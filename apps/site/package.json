@@ -29,13 +29,13 @@
     "pixi-reels": "workspace:*",
     "pixi.js": "^8.17.0",
     "gsap": "^3.14.0",
-    "react": "^18.3.1",
+    "react": "^19.2.5",
     "react-dom": "^18.3.1",
     "@monaco-editor/react": "^4.6.0",
     "sucrase": "^3.35.0"
   },
   "devDependencies": {
-    "@types/react": "^18.3.11",
+    "@types/react": "^19.2.14",
     "@types/react-dom": "^18.3.0",
     "typescript": "^5.6.0"
   }
