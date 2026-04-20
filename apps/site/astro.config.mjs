@@ -1,7 +1,7 @@
 import { defineConfig } from 'astro/config';
 import mdx from '@astrojs/mdx';
 import react from '@astrojs/react';
-import tailwind from '@astrojs/tailwind';
+import tailwindcss from '@tailwindcss/vite';
 import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
 
@@ -12,11 +12,11 @@ const repoRoot = resolve(here, '../..');
 export default defineConfig({
   site: 'https://pixi-reels.dev',
   integrations: [
-    tailwind(),
     mdx(),
     react(),
   ],
   vite: {
+    plugins: [tailwindcss()],
     resolve: {
       alias: [
         // The subpath alias must win over the bare one, so order matters:

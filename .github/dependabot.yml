@@ -17,7 +17,9 @@ updates:
       - dependencies
       - javascript
     commit-message:
-      prefix: chore(deps)
+      # `include: scope` makes Dependabot append its own (deps)/(deps-dev)
+      # scope, so the prefix must stay bare — otherwise you get chore(deps)(deps).
+      prefix: chore
       include: scope
     # Collapse minor + patch bumps into a single PR per ecosystem so the
     # review queue stays short. Majors still come in as one PR each.
@@ -47,5 +49,7 @@ updates:
       - dependencies
       - github-actions
     commit-message:
-      prefix: chore(ci)
+      # Same reasoning as the npm block — use a bare type so scope is
+      # supplied exactly once, by Dependabot.
+      prefix: ci
       include: scope
