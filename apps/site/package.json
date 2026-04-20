@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "astro": "^4.16.0",
-    "@astrojs/mdx": "^3.1.0",
+    "@astrojs/mdx": "^5.0.3",
     "@astrojs/react": "^3.6.0",
     "@astrojs/tailwind": "^5.1.4",
     "tailwindcss": "^3.4.14",
