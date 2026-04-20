@@ -3,6 +3,10 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "sync-assets": "node -e \"require('fs').cpSync('../../examples/assets/prototype-symbols','public/prototype-symbols',{recursive:true})\"",
+    "predev": "pnpm sync-assets",
+    "prebuild": "pnpm sync-assets",
+    "prepreview": "pnpm sync-assets",
     "dev": "astro dev",
     "start": "astro dev",
     "build": "astro build",

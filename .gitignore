@@ -14,3 +14,6 @@ coverage/
 # the copies under packages/*/ directly.
 packages/*/README.md
 packages/*/LICENSE
+
+# Copied from examples/assets/ by apps/site's sync-assets script.
+apps/site/public/prototype-symbols/
