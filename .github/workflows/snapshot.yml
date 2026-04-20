@@ -1,0 +1,102 @@
+name: Snapshot Release
+
+# Publishes a Changesets "snapshot" release of every package that has a
+# pending .changeset/*.md file on the current branch. Snapshot versions are
+# stamped `<base>-<tag>-<timestamp>` and published to npm under a per-branch
+# dist-tag so reviewers can install the preview without disturbing `latest`
+# or the normal release flow.
+#
+# How it runs:
+#   1. On every push to any branch (except `main` — that uses release.yml)
+#      if a .changeset/*.md file exists.
+#   2. Nightly at 03:00 UTC against the default branch so long-lived
+#      integration branches stay fresh.
+#   3. On-demand via workflow_dispatch, picking any branch by hand.
+#
+# Install a published snapshot with:
+#   pnpm add pixi-reels@<branch-tag>
+# where <branch-tag> is the sanitized branch name (e.g. v0.2 -> v0-2,
+# feat/shiny -> feat-shiny).
+
+on:
+  push:
+    branches-ignore:
+      - main
+      - 'changeset-release/**'
+  schedule:
+    # 03:00 UTC nightly — runs against the repo's default branch to give a
+    # current `latest-nightly` tag for integration smoke tests.
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to snapshot (defaults to the workflow ref)'
+        required: false
+        type: string
+      tag:
+        description: 'Override dist-tag (defaults to sanitized branch name)'
+        required: false
+        type: string
+
+concurrency:
+  group: snapshot-${{ github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # Required for npm provenance attestation.
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          ref: ${{ github.event.inputs.branch || github.ref_name }}
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@a7487c7e89a18df4991f7f222e4898a00d66ddda # v4
+        with:
+          version: 10
+
+      - name: Setup Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 20
+          cache: pnpm
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint guards
+        run: pnpm check:lint
+
+      - name: Typecheck
+        run: pnpm --filter pixi-reels typecheck
+
+      - name: Test
+        run: pnpm --filter pixi-reels test
+
+      - name: Derive dist-tag
+        id: tag
+        run: |
+          if [ -n "${{ github.event.inputs.tag }}" ]; then
+            RAW="${{ github.event.inputs.tag }}"
+          elif [ "${{ github.event_name }}" = "schedule" ]; then
+            RAW="nightly"
+          else
+            RAW="${{ github.event.inputs.branch || github.ref_name }}"
+          fi
+          SAN=$(echo "$RAW" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]/-/g; s/^-*//; s/-*$//')
+          echo "tag=$SAN" >> "$GITHUB_OUTPUT"
+          echo "Snapshot dist-tag: $SAN"
+
+      - name: Publish snapshot
+        run: pnpm snapshot
+        env:
+          SNAPSHOT_TAG: ${{ steps.tag.outputs.tag }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_CONFIG_PROVENANCE: 'true'

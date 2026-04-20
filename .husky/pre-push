@@ -1,0 +1,9 @@
+#!/usr/bin/env sh
+# Run the fast gates before anything leaves the laptop:
+#   - lint guards (fancy unicode)
+#   - typecheck
+#   - library tests (vitest run)
+#
+# If you need to push a WIP branch without these, use `git push --no-verify`
+# and come back to green before the PR lands.
+pnpm check:lint && pnpm --filter pixi-reels typecheck && pnpm --filter pixi-reels test

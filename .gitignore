@@ -1,2 +1,16 @@
 node_modules/
 dist/
+.DS_Store
+*.local
+*.log
+coverage/
+.vite/
+.astro/
+.turbo/
+.vitest-cache/
+*.tsbuildinfo
+
+# Sync'd by scripts/build-all-publishable.mjs from repo root — do not edit
+# the copies under packages/*/ directly.
+packages/*/README.md
+packages/*/LICENSE

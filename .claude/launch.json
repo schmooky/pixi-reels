@@ -1,0 +1,35 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "site",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@pixi-reels/site", "dev", "--", "--port", "4321"],
+      "port": 4321
+    },
+    {
+      "name": "classic-spin",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "classic-spin", "exec", "vite", "--port", "5173", "--strictPort"],
+      "port": 5173
+    },
+    {
+      "name": "cascade-tumble",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "cascade-tumble", "exec", "vite", "--port", "5174", "--strictPort"],
+      "port": 5174
+    },
+    {
+      "name": "hold-and-win",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "hold-and-win", "exec", "vite", "--port", "5175", "--strictPort"],
+      "port": 5175
+    },
+    {
+      "name": "sandbox",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "sandbox", "exec", "vite", "--port", "5176", "--strictPort"],
+      "port": 5176
+    }
+  ]
+}

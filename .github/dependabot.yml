@@ -1,0 +1,51 @@
+# Dependabot keeps npm + GitHub Actions dependencies fresh. For a workspace
+# monorepo the npm ecosystem at the root covers every apps/*, packages/*,
+# and examples/* subfolder - Dependabot walks pnpm workspaces automatically.
+
+version: 2
+updates:
+  # All workspace npm dependencies (apps/*, packages/*, examples/*)
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: '06:00'
+      timezone: UTC
+    open-pull-requests-limit: 10
+    labels:
+      - dependencies
+      - javascript
+    commit-message:
+      prefix: chore(deps)
+      include: scope
+    # Collapse minor + patch bumps into a single PR per ecosystem so the
+    # review queue stays short. Majors still come in as one PR each.
+    groups:
+      minor-and-patch:
+        patterns:
+          - '*'
+        update-types:
+          - minor
+          - patch
+    ignore:
+      # Pinned intentionally - bump these deliberately.
+      - dependency-name: '@esotericsoftware/spine-pixi-v8'
+      - dependency-name: 'pixi.js'
+      - dependency-name: 'gsap'
+
+  # GitHub Actions workflows under .github/workflows
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: '06:00'
+      timezone: UTC
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - github-actions
+    commit-message:
+      prefix: chore(ci)
+      include: scope

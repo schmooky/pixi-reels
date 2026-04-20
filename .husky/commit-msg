@@ -1,0 +1,5 @@
+#!/usr/bin/env sh
+# Enforce Conventional Commits on every commit message.
+# Allowed types (from @commitlint/config-conventional + local extensions)
+# live in commitlint.config.cjs.
+pnpm exec commitlint --edit "$1"

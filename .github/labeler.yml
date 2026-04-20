@@ -1,0 +1,79 @@
+# Config for actions/labeler. Labels are applied to PRs based on which
+# paths the PR touches. Keep this list in sync with the repo layout.
+#
+# Syntax: https://github.com/actions/labeler#create-labelsyml
+
+area/ci:
+  - changed-files:
+      - any-glob-to-any-file:
+          - '.github/workflows/**'
+          - '.github/actions/**'
+          - '.github/dependabot.yml'
+          - '.github/labeler.yml'
+          - '.husky/**'
+          - 'scripts/**'
+
+area/docs:
+  - changed-files:
+      - any-glob-to-any-file:
+          - '**/*.md'
+          - '**/*.mdx'
+          - 'logo.svg'
+          - '.github/ISSUE_TEMPLATE/**'
+          - '.github/pull_request_template.md'
+
+area/library:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'packages/pixi-reels/**'
+
+area/site:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'apps/site/**'
+
+area/examples:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'examples/**'
+
+area/spine:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'packages/pixi-reels/src/spine/**'
+          - 'packages/pixi-reels/src/symbols/SpineSymbol.ts'
+
+area/cascade:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'examples/shared/cascadeLoop.ts'
+          - 'packages/pixi-reels/src/spin/modes/CascadeMode.ts'
+
+area/cheats:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'examples/shared/cheats.ts'
+          - 'examples/shared/CheatPanel.ts'
+          - 'examples/shared/seededRng.ts'
+
+area/testing:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'packages/pixi-reels/src/testing/**'
+
+area/release:
+  - changed-files:
+      - any-glob-to-any-file:
+          - '.changeset/**'
+          - 'scripts/snapshot-release.mjs'
+          - 'scripts/build-all-publishable.mjs'
+
+area/tests:
+  - changed-files:
+      - any-glob-to-any-file:
+          - '**/*.test.ts'
+          - '**/*.test.tsx'
+          - '**/*.spec.ts'
+          - '**/*.spec.tsx'
+          - 'vitest.config.ts'
+          - 'vitest.setup.ts'

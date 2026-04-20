@@ -1,0 +1,113 @@
+# Canonical label set for this repo. Consumed by .github/workflows/sync-labels.yml
+# to create/update labels via the GitHub REST API. Edit this file and re-run
+# the "Sync Labels" workflow from the Actions tab to apply changes.
+#
+# Keep area/* labels in sync with .github/labeler.yml so the auto-labeler
+# has matching labels to apply.
+
+# --- Area labels (auto-applied by .github/workflows/labeler.yml) ---
+- name: area/ci
+  color: 0e8a16
+  description: CI, workflows, scripts, husky hooks
+- name: area/docs
+  color: 0075ca
+  description: Documentation, READMEs, MDX pages, issue/PR templates
+- name: area/library
+  color: fbca04
+  description: The published `pixi-reels` npm package
+- name: area/site
+  color: 1d76db
+  description: The docs site under apps/site
+- name: area/examples
+  color: c2e0c6
+  description: examples/* apps and shared runtime helpers
+- name: area/spine
+  color: b60205
+  description: SpineReelSymbol, spine loader, Spine demos
+- name: area/cascade
+  color: 5319e7
+  description: cascadeLoop, tumbleToGrid, CascadeMode
+- name: area/cheats
+  color: d4c5f9
+  description: CheatEngine, seeded RNG, cheat panel
+- name: area/testing
+  color: 006b75
+  description: FakeTicker, createTestReelSet, HeadlessSymbol
+- name: area/release
+  color: 0052cc
+  description: Changesets, snapshot/release scripts
+- name: area/tests
+  color: 006b75
+  description: Test files and test infrastructure
+
+# --- Type labels ---
+- name: bug
+  color: d73a4a
+  description: Something isn't working
+- name: enhancement
+  color: a2eeef
+  description: New feature or request
+- name: regression
+  color: b60205
+  description: Worked before, broken now
+- name: performance
+  color: fef2c0
+  description: Perf-sensitive change or perf regression
+- name: security
+  color: ee0701
+  description: Security issue or hardening
+- name: question
+  color: cc317c
+  description: Further information is requested
+- name: discussion
+  color: d4c5f9
+  description: Open-ended design or direction discussion
+- name: breaking
+  color: b60205
+  description: Breaking API change
+
+# --- Workflow / triage labels ---
+- name: good first issue
+  color: 7057ff
+  description: Good for newcomers
+- name: help wanted
+  color: 008672
+  description: Extra attention is needed
+- name: needs-triage
+  color: ededed
+  description: Not yet reviewed by a maintainer
+- name: needs-repro
+  color: e99695
+  description: Waiting for a reproducible test case
+- name: blocked
+  color: 000000
+  description: Blocked on another issue, PR, or external input
+- name: wontfix
+  color: ffffff
+  description: This will not be worked on
+- name: duplicate
+  color: cfd3d7
+  description: This issue or PR already exists
+- name: invalid
+  color: e4e669
+  description: "This doesn't seem right"
+- name: pinned
+  color: 1d76db
+  description: Exempt from stale auto-close
+- name: stale
+  color: ededed
+  description: Has gone quiet and is approaching auto-close
+- name: skip-changelog
+  color: ededed
+  description: Exclude from release-drafter changelog
+
+# --- Dependabot / automation ---
+- name: dependencies
+  color: 0366d6
+  description: Pull requests that update a dependency file
+- name: javascript
+  color: f1e05a
+  description: npm dependency updates
+- name: github-actions
+  color: '000000'
+  description: GitHub Actions dependency updates

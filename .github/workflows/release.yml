@@ -1,0 +1,86 @@
+name: Release
+
+# Auto-publish flow driven by changesets.
+#
+# How it works:
+#   1. Contributor opens a PR. If the PR ships user-visible changes they
+#      run `pnpm changeset` locally and commit the resulting .changeset/*.md
+#      file. The file states which packages bump and how.
+#   2. PR is reviewed and merged into main.
+#   3. This workflow runs. If there are any pending changeset .md files,
+#      changesets/action opens (or updates) a PR titled "Version Packages"
+#      that applies the version bumps, regenerates each affected package's
+#      CHANGELOG.md, and removes the consumed .changeset files.
+#   4. When the "Version Packages" PR is merged into main, this workflow
+#      runs again. This time there are no pending changesets, so the
+#      action runs `pnpm release` (build-all-publishable + changeset
+#      publish), which publishes every newly-bumped package to npm.
+
+on:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      # changesets/action needs these to open the Version Packages PR.
+      contents: write
+      pull-requests: write
+      # required for npm provenance attestation.
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          # changesets needs full history to compute "what changed since
+          # the last release tag".
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@a7487c7e89a18df4991f7f222e4898a00d66ddda # v4
+        with:
+          version: 10
+
+      - name: Setup Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 20
+          cache: pnpm
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint guards
+        run: pnpm check:lint
+
+      - name: Typecheck
+        run: pnpm --filter pixi-reels typecheck
+
+      - name: Test
+        run: pnpm --filter pixi-reels test
+
+      - name: Create Release Pull Request or Publish
+        uses: changesets/action@6a0a831ff30acef54f2c6aa1cbbc1096b066edaf # v1.7.0
+        with:
+          # Opens or updates the "Version Packages" PR with pending bumps.
+          version: pnpm version-packages
+          # Runs when the Version Packages PR has already been merged - builds
+          # all dist/ folders topologically and publishes the bumped packages
+          # to npm.
+          publish: pnpm release
+          # Create a GitHub Release for every package version that ships.
+          createGithubReleases: true
+          title: 'chore: version packages'
+          commit: 'chore: version packages'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          # Turn on npm provenance so each published package ships with a
+          # signed attestation linking it back to this workflow run.
+          NPM_CONFIG_PROVENANCE: 'true'

@@ -1,0 +1,22 @@
+# Code owners for pixi-reels.
+#
+# GitHub auto-requests review from the owner listed next to each pattern
+# when a PR touches a matching file. Order matters - later patterns win.
+# https://docs.github.com/en/repositories/managing-your-repositories-settings-and-security/customizing-your-repository/about-code-owners
+
+# Default owner for anything not covered below.
+*                                   @schmooky
+
+# Release + snapshot + CI plumbing
+/.github/                           @schmooky
+/scripts/                           @schmooky
+/.changeset/                        @schmooky
+
+# The published library.
+/packages/pixi-reels/               @schmooky
+
+# Examples + shared test harness code.
+/examples/                          @schmooky
+
+# The docs site.
+/apps/site/                         @schmooky

@@ -1,0 +1,87 @@
+name: Bug report
+description: Something in pixi-reels, a demo, or the docs site behaves incorrectly.
+title: 'bug: '
+labels: ['bug', 'needs-triage']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug. The more reproducible a report is, the faster it gets fixed. A headless `createTestReelSet` repro is the gold standard — if you can trigger the bug with just the library in Node, attach that test.
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: Which part of the repo is affected?
+      options:
+        - Library (packages/pixi-reels)
+        - Spine integration (SpineReelSymbol, spine loader)
+        - Cascade / tumble
+        - Cheats / testing utilities
+        - Docs site (apps/site, pixi-reels.dev)
+        - One of the example apps (examples/*)
+        - Build, CI, or release tooling
+        - Unsure / other
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Version / branch / commit
+      description: |
+        For the npm package, run `pnpm ls pixi-reels`. For the docs site, check the footer. For local checkouts, include the git SHA and branch.
+      placeholder: 'e.g. pixi-reels 0.1.0, or main @ 400277a'
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Describe the actual behavior you observed. Error messages, stack traces, and screenshots all help.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect to happen?
+      description: What should have happened instead?
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: Numbered steps a maintainer can follow from a fresh clone or a fresh browser tab. A `createTestReelSet` Node-only repro is best.
+      placeholder: |
+        1. const { reelSet, spinAndLand } = createTestReelSet({ reels: 5, visibleRows: 3, symbolIds: ['a','b','c'] });
+        2. await spinAndLand([['a','b','c'], ...]);
+        3. expect(reelSet.reels[0].getVisibleSymbols()).toEqual(['a','b','c']);
+        4. Observed: first row is 'z' instead of 'a'
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Browser + OS for UI bugs. For library bugs, include Node version and the package versions installed.
+      placeholder: |
+        - Browser: Chrome 139 on macOS 15
+        - Node: 20.11.0
+        - Pixi: 8.17
+        - Spine: 4.2 (optional)
+    validations:
+      required: false
+
+  - type: textarea
+    id: console
+    attributes:
+      label: Console / server logs
+      description: Paste any relevant DevTools console output or server logs. Wrap with triple backticks.
+      render: text
+    validations:
+      required: false
