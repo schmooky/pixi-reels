@@ -1,0 +1,87 @@
+---
+layout: ../../layouts/Docs.astro
+title: Spin lifecycle
+section: guides
+eyebrow: Building blocks
+description: The full lifecycle of a spin — phases, events, and how to hook in.
+---
+
+A single spin moves through four phases per reel:
+
+```
+START → SPIN → [ANTICIPATION] → STOP → landed
+```
+
+`START` accelerates from rest with a tiny step-back "pull." `SPIN` holds full
+speed until the server answer arrives. `ANTICIPATION` (optional) slows a
+specific reel for dramatic tension. `STOP` decelerates onto the target frame
+with a bounce.
+
+## The happy path
+
+```ts
+reelSet.events.on('spin:start',       () => console.log('pulled the handle'));
+reelSet.events.on('spin:allStarted',  () => console.log('all reels at full speed'));
+reelSet.events.on('spin:stopping',    (i) => console.log('reel', i, 'braking'));
+reelSet.events.on('spin:reelLanded',  (i, symbols) => console.log('reel', i, 'landed on', symbols));
+reelSet.events.on('spin:allLanded',   (result) => console.log('final grid', result.symbols));
+reelSet.events.on('spin:complete',    (result) => console.log('spin done in', result.duration, 'ms'));
+
+await reelSet.spin();           // triggers all of the above
+```
+
+## Pattern: fetch result mid-spin
+
+Real slots call the server while the reels are spinning. pixi-reels is built
+for exactly this.
+
+```ts
+const promise = reelSet.spin();                 // reels accelerate and spin
+const response = await fetch('/api/spin').then((r) => r.json());
+reelSet.setResult(response.symbols);            // ← triggers STOP phase
+if (response.anticipationReels?.length) {
+  reelSet.setAnticipation(response.anticipationReels);
+}
+const result = await promise;
+```
+
+`setResult()` must be called **while the reels are spinning**. If you call it
+too early (before `spin:allStarted`), the engine defers the stop until all
+reels are in the SPIN phase.
+
+## Pattern: player slam-stop
+
+```ts
+button.addEventListener('click', () => {
+  if (reelSet.isSpinning) {
+    reelSet.skip();                              // instant land
+  } else {
+    reelSet.spin();
+  }
+});
+```
+
+`skip()` force-lands on whatever `setResult()` told it — or on random symbols
+if no result was set yet. `result.wasSkipped === true`.
+
+## Full event map
+
+| Event | Payload | When |
+|---|---|---|
+| `spin:start` | — | Any `spin()` call |
+| `spin:allStarted` | — | Every reel is in SPIN phase |
+| `spin:stopping` | `(reelIndex)` | A reel begins STOP |
+| `spin:reelLanded` | `(reelIndex, symbols)` | Individual reel landed |
+| `spin:allLanded` | `(result)` | Last reel landed |
+| `spin:complete` | `(result)` | Just after `spin:allLanded` |
+| `skip:requested` | — | `skip()` called |
+| `skip:completed` | — | All reels force-landed |
+| `speed:changed` | `(profile, previous)` | `setSpeed()` called |
+| `spotlight:start` | `(positions)` | `spotlight.cycle(...)` began |
+| `spotlight:end` | — | Spotlight finished |
+| `destroyed` | — | `destroy()` called |
+
+## Deeper dive
+
+- [Phases](/wiki/api-phases/) — customize START/SPIN/STOP timing
+- [Events](/wiki/api-events/) — types and exact signatures

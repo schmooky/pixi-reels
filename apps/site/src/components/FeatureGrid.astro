@@ -1,0 +1,39 @@
+---
+import { Wand2, Zap, TestTube2, Boxes, Gauge, Puzzle } from 'lucide-react';
+
+const features = [
+  { icon: Wand2, title: 'Fluent builder', body: 'Zero to a running 5×3 reelset in 10 chainable lines. Validated on build().' },
+  { icon: Zap, title: 'Typed events', body: 'spin:start, spin:reelLanded, speed:changed, spotlight:end — fully typed payloads.' },
+  { icon: TestTube2, title: 'Headless testing', body: 'createTestReelSet + FakeTicker run the full spin lifecycle in Node. No renderer, no flaky timers.' },
+  { icon: Boxes, title: 'Mechanic sandboxes', body: 'Every demo ships with a cheat panel. "Force 3 scatters" is one click.' },
+  { icon: Gauge, title: 'Agent-friendly debug', body: 'enableDebug() attaches JSON + ASCII snapshots to window. Agents inspect state without reading the canvas.' },
+  { icon: Puzzle, title: 'Plug in anything', body: 'Symbols, phases, spinning modes, frame middleware — each extension is a named interface.' },
+];
+---
+<section class="border-b border-border/60 py-20">
+  <div class="container">
+    <div class="mx-auto max-w-2xl text-center mb-12">
+      <div class="inline-flex items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-primary">
+        Why pixi-reels
+      </div>
+      <h2 class="mt-4 text-3xl font-semibold tracking-tight sm:text-4xl">
+        The parts you'd have to build anyway.
+      </h2>
+    </div>
+
+    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {features.map((f) => (
+        <div class="group relative overflow-hidden rounded-xl border border-border bg-card p-6 transition-all hover:border-primary/40 hover:-translate-y-0.5">
+          <div class="absolute inset-0 bg-gradient-to-br from-primary/0 via-primary/0 to-accent/0 opacity-0 transition-opacity group-hover:opacity-[0.04]" aria-hidden></div>
+          <div class="relative">
+            <div class="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-lg bg-secondary/80 text-primary ring-1 ring-border">
+              <f.icon size={18} strokeWidth={1.7} />
+            </div>
+            <h3 class="text-base font-semibold tracking-tight">{f.title}</h3>
+            <p class="mt-1.5 text-sm text-muted-foreground">{f.body}</p>
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+</section>

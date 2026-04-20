@@ -1,0 +1,56 @@
+---
+layout: ../../layouts/Docs.astro
+title: Phases
+section: wiki
+eyebrow: API
+description: START, SPIN, ANTICIPATION, STOP — the four lifecycle phases and how to extend them.
+---
+
+A **phase** is one slice of a reel's spin lifecycle. Phases extend
+`ReelPhase<TConfig>` and implement three hooks.
+
+```
+ReelPhase<TConfig>
+├─ onEnter(config)   // set up tweens, set reel.speed
+├─ update(deltaMs)   // called every frame while active
+└─ onSkip()          // clean up when forced
+```
+
+## Built-ins
+
+| Phase | Role | Skippable |
+|---|---|---|
+| `StartPhase` | Accelerate from rest, optional step-back | yes |
+| `SpinPhase` | Full speed until stop requested | yes |
+| `AnticipationPhase` | Slow-down hold for tension | yes |
+| `StopPhase` | Decelerate to target frame, bounce | no |
+
+## Register a custom phase
+
+```ts
+import { ReelPhase } from 'pixi-reels';
+
+class FlashPhase extends ReelPhase<{ duration: number }> {
+  readonly name = 'flash';
+  readonly skippable = true;
+  private _elapsed = 0;
+
+  protected onEnter(cfg: { duration: number }): void {
+    this._elapsed = 0;
+    this._duration = cfg.duration;
+  }
+
+  update(deltaMs: number): void {
+    this._elapsed += deltaMs;
+    // ... toggle reel alpha or something
+    if (this._elapsed >= this._duration) this._complete();
+  }
+
+  protected onSkip(): void { /* cleanup */ }
+}
+
+builder.phases((f) => f.register('flash', FlashPhase));
+```
+
+Replacing built-ins works the same way — register with the same name (`'start'`,
+`'spin'`, `'anticipation'`, `'stop'`) to override.

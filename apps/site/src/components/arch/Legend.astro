@@ -1,0 +1,27 @@
+---
+interface Item {
+  label: string;
+  kind: 'primary' | 'accent' | 'muted' | 'subtle';
+  note?: string;
+}
+interface Props {
+  items: Item[];
+}
+const { items } = Astro.props;
+
+const variants: Record<string, string> = {
+  primary: 'bg-primary',
+  accent: 'bg-accent',
+  muted: 'bg-muted border border-border',
+  subtle: 'bg-card border border-border',
+};
+---
+<div class="flex flex-wrap gap-4 text-xs text-muted-foreground">
+  {items.map((it) => (
+    <div class="flex items-center gap-2">
+      <span class={`inline-block w-3 h-3 rounded-sm ${variants[it.kind]}`}></span>
+      <span class="font-mono text-foreground/80">{it.label}</span>
+      {it.note && <span class="text-muted-foreground/80">· {it.note}</span>}
+    </div>
+  ))}
+</div>

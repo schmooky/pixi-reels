@@ -1,0 +1,36 @@
+---
+import type { NavSection } from '../content/nav.ts';
+interface Props { nav: NavSection[]; pathname: string; }
+const { nav, pathname } = Astro.props;
+---
+<aside class="sticky top-20 self-start max-h-[calc(100vh-5.5rem)] overflow-y-auto pr-4">
+  <nav class="space-y-6">
+    {nav.map((section) => (
+      <div>
+        <div class="mb-2 px-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/80">
+          {section.title}
+        </div>
+        <ul class="space-y-0.5">
+          {section.items.map((item) => {
+            const active = pathname === item.href || pathname === item.href.slice(0, -1);
+            return (
+              <li>
+                <a
+                  href={item.href}
+                  class:list={[
+                    'block rounded-md px-2.5 py-1.5 text-sm transition-colors',
+                    active
+                      ? 'bg-primary/10 text-foreground font-medium border-l-2 border-primary pl-[9px]'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-secondary/40',
+                  ]}
+                >
+                  {item.label}
+                </a>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+    ))}
+  </nav>
+</aside>

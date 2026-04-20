@@ -1,0 +1,42 @@
+{
+  "name": "@pixi-reels/site",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "start": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "astro": "astro"
+  },
+  "dependencies": {
+    "astro": "^4.16.0",
+    "@astrojs/mdx": "^3.1.0",
+    "@astrojs/react": "^3.6.0",
+    "@astrojs/tailwind": "^5.1.4",
+    "tailwindcss": "^3.4.14",
+    "tailwindcss-animate": "^1.0.7",
+    "@radix-ui/react-switch": "^1.1.2",
+    "@radix-ui/react-slot": "^1.1.1",
+    "@radix-ui/react-separator": "^1.1.1",
+    "@radix-ui/react-collapsible": "^1.1.2",
+    "@radix-ui/react-tabs": "^1.1.2",
+    "@radix-ui/react-tooltip": "^1.1.4",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "tailwind-merge": "^2.5.4",
+    "lucide-react": "^0.468.0",
+    "pixi-reels": "workspace:*",
+    "pixi.js": "^8.17.0",
+    "gsap": "^3.14.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "@monaco-editor/react": "^4.6.0",
+    "sucrase": "^3.35.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.11",
+    "@types/react-dom": "^18.3.0",
+    "typescript": "^5.6.0"
+  }
+}

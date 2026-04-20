@@ -1,0 +1,46 @@
+---
+layout: ../../layouts/Recipe.astro
+title: How to animate paylines
+description: Cycle through multiple winning lines with the built-in spotlight — dim non-winners, promote winners, pulse each line.
+tags: [wins, spotlight, paylines]
+steps:
+  - After spin, detect your win lines (array of winning cells)
+  - Call reelSet.spotlight.cycle(lines, { displayDuration, gapDuration, cycles, dimAmount })
+  - Listen for spotlight:end to re-enable UI
+apis:
+  - SymbolSpotlight.cycle
+  - spotlight:start event
+  - spotlight:end event
+---
+
+import AnimatePaylinesRecipe from '../../components/recipes/AnimatePaylinesRecipe.tsx';
+
+<AnimatePaylinesRecipe client:only="react" />
+
+## The minimum code
+
+```ts
+function paylineCells(row: number, reelCount: number) {
+  return Array.from({ length: reelCount }, (_, reelIndex) => ({ reelIndex, rowIndex: row }));
+}
+
+reelSet.events.on('spin:complete', async (result) => {
+  const wins = detectLineWins(result.symbols);       // your logic
+  if (!wins.length) return;
+
+  await reelSet.spotlight.cycle(
+    wins.map((w) => ({ positions: w.positions })),
+    { displayDuration: 600, dimAmount: 0.25, cycles: 1 },
+  );
+});
+```
+
+## Pair with per-symbol win animations
+
+`spotlight.cycle` calls `symbol.playWin()` on each highlighted cell if you pass `playWin: true` (default). Your `ReelSymbol` subclass defines the gesture — `SpineSymbol` fires its "win" animation, `BlockSymbol` does a scale-down pulse, custom classes do whatever you want.
+
+## UX guardrails
+
+- Disable the spin button between `spotlight:start` and `spotlight:end`.
+- On slam-stop or new spin, the spotlight aborts automatically.
+- Use `dim: 0` when you just want winners to pulse without fading losers.

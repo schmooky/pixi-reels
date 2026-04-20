@@ -1,0 +1,114 @@
+---
+layout: ../../layouts/Recipe.astro
+title: How to remove a symbol in a cascade
+description: Fade the winners out, then drop the next-stage symbols in from above — a proper cascade with no reel respin.
+tags: [cascade, animation]
+steps:
+  - Compute which cells are "winners" by diffing stage N against stage N+1
+  - Animate alpha 1 → 0 on winners (the pop)
+  - Tumble: replace symbols in-place and tween them down from above — no spin, no reel acceleration
+apis:
+  - runCascade
+  - tumbleToGrid
+  - diffCells
+  - Reel.placeSymbols
+---
+
+import RemoveSymbolRecipe from '../../components/recipes/RemoveSymbolRecipe.tsx';
+
+<RemoveSymbolRecipe client:only="react" />
+
+## Anatomy of a cascade drop
+
+A real cascade is **not** a new spin — and crucially, survivors with no
+cleared slots beneath them must **not move at all**. Three beats:
+
+1. **Pop** — animate winner cells (alpha 1 → 0, or play a Spine `disintegration`).
+2. **Replace** — `reel.placeSymbols(nextGrid[reelIndex])` swaps the symbol identities in place.
+3. **Drop** — per survivor, compute a fall distance from *how many winners sat below its original row*. Survivors with 0 winners below them keep their y unchanged. New symbols at the top fall in with a staggered entrance (row 0 from 1 slot up, row 1 from 2 slots up, …).
+
+`tumbleToGrid` implements this. Given the next grid plus a `winners` list it
+places each symbol at its correct final y, then offsets only the cells that
+actually need to fall. A middle-row winner only moves the cells above it;
+rows below stay perfectly still.
+
+## `winners` must be *semantic*, not diffed
+
+A classic trap: computing winners with `diffCells(prev, next)` looks tempting
+but gives wrong results when survivors slide past cleared slots. In that case
+the survivor's new row holds a *different* symbol id than it used to — so
+`diffCells` reports it as "changed" and `tumbleToGrid` treats it as a new
+symbol dropping from above.
+
+Compute winners from your game logic:
+
+```ts
+// Match detection for a specific winning symbol
+function winnersOfX(grid: string[][]): Cell[] {
+  const out: Cell[] = [];
+  for (let reel = 0; reel < grid.length; reel++) {
+    for (let row = 0; row < grid[reel].length; row++) {
+      if (grid[reel][row] === 'x') out.push({ reel, row });
+    }
+  }
+  return out;
+}
+
+await tumbleToGrid(reelSet, nextGrid, winnersOfX(currentGrid));
+```
+
+With `runCascade`, pass a custom `winners` callback:
+
+```ts
+await runCascade(reelSet, stages, {
+  winners: (prev) => winnersOfX(prev),
+});
+```
+
+The default `diffCells` is fine when your cascade physics are gravity-clean
+(survivors never slide). For real match-pattern cascades, always compute
+winners from the match — it's the only correct answer.
+
+```ts
+import { tumbleToGrid, diffCells } from '@/shared/cascadeLoop';
+
+const winners = diffCells(currentGrid, nextGrid);
+
+// 1. pop (fade the winners)
+await fadeOutCells(reelSet, winners, 320);
+
+// 2 + 3. replace + drop — no reelSet.spin() involved
+await tumbleToGrid(reelSet, nextGrid, winners, { dropDuration: 420 });
+```
+
+## Using it with `runCascade`
+
+`runCascade` wraps pop + drop for you and accepts either an array or an `AsyncIterable` of stages:
+
+```ts
+import { runCascade } from '@/shared/cascadeLoop';
+
+await runCascade(reelSet, stages, {
+  vanishDuration: 320,
+  dropDuration: 420,
+  onStageLanded: (grid, i) => hud.setMultiplier(i + 1),
+});
+```
+
+Override `onWinnersVanish` to play your own pop (per-symbol `playWin()`, particles, etc.):
+
+```ts
+await runCascade(reelSet, stages, {
+  onWinnersVanish: async (rs, winners) => {
+    await Promise.all(winners.map(({reel,row}) =>
+      rs.getReel(reel).getSymbolAt(row).playWin()
+    ));
+  },
+});
+```
+
+> Recycled symbols reset `view.alpha` and `view.scale` automatically on acquisition, so you don't need cleanup logic between stages.
+
+## Where this is used
+
+[`cascade-multiplier` demo](/demos/cascade-multiplier/) runs the same pop + drop sequence for the full 4-stage tumble.

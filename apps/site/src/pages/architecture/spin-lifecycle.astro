@@ -1,0 +1,178 @@
+---
+import Architecture from '../../layouts/Architecture.astro';
+import Legend from '../../components/arch/Legend.astro';
+---
+<Architecture
+  title="Spin lifecycle"
+  subtitle="One spin as a state machine, per reel."
+  eyebrow="Lifecycle"
+>
+  <p>
+    Each reel moves through four phases, independently. The diagram below
+    shows the transitions and what triggers each one. Anticipation is
+    optional — a reel skips it unless <code>setAnticipation([i])</code> put
+    its index on the list. <code>skip()</code> can short-circuit any phase
+    into an immediate landing.
+  </p>
+
+  <div class="not-prose my-8">
+    <div class="rounded-2xl border border-border bg-card p-6 overflow-x-auto">
+      <svg viewBox="0 0 960 440" class="w-full h-auto min-w-[720px]">
+
+        <!-- IDLE -->
+        <g>
+          <rect x="40" y="180" width="140" height="80" rx="40" fill="hsl(var(--muted))" stroke="hsl(var(--border-strong))" stroke-width="2" />
+          <text x="110" y="215" text-anchor="middle" font-family="Inter, sans-serif" font-size="16" font-weight="700" fill="hsl(var(--foreground))">IDLE</text>
+          <text x="110" y="235" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="10" fill="hsl(var(--muted-foreground))">speed = 0</text>
+        </g>
+
+        <!-- Arrow IDLE -> START -->
+        <path d="M 180 220 L 230 220" stroke="hsl(var(--primary))" stroke-width="2" fill="none" marker-end="url(#arr-p)" />
+        <rect x="180" y="190" width="60" height="20" rx="5" fill="hsl(var(--card))" stroke="hsl(var(--primary))" />
+        <text x="210" y="204" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="10" font-weight="600" fill="hsl(var(--primary))">spin()</text>
+
+        <!-- START -->
+        <g>
+          <rect x="230" y="180" width="140" height="80" rx="16" fill="hsl(var(--primary) / 0.15)" stroke="hsl(var(--primary))" stroke-width="2" />
+          <text x="300" y="210" text-anchor="middle" font-family="Inter, sans-serif" font-size="15" font-weight="700" fill="hsl(var(--foreground))">START</text>
+          <text x="300" y="226" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="10" fill="hsl(var(--muted-foreground))">accelerate</text>
+          <text x="300" y="240" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="10" fill="hsl(var(--muted-foreground))">+ step-back</text>
+        </g>
+
+        <!-- START -> SPIN -->
+        <path d="M 370 220 L 410 220" stroke="hsl(var(--accent))" stroke-width="2" fill="none" marker-end="url(#arr-a)" />
+        <text x="390" y="210" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="9" fill="hsl(var(--accent))">tween complete</text>
+
+        <!-- SPIN -->
+        <g>
+          <rect x="410" y="180" width="140" height="80" rx="16" fill="hsl(var(--accent) / 0.15)" stroke="hsl(var(--accent))" stroke-width="2" />
+          <text x="480" y="210" text-anchor="middle" font-family="Inter, sans-serif" font-size="15" font-weight="700" fill="hsl(var(--foreground))">SPIN</text>
+          <text x="480" y="226" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="10" fill="hsl(var(--muted-foreground))">speed = max</text>
+          <text x="480" y="240" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="10" fill="hsl(var(--muted-foreground))">symbols wrap</text>
+        </g>
+
+        <!-- SPIN -> ANTICIPATION (top branch, dashed) -->
+        <path d="M 550 210 C 610 210, 620 120, 690 120" stroke="hsl(var(--primary))" stroke-width="2" fill="none" stroke-dasharray="5,4" marker-end="url(#arr-p)" />
+        <text x="620" y="165" font-family="ui-monospace, Menlo, monospace" font-size="9" fill="hsl(var(--primary))">if anticipationReels</text>
+        <text x="620" y="178" font-family="ui-monospace, Menlo, monospace" font-size="9" fill="hsl(var(--primary))">includes this reel</text>
+
+        <!-- SPIN -> STOP (bottom branch) -->
+        <path d="M 550 230 C 610 230, 620 320, 690 320" stroke="hsl(var(--accent))" stroke-width="2" fill="none" marker-end="url(#arr-a)" />
+        <text x="620" y="270" font-family="ui-monospace, Menlo, monospace" font-size="9" fill="hsl(var(--muted-foreground))">default</text>
+
+        <!-- ANTICIPATION -->
+        <g>
+          <rect x="690" y="70" width="180" height="90" rx="16" fill="hsl(var(--primary) / 0.15)" stroke="hsl(var(--primary))" stroke-width="2" stroke-dasharray="5,4" />
+          <text x="780" y="102" text-anchor="middle" font-family="Inter, sans-serif" font-size="15" font-weight="700" fill="hsl(var(--foreground))">ANTICIPATION</text>
+          <text x="780" y="120" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="10" fill="hsl(var(--muted-foreground))">slow-hold</text>
+          <text x="780" y="134" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="10" fill="hsl(var(--muted-foreground))">for tension</text>
+          <text x="780" y="148" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="10" fill="hsl(var(--muted-foreground))">anticipationDelay ms</text>
+        </g>
+
+        <!-- ANTICIPATION -> STOP -->
+        <path d="M 780 160 L 780 270" stroke="hsl(var(--accent))" stroke-width="2" fill="none" marker-end="url(#arr-a)" />
+        <text x="795" y="215" font-family="ui-monospace, Menlo, monospace" font-size="9" fill="hsl(var(--muted-foreground))">hold complete</text>
+
+        <!-- STOP -->
+        <g>
+          <rect x="690" y="270" width="180" height="90" rx="16" fill="hsl(var(--accent) / 0.15)" stroke="hsl(var(--accent))" stroke-width="2" />
+          <text x="780" y="302" text-anchor="middle" font-family="Inter, sans-serif" font-size="15" font-weight="700" fill="hsl(var(--foreground))">STOP</text>
+          <text x="780" y="320" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="10" fill="hsl(var(--muted-foreground))">decelerate</text>
+          <text x="780" y="334" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="10" fill="hsl(var(--muted-foreground))">place target</text>
+          <text x="780" y="348" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="10" fill="hsl(var(--muted-foreground))">bounce + snap</text>
+        </g>
+
+        <!-- STOP -> LANDED -->
+        <path d="M 780 360 C 780 390, 400 420, 110 300 L 110 260" stroke="hsl(var(--accent))" stroke-width="2" fill="none" marker-end="url(#arr-a)" />
+        <rect x="380" y="395" width="110" height="22" rx="5" fill="hsl(var(--card))" stroke="hsl(var(--accent))" />
+        <text x="435" y="410" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="10" font-weight="600" fill="hsl(var(--accent))">landed event</text>
+
+        <!-- skip() bypass -->
+        <path d="M 480 260 C 500 380, 350 380, 180 260" stroke="hsl(var(--destructive))" stroke-width="2" fill="none" stroke-dasharray="4,4" marker-end="url(#arr-d)" opacity="0.8" />
+        <rect x="260" y="335" width="80" height="22" rx="5" fill="hsl(var(--card))" stroke="hsl(var(--destructive))" />
+        <text x="300" y="350" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="10" font-weight="600" fill="hsl(var(--destructive))">skip()</text>
+
+        <!-- Caller sync -->
+        <g>
+          <text x="130" y="40" font-family="ui-monospace, Menlo, monospace" font-size="10" font-weight="700" fill="hsl(var(--muted-foreground))" letter-spacing="0.08em">CALLER TRIGGERS</text>
+          <rect x="300" y="32" width="170" height="22" rx="5" fill="hsl(var(--muted))" stroke="hsl(var(--border))" />
+          <text x="385" y="47" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="10" fill="hsl(var(--foreground))">setResult(symbols[][])</text>
+          <text x="385" y="70" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="9" fill="hsl(var(--muted-foreground))">while all reels are in SPIN phase</text>
+
+          <rect x="480" y="32" width="170" height="22" rx="5" fill="hsl(var(--muted))" stroke="hsl(var(--border))" />
+          <text x="565" y="47" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="10" fill="hsl(var(--foreground))">setAnticipation([i, j])</text>
+          <text x="565" y="70" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="9" fill="hsl(var(--muted-foreground))">marks reels for ANTICIPATION</text>
+        </g>
+
+        <defs>
+          <marker id="arr-p" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="hsl(var(--primary))" />
+          </marker>
+          <marker id="arr-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="hsl(var(--accent))" />
+          </marker>
+          <marker id="arr-d" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="hsl(var(--destructive))" />
+          </marker>
+        </defs>
+      </svg>
+    </div>
+
+    <div class="mt-4">
+      <Legend items={[
+        { kind: 'muted', label: 'Idle', note: 'at rest' },
+        { kind: 'primary', label: 'Conditional path', note: 'dashed = may be skipped' },
+        { kind: 'accent', label: 'Required transition' },
+        { kind: 'subtle', label: 'Caller actions', note: 'drive the state machine' },
+      ]} />
+    </div>
+  </div>
+
+  <h2>What each phase actually does</h2>
+
+  <div class="not-prose my-6 grid gap-3 md:grid-cols-2">
+    <div class="rounded-xl border border-border bg-card p-5">
+      <div class="text-xs font-mono uppercase tracking-wider text-primary mb-2">START</div>
+      <p class="text-sm">A brief downward "step-back" (pulling the handle), then GSAP tweens <code>reel.speed</code> from 0 to <code>spinSpeed</code> with <code>accelerationEase</code>. Each reel's start is delayed by <code>reelIndex × spinDelay</code>, producing the classic staggered kickoff.</p>
+    </div>
+    <div class="rounded-xl border border-border bg-card p-5">
+      <div class="text-xs font-mono uppercase tracking-wider text-primary mb-2">SPIN</div>
+      <p class="text-sm">Reel holds at full speed indefinitely. Symbols wrap vertically via <code>ReelMotion</code>; as each symbol wraps, its identity is swapped for a new one from the <code>RandomSymbolProvider</code>. Waits for <code>setResult()</code> and <code>spin:allStarted</code> before any stop can begin.</p>
+    </div>
+    <div class="rounded-xl border border-border bg-card p-5">
+      <div class="text-xs font-mono uppercase tracking-wider text-primary mb-2">ANTICIPATION (optional)</div>
+      <p class="text-sm">Reel holds at a reduced speed for <code>anticipationDelay</code> ms. Entered only if <code>setAnticipation()</code> included this reel. Fires <code>spin:stopping</code> on entry, not <code>phase:enter "stop"</code> yet.</p>
+    </div>
+    <div class="rounded-xl border border-border bg-card p-5">
+      <div class="text-xs font-mono uppercase tracking-wider text-primary mb-2">STOP</div>
+      <p class="text-sm">GSAP timeline decelerates to 0, calls <code>reel.placeSymbols(visible)</code> to lock in the target, then overshoots by <code>bounceDistance</code> and snaps back. Fires <code>landed</code> when complete.</p>
+    </div>
+  </div>
+
+  <h2>The generation counter</h2>
+
+  <p>
+    Internally <code>SpinController</code> increments <code>_spinGeneration</code>
+    on every <code>spin()</code> and <code>skip()</code>. Every async chain
+    checks the generation before continuing — an in-flight phase from a
+    previous spin quietly no-ops if the player spun again or skipped. That's
+    how you can hammer the spin button without state corruption.
+  </p>
+
+  <h2>What <code>skip()</code> does exactly</h2>
+
+  <ol>
+    <li>Emits <code>skip:requested</code>.</li>
+    <li>Force-completes every active phase's GSAP timeline.</li>
+    <li>Bumps <code>_spinGeneration</code> so pending async chains exit.</li>
+    <li>If <code>setResult()</code> was already called: places the target symbols directly. Otherwise snaps current symbols to grid.</li>
+    <li>Emits <code>spin:reelLanded</code> + <code>spin:allLanded</code> + <code>spin:complete</code> with <code>wasSkipped: true</code>.</li>
+    <li>Emits <code>skip:completed</code>.</li>
+  </ol>
+
+  <p>
+    The <code>spinAndLand</code> test helper uses this exact path. That's why
+    it's synchronous — no ticker, no tweens, just direct symbol placement
+    and event emission.
+  </p>
+</Architecture>

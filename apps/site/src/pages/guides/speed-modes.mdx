@@ -1,0 +1,53 @@
+---
+layout: ../../layouts/Docs.astro
+title: Speed modes
+section: guides
+eyebrow: Building blocks
+description: Normal, turbo, super-turbo — and adding your own.
+---
+
+Speed profiles bundle all the numbers that decide how a spin feels:
+acceleration, spin speed, stop delays, bounce distance.
+
+## The three defaults
+
+```ts
+import { SpeedPresets } from 'pixi-reels';
+
+// SpeedPresets.NORMAL       — "relaxed" feel
+// SpeedPresets.TURBO        — faster stop, short accel
+// SpeedPresets.SUPER_TURBO  — almost-instant
+```
+
+Every `ReelSetBuilder` includes `NORMAL` by default unless you call `.speed()`
+yourself.
+
+## Switch at runtime
+
+```ts
+reelSet.speed.addProfile('turbo', SpeedPresets.TURBO);
+reelSet.setSpeed('turbo');
+reelSet.events.on('speed:changed', (p, prev) => console.log(p.name, prev.name));
+```
+
+## Custom profile
+
+```ts
+const CINEMATIC: SpeedProfile = {
+  name: 'cinematic',
+  spinDelay: 280,
+  spinSpeed: 38,
+  stopDelay: 180,
+  anticipationDelay: 1200,
+  bounceDistance: 14,
+  bounceDuration: 260,
+  accelerationEase: 'power3.in',
+  decelerationEase: 'elastic.out(1, 0.5)',
+  accelerationDuration: 420,
+  minimumSpinTime: 1400,
+};
+
+builder
+  .speed('cinematic', CINEMATIC)
+  .initialSpeed('cinematic');
+```

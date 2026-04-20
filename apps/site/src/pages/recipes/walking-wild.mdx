@@ -1,0 +1,84 @@
+---
+layout: ../../layouts/Recipe.astro
+title: Walking wild
+description: A sticky wild that advances one column every respin, pays on the way across, and exits off-screen. Classic "marching" wild mechanic in games like 9 Pots of Gold, Walking Wilds Pirates.
+tags: [wild, respin, sticky, positional]
+steps:
+  - Track the wild's (reel, row) position in game state between spins
+  - Every respin, build a result grid that places the wild at the new column
+  - After each landing, shift the stored column left by 1
+  - When column < 0, clear the wild and return to normal spins
+apis:
+  - ReelSet.setResult
+  - ReelSet.spin
+  - spin:complete event
+---
+
+import WalkingWildRecipe from '../../components/recipes/WalkingWildRecipe.tsx';
+
+<WalkingWildRecipe client:only="react" />
+
+Press Run repeatedly — watch the wild march one column left each spin until it exits off the board.
+
+The walking wild doesn't live in the library — it's a result-construction pattern. Each respin, you inject the wild at a fixed row but a different column, then decrement.
+
+```ts
+// Game state outside the ReelSet
+let walker: { reel: number; row: number; symbolId: string } | null = null;
+
+async function playSpin() {
+  const promise = reelSet.spin();
+
+  // If a walking wild is active, force its position into the result grid
+  const rawResult = await serverSpin();    // your mock or real server
+  const grid = rawResult.symbols;
+  if (walker) {
+    grid[walker.reel][walker.row] = walker.symbolId;
+  }
+
+  reelSet.setResult(grid);
+  await promise;
+
+  // Pays: evaluate the grid with walker in place (same rules as normal)
+
+  // Progress the walker
+  if (walker) {
+    walker.reel -= 1;
+    if (walker.reel < 0) {
+      walker = null;                       // exited the board — round over
+    } else {
+      // Not done — queue an auto-respin
+      setTimeout(playSpin, 600);
+    }
+  } else {
+    // Did this spin SUMMON a walker? (e.g. any landed wild at column 4)
+    const lastCol = grid.length - 1;
+    const wildRow = grid[lastCol].findIndex((s) => s === 'wild');
+    if (wildRow >= 0) {
+      walker = { reel: lastCol, row: wildRow, symbolId: 'wild' };
+      setTimeout(playSpin, 600);
+    }
+  }
+}
+```
+
+## What makes this feel good
+
+- **Same wild = same row across the walk.** Players read the migration as "my wild is coming".
+- **Auto-respin between steps.** The walker isn't an instant teleport — it's a new spin with the wild pinned to its new column. Use `setStopDelays` on the column the wild will land to emphasize it:
+  ```ts
+  reelSet.setStopDelays([100, 200, 300, 400, 1200]); // long pause on reel 4 if walker is landing there
+  ```
+- **Don't forget the exit.** Once the walker steps off column 0, clear it. Dramatic finale: a win spotlight on the path it walked.
+
+## Variations
+
+- **Multiple walkers** — store an array; every respin all walkers shift; a fresh wild becomes the newest walker.
+- **Column jumps** — walker jumps column randomly (+/-1, +/-2) instead of always -1.
+- **Row drift** — walker also drifts row by ±1 each step for a "wandering" feel.
+
+## Related recipes
+
+- [Sticky wild](/recipes/sticky-wild/) — wild stays in place across respins (no walking)
+- [Single-reel respin](/recipes/single-reel-respin/) — hold the reel the wild is on and respin the rest
+- [Anticipate a reel](/recipes/anticipate-a-reel/) — slow the column the walker is about to land on

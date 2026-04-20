@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>pixi-reels — Sandbox</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      background: #0e0e1a;
+      overflow: hidden;
+      font-family: system-ui, -apple-system, sans-serif;
+      color: #e0e0e0;
+    }
+    canvas { display: block; }
+    .banner {
+      position: fixed;
+      top: 12px;
+      left: 12px;
+      padding: 8px 14px;
+      background: rgba(0,0,0,0.55);
+      border: 1px solid #333;
+      border-radius: 6px;
+      font-size: 13px;
+      line-height: 1.4;
+      pointer-events: none;
+      z-index: 10;
+    }
+    .banner code {
+      background: rgba(255,255,255,0.08);
+      padding: 1px 6px;
+      border-radius: 3px;
+      font-family: ui-monospace, monospace;
+    }
+  </style>
+</head>
+<body>
+  <div class="banner">
+    Sandbox — edit <code>src/sandbox.ts</code> and save. The reels rebuild on HMR.
+  </div>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>

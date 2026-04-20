@@ -1,0 +1,101 @@
+import type { Container, Ticker } from 'pixi.js';
+
+/** Timing and animation profile for a speed mode. */
+export interface SpeedProfile {
+  readonly name: string;
+  /** Milliseconds between each reel starting to spin. */
+  readonly spinDelay: number;
+  /** Pixels per frame at full spin speed. */
+  readonly spinSpeed: number;
+  /** Milliseconds between each reel stopping. */
+  readonly stopDelay: number;
+  /** Milliseconds to hold anticipation phase. */
+  readonly anticipationDelay: number;
+  /** Pixels of overshoot when reel lands. */
+  readonly bounceDistance: number;
+  /** Milliseconds for bounce-back animation. */
+  readonly bounceDuration: number;
+  /** Optional GSAP ease string for acceleration. Default: 'power2.in'. */
+  readonly accelerationEase?: string;
+  /** Optional GSAP ease string for deceleration. Default: 'power2.out'. */
+  readonly decelerationEase?: string;
+  /** Milliseconds for acceleration phase. Default: 300. */
+  readonly accelerationDuration?: number;
+  /** Minimum spin time in ms before stop is allowed. Default: 500. */
+  readonly minimumSpinTime?: number;
+}
+
+/** Per-symbol configuration data. */
+export interface SymbolData {
+  /** Relative weight for random generation (higher = more frequent). */
+  weight: number;
+  /** Display layering order. Higher = in front. */
+  zIndex?: number;
+  /** If true, this symbol renders above the reel mask (for oversized animations). */
+  unmask?: boolean;
+}
+
+/** Configuration for the reel grid layout. */
+export interface ReelGridConfig {
+  /** Number of reel columns. */
+  reelCount: number;
+  /** Number of visible symbol rows per reel. */
+  visibleRows: number;
+  /** Symbol width in pixels. */
+  symbolWidth: number;
+  /** Symbol height in pixels. */
+  symbolHeight: number;
+  /** Gap between symbols. Default: { x: 0, y: 0 }. */
+  symbolGap?: { x: number; y: number };
+  /** Number of buffer symbols above and below the visible area. Default: 1. */
+  bufferSymbols?: number;
+}
+
+/** Extra symbols above/below config per reel. */
+export interface ReelExtraSymbols {
+  symbolsAbove: number;
+  symbolsBelow: number;
+}
+
+/** Offset modes for X-axis symbol positioning. */
+export type OffsetXMode = 'none' | 'trapezoid';
+
+/** Trapezoid perspective configuration. */
+export interface TrapezoidConfig {
+  mode: 'trapezoid';
+  widthDifference: number;
+  topWidthFactor: number;
+  bottomWidthFactor: number;
+}
+
+/** No offset configuration. */
+export interface NoOffsetConfig {
+  mode: 'none';
+}
+
+export type OffsetConfig = TrapezoidConfig | NoOffsetConfig;
+
+/** 2D matrix type (reel × row). */
+export type Matrix<T> = T[][];
+
+/** Simple 2D position. */
+export interface Position {
+  x: number;
+  y: number;
+}
+
+/** Mask configuration for the reel viewport. */
+export interface MaskConfig {
+  mask: Container;
+  position: Position;
+}
+
+/** Full internal configuration assembled by the builder. */
+export interface ReelSetInternalConfig {
+  grid: Required<ReelGridConfig>;
+  symbols: Record<string, SymbolData>;
+  speeds: Map<string, SpeedProfile>;
+  initialSpeed: string;
+  offset: OffsetConfig;
+  ticker: Ticker;
+}

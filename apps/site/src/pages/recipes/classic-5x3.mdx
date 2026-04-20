@@ -1,0 +1,102 @@
+---
+layout: ../../layouts/Recipe.astro
+title: Classic 5×3 starter
+description: Copy-paste starting point for a left-to-right line-pay slot — the foundation of 95% of slot games.
+tags: [starter, 5x3, line-pays]
+steps:
+  - Build a 5-reel × 3-row ReelSet with your sprite atlas
+  - Handle spin + call spotlight.cycle on wins
+  - Ship
+apis:
+  - ReelSetBuilder
+  - SpriteSymbol
+  - SpeedPresets
+  - SymbolSpotlight.cycle
+---
+
+import ClassicStarterRecipe from '../../components/recipes/ClassicStarterRecipe.tsx';
+
+<ClassicStarterRecipe client:only="react" />
+
+A complete working starter for a classic lines slot. Drop this into a Vite + PixiJS app, wire up `loadTextures()`, and you have a live reel set with spotlight-animated line wins.
+
+```ts
+import { Application } from 'pixi.js';
+import {
+  ReelSetBuilder,
+  SpriteSymbol,
+  SpeedPresets,
+  enableDebug,
+} from 'pixi-reels';
+
+const app = new Application();
+await app.init({ width: 900, height: 540, background: '#0a0d14' });
+document.body.appendChild(app.canvas);
+
+const textures = await loadTextures();   // your function
+
+const reelSet = new ReelSetBuilder()
+  .reels(5)
+  .visibleSymbols(3)
+  .symbolSize(140, 140)
+  .symbolGap(4, 4)
+  .symbols((r) => {
+    for (const id of ['cherry', 'lemon', 'orange', 'plum', 'bell', 'seven', 'bar', 'wild']) {
+      r.register(id, SpriteSymbol, { textures });
+    }
+  })
+  .weights({ cherry: 40, lemon: 38, orange: 32, plum: 22, bell: 14, seven: 6, bar: 10, wild: 4 })
+  .speed('normal', SpeedPresets.NORMAL)
+  .speed('turbo', SpeedPresets.TURBO)
+  .ticker(app.ticker)
+  .build();
+
+app.stage.addChild(reelSet);
+reelSet.x = 90;
+reelSet.y = 50;
+
+enableDebug(reelSet);
+
+document.getElementById('spin')!.addEventListener('click', async () => {
+  const result = await reelSet.spin();
+  const wins = detectLineWins(result.symbols);
+  if (wins.length) {
+    await reelSet.spotlight.cycle(
+      wins.map((w) => ({ positions: w.positions })),
+      { displayDuration: 1000 },
+    );
+  }
+});
+
+function detectLineWins(grid: string[][]) {
+  const wins = [];
+  for (let row = 0; row < grid[0].length; row++) {
+    const symbol = grid[0][row];
+    let streak = 1;
+    for (let r = 1; r < grid.length; r++) {
+      if (grid[r][row] === symbol || grid[r][row] === 'wild') streak++;
+      else break;
+    }
+    if (streak >= 3) {
+      wins.push({
+        symbolId: symbol,
+        positions: Array.from({ length: streak }, (_, i) => ({ reelIndex: i, rowIndex: row })),
+      });
+    }
+  }
+  return wins;
+}
+```
+
+## What you get
+
+- Five reels, three rows, typical casino feel
+- Normal + Turbo speed toggle (add `SpeedPresets.SUPER_TURBO` for a third)
+- Spotlight animation cycles through winning lines after each spin
+- `enableDebug` exposes `window.__PIXI_REELS_DEBUG` — inspect grid, trace events, log state
+
+## Where to go next
+
+- [Anticipate a reel](/recipes/anticipate-a-reel/) — tension on scatter hunts
+- [Animate paylines](/recipes/animate-paylines/) — fine-tune the spotlight cycle
+- [Texture atlas symbols](/recipes/texture-atlas-symbols/) — one HTTP request for all sprites

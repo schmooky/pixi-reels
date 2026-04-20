@@ -1,0 +1,72 @@
+---
+layout: ../../layouts/Docs.astro
+title: Getting started
+section: guides
+eyebrow: Start here
+description: Install pixi-reels and run your first reel set in under 2 minutes.
+---
+
+pixi-reels is a reel engine you drop into any PixiJS v8 app. This page gets
+you from a fresh repo to a spinning reel set.
+
+## Requirements
+
+- Node 20+ and pnpm (or npm/yarn)
+- A PixiJS v8 app — the engine plugs into `app.ticker`
+- If you want `SpineSymbol`, also install `@esotericsoftware/spine-pixi-v8`
+
+## Install
+
+```bash
+pnpm add pixi-reels pixi.js gsap
+# optional — for Spine symbols
+pnpm add @esotericsoftware/spine-pixi-v8
+```
+
+## Boot PixiJS, then build a ReelSet
+
+```ts
+import { Application } from 'pixi.js';
+import { ReelSetBuilder, SpriteSymbol } from 'pixi-reels';
+import { cherryTex, sevenTex, barTex } from './textures';
+
+const app = new Application();
+await app.init({ width: 900, height: 540, background: '#0a0d14' });
+document.body.appendChild(app.canvas);
+
+const reelSet = new ReelSetBuilder()
+  .reels(5)
+  .visibleSymbols(3)
+  .symbolSize(140, 140)
+  .symbols((r) => {
+    r.register('cherry', SpriteSymbol, { textures: { cherry: cherryTex } });
+    r.register('seven',  SpriteSymbol, { textures: { seven: sevenTex } });
+    r.register('bar',    SpriteSymbol, { textures: { bar: barTex } });
+  })
+  .weights({ cherry: 40, seven: 10, bar: 20 })
+  .ticker(app.ticker)
+  .build();
+
+app.stage.addChild(reelSet);
+
+const result = await reelSet.spin();
+console.log(result.symbols);
+```
+
+## Verify it works
+
+You should see the reels spin briefly, then land on three random rows of
+symbols. If you see nothing:
+
+| Symptom | Fix |
+|---|---|
+| Blank canvas | Call `reelSet.x = …; reelSet.y = …;` — it's anchored at (0,0). |
+| `ticker() must be called` | Forgot `.ticker(app.ticker)`. |
+| Symbols invisible | Forgot to call `.register(...)` for a weighted symbol id. |
+
+## Next: pick your path
+
+- **Build your first real slot** → [Your first reelset](/guides/your-first-reelset/)
+- **Learn the spin API** → [Spin lifecycle](/guides/spin-lifecycle/)
+- **Write tests for a mechanic** → [Cheats & testing](/guides/cheats-and-testing/)
+- **See what's possible** → [Demos catalog](/demos/)

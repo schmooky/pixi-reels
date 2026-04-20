@@ -1,0 +1,91 @@
+---
+import Base from './Base.astro';
+import { ChevronLeft } from 'lucide-react';
+import { articleLd, howToLd, breadcrumbLd, SITE } from '../lib/seo.ts';
+
+interface Props {
+  title?: string;
+  description?: string;
+  steps?: string[];
+  apis?: string[];
+  tags?: string[];
+  frontmatter?: {
+    title?: string;
+    description?: string;
+    steps?: string[];
+    apis?: string[];
+    tags?: string[];
+  };
+}
+const props = Astro.props as Props;
+const fm = props.frontmatter ?? {};
+const title = props.title ?? fm.title ?? 'Recipe';
+const description = props.description ?? fm.description ?? `${title} — step-by-step slot recipe built with pixi-reels.`;
+const steps = props.steps ?? fm.steps ?? [];
+const apis = props.apis ?? fm.apis ?? [];
+const tags = props.tags ?? fm.tags ?? [];
+const pathname = Astro.url.pathname;
+
+const jsonLd = [
+  articleLd({ title, description, path: pathname }),
+  howToLd({
+    name: title,
+    description,
+    path: pathname,
+    steps: steps.map((s, i) => ({ name: `Step ${i + 1}`, text: s })),
+  }),
+  breadcrumbLd([
+    { name: SITE.name, url: '/' },
+    { name: 'Recipes', url: '/recipes/' },
+    { name: title, url: pathname },
+  ]),
+];
+---
+<Base
+  title={`${title} · ${SITE.name} recipe`}
+  description={description}
+  path={pathname}
+  type="article"
+  article={{ section: 'Recipes', tags }}
+  keywords={tags}
+  jsonLd={jsonLd}
+>
+  <div class="container max-w-[880px] py-10 animate-fade-in">
+    <header class="mb-6">
+      <a href="/recipes/" class="mb-4 inline-flex items-center gap-1 font-mono text-xs uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors">
+        <ChevronLeft size={14} strokeWidth={2} />
+        All recipes
+      </a>
+      <div class="flex flex-wrap gap-1.5 mb-2">
+        {tags.map((t: string) => (
+          <span class="inline-flex items-center rounded-full border border-border bg-card/60 px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+            {t}
+          </span>
+        ))}
+      </div>
+      <h1 class="text-3xl font-semibold tracking-tight sm:text-4xl">{title}</h1>
+      {description && <p class="mt-2 text-muted-foreground max-w-[620px]">{description}</p>}
+    </header>
+
+    {steps.length > 0 && (
+      <div class="mb-6 rounded-xl border border-border bg-card p-4">
+        <div class="mb-2 text-xs font-semibold uppercase tracking-wider text-primary">Steps</div>
+        <ol class="list-decimal pl-5 space-y-1 text-sm text-foreground/80">
+          {steps.map((s: string) => <li>{s}</li>)}
+        </ol>
+        {apis.length > 0 && (
+          <div class="mt-4 flex flex-wrap gap-1.5 border-t border-border/60 pt-3">
+            <span class="text-[11px] uppercase tracking-wider text-muted-foreground">APIs</span>
+            {apis.map((a: string) => (
+              <code class="rounded bg-muted px-1.5 py-0.5 font-mono text-[11px] text-primary">{a}</code>
+            ))}
+          </div>
+        )}
+      </div>
+    )}
+
+    <article class="prose-docs">
+      <slot />
+    </article>
+  </div>
+</Base>

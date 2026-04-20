@@ -1,0 +1,18 @@
+# Ship only the build output + root docs (README / LICENSE / CHANGELOG).
+# Everything else stays out of the tarball.
+src/
+tests/
+coverage/
+node_modules/
+*.log
+*.tsbuildinfo
+.turbo/
+.vitest-cache/
+vite.config.ts
+vitest.config.ts
+tsconfig.json
+tsconfig.*.json
+.eslintrc*
+.eslintignore
+.prettierrc*
+.prettierignore

@@ -1,0 +1,54 @@
+---
+layout: ../../layouts/Recipe.astro
+title: How to anticipate a reel
+description: Slow a specific reel before it lands to build tension — the classic "hold" on reels 4/5 when 2 scatters are already visible.
+tags: [anticipation, tension]
+steps:
+  - During a spin, decide which reels deserve anticipation
+  - Call reelSet.setAnticipation([...reelIndices]) BEFORE calling setResult()
+  - The marked reels will enter the ANTICIPATION phase before STOP
+apis:
+  - ReelSet.setAnticipation
+  - AnticipationPhase
+  - spin:stopping event
+---
+
+import AnticipateRecipe from '../../components/recipes/AnticipateRecipe.tsx';
+
+<AnticipateRecipe client:only="react" />
+
+## The minimum code
+
+```ts
+const promise = reelSet.spin();
+
+// ...some time later, when the server response arrives:
+reelSet.setAnticipation([3, 4]);    // slow the last two reels
+reelSet.setResult(response.symbols);
+
+const result = await promise;
+```
+
+## Reading the anticipation in progress
+
+Listen to `spin:stopping` to tell UI state when any reel enters its stop-phase (anticipation counts as part of stopping):
+
+```ts
+reelSet.events.on('spin:stopping', (reelIndex) => {
+  if (anticipationReels.includes(reelIndex)) {
+    playTensionSound();
+  }
+});
+```
+
+## Customize the feel
+
+The wait time and easing come from the active `SpeedProfile.anticipationDelay`. Per-game feel: define a custom profile and switch to it for bonus rounds.
+
+```ts
+builder.speed('cinematic', {
+  ...SpeedPresets.NORMAL,
+  anticipationDelay: 1400,
+  decelerationEase: 'elastic.out(1, 0.5)',
+});
+```

@@ -1,0 +1,65 @@
+---
+layout: ../../layouts/Docs.astro
+title: Events
+section: wiki
+eyebrow: API
+description: Every typed event a ReelSet emits.
+---
+
+Events live on `reelSet.events` (typed `EventEmitter<ReelSetEvents>`) and on
+individual reels (`reel.events`, typed `EventEmitter<ReelEvents>`).
+
+## ReelSet events
+
+```ts
+type ReelSetEvents = {
+  'spin:start':        [];
+  'spin:allStarted':   [];
+  'spin:stopping':     [reelIndex: number];
+  'spin:reelLanded':   [reelIndex: number, symbols: string[]];
+  'spin:allLanded':    [result: SpinResult];
+  'spin:complete':     [result: SpinResult];
+  'skip:requested':    [];
+  'skip:completed':    [];
+  'speed:changed':     [profile: SpeedProfile, previous: SpeedProfile];
+  'spotlight:start':   [positions: SymbolPosition[]];
+  'spotlight:end':     [];
+  'destroyed':         [];
+};
+```
+
+### SpinResult
+
+```ts
+interface SpinResult {
+  symbols: string[][];   // final visible grid [reelIndex][rowIndex]
+  wasSkipped: boolean;   // true if skip() ended the spin
+  duration: number;      // ms from spin:start to spin:complete
+}
+```
+
+## Reel events
+
+```ts
+type ReelEvents = {
+  'phase:enter':     [phaseName: string];
+  'phase:exit':      [phaseName: string];
+  'symbol:created':  [symbolId: string, row: number];
+  'symbol:recycled': [symbolId: string, row: number];
+  'landed':          [symbols: string[]];
+  'destroyed':       [];
+};
+```
+
+## Usage
+
+```ts
+reelSet.events.on('spin:complete', (result) => { /* full result */ });
+
+const off = reelSet.events.on('spin:stopping', (i) => console.log('reel', i));
+off();   // unsubscribe
+
+reelSet.getReel(4).events.on('phase:enter', (name) => {
+  if (name === 'anticipation') playTensionMusic();
+});
+```

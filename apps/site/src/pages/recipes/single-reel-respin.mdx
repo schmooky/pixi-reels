@@ -1,0 +1,73 @@
+---
+layout: ../../layouts/Recipe.astro
+title: Single-reel respin
+description: Hold every other reel and respin just one — the classic nudge, and the mechanic every full-height stacked symbol needs.
+tags: [respin, hold, nudge]
+steps:
+  - After the main spin lands, pick which reel the player wants to respin
+  - Freeze the others by re-feeding their current visible symbols via setResult()
+  - Let the chosen reel land on a fresh target
+  - A stacked (full-column) symbol naturally locks its reel — same code path
+apis:
+  - ReelSet.spin
+  - ReelSet.setResult
+  - Reel.getSymbolAt
+---
+
+import SingleReelRespinRecipe from '../../components/recipes/SingleReelRespinRecipe.tsx';
+
+<SingleReelRespinRecipe client:only="react" />
+
+The whole board spins first. Then only the middle reel respins — the rest freeze in place. Every spin hits the same two methods: `spin()` and `setResult()`.
+
+## The one-liner
+
+> **`setResult(grid)` is the truth.** If a reel's target column already matches what it's showing, the reel has nothing to do and just holds still.
+
+That's the whole trick. You don't need a "hold this reel" API. Build the target grid with the frozen columns unchanged, and the library figures it out.
+
+```ts
+async function respinReel(reelIndex: number) {
+  const grid: string[][] = [];
+  for (let r = 0; r < reelSet.reels.length; r++) {
+    if (r === reelIndex) {
+      // New target for the one reel that is respinning.
+      grid.push(await server.rollReel(r));
+    } else {
+      // Snapshot the visible column — the reel won't move.
+      const reel = reelSet.reels[r];
+      const col: string[] = [];
+      for (let row = 0; row < reel.getVisibleSymbols().length; row++) {
+        col.push(reel.getSymbolAt(row).symbolId);
+      }
+      grid.push(col);
+    }
+  }
+
+  const p = reelSet.spin();
+  reelSet.setResult(grid);
+  await p;
+}
+```
+
+## Why it works for stacked symbols too
+
+A "stacked" symbol is one that fills an entire reel column in the final grid — think a wild that covers all three rows of reel 3. When you want a follow-up respin that _keeps_ that stacked wild in place, you use the exact same code path. Put the stacked column into `grid[3]` and the reel doesn't move. No special API, no flag on the reel.
+
+```ts
+// Mark the stacked reel as held and respin the rest.
+grid[reelWithStack] = ['wild', 'wild', 'wild'];   // snapshot of what's there
+grid[otherReel]    = await server.rollReel(otherReel);
+```
+
+## Variations
+
+- **Respin-on-demand button** — give the player a "respin reel 3" button that costs a fraction of the base bet.
+- **Auto-nudge** — if `getSymbolAt(0)` on a reel is the scatter symbol, silently respin the other reels to try for the remaining scatters.
+- **Staggered hold & win** — hold every locked coin, respin every free cell individually; see [hold-and-win](/recipes/hold-and-win/) for the board-wide version.
+
+## Related recipes
+
+- [Hold & Win](/recipes/hold-and-win/) — the board-wide respin, where _every cell_ is either held or respinning
+- [Sticky wild](/recipes/sticky-wild/) — wilds that stick across normal spins
+- [Slam-stop](/recipes/slam-stop/) — letting the player end a spin early

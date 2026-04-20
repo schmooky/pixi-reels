@@ -1,0 +1,72 @@
+---
+layout: ../../layouts/Recipe.astro
+title: Hold & Win respin
+description: Coins lock on land; every new coin resets the respin counter; fill the grid for the grand jackpot. The "coin" formula every studio is shipping in 2024.
+tags: [starter, hold-and-win, respin, jackpot]
+steps:
+  - Maintain a held Map of already-landed coin positions
+  - Each respin, build a grid that keeps held cells and lands 0..N new ones
+  - On every new coin, reset the respin counter to max
+  - When the grid is fully held — grand jackpot
+apis:
+  - ReelSet.spin
+  - ReelSet.setResult
+  - ReelSet.reels / getVisibleSymbols
+---
+
+import HoldAndWinStarterRecipe from '../../components/recipes/HoldAndWinStarterRecipe.tsx';
+
+<HoldAndWinStarterRecipe client:only="react" />
+
+Press Run a few times — every coin that lands stays put on the next respin.
+
+The full Hold & Win loop. Combines `setResult()` with a game-side `held` map to keep coins sticky across respins. The library doesn't own the mechanic — it gives you deterministic landings and event hooks; the respin accounting is yours.
+
+```ts
+import { ReelSetBuilder, SpriteSymbol } from 'pixi-reels';
+
+const held = new Map<string, string>();   // "r,row" -> symbolId
+
+async function holdAndWinRound() {
+  const maxRespins = 3;
+  let respinsLeft = maxRespins;
+
+  while (respinsLeft > 0) {
+    const promise = reelSet.spin();
+
+    // Produce a grid that keeps held coins in place, lands 0..N new coins
+    const grid = buildGridKeepingHeld(held);
+    reelSet.setResult(grid);
+    const result = await promise;
+
+    const newCoins = findNewCoins(result.symbols, held);
+    if (newCoins.length > 0) {
+      respinsLeft = maxRespins;     // reset on every new coin
+      for (const c of newCoins) held.set(`${c.r},${c.row}`, c.symbolId);
+    } else {
+      respinsLeft--;
+    }
+
+    const totalCells = reelSet.reels.length * reelSet.reels[0].getVisibleSymbols().length;
+    if (held.size === totalCells) {
+      console.log('GRAND JACKPOT');
+      break;
+    }
+  }
+}
+```
+
+## The three moving parts
+
+1. **`buildGridKeepingHeld(held)`** — every held position MUST appear with its locked symbolId; the rest are random / from your weighted generator.
+2. **`findNewCoins(grid, held)`** — any coin on the grid that isn't already in `held` is a new land.
+3. **Respin counter** — resets to `maxRespins` on every new land, decrements on every dry spin. When it hits zero, the round ends.
+
+## Full playable demo
+
+For the playable version with a cheat panel (force landing, guaranteed jackpot, reset), see the [hold-and-win-respin demo](/demos/hold-and-win-respin/).
+
+## Related recipes
+
+- [Near-miss](/recipes/near-miss/) — tease a coin just off the board
+- [Anticipate a reel](/recipes/anticipate-a-reel/) — slow the final reel when close to a jackpot

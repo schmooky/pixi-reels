@@ -1,0 +1,60 @@
+---
+import { DEMOS } from '../content/demos.ts';
+import { ArrowRight } from 'lucide-react';
+---
+<section class="py-20">
+  <div class="container">
+    <div class="mx-auto max-w-2xl text-center mb-12">
+      <div class="inline-flex items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-primary">
+        Mechanics catalog
+      </div>
+      <h2 class="mt-4 text-balance text-3xl font-semibold tracking-tight sm:text-4xl">
+        Every mechanic,<br />
+        <span class="gradient-text">force any outcome.</span>
+      </h2>
+      <p class="mx-auto mt-4 max-w-xl text-muted-foreground">
+        Each demo is a live sandbox with the full source, a setup walkthrough,
+        and a cheat panel that pins the result you want — no waiting on RNG.
+      </p>
+    </div>
+
+    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {DEMOS.map((d) => (
+        <a
+          href={`/demos/${d.slug}/`}
+          class="group relative overflow-hidden rounded-xl border border-border bg-card p-5 transition-all hover:border-primary/40 hover:-translate-y-0.5"
+        >
+          <div class="flex flex-wrap gap-1.5 mb-3">
+            {d.tags.map((t) => (
+              <span class="rounded-full bg-secondary/70 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                {t}
+              </span>
+            ))}
+          </div>
+          <h3 class="text-base font-semibold tracking-tight">{d.title}</h3>
+          <p class="mt-1 font-mono text-[12px] text-accent/90">{d.subtitle}</p>
+          <p class="mt-2 text-sm text-muted-foreground">{d.summary}</p>
+          <ul class="mt-3 space-y-1 text-[12px] font-mono">
+            {d.cheatHighlights.slice(0, 2).map((c) => (
+              <li class="flex items-center gap-1.5 text-muted-foreground/80">
+                <span class="text-primary">◆</span>{c}
+              </li>
+            ))}
+          </ul>
+          <div class="mt-4 inline-flex items-center gap-1 text-xs font-medium text-foreground/60 transition-colors group-hover:text-foreground">
+            Open demo <ArrowRight size={13} strokeWidth={2} />
+          </div>
+        </a>
+      ))}
+    </div>
+
+    <div class="mt-10 flex justify-center">
+      <a
+        href="/demos/"
+        class="inline-flex h-10 items-center gap-1 rounded-lg border border-border bg-card/50 px-5 text-sm font-medium transition-colors hover:bg-secondary/50"
+      >
+        See all demos <ArrowRight size={14} strokeWidth={2} />
+      </a>
+    </div>
+  </div>
+</section>

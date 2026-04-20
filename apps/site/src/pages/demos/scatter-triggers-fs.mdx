@@ -1,0 +1,70 @@
+---
+layout: ../../layouts/Demo.astro
+title: Scatter triggers Free Spins
+subtitle: 5×3 · 3+ scatters anywhere → FS · anticipation on near-miss
+tags: [scatter, free-spins, anticipation]
+description: Land three scatters anywhere on the grid, play their win animation, transition to Free Spins. Plus a near-miss cheat for tension.
+---
+
+import ScatterFsDemo from '../../components/demos/ScatterFsDemo.tsx';
+
+<ScatterFsDemo client:only="react" />
+
+## Why this page exists
+
+The "3 scatters anywhere" rule is the most common FS trigger in the industry.
+The interesting part isn't the detection — it's *producing it on demand* so you can polish the transition without playing 100 spins.
+
+## Setup
+
+### 1. Register a scatter symbol
+
+```ts
+builder.symbols((r) => {
+  r.register('scatter', BlockSymbol, { colors: { scatter: 0xffd24c } });
+});
+builder.weights({ scatter: 2 });   // low natural frequency
+```
+
+### 2. Detect on completion
+
+```ts
+reelSet.events.on('spin:complete', ({ symbols }) => {
+  const count = symbols.flat().filter((s) => s === 'scatter').length;
+  if (count >= 3) enterFreeSpins(count * 5);
+});
+```
+
+### 3. Anticipation on near-miss
+
+If the server response says "2 scatters visible and reel 5 is spinning," call
+`setAnticipation` before `setResult` to slow the last reel.
+
+```ts
+const promise = reelSet.spin();
+setTimeout(() => {
+  reelSet.setAnticipation([4]);       // slow reel 5
+  reelSet.setResult(response.symbols);
+}, 200);
+```
+
+### 4. Test it
+
+The `forceScatters(3, 'scatter')` cheat makes this deterministic:
+
+```ts
+const { reelSet, spinAndLand } = createTestReelSet({
+  reels: 5, visibleRows: 3, symbolIds: ['a','b','c','scatter'],
+});
+const engine = new CheatEngine({ reelCount: 5, visibleRows: 3, symbolIds: ['a','b','c','scatter'], seed: 1 });
+engine.register({ id: 's', label: 's', enabled: true, cheat: forceScatters(3, 'scatter') });
+
+await spinAndLand(engine.next().symbols);
+expect(countSymbol(reelSet, 'scatter')).toBeGreaterThanOrEqual(3);
+```
+
+## Cheats on this page
+
+- **Force 3 scatters** (default on) — guarantees the trigger.
+- **Force 4 scatters** — retrigger territory.
+- **Near-miss on reel 5** — 2 scatters on reels 1–4, reel 5 blanks with anticipation.

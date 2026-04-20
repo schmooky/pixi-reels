@@ -1,0 +1,117 @@
+# pixi-reels
+
+> Open-source, batteries-included slot machine reel engine for PixiJS v8. Fluent builder API, typed domain events, deterministic testing utilities, and a catalog of live mechanic demos (classic lines, scatters → free spins, hold & win, cascades, sticky wilds, anticipation + slam-stop). MIT licensed. TypeScript. Works with any PixiJS v8 app.
+
+Key facts:
+- Latest version: 0.1
+- License: MIT
+- Language: TypeScript (ESM + CJS dual format)
+- Peer deps: pixi.js ^8.17, gsap ^3.14 (+ optional @esotericsoftware/spine-pixi-v8)
+- Repo: https://github.com/schmooky/pixi-reels
+- Test count: 85 vitest tests passing
+- Demo count: 6 live mechanic sandboxes on the site
+- Docs site: https://pixi-reels.dev
+
+## Quick install
+
+```bash
+pnpm add pixi-reels pixi.js gsap
+```
+
+## Shortest working example
+
+```ts
+import { Application } from 'pixi.js';
+import { ReelSetBuilder, SpriteSymbol } from 'pixi-reels';
+
+const app = new Application();
+await app.init({ width: 900, height: 540 });
+document.body.appendChild(app.canvas);
+
+const reelSet = new ReelSetBuilder()
+  .reels(5).visibleSymbols(3).symbolSize(140, 140)
+  .symbols((r) => { r.register('cherry', SpriteSymbol, { textures: { cherry } }); })
+  .ticker(app.ticker)
+  .build();
+app.stage.addChild(reelSet);
+
+const result = await reelSet.spin(); // { symbols, wasSkipped, duration }
+```
+
+## Essential docs
+
+- /guides/getting-started — install + first reel set
+- /guides/your-first-reelset — 5-step tutorial with verify checks
+- /guides/symbols — register Sprite, AnimatedSprite, Spine, or custom symbols
+- /guides/spin-lifecycle — spin → start → spin → anticipation → stop events
+- /guides/speed-modes — Normal, Turbo, SuperTurbo profiles
+- /guides/win-animations — spotlight.cycle() + playWin()
+- /guides/cheats-and-testing — FakeTicker + CheatEngine for deterministic tests
+- /guides/debugging — debugSnapshot(), debugGrid(), enableDebug()
+
+## API reference
+
+- /wiki/api-reelset — main orchestrator (spin, setResult, setAnticipation, skip, setSpeed)
+- /wiki/api-builder — fluent builder (reels, visibleSymbols, symbolSize, symbols, weights, ticker)
+- /wiki/api-events — every typed event: spin:start, spin:allStarted, spin:stopping, spin:reelLanded, spin:allLanded, spin:complete, skip:requested, skip:completed, speed:changed, spotlight:start, spotlight:end, destroyed
+- /wiki/api-phases — StartPhase, SpinPhase, AnticipationPhase, StopPhase (ReelPhase base class)
+- /wiki/glossary — slot terminology (anticipation, scatter, wild, hold & win, RTP, cascade, near-miss)
+
+## Spine demos (using real Bonanza-style skeletons)
+
+Canonical animation vocabulary per symbol skeleton:
+- idle · landing · win · disintegration · reactions/react_{u,d,l,r,ul,ur,dl,dr}
+
+- /spine/landing-animation — fire `landing` on each symbol via spin:reelLanded listener
+- /spine/win-celebration — parallel `playWin()` on matched cells, `scatter_win` for scatters
+- /spine/reactions — 8-way `reactions/react_<dir>` on non-winners pointing at nearest winner (Chebyshev distance)
+- /spine/disintegrate-cascade — Spine `disintegration` animation as onWinnersVanish in runCascade
+
+`SpineReelSymbol` API: playWin(), playLanding(), playOut(), playBlur(), playOnTrack(track, animName), get spine() for raw Spine access, per-symbol animations override ({ low1: { idle: 'ide' } }) to patch asset typos without editing assets.
+
+## Architecture (visual deep dive, no UML/mermaid)
+
+- /architecture/overview — component graph: builder → reel set → reels + subsystems
+- /architecture/classes — composition tree, ownership chain, Disposable hierarchy
+- /architecture/events — timeline of every event in a spin (reel-set + per-reel tracks)
+- /architecture/spin-lifecycle — state machine per reel: IDLE → START → SPIN → [ANTICIPATION] → STOP → LANDED
+- /architecture/cascade — gravity physics; why survivors with no winners below them must not move
+- /architecture/testing — FakeTicker + HeadlessSymbol + createTestReelSet harness
+
+## Recipes (single-idea how-tos with live micro-demos)
+
+- /recipes/remove-symbol — fade+shrink a cell out before the next stage lands (cascade pop)
+- /recipes/anticipate-a-reel — reelSet.setAnticipation([reelIndex]) before setResult() slows that reel
+- /recipes/expand-a-symbol — animate symbol.view.scale.y from 1 to visibleRows on spin:complete
+- /recipes/animate-paylines — reelSet.spotlight.cycle({ lines, perLine, dim, repeat })
+- /recipes/slam-stop — if isSpinning, call skip(); SpinResult.wasSkipped indicates the outcome
+- /recipes/near-miss — N-1 scatters + setAnticipation on the near reel (or use forceNearMiss cheat)
+- /recipes/texture-atlas-symbols — PIXI.Assets.load(atlas.json) returns a Spritesheet with `textures` keyed by frame id. Pass the map to SpriteSymbol (crisp) or BlurSpriteSymbol (blur-on-spin). Covers atlas + separate-images modes.
+
+## Mechanic demos (live sandboxes with cheats)
+
+- /demos/classic-lines — 5×3 left-to-right line wins + spotlight cycle. Cheat: force a line, force full-grid jackpot.
+- /demos/scatter-triggers-fs — 5×3 → 3+ scatters trigger free spins. Cheat: force N scatters, near-miss on reel 5.
+- /demos/hold-and-win-respin — 5×3 coins lock, respin until grid fills. Cheat: guaranteed coin each spin.
+- /demos/cascade-multiplier — 5×5 cascade/tumble with multiplier. Accepts array or AsyncIterable of stage grids (batch or streamed server responses).
+- /demos/sticky-wilds — wilds persist N spins. Cheat: force wild on specific cell.
+- /demos/anticipation-slam — slow-hold last reels or skip() for slam-stop.
+- /demos/sprite-classic — 5×3 with real sprite art from a TexturePacker atlas (schmooky/prototype-symbols). Motion-blur on SPIN, crisp on land. BlurSpriteSymbol (examples/shared/BlurSpriteSymbol.ts) swaps textures on `phase:enter 'spin' / 'stop'`.
+
+## Testing utilities (exported from `pixi-reels`)
+
+- `FakeTicker` — drop-in PIXI.Ticker replacement with `tick(ms)`
+- `HeadlessSymbol` — zero-render symbol for tests
+- `createTestReelSet({ reels, visibleRows, symbolIds })` — headless ReelSet + FakeTicker
+- `spinAndLand(reelSet, grid)` — synchronous deterministic spin lifecycle
+- `expectGrid(reelSet, grid)` — diff-friendly grid assertion
+- `captureEvents(reelSet, names)` — in-order event log
+- `countSymbol(reelSet, id)` — visible count
+
+## Cheats library (examples/shared/cheats.ts)
+
+CheatEngine + `forceGrid`, `forceLine(row, id)`, `forceScatters(n, id)` (exact count), `forceNearMiss`, `forceCell`, `holdAndWinProgress`, `cascadeSequence`, `cascadingStages` (returns full stage sequence in meta), `forceAnticipation`. All seeded with Mulberry32 PRNG for reproducibility.
+
+## Cascade loop helper (examples/shared/cascadeLoop.ts)
+
+`runCascade(reelSet, stages, opts)` — accepts `string[][][]` or `AsyncIterable<string[][]>` so the same code path works for batch responses and streamed server stages. Identifies winners via `diffCells(prev, next)`, fades them out, spins to the next stage. Customizable `onWinnersVanish`, `onStageLanded`, `vanishDuration`, `pauseBetween`.

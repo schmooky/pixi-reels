@@ -1,0 +1,28 @@
+---
+import Docs from '../../layouts/Docs.astro';
+import { GUIDES_NAV } from '../../content/nav.ts';
+---
+<Docs title="Guides" section="guides" eyebrow="Learn" description="Step-by-step guides for pixi-reels.">
+  <p>
+    Walkthroughs that take you from zero to shipping. Start with <a href="/guides/getting-started/">Getting started</a>, then pick whichever topic matches what you need next.
+  </p>
+
+  <div class="mt-8 space-y-8">
+    {GUIDES_NAV.map((section) => (
+      <section>
+        <h2 class="mb-3">{section.title}</h2>
+        <div class="grid gap-2 not-prose">
+          {section.items.map((item) => (
+            <a
+              href={item.href}
+              class="group flex items-center justify-between rounded-lg border border-border bg-card px-4 py-3 text-sm transition-colors hover:border-primary/40 hover:bg-secondary/30"
+            >
+              <span class="font-medium">{item.label}</span>
+              <span class="text-muted-foreground transition-transform group-hover:translate-x-0.5">→</span>
+            </a>
+          ))}
+        </div>
+      </section>
+    ))}
+  </div>
+</Docs>

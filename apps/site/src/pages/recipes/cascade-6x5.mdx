@@ -1,0 +1,83 @@
+---
+layout: ../../layouts/Recipe.astro
+title: Cascade 6×5 tumble
+description: Modern tumble/cascade mechanic with an ever-growing win multiplier — the Megaways-adjacent style every slot studio is shipping.
+tags: [starter, cascade, 6x5, multiplier]
+steps:
+  - Build a 6×5 ReelSet with CascadeMode as the spinning mode
+  - Spin, detect cluster/line wins, spotlight them
+  - Tumble (remove winners, let survivors fall, refill from top) and repeat
+  - Each tumble increments the win multiplier
+apis:
+  - CascadeMode
+  - ReelSetBuilder.spinningMode
+  - ReelSet.setResult
+  - SymbolSpotlight.cycle
+---
+
+import CascadeStarterRecipe from '../../components/recipes/CascadeStarterRecipe.tsx';
+
+<CascadeStarterRecipe client:only="react" />
+
+A cascade/tumble slot on the engine. The library supplies the visual tumble animation via `CascadeMode` and `setResult()` to land each new grid deterministically — the cascade logic (cluster detection, survivor shift, refill) is yours to write.
+
+```ts
+import { ReelSetBuilder, SpriteSymbol, CascadeMode } from 'pixi-reels';
+
+const reelSet = new ReelSetBuilder()
+  .reels(6)
+  .visibleSymbols(5)
+  .symbolSize(110, 110)
+  .symbols((r) => {
+    for (const id of SYMBOLS) r.register(id, SpriteSymbol, { textures });
+  })
+  .spinningMode(new CascadeMode())
+  .ticker(app.ticker)
+  .build();
+
+app.stage.addChild(reelSet);
+
+let multiplier = 1;
+document.getElementById('spin')!.addEventListener('click', async () => {
+  multiplier = 1;
+  let grid = (await reelSet.spin()).symbols;
+
+  while (true) {
+    const wins = detectClusterWins(grid);          // your function
+    if (wins.length === 0) break;
+
+    await reelSet.spotlight.cycle(
+      wins.map((w) => ({ positions: w.positions })),
+      { displayDuration: 700 },
+    );
+
+    multiplier++;
+    showMultiplier(multiplier);
+
+    const next = tumble(grid, wins);               // remove + fall + refill
+    const promise = reelSet.spin();
+    reelSet.setResult(next);
+    grid = (await promise).symbols;
+  }
+});
+```
+
+## The cascade loop is your code
+
+pixi-reels deliberately doesn't own the tumble rules — every game has quirks (cluster size, adjacency, minimum matches, sticky survivors). What you get from the library:
+
+- **CascadeMode** as the spinning behaviour — symbols fall from above into the visible window
+- **setResult()** on every tumble so each stage's grid is deterministic
+- **spotlight.cycle** for the between-tumble win reveal
+
+Your responsibilities:
+
+- `detectClusterWins(grid)` — cluster/adjacency rules
+- `tumble(grid, wins)` — compute the next-stage grid (surviving symbols + fresh fill)
+- `showMultiplier(n)` — the UI meter
+
+## Related recipes
+
+- [Remove symbol](/recipes/remove-symbol/) — fade-out animation between tumble stages
+- [Single-reel respin](/recipes/single-reel-respin/) — another selective-respin pattern using the same `setResult` hold trick
+- [Hold & Win](/recipes/hold-and-win/) — a different respin pattern for comparison

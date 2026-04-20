@@ -1,0 +1,51 @@
+---
+layout: ../../layouts/Demo.astro
+title: Anticipation & slam-stop
+subtitle: 5×3 · slow the last reels, or let the player skip() them
+tags: [anticipation, skip]
+description: Two tension tools — anticipation (slow a reel to tease a trigger) and skip (player smashes the button to slam-land now).
+---
+
+import AnticipationDemo from '../../components/demos/AnticipationDemo.tsx';
+
+<AnticipationDemo client:only="react" />
+
+## Anticipation
+
+`ReelSet.setAnticipation([4])` tells reel 5 to enter an ANTICIPATION phase
+before STOP. Use it when the grid so far *could* still become a big win.
+
+```ts
+const promise = reelSet.spin();
+setTimeout(() => {
+  const scatters = countScattersSoFar(response.symbols.slice(0, 3));
+  if (scatters === 2) reelSet.setAnticipation([3, 4]);
+  reelSet.setResult(response.symbols);
+}, 200);
+```
+
+## Slam-stop (skip)
+
+`ReelSet.skip()` force-lands every reel immediately, using the target from
+`setResult()` if one was set. The returned `SpinResult` has `wasSkipped: true`.
+
+```ts
+spinButton.addEventListener('click', () => {
+  if (reelSet.isSpinning) reelSet.skip();
+  else reelSet.spin();
+});
+```
+
+## Cheats on this page
+
+- **Force anticipation on reels 4+5** (default on) — every spin slow-holds the last two reels.
+- **Near-miss** — 2 scatters visible, reel 5 blanks, anticipation still fires.
+- **Full 3-scatter trigger** — the anticipation pays off.
+
+## Test
+
+```ts
+engine.register({ id: 'a', label: 'a', enabled: true, cheat: forceAnticipation([3, 4]) });
+const r = engine.next();
+expect(r.anticipationReels).toEqual([3, 4]);
+```

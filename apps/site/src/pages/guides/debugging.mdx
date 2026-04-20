@@ -1,0 +1,67 @@
+---
+layout: ../../layouts/Docs.astro
+title: Debugging
+section: guides
+eyebrow: For authors
+description: Snapshot the reel state as JSON, render an ASCII grid, trace every event.
+---
+
+PixiJS draws to a canvas, so AI agents and automated tooling can't *see* the
+reels. pixi-reels ships three utilities that solve this: `debugSnapshot`,
+`debugGrid`, and `enableDebug`.
+
+## One-liner: attach to window
+
+```ts
+import { enableDebug } from 'pixi-reels';
+enableDebug(reelSet);
+// → window.__PIXI_REELS_DEBUG is now live
+```
+
+In the browser devtools console:
+
+```js
+__PIXI_REELS_DEBUG.log();
+// [pixi-reels debug] spinning=false speed=normal
+// ┌────────┬────────┬────────┬────────┬────────┐
+// │ cherry │ lemon  │ bar    │ seven  │ cherry │
+// │ plum   │ cherry │ wild   │ lemon  │ orange │
+// │ orange │ bell   │ cherry │ plum   │ bell   │
+// └────────┴────────┴────────┴────────┴────────┘
+
+__PIXI_REELS_DEBUG.trace();  // logs every domain event from now on
+```
+
+## Programmatic snapshot
+
+```ts
+import { debugSnapshot, debugGrid } from 'pixi-reels';
+
+const snap = debugSnapshot(reelSet);
+// snap: { isSpinning, currentSpeed, spotlightActive, reelCount, visibleRows, reels: [...], grid: [[...], ...] }
+
+console.log(debugGrid(reelSet));   // ASCII table
+```
+
+## Using snapshots in tests
+
+The test harness pipes snapshots into readable error messages automatically
+when `expectGrid()` fails:
+
+```
+Grid mismatch:
+  reel 0 row 1: expected "seven" got "cherry"
+
+Current grid:
+┌────────┬────────┬────────┬────────┬────────┐
+│ cherry │ bar    │ wild   │ plum   │ seven  │
+│ cherry │ lemon  │ orange │ bell   │ seven  │
+│ bar    │ bell   │ wild   │ bar    │ cherry │
+└────────┴────────┴────────┴────────┴────────┘
+```
+
+## Gotchas
+
+- `debugGrid` returns plain text — safe to log, assert against, or paste anywhere.
+- `enableDebug` is a no-op in Node (it checks `typeof window`).
+- Snapshots contain no PixiJS objects, so `JSON.stringify()` will always work.

@@ -1,0 +1,53 @@
+---
+layout: ../../layouts/Docs.astro
+title: Win animations
+section: guides
+eyebrow: Building blocks
+description: Highlight winning symbols, cycle through lines, and dim the losers.
+---
+
+When the reels land, you want the win to feel earned. pixi-reels ships a
+`SymbolSpotlight` that dims non-winners, promotes winners, and cycles through
+multiple lines automatically.
+
+## One win, one line
+
+```ts
+reelSet.events.on('spin:complete', async (result) => {
+  const wins = detectWins(result.symbols);      // your logic
+  if (wins.length === 0) return;
+
+  await reelSet.spotlight.showLine({
+    positions: wins[0].positions,                // [{reelIndex, rowIndex}, ...]
+    duration: 1200,
+  });
+});
+```
+
+## Multiple lines, cycled
+
+```ts
+await reelSet.spotlight.cycle({
+  lines: wins.map((w) => ({ positions: w.positions })),
+  perLine: 1000,
+  dim: 0.3,        // non-winners fade to 30% alpha
+  repeat: 1,
+});
+```
+
+## Play per-symbol animations
+
+If your symbol class implements `playWin()` (Spine and AnimatedSprite do by
+default), pixi-reels calls it on each highlighted cell.
+
+```ts
+await reelSet.spotlight.showLine({
+  positions: wins[0].positions,
+  playWin: true,   // invoke symbol.playWin() on each
+});
+```
+
+## Events
+
+Listen to `spotlight:start` and `spotlight:end` to gate the UI (disable the
+spin button while a win is being celebrated).

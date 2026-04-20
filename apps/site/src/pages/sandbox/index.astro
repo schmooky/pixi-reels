@@ -1,0 +1,25 @@
+---
+import Base from '../../layouts/Base.astro';
+import Sandbox from '../../components/Sandbox.tsx';
+---
+<Base title="Sandbox · pixi-reels" description="Live in-browser TypeScript playground for pixi-reels. Edit, Run, see reels update instantly.">
+  <section class="border-b border-border/60 py-10">
+    <div class="container max-w-3xl text-center">
+      <div class="inline-flex items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-primary">
+        Live playground
+      </div>
+      <h1 class="mt-4 text-balance text-3xl font-semibold tracking-tight sm:text-4xl">
+        Edit. Run. <span class="gradient-text">Spin.</span>
+      </h1>
+      <p class="mx-auto mt-3 max-w-xl text-sm text-muted-foreground">
+        Write TypeScript in the editor, press Run (or <code class="rounded bg-secondary/70 px-1.5 py-0.5 font-mono text-[11px]">Cmd/Ctrl</code>+<code class="rounded bg-secondary/70 px-1.5 py-0.5 font-mono text-[11px]">Enter</code>) — the reels rebuild from your code. The prototype atlas is preloaded; <code class="rounded bg-secondary/70 px-1.5 py-0.5 font-mono text-[11px]">ReelSetBuilder</code>, <code class="rounded bg-secondary/70 px-1.5 py-0.5 font-mono text-[11px]">SpeedPresets</code>, and a handful of helpers are in scope as globals.
+      </p>
+    </div>
+  </section>
+
+  <section class="py-6 pb-14">
+    <div class="container">
+      <Sandbox client:only="react" />
+    </div>
+  </section>
+</Base>

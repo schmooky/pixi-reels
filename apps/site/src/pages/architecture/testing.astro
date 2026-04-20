@@ -1,0 +1,208 @@
+---
+import Architecture from '../../layouts/Architecture.astro';
+import Legend from '../../components/arch/Legend.astro';
+---
+<Architecture
+  title="Testing model"
+  subtitle="Why you can run a full spin in Node, with zero renderer."
+  eyebrow="Harness"
+>
+  <p>
+    pixi-reels was designed so mechanics, not pixels, are what you test.
+    The testing module gives you a real <code>ReelSet</code> running against a
+    fake ticker and headless symbols — no canvas, no DOM, no WebGL. Every
+    test in the library's suite runs in Node under vitest; each takes
+    milliseconds.
+  </p>
+
+  <h2>The data flow</h2>
+
+  <div class="not-prose my-8">
+    <div class="rounded-2xl border border-border bg-card p-6 overflow-x-auto">
+      <svg viewBox="0 0 920 500" class="w-full h-auto min-w-[720px]">
+
+        <!-- Test file -->
+        <g>
+          <rect x="40" y="40" width="200" height="80" rx="14" fill="hsl(var(--primary))" />
+          <text x="140" y="70" text-anchor="middle" font-family="Inter, sans-serif" font-size="14" font-weight="700" fill="hsl(var(--primary-foreground))">my-spin.test.ts</text>
+          <text x="140" y="90" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="10" fill="hsl(var(--primary-foreground) / 0.85)">describe · it · expect</text>
+          <text x="140" y="105" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="10" fill="hsl(var(--primary-foreground) / 0.85)">vitest node environment</text>
+        </g>
+
+        <!-- Arrow -->
+        <path d="M 240 80 L 300 80" stroke="hsl(var(--primary))" stroke-width="2" fill="none" marker-end="url(#arr-p)" />
+        <text x="270" y="68" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="10" fill="hsl(var(--primary))">import</text>
+
+        <!-- Testing module -->
+        <g>
+          <rect x="300" y="30" width="380" height="160" rx="14" fill="hsl(var(--accent) / 0.08)" stroke="hsl(var(--accent))" stroke-width="2" />
+          <text x="490" y="55" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="11" font-weight="700" fill="hsl(var(--accent))" letter-spacing="0.08em">pixi-reels/src/testing</text>
+
+          <g transform="translate(320, 70)">
+            <rect width="155" height="50" rx="10" fill="hsl(var(--card))" stroke="hsl(var(--border-strong))" stroke-width="1.5" />
+            <text x="77.5" y="20" text-anchor="middle" font-family="Inter, sans-serif" font-size="12" font-weight="600" fill="hsl(var(--foreground))">FakeTicker</text>
+            <text x="77.5" y="36" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="9" fill="hsl(var(--muted-foreground))">.tick(ms) · .deltaMS</text>
+          </g>
+          <g transform="translate(495, 70)">
+            <rect width="165" height="50" rx="10" fill="hsl(var(--card))" stroke="hsl(var(--border-strong))" stroke-width="1.5" />
+            <text x="82.5" y="20" text-anchor="middle" font-family="Inter, sans-serif" font-size="12" font-weight="600" fill="hsl(var(--foreground))">HeadlessSymbol</text>
+            <text x="82.5" y="36" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="9" fill="hsl(var(--muted-foreground))">no sprite · no texture</text>
+          </g>
+
+          <g transform="translate(320, 130)">
+            <rect width="340" height="50" rx="10" fill="hsl(var(--card))" stroke="hsl(var(--border-strong))" stroke-width="1.5" />
+            <text x="170" y="20" text-anchor="middle" font-family="Inter, sans-serif" font-size="12" font-weight="600" fill="hsl(var(--foreground))">createTestReelSet({`{...}`})</text>
+            <text x="170" y="36" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="9" fill="hsl(var(--muted-foreground))">returns {`{ reelSet, ticker, spinAndLand, advance }`}</text>
+          </g>
+        </g>
+
+        <!-- Arrow into real ReelSet -->
+        <path d="M 490 190 L 490 240" stroke="hsl(var(--accent))" stroke-width="2" fill="none" marker-end="url(#arr-a)" />
+        <text x="505" y="215" font-family="ui-monospace, Menlo, monospace" font-size="10" fill="hsl(var(--accent))">constructs</text>
+
+        <!-- Real ReelSet (boxed) -->
+        <g>
+          <rect x="60" y="240" width="840" height="160" rx="14" fill="hsl(var(--card))" stroke="hsl(var(--primary))" stroke-width="2" />
+          <text x="80" y="264" font-family="ui-monospace, Menlo, monospace" font-size="11" font-weight="700" fill="hsl(var(--primary))" letter-spacing="0.08em">REAL REELSET (NO RENDERER)</text>
+
+          <g transform="translate(80, 280)">
+            <rect width="190" height="50" rx="10" fill="hsl(var(--primary) / 0.15)" stroke="hsl(var(--primary))" stroke-width="1.5" />
+            <text x="95" y="20" text-anchor="middle" font-family="Inter, sans-serif" font-size="12" font-weight="600" fill="hsl(var(--foreground))">SpinController</text>
+            <text x="95" y="36" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="9" fill="hsl(var(--muted-foreground))">registered with FakeTicker</text>
+          </g>
+          <g transform="translate(290, 280)">
+            <rect width="190" height="50" rx="10" fill="hsl(var(--primary) / 0.15)" stroke="hsl(var(--primary))" stroke-width="1.5" />
+            <text x="95" y="20" text-anchor="middle" font-family="Inter, sans-serif" font-size="12" font-weight="600" fill="hsl(var(--foreground))">Reel[] × N</text>
+            <text x="95" y="36" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="9" fill="hsl(var(--muted-foreground))">HeadlessSymbol × V+buffers</text>
+          </g>
+          <g transform="translate(500, 280)">
+            <rect width="190" height="50" rx="10" fill="hsl(var(--primary) / 0.15)" stroke="hsl(var(--primary))" stroke-width="1.5" />
+            <text x="95" y="20" text-anchor="middle" font-family="Inter, sans-serif" font-size="12" font-weight="600" fill="hsl(var(--foreground))">EventEmitter</text>
+            <text x="95" y="36" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="9" fill="hsl(var(--muted-foreground))">real typed events</text>
+          </g>
+          <g transform="translate(710, 280)">
+            <rect width="190" height="50" rx="10" fill="hsl(var(--primary) / 0.15)" stroke="hsl(var(--primary))" stroke-width="1.5" />
+            <text x="95" y="20" text-anchor="middle" font-family="Inter, sans-serif" font-size="12" font-weight="600" fill="hsl(var(--foreground))">FrameBuilder</text>
+            <text x="95" y="36" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="9" fill="hsl(var(--muted-foreground))">real middleware pipeline</text>
+          </g>
+
+          <g transform="translate(80, 345)">
+            <rect width="820" height="42" rx="8" fill="hsl(var(--muted))" stroke="hsl(var(--border))" />
+            <text x="410" y="20" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="11" fill="hsl(var(--foreground))">reelSet.spin() → setResult() → skip() ⇒ synchronous landing (microtask)</text>
+            <text x="410" y="33" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="9" fill="hsl(var(--muted-foreground))">no ticker frames needed — skip() force-completes every phase</text>
+          </g>
+        </g>
+
+        <!-- Assertions -->
+        <g>
+          <rect x="280" y="420" width="380" height="60" rx="12" fill="hsl(var(--muted))" stroke="hsl(var(--border-strong))" stroke-width="1.5" />
+          <text x="470" y="446" text-anchor="middle" font-family="Inter, sans-serif" font-size="13" font-weight="700" fill="hsl(var(--foreground))">Assertions you can make in Node</text>
+          <text x="470" y="464" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="10" fill="hsl(var(--muted-foreground))">expectGrid · captureEvents · countSymbol · debugSnapshot</text>
+        </g>
+
+        <path d="M 490 400 L 490 420" stroke="hsl(var(--muted-foreground))" stroke-width="2" fill="none" marker-end="url(#arr-m)" />
+
+        <defs>
+          <marker id="arr-p" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="hsl(var(--primary))" />
+          </marker>
+          <marker id="arr-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="hsl(var(--accent))" />
+          </marker>
+          <marker id="arr-m" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="hsl(var(--muted-foreground))" />
+          </marker>
+        </defs>
+      </svg>
+    </div>
+
+    <div class="mt-4">
+      <Legend items={[
+        { kind: 'primary', label: 'Test entry + ReelSet core' },
+        { kind: 'accent', label: 'Testing module (tree-shakeable)' },
+        { kind: 'muted', label: 'Assertions' },
+      ]} />
+    </div>
+  </div>
+
+  <h2>Three parts, in detail</h2>
+
+  <h3>FakeTicker</h3>
+
+  <p>
+    Duck-compatible with <code>PIXI.Ticker</code>: same <code>add/remove/deltaMS</code>
+    surface, no rendering. Tests that want to drive time call
+    <code>ticker.tick(16)</code> or <code>ticker.tickFor(1000, 16)</code>
+    manually. The library never distinguishes a real Ticker from a fake one —
+    the <code>TickerRef</code> wrapper only calls the standard interface.
+  </p>
+
+  <h3>HeadlessSymbol</h3>
+
+  <p>
+    Extends <code>ReelSymbol</code>. Creates a PixiJS <code>Container</code>
+    for <code>view</code> (so scene-graph code works) but never draws anything.
+    Every symbol subclass requires the same lifecycle hooks
+    (<code>onActivate</code>, <code>resize</code>, <code>playWin</code>…) so
+    it slots into the factory the same way a <code>SpriteSymbol</code> would.
+  </p>
+
+  <h3>createTestReelSet</h3>
+
+  <p>
+    The one-liner. Builds a ReelSet wired to a FakeTicker with
+    HeadlessSymbol-backed entries for every id you pass in. Returns a handle
+    with two convenience methods:
+  </p>
+
+  <ul>
+    <li><code>advance(ms, stepMs?)</code> — run the FakeTicker for that many ms.</li>
+    <li><code>spinAndLand(grid)</code> — <code>spin() → setResult(grid) → skip()</code>. Resolves synchronously because <code>skip()</code> force-lands without any animation frames. This is how every mechanic test asserts outcomes in milliseconds.</li>
+  </ul>
+
+  <h2>Why this composition is testable</h2>
+
+  <p>
+    The library has <em>zero</em> renderer assumptions anywhere except in
+    the concrete <code>ReelSymbol</code> subclasses (Sprite/AnimatedSprite/Spine).
+    Control flow sits in <code>SpinController</code> + phases + events, all of
+    which are just JavaScript objects. Swapping the symbols for HeadlessSymbol
+    and the ticker for FakeTicker is enough to run the whole thing in Node.
+  </p>
+
+  <p>
+    That's also why the test suite ships as a tree-shakeable sub-module
+    (<code>pixi-reels/src/testing/</code>, exported from the barrel). Production
+    bundles drop it automatically; test bundles keep it.
+  </p>
+
+  <h2>What a real test looks like</h2>
+
+  <pre><code>{`import { createTestReelSet, expectGrid, captureEvents } from 'pixi-reels';
+
+it('hold-and-win persists across spins', async () => {
+  const h = createTestReelSet({
+    reels: 5, visibleRows: 3,
+    symbolIds: ['a', 'b', 'coin'],
+  });
+  try {
+    await h.spinAndLand([
+      ['coin','a','b'],
+      ['b','coin','a'],
+      ['a','b','coin'],
+      ['coin','a','b'],
+      ['b','coin','a'],
+    ]);
+    const log = captureEvents(h.reelSet, ['spin:complete']);
+    await h.spinAndLand(/* next stage */);
+    expect(log).toHaveLength(1);
+  } finally {
+    h.destroy();
+  }
+});`}</code></pre>
+
+  <p>
+    This is exactly the shape every mechanic test in
+    <code>tests/integration/mechanics.test.ts</code> follows.
+  </p>
+</Architecture>

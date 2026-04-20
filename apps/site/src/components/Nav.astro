@@ -1,0 +1,56 @@
+---
+const pathname = Astro.url.pathname;
+function isActive(prefix: string): boolean {
+  if (prefix === '/') return pathname === '/';
+  return pathname.startsWith(prefix);
+}
+const links = [
+  { href: '/guides/', label: 'Guides' },
+  { href: '/recipes/', label: 'Recipes' },
+  { href: '/wiki/', label: 'Docs' },
+  { href: '/architecture/', label: 'Architecture' },
+  { href: '/demos/', label: 'Demos' },
+  { href: '/sandbox/', label: 'Sandbox' },
+];
+---
+<header class="sticky top-0 z-50 w-full border-b border-border/60 glass">
+  <div class="container flex h-14 items-center">
+    <a href="/" class="mr-8 flex items-center gap-2 font-mono text-sm font-semibold tracking-tight">
+      <span class="inline-flex h-6 w-6 items-center justify-center rounded-md bg-gradient-to-br from-primary to-accent text-[10px] text-primary-foreground font-bold shadow-sm shadow-primary/40">
+        PR
+      </span>
+      <span>pixi-reels</span>
+      <span class="ml-1 hidden rounded-full border border-border/70 bg-background/80 px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground sm:inline-block">
+        v0.1
+      </span>
+    </a>
+
+    <nav class="flex items-center gap-1 text-sm">
+      {links.map(({ href, label }) => (
+        <a
+          href={href}
+          class:list={[
+            'rounded-md px-3 py-1.5 text-muted-foreground transition-colors hover:text-foreground hover:bg-secondary/60',
+            { 'bg-secondary/70 text-foreground': isActive(href) },
+          ]}
+        >
+          {label}
+        </a>
+      ))}
+    </nav>
+
+    <div class="ml-auto flex items-center gap-2">
+      <a
+        href="https://github.com/schmooky/pixi-reels"
+        target="_blank"
+        rel="noopener"
+        class="inline-flex h-8 items-center gap-2 rounded-md border border-border bg-transparent px-3 text-sm text-muted-foreground transition-colors hover:text-foreground hover:bg-secondary/50"
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+          <path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.55 0-.28-.01-1.02-.02-2-3.2.7-3.87-1.54-3.87-1.54-.52-1.34-1.28-1.7-1.28-1.7-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.2 1.77 1.2 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.72-1.55-2.55-.29-5.24-1.28-5.24-5.7 0-1.26.45-2.29 1.19-3.1-.12-.29-.52-1.47.11-3.06 0 0 .97-.31 3.18 1.18a11 11 0 015.78 0c2.21-1.49 3.18-1.18 3.18-1.18.63 1.59.23 2.77.11 3.06.74.81 1.19 1.84 1.19 3.1 0 4.43-2.69 5.41-5.25 5.69.41.36.77 1.06.77 2.13 0 1.54-.01 2.78-.01 3.15 0 .3.21.67.8.55C20.21 21.39 23.5 17.08 23.5 12 23.5 5.65 18.35.5 12 .5z"/>
+        </svg>
+        GitHub
+      </a>
+    </div>
+  </div>
+</header>

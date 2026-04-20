@@ -1,0 +1,106 @@
+---
+layout: ../../layouts/Recipe.astro
+title: How to load sprite symbols from a TexturePacker atlas
+description: One atlas file, 80+ frames, zero per-image HTTP requests. Plus the separate-images fallback when you don't want to pack.
+tags: [sprites, atlas, texturepacker]
+steps:
+  - Load the TexturePacker JSON with `PIXI.Assets.load()` — PixiJS understands the format natively
+  - The returned Spritesheet exposes `sheet.textures[frameId]` for every frame
+  - Pass the base + blur texture maps to `SpriteSymbol` (crisp) or `BlurSpriteSymbol` (swaps on phase events)
+apis:
+  - PIXI.Assets.load
+  - Spritesheet.textures
+  - ReelSetBuilder.symbols
+  - SpriteSymbol
+  - BlurSpriteSymbol
+---
+
+import TextureAtlasRecipe from '../../components/recipes/TextureAtlasRecipe.tsx';
+
+<TextureAtlasRecipe client:only="react" />
+
+Press Run — watch each symbol swap to its `_blur` variant while spinning, then back to the crisp base texture on land.
+
+## The atlas path (preferred)
+
+One network request, one texture upload to the GPU, all 80+ frames packed. This is how production slots ship.
+
+```ts
+import { Assets, type Spritesheet } from 'pixi.js';
+
+const sheet = (await Assets.load('/prototype-symbols/prototype.json')) as Spritesheet;
+// sheet.textures is Record<string, Texture> keyed by frame name:
+// sheet.textures['royal/royal_1']
+// sheet.textures['royal/royal_1_blur']
+// sheet.textures['wild/wild_2']
+// ...
+
+const textures: Record<string, Texture> = {};
+const blurTextures: Record<string, Texture> = {};
+for (const [key, tex] of Object.entries(sheet.textures)) {
+  if (key.endsWith('_blur')) blurTextures[key.slice(0, -'_blur'.length)] = tex;
+  else                        textures[key] = tex;
+}
+```
+
+Then wire into the builder — `SpriteSymbol` for crisp-only, `BlurSpriteSymbol` for blur-on-spin:
+
+```ts
+import { SpriteSymbol } from 'pixi-reels';
+// or, for blur-on-spin:
+// import { BlurSpriteSymbol } from '@/shared/BlurSpriteSymbol';
+
+builder.symbols((r) => {
+  for (const id of Object.keys(textures)) {
+    r.register(id, SpriteSymbol, { textures, anchor: { x: 0.5, y: 0.5 } });
+  }
+});
+```
+
+The live [`sprite-classic` demo](/demos/sprite-classic/) does exactly this with the [`prototype-symbols`](https://github.com/schmooky/prototype-symbols) atlas.
+
+## The separate-images path (when you can't pack)
+
+Sometimes you don't have a packer in the pipeline, or you're iterating on a single symbol and want the one PNG to hot-reload. Same library, different loader:
+
+```ts
+const ids = ['cherry', 'lemon', 'bar', 'seven', 'wild'];
+
+const entries = await Assets.load(
+  ids.map((id) => ({ alias: id, src: `/symbols/${id}.png` })),
+);
+
+const textures: Record<string, Texture> = {};
+for (const id of ids) textures[id] = Assets.get(id);
+
+builder.symbols((r) => {
+  for (const id of ids) {
+    r.register(id, SpriteSymbol, { textures, anchor: { x: 0.5, y: 0.5 } });
+  }
+});
+```
+
+Trade-off: one HTTP request per symbol (small set = fine), one GPU texture per symbol (lots of bind calls for big sets). For production, pack when your symbol count grows past ~8.
+
+## Which classes handle textures?
+
+| Class | Source | When to use |
+|---|---|---|
+| `SpriteSymbol` | `pixi-reels` (main) | Simple static texture per symbol. Pulse on win. |
+| `AnimatedSpriteSymbol` | `pixi-reels` (main) | Frame-sequence animation (spritesheet frames). |
+| `BlurSpriteSymbol` | `examples/shared/` | Base + blur variant, swapped on `phase:enter 'spin' / 'stop'`. |
+| `SpineReelSymbol` | `pixi-reels/spine` | Spine skeletons with `idle / landing / win / disintegration` vocabulary. |
+
+All four extend the same `ReelSymbol` abstract class. Your reel set treats them identically.
+
+## Motion blur — why it matters
+
+A reel spinning at ~30 pixels per frame with 152-pixel symbols presents one symbol every 5 frames. At 60 fps, that's 12 identity swaps per second. Without motion blur, each swap reads as a jittery stacked band. With pre-rendered blur, each swap reads as continuous downward motion.
+
+`BlurSpriteSymbol.setBlurred(true)` during SPIN, `false` on STOP. That's the whole mechanic. The [classic sprite demo](/demos/sprite-classic/) shows it live on every SPIN click.
+
+## Where this fits
+
+- Your atlas + your symbol ids — [`sprite-classic` demo](/demos/sprite-classic/) is the working reference. Fork it, swap the ids, done.
+- Your atlas, no blur — just use `SpriteSymbol` directly. Drop the blur loader.
+- Many textures on many GPU binds — [pack with TexturePacker](https://www.codeandweb.com/texturepacker) or any equivalent before you ship.

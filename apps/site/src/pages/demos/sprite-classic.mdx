@@ -1,0 +1,106 @@
+---
+layout: ../../layouts/Demo.astro
+title: Classic lines with sprite symbols
+subtitle: 5×3 · TexturePacker atlas · motion-blur during spin
+description: Real sprite art on a classic 5×3 reel set. Symbols load from a single TexturePacker atlas (WebP + JSON), swap to pre-rendered motion-blur variants during the SPIN phase, and pulse on win.
+tags: [sprites, atlas, blur-on-spin, classic-lines]
+---
+
+import SpriteClassicDemo from '../../components/demos/SpriteClassicDemo.tsx';
+
+<SpriteClassicDemo client:only="react" />
+
+## What this demo shows
+
+- **Atlas loading** — one `PIXI.Assets.load('/prototype-symbols/prototype.json')` call resolves the spritesheet, `sheet.textures[id]` gives you every frame.
+- **Base + blur variants** — each symbol ships a companion `_blur` texture. The demo swaps to blur on `phase:enter 'spin'` and back on `phase:enter 'stop'`, per reel.
+- **Subpath-clean** — no Spine imports reach this demo. A consumer who only uses sprites never pays for the Spine runtime.
+
+Assets: [schmooky/prototype-symbols](https://github.com/schmooky/prototype-symbols). The full atlas is 84 frames at 2000×1006, ~400 kB gzipped webp.
+
+## Setup
+
+### 1. Load the atlas
+
+```ts
+import { Assets } from 'pixi.js';
+
+const sheet = await Assets.load('/prototype-symbols/prototype.json');
+// sheet.textures['royal/royal_1']  <- the base texture
+// sheet.textures['royal/royal_1_blur']  <- the motion-blur variant
+```
+
+Or use the pre-baked loader in `examples/shared/prototypeSpriteLoader.ts`:
+
+```ts
+import { loadPrototypeSymbols } from '@/shared/prototypeSpriteLoader';
+
+const { textures, blurTextures } = await loadPrototypeSymbols();
+// textures['royal/royal_1']        -> base
+// blurTextures['royal/royal_1']    -> blur (same key, no suffix)
+```
+
+### 2. Register a sprite-backed symbol class
+
+The library ships `SpriteSymbol` (crisp texture, pulse win). For blur-on-spin, use `BlurSpriteSymbol` from `examples/shared/`:
+
+```ts
+import { BlurSpriteSymbol } from '@/shared/BlurSpriteSymbol';
+
+builder.symbols((r) => {
+  for (const id of symbolIds) {
+    r.register(id, BlurSpriteSymbol, {
+      textures,       // base map
+      blurTextures,   // optional; missing entries fall back to base
+      anchor: { x: 0.5, y: 0.5 },
+      fit: true,
+    });
+  }
+});
+```
+
+### 3. Toggle blur on reel phase changes
+
+```ts
+for (let i = 0; i < reelCount; i++) {
+  const reel = reelSet.getReel(i);
+  reel.events.on('phase:enter', (phaseName) => {
+    if (phaseName === 'spin')  setReelBlur(reel, true);
+    if (phaseName === 'stop')  setReelBlur(reel, false);
+  });
+}
+
+function setReelBlur(reel, blurred) {
+  for (let row = 0; row < reel.getVisibleSymbols().length; row++) {
+    const sym = reel.getSymbolAt(row);
+    if (sym instanceof BlurSpriteSymbol) sym.setBlurred(blurred);
+  }
+}
+```
+
+That's it — the reel set drives the blur automatically, per reel, on every spin.
+
+## Why not `SpriteSymbol`?
+
+Use plain `SpriteSymbol` if your art doesn't ship blur variants. It's simpler, same API for the win pulse. `BlurSpriteSymbol` adds:
+
+- A second texture map (`blurTextures`) and a `setBlurred(bool)` method.
+- Aspect-preserving fit (`fit: true`) so a blur variant that's taller than the base doesn't squish.
+
+Missing blur entries fall through to the base texture — you can ship blur for premiums and plain for low symbols without a second code path.
+
+## Cheats on this page
+
+| Cheat | What it does |
+|---|---|
+| Force royal line (middle row) | Whole row 2 lands `royal/royal_1`. |
+| Force round line (top row) | Whole row 0 lands `round/round_1`. |
+| Full-grid royal jackpot | 15 royals. |
+| Sprinkle 3 bonuses | Exactly 3 `bonus/bonus_1` cells at random. |
+| Wild on reel 3, row 2 | `wild/wild_1` always appears at (2, 1). |
+
+## Where this fits
+
+- For **Spine symbols** with landing/win/disintegration animations, import `SpineReelSymbol` from `pixi-reels/spine` (requires the optional `@esotericsoftware/spine-pixi-v8` peer).
+- For **cluster / cascade mechanics**, see [cascade-multiplier](/demos/cascade-multiplier/) — works identically with sprite or Spine symbols.
+- For **loading from separate PNGs** (not an atlas), see [the texture-atlas-symbols recipe](/recipes/texture-atlas-symbols/).

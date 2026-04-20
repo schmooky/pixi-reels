@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fff7ec"/>
+      <stop offset="1" stop-color="#ffe6cc"/>
+    </linearGradient>
+    <linearGradient id="orange" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f97316"/>
+      <stop offset="1" stop-color="#ffa436"/>
+    </linearGradient>
+    <pattern id="grid" width="36" height="36" patternUnits="userSpaceOnUse">
+      <path d="M 36 0 L 0 0 0 36" fill="none" stroke="#f4cfa3" stroke-width="1" opacity="0.6"/>
+    </pattern>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect width="1200" height="630" fill="url(#grid)"/>
+  <g transform="translate(80,130)">
+    <rect x="-20" y="-40" width="140" height="36" rx="18" fill="#f97316" opacity="0.12"/>
+    <text x="50" y="-13" text-anchor="middle" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="13" font-weight="700" fill="#c2410c" letter-spacing="2">V0.1 · MIT</text>
+    <text x="0" y="70" font-family="Inter,system-ui,sans-serif" font-size="96" font-weight="700" fill="#1c1410" letter-spacing="-3">Slot reels,</text>
+    <text x="0" y="180" font-family="Inter,system-ui,sans-serif" font-size="96" font-weight="700" fill="url(#orange)" letter-spacing="-3">ready to spin.</text>
+    <text x="0" y="250" font-family="Inter,system-ui,sans-serif" font-size="28" font-weight="400" fill="#5a4a3c">
+      Open-source, batteries-included slot machine reel engine for PixiJS v8.
+    </text>
+    <text x="0" y="290" font-family="Inter,system-ui,sans-serif" font-size="28" font-weight="400" fill="#5a4a3c">
+      Fluent builder · typed events · deterministic testing · 6 mechanic demos.
+    </text>
+    <g transform="translate(0,360)" font-family="ui-monospace,monospace" font-size="18" fill="#8a6a4c">
+      <text>◆ pixi-reels.dev</text>
+      <text x="260">◆ github.com/schmooky/pixi-reels</text>
+    </g>
+  </g>
+  <g transform="translate(780,170)">
+    <rect x="0" y="0" width="340" height="300" rx="28" fill="#1c1410" opacity="0.96" stroke="url(#orange)" stroke-width="2"/>
+    <g transform="translate(20,20)">
+      <!-- 3x3 reel mock -->
+      <g font-family="ui-monospace,monospace" font-size="36" font-weight="800" text-anchor="middle">
+        <rect x="0"   y="0"   width="90" height="85" rx="10" fill="#f97316"/>
+        <text x="45"  y="55" fill="#1c1410">7</text>
+        <rect x="105" y="0"   width="90" height="85" rx="10" fill="#ffc766"/>
+        <text x="150" y="55" fill="#1c1410">7</text>
+        <rect x="210" y="0"   width="90" height="85" rx="10" fill="#f97316"/>
+        <text x="255" y="55" fill="#1c1410">7</text>
+        <rect x="0"   y="95"  width="90" height="85" rx="10" fill="#ffa436"/>
+        <text x="45"  y="150" fill="#1c1410">7</text>
+        <rect x="105" y="95"  width="90" height="85" rx="10" fill="#f97316"/>
+        <text x="150" y="150" fill="#1c1410">7</text>
+        <rect x="210" y="95"  width="90" height="85" rx="10" fill="#ffa436"/>
+        <text x="255" y="150" fill="#1c1410">7</text>
+        <rect x="0"   y="190" width="90" height="85" rx="10" fill="#ffc766"/>
+        <text x="45"  y="245" fill="#1c1410">7</text>
+        <rect x="105" y="190" width="90" height="85" rx="10" fill="#ffa436"/>
+        <text x="150" y="245" fill="#1c1410">7</text>
+        <rect x="210" y="190" width="90" height="85" rx="10" fill="#f97316"/>
+        <text x="255" y="245" fill="#1c1410">7</text>
+      </g>
+    </g>
+  </g>
+</svg>

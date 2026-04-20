@@ -1,0 +1,55 @@
+---
+const faqs = [
+  {
+    q: 'What is pixi-reels?',
+    a: 'An MIT-licensed TypeScript library that gives you a slot reel engine for PixiJS v8: fluent builder, typed events, default spin phases, win spotlight, pluggable symbols (Sprite, AnimatedSprite, Spine), and a headless testing mode.',
+  },
+  {
+    q: 'Which PixiJS version is required?',
+    a: 'PixiJS v8 (^8.17.0) and GSAP v3 (^3.14.0). Spine is optional — only install @esotericsoftware/spine-pixi-v8 if you use SpineReelSymbol.',
+  },
+  {
+    q: 'Can I test mechanics without a renderer?',
+    a: 'Yes. Import from pixi-reels/testing: createTestReelSet, FakeTicker, HeadlessSymbol, spinAndLand, expectGrid, captureEvents, countSymbol. You can run full spin lifecycles and assert on grid outcomes in Node — no canvas, no DOM.',
+  },
+  {
+    q: 'How do I force a specific outcome?',
+    a: 'Call reelSet.setResult(grid) during a spin. For structured control (force a scatter count, force a near-miss, seed an RNG), examples/shared/cheats.ts exposes a CheatEngine with forceGrid, forceLine, forceScatters, forceNearMiss, forceCell, holdAndWinProgress, cascadeSequence, forceAnticipation. Deterministic via Mulberry32.',
+  },
+  {
+    q: 'Which mechanics ship as demos?',
+    a: 'Line pays, scatter-triggered free spins, hold & win, cascade/tumble with multipliers, sticky wilds, anticipation, slam-stop. Each has its own /demos page with a cheat panel.',
+  },
+  {
+    q: 'Does it handle server-driven cascades?',
+    a: 'Yes. runCascade(reelSet, stages, opts) accepts either a pre-known string[][][] array or an AsyncIterable<string[][]> streamed from the server. Each yielded grid becomes a cascade stage.',
+  },
+  {
+    q: 'Is it tree-shakeable?',
+    a: 'ESM + CJS dual format. Spine lives on a separate subpath (pixi-reels/spine) so its runtime drops out of your bundle when unused. Testing utilities are in pixi-reels/testing for the same reason.',
+  },
+];
+---
+<section class="border-t border-border/60 py-20">
+  <div class="container max-w-3xl">
+    <div class="mb-10 text-center">
+      <div class="inline-flex items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-primary">
+        FAQ
+      </div>
+      <h2 class="mt-4 text-3xl font-semibold tracking-tight sm:text-4xl">Questions you probably have.</h2>
+    </div>
+    <div class="space-y-3">
+      {faqs.map((f) => (
+        <details class="group rounded-xl border border-border bg-card p-5 transition-colors hover:border-primary/40">
+          <summary class="cursor-pointer list-none flex items-center justify-between gap-4 font-medium">
+            <span>{f.q}</span>
+            <span class="text-muted-foreground transition-transform group-open:rotate-45 shrink-0 text-lg leading-none">+</span>
+          </summary>
+          <p class="mt-3 text-sm text-foreground/70 leading-relaxed">{f.a}</p>
+        </details>
+      ))}
+    </div>
+  </div>
+</section>
+---
+<!-- FAQ schema is emitted by the landing page's jsonLd prop, using these same items. -->

@@ -1,0 +1,124 @@
+---
+layout: ../../layouts/Demo.astro
+title: Cascade + multiplier
+subtitle: 5×5 · one click plays the whole tumble · drop-in for streamed server responses
+tags: [cascade, tumble, multiplier]
+description: A tumble slot — wins vanish, the next stage lands. Built around runCascade(), which accepts an array or an async generator, so you can feed either a full batch response or a server stream.
+---
+
+import CascadeDemo from '../../components/demos/CascadeDemo.tsx';
+
+<CascadeDemo client:only="react" />
+
+## The mechanic
+
+Each SPIN click plays the **full cascade sequence** from a single click:
+
+1. Land on stage 0.
+2. Identify winners (cells changing between stage *N* and stage *N+1*).
+3. Fade the winners out.
+4. Spin + land on stage *N+1*.
+5. Repeat until the stage stream is exhausted.
+
+This is driven by `runCascade(reelSet, stages)` from
+[`examples/shared/cascadeLoop.ts`](https://github.com/schmooky/pixi-reels/blob/main/examples/shared/cascadeLoop.ts).
+
+## Setup
+
+### 1. Ship a single-click cascade with a batch response
+
+If your server returns **all** cascade stages in one response:
+
+```ts
+import { runCascade } from '@/shared/cascadeLoop';
+
+async function spin() {
+  const response = await fetch('/api/spin').then((r) => r.json());
+  // response.stages: string[][][]   — stage 0 first, tumble stages next
+
+  // Land the first stage via the regular spin API
+  const promise = reelSet.spin();
+  setTimeout(() => reelSet.setResult(response.stages[0]), 200);
+  await promise;
+
+  // Play the rest automatically
+  await runCascade(reelSet, response.stages, {
+    vanishDuration: 320,
+    pauseBetween: 140,
+    onStageLanded: (grid, i) => {
+      multiplier++;
+      hud.showMultiplier(multiplier);
+    },
+  });
+}
+```
+
+### 2. Stream stages from a server that dribbles responses
+
+If your backend computes cascades one at a time and streams them:
+
+```ts
+async function* streamFromServer(): AsyncIterable<string[][]> {
+  const conn = openWebSocket('/spin');
+  for await (const msg of conn) {
+    if (msg.type === 'stage') yield msg.grid;
+    else if (msg.type === 'end') return;
+  }
+}
+
+const stream = streamFromServer();
+
+// stage 0 — land the first response manually
+const first = (await stream.next()).value!;
+const p = reelSet.spin();
+setTimeout(() => reelSet.setResult(first), 200);
+await p;
+
+// remaining stages — runCascade consumes the generator
+await runCascade(reelSet, stream, { pauseBetween: 100 });
+```
+
+`runCascade` accepts `string[][][]` **or** `AsyncIterable<string[][]>`, so the
+same code works for both cases.
+
+### 3. Custom vanish animation
+
+By default, winners fade alpha 1 → 0 over `vanishDuration` ms. Override
+`onWinnersVanish` to do anything else — scale down, play per-symbol
+`symbol.playWin()` on each winner, emit particles, etc.
+
+```ts
+await runCascade(reelSet, stages, {
+  onWinnersVanish: async (reelSet, winners) => {
+    await Promise.all(winners.map(async ({ reel, row }) => {
+      const sym = reelSet.getReel(reel).getSymbolAt(row);
+      await sym.playWin();        // your ReelSymbol's built-in win anim
+    }));
+  },
+});
+```
+
+### 4. Identifying winners
+
+`diffCells(prev, next)` returns cells whose symbol id changes between two
+grids. That's the default winner-detection used inside `runCascade`. If your
+server sends winners explicitly, just pass your own `onWinnersVanish` and
+ignore the diff.
+
+## Cheats on this page
+
+- **One-click 4-stage cascade** (default on) — `cascadingStages(STAGES)` bundles the whole tumble in one response; `runCascade` plays it.
+- **One stage per click (legacy)** — `cascadeSequence(STAGES)`; each click lands one stage. Useful for stepping through the sequence manually.
+
+## Test the loop
+
+```ts
+import { runCascade, diffCells } from '@/shared/cascadeLoop';
+
+expect(diffCells(stage0, stage1)).toEqual([
+  { reel: 0, row: 1 }, { reel: 1, row: 1 },
+]);
+
+// Full generator flow — use a fake reelSet for unit tests, or spinAndLand()
+// from the pixi-reels testing utilities for integration.
+```

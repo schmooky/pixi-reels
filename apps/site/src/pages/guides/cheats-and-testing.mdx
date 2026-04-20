@@ -1,0 +1,111 @@
+---
+layout: ../../layouts/Docs.astro
+title: Cheats & testing
+section: guides
+eyebrow: For authors
+description: Force deterministic outcomes, run spin lifecycles in Node, write mechanic tests that never flake.
+---
+
+pixi-reels is built so you can test **mechanics**, not canvases. Two tools
+make that possible:
+
+- **`createTestReelSet`** — a headless reel set wired to a `FakeTicker`. No renderer, no DOM.
+- **`CheatEngine`** (in `examples/shared/cheats`) — a pluggable outcome source that forces grids, scatters, lines, cascades on demand.
+
+Together they let you write assertions like *"this mechanic produces exactly
+3 scatters, triggers anticipation on reel 5, and emits `spin:complete`."*
+
+## 1. Headless reel set
+
+```ts
+import { createTestReelSet, expectGrid } from 'pixi-reels';
+
+const { reelSet, spinAndLand, destroy } = createTestReelSet({
+  reels: 5,
+  visibleRows: 3,
+  symbolIds: ['cherry', 'seven', 'wild', 'scatter'],
+});
+
+await spinAndLand([
+  ['wild','wild','wild'],
+  ['wild','wild','wild'],
+  ['wild','wild','wild'],
+  ['wild','wild','wild'],
+  ['wild','wild','wild'],
+]);
+
+expectGrid(reelSet, /* same 5×3 grid of 'wild' */);
+destroy();
+```
+
+`spinAndLand()` calls `spin() → setResult() → skip()` under the hood, which
+bypasses all timing and resolves on a microtask. Perfect for CI.
+
+## 2. Force outcomes with cheats
+
+Cheats are pure functions that take a context and return a grid.
+
+```ts
+import { CheatEngine, forceScatters, forceLine, holdAndWinProgress } from '../../../../examples/shared/cheats';
+
+const engine = new CheatEngine({
+  reelCount: 5, visibleRows: 3,
+  symbolIds: ['a', 'b', 'scatter', 'coin'],
+  seed: 42,
+});
+
+engine.register({
+  id: 'scat3',
+  label: 'Force 3 scatters',
+  enabled: true,
+  cheat: forceScatters(3, 'scatter'),
+});
+
+const { symbols, anticipationReels } = engine.next();
+await spinAndLand(symbols);
+```
+
+### Built-in cheats
+
+| Cheat | Effect |
+|---|---|
+| `forceGrid(grid)` | Every spin returns this exact grid. |
+| `forceLine(row, id)` | Fills a horizontal row with `id`. |
+| `forceScatters(n, id)` | Sprinkles exactly `n` of `id` at random cells. |
+| `forceNearMiss(n, id, nearReel)` | `n-1` scatters, none on `nearReel`. Triggers anticipation there. |
+| `forceCell(r, row, id)` | Places `id` at `[r, row]`. |
+| `holdAndWinProgress(coinId, p)` | Keeps held coins, adds one new coin with probability `p`. |
+| `cascadeSequence([g1, g2, ...])` | Emits grids in order. |
+| `forceAnticipation(reels)` | Sets anticipation reels without constraining symbols. |
+
+### Write your own
+
+A cheat is `(ctx) => { symbols, anticipationReels, meta } | null`. Returning
+`null` means "pass through, let the next cheat or the RNG handle it."
+
+```ts
+const forcePairWild: Cheat = (ctx) => {
+  const grid = /* random grid */;
+  grid[2][1] = 'wild';
+  grid[3][1] = 'wild';
+  return { symbols: grid, anticipationReels: [] };
+};
+```
+
+## 3. Assert events fired correctly
+
+```ts
+import { captureEvents } from 'pixi-reels';
+
+const log = captureEvents(reelSet, ['spin:start', 'spin:complete']);
+await spinAndLand(grid);
+expect(log.map((e) => e.event)).toEqual(['spin:start', 'spin:complete']);
+```
+
+## 4. Drive a live demo page
+
+Every mechanic demo on this site mounts a `CheatPanel` that toggles these
+cheats at runtime. Open any demo → check a cheat → spin → watch the
+advertised outcome land every time.
+
+See the [Demos catalog](/demos/) for copy-pasteable examples.

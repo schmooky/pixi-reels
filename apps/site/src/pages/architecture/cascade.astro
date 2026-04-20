@@ -1,0 +1,226 @@
+---
+import Architecture from '../../layouts/Architecture.astro';
+import Legend from '../../components/arch/Legend.astro';
+---
+<Architecture
+  title="Cascade physics"
+  subtitle="Why survivors without cleared slots below them do not move."
+  eyebrow="Algorithm"
+>
+  <p>
+    A correct cascade drop has a simple invariant: <strong>a symbol only
+    moves if there are cleared slots beneath its original row</strong>.
+    Getting this wrong is the classic cascade bug — naive implementations
+    shift every visible cell up by the winner count, then tween back down,
+    making untouched symbols visually jump.
+  </p>
+
+  <p>
+    pixi-reels computes per-cell fall distance from the winners list.
+    Survivors with no winners below them are <em>never touched</em> — no
+    animation job is created, their <code>view.y</code> stays exactly where
+    <code>placeSymbols</code> put it.
+  </p>
+
+  <h2>The algorithm, in one column</h2>
+
+  <div class="not-prose my-8">
+    <div class="rounded-2xl border border-border bg-card p-6 overflow-x-auto">
+      <svg viewBox="0 0 920 560" class="w-full h-auto min-w-[720px]">
+
+        <!-- Column labels -->
+        <g font-family="ui-monospace, Menlo, monospace" font-size="11" font-weight="700" fill="hsl(var(--muted-foreground))" letter-spacing="0.08em">
+          <text x="130" y="35" text-anchor="middle">BEFORE</text>
+          <text x="330" y="35" text-anchor="middle">REMOVE WINNERS</text>
+          <text x="530" y="35" text-anchor="middle">GRAVITY</text>
+          <text x="730" y="35" text-anchor="middle">FILL FROM TOP</text>
+        </g>
+
+        <!-- Stage 1: BEFORE -->
+        {[
+          { row: 0, sym: 'A', winner: false },
+          { row: 1, sym: 'B', winner: true },
+          { row: 2, sym: 'C', winner: false },
+          { row: 3, sym: 'D', winner: true },
+          { row: 4, sym: 'E', winner: false },
+        ].map((s) => (
+          <g transform={`translate(90, ${60 + s.row * 80})`}>
+            <rect width="80" height="70" rx="12" fill={s.winner ? 'hsl(var(--destructive) / 0.2)' : 'hsl(var(--card))'} stroke={s.winner ? 'hsl(var(--destructive))' : 'hsl(var(--border-strong))'} stroke-width="2" />
+            <text x="40" y="44" text-anchor="middle" font-family="Inter, sans-serif" font-size="26" font-weight="700" fill={s.winner ? 'hsl(var(--destructive))' : 'hsl(var(--foreground))'}>{s.sym}</text>
+          </g>
+        ))}
+
+        <!-- Arrow -->
+        <path d="M 180 280 L 240 280" stroke="hsl(var(--muted-foreground))" stroke-width="2" fill="none" marker-end="url(#arr-m)" />
+
+        <!-- Stage 2: REMOVE WINNERS -->
+        {[
+          { row: 0, sym: 'A', state: 'survivor' },
+          { row: 1, sym: '', state: 'empty' },
+          { row: 2, sym: 'C', state: 'survivor' },
+          { row: 3, sym: '', state: 'empty' },
+          { row: 4, sym: 'E', state: 'survivor' },
+        ].map((s) => (
+          <g transform={`translate(290, ${60 + s.row * 80})`}>
+            {s.state === 'empty' ? (
+              <rect width="80" height="70" rx="12" fill="none" stroke="hsl(var(--muted-foreground))" stroke-dasharray="5,4" stroke-width="2" />
+            ) : (
+              <g>
+                <rect width="80" height="70" rx="12" fill="hsl(var(--card))" stroke="hsl(var(--border-strong))" stroke-width="2" />
+                <text x="40" y="44" text-anchor="middle" font-family="Inter, sans-serif" font-size="26" font-weight="700" fill="hsl(var(--foreground))">{s.sym}</text>
+              </g>
+            )}
+          </g>
+        ))}
+
+        <!-- Arrow -->
+        <path d="M 380 280 L 440 280" stroke="hsl(var(--muted-foreground))" stroke-width="2" fill="none" marker-end="url(#arr-m)" />
+
+        <!-- Stage 3: GRAVITY — survivors move down, empty slots float up -->
+        {[
+          { row: 0, sym: '', state: 'empty' },
+          { row: 1, sym: '', state: 'empty' },
+          { row: 2, sym: 'A', state: 'fell-2', fallFrom: 0 },
+          { row: 3, sym: 'C', state: 'fell-1', fallFrom: 2 },
+          { row: 4, sym: 'E', state: 'stayed', fallFrom: 4 },
+        ].map((s) => (
+          <g transform={`translate(490, ${60 + s.row * 80})`}>
+            {s.state === 'empty' ? (
+              <rect width="80" height="70" rx="12" fill="none" stroke="hsl(var(--muted-foreground))" stroke-dasharray="5,4" stroke-width="2" />
+            ) : (
+              <g>
+                <rect width="80" height="70" rx="12" fill={s.state === 'stayed' ? 'hsl(var(--card))' : 'hsl(var(--accent) / 0.15)'} stroke={s.state === 'stayed' ? 'hsl(var(--border-strong))' : 'hsl(var(--accent))'} stroke-width="2" />
+                <text x="40" y="44" text-anchor="middle" font-family="Inter, sans-serif" font-size="26" font-weight="700" fill="hsl(var(--foreground))">{s.sym}</text>
+                {s.state !== 'stayed' && (
+                  <text x="40" y="62" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="9" font-weight="700" fill="hsl(var(--accent))">fell {s.row - s.fallFrom}</text>
+                )}
+                {s.state === 'stayed' && (
+                  <text x="40" y="62" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="9" font-weight="700" fill="hsl(var(--muted-foreground))">no move</text>
+                )}
+              </g>
+            )}
+          </g>
+        ))}
+
+        <!-- Arrow -->
+        <path d="M 580 280 L 640 280" stroke="hsl(var(--muted-foreground))" stroke-width="2" fill="none" marker-end="url(#arr-m)" />
+
+        <!-- Stage 4: FILL FROM TOP -->
+        {[
+          { row: 0, sym: 'X', state: 'new', fallFrom: 'above' },
+          { row: 1, sym: 'Y', state: 'new', fallFrom: 'above' },
+          { row: 2, sym: 'A', state: 'fell-2' },
+          { row: 3, sym: 'C', state: 'fell-1' },
+          { row: 4, sym: 'E', state: 'stayed' },
+        ].map((s) => (
+          <g transform={`translate(690, ${60 + s.row * 80})`}>
+            <rect width="80" height="70" rx="12" fill={s.state === 'new' ? 'hsl(var(--primary) / 0.18)' : s.state === 'stayed' ? 'hsl(var(--card))' : 'hsl(var(--accent) / 0.15)'} stroke={s.state === 'new' ? 'hsl(var(--primary))' : s.state === 'stayed' ? 'hsl(var(--border-strong))' : 'hsl(var(--accent))'} stroke-width="2" />
+            <text x="40" y="44" text-anchor="middle" font-family="Inter, sans-serif" font-size="26" font-weight="700" fill="hsl(var(--foreground))">{s.sym}</text>
+            {s.state === 'new' && <text x="40" y="62" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="9" font-weight="700" fill="hsl(var(--primary))">new</text>}
+            {s.state === 'stayed' && <text x="40" y="62" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="9" font-weight="700" fill="hsl(var(--muted-foreground))">no move</text>}
+          </g>
+        ))}
+
+        <defs>
+          <marker id="arr-m" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="hsl(var(--muted-foreground))" />
+          </marker>
+        </defs>
+      </svg>
+    </div>
+
+    <div class="mt-4">
+      <Legend items={[
+        { kind: 'subtle', label: 'Stayed put', note: 'no winners below → no animation' },
+        { kind: 'accent', label: 'Survivor fell', note: 'moved N slots where N = winners below' },
+        { kind: 'primary', label: 'New symbol', note: 'fell from above viewport' },
+      ]} />
+    </div>
+  </div>
+
+  <h2>Per-row fall distance formula</h2>
+
+  <p>
+    For a column with visible rows indexed <code>0..V-1</code> and winner
+    rows <code>winnerRows</code> (sorted ascending), let
+    <code>nonWinnerRows</code> be the surviving row indices in order. For
+    each final row <code>R</code>:
+  </p>
+
+  <div class="not-prose my-4 rounded-xl border border-border bg-card overflow-hidden">
+    <table class="w-full text-sm">
+      <thead class="bg-muted/60">
+        <tr>
+          <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">Final row R</th>
+          <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">Is it a new symbol?</th>
+          <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">Starting y offset (slots above target)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="border-t border-border/60">
+          <td class="px-4 py-2.5"><code>R &lt; winnerRows.length</code></td>
+          <td class="px-4 py-2.5 text-xs text-foreground/80">yes — falls from above the viewport</td>
+          <td class="px-4 py-2.5 font-mono text-xs text-primary">R + 1</td>
+        </tr>
+        <tr class="border-t border-border/60">
+          <td class="px-4 py-2.5"><code>R ≥ winnerRows.length</code></td>
+          <td class="px-4 py-2.5 text-xs text-foreground/80">no — survivor from <code>nonWinnerRows[R - winCount]</code></td>
+          <td class="px-4 py-2.5 font-mono text-xs text-accent">R - originalRow <span class="text-muted-foreground">(0 means: don't touch it)</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>
+    Crucially: when <code>offsetRows === 0</code>, the code returns early
+    and never creates an animation job for that cell. Its <code>view.y</code>
+    is already correct from <code>placeSymbols</code>, and tweening it would
+    be visually wrong.
+  </p>
+
+  <h2>Four canonical cases</h2>
+
+  <div class="not-prose my-6 grid gap-4 md:grid-cols-2">
+    <div class="rounded-xl border border-border bg-card p-5">
+      <div class="text-xs font-mono uppercase tracking-wider text-primary mb-2">Winner at the top</div>
+      <p class="text-sm text-muted-foreground">One new symbol falls in at row 0. <strong>Every survivor stays put.</strong></p>
+    </div>
+    <div class="rounded-xl border border-border bg-card p-5">
+      <div class="text-xs font-mono uppercase tracking-wider text-primary mb-2">Winner in the middle</div>
+      <p class="text-sm text-muted-foreground">Survivors above the winner each fall 1 slot. <strong>Survivors below don't move.</strong></p>
+    </div>
+    <div class="rounded-xl border border-border bg-card p-5">
+      <div class="text-xs font-mono uppercase tracking-wider text-primary mb-2">Winner at the bottom</div>
+      <p class="text-sm text-muted-foreground">Every survivor falls exactly 1 slot. New symbol fills row 0.</p>
+    </div>
+    <div class="rounded-xl border border-border bg-card p-5">
+      <div class="text-xs font-mono uppercase tracking-wider text-primary mb-2">Two stacked winners at the top</div>
+      <p class="text-sm text-muted-foreground">Two new symbols fall in. <strong>No survivor moves.</strong></p>
+    </div>
+  </div>
+
+  <h2>API surface</h2>
+
+  <ul>
+    <li><code>tumbleToGrid(reelSet, nextGrid, winners, opts)</code> — the primitive. Takes a <code>Cell[]</code> of real winners; per-reel fall distance math happens here.</li>
+    <li><code>runCascade(reelSet, stages, opts)</code> — orchestrates multiple stages. Default winner detection is <code>diffCells(prev, next)</code>; pass a custom <code>winners: (prev, next) =&gt; Cell[]</code> for match-pattern cascades.</li>
+    <li><code>diffCells(prev, next)</code> — utility, equal cells → zero. Fine for gravity-clean sequences; wrong for patterns where survivors' new rows hold different symbol ids than before.</li>
+  </ul>
+
+  <h2>The trap with <code>diffCells</code></h2>
+
+  <p>
+    Consider <code>prevCol = [A, C, X]</code>, <code>X</code> at row 2 wins.
+    The correct next col is <code>[N, A, C]</code> — new symbol at row 0,
+    survivors shifted down. <code>diffCells</code> reports <em>three</em>
+    changed cells (row 0: A→N, row 1: C→A, row 2: X→C). Treating those as
+    "three winners" would animate three new symbols falling from above,
+    instead of one new + two survivors sliding by one slot.
+  </p>
+
+  <p>
+    For pattern cascades, always pass your own winner list derived from the
+    actual match, never from the diff. The <a href="/recipes/remove-symbol/">remove-symbol recipe</a>
+    does exactly this.
+  </p>
+</Architecture>

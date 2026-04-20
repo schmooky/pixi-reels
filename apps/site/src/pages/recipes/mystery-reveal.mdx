@@ -1,0 +1,107 @@
+---
+layout: ../../layouts/Recipe.astro
+title: Mystery reveal
+description: '"?" cells that all reveal the same random symbol on land — the classic "mystery symbol" mechanic from games like Reel King Mega and Money Train.'
+tags: [mystery, reveal, animation]
+steps:
+  - Use a `mystery` symbol id in the result grid like any other symbol
+  - On `spin:allLanded`, pick ONE reveal symbol (shared across all mystery cells)
+  - Play a reveal animation on each mystery cell, swapping to the chosen symbol
+  - Evaluate wins AFTER the reveal with the post-reveal grid
+apis:
+  - spin:allLanded event
+  - Reel.placeSymbols
+  - Reel.getSymbolAt
+---
+
+import MysteryRevealRecipe from '../../components/recipes/MysteryRevealRecipe.tsx';
+
+<MysteryRevealRecipe client:only="react" />
+
+Three "?" cells land, shake, then reveal the same symbol together.
+
+The mystery mechanic is deceptively simple: a few cells land as `?`, then all of them simultaneously reveal the SAME symbol. If the reveal hits a high-pay, it's a huge hit; if not, it stings.
+
+```ts
+import { gsap } from 'gsap';
+
+const MYSTERY = 'mystery';
+const revealWeights = {
+  low_1: 30, low_2: 30, med_1: 20, med_2: 15, high_1: 4, high_2: 1,
+};
+
+reelSet.events.on('spin:allLanded', async () => {
+  // Find every mystery cell on the grid
+  const mysteryCells: { reel: number; row: number }[] = [];
+  for (let r = 0; r < reelSet.reels.length; r++) {
+    const visible = reelSet.reels[r].getVisibleSymbols();
+    for (let row = 0; row < visible.length; row++) {
+      if (visible[row] === MYSTERY) mysteryCells.push({ reel: r, row });
+    }
+  }
+  if (mysteryCells.length === 0) return;
+
+  // ONE reveal for all mystery cells — that's the drama
+  const revealed = pickWeighted(revealWeights);
+
+  // Animate each cell: shake, flash, swap
+  await Promise.all(mysteryCells.map(async ({ reel, row }) => {
+    const r = reelSet.reels[reel];
+    const sym = r.getSymbolAt(row);
+
+    // Shake
+    await new Promise<void>((resolve) => {
+      gsap.to(sym.view, {
+        x: '+=6', duration: 0.05, yoyo: true, repeat: 5,
+        ease: 'sine.inOut', onComplete: () => { sym.view.x = 0; resolve(); },
+      });
+    });
+
+    // Swap
+    const visible = r.getVisibleSymbols();
+    visible[row] = revealed;
+    r.placeSymbols(visible);
+
+    // Pop in
+    const next = r.getSymbolAt(row);
+    next.view.scale.set(0);
+    gsap.to(next.view.scale, {
+      x: 1, y: 1, duration: 0.35, ease: 'back.out(2)',
+    });
+  }));
+
+  // Re-evaluate wins with the post-reveal grid
+  const postRevealGrid: string[][] = reelSet.reels.map((r) => r.getVisibleSymbols());
+  const wins = detectWins(postRevealGrid);
+  if (wins.length > 0) {
+    await reelSet.spotlight.cycle(
+      wins.map((w) => ({ positions: w.positions })),
+      { displayDuration: 900 },
+    );
+  }
+});
+```
+
+## Where do mystery symbols come from?
+
+They're produced by your RNG just like any other symbol — give `mystery` a weight in the generator:
+
+```ts
+.weights({ low_1: 30, low_2: 30, med_1: 20, med_2: 15, high_1: 4, high_2: 1, mystery: 6 })
+```
+
+Or force them via a cheat for testing:
+```ts
+// Game-code cheat: every 4th spin, drop a mystery cluster on reel 2
+```
+
+## Variations
+
+- **Per-cell reveals** — pick a reveal independently for each mystery cell (more volatile, less dramatic).
+- **Mystery wild** — reveal can also be `wild`, giving the player a second tier of excitement.
+- **Cascade ready** — if the reveal creates wins, your cascade loop picks them up on the next tumble.
+
+## Related recipes
+
+- [Symbol transform](/recipes/symbol-transform/) — the animation primitive this recipe builds on
+- [Walking wild](/recipes/walking-wild/) — another result-injection pattern

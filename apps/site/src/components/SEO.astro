@@ -1,0 +1,78 @@
+---
+import { SITE, canonical, imageUrl, type PageSeo } from '../lib/seo.ts';
+
+interface Props extends PageSeo {}
+const {
+  title,
+  description,
+  path,
+  image,
+  type = 'website',
+  article,
+  keywords,
+  jsonLd = [],
+  noIndex = false,
+} = Astro.props as Props;
+
+const url = canonical(path ?? Astro.url.pathname);
+const imgAbs = imageUrl(image);
+const allKeywords = [...SITE.keywords, ...(keywords ?? [])];
+---
+<!-- Core -->
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>{title}</title>
+<meta name="description" content={description} />
+<meta name="keywords" content={allKeywords.join(', ')} />
+<meta name="author" content={SITE.author} />
+<meta name="generator" content="Astro" />
+<link rel="canonical" href={url} />
+
+<!-- Robots -->
+{noIndex
+  ? <meta name="robots" content="noindex, nofollow" />
+  : <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+}
+
+<!-- Open Graph -->
+<meta property="og:type" content={type} />
+<meta property="og:site_name" content={SITE.name} />
+<meta property="og:title" content={title} />
+<meta property="og:description" content={description} />
+<meta property="og:url" content={url} />
+<meta property="og:image" content={imgAbs} />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:locale" content="en_US" />
+
+<!-- Twitter -->
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content={title} />
+<meta name="twitter:description" content={description} />
+<meta name="twitter:image" content={imgAbs} />
+
+<!-- Article-specific -->
+{type === 'article' && article && (
+  <>
+    {article.publishedTime && <meta property="article:published_time" content={article.publishedTime} />}
+    {article.modifiedTime && <meta property="article:modified_time" content={article.modifiedTime} />}
+    {article.section && <meta property="article:section" content={article.section} />}
+    {article.tags?.map((t) => <meta property="article:tag" content={t} />)}
+  </>
+)}
+
+<!-- Icons / Theme -->
+<link rel="icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='14' fill='%23f97316'/><text x='16' y='21' text-anchor='middle' font-family='ui-monospace,monospace' font-size='14' font-weight='700' fill='white'>PR</text></svg>" />
+<link rel="sitemap" href="/sitemap.xml" />
+<link rel="alternate" type="text/plain" href="/llms.txt" title="LLM-readable site summary" />
+<meta name="theme-color" content="#f97316" />
+<meta name="color-scheme" content="light" />
+
+<!-- GEO / AI discoverability hints -->
+<meta name="geo.region" content="WORLD" />
+<meta name="geo.placename" content="Worldwide" />
+
+<!-- JSON-LD -->
+{jsonLd.map((obj) => (
+  <script type="application/ld+json" set:html={JSON.stringify(obj)} />
+))}

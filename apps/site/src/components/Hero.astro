@@ -1,0 +1,56 @@
+---
+const marqueeTags = [
+  'classic lines', 'scatters', 'free spins', 'hold & win',
+  'cascades', 'tumbles', 'sticky wilds', 'walking wilds',
+  'anticipation', 'slam-stop', 'multipliers', 'respins',
+  'jackpots', 'bonus buy', 'mystery symbols',
+];
+---
+<section class="relative overflow-hidden border-b border-border/60 pb-16 pt-24">
+  <div class="grid-bg absolute inset-0 opacity-60 pointer-events-none"></div>
+
+  <div class="container relative">
+    <div class="mx-auto max-w-3xl text-center">
+      <div class="mb-6 inline-flex items-center gap-2 rounded-full border border-border/80 bg-card/60 px-3 py-1 text-xs font-medium text-muted-foreground backdrop-blur-sm">
+        <span class="inline-block h-1.5 w-1.5 rounded-full bg-accent animate-pulse"></span>
+        v0.1 · MIT · PixiJS v8
+      </div>
+
+      <h1 class="text-balance text-5xl font-semibold tracking-tight sm:text-6xl md:text-7xl">
+        Slot reels,<br />
+        <span class="gradient-text">ready to spin.</span>
+      </h1>
+
+      <p class="mx-auto mt-6 max-w-xl text-balance text-lg text-muted-foreground">
+        An open-source slot reel engine for PixiJS v8. Fluent builder, typed events,
+        and the weighty spin+stop feel modeled on real-money games.
+      </p>
+
+      <div class="mt-8 flex items-center justify-center gap-3">
+        <a
+          href="/guides/getting-started/"
+          class="inline-flex h-11 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-accent px-6 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/30 transition-all hover:brightness-110 hover:translate-y-[-1px]"
+        >
+          Get started
+        </a>
+        <a
+          href="/demos/"
+          class="inline-flex h-11 items-center justify-center rounded-lg border border-border bg-card/50 px-6 text-sm font-medium text-foreground transition-colors hover:bg-secondary/50"
+        >
+          Explore mechanics →
+        </a>
+      </div>
+    </div>
+
+    <!-- Marquee -->
+    <div class="relative mt-14 overflow-hidden [mask-image:linear-gradient(90deg,transparent,black_10%,black_90%,transparent)]">
+      <div class="inline-flex items-center gap-8 whitespace-nowrap animate-marquee py-2">
+        {[...marqueeTags, ...marqueeTags].map((t) => (
+          <span class="inline-flex items-center gap-2 font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground/70">
+            <span class="text-primary/80">◆</span>{t}
+          </span>
+        ))}
+      </div>
+    </div>
+  </div>
+</section>

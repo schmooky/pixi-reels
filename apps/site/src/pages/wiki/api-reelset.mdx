@@ -1,0 +1,61 @@
+---
+layout: ../../layouts/Docs.astro
+title: ReelSet
+section: wiki
+eyebrow: API
+description: The main orchestrator. Created via ReelSetBuilder.
+---
+
+`ReelSet` extends `PIXI.Container`. Add it to your stage, spin it, listen to events.
+
+## Spin API
+
+| Method | Signature | Notes |
+|---|---|---|
+| `spin` | `() => Promise<SpinResult>` | Start all reels. Resolves when `spin:complete` fires. |
+| `setResult` | `(symbols: string[][]) => void` | Set the target grid. Triggers stop sequence. |
+| `setAnticipation` | `(reelIndices: number[]) => void` | Mark reels that should enter ANTICIPATION. |
+| `skip` | `() => void` | Force-land all reels immediately. |
+| `isSpinning` | `readonly boolean` | `true` between `spin:start` and `spin:complete`. |
+
+## Speed API
+
+| Accessor | Returns |
+|---|---|
+| `speed` | `SpeedManager` — add/remove profiles |
+| `setSpeed(name)` | Activate a registered profile. Emits `speed:changed`. |
+
+## Spotlight API
+
+| Accessor | Returns |
+|---|---|
+| `spotlight` | `SymbolSpotlight` — dim losers, cycle winning lines, play win animations |
+
+## Reel access
+
+| Accessor | Returns |
+|---|---|
+| `reels` | `readonly Reel[]` |
+| `getReel(i)` | `Reel` |
+| `viewport` | `ReelViewport` |
+
+## Events
+
+Listen via `reelSet.events.on(name, cb)`. See [Events](/wiki/api-events/) for the full list.
+
+## Lifecycle
+
+| Accessor / Method | |
+|---|---|
+| `isDestroyed` | `readonly boolean` |
+| `destroy()` | Releases all symbols, removes ticker callbacks, removes all listeners, destroys children. |
+
+## Example
+
+```ts
+const reelSet = new ReelSetBuilder()/* ... */.build();
+app.stage.addChild(reelSet);
+
+reelSet.events.on('spin:complete', (r) => console.log(r.symbols));
+await reelSet.spin();
+```

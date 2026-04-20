@@ -1,0 +1,100 @@
+---
+layout: ../../layouts/Docs.astro
+title: Your first reelset
+section: guides
+eyebrow: Step-by-step
+description: Build, spin, and react to a reel set from scratch.
+---
+
+In this guide you'll build a minimal slot from nothing. We'll do it in five
+steps, and each step has a "verify" check so you always know what should be
+true before moving on.
+
+## 1. Create the builder
+
+```ts
+import { ReelSetBuilder } from 'pixi-reels';
+const builder = new ReelSetBuilder();
+```
+
+> **Verify:** `builder instanceof ReelSetBuilder` — if the import fails, you
+> didn't install the package or your bundler can't find ESM modules.
+
+## 2. Configure the grid
+
+```ts
+builder
+  .reels(5)
+  .visibleSymbols(3)
+  .symbolSize(140, 140)
+  .symbolGap(4, 4)           // optional
+  .bufferSymbols(1);         // optional — default 1
+```
+
+> **Verify:** nothing visible yet, no errors. Configuration is deferred until `.build()`.
+
+## 3. Register symbols
+
+Every symbol needs an id and a class. Use `SpriteSymbol` for static textures,
+`AnimatedSpriteSymbol` for sprite-sheet animation, `SpineSymbol` for Spine.
+
+```ts
+import { SpriteSymbol } from 'pixi-reels';
+
+builder.symbols((r) => {
+  r.register('cherry', SpriteSymbol, { textures: { cherry: cherryTex } });
+  r.register('seven',  SpriteSymbol, { textures: { seven: sevenTex } });
+  r.register('wild',   SpriteSymbol, { textures: { wild: wildTex } });
+});
+```
+
+> **Verify:** calling `.build()` without registering any symbols throws
+> `symbols() must register at least one symbol.`
+
+## 4. Weights + ticker, then build
+
+```ts
+import { app } from './app';   // your PIXI.Application
+
+builder
+  .weights({ cherry: 40, seven: 8, wild: 5 })
+  .ticker(app.ticker);
+
+const reelSet = builder.build();
+app.stage.addChild(reelSet);
+```
+
+> **Verify:** you see a 5-column, 3-row grid of randomly assigned symbols,
+> static (not spinning).
+
+## 5. Spin it
+
+```ts
+document.getElementById('spin')!.addEventListener('click', async () => {
+  const result = await reelSet.spin();       // random grid
+  console.log(result.symbols);
+});
+```
+
+Want a *specific* outcome? Call `setResult()` before the promise resolves:
+
+```ts
+const promise = reelSet.spin();
+setTimeout(() => reelSet.setResult([
+  ['wild','seven','wild'],
+  ['seven','wild','seven'],
+  ['wild','seven','wild'],
+  ['seven','wild','seven'],
+  ['wild','seven','wild'],
+]), 200);
+const result = await promise;
+```
+
+> **Verify:** the reels land on exactly that grid, in that column order.
+
+## What next
+
+- React to events: [Spin lifecycle](/guides/spin-lifecycle/)
+- Change speed: [Speed modes](/guides/speed-modes/)
+- Play symbol animations on wins: [Win animations](/guides/win-animations/)
+- Test your slot deterministically: [Cheats & testing](/guides/cheats-and-testing/)

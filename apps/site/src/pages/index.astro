@@ -1,0 +1,78 @@
+---
+import Base from '../layouts/Base.astro';
+import Hero from '../components/Hero.astro';
+import FeatureGrid from '../components/FeatureGrid.astro';
+import CodeShowcase from '../components/CodeShowcase.astro';
+import DemoCallout from '../components/DemoCallout.astro';
+import FAQ from '../components/FAQ.astro';
+import {
+  SITE,
+  softwareApplicationLd,
+  softwareSourceCodeLd,
+  webSiteLd,
+  faqLd,
+  breadcrumbLd,
+} from '../lib/seo.ts';
+
+const faqs = [
+  { question: 'What is pixi-reels?', answer: 'pixi-reels is an open-source, MIT-licensed slot machine reel engine for PixiJS v8. It provides a fluent builder API, typed events, default spin phases, win animations, pluggable symbol types, and deterministic testing utilities.' },
+  { question: 'Which PixiJS versions does pixi-reels support?', answer: 'PixiJS v8 (^8.17.0) and GSAP v3 (^3.14.0). Spine symbols use an optional peer: @esotericsoftware/spine-pixi-v8.' },
+  { question: 'Can I test slot mechanics without a renderer?', answer: 'Yes. The pixi-reels testing module exports createTestReelSet, FakeTicker, HeadlessSymbol, spinAndLand, expectGrid, captureEvents, and countSymbol for running full spin lifecycles in Node.' },
+  { question: 'How do I force a specific spin outcome?', answer: 'Call ReelSet.setResult(grid) during a spin, or use the CheatEngine (examples/shared/cheats.ts) with built-in cheats: forceGrid, forceLine, forceScatters, forceNearMiss, forceCell, holdAndWinProgress, cascadeSequence, cascadingStages, forceAnticipation.' },
+  { question: 'Which slot mechanics are supported out of the box?', answer: 'Line pays, scatter-triggered free spins, hold & win, cascade/tumble with multipliers, sticky wilds, and anticipation plus slam-stop. Each ships as a live demo with a cheat panel.' },
+  { question: 'Does pixi-reels handle multi-response server cascades?', answer: 'Yes, via runCascade(reelSet, stages, opts). It accepts both a pre-known string[][][] array and an AsyncIterable<string[][]> for streaming server responses.' },
+  { question: 'Is pixi-reels tree-shakeable?', answer: 'Yes. ESM + CJS dual format, optional Spine peer, and the testing utilities live in a sub-module so they drop out of production builds.' },
+];
+
+const jsonLd = [
+  webSiteLd(),
+  softwareApplicationLd(),
+  softwareSourceCodeLd(),
+  faqLd(faqs),
+  breadcrumbLd([{ name: SITE.name, url: '/' }]),
+];
+---
+<Base
+  title={`${SITE.name} — ${SITE.tagline}`}
+  description={SITE.description}
+  path="/"
+  type="website"
+  jsonLd={jsonLd}
+>
+  <Hero />
+  <FeatureGrid />
+  <CodeShowcase />
+  <DemoCallout />
+  <FAQ />
+
+  <section class="pb-24">
+    <div class="container">
+      <div class="relative overflow-hidden rounded-2xl border border-border bg-card p-12 text-center shadow-xl shadow-primary/5">
+        <div class="absolute -top-px left-1/2 h-px w-2/3 -translate-x-1/2 bg-gradient-to-r from-transparent via-primary to-transparent" aria-hidden></div>
+        <div class="absolute -inset-x-20 -top-32 h-64 bg-gradient-to-b from-primary/20 to-transparent blur-3xl opacity-60" aria-hidden></div>
+        <div class="relative">
+          <h2 class="text-balance text-3xl font-semibold tracking-tight sm:text-4xl">
+            Install, and you're spinning.
+          </h2>
+          <p class="mx-auto mt-3 max-w-md text-muted-foreground">
+            One package, three peer deps, ten lines of code. Or skip ahead and poke a demo.
+          </p>
+          <div class="mt-6 flex items-center justify-center gap-3">
+            <a
+              href="/guides/getting-started/"
+              class="inline-flex h-10 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-accent px-5 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/30 transition-all hover:brightness-110"
+            >
+              Getting started
+            </a>
+            <a
+              href="/wiki/"
+              class="inline-flex h-10 items-center justify-center rounded-lg border border-border bg-transparent px-5 text-sm font-medium transition-colors hover:bg-secondary/50"
+            >
+              Read the reference
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</Base>

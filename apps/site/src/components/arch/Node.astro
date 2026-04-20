@@ -1,0 +1,41 @@
+---
+interface Props {
+  title: string;
+  subtitle?: string;
+  kind?: 'primary' | 'accent' | 'muted' | 'subtle';
+  badge?: string;
+  /** Inline style for positioning inside an absolutely-positioned canvas. */
+  style?: string;
+  /** Extra class names. */
+  class?: string;
+}
+const { title, subtitle, kind = 'subtle', badge, style, class: className } = Astro.props;
+
+const variants: Record<string, string> = {
+  primary: 'bg-primary text-primary-foreground border-primary shadow-primary/40',
+  accent: 'bg-accent text-accent-foreground border-accent shadow-accent/30',
+  muted: 'bg-muted border-border text-foreground',
+  subtle: 'bg-card border-border text-foreground',
+};
+---
+<div
+  class:list={[
+    'rounded-xl border-2 p-3 min-w-[150px] shadow-lg transition-transform',
+    variants[kind],
+    className,
+  ]}
+  style={style}
+>
+  <div class="flex items-center gap-2">
+    {badge && (
+      <span class="inline-flex items-center justify-center h-5 min-w-[20px] px-1.5 rounded-md bg-background/30 text-[10px] font-mono font-semibold">
+        {badge}
+      </span>
+    )}
+    <div class="flex-1">
+      <div class="font-mono text-[13px] font-semibold leading-tight">{title}</div>
+      {subtitle && <div class="text-[11px] opacity-75 mt-0.5">{subtitle}</div>}
+    </div>
+  </div>
+  <slot />
+</div>

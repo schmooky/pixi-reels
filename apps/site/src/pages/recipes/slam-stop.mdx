@@ -1,0 +1,57 @@
+---
+layout: ../../layouts/Recipe.astro
+title: How to slam-stop
+description: Let the player tap the spin button again to land the reels immediately — with the result still correct.
+tags: [skip, UX]
+steps:
+  - If the reels are spinning, reelSet.skip() — otherwise reelSet.spin()
+  - Ensure setResult() has already fired so skip lands on target
+  - Inspect result.wasSkipped to adjust animations (shorter win celebration, etc.)
+apis:
+  - ReelSet.skip
+  - ReelSet.isSpinning
+  - SpinResult.wasSkipped
+---
+
+import SlamStopRecipe from '../../components/recipes/SlamStopRecipe.tsx';
+
+<SlamStopRecipe client:only="react" />
+
+## The minimum code
+
+```ts
+spinButton.addEventListener('click', async () => {
+  if (reelSet.isSpinning) {
+    reelSet.skip();
+    return;
+  }
+  const promise = reelSet.spin();
+  const response = await fetch('/api/spin').then((r) => r.json());
+  reelSet.setResult(response.symbols);
+  const result = await promise;
+  if (result.wasSkipped) {
+    // skip paths can use shorter/no win animations
+  }
+});
+```
+
+## What `skip()` actually does
+
+1. Emits `skip:requested`.
+2. Force-completes every active spin phase (including GSAP tweens).
+3. Calls `reel.placeSymbols(targetRow)` on every reel with the result from `setResult()`, or the current symbols if none was set.
+4. Snaps the reel container `y` back to `0`.
+5. Fires `skip:completed` then `spin:complete` with `wasSkipped: true`.
+
+## Test it
+
+```ts
+import { createTestReelSet, captureEvents } from 'pixi-reels';
+
+const { reelSet, spinAndLand } = createTestReelSet({ reels: 5, visibleRows: 3, symbolIds: ['a','b','c'] });
+const log = captureEvents(reelSet, ['skip:requested', 'skip:completed', 'spin:complete']);
+
+const result = await spinAndLand([['a','a','a'],['b','b','b'],['c','c','c'],['a','b','c'],['c','b','a']]);
+expect(result.wasSkipped).toBe(true);
+expect(log.map((e) => e.event)).toEqual(['skip:requested','spin:complete','skip:completed']);
+```

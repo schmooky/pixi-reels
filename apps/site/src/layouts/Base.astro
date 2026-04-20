@@ -1,0 +1,44 @@
+---
+import Nav from '../components/Nav.astro';
+import Footer from '../components/Footer.astro';
+import SEO from '../components/SEO.astro';
+import '../styles/global.css';
+import { SITE, type PageSeo } from '../lib/seo.ts';
+
+interface Props extends Partial<PageSeo> {
+  title?: string;
+  description?: string;
+}
+const {
+  title = `${SITE.name} — ${SITE.tagline}`,
+  description = SITE.description,
+  path,
+  image,
+  type,
+  article,
+  keywords,
+  jsonLd,
+  noIndex,
+} = Astro.props as Props;
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <SEO
+      title={title}
+      description={description}
+      path={path}
+      image={image}
+      type={type}
+      article={article}
+      keywords={keywords}
+      jsonLd={jsonLd}
+      noIndex={noIndex}
+    />
+  </head>
+  <body>
+    <Nav />
+    <main><slot /></main>
+    <Footer />
+  </body>
+</html>

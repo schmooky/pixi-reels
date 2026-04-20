@@ -1,0 +1,420 @@
+---
+import Architecture from '../../layouts/Architecture.astro';
+import Legend from '../../components/arch/Legend.astro';
+---
+<Architecture
+  title="Classes"
+  subtitle="The composition tree — what owns what, and what passes through."
+  eyebrow="Objects"
+>
+  <p>
+    Every class in pixi-reels lives on one of three layers: the
+    <strong>outer shell</strong> the user builds, the <strong>scene graph</strong>
+    PixiJS renders, or the <strong>internals</strong> that exist for the
+    duration of a spin. Ownership reads top-to-bottom: the parent always
+    destroys its children on <code>destroy()</code>.
+  </p>
+
+  <h2>What each class does — in plain English</h2>
+
+  <p>
+    If a name feels opaque, read its one-liner here first. The SVG after
+    this section shows how the names are wired together.
+  </p>
+
+  <div class="not-prose my-6 grid gap-2 text-sm">
+    <div class="rounded-lg border border-border bg-card px-4 py-3">
+      <div class="flex items-center gap-2">
+        <code class="font-mono text-primary text-sm">ReelSetBuilder</code>
+        <span class="text-xs text-muted-foreground">builder</span>
+      </div>
+      <p class="mt-1 text-foreground/80">
+        A fluent, chainable configurator. You call <code>.reels(5).visibleSymbols(3)...</code> and end with <code>.build()</code>. It exists so every required piece of setup is forced into one place — forget <code>.ticker(app.ticker)</code> and <code>.build()</code> throws before your game boots.
+      </p>
+    </div>
+
+    <div class="rounded-lg border border-border bg-card px-4 py-3">
+      <div class="flex items-center gap-2">
+        <code class="font-mono text-primary text-sm">ReelSet</code>
+        <span class="text-xs text-muted-foreground">scene graph root</span>
+      </div>
+      <p class="mt-1 text-foreground/80">
+        The thing you <code>app.stage.addChild(reelSet)</code>. A PixiJS <code>Container</code> that owns every reel, the spin controller, the speed manager, and the win spotlight. All the public methods you'll reach for live here: <code>spin()</code>, <code>setResult()</code>, <code>skip()</code>, <code>destroy()</code>.
+      </p>
+    </div>
+
+    <div class="rounded-lg border border-border bg-card px-4 py-3">
+      <div class="flex items-center gap-2">
+        <code class="font-mono text-primary text-sm">Reel</code>
+        <span class="text-xs text-muted-foreground">one column</span>
+      </div>
+      <p class="mt-1 text-foreground/80">
+        One vertical column of symbols. A Reel owns the symbols currently on screen, their vertical position, and the "what do I land on" queue. You rarely touch a Reel directly — you drive the whole <code>ReelSet</code> and let it fan out.
+      </p>
+    </div>
+
+    <div class="rounded-lg border border-border bg-card px-4 py-3">
+      <div class="flex items-center gap-2">
+        <code class="font-mono text-primary text-sm">ReelViewport</code>
+        <span class="text-xs text-muted-foreground">clip + layer</span>
+      </div>
+      <p class="mt-1 text-foreground/80">
+        The clipped window you see through. Holds the mask so symbols scrolling above or below the visible area are hidden, plus a "promoted" layer where winning symbols get temporarily lifted above the mask so their celebration animation isn't clipped.
+      </p>
+    </div>
+
+    <div class="rounded-lg border border-border bg-card px-4 py-3">
+      <div class="flex items-center gap-2">
+        <code class="font-mono text-primary text-sm">ReelMotion</code>
+        <span class="text-xs text-muted-foreground">vertical scroll</span>
+      </div>
+      <p class="mt-1 text-foreground/80">
+        The physics of one reel. Adds a Y delta every tick and wraps symbols that fall off the bottom back to the top. When a symbol wraps, it fires a callback that tells the reel "time to swap identity" — that's how a spinning reel eventually shows the target grid.
+      </p>
+    </div>
+
+    <div class="rounded-lg border border-border bg-card px-4 py-3">
+      <div class="flex items-center gap-2">
+        <code class="font-mono text-primary text-sm">StopSequencer</code>
+        <span class="text-xs text-muted-foreground">landing queue</span>
+      </div>
+      <p class="mt-1 text-foreground/80">
+        A tiny queue that holds the symbols a reel must land on, in order. On every wrap, the sequencer hands out the next target. When the queue is empty the reel stops.
+      </p>
+    </div>
+
+    <div class="rounded-lg border border-border bg-card px-4 py-3">
+      <div class="flex items-center gap-2">
+        <code class="font-mono text-primary text-sm">SpinController</code>
+        <span class="text-xs text-muted-foreground">conductor</span>
+      </div>
+      <p class="mt-1 text-foreground/80">
+        The conductor of a spin. Hands every reel its next phase (<code>Start</code> → <code>Spin</code> → optional <code>Anticipation</code> → <code>Stop</code>), coordinates with <code>setResult()</code>, fires the <code>spin:*</code> events, and resolves the promise you awaited on.
+      </p>
+    </div>
+
+    <div class="rounded-lg border border-border bg-card px-4 py-3">
+      <div class="flex items-center gap-2">
+        <code class="font-mono text-primary text-sm">ReelPhase</code>
+        <span class="text-xs text-muted-foreground">state</span>
+      </div>
+      <p class="mt-1 text-foreground/80">
+        Abstract base for a single stage of a reel's spin. Each stage gets <code>onEnter</code>, <code>update</code> (per-tick), and <code>onSkip</code>. Stock phases: <code>StartPhase</code> (wind-up), <code>SpinPhase</code> (steady-state blur), <code>AnticipationPhase</code> (slow-down for tension), <code>StopPhase</code> (decelerate, snap, bounce).
+      </p>
+    </div>
+
+    <div class="rounded-lg border border-border bg-card px-4 py-3">
+      <div class="flex items-center gap-2">
+        <code class="font-mono text-primary text-sm">SpinningMode</code>
+        <span class="text-xs text-muted-foreground">strategy</span>
+      </div>
+      <p class="mt-1 text-foreground/80">
+        The top-level "what does a spin even mean" strategy. <code>StandardMode</code> runs every reel through the phase machine. <code>CascadeMode</code> replaces whole columns atomically for tumble mechanics. <code>ImmediateMode</code> snaps straight to the result — useful in tests.
+      </p>
+    </div>
+
+    <div class="rounded-lg border border-border bg-card px-4 py-3">
+      <div class="flex items-center gap-2">
+        <code class="font-mono text-primary text-sm">SpeedManager</code>
+        <span class="text-xs text-muted-foreground">tempo</span>
+      </div>
+      <p class="mt-1 text-foreground/80">
+        Named bundles of timings (spin speed, stop delay, bounce distance, easings). Ship with <code>normal</code>, <code>turbo</code>, <code>superTurbo</code> presets. Switch at runtime with <code>reelSet.setSpeed('turbo')</code>; add your own with <code>addProfile()</code>.
+      </p>
+    </div>
+
+    <div class="rounded-lg border border-border bg-card px-4 py-3">
+      <div class="flex items-center gap-2">
+        <code class="font-mono text-primary text-sm">ReelSymbol</code>
+        <span class="text-xs text-muted-foreground">abstract cell</span>
+      </div>
+      <p class="mt-1 text-foreground/80">
+        One visible cell on a reel. Abstract base class — subclass it to draw whatever you like. Built-in subclasses: <code>SpriteSymbol</code> (plain texture), <code>AnimatedSpriteSymbol</code> (sprite sheet), <code>SpineSymbol</code> (Spine skeleton, optional peer). Implement <code>onActivate</code>, <code>onDeactivate</code>, <code>playWin</code>, <code>stopAnimation</code>, <code>resize</code> for a new kind.
+      </p>
+    </div>
+
+    <div class="rounded-lg border border-border bg-card px-4 py-3">
+      <div class="flex items-center gap-2">
+        <code class="font-mono text-primary text-sm">SymbolRegistry / SymbolFactory</code>
+        <span class="text-xs text-muted-foreground">pool</span>
+      </div>
+      <p class="mt-1 text-foreground/80">
+        <code>SymbolRegistry</code> records "symbol id X is rendered by class Y with options Z". <code>SymbolFactory</code> is the cache on top — it pools instances so scrolling a 5x3 reel for five seconds allocates zero new symbol objects.
+      </p>
+    </div>
+
+    <div class="rounded-lg border border-border bg-card px-4 py-3">
+      <div class="flex items-center gap-2">
+        <code class="font-mono text-primary text-sm">FrameBuilder + middleware</code>
+        <span class="text-xs text-muted-foreground">pipeline</span>
+      </div>
+      <p class="mt-1 text-foreground/80">
+        A middleware pipeline that decides which symbol identity fills each new buffer slot when a reel needs another row. Random fill is priority 0, target-frame placement is priority 10. Register your own middleware to implement rules like "no three-in-a-row" or "inject a mystery symbol every 7th spin".
+      </p>
+    </div>
+
+    <div class="rounded-lg border border-border bg-card px-4 py-3">
+      <div class="flex items-center gap-2">
+        <code class="font-mono text-primary text-sm">SymbolSpotlight</code>
+        <span class="text-xs text-muted-foreground">wins</span>
+      </div>
+      <p class="mt-1 text-foreground/80">
+        The win-animation primitive. <code>show(positions)</code> dims the losers and runs <code>playWin()</code> on the winners, promoted above the mask. <code>cycle(lines)</code> iterates through multiple lines with a configurable cadence and emits <code>spotlight:start</code> / <code>spotlight:end</code> events.
+      </p>
+    </div>
+
+    <div class="rounded-lg border border-border bg-card px-4 py-3">
+      <div class="flex items-center gap-2">
+        <code class="font-mono text-primary text-sm">EventEmitter</code>
+        <span class="text-xs text-muted-foreground">pub / sub</span>
+      </div>
+      <p class="mt-1 text-foreground/80">
+        Typed pub/sub. Event names are colon-namespaced (<code>spin:start</code>, <code>spin:reelLanded</code>, <code>speed:changed</code>). Every exit path from a spin fires an event — wire audio and HUD to events, not to method calls, so <code>skip()</code> and <code>destroy()</code> stay correct without your HUD knowing about them.
+      </p>
+    </div>
+
+    <div class="rounded-lg border border-border bg-card px-4 py-3">
+      <div class="flex items-center gap-2">
+        <code class="font-mono text-primary text-sm">TickerRef</code>
+        <span class="text-xs text-muted-foreground">safe ticker</span>
+      </div>
+      <p class="mt-1 text-foreground/80">
+        A thin wrapper around <code>PIXI.Ticker</code> that tracks every callback it adds and removes them all on <code>destroy()</code>. Nobody in this codebase calls <code>ticker.add()</code> directly — that's how we keep teardown correct.
+      </p>
+    </div>
+
+    <div class="rounded-lg border border-border bg-card px-4 py-3">
+      <div class="flex items-center gap-2">
+        <code class="font-mono text-primary text-sm">Disposable</code>
+        <span class="text-xs text-muted-foreground">interface</span>
+      </div>
+      <p class="mt-1 text-foreground/80">
+        The cleanup contract. Anything that allocates implements it. <code>reelSet.destroy()</code> cascades through the whole tree — you never have to chase individual pieces yourself.
+      </p>
+    </div>
+
+    <div class="rounded-lg border border-border bg-card px-4 py-3">
+      <div class="flex items-center gap-2">
+        <code class="font-mono text-primary text-sm">FakeTicker + HeadlessSymbol</code>
+        <span class="text-xs text-muted-foreground">tests</span>
+      </div>
+      <p class="mt-1 text-foreground/80">
+        The headless harness. A manual ticker you step frame by frame, plus a symbol class that draws nothing. With these you can run an entire spin lifecycle in Node, assert on the final grid, and never load PixiJS's renderer.
+      </p>
+    </div>
+  </div>
+
+  <div class="not-prose my-8">
+    <div class="rounded-2xl border border-border bg-card p-6 overflow-x-auto">
+      <svg viewBox="0 0 920 720" class="w-full h-auto">
+
+        <!-- Layer 1: Builder -->
+        <rect x="340" y="30" width="240" height="60" rx="14" fill="hsl(var(--primary))" />
+        <text x="460" y="58" text-anchor="middle" font-family="Inter, sans-serif" font-size="15" font-weight="700" fill="hsl(var(--primary-foreground))">ReelSetBuilder</text>
+        <text x="460" y="76" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="10" fill="hsl(var(--primary-foreground))" opacity="0.85">.reels() · .symbols() · .build()</text>
+
+        <!-- Arrow builder -> ReelSet -->
+        <path d="M 460 90 L 460 130" stroke="hsl(var(--primary))" stroke-width="2" stroke-dasharray="4 4" fill="none" marker-end="url(#arr-p)" />
+        <text x="480" y="115" font-family="ui-monospace, Menlo, monospace" font-size="10" fill="hsl(var(--primary))">creates</text>
+
+        <!-- Layer 2: ReelSet -->
+        <rect x="300" y="130" width="320" height="70" rx="14" fill="hsl(var(--accent))" fill-opacity="0.15" stroke="hsl(var(--accent))" stroke-width="2.5" />
+        <text x="460" y="160" text-anchor="middle" font-family="Inter, sans-serif" font-size="16" font-weight="700" fill="hsl(var(--foreground))">ReelSet</text>
+        <text x="460" y="180" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="10" fill="hsl(var(--muted-foreground))">extends PIXI.Container · implements Disposable</text>
+
+        <!-- Fan-out arrows -->
+        <path d="M 460 200 C 460 225, 125 215, 125 240" stroke="hsl(var(--accent))" stroke-width="1.5" fill="none" opacity="0.6" />
+        <path d="M 460 200 C 460 225, 280 215, 280 240" stroke="hsl(var(--accent))" stroke-width="1.5" fill="none" opacity="0.6" />
+        <path d="M 460 200 C 460 225, 435 215, 435 240" stroke="hsl(var(--accent))" stroke-width="1.5" fill="none" opacity="0.6" />
+        <path d="M 460 200 C 460 225, 590 215, 590 240" stroke="hsl(var(--accent))" stroke-width="1.5" fill="none" opacity="0.6" />
+        <path d="M 460 200 C 460 225, 745 215, 745 240" stroke="hsl(var(--accent))" stroke-width="1.5" fill="none" opacity="0.6" />
+
+        <!-- Subsystem boxes -->
+        <g>
+          <rect x="50" y="240" width="150" height="56" rx="10" fill="hsl(var(--card))" stroke="hsl(var(--border-strong))" stroke-width="1.5" />
+          <text x="125" y="263" text-anchor="middle" font-family="Inter, sans-serif" font-size="12" font-weight="600" fill="hsl(var(--foreground))">SpinController</text>
+          <text x="125" y="280" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="10" fill="hsl(var(--muted-foreground))">phase orchestrator</text>
+        </g>
+        <g>
+          <rect x="205" y="240" width="150" height="56" rx="10" fill="hsl(var(--card))" stroke="hsl(var(--border-strong))" stroke-width="1.5" />
+          <text x="280" y="263" text-anchor="middle" font-family="Inter, sans-serif" font-size="12" font-weight="600" fill="hsl(var(--foreground))">SpeedManager</text>
+          <text x="280" y="280" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="10" fill="hsl(var(--muted-foreground))">named profiles</text>
+        </g>
+        <g>
+          <rect x="360" y="240" width="150" height="56" rx="10" fill="hsl(var(--card))" stroke="hsl(var(--border-strong))" stroke-width="1.5" />
+          <text x="435" y="263" text-anchor="middle" font-family="Inter, sans-serif" font-size="12" font-weight="600" fill="hsl(var(--foreground))">SymbolSpotlight</text>
+          <text x="435" y="280" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="10" fill="hsl(var(--muted-foreground))">win cycle</text>
+        </g>
+        <g>
+          <rect x="515" y="240" width="150" height="56" rx="10" fill="hsl(var(--card))" stroke="hsl(var(--border-strong))" stroke-width="1.5" />
+          <text x="590" y="263" text-anchor="middle" font-family="Inter, sans-serif" font-size="12" font-weight="600" fill="hsl(var(--foreground))">SymbolFactory</text>
+          <text x="590" y="280" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="10" fill="hsl(var(--muted-foreground))">pool owner</text>
+        </g>
+        <g>
+          <rect x="670" y="240" width="160" height="56" rx="10" fill="hsl(var(--card))" stroke="hsl(var(--border-strong))" stroke-width="1.5" />
+          <text x="750" y="263" text-anchor="middle" font-family="Inter, sans-serif" font-size="12" font-weight="600" fill="hsl(var(--foreground))">FrameBuilder</text>
+          <text x="750" y="280" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="10" fill="hsl(var(--muted-foreground))">middleware pipeline</text>
+        </g>
+
+        <!-- Reels[] -->
+        <path d="M 460 200 L 460 340" stroke="hsl(var(--primary))" stroke-width="2" fill="none" />
+        <rect x="280" y="340" width="360" height="90" rx="14" fill="hsl(var(--accent))" fill-opacity="0.08" stroke="hsl(var(--accent))" stroke-dasharray="5 4" stroke-width="1.5" />
+        <text x="295" y="362" font-family="ui-monospace, Menlo, monospace" font-size="11" font-weight="700" fill="hsl(var(--accent))" letter-spacing="0.08em">REELS[]</text>
+
+        <g transform="translate(295, 372)">
+          <rect width="55" height="48" rx="8" fill="hsl(var(--card))" stroke="hsl(var(--accent))" stroke-width="1.5" />
+          <text x="27.5" y="20" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" font-weight="600" fill="hsl(var(--foreground))">Reel</text>
+          <text x="27.5" y="36" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="9" fill="hsl(var(--muted-foreground))">#0</text>
+        </g>
+        <g transform="translate(360, 372)">
+          <rect width="55" height="48" rx="8" fill="hsl(var(--card))" stroke="hsl(var(--accent))" stroke-width="1.5" />
+          <text x="27.5" y="20" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" font-weight="600" fill="hsl(var(--foreground))">Reel</text>
+          <text x="27.5" y="36" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="9" fill="hsl(var(--muted-foreground))">#1</text>
+        </g>
+        <g transform="translate(425, 372)">
+          <rect width="55" height="48" rx="8" fill="hsl(var(--card))" stroke="hsl(var(--accent))" stroke-width="1.5" />
+          <text x="27.5" y="20" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" font-weight="600" fill="hsl(var(--foreground))">Reel</text>
+          <text x="27.5" y="36" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="9" fill="hsl(var(--muted-foreground))">#2</text>
+        </g>
+        <g transform="translate(490, 372)">
+          <rect width="55" height="48" rx="8" fill="hsl(var(--card))" stroke="hsl(var(--accent))" stroke-width="1.5" />
+          <text x="27.5" y="20" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" font-weight="600" fill="hsl(var(--foreground))">Reel</text>
+          <text x="27.5" y="36" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="9" fill="hsl(var(--muted-foreground))">#3</text>
+        </g>
+        <g transform="translate(555, 372)">
+          <rect width="55" height="48" rx="8" fill="hsl(var(--card))" stroke="hsl(var(--accent))" stroke-width="1.5" />
+          <text x="27.5" y="20" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" font-weight="600" fill="hsl(var(--foreground))">Reel</text>
+          <text x="27.5" y="36" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="9" fill="hsl(var(--muted-foreground))">#4</text>
+        </g>
+
+        <!-- Per reel details -->
+        <path d="M 460 430 L 460 470" stroke="hsl(var(--muted-foreground))" stroke-width="1.5" stroke-dasharray="3 3" fill="none" />
+        <text x="480" y="455" font-family="ui-monospace, Menlo, monospace" font-size="10" fill="hsl(var(--muted-foreground))">one reel contains:</text>
+
+        <rect x="60" y="470" width="800" height="220" rx="14" fill="hsl(var(--muted))" fill-opacity="0.5" stroke="hsl(var(--border))" stroke-width="1" />
+        <text x="72" y="492" font-family="ui-monospace, Menlo, monospace" font-size="11" font-weight="700" fill="hsl(var(--foreground))" letter-spacing="0.08em">PER REEL</text>
+
+        <g transform="translate(80, 510)">
+          <rect width="220" height="60" rx="10" fill="hsl(var(--card))" stroke="hsl(var(--border))" stroke-width="1.5" />
+          <text x="110" y="24" text-anchor="middle" font-family="Inter, sans-serif" font-size="12" font-weight="600" fill="hsl(var(--foreground))">container: PIXI.Container</text>
+          <text x="110" y="40" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="9" fill="hsl(var(--muted-foreground))">child of ReelViewport.maskedContainer</text>
+          <text x="110" y="52" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="9" fill="hsl(var(--muted-foreground))">holds the symbol views</text>
+        </g>
+        <g transform="translate(320, 510)">
+          <rect width="220" height="60" rx="10" fill="hsl(var(--card))" stroke="hsl(var(--border))" stroke-width="1.5" />
+          <text x="110" y="24" text-anchor="middle" font-family="Inter, sans-serif" font-size="12" font-weight="600" fill="hsl(var(--foreground))">symbols: ReelSymbol[]</text>
+          <text x="110" y="40" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="9" fill="hsl(var(--muted-foreground))">buffer + visible + buffer</text>
+          <text x="110" y="52" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="9" fill="hsl(var(--muted-foreground))">pooled + recycled by SymbolFactory</text>
+        </g>
+        <g transform="translate(560, 510)">
+          <rect width="280" height="60" rx="10" fill="hsl(var(--card))" stroke="hsl(var(--border))" stroke-width="1.5" />
+          <text x="140" y="24" text-anchor="middle" font-family="Inter, sans-serif" font-size="12" font-weight="600" fill="hsl(var(--foreground))">events: EventEmitter&lt;ReelEvents&gt;</text>
+          <text x="140" y="40" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="9" fill="hsl(var(--muted-foreground))">phase:enter · phase:exit · landed</text>
+          <text x="140" y="52" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="9" fill="hsl(var(--muted-foreground))">symbol:created · symbol:recycled</text>
+        </g>
+
+        <g transform="translate(80, 590)">
+          <rect width="220" height="60" rx="10" fill="hsl(var(--card))" stroke="hsl(var(--border))" stroke-width="1.5" />
+          <text x="110" y="24" text-anchor="middle" font-family="Inter, sans-serif" font-size="12" font-weight="600" fill="hsl(var(--foreground))">motion: ReelMotion</text>
+          <text x="110" y="40" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="9" fill="hsl(var(--muted-foreground))">displace · wrap · snapToGrid</text>
+          <text x="110" y="52" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="9" fill="hsl(var(--muted-foreground))">fires wrap callback -&gt; factory</text>
+        </g>
+        <g transform="translate(320, 590)">
+          <rect width="220" height="60" rx="10" fill="hsl(var(--card))" stroke="hsl(var(--border))" stroke-width="1.5" />
+          <text x="110" y="24" text-anchor="middle" font-family="Inter, sans-serif" font-size="12" font-weight="600" fill="hsl(var(--foreground))">stopSequencer: StopSequencer</text>
+          <text x="110" y="40" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="9" fill="hsl(var(--muted-foreground))">target frame queue</text>
+          <text x="110" y="52" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="9" fill="hsl(var(--muted-foreground))">next() pops each wrap</text>
+        </g>
+        <g transform="translate(560, 590)">
+          <rect width="280" height="60" rx="10" fill="hsl(var(--card))" stroke="hsl(var(--border))" stroke-width="1.5" />
+          <text x="140" y="24" text-anchor="middle" font-family="Inter, sans-serif" font-size="12" font-weight="600" fill="hsl(var(--foreground))">spinningMode: SpinningMode</text>
+          <text x="140" y="40" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="9" fill="hsl(var(--muted-foreground))">Standard · Cascade · Immediate</text>
+          <text x="140" y="52" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="9" fill="hsl(var(--muted-foreground))">computeDeltaY() per tick</text>
+        </g>
+
+        <defs>
+          <marker id="arr-p" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="hsl(var(--primary))" />
+          </marker>
+        </defs>
+      </svg>
+    </div>
+
+    <div class="mt-4">
+      <Legend items={[
+        { kind: 'primary', label: 'Public API', note: 'Builder — you construct this' },
+        { kind: 'accent', label: 'Scene graph', note: 'ReelSet and its reels' },
+        { kind: 'subtle', label: 'Internals', note: 'Subsystems, motion, sequencer' },
+        { kind: 'muted', label: 'Grouping', note: 'conceptual, not a class' },
+      ]} />
+    </div>
+  </div>
+
+  <h2>Reading the ownership chain</h2>
+
+  <p>
+    <code>ReelSet.destroy()</code> is the single source of truth for teardown.
+    Internally it:
+  </p>
+
+  <ol>
+    <li>Destroys the <code>SymbolSpotlight</code> (releases its tween handles).</li>
+    <li>Destroys the <code>SpinController</code>, which removes the <code>TickerRef</code> callback.</li>
+    <li>For each <code>Reel</code>: releases every pooled symbol back to the <code>SymbolFactory</code>, removes event listeners, destroys the PixiJS container tree.</li>
+    <li>Destroys the <code>SymbolFactory</code>, which disposes every class instance in its pool.</li>
+    <li>Destroys the <code>ReelViewport</code> (masked container).</li>
+    <li>Emits <code>destroyed</code>, removes every listener, calls <code>{'super.destroy({ children: true })'}</code>.</li>
+  </ol>
+
+  <p>
+    If you extend pixi-reels with a new subsystem that holds resources, it
+    must implement the <code>Disposable</code> interface and be destroyed
+    from this chain — there's no hidden GC to catch you.
+  </p>
+
+  <h2>Disposable everywhere</h2>
+
+  <div class="not-prose my-4 grid gap-2 text-sm">
+    <div class="flex items-center gap-3 rounded-lg border border-border bg-card px-3 py-2">
+      <code class="font-mono text-primary text-sm min-w-[180px]">ReelSet</code>
+      <span class="text-muted-foreground text-xs">owns: viewport · reels · factory · subsystems</span>
+    </div>
+    <div class="flex items-center gap-3 rounded-lg border border-border bg-card px-3 py-2">
+      <code class="font-mono text-primary text-sm min-w-[180px]">Reel</code>
+      <span class="text-muted-foreground text-xs">owns: motion · stopSequencer · events · container</span>
+    </div>
+    <div class="flex items-center gap-3 rounded-lg border border-border bg-card px-3 py-2">
+      <code class="font-mono text-primary text-sm min-w-[180px]">SpinController</code>
+      <span class="text-muted-foreground text-xs">owns: TickerRef · active phases</span>
+    </div>
+    <div class="flex items-center gap-3 rounded-lg border border-border bg-card px-3 py-2">
+      <code class="font-mono text-primary text-sm min-w-[180px]">SymbolSpotlight</code>
+      <span class="text-muted-foreground text-xs">owns: gsap timelines · overlay containers</span>
+    </div>
+    <div class="flex items-center gap-3 rounded-lg border border-border bg-card px-3 py-2">
+      <code class="font-mono text-primary text-sm min-w-[180px]">SymbolFactory</code>
+      <span class="text-muted-foreground text-xs">owns: ObjectPool&lt;ReelSymbol&gt;</span>
+    </div>
+    <div class="flex items-center gap-3 rounded-lg border border-border bg-card px-3 py-2">
+      <code class="font-mono text-primary text-sm min-w-[180px]">TickerRef</code>
+      <span class="text-muted-foreground text-xs">owns: registered ticker callbacks</span>
+    </div>
+    <div class="flex items-center gap-3 rounded-lg border border-border bg-card px-3 py-2">
+      <code class="font-mono text-primary text-sm min-w-[180px]">ReelSymbol</code>
+      <span class="text-muted-foreground text-xs">owns: view container · subclass resources</span>
+    </div>
+  </div>
+
+  <h2>Extension points</h2>
+
+  <p>
+    The classes on the outer edges are where you plug in custom code:
+  </p>
+
+  <ul>
+    <li>Extend <code>ReelSymbol</code> for a new rendering style (Spine, animated sprite, custom Graphics).</li>
+    <li>Extend <code>ReelPhase&lt;TConfig&gt;</code> for a new spin phase, register it via <code>builder.phases(f =&gt; f.register(...))</code>.</li>
+    <li>Implement <code>SpinningMode</code> for a different motion model (cascade, hover, immediate).</li>
+    <li>Implement <code>FrameMiddleware</code> to hook into per-frame symbol generation — random fill and target placement are themselves just middleware.</li>
+  </ul>
+</Architecture>

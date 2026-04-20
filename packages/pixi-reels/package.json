@@ -1,0 +1,86 @@
+{
+  "name": "pixi-reels",
+  "version": "0.1.0",
+  "description": "A batteries-included slot machine reel engine for PixiJS v8 — fluent builder, typed events, spin phases, speed modes, win spotlight, and a headless testing harness.",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs",
+      "types": "./dist/index.d.ts"
+    },
+    "./spine": {
+      "import": "./dist/spine.js",
+      "require": "./dist/spine.cjs",
+      "types": "./dist/spine.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "scripts": {
+    "build": "vite build",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src/"
+  },
+  "peerDependencies": {
+    "pixi.js": "^8.17.0",
+    "gsap": "^3.14.0",
+    "@esotericsoftware/spine-pixi-v8": "^4.2.108"
+  },
+  "peerDependenciesMeta": {
+    "@esotericsoftware/spine-pixi-v8": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "typescript": "^6.0.0",
+    "vite": "^8.0.0",
+    "vite-plugin-dts": "^4.5.0",
+    "vitest": "^4.1.0",
+    "pixi.js": "^8.17.0",
+    "gsap": "^3.14.0",
+    "@esotericsoftware/spine-pixi-v8": "^4.2.108"
+  },
+  "license": "MIT",
+  "author": "schmooky",
+  "homepage": "https://pixi-reels.dev",
+  "bugs": {
+    "url": "https://github.com/schmooky/pixi-reels/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/schmooky/pixi-reels.git",
+    "directory": "packages/pixi-reels"
+  },
+  "keywords": [
+    "pixi",
+    "pixijs",
+    "pixi.js",
+    "slot",
+    "reel",
+    "reels",
+    "casino",
+    "slot-machine",
+    "game",
+    "gamedev",
+    "html5-game",
+    "spine",
+    "animation",
+    "gsap",
+    "typescript"
+  ]
+}

@@ -1,0 +1,73 @@
+---
+import Base from './Base.astro';
+import DocsSidebar from '../components/DocsSidebar.astro';
+import { GUIDES_NAV, WIKI_NAV, type NavSection } from '../content/nav.ts';
+import { articleLd, breadcrumbLd, SITE } from '../lib/seo.ts';
+
+interface Props {
+  title?: string;
+  description?: string;
+  section?: 'guides' | 'wiki' | 'demos';
+  eyebrow?: string;
+  frontmatter?: {
+    title?: string;
+    description?: string;
+    section?: 'guides' | 'wiki' | 'demos';
+    eyebrow?: string;
+  };
+}
+
+const props = Astro.props as Props;
+const fm = props.frontmatter ?? {};
+const title = props.title ?? fm.title ?? 'pixi-reels';
+const description =
+  props.description ??
+  fm.description ??
+  `${title} — pixi-reels, open-source slot machine reel engine for PixiJS v8.`;
+const section = (props.section ?? fm.section ?? 'guides') as 'guides' | 'wiki' | 'demos';
+const eyebrow = props.eyebrow ?? fm.eyebrow;
+const pathname = Astro.url.pathname;
+
+const navMap: Record<string, NavSection[]> = {
+  guides: GUIDES_NAV,
+  wiki: WIKI_NAV,
+  demos: [],
+};
+const nav = navMap[section] ?? [];
+
+const sectionLabel: Record<string, string> = {
+  guides: 'Guides',
+  wiki: 'Wiki',
+  demos: 'Demos',
+};
+
+const jsonLd = [
+  articleLd({ title, description, path: pathname }),
+  breadcrumbLd([
+    { name: SITE.name, url: '/' },
+    { name: sectionLabel[section], url: `/${section}/` },
+    { name: title, url: pathname },
+  ]),
+];
+---
+<Base
+  title={`${title} · ${SITE.name}`}
+  description={description}
+  path={pathname}
+  type="article"
+  article={{ section: sectionLabel[section] }}
+  jsonLd={jsonLd}
+>
+  <div class="container grid gap-10 py-12 md:grid-cols-[220px_minmax(0,1fr)]">
+    {nav.length > 0 && <DocsSidebar nav={nav} pathname={pathname} />}
+    <article class:list={["prose-docs min-w-0 max-w-3xl animate-fade-in", { 'md:col-span-2 mx-auto': nav.length === 0 }]}>
+      {eyebrow && (
+        <div class="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
+          {eyebrow}
+        </div>
+      )}
+      <h1 class="mb-6 text-4xl font-semibold tracking-tight">{title}</h1>
+      <slot />
+    </article>
+  </div>
+</Base>

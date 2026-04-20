@@ -1,0 +1,79 @@
+---
+layout: ../../layouts/Recipe.astro
+title: Sticky wild
+description: Wilds that land during a free-spin round stay locked for the remainder of the round. The simpler cousin of the walking wild.
+tags: [wild, respin, sticky]
+steps:
+  - Track each landed wild's (reel, row) in a Set
+  - Every free-spin, build a result grid that re-injects every stuck wild
+  - Clear the Set when the round ends
+apis:
+  - ReelSet.setResult
+  - spin:complete event
+---
+
+import StickyWildRecipe from '../../components/recipes/StickyWildRecipe.tsx';
+
+<StickyWildRecipe client:only="react" />
+
+Every wild that lands stays locked for the rest of the round. Press Run a few times — watch the board fill up.
+
+Where a [walking wild](/recipes/walking-wild/) migrates, a sticky wild just... stays. Great for free-spin bonus rounds — each new wild locks in place, building up through the round until board fills feel inevitable.
+
+```ts
+interface StuckWild { reel: number; row: number; symbolId: string }
+const stuck: StuckWild[] = [];
+
+async function playFreeSpin() {
+  const promise = reelSet.spin();
+
+  // Build the grid: server's random result, but overwrite with stuck wilds
+  const grid = (await serverSpin()).symbols;
+  for (const w of stuck) {
+    grid[w.reel][w.row] = w.symbolId;
+  }
+  reelSet.setResult(grid);
+  await promise;
+
+  // Any NEW wild on this spin joins the sticky set
+  for (let r = 0; r < grid.length; r++) {
+    for (let row = 0; row < grid[r].length; row++) {
+      if (grid[r][row] === 'wild' && !stuck.some(w => w.reel === r && w.row === row)) {
+        stuck.push({ reel: r, row, symbolId: 'wild' });
+      }
+    }
+  }
+}
+
+function endFreeSpinRound() {
+  stuck.length = 0;
+}
+```
+
+## Optional: animate the lock-in
+
+When a wild first lands, give it a visual "click" so the player notices it became sticky:
+
+```ts
+reelSet.events.on('spin:reelLanded', (reelIndex, symbols) => {
+  for (let row = 0; row < symbols.length; row++) {
+    if (symbols[row] !== 'wild') continue;
+    const isNew = !stuck.some(w => w.reel === reelIndex && w.row === row);
+    if (isNew) {
+      const sym = reelSet.reels[reelIndex].getSymbolAt(row);
+      gsap.fromTo(sym.view.scale, { x: 1.3, y: 1.3 }, { x: 1, y: 1, duration: 0.4, ease: 'back.out(2)' });
+    }
+  }
+});
+```
+
+## Variations
+
+- **Expiring stickies** — each wild has a counter; decrement every spin, unstick at zero.
+- **Stack-up wilds** — every spin stack a second "wild overlay" on existing stuck wilds (increments a multiplier or a displayed number via a slot object).
+- **Wild gravity** — stuck wilds drift downward one row per respin until they reach the bottom.
+
+## Related recipes
+
+- [Walking wild](/recipes/walking-wild/) — wild migrates instead of stays
+- [Hold & Win](/recipes/hold-and-win/) — same pattern but for coin/bonus symbols

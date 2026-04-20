@@ -1,0 +1,53 @@
+---
+import Docs from '../../layouts/Docs.astro';
+import { WIKI_NAV } from '../../content/nav.ts';
+import { ARCH_PAGES } from '../../content/architectureNav.ts';
+---
+<Docs title="Docs & API reference" section="wiki" eyebrow="Reference">
+  <p>
+    The full API reference for <code>pixi-reels</code>, plus an architecture tour and a plain-English glossary.
+    Each page below explains one axis in common language first, then drops into signatures and examples.
+  </p>
+
+  <p class="!mt-2 text-sm text-muted-foreground">
+    Looking for a how-to? Start with <a href="/guides/getting-started/">Getting started</a> or a <a href="/recipes/">recipe</a>.
+  </p>
+
+  <div class="mt-8 space-y-8">
+    {WIKI_NAV.map((section) => (
+      <section>
+        <h2 class="mb-3">{section.title}</h2>
+        <div class="grid gap-2 not-prose">
+          {section.items.map((item) => (
+            <a
+              href={item.href}
+              class="group flex items-center justify-between rounded-lg border border-border bg-card px-4 py-3 text-sm transition-colors hover:border-primary/40 hover:bg-secondary/30"
+            >
+              <span class="font-medium">{item.label}</span>
+              <span class="text-muted-foreground transition-transform group-hover:translate-x-0.5">→</span>
+            </a>
+          ))}
+        </div>
+      </section>
+    ))}
+
+    <section>
+      <h2 class="mb-3">Architecture</h2>
+      <p class="mb-3 text-sm text-muted-foreground">A tour of the internals — composition, lifecycle, events, algorithms, testing. Hand-laid SVG, no UML.</p>
+      <div class="grid gap-2 not-prose">
+        {ARCH_PAGES.map((p) => (
+          <a
+            href={`/architecture/${p.slug}/`}
+            class="group flex items-center justify-between rounded-lg border border-border bg-card px-4 py-3 text-sm transition-colors hover:border-primary/40 hover:bg-secondary/30"
+          >
+            <span>
+              <span class="font-medium">{p.title}</span>
+              <span class="ml-2 text-[11px] text-muted-foreground">{p.subtitle}</span>
+            </span>
+            <span class="text-muted-foreground transition-transform group-hover:translate-x-0.5">→</span>
+          </a>
+        ))}
+      </div>
+    </section>
+  </div>
+</Docs>

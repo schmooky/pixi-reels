@@ -1,0 +1,109 @@
+---
+layout: ../../layouts/Recipe.astro
+title: Symbol transform
+description: A symbol morphs into a different (usually higher-paying) one mid-round — after a win, on a timer, or when a condition is met. Common in cluster-pays and upgrade-style slots.
+tags: [transform, animation, upgrade]
+steps:
+  - Detect the transform trigger (a win, a cascade level, an RNG roll)
+  - Tween the old symbol out (scale / fade / disintegrate)
+  - Swap the symbol via reel.placeSymbols with the new identity
+  - Tween the new symbol in
+apis:
+  - Reel.placeSymbols
+  - Reel.getSymbolAt
+  - ReelSymbol.playWin
+---
+
+import SymbolTransformRecipe from '../../components/recipes/SymbolTransformRecipe.tsx';
+
+<SymbolTransformRecipe client:only="react" />
+
+After every spin, a random low-pay cell upgrades to a high-pay symbol with a scale-fade-swap animation.
+
+Symbol transformation is a visual-only effect — the engine doesn't know anything about it. Your game decides which cell transforms into what, plays a transition, and writes the new identity.
+
+```ts
+import { gsap } from 'gsap';
+
+async function transformCell(reelIndex: number, row: number, newSymbolId: string) {
+  const reel = reelSet.reels[reelIndex];
+  const old = reel.getSymbolAt(row);
+
+  // Phase 1: out
+  await new Promise<void>((resolve) => {
+    gsap.to(old.view, {
+      alpha: 0,
+      scale: 0.4,
+      duration: 0.35,
+      ease: 'power2.in',
+      onComplete: () => resolve(),
+    });
+  });
+
+  // Phase 2: swap identity. placeSymbols expects the VISIBLE window top→bottom.
+  const visible = reel.getVisibleSymbols();
+  visible[row] = newSymbolId;
+  reel.placeSymbols(visible);
+
+  // Phase 3: in
+  const next = reel.getSymbolAt(row);
+  next.view.alpha = 0;
+  next.view.scale.set(0.4);
+  await new Promise<void>((resolve) => {
+    gsap.to(next.view, {
+      alpha: 1,
+      scale: 1,
+      duration: 0.35,
+      ease: 'back.out(1.8)',
+      onComplete: () => resolve(),
+    });
+  });
+}
+```
+
+## Trigger patterns
+
+**After a win** — upgrade winning low symbols to med:
+```ts
+reelSet.events.on('spin:complete', async () => {
+  const wins = detectWins(currentGrid);
+  for (const w of wins) {
+    if (w.symbolId.startsWith('low_')) {
+      for (const p of w.positions) {
+        await transformCell(p.reelIndex, p.rowIndex, w.symbolId.replace('low_', 'med_'));
+      }
+    }
+  }
+});
+```
+
+**On a cascade level** — every 3rd cascade bumps a random symbol up a tier:
+```ts
+if (cascadeLevel % 3 === 0) {
+  const r = Math.floor(Math.random() * reelSet.reels.length);
+  const row = Math.floor(Math.random() * reelSet.reels[0].getVisibleSymbols().length);
+  transformCell(r, row, pickUpgrade(currentGrid[r][row]));
+}
+```
+
+**Mystery symbols** — start every spin with all `?` symbols, reveal them after landing:
+```ts
+reelSet.events.on('spin:allLanded', async () => {
+  const reveal = pickWeighted(revealWeights);  // one pick for ALL mystery cells
+  for (let r = 0; r < reelSet.reels.length; r++) {
+    for (let row = 0; row < 3; row++) {
+      if (currentGrid[r][row] === 'mystery') {
+        transformCell(r, row, reveal);
+      }
+    }
+  }
+});
+```
+
+See [Mystery reveal](/recipes/mystery-reveal/) for the full mystery-symbol pattern.
+
+## Gotchas
+
+- `placeSymbols` replaces **all** symbols in the visible window; pass the current window with only the target cell changed.
+- Transforms are visual — if your win evaluation happens AFTER the transform, make sure your game state reflects the new identity.
+- Don't transform during a spin — wait for `spin:complete` or `spin:reelLanded`.

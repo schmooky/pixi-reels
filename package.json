@@ -1,0 +1,49 @@
+{
+  "name": "pixi-reels-workspace",
+  "private": true,
+  "version": "0.1.0",
+  "description": "pixi-reels monorepo — open-source slot machine reel engine for PixiJS v8.",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "pnpm --filter pixi-reels build && pnpm --filter classic-spin build && pnpm --filter cascade-tumble build && pnpm --filter hold-and-win build",
+    "build:all": "node scripts/build-all-publishable.mjs",
+    "test": "pnpm check:lint && pnpm --filter pixi-reels test",
+    "typecheck": "pnpm --filter pixi-reels typecheck",
+    "lint": "pnpm --filter pixi-reels lint",
+    "check:no-fancy-unicode": "node scripts/check-no-fancy-unicode.mjs",
+    "check:lint": "pnpm check:no-fancy-unicode",
+    "commitlint": "commitlint --edit",
+    "examples:dev:classic": "pnpm --filter classic-spin dev",
+    "examples:dev:cascade": "pnpm --filter cascade-tumble dev",
+    "examples:dev:holdwin": "pnpm --filter hold-and-win dev",
+    "examples:dev:sandbox": "pnpm --filter sandbox dev",
+    "examples:build": "pnpm --filter './examples/*' build",
+    "site:dev": "pnpm --filter @pixi-reels/site dev",
+    "site:build": "pnpm --filter @pixi-reels/site build",
+    "site:preview": "pnpm --filter @pixi-reels/site preview",
+    "changeset": "changeset",
+    "changeset:status": "changeset status",
+    "version-packages": "changeset version && pnpm install --lockfile-only",
+    "release": "pnpm build:all && changeset publish",
+    "snapshot": "node scripts/snapshot-release.mjs",
+    "size": "node scripts/size-check.mjs",
+    "size:check": "node scripts/size-check.mjs --check",
+    "size:update": "node scripts/size-check.mjs --update",
+    "prepare": "husky || true"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx,mjs,cjs,md,mdx,astro,yml,yaml,json}": [
+      "node scripts/check-no-fancy-unicode.mjs"
+    ]
+  },
+  "devDependencies": {
+    "@changesets/changelog-github": "^0.5.0",
+    "@changesets/cli": "^2.27.0",
+    "@commitlint/cli": "^19.5.0",
+    "@commitlint/config-conventional": "^19.5.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^15.2.0"
+  }
+}

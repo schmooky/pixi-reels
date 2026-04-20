@@ -1,0 +1,59 @@
+---
+layout: ../../layouts/Docs.astro
+title: ReelSetBuilder
+section: wiki
+eyebrow: API
+description: Fluent builder for ReelSet. Reduces ~100 lines of manual wiring to ~10.
+---
+
+Every method returns `this` so you can chain.
+
+## Required
+
+| Method | |
+|---|---|
+| `.reels(n)` | Number of columns. |
+| `.visibleSymbols(n)` | Rows visible at rest. |
+| `.symbolSize(w, h)` | Per-symbol dimensions in px. |
+| `.symbols((r) => { r.register(...) })` | At least one symbol id. |
+| `.ticker(pixiTicker)` | Drives frame updates. |
+
+Missing any of these throws at `.build()` time with a human-readable list of problems.
+
+## Optional
+
+| Method | Default |
+|---|---|
+| `.symbolGap(x, y)` | `{ x: 0, y: 0 }` |
+| `.bufferSymbols(n)` | `1` |
+| `.weights({ id: n })` | `10` for each registered symbol |
+| `.speed(name, profile)` | `SpeedPresets.NORMAL` under `'normal'` |
+| `.initialSpeed(name)` | `'normal'` |
+| `.offsetConfig(config)` | `{ mode: 'none' }` |
+| `.spinningMode(mode)` | `new StandardMode()` |
+| `.frameMiddleware(mw)` | *(none)* |
+| `.phases((f) => { f.register(...) })` | built-in START/SPIN/STOP/ANTICIPATION |
+| `.initialFrame(grid)` | random |
+
+## .build()
+
+Validates every required field, instantiates every subsystem, returns a `ReelSet`.
+
+## Example
+
+```ts
+import { ReelSetBuilder, SpriteSymbol, SpeedPresets } from 'pixi-reels';
+
+const reelSet = new ReelSetBuilder()
+  .reels(5)
+  .visibleSymbols(3)
+  .symbolSize(140, 140)
+  .symbolGap(4, 4)
+  .symbols((r) => {
+    r.register('cherry', SpriteSymbol, { textures: { cherry: cherryTex } });
+  })
+  .weights({ cherry: 40 })
+  .speed('turbo', SpeedPresets.TURBO)
+  .ticker(app.ticker)
+  .build();
+```

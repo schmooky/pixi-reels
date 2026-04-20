@@ -1,0 +1,61 @@
+---
+layout: ../../layouts/Recipe.astro
+title: How to fake a near-miss
+description: Place N-1 scatters, add anticipation on the reel that "almost" landed one — the most engagement-per-byte flourish a slot has.
+tags: [anticipation, engagement]
+steps:
+  - Build a result grid with count - 1 scatters, none on the near reel
+  - setAnticipation([nearReelIndex]) BEFORE setResult()
+  - Let the player feel the hold on the last reel
+apis:
+  - ReelSet.setAnticipation
+  - ReelSet.setResult
+  - forceNearMiss cheat
+---
+
+import NearMissRecipe from '../../components/recipes/NearMissRecipe.tsx';
+
+<NearMissRecipe client:only="react" />
+
+## The minimum code
+
+```ts
+function nearMissGrid(reelCount: number, visibleRows: number, scatter: string, nearReel: number, count: number) {
+  // fill random, then sprinkle count-1 scatters on NOT-nearReel, then wipe any on nearReel
+  const grid: string[][] = /* random fill */;
+  const coords = /* all coords NOT on nearReel, shuffled */;
+  for (let i = 0; i < count - 1; i++) {
+    const [r, row] = coords[i];
+    grid[r][row] = scatter;
+  }
+  for (let row = 0; row < visibleRows; row++) {
+    if (grid[nearReel][row] === scatter) grid[nearReel][row] = pickNonScatter();
+  }
+  return grid;
+}
+
+const promise = reelSet.spin();
+setTimeout(() => {
+  reelSet.setAnticipation([nearReelIndex]);
+  reelSet.setResult(nearMissGrid(5, 3, 'scatter', 4, 3));
+}, 200);
+```
+
+## Or — use the cheat
+
+The same logic ships in the cheats library as `forceNearMiss(count, symbolId, nearReelIndex)`:
+
+```ts
+import { forceNearMiss } from '@/shared/cheats';
+
+engine.register({
+  id: 'near-miss-r5',
+  label: 'Near-miss on reel 5',
+  enabled: true,
+  cheat: forceNearMiss(3, 'scatter', 4),
+});
+```
+
+## Why this works
+
+Near-miss sits between two reward systems in the player's head: the **immediate** reward of a visible pattern, and the **anticipated** reward of a trigger. Anticipation holds the final reel long enough for both systems to fire. The grid always resolves to a loss — but the *timing* convinces the player that winning was within reach.

@@ -1,0 +1,59 @@
+---
+layout: ../../layouts/Demo.astro
+title: Sticky wilds
+subtitle: 5×3 · wilds persist for N spins, stack with new ones
+tags: [wild, sticky]
+description: A wild lands and stays for the next 3 spins. New wilds reset the timer on that cell.
+---
+
+import StickyWildsDemo from '../../components/demos/StickyWildsDemo.tsx';
+
+<StickyWildsDemo client:only="react" />
+
+## Mechanic rules
+
+- When a wild lands, remember its cell and a countdown (3 spins).
+- On subsequent spins, **replace** the natural symbol at that cell with a wild until the countdown hits 0.
+- Each new wild resets the countdown on its cell.
+
+## Setup
+
+### 1. Track stickies
+
+```ts
+type Sticky = { reel: number; row: number; spinsLeft: number };
+const stickies: Sticky[] = [];
+```
+
+### 2. Rewrite the grid before every spin
+
+Use the library's `setHeld()` + `holdAndWinProgress` pattern, or feed your own grid:
+
+```ts
+reelSet.events.on('spin:complete', ({ symbols }) => {
+  for (const s of stickies) s.spinsLeft--;
+  for (let r = 0; r < symbols.length; r++) {
+    for (let row = 0; row < symbols[r].length; row++) {
+      if (symbols[r][row] === 'wild') {
+        const existing = stickies.find((x) => x.reel === r && x.row === row);
+        if (existing) existing.spinsLeft = 3;
+        else stickies.push({ reel: r, row, spinsLeft: 3 });
+      }
+    }
+  }
+  stickies.splice(0, stickies.length, ...stickies.filter((s) => s.spinsLeft > 0));
+});
+```
+
+### 3. On next spin, force those cells to wilds
+
+```ts
+engine.setHeld(
+  stickies.filter((s) => s.spinsLeft > 0).map((s) => ({ reel: s.reel, row: s.row, symbolId: 'wild' })),
+);
+```
+
+### 4. Cheat: guaranteed sticky
+
+`forceCell(reelIndex, rowIndex, 'wild')` lands a fresh wild in the same spot
+every spin — perfect for reviewing the sticky animation on loop.

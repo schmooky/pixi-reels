@@ -1,0 +1,142 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/**
+ * shadcn light palette — warm white + orange primary.
+ * All tokens are HSL triples so Tailwind's `hsl(var(--x))` wiring works.
+ */
+@layer base {
+  :root {
+    --background: 30 35% 99%;
+    --foreground: 20 20% 12%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 20 20% 12%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 20 20% 12%;
+
+    --primary: 22 92% 52%;
+    --primary-foreground: 30 40% 98%;
+
+    --secondary: 26 30% 96%;
+    --secondary-foreground: 20 25% 18%;
+
+    --muted: 26 30% 96%;
+    --muted-foreground: 20 10% 40%;
+
+    --accent: 36 100% 50%;
+    --accent-foreground: 20 25% 12%;
+
+    --destructive: 0 80% 55%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 24 25% 90%;
+    --input: 24 25% 90%;
+    --ring: 22 92% 52%;
+
+    --radius: 0.75rem;
+
+    /* One warm-dark surface used by every dark element (code blocks, reel well). */
+    --code-bg: 27 40% 7%;          /* ≈ #16100a */
+    --code-border: 24 30% 14%;     /* ≈ #2a2018 */
+    --code-fg: 30 25% 92%;         /* ≈ #f3ebe2 */
+    --code-muted: 30 15% 62%;
+  }
+
+  * { @apply border-border; }
+
+  html, body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1, "ss01" 1;
+  }
+
+  body {
+    background:
+      radial-gradient(1200px 600px at 80% -10%, hsl(22 92% 52% / 0.14), transparent 55%),
+      radial-gradient(900px 500px at -10% 15%, hsl(36 100% 50% / 0.10), transparent 60%),
+      hsl(var(--background));
+    min-height: 100vh;
+  }
+
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: hsl(var(--background)); }
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--border));
+    border-radius: 10px;
+    border: 2px solid hsl(var(--background));
+  }
+  ::-webkit-scrollbar-thumb:hover { background: hsl(var(--primary) / 0.5); }
+
+  /* Prose for MDX docs */
+  .prose-docs h1 { @apply text-3xl font-semibold tracking-tight mb-3 text-foreground; }
+  .prose-docs h2 { @apply text-xl font-semibold tracking-tight mt-10 mb-3 text-foreground; }
+  .prose-docs h3 { @apply text-lg font-semibold tracking-tight mt-8 mb-2 text-foreground; }
+  .prose-docs h4 { @apply text-sm font-semibold uppercase tracking-wider mt-6 mb-2 text-muted-foreground; }
+  .prose-docs p  { @apply text-foreground/80 leading-7 my-4; }
+  .prose-docs a  { @apply text-primary underline-offset-4 hover:underline; }
+  .prose-docs strong { @apply text-foreground font-semibold; }
+  .prose-docs ul, .prose-docs ol { @apply text-foreground/80 my-4 ml-6 list-disc [&>li]:mt-1; }
+  .prose-docs ol { @apply list-decimal; }
+  .prose-docs blockquote {
+    @apply border-l-2 border-primary bg-primary/5 text-foreground/80 px-4 py-2 my-4 rounded-r-md;
+  }
+  .prose-docs hr { @apply my-8 border-border; }
+  .prose-docs code:not(pre code) {
+    @apply rounded bg-secondary px-1.5 py-0.5 text-[0.85em] font-mono text-primary;
+  }
+  .prose-docs pre {
+    @apply rounded-lg px-4 py-3 overflow-x-auto my-5 text-sm;
+    background: hsl(var(--code-bg));
+    border: 1px solid hsl(var(--code-border));
+    color: hsl(var(--code-fg));
+  }
+  .prose-docs pre code { @apply bg-transparent p-0; color: inherit; }
+  .prose-docs table { @apply w-full my-6 text-sm border-collapse; }
+  .prose-docs thead tr { @apply border-b border-border; }
+  .prose-docs th, .prose-docs td { @apply text-left px-3 py-2; }
+  .prose-docs tbody tr { @apply border-b border-border/60; }
+  .prose-docs th { @apply text-foreground font-semibold; }
+
+  ::selection { background: hsl(var(--primary) / 0.25); color: hsl(var(--foreground)); }
+}
+
+@layer components {
+  .glass {
+    @apply bg-background/75 backdrop-blur-xl border border-border/80;
+  }
+  .gradient-text {
+    background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent)));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .grid-bg {
+    background-image:
+      linear-gradient(to right, hsl(var(--border) / 0.55) 1px, transparent 1px),
+      linear-gradient(to bottom, hsl(var(--border) / 0.55) 1px, transparent 1px);
+    background-size: 36px 36px;
+    mask-image: radial-gradient(ellipse at center, black, transparent 70%);
+    -webkit-mask-image: radial-gradient(ellipse at center, black, transparent 70%);
+  }
+  .dot-bg {
+    background-image: radial-gradient(hsl(var(--primary) / 0.25) 1px, transparent 1px);
+    background-size: 22px 22px;
+    mask-image: radial-gradient(ellipse at center, black, transparent 70%);
+    -webkit-mask-image: radial-gradient(ellipse at center, black, transparent 70%);
+  }
+
+  /* Shared warm-dark surface — code blocks, reel well, mini-demo backdrops. */
+  .surface-code {
+    background: hsl(var(--code-bg));
+    border: 1px solid hsl(var(--code-border));
+    color: hsl(var(--code-fg));
+  }
+  .surface-code-soft {
+    background:
+      radial-gradient(900px 300px at 50% 40%, hsl(22 92% 52% / 0.22), transparent 60%),
+      radial-gradient(600px 200px at 50% 100%, hsl(36 100% 50% / 0.18), transparent 60%),
+      hsl(var(--code-bg));
+  }
+}

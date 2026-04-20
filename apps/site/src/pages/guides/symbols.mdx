@@ -1,0 +1,101 @@
+---
+layout: ../../layouts/Docs.astro
+title: Symbols
+section: guides
+eyebrow: Building blocks
+description: Register and implement reel symbols — sprites, animations, Spine, or custom.
+---
+
+A **symbol** is a visual cell on a reel. pixi-reels ships three implementations
+and a base class for anything else:
+
+| Class | Use it for |
+|---|---|
+| `SpriteSymbol` | Static images. One texture per id. |
+| `AnimatedSpriteSymbol` | Sprite-sheet animation loops. |
+| `SpineSymbol` | Skeletal animation via `@esotericsoftware/spine-pixi-v8`. |
+| `ReelSymbol` (abstract) | Roll your own. |
+
+## Register
+
+The builder exposes a `symbols()` callback that hands you a `SymbolRegistry`.
+You don't instantiate symbols yourself — the library pools them.
+
+```ts
+builder.symbols((r) => {
+  r.register('cherry', SpriteSymbol, { textures: { cherry: cherryTex } });
+  r.register('bar',    AnimatedSpriteSymbol, { frames: barFrames, fps: 18 });
+});
+```
+
+## Custom symbol
+
+Extend `ReelSymbol`. The lifecycle is `activate → [playWin/stopAnimation] → deactivate`.
+
+```ts
+import { ReelSymbol } from 'pixi-reels';
+import { Graphics } from 'pixi.js';
+
+export class BlockSymbol extends ReelSymbol {
+  private _g = new Graphics();
+
+  constructor(opts: { colors: Record<string, number> }) {
+    super();
+    this.view.addChild(this._g);
+    (this as any)._opts = opts;
+  }
+
+  protected onActivate(symbolId: string): void {
+    const color = (this as any)._opts.colors[symbolId] ?? 0x888888;
+    this._g.clear().roundRect(0, 0, 140, 140, 10).fill(color);
+  }
+
+  protected onDeactivate(): void {
+    this._g.clear();
+  }
+
+  async playWin(): Promise<void> {
+    // pulse for 400ms
+    this.view.scale.set(1.1);
+    await new Promise((r) => setTimeout(r, 400));
+    this.view.scale.set(1);
+  }
+
+  stopAnimation(): void { this.view.scale.set(1); }
+  resize(w: number, h: number): void { this._g.clear().roundRect(0, 0, w, h, 10).fill(0x333333); }
+}
+
+// Register:
+builder.symbols((r) => {
+  r.register('red',   BlockSymbol, { colors: { red: 0xff6d70 } });
+  r.register('blue',  BlockSymbol, { colors: { blue: 0x4cc2ff } });
+});
+```
+
+## Headless testing
+
+For tests, use the built-in `HeadlessSymbol` — it renders nothing, lets you
+skip textures entirely.
+
+```ts
+import { HeadlessSymbol } from 'pixi-reels';
+
+builder.symbols((r) => {
+  r.register('a', HeadlessSymbol, {});
+  r.register('b', HeadlessSymbol, {});
+});
+```
+
+See [Cheats & testing](/guides/cheats-and-testing/) for the full recipe.
+
+## Weights
+
+Symbols registered without a weight default to `10`. Override via
+`builder.weights({ id: n })`.
+
+```ts
+builder.weights({ cherry: 40, bar: 20, seven: 4 });
+```
+
+Higher numbers = more frequent in random fills. Landed (target) grids from
+`setResult()` are *never* affected by weights.

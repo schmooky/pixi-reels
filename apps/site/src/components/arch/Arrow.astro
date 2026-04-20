@@ -1,0 +1,103 @@
+---
+interface Props {
+  from: { x: number; y: number };
+  to: { x: number; y: number };
+  /** Optional mid-flight label. */
+  label?: string;
+  /** Color variant. */
+  kind?: 'primary' | 'accent' | 'muted';
+  /** Curve shape: 'straight' | 'right-angle' | 'curve'. */
+  shape?: 'straight' | 'right-angle' | 'curve';
+  /** Dashed line for "emits" / "async" flows. */
+  dashed?: boolean;
+}
+const {
+  from,
+  to,
+  label,
+  kind = 'muted',
+  shape = 'curve',
+  dashed = false,
+} = Astro.props;
+
+const colorVar = {
+  primary: 'hsl(var(--primary))',
+  accent: 'hsl(var(--accent))',
+  muted: 'hsl(var(--muted-foreground) / 0.5)',
+}[kind];
+
+function pathD(): string {
+  if (shape === 'straight') {
+    return `M ${from.x} ${from.y} L ${to.x} ${to.y}`;
+  }
+  if (shape === 'right-angle') {
+    const midY = from.y;
+    return `M ${from.x} ${from.y} L ${to.x} ${midY} L ${to.x} ${to.y}`;
+  }
+  // curve: cubic bezier
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const cx1 = from.x + dx * 0.4;
+  const cy1 = from.y + dy * 0.1;
+  const cx2 = from.x + dx * 0.6;
+  const cy2 = to.y - dy * 0.1;
+  return `M ${from.x} ${from.y} C ${cx1} ${cy1}, ${cx2} ${cy2}, ${to.x} ${to.y}`;
+}
+
+const d = pathD();
+
+// Midpoint for label — approximate, good enough for short arrows.
+const labelX = (from.x + to.x) / 2;
+const labelY = (from.y + to.y) / 2;
+
+const markerId = `arr-${kind}-${Math.random().toString(36).slice(2, 8)}`;
+---
+<g>
+  <defs>
+    <marker
+      id={markerId}
+      viewBox="0 0 10 10"
+      refX="9"
+      refY="5"
+      markerWidth="6"
+      markerHeight="6"
+      orient="auto-start-reverse"
+    >
+      <path d="M 0 0 L 10 5 L 0 10 z" fill={colorVar} />
+    </marker>
+  </defs>
+  <path
+    d={d}
+    stroke={colorVar}
+    stroke-width="1.5"
+    fill="none"
+    stroke-dasharray={dashed ? '5,4' : undefined}
+    marker-end={`url(#${markerId})`}
+    opacity="0.85"
+  />
+  {label && (
+    <g>
+      <rect
+        x={labelX - (label.length * 3.5 + 6)}
+        y={labelY - 9}
+        width={label.length * 7 + 12}
+        height="18"
+        rx="6"
+        fill="hsl(var(--card))"
+        stroke={colorVar}
+        stroke-opacity="0.4"
+      />
+      <text
+        x={labelX}
+        y={labelY + 4}
+        text-anchor="middle"
+        font-family="ui-monospace, Menlo, monospace"
+        font-size="11"
+        font-weight="600"
+        fill="hsl(var(--foreground))"
+      >
+        {label}
+      </text>
+    </g>
+  )}
+</g>

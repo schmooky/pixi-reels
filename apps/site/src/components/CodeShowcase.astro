@@ -1,0 +1,69 @@
+---
+const snippet = `import { ReelSetBuilder, SpriteSymbol } from 'pixi-reels';
+
+const reelSet = new ReelSetBuilder()
+  .reels(5)
+  .visibleSymbols(3)
+  .symbolSize(140, 140)
+  .symbols((r) => {
+    r.register('cherry', SpriteSymbol, { textures: { cherry: cherryTex } });
+    r.register('seven',  SpriteSymbol, { textures: { seven: sevenTex } });
+    r.register('bar',    SpriteSymbol, { textures: { bar: barTex } });
+  })
+  .weights({ cherry: 40, seven: 10, bar: 20 })
+  .ticker(app.ticker)
+  .build();
+
+const result = await reelSet.spin();
+console.log(result.symbols); // [[ 'cherry','seven','bar' ], ...]`;
+
+const bullets = [
+  { bold: 'One import', rest: ' — ReelSetBuilder wires every subsystem.' },
+  { bold: 'Runtime validation', rest: ' — forget a required call? You\'ll know at build().' },
+  { bold: 'Extension points everywhere', rest: ' — custom symbols, phases, spinning modes.' },
+  { bold: 'No PixiJS coupling in your logic', rest: ' — tests run in Node.' },
+];
+---
+<section class="border-b border-border/60 py-20">
+  <div class="container">
+    <div class="grid items-center gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
+      <div>
+        <div class="inline-flex items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-primary">
+          10 lines to liftoff
+        </div>
+        <h2 class="mt-4 text-3xl font-semibold tracking-tight sm:text-4xl">
+          A builder so fluent<br />you'll never touch <code class="rounded-md bg-muted px-2 py-0.5 font-mono text-[0.85em]">new ReelSet()</code> again.
+        </h2>
+        <ul class="mt-6 space-y-3">
+          {bullets.map((b) => (
+            <li class="flex items-start gap-2.5 text-muted-foreground">
+              <span class="mt-[7px] inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-primary"></span>
+              <span><strong class="text-foreground font-semibold">{b.bold}</strong>{b.rest}</span>
+            </li>
+          ))}
+        </ul>
+        <div class="mt-8">
+          <a
+            href="/guides/your-first-reelset/"
+            class="inline-flex h-10 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-accent px-5 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/30 transition-all hover:brightness-110"
+          >
+            Build your first reelset →
+          </a>
+        </div>
+      </div>
+
+      <div class="relative">
+        <div class="absolute -inset-4 rounded-2xl bg-gradient-to-br from-primary/25 via-transparent to-accent/20 blur-2xl opacity-70" aria-hidden></div>
+        <div class="surface-code relative overflow-hidden rounded-xl shadow-2xl shadow-primary/10">
+          <div class="flex items-center gap-1.5 border-b px-4 py-2.5" style="border-color: hsl(var(--code-border));">
+            <span class="h-2.5 w-2.5 rounded-full bg-[#ff6d70]/90"></span>
+            <span class="h-2.5 w-2.5 rounded-full bg-[#ffb74c]/90"></span>
+            <span class="h-2.5 w-2.5 rounded-full bg-[#5bd694]/90"></span>
+            <span class="ml-2 font-mono text-[11px]" style="color: hsl(var(--code-muted));">your-first-reelset.ts</span>
+          </div>
+          <pre class="m-0 overflow-x-auto p-5 font-mono text-[12.5px] leading-[1.65]" style="color: hsl(var(--code-fg));"><code>{snippet}</code></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

@@ -1,0 +1,58 @@
+---
+import Base from '../../layouts/Base.astro';
+import { ARCH_PAGES } from '../../content/architectureNav.ts';
+import { ArrowRight, Sparkles } from 'lucide-react';
+import { SITE, articleLd, breadcrumbLd } from '../../lib/seo.ts';
+
+const title = 'Architecture — how pixi-reels is put together';
+const description = 'A visual tour of the pixi-reels internals: component graph, composition tree, event flow, spin state machine, cascade gravity, and the test harness. Hand-drawn diagrams, no UML.';
+---
+<Base
+  title={`Architecture · ${SITE.name}`}
+  description={description}
+  path="/architecture/"
+  jsonLd={[
+    articleLd({ title, description, path: '/architecture/' }),
+    breadcrumbLd([{ name: SITE.name, url: '/' }, { name: 'Architecture', url: '/architecture/' }]),
+  ]}
+>
+  <section class="border-b border-border/60 py-20">
+    <div class="container max-w-3xl text-center">
+      <div class="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-primary">
+        <Sparkles size={12} strokeWidth={2.5} />
+        Architecture
+      </div>
+      <h1 class="mt-4 text-balance text-4xl font-semibold tracking-tight sm:text-6xl">
+        A tour, <span class="gradient-text">in pictures.</span>
+      </h1>
+      <p class="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground">
+        Six pages, one per axis of the library. Composition, lifecycle,
+        events, algorithms, testing. Hand-laid-out SVG — no UML, no
+        mermaid — so you can read at a glance what's wired to what.
+      </p>
+    </div>
+  </section>
+
+  <section class="py-14">
+    <div class="container">
+      <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        {ARCH_PAGES.map((p, i) => (
+          <a
+            href={`/architecture/${p.slug}/`}
+            class="group relative overflow-hidden rounded-2xl border border-border bg-card p-6 transition-all hover:border-primary/40 hover:-translate-y-0.5"
+          >
+            <div class="absolute top-4 right-4 font-mono text-[10px] text-muted-foreground/70">
+              {String(i + 1).padStart(2, '0')}
+            </div>
+            <div class="text-[10px] font-semibold uppercase tracking-[0.14em] text-primary">{p.eyebrow}</div>
+            <h3 class="mt-2 text-xl font-semibold tracking-tight">{p.title}</h3>
+            <p class="mt-2 text-sm text-muted-foreground">{p.subtitle}</p>
+            <div class="mt-4 inline-flex items-center gap-1 text-xs font-medium text-foreground/60 transition-colors group-hover:text-foreground">
+              Read → <ArrowRight size={13} strokeWidth={2} />
+            </div>
+          </a>
+        ))}
+      </div>
+    </div>
+  </section>
+</Base>

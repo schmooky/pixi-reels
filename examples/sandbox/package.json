@@ -1,0 +1,18 @@
+{
+  "name": "sandbox",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build"
+  },
+  "dependencies": {
+    "pixi-reels": "workspace:*",
+    "pixi.js": "^8.17.0",
+    "gsap": "^3.14.0"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.0",
+    "vite": "^8.0.0"
+  }
+}

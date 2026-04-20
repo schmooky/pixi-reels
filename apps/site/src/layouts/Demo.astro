@@ -1,0 +1,68 @@
+---
+import Base from './Base.astro';
+import { ChevronLeft } from 'lucide-react';
+import { articleLd, breadcrumbLd, SITE } from '../lib/seo.ts';
+
+interface Props {
+  title?: string;
+  subtitle?: string;
+  description?: string;
+  tags?: string[];
+  frontmatter?: {
+    title?: string;
+    subtitle?: string;
+    description?: string;
+    tags?: string[];
+  };
+}
+const props = Astro.props as Props;
+const fm = props.frontmatter ?? {};
+const title = props.title ?? fm.title ?? 'Demo';
+const subtitle = props.subtitle ?? fm.subtitle ?? '';
+const description =
+  props.description ??
+  fm.description ??
+  `${title} — live slot mechanic sandbox built on pixi-reels.`;
+const tags = props.tags ?? fm.tags ?? [];
+const pathname = Astro.url.pathname;
+
+const jsonLd = [
+  articleLd({ title, description, path: pathname }),
+  breadcrumbLd([
+    { name: SITE.name, url: '/' },
+    { name: 'Demos', url: '/demos/' },
+    { name: title, url: pathname },
+  ]),
+];
+---
+<Base
+  title={`${title} · ${SITE.name} demo`}
+  description={description}
+  path={pathname}
+  type="article"
+  article={{ section: 'Demos', tags }}
+  keywords={tags}
+  jsonLd={jsonLd}
+>
+  <div class="container max-w-[1100px] py-10 animate-fade-in">
+    <header class="mb-6">
+      <a href="/demos/" class="mb-4 inline-flex items-center gap-1 font-mono text-xs uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors">
+        <ChevronLeft size={14} strokeWidth={2} />
+        All demos
+      </a>
+      <div class="flex flex-wrap gap-1.5 mb-2">
+        {tags.map((t: string) => (
+          <span class="inline-flex items-center rounded-full border border-border bg-card/60 px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+            {t}
+          </span>
+        ))}
+      </div>
+      <h1 class="text-3xl font-semibold tracking-tight sm:text-4xl">{title}</h1>
+      <p class="mt-1 font-mono text-sm text-primary/90">{subtitle}</p>
+    </header>
+
+    <article class="prose-docs max-w-[820px]">
+      <slot />
+    </article>
+  </div>
+</Base>

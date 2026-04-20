@@ -1,0 +1,102 @@
+---
+layout: ../../layouts/Demo.astro
+title: Classic line pays
+subtitle: 5×3 · left-to-right line wins · spotlight cycle
+tags: [basics, lines, spotlight]
+description: The foundation of most slots. Detect 3+ matching symbols left-to-right, then spotlight each winning line.
+---
+
+import ClassicLinesDemo from '../../components/demos/ClassicLinesDemo.tsx';
+
+<ClassicLinesDemo client:only="react" />
+
+## What this demo proves
+
+- Building a 5×3 reelset with `ReelSetBuilder`.
+- Listening to `spin:complete` to walk the grid.
+- Running `playWin()` on each winning symbol.
+- Using **cheats** to force specific outcomes without touching RNG.
+
+## Setup (copy-paste ready)
+
+### 1. Build the reelset
+
+```ts
+import { ReelSetBuilder } from 'pixi-reels';
+import { BlockSymbol } from './BlockSymbol';
+
+const reelSet = new ReelSetBuilder()
+  .reels(5).visibleSymbols(3).symbolSize(96, 96)
+  .symbols((r) => {
+    r.register('cherry', BlockSymbol, { colors: { cherry: 0xff6d70 } });
+    r.register('seven',  BlockSymbol, { colors: { seven: 0xffffff } });
+    r.register('wild',   BlockSymbol, { colors: { wild: 0x8b7dff } });
+  })
+  .weights({ cherry: 40, seven: 6, wild: 4 })
+  .ticker(app.ticker)
+  .build();
+
+app.stage.addChild(reelSet);
+```
+> **Verify:** a 5×3 static grid of colored blocks appears.
+
+### 2. Detect line wins
+
+```ts
+function detectLineWins(grid: string[][]) {
+  const wins = [];
+  for (let row = 0; row < grid[0].length; row++) {
+    const base = grid[0][row] === 'wild' ? firstNonWild(grid, row) : grid[0][row];
+    let streak = 1;
+    for (let r = 1; r < grid.length; r++) {
+      if (grid[r][row] === base || grid[r][row] === 'wild') streak++;
+      else break;
+    }
+    if (streak >= 3) wins.push({ row, streak, symbolId: base });
+  }
+  return wins;
+}
+```
+
+### 3. Celebrate wins
+
+```ts
+reelSet.events.on('spin:complete', async (result) => {
+  const wins = detectLineWins(result.symbols);
+  for (const w of wins) {
+    for (let r = 0; r < w.streak; r++) {
+      reelSet.getReel(r).getSymbolAt(w.row).playWin();
+    }
+  }
+});
+```
+
+### 4. Force outcomes in tests
+
+```ts
+import { createTestReelSet } from 'pixi-reels';
+import { CheatEngine, forceLine } from '@/shared/cheats';
+
+const { reelSet, spinAndLand, destroy } = createTestReelSet({
+  reels: 5, visibleRows: 3, symbolIds: ['cherry','seven','wild'],
+});
+const engine = new CheatEngine({ reelCount: 5, visibleRows: 3, symbolIds: ['cherry','seven','wild'], seed: 1 });
+engine.register({ id: 'ln', label: 'line', enabled: true, cheat: forceLine(1, 'seven') });
+
+await spinAndLand(engine.next().symbols);
+for (let r = 0; r < 5; r++) {
+  expect(reelSet.reels[r].getVisibleSymbols()[1]).toBe('seven');
+}
+destroy();
+```
+
+> **Verify:** the assertion passes — every reel's row-1 symbol is `seven`.
+
+## Cheats available in this demo
+
+| Cheat | Effect |
+|---|---|
+| Force middle-row line | Whole row-2 is `seven`. |
+| Force top-row line | Whole row-1 is `wild`. |
+| Full-grid 7s jackpot | 15 sevens. |
+| Sprinkle 5 bells | 5 bells at random cells. |

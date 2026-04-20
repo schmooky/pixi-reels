@@ -1,0 +1,227 @@
+---
+import Architecture from '../../layouts/Architecture.astro';
+import Legend from '../../components/arch/Legend.astro';
+---
+<Architecture
+  title="Overview"
+  subtitle="The ten-thousand-foot view of every moving piece in pixi-reels."
+  eyebrow="Start here"
+>
+  <p>
+    pixi-reels splits into three concentric rings: the <strong>builder</strong>
+    wires things, the <strong>reel set</strong> owns the scene graph and the spin
+    controller, and the <strong>test harness + cheats</strong> let you drive it
+    headlessly. Every line of the diagram below maps to a file you can click
+    through to in the <a href="/wiki/">API reference</a>.
+  </p>
+
+  <div class="not-prose my-8">
+    <div class="rounded-2xl border border-border bg-card p-6 overflow-x-auto">
+      <svg viewBox="0 0 920 540" class="w-full h-auto max-h-[560px]">
+        <!-- Outer ring: Test harness + cheats -->
+        <rect x="20" y="20" width="880" height="500" rx="24" fill="hsl(var(--muted))" stroke="hsl(var(--border))" stroke-dasharray="6,5" stroke-width="1.5" />
+        <text x="40" y="48" font-family="ui-monospace, Menlo, monospace" font-size="12" font-weight="600" fill="hsl(var(--muted-foreground))" letter-spacing="0.1em">
+          TESTS &amp; TOOLING
+        </text>
+
+        <!-- Middle ring: Reel set (Container) -->
+        <rect x="60" y="72" width="800" height="420" rx="20" fill="hsl(var(--card))" stroke="hsl(var(--primary) / 0.3)" stroke-width="2" />
+        <text x="80" y="100" font-family="ui-monospace, Menlo, monospace" font-size="12" font-weight="600" fill="hsl(var(--primary))" letter-spacing="0.1em">
+          REELSET (PIXI CONTAINER)
+        </text>
+
+        <!-- Builder input -->
+        <g>
+          <rect x="80" y="130" width="200" height="60" rx="12" fill="hsl(var(--primary))" stroke="hsl(var(--primary))" />
+          <text x="180" y="158" text-anchor="middle" font-family="Inter, sans-serif" font-size="14" font-weight="700" fill="hsl(var(--primary-foreground))">ReelSetBuilder</text>
+          <text x="180" y="176" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="10" fill="hsl(var(--primary-foreground) / 0.8)">fluent config · .build()</text>
+        </g>
+
+        <!-- Arrow builder -> reel set core -->
+        <path d="M 280 160 L 340 160" stroke="hsl(var(--primary))" stroke-width="2" fill="none" marker-end="url(#arr-primary)" />
+
+        <!-- Core subsystems (5 boxes in a cluster) -->
+        <g>
+          <rect x="340" y="130" width="150" height="60" rx="10" fill="hsl(var(--accent) / 0.12)" stroke="hsl(var(--accent))" stroke-width="1.5" />
+          <text x="415" y="155" text-anchor="middle" font-family="Inter, sans-serif" font-size="13" font-weight="600" fill="hsl(var(--foreground))">SpinController</text>
+          <text x="415" y="173" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="10" fill="hsl(var(--muted-foreground))">orchestrates phases</text>
+        </g>
+        <g>
+          <rect x="510" y="130" width="150" height="60" rx="10" fill="hsl(var(--accent) / 0.12)" stroke="hsl(var(--accent))" stroke-width="1.5" />
+          <text x="585" y="155" text-anchor="middle" font-family="Inter, sans-serif" font-size="13" font-weight="600" fill="hsl(var(--foreground))">SpeedManager</text>
+          <text x="585" y="173" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="10" fill="hsl(var(--muted-foreground))">normal · turbo · super</text>
+        </g>
+        <g>
+          <rect x="680" y="130" width="160" height="60" rx="10" fill="hsl(var(--accent) / 0.12)" stroke="hsl(var(--accent))" stroke-width="1.5" />
+          <text x="760" y="155" text-anchor="middle" font-family="Inter, sans-serif" font-size="13" font-weight="600" fill="hsl(var(--foreground))">SymbolSpotlight</text>
+          <text x="760" y="173" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="10" fill="hsl(var(--muted-foreground))">win animations</text>
+        </g>
+
+        <!-- Viewport (wider, second row) -->
+        <g>
+          <rect x="80" y="218" width="200" height="60" rx="10" fill="hsl(var(--secondary))" stroke="hsl(var(--border))" stroke-width="1.5" />
+          <text x="180" y="243" text-anchor="middle" font-family="Inter, sans-serif" font-size="13" font-weight="600" fill="hsl(var(--foreground))">ReelViewport</text>
+          <text x="180" y="261" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="10" fill="hsl(var(--muted-foreground))">masked container</text>
+        </g>
+
+        <!-- Reel columns (5 thin boxes) -->
+        <g>
+          <rect x="300" y="208" width="540" height="80" rx="10" fill="hsl(var(--background))" stroke="hsl(var(--border))" stroke-dasharray="3,3" stroke-width="1" />
+          <text x="310" y="228" font-family="ui-monospace, Menlo, monospace" font-size="10" font-weight="600" fill="hsl(var(--muted-foreground))" letter-spacing="0.1em">REELS[]</text>
+          <!-- 5 mini reels -->
+          {[0, 1, 2, 3, 4].map((i) => (
+            <g transform={`translate(${320 + i * 100}, 235)`}>
+              <rect width="90" height="45" rx="8" fill="hsl(var(--accent) / 0.15)" stroke="hsl(var(--accent))" stroke-width="1.5" />
+              <text x="45" y="21" text-anchor="middle" font-family="Inter, sans-serif" font-size="12" font-weight="600" fill="hsl(var(--foreground))">Reel {i}</text>
+              <text x="45" y="36" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="9" fill="hsl(var(--muted-foreground))">motion · phases</text>
+            </g>
+          ))}
+        </g>
+
+        <!-- Reel internals (symbols row) -->
+        <g>
+          <rect x="80" y="310" width="760" height="76" rx="10" fill="hsl(var(--secondary) / 0.6)" stroke="hsl(var(--border))" stroke-width="1" />
+          <text x="92" y="330" font-family="ui-monospace, Menlo, monospace" font-size="10" font-weight="600" fill="hsl(var(--muted-foreground))" letter-spacing="0.1em">PER REEL</text>
+
+          <g transform="translate(92, 340)">
+            <rect width="160" height="38" rx="8" fill="hsl(var(--card))" stroke="hsl(var(--border))" />
+            <text x="80" y="17" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" font-weight="600" fill="hsl(var(--foreground))">ReelSymbol[]</text>
+            <text x="80" y="30" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="9" fill="hsl(var(--muted-foreground))">sprite · spine · headless</text>
+          </g>
+          <g transform="translate(262, 340)">
+            <rect width="160" height="38" rx="8" fill="hsl(var(--card))" stroke="hsl(var(--border))" />
+            <text x="80" y="17" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" font-weight="600" fill="hsl(var(--foreground))">ReelMotion</text>
+            <text x="80" y="30" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="9" fill="hsl(var(--muted-foreground))">wrap + displace</text>
+          </g>
+          <g transform="translate(432, 340)">
+            <rect width="160" height="38" rx="8" fill="hsl(var(--card))" stroke="hsl(var(--border))" />
+            <text x="80" y="17" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" font-weight="600" fill="hsl(var(--foreground))">StopSequencer</text>
+            <text x="80" y="30" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="9" fill="hsl(var(--muted-foreground))">target frame queue</text>
+          </g>
+          <g transform="translate(602, 340)">
+            <rect width="160" height="38" rx="8" fill="hsl(var(--card))" stroke="hsl(var(--border))" />
+            <text x="80" y="17" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" font-weight="600" fill="hsl(var(--foreground))">FrameBuilder</text>
+            <text x="80" y="30" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="9" fill="hsl(var(--muted-foreground))">middleware pipeline</text>
+          </g>
+        </g>
+
+        <!-- Test harness row -->
+        <g>
+          <rect x="80" y="406" width="760" height="70" rx="10" fill="hsl(var(--muted))" stroke="hsl(var(--border))" stroke-dasharray="4,4" />
+          <text x="92" y="426" font-family="ui-monospace, Menlo, monospace" font-size="10" font-weight="600" fill="hsl(var(--muted-foreground))" letter-spacing="0.1em">TESTING MODULE</text>
+
+          <g transform="translate(92, 436)">
+            <rect width="140" height="32" rx="8" fill="hsl(var(--card))" stroke="hsl(var(--border))" />
+            <text x="70" y="20" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="11" fill="hsl(var(--foreground))">FakeTicker</text>
+          </g>
+          <g transform="translate(242, 436)">
+            <rect width="150" height="32" rx="8" fill="hsl(var(--card))" stroke="hsl(var(--border))" />
+            <text x="75" y="20" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="11" fill="hsl(var(--foreground))">HeadlessSymbol</text>
+          </g>
+          <g transform="translate(402, 436)">
+            <rect width="160" height="32" rx="8" fill="hsl(var(--card))" stroke="hsl(var(--border))" />
+            <text x="80" y="20" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="11" fill="hsl(var(--foreground))">createTestReelSet</text>
+          </g>
+          <g transform="translate(572, 436)">
+            <rect width="130" height="32" rx="8" fill="hsl(var(--card))" stroke="hsl(var(--border))" />
+            <text x="65" y="20" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="11" fill="hsl(var(--foreground))">spinAndLand</text>
+          </g>
+          <g transform="translate(712, 436)">
+            <rect width="120" height="32" rx="8" fill="hsl(var(--card))" stroke="hsl(var(--border))" />
+            <text x="60" y="20" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="11" fill="hsl(var(--foreground))">expectGrid</text>
+          </g>
+        </g>
+
+        <defs>
+          <marker id="arr-primary" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="hsl(var(--primary))" />
+          </marker>
+        </defs>
+      </svg>
+    </div>
+
+    <div class="mt-4">
+      <Legend items={[
+        { kind: 'primary', label: 'Entry points', note: 'ReelSetBuilder, the API you actually call' },
+        { kind: 'accent', label: 'Subsystems', note: 'SpinController, SpeedManager, Spotlight' },
+        { kind: 'subtle', label: 'Internals', note: 'Motion, StopSequencer, FrameBuilder' },
+        { kind: 'muted', label: 'Test-time only', note: 'FakeTicker, harness' },
+      ]} />
+    </div>
+  </div>
+
+  <h2>How the pieces talk to each other</h2>
+
+  <p>
+    <code>ReelSetBuilder</code> is the only class a consumer ever instantiates
+    directly. Its <code>.build()</code> method constructs the <code>ReelSet</code>
+    and every subsystem it needs — you never <code>new</code> a <code>SpinController</code>
+    or a <code>Reel</code> yourself.
+  </p>
+
+  <p>
+    Inside the reel set:
+  </p>
+
+  <ul>
+    <li><strong><code>SpinController</code></strong> orchestrates the spin lifecycle across all reels. It listens to the PixiJS ticker (via a <code>TickerRef</code>) and drives each reel's phase machine.</li>
+    <li><strong><code>SpeedManager</code></strong> holds named speed profiles (<code>normal</code>, <code>turbo</code>, <code>super-turbo</code>) and emits <code>speed:changed</code> when the active one swaps.</li>
+    <li><strong><code>SymbolSpotlight</code></strong> handles post-spin win animations: dim losers, promote winners, cycle through multiple pay lines.</li>
+    <li><strong><code>ReelViewport</code></strong> is the PixiJS <code>Container</code> that masks each reel column to the visible rows.</li>
+  </ul>
+
+  <p>
+    Each <code>Reel</code> is a scene node that owns its <code>ReelSymbol[]</code>
+    (pooled, swappable), a <code>ReelMotion</code> handler, and a <code>StopSequencer</code>
+    for landing on specific frames. Spin phases (<code>START</code>, <code>SPIN</code>,
+    <code>ANTICIPATION</code>, <code>STOP</code>) are per-reel, which is how
+    anticipation can slow a single reel while the others land normally.
+  </p>
+
+  <h2>The dotted outer ring</h2>
+
+  <p>
+    Everything under <code>src/testing/</code> is tree-shakeable: it exports
+    <code>FakeTicker</code>, <code>HeadlessSymbol</code>, and the
+    <code>createTestReelSet</code> harness. You can build a working 5×3 reel
+    set in Node with no renderer, run a full spin synchronously, and assert
+    the landed grid — see <a href="/architecture/testing/">Testing model</a>
+    for how it hangs together.
+  </p>
+
+  <h2>What lives where</h2>
+
+  <div class="not-prose my-6 grid gap-3 sm:grid-cols-2">
+    <div class="rounded-xl border border-border bg-card p-4">
+      <div class="text-[11px] font-mono uppercase tracking-wider text-primary mb-1">packages/pixi-reels/src/</div>
+      <ul class="text-sm space-y-1 text-foreground/80">
+        <li><code>core/</code> — ReelSet, Builder, Reel, Viewport, Motion, StopSequencer</li>
+        <li><code>spin/</code> — SpinController, phases, spinning modes</li>
+        <li><code>symbols/</code> — ReelSymbol + Sprite/AnimatedSprite/Spine/Headless</li>
+        <li><code>speed/</code> — SpeedManager + profiles</li>
+        <li><code>frame/</code> — FrameBuilder, middleware, RNG</li>
+        <li><code>spotlight/</code> — win animations</li>
+        <li><code>events/</code> — typed EventEmitter, event types</li>
+        <li><code>testing/</code> — FakeTicker, HeadlessSymbol, harness</li>
+        <li><code>debug/</code> — debugSnapshot, debugGrid, enableDebug</li>
+      </ul>
+    </div>
+    <div class="rounded-xl border border-border bg-card p-4">
+      <div class="text-[11px] font-mono uppercase tracking-wider text-primary mb-1">examples/shared/</div>
+      <ul class="text-sm space-y-1 text-foreground/80">
+        <li><code>cheats.ts</code> — CheatEngine + built-in cheats</li>
+        <li><code>cascadeLoop.ts</code> — runCascade, tumbleToGrid, diffCells</li>
+        <li><code>BlurSpriteSymbol.ts</code> — sprite symbol with motion-blur swap</li>
+        <li><code>prototypeSpriteLoader.ts</code> — prototype-symbols atlas loader</li>
+        <li><code>mockServer.ts</code> — fake spin responses</li>
+        <li><code>seededRng.ts</code> — Mulberry32 PRNG</li>
+      </ul>
+    </div>
+  </div>
+
+  <p>
+    Read the next page for the class composition tree in detail, or skip
+    ahead to <a href="/architecture/events/">Events</a> for the full event
+    choreography.
+  </p>
+</Architecture>

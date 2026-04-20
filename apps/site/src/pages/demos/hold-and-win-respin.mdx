@@ -1,0 +1,80 @@
+---
+layout: ../../layouts/Demo.astro
+title: Hold & Win respin
+subtitle: 5×3 · coins lock in place · respin until jackpot or middle row
+tags: [hold-and-win, respin, jackpot]
+description: Every "coin" symbol locks. Respin until no new coins land or the grid fills. Plus a mini-jackpot at 3 coins on middle row.
+---
+
+import HoldAndWinDemo from '../../components/demos/HoldAndWinDemo.tsx';
+
+<HoldAndWinDemo client:only="react" />
+
+## The mechanic
+
+- Each spin can land one or more **coin** symbols.
+- Coins **lock** in place for the rest of the round.
+- Respin until no new coins land for 3 spins — or the grid fills (grand jackpot).
+- Bonus twist: 3 coins on the **middle row** = mini-jackpot.
+
+## Setup
+
+### 1. Register coin symbol
+
+```ts
+builder.symbols((r) => {
+  r.register('coin', BlockSymbol, { colors: { coin: 0xffb74c } });
+});
+builder.weights({ coin: 3 });
+```
+
+### 2. Track held positions
+
+```ts
+const held = new Map<string, string>();   // "r,row" → symbolId
+
+reelSet.events.on('spin:complete', ({ symbols }) => {
+  for (let r = 0; r < symbols.length; r++) {
+    for (let row = 0; row < symbols[r].length; row++) {
+      if (symbols[r][row] === 'coin') held.set(`${r},${row}`, 'coin');
+    }
+  }
+  if (held.size === symbols.length * symbols[0].length) grandJackpot();
+});
+```
+
+### 3. Feed held cells back into the next spin
+
+On every spin, build the target grid yourself — keep held cells as coins,
+fill the rest with random non-coins. This is exactly what `holdAndWinProgress`
+does in the cheats library.
+
+```ts
+function buildGrid(held, size, coinChance) {
+  // 1. empty grid with held cells pre-filled
+  // 2. roll a coin for each free cell with `coinChance`
+  // 3. fill remaining with random non-coin noise
+}
+```
+
+### 4. Cheat: guaranteed progression
+
+Use `holdAndWinProgress('coin', 1)` for demos — every spin lands a new coin,
+so you reach the jackpot in a few clicks instead of playing through RNG.
+
+```ts
+engine.register({
+  id: 'guaranteed',
+  label: 'Guaranteed coin each spin',
+  enabled: true,
+  cheat: holdAndWinProgress('coin', 1),
+});
+```
+
+## Testing the jackpot
+
+```ts
+engine.setHeld(heldAlmostAll);   // 8/9 cells on a 3×3 test board
+const r = engine.next();
+expect(r.meta?.jackpot).toBe(true);
+```

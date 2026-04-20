@@ -1,0 +1,59 @@
+---
+const cols = [
+  {
+    title: 'Learn',
+    items: [
+      { href: '/guides/getting-started/', label: 'Getting started' },
+      { href: '/guides/your-first-reelset/', label: 'Your first reelset' },
+      { href: '/guides/cheats-and-testing/', label: 'Testing with cheats' },
+    ],
+  },
+  {
+    title: 'Reference',
+    items: [
+      { href: '/wiki/api-builder/', label: 'Builder API' },
+      { href: '/wiki/api-events/', label: 'Events' },
+      { href: '/wiki/glossary/', label: 'Glossary' },
+    ],
+  },
+  {
+    title: 'Play',
+    items: [
+      { href: '/demos/', label: 'All demos' },
+      { href: '/sandbox/', label: 'Sandbox' },
+      { href: 'https://github.com/schmooky/pixi-reels', label: 'GitHub' },
+    ],
+  },
+];
+---
+<footer class="mt-20 border-t border-border/60 bg-card/30">
+  <div class="container py-12">
+    <div class="grid grid-cols-2 gap-10 md:grid-cols-4">
+      <div>
+        <div class="flex items-center gap-2 font-mono text-sm font-semibold">
+          <span class="inline-flex h-6 w-6 items-center justify-center rounded-md bg-gradient-to-br from-primary to-accent text-[10px] text-primary-foreground font-bold">
+            PR
+          </span>
+          <span>pixi-reels</span>
+        </div>
+        <p class="mt-3 max-w-xs text-sm text-muted-foreground">
+          Open-source, batteries-included slot reels for PixiJS v8.
+        </p>
+      </div>
+      {cols.map((col) => (
+        <div class="flex flex-col gap-2">
+          <div class="mb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground/80">{col.title}</div>
+          {col.items.map((item) => (
+            <a href={item.href} class="text-sm text-muted-foreground transition-colors hover:text-foreground">
+              {item.label}
+            </a>
+          ))}
+        </div>
+      ))}
+    </div>
+    <div class="mt-10 flex items-center justify-between border-t border-border/50 pt-6 text-xs text-muted-foreground">
+      <span>MIT licensed.</span>
+      <span>Built with Astro, React, shadcn/ui & PixiJS.</span>
+    </div>
+  </div>
+</footer>

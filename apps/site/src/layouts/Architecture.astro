@@ -1,0 +1,84 @@
+---
+import Base from './Base.astro';
+import { ChevronLeft } from 'lucide-react';
+import { articleLd, breadcrumbLd, SITE } from '../lib/seo.ts';
+import { ARCH_PAGES } from '../content/architectureNav.ts';
+
+interface Props {
+  title?: string;
+  subtitle?: string;
+  eyebrow?: string;
+  description?: string;
+  frontmatter?: {
+    title?: string;
+    subtitle?: string;
+    eyebrow?: string;
+    description?: string;
+  };
+}
+const props = Astro.props as Props;
+const fm = props.frontmatter ?? {};
+const title = props.title ?? fm.title ?? 'Architecture';
+const subtitle = props.subtitle ?? fm.subtitle ?? '';
+const eyebrow = props.eyebrow ?? fm.eyebrow ?? 'Architecture';
+const description = props.description ?? fm.description ?? `${title} — pixi-reels architecture deep dive.`;
+const pathname = Astro.url.pathname;
+
+const jsonLd = [
+  articleLd({ title, description, path: pathname }),
+  breadcrumbLd([
+    { name: SITE.name, url: '/' },
+    { name: 'Wiki', url: '/wiki/' },
+    { name: 'Architecture', url: '/wiki/#architecture' },
+    { name: title, url: pathname },
+  ]),
+];
+
+const currentSlug = pathname.replace(/^\/architecture\//, '').replace(/\/$/, '');
+const currentIdx = ARCH_PAGES.findIndex((p) => p.slug === currentSlug);
+const prev = currentIdx > 0 ? ARCH_PAGES[currentIdx - 1] : null;
+const next = currentIdx >= 0 && currentIdx < ARCH_PAGES.length - 1 ? ARCH_PAGES[currentIdx + 1] : null;
+---
+<Base
+  title={`${title} · ${SITE.name} architecture`}
+  description={description}
+  path={pathname}
+  type="article"
+  article={{ section: 'Architecture' }}
+  jsonLd={jsonLd}
+>
+  <div class="container max-w-[1100px] py-10 animate-fade-in">
+    <header class="mb-10">
+      <a href="/wiki/" class="mb-4 inline-flex items-center gap-1 font-mono text-xs uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors">
+        <ChevronLeft size={14} strokeWidth={2} />
+        Wiki · Architecture
+      </a>
+      <div class="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary mb-2">{eyebrow}</div>
+      <h1 class="text-4xl font-semibold tracking-tight sm:text-5xl">{title}</h1>
+      {subtitle && <p class="mt-3 text-lg text-muted-foreground max-w-[680px]">{subtitle}</p>}
+    </header>
+
+    <article class="prose-docs">
+      <slot />
+    </article>
+
+    {(prev || next) && (
+      <nav class="mt-16 grid gap-3 sm:grid-cols-2 not-prose">
+        {prev ? (
+          <a href={`/architecture/${prev.slug}/`} class="group rounded-xl border border-border bg-card p-4 transition-all hover:border-primary/40 hover:-translate-y-0.5">
+            <div class="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">← Previous</div>
+            <div class="mt-1 font-semibold">{prev.title}</div>
+            <div class="mt-0.5 text-xs text-muted-foreground">{prev.subtitle}</div>
+          </a>
+        ) : <div></div>}
+        {next ? (
+          <a href={`/architecture/${next.slug}/`} class="group rounded-xl border border-border bg-card p-4 transition-all hover:border-primary/40 hover:-translate-y-0.5 text-right">
+            <div class="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">Next →</div>
+            <div class="mt-1 font-semibold">{next.title}</div>
+            <div class="mt-0.5 text-xs text-muted-foreground">{next.subtitle}</div>
+          </a>
+        ) : <div></div>}
+      </nav>
+    )}
+  </div>
+</Base>

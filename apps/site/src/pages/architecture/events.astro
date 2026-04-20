@@ -1,0 +1,255 @@
+---
+import Architecture from '../../layouts/Architecture.astro';
+import Legend from '../../components/arch/Legend.astro';
+---
+<Architecture
+  title="Events"
+  subtitle="What fires when, and in what order."
+  eyebrow="Flow"
+>
+  <p>
+    Every event pixi-reels emits is typed. The headline stream comes off
+    <code>reelSet.events</code>. Each <code>Reel</code> also has its own
+    per-reel stream — useful when you want to drive behavior on one column
+    without the whole set.
+  </p>
+
+  <h2>The spin timeline</h2>
+
+  <p>
+    A typical spin unfolds in this exact order. The timeline below has the
+    reel-set-level events on the top track and per-reel events on the bottom.
+    Read left-to-right as wall-clock time.
+  </p>
+
+  <div class="not-prose my-8">
+    <div class="rounded-2xl border border-border bg-card p-6 overflow-x-auto">
+      <svg viewBox="0 0 960 460" class="w-full h-auto min-w-[760px]">
+
+        <!-- Phase backgrounds -->
+        <g opacity="0.35">
+          <rect x="80" y="40" width="120" height="380" rx="4" fill="hsl(var(--primary) / 0.08)" />
+          <rect x="200" y="40" width="220" height="380" rx="4" fill="hsl(var(--accent) / 0.06)" />
+          <rect x="420" y="40" width="150" height="380" rx="4" fill="hsl(var(--accent) / 0.12)" />
+          <rect x="570" y="40" width="250" height="380" rx="4" fill="hsl(var(--accent) / 0.06)" />
+          <rect x="820" y="40" width="120" height="380" rx="4" fill="hsl(var(--primary) / 0.08)" />
+        </g>
+
+        <!-- Phase labels -->
+        <g font-family="ui-monospace, Menlo, monospace" font-size="10" font-weight="700" fill="hsl(var(--muted-foreground))" letter-spacing="0.1em">
+          <text x="140" y="32" text-anchor="middle">START</text>
+          <text x="310" y="32" text-anchor="middle">SPIN</text>
+          <text x="495" y="32" text-anchor="middle">ANTICIPATION</text>
+          <text x="695" y="32" text-anchor="middle">STOP</text>
+          <text x="880" y="32" text-anchor="middle">LANDED</text>
+        </g>
+
+        <!-- Track 1: ReelSet events -->
+        <g>
+          <text x="10" y="84" font-family="ui-monospace, Menlo, monospace" font-size="10" font-weight="700" fill="hsl(var(--primary))" letter-spacing="0.08em">REELSET</text>
+          <line x1="80" y1="100" x2="940" y2="100" stroke="hsl(var(--primary))" stroke-width="2" />
+
+          <!-- event markers -->
+          <g>
+            <circle cx="100" cy="100" r="6" fill="hsl(var(--primary))" />
+            <line x1="100" y1="100" x2="100" y2="130" stroke="hsl(var(--primary))" stroke-width="1" stroke-dasharray="2,2" />
+            <text x="100" y="148" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="10.5" font-weight="600" fill="hsl(var(--foreground))">spin:start</text>
+          </g>
+
+          <g>
+            <circle cx="210" cy="100" r="6" fill="hsl(var(--primary))" />
+            <line x1="210" y1="100" x2="210" y2="175" stroke="hsl(var(--primary))" stroke-width="1" stroke-dasharray="2,2" />
+            <text x="210" y="193" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="10.5" font-weight="600" fill="hsl(var(--foreground))">spin:allStarted</text>
+          </g>
+
+          <g>
+            <circle cx="560" cy="100" r="6" fill="hsl(var(--primary))" />
+            <line x1="560" y1="100" x2="560" y2="130" stroke="hsl(var(--primary))" stroke-width="1" stroke-dasharray="2,2" />
+            <text x="560" y="148" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="10.5" font-weight="600" fill="hsl(var(--foreground))">spin:stopping</text>
+            <text x="560" y="162" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="9" fill="hsl(var(--muted-foreground))">(per reel)</text>
+          </g>
+
+          <g>
+            <circle cx="780" cy="100" r="6" fill="hsl(var(--primary))" />
+            <line x1="780" y1="100" x2="780" y2="175" stroke="hsl(var(--primary))" stroke-width="1" stroke-dasharray="2,2" />
+            <text x="780" y="193" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="10.5" font-weight="600" fill="hsl(var(--foreground))">spin:reelLanded</text>
+            <text x="780" y="207" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="9" fill="hsl(var(--muted-foreground))">(per reel)</text>
+          </g>
+
+          <g>
+            <circle cx="870" cy="100" r="6" fill="hsl(var(--primary))" />
+            <line x1="870" y1="100" x2="870" y2="130" stroke="hsl(var(--primary))" stroke-width="1" stroke-dasharray="2,2" />
+            <text x="870" y="148" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="10.5" font-weight="600" fill="hsl(var(--foreground))">spin:allLanded</text>
+          </g>
+
+          <g>
+            <circle cx="910" cy="100" r="6" fill="hsl(var(--primary))" />
+            <line x1="910" y1="100" x2="910" y2="175" stroke="hsl(var(--primary))" stroke-width="1" stroke-dasharray="2,2" />
+            <text x="910" y="193" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="10.5" font-weight="600" fill="hsl(var(--foreground))">spin:complete</text>
+          </g>
+        </g>
+
+        <!-- Track 2: Per-reel events -->
+        <g>
+          <text x="10" y="254" font-family="ui-monospace, Menlo, monospace" font-size="10" font-weight="700" fill="hsl(var(--accent))" letter-spacing="0.08em">PER REEL</text>
+          <line x1="80" y1="270" x2="940" y2="270" stroke="hsl(var(--accent))" stroke-width="2" />
+
+          <g>
+            <circle cx="120" cy="270" r="5" fill="hsl(var(--accent))" />
+            <line x1="120" y1="270" x2="120" y2="300" stroke="hsl(var(--accent))" stroke-width="1" stroke-dasharray="2,2" />
+            <text x="120" y="317" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="10" fill="hsl(var(--foreground))">phase:enter "start"</text>
+          </g>
+          <g>
+            <circle cx="195" cy="270" r="5" fill="hsl(var(--accent))" />
+            <line x1="195" y1="270" x2="195" y2="342" stroke="hsl(var(--accent))" stroke-width="1" stroke-dasharray="2,2" />
+            <text x="195" y="359" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="10" fill="hsl(var(--foreground))">phase:exit "start"</text>
+            <text x="195" y="372" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="10" fill="hsl(var(--foreground))">phase:enter "spin"</text>
+          </g>
+
+          <!-- wrap events during SPIN -->
+          <g opacity="0.7">
+            {[0, 1, 2, 3, 4].map((i) => (
+              <g>
+                <circle cx={240 + i * 35} cy="270" r="3" fill="hsl(var(--accent))" />
+              </g>
+            ))}
+          </g>
+          <text x="305" y="297" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="9" fill="hsl(var(--muted-foreground))">symbol:created · symbol:recycled (many)</text>
+
+          <g>
+            <circle cx="440" cy="270" r="5" fill="hsl(var(--accent))" />
+            <line x1="440" y1="270" x2="440" y2="300" stroke="hsl(var(--accent))" stroke-width="1" stroke-dasharray="2,2" />
+            <text x="440" y="317" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="10" fill="hsl(var(--foreground))">phase:exit "spin"</text>
+          </g>
+
+          <g>
+            <circle cx="460" cy="270" r="5" fill="hsl(var(--accent))" />
+            <line x1="460" y1="270" x2="460" y2="342" stroke="hsl(var(--accent))" stroke-width="1" stroke-dasharray="2,2" />
+            <text x="460" y="359" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="10" fill="hsl(var(--foreground))">phase:enter</text>
+            <text x="460" y="372" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="10" fill="hsl(var(--foreground))">"anticipation"</text>
+          </g>
+
+          <g>
+            <circle cx="575" cy="270" r="5" fill="hsl(var(--accent))" />
+            <line x1="575" y1="270" x2="575" y2="300" stroke="hsl(var(--accent))" stroke-width="1" stroke-dasharray="2,2" />
+            <text x="575" y="317" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="10" fill="hsl(var(--foreground))">phase:enter "stop"</text>
+          </g>
+
+          <g>
+            <circle cx="770" cy="270" r="5" fill="hsl(var(--accent))" />
+            <line x1="770" y1="270" x2="770" y2="342" stroke="hsl(var(--accent))" stroke-width="1" stroke-dasharray="2,2" />
+            <text x="770" y="359" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="10" fill="hsl(var(--foreground))">phase:exit "stop"</text>
+            <text x="770" y="372" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="10" fill="hsl(var(--foreground))">landed (symbols[])</text>
+          </g>
+        </g>
+
+        <!-- User hooks -->
+        <g>
+          <line x1="80" y1="415" x2="940" y2="415" stroke="hsl(var(--muted-foreground))" stroke-width="1" stroke-dasharray="3,3" opacity="0.4" />
+
+          <g>
+            <rect x="145" y="405" width="130" height="24" rx="6" fill="hsl(var(--muted))" stroke="hsl(var(--border))" stroke-width="1" />
+            <text x="210" y="421" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="10" fill="hsl(var(--foreground))">setResult()</text>
+          </g>
+          <text x="210" y="446" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="9" fill="hsl(var(--muted-foreground))">"server response arrived"</text>
+
+          <g>
+            <rect x="415" y="405" width="165" height="24" rx="6" fill="hsl(var(--muted))" stroke="hsl(var(--border))" stroke-width="1" />
+            <text x="497" y="421" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="10" fill="hsl(var(--foreground))">setAnticipation([3,4])</text>
+          </g>
+          <text x="497" y="446" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="9" fill="hsl(var(--muted-foreground))">"slow these reels"</text>
+        </g>
+      </svg>
+    </div>
+
+    <div class="mt-4">
+      <Legend items={[
+        { kind: 'primary', label: 'ReelSet events', note: 'reelSet.events.on(...)' },
+        { kind: 'accent', label: 'Per-reel events', note: 'reelSet.getReel(i).events.on(...)' },
+        { kind: 'muted', label: 'Caller actions', note: 'setResult, setAnticipation, skip' },
+      ]} />
+    </div>
+  </div>
+
+  <h2>The full event map</h2>
+
+  <div class="not-prose my-6">
+    <div class="rounded-xl border border-border bg-card overflow-hidden">
+      <table class="w-full text-sm">
+        <thead class="bg-muted/60">
+          <tr>
+            <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">Event</th>
+            <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">Payload</th>
+            <th class="text-left px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">Fires when</th>
+          </tr>
+        </thead>
+        <tbody>
+          {[
+            ['spin:start', '—', 'Any spin() call'],
+            ['spin:allStarted', '—', 'Every reel is in SPIN phase'],
+            ['spin:stopping', 'reelIndex', 'A reel begins STOP (or ANTICIPATION)'],
+            ['spin:reelLanded', 'reelIndex, symbols[]', 'A reel finished landing'],
+            ['spin:allLanded', 'result: SpinResult', 'Last reel landed'],
+            ['spin:complete', 'result: SpinResult', 'Just after spin:allLanded'],
+            ['skip:requested', '—', 'skip() called'],
+            ['skip:completed', '—', 'All reels force-landed'],
+            ['speed:changed', 'profile, previous', 'setSpeed() called'],
+            ['spotlight:start', 'positions: SymbolPosition[]', 'spotlight.cycle(...) began'],
+            ['spotlight:end', '—', 'Spotlight sequence finished'],
+            ['destroyed', '—', 'destroy() called'],
+          ].map(([name, payload, when]) => (
+            <tr class="border-t border-border/60">
+              <td class="px-4 py-2.5 font-mono text-primary text-xs">{name}</td>
+              <td class="px-4 py-2.5 font-mono text-xs text-muted-foreground">{payload}</td>
+              <td class="px-4 py-2.5 text-xs text-foreground/80">{when}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <h2>Two interaction patterns</h2>
+
+  <p>
+    Wiring these events together gets you every major slot UX without
+    custom state tracking:
+  </p>
+
+  <div class="not-prose my-6 grid gap-4 md:grid-cols-2">
+    <div class="rounded-xl border border-border bg-card p-5">
+      <div class="text-[11px] font-mono uppercase tracking-wider text-primary mb-2">Pattern: Skip button</div>
+      <p class="text-sm text-muted-foreground mb-3">
+        Use <code>isSpinning</code> to branch the same button between "start" and "slam-stop."
+      </p>
+      <pre class="text-[11px] !my-0"><code>{`button.addEventListener('click', () => {
+  if (reelSet.isSpinning) reelSet.skip();
+  else               reelSet.spin();
+});`}</code></pre>
+    </div>
+
+    <div class="rounded-xl border border-border bg-card p-5">
+      <div class="text-[11px] font-mono uppercase tracking-wider text-primary mb-2">Pattern: Fetch + stop</div>
+      <p class="text-sm text-muted-foreground mb-3">
+        Real slots fetch the server answer while the reels are spinning, then call setResult() to trigger the stop.
+      </p>
+      <pre class="text-[11px] !my-0"><code>{`const p = reelSet.spin();
+const r = await fetch('/spin').then(x => x.json());
+reelSet.setAnticipation(r.anticipationReels);
+reelSet.setResult(r.symbols);
+await p;`}</code></pre>
+    </div>
+  </div>
+
+  <h2>Listening on a single reel</h2>
+
+  <p>
+    Each <code>Reel</code> has its own typed emitter. Useful when only one
+    column's state matters — e.g. a sticky wild tracker that needs to
+    know exactly when reel 2 landed:
+  </p>
+
+  <pre><code>{`reelSet.getReel(2).events.on('landed', (symbols) => {
+  if (symbols.includes('wild')) stickyWilds.push({ reel: 2, ... });
+});`}</code></pre>
+</Architecture>
