@@ -165,4 +165,3 @@ PRs welcome. [CONTRIBUTING.md](./CONTRIBUTING.md) covers the workflow, changeset
 ## License
 
 MIT.
-
