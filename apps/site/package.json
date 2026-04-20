@@ -25,7 +25,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "tailwind-merge": "^2.5.4",
-    "lucide-react": "^0.468.0",
+    "lucide-react": "^1.8.0",
     "pixi-reels": "workspace:*",
     "pixi.js": "^8.17.0",
     "gsap": "^3.14.0",
