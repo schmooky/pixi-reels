@@ -111,3 +111,53 @@
 - name: github-actions
   color: '000000'
   description: GitHub Actions dependency updates
+
+# --- Backlog taxonomy (mechanics/roadmap issues) ---
+- name: mechanic
+  color: 8250df
+  description: Slot mechanic or reel-motion capability tracked on the roadmap
+- name: type/epic
+  color: 3e1f47
+  description: Large multi-story effort, usually a major release
+- name: type/story
+  color: 6f42c1
+  description: Single-release-sized feature work
+- name: type/task
+  color: b392f0
+  description: Self-contained task; often a recipe or small fix
+- name: priority/p0
+  color: b60205
+  description: Next release. Blocks promised capability.
+- name: priority/p1
+  color: d93f0b
+  description: Soon. High-value, high-demand.
+- name: priority/p2
+  color: fbca04
+  description: Nice-to-have. Plan in, not urgent.
+- name: priority/p3
+  color: c5def5
+  description: Later. Exploration or low-ROI.
+- name: size/xs
+  color: c5f4c5
+  description: Under an hour
+- name: size/s
+  color: a2efa2
+  description: Half a day
+- name: size/m
+  color: 76c476
+  description: A day or two
+- name: size/l
+  color: 479647
+  description: A week
+- name: size/xl
+  color: 1a5a1a
+  description: Multi-week epic
+- name: release/patch
+  color: 1f6feb
+  description: Ships in the next patch (no API change)
+- name: release/minor
+  color: 5319e7
+  description: Ships in the next minor (new feature, backwards-compatible)
+- name: release/major
+  color: 8b0000
+  description: Breaking change, needs a major release
