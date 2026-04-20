@@ -20,6 +20,10 @@ on:
   push:
     branches:
       - main
+  # Manual trigger from Actions -> "Release" -> "Run workflow". Useful when
+  # a push event was dropped or you want to force a changeset-action pass
+  # without pushing a new commit.
+  workflow_dispatch:
 
 concurrency:
   group: release-${{ github.ref }}
