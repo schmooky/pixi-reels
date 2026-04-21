@@ -14,9 +14,10 @@ apis:
   - ReelSet.reels / getVisibleSymbols
 ---
 
-import HoldAndWinStarterRecipe from '../../components/recipes/HoldAndWinStarterRecipe.tsx';
+import code from '../../recipes/hold-and-win.recipe.ts?raw';
+import { RecipeRunner } from '../../components/RecipeRunner.tsx';
 
-<HoldAndWinStarterRecipe client:only="react" />
+<RecipeRunner code={code} client:only="react" />
 
 Press Run a few times — every coin that lands stays put on the next respin.
 

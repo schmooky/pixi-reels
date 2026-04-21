@@ -14,9 +14,10 @@ apis:
   - spin:complete event
 ---
 
-import WalkingWildRecipe from '../../components/recipes/WalkingWildRecipe.tsx';
+import code from '../../recipes/walking-wild.recipe.ts?raw';
+import { RecipeRunner } from '../../components/RecipeRunner.tsx';
 
-<WalkingWildRecipe client:only="react" />
+<RecipeRunner code={code} client:only="react" />
 
 Press Run repeatedly — watch the wild march one column left each spin until it exits off the board.
 

@@ -14,9 +14,10 @@ apis:
   - ReelSymbol.playWin
 ---
 
-import SymbolTransformRecipe from '../../components/recipes/SymbolTransformRecipe.tsx';
+import code from '../../recipes/symbol-transform.recipe.ts?raw';
+import { RecipeRunner } from '../../components/RecipeRunner.tsx';
 
-<SymbolTransformRecipe client:only="react" />
+<RecipeRunner code={code} client:only="react" />
 
 After every spin, a random low-pay cell upgrades to a high-pay symbol with a scale-fade-swap animation.
 

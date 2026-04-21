@@ -14,9 +14,10 @@ apis:
   - Reel.getSymbolAt
 ---
 
-import SingleReelRespinRecipe from '../../components/recipes/SingleReelRespinRecipe.tsx';
+import code from '../../recipes/single-reel-respin.recipe.ts?raw';
+import { RecipeRunner } from '../../components/RecipeRunner.tsx';
 
-<SingleReelRespinRecipe client:only="react" />
+<RecipeRunner code={code} client:only="react" />
 
 The whole board spins first. Then only the middle reel respins — the rest freeze in place. Every spin hits the same two methods: `spin()` and `setResult()`.
 

@@ -5,16 +5,27 @@ import { Play, RotateCcw, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { Kbd, KbdChord } from '@/components/ui/kbd';
 import { Application } from 'pixi.js';
 import type { Texture } from 'pixi.js';
+import * as PIXI from 'pixi.js';
 import { gsap } from 'gsap';
 import {
   ReelSetBuilder,
   SpeedPresets,
   enableDebug,
   type ReelSet,
+  ReelSymbol,
 } from 'pixi-reels';
 import { BlurSpriteSymbol } from '../../../../examples/shared/BlurSpriteSymbol.ts';
 import { loadPrototypeSymbols } from '../../../../examples/shared/prototypeSpriteLoader.ts';
 import { transform as sucraseTransform } from 'sucrase';
+import { runCascade, tumbleToGrid, diffCells } from '../../../../examples/shared/cascadeLoop.ts';
+
+class EmptySymbol extends ReelSymbol {
+  protected onActivate(_symbolId: string): void {}
+  protected onDeactivate(): void {}
+  async playWin(): Promise<void> {}
+  stopAnimation(): void {}
+  resize(_w: number, _h: number): void {}
+}
 
 const DEFAULT_CODE = `// ─── pixi-reels sandbox ─────────────────────────────────────────────────
 // Edit this code and press "Run" (or Cmd/Ctrl+Enter). The reels on the
@@ -26,10 +37,13 @@ const DEFAULT_CODE = `// ─── pixi-reels sandbox ────────�
 //   - textures     -- Record<symbolId, Texture>    (base art)
 //   - blurTextures -- Record<symbolId, Texture>    (motion-blur variants)
 //   - SYMBOL_IDS   -- string[] of every available prototype atlas id
-//   - pickWeighted(weights) -- sample helper
+//   - pickWeighted(weights) -- weighted random sampler
+//   - gsap, PIXI   -- animation + full PixiJS namespace
+//   - runCascade, tumbleToGrid, diffCells -- cascade sequence helpers
+//   - EmptySymbol  -- blank ReelSymbol subclass (for hold-and-win patterns)
 //
-// Return { reelSet, nextResult } — \`nextResult()\` is called each spin to
-// produce the server-side target grid.
+// Return { reelSet, nextResult? } — \`nextResult()\` is called each spin.
+// Or return { onSpin } for a fully custom spin handler.
 // ───────────────────────────────────────────────────────────────────────
 
 function buildReels() {
@@ -94,8 +108,10 @@ interface SandboxEnv {
 }
 
 interface BuildResult {
-  reelSet: ReelSet;
+  reelSet?: ReelSet;
   nextResult?: () => string[][];
+  onSpin?: () => Promise<void>;
+  cleanup?: () => void;
 }
 
 function pickWeighted(weights: Record<string, number>): string {
@@ -113,8 +129,14 @@ export default function Sandbox() {
   const envRef = useRef<SandboxEnv | null>(null);
   const currentReelSetRef = useRef<ReelSet | null>(null);
   const nextResultRef = useRef<(() => string[][]) | null>(null);
+  const onSpinRef = useRef<(() => Promise<void>) | null>(null);
+  const cleanupRef = useRef<(() => void) | null>(null);
 
-  const [code, setCode] = useState(DEFAULT_CODE);
+  const hashCode = typeof location !== 'undefined' && location.hash.startsWith('#code=')
+    ? decodeURIComponent(escape(atob(location.hash.slice(6))))
+    : null;
+
+  const [code, setCode] = useState(hashCode ?? DEFAULT_CODE);
   const [status, setStatus] = useState<{ kind: 'idle' | 'ok' | 'err'; msg: string }>({ kind: 'idle', msg: 'Press Run to mount the reels.' });
   const [isBooting, setIsBooting] = useState(true);
   const [isSpinning, setIsSpinning] = useState(false);
@@ -150,16 +172,14 @@ export default function Sandbox() {
 
       envRef.current = { app, textures, blurTextures, SYMBOL_IDS };
       setIsBooting(false);
-      // Auto-run default code so the user sees reels immediately
-      void run(DEFAULT_CODE);
+      void run(code);
     })();
 
     return () => {
       cancelled = true;
-      if (currentReelSetRef.current) {
-        try { currentReelSetRef.current.destroy(); } catch { /* ignore */ }
-        currentReelSetRef.current = null;
-      }
+      try { cleanupRef.current?.(); } catch { /* ignore */ }
+      try { currentReelSetRef.current?.destroy(); } catch { /* ignore */ }
+      currentReelSetRef.current = null;
       if (envRef.current) {
         try { envRef.current.app.destroy(true, { children: true }); } catch { /* ignore */ }
         envRef.current = null;
@@ -173,12 +193,13 @@ export default function Sandbox() {
     const env = envRef.current;
     if (!env) return;
 
-    // Tear down current reelSet
-    if (currentReelSetRef.current) {
-      try { currentReelSetRef.current.destroy(); } catch { /* ignore */ }
-      currentReelSetRef.current = null;
-      nextResultRef.current = null;
-    }
+    // Tear down current state
+    try { cleanupRef.current?.(); } catch { /* ignore */ }
+    try { currentReelSetRef.current?.destroy(); } catch { /* ignore */ }
+    currentReelSetRef.current = null;
+    nextResultRef.current = null;
+    onSpinRef.current = null;
+    cleanupRef.current = null;
 
     // Transpile TS → JS (types stripped, no type-checking)
     let js: string;
@@ -209,6 +230,11 @@ export default function Sandbox() {
         'SYMBOL_IDS',
         'pickWeighted',
         'gsap',
+        'PIXI',
+        'runCascade',
+        'tumbleToGrid',
+        'diffCells',
+        'EmptySymbol',
         factorySource,
       );
       built = factory(
@@ -221,14 +247,27 @@ export default function Sandbox() {
         env.SYMBOL_IDS,
         pickWeighted,
         gsap,
+        PIXI,
+        runCascade,
+        tumbleToGrid,
+        diffCells,
+        EmptySymbol,
       ) as BuildResult;
     } catch (e) {
       setStatus({ kind: 'err', msg: `Runtime error: ${(e as Error).message}` });
       return;
     }
 
-    if (!built || !built.reelSet) {
-      setStatus({ kind: 'err', msg: 'buildReels() must return { reelSet, nextResult? }.' });
+    if (!built || (!built.reelSet && !built.onSpin)) {
+      setStatus({ kind: 'err', msg: 'buildReels() must return { reelSet } or { onSpin }.' });
+      return;
+    }
+
+    onSpinRef.current = built.onSpin ?? null;
+    cleanupRef.current = built.cleanup ?? null;
+
+    if (!built.reelSet) {
+      setStatus({ kind: 'ok', msg: 'Mounted. Custom spin handler active.' });
       return;
     }
 
@@ -283,19 +322,23 @@ export default function Sandbox() {
   }
 
   async function handleSpin() {
-    const reelSet = currentReelSetRef.current;
-    if (!reelSet) return;
     if (isSpinning) {
-      try { reelSet.skip(); } catch { /* ignore */ }
+      try { currentReelSetRef.current?.skip(); } catch { /* ignore */ }
       return;
     }
+    const reelSet = currentReelSetRef.current;
+    if (!reelSet && !onSpinRef.current) return;
     setIsSpinning(true);
     try {
-      const spinPromise = reelSet.spin();
-      const result = nextResultRef.current?.();
-      await new Promise((r) => setTimeout(r, 150));
-      if (result) reelSet.setResult(result);
-      await spinPromise;
+      if (onSpinRef.current) {
+        await onSpinRef.current();
+      } else {
+        const spinPromise = reelSet!.spin();
+        const result = nextResultRef.current?.();
+        await new Promise((r) => setTimeout(r, 150));
+        if (result) reelSet!.setResult(result);
+        await spinPromise;
+      }
     } catch (e) {
       setStatus({ kind: 'err', msg: `Spin error: ${(e as Error).message}` });
     } finally {
@@ -387,7 +430,7 @@ export default function Sandbox() {
       <div className="flex flex-col overflow-hidden rounded-xl border border-border bg-card">
         <div
           ref={canvasHostRef}
-          className="relative flex-1 min-h-[420px] bg-[#0e0e1a]"
+          className="relative flex-1 min-h-[420px] bg-background"
         />
         <div className="flex items-center gap-2 border-t border-border/60 bg-background/40 px-3 py-2">
           <button

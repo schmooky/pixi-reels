@@ -13,9 +13,10 @@ apis:
   - spin:stopping event
 ---
 
-import AnticipateRecipe from '../../components/recipes/AnticipateRecipe.tsx';
+import code from '../../recipes/anticipate-a-reel.recipe.ts?raw';
+import { RecipeRunner } from '../../components/RecipeRunner.tsx';
 
-<AnticipateRecipe client:only="react" />
+<RecipeRunner code={code} client:only="react" />
 
 ## The minimum code
 

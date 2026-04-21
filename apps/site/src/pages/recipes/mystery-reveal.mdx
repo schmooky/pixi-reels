@@ -14,9 +14,10 @@ apis:
   - Reel.getSymbolAt
 ---
 
-import MysteryRevealRecipe from '../../components/recipes/MysteryRevealRecipe.tsx';
+import code from '../../recipes/mystery-reveal.recipe.ts?raw';
+import { RecipeRunner } from '../../components/RecipeRunner.tsx';
 
-<MysteryRevealRecipe client:only="react" />
+<RecipeRunner code={code} client:only="react" />
 
 Three "?" cells land, shake, then reveal the same symbol together.
 

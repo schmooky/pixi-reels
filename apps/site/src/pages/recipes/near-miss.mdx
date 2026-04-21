@@ -13,9 +13,10 @@ apis:
   - forceNearMiss cheat
 ---
 
-import NearMissRecipe from '../../components/recipes/NearMissRecipe.tsx';
+import code from '../../recipes/near-miss.recipe.ts?raw';
+import { RecipeRunner } from '../../components/RecipeRunner.tsx';
 
-<NearMissRecipe client:only="react" />
+<RecipeRunner code={code} client:only="react" />
 
 ## The minimum code
 
