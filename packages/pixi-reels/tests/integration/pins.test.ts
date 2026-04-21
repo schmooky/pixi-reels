@@ -376,3 +376,117 @@ describe('CellPin — pin replaces existing pin at same cell', () => {
     }
   });
 });
+
+describe('CellPin — visual overlay during spin motion', () => {
+  /**
+   * During a spin, the reel strip scrolls through random symbols. A pinned
+   * cell's underlying symbol cycles like any other; without an engine
+   * overlay the player sees the pinned symbol leave the cell and only
+   * reappear when the reel lands. The overlay keeps the pinned symbol
+   * visible throughout the motion phase.
+   */
+  it('creates an overlay when a spin starts and a pin exists', async () => {
+    const h = makeHarness();
+    try {
+      h.reelSet.pin(2, 1, 'wild', { turns: 3 });
+      const overlays = (h.reelSet as unknown as {
+        _pinOverlays: Map<string, unknown>;
+      })._pinOverlays;
+      expect(overlays.size).toBe(0); // no spin yet
+
+      // Start a spin manually so spin:start fires
+      const promise = h.reelSet.spin();
+      expect(overlays.size).toBe(1);
+      expect(overlays.has('2:1')).toBe(true);
+
+      h.reelSet.setResult([
+        ['a', 'b', 'c'], ['a', 'b', 'c'], ['a', 'b', 'c'],
+        ['a', 'b', 'c'], ['a', 'b', 'c'],
+      ]);
+      h.reelSet.skip();
+      await promise;
+
+      // Overlay destroyed after landing
+      expect(overlays.size).toBe(0);
+    } finally {
+      h.destroy();
+    }
+  });
+
+  it('creates overlays for all active pins on spin:start', async () => {
+    const h = makeHarness();
+    try {
+      h.reelSet.pin(0, 0, 'wild');
+      h.reelSet.pin(2, 1, 'wild');
+      h.reelSet.pin(4, 2, 'wild');
+      const overlays = (h.reelSet as unknown as {
+        _pinOverlays: Map<string, unknown>;
+      })._pinOverlays;
+
+      const promise = h.reelSet.spin();
+      expect(overlays.size).toBe(3);
+
+      h.reelSet.setResult([
+        ['a', 'b', 'c'], ['a', 'b', 'c'], ['a', 'b', 'c'],
+        ['a', 'b', 'c'], ['a', 'b', 'c'],
+      ]);
+      h.reelSet.skip();
+      await promise;
+
+      expect(overlays.size).toBe(0);
+    } finally {
+      h.destroy();
+    }
+  });
+
+  it('pin() during spin creates an overlay immediately', async () => {
+    const h = makeHarness();
+    try {
+      const overlays = (h.reelSet as unknown as {
+        _pinOverlays: Map<string, unknown>;
+      })._pinOverlays;
+
+      const promise = h.reelSet.spin();
+      expect(overlays.size).toBe(0);
+
+      h.reelSet.pin(1, 1, 'wild');
+      expect(overlays.size).toBe(1); // overlay created mid-spin
+
+      h.reelSet.setResult([
+        ['a', 'b', 'c'], ['a', 'b', 'c'], ['a', 'b', 'c'],
+        ['a', 'b', 'c'], ['a', 'b', 'c'],
+      ]);
+      h.reelSet.skip();
+      await promise;
+
+      expect(overlays.size).toBe(0);
+    } finally {
+      h.destroy();
+    }
+  });
+
+  it('unpin() during spin destroys the overlay immediately', async () => {
+    const h = makeHarness();
+    try {
+      h.reelSet.pin(1, 1, 'wild');
+      const overlays = (h.reelSet as unknown as {
+        _pinOverlays: Map<string, unknown>;
+      })._pinOverlays;
+
+      const promise = h.reelSet.spin();
+      expect(overlays.size).toBe(1);
+
+      h.reelSet.unpin(1, 1);
+      expect(overlays.size).toBe(0);
+
+      h.reelSet.setResult([
+        ['a', 'b', 'c'], ['a', 'b', 'c'], ['a', 'b', 'c'],
+        ['a', 'b', 'c'], ['a', 'b', 'c'],
+      ]);
+      h.reelSet.skip();
+      await promise;
+    } finally {
+      h.destroy();
+    }
+  });
+});

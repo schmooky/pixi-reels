@@ -10,6 +10,7 @@ import { SpinController } from '../spin/SpinController.js';
 import { SpeedManager } from '../speed/SpeedManager.js';
 import { SymbolSpotlight, type SpotlightOptions, type WinLine, type CycleOptions } from '../spotlight/SymbolSpotlight.js';
 import type { SymbolFactory } from '../symbols/SymbolFactory.js';
+import type { ReelSymbol } from '../symbols/ReelSymbol.js';
 import type { FrameBuilder } from '../frame/FrameBuilder.js';
 import type { PhaseFactory } from '../spin/phases/PhaseFactory.js';
 import type { SpinningMode } from '../spin/modes/SpinningMode.js';
@@ -87,6 +88,14 @@ export class ReelSet extends Container implements Disposable {
   private _frameBuilder: FrameBuilder;
   private _isDestroyed = false;
   private _pins = new Map<string, CellPin>();
+  /**
+   * Visual overlays rendered above the reel viewport while a spin is in
+   * motion. Each overlay is a pooled ReelSymbol sitting in the viewport's
+   * unmaskedContainer at the pin's cell position — it keeps the pinned
+   * symbol visible while the underlying reel scrolls. Created on
+   * spin:start, destroyed on spin:allLanded.
+   */
+  private _pinOverlays = new Map<string, ReelSymbol>();
 
   constructor(params: ReelSetParams) {
     super();
@@ -291,12 +300,22 @@ export class ReelSet extends Container implements Disposable {
       payload: options?.payload,
     };
 
-    this._pins.set(pinKey(col, row), pin);
+    const key = pinKey(col, row);
+    // If we're replacing an existing pin, drop its overlay so a fresh one
+    // with the new symbolId can be created.
+    if (this._pins.has(key)) {
+      this._destroyPinOverlay(key);
+    }
+    this._pins.set(key, pin);
 
-    // If the reel is idle (not spinning), apply the pin visually now so the
-    // grid matches what `pins` reports.
     if (!this._spinController.isSpinning) {
+      // Reel is idle: apply the pin visually on the reel itself so
+      // `getVisibleSymbols()` matches what `pins` reports.
       this._applyPinVisually(col, row, symbolId);
+    } else {
+      // Mid-spin: create an overlay so the pinned symbol is visible
+      // immediately even while the reel scrolls.
+      this._ensurePinOverlay(pin);
     }
 
     this._events.emit('pin:placed', pin);
@@ -312,6 +331,7 @@ export class ReelSet extends Container implements Disposable {
     const pin = this._pins.get(key);
     if (!pin) return;
     this._pins.delete(key);
+    this._destroyPinOverlay(key);
     this._events.emit('pin:expired', pin, 'explicit');
   }
 
@@ -408,6 +428,10 @@ export class ReelSet extends Container implements Disposable {
     this._pins.delete(fromKey);
     const movedPin: CellPin = { ...pin, col: to.col, row: to.row };
     this._pins.set(toKey, movedPin);
+
+    // An overlay at the old cell (from a prior spin-interrupted state)
+    // is no longer accurate — drop it; the flight symbol takes over.
+    this._destroyPinOverlay(fromKey);
 
     // Gather viewport-local coordinates for both cells. The flight symbol
     // will be parented to `viewport.unmaskedContainer`, whose local space
@@ -521,6 +545,7 @@ export class ReelSet extends Container implements Disposable {
       reel.destroy();
     }
 
+    this._destroyAllPinOverlays();
     this._symbolFactory.destroy();
     this._viewport.destroy();
     this._pins.clear();
@@ -563,11 +588,14 @@ export class ReelSet extends Container implements Disposable {
   }
 
   /**
-   * Fires on `spin:allLanded`. Numeric-turns pins decrement; pins that hit
-   * zero expire with reason `'turns'`. Non-numeric (`'eval'`, `'permanent'`)
-   * are untouched here.
+   * Fires on `spin:allLanded`. Destroys visual pin overlays (the actual reel
+   * cells now show the pinned symbols via setResult overlay), then
+   * decrements numeric-turns pins and expires pins that hit zero.
    */
   private _onSpinLanded(): void {
+    // Overlays are only needed during spin motion — destroy them all.
+    this._destroyAllPinOverlays();
+
     if (this._pins.size === 0) return;
 
     const expired: CellPin[] = [];
@@ -585,20 +613,67 @@ export class ReelSet extends Container implements Disposable {
   }
 
   /**
-   * Fires on `spin:start`. Clears every `'eval'` pin from the previous spin
-   * — they served their purpose during that spin's evaluation.
+   * Fires on `spin:start`. Clears every `'eval'` pin from the previous spin,
+   * then creates a visual overlay for every remaining pin so its symbol
+   * stays visible while the reel scrolls underneath.
    */
   private _onSpinStart(): void {
-    if (this._pins.size === 0) return;
+    if (this._pins.size > 0) {
+      const expired: CellPin[] = [];
+      for (const pin of this._pins.values()) {
+        if (pin.turns === 'eval') expired.push(pin);
+      }
 
-    const expired: CellPin[] = [];
+      for (const pin of expired) {
+        this._pins.delete(pinKey(pin.col, pin.row));
+        this._events.emit('pin:expired', pin, 'eval' as PinExpireReason);
+      }
+    }
+
+    // Create overlays for all remaining pins. The overlay is what the player
+    // sees during the spin motion phase — the underlying reel cell scrolls
+    // normally but is visually covered.
     for (const pin of this._pins.values()) {
-      if (pin.turns === 'eval') expired.push(pin);
+      this._ensurePinOverlay(pin);
     }
+  }
 
-    for (const pin of expired) {
-      this._pins.delete(pinKey(pin.col, pin.row));
-      this._events.emit('pin:expired', pin, 'eval' as PinExpireReason);
+  /**
+   * Create an overlay ReelSymbol for a pin in the viewport's unmasked
+   * container. No-op if one already exists at that cell.
+   */
+  private _ensurePinOverlay(pin: CellPin): void {
+    const key = pinKey(pin.col, pin.row);
+    if (this._pinOverlays.has(key)) return;
+
+    const reel = this._reels[pin.col];
+    const overlay = this._symbolFactory.acquire(pin.symbolId);
+    overlay.resize(reel.symbolWidth, reel.symbolHeight);
+    // Viewport.unmaskedContainer sits at (0,0) inside the viewport — same
+    // local space as maskedContainer. Reel x is on maskedContainer;
+    // symbol-view y is reel-local; the sum gives correct position.
+    overlay.view.x = reel.container.x;
+    overlay.view.y = reel.getSymbolAt(pin.row).view.y;
+    overlay.view.zIndex = 10000;
+    this._viewport.unmaskedContainer.addChild(overlay.view);
+    this._pinOverlays.set(key, overlay);
+  }
+
+  /** Destroy a single pin's overlay, if present. */
+  private _destroyPinOverlay(key: string): void {
+    const overlay = this._pinOverlays.get(key);
+    if (!overlay) return;
+    this._viewport.unmaskedContainer.removeChild(overlay.view);
+    this._symbolFactory.release(overlay);
+    this._pinOverlays.delete(key);
+  }
+
+  /** Destroy every active pin overlay. Called on spin land and on destroy. */
+  private _destroyAllPinOverlays(): void {
+    for (const [, overlay] of this._pinOverlays) {
+      this._viewport.unmaskedContainer.removeChild(overlay.view);
+      this._symbolFactory.release(overlay);
     }
+    this._pinOverlays.clear();
   }
 }
