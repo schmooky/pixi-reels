@@ -13,9 +13,10 @@ apis:
   - spotlight:end event
 ---
 
-import AnimatePaylinesRecipe from '../../components/recipes/AnimatePaylinesRecipe.tsx';
+import code from '../../recipes/animate-paylines.recipe.ts?raw';
+import { RecipeRunner } from '../../components/RecipeRunner.tsx';
 
-<AnimatePaylinesRecipe client:only="react" />
+<RecipeRunner code={code} client:only="react" />
 
 ## The minimum code
 

@@ -14,9 +14,10 @@ apis:
   - SymbolSpotlight.cycle
 ---
 
-import ClassicStarterRecipe from '../../components/recipes/ClassicStarterRecipe.tsx';
+import code from '../../recipes/classic-5x3.recipe.ts?raw';
+import { RecipeRunner } from '../../components/RecipeRunner.tsx';
 
-<ClassicStarterRecipe client:only="react" />
+<RecipeRunner code={code} client:only="react" />
 
 A complete working starter for a classic lines slot. Drop this into a Vite + PixiJS app, wire up `loadTextures()`, and you have a live reel set with spotlight-animated line wins.
 

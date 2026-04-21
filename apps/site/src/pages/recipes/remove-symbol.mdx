@@ -14,9 +14,10 @@ apis:
   - Reel.placeSymbols
 ---
 
-import RemoveSymbolRecipe from '../../components/recipes/RemoveSymbolRecipe.tsx';
+import code from '../../recipes/remove-symbol.recipe.ts?raw';
+import { RecipeRunner } from '../../components/RecipeRunner.tsx';
 
-<RemoveSymbolRecipe client:only="react" />
+<RecipeRunner code={code} client:only="react" />
 
 ## Anatomy of a cascade drop
 

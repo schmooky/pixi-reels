@@ -12,9 +12,10 @@ apis:
   - spin:complete event
 ---
 
-import StickyWildRecipe from '../../components/recipes/StickyWildRecipe.tsx';
+import code from '../../recipes/sticky-wild.recipe.ts?raw';
+import { RecipeRunner } from '../../components/RecipeRunner.tsx';
 
-<StickyWildRecipe client:only="react" />
+<RecipeRunner code={code} client:only="react" />
 
 Every wild that lands stays locked for the rest of the round. Press Run a few times — watch the board fill up.
 

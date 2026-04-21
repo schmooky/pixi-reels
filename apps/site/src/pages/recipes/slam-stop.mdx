@@ -13,9 +13,10 @@ apis:
   - SpinResult.wasSkipped
 ---
 
-import SlamStopRecipe from '../../components/recipes/SlamStopRecipe.tsx';
+import code from '../../recipes/slam-stop.recipe.ts?raw';
+import { RecipeRunner } from '../../components/RecipeRunner.tsx';
 
-<SlamStopRecipe client:only="react" />
+<RecipeRunner code={code} client:only="react" />
 
 ## The minimum code
 

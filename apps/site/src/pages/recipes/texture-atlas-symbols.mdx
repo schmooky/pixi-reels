@@ -15,9 +15,10 @@ apis:
   - BlurSpriteSymbol
 ---
 
-import TextureAtlasRecipe from '../../components/recipes/TextureAtlasRecipe.tsx';
+import code from '../../recipes/texture-atlas-symbols.recipe.ts?raw';
+import { RecipeRunner } from '../../components/RecipeRunner.tsx';
 
-<TextureAtlasRecipe client:only="react" />
+<RecipeRunner code={code} client:only="react" />
 
 Press Run — watch each symbol swap to its `_blur` variant while spinning, then back to the crisp base texture on land.
 

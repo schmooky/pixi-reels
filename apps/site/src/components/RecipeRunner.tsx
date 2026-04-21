@@ -1,0 +1,237 @@
+/** @jsxImportSource react */
+import { useEffect, useRef, useState } from 'react';
+import { RefreshCw, ExternalLink } from 'lucide-react';
+import { Application } from 'pixi.js';
+import type { Texture } from 'pixi.js';
+import * as PIXI from 'pixi.js';
+import { gsap } from 'gsap';
+import { ReelSetBuilder, SpeedPresets, enableDebug, type ReelSet, ReelSymbol } from 'pixi-reels';
+import { BlurSpriteSymbol } from '../../../../examples/shared/BlurSpriteSymbol.ts';
+import { loadPrototypeSymbols } from '../../../../examples/shared/prototypeSpriteLoader.ts';
+import { transform as sucraseTransform } from 'sucrase';
+import { runCascade, tumbleToGrid, diffCells } from '../../../../examples/shared/cascadeLoop.ts';
+import { cn } from '@/lib/utils';
+
+let gsapSynced = false;
+
+function pickWeighted(weights: Record<string, number>): string {
+  const total = Object.values(weights).reduce((a, b) => a + b, 0);
+  let r = Math.random() * total;
+  for (const [id, w] of Object.entries(weights)) {
+    r -= w;
+    if (r <= 0) return id;
+  }
+  return Object.keys(weights)[0];
+}
+
+class EmptySymbol extends ReelSymbol {
+  protected onActivate(_symbolId: string): void {}
+  protected onDeactivate(): void {}
+  async playWin(): Promise<void> {}
+  stopAnimation(): void {}
+  resize(_w: number, _h: number): void {}
+}
+
+interface RunResult {
+  reelSet?: ReelSet;
+  nextResult?: () => string[][];
+  onSpin?: () => Promise<void>;
+  cleanup?: () => void;
+}
+
+interface Env {
+  app: Application;
+  textures: Record<string, Texture>;
+  blurTextures: Record<string, Texture>;
+  SYMBOL_IDS: string[];
+}
+
+interface RecipeRunnerProps {
+  code: string;
+  height?: number;
+}
+
+export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
+  const hostRef = useRef<HTMLDivElement>(null);
+  const envRef = useRef<Env | null>(null);
+  const reelSetRef = useRef<ReelSet | null>(null);
+  const nextResultRef = useRef<(() => string[][]) | null>(null);
+  const onSpinRef = useRef<(() => Promise<void>) | null>(null);
+  const cleanupRef = useRef<(() => void) | null>(null);
+  const [spinning, setSpinning] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      const host = hostRef.current;
+      if (!host) return;
+
+      const app = new Application();
+      await app.init({
+        backgroundAlpha: 0,
+        antialias: true,
+        resizeTo: host,
+        resolution: Math.min(window.devicePixelRatio, 2),
+        autoDensity: true,
+      });
+      if (cancelled) { app.destroy(true, { children: true }); return; }
+
+      if (!gsapSynced) {
+        gsapSynced = true;
+        try { gsap.ticker.remove(gsap.updateRoot); } catch { /* ignore */ }
+        app.ticker.add((t) => gsap.updateRoot(t.lastTime / 1000));
+      }
+
+      host.innerHTML = '';
+      host.appendChild(app.canvas);
+
+      const { textures, blurTextures } = await loadPrototypeSymbols();
+      if (cancelled) return;
+
+      const SYMBOL_IDS = Object.keys(textures);
+      const env: Env = { app, textures, blurTextures, SYMBOL_IDS };
+      envRef.current = env;
+
+      let js: string;
+      try {
+        js = sucraseTransform(code, { transforms: ['typescript'] }).code;
+      } catch (e) {
+        setError(`Compile error: ${(e as Error).message}`);
+        return;
+      }
+
+      let result: RunResult;
+      try {
+        const factory = new Function(
+          'ReelSetBuilder', 'SpeedPresets', 'BlurSpriteSymbol',
+          'app', 'textures', 'blurTextures', 'SYMBOL_IDS', 'pickWeighted', 'gsap', 'PIXI',
+          'runCascade', 'tumbleToGrid', 'diffCells', 'EmptySymbol',
+          `"use strict"; ${js}`,
+        );
+        result = factory(
+          ReelSetBuilder, SpeedPresets, BlurSpriteSymbol,
+          app, textures, blurTextures, SYMBOL_IDS, pickWeighted, gsap, PIXI,
+          runCascade, tumbleToGrid, diffCells, EmptySymbol,
+        ) as RunResult;
+      } catch (e) {
+        setError(`Runtime error: ${(e as Error).message}`);
+        return;
+      }
+
+      if (!result?.reelSet && !result?.onSpin) {
+        setError('Recipe must return { reelSet } or { onSpin }.');
+        return;
+      }
+
+      reelSetRef.current = result.reelSet ?? null;
+      nextResultRef.current = result.nextResult ?? null;
+      onSpinRef.current = result.onSpin ?? null;
+      cleanupRef.current = result.cleanup ?? null;
+
+      if (result.reelSet) {
+        const rs = result.reelSet;
+        const fit = () => {
+          const rawW = rs.width / (rs.scale.x || 1);
+          const rawH = rs.height / (rs.scale.y || 1);
+          const pad = 16;
+          const scale = Math.min(1, (app.screen.width - pad * 2) / rawW, (app.screen.height - pad * 2) / rawH);
+          rs.scale.set(scale);
+          rs.x = (app.screen.width - rawW * scale) / 2;
+          rs.y = (app.screen.height - rawH * scale) / 2;
+        };
+        app.stage.addChild(rs);
+        fit();
+        app.renderer.on('resize', fit);
+        enableDebug(rs);
+      }
+
+      setReady(true);
+    })();
+
+    return () => {
+      cancelled = true;
+      try { cleanupRef.current?.(); } catch { /* ignore */ }
+      try { reelSetRef.current?.destroy(); } catch { /* ignore */ }
+      try { envRef.current?.app.destroy(true, { children: true }); } catch { /* ignore */ }
+      reelSetRef.current = null;
+      onSpinRef.current = null;
+      cleanupRef.current = null;
+      envRef.current = null;
+    };
+  }, []);
+
+  async function handleSpin() {
+    if (spinning || !ready) return;
+    setSpinning(true);
+    try {
+      if (onSpinRef.current) {
+        await onSpinRef.current();
+      } else {
+        const reelSet = reelSetRef.current;
+        if (!reelSet) return;
+        const p = reelSet.spin();
+        await new Promise((r) => setTimeout(r, 150));
+        const result = nextResultRef.current?.();
+        if (result) reelSet.setResult(result);
+        await p;
+      }
+    } catch { /* ignore */ } finally {
+      setSpinning(false);
+    }
+  }
+
+  function openInSandbox() {
+    window.location.href = `/sandbox/#code=${btoa(unescape(encodeURIComponent(code)))}`;
+  }
+
+  return (
+    <div className="my-5 overflow-hidden rounded-xl border border-border bg-card">
+      <div
+        className="relative flex w-full items-center justify-center bg-background"
+        style={{ height }}
+      >
+        <div
+          ref={hostRef}
+          className="h-full w-full [&_canvas]:block [&_canvas]:h-full [&_canvas]:w-full"
+        />
+        {error && (
+          <div className="absolute inset-0 flex items-center justify-center bg-card/90 p-6 font-mono text-xs text-destructive">
+            {error}
+          </div>
+        )}
+        <button
+          type="button"
+          onClick={() => void handleSpin()}
+          disabled={spinning || !!error || !ready}
+          title={spinning ? 'Running…' : 'Spin'}
+          aria-label={spinning ? 'Running…' : 'Spin'}
+          className={cn(
+            'absolute bottom-3 right-3 inline-flex h-10 w-10 items-center justify-center rounded-full',
+            'border border-border/70 bg-background/80 text-foreground shadow-sm backdrop-blur',
+            'transition-all hover:bg-primary hover:text-primary-foreground hover:border-primary',
+            'disabled:cursor-wait disabled:opacity-70',
+          )}
+        >
+          <RefreshCw
+            size={16}
+            strokeWidth={2.25}
+            className={cn('transition-transform', spinning && 'animate-spin')}
+          />
+        </button>
+      </div>
+      <div className="flex items-center justify-end border-t border-border/60 bg-background/40 px-3 py-1.5">
+        <button
+          type="button"
+          onClick={openInSandbox}
+          className="inline-flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+        >
+          <ExternalLink size={12} />
+          Open in Sandbox
+        </button>
+      </div>
+    </div>
+  );
+}
