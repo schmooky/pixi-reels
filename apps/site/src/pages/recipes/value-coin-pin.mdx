@@ -1,0 +1,76 @@
+---
+layout: ../../layouts/Recipe.astro
+title: Value-carrying coin (Hold & Win)
+description: Coin symbols carry their payout value in the pin payload. Locked coins accumulate; pins persist until the feature ends.
+tags: [coin, hold-and-win, payload, cell-pin]
+steps:
+  - "On coin landing, pin with turns 'permanent' and payload { value }"
+  - Draw the value badge on each pinned cell
+  - Display a running total across all active coin pins
+  - Call unpin() to release a cell (or the engine holds them forever)
+apis:
+  - ReelSet.pin
+  - ReelSet.unpin
+  - ReelSet.pins
+  - CellPin.payload
+---
+
+import code from '../../recipes/value-coin-pin.recipe.ts?raw';
+import { RecipeRunner } from '../../components/RecipeRunner.tsx';
+
+<RecipeRunner code={code} client:only="react" />
+
+Hold & Win-style coin collection, built on CellPin. Each coin carries its payout value in `payload.value`. The engine keeps them locked; game code reads the payloads to compute the total.
+
+Previously the Hold & Win example used `CheatEngine._applyHeld()` — a test utility repurposed as production logic. Here, pins own everything: symbol identity, value, persistence.
+
+## The whole mechanic
+
+```ts
+reelSet.events.on('spin:allLanded', ({ symbols }) => {
+  for (let c = 0; c < symbols.length; c++) {
+    for (let r = 0; r < symbols[c].length; r++) {
+      if (symbols[c][r] === 'coin' && !reelSet.getPin(c, r)) {
+        const value = rollCoinValue(); // server or client
+        reelSet.pin(c, r, 'coin', {
+          turns: 'permanent',
+          payload: { value },
+        });
+      }
+    }
+  }
+});
+```
+
+## Reading the total
+
+Because `reelSet.pins` is a readable `ReadonlyMap`, computing the live total is trivial:
+
+```ts
+function currentTotal(): number {
+  let total = 0;
+  for (const pin of reelSet.pins.values()) {
+    if (typeof pin.payload?.value === 'number') total += pin.payload.value;
+  }
+  return total;
+}
+```
+
+The demo redraws this total on every `pin:placed` and `pin:expired`.
+
+## Ending the feature
+
+When the Hold & Win round ends, release everything:
+
+```ts
+for (const pin of [...reelSet.pins.values()]) {
+  reelSet.unpin(pin.col, pin.row);
+}
+```
+
+`pin:expired` fires with reason `'explicit'` for each one, giving you a hook to clear badges and animate the collect.
+
+## Related
+
+- [Multiplier wild](/recipes/multiplier-wild-pin/) — same payload pattern
+- [Collector symbol](/recipes/collector-symbol-pin/) — collector absorbs adjacent coin payloads

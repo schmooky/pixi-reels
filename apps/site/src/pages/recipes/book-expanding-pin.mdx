@@ -1,0 +1,50 @@
+---
+layout: ../../layouts/Recipe.astro
+title: Book-style expanding symbol
+description: One chosen symbol class expands to fill every row of any reel it appears on — the Book of Dead / Book of Ra mechanic, built with CellPin's 'eval' lifetime.
+tags: [wild, book, expanding, cell-pin]
+steps:
+  - At feature start, choose a symbol class (e.g. the pharaoh)
+  - On each feature spin, find reels containing that symbol
+  - Pin every other row of those reels with turns 'eval'
+  - Evaluate wins with the expanded grid; pins clear at next spin:start
+apis:
+  - ReelSet.pin
+  - CellPin.turns ('eval')
+---
+
+import code from '../../recipes/book-expanding-pin.recipe.ts?raw';
+import { RecipeRunner } from '../../components/RecipeRunner.tsx';
+
+<RecipeRunner code={code} client:only="react" />
+
+The Book of Dead / Book of Ra free-spins mechanic. One symbol class is chosen at feature start. On every feature spin, any reel containing at least one instance of that symbol has all its rows filled with the symbol before evaluation.
+
+Distinct from an [expanding wild](/recipes/expanding-wild-pin/):
+
+- **Expanding wild** is *per-wild-cell* — the wild at `(3,1)` expands the reel
+- **Book-style** is *per-symbol-class, per-reel* — any reel with the chosen symbol expands, regardless of which cell(s) the symbol landed on
+
+## The whole mechanic
+
+```ts
+const EXPANDING = 'pharaoh'; // chosen at feature entry
+
+reelSet.events.on('spin:allLanded', ({ symbols }) => {
+  for (let c = 0; c < symbols.length; c++) {
+    if (!symbols[c].includes(EXPANDING)) continue;
+    for (let r = 0; r < symbols[c].length; r++) {
+      if (symbols[c][r] !== EXPANDING) {
+        reelSet.pin(c, r, EXPANDING, { turns: 'eval' });
+      }
+    }
+  }
+});
+```
+
+The pin is placed *after* the reels land (inside the `spin:allLanded` handler). It applies to the current win evaluation. When the next spin starts, `spin:start` fires and eval pins are cleared automatically.
+
+## Related
+
+- [Expanding wild](/recipes/expanding-wild-pin/) — per-cell column expansion
+- [Sticky wild (CellPin)](/recipes/sticky-wild-pin/) — persistent version

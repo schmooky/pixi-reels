@@ -1,0 +1,70 @@
+---
+layout: ../../layouts/Recipe.astro
+title: Mystery reveal (CellPin)
+description: Mystery symbols land, then all reveal to the same random class via 'eval' pins. Auto-cleared at next spin.
+tags: [mystery, reveal, cell-pin]
+steps:
+  - Server places 'mystery' symbols at specific cells
+  - On spin:allLanded, pick one random class and pin all mystery cells with turns 'eval'
+  - Pins auto-clear on next spin:start
+apis:
+  - ReelSet.pin
+  - CellPin.turns ('eval')
+---
+
+import code from '../../recipes/mystery-reveal-pin.recipe.ts?raw';
+import { RecipeRunner } from '../../components/RecipeRunner.tsx';
+
+<RecipeRunner code={code} client:only="react" />
+
+Mystery symbols all flip to the same random class after landing. Book of Oz and Mystery Reels use this. Built with `'eval'` pins — zero manual cleanup.
+
+## The whole mechanic
+
+```ts
+reelSet.events.on('spin:allLanded', ({ symbols }) => {
+  const mysteryCells = [];
+  for (let c = 0; c < symbols.length; c++) {
+    for (let r = 0; r < symbols[c].length; r++) {
+      if (symbols[c][r] === 'mystery') mysteryCells.push({ col: c, row: r });
+    }
+  }
+  if (mysteryCells.length === 0) return;
+
+  const reveal = pickRandomClass(); // or from server
+  for (const cell of mysteryCells) {
+    reelSet.pin(cell.col, cell.row, reveal, { turns: 'eval' });
+  }
+});
+```
+
+## Animation hook
+
+The reveal animation happens in the same `spin:allLanded` handler. Plant the pins, then animate:
+
+```ts
+reelSet.events.on('spin:allLanded', async ({ symbols }) => {
+  const mysteryCells = findMysteryCells(symbols);
+  if (mysteryCells.length === 0) return;
+
+  const reveal = pickRandomClass();
+
+  // Play a synchronized flip animation on each mystery cell
+  await Promise.all(mysteryCells.map(cell => {
+    const sym = reelSet.reels[cell.col].getSymbolAt(cell.row);
+    return gsap.to(sym.view.scale, { x: 0, duration: 0.2 }).then(() => {
+      reelSet.pin(cell.col, cell.row, reveal, { turns: 'eval' });
+      return gsap.fromTo(sym.view.scale, { x: 0 }, { x: 1, duration: 0.2 });
+    });
+  }));
+
+  // Now win evaluation runs with the revealed grid
+});
+```
+
+The pin is placed *at* the reveal moment — before the animation starts, the cell shows `mystery`; after `pin()` is called, it shows the revealed class.
+
+## Related
+
+- [Symbol transform](/recipes/symbol-transform/) — in-place morph on win (different mechanic)
+- [Book-style expanding symbol](/recipes/book-expanding-pin/) — another "reveal and fill" pattern

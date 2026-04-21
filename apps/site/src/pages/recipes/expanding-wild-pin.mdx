@@ -1,0 +1,54 @@
+---
+layout: ../../layouts/Recipe.astro
+title: Expanding wild
+description: When a wild lands, fill its entire column with wild for this spin's win evaluation only. Built with CellPin's 'eval' lifetime — auto-cleared at next spin.
+tags: [wild, expanding, cell-pin]
+steps:
+  - On spin:allLanded, find every reel containing a wild
+  - "For every other row in that reel, call reelSet.pin(col, row, 'wild', { turns: 'eval' })"
+  - The pins survive through your win evaluation and clear at next spin:start
+apis:
+  - ReelSet.pin
+  - CellPin.turns ('eval')
+---
+
+import code from '../../recipes/expanding-wild-pin.recipe.ts?raw';
+import { RecipeRunner } from '../../components/RecipeRunner.tsx';
+
+<RecipeRunner code={code} client:only="react" />
+
+Classic expanding wild — wild on land, whole column covered. Neon Staxx (NetEnt) and Wild Toro (ELK Studios) use this.
+
+## The whole mechanic
+
+```ts
+reelSet.events.on('spin:allLanded', ({ symbols }) => {
+  for (let c = 0; c < symbols.length; c++) {
+    if (!symbols[c].includes('wild')) continue;
+    for (let r = 0; r < symbols[c].length; r++) {
+      if (symbols[c][r] !== 'wild') {
+        reelSet.pin(c, r, 'wild', { turns: 'eval' });
+      }
+    }
+  }
+});
+```
+
+## Why `turns: 'eval'`
+
+`'eval'` pins exist for exactly one spin's evaluation phase. They:
+
+- Apply to the display immediately (the cell shows a wild)
+- Survive through your game layer's win calculation and any animations
+- Clear automatically when `spin:start` fires for the next spin
+
+No cleanup code. The next spin is a clean slate.
+
+## Not to be confused with book-style expanding
+
+In a [book-style feature](/recipes/book-expanding-pin/), one symbol *class* is chosen at feature entry and expands whenever it appears. Expanding wild is per-cell: the wild at `(3,1)` expands its own column.
+
+## Related
+
+- [Book-style expanding symbol](/recipes/book-expanding-pin/) — class-based expansion
+- [Sticky wild (CellPin)](/recipes/sticky-wild-pin/) — persistent instead of eval
