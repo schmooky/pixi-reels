@@ -3,17 +3,17 @@ import { gsap } from 'gsap';
 import {
   ReelSetBuilder,
   SpeedPresets,
+  DropRecipes,
   enableDebug,
 } from 'pixi-reels';
 import { loadPrototypeSymbols } from '../../shared/prototypeSpriteLoader.js';
-import { BlurSpriteSymbol } from '../../shared/BlurSpriteSymbol.js';
+import { SpriteSymbol } from 'pixi-reels';
 import { createUI } from '../../shared/ui.js';
 
 const REEL_COUNT = 6;
 const VISIBLE_ROWS = 5;
 const SYMBOL_SIZE = 95;
 const SYMBOL_GAP = 5;
-const SLOT_H = SYMBOL_SIZE + SYMBOL_GAP;
 
 const SYMBOL_MAP: Record<string, string> = {
   low1: 'round/round_1',
@@ -41,6 +41,12 @@ function randomSymbol(): string {
   return 'low4';
 }
 
+function randomGrid(): string[][] {
+  return Array.from({ length: REEL_COUNT }, () =>
+    Array.from({ length: VISIBLE_ROWS }, randomSymbol),
+  );
+}
+
 function detectWins(grid: string[][]): { reelIndex: number; rowIndex: number }[][] {
   const wins: { reelIndex: number; rowIndex: number }[][] = [];
   for (let row = 0; row < VISIBLE_ROWS; row++) {
@@ -58,6 +64,30 @@ function detectWins(grid: string[][]): { reelIndex: number; rowIndex: number }[]
   return wins;
 }
 
+function computeRefillGrid(
+  currentGrid: string[][],
+  removedPositions: { reelIndex: number; rowIndex: number }[],
+): string[][] {
+  const newGrid = currentGrid.map((col) => [...col]);
+
+  const removedByReel = new Map<number, Set<number>>();
+  for (const p of removedPositions) {
+    if (!removedByReel.has(p.reelIndex)) removedByReel.set(p.reelIndex, new Set());
+    removedByReel.get(p.reelIndex)!.add(p.rowIndex);
+  }
+
+  for (let col = 0; col < REEL_COUNT; col++) {
+    const removed = removedByReel.get(col);
+    if (!removed || removed.size === 0) continue;
+
+    const survivors = newGrid[col].filter((_, row) => !removed.has(row));
+    const newSymbols = Array.from({ length: VISIBLE_ROWS - survivors.length }, randomSymbol);
+    newGrid[col] = [...newSymbols, ...survivors];
+  }
+
+  return newGrid;
+}
+
 async function main() {
   const app = new Application();
   await app.init({ background: 0x0f3460, resizeTo: window, antialias: true });
@@ -66,12 +96,10 @@ async function main() {
   gsap.ticker.remove(gsap.updateRoot);
   app.ticker.add(() => gsap.updateRoot(app.ticker.lastTime / 1000));
 
-  const { textures, blurTextures } = await loadPrototypeSymbols();
+  const { textures } = await loadPrototypeSymbols();
   const symbolTextures: Record<string, typeof textures[string]> = {};
-  const symbolBlurTextures: Record<string, typeof textures[string]> = {};
   for (const [id, atlasKey] of Object.entries(SYMBOL_MAP)) {
     symbolTextures[id] = textures[atlasKey];
-    if (blurTextures[atlasKey]) symbolBlurTextures[id] = blurTextures[atlasKey];
   }
 
   const reelSet = new ReelSetBuilder()
@@ -81,28 +109,16 @@ async function main() {
     .symbolGap(SYMBOL_GAP, SYMBOL_GAP)
     .symbols((r) => {
       for (const id of GAME_SYMBOLS) {
-        r.register(id, BlurSpriteSymbol, {
-          textures: symbolTextures,
-          blurTextures: symbolBlurTextures,
-        });
+        r.register(id, SpriteSymbol, { textures: symbolTextures });
       }
     })
     .weights({ low1: 18, low2: 18, low3: 18, low4: 18, med1: 12, med2: 12, high1: 6, high2: 6, wild: 3 })
-    .speed('normal', SpeedPresets.NORMAL)
-    .speed('turbo', SpeedPresets.TURBO)
-    .speed('superTurbo', SpeedPresets.SUPER_TURBO)
+    .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150 })
+    .speed('turbo', { ...SpeedPresets.TURBO, stopDelay: 80 })
+    .speed('superTurbo', { ...SpeedPresets.SUPER_TURBO, stopDelay: 0 })
+    .cascade(DropRecipes.cascadeDrop)
     .ticker(app.ticker)
     .build();
-
-  for (const reel of reelSet.reels) {
-    reel.events.on('phase:enter', (name) => {
-      const blurred = name === 'spin';
-      for (let row = 0; row < VISIBLE_ROWS; row++) {
-        const sym = reel.getSymbolAt(row);
-        if (sym instanceof BlurSpriteSymbol) sym.setBlurred(blurred);
-      }
-    });
-  }
 
   enableDebug(reelSet);
 
@@ -162,76 +178,6 @@ async function main() {
     reelSet.viewport.hideDim();
   }
 
-  async function cascade(
-    currentGrid: string[][],
-    removedPositions: { reelIndex: number; rowIndex: number }[],
-  ): Promise<string[][]> {
-    const newGrid: string[][] = currentGrid.map((col) => [...col]);
-
-    const removedByReel = new Map<number, Set<number>>();
-    for (const p of removedPositions) {
-      if (!removedByReel.has(p.reelIndex)) removedByReel.set(p.reelIndex, new Set());
-      removedByReel.get(p.reelIndex)!.add(p.rowIndex);
-    }
-
-    const allAnimations: gsap.core.Tween[] = [];
-
-    for (let col = 0; col < REEL_COUNT; col++) {
-      const removed = removedByReel.get(col);
-      if (!removed || removed.size === 0) continue;
-
-      const reel = reelSet.reels[col];
-
-      const survivors: string[] = [];
-      for (let row = 0; row < VISIBLE_ROWS; row++) {
-        if (!removed.has(row)) {
-          survivors.push(newGrid[col][row]);
-        }
-      }
-      const gapCount = VISIBLE_ROWS - survivors.length;
-      const newSymbols: string[] = [];
-      for (let i = 0; i < gapCount; i++) {
-        newSymbols.push(randomSymbol());
-      }
-
-      const finalCol = [...newSymbols, ...survivors];
-      newGrid[col] = finalCol;
-
-      reel.placeSymbols(finalCol);
-      reel.snapToGrid();
-
-      for (let row = 0; row < VISIBLE_ROWS; row++) {
-        const symbol = reel.getSymbolAt(row);
-        if (!symbol) continue;
-
-        symbol.view.alpha = 1;
-        symbol.view.scale.set(1, 1);
-        symbol.view.zIndex = 0;
-
-        if (row < gapCount) {
-          const targetY = symbol.view.y;
-          const startOffset = (gapCount - row) * SLOT_H;
-          symbol.view.y = targetY - startOffset;
-
-          allAnimations.push(
-            gsap.to(symbol.view, {
-              y: targetY,
-              duration: 0.25 + row * 0.04,
-              ease: 'bounce.out',
-              delay: row * 0.03,
-            }),
-          );
-        }
-      }
-    }
-
-    if (allAnimations.length > 0) {
-      await Promise.all(allAnimations.map((t) => new Promise<void>((r) => { t.eventCallback('onComplete', r); })));
-    }
-
-    return newGrid;
-  }
-
   async function handleSpin() {
     if (isSpinning) { try { reelSet.skip(); } catch {} return; }
 
@@ -240,27 +186,14 @@ async function main() {
     ui.showWin(0);
     multiplierEl.textContent = '';
 
-    for (const reel of reelSet.reels) {
-      for (let row = 0; row < VISIBLE_ROWS; row++) {
-        const sym = reel.getSymbolAt(row);
-        if (sym) { sym.view.alpha = 1; sym.view.scale.set(1, 1); sym.view.zIndex = 0; }
-      }
-    }
-    reelSet.viewport.hideDim();
-
-    const spinPromise = reelSet.spin();
-    await wait(400);
-
-    const initialGrid: string[][] = [];
-    for (let r = 0; r < REEL_COUNT; r++) {
-      const col: string[] = [];
-      for (let row = 0; row < VISIBLE_ROWS; row++) col.push(randomSymbol());
-      initialGrid.push(col);
-    }
-    reelSet.setResult(initialGrid);
+    // Initial drop: left-to-right column stagger, row-by-row within each column
+    let spinPromise = reelSet.spin();
+    await wait(300);
+    reelSet.setDropOrder('ltr');
+    let grid = randomGrid();
+    reelSet.setResult(grid);
     await spinPromise;
 
-    let grid = initialGrid;
     let wins = detectWins(grid);
     let cascadeLevel = 0;
     let totalWin = 0;
@@ -276,9 +209,14 @@ async function main() {
       await explode(allPositions);
       await wait(100);
 
-      grid = await cascade(grid, allPositions);
-      await wait(150);
+      // Cascade refill: all columns drop simultaneously
+      grid = computeRefillGrid(grid, allPositions);
+      spinPromise = reelSet.spin();
+      reelSet.setDropOrder('all');
+      reelSet.setResult(grid);
+      await spinPromise;
 
+      await wait(150);
       wins = detectWins(grid);
     }
 

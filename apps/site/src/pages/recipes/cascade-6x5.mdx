@@ -4,13 +4,15 @@ title: Cascade 6×5 tumble
 description: Modern tumble/cascade mechanic with an ever-growing win multiplier — the Megaways-adjacent style every slot studio is shipping.
 tags: [starter, cascade, 6x5, multiplier]
 steps:
-  - Build a 6×5 ReelSet with CascadeMode as the spinning mode
-  - Spin, detect cluster/line wins, spotlight them
-  - Tumble (remove winners, let survivors fall, refill from top) and repeat
+  - Build a 6×5 ReelSet with .cascade() for drop-in mechanics (no strip spin)
+  - Spin — symbols drop in left-to-right, row by row, with bounce
+  - Detect cluster/line wins and spotlight them
+  - Tumble (vanish winners, survivors fall, new symbols drop from above) and repeat
   - Each tumble increments the win multiplier
 apis:
-  - CascadeMode
-  - ReelSetBuilder.spinningMode
+  - ReelSetBuilder.cascade
+  - DropRecipes
+  - ReelSet.setDropOrder
   - ReelSet.setResult
   - SymbolSpotlight.cycle
 ---
@@ -20,10 +22,10 @@ import { RecipeRunner } from '../../components/RecipeRunner.tsx';
 
 <RecipeRunner code={code} client:only="react" />
 
-A cascade/tumble slot on the engine. The library supplies the visual tumble animation via `CascadeMode` and `setResult()` to land each new grid deterministically — the cascade logic (cluster detection, survivor shift, refill) is yours to write.
+A cascade/tumble slot on the engine. `.cascade()` replaces the strip-spin mechanic with a drop-in: symbols fall from above the viewport when the result arrives, with configurable per-row stagger and easing. The cascade loop itself (cluster detection, survivor shift, refill) stays in your code.
 
 ```ts
-import { ReelSetBuilder, SpriteSymbol, CascadeMode } from 'pixi-reels';
+import { ReelSetBuilder, SpriteSymbol, DropRecipes } from 'pixi-reels';
 
 const reelSet = new ReelSetBuilder()
   .reels(6)
@@ -32,7 +34,7 @@ const reelSet = new ReelSetBuilder()
   .symbols((r) => {
     for (const id of SYMBOLS) r.register(id, SpriteSymbol, { textures });
   })
-  .spinningMode(new CascadeMode())
+  .cascade(DropRecipes.stiffDrop)     // row-by-row drop, hard stop (no bounce)
   .ticker(app.ticker)
   .build();
 
@@ -41,10 +43,15 @@ app.stage.addChild(reelSet);
 let multiplier = 1;
 document.getElementById('spin')!.addEventListener('click', async () => {
   multiplier = 1;
-  let grid = (await reelSet.spin()).symbols;
+
+  // Initial drop: columns land left-to-right
+  const p = reelSet.spin();
+  reelSet.setDropOrder('ltr');
+  reelSet.setResult(await server.spin());
+  let grid = (await p).symbols;
 
   while (true) {
-    const wins = detectClusterWins(grid);          // your function
+    const wins = detectClusterWins(grid);     // your function
     if (wins.length === 0) break;
 
     await reelSet.spotlight.cycle(
@@ -55,21 +62,46 @@ document.getElementById('spin')!.addEventListener('click', async () => {
     multiplier++;
     showMultiplier(multiplier);
 
-    const next = tumble(grid, wins);               // remove + fall + refill
+    // Cascade refill: all columns drop simultaneously
+    const next = tumble(grid, wins);          // remove + fall + refill
     const promise = reelSet.spin();
+    reelSet.setDropOrder('all');
     reelSet.setResult(next);
     grid = (await promise).symbols;
   }
 });
 ```
 
+## Drop order controls the reveal feel
+
+`setDropOrder` is a per-spin call — mix orders freely:
+
+```ts
+reelSet.setDropOrder('ltr');   // left → right (initial spin reveal)
+reelSet.setDropOrder('rtl');   // right → left
+reelSet.setDropOrder('all');   // all columns simultaneously (cascade refills)
+reelSet.setDropOrder([0, 0, 150, 150, 300, 300]); // custom ms per reel
+```
+
+## Drop recipes
+
+`DropRecipes` ships three presets you can pass directly to `.cascade()`:
+
+| Preset | rowDelay | dropDuration | fallDuration | easing |
+|---|---|---|---|---|
+| `cascadeDrop` | 80 ms | 600 ms | 300 ms | `bounce.out` |
+| `stiffDrop` | 60 ms | 450 ms | 280 ms | `power3.out` |
+| `simultaneousDrop` | 0 ms | 500 ms | 300 ms | `bounce.out` |
+| `slamDrop` | 0 ms | 0 ms | 0 ms | — |
+
 ## The cascade loop is your code
 
 pixi-reels deliberately doesn't own the tumble rules — every game has quirks (cluster size, adjacency, minimum matches, sticky survivors). What you get from the library:
 
-- **CascadeMode** as the spinning behaviour — symbols fall from above into the visible window
-- **setResult()** on every tumble so each stage's grid is deterministic
-- **spotlight.cycle** for the between-tumble win reveal
+- **`.cascade()`** — drop-in mechanic, no strip spinning
+- **`setDropOrder()`** — per-spin column reveal order
+- **`setResult()`** on every tumble so each stage's grid is deterministic
+- **`spotlight.cycle`** for the between-tumble win reveal
 
 Your responsibilities:
 
