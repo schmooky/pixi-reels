@@ -1,4 +1,5 @@
 import type { SpeedProfile } from '../config/types.js';
+import type { CellPin, PinExpireReason } from '../pins/CellPin.js';
 
 /** Position of a symbol on the reel grid. */
 export interface SymbolPosition {
@@ -29,6 +30,9 @@ export interface ReelSetEvents extends Record<string, unknown[]> {
   'speed:changed': [profile: SpeedProfile, previous: SpeedProfile];
   'spotlight:start': [positions: SymbolPosition[]];
   'spotlight:end': [];
+  'pin:placed': [pin: CellPin];
+  'pin:moved': [pin: CellPin, from: { col: number; row: number }];
+  'pin:expired': [pin: CellPin, reason: PinExpireReason];
   'destroyed': [];
 }
 

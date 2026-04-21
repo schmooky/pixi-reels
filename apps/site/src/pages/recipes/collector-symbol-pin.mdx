@@ -1,0 +1,89 @@
+---
+layout: ../../layouts/Recipe.astro
+title: Collector symbol
+description: Collector symbol absorbs the values of adjacent coin pins, summing them into its own payload. Demonstrates cross-pin coordination via the readable pins map.
+tags: [coin, collector, payload, cell-pin]
+steps:
+  - "Pin coins on land with { value } payloads"
+  - When a collector lands, iterate neighbors, sum payloads, unpin coins
+  - Pin the collector with the total in its payload
+apis:
+  - ReelSet.pin
+  - ReelSet.unpin
+  - ReelSet.getPin
+  - CellPin.payload
+---
+
+import code from '../../recipes/collector-symbol-pin.recipe.ts?raw';
+import { RecipeRunner } from '../../components/RecipeRunner.tsx';
+
+<RecipeRunner code={code} client:only="react" />
+
+Cash Noire (NetEnt) uses this. A collector symbol lands and absorbs the values of adjacent coin symbols. The collected cells become empty; the collector's cell shows the summed total.
+
+This is the clearest demo of why pins expose a readable map. Game code iterates over `reelSet.pins` to find and coordinate with other pins — no parallel state, no ghost objects.
+
+## The whole mechanic
+
+```ts
+function neighborsOf(col, row) {
+  return [
+    { col: col - 1, row },
+    { col: col + 1, row },
+    { col, row: row - 1 },
+    { col, row: row + 1 },
+  ];
+}
+
+reelSet.events.on('spin:allLanded', ({ symbols }) => {
+  // First: pin all landed coins with random values
+  for (let c = 0; c < symbols.length; c++) {
+    for (let r = 0; r < symbols[c].length; r++) {
+      if (symbols[c][r] === 'coin' && !reelSet.getPin(c, r)) {
+        reelSet.pin(c, r, 'coin', {
+          turns: 'permanent',
+          payload: { value: rollCoinValue() },
+        });
+      }
+    }
+  }
+
+  // Second: each collector absorbs neighboring coin payloads
+  for (let c = 0; c < symbols.length; c++) {
+    for (let r = 0; r < symbols[c].length; r++) {
+      if (symbols[c][r] !== 'collector') continue;
+
+      let total = 0;
+      for (const n of neighborsOf(c, r)) {
+        const pin = reelSet.getPin(n.col, n.row);
+        if (pin?.symbolId === 'coin' && typeof pin.payload?.value === 'number') {
+          total += pin.payload.value;
+          reelSet.unpin(n.col, n.row);
+        }
+      }
+
+      if (total > 0) {
+        reelSet.pin(c, r, 'collector', {
+          turns: 'permanent',
+          payload: { value: total },
+        });
+      }
+    }
+  }
+});
+```
+
+## Why two passes?
+
+If you checked for collectors first, you might unpin coins that would otherwise land *this* spin. The first pass pins all coins (including newly-landed ones). The second pass looks up pinned coins as collector neighbors. The reel grid is stable by this point — `spin:allLanded` has fired.
+
+## Variations
+
+- **8-neighbor** — include diagonals: `[col±1, row±1]`
+- **Same-column collector** — sum every coin in the collector's column
+- **Chain reaction** — if a collector lands adjacent to another collector, absorb its total too
+
+## Related
+
+- [Value-carrying coin](/recipes/value-coin-pin/) — the underlying coin primitive
+- [Multiplier wild](/recipes/multiplier-wild-pin/) — payload pattern for single-cell effects

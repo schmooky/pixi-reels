@@ -1,0 +1,75 @@
+---
+layout: ../../layouts/Recipe.astro
+title: Feature mode swap
+description: Toggle a bonus mode on and off at runtime by adding and removing a frame middleware — no ReelSet rebuild, no rebuild latency.
+tags: [mode, feature, middleware, frame]
+steps:
+  - Write a FrameMiddleware that rewrites frames for the bonus mode
+  - On feature entry, call reelSet.frame.use(middleware)
+  - On feature exit, call reelSet.frame.remove(name)
+  - Change takes effect on the very next spin — no rebuild
+apis:
+  - ReelSet.frame.use
+  - ReelSet.frame.remove
+  - FrameMiddleware
+  - FrameAPI
+---
+
+import code from '../../recipes/feature-mode-swap.recipe.ts?raw';
+import { RecipeRunner } from '../../components/RecipeRunner.tsx';
+
+<RecipeRunner code={code} client:only="react" />
+
+The base game and the bonus feature usually only differ in strip weighting. More wilds, fewer low-pays, maybe a symbol replacement. In the past, swapping between them meant destroying the `ReelSet` and rebuilding — a lot of work to change a few probabilities.
+
+`reelSet.frame.use()` and `.remove()` are the surface for toggling middleware at runtime. The `FrameBuilder` underneath always supported runtime mutation; this recipe shows the API.
+
+## The mechanic
+
+```ts
+const featureMoreWildsMiddleware: FrameMiddleware = {
+  name: 'feature-more-wilds',
+  priority: 20, // after target-placement (10) so it sees the final grid
+  process(ctx, next) {
+    for (let i = ctx.bufferAbove; i < ctx.bufferAbove + ctx.visibleRows; i++) {
+      if (ctx.symbols[i] === 'low-symbol' && Math.random() < 0.35) {
+        ctx.symbols[i] = 'wild';
+      }
+    }
+    next();
+  },
+};
+
+function enterFeature() {
+  reelSet.frame.use(featureMoreWildsMiddleware);
+}
+
+function exitFeature() {
+  reelSet.frame.remove('feature-more-wilds');
+}
+```
+
+Call `enterFeature()` when your bonus triggers; call `exitFeature()` when the respin counter runs out. The very next spin builds its frame with the new pipeline.
+
+## Why middleware over rebuild
+
+- **Zero rebuild** — no symbol pool recreation, no textures to reload, no state loss
+- **Clean boundary** — feature-mode logic lives in one named middleware; entry and exit are one line each
+- **Stackable** — add multiple feature-mode middleware together (more wilds + mystery injection + no-triples constraint)
+- **Diagnosable** — `reelSet.frame.middleware` lists the active pipeline at any time
+
+## Middleware priorities
+
+Built-in middleware uses these priorities:
+
+| Name | Priority | Role |
+|---|---|---|
+| `random-fill` | 0 | Fills empty slots with strip-random symbols |
+| `target-placement` | 10 | Overlays the `setResult()` targets onto the visible area |
+
+Your custom middleware should generally run after target-placement (priority ≥ 10) so it can react to what the server chose.
+
+## Related
+
+- [Mystery reveal (CellPin)](/recipes/mystery-reveal-pin/) — similar idea using pins instead of middleware
+- [Walking wild (movePin)](/recipes/walking-wild-pin/) — pair with feature mode swap for a "walking wild only during the bonus" pattern

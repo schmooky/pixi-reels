@@ -204,4 +204,142 @@ export const RECIPES: RecipeMeta[] = [
     apis: ['PIXI.Assets.load', 'Spritesheet.textures', 'SpriteSymbol', 'BlurSpriteSymbol'],
     tags: ['sprites', 'atlas', 'texturepacker'],
   },
+
+  // ── CellPin primitive recipes ──────────────────────────────────────
+  // These recipes all use reelSet.pin() — the engine's unified cell-persistence
+  // primitive. Each shows a different configuration of one API.
+  {
+    slug: 'sticky-wild-pin',
+    title: 'Sticky wild (CellPin)',
+    oneLiner: 'Same sticky wild, built on the engine primitive — no ghost sprites, no manual grid injection.',
+    steps: [
+      'Listen for wilds landing via spin:allLanded',
+      'Call reelSet.pin(col, row, "wild", { turns: N })',
+      'The engine overlays the pin on setResult and decrements turns automatically',
+    ],
+    apis: ['ReelSet.pin', 'ReelSet.getPin', 'pin:expired event'],
+    tags: ['wild', 'sticky', 'cell-pin'],
+  },
+  {
+    slug: 'expanding-wild-pin',
+    title: 'Expanding wild',
+    oneLiner: 'Wild lands, entire column becomes wild for evaluation — then auto-clears at next spin.',
+    steps: [
+      'On spin:allLanded, find every reel containing a wild',
+      'For every other row in that reel, pin with { turns: "eval" }',
+      'Pins survive through your win evaluation and clear automatically',
+    ],
+    apis: ['ReelSet.pin', 'CellPin.turns ("eval")'],
+    tags: ['wild', 'expanding', 'cell-pin'],
+  },
+  {
+    slug: 'book-expanding-pin',
+    title: 'Book-style expanding symbol',
+    oneLiner: 'One chosen symbol class expands to fill any reel it appears on — the Book-of slot formula.',
+    steps: [
+      'At feature start, choose a symbol class (the "expanding symbol")',
+      'On each spin, pin every row of reels containing that symbol with { turns: "eval" }',
+      'Evaluate wins with the expanded grid; pins auto-clear at next spin:start',
+    ],
+    apis: ['ReelSet.pin', 'CellPin.turns ("eval")'],
+    tags: ['wild', 'book', 'expanding', 'cell-pin'],
+  },
+  {
+    slug: 'multiplier-wild-pin',
+    title: 'Multiplier wild',
+    oneLiner: 'Each wild carries a per-instance multiplier in its pin payload — a ×N badge overlays the cell.',
+    steps: [
+      'Pin wilds on land with a payload containing the multiplier value',
+      'Draw a ×N badge on each pinned cell via pin:placed event',
+      'On wins, read pin.payload.multiplier to scale the payout',
+    ],
+    apis: ['ReelSet.pin', 'CellPin.payload', 'pin:placed event'],
+    tags: ['wild', 'multiplier', 'payload', 'cell-pin'],
+  },
+  {
+    slug: 'value-coin-pin',
+    title: 'Value-carrying coin (Hold & Win)',
+    oneLiner: 'Coin symbols carry their payout value in the pin payload; a running total updates as coins lock.',
+    steps: [
+      'On coin landing, pin with turns "permanent" and payload { value }',
+      'Draw the value badge on each pinned cell',
+      'Compute the running total by iterating reelSet.pins',
+    ],
+    apis: ['ReelSet.pin', 'ReelSet.unpin', 'ReelSet.pins', 'CellPin.payload'],
+    tags: ['coin', 'hold-and-win', 'payload', 'cell-pin'],
+  },
+  {
+    slug: 'collector-symbol-pin',
+    title: 'Collector symbol',
+    oneLiner: 'Collector absorbs adjacent coin pin payloads into its own total — pins coordinating across cells.',
+    steps: [
+      'Pin coins on land with { value } payloads',
+      'When a collector lands, iterate neighbors, sum pin payloads, unpin coins',
+      'Pin the collector with the absorbed total in its payload',
+    ],
+    apis: ['ReelSet.pin', 'ReelSet.unpin', 'ReelSet.getPin', 'CellPin.payload'],
+    tags: ['coin', 'collector', 'payload', 'cell-pin'],
+  },
+  {
+    slug: 'mystery-reveal-pin',
+    title: 'Mystery reveal (CellPin)',
+    oneLiner: 'Mystery symbols land, all reveal to the same random class via eval pins — auto-cleared at next spin.',
+    steps: [
+      'Server places "mystery" symbols at specific cells',
+      'On spin:allLanded, pick one random class and pin all mystery cells with { turns: "eval" }',
+      'Pins auto-clear on next spin:start',
+    ],
+    apis: ['ReelSet.pin', 'CellPin.turns ("eval")'],
+    tags: ['mystery', 'reveal', 'cell-pin'],
+  },
+  {
+    slug: 'sticky-win-respin-pin',
+    title: 'Sticky-win respin',
+    oneLiner: 'Winners lock for N respins while the rest of the grid spins independently — the Dead-or-Alive-II pattern.',
+    steps: [
+      'Detect winners on spin:allLanded',
+      'Pin each winner with { turns: N } — N is the respin window',
+      'Non-winners respin naturally; winners stay pinned and expire after N spins',
+    ],
+    apis: ['ReelSet.pin', 'CellPin.turns (number)', 'pin:expired event'],
+    tags: ['respin', 'sticky', 'win', 'cell-pin'],
+  },
+  {
+    slug: 'positional-multiplier-pin',
+    title: 'Positional multiplier cells',
+    oneLiner: 'Specific cells carry multipliers — any symbol that lands there boosts the win passing through.',
+    steps: [
+      'Mark fixed cells as multiplier positions (or receive them per-spin from server)',
+      'Draw persistent ×N badges at those cells',
+      'After landing, pin the rolled symbol with multiplier in payload (turns "eval")',
+    ],
+    apis: ['ReelSet.pin', 'CellPin.payload', 'CellPin.turns ("eval")'],
+    tags: ['multiplier', 'positional', 'payload', 'cell-pin'],
+  },
+
+  // ── movePin + frame exposure recipes ──────────────────────────────────
+  {
+    slug: 'walking-wild-pin',
+    title: 'Walking wild (movePin)',
+    oneLiner: 'Walking wild migrating one column left each spin — engine-native reelSet.movePin(), no ghost sprites.',
+    steps: [
+      "Pin new wilds on land with turns 'permanent'",
+      'Before each spin, movePin() each existing pin one column left',
+      'When a pin reaches column 0, unpin() — it has walked off the board',
+    ],
+    apis: ['ReelSet.pin', 'ReelSet.movePin', 'ReelSet.unpin', 'pin:moved event'],
+    tags: ['wild', 'walking', 'movement', 'cell-pin'],
+  },
+  {
+    slug: 'feature-mode-swap',
+    title: 'Feature mode swap',
+    oneLiner: 'Enter and exit a bonus mode at runtime by toggling a frame middleware — zero rebuild.',
+    steps: [
+      'Write a FrameMiddleware that rewrites frames for the bonus mode',
+      'On feature entry, call reelSet.frame.use(middleware)',
+      'On feature exit, call reelSet.frame.remove(name)',
+    ],
+    apis: ['ReelSet.frame.use', 'ReelSet.frame.remove', 'FrameMiddleware'],
+    tags: ['mode', 'feature', 'middleware', 'frame'],
+  },
 ];
