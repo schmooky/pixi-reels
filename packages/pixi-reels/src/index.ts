@@ -49,6 +49,15 @@ export type { StopPhaseConfig } from './spin/phases/StopPhase.js';
 export { AnticipationPhase } from './spin/phases/AnticipationPhase.js';
 export type { AnticipationPhaseConfig } from './spin/phases/AnticipationPhase.js';
 
+// Cascade drop-in
+export { DropRecipes } from './cascade/DropRecipes.js';
+export type { CascadeDropConfig } from './cascade/DropRecipes.js';
+export { DropStartPhase } from './spin/phases/DropStartPhase.js';
+export type { DropStartPhaseConfig } from './spin/phases/DropStartPhase.js';
+export { DropStopPhase } from './spin/phases/DropStopPhase.js';
+export type { DropStopPhaseConfig } from './spin/phases/DropStopPhase.js';
+export { CascadeAnticipationPhase } from './cascade/CascadeAnticipationPhase.js';
+
 // Spinning modes
 export type { SpinningMode } from './spin/modes/SpinningMode.js';
 export { StandardMode } from './spin/modes/StandardMode.js';

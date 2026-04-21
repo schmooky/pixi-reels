@@ -15,6 +15,9 @@ import type { SpinningMode } from '../spin/modes/SpinningMode.js';
 import { StandardMode } from '../spin/modes/StandardMode.js';
 import type { FrameMiddleware } from '../frame/FrameBuilder.js';
 import type { ReelSymbol } from '../symbols/ReelSymbol.js';
+import type { CascadeDropConfig } from '../cascade/DropRecipes.js';
+import { DropStartPhase } from '../spin/phases/DropStartPhase.js';
+import { DropStopPhase } from '../spin/phases/DropStopPhase.js';
 
 /**
  * The configurator you call before every reel set.
@@ -64,6 +67,7 @@ export class ReelSetBuilder {
   private _middlewares: FrameMiddleware[] = [];
   private _initialFrame?: string[][];
   private _symbolDataOverrides: Record<string, Partial<SymbolData>> = {};
+  private _cascadeDropConfig?: CascadeDropConfig;
 
   /** Set number of reel columns. */
   reels(count: number): this {
@@ -166,6 +170,24 @@ export class ReelSetBuilder {
     return this;
   }
 
+  /**
+   * Enable cascade drop-in mechanics.
+   *
+   * Replaces the strip-spin + bounce stop cycle with a stationary wait
+   * followed by symbols dropping in from above the viewport.
+   *
+   * Usage is identical to standard spin — `spin()` / `setResult()` / `await`.
+   * Use `reelSet.setDropOrder()` to control which columns drop first.
+   *
+   * @example
+   * import { DropRecipes } from 'pixi-reels';
+   * builder.cascade(DropRecipes.cascadeDrop)
+   */
+  cascade(config: CascadeDropConfig): this {
+    this._cascadeDropConfig = config;
+    return this;
+  }
+
   /** Set the initial symbol grid (visible symbols only). */
   initialFrame(frame: string[][]): this {
     this._initialFrame = frame;
@@ -226,6 +248,13 @@ export class ReelSetBuilder {
     // Add custom middlewares
     for (const mw of this._middlewares) {
       frameBuilder.use(mw);
+    }
+
+    // Wire cascade drop-in phases if configured
+    if (this._cascadeDropConfig) {
+      const dropConfig = this._cascadeDropConfig;
+      this._phaseFactory.register('start', DropStartPhase);
+      this._phaseFactory.registerFactory('stop', (reel, speed) => new DropStopPhase(reel, speed, dropConfig));
     }
 
     // Create viewport

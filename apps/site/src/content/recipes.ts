@@ -31,13 +31,25 @@ export const RECIPES: RecipeMeta[] = [
     title: 'Cascade 6×5 tumble',
     oneLiner: 'Modern tumble mechanic with an ever-growing multiplier — Megaways-adjacent.',
     steps: [
-      'Build a 6×5 ReelSet with CascadeMode',
+      'Build a 6×5 ReelSet with .cascade() for drop-in mechanics',
       'Spin, detect cluster/line wins, spotlight them',
       'Tumble (remove winners, fall, refill) and repeat',
       'Each tumble increments the win multiplier',
     ],
-    apis: ['CascadeMode', 'ReelSetBuilder.spinningMode', 'ReelSet.setResult'],
+    apis: ['ReelSetBuilder.cascade', 'DropRecipes', 'ReelSet.setDropOrder', 'ReelSet.setResult'],
     tags: ['starter', 'cascade', '6x5'],
+  },
+  {
+    slug: 'cascade-anticipation',
+    title: 'Cascade drop anticipation',
+    oneLiner: 'All columns fall empty at once — then one hole stays open until the payoff symbol drops in.',
+    steps: [
+      'Spin — all columns fall out simultaneously, grid empties',
+      'Most columns refill immediately; the payoff column stays empty',
+      'Call setDropOrder([0, 0, 0, 0, 2500, 0]) — delay is drop-in only, not the fall',
+    ],
+    apis: ['ReelSet.setDropOrder', 'ReelSet.setResult', 'DropRecipes'],
+    tags: ['cascade', 'anticipation', 'tension'],
   },
   {
     slug: 'hold-and-win',

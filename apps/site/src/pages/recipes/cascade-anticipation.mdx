@@ -1,0 +1,87 @@
+---
+layout: ../../layouts/Recipe.astro
+title: Cascade drop anticipation
+description: All columns fall out together. Most refill immediately — but the payoff column stays empty, holding the player's breath, until it finally drops in.
+tags: [cascade, anticipation, tension]
+steps:
+  - Spin — all columns fall out simultaneously, grid empties
+  - setDropOrder delays only the drop-in, not the fall-out
+  - Columns 0-3 refill immediately — player sees 2 confirmed scatters
+  - Column 4 stays empty for 2.5 s, then drops in revealing the winning 3rd scatter
+apis:
+  - ReelSet.setDropOrder
+  - ReelSet.setResult
+  - ReelSetBuilder.cascade
+  - DropRecipes
+---
+
+import code from '../../recipes/cascade-anticipation.recipe.ts?raw';
+import { RecipeRunner } from '../../components/RecipeRunner.tsx';
+
+<RecipeRunner code={code} client:only="react" />
+
+## How it works
+
+When `spin()` is called, all six columns fall out at once — the grid empties.
+Then `setDropOrder` controls when each column refills:
+
+| Reel | Drop-in delay | Role |
+|------|--------------|------|
+| 0 | 0 ms | scatter — fills immediately |
+| 1 | 0 ms | non-scatter filler |
+| 2 | 0 ms | scatter — fills immediately |
+| 3 | 0 ms | non-scatter filler |
+| 4 | 2 500 ms | **scatter payoff — held empty** |
+| 5 | 0 ms | non-scatter filler |
+
+After the fall the grid is almost full: scatters on reels 0 and 2 are already confirmed.
+Reel 4 is a visible hole. Two seconds of nothing — then it drops.
+
+## The minimum code
+
+```ts
+import { ReelSetBuilder, SpriteSymbol, DropRecipes } from 'pixi-reels';
+
+const reelSet = new ReelSetBuilder()
+  .reels(6).visibleSymbols(4).symbolSize(72, 72)
+  .symbols((r) => { /* ... */ })
+  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150 })
+  .cascade(DropRecipes.stiffDrop)
+  .ticker(app.ticker)
+  .build();
+
+// Per spin:
+const p = reelSet.spin();
+
+// All columns fall together. Delay here = how long the column
+// stays EMPTY before its new symbols drop in.
+reelSet.setDropOrder([0, 0, 0, 0, 2500, 0]);
+reelSet.setResult(grid);
+await p;
+```
+
+`setDropOrder` delays only the **drop-in** half of the animation.
+The fall-out always starts immediately for every column.
+
+## Tuning the hold
+
+Push the payoff delay higher for maximum dread, lower for a snappier reveal:
+
+```ts
+reelSet.setDropOrder([0, 0, 0, 0, 4000, 0]);  // longer hold
+reelSet.setDropOrder([0, 0, 0, 0, 1200, 0]);  // quick confirm
+```
+
+You can also stagger the fillers so they land one-by-one after the fall,
+making the hole even more conspicuous:
+
+```ts
+// Fillers land in sequence, payoff last
+reelSet.setDropOrder([0, 300, 0, 600, 2500, 900]);
+```
+
+## Related recipes
+
+- [Cascade 6×5 tumble](/recipes/cascade-6x5/) — the drop-in mechanic this builds on
+- [Anticipate a reel](/recipes/anticipate-a-reel/) — the strip-spin equivalent
+- [Near miss](/recipes/near-miss/) — scripted grid with no winning 3rd scatter

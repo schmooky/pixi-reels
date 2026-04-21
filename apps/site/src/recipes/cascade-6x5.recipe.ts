@@ -1,6 +1,6 @@
 // @ts-nocheck
-// Injected: ReelSetBuilder, SpeedPresets, BlurSpriteSymbol, PIXI, gsap,
-//           app, textures, blurTextures, SYMBOL_IDS, pickWeighted,
+// Injected: ReelSetBuilder, SpeedPresets, SpriteSymbol, DropRecipes, PIXI, gsap,
+//           app, textures, SYMBOL_IDS, pickWeighted,
 //           runCascade (cascade sequence helper)
 
 const IDS = [
@@ -17,8 +17,9 @@ function randSymbol(exclude) {
 
 const reelSet = new ReelSetBuilder()
   .reels(REELS).visibleSymbols(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
-  .symbols(r => { for (const id of IDS) r.register(id, BlurSpriteSymbol, { textures, blurTextures }); })
-  .speed('normal', SpeedPresets.NORMAL).speed('turbo', SpeedPresets.TURBO)
+  .symbols(r => { for (const id of IDS) r.register(id, SpriteSymbol, { textures }); })
+  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150 })
+  .cascade(DropRecipes.stiffDrop)
   .ticker(app.ticker).build();
 
 return {
@@ -44,12 +45,15 @@ return {
       return next;
     });
 
+    // Initial spin: symbols drop in left-to-right
     const p = reelSet.spin();
-    await new Promise(r => setTimeout(r, 180));
+    await new Promise(r => setTimeout(r, 200));
+    reelSet.setDropOrder('ltr');
     reelSet.setResult(stage0);
     await p;
     await new Promise(r => setTimeout(r, 300));
 
+    // Cascade tumble: vanish winners, survivors fall, new symbols drop from above
     await runCascade(reelSet, [stage0, stage1], {
       winners: () => HIT_COLS.map(c => ({ reel: c, row: HIT_ROW })),
       vanishDuration: 300,

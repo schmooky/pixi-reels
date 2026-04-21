@@ -141,6 +141,42 @@ export class ReelSet extends Container implements Disposable {
     this._spinController.skip();
   }
 
+  /**
+   * Set the drop order for cascade drop-in mechanics.
+   *
+   * A convenience wrapper over setStopDelays() for common patterns.
+   * The stagger step defaults to the active speed profile's stopDelay
+   * (or 150 ms if stopDelay is 0).
+   *
+   * Call this before or after setResult() — both work.
+   *
+   * @example
+   * reelSet.setDropOrder('ltr');  // left-to-right
+   * reelSet.setDropOrder('rtl');  // right-to-left
+   * reelSet.setDropOrder('all');  // all columns simultaneously
+   * reelSet.setDropOrder([0, 0, 200, 200, 400]); // custom per-reel delays
+   */
+  setDropOrder(order: 'ltr' | 'rtl' | 'all' | number[], stepMs?: number): void {
+    if (Array.isArray(order)) {
+      this._spinController.setStopDelays(order);
+      return;
+    }
+
+    const n = this._reels.length;
+    const step = stepMs ?? Math.max(this._speedManager.active.stopDelay, 150);
+    let delays: number[];
+
+    if (order === 'all') {
+      delays = new Array(n).fill(0);
+    } else if (order === 'ltr') {
+      delays = Array.from({ length: n }, (_, i) => i * step);
+    } else {
+      delays = Array.from({ length: n }, (_, i) => (n - 1 - i) * step);
+    }
+
+    this._spinController.setStopDelays(delays);
+  }
+
   get isSpinning(): boolean {
     return this._spinController.isSpinning;
   }
