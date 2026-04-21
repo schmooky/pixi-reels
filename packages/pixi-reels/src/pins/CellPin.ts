@@ -46,6 +46,25 @@ export interface CellPinOptions {
 /** Reason a pin expired. Fired with `pin:expired`. */
 export type PinExpireReason = 'turns' | 'explicit' | 'eval';
 
+/** A grid coordinate. */
+export interface CellCoord {
+  col: number;
+  row: number;
+}
+
+/** Options for `reelSet.movePin()` — the flight animation tuning. */
+export interface MovePinOptions {
+  /** Animation duration in milliseconds. Default 400. */
+  duration?: number;
+  /** GSAP easing string. Default 'power2.inOut'. */
+  easing?: string;
+  /**
+   * Symbol id to use as the filler at the vacated cell. When omitted, the
+   * engine picks a random symbol from its frame builder's random provider.
+   */
+  backfill?: string;
+}
+
 /** Map key used internally and exposed by `reelSet.pins`. */
 export function pinKey(col: number, row: number): string {
   return `${col}:${row}`;

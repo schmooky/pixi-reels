@@ -31,6 +31,7 @@ export interface ReelSetEvents extends Record<string, unknown[]> {
   'spotlight:start': [positions: SymbolPosition[]];
   'spotlight:end': [];
   'pin:placed': [pin: CellPin];
+  'pin:moved': [pin: CellPin, from: { col: number; row: number }];
   'pin:expired': [pin: CellPin, reason: PinExpireReason];
   'destroyed': [];
 }

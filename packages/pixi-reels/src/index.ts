@@ -81,8 +81,17 @@ export { SymbolSpotlight } from './spotlight/SymbolSpotlight.js';
 export type { SpotlightOptions, WinLine, CycleOptions } from './spotlight/SymbolSpotlight.js';
 
 // Pins (cell persistence primitive)
-export type { CellPin, CellPinOptions, PinExpireReason } from './pins/CellPin.js';
+export type {
+  CellPin,
+  CellPinOptions,
+  PinExpireReason,
+  CellCoord,
+  MovePinOptions,
+} from './pins/CellPin.js';
 export { pinKey } from './pins/CellPin.js';
+
+// ReelSet frame API (runtime middleware)
+export type { FrameAPI } from './core/ReelSet.js';
 
 // Events
 export { EventEmitter } from './events/EventEmitter.js';

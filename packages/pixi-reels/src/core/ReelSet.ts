@@ -13,8 +13,10 @@ import type { SymbolFactory } from '../symbols/SymbolFactory.js';
 import type { FrameBuilder } from '../frame/FrameBuilder.js';
 import type { PhaseFactory } from '../spin/phases/PhaseFactory.js';
 import type { SpinningMode } from '../spin/modes/SpinningMode.js';
-import type { CellPin, CellPinOptions, PinExpireReason } from '../pins/CellPin.js';
+import type { CellPin, CellPinOptions, PinExpireReason, MovePinOptions, CellCoord } from '../pins/CellPin.js';
 import { pinKey } from '../pins/CellPin.js';
+import { gsap } from 'gsap';
+import type { FrameMiddleware } from '../frame/FrameBuilder.js';
 
 export interface ReelSetParams {
   config: ReelSetInternalConfig;
@@ -24,6 +26,20 @@ export interface ReelSetParams {
   frameBuilder: FrameBuilder;
   phaseFactory: PhaseFactory;
   spinningMode: SpinningMode;
+}
+
+/**
+ * The runtime-mutable frame-builder pipeline exposed on `reelSet.frame`.
+ * Matches `FrameBuilder.use/remove` — the internal machinery that already
+ * exists; this is the ergonomic surface.
+ */
+export interface FrameAPI {
+  /** Add a middleware. Sorted by `priority` on next frame build. */
+  use(middleware: FrameMiddleware): void;
+  /** Remove a middleware by `name`. No-op if absent. */
+  remove(name: string): void;
+  /** Current middleware list in registration order. */
+  readonly middleware: ReadonlyArray<FrameMiddleware>;
 }
 
 /**
@@ -68,6 +84,7 @@ export class ReelSet extends Container implements Disposable {
   private _speedManager: SpeedManager;
   private _spotlight: SymbolSpotlight;
   private _symbolFactory: SymbolFactory;
+  private _frameBuilder: FrameBuilder;
   private _isDestroyed = false;
   private _pins = new Map<string, CellPin>();
 
@@ -77,6 +94,7 @@ export class ReelSet extends Container implements Disposable {
     this._reels = params.reels;
     this._viewport = params.viewport;
     this._symbolFactory = params.symbolFactory;
+    this._frameBuilder = params.frameBuilder;
 
     // Speed manager
     this._speedManager = new SpeedManager(
@@ -310,6 +328,180 @@ export class ReelSet extends Container implements Disposable {
   /** Convenience: get the pin at `(col, row)` or `undefined`. */
   getPin(col: number, row: number): CellPin | undefined {
     return this._pins.get(pinKey(col, row));
+  }
+
+  /**
+   * Move an existing pin from one cell to another. Animates a flight symbol
+   * between the two cells, updates pin state atomically, and resolves when
+   * the animation completes.
+   *
+   * This is the engine-native replacement for ghost sprites in walking-wild
+   * recipes. The flight symbol is a pooled `ReelSymbol` acquired from the
+   * factory, parented briefly to the viewport's `unmaskedContainer` so it
+   * can travel across reel boundaries without being clipped.
+   *
+   * Constraints:
+   *  - Only callable at rest (throws if `isSpinning === true`).
+   *  - `to` must be within the grid; no pin may already exist there.
+   *  - Calling with `from === to` is a no-op that still fires `pin:moved`.
+   *
+   * @example
+   * // Walking wild — move the pinned wild one column left each spin
+   * reelSet.events.on('spin:complete', async () => {
+   *   for (const pin of [...reelSet.pins.values()]) {
+   *     if (pin.col > 0) {
+   *       await reelSet.movePin(
+   *         { col: pin.col, row: pin.row },
+   *         { col: pin.col - 1, row: pin.row },
+   *       );
+   *     } else {
+   *       reelSet.unpin(pin.col, pin.row);
+   *     }
+   *   }
+   * });
+   */
+  async movePin(
+    from: CellCoord,
+    to: CellCoord,
+    opts?: MovePinOptions,
+  ): Promise<void> {
+    const fromKey = pinKey(from.col, from.row);
+    const pin = this._pins.get(fromKey);
+    if (!pin) {
+      throw new Error(
+        `movePin(): no pin at (${from.col}, ${from.row})`,
+      );
+    }
+
+    // Validate `to` bounds (same rules as pin()).
+    if (to.col < 0 || to.col >= this._reels.length) {
+      throw new Error(
+        `movePin(): to col ${to.col} out of range [0, ${this._reels.length})`,
+      );
+    }
+    const toReel = this._reels[to.col];
+    if (to.row < 0 || to.row >= toReel.visibleRows) {
+      throw new Error(
+        `movePin(): to row ${to.row} out of range [0, ${toReel.visibleRows})`,
+      );
+    }
+
+    if (this._spinController.isSpinning) {
+      throw new Error('movePin(): cannot move pin while spinning');
+    }
+
+    // No-op self-move: still fire the event so callers can treat it uniformly.
+    if (from.col === to.col && from.row === to.row) {
+      this._events.emit('pin:moved', pin, { col: from.col, row: from.row });
+      return;
+    }
+
+    const toKey = pinKey(to.col, to.row);
+    if (this._pins.has(toKey)) {
+      throw new Error(
+        `movePin(): a pin already exists at (${to.col}, ${to.row})`,
+      );
+    }
+
+    // Update pin state first (atomic). The map now reflects the new position
+    // immediately — any subsequent spin sees the pin at `to`.
+    this._pins.delete(fromKey);
+    const movedPin: CellPin = { ...pin, col: to.col, row: to.row };
+    this._pins.set(toKey, movedPin);
+
+    // Gather viewport-local coordinates for both cells. The flight symbol
+    // will be parented to `viewport.unmaskedContainer`, whose local space
+    // matches `maskedContainer` (both sit at (0,0) inside viewport) — so
+    // `reel.container.x + symbol.view.x/y` gives us the right offset.
+    const fromReel = this._reels[from.col];
+    const fromCellY = fromReel.getSymbolAt(from.row).view.y;
+    const toCellY = toReel.getSymbolAt(to.row).view.y;
+    const fromX = fromReel.container.x;
+    const toX = toReel.container.x;
+
+    // Backfill the vacated cell with a filler. Takes effect immediately —
+    // the vacated cell visually swaps to the backfill while the flight
+    // symbol is still in motion.
+    const backfill =
+      opts?.backfill ?? this._frameBuilder.randomProvider.next(false);
+    const fromVisible = fromReel.getVisibleSymbols();
+    fromVisible[from.row] = backfill;
+    fromReel.placeSymbols(fromVisible);
+
+    // Spawn the flight symbol on the unmasked container so it renders above
+    // the reels and can cross column boundaries.
+    const flight = this._symbolFactory.acquire(pin.symbolId);
+    flight.resize(fromReel.symbolWidth, fromReel.symbolHeight);
+    flight.view.x = fromX;
+    flight.view.y = fromCellY;
+    this._viewport.unmaskedContainer.addChild(flight.view);
+
+    // Tween.
+    const duration = (opts?.duration ?? 400) / 1000;
+    const easing = opts?.easing ?? 'power2.inOut';
+    await new Promise<void>((resolve) => {
+      gsap.to(flight.view, {
+        x: toX,
+        y: toCellY,
+        duration,
+        ease: easing,
+        onComplete: () => resolve(),
+      });
+    });
+
+    // Apply the pin visually at the destination cell.
+    const toVisible = toReel.getVisibleSymbols();
+    toVisible[to.row] = pin.symbolId;
+    toReel.placeSymbols(toVisible);
+
+    // Release the flight symbol.
+    this._viewport.unmaskedContainer.removeChild(flight.view);
+    this._symbolFactory.release(flight);
+
+    this._events.emit('pin:moved', movedPin, {
+      col: from.col,
+      row: from.row,
+    });
+  }
+
+  // ─── Frame pipeline (strip generation) ────────────────────
+  //
+  // Exposes the runtime-mutable FrameBuilder middleware pipeline on ReelSet
+  // so recipes can add/remove frame middleware after build — the entry
+  // point for mode-specific strip changes (feature weights, mystery
+  // injection, positional overrides) without a full rebuild.
+  //
+  // The internal machinery was already present on FrameBuilder; this is
+  // pure exposure — no behaviour change for recipes that don't call it.
+
+  /**
+   * Runtime-mutable middleware pipeline for symbol-frame generation.
+   *
+   * @example
+   * // Feature entry — swap to a middleware that injects more wilds
+   * reelSet.frame.use(moreWildsMiddleware);
+   *
+   * // Feature exit
+   * reelSet.frame.remove('more-wilds');
+   */
+  get frame(): FrameAPI {
+    const fb = this._frameBuilder;
+    return {
+      use(middleware: FrameMiddleware): void {
+        fb.use(middleware);
+      },
+      remove(name: string): void {
+        fb.remove(name);
+      },
+      get middleware(): ReadonlyArray<FrameMiddleware> {
+        // Access the internal array via a known-safe field name.
+        // FrameBuilder does not expose middleware publicly, so we read
+        // via a narrowly-typed cast. If FrameBuilder ever grows a public
+        // getter this should switch to that.
+        return ((fb as unknown) as { _middlewares: FrameMiddleware[] })
+          ._middlewares;
+      },
+    };
   }
 
   // ─── Lifecycle ────────────────────────────────────────────

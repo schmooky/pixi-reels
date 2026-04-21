@@ -141,6 +141,16 @@ export class Reel implements Disposable {
     return this._visibleRows;
   }
 
+  /** The symbol cell width (in pixels). Constant for the reel's lifetime. */
+  get symbolWidth(): number {
+    return this._symbolWidth;
+  }
+
+  /** The symbol cell height (in pixels). Constant for the reel's lifetime. */
+  get symbolHeight(): number {
+    return this._symbolHeight;
+  }
+
   /** Update reel for one frame. Called by SpinController via ticker. */
   update(deltaMs: number): void {
     if (this.speed === 0) return;
