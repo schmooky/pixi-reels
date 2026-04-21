@@ -1,4 +1,4 @@
-import { Application, Graphics } from 'pixi.js';
+import { Application, Container, Graphics } from 'pixi.js';
 import { gsap } from 'gsap';
 import {
   ReelSetBuilder,
@@ -108,16 +108,22 @@ async function main() {
 
   const totalWidth = REEL_COUNT * (SYMBOL_SIZE + SYMBOL_GAP) - SYMBOL_GAP;
   const totalHeight = VISIBLE_ROWS * (SYMBOL_SIZE + SYMBOL_GAP) - SYMBOL_GAP;
-  const centerX = () => (app.screen.width - totalWidth) / 2;
-  const centerY = () => (app.screen.height - totalHeight) / 2 - 30;
-  reelSet.x = centerX();
-  reelSet.y = centerY();
+  const wrapper = new Container();
+  wrapper.addChild(reelSet);
+  app.stage.addChild(wrapper);
+
+  function reposition() {
+    const pad = 16, uiH = 80;
+    const s = Math.min((app.screen.width - pad * 2) / totalWidth, (app.screen.height - pad * 2 - uiH) / totalHeight, 1);
+    wrapper.scale.set(s);
+    wrapper.x = (app.screen.width - totalWidth * s) / 2;
+    wrapper.y = (app.screen.height - totalHeight * s - uiH) / 2;
+  }
 
   const frame = new Graphics();
   frame.roundRect(-10, -10, totalWidth + 20, totalHeight + 20, 8);
   frame.stroke({ color: 0xe74c3c, width: 3 });
   reelSet.addChildAt(frame, 0);
-  app.stage.addChild(reelSet);
 
   const multiplierEl = document.getElementById('multiplier')!;
   const ui = createUI({
@@ -283,10 +289,8 @@ async function main() {
 
   function wait(ms: number): Promise<void> { return new Promise((r) => setTimeout(r, ms)); }
 
-  window.addEventListener('resize', () => {
-    reelSet.x = centerX();
-    reelSet.y = centerY();
-  });
+  reposition();
+  window.addEventListener('resize', reposition);
 }
 
 main().catch(console.error);

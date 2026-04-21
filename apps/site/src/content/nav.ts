@@ -38,15 +38,26 @@ export const WIKI_NAV: NavSection[] = [
   {
     title: 'API',
     items: [
-      { label: 'ReelSet', href: '/wiki/api-reelset/' },
-      { label: 'Builder', href: '/wiki/api-builder/' },
-      { label: 'Events', href: '/wiki/api-events/' },
-      { label: 'Phases', href: '/wiki/api-phases/' },
+      { label: 'ReelSet', href: '/docs/api-reelset/' },
+      { label: 'Builder', href: '/docs/api-builder/' },
+      { label: 'Events', href: '/docs/api-events/' },
+      { label: 'Phases', href: '/docs/api-phases/' },
     ],
   },
   {
     title: 'Reference',
-    items: [{ label: 'Glossary', href: '/wiki/glossary/' }],
+    items: [{ label: 'Glossary', href: '/docs/glossary/' }],
+  },
+  {
+    title: 'Architecture',
+    items: [
+      { label: 'Overview', href: '/architecture/overview/' },
+      { label: 'Classes', href: '/architecture/classes/' },
+      { label: 'Events', href: '/architecture/events/' },
+      { label: 'Spin lifecycle', href: '/architecture/spin-lifecycle/' },
+      { label: 'Cascade physics', href: '/architecture/cascade/' },
+      { label: 'Testing model', href: '/architecture/testing/' },
+    ],
   },
 ];
 

@@ -7,7 +7,8 @@ export function createUI(options: {
   const container = document.createElement('div');
   container.style.cssText =
     'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);' +
-    'display:flex;gap:12px;align-items:center;z-index:1000;font-family:sans-serif;';
+    'display:flex;gap:12px;align-items:center;z-index:1000;font-family:sans-serif;' +
+    'touch-action:manipulation;user-select:none;';
 
   // Spin button
   const spinBtn = document.createElement('button');
@@ -15,9 +16,12 @@ export function createUI(options: {
   spinBtn.style.cssText =
     'padding:12px 32px;font-size:18px;font-weight:bold;cursor:pointer;' +
     'border:none;border-radius:8px;background:#e74c3c;color:white;' +
-    'box-shadow:0 4px 12px rgba(0,0,0,0.3);transition:transform 0.1s;';
+    'box-shadow:0 4px 12px rgba(0,0,0,0.3);transition:transform 0.1s;' +
+    'min-height:44px;touch-action:manipulation;';
   spinBtn.addEventListener('mousedown', () => (spinBtn.style.transform = 'scale(0.95)'));
   spinBtn.addEventListener('mouseup', () => (spinBtn.style.transform = 'scale(1)'));
+  spinBtn.addEventListener('touchstart', () => (spinBtn.style.transform = 'scale(0.95)'), { passive: true });
+  spinBtn.addEventListener('touchend', () => (spinBtn.style.transform = 'scale(1)'));
   spinBtn.addEventListener('click', options.onSpin);
   container.appendChild(spinBtn);
 
@@ -31,7 +35,8 @@ export function createUI(options: {
       btn.textContent = speed.charAt(0).toUpperCase() + speed.slice(1);
       btn.style.cssText =
         'padding:8px 16px;font-size:14px;cursor:pointer;border:1px solid #666;' +
-        'border-radius:6px;background:#2c3e50;color:white;';
+        'border-radius:6px;background:#2c3e50;color:white;' +
+        'min-height:44px;touch-action:manipulation;';
       btn.addEventListener('click', () => {
         options.onSpeedChange!(speed);
         // Highlight active

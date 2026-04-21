@@ -93,6 +93,8 @@
   }
   .prose-docs pre code { @apply bg-transparent p-0; color: inherit; }
   .prose-docs table { @apply w-full my-6 text-sm border-collapse; }
+  .prose-docs .table-wrap { @apply overflow-x-auto; }
+  .prose-docs .table-wrap table { @apply my-0; }
   .prose-docs thead tr { @apply border-b border-border; }
   .prose-docs th, .prose-docs td { @apply text-left px-3 py-2; }
   .prose-docs tbody tr { @apply border-b border-border/60; }

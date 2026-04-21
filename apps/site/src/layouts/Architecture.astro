@@ -1,8 +1,10 @@
 ---
 import Base from './Base.astro';
+import DocsSidebar from '../components/DocsSidebar.astro';
 import { ChevronLeft } from 'lucide-react';
 import { articleLd, breadcrumbLd, SITE } from '../lib/seo.ts';
 import { ARCH_PAGES } from '../content/architectureNav.ts';
+import { WIKI_NAV } from '../content/nav.ts';
 
 interface Props {
   title?: string;
@@ -28,8 +30,8 @@ const jsonLd = [
   articleLd({ title, description, path: pathname }),
   breadcrumbLd([
     { name: SITE.name, url: '/' },
-    { name: 'Wiki', url: '/wiki/' },
-    { name: 'Architecture', url: '/wiki/#architecture' },
+    { name: 'Docs', url: '/docs/' },
+    { name: 'Architecture', url: '/docs/#architecture' },
     { name: title, url: pathname },
   ]),
 ];
@@ -47,38 +49,38 @@ const next = currentIdx >= 0 && currentIdx < ARCH_PAGES.length - 1 ? ARCH_PAGES[
   article={{ section: 'Architecture' }}
   jsonLd={jsonLd}
 >
-  <div class="container max-w-[1100px] py-10 animate-fade-in">
-    <header class="mb-10">
-      <a href="/wiki/" class="mb-4 inline-flex items-center gap-1 font-mono text-xs uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors">
+  <div class="container grid gap-10 py-12 md:grid-cols-[220px_minmax(0,1fr)]">
+    <DocsSidebar nav={WIKI_NAV} pathname={pathname} />
+
+    <article class="prose-docs min-w-0 animate-fade-in">
+      <a href="/docs/" class="mb-6 inline-flex items-center gap-1 font-mono text-xs uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors not-prose">
         <ChevronLeft size={14} strokeWidth={2} />
-        Wiki · Architecture
+        Docs · Architecture
       </a>
       <div class="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary mb-2">{eyebrow}</div>
-      <h1 class="text-4xl font-semibold tracking-tight sm:text-5xl">{title}</h1>
-      {subtitle && <p class="mt-3 text-lg text-muted-foreground max-w-[680px]">{subtitle}</p>}
-    </header>
+      <h1 class="mb-3 text-4xl font-semibold tracking-tight sm:text-5xl">{title}</h1>
+      {subtitle && <p class="mb-8 text-lg text-muted-foreground">{subtitle}</p>}
 
-    <article class="prose-docs">
       <slot />
-    </article>
 
-    {(prev || next) && (
-      <nav class="mt-16 grid gap-3 sm:grid-cols-2 not-prose">
-        {prev ? (
-          <a href={`/architecture/${prev.slug}/`} class="group rounded-xl border border-border bg-card p-4 transition-all hover:border-primary/40 hover:-translate-y-0.5">
-            <div class="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">← Previous</div>
-            <div class="mt-1 font-semibold">{prev.title}</div>
-            <div class="mt-0.5 text-xs text-muted-foreground">{prev.subtitle}</div>
-          </a>
-        ) : <div></div>}
-        {next ? (
-          <a href={`/architecture/${next.slug}/`} class="group rounded-xl border border-border bg-card p-4 transition-all hover:border-primary/40 hover:-translate-y-0.5 text-right">
-            <div class="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">Next →</div>
-            <div class="mt-1 font-semibold">{next.title}</div>
-            <div class="mt-0.5 text-xs text-muted-foreground">{next.subtitle}</div>
-          </a>
-        ) : <div></div>}
-      </nav>
-    )}
+      {(prev || next) && (
+        <nav class="mt-16 grid gap-3 sm:grid-cols-2 not-prose">
+          {prev ? (
+            <a href={`/architecture/${prev.slug}/`} class="group rounded-xl border border-border bg-card p-4 transition-all hover:border-primary/40 hover:-translate-y-0.5">
+              <div class="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">← Previous</div>
+              <div class="mt-1 font-semibold">{prev.title}</div>
+              <div class="mt-0.5 text-xs text-muted-foreground">{prev.subtitle}</div>
+            </a>
+          ) : <div></div>}
+          {next ? (
+            <a href={`/architecture/${next.slug}/`} class="group rounded-xl border border-border bg-card p-4 transition-all hover:border-primary/40 hover:-translate-y-0.5 text-right">
+              <div class="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">Next →</div>
+              <div class="mt-1 font-semibold">{next.title}</div>
+              <div class="mt-0.5 text-xs text-muted-foreground">{next.subtitle}</div>
+            </a>
+          ) : <div></div>}
+        </nav>
+      )}
+    </article>
   </div>
 </Base>
