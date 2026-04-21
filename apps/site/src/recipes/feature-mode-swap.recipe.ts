@@ -2,13 +2,16 @@
 // Injected globals: ReelSetBuilder, SpeedPresets, BlurSpriteSymbol, PIXI, gsap,
 //                   app, textures, blurTextures, SYMBOL_IDS, pickWeighted
 //
-// Feature mode entry via runtime middleware.
+// Feature mode entry via runtime frame middleware.
 //
-// A game's base mode and bonus mode usually differ only in strip weighting:
-// more wilds, more scatters, tighter/looser distribution. Instead of rebuilding
-// the ReelSet on feature entry, we toggle a frame middleware that rewrites the
-// frame after the strip rolls. Entry: `reelSet.frame.use(featureMiddleware)`.
-// Exit: `reelSet.frame.remove(name)`. Zero rebuild.
+// Two pipelines active across alternating 3-spin blocks:
+//   BASE mode:    stock FrameBuilder pipeline, no extras
+//   FEATURE mode: `feature-wild-injector` middleware present — every
+//                 visible cell has a 40% chance to be rewritten to WILD
+//                 at frame-build time
+//
+// A large banner above the grid shows the current mode and the spin
+// counter, making the mode change and its payoff obvious at a glance.
 
 const FILLER = ['round/round_1', 'round/round_2', 'royal/royal_1', 'square/square_1'];
 const WILD = 'wild/wild_1';
@@ -36,15 +39,15 @@ const reelSet = new ReelSetBuilder()
   .build();
 
 // ── The feature-mode middleware ──────────────────────────────────────────
-// During the bonus feature, upgrade ~30% of cells with a specific filler
-// symbol into wilds. Runs AFTER target-placement (priority 20) so it can see
-// the final grid and only mutates the remaining non-target cells.
-const featureMoreWildsMiddleware = {
-  name: 'feature-more-wilds',
+// Priority 20 runs after target-placement (10), so it gets the final
+// target grid and rewrites some cells in-place. 40% wild-injection rate
+// makes the payoff unmistakable.
+const featureWildInjector = {
+  name: 'feature-wild-injector',
   priority: 20,
   process(ctx, next) {
     for (let i = ctx.bufferAbove; i < ctx.bufferAbove + ctx.visibleRows; i++) {
-      if (ctx.symbols[i] === 'square/square_1' && Math.random() < 0.35) {
+      if (ctx.symbols[i] !== WILD && Math.random() < 0.4) {
         ctx.symbols[i] = WILD;
       }
     }
@@ -57,50 +60,100 @@ let inFeature = false;
 function enterFeature() {
   if (inFeature) return;
   inFeature = true;
-  reelSet.frame.use(featureMoreWildsMiddleware);
+  reelSet.frame.use(featureWildInjector);
 }
 
 function exitFeature() {
   if (!inFeature) return;
   inFeature = false;
-  reelSet.frame.remove('feature-more-wilds');
+  reelSet.frame.remove('feature-wild-injector');
 }
 
-// Visual cue — a border overlay so we can see the mode change
-const overlay = new PIXI.Graphics();
-reelSet.addChild(overlay);
+// ── Mode banner — big, obvious, unmissable ──────────────────────────────
+const bannerHeight = 42;
+const banner = new PIXI.Container();
+reelSet.addChild(banner);
+banner.y = -bannerHeight - 10;
 
-function redrawOverlay() {
-  overlay.clear();
+const bannerBg = new PIXI.Graphics();
+banner.addChild(bannerBg);
+
+const bannerText = new PIXI.Text({
+  text: '',
+  style: {
+    fontFamily: 'system-ui, sans-serif',
+    fontSize: 22,
+    fontWeight: '900',
+    fill: 0xffffff,
+    stroke: { color: 0x000000, width: 4 },
+    letterSpacing: 2,
+  },
+});
+bannerText.anchor.set(0.5);
+bannerText.y = bannerHeight / 2;
+banner.addChild(bannerText);
+
+const subText = new PIXI.Text({
+  text: '',
+  style: {
+    fontFamily: 'system-ui, sans-serif',
+    fontSize: 13,
+    fontWeight: '600',
+    fill: 0xfef08a,
+  },
+});
+subText.anchor.set(0.5);
+subText.y = bannerHeight + 14;
+banner.addChild(subText);
+
+function redrawBanner(spinsUntilSwitch) {
+  const width = COLS * (SIZE + 4) - 4;
+  bannerBg.clear();
+
   if (inFeature) {
-    overlay
-      .rect(-4, -4, COLS * (SIZE + 4) + 4, ROWS * (SIZE + 4) + 4)
-      .stroke({ width: 4, color: 0xffd43b, alpha: 0.9 });
+    bannerBg
+      .roundRect(0, 0, width, bannerHeight, 10)
+      .fill({ color: 0x9b59b6 })
+      .stroke({ width: 3, color: 0xfef08a });
+    bannerText.text = 'FEATURE MODE';
+    bannerText.style.fill = 0xfef08a;
+    subText.text = `More wilds for the next ${spinsUntilSwitch} spin(s)`;
+  } else {
+    bannerBg
+      .roundRect(0, 0, width, bannerHeight, 10)
+      .fill({ color: 0x1e293b })
+      .stroke({ width: 2, color: 0x94a3b8 });
+    bannerText.text = 'BASE MODE';
+    bannerText.style.fill = 0xe5e7eb;
+    subText.text = `Feature opens in ${spinsUntilSwitch} spin(s)`;
   }
+
+  bannerText.x = width / 2;
+  subText.x = width / 2;
 }
 
-// Toggle feature every 3 spins: 3 base spins, then 3 feature spins, repeat.
+// Cycle: 3 base spins, then 3 feature spins, then repeat
 let spinCount = 0;
+redrawBanner(3);
 
 return {
   reelSet,
   onSpin: async () => {
-    // Toggle mode at cycle boundaries
     const phase = Math.floor(spinCount / 3) % 2;
-    if (phase === 1 && !inFeature) {
-      enterFeature();
-      redrawOverlay();
-    } else if (phase === 0 && inFeature) {
-      exitFeature();
-      redrawOverlay();
-    }
+    const shouldBeInFeature = phase === 1;
+    if (shouldBeInFeature && !inFeature) enterFeature();
+    else if (!shouldBeInFeature && inFeature) exitFeature();
+
+    const spinsUntilSwitch = 3 - (spinCount % 3);
+    redrawBanner(spinsUntilSwitch);
 
     const promise = reelSet.spin();
     await new Promise((r) => setTimeout(r, 150));
 
-    // Server never intentionally sends wilds in this demo — the feature
-    // middleware is what injects them. That way the visual payoff of
-    // "feature mode = more wilds" is obvious.
+    // Server provides a boring, no-wild base result every time. In BASE mode
+    // the grid stays boring. In FEATURE mode the wild-injector middleware
+    // rewrites ~40% of cells to WILD — the player instantly sees the payoff
+    // of being in the feature.
     const grid = Array.from({ length: COLS }, () =>
       Array.from({ length: ROWS }, () =>
         FILLER[Math.floor(Math.random() * FILLER.length)],
@@ -109,8 +162,11 @@ return {
     reelSet.setResult(grid);
     await promise;
     spinCount++;
+
+    const nextSpinsUntilSwitch = 3 - (spinCount % 3);
+    redrawBanner(nextSpinsUntilSwitch);
   },
   cleanup: () => {
-    try { overlay.destroy(); } catch {}
+    try { banner.destroy({ children: true }); } catch {}
   },
 };

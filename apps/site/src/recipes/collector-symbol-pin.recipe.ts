@@ -1,154 +1,196 @@
 // @ts-nocheck
 // Injected globals: ReelSetBuilder, SpeedPresets, BlurSpriteSymbol, PIXI, gsap,
-//                   app, textures, blurTextures, SYMBOL_IDS, pickWeighted
+//                   app, textures, blurTextures, SYMBOL_IDS, pickWeighted, EmptySymbol
 //
-// Collector symbol (Cash Noire mechanic).
+// Collector symbol on a Hold & Win board.
 //
-// When the collector lands, it reads the payloads of adjacent value-carrying
-// coin pins and absorbs their values. Collected coins are unpinned; the
-// collector itself is pinned permanently with the accumulated total.
-//
-// This is the clearest demo of CellPin payload + cross-pin coordination.
-// The library gives us `reelSet.pins` as a readable map — game logic iterates
-// over it to find neighbors.
+// Same 15-mini-ReelSet architecture as value-coin-pin. Coins land and are
+// pinned with a payload.value. When a collector lands adjacent to pinned
+// coins, it absorbs every adjacent coin's payload and stores the total in
+// its own pin payload. Absorbed coins are unpinned — they "fly" to the
+// collector conceptually, though here we just update badges.
 
-const FILLER = ['round/round_1', 'round/round_2', 'royal/royal_1'];
-const COIN = 'wild/wild_1';
-const COLLECTOR = 'square/square_1';
-const COLS = 5, ROWS = 3, SIZE = 90;
+const COIN = 'feature/feature_1';
+const COLLECTOR = 'wild/wild_1';
+const EMPTY = 'empty';
+const COLS = 5, ROWS = 3, CELL = 60, GAP = 4;
 const COIN_VALUES = [10, 25, 50, 100];
 
-const reelSet = new ReelSetBuilder()
-  .reels(COLS)
-  .visibleSymbols(ROWS)
-  .symbolSize(SIZE, SIZE)
-  .symbolGap(4, 4)
-  .symbols((r) => {
-    for (const id of [...FILLER, COIN, COLLECTOR]) {
-      r.register(id, BlurSpriteSymbol, { textures, blurTextures });
-    }
-  })
-  .weights({
-    'round/round_1': 30,
-    'round/round_2': 30,
-    'royal/royal_1': 20,
-  })
-  .speed('normal', SpeedPresets.NORMAL)
-  .speed('turbo', SpeedPresets.TURBO)
-  .ticker(app.ticker)
-  .build();
+const colWidth = COLS * (CELL + GAP) - GAP;
+const colHeight = ROWS * (CELL + GAP) - GAP;
+const startX = (app.screen.width - colWidth) / 2;
+const startY = (app.screen.height - colHeight) / 2 - 18;
 
-// ── Value badge display ──────────────────────────────────────────────────
-const badgeLayer = new PIXI.Container();
-reelSet.addChild(badgeLayer);
+const cells = [];
+for (let col = 0; col < COLS; col++) {
+  for (let row = 0; row < ROWS; row++) {
+    const mini = new ReelSetBuilder()
+      .reels(1).visibleSymbols(1)
+      .symbolSize(CELL, CELL).symbolGap(0, 0)
+      .symbols((r) => {
+        r.register(COIN, BlurSpriteSymbol, { textures, blurTextures });
+        r.register(COLLECTOR, BlurSpriteSymbol, { textures, blurTextures });
+        r.register(EMPTY, EmptySymbol, {});
+      })
+      .weights({ [COIN]: 2, [COLLECTOR]: 1, [EMPTY]: 6 })
+      .speed('normal', { ...SpeedPresets.NORMAL, minimumSpinTime: 320 + (col + row) * 60 })
+      .ticker(app.ticker)
+      .build();
+    mini.x = startX + col * (CELL + GAP);
+    mini.y = startY + row * (CELL + GAP);
+    app.stage.addChild(mini);
+    cells.push({ col, row, reelSet: mini });
+  }
+}
+
+// ── Value badges + total ────────────────────────────────────────────────
 const badges = new Map();
+const totalText = new PIXI.Text({
+  text: 'TOTAL: 0',
+  style: {
+    fontFamily: 'system-ui, sans-serif',
+    fontSize: 22,
+    fontWeight: '800',
+    fill: 0xfef08a,
+    stroke: { color: 0x000000, width: 4 },
+  },
+});
+totalText.anchor.set(0.5, 0);
+totalText.x = startX + colWidth / 2;
+totalText.y = startY + colHeight + 14;
+app.stage.addChild(totalText);
 
-function drawBadge(col, row, text, color = 0xffd43b) {
-  const key = `${col}:${row}`;
+function drawBadge(cell, value, isCollector = false) {
+  const key = `${cell.col},${cell.row}`;
   const existing = badges.get(key);
   if (existing) { try { existing.destroy(); } catch {} }
   const badge = new PIXI.Text({
-    text: String(text),
+    text: String(value),
     style: {
       fontFamily: 'system-ui, sans-serif',
       fontSize: 18,
       fontWeight: '900',
-      fill: color,
+      fill: isCollector ? 0x90ee90 : 0xffd43b,
       stroke: { color: 0x000000, width: 4 },
     },
   });
   badge.anchor.set(0.5);
-  badge.x = col * (SIZE + 4) + SIZE / 2;
-  badge.y = row * (SIZE + 4) + SIZE / 2;
-  badgeLayer.addChild(badge);
+  badge.x = cell.reelSet.x + CELL / 2;
+  badge.y = cell.reelSet.y + CELL / 2;
+  app.stage.addChild(badge);
   badges.set(key, badge);
 }
 
 function clearBadge(col, row) {
-  const key = `${col}:${row}`;
+  const key = `${col},${row}`;
   const badge = badges.get(key);
   if (badge) { try { badge.destroy(); } catch {} badges.delete(key); }
 }
 
-reelSet.events.on('pin:placed', (pin) => {
-  if (typeof pin.payload?.value === 'number') {
-    const isCollector = pin.symbolId === COLLECTOR;
-    drawBadge(pin.col, pin.row, pin.payload.value, isCollector ? 0x90ee90 : 0xffd43b);
-  }
-});
-
-reelSet.events.on('pin:expired', (pin) => clearBadge(pin.col, pin.row));
-
-// ── Collector logic: absorb adjacent coin payloads on land ───────────────
-// Neighbors = orthogonal (up/down/left/right) adjacency.
-function neighborsOf(col, row) {
-  return [
-    { col: col - 1, row },
-    { col: col + 1, row },
-    { col, row: row - 1 },
-    { col, row: row + 1 },
-  ];
+function cellAt(col, row) {
+  return cells.find((c) => c.col === col && c.row === row);
 }
 
-reelSet.events.on('spin:allLanded', ({ symbols }) => {
-  // First pass: pin every landed coin with a value, if not already pinned.
-  for (let c = 0; c < symbols.length; c++) {
-    for (let r = 0; r < symbols[c].length; r++) {
-      if (symbols[c][r] === COIN && !reelSet.getPin(c, r)) {
-        const value = COIN_VALUES[Math.floor(Math.random() * COIN_VALUES.length)];
-        reelSet.pin(c, r, COIN, { turns: 'permanent', payload: { value } });
-      }
-    }
+function recomputeTotal() {
+  let total = 0;
+  for (const cell of cells) {
+    const pin = cell.reelSet.getPin(0, 0);
+    if (typeof pin?.payload?.value === 'number') total += pin.payload.value;
   }
+  totalText.text = `TOTAL: ${total}`;
+}
 
-  // Second pass: for each landed collector, sum adjacent pinned coin values.
-  for (let c = 0; c < symbols.length; c++) {
-    for (let r = 0; r < symbols[c].length; r++) {
-      if (symbols[c][r] !== COLLECTOR) continue;
+for (const cell of cells) {
+  cell.reelSet.events.on('pin:placed', (pin) => {
+    if (typeof pin.payload?.value === 'number') {
+      drawBadge(cell, pin.payload.value, pin.symbolId === COLLECTOR);
+      recomputeTotal();
+    }
+  });
+  cell.reelSet.events.on('pin:expired', () => {
+    clearBadge(cell.col, cell.row);
+    recomputeTotal();
+  });
+}
 
-      let total = 0;
-      for (const n of neighborsOf(c, r)) {
-        const pin = reelSet.getPin(n.col, n.row);
-        if (pin?.symbolId === COIN && typeof pin.payload?.value === 'number') {
-          total += pin.payload.value;
-          reelSet.unpin(n.col, n.row);
+// ── Scripted demo: seed coins, then drop a collector in the middle ─────
+const rounds = [
+  { hits: [
+    { col: 1, row: 1, type: 'coin' },
+    { col: 2, row: 2, type: 'coin' },
+    { col: 3, row: 1, type: 'coin' },
+  ] },
+  { hits: [
+    { col: 2, row: 0, type: 'coin' },
+  ] },
+  { hits: [
+    { col: 2, row: 1, type: 'collector' },
+  ] },
+];
+
+return {
+  cleanup: () => {
+    for (const b of badges.values()) try { b.destroy(); } catch {}
+    try { totalText.destroy(); } catch {}
+    for (const c of cells) try { c.reelSet.destroy(); } catch {}
+  },
+  onSpin: async () => {
+    for (const cell of cells) {
+      if (cell.reelSet.getPin(0, 0)) cell.reelSet.unpin(0, 0);
+    }
+
+    for (const round of rounds) {
+      const spinPromises = [];
+      const activeCells = [];
+      for (const cell of cells) {
+        if (cell.reelSet.getPin(0, 0)) continue;
+        activeCells.push(cell);
+        spinPromises.push(cell.reelSet.spin());
+      }
+
+      await new Promise((r) => setTimeout(r, 140));
+      for (const cell of activeCells) {
+        const hit = round.hits.find((h) => h.col === cell.col && h.row === cell.row);
+        const target = hit ? (hit.type === 'collector' ? COLLECTOR : COIN) : EMPTY;
+        cell.reelSet.setResult([[target]]);
+      }
+      await Promise.all(spinPromises);
+
+      for (const cell of activeCells) {
+        const hit = round.hits.find((h) => h.col === cell.col && h.row === cell.row);
+        if (!hit) continue;
+
+        if (hit.type === 'coin') {
+          const value = COIN_VALUES[Math.floor(Math.random() * COIN_VALUES.length)];
+          cell.reelSet.pin(0, 0, COIN, { turns: 'permanent', payload: { value } });
+          continue;
+        }
+
+        if (hit.type === 'collector') {
+          const neighbors = [
+            { col: cell.col - 1, row: cell.row },
+            { col: cell.col + 1, row: cell.row },
+            { col: cell.col, row: cell.row - 1 },
+            { col: cell.col, row: cell.row + 1 },
+          ];
+          let total = 0;
+          for (const n of neighbors) {
+            const nCell = cellAt(n.col, n.row);
+            if (!nCell) continue;
+            const nPin = nCell.reelSet.getPin(0, 0);
+            if (nPin?.symbolId === COIN && typeof nPin.payload?.value === 'number') {
+              total += nPin.payload.value;
+              nCell.reelSet.unpin(0, 0);
+            }
+          }
+          cell.reelSet.pin(0, 0, COLLECTOR, {
+            turns: 'permanent',
+            payload: { value: total },
+          });
         }
       }
 
-      if (total > 0) {
-        reelSet.pin(c, r, COLLECTOR, {
-          turns: 'permanent',
-          payload: { value: total },
-        });
-      }
+      await new Promise((r) => setTimeout(r, 650));
     }
-  }
-});
-
-// Scripted demo: coins accumulate over spins 0–2, collector lands spin 3.
-const scripts = [
-  { coins: [{ c: 1, r: 1, v: 50 }], collector: null },
-  { coins: [{ c: 2, r: 1, v: 25 }], collector: null },
-  { coins: [{ c: 1, r: 2, v: 100 }], collector: null },
-  { coins: [], collector: { c: 2, r: 2 } }, // collector absorbs 25+100
-];
-let spinCount = 0;
-
-return {
-  reelSet,
-  nextResult: () => {
-    const idx = spinCount % scripts.length;
-    if (idx === 0) {
-      for (const pin of [...reelSet.pins.values()]) reelSet.unpin(pin.col, pin.row);
-    }
-    const script = scripts[idx];
-    const grid = Array.from({ length: COLS }, () =>
-      Array.from({ length: ROWS }, () => FILLER[Math.floor(Math.random() * FILLER.length)]),
-    );
-    for (const c of script.coins) grid[c.c][c.r] = COIN;
-    if (script.collector) grid[script.collector.c][script.collector.r] = COLLECTOR;
-    spinCount++;
-    return grid;
   },
-  cleanup: () => { try { badgeLayer.destroy({ children: true }); } catch {} },
 };

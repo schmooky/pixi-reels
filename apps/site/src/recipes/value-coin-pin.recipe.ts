@@ -1,71 +1,70 @@
 // @ts-nocheck
 // Injected globals: ReelSetBuilder, SpeedPresets, BlurSpriteSymbol, PIXI, gsap,
-//                   app, textures, blurTextures, SYMBOL_IDS, pickWeighted
+//                   app, textures, blurTextures, SYMBOL_IDS, pickWeighted, EmptySymbol
 //
-// Value-carrying coin symbols — the foundation of Hold & Win features.
+// Hold & Win with CellPin.
 //
-// Each coin symbol carries a payout value in its pin payload. The engine
-// keeps the coin in place across spins; game code reads payload.value to
-// sum the final payout. A running total is displayed live.
-//
-// This replaces CheatEngine._applyHeld() — previously used as production
-// logic. Here, pins carry everything: symbol identity + value + persistence.
+// Each grid cell is its own 1×1 ReelSet. Coins flash past during the spin.
+// When a coin lands, we pin it on its mini-reel with `turns: 'permanent'`
+// and a payload carrying the coin value. Pinned cells skip their spin on
+// subsequent rounds — the engine keeps showing the coin, its payload is
+// readable from `reelSet.pins`, and the running total updates live.
 
-const FILLER = ['round/round_1', 'round/round_2', 'royal/royal_1', 'square/square_1'];
-const COIN = 'wild/wild_1'; // treat "wild" sprite as coin for this demo
-const COLS = 5, ROWS = 3, SIZE = 90;
+const COIN = 'feature/feature_1';
+const EMPTY = 'empty';
+const COLS = 5, ROWS = 3, CELL = 60, GAP = 4;
 const COIN_VALUES = [10, 25, 50, 100];
 
-const reelSet = new ReelSetBuilder()
-  .reels(COLS)
-  .visibleSymbols(ROWS)
-  .symbolSize(SIZE, SIZE)
-  .symbolGap(4, 4)
-  .symbols((r) => {
-    for (const id of [...FILLER, COIN]) {
-      r.register(id, BlurSpriteSymbol, { textures, blurTextures });
-    }
-  })
-  .weights({
-    'round/round_1': 22,
-    'round/round_2': 22,
-    'royal/royal_1': 18,
-    'square/square_1': 18,
-  })
-  .speed('normal', SpeedPresets.NORMAL)
-  .speed('turbo', SpeedPresets.TURBO)
-  .ticker(app.ticker)
-  .build();
+// Build 15 independent 1×1 ReelSets — one per cell.
+const colWidth = COLS * (CELL + GAP) - GAP;
+const colHeight = ROWS * (CELL + GAP) - GAP;
+const startX = (app.screen.width - colWidth) / 2;
+const startY = (app.screen.height - colHeight) / 2 - 18;
 
-// ── Value badges + total display (pure presentation) ─────────────────────
-const badgeLayer = new PIXI.Container();
-reelSet.addChild(badgeLayer);
-const badges = new Map();
+const cells = [];
+for (let col = 0; col < COLS; col++) {
+  for (let row = 0; row < ROWS; row++) {
+    const mini = new ReelSetBuilder()
+      .reels(1).visibleSymbols(1)
+      .symbolSize(CELL, CELL).symbolGap(0, 0)
+      .symbols((r) => {
+        r.register(COIN, BlurSpriteSymbol, { textures, blurTextures });
+        r.register(EMPTY, EmptySymbol, {});
+      })
+      .weights({ [COIN]: 1, [EMPTY]: 3 })
+      .speed('normal', { ...SpeedPresets.NORMAL, minimumSpinTime: 320 + (col + row) * 60 })
+      .ticker(app.ticker)
+      .build();
+    mini.x = startX + col * (CELL + GAP);
+    mini.y = startY + row * (CELL + GAP);
+    app.stage.addChild(mini);
+    cells.push({ col, row, reelSet: mini });
+  }
+}
 
+// ── Total display ───────────────────────────────────────────────────────
 const totalText = new PIXI.Text({
   text: 'TOTAL: 0',
   style: {
     fontFamily: 'system-ui, sans-serif',
-    fontSize: 20,
-    fontWeight: '700',
-    fill: 0xffffff,
+    fontSize: 22,
+    fontWeight: '800',
+    fill: 0xfef08a,
     stroke: { color: 0x000000, width: 4 },
   },
 });
-totalText.x = 8;
-totalText.y = ROWS * (SIZE + 4) + 8;
-badgeLayer.addChild(totalText);
+totalText.anchor.set(0.5, 0);
+totalText.x = startX + colWidth / 2;
+totalText.y = startY + colHeight + 14;
+app.stage.addChild(totalText);
 
-function redrawTotal() {
-  let total = 0;
-  for (const pin of reelSet.pins.values()) {
-    if (typeof pin.payload?.value === 'number') total += pin.payload.value;
-  }
-  totalText.text = `TOTAL: ${total}`;
-}
+// ── Value badges on pinned coins ────────────────────────────────────────
+// Subscribe to every mini-reel's pin events; draw the payload.value on top.
+const badges = new Map();
+function badgeKey(col, row) { return `${col},${row}`; }
 
-function drawValueBadge(col, row, value) {
-  const key = `${col}:${row}`;
+function drawBadge(cell, value) {
+  const key = badgeKey(cell.col, cell.row);
   const existing = badges.get(key);
   if (existing) { try { existing.destroy(); } catch {} }
   const badge = new PIXI.Text({
@@ -79,67 +78,87 @@ function drawValueBadge(col, row, value) {
     },
   });
   badge.anchor.set(0.5);
-  badge.x = col * (SIZE + 4) + SIZE / 2;
-  badge.y = row * (SIZE + 4) + SIZE / 2;
-  badgeLayer.addChild(badge);
+  badge.x = cell.reelSet.x + CELL / 2;
+  badge.y = cell.reelSet.y + CELL / 2;
+  app.stage.addChild(badge);
   badges.set(key, badge);
 }
 
-reelSet.events.on('pin:placed', (pin) => {
-  if (typeof pin.payload?.value === 'number') {
-    drawValueBadge(pin.col, pin.row, pin.payload.value);
-    redrawTotal();
-  }
-});
-
-reelSet.events.on('pin:expired', (pin) => {
-  const key = `${pin.col}:${pin.row}`;
+function clearBadge(col, row) {
+  const key = badgeKey(col, row);
   const badge = badges.get(key);
   if (badge) { try { badge.destroy(); } catch {} badges.delete(key); }
-  redrawTotal();
-});
+}
 
-// ── Pin coins permanently on land ────────────────────────────────────────
-reelSet.events.on('spin:allLanded', ({ symbols }) => {
-  for (let c = 0; c < symbols.length; c++) {
-    for (let r = 0; r < symbols[c].length; r++) {
-      if (symbols[c][r] === COIN && !reelSet.getPin(c, r)) {
-        const value = COIN_VALUES[Math.floor(Math.random() * COIN_VALUES.length)];
-        reelSet.pin(c, r, COIN, {
-          turns: 'permanent',
-          payload: { value },
-        });
-      }
-    }
+function recomputeTotal() {
+  let total = 0;
+  for (const cell of cells) {
+    const pin = cell.reelSet.getPin(0, 0);
+    if (typeof pin?.payload?.value === 'number') total += pin.payload.value;
   }
-});
+  totalText.text = `TOTAL: ${total}`;
+}
 
-// Scripted: one new coin per spin, cycling positions.
-const arrivals = [
-  { col: 0, row: 0 }, { col: 2, row: 1 }, { col: 4, row: 2 },
-  { col: 1, row: 2 }, { col: 3, row: 0 }, { col: 2, row: 0 },
+// Hook pin events on every mini reel
+for (const cell of cells) {
+  cell.reelSet.events.on('pin:placed', (pin) => {
+    if (typeof pin.payload?.value === 'number') {
+      drawBadge(cell, pin.payload.value);
+      recomputeTotal();
+    }
+  });
+  cell.reelSet.events.on('pin:expired', () => {
+    clearBadge(cell.col, cell.row);
+    recomputeTotal();
+  });
+}
+
+// ── Scripted round sequence ─────────────────────────────────────────────
+const rounds = [
+  [{ col: 0, row: 2 }, { col: 2, row: 0 }, { col: 4, row: 1 }],
+  [{ col: 1, row: 0 }],
+  [{ col: 3, row: 2 }],
 ];
-let spinCount = 0;
 
 return {
-  reelSet,
-  nextResult: () => {
-    const idx = spinCount % arrivals.length;
-    // At the start of the cycle, release everything for a clean demo loop.
-    if (idx === 0) {
-      for (const pin of [...reelSet.pins.values()]) {
-        reelSet.unpin(pin.col, pin.row);
-      }
-    }
-    const grid = Array.from({ length: COLS }, () =>
-      Array.from({ length: ROWS }, () => FILLER[Math.floor(Math.random() * FILLER.length)]),
-    );
-    const next = arrivals[idx];
-    grid[next.col][next.row] = COIN;
-    spinCount++;
-    return grid;
-  },
   cleanup: () => {
-    try { badgeLayer.destroy({ children: true }); } catch {}
+    for (const b of badges.values()) try { b.destroy(); } catch {}
+    try { totalText.destroy(); } catch {}
+    for (const c of cells) try { c.reelSet.destroy(); } catch {}
+  },
+  onSpin: async () => {
+    // Reset state at the start of every demo cycle
+    for (const cell of cells) {
+      const pin = cell.reelSet.getPin(0, 0);
+      if (pin) cell.reelSet.unpin(0, 0);
+    }
+
+    for (const hits of rounds) {
+      const spinPromises = [];
+      const activeCells = [];
+      for (const cell of cells) {
+        // Pinned (= already held) cells skip their spin entirely.
+        if (cell.reelSet.getPin(0, 0)) continue;
+        activeCells.push(cell);
+        spinPromises.push(cell.reelSet.spin());
+      }
+
+      await new Promise((r) => setTimeout(r, 140));
+      for (const cell of activeCells) {
+        const isHit = hits.some((h) => h.col === cell.col && h.row === cell.row);
+        cell.reelSet.setResult([[isHit ? COIN : EMPTY]]);
+      }
+      await Promise.all(spinPromises);
+
+      // Pin every hit with its value payload — the engine keeps the coin
+      // visible for the rest of the feature.
+      for (const cell of activeCells) {
+        if (!hits.some((h) => h.col === cell.col && h.row === cell.row)) continue;
+        const value = COIN_VALUES[Math.floor(Math.random() * COIN_VALUES.length)];
+        cell.reelSet.pin(0, 0, COIN, { turns: 'permanent', payload: { value } });
+      }
+
+      await new Promise((r) => setTimeout(r, 650));
+    }
   },
 };

@@ -2,13 +2,15 @@
 // Injected globals: ReelSetBuilder, SpeedPresets, BlurSpriteSymbol, PIXI, gsap,
 //                   app, textures, blurTextures, SYMBOL_IDS, pickWeighted
 //
-// Expanding wild — when a wild lands, fill its entire column with wild for
-// this spin's evaluation only. We use `turns: 'eval'` pins, which are
-// cleared automatically at the next spin:start.
+// Expanding wild — when a wild lands, fill its entire column with wild
+// and keep the expansion for N spins. Each column-fill pin has `turns: 3`,
+// so the expanded column sticks around for three more spins before the
+// engine auto-expires the fill.
 
 const FILLER = ['round/round_1', 'round/round_2', 'royal/royal_1', 'square/square_1'];
 const WILD = 'wild/wild_1';
 const COLS = 5, ROWS = 3, SIZE = 90;
+const STICKY_TURNS = 3;
 
 const reelSet = new ReelSetBuilder()
   .reels(COLS)
@@ -31,19 +33,21 @@ const reelSet = new ReelSetBuilder()
   .ticker(app.ticker)
   .build();
 
-// ── Expand wilds on land ─────────────────────────────────────────────────
-// For every reel that has a wild somewhere in its visible rows, pin all
-// other rows of that reel with WILD for this spin's evaluation only.
+// ── Expand wilds on land, persist for N spins ───────────────────────────
+// For every reel that has a wild somewhere in its visible rows, pin every
+// row of that reel with WILD for STICKY_TURNS spins. The engine decrements
+// `turns` after each spin:allLanded and auto-expires pins at zero.
 //
-// `turns: 'eval'` means: apply now, expire at the NEXT spin:start.
-// The pins are cleared automatically — no manual cleanup needed.
+// Pinning the wild's own cell too means the "original" wild also benefits
+// from the sticky duration, so the entire column visibly stays wild until
+// all pins expire together.
 reelSet.events.on('spin:allLanded', ({ symbols }) => {
   for (let c = 0; c < symbols.length; c++) {
     const hasWild = symbols[c].includes(WILD);
     if (!hasWild) continue;
     for (let r = 0; r < symbols[c].length; r++) {
-      if (symbols[c][r] !== WILD) {
-        reelSet.pin(c, r, WILD, { turns: 'eval' });
+      if (!reelSet.getPin(c, r)) {
+        reelSet.pin(c, r, WILD, { turns: STICKY_TURNS });
       }
     }
   }
