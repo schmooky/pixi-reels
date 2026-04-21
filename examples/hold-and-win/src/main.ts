@@ -47,8 +47,16 @@ async function main() {
 
   const totalWidth = REEL_COUNT * (SYMBOL_SIZE + SYMBOL_GAP) - SYMBOL_GAP;
   const totalHeight = VISIBLE_ROWS * (SYMBOL_SIZE + SYMBOL_GAP) - SYMBOL_GAP;
-  const centerX = () => (app.screen.width - totalWidth) / 2;
-  const centerY = () => (app.screen.height - totalHeight) / 2 - 30;
+  const wrapper = new Container();
+  app.stage.addChild(wrapper);
+
+  function reposition() {
+    const pad = 16, uiH = 80;
+    const s = Math.min((app.screen.width - pad * 2) / totalWidth, (app.screen.height - pad * 2 - uiH) / totalHeight, 1);
+    wrapper.scale.set(s);
+    wrapper.x = (app.screen.width - totalWidth * s) / 2;
+    wrapper.y = (app.screen.height - totalHeight * s - uiH) / 2;
+  }
 
   const mainReelSet = new ReelSetBuilder()
     .reels(REEL_COUNT)
@@ -81,22 +89,17 @@ async function main() {
   }
 
   enableDebug(mainReelSet);
-  mainReelSet.x = centerX();
-  mainReelSet.y = centerY();
-
   const mainFrame = new Graphics();
   mainFrame.roundRect(-10, -10, totalWidth + 20, totalHeight + 20, 8);
   mainFrame.stroke({ color: 0x9b59b6, width: 3 });
   mainReelSet.addChildAt(mainFrame, 0);
-  app.stage.addChild(mainReelSet);
+  wrapper.addChild(mainReelSet);
 
   const statusEl = document.getElementById('status')!;
 
   const bonusContainer = new Container();
   bonusContainer.visible = false;
-  bonusContainer.x = centerX();
-  bonusContainer.y = centerY();
-  app.stage.addChild(bonusContainer);
+  wrapper.addChild(bonusContainer);
 
   interface BonusCell {
     col: number;
@@ -360,12 +363,8 @@ async function main() {
 
   function wait(ms: number): Promise<void> { return new Promise((r) => setTimeout(r, ms)); }
 
-  window.addEventListener('resize', () => {
-    mainReelSet.x = centerX();
-    mainReelSet.y = centerY();
-    bonusContainer.x = centerX();
-    bonusContainer.y = centerY();
-  });
+  reposition();
+  window.addEventListener('resize', reposition);
 }
 
 main().catch(console.error);

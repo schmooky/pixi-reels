@@ -8,7 +8,7 @@
  * On Vite HMR, when `sandbox.ts` changes, the page reloads and your new
  * reel config is mounted.
  */
-import { Application } from 'pixi.js';
+import { Application, Container } from 'pixi.js';
 import { gsap } from 'gsap';
 import { loadPrototypeSymbols } from '../../shared/prototypeSpriteLoader.js';
 import { createUI } from '../../shared/ui.js';
@@ -28,13 +28,19 @@ async function main() {
   const result: SandboxResult = buildSandbox(ctx);
   const reelSet = result.reelSet;
 
-  const center = () => {
-    reelSet.x = (app.screen.width - result.width) / 2;
-    reelSet.y = (app.screen.height - result.height) / 2 - 40;
-  };
-  center();
-  app.stage.addChild(reelSet);
-  window.addEventListener('resize', center);
+  const wrapper = new Container();
+  wrapper.addChild(reelSet);
+  app.stage.addChild(wrapper);
+
+  function reposition() {
+    const pad = 16, uiH = 80;
+    const s = Math.min((app.screen.width - pad * 2) / result.width, (app.screen.height - pad * 2 - uiH) / result.height, 1);
+    wrapper.scale.set(s);
+    wrapper.x = (app.screen.width - result.width * s) / 2;
+    wrapper.y = (app.screen.height - result.height * s - uiH) / 2;
+  }
+  reposition();
+  window.addEventListener('resize', reposition);
 
   const speeds = reelSet.speed.profileNames;
   const ui = createUI({

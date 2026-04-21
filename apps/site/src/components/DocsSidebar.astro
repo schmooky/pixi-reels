@@ -3,8 +3,19 @@ import type { NavSection } from '../content/nav.ts';
 interface Props { nav: NavSection[]; pathname: string; }
 const { nav, pathname } = Astro.props;
 ---
-<aside class="sticky top-20 self-start max-h-[calc(100vh-5.5rem)] overflow-y-auto pr-4">
-  <nav class="space-y-6">
+<aside class="md:sticky md:top-20 md:self-start md:max-h-[calc(100vh-5.5rem)] md:overflow-y-auto pr-4">
+  <button
+    id="sidebar-toggle"
+    class="md:hidden mb-3 flex w-full items-center justify-between rounded-md border border-border bg-card/60 px-3 py-2 text-sm font-medium text-foreground"
+    aria-expanded="true"
+    aria-controls="sidebar-nav"
+  >
+    <span>On this section</span>
+    <svg id="sidebar-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden>
+      <path d="M4 6l4 4 4-4"/>
+    </svg>
+  </button>
+  <nav id="sidebar-nav" class="space-y-6">
     {nav.map((section) => (
       <div>
         <div class="mb-2 px-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/80">
@@ -34,3 +45,16 @@ const { nav, pathname } = Astro.props;
     ))}
   </nav>
 </aside>
+
+<script>
+  const toggle = document.getElementById('sidebar-toggle');
+  const nav = document.getElementById('sidebar-nav');
+  const chevron = document.getElementById('sidebar-chevron');
+
+  toggle?.addEventListener('click', () => {
+    const isOpen = !nav?.classList.contains('hidden');
+    nav?.classList.toggle('hidden', isOpen);
+    toggle.setAttribute('aria-expanded', String(!isOpen));
+    if (chevron) chevron.style.transform = isOpen ? 'rotate(-90deg)' : '';
+  });
+</script>
