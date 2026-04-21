@@ -15,9 +15,9 @@ apis:
   - SymbolSpotlight.cycle
 ---
 
-import CascadeStarterRecipe from '../../components/recipes/CascadeStarterRecipe.tsx';
+import RecipePreview from '../../components/RecipePreview.tsx';
 
-<CascadeStarterRecipe client:only="react" />
+<RecipePreview slug="cascade-6x5" client:only="react" />
 
 A cascade/tumble slot on the engine. The library supplies the visual tumble animation via `CascadeMode` and `setResult()` to land each new grid deterministically — the cascade logic (cluster detection, survivor shift, refill) is yours to write.
 

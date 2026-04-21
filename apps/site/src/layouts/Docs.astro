@@ -58,7 +58,7 @@ const jsonLd = [
   article={{ section: sectionLabel[section] }}
   jsonLd={jsonLd}
 >
-  <div class="container grid gap-10 py-12 md:grid-cols-[220px_minmax(0,1fr)]">
+  <div class="container grid gap-6 py-8 md:gap-10 md:py-12 md:grid-cols-[220px_minmax(0,1fr)]">
     {nav.length > 0 && <DocsSidebar nav={nav} pathname={pathname} />}
     <article class:list={["prose-docs min-w-0 max-w-3xl animate-fade-in", { 'md:col-span-2 mx-auto': nav.length === 0 }]}>
       {eyebrow && (
