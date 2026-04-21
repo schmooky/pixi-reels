@@ -80,6 +80,10 @@ export { ObjectPool } from './pool/ObjectPool.js';
 export { SymbolSpotlight } from './spotlight/SymbolSpotlight.js';
 export type { SpotlightOptions, WinLine, CycleOptions } from './spotlight/SymbolSpotlight.js';
 
+// Pins (cell persistence primitive)
+export type { CellPin, CellPinOptions, PinExpireReason } from './pins/CellPin.js';
+export { pinKey } from './pins/CellPin.js';
+
 // Events
 export { EventEmitter } from './events/EventEmitter.js';
 export type {
