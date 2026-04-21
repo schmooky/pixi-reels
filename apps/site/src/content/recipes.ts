@@ -316,4 +316,30 @@ export const RECIPES: RecipeMeta[] = [
     apis: ['ReelSet.pin', 'CellPin.payload', 'CellPin.turns ("eval")'],
     tags: ['multiplier', 'positional', 'payload', 'cell-pin'],
   },
+
+  // ── movePin + frame exposure recipes ──────────────────────────────────
+  {
+    slug: 'walking-wild-pin',
+    title: 'Walking wild (movePin)',
+    oneLiner: 'Walking wild migrating one column left each spin — engine-native reelSet.movePin(), no ghost sprites.',
+    steps: [
+      "Pin new wilds on land with turns 'permanent'",
+      'Before each spin, movePin() each existing pin one column left',
+      'When a pin reaches column 0, unpin() — it has walked off the board',
+    ],
+    apis: ['ReelSet.pin', 'ReelSet.movePin', 'ReelSet.unpin', 'pin:moved event'],
+    tags: ['wild', 'walking', 'movement', 'cell-pin'],
+  },
+  {
+    slug: 'feature-mode-swap',
+    title: 'Feature mode swap',
+    oneLiner: 'Enter and exit a bonus mode at runtime by toggling a frame middleware — zero rebuild.',
+    steps: [
+      'Write a FrameMiddleware that rewrites frames for the bonus mode',
+      'On feature entry, call reelSet.frame.use(middleware)',
+      'On feature exit, call reelSet.frame.remove(name)',
+    ],
+    apis: ['ReelSet.frame.use', 'ReelSet.frame.remove', 'FrameMiddleware'],
+    tags: ['mode', 'feature', 'middleware', 'frame'],
+  },
 ];
