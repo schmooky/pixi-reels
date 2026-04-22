@@ -40,7 +40,6 @@ const reelSet = new ReelSetBuilder()
 // then walk every existing pin one column to the left. When a wild reaches
 // column 0, unpin it — it has walked off the board.
 async function walkPinsLeft() {
-  // Snapshot the pins before we modify, so we iterate a stable set
   const current = [...reelSet.pins.values()];
   for (const pin of current) {
     if (pin.col <= 0) {
@@ -50,13 +49,52 @@ async function walkPinsLeft() {
     await reelSet.movePin(
       { col: pin.col, row: pin.row },
       { col: pin.col - 1, row: pin.row },
-      { duration: 350, easing: 'power2.inOut' },
+      {
+        duration: 350,
+        easing: 'power2.inOut',
+        // onFlightCreated / onFlightCompleted give you the pooled flight
+        // ReelSymbol. For a Spine asset this is where you'd set a `run`
+        // animation track for the flight duration. Here the symbol is a
+        // plain sprite, so we add a scale pulse to make the hook visible.
+        onFlightCreated: (flight) => {
+          flight.view.scale.set(1);
+          gsap.to(flight.view.scale, {
+            x: 1.22,
+            y: 1.22,
+            duration: 0.18,
+            ease: 'sine.out',
+            yoyo: true,
+            repeat: 1,
+          });
+        },
+        onFlightCompleted: (flight) => {
+          gsap.killTweensOf(flight.view.scale);
+          flight.view.scale.set(1, 1);
+        },
+      },
     );
   }
 }
 
+// Overlay event hook — fires whenever an overlay ReelSymbol is created
+// (at spin:start for every active pin). This is the Spine-animation hook:
+// for a SpineSymbol you'd cast and call `overlay.setAnimation('idle', true)`
+// or similar. Here we give every sticky-wild overlay a gentle pulse so it's
+// distinct from the final cell render on land.
+reelSet.events.on('pin:overlayCreated', (_pin, overlay) => {
+  gsap.fromTo(
+    overlay.view,
+    { alpha: 0.7 },
+    { alpha: 1, duration: 0.4, repeat: -1, yoyo: true, ease: 'sine.inOut' },
+  );
+});
+
+reelSet.events.on('pin:overlayDestroyed', (_pin, overlay) => {
+  gsap.killTweensOf(overlay.view);
+  overlay.view.alpha = 1;
+});
+
 reelSet.events.on('spin:allLanded', ({ symbols }) => {
-  // Pin any newly-landed wilds that aren't already pinned.
   for (let c = 0; c < symbols.length; c++) {
     for (let r = 0; r < symbols[c].length; r++) {
       if (symbols[c][r] === WILD && !reelSet.getPin(c, r)) {

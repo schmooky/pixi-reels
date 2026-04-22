@@ -1,0 +1,138 @@
+---
+layout: ../../layouts/Docs.astro
+title: Spine pins + movePin
+section: guides
+eyebrow: Building blocks
+description: How CellPin and movePin behave when the pinned cell is a Spine skeleton — lifecycle, animation hooks, and a full walking-Spine-wild example.
+---
+
+`reelSet.pin()` and `reelSet.movePin()` work out of the box with Spine symbols because both go through the `SymbolFactory`. Whatever symbol class you registered for the id (`SpriteSymbol`, `AnimatedSpriteSymbol`, `SpineSymbol`, or your own subclass) is what the engine acquires for overlays and flight symbols. Position, size, reparenting, and pool lifecycle all work identically.
+
+The only extra concern Spine introduces is animation control during the in-motion phases — and the engine exposes hooks for that.
+
+## The three Spine instances involved
+
+For a single pinned Spine symbol, at different moments you will have up to three distinct Spine instances in play:
+
+| Instance | When it exists | Where it lives |
+|---|---|---|
+| **Reel-cell symbol** | Always (when idle / landed) | `reel.container` inside `viewport.maskedContainer` |
+| **Overlay symbol** | During a spin, per active pin | `viewport.unmaskedContainer`, zIndex 10000 |
+| **Flight symbol** | During `movePin` tween | `viewport.unmaskedContainer` |
+
+All three are pooled. All three go through `onActivate(symbolId)` → Spine defaults to `idle`.
+
+## Lifecycle in full
+
+```
+pin(col, row, 'spine-wild', { turns: 'permanent' })
+  _applyPinVisually → reel.placeSymbols
+  Reel cell gets a fresh Spine in idle.
+
+spin() begins
+  _ensurePinOverlay(pin)
+  Overlay Spine acquired, positioned at pin's cell, added to
+  unmaskedContainer. onActivate runs → plays idle.
+  fires pin:overlayCreated(pin, overlay)   <- set overlay animation here
+
+  Reel scrolls normally underneath. Overlay is what the player sees.
+
+spin lands
+  fires pin:overlayDestroyed(pin, overlay) <- stop animations here
+  Overlay released to pool. The reel cell's Spine now shows (same
+  instance idle state).
+
+movePin(from, to, opts)
+  Flight Spine acquired, positioned at from, added to unmaskedContainer.
+  opts.onFlightCreated(flight) fires      <- Spine: setAnimation('run', true)
+
+  GSAP tweens flight.view.x / .y from source to destination world coords.
+
+  opts.onFlightCompleted(flight) fires    <- Spine: setAnimation('idle', true)
+  Reel cell at destination updated, flight released.
+  fires pin:moved(newPin, oldCoord)
+```
+
+## Minimal example
+
+Assumes you have a `SpineSymbol`-derived class that exposes a `setAnimation` method. The built-in `SpineSymbol` sets idle/win tracks internally; a walking wild needs a subclass:
+
+```ts
+import { SpineSymbol, type SpineSymbolOptions } from 'pixi-reels';
+
+export class WalkingSpineSymbol extends SpineSymbol {
+  constructor(options: SpineSymbolOptions) {
+    super(options);
+  }
+
+  /** Publicly swap the current animation track. */
+  setAnimation(name: string, loop = true): void {
+    const spine = (this as any)._spine;
+    if (!spine) return;
+    if (!spine.skeleton.data.findAnimation(name)) return;
+    spine.state.setAnimation(0, name, loop);
+  }
+}
+```
+
+Then wire the hooks:
+
+```ts
+// Overlay: sticky idle while the reel spins
+reelSet.events.on('pin:overlayCreated', (_pin, overlay) => {
+  (overlay as WalkingSpineSymbol).setAnimation('idle-sticky', true);
+});
+
+// Flight: run animation during movePin
+async function walkLeft(pin: CellPin) {
+  await reelSet.movePin(
+    { col: pin.col, row: pin.row },
+    { col: pin.col - 1, row: pin.row },
+    {
+      duration: 600,
+      onFlightCreated: (flight) => {
+        (flight as WalkingSpineSymbol).setAnimation('run', true);
+      },
+      onFlightCompleted: (flight) => {
+        (flight as WalkingSpineSymbol).setAnimation('idle', true);
+      },
+    },
+  );
+}
+```
+
+## Important gotchas
+
+### 1. The flight symbol is a fresh acquire
+
+It is **not** the same instance as the reel-cell Spine. Any transient state you set on the cell Spine (animation tracks, skeleton colour, skin) is not inherited by the flight instance. The flight starts from `onActivate` defaults.
+
+This is usually what you want — your flight animation is its own entity — but be deliberate about it.
+
+### 2. Overlay animations don't carry over to the landed cell
+
+On `spin:allLanded`, the overlay is released and the reel cell takes over display. If you set a special animation on the overlay (say `idle-sticky`), the reel cell will continue to show whatever its own `onActivate` set (plain `idle`).
+
+If you want the landed cell to keep the sticky-idle animation, also set it on the reel cell on `pin:placed`:
+
+```ts
+reelSet.events.on('pin:placed', (pin) => {
+  if (reelSet.isSpinning) return; // overlay will handle it
+  const sym = reelSet.reels[pin.col].getSymbolAt(pin.row);
+  (sym as WalkingSpineSymbol).setAnimation?.('idle-sticky', true);
+});
+```
+
+### 3. Callback errors don't crash `movePin`
+
+`onFlightCreated` and `onFlightCompleted` errors are caught internally. The tween always runs, the pin always moves, the flight is always released. This keeps a bug in your animation code from leaving the engine in a bad state.
+
+### 4. `resize()` runs on every acquire
+
+`SpineSymbol.resize` computes a scale from `spine.getBounds()`. If the Spine hasn't loaded yet (async skeleton data) you may see a zero-sized sprite for the first frame. In practice the skeleton is always ready by the time the pool is warm; keep an eye on it if you see a size pop.
+
+## Related
+
+- [Walking wild (movePin) recipe](/recipes/walking-wild-pin/) — the same pattern, runnable
+- [Symbols guide](/guides/symbols/) — authoring custom `ReelSymbol` subclasses
+- [Spin lifecycle](/guides/spin-lifecycle/) — events fired around a spin
