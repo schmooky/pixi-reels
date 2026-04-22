@@ -460,6 +460,13 @@ export class ReelSet extends Container implements Disposable {
     flight.view.y = fromCellY;
     this._viewport.unmaskedContainer.addChild(flight.view);
 
+    // onFlightCreated hook — fires after the flight symbol is in place but
+    // before the tween begins. This is where consumers switch a Spine
+    // symbol onto a `run` animation for the flight duration.
+    try {
+      opts?.onFlightCreated?.(flight);
+    } catch { /* caller bug — don't let a hook kill the animation */ }
+
     // Tween.
     const duration = (opts?.duration ?? 400) / 1000;
     const easing = opts?.easing ?? 'power2.inOut';
@@ -472,6 +479,12 @@ export class ReelSet extends Container implements Disposable {
         onComplete: () => resolve(),
       });
     });
+
+    // onFlightCompleted hook — fires before releasing the flight symbol,
+    // so consumers can return a Spine to `idle` or play a landing animation.
+    try {
+      opts?.onFlightCompleted?.(flight);
+    } catch { /* ignore */ }
 
     // Apply the pin visually at the destination cell.
     const toVisible = toReel.getVisibleSymbols();
@@ -640,7 +653,10 @@ export class ReelSet extends Container implements Disposable {
 
   /**
    * Create an overlay ReelSymbol for a pin in the viewport's unmasked
-   * container. No-op if one already exists at that cell.
+   * container. No-op if one already exists at that cell. Fires
+   * `pin:overlayCreated` after the overlay is positioned and added to the
+   * display list — that's the hook consumers use to drive animation state
+   * (e.g. setting a Spine track).
    */
   private _ensurePinOverlay(pin: CellPin): void {
     const key = pinKey(pin.col, pin.row);
@@ -657,12 +673,29 @@ export class ReelSet extends Container implements Disposable {
     overlay.view.zIndex = 10000;
     this._viewport.unmaskedContainer.addChild(overlay.view);
     this._pinOverlays.set(key, overlay);
+    this._events.emit('pin:overlayCreated', pin, overlay);
   }
 
-  /** Destroy a single pin's overlay, if present. */
+  /**
+   * Destroy a single pin's overlay, if present. Fires
+   * `pin:overlayDestroyed` BEFORE the overlay is released to the pool, so
+   * consumers can stop animations / remove listeners on a still-valid
+   * instance.
+   */
   private _destroyPinOverlay(key: string): void {
     const overlay = this._pinOverlays.get(key);
     if (!overlay) return;
+    // Best-effort pin lookup — at destroy time the pin may or may not
+    // still be in the map (e.g. unpin removes the pin before destroying
+    // the overlay). We pass the pin if we have it, a coord-only stub
+    // otherwise, so handlers always get positional context.
+    const pin =
+      this._pins.get(key) ??
+      (() => {
+        const [c, r] = key.split(':').map(Number);
+        return { col: c, row: r, symbolId: overlay.symbolId, turns: 'eval' as const };
+      })();
+    this._events.emit('pin:overlayDestroyed', pin, overlay);
     this._viewport.unmaskedContainer.removeChild(overlay.view);
     this._symbolFactory.release(overlay);
     this._pinOverlays.delete(key);
@@ -670,10 +703,7 @@ export class ReelSet extends Container implements Disposable {
 
   /** Destroy every active pin overlay. Called on spin land and on destroy. */
   private _destroyAllPinOverlays(): void {
-    for (const [, overlay] of this._pinOverlays) {
-      this._viewport.unmaskedContainer.removeChild(overlay.view);
-      this._symbolFactory.release(overlay);
-    }
-    this._pinOverlays.clear();
+    const keys = [...this._pinOverlays.keys()];
+    for (const key of keys) this._destroyPinOverlay(key);
   }
 }

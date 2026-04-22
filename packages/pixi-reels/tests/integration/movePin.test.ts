@@ -223,3 +223,86 @@ describe('movePin — chained moves', () => {
     }
   });
 });
+
+describe('movePin — flight callbacks', () => {
+  /**
+   * onFlightCreated / onFlightCompleted expose the pooled flight ReelSymbol
+   * so consumers can drive animation state on it — e.g. switch a Spine
+   * symbol onto a `run` animation for the duration of the flight.
+   */
+  it('invokes onFlightCreated with the flight ReelSymbol before the tween', async () => {
+    const h = makeHarness();
+    try {
+      h.reelSet.pin(2, 1, 'wild');
+
+      // Capture state AT callback time — the flight instance is recycled
+      // back to the pool after the move, so its symbolId is '' by the time
+      // the outer assertion runs.
+      let capturedSymbolId: string | null = null;
+      let capturedHasView = false;
+      await h.reelSet.movePin({ col: 2, row: 1 }, { col: 1, row: 1 }, {
+        duration: 1,
+        backfill: 'filler',
+        onFlightCreated: (flight) => {
+          capturedSymbolId = (flight as { symbolId: string }).symbolId;
+          capturedHasView = !!(flight as { view: unknown }).view;
+        },
+      });
+
+      expect(capturedSymbolId).toBe('wild');
+      expect(capturedHasView).toBe(true);
+    } finally {
+      h.destroy();
+    }
+  });
+
+  it('invokes onFlightCompleted after the tween, before release', async () => {
+    const h = makeHarness();
+    try {
+      h.reelSet.pin(2, 1, 'wild');
+
+      const order: string[] = [];
+      let flightRef: unknown = null;
+
+      await h.reelSet.movePin({ col: 2, row: 1 }, { col: 1, row: 1 }, {
+        duration: 1,
+        backfill: 'filler',
+        onFlightCreated: (flight) => {
+          order.push('created');
+          flightRef = flight;
+        },
+        onFlightCompleted: (flight) => {
+          order.push('completed');
+          expect(flight).toBe(flightRef);
+        },
+      });
+
+      expect(order).toEqual(['created', 'completed']);
+    } finally {
+      h.destroy();
+    }
+  });
+
+  it('callback thrown errors do not break the move', async () => {
+    const h = makeHarness();
+    try {
+      h.reelSet.pin(2, 1, 'wild');
+
+      await h.reelSet.movePin({ col: 2, row: 1 }, { col: 1, row: 1 }, {
+        duration: 1,
+        backfill: 'filler',
+        onFlightCreated: () => {
+          throw new Error('boom');
+        },
+        onFlightCompleted: () => {
+          throw new Error('boom again');
+        },
+      });
+
+      expect(h.reelSet.getPin(2, 1)).toBeUndefined();
+      expect(h.reelSet.getPin(1, 1)).toBeDefined();
+    } finally {
+      h.destroy();
+    }
+  });
+});

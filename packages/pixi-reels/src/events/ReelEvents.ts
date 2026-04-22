@@ -33,6 +33,22 @@ export interface ReelSetEvents extends Record<string, unknown[]> {
   'pin:placed': [pin: CellPin];
   'pin:moved': [pin: CellPin, from: { col: number; row: number }];
   'pin:expired': [pin: CellPin, reason: PinExpireReason];
+  /**
+   * Fires whenever the engine creates a visual overlay symbol for a pin
+   * during a spin's motion phase. The `overlay` argument is the pooled
+   * ReelSymbol instance — typed as `unknown` here to keep this module
+   * free of symbol-layer imports; cast to your concrete symbol class.
+   *
+   * Use this hook to drive animation state on the overlay (e.g. set a
+   * Spine animation track). The overlay is recycled on `pin:overlayDestroyed`.
+   */
+  'pin:overlayCreated': [pin: CellPin, overlay: unknown];
+  /**
+   * Fires when the engine is about to release a pin's visual overlay
+   * back to the pool (on spin:allLanded, unpin, or pin replacement).
+   * Use this hook to stop any animations or listeners you attached.
+   */
+  'pin:overlayDestroyed': [pin: CellPin, overlay: unknown];
   'destroyed': [];
 }
 

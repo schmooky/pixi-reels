@@ -490,3 +490,93 @@ describe('CellPin — visual overlay during spin motion', () => {
     }
   });
 });
+
+describe('CellPin — overlay events (pin:overlayCreated / :overlayDestroyed)', () => {
+  /**
+   * These events expose the engine-managed overlay ReelSymbol so game code
+   * can drive animation state on it — e.g. set a Spine animation track for
+   * the duration the pin is sticky during a spin.
+   */
+  it('fires pin:overlayCreated with the pin and the overlay symbol', async () => {
+    const h = makeHarness();
+    try {
+      h.reelSet.pin(2, 1, 'wild');
+
+      const events = captureEvents(h.reelSet, ['pin:overlayCreated']);
+
+      const promise = h.reelSet.spin();
+      expect(events.length).toBe(1);
+
+      const [pin, overlay] = events[0].args as [
+        { col: number; row: number; symbolId: string },
+        { symbolId: string; view: unknown },
+      ];
+      expect(pin).toMatchObject({ col: 2, row: 1, symbolId: 'wild' });
+      expect(overlay).toBeDefined();
+      expect(overlay.symbolId).toBe('wild');
+      expect(overlay.view).toBeDefined();
+
+      h.reelSet.setResult([
+        ['a', 'b', 'c'], ['a', 'b', 'c'], ['a', 'b', 'c'],
+        ['a', 'b', 'c'], ['a', 'b', 'c'],
+      ]);
+      h.reelSet.skip();
+      await promise;
+    } finally {
+      h.destroy();
+    }
+  });
+
+  it('fires pin:overlayDestroyed on spin:allLanded before releasing', async () => {
+    const h = makeHarness();
+    try {
+      h.reelSet.pin(2, 1, 'wild');
+
+      // Capture state at event time — the overlay is recycled to the pool
+      // right after the event fires (deactivate zeroes _symbolId).
+      let capturedOverlaySymbolId: string | null = null;
+      let capturedPinCol = -1;
+      let capturedPinRow = -1;
+      h.reelSet.events.on('pin:overlayDestroyed', (pin, overlay) => {
+        capturedPinCol = pin.col;
+        capturedPinRow = pin.row;
+        capturedOverlaySymbolId = (overlay as { symbolId: string }).symbolId;
+      });
+
+      const promise = h.reelSet.spin();
+      h.reelSet.setResult([
+        ['a', 'b', 'c'], ['a', 'b', 'c'], ['a', 'b', 'c'],
+        ['a', 'b', 'c'], ['a', 'b', 'c'],
+      ]);
+      h.reelSet.skip();
+      await promise;
+
+      expect(capturedPinCol).toBe(2);
+      expect(capturedPinRow).toBe(1);
+      expect(capturedOverlaySymbolId).toBe('wild');
+    } finally {
+      h.destroy();
+    }
+  });
+
+  it('fires pin:overlayDestroyed on unpin() during spin', async () => {
+    const h = makeHarness();
+    try {
+      h.reelSet.pin(1, 1, 'wild');
+      const events = captureEvents(h.reelSet, ['pin:overlayDestroyed']);
+
+      const promise = h.reelSet.spin();
+      h.reelSet.unpin(1, 1);
+      expect(events.length).toBeGreaterThanOrEqual(1);
+
+      h.reelSet.setResult([
+        ['a', 'b', 'c'], ['a', 'b', 'c'], ['a', 'b', 'c'],
+        ['a', 'b', 'c'], ['a', 'b', 'c'],
+      ]);
+      h.reelSet.skip();
+      await promise;
+    } finally {
+      h.destroy();
+    }
+  });
+});

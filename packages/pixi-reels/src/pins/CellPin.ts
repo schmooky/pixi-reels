@@ -52,7 +52,7 @@ export interface CellCoord {
   row: number;
 }
 
-/** Options for `reelSet.movePin()` — the flight animation tuning. */
+/** Options for `reelSet.movePin()` — flight animation tuning + lifecycle hooks. */
 export interface MovePinOptions {
   /** Animation duration in milliseconds. Default 400. */
   duration?: number;
@@ -63,6 +63,23 @@ export interface MovePinOptions {
    * engine picks a random symbol from its frame builder's random provider.
    */
   backfill?: string;
+  /**
+   * Fires after the flight symbol is acquired, positioned at `from`, and
+   * added to the viewport — but before the tween begins. Use this hook to
+   * drive animation state on the flight instance. For example: cast to
+   * your `SpineSymbol` subclass and switch to a `run` animation for the
+   * duration of the flight.
+   *
+   * `flight` is the pooled `ReelSymbol` instance. The type is `unknown` so
+   * this module stays free of circular imports; cast in the caller.
+   */
+  onFlightCreated?: (flight: unknown) => void;
+  /**
+   * Fires after the tween completes, before the flight symbol is released
+   * back to the pool. Use this hook to play a landing animation or return
+   * a Spine symbol to `idle` before its instance is recycled.
+   */
+  onFlightCompleted?: (flight: unknown) => void;
 }
 
 /** Map key used internally and exposed by `reelSet.pins`. */
