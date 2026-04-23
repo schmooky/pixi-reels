@@ -21,6 +21,7 @@ export type {
   OffsetXMode,
   Matrix,
   Position,
+  CellBounds,
   MaskConfig,
   ReelSetInternalConfig,
 } from './config/types.js';

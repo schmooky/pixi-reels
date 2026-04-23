@@ -12,6 +12,7 @@ export interface TestReelSetOptions {
   symbolIds?: string[];
   weights?: Record<string, number>;
   symbolSize?: { width: number; height: number };
+  symbolGap?: { x: number; y: number };
 }
 
 export interface TestReelSetHandle {
@@ -65,6 +66,10 @@ export function createTestReelSet(opts: TestReelSetOptions = {}): TestReelSetHan
         registry.register(id, HeadlessSymbol, {});
       }
     });
+
+  if (opts.symbolGap) {
+    builder.symbolGap(opts.symbolGap.x, opts.symbolGap.y);
+  }
 
   if (Object.keys(weights).length > 0) {
     builder.weights(weights);

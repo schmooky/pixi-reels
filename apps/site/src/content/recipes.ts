@@ -317,6 +317,44 @@ export const RECIPES: RecipeMeta[] = [
     tags: ['multiplier', 'positional', 'payload', 'cell-pin'],
   },
 
+  // ── getCellBounds — coordinate utilities ──────────────────────────────
+  {
+    slug: 'cell-bounds',
+    title: 'Cell bounds — overlays, paylines & hit areas',
+    oneLiner: 'getCellBounds(col, row) returns the pixel rectangle of any visible cell — draw paylines, win outlines, or hit areas that align exactly with symbols.',
+    steps: [
+      'Call reelSet.getCellBounds(col, row) to get { x, y, width, height } in ReelSet-local coords',
+      'Draw a PIXI.Graphics outline or line using those coordinates',
+      'addChild the graphic to reelSet so it stays aligned with the board',
+    ],
+    apis: ['ReelSet.getCellBounds', 'CellBounds'],
+    tags: ['utility', 'paylines', 'hit-areas', 'graphics'],
+  },
+  {
+    slug: 'cell-hit-areas',
+    title: 'Cell hit areas — click to pick, hover to preview',
+    oneLiner: 'Attach pointer events to individual grid cells with getCellBounds — cursor turns to pointer on hover, click toggles a pick state.',
+    steps: [
+      'For each cell, call reelSet.getCellBounds(col, row)',
+      'Build an invisible PIXI.Graphics rect with eventMode "static" + cursor "pointer"',
+      'Wire pointerover / pointerout / pointertap to drive hover + pick state',
+    ],
+    apis: ['ReelSet.getCellBounds', 'PIXI.Graphics.eventMode', 'PIXI.Graphics.cursor'],
+    tags: ['utility', 'hit-areas', 'interaction', 'cursor'],
+  },
+  {
+    slug: 'cell-hit-areas-portrait',
+    title: 'Portrait (non-square) cells + hit areas',
+    oneLiner: 'Proof that getCellBounds makes no square-cell assumption — 70 × 105 portrait cells, fit-scaled sprites, pointer-accurate hit areas.',
+    steps: [
+      'Call .symbolSize(width, height) with any ratio — e.g. 70 × 105 for portrait',
+      'Register symbols with BlurSpriteSymbol and fit true so art preserves aspect ratio',
+      'Use getCellBounds(col, row) to build hit-area Graphics that match the tall rectangles',
+    ],
+    apis: ['ReelSet.getCellBounds', 'ReelSetBuilder.symbolSize', 'BlurSpriteSymbol fit option'],
+    tags: ['utility', 'hit-areas', 'non-square', 'proportions'],
+  },
+
   // ── movePin + frame exposure recipes ──────────────────────────────────
   {
     slug: 'walking-wild-pin',
