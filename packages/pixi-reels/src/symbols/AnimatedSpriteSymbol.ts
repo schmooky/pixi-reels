@@ -73,5 +73,11 @@ export class AnimatedSpriteSymbol extends ReelSymbol {
   resize(width: number, height: number): void {
     this._animSprite.width = width;
     this._animSprite.height = height;
+    // Position the sprite to match its anchor so it fills the cell.
+    // Without this, an anchor of (0.5, 0.5) would render the sprite with
+    // its centre at the cell's top-left corner — only the bottom-right
+    // quadrant visible inside the mask.
+    this._animSprite.x = width * this._animSprite.anchor.x;
+    this._animSprite.y = height * this._animSprite.anchor.y;
   }
 }
