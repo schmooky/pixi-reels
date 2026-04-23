@@ -223,14 +223,14 @@ export const RECIPES: RecipeMeta[] = [
   {
     slug: 'expanding-wild-pin',
     title: 'Expanding wild',
-    oneLiner: 'Wild lands, entire column becomes wild for evaluation — then auto-clears at next spin.',
+    oneLiner: 'Wild lands, entire column becomes wild for N spins — auto-expires when the turn counter runs out.',
     steps: [
       'On spin:allLanded, find every reel containing a wild',
-      'For every other row in that reel, pin with { turns: "eval" }',
-      'Pins survive through your win evaluation and clear automatically',
+      'Pin every row of that reel with { turns: N } — the column stays wild for N more spins',
+      'The engine decrements turns after each spin:allLanded and expires pins at zero',
     ],
-    apis: ['ReelSet.pin', 'CellPin.turns ("eval")'],
-    tags: ['wild', 'expanding', 'cell-pin'],
+    apis: ['ReelSet.pin', 'CellPin.turns (number)'],
+    tags: ['wild', 'expanding', 'sticky', 'cell-pin'],
   },
   {
     slug: 'book-expanding-pin',

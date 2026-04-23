@@ -96,6 +96,27 @@ describe('movePin — state', () => {
 });
 
 describe('movePin — errors', () => {
+  it('throws when called while spinning', async () => {
+    const h = makeHarness();
+    try {
+      h.reelSet.pin(2, 1, 'wild');
+      const spinPromise = h.reelSet.spin();
+
+      await expect(
+        h.reelSet.movePin({ col: 2, row: 1 }, { col: 1, row: 1 }, { duration: 1 }),
+      ).rejects.toThrow(/cannot move pin while spinning/);
+
+      h.reelSet.setResult([
+        ['a', 'b', 'c'], ['a', 'b', 'c'], ['a', 'b', 'c'],
+        ['a', 'b', 'c'], ['a', 'b', 'c'],
+      ]);
+      h.reelSet.skip();
+      await spinPromise;
+    } finally {
+      h.destroy();
+    }
+  });
+
   it('throws when no pin exists at source', async () => {
     const h = makeHarness();
     try {
