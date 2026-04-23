@@ -1,0 +1,43 @@
+---
+layout: ../../layouts/Recipe.astro
+title: Custom per-symbol animation
+description: Skip playWin() — drive each cell with a GSAP timeline, styled per win.id.
+tags: [wins, gsap]
+steps:
+  - Pass a `symbolAnim` callback to WinPresenter
+  - Receive (symbol, cell, win) and return a Promise — the presenter awaits it
+  - Style per win by switching on `win.id` / `win.kind`
+apis:
+  - WinPresenter.symbolAnim
+  - WinSymbolAnim type
+---
+
+import code from '../../recipes/paylines-custom-animation.recipe.ts?raw';
+import { RecipeRunner } from '../../components/RecipeRunner.tsx';
+
+<RecipeRunner code={code} client:only="react" />
+
+## The minimum code
+
+```ts
+const presenter = new WinPresenter(reelSet, {
+  stagger: 70,
+  symbolAnim: async (symbol, cell, win) => {
+    const peak = win.id === 0 ? 1.35 : 1.18;  // per-win styling
+    await bouncePulse(symbol.view, peak, 220);
+  },
+});
+```
+
+## Three modes in one field
+
+`symbolAnim` accepts three shapes:
+
+| Value | Behaviour |
+|---|---|
+| `'win'` (default) | calls `symbol.playWin()` — your `ReelSymbol` subclass's hook |
+| any other string | calls `symbol.playAnimation(name)` if present (e.g. `SpineSymbol`), else falls back to `playWin()` |
+| `(symbol, cell, win) => Promise<void>` | fully custom — you decide what to run |
+
+The presenter still owns dim, stagger, events, and cancellation — the
+callback only replaces the per-cell gesture.

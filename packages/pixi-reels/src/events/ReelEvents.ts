@@ -1,11 +1,13 @@
-import type { SpeedProfile } from '../config/types.js';
+import type {
+  SpeedProfile,
+  Win,
+  SymbolPosition,
+} from '../config/types.js';
 import type { CellPin, PinExpireReason } from '../pins/CellPin.js';
 
-/** Position of a symbol on the reel grid. */
-export interface SymbolPosition {
-  reelIndex: number;
-  rowIndex: number;
-}
+// Re-export SymbolPosition (lives in config/types) so existing imports
+// from this module keep working.
+export type { SymbolPosition };
 
 /** Result returned when a spin completes. */
 export interface SpinResult {
@@ -30,6 +32,29 @@ export interface ReelSetEvents extends Record<string, unknown[]> {
   'speed:changed': [profile: SpeedProfile, previous: SpeedProfile];
   'spotlight:start': [positions: SymbolPosition[]];
   'spotlight:end': [];
+  /**
+   * WinPresenter started a sequence. Fires once per `show()` call, with
+   * the full list of wins in the order they'll be shown (sorted by
+   * `value` desc by default).
+   */
+  'win:start': [wins: readonly Win[]];
+  /**
+   * A single win is now being presented. Fires once per win per cycle —
+   * before `win:symbol` fires for its cells. Subscribe to draw per-win
+   * visuals (payline polyline, cluster outline, number popup) using
+   * `reelSet.getCellBounds(col, row)`.
+   */
+  'win:group': [win: Win, cells: readonly SymbolPosition[]];
+  /**
+   * A specific cell is being animated. Fires once per cell per win per
+   * cycle. `symbol` is typed as `unknown` to keep this module free of
+   * symbol-layer imports; cast to `ReelSymbol` (or your subclass).
+   * When `WinPresenter.stagger > 0`, successive cells fire this event
+   * one after another with that gap.
+   */
+  'win:symbol': [symbol: unknown, cell: SymbolPosition, win: Win];
+  /** WinPresenter finished — either naturally (`complete`) or via abort. */
+  'win:end': [reason: 'complete' | 'aborted'];
   'pin:placed': [pin: CellPin];
   'pin:moved': [pin: CellPin, from: { col: number; row: number }];
   'pin:expired': [pin: CellPin, reason: PinExpireReason];

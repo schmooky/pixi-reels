@@ -138,6 +138,78 @@ reelSet.events.on('spin:reelLanded', (reelIndex) => {
 
 Missing animations are silent no-ops. If your asset doesn't have `landing`, the call is a free-lunch skip.
 
+## Presenting wins
+
+`pixi-reels` never computes wins, and it never draws them. Its one job for
+wins is to **animate the winning cells** and fire events so your game code
+can overlay whatever visuals fit the art.
+
+```ts
+import { WinPresenter, type Win } from 'pixi-reels';
+
+const presenter = new WinPresenter(reelSet, {
+  stagger: 70,         // left-to-right sweep; 0 for simultaneous flash
+  cycleGap: 350,       // ms between successive wins
+});
+
+reelSet.events.on('spin:complete', async (result) => {
+  const wins: Win[] = await server.wins(result);   // your shape, your math
+  await presenter.show(wins);
+});
+reelSet.events.on('spin:start', () => presenter.abort());
+```
+
+### The Win shape
+
+```ts
+interface Win {
+  cells: SymbolPosition[];  // order matters when stagger > 0
+  value?: number;           // used for default value-desc sort
+  kind?: string;            // optional tag for routing
+  id?: number;              // optional stable id
+}
+```
+
+One shape covers every win type — paylines, cluster pops, ways-to-win,
+scatters, bonus reveals. The presenter only cares about `cells`.
+
+### Two presentation modes, one option
+
+| `stagger` | Visual |
+|---|---|
+| `0` (default) | All cells animate together — a clean flash |
+| `60`–`90` | Cells animate one after another — a left-to-right sweep if you pass cells in reel order |
+
+### Drawing your own overlays
+
+Every per-win visual — the polyline, a cluster outline, a win-amount
+popup, a sound cue — is your code reacting to events:
+
+| Event | Fires | Payload |
+|---|---|---|
+| `win:start` | once per `show()` | ordered wins list |
+| `win:group` | once per win per cycle | win, cell positions |
+| `win:symbol` | once per cell per win per cycle | symbol, cell, win |
+| `win:end` | once per `show()` | `'complete'` or `'aborted'` |
+
+Plot graphics with `reelSet.getCellBounds(col, row)` — see the
+[paylines-events-only](/recipes/paylines-events-only/) recipe.
+
+### Cascades reuse the same API
+
+In `runCascade`'s `onWinnersVanish` hook, call `presenter.show([{ cells: winners }])`.
+Cluster pops and payline hits are the same shape to the presenter — no
+new type, no new method.
+
+## Symbol layering and overflow
+
+Slot art often overflows the cell — a drop-shadowed wild, a celebration frame bigger than its box. Two knobs control render order:
+
+- **Per-symbol base:** `symbolData.zIndex` on each registered symbol. The library multiplies it by `100` and adds the symbol's current visual row, so scatters / bonuses draw in front of regulars, and bottom-row symbols draw in front of upper rows — overflow naturally spills downward without clipping neighbours.
+- **Per-reel ordering:** `reel.container.zIndex` defaults to `reelIndex`, so the rightmost reel draws on top. If your art overflows bottom-left instead of bottom-right, flip the sign: `reel.container.zIndex = -reelIndex` right after building the reel set.
+
+For mid-spin celebrations that need to break out of the reel mask entirely, use `reelSet.spotlight` (dim + promote) or pass a renderer that draws into `reelSet.viewport.unmaskedContainer`.
+
 ## Speed modes and "feel"
 
 `SpeedManager` holds named `SpeedProfile` objects. Switch at runtime:

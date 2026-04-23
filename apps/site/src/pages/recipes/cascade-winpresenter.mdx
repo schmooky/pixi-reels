@@ -1,0 +1,61 @@
+---
+layout: ../../layouts/Recipe.astro
+title: Cascade pops with WinPresenter
+description: Drive cascade cell pops with the same WinPresenter you use for paylines. One API, one shape.
+tags: [wins, cascade]
+steps:
+  - Build a WinPresenter — no special cluster config, it already works
+  - In runCascade's onWinnersVanish, pass the winners as one Win and await it
+  - Tumble + drop continues when the pop resolves
+apis:
+  - WinPresenter
+  - runCascade (onWinnersVanish)
+  - win:group event
+---
+
+import code from '../../recipes/cascade-winpresenter.recipe.ts?raw';
+import { RecipeRunner } from '../../components/RecipeRunner.tsx';
+
+<RecipeRunner code={code} client:only="react" />
+
+## The minimum code
+
+```ts
+const presenter = new WinPresenter(reelSet, {
+  symbolAnim: async (symbol) => /* your pop animation */,
+});
+
+await runCascade(reelSet, stages, {
+  vanishDuration: 0,       // we drive the pop ourselves
+  onWinnersVanish: async (_rs, winners, stageIndex) => {
+    await presenter.show([{
+      id: stageIndex,
+      cells: winners.map(w => ({ reelIndex: w.reel, rowIndex: w.row })),
+      value: winners.length * 10,
+    }]);
+  },
+});
+```
+
+## One shape, two use cases
+
+A "win" is just cells. Whether those cells came from a payline, a cluster,
+or a cascade pop, the presenter treats them the same. No
+`isPayline` / `isCluster` narrowing — just `win.cells`.
+
+For mixed rounds (a scatter cluster + a payline in the same spin), pass
+them together:
+
+```ts
+await presenter.show([
+  { id: 0, cells: paylineCells, value: 50 },
+  { id: 1, cells: scatterCells, value: 500 },   // sorts first (default value desc)
+]);
+```
+
+## UX guardrails
+
+- `vanishDuration: 0` disables the `runCascade` default fade so your pop
+  is the only thing the player sees. If you want both, keep the default
+  fade and don't `await` `presenter.show`.
+- `presenter.abort()` on `spin:start` — slam-spin mid-cascade cancels cleanly.

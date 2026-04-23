@@ -1,16 +1,16 @@
 ---
 layout: ../../layouts/Recipe.astro
-title: How to animate paylines
-description: Cycle through multiple winning lines with the built-in spotlight — dim non-winners, promote winners, pulse each line.
-tags: [wins, spotlight, paylines]
+title: Highlight winning cells
+description: Use WinPresenter to sweep or flash the winning cells. No lines, no overlays — just the cells, orchestrated cleanly.
+tags: [wins, presenter]
 steps:
-  - After spin, detect your win lines (array of winning cells)
-  - Call reelSet.spotlight.cycle(lines, { displayDuration, gapDuration, cycles, dimAmount })
-  - Listen for spotlight:end to re-enable UI
+  - Build a WinPresenter. stagger = 0 flashes simultaneously, > 0 sweeps in cell order
+  - Pass each win as { cells, value? }. Presenter sorts by value desc by default
+  - Abort on spin:start so slam-spin cancels mid-celebration
 apis:
-  - SymbolSpotlight.cycle
-  - spotlight:start event
-  - spotlight:end event
+  - WinPresenter
+  - Win type ({ cells, value?, kind?, id? })
+  - win:* events
 ---
 
 import code from '../../recipes/animate-paylines.recipe.ts?raw';
@@ -21,27 +21,52 @@ import { RecipeRunner } from '../../components/RecipeRunner.tsx';
 ## The minimum code
 
 ```ts
-function paylineCells(row: number, reelCount: number) {
-  return Array.from({ length: reelCount }, (_, reelIndex) => ({ reelIndex, rowIndex: row }));
-}
+import { WinPresenter, type Win } from 'pixi-reels';
 
-reelSet.events.on('spin:complete', async (result) => {
-  const wins = detectLineWins(result.symbols);       // your logic
-  if (!wins.length) return;
-
-  await reelSet.spotlight.cycle(
-    wins.map((w) => ({ positions: w.positions })),
-    { displayDuration: 600, dimAmount: 0.25, cycles: 1 },
-  );
+const presenter = new WinPresenter(reelSet, {
+  stagger: 70,          // ms between cells — left-to-right sweep
+  cycleGap: 350,        // ms between wins
 });
+
+reelSet.events.on('spin:complete', async () => {
+  const wins: Win[] = await server.wins(result);   // your shape
+  await presenter.show(wins);
+});
+reelSet.events.on('spin:start', () => presenter.abort());
 ```
 
-## Pair with per-symbol win animations
+## The whole API
 
-`spotlight.cycle` calls `symbol.playWin()` on each highlighted cell if you pass `playWin: true` (default). Your `ReelSymbol` subclass defines the gesture — `SpineSymbol` fires its "win" animation, `BlockSymbol` does a scale-down pulse, custom classes do whatever you want.
+```ts
+interface Win {
+  cells: SymbolPosition[];  // order matters when stagger > 0
+  value?: number;           // used for default sort
+  kind?: string;            // optional tag
+  id?: number;              // optional stable id
+}
+```
+
+One shape covers both classic paylines ("row 1 across all 5 reels") and
+cluster pops ("these 7 cells vanished"). The presenter never distinguishes
+them; it just animates the cells you hand it.
+
+## Two knobs
+
+| Option | Effect |
+|---|---|
+| `stagger: 0` | All cells in a win pulse together (a flash) |
+| `stagger: 60+` | Cells animate one after another (a sweep). Pass cells in the order you want the sweep to run |
+| `cycleGap: N` | ms between successive wins |
+| `cycles: -1` | Loop forever until `abort()` |
+
+## Paylines, outlines, numbers — draw them yourself
+
+`WinPresenter` does not draw anything. To render a line over each payline,
+subscribe to `win:group` and draw from `reelSet.getCellBounds`. See
+[paylines-events-only](/recipes/paylines-events-only/) for a worked example.
 
 ## UX guardrails
 
-- Disable the spin button between `spotlight:start` and `spotlight:end`.
-- On slam-stop or new spin, the spotlight aborts automatically.
-- Use `dim: 0` when you just want winners to pulse without fading losers.
+- `abort()` on `spin:start`.
+- `dimLosers: false` if your game already dims via an overlay.
+- `stagger` tests well at 60–90 ms for a 5-reel sweep; shorter feels rushed, longer drags.

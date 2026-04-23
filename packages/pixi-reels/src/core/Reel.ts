@@ -95,6 +95,11 @@ export class Reel implements Disposable {
     this.container = new Container();
     this.container.sortableChildren = true;
     this.container.x = config.reelIndex * (config.symbolWidth + config.symbolGapX);
+    // Explicit zIndex so the reel's layer in `ReelViewport.maskedContainer`
+    // (sortableChildren = true) is deterministic. Rightmost reel draws on
+    // top by default — same visual order as insertion, but now set via
+    // zIndex so callers can flip it for bottom-left diagonal overflow.
+    this.container.zIndex = config.reelIndex;
 
     // Create initial symbols
     this.symbols = config.initialSymbols.map((symbolId, row) => {

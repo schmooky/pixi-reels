@@ -102,6 +102,45 @@ export interface CellBounds {
   height: number;
 }
 
+/**
+ * A cell on the visible grid — `reelIndex` is the column, `rowIndex` the
+ * row from the top. This is the canonical grid-cell shape used across
+ * events (`win:symbol`, `spotlight:start`), `Spotlight.show`, and
+ * `ClusterWin.cells`.
+ *
+ * Named `SymbolPosition` for back-compat with the original events module.
+ */
+export interface SymbolPosition {
+  reelIndex: number;
+  rowIndex: number;
+}
+
+/**
+ * One "win" as the presenter sees it: an ordered set of cells to highlight.
+ *
+ * Use cases collapse onto this one shape — whether those cells came from a
+ * classic payline ("row 1 across all 5 reels"), a cascade pop ("this cluster
+ * vanished"), a scatter splash, or a bonus reveal.
+ *
+ * The presenter's job is to **animate these cells**. Anything beyond that —
+ * drawing a polyline, a cluster outline, a number popup, a sound cue — is
+ * user-land code reacting to the `win:*` events. pixi-reels never draws wins.
+ *
+ * Order of `cells` matters when `WinPresenter.stagger > 0` (e.g. a
+ * left-to-right sweep): cell N starts animating `stagger` ms after cell N-1.
+ * Pass the cells in the order you want the sweep to run.
+ */
+export interface Win {
+  /** Cells to highlight. Order matters when `stagger > 0`. */
+  cells: ReadonlyArray<SymbolPosition>;
+  /** Optional payout — used for the default value-desc sort. */
+  value?: number;
+  /** Optional tag for routing events to different handlers. */
+  kind?: string;
+  /** Optional stable id so event consumers can key per-win state. */
+  id?: number;
+}
+
 /** Mask configuration for the reel viewport. */
 export interface MaskConfig {
   mask: Container;

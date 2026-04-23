@@ -22,6 +22,8 @@ export type {
   Matrix,
   Position,
   CellBounds,
+  SymbolPosition,
+  Win,
   MaskConfig,
   ReelSetInternalConfig,
 } from './config/types.js';
@@ -81,6 +83,11 @@ export { ObjectPool } from './pool/ObjectPool.js';
 export { SymbolSpotlight } from './spotlight/SymbolSpotlight.js';
 export type { SpotlightOptions, WinLine, CycleOptions } from './spotlight/SymbolSpotlight.js';
 
+// Wins (symbol-highlight presenter — no line drawing, events-driven)
+export { WinPresenter } from './wins/WinPresenter.js';
+export type { WinPresenterOptions, WinSymbolAnim } from './wins/WinPresenter.js';
+export { sortByValueDesc } from './wins/Win.js';
+
 // Pins (cell persistence primitive)
 export type {
   CellPin,
@@ -100,7 +107,6 @@ export type {
   ReelSetEvents,
   ReelEvents,
   SpinResult,
-  SymbolPosition,
 } from './events/ReelEvents.js';
 
 // Utils
