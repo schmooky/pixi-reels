@@ -342,6 +342,18 @@ export const RECIPES: RecipeMeta[] = [
     apis: ['ReelSet.getCellBounds', 'PIXI.Graphics.eventMode', 'PIXI.Graphics.cursor'],
     tags: ['utility', 'hit-areas', 'interaction', 'cursor'],
   },
+  {
+    slug: 'cell-hit-areas-portrait',
+    title: 'Portrait (non-square) cells + hit areas',
+    oneLiner: 'Proof that getCellBounds makes no square-cell assumption — 70 × 105 portrait cells, fit-scaled sprites, pointer-accurate hit areas.',
+    steps: [
+      'Call .symbolSize(width, height) with any ratio — e.g. 70 × 105 for portrait',
+      'Register symbols with BlurSpriteSymbol and fit true so art preserves aspect ratio',
+      'Use getCellBounds(col, row) to build hit-area Graphics that match the tall rectangles',
+    ],
+    apis: ['ReelSet.getCellBounds', 'ReelSetBuilder.symbolSize', 'BlurSpriteSymbol fit option'],
+    tags: ['utility', 'hit-areas', 'non-square', 'proportions'],
+  },
 
   // ── movePin + frame exposure recipes ──────────────────────────────────
   {

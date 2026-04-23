@@ -1,0 +1,74 @@
+---
+layout: ../../layouts/Recipe.astro
+title: Portrait (non-square) cells + hit areas
+description: getCellBounds works for any cell ratio — this recipe uses 70×105 portrait cells, renders sprites with fit true, and places pointer-interactive hit areas that match the tall rectangles exactly.
+tags: [utility, hit-areas, non-square, proportions]
+steps:
+  - Call .symbolSize(width, height) with any ratio — e.g. 70 × 105 for portrait cells
+  - Register symbols with BlurSpriteSymbol and fit true so art preserves aspect ratio
+  - Use getCellBounds(col, row) to build hit-area Graphics that match the cell rectangle
+apis:
+  - ReelSet.getCellBounds
+  - ReelSetBuilder.symbolSize
+  - BlurSpriteSymbol fit option
+---
+
+import code from '../../recipes/cell-hit-areas-portrait.recipe.ts?raw';
+import { RecipeRunner } from '../../components/RecipeRunner.tsx';
+
+<RecipeRunner code={code} client:only="react" />
+
+Hover a cell — the cursor turns into a pointer and a grey outline appears. Click to pick. The cells are **70 wide × 105 tall** (2:3 portrait) and every hit area matches the cell rectangle exactly.
+
+## Why it works automatically
+
+`getCellBounds` returns a `{ x, y, width, height }` rectangle derived from the reel's stored `symbolWidth`, `symbolHeight`, and gap. It makes no square-cell assumption:
+
+```ts
+// inside ReelSet.getCellBounds
+return {
+  x: this._viewport.x + reel.container.x,
+  y: this._viewport.y + row * reel.motion.slotHeight,
+  width: reel.symbolWidth,
+  height: reel.symbolHeight,
+};
+```
+
+So building a hit area is the same code as the square-cell recipe:
+
+```ts
+const b = reelSet.getCellBounds(col, row);
+const hit = new PIXI.Graphics();
+hit.rect(b.x, b.y, b.width, b.height).fill({ color: 0xffffff, alpha: 0 });
+hit.eventMode = 'static';
+hit.cursor = 'pointer';
+```
+
+## Keep art aspect-correct with `fit: true`
+
+A 70×105 cell stretches square sprites into caricatures. Register symbols with `fit: true` + centre anchor so art is scaled down to fit inside the cell, preserving its ratio and letterboxing the rest:
+
+```ts
+.symbols(r => {
+  for (const id of IDS) {
+    r.register(id, BlurSpriteSymbol, {
+      textures, blurTextures,
+      anchor: { x: 0.5, y: 0.5 },
+      fit: true,
+    });
+  }
+})
+```
+
+If your art is authored to the target ratio, omit `fit` entirely — the sprite will fill the whole cell.
+
+## Common ratios
+
+| Use case | Cell w × h | Ratio |
+|---|---|---|
+| Classic square | 100 × 100 | 1 : 1 |
+| Character portrait | 70 × 105 | 2 : 3 |
+| Widescreen card | 120 × 80 | 3 : 2 |
+| Tall columns | 80 × 160 | 1 : 2 |
+
+All of them work with `getCellBounds`, the spin loop, pins, spotlight — every core API.
