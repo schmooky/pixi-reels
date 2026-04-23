@@ -84,6 +84,24 @@ export interface Position {
   y: number;
 }
 
+/**
+ * Axis-aligned bounding box of a single grid cell in ReelSet-local
+ * coordinates. Returned by `reelSet.getCellBounds(col, row)`.
+ *
+ * Use this to draw paylines, hit areas, debug overlays, or any graphic
+ * that needs to align precisely with a visible symbol cell.
+ */
+export interface CellBounds {
+  /** Left edge of the cell in ReelSet-local pixels. */
+  x: number;
+  /** Top edge of the cell in ReelSet-local pixels. */
+  y: number;
+  /** Cell width — equals the configured symbol width. */
+  width: number;
+  /** Cell height — equals the configured symbol height. */
+  height: number;
+}
+
 /** Mask configuration for the reel viewport. */
 export interface MaskConfig {
   mask: Container;

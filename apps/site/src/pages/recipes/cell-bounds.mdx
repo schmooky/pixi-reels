@@ -1,0 +1,79 @@
+---
+layout: ../../layouts/Recipe.astro
+title: Cell bounds — overlays, paylines & hit areas
+description: getCellBounds(col, row) returns the pixel rectangle of any visible cell. Use it to draw payline lines, win-box outlines, or invisible hit areas that align exactly with symbols.
+tags: [utility, paylines, hit-areas, graphics]
+steps:
+  - Call reelSet.getCellBounds(col, row) to get { x, y, width, height } in ReelSet-local coords
+  - Draw a PIXI.Graphics outline or line using those coordinates
+  - addChild the graphic to reelSet so it moves with the board
+apis:
+  - ReelSet.getCellBounds
+  - CellBounds
+---
+
+import code from '../../recipes/cell-bounds.recipe.ts?raw';
+import { RecipeRunner } from '../../components/RecipeRunner.tsx';
+
+<RecipeRunner code={code} client:only="react" />
+
+## The one-liner
+
+```ts
+const b = reelSet.getCellBounds(col, row);
+// b = { x, y, width, height } — ReelSet-local pixels, row 0 = top visible row
+```
+
+Coordinates are relative to the `ReelSet` container. To convert to stage / global coordinates use PixiJS:
+
+```ts
+const globalPos = reelSet.toGlobal({ x: b.x, y: b.y });
+```
+
+## Drawing a win outline
+
+```ts
+const gfx = new PIXI.Graphics();
+reelSet.addChild(gfx); // sits above the reel strip
+
+function drawWinOutline(col: number, row: number) {
+  const b = reelSet.getCellBounds(col, row);
+  gfx.roundRect(b.x + 3, b.y + 3, b.width - 6, b.height - 6, 8)
+     .stroke({ color: 0xff6b35, width: 2.5 });
+}
+```
+
+## Drawing a payline through cell centres
+
+```ts
+function drawPayline(cols: number[], row: number) {
+  const pts = cols.map(col => {
+    const b = reelSet.getCellBounds(col, row);
+    return { x: b.x + b.width / 2, y: b.y + b.height / 2 };
+  });
+  gfx.moveTo(pts[0].x, pts[0].y);
+  for (let i = 1; i < pts.length; i++) gfx.lineTo(pts[i].x, pts[i].y);
+  gfx.stroke({ color: 0xff6b35, width: 3, alpha: 0.85 });
+}
+```
+
+## Hit areas
+
+`getCellBounds` doubles as an input-picking helper. Create an invisible interactive rectangle over a cell and attach pointer events:
+
+```ts
+const b = reelSet.getCellBounds(col, row);
+const hitArea = new PIXI.Graphics();
+hitArea.rect(b.x, b.y, b.width, b.height).fill({ color: 0, alpha: 0 });
+hitArea.eventMode = 'static';
+hitArea.cursor = 'pointer';
+hitArea.on('pointertap', () => console.log(`tapped ${col},${row}`));
+reelSet.addChild(hitArea);
+reelSet.eventMode = 'static'; // enable events on the container too
+```
+
+## Constraints
+
+- Row 0 is the **top visible row**; buffer rows above/below are not addressable.
+- Coordinates assume no `OffsetConfig` (trapezoid perspective). If you use `.offset(trapezoid)`, X per-symbol shifts won't be reflected — account for the reel's `container.x` offset manually.
+- The bounds are static pixel values. During a spin the symbols are scrolling but `getCellBounds` always returns the **cell's resting position** — ideal for post-land overlays, not mid-spin ones.

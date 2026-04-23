@@ -1,0 +1,84 @@
+---
+layout: ../../layouts/Recipe.astro
+title: Cell hit areas — click to pick, hover to preview
+description: Use getCellBounds to attach pointer events to individual grid cells — cursor changes to a pointer on hover, click toggles a pick state, all cells stay selectable across spins.
+tags: [utility, hit-areas, interaction, cursor]
+steps:
+  - For each cell call reelSet.getCellBounds(col, row)
+  - Build an invisible PIXI.Graphics rect and set eventMode "static" + cursor "pointer"
+  - Attach pointerover / pointerout / pointertap listeners to drive the UI
+apis:
+  - ReelSet.getCellBounds
+  - PIXI.Graphics.eventMode
+  - PIXI.Graphics.cursor
+---
+
+import code from '../../recipes/cell-hit-areas.recipe.ts?raw';
+import { RecipeRunner } from '../../components/RecipeRunner.tsx';
+
+<RecipeRunner code={code} client:only="react" />
+
+Hover a cell — cursor turns into a pointer and a grey outline appears. Click to pick; click again to unpick. Picks survive spins.
+
+## The minimum code
+
+```ts
+const b = reelSet.getCellBounds(col, row);
+const hit = new PIXI.Graphics();
+hit.rect(b.x, b.y, b.width, b.height).fill({ color: 0xffffff, alpha: 0 }); // invisible
+hit.eventMode = 'static';
+hit.cursor = 'pointer';
+hit.on('pointertap', () => {
+  console.log(`cell ${col},${row} tapped`);
+});
+reelSet.addChild(hit);
+```
+
+Three things to remember:
+
+1. **Fill with alpha 0**, not `visible = false`. An invisible-but-filled rect is still hit-testable; a `visible=false` one is not.
+2. **`eventMode = 'static'`** is the PixiJS v8 way to opt a node into the event system. `'dynamic'` works too but costs more per frame.
+3. **`cursor = 'pointer'`** is enough on its own — PixiJS sets the page cursor when the pointer is over a hit-enabled node.
+
+## Hover preview + pick state
+
+The live demo above keeps two visual layers:
+
+- One shared `Graphics` for outlines, redrawn whenever hover or picks change
+- A transparent hit-area rect per cell for pointer events
+
+```ts
+const overlay = new PIXI.Graphics();
+const picked = new Set<string>();
+let hoverKey: string | null = null;
+
+function redraw() {
+  overlay.clear();
+  for (const k of picked) drawOutline(k, 0xff6b35, 3, 1);
+  if (hoverKey && !picked.has(hoverKey)) drawOutline(hoverKey, 0x666666, 2, 0.55);
+}
+
+hit.on('pointerover', () => { hoverKey = key; redraw(); });
+hit.on('pointerout',  () => { if (hoverKey === key) hoverKey = null; redraw(); });
+hit.on('pointertap',  () => {
+  picked.has(key) ? picked.delete(key) : picked.add(key);
+  redraw();
+});
+```
+
+## Keep hit areas on top
+
+Symbols are repositioned every frame during a spin. Give your hit areas and overlays a high `zIndex` on a `sortableChildren = true` parent so they stay clickable:
+
+```ts
+reelSet.sortableChildren = true;
+hit.zIndex = 9999;
+overlay.zIndex = 9998;
+```
+
+## Use cases
+
+- **Pick-a-multiplier bonus** — lock one cell, spin, that cell pays ×N
+- **Sticky-wild placement feature** — player picks 3 cells, they become sticky wilds
+- **Free-form paytable viewer** — click a symbol to show its pays
+- **Debug tooling** — click a cell in dev to inspect `reelSet.getReel(col).getSymbolAt(row)`

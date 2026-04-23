@@ -1,7 +1,7 @@
 import { Container } from 'pixi.js';
 import type { Ticker } from 'pixi.js';
 import type { Disposable } from '../utils/Disposable.js';
-import type { SpeedProfile, ReelSetInternalConfig } from '../config/types.js';
+import type { SpeedProfile, ReelSetInternalConfig, CellBounds } from '../config/types.js';
 import { EventEmitter } from '../events/EventEmitter.js';
 import type { ReelSetEvents, SpinResult, SymbolPosition } from '../events/ReelEvents.js';
 import { Reel } from './Reel.js';
@@ -265,6 +265,41 @@ export class ReelSet extends Container implements Disposable {
   /** Get a reel by index. */
   getReel(index: number): Reel {
     return this._reels[index];
+  }
+
+  /**
+   * Returns the bounding box of a visible grid cell in ReelSet-local
+   * coordinates (i.e. relative to this Container, before any parent
+   * transforms). Row 0 is the top visible row.
+   *
+   * Use this to place payline graphics, hit areas, or debug overlays
+   * that must align with a specific symbol cell:
+   *
+   * ```ts
+   * const b = reelSet.getCellBounds(2, 1);
+   * gfx.rect(b.x, b.y, b.width, b.height).stroke({ color: 0xff6b35 });
+   * reelSet.addChild(gfx);
+   * ```
+   *
+   * To convert to stage / global coordinates use PixiJS:
+   * ```ts
+   * const global = reelSet.toGlobal({ x: b.x, y: b.y });
+   * ```
+   */
+  getCellBounds(col: number, row: number): CellBounds {
+    if (col < 0 || col >= this._reels.length) {
+      throw new RangeError(`getCellBounds: col ${col} out of range [0, ${this._reels.length})`);
+    }
+    const reel = this._reels[col];
+    if (row < 0 || row >= reel.visibleRows) {
+      throw new RangeError(`getCellBounds: row ${row} out of range [0, ${reel.visibleRows})`);
+    }
+    return {
+      x: this._viewport.x + reel.container.x,
+      y: this._viewport.y + row * reel.motion.slotHeight,
+      width: reel.symbolWidth,
+      height: reel.symbolHeight,
+    };
   }
 
   /** Get the viewport. */
