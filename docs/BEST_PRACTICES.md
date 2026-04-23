@@ -162,10 +162,27 @@ Pick the level of abstraction that matches the art:
 |---|---|
 | Default bounce + line + dim | `WinPresenter` + `GraphicsLineRenderer`, config-only |
 | Same orchestration but a premium line look | `WinPresenter` + a custom `LineRenderer` (Spine rig, sprite sheet, particle trail) |
-| Same orchestration but a custom per-symbol animation | `WinPresenter`'s `symbolAnim: (sym, cell, payline) => Promise<void>` |
-| Full control; the lib must not draw lines | `WinPresenter` without a `lineRenderer`, subscribe to `win:line` / `win:symbol` and draw with `reelSet.getCellBounds(col, row)` |
+| Same orchestration but a custom per-symbol animation | `WinPresenter`'s `symbolAnim: (sym, cell, win) => Promise<void>` |
+| Cascade / cluster pops — no line, just animate the cells | `WinPresenter` with no `lineRenderer`, pass `ClusterWin[]` to `show()` |
+| Full control; the lib must not draw anything | `WinPresenter` without a `lineRenderer`, subscribe to `win:line` / `win:cluster` / `win:symbol` and draw with `reelSet.getCellBounds(col, row)` |
 
-`win:start` / `win:line` / `win:symbol` / `win:end` fire whether or not you use the presenter. An event-only integration is the right call when wins belong to a separate feature layer (scatter overlays, big-win canvases, sound routers) that needs its own lifecycle.
+`win:start` / `win:line` / `win:cluster` / `win:symbol` / `win:end` fire whether or not you use the presenter. An event-only integration is the right call when wins belong to a separate feature layer (scatter overlays, big-win canvases, sound routers) that needs its own lifecycle.
+
+### Paylines vs. cluster wins
+
+```ts
+// Classic payline — one row per reel, null to skip
+interface Payline { lineId: number; line: (number | null)[]; value: number; kind?: string }
+
+// Cascade / cluster — arbitrary cells, possibly multiple per reel
+interface ClusterWin { clusterId: number; cells: SymbolPosition[]; value: number; kind?: string }
+
+type Win = Payline | ClusterWin;
+```
+
+`WinPresenter.show(wins)` accepts a mixed list. Paylines get the `LineRenderer`; clusters skip it. A bonus round that combines a 500× scatter splash with a 50× line win presents both with a single `show()` call, sorted by value. In event handlers, narrow with `isPayline(win)` / `isCluster(win)` if you need to branch.
+
+Cascades drive the same API from the `onWinnersVanish` hook — see the `cascade-winpresenter` recipe.
 
 ## Symbol layering and overflow
 

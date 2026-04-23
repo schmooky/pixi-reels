@@ -1,11 +1,11 @@
 import { Container } from 'pixi.js';
-import type { Payline } from '../config/types.js';
+import type { Payline, Win } from '../config/types.js';
 import type { ReelSet } from '../core/ReelSet.js';
 import type { SymbolPosition } from '../events/ReelEvents.js';
 import type { ReelSymbol } from '../symbols/ReelSymbol.js';
 import type { Disposable } from '../utils/Disposable.js';
 import type { LineRenderer } from './LineRenderer.js';
-import { paylineToCells, sortByValueDesc } from './Payline.js';
+import { isPayline, sortByValueDesc, winToCells } from './Payline.js';
 
 /**
  * What to play on each winning symbol.
@@ -14,13 +14,14 @@ import { paylineToCells, sortByValueDesc } from './Payline.js';
  *   - `string` — a named animation. If the symbol exposes a
  *     `playAnimation(name)` method (e.g. SpineSymbol), it's invoked; else
  *     it falls back to `playWin()`.
- *   - `(symbol, cell, payline) => Promise<void>` — drive the animation
- *     yourself. Good for GSAP bounces, line-specific pulses, etc.
+ *   - `(symbol, cell, win) => Promise<void>` — drive the animation
+ *     yourself. Receives the owning `Win` (a payline or cluster); narrow
+ *     with `isPayline` / `isCluster` to route different animations.
  */
 export type WinSymbolAnim =
   | 'win'
   | string
-  | ((symbol: ReelSymbol, cell: SymbolPosition, payline: Payline) => Promise<void>);
+  | ((symbol: ReelSymbol, cell: SymbolPosition, win: Win) => Promise<void>);
 
 export interface WinPresenterOptions {
   /** Optional renderer. If absent, no line is drawn — useful for events-only flows. */
@@ -110,19 +111,20 @@ export class WinPresenter implements Disposable {
   }
 
   /**
-   * Present the given paylines. Cancels any in-flight sequence first.
-   * Resolves when all cycles complete or when `abort()` is called.
+   * Present the given wins — paylines, clusters, or a mix. Cancels any
+   * in-flight sequence first. Resolves when all cycles complete or when
+   * `abort()` is called.
    *
    * Empty input resolves immediately without firing any events.
    */
-  async show(paylines: readonly Payline[]): Promise<void> {
+  async show(wins: readonly Win[]): Promise<void> {
     this.abort();
     if (this._isDestroyed) return;
-    if (paylines.length === 0) return;
+    if (wins.length === 0) return;
 
     const ordered = this._options.sortByValue
-      ? sortByValueDesc(paylines)
-      : [...paylines];
+      ? sortByValueDesc(wins)
+      : [...wins];
 
     const abort = new AbortController();
     this._abort = abort;
@@ -132,9 +134,9 @@ export class WinPresenter implements Disposable {
     let loop = 0;
     try {
       while (this._options.cycles === -1 || loop < this._options.cycles) {
-        for (const payline of ordered) {
+        for (const win of ordered) {
           if (abort.signal.aborted) return;
-          await this._showOne(payline, abort.signal);
+          await this._showOne(win, abort.signal);
           if (abort.signal.aborted) return;
           await this._wait(this._options.cycleGap, abort.signal);
         }
@@ -166,24 +168,33 @@ export class WinPresenter implements Disposable {
     this._lineLayer.destroy({ children: true });
   }
 
-  private async _showOne(payline: Payline, signal: AbortSignal): Promise<void> {
-    const cells = paylineToCells(payline);
+  private async _showOne(win: Win, signal: AbortSignal): Promise<void> {
+    const cells = winToCells(win);
     if (cells.length === 0) return;
 
-    // Apply dim before firing the event so listeners observe the live
-    // visual state (e.g. a UI that freezes the winners into a screenshot
-    // during win:line sees losers already faded).
+    // Apply dim before firing the per-win event so listeners observe the
+    // live visual state (e.g. a UI snapshot during win:line/win:cluster
+    // sees losers already faded).
     this._applyDim(cells);
-    this._reelSet.events.emit('win:line', payline, cells);
 
-    const linePromise = this._options.lineRenderer
-      ? this._options.lineRenderer.render(
-          payline,
+    // Paylines get the LineRenderer (if any). Clusters skip it — they're
+    // just "animate these cells, please": dim, symbolAnim, events. If a
+    // cluster needs a visual (outline, hull, numbered badge), subscribe
+    // to `win:cluster` and draw it from `reelSet.getCellBounds`.
+    let renderPromise: Promise<void> = Promise.resolve();
+    if (isPayline(win)) {
+      this._reelSet.events.emit('win:line', win, cells);
+      if (this._options.lineRenderer) {
+        renderPromise = this._options.lineRenderer.render(
+          win,
           cells,
           (c, r) => this._reelSet.getCellBounds(c, r),
           this._lineLayer,
-        )
-      : Promise.resolve();
+        );
+      }
+    } else {
+      this._reelSet.events.emit('win:cluster', win, cells);
+    }
 
     const animPromises: Promise<void>[] = [];
     for (const cell of cells) {
@@ -191,23 +202,25 @@ export class WinPresenter implements Disposable {
       if (!reel) continue;
       const symbol = reel.getSymbolAt(cell.rowIndex);
       if (!symbol) continue;
-      this._reelSet.events.emit('win:symbol', symbol, cell, payline);
-      animPromises.push(this._playAnim(symbol, cell, payline));
+      this._reelSet.events.emit('win:symbol', symbol, cell, win);
+      animPromises.push(this._playAnim(symbol, cell, win));
     }
 
-    await Promise.all([linePromise, ...animPromises]);
+    await Promise.all([renderPromise, ...animPromises]);
     if (signal.aborted) return;
 
-    this._options.lineRenderer?.clear();
+    // Only paylines produce line-renderer output, so only paylines need
+    // a clear. Clusters have nothing to tear down.
+    if (isPayline(win)) this._options.lineRenderer?.clear();
   }
 
   private async _playAnim(
     symbol: ReelSymbol,
     cell: SymbolPosition,
-    payline: Payline,
+    win: Win,
   ): Promise<void> {
     const anim = this._options.symbolAnim;
-    if (typeof anim === 'function') return anim(symbol, cell, payline);
+    if (typeof anim === 'function') return anim(symbol, cell, win);
     if (anim === 'win') return symbol.playWin();
     const withPlay = symbol as unknown as { playAnimation?: (name: string) => Promise<void> };
     if (typeof withPlay.playAnimation === 'function') return withPlay.playAnimation(anim);

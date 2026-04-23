@@ -181,6 +181,18 @@ export const RECIPES: RecipeMeta[] = [
     tags: ['wins', 'paylines', 'gsap'],
   },
   {
+    slug: 'cascade-winpresenter',
+    title: 'Cascade pops with WinPresenter',
+    oneLiner: 'Drive cluster-win pops from runCascade. No line drawing — just "animate these cells".',
+    steps: [
+      'Build a WinPresenter with no lineRenderer',
+      'In runCascade\'s onWinnersVanish, await presenter.show([cluster])',
+      'Tumble + drop continues once the pop resolves',
+    ],
+    apis: ['WinPresenter', 'ClusterWin', 'runCascade.onWinnersVanish'],
+    tags: ['wins', 'cascade', 'cluster'],
+  },
+  {
     slug: 'paylines-events-only',
     title: 'Paylines: events-only',
     oneLiner: 'Skip the line renderer. Draw with getCellBounds from win:line / win:symbol.',

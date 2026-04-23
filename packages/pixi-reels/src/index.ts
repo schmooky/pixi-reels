@@ -22,7 +22,10 @@ export type {
   Matrix,
   Position,
   CellBounds,
+  SymbolPosition,
   Payline,
+  ClusterWin,
+  Win,
   MaskConfig,
   ReelSetInternalConfig,
 } from './config/types.js';
@@ -88,7 +91,13 @@ export type { WinPresenterOptions, WinSymbolAnim } from './wins/WinPresenter.js'
 export type { LineRenderer } from './wins/LineRenderer.js';
 export { GraphicsLineRenderer } from './wins/GraphicsLineRenderer.js';
 export type { GraphicsLineRendererOptions } from './wins/GraphicsLineRenderer.js';
-export { paylineToCells, sortByValueDesc } from './wins/Payline.js';
+export {
+  paylineToCells,
+  winToCells,
+  sortByValueDesc,
+  isPayline,
+  isCluster,
+} from './wins/Payline.js';
 
 // Pins (cell persistence primitive)
 export type {
@@ -109,7 +118,6 @@ export type {
   ReelSetEvents,
   ReelEvents,
   SpinResult,
-  SymbolPosition,
 } from './events/ReelEvents.js';
 
 // Utils

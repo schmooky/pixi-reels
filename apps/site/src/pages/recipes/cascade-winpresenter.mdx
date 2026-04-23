@@ -1,0 +1,77 @@
+---
+layout: ../../layouts/Recipe.astro
+title: Cascade pops with WinPresenter
+description: Drive cluster-win animations during a cascade using WinPresenter — no line drawing, just "animate those cells before they vanish".
+tags: [wins, cascade, cluster, presenter]
+steps:
+  - Build a WinPresenter with no lineRenderer — clusters aren't lines
+  - In runCascade's onWinnersVanish, call presenter.show([cluster]) and await it
+  - Let the drop + tumble continue after the pop animation resolves
+apis:
+  - WinPresenter
+  - ClusterWin
+  - runCascade (onWinnersVanish)
+  - win:cluster event
+---
+
+import code from '../../recipes/cascade-winpresenter.recipe.ts?raw';
+import { RecipeRunner } from '../../components/RecipeRunner.tsx';
+
+<RecipeRunner code={code} client:only="react" />
+
+## The minimum code
+
+```ts
+import { WinPresenter, type ClusterWin } from 'pixi-reels';
+
+const presenter = new WinPresenter(reelSet, {
+  dimLosers: { alpha: 0.35 },
+  symbolAnim: async (symbol) => /* your pop animation */,
+});
+
+await runCascade(reelSet, stages, {
+  vanishDuration: 0,         // we drive the pop ourselves
+  onWinnersVanish: async (_rs, winners, stageIndex) => {
+    const cluster: ClusterWin = {
+      clusterId: stageIndex,
+      cells: winners.map(w => ({ reelIndex: w.reel, rowIndex: w.row })),
+      value: winners.length * 10,
+    };
+    await presenter.show([cluster]);
+  },
+});
+```
+
+## Why no line renderer
+
+`WinPresenter` accepts a `Win = Payline | ClusterWin` union. For paylines
+it invokes the optional `LineRenderer` (polyline through cells). For
+clusters it doesn't — a cluster is an arbitrary bag of cells, and most
+games either skip a line entirely or draw something cluster-specific
+(a bounding outline, a hull, a counter badge) that wouldn't fit a
+line-shaped API.
+
+The presenter's job for a cluster is simple: **animate these cells,
+please.** Dim the rest, play each symbol's `playWin` (or your
+`symbolAnim` callback), fire `win:cluster` / `win:symbol` events. When
+your animation resolves, the presenter is done.
+
+## When a win is both
+
+A bonus round might combine a payline with a scatter cluster. `show()`
+takes the mixed list and the default sort by `value` desc orders them
+together — a 500× scatter cluster presents before a 50× payline:
+
+```ts
+await presenter.show([
+  { lineId: 0, line: [0,0,0,0,0], value: 50 },
+  { clusterId: 0, cells: scatterCells, value: 500 },
+]);
+```
+
+Use `isPayline(win)` / `isCluster(win)` in event handlers to narrow.
+
+## UX guardrails
+
+- Default `runCascade` vanish is a scale-down + fade. Passing `vanishDuration: 0` disables it — your pop animation replaces it entirely. If you want both, keep `vanishDuration` non-zero and do the pop in parallel (don't `await`).
+- `presenter.abort()` on `spin:start` so slam-spin mid-cascade cancels cleanly.

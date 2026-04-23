@@ -3,14 +3,24 @@ import { describe, it, expect, vi } from 'vitest';
 import {
   WinPresenter,
   paylineToCells,
+  winToCells,
   sortByValueDesc,
+  isPayline,
+  isCluster,
+  type ClusterWin,
   type LineRenderer,
   type Payline,
+  type SymbolPosition,
+  type Win,
 } from '../../src/index.js';
 import { createTestReelSet } from '../../src/testing/index.js';
 
 function mkPayline(lineId: number, line: (number | null)[], value: number): Payline {
   return { lineId, line, value };
+}
+
+function mkCluster(clusterId: number, cells: SymbolPosition[], value: number): ClusterWin {
+  return { clusterId, cells, value };
 }
 
 function recorder(): LineRenderer & {
@@ -243,6 +253,155 @@ describe('WinPresenter', () => {
       const p = new WinPresenter(h.reelSet);
       await p.show([]);
       expect(spy).not.toHaveBeenCalled();
+      p.destroy();
+    } finally {
+      h.destroy();
+    }
+  });
+});
+
+describe('winToCells / discriminators', () => {
+  it('isPayline / isCluster discriminate correctly', () => {
+    const p: Win = mkPayline(0, [0, 1, null, 2], 10);
+    const c: Win = mkCluster(0, [{ reelIndex: 0, rowIndex: 0 }], 10);
+    expect(isPayline(p)).toBe(true);
+    expect(isCluster(p)).toBe(false);
+    expect(isCluster(c)).toBe(true);
+    expect(isPayline(c)).toBe(false);
+  });
+
+  it('winToCells handles both shapes', () => {
+    expect(winToCells(mkPayline(0, [null, 2, 2, null], 10))).toEqual([
+      { reelIndex: 1, rowIndex: 2 },
+      { reelIndex: 2, rowIndex: 2 },
+    ]);
+    const c = mkCluster(7, [
+      { reelIndex: 3, rowIndex: 0 },
+      { reelIndex: 3, rowIndex: 1 },
+      { reelIndex: 4, rowIndex: 2 },
+    ], 50);
+    expect(winToCells(c)).toEqual(c.cells);
+    // Copy (not reference) — mutation doesn't leak into the source.
+    const extracted = winToCells(c);
+    extracted.pop();
+    expect(c.cells.length).toBe(3);
+  });
+});
+
+describe('WinPresenter — cluster wins', () => {
+  function setup() {
+    return createTestReelSet({ reels: 5, visibleRows: 3, symbolIds: ['a', 'b'] });
+  }
+
+  it('fires win:start, win:cluster, win:symbol, win:end for a cluster', async () => {
+    const h = setup();
+    try {
+      const events: Array<{ name: string; payload?: unknown }> = [];
+      h.reelSet.events.on('win:start', (wins) => events.push({ name: 'win:start', payload: wins.length }));
+      h.reelSet.events.on('win:cluster', (cluster) => events.push({ name: 'win:cluster', payload: cluster.clusterId }));
+      h.reelSet.events.on('win:line', (p) => events.push({ name: 'win:line', payload: p.lineId }));
+      h.reelSet.events.on('win:symbol', () => events.push({ name: 'win:symbol' }));
+      h.reelSet.events.on('win:end', (r) => events.push({ name: 'win:end', payload: r }));
+
+      const p = new WinPresenter(h.reelSet, { cycleGap: 0 });
+      await h.spinAndLand([
+        ['a', 'a', 'a'], ['a', 'a', 'a'], ['a', 'a', 'a'], ['a', 'a', 'a'], ['a', 'a', 'a'],
+      ]);
+
+      await p.show([mkCluster(9, [
+        { reelIndex: 0, rowIndex: 0 },
+        { reelIndex: 0, rowIndex: 1 },
+        { reelIndex: 2, rowIndex: 2 },
+      ], 100)]);
+
+      const names = events.map((e) => e.name);
+      expect(names).toEqual([
+        'win:start',
+        'win:cluster',
+        'win:symbol',
+        'win:symbol',
+        'win:symbol',
+        'win:end',
+      ]);
+      // No win:line fired — clusters are not line-shaped.
+      expect(events.find((e) => e.name === 'win:line')).toBeUndefined();
+      expect(events.at(-1)).toEqual({ name: 'win:end', payload: 'complete' });
+      p.destroy();
+    } finally {
+      h.destroy();
+    }
+  });
+
+  it('does NOT invoke the LineRenderer for clusters (only paylines)', async () => {
+    const h = setup();
+    try {
+      const renderCalls: unknown[] = [];
+      const lr: LineRenderer & { isDestroyed: boolean } = {
+        isDestroyed: false,
+        async render(win) { renderCalls.push(win); },
+        clear() { /* no-op */ },
+        destroy() { this.isDestroyed = true; },
+      };
+      const p = new WinPresenter(h.reelSet, { lineRenderer: lr, cycleGap: 0 });
+      await h.spinAndLand([
+        ['a', 'a', 'a'], ['a', 'a', 'a'], ['a', 'a', 'a'], ['a', 'a', 'a'], ['a', 'a', 'a'],
+      ]);
+      await p.show([
+        mkCluster(0, [{ reelIndex: 0, rowIndex: 0 }, { reelIndex: 0, rowIndex: 1 }], 50),
+        mkPayline(1, [0, 0, 0, 0, 0], 100),
+      ]);
+      // One render call, for the payline.
+      expect(renderCalls.length).toBe(1);
+      expect((renderCalls[0] as Payline).lineId).toBe(1);
+      p.destroy();
+    } finally {
+      h.destroy();
+    }
+  });
+
+  it('dims non-cluster cells while a cluster is active', async () => {
+    const h = setup();
+    try {
+      const p = new WinPresenter(h.reelSet, { dimLosers: { alpha: 0.2 }, cycleGap: 0 });
+      await h.spinAndLand([
+        ['a', 'a', 'a'], ['a', 'a', 'a'], ['a', 'a', 'a'], ['a', 'a', 'a'], ['a', 'a', 'a'],
+      ]);
+      let winnerAlpha = -1;
+      let loserAlpha = -1;
+      h.reelSet.events.on('win:cluster', () => {
+        // Cluster is at (0,0) + (1,0). Any other cell is a loser.
+        winnerAlpha = h.reelSet.getReel(0).getSymbolAt(0).view.alpha;
+        loserAlpha = h.reelSet.getReel(2).getSymbolAt(2).view.alpha;
+      });
+      await p.show([mkCluster(0, [
+        { reelIndex: 0, rowIndex: 0 },
+        { reelIndex: 1, rowIndex: 0 },
+      ], 50)]);
+      expect(winnerAlpha).toBe(1);
+      expect(loserAlpha).toBeCloseTo(0.2, 5);
+      p.destroy();
+    } finally {
+      h.destroy();
+    }
+  });
+
+  it('mixed sequence — paylines and clusters sort together by value desc', async () => {
+    const h = setup();
+    try {
+      const order: string[] = [];
+      h.reelSet.events.on('win:line', (p) => order.push(`line:${p.lineId}`));
+      h.reelSet.events.on('win:cluster', (c) => order.push(`cluster:${c.clusterId}`));
+
+      const p = new WinPresenter(h.reelSet, { cycleGap: 0 });
+      await h.spinAndLand([
+        ['a', 'a', 'a'], ['a', 'a', 'a'], ['a', 'a', 'a'], ['a', 'a', 'a'], ['a', 'a', 'a'],
+      ]);
+      await p.show([
+        mkPayline(0, [0, 0, 0, 0, 0], 10),
+        mkCluster(7, [{ reelIndex: 0, rowIndex: 0 }], 500),
+        mkPayline(1, [1, 1, 1, 1, 1], 100),
+      ]);
+      expect(order).toEqual(['cluster:7', 'line:1', 'line:0']);
       p.destroy();
     } finally {
       h.destroy();

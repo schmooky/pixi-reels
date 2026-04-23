@@ -103,14 +103,28 @@ export interface CellBounds {
 }
 
 /**
+ * A cell on the visible grid — `reelIndex` is the column, `rowIndex` the
+ * row from the top. This is the canonical grid-cell shape used across
+ * events (`win:symbol`, `spotlight:start`), `Spotlight.show`, and
+ * `ClusterWin.cells`.
+ *
+ * Named `SymbolPosition` for back-compat with the original events module.
+ */
+export interface SymbolPosition {
+  reelIndex: number;
+  rowIndex: number;
+}
+
+/**
  * One winning payline returned by your server / game logic.
  *
  * `line` is indexed by reel column. An entry is the winning row on that
  * reel, or `null` to skip the reel (ways-to-win, partial lines, or a
  * cluster-style hit that only occupies some columns).
  *
- * This is the shape `WinPresenter.show()` consumes and that `win:line`
- * fires with. pixi-reels never computes wins — it just presents them.
+ * This is the shape `WinPresenter.show()` consumes for line-shaped wins
+ * and that `win:line` fires with. pixi-reels never computes wins — it
+ * just presents them.
  */
 export interface Payline {
   /** A stable identifier so renderers can key per-line styling. */
@@ -122,6 +136,35 @@ export interface Payline {
   /** Optional tag for routing (e.g. 'line' vs 'scatter' vs 'way'). */
   kind?: string;
 }
+
+/**
+ * One winning cluster — an arbitrary set of cells from a cascade/tumble
+ * or cluster-pay game. Unlike {@link Payline}, a cluster can hit multiple
+ * rows on the same reel (four Cs stacked in column 3).
+ *
+ * WinPresenter consumes `ClusterWin` for its "pop" presentation:
+ * dim losers, animate the cluster cells, fire `win:cluster` +
+ * `win:symbol` events. No `LineRenderer` is invoked — clusters rarely
+ * want a polyline through their cells. Plug your own visual via events
+ * if you need an outline, hull, or numbered badge.
+ */
+export interface ClusterWin {
+  /** Stable identifier for routing per-cluster visuals. */
+  clusterId: number;
+  /** Cells the cluster occupies. Order is up to the caller. */
+  cells: ReadonlyArray<SymbolPosition>;
+  /** Payout for this cluster. WinPresenter sorts by this (desc) by default. */
+  value: number;
+  /** Optional tag (e.g. 'cluster', 'scatter', or your game's feature id). */
+  kind?: string;
+}
+
+/**
+ * A winning result in any shape — either a classic {@link Payline} or an
+ * arbitrary {@link ClusterWin}. WinPresenter accepts a mixed array, so a
+ * single spin can combine a payline win with a scatter cluster.
+ */
+export type Win = Payline | ClusterWin;
 
 /** Mask configuration for the reel viewport. */
 export interface MaskConfig {

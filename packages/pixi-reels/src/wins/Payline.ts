@@ -1,7 +1,6 @@
-import type { Payline } from '../config/types.js';
-import type { SymbolPosition } from '../events/ReelEvents.js';
+import type { ClusterWin, Payline, SymbolPosition, Win } from '../config/types.js';
 
-export type { Payline };
+export type { Payline, ClusterWin, Win };
 
 /**
  * Expand a `Payline` into an ordered list of cell positions, skipping any
@@ -22,7 +21,31 @@ export function paylineToCells(payline: Payline): SymbolPosition[] {
   return cells;
 }
 
-/** Return a new array sorted by `value` descending (non-mutating). */
-export function sortByValueDesc(paylines: readonly Payline[]): Payline[] {
-  return [...paylines].sort((a, b) => b.value - a.value);
+/** Discriminator — true if the win carries a `line` (payline-shaped). */
+export function isPayline(win: Win): win is Payline {
+  return Array.isArray((win as Payline).line);
 }
+
+/** Discriminator — true if the win carries a `cells` array (cluster-shaped). */
+export function isCluster(win: Win): win is ClusterWin {
+  return Array.isArray((win as ClusterWin).cells);
+}
+
+/**
+ * Extract the cells of a win regardless of shape. `Payline.line` is
+ * expanded skipping nulls; `ClusterWin.cells` is returned as-is (copied
+ * to a fresh array so callers can mutate freely).
+ */
+export function winToCells(win: Win): SymbolPosition[] {
+  if (isPayline(win)) return paylineToCells(win);
+  const cells = (win as ClusterWin).cells;
+  const out: SymbolPosition[] = [];
+  for (const c of cells) out.push({ reelIndex: c.reelIndex, rowIndex: c.rowIndex });
+  return out;
+}
+
+/** Return a new array sorted by `value` descending (non-mutating). */
+export function sortByValueDesc<T extends { value: number }>(wins: readonly T[]): T[] {
+  return [...wins].sort((a, b) => b.value - a.value);
+}
+
