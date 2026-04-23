@@ -62,6 +62,67 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 
 **These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.
 
+### 5. Always Ship a Changeset for Library Changes
+
+**Hard rule, enforced by CI.** If your diff touches `packages/pixi-reels/src/**` or `packages/pixi-reels/package.json`, you MUST add a `.changeset/*.md` file in the same PR. No exceptions for "small" fixes — `fix:` and `perf:` are patch bumps, not skips.
+
+How to decide the bump:
+- `feat:` → `minor` (additive, non-breaking)
+- `fix:` / `perf:` / user-visible `refactor:` → `patch`
+- any commit with `!` or `BREAKING CHANGE:` → `major` (pre-`1.0.0` is not exempt)
+- truly no user-visible change (tests, internal-only refactor, comments) → apply the `skip-changeset` PR label instead of faking a bump
+
+Write the file by hand or run `pnpm changeset`. Summary should read like a changelog line to a downstream consumer — lead with the verb (`Add:`, `Fix:`, `Remove:`). See [.changeset/README.md](.changeset/README.md) and [AGENTS.md](AGENTS.md) section 12 for the full flow.
+
+The CI `changeset-gate` job in [.github/workflows/ci.yml](.github/workflows/ci.yml) fails any PR that modifies the library without a new changeset file. The `skip-changeset` label is the only escape hatch.
+
+---
+
+## Stability Rules — How to Ship Code That Holds Up
+
+These are habits, not gates. Sections 1-5 above are hard rules; this section is the craft.
+
+### Verify before you say "done"
+
+A passing typecheck is not "done." A compiled bundle is not "done." Done means you watched the thing behave correctly.
+
+- After every lib change, in order: `pnpm --filter pixi-reels typecheck` → `pnpm --filter pixi-reels test` → `pnpm check:lint`. Don't skip steps.
+- If your change is observable in a running reel, run the relevant example (`pnpm --filter sandbox dev` for the fastest iteration) and drive it. Use `__PIXI_REELS_DEBUG.log()` and `.trace()` — they exist because the canvas is opaque to you.
+- If you cannot verify a behavior end-to-end (no browser, no real server, no spine asset), **say so explicitly** in the PR description. "Typecheck passes but I could not confirm the spotlight renders" is honest; "shipped" is not.
+
+### Read state, don't remember it
+
+LLMs hallucinate the shape of code they've edited five minutes ago. Re-read the file before the next edit. Re-read the public API surface before you extend it. If you're about to call a function, confirm its signature exists at the current HEAD, not in your memory.
+
+### Fail loud, not silent
+
+- No `try { ... } catch { /* ignore */ }` unless the caller explicitly handles the sentinel.
+- No "fallback to default" that hides a missing config. If something is missing, throw with a message that names what's missing and who should have provided it.
+- No `as any`, no `@ts-ignore`, no `// eslint-disable-next-line` without a one-line comment explaining *why this is the least-bad option*.
+
+Silent failures are the #1 way AI-written code rots in production. An error you see on day one is cheap; a silent divergence discovered in week four is not.
+
+### One logical change per PR
+
+If the diff description needs the word "and" twice, split it. Small PRs get merged; big PRs get reverted. A good pixi-reels PR is typically under ~300 lines of real change, has one changeset entry, and tells one story.
+
+### Use the pools, ticker, and disposable patterns — don't invent parallels
+
+This repo already has `ObjectPool`, `TickerRef`, `Disposable`, `EventEmitter`, `FrameBuilder`. If you find yourself writing "a quick wrapper around `ticker.add`" or "a small helper to hold a list of symbols," stop — the primitive already exists. Grep for it. The existing ones are tested and leak-free; your parallel will not be.
+
+### Touching PixiJS? Respect the invariants
+
+- `ReelSymbol.resize()` is called on **every** symbol swap. Anything positional lives there, not in the constructor.
+- SpriteSymbols anchor at `(0, 0)`; SpineSymbols center via `resize()`. Don't mix models inside one class.
+- `ReelMotion` wraps via `_maxY` / `_minY`; never mutate symbol Y outside the motion layer.
+- GSAP must be driven off `app.ticker` in examples (the example scaffolding already does this — don't add a second driver).
+
+Violating these produces bugs that only appear on hidden tabs, long sessions, or specific aspect ratios — exactly the ones humans will only notice after a release.
+
+### When stuck, stop and report
+
+If you've tried three approaches and none work, do not try a fourth random approach. Write up: what you tried, what you expected, what actually happened, what you think is going on. Ask. This is faster than five more attempts and produces a far better repo in the long run.
+
 ---
 
 ## Project Identity

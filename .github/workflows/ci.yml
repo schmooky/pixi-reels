@@ -42,3 +42,41 @@ jobs:
 
       - name: Test
         run: pnpm --filter pixi-reels test
+
+  changeset-gate:
+    # Fails the PR when library source changed but no changeset file was added.
+    # Escape hatch: apply the `skip-changeset` label (docs/CI-only PRs, reverts).
+    if: github.event_name == 'pull_request' && !contains(github.event.pull_request.labels.*.name, 'skip-changeset')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+
+      - name: Detect library changes
+        id: lib
+        run: |
+          base="${{ github.event.pull_request.base.sha }}"
+          head="${{ github.event.pull_request.head.sha }}"
+          if git diff --name-only "$base" "$head" -- \
+              'packages/pixi-reels/src/**' \
+              'packages/pixi-reels/package.json' | grep -q .; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Require a changeset
+        if: steps.lib.outputs.changed == 'true'
+        run: |
+          base="${{ github.event.pull_request.base.sha }}"
+          head="${{ github.event.pull_request.head.sha }}"
+          added=$(git diff --name-only --diff-filter=A "$base" "$head" -- '.changeset/*.md' \
+            | grep -vE '(^|/)README\.md$' || true)
+          if [ -z "$added" ]; then
+            echo "::error::This PR modifies packages/pixi-reels but adds no .changeset/*.md file."
+            echo "Run 'pnpm changeset' and commit the generated file, or apply the 'skip-changeset' label if this PR ships no user-visible library change."
+            exit 1
+          fi
+          echo "Found changeset(s):"
+          echo "$added"
