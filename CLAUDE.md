@@ -4,6 +4,8 @@
 
 **These apply to every AI agent working on this repo. No exceptions.**
 
+Sections 1-4 below are adapted verbatim from the [karpathy-guidelines](https://github.com/forrestchang/andrej-karpathy-skills) skill (MIT), itself derived from [Andrej Karpathy's observations](https://x.com/karpathy/status/2015883857489522876) on LLM coding pitfalls. Sections 5 and the Stability Rules below are pixi-reels-specific additions.
+
 ### 1. Think Before Coding
 
 **Don't assume. Don't hide confusion. Surface tradeoffs.**
