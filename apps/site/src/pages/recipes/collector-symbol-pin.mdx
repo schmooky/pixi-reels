@@ -1,0 +1,70 @@
+---
+layout: ../../layouts/Recipe.astro
+title: Collector symbol (Hold & Win)
+description: A collector symbol lands adjacent to pinned coins and absorbs their payload values into its own pin. Hold & Win architecture with cross-pin coordination.
+tags: [coin, collector, payload, cell-pin]
+steps:
+  - Build one 1x1 ReelSet per cell (Hold & Win architecture)
+  - "Pin landed coins with { turns 'permanent', payload: { value } }"
+  - On collector land, sum neighbor pin payloads and unpin absorbed coins
+  - Pin the collector with the total in its own payload
+apis:
+  - ReelSet.pin
+  - ReelSet.unpin
+  - ReelSet.getPin
+  - CellPin.payload
+---
+
+import code from '../../recipes/collector-symbol-pin.recipe.ts?raw';
+import { RecipeRunner } from '../../components/RecipeRunner.tsx';
+
+<RecipeRunner code={code} client:only="react" />
+
+Cash Noire (NetEnt) and similar titles pair a Hold & Win board with a "collector" symbol that sweeps up nearby coin values. Here we build it with the same [per-cell ReelSet architecture](/recipes/value-coin-pin/) plus one extra step: on collector land, query the neighbors' pins, sum their payloads, unpin them, and pin the collector with the accumulated total.
+
+## The absorb step
+
+```ts
+// Inside the round handler, after all reels have landed
+if (hit.type === 'collector') {
+  const neighbors = [
+    { col: cell.col - 1, row: cell.row },
+    { col: cell.col + 1, row: cell.row },
+    { col: cell.col, row: cell.row - 1 },
+    { col: cell.col, row: cell.row + 1 },
+  ];
+
+  let total = 0;
+  for (const n of neighbors) {
+    const nCell = cellAt(n.col, n.row);
+    if (!nCell) continue;
+    const nPin = nCell.reelSet.getPin(0, 0);
+    if (nPin?.symbolId === 'coin' && typeof nPin.payload?.value === 'number') {
+      total += nPin.payload.value;
+      nCell.reelSet.unpin(0, 0);
+    }
+  }
+
+  cell.reelSet.pin(0, 0, 'collector', {
+    turns: 'permanent',
+    payload: { value: total },
+  });
+}
+```
+
+## Why this is clean
+
+- **No parallel state.** The pins map on each mini-reel IS the source of truth for "is this cell held, and with what value?" The collector reads it, the total display reads it, the badge drawer reads it. One representation, many consumers.
+- **Event-driven display.** Every badge on screen is driven by `pin:placed` / `pin:expired` events. When the collector unpins a neighbor, the neighbor's badge auto-clears. No coordination code.
+- **Collector badge in a different color.** Inside the `pin:placed` handler we check `pin.symbolId === 'collector'` and draw green instead of gold. Same pin API, different color by payload context.
+
+## Variations
+
+- **8-neighbor absorb** — include diagonals in the neighbors array
+- **Same-column / same-row sweeps** — sum every pinned coin on the collector's column or row
+- **Chain reactions** — if a collector lands adjacent to another collector, absorb its total too, then unpin
+
+## Related
+
+- [Value-carrying coin (Hold & Win)](/recipes/value-coin-pin/) — the underlying architecture
+- [Multiplier wild](/recipes/multiplier-wild-pin/) — payload pattern on a single full-grid ReelSet

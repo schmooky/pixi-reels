@@ -20,6 +20,7 @@ export const GUIDES_NAV: NavSection[] = [
     title: 'Building blocks',
     items: [
       { label: 'Symbols', href: '/guides/symbols/' },
+      { label: 'Spine pins + movePin', href: '/guides/spine-pins/' },
       { label: 'Spin lifecycle', href: '/guides/spin-lifecycle/' },
       { label: 'Speed modes', href: '/guides/speed-modes/' },
       { label: 'Win animations', href: '/guides/win-animations/' },

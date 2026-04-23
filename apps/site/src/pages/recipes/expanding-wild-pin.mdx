@@ -1,0 +1,62 @@
+---
+layout: ../../layouts/Recipe.astro
+title: Expanding wild (sticky)
+description: When a wild lands, the whole column fills with wild and stays expanded for N spins. Built with CellPin numeric turns — auto-expires when the counter runs out.
+tags: [wild, expanding, sticky, cell-pin]
+steps:
+  - On spin:allLanded, find every reel containing a wild
+  - "Pin every row of that reel with { turns: N } — the column becomes wild for the next N spins"
+  - The engine decrements turns on each spin:allLanded and expires pins at zero
+apis:
+  - ReelSet.pin
+  - CellPin.turns (number)
+---
+
+import code from '../../recipes/expanding-wild-pin.recipe.ts?raw';
+import { RecipeRunner } from '../../components/RecipeRunner.tsx';
+
+<RecipeRunner code={code} client:only="react" />
+
+Classic expanding wild — wild on land, whole column covered — held for three spins before the expansion releases. Neon Staxx (NetEnt) and Wild Toro (ELK Studios) use variations on this pattern.
+
+## The whole mechanic
+
+```ts
+const STICKY_TURNS = 3;
+
+reelSet.events.on('spin:allLanded', ({ symbols }) => {
+  for (let c = 0; c < symbols.length; c++) {
+    if (!symbols[c].includes('wild')) continue;
+    for (let r = 0; r < symbols[c].length; r++) {
+      if (!reelSet.getPin(c, r)) {
+        reelSet.pin(c, r, 'wild', { turns: STICKY_TURNS });
+      }
+    }
+  }
+});
+```
+
+## Turn lifecycle
+
+Numeric `turns` values are decremented at every `spin:allLanded`. When `turns` reaches zero, the pin fires `pin:expired` (reason: `'turns'`) and is removed from the map. Each pin in the expanded column expires independently — all at the same spin since they're pinned together.
+
+During each spin in the sticky window:
+1. The engine creates an overlay `ReelSymbol` for every pin, parented to the viewport's unmasked container
+2. The reel scrolls normally underneath; the overlay keeps the wild visible at its cell
+3. On landing, overlays are destroyed — the actual cell now shows the wild (via the `setResult` overlay)
+
+That's the visual mechanism behind "the wild stays put while the reel spins around it."
+
+## Variations
+
+- **Single-spin eval** — change `turns: STICKY_TURNS` to `turns: 'eval'`. The expansion applies only for the current spin's evaluation and clears at next `spin:start`. Useful for games where the expansion is purely a win-calc boost, not a visible multi-spin state.
+- **Growing expansion** — instead of filling the whole column, expand one cell per spin outward from the wild's landing row. Pin incrementally in successive `spin:allLanded` handlers.
+
+## Not to be confused with book-style expanding
+
+In a [book-style feature](/recipes/book-expanding-pin/), one symbol *class* is chosen at feature entry and expands whenever it appears. Expanding wild is per-cell: the wild at `(3,1)` expands its own column.
+
+## Related
+
+- [Book-style expanding symbol](/recipes/book-expanding-pin/) — class-based expansion
+- [Sticky wild (CellPin)](/recipes/sticky-wild-pin/) — persistent single cell instead of column fill

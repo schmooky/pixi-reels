@@ -121,6 +121,10 @@ export class FrameBuilder {
   get randomProvider(): RandomSymbolProvider {
     return this._randomProvider;
   }
+
+  get middleware(): ReadonlyArray<FrameMiddleware> {
+    return this._middlewares;
+  }
 }
 
 /** Fills empty symbol slots with random symbols. */

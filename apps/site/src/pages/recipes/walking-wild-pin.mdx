@@ -1,0 +1,135 @@
+---
+layout: ../../layouts/Recipe.astro
+title: Walking wild (movePin)
+description: Walking wild migrating one column left each spin via reelSet.movePin() — no ghost sprites. With Spine-ready flight hooks for running/walking animations.
+tags: [wild, walking, movement, spine, cell-pin]
+steps:
+  - "Pin new wilds on land with turns: 'permanent'"
+  - Before each spin, movePin() each existing pin one column left
+  - When a pin reaches column 0, unpin() — it walked off the board
+  - Use onFlightCreated / onFlightCompleted to drive Spine animations
+apis:
+  - ReelSet.pin
+  - ReelSet.movePin
+  - ReelSet.unpin
+  - MovePinOptions.onFlightCreated
+  - pin:overlayCreated event
+  - pin:moved event
+---
+
+import code from '../../recipes/walking-wild-pin.recipe.ts?raw';
+import { RecipeRunner } from '../../components/RecipeRunner.tsx';
+
+<RecipeRunner code={code} client:only="react" />
+
+Walking wild done with the engine primitive. No stage-level ghost sprites; the engine reparents a pooled `ReelSymbol` to `viewport.unmaskedContainer` for the flight, tweens it across column boundaries, releases it back to the pool on land, and fires hooks at every transition so you can drive animation state on Spine assets.
+
+## The core loop
+
+```ts
+async function walkPinsLeft() {
+  for (const pin of [...reelSet.pins.values()]) {
+    if (pin.col <= 0) {
+      reelSet.unpin(pin.col, pin.row);
+      continue;
+    }
+    await reelSet.movePin(
+      { col: pin.col, row: pin.row },
+      { col: pin.col - 1, row: pin.row },
+      { duration: 350 },
+    );
+  }
+}
+```
+
+Call `walkPinsLeft()` between spins and you have a walking wild.
+
+## Driving flight animation — `onFlightCreated` / `onFlightCompleted`
+
+`movePin` exposes the pooled flight ReelSymbol via two callbacks:
+
+```ts
+reelSet.movePin(from, to, {
+  duration: 350,
+  onFlightCreated: (flight) => {
+    // Before the tween starts. Kick off a flight animation here.
+  },
+  onFlightCompleted: (flight) => {
+    // After the tween, before the pool recycles the instance.
+  },
+});
+```
+
+The demo uses them for a simple scale pulse (the sprite asset has no "run" animation). For a Spine-based walking wild, this is where you set the `run` animation track:
+
+```ts
+import type { SpineSymbol } from 'pixi-reels';
+
+reelSet.movePin(from, to, {
+  duration: 600,
+  onFlightCreated: (flight) => {
+    // Your SpineSymbol subclass exposes a method to set an animation track.
+    (flight as SpineSymbol).setAnimation?.('run', true);
+  },
+  onFlightCompleted: (flight) => {
+    (flight as SpineSymbol).setAnimation?.('idle', true);
+  },
+});
+```
+
+The flight symbol is a fresh acquire from the symbol factory, so its default state is whatever your `SpineSymbol.onActivate()` sets (typically `idle`). The callback kicks it out of idle for the flight duration.
+
+## Driving overlay animation — `pin:overlayCreated` / `pin:overlayDestroyed`
+
+The sticky part of a walking wild — its behaviour while the reel is spinning, before it moves — is managed by the engine's per-pin overlay. Two events expose that too:
+
+```ts
+reelSet.events.on('pin:overlayCreated', (pin, overlay) => {
+  // Overlay created on spin:start for every active pin.
+  // For Spine: (overlay as SpineSymbol).setAnimation?.('idle-sticky', true);
+});
+
+reelSet.events.on('pin:overlayDestroyed', (pin, overlay) => {
+  // Fires before the overlay is released to the pool.
+  // Stop any tweens / listeners you attached.
+});
+```
+
+In the demo we fade the overlay rhythmically so the "sticky during spin" state reads differently from the landed state.
+
+## Lifecycle overview
+
+```
+pin(col, row, 'wild', { turns: 'permanent' })
+     fires pin:placed
+
+spin() begins
+     _ensurePinOverlay runs for every pin
+     fires pin:overlayCreated          <- Spine: play idle-sticky
+
+  reels scrolling; overlay keeps the wild visible at its cell
+
+spin lands
+     fires pin:overlayDestroyed        <- Spine: cleanup
+     overlay released to pool; real cell shows the wild
+
+game code calls movePin(from, to)
+     onFlightCreated fires before tween   <- Spine: play run
+     onFlightCompleted fires after tween  <- Spine: play idle
+     fires pin:moved
+
+next spin begins - new overlay at the NEW position
+```
+
+## Constraints
+
+- `movePin` must be called at rest (throws during `isSpinning`).
+- Destination must be in-grid and unoccupied by another pin.
+- `from === to` is a no-op that still fires `pin:moved` — safe in generic loops.
+- Callback errors are swallowed so a bug in animation code can't break the move.
+- **Walk pins sequentially, not in parallel.** If two wilds try to move to the same destination cell, the second `movePin` throws (`"a pin already exists at…"`). The example above iterates with `await` inside the loop so each move completes and the destination is free before the next one starts. Do not use `Promise.all` across multiple `movePin` calls.
+
+## Related
+
+- [Sticky wild (CellPin)](/recipes/sticky-wild-pin/) — persistent pin, no movement
+- [Spine pins + movePin](/guides/spine-pins/) — the full Spine integration guide

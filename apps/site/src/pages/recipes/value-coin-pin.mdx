@@ -1,0 +1,112 @@
+---
+layout: ../../layouts/Recipe.astro
+title: Value-carrying coin (Hold & Win)
+description: Classic Hold & Win architecture — one 1x1 ReelSet per cell, coin symbols carry their payout value in the pin payload, pinned cells skip their spin entirely.
+tags: [coin, hold-and-win, payload, cell-pin]
+steps:
+  - Build one 1x1 ReelSet per grid cell
+  - On each round, only spin cells without a pin
+  - "On coin land, pin with { turns 'permanent', payload: { value } }"
+  - Running total = sum of all pin payloads across every cell
+apis:
+  - ReelSet.pin
+  - ReelSet.unpin
+  - ReelSet.getPin
+  - CellPin.payload
+---
+
+import code from '../../recipes/value-coin-pin.recipe.ts?raw';
+import { RecipeRunner } from '../../components/RecipeRunner.tsx';
+
+<RecipeRunner code={code} client:only="react" />
+
+The Lightning Link / Dragon Link Hold & Win pattern, built with CellPin. The grid is **not** one 5×3 ReelSet — it's **15 independent 1×1 ReelSets**, one per cell. Each spins on its own, each holds coins on its own, and the CellPin primitive handles the "hold" part.
+
+## Why per-cell ReelSets
+
+In a Hold & Win feature, locked cells don't spin — only unlocked cells do. A single 5×3 ReelSet spins whole columns at once; you'd have to work around it. Per-cell mini-reels make the "spin only the unlocked cells" pattern trivial:
+
+```ts
+for (const cell of cells) {
+  if (cell.reelSet.getPin(0, 0)) continue; // already held, skip
+  spinPromises.push(cell.reelSet.spin());
+}
+```
+
+## The mechanic in full
+
+```ts
+// Create 15 mini ReelSets at build time (shown abbreviated)
+for (let col = 0; col < 5; col++) {
+  for (let row = 0; row < 3; row++) {
+    const mini = new ReelSetBuilder()
+      .reels(1).visibleSymbols(1)
+      .symbolSize(CELL, CELL)
+      .symbols((r) => {
+        r.register('coin', BlurSpriteSymbol, { textures, blurTextures });
+        r.register('empty', EmptySymbol, {});
+      })
+      .weights({ coin: 1, empty: 3 })
+      .ticker(app.ticker)
+      .build();
+    cells.push({ col, row, reelSet: mini });
+  }
+}
+
+// Each round: spin only the unlocked cells, then pin any hits
+async function playRound(hits) {
+  const spinning = cells.filter((c) => !c.reelSet.getPin(0, 0));
+  const promises = spinning.map((c) => c.reelSet.spin());
+  await new Promise((r) => setTimeout(r, 140));
+
+  for (const cell of spinning) {
+    const isHit = hits.some((h) => h.col === cell.col && h.row === cell.row);
+    cell.reelSet.setResult([[isHit ? 'coin' : 'empty']]);
+  }
+  await Promise.all(promises);
+
+  // Pin every hit with its payout value — the engine keeps the coin in place
+  for (const cell of spinning) {
+    if (!hits.some((h) => h.col === cell.col && h.row === cell.row)) continue;
+    cell.reelSet.pin(0, 0, 'coin', {
+      turns: 'permanent',
+      payload: { value: rollCoinValue() },
+    });
+  }
+}
+```
+
+## Reading the total
+
+Because each ReelSet's pins live on their own map, the total is a sum across all mini-reels:
+
+```ts
+function currentTotal(): number {
+  let total = 0;
+  for (const cell of cells) {
+    const pin = cell.reelSet.getPin(0, 0);
+    if (typeof pin?.payload?.value === 'number') total += pin.payload.value;
+  }
+  return total;
+}
+```
+
+The demo recomputes this on every `pin:placed` and `pin:expired`, keeping the TOTAL display live.
+
+## Ending the feature
+
+When the round counter runs out:
+
+```ts
+for (const cell of cells) {
+  const pin = cell.reelSet.getPin(0, 0);
+  if (pin) cell.reelSet.unpin(0, 0);
+}
+```
+
+Each `unpin` fires `pin:expired` with reason `'explicit'`, clearing badges and zeroing the total.
+
+## Related
+
+- [Collector symbol](/recipes/collector-symbol-pin/) — same architecture + one collector that absorbs adjacent pin values
+- [Multiplier wild](/recipes/multiplier-wild-pin/) — payload pattern on a single full-grid ReelSet

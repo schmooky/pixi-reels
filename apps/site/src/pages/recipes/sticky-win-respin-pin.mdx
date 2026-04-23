@@ -1,0 +1,63 @@
+---
+layout: ../../layouts/Recipe.astro
+title: Sticky-win respin
+description: Winning symbols lock for N respins while the rest of the grid spins independently — the Dead or Alive II / Razor Shark pattern.
+tags: [respin, sticky, win, cell-pin]
+steps:
+  - Detect winners on spin:allLanded
+  - Pin each winner with turns N — N is the respin window
+  - Non-winners respin naturally on the next spin, winners stay pinned
+  - Pins decrement after each landing and expire automatically
+apis:
+  - ReelSet.pin
+  - CellPin.turns (number)
+  - pin:expired event
+---
+
+import code from '../../recipes/sticky-win-respin-pin.recipe.ts?raw';
+import { RecipeRunner } from '../../components/RecipeRunner.tsx';
+
+<RecipeRunner code={code} client:only="react" />
+
+One of the most common resolution loops in the modern slot market. When a winning combination lands, the winning symbols lock in place; everything else respins. If a *new* winner lands during the respin, the counter resets. Otherwise the feature winds down.
+
+This recipe shows the primitive doing the locking. Real win detection is a game-layer concern — here we use "any 3 in a horizontal row" as a stand-in.
+
+## The core loop
+
+```ts
+const RESPIN_WINDOW = 2;
+
+reelSet.events.on('spin:allLanded', ({ symbols }) => {
+  const winners = detectWinners(symbols); // your evaluator
+  if (winners.length === 0) return;
+
+  for (const w of winners) {
+    // Re-pinning refreshes the lifetime; existing winners stay stuck
+    reelSet.pin(w.col, w.row, w.symbolId, { turns: RESPIN_WINDOW });
+  }
+});
+```
+
+## How the counter resets
+
+Calling `reelSet.pin()` with the same `(col, row)` *replaces* the existing pin silently (no `pin:expired` fires for replacement). If a new winner overlaps an already-pinned cell, we just reset its `turns` back to the full respin window.
+
+That's the whole "counter resets when a new winner lands" behavior — it falls out naturally.
+
+## When the feature ends
+
+Once a respin produces no new winners, the previously-pinned winners' `turns` keep decrementing. When they hit zero, `pin:expired` fires with reason `'turns'`. The feature naturally ends.
+
+```ts
+reelSet.events.on('pin:expired', (_pin, reason) => {
+  if (reason === 'turns' && reelSet.pins.size === 0) {
+    endFeature();
+  }
+});
+```
+
+## Related
+
+- [Sticky wild (CellPin)](/recipes/sticky-wild-pin/) — simpler persistence pattern
+- [Hold & Win coin](/recipes/value-coin-pin/) — permanent lock + value payload

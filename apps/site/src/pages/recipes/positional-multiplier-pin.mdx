@@ -1,0 +1,64 @@
+---
+layout: ../../layouts/Recipe.astro
+title: Positional multiplier cells
+description: Specific grid positions carry a multiplier. Any symbol landing on those cells boosts its own win contribution — Gonzo's Quest multiplier-reel style.
+tags: [multiplier, positional, payload, cell-pin]
+steps:
+  - Mark fixed cells as multiplier positions (or receive them per-spin from server)
+  - Draw persistent ×N badges at those cells
+  - After landing, re-pin the rolled symbol with multiplier in payload (turns 'eval')
+  - Win evaluator reads pin.payload.multiplier for any winning cell
+apis:
+  - ReelSet.pin
+  - CellPin.payload
+  - CellPin.turns ('eval')
+---
+
+import code from '../../recipes/positional-multiplier-pin.recipe.ts?raw';
+import { RecipeRunner } from '../../components/RecipeRunner.tsx';
+
+<RecipeRunner code={code} client:only="react" />
+
+Some cells carry a multiplier regardless of what lands on them. Any win passing through boosts. Gonzo's Quest (NetEnt) and Irish Riches (Blueprint Gaming) both use this pattern.
+
+## The mechanic
+
+```ts
+const MULTIPLIER_CELLS = [
+  { col: 1, row: 1, mult: 2 },
+  { col: 3, row: 0, mult: 3 },
+  { col: 2, row: 2, mult: 5 },
+];
+
+reelSet.events.on('spin:allLanded', ({ symbols }) => {
+  for (const cell of MULTIPLIER_CELLS) {
+    const rolled = symbols[cell.col][cell.row];
+    reelSet.pin(cell.col, cell.row, rolled, {
+      turns: 'eval',
+      payload: { multiplier: cell.mult, positionMultiplier: true },
+    });
+  }
+});
+```
+
+Unlike a multiplier wild, the symbol at the cell is whatever the strip rolled. The multiplier is pure metadata on the pin's `payload`. We use `turns: 'eval'` because the metadata is per-spin — the next spin will re-pin with a fresh rolled symbol.
+
+## Reading at win time
+
+```ts
+for (const pos of winningPositions) {
+  const pin = reelSet.getPin(pos.col, pos.row);
+  if (pin?.payload?.positionMultiplier) {
+    winAmount *= pin.payload.multiplier;
+  }
+}
+```
+
+## Note on CellDecorator
+
+A cleaner future API would be a `CellDecorator` primitive that lets you attach metadata to a cell *without* having to pin a symbol. We're using the symbol-mirroring workaround (pinning the rolled symbol so the pin's `symbolId` doesn't override the display) because it works today without new primitives. If `CellDecorator` ships, the payload simply moves there.
+
+## Related
+
+- [Multiplier wild](/recipes/multiplier-wild-pin/) — multiplier tied to a specific symbol, not a position
+- [Value-carrying coin](/recipes/value-coin-pin/) — payload pattern for Hold & Win

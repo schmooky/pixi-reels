@@ -1,0 +1,74 @@
+---
+layout: ../../layouts/Recipe.astro
+title: Multiplier wild
+description: Each wild carries a per-instance multiplier value in its pin payload. Game layer reads the payload during win evaluation to scale the payout.
+tags: [wild, multiplier, payload, cell-pin]
+steps:
+  - Pin wilds on land with a payload containing the multiplier value
+  - Draw a ×N badge on each pinned cell via pin:placed event
+  - On wins, read pin.payload.multiplier to scale the payout
+apis:
+  - ReelSet.pin
+  - CellPin.payload
+  - pin:placed event
+---
+
+import code from '../../recipes/multiplier-wild-pin.recipe.ts?raw';
+import { RecipeRunner } from '../../components/RecipeRunner.tsx';
+
+<RecipeRunner code={code} client:only="react" />
+
+`CellPin.payload` carries arbitrary per-instance data alongside the pinned symbol. Multiplier wilds, value-carrying coins, tiered symbols — any "this cell has extra game state" mechanic goes here.
+
+## The whole mechanic
+
+```ts
+reelSet.events.on('spin:allLanded', ({ symbols }) => {
+  for (let c = 0; c < symbols.length; c++) {
+    for (let r = 0; r < symbols[c].length; r++) {
+      if (symbols[c][r] === 'wild' && !reelSet.getPin(c, r)) {
+        const mult = [2, 3, 5][Math.floor(Math.random() * 3)];
+        reelSet.pin(c, r, 'wild', {
+          turns: 3,
+          payload: { multiplier: mult },
+        });
+      }
+    }
+  }
+});
+```
+
+## Reading the payload at win time
+
+```ts
+// Inside your win evaluator
+let winAmount = lineBasePayout;
+for (const pos of winningPositions) {
+  const pin = reelSet.getPin(pos.col, pos.row);
+  if (typeof pin?.payload?.multiplier === 'number') {
+    winAmount *= pin.payload.multiplier;
+  }
+}
+```
+
+## Drawing the badge
+
+The demo subscribes to `pin:placed` and `pin:expired` to draw and remove ×N badges:
+
+```ts
+reelSet.events.on('pin:placed', (pin) => {
+  const mult = pin.payload?.multiplier;
+  if (typeof mult === 'number') drawBadge(pin.col, pin.row, mult);
+});
+
+reelSet.events.on('pin:expired', (pin) => {
+  clearBadge(pin.col, pin.row);
+});
+```
+
+The engine fires both events regardless of whether a payload is set — the badge logic just checks.
+
+## Related
+
+- [Value-carrying coin symbols](/recipes/value-coin-pin/) — same payload pattern for Hold & Win-style features
+- [Positional multiplier cells](/recipes/positional-multiplier-pin/) — multipliers tied to grid positions, not symbols
