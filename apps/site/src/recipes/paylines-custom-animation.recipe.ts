@@ -14,6 +14,7 @@ const GRID = [
 const PAYLINES = [
   { lineId: 0, line: [0, 0, 0, 0, 0], value: 300 },
   { lineId: 1, line: [1, 1, 1, 1, 1], value: 100 },
+  { lineId: 2, line: [2, 2, 2, 2, 2], value:  60 },
 ];
 
 const reelSet = new ReelSetBuilder()

@@ -14,7 +14,10 @@ const GRID = [
 const PAYLINES = [
   { lineId: 0, line: [0, 0, 0, 0, 0], value: 300 },
   { lineId: 1, line: [1, 1, 1, 1, 1], value: 100 },
+  { lineId: 2, line: [2, 2, 2, 2, 2], value:  60 },
 ];
+
+const LINE_COLORS = [0xffe04a, 0x33d1ff, 0xff7aa2];
 
 const reelSet = new ReelSetBuilder()
   .reels(COLS).visibleSymbols(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
@@ -33,7 +36,7 @@ reelSet.addChild(lineLayer);
 reelSet.events.on('win:line', (payline, cells) => {
   const gfx = new PIXI.Graphics();
   gfx.zIndex = payline.lineId;
-  const color = payline.lineId === 0 ? 0xffe04a : 0x33d1ff;
+  const color = LINE_COLORS[payline.lineId % LINE_COLORS.length];
   const pts = cells.map(c => {
     const b = reelSet.getCellBounds(c.reelIndex, c.rowIndex);
     return { x: b.x + b.width / 2, y: b.y + b.height / 2 };
