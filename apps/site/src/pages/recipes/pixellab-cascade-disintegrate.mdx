@@ -1,0 +1,105 @@
+---
+layout: ../../layouts/Recipe.astro
+title: Cascade with disintegration (pixellab)
+description: A 6×5 cluster-pay cascade. Each winning cell plays its own AI-generated disintegrate sequence before tumbling.
+tags: [cascade, animation, ai, cluster]
+steps:
+  - Generate two sequences per symbol (win + disintegrate) via gen-pixellab-symbols.mjs
+  - Load both with loadPixellabSymbols — { frames, disintegrateFrames }
+  - In runCascade.onWinnersVanish, spawn AnimatedSprite overlays playing the disintegrate frames
+apis:
+  - AnimatedSpriteSymbol
+  - loadPixellabSymbols (disintegrateFrames)
+  - runCascade.onWinnersVanish
+  - WinPresenter
+---
+
+import code from '../../recipes/pixellab-cascade-disintegrate.recipe.ts?raw';
+import { RecipeRunner } from '../../components/RecipeRunner.tsx';
+
+<RecipeRunner code={code} client:only="react" />
+
+## Two sequences per symbol
+
+The companion [generator script](https://github.com/schmooky/pixi-reels/blob/main/scripts/gen-pixellab-symbols.mjs)
+now produces **two** animation sequences per symbol, both keyed off the
+same `base.png`:
+
+| Sequence | Filename | Action prompt (e.g. seven) |
+|---|---|---|
+| Idle / win pulse | `frame_NN.png` | `"pulsing red glow with white sparkles"` |
+| Cascade vanish | `disintegrate_NN.png` | `"crumbling to red dust particles and fading away"` |
+
+The loader returns them separately — `frames` for `AnimatedSpriteSymbol`
+(which drives `playWin()`), `disintegrateFrames` for the cascade pop
+below.
+
+## Driving the pop
+
+```ts
+function playDisintegrate(cell, durationMs) {
+  const symbol = reelSet.getReel(cell.reelIndex).getSymbolAt(cell.rowIndex);
+  const seq = disintegrateFrames[symbol.symbolId];
+  const b = reelSet.getCellBounds(cell.reelIndex, cell.rowIndex);
+
+  const sprite = new PIXI.AnimatedSprite(seq);
+  sprite.anchor.set(0.5, 0.5);
+  sprite.width = b.width;
+  sprite.height = b.height;
+  sprite.x = b.x + b.width / 2;
+  sprite.y = b.y + b.height / 2;
+  sprite.animationSpeed = (seq.length / (durationMs / 1000)) / 60;
+  sprite.loop = false;
+  fxLayer.addChild(sprite);
+
+  symbol.view.alpha = 0;   // hide the original while the overlay plays
+
+  return new Promise(resolve => {
+    sprite.onComplete = () => { sprite.destroy(); resolve(); };
+    sprite.gotoAndPlay(0);
+  });
+}
+```
+
+We use a plain `PIXI.AnimatedSprite` for the overlay rather than a
+`ReelSymbol` — the disintegrate is transient, lives in a dedicated
+`fxLayer` above the viewport, and doesn't need the pool lifecycle.
+
+## Wired into runCascade
+
+```ts
+await runCascade(reelSet, stages, {
+  vanishDuration: 0,         // we drive the pop ourselves
+  onWinnersVanish: async (_rs, winners, stageIndex) => {
+    const cells = winners.map(w => ({ reelIndex: w.reel, rowIndex: w.row }));
+    await Promise.all([
+      presenter.show([{ id: stageIndex, cells, value: winners.length * 25 }]),
+      ...winners.map(w => playDisintegrate({ reelIndex: w.reel, rowIndex: w.row }, 520)),
+    ]);
+  },
+});
+```
+
+`WinPresenter.show(...)` still fires `win:start` / `win:group` /
+`win:symbol` / `win:end` so any external subscriber (sound, counter,
+popup) works the same as a payline win. The disintegrate overlay is a
+parallel track.
+
+## Cluster detection is yours
+
+The recipe uses a placeholder: "pick the symbol with the biggest count,
+if ≥ 4 cells, it's the cluster." A real game would run connected-
+component flood fill or evaluate paylines / ways. The cascade loop and
+disintegration don't care which rule produced the winners.
+
+## Regenerating the disintegrate sequences
+
+```bash
+# Just the disintegrate action for one symbol:
+rm examples/assets/pixellab-symbols/seven/disintegrate_*.png
+PIXELAB_SYMBOLS=seven node scripts/gen-pixellab-symbols.mjs
+```
+
+The script keeps already-generated files on disk (cache-safe). Delete
+the relevant `disintegrate_*.png` or `frame_*.png` files to force a regen
+for that specific sequence.

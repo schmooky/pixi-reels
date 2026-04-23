@@ -57,3 +57,33 @@ describe('AnimatedSpriteSymbol.resize — anchor-aware positioning', () => {
     expect(spr.y).toBe(32);
   });
 });
+
+describe('AnimatedSpriteSymbol.playWin — returns to frame 0 on completion', () => {
+  it('calls gotoAndStop(0) from the onComplete handler', async () => {
+    const s = new AnimatedSpriteSymbol({
+      frames: { a: [mkTex(), mkTex(), mkTex(), mkTex()] },
+    });
+    s.activate('a');
+    const spr = (s as unknown as {
+      _animSprite: {
+        onComplete?: () => void;
+        gotoAndPlay: (i: number) => void;
+        gotoAndStop: (i: number) => void;
+      };
+    })._animSprite;
+
+    // Stub gotoAndPlay (starts the PIXI shared ticker → needs RAF in node)
+    // and capture gotoAndStop calls. We're testing the completion-time
+    // behaviour, not the PIXI playback loop.
+    const stopCalls: number[] = [];
+    spr.gotoAndPlay = () => {};
+    spr.gotoAndStop = (i: number) => stopCalls.push(i);
+
+    const win = s.playWin();
+    // The real PIXI ticker would fire onComplete at the end of the sequence.
+    expect(typeof spr.onComplete).toBe('function');
+    spr.onComplete!();
+    await win;
+    expect(stopCalls).toEqual([0]);
+  });
+});

@@ -55,6 +55,11 @@ export class AnimatedSpriteSymbol extends ReelSymbol {
       this._animSprite.onComplete = () => {
         this._winResolve = null;
         this._animSprite.onComplete = undefined;
+        // Return to frame 0 so the cell settles on its idle look instead
+        // of holding the last frame of the win sequence (which for
+        // generated pixel-art sequences often ends mid-action — muted,
+        // shifted, or otherwise not the neutral base pose).
+        this._animSprite.gotoAndStop(0);
         resolve();
       };
       this._animSprite.gotoAndPlay(0);

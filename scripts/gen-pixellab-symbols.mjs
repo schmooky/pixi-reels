@@ -37,31 +37,41 @@ const FRAMES = Number(process.env.PIXELAB_FRAMES ?? 8);
 // subject + one or two style modifiers. `action` for the animation step
 // tells the model what the in-between frames should do; keep it to a
 // single visual idea so the loop reads cleanly at 8 frames.
+// Each symbol has two action prompts:
+//   - `action` → the idle / win pulse (frame_NN.png)
+//   - `disintegrateAction` → the cascade vanish sequence (disintegrate_NN.png)
+// Running the script re-uses whatever already exists on disk — delete a
+// sub-directory to force a regen.
 const SYMBOLS = [
   {
     id: 'seven',
     description: 'glowing red seven slot machine symbol, shiny, bold, centered on a transparent background',
     action: 'pulsing red glow with white sparkles',
+    disintegrateAction: 'crumbling to red dust particles and fading away',
   },
   {
     id: 'bell',
     description: 'golden brass bell slot machine symbol, polished, centered',
     action: 'ringing bell with yellow glow',
+    disintegrateAction: 'shattering into golden fragments and fading',
   },
   {
     id: 'cherry',
     description: 'pair of red cherries with green stem, glossy, slot machine symbol, centered',
     action: 'bouncing cherries with sparkle',
+    disintegrateAction: 'bursting into red droplets and dissipating',
   },
   {
     id: 'diamond',
     description: 'cut blue diamond slot machine symbol, faceted, bright, centered',
     action: 'rotating diamond with light flare',
+    disintegrateAction: 'shattering into blue shards and fading',
   },
   {
     id: 'bar',
     description: 'golden triple-bar slot machine symbol, embossed, centered',
     action: 'glowing golden bar with shimmer',
+    disintegrateAction: 'cracking and disintegrating into golden dust',
   },
 ];
 
@@ -117,19 +127,24 @@ async function generateBase(symbol, outPath) {
   console.log(`  ✓ wrote ${path.relative(REPO, outPath)}`);
 }
 
-async function generateFrames(symbol, basePath, framesDir) {
-  const done = fs.existsSync(framesDir)
-    && fs.readdirSync(framesDir).filter((n) => n.startsWith('frame_') && n.endsWith('.png')).length > 0;
-  if (done) {
-    console.log(`  ✓ frames cached: ${path.relative(REPO, framesDir)}`);
+/**
+ * Generate one animation sequence using /animate-with-text-v3.
+ * `prefix` controls the filename pattern: "frame" for the idle/win
+ * sequence, "disintegrate" for the cascade-vanish sequence.
+ */
+async function generateSequence(symbol, basePath, framesDir, action, prefix) {
+  const cached = fs.existsSync(framesDir)
+    && fs.readdirSync(framesDir).some((n) => n.startsWith(`${prefix}_`) && n.endsWith('.png'));
+  if (cached) {
+    console.log(`  ✓ ${prefix} frames cached: ${path.relative(REPO, framesDir)}`);
     return;
   }
   fs.mkdirSync(framesDir, { recursive: true });
   const basePng = fs.readFileSync(basePath);
-  console.log(`  → animate (${FRAMES} frames, action: "${symbol.action}")…`);
+  console.log(`  → animate ${prefix} (${FRAMES} frames, action: "${action}")…`);
   const started = await api('/animate-with-text-v3', {
     first_frame: { type: 'base64', base64: basePng.toString('base64'), format: 'png' },
-    action: symbol.action,
+    action,
     frame_count: FRAMES,
     no_background: true,
   });
@@ -142,10 +157,10 @@ async function generateFrames(symbol, basePath, framesDir) {
     throw new Error(`no images in completed job: ${JSON.stringify(job.last_response).slice(0, 400)}`);
   }
   images.forEach((im, i) => {
-    const out = path.join(framesDir, `frame_${String(i).padStart(2, '0')}.png`);
+    const out = path.join(framesDir, `${prefix}_${String(i).padStart(2, '0')}.png`);
     fs.writeFileSync(out, Buffer.from(im.base64, 'base64'));
   });
-  console.log(`  ✓ wrote ${images.length} frames to ${path.relative(REPO, framesDir)}`);
+  console.log(`  ✓ wrote ${images.length} ${prefix} frames to ${path.relative(REPO, framesDir)}`);
 }
 
 fs.mkdirSync(OUT_ROOT, { recursive: true });
@@ -157,7 +172,10 @@ for (const symbol of todo) {
   const basePath = path.join(symbolDir, 'base.png');
   try {
     await generateBase(symbol, basePath);
-    await generateFrames(symbol, basePath, symbolDir);
+    await generateSequence(symbol, basePath, symbolDir, symbol.action, 'frame');
+    if (symbol.disintegrateAction) {
+      await generateSequence(symbol, basePath, symbolDir, symbol.disintegrateAction, 'disintegrate');
+    }
   } catch (e) {
     console.error(`  ✗ ${symbol.id}: ${e.message}`);
     throw e;

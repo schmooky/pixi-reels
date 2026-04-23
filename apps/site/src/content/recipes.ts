@@ -252,6 +252,18 @@ export const RECIPES: RecipeMeta[] = [
     apis: ['AnimatedSpriteSymbol', 'loadPixellabSymbols', 'WinPresenter'],
     tags: ['symbols', 'animation', 'ai'],
   },
+  {
+    slug: 'pixellab-cascade-disintegrate',
+    title: 'Cascade with disintegration (pixellab)',
+    oneLiner: '6×5 cluster cascade. Each winning cell plays its own AI-generated disintegrate sequence before tumbling.',
+    steps: [
+      'Generate per-symbol win + disintegrate sequences',
+      'Spawn a PIXI.AnimatedSprite overlay playing disintegrateFrames on each winner',
+      'Let runCascade tumble + drop after the pops resolve',
+    ],
+    apis: ['AnimatedSpriteSymbol', 'loadPixellabSymbols', 'runCascade.onWinnersVanish'],
+    tags: ['cascade', 'animation', 'ai', 'cluster'],
+  },
 
   // ── CellPin primitive recipes ──────────────────────────────────────
   // These recipes all use reelSet.pin() — the engine's unified cell-persistence
