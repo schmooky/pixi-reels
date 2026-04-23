@@ -62,7 +62,7 @@ const ALLOWED_NON_ASCII = new Set([
   '×', '≥', '≤', '±', '⇒', // math glyphs in comments
   'Δ', 'δ', 'Σ', 'σ', 'π',  // Greek math letters in docs ("Chebyshev |Δreel|")
   '◆', '◎', '★',           // UI bullets already adopted on the site
-  '✓',                     // check mark for toggle-on UI state
+  '✓', '✗',                // check / cross marks for toggle + script status lines
   '♥', '✦', '◉', '◔',      // decorative glyphs on the classic-lines demo symbols
   '▶', '◀', '▲', '▼',      // solid-triangle arrowheads for ASCII flow diagrams
   // Box drawing characters — used by the debug ASCII grid and by

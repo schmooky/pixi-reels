@@ -17,3 +17,4 @@ packages/*/LICENSE
 
 # Copied from examples/assets/ by apps/site's sync-assets script.
 apps/site/public/prototype-symbols/
+apps/site/public/pixellab-symbols/

@@ -1,0 +1,107 @@
+---
+layout: ../../layouts/Recipe.astro
+title: AI-generated animated symbols (pixellab)
+description: Generate slot symbols + per-symbol win-animation sequences via pixellab.ai and wire them into AnimatedSpriteSymbol.
+tags: [symbols, animation, ai]
+steps:
+  - Generate a base image per symbol via /create-image-pixflux
+  - For each base, generate N frames via /animate-with-text-v3
+  - Load the frames with loadPixellabSymbols and register with AnimatedSpriteSymbol
+apis:
+  - AnimatedSpriteSymbol
+  - loadPixellabSymbols (helper)
+  - scripts/gen-pixellab-symbols.mjs
+---
+
+import code from '../../recipes/pixellab-animated-symbols.recipe.ts?raw';
+import { RecipeRunner } from '../../components/RecipeRunner.tsx';
+
+<RecipeRunner code={code} client:only="react" />
+
+## Why this recipe exists
+
+pixi-reels ships three symbol classes:
+
+- `SpriteSymbol` — one static texture. Cheapest, best for casino-grade pre-rendered art.
+- `SpineSymbol` — full Spine skeleton. Best for character-style symbols with complex win animations.
+- **`AnimatedSpriteSymbol` — sequence of textures, played frame-by-frame.** This recipe.
+
+Sequences sit nicely between the other two: richer than a still sprite,
+cheaper to ship than a Spine rig. For a prototype or indie slot, an
+AI-generated pixel-art sequence gives every symbol a distinct win
+gesture in minutes — no animator required.
+
+## The generation pipeline
+
+Two endpoints, one env var:
+
+```bash
+export PIXELAB_API_KEY=…  # https://pixellab.ai/account
+node scripts/gen-pixellab-symbols.mjs
+```
+
+The [script](https://github.com/schmooky/pixi-reels/blob/main/scripts/gen-pixellab-symbols.mjs)
+loops over a list of symbols and, for each:
+
+1. `POST /create-image-pixflux` with the visual description →
+   `examples/assets/pixellab-symbols/<id>/base.png`
+2. `POST /animate-with-text-v3` with the base as `first_frame` + an
+   action description (e.g. `"pulsing red glow with white sparkles"`)
+   → 8 frames saved as `frame_00.png` … `frame_07.png`
+
+The animation endpoint is async — the script polls `/background-jobs/{id}`
+until status flips to `completed`. Typical cost: ~1 generation for the
+base + ~5 for the 8-frame animation per symbol.
+
+Change the palette:
+
+```bash
+# Generate just one symbol with 12 frames at 64px.
+PIXELAB_SYMBOLS=cherry PIXELAB_FRAMES=12 PIXELAB_SIZE=64 \
+  node scripts/gen-pixellab-symbols.mjs
+```
+
+## Loading the assets
+
+```ts
+import { AnimatedSpriteSymbol } from 'pixi-reels';
+import { loadPixellabSymbols } from '../../shared/pixellabSymbolsLoader.ts';
+
+const { frames } = await loadPixellabSymbols(['cherry', 'seven', 'bell']);
+
+builder.symbols((r) => {
+  for (const id of Object.keys(frames)) {
+    r.register(id, AnimatedSpriteSymbol, {
+      frames,                        // same map passed to every registration
+      animationSpeed: 0.35,          // frames advanced per tick (~21 fps at 60)
+      anchor: { x: 0.5, y: 0.5 },
+    });
+  }
+});
+```
+
+`AnimatedSpriteSymbol.onActivate` picks the right frame array by
+`symbolId`. The sprite starts stopped on frame 0 (the base). `playWin()`
+runs the full sequence once and resolves when the last frame lands —
+which is exactly what `WinPresenter` awaits.
+
+## Non-pixel-art alternatives
+
+pixellab is pixel-focused. For rendered/photoreal slot art the same
+shape works with other providers — generate a base with e.g. an SDXL or
+Kling endpoint, then animate with an image-to-video model (Kling, Runway
+Gen-3, Luma). Save each frame as a PNG, drop into
+`examples/assets/<your-folder>/<id>/frame_NN.png`, and reuse
+`loadPixellabSymbols` (or fork it — the loader is 40 lines).
+
+## Caveats
+
+- **Frames vary in silhouette.** AI animations drift shape a bit between
+  frames; a cell-snapped slot grid will show that as jitter. Crop tightly
+  and add `no_background: true` (already set) to minimise it. For
+  production-grade stability, hand-clean the frames in Aseprite.
+- **Background-removal occasionally bleeds.** If you get halo artifacts,
+  switch `background_removal_task` in the request body to
+  `remove_complex_background` (slower, cleaner).
+- **animationSpeed** is frames-per-tick. At 60 fps ticker, `0.35` is
+  ~21 fps; `1.0` is the full 60. Slow it down for a deliberate win feel.

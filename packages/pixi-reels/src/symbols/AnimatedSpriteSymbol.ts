@@ -55,6 +55,11 @@ export class AnimatedSpriteSymbol extends ReelSymbol {
       this._animSprite.onComplete = () => {
         this._winResolve = null;
         this._animSprite.onComplete = undefined;
+        // Return to frame 0 so the cell settles on its idle look instead
+        // of holding the last frame of the win sequence (which for
+        // generated pixel-art sequences often ends mid-action — muted,
+        // shifted, or otherwise not the neutral base pose).
+        this._animSprite.gotoAndStop(0);
         resolve();
       };
       this._animSprite.gotoAndPlay(0);
@@ -73,5 +78,11 @@ export class AnimatedSpriteSymbol extends ReelSymbol {
   resize(width: number, height: number): void {
     this._animSprite.width = width;
     this._animSprite.height = height;
+    // Position the sprite to match its anchor so it fills the cell.
+    // Without this, an anchor of (0.5, 0.5) would render the sprite with
+    // its centre at the cell's top-left corner — only the bottom-right
+    // quadrant visible inside the mask.
+    this._animSprite.x = width * this._animSprite.anchor.x;
+    this._animSprite.y = height * this._animSprite.anchor.y;
   }
 }

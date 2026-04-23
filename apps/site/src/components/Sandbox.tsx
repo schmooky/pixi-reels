@@ -13,9 +13,11 @@ import {
   SpeedPresets,
   enableDebug,
   WinPresenter,
+  AnimatedSpriteSymbol,
   type ReelSet,
   ReelSymbol,
 } from 'pixi-reels';
+import { loadPixellabSymbols } from '../../../../examples/shared/pixellabSymbolsLoader.ts';
 import { BlurSpriteSymbol } from '../../../../examples/shared/BlurSpriteSymbol.ts';
 import { loadPrototypeSymbols } from '../../../../examples/shared/prototypeSpriteLoader.ts';
 import { transform as sucraseTransform } from 'sucrase';
@@ -34,8 +36,9 @@ const DEFAULT_CODE = `// ─── pixi-reels sandbox ────────�
 // right rebuild from your \`buildReels\` function.
 //
 // Injected globals:
-//   - ReelSetBuilder, SpeedPresets, BlurSpriteSymbol
+//   - ReelSetBuilder, SpeedPresets, BlurSpriteSymbol, AnimatedSpriteSymbol
 //   - WinPresenter (symbol highlight on wins; emits win:* events)
+//   - loadPixellabSymbols (async loader for generated sequence assets)
 //   - app          -- PixiJS Application (has .ticker, .screen)
 //   - textures     -- Record<symbolId, Texture>    (base art)
 //   - blurTextures -- Record<symbolId, Texture>    (motion-blur variants)
@@ -223,11 +226,14 @@ export default function Sandbox() {
 
     let built: BuildResult;
     try {
-      const factory = new Function(
+      const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor as FunctionConstructor;
+      const factory = new AsyncFunction(
         'ReelSetBuilder',
         'SpeedPresets',
         'BlurSpriteSymbol',
+        'AnimatedSpriteSymbol',
         'WinPresenter',
+        'loadPixellabSymbols',
         'app',
         'textures',
         'blurTextures',
@@ -241,11 +247,15 @@ export default function Sandbox() {
         'EmptySymbol',
         factorySource,
       );
-      built = factory(
+      // Await the factory so recipes that need async setup
+      // (e.g. `await loadPixellabSymbols(...)`) work.
+      built = (await factory(
         ReelSetBuilder,
         SpeedPresets,
         BlurSpriteSymbol,
+        AnimatedSpriteSymbol,
         WinPresenter,
+        loadPixellabSymbols,
         env.app,
         env.textures,
         env.blurTextures,
@@ -257,7 +267,7 @@ export default function Sandbox() {
         tumbleToGrid,
         diffCells,
         EmptySymbol,
-      ) as BuildResult;
+      )) as BuildResult;
     } catch (e) {
       setStatus({ kind: 'err', msg: `Runtime error: ${(e as Error).message}` });
       return;

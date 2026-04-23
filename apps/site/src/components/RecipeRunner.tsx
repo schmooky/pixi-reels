@@ -6,17 +6,23 @@ import type { Texture } from 'pixi.js';
 import * as PIXI from 'pixi.js';
 import { gsap } from 'gsap';
 import {
-  ReelSetBuilder, SpeedPresets, SpriteSymbol, DropRecipes, CascadeAnticipationPhase,
+  ReelSetBuilder, SpeedPresets, SpriteSymbol, AnimatedSpriteSymbol, DropRecipes, CascadeAnticipationPhase,
   enableDebug, WinPresenter,
   type ReelSet, ReelSymbol,
 } from 'pixi-reels';
 import { BlurSpriteSymbol } from '../../../../examples/shared/BlurSpriteSymbol.ts';
 import { loadPrototypeSymbols } from '../../../../examples/shared/prototypeSpriteLoader.ts';
+import { loadPixellabSymbols } from '../../../../examples/shared/pixellabSymbolsLoader.ts';
 import { transform as sucraseTransform } from 'sucrase';
 import { runCascade, tumbleToGrid, diffCells } from '../../../../examples/shared/cascadeLoop.ts';
 import { cn } from '@/lib/utils';
 
 let gsapSynced = false;
+
+// Use AsyncFunction so recipes can do top-level `await loadPixellabSymbols(...)`
+// inside the injected body. Plain `new Function(...)` returns a sync function
+// where top-level await is a SyntaxError.
+const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor as FunctionConstructor;
 
 function pickWeighted(weights: Record<string, number>): string {
   const total = Object.values(weights).reduce((a, b) => a + b, 0);
@@ -109,19 +115,25 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
 
       let result: RunResult;
       try {
-        const factory = new Function(
-          'ReelSetBuilder', 'SpeedPresets', 'BlurSpriteSymbol', 'SpriteSymbol', 'DropRecipes', 'CascadeAnticipationPhase',
-          'WinPresenter',
+        const factory = new AsyncFunction(
+          'ReelSetBuilder', 'SpeedPresets', 'BlurSpriteSymbol', 'SpriteSymbol', 'AnimatedSpriteSymbol',
+          'DropRecipes', 'CascadeAnticipationPhase',
+          'WinPresenter', 'loadPixellabSymbols',
           'app', 'textures', 'blurTextures', 'SYMBOL_IDS', 'pickWeighted', 'gsap', 'PIXI',
           'runCascade', 'tumbleToGrid', 'diffCells', 'EmptySymbol',
           `"use strict"; ${js}`,
         );
-        result = factory(
-          ReelSetBuilder, SpeedPresets, BlurSpriteSymbol, SpriteSymbol, DropRecipes, CascadeAnticipationPhase,
-          WinPresenter,
+        // Await the factory result so recipes that need async setup
+        // (e.g. `await loadPixellabSymbols(...)`) can just `return await`
+        // the built RunResult. Sync recipes that return a plain object
+        // are unaffected — `await x` on a non-Promise resolves to x.
+        result = (await factory(
+          ReelSetBuilder, SpeedPresets, BlurSpriteSymbol, SpriteSymbol, AnimatedSpriteSymbol,
+          DropRecipes, CascadeAnticipationPhase,
+          WinPresenter, loadPixellabSymbols,
           app, textures, blurTextures, SYMBOL_IDS, pickWeighted, gsap, PIXI,
           runCascade, tumbleToGrid, diffCells, EmptySymbol,
-        ) as RunResult;
+        )) as RunResult;
       } catch (e) {
         setError(`Runtime error: ${(e as Error).message}`);
         return;
