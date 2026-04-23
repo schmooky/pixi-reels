@@ -13,8 +13,6 @@ import {
   SpeedPresets,
   enableDebug,
   WinPresenter,
-  GraphicsLineRenderer,
-  paylineToCells,
   type ReelSet,
   ReelSymbol,
 } from 'pixi-reels';
@@ -37,7 +35,7 @@ const DEFAULT_CODE = `// ─── pixi-reels sandbox ────────�
 //
 // Injected globals:
 //   - ReelSetBuilder, SpeedPresets, BlurSpriteSymbol
-//   - WinPresenter, GraphicsLineRenderer, paylineToCells (payline presentation)
+//   - WinPresenter (symbol highlight on wins; emits win:* events)
 //   - app          -- PixiJS Application (has .ticker, .screen)
 //   - textures     -- Record<symbolId, Texture>    (base art)
 //   - blurTextures -- Record<symbolId, Texture>    (motion-blur variants)
@@ -230,8 +228,6 @@ export default function Sandbox() {
         'SpeedPresets',
         'BlurSpriteSymbol',
         'WinPresenter',
-        'GraphicsLineRenderer',
-        'paylineToCells',
         'app',
         'textures',
         'blurTextures',
@@ -250,8 +246,6 @@ export default function Sandbox() {
         SpeedPresets,
         BlurSpriteSymbol,
         WinPresenter,
-        GraphicsLineRenderer,
-        paylineToCells,
         env.app,
         env.textures,
         env.blurTextures,

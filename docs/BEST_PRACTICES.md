@@ -140,49 +140,66 @@ Missing animations are silent no-ops. If your asset doesn't have `landing`, the 
 
 ## Presenting wins
 
-`pixi-reels` never computes wins — your server or eval does. For showing them, the library ships three stacked pieces: raw events, a `LineRenderer` interface, and the `WinPresenter` that orchestrates both.
+`pixi-reels` never computes wins, and it never draws them. Its one job for
+wins is to **animate the winning cells** and fire events so your game code
+can overlay whatever visuals fit the art.
 
 ```ts
-import { WinPresenter, GraphicsLineRenderer, type Payline } from 'pixi-reels';
+import { WinPresenter, type Win } from 'pixi-reels';
 
 const presenter = new WinPresenter(reelSet, {
-  lineRenderer: new GraphicsLineRenderer(),
+  stagger: 70,         // left-to-right sweep; 0 for simultaneous flash
+  cycleGap: 350,       // ms between successive wins
 });
 
 reelSet.events.on('spin:complete', async (result) => {
-  const paylines: Payline[] = await server.wins(result);
-  await presenter.show(paylines);
+  const wins: Win[] = await server.wins(result);   // your shape, your math
+  await presenter.show(wins);
 });
 reelSet.events.on('spin:start', () => presenter.abort());
 ```
 
-Pick the level of abstraction that matches the art:
-
-| You want… | Use |
-|---|---|
-| Default bounce + line + dim | `WinPresenter` + `GraphicsLineRenderer`, config-only |
-| Same orchestration but a premium line look | `WinPresenter` + a custom `LineRenderer` (Spine rig, sprite sheet, particle trail) |
-| Same orchestration but a custom per-symbol animation | `WinPresenter`'s `symbolAnim: (sym, cell, win) => Promise<void>` |
-| Cascade / cluster pops — no line, just animate the cells | `WinPresenter` with no `lineRenderer`, pass `ClusterWin[]` to `show()` |
-| Full control; the lib must not draw anything | `WinPresenter` without a `lineRenderer`, subscribe to `win:line` / `win:cluster` / `win:symbol` and draw with `reelSet.getCellBounds(col, row)` |
-
-`win:start` / `win:line` / `win:cluster` / `win:symbol` / `win:end` fire whether or not you use the presenter. An event-only integration is the right call when wins belong to a separate feature layer (scatter overlays, big-win canvases, sound routers) that needs its own lifecycle.
-
-### Paylines vs. cluster wins
+### The Win shape
 
 ```ts
-// Classic payline — one row per reel, null to skip
-interface Payline { lineId: number; line: (number | null)[]; value: number; kind?: string }
-
-// Cascade / cluster — arbitrary cells, possibly multiple per reel
-interface ClusterWin { clusterId: number; cells: SymbolPosition[]; value: number; kind?: string }
-
-type Win = Payline | ClusterWin;
+interface Win {
+  cells: SymbolPosition[];  // order matters when stagger > 0
+  value?: number;           // used for default value-desc sort
+  kind?: string;            // optional tag for routing
+  id?: number;              // optional stable id
+}
 ```
 
-`WinPresenter.show(wins)` accepts a mixed list. Paylines get the `LineRenderer`; clusters skip it. A bonus round that combines a 500× scatter splash with a 50× line win presents both with a single `show()` call, sorted by value. In event handlers, narrow with `isPayline(win)` / `isCluster(win)` if you need to branch.
+One shape covers every win type — paylines, cluster pops, ways-to-win,
+scatters, bonus reveals. The presenter only cares about `cells`.
 
-Cascades drive the same API from the `onWinnersVanish` hook — see the `cascade-winpresenter` recipe.
+### Two presentation modes, one option
+
+| `stagger` | Visual |
+|---|---|
+| `0` (default) | All cells animate together — a clean flash |
+| `60`–`90` | Cells animate one after another — a left-to-right sweep if you pass cells in reel order |
+
+### Drawing your own overlays
+
+Every per-win visual — the polyline, a cluster outline, a win-amount
+popup, a sound cue — is your code reacting to events:
+
+| Event | Fires | Payload |
+|---|---|---|
+| `win:start` | once per `show()` | ordered wins list |
+| `win:group` | once per win per cycle | win, cell positions |
+| `win:symbol` | once per cell per win per cycle | symbol, cell, win |
+| `win:end` | once per `show()` | `'complete'` or `'aborted'` |
+
+Plot graphics with `reelSet.getCellBounds(col, row)` — see the
+[paylines-events-only](/recipes/paylines-events-only/) recipe.
+
+### Cascades reuse the same API
+
+In `runCascade`'s `onWinnersVanish` hook, call `presenter.show([{ cells: winners }])`.
+Cluster pops and payline hits are the same shape to the presenter — no
+new type, no new method.
 
 ## Symbol layering and overflow
 

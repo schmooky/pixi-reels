@@ -1,15 +1,15 @@
 ---
 layout: ../../layouts/Recipe.astro
-title: Custom per-symbol win animation
-description: Skip playWin() — drive each winning symbol with a GSAP timeline or your own choreography, styled per payline.
-tags: [wins, paylines, gsap]
+title: Custom per-symbol animation
+description: Skip playWin() — drive each cell with a GSAP timeline, styled per win.id.
+tags: [wins, gsap]
 steps:
-  - Pass a `symbolAnim` callback to WinPresenter instead of the default 'win'
-  - Receive (symbol, cell, payline) and return a Promise — the presenter awaits it
-  - Style per payline by switching on `payline.lineId` or `payline.kind`
+  - Pass a `symbolAnim` callback to WinPresenter
+  - Receive (symbol, cell, win) and return a Promise — the presenter awaits it
+  - Style per win by switching on `win.id` / `win.kind`
 apis:
   - WinPresenter.symbolAnim
-  - GraphicsLineRenderer
+  - WinSymbolAnim type
 ---
 
 import code from '../../recipes/paylines-custom-animation.recipe.ts?raw';
@@ -21,10 +21,9 @@ import { RecipeRunner } from '../../components/RecipeRunner.tsx';
 
 ```ts
 const presenter = new WinPresenter(reelSet, {
-  lineRenderer: new GraphicsLineRenderer(),
-  symbolAnim: async (symbol, cell, payline) => {
-    // Bigger bounce on the premium line, regular bounce elsewhere.
-    const peak = payline.lineId === 0 ? 1.35 : 1.18;
+  stagger: 70,
+  symbolAnim: async (symbol, cell, win) => {
+    const peak = win.id === 0 ? 1.35 : 1.18;  // per-win styling
     await bouncePulse(symbol.view, peak, 220);
   },
 });
@@ -32,18 +31,13 @@ const presenter = new WinPresenter(reelSet, {
 
 ## Three modes in one field
 
-`symbolAnim` accepts three shapes — pick whichever matches the asset:
+`symbolAnim` accepts three shapes:
 
 | Value | Behaviour |
 |---|---|
 | `'win'` (default) | calls `symbol.playWin()` — your `ReelSymbol` subclass's hook |
 | any other string | calls `symbol.playAnimation(name)` if present (e.g. `SpineSymbol`), else falls back to `playWin()` |
-| `(symbol, cell, payline) => Promise<void>` | fully custom — you decide what to run |
+| `(symbol, cell, win) => Promise<void>` | fully custom — you decide what to run |
 
-## When to use this
-
-- Sprite-based games that don't have spine animations — a GSAP scale/tint is the whole "win" gesture.
-- Routing different paylines through different animations (scatter vs. line vs. way).
-- Pairing a symbol animation with a sound cue keyed off `payline.value`.
-
-The presenter still handles dim, line drawing, events, and cancellation — you only override the per-cell piece.
+The presenter still owns dim, stagger, events, and cancellation — the
+callback only replaces the per-cell gesture.

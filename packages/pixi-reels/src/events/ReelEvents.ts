@@ -1,7 +1,5 @@
 import type {
   SpeedProfile,
-  Payline,
-  ClusterWin,
   Win,
   SymbolPosition,
 } from '../config/types.js';
@@ -35,30 +33,24 @@ export interface ReelSetEvents extends Record<string, unknown[]> {
   'spotlight:start': [positions: SymbolPosition[]];
   'spotlight:end': [];
   /**
-   * WinPresenter started a sequence. Fires once per `show()` call. The
-   * payload is the mixed list of wins — paylines and/or clusters — in
-   * the order the presenter will show them (sorted by `value` desc by
-   * default). Use `isPayline` / `isCluster` to narrow.
+   * WinPresenter started a sequence. Fires once per `show()` call, with
+   * the full list of wins in the order they'll be shown (sorted by
+   * `value` desc by default).
    */
   'win:start': [wins: readonly Win[]];
   /**
-   * A single payline is now being presented. Fires once per payline per
-   * cycle. `cells` is the payline expanded via `paylineToCells`. For
-   * cluster-shaped wins, listen to `win:cluster` instead.
+   * A single win is now being presented. Fires once per win per cycle —
+   * before `win:symbol` fires for its cells. Subscribe to draw per-win
+   * visuals (payline polyline, cluster outline, number popup) using
+   * `reelSet.getCellBounds(col, row)`.
    */
-  'win:line': [payline: Payline, cells: readonly SymbolPosition[]];
+  'win:group': [win: Win, cells: readonly SymbolPosition[]];
   /**
-   * A single cluster is now being presented. Fires once per cluster per
-   * cycle, analogous to `win:line` but for `ClusterWin`s (cascade pops,
-   * cluster-pay hits, scatter splashes).
-   */
-  'win:cluster': [cluster: ClusterWin, cells: readonly SymbolPosition[]];
-  /**
-   * A specific winning cell is being animated. Fires once per cell per
-   * win per cycle, for both paylines and clusters. `symbol` is typed as
-   * `unknown` to keep this module free of symbol-layer imports; cast to
-   * `ReelSymbol` (or your subclass). `win` is the owning payline /
-   * cluster — narrow with `isPayline` / `isCluster`.
+   * A specific cell is being animated. Fires once per cell per win per
+   * cycle. `symbol` is typed as `unknown` to keep this module free of
+   * symbol-layer imports; cast to `ReelSymbol` (or your subclass).
+   * When `WinPresenter.stagger > 0`, successive cells fire this event
+   * one after another with that gap.
    */
   'win:symbol': [symbol: unknown, cell: SymbolPosition, win: Win];
   /** WinPresenter finished — either naturally (`complete`) or via abort. */

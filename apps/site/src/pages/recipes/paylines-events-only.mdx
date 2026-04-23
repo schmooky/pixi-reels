@@ -1,15 +1,15 @@
 ---
 layout: ../../layouts/Recipe.astro
-title: Paylines, events-only
-description: Skip the line renderer. Subscribe to win:line / win:symbol and draw whatever you want with getCellBounds.
-tags: [wins, paylines, events]
+title: Draw paylines yourself from win:group
+description: The presenter never draws lines. Subscribe to win:group and use reelSet.getCellBounds to render any overlay.
+tags: [wins, events, overlays]
 steps:
-  - Create a WinPresenter without a lineRenderer
-  - Subscribe to win:line to draw your own line graphic from reelSet.getCellBounds
-  - Subscribe to win:symbol for per-cell effects alongside the presenter's default
+  - Create a WinPresenter — it only animates symbols
+  - Subscribe to `win:group`, draw a line (or outline, or number) from `reelSet.getCellBounds`
+  - Drop your own GSAP fade in + out so visuals don't pile up between wins
 apis:
   - ReelSet.getCellBounds
-  - win:line / win:symbol / win:end events
+  - win:group / win:symbol / win:end events
 ---
 
 import code from '../../recipes/paylines-events-only.recipe.ts?raw';
@@ -20,7 +20,10 @@ import { RecipeRunner } from '../../components/RecipeRunner.tsx';
 ## The minimum code
 
 ```ts
-reelSet.events.on('win:line', (payline, cells) => {
+const lineLayer = new PIXI.Container();
+reelSet.addChild(lineLayer);
+
+reelSet.events.on('win:group', (win, cells) => {
   const gfx = new PIXI.Graphics();
   const pts = cells.map(c => {
     const b = reelSet.getCellBounds(c.reelIndex, c.rowIndex);
@@ -28,30 +31,31 @@ reelSet.events.on('win:line', (payline, cells) => {
   });
   gfx.moveTo(pts[0].x, pts[0].y);
   for (let i = 1; i < pts.length; i++) gfx.lineTo(pts[i].x, pts[i].y);
-  gfx.stroke({ color: paletteFor(payline), width: 6 });
-  myLineLayer.addChild(gfx);
+  gfx.stroke({ color: paletteFor(win), width: 6 });
+  lineLayer.addChild(gfx);
   fadeOutAfter(gfx, 1200);
 });
 
-const presenter = new WinPresenter(reelSet);   // no lineRenderer
-await presenter.show(paylines);
+const presenter = new WinPresenter(reelSet);   // no line drawing in core
+await presenter.show(wins);
 ```
 
-## Why events-only
+## Why events, not an injected renderer
 
-`LineRenderer` is great for reusable line looks. Events-only is better when:
-
-- The line is owned by a separate feature layer (scatter overlay, big-win canvas).
-- You need multiple renderings per payline (a line + a number popup + a sound).
-- You're integrating with an existing animation framework that expects its own lifecycle.
+Overlays vary: payline polylines, cluster outlines, numbered badges, Spine
+line rigs, particle trails. Baking any one into the core API would either
+force a single look on every game, or grow a config surface that outlasts
+the feature. Events plus `reelSet.getCellBounds` keeps the decision on
+your side — draw whatever fits the art.
 
 ## The event contract
 
 | Event | Fires | Payload |
 |---|---|---|
-| `win:start` | once per `show()` call | ordered payline list |
-| `win:line` | once per payline per cycle | payline, cell positions |
-| `win:symbol` | once per winning cell per cycle | symbol, cell, payline |
+| `win:start` | once per `show()` call | ordered wins list |
+| `win:group` | once per win per cycle | win, cell positions |
+| `win:symbol` | once per cell per win per cycle | symbol, cell, win |
 | `win:end` | once per `show()` | `'complete'` or `'aborted'` |
 
-All events fire in the same tick order as the visual state changes — `win:line` fires *after* dim has been applied, so a listener can snapshot the live state.
+Dim is applied before `win:group` fires, so a listener taking a snapshot
+sees the live state.

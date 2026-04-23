@@ -1,16 +1,16 @@
 ---
 layout: ../../layouts/Recipe.astro
-title: How to animate paylines
-description: Cycle winning paylines with WinPresenter — draws lines, dims losers, fires events for sound and UI.
-tags: [wins, paylines, presenter]
+title: Highlight winning cells
+description: Use WinPresenter to sweep or flash the winning cells. No lines, no overlays — just the cells, orchestrated cleanly.
+tags: [wins, presenter]
 steps:
-  - Build a WinPresenter with a GraphicsLineRenderer (or your own renderer)
-  - After spin lands, call presenter.show(paylines) — it cycles, dims, animates
-  - Abort on the next spin:start so slam-spins don't leave a line hanging
+  - Build a WinPresenter. stagger = 0 flashes simultaneously, > 0 sweeps in cell order
+  - Pass each win as { cells, value? }. Presenter sorts by value desc by default
+  - Abort on spin:start so slam-spin cancels mid-celebration
 apis:
   - WinPresenter
-  - GraphicsLineRenderer
-  - win:start / win:line / win:symbol / win:end events
+  - Win type ({ cells, value?, kind?, id? })
+  - win:* events
 ---
 
 import code from '../../recipes/animate-paylines.recipe.ts?raw';
@@ -21,54 +21,52 @@ import { RecipeRunner } from '../../components/RecipeRunner.tsx';
 ## The minimum code
 
 ```ts
-import { WinPresenter, GraphicsLineRenderer } from 'pixi-reels';
+import { WinPresenter, type Win } from 'pixi-reels';
 
 const presenter = new WinPresenter(reelSet, {
-  lineRenderer: new GraphicsLineRenderer(),
+  stagger: 70,          // ms between cells — left-to-right sweep
+  cycleGap: 350,        // ms between wins
 });
 
 reelSet.events.on('spin:complete', async () => {
-  const paylines = await server.wins(result);  // your server / eval
-  await presenter.show(paylines);
+  const wins: Win[] = await server.wins(result);   // your shape
+  await presenter.show(wins);
 });
-
-// Cancel in-flight win presentation when a new spin starts.
 reelSet.events.on('spin:start', () => presenter.abort());
 ```
 
-## Payline shape
+## The whole API
 
 ```ts
-interface Payline {
-  lineId: number;                 // stable id for per-line styling
-  line: (number | null)[];        // row per reel, null to skip
-  value: number;                  // amount (used for default sort)
-  kind?: string;                  // optional tag routed to events
+interface Win {
+  cells: SymbolPosition[];  // order matters when stagger > 0
+  value?: number;           // used for default sort
+  kind?: string;            // optional tag
+  id?: number;              // optional stable id
 }
 ```
 
-Per-reel `null` entries let you represent ways-to-win, cluster hits, or
-partial lines without inventing a separate shape.
+One shape covers both classic paylines ("row 1 across all 5 reels") and
+cluster pops ("these 7 cells vanished"). The presenter never distinguishes
+them; it just animates the cells you hand it.
 
-## What the default does
+## Two knobs
 
-`WinPresenter` with its defaults:
+| Option | Effect |
+|---|---|
+| `stagger: 0` | All cells in a win pulse together (a flash) |
+| `stagger: 60+` | Cells animate one after another (a sweep). Pass cells in the order you want the sweep to run |
+| `cycleGap: N` | ms between successive wins |
+| `cycles: -1` | Loop forever until `abort()` |
 
-- sorts paylines by `value` descending,
-- fades non-winning symbols to `alpha: 0.35`,
-- calls each winner's `playWin()` in parallel,
-- renders a polyline through the cell centres (when a renderer is passed),
-- cycles once with a 400 ms gap, fires `win:*` events throughout,
-- restores symbol alpha on end.
+## Paylines, outlines, numbers — draw them yourself
 
-## When to reach for a custom renderer
-
-`GraphicsLineRenderer` is a prototype-grade polyline. For a premium look
-(Spine line rig, dashed glow, per-line sprite sheet) implement the
-[`LineRenderer`](/docs/) interface yourself and pass it as `lineRenderer`.
+`WinPresenter` does not draw anything. To render a line over each payline,
+subscribe to `win:group` and draw from `reelSet.getCellBounds`. See
+[paylines-events-only](/recipes/paylines-events-only/) for a worked example.
 
 ## UX guardrails
 
-- Abort on `spin:start` — the snippet above.
-- Disable the spin button between `win:start` and `win:end` if your UI can't slam-spin during celebrations.
-- `cycles: -1` makes presentation loop until aborted — good for autoplay off-screens.
+- `abort()` on `spin:start`.
+- `dimLosers: false` if your game already dims via an overlay.
+- `stagger` tests well at 60–90 ms for a 5-reel sweep; shorter feels rushed, longer drags.

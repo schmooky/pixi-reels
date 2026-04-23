@@ -1,22 +1,19 @@
-import { Container } from 'pixi.js';
-import type { Payline, Win } from '../config/types.js';
+import type { Win } from '../config/types.js';
 import type { ReelSet } from '../core/ReelSet.js';
 import type { SymbolPosition } from '../events/ReelEvents.js';
 import type { ReelSymbol } from '../symbols/ReelSymbol.js';
 import type { Disposable } from '../utils/Disposable.js';
-import type { LineRenderer } from './LineRenderer.js';
-import { isPayline, sortByValueDesc, winToCells } from './Payline.js';
+import { sortByValueDesc } from './Win.js';
 
 /**
- * What to play on each winning symbol.
+ * What to play on each cell being highlighted.
  *
  *   - `'win'` — default. Calls `symbol.playWin()` (your subclass's hook).
  *   - `string` — a named animation. If the symbol exposes a
  *     `playAnimation(name)` method (e.g. SpineSymbol), it's invoked; else
  *     it falls back to `playWin()`.
  *   - `(symbol, cell, win) => Promise<void>` — drive the animation
- *     yourself. Receives the owning `Win` (a payline or cluster); narrow
- *     with `isPayline` / `isCluster` to route different animations.
+ *     yourself. Good for GSAP bounces, line-specific pulses, etc.
  */
 export type WinSymbolAnim =
   | 'win'
@@ -24,10 +21,8 @@ export type WinSymbolAnim =
   | ((symbol: ReelSymbol, cell: SymbolPosition, win: Win) => Promise<void>);
 
 export interface WinPresenterOptions {
-  /** Optional renderer. If absent, no line is drawn — useful for events-only flows. */
-  lineRenderer?: LineRenderer;
   /**
-   * Fade non-winning symbols to this alpha while a payline is active.
+   * Fade non-winning symbols to this alpha while a win is active.
    *  - `true` (default) → alpha 0.35
    *  - number → that alpha
    *  - `false` → don't touch non-winners
@@ -37,53 +32,62 @@ export interface WinPresenterOptions {
   dimLosers?: boolean | { alpha?: number };
   /** See {@link WinSymbolAnim}. Default `'win'`. */
   symbolAnim?: WinSymbolAnim;
-  /** Delay between paylines (ms). Default 400. */
+  /**
+   * Delay between cells *within* a single win (ms).
+   * - `0` (default) → all cells animate simultaneously
+   * - `> 0` → cells start one after another in array order (e.g. a
+   *   left-to-right sweep across a payline's cells)
+   */
+  stagger?: number;
+  /** Delay between successive wins in the sequence (ms). Default 400. */
   cycleGap?: number;
-  /** Number of full cycles through the payline list. `-1` for infinite. Default 1. */
+  /** Number of full cycles through the wins list. `-1` for infinite. Default 1. */
   cycles?: number;
-  /** Sort paylines by `value` descending before cycling. Default true. */
+  /** Sort wins by `value` descending before cycling. Default true. */
   sortByValue?: boolean;
 }
 
 interface ResolvedOptions {
-  lineRenderer?: LineRenderer;
   dimAlpha: number | null;
   symbolAnim: WinSymbolAnim;
+  stagger: number;
   cycleGap: number;
   cycles: number;
   sortByValue: boolean;
 }
 
 /**
- * Orchestrates a win sequence: cycles paylines, renders each one (via an
- * optional {@link LineRenderer}), animates the winning symbols, dims the
- * losers, and fires `win:start` / `win:line` / `win:symbol` / `win:end`
- * on the ReelSet.
+ * Highlights winning cells on a reel set. One job: animate the symbols.
  *
- * Create once per `ReelSet`, call `show(paylines)` when your server
- * response arrives, call `abort()` on a new spin or slam-stop.
+ * The presenter doesn't draw lines, outlines, or any per-win visual — it
+ * emits `win:start` / `win:group` / `win:symbol` / `win:end` events so
+ * your code can hook anything it wants (polylines, Spine line rigs,
+ * popup numbers, sound cues) by subscribing and using
+ * `reelSet.getCellBounds(col, row)` to place graphics.
+ *
+ * Two knobs cover the common presentation modes:
+ *
+ *   - `stagger: 0` → all cells in a win pulse together
+ *   - `stagger: 60` → cells start one after another — a left-to-right
+ *     sweep if you pass cells in reel order
  *
  * ```ts
- * const presenter = new WinPresenter(reelSet, {
- *   lineRenderer: new GraphicsLineRenderer(),
- *   dimLosers: { alpha: 0.3 },
- *   cycleGap: 500,
- *   cycles: 2,
- * });
+ * const presenter = new WinPresenter(reelSet, { stagger: 80 });
  *
- * reelSet.events.on('spin:complete', () => presenter.show(serverWins));
+ * reelSet.events.on('spin:complete', async () => {
+ *   const wins = await server.wins(result);  // your wins, your shape
+ *   await presenter.show(wins);
+ * });
  * reelSet.events.on('spin:start', () => presenter.abort());
  * ```
  *
- * Lines are drawn onto a dedicated container added to the ReelSet at the
- * top of its child list — i.e. above the viewport (above symbols). If
- * you want lines drawn behind the winning symbols, supply your own
- * `LineRenderer` that adds to `reelSet.viewport.unmaskedContainer`.
+ * Cascades: drive `presenter.show([{ cells: winners }])` from
+ * `runCascade`'s `onWinnersVanish` hook — cluster pops and payline hits
+ * are the same shape to the presenter.
  */
 export class WinPresenter implements Disposable {
   private _reelSet: ReelSet;
   private _options: ResolvedOptions;
-  private _lineLayer: Container;
   private _abort: AbortController | null = null;
   private _isActive = false;
   private _isDestroyed = false;
@@ -91,10 +95,6 @@ export class WinPresenter implements Disposable {
   constructor(reelSet: ReelSet, options: WinPresenterOptions = {}) {
     this._reelSet = reelSet;
     this._options = WinPresenter._resolve(options);
-
-    this._lineLayer = new Container();
-    this._lineLayer.sortableChildren = true;
-    reelSet.addChild(this._lineLayer);
   }
 
   get isActive(): boolean {
@@ -105,15 +105,9 @@ export class WinPresenter implements Disposable {
     return this._isDestroyed;
   }
 
-  /** The Container the renderer draws into. Exposed for advanced composition. */
-  get lineLayer(): Container {
-    return this._lineLayer;
-  }
-
   /**
-   * Present the given wins — paylines, clusters, or a mix. Cancels any
-   * in-flight sequence first. Resolves when all cycles complete or when
-   * `abort()` is called.
+   * Present the given wins. Cancels any in-flight sequence first.
+   * Resolves when all cycles complete or when `abort()` is called.
    *
    * Empty input resolves immediately without firing any events.
    */
@@ -143,7 +137,6 @@ export class WinPresenter implements Disposable {
         loop++;
       }
     } finally {
-      this._options.lineRenderer?.clear();
       this._restoreAlpha();
       const wasAborted = abort.signal.aborted;
       if (this._abort === abort) this._abort = null;
@@ -152,7 +145,7 @@ export class WinPresenter implements Disposable {
     }
   }
 
-  /** Abort any in-flight `show()` and tear down the current payline. */
+  /** Abort any in-flight `show()`. */
   abort(): void {
     if (this._abort) this._abort.abort();
   }
@@ -161,43 +154,25 @@ export class WinPresenter implements Disposable {
     if (this._isDestroyed) return;
     this._isDestroyed = true;
     this.abort();
-    this._options.lineRenderer?.destroy();
-    if (this._lineLayer.parent) {
-      this._lineLayer.parent.removeChild(this._lineLayer);
-    }
-    this._lineLayer.destroy({ children: true });
   }
 
   private async _showOne(win: Win, signal: AbortSignal): Promise<void> {
-    const cells = winToCells(win);
+    const cells = [...win.cells];
     if (cells.length === 0) return;
 
-    // Apply dim before firing the per-win event so listeners observe the
-    // live visual state (e.g. a UI snapshot during win:line/win:cluster
-    // sees losers already faded).
+    // Apply dim before firing win:group so listeners observe the live
+    // visual state (e.g. a UI snapshot sees losers already faded).
     this._applyDim(cells);
+    this._reelSet.events.emit('win:group', win, cells);
 
-    // Paylines get the LineRenderer (if any). Clusters skip it — they're
-    // just "animate these cells, please": dim, symbolAnim, events. If a
-    // cluster needs a visual (outline, hull, numbered badge), subscribe
-    // to `win:cluster` and draw it from `reelSet.getCellBounds`.
-    let renderPromise: Promise<void> = Promise.resolve();
-    if (isPayline(win)) {
-      this._reelSet.events.emit('win:line', win, cells);
-      if (this._options.lineRenderer) {
-        renderPromise = this._options.lineRenderer.render(
-          win,
-          cells,
-          (c, r) => this._reelSet.getCellBounds(c, r),
-          this._lineLayer,
-        );
-      }
-    } else {
-      this._reelSet.events.emit('win:cluster', win, cells);
-    }
-
+    const stagger = this._options.stagger;
     const animPromises: Promise<void>[] = [];
-    for (const cell of cells) {
+
+    for (let i = 0; i < cells.length; i++) {
+      if (signal.aborted) break;
+      if (i > 0 && stagger > 0) await this._wait(stagger, signal);
+      if (signal.aborted) break;
+      const cell = cells[i];
       const reel = this._reelSet.getReel(cell.reelIndex);
       if (!reel) continue;
       const symbol = reel.getSymbolAt(cell.rowIndex);
@@ -206,12 +181,7 @@ export class WinPresenter implements Disposable {
       animPromises.push(this._playAnim(symbol, cell, win));
     }
 
-    await Promise.all([renderPromise, ...animPromises]);
-    if (signal.aborted) return;
-
-    // Only paylines produce line-renderer output, so only paylines need
-    // a clear. Clusters have nothing to tear down.
-    if (isPayline(win)) this._options.lineRenderer?.clear();
+    await Promise.all(animPromises);
   }
 
   private async _playAnim(
@@ -279,9 +249,9 @@ export class WinPresenter implements Disposable {
     }
 
     return {
-      lineRenderer: opts.lineRenderer,
       dimAlpha,
       symbolAnim: opts.symbolAnim ?? 'win',
+      stagger: Math.max(0, opts.stagger ?? 0),
       cycleGap: opts.cycleGap ?? 400,
       cycles: opts.cycles ?? 1,
       sortByValue: opts.sortByValue ?? true,

@@ -7,7 +7,7 @@ import * as PIXI from 'pixi.js';
 import { gsap } from 'gsap';
 import {
   ReelSetBuilder, SpeedPresets, SpriteSymbol, DropRecipes, CascadeAnticipationPhase,
-  enableDebug, WinPresenter, GraphicsLineRenderer, paylineToCells,
+  enableDebug, WinPresenter,
   type ReelSet, ReelSymbol,
 } from 'pixi-reels';
 import { BlurSpriteSymbol } from '../../../../examples/shared/BlurSpriteSymbol.ts';
@@ -111,14 +111,14 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
       try {
         const factory = new Function(
           'ReelSetBuilder', 'SpeedPresets', 'BlurSpriteSymbol', 'SpriteSymbol', 'DropRecipes', 'CascadeAnticipationPhase',
-          'WinPresenter', 'GraphicsLineRenderer', 'paylineToCells',
+          'WinPresenter',
           'app', 'textures', 'blurTextures', 'SYMBOL_IDS', 'pickWeighted', 'gsap', 'PIXI',
           'runCascade', 'tumbleToGrid', 'diffCells', 'EmptySymbol',
           `"use strict"; ${js}`,
         );
         result = factory(
           ReelSetBuilder, SpeedPresets, BlurSpriteSymbol, SpriteSymbol, DropRecipes, CascadeAnticipationPhase,
-          WinPresenter, GraphicsLineRenderer, paylineToCells,
+          WinPresenter,
           app, textures, blurTextures, SYMBOL_IDS, pickWeighted, gsap, PIXI,
           runCascade, tumbleToGrid, diffCells, EmptySymbol,
         ) as RunResult;

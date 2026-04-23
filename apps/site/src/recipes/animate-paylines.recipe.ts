@@ -1,14 +1,13 @@
 // @ts-nocheck
 // Injected: ReelSetBuilder, SpeedPresets, BlurSpriteSymbol, WinPresenter,
-//           GraphicsLineRenderer, paylineToCells, PIXI, gsap, app, textures,
-//           blurTextures, SYMBOL_IDS, pickWeighted.
+//           PIXI, gsap, app, textures, blurTextures, SYMBOL_IDS, pickWeighted.
 
 const A = 'round/round_1', B = 'round/round_2', C = 'round/round_3';
 const SEVEN = 'royal/royal_1';
 const IDS = [A, B, C, SEVEN];
 const COLS = 5, ROWS = 3, SIZE = 90;
 
-// Three full rows of the same symbol — three paylines the presenter cycles.
+// Three full rows of the same symbol per column — three paylines across rows.
 const GRID = [
   [SEVEN, B, C],
   [SEVEN, B, C],
@@ -17,13 +16,13 @@ const GRID = [
   [SEVEN, B, C],
 ];
 
-// Server response: three straight-across paylines, values descending so the
-// presenter shows the premium (row 0) first by default.
-const PAYLINES = [
-  { lineId: 0, line: [0, 0, 0, 0, 0], value: 300 },
-  { lineId: 1, line: [1, 1, 1, 1, 1], value: 100 },
-  { lineId: 2, line: [2, 2, 2, 2, 2], value:  60 },
-];
+// A "win" is just cells + optional value. Order = left-to-right so the
+// stagger option below sweeps cleanly across each payline.
+const WINS = [0, 1, 2].map((row) => ({
+  id: row,
+  cells: Array.from({ length: COLS }, (_, reelIndex) => ({ reelIndex, rowIndex: row })),
+  value: [300, 100, 60][row],
+}));
 
 const reelSet = new ReelSetBuilder()
   .reels(COLS).visibleSymbols(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
@@ -31,18 +30,15 @@ const reelSet = new ReelSetBuilder()
   .speed('normal', SpeedPresets.NORMAL).speed('turbo', SpeedPresets.TURBO)
   .ticker(app.ticker).build();
 
-// One presenter lives for the lifetime of the reel set. Default config:
-//   - GraphicsLineRenderer draws a 4px polyline through cell centres
-//   - dim losers to 0.35 alpha
-//   - cycle each payline once, 400 ms gap, sorted by value desc
-//   - symbol animation is the symbol's own `playWin()`
+// One presenter. No line drawing — the presenter only highlights the
+// symbols. If you want a payline polyline, draw it from `win:group` (see
+// paylines-events-only recipe). Defaults: dim non-winners to 0.35,
+// cycle once, sorted by value desc.
 const presenter = new WinPresenter(reelSet, {
-  lineRenderer: new GraphicsLineRenderer({ width: 5, drawOnMs: 260 }),
-  cycleGap: 350,
+  stagger: 70,        // ms between cells — a left-to-right sweep
+  cycleGap: 350,      // ms between successive wins
 });
 
-// Aborting on the next spin is the canonical pattern — users can slam-spin
-// mid-celebration without leaking a line on screen.
 reelSet.events.on('spin:start', () => presenter.abort());
 
 return {
@@ -53,7 +49,7 @@ return {
     reelSet.setResult(GRID);
     await p;
     await new Promise(r => setTimeout(r, 220));
-    await presenter.show(PAYLINES);
+    await presenter.show(WINS);
   },
   cleanup: () => presenter.destroy(),
 };
