@@ -154,6 +154,9 @@ return {
 
     const p = reelSet.spin();
     await new Promise(r => setTimeout(r, 150));
+    // ltr = leftmost reel drops first; within each column the top row
+    // lands earliest (shortest fall), so the overall sweep reads as
+    // bottom-left → top-right.
     reelSet.setDropOrder('ltr');
     reelSet.setResult(stage);
     await p;
