@@ -4,7 +4,6 @@ import { Application, Container, Graphics, Sprite } from 'pixi.js';
 import type { Texture } from 'pixi.js';
 import { gsap } from 'gsap';
 import { ReelSetBuilder, ReelSymbol, SpeedPresets, type ReelSet } from 'pixi-reels';
-import { Button } from '@/components/ui/button';
 import { Play, RotateCcw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { BlurSpriteSymbol } from '../../../../../examples/shared/BlurSpriteSymbol.ts';
@@ -213,21 +212,23 @@ export default function HoldAndWinStarterRecipe() {
     <div className="my-5 overflow-hidden rounded-xl border border-border bg-card">
       <div className="relative flex w-full items-center justify-center bg-card" style={{ height: 320 }}>
         <div ref={hostRef} className="flex h-full w-full items-center justify-center [&_canvas]:block [&_canvas]:max-w-full [&_canvas]:h-auto" />
-      </div>
-      <div className="flex items-center justify-between gap-3 border-t border-border/70 bg-card/60 px-4 py-2.5">
-        <div className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-          Live recipe · hit-or-miss per cell
-        </div>
-        <Button
-          size="sm"
-          variant={ran ? 'outline' : 'gradient'}
-          disabled={running}
+        <button
+          type="button"
           onClick={() => void run()}
-          className={cn('min-w-[110px]', running && 'cursor-wait')}
+          disabled={running}
+          title={running ? 'Running…' : ran ? 'Replay' : 'Run recipe'}
+          aria-label={running ? 'Running…' : ran ? 'Replay' : 'Run recipe'}
+          className={cn(
+            'absolute bottom-3 right-3 inline-flex h-10 w-10 items-center justify-center rounded-full',
+            'border border-border/70 bg-background/80 text-foreground shadow-sm backdrop-blur',
+            'transition-all hover:bg-primary hover:text-primary-foreground hover:border-primary',
+            'disabled:cursor-wait disabled:opacity-70',
+          )}
         >
-          {ran ? <RotateCcw size={12} strokeWidth={2.5} /> : <Play size={12} strokeWidth={2.5} />}
-          {running ? 'Running…' : ran ? 'Replay' : 'Run recipe'}
-        </Button>
+          {ran
+            ? <RotateCcw size={14} strokeWidth={2.5} />
+            : <Play size={14} strokeWidth={2.5} />}
+        </button>
       </div>
     </div>
   );

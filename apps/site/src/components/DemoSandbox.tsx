@@ -129,28 +129,6 @@ export default function DemoSandbox(props: DemoSandboxProps) {
           </div>
         )}
       </div>
-      <div className="flex items-center gap-3 border-t border-border/70 bg-card/40 px-4 py-2.5">
-        <span
-          className={cn(
-            'inline-block h-1.5 w-1.5 rounded-full',
-            bootError
-              ? 'bg-destructive shadow-[0_0_10px_hsl(var(--destructive))]'
-              : 'bg-green-400 shadow-[0_0_10px_hsl(140_70%_50%)]',
-          )}
-        />
-        <span className="flex-1 font-mono text-xs text-muted-foreground">
-          {bootError ? bootError.message : status}
-        </span>
-        {props.tags && (
-          <div className="flex gap-1">
-            {props.tags.map((t) => (
-              <span key={t} className="rounded-full bg-secondary/70 px-2 py-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">
-                {t}
-              </span>
-            ))}
-          </div>
-        )}
-      </div>
     </div>
   );
 }

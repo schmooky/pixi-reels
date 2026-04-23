@@ -1,6 +1,6 @@
 /** @jsxImportSource react */
 import { useEffect, useRef, useState } from 'react';
-import { RefreshCw, ExternalLink } from 'lucide-react';
+import { RefreshCw, ExternalLink, Square } from 'lucide-react';
 import { Application } from 'pixi.js';
 import type { Texture } from 'pixi.js';
 import * as PIXI from 'pixi.js';
@@ -164,7 +164,11 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
   }, []);
 
   async function handleSpin() {
-    if (spinning || !ready) return;
+    if (!ready || !!error) return;
+    if (spinning) {
+      try { reelSetRef.current?.skip(); } catch { /* ignore */ }
+      return;
+    }
     setSpinning(true);
     try {
       if (onSpinRef.current) {
@@ -205,31 +209,30 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
         <button
           type="button"
           onClick={() => void handleSpin()}
-          disabled={spinning || !!error || !ready}
-          title={spinning ? 'Running…' : 'Spin'}
-          aria-label={spinning ? 'Running…' : 'Spin'}
+          disabled={!!error || !ready}
+          title={spinning ? 'Stop' : 'Spin'}
+          aria-label={spinning ? 'Stop' : 'Spin'}
           className={cn(
             'absolute bottom-3 right-3 inline-flex h-10 w-10 items-center justify-center rounded-full',
             'border border-border/70 bg-background/80 text-foreground shadow-sm backdrop-blur',
             'transition-all hover:bg-primary hover:text-primary-foreground hover:border-primary',
-            'disabled:cursor-wait disabled:opacity-70',
+            spinning && 'bg-primary text-primary-foreground border-primary',
+            'disabled:cursor-not-allowed disabled:opacity-50',
           )}
         >
-          <RefreshCw
-            size={16}
-            strokeWidth={2.25}
-            className={cn('transition-transform', spinning && 'animate-spin')}
-          />
+          {spinning
+            ? <Square size={14} strokeWidth={2.5} />
+            : <RefreshCw size={16} strokeWidth={2.25} />}
         </button>
-      </div>
-      <div className="flex items-center justify-end border-t border-border/60 bg-background/40 px-3 py-1.5">
         <button
           type="button"
           onClick={openInSandbox}
-          className="inline-flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+          title="Open in Sandbox"
+          aria-label="Open in Sandbox"
+          className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-md border border-border/40 bg-background/70 px-2 py-1 text-[10px] text-muted-foreground backdrop-blur transition-colors hover:text-foreground"
         >
-          <ExternalLink size={12} />
-          Open in Sandbox
+          <ExternalLink size={10} />
+          Sandbox
         </button>
       </div>
     </div>
