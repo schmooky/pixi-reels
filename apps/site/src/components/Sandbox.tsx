@@ -1,7 +1,8 @@
 /** @jsxImportSource react */
 import { useEffect, useRef, useState } from 'react';
 import Editor from '@monaco-editor/react';
-import { Play, RotateCcw, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Play, RotateCcw, AlertCircle, CheckCircle2, Square, RefreshCw } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { Kbd, KbdChord } from '@/components/ui/kbd';
 import { Application } from 'pixi.js';
 import type { Texture } from 'pixi.js';
@@ -428,20 +429,30 @@ export default function Sandbox() {
 
       {/* ── Canvas pane ─── */}
       <div className="flex flex-col overflow-hidden rounded-xl border border-border bg-card">
-        <div
-          ref={canvasHostRef}
-          className="relative flex-1 min-h-[420px] bg-background"
-        />
-        <div className="flex items-center gap-2 border-t border-border/60 bg-background/40 px-3 py-2">
+        <div className="relative flex-1 min-h-[420px]">
+          <div
+            ref={canvasHostRef}
+            className="h-full w-full bg-background"
+          />
           <button
             type="button"
             onClick={() => void handleSpin()}
-            disabled={isBooting || !currentReelSetRef.current}
-            className="inline-flex items-center gap-1.5 rounded-md bg-primary px-4 py-1.5 text-xs font-semibold text-primary-foreground shadow hover:brightness-110 disabled:opacity-50"
+            disabled={isBooting || (!currentReelSetRef.current && !onSpinRef.current)}
+            title={isSpinning ? 'Stop' : 'Spin'}
+            aria-label={isSpinning ? 'Stop' : 'Spin'}
+            className={cn(
+              'absolute bottom-3 right-3 inline-flex h-10 w-10 items-center justify-center rounded-full',
+              'border border-border/70 bg-background/80 text-foreground shadow-sm backdrop-blur',
+              'transition-all hover:bg-primary hover:text-primary-foreground hover:border-primary',
+              isSpinning && 'bg-primary text-primary-foreground border-primary',
+              'disabled:cursor-not-allowed disabled:opacity-50',
+            )}
           >
-            {isSpinning ? 'Skip' : 'Spin'}
+            {isSpinning ? <Square size={14} strokeWidth={2.5} /> : <RefreshCw size={16} strokeWidth={2.25} />}
           </button>
-          <div className="ml-1 flex items-center rounded-md border border-border bg-background/50 p-0.5">
+        </div>
+        <div className="flex items-center gap-2 border-t border-border/60 bg-background/40 px-3 py-2">
+          <div className="flex items-center rounded-md border border-border bg-background/50 p-0.5">
             {speeds.map((name) => (
               <button
                 key={name}

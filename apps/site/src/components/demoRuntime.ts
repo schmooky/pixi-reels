@@ -230,57 +230,43 @@ export async function mountMechanic(
   });
   for (const c of cfg.cheats) engine.register({ ...c });
 
-  // Spin controls (DOM overlay styled like shadcn buttons)
-  const controls = document.createElement('div');
-  controls.className = 'pr-controls';
-  Object.assign(controls.style, {
-    position: 'absolute',
-    bottom: '14px',
-    left: '50%',
-    transform: 'translateX(-50%)',
-    display: 'flex',
-    gap: '8px',
-    zIndex: '5',
-  });
-  host.appendChild(controls);
+  // Canonical circular slam-stop button — matches RecipeRunner / Sandbox.
+  const ICON_SPIN = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>`;
+  const ICON_STOP = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/></svg>`;
 
-  const baseBtn = 'inline-flex items-center justify-center gap-2 rounded-lg px-5 h-10 text-sm font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-50 disabled:pointer-events-none';
-  const mkPrimary = (label: string): HTMLButtonElement => {
-    const btn = document.createElement('button');
-    btn.textContent = label;
-    btn.className = `${baseBtn} text-primary-foreground shadow-lg shadow-primary/30 bg-[linear-gradient(135deg,hsl(var(--primary)),hsl(var(--accent)))] hover:brightness-110`;
-    return btn;
-  };
-  const mkSecondary = (label: string): HTMLButtonElement => {
-    const btn = document.createElement('button');
-    btn.textContent = label;
-    btn.className = `${baseBtn} border border-border bg-card/80 text-foreground hover:bg-secondary/60 backdrop-blur`;
-    return btn;
-  };
-
-  const spinBtn = mkPrimary(cfg.spinLabel ?? 'SPIN');
-  const skipBtn = mkSecondary('Skip');
-  const turboBtn = mkSecondary('Turbo');
-  let turbo = false;
-
-  controls.appendChild(spinBtn);
-  controls.appendChild(skipBtn);
-  controls.appendChild(turboBtn);
-
-  turboBtn.addEventListener('click', () => {
-    turbo = !turbo;
-    reelSet.setSpeed(turbo ? 'turbo' : 'normal');
-    turboBtn.textContent = turbo ? 'Turbo ✓' : 'Turbo';
-  });
-  skipBtn.addEventListener('click', () => {
-    if (reelSet.isSpinning) reelSet.skip();
-  });
+  const spinBtn = document.createElement('button');
+  spinBtn.innerHTML = ICON_SPIN;
+  spinBtn.title = 'Spin';
+  spinBtn.setAttribute('aria-label', 'Spin');
+  spinBtn.className = [
+    'absolute bottom-3 right-3',
+    'inline-flex h-10 w-10 items-center justify-center rounded-full',
+    'border border-border/70 bg-background/80 text-foreground shadow-sm backdrop-blur',
+    'transition-all hover:bg-primary hover:text-primary-foreground hover:border-primary',
+    'disabled:cursor-not-allowed disabled:opacity-50',
+  ].join(' ');
+  spinBtn.style.zIndex = '5';
+  host.appendChild(spinBtn);
 
   let spinning = false;
+  const setSpinState = (on: boolean): void => {
+    spinning = on;
+    spinBtn.innerHTML = on ? ICON_STOP : ICON_SPIN;
+    spinBtn.title = on ? 'Stop' : 'Spin';
+    spinBtn.setAttribute('aria-label', on ? 'Stop' : 'Spin');
+    if (on) {
+      spinBtn.classList.add('bg-primary', 'text-primary-foreground', 'border-primary');
+    } else {
+      spinBtn.classList.remove('bg-primary', 'text-primary-foreground', 'border-primary');
+    }
+  };
+
   const runSpin = async (): Promise<void> => {
-    if (spinning) return;
-    spinning = true;
-    spinBtn.disabled = true;
+    if (spinning) {
+      if (reelSet.isSpinning) reelSet.skip();
+      return;
+    }
+    setSpinState(true);
     try {
       cfg.beforeSpin?.(engine);
       const { symbols, anticipationReels, meta } = engine.next();
@@ -300,17 +286,13 @@ export async function mountMechanic(
           meta: meta ?? {},
           api,
           toast: api.toast,
-          // `requestSpin` schedules on the next tick so the current onLanded
-          // handler unwinds first — otherwise we'd recurse through `runSpin`
-          // while it's still marked `spinning`.
           requestSpin: () => new Promise<void>((resolve) => {
             setTimeout(() => { runSpin().then(resolve); }, 0);
           }),
         });
       }
     } finally {
-      spinning = false;
-      spinBtn.disabled = false;
+      setSpinState(false);
     }
   };
   spinBtn.addEventListener('click', () => { void runSpin(); });
@@ -321,7 +303,7 @@ export async function mountMechanic(
   api.setStatus('Ready. Toggle a cheat, then press SPIN.');
 
   return () => {
-    try { controls.remove(); } catch {}
+    try { spinBtn.remove(); } catch {}
     try { reelSet.destroy(); } catch {}
     try { app.destroy(true, { children: true }); } catch {}
   };

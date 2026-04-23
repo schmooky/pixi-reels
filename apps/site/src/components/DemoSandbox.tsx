@@ -2,7 +2,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import type { CheatDefinition, CheatEngine } from '../../../../examples/shared/cheats.ts';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { AlertTriangle, Copy, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -100,12 +99,6 @@ export default function DemoSandbox(props: DemoSandboxProps) {
 
   return (
     <div className="my-5 overflow-hidden rounded-xl border border-border bg-card">
-      <div className="flex items-center justify-between gap-3 border-b border-border/70 bg-card/60 px-4 py-2.5">
-        <Badge variant={bootError ? 'destructive' : 'accent'} className="font-mono">{props.mechanic}</Badge>
-        <div className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-          {bootError ? 'boot failed' : 'headless symbols · live sandbox'}
-        </div>
-      </div>
       <div
         className="relative flex w-full items-center justify-center overflow-hidden bg-card"
         style={{ height: props.height ?? 440 }}
