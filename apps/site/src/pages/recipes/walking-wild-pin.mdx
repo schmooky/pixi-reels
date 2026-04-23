@@ -127,6 +127,7 @@ next spin begins - new overlay at the NEW position
 - Destination must be in-grid and unoccupied by another pin.
 - `from === to` is a no-op that still fires `pin:moved` — safe in generic loops.
 - Callback errors are swallowed so a bug in animation code can't break the move.
+- **Walk pins sequentially, not in parallel.** If two wilds try to move to the same destination cell, the second `movePin` throws (`"a pin already exists at…"`). The example above iterates with `await` inside the loop so each move completes and the destination is free before the next one starts. Do not use `Promise.all` across multiple `movePin` calls.
 
 ## Related
 

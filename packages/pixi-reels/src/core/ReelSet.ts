@@ -78,6 +78,9 @@ export interface FrameAPI {
  * Teardown cascades: one `reelSet.destroy()` disposes every child.
  */
 export class ReelSet extends Container implements Disposable {
+  /** zIndex applied to pin overlays so they render above the reel strip. */
+  private static readonly PIN_OVERLAY_Z_INDEX = 10000;
+
   private _events = new EventEmitter<ReelSetEvents>();
   private _reels: Reel[];
   private _viewport: ReelViewport;
@@ -86,6 +89,7 @@ export class ReelSet extends Container implements Disposable {
   private _spotlight: SymbolSpotlight;
   private _symbolFactory: SymbolFactory;
   private _frameBuilder: FrameBuilder;
+  private _frameAPI: FrameAPI;
   private _isDestroyed = false;
   private _pins = new Map<string, CellPin>();
   /**
@@ -93,9 +97,11 @@ export class ReelSet extends Container implements Disposable {
    * motion. Each overlay is a pooled ReelSymbol sitting in the viewport's
    * unmaskedContainer at the pin's cell position — it keeps the pinned
    * symbol visible while the underlying reel scrolls. Created on
-   * spin:start, destroyed on spin:allLanded.
+   * spin:start, destroyed on spin:allLanded. The pin is co-stored so
+   * _destroyPinOverlay always has it available even after the pin is
+   * removed from `_pins` (e.g. during unpin()).
    */
-  private _pinOverlays = new Map<string, ReelSymbol>();
+  private _pinOverlays = new Map<string, { pin: CellPin; overlay: ReelSymbol }>();
 
   constructor(params: ReelSetParams) {
     super();
@@ -104,6 +110,13 @@ export class ReelSet extends Container implements Disposable {
     this._viewport = params.viewport;
     this._symbolFactory = params.symbolFactory;
     this._frameBuilder = params.frameBuilder;
+
+    const fb = this._frameBuilder;
+    this._frameAPI = {
+      use(mw: FrameMiddleware): void { fb.use(mw); },
+      remove(name: string): void { fb.remove(name); },
+      get middleware(): ReadonlyArray<FrameMiddleware> { return fb.middleware; },
+    };
 
     // Speed manager
     this._speedManager = new SpeedManager(
@@ -385,6 +398,10 @@ export class ReelSet extends Container implements Disposable {
     to: CellCoord,
     opts?: MovePinOptions,
   ): Promise<void> {
+    if (this._spinController.isSpinning) {
+      throw new Error('movePin(): cannot move pin while spinning');
+    }
+
     const fromKey = pinKey(from.col, from.row);
     const pin = this._pins.get(fromKey);
     if (!pin) {
@@ -404,10 +421,6 @@ export class ReelSet extends Container implements Disposable {
       throw new Error(
         `movePin(): to row ${to.row} out of range [0, ${toReel.visibleRows})`,
       );
-    }
-
-    if (this._spinController.isSpinning) {
-      throw new Error('movePin(): cannot move pin while spinning');
     }
 
     // No-op self-move: still fire the event so callers can treat it uniformly.
@@ -522,23 +535,7 @@ export class ReelSet extends Container implements Disposable {
    * reelSet.frame.remove('more-wilds');
    */
   get frame(): FrameAPI {
-    const fb = this._frameBuilder;
-    return {
-      use(middleware: FrameMiddleware): void {
-        fb.use(middleware);
-      },
-      remove(name: string): void {
-        fb.remove(name);
-      },
-      get middleware(): ReadonlyArray<FrameMiddleware> {
-        // Access the internal array via a known-safe field name.
-        // FrameBuilder does not expose middleware publicly, so we read
-        // via a narrowly-typed cast. If FrameBuilder ever grows a public
-        // getter this should switch to that.
-        return ((fb as unknown) as { _middlewares: FrameMiddleware[] })
-          ._middlewares;
-      },
-    };
+    return this._frameAPI;
   }
 
   // ─── Lifecycle ────────────────────────────────────────────
@@ -614,7 +611,9 @@ export class ReelSet extends Container implements Disposable {
     const expired: CellPin[] = [];
     for (const pin of this._pins.values()) {
       if (typeof pin.turns === 'number') {
-        pin.turns -= 1;
+        // turns is readonly on the public interface; the engine owns the
+        // mutation here — cast to the mutable internal representation.
+        (pin as { turns: number }).turns -= 1;
         if (pin.turns <= 0) expired.push(pin);
       }
     }
@@ -670,9 +669,9 @@ export class ReelSet extends Container implements Disposable {
     // symbol-view y is reel-local; the sum gives correct position.
     overlay.view.x = reel.container.x;
     overlay.view.y = reel.getSymbolAt(pin.row).view.y;
-    overlay.view.zIndex = 10000;
+    overlay.view.zIndex = ReelSet.PIN_OVERLAY_Z_INDEX;
     this._viewport.unmaskedContainer.addChild(overlay.view);
-    this._pinOverlays.set(key, overlay);
+    this._pinOverlays.set(key, { pin, overlay });
     this._events.emit('pin:overlayCreated', pin, overlay);
   }
 
@@ -683,18 +682,9 @@ export class ReelSet extends Container implements Disposable {
    * instance.
    */
   private _destroyPinOverlay(key: string): void {
-    const overlay = this._pinOverlays.get(key);
-    if (!overlay) return;
-    // Best-effort pin lookup — at destroy time the pin may or may not
-    // still be in the map (e.g. unpin removes the pin before destroying
-    // the overlay). We pass the pin if we have it, a coord-only stub
-    // otherwise, so handlers always get positional context.
-    const pin =
-      this._pins.get(key) ??
-      (() => {
-        const [c, r] = key.split(':').map(Number);
-        return { col: c, row: r, symbolId: overlay.symbolId, turns: 'eval' as const };
-      })();
+    const entry = this._pinOverlays.get(key);
+    if (!entry) return;
+    const { pin, overlay } = entry;
     this._events.emit('pin:overlayDestroyed', pin, overlay);
     this._viewport.unmaskedContainer.removeChild(overlay.view);
     this._symbolFactory.release(overlay);

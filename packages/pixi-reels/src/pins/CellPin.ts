@@ -30,7 +30,7 @@ export interface CellPin {
    * - 'eval'      → valid for one spin only; cleared at the next spin start
    * - 'permanent' → persists until `unpin()` is called explicitly
    */
-  turns: number | 'eval' | 'permanent';
+  readonly turns: number | 'eval' | 'permanent';
   /** Optional per-instance data: multiplier, value, tier — game-specific. */
   payload?: Readonly<Record<string, unknown>>;
 }
