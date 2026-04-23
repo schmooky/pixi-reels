@@ -22,6 +22,7 @@ export type {
   Matrix,
   Position,
   CellBounds,
+  Payline,
   MaskConfig,
   ReelSetInternalConfig,
 } from './config/types.js';
@@ -80,6 +81,14 @@ export { ObjectPool } from './pool/ObjectPool.js';
 // Spotlight
 export { SymbolSpotlight } from './spotlight/SymbolSpotlight.js';
 export type { SpotlightOptions, WinLine, CycleOptions } from './spotlight/SymbolSpotlight.js';
+
+// Wins (payline presentation)
+export { WinPresenter } from './wins/WinPresenter.js';
+export type { WinPresenterOptions, WinSymbolAnim } from './wins/WinPresenter.js';
+export type { LineRenderer } from './wins/LineRenderer.js';
+export { GraphicsLineRenderer } from './wins/GraphicsLineRenderer.js';
+export type { GraphicsLineRendererOptions } from './wins/GraphicsLineRenderer.js';
+export { paylineToCells, sortByValueDesc } from './wins/Payline.js';
 
 // Pins (cell persistence primitive)
 export type {

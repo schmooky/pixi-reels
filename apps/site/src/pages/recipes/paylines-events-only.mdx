@@ -1,0 +1,57 @@
+---
+layout: ../../layouts/Recipe.astro
+title: Paylines, events-only
+description: Skip the line renderer. Subscribe to win:line / win:symbol and draw whatever you want with getCellBounds.
+tags: [wins, paylines, events]
+steps:
+  - Create a WinPresenter without a lineRenderer
+  - Subscribe to win:line to draw your own line graphic from reelSet.getCellBounds
+  - Subscribe to win:symbol for per-cell effects alongside the presenter's default
+apis:
+  - ReelSet.getCellBounds
+  - win:line / win:symbol / win:end events
+---
+
+import code from '../../recipes/paylines-events-only.recipe.ts?raw';
+import { RecipeRunner } from '../../components/RecipeRunner.tsx';
+
+<RecipeRunner code={code} client:only="react" />
+
+## The minimum code
+
+```ts
+reelSet.events.on('win:line', (payline, cells) => {
+  const gfx = new PIXI.Graphics();
+  const pts = cells.map(c => {
+    const b = reelSet.getCellBounds(c.reelIndex, c.rowIndex);
+    return { x: b.x + b.width / 2, y: b.y + b.height / 2 };
+  });
+  gfx.moveTo(pts[0].x, pts[0].y);
+  for (let i = 1; i < pts.length; i++) gfx.lineTo(pts[i].x, pts[i].y);
+  gfx.stroke({ color: paletteFor(payline), width: 6 });
+  myLineLayer.addChild(gfx);
+  fadeOutAfter(gfx, 1200);
+});
+
+const presenter = new WinPresenter(reelSet);   // no lineRenderer
+await presenter.show(paylines);
+```
+
+## Why events-only
+
+`LineRenderer` is great for reusable line looks. Events-only is better when:
+
+- The line is owned by a separate feature layer (scatter overlay, big-win canvas).
+- You need multiple renderings per payline (a line + a number popup + a sound).
+- You're integrating with an existing animation framework that expects its own lifecycle.
+
+## The event contract
+
+| Event | Fires | Payload |
+|---|---|---|
+| `win:start` | once per `show()` call | ordered payline list |
+| `win:line` | once per payline per cycle | payline, cell positions |
+| `win:symbol` | once per winning cell per cycle | symbol, cell, payline |
+| `win:end` | once per `show()` | `'complete'` or `'aborted'` |
+
+All events fire in the same tick order as the visual state changes — `win:line` fires *after* dim has been applied, so a listener can snapshot the live state.

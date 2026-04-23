@@ -1,4 +1,4 @@
-import type { SpeedProfile } from '../config/types.js';
+import type { SpeedProfile, Payline } from '../config/types.js';
 import type { CellPin, PinExpireReason } from '../pins/CellPin.js';
 
 /** Position of a symbol on the reel grid. */
@@ -30,6 +30,21 @@ export interface ReelSetEvents extends Record<string, unknown[]> {
   'speed:changed': [profile: SpeedProfile, previous: SpeedProfile];
   'spotlight:start': [positions: SymbolPosition[]];
   'spotlight:end': [];
+  /** WinPresenter started a sequence. Fires once per `show()` call. */
+  'win:start': [paylines: readonly Payline[]];
+  /**
+   * A single payline is now being presented. Fires once per payline per
+   * cycle. `cells` is the payline expanded via `paylineToCells`.
+   */
+  'win:line': [payline: Payline, cells: readonly SymbolPosition[]];
+  /**
+   * A specific winning cell is being animated. Fires once per cell per
+   * payline per cycle. `symbol` is typed as `unknown` to keep this module
+   * free of symbol-layer imports; cast to `ReelSymbol` (or your subclass).
+   */
+  'win:symbol': [symbol: unknown, cell: SymbolPosition, payline: Payline];
+  /** WinPresenter finished — either naturally (`complete`) or via abort. */
+  'win:end': [reason: 'complete' | 'aborted'];
   'pin:placed': [pin: CellPin];
   'pin:moved': [pin: CellPin, from: { col: number; row: number }];
   'pin:expired': [pin: CellPin, reason: PinExpireReason];

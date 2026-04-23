@@ -1,13 +1,14 @@
 // @ts-nocheck
-// Injected: ReelSetBuilder, SpeedPresets, BlurSpriteSymbol, PIXI, gsap,
-//           app, textures, blurTextures, SYMBOL_IDS, pickWeighted
+// Injected: ReelSetBuilder, SpeedPresets, BlurSpriteSymbol, WinPresenter,
+//           GraphicsLineRenderer, paylineToCells, PIXI, gsap, app, textures,
+//           blurTextures, SYMBOL_IDS, pickWeighted.
 
 const A = 'round/round_1', B = 'round/round_2', C = 'round/round_3';
 const SEVEN = 'royal/royal_1';
 const IDS = [A, B, C, SEVEN];
 const COLS = 5, ROWS = 3, SIZE = 90;
 
-// Three full rows of different symbols — three visible paylines.
+// Three full rows of the same symbol — three paylines the presenter cycles.
 const GRID = [
   [SEVEN, B, C],
   [SEVEN, B, C],
@@ -16,32 +17,33 @@ const GRID = [
   [SEVEN, B, C],
 ];
 
+// Server response: three straight-across paylines, values descending so the
+// presenter shows the premium (row 0) first by default.
+const PAYLINES = [
+  { lineId: 0, line: [0, 0, 0, 0, 0], value: 300 },
+  { lineId: 1, line: [1, 1, 1, 1, 1], value: 100 },
+  { lineId: 2, line: [2, 2, 2, 2, 2], value:  60 },
+];
+
 const reelSet = new ReelSetBuilder()
   .reels(COLS).visibleSymbols(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
   .symbols(r => { for (const id of IDS) r.register(id, BlurSpriteSymbol, { textures, blurTextures }); })
   .speed('normal', SpeedPresets.NORMAL).speed('turbo', SpeedPresets.TURBO)
   .ticker(app.ticker).build();
 
-// Scale a symbol's view from its visual center (view origin is top-left).
-function scaleFromCenter(view, target, duration) {
-  return new Promise(resolve => {
-    const b = view.getLocalBounds();
-    const cx = b.x + b.width / 2, cy = b.y + b.height / 2;
-    const ox = view.pivot.x, oy = view.pivot.y, px = view.x, py = view.y;
-    view.pivot.set(cx, cy);
-    view.x = px + (cx - ox);
-    view.y = py + (cy - oy);
-    gsap.to(view.scale, {
-      x: target, y: target, duration, ease: 'back.out(2)',
-      onComplete: () => {
-        gsap.to(view.scale, {
-          x: 1, y: 1, duration: duration * 0.7, ease: 'power2.inOut',
-          onComplete: () => { view.pivot.set(ox, oy); view.x = px; view.y = py; resolve(); },
-        });
-      },
-    });
-  });
-}
+// One presenter lives for the lifetime of the reel set. Default config:
+//   - GraphicsLineRenderer draws a 4px polyline through cell centres
+//   - dim losers to 0.35 alpha
+//   - cycle each payline once, 400 ms gap, sorted by value desc
+//   - symbol animation is the symbol's own `playWin()`
+const presenter = new WinPresenter(reelSet, {
+  lineRenderer: new GraphicsLineRenderer({ width: 5, drawOnMs: 260 }),
+  cycleGap: 350,
+});
+
+// Aborting on the next spin is the canonical pattern — users can slam-spin
+// mid-celebration without leaking a line on screen.
+reelSet.events.on('spin:start', () => presenter.abort());
 
 return {
   reelSet,
@@ -50,28 +52,8 @@ return {
     await new Promise(r => setTimeout(r, 150));
     reelSet.setResult(GRID);
     await p;
-    await new Promise(r => setTimeout(r, 240));
-
-    for (let row = 0; row < ROWS; row++) {
-      // Dim non-winners, highlight this row.
-      for (let r = 0; r < COLS; r++) {
-        for (let ro = 0; ro < ROWS; ro++) {
-          gsap.to(reelSet.getReel(r).getSymbolAt(ro).view, { alpha: ro === row ? 1 : 0.25, duration: 0.2 });
-        }
-      }
-      // Sweep scale pulse left-to-right.
-      for (let r = 0; r < COLS; r++) {
-        void scaleFromCenter(reelSet.getReel(r).getSymbolAt(row).view, 1.22, 0.18);
-        await new Promise(res => setTimeout(res, 80));
-      }
-      await new Promise(r => setTimeout(r, 480));
-    }
-
-    // Restore all.
-    for (let r = 0; r < COLS; r++) {
-      for (let ro = 0; ro < ROWS; ro++) {
-        gsap.to(reelSet.getReel(r).getSymbolAt(ro).view, { alpha: 1, duration: 0.2 });
-      }
-    }
+    await new Promise(r => setTimeout(r, 220));
+    await presenter.show(PAYLINES);
   },
+  cleanup: () => presenter.destroy(),
 };

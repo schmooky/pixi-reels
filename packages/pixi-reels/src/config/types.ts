@@ -102,6 +102,27 @@ export interface CellBounds {
   height: number;
 }
 
+/**
+ * One winning payline returned by your server / game logic.
+ *
+ * `line` is indexed by reel column. An entry is the winning row on that
+ * reel, or `null` to skip the reel (ways-to-win, partial lines, or a
+ * cluster-style hit that only occupies some columns).
+ *
+ * This is the shape `WinPresenter.show()` consumes and that `win:line`
+ * fires with. pixi-reels never computes wins — it just presents them.
+ */
+export interface Payline {
+  /** A stable identifier so renderers can key per-line styling. */
+  lineId: number;
+  /** Per-reel winning row, or `null` to skip. Length = reel count. */
+  line: ReadonlyArray<number | null>;
+  /** Payout for this line. WinPresenter sorts by this (desc) by default. */
+  value: number;
+  /** Optional tag for routing (e.g. 'line' vs 'scatter' vs 'way'). */
+  kind?: string;
+}
+
 /** Mask configuration for the reel viewport. */
 export interface MaskConfig {
   mask: Container;

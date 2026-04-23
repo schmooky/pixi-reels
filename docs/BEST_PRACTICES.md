@@ -138,6 +138,44 @@ reelSet.events.on('spin:reelLanded', (reelIndex) => {
 
 Missing animations are silent no-ops. If your asset doesn't have `landing`, the call is a free-lunch skip.
 
+## Presenting wins
+
+`pixi-reels` never computes wins — your server or eval does. For showing them, the library ships three stacked pieces: raw events, a `LineRenderer` interface, and the `WinPresenter` that orchestrates both.
+
+```ts
+import { WinPresenter, GraphicsLineRenderer, type Payline } from 'pixi-reels';
+
+const presenter = new WinPresenter(reelSet, {
+  lineRenderer: new GraphicsLineRenderer(),
+});
+
+reelSet.events.on('spin:complete', async (result) => {
+  const paylines: Payline[] = await server.wins(result);
+  await presenter.show(paylines);
+});
+reelSet.events.on('spin:start', () => presenter.abort());
+```
+
+Pick the level of abstraction that matches the art:
+
+| You want… | Use |
+|---|---|
+| Default bounce + line + dim | `WinPresenter` + `GraphicsLineRenderer`, config-only |
+| Same orchestration but a premium line look | `WinPresenter` + a custom `LineRenderer` (Spine rig, sprite sheet, particle trail) |
+| Same orchestration but a custom per-symbol animation | `WinPresenter`'s `symbolAnim: (sym, cell, payline) => Promise<void>` |
+| Full control; the lib must not draw lines | `WinPresenter` without a `lineRenderer`, subscribe to `win:line` / `win:symbol` and draw with `reelSet.getCellBounds(col, row)` |
+
+`win:start` / `win:line` / `win:symbol` / `win:end` fire whether or not you use the presenter. An event-only integration is the right call when wins belong to a separate feature layer (scatter overlays, big-win canvases, sound routers) that needs its own lifecycle.
+
+## Symbol layering and overflow
+
+Slot art often overflows the cell — a drop-shadowed wild, a celebration frame bigger than its box. Two knobs control render order:
+
+- **Per-symbol base:** `symbolData.zIndex` on each registered symbol. The library multiplies it by `100` and adds the symbol's current visual row, so scatters / bonuses draw in front of regulars, and bottom-row symbols draw in front of upper rows — overflow naturally spills downward without clipping neighbours.
+- **Per-reel ordering:** `reel.container.zIndex` defaults to `reelIndex`, so the rightmost reel draws on top. If your art overflows bottom-left instead of bottom-right, flip the sign: `reel.container.zIndex = -reelIndex` right after building the reel set.
+
+For mid-spin celebrations that need to break out of the reel mask entirely, use `reelSet.spotlight` (dim + promote) or pass a renderer that draws into `reelSet.viewport.unmaskedContainer`.
+
 ## Speed modes and "feel"
 
 `SpeedManager` holds named `SpeedProfile` objects. Switch at runtime:

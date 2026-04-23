@@ -1,16 +1,16 @@
 ---
 layout: ../../layouts/Recipe.astro
 title: How to animate paylines
-description: Cycle through multiple winning lines with the built-in spotlight — dim non-winners, promote winners, pulse each line.
-tags: [wins, spotlight, paylines]
+description: Cycle winning paylines with WinPresenter — draws lines, dims losers, fires events for sound and UI.
+tags: [wins, paylines, presenter]
 steps:
-  - After spin, detect your win lines (array of winning cells)
-  - Call reelSet.spotlight.cycle(lines, { displayDuration, gapDuration, cycles, dimAmount })
-  - Listen for spotlight:end to re-enable UI
+  - Build a WinPresenter with a GraphicsLineRenderer (or your own renderer)
+  - After spin lands, call presenter.show(paylines) — it cycles, dims, animates
+  - Abort on the next spin:start so slam-spins don't leave a line hanging
 apis:
-  - SymbolSpotlight.cycle
-  - spotlight:start event
-  - spotlight:end event
+  - WinPresenter
+  - GraphicsLineRenderer
+  - win:start / win:line / win:symbol / win:end events
 ---
 
 import code from '../../recipes/animate-paylines.recipe.ts?raw';
@@ -21,27 +21,54 @@ import { RecipeRunner } from '../../components/RecipeRunner.tsx';
 ## The minimum code
 
 ```ts
-function paylineCells(row: number, reelCount: number) {
-  return Array.from({ length: reelCount }, (_, reelIndex) => ({ reelIndex, rowIndex: row }));
-}
+import { WinPresenter, GraphicsLineRenderer } from 'pixi-reels';
 
-reelSet.events.on('spin:complete', async (result) => {
-  const wins = detectLineWins(result.symbols);       // your logic
-  if (!wins.length) return;
-
-  await reelSet.spotlight.cycle(
-    wins.map((w) => ({ positions: w.positions })),
-    { displayDuration: 600, dimAmount: 0.25, cycles: 1 },
-  );
+const presenter = new WinPresenter(reelSet, {
+  lineRenderer: new GraphicsLineRenderer(),
 });
+
+reelSet.events.on('spin:complete', async () => {
+  const paylines = await server.wins(result);  // your server / eval
+  await presenter.show(paylines);
+});
+
+// Cancel in-flight win presentation when a new spin starts.
+reelSet.events.on('spin:start', () => presenter.abort());
 ```
 
-## Pair with per-symbol win animations
+## Payline shape
 
-`spotlight.cycle` calls `symbol.playWin()` on each highlighted cell if you pass `playWin: true` (default). Your `ReelSymbol` subclass defines the gesture — `SpineSymbol` fires its "win" animation, `BlockSymbol` does a scale-down pulse, custom classes do whatever you want.
+```ts
+interface Payline {
+  lineId: number;                 // stable id for per-line styling
+  line: (number | null)[];        // row per reel, null to skip
+  value: number;                  // amount (used for default sort)
+  kind?: string;                  // optional tag routed to events
+}
+```
+
+Per-reel `null` entries let you represent ways-to-win, cluster hits, or
+partial lines without inventing a separate shape.
+
+## What the default does
+
+`WinPresenter` with its defaults:
+
+- sorts paylines by `value` descending,
+- fades non-winning symbols to `alpha: 0.35`,
+- calls each winner's `playWin()` in parallel,
+- renders a polyline through the cell centres (when a renderer is passed),
+- cycles once with a 400 ms gap, fires `win:*` events throughout,
+- restores symbol alpha on end.
+
+## When to reach for a custom renderer
+
+`GraphicsLineRenderer` is a prototype-grade polyline. For a premium look
+(Spine line rig, dashed glow, per-line sprite sheet) implement the
+[`LineRenderer`](/docs/) interface yourself and pass it as `lineRenderer`.
 
 ## UX guardrails
 
-- Disable the spin button between `spotlight:start` and `spotlight:end`.
-- On slam-stop or new spin, the spotlight aborts automatically.
-- Use `dim: 0` when you just want winners to pulse without fading losers.
+- Abort on `spin:start` — the snippet above.
+- Disable the spin button between `win:start` and `win:end` if your UI can't slam-spin during celebrations.
+- `cycles: -1` makes presentation loop until aborted — good for autoplay off-screens.
