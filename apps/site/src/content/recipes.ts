@@ -240,6 +240,18 @@ export const RECIPES: RecipeMeta[] = [
     apis: ['PIXI.Assets.load', 'Spritesheet.textures', 'SpriteSymbol', 'BlurSpriteSymbol'],
     tags: ['sprites', 'atlas', 'texturepacker'],
   },
+  {
+    slug: 'pixellab-animated-symbols',
+    title: 'AI-generated animated symbols (pixellab)',
+    oneLiner: 'Generate pixel-art symbols + win sequences via pixellab.ai, drop into AnimatedSpriteSymbol.',
+    steps: [
+      'Run scripts/gen-pixellab-symbols.mjs with PIXELAB_API_KEY',
+      'Load the frames with loadPixellabSymbols([...ids])',
+      'Register each symbol with AnimatedSpriteSymbol — playWin plays the sequence',
+    ],
+    apis: ['AnimatedSpriteSymbol', 'loadPixellabSymbols', 'WinPresenter'],
+    tags: ['symbols', 'animation', 'ai'],
+  },
 
   // ── CellPin primitive recipes ──────────────────────────────────────
   // These recipes all use reelSet.pin() — the engine's unified cell-persistence
