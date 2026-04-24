@@ -1,6 +1,6 @@
 {
   "name": "pixi-reels",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A batteries-included slot machine reel engine for PixiJS v8 — fluent builder, typed events, spin phases, speed modes, win spotlight, and a headless testing harness.",
   "type": "module",
   "main": "./dist/index.cjs",
