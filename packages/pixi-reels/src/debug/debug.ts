@@ -1,3 +1,4 @@
+import { Graphics } from 'pixi.js';
 import type { ReelSet } from '../core/ReelSet.js';
 import type { Reel } from '../core/Reel.js';
 
@@ -6,6 +7,11 @@ import type { Reel } from '../core/Reel.js';
  *
  * Designed for AI agents that cannot see the canvas.
  * Returns no PixiJS display objects, only serializable data.
+ *
+ * **Breaking note (since v0.3):** `visibleRows` is now `number[]` (one entry
+ * per reel) so jagged shapes (pyramids, Megaways) are representable. For
+ * uniform slots every entry is the same value. Adapt downstream code that
+ * deep-reads the snapshot.
  */
 export interface DebugSnapshot {
   timestamp: number;
@@ -14,7 +20,7 @@ export interface DebugSnapshot {
   availableSpeeds: string[];
   spotlightActive: boolean;
   reelCount: number;
-  visibleRows: number;
+  visibleRows: number[];
   reels: DebugReelSnapshot[];
   grid: string[][];
 }
@@ -52,11 +58,10 @@ export function debugSnapshot(reelSet: ReelSet): DebugSnapshot {
     visibleSymbols: reel.getVisibleSymbols(),
   }));
 
-  // Build the visual grid (what a player would see)
-  const grid: string[][] = [];
-  for (const reelSnap of reelSnapshots) {
-    grid.push(reelSnap.visibleSymbols);
-  }
+  // Build the visual grid (what a player would see). Uses the ReelSet
+  // resolver so cross-reel OCCUPIED cells of a big-symbol block render as
+  // the anchor's id, not as the OCCUPIED sentinel.
+  const grid: string[][] = reelSet.getVisibleGrid();
 
   return {
     timestamp: Date.now(),
@@ -65,7 +70,7 @@ export function debugSnapshot(reelSet: ReelSet): DebugSnapshot {
     availableSpeeds: reelSet.speed.profileNames,
     spotlightActive: reelSet.spotlight.isActive,
     reelCount: reels.length,
-    visibleRows: reels[0]?.getVisibleSymbols().length ?? 0,
+    visibleRows: reels.map((r) => r.visibleRows),
     reels: reelSnapshots,
     grid,
   };
@@ -88,7 +93,9 @@ export function debugGrid(reelSet: ReelSet): string {
   if (grid.length === 0) return '(empty grid)';
 
   const colWidth = 8;
+  const maxRows = Math.max(...visibleRows);
   const pad = (s: string) => s.slice(0, colWidth).padEnd(colWidth);
+  const empty = ' '.repeat(colWidth);
 
   const border = (left: string, mid: string, right: string) =>
     left + grid.map(() => '─'.repeat(colWidth)).join(mid) + right;
@@ -96,8 +103,8 @@ export function debugGrid(reelSet: ReelSet): string {
   const lines: string[] = [];
   lines.push(border('┌', '┬', '┐'));
 
-  for (let row = 0; row < visibleRows; row++) {
-    const cells = grid.map((col) => pad(col[row] ?? '?'));
+  for (let row = 0; row < maxRows; row++) {
+    const cells = grid.map((col, i) => (row < visibleRows[i] ? pad(col[row] ?? '?') : empty));
     lines.push('│' + cells.join('│') + '│');
   }
 
@@ -118,6 +125,8 @@ export function debugGrid(reelSet: ReelSet): string {
 export function enableDebug(reelSet: ReelSet): void {
   if (typeof window === 'undefined') return;
 
+  let maskOverlay: Graphics | null = null;
+
   const debug = {
     reelSet,
     snapshot: () => debugSnapshot(reelSet),
@@ -134,7 +143,9 @@ export function enableDebug(reelSet: ReelSet): void {
         'spin:start', 'spin:allStarted', 'spin:stopping',
         'spin:reelLanded', 'spin:allLanded', 'spin:complete',
         'skip:requested', 'skip:completed', 'speed:changed',
-        'spotlight:start', 'spotlight:end', 'destroyed',
+        'spotlight:start', 'spotlight:end',
+        'shape:changed', 'adjust:start', 'adjust:complete', 'pin:migrated',
+        'destroyed',
       ] as const;
       for (const event of events) {
         reelSet.events.on(event as any, (...args: any[]) => {
@@ -142,6 +153,29 @@ export function enableDebug(reelSet: ReelSet): void {
         });
       }
       console.log('[pixi-reels debug] tracing enabled for all events');
+    },
+    /**
+     * Toggle a debug overlay on the unmasked container that visualizes the
+     * mask shape and per-reel boxes. Useful for spotting pyramid peek and
+     * confirming Megaways box geometry.
+     */
+    showMask: (enabled: boolean) => {
+      if (enabled) {
+        if (maskOverlay) return;
+        const g = new Graphics();
+        g.rect(0, 0, reelSet.viewport.maskWidth, reelSet.viewport.maskHeight)
+          .fill({ color: 0xff0000, alpha: 0.15 });
+        for (const rect of reelSet.viewport.maskRects) {
+          g.rect(rect.x, rect.y, rect.width, rect.height)
+            .stroke({ color: 0x00ff00, width: 2 });
+        }
+        reelSet.viewport.unmaskedContainer.addChild(g);
+        maskOverlay = g;
+      } else if (maskOverlay) {
+        reelSet.viewport.unmaskedContainer.removeChild(maskOverlay);
+        maskOverlay.destroy();
+        maskOverlay = null;
+      }
     },
   };
 

@@ -18,6 +18,10 @@
 import type { Application, Texture } from 'pixi.js';
 import { ReelSetBuilder, SpeedPresets, type ReelSet, enableDebug } from 'pixi-reels';
 import { BlurSpriteSymbol } from '../../shared/BlurSpriteSymbol.js';
+import { buildPyramid } from './routes/pyramid.js';
+import { buildMegaways } from './routes/megaways.js';
+import { buildExpandingWild } from './routes/expanding-wild.js';
+import { buildBigSymbols } from './routes/big-symbols.js';
 
 export interface SandboxContext {
   app: Application;
@@ -32,6 +36,12 @@ export interface SandboxResult {
   /** Called each spin to produce the target symbol grid. */
   nextResult: () => string[][];
 }
+
+// Swap this assignment to try a recipe from `./routes/*`. Set to `null` to
+// run the inline default classic 5×3 below.
+//   buildPyramid | buildMegaways | buildExpandingWild | buildBigSymbols
+const ACTIVE_ROUTE: ((ctx: SandboxContext) => SandboxResult) | null = null;
+void buildPyramid; void buildMegaways; void buildExpandingWild; void buildBigSymbols;
 
 const REELS = 5;
 const ROWS = 3;
@@ -51,7 +61,10 @@ const SYMBOL_MAP: Record<string, string> = {
 };
 const SYMBOLS = Object.keys(SYMBOL_MAP);
 
-export function buildSandbox({ app, textures, blurTextures }: SandboxContext): SandboxResult {
+export function buildSandbox(ctx: SandboxContext): SandboxResult {
+  if (ACTIVE_ROUTE) return ACTIVE_ROUTE(ctx);
+
+  const { app, textures, blurTextures } = ctx;
   const symbolTextures: Record<string, Texture> = {};
   const symbolBlurTextures: Record<string, Texture> = {};
   for (const [id, atlasKey] of Object.entries(SYMBOL_MAP)) {
@@ -135,6 +148,19 @@ function pickWeighted(): string {
   return 'low4';
 }
 
+// ============================================================================
+//  PER-REEL GEOMETRY / MEGAWAYS / BIG SYMBOLS / EXPANDING WILDS
+// ============================================================================
+//
+// Each route in `./routes/` is a complete `buildSandbox`-shaped function.
+// To try one, set `ACTIVE_ROUTE = buildXxx` near the top of this file.
+//
+// Available routes:
+//   - ./routes/pyramid.js          — static 3-5-5-5-3 pyramid
+//   - ./routes/megaways.js         — per-spin row variation (2..7 rows)
+//   - ./routes/expanding-wild.js   — wild expands its full column for one spin
+//   - ./routes/big-symbols.js      — 2×2 bonus block via SymbolData.size
+//
 // ============================================================================
 //  MORE RECIPES (uncomment/adapt in the block above)
 // ============================================================================

@@ -1,10 +1,10 @@
 import { Container } from 'pixi.js';
 import type { Ticker } from 'pixi.js';
 import type { Disposable } from '../utils/Disposable.js';
-import type { SpeedProfile, ReelSetInternalConfig, CellBounds } from '../config/types.js';
+import type { SpeedProfile, ReelSetInternalConfig, CellBounds, SymbolData } from '../config/types.js';
 import { EventEmitter } from '../events/EventEmitter.js';
 import type { ReelSetEvents, SpinResult, SymbolPosition } from '../events/ReelEvents.js';
-import { Reel } from './Reel.js';
+import { Reel, OCCUPIED_SENTINEL } from './Reel.js';
 import { ReelViewport } from './ReelViewport.js';
 import { SpinController } from '../spin/SpinController.js';
 import { SpeedManager } from '../speed/SpeedManager.js';
@@ -103,6 +103,22 @@ export class ReelSet extends Container implements Disposable {
    */
   private _pinOverlays = new Map<string, { pin: CellPin; overlay: ReelSymbol }>();
 
+  /**
+   * Megaways: target row counts for the next AdjustPhase. Recorded by
+   * `setShape()`, consumed by `SpinController` when it builds AdjustPhase
+   * configs. `null` means "no shape change pending".
+   */
+  private _targetShape: number[] | null = null;
+
+  /** Set at construction by the builder when `.megaways(...)` was called. */
+  private _isMegawaysSlot: boolean;
+  private _megawaysMinRows = 0;
+  private _megawaysMaxRows = 0;
+  private _megawaysReelPixelHeight = 0;
+
+  /** Resolved per-symbol metadata (size, zIndex, etc). */
+  private _symbolsData: Record<string, SymbolData>;
+
   constructor(params: ReelSetParams) {
     super();
 
@@ -110,6 +126,13 @@ export class ReelSet extends Container implements Disposable {
     this._viewport = params.viewport;
     this._symbolFactory = params.symbolFactory;
     this._frameBuilder = params.frameBuilder;
+    this._symbolsData = params.config.symbols;
+    this._isMegawaysSlot = !!params.config.grid.megaways;
+    if (params.config.grid.megaways) {
+      this._megawaysMinRows = params.config.grid.megaways.minRows;
+      this._megawaysMaxRows = params.config.grid.megaways.maxRows;
+      this._megawaysReelPixelHeight = params.config.grid.megaways.reelPixelHeight;
+    }
 
     const fb = this._frameBuilder;
     this._frameAPI = {
@@ -133,6 +156,19 @@ export class ReelSet extends Container implements Disposable {
       this._events,
       params.config.ticker,
       params.spinningMode,
+      {
+        isMegawaysSlot: this._isMegawaysSlot,
+        symbolsData: this._symbolsData,
+        consumeTargetShape: () => this.consumeTargetShape(),
+        clearTargetShape: () => this.clearTargetShape(),
+        megawaysReelPixelHeight: this._megawaysReelPixelHeight,
+        symbolGapY: params.config.grid.symbolGap.y,
+        getPinsOnReel: (reelIndex) => this._pinsOnReel(reelIndex),
+        migratePinsForReel: (reelIndex, newRows) => this._migratePinsForReel(reelIndex, newRows),
+        refreshPinOverlaysForReel: (reelIndex) => this.refreshPinOverlaysForReel(reelIndex),
+        buildPinOverlayTweens: (reelIndex, targetSymbolHeight, symbolGapY) =>
+          this._buildPinOverlayTweens(reelIndex, targetSymbolHeight, symbolGapY),
+      },
     );
 
     // Spotlight
@@ -236,6 +272,147 @@ export class ReelSet extends Container implements Disposable {
     return this._spinController.isSpinning;
   }
 
+  /** Whether this slot was built with `.megaways(...)`. */
+  get isMegawaysSlot(): boolean {
+    return this._isMegawaysSlot;
+  }
+
+  // ─── Megaways API ─────────────────────────────────────────
+
+  /**
+   * Megaways: record the row count each reel should land on this spin. The
+   * AdjustPhase between SPIN and STOP will reshape reels (resize symbols,
+   * reshape motion) before the stop sequence runs.
+   *
+   * Must be called between `spin()` and `setResult()`. The shape stays in
+   * effect for the current spin only — call again on every spin.
+   *
+   * Throws if:
+   *  - this slot was not built with `.megaways(...)`
+   *  - `rowsPerReel.length !== reelCount`
+   *  - any entry falls outside `[megaways.minRows, megaways.maxRows]`
+   */
+  setShape(rowsPerReel: number[]): void {
+    if (!this._isMegawaysSlot) {
+      throw new Error('setShape(): slot was not built with .megaways(...) — call ReelSetBuilder.megaways() first.');
+    }
+    if (rowsPerReel.length !== this._reels.length) {
+      throw new Error(
+        `setShape(): rowsPerReel length ${rowsPerReel.length} must equal reelCount ${this._reels.length}.`,
+      );
+    }
+    for (let i = 0; i < rowsPerReel.length; i++) {
+      const r = rowsPerReel[i];
+      if (r < this._megawaysMinRows || r > this._megawaysMaxRows) {
+        throw new Error(
+          `setShape(): rowsPerReel[${i}] = ${r} out of range [${this._megawaysMinRows}, ${this._megawaysMaxRows}].`,
+        );
+      }
+    }
+    this._targetShape = [...rowsPerReel];
+    this._events.emit('shape:changed', [...rowsPerReel]);
+
+    // Migrate pins to their post-reshape rows EAGERLY — before any
+    // `setResult` overlay or frame build runs. Otherwise a pin at row=4
+    // on a 7-row reel is silently dropped when setResult overlays it onto
+    // a 3-row grid (row 4 is out of bounds for the new shape).
+    //
+    // AdjustPhase later commits the geometry; the pin map is already at
+    // the post-migration rows by then, so AdjustPhase only needs to
+    // refresh overlays + tween (when implemented).
+    for (let i = 0; i < this._reels.length; i++) {
+      this._migratePinsForReel(i, rowsPerReel[i]);
+    }
+  }
+
+  /**
+   * Megaways internal: read and clear the pending target shape. Called by
+   * SpinController when building AdjustPhase configs. `null` means the
+   * caller should keep current rows.
+   */
+  consumeTargetShape(): number[] | null {
+    const shape = this._targetShape;
+    return shape;
+  }
+
+  /** Megaways internal: clear after the spin lands. Called from SpinController. */
+  clearTargetShape(): void {
+    this._targetShape = null;
+  }
+
+  /**
+   * Resolved grid, with all OCCUPIED cells (same-reel and cross-reel)
+   * replaced by their anchor's symbol id. For non-big-symbol slots this is
+   * `reels.map(r => r.getVisibleSymbols())`. For big-symbol slots a 2×2
+   * bonus appears as four "bonus" cells.
+   */
+  getVisibleGrid(): string[][] {
+    const grid = this._reels.map((r) => r.getVisibleSymbols());
+    for (let col = 0; col < grid.length; col++) {
+      for (let row = 0; row < grid[col].length; row++) {
+        if (grid[col][row] === OCCUPIED_SENTINEL) {
+          grid[col][row] = this.getSymbolFootprint(col, row).anchor.col === col
+            ? grid[col][this.getSymbolFootprint(col, row).anchor.row]
+            : grid[this.getSymbolFootprint(col, row).anchor.col][this.getSymbolFootprint(col, row).anchor.row];
+        }
+      }
+    }
+    return grid;
+  }
+
+  /**
+   * Footprint of the symbol at `(col, row)`.
+   *
+   *   - 1×1 symbols: `{ anchor: { col, row }, size: { w: 1, h: 1 } }`.
+   *   - Big symbols: returns the anchor cell and block size.
+   *   - OCCUPIED cells: resolves transparently to the anchor.
+   *
+   * Useful for win presenters that need to highlight a whole NxM block.
+   */
+  getSymbolFootprint(
+    col: number,
+    row: number,
+  ): { anchor: { col: number; row: number }; size: { w: number; h: number } } {
+    if (col < 0 || col >= this._reels.length) {
+      throw new RangeError(`getSymbolFootprint: col ${col} out of range [0, ${this._reels.length})`);
+    }
+    const reel = this._reels[col];
+    if (row < 0 || row >= reel.visibleRows) {
+      throw new RangeError(`getSymbolFootprint: row ${row} out of range [0, ${reel.visibleRows})`);
+    }
+
+    // Resolve OCCUPIED → anchor row on this reel. Cross-reel OCCUPIED
+    // requires walking left to find the anchoring column with size.w > col.
+    const anchorRow = reel.getAnchorRow(row);
+    const anchorSym = reel.getSymbolAt(row);
+    const meta = this._symbolsData[anchorSym.symbolId];
+    const size = meta?.size && (meta.size.w > 1 || meta.size.h > 1)
+      ? meta.size
+      : { w: 1, h: 1 };
+
+    // Resolve cross-reel anchor column: if the anchor symbol on THIS reel
+    // is itself an OCCUPIED stub painted by a big symbol on a leftward
+    // reel, walk left until we find a column where the row matches a big
+    // symbol whose width covers our column.
+    let anchorCol = col;
+    for (let c = col - 1; c >= 0; c--) {
+      const leftReel = this._reels[c];
+      if (anchorRow >= leftReel.visibleRows) break;
+      const leftAnchorRow = leftReel.getAnchorRow(anchorRow);
+      const leftSym = leftReel.getSymbolAt(anchorRow);
+      const leftMeta = this._symbolsData[leftSym.symbolId];
+      if (leftMeta?.size && leftMeta.size.w > col - c) {
+        anchorCol = c;
+        return {
+          anchor: { col: anchorCol, row: leftAnchorRow },
+          size: leftMeta.size,
+        };
+      }
+    }
+
+    return { anchor: { col: anchorCol, row: anchorRow }, size };
+  }
+
   // ─── Speed API ────────────────────────────────────────────
 
   /** Speed profile manager. */
@@ -296,7 +473,7 @@ export class ReelSet extends Container implements Disposable {
     }
     return {
       x: this._viewport.x + reel.container.x,
-      y: this._viewport.y + row * reel.motion.slotHeight,
+      y: this._viewport.y + reel.offsetY + row * reel.motion.slotHeight,
       width: reel.symbolWidth,
       height: reel.symbolHeight,
     };
@@ -343,6 +520,7 @@ export class ReelSet extends Container implements Disposable {
     const pin: CellPin = {
       col,
       row,
+      originRow: options?.originRow ?? row,
       symbolId,
       turns: options?.turns ?? 'permanent',
       payload: options?.payload,
@@ -474,7 +652,7 @@ export class ReelSet extends Container implements Disposable {
     // Update pin state first (atomic). The map now reflects the new position
     // immediately — any subsequent spin sees the pin at `to`.
     this._pins.delete(fromKey);
-    const movedPin: CellPin = { ...pin, col: to.col, row: to.row };
+    const movedPin: CellPin = { ...pin, col: to.col, row: to.row, originRow: to.row };
     this._pins.set(toKey, movedPin);
 
     // An overlay at the old cell (from a prior spin-interrupted state)
@@ -619,6 +797,66 @@ export class ReelSet extends Container implements Disposable {
     return cloned;
   }
 
+  /** Pins on a given reel, in row order. Used by AdjustPhase migration. */
+  private _pinsOnReel(reelIndex: number): CellPin[] {
+    const result: CellPin[] = [];
+    for (const pin of this._pins.values()) {
+      if (pin.col === reelIndex) result.push(pin);
+    }
+    return result;
+  }
+
+  /**
+   * Megaways: relocate pins on a reel for a new visible-row count. The new
+   * row is computed as `min(originRow, newRows - 1)` — clamped only when
+   * the origin no longer fits. Returns the migrated pins so AdjustPhase
+   * can build tween descriptors. Mutates the pins map in place.
+   */
+  private _migratePinsForReel(reelIndex: number, newRows: number): {
+    pin: CellPin;
+    fromRow: number;
+    toRow: number;
+    clamped: boolean;
+  }[] {
+    const migrations: {
+      pin: CellPin;
+      fromRow: number;
+      toRow: number;
+      clamped: boolean;
+    }[] = [];
+
+    const reelPins = this._pinsOnReel(reelIndex);
+    for (const pin of reelPins) {
+      const fromRow = pin.row;
+      const target = Math.min(pin.originRow, newRows - 1);
+      if (target === fromRow) continue;
+
+      const clamped = target !== pin.originRow;
+      const fromKey = pinKey(pin.col, fromRow);
+      const toKey = pinKey(pin.col, target);
+
+      this._pins.delete(fromKey);
+      const moved: CellPin = { ...pin, row: target };
+      this._pins.set(toKey, moved);
+
+      // Keep overlay map keyed by the new cell.
+      const overlayEntry = this._pinOverlays.get(fromKey);
+      if (overlayEntry) {
+        this._pinOverlays.delete(fromKey);
+        this._pinOverlays.set(toKey, { pin: moved, overlay: overlayEntry.overlay });
+      }
+
+      migrations.push({ pin: moved, fromRow, toRow: target, clamped });
+      this._events.emit('pin:migrated', moved, {
+        fromRow,
+        toRow: target,
+        clamped,
+        reelIndex,
+      });
+    }
+    return migrations;
+  }
+
   /**
    * Apply a pin to the idle reel's visible display immediately. Used when
    * `pin()` is called while no spin is in flight — the grid updates right
@@ -700,14 +938,66 @@ export class ReelSet extends Container implements Disposable {
     const overlay = this._symbolFactory.acquire(pin.symbolId);
     overlay.resize(reel.symbolWidth, reel.symbolHeight);
     // Viewport.unmaskedContainer sits at (0,0) inside the viewport — same
-    // local space as maskedContainer. Reel x is on maskedContainer;
-    // symbol-view y is reel-local; the sum gives correct position.
+    // local space as maskedContainer. Reel x lives on the reel container;
+    // symbol-view y is reel-local; pyramid layouts add `reel.container.y`
+    // (the per-reel offsetY) so overlays line up with the actual cell.
     overlay.view.x = reel.container.x;
-    overlay.view.y = reel.getSymbolAt(pin.row).view.y;
+    overlay.view.y = reel.container.y + reel.getSymbolAt(pin.row).view.y;
     overlay.view.zIndex = ReelSet.PIN_OVERLAY_Z_INDEX;
     this._viewport.unmaskedContainer.addChild(overlay.view);
     this._pinOverlays.set(key, { pin, overlay });
     this._events.emit('pin:overlayCreated', pin, overlay);
+  }
+
+  /**
+   * Reposition + resize every pin overlay on the given reel. Called after
+   * a Megaways reshape commits — both the pin's row (post-migration) and
+   * the cell height have changed since the overlay was first created.
+   *
+   * No-op for non-Megaways slots (no reshape, nothing to update). Touches
+   * only overlays that already exist.
+   */
+  refreshPinOverlaysForReel(reelIndex: number): void {
+    const reel = this._reels[reelIndex];
+    for (const [, entry] of this._pinOverlays) {
+      if (entry.pin.col !== reelIndex) continue;
+      const { pin, overlay } = entry;
+      overlay.resize(reel.symbolWidth, reel.symbolHeight);
+      overlay.view.x = reel.container.x;
+      overlay.view.y = reel.container.y + pin.row * reel.motion.slotHeight;
+    }
+  }
+
+  /**
+   * Internal: build AdjustPhase pin-overlay tween descriptors for a reel.
+   * Captures the overlays' CURRENT on-screen Y + size as the tween's
+   * `from` state, then computes the post-reshape `to` state from the
+   * pin's already-migrated row + the upcoming cell height. Called BEFORE
+   * AdjustPhase commits the reshape, so the snapshot reflects what the
+   * player actually sees.
+   */
+  private _buildPinOverlayTweens(
+    reelIndex: number,
+    targetSymbolHeight: number,
+    symbolGapY: number,
+  ): import('../spin/phases/AdjustPhase.js').PinOverlayTween[] {
+    const reel = this._reels[reelIndex];
+    const out: import('../spin/phases/AdjustPhase.js').PinOverlayTween[] = [];
+    const newSlot = targetSymbolHeight + symbolGapY;
+    for (const [, entry] of this._pinOverlays) {
+      if (entry.pin.col !== reelIndex) continue;
+      const { pin, overlay } = entry;
+      out.push({
+        symbol: overlay,
+        cellWidth: reel.symbolWidth,
+        oldCellHeight: reel.symbolHeight,
+        newCellHeight: targetSymbolHeight,
+        fromY: overlay.view.y,
+        toY: reel.container.y + pin.row * newSlot,
+        x: reel.container.x,
+      });
+    }
+    return out;
   }
 
   /**

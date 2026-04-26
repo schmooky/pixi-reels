@@ -13,6 +13,68 @@ export interface RecipeMeta {
  * recipes (wilds, reveals), then UX / system recipes (anticipation, skip).
  */
 export const RECIPES: RecipeMeta[] = [
+  // ── Per-reel geometry / Megaways / Big symbols ───────────────────
+  {
+    slug: 'pyramid-shape',
+    title: 'Per-reel shape (pyramid)',
+    oneLiner: 'Non-uniform reel set — 3-5-5-5-3 pyramid, diamond, half-pyramid. Static shape set at build time.',
+    steps: [
+      'Pass an array to .visibleRowsPerReel([3, 5, 5, 5, 3]) instead of .visibleSymbols(n)',
+      'Optionally set .reelAnchor("center" | "top" | "bottom") to control vertical alignment',
+      'getCellBounds(col, row) reflects per-reel offsetY automatically',
+    ],
+    apis: ['ReelSetBuilder.visibleRowsPerReel', 'ReelSetBuilder.reelAnchor', 'Reel.offsetY'],
+    tags: ['shape', 'pyramid', 'geometry', 'layout'],
+  },
+  {
+    slug: 'megaways',
+    title: 'Megaways',
+    oneLiner: 'Per-spin row variation — each reel can land on a different row count between minRows and maxRows.',
+    steps: [
+      'Build with .megaways({ minRows, maxRows, reelPixelHeight })',
+      'Each spin, call reelSet.setShape(rowsPerReel) BEFORE setResult()',
+      'AdjustPhase reshapes reels (resize symbols + reshape motion) before STOP',
+    ],
+    apis: ['ReelSetBuilder.megaways', 'ReelSet.setShape', 'AdjustPhase'],
+    tags: ['megaways', 'shape', 'reshape', 'geometry'],
+  },
+  {
+    slug: 'big-symbols',
+    title: 'Big symbols (N×M)',
+    oneLiner: 'Single symbol occupying an N×M block — 2×2 bonus frames, 3×3 giants. Declared via SymbolData.size.',
+    steps: [
+      'Register a big symbol with size { w, h } in symbolData metadata',
+      'Server places the symbol id at the top-left (anchor) cell only',
+      'Engine paints OCCUPIED across the rest of the block — public result stays string[][]',
+    ],
+    apis: ['SymbolData.size', 'ReelSet.getSymbolFootprint', 'ReelSet.getVisibleGrid'],
+    tags: ['big-symbols', 'bonus', 'layout', 'registration'],
+  },
+  {
+    slug: 'big-symbols-mxn',
+    title: 'MxN big symbols',
+    oneLiner: 'Big symbols at any rectangular size — 1×3 tall bars, 2×2 bonuses, 3×3 giants, 2×4 wide blocks.',
+    steps: [
+      'Register each oversized symbol with size { w, h } — any positive integers',
+      'Engine validates block fit at setResult() and throws on overflow',
+      'getSymbolFootprint resolves any cell to its anchor + block size',
+    ],
+    apis: ['SymbolData.size', 'ReelSet.getSymbolFootprint', 'block-fit validation'],
+    tags: ['big-symbols', 'layout', 'sizing'],
+  },
+  {
+    slug: 'sticky-wild-megaways',
+    title: 'Sticky wild on Megaways',
+    oneLiner: 'Pin survives every Megaways reshape — clamps when shape shrinks, restores to originRow when it grows back.',
+    steps: [
+      'Pin wilds on spin:allLanded — originRow is frozen at placement',
+      'Each spin, setShape(rowsPerReel) — AdjustPhase migrates pins via min(originRow, newRows-1)',
+      'pin:migrated fires per affected pin with { fromRow, toRow, clamped, reelIndex }',
+    ],
+    apis: ['ReelSet.pin', 'CellPin.originRow', 'AdjustPhase', 'pin:migrated event'],
+    tags: ['megaways', 'sticky', 'wild', 'cell-pin', 'pin-migration'],
+  },
+
   // ── Starter templates (merged in from /templates/) ─────────────────
   {
     slug: 'classic-5x3',

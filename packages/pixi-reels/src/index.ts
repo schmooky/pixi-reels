@@ -1,7 +1,7 @@
 // Core
 export { ReelSet } from './core/ReelSet.js';
 export { ReelSetBuilder } from './core/ReelSetBuilder.js';
-export { Reel } from './core/Reel.js';
+export { Reel, OCCUPIED_SENTINEL } from './core/Reel.js';
 export type { ReelConfig } from './core/Reel.js';
 export { ReelViewport } from './core/ReelViewport.js';
 export { ReelMotion } from './core/ReelMotion.js';
@@ -26,7 +26,12 @@ export type {
   Win,
   MaskConfig,
   ReelSetInternalConfig,
+  ResolvedReelGridConfig,
+  MegawaysConfig,
+  ReelAnchor,
 } from './config/types.js';
+export type { ReelMaskRect, MaskStrategy } from './core/ReelViewport.js';
+export { RectMaskStrategy } from './core/ReelViewport.js';
 
 // Symbols
 export { ReelSymbol } from './symbols/ReelSymbol.js';
@@ -41,6 +46,7 @@ export { SymbolFactory } from './symbols/SymbolFactory.js';
 
 // Spin
 export { SpinController } from './spin/SpinController.js';
+export type { SpinControllerHooks } from './spin/SpinController.js';
 export { ReelPhase } from './spin/phases/ReelPhase.js';
 export { PhaseFactory } from './spin/phases/PhaseFactory.js';
 export { StartPhase } from './spin/phases/StartPhase.js';
@@ -51,6 +57,8 @@ export { StopPhase } from './spin/phases/StopPhase.js';
 export type { StopPhaseConfig } from './spin/phases/StopPhase.js';
 export { AnticipationPhase } from './spin/phases/AnticipationPhase.js';
 export type { AnticipationPhaseConfig } from './spin/phases/AnticipationPhase.js';
+export { AdjustPhase } from './spin/phases/AdjustPhase.js';
+export type { AdjustPhaseConfig, PinOverlayTween } from './spin/phases/AdjustPhase.js';
 
 // Cascade drop-in
 export { DropRecipes } from './cascade/DropRecipes.js';

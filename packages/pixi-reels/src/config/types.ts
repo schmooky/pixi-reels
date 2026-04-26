@@ -33,22 +33,75 @@ export interface SymbolData {
   zIndex?: number;
   /** If true, this symbol renders above the reel mask (for oversized animations). */
   unmask?: boolean;
+  /**
+   * Footprint in cells. Default `{ w: 1, h: 1 }`. When `w * h > 1` this
+   * symbol is a "big symbol" — at landing it occupies an `w × h` block of
+   * cells anchored at the (col, row) where its id appears in the result.
+   * Big-symbol registration is rejected on Megaways slots.
+   */
+  size?: { w: number; h: number };
+}
+
+/** How to vertically align reels of differing pixel heights. */
+export type ReelAnchor = 'top' | 'center' | 'bottom';
+
+/**
+ * Megaways configuration knobs. Set via `builder.megaways({ ... })` —
+ * mutually exclusive with big-symbol registration.
+ */
+export interface MegawaysConfig {
+  /** Minimum visible rows the server can request. Inclusive. */
+  minRows: number;
+  /** Maximum visible rows the server can request. Inclusive. */
+  maxRows: number;
+  /**
+   * Pixel height of every reel box. Cell height per reel becomes
+   * `reelPixelHeight / visibleRows[i]` after each reshape.
+   */
+  reelPixelHeight: number;
 }
 
 /** Configuration for the reel grid layout. */
 export interface ReelGridConfig {
   /** Number of reel columns. */
   reelCount: number;
-  /** Number of visible symbol rows per reel. */
+  /**
+   * Default visible rows when all reels are uniform. Ignored if
+   * `visibleRowsPerReel` is set.
+   */
   visibleRows: number;
+  /**
+   * Per-reel row counts (static shape). Length MUST equal `reelCount`.
+   * Example: `[3, 5, 5, 5, 3]` for a pyramid layout. Mutually exclusive
+   * with the scalar `visibleRows` field at the builder level.
+   */
+  visibleRowsPerReel?: number[];
   /** Symbol width in pixels. */
   symbolWidth: number;
-  /** Symbol height in pixels. */
+  /** Symbol height in pixels. Used as the SPIN-time uniform cell height. */
   symbolHeight: number;
+  /**
+   * Per-reel pixel-box heights. Length MUST equal `reelCount` when set.
+   * For Megaways: every entry is the same fixed reel height. For static
+   * pyramids: defaults to `visibleRowsPerReel[i] * symbolHeight`.
+   */
+  reelPixelHeights?: number[];
+  /**
+   * How short reels align vertically inside the tallest reel's height.
+   * Default: 'center'.
+   */
+  reelAnchor?: ReelAnchor;
   /** Gap between symbols. Default: { x: 0, y: 0 }. */
   symbolGap?: { x: number; y: number };
   /** Number of buffer symbols above and below the visible area. Default: 1. */
   bufferSymbols?: number;
+  /**
+   * Megaways configuration. Set by `builder.megaways(...)`. When present:
+   *   - `setShape(rowsPerReel)` becomes callable mid-spin
+   *   - AdjustPhase is inserted between SPIN and STOP
+   *   - big-symbol registration throws at build time
+   */
+  megaways?: MegawaysConfig;
 }
 
 /** Extra symbols above/below config per reel. */
@@ -147,9 +200,27 @@ export interface MaskConfig {
   position: Position;
 }
 
+/**
+ * Resolved grid view used internally — every defaulted field is filled in,
+ * but per-reel-shape and Megaways extensions stay optional because they're
+ * genuinely opt-in.
+ */
+export interface ResolvedReelGridConfig {
+  reelCount: number;
+  visibleRows: number;
+  symbolWidth: number;
+  symbolHeight: number;
+  symbolGap: { x: number; y: number };
+  bufferSymbols: number;
+  visibleRowsPerReel?: number[];
+  reelPixelHeights?: number[];
+  reelAnchor: ReelAnchor;
+  megaways?: MegawaysConfig;
+}
+
 /** Full internal configuration assembled by the builder. */
 export interface ReelSetInternalConfig {
-  grid: Required<ReelGridConfig>;
+  grid: ResolvedReelGridConfig;
   symbols: Record<string, SymbolData>;
   speeds: Map<string, SpeedProfile>;
   initialSpeed: string;

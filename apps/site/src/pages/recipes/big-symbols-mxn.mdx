@@ -1,0 +1,77 @@
+---
+layout: ../../layouts/Recipe.astro
+title: MxN big symbols
+description: Big symbols at any rectangular size — 1×3 tall bars, 2×2 bonuses, 3×3 giants, 2×4 wide blocks. Same registration API, different size metadata.
+tags: [big-symbols, layout, registration, sizing]
+steps:
+  - "Register each oversized symbol with size { w, h } — any positive integers"
+  - The server places the symbol id at the anchor (top-left) cell only
+  - Engine paints OCCUPIED across the rest of the block before per-reel framebuilding
+apis:
+  - SymbolData.size
+  - ReelSet.getSymbolFootprint
+  - "validation: 'block exceeds reel height/count'"
+---
+
+import code from '../../recipes/big-symbols-mxn.recipe.ts?raw';
+import { RecipeRunner } from '../../components/RecipeRunner.tsx';
+
+<RecipeRunner code={code} client:only="react" />
+
+The engine's big-symbol mechanism doesn't hard-code `w === h`. Any positive integer size works — `1×3` tall bars, `3×3` giants, `2×4` wide blocks. This recipe cycles through four sizes so each spin shows a different shape on a 6×5 grid.
+
+## The whole mechanic
+
+```ts
+.symbolData({
+  tallBar: { size: { w: 1, h: 3 } },  // tall bar
+  square:  { size: { w: 2, h: 2 } },  // standard 2×2 bonus
+  giant:   { size: { w: 3, h: 3 } },  // jackpot icon
+  wide:    { size: { w: 2, h: 4 } },  // bonus banner
+})
+```
+
+Server response stays `string[][]` — only the anchor (top-left) cell carries the id. The engine paints OCCUPIED sentinels across the block before per-reel `FrameBuilder` runs, validates that the block fits, and at landing sizes the anchor symbol's view to span `(w × cellW, h × cellH)`.
+
+## Validation
+
+If the server places a block whose anchor doesn't leave room, `setResult` throws:
+
+```
+big symbol 'giant' (3x3) at (col=4, row=2) exceeds reel count 6.
+big symbol 'tallBar' (1x3) at (col=0, row=3) exceeds reel 0 height 5.
+```
+
+Fail-fast at the call site rather than silently truncating. Catch it in your server-integration layer if you want to gracefully reroll — the engine's contract is "shape your data, or fail loud."
+
+## Footprint lookup
+
+`reelSet.getSymbolFootprint(col, row)` returns the anchor cell and size for any cell — even non-anchor cells of a block:
+
+```ts
+const fp = reelSet.getSymbolFootprint(col, row);
+const b  = reelSet.getCellBounds(fp.anchor.col, fp.anchor.row);
+const blockRect = {
+  x: b.x,
+  y: b.y,
+  width:  fp.size.w * b.width,
+  height: fp.size.h * b.height,
+};
+```
+
+Useful for win presenters that need to highlight the whole block instead of one cell.
+
+## Authoring resolution
+
+Pre-render each big symbol's texture at the size it'll actually display. A 3×3 giant on a 70px-cell grid renders at `210 × 210` — author the source asset at that resolution (or larger). Sprites scale up poorly; if you must support multiple cell sizes, ship per-size variants or use a Spine skeleton (see [Spine recipe](/docs/recipes/spine-megaways-ready)).
+
+## Constraints
+
+- **Big symbols + Megaways** — rejected at build. Block sizes don't compose with per-spin shape changes.
+- **Random fill** doesn't generate big symbols in v1; only target frames place them.
+- **During spin**, every cell is 1×1; the block layout commits at stop.
+
+## Related
+
+- [Big symbols (basics)](/recipes/big-symbols/) — single 2×2 example with full architecture notes
+- [Megaways](/recipes/megaways/) — mutually exclusive

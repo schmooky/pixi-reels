@@ -1,0 +1,88 @@
+---
+layout: ../../layouts/Recipe.astro
+title: Big symbols (N×M)
+description: A single symbol occupying an N×M block of cells — 2×2 bonus frames, 3×3 giants. Declared via SymbolData.size; server places the anchor cell only.
+tags: [big-symbols, bonus, layout, registration]
+steps:
+  - "Register a big symbol with size { w, h } in symbolData metadata"
+  - The server places the symbol id at the top-left (anchor) cell only
+  - Engine paints OCCUPIED across the rest of the block before per-reel framebuilding
+apis:
+  - SymbolData.size
+  - ReelSet.getSymbolFootprint
+  - ReelSet.getVisibleGrid
+---
+
+import code from '../../recipes/big-symbols.recipe.ts?raw';
+import { RecipeRunner } from '../../components/RecipeRunner.tsx';
+
+<RecipeRunner code={code} client:only="react" />
+
+A "big symbol" — a 2×2 bonus frame, a 3×3 giant — occupies multiple grid cells but represents a single icon. The engine paints the block from one anchor cell; you don't change the wire format.
+
+## The whole mechanic
+
+Register with size metadata:
+
+```ts
+.symbolData({
+  bonus: { weight: 1, zIndex: 5, size: { w: 2, h: 2 } },
+})
+```
+
+Server response stays `string[][]`. Place the symbol id at the **anchor cell** (top-left of the block) only. The engine fills the rest:
+
+```ts
+// 5×4 grid, 2×2 bonus at (col=2, row=1):
+setResult([
+  ['low1', 'low2', 'low1', 'low2'],
+  ['low1', 'low2', 'low1', 'low2'],
+  ['low1', 'bonus', 'X',    'low2'],   // 'X' is whatever; engine paints OCCUPIED
+  ['low1', 'Y',     'Z',    'low2'],   // 'Y','Z' ignored — engine paints OCCUPIED
+  ['low1', 'low2', 'low1', 'low2'],
+]);
+```
+
+The 2×2 anchor symbol is sized to `(2 × cellW, 2 × cellH)` and visually covers the whole block. `getVisibleSymbols()` and `getVisibleGrid()` resolve OCCUPIED cells to the anchor's id, so all four cells of a 2×2 read as `'bonus'`.
+
+## Anchor lookup
+
+To highlight the whole block from any covered cell:
+
+```ts
+const fp = reelSet.getSymbolFootprint(col, row);
+// → { anchor: { col: 2, row: 1 }, size: { w: 2, h: 2 } }
+
+const b = reelSet.getCellBounds(fp.anchor.col, fp.anchor.row);
+const blockRect = {
+  x: b.x,
+  y: b.y,
+  width:  fp.size.w * b.width,
+  height: fp.size.h * b.height,
+};
+```
+
+## Validation
+
+The engine throws at `setResult()` if a block doesn't fit:
+- "block exceeds reel height" — anchor's row + `size.h` > `visibleRows`.
+- "block exceeds reel count" — anchor's col + `size.w` > `reelCount`.
+
+Pinning a non-anchor cell of a big symbol throws — pin the anchor instead, which covers the whole block visually because the anchor's view spans the block.
+
+## Constraints
+
+- **Big symbols + Megaways** is rejected at build. The 2×2-on-a-2-row question is a game-design call.
+- **Big symbols only at landing** — during the spin, every cell is 1×1. The 2×2 layout commits at stop.
+- **No random-fill big symbols in v1** — only target frames (server-driven) place them.
+
+## How OCCUPIED works internally
+
+The cross-reel coordinator runs in `SpinController` ahead of per-reel `FrameBuilder`. It reads the result grid, finds big-symbol anchors, validates fit, and paints an internal `OCCUPIED_SENTINEL` across the rest of the block. Per-reel frame building leaves OCCUPIED cells alone (they're non-empty strings, so `RandomFillMiddleware` skips them). At land, an invisible `OccupiedStub` (an internal `ReelSymbol` with `view.alpha = 0`) sits at the OCCUPIED cell — the anchor's resized view covers it visually.
+
+The sentinel never crosses the public API. `getVisibleSymbols()` (per reel) resolves intra-reel OCCUPIED to the anchor's id. `ReelSet.getVisibleGrid()` additionally resolves cross-reel OCCUPIED via `getSymbolFootprint`.
+
+## Related
+
+- [Megaways](/recipes/megaways/) — mutually exclusive with big symbols
+- [Cell bounds](/recipes/cell-bounds/) — get pixel rects for any cell

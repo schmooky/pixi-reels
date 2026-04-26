@@ -1,6 +1,6 @@
 import type { Ticker } from 'pixi.js';
 import type { Reel } from '../core/Reel.js';
-import type { SpeedProfile } from '../config/types.js';
+import type { SpeedProfile, SymbolData } from '../config/types.js';
 import type { SpeedManager } from '../speed/SpeedManager.js';
 import type { FrameBuilder } from '../frame/FrameBuilder.js';
 import type { SpinResult } from '../events/ReelEvents.js';
@@ -12,10 +12,59 @@ import type { ReelPhase } from './phases/ReelPhase.js';
 import type { StartPhaseConfig } from './phases/StartPhase.js';
 import type { StopPhaseConfig } from './phases/StopPhase.js';
 import type { AnticipationPhaseConfig } from './phases/AnticipationPhase.js';
+import type { AdjustPhaseConfig } from './phases/AdjustPhase.js';
 import type { SpinningMode } from './modes/SpinningMode.js';
 import { StandardMode } from './modes/StandardMode.js';
 import type { Disposable } from '../utils/Disposable.js';
 import { TickerRef } from '../utils/TickerRef.js';
+import { OCCUPIED_SENTINEL } from '../core/Reel.js';
+import type { CellPin } from '../pins/CellPin.js';
+
+/**
+ * Megaways/big-symbol coordination hook injected by `ReelSet` into
+ * `SpinController`. All callbacks are no-ops (and `isMegawaysSlot=false`)
+ * for non-Megaways slots, so the standard chain is unchanged.
+ */
+export interface SpinControllerHooks {
+  isMegawaysSlot: boolean;
+  symbolsData: Record<string, SymbolData>;
+  /** Read pending Megaways shape. Returns null when no shape is pending. */
+  consumeTargetShape(): number[] | null;
+  /** Clear pending shape after AdjustPhase runs. */
+  clearTargetShape(): void;
+  /** Reel pixel-box height for Megaways cell-height derivation. */
+  megawaysReelPixelHeight: number;
+  symbolGapY: number;
+  /** Reel-scoped pin lookup. Used to build AdjustPhase tween descriptors. */
+  getPinsOnReel(reelIndex: number): CellPin[];
+  /**
+   * Migrate pins on a reel to a new visible-row count, returning the
+   * resulting moves. Mutates the pin map directly inside ReelSet.
+   */
+  migratePinsForReel(reelIndex: number, newRows: number): {
+    pin: CellPin;
+    fromRow: number;
+    toRow: number;
+    clamped: boolean;
+  }[];
+  /**
+   * Reposition + resize every pin overlay on the given reel. Called after
+   * AdjustPhase commits a Megaways reshape so overlays move to their new
+   * (post-migration) row at the new cell size.
+   */
+  refreshPinOverlaysForReel(reelIndex: number): void;
+  /**
+   * Build AdjustPhase pin-overlay tween descriptors for a reel — one per
+   * active pin overlay. Captures pre-reshape (current) Y/size from the
+   * overlay and computes post-reshape target. Called BEFORE the reshape
+   * commits so the "from" state reflects what's actually on screen.
+   */
+  buildPinOverlayTweens(
+    reelIndex: number,
+    targetSymbolHeight: number,
+    symbolGapY: number,
+  ): import('./phases/AdjustPhase.js').PinOverlayTween[];
+}
 
 /**
  * The conductor of a spin.
@@ -43,6 +92,7 @@ export class SpinController implements Disposable {
   private _events: EventEmitter<ReelSetEvents>;
   private _tickerRef: TickerRef;
   private _spinningMode: SpinningMode;
+  private _hooks: SpinControllerHooks;
 
   private _isSpinning = false;
   private _spinStartTime = 0;
@@ -65,6 +115,7 @@ export class SpinController implements Disposable {
     events: EventEmitter<ReelSetEvents>,
     ticker: Ticker,
     spinningMode?: SpinningMode,
+    hooks?: SpinControllerHooks,
   ) {
     this._reels = reels;
     this._speedManager = speedManager;
@@ -73,6 +124,18 @@ export class SpinController implements Disposable {
     this._events = events;
     this._tickerRef = new TickerRef(ticker);
     this._spinningMode = spinningMode ?? new StandardMode();
+    this._hooks = hooks ?? {
+      isMegawaysSlot: false,
+      symbolsData: {},
+      consumeTargetShape: () => null,
+      clearTargetShape: () => {},
+      megawaysReelPixelHeight: 0,
+      symbolGapY: 0,
+      getPinsOnReel: () => [],
+      migratePinsForReel: () => [],
+      refreshPinOverlaysForReel: () => {},
+      buildPinOverlayTweens: () => [],
+    };
 
     this._tickerRef.add((ticker) => this._onTick(ticker));
   }
@@ -118,6 +181,13 @@ export class SpinController implements Disposable {
 
   setResult(symbols: string[][]): void {
     if (!this._isSpinning) return;
+    // Fail-fast: validate big-symbol block fit so setResult throws at the
+    // call site rather than later inside skip()/_tryBeginStopSequence().
+    const visibleRowsForReel = (i: number): number => {
+      const pendingShape = this._hooks.consumeTargetShape();
+      return pendingShape ? pendingShape[i] : this._reels[i].visibleRows;
+    };
+    this._coordinateBigSymbols(symbols, visibleRowsForReel);
     this._resultSymbols = symbols;
     this._tryBeginStopSequence();
   }
@@ -149,12 +219,36 @@ export class SpinController implements Disposable {
     this._spinGeneration++;
 
     if (this._resultSymbols) {
+      // Megaways skip: apply pending shape and big-symbol coordinator before
+      // placement so reels land at the new shape with OCCUPIED sentinels.
+      const pendingShape = this._hooks.consumeTargetShape();
+      const visibleRowsForReel = (i: number): number =>
+        pendingShape ? pendingShape[i] : this._reels[i].visibleRows;
+      const decorated = this._coordinateBigSymbols(this._resultSymbols, visibleRowsForReel);
+
       for (let i = 0; i < this._reels.length; i++) {
         if (this._landedReels.has(i)) continue;
         const reel = this._reels[i];
         reel.speed = 0;
         reel.isStopping = false;
-        reel.placeSymbols(this._resultSymbols[i]);
+
+        if (this._hooks.isMegawaysSlot && pendingShape) {
+          const targetRows = pendingShape[i];
+          const targetSymbolHeight =
+            this._hooks.megawaysReelPixelHeight > 0
+              ? (this._hooks.megawaysReelPixelHeight - (targetRows - 1) * this._hooks.symbolGapY) / targetRows
+              : reel.symbolHeight;
+          if (targetRows !== reel.visibleRows || targetSymbolHeight !== reel.symbolHeight) {
+            this._hooks.migratePinsForReel(i, targetRows);
+            const fromRows = reel.visibleRows;
+            reel.reshape(targetRows, targetSymbolHeight, reel.bufferAbove, reel.bufferBelow);
+            this._hooks.refreshPinOverlaysForReel(i);
+            this._events.emit('adjust:start', { reelIndex: i, fromRows, toRows: targetRows });
+            this._events.emit('adjust:complete', { reelIndex: i });
+          }
+        }
+
+        reel.placeSymbols(decorated[i]);
         this._markLanded(i);
       }
     } else {
@@ -212,6 +306,14 @@ export class SpinController implements Disposable {
     await spinDone;
     if (generation !== this._spinGeneration) return;
 
+    // Megaways: AdjustPhase commits the new shape and migrates pins between
+    // SpinPhase and StopPhase. Inserted only when builder.megaways() was
+    // called — non-Megaways slots skip this entirely.
+    if (this._hooks.isMegawaysSlot && this._phaseFactory.has('adjust')) {
+      await this._runAdjustForReel(reel, reelIndex, speed, generation);
+      if (generation !== this._spinGeneration) return;
+    }
+
     // SpinPhase resolved (result arrived). Run ANTICIPATION (if requested) then STOP.
     const stopDelay = this._stopDelayFor(reelIndex, speed);
     const targetFrame = this._frameFor(reelIndex);
@@ -232,6 +334,59 @@ export class SpinController implements Disposable {
     if (generation !== this._spinGeneration) return;
 
     this._markLanded(reelIndex);
+  }
+
+  /**
+   * Megaways AdjustPhase orchestration: pull the pending shape, migrate
+   * pins to their new rows, build pin-overlay tween descriptors, run the
+   * phase. Emits `adjust:start` on entry and `adjust:complete` on exit.
+   */
+  private async _runAdjustForReel(
+    reel: Reel,
+    reelIndex: number,
+    speed: SpeedProfile,
+    generation: number,
+  ): Promise<void> {
+    const targetShape = this._hooks.consumeTargetShape();
+    const targetRows = targetShape ? targetShape[reelIndex] : reel.visibleRows;
+    const targetSymbolHeight =
+      this._hooks.megawaysReelPixelHeight > 0
+        ? (this._hooks.megawaysReelPixelHeight - (targetRows - 1) * this._hooks.symbolGapY) / targetRows
+        : reel.symbolHeight;
+
+    const fromRows = reel.visibleRows;
+    this._events.emit('adjust:start', { reelIndex, fromRows, toRows: targetRows });
+
+    // Pin migration already happened at `setShape()` time (eagerly, so
+    // setResult's pin overlay sees the correct rows). Now build tween
+    // descriptors that capture the overlays' CURRENT (pre-reshape) on-
+    // screen pose so AdjustPhase can interpolate from there to the new
+    // cell. Must be done BEFORE AdjustPhase calls reel.reshape() —
+    // otherwise we'd snapshot post-reshape Y values and the tween would
+    // start from the destination.
+    const pinOverlays = this._hooks.buildPinOverlayTweens(
+      reelIndex,
+      targetSymbolHeight,
+      this._hooks.symbolGapY,
+    );
+
+    const adjust = this._phaseFactory.create<any>('adjust', reel, speed);
+    this._activePhases.set(reelIndex, adjust);
+    const config: AdjustPhaseConfig = {
+      targetRows,
+      targetSymbolHeight,
+      pinOverlays,
+    };
+    await adjust.run(config);
+
+    if (generation !== this._spinGeneration) return;
+
+    // AdjustPhase has already snapped overlays to their final cells (via
+    // its onComplete settle path). For safety against any extreme custom
+    // ease that leaves a sub-pixel residue, snap again here.
+    this._hooks.refreshPinOverlaysForReel(reelIndex);
+
+    this._events.emit('adjust:complete', { reelIndex });
   }
 
   private _stopDelayFor(reelIndex: number, speed: SpeedProfile): number {
@@ -256,18 +411,33 @@ export class SpinController implements Disposable {
       if (!phase || phase.name !== 'spin') return;
     }
 
+    // For Megaways, the per-reel target row count is whatever AdjustPhase
+    // will reshape to. For frame-building purposes we need to send the
+    // correct number of visible rows per reel. Pull the pending shape; if
+    // unset, fall back to current reel.visibleRows.
+    const pendingShape = this._hooks.consumeTargetShape();
+    const visibleRowsForReel = (i: number): number =>
+      pendingShape ? pendingShape[i] : this._reels[i].visibleRows;
+
+    // Big symbols: paint cross-reel OCCUPIED sentinels into the result grid
+    // BEFORE per-reel frame building. The coordinator validates block fit
+    // and rewrites cells; per-reel FrameBuilder then sees the sentinels and
+    // RandomFillMiddleware skips them. Non-big-symbol slots are zero-cost.
+    const decorated = this._coordinateBigSymbols(this._resultSymbols, visibleRowsForReel);
+
     // Build and cache frames using each reel's actual buffer/visible config.
     // Reels may differ in buffer size; build each independently.
     const frames: string[][] = [];
     for (let i = 0; i < this._reels.length; i++) {
       const reel = this._reels[i];
+      const rows = visibleRowsForReel(i);
       frames.push(
         this._frameBuilder.build(
           i,
-          reel.visibleRows,
+          rows,
           reel.bufferAbove,
           reel.bufferBelow,
-          this._resultSymbols[i],
+          decorated[i],
         ),
       );
     }
@@ -279,6 +449,68 @@ export class SpinController implements Disposable {
       const spinPhase = this._activePhases.get(i) as SpinPhase;
       if (spinPhase?.resolve) spinPhase.resolve();
     }
+  }
+
+  /**
+   * Big symbols cross-reel coordinator. Walks the result grid, locates big
+   * symbols (those with `SymbolData.size.w * size.h > 1`), validates that
+   * the block fits within reel bounds, and paints OCCUPIED sentinels into
+   * the non-anchor cells so per-reel FrameBuilder leaves them alone.
+   *
+   * Pure: returns a new grid; does not mutate the input. Zero-overhead for
+   * slots with no big symbols (the loop runs but never matches metadata).
+   */
+  private _coordinateBigSymbols(
+    grid: string[][],
+    visibleRowsForReel: (i: number) => number,
+  ): string[][] {
+    const out = grid.map((col) => [...col]);
+    const symData = this._hooks.symbolsData;
+
+    for (let col = 0; col < out.length; col++) {
+      const rows = visibleRowsForReel(col);
+      for (let row = 0; row < rows && row < out[col].length; row++) {
+        const id = out[col][row];
+        const meta = symData[id];
+        if (!meta?.size) continue;
+        const w = meta.size.w;
+        const h = meta.size.h;
+        if (w === 1 && h === 1) continue;
+
+        // Validate block fit on this reel and across columns to the right.
+        if (row + h > rows) {
+          throw new Error(
+            `big symbol '${id}' (${w}x${h}) at (col=${col}, row=${row}) ` +
+            `exceeds reel ${col} height ${rows}.`,
+          );
+        }
+        if (col + w > out.length) {
+          throw new Error(
+            `big symbol '${id}' (${w}x${h}) at (col=${col}, row=${row}) ` +
+            `exceeds reel count ${out.length}.`,
+          );
+        }
+        for (let dx = 0; dx < w; dx++) {
+          const targetReel = col + dx;
+          const targetRows = visibleRowsForReel(targetReel);
+          if (row + h > targetRows) {
+            throw new Error(
+              `big symbol '${id}' (${w}x${h}) at (col=${col}, row=${row}) ` +
+              `exceeds reel ${targetReel} height ${targetRows}.`,
+            );
+          }
+        }
+
+        // Paint OCCUPIED across the block (skip the anchor itself at dx=0,dy=0).
+        for (let dy = 0; dy < h; dy++) {
+          for (let dx = 0; dx < w; dx++) {
+            if (dx === 0 && dy === 0) continue;
+            out[col + dx][row + dy] = OCCUPIED_SENTINEL;
+          }
+        }
+      }
+    }
+    return out;
   }
 
   private _markLanded(reelIndex: number): void {
@@ -305,6 +537,9 @@ export class SpinController implements Disposable {
     this._isSpinning = false;
     this._activePhases.clear();
     this._cachedFrames = null;
+    // Megaways: the target shape was applied this spin; clear it so the next
+    // spin starts fresh. Non-Megaways: this is a no-op.
+    this._hooks.clearTargetShape();
 
     this._events.emit('spin:allLanded', result);
     this._events.emit('spin:complete', result);

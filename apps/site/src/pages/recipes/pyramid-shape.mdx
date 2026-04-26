@@ -1,0 +1,56 @@
+---
+layout: ../../layouts/Recipe.astro
+title: Per-reel shape (pyramid)
+description: Build a non-uniform reel set — 3-5-5-5-3 pyramid, diamond, half-pyramid. Static shape, set at build time, no per-spin reshaping.
+tags: [shape, pyramid, geometry, layout]
+steps:
+  - "Pass an array to .visibleRowsPerReel([3, 5, 5, 5, 3]) instead of .visibleSymbols(n)"
+  - "Optionally set .reelAnchor('center' | 'top' | 'bottom') to control vertical alignment"
+  - The engine computes per-reel offsetY automatically; getCellBounds(col, row) reflects it
+apis:
+  - ReelSetBuilder.visibleRowsPerReel
+  - ReelSetBuilder.reelAnchor
+  - Reel.offsetY
+---
+
+import code from '../../recipes/pyramid-shape.recipe.ts?raw';
+import { RecipeRunner } from '../../components/RecipeRunner.tsx';
+
+<RecipeRunner code={code} client:only="react" />
+
+Per-reel static shape — non-uniform row counts across reels, fixed at build time. The classic example is a `3-5-5-5-3` pyramid where the outer reels are shorter than the inner ones. The engine handles the geometry (per-reel `offsetY`, mask sizing, cell positioning) so you only declare the shape.
+
+## The whole mechanic
+
+```ts
+new ReelSetBuilder()
+  .reels(5)
+  .visibleRowsPerReel([3, 5, 5, 5, 3])  // mutually exclusive with visibleSymbols(n)
+  .reelAnchor('center')                  // 'top' | 'center' | 'bottom'
+  .symbolSize(80, 80)
+  // ...
+  .build();
+```
+
+That's it. `visibleRowsPerReel` and `visibleSymbols` are mutually exclusive — picking either is a one-line decision.
+
+## What the engine does for you
+
+- **`offsetY` per reel** — tallest reel is at `y=0`. Shorter reels are positioned according to `reelAnchor`. Default `'center'` puts a 3-row reel inside a 5-row bounding box with `(5-3)/2 = 1 row` of padding above and below.
+- **`getCellBounds(col, row)`** — returns the pixel rectangle of any visible cell, accounting for the reel's `offsetY`. Use it to draw paylines, hit areas, or any overlay aligned to a specific cell.
+- **`debugSnapshot.visibleRows`** is now `number[]` (one entry per reel), so AI agents and debug logs see the jagged shape.
+
+## Mask
+
+`RectMaskStrategy` (the v1 default) draws one rectangle per reel into a single PixiJS mask Graphics — the union of those rects forms the clip shape. Each reel is clipped to its own `(offsetY, reelHeight)` box, so a 3-row reel never leaks buffer rows from above or below. The same Graphics can hold any union of rectangular shapes, so jagged layouts (pyramid, diamond, half-pyramid) all clip cleanly without a custom shader.
+
+Non-rectangular masks (curved frames, hexagonal grids) are left to a future strategy implementation — the `MaskStrategy` interface is in place so the swap is one line.
+
+## Mutually exclusive with Megaways
+
+A static pyramid is set once at build. **Megaways** changes the row count *per spin* — different mechanic, different builder method. See the [Megaways recipe](/recipes/megaways/).
+
+## Related
+
+- [Megaways](/recipes/megaways/) — shape that changes per spin
+- [Cell bounds](/recipes/cell-bounds/) — overlays aligned to cells (works on jagged shapes too)
