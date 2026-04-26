@@ -109,6 +109,7 @@ export class Reel implements Disposable {
   private _reelHeight: number;
   private _spinSymbolHeight: number;
   private _symbolGapY: number;
+  private _symbolGapX: number;
   private _isDestroyed = false;
   private _isStopping = false;
   /**
@@ -155,6 +156,7 @@ export class Reel implements Disposable {
     this._reelHeight = config.reelHeight ?? config.visibleRows * config.symbolHeight;
     this._spinSymbolHeight = config.spinSymbolHeight ?? config.symbolHeight;
     this._symbolGapY = config.symbolGapY;
+    this._symbolGapX = config.symbolGapX;
     this._occupancy = new Array(config.visibleRows).fill(null);
     this.events = new EventEmitter<ReelEvents>();
     this.stopSequencer = new StopSequencer();
@@ -644,7 +646,13 @@ export class Reel implements Disposable {
       const h = meta.size.h;
       if (w === 1 && h === 1) continue;
 
-      sym.resize(w * this._symbolWidth, h * this._symbolHeight);
+      // Size the anchor to span the block PLUS inter-cell gaps. A 2x2
+      // block on a (cellW=80, cellH=80, gapX=4, gapY=4) layout covers
+      // 2*80 + 1*4 = 164px wide, not 160px. Without the gap, the anchor
+      // leaves a thin uncovered strip at the gap row/col.
+      const blockW = w * this._symbolWidth + (w - 1) * this._symbolGapX;
+      const blockH = h * this._symbolHeight + (h - 1) * this._symbolGapY;
+      sym.resize(blockW, blockH);
       for (let dy = 1; dy < h; dy++) {
         const occRow = row + dy;
         if (occRow < this._visibleRows) {

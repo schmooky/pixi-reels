@@ -149,6 +149,9 @@ export class ReelSet extends Container implements Disposable {
   /** Resolved per-symbol metadata (size, zIndex, etc). */
   private _symbolsData: Record<string, SymbolData>;
 
+  /** Horizontal symbol gap (px). Used by `getBlockBounds` for big symbols. */
+  private _configGapX: number;
+
   constructor(params: ReelSetParams) {
     super();
 
@@ -157,6 +160,7 @@ export class ReelSet extends Container implements Disposable {
     this._symbolFactory = params.symbolFactory;
     this._frameBuilder = params.frameBuilder;
     this._symbolsData = params.config.symbols;
+    this._configGapX = params.config.grid.symbolGap.x;
     this._isMultiWaysSlot = !!params.config.grid.multiways;
     if (params.config.grid.multiways) {
       this._multiwaysMinRows = params.config.grid.multiways.minRows;
@@ -502,11 +506,20 @@ export class ReelSet extends Container implements Disposable {
   getBlockBounds(col: number, row: number): CellBounds {
     const fp = this.getSymbolFootprint(col, row);
     const anchorBounds = this.getCellBounds(fp.anchor.col, fp.anchor.row);
+    // Block covers w * cellWidth + (w-1) * gapX horizontally — the
+    // (w-1) inter-cell gaps are part of the block's visible footprint.
+    // Same vertically for cellHeight + gapY.
+    const reel = this._reels[fp.anchor.col];
+    const gapX = this._configGapX;
+    const slotH = reel.motion.slotHeight;
+    const cellW = anchorBounds.width;
+    const cellH = anchorBounds.height;
+    const gapY = slotH - cellH;
     return {
       x: anchorBounds.x,
       y: anchorBounds.y,
-      width: fp.size.w * anchorBounds.width,
-      height: fp.size.h * anchorBounds.height,
+      width: fp.size.w * cellW + (fp.size.w - 1) * gapX,
+      height: fp.size.h * cellH + (fp.size.h - 1) * gapY,
     };
   }
 

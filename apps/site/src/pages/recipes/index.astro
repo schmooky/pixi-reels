@@ -1,11 +1,19 @@
 ---
 import Base from '../../layouts/Base.astro';
-import { RECIPES } from '../../content/recipes.ts';
+import { RECIPES, RECIPE_GROUPS } from '../../content/recipes.ts';
 import { ArrowRight } from 'lucide-react';
 import { breadcrumbLd, articleLd, SITE } from '../../lib/seo.ts';
 
 const title = 'Recipes — mini pixi-reels how-tos';
 const description = 'Focused, single-idea recipes for slot mechanics built with pixi-reels: how to remove a symbol in a cascade, anticipate a reel, expand a wild, animate paylines, slam-stop, and fake a near-miss.';
+
+// Group recipes by their `group` field; preserve declaration order within each group.
+const recipesByGroup = new Map<string, typeof RECIPES>();
+for (const recipe of RECIPES) {
+  const list = recipesByGroup.get(recipe.group) ?? [];
+  list.push(recipe);
+  recipesByGroup.set(recipe.group, list);
+}
 ---
 <Base
   title={`Recipes · ${SITE.name}`}
@@ -35,39 +43,47 @@ const description = 'Focused, single-idea recipes for slot mechanics built with 
   </section>
 
   <section class="py-14">
-    <div class="container">
-      <div class="mb-4 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/80">
-        Core recipes
-      </div>
-      <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-        {RECIPES.map((r) => (
-          <a
-            href={`/recipes/${r.slug}/`}
-            class="group overflow-hidden rounded-xl border border-border bg-card p-5 transition-all hover:border-primary/40 hover:-translate-y-0.5"
-          >
-            <div class="mb-3 flex flex-wrap gap-1.5">
-              {r.tags.map((t) => (
-                <span class="rounded-full bg-secondary/70 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                  {t}
-                </span>
+    <div class="container space-y-14">
+      {RECIPE_GROUPS.map((g) => {
+        const groupRecipes = recipesByGroup.get(g.id) ?? [];
+        if (groupRecipes.length === 0) return null;
+        return (
+          <div>
+            <div class="mb-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/80">
+              {g.label}
+            </div>
+            <p class="mb-5 text-sm text-muted-foreground/80">{g.description}</p>
+            <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {groupRecipes.map((r) => (
+                <a
+                  href={`/recipes/${r.slug}/`}
+                  class="group overflow-hidden rounded-xl border border-border bg-card p-5 transition-all hover:border-primary/40 hover:-translate-y-0.5"
+                >
+                  <div class="mb-3 flex flex-wrap gap-1.5">
+                    {r.tags.map((t) => (
+                      <span class="rounded-full bg-secondary/70 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                        {t}
+                      </span>
+                    ))}
+                  </div>
+                  <h3 class="text-base font-semibold tracking-tight">{r.title}</h3>
+                  <p class="mt-2 text-sm text-muted-foreground">{r.oneLiner}</p>
+                  <ul class="mt-3 space-y-1 text-[12px] font-mono">
+                    {r.apis.slice(0, 3).map((a) => (
+                      <li class="flex items-center gap-1.5 text-muted-foreground/80">
+                        <span class="text-primary">◆</span>{a}
+                      </li>
+                    ))}
+                  </ul>
+                  <div class="mt-4 inline-flex items-center gap-1 text-xs font-medium text-foreground/60 transition-colors group-hover:text-foreground">
+                    Open recipe <ArrowRight size={13} strokeWidth={2} />
+                  </div>
+                </a>
               ))}
             </div>
-            <h3 class="text-base font-semibold tracking-tight">{r.title}</h3>
-            <p class="mt-2 text-sm text-muted-foreground">{r.oneLiner}</p>
-            <ul class="mt-3 space-y-1 text-[12px] font-mono">
-              {r.apis.slice(0, 3).map((a) => (
-                <li class="flex items-center gap-1.5 text-muted-foreground/80">
-                  <span class="text-primary">◆</span>{a}
-                </li>
-              ))}
-            </ul>
-            <div class="mt-4 inline-flex items-center gap-1 text-xs font-medium text-foreground/60 transition-colors group-hover:text-foreground">
-              Open recipe <ArrowRight size={13} strokeWidth={2} />
-            </div>
-          </a>
-        ))}
-      </div>
-
+          </div>
+        );
+      })}
     </div>
   </section>
 </Base>

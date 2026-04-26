@@ -1,0 +1,132 @@
+---
+layout: ../../layouts/Docs.astro
+title: Big symbols
+section: guides
+eyebrow: Building blocks
+description: A big symbol is a single symbol that visually occupies an N×M block of cells. Declared via SymbolData.size; server places the anchor cell only and the engine paints OCCUPIED across the rest. Includes block lookup, validation, and mask interaction.
+---
+
+A "big symbol" is a single symbol that visually occupies a rectangular block of cells — a 2×2 bonus, a 3×3 giant, a 1×3 bar, a 2×4 banner. Declared at registration via `SymbolData.size`. The wire format stays `string[][]` — the engine does the heavy lifting.
+
+This guide covers big symbols in depth. For the broader picture (pyramid layouts, MultiWays, mutual exclusivity rules), start at the [Per-reel geometry](/guides/per-reel-geometry/) overview.
+
+## Declaration
+
+Register the symbol like any other; add a `size: { w, h }` to its metadata:
+
+```ts
+.symbols((registry) => {
+  registry.register('bonus', SpriteSymbol, { textures: { bonus: tex } });
+})
+.symbolData({
+  bonus: { weight: 0, zIndex: 5, size: { w: 2, h: 2 } },
+  //         ^^^^^^^^^ big symbols MUST have weight 0 — random fill can't
+  //                   place blocks in v1, so a non-zero weight would
+  //                   silently never be picked. Builder throws otherwise.
+})
+```
+
+`zIndex: 5` is recipe convention — sets the anchor's z-index above 1×1 neighbors so it draws on top.
+
+## How the wire format stays unchanged
+
+Server returns `string[][]` like every other result. The server places the symbol id at the **anchor cell** (top-left of the block) only — every other cell of the block can hold *any* string, the engine overwrites it.
+
+```ts
+// 5×4 grid, 2×2 bonus anchored at (col=2, row=1):
+setResult([
+  ['low1', 'low2', 'low1', 'low2'],
+  ['low1', 'low2', 'low1', 'low2'],
+  ['low1', 'bonus',  '?',   'low2'],   // '?' is whatever; engine paints OCCUPIED
+  ['low1', '?',      '?',   'low2'],   // '?' is whatever; engine paints OCCUPIED
+  ['low1', 'low2', 'low1', 'low2'],
+]);
+```
+
+Internally:
+
+1. **Cross-reel coordinator** runs in `SpinController` ahead of per-reel frame building. It reads the result grid, finds big-symbol anchors, validates block fit, and paints `OCCUPIED_SENTINEL` across the rest of the block.
+2. **At land**, the anchor symbol is sized to span the whole `(w*cellW, h*cellH)` block. Non-anchor cells get an invisible `OccupiedStub` (a zero-alpha placeholder) — the anchor's view visually covers them.
+3. **Public API** never sees the sentinel. Both `Reel.getVisibleSymbols()` and `ReelSet.getVisibleGrid()` resolve OCCUPIED — same-reel and cross-reel — to the anchor's id. Iterating per reel and the grid surface return identical data.
+
+## Block lookup
+
+Two related APIs:
+
+- **`reelSet.getSymbolFootprint(col, row)`** — logical info: `{ anchor, size }`. Use for evaluation / event payloads.
+- **`reelSet.getBlockBounds(col, row)`** — pixel rect covering the whole block. Use for overlays.
+
+```ts
+const fp = reelSet.getSymbolFootprint(col, row);
+// → { anchor: { col: 2, row: 1 }, size: { w: 2, h: 2 } }
+
+const rect = reelSet.getBlockBounds(col, row);
+// → { x, y, width: 2 * cellW, height: 2 * cellH }
+gfx.rect(rect.x, rect.y, rect.width, rect.height).stroke({ color: 0xff6b35, width: 4 });
+```
+
+Pass any cell of a block — anchor or non-anchor — both APIs return the same data. For 1×1 cells, `getBlockBounds` is equivalent to `getCellBounds`.
+
+## Validation
+
+The engine throws fail-fast at `setResult()` if a block doesn't fit:
+
+- `"big symbol 'giant' (3x3) at (col=4, row=2) exceeds reel count 6."`
+- `"big symbol 'tallBar' (1x3) at (col=0, row=3) exceeds reel 0 height 5."`
+
+Pinning the **non-anchor** cell of a big symbol throws — pin the anchor instead, which covers the block visually because the anchor's view spans it.
+
+The **build-time** check refuses big symbols with non-zero weight (`big symbol 'bonus' (2x2) must have weight 0 — ...`). Random fill can't place blocks in v1, so non-zero weight would silently never be picked.
+
+## Mask interaction (`SharedRectMaskStrategy`)
+
+If `symbolGap.x > 0`, the **default per-reel mask** has horizontal gaps between reel columns. A big symbol's anchor view extends across multiple reels' worth of width, but the per-reel mask **clips it at every column gap** — visible as transparent vertical strips through the symbol.
+
+The engine **auto-picks `SharedRectMaskStrategy`** when:
+
+1. At least one big symbol is registered (`SymbolData.size > 1×1`), AND
+2. `symbolGap.x > 0`, AND
+3. No explicit `.maskStrategy(...)` call was made.
+
+It logs a `console.info(...)` so you can see what happened. Pass `.maskStrategy(...)` to override.
+
+```ts
+import { SharedRectMaskStrategy } from 'pixi-reels';
+
+builder
+  .symbolGap(4, 4)                                  // horizontal gap > 0
+  .maskStrategy(new SharedRectMaskStrategy())       // explicit (or rely on auto-pick)
+  // ...
+```
+
+`SharedRectMaskStrategy` draws a single bounding rect covering every reel's tallest extent. For pyramid + big-symbol slots, this means buffer rows above/below short reels become visible (the "pyramid peek") — handled in production by frame art covering the slot.
+
+## zIndex layering
+
+Big-symbol anchors render at `symbolData.zIndex * 100 + arrayIndex` (typically ~500 with `zIndex: 5`). The 100× multiplier reserves room for per-row stacking inside a layer (bottom rows render above top rows on the same layer).
+
+Pin overlays render at zIndex `10000`. So a big symbol that's also pinned (`reelSet.pin(anchorCol, anchorRow, id, ...)`) gets its overlay rendered above the cell — the overlay covers the whole block visually because the overlay symbol is sized to the block.
+
+| Layer | zIndex | Source |
+|---|---|---|
+| 1×1 symbol, default | `0 * 100 + arrayIndex` | `symbolData.zIndex ?? 0` |
+| 1×1 symbol, elevated | `1 * 100 + arrayIndex` | `symbolData.zIndex: 1` |
+| Big-symbol anchor (recipe convention) | `5 * 100 + arrayIndex` (~500) | `symbolData.zIndex: 5` |
+| Pin overlay during spin | `10000` | `ReelSet.PIN_OVERLAY_Z_INDEX` |
+| Spotlight (winning symbols) | own container | `viewport.spotlightContainer` |
+
+## Constraints
+
+- **Weight 0 required.** Random fill cannot place blocks in v1; the builder throws on non-zero weight. Server places via `setResult()`.
+- **Big symbols only at landing.** During the spin, every cell is 1×1; the block layout commits at stop.
+- **No random-fill big symbols** in v1. v2 may add a frame middleware that places big symbols during scroll.
+- **Big symbols + MultiWays** is rejected at build. See the [Per-reel geometry](/guides/per-reel-geometry/) constraint matrix.
+
+## See also
+
+- [Guide: Per-reel geometry](/guides/per-reel-geometry/) — overview + constraint matrix + mask strategy
+- [Guide: MultiWays](/guides/multiways/) — mutually exclusive with big symbols
+- [`big-symbols`](/recipes/big-symbols/) recipe — single 2×2 bonus
+- [`big-symbols-mxn`](/recipes/big-symbols-mxn/) recipe — every shape: 1×3, 2×2, 3×3, 2×4
+- [`card-symbol-debug`](/recipes/card-symbol-debug/) recipe — the debug `CardSymbol` used in these recipes
+- [`cell-bounds`](/recipes/cell-bounds/) recipe — pixel rects for any cell

@@ -1,34 +1,39 @@
 ---
 layout: ../../layouts/Docs.astro
-title: Per-reel geometry, MultiWays & big symbols
+title: Per-reel geometry
 section: guides
 eyebrow: Building blocks
-description: How the engine lets every reel have its own row count and cell height — covers static pyramids, MultiWays per-spin reshape, and N×M big symbols. Includes the mutual-exclusivity rules you need to follow.
+description: Each reel can have its own row count, cell height, and offset. Covers static pyramid layouts, the mask strategy that clips them cleanly, and how this interacts with MultiWays and big symbols (which have their own guides).
 ---
 
-The engine's "reel" used to mean "every column has the same row count and the same cell height." That's still the most common shape (5×3, 5×4 starters), but real-world slot mechanics need three more layouts:
+The engine's "reel" used to mean "every column has the same row count and the same cell height." That's still the most common shape (5×3, 5×4 starters), but real-world slot mechanics need three more layouts. Each is documented in its own guide; this page is the overview and the place to learn about static pyramids and the mask strategy.
 
-| Mechanic | When the shape changes | Cell height varies | Built via |
-|---|---|---|---|
-| **Static pyramid** (e.g. `3-5-5-5-3`) | Never — fixed at build time | No (uniform) | `.visibleRowsPerReel([...])` |
-| **MultiWays** | Every spin | Per reel, derived from a fixed reel pixel height | `.multiways({...})` + `setShape(...)` |
-| **Big symbols** | Never — but a single symbol covers `N×M` cells | No (cells stay 1×1) | `SymbolData.size = { w, h }` |
+| Mechanic | When the shape changes | Where to read |
+|---|---|---|
+| **Uniform** (e.g. 5×3) | Never | nothing special — the default |
+| **Static pyramid** (e.g. `3-5-5-5-3`) | Never — fixed at build time | this page (below) |
+| **MultiWays** | Every spin | [`/guides/multiways/`](/guides/multiways/) |
+| **Big symbols** (`N×M` blocks) | Never — but a single symbol covers multiple cells | [`/guides/big-symbols/`](/guides/big-symbols/) |
 
-These three are independent in concept but **two pairs are mutually exclusive at build time**. The constraint matrix is below — read it first if you're combining mechanics.
+These four are independent in concept but **two pairs are mutually exclusive** at build time. The constraint matrix below is the one source of truth.
 
 ## Constraint matrix
 
 |  | Pyramid | MultiWays | Big symbols |
 |---|---|---|---|
 | **Pyramid** + Pyramid | uniform 5×3 is the trivial case | — | — |
-| **MultiWays** + Pyramid | **rejected** rejected at build (`cannot combine multiways() with visibleRowsPerReel()`) | — | — |
-| **Big symbols** + Pyramid | **allowed** allowed | — | — |
-| **Big symbols** + MultiWays | **rejected** rejected at build (`big symbol '...' cannot be registered on a MultiWays slot`) | — | — |
-| **Cascade mode** + MultiWays | **rejected** rejected at build (`multiways() is not supported with cascade mode in v1`) | — | — |
+| **MultiWays** + Pyramid | **rejected** at build (`cannot combine multiways() with visibleRowsPerReel()`) | — | — |
+| **Big symbols** + Pyramid | **allowed** | — | — |
+| **Big symbols** + MultiWays | **rejected** at build (`big symbol '...' cannot be registered on a MultiWays slot`) | — | — |
+| **Cascade mode** + MultiWays | **rejected** at build (`multiways() is not supported with cascade mode in v1`) | — | — |
 
-> **Why MultiWays + big symbols are exclusive.** A 2×2 bonus on a 2-row reel doesn't have a coherent answer — the block doesn't fit. Letting the engine pick (clamp? skip? truncate?) hides design decisions. We reject at build instead so the mistake surfaces during development, not in production.
+Why these reject each other:
 
-## 1. Static pyramid (per-reel shape)
+- **MultiWays + big symbols**: a 2×2 bonus on a 2-row reel can't fit. Defining "what happens" (silently truncate? scale down? skip?) hides game-design intent. Better to fail at build so the developer picks a resolution explicitly.
+- **MultiWays + cascade**: cascade physics drop survivors into vacant cells from above; MultiWays reshape changes the cell count between spins. A cascade survivor at row 6 may not have a row 6 to land on next spin. Niche; deferred to v2.
+- **MultiWays + pyramid**: `visibleRowsPerReel` declares a *static* shape; `multiways({...})` declares a *dynamic* shape. They contradict each other — both say "reel `i` has N rows."
+
+## Static pyramid (per-reel shape)
 
 A static pyramid sets each reel's row count once at build time. No per-spin reshape, no AdjustPhase, no surprise events.
 
@@ -42,181 +47,11 @@ new ReelSetBuilder()
   .build();
 ```
 
-The engine computes a per-reel `offsetY` so shorter reels are positioned according to `reelAnchor`. The default mask (`RectMaskStrategy`) draws one clip rect per reel — short reels never leak buffer rows above or below their visible area.
+The engine computes a per-reel `offsetY` so shorter reels are positioned according to `reelAnchor`. The default mask draws one clip rect per reel — short reels never leak buffer rows above or below their visible area.
 
 `getCellBounds(col, row)` accounts for `offsetY` automatically; `debugSnapshot.visibleRows` is `number[]` (one per reel) so jagged shapes are visible to debug tooling.
 
 → Recipe: [Per-reel shape (pyramid)](/recipes/pyramid-shape/)
-
-## 2. MultiWays (per-spin row variation)
-
-MultiWays is the open-source name for the "ways"-style mechanic where each reel can land on a different row count *every spin*. The reel **pixel height is fixed** for the whole slot; cell height per reel is derived as `reelPixelHeight / visibleRows[i]`. So a 2-row reel has tall cells; a 7-row reel has short ones.
-
-```ts
-const reelSet = new ReelSetBuilder()
-  .reels(6)
-  .multiways({ minRows: 2, maxRows: 7, reelPixelHeight: 480 })
-  .pinMigrationDuration(300)         // ms; pin-overlay tween. 0 = instant snap.
-  .pinMigrationEase('power2.inOut')  // any GSAP ease
-  .symbolSize(68, 68)
-  // ...
-  .build();
-```
-
-### Per-spin flow
-
-```ts
-const promise = reelSet.spin();
-const shape = pickRandomShape();   // [3, 5, 7, 4, 6, 2]
-reelSet.setShape(shape);           // before setResult() — emits 'shape:changed', migrates pins
-reelSet.setResult(serverGrid);     // serverGrid[i].length === shape[i]
-await promise;
-```
-
-1. **`spin()`** — reels start scrolling. Cells are at the previous spin's heights.
-2. **`setShape(rowsPerReel)`** — records the target shape. Migrates pins eagerly (see below) so `setResult` can apply pin overlays at the correct row. Emits `shape:changed`.
-3. **`setResult(grid)`** — server result. Each `grid[i]` has length `rowsPerReel[i]`.
-4. **`AdjustPhase`** — inserted between SPIN and STOP **only on MultiWays slots**. Commits the geometry (resizes existing symbols, reshapes the motion layer), tweens any pin overlays from their old cell to their new cell over `pinMigrationDuration` with `pinMigrationEase`. Emits `adjust:start` / `adjust:complete`.
-5. **`StopPhase`** — lands the reels at the new shape with the bounce.
-
-### Pin migration (sticky wilds)
-
-A pin's `originRow` is captured at placement. On every reshape it migrates per its `migration` policy. Each migration fires `pin:migrated` with `{ fromRow, toRow, clamped, reelIndex }`.
-
-**`migration: 'origin'`** (default — clamp + restore, prevents wander):
-
-| Spin | Shape (col 2) | originRow | Migrated row | Clamped? |
-|------|---------------|-----------|--------------|----------|
-| 1 | 5 | 4 | 4 | no |
-| 2 | 3 | 4 | 2 | yes |
-| 3 | 7 | 4 | 4 | **restored** |
-| 4 | 4 | 4 | 3 | yes |
-
-A pin clamped down on a shrink returns to its origin row when a later shape grows back. Right for sticky wilds.
-
-**`migration: 'frozen'`** (clamp without restoring — origin updates on clamp):
-
-| Spin | Shape (col 2) | originRow before | Migrated row | originRow after |
-|------|---------------|------------------|--------------|-----------------|
-| 1 | 5 | 4 | 4 | 4 |
-| 2 | 3 | 4 | 2 (clamped) | **2** (updated) |
-| 3 | 7 | 2 | 2 | 2 |
-| 4 | 4 | 2 | 2 | 2 |
-
-The pin never restores after a clamp. Right for walking wilds, descending wilds, anything where "current row" is the truth and a higher row is unreachable history.
-
-Pass via `pin()` options: `reelSet.pin(col, row, id, { migration: 'frozen' })`.
-
-### Animation scope
-
-`pinMigrationDuration` + `pinMigrationEase` control **pin-overlay** migration only. The underlying reel cells snap instantly because the reel is still spinning at full speed during AdjustPhase — tweening individual cell symbols would fight the spinning motion layer.
-
-If your slot has no pinned cells on a given spin, the AdjustPhase commits geometry instantly and finishes in one frame. The duration only matters when there's an overlay to animate.
-
-### Events specific to MultiWays
-
-These events ONLY fire on slots built with `.multiways(...)`. Non-MultiWays slots never see them:
-
-- `shape:changed` — `setShape()` recorded a new target.
-- `adjust:start` — per-reel AdjustPhase entry.
-- `adjust:complete` — per-reel AdjustPhase exit.
-- `pin:migrated` — a pin's row changed because of reshape.
-
-→ Recipes: [MultiWays](/recipes/multiways/) · [MultiWays with custom Graphics symbols](/recipes/multiways-card-symbols/) · [Sticky wild on MultiWays](/recipes/sticky-wild-multiways/)
-
-## 3. Big symbols (`N×M` blocks)
-
-A "big symbol" is a single symbol that visually occupies a rectangular block of cells — a 2×2 bonus, a 3×3 giant, a 1×3 bar, a 2×4 banner. Declared at registration via `SymbolData.size`:
-
-```ts
-.symbols((registry) => {
-  registry.register('bonus', SpriteSymbol, { textures: { bonus: tex } });
-})
-.symbolData({
-  bonus: { weight: 0, zIndex: 5, size: { w: 2, h: 2 } },
-  //         ^^^^^^^^^ big symbols MUST have weight 0 — random fill can't
-  //                   place blocks in v1, so a non-zero weight would
-  //                   silently never be picked. Builder throws otherwise.
-})
-```
-
-### How the wire format stays unchanged
-
-Server returns `string[][]` like every other result. The server places the symbol id at the **anchor cell** (top-left of the block) only — every other cell of the block can hold *any* string, the engine overwrites it.
-
-```ts
-// 5×4 grid, 2×2 bonus anchored at (col=2, row=1):
-setResult([
-  ['low1', 'low2', 'low1', 'low2'],
-  ['low1', 'low2', 'low1', 'low2'],
-  ['low1', 'bonus',  '?',   'low2'],   // '?' is whatever; engine paints OCCUPIED
-  ['low1', '?',      '?',   'low2'],   // '?' is whatever; engine paints OCCUPIED
-  ['low1', 'low2', 'low1', 'low2'],
-]);
-```
-
-Internally:
-1. **Cross-reel coordinator** runs in `SpinController` ahead of per-reel frame building. It reads the result grid, finds big-symbol anchors, validates block fit, and paints `OCCUPIED_SENTINEL` across the rest of the block.
-2. **At land**, the anchor symbol is sized to span the whole `(w*cellW, h*cellH)` block. Non-anchor cells get an invisible `OccupiedStub` (a zero-alpha placeholder) — the anchor's view visually covers them.
-3. **Public API** never sees the sentinel. Both `Reel.getVisibleSymbols()` and `ReelSet.getVisibleGrid()` resolve OCCUPIED — same-reel and cross-reel — to the anchor's id. Iterating per reel and the grid surface return identical data.
-
-### Block lookup
-
-Two related APIs:
-
-- `reelSet.getSymbolFootprint(col, row)` — logical info: `{ anchor, size }`. Use for evaluation / event payloads.
-- `reelSet.getBlockBounds(col, row)` — pixel rect covering the whole block. Use for overlays.
-
-```ts
-const fp = reelSet.getSymbolFootprint(col, row);
-// → { anchor: { col: 2, row: 1 }, size: { w: 2, h: 2 } }
-
-const rect = reelSet.getBlockBounds(col, row);
-// → { x, y, width: 2 * cellW, height: 2 * cellH }
-gfx.rect(rect.x, rect.y, rect.width, rect.height).stroke({ color: 0xff6b35, width: 4 });
-```
-
-Pass any cell of a block — anchor or non-anchor — both APIs return the same data. For 1×1 cells, `getBlockBounds` is equivalent to `getCellBounds`.
-
-### Validation
-
-The engine throws fail-fast at `setResult()` if a block doesn't fit:
-- `"big symbol 'giant' (3x3) at (col=4, row=2) exceeds reel count 6."`
-- `"big symbol 'tallBar' (1x3) at (col=0, row=3) exceeds reel 0 height 5."`
-
-Pinning the **non-anchor** cell of a big symbol throws — pin the anchor instead, which covers the block visually because the anchor's view spans it.
-
-### Constraints
-
-- **Big symbols only at landing.** During the spin, every cell is 1×1; the block layout commits at stop.
-- **No random-fill big symbols** in v1. Only target frames (server-driven) place them.
-- **Big symbols + MultiWays** is rejected at build. See the matrix above.
-
-→ Recipes: [Big symbols](/recipes/big-symbols/) · [MxN big symbols](/recipes/big-symbols-mxn/)
-
-## Why two of these reject each other
-
-The mutual-exclusivity rules aren't engine limitations — they're **design constraints we surface upfront** so a slot's mechanic stays coherent.
-
-**Big symbols + MultiWays**: a 2×2 bonus on a 2-row reel can't fit. Defining "what happens" (silently truncate? scale down? skip?) hides game-design intent. Better to fail at build with a clear message, so the developer picks the resolution explicitly (e.g. by ensuring big symbols never land on a MultiWays slot, or by gating min-rows at design time).
-
-**Cascade + MultiWays**: cascade physics drop survivors into vacant cells from above; MultiWays reshape changes the cell count between spins. Combining them means a cascade survivor at row 6 may not have a row 6 to land on next spin. The combination is niche enough that v1 defers it; raise an issue if your slot needs it.
-
-**Pyramid + MultiWays**: `visibleRowsPerReel` declares a *static* shape; `multiways({...})` declares a *dynamic* shape. They contradict each other — both say "the row count of reel `i` is...". The builder picks one or the other, not both.
-
-## zIndex layering
-
-Pin overlays render at zIndex `10000`. Big-symbol anchors render at `symbolData.zIndex * 100 + arrayIndex` (typically ~500 with `zIndex: 5`). The 100× multiplier reserves room for per-row stacking inside a layer (bottom rows render above top rows). The 10000 ceiling for pins is set very high so a consumer who sets `symbolData.zIndex: 50` (= 5000) still sits below pins.
-
-If you need a symbol to render ABOVE pin overlays (e.g. a win-presenter promotion), re-parent it to `viewport.spotlightContainer` — that's a separate display layer above pins.
-
-| Layer | zIndex | Source |
-|---|---|---|
-| 1×1 symbol, default | `0 * 100 + arrayIndex` | `symbolData.zIndex ?? 0` |
-| 1×1 symbol, elevated | `1 * 100 + arrayIndex` | `symbolData.zIndex: 1` |
-| Big-symbol anchor (recipe convention) | `5 * 100 + arrayIndex` (~500) | `symbolData.zIndex: 5` |
-| Pin overlay during spin | `10000` | `ReelSet.PIN_OVERLAY_Z_INDEX` |
-| Spotlight (winning symbols) | own container | `viewport.spotlightContainer` |
 
 ## Mask strategy
 
@@ -224,10 +59,10 @@ The viewport's clip mask is built by a `MaskStrategy` — a public interface so 
 
 | Strategy | Default? | Use when | Caveat |
 |---|---|---|---|
-| `RectMaskStrategy` | yes | Pyramid layouts, uniform layouts, any slot with **no big symbols** OR `symbolGap.x === 0` | If `symbolGap.x > 0` AND big symbols span reels, the gap clips them between columns — visible as transparent vertical strips through the symbol |
-| `SharedRectMaskStrategy` | no | **Any big-symbol slot with `symbolGap.x > 0`.** Also: any case where you want cross-reel symbol overlap | Pyramid layouts will show buffer rows above/below short reels (the "pyramid peek") |
+| `RectMaskStrategy` | yes | Pyramid layouts, uniform layouts, any slot with **no big symbols** OR `symbolGap.x === 0` | If `symbolGap.x > 0` AND big symbols span reels, the gap clips them between columns |
+| `SharedRectMaskStrategy` | no (auto-picked when needed) | **Any big-symbol slot with `symbolGap.x > 0`.** Also: any case where you want cross-reel symbol overlap | Pyramid layouts will show buffer rows above/below short reels (the "pyramid peek") |
 
-**Practical rule:** if your slot uses big symbols (`SymbolData.size.w > 1` or `size.h > 1`) AND `symbolGap.x > 0`, use `SharedRectMaskStrategy`. Otherwise the default is fine.
+**Practical rule:** the engine **auto-picks `SharedRectMaskStrategy`** when big symbols are registered AND `symbolGap.x > 0`, so most slots don't need to think about this. Override with `.maskStrategy(...)` if you want explicit control.
 
 ```ts
 import { SharedRectMaskStrategy } from 'pixi-reels';
@@ -242,13 +77,12 @@ To see exactly what's clipped, enable the debug overlay:
 __PIXI_REELS_DEBUG.showMask(true);
 ```
 
-It paints the active clip area semi-transparent red and outlines each per-reel rect in green.
+Paints the active clip area semi-transparent red and outlines each per-reel rect in green.
 
 ## See also
 
-- [`pyramid-shape`](/recipes/pyramid-shape/) recipe — static jagged layout
-- [`multiways`](/recipes/multiways/) recipe — per-spin reshape
-- [`big-symbols`](/recipes/big-symbols/) recipe — 2×2 bonus
-- [`big-symbols-mxn`](/recipes/big-symbols-mxn/) recipe — every shape (1×3, 2×2, 3×3, 2×4)
-- [`sticky-wild-multiways`](/recipes/sticky-wild-multiways/) recipe — pin migration in action
-- [Spine recipe (lib docs)](/docs/recipes/spine-multiways-ready/) — Spine skeletons that scale cleanly across reshape
+- [Guide: MultiWays](/guides/multiways/) — per-spin row variation, AdjustPhase, pin migration
+- [Guide: Big symbols](/guides/big-symbols/) — `N×M` blocks, OCCUPIED, block lookup
+- [`pyramid-shape`](/recipes/pyramid-shape/) recipe — static jagged layout demo
+- [`card-symbol-debug`](/recipes/card-symbol-debug/) recipe — the debug `CardSymbol` used in these recipes
+- [`cell-bounds`](/recipes/cell-bounds/) recipe — overlays aligned to cells (works on jagged shapes too)
