@@ -47,20 +47,25 @@ The 2×2 anchor symbol is sized to `(2 × cellW, 2 × cellH)` and visually cover
 
 ## Anchor lookup
 
-To highlight the whole block from any covered cell:
+`reelSet.getSymbolFootprint(col, row)` returns the anchor + size for any cell — anchor or non-anchor:
 
 ```ts
 const fp = reelSet.getSymbolFootprint(col, row);
 // → { anchor: { col: 2, row: 1 }, size: { w: 2, h: 2 } }
-
-const b = reelSet.getCellBounds(fp.anchor.col, fp.anchor.row);
-const blockRect = {
-  x: b.x,
-  y: b.y,
-  width:  fp.size.w * b.width,
-  height: fp.size.h * b.height,
-};
 ```
+
+For the pixel rect covering the whole block, use `getBlockBounds`:
+
+```ts
+const rect = reelSet.getBlockBounds(col, row);
+// → { x, y, width: 2 * cellW, height: 2 * cellH }
+
+gfx.rect(rect.x, rect.y, rect.width, rect.height)
+   .stroke({ color: 0xff6b35, width: 4 });
+reelSet.addChild(gfx);
+```
+
+For 1×1 cells, `getBlockBounds` is equivalent to `getCellBounds`.
 
 ## Validation
 

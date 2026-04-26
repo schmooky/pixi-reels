@@ -120,6 +120,38 @@ describe('big symbols', () => {
     ).toThrow(/big symbol .* cannot be registered on a MultiWays slot/);
   });
 
+  it('getBlockBounds returns the pixel rect for a 2x2 block from any cell', async () => {
+    const { reelSet, spinAndLand, destroy } = createTestReelSet({
+      reels: 5,
+      visibleRows: 3,
+      symbolIds: ['a', 'bonus'],
+      symbolData: { bonus: { weight: 0, size: { w: 2, h: 2 } } },
+      symbolSize: { width: 100, height: 100 },
+    });
+    try {
+      await spinAndLand([
+        ['a', 'a', 'a'],
+        ['a', 'a', 'a'],
+        ['bonus', 'a', 'a'],
+        ['a', 'a', 'a'],
+        ['a', 'a', 'a'],
+      ]);
+      // From the anchor cell.
+      const r1 = reelSet.getBlockBounds(2, 0);
+      expect(r1.width).toBe(200);
+      expect(r1.height).toBe(200);
+      // From a non-anchor cell — same rect.
+      const r2 = reelSet.getBlockBounds(3, 1);
+      expect(r2).toEqual(r1);
+      // 1x1 cell — equivalent to getCellBounds.
+      const r3 = reelSet.getBlockBounds(0, 0);
+      expect(r3.width).toBe(100);
+      expect(r3.height).toBe(100);
+    } finally {
+      destroy();
+    }
+  });
+
   it('rejects big symbols with non-zero weight (random fill cannot place blocks)', () => {
     expect(() =>
       createTestReelSet({

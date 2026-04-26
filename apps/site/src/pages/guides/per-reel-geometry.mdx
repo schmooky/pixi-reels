@@ -147,20 +147,21 @@ Internally:
 
 ### Block lookup
 
-`reelSet.getSymbolFootprint(col, row)` returns the anchor + size for any cell — even non-anchor cells. Useful for win presenters that need to highlight a whole block:
+Two related APIs:
+
+- `reelSet.getSymbolFootprint(col, row)` — logical info: `{ anchor, size }`. Use for evaluation / event payloads.
+- `reelSet.getBlockBounds(col, row)` — pixel rect covering the whole block. Use for overlays.
 
 ```ts
 const fp = reelSet.getSymbolFootprint(col, row);
 // → { anchor: { col: 2, row: 1 }, size: { w: 2, h: 2 } }
 
-const b = reelSet.getCellBounds(fp.anchor.col, fp.anchor.row);
-const blockRect = {
-  x: b.x,
-  y: b.y,
-  width:  fp.size.w * b.width,
-  height: fp.size.h * b.height,
-};
+const rect = reelSet.getBlockBounds(col, row);
+// → { x, y, width: 2 * cellW, height: 2 * cellH }
+gfx.rect(rect.x, rect.y, rect.width, rect.height).stroke({ color: 0xff6b35, width: 4 });
 ```
+
+Pass any cell of a block — anchor or non-anchor — both APIs return the same data. For 1×1 cells, `getBlockBounds` is equivalent to `getCellBounds`.
 
 ### Validation
 
@@ -187,6 +188,20 @@ The mutual-exclusivity rules aren't engine limitations — they're **design cons
 **Cascade + MultiWays**: cascade physics drop survivors into vacant cells from above; MultiWays reshape changes the cell count between spins. Combining them means a cascade survivor at row 6 may not have a row 6 to land on next spin. The combination is niche enough that v1 defers it; raise an issue if your slot needs it.
 
 **Pyramid + MultiWays**: `visibleRowsPerReel` declares a *static* shape; `multiways({...})` declares a *dynamic* shape. They contradict each other — both say "the row count of reel `i` is...". The builder picks one or the other, not both.
+
+## zIndex layering
+
+Pin overlays render at zIndex `10000`. Big-symbol anchors render at `symbolData.zIndex * 100 + arrayIndex` (typically ~500 with `zIndex: 5`). The 100× multiplier reserves room for per-row stacking inside a layer (bottom rows render above top rows). The 10000 ceiling for pins is set very high so a consumer who sets `symbolData.zIndex: 50` (= 5000) still sits below pins.
+
+If you need a symbol to render ABOVE pin overlays (e.g. a win-presenter promotion), re-parent it to `viewport.spotlightContainer` — that's a separate display layer above pins.
+
+| Layer | zIndex | Source |
+|---|---|---|
+| 1×1 symbol, default | `0 * 100 + arrayIndex` | `symbolData.zIndex ?? 0` |
+| 1×1 symbol, elevated | `1 * 100 + arrayIndex` | `symbolData.zIndex: 1` |
+| Big-symbol anchor (recipe convention) | `5 * 100 + arrayIndex` (~500) | `symbolData.zIndex: 5` |
+| Pin overlay during spin | `10000` | `ReelSet.PIN_OVERLAY_Z_INDEX` |
+| Spotlight (winning symbols) | own container | `viewport.spotlightContainer` |
 
 ## Mask strategy
 

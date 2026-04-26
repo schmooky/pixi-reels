@@ -42,6 +42,30 @@ describe('MultiWays reshape', () => {
     }
   });
 
+  it('setShape() throws when called after setResult() in the same spin', async () => {
+    const { reelSet, destroy } = createTestReelSet({
+      reels: 3,
+      multiways: { minRows: 2, maxRows: 6, reelPixelHeight: 600 },
+      symbolIds: ['a'],
+    });
+    try {
+      const promise = reelSet.spin();
+      reelSet.setShape([3, 3, 3]);
+      reelSet.setResult([
+        ['a', 'a', 'a'],
+        ['a', 'a', 'a'],
+        ['a', 'a', 'a'],
+      ]);
+      // Past setResult — a second setShape must throw to avoid corrupting
+      // the cached frames.
+      expect(() => reelSet.setShape([2, 2, 2])).toThrow(/BEFORE setResult/);
+      reelSet.skip();
+      await promise;
+    } finally {
+      destroy();
+    }
+  });
+
   it('setShape() validates length and bounds', () => {
     const { reelSet, destroy } = createTestReelSet({
       reels: 4,

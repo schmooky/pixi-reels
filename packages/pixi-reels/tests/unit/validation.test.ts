@@ -104,4 +104,17 @@ describe('builder validation', () => {
       destroy();
     }
   });
+
+  it('rejects multiways({reelPixelHeight}) + reelPixelHeights([...]) collision', () => {
+    expect(() =>
+      new ReelSetBuilder()
+        .reels(3)
+        .multiways({ minRows: 2, maxRows: 5, reelPixelHeight: 500 })
+        .reelPixelHeights([500, 500, 500])
+        .symbolSize(100, 100)
+        .ticker(new FakeTicker() as unknown as Ticker)
+        .symbols((r) => r.register('a', HeadlessSymbol, {}))
+        .build(),
+    ).toThrow(/cannot combine multiways\({reelPixelHeight}\) with reelPixelHeights/);
+  });
 });

@@ -59,7 +59,14 @@ const blockRect = {
 };
 ```
 
-Useful for win presenters that need to highlight the whole block instead of one cell.
+Or use `reelSet.getBlockBounds(col, row)` — same calculation in one call:
+
+```ts
+const rect = reelSet.getBlockBounds(col, row);
+gfx.rect(rect.x, rect.y, rect.width, rect.height).stroke({ color: 0xff6b35, width: 4 });
+```
+
+Useful for win presenters that highlight a whole block instead of cell-by-cell.
 
 ## Authoring resolution
 

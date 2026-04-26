@@ -78,7 +78,28 @@ export interface FrameAPI {
  * Teardown cascades: one `reelSet.destroy()` disposes every child.
  */
 export class ReelSet extends Container implements Disposable {
-  /** zIndex applied to pin overlays so they render above the reel strip. */
+  /**
+   * zIndex applied to pin overlays so they render above the reel strip.
+   *
+   * **The library's z-index budget**, for reference if you author symbols
+   * that need to layer above defaults:
+   *
+   * | Layer | zIndex | Source |
+   * |---|---|---|
+   * | 1×1 symbol, default | `0 * 100 + arrayIndex` (~0–10) | `symbolData.zIndex ?? 0` |
+   * | 1×1 symbol, elevated (`zIndex: 1` on `symbolData`) | `1 * 100 + arrayIndex` (~100) | `symbolData.zIndex` |
+   * | Big-symbol anchor, default registration | `5 * 100 + arrayIndex` (~500) | recipe convention |
+   * | Pin overlay (sticky/expanding wild during spin) | `10000` | `PIN_OVERLAY_Z_INDEX` |
+   *
+   * The 100× multiplier on `symbolData.zIndex` leaves room for per-row
+   * stacking inside a layer (bottom rows render in front of top rows on
+   * the same layer). The 10000 ceiling on pin overlays is set very high
+   * so a consumer who sets `symbolData.zIndex: 50` (= 5000) still sits
+   * below pins. If you need to stack ABOVE pin overlays — e.g. a win-
+   * presenter symbol promotion — re-parent the symbol to
+   * `viewport.spotlightContainer`, which is its own DisplayObject layer
+   * above pin overlays.
+   */
   private static readonly PIN_OVERLAY_Z_INDEX = 10000;
 
   private _events = new EventEmitter<ReelSetEvents>();
@@ -109,6 +130,15 @@ export class ReelSet extends Container implements Disposable {
    * configs. `null` means "no shape change pending".
    */
   private _targetShape: number[] | null = null;
+
+  /**
+   * True once `setResult()` has been called for the current spin. Reset on
+   * every `spin:start`. Used to enforce the contract that `setShape()`
+   * must be called BEFORE `setResult()` — calling it after corrupts the
+   * cached frames (pins were applied at their pre-migration rows; a later
+   * setShape would migrate them but the frames are already built).
+   */
+  private _resultSetForCurrentSpin = false;
 
   /** Set at construction by the builder when `.multiways(...)` was called. */
   private _isMultiWaysSlot: boolean;
@@ -222,6 +252,7 @@ export class ReelSet extends Container implements Disposable {
    */
   setResult(symbols: string[][]): void {
     const withPins = this._applyPinsToGrid(symbols);
+    this._resultSetForCurrentSpin = true;
     this._spinController.setResult(withPins);
   }
 
@@ -310,6 +341,13 @@ export class ReelSet extends Container implements Disposable {
   setShape(rowsPerReel: number[]): void {
     if (!this._isMultiWaysSlot) {
       throw new Error('setShape(): slot was not built with .multiways(...) — call ReelSetBuilder.multiways() first.');
+    }
+    if (this._resultSetForCurrentSpin) {
+      throw new Error(
+        'setShape(): must be called BEFORE setResult() in the current spin. ' +
+        'Calling setShape after setResult corrupts the cached frames (pins were ' +
+        'overlaid at their pre-migration rows). Reorder: spin() → setShape() → setResult().',
+      );
     }
     if (rowsPerReel.length !== this._reels.length) {
       throw new Error(
@@ -424,6 +462,37 @@ export class ReelSet extends Container implements Disposable {
     }
 
     return { anchor: { col: anchorCol, row: anchorRow }, size };
+  }
+
+  /**
+   * Pixel rectangle covering a big symbol's whole `N×M` block, in
+   * ReelSet-local coordinates. Returns the anchor cell's bounds for 1×1
+   * symbols. Pass any cell of a block — anchor or non-anchor — and you
+   * get the same rect.
+   *
+   * Useful for win presenters drawing an outline around a whole bonus, or
+   * any overlay aligned to the visible footprint of a big symbol:
+   *
+   * ```ts
+   * const rect = reelSet.getBlockBounds(2, 1);
+   * gfx.rect(rect.x, rect.y, rect.width, rect.height)
+   *    .stroke({ color: 0xff6b35, width: 4 });
+   * reelSet.addChild(gfx);
+   * ```
+   *
+   * For 1×1 cells this is equivalent to `getCellBounds(col, row)`. For
+   * big-symbol cells it multiplies width/height by the block size and
+   * starts from the anchor cell's bounds.
+   */
+  getBlockBounds(col: number, row: number): CellBounds {
+    const fp = this.getSymbolFootprint(col, row);
+    const anchorBounds = this.getCellBounds(fp.anchor.col, fp.anchor.row);
+    return {
+      x: anchorBounds.x,
+      y: anchorBounds.y,
+      width: fp.size.w * anchorBounds.width,
+      height: fp.size.h * anchorBounds.height,
+    };
   }
 
   // ─── Speed API ────────────────────────────────────────────
@@ -916,6 +985,10 @@ export class ReelSet extends Container implements Disposable {
    * stays visible while the reel scrolls underneath.
    */
   private _onSpinStart(): void {
+    // Fresh spin — setResult hasn't been called yet, so setShape() is
+    // allowed again until setResult() flips this back.
+    this._resultSetForCurrentSpin = false;
+
     if (this._pins.size > 0) {
       const expired: CellPin[] = [];
       for (const pin of this._pins.values()) {
