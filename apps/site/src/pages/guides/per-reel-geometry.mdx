@@ -224,8 +224,10 @@ The viewport's clip mask is built by a `MaskStrategy` — a public interface so 
 
 | Strategy | Default? | Use when | Caveat |
 |---|---|---|---|
-| `RectMaskStrategy` | yes | Pyramid layouts, uniform layouts, MultiWays where reels share horizontal spacing | If `symbolGap.x > 0` AND big symbols span reels, the gap clips them between columns |
-| `SharedRectMaskStrategy` | no | Big symbols on a layout with `symbolGap.x > 0`; any case where you want cross-reel overlap | Pyramid layouts will show buffer rows above/below short reels (the "pyramid peek") |
+| `RectMaskStrategy` | yes | Pyramid layouts, uniform layouts, any slot with **no big symbols** OR `symbolGap.x === 0` | If `symbolGap.x > 0` AND big symbols span reels, the gap clips them between columns — visible as transparent vertical strips through the symbol |
+| `SharedRectMaskStrategy` | no | **Any big-symbol slot with `symbolGap.x > 0`.** Also: any case where you want cross-reel symbol overlap | Pyramid layouts will show buffer rows above/below short reels (the "pyramid peek") |
+
+**Practical rule:** if your slot uses big symbols (`SymbolData.size.w > 1` or `size.h > 1`) AND `symbolGap.x > 0`, use `SharedRectMaskStrategy`. Otherwise the default is fine.
 
 ```ts
 import { SharedRectMaskStrategy } from 'pixi-reels';

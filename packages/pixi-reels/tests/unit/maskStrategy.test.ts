@@ -128,6 +128,88 @@ describe('mask strategies', () => {
     }
   });
 
+  it('auto-picks SharedRectMaskStrategy when big symbols + symbolGap.x > 0', () => {
+    const consoleInfo = console.info;
+    const captured: unknown[][] = [];
+    console.info = (...args: unknown[]) => { captured.push(args); };
+    try {
+      const reelSet = new ReelSetBuilder()
+        .reels(5)
+        .visibleRows(4)
+        .symbolSize(80, 80)
+        .symbolGap(4, 4)
+        .symbols((r) => {
+          r.register('a', HeadlessSymbol, {});
+          r.register('bonus', HeadlessSymbol, {});
+        })
+        .symbolData({ bonus: { weight: 0, size: { w: 2, h: 2 } } })
+        .ticker(new FakeTicker() as unknown as Ticker)
+        .build();
+      try {
+        // Single bounding rect ⇒ getLocalBounds covers full viewport.
+        const bounds = reelSet.viewport.maskGraphics.getLocalBounds();
+        const totalW = 5 * (80 + 4) - 4; // 416
+        expect(bounds.width).toBe(totalW);
+        // Console hint surfaced.
+        expect(captured.some((args) => String(args[0]).includes('SharedRectMaskStrategy'))).toBe(true);
+      } finally {
+        reelSet.destroy();
+      }
+    } finally {
+      console.info = consoleInfo;
+    }
+  });
+
+  it('does NOT auto-pick SharedRectMaskStrategy when big symbols are registered but symbolGap.x === 0', () => {
+    const reelSet = new ReelSetBuilder()
+      .reels(5)
+      .visibleRows(4)
+      .symbolSize(80, 80)
+      .symbolGap(0, 4) // zero horizontal gap — per-reel rects are contiguous
+      .symbols((r) => {
+        r.register('a', HeadlessSymbol, {});
+        r.register('bonus', HeadlessSymbol, {});
+      })
+      .symbolData({ bonus: { weight: 0, size: { w: 2, h: 2 } } })
+      .ticker(new FakeTicker() as unknown as Ticker)
+      .build();
+    try {
+      // Default per-reel RectMaskStrategy still in effect.
+      const bounds = reelSet.viewport.maskGraphics.getLocalBounds();
+      // With 0 horizontal gap, per-reel rects ARE contiguous so bounds
+      // matches single rect — but the strategy is still per-reel. Verify
+      // the rect array is per-reel size 5.
+      expect(reelSet.viewport.maskRects).toHaveLength(5);
+      expect(bounds.width).toBe(5 * 80);
+    } finally {
+      reelSet.destroy();
+    }
+  });
+
+  it('explicit .maskStrategy() always wins over the auto-pick', () => {
+    const reelSet = new ReelSetBuilder()
+      .reels(5)
+      .visibleRows(4)
+      .symbolSize(80, 80)
+      .symbolGap(4, 4) // would normally trigger auto-pick
+      .maskStrategy(new RectMaskStrategy()) // explicit override
+      .symbols((r) => {
+        r.register('a', HeadlessSymbol, {});
+        r.register('bonus', HeadlessSymbol, {});
+      })
+      .symbolData({ bonus: { weight: 0, size: { w: 2, h: 2 } } })
+      .ticker(new FakeTicker() as unknown as Ticker)
+      .build();
+    try {
+      // Explicit per-reel strategy honored despite the auto-pick condition.
+      // Verify that maskRects was populated AND used (5 separate rects in
+      // the mask Graphics).
+      expect(reelSet.viewport.maskRects).toHaveLength(5);
+    } finally {
+      reelSet.destroy();
+    }
+  });
+
   it('builder.maskStrategy() accepts a custom strategy', () => {
     let buildCalls = 0;
     const custom: MaskStrategy = {

@@ -1,11 +1,17 @@
 // @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, BlurSpriteSymbol, PIXI, gsap,
+// Injected globals: ReelSetBuilder, SpeedPresets, BlurSpriteSymbol,
+//                   SharedRectMaskStrategy, PIXI, gsap,
 //                   app, textures, blurTextures, SYMBOL_IDS, pickWeighted
 //
 // Big symbols — register a 2×2 bonus and let the engine paint OCCUPIED
 // across the block. The server places the symbol id at the anchor cell only
 // (the top-left of the block); the engine fills the rest. Public result
 // stays string[][] — block size is registration metadata, not data.
+//
+// Uses SharedRectMaskStrategy because the layout has horizontal gaps
+// (symbolGap.x > 0). Without this, the default per-reel mask would clip
+// the 2×2 anchor symbol at the column gap, producing a visible vertical
+// strip down the middle of the bonus.
 
 const FILLER = ['round/round_1', 'round/round_2', 'royal/royal_1', 'royal/royal_2'];
 const BONUS = 'wild/wild_1';
@@ -19,6 +25,7 @@ const reelSet = new ReelSetBuilder()
   .visibleSymbols(ROWS)
   .symbolSize(SIZE, SIZE)
   .symbolGap(GAP, GAP)
+  .maskStrategy(new SharedRectMaskStrategy())
   .symbols((r) => {
     for (const id of [...FILLER, BONUS]) {
       r.register(id, BlurSpriteSymbol, { textures, blurTextures });

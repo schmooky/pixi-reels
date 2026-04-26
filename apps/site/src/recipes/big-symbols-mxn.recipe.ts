@@ -1,10 +1,15 @@
 // @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, BlurSpriteSymbol, PIXI, gsap,
+// Injected globals: ReelSetBuilder, SpeedPresets, BlurSpriteSymbol,
+//                   SharedRectMaskStrategy, PIXI, gsap,
 //                   app, textures, blurTextures, SYMBOL_IDS, pickWeighted
 //
 // MxN big symbols — proving the engine handles any rectangular size, not
 // just 2×2. Cycles through 1×3, 2×2, 3×3, and 2×4 blocks so each spin
 // shows a different shape. Same registration mechanism: SymbolData.size.
+//
+// Uses SharedRectMaskStrategy because the layout has horizontal gaps
+// (symbolGap.x > 0). Without this, the default per-reel mask would clip
+// big symbols at each column gap, producing visible vertical strips.
 
 const FILLER = ['round/round_1', 'round/round_2', 'royal/royal_1', 'royal/royal_2'];
 const TALL_BAR = 'royal/royal_3';   // 1×3
@@ -21,6 +26,7 @@ const reelSet = new ReelSetBuilder()
   .visibleSymbols(ROWS)
   .symbolSize(SIZE, SIZE)
   .symbolGap(GAP, GAP)
+  .maskStrategy(new SharedRectMaskStrategy())
   .symbols((r) => {
     for (const id of [...FILLER, TALL_BAR, SQUARE, GIANT, WIDE]) {
       r.register(id, BlurSpriteSymbol, { textures, blurTextures });

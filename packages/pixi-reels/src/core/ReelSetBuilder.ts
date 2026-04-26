@@ -8,7 +8,7 @@ import type {
   ReelAnchor,
 } from '../config/types.js';
 import type { ReelMaskRect, MaskStrategy } from './ReelViewport.js';
-import { RectMaskStrategy } from './ReelViewport.js';
+import { RectMaskStrategy, SharedRectMaskStrategy } from './ReelViewport.js';
 import { DEFAULTS } from '../config/defaults.js';
 import { SpeedPresets } from '../config/SpeedPresets.js';
 import { ReelSet, type ReelSetParams } from './ReelSet.js';
@@ -93,6 +93,8 @@ export class ReelSetBuilder {
   private _pinMigrationEase = 'power2.out';
   /** Mask strategy. Default: per-reel `RectMaskStrategy`. */
   private _maskStrategy: MaskStrategy = new RectMaskStrategy();
+  /** True if the user explicitly set a mask strategy (no auto-pick override). */
+  private _maskStrategyExplicit = false;
 
   /** Set number of reel columns. */
   reels(count: number): this {
@@ -178,6 +180,7 @@ export class ReelSetBuilder {
    */
   maskStrategy(strategy: MaskStrategy): this {
     this._maskStrategy = strategy;
+    this._maskStrategyExplicit = true;
     return this;
   }
 
@@ -464,6 +467,28 @@ export class ReelSetBuilder {
     // Create viewport — width covers all reels, height covers tallest box.
     const viewportWidth = reelCount * (symbolWidth + this._symbolGap.x) - this._symbolGap.x;
     const viewportHeight = tallest;
+
+    // Auto-pick `SharedRectMaskStrategy` when big symbols are registered AND
+    // there's a horizontal gap. The default per-reel mask would clip cross-
+    // reel big symbols at every column gap (visible vertical strips through
+    // the symbol). The shared mask draws one bounding rect so the symbol
+    // stays whole. Explicit `.maskStrategy(...)` calls always win.
+    const hasBigSymbols = Object.values(symbolsData).some(
+      (d) => d.size && (d.size.w > 1 || d.size.h > 1),
+    );
+    if (
+      !this._maskStrategyExplicit &&
+      hasBigSymbols &&
+      this._symbolGap.x > 0
+    ) {
+      this._maskStrategy = new SharedRectMaskStrategy();
+      // Heads-up so devs see the auto-pick in their console.
+      // eslint-disable-next-line no-console
+      console.info(
+        '[pixi-reels] auto-selected SharedRectMaskStrategy because big symbols are registered ' +
+        'and symbolGap.x > 0. Pass .maskStrategy(...) explicitly to override.',
+      );
+    }
     const viewport = new ReelViewport(viewportWidth, viewportHeight, undefined, this._maskStrategy);
 
     // Create offset calculator (X-axis)

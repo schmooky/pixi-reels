@@ -75,6 +75,21 @@ The engine throws at `setResult()` if a block doesn't fit:
 
 Pinning a non-anchor cell of a big symbol throws — pin the anchor instead, which covers the whole block visually because the anchor's view spans the block.
 
+## Mask strategy: use `SharedRectMaskStrategy` if reels have horizontal gaps
+
+If `symbolGap.x > 0`, the default per-reel mask (one clip rect per reel) will **clip a cross-reel big symbol at every column gap** — visible as thin transparent vertical strips through the symbol. The fix is to switch to `SharedRectMaskStrategy`, which draws a single bounding rect:
+
+```ts
+import { SharedRectMaskStrategy } from 'pixi-reels';
+
+builder
+  .symbolGap(4, 4)                                  // horizontal gap > 0
+  .maskStrategy(new SharedRectMaskStrategy())       // big symbol stays whole
+  // ...
+```
+
+The recipe demo above does this. If your slot has zero horizontal gap (`symbolGap.x === 0`), you don't need to change anything — the per-reel rects are contiguous so big symbols render correctly.
+
 ## Constraints
 
 - **Big symbols must have `weight: 0`.** Random fill can't place blocks in v1, so a non-zero weight would silently never get picked. The builder throws to surface the misunderstanding. Place big symbols via `setResult()` only.

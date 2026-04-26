@@ -8,6 +8,7 @@ import { gsap } from 'gsap';
 import {
   ReelSetBuilder, SpeedPresets, SpriteSymbol, AnimatedSpriteSymbol, DropRecipes, CascadeAnticipationPhase,
   enableDebug, WinPresenter,
+  RectMaskStrategy, SharedRectMaskStrategy,
   type ReelSet, ReelSymbol,
 } from 'pixi-reels';
 import { BlurSpriteSymbol } from '../../../../examples/shared/BlurSpriteSymbol.ts';
@@ -121,6 +122,7 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
           'WinPresenter', 'loadPixellabSymbols',
           'app', 'textures', 'blurTextures', 'SYMBOL_IDS', 'pickWeighted', 'gsap', 'PIXI',
           'runCascade', 'tumbleToGrid', 'diffCells', 'EmptySymbol', 'ReelSymbol',
+          'RectMaskStrategy', 'SharedRectMaskStrategy',
           `"use strict"; ${js}`,
         );
         // Await the factory result so recipes that need async setup
@@ -133,6 +135,7 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
           WinPresenter, loadPixellabSymbols,
           app, textures, blurTextures, SYMBOL_IDS, pickWeighted, gsap, PIXI,
           runCascade, tumbleToGrid, diffCells, EmptySymbol, ReelSymbol,
+          RectMaskStrategy, SharedRectMaskStrategy,
         )) as RunResult;
       } catch (e) {
         setError(`Runtime error: ${(e as Error).message}`);
