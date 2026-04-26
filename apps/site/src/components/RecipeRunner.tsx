@@ -8,9 +8,11 @@ import { gsap } from 'gsap';
 import {
   ReelSetBuilder, SpeedPresets, SpriteSymbol, AnimatedSpriteSymbol, DropRecipes, CascadeAnticipationPhase,
   enableDebug, WinPresenter,
+  RectMaskStrategy, SharedRectMaskStrategy,
   type ReelSet, ReelSymbol,
 } from 'pixi-reels';
 import { BlurSpriteSymbol } from '../../../../examples/shared/BlurSpriteSymbol.ts';
+import { CardSymbol, CARD_DECK, WILD_CARD } from '../../../../examples/shared/CardSymbol.ts';
 import { loadPrototypeSymbols } from '../../../../examples/shared/prototypeSpriteLoader.ts';
 import { loadPixellabSymbols } from '../../../../examples/shared/pixellabSymbolsLoader.ts';
 import { transform as sucraseTransform } from 'sucrase';
@@ -120,7 +122,9 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
           'DropRecipes', 'CascadeAnticipationPhase',
           'WinPresenter', 'loadPixellabSymbols',
           'app', 'textures', 'blurTextures', 'SYMBOL_IDS', 'pickWeighted', 'gsap', 'PIXI',
-          'runCascade', 'tumbleToGrid', 'diffCells', 'EmptySymbol',
+          'runCascade', 'tumbleToGrid', 'diffCells', 'EmptySymbol', 'ReelSymbol',
+          'RectMaskStrategy', 'SharedRectMaskStrategy',
+          'CardSymbol', 'CARD_DECK', 'WILD_CARD',
           `"use strict"; ${js}`,
         );
         // Await the factory result so recipes that need async setup
@@ -132,7 +136,9 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
           DropRecipes, CascadeAnticipationPhase,
           WinPresenter, loadPixellabSymbols,
           app, textures, blurTextures, SYMBOL_IDS, pickWeighted, gsap, PIXI,
-          runCascade, tumbleToGrid, diffCells, EmptySymbol,
+          runCascade, tumbleToGrid, diffCells, EmptySymbol, ReelSymbol,
+          RectMaskStrategy, SharedRectMaskStrategy,
+          CardSymbol, CARD_DECK, WILD_CARD,
         )) as RunResult;
       } catch (e) {
         setError(`Runtime error: ${(e as Error).message}`);

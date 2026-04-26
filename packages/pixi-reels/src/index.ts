@@ -1,7 +1,7 @@
 // Core
 export { ReelSet } from './core/ReelSet.js';
 export { ReelSetBuilder } from './core/ReelSetBuilder.js';
-export { Reel } from './core/Reel.js';
+export { Reel, OCCUPIED_SENTINEL } from './core/Reel.js';
 export type { ReelConfig } from './core/Reel.js';
 export { ReelViewport } from './core/ReelViewport.js';
 export { ReelMotion } from './core/ReelMotion.js';
@@ -26,7 +26,12 @@ export type {
   Win,
   MaskConfig,
   ReelSetInternalConfig,
+  ResolvedReelGridConfig,
+  MultiWaysConfig,
+  ReelAnchor,
 } from './config/types.js';
+export type { ReelMaskRect, MaskStrategy } from './core/ReelViewport.js';
+export { RectMaskStrategy, SharedRectMaskStrategy } from './core/ReelViewport.js';
 
 // Symbols
 export { ReelSymbol } from './symbols/ReelSymbol.js';
@@ -41,6 +46,7 @@ export { SymbolFactory } from './symbols/SymbolFactory.js';
 
 // Spin
 export { SpinController } from './spin/SpinController.js';
+export type { SpinControllerHooks } from './spin/SpinController.js';
 export { ReelPhase } from './spin/phases/ReelPhase.js';
 export { PhaseFactory } from './spin/phases/PhaseFactory.js';
 export { StartPhase } from './spin/phases/StartPhase.js';
@@ -51,6 +57,11 @@ export { StopPhase } from './spin/phases/StopPhase.js';
 export type { StopPhaseConfig } from './spin/phases/StopPhase.js';
 export { AnticipationPhase } from './spin/phases/AnticipationPhase.js';
 export type { AnticipationPhaseConfig } from './spin/phases/AnticipationPhase.js';
+export { AdjustPhase } from './spin/phases/AdjustPhase.js';
+export type { AdjustPhaseConfig } from './spin/phases/AdjustPhase.js';
+// Note: `PinOverlayTween` is intentionally not re-exported. It's an
+// internal hand-off type built by SpinController and consumed by
+// AdjustPhase — consumers don't construct one directly.
 
 // Cascade drop-in
 export { DropRecipes } from './cascade/DropRecipes.js';
@@ -93,6 +104,7 @@ export type {
   CellPin,
   CellPinOptions,
   PinExpireReason,
+  PinMigration,
   CellCoord,
   MovePinOptions,
 } from './pins/CellPin.js';
