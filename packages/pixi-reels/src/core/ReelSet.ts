@@ -204,7 +204,7 @@ export class ReelSet extends Container implements Disposable {
       {
         isMultiWaysSlot: this._isMultiWaysSlot,
         symbolsData: this._symbolsData,
-        consumeTargetShape: () => this._consumeTargetShape(),
+        peekTargetShape: () => this._peekTargetShape(),
         clearTargetShape: () => this._clearTargetShape(),
         multiwaysReelPixelHeight: this._multiwaysReelPixelHeight,
         symbolGapY: params.config.grid.symbolGap.y,
@@ -362,6 +362,21 @@ export class ReelSet extends Container implements Disposable {
         );
       }
     }
+    // Fast-path: if the requested shape matches the current shape per-reel,
+    // there's nothing to do. Avoids spurious `shape:changed` events and
+    // pointless migration loops in defensive callers that always invoke
+    // `setShape` per spin even when the shape didn't actually change.
+    let isUnchanged = true;
+    for (let i = 0; i < this._reels.length; i++) {
+      if (this._reels[i].visibleRows !== rowsPerReel[i]) {
+        isUnchanged = false;
+        break;
+      }
+    }
+    if (isUnchanged) {
+      return;
+    }
+
     this._targetShape = [...rowsPerReel];
     this._events.emit('shape:changed', [...rowsPerReel]);
 
@@ -385,7 +400,7 @@ export class ReelSet extends Container implements Disposable {
    *
    * @internal
    */
-  private _consumeTargetShape(): number[] | null {
+  private _peekTargetShape(): number[] | null {
     return this._targetShape;
   }
 
@@ -434,7 +449,7 @@ export class ReelSet extends Container implements Disposable {
 
     // Resolve OCCUPIED → anchor row on this reel. Cross-reel OCCUPIED
     // requires walking left to find the anchoring column with size.w > col.
-    const anchorRow = reel.getAnchorRow(row);
+    const anchorRow = reel._getAnchorRow(row);
     const anchorSym = reel.getSymbolAt(row);
     const meta = this._symbolsData[anchorSym.symbolId];
     const size = meta?.size && (meta.size.w > 1 || meta.size.h > 1)
@@ -449,7 +464,7 @@ export class ReelSet extends Container implements Disposable {
     for (let c = col - 1; c >= 0; c--) {
       const leftReel = this._reels[c];
       if (anchorRow >= leftReel.visibleRows) break;
-      const leftAnchorRow = leftReel.getAnchorRow(anchorRow);
+      const leftAnchorRow = leftReel._getAnchorRow(anchorRow);
       const leftSym = leftReel.getSymbolAt(anchorRow);
       const leftMeta = this._symbolsData[leftSym.symbolId];
       if (leftMeta?.size && leftMeta.size.w > col - c) {
@@ -603,6 +618,7 @@ export class ReelSet extends Container implements Disposable {
       col,
       row,
       originRow: options?.originRow ?? row,
+      migration: options?.migration ?? 'origin',
       symbolId,
       turns: options?.turns ?? 'permanent',
       payload: options?.payload,
@@ -910,15 +926,37 @@ export class ReelSet extends Container implements Disposable {
     const reelPins = this._pinsOnReel(reelIndex);
     for (const pin of reelPins) {
       const fromRow = pin.row;
-      const target = Math.min(pin.originRow, newRows - 1);
-      if (target === fromRow) continue;
 
-      const clamped = target !== pin.originRow;
+      // Compute target row based on migration policy.
+      //   'origin'  → clamp to min(originRow, newRows - 1). Restores on grow.
+      //   'frozen'  → stay at current row if it fits, else clamp to last
+      //              visible row AND update originRow so future grows
+      //              don't restore. "Lock at current position" semantics.
+      let target: number;
+      let clamped: boolean;
+      let nextOriginRow = pin.originRow;
+      if (pin.migration === 'frozen') {
+        if (fromRow < newRows) {
+          target = fromRow;
+          clamped = false;
+        } else {
+          target = newRows - 1;
+          clamped = true;
+          nextOriginRow = target; // freeze the new row as the new "origin"
+        }
+      } else {
+        // 'origin' (default)
+        target = Math.min(pin.originRow, newRows - 1);
+        clamped = target !== pin.originRow;
+      }
+
+      if (target === fromRow && nextOriginRow === pin.originRow) continue;
+
       const fromKey = pinKey(pin.col, fromRow);
       const toKey = pinKey(pin.col, target);
 
       this._pins.delete(fromKey);
-      const moved: CellPin = { ...pin, row: target };
+      const moved: CellPin = { ...pin, row: target, originRow: nextOriginRow };
       this._pins.set(toKey, moved);
 
       // Keep overlay map keyed by the new cell.

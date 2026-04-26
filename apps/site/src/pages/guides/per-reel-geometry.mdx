@@ -81,7 +81,9 @@ await promise;
 
 ### Pin migration (sticky wilds)
 
-A pin's `originRow` is **frozen** at placement. On every reshape it migrates to `min(originRow, newRows - 1)`:
+A pin's `originRow` is captured at placement. On every reshape it migrates per its `migration` policy. Each migration fires `pin:migrated` with `{ fromRow, toRow, clamped, reelIndex }`.
+
+**`migration: 'origin'`** (default — clamp + restore, prevents wander):
 
 | Spin | Shape (col 2) | originRow | Migrated row | Clamped? |
 |------|---------------|-----------|--------------|----------|
@@ -90,7 +92,20 @@ A pin's `originRow` is **frozen** at placement. On every reshape it migrates to 
 | 3 | 7 | 4 | 4 | **restored** |
 | 4 | 4 | 4 | 3 | yes |
 
-Each migration fires `pin:migrated` with `{ fromRow, toRow, clamped, reelIndex }`. This prevents wander: a pin clamped down on a shrink will return to its origin row when a later shape grows back.
+A pin clamped down on a shrink returns to its origin row when a later shape grows back. Right for sticky wilds.
+
+**`migration: 'frozen'`** (clamp without restoring — origin updates on clamp):
+
+| Spin | Shape (col 2) | originRow before | Migrated row | originRow after |
+|------|---------------|------------------|--------------|-----------------|
+| 1 | 5 | 4 | 4 | 4 |
+| 2 | 3 | 4 | 2 (clamped) | **2** (updated) |
+| 3 | 7 | 2 | 2 | 2 |
+| 4 | 4 | 2 | 2 | 2 |
+
+The pin never restores after a clamp. Right for walking wilds, descending wilds, anything where "current row" is the truth and a higher row is unreachable history.
+
+Pass via `pin()` options: `reelSet.pin(col, row, id, { migration: 'frozen' })`.
 
 ### Animation scope
 

@@ -29,7 +29,7 @@ export interface SpinControllerHooks {
   isMultiWaysSlot: boolean;
   symbolsData: Record<string, SymbolData>;
   /** Read pending MultiWays shape. Returns null when no shape is pending. */
-  consumeTargetShape(): number[] | null;
+  peekTargetShape(): number[] | null;
   /** Clear pending shape after AdjustPhase runs. */
   clearTargetShape(): void;
   /** Reel pixel-box height for MultiWays cell-height derivation. */
@@ -127,7 +127,7 @@ export class SpinController implements Disposable {
     this._hooks = hooks ?? {
       isMultiWaysSlot: false,
       symbolsData: {},
-      consumeTargetShape: () => null,
+      peekTargetShape: () => null,
       clearTargetShape: () => {},
       multiwaysReelPixelHeight: 0,
       symbolGapY: 0,
@@ -184,7 +184,7 @@ export class SpinController implements Disposable {
     // Fail-fast: validate big-symbol block fit so setResult throws at the
     // call site rather than later inside skip()/_tryBeginStopSequence().
     const visibleRowsForReel = (i: number): number => {
-      const pendingShape = this._hooks.consumeTargetShape();
+      const pendingShape = this._hooks.peekTargetShape();
       return pendingShape ? pendingShape[i] : this._reels[i].visibleRows;
     };
     this._coordinateBigSymbols(symbols, visibleRowsForReel);
@@ -221,7 +221,7 @@ export class SpinController implements Disposable {
     if (this._resultSymbols) {
       // MultiWays skip: apply pending shape and big-symbol coordinator before
       // placement so reels land at the new shape with OCCUPIED sentinels.
-      const pendingShape = this._hooks.consumeTargetShape();
+      const pendingShape = this._hooks.peekTargetShape();
       const visibleRowsForReel = (i: number): number =>
         pendingShape ? pendingShape[i] : this._reels[i].visibleRows;
       const decorated = this._coordinateBigSymbols(this._resultSymbols, visibleRowsForReel);
@@ -233,19 +233,9 @@ export class SpinController implements Disposable {
         reel.isStopping = false;
 
         if (this._hooks.isMultiWaysSlot && pendingShape) {
-          const targetRows = pendingShape[i];
-          const targetSymbolHeight =
-            this._hooks.multiwaysReelPixelHeight > 0
-              ? (this._hooks.multiwaysReelPixelHeight - (targetRows - 1) * this._hooks.symbolGapY) / targetRows
-              : reel.symbolHeight;
-          if (targetRows !== reel.visibleRows || targetSymbolHeight !== reel.symbolHeight) {
-            this._hooks.migratePinsForReel(i, targetRows);
-            const fromRows = reel.visibleRows;
-            reel.reshape(targetRows, targetSymbolHeight, reel.bufferAbove, reel.bufferBelow);
-            this._hooks.refreshPinOverlaysForReel(i);
-            this._events.emit('adjust:start', { reelIndex: i, fromRows, toRows: targetRows });
-            this._events.emit('adjust:complete', { reelIndex: i });
-          }
+          // Pin migration already ran at setShape() time; reshape via the
+          // shared helper that both paths use. No tween — skip is instant.
+          this._applyReshape(i, pendingShape[i]);
         }
 
         reel.placeSymbols(decorated[i]);
@@ -270,6 +260,46 @@ export class SpinController implements Disposable {
     this._tickerRef.destroy();
     this._activePhases.clear();
     this._isDestroyed = true;
+  }
+
+  /**
+   * Compute the target cell height for a reel given a target row count.
+   * MultiWays slots derive cell height from the fixed `multiwaysReelPixelHeight`;
+   * non-MultiWays slots return the reel's current `symbolHeight` unchanged.
+   */
+  private _targetCellHeightFor(reel: Reel, targetRows: number): number {
+    if (this._hooks.multiwaysReelPixelHeight <= 0) return reel.symbolHeight;
+    return (this._hooks.multiwaysReelPixelHeight - (targetRows - 1) * this._hooks.symbolGapY) / targetRows;
+  }
+
+  /**
+   * Commit a reshape on one reel: emit `adjust:start`, call `reel.reshape()`,
+   * refresh pin overlays, emit `adjust:complete`. Returns whether work was
+   * actually done.
+   *
+   * **The single source of truth** for reshape orchestration — both the
+   * normal AdjustPhase path AND the skip path call this. Avoids the
+   * "two parallel implementations" bug magnet that previously had each
+   * path duplicating the same compute-target-height + reshape + refresh +
+   * emit-events logic.
+   *
+   * Pin migration already happened at `setShape()` time, so this method
+   * only handles geometry + overlays.
+   */
+  private _applyReshape(reelIndex: number, targetRows: number): boolean {
+    const reel = this._reels[reelIndex];
+    const targetCellH = this._targetCellHeightFor(reel, targetRows);
+    const fromRows = reel.visibleRows;
+
+    if (targetRows === fromRows && targetCellH === reel.symbolHeight) {
+      return false;
+    }
+
+    this._events.emit('adjust:start', { reelIndex, fromRows, toRows: targetRows });
+    reel.reshape(targetRows, targetCellH, reel.bufferAbove, reel.bufferBelow);
+    this._hooks.refreshPinOverlaysForReel(reelIndex);
+    this._events.emit('adjust:complete', { reelIndex });
+    return true;
   }
 
   // ── Internal ──────────────────────────────────────────
@@ -352,54 +382,34 @@ export class SpinController implements Disposable {
     speed: SpeedProfile,
     generation: number,
   ): Promise<void> {
-    const targetShape = this._hooks.consumeTargetShape();
+    const targetShape = this._hooks.peekTargetShape();
     const targetRows = targetShape ? targetShape[reelIndex] : reel.visibleRows;
-    const targetSymbolHeight =
-      this._hooks.multiwaysReelPixelHeight > 0
-        ? (this._hooks.multiwaysReelPixelHeight - (targetRows - 1) * this._hooks.symbolGapY) / targetRows
-        : reel.symbolHeight;
+    const targetCellH = this._targetCellHeightFor(reel, targetRows);
 
-    // Pin migration already happened at `setShape()` time (eagerly, so
-    // setResult's pin overlay sees the correct rows). Build tween
-    // descriptors that capture the overlays' CURRENT (pre-reshape) on-
-    // screen pose so AdjustPhase can interpolate from there to the new
-    // cell. Must be done BEFORE AdjustPhase calls reel.reshape() —
-    // otherwise we'd snapshot post-reshape Y values and the tween would
-    // start from the destination.
+    // Build tween descriptors BEFORE the reshape commits — they capture
+    // each overlay's current on-screen pose as the tween's `from` state.
     const pinOverlays = this._hooks.buildPinOverlayTweens(
       reelIndex,
-      targetSymbolHeight,
+      targetCellH,
       this._hooks.symbolGapY,
     );
 
-    // Early-out: no reshape, no overlays to tween. Don't construct the
-    // phase, don't emit adjust:* events. (Vitali Malykh / discussion #58.)
-    const fromRows = reel.visibleRows;
-    const hasReshape =
-      targetRows !== fromRows || targetSymbolHeight !== reel.symbolHeight;
-    if (!hasReshape && pinOverlays.length === 0) {
+    // Commit the reshape via the shared helper (events + reel.reshape +
+    // overlay refresh). Skip if no work and no overlays to tween.
+    const reshapeHappened = this._applyReshape(reelIndex, targetRows);
+    if (!reshapeHappened && pinOverlays.length === 0) {
       return;
     }
 
-    this._events.emit('adjust:start', { reelIndex, fromRows, toRows: targetRows });
-
+    // Run AdjustPhase purely as a tween phase — the geometry is already
+    // committed. Phase only animates the pin overlays from their captured
+    // pre-reshape pose to the new cell positions.
+    if (pinOverlays.length === 0) {
+      return;
+    }
     const adjust = this._phaseFactory.create<any>('adjust', reel, speed);
     this._activePhases.set(reelIndex, adjust);
-    const config: AdjustPhaseConfig = {
-      targetRows,
-      targetSymbolHeight,
-      pinOverlays,
-    };
-    await adjust.run(config);
-
-    if (generation !== this._spinGeneration) return;
-
-    // AdjustPhase has already snapped overlays to their final cells (via
-    // its onComplete settle path). For safety against any extreme custom
-    // ease that leaves a sub-pixel residue, snap again here.
-    this._hooks.refreshPinOverlaysForReel(reelIndex);
-
-    this._events.emit('adjust:complete', { reelIndex });
+    await adjust.run({ pinOverlays } satisfies AdjustPhaseConfig);
   }
 
   private _stopDelayFor(reelIndex: number, speed: SpeedProfile): number {
@@ -428,7 +438,7 @@ export class SpinController implements Disposable {
     // will reshape to. For frame-building purposes we need to send the
     // correct number of visible rows per reel. Pull the pending shape; if
     // unset, fall back to current reel.visibleRows.
-    const pendingShape = this._hooks.consumeTargetShape();
+    const pendingShape = this._hooks.peekTargetShape();
     const visibleRowsForReel = (i: number): number =>
       pendingShape ? pendingShape[i] : this._reels[i].visibleRows;
 

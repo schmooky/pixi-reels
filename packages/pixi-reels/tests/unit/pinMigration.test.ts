@@ -54,6 +54,57 @@ describe('pin migration (MultiWays)', () => {
     }
   });
 
+  it('migration: "frozen" stays at current row, never restores after a clamp', async () => {
+    const { reelSet, destroy } = createTestReelSet({
+      reels: 3,
+      multiways: { minRows: 2, maxRows: 7, reelPixelHeight: 600 },
+      symbolIds: ['a', 'wild'],
+    });
+    try {
+      reelSet.pin(1, 4, 'wild', { turns: 'permanent', migration: 'frozen' });
+      expect(reelSet.getPin(1, 4)?.migration).toBe('frozen');
+
+      // Spin 1: shape fits → no migration. Pin still at row 4.
+      let p = reelSet.spin();
+      reelSet.setShape([5, 5, 5]);
+      reelSet.setResult([
+        ['a','a','a','a','a'], ['a','a','a','a','a'], ['a','a','a','a','a'],
+      ]);
+      reelSet.skip();
+      await p;
+      expect(reelSet.getPin(1, 4)?.row).toBe(4);
+      expect(reelSet.getPin(1, 4)?.originRow).toBe(4);
+
+      // Spin 2: shape shrinks → clamp to row 2 AND update originRow to 2.
+      p = reelSet.spin();
+      reelSet.setShape([3, 3, 3]);
+      reelSet.setResult([
+        ['a','a','a'], ['a','a','a'], ['a','a','a'],
+      ]);
+      reelSet.skip();
+      await p;
+      expect(reelSet.getPin(1, 2)?.row).toBe(2);
+      expect(reelSet.getPin(1, 2)?.originRow).toBe(2); // FROZEN — origin updated
+
+      // Spin 3: shape grows back. With 'frozen', pin STAYS at row 2 (not restored to 4).
+      p = reelSet.spin();
+      reelSet.setShape([7, 7, 7]);
+      reelSet.setResult([
+        ['a','a','a','a','a','a','a'],
+        ['a','a','a','a','a','a','a'],
+        ['a','a','a','a','a','a','a'],
+      ]);
+      reelSet.skip();
+      await p;
+      // Confirm NOT restored to row 4 (which 'origin' would do).
+      expect(reelSet.getPin(1, 4)).toBeUndefined();
+      expect(reelSet.getPin(1, 2)?.row).toBe(2);
+      expect(reelSet.getPin(1, 2)?.originRow).toBe(2);
+    } finally {
+      destroy();
+    }
+  });
+
   it('clamps when shape no longer fits originRow, restores when it fits again', async () => {
     const { reelSet, destroy } = createTestReelSet({
       reels: 3,

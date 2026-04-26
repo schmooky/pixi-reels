@@ -5,26 +5,25 @@ import type { SpeedProfile } from '../../config/types.js';
 import type { ReelSymbol } from '../../symbols/ReelSymbol.js';
 
 export interface AdjustPhaseConfig {
-  /** Target visible-row count for this reel. */
-  targetRows?: number;
-  /** Target cell height for this reel. */
-  targetSymbolHeight?: number;
   /**
-   * Pin overlays on this reel that need to tween to their new cell during
-   * the reshape. Populated by SpinController from `ReelSet`'s pin map.
-   * Each entry's overlay symbol is alive in `viewport.unmaskedContainer` —
-   * the underlying reel cell is owned by the spinning reel and snapped
-   * instantly by `reel.reshape()`.
+   * Pin overlays on this reel that need to tween from their pre-reshape
+   * cell to the post-reshape cell. Populated by `SpinController` BEFORE
+   * the reshape commits — `fromY` captures each overlay's on-screen Y at
+   * the moment the snapshot was taken, `toY` is computed from the new
+   * geometry.
+   *
+   * AdjustPhase no longer commits geometry — `SpinController._applyReshape`
+   * does that synchronously before the phase runs. The phase's only job is
+   * the tween.
    */
-  pinOverlays?: PinOverlayTween[];
+  pinOverlays: PinOverlayTween[];
 }
 
 /**
  * Descriptor for one pin overlay's animation across a MultiWays reshape.
- * The overlay started life sized at `oldCellHeight` and positioned at
- * `oldRow * oldSlotHeight + reel.offsetY`. After the reshape commits we
- * want it at `newRow * newSlotHeight + reel.offsetY`, sized to
- * `newCellHeight`.
+ *
+ * @internal — constructed by `SpinController.buildPinOverlayTweens`. Not
+ * meant to be hand-built by consumers.
  */
 export interface PinOverlayTween {
   /** The pin overlay symbol — its view is what we animate. */
@@ -44,23 +43,20 @@ export interface PinOverlayTween {
 }
 
 /**
- * Bridge between SPIN and STOP for MultiWays slots.
+ * Tween-only phase between SPIN and STOP for MultiWays slots.
  *
- * Snaps the reel geometry (visible-row count + cell height) instantly via
- * `reel.reshape()`, then tweens any pin overlays from their pre-reshape
- * cell to their post-reshape cell. Cell symbols on the strip are NOT
- * tweened — the reel is still spinning at full speed when AdjustPhase
- * runs, and tweening individual symbol scale/position would conflict with
- * the motion layer that's continuously updating Y. The pin overlay lives
- * in the unmasked container, doesn't move with the reel motion, and is
- * the one element that visibly migrates between cells — so it's the only
- * thing the reshape needs to animate.
+ * The geometry commit (resize symbols, reshape motion) happens in
+ * `SpinController._applyReshape` before this phase runs. AdjustPhase only
+ * tweens any pin overlays from their pre-reshape cell to the new cell —
+ * cell symbols on the strip snap instantly because the reel is still
+ * spinning at full speed when this phase runs (tweening cell scale would
+ * fight the motion layer).
  *
  * Inserted into the phase chain ONLY when `builder.multiways(...)` is
  * called. Non-MultiWays slots never see this phase.
  *
- * AdjustPhase plays on top of whatever stop staggering you've configured;
- * its duration is independent of `stopDelay`.
+ * Plays on top of whatever stop staggering you've configured; duration
+ * is independent of `stopDelay`.
  */
 export class AdjustPhase extends ReelPhase<AdjustPhaseConfig> {
   readonly name = 'adjust';
@@ -82,27 +78,17 @@ export class AdjustPhase extends ReelPhase<AdjustPhaseConfig> {
   }
 
   protected onEnter(config: AdjustPhaseConfig): void {
-    const reel = this._reel;
-    const targetRows = config.targetRows ?? reel.visibleRows;
-    const targetCellH = config.targetSymbolHeight ?? reel.symbolHeight;
-    const overlays = config.pinOverlays ?? [];
-    const hasReshape =
-      targetRows !== reel.visibleRows || targetCellH !== reel.symbolHeight;
+    const overlays = config.pinOverlays;
 
-    if (!hasReshape && overlays.length === 0) {
+    if (overlays.length === 0) {
+      // SpinController shouldn't construct the phase in this case, but
+      // defend in depth.
       this._complete();
       return;
     }
 
-    // Commit reel geometry instantly. The motion layer keeps spinning at
-    // its new slotHeight; the player's eye is on the pin overlays, which
-    // we tween below.
-    if (hasReshape) {
-      reel.reshape(targetRows, targetCellH, reel.bufferAbove, reel.bufferBelow);
-    }
-
-    if (overlays.length === 0 || this._durationMs <= 0) {
-      // No pins on this reel (or instant snap requested) — finalize and exit.
+    if (this._durationMs <= 0) {
+      // Instant snap path — match user's `pinMigrationDuration(0)`.
       this._snapPinOverlays(overlays);
       this._complete();
       return;
@@ -110,8 +96,8 @@ export class AdjustPhase extends ReelPhase<AdjustPhaseConfig> {
 
     // Pose every overlay at its OLD cell visually so the tween starts
     // from where the player last saw it. The overlay's underlying view is
-    // already at `newCellHeight` after reshape (we resize it below); we
-    // use scale.y to make it look its old size during the tween.
+    // already at `newCellHeight` after the upstream reshape; we use
+    // scale.y to make it look its old size during the tween.
     for (const o of overlays) {
       o.symbol.resize(o.cellWidth, o.newCellHeight);
       o.symbol.view.x = o.x;

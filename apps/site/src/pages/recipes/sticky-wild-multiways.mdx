@@ -73,6 +73,20 @@ reelSet.pin(newCol, newRow, 'wild', { turns: 'permanent', originRow: newRow });
 
 Default behaviour (origin = placement row) is what 95% of sticky mechanics want.
 
+## "Lock at current row, never restore" mode
+
+The default `migration: 'origin'` clamps + restores, which is right for sticky wilds where the origin row is meaningful. For mechanics where the row is whatever-it-is-now and shouldn't bounce back on grow (walking wilds, descending wilds, anything path-based), pass `migration: 'frozen'`:
+
+```ts
+reelSet.pin(2, 4, 'wild', { turns: 'permanent', migration: 'frozen' });
+//
+// Spin 1: shape 5  → row 4 fits, no migration.
+// Spin 2: shape 3  → clamped to row 2; originRow gets updated to 2.
+// Spin 3: shape 7  → DOES NOT restore to row 4; stays at row 2.
+```
+
+`'frozen'` updates `originRow` on every clamp, so the pin never auto-restores. Pair with `movePin()` for fully manual position control.
+
 ## Constraints
 
 - **AdjustPhase is multiways-only.** `pin:migrated` and `adjust:*` events never fire on non-MultiWays slots.

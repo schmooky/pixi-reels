@@ -331,19 +331,26 @@ export class Reel implements Disposable {
   /**
    * Anchor row for a visible row. Equals `visibleRow` for normal cells;
    * for non-anchor cells inside a big-symbol block, returns the row where
-   * the anchor lives. Used by ReelSet.getSymbolFootprint.
+   * the anchor lives.
+   *
+   * @internal — used by `ReelSet.getSymbolFootprint` and the cross-reel
+   * resolver wired in `ReelSet`'s constructor. Not intended for consumer
+   * use; prefer `ReelSet.getSymbolFootprint(col, row)` which returns full
+   * anchor + size info.
    */
-  getAnchorRow(visibleRow: number): number {
+  _getAnchorRow(visibleRow: number): number {
     const occ = this._occupancy[visibleRow];
     return occ ? occ.anchorRow : visibleRow;
   }
 
   /**
-   * Internal: record that the given visible row is the non-anchor cell of a
-   * big symbol whose anchor lives at `anchorRow`. Called by `placeSymbols`
-   * when a big-symbol id appears in the target frame.
+   * Record that the given visible row is the non-anchor cell of a big
+   * symbol whose anchor lives at `anchorRow`. Pass `null` to clear the
+   * occupancy mark.
+   *
+   * @internal — called by `_finalizeFrame` and the big-symbol coordinator.
    */
-  setOccupancy(visibleRow: number, anchorRow: number | null): void {
+  _setOccupancy(visibleRow: number, anchorRow: number | null): void {
     if (anchorRow === null) {
       this._occupancy[visibleRow] = null;
     } else {

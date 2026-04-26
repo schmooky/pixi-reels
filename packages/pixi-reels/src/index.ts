@@ -58,7 +58,10 @@ export type { StopPhaseConfig } from './spin/phases/StopPhase.js';
 export { AnticipationPhase } from './spin/phases/AnticipationPhase.js';
 export type { AnticipationPhaseConfig } from './spin/phases/AnticipationPhase.js';
 export { AdjustPhase } from './spin/phases/AdjustPhase.js';
-export type { AdjustPhaseConfig, PinOverlayTween } from './spin/phases/AdjustPhase.js';
+export type { AdjustPhaseConfig } from './spin/phases/AdjustPhase.js';
+// Note: `PinOverlayTween` is intentionally not re-exported. It's an
+// internal hand-off type built by SpinController and consumed by
+// AdjustPhase — consumers don't construct one directly.
 
 // Cascade drop-in
 export { DropRecipes } from './cascade/DropRecipes.js';
@@ -101,6 +104,7 @@ export type {
   CellPin,
   CellPinOptions,
   PinExpireReason,
+  PinMigration,
   CellCoord,
   MovePinOptions,
 } from './pins/CellPin.js';
