@@ -7,7 +7,7 @@ describe('big symbols', () => {
       reels: 5,
       visibleRows: 3,
       symbolIds: ['a', 'bonus'],
-      symbolData: { bonus: { size: { w: 2, h: 2 } } },
+      symbolData: { bonus: { weight: 0, size: { w: 2, h: 2 } } },
     });
     try {
       await spinAndLand([
@@ -39,7 +39,7 @@ describe('big symbols', () => {
       reels: 5,
       visibleRows: 3,
       symbolIds: ['a', 'bonus'],
-      symbolData: { bonus: { size: { w: 2, h: 2 } } },
+      symbolData: { bonus: { weight: 0, size: { w: 2, h: 2 } } },
     });
     try {
       await spinAndLand([
@@ -68,7 +68,7 @@ describe('big symbols', () => {
       reels: 3,
       visibleRows: 3,
       symbolIds: ['a', 'giant'],
-      symbolData: { giant: { size: { w: 1, h: 4 } } },
+      symbolData: { giant: { weight: 0, size: { w: 1, h: 4 } } },
     });
     try {
       const promise = reelSet.spin();
@@ -91,7 +91,7 @@ describe('big symbols', () => {
       reels: 3,
       visibleRows: 3,
       symbolIds: ['a', 'wide'],
-      symbolData: { wide: { size: { w: 4, h: 1 } } },
+      symbolData: { wide: { weight: 0, size: { w: 4, h: 1 } } },
     });
     try {
       const promise = reelSet.spin();
@@ -115,8 +115,19 @@ describe('big symbols', () => {
         reels: 5,
         multiways: { minRows: 2, maxRows: 7, reelPixelHeight: 600 },
         symbolIds: ['a', 'bonus'],
-        symbolData: { bonus: { size: { w: 2, h: 2 } } },
+        symbolData: { bonus: { weight: 0, size: { w: 2, h: 2 } } },
       }),
     ).toThrow(/big symbol .* cannot be registered on a MultiWays slot/);
+  });
+
+  it('rejects big symbols with non-zero weight (random fill cannot place blocks)', () => {
+    expect(() =>
+      createTestReelSet({
+        reels: 3,
+        visibleRows: 3,
+        symbolIds: ['a', 'bonus'],
+        symbolData: { bonus: { weight: 5, size: { w: 2, h: 2 } } },
+      }),
+    ).toThrow(/big symbol .* must have weight 0/);
   });
 });

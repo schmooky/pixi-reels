@@ -31,7 +31,7 @@ export type {
   ReelAnchor,
 } from './config/types.js';
 export type { ReelMaskRect, MaskStrategy } from './core/ReelViewport.js';
-export { RectMaskStrategy } from './core/ReelViewport.js';
+export { RectMaskStrategy, SharedRectMaskStrategy } from './core/ReelViewport.js';
 
 // Symbols
 export { ReelSymbol } from './symbols/ReelSymbol.js';

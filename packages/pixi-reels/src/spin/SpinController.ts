@@ -340,6 +340,11 @@ export class SpinController implements Disposable {
    * MultiWays AdjustPhase orchestration: pull the pending shape, migrate
    * pins to their new rows, build pin-overlay tween descriptors, run the
    * phase. Emits `adjust:start` on entry and `adjust:complete` on exit.
+   *
+   * **Skips entirely** when there's no shape change AND no pin overlay on
+   * this reel — no phase instance is constructed and no `adjust:*` events
+   * fire. A spin where most reels have no work shouldn't pay for a phase
+   * boundary or spam the event bus.
    */
   private async _runAdjustForReel(
     reel: Reel,
@@ -354,11 +359,8 @@ export class SpinController implements Disposable {
         ? (this._hooks.multiwaysReelPixelHeight - (targetRows - 1) * this._hooks.symbolGapY) / targetRows
         : reel.symbolHeight;
 
-    const fromRows = reel.visibleRows;
-    this._events.emit('adjust:start', { reelIndex, fromRows, toRows: targetRows });
-
     // Pin migration already happened at `setShape()` time (eagerly, so
-    // setResult's pin overlay sees the correct rows). Now build tween
+    // setResult's pin overlay sees the correct rows). Build tween
     // descriptors that capture the overlays' CURRENT (pre-reshape) on-
     // screen pose so AdjustPhase can interpolate from there to the new
     // cell. Must be done BEFORE AdjustPhase calls reel.reshape() —
@@ -369,6 +371,17 @@ export class SpinController implements Disposable {
       targetSymbolHeight,
       this._hooks.symbolGapY,
     );
+
+    // Early-out: no reshape, no overlays to tween. Don't construct the
+    // phase, don't emit adjust:* events. (Vitali Malykh / discussion #58.)
+    const fromRows = reel.visibleRows;
+    const hasReshape =
+      targetRows !== fromRows || targetSymbolHeight !== reel.symbolHeight;
+    if (!hasReshape && pinOverlays.length === 0) {
+      return;
+    }
+
+    this._events.emit('adjust:start', { reelIndex, fromRows, toRows: targetRows });
 
     const adjust = this._phaseFactory.create<any>('adjust', reel, speed);
     this._activePhases.set(reelIndex, adjust);

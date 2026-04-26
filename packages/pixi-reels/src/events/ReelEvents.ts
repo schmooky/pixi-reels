@@ -55,6 +55,13 @@ export interface ReelSetEvents extends Record<string, unknown[]> {
   'win:symbol': [symbol: unknown, cell: SymbolPosition, win: Win];
   /** WinPresenter finished — either naturally (`complete`) or via abort. */
   'win:end': [reason: 'complete' | 'aborted'];
+  /**
+   * A pin was placed at a cell. The pin's `originRow` is captured at
+   * placement and frozen for its lifetime; on MultiWays slots it controls
+   * how the pin migrates across reshapes (see `pin:migrated`). For
+   * non-MultiWays slots `originRow === pin.row` and never changes — but
+   * the field is still on the payload, so trace logs can show the intent.
+   */
   'pin:placed': [pin: CellPin];
   'pin:moved': [pin: CellPin, from: { col: number; row: number }];
   'pin:expired': [pin: CellPin, reason: PinExpireReason];

@@ -72,17 +72,20 @@ Pinning a non-anchor cell of a big symbol throws — pin the anchor instead, whi
 
 ## Constraints
 
+- **Big symbols must have `weight: 0`.** Random fill can't place blocks in v1, so a non-zero weight would silently never get picked. The builder throws to surface the misunderstanding. Place big symbols via `setResult()` only.
 - **Big symbols + MultiWays** is rejected at build. The 2×2-on-a-2-row question is a game-design call.
 - **Big symbols only at landing** — during the spin, every cell is 1×1. The 2×2 layout commits at stop.
-- **No random-fill big symbols in v1** — only target frames (server-driven) place them.
+- **No random-fill big symbols in v1** — only target frames (server-driven) place them. v2 may add a frame middleware that places big symbols during scroll.
 
 ## How OCCUPIED works internally
 
 The cross-reel coordinator runs in `SpinController` ahead of per-reel `FrameBuilder`. It reads the result grid, finds big-symbol anchors, validates fit, and paints an internal `OCCUPIED_SENTINEL` across the rest of the block. Per-reel frame building leaves OCCUPIED cells alone (they're non-empty strings, so `RandomFillMiddleware` skips them). At land, an invisible `OccupiedStub` (an internal `ReelSymbol` with `view.alpha = 0`) sits at the OCCUPIED cell — the anchor's resized view covers it visually.
 
-The sentinel never crosses the public API. `getVisibleSymbols()` (per reel) resolves intra-reel OCCUPIED to the anchor's id. `ReelSet.getVisibleGrid()` additionally resolves cross-reel OCCUPIED via `getSymbolFootprint`.
+The sentinel never crosses the public API. Both `Reel.getVisibleSymbols()` and `ReelSet.getVisibleGrid()` resolve OCCUPIED — same-reel and cross-reel — to the anchor's id. Iterating per reel returns the same data as the grid surface.
 
 ## Related
 
+- [Guide: Per-reel geometry, MultiWays & big symbols](/guides/per-reel-geometry/) — full mechanics primer + constraint matrix
+- [MxN big symbols](/recipes/big-symbols-mxn/) — every shape: 1×3, 3×3, 2×4
 - [MultiWays](/recipes/multiways/) — mutually exclusive with big symbols
 - [Cell bounds](/recipes/cell-bounds/) — get pixel rects for any cell

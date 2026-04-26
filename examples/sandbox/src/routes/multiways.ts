@@ -35,7 +35,7 @@ export function buildMultiWays({ app, textures, blurTextures }: SandboxContext):
   const reelSet = new ReelSetBuilder()
     .reels(REELS)
     .multiways({ minRows: MIN_ROWS, maxRows: MAX_ROWS, reelPixelHeight: REEL_PIXEL_HEIGHT })
-    .adjustDuration(220)
+    .pinMigrationDuration(220)
     .symbolSize(SYMBOL_SIZE, SYMBOL_SIZE)
     .symbolGap(GAP, GAP)
     .symbols((registry) => {

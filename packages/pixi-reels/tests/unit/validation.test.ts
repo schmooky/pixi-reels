@@ -7,17 +7,33 @@ import { HeadlessSymbol } from '../../src/testing/HeadlessSymbol.js';
 import type { Ticker } from 'pixi.js';
 
 describe('builder validation', () => {
-  it('rejects both visibleSymbols() and visibleRowsPerReel()', () => {
+  it('rejects both visibleRows() and visibleRowsPerReel()', () => {
     expect(() =>
       new ReelSetBuilder()
         .reels(3)
-        .visibleSymbols(3)
+        .visibleRows(3)
         .visibleRowsPerReel([3, 5, 3])
         .symbolSize(100, 100)
         .ticker(new FakeTicker() as unknown as Ticker)
         .symbols((r) => r.register('a', HeadlessSymbol, {}))
         .build(),
-    ).toThrow(/cannot call both visibleSymbols\(\) and visibleRowsPerReel\(\)/);
+    ).toThrow(/cannot call both visibleRows\(\) and visibleRowsPerReel\(\)/);
+  });
+
+  it('visibleSymbols() is preserved as an alias for visibleRows()', () => {
+    // Back-compat: visibleSymbols still works exactly like visibleRows.
+    const builder = new ReelSetBuilder()
+      .reels(3)
+      .visibleSymbols(3)
+      .symbolSize(100, 100)
+      .ticker(new FakeTicker() as unknown as Ticker)
+      .symbols((r) => r.register('a', HeadlessSymbol, {}));
+    const reelSet = builder.build();
+    try {
+      expect(reelSet.reels.map((r) => r.visibleRows)).toEqual([3, 3, 3]);
+    } finally {
+      reelSet.destroy();
+    }
   });
 
   it('rejects multiways() + visibleRowsPerReel()', () => {

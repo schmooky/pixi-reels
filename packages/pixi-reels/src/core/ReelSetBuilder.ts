@@ -7,7 +7,8 @@ import type {
   MultiWaysConfig,
   ReelAnchor,
 } from '../config/types.js';
-import type { ReelMaskRect } from './ReelViewport.js';
+import type { ReelMaskRect, MaskStrategy } from './ReelViewport.js';
+import { RectMaskStrategy } from './ReelViewport.js';
 import { DEFAULTS } from '../config/defaults.js';
 import { SpeedPresets } from '../config/SpeedPresets.js';
 import { ReelSet, type ReelSetParams } from './ReelSet.js';
@@ -87,9 +88,11 @@ export class ReelSetBuilder {
   /** MultiWays configuration. Set by `.multiways(...)`. */
   private _multiways?: MultiWaysConfig;
   /** Per-reel AdjustPhase tween duration in ms (MultiWays only). */
-  private _adjustDuration: number | ((reelIndex: number) => number) = 200;
+  private _pinMigrationDuration: number | ((reelIndex: number) => number) = 200;
   /** GSAP easing string used by AdjustPhase. Default: 'power2.out'. */
-  private _adjustEase = 'power2.out';
+  private _pinMigrationEase = 'power2.out';
+  /** Mask strategy. Default: per-reel `RectMaskStrategy`. */
+  private _maskStrategy: MaskStrategy = new RectMaskStrategy();
 
   /** Set number of reel columns. */
   reels(count: number): this {
@@ -97,15 +100,35 @@ export class ReelSetBuilder {
     return this;
   }
 
-  /** Set number of visible symbol rows per reel. */
-  visibleSymbols(count: number): this {
+  /**
+   * Number of visible rows per reel (uniform across all reels).
+   * Mutually exclusive with `visibleRowsPerReel()` — calling both throws
+   * at `build()`.
+   *
+   * @example
+   * builder.reels(5).visibleRows(3)  // classic 5x3
+   */
+  visibleRows(count: number): this {
     this._visibleRows = count;
     return this;
   }
 
   /**
+   * Alias of {@link visibleRows} — kept for backwards compatibility with
+   * the original API. New code should prefer `visibleRows(n)` so the
+   * naming aligns with `visibleRowsPerReel([...])` (both are about rows;
+   * the original name pre-dated jagged shapes).
+   *
+   * @deprecated Use `visibleRows(n)` instead.
+   */
+  visibleSymbols(count: number): this {
+    return this.visibleRows(count);
+  }
+
+  /**
    * Per-reel static row counts. Length MUST equal `reels()`. Mutually
-   * exclusive with `visibleSymbols()` — calling both throws at `build()`.
+   * exclusive with `visibleRows()` / `visibleSymbols()` — calling both
+   * throws at `build()`.
    *
    * @example
    * builder.reels(5).visibleRowsPerReel([3, 5, 5, 5, 3])  // pyramid
@@ -139,6 +162,26 @@ export class ReelSetBuilder {
   }
 
   /**
+   * Custom mask strategy for the viewport. Defaults to {@link RectMaskStrategy}
+   * (one clip rect per reel — clean for pyramid + uniform layouts).
+   *
+   * Use {@link SharedRectMaskStrategy} when reels have horizontal gaps
+   * AND symbols (typically big symbols) need to overlap across reel
+   * boundaries — the per-reel default would clip them at the gaps.
+   *
+   * Or pass any custom `MaskStrategy` for non-rectangular masks (rounded
+   * frames, hexagonal grids, etc.).
+   *
+   * @example
+   * import { SharedRectMaskStrategy } from 'pixi-reels';
+   * builder.maskStrategy(new SharedRectMaskStrategy())
+   */
+  maskStrategy(strategy: MaskStrategy): this {
+    this._maskStrategy = strategy;
+    return this;
+  }
+
+  /**
    * Configure this slot as MultiWays: per-spin row variation. Pass minRows,
    * maxRows, and the fixed reel pixel height. After build, call
    * `reelSet.setShape(rowsPerReel)` mid-spin to set the next stop's shape.
@@ -160,8 +203,8 @@ export class ReelSetBuilder {
    * AdjustPhase plays on top of whatever stop staggering you've configured
    * — its duration is independent of `stopDelay`.
    */
-  adjustDuration(value: number | ((reelIndex: number) => number)): this {
-    this._adjustDuration = value;
+  pinMigrationDuration(value: number | ((reelIndex: number) => number)): this {
+    this._pinMigrationDuration = value;
     return this;
   }
 
@@ -172,11 +215,11 @@ export class ReelSetBuilder {
    * the full vocabulary.
    *
    * @example
-   * builder.adjustEase('back.out(1.4)')          // pop-in feel
-   * builder.adjustEase('expo.inOut')             // slow start + slow end
+   * builder.pinMigrationEase('back.out(1.4)')          // pop-in feel
+   * builder.pinMigrationEase('expo.inOut')             // slow start + slow end
    */
-  adjustEase(ease: string): this {
-    this._adjustEase = ease;
+  pinMigrationEase(ease: string): this {
+    this._pinMigrationEase = ease;
     return this;
   }
 
@@ -410,18 +453,18 @@ export class ReelSetBuilder {
     // MultiWays: wire AdjustPhase. Stay out of non-MultiWays chains entirely
     // so the default `start → spin → stop` flow is unchanged for them.
     if (isMultiWays) {
-      const adjustDur = this._adjustDuration;
-      const adjustEase = this._adjustEase;
+      const adjustDur = this._pinMigrationDuration;
+      const pinMigrationEase = this._pinMigrationEase;
       this._phaseFactory.registerFactory('adjust', (reel, speed) => {
         const ms = typeof adjustDur === 'function' ? adjustDur(reel.reelIndex) : adjustDur;
-        return new AdjustPhase(reel, speed, { durationMs: ms, ease: adjustEase });
+        return new AdjustPhase(reel, speed, { durationMs: ms, ease: pinMigrationEase });
       });
     }
 
     // Create viewport — width covers all reels, height covers tallest box.
     const viewportWidth = reelCount * (symbolWidth + this._symbolGap.x) - this._symbolGap.x;
     const viewportHeight = tallest;
-    const viewport = new ReelViewport(viewportWidth, viewportHeight);
+    const viewport = new ReelViewport(viewportWidth, viewportHeight, undefined, this._maskStrategy);
 
     // Create offset calculator (X-axis)
     const totalRowsForOffset = bufferAbove + Math.max(...visibleRowsPerReel) + bufferBelow;
@@ -497,10 +540,10 @@ export class ReelSetBuilder {
     const hasMega = !!this._multiways;
 
     if (!hasMega && !hasUniform && !hasShape) {
-      errors.push('one of visibleSymbols(n) or visibleRowsPerReel([...]) or multiways({...}) must be called.');
+      errors.push('one of visibleRows(n) or visibleRowsPerReel([...]) or multiways({...}) must be called.');
     }
     if (hasUniform && hasShape) {
-      errors.push('cannot call both visibleSymbols() and visibleRowsPerReel() — pick one.');
+      errors.push('cannot call both visibleRows() and visibleRowsPerReel() — pick one.');
     }
     if (hasMega && hasShape) {
       errors.push('cannot combine multiways() with visibleRowsPerReel() — MultiWays shapes are server-driven.');
@@ -538,6 +581,16 @@ export class ReelSetBuilder {
       if (this._spinningMode instanceof CascadeMode || this._cascadeDropConfig) {
         errors.push('multiways() is not supported with cascade mode in v1.');
       }
+      // multiways({reelPixelHeight}) sets a uniform reel-pixel height for
+      // every reel; reelPixelHeights([...]) sets per-reel heights for
+      // pyramid layouts. Setting both is ambiguous — fail loud.
+      if (this._reelPixelHeights) {
+        errors.push(
+          'cannot combine multiways({reelPixelHeight}) with reelPixelHeights([...]) — ' +
+          'multiways slots use a uniform reel pixel height. Drop reelPixelHeights() or ' +
+          'remove the multiways() configuration.',
+        );
+      }
       // Big symbols are mutually exclusive with MultiWays.
       for (const id of this._symbolRegistry.symbolIds) {
         const override = this._symbolDataOverrides[id] ?? {};
@@ -551,8 +604,26 @@ export class ReelSetBuilder {
       }
     }
 
+    // Big symbols (size > 1x1) are placed by the server at anchor cells
+    // only — random fill skips them in v1 (a 2x2 with a non-zero weight
+    // would silently never get picked, since RandomFillMiddleware can't
+    // place blocks). Throw to surface the misunderstanding.
+    for (const id of this._symbolRegistry.symbolIds) {
+      const override = this._symbolDataOverrides[id] ?? {};
+      const size = override.size;
+      if (!size || (size.w === 1 && size.h === 1)) continue;
+      const weight = override.weight ?? this._weights[id];
+      if (weight !== undefined && weight > 0) {
+        errors.push(
+          `big symbol '${id}' (size ${size.w}x${size.h}) must have weight 0 — ` +
+          'big symbols are placed by the server at anchor cells only and never enter ' +
+          'random fill in v1. Set weight to 0 (or omit it) and place the symbol via setResult().',
+        );
+      }
+    }
+
     if (this._visibleRows !== undefined && this._visibleRows <= 0) {
-      errors.push('visibleSymbols() must be called with a positive number.');
+      errors.push('visibleRows() must be called with a positive number.');
     }
     if (this._symbolWidth === undefined || this._symbolHeight === undefined) {
       errors.push('symbolSize() must be called with width and height.');

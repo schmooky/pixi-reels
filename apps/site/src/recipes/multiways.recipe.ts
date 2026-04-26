@@ -73,8 +73,8 @@ const GAP = 0;
 const reelSet = new ReelSetBuilder()
   .reels(REELS)
   .multiways({ minRows: MIN_ROWS, maxRows: MAX_ROWS, reelPixelHeight: REEL_PIXEL_HEIGHT })
-  .adjustDuration(300)
-  .adjustEase('power2.inOut')
+  .pinMigrationDuration(300)
+  .pinMigrationEase('power2.inOut')
   .symbolSize(SYMBOL_SIZE, SYMBOL_SIZE)
   .symbolGap(GAP, GAP)
   .symbols((registry) => {

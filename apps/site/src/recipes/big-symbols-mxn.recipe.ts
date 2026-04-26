@@ -33,10 +33,12 @@ const reelSet = new ReelSetBuilder()
   // Each big symbol declares its block via { size: { w, h } }.
   // zIndex lifts them above 1×1 neighbors at the cell where the anchor lives.
   .symbolData({
-    [TALL_BAR]: { weight: 1, zIndex: 5, size: { w: 1, h: 3 } },
-    [SQUARE]:   { weight: 1, zIndex: 5, size: { w: 2, h: 2 } },
-    [GIANT]:    { weight: 1, zIndex: 5, size: { w: 3, h: 3 } },
-    [WIDE]:     { weight: 1, zIndex: 5, size: { w: 2, h: 4 } },
+    // weight 0 — big symbols are placed by the server (or this demo's
+    // nextResult) at anchor cells, never by random fill.
+    [TALL_BAR]: { weight: 0, zIndex: 5, size: { w: 1, h: 3 } },
+    [SQUARE]:   { weight: 0, zIndex: 5, size: { w: 2, h: 2 } },
+    [GIANT]:    { weight: 0, zIndex: 5, size: { w: 3, h: 3 } },
+    [WIDE]:     { weight: 0, zIndex: 5, size: { w: 2, h: 4 } },
   })
   .speed('normal', SpeedPresets.NORMAL)
   .speed('turbo', SpeedPresets.TURBO)

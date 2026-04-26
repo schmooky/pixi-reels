@@ -128,6 +128,13 @@ export class Reel implements Disposable {
    * anchor.
    */
   private _occupancy: Array<{ anchorRow: number } | null> = [];
+  /**
+   * Optional resolver for cross-reel OCCUPIED cells. Set by `ReelSet` so
+   * `getVisibleSymbols()` returns the anchor's id even when the anchor
+   * lives on a different reel (a 2×2 bonus straddles cols c, c+1).
+   * Without it, cross-reel OCCUPIED cells return the OCCUPIED sentinel.
+   */
+  private _crossReelResolver: ((col: number, row: number) => string) | null = null;
 
   constructor(
     config: ReelConfig,
@@ -269,9 +276,15 @@ export class Reel implements Disposable {
 
   /**
    * Get visible symbol IDs (top to bottom, excluding buffers).
-   * For cells inside a big symbol's block (non-anchor cells), returns the
-   * anchor symbol's id rather than the OCCUPIED sentinel — so consumer code
-   * sees a 2×2 bonus as four "bonus" cells.
+   *
+   * Big-symbol cells resolve to the anchor's id — both **same-reel**
+   * (the anchor lives on this reel) and **cross-reel** (the anchor is on
+   * a leftward reel of a wider block). The cross-reel resolver is
+   * injected by `ReelSet`; without it, cross-reel OCCUPIED cells would
+   * return the OCCUPIED sentinel, which is the only difference vs.
+   * `ReelSet.getVisibleGrid()`. With the resolver wired, the two are
+   * equivalent for any reel — `reels.map(r => r.getVisibleSymbols())`
+   * matches `reelSet.getVisibleGrid()`.
    */
   getVisibleSymbols(): string[] {
     const result: string[] = [];
@@ -281,10 +294,27 @@ export class Reel implements Disposable {
         const anchor = this.symbols[this._bufferAbove + occ.anchorRow];
         result.push(anchor.symbolId);
       } else {
-        result.push(this.symbols[this._bufferAbove + row].symbolId);
+        const id = this.symbols[this._bufferAbove + row].symbolId;
+        if (id === OCCUPIED_SENTINEL && this._crossReelResolver) {
+          result.push(this._crossReelResolver(this.reelIndex, row));
+        } else {
+          result.push(id);
+        }
       }
     }
     return result;
+  }
+
+  /**
+   * Internal: register a callback used to resolve cross-reel OCCUPIED
+   * cells to the originating big-symbol's id. Wired by `ReelSet` so this
+   * reel can answer "what id is at (myCol, row)?" even when the anchor is
+   * on a different reel.
+   *
+   * @internal
+   */
+  setCrossReelResolver(resolver: ((col: number, row: number) => string) | null): void {
+    this._crossReelResolver = resolver;
   }
 
   /**

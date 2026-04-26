@@ -84,7 +84,7 @@ const GAP = 0;
 const reelSet = new ReelSetBuilder()
   .reels(REELS)
   .multiways({ minRows: MIN_ROWS, maxRows: MAX_ROWS, reelPixelHeight: REEL_PIXEL_HEIGHT })
-  .adjustDuration(0)             // cells snap; only pin overlays would tween
+  .pinMigrationDuration(0)             // cells snap; only pin overlays would tween
   .symbolSize(SYMBOL_SIZE, SYMBOL_SIZE)
   .symbolGap(GAP, GAP)
   .symbols((registry) => {

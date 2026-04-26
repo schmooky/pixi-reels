@@ -11,9 +11,9 @@ Add: per-reel geometry, MultiWays, big symbols, and expanding wilds.
 
 New events: `shape:changed`, `adjust:start`, `adjust:complete`, `pin:migrated`. They only fire on MultiWays slots — non-MultiWays event surfaces are unchanged.
 
-New runtime: `reelSet.setShape()`, `reelSet.getSymbolFootprint()`, `reelSet.getVisibleGrid()`, `reelSet.isMultiWaysSlot`. New builder fluents: `.visibleRowsPerReel()`, `.reelPixelHeights()`, `.reelAnchor()`, `.multiways()`, `.adjustDuration()`, `.adjustEase()`. Pin gains optional `originRow`.
+New runtime: `reelSet.setShape()`, `reelSet.getSymbolFootprint()`, `reelSet.getVisibleGrid()`, `reelSet.isMultiWaysSlot`. New builder fluents: `.visibleRowsPerReel()`, `.reelPixelHeights()`, `.reelAnchor()`, `.multiways()`, `.pinMigrationDuration()`, `.pinMigrationEase()`. Pin gains optional `originRow`.
 
-AdjustPhase animates the reshape: every visible symbol tweens its height + Y from the old shape to the new one over `adjustDuration` ms with the configurable `adjustEase`. Pin overlays tween in lock-step so a sticky wild visibly slides to its migrated row. Set `adjustDuration(0)` for an instant snap.
+AdjustPhase animates the reshape: every visible symbol tweens its height + Y from the old shape to the new one over `pinMigrationDuration` ms with the configurable `pinMigrationEase`. Pin overlays tween in lock-step so a sticky wild visibly slides to its migrated row. Set `pinMigrationDuration(0)` for an instant snap.
 
 Constraints: big symbols and MultiWays are mutually exclusive per slot in v1. Cascade mode + MultiWays throws at build.
 

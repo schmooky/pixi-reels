@@ -29,7 +29,9 @@ const reelSet = new ReelSetBuilder()
     'royal/royal_1': 14, 'royal/royal_2': 14,
   })
   // Declare the bonus as 2×2. Default zIndex=5 so it draws above neighbors.
-  .symbolData({ [BONUS]: { weight: 1, zIndex: 5, size: { w: 2, h: 2 } } })
+  // Big symbols (size > 1x1) must have weight 0 — they're placed by the
+  // server at anchor cells only, never by random fill.
+  .symbolData({ [BONUS]: { weight: 0, zIndex: 5, size: { w: 2, h: 2 } } })
   .speed('normal', SpeedPresets.NORMAL)
   .speed('turbo', SpeedPresets.TURBO)
   .ticker(app.ticker)

@@ -17,9 +17,18 @@ export interface ReelMaskRect {
 }
 
 /**
- * Strategy for building the viewport's clip mask. Exposed internally so a
- * future v2 can swap a stencil/shape mask without changing the viewport
- * surface. Kept internal in v1 — `RectMaskStrategy` is the only impl shipped.
+ * Strategy for building the viewport's clip mask. Public — pass a custom
+ * implementation to `ReelSetBuilder.maskStrategy(...)` to clip the reels
+ * with any shape PixiJS Graphics can express (rounded frames, hex grids,
+ * etc.). v1 ships two strategies:
+ *
+ * - {@link RectMaskStrategy} — one rect per reel (default). Good for
+ *   pyramid layouts; symbols never leak buffer rows above/below.
+ * - {@link SharedRectMaskStrategy} — single bounding-box rect spanning
+ *   every reel's tallest extent. Big symbols spanning multiple reels
+ *   render correctly even when reels have horizontal gaps; cross-reel
+ *   overlap (e.g. a 2×2 bonus straddling reel 2 and 3 with `symbolGap.x>0`)
+ *   needs this strategy.
  */
 export interface MaskStrategy {
   /** Build (or rebuild) the mask graphic. Returns the Graphics to use as the mask. */
@@ -30,15 +39,20 @@ export interface MaskStrategy {
 
 /**
  * v1 default: a per-reel rectangular mask. Each reel is clipped to its own
- * `(offsetY, reelHeight)` box so pyramid shapes (and uniform shapes) clip
- * cleanly without buffer-row peek.
+ * `(offsetY, reelHeight)` box so pyramid shapes clip cleanly without
+ * buffer-row peek above or below short reels.
  *
  * PixiJS masks support multiple shapes inside a single Graphics — the union
  * of every filled shape is the visible region. So drawing one rect per reel
  * gives the engine a jagged-but-rectangular mask without a custom shader.
  *
- * If `rects` is empty (e.g. before the builder calls `updateMaskSize` with
- * per-reel rects), this falls back to a single bounding-box rect.
+ * **Caveat:** if reels have a horizontal `symbolGap.x > 0`, a symbol that
+ * extends across the gap (e.g. a 2×2 bonus on a non-zero-gap layout) will
+ * be clipped between the columns. Use {@link SharedRectMaskStrategy} in
+ * that case, or set `symbolGap: { x: 0, y: ... }`.
+ *
+ * If `rects` is empty (the builder hasn't supplied per-reel rects yet),
+ * this falls back to a single bounding-box rect.
  */
 export class RectMaskStrategy implements MaskStrategy {
   build(rects: ReelMaskRect[], totalWidth: number, totalHeight: number): Graphics {
@@ -60,6 +74,36 @@ export class RectMaskStrategy implements MaskStrategy {
     for (const r of rects) {
       g.rect(r.x, r.y, r.width, r.height).fill({ color: 0xffffff });
     }
+  }
+}
+
+/**
+ * Single bounding-box mask covering every reel's tallest extent. Use this
+ * when symbols need to overlap across reel boundaries — typical for slots
+ * with big symbols that span multiple columns (a 2×2 bonus, a 3×3 giant)
+ * AND a non-zero `symbolGap.x`. Per-reel rects would clip those symbols at
+ * the column gaps; a single shared rect keeps them visible.
+ *
+ * Pyramid layouts using this strategy will show buffer rows above/below
+ * short reels (the "pyramid peek" — covered by frame art in production).
+ *
+ * @example
+ * builder.maskStrategy(new SharedRectMaskStrategy())
+ */
+export class SharedRectMaskStrategy implements MaskStrategy {
+  build(rects: ReelMaskRect[], totalWidth: number, totalHeight: number): Graphics {
+    const g = new Graphics();
+    this._draw(g, rects, totalWidth, totalHeight);
+    return g;
+  }
+
+  update(g: Graphics, rects: ReelMaskRect[], totalWidth: number, totalHeight: number): void {
+    g.clear();
+    this._draw(g, rects, totalWidth, totalHeight);
+  }
+
+  private _draw(g: Graphics, _rects: ReelMaskRect[], totalW: number, totalH: number): void {
+    g.rect(0, 0, totalW, totalH).fill({ color: 0xffffff });
   }
 }
 

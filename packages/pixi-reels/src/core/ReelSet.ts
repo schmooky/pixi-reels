@@ -134,6 +134,21 @@ export class ReelSet extends Container implements Disposable {
       this._multiwaysReelPixelHeight = params.config.grid.multiways.reelPixelHeight;
     }
 
+    // Wire each reel's cross-reel resolver so `Reel.getVisibleSymbols()`
+    // returns the anchor's id even when the OCCUPIED cell's anchor lives
+    // on a different reel. Without this, per-reel surface returns the
+    // sentinel for cross-reel cells — making it inconsistent with
+    // `ReelSet.getVisibleGrid()`.
+    for (const reel of this._reels) {
+      reel.setCrossReelResolver((col, row) => {
+        const fp = this.getSymbolFootprint(col, row);
+        const anchorReel = this._reels[fp.anchor.col];
+        // Anchor row is on its OWN reel — read its symbolId directly to
+        // avoid recursing back through this resolver.
+        return anchorReel.symbols[anchorReel.bufferAbove + fp.anchor.row].symbolId;
+      });
+    }
+
     const fb = this._frameBuilder;
     this._frameAPI = {
       use(mw: FrameMiddleware): void { fb.use(mw); },
@@ -347,22 +362,15 @@ export class ReelSet extends Container implements Disposable {
 
   /**
    * Resolved grid, with all OCCUPIED cells (same-reel and cross-reel)
-   * replaced by their anchor's symbol id. For non-big-symbol slots this is
-   * `reels.map(r => r.getVisibleSymbols())`. For big-symbol slots a 2×2
-   * bonus appears as four "bonus" cells.
+   * replaced by their anchor's symbol id. A 2×2 bonus reads as four
+   * `'bonus'` cells.
+   *
+   * Equivalent to `reelSet.reels.map(r => r.getVisibleSymbols())` because
+   * each reel has a cross-reel resolver wired in by ReelSet's constructor —
+   * the per-reel surface and the grid surface are the same.
    */
   getVisibleGrid(): string[][] {
-    const grid = this._reels.map((r) => r.getVisibleSymbols());
-    for (let col = 0; col < grid.length; col++) {
-      for (let row = 0; row < grid[col].length; row++) {
-        if (grid[col][row] === OCCUPIED_SENTINEL) {
-          grid[col][row] = this.getSymbolFootprint(col, row).anchor.col === col
-            ? grid[col][this.getSymbolFootprint(col, row).anchor.row]
-            : grid[this.getSymbolFootprint(col, row).anchor.col][this.getSymbolFootprint(col, row).anchor.row];
-        }
-      }
-    }
-    return grid;
+    return this._reels.map((r) => r.getVisibleSymbols());
   }
 
   /**
@@ -955,12 +963,16 @@ export class ReelSet extends Container implements Disposable {
   }
 
   /**
-   * Reposition + resize every pin overlay on the given reel. Called after
-   * a MultiWays reshape commits — both the pin's row (post-migration) and
-   * the cell height have changed since the overlay was first created.
+   * Reposition + resize every pin overlay on the given reel.
    *
-   * No-op for non-MultiWays slots (no reshape, nothing to update). Touches
-   * only overlays that already exist.
+   * The engine calls this automatically after every MultiWays AdjustPhase
+   * reshape (and from the skip path), so applications that just use
+   * `setShape()` / `setResult()` never need to invoke it. **Call it
+   * yourself only if** you mutate `Reel.symbolWidth`, `Reel.symbolHeight`,
+   * or a pin's row outside the normal MultiWays flow — e.g. a custom
+   * mid-spin layout swap that bypasses `AdjustPhase`.
+   *
+   * No-op for reels with no active pin overlays.
    */
   refreshPinOverlaysForReel(reelIndex: number): void {
     const reel = this._reels[reelIndex];

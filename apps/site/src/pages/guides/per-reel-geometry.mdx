@@ -56,8 +56,8 @@ MultiWays is the open-source name for the "ways"-style mechanic where each reel 
 const reelSet = new ReelSetBuilder()
   .reels(6)
   .multiways({ minRows: 2, maxRows: 7, reelPixelHeight: 480 })
-  .adjustDuration(300)         // ms; pin-overlay tween. 0 = instant snap.
-  .adjustEase('power2.inOut')  // any GSAP ease
+  .pinMigrationDuration(300)         // ms; pin-overlay tween. 0 = instant snap.
+  .pinMigrationEase('power2.inOut')  // any GSAP ease
   .symbolSize(68, 68)
   // ...
   .build();
@@ -76,7 +76,7 @@ await promise;
 1. **`spin()`** — reels start scrolling. Cells are at the previous spin's heights.
 2. **`setShape(rowsPerReel)`** — records the target shape. Migrates pins eagerly (see below) so `setResult` can apply pin overlays at the correct row. Emits `shape:changed`.
 3. **`setResult(grid)`** — server result. Each `grid[i]` has length `rowsPerReel[i]`.
-4. **`AdjustPhase`** — inserted between SPIN and STOP **only on MultiWays slots**. Commits the geometry (resizes existing symbols, reshapes the motion layer), tweens any pin overlays from their old cell to their new cell over `adjustDuration` with `adjustEase`. Emits `adjust:start` / `adjust:complete`.
+4. **`AdjustPhase`** — inserted between SPIN and STOP **only on MultiWays slots**. Commits the geometry (resizes existing symbols, reshapes the motion layer), tweens any pin overlays from their old cell to their new cell over `pinMigrationDuration` with `pinMigrationEase`. Emits `adjust:start` / `adjust:complete`.
 5. **`StopPhase`** — lands the reels at the new shape with the bounce.
 
 ### Pin migration (sticky wilds)
@@ -94,7 +94,7 @@ Each migration fires `pin:migrated` with `{ fromRow, toRow, clamped, reelIndex }
 
 ### Animation scope
 
-`adjustDuration` + `adjustEase` control **pin-overlay** migration only. The underlying reel cells snap instantly because the reel is still spinning at full speed during AdjustPhase — tweening individual cell symbols would fight the spinning motion layer.
+`pinMigrationDuration` + `pinMigrationEase` control **pin-overlay** migration only. The underlying reel cells snap instantly because the reel is still spinning at full speed during AdjustPhase — tweening individual cell symbols would fight the spinning motion layer.
 
 If your slot has no pinned cells on a given spin, the AdjustPhase commits geometry instantly and finishes in one frame. The duration only matters when there's an overlay to animate.
 
@@ -118,7 +118,10 @@ A "big symbol" is a single symbol that visually occupies a rectangular block of 
   registry.register('bonus', SpriteSymbol, { textures: { bonus: tex } });
 })
 .symbolData({
-  bonus: { weight: 1, zIndex: 5, size: { w: 2, h: 2 } },
+  bonus: { weight: 0, zIndex: 5, size: { w: 2, h: 2 } },
+  //         ^^^^^^^^^ big symbols MUST have weight 0 — random fill can't
+  //                   place blocks in v1, so a non-zero weight would
+  //                   silently never be picked. Builder throws otherwise.
 })
 ```
 
@@ -140,7 +143,7 @@ setResult([
 Internally:
 1. **Cross-reel coordinator** runs in `SpinController` ahead of per-reel frame building. It reads the result grid, finds big-symbol anchors, validates block fit, and paints `OCCUPIED_SENTINEL` across the rest of the block.
 2. **At land**, the anchor symbol is sized to span the whole `(w*cellW, h*cellH)` block. Non-anchor cells get an invisible `OccupiedStub` (a zero-alpha placeholder) — the anchor's view visually covers them.
-3. **Public API** never sees the sentinel. `Reel.getVisibleSymbols()` resolves intra-reel OCCUPIED to the anchor's id; `ReelSet.getVisibleGrid()` additionally resolves cross-reel OCCUPIED. So a 2×2 bonus reads as four `'bonus'` cells.
+3. **Public API** never sees the sentinel. Both `Reel.getVisibleSymbols()` and `ReelSet.getVisibleGrid()` resolve OCCUPIED — same-reel and cross-reel — to the anchor's id. Iterating per reel and the grid surface return identical data.
 
 ### Block lookup
 
@@ -184,6 +187,30 @@ The mutual-exclusivity rules aren't engine limitations — they're **design cons
 **Cascade + MultiWays**: cascade physics drop survivors into vacant cells from above; MultiWays reshape changes the cell count between spins. Combining them means a cascade survivor at row 6 may not have a row 6 to land on next spin. The combination is niche enough that v1 defers it; raise an issue if your slot needs it.
 
 **Pyramid + MultiWays**: `visibleRowsPerReel` declares a *static* shape; `multiways({...})` declares a *dynamic* shape. They contradict each other — both say "the row count of reel `i` is...". The builder picks one or the other, not both.
+
+## Mask strategy
+
+The viewport's clip mask is built by a `MaskStrategy` — a public interface so consumers can pass in any custom shape. v1 ships two implementations:
+
+| Strategy | Default? | Use when | Caveat |
+|---|---|---|---|
+| `RectMaskStrategy` | yes | Pyramid layouts, uniform layouts, MultiWays where reels share horizontal spacing | If `symbolGap.x > 0` AND big symbols span reels, the gap clips them between columns |
+| `SharedRectMaskStrategy` | no | Big symbols on a layout with `symbolGap.x > 0`; any case where you want cross-reel overlap | Pyramid layouts will show buffer rows above/below short reels (the "pyramid peek") |
+
+```ts
+import { SharedRectMaskStrategy } from 'pixi-reels';
+builder.maskStrategy(new SharedRectMaskStrategy());
+```
+
+For non-rectangular masks (rounded frames, hexagonal grids), implement the `MaskStrategy` interface directly — pass a `Graphics` filled with whatever shape PixiJS supports.
+
+To see exactly what's clipped, enable the debug overlay:
+
+```ts
+__PIXI_REELS_DEBUG.showMask(true);
+```
+
+It paints the active clip area semi-transparent red and outlines each per-reel rect in green.
 
 ## See also
 

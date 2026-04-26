@@ -144,7 +144,8 @@ export function enableDebug(reelSet: ReelSet): void {
         'spin:reelLanded', 'spin:allLanded', 'spin:complete',
         'skip:requested', 'skip:completed', 'speed:changed',
         'spotlight:start', 'spotlight:end',
-        'shape:changed', 'adjust:start', 'adjust:complete', 'pin:migrated',
+        'shape:changed', 'adjust:start', 'adjust:complete',
+        'pin:placed', 'pin:moved', 'pin:expired', 'pin:migrated',
         'destroyed',
       ] as const;
       for (const event of events) {
