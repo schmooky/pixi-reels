@@ -4,118 +4,240 @@ Implements [discussion #58](https://github.com/schmooky/pixi-reels/discussions/5
 
 PR: [#60](https://github.com/schmooky/pixi-reels/pull/60) · branch: `feat/per-reel-geometry-big-symbols-megaways`
 
-## What's new
+---
 
-| Feature | Builder API | Runtime API | Surfaces |
+## Summary
+
+| Mechanic | Builder API | Runtime API | New events |
 |---|---|---|---|
-| **Per-reel static shape (pyramid)** | `.visibleRowsPerReel([3,5,5,5,3])`, `.reelAnchor()`, `.reelPixelHeights()` | — | jagged layouts at build time |
+| **Per-reel geometry** (pyramid, jagged) | `.visibleRowsPerReel([3,5,5,5,3])`, `.reelAnchor()`, `.reelPixelHeights()` | — | — |
 | **MultiWays** (per-spin row variation) | `.multiways({ minRows, maxRows, reelPixelHeight })`, `.pinMigrationDuration()`, `.pinMigrationEase()` | `reelSet.setShape(rowsPerReel)`, `reelSet.isMultiWaysSlot` | `shape:changed`, `adjust:start`, `adjust:complete`, `pin:migrated` |
-| **Big symbols (NxM)** | `.symbolData({ id: { size: { w, h } } })` | `reelSet.getSymbolFootprint(col, row)`, `reelSet.getVisibleGrid()`, `reelSet.getBlockBounds(col, row)` | server still sends `string[][]` |
-| **Expanding wilds** | unchanged — `pin(col, row, 'wild', { turns: 'eval' })` | unchanged | `pin:placed`, `pin:expired` |
+| **Big symbols** (NxM blocks) | `.symbolData({ id: { size: { w, h } } })` | `reelSet.getSymbolFootprint`, `reelSet.getVisibleGrid`, `reelSet.getBlockBounds` | — |
+| **Expanding wilds** | unchanged — `pin(col, row, 'wild', { turns: 'eval' })` | unchanged | unchanged |
 
-Plus a new internal phase (`AdjustPhase`, MultiWays-only) and a public `MaskStrategy` interface (`RectMaskStrategy` per-reel default, `SharedRectMaskStrategy` for big symbols + horizontal gap; auto-picked at build).
+Plus: a new internal phase (`AdjustPhase`, MultiWays-only), a new public `MaskStrategy` interface (`RectMaskStrategy` + `SharedRectMaskStrategy`, auto-picked at build), and a shared debug `CardSymbol` for prototyping.
 
-## Decisions from discussion 19 review
+---
 
-The design doc had eight open questions. Both reviewers (`@hendrikpern`, `@MajorTahm`) responded; this PR encodes the consensus:
+## 1. Per-reel geometry (pyramid + jagged layouts)
 
-| # | Decision | Where it lives |
-|---|---|---|
-| 19.1 | Cascade + MultiWays deferred to v2 — throws at build | `ReelSetBuilder._validate()` |
-| 19.2 | AdjustPhase fires on StopPhase entry (after `setResult`) | `SpinController._startReel()` |
-| 19.3 | OCCUPIED stub is a singleton-ish internal placeholder, not pooled | `Reel.OccupiedStub` |
-| 19.4 | `MaskStrategy` is now public; ships with `RectMaskStrategy` + `SharedRectMaskStrategy` | `ReelViewport.ts`, exported from `index.ts` |
-| 19.5 | **AdjustPhase only inserted when `.multiways()` is called**; auto-skips when no reshape AND no pin overlays | `ReelSetBuilder.build()` registers `'adjust'` factory only for MultiWays slots; `SpinController._runAdjustForReel` early-returns |
-| 19.6 | `reelPixelHeights` wins over `reelAnchor` when both set | `ReelSetBuilder.build()` |
-| 19.7 | `pinMigrationDuration` is independent of `stopDelay` | `AdjustPhase` constructor |
-| 19.8 | `DebugSnapshot.visibleRows: number -> number[]` shipped under minor bump, called out in changeset | `.changeset/per-reel-geometry-big-symbols.md` |
+### What's new
 
-## Mutual exclusivity (game-design guardrails)
+```ts
+new ReelSetBuilder()
+  .visibleRowsPerReel([3, 5, 5, 5, 3])  // pyramid
+  .reelAnchor('center')                  // 'top' | 'center' | 'bottom'
+  .reelPixelHeights([240, 400, 400, 400, 240])  // override layout pixels
+```
 
-Three combinations throw at build with named errors:
+Reels can have non-uniform row counts at build time. Each reel still has buffer rows above/below for spinning, but its visible window is independent.
 
-- **MultiWays + cascade mode** — niche; raise an issue if needed
-- **MultiWays + big symbols** — "what's a 2x2 on a 2-row reel?" is a design question, not an engine question
-- **MultiWays + visibleRowsPerReel** — both declare per-reel row counts; they contradict
-- **Big symbols with non-zero weight** — big symbols may only land via target frames, not random fill (v1)
+### Architecture
 
-Surfaced in the new `/guides/big-symbols/` and `/guides/multiways/` pages as a constraint matrix and explained in the "why these reject each other" sections.
+- `Reel` gains `_offsetY`, `_reelHeight`, `_visibleRows`, `_bufferAbove`, `_bufferBelow` per-reel
+- `ReelViewport` stores per-reel offsets and uses them when sizing the mask
+- `ReelSet.getCellBounds(col, row)` returns the correct world coords for jagged layouts
+- `RectMaskStrategy` draws **one rect per reel** (not a single bounding rect) to prevent buffer-row peek on shorter reels in pyramid layouts
 
-## Architecture highlights
+### Decision wins
 
-### Pin migration (`originRow` + `migration` policy)
+- `reelPixelHeights` overrides `reelAnchor` when both set (review #19.6)
+- Validation throws on length mismatch with reel count
 
-A pin's `originRow` is frozen at placement. Pins gain a `migration: 'origin' | 'frozen'` policy:
+---
 
-- **`origin` (default)** — clamps to `min(originRow, newRows - 1)` on every reshape. A pin at origin row 4 cycling through `7 -> 3 -> 7 -> 5 -> 7` always returns to row 4 when the shape allows. **No wander.**
-- **`frozen`** — pin clamps once when shape shrinks but never restores. Useful for walking-wild-on-MultiWays where the pin should keep its visited cell across reshapes.
+## 2. MultiWays (per-spin row variation)
 
-Migration runs eagerly inside `setShape()` rather than lazily inside `AdjustPhase`. This was the trickiest correctness issue: `setResult()` calls `_applyPinsToGrid()` which uses `pin.row` to index into the new (smaller) result grid — if migration runs later, the pin is silently dropped because `pin.row` is out of bounds for the shrunk shape. Fixed by migrating at `setShape` time so `setResult` sees the migrated rows.
+### What's new
 
-### Mask strategy auto-pick
+```ts
+new ReelSetBuilder()
+  .multiways({ minRows: 3, maxRows: 7, reelPixelHeight: 480 })
+  .pinMigrationDuration(220)         // ms
+  .pinMigrationEase('power2.out')    // GSAP ease
+```
 
-`RectMaskStrategy` draws **one rect per reel** into a single PixiJS mask Graphics — the union of those rects forms the clip shape. Pyramid layouts clip cleanly without buffer-row peek; MultiWays clips per-reel-pixel-height boxes; uniform layouts get the equivalent of a single bounding rect.
+```ts
+// During gameplay
+reelSet.setShape([5, 7, 4, 6, 5, 3]);   // before setResult
+reelSet.setResult(symbols);
+await reelSet.spin();
+```
 
-`SharedRectMaskStrategy` draws a single bounding-box rect across all reels. Required for big symbols when `symbolGap.x > 0`, because a 2x2 anchor straddling a column gap would otherwise be clipped at the gap. The builder auto-picks `SharedRectMaskStrategy` when big symbols are registered AND there's a horizontal gap; opt out with `.maskStrategy(new RectMaskStrategy())`.
+### Architecture
 
-Originally specced as a single bounding-box rect (with "pyramid peek" expected to be hidden by frame art); upgraded to per-reel rects mid-implementation when the peek issue surfaced visually in testing. Promoted to public API on review feedback (#19.4).
+- New `AdjustPhase` (StopPhase entry) reshapes reels between SPIN and STOP. Only inserted when `.multiways()` is called (review #19.5) — non-MultiWays slots get the original phase chain unchanged.
+- `AdjustPhase` auto-skips when there's no reshape AND no pin overlays — zero work for spins that didn't change shape.
+- `pinMigrationDuration` is independent of `stopDelay` (review #19.7).
+- Shared `_applyReshape` helper inside `SpinController` deduplicates the AdjustPhase path and the `skip()` (slam-stop) path. Geometry commits stay identical regardless of which path runs.
+- `setShape()` after `setResult()` throws fail-fast — pin migration relies on running before `_applyPinsToGrid()`.
+
+### Pin migration
+
+A pin's `originRow` is frozen at placement. Pins gain a `migration` policy:
+
+- **`origin` (default)** — clamps to `min(originRow, newRows - 1)` on every reshape, restores when shape grows back. **No wander** — a pin at origin row 4 cycling through `7 -> 3 -> 7 -> 5 -> 7` always returns to row 4.
+- **`frozen`** — clamps once when shape shrinks, never restores. Useful for walking-wild-on-MultiWays where the pin should keep its visited cell.
+
+Migration runs eagerly inside `setShape()` rather than lazily inside `AdjustPhase`. This was the trickiest correctness issue: `setResult()` calls `_applyPinsToGrid()` which uses `pin.row` to index into the new (smaller) result grid. If migration ran later, pins were silently dropped because `pin.row` was out of bounds for the shrunk shape.
 
 ### AdjustPhase tween scope
 
 `pinMigrationDuration` + `pinMigrationEase` control **pin-overlay** migration only. The underlying reel cells snap instantly because the reel is still spinning at full speed during AdjustPhase — tweening individual cell symbols would fight the spinning motion layer. Pin overlays live in the unmasked container, don't move with the reel motion, and are the one element that visibly migrates between cells.
 
-Shared `_applyReshape` helper inside `SpinController` deduplicates the AdjustPhase path and the `skip()` path so geometry commits stay identical on slam-stop. Dedicated tests for both paths.
+---
 
-### Big-symbol coordinator + gap-inclusive sizing
+## 3. Big symbols (NxM blocks)
 
-Cross-reel OCCUPIED painting runs in `SpinController._tryBeginStopSequence` ahead of per-reel `FrameBuilder.build()`. Per-reel frame building stays per-reel and context-free. Validation (`block exceeds reel height`, `block exceeds reel count`) throws fail-fast at `setResult()`.
+### What's new
 
-The OCCUPIED sentinel never crosses the public API. `Reel.getVisibleSymbols()` resolves intra-reel OCCUPIED to the anchor's id; `ReelSet.getVisibleGrid()` additionally resolves cross-reel OCCUPIED via `getSymbolFootprint`. So a 2x2 bonus reads as four `'bonus'` cells from any consumer surface.
+```ts
+.symbols((r) => {
+  r.register('bonus', BonusSymbol, { size: { w: 2, h: 2 } });
+})
+.symbolWeights({ '7': 10, '8': 10, /* ... */ bonus: 0 });   // big symbols MUST be weight 0
+```
 
-**Block sizing includes inter-cell gaps.** A 2x2 block on a `(cellW=80, cellH=80, gapX=4, gapY=4)` layout covers `2*80 + 1*4 = 164px` wide, not 160. Both `Reel._finalizeFrame` and `ReelSet.getBlockBounds` add `(w-1)*gapX` horizontally and `(h-1)*gapY` vertically — without it, anchor symbols leave thin uncovered strips at the gap rows/cols.
+Server still sends `string[][]`. The engine paints OCCUPIED across the block automatically:
 
-## Naming: MultiWays (not Megaways)
+```ts
+reelSet.setResult([
+  ['7', '8', 'bonus', 'OCCUPIED', '9'],   // row 0: 'bonus' anchor + OCCUPIED tail
+  ['Q', 'K', 'OCCUPIED', 'OCCUPIED', 'A'], // row 1: bonus continues
+  ['J', '10', 'wild', 'A', 'K'],
+]);
+```
 
-"Megaways" is Big Time Gaming's trademark. The mechanic itself — per-spin row variation — is generic. The library uses **MultiWays** as the open-source name, lowercase `multiways` for identifiers and slugs. The `.visibleSymbols(n)` builder fluent is preserved as an alias for `.visibleRows(n)` so existing code keeps compiling.
+Consumer surfaces resolve OCCUPIED back to the anchor's id transparently:
 
-## CardSymbol: shared debug primitive
+```ts
+reelSet.getVisibleGrid()
+// → [['7','8','bonus','bonus','9'], ['Q','K','bonus','bonus','A'], ...]
+
+reelSet.getSymbolFootprint(2, 0)
+// → { anchor: { col: 2, row: 0 }, size: { w: 2, h: 2 } }
+
+reelSet.getBlockBounds(2, 0)
+// → { x, y, width: 2*cellW + 1*gapX, height: 2*cellH + 1*gapY }
+```
+
+### Architecture
+
+- Cross-reel OCCUPIED painting runs in `SpinController._tryBeginStopSequence` ahead of per-reel `FrameBuilder.build()`. Per-reel frame building stays per-reel and context-free.
+- The OCCUPIED sentinel never crosses the public API — `Reel.getVisibleSymbols()` resolves intra-reel, `ReelSet.getVisibleGrid()` resolves cross-reel.
+- `OccupiedStub` is an internal singleton-like placeholder, allocated directly by `Reel`, not pooled (review #19.3).
+
+### Block sizing includes inter-cell gaps
+
+A 2x2 block on a `(cellW=80, cellH=80, gapX=4, gapY=4)` layout covers `2*80 + 1*4 = 164px` wide, not 160. Both `Reel._finalizeFrame` and `ReelSet.getBlockBounds` add `(w-1)*gapX` horizontally and `(h-1)*gapY` vertically. Without this, anchor symbols left thin uncovered strips at the gap rows/cols.
+
+### Mask strategy auto-pick
+
+When big symbols are registered AND `symbolGap.x > 0`, the builder auto-picks `SharedRectMaskStrategy` (single bounding rect) instead of `RectMaskStrategy` (per-reel). A 2x2 anchor straddling a column gap would otherwise be clipped at the gap. Opt out with `.maskStrategy(new RectMaskStrategy())`.
+
+### Validation (fail-fast)
+
+- Big symbols must have `weight: 0` (only land via target frames in v1)
+- Block exceeding reel height or reel count throws at `setResult()`
+- MultiWays + big symbols throws at build (mutual exclusivity)
+
+---
+
+## 4. Expanding wilds
+
+Unchanged from existing pin API — confirmed via tests as a degenerate big-symbol case (NxM block painted via cell pins with `turns: 'eval'`).
+
+```ts
+reelSet.pin(2, 0, 'wild', { turns: 'eval' });   // expand reel 2 column
+reelSet.pin(2, 1, 'wild', { turns: 'eval' });
+reelSet.pin(2, 2, 'wild', { turns: 'eval' });
+```
+
+---
+
+## Cross-cutting
+
+### MaskStrategy (now public, review #19.4)
+
+| Strategy | Use when |
+|---|---|
+| `RectMaskStrategy` | default — per-reel rects, prevents pyramid buffer peek |
+| `SharedRectMaskStrategy` | big symbols + horizontal gap (auto-picked); custom shapes that span reels |
+
+`MaskStrategy` interface is exported from `pixi-reels` so games can ship custom strategies (stencil/shape mask is the obvious v2 candidate).
+
+### CardSymbol (debug-only prototyping primitive)
 
 `examples/shared/CardSymbol.ts` is a flat `PIXI.Graphics` rectangle plus centered `Text` (Roboto Condensed) that scales crisply at any cell size. Used across all geometry recipes so cells visually fill their space across MultiWays reshapes and big-symbol blocks without needing pre-rendered atlas assets.
 
-The `CardSymbol` class is **explicitly debug-only** — `/recipes/card-symbol-debug/` documents this and points production users at `SpriteSymbol` / `AnimatedSpriteSymbol` / `SpineSymbol`. It lives in `examples/shared/` (not the library proper) for that reason: it's prototyping scaffolding, not library API.
+The class is **explicitly debug-only**. `/recipes/card-symbol-debug/` documents this and points production users at `SpriteSymbol` / `AnimatedSpriteSymbol` / `SpineSymbol`. It lives in `examples/shared/` (not the library proper) for that reason: it's prototyping scaffolding, not library API.
 
-Site-wide Roboto Condensed font loads via Google Fonts in `Base.astro` so card recipes render with consistent type even on plain pages.
+Site-wide Roboto Condensed loads via Google Fonts in `Base.astro` so card recipes render with consistent type even on plain pages.
 
-## Recipes added (grouped by topic)
+### Naming: MultiWays (not Megaways)
 
-The `/recipes/` index now groups by topic:
+"Megaways" is Big Time Gaming's trademark. The mechanic itself — per-spin row variation — is generic. The library uses **MultiWays** as the open-source name, lowercase `multiways` for identifiers. The `.visibleSymbols(n)` builder fluent is preserved as an alias for `.visibleRows(n)` so existing code keeps compiling.
 
-**Pyramid layouts**
-- `/recipes/pyramid-shape/` — static `3-5-5-5-3` with CardSymbol
+### Mutual exclusivity (game-design guardrails)
 
-**MultiWays**
+Three combinations throw at build with named errors:
+
+| Combination | Why it throws |
+|---|---|
+| MultiWays + cascade mode | Niche; raise an issue if needed (review #19.1) |
+| MultiWays + big symbols | "What's a 2x2 on a 2-row reel?" is a design question, not an engine question |
+| MultiWays + visibleRowsPerReel | Both declare per-reel row counts; they contradict |
+| Big symbols with non-zero weight | Big symbols only land via target frames in v1, never random fill |
+
+Surfaced in the `/guides/big-symbols/` and `/guides/multiways/` pages as a constraint matrix.
+
+### Decisions from discussion 19 review
+
+| # | Decision | Where it lives |
+|---|---|---|
+| 19.1 | Cascade + MultiWays deferred to v2 — throws at build | `ReelSetBuilder._validate()` |
+| 19.2 | AdjustPhase fires on StopPhase entry (after `setResult`) | `SpinController._startReel()` |
+| 19.3 | OCCUPIED stub is singleton-like internal, not pooled | `Reel.OccupiedStub` |
+| 19.4 | `MaskStrategy` public; ships with two strategies | `ReelViewport.ts`, exported from `index.ts` |
+| 19.5 | AdjustPhase only inserted on MultiWays slots; auto-skips when no reshape AND no pin overlays | `ReelSetBuilder.build()`, `SpinController._runAdjustForReel` |
+| 19.6 | `reelPixelHeights` wins over `reelAnchor` when both set | `ReelSetBuilder.build()` |
+| 19.7 | `pinMigrationDuration` independent of `stopDelay` | `AdjustPhase` constructor |
+| 19.8 | `DebugSnapshot.visibleRows: number -> number[]` | Documented in changeset |
+
+---
+
+## Recipes (grouped by topic on `/recipes/`)
+
+### Pyramid layouts
+- `/recipes/pyramid-shape/` — static `[3,5,5,5,3]` with CardSymbol
+
+### MultiWays
 - `/recipes/multiways/` — per-spin reshape with prototype atlas symbols
-- `/recipes/multiways-card-symbols/` — same mechanic with CardSymbol (cells visually fill space)
-- `/recipes/sticky-wild-multiways/` — pin migration in action with a yellow `WILD` cell
-- `/recipes/card-symbol-debug/` — explainer page for CardSymbol as debug-only primitive
+- `/recipes/multiways-card-symbols/` — same mechanic with CardSymbol (cells visually fill space across reshapes)
+- `/recipes/sticky-wild-multiways/` — pin migration in action with a `WILD` cell
+- `/recipes/card-symbol-debug/` — explainer page: CardSymbol is debug-only, production uses Sprite/AnimatedSprite/Spine
 
-**Big symbols**
-- `/recipes/big-symbols/` — single 2x2 bonus with CardSymbol
+### Big symbols
+- `/recipes/big-symbols/` — single 2x2 bonus with CardSymbol + `SharedRectMaskStrategy`
 - `/recipes/big-symbols-mxn/` — every shape (1x3, 2x2, 3x3, 2x4) on one reelset
+
+---
 
 ## Docs
 
-The original combined geometry guide is now split into three focused pages:
+The original combined geometry guide is split into three focused pages:
 
 - `/guides/per-reel-geometry/` — pyramid layouts, `reelAnchor`, per-reel pixel heights
 - `/guides/multiways/` — per-spin reshape, AdjustPhase, pin migration policies
 - `/guides/big-symbols/` — NxM blocks, OCCUPIED sentinel, mask strategy, gap-inclusive sizing
 
-Plus `.changeset/per-reel-geometry-big-symbols.md` for the minor bump. ADRs and Spine recipe contract were dropped during scope-trimming.
+Plus `.changeset/per-reel-geometry-big-symbols.md` for the minor bump.
 
-## Tests
+---
 
-**212 / 212 pass** across 25 test files. New coverage:
+## Verification
+
+### Tests — 212 / 212 pass across 25 files
 
 | File | Coverage |
 |---|---|
@@ -124,14 +246,32 @@ Plus `.changeset/per-reel-geometry-big-symbols.md` for the minor bump. ADRs and 
 | `bigSymbols.test.ts` | 2x2 anchor + OCCUPIED, `getSymbolFootprint`, `getBlockBounds`, block overflow, MultiWays + big-symbol rejection |
 | `pinMigration.test.ts` | `originRow` defaults, `origin`/`frozen` policies, clamp + restore, overlay reposition |
 | `expandingWild.test.ts` | 1x3 column fill via eval pins |
-| `validation.test.ts` | every throw path: shape mismatches, mutual exclusivity rules |
-| `maskStrategy.test.ts` | `RectMaskStrategy` per-reel rects, `SharedRectMaskStrategy` bounding rect, auto-pick logic |
+| `validation.test.ts` | every throw path |
+| `maskStrategy.test.ts` | both strategies + auto-pick logic |
 
-Lint clean. Lib build clean (`dist/index.js` 78.31 kB / 20.13 kB gzip). All examples build. Site builds 78 pages.
+### Build
+
+- `pnpm --filter pixi-reels typecheck` — green
+- `pnpm --filter pixi-reels test` — 212 / 212
+- `pnpm check:lint` — green
+- `pnpm --filter pixi-reels build` — green (`dist/index.js` 78.31 kB / 20.13 kB gzip)
+- `pnpm --filter site build` — 78 pages
+
+### Manual QA (browser preview)
+
+- Pyramid renders `[3,5,5,5,3]` with no buffer peek
+- MultiWays reshapes from `[7,7,7,7,7,7]` through varied shapes; cells snap, pin overlays tween
+- Sticky wild on MultiWays — clamp + restore demonstrated across `[5] -> [3] -> [7] -> [4]` cycle
+- Big symbols — 2x2, 3x3, 1x3, 2x4 all land correctly with no uncovered gap strips
+- CardSymbol (PIXI.Graphics + Roboto Condensed) renders at exact cell sizes across all MultiWays shapes
+
+---
 
 ## Breaking notes
 
 `DebugSnapshot.visibleRows` widens from `number` to `number[]`. The snapshot is debug-only and not protected by semver, but adapt anywhere that deep-reads it. Called out in the changeset under "Breaking".
+
+---
 
 ## Out of scope (deferred to TODO.md)
 
@@ -144,16 +284,3 @@ Lint clean. Lib build clean (`dist/index.js` 78.31 kB / 20.13 kB gzip). All exam
 - Big symbols from random fill (only target frames place them)
 - Pool shrink on MultiWays collapse (high-water mark)
 - Visual regression harness for mask strategies
-
-## Test plan
-
-- [x] `pnpm --filter pixi-reels typecheck` — green
-- [x] `pnpm --filter pixi-reels test` — 212 / 212 pass
-- [x] `pnpm check:lint` — green
-- [x] `pnpm --filter pixi-reels build` — green (`dist/index.js` 78.31 kB / 20.13 kB gzip)
-- [x] `pnpm --filter site build` — 78 pages
-- [x] Browser preview: pyramid renders `[3,5,5,5,3]` with no buffer peek
-- [x] Browser preview: MultiWays reshapes from `[7,7,7,7,7,7]` through varied shapes; cells snap, pin overlays tween
-- [x] Browser preview: sticky wild on MultiWays — clamp + restore demonstrated across `[5] -> [3] -> [7] -> [4]` cycle
-- [x] Browser preview: big symbols — 2x2, 3x3, 1x3, 2x4 all land correctly with no uncovered gap strips
-- [x] Browser preview: card symbols (PIXI.Graphics + Roboto Condensed) render at exact cell sizes across all MultiWays shapes
