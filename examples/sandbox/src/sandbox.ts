@@ -19,7 +19,7 @@ import type { Application, Texture } from 'pixi.js';
 import { ReelSetBuilder, SpeedPresets, type ReelSet, enableDebug } from 'pixi-reels';
 import { BlurSpriteSymbol } from '../../shared/BlurSpriteSymbol.js';
 import { buildPyramid } from './routes/pyramid.js';
-import { buildMegaways } from './routes/megaways.js';
+import { buildMultiWays } from './routes/multiways.js';
 import { buildExpandingWild } from './routes/expanding-wild.js';
 import { buildBigSymbols } from './routes/big-symbols.js';
 
@@ -39,9 +39,9 @@ export interface SandboxResult {
 
 // Swap this assignment to try a recipe from `./routes/*`. Set to `null` to
 // run the inline default classic 5×3 below.
-//   buildPyramid | buildMegaways | buildExpandingWild | buildBigSymbols
+//   buildPyramid | buildMultiWays | buildExpandingWild | buildBigSymbols
 const ACTIVE_ROUTE: ((ctx: SandboxContext) => SandboxResult) | null = null;
-void buildPyramid; void buildMegaways; void buildExpandingWild; void buildBigSymbols;
+void buildPyramid; void buildMultiWays; void buildExpandingWild; void buildBigSymbols;
 
 const REELS = 5;
 const ROWS = 3;
@@ -149,7 +149,7 @@ function pickWeighted(): string {
 }
 
 // ============================================================================
-//  PER-REEL GEOMETRY / MEGAWAYS / BIG SYMBOLS / EXPANDING WILDS
+//  PER-REEL GEOMETRY / MULTIWAYS / BIG SYMBOLS / EXPANDING WILDS
 // ============================================================================
 //
 // Each route in `./routes/` is a complete `buildSandbox`-shaped function.
@@ -157,7 +157,7 @@ function pickWeighted(): string {
 //
 // Available routes:
 //   - ./routes/pyramid.js          — static 3-5-5-5-3 pyramid
-//   - ./routes/megaways.js         — per-spin row variation (2..7 rows)
+//   - ./routes/multiways.js         — per-spin row variation (2..7 rows)
 //   - ./routes/expanding-wild.js   — wild expands its full column for one spin
 //   - ./routes/big-symbols.js      — 2×2 bonus block via SymbolData.size
 //

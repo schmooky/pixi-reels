@@ -59,11 +59,11 @@ export interface ReelSetEvents extends Record<string, unknown[]> {
   'pin:moved': [pin: CellPin, from: { col: number; row: number }];
   'pin:expired': [pin: CellPin, reason: PinExpireReason];
   /**
-   * Megaways: a pin was relocated by an AdjustPhase reshape because its
+   * MultiWays: a pin was relocated by an AdjustPhase reshape because its
    * `originRow` either no longer fits within the new shape (`clamped: true`)
    * or fits at a row that differs from its current visual position.
    *
-   * Always fires from a Megaways AdjustPhase — non-Megaways slots never
+   * Always fires from a MultiWays AdjustPhase — non-MultiWays slots never
    * emit this event.
    */
   'pin:migrated': [
@@ -71,17 +71,17 @@ export interface ReelSetEvents extends Record<string, unknown[]> {
     info: { fromRow: number; toRow: number; clamped: boolean; reelIndex: number },
   ];
   /**
-   * Megaways: `setShape(rowsPerReel)` recorded a new target shape for the
+   * MultiWays: `setShape(rowsPerReel)` recorded a new target shape for the
    * upcoming AdjustPhase. Fires before any geometry change. No-op for
-   * non-Megaways slots — they never see this event.
+   * non-MultiWays slots — they never see this event.
    */
   'shape:changed': [rowsPerReel: number[]];
   /**
-   * Megaways: per-reel AdjustPhase entry. `fromRows` is the row count
+   * MultiWays: per-reel AdjustPhase entry. `fromRows` is the row count
    * before the reshape; `toRows` is the row count after.
    */
   'adjust:start': [info: { reelIndex: number; fromRows: number; toRows: number }];
-  /** Megaways: per-reel AdjustPhase exit. */
+  /** MultiWays: per-reel AdjustPhase exit. */
   'adjust:complete': [info: { reelIndex: number }];
   /**
    * Fires whenever the engine creates a visual overlay symbol for a pin

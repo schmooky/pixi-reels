@@ -72,7 +72,7 @@ Pinning a non-anchor cell of a big symbol throws — pin the anchor instead, whi
 
 ## Constraints
 
-- **Big symbols + Megaways** is rejected at build. The 2×2-on-a-2-row question is a game-design call.
+- **Big symbols + MultiWays** is rejected at build. The 2×2-on-a-2-row question is a game-design call.
 - **Big symbols only at landing** — during the spin, every cell is 1×1. The 2×2 layout commits at stop.
 - **No random-fill big symbols in v1** — only target frames (server-driven) place them.
 
@@ -84,5 +84,5 @@ The sentinel never crosses the public API. `getVisibleSymbols()` (per reel) reso
 
 ## Related
 
-- [Megaways](/recipes/megaways/) — mutually exclusive with big symbols
+- [MultiWays](/recipes/multiways/) — mutually exclusive with big symbols
 - [Cell bounds](/recipes/cell-bounds/) — get pixel rects for any cell

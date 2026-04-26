@@ -2,15 +2,15 @@ import { describe, it, expect } from 'vitest';
 import { createTestReelSet, captureEvents } from '../../src/testing/index.js';
 import { debugSnapshot } from '../../src/debug/debug.js';
 
-describe('Megaways reshape', () => {
-  it('builds at maxRows by default and reports isMegawaysSlot', () => {
+describe('MultiWays reshape', () => {
+  it('builds at maxRows by default and reports isMultiWaysSlot', () => {
     const { reelSet, destroy } = createTestReelSet({
       reels: 6,
-      megaways: { minRows: 2, maxRows: 7, reelPixelHeight: 600 },
+      multiways: { minRows: 2, maxRows: 7, reelPixelHeight: 600 },
       symbolIds: ['a', 'b'],
     });
     try {
-      expect(reelSet.isMegawaysSlot).toBe(true);
+      expect(reelSet.isMultiWaysSlot).toBe(true);
       expect(reelSet.reels.map((r) => r.visibleRows)).toEqual([7, 7, 7, 7, 7, 7]);
     } finally {
       destroy();
@@ -20,7 +20,7 @@ describe('Megaways reshape', () => {
   it('setShape() emits shape:changed with a copy of the input', () => {
     const { reelSet, destroy } = createTestReelSet({
       reels: 4,
-      megaways: { minRows: 2, maxRows: 6, reelPixelHeight: 500 },
+      multiways: { minRows: 2, maxRows: 6, reelPixelHeight: 500 },
       symbolIds: ['a'],
     });
     try {
@@ -33,10 +33,10 @@ describe('Megaways reshape', () => {
     }
   });
 
-  it('setShape() throws on non-Megaways slot', () => {
+  it('setShape() throws on non-MultiWays slot', () => {
     const { reelSet, destroy } = createTestReelSet({ reels: 5, visibleRows: 3 });
     try {
-      expect(() => reelSet.setShape([3, 3, 3, 3, 3])).toThrow(/megaways/);
+      expect(() => reelSet.setShape([3, 3, 3, 3, 3])).toThrow(/multiways/);
     } finally {
       destroy();
     }
@@ -45,7 +45,7 @@ describe('Megaways reshape', () => {
   it('setShape() validates length and bounds', () => {
     const { reelSet, destroy } = createTestReelSet({
       reels: 4,
-      megaways: { minRows: 2, maxRows: 5, reelPixelHeight: 500 },
+      multiways: { minRows: 2, maxRows: 5, reelPixelHeight: 500 },
       symbolIds: ['a'],
     });
     try {
@@ -60,7 +60,7 @@ describe('Megaways reshape', () => {
   it('reel.reshape applies new visibleRows + cell height', () => {
     const { reelSet, destroy } = createTestReelSet({
       reels: 3,
-      megaways: { minRows: 2, maxRows: 6, reelPixelHeight: 600 },
+      multiways: { minRows: 2, maxRows: 6, reelPixelHeight: 600 },
       symbolIds: ['a', 'b'],
       symbolSize: { width: 100, height: 100 },
     });
@@ -77,7 +77,7 @@ describe('Megaways reshape', () => {
   it('AdjustPhase adjusts shape between SPIN and STOP', async () => {
     const { reelSet, spinAndLand, destroy } = createTestReelSet({
       reels: 3,
-      megaways: { minRows: 2, maxRows: 6, reelPixelHeight: 600 },
+      multiways: { minRows: 2, maxRows: 6, reelPixelHeight: 600 },
       symbolIds: ['a', 'b'],
     });
     try {
@@ -99,10 +99,10 @@ describe('Megaways reshape', () => {
     }
   });
 
-  it('snapshot.visibleRows is per-reel after Megaways reshape', () => {
+  it('snapshot.visibleRows is per-reel after MultiWays reshape', () => {
     const { reelSet, destroy } = createTestReelSet({
       reels: 3,
-      megaways: { minRows: 2, maxRows: 6, reelPixelHeight: 600 },
+      multiways: { minRows: 2, maxRows: 6, reelPixelHeight: 600 },
       symbolIds: ['a'],
     });
     try {

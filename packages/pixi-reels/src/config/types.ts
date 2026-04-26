@@ -37,7 +37,7 @@ export interface SymbolData {
    * Footprint in cells. Default `{ w: 1, h: 1 }`. When `w * h > 1` this
    * symbol is a "big symbol" — at landing it occupies an `w × h` block of
    * cells anchored at the (col, row) where its id appears in the result.
-   * Big-symbol registration is rejected on Megaways slots.
+   * Big-symbol registration is rejected on MultiWays slots.
    */
   size?: { w: number; h: number };
 }
@@ -46,10 +46,10 @@ export interface SymbolData {
 export type ReelAnchor = 'top' | 'center' | 'bottom';
 
 /**
- * Megaways configuration knobs. Set via `builder.megaways({ ... })` —
+ * MultiWays configuration knobs. Set via `builder.multiways({ ... })` —
  * mutually exclusive with big-symbol registration.
  */
-export interface MegawaysConfig {
+export interface MultiWaysConfig {
   /** Minimum visible rows the server can request. Inclusive. */
   minRows: number;
   /** Maximum visible rows the server can request. Inclusive. */
@@ -82,7 +82,7 @@ export interface ReelGridConfig {
   symbolHeight: number;
   /**
    * Per-reel pixel-box heights. Length MUST equal `reelCount` when set.
-   * For Megaways: every entry is the same fixed reel height. For static
+   * For MultiWays: every entry is the same fixed reel height. For static
    * pyramids: defaults to `visibleRowsPerReel[i] * symbolHeight`.
    */
   reelPixelHeights?: number[];
@@ -96,12 +96,12 @@ export interface ReelGridConfig {
   /** Number of buffer symbols above and below the visible area. Default: 1. */
   bufferSymbols?: number;
   /**
-   * Megaways configuration. Set by `builder.megaways(...)`. When present:
+   * MultiWays configuration. Set by `builder.multiways(...)`. When present:
    *   - `setShape(rowsPerReel)` becomes callable mid-spin
    *   - AdjustPhase is inserted between SPIN and STOP
    *   - big-symbol registration throws at build time
    */
-  megaways?: MegawaysConfig;
+  multiways?: MultiWaysConfig;
 }
 
 /** Extra symbols above/below config per reel. */
@@ -202,7 +202,7 @@ export interface MaskConfig {
 
 /**
  * Resolved grid view used internally — every defaulted field is filled in,
- * but per-reel-shape and Megaways extensions stay optional because they're
+ * but per-reel-shape and MultiWays extensions stay optional because they're
  * genuinely opt-in.
  */
 export interface ResolvedReelGridConfig {
@@ -215,7 +215,7 @@ export interface ResolvedReelGridConfig {
   visibleRowsPerReel?: number[];
   reelPixelHeights?: number[];
   reelAnchor: ReelAnchor;
-  megaways?: MegawaysConfig;
+  multiways?: MultiWaysConfig;
 }
 
 /** Full internal configuration assembled by the builder. */

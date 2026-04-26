@@ -120,7 +120,7 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
           'DropRecipes', 'CascadeAnticipationPhase',
           'WinPresenter', 'loadPixellabSymbols',
           'app', 'textures', 'blurTextures', 'SYMBOL_IDS', 'pickWeighted', 'gsap', 'PIXI',
-          'runCascade', 'tumbleToGrid', 'diffCells', 'EmptySymbol',
+          'runCascade', 'tumbleToGrid', 'diffCells', 'EmptySymbol', 'ReelSymbol',
           `"use strict"; ${js}`,
         );
         // Await the factory result so recipes that need async setup
@@ -132,7 +132,7 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
           DropRecipes, CascadeAnticipationPhase,
           WinPresenter, loadPixellabSymbols,
           app, textures, blurTextures, SYMBOL_IDS, pickWeighted, gsap, PIXI,
-          runCascade, tumbleToGrid, diffCells, EmptySymbol,
+          runCascade, tumbleToGrid, diffCells, EmptySymbol, ReelSymbol,
         )) as RunResult;
       } catch (e) {
         setError(`Runtime error: ${(e as Error).message}`);

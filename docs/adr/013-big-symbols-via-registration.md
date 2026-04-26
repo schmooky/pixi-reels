@@ -19,7 +19,7 @@ Big symbols are declared at registration via `SymbolData.size = { w, h }` (defau
 
 The cross-reel coordinator runs in `SpinController` before per-reel `FrameBuilder.build()`. It validates block fit (throws on overflow with a named message) and rewrites the result grid in place. `FrameBuilder` stays per-reel and context-free — the original layering is preserved.
 
-Big symbols and Megaways are mutually exclusive at build time. `.megaways(...)` + a `size > 1×1` registration throws.
+Big symbols and MultiWays are mutually exclusive at build time. `.multiways(...)` + a `size > 1×1` registration throws.
 
 ## Consequences
 
@@ -33,4 +33,4 @@ Big symbols and Megaways are mutually exclusive at build time. `.megaways(...)` 
 
 - **Encode size in result data.** Every server integration learns a new shape; CLAUDE.md and the `setResult` typedoc grow new edge cases. Rejected.
 - **Pool the OCCUPIED stub through SymbolFactory.** Adds a special-case symbol id everyone has to know about. Rejected (discussion #58, section 19.3) — singleton-ish stubs allocated by `Reel` are simpler.
-- **Big symbols on Megaways.** "What's a 2×2 on a 2-row reel?" is a game-design question the engine can't answer cleanly. Defer to v2 if a customer ever asks.
+- **Big symbols on MultiWays.** "What's a 2×2 on a 2-row reel?" is a game-design question the engine can't answer cleanly. Defer to v2 if a customer ever asks.

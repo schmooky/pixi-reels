@@ -1,11 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import { createTestReelSet, captureEvents } from '../../src/testing/index.js';
 
-describe('pin migration (Megaways)', () => {
+describe('pin migration (MultiWays)', () => {
   it('originRow defaults to row at pin placement', () => {
     const { reelSet, destroy } = createTestReelSet({
       reels: 4,
-      megaways: { minRows: 2, maxRows: 7, reelPixelHeight: 600 },
+      multiways: { minRows: 2, maxRows: 7, reelPixelHeight: 600 },
       symbolIds: ['a', 'wild'],
     });
     try {
@@ -16,10 +16,10 @@ describe('pin migration (Megaways)', () => {
     }
   });
 
-  it('repositions + resizes the pin overlay after a Megaways reshape', async () => {
+  it('repositions + resizes the pin overlay after a MultiWays reshape', async () => {
     const { reelSet, destroy } = createTestReelSet({
       reels: 3,
-      megaways: { minRows: 2, maxRows: 7, reelPixelHeight: 700 },
+      multiways: { minRows: 2, maxRows: 7, reelPixelHeight: 700 },
       symbolIds: ['a', 'wild'],
       symbolSize: { width: 100, height: 100 },
     });
@@ -57,7 +57,7 @@ describe('pin migration (Megaways)', () => {
   it('clamps when shape no longer fits originRow, restores when it fits again', async () => {
     const { reelSet, destroy } = createTestReelSet({
       reels: 3,
-      megaways: { minRows: 2, maxRows: 7, reelPixelHeight: 600 },
+      multiways: { minRows: 2, maxRows: 7, reelPixelHeight: 600 },
       symbolIds: ['a', 'wild'],
     });
     try {

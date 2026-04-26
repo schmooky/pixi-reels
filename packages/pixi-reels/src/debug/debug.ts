@@ -9,7 +9,7 @@ import type { Reel } from '../core/Reel.js';
  * Returns no PixiJS display objects, only serializable data.
  *
  * **Breaking note (since v0.3):** `visibleRows` is now `number[]` (one entry
- * per reel) so jagged shapes (pyramids, Megaways) are representable. For
+ * per reel) so jagged shapes (pyramids, MultiWays) are representable. For
  * uniform slots every entry is the same value. Adapt downstream code that
  * deep-reads the snapshot.
  */
@@ -157,7 +157,7 @@ export function enableDebug(reelSet: ReelSet): void {
     /**
      * Toggle a debug overlay on the unmasked container that visualizes the
      * mask shape and per-reel boxes. Useful for spotting pyramid peek and
-     * confirming Megaways box geometry.
+     * confirming MultiWays box geometry.
      */
     showMask: (enabled: boolean) => {
       if (enabled) {

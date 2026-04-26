@@ -27,7 +27,7 @@ export type {
   MaskConfig,
   ReelSetInternalConfig,
   ResolvedReelGridConfig,
-  MegawaysConfig,
+  MultiWaysConfig,
   ReelAnchor,
 } from './config/types.js';
 export type { ReelMaskRect, MaskStrategy } from './core/ReelViewport.js';

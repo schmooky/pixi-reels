@@ -1,8 +1,8 @@
 ---
 layout: ../../layouts/Recipe.astro
-title: Sticky wild on Megaways
-description: Pin survives every Megaways reshape. Wild stays at its originRow when the shape allows; clamps to the last row when the shape shrinks; migrates back when the shape grows again.
-tags: [megaways, sticky, wild, cell-pin, pin-migration]
+title: Sticky wild on MultiWays
+description: Pin survives every MultiWays reshape. Wild stays at its originRow when the shape allows; clamps to the last row when the shape shrinks; migrates back when the shape grows again.
+tags: [multiways, sticky, wild, cell-pin, pin-migration]
 steps:
   - "Pin wilds on spin:allLanded with { turns: N } — originRow defaults to current row"
   - "Each spin, setShape(rowsPerReel) before setResult() — AdjustPhase migrates pins"
@@ -14,12 +14,12 @@ apis:
   - "events: pin:migrated"
 ---
 
-import code from '../../recipes/sticky-wild-megaways.recipe.ts?raw';
+import code from '../../recipes/sticky-wild-multiways.recipe.ts?raw';
 import { RecipeRunner } from '../../components/RecipeRunner.tsx';
 
 <RecipeRunner code={code} client:only="react" />
 
-The combination most studios get wrong: a sticky wild on a Megaways slot. The naive implementation forgets where the wild was *supposed* to be after a few reshapes — so the wild walks downward as shapes shrink and never finds its way back up.
+The combination most studios get wrong: a sticky wild on a MultiWays slot. The naive implementation forgets where the wild was *supposed* to be after a few reshapes — so the wild walks downward as shapes shrink and never finds its way back up.
 
 `pixi-reels` solves this by freezing `originRow` at pin placement and computing the migrated row as `min(originRow, newRows - 1)` on every reshape. The pin clamps when the shape can't fit, and restores when it can again — no wander, no game-state bookkeeping.
 
@@ -59,13 +59,13 @@ Each reshape fires `pin:migrated` per affected pin with `{ fromRow, toRow, clamp
 
 ## Why this matters
 
-Naive sticky-wild-on-Megaways implementations track only the *current* row. The first time a shape shrinks, the pin is rewritten to the clamped row; the original row is forgotten. After a `7 → 3 → 7` cycle, the wild ends up two rows lower than where it started. Players notice — and so do regulators auditing visible state.
+Naive sticky-wild-on-MultiWays implementations track only the *current* row. The first time a shape shrinks, the pin is rewritten to the clamped row; the original row is forgotten. After a `7 → 3 → 7` cycle, the wild ends up two rows lower than where it started. Players notice — and so do regulators auditing visible state.
 
 `originRow` is frozen at pin creation. The clamp is computed *fresh* on every reshape from the origin, not from the previous clamped position. So a `7 → 3 → 7 → 5 → 7` cycle always returns the pin to its origin row whenever the shape allows.
 
 ## Override originRow if you need to
 
-For walking-wild-on-Megaways, you'd want to update the origin as the wild walks:
+For walking-wild-on-MultiWays, you'd want to update the origin as the wild walks:
 
 ```ts
 reelSet.pin(newCol, newRow, 'wild', { turns: 'permanent', originRow: newRow });
@@ -75,12 +75,12 @@ Default behaviour (origin = placement row) is what 95% of sticky mechanics want.
 
 ## Constraints
 
-- **AdjustPhase is megaways-only.** `pin:migrated` and `adjust:*` events never fire on non-Megaways slots.
+- **AdjustPhase is multiways-only.** `pin:migrated` and `adjust:*` events never fire on non-MultiWays slots.
 - **Pin migration is per-reel.** Pins on column 2 don't reshape when only column 4's row count changes.
-- **Big symbols + Megaways** is rejected at build, so a sticky big-symbol-on-Megaways isn't a thing in v1.
+- **Big symbols + MultiWays** is rejected at build, so a sticky big-symbol-on-MultiWays isn't a thing in v1.
 
 ## Related
 
-- [Sticky wild (CellPin)](/recipes/sticky-wild-pin/) — same pattern, non-Megaways slot
-- [Megaways](/recipes/megaways/) — full Megaways primer
+- [Sticky wild (CellPin)](/recipes/sticky-wild-pin/) — same pattern, non-MultiWays slot
+- [MultiWays](/recipes/multiways/) — full MultiWays primer
 - [Walking wild (movePin)](/recipes/walking-wild-pin/) — moving pins between cells

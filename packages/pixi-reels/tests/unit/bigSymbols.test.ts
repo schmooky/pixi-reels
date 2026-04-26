@@ -109,14 +109,14 @@ describe('big symbols', () => {
     }
   });
 
-  it('rejects big-symbol registration on Megaways slots at build()', () => {
+  it('rejects big-symbol registration on MultiWays slots at build()', () => {
     expect(() =>
       createTestReelSet({
         reels: 5,
-        megaways: { minRows: 2, maxRows: 7, reelPixelHeight: 600 },
+        multiways: { minRows: 2, maxRows: 7, reelPixelHeight: 600 },
         symbolIds: ['a', 'bonus'],
         symbolData: { bonus: { size: { w: 2, h: 2 } } },
       }),
-    ).toThrow(/big symbol .* cannot be registered on a Megaways slot/);
+    ).toThrow(/big symbol .* cannot be registered on a MultiWays slot/);
   });
 });

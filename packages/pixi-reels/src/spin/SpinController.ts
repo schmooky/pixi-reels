@@ -21,19 +21,19 @@ import { OCCUPIED_SENTINEL } from '../core/Reel.js';
 import type { CellPin } from '../pins/CellPin.js';
 
 /**
- * Megaways/big-symbol coordination hook injected by `ReelSet` into
- * `SpinController`. All callbacks are no-ops (and `isMegawaysSlot=false`)
- * for non-Megaways slots, so the standard chain is unchanged.
+ * MultiWays/big-symbol coordination hook injected by `ReelSet` into
+ * `SpinController`. All callbacks are no-ops (and `isMultiWaysSlot=false`)
+ * for non-MultiWays slots, so the standard chain is unchanged.
  */
 export interface SpinControllerHooks {
-  isMegawaysSlot: boolean;
+  isMultiWaysSlot: boolean;
   symbolsData: Record<string, SymbolData>;
-  /** Read pending Megaways shape. Returns null when no shape is pending. */
+  /** Read pending MultiWays shape. Returns null when no shape is pending. */
   consumeTargetShape(): number[] | null;
   /** Clear pending shape after AdjustPhase runs. */
   clearTargetShape(): void;
-  /** Reel pixel-box height for Megaways cell-height derivation. */
-  megawaysReelPixelHeight: number;
+  /** Reel pixel-box height for MultiWays cell-height derivation. */
+  multiwaysReelPixelHeight: number;
   symbolGapY: number;
   /** Reel-scoped pin lookup. Used to build AdjustPhase tween descriptors. */
   getPinsOnReel(reelIndex: number): CellPin[];
@@ -49,7 +49,7 @@ export interface SpinControllerHooks {
   }[];
   /**
    * Reposition + resize every pin overlay on the given reel. Called after
-   * AdjustPhase commits a Megaways reshape so overlays move to their new
+   * AdjustPhase commits a MultiWays reshape so overlays move to their new
    * (post-migration) row at the new cell size.
    */
   refreshPinOverlaysForReel(reelIndex: number): void;
@@ -125,11 +125,11 @@ export class SpinController implements Disposable {
     this._tickerRef = new TickerRef(ticker);
     this._spinningMode = spinningMode ?? new StandardMode();
     this._hooks = hooks ?? {
-      isMegawaysSlot: false,
+      isMultiWaysSlot: false,
       symbolsData: {},
       consumeTargetShape: () => null,
       clearTargetShape: () => {},
-      megawaysReelPixelHeight: 0,
+      multiwaysReelPixelHeight: 0,
       symbolGapY: 0,
       getPinsOnReel: () => [],
       migratePinsForReel: () => [],
@@ -219,7 +219,7 @@ export class SpinController implements Disposable {
     this._spinGeneration++;
 
     if (this._resultSymbols) {
-      // Megaways skip: apply pending shape and big-symbol coordinator before
+      // MultiWays skip: apply pending shape and big-symbol coordinator before
       // placement so reels land at the new shape with OCCUPIED sentinels.
       const pendingShape = this._hooks.consumeTargetShape();
       const visibleRowsForReel = (i: number): number =>
@@ -232,11 +232,11 @@ export class SpinController implements Disposable {
         reel.speed = 0;
         reel.isStopping = false;
 
-        if (this._hooks.isMegawaysSlot && pendingShape) {
+        if (this._hooks.isMultiWaysSlot && pendingShape) {
           const targetRows = pendingShape[i];
           const targetSymbolHeight =
-            this._hooks.megawaysReelPixelHeight > 0
-              ? (this._hooks.megawaysReelPixelHeight - (targetRows - 1) * this._hooks.symbolGapY) / targetRows
+            this._hooks.multiwaysReelPixelHeight > 0
+              ? (this._hooks.multiwaysReelPixelHeight - (targetRows - 1) * this._hooks.symbolGapY) / targetRows
               : reel.symbolHeight;
           if (targetRows !== reel.visibleRows || targetSymbolHeight !== reel.symbolHeight) {
             this._hooks.migratePinsForReel(i, targetRows);
@@ -306,10 +306,10 @@ export class SpinController implements Disposable {
     await spinDone;
     if (generation !== this._spinGeneration) return;
 
-    // Megaways: AdjustPhase commits the new shape and migrates pins between
-    // SpinPhase and StopPhase. Inserted only when builder.megaways() was
-    // called — non-Megaways slots skip this entirely.
-    if (this._hooks.isMegawaysSlot && this._phaseFactory.has('adjust')) {
+    // MultiWays: AdjustPhase commits the new shape and migrates pins between
+    // SpinPhase and StopPhase. Inserted only when builder.multiways() was
+    // called — non-MultiWays slots skip this entirely.
+    if (this._hooks.isMultiWaysSlot && this._phaseFactory.has('adjust')) {
       await this._runAdjustForReel(reel, reelIndex, speed, generation);
       if (generation !== this._spinGeneration) return;
     }
@@ -337,7 +337,7 @@ export class SpinController implements Disposable {
   }
 
   /**
-   * Megaways AdjustPhase orchestration: pull the pending shape, migrate
+   * MultiWays AdjustPhase orchestration: pull the pending shape, migrate
    * pins to their new rows, build pin-overlay tween descriptors, run the
    * phase. Emits `adjust:start` on entry and `adjust:complete` on exit.
    */
@@ -350,8 +350,8 @@ export class SpinController implements Disposable {
     const targetShape = this._hooks.consumeTargetShape();
     const targetRows = targetShape ? targetShape[reelIndex] : reel.visibleRows;
     const targetSymbolHeight =
-      this._hooks.megawaysReelPixelHeight > 0
-        ? (this._hooks.megawaysReelPixelHeight - (targetRows - 1) * this._hooks.symbolGapY) / targetRows
+      this._hooks.multiwaysReelPixelHeight > 0
+        ? (this._hooks.multiwaysReelPixelHeight - (targetRows - 1) * this._hooks.symbolGapY) / targetRows
         : reel.symbolHeight;
 
     const fromRows = reel.visibleRows;
@@ -411,7 +411,7 @@ export class SpinController implements Disposable {
       if (!phase || phase.name !== 'spin') return;
     }
 
-    // For Megaways, the per-reel target row count is whatever AdjustPhase
+    // For MultiWays, the per-reel target row count is whatever AdjustPhase
     // will reshape to. For frame-building purposes we need to send the
     // correct number of visible rows per reel. Pull the pending shape; if
     // unset, fall back to current reel.visibleRows.
@@ -537,8 +537,8 @@ export class SpinController implements Disposable {
     this._isSpinning = false;
     this._activePhases.clear();
     this._cachedFrames = null;
-    // Megaways: the target shape was applied this spin; clear it so the next
-    // spin starts fresh. Non-Megaways: this is a no-op.
+    // MultiWays: the target shape was applied this spin; clear it so the next
+    // spin starts fresh. Non-MultiWays: this is a no-op.
     this._hooks.clearTargetShape();
 
     this._events.emit('spin:allLanded', result);

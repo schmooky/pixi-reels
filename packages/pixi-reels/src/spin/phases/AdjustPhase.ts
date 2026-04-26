@@ -20,7 +20,7 @@ export interface AdjustPhaseConfig {
 }
 
 /**
- * Descriptor for one pin overlay's animation across a Megaways reshape.
+ * Descriptor for one pin overlay's animation across a MultiWays reshape.
  * The overlay started life sized at `oldCellHeight` and positioned at
  * `oldRow * oldSlotHeight + reel.offsetY`. After the reshape commits we
  * want it at `newRow * newSlotHeight + reel.offsetY`, sized to
@@ -44,7 +44,7 @@ export interface PinOverlayTween {
 }
 
 /**
- * Bridge between SPIN and STOP for Megaways slots.
+ * Bridge between SPIN and STOP for MultiWays slots.
  *
  * Snaps the reel geometry (visible-row count + cell height) instantly via
  * `reel.reshape()`, then tweens any pin overlays from their pre-reshape
@@ -56,8 +56,8 @@ export interface PinOverlayTween {
  * the one element that visibly migrates between cells — so it's the only
  * thing the reshape needs to animate.
  *
- * Inserted into the phase chain ONLY when `builder.megaways(...)` is
- * called. Non-Megaways slots never see this phase.
+ * Inserted into the phase chain ONLY when `builder.multiways(...)` is
+ * called. Non-MultiWays slots never see this phase.
  *
  * AdjustPhase plays on top of whatever stop staggering you've configured;
  * its duration is independent of `stopDelay`.

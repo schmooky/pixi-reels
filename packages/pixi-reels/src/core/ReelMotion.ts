@@ -81,7 +81,7 @@ export class ReelMotion {
   /**
    * Reshape the motion layer for a new visible-row count and cell height.
    * Recomputes wrap bounds and the slot height. Called by `Reel.reshape()`
-   * during AdjustPhase on Megaways slots. The symbol array is re-bound by
+   * during AdjustPhase on MultiWays slots. The symbol array is re-bound by
    * `Reel.reshape()` directly via the same array reference, so this method
    * doesn't take a new array.
    */

@@ -63,15 +63,15 @@ Useful for win presenters that need to highlight the whole block instead of one 
 
 ## Authoring resolution
 
-Pre-render each big symbol's texture at the size it'll actually display. A 3×3 giant on a 70px-cell grid renders at `210 × 210` — author the source asset at that resolution (or larger). Sprites scale up poorly; if you must support multiple cell sizes, ship per-size variants or use a Spine skeleton (see [Spine recipe](/docs/recipes/spine-megaways-ready)).
+Pre-render each big symbol's texture at the size it'll actually display. A 3×3 giant on a 70px-cell grid renders at `210 × 210` — author the source asset at that resolution (or larger). Sprites scale up poorly; if you must support multiple cell sizes, ship per-size variants or use a Spine skeleton (see [Spine recipe](/docs/recipes/spine-multiways-ready)).
 
 ## Constraints
 
-- **Big symbols + Megaways** — rejected at build. Block sizes don't compose with per-spin shape changes.
+- **Big symbols + MultiWays** — rejected at build. Block sizes don't compose with per-spin shape changes.
 - **Random fill** doesn't generate big symbols in v1; only target frames place them.
 - **During spin**, every cell is 1×1; the block layout commits at stop.
 
 ## Related
 
 - [Big symbols (basics)](/recipes/big-symbols/) — single 2×2 example with full architecture notes
-- [Megaways](/recipes/megaways/) — mutually exclusive
+- [MultiWays](/recipes/multiways/) — mutually exclusive

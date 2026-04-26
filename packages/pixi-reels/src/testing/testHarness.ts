@@ -13,14 +13,14 @@ export interface TestReelSetOptions {
    *   - `number` → uniform rows.
    *   - `number[]` → per-reel static shape (pyramid).
    *
-   * Mutually exclusive with `megaways` (which always starts at `maxRows`).
+   * Mutually exclusive with `multiways` (which always starts at `maxRows`).
    */
   visibleRows?: number | number[];
   /**
-   * Megaways configuration. Mutually exclusive with `visibleRows: number[]`.
+   * MultiWays configuration. Mutually exclusive with `visibleRows: number[]`.
    * The harness sets uniform `reelPixelHeight` and forwards `min/maxRows`.
    */
-  megaways?: { minRows: number; maxRows: number; reelPixelHeight: number };
+  multiways?: { minRows: number; maxRows: number; reelPixelHeight: number };
   symbolIds?: string[];
   weights?: Record<string, number>;
   /** Per-symbol overrides — useful for big-symbol size declarations in tests. */
@@ -79,8 +79,8 @@ export function createTestReelSet(opts: TestReelSetOptions = {}): TestReelSetHan
       }
     });
 
-  if (opts.megaways) {
-    builder.megaways(opts.megaways);
+  if (opts.multiways) {
+    builder.multiways(opts.multiways);
   } else if (Array.isArray(opts.visibleRows)) {
     builder.visibleRowsPerReel(opts.visibleRows);
   } else {

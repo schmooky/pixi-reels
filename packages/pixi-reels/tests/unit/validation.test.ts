@@ -20,37 +20,37 @@ describe('builder validation', () => {
     ).toThrow(/cannot call both visibleSymbols\(\) and visibleRowsPerReel\(\)/);
   });
 
-  it('rejects megaways() + visibleRowsPerReel()', () => {
+  it('rejects multiways() + visibleRowsPerReel()', () => {
     expect(() =>
       new ReelSetBuilder()
         .reels(3)
         .visibleRowsPerReel([3, 5, 3])
-        .megaways({ minRows: 2, maxRows: 7, reelPixelHeight: 600 })
+        .multiways({ minRows: 2, maxRows: 7, reelPixelHeight: 600 })
         .symbolSize(100, 100)
         .ticker(new FakeTicker() as unknown as Ticker)
         .symbols((r) => r.register('a', HeadlessSymbol, {}))
         .build(),
-    ).toThrow(/cannot combine megaways\(\) with visibleRowsPerReel\(\)/);
+    ).toThrow(/cannot combine multiways\(\) with visibleRowsPerReel\(\)/);
   });
 
-  it('rejects megaways() + cascade mode', () => {
+  it('rejects multiways() + cascade mode', () => {
     expect(() =>
       new ReelSetBuilder()
         .reels(3)
-        .megaways({ minRows: 2, maxRows: 7, reelPixelHeight: 600 })
+        .multiways({ minRows: 2, maxRows: 7, reelPixelHeight: 600 })
         .symbolSize(100, 100)
         .spinningMode(new CascadeMode())
         .ticker(new FakeTicker() as unknown as Ticker)
         .symbols((r) => r.register('a', HeadlessSymbol, {}))
         .build(),
-    ).toThrow(/megaways.* not supported with cascade/);
+    ).toThrow(/multiways.* not supported with cascade/);
   });
 
-  it('rejects megaways with minRows > maxRows', () => {
+  it('rejects multiways with minRows > maxRows', () => {
     expect(() =>
       new ReelSetBuilder()
         .reels(3)
-        .megaways({ minRows: 7, maxRows: 2, reelPixelHeight: 600 })
+        .multiways({ minRows: 7, maxRows: 2, reelPixelHeight: 600 })
         .symbolSize(100, 100)
         .ticker(new FakeTicker() as unknown as Ticker)
         .symbols((r) => r.register('a', HeadlessSymbol, {}))
@@ -77,13 +77,13 @@ describe('builder validation', () => {
     ).toThrow(/reelPixelHeights length 2 must equal reels\(5\)/);
   });
 
-  it('accepts a complete megaways slot', () => {
+  it('accepts a complete multiways slot', () => {
     const { reelSet, destroy } = createTestReelSet({
       reels: 6,
-      megaways: { minRows: 2, maxRows: 7, reelPixelHeight: 600 },
+      multiways: { minRows: 2, maxRows: 7, reelPixelHeight: 600 },
     });
     try {
-      expect(reelSet.isMegawaysSlot).toBe(true);
+      expect(reelSet.isMultiWaysSlot).toBe(true);
     } finally {
       destroy();
     }

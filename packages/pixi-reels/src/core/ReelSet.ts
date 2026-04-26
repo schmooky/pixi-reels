@@ -104,17 +104,17 @@ export class ReelSet extends Container implements Disposable {
   private _pinOverlays = new Map<string, { pin: CellPin; overlay: ReelSymbol }>();
 
   /**
-   * Megaways: target row counts for the next AdjustPhase. Recorded by
+   * MultiWays: target row counts for the next AdjustPhase. Recorded by
    * `setShape()`, consumed by `SpinController` when it builds AdjustPhase
    * configs. `null` means "no shape change pending".
    */
   private _targetShape: number[] | null = null;
 
-  /** Set at construction by the builder when `.megaways(...)` was called. */
-  private _isMegawaysSlot: boolean;
-  private _megawaysMinRows = 0;
-  private _megawaysMaxRows = 0;
-  private _megawaysReelPixelHeight = 0;
+  /** Set at construction by the builder when `.multiways(...)` was called. */
+  private _isMultiWaysSlot: boolean;
+  private _multiwaysMinRows = 0;
+  private _multiwaysMaxRows = 0;
+  private _multiwaysReelPixelHeight = 0;
 
   /** Resolved per-symbol metadata (size, zIndex, etc). */
   private _symbolsData: Record<string, SymbolData>;
@@ -127,11 +127,11 @@ export class ReelSet extends Container implements Disposable {
     this._symbolFactory = params.symbolFactory;
     this._frameBuilder = params.frameBuilder;
     this._symbolsData = params.config.symbols;
-    this._isMegawaysSlot = !!params.config.grid.megaways;
-    if (params.config.grid.megaways) {
-      this._megawaysMinRows = params.config.grid.megaways.minRows;
-      this._megawaysMaxRows = params.config.grid.megaways.maxRows;
-      this._megawaysReelPixelHeight = params.config.grid.megaways.reelPixelHeight;
+    this._isMultiWaysSlot = !!params.config.grid.multiways;
+    if (params.config.grid.multiways) {
+      this._multiwaysMinRows = params.config.grid.multiways.minRows;
+      this._multiwaysMaxRows = params.config.grid.multiways.maxRows;
+      this._multiwaysReelPixelHeight = params.config.grid.multiways.reelPixelHeight;
     }
 
     const fb = this._frameBuilder;
@@ -157,11 +157,11 @@ export class ReelSet extends Container implements Disposable {
       params.config.ticker,
       params.spinningMode,
       {
-        isMegawaysSlot: this._isMegawaysSlot,
+        isMultiWaysSlot: this._isMultiWaysSlot,
         symbolsData: this._symbolsData,
-        consumeTargetShape: () => this.consumeTargetShape(),
-        clearTargetShape: () => this.clearTargetShape(),
-        megawaysReelPixelHeight: this._megawaysReelPixelHeight,
+        consumeTargetShape: () => this._consumeTargetShape(),
+        clearTargetShape: () => this._clearTargetShape(),
+        multiwaysReelPixelHeight: this._multiwaysReelPixelHeight,
         symbolGapY: params.config.grid.symbolGap.y,
         getPinsOnReel: (reelIndex) => this._pinsOnReel(reelIndex),
         migratePinsForReel: (reelIndex, newRows) => this._migratePinsForReel(reelIndex, newRows),
@@ -272,15 +272,15 @@ export class ReelSet extends Container implements Disposable {
     return this._spinController.isSpinning;
   }
 
-  /** Whether this slot was built with `.megaways(...)`. */
-  get isMegawaysSlot(): boolean {
-    return this._isMegawaysSlot;
+  /** Whether this slot was built with `.multiways(...)`. */
+  get isMultiWaysSlot(): boolean {
+    return this._isMultiWaysSlot;
   }
 
-  // ─── Megaways API ─────────────────────────────────────────
+  // ─── MultiWays API ─────────────────────────────────────────
 
   /**
-   * Megaways: record the row count each reel should land on this spin. The
+   * MultiWays: record the row count each reel should land on this spin. The
    * AdjustPhase between SPIN and STOP will reshape reels (resize symbols,
    * reshape motion) before the stop sequence runs.
    *
@@ -288,13 +288,13 @@ export class ReelSet extends Container implements Disposable {
    * effect for the current spin only — call again on every spin.
    *
    * Throws if:
-   *  - this slot was not built with `.megaways(...)`
+   *  - this slot was not built with `.multiways(...)`
    *  - `rowsPerReel.length !== reelCount`
-   *  - any entry falls outside `[megaways.minRows, megaways.maxRows]`
+   *  - any entry falls outside `[multiways.minRows, multiways.maxRows]`
    */
   setShape(rowsPerReel: number[]): void {
-    if (!this._isMegawaysSlot) {
-      throw new Error('setShape(): slot was not built with .megaways(...) — call ReelSetBuilder.megaways() first.');
+    if (!this._isMultiWaysSlot) {
+      throw new Error('setShape(): slot was not built with .multiways(...) — call ReelSetBuilder.multiways() first.');
     }
     if (rowsPerReel.length !== this._reels.length) {
       throw new Error(
@@ -303,9 +303,9 @@ export class ReelSet extends Container implements Disposable {
     }
     for (let i = 0; i < rowsPerReel.length; i++) {
       const r = rowsPerReel[i];
-      if (r < this._megawaysMinRows || r > this._megawaysMaxRows) {
+      if (r < this._multiwaysMinRows || r > this._multiwaysMaxRows) {
         throw new Error(
-          `setShape(): rowsPerReel[${i}] = ${r} out of range [${this._megawaysMinRows}, ${this._megawaysMaxRows}].`,
+          `setShape(): rowsPerReel[${i}] = ${r} out of range [${this._multiwaysMinRows}, ${this._multiwaysMaxRows}].`,
         );
       }
     }
@@ -326,17 +326,22 @@ export class ReelSet extends Container implements Disposable {
   }
 
   /**
-   * Megaways internal: read and clear the pending target shape. Called by
-   * SpinController when building AdjustPhase configs. `null` means the
-   * caller should keep current rows.
+   * Internal: read the pending MultiWays target shape (does not clear).
+   * Used by `SpinController` via the hooks interface. Not part of the
+   * public API — call `setShape()` to change shape.
+   *
+   * @internal
    */
-  consumeTargetShape(): number[] | null {
-    const shape = this._targetShape;
-    return shape;
+  private _consumeTargetShape(): number[] | null {
+    return this._targetShape;
   }
 
-  /** Megaways internal: clear after the spin lands. Called from SpinController. */
-  clearTargetShape(): void {
+  /**
+   * Internal: clear the pending MultiWays target shape after the spin lands.
+   *
+   * @internal
+   */
+  private _clearTargetShape(): void {
     this._targetShape = null;
   }
 
@@ -807,7 +812,7 @@ export class ReelSet extends Container implements Disposable {
   }
 
   /**
-   * Megaways: relocate pins on a reel for a new visible-row count. The new
+   * MultiWays: relocate pins on a reel for a new visible-row count. The new
    * row is computed as `min(originRow, newRows - 1)` — clamped only when
    * the origin no longer fits. Returns the migrated pins so AdjustPhase
    * can build tween descriptors. Mutates the pins map in place.
@@ -951,10 +956,10 @@ export class ReelSet extends Container implements Disposable {
 
   /**
    * Reposition + resize every pin overlay on the given reel. Called after
-   * a Megaways reshape commits — both the pin's row (post-migration) and
+   * a MultiWays reshape commits — both the pin's row (post-migration) and
    * the cell height have changed since the overlay was first created.
    *
-   * No-op for non-Megaways slots (no reshape, nothing to update). Touches
+   * No-op for non-MultiWays slots (no reshape, nothing to update). Touches
    * only overlays that already exist.
    */
   refreshPinOverlaysForReel(reelIndex: number): void {

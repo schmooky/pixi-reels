@@ -27,12 +27,12 @@ export interface CellPin {
   /**
    * Original row at pin creation. Frozen for the pin's lifetime.
    *
-   * Megaways: when AdjustPhase reshapes the reel, the pin's row migrates
+   * MultiWays: when AdjustPhase reshapes the reel, the pin's row migrates
    * back toward `originRow` if it now fits (`min(originRow, newRows-1)`).
    * Prevents wander: a pin at `originRow=3` that gets clamped to row 2 on
    * a 3-row shape returns to row 3 on a later 5-row shape.
    *
-   * Non-Megaways: equals `row` and never changes.
+   * Non-MultiWays: equals `row` and never changes.
    */
   readonly originRow: number;
   /**
@@ -53,7 +53,7 @@ export interface CellPinOptions {
   /** Arbitrary per-instance data. */
   payload?: Record<string, unknown>;
   /**
-   * Original row for Megaways pin migration. Defaults to the row at pin
+   * Original row for MultiWays pin migration. Defaults to the row at pin
    * placement. The pin's `row` field migrates back toward this value when
    * the shape grows enough to fit it.
    */

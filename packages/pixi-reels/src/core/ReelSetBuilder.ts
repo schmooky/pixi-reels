@@ -4,7 +4,7 @@ import type {
   SymbolData,
   OffsetConfig,
   ReelSetInternalConfig,
-  MegawaysConfig,
+  MultiWaysConfig,
   ReelAnchor,
 } from '../config/types.js';
 import type { ReelMaskRect } from './ReelViewport.js';
@@ -80,13 +80,13 @@ export class ReelSetBuilder {
   private _cascadeDropConfig?: CascadeDropConfig;
   /** Per-reel static row counts (jagged shapes like 3-5-5-5-3). */
   private _visibleRowsPerReel?: number[];
-  /** Per-reel pixel-box heights — used for both pyramids and Megaways. */
+  /** Per-reel pixel-box heights — used for both pyramids and MultiWays. */
   private _reelPixelHeights?: number[];
   /** Vertical alignment of short reels inside the tallest reel's box. */
   private _reelAnchor: ReelAnchor = 'center';
-  /** Megaways configuration. Set by `.megaways(...)`. */
-  private _megaways?: MegawaysConfig;
-  /** Per-reel AdjustPhase tween duration in ms (Megaways only). */
+  /** MultiWays configuration. Set by `.multiways(...)`. */
+  private _multiways?: MultiWaysConfig;
+  /** Per-reel AdjustPhase tween duration in ms (MultiWays only). */
   private _adjustDuration: number | ((reelIndex: number) => number) = 200;
   /** GSAP easing string used by AdjustPhase. Default: 'power2.out'. */
   private _adjustEase = 'power2.out';
@@ -121,7 +121,7 @@ export class ReelSetBuilder {
    *   - Pyramid: defaults to `visibleRowsPerReel[i] * symbolHeight`. Override
    *     to make all reels the same height with different cell heights per
    *     reel.
-   *   - Megaways: every entry equals the same fixed reel height. Cell
+   *   - MultiWays: every entry equals the same fixed reel height. Cell
    *     height per reel is derived as `reelPixelHeight / visibleRows[i]`.
    *
    * Precedence: when both `reelPixelHeights` and `reelAnchor` are set,
@@ -139,20 +139,20 @@ export class ReelSetBuilder {
   }
 
   /**
-   * Configure this slot as Megaways: per-spin row variation. Pass minRows,
+   * Configure this slot as MultiWays: per-spin row variation. Pass minRows,
    * maxRows, and the fixed reel pixel height. After build, call
    * `reelSet.setShape(rowsPerReel)` mid-spin to set the next stop's shape.
    *
    * Mutually exclusive with big-symbol registration (`SymbolData.size`).
    * Mutually exclusive with cascade mode in v1.
    */
-  megaways(config: MegawaysConfig): this {
-    this._megaways = { ...config };
+  multiways(config: MultiWaysConfig): this {
+    this._multiways = { ...config };
     return this;
   }
 
   /**
-   * AdjustPhase tween duration in ms (Megaways only). Pass a number for a
+   * AdjustPhase tween duration in ms (MultiWays only). Pass a number for a
    * uniform duration across reels, or a function `(reelIndex) => number`
    * for per-reel control. Default: 200. Pass `0` for an instant snap (no
    * tween).
@@ -166,7 +166,7 @@ export class ReelSetBuilder {
   }
 
   /**
-   * GSAP easing string used by AdjustPhase tweens (Megaways only).
+   * GSAP easing string used by AdjustPhase tweens (MultiWays only).
    * Applied to both the cell-resize tween and any pin-overlay migration
    * tween. Defaults to `'power2.out'`. See gsap.com/docs/v3/Eases for
    * the full vocabulary.
@@ -303,12 +303,12 @@ export class ReelSetBuilder {
     const bufferAbove = this._bufferSymbols;
     const bufferBelow = this._bufferSymbols;
     const ticker = this._ticker!;
-    const isMegaways = !!this._megaways;
+    const isMultiWays = !!this._multiways;
 
-    // Resolve per-reel row counts. Megaways: every reel starts at maxRows.
+    // Resolve per-reel row counts. MultiWays: every reel starts at maxRows.
     let visibleRowsPerReel: number[];
-    if (isMegaways) {
-      visibleRowsPerReel = new Array(reelCount).fill(this._megaways!.maxRows);
+    if (isMultiWays) {
+      visibleRowsPerReel = new Array(reelCount).fill(this._multiways!.maxRows);
     } else if (this._visibleRowsPerReel) {
       visibleRowsPerReel = this._visibleRowsPerReel;
     } else {
@@ -316,11 +316,11 @@ export class ReelSetBuilder {
       visibleRowsPerReel = new Array(reelCount).fill(v);
     }
 
-    // Resolve per-reel pixel-box heights. Megaways: uniform reelPixelHeight.
+    // Resolve per-reel pixel-box heights. MultiWays: uniform reelPixelHeight.
     // Pyramid: defaults to visibleRowsPerReel[i] * symbolHeight.
     let reelPixelHeights: number[];
-    if (isMegaways) {
-      reelPixelHeights = new Array(reelCount).fill(this._megaways!.reelPixelHeight);
+    if (isMultiWays) {
+      reelPixelHeights = new Array(reelCount).fill(this._multiways!.reelPixelHeight);
     } else if (this._reelPixelHeights) {
       reelPixelHeights = this._reelPixelHeights;
     } else {
@@ -344,10 +344,10 @@ export class ReelSetBuilder {
       const rows = visibleRowsPerReel[i];
       return (h - (rows - 1) * this._symbolGap.y) / rows;
     });
-    // Megaways uses uniform spinSymbolHeight = configured symbolHeight.
+    // MultiWays uses uniform spinSymbolHeight = configured symbolHeight.
     // Pyramid: per-reel cell height. Uniform: same as symbolHeight.
     const spinSymbolHeight = symbolHeight;
-    const initialSymbolHeight = isMegaways
+    const initialSymbolHeight = isMultiWays
       ? new Array(reelCount).fill(spinSymbolHeight)
       : perReelSymbolHeight;
 
@@ -381,7 +381,7 @@ export class ReelSetBuilder {
         visibleRowsPerReel,
         reelPixelHeights,
         reelAnchor: this._reelAnchor,
-        megaways: this._megaways,
+        multiways: this._multiways,
       },
       symbols: symbolsData,
       speeds: this._speeds,
@@ -407,9 +407,9 @@ export class ReelSetBuilder {
       this._phaseFactory.registerFactory('stop', (reel, speed) => new DropStopPhase(reel, speed, dropConfig));
     }
 
-    // Megaways: wire AdjustPhase. Stay out of non-Megaways chains entirely
+    // MultiWays: wire AdjustPhase. Stay out of non-MultiWays chains entirely
     // so the default `start → spin → stop` flow is unchanged for them.
-    if (isMegaways) {
+    if (isMultiWays) {
       const adjustDur = this._adjustDuration;
       const adjustEase = this._adjustEase;
       this._phaseFactory.registerFactory('adjust', (reel, speed) => {
@@ -494,16 +494,16 @@ export class ReelSetBuilder {
 
     const hasShape = !!this._visibleRowsPerReel;
     const hasUniform = this._visibleRows !== undefined;
-    const hasMega = !!this._megaways;
+    const hasMega = !!this._multiways;
 
     if (!hasMega && !hasUniform && !hasShape) {
-      errors.push('one of visibleSymbols(n) or visibleRowsPerReel([...]) or megaways({...}) must be called.');
+      errors.push('one of visibleSymbols(n) or visibleRowsPerReel([...]) or multiways({...}) must be called.');
     }
     if (hasUniform && hasShape) {
       errors.push('cannot call both visibleSymbols() and visibleRowsPerReel() — pick one.');
     }
     if (hasMega && hasShape) {
-      errors.push('cannot combine megaways() with visibleRowsPerReel() — Megaways shapes are server-driven.');
+      errors.push('cannot combine multiways() with visibleRowsPerReel() — MultiWays shapes are server-driven.');
     }
 
     if (this._reelCount && hasShape && this._visibleRowsPerReel!.length !== this._reelCount) {
@@ -526,25 +526,25 @@ export class ReelSetBuilder {
     }
 
     if (hasMega) {
-      const m = this._megaways!;
+      const m = this._multiways!;
       if (m.minRows <= 0 || m.maxRows <= 0) {
-        errors.push('megaways({minRows, maxRows}) must both be positive.');
+        errors.push('multiways({minRows, maxRows}) must both be positive.');
       } else if (m.minRows > m.maxRows) {
-        errors.push(`megaways: minRows ${m.minRows} cannot exceed maxRows ${m.maxRows}.`);
+        errors.push(`multiways: minRows ${m.minRows} cannot exceed maxRows ${m.maxRows}.`);
       }
       if (m.reelPixelHeight <= 0) {
-        errors.push('megaways({reelPixelHeight}) must be positive.');
+        errors.push('multiways({reelPixelHeight}) must be positive.');
       }
       if (this._spinningMode instanceof CascadeMode || this._cascadeDropConfig) {
-        errors.push('megaways() is not supported with cascade mode in v1.');
+        errors.push('multiways() is not supported with cascade mode in v1.');
       }
-      // Big symbols are mutually exclusive with Megaways.
+      // Big symbols are mutually exclusive with MultiWays.
       for (const id of this._symbolRegistry.symbolIds) {
         const override = this._symbolDataOverrides[id] ?? {};
         if (override.size && (override.size.w > 1 || override.size.h > 1)) {
           errors.push(
             `big symbol '${id}' (size ${override.size.w}x${override.size.h}) cannot be ` +
-            'registered on a Megaways slot. Drop megaways() or remove the size metadata.',
+            'registered on a MultiWays slot. Drop multiways() or remove the size metadata.',
           );
           break;
         }

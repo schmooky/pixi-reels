@@ -1,10 +1,10 @@
 /**
- * Megaways recipe — per-spin row variation. Each spin chooses a random shape
+ * MultiWays recipe — per-spin row variation. Each spin chooses a random shape
  * inside `[minRows, maxRows]`, and `setShape()` is called between `spin()`
  * and `setResult()`. AdjustPhase reshapes the reels before the stop sequence.
  *
  * To try it: in sandbox.ts, swap the active `buildSandbox` body for
- * `return buildMegaways(ctx)`.
+ * `return buildMultiWays(ctx)`.
  */
 import type { Texture } from 'pixi.js';
 import { ReelSetBuilder, SpeedPresets, enableDebug } from 'pixi-reels';
@@ -24,7 +24,7 @@ const REEL_PIXEL_HEIGHT = 700;
 const SYMBOL_SIZE = REEL_PIXEL_HEIGHT / MAX_ROWS; // ~100
 const GAP = 4;
 
-export function buildMegaways({ app, textures, blurTextures }: SandboxContext): SandboxResult {
+export function buildMultiWays({ app, textures, blurTextures }: SandboxContext): SandboxResult {
   const symbolTextures: Record<string, Texture> = {};
   const symbolBlurTextures: Record<string, Texture> = {};
   for (const [id, atlasKey] of Object.entries(SYMBOL_MAP)) {
@@ -34,7 +34,7 @@ export function buildMegaways({ app, textures, blurTextures }: SandboxContext): 
 
   const reelSet = new ReelSetBuilder()
     .reels(REELS)
-    .megaways({ minRows: MIN_ROWS, maxRows: MAX_ROWS, reelPixelHeight: REEL_PIXEL_HEIGHT })
+    .multiways({ minRows: MIN_ROWS, maxRows: MAX_ROWS, reelPixelHeight: REEL_PIXEL_HEIGHT })
     .adjustDuration(220)
     .symbolSize(SYMBOL_SIZE, SYMBOL_SIZE)
     .symbolGap(GAP, GAP)

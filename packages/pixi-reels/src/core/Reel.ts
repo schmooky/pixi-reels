@@ -43,7 +43,7 @@ export interface ReelConfig {
    */
   offsetY?: number;
   /**
-   * Pixel height of this reel's box. Used for Megaways cell-height
+   * Pixel height of this reel's box. Used for MultiWays cell-height
    * derivation (`reelHeight / visibleRows`). Defaults to
    * `visibleRows * symbolHeight`.
    */
@@ -219,10 +219,10 @@ export class Reel implements Disposable {
   }
 
   /**
-   * The symbol cell height (in pixels). Mutates on Megaways reshape via
+   * The symbol cell height (in pixels). Mutates on MultiWays reshape via
    * `reshape()`. During SPIN this still equals `spinSymbolHeight`; the
    * per-reel target value comes into effect when AdjustPhase commits the
-   * reshape. For non-Megaways slots this is constant for the reel's lifetime.
+   * reshape. For non-MultiWays slots this is constant for the reel's lifetime.
    */
   get symbolHeight(): number {
     return this._symbolHeight;
@@ -371,12 +371,12 @@ export class Reel implements Disposable {
   }
 
   /**
-   * Megaways: commit a new visible-row count and per-reel cell height.
+   * MultiWays: commit a new visible-row count and per-reel cell height.
    * Resizes every existing symbol on the strip to the new cell height,
    * rebuilds the symbol array (extending or truncating buffers as needed),
    * and reshapes the motion layer. Idempotent if the shape doesn't change.
    *
-   * Only callable on Megaways slots. Non-Megaways callers should never
+   * Only callable on MultiWays slots. Non-MultiWays callers should never
    * reach this — `ReelSet.setShape()` rejects up-front.
    */
   reshape(

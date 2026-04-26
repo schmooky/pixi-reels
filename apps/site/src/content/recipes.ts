@@ -13,7 +13,7 @@ export interface RecipeMeta {
  * recipes (wilds, reveals), then UX / system recipes (anticipation, skip).
  */
 export const RECIPES: RecipeMeta[] = [
-  // ── Per-reel geometry / Megaways / Big symbols ───────────────────
+  // ── Per-reel geometry / MultiWays / Big symbols ───────────────────
   {
     slug: 'pyramid-shape',
     title: 'Per-reel shape (pyramid)',
@@ -27,16 +27,16 @@ export const RECIPES: RecipeMeta[] = [
     tags: ['shape', 'pyramid', 'geometry', 'layout'],
   },
   {
-    slug: 'megaways',
-    title: 'Megaways',
+    slug: 'multiways',
+    title: 'MultiWays',
     oneLiner: 'Per-spin row variation — each reel can land on a different row count between minRows and maxRows.',
     steps: [
-      'Build with .megaways({ minRows, maxRows, reelPixelHeight })',
+      'Build with .multiways({ minRows, maxRows, reelPixelHeight })',
       'Each spin, call reelSet.setShape(rowsPerReel) BEFORE setResult()',
       'AdjustPhase reshapes reels (resize symbols + reshape motion) before STOP',
     ],
-    apis: ['ReelSetBuilder.megaways', 'ReelSet.setShape', 'AdjustPhase'],
-    tags: ['megaways', 'shape', 'reshape', 'geometry'],
+    apis: ['ReelSetBuilder.multiways', 'ReelSet.setShape', 'AdjustPhase'],
+    tags: ['multiways', 'shape', 'reshape', 'geometry'],
   },
   {
     slug: 'big-symbols',
@@ -63,16 +63,28 @@ export const RECIPES: RecipeMeta[] = [
     tags: ['big-symbols', 'layout', 'sizing'],
   },
   {
-    slug: 'sticky-wild-megaways',
-    title: 'Sticky wild on Megaways',
-    oneLiner: 'Pin survives every Megaways reshape — clamps when shape shrinks, restores to originRow when it grows back.',
+    slug: 'multiways-card-symbols',
+    title: 'MultiWays with custom Graphics symbols',
+    oneLiner: 'Card-suit symbols (7 8 9 10 J Q K A) drawn from PIXI.Graphics — flat colored rects that always render at the exact cell size.',
+    steps: [
+      'Subclass ReelSymbol with a PIXI.Graphics + PIXI.Text composite',
+      'In resize(w, h), redraw the rect at the cell\'s actual pixel size',
+      'Register one symbol id per card with its own color',
+    ],
+    apis: ['ReelSymbol', 'PIXI.Graphics', 'ReelSetBuilder.multiways'],
+    tags: ['multiways', 'custom-symbol', 'graphics', 'no-textures'],
+  },
+  {
+    slug: 'sticky-wild-multiways',
+    title: 'Sticky wild on MultiWays',
+    oneLiner: 'Pin survives every MultiWays reshape — clamps when shape shrinks, restores to originRow when it grows back.',
     steps: [
       'Pin wilds on spin:allLanded — originRow is frozen at placement',
       'Each spin, setShape(rowsPerReel) — AdjustPhase migrates pins via min(originRow, newRows-1)',
       'pin:migrated fires per affected pin with { fromRow, toRow, clamped, reelIndex }',
     ],
     apis: ['ReelSet.pin', 'CellPin.originRow', 'AdjustPhase', 'pin:migrated event'],
-    tags: ['megaways', 'sticky', 'wild', 'cell-pin', 'pin-migration'],
+    tags: ['multiways', 'sticky', 'wild', 'cell-pin', 'pin-migration'],
   },
 
   // ── Starter templates (merged in from /templates/) ─────────────────
@@ -91,7 +103,7 @@ export const RECIPES: RecipeMeta[] = [
   {
     slug: 'cascade-6x5',
     title: 'Cascade 6×5 tumble',
-    oneLiner: 'Modern tumble mechanic with an ever-growing multiplier — Megaways-adjacent.',
+    oneLiner: 'Modern tumble mechanic with an ever-growing multiplier — MultiWays-adjacent.',
     steps: [
       'Build a 6×5 ReelSet with .cascade() for drop-in mechanics',
       'Spin, detect cluster/line wins, spotlight them',

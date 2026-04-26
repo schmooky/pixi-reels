@@ -24,7 +24,7 @@ export interface ReelMaskRect {
 export interface MaskStrategy {
   /** Build (or rebuild) the mask graphic. Returns the Graphics to use as the mask. */
   build(rects: ReelMaskRect[], totalWidth: number, totalHeight: number): Graphics;
-  /** Update the mask when reel boxes resize (e.g. Megaways reshape). */
+  /** Update the mask when reel boxes resize (e.g. MultiWays reshape). */
   update(graphics: Graphics, rects: ReelMaskRect[], totalWidth: number, totalHeight: number): void;
 }
 
@@ -160,7 +160,7 @@ export class ReelViewport extends Container implements Disposable {
     this.dimOverlay.visible = false;
   }
 
-  /** Update mask size and per-reel rects. Used after pyramid/Megaways shape changes. */
+  /** Update mask size and per-reel rects. Used after pyramid/MultiWays shape changes. */
   updateMaskSize(width: number, height: number, rects: ReelMaskRect[] = []): void {
     this._maskWidth = width;
     this._maskHeight = height;

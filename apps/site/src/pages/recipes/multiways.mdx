@@ -1,32 +1,32 @@
 ---
 layout: ../../layouts/Recipe.astro
-title: Megaways
+title: MultiWays
 description: Per-spin row variation. Each reel can land on a different row count between minRows and maxRows. AdjustPhase reshapes the reels between SPIN and STOP.
-tags: [megaways, shape, geometry, reshape]
+tags: [multiways, shape, geometry, reshape]
 steps:
-  - "Build with .megaways({ minRows, maxRows, reelPixelHeight })"
+  - "Build with .multiways({ minRows, maxRows, reelPixelHeight })"
   - "Each spin, call reelSet.setShape(rowsPerReel) BEFORE setResult()"
   - "AdjustPhase reshapes reels (resize symbols + reshape motion) before STOP"
 apis:
-  - ReelSetBuilder.megaways
+  - ReelSetBuilder.multiways
   - ReelSet.setShape
   - AdjustPhase
   - "events: shape:changed, adjust:start, adjust:complete"
 ---
 
-import code from '../../recipes/megaways.recipe.ts?raw';
+import code from '../../recipes/multiways.recipe.ts?raw';
 import { RecipeRunner } from '../../components/RecipeRunner.tsx';
 
 <RecipeRunner code={code} client:only="react" />
 
-Megaways — every spin chooses a fresh per-reel row count from `[minRows, maxRows]`. The reel pixel height is fixed; cell height per reel is derived as `reelPixelHeight / visibleRows[i]`, so a 2-row reel has tall cells and a 7-row reel has short ones. A new `AdjustPhase` between SPIN and STOP reshapes the reels (resizes every symbol, reshapes motion) before the stop sequence runs.
+MultiWays — every spin chooses a fresh per-reel row count from `[minRows, maxRows]`. The reel pixel height is fixed; cell height per reel is derived as `reelPixelHeight / visibleRows[i]`, so a 2-row reel has tall cells and a 7-row reel has short ones. A new `AdjustPhase` between SPIN and STOP reshapes the reels (resizes every symbol, reshapes motion) before the stop sequence runs.
 
 ## The whole mechanic
 
 ```ts
 const reelSet = new ReelSetBuilder()
   .reels(6)
-  .megaways({ minRows: 2, maxRows: 7, reelPixelHeight: 480 })
+  .multiways({ minRows: 2, maxRows: 7, reelPixelHeight: 480 })
   .adjustDuration(350)        // ms — cell + overlay reshape tween. 0 for instant snap.
   .adjustEase('back.out(1.2)') // any GSAP ease string
   .symbolSize(68, 68)         // SPIN-time cell size (uniform across reels)
@@ -57,22 +57,22 @@ That's it. The engine handles cell-height derivation, AdjustPhase reshape, mask 
 
 Set `adjustDuration(0)` to skip the overlay tween (instant snap). Pass any GSAP ease string to `adjustEase` — `'power2.out'` (default), `'back.out(1.4)'`, `'expo.inOut'`, etc. Reels without active pins on this spin see the same instant geometry change either way; the duration only matters when there's an overlay to migrate.
 
-## AdjustPhase is megaways-only
+## AdjustPhase is multiways-only
 
-Non-Megaways slots run the original `start → spin → stop` chain unchanged. `adjust:*` and `pin:migrated` events never fire on non-Megaways slots, so downstream consumers don't have to ignore phantom events.
+Non-MultiWays slots run the original `start → spin → stop` chain unchanged. `adjust:*` and `pin:migrated` events never fire on non-MultiWays slots, so downstream consumers don't have to ignore phantom events.
 
 ## Pin migration
 
-Pins survive Megaways reshapes. Each pin has a frozen `originRow` (defaults to its placement row); on every reshape the pin moves to `min(originRow, newRows - 1)`. If the new shape doesn't fit the origin, the pin clamps to the last row (`pin:migrated` fires with `clamped: true`); if a later, larger shape DOES fit the origin again, the pin moves back. This prevents wander — a pin at `originRow=4` stays anchored to row 4 across `7 -> 3 -> 5` shape transitions.
+Pins survive MultiWays reshapes. Each pin has a frozen `originRow` (defaults to its placement row); on every reshape the pin moves to `min(originRow, newRows - 1)`. If the new shape doesn't fit the origin, the pin clamps to the last row (`pin:migrated` fires with `clamped: true`); if a later, larger shape DOES fit the origin again, the pin moves back. This prevents wander — a pin at `originRow=4` stays anchored to row 4 across `7 -> 3 -> 5` shape transitions.
 
 ## Constraints
 
-- **Big symbols + Megaways** is rejected at build. "What's a 2×2 on a 2-row reel?" is a game-design question we don't answer in v1.
-- **Cascade + Megaways** is rejected at build. Niche combination, deferred.
-- The pixel height is fixed per the `megaways({ reelPixelHeight })` value. To change it, rebuild.
+- **Big symbols + MultiWays** is rejected at build. "What's a 2×2 on a 2-row reel?" is a game-design question we don't answer in v1.
+- **Cascade + MultiWays** is rejected at build. Niche combination, deferred.
+- The pixel height is fixed per the `multiways({ reelPixelHeight })` value. To change it, rebuild.
 
 ## Related
 
-- [Per-reel shape (pyramid)](/recipes/pyramid-shape/) — non-Megaways static shape
-- [Big symbols](/recipes/big-symbols/) — N×M blocks (mutually exclusive with Megaways)
-- [Sticky wild (CellPin)](/recipes/sticky-wild-pin/) — pins survive Megaways reshapes
+- [Per-reel shape (pyramid)](/recipes/pyramid-shape/) — non-MultiWays static shape
+- [Big symbols](/recipes/big-symbols/) — N×M blocks (mutually exclusive with MultiWays)
+- [Sticky wild (CellPin)](/recipes/sticky-wild-pin/) — pins survive MultiWays reshapes

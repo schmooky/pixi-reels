@@ -1,6 +1,6 @@
-# Spine recipe — Megaways- and big-symbol-ready skeletons
+# Spine recipe — MultiWays- and big-symbol-ready skeletons
 
-Pixi-reels resizes Spine symbols on every cell-size change. For Megaways slots that means every reshape; for big symbols that means landing on an `N×M` block; even for non-uniform pyramids it means each reel may have its own cell height. This recipe captures what your skeleton needs to provide so the engine can scale it cleanly across all those cases.
+Pixi-reels resizes Spine symbols on every cell-size change. For MultiWays slots that means every reshape; for big symbols that means landing on an `N×M` block; even for non-uniform pyramids it means each reel may have its own cell height. This recipe captures what your skeleton needs to provide so the engine can scale it cleanly across all those cases.
 
 If you're building a 1×1 symbol for a fixed-shape slot, only sections "Skeleton geometry" and "Required animations" matter. The rest is about how to behave under reshape.
 
@@ -32,8 +32,8 @@ If you're building a 1×1 symbol for a fixed-shape slot, only sections "Skeleton
 
 - Use a single `.atlas` + `.webp` page per symbol, OR a shared atlas across all symbols (preferred for drawcall reduction). The vite config already serves textures from `examples/assets/`.
 - Author at the **largest** size the symbol will render at:
-  - Non-Megaways 1×1: ~300 px tall.
-  - Megaways with `minRows=2, reelPixelHeight=600`: ~300 px tall (same as the maxRows case at 7 rows).
+  - Non-MultiWays 1×1: ~300 px tall.
+  - MultiWays with `minRows=2, reelPixelHeight=600`: ~300 px tall (same as the maxRows case at 7 rows).
   - Big symbol 2×2: ~600 px tall.
 - Down-scaling looks fine. Up-scaling past authoring size looks bad.
 
@@ -68,8 +68,8 @@ Use Spine skins for palette/variant swaps. The lib does not set skins by default
 | Symptom | Likely cause |
 |---|---|
 | Symbol drifts out of cell during idle | Root bone animated in `idle`. Remove root motion. |
-| Distortion at small Megaways sizes | Non-uniform scale inside the skeleton, OR aspect mismatch with the cell. |
-| Blurry at 2×2 / 2-row Megaways | Texture authored too small. Re-export atlas at 2×. |
+| Distortion at small MultiWays sizes | Non-uniform scale inside the skeleton, OR aspect mismatch with the cell. |
+| Blurry at 2×2 / 2-row MultiWays | Texture authored too small. Re-export atlas at 2×. |
 | Flicker on reshape | `resize()` not idempotent, or constructor-only positioning not re-applied in `resize()`. |
 | Win animation cut off | `win` length exceeds the WinPresenter dim duration. Shorten `win` or lengthen dim. |
 | Double-update feel (too fast) | A second ticker is installed somewhere. Remove it. |

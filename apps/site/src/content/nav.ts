@@ -22,6 +22,7 @@ export const GUIDES_NAV: NavSection[] = [
       { label: 'Symbols', href: '/guides/symbols/' },
       { label: 'Spine pins + movePin', href: '/guides/spine-pins/' },
       { label: 'Spin lifecycle', href: '/guides/spin-lifecycle/' },
+      { label: 'Per-reel geometry, MultiWays & big symbols', href: '/guides/per-reel-geometry/' },
       { label: 'Speed modes', href: '/guides/speed-modes/' },
       { label: 'Win animations', href: '/guides/win-animations/' },
     ],
