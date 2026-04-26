@@ -1,0 +1,112 @@
+---
+layout: ../../layouts/Recipe.astro
+title: CardSymbol — debug / prototyping helper
+description: A no-asset PIXI.Graphics symbol class for recipes, mechanic tests, and prototypes. Always crisp at any cell size. NOT for production — ship SpriteSymbol, AnimatedSpriteSymbol, or SpineSymbol instead.
+tags: [debug, prototyping, custom-symbol, graphics]
+steps:
+  - "Import `CardSymbol`, `CARD_DECK` (and optional `WILD_CARD`) from `examples/shared/CardSymbol.ts`"
+  - "Register one symbol id per card with its own color"
+  - "No textures, no atlases — geometry redrawn at every resize"
+apis:
+  - CardSymbol
+  - CARD_DECK
+  - WILD_CARD
+  - PIXI.Graphics
+---
+
+import code from '../../recipes/card-symbol-debug.recipe.ts?raw';
+import { RecipeRunner } from '../../components/RecipeRunner.tsx';
+
+<RecipeRunner code={code} client:only="react" />
+
+> **`CardSymbol` is debug scaffolding, not production art.** Real slots ship `SpriteSymbol` / `AnimatedSpriteSymbol` / `SpineSymbol`. This page exists to explain when CardSymbol IS the right tool — and when it isn't.
+
+## What it is
+
+`CardSymbol` lives in `examples/shared/CardSymbol.ts`. It's a `ReelSymbol` subclass that renders a flat colored rectangle with a centered text label using `PIXI.Graphics` and `PIXI.Text` — no atlases, no loaders, no async asset boot. Two helpers ship with it:
+
+- **`CARD_DECK`** — eight high cards (`7 8 9 10 J Q K A`), each its own color. Ready to register as a full deck.
+- **`WILD_CARD`** — pale-yellow `WILD` card for sticky/expanding-wild prototypes.
+
+```ts
+import { CardSymbol, CARD_DECK, WILD_CARD } from '../../shared/CardSymbol';
+
+builder.symbols((registry) => {
+  for (const card of CARD_DECK) {
+    registry.register(card.id, CardSymbol, { color: card.color, label: card.label });
+  }
+  // optional sticky-wild:
+  registry.register(WILD_CARD.id, CardSymbol, {
+    color: WILD_CARD.color,
+    label: WILD_CARD.label,
+    textColor: WILD_CARD.textColor,
+  });
+});
+```
+
+That's the whole API. Pass `{ color, label, textColor? }` per registration; the class handles its own resize, win flash, and text scaling.
+
+## When to use it
+
+Use `CardSymbol` when:
+
+- **Writing a recipe.** Reviewers want a self-contained snippet they can read in 30 seconds, not a dependency on a sprite atlas.
+- **Prototyping a mechanic.** You're fiddling with cascade physics or a feature mode, and you don't want to wait for art.
+- **Writing a test that needs visible cells.** Debug `__PIXI_REELS_DEBUG.snapshot()` reads the cell ids regardless of rendering, but if you're eyeballing the canvas during a manual test, CardSymbol is the fastest path.
+- **Demonstrating cell-size behavior.** MultiWays reshape, big-symbol blocks, pyramid layouts — all of these visibly change cell sizes. Sprites stretch ugly at extreme sizes; CardSymbol redraws crisply at every reshape.
+
+## When NOT to use it
+
+`CardSymbol` is **not** what you ship to players:
+
+| If you want… | Use |
+|---|---|
+| Pre-rendered art at one resolution | `SpriteSymbol` (cheapest, most common) |
+| Frame-by-frame win/idle animation | `AnimatedSpriteSymbol` |
+| Vector skeletal animation that scales without quality loss across MultiWays reshapes | `SpineSymbol` (via `pixi-reels/spine`) |
+| Custom shader, particle effects, multiple Pixi DisplayObjects per cell | Subclass `ReelSymbol` directly |
+
+The library exists to support those production symbols. `CardSymbol` is purely a developer-experience aid.
+
+## Why it lives in `examples/shared/`, not the library
+
+This is intentional:
+
+- **Library is small.** `pixi-reels` is currently ~64 KB minified. Adding `CardSymbol` (with its `PIXI.Text` dependency on font rasterization) bloats the bundle for code 99% of consumers won't ship.
+- **Forces the right mental model.** Importing from `examples/shared/` makes it obvious this is debug code. Importing from `pixi-reels` would imply it's a supported runtime path.
+- **You can copy it.** It's ~100 lines. If you keep using it in your tests, vendor it into your own `test/` folder; it'll never need maintenance.
+
+## Resize behavior
+
+`resize(width, height)` is called on every symbol swap and every reshape. The class redraws:
+
+```ts
+this._gfx.rect(0, 0, width, height).fill({ color: this._color });
+this._gfx.rect(1, 1, width - 2, height - 2).stroke({ color: 0x000000, width: 2, alpha: 0.25 });
+this._text.x = width / 2;
+this._text.y = height / 2;
+this._text.style.fontSize = /* fits within both height and label-width budget */;
+```
+
+The font-size formula caps by *both* the cell height (~55%) and the label width (`width * 0.78 / labelLen`) so multi-character labels like `'10'` or `'WILD'` don't overflow narrow cells. Labels stay readable from 2-row MultiWays cells (~240 px tall) through 7-row cells (~68 px tall).
+
+## What CardSymbol skips
+
+To keep it minimal, CardSymbol does **not**:
+
+- Cache anything. Every `resize()` redraws geometry from scratch. Cheap for `Graphics` but wasteful for production.
+- Pool internal `Graphics`/`Text` instances. One per `CardSymbol`.
+- Implement `onActivate`/`onDeactivate` beyond a no-op. The class's identity is set at construction, not per-activation.
+- Handle pointer events, hover states, tooltips, or anything interactive.
+
+A real production symbol would do most of the above. Don't model your custom `ReelSymbol` on `CardSymbol`'s simplicity — model it on `SpriteSymbol` or `AnimatedSpriteSymbol` from the library.
+
+## Related
+
+- [Per-reel shape (pyramid)](/recipes/pyramid-shape/) — uses CardSymbol for the visual demo
+- [MultiWays](/recipes/multiways/) — uses CardSymbol so cell-resize is visible
+- [Sticky wild on MultiWays](/recipes/sticky-wild-multiways/) — uses CardSymbol + WILD_CARD
+- [Big symbols](/recipes/big-symbols/) — uses CardSymbol with `size: { w: 2, h: 2 }`
+- [MxN big symbols](/recipes/big-symbols-mxn/) — uses CardSymbol with mixed sizes
+- [Texture atlas symbols](/recipes/texture-atlas-symbols/) — production sprite path
+- [AI-generated animated symbols (pixellab)](/recipes/pixellab-animated-symbols/) — production animated path
