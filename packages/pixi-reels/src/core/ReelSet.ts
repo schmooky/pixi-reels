@@ -1,14 +1,13 @@
 import { Container } from 'pixi.js';
-import type { Ticker } from 'pixi.js';
 import type { Disposable } from '../utils/Disposable.js';
-import type { SpeedProfile, ReelSetInternalConfig, CellBounds, SymbolData } from '../config/types.js';
+import type { ReelSetInternalConfig, CellBounds, SymbolData } from '../config/types.js';
 import { EventEmitter } from '../events/EventEmitter.js';
-import type { ReelSetEvents, SpinResult, SymbolPosition } from '../events/ReelEvents.js';
-import { Reel, OCCUPIED_SENTINEL } from './Reel.js';
+import type { ReelSetEvents, SpinResult, } from '../events/ReelEvents.js';
+import { Reel, } from './Reel.js';
 import { ReelViewport } from './ReelViewport.js';
 import { SpinController } from '../spin/SpinController.js';
 import { SpeedManager } from '../speed/SpeedManager.js';
-import { SymbolSpotlight, type SpotlightOptions, type WinLine, type CycleOptions } from '../spotlight/SymbolSpotlight.js';
+import { SymbolSpotlight, } from '../spotlight/SymbolSpotlight.js';
 import type { SymbolFactory } from '../symbols/SymbolFactory.js';
 import type { ReelSymbol } from '../symbols/ReelSymbol.js';
 import type { FrameBuilder } from '../frame/FrameBuilder.js';

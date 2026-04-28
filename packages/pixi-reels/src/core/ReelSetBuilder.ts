@@ -24,7 +24,6 @@ import type { SpinningMode } from '../spin/modes/SpinningMode.js';
 import { StandardMode } from '../spin/modes/StandardMode.js';
 import { CascadeMode } from '../spin/modes/CascadeMode.js';
 import type { FrameMiddleware } from '../frame/FrameBuilder.js';
-import type { ReelSymbol } from '../symbols/ReelSymbol.js';
 import type { CascadeDropConfig } from '../cascade/DropRecipes.js';
 import { DropStartPhase } from '../spin/phases/DropStartPhase.js';
 import { DropStopPhase } from '../spin/phases/DropStopPhase.js';
