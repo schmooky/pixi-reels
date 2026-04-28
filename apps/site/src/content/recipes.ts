@@ -1,5 +1,20 @@
+export type RecipeGroup =
+  | 'starters'
+  | 'pyramid'       // static per-reel shape
+  | 'multiways'     // per-spin row variation
+  | 'big-symbols'   // N×M block symbols
+  | 'wilds'         // sticky/expanding/walking/multiplier wilds
+  | 'features'      // bonus reveals, multipliers, coins, transforms
+  | 'cascade'       // cascade physics + tumbling
+  | 'wins'          // payline & cell-highlight presentation
+  | 'tension'       // anticipation, near-miss, skip, respin
+  | 'cell-coords'   // cell bounds, hit areas, overlays
+  | 'symbol-formats' // texture atlas, animated, AI-generated
+  | 'runtime';      // mode swaps, feature middleware
+
 export interface RecipeMeta {
   slug: string;
+  group: RecipeGroup;
   title: string;
   oneLiner: string;
   steps: string[];
@@ -7,15 +22,185 @@ export interface RecipeMeta {
   tags: string[];
 }
 
+/** Display order + label for each group on the /recipes/ index page. */
+export const RECIPE_GROUPS: Array<{ id: RecipeGroup; label: string; description: string }> = [
+  {
+    id: 'starters',
+    label: 'Starter templates',
+    description: 'Copy-paste foundations to clone for a new slot.',
+  },
+  {
+    id: 'pyramid',
+    label: 'Per-reel geometry (pyramid layouts)',
+    description: 'Static jagged shapes — non-uniform row counts fixed at build time.',
+  },
+  {
+    id: 'multiways',
+    label: 'MultiWays',
+    description: 'Per-spin row variation — each reel can land on a different row count between minRows and maxRows.',
+  },
+  {
+    id: 'big-symbols',
+    label: 'Big symbols (N×M blocks)',
+    description: 'Single symbol that occupies an N×M block of cells — 2×2 bonuses, 3×3 giants, 1×3 bars.',
+  },
+  {
+    id: 'wilds',
+    label: 'Wilds & sticky cells',
+    description: 'Sticky, expanding, walking, multiplier wilds — all powered by the pin primitive.',
+  },
+  {
+    id: 'features',
+    label: 'Features, bonuses & transforms',
+    description: 'Mystery reveals, value coins, collectors, symbol upgrades.',
+  },
+  {
+    id: 'cascade',
+    label: 'Cascade & tumbling',
+    description: 'Drop physics, anticipation drops, removing winners.',
+  },
+  {
+    id: 'wins',
+    label: 'Wins & paylines',
+    description: 'Highlight winning cells; draw your own paylines from events.',
+  },
+  {
+    id: 'tension',
+    label: 'Anticipation, skip & respin',
+    description: 'Slow a reel, slam-stop, near-miss, single-reel respin.',
+  },
+  {
+    id: 'cell-coords',
+    label: 'Cell coordinates & hit areas',
+    description: 'Pixel rects per cell; pointer-aligned overlays.',
+  },
+  {
+    id: 'symbol-formats',
+    label: 'Symbol authoring',
+    description: 'Texture atlases, animated sprite sequences, AI-generated art.',
+  },
+  {
+    id: 'runtime',
+    label: 'Runtime & feature modes',
+    description: 'Mid-spin mode swaps, frame middleware.',
+  },
+];
+
 /**
- * Every recipe card on /recipes/ comes from this list. Entries are grouped
- * loosely by intent: starter templates first (`starter` tag), then mechanic
- * recipes (wilds, reveals), then UX / system recipes (anticipation, skip).
+ * Every recipe card on /recipes/ comes from this list. The `group` field
+ * controls which section the card renders under on the index page.
  */
 export const RECIPES: RecipeMeta[] = [
+  // ── Per-reel geometry / MultiWays / Big symbols ───────────────────
+  {
+    slug: 'pyramid-shape',
+    group: 'pyramid',
+    title: 'Per-reel shape (pyramid)',
+    oneLiner: 'Non-uniform reel set — 3-5-5-5-3 pyramid, diamond, half-pyramid. Static shape set at build time.',
+    steps: [
+      'Pass an array to .visibleRowsPerReel([3, 5, 5, 5, 3]) instead of .visibleSymbols(n)',
+      'Optionally set .reelAnchor("center" | "top" | "bottom") to control vertical alignment',
+      'getCellBounds(col, row) reflects per-reel offsetY automatically',
+    ],
+    apis: ['ReelSetBuilder.visibleRowsPerReel', 'ReelSetBuilder.reelAnchor', 'Reel.offsetY'],
+    tags: ['shape', 'pyramid', 'geometry', 'layout'],
+  },
+  {
+    slug: 'multiways',
+    group: 'multiways',
+    title: 'MultiWays',
+    oneLiner: 'Per-spin row variation — each reel can land on a different row count between minRows and maxRows.',
+    steps: [
+      'Build with .multiways({ minRows, maxRows, reelPixelHeight })',
+      'Each spin, call reelSet.setShape(rowsPerReel) BEFORE setResult()',
+      'AdjustPhase reshapes reels (resize symbols + reshape motion) before STOP',
+    ],
+    apis: ['ReelSetBuilder.multiways', 'ReelSet.setShape', 'AdjustPhase'],
+    tags: ['multiways', 'shape', 'reshape', 'geometry'],
+  },
+  {
+    slug: 'big-symbols',
+    group: 'big-symbols',
+    title: 'Big symbols (N×M)',
+    oneLiner: 'Single symbol occupying an N×M block — 2×2 bonus frames, 3×3 giants. Declared via SymbolData.size.',
+    steps: [
+      'Register a big symbol with size { w, h } in symbolData metadata',
+      'Server places the symbol id at the top-left (anchor) cell only',
+      'Engine paints OCCUPIED across the rest of the block — public result stays string[][]',
+    ],
+    apis: ['SymbolData.size', 'ReelSet.getSymbolFootprint', 'ReelSet.getVisibleGrid'],
+    tags: ['big-symbols', 'bonus', 'layout', 'registration'],
+  },
+  {
+    slug: 'big-symbols-mxn',
+    group: 'big-symbols',
+    title: 'MxN big symbols — every shape',
+    oneLiner: 'Square 2×2, tall 1×3, giant 3×3, wide 2×4 — one focused interactive demo per shape, with the placement logic spelled out.',
+    steps: [
+      'Same registration API for every shape: { weight: 0, size: { w, h } }',
+      'Anchor formula: col in [0, REELS - w], row in [0, ROWS - h]',
+      'getSymbolFootprint + getBlockBounds resolve any cell to its anchor + pixel rect',
+    ],
+    apis: ['SymbolData.size', 'ReelSet.getSymbolFootprint', 'ReelSet.getBlockBounds'],
+    tags: ['big-symbols', 'layout', 'sizing'],
+  },
+  {
+    slug: 'get-block-bounds',
+    group: 'big-symbols',
+    title: 'getBlockBounds — outline a big symbol',
+    oneLiner: 'Draw a single rectangle that hugs an entire N×M block, regardless of which cell you pass. Works for 1×1 (equivalent to getCellBounds) and 1×N expanding wilds.',
+    steps: [
+      'getBlockBounds(col, row) returns { x, y, width, height } in ReelSet-local pixels',
+      "Pass any cell of a block — anchor or non-anchor — both return the same rect",
+      'Use for win frames, cluster outlines, hit-area overlays',
+    ],
+    apis: ['ReelSet.getBlockBounds', 'ReelSet.getSymbolFootprint'],
+    tags: ['big-symbols', 'overlay', 'cell-bounds'],
+  },
+  {
+    slug: 'card-symbol-debug',
+    group: 'starters',
+    title: 'CardSymbol — debug / prototyping helper',
+    oneLiner: 'No-asset PIXI.Graphics symbol class for recipes, mechanic tests, and prototypes. NOT for production — ship Sprite/Animated/Spine instead.',
+    steps: [
+      "Import CardSymbol, CARD_DECK from `examples/shared/CardSymbol.ts`",
+      'Register one symbol id per card with its own color',
+      'No textures, no atlases — geometry redrawn at every resize',
+    ],
+    apis: ['CardSymbol', 'CARD_DECK', 'WILD_CARD', 'PIXI.Graphics'],
+    tags: ['debug', 'prototyping', 'custom-symbol', 'graphics'],
+  },
+  {
+    slug: 'multiways-card-symbols',
+    group: 'multiways',
+    title: 'MultiWays with debug Graphics symbols',
+    oneLiner: 'CardSymbol on a MultiWays slot — every reshape redraws cells at their exact pixel size, no texture stretching.',
+    steps: [
+      'Import CardSymbol from examples/shared/CardSymbol.ts',
+      'Build .multiways({ minRows, maxRows, reelPixelHeight })',
+      'Register a deck of cards via CARD_DECK; reshape on every spin',
+    ],
+    apis: ['CardSymbol', 'ReelSetBuilder.multiways', 'ReelSet.setShape'],
+    tags: ['multiways', 'custom-symbol', 'graphics', 'debug'],
+  },
+  {
+    slug: 'sticky-wild-multiways',
+    group: 'multiways',
+    title: 'Sticky wild on MultiWays',
+    oneLiner: 'Pin survives every MultiWays reshape — clamps when shape shrinks, restores to originRow when it grows back.',
+    steps: [
+      'Pin wilds on spin:allLanded — originRow is frozen at placement',
+      'Each spin, setShape(rowsPerReel) — AdjustPhase migrates pins via min(originRow, newRows-1)',
+      'pin:migrated fires per affected pin with { fromRow, toRow, clamped, reelIndex }',
+    ],
+    apis: ['ReelSet.pin', 'CellPin.originRow', 'AdjustPhase', 'pin:migrated event'],
+    tags: ['multiways', 'sticky', 'wild', 'cell-pin', 'pin-migration'],
+  },
+
   // ── Starter templates (merged in from /templates/) ─────────────────
   {
     slug: 'classic-5x3',
+    group: 'starters',
     title: 'Classic 5×3 starter',
     oneLiner: 'The foundation of 95% of slot games — copy-paste starting point for line-pays.',
     steps: [
@@ -28,8 +213,9 @@ export const RECIPES: RecipeMeta[] = [
   },
   {
     slug: 'cascade-6x5',
+    group: 'starters',
     title: 'Cascade 6×5 tumble',
-    oneLiner: 'Modern tumble mechanic with an ever-growing multiplier — Megaways-adjacent.',
+    oneLiner: 'Modern tumble mechanic with an ever-growing multiplier — MultiWays-adjacent.',
     steps: [
       'Build a 6×5 ReelSet with .cascade() for drop-in mechanics',
       'Spin, detect cluster/line wins, spotlight them',
@@ -41,6 +227,7 @@ export const RECIPES: RecipeMeta[] = [
   },
   {
     slug: 'cascade-anticipation',
+    group: 'cascade',
     title: 'Cascade drop anticipation',
     oneLiner: 'All columns fall empty at once — then one hole stays open until the payoff symbol drops in.',
     steps: [
@@ -53,6 +240,7 @@ export const RECIPES: RecipeMeta[] = [
   },
   {
     slug: 'hold-and-win',
+    group: 'starters',
     title: 'Hold & Win respin',
     oneLiner: 'Coins lock on land, respin until the grid fills — the "coin" formula every studio is shipping.',
     steps: [
@@ -68,6 +256,7 @@ export const RECIPES: RecipeMeta[] = [
   // ── Mechanic recipes ───────────────────────────────────────────────
   {
     slug: 'walking-wild',
+    group: 'wilds',
     title: 'Walking wild',
     oneLiner: 'Sticky wild that advances one column every respin, pays on the way across.',
     steps: [
@@ -81,6 +270,7 @@ export const RECIPES: RecipeMeta[] = [
   },
   {
     slug: 'sticky-wild',
+    group: 'wilds',
     title: 'Sticky wild',
     oneLiner: 'Wilds land during free spins, lock in place, board fills up toward an inevitable jackpot.',
     steps: [
@@ -93,6 +283,7 @@ export const RECIPES: RecipeMeta[] = [
   },
   {
     slug: 'symbol-transform',
+    group: 'features',
     title: 'Symbol transform',
     oneLiner: 'A symbol morphs into a different (usually higher) one mid-round — winning lows upgrade to meds.',
     steps: [
@@ -106,6 +297,7 @@ export const RECIPES: RecipeMeta[] = [
   },
   {
     slug: 'mystery-reveal',
+    group: 'features',
     title: 'Mystery reveal',
     oneLiner: 'All "?" cells reveal the SAME random symbol on land — the Money Train mystery-symbol drama.',
     steps: [
@@ -121,6 +313,7 @@ export const RECIPES: RecipeMeta[] = [
   // ── UX & system recipes ────────────────────────────────────────────
   {
     slug: 'remove-symbol',
+    group: 'cascade',
     title: 'Remove symbol in a cascade',
     oneLiner: 'Fade and shrink a cell out before the next stage lands.',
     steps: [
@@ -133,6 +326,7 @@ export const RECIPES: RecipeMeta[] = [
   },
   {
     slug: 'anticipate-a-reel',
+    group: 'tension',
     title: 'Anticipate a reel',
     oneLiner: 'Slow a specific reel to build tension before it lands.',
     steps: [
@@ -145,6 +339,7 @@ export const RECIPES: RecipeMeta[] = [
   },
   {
     slug: 'single-reel-respin',
+    group: 'tension',
     title: 'Single-reel respin',
     oneLiner: 'Hold every other reel and respin just one — the classic "nudge" mechanic.',
     steps: [
@@ -158,6 +353,7 @@ export const RECIPES: RecipeMeta[] = [
   },
   {
     slug: 'animate-paylines',
+    group: 'wins',
     title: 'Highlight winning cells',
     oneLiner: 'Sweep or flash the winning symbols with WinPresenter — just cells, no line drawing.',
     steps: [
@@ -170,6 +366,7 @@ export const RECIPES: RecipeMeta[] = [
   },
   {
     slug: 'paylines-custom-animation',
+    group: 'wins',
     title: 'Custom per-symbol animation',
     oneLiner: 'Replace playWin() with a GSAP timeline, styled per win.id.',
     steps: [
@@ -182,6 +379,7 @@ export const RECIPES: RecipeMeta[] = [
   },
   {
     slug: 'cascade-winpresenter',
+    group: 'cascade',
     title: 'Cascade pops with WinPresenter',
     oneLiner: 'Same presenter, same Win shape — just cells vanishing from a cascade.',
     steps: [
@@ -194,6 +392,7 @@ export const RECIPES: RecipeMeta[] = [
   },
   {
     slug: 'paylines-events-only',
+    group: 'wins',
     title: 'Draw paylines yourself from win:group',
     oneLiner: 'Core never draws lines. Subscribe to win:group + getCellBounds and render any overlay.',
     steps: [
@@ -206,6 +405,7 @@ export const RECIPES: RecipeMeta[] = [
   },
   {
     slug: 'slam-stop',
+    group: 'tension',
     title: 'Slam-stop',
     oneLiner: 'Let the player smash the button to land the reels now.',
     steps: [
@@ -218,6 +418,7 @@ export const RECIPES: RecipeMeta[] = [
   },
   {
     slug: 'near-miss',
+    group: 'tension',
     title: 'Fake a near-miss',
     oneLiner: 'Place N-1 scatters plus anticipation on the reel that "almost" landed one.',
     steps: [
@@ -230,6 +431,7 @@ export const RECIPES: RecipeMeta[] = [
   },
   {
     slug: 'texture-atlas-symbols',
+    group: 'symbol-formats',
     title: 'Texture atlas symbols',
     oneLiner: 'Load sprite symbols from a TexturePacker atlas — one atlas file, 80+ frames.',
     steps: [
@@ -240,36 +442,12 @@ export const RECIPES: RecipeMeta[] = [
     apis: ['PIXI.Assets.load', 'Spritesheet.textures', 'SpriteSymbol', 'BlurSpriteSymbol'],
     tags: ['sprites', 'atlas', 'texturepacker'],
   },
-  {
-    slug: 'pixellab-animated-symbols',
-    title: 'AI-generated animated symbols (pixellab)',
-    oneLiner: 'Generate pixel-art symbols + win sequences via pixellab.ai, drop into AnimatedSpriteSymbol.',
-    steps: [
-      'Run scripts/gen-pixellab-symbols.mjs with PIXELAB_API_KEY',
-      'Load the frames with loadPixellabSymbols([...ids])',
-      'Register each symbol with AnimatedSpriteSymbol — playWin plays the sequence',
-    ],
-    apis: ['AnimatedSpriteSymbol', 'loadPixellabSymbols', 'WinPresenter'],
-    tags: ['symbols', 'animation', 'ai'],
-  },
-  {
-    slug: 'pixellab-cascade-disintegrate',
-    title: 'Cascade with disintegration (pixellab)',
-    oneLiner: '6×5 cluster cascade. Each winning cell plays its own AI-generated disintegrate sequence before tumbling.',
-    steps: [
-      'Generate per-symbol win + disintegrate sequences',
-      'Spawn a PIXI.AnimatedSprite overlay playing disintegrateFrames on each winner',
-      'Let runCascade tumble + drop after the pops resolve',
-    ],
-    apis: ['AnimatedSpriteSymbol', 'loadPixellabSymbols', 'runCascade.onWinnersVanish'],
-    tags: ['cascade', 'animation', 'ai', 'cluster'],
-  },
-
   // ── CellPin primitive recipes ──────────────────────────────────────
   // These recipes all use reelSet.pin() — the engine's unified cell-persistence
   // primitive. Each shows a different configuration of one API.
   {
     slug: 'sticky-wild-pin',
+    group: 'wilds',
     title: 'Sticky wild (CellPin)',
     oneLiner: 'Same sticky wild, built on the engine primitive — no ghost sprites, no manual grid injection.',
     steps: [
@@ -282,6 +460,7 @@ export const RECIPES: RecipeMeta[] = [
   },
   {
     slug: 'expanding-wild-pin',
+    group: 'wilds',
     title: 'Expanding wild',
     oneLiner: 'Wild lands, entire column becomes wild for N spins — auto-expires when the turn counter runs out.',
     steps: [
@@ -294,6 +473,7 @@ export const RECIPES: RecipeMeta[] = [
   },
   {
     slug: 'book-expanding-pin',
+    group: 'wilds',
     title: 'Book-style expanding symbol',
     oneLiner: 'One chosen symbol class expands to fill any reel it appears on — the Book-of slot formula.',
     steps: [
@@ -306,6 +486,7 @@ export const RECIPES: RecipeMeta[] = [
   },
   {
     slug: 'multiplier-wild-pin',
+    group: 'wilds',
     title: 'Multiplier wild',
     oneLiner: 'Each wild carries a per-instance multiplier in its pin payload — a ×N badge overlays the cell.',
     steps: [
@@ -318,6 +499,7 @@ export const RECIPES: RecipeMeta[] = [
   },
   {
     slug: 'value-coin-pin',
+    group: 'features',
     title: 'Value-carrying coin (Hold & Win)',
     oneLiner: 'Coin symbols carry their payout value in the pin payload; a running total updates as coins lock.',
     steps: [
@@ -330,6 +512,7 @@ export const RECIPES: RecipeMeta[] = [
   },
   {
     slug: 'collector-symbol-pin',
+    group: 'features',
     title: 'Collector symbol',
     oneLiner: 'Collector absorbs adjacent coin pin payloads into its own total — pins coordinating across cells.',
     steps: [
@@ -342,6 +525,7 @@ export const RECIPES: RecipeMeta[] = [
   },
   {
     slug: 'mystery-reveal-pin',
+    group: 'features',
     title: 'Mystery reveal (CellPin)',
     oneLiner: 'Mystery symbols land, all reveal to the same random class via eval pins — auto-cleared at next spin.',
     steps: [
@@ -354,6 +538,7 @@ export const RECIPES: RecipeMeta[] = [
   },
   {
     slug: 'sticky-win-respin-pin',
+    group: 'wilds',
     title: 'Sticky-win respin',
     oneLiner: 'Winners lock for N respins while the rest of the grid spins independently — the Dead-or-Alive-II pattern.',
     steps: [
@@ -366,6 +551,7 @@ export const RECIPES: RecipeMeta[] = [
   },
   {
     slug: 'positional-multiplier-pin',
+    group: 'features',
     title: 'Positional multiplier cells',
     oneLiner: 'Specific cells carry multipliers — any symbol that lands there boosts the win passing through.',
     steps: [
@@ -380,6 +566,7 @@ export const RECIPES: RecipeMeta[] = [
   // ── getCellBounds — coordinate utilities ──────────────────────────────
   {
     slug: 'cell-bounds',
+    group: 'cell-coords',
     title: 'Cell bounds — overlays, paylines & hit areas',
     oneLiner: 'getCellBounds(col, row) returns the pixel rectangle of any visible cell — draw paylines, win outlines, or hit areas that align exactly with symbols.',
     steps: [
@@ -392,6 +579,7 @@ export const RECIPES: RecipeMeta[] = [
   },
   {
     slug: 'cell-hit-areas',
+    group: 'cell-coords',
     title: 'Cell hit areas — click to pick, hover to preview',
     oneLiner: 'Attach pointer events to individual grid cells with getCellBounds — cursor turns to pointer on hover, click toggles a pick state.',
     steps: [
@@ -404,6 +592,7 @@ export const RECIPES: RecipeMeta[] = [
   },
   {
     slug: 'cell-hit-areas-portrait',
+    group: 'cell-coords',
     title: 'Portrait (non-square) cells + hit areas',
     oneLiner: 'Proof that getCellBounds makes no square-cell assumption — 70 × 105 portrait cells, fit-scaled sprites, pointer-accurate hit areas.',
     steps: [
@@ -418,6 +607,7 @@ export const RECIPES: RecipeMeta[] = [
   // ── movePin + frame exposure recipes ──────────────────────────────────
   {
     slug: 'walking-wild-pin',
+    group: 'wilds',
     title: 'Walking wild (movePin)',
     oneLiner: 'Walking wild migrating one column left each spin — engine-native reelSet.movePin(), no ghost sprites.',
     steps: [
@@ -430,6 +620,7 @@ export const RECIPES: RecipeMeta[] = [
   },
   {
     slug: 'feature-mode-swap',
+    group: 'runtime',
     title: 'Feature mode swap',
     oneLiner: 'Enter and exit a bonus mode at runtime by toggling a frame middleware — zero rebuild.',
     steps: [

@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "sync-assets": "node -e \"const fs=require('fs');fs.cpSync('../../examples/assets/prototype-symbols','public/prototype-symbols',{recursive:true});fs.cpSync('../../examples/assets/pixellab-symbols','public/pixellab-symbols',{recursive:true});\"",
+    "sync-assets": "node -e \"const fs=require('fs');fs.cpSync('../../examples/assets/prototype-symbols','public/prototype-symbols',{recursive:true});\"",
     "predev": "pnpm sync-assets",
     "prebuild": "pnpm sync-assets",
     "prepreview": "pnpm sync-assets",

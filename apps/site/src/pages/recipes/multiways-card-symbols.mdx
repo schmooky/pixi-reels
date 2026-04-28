@@ -1,0 +1,89 @@
+---
+layout: ../../layouts/Recipe.astro
+title: MultiWays with custom Graphics symbols
+description: Card-suit symbols (7 8 9 10 J Q K A) drawn from PIXI Graphics — flat rectangles with centered labels — so cells visually fill the entire space the engine hands them. Shows how MultiWays reshape feels at the cell level.
+tags: [multiways, custom-symbol, graphics, no-textures]
+steps:
+  - "Subclass ReelSymbol with a PIXI.Graphics + PIXI.Text composite"
+  - "In resize(width, height), redraw the rect at the cell's actual size"
+  - "Register one symbol id per card, each with its own color"
+apis:
+  - ReelSymbol
+  - ReelSetBuilder.multiways
+  - PIXI.Graphics
+---
+
+import code from '../../recipes/multiways-card-symbols.recipe.ts?raw';
+import { RecipeRunner } from '../../components/RecipeRunner.tsx';
+
+<RecipeRunner code={code} client:only="react" />
+
+Sprites stretch when you scale them; Graphics don't. This recipe builds card symbols (`7 8 9 10 J Q K A`) directly from `PIXI.Graphics` + `PIXI.Text`, so every reshape redraws each cell at its actual pixel size. Useful when you want to feel exactly how the engine hands cell space across MultiWays shapes — a 2-row reel gives each cell ~240px tall; a 7-row reel gives each cell ~68px tall.
+
+## The custom class
+
+The recipe runner imports `CardSymbol` from `examples/shared/CardSymbol.ts`. The shape of the class — for review or for vendoring into your own codebase — looks like:
+
+```ts
+class CardSymbol extends ReelSymbol {
+  constructor({ color, label, textColor = 0xffffff }) {
+    super();
+    this._color = color;
+    this._label = label;
+    this._gfx = new Graphics();
+    this._text = new Text({
+      text: label,
+      style: { fontFamily: '"Roboto Condensed", system-ui, sans-serif', fontWeight: '700', fill: textColor },
+    });
+    this._text.anchor.set(0.5);
+    this.view.addChild(this._gfx);
+    this.view.addChild(this._text);
+  }
+  onActivate() {}
+  onDeactivate() {}
+  async playWin() { /* gsap flash + scale pulse */ }
+  stopAnimation() { this.view.scale.set(1, 1); this._gfx.alpha = 1; }
+  resize(w, h) {
+    this._gfx.clear();
+    this._gfx.rect(0, 0, w, h).fill({ color: this._color });
+    this._gfx.rect(1, 1, w - 2, h - 2).stroke({ color: 0x000000, width: 2, alpha: 0.25 });
+    this._text.x = w / 2;
+    this._text.y = h / 2;
+    const labelLen = Math.max(1, this._label.length);
+    const fitH = h * 0.38;
+    const fitW = (w * 0.7) / (labelLen * 0.45);
+    this._text.style.fontSize = Math.max(7, Math.floor(Math.min(fitH, fitW)));
+  }
+}
+```
+
+`resize(w, h)` is called on every symbol swap and every MultiWays reshape. The rectangle is redrawn at exactly the new cell size — no scaling artifacts, no stretched textures. The font-size formula scales by *both* height and label width so multi-character labels (`'10'`, `'WILD'`) stay readable from 2-row through 7-row shapes without overflowing narrow cells.
+
+## Registration
+
+Use the bundled `CARD_DECK` constant — it's the same eight cards laid out above:
+
+```ts
+import { CardSymbol, CARD_DECK } from '../../shared/CardSymbol';
+
+builder.symbols((registry) => {
+  for (const card of CARD_DECK) {
+    registry.register(card.id, CardSymbol, { color: card.color, label: card.label });
+  }
+});
+```
+
+Each symbol id gets its own pool of `CardSymbol` instances. The class itself is generic; the per-id config (color, label, optional `textColor`) is captured in each pool instance via constructor opts.
+
+## Why this matters for MultiWays
+
+When you author MultiWays with sprite textures, you pre-render the texture at one size and let PixiJS scale it for the rest. At extreme reshapes (e.g. a 2-row reel where cells are 3x taller than max-rows authoring), sprites pixellate or look soft.
+
+Drawing from Graphics sidesteps the trade-off: every reshape redraws geometry from scratch. The rectangle, the stroke, the text — all crisp at any size. You won't ship a real slot like this (players want art), but it's the cleanest way to see how the engine treats cell space.
+
+## Related
+
+- [Guide: Per-reel geometry, MultiWays & big symbols](/guides/per-reel-geometry/) — full mechanics primer
+- [MultiWays](/recipes/multiways/) — same mechanic, both render with these card symbols
+- [Sticky wild on MultiWays](/recipes/sticky-wild-multiways/) — pin overlays survive reshape
+- [Spine recipe (lib docs)](/docs/recipes/spine-multiways-ready/) — Spine skeletons that scale cleanly across reshape

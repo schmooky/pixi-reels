@@ -1,0 +1,105 @@
+---
+layout: ../../layouts/Docs.astro
+title: MultiWays
+section: guides
+eyebrow: Building blocks
+description: Per-spin row variation. Each reel can land on a different row count between minRows and maxRows, with cell height derived from a fixed reel pixel height. The engine reshapes each reel between SPIN and STOP and AdjustPhase tweens any pin overlays; pins migrate via originRow.
+---
+
+MultiWays is the open-source name for the "ways"-style mechanic where each reel can land on a different row count *every spin*. Reel **pixel height is fixed** for the whole slot; cell height per reel is derived as `reelPixelHeight / visibleRows[i]`. So a 2-row reel has tall cells; a 7-row reel has short ones.
+
+This guide covers MultiWays in depth. For the broader picture (pyramid layouts, big symbols, mutual exclusivity rules), start at the [Per-reel geometry](/guides/per-reel-geometry/) overview.
+
+## The whole mechanic
+
+```ts
+const reelSet = new ReelSetBuilder()
+  .reels(6)
+  .multiways({ minRows: 2, maxRows: 7, reelPixelHeight: 480 })
+  .pinMigrationDuration(300)         // ms; pin-overlay tween. 0 = instant snap.
+  .pinMigrationEase('power2.inOut')  // any GSAP ease string
+  .symbolSize(68, 68)                // SPIN-time uniform cell size
+  // ...
+  .build();
+
+// Per-spin flow:
+const promise = reelSet.spin();
+const shape = pickRandomShape();   // [3, 5, 7, 4, 6, 2]
+reelSet.setShape(shape);           // BEFORE setResult — emits 'shape:changed', migrates pins
+reelSet.setResult(serverGrid);     // serverGrid[i].length === shape[i]
+await promise;
+```
+
+The engine handles cell-height derivation, AdjustPhase reshape, mask sizing, and per-reel offset.
+
+## Order of operations
+
+1. **`spin()`** — reels start scrolling. Cells are at the previous spin's heights.
+2. **`setShape(rowsPerReel)`** — records the target shape, **migrates pins** to their new rows eagerly, emits `shape:changed`. Must be called BEFORE `setResult` (the engine throws otherwise).
+3. **`setResult(grid)`** — server result. Each `grid[i]` has length `rowsPerReel[i]`.
+4. **Reshape + `AdjustPhase`** — runs between SPIN and STOP **only on MultiWays slots**. Per reel: emit `adjust:start`, commit the geometry (resize existing symbols, reshape the motion layer), refresh pin overlays, emit `adjust:complete` — the cell symbols snap instantly because the reel is still spinning at full speed. Then `AdjustPhase` tweens any pin overlays from their captured pre-reshape pose to the new cell over `pinMigrationDuration` with `pinMigrationEase`. With no overlays the phase is skipped, but the reshape (and `adjust:start`/`adjust:complete`) still runs whenever the row count actually changes.
+5. **`StopPhase`** — lands the reels at the new shape with the bounce.
+
+## Pin migration (sticky wilds, walking wilds)
+
+A pin's `originRow` is captured at placement. On every reshape it migrates per its `migration` policy. Each migration fires `pin:migrated` with `{ fromRow, toRow, clamped, reelIndex }`.
+
+### `migration: 'origin'` (default — clamp + restore)
+
+Prevents wander. A pin clamped down on a shrink returns to its origin row when a later shape grows back. Right for sticky wilds.
+
+| Spin | Shape (col 2) | originRow | Migrated row | Clamped? |
+|------|---------------|-----------|--------------|----------|
+| 1 | 5 | 4 | 4 | no |
+| 2 | 3 | 4 | 2 | yes |
+| 3 | 7 | 4 | 4 | **restored** |
+| 4 | 4 | 4 | 3 | yes |
+
+### `migration: 'frozen'` (clamp without restoring)
+
+The pin never restores after a clamp. `originRow` is updated on every clamp, so future grows see the new origin. Right for walking wilds, descending wilds, or anything where "current row" is the source of truth and a higher row is unreachable history.
+
+| Spin | Shape (col 2) | originRow before | Migrated row | originRow after |
+|------|---------------|------------------|--------------|-----------------|
+| 1 | 5 | 4 | 4 | 4 |
+| 2 | 3 | 4 | 2 (clamped) | **2** (updated) |
+| 3 | 7 | 2 | 2 | 2 |
+| 4 | 4 | 2 | 2 | 2 |
+
+Pass via `pin()` options:
+
+```ts
+reelSet.pin(col, row, id, { migration: 'frozen' });
+```
+
+## Animation scope
+
+`pinMigrationDuration` + `pinMigrationEase` control **pin-overlay** migration only. The underlying reel cells snap instantly because the reel is still spinning at full speed during the reshape — tweening individual cell symbols would fight the motion layer.
+
+When a reel has no pinned cells on this spin, the `AdjustPhase` tween is skipped (no phase instance is constructed and no overlay tween runs). `adjust:start` and `adjust:complete` still fire around the reshape itself whenever the row count or cell height actually changes — they're emitted by the engine's reshape step, not by the tween phase. If neither the shape nor any overlays change for a reel, nothing fires and no work is done.
+
+The tween is also bypassed on `reelSet.skip()` — slam-stop is meant to land immediately, so pin overlays snap to their new cells regardless of `pinMigrationDuration`.
+
+## Events specific to MultiWays
+
+These events ONLY fire on slots built with `.multiways(...)`. Non-MultiWays slots never see them:
+
+- `shape:changed` — `setShape()` recorded a new target.
+- `adjust:start` — per-reel AdjustPhase entry.
+- `adjust:complete` — per-reel AdjustPhase exit.
+- `pin:migrated` — a pin's row changed because of reshape.
+
+## Constraints
+
+- **Big symbols + MultiWays** is rejected at build. A 2×2 on a 2-row reel can't fit; the engine fails fast rather than picking arbitrarily.
+- **Cascade + MultiWays** is rejected at build. Niche combination, deferred to v2.
+- The reel pixel height is fixed per the `multiways({ reelPixelHeight })` value. To change it, rebuild.
+- `setShape` must be called between `spin()` and `setResult()`. Calling after `setResult` corrupts cached frames; the engine throws.
+
+## See also
+
+- [Guide: Per-reel geometry](/guides/per-reel-geometry/) — overview + constraint matrix + mask strategy
+- [Guide: Big symbols](/guides/big-symbols/) — N×M blocks (mutually exclusive with MultiWays)
+- [`multiways`](/recipes/multiways/) recipe — basic per-spin reshape
+- [`multiways-card-symbols`](/recipes/multiways-card-symbols/) recipe — same demo, focuses on cell-resize visuals
+- [`sticky-wild-multiways`](/recipes/sticky-wild-multiways/) recipe — pin migration in action with `originRow`
