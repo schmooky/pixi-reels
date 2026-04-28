@@ -25,6 +25,19 @@
  */
 module.exports = {
   extends: ['@commitlint/config-conventional'],
+  // Skip bot-generated commits. Three matchers, in order of specificity:
+  //   1. Co-authored-by trailer points at a [bot]@users.noreply.github.com
+  //      address — the canonical signature of a GitHub-hosted bot
+  //      (CodeQL Autofix, Dependabot, Renovate-on-GitHub, etc).
+  //   2. CodeQL Autofix subject prefix, for older bot versions that
+  //      omit the trailer.
+  //   3. Dependabot's classic "Bumps X from Y to Z" subject.
+  // commitlint defaults already skip merge/revert/squash/initial commits.
+  ignores: [
+    (commit) => /\[bot\]@users\.noreply\.github\.com/i.test(commit),
+    (commit) => /^Potential fix for pull request finding/i.test(commit),
+    (commit) => /^Bumps? \S+ from \S+ to \S+/.test(commit),
+  ],
   rules: {
     'type-enum': [
       2,
