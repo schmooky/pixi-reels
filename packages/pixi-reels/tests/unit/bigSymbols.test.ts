@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createTestReelSet, expectGrid } from '../../src/testing/index.js';
+import { createTestReelSet } from '../../src/testing/index.js';
 
 describe('big symbols', () => {
   it('lands a 2x2 block, anchor row reports anchor id, OCCUPIED rows do too', async () => {
