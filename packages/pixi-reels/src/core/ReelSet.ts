@@ -4,7 +4,7 @@ import type { Disposable } from '../utils/Disposable.js';
 import type { SpeedProfile, ReelSetInternalConfig, CellBounds, SymbolData } from '../config/types.js';
 import { EventEmitter } from '../events/EventEmitter.js';
 import type { ReelSetEvents, SpinResult, SymbolPosition } from '../events/ReelEvents.js';
-import { Reel, OCCUPIED_SENTINEL } from './Reel.js';
+import { Reel } from './Reel.js';
 import { ReelViewport } from './ReelViewport.js';
 import { SpinController } from '../spin/SpinController.js';
 import { SpeedManager } from '../speed/SpeedManager.js';
