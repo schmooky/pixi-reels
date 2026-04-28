@@ -425,7 +425,6 @@ export class Reel implements Disposable {
     bufferBelow: number,
   ): void {
     const newTotal = bufferAbove + newVisibleRows + bufferBelow;
-    const oldTotal = this.symbols.length;
 
     // Grow: append additional symbols at the bottom buffer.
     while (this.symbols.length < newTotal) {
