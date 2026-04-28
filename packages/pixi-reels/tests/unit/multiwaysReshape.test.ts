@@ -99,7 +99,7 @@ describe('MultiWays reshape', () => {
   });
 
   it('AdjustPhase adjusts shape between SPIN and STOP', async () => {
-    const { reelSet, spinAndLand, destroy } = createTestReelSet({
+    const { reelSet, destroy } = createTestReelSet({
       reels: 3,
       multiways: { minRows: 2, maxRows: 6, reelPixelHeight: 600 },
       symbolIds: ['a', 'b'],
