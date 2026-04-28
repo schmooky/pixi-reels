@@ -235,6 +235,14 @@ export class SpinController implements Disposable {
         if (this._hooks.isMultiWaysSlot && pendingShape) {
           // Pin migration already ran at setShape() time; reshape via the
           // shared helper that both paths use. No tween — skip is instant.
+          //
+          // Edge case: pins exist but the shape didn't change (`pendingShape`
+          // is null). We don't refresh overlays here because they're about
+          // to be destroyed in `_onSpinLanded` anyway — the cell symbols at
+          // the pinned coords land via `placeSymbols(decorated[i])` below
+          // and overlay the same id, so the player sees the right thing.
+          // `pinMigrationDuration` doesn't apply on skip by design (slam
+          // stop is meant to land *now*, not run a tween on the way there).
           this._applyReshape(i, pendingShape[i]);
         }
 

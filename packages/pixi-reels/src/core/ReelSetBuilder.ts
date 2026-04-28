@@ -178,6 +178,19 @@ export class ReelSetBuilder {
    * builder.maskStrategy(new SharedRectMaskStrategy())
    */
   maskStrategy(strategy: MaskStrategy): this {
+    // TS catches `null`/`undefined` for typed callers, but plain-JS callers
+    // get a confusing crash deep inside `ReelViewport` later. Throw here
+    // with a name they can grep.
+    if (
+      strategy == null ||
+      typeof strategy.build !== 'function' ||
+      typeof strategy.update !== 'function'
+    ) {
+      throw new Error(
+        'maskStrategy(): expected a MaskStrategy with build(...) and update(...) methods ' +
+        '(e.g. new RectMaskStrategy() or new SharedRectMaskStrategy()).',
+      );
+    }
     this._maskStrategy = strategy;
     this._maskStrategyExplicit = true;
     return this;

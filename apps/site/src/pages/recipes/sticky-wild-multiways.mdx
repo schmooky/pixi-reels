@@ -5,12 +5,12 @@ description: Pin survives every MultiWays reshape. Wild stays at its originRow w
 tags: [multiways, sticky, wild, cell-pin, pin-migration]
 steps:
   - "Pin wilds on spin:allLanded with { turns: N } — originRow defaults to current row"
-  - "Each spin, setShape(rowsPerReel) before setResult() — AdjustPhase migrates pins"
+  - "Each spin, setShape(rowsPerReel) before setResult() — setShape migrates pins eagerly"
   - "When new shape can't fit originRow, pin clamps; when it can again, pin restores"
 apis:
   - ReelSet.pin
   - CellPin.originRow
-  - "ReelSet.setShape + AdjustPhase"
+  - ReelSet.setShape
   - "events: pin:migrated"
 ---
 
@@ -41,10 +41,12 @@ Then on every spin, set the shape and result as usual. The engine handles migrat
 
 ```ts
 const promise = reelSet.spin();
-reelSet.setShape(rowsPerReel);   // AdjustPhase will migrate pins to fit
+reelSet.setShape(rowsPerReel);   // migrates pins eagerly to fit the new shape
 reelSet.setResult(serverGrid);
 await promise;
 ```
+
+`setShape()` is what migrates pins (eagerly, before `setResult` overlays them). The later `AdjustPhase` only tweens the *visual* overlays from their old cell to their new one — the pin map is already at the post-migration rows by then.
 
 ## Migration semantics
 
@@ -55,7 +57,7 @@ await promise;
 | 3    | 7             | 4         | 4            | no — restored |
 | 4    | 4             | 4         | 3            | yes      |
 
-Each reshape fires `pin:migrated` per affected pin with `{ fromRow, toRow, clamped, reelIndex }`. `clamped: true` means the new row was forced by shape size; `clamped: false` means the pin landed at its origin (either it never moved, or it just restored).
+Each `setShape()` call fires `pin:migrated` per affected pin with `{ fromRow, toRow, clamped, reelIndex }`. `clamped: true` means the new row was forced by shape size; `clamped: false` means the pin landed at its origin (either it never moved, or it just restored).
 
 ## Why this matters
 
@@ -89,7 +91,7 @@ reelSet.pin(2, 4, 'wild', { turns: 'permanent', migration: 'frozen' });
 
 ## Constraints
 
-- **AdjustPhase is multiways-only.** `pin:migrated` and `adjust:*` events never fire on non-MultiWays slots.
+- **Reshape + AdjustPhase are multiways-only.** `pin:migrated`, `shape:changed`, and `adjust:*` events never fire on non-MultiWays slots.
 - **Pin migration is per-reel.** Pins on column 2 don't reshape when only column 4's row count changes.
 - **Big symbols + MultiWays** is rejected at build, so a sticky big-symbol-on-MultiWays isn't a thing in v1.
 

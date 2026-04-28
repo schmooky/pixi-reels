@@ -17,6 +17,7 @@ ADRs for pixi-reels. Each one captures a decision that shapes how the code is wr
 | [011](./011-spine-subpath-and-vocabulary.md) | Spine subpath export + canonical animation vocabulary | Accepted |
 | [012](./012-per-reel-geometry-and-adjust-phase.md) | Per-reel geometry and the Adjust phase | Accepted (load-bearing) |
 | [013](./013-big-symbols-via-registration.md) | Big symbols via registration, not result data | Accepted |
+| [014](./014-mask-strategy-public.md) | MaskStrategy is a public extension point | Accepted |
 
 ## Writing a new ADR
 

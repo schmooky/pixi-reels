@@ -1,7 +1,7 @@
 ---
 layout: ../../layouts/Recipe.astro
-title: MxN big symbols
-description: Big symbols at any rectangular size — 1×3 tall bars, 2×2 bonuses, 3×3 giants, 2×4 wide blocks. Same registration API, different size metadata.
+title: MxN big symbols — every shape
+description: Big symbols at any rectangular size — 2×2 squares, 1×3 tall bars, 3×3 giants, 2×4 wide banners. Same registration API for all four; each shape has its own use case. One interactive example per shape, with the placement logic spelled out.
 tags: [big-symbols, layout, registration, sizing]
 steps:
   - "Register each oversized symbol with size { w, h } — any positive integers"
@@ -10,76 +10,188 @@ steps:
 apis:
   - SymbolData.size
   - ReelSet.getSymbolFootprint
+  - ReelSet.getBlockBounds
   - "validation: 'block exceeds reel height/count'"
 ---
 
-import code from '../../recipes/big-symbols-mxn.recipe.ts?raw';
+import squareCode from '../../recipes/big-symbols-mxn-square.recipe.ts?raw';
+import tallCode from '../../recipes/big-symbols-mxn-tall.recipe.ts?raw';
+import giantCode from '../../recipes/big-symbols-mxn-giant.recipe.ts?raw';
+import wideCode from '../../recipes/big-symbols-mxn-wide.recipe.ts?raw';
 import { RecipeRunner } from '../../components/RecipeRunner.tsx';
 
-<RecipeRunner code={code} client:only="react" />
+The engine's big-symbol mechanism doesn't hard-code `w === h`. Any positive integer size works — what changes per shape is the *visual intent* and the *grid budget* it consumes. This recipe walks through the four most common shapes one at a time, with the placement logic shown in each block. Each demo always plants its shape so every spin shows the mechanic.
 
-The engine's big-symbol mechanism doesn't hard-code `w === h`. Any positive integer size works — `1×3` tall bars, `3×3` giants, `2×4` wide blocks. This recipe cycles through four sizes so each spin shows a different shape on a 6×5 grid.
+> **One thing first.** Every shape uses the same registration API: `symbolData({ id: { weight: 0, size: { w, h } } })`. The differences below are about *when to reach for each shape*, not how to wire it. If you only read one section, scroll to **How the wire format stays unchanged** at the bottom — that's the bit that makes the rest make sense.
 
-## The whole mechanic
+## Square — 2×2
+
+<RecipeRunner code={squareCode} client:only="react" />
+
+The most common big-symbol shape. Players expect bonus icons, jackpot reveals, and premium symbol art at this size — it's the one shape you're guaranteed to fit on any 5+ reel grid with 3+ rows.
 
 ```ts
-.symbolData({
-  tallBar: { size: { w: 1, h: 3 } },  // tall bar
-  square:  { size: { w: 2, h: 2 } },  // standard 2×2 bonus
-  giant:   { size: { w: 3, h: 3 } },  // jackpot icon
-  wide:    { size: { w: 2, h: 4 } },  // bonus banner
-})
+const SQUARE = { id: 'square', size: { w: 2, h: 2 } };
+
+builder
+  .symbols((r) => r.register('square', SpriteSymbol, { textures: { square: tex } }))
+  .symbolData({ square: { weight: 0, zIndex: 5, size: { w: 2, h: 2 } } });
 ```
 
-Server response stays `string[][]` — only the anchor (top-left) cell carries the id. The engine paints OCCUPIED sentinels across the block before per-reel `FrameBuilder` runs, validates that the block fits, and at landing sizes the anchor symbol's view to span `(w × cellW, h × cellH)`.
+**Anchor logic** — the recipe always plants a 2×2 to make the demo deterministic:
 
-## Validation
+```ts
+const col = Math.floor(Math.random() * (REELS - 2 + 1));   // last legal anchor col
+const row = Math.floor(Math.random() * (ROWS  - 2 + 1));   // last legal anchor row
+grid[col][row] = 'square';
+// engine paints OCCUPIED at (col+1,row), (col,row+1), (col+1,row+1)
+```
 
-If the server places a block whose anchor doesn't leave room, `setResult` throws:
+**When to use:** bonus icons, jackpot frames, premium sprites you've authored at 2× resolution. Default first-thought big-symbol shape.
+
+**When *not*:** narrow grids (e.g. 3×3 — a 2×2 covers most of the board, which feels overweight). Symbols that read better as a single tall column (use 1×3 below).
+
+## Tall bar — 1×3
+
+<RecipeRunner code={tallCode} client:only="react" />
+
+One column, three rows. The block stays inside a single reel — it's effectively a "stacked" symbol. Reads as a totem, gold-bar tower, or a vertical wild column that fills its reel without spilling into neighbours.
+
+```ts
+const TALL = { id: 'tall', size: { w: 1, h: 3 } };
+
+builder.symbolData({ tall: { weight: 0, zIndex: 5, size: { w: 1, h: 3 } } });
+```
+
+**Anchor logic** — same placement formula, different size budget:
+
+```ts
+const col = Math.floor(Math.random() * (REELS - 1 + 1));   // any column (w=1)
+const row = Math.floor(Math.random() * (ROWS  - 3 + 1));   // last legal anchor row
+grid[col][row] = 'tall';
+// engine paints OCCUPIED at (col, row+1), (col, row+2)
+```
+
+**When to use:** vertical wilds (Wild Toro–style), gold-bar / coin towers, "stacked symbol" effects without the per-cell duplicate logic of true stacked reels.
+
+**When *not*:** anything that needs to span columns. A 1×N stays inside a single reel.
+
+> **Mask note.** Single-column blocks don't cross reel gaps, so `RectMaskStrategy` (the default) clips them correctly even when `symbolGap.x > 0`. The auto-pick of `SharedRectMaskStrategy` only fires for blocks where `w > 1`. The recipe still uses `SharedRectMaskStrategy` here for visual consistency with the other blocks.
+
+## Giant — 3×3
+
+<RecipeRunner code={giantCode} client:only="react" />
+
+A board-dominating feature anchor. On a 6×5 grid a 3×3 covers nine cells — half the visible area on the rows it lands across. Use sparingly: this is "free spins triggered" energy, not "weighted symbol" energy.
+
+```ts
+const GIANT = { id: 'giant', size: { w: 3, h: 3 } };
+
+builder.symbolData({ giant: { weight: 0, zIndex: 5, size: { w: 3, h: 3 } } });
+```
+
+**Anchor logic** — the legal anchor range is much smaller because the block is so large:
+
+```ts
+const col = Math.floor(Math.random() * (REELS - 3 + 1));   // 4 legal columns on a 6-reel grid
+const row = Math.floor(Math.random() * (ROWS  - 3 + 1));   // 3 legal rows on a 5-row grid
+grid[col][row] = 'giant';
+// engine paints OCCUPIED at the other 8 cells of the 3×3 block
+```
+
+**When to use:** rare feature reveals — bonus rounds, jackpot panels, character splash art. Also good when the symbol is the "frame" for an internal mini-grid (multiplier coins, prize cells).
+
+**When *not*:** small grids (5×3 — a 3×3 leaves only one valid anchor position). Random fill (`weight: 0` is mandatory; the engine throws on non-zero anyway). Frequent occurrences — at this size, players need it to feel like an *event*.
+
+## Wide banner — 2×4
+
+<RecipeRunner code={wideCode} client:only="react" />
+
+Two columns, four rows. A block that's *taller* than wide — a banner pose rather than a square. Useful when you want to span adjacent reels (so the symbol clearly belongs to multiple reels' lines / ways) but still want a bold vertical presence.
+
+```ts
+const WIDE = { id: 'wide', size: { w: 2, h: 4 } };
+
+builder.symbolData({ wide: { weight: 0, zIndex: 5, size: { w: 2, h: 4 } } });
+```
+
+**Anchor logic** — same shape of formula, but `h: 4` requires `rows >= 4`:
+
+```ts
+const col = Math.floor(Math.random() * (REELS - 2 + 1));   // 5 legal columns on a 6-reel grid
+const row = Math.floor(Math.random() * (ROWS  - 4 + 1));   // 2 legal rows on a 5-row grid
+grid[col][row] = 'wide';
+// engine paints OCCUPIED at the other 7 cells of the 2×4 block
+```
+
+**When to use:** "feature triggered" splash panels, scroll-effect tall character art that should be visually anchored to a pair of reels (so paylines / ways through it count both columns).
+
+**When *not*:** grids shorter than `h` — the engine will throw at `setResult()` with `"block exceeds reel height"` because the anchor at row 0 already needs row 0..3 visible.
+
+## How the wire format stays unchanged
+
+The server response stays `string[][]` for every shape above. The server sets the symbol id at the **anchor cell** (top-left) only. The engine:
+
+1. **Cross-reel coordinator** runs in `SpinController` ahead of per-reel `FrameBuilder`. It reads the result grid, finds big-symbol anchors, validates that each block fits, and paints the internal `OCCUPIED_SENTINEL` across the rest of the block.
+2. **At land**, the anchor symbol is sized to `(w * cellW, h * cellH)`. Non-anchor cells get an invisible `OccupiedStub` — the anchor's view spans all of them visually.
+3. **Public API never sees the sentinel.** `Reel.getVisibleSymbols()` and `ReelSet.getVisibleGrid()` resolve OCCUPIED — both same-reel and cross-reel — to the anchor's id.
+
+```ts
+// 6×5 grid with a 2×4 wide banner anchored at (col=2, row=1):
+setResult([
+  ['low1', 'low2', 'low1', 'low2', 'low1'],
+  ['low1', 'low2', 'low1', 'low2', 'low1'],
+  ['low1', 'wide',  '?',    '?',    'low2'],   // wide anchor + 'wide' OCCUPIED below
+  ['low1', '?',     '?',    '?',    'low2'],
+  ['low1', '?',     '?',    '?',    'low2'],
+  ['low1', 'low2', 'low1', 'low2', 'low1'],
+]);
+```
+
+The `?` cells can be any string; the engine overwrites them. Keep them readable for debug logs.
+
+## Validation — fail-fast at `setResult()`
+
+If the server places a block that doesn't fit, `setResult` throws synchronously:
 
 ```
 big symbol 'giant' (3x3) at (col=4, row=2) exceeds reel count 6.
-big symbol 'tallBar' (1x3) at (col=0, row=3) exceeds reel 0 height 5.
+big symbol 'tall'  (1x3) at (col=0, row=3) exceeds reel 0 height 5.
 ```
 
-Fail-fast at the call site rather than silently truncating. Catch it in your server-integration layer if you want to gracefully reroll — the engine's contract is "shape your data, or fail loud."
+Catch in your server-integration layer if you want graceful behaviour (re-roll, fallback to a 1×1, log telemetry). The engine's contract is "shape your data correctly, or fail loud." Silent truncation would let bad placements slip into production.
 
-## Footprint lookup
+The **build-time** check refuses big symbols with non-zero weight. Random fill cannot place blocks in v1, so a non-zero weight would silently never be picked — the builder throws with `big symbol 'X' (NxM) must have weight 0 — ...`.
 
-`reelSet.getSymbolFootprint(col, row)` returns the anchor cell and size for any cell — even non-anchor cells of a block:
+## Footprint and block bounds
 
-```ts
-const fp = reelSet.getSymbolFootprint(col, row);
-const b  = reelSet.getCellBounds(fp.anchor.col, fp.anchor.row);
-const blockRect = {
-  x: b.x,
-  y: b.y,
-  width:  fp.size.w * b.width,
-  height: fp.size.h * b.height,
-};
-```
+Two related APIs work for any cell — anchor or non-anchor:
 
-Or use `reelSet.getBlockBounds(col, row)` — same calculation in one call:
+- `reelSet.getSymbolFootprint(col, row)` → `{ anchor: { col, row }, size: { w, h } }`. Use for evaluation, event payloads, win-line logic.
+- `reelSet.getBlockBounds(col, row)` → `{ x, y, width, height }` covering the whole block in ReelSet-local pixels. Use for overlays, win frames, cluster outlines.
 
 ```ts
 const rect = reelSet.getBlockBounds(col, row);
+// 1×1 cell? rect equals getCellBounds(col, row).
+// Big-symbol cell? rect spans the entire block, regardless of which cell you passed.
 gfx.rect(rect.x, rect.y, rect.width, rect.height).stroke({ color: 0xff6b35, width: 4 });
+reelSet.addChild(gfx);
 ```
-
-Useful for win presenters that highlight a whole block instead of cell-by-cell.
 
 ## Authoring resolution
 
-Pre-render each big symbol's texture at the size it'll actually display. A 3×3 giant on a 70px-cell grid renders at `210 × 210` — author the source asset at that resolution (or larger). Sprites scale up poorly; if you must support multiple cell sizes, ship per-size variants or use a Spine skeleton (see [Spine recipe](/docs/recipes/spine-multiways-ready)).
+Pre-render each big symbol's texture at the size it'll actually display. A 3×3 giant on a 70 px-cell grid is `210 × 210` — author at that resolution or larger. Sprites scale up poorly. If you must support multiple cell sizes (responsive grids, MultiWays — but big symbols are rejected on MultiWays in v1), ship per-size variants or use a [Spine skeleton](/docs/recipes/spine-multiways-ready/).
 
-## Constraints
+## Constraints (all shapes)
 
-- **Big symbols + MultiWays** — rejected at build. Block sizes don't compose with per-spin shape changes.
-- **Random fill** doesn't generate big symbols in v1; only target frames place them.
-- **During spin**, every cell is 1×1; the block layout commits at stop.
+- **Big symbols + MultiWays** — rejected at build. Block sizes don't compose with per-spin shape changes ("what's a 2×2 on a 2-row reel?" is a game-design question we don't answer in v1).
+- **Random fill** doesn't generate big symbols in v1. Only target frames place them. v2 may add a `RandomFillBigSymbolMiddleware`.
+- **During spin**, every cell is 1×1; the block layout commits at landing.
+- **Pin a non-anchor cell** throws — pin the anchor instead, which covers the block visually.
 
 ## Related
 
 - [Guide: Per-reel geometry, MultiWays & big symbols](/guides/per-reel-geometry/) — full mechanics primer
 - [Big symbols (basics)](/recipes/big-symbols/) — single 2×2 example with full architecture notes
-- [MultiWays](/recipes/multiways/) — mutually exclusive
+- [getBlockBounds (overlays)](/recipes/get-block-bounds/) — drawing block-aware win frames
+- [MultiWays](/recipes/multiways/) — mutually exclusive with big symbols

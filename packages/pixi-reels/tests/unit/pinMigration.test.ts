@@ -16,6 +16,43 @@ describe('pin migration (MultiWays)', () => {
     }
   });
 
+  it('pin:placed payload carries originRow (default = row)', () => {
+    const { reelSet, destroy } = createTestReelSet({
+      reels: 4,
+      multiways: { minRows: 2, maxRows: 7, reelPixelHeight: 600 },
+      symbolIds: ['a', 'wild'],
+    });
+    try {
+      const captured = captureEvents(reelSet, ['pin:placed']);
+      reelSet.pin(2, 3, 'wild', { turns: 'permanent' });
+      expect(captured).toHaveLength(1);
+      expect(captured[0].event).toBe('pin:placed');
+      const pin = captured[0].args[0] as { originRow: number; row: number; col: number };
+      expect(pin.row).toBe(3);
+      expect(pin.col).toBe(2);
+      expect(pin.originRow).toBe(3);
+    } finally {
+      destroy();
+    }
+  });
+
+  it('pin:placed payload preserves explicit originRow override', () => {
+    const { reelSet, destroy } = createTestReelSet({
+      reels: 4,
+      multiways: { minRows: 2, maxRows: 7, reelPixelHeight: 600 },
+      symbolIds: ['a', 'wild'],
+    });
+    try {
+      const captured = captureEvents(reelSet, ['pin:placed']);
+      reelSet.pin(1, 2, 'wild', { turns: 'permanent', originRow: 5 });
+      const pin = captured[0].args[0] as { originRow: number; row: number };
+      expect(pin.row).toBe(2);
+      expect(pin.originRow).toBe(5);
+    } finally {
+      destroy();
+    }
+  });
+
   it('repositions + resizes the pin overlay after a MultiWays reshape', async () => {
     const { reelSet, destroy } = createTestReelSet({
       reels: 3,

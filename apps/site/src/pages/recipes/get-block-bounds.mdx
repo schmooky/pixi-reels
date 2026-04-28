@@ -1,0 +1,93 @@
+---
+layout: ../../layouts/Recipe.astro
+title: getBlockBounds — outline a big symbol
+description: Draw one overlay rectangle that hugs an entire N×M block, regardless of which cell you pass. Works for any size — 1×1 (same as getCellBounds), 1×N expanding wilds, 2×2 / 3×3 blocks.
+tags: [big-symbols, overlay, cell-bounds]
+steps:
+  - "getBlockBounds(col, row) returns { x, y, width, height } in ReelSet-local pixels"
+  - "Pass any cell of a block — anchor or non-anchor — both return the same rect"
+  - "Use for win frames, cluster outlines, hit-area overlays around big symbols"
+apis:
+  - ReelSet.getBlockBounds
+  - ReelSet.getSymbolFootprint
+---
+
+import code from '../../recipes/get-block-bounds.recipe.ts?raw';
+import { RecipeRunner } from '../../components/RecipeRunner.tsx';
+
+<RecipeRunner code={code} client:only="react" />
+
+`reelSet.getBlockBounds(col, row)` returns the **single rectangle** that covers the whole block at `(col, row)` — anchor or not — in ReelSet-local pixel coordinates. The recipe above plants a 2×2 or 1×3 block (randomly chosen) every spin and draws an orange outline around it on `spin:allLanded`. Same code, different shape.
+
+## Why this exists
+
+`getCellBounds(col, row)` gives you one cell's rectangle. Fine for 1×1 symbols. But a 2×2 bonus needs an outline that **spans four cells** — and you don't want to compute it from four `getCellBounds` calls and a manual union-of-rects. `getBlockBounds` does that math for you, and works correctly when:
+
+- The cell is a 1×1 (returns the same as `getCellBounds`).
+- The cell is the anchor of an N×M block (returns the full block rect).
+- The cell is a non-anchor cell of an N×M block (returns the same full block rect).
+- The cell is part of an expanding wild (1×N) — same as any other big-symbol shape.
+
+So you can pass *any cell of a block* and get back the rect that covers the whole block, without first looking up the anchor.
+
+## The whole mechanic
+
+```ts
+const overlay = new PIXI.Graphics();
+reelSet.addChild(overlay);
+
+reelSet.events.on('spin:allLanded', ({ symbols }) => {
+  overlay.clear();
+  // For each big symbol on the board, draw a single rect around the whole block.
+  for (let c = 0; c < symbols.length; c++) {
+    for (let r = 0; r < symbols[c].length; r++) {
+      const fp = reelSet.getSymbolFootprint(c, r);
+      // 1×1 cells: skip (or fall through if you want to outline them too).
+      if (fp.size.w === 1 && fp.size.h === 1) continue;
+      // Only draw once per block — when we hit the anchor.
+      if (fp.anchor.col !== c || fp.anchor.row !== r) continue;
+      const rect = reelSet.getBlockBounds(c, r);
+      overlay
+        .roundRect(rect.x - 3, rect.y - 3, rect.width + 6, rect.height + 6, 8)
+        .stroke({ color: 0xff6b35, width: 4 });
+    }
+  }
+});
+```
+
+Two API calls do the work:
+
+- **`getSymbolFootprint(col, row)`** answers *what's at this cell?* Returns `{ anchor, size }`. Use it to decide whether you've found a big symbol and to dedupe (only draw on the anchor cell).
+- **`getBlockBounds(col, row)`** answers *what pixel rect should I draw?* Returns `{ x, y, width, height }`. Pass anchor or non-anchor — same rect either way.
+
+## When you'd use it
+
+- **Win frames around bonus reveals.** A 2×2 bonus that pays — outline the whole block, not four separate cells.
+- **Cluster outlines for cascade pops.** If a cluster contains a big symbol, the outline that covers the cluster needs to know the big symbol's actual footprint.
+- **Hit areas for click-to-info on big symbols.** One rectangular hit area, sized to the block, is cleaner than four overlapping single-cell hit areas.
+- **Spotlight-style highlights** that need to span the whole block on a win.
+
+## What it returns for 1×1 cells
+
+```ts
+const a = reelSet.getCellBounds(2, 1);   // { x, y, width, height }
+const b = reelSet.getBlockBounds(2, 1);  // { x, y, width, height }
+// a and b are equal for 1×1 cells.
+```
+
+So you can use `getBlockBounds` everywhere instead of branching on whether the cell is part of a block. The "is this 1×1 or N×M?" decision is made inside the engine, where it has all the data.
+
+## Pin overlays + getBlockBounds
+
+If you've pinned the **anchor** of a big symbol, the pin overlay is sized to the whole block (the anchor's view spans it). Drawing `getBlockBounds(anchorCol, anchorRow)` outlines the same rectangle the player sees. Pinning a non-anchor cell of a big symbol throws — pin the anchor.
+
+## Coordinate space
+
+`getBlockBounds` returns ReelSet-**local** coordinates: `(0, 0)` is the top-left of the ReelSet container, not the page. Add the overlay as a child of the ReelSet (`reelSet.addChild(overlay)`) so the math just works. If you want page-space coordinates, transform with `reelSet.toGlobal({ x, y })`.
+
+## Related
+
+- [Cell bounds](/recipes/cell-bounds/) — same shape of API for 1×1 cells (paylines, single-cell hit areas)
+- [Big symbols (basics)](/recipes/big-symbols/) — register a 2×2 bonus
+- [MxN big symbols](/recipes/big-symbols-mxn/) — every shape, one focused demo each
+- [Guide: Big symbols](/guides/big-symbols/) — full architecture notes

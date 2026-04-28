@@ -14,7 +14,6 @@ import {
 import { BlurSpriteSymbol } from '../../../../examples/shared/BlurSpriteSymbol.ts';
 import { CardSymbol, CARD_DECK, WILD_CARD } from '../../../../examples/shared/CardSymbol.ts';
 import { loadPrototypeSymbols } from '../../../../examples/shared/prototypeSpriteLoader.ts';
-import { loadPixellabSymbols } from '../../../../examples/shared/pixellabSymbolsLoader.ts';
 import { transform as sucraseTransform } from 'sucrase';
 import { runCascade, tumbleToGrid, diffCells } from '../../../../examples/shared/cascadeLoop.ts';
 import { cn } from '@/lib/utils';
@@ -120,21 +119,21 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
         const factory = new AsyncFunction(
           'ReelSetBuilder', 'SpeedPresets', 'BlurSpriteSymbol', 'SpriteSymbol', 'AnimatedSpriteSymbol',
           'DropRecipes', 'CascadeAnticipationPhase',
-          'WinPresenter', 'loadPixellabSymbols',
+          'WinPresenter',
           'app', 'textures', 'blurTextures', 'SYMBOL_IDS', 'pickWeighted', 'gsap', 'PIXI',
           'runCascade', 'tumbleToGrid', 'diffCells', 'EmptySymbol', 'ReelSymbol',
           'RectMaskStrategy', 'SharedRectMaskStrategy',
           'CardSymbol', 'CARD_DECK', 'WILD_CARD',
           `"use strict"; ${js}`,
         );
-        // Await the factory result so recipes that need async setup
-        // (e.g. `await loadPixellabSymbols(...)`) can just `return await`
+        // AsyncFunction so recipes that need async setup (e.g. dynamic
+        // texture loaders added by future recipes) can `return await`
         // the built RunResult. Sync recipes that return a plain object
         // are unaffected — `await x` on a non-Promise resolves to x.
         result = (await factory(
           ReelSetBuilder, SpeedPresets, BlurSpriteSymbol, SpriteSymbol, AnimatedSpriteSymbol,
           DropRecipes, CascadeAnticipationPhase,
-          WinPresenter, loadPixellabSymbols,
+          WinPresenter,
           app, textures, blurTextures, SYMBOL_IDS, pickWeighted, gsap, PIXI,
           runCascade, tumbleToGrid, diffCells, EmptySymbol, ReelSymbol,
           RectMaskStrategy, SharedRectMaskStrategy,

@@ -85,10 +85,13 @@ this._gfx.rect(0, 0, width, height).fill({ color: this._color });
 this._gfx.rect(1, 1, width - 2, height - 2).stroke({ color: 0x000000, width: 2, alpha: 0.25 });
 this._text.x = width / 2;
 this._text.y = height / 2;
-this._text.style.fontSize = /* fits within both height and label-width budget */;
+const labelLen = Math.max(1, this._label.length);
+const fitH = height * 0.38;
+const fitW = (width * 0.7) / (labelLen * 0.45);
+this._text.style.fontSize = Math.max(7, Math.floor(Math.min(fitH, fitW)));
 ```
 
-The font-size formula caps by *both* the cell height (~55%) and the label width (`width * 0.78 / labelLen`) so multi-character labels like `'10'` or `'WILD'` don't overflow narrow cells. Labels stay readable from 2-row MultiWays cells (~240 px tall) through 7-row cells (~68 px tall).
+The font-size formula caps by *both* the cell height (`~38%` — leaves breathing room) and the label width (`width * 0.7 / (labelLen * 0.45)` — the `0.45` factor matches Roboto Condensed's narrow glyph ratio so multi-character labels like `'10'` or `'WILD'` don't overflow). The `Math.max(7, …)` floor keeps labels visible even on tiny 2-row MultiWays reshapes. Labels stay readable from 2-row MultiWays cells (~240 px tall) through 7-row cells (~68 px tall).
 
 ## What CardSymbol skips
 
@@ -109,4 +112,3 @@ A real production symbol would do most of the above. Don't model your custom `Re
 - [Big symbols](/recipes/big-symbols/) — uses CardSymbol with `size: { w: 2, h: 2 }`
 - [MxN big symbols](/recipes/big-symbols-mxn/) — uses CardSymbol with mixed sizes
 - [Texture atlas symbols](/recipes/texture-atlas-symbols/) — production sprite path
-- [AI-generated animated symbols (pixellab)](/recipes/pixellab-animated-symbols/) — production animated path

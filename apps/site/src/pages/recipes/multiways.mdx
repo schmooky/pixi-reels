@@ -6,7 +6,7 @@ tags: [multiways, shape, geometry, reshape]
 steps:
   - "Build with .multiways({ minRows, maxRows, reelPixelHeight })"
   - "Each spin, call reelSet.setShape(rowsPerReel) BEFORE setResult()"
-  - "AdjustPhase reshapes reels (resize symbols + reshape motion) before STOP"
+  - "Between SPIN and STOP the reels reshape (cell symbols snap; pin overlays tween)"
 apis:
   - ReelSetBuilder.multiways
   - ReelSet.setShape
@@ -19,7 +19,7 @@ import { RecipeRunner } from '../../components/RecipeRunner.tsx';
 
 <RecipeRunner code={code} client:only="react" />
 
-MultiWays — every spin chooses a fresh per-reel row count from `[minRows, maxRows]`. The reel pixel height is fixed; cell height per reel is derived as `reelPixelHeight / visibleRows[i]`, so a 2-row reel has tall cells and a 7-row reel has short ones. A new `AdjustPhase` between SPIN and STOP reshapes the reels (resizes every symbol, reshapes motion) before the stop sequence runs.
+MultiWays — every spin chooses a fresh per-reel row count from `[minRows, maxRows]`. The reel pixel height is fixed; cell height per reel is derived as `reelPixelHeight / visibleRows[i]`, so a 2-row reel has tall cells and a 7-row reel has short ones. Between SPIN and STOP the engine commits the new geometry on each reel (resizes the strip's symbols, reshapes the motion layer) and then runs `AdjustPhase` to tween any pin overlays from their old cell to their new cell — the cell symbols themselves snap because they're still spinning at full speed.
 
 ## The whole mechanic
 
@@ -46,20 +46,22 @@ That's it. The engine handles cell-height derivation, AdjustPhase reshape, mask 
 ## Order of operations
 
 1. **`spin()`** — reels start scrolling at the previous shape's cell height.
-2. **`setShape(rowsPerReel)`** — records the target shape, **migrates pins** to their new rows, emits `shape:changed`. No visual reshape yet (the geometry change is bundled into AdjustPhase later).
+2. **`setShape(rowsPerReel)`** — records the target shape, **migrates pins** eagerly to their new rows, emits `shape:changed`. No visual reshape yet — the geometry change happens later in step 4.
 3. **`setResult(grid)`** — server result, with `grid[i].length === rowsPerReel[i]` per reel.
-4. **AdjustPhase** runs per reel after `SpinPhase` resolves. Emits `adjust:start`, commits the new visible-row count and cell height, **tweens** every visible symbol's height + Y position from the old to new geometry over `pinMigrationDuration` with `pinMigrationEase`. Pin overlays tween in lock-step. Emits `adjust:complete`.
+4. **Reshape + AdjustPhase** runs per reel after `SpinPhase` resolves. The engine emits `adjust:start`, then commits the new visible-row count and cell height (cell symbols on the strip snap instantly — they're still spinning at full speed), refreshes pin overlays, emits `adjust:complete`. If any pin overlays exist on the reel, `AdjustPhase` then tweens them from their captured pre-reshape pose to the new cell over `pinMigrationDuration` with `pinMigrationEase`. With no overlays the phase is skipped (no tween work to do).
 5. **StopPhase** lands the reels at the new shape with the bounce.
 
 ## Animation
 
-`pinMigrationDuration` + `pinMigrationEase` control **pin-overlay** migration only — the wild visibly slides and scales from its old cell to its new one over the duration. The underlying reel cells snap instantly because the reel is still spinning at full speed when AdjustPhase runs (tweening individual cell symbols would fight the spinning motion layer and look broken).
+`pinMigrationDuration` + `pinMigrationEase` control **pin-overlay** migration only — the wild visibly slides and scales from its old cell to its new one over the duration. The underlying reel cells snap instantly because the reel is still spinning at full speed when the reshape runs (tweening individual cell symbols would fight the spinning motion layer and look broken).
 
 Set `pinMigrationDuration(0)` to skip the overlay tween (instant snap). Pass any GSAP ease string to `pinMigrationEase` — `'power2.out'` (default), `'back.out(1.4)'`, `'expo.inOut'`, etc. Reels without active pins on this spin see the same instant geometry change either way; the duration only matters when there's an overlay to migrate.
 
-## AdjustPhase is multiways-only
+`pinMigrationDuration` does **not** apply when the player slam-stops the spin (`reelSet.skip()`). Skip is meant to land *now*; running a 300 ms tween on the way there would defeat the purpose. Pin overlays migrate instantly on skip regardless of `pinMigrationDuration`.
 
-Non-MultiWays slots run the original `start → spin → stop` chain unchanged. `adjust:*` and `pin:migrated` events never fire on non-MultiWays slots, so downstream consumers don't have to ignore phantom events.
+## Reshape + AdjustPhase are multiways-only
+
+Non-MultiWays slots run the original `start → spin → stop` chain unchanged. `shape:changed`, `adjust:*`, and `pin:migrated` events never fire on non-MultiWays slots, so downstream consumers don't have to ignore phantom events.
 
 ## Pin migration
 

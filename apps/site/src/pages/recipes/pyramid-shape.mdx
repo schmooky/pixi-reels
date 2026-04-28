@@ -4,7 +4,7 @@ title: Per-reel shape (pyramid)
 description: Build a non-uniform reel set — 3-5-5-5-3 pyramid, diamond, half-pyramid. Static shape, set at build time, no per-spin reshaping.
 tags: [shape, pyramid, geometry, layout]
 steps:
-  - "Pass an array to .visibleRowsPerReel([3, 5, 5, 5, 3]) instead of .visibleSymbols(n)"
+  - "Pass an array to .visibleRowsPerReel([3, 5, 5, 5, 3]) instead of .visibleRows(n)"
   - "Optionally set .reelAnchor('center' | 'top' | 'bottom') to control vertical alignment"
   - The engine computes per-reel offsetY automatically; getCellBounds(col, row) reflects it
 apis:
@@ -25,14 +25,14 @@ Per-reel static shape — non-uniform row counts across reels, fixed at build ti
 ```ts
 new ReelSetBuilder()
   .reels(5)
-  .visibleRowsPerReel([3, 5, 5, 5, 3])  // mutually exclusive with visibleSymbols(n)
+  .visibleRowsPerReel([3, 5, 5, 5, 3])  // mutually exclusive with visibleRows(n)
   .reelAnchor('center')                  // 'top' | 'center' | 'bottom'
   .symbolSize(80, 80)
   // ...
   .build();
 ```
 
-That's it. `visibleRowsPerReel` and `visibleSymbols` are mutually exclusive — picking either is a one-line decision.
+That's it. `visibleRowsPerReel` and `visibleRows` are mutually exclusive — picking either is a one-line decision. (The legacy `visibleSymbols(n)` alias is still accepted but deprecated; new code should use `visibleRows(n)`.)
 
 ## What the engine does for you
 

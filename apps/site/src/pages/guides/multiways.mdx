@@ -3,7 +3,7 @@ layout: ../../layouts/Docs.astro
 title: MultiWays
 section: guides
 eyebrow: Building blocks
-description: Per-spin row variation. Each reel can land on a different row count between minRows and maxRows, with cell height derived from a fixed reel pixel height. AdjustPhase reshapes the reels between SPIN and STOP; pins migrate via originRow.
+description: Per-spin row variation. Each reel can land on a different row count between minRows and maxRows, with cell height derived from a fixed reel pixel height. The engine reshapes each reel between SPIN and STOP and AdjustPhase tweens any pin overlays; pins migrate via originRow.
 ---
 
 MultiWays is the open-source name for the "ways"-style mechanic where each reel can land on a different row count *every spin*. Reel **pixel height is fixed** for the whole slot; cell height per reel is derived as `reelPixelHeight / visibleRows[i]`. So a 2-row reel has tall cells; a 7-row reel has short ones.
@@ -37,7 +37,7 @@ The engine handles cell-height derivation, AdjustPhase reshape, mask sizing, and
 1. **`spin()`** — reels start scrolling. Cells are at the previous spin's heights.
 2. **`setShape(rowsPerReel)`** — records the target shape, **migrates pins** to their new rows eagerly, emits `shape:changed`. Must be called BEFORE `setResult` (the engine throws otherwise).
 3. **`setResult(grid)`** — server result. Each `grid[i]` has length `rowsPerReel[i]`.
-4. **`AdjustPhase`** — inserted between SPIN and STOP **only on MultiWays slots**. Commits the geometry (resizes existing symbols, reshapes the motion layer), tweens any pin overlays from their old cell to their new cell over `pinMigrationDuration` with `pinMigrationEase`. Emits `adjust:start` / `adjust:complete`.
+4. **Reshape + `AdjustPhase`** — runs between SPIN and STOP **only on MultiWays slots**. Per reel: emit `adjust:start`, commit the geometry (resize existing symbols, reshape the motion layer), refresh pin overlays, emit `adjust:complete` — the cell symbols snap instantly because the reel is still spinning at full speed. Then `AdjustPhase` tweens any pin overlays from their captured pre-reshape pose to the new cell over `pinMigrationDuration` with `pinMigrationEase`. With no overlays the phase is skipped, but the reshape (and `adjust:start`/`adjust:complete`) still runs whenever the row count actually changes.
 5. **`StopPhase`** — lands the reels at the new shape with the bounce.
 
 ## Pin migration (sticky wilds, walking wilds)
@@ -74,9 +74,11 @@ reelSet.pin(col, row, id, { migration: 'frozen' });
 
 ## Animation scope
 
-`pinMigrationDuration` + `pinMigrationEase` control **pin-overlay** migration only. The underlying reel cells snap instantly because the reel is still spinning at full speed during AdjustPhase — tweening individual cell symbols would fight the motion layer.
+`pinMigrationDuration` + `pinMigrationEase` control **pin-overlay** migration only. The underlying reel cells snap instantly because the reel is still spinning at full speed during the reshape — tweening individual cell symbols would fight the motion layer.
 
-If your slot has no pinned cells on a given spin, AdjustPhase is **skipped entirely** (no events, no phase boundary). The duration only matters when there's an overlay to animate.
+When a reel has no pinned cells on this spin, the `AdjustPhase` tween is skipped (no phase instance is constructed and no overlay tween runs). `adjust:start` and `adjust:complete` still fire around the reshape itself whenever the row count or cell height actually changes — they're emitted by the engine's reshape step, not by the tween phase. If neither the shape nor any overlays change for a reel, nothing fires and no work is done.
+
+The tween is also bypassed on `reelSet.skip()` — slam-stop is meant to land immediately, so pin overlays snap to their new cells regardless of `pinMigrationDuration`.
 
 ## Events specific to MultiWays
 

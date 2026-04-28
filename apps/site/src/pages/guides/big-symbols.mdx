@@ -105,14 +105,14 @@ builder
 
 Big-symbol anchors render at `symbolData.zIndex * 100 + arrayIndex` (typically ~500 with `zIndex: 5`). The 100× multiplier reserves room for per-row stacking inside a layer (bottom rows render above top rows on the same layer).
 
-Pin overlays render at zIndex `10000`. So a big symbol that's also pinned (`reelSet.pin(anchorCol, anchorRow, id, ...)`) gets its overlay rendered above the cell — the overlay covers the whole block visually because the overlay symbol is sized to the block.
+Pin overlays render at zIndex `10000` (an internal `ReelSet` constant — not part of the public API). So a big symbol that's also pinned (`reelSet.pin(anchorCol, anchorRow, id, ...)`) gets its overlay rendered above the cell — the overlay covers the whole block visually because the overlay symbol is sized to the block.
 
 | Layer | zIndex | Source |
 |---|---|---|
 | 1×1 symbol, default | `0 * 100 + arrayIndex` | `symbolData.zIndex ?? 0` |
 | 1×1 symbol, elevated | `1 * 100 + arrayIndex` | `symbolData.zIndex: 1` |
 | Big-symbol anchor (recipe convention) | `5 * 100 + arrayIndex` (~500) | `symbolData.zIndex: 5` |
-| Pin overlay during spin | `10000` | `ReelSet.PIN_OVERLAY_Z_INDEX` |
+| Pin overlay during spin | `10000` | internal (engine-managed) |
 | Spotlight (winning symbols) | own container | `viewport.spotlightContainer` |
 
 ## Constraints

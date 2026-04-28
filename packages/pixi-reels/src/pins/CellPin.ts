@@ -71,7 +71,16 @@ export interface CellPin {
   payload?: Readonly<Record<string, unknown>>;
 }
 
-/** Options accepted by `reelSet.pin()`. */
+/**
+ * Options accepted by `reelSet.pin()`.
+ *
+ * **Calling `pin()` mid-reshape** (from a `shape:changed`, `pin:migrated`, or
+ * `adjust:start` event handler) is allowed and well-defined: the new pin is
+ * placed at the cell you pass, and `originRow` defaults to the **post-reshape**
+ * row (i.e. whatever `row` is *now*, on the new shape). If you want the pin
+ * to remember a different origin, pass `originRow` explicitly. The pin
+ * participates in the next migration cycle like any other pin.
+ */
 export interface CellPinOptions {
   /** Defaults to 'permanent'. */
   turns?: number | 'eval' | 'permanent';

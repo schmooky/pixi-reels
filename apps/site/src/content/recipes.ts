@@ -134,15 +134,28 @@ export const RECIPES: RecipeMeta[] = [
   {
     slug: 'big-symbols-mxn',
     group: 'big-symbols',
-    title: 'MxN big symbols',
-    oneLiner: 'Big symbols at any rectangular size — 1×3 tall bars, 2×2 bonuses, 3×3 giants, 2×4 wide blocks.',
+    title: 'MxN big symbols — every shape',
+    oneLiner: 'Square 2×2, tall 1×3, giant 3×3, wide 2×4 — one focused interactive demo per shape, with the placement logic spelled out.',
     steps: [
-      'Register each oversized symbol with size { w, h } — any positive integers',
-      'Engine validates block fit at setResult() and throws on overflow',
-      'getSymbolFootprint resolves any cell to its anchor + block size',
+      'Same registration API for every shape: { weight: 0, size: { w, h } }',
+      'Anchor formula: col in [0, REELS - w], row in [0, ROWS - h]',
+      'getSymbolFootprint + getBlockBounds resolve any cell to its anchor + pixel rect',
     ],
-    apis: ['SymbolData.size', 'ReelSet.getSymbolFootprint', 'block-fit validation'],
+    apis: ['SymbolData.size', 'ReelSet.getSymbolFootprint', 'ReelSet.getBlockBounds'],
     tags: ['big-symbols', 'layout', 'sizing'],
+  },
+  {
+    slug: 'get-block-bounds',
+    group: 'big-symbols',
+    title: 'getBlockBounds — outline a big symbol',
+    oneLiner: 'Draw a single rectangle that hugs an entire N×M block, regardless of which cell you pass. Works for 1×1 (equivalent to getCellBounds) and 1×N expanding wilds.',
+    steps: [
+      'getBlockBounds(col, row) returns { x, y, width, height } in ReelSet-local pixels',
+      "Pass any cell of a block — anchor or non-anchor — both return the same rect",
+      'Use for win frames, cluster outlines, hit-area overlays',
+    ],
+    apis: ['ReelSet.getBlockBounds', 'ReelSet.getSymbolFootprint'],
+    tags: ['big-symbols', 'overlay', 'cell-bounds'],
   },
   {
     slug: 'card-symbol-debug',
@@ -429,33 +442,6 @@ export const RECIPES: RecipeMeta[] = [
     apis: ['PIXI.Assets.load', 'Spritesheet.textures', 'SpriteSymbol', 'BlurSpriteSymbol'],
     tags: ['sprites', 'atlas', 'texturepacker'],
   },
-  {
-    slug: 'pixellab-animated-symbols',
-    group: 'symbol-formats',
-    title: 'AI-generated animated symbols (pixellab)',
-    oneLiner: 'Generate pixel-art symbols + win sequences via pixellab.ai, drop into AnimatedSpriteSymbol.',
-    steps: [
-      'Run scripts/gen-pixellab-symbols.mjs with PIXELAB_API_KEY',
-      'Load the frames with loadPixellabSymbols([...ids])',
-      'Register each symbol with AnimatedSpriteSymbol — playWin plays the sequence',
-    ],
-    apis: ['AnimatedSpriteSymbol', 'loadPixellabSymbols', 'WinPresenter'],
-    tags: ['symbols', 'animation', 'ai'],
-  },
-  {
-    slug: 'pixellab-cascade-disintegrate',
-    group: 'symbol-formats',
-    title: 'Cascade with disintegration (pixellab)',
-    oneLiner: '6×5 cluster cascade. Each winning cell plays its own AI-generated disintegrate sequence before tumbling.',
-    steps: [
-      'Generate per-symbol win + disintegrate sequences',
-      'Spawn a PIXI.AnimatedSprite overlay playing disintegrateFrames on each winner',
-      'Let runCascade tumble + drop after the pops resolve',
-    ],
-    apis: ['AnimatedSpriteSymbol', 'loadPixellabSymbols', 'runCascade.onWinnersVanish'],
-    tags: ['cascade', 'animation', 'ai', 'cluster'],
-  },
-
   // ── CellPin primitive recipes ──────────────────────────────────────
   // These recipes all use reelSet.pin() — the engine's unified cell-persistence
   // primitive. Each shows a different configuration of one API.

@@ -410,13 +410,20 @@ export class Reel implements Disposable {
   }
 
   /**
-   * MultiWays: commit a new visible-row count and per-reel cell height.
-   * Resizes every existing symbol on the strip to the new cell height,
-   * rebuilds the symbol array (extending or truncating buffers as needed),
-   * and reshapes the motion layer. Idempotent if the shape doesn't change.
+   * @internal — MultiWays orchestration only.
    *
-   * Only callable on MultiWays slots. Non-MultiWays callers should never
-   * reach this — `ReelSet.setShape()` rejects up-front.
+   * Commit a new visible-row count and per-reel cell height. Resizes every
+   * existing symbol on the strip to the new cell height, rebuilds the
+   * symbol array (extending or truncating buffers as needed), reshapes the
+   * motion layer, and recomputes `_reelHeight` from the new geometry so
+   * `reelHeight` stays consistent. Idempotent if the shape doesn't change.
+   *
+   * Only the engine should call this — `SpinController._applyReshape` is
+   * the single source of truth for reshape orchestration. Direct external
+   * calls are unsupported and may leave pin overlays, the cross-reel
+   * resolver, and the parent `ReelSet`'s shape state out of sync. Use
+   * `ReelSet.setShape()` instead, which gates this method on a MultiWays
+   * slot and migrates pins atomically.
    */
   reshape(
     newVisibleRows: number,
@@ -450,6 +457,13 @@ export class Reel implements Disposable {
     this._symbolHeight = newSymbolHeight;
     this._bufferAbove = bufferAbove;
     this._occupancy = new Array(newVisibleRows).fill(null);
+    // Recompute pixel-box height from the new geometry. For MultiWays this
+    // equals the fixed `multiways.reelPixelHeight` by construction (the cell
+    // height is derived from it); for any non-MultiWays caller it matches
+    // what the builder would have set at construction. Keeps `reelHeight`
+    // from going stale across reshape.
+    this._reelHeight =
+      newVisibleRows * newSymbolHeight + (newVisibleRows - 1) * this._symbolGapY;
 
     // Resize every kept symbol to the new cell height.
     for (const sym of this.symbols) {
