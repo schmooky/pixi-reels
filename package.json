@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "description": "pixi-reels monorepo — open-source slot machine reel engine for PixiJS v8.",
   "engines": {
-    "node": ">=20"
+    "node": ">=22.12"
   },
   "scripts": {
     "build": "pnpm --filter pixi-reels build && pnpm --filter classic-spin build && pnpm --filter cascade-tumble build && pnpm --filter hold-and-win build",
