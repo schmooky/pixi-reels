@@ -32,7 +32,7 @@ module.exports = {
       ['feat', 'fix', 'perf', 'refactor', 'docs', 'test', 'build', 'ci', 'chore', 'revert'],
     ],
     'subject-case': [0],
-    'header-max-length': [2, 'always', 100],
+    'header-max-length': [0],
     'body-max-line-length': [0],
     'footer-max-line-length': [0],
   },
