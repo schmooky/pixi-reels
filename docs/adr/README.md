@@ -15,6 +15,8 @@ ADRs for pixi-reels. Each one captures a decision that shapes how the code is wr
 | [009](./009-cheats-live-outside-lib.md) | Cheats live outside the library | Accepted |
 | [010](./010-cascade-physics.md) | Cascade physics — per-survivor fall distance | Accepted (load-bearing) |
 | [011](./011-spine-subpath-and-vocabulary.md) | Spine subpath export + canonical animation vocabulary | Accepted |
+| [012](./012-per-reel-geometry-and-adjust-phase.md) | Per-reel geometry and the Adjust phase | Accepted (load-bearing) |
+| [013](./013-big-symbols-via-registration.md) | Big symbols via registration, not result data | Accepted |
 
 ## Writing a new ADR
 

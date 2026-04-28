@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__Claude_Preview__preview_start",
+      "WebFetch(domain:pixijs.com)",
+      "WebSearch",
+      "Bash(pnpm --filter pixi-reels typecheck)",
+      "Bash(pnpm --filter pixi-reels test)",
+      "Bash(pnpm --filter pixi-reels build)",
+      "Bash(cp /Users/user/Downloads/_audit/bonbon-hw/bonbonb-hw-develop/assets/spine/symbols/*.json /Users/user/GitHub/pixi-reels/examples/assets/bonbon-hw/symbols/)",
+      "Bash(cp /Users/user/Downloads/_audit/bonbon-hw/bonbonb-hw-develop/assets/spine/symbols/*.atlas /Users/user/GitHub/pixi-reels/examples/assets/bonbon-hw/symbols/)",
+      "Bash(cp /Users/user/Downloads/_audit/bonbon-hw/bonbonb-hw-develop/assets/spine/symbols/*.webp /Users/user/GitHub/pixi-reels/examples/assets/bonbon-hw/symbols/)",
+      "Bash(pnpm --filter pixi-reels test -- tests/unit/testing/)",
+      "Bash(pnpm install:*)",
+      "Bash(pnpm --filter mega-symbols exec tsc --noEmit)",
+      "Bash(node -e \"const fs = require\\('fs'\\); const code = fs.readFileSync\\('/Users/user/GitHub/schmooky/pixi-reels/apps/site/src/recipes/sticky-wild.recipe.ts', 'utf8'\\); console.log\\(Buffer.from\\(code\\).toString\\('base64'\\)\\);\")",
+      "Bash(git checkout *)",
+      "Bash(tree -L 2 /Users/user/GitHub/schmooky/pixi-reels/apps/site/src --ignore node_modules)",
+      "Bash(gh pr *)",
+      "Bash(gh api *)"
+    ]
+  }
+}
