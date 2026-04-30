@@ -1,0 +1,333 @@
+import { Application, Container, Graphics } from 'pixi.js';
+import { gsap } from 'gsap';
+import {
+  ReelSetBuilder,
+  SpeedPresets,
+  DropRecipes,
+  enableDebug,
+} from 'pixi-reels';
+import type { SymbolPosition } from 'pixi-reels';
+import { CardSymbol, CARD_DECK, WILD_CARD } from '../../shared/CardSymbol.js';
+import { tumbleToGrid, type Cell } from '../../shared/cascadeLoop.js';
+import { WinBox } from '../../shared/WinBox.js';
+import { roundBus } from '../../shared/roundBus.js';
+import { mountUiOverlay, type UiOverlay } from '../../shared/uiOverlay.js';
+
+const REEL_COUNT = 5;
+const ROWS_PER_REEL = [3, 5, 5, 5, 3];
+const MAX_ROWS = Math.max(...ROWS_PER_REEL);
+const SYMBOL_SIZE = 110;
+const SYMBOL_GAP = 4;
+
+/** Per-reel row offset to convert local-row to global-row (center anchor). */
+const ROW_OFFSET = ROWS_PER_REEL.map((rows) => Math.floor((MAX_ROWS - rows) / 2));
+
+const PAYS: Record<string, number> = { '7': 4, '8': 6, '9': 8, '10': 10, J: 14, Q: 18, K: 24, A: 32 };
+
+interface WaysWin { cells: SymbolPosition[]; symbolId: string; amount: number; chain: number; }
+
+export interface BootOptions {
+  host: HTMLElement;
+  fullScreen?: boolean;
+  showSpeeds?: boolean;
+}
+
+export async function boot(opts: BootOptions): Promise<() => void> {
+  const { host, fullScreen = false } = opts;
+  const showSpeeds = opts.showSpeeds ?? fullScreen;
+
+  const app = new Application();
+  await app.init({
+    background: 0x1c0d2b,
+    antialias: true,
+    ...(fullScreen ? { resizeTo: window } : { resizeTo: host }),
+  });
+  host.appendChild(app.canvas);
+
+  gsap.ticker.remove(gsap.updateRoot);
+  const gsapDriver = (): void => gsap.updateRoot(app.ticker.lastTime / 1000);
+  app.ticker.add(gsapDriver);
+
+  const winBox = new WinBox({
+    tickupSeconds: 0.9,
+    anchor: 'top',
+    mountTo: fullScreen ? document.body : host,
+  });
+
+  const reelSet = new ReelSetBuilder()
+    .reels(REEL_COUNT)
+    .visibleRowsPerReel(ROWS_PER_REEL)
+    .reelAnchor('center')
+    .symbolSize(SYMBOL_SIZE, SYMBOL_SIZE)
+    .symbolGap(SYMBOL_GAP, SYMBOL_GAP)
+    .symbols((r) => {
+      for (const c of CARD_DECK) {
+        r.register(c.id, CardSymbol, { color: c.color, label: c.label });
+      }
+      r.register(WILD_CARD.id, CardSymbol, {
+        color: WILD_CARD.color,
+        label: WILD_CARD.label,
+        textColor: WILD_CARD.textColor,
+      });
+    })
+    .weights({ '7': 18, '8': 16, '9': 14, '10': 12, J: 10, Q: 8, K: 7, A: 5, wild: 2 })
+    .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 130 })
+    .speed('turbo', { ...SpeedPresets.TURBO, stopDelay: 70 })
+    .speed('superTurbo', { ...SpeedPresets.SUPER_TURBO, stopDelay: 0 })
+    // Stiff drop — no bounce on land. The bouncy default fights the win
+    // animation when it arrives a frame later.
+    .cascade(DropRecipes.stiffDrop)
+    .ticker(app.ticker)
+    .build();
+
+  enableDebug(reelSet);
+
+  const totalWidth = REEL_COUNT * (SYMBOL_SIZE + SYMBOL_GAP) - SYMBOL_GAP;
+  const totalHeight = MAX_ROWS * (SYMBOL_SIZE + SYMBOL_GAP) - SYMBOL_GAP;
+  const wrapper = new Container();
+  wrapper.addChild(reelSet);
+  app.stage.addChild(wrapper);
+
+  function reposition(): void {
+    const pad = 16, uiH = fullScreen ? 100 : 80;
+    const s = Math.min(
+      (app.screen.width - pad * 2) / totalWidth,
+      (app.screen.height - pad * 2 - uiH) / totalHeight,
+      1,
+    );
+    wrapper.scale.set(s);
+    wrapper.x = (app.screen.width - totalWidth * s) / 2;
+    wrapper.y = (app.screen.height - totalHeight * s - uiH) / 2;
+  }
+
+  const frame = new Graphics();
+  drawDiamondFrame(frame);
+  reelSet.addChildAt(frame, 0);
+
+  const ui: UiOverlay = mountUiOverlay({
+    host: fullScreen ? document.body : host,
+    fullScreen,
+    showSpeeds,
+    onSpin: () => handleSpin(),
+    onSpeedChange: (s) => reelSet.setSpeed(s),
+  });
+
+  let isSpinning = false;
+  let disposed = false;
+
+  async function handleSpin(): Promise<void> {
+    if (disposed) return;
+    if (isSpinning) {
+      try { reelSet.skip(); } catch { /* idle */ }
+      return;
+    }
+    isSpinning = true;
+    ui.setSpinning(true);
+    roundBus.emit('round:reset');
+    ui.setStatus('');
+
+    const spinPromise = reelSet.spin();
+    reelSet.setDropOrder('ltr');
+    let grid = randomGrid();
+    reelSet.setResult(grid);
+    await spinPromise;
+    if (disposed) return;
+
+    let cascadeLevel = 0;
+    let totalWin = 0;
+    let wins = evaluateWays(grid);
+
+    while (wins.length > 0 && !disposed) {
+      cascadeLevel++;
+      const multi = cascadeLevel;
+      const dedupedCells = dedupeCells(wins.flatMap((w) => w.cells));
+      const roundWin = wins.reduce((s, w) => s + w.amount * multi, 0);
+      totalWin += roundWin;
+
+      ui.setStatus(
+        cascadeLevel === 1
+          ? `${wins.length} WAY${wins.length > 1 ? 'S' : ''} WIN`
+          : `CASCADE x${multi} - ${wins.length} WAY${wins.length > 1 ? 'S' : ''}`,
+      );
+      roundBus.emit('win:add', roundWin);
+
+      await vanish(dedupedCells);
+      const nextGrid = computeRefillGrid(grid, dedupedCells);
+      const winnerCells: Cell[] = dedupedCells.map((c) => ({ reel: c.reelIndex, row: c.rowIndex }));
+      await tumbleToGrid(reelSet, nextGrid, winnerCells, { dropDuration: 380 });
+      grid = nextGrid;
+      await wait(120);
+
+      wins = evaluateWays(grid);
+    }
+
+    if (cascadeLevel === 0) ui.setStatus('');
+    else if (totalWin > 0) ui.setStatus(`${cascadeLevel} CASCADE${cascadeLevel > 1 ? 'S' : ''} - ${totalWin} TOTAL`);
+
+    isSpinning = false;
+    ui.setSpinning(false);
+  }
+
+  /**
+   * Pop the winner cells: scale-from-center + alpha to 0. After this, the
+   * symbol views are alpha=0 — `tumbleToGrid` calls `placeSymbols` to swap
+   * identities for the next stage. We reset alpha back to 1 ourselves so
+   * survivors stay visible AND new symbols falling into cleared cells
+   * appear at full opacity.
+   */
+  async function vanish(cells: SymbolPosition[]): Promise<void> {
+    if (cells.length === 0) return;
+    interface Prep {
+      view: Container;
+      origX: number; origY: number;
+      origPivotX: number; origPivotY: number;
+    }
+    const prepped: Prep[] = [];
+    for (const c of cells) {
+      const view = reelSet.getReel(c.reelIndex).getSymbolAt(c.rowIndex).view;
+      const b = view.getLocalBounds();
+      const cx = b.x + b.width / 2;
+      const cy = b.y + b.height / 2;
+      const origPivotX = view.pivot.x;
+      const origPivotY = view.pivot.y;
+      const origX = view.x;
+      const origY = view.y;
+      view.pivot.set(cx, cy);
+      view.x = origX + (cx - origPivotX);
+      view.y = origY + (cy - origPivotY);
+      prepped.push({ view, origX, origY, origPivotX, origPivotY });
+    }
+    await Promise.all(
+      prepped.map(
+        (p) =>
+          new Promise<void>((resolve) => {
+            gsap
+              .timeline({ onComplete: resolve })
+              .to(p.view, { alpha: 0, duration: 0.28, ease: 'power2.in' }, 0)
+              .to(p.view.scale, { x: 0.4, y: 0.4, duration: 0.28, ease: 'power2.in' }, 0);
+          }),
+      ),
+    );
+    for (const p of prepped) {
+      p.view.scale.set(1, 1);
+      p.view.alpha = 1;
+      p.view.pivot.set(p.origPivotX, p.origPivotY);
+      p.view.x = p.origX;
+      p.view.y = p.origY;
+    }
+  }
+
+  reposition();
+  if (fullScreen) window.addEventListener('resize', reposition);
+  const ro = !fullScreen && typeof ResizeObserver !== 'undefined'
+    ? new ResizeObserver(() => reposition())
+    : null;
+  if (ro) ro.observe(host);
+
+  return (): void => {
+    if (disposed) return;
+    disposed = true;
+    if (fullScreen) window.removeEventListener('resize', reposition);
+    if (ro) ro.disconnect();
+    ui.destroy();
+    winBox.destroy();
+    app.ticker.remove(gsapDriver);
+    app.destroy(true, { children: true });
+  };
+}
+
+function drawDiamondFrame(g: Graphics): void {
+  for (let c = 0; c < REEL_COUNT; c++) {
+    const rows = ROWS_PER_REEL[c];
+    const offset = ROW_OFFSET[c];
+    const x = c * (SYMBOL_SIZE + SYMBOL_GAP);
+    const y = offset * (SYMBOL_SIZE + SYMBOL_GAP);
+    const w = SYMBOL_SIZE;
+    const h = rows * SYMBOL_SIZE + (rows - 1) * SYMBOL_GAP;
+    g.roundRect(x - 4, y - 4, w + 8, h + 8, 8);
+  }
+  g.stroke({ color: 0xffb347, width: 2.5, alpha: 0.85 });
+}
+
+function randomCard(): string {
+  const r = Math.random();
+  if (r < 0.03) return 'wild';
+  if (r < 0.10) return 'A';
+  if (r < 0.18) return 'K';
+  if (r < 0.28) return 'Q';
+  if (r < 0.40) return 'J';
+  if (r < 0.54) return '10';
+  if (r < 0.68) return '9';
+  if (r < 0.84) return '8';
+  return '7';
+}
+
+function randomGrid(): string[][] {
+  return ROWS_PER_REEL.map((rows) =>
+    Array.from({ length: rows }, randomCard),
+  );
+}
+
+function evaluateWays(grid: string[][]): WaysWin[] {
+  const kinds = new Set<string>();
+  for (const col of grid) for (const s of col) if (s !== 'wild') kinds.add(s);
+
+  const wins: WaysWin[] = [];
+  for (const kind of kinds) {
+    const cellsByReel: SymbolPosition[][] = [];
+    let chain = 0;
+    for (let c = 0; c < REEL_COUNT; c++) {
+      const matches: SymbolPosition[] = [];
+      for (let r = 0; r < grid[c].length; r++) {
+        const s = grid[c][r];
+        if (s === kind || s === 'wild') matches.push({ reelIndex: c, rowIndex: r });
+      }
+      if (matches.length === 0) break;
+      cellsByReel.push(matches);
+      chain++;
+    }
+    if (chain < 3) continue;
+
+    let ways = 1;
+    const cells: SymbolPosition[] = [];
+    for (let i = 0; i < chain; i++) {
+      ways *= cellsByReel[i].length;
+      cells.push(...cellsByReel[i]);
+    }
+    const baseLine = (PAYS[kind] ?? 5) * chain;
+    wins.push({ cells, symbolId: kind, amount: baseLine * ways, chain });
+  }
+  wins.sort((a, b) => b.amount - a.amount);
+  return wins;
+}
+
+function dedupeCells(cells: SymbolPosition[]): SymbolPosition[] {
+  const seen = new Set<string>();
+  const out: SymbolPosition[] = [];
+  for (const c of cells) {
+    const k = `${c.reelIndex}:${c.rowIndex}`;
+    if (seen.has(k)) continue;
+    seen.add(k);
+    out.push(c);
+  }
+  return out;
+}
+
+function computeRefillGrid(currentGrid: string[][], removed: SymbolPosition[]): string[][] {
+  const grid = currentGrid.map((col) => [...col]);
+  const removedByReel = new Map<number, Set<number>>();
+  for (const p of removed) {
+    if (!removedByReel.has(p.reelIndex)) removedByReel.set(p.reelIndex, new Set());
+    removedByReel.get(p.reelIndex)!.add(p.rowIndex);
+  }
+  for (let c = 0; c < REEL_COUNT; c++) {
+    const rem = removedByReel.get(c);
+    if (!rem || rem.size === 0) continue;
+    const survivors = grid[c].filter((_, row) => !rem.has(row));
+    const newSyms = Array.from({ length: ROWS_PER_REEL[c] - survivors.length }, randomCard);
+    grid[c] = [...newSyms, ...survivors];
+  }
+  return grid;
+}
+
+function wait(ms: number): Promise<void> { return new Promise((r) => setTimeout(r, ms)); }

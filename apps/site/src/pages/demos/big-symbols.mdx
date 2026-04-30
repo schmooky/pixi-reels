@@ -1,0 +1,45 @@
+---
+layout: ../../layouts/Demo.astro
+title: Big symbols (2x2 BIG WILD)
+subtitle: 5x4 - 2x2 wild block lands at anchor cells, engine paints OCCUPIED stubs
+tags: [big-symbols, wild, lines]
+description: Server places a single anchor cell, the engine paints the rest of the block with OCCUPIED stubs that resolve back to the anchor's id at evaluation. Glyph-only win animation keeps the cell border still while the character pulses.
+---
+
+import BigSymbolsDemo from '../../components/demos/BigSymbolsDemo.tsx';
+
+<BigSymbolsDemo client:only="react" />
+
+## The mechanic
+
+A "big symbol" is one ReelSymbol that spans an `N x M` block of cells. The
+server only writes its id at the anchor (top-left) cell; the engine paints
+the rest of the block with `OCCUPIED` stubs that downstream code resolves
+back to the anchor's symbol id.
+
+```ts
+.symbolData({
+  bigWild: { size: { w: 2, h: 2 }, weight: 0, zIndex: 5 },
+})
+```
+
+Big symbols **must have weight 0** - they're never randomly filled, only
+placed by the server in `setResult()`. The engine throws at build time if
+you give one a positive weight.
+
+## Win animation
+
+The card's `playWin` animates **only the glyph**, not the view. The card
+border stays still while the character scales, wobbles, and flashes warm
+gold. This matters here: a 2x2 BIG WILD covers 4 cells; if `playWin`
+moved the view it would jitter four times in the same physical sprite.
+
+## Round flow
+
+1. `roundBus.emit('round:reset')` - clears the WinBox.
+2. `reelSet.spin()` + `setResult(grid)` - mock server lands a fresh grid.
+3. Left-anchored payline evaluation - 3+ consecutive matches per row, with
+   wild + bigWild substitution.
+4. `WinPresenter.show(wins)` - dims losers, cycles each win twice with a
+   60ms cell stagger.
+5. `roundBus.emit('win:set', total)` - WinBox tickups to the total.

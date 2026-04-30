@@ -85,17 +85,40 @@ export class CardSymbol extends ReelSymbol {
 
   async playWin(): Promise<void> {
     return new Promise((resolve) => {
-      gsap
-        .timeline({ onComplete: resolve })
-        .to(this._gfx, { alpha: 0.5, duration: 0.12, ease: 'power1.in' })
-        .to(this._gfx, { alpha: 1, duration: 0.12, ease: 'power1.out' })
-        .to(this.view.scale, { x: 1.08, y: 1.08, duration: 0.12 }, 0)
-        .to(this.view.scale, { x: 1, y: 1, duration: 0.12 }, 0.12);
+      // Animate only the glyph — the card body stays put. Useful for big
+      // symbols (the rectangle is the cell footprint) and any setting
+      // where movement of the cell border is distracting (cascade refills,
+      // MultiWays adjust). The text is anchored at (0.5, 0.5) so its
+      // scale tween pivots about the centre.
+      gsap.killTweensOf(this._text);
+      gsap.killTweensOf(this._text.scale);
+      const originalFill = this._textColor;
+      const tl = gsap.timeline({
+        onComplete: () => {
+          this._text.scale.set(1, 1);
+          this._text.rotation = 0;
+          this._text.style.fill = originalFill;
+          resolve();
+        },
+      });
+      tl.to(this._text.scale, { x: 1.4, y: 1.4, duration: 0.18, ease: 'back.out(2)' }, 0)
+        .to(this._text, { rotation: -0.12, duration: 0.09, ease: 'sine.inOut' }, 0)
+        .to(this._text, { rotation: 0.12, duration: 0.18, ease: 'sine.inOut' }, 0.09)
+        .to(this._text, { rotation: 0, duration: 0.09, ease: 'sine.inOut' }, 0.27)
+        .to(this._text.scale, { x: 1, y: 1, duration: 0.18, ease: 'power2.out' }, 0.32);
+      // Glyph fill flashes warm gold mid-pulse — `Text.style.fill` isn't
+      // a tweenable target on every Pixi version, so we set it discretely.
+      gsap.delayedCall(0.06, () => (this._text.style.fill = 0xffe168));
+      gsap.delayedCall(0.42, () => (this._text.style.fill = originalFill));
     });
   }
 
   stopAnimation(): void {
-    this.view.scale.set(1, 1);
+    gsap.killTweensOf(this._text);
+    gsap.killTweensOf(this._text.scale);
+    this._text.scale.set(1, 1);
+    this._text.rotation = 0;
+    this._text.style.fill = this._textColor;
     this._gfx.alpha = 1;
   }
 

@@ -112,6 +112,25 @@ importers:
         specifier: ^6.0.3
         version: 6.0.3
 
+  examples/big-symbols:
+    dependencies:
+      gsap:
+        specifier: ^3.15.0
+        version: 3.15.0
+      pixi-reels:
+        specifier: workspace:*
+        version: link:../../packages/pixi-reels
+      pixi.js:
+        specifier: ^8.18.1
+        version: 8.18.1
+    devDependencies:
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+      vite:
+        specifier: ^8.0.9
+        version: 8.0.9(@types/node@24.12.2)(esbuild@0.27.7)(jiti@2.6.1)(yaml@2.8.3)
+
   examples/cascade-tumble:
     dependencies:
       gsap:
@@ -150,7 +169,45 @@ importers:
         specifier: ^8.0.9
         version: 8.0.9(@types/node@24.12.2)(esbuild@0.27.7)(jiti@2.6.1)(yaml@2.8.3)
 
+  examples/flexiways:
+    dependencies:
+      gsap:
+        specifier: ^3.15.0
+        version: 3.15.0
+      pixi-reels:
+        specifier: workspace:*
+        version: link:../../packages/pixi-reels
+      pixi.js:
+        specifier: ^8.18.1
+        version: 8.18.1
+    devDependencies:
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+      vite:
+        specifier: ^8.0.9
+        version: 8.0.9(@types/node@24.12.2)(esbuild@0.27.7)(jiti@2.6.1)(yaml@2.8.3)
+
   examples/hold-and-win:
+    dependencies:
+      gsap:
+        specifier: ^3.15.0
+        version: 3.15.0
+      pixi-reels:
+        specifier: workspace:*
+        version: link:../../packages/pixi-reels
+      pixi.js:
+        specifier: ^8.18.1
+        version: 8.18.1
+    devDependencies:
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+      vite:
+        specifier: ^8.0.9
+        version: 8.0.9(@types/node@24.12.2)(esbuild@0.27.7)(jiti@2.6.1)(yaml@2.8.3)
+
+  examples/pyramid-cascade:
     dependencies:
       gsap:
         specifier: ^3.15.0
