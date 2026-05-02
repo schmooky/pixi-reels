@@ -27,6 +27,7 @@
     "site:dev": "pnpm --filter @pixi-reels/site dev",
     "site:build": "pnpm --filter @pixi-reels/site build",
     "site:preview": "pnpm --filter @pixi-reels/site preview",
+    "symbols:build": "pnpm --filter pixi-reels-symbol-gen build",
     "changeset": "changeset",
     "changeset:status": "changeset status",
     "version-packages": "changeset version && pnpm install --lockfile-only",

@@ -6,17 +6,38 @@ import {
   DropRecipes,
   enableDebug,
 } from 'pixi-reels';
+import { SpineReelSymbol } from 'pixi-reels/spine';
 import type { SymbolPosition } from 'pixi-reels';
-import { CardSymbol, CARD_DECK, WILD_CARD } from '../../shared/CardSymbol.js';
 import { tumbleToGrid, type Cell } from '../../shared/cascadeLoop.js';
 import { WinBox } from '../../shared/WinBox.js';
 import { roundBus } from '../../shared/roundBus.js';
 import { mountUiOverlay, type UiOverlay } from '../../shared/uiOverlay.js';
+import {
+  loadGeneratedSpines,
+  buildSpineMap,
+  type GeneratedSpineName,
+} from '../../shared/generatedSpineLoader.js';
+
+/** Symbol IDs in use here mapped to generated spine skeletons. */
+const SPINE_MAP: Record<string, GeneratedSpineName> = {
+  '7': 'low_a',
+  '8': 'low_k',
+  '9': 'low_q',
+  '10': 'low_j',
+  J: 'mid_1',
+  Q: 'mid_2',
+  K: 'mid_3',
+  A: 'high_1',
+  wild: 'wild',
+};
+const SYMBOL_IDS = Object.keys(SPINE_MAP);
 
 const REEL_COUNT = 5;
 const ROWS_PER_REEL = [3, 5, 5, 5, 3];
 const MAX_ROWS = Math.max(...ROWS_PER_REEL);
-const SYMBOL_SIZE = 110;
+// 140 = the generated spines' authored frame size — matches the bake
+// so frame strokes stay crisp.
+const SYMBOL_SIZE = 140;
 const SYMBOL_GAP = 4;
 
 /** Per-reel row offset to convert local-row to global-row (center anchor). */
@@ -44,6 +65,8 @@ export async function boot(opts: BootOptions): Promise<() => void> {
   });
   host.appendChild(app.canvas);
 
+  await loadGeneratedSpines();
+
   gsap.ticker.remove(gsap.updateRoot);
   const gsapDriver = (): void => gsap.updateRoot(app.ticker.lastTime / 1000);
   app.ticker.add(gsapDriver);
@@ -61,16 +84,18 @@ export async function boot(opts: BootOptions): Promise<() => void> {
     .symbolSize(SYMBOL_SIZE, SYMBOL_SIZE)
     .symbolGap(SYMBOL_GAP, SYMBOL_GAP)
     .symbols((r) => {
-      for (const c of CARD_DECK) {
-        r.register(c.id, CardSymbol, { color: c.color, label: c.label });
+      const spineMap = buildSpineMap(SPINE_MAP);
+      for (const id of SYMBOL_IDS) {
+        r.register(id, SpineReelSymbol, {
+          spineMap,
+          autoPlayLanding: true,
+        });
       }
-      r.register(WILD_CARD.id, CardSymbol, {
-        color: WILD_CARD.color,
-        label: WILD_CARD.label,
-        textColor: WILD_CARD.textColor,
-      });
     })
     .weights({ '7': 18, '8': 16, '9': 14, '10': 12, J: 10, Q: 8, K: 7, A: 5, wild: 2 })
+    // Wild's icon attachment is 200 px — overflows the 140 px frame.
+    // High zIndex keeps the W painted above neighbouring tiles.
+    .symbolData({ wild: { zIndex: 999 } })
     .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 130 })
     .speed('turbo', { ...SpeedPresets.TURBO, stopDelay: 70 })
     .speed('superTurbo', { ...SpeedPresets.SUPER_TURBO, stopDelay: 0 })
@@ -81,6 +106,25 @@ export async function boot(opts: BootOptions): Promise<() => void> {
     .build();
 
   enableDebug(reelSet);
+
+  // Sync idle across every spine symbol once the spin fully completes.
+  // Reels touch down staggered, so per-symbol idle would also start
+  // staggered. After spin:complete + a short wait for landing one-shots
+  // to finish, restart idle on every visible symbol so the breathing
+  // loops are time-aligned across the whole grid.
+  const LANDING_MS = 350;
+  function syncIdle(): void {
+    for (let r = 0; r < reelSet.reelCount; r++) {
+      const reel = reelSet.getReel(r);
+      for (let row = 0; row < reel.visibleRows; row++) {
+        const sym = reel.getSymbolAt(row);
+        if (sym instanceof SpineReelSymbol) sym.stopAnimation();
+      }
+    }
+  }
+  reelSet.events.on('spin:complete', () => {
+    setTimeout(syncIdle, LANDING_MS);
+  });
 
   const totalWidth = REEL_COUNT * (SYMBOL_SIZE + SYMBOL_GAP) - SYMBOL_GAP;
   const totalHeight = MAX_ROWS * (SYMBOL_SIZE + SYMBOL_GAP) - SYMBOL_GAP;

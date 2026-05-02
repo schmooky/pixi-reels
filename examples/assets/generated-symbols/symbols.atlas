@@ -1,0 +1,45 @@
+
+symbols.png
+size: 1024, 512
+filter: Linear, Linear
+pma: false
+low_a_frame
+  bounds: 0, 0, 140, 140
+low_a_icon
+  bounds: 142, 0, 140, 140
+low_k_frame
+  bounds: 284, 0, 140, 140
+low_k_icon
+  bounds: 0, 142, 140, 140
+low_q_frame
+  bounds: 0, 284, 140, 140
+low_q_icon
+  bounds: 142, 142, 140, 140
+low_j_frame
+  bounds: 142, 284, 140, 140
+low_j_icon
+  bounds: 284, 142, 140, 140
+mid_1_frame
+  bounds: 284, 284, 140, 140
+mid_1_icon
+  bounds: 426, 0, 140, 140
+mid_2_frame
+  bounds: 426, 142, 140, 140
+mid_2_icon
+  bounds: 426, 284, 140, 140
+mid_3_frame
+  bounds: 568, 0, 140, 140
+mid_3_icon
+  bounds: 710, 0, 140, 140
+high_1_frame
+  bounds: 852, 0, 140, 140
+high_1_icon
+  bounds: 568, 142, 140, 140
+wild_frame
+  bounds: 568, 284, 140, 140
+wild_icon
+  bounds: 710, 142, 200, 200
+scatter_frame
+  bounds: 710, 344, 140, 140
+scatter_icon
+  bounds: 852, 344, 140, 140

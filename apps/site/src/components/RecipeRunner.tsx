@@ -11,9 +11,14 @@ import {
   RectMaskStrategy, SharedRectMaskStrategy,
   type ReelSet, ReelSymbol,
 } from 'pixi-reels';
+import { SpineReelSymbol } from 'pixi-reels/spine';
 import { BlurSpriteSymbol } from '../../../../examples/shared/BlurSpriteSymbol.ts';
 import { CardSymbol, CARD_DECK, WILD_CARD } from '../../../../examples/shared/CardSymbol.ts';
 import { loadPrototypeSymbols } from '../../../../examples/shared/prototypeSpriteLoader.ts';
+import {
+  loadGeneratedSpines,
+  buildSpineMap,
+} from '../../../../examples/shared/generatedSpineLoader.ts';
 import { transform as sucraseTransform } from 'sucrase';
 import { runCascade, tumbleToGrid, diffCells } from '../../../../examples/shared/cascadeLoop.ts';
 import { cn } from '@/lib/utils';
@@ -124,6 +129,7 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
           'runCascade', 'tumbleToGrid', 'diffCells', 'EmptySymbol', 'ReelSymbol',
           'RectMaskStrategy', 'SharedRectMaskStrategy',
           'CardSymbol', 'CARD_DECK', 'WILD_CARD',
+          'SpineReelSymbol', 'loadGeneratedSpines', 'buildSpineMap',
           `"use strict"; ${js}`,
         );
         // AsyncFunction so recipes that need async setup (e.g. dynamic
@@ -138,6 +144,7 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
           runCascade, tumbleToGrid, diffCells, EmptySymbol, ReelSymbol,
           RectMaskStrategy, SharedRectMaskStrategy,
           CardSymbol, CARD_DECK, WILD_CARD,
+          SpineReelSymbol, loadGeneratedSpines, buildSpineMap,
         )) as RunResult;
       } catch (e) {
         setError(`Runtime error: ${(e as Error).message}`);

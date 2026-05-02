@@ -1,0 +1,7 @@
+node_modules/
+out/*
+!out/.gitkeep
+fonts/*
+!fonts/.gitkeep
+*.log
+.DS_Store

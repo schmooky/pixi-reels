@@ -6,20 +6,36 @@ import {
   WinPresenter,
   enableDebug,
 } from 'pixi-reels';
+import { SpineReelSymbol } from 'pixi-reels/spine';
 import type { Win, SymbolPosition, ReelSet } from 'pixi-reels';
 import { WinBox } from '../../shared/WinBox.js';
 import { roundBus } from '../../shared/roundBus.js';
 import { mountUiOverlay, type UiOverlay } from '../../shared/uiOverlay.js';
 import {
-  AnimatedCardSymbol,
-  CARD_DECK,
-  REGULAR_WILD,
-  BIG_WILD,
-} from './AnimatedCardSymbol.js';
+  loadGeneratedSpines,
+  buildSpineMap,
+  type GeneratedSpineName,
+} from '../../shared/generatedSpineLoader.js';
+
+/** Symbol IDs in use here mapped to generated spine skeletons. */
+const SPINE_MAP: Record<string, GeneratedSpineName> = {
+  '9': 'low_a',
+  '10': 'low_k',
+  J: 'low_q',
+  Q: 'low_j',
+  K: 'mid_1',
+  A: 'high_1',
+  wild: 'wild',
+  bigWild: 'wild',
+};
+const SYMBOL_IDS = Object.keys(SPINE_MAP);
 
 const REEL_COUNT = 5;
 const VISIBLE_ROWS = 4;
-const SYMBOL_SIZE = 130;
+// 140 = the generated spines' authored frame size — matches the bake
+// so frame strokes stay crisp and the wild's 200 px W overflows by the
+// intended 60 px (~30 px each side past the frame border).
+const SYMBOL_SIZE = 140;
 const SYMBOL_GAP = 6;
 
 const PAYS: Record<string, number> = {
@@ -55,6 +71,8 @@ export async function boot(opts: BootOptions): Promise<() => void> {
   });
   host.appendChild(app.canvas);
 
+  await loadGeneratedSpines();
+
   gsap.ticker.remove(gsap.updateRoot);
   const gsapDriver = (): void => gsap.updateRoot(app.ticker.lastTime / 1000);
   app.ticker.add(gsapDriver);
@@ -71,11 +89,17 @@ export async function boot(opts: BootOptions): Promise<() => void> {
     .symbolSize(SYMBOL_SIZE, SYMBOL_SIZE)
     .symbolGap(SYMBOL_GAP, SYMBOL_GAP)
     .symbols((r) => {
-      for (const card of CARD_DECK) {
-        r.register(card.id, AnimatedCardSymbol, { color: card.color, label: card.label });
+      const spineMap = buildSpineMap(SPINE_MAP);
+      for (const id of SYMBOL_IDS) {
+        r.register(id, SpineReelSymbol, {
+          spineMap,
+          autoPlayLanding: true,
+          // bigWild occupies a 2x2 block — render the spine at 2x scale
+          // so the rig fills the block instead of sitting tiny in the
+          // top-left cell with empty space around it.
+          scale: id === 'bigWild' ? 2 : 1,
+        });
       }
-      r.register(REGULAR_WILD.id, AnimatedCardSymbol, REGULAR_WILD);
-      r.register(BIG_WILD.id, AnimatedCardSymbol, BIG_WILD);
     })
     .weights({
       '9': 18, '10': 18,
@@ -85,8 +109,11 @@ export async function boot(opts: BootOptions): Promise<() => void> {
       bigWild: 0,
     })
     .symbolData({
-      bigWild: { size: { w: 2, h: 2 }, weight: 0, zIndex: 5 },
-      wild: { zIndex: 4 },
+      // Wild + bigWild use a 200 px icon attachment that overflows the
+      // 140 px frame. zIndex 999/1000 keeps the overflowing W painted
+      // ABOVE every neighbouring tile's frame.
+      bigWild: { size: { w: 2, h: 2 }, weight: 0, zIndex: 1000 },
+      wild: { zIndex: 999 },
     })
     .speed('normal', SpeedPresets.NORMAL)
     .speed('turbo', SpeedPresets.TURBO)
@@ -95,6 +122,25 @@ export async function boot(opts: BootOptions): Promise<() => void> {
     .build();
 
   enableDebug(reelSet);
+
+  // Sync idle across every spine symbol once the spin fully completes.
+  // Reels touch down staggered, so per-symbol idle would also start
+  // staggered. After spin:complete + a short wait for landing one-shots
+  // to finish, restart idle on every visible symbol so the breathing
+  // loops are time-aligned across the whole grid.
+  const LANDING_MS = 350;
+  function syncIdle(): void {
+    for (let r = 0; r < reelSet.reelCount; r++) {
+      const reel = reelSet.getReel(r);
+      for (let row = 0; row < reel.visibleRows; row++) {
+        const sym = reel.getSymbolAt(row);
+        if (sym instanceof SpineReelSymbol) sym.stopAnimation();
+      }
+    }
+  }
+  reelSet.events.on('spin:complete', () => {
+    setTimeout(syncIdle, LANDING_MS);
+  });
 
   const totalWidth = REEL_COUNT * (SYMBOL_SIZE + SYMBOL_GAP) - SYMBOL_GAP;
   const totalHeight = VISIBLE_ROWS * (SYMBOL_SIZE + SYMBOL_GAP) - SYMBOL_GAP;

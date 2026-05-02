@@ -106,6 +106,19 @@ export const RECIPES: RecipeMeta[] = [
     tags: ['shape', 'pyramid', 'geometry', 'layout'],
   },
   {
+    slug: 'spine-pyramid-shape',
+    group: 'pyramid',
+    title: 'Pyramid shape with Spine',
+    oneLiner: 'Same 3-5-5-5-3 pyramid, every cell a Spine 2D skeleton. Crisp at every per-reel cell size, with idle/landing/win/destroy animations baked in.',
+    steps: [
+      '`await loadGeneratedSpines()` once before building',
+      'Map symbol ids to skeleton names with `buildSpineMap({ id: "low_a", ... })`',
+      'Register every id with `SpineReelSymbol` — same registration as a uniform layout',
+    ],
+    apis: ['SpineReelSymbol', 'loadGeneratedSpines', 'buildSpineMap', 'ReelSetBuilder.visibleRowsPerReel'],
+    tags: ['shape', 'pyramid', 'spine', 'custom-symbol', 'animation'],
+  },
+  {
     slug: 'multiways',
     group: 'multiways',
     title: 'MultiWays',
@@ -130,6 +143,19 @@ export const RECIPES: RecipeMeta[] = [
     ],
     apis: ['SymbolData.size', 'ReelSet.getSymbolFootprint', 'ReelSet.getVisibleGrid'],
     tags: ['big-symbols', 'bonus', 'layout', 'registration'],
+  },
+  {
+    slug: 'spine-big-symbols',
+    group: 'big-symbols',
+    title: 'Big symbols with Spine',
+    oneLiner: 'Same 2×2 anchor mechanic, every cell a Spine skeleton. The bigWild reuses the regular wild rig — Spine scales it to the larger block without losing crispness.',
+    steps: [
+      '`await loadGeneratedSpines()` once before building — boots the atlas + 10 skeleton JSONs',
+      'Register every id with `SpineReelSymbol` and pass the same map to each registration',
+      'Mark the big symbol with `size: { w: 2, h: 2 }` and `weight: 0` — anchor-only, never from random fill',
+    ],
+    apis: ['SpineReelSymbol', 'loadGeneratedSpines', 'buildSpineMap', 'ReelSetBuilder.symbolData'],
+    tags: ['big-symbols', 'spine', 'custom-symbol', 'animation'],
   },
   {
     slug: 'big-symbols-mxn',
