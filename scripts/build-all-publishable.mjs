@@ -24,7 +24,7 @@ const repoRoot = fileURLToPath(new URL('..', import.meta.url));
  * the targets; this step makes sure they exist locally before `vite build`
  * (and before `changeset publish`).
  */
-const ROOT_FILES_TO_COPY = ['README.md', 'LICENSE'];
+const ROOT_FILES_TO_COPY = ['README.md', 'LICENSE', 'CONTRIBUTING.md'];
 
 async function syncRootFiles(pkgDir) {
   for (const name of ROOT_FILES_TO_COPY) {
