@@ -21,6 +21,8 @@ export function createExampleConfig(exampleDir: string): UserConfig {
         { find: /^pixi-reels$/, replacement: resolve(exampleDir, '../../packages/pixi-reels/src/index.ts') },
         { find: 'pixi.js', replacement: nm('pixi.js') },
         { find: 'gsap', replacement: nm('gsap') },
+        // Optional — only resolved if the example installs spine-pixi-v8.
+        { find: '@esotericsoftware/spine-pixi-v8', replacement: nm('@esotericsoftware/spine-pixi-v8') },
       ],
     },
     publicDir: resolve(exampleDir, '../assets'),

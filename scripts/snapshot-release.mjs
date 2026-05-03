@@ -108,7 +108,7 @@ async function main() {
     run('pnpm', ['build:all']);
 
     // Publish under the custom dist-tag without creating git tags or committing.
-    run('npx', ['changeset', 'publish', '--no-git-tag', '--tag', tag, '--snapshot']);
+    run('npx', ['changeset', 'publish', '--no-git-tag', '--tag', tag]);
   } finally {
     for (const p of ephemerals) {
       try {

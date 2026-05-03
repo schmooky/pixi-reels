@@ -29,7 +29,7 @@ self-contained (usually a recipe + MDX page).
 | Expanding reels at runtime (add rows) | [todo] | minor | p3 | Reel must support live resize. |
 | Split symbols (two symbols per cell) | [todo] | minor | p2 | Cell-fraction occupancy. |
 | Horizontal reels | [todo] | **major** | p2 | Orientation is hardcoded to vertical. |
-| Megaways (variable `visibleRows` per reel) | [todo] | **major** | p1 | Frame/geometry rewrite. |
+| MultiWays (variable `visibleRows` per reel) | [todo] | **major** | p1 | Frame/geometry rewrite. |
 | Cluster grid (WxH, no reel concept) | [todo] | **major** | p1 | New non-reel mode + viewport. |
 | Colossal / big symbols (2x2, 3x3 overlay) | [todo] | **major** | p1 | Multi-cell symbol occupancy. |
 | Infinity Reels (dynamic column count) | [todo] | **major** | p3 | Columns added on each win. |

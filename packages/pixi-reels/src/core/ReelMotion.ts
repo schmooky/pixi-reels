@@ -78,6 +78,22 @@ export class ReelMotion {
     return this._slotHeight;
   }
 
+  /**
+   * Reshape the motion layer for a new visible-row count and cell height.
+   * Recomputes wrap bounds and the slot height. Called by `Reel.reshape()`
+   * during AdjustPhase on MultiWays slots. The symbol array is re-bound by
+   * `Reel.reshape()` directly via the same array reference, so this method
+   * doesn't take a new array.
+   */
+  reshape(symbolHeight: number, symbolGapY: number, bufferAbove: number, visibleRows: number): void {
+    this._symbolHeight = symbolHeight;
+    this._symbolGapY = symbolGapY;
+    this._slotHeight = symbolHeight + symbolGapY;
+    this._bufferAbove = bufferAbove;
+    this._maxY = (visibleRows + 1) * this._slotHeight;
+    this._minY = -(this._bufferAbove + 1) * this._slotHeight;
+  }
+
   private _wrapBottomToTop(): void {
     const lastIdx = this._symbols.length - 1;
     const lastSymbol = this._symbols[lastIdx];

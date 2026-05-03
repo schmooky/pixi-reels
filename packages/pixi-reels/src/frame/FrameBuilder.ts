@@ -127,7 +127,7 @@ export class FrameBuilder {
   }
 }
 
-/** Fills empty symbol slots with random symbols. */
+/** Fills empty symbol slots with random symbols. OCCUPIED cells are kept verbatim. */
 class RandomFillMiddleware implements FrameMiddleware {
   readonly name = 'random-fill';
   readonly priority = 0;

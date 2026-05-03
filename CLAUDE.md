@@ -240,11 +240,13 @@ Example `debugSnapshot()` fields:
   "currentSpeed": "normal",
   "spotlightActive": false,
   "reelCount": 5,
-  "visibleRows": 3,
+  "visibleRows": [3, 3, 3, 3, 3],
   "grid": [["cherry","plum","orange"], ...],
   "reels": [{ "index": 0, "speed": 0, "isStopping": false, "visibleSymbols": [...] }, ...]
 }
 ```
+
+`visibleRows` is `number[]` (one entry per reel) so jagged shapes (pyramids, MultiWays) are representable. For uniform slots every entry is the same value.
 
 **When debugging reel issues as an AI agent:**
 1. Call `__PIXI_REELS_DEBUG.log()` via eval to understand current state

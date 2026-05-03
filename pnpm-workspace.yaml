@@ -2,3 +2,8 @@ packages:
   - 'packages/*'
   - 'examples/*'
   - 'apps/*'
+  - 'tools/*'
+# Native postinstall scripts allowed to run. skia-canvas downloads its
+# prebuilt binary in postinstall — required by tools/symbol-gen.
+onlyBuiltDependencies:
+  - skia-canvas

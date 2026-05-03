@@ -1,0 +1,54 @@
+---
+layout: ../../layouts/Demo.astro
+title: MultiWays (Megaways)
+subtitle: 6 reels - per-spin row count via setShape() - ways = product of row counts
+tags: [megaways, multiways, multiways-ways]
+description: Every spin rolls a fresh per-reel shape (2-7 rows each). The engine's AdjustPhase tweens cell heights between SPIN and STOP so the reels reshape mid-flight. Ways evaluation - chain of consecutive reels containing the kind, multiplied by per-reel match count.
+---
+
+import MultiWaysDemo from '../../components/demos/MultiWaysDemo.tsx';
+
+<MultiWaysDemo client:only="react" />
+
+## The mechanic
+
+`builder.multiways({ minRows, maxRows, reelPixelHeight })` switches the
+reel set to MultiWays mode. Every spin must call `setShape(rowsPerReel)`
+**before** `setResult(grid)`:
+
+```ts
+const spinPromise = reelSet.spin();
+reelSet.setShape([7, 4, 6, 7, 6, 3]);  // any per-reel count in [min, max]
+reelSet.setResult(serverGrid);          // grid[c].length === shape[c]
+await spinPromise;
+```
+
+The engine's `AdjustPhase` runs between SPIN and STOP and tweens each
+reel's cell height to `reelPixelHeight / rowsPerReel[i]` while pinned
+overlays migrate to their new rows. Cell border stays still during the
+win animation thanks to the glyph-only `playWin` on `CardSymbol`.
+
+## Ways evaluation
+
+Walk reels left-to-right counting **reels** (not cells) that contain the
+kind (or wild). The chain breaks at the first reel with zero matches.
+Chains of 3+ reels pay `PAYS[kind] * chain * (count_per_reel product)`:
+
+```ts
+let ways = 1;
+for (let i = 0; i < chain; i++) ways *= cellsByReel[i].length;
+const amount = PAYS[kind] * chain * ways;
+```
+
+The displayed `WAYS` headline above the canvas is the **product of every
+reel's row count**, not the chain - that's the slot's bandwidth this
+spin, regardless of whether anyone won.
+
+## Round flow
+
+1. `roundBus.emit('round:reset')` - WinBox to 0, WAYS cleared.
+2. Roll a per-reel shape biased toward the high end of [2, 7].
+3. `reelSet.spin()` -> `setShape(shape)` -> `setResult(grid)`.
+4. WAYS counter: `shape.reduce((p, n) => p * n, 1)`.
+5. Walk ways evaluation, sort by amount desc, present via `WinPresenter`.
+6. `roundBus.emit('win:set', total)`.

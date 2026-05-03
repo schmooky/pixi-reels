@@ -17,7 +17,6 @@ import {
   type ReelSet,
   ReelSymbol,
 } from 'pixi-reels';
-import { loadPixellabSymbols } from '../../../../examples/shared/pixellabSymbolsLoader.ts';
 import { BlurSpriteSymbol } from '../../../../examples/shared/BlurSpriteSymbol.ts';
 import { loadPrototypeSymbols } from '../../../../examples/shared/prototypeSpriteLoader.ts';
 import { transform as sucraseTransform } from 'sucrase';
@@ -38,7 +37,6 @@ const DEFAULT_CODE = `// ─── pixi-reels sandbox ────────�
 // Injected globals:
 //   - ReelSetBuilder, SpeedPresets, BlurSpriteSymbol, AnimatedSpriteSymbol
 //   - WinPresenter (symbol highlight on wins; emits win:* events)
-//   - loadPixellabSymbols (async loader for generated sequence assets)
 //   - app          -- PixiJS Application (has .ticker, .screen)
 //   - textures     -- Record<symbolId, Texture>    (base art)
 //   - blurTextures -- Record<symbolId, Texture>    (motion-blur variants)
@@ -233,7 +231,6 @@ export default function Sandbox() {
         'BlurSpriteSymbol',
         'AnimatedSpriteSymbol',
         'WinPresenter',
-        'loadPixellabSymbols',
         'app',
         'textures',
         'blurTextures',
@@ -248,14 +245,13 @@ export default function Sandbox() {
         factorySource,
       );
       // Await the factory so recipes that need async setup
-      // (e.g. `await loadPixellabSymbols(...)`) work.
+      // (e.g. dynamic texture loaders) work.
       built = (await factory(
         ReelSetBuilder,
         SpeedPresets,
         BlurSpriteSymbol,
         AnimatedSpriteSymbol,
         WinPresenter,
-        loadPixellabSymbols,
         env.app,
         env.textures,
         env.blurTextures,

@@ -49,7 +49,7 @@ Every third-party action in `.github/workflows/` is pinned to a full commit SHA 
 uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 ```
 
-This is a supply-chain hardening step recommended by the OpenSSF Scorecard: a moving tag like `@v4` could be repointed at a malicious commit by a compromised maintainer account, but a SHA cannot. Dependabot keeps the SHAs fresh. Approve those `chore(ci)` PRs like any other dependency bump.
+This is a supply-chain hardening step: a moving tag like `@v4` could be repointed at a malicious commit by a compromised maintainer account, but a SHA cannot. Dependabot keeps the SHAs fresh. Approve those `chore(ci)` PRs like any other dependency bump.
 
 If you are adding a new action, resolve its major-version tag to a SHA with `git ls-remote` and commit both the SHA and the version comment in the same `uses:` line.
 

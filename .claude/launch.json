@@ -30,6 +30,24 @@
       "runtimeExecutable": "pnpm",
       "runtimeArgs": ["--filter", "sandbox", "exec", "vite", "--port", "5176", "--strictPort"],
       "port": 5176
+    },
+    {
+      "name": "big-symbols",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "big-symbols", "exec", "vite", "--port", "5177", "--strictPort"],
+      "port": 5177
+    },
+    {
+      "name": "multiways",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "multiways", "exec", "vite", "--port", "5178", "--strictPort"],
+      "port": 5178
+    },
+    {
+      "name": "pyramid-cascade",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "pyramid-cascade", "exec", "vite", "--port", "5179", "--strictPort"],
+      "port": 5179
     }
   ]
 }

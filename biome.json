@@ -1,0 +1,23 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.4.13/schema.json",
+  "files": {
+    "includes": [
+      "packages/pixi-reels/src/**/*.ts",
+      "packages/pixi-reels/src/**/*.tsx"
+    ]
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "recommended": false,
+      "correctness": {
+        "noUnusedImports": "error"
+      }
+    }
+  },
+  "formatter": { "enabled": false },
+  "assist": { "enabled": false },
+  "javascript": {
+    "parser": { "unsafeParameterDecoratorsEnabled": false }
+  }
+}

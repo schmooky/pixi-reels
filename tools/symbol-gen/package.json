@@ -1,0 +1,18 @@
+{
+  "name": "pixi-reels-symbol-gen",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "tsx scripts/build-symbols.ts",
+    "clean": "rm -rf out/*"
+  },
+  "dependencies": {
+    "maxrects-packer": "^2.7.3",
+    "skia-canvas": "^3.0.3"
+  },
+  "devDependencies": {
+    "tsx": "^4.20.6",
+    "typescript": "^5.5.0"
+  }
+}

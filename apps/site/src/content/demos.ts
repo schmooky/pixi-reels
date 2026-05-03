@@ -64,4 +64,28 @@ export const DEMOS: DemoMeta[] = [
     tags: ['sprites', 'atlas', 'blur-on-spin'],
     cheatHighlights: ['Force royal line', 'Full-grid royal jackpot', 'Wild on reel 3 row 2'],
   },
+  {
+    slug: 'big-symbols',
+    title: 'Big symbols (2x2 BIG WILD)',
+    subtitle: '5x4 · 2x2 wild block · glyph-only win animation',
+    summary: 'A 2x2 wild lands at an anchor cell, the engine paints the rest of the block with OCCUPIED stubs. Win animation pulses only the glyph - the card body stays still.',
+    tags: ['big-symbols', 'wild', 'lines'],
+    cheatHighlights: ['BIG WILD every third spin', 'Lines pay 3+', 'WinPresenter cycle x2'],
+  },
+  {
+    slug: 'multiways',
+    title: 'MultiWays (Megaways)',
+    subtitle: '6 reels · setShape() per spin · ways pay',
+    summary: 'Per-spin per-reel row counts (2-7) via the engine\'s MultiWays + AdjustPhase. Ways = product of row counts. Wins are chains of consecutive reels.',
+    tags: ['megaways', 'multiways', 'ways'],
+    cheatHighlights: ['Random shape every spin', 'Bias to bigger ways', 'Chain x ways scoring'],
+  },
+  {
+    slug: 'pyramid-cascade',
+    title: 'Pyramid cascade (3-5-5-5-3)',
+    subtitle: 'Jagged diamond · ways pay · real gravity refill',
+    summary: 'visibleRowsPerReel + center anchor builds a diamond. Cascade refills use tumbleToGrid - survivors stay put, only the cleared slots refill from above.',
+    tags: ['pyramid', 'cascade', 'gravity'],
+    cheatHighlights: ['Stiff drop (no bounce)', 'Survivors don\'t re-drop', 'Cascade multiplier'],
+  },
 ];

@@ -1,0 +1,19 @@
+{
+  "name": "multiways",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build"
+  },
+  "dependencies": {
+    "@esotericsoftware/spine-pixi-v8": "^4.2.110",
+    "gsap": "^3.15.0",
+    "pixi-reels": "workspace:*",
+    "pixi.js": "^8.18.1"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.3",
+    "vite": "^8.0.9"
+  }
+}

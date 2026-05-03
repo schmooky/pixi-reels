@@ -8,9 +8,23 @@ import { HeadlessSymbol } from './HeadlessSymbol.js';
 
 export interface TestReelSetOptions {
   reels?: number;
-  visibleRows?: number;
+  /**
+   * Visible row count.
+   *   - `number` → uniform rows.
+   *   - `number[]` → per-reel static shape (pyramid).
+   *
+   * Mutually exclusive with `multiways` (which always starts at `maxRows`).
+   */
+  visibleRows?: number | number[];
+  /**
+   * MultiWays configuration. Mutually exclusive with `visibleRows: number[]`.
+   * The harness sets uniform `reelPixelHeight` and forwards `min/maxRows`.
+   */
+  multiways?: { minRows: number; maxRows: number; reelPixelHeight: number };
   symbolIds?: string[];
   weights?: Record<string, number>;
+  /** Per-symbol overrides — useful for big-symbol size declarations in tests. */
+  symbolData?: Record<string, Partial<import('../config/types.js').SymbolData>>;
   symbolSize?: { width: number; height: number };
   symbolGap?: { x: number; y: number };
 }
@@ -49,7 +63,6 @@ export interface TestReelSetHandle {
  */
 export function createTestReelSet(opts: TestReelSetOptions = {}): TestReelSetHandle {
   const reels = opts.reels ?? 5;
-  const visibleRows = opts.visibleRows ?? 3;
   const symbolIds = opts.symbolIds ?? ['a', 'b', 'c'];
   const weights = opts.weights ?? {};
   const size = opts.symbolSize ?? { width: 100, height: 100 };
@@ -58,7 +71,6 @@ export function createTestReelSet(opts: TestReelSetOptions = {}): TestReelSetHan
 
   const builder = new ReelSetBuilder()
     .reels(reels)
-    .visibleSymbols(visibleRows)
     .symbolSize(size.width, size.height)
     .ticker(ticker as unknown as Ticker)
     .symbols((registry) => {
@@ -67,12 +79,24 @@ export function createTestReelSet(opts: TestReelSetOptions = {}): TestReelSetHan
       }
     });
 
+  if (opts.multiways) {
+    builder.multiways(opts.multiways);
+  } else if (Array.isArray(opts.visibleRows)) {
+    builder.visibleRowsPerReel(opts.visibleRows);
+  } else {
+    builder.visibleSymbols(opts.visibleRows ?? 3);
+  }
+
   if (opts.symbolGap) {
     builder.symbolGap(opts.symbolGap.x, opts.symbolGap.y);
   }
 
   if (Object.keys(weights).length > 0) {
     builder.weights(weights);
+  }
+
+  if (opts.symbolData) {
+    builder.symbolData(opts.symbolData);
   }
 
   const reelSet = builder.build();
@@ -137,6 +161,12 @@ export function expectGrid(reelSet: ReelSet, expected: string[][]): void {
   }
 
   for (let r = 0; r < expected.length; r++) {
+    if (expected[r].length !== actual[r].length) {
+      mismatches.push(
+        `  reel ${r} row count: expected ${expected[r].length} got ${actual[r].length}`,
+      );
+      continue;
+    }
     for (let row = 0; row < expected[r].length; row++) {
       if (expected[r][row] !== actual[r][row]) {
         mismatches.push(

@@ -32,6 +32,9 @@ const DEFAULT_GLOBS = [
   'examples/classic-spin/src',
   'examples/cascade-tumble/src',
   'examples/hold-and-win/src',
+  'examples/big-symbols/src',
+  'examples/multiways/src',
+  'examples/pyramid-cascade/src',
   'docs',
   'scripts',
   '.github',
@@ -64,6 +67,7 @@ const ALLOWED_NON_ASCII = new Set([
   '◆', '◎', '★',           // UI bullets already adopted on the site
   '✓', '✗',                // check / cross marks for toggle + script status lines
   '♥', '✦', '◉', '◔',      // decorative glyphs on the classic-lines demo symbols
+  '♣', '♛',                // card-suit / crown glyphs baked into generated-symbols icons
   '▶', '◀', '▲', '▼',      // solid-triangle arrowheads for ASCII flow diagrams
   // Box drawing characters — used by the debug ASCII grid and by
   // comment banners like `// ─── Section ───`.

@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>pixi-reels - MultiWays (Megaways)</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0e1f2a; overflow: hidden; }
+    canvas { display: block; }
+    #status { position: fixed; bottom: 96px; left: 50%; transform: translateX(-50%);
+      font-size: 14px; color: #7ed6c8; font-family: sans-serif;
+      letter-spacing: 0.06em; z-index: 1000;
+      max-width: 90vw; text-align: center; }
+    #ways { position: fixed; bottom: 70px; left: 50%; transform: translateX(-50%);
+      font-size: 22px; color: #ffd700; font-family: "Roboto Condensed", sans-serif;
+      font-weight: 700; letter-spacing: 0.12em; z-index: 1000;
+      text-shadow: 0 2px 6px rgba(0,0,0,0.6); }
+  </style>
+</head>
+<body>
+  <div id="ways"></div>
+  <div id="status"></div>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
