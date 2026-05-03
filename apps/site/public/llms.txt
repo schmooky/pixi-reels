@@ -3,14 +3,15 @@
 > Open-source, batteries-included slot machine reel engine for PixiJS v8. Fluent builder API, typed domain events, deterministic testing utilities, and a catalog of live mechanic demos (classic lines, scatters → free spins, hold & win, cascades, sticky wilds, anticipation + slam-stop). MIT licensed. TypeScript. Works with any PixiJS v8 app.
 
 Key facts:
-- Latest version: 0.1
+- Latest version: 0.3.1
 - License: MIT
 - Language: TypeScript (ESM + CJS dual format)
 - Peer deps: pixi.js ^8.17, gsap ^3.14 (+ optional @esotericsoftware/spine-pixi-v8)
 - Repo: https://github.com/schmooky/pixi-reels
 - Test count: 85 vitest tests passing
 - Demo count: 6 live mechanic sandboxes on the site
-- Docs site: https://pixi-reels.dev
+- Docs site: https://pixi-reels.schmooky.dev
+- Changelog: https://pixi-reels.schmooky.dev/changelog/
 
 ## Quick install
 

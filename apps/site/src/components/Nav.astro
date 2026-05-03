@@ -1,4 +1,6 @@
 ---
+import { PIXI_REELS_VERSION } from '../lib/version.ts';
+
 const pathname = Astro.url.pathname;
 function isActive(prefix: string): boolean {
   if (prefix === '/') return pathname === '/';
@@ -20,9 +22,12 @@ const links = [
         PR
       </span>
       <span>pixi-reels</span>
-      <span class="ml-1 hidden rounded-full border border-border/70 bg-background/80 px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground sm:inline-block">
-        v0.1
-      </span>
+      <a
+        href="/changelog/"
+        class="ml-1 hidden rounded-full border border-border/70 bg-background/80 px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground sm:inline-block"
+      >
+        v{PIXI_REELS_VERSION}
+      </a>
     </a>
 
     <nav class="hidden md:flex items-center gap-1 text-sm">

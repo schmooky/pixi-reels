@@ -16,7 +16,7 @@
   <rect width="1200" height="630" fill="url(#grid)"/>
   <g transform="translate(80,130)">
     <rect x="-20" y="-40" width="140" height="36" rx="18" fill="#f97316" opacity="0.12"/>
-    <text x="50" y="-13" text-anchor="middle" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="13" font-weight="700" fill="#c2410c" letter-spacing="2">V0.1 · MIT</text>
+    <text x="50" y="-13" text-anchor="middle" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="13" font-weight="700" fill="#c2410c" letter-spacing="2">V0.3.1 · MIT</text>
     <text x="0" y="70" font-family="Inter,system-ui,sans-serif" font-size="96" font-weight="700" fill="#1c1410" letter-spacing="-3">Slot reels,</text>
     <text x="0" y="180" font-family="Inter,system-ui,sans-serif" font-size="96" font-weight="700" fill="url(#orange)" letter-spacing="-3">ready to spin.</text>
     <text x="0" y="250" font-family="Inter,system-ui,sans-serif" font-size="28" font-weight="400" fill="#5a4a3c">
@@ -26,7 +26,7 @@
       Fluent builder · typed events · deterministic testing · 6 mechanic demos.
     </text>
     <g transform="translate(0,360)" font-family="ui-monospace,monospace" font-size="18" fill="#8a6a4c">
-      <text>◆ pixi-reels.dev</text>
+      <text>◆ pixi-reels.schmooky.dev</text>
       <text x="260">◆ github.com/schmooky/pixi-reels</text>
     </g>
   </g>

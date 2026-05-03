@@ -1,6 +1,6 @@
 export const SITE = {
   name: 'pixi-reels',
-  url: 'https://pixi-reels.dev',
+  url: 'https://pixi-reels.schmooky.dev',
   author: 'pixi-reels contributors',
   githubRepo: 'https://github.com/schmooky/pixi-reels',
   tagline: 'Open-source slot machine reel engine for PixiJS v8',

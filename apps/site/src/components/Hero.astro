@@ -1,4 +1,6 @@
 ---
+import { PIXI_REELS_VERSION } from '../lib/version.ts';
+
 const marqueeTags = [
   'classic lines', 'scatters', 'free spins', 'hold & win',
   'cascades', 'tumbles', 'sticky wilds', 'walking wilds',
@@ -13,7 +15,7 @@ const marqueeTags = [
     <div class="mx-auto max-w-3xl text-center">
       <div class="mb-6 inline-flex items-center gap-2 rounded-full border border-border/80 bg-card/60 px-3 py-1 text-xs font-medium text-muted-foreground backdrop-blur-sm">
         <span class="inline-block h-1.5 w-1.5 rounded-full bg-accent animate-pulse"></span>
-        v0.1 · MIT · PixiJS v8
+        v{PIXI_REELS_VERSION} · MIT · PixiJS v8
       </div>
 
       <h1 class="text-balance text-5xl font-semibold tracking-tight sm:text-6xl md:text-7xl">

@@ -1,0 +1,49 @@
+---
+import Base from '../layouts/Base.astro';
+import { Content as ChangelogContent } from '../generated/CHANGELOG.md';
+import { PIXI_REELS_VERSION } from '../lib/version.ts';
+import { SITE, articleLd, breadcrumbLd } from '../lib/seo.ts';
+
+const title = 'Changelog';
+const description = `Per-release notes for the pixi-reels engine. Latest published version: v${PIXI_REELS_VERSION}.`;
+
+const jsonLd = [
+  articleLd({ title, description, path: '/changelog/' }),
+  breadcrumbLd([
+    { name: SITE.name, url: '/' },
+    { name: title, url: '/changelog/' },
+  ]),
+];
+---
+<Base
+  title={`${title} · ${SITE.name}`}
+  description={description}
+  path="/changelog/"
+  type="article"
+  article={{ section: 'Reference' }}
+  jsonLd={jsonLd}
+>
+  <div class="container py-12">
+    <article class="prose-docs mx-auto min-w-0 max-w-3xl animate-fade-in">
+      <div class="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
+        Reference
+      </div>
+      <h1 class="mb-3 text-4xl font-semibold tracking-tight">Changelog</h1>
+      <p class="!mt-0 text-muted-foreground">
+        Latest published version: <a
+          href="https://www.npmjs.com/package/pixi-reels"
+          class="font-mono"
+          target="_blank"
+          rel="noopener"
+        >v{PIXI_REELS_VERSION}</a>. Full per-release notes are generated from
+        <a
+          href="https://github.com/schmooky/pixi-reels/blob/main/packages/pixi-reels/CHANGELOG.md"
+          target="_blank"
+          rel="noopener"
+        >packages/pixi-reels/CHANGELOG.md</a>.
+      </p>
+      <hr class="my-8 border-border/60" />
+      <ChangelogContent />
+    </article>
+  </div>
+</Base>

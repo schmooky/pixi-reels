@@ -10,7 +10,7 @@ const repoRoot = resolve(here, '../..');
 
 // https://astro.build/config
 export default defineConfig({
-  site: 'https://pixi-reels.dev',
+  site: 'https://pixi-reels.schmooky.dev',
   integrations: [
     mdx(),
     react(),

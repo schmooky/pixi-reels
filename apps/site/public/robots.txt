@@ -32,4 +32,4 @@ Allow: /
 User-agent: Applebot-Extended
 Allow: /
 
-Sitemap: https://pixi-reels.dev/sitemap.xml
+Sitemap: https://pixi-reels.schmooky.dev/sitemap.xml

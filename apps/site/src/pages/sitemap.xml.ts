@@ -22,6 +22,7 @@ export const GET: APIRoute = async () => {
   entries.push({ loc: url('/sandbox/'), priority: '0.9', changefreq: 'weekly' });
   entries.push({ loc: url('/recipes/'), priority: '0.9', changefreq: 'weekly' });
   entries.push({ loc: url('/architecture/'), priority: '0.9', changefreq: 'weekly' });
+  entries.push({ loc: url('/changelog/'), priority: '0.7', changefreq: 'weekly' });
 
   for (const r of RECIPES) {
     entries.push({ loc: url(`/recipes/${r.slug}/`), priority: '0.85', changefreq: 'monthly' });

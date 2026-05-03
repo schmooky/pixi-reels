@@ -50,7 +50,10 @@ export const WIKI_NAV: NavSection[] = [
   },
   {
     title: 'Reference',
-    items: [{ label: 'Glossary', href: '/docs/glossary/' }],
+    items: [
+      { label: 'Glossary', href: '/docs/glossary/' },
+      { label: 'Changelog', href: '/changelog/' },
+    ],
   },
   {
     title: 'Architecture',
