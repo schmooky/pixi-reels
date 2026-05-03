@@ -1,5 +1,11 @@
 # pixi-reels
 
+## 0.3.2
+
+### Patch Changes
+
+- [`b86dad7`](https://github.com/schmooky/pixi-reels/commit/b86dad75fcdd4936170bb96a6084904bad419dd3) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Fix: ship `CONTRIBUTING.md` in the npm tarball so the npmjs.com "Contributing" sidebar link resolves. npmjs builds that link from `repository.directory` (`packages/pixi-reels`) and a standard filename, but the file previously only existed at the monorepo root — the link 404'd. The build script now syncs `CONTRIBUTING.md` into the package alongside `README.md` and `LICENSE`, and the package's `files` array includes it.
+
 ## 0.3.1
 
 ### Patch Changes
