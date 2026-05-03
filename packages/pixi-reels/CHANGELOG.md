@@ -1,5 +1,11 @@
 # pixi-reels
 
+## 0.3.1
+
+### Patch Changes
+
+- [`93aa66c`](https://github.com/schmooky/pixi-reels/commit/93aa66c103ef0f624345c76a92a22621fc3c676a) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Update: package `homepage` now points at the canonical docs site, `https://pixi-reels.schmooky.dev`. No code or runtime change — npm metadata and the docs site URL only.
+
 ## 0.3.0
 
 ### Minor Changes
