@@ -38,9 +38,9 @@
       "port": 5177
     },
     {
-      "name": "flexiways",
+      "name": "multiways",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["--filter", "flexiways", "exec", "vite", "--port", "5178", "--strictPort"],
+      "runtimeArgs": ["--filter", "multiways", "exec", "vite", "--port", "5178", "--strictPort"],
       "port": 5178
     },
     {

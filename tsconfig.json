@@ -22,7 +22,7 @@
     { "path": "./examples/cascade-tumble" },
     { "path": "./examples/hold-and-win" },
     { "path": "./examples/big-symbols" },
-    { "path": "./examples/flexiways" },
+    { "path": "./examples/multiways" },
     { "path": "./examples/pyramid-cascade" },
     { "path": "./examples/sandbox" },
     { "path": "./apps/site" }
