@@ -7,7 +7,7 @@
     "node": ">=22.12"
   },
   "scripts": {
-    "build": "pnpm --filter pixi-reels build && pnpm --filter classic-spin build && pnpm --filter cascade-tumble build && pnpm --filter hold-and-win build && pnpm --filter big-symbols build && pnpm --filter flexiways build && pnpm --filter pyramid-cascade build",
+    "build": "pnpm --filter pixi-reels build && pnpm --filter classic-spin build && pnpm --filter cascade-tumble build && pnpm --filter hold-and-win build && pnpm --filter big-symbols build && pnpm --filter multiways build && pnpm --filter pyramid-cascade build",
     "build:all": "node scripts/build-all-publishable.mjs",
     "test": "pnpm check:lint && pnpm --filter pixi-reels test",
     "typecheck": "pnpm --filter pixi-reels typecheck",

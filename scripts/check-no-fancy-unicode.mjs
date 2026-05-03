@@ -33,7 +33,7 @@ const DEFAULT_GLOBS = [
   'examples/cascade-tumble/src',
   'examples/hold-and-win/src',
   'examples/big-symbols/src',
-  'examples/flexiways/src',
+  'examples/multiways/src',
   'examples/pyramid-cascade/src',
   'docs',
   'scripts',
