@@ -73,8 +73,8 @@ export const DEMOS: DemoMeta[] = [
     cheatHighlights: ['BIG WILD every third spin', 'Lines pay 3+', 'WinPresenter cycle x2'],
   },
   {
-    slug: 'flexiways',
-    title: 'Flexiways (Megaways)',
+    slug: 'multiways',
+    title: 'MultiWays (Megaways)',
     subtitle: '6 reels · setShape() per spin · ways pay',
     summary: 'Per-spin per-reel row counts (2-7) via the engine\'s MultiWays + AdjustPhase. Ways = product of row counts. Wins are chains of consecutive reels.',
     tags: ['megaways', 'multiways', 'ways'],
