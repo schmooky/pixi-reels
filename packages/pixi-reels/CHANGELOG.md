@@ -1,5 +1,36 @@
 # pixi-reels
 
+## 0.3.0
+
+### Minor Changes
+
+- [#61](https://github.com/schmooky/pixi-reels/pull/61) [`28551ca`](https://github.com/schmooky/pixi-reels/commit/28551ca72e6cbc1e95984cf1b35e71bdb5f18d22) Thanks [@schmooky](https://github.com/schmooky)! - Add: per-reel geometry, MultiWays, big symbols, and expanding wilds.
+
+  - **Per-reel static shape (pyramids):** `builder.visibleRowsPerReel([3, 5, 5, 5, 3])`, optional `reelPixelHeights`, `reelAnchor: 'top' | 'center' | 'bottom'`. Reels can now have non-uniform row counts at build time.
+  - **MultiWays (per-spin row variation):** `builder.multiways({ minRows, maxRows, reelPixelHeight })` plus `reelSet.setShape(rowsPerReel)` mid-spin. A new `AdjustPhase` (inserted only when `.multiways(...)` is called) reshapes reels between SPIN and STOP. Pin migration follows: pins gain a frozen `originRow` and migrate back toward it on each reshape.
+  - **Big symbols (`N×M` blocks):** `register('bonus', SymbolClass, { size: { w: 2, h: 2 } })`. The result grid stays `string[][]` — the engine paints OCCUPIED across the block. `getSymbolFootprint(col, row)` resolves any cell to the anchor.
+  - **Expanding wilds:** unchanged from the existing pin API; reaffirmed via tests as a degenerate big-symbol case.
+
+  New events: `shape:changed`, `adjust:start`, `adjust:complete`, `pin:migrated`. They only fire on MultiWays slots — non-MultiWays event surfaces are unchanged.
+
+  New runtime: `reelSet.setShape()`, `reelSet.getSymbolFootprint()`, `reelSet.getVisibleGrid()`, `reelSet.isMultiWaysSlot`. New builder fluents: `.visibleRowsPerReel()`, `.reelPixelHeights()`, `.reelAnchor()`, `.multiways()`, `.pinMigrationDuration()`, `.pinMigrationEase()`. Pin gains optional `originRow`.
+
+  AdjustPhase animates the reshape: every visible symbol tweens its height + Y from the old shape to the new one over `pinMigrationDuration` ms with the configurable `pinMigrationEase`. Pin overlays tween in lock-step so a sticky wild visibly slides to its migrated row. Set `pinMigrationDuration(0)` for an instant snap.
+
+  Constraints: big symbols and MultiWays are mutually exclusive per slot in v1. Cascade mode + MultiWays throws at build.
+
+  **Breaking** (debug-only, not protected by semver but called out): `DebugSnapshot.visibleRows` widens from `number` to `number[]` so jagged shapes are representable. Adapt downstream code that deep-reads the snapshot.
+
+### Patch Changes
+
+- [#61](https://github.com/schmooky/pixi-reels/pull/61) [`4b22c00`](https://github.com/schmooky/pixi-reels/commit/4b22c00b0f5733d141de1fee4ed8bf515cc2a513) Thanks [@schmooky](https://github.com/schmooky)! - Fix and harden a handful of follow-ups from the per-reel-geometry / MultiWays / big-symbols PR:
+
+  - `Reel.reshape()` now keeps `_reelHeight` in sync with the new geometry so the field doesn't go stale after a reshape. Previously a direct external call left `reelHeight` reporting the construction-time value. The method is also marked `@internal` in JSDoc — `ReelSet.setShape()` is the supported entry point.
+  - `ReelSetBuilder.maskStrategy()` now validates its argument synchronously: passing `null`, `undefined`, or an object missing `build()` / `update()` methods throws with a grep-able error instead of crashing later inside `ReelViewport`.
+  - Added a comment in `SpinController.skip()` documenting the reshape-on-skip contract — pin overlays migrate instantly on slam-stop regardless of `pinMigrationDuration`, and the rationale (overlays are destroyed at land anyway).
+
+  No new public API; behaviour for existing well-formed callers is unchanged.
+
 ## 0.2.0
 
 ### Minor Changes
