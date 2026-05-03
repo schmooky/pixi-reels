@@ -11,9 +11,6 @@ const repoRoot = resolve(here, '../..');
 // https://astro.build/config
 export default defineConfig({
   site: 'https://pixi-reels.dev',
-  redirects: {
-    '/demos/flexiways': '/demos/multiways',
-  },
   integrations: [
     mdx(),
     react(),
