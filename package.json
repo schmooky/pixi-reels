@@ -20,7 +20,7 @@
     "examples:dev:cascade": "pnpm --filter cascade-tumble dev",
     "examples:dev:holdwin": "pnpm --filter hold-and-win dev",
     "examples:dev:bigsymbols": "pnpm --filter big-symbols dev",
-    "examples:dev:flexiways": "pnpm --filter flexiways dev",
+    "examples:dev:multiways": "pnpm --filter multiways dev",
     "examples:dev:pyramid": "pnpm --filter pyramid-cascade dev",
     "examples:dev:sandbox": "pnpm --filter sandbox dev",
     "examples:build": "pnpm --filter './examples/*' build",

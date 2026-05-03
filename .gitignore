@@ -9,6 +9,7 @@ coverage/
 .turbo/
 .vitest-cache/
 *.tsbuildinfo
+.idea
 
 # Sync'd by scripts/build-all-publishable.mjs from repo root — do not edit
 # the copies under packages/*/ directly.
