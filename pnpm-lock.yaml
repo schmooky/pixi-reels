@@ -23,6 +23,9 @@ importers:
       '@commitlint/config-conventional':
         specifier: ^20.5.0
         version: 20.5.0
+      '@schmooky/zvuk':
+        specifier: ^0.1.1
+        version: 0.1.1
       husky:
         specifier: ^9.1.7
         version: 9.1.7
@@ -59,6 +62,9 @@ importers:
       '@radix-ui/react-tooltip':
         specifier: ^1.2.8
         version: 1.2.8(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
+      '@schmooky/zvuk':
+        specifier: ^0.1.1
+        version: 0.1.1
       '@tailwindcss/vite':
         specifier: ^4.2.2
         version: 4.2.2(vite@8.0.9(@types/node@24.12.2)(esbuild@0.27.7)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3))
@@ -1659,6 +1665,11 @@ packages:
 
   '@rushstack/ts-command-line@5.3.8':
     resolution: {integrity: sha512-vKL4fVR2TdnMdCmlP71nZUzbNANOYlR7NfN+J/YL9UIvicDIEB+ZtH38LcJECOZUwHia8C5Mg98kc4kPt/ev5w==}
+
+  '@schmooky/zvuk@0.1.1':
+    resolution: {integrity: sha512-430M56yqUPbyVQJzoftm7h0GM6ls7GVVIzmGWlUBWaLlW2fzskr+zlK33gNUPJ3JVPQLzd7QW8v1YDeK7w/b7Q==}
+    engines: {node: '>=20'}
+    hasBin: true
 
   '@shikijs/core@4.0.2':
     resolution: {integrity: sha512-hxT0YF4ExEqB8G/qFdtJvpmHXBYJ2lWW7qTHDarVkIudPFE6iCIrqdgWxGn5s+ppkGXI0aEGlibI0PAyzP3zlw==}
@@ -5464,6 +5475,10 @@ snapshots:
       string-argv: 0.3.2
     transitivePeerDependencies:
       - '@types/node'
+
+  '@schmooky/zvuk@0.1.1':
+    dependencies:
+      eventemitter3: 5.0.4
 
   '@shikijs/core@4.0.2':
     dependencies:

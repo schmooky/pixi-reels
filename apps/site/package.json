@@ -23,6 +23,7 @@
     "@radix-ui/react-switch": "^1.2.6",
     "@radix-ui/react-tabs": "^1.1.13",
     "@radix-ui/react-tooltip": "^1.2.8",
+    "@schmooky/zvuk": "^0.1.1",
     "@tailwindcss/vite": "^4.2.2",
     "astro": "^6.1.8",
     "class-variance-authority": "^0.7.1",

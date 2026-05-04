@@ -10,7 +10,8 @@ export type RecipeGroup =
   | 'tension'       // anticipation, near-miss, skip, respin
   | 'cell-coords'   // cell bounds, hit areas, overlays
   | 'symbol-formats' // texture atlas, animated, AI-generated
-  | 'runtime';      // mode swaps, feature middleware
+  | 'runtime'       // mode swaps, feature middleware
+  | 'audio';        // sound integration
 
 export interface RecipeMeta {
   slug: string;
@@ -83,6 +84,11 @@ export const RECIPE_GROUPS: Array<{ id: RecipeGroup; label: string; description:
     id: 'runtime',
     label: 'Runtime & feature modes',
     description: 'Mid-spin mode swaps, frame middleware.',
+  },
+  {
+    id: 'audio',
+    label: 'Audio',
+    description: 'Wire reel events to a Web Audio engine — landing thuds, win cues, music ducking.',
   },
 ];
 
@@ -656,5 +662,21 @@ export const RECIPES: RecipeMeta[] = [
     ],
     apis: ['ReelSet.frame.use', 'ReelSet.frame.remove', 'FrameMiddleware'],
     tags: ['mode', 'feature', 'middleware', 'frame'],
+  },
+
+  // ── Audio ────────────────────────────────────────────────────────────
+  {
+    slug: 'audio-with-zvuk',
+    group: 'audio',
+    title: 'Audio with @schmooky/zvuk',
+    oneLiner: 'Wire reel landings to a Kenney click with @schmooky/zvuk — pitch + volume jitter so 5 reels in a stagger sound like a real cabinet, plus a stiff landing config so the click lines up with the visual stop.',
+    steps: [
+      'createEngine with buses sfx / music / ui at app start',
+      'Unlock the AudioContext on the first user gesture (the spin button click works)',
+      "engine.loadSound('reel-stop', ['/audio/click_002.webm', '/audio/click_002.m4a'])",
+      "Subscribe to spin:reelLanded and play the click with pitch + volume jitter",
+    ],
+    apis: ['ReelSetEvents.spin:reelLanded', 'createReelAudio', 'loadKenneyBank'],
+    tags: ['audio', 'sound', 'zvuk', 'kenney'],
   },
 ];
