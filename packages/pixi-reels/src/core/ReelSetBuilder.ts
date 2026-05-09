@@ -78,6 +78,7 @@ export class ReelSetBuilder {
   private _initialFrame?: string[][];
   private _symbolDataOverrides: Record<string, Partial<SymbolData>> = {};
   private _cascadeDropConfig?: CascadeDropConfig;
+  private _defaultSpinMode: 'standard' | 'cascade' = 'standard';
   /** Per-reel static row counts (jagged shapes like 3-5-5-5-3). */
   private _visibleRowsPerReel?: number[];
   /** Per-reel pixel-box heights — used for both pyramids and MultiWays. */
@@ -342,6 +343,7 @@ export class ReelSetBuilder {
    */
   cascade(config: CascadeDropConfig): this {
     this._cascadeDropConfig = config;
+    this._defaultSpinMode = 'cascade';
     return this;
   }
 
@@ -458,11 +460,14 @@ export class ReelSetBuilder {
       frameBuilder.use(mw);
     }
 
-    // Wire cascade drop-in phases if configured
+    // Wire cascade drop-in phases under cascade-specific keys so the
+    // standard 'start' / 'stop' phases stay available. The default spin
+    // mode flips to 'cascade' when .cascade() was called, preserving
+    // existing behaviour for callers that don't pass `spin({ mode })`.
     if (this._cascadeDropConfig) {
       const dropConfig = this._cascadeDropConfig;
-      this._phaseFactory.register('start', DropStartPhase);
-      this._phaseFactory.registerFactory('stop', (reel, speed) => new DropStopPhase(reel, speed, dropConfig));
+      this._phaseFactory.register('dropStart', DropStartPhase);
+      this._phaseFactory.registerFactory('dropStop', (reel, speed) => new DropStopPhase(reel, speed, dropConfig));
     }
 
     // MultiWays: wire AdjustPhase. Stay out of non-MultiWays chains entirely
@@ -560,6 +565,7 @@ export class ReelSetBuilder {
       frameBuilder,
       phaseFactory: this._phaseFactory,
       spinningMode: this._spinningMode,
+      defaultSpinMode: this._defaultSpinMode,
     };
 
     return new ReelSet(params);

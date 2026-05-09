@@ -1,6 +1,6 @@
 import { Container } from 'pixi.js';
 import type { Disposable } from '../utils/Disposable.js';
-import type { ReelSetInternalConfig, CellBounds, SymbolData } from '../config/types.js';
+import type { ReelSetInternalConfig, CellBounds, SymbolData, SpinOptions } from '../config/types.js';
 import { EventEmitter } from '../events/EventEmitter.js';
 import type { ReelSetEvents, SpinResult, } from '../events/ReelEvents.js';
 import { Reel, } from './Reel.js';
@@ -26,6 +26,7 @@ export interface ReelSetParams {
   frameBuilder: FrameBuilder;
   phaseFactory: PhaseFactory;
   spinningMode: SpinningMode;
+  defaultSpinMode: 'standard' | 'cascade';
 }
 
 /**
@@ -204,6 +205,7 @@ export class ReelSet extends Container implements Disposable {
       this._events,
       params.config.ticker,
       params.spinningMode,
+      params.defaultSpinMode,
       {
         isMultiWaysSlot: this._isMultiWaysSlot,
         symbolsData: this._symbolsData,
@@ -241,9 +243,14 @@ export class ReelSet extends Container implements Disposable {
 
   // ─── Spin API ─────────────────────────────────────────────
 
-  /** Start spinning all reels. Returns a promise that resolves when all reels land. */
-  async spin(): Promise<SpinResult> {
-    return this._spinController.spin();
+  /**
+   * Start spinning all reels. Returns a promise that resolves when all
+   * reels land. Pass `{ mode: 'standard' | 'cascade' }` to override the
+   * builder-time default for a single spin (e.g. classic strip-spin on
+   * the first round, drop-in on the cascade waves).
+   */
+  async spin(opts?: SpinOptions): Promise<SpinResult> {
+    return this._spinController.spin(opts);
   }
 
   /**

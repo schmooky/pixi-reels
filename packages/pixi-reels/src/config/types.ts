@@ -1,5 +1,14 @@
 import type { Container, Ticker } from 'pixi.js';
 
+/** Optional overrides for a single `spin()` call. */
+export interface SpinOptions {
+  /**
+   * Phase chain selector for this spin.
+   * `'cascade'` requires `.cascade(...)` on the builder.
+   */
+  mode?: 'standard' | 'cascade';
+}
+
 /** Timing and animation profile for a speed mode. */
 export interface SpeedProfile {
   readonly name: string;
