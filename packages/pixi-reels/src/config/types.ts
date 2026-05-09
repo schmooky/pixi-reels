@@ -31,7 +31,17 @@ export interface SymbolData {
   weight: number;
   /** Display layering order. Higher = in front. */
   zIndex?: number;
-  /** If true, this symbol renders above the reel mask (for oversized animations). */
+  /**
+   * If true, this symbol renders above the reel mask (for oversized
+   * animations).
+   *
+   * **Mask-strategy auto-pick:** when any registered symbol sets
+   * `unmask: true` and `symbolGap.x > 0`, the builder switches the
+   * default `RectMaskStrategy` to `SharedRectMaskStrategy` so that
+   * neighboring (masked) symbols don't get clipped at the column gap
+   * next to the unmasked overlay. Passing `.maskStrategy(...)`
+   * explicitly always wins.
+   */
   unmask?: boolean;
   /**
    * Footprint in cells. Default `{ w: 1, h: 1 }`. When `w * h > 1` this
