@@ -117,8 +117,6 @@ export class StopPhase extends ReelPhase<StopPhaseConfig> {
     }
     reel.snapToGrid();
     reel.container.y = this._baseY;
-    reel.notifySpinEnd();
-    reel.notifyLanded();
     this._stage = 'done';
   }
 

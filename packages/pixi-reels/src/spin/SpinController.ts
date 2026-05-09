@@ -247,6 +247,8 @@ export class SpinController implements Disposable {
         }
 
         reel.placeSymbols(decorated[i]);
+        reel.notifySpinEnd();
+        reel.notifyLanded();
         this._markLanded(i);
       }
     } else {
@@ -256,6 +258,8 @@ export class SpinController implements Disposable {
         reel.speed = 0;
         reel.isStopping = false;
         reel.snapToGrid();
+        reel.notifySpinEnd();
+        reel.notifyLanded();
         this._markLanded(i);
       }
     }
