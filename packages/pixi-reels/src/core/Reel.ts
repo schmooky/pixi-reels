@@ -391,6 +391,46 @@ export class Reel implements Disposable {
     this.refreshZIndex();
   }
 
+  /**
+   * Swap the symbol at a single visible row in-place, without restarting
+   * the spin or rebuilding the rest of the strip.
+   *
+   * Useful for live presentation effects — converting a wild after a
+   * cascade pop, dropping in a "respin" symbol on a held reel, swapping
+   * to a sticky variant after a win — without going through the full
+   * `placeSymbols` / `setResult` paths.
+   *
+   * The symbol's `zIndex`, parent (masked vs unmasked), and visual state
+   * are reset by `_replaceSymbol` so callers don't need to follow up
+   * with `refreshZIndex`. The motion layer is **not** snapped — call
+   * `snapToGrid()` separately if you need to re-grid.
+   *
+   * Throws if `visibleRow` is out of `[0, visibleRows)` or if `symbolId`
+   * is not registered. **Big-symbol anchors are not supported** — pass
+   * a normal cell row, not a non-anchor cell of a block.
+   */
+  setSymbolAt(visibleRow: number, symbolId: string): void {
+    if (!Number.isInteger(visibleRow) || visibleRow < 0 || visibleRow >= this._visibleRows) {
+      throw new Error(
+        `setSymbolAt: visibleRow ${visibleRow} is out of range [0, ${this._visibleRows}).`,
+      );
+    }
+    if (!Object.prototype.hasOwnProperty.call(this._symbolsData, symbolId)) {
+      throw new Error(
+        `setSymbolAt: symbolId '${symbolId}' is not registered. Register it via builder.symbols(...).`,
+      );
+    }
+    const occ = this._occupancy[visibleRow];
+    if (occ) {
+      throw new Error(
+        `setSymbolAt: visible row ${visibleRow} is a non-anchor cell of a big symbol (anchor at row ${occ.anchorRow}). ` +
+        `Swap the anchor row directly, or use placeSymbols to rebuild the frame.`,
+      );
+    }
+    const arrayIndex = this._bufferAbove + visibleRow;
+    this._replaceSymbol(arrayIndex, symbolId);
+  }
+
   /** Place symbols immediately at target positions (for skip/turbo). */
   placeSymbols(symbolIds: string[]): void {
     const totalSlots = this.symbols.length;
