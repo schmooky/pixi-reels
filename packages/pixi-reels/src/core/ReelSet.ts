@@ -265,12 +265,30 @@ export class ReelSet extends Container implements Disposable {
   }
 
   /**
-   * Override the per-reel stop delay for the current spin (in ms).
-   * Pass one value per reel. Cleared at the start of each new spin.
+   * Override the per-reel stop delay for the current spin, in
+   * milliseconds. Pass one value per reel; cleared at the start of each
+   * new spin.
+   *
+   * **This is delay, not hold.** A large value (e.g. `999999`) only
+   * postpones a reel's stop — the reel still spins, still consumes its
+   * target frame from the StopSequencer, still emits `spin:reelLanded`
+   * eventually. If you want to keep a reel motionless across the spin
+   * (its current visible frame stays put — classic Hold & Win), pass it
+   * via {@link spin}'s `holdReels` instead:
+   *
+   * ```ts
+   * reelSet.spin({ holdReels: [4] });
+   * ```
+   *
+   * `setStopDelays` is for visual stagger (left-to-right sweep, dramatic
+   * pause on the last reel, etc.) — not for skipping a reel's spin.
    *
    * @example
    * // Stagger the last two reels more than the default for dramatic effect:
    * reelSet.setStopDelays([0, 140, 280, 600, 1100]);
+   *
+   * @see {@link spin} — `holdReels` skips the spin entirely.
+   * @see {@link setDropOrder} — convenience wrapper for cascade drop patterns.
    */
   setStopDelays(delays: number[]): void {
     this._spinController.setStopDelays(delays);

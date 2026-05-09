@@ -200,6 +200,13 @@ export class SpinController implements Disposable {
    * Override the per-reel stop delay (in ms). Pass one value per reel.
    * When set, these replace the staggered `reelIndex * speed.stopDelay`
    * pattern for the current spin. Cleared at the start of each new spin.
+   *
+   * **Delay, not hold.** A large value postpones a reel's stop — the
+   * reel still spins, still consumes its target from the StopSequencer,
+   * still emits `spin:reelLanded`. To keep a reel motionless across an
+   * entire spin (its visible frame stays put), pass it via
+   * `spin({ holdReels: [...] })` instead. `setStopDelays` is for visual
+   * stagger only.
    */
   setStopDelays(delays: number[]): void {
     this._stopDelayOverride = [...delays];
