@@ -1,6 +1,6 @@
 import type { Ticker } from 'pixi.js';
 import type { Reel } from '../core/Reel.js';
-import type { SpeedProfile, SymbolData } from '../config/types.js';
+import type { SpeedProfile, SpinOptions, SymbolData } from '../config/types.js';
 import type { SpeedManager } from '../speed/SpeedManager.js';
 import type { FrameBuilder } from '../frame/FrameBuilder.js';
 import type { SpinResult } from '../events/ReelEvents.js';
@@ -101,6 +101,12 @@ export class SpinController implements Disposable {
   private _stopDelayOverride: number[] | null = null;
   private _activePhases: Map<number, ReelPhase<any>> = new Map();
   private _landedReels = new Set<number>();
+  /**
+   * Reels held for the current spin (per `SpinOptions.holdReels`). Held
+   * reels skip START / SPIN / STOP and stay on their current symbols.
+   * Cleared at the start of every spin.
+   */
+  private _heldReels = new Set<number>();
   private _wasSkipped = false;
   private _isDestroyed = false;
   private _currentSpinResolve: ((result: SpinResult) => void) | null = null;
@@ -148,7 +154,7 @@ export class SpinController implements Disposable {
     return this._isDestroyed;
   }
 
-  async spin(): Promise<SpinResult> {
+  async spin(options?: SpinOptions): Promise<SpinResult> {
     if (this._isSpinning) {
       throw new Error('Cannot start a new spin while one is in progress.');
     }
@@ -161,6 +167,7 @@ export class SpinController implements Disposable {
     this._stopDelayOverride = null;
     this._landedReels.clear();
     this._activePhases.clear();
+    this._heldReels = this._normalizeHoldReels(options?.holdReels);
     this._spinGeneration++;
 
     const generation = this._spinGeneration;
@@ -172,11 +179,38 @@ export class SpinController implements Disposable {
       this._currentSpinResolve = resolve;
     });
 
+    // Degenerate case: every reel held → resolve next microtask with the
+    // current visible grid. Spin emitted, but no animation runs.
+    if (this._heldReels.size === this._reels.length) {
+      Promise.resolve().then(() => {
+        if (generation !== this._spinGeneration) return;
+        this._finishSpin();
+      });
+      return resultPromise;
+    }
+
     for (let i = 0; i < this._reels.length; i++) {
+      if (this._heldReels.has(i)) continue;
       this._startReel(i, speed, generation);
     }
 
     return resultPromise;
+  }
+
+  /**
+   * Filter `holdReels` down to a clean Set: drop out-of-range, drop
+   * duplicates, drop non-integer entries. Returning a normalized set
+   * makes every internal call site safe to read without re-validating.
+   */
+  private _normalizeHoldReels(input: number[] | undefined): Set<number> {
+    const out = new Set<number>();
+    if (!input) return out;
+    for (const i of input) {
+      if (Number.isInteger(i) && i >= 0 && i < this._reels.length) {
+        out.add(i);
+      }
+    }
+    return out;
   }
 
   setResult(symbols: string[][]): void {
@@ -193,7 +227,10 @@ export class SpinController implements Disposable {
   }
 
   setAnticipation(reelIndices: number[]): void {
-    this._anticipationReels = reelIndices;
+    // Held reels never reach AnticipationPhase, but filter here too so the
+    // public API is forgiving — callers can pass a flat list without
+    // tracking which indices are held this spin.
+    this._anticipationReels = reelIndices.filter((i) => !this._heldReels.has(i));
   }
 
   /**
@@ -228,6 +265,7 @@ export class SpinController implements Disposable {
 
       for (let i = 0; i < this._reels.length; i++) {
         if (this._landedReels.has(i)) continue;
+        if (this._heldReels.has(i)) continue;
         const reel = this._reels[i];
         reel.speed = 0;
         reel.isStopping = false;
@@ -252,6 +290,7 @@ export class SpinController implements Disposable {
     } else {
       for (let i = 0; i < this._reels.length; i++) {
         if (this._landedReels.has(i)) continue;
+        if (this._heldReels.has(i)) continue;
         const reel = this._reels[i];
         reel.speed = 0;
         reel.isStopping = false;
@@ -333,6 +372,9 @@ export class SpinController implements Disposable {
 
     let allSpinning = true;
     for (let i = 0; i < this._reels.length; i++) {
+      // Held reels never enter the phase chain; they don't gate
+      // `spin:allStarted` or the stop-sequence start.
+      if (this._heldReels.has(i)) continue;
       const phase = this._activePhases.get(i);
       if (!phase || phase.name !== 'spin') { allSpinning = false; break; }
     }
@@ -438,6 +480,9 @@ export class SpinController implements Disposable {
     if (!this._resultSymbols) return;
 
     for (let i = 0; i < this._reels.length; i++) {
+      // Held reels never enter a phase chain — don't gate the stop
+      // sequence on them.
+      if (this._heldReels.has(i)) continue;
       const phase = this._activePhases.get(i);
       if (!phase || phase.name !== 'spin') return;
     }
@@ -457,9 +502,15 @@ export class SpinController implements Disposable {
     const decorated = this._coordinateBigSymbols(this._resultSymbols, visibleRowsForReel);
 
     // Build and cache frames using each reel's actual buffer/visible config.
-    // Reels may differ in buffer size; build each independently.
+    // Reels may differ in buffer size; build each independently. Held reels
+    // get an empty placeholder — their entry is never read because no
+    // StopPhase ever fires for them.
     const frames: string[][] = [];
     for (let i = 0; i < this._reels.length; i++) {
+      if (this._heldReels.has(i)) {
+        frames.push([]);
+        continue;
+      }
       const reel = this._reels[i];
       const rows = visibleRowsForReel(i);
       frames.push(
@@ -474,9 +525,11 @@ export class SpinController implements Disposable {
     }
     this._cachedFrames = frames;
 
-    // Resolve all SpinPhases; each reel's _startReel awaits its own spinDone,
-    // then independently runs ANTICIPATION/STOP.
+    // Resolve all non-held SpinPhases; each reel's _startReel awaits its own
+    // spinDone, then independently runs ANTICIPATION/STOP. Held reels have
+    // no SpinPhase to resolve.
     for (let i = 0; i < this._reels.length; i++) {
+      if (this._heldReels.has(i)) continue;
       const spinPhase = this._activePhases.get(i) as SpinPhase;
       if (spinPhase?.resolve) spinPhase.resolve();
     }
@@ -553,7 +606,10 @@ export class SpinController implements Disposable {
     reel.events.emit('landed', symbols);
     this._events.emit('spin:reelLanded', reelIndex, symbols);
 
-    if (this._landedReels.size === this._reels.length) {
+    // All NON-HELD reels accounted for → finish. Held reels never
+    // _markLanded, but their slots count toward `reels.length`, so we
+    // compare against the count that was supposed to actually animate.
+    if (this._landedReels.size === this._reels.length - this._heldReels.size) {
       this._finishSpin();
     }
   }
