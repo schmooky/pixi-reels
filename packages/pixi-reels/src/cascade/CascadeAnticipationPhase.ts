@@ -1,4 +1,5 @@
-import { gsap } from 'gsap';
+import type { gsap } from 'gsap';
+import { getGsap } from '../utils/gsapRef.js';
 import { ReelPhase } from '../spin/phases/ReelPhase.js';
 
 /**
@@ -34,7 +35,7 @@ export class CascadeAnticipationPhase extends ReelPhase<void> {
     const halfPeriod = 0.04;
     const repeats = Math.round(duration / halfPeriod) - 1;
 
-    this._tween = gsap.to(this._reel.container, {
+    this._tween = getGsap().to(this._reel.container, {
       x: this._baseX + 4,
       duration: halfPeriod,
       ease: 'power1.inOut',

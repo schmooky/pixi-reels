@@ -1,4 +1,6 @@
 import type { Ticker } from 'pixi.js';
+import type { gsap } from 'gsap';
+import { setGsap } from '../utils/gsapRef.js';
 import type {
   SpeedProfile,
   SymbolData,
@@ -306,6 +308,44 @@ export class ReelSetBuilder {
   /** Set the PixiJS ticker for frame updates. */
   ticker(ticker: Ticker): this {
     this._ticker = ticker;
+    return this;
+  }
+
+  /**
+   * Inject the GSAP instance the engine should use for tweens.
+   *
+   * **When you need this:** if your app already imports `gsap` and your
+   * bundler resolves `gsap` to a different module instance than the one
+   * `pixi-reels` resolved (common with symlinked workspaces, npm-link, or
+   * misconfigured `dedupe`), every tween you start on a target the engine
+   * also tweens will fight a separate timeline. Symptoms: spotlights that
+   * render but never finish, animations that double-fire, tweens that
+   * silently drop on hidden tabs in only one of the two instances.
+   *
+   * Calling `.gsap(myGsap)` rebinds every internal phase, motion tween,
+   * pin-flight tween, and SpriteSymbol win pulse to the GSAP you pass —
+   * guaranteed to be the same instance that drives your own animations.
+   *
+   * Default: the `gsap` import resolved at the engine's own
+   * `node_modules/gsap` path. If your app and the engine resolve to the
+   * same instance (the common case in production bundles with proper
+   * `dedupe`), you do NOT need to call this.
+   *
+   * Idempotent — calling again with the same instance is a no-op. Calling
+   * with a different instance after `.build()` only affects tweens
+   * started after the swap.
+   *
+   * @example
+   * import { gsap } from 'gsap';
+   * const reelSet = new ReelSetBuilder()
+   *   .reels(5).visibleRows(3).symbolSize(200, 200)
+   *   .symbols(...)
+   *   .ticker(app.ticker)
+   *   .gsap(gsap)              // ensure engine and app share one instance
+   *   .build();
+   */
+  gsap(instance: typeof gsap): this {
+    setGsap(instance);
     return this;
   }
 

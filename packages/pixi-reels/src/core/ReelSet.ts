@@ -15,7 +15,7 @@ import type { PhaseFactory } from '../spin/phases/PhaseFactory.js';
 import type { SpinningMode } from '../spin/modes/SpinningMode.js';
 import type { CellPin, CellPinOptions, PinExpireReason, MovePinOptions, CellCoord } from '../pins/CellPin.js';
 import { pinKey } from '../pins/CellPin.js';
-import { gsap } from 'gsap';
+import { getGsap } from '../utils/gsapRef.js';
 import type { FrameMiddleware } from '../frame/FrameBuilder.js';
 
 export interface ReelSetParams {
@@ -807,7 +807,7 @@ export class ReelSet extends Container implements Disposable {
     const duration = (opts?.duration ?? 400) / 1000;
     const easing = opts?.easing ?? 'power2.inOut';
     await new Promise<void>((resolve) => {
-      gsap.to(flight.view, {
+      getGsap().to(flight.view, {
         x: toX,
         y: toCellY,
         duration,
