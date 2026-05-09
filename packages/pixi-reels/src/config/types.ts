@@ -31,7 +31,31 @@ export interface SymbolData {
   weight: number;
   /** Display layering order. Higher = in front. */
   zIndex?: number;
-  /** If true, this symbol renders above the reel mask (for oversized animations). */
+  /**
+   * If true, the engine parents this symbol's view to
+   * `viewport.unmaskedContainer` instead of the reel's masked container —
+   * the symbol renders above the reel mask, useful for oversized win
+   * animations (expanding wilds, splash frames) that should not be
+   * clipped at the cell boundary.
+   *
+   * **Coordinate space:** when unmasked, the engine sets the view's X to
+   * `reel.container.x` and adds `reel.container.y` to the view's Y so
+   * the at-rest position matches the reel's grid cell.
+   *
+   * **Motion limitation:** `ReelMotion` writes `view.y` in reel-local
+   * coordinates. While the reel is spinning, an unmasked symbol on the
+   * strip will appear shifted vertically by the reel's offset (the
+   * `reel.container.y` translation is only applied on activate, not on
+   * every motion frame). Treat `unmask: true` as a *landed-state* flag —
+   * it is correct at rest and during static frames, but not designed to
+   * stay visually accurate while the reel is spinning. If you need a
+   * mid-spin "stays visible above mask" overlay, use a cell pin instead.
+   *
+   * **Mask strategy:** the per-reel `RectMaskStrategy` (default) clips
+   * any horizontal gaps between reels. For symbols that need to overlap
+   * across reel boundaries while unmasked, prefer
+   * `SharedRectMaskStrategy`.
+   */
   unmask?: boolean;
   /**
    * Footprint in cells. Default `{ w: 1, h: 1 }`. When `w * h > 1` this
