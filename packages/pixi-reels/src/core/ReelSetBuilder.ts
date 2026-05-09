@@ -251,11 +251,34 @@ export class ReelSetBuilder {
     return this;
   }
 
-  /** Set number of buffer symbols above/below visible area. Default: 1. */
+  /**
+   * Set number of buffer symbols above/below the visible area. Default: 1.
+   *
+   * Buffer rows are off-screen cells the reel keeps around the visible
+   * window so symbols can fade/slide in cleanly. The motion layer's wrap
+   * detection assumes at least one buffer row above and one below — the
+   * minimum supported value is **1**. Passing `0` (or a negative number)
+   * is clamped to `1` and a single console warning is printed; the
+   * builder does not throw, so existing user code keeps running.
+   */
   bufferSymbols(count: number): this {
+    if (!Number.isFinite(count) || count < 1) {
+      if (!ReelSetBuilder._bufferWarnedThisProcess) {
+        ReelSetBuilder._bufferWarnedThisProcess = true;
+        // eslint-disable-next-line no-console
+        console.warn(
+          `[pixi-reels] bufferSymbols(${count}) is below the minimum of 1; clamping to 1. ` +
+            `The motion layer needs at least one buffer row above and below the visible window for wrap detection.`,
+        );
+      }
+      this._bufferSymbols = 1;
+      return this;
+    }
     this._bufferSymbols = count;
     return this;
   }
+  /** One-shot guard so we don't spam consoles when builders are constructed in a loop. */
+  private static _bufferWarnedThisProcess = false;
 
   /** Configure symbols via a registry callback. */
   symbols(configurator: (registry: SymbolRegistry) => void): this {
