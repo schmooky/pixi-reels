@@ -129,8 +129,10 @@ export class SpineReelSymbol extends ReelSymbol {
     spine.visible = true;
     this._currentSpine = spine;
 
-    // Clear any lingering one-shot resolve from a prior pool use
-    this._oneShotResolve = null;
+    // Settle any lingering one-shot resolve from a prior pool use so the
+    // caller's `await playWin()` doesn't dangle when the symbol is
+    // recycled mid-animation.
+    this._resolveOneShot();
 
     const idleName = this._animNameFor('idle');
     if (spine.skeleton.data.findAnimation(idleName)) {
@@ -149,11 +151,7 @@ export class SpineReelSymbol extends ReelSymbol {
       this._currentSpine.visible = false;
       this._currentSpine = null;
     }
-    if (this._oneShotResolve) {
-      const fn = this._oneShotResolve;
-      this._oneShotResolve = null;
-      fn();
-    }
+    this._resolveOneShot();
   }
 
   // -- Canonical one-shot animations ---------------------------------------
@@ -182,11 +180,16 @@ export class SpineReelSymbol extends ReelSymbol {
   /**
    * Swap the primary track to the blur animation for the SPIN phase. Reverts
    * to idle automatically on `stopAnimation()` or next activate.
+   *
+   * If a one-shot promise (`playWin` / `playLanding` / `playOut`) is in
+   * flight on the same track, settle it first so the caller's `await`
+   * doesn't dangle when its track is hijacked.
    */
   playBlur(): void {
     if (!this._currentSpine) return;
     const name = this._animNameFor('blur');
     if (!this._currentSpine.skeleton.data.findAnimation(name)) return;
+    this._resolveOneShot();
     this._currentSpine.state.setAnimation(0, name, true);
   }
 
@@ -199,15 +202,10 @@ export class SpineReelSymbol extends ReelSymbol {
 
   stopAnimation(): void {
     if (!this._currentSpine) return;
-    this._currentSpine.state.removeListener(this._currentListener);
+    this._resolveOneShot();
     const idleName = this._animNameFor('idle');
     if (this._currentSpine.skeleton.data.findAnimation(idleName)) {
       this._currentSpine.state.setAnimation(0, idleName, true);
-    }
-    if (this._oneShotResolve) {
-      const fn = this._oneShotResolve;
-      this._oneShotResolve = null;
-      fn();
     }
   }
 
@@ -222,6 +220,32 @@ export class SpineReelSymbol extends ReelSymbol {
     complete?: (entry: TrackEntry) => void;
   } = {};
 
+  /**
+   * Settle any one-shot promise currently in flight and remove its
+   * listener. Safe to call when no one-shot is pending — both fields are
+   * cleared.
+   *
+   * Called by `onActivate`, `onDeactivate`, `stopAnimation`, `playBlur`,
+   * and the start of every new `_playOneShot` so that:
+   *   - a `playWin()` promise resolves rather than hangs when the symbol
+   *     is recycled mid-animation,
+   *   - calling `playOut` while `playWin` is in flight resolves the
+   *     `playWin` promise (its track was hijacked),
+   *   - the prior listener is detached so spine state doesn't leak
+   *     listeners across consecutive one-shots.
+   */
+  private _resolveOneShot(): void {
+    if (this._currentSpine) {
+      this._currentSpine.state.removeListener(this._currentListener);
+    }
+    this._currentListener = {};
+    if (this._oneShotResolve) {
+      const fn = this._oneShotResolve;
+      this._oneShotResolve = null;
+      fn();
+    }
+  }
+
   private async _playOneShot(
     animName: string,
     track: number,
@@ -231,13 +255,23 @@ export class SpineReelSymbol extends ReelSymbol {
     const spine = this._currentSpine;
     if (!spine.skeleton.data.findAnimation(animName)) return;
 
+    // Settle any prior one-shot before starting a new one — without this,
+    // back-to-back `playWin()` / `playOut()` calls would silently abandon
+    // the first promise.
+    this._resolveOneShot();
+
     return new Promise<void>((resolve) => {
       this._oneShotResolve = resolve;
       const entry = spine.state.setAnimation(track, animName, false);
       const listener = {
         complete: (done: TrackEntry) => {
+          // Track-entry guard: ignore completes from earlier or unrelated
+          // entries on the same track (e.g. an idle loop that happens to
+          // wrap while we're queued). Only resolve when our exact entry
+          // finishes.
           if (done !== entry) return;
           spine.state.removeListener(this._currentListener);
+          this._currentListener = {};
           if (returnToIdle) {
             const idleName = this._animNameFor('idle');
             if (spine.skeleton.data.findAnimation(idleName)) {
