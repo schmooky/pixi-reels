@@ -281,6 +281,11 @@ export class ReelSet extends Container implements Disposable {
     this._spinController.skip();
   }
 
+  /** Slam-stop safe before `setResult()` arrives — queues until then. */
+  requestSkip(): void {
+    this._spinController.requestSkip();
+  }
+
   /**
    * Set the drop order for cascade drop-in mechanics.
    *
