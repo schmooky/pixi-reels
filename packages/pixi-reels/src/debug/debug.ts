@@ -113,6 +113,105 @@ export function debugGrid(reelSet: ReelSet): string {
 }
 
 /**
+ * One captured frame from `startRecording()` — a `DebugSnapshot` plus the
+ * tag the recording was started with and the spin event that triggered
+ * the capture.
+ */
+export interface RecordedFrame {
+  /** Recording tag at the time of capture. Useful for grouping multiple sessions. */
+  tag: string;
+  /** Reel-set event that triggered the capture (`spin:start`, `spin:allLanded`, etc). */
+  trigger: string;
+  /** Snapshot of `debugSnapshot(reelSet)` at the moment of capture. */
+  snapshot: DebugSnapshot;
+}
+
+/** All captured frames across all recording sessions in this process. */
+const _recordedFrames: RecordedFrame[] = [];
+
+/**
+ * Per-recording-session state: which events to listen on and how to
+ * detach them later. Keyed by the `ReelSet` so two reel sets in the
+ * same page can each record independently.
+ */
+const _recorders = new WeakMap<ReelSet, () => void>();
+
+/**
+ * Start recording the reel-set's frame state at every key spin event
+ * (`spin:start`, `spin:allLanded`, `spin:complete`). Each event captures
+ * a `DebugSnapshot` and pushes it onto a process-wide log readable via
+ * {@link getFrames}.
+ *
+ * The `tag` is freeform — use it to label multiple recording sessions
+ * so you can filter `getFrames(tag)` later. Call {@link stopRecording}
+ * to detach the listeners.
+ *
+ * Designed for AI agents and debug harnesses. Calling `startRecording`
+ * twice on the same `reelSet` replaces the prior recording (the previous
+ * tag's listeners are removed before the new ones attach).
+ *
+ * ```ts
+ * import { startRecording, stopRecording, getFrames } from 'pixi-reels';
+ *
+ * startRecording(reelSet, 'spin-1');
+ * await reelSet.spin();
+ * stopRecording(reelSet);
+ * const frames = getFrames('spin-1'); // every snapshot tagged 'spin-1'
+ * ```
+ */
+export function startRecording(reelSet: ReelSet, tag = 'default'): void {
+  // Detach any prior recorder on this reel set first.
+  stopRecording(reelSet);
+
+  const triggers = ['spin:start', 'spin:allLanded', 'spin:complete'] as const;
+  const handlers: Array<{ event: string; fn: (...args: unknown[]) => void }> = [];
+
+  for (const event of triggers) {
+    const fn = () => {
+      _recordedFrames.push({
+        tag,
+        trigger: event,
+        snapshot: debugSnapshot(reelSet),
+      });
+    };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    reelSet.events.on(event as any, fn as any);
+    handlers.push({ event, fn });
+  }
+
+  _recorders.set(reelSet, () => {
+    for (const { event, fn } of handlers) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      reelSet.events.off(event as any, fn as any);
+    }
+  });
+}
+
+/** Detach the recorder previously installed by {@link startRecording}. No-op if none. */
+export function stopRecording(reelSet: ReelSet): void {
+  const detach = _recorders.get(reelSet);
+  if (detach) {
+    detach();
+    _recorders.delete(reelSet);
+  }
+}
+
+/**
+ * All recorded frames in capture order. When `tag` is provided, only
+ * frames tagged with it are returned. Frames are not cleared between
+ * recording sessions — call {@link clearFrames} to reset.
+ */
+export function getFrames(tag?: string): readonly RecordedFrame[] {
+  if (tag === undefined) return _recordedFrames.slice();
+  return _recordedFrames.filter((f) => f.tag === tag);
+}
+
+/** Empty the global recording log. */
+export function clearFrames(): void {
+  _recordedFrames.length = 0;
+}
+
+/**
  * Enable debug mode: attaches debug utilities to `window.__PIXI_REELS_DEBUG`.
  *
  * After calling this, an AI agent can run in the browser console:
@@ -120,6 +219,9 @@ export function debugGrid(reelSet: ReelSet): string {
  * __PIXI_REELS_DEBUG.snapshot()  // full state JSON
  * __PIXI_REELS_DEBUG.grid()      // ASCII grid
  * __PIXI_REELS_DEBUG.log()       // console.log the grid
+ * __PIXI_REELS_DEBUG.startRecording('myTag')
+ * __PIXI_REELS_DEBUG.stopRecording()
+ * __PIXI_REELS_DEBUG.getFrames('myTag')
  * ```
  */
 export function enableDebug(reelSet: ReelSet): void {
@@ -155,6 +257,14 @@ export function enableDebug(reelSet: ReelSet): void {
       }
       console.log('[pixi-reels debug] tracing enabled for all events');
     },
+    /** Start a frame-state recording session on this reel set. */
+    startRecording: (tag = 'default') => startRecording(reelSet, tag),
+    /** Stop a recording session — paired with `startRecording`. */
+    stopRecording: () => stopRecording(reelSet),
+    /** Pull recorded frames; pass `tag` to filter to one session. */
+    getFrames: (tag?: string) => getFrames(tag),
+    /** Empty the global recording log. */
+    clearFrames: () => clearFrames(),
     /**
      * Toggle a debug overlay on the unmasked container that visualizes the
      * mask shape and per-reel boxes. Useful for spotting pyramid peek and
