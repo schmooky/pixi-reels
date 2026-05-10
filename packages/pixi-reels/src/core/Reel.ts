@@ -506,13 +506,14 @@ export class Reel implements Disposable {
   ): void {
     const newTotal = bufferAbove + newVisibleRows + bufferBelow;
 
-    // Grow: append additional symbols at the bottom buffer.
+    // Grow: append additional symbols at the bottom buffer. New symbols are
+    // parented based on `unmask` flag — same rule as `_replaceSymbol`.
     while (this.symbols.length < newTotal) {
       const id = this._randomProvider.next(true);
       const sym = this._symbolFactory.acquire(id);
       sym.resize(this._symbolWidth, newSymbolHeight);
-      sym.view.x = 0;
-      this.container.addChild(sym.view);
+      this._placeSymbolView(sym.view, sym.view.y, this._isUnmasked(id));
+      this._parentForSymbolId(id).addChild(sym.view);
       this.symbols.push(sym);
     }
 
@@ -608,19 +609,72 @@ export class Reel implements Disposable {
     this.events.emit('destroyed');
   }
 
+  /**
+   * Whether the symbol with this id has `unmask: true` in its data — i.e.
+   * its view should be parented to `viewport.unmaskedContainer` to render
+   * above the reel mask.
+   */
+  private _isUnmasked(symbolId: string): boolean {
+    return !!this._symbolsData[symbolId]?.unmask;
+  }
+
+  /**
+   * Pick the right parent container for a symbol view based on its
+   * `unmask` flag. Unmasked symbols sit in `viewport.unmaskedContainer`
+   * (above the reel mask); everything else lives in this reel's own
+   * container (which is itself inside `viewport.maskedContainer`).
+   */
+  private _parentForSymbolId(symbolId: string): Container {
+    return this._isUnmasked(symbolId)
+      ? this._viewport.unmaskedContainer
+      : this.container;
+  }
+
+  /**
+   * Position a symbol view at a given reel-local Y, choosing X and any
+   * parent-translation offset based on whether the symbol is unmasked.
+   *
+   * Unmasked views live in `viewport.unmaskedContainer` (at viewport
+   * (0,0)), so we add `reel.container.x` and `reel.container.y` to keep
+   * the at-rest cell position aligned with the reel column. Masked views
+   * live in `this.container`, so reel-local coords map directly.
+   */
+  private _placeSymbolView(view: Container, reelLocalY: number, isUnmasked: boolean): void {
+    if (isUnmasked) {
+      view.x = this.container.x;
+      view.y = this.container.y + reelLocalY;
+    } else {
+      view.x = 0;
+      view.y = reelLocalY;
+    }
+  }
+
+  /**
+   * Convert a view's current y back to reel-local coords. The view may
+   * be parented to either `this.container` (already reel-local) or
+   * `viewport.unmaskedContainer` (viewport-local — needs the reel offset
+   * subtracted).
+   */
+  private _toReelLocalY(view: Container): number {
+    return view.parent === this._viewport.unmaskedContainer
+      ? view.y - this.container.y
+      : view.y;
+  }
+
   private _setupSymbolPositions(config: ReelConfig): void {
     const slotH = this._spinSymbolHeight + config.symbolGapY;
+    // Add the reel container to the viewport's masked area first so
+    // `this.container.x/y` are in viewport coords if any initial symbol
+    // has `unmask: true` and needs parent-translation.
+    this._viewport.maskedContainer.addChild(this.container);
+
     for (let i = 0; i < this.symbols.length; i++) {
       const symbol = this.symbols[i];
       const y = (i - config.bufferAbove) * slotH;
-      symbol.view.y = y;
-      symbol.view.x = 0;
-
-      // All symbols go into the reel's own container
-      this.container.addChild(symbol.view);
+      const unmasked = this._isUnmasked(symbol.symbolId);
+      this._placeSymbolView(symbol.view, y, unmasked);
+      this._parentForSymbolId(symbol.symbolId).addChild(symbol.view);
     }
-    // Add the reel container to the viewport's masked area
-    this._viewport.maskedContainer.addChild(this.container);
   }
 
   private _onSymbolWrapped(symbol: ReelSymbol, row: number, direction: 'up' | 'down'): void {
@@ -640,45 +694,52 @@ export class Reel implements Disposable {
   private _replaceSymbol(index: number, newSymbolId: string): void {
     const oldSymbol = this.symbols[index];
     const isOldStub = oldSymbol instanceof OccupiedStub;
-    // Always parent into THIS reel's own container — the old symbol's
-    // `view.parent` is unsafe as a destination because the shared symbol
-    // pool can recycle a view across reels (or the spotlight may have
-    // promoted it above the mask), leaving `oldSymbol.view.parent`
-    // pointing at a foreign container.
-    const parent = this.container;
+    // The old symbol's `view.parent` is unsafe as a destination because
+    // the shared symbol pool can recycle a view across reels (or the
+    // spotlight may have promoted it above the mask). Always re-pick
+    // the destination from `_parentForSymbolId(newSymbolId)` (or
+    // `this.container` for OCCUPIED stubs, which never carry `unmask`).
 
-    // OCCUPIED: install a stub. Stubs are not pooled through SymbolFactory.
+    // Capture old Y in reel-local coords before releasing — old view may
+    // have been parented to viewport.unmaskedContainer and need an offset
+    // subtraction to be reused as the new symbol's reel-local Y.
+    const reelLocalY = isOldStub
+      ? oldSymbol.view.y
+      : this._toReelLocalY(oldSymbol.view);
+
+    // OCCUPIED: install a stub. Stubs are not pooled through SymbolFactory
+    // and never carry an `unmask` flag — they always live in `this.container`.
     if (newSymbolId === OCCUPIED_SENTINEL) {
       if (isOldStub) {
         oldSymbol.view.alpha = 0;
         return;
       }
-      const y = oldSymbol.view.y;
       this._symbolFactory.release(oldSymbol);
       const stub = this._acquireOccupiedStub();
-      stub.view.y = y;
+      stub.view.y = reelLocalY;
       stub.view.x = 0;
       stub.view.alpha = 0;
       stub.view.visible = true;
       stub.view.scale.set(1, 1);
       stub.view.zIndex = index;
-      if (stub.view.parent !== parent) parent.addChild(stub.view);
+      // Stubs are never unmasked — always live in this reel's container.
+      if (stub.view.parent !== this.container) this.container.addChild(stub.view);
       this.symbols[index] = stub;
       return;
     }
 
-    // Replacing a stub with a real symbol: release stub back to internal cache.
+    // Replacing a stub with a real symbol: release stub back to internal
+    // cache. The new symbol may be unmasked → choose parent + offset by id.
     if (isOldStub) {
-      const y = oldSymbol.view.y;
       this._releaseOccupiedStub(oldSymbol);
       const newSymbol = this._symbolFactory.acquire(newSymbolId);
+      const newIsUnmasked = this._isUnmasked(newSymbolId);
       newSymbol.resize(this._symbolWidth, this._symbolHeight);
-      newSymbol.view.y = y;
-      newSymbol.view.x = 0;
+      this._placeSymbolView(newSymbol.view, reelLocalY, newIsUnmasked);
       newSymbol.view.alpha = 1;
       newSymbol.view.scale.set(1, 1);
       newSymbol.view.zIndex = this._computeSymbolZIndex(newSymbolId, index);
-      parent.addChild(newSymbol.view);
+      this._parentForSymbolId(newSymbolId).addChild(newSymbol.view);
       this.symbols[index] = newSymbol;
       this.events.emit('symbol:created', newSymbolId, index);
       return;
@@ -694,22 +755,25 @@ export class Reel implements Disposable {
       oldSymbol.view.rotation = 0;
       oldSymbol.view.filters = null;
       oldSymbol.view.zIndex = this._computeSymbolZIndex(newSymbolId, index);
-      if (oldSymbol.view.parent !== parent) parent.addChild(oldSymbol.view);
+      // Same id → same unmask status; pick the right destination by id
+      // so an unmasked symbol stays in `unmaskedContainer` post-spotlight.
+      const target = this._parentForSymbolId(newSymbolId);
+      if (oldSymbol.view.parent !== target) target.addChild(oldSymbol.view);
+      // Reset Y in case spotlight or another mutator displaced it.
+      this._placeSymbolView(oldSymbol.view, reelLocalY, this._isUnmasked(newSymbolId));
       return;
     }
 
-    const y = oldSymbol.view.y;
-
     this._symbolFactory.release(oldSymbol);
     const newSymbol = this._symbolFactory.acquire(newSymbolId);
+    const newIsUnmasked = this._isUnmasked(newSymbolId);
     newSymbol.resize(this._symbolWidth, this._symbolHeight);
-    newSymbol.view.y = y;
-    newSymbol.view.x = 0;
+    this._placeSymbolView(newSymbol.view, reelLocalY, newIsUnmasked);
     newSymbol.view.alpha = 1;
     newSymbol.view.scale.set(1, 1);
     newSymbol.view.zIndex = this._computeSymbolZIndex(newSymbolId, index);
 
-    parent.addChild(newSymbol.view);
+    this._parentForSymbolId(newSymbolId).addChild(newSymbol.view);
 
     this.symbols[index] = newSymbol;
     this.events.emit('symbol:created', newSymbolId, index);

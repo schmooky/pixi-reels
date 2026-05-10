@@ -565,6 +565,25 @@ export class ReelSetBuilder {
       (d) => d.size && (d.size.w > 1 || d.size.h > 1),
     );
     const hasUnmaskedSymbols = Object.values(symbolsData).some((d) => d.unmask);
+
+    // Pyramid + unmask is not supported. `ReelMotion.snapToGrid()` and
+    // `displace()` write reel-local Y to every symbol view — including
+    // unmasked views that live in `viewport.unmaskedContainer`. On a
+    // pyramid (any reel with offsetY != 0), the unmasked view's at-rest
+    // Y is misset by `reel.container.y`. The activate path compensates,
+    // but the next snap (landing/skip) re-breaks it. Fail at config time
+    // rather than ship a layout the engine can't keep aligned.
+    if (hasUnmaskedSymbols && offsetsY.some((y) => y !== 0)) {
+      const pyramidIdx = offsetsY.findIndex((y) => y !== 0);
+      throw new Error(
+        `[pixi-reels] unmask + pyramid layout is not supported (reel ${pyramidIdx} ` +
+        `has offsetY=${offsetsY[pyramidIdx]}). The motion layer writes reel-local ` +
+        `Y to unmasked views, which mispositions them by reel.container.y on every ` +
+        `snap. Use cell pins (reelSet.pin(...)) for above-mask overlays on pyramid ` +
+        `slots, or remove the per-reel offset.`,
+      );
+    }
+
     if (
       !this._maskStrategyExplicit &&
       (hasBigSymbols || hasUnmaskedSymbols) &&
