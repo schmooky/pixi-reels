@@ -1,9 +1,9 @@
 // @ts-nocheck
-// Injected: ReelSetBuilder, SpeedPresets, BlurSpriteSymbol, WinPresenter,
-//           PIXI, gsap, app, textures, blurTextures.
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//                   WILD_CARD, WinPresenter, PIXI, gsap, app, pickWeighted
 
-const A = 'round/round_1', B = 'round/round_2', C = 'round/round_3';
-const SEVEN = 'royal/royal_1';
+const A = '7', B = '8', C = '9';
+const SEVEN = 'A'; // premium card stand-in for the original royal "seven"
 const IDS = [A, B, C, SEVEN];
 const COLS = 5, ROWS = 3, SIZE = 90;
 
@@ -19,7 +19,11 @@ const WINS = [0, 1, 2].map((row) => ({
 
 const reelSet = new ReelSetBuilder()
   .reels(COLS).visibleSymbols(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
-  .symbols(r => { for (const id of IDS) r.register(id, BlurSpriteSymbol, { textures, blurTextures }); })
+  .symbols(r => {
+    for (const sym of [...CARD_DECK, WILD_CARD]) {
+      r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
+    }
+  })
   .speed('normal', SpeedPresets.NORMAL).speed('turbo', SpeedPresets.TURBO)
   .ticker(app.ticker).build();
 

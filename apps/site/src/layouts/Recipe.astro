@@ -2,6 +2,13 @@
 import Base from './Base.astro';
 import { ChevronLeft } from 'lucide-react';
 import { articleLd, howToLd, breadcrumbLd, SITE } from '../lib/seo.ts';
+import RealGameVideo from '../components/RealGameVideo.astro';
+
+interface RealGameVideoFrontmatter {
+  webm?: string;
+  mp4?: string;
+  caption: string;
+}
 
 interface Props {
   title?: string;
@@ -9,12 +16,14 @@ interface Props {
   steps?: string[];
   apis?: string[];
   tags?: string[];
+  realGameVideo?: RealGameVideoFrontmatter;
   frontmatter?: {
     title?: string;
     description?: string;
     steps?: string[];
     apis?: string[];
     tags?: string[];
+    realGameVideo?: RealGameVideoFrontmatter;
   };
 }
 const props = Astro.props as Props;
@@ -24,6 +33,7 @@ const description = props.description ?? fm.description ?? `${title} — step-by
 const steps = props.steps ?? fm.steps ?? [];
 const apis = props.apis ?? fm.apis ?? [];
 const tags = props.tags ?? fm.tags ?? [];
+const realGameVideo = props.realGameVideo ?? fm.realGameVideo;
 const pathname = Astro.url.pathname;
 
 const jsonLd = [
@@ -81,6 +91,16 @@ const jsonLd = [
             ))}
           </div>
         )}
+      </div>
+    )}
+
+    {realGameVideo && (
+      <div class="mb-4">
+        <RealGameVideo
+          webm={realGameVideo.webm}
+          mp4={realGameVideo.mp4}
+          caption={realGameVideo.caption}
+        />
       </div>
     )}
 

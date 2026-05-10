@@ -1,0 +1,181 @@
+---
+layout: ../../layouts/Recipe.astro
+title: Spin first, cascade after
+description: Open every play with a classic strip-spin. The landing's winning cells pop, survivors fall down, new symbols drop in from above — repeat for every cascade in the chain.
+tags: [hybrid, cascade, runCascade, recent]
+steps:
+  - "Round 1: a normal spin lands the initial grid"
+  - "Detect winners on that grid (server-side or client-side eval)"
+  - "runCascade animates the pop, fall, and drop-in for every chain stage"
+apis:
+  - reelSet.spin
+  - runCascade
+  - reel.placeSymbols
+realGameVideo:
+  mp4: /videos/arc-lord.mp4
+  caption: Arc Lord by Backseat Gaming
+---
+
+import code from '../../recipes/spin-then-cascade.recipe.ts?raw';
+import { RecipeRunner } from '../../components/RecipeRunner.tsx';
+
+<RecipeRunner code={code} client:only="react" />
+
+A common request: "the first round of the play should feel like a normal slot, but if there's a hit, the winners should pop and new symbols should drop in from above — like a tumble." This is exactly what the demo above does:
+
+1. **Round 1** — a regular strip-spin lands a grid. The left three columns are deliberately stacked: `J` on top, `10` in the middle, random on the bottom.
+2. **First cascade pop** — the three `10`s on the middle row vanish. The `J`s above each fall down to fill the gap; brand-new symbols drop in at the top. The middle row now reads `J J J _ _` — a second cluster.
+3. **Second cascade pop** — those three `J`s vanish, survivors fall, new symbols drop in. No more wins, the play ends.
+
+The reels never re-spin between cascades. The landed grid stays landed; only the cells involved in each pop move. The right two columns (4 and 5) are untouched throughout the cascade chain — they landed during the strip-spin and stay frozen.
+
+## How it works
+
+The cascade animation is a separate concern from the spin. The library ships a tumble helper at `examples/shared/cascadeLoop.ts` that operates on the already-landed reelSet:
+
+- It expects an array of "stages" — full grids representing the state after each cascade pop.
+- It expects a `winners(prev, next, stageIndex)` callback that names the cells about to vanish.
+- For each stage transition it runs your vanish animation (default: fade out), then slides the survivor symbols down by exactly the number of cleared slots beneath them, then drops new symbols in from above (staggered, gravity-style).
+
+```ts
+import { runCascade } from '../../shared/cascadeLoop';
+
+await reelSet.spin();              // round 1, classic strip-spin
+reelSet.setResult(stage0);
+await /* wait for the spin to land */;
+
+await runCascade(reelSet, [stage0, stage1, stage2], {
+  winners: (_prev, _next, stageIdx) => {
+    if (stageIdx === 0) return [{reel:1,row:1},{reel:2,row:1},{reel:3,row:1}];
+    return [{reel:0,row:2},{reel:1,row:2},{reel:2,row:2}];
+  },
+  vanishDuration: 320,
+  dropDuration: 440,
+  pauseBetween: 160,
+});
+```
+
+`runCascade` does NOT call `reelSet.spin()`. It works directly on the symbols already on screen — that's why the reels appear to stay still while the symbols rearrange themselves.
+
+## When to use this vs `spin({ mode: 'cascade' })`
+
+The library has two distinct cascade tools and they solve different problems:
+
+| | `runCascade(reelSet, stages, ...)` | `reelSet.spin({ mode: 'cascade' })` |
+|---|---|---|
+| What runs | The visual tumble: pop, fall, drop-in | A full new spin using cascade phases (`dropStart` / `dropStop`) |
+| Reels move? | No — landed reels stay landed; only winning + falling cells move | Yes — the whole frame drops in from above |
+| Use case | Post-spin cascade animation on a single landed result (this recipe) | Discrete cascade respins between rounds (e.g. free-spin features that explicitly cascade-respin) |
+| Builder requirement | None | `.cascade(DropRecipes....)` must be on the builder |
+
+This recipe uses `runCascade` because the user-visible mechanic is "win on the spin, watch the winners pop". For "pure cascade respin" gameplay where every round is a top-down drop, see [Cascade 6×5 tumble](/recipes/cascade-6x5/).
+
+## Full source
+
+The exact code running in the demo above:
+
+```ts
+// @ts-nocheck
+// Injected: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, WILD_CARD,
+//           DropRecipes, PIXI, gsap, app, runCascade, pickWeighted
+
+// 5 reels x 5 rows — matches the Arc Lord shape shown in the reference
+// clip above. Cascade pops the upper-middle row twice on the left three
+// columns; the right two columns and the bottom three rows stay still.
+const IDS = ['7', '8', '9', '10', 'J', 'Q'];
+const REELS = 5, ROWS = 5, SIZE = 64;
+const HIT_COLS = [0, 1, 2];        // left three columns
+const HIT_ROW = 1;                  // upper-middle row
+const TRIGGER1 = '10';
+const TRIGGER2 = 'J';
+
+function randSymbolNotIn(exclude) {
+  let s;
+  do { s = IDS[Math.floor(Math.random() * IDS.length)]; }
+  while (exclude.has(s));
+  return s;
+}
+
+const reelSet = new ReelSetBuilder()
+  .reels(REELS).visibleSymbols(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
+  .symbols((r) => {
+    for (const sym of CARD_DECK) {
+      if (IDS.includes(sym.id)) {
+        r.register(sym.id, CardSymbol, {
+          color: sym.color, label: sym.label, textColor: sym.textColor,
+        });
+      }
+    }
+  })
+  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 120 })
+  .ticker(app.ticker)
+  .build();
+
+return {
+  reelSet,
+  onSpin: async () => {
+    // Stage 0 — strip-spin lands here. Pre-stack the left three cols:
+    // J on row 0, 10 at HIT_ROW, random elsewhere. The Js are
+    // pre-positioned so when the first cascade pops the 10s, the Js
+    // fall into HIT_ROW creating cluster #2 without any extra authoring.
+    const stage0 = Array.from({ length: REELS }, (_, c) =>
+      Array.from({ length: ROWS }, (_, r) => {
+        if (HIT_COLS.includes(c)) {
+          if (r === 0)        return TRIGGER2;  // 'J' on top
+          if (r === HIT_ROW)  return TRIGGER1;  // '10' at HIT_ROW
+        }
+        return randSymbolNotIn(new Set([TRIGGER1, TRIGGER2]));
+      }),
+    );
+
+    // Cascade gravity: when the cell at HIT_ROW vanishes, every cell
+    // above it falls down by one row, and a new symbol fills the top.
+    // Cells BELOW HIT_ROW stay put.
+    const dropAtHitRow = (col, fillTop) => {
+      const next = [...col];
+      for (let r = HIT_ROW; r > 0; r--) next[r] = next[r - 1];
+      next[0] = fillTop;
+      return next;
+    };
+
+    // Stage 1 — 10s vanish at HIT_ROW. Js at row 0 fall to HIT_ROW,
+    // creating cluster #2. New randoms drop in at row 0.
+    const stage1 = stage0.map((col, c) =>
+      HIT_COLS.includes(c)
+        ? dropAtHitRow(col, randSymbolNotIn(new Set([TRIGGER1, TRIGGER2])))
+        : [...col],
+    );
+
+    // Stage 2 — Js vanish at HIT_ROW. Stage-1's row-0 (a random) falls
+    // into HIT_ROW; new random at row 0. No further cluster.
+    const stage2 = stage1.map((col, c) =>
+      HIT_COLS.includes(c)
+        ? dropAtHitRow(col, randSymbolNotIn(new Set([TRIGGER1, TRIGGER2])))
+        : [...col],
+    );
+
+    // Round 1: classic strip-spin to stage 0.
+    const p = reelSet.spin();
+    await new Promise((r) => setTimeout(r, 150));
+    reelSet.setResult(stage0);
+    await p;
+    await new Promise((r) => setTimeout(r, 300));
+
+    // Cascade chain: pop HIT_ROW twice. Both pops on the same three
+    // left columns; cols 3-4 never animate because cascadeLoop skips
+    // reels with no winners and unchanged symbols.
+    await runCascade(reelSet, [stage0, stage1, stage2], {
+      winners: () => HIT_COLS.map((c) => ({ reel: c, row: HIT_ROW })),
+      vanishDuration: 320,
+      dropDuration: 440,
+      pauseBetween: 160,
+    });
+  },
+};
+```
+
+## Related
+
+- [Cascade 6×5 tumble](/recipes/cascade-6x5/) — same `runCascade` helper applied to a pure-cascade slot (no strip-spin first round).
+- [Cascade pops with WinPresenter](/recipes/cascade-winpresenter/) — drive the vanish animation through `WinPresenter` instead of the default fade.
+- [Classic 5×3 starter](/recipes/classic-5x3/) — the pure strip-spin starter this recipe extends.

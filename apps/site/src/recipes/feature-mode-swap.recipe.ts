@@ -1,6 +1,6 @@
 // @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, BlurSpriteSymbol, PIXI, gsap,
-//                   app, textures, blurTextures, SYMBOL_IDS, pickWeighted
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//                   WILD_CARD, PIXI, gsap, app, pickWeighted
 //
 // Feature mode entry via runtime frame middleware.
 //
@@ -13,8 +13,8 @@
 // A large banner above the grid shows the current mode and the spin
 // counter, making the mode change and its payoff obvious at a glance.
 
-const FILLER = ['round/round_1', 'round/round_2', 'royal/royal_1', 'square/square_1'];
-const WILD = 'wild/wild_1';
+const FILLER = ['7', '8', '10', 'Q'];
+const WILD = WILD_CARD.id;
 const COLS = 5, ROWS = 3, SIZE = 90;
 
 const reelSet = new ReelSetBuilder()
@@ -23,15 +23,15 @@ const reelSet = new ReelSetBuilder()
   .symbolSize(SIZE, SIZE)
   .symbolGap(4, 4)
   .symbols((r) => {
-    for (const id of [...FILLER, WILD]) {
-      r.register(id, BlurSpriteSymbol, { textures, blurTextures });
+    for (const sym of [...CARD_DECK, WILD_CARD]) {
+      r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
     }
   })
   .weights({
-    'round/round_1': 25,
-    'round/round_2': 25,
-    'royal/royal_1': 20,
-    'square/square_1': 20,
+    '7': 25,
+    '8': 25,
+    '10': 20,
+    'Q': 20,
   })
   .speed('normal', SpeedPresets.NORMAL)
   .speed('turbo', SpeedPresets.TURBO)

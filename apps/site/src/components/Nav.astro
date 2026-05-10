@@ -1,5 +1,6 @@
 ---
 import { PIXI_REELS_VERSION } from '../lib/version.ts';
+import Search from './Search.astro';
 
 const pathname = Astro.url.pathname;
 function isActive(prefix: string): boolean {
@@ -45,6 +46,7 @@ const links = [
     </nav>
 
     <div class="ml-auto flex items-center gap-2">
+      <Search />
       <a
         href="https://github.com/schmooky/pixi-reels"
         target="_blank"

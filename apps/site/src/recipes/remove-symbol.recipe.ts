@@ -1,10 +1,10 @@
 // @ts-nocheck
-// Injected: ReelSetBuilder, SpeedPresets, BlurSpriteSymbol, PIXI, gsap,
-//           app, textures, blurTextures, SYMBOL_IDS, pickWeighted,
+// Injected: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, WILD_CARD,
+//           PIXI, gsap, app, pickWeighted,
 //           runCascade, tumbleToGrid (cascade helpers)
 
-const A = 'round/round_1', B = 'round/round_2', C = 'round/round_3';
-const X = 'feature/feature_1'; // the winner that vanishes
+const A = '7', B = '8', C = '9';
+const X = 'wild'; // the winner that vanishes
 const IDS = [A, B, C, X];
 const REELS = 4, ROWS = 3, SIZE = 90;
 
@@ -23,7 +23,13 @@ const AFTER = [
 
 const reelSet = new ReelSetBuilder()
   .reels(REELS).visibleSymbols(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
-  .symbols(r => { for (const id of IDS) r.register(id, BlurSpriteSymbol, { textures, blurTextures }); })
+  .symbols(r => {
+    for (const sym of [...CARD_DECK, WILD_CARD]) {
+      if (IDS.includes(sym.id)) {
+        r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
+      }
+    }
+  })
   .speed('normal', SpeedPresets.NORMAL).speed('turbo', SpeedPresets.TURBO)
   .ticker(app.ticker).build();
 

@@ -1,9 +1,9 @@
 // @ts-nocheck
-// Injected: ReelSetBuilder, SpeedPresets, BlurSpriteSymbol, PIXI, gsap,
-//           app, textures, blurTextures, SYMBOL_IDS, pickWeighted
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//                   WILD_CARD, app, pickWeighted
 
-const A = 'round/round_1', B = 'round/round_2', C = 'round/round_3';
-const SEVEN = 'royal/royal_1';
+const A = '7', B = '8', C = '9';
+const SEVEN = 'A'; // premium card stand-in for the original royal "seven"
 const IDS = [A, B, C, SEVEN];
 
 const GRID = [
@@ -20,8 +20,8 @@ const reelSet = new ReelSetBuilder()
   .symbolSize(90, 90)
   .symbolGap(4, 4)
   .symbols(r => {
-    for (const id of IDS) {
-      r.register(id, BlurSpriteSymbol, { textures, blurTextures });
+    for (const sym of [...CARD_DECK, WILD_CARD]) {
+      r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
     }
   })
   .speed('normal', SpeedPresets.NORMAL)
@@ -33,9 +33,12 @@ return {
   reelSet,
   onSpin: async () => {
     const p = reelSet.spin();
-    reelSet.setResult(GRID);
-    await new Promise(r => setTimeout(r, 560));
-    reelSet.skip();
+    // requestSkip queues until setResult arrives — call it from a player tap
+    // anywhere in the round and the engine will land as soon as it has a
+    // target, no race-window to manage in your UI code.
+    setTimeout(() => reelSet.requestSkip(), 560);
+    // Server response arrives a moment later. requestSkip is already armed.
+    setTimeout(() => reelSet.setResult(GRID), 800);
     await p;
   },
 };

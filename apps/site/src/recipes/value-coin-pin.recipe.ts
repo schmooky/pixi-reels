@@ -1,6 +1,6 @@
 // @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, BlurSpriteSymbol, PIXI, gsap,
-//                   app, textures, blurTextures, SYMBOL_IDS, pickWeighted, EmptySymbol
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//                   WILD_CARD, PIXI, gsap, app, pickWeighted, EmptySymbol
 //
 // Hold & Win with CellPin.
 //
@@ -10,10 +10,13 @@
 // subsequent rounds — the engine keeps showing the coin, its payload is
 // readable from `reelSet.pins`, and the running total updates live.
 
-const COIN = 'feature/feature_1';
+const COIN = 'coin';
 const EMPTY = 'empty';
 const COLS = 5, ROWS = 3, CELL = 60, GAP = 4;
 const COIN_VALUES = [10, 25, 50, 100];
+
+// Coin card definition — distinctive gold so it stands out against empty cells.
+const COIN_CARD = { id: COIN, color: 0xf1c40f, label: 'COIN', textColor: 0x6b5400 };
 
 // Build 15 independent 1×1 ReelSets — one per cell.
 const colWidth = COLS * (CELL + GAP) - GAP;
@@ -28,7 +31,7 @@ for (let col = 0; col < COLS; col++) {
       .reels(1).visibleSymbols(1)
       .symbolSize(CELL, CELL).symbolGap(0, 0)
       .symbols((r) => {
-        r.register(COIN, BlurSpriteSymbol, { textures, blurTextures });
+        r.register(COIN, CardSymbol, { color: COIN_CARD.color, label: COIN_CARD.label, textColor: COIN_CARD.textColor });
         r.register(EMPTY, EmptySymbol, {});
       })
       .weights({ [COIN]: 1, [EMPTY]: 3 })

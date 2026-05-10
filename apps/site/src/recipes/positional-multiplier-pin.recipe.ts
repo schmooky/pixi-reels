@@ -1,6 +1,6 @@
 // @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, BlurSpriteSymbol, PIXI, gsap,
-//                   app, textures, blurTextures, SYMBOL_IDS, pickWeighted
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//                   WILD_CARD, PIXI, gsap, app, pickWeighted
 //
 // Positional multiplier cells (Gonzo's Quest / Irish Riches style).
 //
@@ -15,7 +15,7 @@
 // badge display stays correct. (A cleaner CellDecorator primitive would
 // avoid this mirror dance, but it isn't required.)
 
-const FILLER = ['round/round_1', 'round/round_2', 'royal/royal_1', 'square/square_1'];
+const FILLER = ['7', '8', '10', 'Q'];
 const COLS = 5, ROWS = 3, SIZE = 90;
 
 // Define fixed multiplier positions for this demo. In a real game, these
@@ -32,15 +32,15 @@ const reelSet = new ReelSetBuilder()
   .symbolSize(SIZE, SIZE)
   .symbolGap(4, 4)
   .symbols((r) => {
-    for (const id of FILLER) {
-      r.register(id, BlurSpriteSymbol, { textures, blurTextures });
+    for (const sym of CARD_DECK) {
+      r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
     }
   })
   .weights({
-    'round/round_1': 30,
-    'round/round_2': 30,
-    'royal/royal_1': 20,
-    'square/square_1': 20,
+    '7': 30,
+    '8': 30,
+    '10': 20,
+    Q: 20,
   })
   .speed('normal', SpeedPresets.NORMAL)
   .speed('turbo', SpeedPresets.TURBO)
@@ -64,7 +64,7 @@ for (const cell of MULTIPLIER_CELLS) {
   badgeLayer.addChild(ring);
 
   const badge = new PIXI.Text({
-    text: `×${cell.mult}`,
+    text: `x${cell.mult}`,
     style: {
       fontFamily: 'system-ui, sans-serif',
       fontSize: 22,

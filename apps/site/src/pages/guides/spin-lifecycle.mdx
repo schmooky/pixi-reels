@@ -54,34 +54,83 @@ reels are in the SPIN phase.
 ```ts
 button.addEventListener('click', () => {
   if (reelSet.isSpinning) {
-    reelSet.skip();                              // instant land
+    // requestSkip is the safe variant — if the player taps before the
+    // server response arrives, it queues until setResult() and then
+    // slams. skip() does nothing useful when called pre-result.
+    reelSet.requestSkip();
   } else {
     reelSet.spin();
   }
 });
 ```
 
-`skip()` force-lands on whatever `setResult()` told it — or on random symbols
-if no result was set yet. `result.wasSkipped === true`.
+`skip()` / `requestSkip()` both force-land on whatever `setResult()` told the
+engine. `result.wasSkipped === true`. The lifecycle hooks (`spin:reelLanded`,
+`spin:allLanded`, `spin:complete`) all still fire on the slam path — so win
+presenters and effect chains keep working without a separate code path.
+
+## Pattern: hold some reels
+
+```ts
+// Reels 0 and 4 are frozen for this spin — only the middle three reroll.
+const spin = reelSet.spin({ holdReels: [0, 4] });
+reelSet.setResult(serverGrid); // entries at held indices are ignored
+await spin;
+```
+
+Held reels skip START / SPIN / STOP entirely and stay on whatever symbols
+they're currently showing. They count as already-landed for `spin:allLanded`,
+so the resolver fires when all *non-held* reels land. No `spin:reelLanded` /
+`spin:stopping` fires for held reels. `setAnticipation([...])` filters held
+indices silently. See the [hold-and-win recipe](/recipes/hold-and-win/) for
+when to use this vs the per-cell pattern.
+
+## Pattern: hybrid spin-then-cascade
+
+```ts
+const reelSet = new ReelSetBuilder()
+  // ...
+  .cascade(DropRecipes.stiffDrop) // register cascade phases
+  .ticker(app.ticker)
+  .build();
+
+await reelSet.spin();                  // round 1 — strip-spin (default mode)
+await reelSet.spin({ mode: 'cascade' }); // respin — cascade drop-in
+```
+
+`SpinOptions.mode` overrides the builder's default phase chain on a
+per-call basis. The engine throws if you pick `'cascade'` without
+`.cascade(...)` on the builder — the error names the missing method.
+See the [spin-then-cascade recipe](/recipes/spin-then-cascade/).
 
 ## Full event map
 
 | Event | Payload | When |
 |---|---|---|
 | `spin:start` | — | Any `spin()` call |
-| `spin:allStarted` | — | Every reel is in SPIN phase |
-| `spin:stopping` | `(reelIndex)` | A reel begins STOP |
-| `spin:reelLanded` | `(reelIndex, symbols)` | Individual reel landed |
-| `spin:allLanded` | `(result)` | Last reel landed |
+| `spin:allStarted` | — | Every (non-held) reel is in SPIN phase |
+| `spin:stopping` | `(reelIndex)` | A reel begins STOP (held reels never fire) |
+| `spin:reelLanded` | `(reelIndex, symbols)` | Individual reel landed (held reels never fire) |
+| `spin:allLanded` | `(result)` | Last non-held reel landed |
 | `spin:complete` | `(result)` | Just after `spin:allLanded` |
-| `skip:requested` | — | `skip()` called |
-| `skip:completed` | — | All reels force-landed |
+| `skip:requested` | — | `skip()` / `requestSkip()` actually fires the slam |
+| `skip:completed` | — | All non-held reels force-landed |
 | `speed:changed` | `(profile, previous)` | `setSpeed()` called |
 | `spotlight:start` | `(positions)` | `spotlight.cycle(...)` began |
 | `spotlight:end` | — | Spotlight finished |
+| `pin:placed` | `(pin)` | `reelSet.pin(...)` succeeded |
+| `pin:expired` | `(pin, reason)` | Pin removed by `unpin`, `turns` exhausted, or `'eval'` reset |
+| `pin:moved` | `(pin, from)` | `reelSet.movePin(...)` resolved |
+| `pin:migrated` | `(pin, info)` | MultiWays reshape moved a pin to a new row |
+| `pin:overlayCreated` | `(pin, symbol)` | Mid-spin overlay symbol mounted for a pin |
+| `pin:overlayDestroyed` | `(pin, symbol)` | Mid-spin overlay torn down on land |
+| `shape:changed` | `(rowsPerReel)` | MultiWays `setShape(...)` accepted |
+| `adjust:start` | `({ reelIndex, fromRows, toRows })` | AdjustPhase entered for a reel |
+| `adjust:complete` | `({ reelIndex })` | AdjustPhase finished |
 | `destroyed` | — | `destroy()` called |
 
 ## Deeper dive
 
 - [Phases](/docs/api-phases/) — customize START/SPIN/STOP timing
 - [Events](/docs/api-events/) — types and exact signatures
+- [SpinOptions](/docs/api-builder/#spin-options) — `holdReels`, `mode`

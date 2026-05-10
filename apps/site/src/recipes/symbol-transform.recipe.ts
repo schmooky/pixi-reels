@@ -1,24 +1,30 @@
 // @ts-nocheck
-// Injected: ReelSetBuilder, SpeedPresets, BlurSpriteSymbol, PIXI, gsap,
-//           app, textures, blurTextures, SYMBOL_IDS, pickWeighted
+// Injected: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, WILD_CARD,
+//           PIXI, gsap, app, pickWeighted
 
-const LOW = ['round/round_1', 'round/round_2', 'round/round_3'];
-const HIGH = ['royal/royal_1', 'royal/royal_2'];
+const LOW = ['7', '8', '9'];
+const HIGH = ['10', 'J'];
 const IDS = [...LOW, ...HIGH];
 const COLS = 5, ROWS = 3, CELL = 90;
 
 // Predictable grid — always has low-pays to upgrade.
 const GRID = [
-  ['round/round_1', 'round/round_2', 'round/round_1'],
-  ['round/round_2', 'round/round_3', 'royal/royal_1'],
-  ['round/round_3', 'round/round_1', 'round/round_2'],
-  ['royal/royal_2', 'round/round_2', 'round/round_3'],
-  ['round/round_1', 'round/round_3', 'round/round_2'],
+  ['7', '8', '7'],
+  ['8', '9', '10'],
+  ['9', '7', '8'],
+  ['J', '8', '9'],
+  ['7', '9', '8'],
 ];
 
 const reelSet = new ReelSetBuilder()
   .reels(COLS).visibleSymbols(ROWS).symbolSize(CELL, CELL).symbolGap(4, 4)
-  .symbols(r => { for (const id of IDS) r.register(id, BlurSpriteSymbol, { textures, blurTextures }); })
+  .symbols(r => {
+    for (const sym of CARD_DECK) {
+      if (IDS.includes(sym.id)) {
+        r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
+      }
+    }
+  })
   .speed('normal', SpeedPresets.NORMAL).speed('turbo', SpeedPresets.TURBO)
   .ticker(app.ticker).build();
 
@@ -61,10 +67,10 @@ return {
     });
     restoreOld();
 
-    // Swap identity.
-    const visible = reel.getVisibleSymbols();
-    visible[pick.row] = upgradeId;
-    reel.placeSymbols(visible);
+    // Swap identity. setSymbolAt is the one-cell rewrite that doesn't
+    // touch the rest of the reel — leaves the symbol pool / motion layer
+    // alone and only cycles the single ReelSymbol at this row.
+    reelSet.setSymbolAt(pick.r, pick.row, upgradeId);
 
     // Scale-in new symbol from center.
     const next = reel.getSymbolAt(pick.row);

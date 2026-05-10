@@ -1,0 +1,49 @@
+---
+/**
+ * Optional "as seen in the wild" video clip on a recipe page.
+ *
+ * Renders the source video at its NATURAL aspect ratio, capped to a
+ * max height so portrait clips don't dominate the page. Below it:
+ * a caption naming the slot and studio. Use it on a recipe to point
+ * readers at a real shipping game that uses the same mechanic — far
+ * more convincing than just the demo.
+ *
+ * Frontmatter shape:
+ *   realGameVideo:
+ *     webm: /videos/foo.webm        # optional, preferred (smaller)
+ *     mp4:  /videos/foo.mp4         # optional, fallback for older Safari
+ *     caption: "Foo Slot by Studio"
+ *
+ * Browser picks webm vs mp4. Both are optional, but at least one must
+ * be provided.
+ */
+export interface Props {
+  webm?: string;
+  mp4?: string;
+  caption: string;
+}
+
+const { webm, mp4, caption } = Astro.props;
+
+if (!webm && !mp4) {
+  throw new Error('RealGameVideo: at least one of `webm` or `mp4` must be provided.');
+}
+---
+
+<figure class="not-prose flex flex-col items-center">
+  <video
+    autoplay
+    muted
+    loop
+    playsinline
+    preload="metadata"
+    class="max-h-[320px] w-auto rounded-xl border border-border bg-muted/40"
+    aria-label={caption}
+  >
+    {webm && <source src={webm} type="video/webm" />}
+    {mp4 && <source src={mp4} type="video/mp4" />}
+  </video>
+  <figcaption class="mt-2 text-center text-xs text-muted-foreground">
+    As seen in <span class="font-medium text-foreground/80">{caption}</span>
+  </figcaption>
+</figure>

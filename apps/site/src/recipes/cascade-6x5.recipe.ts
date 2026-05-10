@@ -1,12 +1,9 @@
 // @ts-nocheck
-// Injected: ReelSetBuilder, SpeedPresets, SpriteSymbol, DropRecipes, PIXI, gsap,
-//           app, textures, SYMBOL_IDS, pickWeighted,
+// Injected: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, WILD_CARD,
+//           DropRecipes, PIXI, gsap, app, pickWeighted,
 //           runCascade (cascade sequence helper)
 
-const IDS = [
-  'round/round_1', 'round/round_2', 'round/round_3',
-  'royal/royal_1', 'royal/royal_2', 'square/square_1',
-];
+const IDS = ['7', '8', '9', '10', 'J', 'Q'];
 const REELS = 6, ROWS = 4, SIZE = 72;
 
 function randSymbol(exclude) {
@@ -17,7 +14,13 @@ function randSymbol(exclude) {
 
 const reelSet = new ReelSetBuilder()
   .reels(REELS).visibleSymbols(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
-  .symbols(r => { for (const id of IDS) r.register(id, SpriteSymbol, { textures }); })
+  .symbols(r => {
+    for (const sym of CARD_DECK) {
+      if (IDS.includes(sym.id)) {
+        r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
+      }
+    }
+  })
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150 })
   .cascade(DropRecipes.stiffDrop)
   .ticker(app.ticker).build();
@@ -25,7 +28,7 @@ const reelSet = new ReelSetBuilder()
 return {
   reelSet,
   onSpin: async () => {
-    const CLUSTER = 'royal/royal_1';
+    const CLUSTER = '10';
     const HIT_ROW = 2;
     const HIT_COLS = [0, 1, 2];
 

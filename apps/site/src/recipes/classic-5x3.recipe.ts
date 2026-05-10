@@ -1,17 +1,18 @@
 // @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, BlurSpriteSymbol,
-//                   app, textures, blurTextures, SYMBOL_IDS, pickWeighted
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//                   WILD_CARD, app, pickWeighted
 
-const IDS = [
-  'round/round_1', 'round/round_2', 'round/round_3',
-  'royal/royal_1', 'royal/royal_2',
-  'square/square_1', 'wild/wild_1',
-];
+// Cards make a clean prototyping canvas — no asset loading, no motion-blur
+// strip, scales crisply at any cell size. Swap to SpriteSymbol +
+// AnimatedSpriteSymbol when you ship.
+
+const SYMBOLS = [...CARD_DECK, WILD_CARD];
 
 const weights = {
-  'round/round_1': 20, 'round/round_2': 20, 'round/round_3': 20,
-  'royal/royal_1': 14, 'royal/royal_2': 14,
-  'square/square_1': 10, 'wild/wild_1': 3,
+  '7': 20, '8': 20, '9': 20,
+  '10': 14, J: 14,
+  Q: 10, K: 6, A: 5,
+  wild: 3,
 };
 
 const reelSet = new ReelSetBuilder()
@@ -19,9 +20,13 @@ const reelSet = new ReelSetBuilder()
   .visibleSymbols(3)
   .symbolSize(90, 90)
   .symbolGap(4, 4)
-  .symbols(r => {
-    for (const id of IDS) {
-      r.register(id, BlurSpriteSymbol, { textures, blurTextures });
+  .symbols((r) => {
+    for (const sym of SYMBOLS) {
+      r.register(sym.id, CardSymbol, {
+        color: sym.color,
+        label: sym.label,
+        textColor: sym.textColor,
+      });
     }
   })
   .weights(weights)
@@ -34,6 +39,6 @@ return {
   reelSet,
   nextResult: () =>
     Array.from({ length: 5 }, () =>
-      Array.from({ length: 3 }, () => pickWeighted(weights))
+      Array.from({ length: 3 }, () => pickWeighted(weights)),
     ),
 };

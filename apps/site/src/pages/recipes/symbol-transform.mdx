@@ -9,7 +9,7 @@ steps:
   - Swap the symbol via reel.placeSymbols with the new identity
   - Tween the new symbol in
 apis:
-  - Reel.placeSymbols
+  - ReelSet.setSymbolAt
   - Reel.getSymbolAt
   - ReelSymbol.playWin
 ---
@@ -41,10 +41,10 @@ async function transformCell(reelIndex: number, row: number, newSymbolId: string
     });
   });
 
-  // Phase 2: swap identity. placeSymbols expects the VISIBLE window top→bottom.
-  const visible = reel.getVisibleSymbols();
-  visible[row] = newSymbolId;
-  reel.placeSymbols(visible);
+  // Phase 2: swap identity. setSymbolAt is the one-cell rewrite — leaves
+  // the rest of the strip alone, no buffer regen, no re-shuffle. Throws
+  // mid-spin and on big-symbol anchors so it can't silently misbehave.
+  reelSet.setSymbolAt(reelIndex, row, newSymbolId);
 
   // Phase 3: in
   const next = reel.getSymbolAt(row);

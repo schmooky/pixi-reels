@@ -22,6 +22,8 @@ import {
 import { transform as sucraseTransform } from 'sucrase';
 import { runCascade, tumbleToGrid, diffCells } from '../../../../examples/shared/cascadeLoop.ts';
 import { cn } from '@/lib/utils';
+import { CanvasSkeleton } from './CanvasSkeleton';
+import { useMinDisplay } from './useMinDisplay';
 
 let gsapSynced = false;
 
@@ -77,6 +79,9 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
   const [spinning, setSpinning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
+  // Hold the skeleton for at least 250ms so it doesn't flash for one
+  // frame on fast loads.
+  const showSkeleton = useMinDisplay(!ready, 250);
 
   useEffect(() => {
     let cancelled = false;
@@ -231,6 +236,7 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
           ref={hostRef}
           className="h-full w-full [&_canvas]:block [&_canvas]:h-full [&_canvas]:w-full"
         />
+        {showSkeleton && !error && <CanvasSkeleton label="Compiling recipe…" />}
         {error && (
           <div className="absolute inset-0 flex items-center justify-center bg-card/90 p-6 font-mono text-xs text-destructive">
             {error}
