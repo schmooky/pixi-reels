@@ -51,24 +51,36 @@ export abstract class ReelSymbol implements Disposable {
   }
 
   /**
-   * Activate the symbol with a new identity.
-   * Called when the symbol enters the visible reel or is recycled from the pool.
+   * Activate the symbol with a new identity. Called when the symbol enters
+   * the visible reel or is recycled from the pool. Resets container
+   * transform / filter state for parity with deactivate().
    */
   activate(symbolId: string): void {
     this._symbolId = symbolId;
     this.view.visible = true;
+    this.view.alpha = 1;
+    this.view.scale.set(1, 1);
+    this.view.rotation = 0;
+    this.view.filters = null;
+    this.view.zIndex = 0;
     this.onActivate(symbolId);
   }
 
   /**
-   * Deactivate the symbol before returning it to the pool.
-   * Stops any running animations and hides the view.
+   * Deactivate the symbol before returning it to the pool. Stops
+   * animations, hides the view, and resets container transform / filter
+   * state so subclass decorations don't leak across recycles.
    */
   deactivate(): void {
     this.stopAnimation();
     this.onDeactivate();
     this._symbolId = '';
     this.view.visible = false;
+    this.view.alpha = 1;
+    this.view.scale.set(1, 1);
+    this.view.rotation = 0;
+    this.view.filters = null;
+    this.view.zIndex = 0;
   }
 
   /** Pool reset — aliases deactivate. */
@@ -78,9 +90,10 @@ export abstract class ReelSymbol implements Disposable {
 
   destroy(): void {
     if (this._isDestroyed) return;
-    this.deactivate();
+    this.stopAnimation();
+    this.onDeactivate();
     this.onDestroy();
-    this.view.destroy({ children: true });
+    if (!this.view.destroyed) this.view.destroy({ children: true });
     this._isDestroyed = true;
   }
 

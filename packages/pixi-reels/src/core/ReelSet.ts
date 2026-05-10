@@ -1,6 +1,6 @@
 import { Container } from 'pixi.js';
 import type { Disposable } from '../utils/Disposable.js';
-import type { ReelSetInternalConfig, CellBounds, SpinOptions, SymbolData } from '../config/types.js';
+import type { ReelSetInternalConfig, CellBounds, SymbolData, SpinOptions } from '../config/types.js';
 import { EventEmitter } from '../events/EventEmitter.js';
 import type { ReelSetEvents, SpinResult, } from '../events/ReelEvents.js';
 import { Reel, } from './Reel.js';
@@ -15,7 +15,7 @@ import type { PhaseFactory } from '../spin/phases/PhaseFactory.js';
 import type { SpinningMode } from '../spin/modes/SpinningMode.js';
 import type { CellPin, CellPinOptions, PinExpireReason, MovePinOptions, CellCoord } from '../pins/CellPin.js';
 import { pinKey } from '../pins/CellPin.js';
-import { gsap } from 'gsap';
+import { getGsap } from '../utils/gsapRef.js';
 import type { FrameMiddleware } from '../frame/FrameBuilder.js';
 
 export interface ReelSetParams {
@@ -26,6 +26,7 @@ export interface ReelSetParams {
   frameBuilder: FrameBuilder;
   phaseFactory: PhaseFactory;
   spinningMode: SpinningMode;
+  defaultSpinMode: 'standard' | 'cascade';
 }
 
 /**
@@ -204,6 +205,7 @@ export class ReelSet extends Container implements Disposable {
       this._events,
       params.config.ticker,
       params.spinningMode,
+      params.defaultSpinMode,
       {
         isMultiWaysSlot: this._isMultiWaysSlot,
         symbolsData: this._symbolsData,
@@ -251,6 +253,11 @@ export class ReelSet extends Container implements Disposable {
    * Hold & Win respins, sticky / expanding wilds, and "the trigger
    * column stays in place" bonus rounds.
    *
+   * Pass `{ mode: 'standard' | 'cascade' }` to override the builder-time
+   * default for a single spin (e.g. classic strip-spin on the first round,
+   * drop-in on the cascade waves). `'cascade'` requires `.cascade(...)`
+   * on the builder.
+   *
    * @example
    * // Plain spin — every reel animates.
    * await reelSet.spin();
@@ -260,6 +267,10 @@ export class ReelSet extends Container implements Disposable {
    * const spin = reelSet.spin({ holdReels: [0, 4] });
    * reelSet.setResult(serverGrid); // entries at 0/4 are ignored
    * await spin;
+   *
+   * @example
+   * // Per-spin cascade override.
+   * await reelSet.spin({ mode: 'cascade' });
    *
    * See {@link SpinOptions} for the full contract (event behaviour,
    * setResult interaction, setAnticipation filtering).
@@ -301,6 +312,11 @@ export class ReelSet extends Container implements Disposable {
   /** Skip/slam-stop: immediately land all reels on target. */
   skip(): void {
     this._spinController.skip();
+  }
+
+  /** Slam-stop safe before `setResult()` arrives — queues until then. */
+  requestSkip(): void {
+    this._spinController.requestSkip();
   }
 
   /**
@@ -829,7 +845,7 @@ export class ReelSet extends Container implements Disposable {
     const duration = (opts?.duration ?? 400) / 1000;
     const easing = opts?.easing ?? 'power2.inOut';
     await new Promise<void>((resolve) => {
-      gsap.to(flight.view, {
+      getGsap().to(flight.view, {
         x: toX,
         y: toCellY,
         duration,

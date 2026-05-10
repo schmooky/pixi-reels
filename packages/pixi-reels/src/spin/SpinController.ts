@@ -92,6 +92,8 @@ export class SpinController implements Disposable {
   private _events: EventEmitter<ReelSetEvents>;
   private _tickerRef: TickerRef;
   private _spinningMode: SpinningMode;
+  private _defaultSpinMode: 'standard' | 'cascade';
+  private _currentSpinMode: 'standard' | 'cascade' = 'standard';
   private _hooks: SpinControllerHooks;
 
   private _isSpinning = false;
@@ -108,6 +110,7 @@ export class SpinController implements Disposable {
    */
   private _heldReels = new Set<number>();
   private _wasSkipped = false;
+  private _skipPending = false;
   private _isDestroyed = false;
   private _currentSpinResolve: ((result: SpinResult) => void) | null = null;
   /** Incremented on each new spin. If a callback sees a stale generation, it no-ops. */
@@ -121,6 +124,7 @@ export class SpinController implements Disposable {
     events: EventEmitter<ReelSetEvents>,
     ticker: Ticker,
     spinningMode?: SpinningMode,
+    defaultSpinMode: 'standard' | 'cascade' = 'standard',
     hooks?: SpinControllerHooks,
   ) {
     this._reels = reels;
@@ -130,6 +134,7 @@ export class SpinController implements Disposable {
     this._events = events;
     this._tickerRef = new TickerRef(ticker);
     this._spinningMode = spinningMode ?? new StandardMode();
+    this._defaultSpinMode = defaultSpinMode;
     this._hooks = hooks ?? {
       isMultiWaysSlot: false,
       symbolsData: {},
@@ -159,8 +164,17 @@ export class SpinController implements Disposable {
       throw new Error('Cannot start a new spin while one is in progress.');
     }
 
+    const mode = options?.mode ?? this._defaultSpinMode;
+    if (mode === 'cascade' && !this._phaseFactory.has('dropStart')) {
+      throw new Error(
+        "spin({ mode: 'cascade' }) requires .cascade(...) on the builder.",
+      );
+    }
+    this._currentSpinMode = mode;
+
     this._isSpinning = true;
     this._wasSkipped = false;
+    this._skipPending = false;
     this._spinStartTime = performance.now();
     this._resultSymbols = null;
     this._anticipationReels = [];
@@ -224,6 +238,10 @@ export class SpinController implements Disposable {
     this._coordinateBigSymbols(symbols, visibleRowsForReel);
     this._resultSymbols = symbols;
     this._tryBeginStopSequence();
+    if (this._skipPending) {
+      this._skipPending = false;
+      this.skip();
+    }
   }
 
   setAnticipation(reelIndices: number[]): void {
@@ -240,6 +258,19 @@ export class SpinController implements Disposable {
    */
   setStopDelays(delays: number[]): void {
     this._stopDelayOverride = [...delays];
+  }
+
+  /**
+   * Slam-stop safe before `setResult()` arrives. Queues until a result is
+   * set, then fires `skip()`. Otherwise equivalent to `skip()`.
+   */
+  requestSkip(): void {
+    if (!this._isSpinning) return;
+    if (this._resultSymbols) {
+      this.skip();
+      return;
+    }
+    this._skipPending = true;
   }
 
   skip(): void {
@@ -285,6 +316,8 @@ export class SpinController implements Disposable {
         }
 
         reel.placeSymbols(decorated[i]);
+        reel.notifySpinEnd();
+        reel.notifyLanded();
         this._markLanded(i);
       }
     } else {
@@ -295,6 +328,8 @@ export class SpinController implements Disposable {
         reel.speed = 0;
         reel.isStopping = false;
         reel.snapToGrid();
+        reel.notifySpinEnd();
+        reel.notifyLanded();
         this._markLanded(i);
       }
     }
@@ -356,8 +391,12 @@ export class SpinController implements Disposable {
 
     const reel = this._reels[reelIndex];
 
+    const phaseKeys = this._currentSpinMode === 'cascade'
+      ? { start: 'dropStart', stop: 'dropStop' }
+      : { start: 'start', stop: 'stop' };
+
     // START → SPIN: chain via phase.run() promises (no busy-polling).
-    const startPhase = this._phaseFactory.create<any>('start', reel, speed);
+    const startPhase = this._phaseFactory.create<any>(phaseKeys.start, reel, speed);
     this._activePhases.set(reelIndex, startPhase);
     await startPhase.run({
       spinningMode: this._spinningMode,
@@ -408,7 +447,7 @@ export class SpinController implements Disposable {
       this._events.emit('spin:stopping', reelIndex);
     }
 
-    const stopPhase = this._phaseFactory.create<any>('stop', reel, speed);
+    const stopPhase = this._phaseFactory.create<any>(phaseKeys.stop, reel, speed);
     this._activePhases.set(reelIndex, stopPhase);
     await stopPhase.run({ targetFrame, delay: stopDelay } as StopPhaseConfig);
     if (generation !== this._spinGeneration) return;
