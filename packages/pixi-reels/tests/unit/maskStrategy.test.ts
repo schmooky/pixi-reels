@@ -186,6 +186,62 @@ describe('mask strategies', () => {
     }
   });
 
+  it('auto-picks SharedRectMaskStrategy when any symbol has unmask: true + symbolGap.x > 0', () => {
+    const consoleInfo = console.info;
+    const captured: unknown[][] = [];
+    console.info = (...args: unknown[]) => { captured.push(args); };
+    try {
+      const reelSet = new ReelSetBuilder()
+        .reels(5)
+        .visibleRows(3)
+        .symbolSize(80, 80)
+        .symbolGap(4, 4)
+        .symbols((r) => {
+          r.register('a', HeadlessSymbol, {});
+          r.register('wild', HeadlessSymbol, {});
+        })
+        .symbolData({ wild: { unmask: true } })
+        .ticker(new FakeTicker() as unknown as Ticker)
+        .build();
+      try {
+        // Single bounding rect ⇒ getLocalBounds covers full viewport.
+        const bounds = reelSet.viewport.maskGraphics.getLocalBounds();
+        const totalW = 5 * (80 + 4) - 4; // 416
+        expect(bounds.width).toBe(totalW);
+        // Console hint surfaced AND mentions the unmask reason.
+        expect(captured.some((args) => {
+          const msg = String(args[0]);
+          return msg.includes('SharedRectMaskStrategy') && msg.includes('unmask');
+        })).toBe(true);
+      } finally {
+        reelSet.destroy();
+      }
+    } finally {
+      console.info = consoleInfo;
+    }
+  });
+
+  it('does NOT auto-pick SharedRectMaskStrategy on unmask if symbolGap.x === 0', () => {
+    const reelSet = new ReelSetBuilder()
+      .reels(5)
+      .visibleRows(3)
+      .symbolSize(80, 80)
+      .symbolGap(0, 4) // zero horizontal gap — per-reel rects are contiguous
+      .symbols((r) => {
+        r.register('a', HeadlessSymbol, {});
+        r.register('wild', HeadlessSymbol, {});
+      })
+      .symbolData({ wild: { unmask: true } })
+      .ticker(new FakeTicker() as unknown as Ticker)
+      .build();
+    try {
+      // Per-reel RectMaskStrategy still in effect (5 rects, one per reel).
+      expect(reelSet.viewport.maskRects).toHaveLength(5);
+    } finally {
+      reelSet.destroy();
+    }
+  });
+
   it('explicit .maskStrategy() always wins over the auto-pick', () => {
     const reelSet = new ReelSetBuilder()
       .reels(5)

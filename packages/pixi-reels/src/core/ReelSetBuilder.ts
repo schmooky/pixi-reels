@@ -548,24 +548,36 @@ export class ReelSetBuilder {
     const viewportWidth = reelCount * (symbolWidth + this._symbolGap.x) - this._symbolGap.x;
     const viewportHeight = tallest;
 
-    // Auto-pick `SharedRectMaskStrategy` when big symbols are registered AND
-    // there's a horizontal gap. The default per-reel mask would clip cross-
-    // reel big symbols at every column gap (visible vertical strips through
-    // the symbol). The shared mask draws one bounding rect so the symbol
-    // stays whole. Explicit `.maskStrategy(...)` calls always win.
+    // Auto-pick `SharedRectMaskStrategy` when the layout has horizontal
+    // gaps AND any registered symbol needs to span across reel boundaries:
+    //
+    //   - **big symbols** (footprint w > 1 or h > 1) — the per-reel mask
+    //     would clip cross-reel big symbols at every column gap (visible
+    //     vertical strips through the symbol), so we share a single mask.
+    //   - **unmasked symbols** (`SymbolData.unmask: true`) — these render
+    //     above the per-reel mask anyway, but neighboring (masked)
+    //     symbols still get clipped at the gap. Players see a
+    //     half-cropped neighbor next to the unmasked overlay. Sharing
+    //     one mask removes the gap stripe.
+    //
+    // Explicit `.maskStrategy(...)` calls always win.
     const hasBigSymbols = Object.values(symbolsData).some(
       (d) => d.size && (d.size.w > 1 || d.size.h > 1),
     );
+    const hasUnmaskedSymbols = Object.values(symbolsData).some((d) => d.unmask);
     if (
       !this._maskStrategyExplicit &&
-      hasBigSymbols &&
+      (hasBigSymbols || hasUnmaskedSymbols) &&
       this._symbolGap.x > 0
     ) {
       this._maskStrategy = new SharedRectMaskStrategy();
       // Heads-up so devs see the auto-pick in their console.
+      const reason = hasBigSymbols
+        ? 'big symbols are registered'
+        : 'one or more symbols use `unmask: true`';
       // eslint-disable-next-line no-console
       console.info(
-        '[pixi-reels] auto-selected SharedRectMaskStrategy because big symbols are registered ' +
+        `[pixi-reels] auto-selected SharedRectMaskStrategy because ${reason} ` +
         'and symbolGap.x > 0. Pass .maskStrategy(...) explicitly to override.',
       );
     }
