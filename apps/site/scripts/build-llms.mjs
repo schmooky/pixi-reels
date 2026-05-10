@@ -82,8 +82,34 @@ async function collectPages() {
       tags: fm.tags ?? [],
       apis: fm.apis ?? [],
       steps: fm.steps ?? [],
+      realGameVideo: extractRealGameVideo(raw),
     });
   }
+  return out;
+}
+
+/**
+ * Pull the nested `realGameVideo` block out of MDX frontmatter. The flat
+ * `parseFrontmatter` above doesn't handle nested objects, so this is a
+ * targeted secondary read for that one known shape:
+ *
+ *   realGameVideo:
+ *     webm: /videos/foo.webm
+ *     mp4:  /videos/foo.mp4   # optional
+ *     caption: Foo Slot by Studio
+ *
+ * Returns null when the block isn't present.
+ */
+function extractRealGameVideo(raw) {
+  const m = raw.match(/^realGameVideo:\s*\n((?:[ \t]+\S[^\n]*\n)+)/m);
+  if (!m) return null;
+  const out = {};
+  for (const line of m[1].split('\n')) {
+    const kv = line.match(/^[ \t]+([A-Za-z][\w-]*):\s*(.+?)\s*$/);
+    if (!kv) continue;
+    out[kv[1]] = kv[2].replace(/^['"]|['"]$/g, '');
+  }
+  if (!out.caption) return null;
   return out;
 }
 
@@ -213,6 +239,11 @@ function render(sections, recipes) {
       if (item.steps.length) {
         lines.push('Steps:');
         for (const s of item.steps) lines.push(`  - ${s}`);
+      }
+      if (item.realGameVideo) {
+        const v = item.realGameVideo;
+        const url = v.webm ?? v.mp4;
+        lines.push(`Real game example: ${v.caption}${url ? ` (${SITE_URL}${url})` : ''}`);
       }
       lines.push('');
     }
