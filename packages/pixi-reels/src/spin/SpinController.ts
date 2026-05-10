@@ -102,6 +102,7 @@ export class SpinController implements Disposable {
   private _activePhases: Map<number, ReelPhase<any>> = new Map();
   private _landedReels = new Set<number>();
   private _wasSkipped = false;
+  private _skipPending = false;
   private _isDestroyed = false;
   private _currentSpinResolve: ((result: SpinResult) => void) | null = null;
   /** Incremented on each new spin. If a callback sees a stale generation, it no-ops. */
@@ -155,6 +156,7 @@ export class SpinController implements Disposable {
 
     this._isSpinning = true;
     this._wasSkipped = false;
+    this._skipPending = false;
     this._spinStartTime = performance.now();
     this._resultSymbols = null;
     this._anticipationReels = [];
@@ -190,6 +192,10 @@ export class SpinController implements Disposable {
     this._coordinateBigSymbols(symbols, visibleRowsForReel);
     this._resultSymbols = symbols;
     this._tryBeginStopSequence();
+    if (this._skipPending) {
+      this._skipPending = false;
+      this.skip();
+    }
   }
 
   setAnticipation(reelIndices: number[]): void {
@@ -203,6 +209,19 @@ export class SpinController implements Disposable {
    */
   setStopDelays(delays: number[]): void {
     this._stopDelayOverride = [...delays];
+  }
+
+  /**
+   * Slam-stop safe before `setResult()` arrives. Queues until a result is
+   * set, then fires `skip()`. Otherwise equivalent to `skip()`.
+   */
+  requestSkip(): void {
+    if (!this._isSpinning) return;
+    if (this._resultSymbols) {
+      this.skip();
+      return;
+    }
+    this._skipPending = true;
   }
 
   skip(): void {
