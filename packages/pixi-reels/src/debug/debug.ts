@@ -126,8 +126,19 @@ export interface RecordedFrame {
   snapshot: DebugSnapshot;
 }
 
+/**
+ * Default upper bound on `_recordedFrames` length. When the buffer fills,
+ * the oldest entries are dropped (rolling window). Override per session
+ * via `startRecording(reelSet, tag, { maxFrames })`. A long-running debug
+ * session in a browser would otherwise grow the array forever.
+ */
+const DEFAULT_MAX_FRAMES = 1000;
+
 /** All captured frames across all recording sessions in this process. */
 const _recordedFrames: RecordedFrame[] = [];
+
+/** Effective per-process cap. Updated when a session starts with a higher value. */
+let _maxFrames = DEFAULT_MAX_FRAMES;
 
 /**
  * Per-recording-session state: which events to listen on and how to
@@ -136,15 +147,25 @@ const _recordedFrames: RecordedFrame[] = [];
  */
 const _recorders = new WeakMap<ReelSet, () => void>();
 
+/** Options for {@link startRecording}. */
+export interface StartRecordingOptions {
+  /**
+   * Maximum number of frames retained across the whole process. When the
+   * buffer is full the oldest frames are dropped. Default 1000.
+   */
+  maxFrames?: number;
+}
+
 /**
  * Start recording the reel-set's frame state at every key spin event
- * (`spin:start`, `spin:allLanded`, `spin:complete`). Each event captures
- * a `DebugSnapshot` and pushes it onto a process-wide log readable via
- * {@link getFrames}.
+ * (`spin:start`, `spin:reelLanded`, `spin:allLanded`, `spin:complete`).
+ * Each event captures a `DebugSnapshot` and pushes it onto a process-
+ * wide rolling log readable via {@link getFrames}.
  *
  * The `tag` is freeform — use it to label multiple recording sessions
  * so you can filter `getFrames(tag)` later. Call {@link stopRecording}
- * to detach the listeners.
+ * to detach the listeners (also fires automatically when the reel set
+ * emits `'destroyed'`).
  *
  * Designed for AI agents and debug harnesses. Calling `startRecording`
  * twice on the same `reelSet` replaces the prior recording (the previous
@@ -159,31 +180,46 @@ const _recorders = new WeakMap<ReelSet, () => void>();
  * const frames = getFrames('spin-1'); // every snapshot tagged 'spin-1'
  * ```
  */
-export function startRecording(reelSet: ReelSet, tag = 'default'): void {
+export function startRecording(
+  reelSet: ReelSet,
+  tag = 'default',
+  options: StartRecordingOptions = {},
+): void {
   // Detach any prior recorder on this reel set first.
   stopRecording(reelSet);
 
-  const triggers = ['spin:start', 'spin:allLanded', 'spin:complete'] as const;
-  const handlers: Array<{ event: string; fn: (...args: unknown[]) => void }> = [];
-
-  for (const event of triggers) {
-    const fn = () => {
-      _recordedFrames.push({
-        tag,
-        trigger: event,
-        snapshot: debugSnapshot(reelSet),
-      });
-    };
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    reelSet.events.on(event as any, fn as any);
-    handlers.push({ event, fn });
+  if (options.maxFrames !== undefined && options.maxFrames > 0) {
+    _maxFrames = options.maxFrames;
   }
 
-  _recorders.set(reelSet, () => {
-    for (const { event, fn } of handlers) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      reelSet.events.off(event as any, fn as any);
+  const capture = (trigger: string): void => {
+    _recordedFrames.push({ tag, trigger, snapshot: debugSnapshot(reelSet) });
+    // Rolling window: drop oldest when over cap.
+    if (_recordedFrames.length > _maxFrames) {
+      _recordedFrames.splice(0, _recordedFrames.length - _maxFrames);
     }
+  };
+
+  const onStart = () => capture('spin:start');
+  const onReelLanded = () => capture('spin:reelLanded');
+  const onAllLanded = () => capture('spin:allLanded');
+  const onComplete = () => capture('spin:complete');
+  // Auto-detach when the reel set is destroyed — otherwise listeners hang
+  // off a dead emitter and the WeakMap entry can't drop until GC.
+  const onDestroyed = () => stopRecording(reelSet);
+
+  reelSet.events.on('spin:start', onStart);
+  reelSet.events.on('spin:reelLanded', onReelLanded);
+  reelSet.events.on('spin:allLanded', onAllLanded);
+  reelSet.events.on('spin:complete', onComplete);
+  reelSet.events.on('destroyed', onDestroyed);
+
+  _recorders.set(reelSet, () => {
+    reelSet.events.off('spin:start', onStart);
+    reelSet.events.off('spin:reelLanded', onReelLanded);
+    reelSet.events.off('spin:allLanded', onAllLanded);
+    reelSet.events.off('spin:complete', onComplete);
+    reelSet.events.off('destroyed', onDestroyed);
   });
 }
 
@@ -258,7 +294,8 @@ export function enableDebug(reelSet: ReelSet): void {
       console.log('[pixi-reels debug] tracing enabled for all events');
     },
     /** Start a frame-state recording session on this reel set. */
-    startRecording: (tag = 'default') => startRecording(reelSet, tag),
+    startRecording: (tag = 'default', options?: StartRecordingOptions) =>
+      startRecording(reelSet, tag, options),
     /** Stop a recording session — paired with `startRecording`. */
     stopRecording: () => stopRecording(reelSet),
     /** Pull recorded frames; pass `tag` to filter to one session. */

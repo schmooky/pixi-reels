@@ -139,6 +139,7 @@ export type {
   DebugSnapshot,
   DebugReelSnapshot,
   RecordedFrame,
+  StartRecordingOptions,
 } from './debug/debug.js';
 
 // Testing utilities (tree-shakeable)
