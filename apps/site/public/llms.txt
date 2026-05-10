@@ -6,7 +6,7 @@ Site: https://pixi-reels.schmooky.dev
 Repo: https://github.com/schmooky/pixi-reels
 Package: https://www.npmjs.com/package/pixi-reels
 
-Generated: 2026-05-10T16:27:19.743Z
+Generated: 2026-05-10T16:41:10.947Z
 
 ## Quick start
 
@@ -537,12 +537,14 @@ Each recipe page on the site renders one of the following TypeScript files. Inli
 URL: https://pixi-reels.schmooky.dev/recipes/anticipate-a-reel/
 ```ts
 // @ts-nocheck
-// Injected: ReelSetBuilder, SpeedPresets, BlurSpriteSymbol, PIXI, gsap,
-//           app, textures, blurTextures, SYMBOL_IDS, pickWeighted
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//                   WILD_CARD, app, pickWeighted
 
-const A = 'round/round_1', B = 'round/round_2', C = 'round/round_3';
-const S = 'feature/feature_1'; // scatter
+const A = '7', B = '8', C = '9';
+const S = 'scatter'; // scatter — registered as a custom card below
 const IDS = [A, B, C, S];
+
+const SCATTER_SYM = { id: S, color: 0xff6b35, label: 'SCAT', textColor: 0xffffff };
 
 // Two scatters on reels 0 and 2 — anticipation holds reels 3 and 4.
 const GRID = [
@@ -559,8 +561,8 @@ const reelSet = new ReelSetBuilder()
   .symbolSize(90, 90)
   .symbolGap(4, 4)
   .symbols(r => {
-    for (const id of IDS) {
-      r.register(id, BlurSpriteSymbol, { textures, blurTextures });
+    for (const sym of [...CARD_DECK, WILD_CARD, SCATTER_SYM]) {
+      r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
     }
   })
   .speed('normal', SpeedPresets.NORMAL)
@@ -850,14 +852,11 @@ return {
 URL: https://pixi-reels.schmooky.dev/recipes/cascade-6x5/
 ```ts
 // @ts-nocheck
-// Injected: ReelSetBuilder, SpeedPresets, SpriteSymbol, DropRecipes, PIXI, gsap,
-//           app, textures, SYMBOL_IDS, pickWeighted,
+// Injected: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, WILD_CARD,
+//           DropRecipes, PIXI, gsap, app, pickWeighted,
 //           runCascade (cascade sequence helper)
 
-const IDS = [
-  'round/round_1', 'round/round_2', 'round/round_3',
-  'royal/royal_1', 'royal/royal_2', 'square/square_1',
-];
+const IDS = ['7', '8', '9', '10', 'J', 'Q'];
 const REELS = 6, ROWS = 4, SIZE = 72;
 
 function randSymbol(exclude) {
@@ -868,7 +867,13 @@ function randSymbol(exclude) {
 
 const reelSet = new ReelSetBuilder()
   .reels(REELS).visibleSymbols(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
-  .symbols(r => { for (const id of IDS) r.register(id, SpriteSymbol, { textures }); })
+  .symbols(r => {
+    for (const sym of CARD_DECK) {
+      if (IDS.includes(sym.id)) {
+        r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
+      }
+    }
+  })
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150 })
   .cascade(DropRecipes.stiffDrop)
   .ticker(app.ticker).build();
@@ -876,7 +881,7 @@ const reelSet = new ReelSetBuilder()
 return {
   reelSet,
   onSpin: async () => {
-    const CLUSTER = 'royal/royal_1';
+    const CLUSTER = '10';
     const HIT_ROW = 2;
     const HIT_COLS = [0, 1, 2];
 
@@ -919,15 +924,12 @@ return {
 URL: https://pixi-reels.schmooky.dev/recipes/cascade-winpresenter/
 ```ts
 // @ts-nocheck
-// Injected: ReelSetBuilder, SpeedPresets, SpriteSymbol, DropRecipes,
-//           WinPresenter, PIXI, gsap, app, textures, pickWeighted, runCascade.
+// Injected: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, WILD_CARD,
+//           DropRecipes, WinPresenter, PIXI, gsap, app, pickWeighted, runCascade.
 
-const IDS = [
-  'round/round_1', 'round/round_2', 'round/round_3',
-  'royal/royal_1', 'royal/royal_2', 'square/square_1',
-];
+const IDS = ['7', '8', '9', '10', 'J', 'Q'];
 const REELS = 6, ROWS = 4, SIZE = 72;
-const CLUSTER = 'royal/royal_1';
+const CLUSTER = '10';
 
 function randSymbol(exclude) {
   let s;
@@ -937,7 +939,13 @@ function randSymbol(exclude) {
 
 const reelSet = new ReelSetBuilder()
   .reels(REELS).visibleSymbols(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
-  .symbols(r => { for (const id of IDS) r.register(id, SpriteSymbol, { textures }); })
+  .symbols(r => {
+    for (const sym of CARD_DECK) {
+      if (IDS.includes(sym.id)) {
+        r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
+      }
+    }
+  })
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150 })
   .cascade(DropRecipes.stiffDrop)
   .ticker(app.ticker).build();
@@ -1023,17 +1031,21 @@ return {
 URL: https://pixi-reels.schmooky.dev/recipes/cell-bounds/
 ```ts
 // @ts-nocheck
-// Injected: ReelSetBuilder, SpeedPresets, BlurSpriteSymbol, PIXI, gsap,
-//           app, textures, blurTextures, SYMBOL_IDS, pickWeighted
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//                   WILD_CARD, PIXI, gsap, app, pickWeighted
 
-const A = 'round/round_1', B = 'round/round_2', C = 'round/round_3';
-const SEVEN = 'royal/royal_1';
+const A = '7', B = '8', C = '9';
+const SEVEN = 'A'; // premium card stand-in for the original royal "seven"
 const IDS = [A, B, C, SEVEN];
 const COLS = 5, ROWS = 3, SIZE = 90;
 
 const reelSet = new ReelSetBuilder()
   .reels(COLS).visibleSymbols(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
-  .symbols(r => { for (const id of IDS) r.register(id, BlurSpriteSymbol, { textures, blurTextures }); })
+  .symbols(r => {
+    for (const sym of [...CARD_DECK, WILD_CARD]) {
+      r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
+    }
+  })
   .weights({ [A]: 10, [B]: 10, [C]: 10, [SEVEN]: 3 })
   .speed('normal', SpeedPresets.NORMAL)
   .ticker(app.ticker).build();
@@ -1102,17 +1114,21 @@ return {
 URL: https://pixi-reels.schmooky.dev/recipes/cell-hit-areas/
 ```ts
 // @ts-nocheck
-// Injected: ReelSetBuilder, SpeedPresets, BlurSpriteSymbol, PIXI, gsap,
-//           app, textures, blurTextures, SYMBOL_IDS, pickWeighted
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//                   WILD_CARD, PIXI, gsap, app, pickWeighted
 
-const A = 'round/round_1', B = 'round/round_2', C = 'round/round_3';
-const SEVEN = 'royal/royal_1';
+const A = '7', B = '8', C = '9';
+const SEVEN = 'A'; // premium card stand-in for the original royal "seven"
 const IDS = [A, B, C, SEVEN];
 const COLS = 5, ROWS = 3, SIZE = 90;
 
 const reelSet = new ReelSetBuilder()
   .reels(COLS).visibleSymbols(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
-  .symbols(r => { for (const id of IDS) r.register(id, BlurSpriteSymbol, { textures, blurTextures }); })
+  .symbols(r => {
+    for (const sym of [...CARD_DECK, WILD_CARD]) {
+      r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
+    }
+  })
   .weights({ [A]: 10, [B]: 10, [C]: 10, [SEVEN]: 3 })
   .speed('normal', SpeedPresets.NORMAL)
   .ticker(app.ticker).build();
@@ -1217,19 +1233,20 @@ return {
 URL: https://pixi-reels.schmooky.dev/recipes/classic-5x3/
 ```ts
 // @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, BlurSpriteSymbol,
-//                   app, textures, blurTextures, SYMBOL_IDS, pickWeighted
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//                   WILD_CARD, app, pickWeighted
 
-const IDS = [
-  'round/round_1', 'round/round_2', 'round/round_3',
-  'royal/royal_1', 'royal/royal_2',
-  'square/square_1', 'wild/wild_1',
-];
+// Cards make a clean prototyping canvas — no asset loading, no motion-blur
+// strip, scales crisply at any cell size. Swap to SpriteSymbol +
+// AnimatedSpriteSymbol when you ship.
+
+const SYMBOLS = [...CARD_DECK, WILD_CARD];
 
 const weights = {
-  'round/round_1': 20, 'round/round_2': 20, 'round/round_3': 20,
-  'royal/royal_1': 14, 'royal/royal_2': 14,
-  'square/square_1': 10, 'wild/wild_1': 3,
+  '7': 20, '8': 20, '9': 20,
+  '10': 14, J: 14,
+  Q: 10, K: 6, A: 5,
+  wild: 3,
 };
 
 const reelSet = new ReelSetBuilder()
@@ -1237,9 +1254,13 @@ const reelSet = new ReelSetBuilder()
   .visibleSymbols(3)
   .symbolSize(90, 90)
   .symbolGap(4, 4)
-  .symbols(r => {
-    for (const id of IDS) {
-      r.register(id, BlurSpriteSymbol, { textures, blurTextures });
+  .symbols((r) => {
+    for (const sym of SYMBOLS) {
+      r.register(sym.id, CardSymbol, {
+        color: sym.color,
+        label: sym.label,
+        textColor: sym.textColor,
+      });
     }
   })
   .weights(weights)
@@ -1252,7 +1273,7 @@ return {
   reelSet,
   nextResult: () =>
     Array.from({ length: 5 }, () =>
-      Array.from({ length: 3 }, () => pickWeighted(weights))
+      Array.from({ length: 3 }, () => pickWeighted(weights)),
     ),
 };
 ```
@@ -1261,8 +1282,8 @@ return {
 URL: https://pixi-reels.schmooky.dev/recipes/collector-symbol-pin/
 ```ts
 // @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, BlurSpriteSymbol, PIXI, gsap,
-//                   app, textures, blurTextures, SYMBOL_IDS, pickWeighted, EmptySymbol
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//                   WILD_CARD, PIXI, gsap, app, pickWeighted, EmptySymbol
 //
 // Collector symbol on a Hold & Win board.
 //
@@ -1272,11 +1293,15 @@ URL: https://pixi-reels.schmooky.dev/recipes/collector-symbol-pin/
 // its own pin payload. Absorbed coins are unpinned — they "fly" to the
 // collector conceptually, though here we just update badges.
 
-const COIN = 'feature/feature_1';
-const COLLECTOR = 'wild/wild_1';
+const COIN = 'coin';
+const COLLECTOR = 'collector';
 const EMPTY = 'empty';
 const COLS = 5, ROWS = 3, CELL = 60, GAP = 4;
 const COIN_VALUES = [10, 25, 50, 100];
+
+// Thematic cards for this recipe — gold coin, purple collector.
+const COIN_CARD = { id: COIN, color: 0xf1c40f, label: 'COIN', textColor: 0x6b5400 };
+const COLLECTOR_CARD = { id: COLLECTOR, color: 0x9b59b6, label: 'COLL', textColor: 0xffffff };
 
 const colWidth = COLS * (CELL + GAP) - GAP;
 const colHeight = ROWS * (CELL + GAP) - GAP;
@@ -1290,8 +1315,8 @@ for (let col = 0; col < COLS; col++) {
       .reels(1).visibleSymbols(1)
       .symbolSize(CELL, CELL).symbolGap(0, 0)
       .symbols((r) => {
-        r.register(COIN, BlurSpriteSymbol, { textures, blurTextures });
-        r.register(COLLECTOR, BlurSpriteSymbol, { textures, blurTextures });
+        r.register(COIN, CardSymbol, { color: COIN_CARD.color, label: COIN_CARD.label, textColor: COIN_CARD.textColor });
+        r.register(COLLECTOR, CardSymbol, { color: COLLECTOR_CARD.color, label: COLLECTOR_CARD.label, textColor: COLLECTOR_CARD.textColor });
         r.register(EMPTY, EmptySymbol, {});
       })
       .weights({ [COIN]: 2, [COLLECTOR]: 1, [EMPTY]: 6 })
@@ -1462,16 +1487,16 @@ return {
 URL: https://pixi-reels.schmooky.dev/recipes/expanding-wild-pin/
 ```ts
 // @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, BlurSpriteSymbol, PIXI, gsap,
-//                   app, textures, blurTextures, SYMBOL_IDS, pickWeighted
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//                   WILD_CARD, PIXI, gsap, app, pickWeighted
 //
 // Expanding wild — when a wild lands, fill its entire column with wild
 // and keep the expansion for N spins. Each column-fill pin has `turns: 3`,
 // so the expanded column sticks around for three more spins before the
 // engine auto-expires the fill.
 
-const FILLER = ['round/round_1', 'round/round_2', 'royal/royal_1', 'square/square_1'];
-const WILD = 'wild/wild_1';
+const FILLER = ['7', '8', '10', 'Q'];
+const WILD = WILD_CARD.id;
 const COLS = 5, ROWS = 3, SIZE = 90;
 const STICKY_TURNS = 3;
 
@@ -1481,15 +1506,15 @@ const reelSet = new ReelSetBuilder()
   .symbolSize(SIZE, SIZE)
   .symbolGap(4, 4)
   .symbols((r) => {
-    for (const id of [...FILLER, WILD]) {
-      r.register(id, BlurSpriteSymbol, { textures, blurTextures });
+    for (const sym of [...CARD_DECK, WILD_CARD]) {
+      r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
     }
   })
   .weights({
-    'round/round_1': 22,
-    'round/round_2': 22,
-    'royal/royal_1': 18,
-    'square/square_1': 18,
+    '7': 22,
+    '8': 22,
+    '10': 18,
+    Q: 18,
   })
   .speed('normal', SpeedPresets.NORMAL)
   .speed('turbo', SpeedPresets.TURBO)
@@ -1539,8 +1564,8 @@ return {
 URL: https://pixi-reels.schmooky.dev/recipes/feature-mode-swap/
 ```ts
 // @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, BlurSpriteSymbol, PIXI, gsap,
-//                   app, textures, blurTextures, SYMBOL_IDS, pickWeighted
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//                   WILD_CARD, PIXI, gsap, app, pickWeighted
 //
 // Feature mode entry via runtime frame middleware.
 //
@@ -1553,8 +1578,8 @@ URL: https://pixi-reels.schmooky.dev/recipes/feature-mode-swap/
 // A large banner above the grid shows the current mode and the spin
 // counter, making the mode change and its payoff obvious at a glance.
 
-const FILLER = ['round/round_1', 'round/round_2', 'royal/royal_1', 'square/square_1'];
-const WILD = 'wild/wild_1';
+const FILLER = ['7', '8', '10', 'Q'];
+const WILD = WILD_CARD.id;
 const COLS = 5, ROWS = 3, SIZE = 90;
 
 const reelSet = new ReelSetBuilder()
@@ -1563,15 +1588,15 @@ const reelSet = new ReelSetBuilder()
   .symbolSize(SIZE, SIZE)
   .symbolGap(4, 4)
   .symbols((r) => {
-    for (const id of [...FILLER, WILD]) {
-      r.register(id, BlurSpriteSymbol, { textures, blurTextures });
+    for (const sym of [...CARD_DECK, WILD_CARD]) {
+      r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
     }
   })
   .weights({
-    'round/round_1': 25,
-    'round/round_2': 25,
-    'royal/royal_1': 20,
-    'square/square_1': 20,
+    '7': 25,
+    '8': 25,
+    '10': 20,
+    'Q': 20,
   })
   .speed('normal', SpeedPresets.NORMAL)
   .speed('turbo', SpeedPresets.TURBO)
@@ -1791,11 +1816,11 @@ return {
 URL: https://pixi-reels.schmooky.dev/recipes/hold-and-win/
 ```ts
 // @ts-nocheck
-// Injected: ReelSetBuilder, SpeedPresets, BlurSpriteSymbol, PIXI, gsap,
-//           app, textures, blurTextures, SYMBOL_IDS, pickWeighted,
+// Injected: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, WILD_CARD,
+//           PIXI, gsap, app, pickWeighted,
 //           EmptySymbol (blank ReelSymbol — renders nothing, used for miss cells)
 
-const COIN = 'feature/feature_1';
+const COIN = 'wild';
 const EMPTY = 'empty';
 const COLS = 5, ROWS = 3, CELL = 60, GAP = 4;
 
@@ -1812,7 +1837,11 @@ for (let col = 0; col < COLS; col++) {
       .reels(1).visibleSymbols(1)
       .symbolSize(CELL, CELL).symbolGap(0, 0)
       .symbols(r => {
-        r.register(COIN, BlurSpriteSymbol, { textures, blurTextures });
+        r.register(COIN, CardSymbol, {
+          color: WILD_CARD.color,
+          label: WILD_CARD.label,
+          textColor: WILD_CARD.textColor,
+        });
         r.register(EMPTY, EmptySymbol, {});
       })
       // Mostly empty so coins flash past during the spin animation.
@@ -1836,6 +1865,33 @@ const rounds = [
 
 const heldKeys = new Set();
 const overlays = [];
+
+// Build a held-coin overlay matching the WILD card visual (no texture
+// needed — cards are pure Graphics).
+function makeCoinOverlay() {
+  const g = new PIXI.Container();
+  const rect = new PIXI.Graphics();
+  rect.rect(0, 0, CELL - 8, CELL - 8).fill({ color: WILD_CARD.color });
+  rect.rect(1, 1, CELL - 10, CELL - 10).stroke({ color: 0x000000, width: 2, alpha: 0.25 });
+  const label = new PIXI.Text({
+    text: WILD_CARD.label,
+    style: {
+      fontFamily:
+        '"Roboto Condensed", "Arial Narrow", "Helvetica Neue Condensed", "Liberation Sans Narrow", system-ui, sans-serif',
+      fontSize: Math.floor((CELL - 8) * 0.32),
+      fontWeight: '700',
+      fill: WILD_CARD.textColor,
+      align: 'center',
+    },
+  });
+  label.anchor.set(0.5);
+  label.x = (CELL - 8) / 2;
+  label.y = (CELL - 8) / 2;
+  g.addChild(rect);
+  g.addChild(label);
+  g.pivot.set((CELL - 8) / 2, (CELL - 8) / 2);
+  return g;
+}
 
 return {
   cleanup: () => {
@@ -1867,22 +1923,19 @@ return {
       await Promise.all(spinPromises);
 
       // Lock in hits with a coin overlay sprite; hide their mini reel.
-      const coinTex = textures[COIN];
       for (const cell of activeCells) {
         const key = `${cell.col},${cell.row}`;
         if (!hits.some(h => h.col === cell.col && h.row === cell.row)) continue;
-        const s = (CELL - 8) / Math.max(coinTex.width, coinTex.height);
-        const overlay = new PIXI.Sprite(coinTex);
-        overlay.anchor.set(0.5);
+        const overlay = makeCoinOverlay();
         overlay.x = cell.reelSet.x + CELL / 2;
         overlay.y = cell.reelSet.y + CELL / 2;
         overlay.alpha = 0;
-        overlay.scale.set(s * 1.4);
+        overlay.scale.set(1.4);
         app.stage.addChild(overlay);
         overlays.push(overlay);
         heldKeys.add(key);
         gsap.to(overlay, { alpha: 1, duration: 0.22 });
-        gsap.to(overlay.scale, { x: s, y: s, duration: 0.35, ease: 'back.out(2)' });
+        gsap.to(overlay.scale, { x: 1, y: 1, duration: 0.35, ease: 'back.out(2)' });
         cell.reelSet.visible = false;
       }
 
@@ -1896,8 +1949,8 @@ return {
 URL: https://pixi-reels.schmooky.dev/recipes/multiplier-wild-pin/
 ```ts
 // @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, BlurSpriteSymbol, PIXI, gsap,
-//                   app, textures, blurTextures, SYMBOL_IDS, pickWeighted
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//                   WILD_CARD, PIXI, gsap, app, pickWeighted
 //
 // Multiplier wild — the wild carries a per-instance multiplier value.
 //
@@ -1907,8 +1960,8 @@ URL: https://pixi-reels.schmooky.dev/recipes/multiplier-wild-pin/
 // We overlay the multiplier value as a PIXI text badge on top of the symbol
 // sprite whenever a multiplier wild is pinned or repositioned.
 
-const FILLER = ['round/round_1', 'round/round_2', 'royal/royal_1', 'square/square_1'];
-const WILD = 'wild/wild_1';
+const FILLER = ['7', '8', '10', 'Q'];
+const WILD = WILD_CARD.id;
 const COLS = 5, ROWS = 3, SIZE = 90;
 const MULTIPLIERS = [2, 3, 5];
 const STICKY_TURNS = 3;
@@ -1919,15 +1972,15 @@ const reelSet = new ReelSetBuilder()
   .symbolSize(SIZE, SIZE)
   .symbolGap(4, 4)
   .symbols((r) => {
-    for (const id of [...FILLER, WILD]) {
-      r.register(id, BlurSpriteSymbol, { textures, blurTextures });
+    for (const sym of [...CARD_DECK, WILD_CARD]) {
+      r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
     }
   })
   .weights({
-    'round/round_1': 22,
-    'round/round_2': 22,
-    'royal/royal_1': 18,
-    'square/square_1': 18,
+    '7': 22,
+    '8': 22,
+    '10': 18,
+    Q: 18,
   })
   .speed('normal', SpeedPresets.NORMAL)
   .speed('turbo', SpeedPresets.TURBO)
@@ -1953,7 +2006,7 @@ function clearBadge(col, row) {
 function drawBadge(col, row, multiplier) {
   clearBadge(col, row);
   const badge = new PIXI.Text({
-    text: `×${multiplier}`,
+    text: `x${multiplier}`,
     style: {
       fontFamily: 'system-ui, sans-serif',
       fontSize: 22,
@@ -2144,8 +2197,8 @@ return {
 URL: https://pixi-reels.schmooky.dev/recipes/mystery-reveal-pin/
 ```ts
 // @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, BlurSpriteSymbol, PIXI, gsap,
-//                   app, textures, blurTextures, SYMBOL_IDS, pickWeighted
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//                   WILD_CARD, PIXI, gsap, app, pickWeighted
 //
 // Mystery symbol (reveal-to-same-class) using CellPin with `turns: 'eval'`.
 //
@@ -2153,10 +2206,13 @@ URL: https://pixi-reels.schmooky.dev/recipes/mystery-reveal-pin/
 // it at each mystery cell with `turns: 'eval'`. The pins are cleared
 // automatically at the next spin:start — no manual cleanup.
 
-const FILLER = ['round/round_1', 'round/round_2', 'royal/royal_1', 'square/square_1'];
-const MYSTERY = 'wild/wild_1'; // sprite stands in for a "?" mystery icon
+const FILLER = ['7', '8', '10', 'Q'];
+const MYSTERY = 'mystery';
 const REVEAL_CANDIDATES = FILLER; // mystery can reveal to any filler
 const COLS = 5, ROWS = 3, SIZE = 90;
+
+// Dark slate card with a "?" label so the mystery cell is unmistakable.
+const MYSTERY_CARD = { id: MYSTERY, color: 0x34495e, label: '?', textColor: 0xffffff };
 
 const reelSet = new ReelSetBuilder()
   .reels(COLS)
@@ -2164,15 +2220,15 @@ const reelSet = new ReelSetBuilder()
   .symbolSize(SIZE, SIZE)
   .symbolGap(4, 4)
   .symbols((r) => {
-    for (const id of [...FILLER, MYSTERY]) {
-      r.register(id, BlurSpriteSymbol, { textures, blurTextures });
+    for (const sym of [...CARD_DECK, MYSTERY_CARD]) {
+      r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
     }
   })
   .weights({
-    'round/round_1': 22,
-    'round/round_2': 22,
-    'royal/royal_1': 18,
-    'square/square_1': 18,
+    '7': 22,
+    '8': 22,
+    '10': 18,
+    Q: 18,
   })
   .speed('normal', SpeedPresets.NORMAL)
   .speed('turbo', SpeedPresets.TURBO)
@@ -2224,12 +2280,14 @@ return {
 URL: https://pixi-reels.schmooky.dev/recipes/near-miss/
 ```ts
 // @ts-nocheck
-// Injected: ReelSetBuilder, SpeedPresets, BlurSpriteSymbol, PIXI, gsap,
-//           app, textures, blurTextures, SYMBOL_IDS, pickWeighted
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//                   WILD_CARD, app, pickWeighted
 
-const A = 'round/round_1', B = 'round/round_2', C = 'round/round_3';
-const S = 'feature/feature_1'; // scatter
+const A = '7', B = '8', C = '9';
+const S = 'scatter'; // scatter — registered as a custom card below
 const IDS = [A, B, C, S];
+
+const SCATTER_SYM = { id: S, color: 0xff6b35, label: 'SCAT', textColor: 0xffffff };
 
 // Two scatters on reels 0 and 2; reel 4 has none — classic near-miss.
 const GRID = [
@@ -2246,8 +2304,8 @@ const reelSet = new ReelSetBuilder()
   .symbolSize(90, 90)
   .symbolGap(4, 4)
   .symbols(r => {
-    for (const id of IDS) {
-      r.register(id, BlurSpriteSymbol, { textures, blurTextures });
+    for (const sym of [...CARD_DECK, WILD_CARD, SCATTER_SYM]) {
+      r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
     }
   })
   .speed('normal', SpeedPresets.NORMAL)
@@ -2271,11 +2329,11 @@ return {
 URL: https://pixi-reels.schmooky.dev/recipes/paylines-custom-animation/
 ```ts
 // @ts-nocheck
-// Injected: ReelSetBuilder, SpeedPresets, BlurSpriteSymbol, WinPresenter,
-//           PIXI, gsap, app, textures, blurTextures.
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//                   WILD_CARD, WinPresenter, PIXI, gsap, app, pickWeighted
 
-const A = 'round/round_1', B = 'round/round_2', C = 'round/round_3';
-const SEVEN = 'royal/royal_1';
+const A = '7', B = '8', C = '9';
+const SEVEN = 'A'; // premium card stand-in for the original royal "seven"
 const IDS = [A, B, C, SEVEN];
 const COLS = 5, ROWS = 3, SIZE = 90;
 
@@ -2291,7 +2349,11 @@ const WINS = [0, 1, 2].map((row) => ({
 
 const reelSet = new ReelSetBuilder()
   .reels(COLS).visibleSymbols(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
-  .symbols(r => { for (const id of IDS) r.register(id, BlurSpriteSymbol, { textures, blurTextures }); })
+  .symbols(r => {
+    for (const sym of [...CARD_DECK, WILD_CARD]) {
+      r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
+    }
+  })
   .speed('normal', SpeedPresets.NORMAL).speed('turbo', SpeedPresets.TURBO)
   .ticker(app.ticker).build();
 
@@ -2348,15 +2410,15 @@ return {
 URL: https://pixi-reels.schmooky.dev/recipes/paylines-events-only/
 ```ts
 // @ts-nocheck
-// Injected: ReelSetBuilder, SpeedPresets, BlurSpriteSymbol, WinPresenter,
-//           PIXI, gsap, app, textures, blurTextures.
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//                   WILD_CARD, WinPresenter, PIXI, gsap, app, pickWeighted
 //
 // This recipe shows the "events + getCellBounds" path: WinPresenter only
 // animates symbols; you draw every per-win visual (lines, outlines,
 // numbers) yourself by subscribing to `win:group` / `win:symbol`.
 
-const A = 'round/round_1', B = 'round/round_2', C = 'round/round_3';
-const SEVEN = 'royal/royal_1';
+const A = '7', B = '8', C = '9';
+const SEVEN = 'A'; // premium card stand-in for the original royal "seven"
 const IDS = [A, B, C, SEVEN];
 const COLS = 5, ROWS = 3, SIZE = 90;
 
@@ -2374,7 +2436,11 @@ const LINE_COLORS = [0xffe04a, 0x33d1ff, 0xff7aa2];
 
 const reelSet = new ReelSetBuilder()
   .reels(COLS).visibleSymbols(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
-  .symbols(r => { for (const id of IDS) r.register(id, BlurSpriteSymbol, { textures, blurTextures }); })
+  .symbols(r => {
+    for (const sym of [...CARD_DECK, WILD_CARD]) {
+      r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
+    }
+  })
   .speed('normal', SpeedPresets.NORMAL).speed('turbo', SpeedPresets.TURBO)
   .ticker(app.ticker).build();
 
@@ -2443,8 +2509,8 @@ return {
 URL: https://pixi-reels.schmooky.dev/recipes/positional-multiplier-pin/
 ```ts
 // @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, BlurSpriteSymbol, PIXI, gsap,
-//                   app, textures, blurTextures, SYMBOL_IDS, pickWeighted
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//                   WILD_CARD, PIXI, gsap, app, pickWeighted
 //
 // Positional multiplier cells (Gonzo's Quest / Irish Riches style).
 //
@@ -2459,7 +2525,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/positional-multiplier-pin/
 // badge display stays correct. (A cleaner CellDecorator primitive would
 // avoid this mirror dance, but it isn't required.)
 
-const FILLER = ['round/round_1', 'round/round_2', 'royal/royal_1', 'square/square_1'];
+const FILLER = ['7', '8', '10', 'Q'];
 const COLS = 5, ROWS = 3, SIZE = 90;
 
 // Define fixed multiplier positions for this demo. In a real game, these
@@ -2476,15 +2542,15 @@ const reelSet = new ReelSetBuilder()
   .symbolSize(SIZE, SIZE)
   .symbolGap(4, 4)
   .symbols((r) => {
-    for (const id of FILLER) {
-      r.register(id, BlurSpriteSymbol, { textures, blurTextures });
+    for (const sym of CARD_DECK) {
+      r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
     }
   })
   .weights({
-    'round/round_1': 30,
-    'round/round_2': 30,
-    'royal/royal_1': 20,
-    'square/square_1': 20,
+    '7': 30,
+    '8': 30,
+    '10': 20,
+    Q: 20,
   })
   .speed('normal', SpeedPresets.NORMAL)
   .speed('turbo', SpeedPresets.TURBO)
@@ -2508,7 +2574,7 @@ for (const cell of MULTIPLIER_CELLS) {
   badgeLayer.addChild(ring);
 
   const badge = new PIXI.Text({
-    text: `×${cell.mult}`,
+    text: `x${cell.mult}`,
     style: {
       fontFamily: 'system-ui, sans-serif',
       fontSize: 22,
@@ -2597,12 +2663,12 @@ return {
 URL: https://pixi-reels.schmooky.dev/recipes/remove-symbol/
 ```ts
 // @ts-nocheck
-// Injected: ReelSetBuilder, SpeedPresets, BlurSpriteSymbol, PIXI, gsap,
-//           app, textures, blurTextures, SYMBOL_IDS, pickWeighted,
+// Injected: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, WILD_CARD,
+//           PIXI, gsap, app, pickWeighted,
 //           runCascade, tumbleToGrid (cascade helpers)
 
-const A = 'round/round_1', B = 'round/round_2', C = 'round/round_3';
-const X = 'feature/feature_1'; // the winner that vanishes
+const A = '7', B = '8', C = '9';
+const X = 'wild'; // the winner that vanishes
 const IDS = [A, B, C, X];
 const REELS = 4, ROWS = 3, SIZE = 90;
 
@@ -2621,7 +2687,13 @@ const AFTER = [
 
 const reelSet = new ReelSetBuilder()
   .reels(REELS).visibleSymbols(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
-  .symbols(r => { for (const id of IDS) r.register(id, BlurSpriteSymbol, { textures, blurTextures }); })
+  .symbols(r => {
+    for (const sym of [...CARD_DECK, WILD_CARD]) {
+      if (IDS.includes(sym.id)) {
+        r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
+      }
+    }
+  })
   .speed('normal', SpeedPresets.NORMAL).speed('turbo', SpeedPresets.TURBO)
   .ticker(app.ticker).build();
 
@@ -2653,11 +2725,11 @@ return {
 URL: https://pixi-reels.schmooky.dev/recipes/slam-stop/
 ```ts
 // @ts-nocheck
-// Injected: ReelSetBuilder, SpeedPresets, BlurSpriteSymbol, PIXI, gsap,
-//           app, textures, blurTextures, SYMBOL_IDS, pickWeighted
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//                   WILD_CARD, app, pickWeighted
 
-const A = 'round/round_1', B = 'round/round_2', C = 'round/round_3';
-const SEVEN = 'royal/royal_1';
+const A = '7', B = '8', C = '9';
+const SEVEN = 'A'; // premium card stand-in for the original royal "seven"
 const IDS = [A, B, C, SEVEN];
 
 const GRID = [
@@ -2674,8 +2746,8 @@ const reelSet = new ReelSetBuilder()
   .symbolSize(90, 90)
   .symbolGap(4, 4)
   .symbols(r => {
-    for (const id of IDS) {
-      r.register(id, BlurSpriteSymbol, { textures, blurTextures });
+    for (const sym of [...CARD_DECK, WILD_CARD]) {
+      r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
     }
   })
   .speed('normal', SpeedPresets.NORMAL)
@@ -2702,9 +2774,8 @@ return {
 URL: https://pixi-reels.schmooky.dev/recipes/spin-then-cascade/
 ```ts
 // @ts-nocheck
-// Injected: ReelSetBuilder, SpeedPresets, BlurSpriteSymbol, SpriteSymbol,
-//           DropRecipes, PIXI, gsap, app, textures, blurTextures, SYMBOL_IDS,
-//           runCascade, pickWeighted
+// Injected: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, WILD_CARD,
+//           DropRecipes, PIXI, gsap, app, runCascade, pickWeighted
 
 // Hybrid spin-then-cascade: the FIRST round of every play spins like a
 // classic strip slot (top-to-bottom motion, START → SPIN → STOP). If the
@@ -2719,10 +2790,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/spin-then-cascade/
 //   await reelSet.spin();                  // builder default ('standard')
 //   await reelSet.spin({ mode: 'cascade' }); // override for one round
 
-const IDS = [
-  'round/round_1', 'round/round_2', 'round/round_3',
-  'royal/royal_1', 'royal/royal_2', 'square/square_1',
-];
+const IDS = ['7', '8', '9', '10', 'J', 'Q'];
 const REELS = 5, ROWS = 3, SIZE = 80;
 
 function randSymbol(exclude) {
@@ -2734,7 +2802,11 @@ function randSymbol(exclude) {
 const reelSet = new ReelSetBuilder()
   .reels(REELS).visibleSymbols(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
   .symbols((r) => {
-    for (const id of IDS) r.register(id, BlurSpriteSymbol, { textures, blurTextures });
+    for (const sym of CARD_DECK) {
+      if (IDS.includes(sym.id)) {
+        r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
+      }
+    }
   })
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 120 })
   // .cascade() registers the dropStart/dropStop phases. Without it,
@@ -2773,7 +2845,7 @@ return {
       Array.from({ length: ROWS }, () => randSymbol(null)),
     );
     // Force a triggering cluster on row 1 cols 1-3 to keep the demo loud.
-    const TRIGGER = 'royal/royal_1';
+    const TRIGGER = '10';
     const HIT_ROW = 1;
     const HIT_COLS = [1, 2, 3];
     for (const c of HIT_COLS) initial[c][HIT_ROW] = TRIGGER;
@@ -3099,8 +3171,8 @@ return {
 URL: https://pixi-reels.schmooky.dev/recipes/sticky-wild-pin/
 ```ts
 // @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, BlurSpriteSymbol, PIXI, gsap,
-//                   app, textures, blurTextures, SYMBOL_IDS, pickWeighted
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//                   WILD_CARD, PIXI, gsap, app, pickWeighted
 //
 // Sticky wild — CellPin edition.
 //
@@ -3111,8 +3183,8 @@ URL: https://pixi-reels.schmooky.dev/recipes/sticky-wild-pin/
 //
 // No ghost sprites. No external state. No grid re-injection.
 
-const FILLER = ['round/round_1', 'round/round_2', 'royal/royal_1', 'square/square_1'];
-const WILD = 'wild/wild_1';
+const FILLER = ['7', '8', '10', 'Q'];
+const WILD = WILD_CARD.id;
 const COLS = 5, ROWS = 3, SIZE = 90;
 const STICKY_TURNS = 3;
 
@@ -3122,15 +3194,15 @@ const reelSet = new ReelSetBuilder()
   .symbolSize(SIZE, SIZE)
   .symbolGap(4, 4)
   .symbols((r) => {
-    for (const id of [...FILLER, WILD]) {
-      r.register(id, BlurSpriteSymbol, { textures, blurTextures });
+    for (const sym of [...CARD_DECK, WILD_CARD]) {
+      r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
     }
   })
   .weights({
-    'round/round_1': 22,
-    'round/round_2': 22,
-    'royal/royal_1': 18,
-    'square/square_1': 18,
+    '7': 22,
+    '8': 22,
+    '10': 18,
+    Q: 18,
   })
   .speed('normal', SpeedPresets.NORMAL)
   .speed('turbo', SpeedPresets.TURBO)
@@ -3180,8 +3252,8 @@ return {
 URL: https://pixi-reels.schmooky.dev/recipes/sticky-win-respin-pin/
 ```ts
 // @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, BlurSpriteSymbol, PIXI, gsap,
-//                   app, textures, blurTextures, SYMBOL_IDS, pickWeighted
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//                   WILD_CARD, PIXI, gsap, app, pickWeighted
 //
 // Sticky-win respin (Dead or Alive II / Razor Shark mechanic).
 //
@@ -3193,7 +3265,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/sticky-win-respin-pin/
 // CellPin with numeric `turns` provides the lock lifecycle for free.
 // Simple "any 3 in a row" counts as a win for this demo.
 
-const FILLER = ['round/round_1', 'round/round_2', 'royal/royal_1', 'square/square_1'];
+const FILLER = ['7', '8', '10', 'Q'];
 const COLS = 5, ROWS = 3, SIZE = 90;
 const RESPIN_WINDOW = 2; // symbol stays pinned for 2 additional respins
 
@@ -3203,15 +3275,15 @@ const reelSet = new ReelSetBuilder()
   .symbolSize(SIZE, SIZE)
   .symbolGap(4, 4)
   .symbols((r) => {
-    for (const id of FILLER) {
-      r.register(id, BlurSpriteSymbol, { textures, blurTextures });
+    for (const sym of CARD_DECK) {
+      r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
     }
   })
   .weights({
-    'round/round_1': 30,
-    'round/round_2': 30,
-    'royal/royal_1': 20,
-    'square/square_1': 20,
+    '7': 30,
+    '8': 30,
+    '10': 20,
+    Q: 20,
   })
   .speed('normal', SpeedPresets.NORMAL)
   .speed('turbo', SpeedPresets.TURBO)
@@ -3285,9 +3357,9 @@ const scripts = [
     const g = Array.from({ length: COLS }, () =>
       Array.from({ length: ROWS }, () => FILLER[Math.floor(Math.random() * FILLER.length)]),
     );
-    g[0][1] = 'royal/royal_1';
-    g[1][1] = 'royal/royal_1';
-    g[2][1] = 'royal/royal_1';
+    g[0][1] = '10';
+    g[1][1] = '10';
+    g[2][1] = '10';
     return g;
   },
   // Spin 2: respin — winners are still pinned, non-winners get fresh symbols
@@ -3318,26 +3390,32 @@ return {
 URL: https://pixi-reels.schmooky.dev/recipes/symbol-transform/
 ```ts
 // @ts-nocheck
-// Injected: ReelSetBuilder, SpeedPresets, BlurSpriteSymbol, PIXI, gsap,
-//           app, textures, blurTextures, SYMBOL_IDS, pickWeighted
+// Injected: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, WILD_CARD,
+//           PIXI, gsap, app, pickWeighted
 
-const LOW = ['round/round_1', 'round/round_2', 'round/round_3'];
-const HIGH = ['royal/royal_1', 'royal/royal_2'];
+const LOW = ['7', '8', '9'];
+const HIGH = ['10', 'J'];
 const IDS = [...LOW, ...HIGH];
 const COLS = 5, ROWS = 3, CELL = 90;
 
 // Predictable grid — always has low-pays to upgrade.
 const GRID = [
-  ['round/round_1', 'round/round_2', 'round/round_1'],
-  ['round/round_2', 'round/round_3', 'royal/royal_1'],
-  ['round/round_3', 'round/round_1', 'round/round_2'],
-  ['royal/royal_2', 'round/round_2', 'round/round_3'],
-  ['round/round_1', 'round/round_3', 'round/round_2'],
+  ['7', '8', '7'],
+  ['8', '9', '10'],
+  ['9', '7', '8'],
+  ['J', '8', '9'],
+  ['7', '9', '8'],
 ];
 
 const reelSet = new ReelSetBuilder()
   .reels(COLS).visibleSymbols(ROWS).symbolSize(CELL, CELL).symbolGap(4, 4)
-  .symbols(r => { for (const id of IDS) r.register(id, BlurSpriteSymbol, { textures, blurTextures }); })
+  .symbols(r => {
+    for (const sym of CARD_DECK) {
+      if (IDS.includes(sym.id)) {
+        r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
+      }
+    }
+  })
   .speed('normal', SpeedPresets.NORMAL).speed('turbo', SpeedPresets.TURBO)
   .ticker(app.ticker).build();
 
@@ -3439,8 +3517,8 @@ return {
 URL: https://pixi-reels.schmooky.dev/recipes/value-coin-pin/
 ```ts
 // @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, BlurSpriteSymbol, PIXI, gsap,
-//                   app, textures, blurTextures, SYMBOL_IDS, pickWeighted, EmptySymbol
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//                   WILD_CARD, PIXI, gsap, app, pickWeighted, EmptySymbol
 //
 // Hold & Win with CellPin.
 //
@@ -3450,10 +3528,13 @@ URL: https://pixi-reels.schmooky.dev/recipes/value-coin-pin/
 // subsequent rounds — the engine keeps showing the coin, its payload is
 // readable from `reelSet.pins`, and the running total updates live.
 
-const COIN = 'feature/feature_1';
+const COIN = 'coin';
 const EMPTY = 'empty';
 const COLS = 5, ROWS = 3, CELL = 60, GAP = 4;
 const COIN_VALUES = [10, 25, 50, 100];
+
+// Coin card definition — distinctive gold so it stands out against empty cells.
+const COIN_CARD = { id: COIN, color: 0xf1c40f, label: 'COIN', textColor: 0x6b5400 };
 
 // Build 15 independent 1×1 ReelSets — one per cell.
 const colWidth = COLS * (CELL + GAP) - GAP;
@@ -3468,7 +3549,7 @@ for (let col = 0; col < COLS; col++) {
       .reels(1).visibleSymbols(1)
       .symbolSize(CELL, CELL).symbolGap(0, 0)
       .symbols((r) => {
-        r.register(COIN, BlurSpriteSymbol, { textures, blurTextures });
+        r.register(COIN, CardSymbol, { color: COIN_CARD.color, label: COIN_CARD.label, textColor: COIN_CARD.textColor });
         r.register(EMPTY, EmptySymbol, {});
       })
       .weights({ [COIN]: 1, [EMPTY]: 3 })
@@ -3608,8 +3689,8 @@ return {
 URL: https://pixi-reels.schmooky.dev/recipes/walking-wild-pin/
 ```ts
 // @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, BlurSpriteSymbol, PIXI, gsap,
-//                   app, textures, blurTextures, SYMBOL_IDS, pickWeighted
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//                   WILD_CARD, PIXI, gsap, app, pickWeighted
 //
 // Walking wild — CellPin.movePin() edition.
 //
@@ -3619,8 +3700,8 @@ URL: https://pixi-reels.schmooky.dev/recipes/walking-wild-pin/
 // it back to the pool. State is atomic; the pin coordinates in the map flip
 // before the animation starts.
 
-const FILLER = ['round/round_1', 'round/round_2', 'royal/royal_1', 'square/square_1'];
-const WILD = 'wild/wild_1';
+const FILLER = ['7', '8', '10', 'Q'];
+const WILD = WILD_CARD.id;
 const COLS = 5, ROWS = 3, SIZE = 90;
 
 const reelSet = new ReelSetBuilder()
@@ -3629,16 +3710,13 @@ const reelSet = new ReelSetBuilder()
   .symbolSize(SIZE, SIZE)
   .symbolGap(4, 4)
   .symbols((r) => {
-    for (const id of [...FILLER, WILD]) {
-      r.register(id, BlurSpriteSymbol, { textures, blurTextures });
+    for (const sym of [...CARD_DECK, WILD_CARD]) {
+      r.register(sym.id, CardSymbol, {
+        color: sym.color, label: sym.label, textColor: sym.textColor,
+      });
     }
   })
-  .weights({
-    'round/round_1': 22,
-    'round/round_2': 22,
-    'royal/royal_1': 18,
-    'square/square_1': 18,
-  })
+  .weights({ '7': 22, '8': 22, '10': 18, Q: 18 })
   .speed('normal', SpeedPresets.NORMAL)
   .speed('turbo', SpeedPresets.TURBO)
   .ticker(app.ticker)

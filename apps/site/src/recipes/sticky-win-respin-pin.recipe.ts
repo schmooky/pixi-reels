@@ -1,6 +1,6 @@
 // @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, BlurSpriteSymbol, PIXI, gsap,
-//                   app, textures, blurTextures, SYMBOL_IDS, pickWeighted
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//                   WILD_CARD, PIXI, gsap, app, pickWeighted
 //
 // Sticky-win respin (Dead or Alive II / Razor Shark mechanic).
 //
@@ -12,7 +12,7 @@
 // CellPin with numeric `turns` provides the lock lifecycle for free.
 // Simple "any 3 in a row" counts as a win for this demo.
 
-const FILLER = ['round/round_1', 'round/round_2', 'royal/royal_1', 'square/square_1'];
+const FILLER = ['7', '8', '10', 'Q'];
 const COLS = 5, ROWS = 3, SIZE = 90;
 const RESPIN_WINDOW = 2; // symbol stays pinned for 2 additional respins
 
@@ -22,15 +22,15 @@ const reelSet = new ReelSetBuilder()
   .symbolSize(SIZE, SIZE)
   .symbolGap(4, 4)
   .symbols((r) => {
-    for (const id of FILLER) {
-      r.register(id, BlurSpriteSymbol, { textures, blurTextures });
+    for (const sym of CARD_DECK) {
+      r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
     }
   })
   .weights({
-    'round/round_1': 30,
-    'round/round_2': 30,
-    'royal/royal_1': 20,
-    'square/square_1': 20,
+    '7': 30,
+    '8': 30,
+    '10': 20,
+    Q: 20,
   })
   .speed('normal', SpeedPresets.NORMAL)
   .speed('turbo', SpeedPresets.TURBO)
@@ -104,9 +104,9 @@ const scripts = [
     const g = Array.from({ length: COLS }, () =>
       Array.from({ length: ROWS }, () => FILLER[Math.floor(Math.random() * FILLER.length)]),
     );
-    g[0][1] = 'royal/royal_1';
-    g[1][1] = 'royal/royal_1';
-    g[2][1] = 'royal/royal_1';
+    g[0][1] = '10';
+    g[1][1] = '10';
+    g[2][1] = '10';
     return g;
   },
   // Spin 2: respin — winners are still pinned, non-winners get fresh symbols

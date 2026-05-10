@@ -1,6 +1,6 @@
 // @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, BlurSpriteSymbol, PIXI, gsap,
-//                   app, textures, blurTextures, SYMBOL_IDS, pickWeighted
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//                   WILD_CARD, PIXI, gsap, app, pickWeighted
 //
 // Mystery symbol (reveal-to-same-class) using CellPin with `turns: 'eval'`.
 //
@@ -8,10 +8,13 @@
 // it at each mystery cell with `turns: 'eval'`. The pins are cleared
 // automatically at the next spin:start — no manual cleanup.
 
-const FILLER = ['round/round_1', 'round/round_2', 'royal/royal_1', 'square/square_1'];
-const MYSTERY = 'wild/wild_1'; // sprite stands in for a "?" mystery icon
+const FILLER = ['7', '8', '10', 'Q'];
+const MYSTERY = 'mystery';
 const REVEAL_CANDIDATES = FILLER; // mystery can reveal to any filler
 const COLS = 5, ROWS = 3, SIZE = 90;
+
+// Dark slate card with a "?" label so the mystery cell is unmistakable.
+const MYSTERY_CARD = { id: MYSTERY, color: 0x34495e, label: '?', textColor: 0xffffff };
 
 const reelSet = new ReelSetBuilder()
   .reels(COLS)
@@ -19,15 +22,15 @@ const reelSet = new ReelSetBuilder()
   .symbolSize(SIZE, SIZE)
   .symbolGap(4, 4)
   .symbols((r) => {
-    for (const id of [...FILLER, MYSTERY]) {
-      r.register(id, BlurSpriteSymbol, { textures, blurTextures });
+    for (const sym of [...CARD_DECK, MYSTERY_CARD]) {
+      r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
     }
   })
   .weights({
-    'round/round_1': 22,
-    'round/round_2': 22,
-    'royal/royal_1': 18,
-    'square/square_1': 18,
+    '7': 22,
+    '8': 22,
+    '10': 18,
+    Q: 18,
   })
   .speed('normal', SpeedPresets.NORMAL)
   .speed('turbo', SpeedPresets.TURBO)

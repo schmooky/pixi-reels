@@ -1,7 +1,6 @@
 // @ts-nocheck
-// Injected: ReelSetBuilder, SpeedPresets, BlurSpriteSymbol, SpriteSymbol,
-//           DropRecipes, PIXI, gsap, app, textures, blurTextures, SYMBOL_IDS,
-//           runCascade, pickWeighted
+// Injected: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, WILD_CARD,
+//           DropRecipes, PIXI, gsap, app, runCascade, pickWeighted
 
 // Hybrid spin-then-cascade: the FIRST round of every play spins like a
 // classic strip slot (top-to-bottom motion, START → SPIN → STOP). If the
@@ -16,10 +15,7 @@
 //   await reelSet.spin();                  // builder default ('standard')
 //   await reelSet.spin({ mode: 'cascade' }); // override for one round
 
-const IDS = [
-  'round/round_1', 'round/round_2', 'round/round_3',
-  'royal/royal_1', 'royal/royal_2', 'square/square_1',
-];
+const IDS = ['7', '8', '9', '10', 'J', 'Q'];
 const REELS = 5, ROWS = 3, SIZE = 80;
 
 function randSymbol(exclude) {
@@ -31,7 +27,11 @@ function randSymbol(exclude) {
 const reelSet = new ReelSetBuilder()
   .reels(REELS).visibleSymbols(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
   .symbols((r) => {
-    for (const id of IDS) r.register(id, BlurSpriteSymbol, { textures, blurTextures });
+    for (const sym of CARD_DECK) {
+      if (IDS.includes(sym.id)) {
+        r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
+      }
+    }
   })
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 120 })
   // .cascade() registers the dropStart/dropStop phases. Without it,
@@ -70,7 +70,7 @@ return {
       Array.from({ length: ROWS }, () => randSymbol(null)),
     );
     // Force a triggering cluster on row 1 cols 1-3 to keep the demo loud.
-    const TRIGGER = 'royal/royal_1';
+    const TRIGGER = '10';
     const HIT_ROW = 1;
     const HIT_COLS = [1, 2, 3];
     for (const c of HIT_COLS) initial[c][HIT_ROW] = TRIGGER;

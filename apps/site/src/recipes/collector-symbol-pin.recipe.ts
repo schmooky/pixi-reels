@@ -1,6 +1,6 @@
 // @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, BlurSpriteSymbol, PIXI, gsap,
-//                   app, textures, blurTextures, SYMBOL_IDS, pickWeighted, EmptySymbol
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//                   WILD_CARD, PIXI, gsap, app, pickWeighted, EmptySymbol
 //
 // Collector symbol on a Hold & Win board.
 //
@@ -10,11 +10,15 @@
 // its own pin payload. Absorbed coins are unpinned — they "fly" to the
 // collector conceptually, though here we just update badges.
 
-const COIN = 'feature/feature_1';
-const COLLECTOR = 'wild/wild_1';
+const COIN = 'coin';
+const COLLECTOR = 'collector';
 const EMPTY = 'empty';
 const COLS = 5, ROWS = 3, CELL = 60, GAP = 4;
 const COIN_VALUES = [10, 25, 50, 100];
+
+// Thematic cards for this recipe — gold coin, purple collector.
+const COIN_CARD = { id: COIN, color: 0xf1c40f, label: 'COIN', textColor: 0x6b5400 };
+const COLLECTOR_CARD = { id: COLLECTOR, color: 0x9b59b6, label: 'COLL', textColor: 0xffffff };
 
 const colWidth = COLS * (CELL + GAP) - GAP;
 const colHeight = ROWS * (CELL + GAP) - GAP;
@@ -28,8 +32,8 @@ for (let col = 0; col < COLS; col++) {
       .reels(1).visibleSymbols(1)
       .symbolSize(CELL, CELL).symbolGap(0, 0)
       .symbols((r) => {
-        r.register(COIN, BlurSpriteSymbol, { textures, blurTextures });
-        r.register(COLLECTOR, BlurSpriteSymbol, { textures, blurTextures });
+        r.register(COIN, CardSymbol, { color: COIN_CARD.color, label: COIN_CARD.label, textColor: COIN_CARD.textColor });
+        r.register(COLLECTOR, CardSymbol, { color: COLLECTOR_CARD.color, label: COLLECTOR_CARD.label, textColor: COLLECTOR_CARD.textColor });
         r.register(EMPTY, EmptySymbol, {});
       })
       .weights({ [COIN]: 2, [COLLECTOR]: 1, [EMPTY]: 6 })

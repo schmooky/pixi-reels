@@ -1,10 +1,12 @@
 // @ts-nocheck
-// Injected: ReelSetBuilder, SpeedPresets, BlurSpriteSymbol, PIXI, gsap,
-//           app, textures, blurTextures, SYMBOL_IDS, pickWeighted
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//                   WILD_CARD, app, pickWeighted
 
-const A = 'round/round_1', B = 'round/round_2', C = 'round/round_3';
-const S = 'feature/feature_1'; // scatter
+const A = '7', B = '8', C = '9';
+const S = 'scatter'; // scatter — registered as a custom card below
 const IDS = [A, B, C, S];
+
+const SCATTER_SYM = { id: S, color: 0xff6b35, label: 'SCAT', textColor: 0xffffff };
 
 // Two scatters on reels 0 and 2; reel 4 has none — classic near-miss.
 const GRID = [
@@ -21,8 +23,8 @@ const reelSet = new ReelSetBuilder()
   .symbolSize(90, 90)
   .symbolGap(4, 4)
   .symbols(r => {
-    for (const id of IDS) {
-      r.register(id, BlurSpriteSymbol, { textures, blurTextures });
+    for (const sym of [...CARD_DECK, WILD_CARD, SCATTER_SYM]) {
+      r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
     }
   })
   .speed('normal', SpeedPresets.NORMAL)

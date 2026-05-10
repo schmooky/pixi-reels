@@ -1,6 +1,6 @@
 // @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, BlurSpriteSymbol, PIXI, gsap,
-//                   app, textures, blurTextures, SYMBOL_IDS, pickWeighted
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//                   WILD_CARD, PIXI, gsap, app, pickWeighted
 //
 // Walking wild — CellPin.movePin() edition.
 //
@@ -10,8 +10,8 @@
 // it back to the pool. State is atomic; the pin coordinates in the map flip
 // before the animation starts.
 
-const FILLER = ['round/round_1', 'round/round_2', 'royal/royal_1', 'square/square_1'];
-const WILD = 'wild/wild_1';
+const FILLER = ['7', '8', '10', 'Q'];
+const WILD = WILD_CARD.id;
 const COLS = 5, ROWS = 3, SIZE = 90;
 
 const reelSet = new ReelSetBuilder()
@@ -20,16 +20,13 @@ const reelSet = new ReelSetBuilder()
   .symbolSize(SIZE, SIZE)
   .symbolGap(4, 4)
   .symbols((r) => {
-    for (const id of [...FILLER, WILD]) {
-      r.register(id, BlurSpriteSymbol, { textures, blurTextures });
+    for (const sym of [...CARD_DECK, WILD_CARD]) {
+      r.register(sym.id, CardSymbol, {
+        color: sym.color, label: sym.label, textColor: sym.textColor,
+      });
     }
   })
-  .weights({
-    'round/round_1': 22,
-    'round/round_2': 22,
-    'royal/royal_1': 18,
-    'square/square_1': 18,
-  })
+  .weights({ '7': 22, '8': 22, '10': 18, Q: 18 })
   .speed('normal', SpeedPresets.NORMAL)
   .speed('turbo', SpeedPresets.TURBO)
   .ticker(app.ticker)
