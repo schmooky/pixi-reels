@@ -1,16 +1,16 @@
 ---
 layout: ../../layouts/Recipe.astro
 title: Spin first, cascade after
-description: Open every play with a classic strip-spin, then cascade the respins — one ReelSet, the per-spin `mode` override does the switch.
-tags: [hybrid, cascade, spin-mode, recent]
+description: Open every play with a classic strip-spin. The landing's winning cells pop, survivors fall down, new symbols drop in from above — repeat for every cascade in the chain.
+tags: [hybrid, cascade, runCascade, recent]
 steps:
-  - "Build with both default mode and .cascade(...) registered"
-  - "Round 1 — call spin() (default standard)"
-  - "Cascade respins — call spin({ mode: cascade }) per round"
+  - "Round 1: a normal spin lands the initial grid"
+  - "Detect winners on that grid (server-side or client-side eval)"
+  - "runCascade animates the pop, fall, and drop-in for every chain stage"
 apis:
-  - ReelSetBuilder.cascade
   - reelSet.spin
-  - SpinOptions.mode
+  - runCascade
+  - reel.placeSymbols
 ---
 
 import code from '../../recipes/spin-then-cascade.recipe.ts?raw';
@@ -18,51 +18,54 @@ import { RecipeRunner } from '../../components/RecipeRunner.tsx';
 
 <RecipeRunner code={code} client:only="react" />
 
-A common request: "the first round of the play should feel like a normal slot, but if there's a hit, the next rounds should drop in from above like a tumble." Until recently you needed two `ReelSet` instances and copy-pasted state. Now `spin({ mode })` is a per-call override on the same engine.
+A common request: "the first round of the play should feel like a normal slot, but if there's a hit, the winners should pop and new symbols should drop in from above — like a tumble." This is exactly what the demo above does:
 
-## The shape of the call
+1. **Round 1** — a regular strip-spin lands a grid containing a winning cluster of three `10`s on the middle row.
+2. **First cascade pop** — those three cells vanish, the symbol above each falls down to fill the gap, a brand-new symbol drops in at the top. The new top-row fill happens to create a second cluster (three `J`s on the bottom row).
+3. **Second cascade pop** — those three `J`s vanish, survivors fall, new symbols drop in. No more wins, the play ends.
+
+The reels never re-spin between cascades. The landed grid stays landed; only the cells involved in each pop move.
+
+## How it works
+
+The cascade animation is a separate concern from the spin. The library ships a tumble helper at `examples/shared/cascadeLoop.ts` that operates on the already-landed reelSet:
+
+- It expects an array of "stages" — full grids representing the state after each cascade pop.
+- It expects a `winners(prev, next, stageIndex)` callback that names the cells about to vanish.
+- For each stage transition it runs your vanish animation (default: fade out), then slides the survivor symbols down by exactly the number of cleared slots beneath them, then drops new symbols in from above (staggered, gravity-style).
 
 ```ts
-// Builder: register cascade phases. Note: this ALSO flips the builder
-// default mode to 'cascade', so a bare reelSet.spin() will cascade.
-const reelSet = new ReelSetBuilder()
-  .reels(5).visibleSymbols(3).symbolSize(80, 80)
-  .symbols(/* ... */)
-  .cascade(DropRecipes.stiffDrop) // registers dropStart/dropStop phases
-  .ticker(app.ticker)
-  .build();
+import { runCascade } from '../../shared/cascadeLoop';
 
-// Round 1 — explicit standard. With .cascade() registered, the bare
-// `reelSet.spin()` would cascade-drop — which is not what we want here.
-await reelSet.spin({ mode: 'standard' });
+await reelSet.spin();              // round 1, classic strip-spin
+reelSet.setResult(stage0);
+await /* wait for the spin to land */;
 
-// Round 2+ — cascade respin on the SAME ReelSet.
-await reelSet.spin({ mode: 'cascade' });
+await runCascade(reelSet, [stage0, stage1, stage2], {
+  winners: (_prev, _next, stageIdx) => {
+    if (stageIdx === 0) return [{reel:1,row:1},{reel:2,row:1},{reel:3,row:1}];
+    return [{reel:0,row:2},{reel:1,row:2},{reel:2,row:2}];
+  },
+  vanishDuration: 320,
+  dropDuration: 440,
+  pauseBetween: 160,
+});
 ```
 
-The `.cascade()` builder call has two side effects: it registers the
-`dropStart`/`dropStop` phases AND sets the default spin mode to
-`'cascade'`. To get a strip-spin from a builder that called `.cascade()`,
-you MUST pass `{ mode: 'standard' }` explicitly — otherwise round 1
-inherits the cascade default and you see a cascade for both rounds (the
-classic "I built it, why isn't round 1 strip-spinning?" footgun).
+`runCascade` does NOT call `reelSet.spin()`. It works directly on the symbols already on screen — that's why the reels appear to stay still while the symbols rearrange themselves.
 
-## Why it matters
+## When to use this vs `spin({ mode: 'cascade' })`
 
-The two phase chains were always there, but mode used to be a build-time choice. Picking `'cascade'` at the builder meant every round was a cascade; picking `'standard'` meant no drop-ins anywhere. Studios faked the hybrid by stacking two `ReelSet` containers and toggling visibility, paying for double the symbol pool and double the textures.
+The library has two distinct cascade tools and they solve different problems:
 
-`spin({ mode })` is a per-call override. Same pool, same containers, same event bus, same spotlight — only the phase chain differs.
+| | `runCascade(reelSet, stages, ...)` | `reelSet.spin({ mode: 'cascade' })` |
+|---|---|---|
+| What runs | The visual tumble: pop, fall, drop-in | A full new spin using cascade phases (`dropStart` / `dropStop`) |
+| Reels move? | No — landed reels stay landed; only winning + falling cells move | Yes — the whole frame drops in from above |
+| Use case | Post-spin cascade animation on a single landed result (this recipe) | Discrete cascade respins between rounds (e.g. free-spin features that explicitly cascade-respin) |
+| Builder requirement | None | `.cascade(DropRecipes....)` must be on the builder |
 
-## Guardrails
-
-The engine refuses `spin({ mode: 'cascade' })` if `.cascade(...)` wasn't called on the builder. The error names the missing builder method, so you can wire it without grepping. Inverted: there's no `.standard()` method — standard phases register by default.
-
-## When `setShape()`, `setAnticipation()` and `holdReels` interact
-
-Each `spin()` runs through the chain you pick at call time. So:
-- `setAnticipation([3])` set on a cascade spin uses the AnticipationPhase that lives in the cascade chain.
-- `holdReels: [0, 4]` works in either mode — held reels skip START/SPIN/STOP regardless of which "S/SPIN" pair fires for the active reels.
-- `setShape()` (MultiWays) requires AdjustPhase, which is registered by `.multiways(...)` and is independent of `mode`.
+This recipe uses `runCascade` because the user-visible mechanic is "win on the spin, watch the winners pop". For "pure cascade respin" gameplay where every round is a top-down drop, see [Cascade 6×5 tumble](/recipes/cascade-6x5/).
 
 ## Full source
 
@@ -76,9 +79,10 @@ The exact code running in the demo above:
 const IDS = ['7', '8', '9', '10', 'J', 'Q'];
 const REELS = 5, ROWS = 3, SIZE = 80;
 
-function randSymbol(exclude) {
+function randSymbolNotIn(exclude) {
   let s;
-  do { s = IDS[Math.floor(Math.random() * IDS.length)]; } while (s === exclude);
+  do { s = IDS[Math.floor(Math.random() * IDS.length)]; }
+  while (exclude.has(s));
   return s;
 }
 
@@ -94,48 +98,70 @@ const reelSet = new ReelSetBuilder()
     }
   })
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 120 })
-  // .cascade() registers dropStart/dropStop AND flips the default mode.
-  .cascade(DropRecipes.stiffDrop)
   .ticker(app.ticker)
   .build();
 
 return {
   reelSet,
   onSpin: async () => {
-    // Round 1: explicit 'standard' — strip-spin top-to-bottom motion.
-    const initial = Array.from({ length: REELS }, () =>
-      Array.from({ length: ROWS }, () => randSymbol(null)),
+    // Stage 0: strip-spin lands here. Force a 3-of-'10' on row 1.
+    const TRIGGER1 = '10';
+    const HIT1_ROW = 1;
+    const HIT1_COLS = [1, 2, 3];
+    const stage0 = Array.from({ length: REELS }, (_, c) =>
+      Array.from({ length: ROWS }, (_, r) =>
+        r === HIT1_ROW && HIT1_COLS.includes(c) ? TRIGGER1 : randSymbolNotIn(new Set([TRIGGER1])),
+      ),
     );
-    const TRIGGER = '10';
-    const HIT_ROW = 1;
-    const HIT_COLS = [1, 2, 3];
-    for (const c of HIT_COLS) initial[c][HIT_ROW] = TRIGGER;
 
-    const p = reelSet.spin({ mode: 'standard' });
-    await new Promise((r) => setTimeout(r, 150));
-    reelSet.setResult(initial);
-    await p;
-
-    // Round 2: cascade — winners pop, survivors fall, new symbols drop.
-    const afterPop = initial.map((col, c) => {
-      if (!HIT_COLS.includes(c)) return [...col];
+    // Stage 1: '10' cluster vanishes, survivors fall, new symbols fill.
+    // The new fill creates a second cluster of three Js on row 2.
+    const TRIGGER2 = 'J';
+    const HIT2_ROW = 2;
+    const HIT2_COLS = [0, 1, 2];
+    const stage1 = stage0.map((col, c) => {
       const next = [...col];
-      for (let r = HIT_ROW; r > 0; r--) next[r] = next[r - 1];
-      next[0] = randSymbol(TRIGGER);
+      if (HIT1_COLS.includes(c)) {
+        next[HIT1_ROW] = next[HIT1_ROW - 1];
+        next[HIT1_ROW - 1] = randSymbolNotIn(new Set([TRIGGER1, TRIGGER2]));
+      }
+      if (HIT2_COLS.includes(c)) next[HIT2_ROW] = TRIGGER2;
       return next;
     });
 
-    const cp = reelSet.spin({ mode: 'cascade' });
+    // Stage 2: 'J' cluster vanishes, survivors fall, new symbols fill.
+    const stage2 = stage1.map((col, c) => {
+      if (!HIT2_COLS.includes(c)) return [...col];
+      const next = [...col];
+      next[HIT2_ROW] = next[HIT2_ROW - 1];
+      next[HIT2_ROW - 1] = next[HIT2_ROW - 2];
+      next[0] = randSymbolNotIn(new Set([TRIGGER1, TRIGGER2]));
+      return next;
+    });
+
+    // Round 1: classic strip-spin to stage 0.
+    const p = reelSet.spin();
     await new Promise((r) => setTimeout(r, 150));
-    reelSet.setDropOrder('ltr');
-    reelSet.setResult(afterPop);
-    await cp;
+    reelSet.setResult(stage0);
+    await p;
+    await new Promise((r) => setTimeout(r, 300));
+
+    // Cascade chain: pop + fall + fill, twice.
+    await runCascade(reelSet, [stage0, stage1, stage2], {
+      winners: (_prev, _next, stageIndex) => {
+        if (stageIndex === 0) return HIT1_COLS.map((c) => ({ reel: c, row: HIT1_ROW }));
+        return HIT2_COLS.map((c) => ({ reel: c, row: HIT2_ROW }));
+      },
+      vanishDuration: 320,
+      dropDuration: 440,
+      pauseBetween: 160,
+    });
   },
 };
 ```
 
 ## Related
 
-- [Cascade 6×5 tumble](/recipes/cascade-6x5/) — pure cascade flow.
-- [Classic 5×3 starter](/recipes/classic-5x3/) — pure strip-spin starter.
-- [Feature mode swap](/recipes/feature-mode-swap/) — runtime middleware for "different content, same mode".
+- [Cascade 6×5 tumble](/recipes/cascade-6x5/) — same `runCascade` helper applied to a pure-cascade slot (no strip-spin first round).
+- [Cascade pops with WinPresenter](/recipes/cascade-winpresenter/) — drive the vanish animation through `WinPresenter` instead of the default fade.
+- [Classic 5×3 starter](/recipes/classic-5x3/) — the pure strip-spin starter this recipe extends.

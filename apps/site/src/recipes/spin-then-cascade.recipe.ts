@@ -3,30 +3,30 @@
 //           DropRecipes, PIXI, gsap, app, runCascade, pickWeighted
 
 // Hybrid spin-then-cascade: the FIRST round of every play spins like a
-// classic strip slot (top-to-bottom motion, START → SPIN → STOP). If the
-// landing has winners, every subsequent re-evaluation is a cascade
-// drop-in (winners pop, survivors fall, new symbols drop from above).
+// classic strip slot (top-to-bottom motion, START → SPIN → STOP). The
+// landing has a winning cluster — those cells pop, survivors fall down,
+// and new symbols drop in from above to fill the gap. Repeat for each
+// chain.
 //
-// The new `spin({ mode })` per-spin override does this in ONE ReelSet —
-// no twin-instance gymnastics, no shared `setResult` plumbing. Build with
-// `.cascade(...)` so the cascade phases are registered, then pass mode at
-// each call site:
+// IMPLEMENTATION NOTE — the cascade is a VISUAL animation done by
+// runCascade, NOT a second spin() call. runCascade operates directly
+// on the landed grid: vanishes the winning cells, slides survivors
+// down, drops in new symbols from above. The reels never re-spin.
+// That's exactly what the user sees in real cascade slots — the
+// reels stay landed and the symbols rearrange themselves.
 //
-//   await reelSet.spin({ mode: 'standard' });  // round 1 — strip-spin
-//   await reelSet.spin({ mode: 'cascade' });   // round 2+ — cascade
-//
-// IMPORTANT: `.cascade()` ALSO flips the builder's default mode to
-// 'cascade' (so it can stay opt-in via mere registration). To get a
-// standard spin from a builder that called `.cascade()`, you MUST pass
-// `{ mode: 'standard' }` explicitly — `reelSet.spin()` with no args
-// would inherit the cascade default and run a cascade for both rounds.
+// We don't even need .cascade() on the builder — that's only required
+// if you want to call spin({ mode: 'cascade' }) for a full cascade
+// drop-in respin. Pure spin-then-tumble doesn't touch the spin-mode
+// system at all.
 
 const IDS = ['7', '8', '9', '10', 'J', 'Q'];
 const REELS = 5, ROWS = 3, SIZE = 80;
 
-function randSymbol(exclude) {
+function randSymbolNotIn(exclude) {
   let s;
-  do { s = IDS[Math.floor(Math.random() * IDS.length)]; } while (s === exclude);
+  do { s = IDS[Math.floor(Math.random() * IDS.length)]; }
+  while (exclude.has(s));
   return s;
 }
 
@@ -35,84 +35,87 @@ const reelSet = new ReelSetBuilder()
   .symbols((r) => {
     for (const sym of CARD_DECK) {
       if (IDS.includes(sym.id)) {
-        r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
+        r.register(sym.id, CardSymbol, {
+          color: sym.color, label: sym.label, textColor: sym.textColor,
+        });
       }
     }
   })
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 120 })
-  // .cascade() registers the dropStart/dropStop phases. Without it,
-  // `spin({ mode: 'cascade' })` would throw — the engine refuses to enter
-  // a phase chain that isn't wired.
-  .cascade(DropRecipes.stiffDrop)
   .ticker(app.ticker)
   .build();
-
-// Status banner so the running mode is unmistakable on screen.
-const banner = new PIXI.Text({
-  text: 'READY',
-  style: {
-    fontFamily: 'system-ui, sans-serif',
-    fontSize: 16, fontWeight: '900',
-    fill: 0xfef08a, stroke: { color: 0x000000, width: 3 },
-    letterSpacing: 1,
-  },
-});
-banner.anchor.set(0.5);
-banner.x = (REELS * (SIZE + 4) - 4) / 2;
-banner.y = -22;
-reelSet.addChild(banner);
-
-function setBanner(text, color = 0xfef08a) {
-  banner.text = text;
-  banner.style.fill = color;
-}
 
 return {
   reelSet,
   onSpin: async () => {
-    // ── Round 1: classic strip-spin ─────────────────────────────────
-    setBanner('STRIP SPIN');
-    const initial = Array.from({ length: REELS }, () =>
-      Array.from({ length: ROWS }, () => randSymbol(null)),
+    // ── Stage 0: strip-spin landing ───────────────────────────────────
+    // Force a 3-of-a-kind cluster of '10' on row 1 (cols 1, 2, 3) so
+    // the demo always has a visible cascade trigger. Real games would
+    // detect winners from the server-returned grid via your eval logic.
+    const TRIGGER1 = '10';
+    const HIT1_ROW = 1;
+    const HIT1_COLS = [1, 2, 3];
+
+    const stage0 = Array.from({ length: REELS }, (_, c) =>
+      Array.from({ length: ROWS }, (_, r) =>
+        r === HIT1_ROW && HIT1_COLS.includes(c) ? TRIGGER1 : randSymbolNotIn(new Set([TRIGGER1])),
+      ),
     );
-    // Force a triggering cluster on row 1 cols 1-3 to keep the demo loud.
-    const TRIGGER = '10';
-    const HIT_ROW = 1;
-    const HIT_COLS = [1, 2, 3];
-    for (const c of HIT_COLS) initial[c][HIT_ROW] = TRIGGER;
 
-    // Round 1 must explicitly request 'standard' — calling .cascade() on
-    // the builder above flipped the default to 'cascade', so a bare
-    // `reelSet.spin()` would cascade-drop here too. The per-spin mode
-    // override is what makes the hybrid possible.
-    const p = reelSet.spin({ mode: 'standard' });
-    await new Promise((r) => setTimeout(r, 150));
-    reelSet.setResult(initial);
-    await p;
+    // ── Stage 1: after the '10' cluster pops + survivors fall + fill ──
+    // Hand-crafted so the new top-row fill happens to create a SECOND
+    // cluster — three Js on row 2 (cols 0, 1, 2) — to demonstrate the
+    // chain. In production this is whatever the cascade evaluator says.
+    const TRIGGER2 = 'J';
+    const HIT2_ROW = 2;
+    const HIT2_COLS = [0, 1, 2];
 
-    // ── Cascade respins ─────────────────────────────────────────────
-    setBanner('CASCADE x1', 0x9b59b6);
-
-    // Stage after the cluster pops + survivors fall + new symbols drop.
-    const afterPop = initial.map((col, c) => {
-      if (!HIT_COLS.includes(c)) return [...col];
+    const stage1 = stage0.map((col, c) => {
       const next = [...col];
-      for (let r = HIT_ROW; r > 0; r--) next[r] = next[r - 1];
-      next[0] = randSymbol(TRIGGER);
+      // Hit-1 columns: drop the row-1 winner — survivor at row 0 falls
+      // to row 1, brand-new symbol arrives at row 0.
+      if (HIT1_COLS.includes(c)) {
+        next[HIT1_ROW] = next[HIT1_ROW - 1];        // survivor falls in
+        next[HIT1_ROW - 1] = randSymbolNotIn(new Set([TRIGGER1, TRIGGER2])); // new top
+      }
+      // Plant the second cluster on row 2 (cols 0, 1, 2). For col 0
+      // (untouched by hit 1) and cols 1,2 (touched), we just rewrite
+      // row 2 to TRIGGER2 — the cascade animator only diffs winners
+      // between stages, so authoring a rewrite is fine.
+      if (HIT2_COLS.includes(c)) next[HIT2_ROW] = TRIGGER2;
       return next;
     });
 
-    // The cascade respin uses the `mode: 'cascade'` per-spin override.
-    // Same ReelSet, same builder, just different motion + phases.
-    const cp = reelSet.spin({ mode: 'cascade' });
-    await new Promise((r) => setTimeout(r, 150));
-    reelSet.setDropOrder('ltr');
-    reelSet.setResult(afterPop);
-    await cp;
+    // ── Stage 2: after the 'J' cluster pops + survivors fall + fill ───
+    const stage2 = stage1.map((col, c) => {
+      if (!HIT2_COLS.includes(c)) return [...col];
+      const next = [...col];
+      // Survivors fall: row 0 → row 1, row 1 → row 2; brand-new at row 0.
+      next[HIT2_ROW] = next[HIT2_ROW - 1];
+      next[HIT2_ROW - 1] = next[HIT2_ROW - 2];
+      next[0] = randSymbolNotIn(new Set([TRIGGER1, TRIGGER2]));
+      return next;
+    });
 
-    setBanner('READY');
-  },
-  cleanup: () => {
-    try { banner.destroy(); } catch { /* ignore */ }
+    // ── Round 1: strip-spin to stage 0 ────────────────────────────────
+    const p = reelSet.spin();
+    await new Promise((r) => setTimeout(r, 150));
+    reelSet.setResult(stage0);
+    await p;
+    await new Promise((r) => setTimeout(r, 300));
+
+    // ── Cascade chain: stage 0 → 1 → 2, two pops in sequence ──────────
+    // runCascade plays the animation: vanish the winners, drop survivors,
+    // drop new symbols in from above. No spin, no full-frame reset — the
+    // landed reels stay landed and rearrange.
+    await runCascade(reelSet, [stage0, stage1, stage2], {
+      winners: (_prev, _next, stageIndex) => {
+        if (stageIndex === 0) return HIT1_COLS.map((c) => ({ reel: c, row: HIT1_ROW }));
+        return HIT2_COLS.map((c) => ({ reel: c, row: HIT2_ROW }));
+      },
+      vanishDuration: 320,
+      dropDuration: 440,
+      pauseBetween: 160,
+    });
   },
 };
