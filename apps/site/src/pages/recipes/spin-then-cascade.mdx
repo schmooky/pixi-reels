@@ -20,11 +20,11 @@ import { RecipeRunner } from '../../components/RecipeRunner.tsx';
 
 A common request: "the first round of the play should feel like a normal slot, but if there's a hit, the winners should pop and new symbols should drop in from above — like a tumble." This is exactly what the demo above does:
 
-1. **Round 1** — a regular strip-spin lands a grid containing a winning cluster of three `10`s on the middle row.
-2. **First cascade pop** — those three cells vanish, the symbol above each falls down to fill the gap, a brand-new symbol drops in at the top. The new top-row fill happens to create a second cluster (three `J`s on the bottom row).
+1. **Round 1** — a regular strip-spin lands a grid. The left three columns are deliberately stacked: `J` on top, `10` in the middle, random on the bottom.
+2. **First cascade pop** — the three `10`s on the middle row vanish. The `J`s above each fall down to fill the gap; brand-new symbols drop in at the top. The middle row now reads `J J J _ _` — a second cluster.
 3. **Second cascade pop** — those three `J`s vanish, survivors fall, new symbols drop in. No more wins, the play ends.
 
-The reels never re-spin between cascades. The landed grid stays landed; only the cells involved in each pop move.
+The reels never re-spin between cascades. The landed grid stays landed; only the cells involved in each pop move. The right two columns (4 and 5) are untouched throughout the cascade chain — they landed during the strip-spin and stay frozen.
 
 ## How it works
 
@@ -78,6 +78,10 @@ The exact code running in the demo above:
 
 const IDS = ['7', '8', '9', '10', 'J', 'Q'];
 const REELS = 5, ROWS = 3, SIZE = 80;
+const HIT_COLS = [0, 1, 2];        // left three columns
+const HIT_ROW = 1;                  // middle row
+const TRIGGER1 = '10';
+const TRIGGER2 = 'J';
 
 function randSymbolNotIn(exclude) {
   let s;
@@ -104,39 +108,33 @@ const reelSet = new ReelSetBuilder()
 return {
   reelSet,
   onSpin: async () => {
-    // Stage 0: strip-spin lands here. Force a 3-of-'10' on row 1.
-    const TRIGGER1 = '10';
-    const HIT1_ROW = 1;
-    const HIT1_COLS = [1, 2, 3];
+    // Stage 0 — strip-spin lands here. Pre-stack the left three cols:
+    // J on top, 10 in middle, random on bottom. The Js are pre-positioned
+    // so when the first cascade pops the 10s, the Js fall into row 1
+    // creating a NEW cluster without any extra authoring.
     const stage0 = Array.from({ length: REELS }, (_, c) =>
-      Array.from({ length: ROWS }, (_, r) =>
-        r === HIT1_ROW && HIT1_COLS.includes(c) ? TRIGGER1 : randSymbolNotIn(new Set([TRIGGER1])),
-      ),
+      Array.from({ length: ROWS }, (_, r) => {
+        if (HIT_COLS.includes(c)) {
+          if (r === 0)        return TRIGGER2;  // 'J' on top
+          if (r === HIT_ROW)  return TRIGGER1;  // '10' in middle
+        }
+        return randSymbolNotIn(new Set([TRIGGER1, TRIGGER2]));
+      }),
     );
 
-    // Stage 1: '10' cluster vanishes, survivors fall, new symbols fill.
-    // The new fill creates a second cluster of three Js on row 2.
-    const TRIGGER2 = 'J';
-    const HIT2_ROW = 2;
-    const HIT2_COLS = [0, 1, 2];
+    // Stage 1 — 10s vanish on the middle row. Survivors fall: the Js
+    // at row 0 fall to row 1, creating cluster #2. New randoms drop in
+    // at row 0. Cols 3-4 unchanged.
     const stage1 = stage0.map((col, c) => {
-      const next = [...col];
-      if (HIT1_COLS.includes(c)) {
-        next[HIT1_ROW] = next[HIT1_ROW - 1];
-        next[HIT1_ROW - 1] = randSymbolNotIn(new Set([TRIGGER1, TRIGGER2]));
-      }
-      if (HIT2_COLS.includes(c)) next[HIT2_ROW] = TRIGGER2;
-      return next;
+      if (!HIT_COLS.includes(c)) return [...col];
+      return [randSymbolNotIn(new Set([TRIGGER1, TRIGGER2])), TRIGGER2, col[2]];
     });
 
-    // Stage 2: 'J' cluster vanishes, survivors fall, new symbols fill.
+    // Stage 2 — Js vanish on the middle row. Stage-1's row-0 (random)
+    // falls to row 1; new random at row 0. No further cluster.
     const stage2 = stage1.map((col, c) => {
-      if (!HIT2_COLS.includes(c)) return [...col];
-      const next = [...col];
-      next[HIT2_ROW] = next[HIT2_ROW - 1];
-      next[HIT2_ROW - 1] = next[HIT2_ROW - 2];
-      next[0] = randSymbolNotIn(new Set([TRIGGER1, TRIGGER2]));
-      return next;
+      if (!HIT_COLS.includes(c)) return [...col];
+      return [randSymbolNotIn(new Set([TRIGGER1, TRIGGER2])), col[0], col[2]];
     });
 
     // Round 1: classic strip-spin to stage 0.
@@ -146,12 +144,11 @@ return {
     await p;
     await new Promise((r) => setTimeout(r, 300));
 
-    // Cascade chain: pop + fall + fill, twice.
+    // Cascade chain: pop the middle row twice. Both pops on the same
+    // three left columns (HIT_COLS); cols 3-4 never animate because
+    // cascadeLoop skips reels with no winners and unchanged symbols.
     await runCascade(reelSet, [stage0, stage1, stage2], {
-      winners: (_prev, _next, stageIndex) => {
-        if (stageIndex === 0) return HIT1_COLS.map((c) => ({ reel: c, row: HIT1_ROW }));
-        return HIT2_COLS.map((c) => ({ reel: c, row: HIT2_ROW }));
-      },
+      winners: () => HIT_COLS.map((c) => ({ reel: c, row: HIT_ROW })),
       vanishDuration: 320,
       dropDuration: 440,
       pauseBetween: 160,
