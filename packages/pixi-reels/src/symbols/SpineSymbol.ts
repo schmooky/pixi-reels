@@ -85,7 +85,13 @@ export class SpineSymbol extends ReelSymbol {
       this._spine.state.clearListeners();
       this._spine.state.clearTracks();
     }
-    this._winResolve = null;
+    // Settle any pending playWin so awaiters don't hang when the symbol is
+    // recycled mid-animation. Mirrors the same fix in SpineReelSymbol.
+    if (this._winResolve) {
+      const r = this._winResolve;
+      this._winResolve = null;
+      r();
+    }
   }
 
   async playWin(): Promise<void> {
@@ -139,6 +145,11 @@ export class SpineSymbol extends ReelSymbol {
       this._spine.state.clearListeners();
       this._spine.destroy();
       this._spine = null;
+    }
+    if (this._winResolve) {
+      const r = this._winResolve;
+      this._winResolve = null;
+      r();
     }
   }
 }
