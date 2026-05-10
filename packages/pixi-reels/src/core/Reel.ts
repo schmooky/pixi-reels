@@ -595,12 +595,15 @@ export class Reel implements Disposable {
       return;
     }
 
-    // Same id fast-path. Reset visual state and re-anchor the view to this
-    // reel's container in case the pool had moved it elsewhere since the
-    // last activation.
+    // Same id fast-path. Reset every mutable visual property (alpha, scale,
+    // rotation, filters, zIndex) AND re-anchor the view to this reel's
+    // container in case the pool moved it elsewhere since the last
+    // activation (e.g. spotlight promotion above the mask).
     if (oldSymbol.symbolId === newSymbolId) {
       oldSymbol.view.alpha = 1;
       oldSymbol.view.scale.set(1, 1);
+      oldSymbol.view.rotation = 0;
+      oldSymbol.view.filters = null;
       oldSymbol.view.zIndex = 0;
       if (oldSymbol.view.parent !== parent) parent.addChild(oldSymbol.view);
       return;

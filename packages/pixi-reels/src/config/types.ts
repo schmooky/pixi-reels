@@ -1,5 +1,48 @@
 import type { Container, Ticker } from 'pixi.js';
 
+/**
+ * Options accepted by `reelSet.spin(options?)`. All fields are optional —
+ * passing nothing reproduces the legacy "every reel spins" behaviour.
+ */
+export interface SpinOptions {
+  /**
+   * Phase chain selector for this spin.
+   * `'cascade'` requires `.cascade(...)` on the builder.
+   */
+  mode?: 'standard' | 'cascade';
+
+  /**
+   * Reel indices to HOLD this spin. Held reels skip START / SPIN / STOP
+   * entirely and stay on whatever symbols they're currently showing.
+   * They count as already-landed for the `spin:allLanded` resolver — only
+   * non-held reels actually animate.
+   *
+   * Use cases:
+   *   - Hold & Win respins (most reels held, one or two reroll)
+   *   - Sticky / expanding wilds during a feature spin
+   *   - Bonus respin where the trigger column stays in place
+   *
+   * Notes:
+   *   - `setResult(grid)` still expects a full `reelCount`-length grid;
+   *     entries at held indices are ignored. Pass anything (including
+   *     the held reels' current visible rows) — the engine doesn't read
+   *     held columns.
+   *   - `setAnticipation([...])` silently filters held indices.
+   *   - `setStopDelays([...])` entries at held indices are ignored.
+   *   - The resolved `SpinResult.symbols` is the full visible grid AFTER
+   *     the spin lands — held reels contribute their unchanged rows,
+   *     non-held reels contribute their landed rows.
+   *   - No `spin:reelLanded` / `spin:stopping` event fires for held reels.
+   *   - Big-symbol blocks crossing held into non-held reels are not
+   *     supported — the engine doesn't reposition or reshape held reels
+   *     to accommodate them. Author results that keep big symbols inside
+   *     a contiguous run of non-held reels.
+   *   - Indices outside `[0, reelCount)` and duplicate entries are silently
+   *     filtered.
+   */
+  holdReels?: number[];
+}
+
 /** Timing and animation profile for a speed mode. */
 export interface SpeedProfile {
   readonly name: string;
@@ -31,7 +74,17 @@ export interface SymbolData {
   weight: number;
   /** Display layering order. Higher = in front. */
   zIndex?: number;
-  /** If true, this symbol renders above the reel mask (for oversized animations). */
+  /**
+   * If true, this symbol renders above the reel mask (for oversized
+   * animations).
+   *
+   * **Mask-strategy auto-pick:** when any registered symbol sets
+   * `unmask: true` and `symbolGap.x > 0`, the builder switches the
+   * default `RectMaskStrategy` to `SharedRectMaskStrategy` so that
+   * neighboring (masked) symbols don't get clipped at the column gap
+   * next to the unmasked overlay. Passing `.maskStrategy(...)`
+   * explicitly always wins.
+   */
   unmask?: boolean;
   /**
    * Footprint in cells. Default `{ w: 1, h: 1 }`. When `w * h > 1` this
