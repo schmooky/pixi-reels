@@ -1,5 +1,6 @@
-import { gsap } from 'gsap';
+import type { gsap } from 'gsap';
 import type { Container } from 'pixi.js';
+import { getGsap } from '../../utils/gsapRef.js';
 import type { Reel } from '../../core/Reel.js';
 import type { SpeedProfile } from '../../config/types.js';
 import { ReelPhase } from './ReelPhase.js';
@@ -72,7 +73,7 @@ export class DropStopPhase extends ReelPhase<DropStopPhaseConfig> {
       return;
     }
 
-    this._fallTween = gsap.timeline({
+    this._fallTween = getGsap().timeline({
       onComplete: () => {
         this._fallTween = null;
         views.forEach((v) => { v.alpha = 0; });
@@ -80,7 +81,7 @@ export class DropStopPhase extends ReelPhase<DropStopPhaseConfig> {
         const dropInDelay = (this._runConfig?.delay ?? 0) / 1000;
         if (dropInDelay > 0) {
           this._stage = 'waiting';
-          this._delayTween = gsap.delayedCall(dropInDelay, () => this._beginDropIn(dropFromY));
+          this._delayTween = getGsap().delayedCall(dropInDelay, () => this._beginDropIn(dropFromY));
         } else {
           this._beginDropIn(dropFromY);
         }
@@ -121,7 +122,7 @@ export class DropStopPhase extends ReelPhase<DropStopPhaseConfig> {
       return;
     }
 
-    this._dropTween = gsap.timeline({
+    this._dropTween = getGsap().timeline({
       onComplete: () => {
         this._stage = 'done';
         reel.notifyLanded();
@@ -156,8 +157,6 @@ export class DropStopPhase extends ReelPhase<DropStopPhaseConfig> {
       reel.placeSymbols(config.targetFrame.slice(bufferAbove, bufferAbove + visibleRows));
     }
 
-    reel.notifySpinEnd();
-    reel.notifyLanded();
     this._stage = 'done';
   }
 
