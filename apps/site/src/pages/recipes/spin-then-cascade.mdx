@@ -79,10 +79,13 @@ The exact code running in the demo above:
 // Injected: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, WILD_CARD,
 //           DropRecipes, PIXI, gsap, app, runCascade, pickWeighted
 
+// 5 reels x 4 rows — matches the Arc Lord shape shown in the reference
+// clip above. Cascade pops the upper-middle row twice on the left
+// three columns; the right two columns and bottom two rows stay still.
 const IDS = ['7', '8', '9', '10', 'J', 'Q'];
-const REELS = 5, ROWS = 3, SIZE = 80;
+const REELS = 5, ROWS = 4, SIZE = 72;
 const HIT_COLS = [0, 1, 2];        // left three columns
-const HIT_ROW = 1;                  // middle row
+const HIT_ROW = 1;                  // upper-middle row
 const TRIGGER1 = '10';
 const TRIGGER2 = 'J';
 
@@ -112,33 +115,44 @@ return {
   reelSet,
   onSpin: async () => {
     // Stage 0 — strip-spin lands here. Pre-stack the left three cols:
-    // J on top, 10 in middle, random on bottom. The Js are pre-positioned
-    // so when the first cascade pops the 10s, the Js fall into row 1
-    // creating a NEW cluster without any extra authoring.
+    // J on row 0, 10 at HIT_ROW, random elsewhere. The Js are
+    // pre-positioned so when the first cascade pops the 10s, the Js
+    // fall into HIT_ROW creating cluster #2 without any extra authoring.
     const stage0 = Array.from({ length: REELS }, (_, c) =>
       Array.from({ length: ROWS }, (_, r) => {
         if (HIT_COLS.includes(c)) {
           if (r === 0)        return TRIGGER2;  // 'J' on top
-          if (r === HIT_ROW)  return TRIGGER1;  // '10' in middle
+          if (r === HIT_ROW)  return TRIGGER1;  // '10' at HIT_ROW
         }
         return randSymbolNotIn(new Set([TRIGGER1, TRIGGER2]));
       }),
     );
 
-    // Stage 1 — 10s vanish on the middle row. Survivors fall: the Js
-    // at row 0 fall to row 1, creating cluster #2. New randoms drop in
-    // at row 0. Cols 3-4 unchanged.
-    const stage1 = stage0.map((col, c) => {
-      if (!HIT_COLS.includes(c)) return [...col];
-      return [randSymbolNotIn(new Set([TRIGGER1, TRIGGER2])), TRIGGER2, col[2]];
-    });
+    // Cascade gravity: when the cell at HIT_ROW vanishes, every cell
+    // above it falls down by one row, and a new symbol fills the top.
+    // Cells BELOW HIT_ROW stay put.
+    const dropAtHitRow = (col, fillTop) => {
+      const next = [...col];
+      for (let r = HIT_ROW; r > 0; r--) next[r] = next[r - 1];
+      next[0] = fillTop;
+      return next;
+    };
 
-    // Stage 2 — Js vanish on the middle row. Stage-1's row-0 (random)
-    // falls to row 1; new random at row 0. No further cluster.
-    const stage2 = stage1.map((col, c) => {
-      if (!HIT_COLS.includes(c)) return [...col];
-      return [randSymbolNotIn(new Set([TRIGGER1, TRIGGER2])), col[0], col[2]];
-    });
+    // Stage 1 — 10s vanish at HIT_ROW. Js at row 0 fall to HIT_ROW,
+    // creating cluster #2. New randoms drop in at row 0.
+    const stage1 = stage0.map((col, c) =>
+      HIT_COLS.includes(c)
+        ? dropAtHitRow(col, randSymbolNotIn(new Set([TRIGGER1, TRIGGER2])))
+        : [...col],
+    );
+
+    // Stage 2 — Js vanish at HIT_ROW. Stage-1's row-0 (a random) falls
+    // into HIT_ROW; new random at row 0. No further cluster.
+    const stage2 = stage1.map((col, c) =>
+      HIT_COLS.includes(c)
+        ? dropAtHitRow(col, randSymbolNotIn(new Set([TRIGGER1, TRIGGER2])))
+        : [...col],
+    );
 
     // Round 1: classic strip-spin to stage 0.
     const p = reelSet.spin();
@@ -147,9 +161,9 @@ return {
     await p;
     await new Promise((r) => setTimeout(r, 300));
 
-    // Cascade chain: pop the middle row twice. Both pops on the same
-    // three left columns (HIT_COLS); cols 3-4 never animate because
-    // cascadeLoop skips reels with no winners and unchanged symbols.
+    // Cascade chain: pop HIT_ROW twice. Both pops on the same three
+    // left columns; cols 3-4 never animate because cascadeLoop skips
+    // reels with no winners and unchanged symbols.
     await runCascade(reelSet, [stage0, stage1, stage2], {
       winners: () => HIT_COLS.map((c) => ({ reel: c, row: HIT_ROW })),
       vanishDuration: 320,

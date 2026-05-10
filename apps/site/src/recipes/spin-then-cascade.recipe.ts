@@ -16,10 +16,14 @@
 // reader. Real games typically chain across overlapping clusters; here
 // we keep the demo's affected area visually contiguous.
 
+// 5 reels x 4 rows — matches the Arc Lord shape shown in the reference
+// clip above. The cascade chain pops the upper-middle row twice on the
+// left three columns; the two right columns and bottom two rows stay
+// completely still throughout the chain.
 const IDS = ['7', '8', '9', '10', 'J', 'Q'];
-const REELS = 5, ROWS = 3, SIZE = 80;
+const REELS = 5, ROWS = 4, SIZE = 72;
 const HIT_COLS = [0, 1, 2];                     // left three columns
-const HIT_ROW = 1;                              // middle row
+const HIT_ROW = 1;                              // upper-middle row
 const TRIGGER1 = '10';
 const TRIGGER2 = 'J';
 
@@ -63,30 +67,34 @@ return {
       }),
     );
 
-    // Stage 1 — '10's vanish on the middle row. Survivors fall: the Js
-    // at row 0 fall to row 1, creating cluster #2. New random symbols
-    // drop in at row 0. Cols 3-4 (0-indexed) are unchanged — they
-    // weren't part of the cluster, so cascadeLoop's no-winners-skip
-    // path leaves them completely alone.
-    const stage1 = stage0.map((col, c) => {
-      if (!HIT_COLS.includes(c)) return [...col];
-      return [
-        randSymbolNotIn(new Set([TRIGGER1, TRIGGER2])), // row 0: new
-        TRIGGER2,                                        // row 1: 'J' falls in
-        col[2],                                          // row 2: untouched
-      ];
-    });
+    // Cascade gravity helper: when the cell at HIT_ROW vanishes, every
+    // cell above it falls down by one row, and a brand-new symbol fills
+    // the top slot. Cells BELOW HIT_ROW stay put.
+    const dropAtHitRow = (col, fillTop) => {
+      const next = [...col];
+      for (let r = HIT_ROW; r > 0; r--) next[r] = next[r - 1];
+      next[0] = fillTop;
+      return next;
+    };
 
-    // Stage 2 — 'J's vanish on the middle row. Survivors fall, new
-    // randoms drop in at row 0. No further cluster — chain ends.
-    const stage2 = stage1.map((col, c) => {
-      if (!HIT_COLS.includes(c)) return [...col];
-      return [
-        randSymbolNotIn(new Set([TRIGGER1, TRIGGER2])), // row 0: new
-        col[0],                                          // row 1: stage-1's row-0 fills in
-        col[2],                                          // row 2: untouched
-      ];
-    });
+    // Stage 1 — '10's vanish at HIT_ROW. Survivors fall: the Js at row
+    // 0 fall into HIT_ROW, creating cluster #2. New random symbols
+    // drop in at row 0. Cols 3-4 (0-indexed) and rows below HIT_ROW
+    // are unchanged — cascadeLoop's no-winners-skip path leaves them
+    // completely alone.
+    const stage1 = stage0.map((col, c) =>
+      HIT_COLS.includes(c)
+        ? dropAtHitRow(col, randSymbolNotIn(new Set([TRIGGER1, TRIGGER2])))
+        : [...col],
+    );
+
+    // Stage 2 — 'J's vanish at HIT_ROW. Stage-1's row-0 (a random)
+    // falls into HIT_ROW; new random at row 0. No further cluster.
+    const stage2 = stage1.map((col, c) =>
+      HIT_COLS.includes(c)
+        ? dropAtHitRow(col, randSymbolNotIn(new Set([TRIGGER1, TRIGGER2])))
+        : [...col],
+    );
 
     // Round 1: classic strip-spin lands on stage 0.
     const p = reelSet.spin();

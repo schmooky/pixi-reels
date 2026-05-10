@@ -2,12 +2,11 @@
 /**
  * Optional "as seen in the wild" video clip on a recipe page.
  *
- * Renders a 2:3 portrait card with an autoplay/muted/looped video and
+ * Renders the source video at its NATURAL aspect ratio, capped to a
+ * max height so portrait clips don't dominate the page. Below it:
  * a caption naming the slot and studio. Use it on a recipe to point
  * readers at a real shipping game that uses the same mechanic — far
- * more convincing than just the demo. Source video can be webm and/or
- * mp4; the browser picks what it supports. Both are optional, but at
- * least one must be provided.
+ * more convincing than just the demo.
  *
  * Frontmatter shape:
  *   realGameVideo:
@@ -15,9 +14,8 @@
  *     mp4:  /videos/foo.mp4         # optional, fallback for older Safari
  *     caption: "Foo Slot by Studio"
  *
- * Aspect ratio is fixed at 2:3 (taller than wide). Source videos may
- * be any size — they're cropped to fill via `object-fit: cover`. Most
- * slot recordings work because the playable area is portrait or square.
+ * Browser picks webm vs mp4. Both are optional, but at least one must
+ * be provided.
  */
 export interface Props {
   webm?: string;
@@ -33,24 +31,18 @@ if (!webm && !mp4) {
 ---
 
 <figure class="not-prose flex flex-col items-center">
-  <div class="relative w-full overflow-hidden rounded-xl border border-border bg-muted/40 aspect-[2/3]">
-    <video
-      autoplay
-      muted
-      loop
-      playsinline
-      preload="metadata"
-      class="h-full w-full object-cover"
-      aria-label={caption}
-    >
-      {webm && <source src={webm} type="video/webm" />}
-      {mp4 && <source src={mp4} type="video/mp4" />}
-      <!-- Fallback message if nothing decodes -->
-      <p class="absolute inset-0 flex items-center justify-center p-4 text-center text-xs text-muted-foreground">
-        Your browser can't play this clip. {caption}.
-      </p>
-    </video>
-  </div>
+  <video
+    autoplay
+    muted
+    loop
+    playsinline
+    preload="metadata"
+    class="max-h-[320px] w-auto rounded-xl border border-border bg-muted/40"
+    aria-label={caption}
+  >
+    {webm && <source src={webm} type="video/webm" />}
+    {mp4 && <source src={mp4} type="video/mp4" />}
+  </video>
   <figcaption class="mt-2 text-center text-xs text-muted-foreground">
     As seen in <span class="font-medium text-foreground/80">{caption}</span>
   </figcaption>

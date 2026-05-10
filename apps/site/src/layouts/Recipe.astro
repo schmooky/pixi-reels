@@ -77,33 +77,30 @@ const jsonLd = [
       {description && <p class="mt-2 text-muted-foreground max-w-[620px]">{description}</p>}
     </header>
 
-    {(steps.length > 0 || realGameVideo) && (
-      <div class={`mb-6 ${realGameVideo ? 'grid gap-4 sm:grid-cols-[1fr_auto] sm:items-start' : ''}`}>
-        {steps.length > 0 && (
-          <div class="rounded-xl border border-border bg-card p-4">
-            <div class="mb-2 text-xs font-semibold uppercase tracking-wider text-primary">Steps</div>
-            <ol class="list-decimal pl-5 space-y-1 text-sm text-foreground/80">
-              {steps.map((s: string) => <li>{s}</li>)}
-            </ol>
-            {apis.length > 0 && (
-              <div class="mt-4 flex flex-wrap gap-1.5 border-t border-border/60 pt-3">
-                <span class="text-[11px] uppercase tracking-wider text-muted-foreground">APIs</span>
-                {apis.map((a: string) => (
-                  <code class="rounded bg-muted px-1.5 py-0.5 font-mono text-[11px] text-primary">{a}</code>
-                ))}
-              </div>
-            )}
+    {steps.length > 0 && (
+      <div class="mb-6 rounded-xl border border-border bg-card p-4">
+        <div class="mb-2 text-xs font-semibold uppercase tracking-wider text-primary">Steps</div>
+        <ol class="list-decimal pl-5 space-y-1 text-sm text-foreground/80">
+          {steps.map((s: string) => <li>{s}</li>)}
+        </ol>
+        {apis.length > 0 && (
+          <div class="mt-4 flex flex-wrap gap-1.5 border-t border-border/60 pt-3">
+            <span class="text-[11px] uppercase tracking-wider text-muted-foreground">APIs</span>
+            {apis.map((a: string) => (
+              <code class="rounded bg-muted px-1.5 py-0.5 font-mono text-[11px] text-primary">{a}</code>
+            ))}
           </div>
         )}
-        {realGameVideo && (
-          <div class="mx-auto w-[200px] sm:mx-0">
-            <RealGameVideo
-              webm={realGameVideo.webm}
-              mp4={realGameVideo.mp4}
-              caption={realGameVideo.caption}
-            />
-          </div>
-        )}
+      </div>
+    )}
+
+    {realGameVideo && (
+      <div class="mb-4">
+        <RealGameVideo
+          webm={realGameVideo.webm}
+          mp4={realGameVideo.mp4}
+          caption={realGameVideo.caption}
+        />
       </div>
     )}
 
