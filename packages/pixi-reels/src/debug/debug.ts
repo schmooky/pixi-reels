@@ -113,6 +113,141 @@ export function debugGrid(reelSet: ReelSet): string {
 }
 
 /**
+ * One captured frame from `startRecording()` — a `DebugSnapshot` plus the
+ * tag the recording was started with and the spin event that triggered
+ * the capture.
+ */
+export interface RecordedFrame {
+  /** Recording tag at the time of capture. Useful for grouping multiple sessions. */
+  tag: string;
+  /** Reel-set event that triggered the capture (`spin:start`, `spin:allLanded`, etc). */
+  trigger: string;
+  /** Snapshot of `debugSnapshot(reelSet)` at the moment of capture. */
+  snapshot: DebugSnapshot;
+}
+
+/**
+ * Default upper bound on `_recordedFrames` length. When the buffer fills,
+ * the oldest entries are dropped (rolling window). Override per session
+ * via `startRecording(reelSet, tag, { maxFrames })`. A long-running debug
+ * session in a browser would otherwise grow the array forever.
+ */
+const DEFAULT_MAX_FRAMES = 1000;
+
+/** All captured frames across all recording sessions in this process. */
+const _recordedFrames: RecordedFrame[] = [];
+
+/** Effective per-process cap. Updated when a session starts with a higher value. */
+let _maxFrames = DEFAULT_MAX_FRAMES;
+
+/**
+ * Per-recording-session state: which events to listen on and how to
+ * detach them later. Keyed by the `ReelSet` so two reel sets in the
+ * same page can each record independently.
+ */
+const _recorders = new WeakMap<ReelSet, () => void>();
+
+/** Options for {@link startRecording}. */
+export interface StartRecordingOptions {
+  /**
+   * Maximum number of frames retained across the whole process. When the
+   * buffer is full the oldest frames are dropped. Default 1000.
+   */
+  maxFrames?: number;
+}
+
+/**
+ * Start recording the reel-set's frame state at every key spin event
+ * (`spin:start`, `spin:reelLanded`, `spin:allLanded`, `spin:complete`).
+ * Each event captures a `DebugSnapshot` and pushes it onto a process-
+ * wide rolling log readable via {@link getFrames}.
+ *
+ * The `tag` is freeform — use it to label multiple recording sessions
+ * so you can filter `getFrames(tag)` later. Call {@link stopRecording}
+ * to detach the listeners (also fires automatically when the reel set
+ * emits `'destroyed'`).
+ *
+ * Designed for AI agents and debug harnesses. Calling `startRecording`
+ * twice on the same `reelSet` replaces the prior recording (the previous
+ * tag's listeners are removed before the new ones attach).
+ *
+ * ```ts
+ * import { startRecording, stopRecording, getFrames } from 'pixi-reels';
+ *
+ * startRecording(reelSet, 'spin-1');
+ * await reelSet.spin();
+ * stopRecording(reelSet);
+ * const frames = getFrames('spin-1'); // every snapshot tagged 'spin-1'
+ * ```
+ */
+export function startRecording(
+  reelSet: ReelSet,
+  tag = 'default',
+  options: StartRecordingOptions = {},
+): void {
+  // Detach any prior recorder on this reel set first.
+  stopRecording(reelSet);
+
+  if (options.maxFrames !== undefined && options.maxFrames > 0) {
+    _maxFrames = options.maxFrames;
+  }
+
+  const capture = (trigger: string): void => {
+    _recordedFrames.push({ tag, trigger, snapshot: debugSnapshot(reelSet) });
+    // Rolling window: drop oldest when over cap.
+    if (_recordedFrames.length > _maxFrames) {
+      _recordedFrames.splice(0, _recordedFrames.length - _maxFrames);
+    }
+  };
+
+  const onStart = () => capture('spin:start');
+  const onReelLanded = () => capture('spin:reelLanded');
+  const onAllLanded = () => capture('spin:allLanded');
+  const onComplete = () => capture('spin:complete');
+  // Auto-detach when the reel set is destroyed — otherwise listeners hang
+  // off a dead emitter and the WeakMap entry can't drop until GC.
+  const onDestroyed = () => stopRecording(reelSet);
+
+  reelSet.events.on('spin:start', onStart);
+  reelSet.events.on('spin:reelLanded', onReelLanded);
+  reelSet.events.on('spin:allLanded', onAllLanded);
+  reelSet.events.on('spin:complete', onComplete);
+  reelSet.events.on('destroyed', onDestroyed);
+
+  _recorders.set(reelSet, () => {
+    reelSet.events.off('spin:start', onStart);
+    reelSet.events.off('spin:reelLanded', onReelLanded);
+    reelSet.events.off('spin:allLanded', onAllLanded);
+    reelSet.events.off('spin:complete', onComplete);
+    reelSet.events.off('destroyed', onDestroyed);
+  });
+}
+
+/** Detach the recorder previously installed by {@link startRecording}. No-op if none. */
+export function stopRecording(reelSet: ReelSet): void {
+  const detach = _recorders.get(reelSet);
+  if (detach) {
+    detach();
+    _recorders.delete(reelSet);
+  }
+}
+
+/**
+ * All recorded frames in capture order. When `tag` is provided, only
+ * frames tagged with it are returned. Frames are not cleared between
+ * recording sessions — call {@link clearFrames} to reset.
+ */
+export function getFrames(tag?: string): readonly RecordedFrame[] {
+  if (tag === undefined) return _recordedFrames.slice();
+  return _recordedFrames.filter((f) => f.tag === tag);
+}
+
+/** Empty the global recording log. */
+export function clearFrames(): void {
+  _recordedFrames.length = 0;
+}
+
+/**
  * Enable debug mode: attaches debug utilities to `window.__PIXI_REELS_DEBUG`.
  *
  * After calling this, an AI agent can run in the browser console:
@@ -120,6 +255,9 @@ export function debugGrid(reelSet: ReelSet): string {
  * __PIXI_REELS_DEBUG.snapshot()  // full state JSON
  * __PIXI_REELS_DEBUG.grid()      // ASCII grid
  * __PIXI_REELS_DEBUG.log()       // console.log the grid
+ * __PIXI_REELS_DEBUG.startRecording('myTag')
+ * __PIXI_REELS_DEBUG.stopRecording()
+ * __PIXI_REELS_DEBUG.getFrames('myTag')
  * ```
  */
 export function enableDebug(reelSet: ReelSet): void {
@@ -155,6 +293,15 @@ export function enableDebug(reelSet: ReelSet): void {
       }
       console.log('[pixi-reels debug] tracing enabled for all events');
     },
+    /** Start a frame-state recording session on this reel set. */
+    startRecording: (tag = 'default', options?: StartRecordingOptions) =>
+      startRecording(reelSet, tag, options),
+    /** Stop a recording session — paired with `startRecording`. */
+    stopRecording: () => stopRecording(reelSet),
+    /** Pull recorded frames; pass `tag` to filter to one session. */
+    getFrames: (tag?: string) => getFrames(tag),
+    /** Empty the global recording log. */
+    clearFrames: () => clearFrames(),
     /**
      * Toggle a debug overlay on the unmasked container that visualizes the
      * mask shape and per-reel boxes. Useful for spotting pyramid peek and

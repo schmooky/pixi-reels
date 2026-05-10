@@ -127,8 +127,21 @@ export type { Disposable } from './utils/Disposable.js';
 export { TickerRef } from './utils/TickerRef.js';
 
 // Debug
-export { debugSnapshot, debugGrid, enableDebug } from './debug/debug.js';
-export type { DebugSnapshot, DebugReelSnapshot } from './debug/debug.js';
+export {
+  debugSnapshot,
+  debugGrid,
+  enableDebug,
+  startRecording,
+  stopRecording,
+  getFrames,
+  clearFrames,
+} from './debug/debug.js';
+export type {
+  DebugSnapshot,
+  DebugReelSnapshot,
+  RecordedFrame,
+  StartRecordingOptions,
+} from './debug/debug.js';
 
 // Testing utilities (tree-shakeable)
 export {
