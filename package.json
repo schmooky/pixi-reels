@@ -49,6 +49,7 @@
     "@changesets/cli": "^2.31.0",
     "@commitlint/cli": "^20.5.0",
     "@commitlint/config-conventional": "^20.5.0",
+    "@schmooky/zvuk": "^0.1.1",
     "husky": "^9.1.7",
     "lint-staged": "^16.4.0"
   }
