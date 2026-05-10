@@ -391,6 +391,79 @@ export class Reel implements Disposable {
     this.refreshZIndex();
   }
 
+  /**
+   * Swap the symbol at a single visible row in-place, without restarting
+   * the spin or rebuilding the rest of the strip.
+   *
+   * Useful for live presentation effects at rest — converting a wild
+   * after a cascade pop, swapping to a sticky variant after a win —
+   * without going through the full `placeSymbols` / `setResult` paths.
+   *
+   * The symbol's `zIndex`, parent (masked vs unmasked), and visual state
+   * are reset by `_replaceSymbol` so callers don't need to follow up
+   * with `refreshZIndex`. The motion layer is **not** snapped — call
+   * `snapToGrid()` separately if you need to re-grid.
+   *
+   * Throws if:
+   *   - the reel is currently moving (`speed !== 0` or `isStopping`).
+   *     A mid-spin swap would be overwritten by the next wrap/stop frame
+   *     anyway; the fail-loud throw spares the caller the silent loss.
+   *   - `visibleRow` is out of `[0, visibleRows)`.
+   *   - `symbolId` is not registered.
+   *   - the row is a non-anchor cell of an existing big-symbol block.
+   *   - the row currently holds the anchor of a big-symbol block — big
+   *     blocks span multiple cells (and possibly reels) and require
+   *     `placeSymbols` + the cross-reel OCCUPIED coordinator.
+   *   - `symbolId` itself is a big symbol — same reason.
+   *
+   * Pin overlap is **not** detected at this layer (Reel doesn't see the
+   * pin map). Use `ReelSet.setSymbolAt(col, row, id)` for the safe
+   * caller-facing surface that also throws on pinned cells.
+   */
+  setSymbolAt(visibleRow: number, symbolId: string): void {
+    if (this.speed !== 0 || this._isStopping) {
+      throw new Error(
+        `setSymbolAt: cannot swap mid-spin (speed=${this.speed}, isStopping=${this._isStopping}). ` +
+        `Wait for the spin to land before calling, or use the result grid via setResult().`,
+      );
+    }
+    if (!Number.isInteger(visibleRow) || visibleRow < 0 || visibleRow >= this._visibleRows) {
+      throw new Error(
+        `setSymbolAt: visibleRow ${visibleRow} is out of range [0, ${this._visibleRows}).`,
+      );
+    }
+    if (!Object.prototype.hasOwnProperty.call(this._symbolsData, symbolId)) {
+      throw new Error(
+        `setSymbolAt: symbolId '${symbolId}' is not registered. Register it via builder.symbols(...).`,
+      );
+    }
+    const occ = this._occupancy[visibleRow];
+    if (occ) {
+      throw new Error(
+        `setSymbolAt: visible row ${visibleRow} is a non-anchor cell of a big symbol (anchor at row ${occ.anchorRow}). ` +
+        `Use placeSymbols to rebuild the frame.`,
+      );
+    }
+    const arrayIndex = this._bufferAbove + visibleRow;
+    const oldSym = this.symbols[arrayIndex];
+    const oldMeta = this._symbolsData[oldSym.symbolId];
+    if (oldMeta?.size && (oldMeta.size.w > 1 || oldMeta.size.h > 1)) {
+      throw new Error(
+        `setSymbolAt: row ${visibleRow} currently holds the anchor of big symbol ` +
+        `'${oldSym.symbolId}' (${oldMeta.size.w}x${oldMeta.size.h}). Big blocks span multiple ` +
+        `cells (and possibly reels); use placeSymbols + the OCCUPIED coordinator instead.`,
+      );
+    }
+    const newMeta = this._symbolsData[symbolId];
+    if (newMeta?.size && (newMeta.size.w > 1 || newMeta.size.h > 1)) {
+      throw new Error(
+        `setSymbolAt: '${symbolId}' is a big symbol (${newMeta.size.w}x${newMeta.size.h}). ` +
+        `Use placeSymbols + the OCCUPIED coordinator instead.`,
+      );
+    }
+    this._replaceSymbol(arrayIndex, symbolId);
+  }
+
   /** Place symbols immediately at target positions (for skip/turbo). */
   placeSymbols(symbolIds: string[]): void {
     const totalSlots = this.symbols.length;

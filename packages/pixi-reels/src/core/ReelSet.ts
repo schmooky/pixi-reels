@@ -320,6 +320,35 @@ export class ReelSet extends Container implements Disposable {
   }
 
   /**
+   * Swap the symbol at a single grid cell in-place, at rest.
+   *
+   * Caller-facing wrapper over `Reel.setSymbolAt` that ALSO refuses
+   * pinned cells (since `Reel` itself can't see the pin map). Use this
+   * for live presentation effects — sticky-after-win, mid-feature
+   * rewrites — without going through `setResult()`.
+   *
+   * Throws (in addition to the per-reel guards documented on
+   * `Reel.setSymbolAt`) if `(col, row)` currently has an active pin.
+   * Use `unpin(col, row)` first if you intentionally want to overwrite it.
+   *
+   * @example
+   * await reelSet.spin(); // landed
+   * reelSet.setSymbolAt(2, 1, 'wild'); // swap centre cell to wild
+   */
+  setSymbolAt(col: number, row: number, symbolId: string): void {
+    if (col < 0 || col >= this._reels.length) {
+      throw new RangeError(`setSymbolAt: col ${col} out of range [0, ${this._reels.length})`);
+    }
+    if (this._pins.has(pinKey(col, row))) {
+      throw new Error(
+        `setSymbolAt: cell (${col}, ${row}) has an active pin. Call unpin(col, row) ` +
+        `first if you intend to overwrite it.`,
+      );
+    }
+    this._reels[col].setSymbolAt(row, symbolId);
+  }
+
+  /**
    * Set the drop order for cascade drop-in mechanics.
    *
    * A convenience wrapper over setStopDelays() for common patterns.
