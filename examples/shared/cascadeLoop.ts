@@ -130,6 +130,23 @@ export async function tumbleToGrid(
     }
     const winCount = winnerRows.length;
 
+    // If this reel has no winners AND its visible window is unchanged,
+    // skip placeSymbols entirely. placeSymbols regenerates the buffer-
+    // above and buffer-below symbols (via _randomProvider.next), and
+    // touches every visible symbol's parent / zIndex / visual state via
+    // _replaceSymbol's same-id branch. On a reel that's already settled
+    // and shouldn't move, that work is visible — buffer regeneration
+    // can flicker into the masked area when the mask doesn't perfectly
+    // clip the slot above visible row 0. Skip the whole no-op call.
+    if (winCount === 0) {
+      const current = reel.getVisibleSymbols();
+      let unchanged = true;
+      for (let row = 0; row < visible; row++) {
+        if (current[row] !== nextGrid[r][row]) { unchanged = false; break; }
+      }
+      if (unchanged) continue;
+    }
+
     // Swap identities into the final state. This doesn't move y — placeSymbols
     // snaps to grid — but symbol identities now match nextGrid[r].
     reel.placeSymbols(nextGrid[r]);
