@@ -184,19 +184,6 @@ export const RECIPES: RecipeMeta[] = [
     tags: ['debug', 'prototyping', 'custom-symbol', 'graphics'],
   },
   {
-    slug: 'multiways-card-symbols',
-    group: 'multiways',
-    title: 'MultiWays with debug Graphics symbols',
-    oneLiner: 'CardSymbol on a MultiWays slot — every reshape redraws cells at their exact pixel size, no texture stretching.',
-    steps: [
-      'Import CardSymbol from examples/shared/CardSymbol.ts',
-      'Build .multiways({ minRows, maxRows, reelPixelHeight })',
-      'Register a deck of cards via CARD_DECK; reshape on every spin',
-    ],
-    apis: ['CardSymbol', 'ReelSetBuilder.multiways', 'ReelSet.setShape'],
-    tags: ['multiways', 'custom-symbol', 'graphics', 'debug'],
-  },
-  {
     slug: 'sticky-wild-multiways',
     group: 'multiways',
     title: 'Sticky wild on MultiWays',

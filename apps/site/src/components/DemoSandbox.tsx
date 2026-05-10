@@ -7,6 +7,7 @@ import { AlertTriangle, Copy, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import CheatPanelReact from './CheatPanelReact.tsx';
 import { CanvasSkeleton } from './CanvasSkeleton';
+import { useMinDisplay } from './useMinDisplay';
 
 export interface DemoSandboxProps {
   /** Boots PixiJS + ReelSet into `host`. Returns a cleanup fn. Gets the engine it should register cheats against via `api.mountPanel(engine)`. */
@@ -37,6 +38,7 @@ export default function DemoSandbox(props: DemoSandboxProps) {
   const [bootError, setBootError] = useState<Error | null>(null);
   const [retryKey, setRetryKey] = useState(0);
   const [ready, setReady] = useState(false);
+  const showSkeleton = useMinDisplay(!ready, 250);
 
   useEffect(() => {
     if (!hostRef.current) return;
@@ -108,7 +110,7 @@ export default function DemoSandbox(props: DemoSandboxProps) {
       >
         <div ref={hostRef} className="flex h-full w-full items-center justify-center [&_canvas]:block [&_canvas]:max-w-full [&_canvas]:h-auto" />
 
-        {!ready && !bootError && <CanvasSkeleton label="Booting demo…" />}
+        {showSkeleton && !bootError && <CanvasSkeleton label="Booting demo…" />}
 
         {bootError && (
           <ErrorCard error={bootError} onRetry={() => setRetryKey((k) => k + 1)} />

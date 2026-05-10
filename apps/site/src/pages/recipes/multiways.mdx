@@ -1,17 +1,20 @@
 ---
 layout: ../../layouts/Recipe.astro
-title: MultiWays
-description: Per-spin row variation. Each reel can land on a different row count between minRows and maxRows. AdjustPhase reshapes the reels between SPIN and STOP.
-tags: [multiways, shape, geometry, reshape]
+title: MultiWays (Megaways)
+description: Per-spin row variation. Each reel lands on a different row count between minRows and maxRows. The reel pixel height stays fixed; cell heights are derived per spin. The Megaways formula.
+tags: [multiways, megaways, shape, geometry, reshape]
 steps:
-  - "Build with .multiways({ minRows, maxRows, reelPixelHeight })"
-  - "Each spin, call reelSet.setShape(rowsPerReel) BEFORE setResult()"
-  - "Between SPIN and STOP the reels reshape (cell symbols snap; pin overlays tween)"
+  - "Build with .multiways({ minRows, maxRows, reelPixelHeight }) — defines the height budget"
+  - "Each spin, pick a per-reel row count and call reelSet.setShape(rowsPerReel) BEFORE setResult()"
+  - "AdjustPhase commits the new geometry; cell symbols snap, pin overlays tween"
 apis:
   - ReelSetBuilder.multiways
   - ReelSet.setShape
   - AdjustPhase
   - "events: shape:changed, adjust:start, adjust:complete"
+realGameVideo:
+  mp4: /videos/dog-house-megaways.mp4
+  caption: "The Dog House Megaways by Pragmatic Play"
 ---
 
 import code from '../../recipes/multiways.recipe.ts?raw';
@@ -19,7 +22,9 @@ import { RecipeRunner } from '../../components/RecipeRunner.tsx';
 
 <RecipeRunner code={code} client:only="react" />
 
-MultiWays — every spin chooses a fresh per-reel row count from `[minRows, maxRows]`. The reel pixel height is fixed; cell height per reel is derived as `reelPixelHeight / visibleRows[i]`, so a 2-row reel has tall cells and a 7-row reel has short ones. Between SPIN and STOP the engine commits the new geometry on each reel (resizes the strip's symbols, reshapes the motion layer) and then runs `AdjustPhase` to tween any pin overlays from their old cell to their new cell — the cell symbols themselves snap because they're still spinning at full speed.
+MultiWays is the engine surface behind every "Megaways"-style slot. The setup: a fixed pixel-height per reel column, a configurable `[minRows, maxRows]` range, and `setShape(rowsPerReel)` chosen per spin. The demo above runs **6 reels × 2-7 rows per reel** — exactly the Pragmatic Play "Megaways" footprint shown in the reference clip. Cell height is derived live (`reelPixelHeight / visibleRows[i]`), so a 2-row reel renders as two huge cells and a 7-row reel renders as seven small ones. Between SPIN and STOP the engine commits the new geometry per reel (resizes the strip's symbols, reshapes the motion layer) and then runs `AdjustPhase` to tween any pin overlays from their old cell to their new cell — the cell symbols themselves snap because they're still spinning at full speed.
+
+The card-suit graphics in the demo are a no-asset prototyping default (`CardSymbol` from `examples/shared/CardSymbol.ts`) so each cell renders crisply at any size. In a real Megaways slot you'd ship `SpriteSymbol` / `AnimatedSpriteSymbol` / `SpineSymbol` — see [`card-symbol-debug`](/recipes/card-symbol-debug/) for when (not) to use the debug class.
 
 ## The whole mechanic
 
@@ -77,5 +82,5 @@ Pins survive MultiWays reshapes. Each pin has a frozen `originRow` (defaults to 
 
 - [Guide: Per-reel geometry, MultiWays & big symbols](/guides/per-reel-geometry/) — full mechanics primer
 - [Per-reel shape (pyramid)](/recipes/pyramid-shape/) — non-MultiWays static shape
-- [Big symbols](/recipes/big-symbols/) — N×M blocks (mutually exclusive with MultiWays)
+- [MxN big symbols](/recipes/big-symbols-mxn/) — N×M blocks (mutually exclusive with MultiWays)
 - [Sticky wild on MultiWays](/recipes/sticky-wild-multiways/) — pin migration with `originRow`

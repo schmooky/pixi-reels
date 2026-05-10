@@ -6,7 +6,7 @@ Site: https://pixi-reels.schmooky.dev
 Repo: https://github.com/schmooky/pixi-reels
 Package: https://www.npmjs.com/package/pixi-reels
 
-Generated: 2026-05-10T20:49:51.527Z
+Generated: 2026-05-10T21:33:22.055Z
 
 ## Quick start
 
@@ -271,25 +271,16 @@ Steps:
   - Draw a ×N badge on each pinned cell via pin:placed event
   - On wins, read pin.payload.multiplier to scale the payout
 
-### MultiWays
+### MultiWays (Megaways)
 URL: https://pixi-reels.schmooky.dev/recipes/multiways/
-Per-spin row variation. Each reel can land on a different row count between minRows and maxRows. AdjustPhase reshapes the reels between SPIN and STOP.
-Tags: multiways, shape, geometry, reshape
+Per-spin row variation. Each reel lands on a different row count between minRows and maxRows. The reel pixel height stays fixed; cell heights are derived per spin. The Megaways formula.
+Tags: multiways, megaways, shape, geometry, reshape
 APIs: ReelSetBuilder.multiways, ReelSet.setShape, AdjustPhase, events: shape:changed, adjust:start, adjust:complete
 Steps:
-  - Build with .multiways({ minRows, maxRows, reelPixelHeight })
-  - Each spin, call reelSet.setShape(rowsPerReel) BEFORE setResult()
-  - Between SPIN and STOP the reels reshape (cell symbols snap; pin overlays tween)
-
-### MultiWays with custom Graphics symbols
-URL: https://pixi-reels.schmooky.dev/recipes/multiways-card-symbols/
-Card-suit symbols (7 8 9 10 J Q K A) drawn from PIXI Graphics — flat rectangles with centered labels — so cells visually fill the entire space the engine hands them. Shows how MultiWays reshape feels at the cell level.
-Tags: multiways, custom-symbol, graphics, no-textures
-APIs: ReelSymbol, ReelSetBuilder.multiways, PIXI.Graphics
-Steps:
-  - Subclass ReelSymbol with a PIXI.Graphics + PIXI.Text composite
-  - In resize(width, height), redraw the rect at the cell's actual size
-  - Register one symbol id per card, each with its own color
+  - Build with .multiways({ minRows, maxRows, reelPixelHeight }) — defines the height budget
+  - Each spin, pick a per-reel row count and call reelSet.setShape(rowsPerReel) BEFORE setResult()
+  - AdjustPhase commits the new geometry; cell symbols snap, pin overlays tween
+Real game example: The Dog House Megaways by Pragmatic Play (https://pixi-reels.schmooky.dev/videos/dog-house-megaways.mp4)
 
 ### Mystery reveal (CellPin)
 URL: https://pixi-reels.schmooky.dev/recipes/mystery-reveal-pin/
@@ -621,8 +612,12 @@ const reelSet = new ReelSetBuilder()
   })
   .weights(Object.fromEntries(CARD_DECK.map((c, i) => [c.id, 12 - i])))
   .symbolData({ [GIANT.id]: { weight: 0, zIndex: 5, size: { w: GIANT.w, h: GIANT.h } } })
-  .speed('normal', SpeedPresets.NORMAL)
-  .speed('turbo', SpeedPresets.TURBO)
+  // Big symbols are visually massive (a 3x3 anchor is ~3x cell size);
+  // the default 56px landing bounce overshoots into adjacent cells and
+  // reads as a broken landing. Zero the bounce so the anchor lands
+  // flush on grid.
+  .speed('normal', { ...SpeedPresets.NORMAL, bounceDistance: 0, bounceDuration: 0 })
+  .speed('turbo', { ...SpeedPresets.TURBO, bounceDistance: 0, bounceDuration: 0 })
   .ticker(app.ticker)
   .build();
 
@@ -674,8 +669,13 @@ const reelSet = new ReelSetBuilder()
   })
   .weights(Object.fromEntries(CARD_DECK.map((c, i) => [c.id, 12 - i])))
   .symbolData({ [SQUARE.id]: { weight: 0, zIndex: 5, size: { w: SQUARE.w, h: SQUARE.h } } })
-  .speed('normal', SpeedPresets.NORMAL)
-  .speed('turbo', SpeedPresets.TURBO)
+  // Big symbols are visually massive (a 2x2 anchor is ~2x cell size);
+  // the default 56px landing bounce overshoots into adjacent cells and
+  // reads as a broken landing. Zero the bounce so the anchor lands
+  // flush on grid. Keeps the decelerationEase intact so the brake-in
+  // is still smooth.
+  .speed('normal', { ...SpeedPresets.NORMAL, bounceDistance: 0, bounceDuration: 0 })
+  .speed('turbo', { ...SpeedPresets.TURBO, bounceDistance: 0, bounceDuration: 0 })
   .ticker(app.ticker)
   .build();
 
@@ -728,8 +728,11 @@ const reelSet = new ReelSetBuilder()
   })
   .weights(Object.fromEntries(CARD_DECK.map((c, i) => [c.id, 12 - i])))
   .symbolData({ [TALL.id]: { weight: 0, zIndex: 5, size: { w: TALL.w, h: TALL.h } } })
-  .speed('normal', SpeedPresets.NORMAL)
-  .speed('turbo', SpeedPresets.TURBO)
+  // Big symbols are visually massive; the default 56px landing bounce
+  // overshoots into adjacent cells and reads as a broken landing.
+  // Zero the bounce so the anchor lands flush on grid.
+  .speed('normal', { ...SpeedPresets.NORMAL, bounceDistance: 0, bounceDuration: 0 })
+  .speed('turbo', { ...SpeedPresets.TURBO, bounceDistance: 0, bounceDuration: 0 })
   .ticker(app.ticker)
   .build();
 
@@ -782,8 +785,11 @@ const reelSet = new ReelSetBuilder()
   })
   .weights(Object.fromEntries(CARD_DECK.map((c, i) => [c.id, 12 - i])))
   .symbolData({ [WIDE.id]: { weight: 0, zIndex: 5, size: { w: WIDE.w, h: WIDE.h } } })
-  .speed('normal', SpeedPresets.NORMAL)
-  .speed('turbo', SpeedPresets.TURBO)
+  // Big symbols are visually massive; the default 56px landing bounce
+  // overshoots into adjacent cells and reads as a broken landing.
+  // Zero the bounce so the anchor lands flush on grid.
+  .speed('normal', { ...SpeedPresets.NORMAL, bounceDistance: 0, bounceDuration: 0 })
+  .speed('turbo', { ...SpeedPresets.TURBO, bounceDistance: 0, bounceDuration: 0 })
   .ticker(app.ticker)
   .build();
 
@@ -1775,8 +1781,10 @@ const reelSet = new ReelSetBuilder()
   })
   .weights(Object.fromEntries(CARD_DECK.map((c, i) => [c.id, 12 - i])))
   .symbolData(Object.fromEntries(SHAPES.map((s) => [s.id, { weight: 0, zIndex: 5, size: { w: s.w, h: s.h } }])))
-  .speed('normal', SpeedPresets.NORMAL)
-  .speed('turbo', SpeedPresets.TURBO)
+  // Big symbols make the default 56px landing bounce look broken —
+  // the giant anchor overshoots into adjacent cells. Zero the bounce.
+  .speed('normal', { ...SpeedPresets.NORMAL, bounceDistance: 0, bounceDuration: 0 })
+  .speed('turbo', { ...SpeedPresets.TURBO, bounceDistance: 0, bounceDuration: 0 })
   .ticker(app.ticker)
   .build();
 
@@ -2076,89 +2084,30 @@ return {
 };
 ```
 
-### multiways-card-symbols
-URL: https://pixi-reels.schmooky.dev/recipes/multiways-card-symbols/
-```ts
-// @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
-//                   PIXI, gsap, app, textures, blurTextures, SYMBOL_IDS,
-//                   pickWeighted
-//
-// MultiWays with `CardSymbol` (debug Graphics symbol). Each card is drawn
-// at runtime as a flat colored rectangle with a centered letter, so cells
-// visually fill their entire allotted space — perfect for showing how
-// MultiWays reshape feels at the cell level. With sprite atlases you'd
-// see textures stretching across reshapes; with Graphics every reshape
-// redraws geometry crisply at any size.
-//
-// CARD SYMBOLS BELOW ARE DEBUG/PROTOTYPING ONLY. CardSymbol is the
-// no-asset debug helper from `examples/shared/CardSymbol.ts`. Real slot
-// art ships SpriteSymbol / AnimatedSpriteSymbol / SpineSymbol — see the
-// `/recipes/card-symbol-debug/` recipe for when (not) to use this class.
-
-const REELS = 6;
-const MIN_ROWS = 2;
-const MAX_ROWS = 7;
-const REEL_PIXEL_HEIGHT = 480;
-const SYMBOL_SIZE = REEL_PIXEL_HEIGHT / MAX_ROWS;
-const GAP = 0;
-
-const reelSet = new ReelSetBuilder()
-  .reels(REELS)
-  .multiways({ minRows: MIN_ROWS, maxRows: MAX_ROWS, reelPixelHeight: REEL_PIXEL_HEIGHT })
-  .pinMigrationDuration(0)             // cells snap; only pin overlays would tween
-  .symbolSize(SYMBOL_SIZE, SYMBOL_SIZE)
-  .symbolGap(GAP, GAP)
-  .symbols((registry) => {
-    for (const card of CARD_DECK) {
-      registry.register(card.id, CardSymbol, { color: card.color, label: card.label });
-    }
-  })
-  .weights(Object.fromEntries(CARD_DECK.map((c, i) => [c.id, 12 - i])))
-  .speed('normal', SpeedPresets.NORMAL)
-  .speed('turbo', SpeedPresets.TURBO)
-  .ticker(app.ticker)
-  .build();
-
-return {
-  reelSet,
-  nextResult: () => {
-    const shape = Array.from({ length: REELS }, () =>
-      MIN_ROWS + Math.floor(Math.random() * (MAX_ROWS - MIN_ROWS + 1)),
-    );
-    reelSet.setShape(shape);
-    return shape.map((rows) =>
-      Array.from({ length: rows }, () => CARD_DECK[Math.floor(Math.random() * CARD_DECK.length)].id),
-    );
-  },
-};
-```
-
 ### multiways
 URL: https://pixi-reels.schmooky.dev/recipes/multiways/
 ```ts
 // @ts-nocheck
 // Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
-//                   PIXI, gsap, app, textures, blurTextures, SYMBOL_IDS,
-//                   pickWeighted
+//                   PIXI, gsap, app, pickWeighted
 //
-// MultiWays — per-spin row variation. Each reel can land on a different
-// number of rows in the range [minRows, maxRows]. The reel pixel height is
-// fixed; cell height per reel is derived (`reelPixelHeight / visibleRows[i]`).
-// `setShape(rowsPerReel)` is called between `spin()` and `setResult()`;
-// AdjustPhase reshapes the reels before the stop sequence.
+// MultiWays (the "Megaways" formula) — per-spin row variation. Each
+// reel lands on a different row count in [minRows, maxRows]. The reel
+// pixel height is fixed; cell height per reel is derived live as
+// `reelPixelHeight / visibleRows[i]`, so a 2-row reel has tall cells
+// and a 7-row reel has short ones. `setShape(rowsPerReel)` is called
+// between `spin()` and `setResult()`; AdjustPhase reshapes the reels
+// between SPIN and STOP.
 //
-// CARD SYMBOLS BELOW ARE DEBUG/PROTOTYPING ONLY. CardSymbol is a flat
-// Graphics-rect-with-text scaffold from `examples/shared/CardSymbol.ts`
-// that always renders crisply at any cell size — perfect for showing how
-// MultiWays reshape feels at the cell level. In a real slot, ship
-// SpriteSymbol / AnimatedSpriteSymbol / SpineSymbol — see the
-// `/recipes/card-symbol-debug/` recipe.
+// 6 reels x [2, 7] rows = up to 117,649 ways (7^6) — the canonical
+// Megaways math. The "ways" count for any spin is the product of
+// visibleRows across reels. The banner above the grid prints both the
+// per-reel shape and the total ways for each landing.
 
 const REELS = 6;
 const MIN_ROWS = 2;
 const MAX_ROWS = 7;
-const REEL_PIXEL_HEIGHT = 480;
+const REEL_PIXEL_HEIGHT = 360;
 const SYMBOL_SIZE = REEL_PIXEL_HEIGHT / MAX_ROWS;
 const GAP = 0;
 
@@ -2175,10 +2124,55 @@ const reelSet = new ReelSetBuilder()
     }
   })
   .weights(Object.fromEntries(CARD_DECK.map((c, i) => [c.id, 12 - i])))
-  .speed('normal', SpeedPresets.NORMAL)
-  .speed('turbo', SpeedPresets.TURBO)
+  // Big symbols visually overshoot at landing on this layout — set
+  // bounceDistance: 0 so each cell snaps flush regardless of which
+  // shape was rolled this spin.
+  .speed('normal', { ...SpeedPresets.NORMAL, bounceDistance: 0, bounceDuration: 0 })
+  .speed('turbo', { ...SpeedPresets.TURBO, bounceDistance: 0, bounceDuration: 0 })
   .ticker(app.ticker)
   .build();
+
+// Banner above the grid: prints the per-reel shape + total ways for
+// the current landing, so the variation is unmistakable on every spin.
+const bannerHeight = 36;
+const banner = new PIXI.Container();
+reelSet.addChild(banner);
+banner.y = -bannerHeight - 8;
+
+const bannerBg = new PIXI.Graphics();
+banner.addChild(bannerBg);
+
+const bannerText = new PIXI.Text({
+  text: 'READY — press spin',
+  style: {
+    fontFamily: '"Roboto Condensed", "Arial Narrow", system-ui, sans-serif',
+    fontSize: 14, fontWeight: '700',
+    fill: 0xffffff,
+    letterSpacing: 1,
+  },
+});
+bannerText.anchor.set(0.5);
+bannerText.y = bannerHeight / 2;
+banner.addChild(bannerText);
+
+function redrawBanner(text) {
+  const width = REELS * (SYMBOL_SIZE + GAP) - GAP;
+  bannerBg
+    .clear()
+    .roundRect(0, 0, width, bannerHeight, 8)
+    .fill({ color: 0x1e293b })
+    .stroke({ width: 2, color: 0xfef08a, alpha: 0.5 });
+  bannerText.text = text;
+  bannerText.x = width / 2;
+}
+redrawBanner('READY — press spin');
+
+reelSet.events.on('spin:allLanded', () => {
+  const visibleRowsPerReel = reelSet.reels.map((r) => r.visibleRows);
+  const ways = visibleRowsPerReel.reduce((a, b) => a * b, 1);
+  redrawBanner(`SHAPE [${visibleRowsPerReel.join(', ')}] = ${ways.toLocaleString()} ways`);
+});
+reelSet.events.on('spin:start', () => redrawBanner('SPINNING…'));
 
 return {
   reelSet,
@@ -2190,6 +2184,9 @@ return {
     return shape.map((rows) =>
       Array.from({ length: rows }, () => CARD_DECK[Math.floor(Math.random() * CARD_DECK.length)].id),
     );
+  },
+  cleanup: () => {
+    try { banner.destroy({ children: true }); } catch { /* ignore */ }
   },
 };
 ```
@@ -2240,7 +2237,82 @@ const reelSet = new ReelSetBuilder()
 // After reels land, if any cell is a mystery symbol, pick ONE random
 // filler class and pin it at every mystery cell with eval lifetime.
 // The pins override the visible symbols; the next spin clears them.
-reelSet.events.on('spin:allLanded', ({ symbols }) => {
+//
+// Animation flow:
+//   1. shake each mystery '?' card horizontally for ~280ms (anticipation)
+//   2. scale it down to 0 over 180ms (mystery vanishes)
+//   3. pin the reveal symbol — engine swaps the symbol identity at rest
+//   4. scale the new symbol UP from 0 with a back.out overshoot
+//
+// Without these tweens the reveal would be an instant swap on land —
+// player wouldn't even register that the mystery had to be opened.
+
+async function revealCell(col, row, revealId) {
+  const reel = reelSet.reels[col];
+  const oldSym = reel.getSymbolAt(row);
+  // Pivot to the cell center so the scale-down looks like the symbol
+  // collapses on itself instead of pinning to the top-left corner.
+  const px = oldSym.view.pivot.x, py = oldSym.view.pivot.y;
+  const ox = oldSym.view.x, oy = oldSym.view.y;
+  oldSym.view.pivot.set(SIZE / 2, SIZE / 2);
+  oldSym.view.x = ox + SIZE / 2;
+  oldSym.view.y = oy + SIZE / 2;
+
+  // Shake — small horizontal jiggle, four oscillations.
+  await new Promise((resolve) => {
+    gsap.to(oldSym.view, {
+      x: oldSym.view.x + 6,
+      duration: 0.07,
+      repeat: 4,
+      yoyo: true,
+      ease: 'sine.inOut',
+      onComplete: resolve,
+    });
+  });
+
+  // Scale-down — mystery vanishes.
+  await new Promise((resolve) => {
+    gsap.to(oldSym.view.scale, {
+      x: 0, y: 0,
+      duration: 0.18,
+      ease: 'power2.in',
+      onComplete: resolve,
+    });
+  });
+
+  // Restore pivot/position before swapping (the new symbol arrives with
+  // default top-left anchor, so we hand its view back at the original
+  // top-left coordinates).
+  oldSym.view.pivot.set(px, py);
+  oldSym.view.x = ox;
+  oldSym.view.y = oy;
+  oldSym.view.scale.set(1);
+
+  // Swap identity via pin — same as before, just wrapped in animation.
+  reelSet.pin(col, row, revealId, { turns: 'eval' });
+
+  // The pin call replaced the symbol at this cell; grab the new one
+  // and animate it IN. Same pivot trick so the bounce reads as
+  // expanding-from-the-center.
+  const newSym = reel.getSymbolAt(row);
+  newSym.view.pivot.set(SIZE / 2, SIZE / 2);
+  newSym.view.x = ox + SIZE / 2;
+  newSym.view.y = oy + SIZE / 2;
+  newSym.view.scale.set(0);
+  await new Promise((resolve) => {
+    gsap.to(newSym.view.scale, {
+      x: 1, y: 1,
+      duration: 0.32,
+      ease: 'back.out(1.8)',
+      onComplete: resolve,
+    });
+  });
+  newSym.view.pivot.set(px, py);
+  newSym.view.x = ox;
+  newSym.view.y = oy;
+}
+
+reelSet.events.on('spin:allLanded', async ({ symbols }) => {
   const mysteryCells = [];
   for (let c = 0; c < symbols.length; c++) {
     for (let r = 0; r < symbols[c].length; r++) {
@@ -2250,9 +2322,8 @@ reelSet.events.on('spin:allLanded', ({ symbols }) => {
   if (mysteryCells.length === 0) return;
 
   const reveal = REVEAL_CANDIDATES[Math.floor(Math.random() * REVEAL_CANDIDATES.length)];
-  for (const cell of mysteryCells) {
-    reelSet.pin(cell.col, cell.row, reveal, { turns: 'eval' });
-  }
+  // Reveal all mystery cells in parallel so the whole row pops together.
+  await Promise.all(mysteryCells.map((cell) => revealCell(cell.col, cell.row, reveal)));
 });
 
 // Scripted: every third spin, a few mystery cells land in a row.
@@ -2965,8 +3036,11 @@ const reelSet = new ReelSetBuilder()
     wild:    { weight: 3, zIndex: 999 },
     bigWild: { weight: 0, zIndex: 1000, size: { w: 2, h: 2 } },
   })
-  .speed('normal', SpeedPresets.NORMAL)
-  .speed('turbo', SpeedPresets.TURBO)
+  // Big symbols make the default 56px landing bounce look broken —
+  // the 2x2 wild overshoots into adjacent cells. Zero the bounce so
+  // the anchor lands flush on grid.
+  .speed('normal', { ...SpeedPresets.NORMAL, bounceDistance: 0, bounceDuration: 0 })
+  .speed('turbo', { ...SpeedPresets.TURBO, bounceDistance: 0, bounceDuration: 0 })
   .ticker(app.ticker)
   .build();
 
