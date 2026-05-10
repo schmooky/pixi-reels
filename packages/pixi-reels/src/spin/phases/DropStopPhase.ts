@@ -157,8 +157,6 @@ export class DropStopPhase extends ReelPhase<DropStopPhaseConfig> {
       reel.placeSymbols(config.targetFrame.slice(bufferAbove, bufferAbove + visibleRows));
     }
 
-    reel.notifySpinEnd();
-    reel.notifyLanded();
     this._stage = 'done';
   }
 
