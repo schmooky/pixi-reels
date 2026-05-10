@@ -18,12 +18,13 @@ import { RecipeRunner } from '../../components/RecipeRunner.tsx';
 
 <RecipeRunner code={code} client:only="react" />
 
-A common request: "the first round of the play should feel like a normal slot, but if there's a hit, the next rounds should drop in from above like a tumble." Until recently you needed two `ReelSet` instances and copy-pasted state. Now `spin({ mode: 'cascade' })` is a per-call override on the same engine.
+A common request: "the first round of the play should feel like a normal slot, but if there's a hit, the next rounds should drop in from above like a tumble." Until recently you needed two `ReelSet` instances and copy-pasted state. Now `spin({ mode })` is a per-call override on the same engine.
 
 ## The shape of the call
 
 ```ts
-// Builder: register BOTH modes by enabling cascade phases.
+// Builder: register cascade phases. Note: this ALSO flips the builder
+// default mode to 'cascade', so a bare reelSet.spin() will cascade.
 const reelSet = new ReelSetBuilder()
   .reels(5).visibleSymbols(3).symbolSize(80, 80)
   .symbols(/* ... */)
@@ -31,12 +32,20 @@ const reelSet = new ReelSetBuilder()
   .ticker(app.ticker)
   .build();
 
-// Round 1 — default mode (still 'standard' unless you change the builder default).
-await reelSet.spin();
+// Round 1 — explicit standard. With .cascade() registered, the bare
+// `reelSet.spin()` would cascade-drop — which is not what we want here.
+await reelSet.spin({ mode: 'standard' });
 
 // Round 2+ — cascade respin on the SAME ReelSet.
 await reelSet.spin({ mode: 'cascade' });
 ```
+
+The `.cascade()` builder call has two side effects: it registers the
+`dropStart`/`dropStop` phases AND sets the default spin mode to
+`'cascade'`. To get a strip-spin from a builder that called `.cascade()`,
+you MUST pass `{ mode: 'standard' }` explicitly — otherwise round 1
+inherits the cascade default and you see a cascade for both rounds (the
+classic "I built it, why isn't round 1 strip-spinning?" footgun).
 
 ## Why it matters
 
@@ -54,6 +63,76 @@ Each `spin()` runs through the chain you pick at call time. So:
 - `setAnticipation([3])` set on a cascade spin uses the AnticipationPhase that lives in the cascade chain.
 - `holdReels: [0, 4]` works in either mode — held reels skip START/SPIN/STOP regardless of which "S/SPIN" pair fires for the active reels.
 - `setShape()` (MultiWays) requires AdjustPhase, which is registered by `.multiways(...)` and is independent of `mode`.
+
+## Full source
+
+The exact code running in the demo above:
+
+```ts
+// @ts-nocheck
+// Injected: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, WILD_CARD,
+//           DropRecipes, PIXI, gsap, app, runCascade, pickWeighted
+
+const IDS = ['7', '8', '9', '10', 'J', 'Q'];
+const REELS = 5, ROWS = 3, SIZE = 80;
+
+function randSymbol(exclude) {
+  let s;
+  do { s = IDS[Math.floor(Math.random() * IDS.length)]; } while (s === exclude);
+  return s;
+}
+
+const reelSet = new ReelSetBuilder()
+  .reels(REELS).visibleSymbols(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
+  .symbols((r) => {
+    for (const sym of CARD_DECK) {
+      if (IDS.includes(sym.id)) {
+        r.register(sym.id, CardSymbol, {
+          color: sym.color, label: sym.label, textColor: sym.textColor,
+        });
+      }
+    }
+  })
+  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 120 })
+  // .cascade() registers dropStart/dropStop AND flips the default mode.
+  .cascade(DropRecipes.stiffDrop)
+  .ticker(app.ticker)
+  .build();
+
+return {
+  reelSet,
+  onSpin: async () => {
+    // Round 1: explicit 'standard' — strip-spin top-to-bottom motion.
+    const initial = Array.from({ length: REELS }, () =>
+      Array.from({ length: ROWS }, () => randSymbol(null)),
+    );
+    const TRIGGER = '10';
+    const HIT_ROW = 1;
+    const HIT_COLS = [1, 2, 3];
+    for (const c of HIT_COLS) initial[c][HIT_ROW] = TRIGGER;
+
+    const p = reelSet.spin({ mode: 'standard' });
+    await new Promise((r) => setTimeout(r, 150));
+    reelSet.setResult(initial);
+    await p;
+
+    // Round 2: cascade — winners pop, survivors fall, new symbols drop.
+    const afterPop = initial.map((col, c) => {
+      if (!HIT_COLS.includes(c)) return [...col];
+      const next = [...col];
+      for (let r = HIT_ROW; r > 0; r--) next[r] = next[r - 1];
+      next[0] = randSymbol(TRIGGER);
+      return next;
+    });
+
+    const cp = reelSet.spin({ mode: 'cascade' });
+    await new Promise((r) => setTimeout(r, 150));
+    reelSet.setDropOrder('ltr');
+    reelSet.setResult(afterPop);
+    await cp;
+  },
+};
+```
 
 ## Related
 

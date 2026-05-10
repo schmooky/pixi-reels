@@ -9,11 +9,17 @@
 //
 // The new `spin({ mode })` per-spin override does this in ONE ReelSet —
 // no twin-instance gymnastics, no shared `setResult` plumbing. Build with
-// `.cascade(...)` so the cascade phases are registered, then choose the
-// mode at the call site:
+// `.cascade(...)` so the cascade phases are registered, then pass mode at
+// each call site:
 //
-//   await reelSet.spin();                  // builder default ('standard')
-//   await reelSet.spin({ mode: 'cascade' }); // override for one round
+//   await reelSet.spin({ mode: 'standard' });  // round 1 — strip-spin
+//   await reelSet.spin({ mode: 'cascade' });   // round 2+ — cascade
+//
+// IMPORTANT: `.cascade()` ALSO flips the builder's default mode to
+// 'cascade' (so it can stay opt-in via mere registration). To get a
+// standard spin from a builder that called `.cascade()`, you MUST pass
+// `{ mode: 'standard' }` explicitly — `reelSet.spin()` with no args
+// would inherit the cascade default and run a cascade for both rounds.
 
 const IDS = ['7', '8', '9', '10', 'J', 'Q'];
 const REELS = 5, ROWS = 3, SIZE = 80;
@@ -75,7 +81,11 @@ return {
     const HIT_COLS = [1, 2, 3];
     for (const c of HIT_COLS) initial[c][HIT_ROW] = TRIGGER;
 
-    const p = reelSet.spin(); // default mode = 'standard'
+    // Round 1 must explicitly request 'standard' — calling .cascade() on
+    // the builder above flipped the default to 'cascade', so a bare
+    // `reelSet.spin()` would cascade-drop here too. The per-spin mode
+    // override is what makes the hybrid possible.
+    const p = reelSet.spin({ mode: 'standard' });
     await new Promise((r) => setTimeout(r, 150));
     reelSet.setResult(initial);
     await p;
