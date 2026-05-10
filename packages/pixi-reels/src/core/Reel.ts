@@ -551,6 +551,18 @@ export class Reel implements Disposable {
   }
 
   /**
+   * Compute the canonical zIndex for a single symbol view at a given
+   * array index. Centralizes the formula used by both `refreshZIndex`
+   * (full rescan) and the per-swap activate path (so newly placed
+   * symbols land with their correct zIndex without the caller needing
+   * to remember to call `refreshZIndex` afterwards).
+   */
+  private _computeSymbolZIndex(symbolId: string, index: number): number {
+    const base = this._symbolsData[symbolId]?.zIndex ?? 0;
+    return base * 100 + index;
+  }
+
+  /**
    * Recompute `zIndex` for every symbol in the reel.
    *
    * Formula: `symbolData.zIndex ?? 0` (scaled by 100 to leave room for row
@@ -558,8 +570,12 @@ export class Reel implements Disposable {
    * render in front of top-row symbols and any symbol with a higher
    * configured base zIndex (e.g. wild, bonus) renders above its neighbors.
    *
-   * Called automatically after wraps, snaps, and direct placement. Call it
-   * manually after mutating `symbolsData.zIndex` at runtime.
+   * Called automatically after wraps, snaps, and direct placement. Also
+   * called inline by `_replaceSymbol` for the single newly-placed symbol —
+   * so consumers who swap one symbol at a time (via the public APIs that
+   * funnel into `_replaceSymbol`) get correct layering for free, no
+   * manual `refreshZIndex` required. Call it manually after mutating
+   * `symbolsData.zIndex` at runtime.
    */
   refreshZIndex(): void {
     for (let i = 0; i < this.symbols.length; i++) {
@@ -568,8 +584,7 @@ export class Reel implements Disposable {
         symbol.view.zIndex = i;
         continue;
       }
-      const base = this._symbolsData[symbol.symbolId]?.zIndex ?? 0;
-      symbol.view.zIndex = base * 100 + i;
+      symbol.view.zIndex = this._computeSymbolZIndex(symbol.symbolId, i);
     }
   }
 
@@ -646,6 +661,7 @@ export class Reel implements Disposable {
       stub.view.alpha = 0;
       stub.view.visible = true;
       stub.view.scale.set(1, 1);
+      stub.view.zIndex = index;
       if (stub.view.parent !== parent) parent.addChild(stub.view);
       this.symbols[index] = stub;
       return;
@@ -661,7 +677,7 @@ export class Reel implements Disposable {
       newSymbol.view.x = 0;
       newSymbol.view.alpha = 1;
       newSymbol.view.scale.set(1, 1);
-      newSymbol.view.zIndex = 0;
+      newSymbol.view.zIndex = this._computeSymbolZIndex(newSymbolId, index);
       parent.addChild(newSymbol.view);
       this.symbols[index] = newSymbol;
       this.events.emit('symbol:created', newSymbolId, index);
@@ -677,7 +693,7 @@ export class Reel implements Disposable {
       oldSymbol.view.scale.set(1, 1);
       oldSymbol.view.rotation = 0;
       oldSymbol.view.filters = null;
-      oldSymbol.view.zIndex = 0;
+      oldSymbol.view.zIndex = this._computeSymbolZIndex(newSymbolId, index);
       if (oldSymbol.view.parent !== parent) parent.addChild(oldSymbol.view);
       return;
     }
@@ -691,7 +707,7 @@ export class Reel implements Disposable {
     newSymbol.view.x = 0;
     newSymbol.view.alpha = 1;
     newSymbol.view.scale.set(1, 1);
-    newSymbol.view.zIndex = 0;
+    newSymbol.view.zIndex = this._computeSymbolZIndex(newSymbolId, index);
 
     parent.addChild(newSymbol.view);
 
