@@ -650,10 +650,12 @@ export class Reel implements Disposable {
       return;
     }
 
-    // Even if same symbolId, always reset visual state (alpha, scale, zIndex)
+    // Even if same symbolId, always reset visual state (alpha, scale, rotation, filters, zIndex)
     if (oldSymbol.symbolId === newSymbolId) {
       oldSymbol.view.alpha = 1;
       oldSymbol.view.scale.set(1, 1);
+      oldSymbol.view.rotation = 0;
+      oldSymbol.view.filters = null;
       oldSymbol.view.zIndex = 0;
       return;
     }

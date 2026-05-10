@@ -1,4 +1,6 @@
 import type { Ticker } from 'pixi.js';
+import type { gsap } from 'gsap';
+import { setGsap } from '../utils/gsapRef.js';
 import type {
   SpeedProfile,
   SymbolData,
@@ -78,6 +80,7 @@ export class ReelSetBuilder {
   private _initialFrame?: string[][];
   private _symbolDataOverrides: Record<string, Partial<SymbolData>> = {};
   private _cascadeDropConfig?: CascadeDropConfig;
+  private _defaultSpinMode: 'standard' | 'cascade' = 'standard';
   /** Per-reel static row counts (jagged shapes like 3-5-5-5-3). */
   private _visibleRowsPerReel?: number[];
   /** Per-reel pixel-box heights — used for both pyramids and MultiWays. */
@@ -251,11 +254,34 @@ export class ReelSetBuilder {
     return this;
   }
 
-  /** Set number of buffer symbols above/below visible area. Default: 1. */
+  /**
+   * Set number of buffer symbols above/below the visible area. Default: 1.
+   *
+   * Buffer rows are off-screen cells the reel keeps around the visible
+   * window so symbols can fade/slide in cleanly. The motion layer's wrap
+   * detection assumes at least one buffer row above and one below — the
+   * minimum supported value is **1**. Passing `0` (or a negative number)
+   * is clamped to `1` and a single console warning is printed; the
+   * builder does not throw, so existing user code keeps running.
+   */
   bufferSymbols(count: number): this {
+    if (!Number.isFinite(count) || count < 1) {
+      if (!ReelSetBuilder._bufferWarnedThisProcess) {
+        ReelSetBuilder._bufferWarnedThisProcess = true;
+        // eslint-disable-next-line no-console
+        console.warn(
+          `[pixi-reels] bufferSymbols(${count}) is below the minimum of 1; clamping to 1. ` +
+            `The motion layer needs at least one buffer row above and below the visible window for wrap detection.`,
+        );
+      }
+      this._bufferSymbols = 1;
+      return this;
+    }
     this._bufferSymbols = count;
     return this;
   }
+  /** One-shot guard so we don't spam consoles when builders are constructed in a loop. */
+  private static _bufferWarnedThisProcess = false;
 
   /** Configure symbols via a registry callback. */
   symbols(configurator: (registry: SymbolRegistry) => void): this {
@@ -309,6 +335,44 @@ export class ReelSetBuilder {
     return this;
   }
 
+  /**
+   * Inject the GSAP instance the engine should use for tweens.
+   *
+   * **When you need this:** if your app already imports `gsap` and your
+   * bundler resolves `gsap` to a different module instance than the one
+   * `pixi-reels` resolved (common with symlinked workspaces, npm-link, or
+   * misconfigured `dedupe`), every tween you start on a target the engine
+   * also tweens will fight a separate timeline. Symptoms: spotlights that
+   * render but never finish, animations that double-fire, tweens that
+   * silently drop on hidden tabs in only one of the two instances.
+   *
+   * Calling `.gsap(myGsap)` rebinds every internal phase, motion tween,
+   * pin-flight tween, and SpriteSymbol win pulse to the GSAP you pass —
+   * guaranteed to be the same instance that drives your own animations.
+   *
+   * Default: the `gsap` import resolved at the engine's own
+   * `node_modules/gsap` path. If your app and the engine resolve to the
+   * same instance (the common case in production bundles with proper
+   * `dedupe`), you do NOT need to call this.
+   *
+   * Idempotent — calling again with the same instance is a no-op. Calling
+   * with a different instance after `.build()` only affects tweens
+   * started after the swap.
+   *
+   * @example
+   * import { gsap } from 'gsap';
+   * const reelSet = new ReelSetBuilder()
+   *   .reels(5).visibleRows(3).symbolSize(200, 200)
+   *   .symbols(...)
+   *   .ticker(app.ticker)
+   *   .gsap(gsap)              // ensure engine and app share one instance
+   *   .build();
+   */
+  gsap(instance: typeof gsap): this {
+    setGsap(instance);
+    return this;
+  }
+
   /** Set the spinning mode. Default: StandardMode. */
   spinningMode(mode: SpinningMode): this {
     this._spinningMode = mode;
@@ -342,6 +406,7 @@ export class ReelSetBuilder {
    */
   cascade(config: CascadeDropConfig): this {
     this._cascadeDropConfig = config;
+    this._defaultSpinMode = 'cascade';
     return this;
   }
 
@@ -458,11 +523,14 @@ export class ReelSetBuilder {
       frameBuilder.use(mw);
     }
 
-    // Wire cascade drop-in phases if configured
+    // Wire cascade drop-in phases under cascade-specific keys so the
+    // standard 'start' / 'stop' phases stay available. The default spin
+    // mode flips to 'cascade' when .cascade() was called, preserving
+    // existing behaviour for callers that don't pass `spin({ mode })`.
     if (this._cascadeDropConfig) {
       const dropConfig = this._cascadeDropConfig;
-      this._phaseFactory.register('start', DropStartPhase);
-      this._phaseFactory.registerFactory('stop', (reel, speed) => new DropStopPhase(reel, speed, dropConfig));
+      this._phaseFactory.register('dropStart', DropStartPhase);
+      this._phaseFactory.registerFactory('dropStop', (reel, speed) => new DropStopPhase(reel, speed, dropConfig));
     }
 
     // MultiWays: wire AdjustPhase. Stay out of non-MultiWays chains entirely
@@ -480,24 +548,55 @@ export class ReelSetBuilder {
     const viewportWidth = reelCount * (symbolWidth + this._symbolGap.x) - this._symbolGap.x;
     const viewportHeight = tallest;
 
-    // Auto-pick `SharedRectMaskStrategy` when big symbols are registered AND
-    // there's a horizontal gap. The default per-reel mask would clip cross-
-    // reel big symbols at every column gap (visible vertical strips through
-    // the symbol). The shared mask draws one bounding rect so the symbol
-    // stays whole. Explicit `.maskStrategy(...)` calls always win.
+    // Auto-pick `SharedRectMaskStrategy` when the layout has horizontal
+    // gaps AND any registered symbol needs to span across reel boundaries:
+    //
+    //   - **big symbols** (footprint w > 1 or h > 1) — the per-reel mask
+    //     would clip cross-reel big symbols at every column gap (visible
+    //     vertical strips through the symbol), so we share a single mask.
+    //   - **unmasked symbols** (`SymbolData.unmask: true`) — these render
+    //     above the per-reel mask anyway, but neighboring (masked)
+    //     symbols still get clipped at the gap. Players see a
+    //     half-cropped neighbor next to the unmasked overlay. Sharing
+    //     one mask removes the gap stripe.
+    //
+    // Explicit `.maskStrategy(...)` calls always win.
     const hasBigSymbols = Object.values(symbolsData).some(
       (d) => d.size && (d.size.w > 1 || d.size.h > 1),
     );
+    const hasUnmaskedSymbols = Object.values(symbolsData).some((d) => d.unmask);
+
+    // Pyramid + unmask is not supported. `ReelMotion.snapToGrid()` and
+    // `displace()` write reel-local Y to every symbol view — including
+    // unmasked views that live in `viewport.unmaskedContainer`. On a
+    // pyramid (any reel with offsetY != 0), the unmasked view's at-rest
+    // Y is misset by `reel.container.y`. The activate path compensates,
+    // but the next snap (landing/skip) re-breaks it. Fail at config time
+    // rather than ship a layout the engine can't keep aligned.
+    if (hasUnmaskedSymbols && offsetsY.some((y) => y !== 0)) {
+      const pyramidIdx = offsetsY.findIndex((y) => y !== 0);
+      throw new Error(
+        `[pixi-reels] unmask + pyramid layout is not supported (reel ${pyramidIdx} ` +
+        `has offsetY=${offsetsY[pyramidIdx]}). The motion layer writes reel-local ` +
+        `Y to unmasked views, which mispositions them by reel.container.y on every ` +
+        `snap. Use cell pins (reelSet.pin(...)) for above-mask overlays on pyramid ` +
+        `slots, or remove the per-reel offset.`,
+      );
+    }
+
     if (
       !this._maskStrategyExplicit &&
-      hasBigSymbols &&
+      (hasBigSymbols || hasUnmaskedSymbols) &&
       this._symbolGap.x > 0
     ) {
       this._maskStrategy = new SharedRectMaskStrategy();
       // Heads-up so devs see the auto-pick in their console.
+      const reason = hasBigSymbols
+        ? 'big symbols are registered'
+        : 'one or more symbols use `unmask: true`';
       // eslint-disable-next-line no-console
       console.info(
-        '[pixi-reels] auto-selected SharedRectMaskStrategy because big symbols are registered ' +
+        `[pixi-reels] auto-selected SharedRectMaskStrategy because ${reason} ` +
         'and symbolGap.x > 0. Pass .maskStrategy(...) explicitly to override.',
       );
     }
@@ -560,6 +659,7 @@ export class ReelSetBuilder {
       frameBuilder,
       phaseFactory: this._phaseFactory,
       spinningMode: this._spinningMode,
+      defaultSpinMode: this._defaultSpinMode,
     };
 
     return new ReelSet(params);

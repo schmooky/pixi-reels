@@ -12,6 +12,7 @@ export { SpeedPresets } from './config/SpeedPresets.js';
 export { DEFAULTS } from './config/defaults.js';
 export type {
   SpeedProfile,
+  SpinOptions,
   SymbolData,
   ReelGridConfig,
   ReelExtraSymbols,

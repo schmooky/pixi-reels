@@ -112,4 +112,49 @@ describe('unmask: true reparents the symbol view to viewport.unmaskedContainer',
       h.destroy();
     }
   });
+
+  it('Y on a flat (offsetY=0) reel matches the cell position', async () => {
+    const h = makeHarness();
+    try {
+      await h.spinAndLand([
+        ['a', 'a', 'a'],
+        ['a', 'wild', 'a'],
+        ['a', 'a', 'a'],
+      ]);
+      const reel = h.reelSet.reels[1];
+      // Flat reel: container.y === 0, so the unmasked view's Y is just
+      // row * slotHeight. This is the path that's correct on flat slots.
+      expect(reel.container.y).toBe(0);
+      const wildView = reel.getSymbolAt(1).view;
+      const slotH = reel.motion.slotHeight;
+      expect(wildView.y).toBe(reel.container.y + 1 * slotH);
+    } finally {
+      h.destroy();
+    }
+  });
+});
+
+describe('unmask + pyramid layout fails fast at build()', () => {
+  it('throws when a pyramid reel set registers any unmasked symbol', () => {
+    expect(() =>
+      createTestReelSet({
+        reels: 5,
+        // Pyramid: differing visibleRows produces non-zero reel.offsetY.
+        visibleRows: [3, 4, 5, 4, 3],
+        symbolIds: SYMBOLS,
+        symbolData: { wild: { unmask: true } },
+      }),
+    ).toThrow(/unmask \+ pyramid layout is not supported/);
+  });
+
+  it('does not throw on a flat layout with unmasked symbols', () => {
+    expect(() =>
+      createTestReelSet({
+        reels: 5,
+        visibleRows: 3,
+        symbolIds: SYMBOLS,
+        symbolData: { wild: { unmask: true } },
+      }),
+    ).not.toThrow();
+  });
 });

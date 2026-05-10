@@ -1,5 +1,6 @@
 import { Sprite, type Texture } from 'pixi.js';
-import { gsap } from 'gsap';
+import type { gsap } from 'gsap';
+import { getGsap } from '../utils/gsapRef.js';
 import { ReelSymbol } from './ReelSymbol.js';
 
 export interface SpriteSymbolOptions {
@@ -42,7 +43,7 @@ export class SpriteSymbol extends ReelSymbol {
   async playWin(): Promise<void> {
     this._killWinTween();
     return new Promise<void>((resolve) => {
-      this._winTween = gsap.to(this._sprite.scale, {
+      this._winTween = getGsap().to(this._sprite.scale, {
         x: 1.15,
         y: 1.15,
         duration: 0.15,
