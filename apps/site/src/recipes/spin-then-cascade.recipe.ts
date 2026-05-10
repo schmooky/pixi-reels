@@ -16,12 +16,12 @@
 // reader. Real games typically chain across overlapping clusters; here
 // we keep the demo's affected area visually contiguous.
 
-// 5 reels x 4 rows — matches the Arc Lord shape shown in the reference
+// 5 reels x 5 rows — matches the Arc Lord shape shown in the reference
 // clip above. The cascade chain pops the upper-middle row twice on the
-// left three columns; the two right columns and bottom two rows stay
-// completely still throughout the chain.
+// left three columns; the two right columns and the bottom three rows
+// stay completely still throughout the chain.
 const IDS = ['7', '8', '9', '10', 'J', 'Q'];
-const REELS = 5, ROWS = 4, SIZE = 72;
+const REELS = 5, ROWS = 5, SIZE = 64;
 const HIT_COLS = [0, 1, 2];                     // left three columns
 const HIT_ROW = 1;                              // upper-middle row
 const TRIGGER1 = '10';

@@ -79,11 +79,11 @@ The exact code running in the demo above:
 // Injected: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, WILD_CARD,
 //           DropRecipes, PIXI, gsap, app, runCascade, pickWeighted
 
-// 5 reels x 4 rows — matches the Arc Lord shape shown in the reference
-// clip above. Cascade pops the upper-middle row twice on the left
-// three columns; the right two columns and bottom two rows stay still.
+// 5 reels x 5 rows — matches the Arc Lord shape shown in the reference
+// clip above. Cascade pops the upper-middle row twice on the left three
+// columns; the right two columns and the bottom three rows stay still.
 const IDS = ['7', '8', '9', '10', 'J', 'Q'];
-const REELS = 5, ROWS = 4, SIZE = 72;
+const REELS = 5, ROWS = 5, SIZE = 64;
 const HIT_COLS = [0, 1, 2];        // left three columns
 const HIT_ROW = 1;                  // upper-middle row
 const TRIGGER1 = '10';
