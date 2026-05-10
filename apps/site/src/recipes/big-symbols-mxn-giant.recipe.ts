@@ -29,8 +29,12 @@ const reelSet = new ReelSetBuilder()
   })
   .weights(Object.fromEntries(CARD_DECK.map((c, i) => [c.id, 12 - i])))
   .symbolData({ [GIANT.id]: { weight: 0, zIndex: 5, size: { w: GIANT.w, h: GIANT.h } } })
-  .speed('normal', SpeedPresets.NORMAL)
-  .speed('turbo', SpeedPresets.TURBO)
+  // Big symbols are visually massive (a 3x3 anchor is ~3x cell size);
+  // the default 56px landing bounce overshoots into adjacent cells and
+  // reads as a broken landing. Zero the bounce so the anchor lands
+  // flush on grid.
+  .speed('normal', { ...SpeedPresets.NORMAL, bounceDistance: 0, bounceDuration: 0 })
+  .speed('turbo', { ...SpeedPresets.TURBO, bounceDistance: 0, bounceDuration: 0 })
   .ticker(app.ticker)
   .build();
 

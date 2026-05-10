@@ -67,8 +67,11 @@ const reelSet = new ReelSetBuilder()
     wild:    { weight: 3, zIndex: 999 },
     bigWild: { weight: 0, zIndex: 1000, size: { w: 2, h: 2 } },
   })
-  .speed('normal', SpeedPresets.NORMAL)
-  .speed('turbo', SpeedPresets.TURBO)
+  // Big symbols make the default 56px landing bounce look broken —
+  // the 2x2 wild overshoots into adjacent cells. Zero the bounce so
+  // the anchor lands flush on grid.
+  .speed('normal', { ...SpeedPresets.NORMAL, bounceDistance: 0, bounceDuration: 0 })
+  .speed('turbo', { ...SpeedPresets.TURBO, bounceDistance: 0, bounceDuration: 0 })
   .ticker(app.ticker)
   .build();
 
