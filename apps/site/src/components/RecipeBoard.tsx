@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { CanvasSkeleton } from './CanvasSkeleton';
 
 export interface RecipeBoardProps {
   /** Mount PixiJS + prepare the sandbox. Called once. */
@@ -23,6 +24,7 @@ export default function RecipeBoard(props: RecipeBoardProps) {
   const hostRef = useRef<HTMLDivElement>(null);
   const handleRef = useRef<{ destroy: () => void; run: () => Promise<void> } | null>(null);
   const [running, setRunning] = useState(false);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     if (!hostRef.current) return;
@@ -33,6 +35,7 @@ export default function RecipeBoard(props: RecipeBoardProps) {
         const h = await props.setup(hostRef.current!);
         if (disposed) { h.destroy(); return; }
         handleRef.current = h;
+        setReady(true);
         if (props.autoRun !== false) {
           await run();
         }
@@ -69,6 +72,7 @@ export default function RecipeBoard(props: RecipeBoardProps) {
           ref={hostRef}
           className="flex h-full w-full items-center justify-center [&_canvas]:block [&_canvas]:max-w-full [&_canvas]:h-auto"
         />
+        {!ready && <CanvasSkeleton />}
         <button
           type="button"
           onClick={run}

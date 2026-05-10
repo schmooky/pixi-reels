@@ -1,0 +1,62 @@
+---
+layout: ../../layouts/Recipe.astro
+title: Spin first, cascade after
+description: Open every play with a classic strip-spin, then cascade the respins — one ReelSet, the per-spin `mode` override does the switch.
+tags: [hybrid, cascade, spin-mode, recent]
+steps:
+  - "Build with both default mode and .cascade(...) registered"
+  - "Round 1 — call spin() (default standard)"
+  - "Cascade respins — call spin({ mode: cascade }) per round"
+apis:
+  - ReelSetBuilder.cascade
+  - reelSet.spin
+  - SpinOptions.mode
+---
+
+import code from '../../recipes/spin-then-cascade.recipe.ts?raw';
+import { RecipeRunner } from '../../components/RecipeRunner.tsx';
+
+<RecipeRunner code={code} client:only="react" />
+
+A common request: "the first round of the play should feel like a normal slot, but if there's a hit, the next rounds should drop in from above like a tumble." Until recently you needed two `ReelSet` instances and copy-pasted state. Now `spin({ mode: 'cascade' })` is a per-call override on the same engine.
+
+## The shape of the call
+
+```ts
+// Builder: register BOTH modes by enabling cascade phases.
+const reelSet = new ReelSetBuilder()
+  .reels(5).visibleSymbols(3).symbolSize(80, 80)
+  .symbols(/* ... */)
+  .cascade(DropRecipes.stiffDrop) // registers dropStart/dropStop phases
+  .ticker(app.ticker)
+  .build();
+
+// Round 1 — default mode (still 'standard' unless you change the builder default).
+await reelSet.spin();
+
+// Round 2+ — cascade respin on the SAME ReelSet.
+await reelSet.spin({ mode: 'cascade' });
+```
+
+## Why it matters
+
+The two phase chains were always there, but mode used to be a build-time choice. Picking `'cascade'` at the builder meant every round was a cascade; picking `'standard'` meant no drop-ins anywhere. Studios faked the hybrid by stacking two `ReelSet` containers and toggling visibility, paying for double the symbol pool and double the textures.
+
+`spin({ mode })` is a per-call override. Same pool, same containers, same event bus, same spotlight — only the phase chain differs.
+
+## Guardrails
+
+The engine refuses `spin({ mode: 'cascade' })` if `.cascade(...)` wasn't called on the builder. The error names the missing builder method, so you can wire it without grepping. Inverted: there's no `.standard()` method — standard phases register by default.
+
+## When `setShape()`, `setAnticipation()` and `holdReels` interact
+
+Each `spin()` runs through the chain you pick at call time. So:
+- `setAnticipation([3])` set on a cascade spin uses the AnticipationPhase that lives in the cascade chain.
+- `holdReels: [0, 4]` works in either mode — held reels skip START/SPIN/STOP regardless of which "S/SPIN" pair fires for the active reels.
+- `setShape()` (MultiWays) requires AdjustPhase, which is registered by `.multiways(...)` and is independent of `mode`.
+
+## Related
+
+- [Cascade 6×5 tumble](/recipes/cascade-6x5/) — pure cascade flow.
+- [Classic 5×3 starter](/recipes/classic-5x3/) — pure strip-spin starter.
+- [Feature mode swap](/recipes/feature-mode-swap/) — runtime middleware for "different content, same mode".

@@ -22,6 +22,7 @@ import {
 import { transform as sucraseTransform } from 'sucrase';
 import { runCascade, tumbleToGrid, diffCells } from '../../../../examples/shared/cascadeLoop.ts';
 import { cn } from '@/lib/utils';
+import { CanvasSkeleton } from './CanvasSkeleton';
 
 let gsapSynced = false;
 
@@ -231,6 +232,7 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
           ref={hostRef}
           className="h-full w-full [&_canvas]:block [&_canvas]:h-full [&_canvas]:w-full"
         />
+        {!ready && !error && <CanvasSkeleton label="Compiling recipe…" />}
         {error && (
           <div className="absolute inset-0 flex items-center justify-center bg-card/90 p-6 font-mono text-xs text-destructive">
             {error}

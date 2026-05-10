@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { AlertTriangle, Copy, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import CheatPanelReact from './CheatPanelReact.tsx';
+import { CanvasSkeleton } from './CanvasSkeleton';
 
 export interface DemoSandboxProps {
   /** Boots PixiJS + ReelSet into `host`. Returns a cleanup fn. Gets the engine it should register cheats against via `api.mountPanel(engine)`. */
@@ -35,6 +36,7 @@ export default function DemoSandbox(props: DemoSandboxProps) {
   const [status, setStatus] = useState<string>('Idle');
   const [bootError, setBootError] = useState<Error | null>(null);
   const [retryKey, setRetryKey] = useState(0);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     if (!hostRef.current) return;
@@ -43,6 +45,7 @@ export default function DemoSandbox(props: DemoSandboxProps) {
 
     // Clear any stale error from a previous boot attempt.
     setBootError(null);
+    setReady(false);
 
     const api: DemoApi = {
       toast: (msg, kind = 'info') => {
@@ -74,7 +77,7 @@ export default function DemoSandbox(props: DemoSandboxProps) {
       try {
         const c = await props.boot(hostRef.current!, api, props.cheats);
         if (disposed) c();
-        else cleanup = c;
+        else { cleanup = c; setReady(true); }
       } catch (err) {
         const error = err instanceof Error ? err : new Error(String(err));
         // eslint-disable-next-line no-console
@@ -104,6 +107,8 @@ export default function DemoSandbox(props: DemoSandboxProps) {
         style={{ height: props.height ?? 440 }}
       >
         <div ref={hostRef} className="flex h-full w-full items-center justify-center [&_canvas]:block [&_canvas]:max-w-full [&_canvas]:h-auto" />
+
+        {!ready && !bootError && <CanvasSkeleton label="Booting demo…" />}
 
         {bootError && (
           <ErrorCard error={bootError} onRetry={() => setRetryKey((k) => k + 1)} />

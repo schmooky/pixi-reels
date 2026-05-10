@@ -61,10 +61,10 @@ return {
     });
     restoreOld();
 
-    // Swap identity.
-    const visible = reel.getVisibleSymbols();
-    visible[pick.row] = upgradeId;
-    reel.placeSymbols(visible);
+    // Swap identity. setSymbolAt is the one-cell rewrite that doesn't
+    // touch the rest of the reel — leaves the symbol pool / motion layer
+    // alone and only cycles the single ReelSymbol at this row.
+    reelSet.setSymbolAt(pick.r, pick.row, upgradeId);
 
     // Scale-in new symbol from center.
     const next = reel.getSymbolAt(pick.row);

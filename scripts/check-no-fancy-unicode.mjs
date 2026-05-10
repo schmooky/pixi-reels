@@ -69,6 +69,7 @@ const ALLOWED_NON_ASCII = new Set([
   '♥', '✦', '◉', '◔',      // decorative glyphs on the classic-lines demo symbols
   '♣', '♛',                // card-suit / crown glyphs baked into generated-symbols icons
   '▶', '◀', '▲', '▼',      // solid-triangle arrowheads for ASCII flow diagrams
+  '⌘',                     // Mac Cmd-key glyph in keyboard-shortcut UI (Pagefind search ⌘K)
   // Box drawing characters — used by the debug ASCII grid and by
   // comment banners like `// ─── Section ───`.
   '─', '│', '┌', '┐', '└', '┘', '├', '┤', '┬', '┴', '┼',

@@ -1,13 +1,14 @@
 ---
 layout: ../../layouts/Recipe.astro
 title: How to slam-stop
-description: Let the player tap the spin button again to land the reels immediately — with the result still correct.
-tags: [skip, UX]
+description: Let the player tap the spin button again to land the reels immediately — `requestSkip()` queues until the result is in, no race-window to manage.
+tags: [skip, UX, recent]
 steps:
-  - If the reels are spinning, reelSet.skip() — otherwise reelSet.spin()
-  - Ensure setResult() has already fired so skip lands on target
+  - Bind the player tap to reelSet.requestSkip()
+  - The engine waits until setResult() has fired, then slams
   - Inspect result.wasSkipped to adjust animations (shorter win celebration, etc.)
 apis:
+  - ReelSet.requestSkip
   - ReelSet.skip
   - ReelSet.isSpinning
   - SpinResult.wasSkipped
@@ -23,7 +24,10 @@ import { RecipeRunner } from '../../components/RecipeRunner.tsx';
 ```ts
 spinButton.addEventListener('click', async () => {
   if (reelSet.isSpinning) {
-    reelSet.skip();
+    // requestSkip is the safe variant: if the result hasn't arrived yet,
+    // it queues the slam-stop and fires it as soon as setResult() is in.
+    // Avoids the "user tapped before /api/spin returned" race.
+    reelSet.requestSkip();
     return;
   }
   const promise = reelSet.spin();
@@ -36,13 +40,23 @@ spinButton.addEventListener('click', async () => {
 });
 ```
 
-## What `skip()` actually does
+## `requestSkip()` vs `skip()`
+
+| | `skip()` | `requestSkip()` |
+|---|---|---|
+| Result already set | slams now | slams now |
+| Result not set yet | does nothing useful | **queues** until result arrives, then slams |
+| Caller responsibility | "make sure setResult fired first" | none |
+
+For player-facing slam-stop UX, prefer `requestSkip()` — it removes the timing trap.
+
+## What slam actually does
 
 1. Emits `skip:requested`.
 2. Force-completes every active spin phase (including GSAP tweens).
-3. Calls `reel.placeSymbols(targetRow)` on every reel with the result from `setResult()`, or the current symbols if none was set.
+3. Calls `reel.placeSymbols(targetRow)` on every reel with the result from `setResult()`.
 4. Snaps the reel container `y` back to `0`.
-5. Fires `skip:completed` then `spin:complete` with `wasSkipped: true`.
+5. Fires `spin:reelLanded` per reel + `spin:allLanded` + `spin:complete` with `wasSkipped: true` — same lifecycle hooks as a normal landing.
 
 ## Test it
 

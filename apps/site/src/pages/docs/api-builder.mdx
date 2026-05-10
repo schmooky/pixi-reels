@@ -26,13 +26,19 @@ Missing any of these throws at `.build()` time with a human-readable list of pro
 |---|---|
 | `.symbolGap(x, y)` | `{ x: 0, y: 0 }` |
 | `.bufferSymbols(n)` | `1` |
+| `.visibleRowsPerReel([n, ...])` | uniform per `.visibleSymbols(n)` |
 | `.weights({ id: n })` | `10` for each registered symbol |
+| `.symbolData({ id: { zIndex, unmask, size } })` | per-symbol metadata (auto-routed `unmask`, big-symbol footprint) |
 | `.speed(name, profile)` | `SpeedPresets.NORMAL` under `'normal'` |
 | `.initialSpeed(name)` | `'normal'` |
 | `.offsetConfig(config)` | `{ mode: 'none' }` |
 | `.spinningMode(mode)` | `new StandardMode()` |
 | `.frameMiddleware(mw)` | *(none)* |
 | `.phases((f) => { f.register(...) })` | built-in START/SPIN/STOP/ANTICIPATION |
+| `.cascade(dropRecipe)` | *(unset; required for `spin({ mode: 'cascade' })`)* |
+| `.multiways({ minRows, maxRows, reelPixelHeight })` | *(unset; required for `setShape(...)`)* |
+| `.maskStrategy(strategy)` | per-reel `RectMaskStrategy` (auto-switches to `SharedRectMaskStrategy` when big or unmasked symbols are registered with `symbolGap.x > 0`) |
+| `.gsap(instance)` | bound from package import (use this for SSR / multi-bundle DI) |
 | `.initialFrame(grid)` | random |
 
 ## .build()
@@ -57,3 +63,24 @@ const reelSet = new ReelSetBuilder()
   .ticker(app.ticker)
   .build();
 ```
+
+## Spin options
+
+`reelSet.spin(options?)` accepts a `SpinOptions` object. All fields are optional — passing nothing reproduces the legacy "every reel spins" behaviour.
+
+| Field | Type | Notes |
+|---|---|---|
+| `holdReels` | `number[]` | Reel indices to FREEZE for this spin. Held reels skip START/SPIN/STOP and stay on their current symbols. They count as already-landed for `spin:allLanded`. Out-of-range / duplicate / non-integer entries are silently filtered. `setAnticipation([...])` and `setStopDelays([...])` filter held indices too. |
+| `mode` | `'standard' \| 'cascade'` | Phase chain selector for this spin. Overrides the builder default. `'cascade'` requires `.cascade(...)` on the builder — the engine throws at `spin()` if cascade phases aren't registered. |
+
+```ts
+// Hold reels 0 and 4; only the middle three reroll.
+const spin = reelSet.spin({ holdReels: [0, 4] });
+reelSet.setResult(serverGrid); // entries at 0/4 are ignored
+await spin;
+
+// Per-spin cascade override on a builder that registered both modes.
+await reelSet.spin({ mode: 'cascade' });
+```
+
+See the [spin lifecycle guide](/guides/spin-lifecycle/) for how these options interact with the event timeline.

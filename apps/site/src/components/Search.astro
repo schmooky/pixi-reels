@@ -1,0 +1,122 @@
+---
+/**
+ * ⌘K search modal backed by Pagefind. The static index is built into
+ * dist/pagefind/* by the docs build pipeline (`pagefind --site dist`),
+ * which runs after Astro emits HTML.
+ *
+ * The modal listens for ⌘K / Ctrl+K everywhere; it fetches
+ * `/pagefind/pagefind.js` lazily on first open so readers who never
+ * use search don't pay for the index download.
+ */
+---
+<div id="search-root" class="hidden fixed inset-0 z-[100] flex items-start justify-center bg-background/80 backdrop-blur-sm pt-24">
+  <div class="w-full max-w-xl rounded-xl border border-border bg-card shadow-lg">
+    <div class="flex items-center gap-2 border-b border-border px-4 py-2">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <input
+        id="search-input"
+        type="search"
+        placeholder="Search docs, recipes, guides…"
+        class="w-full bg-transparent text-sm placeholder:text-muted-foreground focus:outline-none"
+        autocomplete="off"
+      />
+      <kbd class="ml-auto rounded border border-border bg-secondary/60 px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">esc</kbd>
+    </div>
+    <ol id="search-results" class="max-h-[60vh] overflow-y-auto px-2 py-2 text-sm"></ol>
+  </div>
+</div>
+<button
+  id="search-trigger"
+  class="hidden md:inline-flex h-8 items-center gap-2 rounded-md border border-border bg-transparent px-3 text-sm text-muted-foreground transition-colors hover:text-foreground hover:bg-secondary/50"
+  type="button"
+  aria-label="Open search"
+>
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+  Search
+  <kbd class="ml-1 rounded border border-border bg-secondary/60 px-1.5 py-0.5 font-mono text-[10px]">⌘K</kbd>
+</button>
+
+<!--
+  Inline + raw JS so Vite doesn't try to resolve /pagefind/pagefind.js at build
+  time — that file is emitted by `pagefind --site dist` AFTER Astro finishes,
+  so a normal ESM import would fail the build. The dynamic import sits inside
+  a string template literal hidden from the bundler.
+-->
+<script is:inline>
+  (() => {
+    var pagefind = null;
+    var root = document.getElementById('search-root');
+    var input = document.getElementById('search-input');
+    var results = document.getElementById('search-results');
+    var trigger = document.getElementById('search-trigger');
+
+    async function ensure() {
+      if (pagefind) return pagefind;
+      try {
+        var url = '/pagefind/' + 'pagefind.js';
+        pagefind = await import(/* @vite-ignore */ url);
+        await pagefind.options({ baseUrl: '/' });
+        return pagefind;
+      } catch (e) {
+        console.warn('Pagefind index not built — run `pnpm build` in apps/site/ first.');
+        if (results) {
+          results.innerHTML = '<li class="px-3 py-2 text-xs text-muted-foreground">Search index unavailable in dev. Run a production build to enable search.</li>';
+        }
+        return null;
+      }
+    }
+
+    function open() {
+      if (!root) return;
+      root.classList.remove('hidden');
+      input && input.focus();
+    }
+    function close() {
+      if (!root) return;
+      root.classList.add('hidden');
+    }
+
+    trigger && trigger.addEventListener('click', function () {
+      void ensure().then(open);
+    });
+
+    document.addEventListener('keydown', function (e) {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        void ensure().then(open);
+      } else if (e.key === 'Escape') {
+        close();
+      }
+    });
+
+    root && root.addEventListener('click', function (e) {
+      if (e.target === root) close();
+    });
+
+    var last = 0;
+    input && input.addEventListener('input', async function () {
+      var q = input.value.trim();
+      var id = ++last;
+      if (!q) {
+        if (results) results.innerHTML = '';
+        return;
+      }
+      var pf = await ensure();
+      if (!pf || id !== last) return;
+      var search = await pf.search(q);
+      if (id !== last) return;
+      var data = await Promise.all(search.results.slice(0, 10).map(function (r) { return r.data(); }));
+      if (!results) return;
+      results.innerHTML = data.map(function (d) {
+        var title = escapeHtml((d.meta && d.meta.title) || d.url);
+        return '<li class="rounded-md hover:bg-secondary/40"><a href="' + d.url + '" class="block px-3 py-2"><div class="text-sm font-semibold">' + title + '</div><div class="text-xs text-muted-foreground line-clamp-2">' + d.excerpt + '</div></a></li>';
+      }).join('');
+    });
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"]/g, function (c) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+      });
+    }
+  })();
+</script>
