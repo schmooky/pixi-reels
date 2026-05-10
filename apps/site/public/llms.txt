@@ -6,7 +6,7 @@ Site: https://pixi-reels.schmooky.dev
 Repo: https://github.com/schmooky/pixi-reels
 Package: https://www.npmjs.com/package/pixi-reels
 
-Generated: 2026-05-10T21:33:22.055Z
+Generated: 2026-05-10T21:42:17.302Z
 
 ## Quick start
 
@@ -271,16 +271,16 @@ Steps:
   - Draw a ×N badge on each pinned cell via pin:placed event
   - On wins, read pin.payload.multiplier to scale the payout
 
-### MultiWays (Megaways)
+### MultiWays
 URL: https://pixi-reels.schmooky.dev/recipes/multiways/
-Per-spin row variation. Each reel lands on a different row count between minRows and maxRows. The reel pixel height stays fixed; cell heights are derived per spin. The Megaways formula.
-Tags: multiways, megaways, shape, geometry, reshape
+Per-spin row variation. Each reel lands on a different row count between minRows and maxRows. The reel pixel height stays fixed; cell heights are derived per spin. Total ways = product of per-reel rows.
+Tags: multiways, shape, geometry, reshape, variable-rows
 APIs: ReelSetBuilder.multiways, ReelSet.setShape, AdjustPhase, events: shape:changed, adjust:start, adjust:complete
 Steps:
   - Build with .multiways({ minRows, maxRows, reelPixelHeight }) — defines the height budget
   - Each spin, pick a per-reel row count and call reelSet.setShape(rowsPerReel) BEFORE setResult()
   - AdjustPhase commits the new geometry; cell symbols snap, pin overlays tween
-Real game example: The Dog House Megaways by Pragmatic Play (https://pixi-reels.schmooky.dev/videos/dog-house-megaways.mp4)
+Real game example: The Dog House (Pragmatic Play) (https://pixi-reels.schmooky.dev/videos/dog-house-megaways.mp4)
 
 ### Mystery reveal (CellPin)
 URL: https://pixi-reels.schmooky.dev/recipes/mystery-reveal-pin/
@@ -2091,18 +2091,18 @@ URL: https://pixi-reels.schmooky.dev/recipes/multiways/
 // Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
 //                   PIXI, gsap, app, pickWeighted
 //
-// MultiWays (the "Megaways" formula) — per-spin row variation. Each
-// reel lands on a different row count in [minRows, maxRows]. The reel
-// pixel height is fixed; cell height per reel is derived live as
+// MultiWays — per-spin row variation. Each reel lands on a different
+// row count in [minRows, maxRows]. The reel pixel height is fixed;
+// cell height per reel is derived live as
 // `reelPixelHeight / visibleRows[i]`, so a 2-row reel has tall cells
 // and a 7-row reel has short ones. `setShape(rowsPerReel)` is called
 // between `spin()` and `setResult()`; AdjustPhase reshapes the reels
 // between SPIN and STOP.
 //
-// 6 reels x [2, 7] rows = up to 117,649 ways (7^6) — the canonical
-// Megaways math. The "ways" count for any spin is the product of
-// visibleRows across reels. The banner above the grid prints both the
-// per-reel shape and the total ways for each landing.
+// 6 reels x [2, 7] rows = up to 117,649 distinct landings (7^6). The
+// "ways" count for any individual spin is the product of visibleRows
+// across reels. The banner above the grid prints both the per-reel
+// shape and the total ways for each landing.
 
 const REELS = 6;
 const MIN_ROWS = 2;

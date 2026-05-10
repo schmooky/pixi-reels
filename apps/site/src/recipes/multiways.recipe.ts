@@ -2,18 +2,18 @@
 // Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
 //                   PIXI, gsap, app, pickWeighted
 //
-// MultiWays (the "Megaways" formula) — per-spin row variation. Each
-// reel lands on a different row count in [minRows, maxRows]. The reel
-// pixel height is fixed; cell height per reel is derived live as
+// MultiWays — per-spin row variation. Each reel lands on a different
+// row count in [minRows, maxRows]. The reel pixel height is fixed;
+// cell height per reel is derived live as
 // `reelPixelHeight / visibleRows[i]`, so a 2-row reel has tall cells
 // and a 7-row reel has short ones. `setShape(rowsPerReel)` is called
 // between `spin()` and `setResult()`; AdjustPhase reshapes the reels
 // between SPIN and STOP.
 //
-// 6 reels x [2, 7] rows = up to 117,649 ways (7^6) — the canonical
-// Megaways math. The "ways" count for any spin is the product of
-// visibleRows across reels. The banner above the grid prints both the
-// per-reel shape and the total ways for each landing.
+// 6 reels x [2, 7] rows = up to 117,649 distinct landings (7^6). The
+// "ways" count for any individual spin is the product of visibleRows
+// across reels. The banner above the grid prints both the per-reel
+// shape and the total ways for each landing.
 
 const REELS = 6;
 const MIN_ROWS = 2;
