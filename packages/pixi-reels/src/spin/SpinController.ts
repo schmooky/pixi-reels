@@ -15,6 +15,7 @@ import type { AnticipationPhaseConfig } from './phases/AnticipationPhase.js';
 import type { AdjustPhaseConfig } from './phases/AdjustPhase.js';
 import type { SpinningMode } from './modes/SpinningMode.js';
 import { StandardMode } from './modes/StandardMode.js';
+import type { SpinOptions } from '../config/types.js';
 import type { Disposable } from '../utils/Disposable.js';
 import { TickerRef } from '../utils/TickerRef.js';
 import { OCCUPIED_SENTINEL } from '../core/Reel.js';
@@ -92,6 +93,8 @@ export class SpinController implements Disposable {
   private _events: EventEmitter<ReelSetEvents>;
   private _tickerRef: TickerRef;
   private _spinningMode: SpinningMode;
+  private _defaultSpinMode: 'standard' | 'cascade';
+  private _currentSpinMode: 'standard' | 'cascade' = 'standard';
   private _hooks: SpinControllerHooks;
 
   private _isSpinning = false;
@@ -116,6 +119,7 @@ export class SpinController implements Disposable {
     events: EventEmitter<ReelSetEvents>,
     ticker: Ticker,
     spinningMode?: SpinningMode,
+    defaultSpinMode: 'standard' | 'cascade' = 'standard',
     hooks?: SpinControllerHooks,
   ) {
     this._reels = reels;
@@ -125,6 +129,7 @@ export class SpinController implements Disposable {
     this._events = events;
     this._tickerRef = new TickerRef(ticker);
     this._spinningMode = spinningMode ?? new StandardMode();
+    this._defaultSpinMode = defaultSpinMode;
     this._hooks = hooks ?? {
       isMultiWaysSlot: false,
       symbolsData: {},
@@ -149,10 +154,18 @@ export class SpinController implements Disposable {
     return this._isDestroyed;
   }
 
-  async spin(): Promise<SpinResult> {
+  async spin(opts?: SpinOptions): Promise<SpinResult> {
     if (this._isSpinning) {
       throw new Error('Cannot start a new spin while one is in progress.');
     }
+
+    const mode = opts?.mode ?? this._defaultSpinMode;
+    if (mode === 'cascade' && !this._phaseFactory.has('dropStart')) {
+      throw new Error(
+        "spin({ mode: 'cascade' }) requires .cascade(...) on the builder.",
+      );
+    }
+    this._currentSpinMode = mode;
 
     this._isSpinning = true;
     this._wasSkipped = false;
@@ -340,8 +353,12 @@ export class SpinController implements Disposable {
 
     const reel = this._reels[reelIndex];
 
+    const phaseKeys = this._currentSpinMode === 'cascade'
+      ? { start: 'dropStart', stop: 'dropStop' }
+      : { start: 'start', stop: 'stop' };
+
     // START → SPIN: chain via phase.run() promises (no busy-polling).
-    const startPhase = this._phaseFactory.create<any>('start', reel, speed);
+    const startPhase = this._phaseFactory.create<any>(phaseKeys.start, reel, speed);
     this._activePhases.set(reelIndex, startPhase);
     await startPhase.run({
       spinningMode: this._spinningMode,
@@ -389,7 +406,7 @@ export class SpinController implements Disposable {
       this._events.emit('spin:stopping', reelIndex);
     }
 
-    const stopPhase = this._phaseFactory.create<any>('stop', reel, speed);
+    const stopPhase = this._phaseFactory.create<any>(phaseKeys.stop, reel, speed);
     this._activePhases.set(reelIndex, stopPhase);
     await stopPhase.run({ targetFrame, delay: stopDelay } as StopPhaseConfig);
     if (generation !== this._spinGeneration) return;
