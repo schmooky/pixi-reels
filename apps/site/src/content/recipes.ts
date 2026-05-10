@@ -132,19 +132,6 @@ export const RECIPES: RecipeMeta[] = [
     tags: ['multiways', 'shape', 'reshape', 'geometry'],
   },
   {
-    slug: 'big-symbols',
-    group: 'big-symbols',
-    title: 'Big symbols (N×M)',
-    oneLiner: 'Single symbol occupying an N×M block — 2×2 bonus frames, 3×3 giants. Declared via SymbolData.size.',
-    steps: [
-      'Register a big symbol with size { w, h } in symbolData metadata',
-      'Server places the symbol id at the top-left (anchor) cell only',
-      'Engine paints OCCUPIED across the rest of the block — public result stays string[][]',
-    ],
-    apis: ['SymbolData.size', 'ReelSet.getSymbolFootprint', 'ReelSet.getVisibleGrid'],
-    tags: ['big-symbols', 'bonus', 'layout', 'registration'],
-  },
-  {
     slug: 'spine-big-symbols',
     group: 'big-symbols',
     title: 'Big symbols with Spine',
@@ -252,19 +239,6 @@ export const RECIPES: RecipeMeta[] = [
     tags: ['starter', 'cascade', '6x5'],
   },
   {
-    slug: 'cascade-anticipation',
-    group: 'cascade',
-    title: 'Cascade drop anticipation',
-    oneLiner: 'All columns fall empty at once — then one hole stays open until the payoff symbol drops in.',
-    steps: [
-      'Spin — all columns fall out simultaneously, grid empties',
-      'Most columns refill immediately; the payoff column stays empty',
-      'Call setDropOrder([0, 0, 0, 0, 2500, 0]) — delay is drop-in only, not the fall',
-    ],
-    apis: ['ReelSet.setDropOrder', 'ReelSet.setResult', 'DropRecipes'],
-    tags: ['cascade', 'anticipation', 'tension'],
-  },
-  {
     slug: 'hold-and-win',
     group: 'starters',
     title: 'Hold & Win respin',
@@ -281,33 +255,6 @@ export const RECIPES: RecipeMeta[] = [
 
   // ── Mechanic recipes ───────────────────────────────────────────────
   {
-    slug: 'walking-wild',
-    group: 'wilds',
-    title: 'Walking wild',
-    oneLiner: 'Sticky wild that advances one column every respin, pays on the way across.',
-    steps: [
-      'Track the wild\'s (reel, row) position in game state between spins',
-      'Every respin, build a result grid that places the wild at the new column',
-      'After each landing, shift the stored column left by 1',
-      'When column < 0, clear the wild and return to normal spins',
-    ],
-    apis: ['ReelSet.setResult', 'ReelSet.spin', 'spin:complete event'],
-    tags: ['wild', 'respin', 'positional'],
-  },
-  {
-    slug: 'sticky-wild',
-    group: 'wilds',
-    title: 'Sticky wild',
-    oneLiner: 'Wilds land during free spins, lock in place, board fills up toward an inevitable jackpot.',
-    steps: [
-      'Track each landed wild\'s (reel, row) in a Set',
-      'Every free-spin, build a result grid that re-injects every stuck wild',
-      'Clear the Set when the round ends',
-    ],
-    apis: ['ReelSet.setResult', 'spin:reelLanded event'],
-    tags: ['wild', 'respin', 'free-spins'],
-  },
-  {
     slug: 'symbol-transform',
     group: 'features',
     title: 'Symbol transform',
@@ -320,20 +267,6 @@ export const RECIPES: RecipeMeta[] = [
     ],
     apis: ['Reel.placeSymbols', 'Reel.getSymbolAt', 'ReelSymbol.view'],
     tags: ['transform', 'animation', 'upgrade'],
-  },
-  {
-    slug: 'mystery-reveal',
-    group: 'features',
-    title: 'Mystery reveal',
-    oneLiner: 'All "?" cells reveal the SAME random symbol on land — the Money Train mystery-symbol drama.',
-    steps: [
-      'Use a `mystery` symbol id in the result grid like any other symbol',
-      'On spin:allLanded, pick ONE reveal symbol (shared across all mystery cells)',
-      'Play a reveal animation on each cell, swapping to the chosen symbol',
-      'Evaluate wins AFTER the reveal with the post-reveal grid',
-    ],
-    apis: ['spin:allLanded event', 'Reel.placeSymbols', 'Reel.getSymbolAt'],
-    tags: ['mystery', 'reveal', 'animation'],
   },
 
   // ── UX & system recipes ────────────────────────────────────────────
@@ -364,33 +297,6 @@ export const RECIPES: RecipeMeta[] = [
     tags: ['anticipation', 'tension'],
   },
   {
-    slug: 'single-reel-respin',
-    group: 'tension',
-    title: 'Single-reel respin',
-    oneLiner: 'Hold every other reel and respin just one — the classic "nudge" mechanic.',
-    steps: [
-      'After the main spin lands, pick which reel the player wants to respin',
-      'Freeze the other reels by re-feeding their current visible symbols via setResult()',
-      'Let the chosen reel spin again with a fresh result',
-      'A full-column (stacked) symbol naturally locks the whole reel — same code path',
-    ],
-    apis: ['ReelSet.spin', 'ReelSet.setResult', 'Reel.getVisibleSymbols'],
-    tags: ['respin', 'hold'],
-  },
-  {
-    slug: 'animate-paylines',
-    group: 'wins',
-    title: 'Highlight winning cells',
-    oneLiner: 'Sweep or flash the winning symbols with WinPresenter — just cells, no line drawing.',
-    steps: [
-      'Build WinPresenter. stagger = 0 flashes, > 0 sweeps left-to-right',
-      'Pass each win as { cells, value? }',
-      'Abort on spin:start',
-    ],
-    apis: ['WinPresenter', 'Win', 'win:* events'],
-    tags: ['wins', 'presenter'],
-  },
-  {
     slug: 'paylines-custom-animation',
     group: 'wins',
     title: 'Custom per-symbol animation',
@@ -415,6 +321,19 @@ export const RECIPES: RecipeMeta[] = [
     ],
     apis: ['WinPresenter', 'runCascade.onWinnersVanish', 'win:group'],
     tags: ['wins', 'cascade'],
+  },
+  {
+    slug: 'spin-then-cascade',
+    group: 'cascade',
+    title: 'Spin first, cascade after',
+    oneLiner: 'Open every play with a classic strip-spin, then cascade the respins — one ReelSet, the per-spin mode override does the switch.',
+    steps: [
+      'Build with a default mode AND .cascade(...) registered',
+      'Round 1 — call spin() (default standard)',
+      'Cascade respins — call spin({ mode: "cascade" }) per round',
+    ],
+    apis: ['ReelSetBuilder.cascade', 'reelSet.spin', 'SpinOptions.mode'],
+    tags: ['hybrid', 'cascade', 'spin-mode', 'recent'],
   },
   {
     slug: 'paylines-events-only',
@@ -496,19 +415,6 @@ export const RECIPES: RecipeMeta[] = [
     ],
     apis: ['ReelSet.pin', 'CellPin.turns (number)'],
     tags: ['wild', 'expanding', 'sticky', 'cell-pin'],
-  },
-  {
-    slug: 'book-expanding-pin',
-    group: 'wilds',
-    title: 'Book-style expanding symbol',
-    oneLiner: 'One chosen symbol class expands to fill any reel it appears on — the Book-of slot formula.',
-    steps: [
-      'At feature start, choose a symbol class (the "expanding symbol")',
-      'On each spin, pin every row of reels containing that symbol with { turns: "eval" }',
-      'Evaluate wins with the expanded grid; pins auto-clear at next spin:start',
-    ],
-    apis: ['ReelSet.pin', 'CellPin.turns ("eval")'],
-    tags: ['wild', 'book', 'expanding', 'cell-pin'],
   },
   {
     slug: 'multiplier-wild-pin',
@@ -615,19 +521,6 @@ export const RECIPES: RecipeMeta[] = [
     ],
     apis: ['ReelSet.getCellBounds', 'PIXI.Graphics.eventMode', 'PIXI.Graphics.cursor'],
     tags: ['utility', 'hit-areas', 'interaction', 'cursor'],
-  },
-  {
-    slug: 'cell-hit-areas-portrait',
-    group: 'cell-coords',
-    title: 'Portrait (non-square) cells + hit areas',
-    oneLiner: 'Proof that getCellBounds makes no square-cell assumption — 70 × 105 portrait cells, fit-scaled sprites, pointer-accurate hit areas.',
-    steps: [
-      'Call .symbolSize(width, height) with any ratio — e.g. 70 × 105 for portrait',
-      'Register symbols with BlurSpriteSymbol and fit true so art preserves aspect ratio',
-      'Use getCellBounds(col, row) to build hit-area Graphics that match the tall rectangles',
-    ],
-    apis: ['ReelSet.getCellBounds', 'ReelSetBuilder.symbolSize', 'BlurSpriteSymbol fit option'],
-    tags: ['utility', 'hit-areas', 'non-square', 'proportions'],
   },
 
   // ── movePin + frame exposure recipes ──────────────────────────────────
