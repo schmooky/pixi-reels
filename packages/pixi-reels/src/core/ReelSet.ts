@@ -244,13 +244,39 @@ export class ReelSet extends Container implements Disposable {
   // ─── Spin API ─────────────────────────────────────────────
 
   /**
-   * Start spinning all reels. Returns a promise that resolves when all
-   * reels land. Pass `{ mode: 'standard' | 'cascade' }` to override the
-   * builder-time default for a single spin (e.g. classic strip-spin on
-   * the first round, drop-in on the cascade waves).
+   * Start spinning. Returns a promise that resolves when all (non-held)
+   * reels land.
+   *
+   * Pass `{ holdReels: [i, ...] }` to keep specific columns frozen for
+   * this spin — they skip START / SPIN / STOP entirely and stay on
+   * whatever symbols they're currently showing. The use cases are
+   * Hold & Win respins, sticky / expanding wilds, and "the trigger
+   * column stays in place" bonus rounds.
+   *
+   * Pass `{ mode: 'standard' | 'cascade' }` to override the builder-time
+   * default for a single spin (e.g. classic strip-spin on the first round,
+   * drop-in on the cascade waves). `'cascade'` requires `.cascade(...)`
+   * on the builder.
+   *
+   * @example
+   * // Plain spin — every reel animates.
+   * await reelSet.spin();
+   *
+   * @example
+   * // Hold reels 0 and 4; only the middle three reroll.
+   * const spin = reelSet.spin({ holdReels: [0, 4] });
+   * reelSet.setResult(serverGrid); // entries at 0/4 are ignored
+   * await spin;
+   *
+   * @example
+   * // Per-spin cascade override.
+   * await reelSet.spin({ mode: 'cascade' });
+   *
+   * See {@link SpinOptions} for the full contract (event behaviour,
+   * setResult interaction, setAnticipation filtering).
    */
-  async spin(opts?: SpinOptions): Promise<SpinResult> {
-    return this._spinController.spin(opts);
+  async spin(options?: SpinOptions): Promise<SpinResult> {
+    return this._spinController.spin(options);
   }
 
   /**

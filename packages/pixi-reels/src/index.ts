@@ -12,6 +12,7 @@ export { SpeedPresets } from './config/SpeedPresets.js';
 export { DEFAULTS } from './config/defaults.js';
 export type {
   SpeedProfile,
+  SpinOptions,
   SymbolData,
   ReelGridConfig,
   ReelExtraSymbols,
@@ -29,7 +30,6 @@ export type {
   ResolvedReelGridConfig,
   MultiWaysConfig,
   ReelAnchor,
-  SpinOptions,
 } from './config/types.js';
 export type { ReelMaskRect, MaskStrategy } from './core/ReelViewport.js';
 export { RectMaskStrategy, SharedRectMaskStrategy } from './core/ReelViewport.js';
