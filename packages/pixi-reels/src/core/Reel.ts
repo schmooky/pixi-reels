@@ -567,6 +567,12 @@ export class Reel implements Disposable {
   private _replaceSymbol(index: number, newSymbolId: string): void {
     const oldSymbol = this.symbols[index];
     const isOldStub = oldSymbol instanceof OccupiedStub;
+    // Always parent into THIS reel's own container — the old symbol's
+    // `view.parent` is unsafe as a destination because the shared symbol
+    // pool can recycle a view across reels (or the spotlight may have
+    // promoted it above the mask), leaving `oldSymbol.view.parent`
+    // pointing at a foreign container.
+    const parent = this.container;
 
     // OCCUPIED: install a stub. Stubs are not pooled through SymbolFactory.
     if (newSymbolId === OCCUPIED_SENTINEL) {
@@ -574,7 +580,6 @@ export class Reel implements Disposable {
         oldSymbol.view.alpha = 0;
         return;
       }
-      const parent = oldSymbol.view.parent;
       const y = oldSymbol.view.y;
       this._symbolFactory.release(oldSymbol);
       const stub = this._acquireOccupiedStub();
@@ -584,14 +589,13 @@ export class Reel implements Disposable {
       stub.view.visible = true;
       stub.view.scale.set(1, 1);
       stub.view.zIndex = index;
-      if (parent && stub.view.parent !== parent) parent.addChild(stub.view);
+      if (stub.view.parent !== parent) parent.addChild(stub.view);
       this.symbols[index] = stub;
       return;
     }
 
     // Replacing a stub with a real symbol: release stub back to internal cache.
     if (isOldStub) {
-      const parent = oldSymbol.view.parent;
       const y = oldSymbol.view.y;
       this._releaseOccupiedStub(oldSymbol);
       const newSymbol = this._symbolFactory.acquire(newSymbolId);
@@ -601,23 +605,26 @@ export class Reel implements Disposable {
       newSymbol.view.alpha = 1;
       newSymbol.view.scale.set(1, 1);
       newSymbol.view.zIndex = this._computeSymbolZIndex(newSymbolId, index);
-      if (parent) parent.addChild(newSymbol.view);
+      parent.addChild(newSymbol.view);
       this.symbols[index] = newSymbol;
       this.events.emit('symbol:created', newSymbolId, index);
       return;
     }
 
-    // Even if same symbolId, always reset visual state (alpha, scale, rotation, filters, zIndex)
+    // Same id fast-path. Reset every mutable visual property (alpha, scale,
+    // rotation, filters, zIndex) AND re-anchor the view to this reel's
+    // container in case the pool moved it elsewhere since the last
+    // activation (e.g. spotlight promotion above the mask).
     if (oldSymbol.symbolId === newSymbolId) {
       oldSymbol.view.alpha = 1;
       oldSymbol.view.scale.set(1, 1);
       oldSymbol.view.rotation = 0;
       oldSymbol.view.filters = null;
       oldSymbol.view.zIndex = this._computeSymbolZIndex(newSymbolId, index);
+      if (oldSymbol.view.parent !== parent) parent.addChild(oldSymbol.view);
       return;
     }
 
-    const parent = oldSymbol.view.parent;
     const y = oldSymbol.view.y;
 
     this._symbolFactory.release(oldSymbol);
@@ -629,9 +636,7 @@ export class Reel implements Disposable {
     newSymbol.view.scale.set(1, 1);
     newSymbol.view.zIndex = this._computeSymbolZIndex(newSymbolId, index);
 
-    if (parent) {
-      parent.addChild(newSymbol.view);
-    }
+    parent.addChild(newSymbol.view);
 
     this.symbols[index] = newSymbol;
     this.events.emit('symbol:created', newSymbolId, index);

@@ -109,11 +109,14 @@ export class SymbolSpotlight implements Disposable {
       if (seen.has(key)) continue;
       seen.add(key);
 
-      const originalParent = symbol.view.parent;
-      this._promoted.push({ symbol, originalParent, position: pos });
-
+      // Track for hide() only when we're actually moving the view —
+      // otherwise the entry's `originalParent` would become stale if the
+      // shared symbol pool recycles this instance into a different reel
+      // before the next hide(), and `hide()` would reparent it back to a
+      // reel that no longer owns it (leaving a hole on the new owner).
       if (promoteAboveMask) {
-        // Re-parent to spotlight container (above mask)
+        const originalParent = symbol.view.parent;
+        this._promoted.push({ symbol, originalParent, position: pos });
         const globalPos = symbol.view.getGlobalPosition();
         this._viewport.spotlightContainer.addChild(symbol.view);
         const localPos = this._viewport.spotlightContainer.toLocal(globalPos);
@@ -139,9 +142,13 @@ export class SymbolSpotlight implements Disposable {
       this._cycleAbort = null;
     }
 
-    // Return promoted symbols
+    // Return promoted symbols. Skip any whose view has been moved out of
+    // the spotlight container — that means the shared symbol pool has
+    // recycled them into another reel since show(), and reparenting back
+    // to `originalParent` would steal them from their new owner.
     for (const { symbol, originalParent } of this._promoted) {
-      if (originalParent && symbol.view.parent !== originalParent) {
+      if (symbol.view.parent !== this._viewport.spotlightContainer) continue;
+      if (originalParent) {
         const globalPos = symbol.view.getGlobalPosition();
         originalParent.addChild(symbol.view);
         const localPos = originalParent.toLocal(globalPos);
