@@ -479,6 +479,18 @@ export class Reel implements Disposable {
   }
 
   /**
+   * Compute the canonical zIndex for a single symbol view at a given
+   * array index. Centralizes the formula used by both `refreshZIndex`
+   * (full rescan) and the per-swap activate path (so newly placed
+   * symbols land with their correct zIndex without the caller needing
+   * to remember to call `refreshZIndex` afterwards).
+   */
+  private _computeSymbolZIndex(symbolId: string, index: number): number {
+    const base = this._symbolsData[symbolId]?.zIndex ?? 0;
+    return base * 100 + index;
+  }
+
+  /**
    * Recompute `zIndex` for every symbol in the reel.
    *
    * Formula: `symbolData.zIndex ?? 0` (scaled by 100 to leave room for row
@@ -486,8 +498,12 @@ export class Reel implements Disposable {
    * render in front of top-row symbols and any symbol with a higher
    * configured base zIndex (e.g. wild, bonus) renders above its neighbors.
    *
-   * Called automatically after wraps, snaps, and direct placement. Call it
-   * manually after mutating `symbolsData.zIndex` at runtime.
+   * Called automatically after wraps, snaps, and direct placement. Also
+   * called inline by `_replaceSymbol` for the single newly-placed symbol —
+   * so consumers who swap one symbol at a time (via the public APIs that
+   * funnel into `_replaceSymbol`) get correct layering for free, no
+   * manual `refreshZIndex` required. Call it manually after mutating
+   * `symbolsData.zIndex` at runtime.
    */
   refreshZIndex(): void {
     for (let i = 0; i < this.symbols.length; i++) {
@@ -496,8 +512,7 @@ export class Reel implements Disposable {
         symbol.view.zIndex = i;
         continue;
       }
-      const base = this._symbolsData[symbol.symbolId]?.zIndex ?? 0;
-      symbol.view.zIndex = base * 100 + i;
+      symbol.view.zIndex = this._computeSymbolZIndex(symbol.symbolId, i);
     }
   }
 
@@ -606,6 +621,11 @@ export class Reel implements Disposable {
   private _replaceSymbol(index: number, newSymbolId: string): void {
     const oldSymbol = this.symbols[index];
     const isOldStub = oldSymbol instanceof OccupiedStub;
+    // The old symbol's `view.parent` is unsafe as a destination because
+    // the shared symbol pool can recycle a view across reels (or the
+    // spotlight may have promoted it above the mask). Always re-pick
+    // the destination from `_parentForSymbolId(newSymbolId)` (or
+    // `this.container` for OCCUPIED stubs, which never carry `unmask`).
 
     // Capture old Y in reel-local coords before releasing — old view may
     // have been parented to viewport.unmaskedContainer and need an offset
@@ -628,6 +648,8 @@ export class Reel implements Disposable {
       stub.view.alpha = 0;
       stub.view.visible = true;
       stub.view.scale.set(1, 1);
+      stub.view.zIndex = index;
+      // Stubs are never unmasked — always live in this reel's container.
       if (stub.view.parent !== this.container) this.container.addChild(stub.view);
       this.symbols[index] = stub;
       return;
@@ -643,20 +665,29 @@ export class Reel implements Disposable {
       this._placeSymbolView(newSymbol.view, reelLocalY, newIsUnmasked);
       newSymbol.view.alpha = 1;
       newSymbol.view.scale.set(1, 1);
-      newSymbol.view.zIndex = 0;
+      newSymbol.view.zIndex = this._computeSymbolZIndex(newSymbolId, index);
       this._parentForSymbolId(newSymbolId).addChild(newSymbol.view);
       this.symbols[index] = newSymbol;
       this.events.emit('symbol:created', newSymbolId, index);
       return;
     }
 
-    // Even if same symbolId, always reset visual state (alpha, scale, rotation, filters, zIndex)
+    // Same id fast-path. Reset every mutable visual property (alpha, scale,
+    // rotation, filters, zIndex) AND re-anchor the view to this reel's
+    // container in case the pool moved it elsewhere since the last
+    // activation (e.g. spotlight promotion above the mask).
     if (oldSymbol.symbolId === newSymbolId) {
       oldSymbol.view.alpha = 1;
       oldSymbol.view.scale.set(1, 1);
       oldSymbol.view.rotation = 0;
       oldSymbol.view.filters = null;
-      oldSymbol.view.zIndex = 0;
+      oldSymbol.view.zIndex = this._computeSymbolZIndex(newSymbolId, index);
+      // Same id → same unmask status; pick the right destination by id
+      // so an unmasked symbol stays in `unmaskedContainer` post-spotlight.
+      const target = this._parentForSymbolId(newSymbolId);
+      if (oldSymbol.view.parent !== target) target.addChild(oldSymbol.view);
+      // Reset Y in case spotlight or another mutator displaced it.
+      this._placeSymbolView(oldSymbol.view, reelLocalY, this._isUnmasked(newSymbolId));
       return;
     }
 
@@ -667,7 +698,7 @@ export class Reel implements Disposable {
     this._placeSymbolView(newSymbol.view, reelLocalY, newIsUnmasked);
     newSymbol.view.alpha = 1;
     newSymbol.view.scale.set(1, 1);
-    newSymbol.view.zIndex = 0;
+    newSymbol.view.zIndex = this._computeSymbolZIndex(newSymbolId, index);
 
     this._parentForSymbolId(newSymbolId).addChild(newSymbol.view);
 
