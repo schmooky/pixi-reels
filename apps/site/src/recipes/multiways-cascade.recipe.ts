@@ -165,8 +165,13 @@ return {
 
     if (winnersByStage.length === 0) return;
 
+    // runCascade walks `stages`; for the stage-N → stage-(N+1) transition
+    // it invokes the winners callback with stageIndex = N + 1 (it's the
+    // post-increment value of the iteration counter, not the source index).
+    // Our winnersByStage[i] holds the winners that produced stages[i+1] from
+    // stages[i], so the lookup is `stageIdx - 1`.
     await runCascade(reelSet, stages, {
-      winners: (_prev, _next, stageIdx) => winnersByStage[stageIdx],
+      winners: (_prev, _next, stageIdx) => winnersByStage[stageIdx - 1] ?? [],
       vanishDuration: 300,
       dropDuration: 420,
       pauseBetween: 160,
