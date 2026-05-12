@@ -21,6 +21,8 @@ import { RecipeRunner } from '../../components/RecipeRunner.tsx';
 
 A slot that varies its shape per spin AND uses cascade-style tumbling on winners — the cascade-Megaways pattern that BTG's *Bonanza* and *Extra Chilli* popularized. The initial landing is a classic strip-spin (so the multiways `AdjustPhase` reshapes the reels between SPIN and STOP); winners then pop, survivors fall, and new symbols drop in from above via `runCascade`. The reels never re-spin between tumbles.
 
+A *ways* win is the multiways win pattern: a symbol that lands on N consecutive reels starting from reel 0 wins, and **every** instance of that symbol on those reels is part of the win — not just one cell per column the way a payline game would resolve it. This recipe pops them all in one cascade. If the resulting fill creates another ways win, the chain continues (capped at 4 cascades per round for demo legibility).
+
 ```ts
 import { ReelSetBuilder, SpriteSymbol } from 'pixi-reels';
 import { runCascade } from './shared/cascadeLoop';   // examples/shared
@@ -54,6 +56,8 @@ document.getElementById('spin')!.addEventListener('click', async () => {
 ## Why this works on a multiways slot
 
 `runCascade` reads each reel's `visibleRows` at call time via `reel.getVisibleSymbols().length`. A reel that landed at 2 rows and a reel that landed at 5 rows cascade independently in the same chain — the helper builds per-reel fall jobs against each reel's live geometry, so jagged multiways shapes aren't a special case.
+
+Crucially, the helper also accepts a `winners` callback with **multiple cells per column**. A ways win that hits three cells on a single 5-row reel will pop all three; the three cleared rows refill from above with new symbols entering staggered (`tumbleToGrid` handles per-reel offset math), regardless of where the winners were in the column.
 
 The initial strip-spin is the multiways primary motion: `AdjustPhase` runs between `SpinPhase` and `StopPhase`, commits the new shape, and `StopPhase` lands the reel at its new row count. By the time `runCascade` runs, every reel is already at its post-reshape geometry.
 

@@ -2,20 +2,20 @@
 // Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
 //                   PIXI, gsap, app, runCascade
 
-// MultiWays + cascade tumble.
+// MultiWays + cascade tumble — proper ways-style winner removal.
 //
-// Visual flow on each round:
+// A "ways" win on a multiways slot: a symbol appears on N consecutive
+// reels starting from reel 0. EVERY instance of that symbol on those
+// reels is a winner — not just one cell per column, the way a payline
+// game would resolve it. So if reel 1 has two Qs and reel 2 has three Qs,
+// a Q-ways win pops all five of them.
+//
+// Visual flow each round:
 //   1. setShape(rowsPerReel) rolls a per-reel row count in [minRows, maxRows].
 //   2. reelSet.spin() — classic strip-spin lands the multiways grid.
-//      AdjustPhase reshapes between SPIN and STOP, so the landing already
-//      shows the new per-reel row count.
-//   3. If three of the same symbol land in a row across cols 0..2 (or 1..3,
-//      or 2..4), runCascade pops them; survivors fall, new symbols drop in
-//      from above — the cascade tumble visual, on a multiways shape.
-//
-// `runCascade` operates on the live grid via per-reel `placeSymbols(...)` and
-// is shape-aware — it reads each reel's visibleRows at call time, so a 2-row
-// reel and a 5-row reel cascade independently within the same chain.
+//   3. Detect a ways win. If found, runCascade pops every winning cell;
+//      survivors fall, new symbols drop in from above.
+//   4. Repeat until no more ways wins (capped at MAX_CASCADES per round).
 
 const REELS = 6;
 const MIN_ROWS = 2;
@@ -25,6 +25,12 @@ const SYMBOL_SIZE = REEL_PIXEL_HEIGHT / MAX_ROWS;
 const GAP = 4;
 
 const IDS = ['7', '8', '9', '10', 'J', 'Q'];
+const MIN_WAYS_REELS = 3;
+const MAX_CASCADES = 4;
+
+function randSymbol() {
+  return IDS[Math.floor(Math.random() * IDS.length)];
+}
 
 function randomShape() {
   return Array.from({ length: REELS }, () =>
@@ -32,30 +38,72 @@ function randomShape() {
   );
 }
 
-function randomGrid(shape, forceTripleRow) {
+function buildGridWithGuaranteedWin(shape) {
+  // Random fill, then plant the same symbol on reels 0, 1, 2 — with multiple
+  // copies on reels that have room — so the ways win removes multiple cells
+  // per column, which is the whole point of multiways-style cascading.
   const grid = shape.map((rows) =>
-    Array.from({ length: rows }, () => IDS[Math.floor(Math.random() * IDS.length)]),
+    Array.from({ length: rows }, () => randSymbol()),
   );
-  if (forceTripleRow !== null && forceTripleRow !== undefined) {
-    const cluster = IDS[Math.floor(Math.random() * IDS.length)];
-    for (let c = 0; c < 3; c++) {
-      if (grid[c].length > forceTripleRow) grid[c][forceTripleRow] = cluster;
+  if (Math.random() < 0.7) {
+    const target = randSymbol();
+    for (let c = 0; c < MIN_WAYS_REELS; c++) {
+      const len = grid[c].length;
+      // At least one copy at row 0; plant 1-2 more copies at distinct rows
+      // when the reel has room.
+      const positions = new Set([0]);
+      const extraCount = len >= 4 ? 2 : len >= 3 ? 1 : 0;
+      while (positions.size < 1 + extraCount) {
+        positions.add(Math.floor(Math.random() * len));
+      }
+      for (const row of positions) grid[c][row] = target;
     }
   }
   return grid;
 }
 
-function findTriple(grid) {
-  for (let startCol = 0; startCol + 2 < grid.length; startCol++) {
-    const minRows = Math.min(grid[startCol].length, grid[startCol + 1].length, grid[startCol + 2].length);
-    for (let row = 0; row < minRows; row++) {
-      const id = grid[startCol][row];
-      if (id === grid[startCol + 1][row] && id === grid[startCol + 2][row]) {
-        return { startCol, row, id };
-      }
+function findWaysWin(grid) {
+  // Look for a symbol that lives on reels 0..N where N >= MIN_WAYS_REELS - 1.
+  // Returns { id, reelCount } or null.
+  for (const id of IDS) {
+    let reelCount = 0;
+    for (let c = 0; c < grid.length; c++) {
+      if (grid[c].includes(id)) reelCount++;
+      else break;
     }
+    if (reelCount >= MIN_WAYS_REELS) return { id, reelCount };
   }
   return null;
+}
+
+function collectWinners(grid, win) {
+  const winners = [];
+  for (let c = 0; c < win.reelCount; c++) {
+    for (let row = 0; row < grid[c].length; row++) {
+      if (grid[c][row] === win.id) winners.push({ reel: c, row });
+    }
+  }
+  return winners;
+}
+
+function applyCascade(grid, winners) {
+  // Group winners by reel, then per reel: drop the winning rows, shift
+  // survivors down, fill the cleared top slots with new random symbols.
+  // Cell count per reel stays the same — multiways shape doesn't change
+  // mid-cascade.
+  const winnersByReel = new Map();
+  for (const w of winners) {
+    if (!winnersByReel.has(w.reel)) winnersByReel.set(w.reel, new Set());
+    winnersByReel.get(w.reel).add(w.row);
+  }
+  return grid.map((col, c) => {
+    const winRows = winnersByReel.get(c);
+    if (!winRows || winRows.size === 0) return [...col];
+    const survivors = col.filter((_, row) => !winRows.has(row));
+    const newCount = col.length - survivors.length;
+    const newSymbols = Array.from({ length: newCount }, () => randSymbol());
+    return [...newSymbols, ...survivors];
+  });
 }
 
 const reelSet = new ReelSetBuilder()
@@ -72,8 +120,6 @@ const reelSet = new ReelSetBuilder()
       }
     }
   })
-  // bounceDistance: 0 — big symbols visually overshoot on a multiways
-  // landing, same fix as the plain multiways recipe.
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 120, bounceDistance: 0, bounceDuration: 0 })
   .ticker(app.ticker)
   .build();
@@ -82,14 +128,10 @@ return {
   reelSet,
   onSpin: async () => {
     const shape = randomShape();
-    // Force a 3-in-a-row about 60% of the time so the cascade chain
-    // is visible often. The target row is 0 (always present, even on
-    // a 2-row reel).
-    const forceTriple = Math.random() < 0.6 ? 0 : null;
 
-    // Round 1 — classic strip-spin on a multiways slot.
-    // AdjustPhase reshapes between SPIN and STOP via setShape(...).
-    const stage0 = randomGrid(shape, forceTriple);
+    // Round 1 — strip-spin lands the multiways grid (AdjustPhase reshapes
+    // between SPIN and STOP).
+    const stage0 = buildGridWithGuaranteedWin(shape);
     const p = reelSet.spin();
     await new Promise((r) => setTimeout(r, 120));
     reelSet.setShape(shape);
@@ -97,30 +139,29 @@ return {
     await p;
     await new Promise((r) => setTimeout(r, 240));
 
-    // Find a 3-in-a-row and tumble it. runCascade reads per-reel
-    // visibleRows live, so reels with different shapes cascade
-    // independently within the same chain.
-    const triple = findTriple(stage0);
-    if (!triple) return;
+    // Build the full cascade chain upfront. Each stage is a grid; each
+    // stage-N → stage-(N+1) transition has a winners list captured in
+    // `winnersByStage`. runCascade reads that list via the `winners`
+    // callback below.
+    const stages = [stage0];
+    const winnersByStage = [];
+    let current = stage0;
+    while (winnersByStage.length < MAX_CASCADES) {
+      const win = findWaysWin(current);
+      if (!win) break;
+      const winners = collectWinners(current, win);
+      winnersByStage.push(winners);
+      current = applyCascade(current, winners);
+      stages.push(current);
+    }
 
-    const stage1 = stage0.map((col, c) => {
-      if (c < triple.startCol || c >= triple.startCol + 3) return [...col];
-      const next = [...col];
-      const row = triple.row;
-      for (let r = row; r > 0; r--) next[r] = next[r - 1];
-      next[0] = IDS[Math.floor(Math.random() * IDS.length)];
-      return next;
-    });
+    if (winnersByStage.length === 0) return;
 
-    await runCascade(reelSet, [stage0, stage1], {
-      winners: () => [
-        { reel: triple.startCol,     row: triple.row },
-        { reel: triple.startCol + 1, row: triple.row },
-        { reel: triple.startCol + 2, row: triple.row },
-      ],
+    await runCascade(reelSet, stages, {
+      winners: (_prev, _next, stageIdx) => winnersByStage[stageIdx],
       vanishDuration: 300,
       dropDuration: 420,
-      pauseBetween: 140,
+      pauseBetween: 160,
     });
   },
 };
