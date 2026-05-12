@@ -1,0 +1,85 @@
+---
+layout: ../../layouts/Recipe.astro
+title: MultiWays cascade
+description: Per-spin row variation and cascade drop-in in the same slot. setShape() each spin; the engine reshapes, then DropStopPhase falls the new grid in from above.
+tags: [multiways, cascade, hybrid, recent]
+steps:
+  - Build with .multiways({minRows, maxRows, reelPixelHeight}) AND .cascade(DropRecipes....)
+  - Each round, call setShape(rowsPerReel) BEFORE setResult()
+  - spin({ mode 'cascade' }) — DropStart → Spin → Adjust → DropStop
+  - Optional post-landing cascade chain via runCascade()
+apis:
+  - ReelSetBuilder.multiways
+  - ReelSetBuilder.cascade
+  - ReelSet.setShape
+  - SpinOptions.mode
+  - runCascade
+---
+
+import code from '../../recipes/multiways-cascade.recipe.ts?raw';
+import { RecipeRunner } from '../../components/RecipeRunner.tsx';
+
+<RecipeRunner code={code} client:only="react" />
+
+A slot that varies its shape per spin AND uses cascade drop-in for landings — the cascade-Megaways pattern that BTG's Bonanza popularized. Both mechanics now compose: `.multiways(...)` and `.cascade(...)` on the same builder, with `AdjustPhase` inserted between `SpinPhase` and `DropStopPhase` so the new shape commits before the drop fills it.
+
+> **As seen in the wild:** *Bonanza* and *Extra Chilli* by Big Time Gaming — the original Megaways titles, both cascade-mode.
+
+```ts
+import { ReelSetBuilder, DropRecipes, SpriteSymbol } from 'pixi-reels';
+
+const reelSet = new ReelSetBuilder()
+  .reels(6)
+  .multiways({ minRows: 2, maxRows: 5, reelPixelHeight: 360 })
+  .symbolSize(72, 72)
+  .symbols((r) => { /* register your symbols */ })
+  .cascade(DropRecipes.cascadeDrop)
+  .ticker(app.ticker)
+  .build();
+
+document.getElementById('spin')!.addEventListener('click', async () => {
+  const shape = rollShape();              // your random or server-driven shape
+  const grid  = buildGrid(shape);         // grid lengths must match `shape`
+
+  const p = reelSet.spin({ mode: 'cascade' });
+  reelSet.setShape(shape);
+  reelSet.setResult(grid);
+  await p;
+
+  // Optional: tumble winners on the landed grid.
+  const wins = detectWins(grid);
+  if (wins.length) await runCascade(reelSet, [grid, ...nextStages], { winners: () => wins });
+});
+```
+
+## Phase order
+
+For `spin({ mode: 'cascade' })` on a multiways slot, each reel walks:
+
+```
+DropStartPhase  → notify start, no motion
+SpinPhase       → wait for setResult()
+AdjustPhase     → commit new shape, migrate pins, tween overlays
+DropStopPhase   → fall the (resized) old grid out, drop the new grid in
+```
+
+`AdjustPhase` lives between `SpinPhase` and `DropStopPhase`, so by the time the drop begins, `reel.visibleRows` and `reel.bufferAbove` already reflect the new shape. `DropStopPhase` reads those values at runtime (it doesn't cache them at construction), so the drop fills the post-reshape geometry without any extra wiring.
+
+## Shape change cadence
+
+`setShape()` applies to the spin it's called on. Each call to `spin({ mode: 'cascade' })` is a separate phase chain that runs its own `AdjustPhase` if a shape is pending — so successive cascade-mode spins can each have a different shape.
+
+What is **not** supported: changing shape *mid-cascade-chain* — i.e., during a `runCascade` tumble after a single `spin()` has already landed. The `runCascade` helper operates on the live grid via per-reel `placeSymbols(...)` and assumes the shape is fixed for the chain it's animating. If you need to reshape between cascade respins, do it by starting a fresh `spin({ mode: 'cascade' })` with the new shape — that's the supported path.
+
+See [ADR 015](/architecture/adr/015-cascade-multiways-interplay/) for the full design rationale.
+
+## What you can't combine
+
+- **Big symbols + multiways** still throws at build time (same guardrail as before — anchor coordinates don't have stable semantics under reshape).
+- **Per-spin shape change mid-cascade-chain** — see above.
+
+## Related
+
+- [MultiWays](/recipes/multiways/) — per-spin row variation without cascade.
+- [Cascade 6×5 tumble](/recipes/cascade-6x5/) — cascade drop-in on a fixed-shape grid.
+- [Spin then cascade](/recipes/spin-then-cascade/) — classic strip-spin + post-landing tumble (uses `runCascade`, no `mode: 'cascade'`).

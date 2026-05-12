@@ -184,6 +184,20 @@ export const RECIPES: RecipeMeta[] = [
     tags: ['debug', 'prototyping', 'custom-symbol', 'graphics'],
   },
   {
+    slug: 'multiways-cascade',
+    group: 'multiways',
+    title: 'MultiWays cascade',
+    oneLiner: 'Per-spin row variation and cascade drop-in on the same slot — set shape, spin in cascade mode, optionally tumble winners.',
+    steps: [
+      'Build with .multiways({minRows, maxRows, reelPixelHeight}) AND .cascade(DropRecipes....)',
+      'Each round, call setShape(rowsPerReel) BEFORE setResult()',
+      'spin({ mode: "cascade" }) — DropStart → Spin → Adjust → DropStop, in that order',
+      'Optional post-landing cascade chain via runCascade()',
+    ],
+    apis: ['ReelSetBuilder.multiways', 'ReelSetBuilder.cascade', 'ReelSet.setShape', 'SpinOptions.mode'],
+    tags: ['multiways', 'cascade', 'hybrid', 'recent'],
+  },
+  {
     slug: 'sticky-wild-multiways',
     group: 'multiways',
     title: 'Sticky wild on MultiWays',

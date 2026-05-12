@@ -24,7 +24,6 @@ import { OffsetCalculator } from '../frame/OffsetCalculator.js';
 import { PhaseFactory } from '../spin/phases/PhaseFactory.js';
 import type { SpinningMode } from '../spin/modes/SpinningMode.js';
 import { StandardMode } from '../spin/modes/StandardMode.js';
-import { CascadeMode } from '../spin/modes/CascadeMode.js';
 import type { FrameMiddleware } from '../frame/FrameBuilder.js';
 import type { CascadeDropConfig } from '../cascade/DropRecipes.js';
 import { DropStartPhase } from '../spin/phases/DropStartPhase.js';
@@ -714,9 +713,6 @@ export class ReelSetBuilder {
       }
       if (m.reelPixelHeight <= 0) {
         errors.push('multiways({reelPixelHeight}) must be positive.');
-      }
-      if (this._spinningMode instanceof CascadeMode || this._cascadeDropConfig) {
-        errors.push('multiways() is not supported with cascade mode in v1.');
       }
       // multiways({reelPixelHeight}) sets a uniform reel-pixel height for
       // every reel; reelPixelHeights([...]) sets per-reel heights for
