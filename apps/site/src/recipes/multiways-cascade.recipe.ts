@@ -62,25 +62,33 @@ function buildGridWithGuaranteedWin(shape) {
   return grid;
 }
 
-function findWaysWin(grid) {
-  // Look for a symbol that lives on reels 0..N where N >= MIN_WAYS_REELS - 1.
-  // Returns { id, reelCount } or null.
+function findAllWaysWins(grid) {
+  // Every symbol whose presence spans the first N consecutive reels
+  // (N >= MIN_WAYS_REELS) is a separate ways win. A real multiways game
+  // pays them all in the same evaluation — Q-ways and 10-ways can both
+  // hit simultaneously and both contribute winners to the same cascade.
+  const wins = [];
   for (const id of IDS) {
     let reelCount = 0;
     for (let c = 0; c < grid.length; c++) {
       if (grid[c].includes(id)) reelCount++;
       else break;
     }
-    if (reelCount >= MIN_WAYS_REELS) return { id, reelCount };
+    if (reelCount >= MIN_WAYS_REELS) wins.push({ id, reelCount });
   }
-  return null;
+  return wins;
 }
 
-function collectWinners(grid, win) {
+function collectAllWinners(grid, wins) {
+  // For every winning symbol, every instance on that symbol's winning
+  // reels is a winner. Cells can't double-count: a cell shows one id,
+  // so it appears in at most one win's winner list.
   const winners = [];
-  for (let c = 0; c < win.reelCount; c++) {
-    for (let row = 0; row < grid[c].length; row++) {
-      if (grid[c][row] === win.id) winners.push({ reel: c, row });
+  for (const win of wins) {
+    for (let c = 0; c < win.reelCount; c++) {
+      for (let row = 0; row < grid[c].length; row++) {
+        if (grid[c][row] === win.id) winners.push({ reel: c, row });
+      }
     }
   }
   return winners;
@@ -147,9 +155,9 @@ return {
     const winnersByStage = [];
     let current = stage0;
     while (winnersByStage.length < MAX_CASCADES) {
-      const win = findWaysWin(current);
-      if (!win) break;
-      const winners = collectWinners(current, win);
+      const wins = findAllWaysWins(current);
+      if (wins.length === 0) break;
+      const winners = collectAllWinners(current, wins);
       winnersByStage.push(winners);
       current = applyCascade(current, winners);
       stages.push(current);
