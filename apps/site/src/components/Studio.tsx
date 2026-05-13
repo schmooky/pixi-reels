@@ -10,8 +10,8 @@ import {
   RefreshCw,
   Code2,
   Boxes,
-  Trash2,
 } from 'lucide-react';
+import { SymbolsTab } from './studio/SymbolsTab.tsx';
 import { cn } from '@/lib/utils';
 import { Kbd, KbdChord } from '@/components/ui/kbd';
 import { Application, type Texture } from 'pixi.js';
@@ -453,10 +453,7 @@ export default function Studio() {
         )}
 
         {tab === 'symbols' && config && (
-          <SymbolsTabPlaceholder
-            symbolCount={config.symbols.length}
-            onClearAll={() => setConfig({ ...config, symbols: [] })}
-          />
+          <SymbolsTab config={config} onChange={setConfig} />
         )}
       </div>
     </div>
@@ -490,30 +487,3 @@ function TabButton({ active, onClick, icon, children }: TabButtonProps): JSX.Ele
   );
 }
 
-interface SymbolsTabPlaceholderProps {
-  symbolCount: number;
-  onClearAll: () => void;
-}
-
-function SymbolsTabPlaceholder({ symbolCount, onClearAll }: SymbolsTabPlaceholderProps): JSX.Element {
-  return (
-    <div className="flex h-[560px] flex-col items-center justify-center gap-4 p-8 text-center">
-      <Boxes size={36} className="text-muted-foreground/50" />
-      <div className="space-y-1">
-        <h3 className="text-sm font-semibold">Symbols workshop</h3>
-        <p className="max-w-xs text-xs text-muted-foreground">
-          Upload sprites, animated sheets, or Spine bundles and bind them to symbol IDs. Coming in the next commit on this branch.
-        </p>
-      </div>
-      {symbolCount > 0 && (
-        <button
-          type="button"
-          onClick={onClearAll}
-          className="inline-flex items-center gap-1.5 rounded-md border border-border bg-transparent px-3 py-1.5 text-xs text-muted-foreground hover:border-destructive hover:text-destructive"
-        >
-          <Trash2 size={12} /> Clear {symbolCount} stored symbol{symbolCount === 1 ? '' : 's'}
-        </button>
-      )}
-    </div>
-  );
-}
