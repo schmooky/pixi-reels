@@ -115,7 +115,11 @@ app.set('trust proxy', 1);
 app.use(express.json({ limit: '60mb' }));
 app.use(
   cors({
-    origin: config.corsOrigins.includes('*') ? true : config.corsOrigins,
+    // Literal '*' (not `true`) when wildcard, so the response sends
+    // `Access-Control-Allow-Origin: *` instead of reflecting whatever
+    // Origin the request carried. No credentials/cookies are in play,
+    // so `*` is the correct anonymous-API posture.
+    origin: config.corsOrigins.includes('*') ? '*' : config.corsOrigins,
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
   }),
 );
@@ -127,6 +131,31 @@ const createLimiter = rateLimit({
   legacyHeaders: false,
   message: { error: 'rate_limit', detail: 'too many shares created from this IP' },
 });
+
+// Brute-force guard for the save-key-authenticated endpoints (PUT,
+// DELETE) and the bearer-gated cleanup. A real attacker would burn
+// through 30 attempts/min per IP at most before getting throttled.
+const authedLimiter = rateLimit({
+  windowMs: 60_000,
+  limit: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'rate_limit', detail: 'too many authenticated requests from this IP' },
+});
+
+/**
+ * Parse `Authorization: Bearer <token>`. Avoids a regex with
+ * overlapping `\s+` / `.+` ranges (ReDoS on adversarial whitespace);
+ * a fixed-prefix string check is both faster and CodeQL-clean.
+ * Returns `null` when the header is absent or malformed.
+ */
+function parseBearer(auth: string | undefined): string | null {
+  if (!auth) return null;
+  if (auth.length < 8) return null;
+  if (auth.slice(0, 7).toLowerCase() !== 'bearer ') return null;
+  const token = auth.slice(7).trim();
+  return token.length > 0 ? token : null;
+}
 
 /**
  * Hash-style viewer URL so the docs site's static `/share/` page can
@@ -218,7 +247,7 @@ app.get('/api/studios/:id', async (req, res, next) => {
   }
 });
 
-app.put('/api/studios/:id', async (req, res, next) => {
+app.put('/api/studios/:id', authedLimiter, async (req, res, next) => {
   try {
     const id = String(req.params.id ?? '');
     const parsed = UpdateBodySchema.safeParse(req.body);
@@ -246,7 +275,7 @@ app.put('/api/studios/:id', async (req, res, next) => {
   }
 });
 
-app.delete('/api/studios/:id', async (req, res, next) => {
+app.delete('/api/studios/:id', authedLimiter, async (req, res, next) => {
   try {
     const id = String(req.params.id ?? '');
     const record = await storage.get(id);
@@ -254,10 +283,9 @@ app.delete('/api/studios/:id', async (req, res, next) => {
     if (!record.meta.mode.editable) throw new ForbiddenError('share is not editable');
     if (!record.meta.saveKeyHash) throw new ForbiddenError('share has no save key configured');
 
-    const auth = req.header('authorization') ?? '';
-    const match = /^Bearer\s+(.+)$/i.exec(auth);
-    if (!match) throw new UnauthorizedError('missing bearer save key');
-    const ok = await verifySaveKey(match[1]!, record.meta.saveKeyHash);
+    const token = parseBearer(req.header('authorization'));
+    if (!token) throw new UnauthorizedError('missing bearer save key');
+    const ok = await verifySaveKey(token, record.meta.saveKeyHash);
     if (!ok) throw new UnauthorizedError('invalid save key');
 
     await storage.delete(id);
@@ -268,14 +296,13 @@ app.delete('/api/studios/:id', async (req, res, next) => {
 });
 
 // Operator cleanup — bearer-gated; can be cron'd from the host.
-app.post('/api/cleanup', async (req, res, next) => {
+app.post('/api/cleanup', authedLimiter, async (req, res, next) => {
   try {
     if (!config.cleanupBearer) {
       throw new ForbiddenError('cleanup endpoint is disabled (CLEANUP_BEARER unset)');
     }
-    const auth = req.header('authorization') ?? '';
-    const match = /^Bearer\s+(.+)$/i.exec(auth);
-    if (!match || match[1] !== config.cleanupBearer) {
+    const token = parseBearer(req.header('authorization'));
+    if (!token || token !== config.cleanupBearer) {
       throw new UnauthorizedError('invalid cleanup bearer');
     }
     const expired = await storage.listExpired(Date.now());
