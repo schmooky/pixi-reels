@@ -10,6 +10,8 @@ import {
   RefreshCw,
   Code2,
   Boxes,
+  Maximize2,
+  Minimize2,
 } from 'lucide-react';
 import { SymbolsTab } from './studio/SymbolsTab.tsx';
 import { cn } from '@/lib/utils';
@@ -135,6 +137,17 @@ export default function Studio() {
   );
   const [isBooting, setIsBooting] = useState(true);
   const [isSpinning, setIsSpinning] = useState(false);
+  const [fullscreen, setFullscreen] = useState(false);
+
+  // ESC exits fullscreen.
+  useEffect(() => {
+    if (!fullscreen) return;
+    const h = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setFullscreen(false);
+    };
+    window.addEventListener('keydown', h);
+    return () => window.removeEventListener('keydown', h);
+  }, [fullscreen]);
 
   // ── Load persisted config + boot Pixi ──────────────────────────────
   useEffect(() => {
@@ -363,10 +376,19 @@ export default function Studio() {
   }, [tab, config]);
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-[1fr_minmax(360px,520px)] gap-4">
+    <div
+      className={cn(
+        fullscreen
+          ? 'fixed inset-x-0 top-14 bottom-0 z-40 grid grid-cols-2 gap-4 bg-background p-4'
+          : 'grid grid-cols-1 gap-4 lg:grid-cols-[1fr_minmax(360px,520px)]',
+      )}
+    >
       {/* ── Canvas pane ─── */}
-      <div className="flex flex-col overflow-hidden rounded-xl border border-border bg-card">
-        <div className="relative flex-1 min-h-[480px]">
+      <div className={cn(
+        'flex flex-col overflow-hidden rounded-xl border border-border bg-card',
+        fullscreen && 'min-h-0',
+      )}>
+        <div className={cn('relative flex-1', !fullscreen && 'min-h-[480px]')}>
           <div ref={canvasHostRef} className="h-full w-full bg-background" />
           <button
             type="button"
@@ -400,7 +422,10 @@ export default function Studio() {
       </div>
 
       {/* ── Editor pane ─── */}
-      <div className="flex flex-col overflow-hidden rounded-xl border border-border bg-card">
+      <div className={cn(
+        'flex flex-col overflow-hidden rounded-xl border border-border bg-card',
+        fullscreen && 'min-h-0',
+      )}>
         {/* Tab strip */}
         <div className="flex items-center gap-1 border-b border-border/60 bg-background/40 px-2 pt-2">
           <TabButton active={tab === 'code'} onClick={() => setTab('code')} icon={<Code2 size={12} />}>
@@ -438,12 +463,21 @@ export default function Studio() {
             >
               <RotateCcw size={12} strokeWidth={2.5} />
             </button>
+            <button
+              type="button"
+              onClick={() => setFullscreen((v) => !v)}
+              className="inline-flex items-center gap-1.5 rounded-md border border-border bg-transparent px-2.5 py-1.5 text-xs text-muted-foreground hover:text-foreground"
+              title={fullscreen ? 'Exit fullscreen (Esc)' : 'Enter fullscreen — Monaco and reels fill the viewport 50/50'}
+              aria-label={fullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+            >
+              {fullscreen ? <Minimize2 size={12} strokeWidth={2.5} /> : <Maximize2 size={12} strokeWidth={2.5} />}
+            </button>
           </div>
         </div>
 
         {/* Tab body */}
         {tab === 'code' && config && (
-          <div className="h-[560px]">
+          <div className={cn(fullscreen ? 'min-h-0 flex-1' : 'h-[560px]')}>
             <Editor
               defaultLanguage="typescript"
               value={config.code}
@@ -474,7 +508,9 @@ export default function Studio() {
         )}
 
         {tab === 'symbols' && config && (
-          <SymbolsTab config={config} onChange={setConfig} />
+          <div className={cn(fullscreen ? 'min-h-0 flex-1' : 'h-[560px]')}>
+            <SymbolsTab config={config} onChange={setConfig} />
+          </div>
         )}
       </div>
     </div>
