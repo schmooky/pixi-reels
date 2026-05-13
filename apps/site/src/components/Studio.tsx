@@ -27,6 +27,7 @@ import {
   RectMaskStrategy,
   SharedRectMaskStrategy,
   type ReelSet,
+  type SymbolData,
 } from 'pixi-reels';
 import { transform as sucraseTransform } from 'sucrase';
 import { runCascade, tumbleToGrid, diffCells } from '../../../../examples/shared/cascadeLoop.ts';
@@ -54,14 +55,14 @@ const DEFAULT_CODE = `// @ts-nocheck
 //   - app             — PixiJS Application (.ticker, .screen)
 //   - textures        — Record<symbolId, Texture> from your uploaded assets
 //   - userSymbols     — Record<symbolId, { Class, options }>; pass into r.register
-//   - userSymbolData  — Record<symbolId, { unmask?: boolean, ... }>; pass into .symbolData()
+//   - userSymbolData  — Record<symbolId, { unmask?: boolean }>; auto-applied at build()
 //   - pickWeighted, gsap, PIXI, runCascade, tumbleToGrid, diffCells
 //
-// Unmask: toggle "unmask on" on a symbol's row, then call .symbolData(userSymbolData)
-// on the builder. With any unmasked symbol present the builder auto-picks
-// SharedRectMaskStrategy — that's what stops neighbouring cells from being
-// half-cropped by the per-reel mask at the column gap. You can also force
-// it explicitly with .maskStrategy(new SharedRectMaskStrategy()).
+// Unmask is plumbed automatically: toggle "unmask on" on a symbol's row and
+// the studio's ReelSetBuilder applies the override at .build() time. The
+// engine then auto-picks SharedRectMaskStrategy so neighbouring cells aren't
+// half-cropped at the column gap. You can still call .maskStrategy(new
+// SharedRectMaskStrategy()) or .symbolData({...}) explicitly to override.
 //
 // Return { reelSet, nextResult? } from buildReels().
 // ───────────────────────────────────────────────────────────────────────
@@ -87,11 +88,6 @@ function buildReels() {
         r.register(id, u.Class, u.options);
       }
     })
-    // .symbolData carries per-symbol metadata (unmask, zIndex, weight).
-    // The studio Symbols tab fills userSymbolData from the row toggles —
-    // an unmask: true entry tells the engine to render that symbol above
-    // the reel mask (animations can spill outside the cell).
-    .symbolData(userSymbolData)
     .speed('normal', SpeedPresets.NORMAL)
     .speed('turbo', SpeedPresets.TURBO)
     .ticker(app.ticker)
@@ -126,6 +122,33 @@ function pickWeighted(weights: Record<string, number>): string {
     if (r <= 0) return id;
   }
   return Object.keys(weights)[0];
+}
+
+/**
+ * Subclass of ReelSetBuilder injected into the studio's user code in
+ * place of the engine's. Auto-applies the per-symbol overrides from the
+ * Symbols tab (currently: `unmask`) in `.build()`, so the user doesn't
+ * have to remember `.symbolData(userSymbolData)` themselves. The
+ * Symbols-tab UI is the source of truth for these flags — if the user
+ * also calls `.symbolData(...)` manually with the same id, the merge
+ * order in ReelSetBuilder.symbolData (line 309: spread merge) means
+ * our studio data wins. That matches user intent: toggling the row
+ * should always reflect on the running reels.
+ *
+ * Bundling the overrides into a factory-built subclass keeps user code
+ * looking exactly like sandbox/recipe code (`new ReelSetBuilder()` with
+ * no args) — no studio-specific API to learn.
+ */
+function makeStudioReelSetBuilder(
+  studioOverrides: Record<string, Partial<SymbolData>>,
+): typeof ReelSetBuilder {
+  if (Object.keys(studioOverrides).length === 0) return ReelSetBuilder;
+  return class StudioReelSetBuilder extends ReelSetBuilder {
+    override build(): ReelSet {
+      this.symbolData(studioOverrides);
+      return super.build();
+    }
+  } as typeof ReelSetBuilder;
 }
 
 type TabId = 'code' | 'symbols';
@@ -306,7 +329,7 @@ export default function Studio() {
         factorySource,
       );
       built = (await factory(
-        ReelSetBuilder,
+        makeStudioReelSetBuilder(injectables.userSymbolData),
         SpeedPresets,
         WinPresenter,
         RectMaskStrategy,
