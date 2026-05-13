@@ -9,7 +9,7 @@
  * atlas to PixiJS Assets.
  */
 
-import { Assets, type Texture } from 'pixi.js';
+import { Assets, ImageSource, type TextureSource } from 'pixi.js';
 import type { SpineSymbolConfig } from './types.js';
 import { getAsset } from './db.js';
 
@@ -33,26 +33,6 @@ export function parseAtlasTexturePages(atlasText: string): string[] {
     }
   }
   return out;
-}
-
-/**
- * Rewrite an atlas text so every page filename becomes the supplied URL.
- * Used at load time to point the atlas at blob URLs instead of unresolvable
- * relative filenames.
- */
-export function rewriteAtlasTextureUrls(
-  atlasText: string,
-  filenameToUrl: Record<string, string>,
-): string {
-  const lines = atlasText.split(/\r?\n/);
-  return lines
-    .map((line) => {
-      if (line.length === 0 || line !== line.trimStart() || line.includes(':')) return line;
-      const trimmed = line.trim();
-      if (!/\.(png|webp|jpe?g)$/i.test(trimmed)) return line;
-      return filenameToUrl[trimmed] ?? line;
-    })
-    .join('\n');
 }
 
 /**
@@ -98,60 +78,91 @@ interface SpineLoadResult {
 
 /**
  * Load a single studio spine symbol's assets into PixiJS Assets and return
- * the aliases SpineReelSymbol expects. Caller revokes `blobUrls` on cleanup.
+ * the aliases `SpineReelSymbol` (and `Spine.from`) consume. Caller revokes
+ * `blobUrls` on cleanup.
  *
- * `runId` namespaces the aliases so successive Runs don't fight over a
- * cached alias from the previous run.
+ * Why the dance — the spine-pixi-v8 loaders match by file extension
+ * (`.atlas`, `.json`), which blob URLs don't have. So we sidestep extension
+ * detection entirely:
+ *
+ *   - Atlas: pre-load each texture page as a PixiJS `Texture`, pass their
+ *     `TextureSource`s to the atlas loader via `data.images` keyed by
+ *     atlas page name. The loader skips relative-path resolution and uses
+ *     the supplied sources directly. We force the parser via
+ *     `loadParser: 'spineTextureAtlasLoader'` because the URL no longer
+ *     tells the loader it's an atlas.
+ *
+ *   - Skeleton: `Spine.from` calls `Assets.get(skeletonAlias)` and feeds
+ *     the result to `SkeletonJson.readSkeletonData`, which expects the
+ *     parsed JSON object. We `JSON.parse` ourselves and seed the cache
+ *     directly — cleaner than coercing the JSON loader past its `.json`
+ *     extension check.
+ *
+ * `runId` namespaces the aliases so successive Runs don't reuse stale
+ * cache entries.
  */
 export async function loadStudioSpine(
   symbol: SpineSymbolConfig,
   runId: string,
 ): Promise<SpineLoadResult> {
-  // 1. Load and rewrite the atlas.
+  const blobUrls: string[] = [];
+
+  // 1. Build a TextureSource per page directly from the blob — bypasses
+  //    the PixiJS texture loader's extension/MIME sniffing (blob URLs
+  //    have no extension and the default loader's `test` rejects them).
+  //    `ImageSource` extends `TextureSource`; the spine atlas parser
+  //    accepts either via `data.images`.
+  const images: Record<string, TextureSource> = {};
+  for (const [filename, hash] of Object.entries(symbol.textureHashes)) {
+    const asset = await getAsset(hash);
+    if (!asset) throw new Error(`Spine texture page missing: ${filename} (hash ${hash})`);
+    const bitmap = await createImageBitmap(asset.blob);
+    images[filename] = new ImageSource({
+      resource: bitmap,
+      alphaMode: 'premultiply-alpha-on-upload',
+    });
+  }
+
+  // 2. Atlas: validate every page the atlas references has a matching
+  //    texture, then load with the explicit parser + pre-bound sources.
   const atlasAsset = await getAsset(symbol.atlasHash);
   if (!atlasAsset) throw new Error(`Spine atlas blob missing: ${symbol.atlasHash}`);
   const atlasText = await atlasAsset.blob.text();
-
-  const blobUrls: string[] = [];
-  const textureUrls: Record<string, string> = {};
-  for (const [filename, hash] of Object.entries(symbol.textureHashes)) {
-    const tex = await getAsset(hash);
-    if (!tex) throw new Error(`Spine texture page missing: ${filename} (hash ${hash})`);
-    const url = URL.createObjectURL(tex.blob);
-    blobUrls.push(url);
-    textureUrls[filename] = url;
-  }
-
-  // Make sure every page the atlas references has a matching texture.
-  const expected = parseAtlasTexturePages(atlasText);
-  for (const page of expected) {
-    if (!textureUrls[page]) {
+  for (const page of parseAtlasTexturePages(atlasText)) {
+    if (!(page in images)) {
       throw new Error(
         `Spine symbol "${symbol.id}" is missing texture page "${page}". ` +
         `Upload it under that exact filename in the Symbols tab.`,
       );
     }
   }
-
-  const rewrittenAtlas = rewriteAtlasTextureUrls(atlasText, textureUrls);
-  const atlasBlob = new Blob([rewrittenAtlas], { type: 'text/plain' });
-  const atlasUrl = URL.createObjectURL(atlasBlob);
+  const atlasUrl = URL.createObjectURL(atlasAsset.blob);
   blobUrls.push(atlasUrl);
 
-  // 2. Load the skeleton JSON.
+  const atlasAlias = `studio-${runId}-${symbol.id}-atlas`;
+  Assets.add({
+    alias: atlasAlias,
+    src: atlasUrl,
+    loadParser: 'spineTextureAtlasLoader',
+    data: { images },
+  });
+  await Assets.load(atlasAlias);
+
+  // 3. Skeleton JSON: parse ourselves, seed the cache so Assets.get returns
+  //    the object Spine.from expects.
   const skelAsset = await getAsset(symbol.skeletonHash);
   if (!skelAsset) throw new Error(`Spine skeleton blob missing: ${symbol.skeletonHash}`);
-  const skelUrl = URL.createObjectURL(skelAsset.blob);
-  blobUrls.push(skelUrl);
-
-  // 3. Register with PixiJS Assets under unique aliases so two runs don't
-  //    collide. We use the runId as a namespace prefix.
-  const skeletonAlias = `studio-${runId}-${symbol.id}.json`;
-  const atlasAlias = `studio-${runId}-${symbol.id}.atlas`;
-
-  Assets.add({ alias: skeletonAlias, src: skelUrl });
-  Assets.add({ alias: atlasAlias, src: atlasUrl });
-  await Assets.load<unknown>([skeletonAlias, atlasAlias]);
+  const skelText = await skelAsset.blob.text();
+  let skelData: unknown;
+  try {
+    skelData = JSON.parse(skelText);
+  } catch (e) {
+    throw new Error(
+      `Spine symbol "${symbol.id}" skeleton is not valid JSON: ${(e as Error).message}`,
+    );
+  }
+  const skeletonAlias = `studio-${runId}-${symbol.id}-skeleton`;
+  Assets.cache.set(skeletonAlias, skelData);
 
   return { skeletonAlias, atlasAlias, blobUrls };
 }
