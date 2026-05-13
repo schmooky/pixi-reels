@@ -11,8 +11,10 @@
 
 import { Application, Assets, ImageSource, type TextureSource } from 'pixi.js';
 import { Spine } from '@esotericsoftware/spine-pixi-v8';
-import type { SpineSymbolConfig } from './types.js';
-import { getAsset } from './db.js';
+import type { SpineSymbolConfig, StoredAsset } from './types.js';
+import { getAsset as getAssetFromIDB } from './db.js';
+
+type AssetGetter = (hash: string) => Promise<StoredAsset | null>;
 
 /**
  * Pull the texture-page filenames out of an atlas text. The atlas format
@@ -105,6 +107,7 @@ interface SpineLoadResult {
 export async function loadStudioSpine(
   symbol: SpineSymbolConfig,
   runId: string,
+  getAsset: AssetGetter = getAssetFromIDB,
 ): Promise<SpineLoadResult> {
   const blobUrls: string[] = [];
 

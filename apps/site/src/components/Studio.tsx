@@ -12,8 +12,10 @@ import {
   Boxes,
   Maximize2,
   Minimize2,
+  Share2,
 } from 'lucide-react';
 import { SymbolsTab } from './studio/SymbolsTab.tsx';
+import { ShareDialog } from './studio/ShareDialog.tsx';
 import { cn } from '@/lib/utils';
 import { Kbd, KbdChord } from '@/components/ui/kbd';
 import { Application, type Texture } from 'pixi.js';
@@ -175,6 +177,7 @@ export default function Studio() {
   const [isBooting, setIsBooting] = useState(true);
   const [isSpinning, setIsSpinning] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
 
   // ESC exits fullscreen.
   useEffect(() => {
@@ -532,6 +535,16 @@ export default function Studio() {
             >
               {fullscreen ? <Minimize2 size={12} strokeWidth={2.5} /> : <Maximize2 size={12} strokeWidth={2.5} />}
             </button>
+            <button
+              type="button"
+              onClick={() => setShareOpen(true)}
+              disabled={!config || config.symbols.length === 0}
+              className="inline-flex items-center gap-1.5 rounded-md border border-border bg-transparent px-2.5 py-1.5 text-xs text-muted-foreground hover:text-foreground disabled:opacity-50"
+              title="Share this studio — uploads encrypted to the share-api, gives you a link"
+              aria-label="Share"
+            >
+              <Share2 size={12} strokeWidth={2.5} />
+            </button>
           </div>
         </div>
 
@@ -573,6 +586,10 @@ export default function Studio() {
           </div>
         )}
       </div>
+
+      {shareOpen && config && (
+        <ShareDialog config={config} onClose={() => setShareOpen(false)} />
+      )}
     </div>
   );
 }

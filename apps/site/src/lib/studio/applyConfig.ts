@@ -21,9 +21,14 @@ import {
   type AnimatedSpriteSymbolOptions,
 } from 'pixi-reels';
 import { SpineReelSymbol, type SpineReelSymbolOptions } from 'pixi-reels/spine';
-import { getAsset } from './db.js';
+import { getAsset as getAssetFromIDB } from './db.js';
 import { loadStudioSpine, newRunId, studioEventsToEngineOverrides } from './spine.js';
-import type { StudioConfig, SymbolConfig } from './types.js';
+import type { StudioConfig, StoredAsset, SymbolConfig } from './types.js';
+
+/** Asset resolver function. Default = IndexedDB lookup. The share
+ *  viewer passes an in-memory Map's `get` so shared assets don't need
+ *  to touch the visitor's local IDB. */
+export type AssetGetter = (hash: string) => Promise<StoredAsset | null>;
 
 export interface UserSymbolBinding {
   /** The symbol class to register via `r.register(id, Class, options)`. */
@@ -49,12 +54,15 @@ export interface StudioInjectables {
 export interface ApplyOpts {
   /** Optional renderer for any pre-upload texture work. Currently unused. */
   renderer?: Renderer;
+  /** Override the asset resolver. Defaults to the studio's IDB getAsset. */
+  getAsset?: AssetGetter;
 }
 
 export async function applyStudioConfig(
   config: StudioConfig,
-  _opts: ApplyOpts = {},
+  opts: ApplyOpts = {},
 ): Promise<StudioInjectables> {
+  const getAsset: AssetGetter = opts.getAsset ?? getAssetFromIDB;
   const textures: Record<string, Texture> = {};
   const userSymbols: Record<string, UserSymbolBinding> = {};
   const userSymbolData: Record<string, { unmask?: boolean }> = {};
@@ -66,7 +74,7 @@ export async function applyStudioConfig(
       userSymbolData[symbol.id] = { unmask: true };
     }
     if (symbol.type === 'sprite') {
-      const tex = await loadTextureFromHash(symbol.textureHash, blobUrls);
+      const tex = await loadTextureFromHash(symbol.textureHash, blobUrls, getAsset);
       textures[symbol.id] = tex;
       userSymbols[symbol.id] = {
         Class: SpriteSymbol,
@@ -81,6 +89,7 @@ export async function applyStudioConfig(
         symbol.frameHeight,
         symbol.frameCount,
         blobUrls,
+        getAsset,
       );
       userSymbols[symbol.id] = {
         Class: AnimatedSpriteSymbol,
@@ -93,6 +102,7 @@ export async function applyStudioConfig(
       const { skeletonAlias, atlasAlias, blobUrls: spineUrls } = await loadStudioSpine(
         symbol,
         runId,
+        getAsset,
       );
       blobUrls.push(...spineUrls);
 
@@ -120,7 +130,11 @@ export async function applyStudioConfig(
   return { textures, userSymbols, userSymbolData, blobUrls };
 }
 
-async function loadTextureFromHash(hash: string, blobUrls: string[]): Promise<Texture> {
+async function loadTextureFromHash(
+  hash: string,
+  blobUrls: string[],
+  getAsset: AssetGetter,
+): Promise<Texture> {
   const asset = await getAsset(hash);
   if (!asset) throw new Error(`Studio asset not found: ${hash}`);
   const url = URL.createObjectURL(asset.blob);
@@ -135,8 +149,9 @@ async function sliceSheet(
   frameH: number,
   frameCount: number,
   blobUrls: string[],
+  getAsset: AssetGetter,
 ): Promise<Texture[]> {
-  const sheet = await loadTextureFromHash(sheetHash, blobUrls);
+  const sheet = await loadTextureFromHash(sheetHash, blobUrls, getAsset);
   const perRow = Math.max(1, Math.floor(sheet.width / frameW));
   const frames: Texture[] = [];
   for (let i = 0; i < frameCount; i++) {

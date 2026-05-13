@@ -128,8 +128,14 @@ const createLimiter = rateLimit({
   message: { error: 'rate_limit', detail: 'too many shares created from this IP' },
 });
 
+/**
+ * Hash-style viewer URL so the docs site's static `/share/` page can
+ * resolve the id client-side (`location.hash`) — no host rewrites
+ * required. Path-style support is possible with a `_redirects`
+ * (Netlify/CF) or `vercel.json` rewrite; see DEPLOY.md.
+ */
 function viewerUrlFor(id: string): string {
-  return `${config.viewerBaseUrl.replace(/\/$/, '')}/share/${id}`;
+  return `${config.viewerBaseUrl.replace(/\/$/, '')}/share/#${id}`;
 }
 
 // ── routes ────────────────────────────────────────────────────────────
