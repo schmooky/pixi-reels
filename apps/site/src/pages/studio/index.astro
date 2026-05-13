@@ -1,0 +1,28 @@
+---
+import Base from '../../layouts/Base.astro';
+import Studio from '../../components/Studio.tsx';
+---
+<Base
+  title="Studio · pixi-reels"
+  description="Bring-your-own-assets workbench for pixi-reels. Drop in sprites, animated sheets, or Spine bundles; bind them to symbol IDs; edit builder code and watch your reels in real time."
+>
+  <section class="border-b border-border/60 py-10">
+    <div class="container max-w-3xl text-center">
+      <div class="inline-flex items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-primary">
+        Workbench
+      </div>
+      <h1 class="mt-4 text-balance text-3xl font-semibold tracking-tight sm:text-4xl">
+        Drop assets. Wire symbols. <span class="gradient-text">Spin.</span>
+      </h1>
+      <p class="mx-auto mt-3 max-w-xl text-sm text-muted-foreground">
+        Upload your own sprites, animated sheets, or Spine bundles in the <strong>Symbols</strong> tab; pick which animation plays on idle, spin, land, and win; write builder code in the <strong>Code</strong> tab. Everything persists locally — your assets never leave the browser.
+      </p>
+    </div>
+  </section>
+
+  <section class="py-6 pb-14">
+    <div class="container">
+      <Studio client:only="react" />
+    </div>
+  </section>
+</Base>

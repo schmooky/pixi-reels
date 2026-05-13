@@ -1,0 +1,15 @@
+---
+import Base from '../../layouts/Base.astro';
+import ShareViewer from '../../components/ShareViewer.tsx';
+---
+<Base
+  title="Shared studio · pixi-reels"
+  description="Open a shared pixi-reels studio. Encrypted shares prompt for a password; public ones load directly."
+  noIndex
+>
+  <section class="py-6 pb-14">
+    <div class="container">
+      <ShareViewer client:only="react" />
+    </div>
+  </section>
+</Base>

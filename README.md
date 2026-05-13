@@ -73,6 +73,7 @@ You'll find:
 - **Recipes** — small how-tos for common mechanics (walking wilds, sticky wilds, cascade, mystery reveal, hold & win, ...). Each ships with a live mini-demo.
 - **Demos** — full mechanic sandboxes with cheat panels. One click forces a scatter, a near-miss, a guaranteed jackpot.
 - **Sandbox** — in-browser TypeScript playground; edit the file, hit Run, reels rebuild.
+- **Studio** — bring-your-own-assets workbench. Drop in sprites or Spine bundles, wire them to symbol ids, edit builder code, share the result via a password-protected link (see [`apps/share-api`](apps/share-api/) for the relay).
 - **Wiki** — API reference.
 
 ## Examples
