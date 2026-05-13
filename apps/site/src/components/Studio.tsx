@@ -38,16 +38,18 @@ import {
 } from '@/lib/studio/applyConfig.js';
 import type { StudioConfig } from '@/lib/studio/types.js';
 
-const DEFAULT_CODE = `// ─── pixi-reels studio ─────────────────────────────────────────────────
+const DEFAULT_CODE = `// @ts-nocheck
+// ─── pixi-reels studio ─────────────────────────────────────────────────
 // Upload your assets and define symbol IDs in the "Symbols" tab.
 // Each symbol you configure shows up here as \`userSymbols.<id>\`.
 // Hit Run (Cmd/Ctrl+Enter) to build the reels.
 //
 // Injected globals:
 //   - ReelSetBuilder, SpeedPresets, WinPresenter
-//   - app          — PixiJS Application (.ticker, .screen)
-//   - textures     — Record<symbolId, Texture> from your uploaded assets
-//   - userSymbols  — Record<symbolId, { Class, options }>; pass into r.register
+//   - app             — PixiJS Application (.ticker, .screen)
+//   - textures        — Record<symbolId, Texture> from your uploaded assets
+//   - userSymbols     — Record<symbolId, { Class, options }>; pass into r.register
+//   - userSymbolData  — Record<symbolId, { unmask?: boolean, ... }>; pass into .symbolData()
 //   - pickWeighted, gsap, PIXI, runCascade, tumbleToGrid, diffCells
 //
 // Return { reelSet, nextResult? } from buildReels().
@@ -74,6 +76,11 @@ function buildReels() {
         r.register(id, u.Class, u.options);
       }
     })
+    // .symbolData carries per-symbol metadata (unmask, zIndex, weight).
+    // The studio Symbols tab fills userSymbolData from the row toggles —
+    // an unmask: true entry tells the engine to render that symbol above
+    // the reel mask (animations can spill outside the cell).
+    .symbolData(userSymbolData)
     .speed('normal', SpeedPresets.NORMAL)
     .speed('turbo', SpeedPresets.TURBO)
     .ticker(app.ticker)
@@ -242,6 +249,7 @@ export default function Studio() {
         'app',
         'textures',
         'userSymbols',
+        'userSymbolData',
         'pickWeighted',
         'gsap',
         'PIXI',
@@ -257,6 +265,7 @@ export default function Studio() {
         env.app,
         injectables.textures,
         injectables.userSymbols,
+        injectables.userSymbolData,
         pickWeighted,
         gsap,
         PIXI,
@@ -447,6 +456,18 @@ export default function Studio() {
                 tabSize: 2,
                 renderWhitespace: 'selection',
                 padding: { top: 10, bottom: 10 },
+              }}
+              onMount={(_editor, monaco) => {
+                // Injected globals (ReelSetBuilder, userSymbols, app, …)
+                // aren't declared anywhere Monaco can resolve, so semantic
+                // diagnostics produce a sea of red squiggles. The code is
+                // transpiled at Run via sucrase (types stripped, no
+                // type-checking), so these errors aren't real — silence
+                // them here. Syntax errors still surface.
+                monaco.languages.typescript.typescriptDefaults.setDiagnosticsOptions({
+                  noSemanticValidation: true,
+                  noSyntaxValidation: false,
+                });
               }}
             />
           </div>

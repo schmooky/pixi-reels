@@ -25,6 +25,13 @@ export interface SpriteSymbolConfig {
   id: string;
   /** SHA-256 hex of the texture blob (PNG/WebP). */
   textureHash: string;
+  /**
+   * Maps to `SymbolData.unmask: true` on the engine — renders this symbol
+   * above the reel mask so its visuals can spill outside the cell. The
+   * builder auto-switches to `SharedRectMaskStrategy` when any symbol has
+   * this flag.
+   */
+  unmask?: boolean;
 }
 
 export interface AnimatedSpriteSymbolConfig {
@@ -37,6 +44,8 @@ export interface AnimatedSpriteSymbolConfig {
   frameCount: number;
   /** Frames per second. */
   fps: number;
+  /** See SpriteSymbolConfig.unmask. */
+  unmask?: boolean;
 }
 
 export interface SpineSymbolConfig {
@@ -65,6 +74,9 @@ export interface SpineSymbolConfig {
    * malformed bundles.
    */
   previewDataUrl?: string;
+  /** See SpriteSymbolConfig.unmask. Spine especially benefits — win/celebrate
+   * animations almost always need to spill outside the cell. */
+  unmask?: boolean;
 }
 
 export type SymbolConfig =

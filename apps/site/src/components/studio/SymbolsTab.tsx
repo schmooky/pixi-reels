@@ -29,6 +29,13 @@ export function SymbolsTab({ config, onChange }: Props): JSX.Element {
     onChange({ ...config, symbols: config.symbols.filter((s) => s.id !== id) });
   }
 
+  function onUpdate(next: SymbolConfig): void {
+    onChange({
+      ...config,
+      symbols: config.symbols.map((s) => (s.id === next.id ? next : s)),
+    });
+  }
+
   return (
     <div className="flex h-[560px] flex-col">
       <div className="flex-1 overflow-y-auto p-4">
@@ -81,7 +88,11 @@ export function SymbolsTab({ config, onChange }: Props): JSX.Element {
           <ul className="mt-2 space-y-2">
             {config.symbols.map((symbol) => (
               <li key={symbol.id}>
-                <SymbolRow symbol={symbol} onDelete={() => onDelete(symbol.id)} />
+                <SymbolRow
+                  symbol={symbol}
+                  onDelete={() => onDelete(symbol.id)}
+                  onUpdate={onUpdate}
+                />
               </li>
             ))}
           </ul>
@@ -375,9 +386,11 @@ function FilePicker({
 function SymbolRow({
   symbol,
   onDelete,
+  onUpdate,
 }: {
   symbol: SymbolConfig;
   onDelete: () => void;
+  onUpdate: (next: SymbolConfig) => void;
 }): JSX.Element {
   const previewHash =
     symbol.type === 'sprite'
@@ -416,6 +429,19 @@ function SymbolRow({
         <div className="truncate font-mono text-sm font-semibold">{symbol.id}</div>
         <div className="truncate text-[11px] text-muted-foreground">{meta}</div>
       </div>
+      <button
+        type="button"
+        onClick={() => onUpdate({ ...symbol, unmask: !symbol.unmask })}
+        className={cn(
+          'rounded px-2 py-0.5 text-[10px] font-mono transition-colors',
+          symbol.unmask
+            ? 'bg-primary/15 text-primary'
+            : 'bg-muted/60 text-muted-foreground hover:bg-muted',
+        )}
+        title="When on, the symbol renders above the reel mask — animations can spill outside the cell. The builder auto-switches to a shared mask when any symbol is unmasked."
+      >
+        unmask {symbol.unmask ? 'on' : 'off'}
+      </button>
       <button
         type="button"
         onClick={onDelete}

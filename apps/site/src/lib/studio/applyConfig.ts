@@ -35,6 +35,13 @@ export interface UserSymbolBinding {
 export interface StudioInjectables {
   textures: Record<string, Texture>;
   userSymbols: Record<string, UserSymbolBinding>;
+  /**
+   * Per-symbol-id metadata to pass into `builder.symbolData(...)`. Currently
+   * carries the `unmask` flag from the studio config; the engine reads it
+   * to render that symbol above the reel mask, and auto-switches to
+   * `SharedRectMaskStrategy` when at least one symbol is unmasked.
+   */
+  userSymbolData: Record<string, { unmask?: boolean }>;
   /** All blob URLs created during apply; caller revokes after teardown. */
   blobUrls: string[];
 }
@@ -50,10 +57,14 @@ export async function applyStudioConfig(
 ): Promise<StudioInjectables> {
   const textures: Record<string, Texture> = {};
   const userSymbols: Record<string, UserSymbolBinding> = {};
+  const userSymbolData: Record<string, { unmask?: boolean }> = {};
   const blobUrls: string[] = [];
   const runId = newRunId();
 
   for (const symbol of config.symbols) {
+    if (symbol.unmask) {
+      userSymbolData[symbol.id] = { unmask: true };
+    }
     if (symbol.type === 'sprite') {
       const tex = await loadTextureFromHash(symbol.textureHash, blobUrls);
       textures[symbol.id] = tex;
@@ -103,7 +114,7 @@ export async function applyStudioConfig(
     }
   }
 
-  return { textures, userSymbols, blobUrls };
+  return { textures, userSymbols, userSymbolData, blobUrls };
 }
 
 async function loadTextureFromHash(hash: string, blobUrls: string[]): Promise<Texture> {
