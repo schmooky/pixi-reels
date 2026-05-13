@@ -24,6 +24,8 @@ import {
   SpeedPresets,
   enableDebug,
   WinPresenter,
+  RectMaskStrategy,
+  SharedRectMaskStrategy,
   type ReelSet,
 } from 'pixi-reels';
 import { transform as sucraseTransform } from 'sucrase';
@@ -48,11 +50,18 @@ const DEFAULT_CODE = `// @ts-nocheck
 //
 // Injected globals:
 //   - ReelSetBuilder, SpeedPresets, WinPresenter
+//   - RectMaskStrategy, SharedRectMaskStrategy
 //   - app             — PixiJS Application (.ticker, .screen)
 //   - textures        — Record<symbolId, Texture> from your uploaded assets
 //   - userSymbols     — Record<symbolId, { Class, options }>; pass into r.register
 //   - userSymbolData  — Record<symbolId, { unmask?: boolean, ... }>; pass into .symbolData()
 //   - pickWeighted, gsap, PIXI, runCascade, tumbleToGrid, diffCells
+//
+// Unmask: toggle "unmask on" on a symbol's row, then call .symbolData(userSymbolData)
+// on the builder. With any unmasked symbol present the builder auto-picks
+// SharedRectMaskStrategy — that's what stops neighbouring cells from being
+// half-cropped by the per-reel mask at the column gap. You can also force
+// it explicitly with .maskStrategy(new SharedRectMaskStrategy()).
 //
 // Return { reelSet, nextResult? } from buildReels().
 // ───────────────────────────────────────────────────────────────────────
@@ -282,6 +291,8 @@ export default function Studio() {
         'ReelSetBuilder',
         'SpeedPresets',
         'WinPresenter',
+        'RectMaskStrategy',
+        'SharedRectMaskStrategy',
         'app',
         'textures',
         'userSymbols',
@@ -298,6 +309,8 @@ export default function Studio() {
         ReelSetBuilder,
         SpeedPresets,
         WinPresenter,
+        RectMaskStrategy,
+        SharedRectMaskStrategy,
         env.app,
         injectables.textures,
         injectables.userSymbols,
