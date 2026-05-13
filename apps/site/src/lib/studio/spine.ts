@@ -175,6 +175,20 @@ export function newRunId(): string {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 }
 
+
+export interface SpinePreviewResult {
+  /** PNG data URL captured from the offscreen render. */
+  dataUrl: string;
+  /**
+   * Fit scale we used at preview time — the spine's natural bounds
+   * scaled into a ~160px reference box. The studio reuses this as the
+   * default `SpineReelSymbol.scale` so spines render at a sane size in
+   * the user's cell instead of their setup-pose size (which is often
+   * hundreds of pixels).
+   */
+  scale: number;
+}
+
 /**
  * Render a spine symbol to an offscreen canvas and return a PNG data URL.
  * Called from `SpineForm.handleSave` after the asset blobs are ingested,
@@ -191,7 +205,7 @@ export function newRunId(): string {
 export async function generateSpinePreview(
   symbol: SpineSymbolConfig,
   opts: { size?: number } = {},
-): Promise<string> {
+): Promise<SpinePreviewResult> {
   const size = opts.size ?? 192;
   const app = new Application();
   await app.init({
@@ -207,37 +221,37 @@ export async function generateSpinePreview(
 
   try {
     const spine = Spine.from({ skeleton: skeletonAlias, atlas: atlasAlias });
+    app.stage.addChild(spine);
 
-    // Advance into the idle animation if the user picked one — otherwise
-    // setup pose tends to look like a T-pose which doesn't make for a
-    // great thumbnail.
     if (symbol.events.idle && spine.skeleton.data.findAnimation(symbol.events.idle)) {
       spine.state.setAnimation(0, symbol.events.idle, true);
-      // Advance ~120ms in; long enough to be past the very first frame
-      // but short enough that loop start poses are well represented.
       spine.state.update(0.12);
       spine.state.apply(spine.skeleton);
       spine.skeleton.update(0.12);
       spine.skeleton.updateWorldTransform(2 /* Physics.update */);
     }
 
-    // Center + scale-to-fit. Spine local bounds are post-update.
-    const bounds = spine.getBounds();
     const pad = 16;
     const drawable = Math.max(size - pad * 2, 1);
+
+    // Initial scale guess from skeleton-data bounds. Spine's getBounds
+    // under-reports visible mesh extent (often by 2-3×), so we apply a
+    // conservative safety factor and expect the user to fine-tune in
+    // the Symbols-tab row. Anything's better than the prior behaviour
+    // (no scaling = scatter at its 400px natural size in a 190px cell).
+    const BOUNDS_UNDER_REPORT_SAFETY = 0.45;
+    const bounds = spine.getBounds();
     const maxDim = Math.max(bounds.width, bounds.height, 1);
-    const scale = Math.min(drawable / maxDim, 4);
+    const scale = (drawable / maxDim) * BOUNDS_UNDER_REPORT_SAFETY;
     spine.scale.set(scale);
 
     const scaledBounds = spine.getBounds();
     spine.x = size / 2 - (scaledBounds.x + scaledBounds.width / 2) + spine.x;
     spine.y = size / 2 - (scaledBounds.y + scaledBounds.height / 2) + spine.y;
 
-    app.stage.addChild(spine);
     app.renderer.render(app.stage);
-
     const dataUrl = await app.renderer.extract.base64(app.stage);
-    return dataUrl;
+    return { dataUrl, scale };
   } finally {
     // Tear down regardless of success — leaving an offscreen Application
     // around per save would balloon GPU contexts.

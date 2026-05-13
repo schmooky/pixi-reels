@@ -109,11 +109,17 @@ export function SpineForm({ usedIds, onCancel, onSave }: Props): JSX.Element {
         textureHashes,
         events: pruneEmptyValues(events),
       };
-      // Generate a thumbnail by rendering the skeleton offscreen. Best-
-      // effort: if it fails (malformed bundle, GPU init flake), we save
-      // without a preview and the row falls back to the bone icon.
+      // Generate a thumbnail by rendering the skeleton offscreen, and
+      // capture the fit scale at the same time. The scale becomes the
+      // SpineReelSymbol's default `scale` option — without it, spines
+      // render at their setup-pose size (often hundreds of px) and look
+      // gigantic in a typical 100-200px cell. Best-effort: if it fails,
+      // we save without the thumbnail / scale and the row falls back
+      // to the bone icon and natural-size rendering.
       try {
-        symbol.previewDataUrl = await generateSpinePreview(symbol);
+        const result = await generateSpinePreview(symbol);
+        symbol.previewDataUrl = result.dataUrl;
+        symbol.scale = result.scale;
       } catch (e) {
         // eslint-disable-next-line no-console
         console.warn('[studio] spine preview generation failed:', e);

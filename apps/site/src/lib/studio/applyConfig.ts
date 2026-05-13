@@ -109,6 +109,9 @@ export async function applyStudioConfig(
         blurAnimation: overrides.blur,
         autoPlayBlur: Boolean(overrides.blur),
         autoPlayLanding: Boolean(overrides.landing),
+        // `scale` is auto-computed at save time from the skeleton's
+        // natural bounds (see generateSpinePreview). Fallback 1.
+        scale: symbol.scale ?? 1,
       };
       userSymbols[symbol.id] = { Class: SpineReelSymbol, options: options as Record<string, unknown> };
     }

@@ -74,6 +74,15 @@ export interface SpineSymbolConfig {
    * malformed bundles.
    */
   previewDataUrl?: string;
+  /**
+   * Spine scale to pass to `SpineReelSymbol`'s `scale` option. Auto-
+   * computed at save time: the spine's natural bounds get fit into a
+   * ~160px reference box (same math the preview render uses). Without
+   * this, spines render at their setup-pose size regardless of the
+   * builder's cell dimensions — scatter at 400px natural width spills
+   * everywhere in a 190px cell, even masked, just hidden by the mask.
+   */
+  scale?: number;
   /** See SpriteSymbolConfig.unmask. Spine especially benefits — win/celebrate
    * animations almost always need to spill outside the cell. */
   unmask?: boolean;

@@ -429,6 +429,12 @@ function SymbolRow({
         <div className="truncate font-mono text-sm font-semibold">{symbol.id}</div>
         <div className="truncate text-[11px] text-muted-foreground">{meta}</div>
       </div>
+      {symbol.type === 'spine' && (
+        <ScaleStepper
+          value={symbol.scale ?? 1}
+          onChange={(next) => onUpdate({ ...symbol, scale: next })}
+        />
+      )}
       <button
         type="button"
         onClick={() => onUpdate({ ...symbol, unmask: !symbol.unmask })}
@@ -450,6 +456,46 @@ function SymbolRow({
         title={`Delete ${symbol.id}`}
       >
         <Trash2 size={14} />
+      </button>
+    </div>
+  );
+}
+
+/**
+ * Inline scale tuner for spine symbols. The auto-fit value computed at
+ * save time is a *starting point* — Spine v8's `getBounds` consistently
+ * under-reports the visible mesh extent (often by 2-3×) so the user
+ * typically needs to nudge. Pressing the buttons updates the config;
+ * the next Run picks it up.
+ */
+function ScaleStepper({
+  value,
+  onChange,
+}: {
+  value: number;
+  onChange: (next: number) => void;
+}): JSX.Element {
+  const v = Math.max(0.05, Math.min(10, value));
+  return (
+    <div className="flex items-center gap-0.5 rounded border border-border bg-muted/40 px-1 py-0.5 text-[10px] font-mono">
+      <button
+        type="button"
+        onClick={() => onChange(Math.max(0.05, +(v * 0.85).toFixed(3)))}
+        className="rounded px-1 text-muted-foreground hover:text-foreground"
+        title="Scale down"
+      >
+        -
+      </button>
+      <span className="min-w-[2.5em] text-center text-foreground" title="Spine scale (re-Run to apply)">
+        {v < 1 ? v.toFixed(2) : v.toFixed(1)}
+      </span>
+      <button
+        type="button"
+        onClick={() => onChange(Math.min(10, +(v / 0.85).toFixed(3)))}
+        className="rounded px-1 text-muted-foreground hover:text-foreground"
+        title="Scale up"
+      >
+        +
       </button>
     </div>
   );
