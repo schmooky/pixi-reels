@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { Upload, X, AlertCircle, Check, Circle } from 'lucide-react';
 import { ingestFile } from '@/lib/studio/db.js';
-import { parseAtlasTexturePages, parseSpineAnimations } from '@/lib/studio/spine.js';
+import { generateSpinePreview, parseAtlasTexturePages, parseSpineAnimations } from '@/lib/studio/spine.js';
 import type { SpineSymbolConfig, SpineEvent } from '@/lib/studio/types.js';
 
 interface Props {
@@ -101,14 +101,24 @@ export function SpineForm({ usedIds, onCancel, onSave }: Props): JSX.Element {
       for (const filename of requiredTextures) {
         textureHashes[filename] = await ingestFile(textureFiles[filename]);
       }
-      onSave({
+      const symbol: SpineSymbolConfig = {
         type: 'spine',
         id: trimmed,
         skeletonHash,
         atlasHash,
         textureHashes,
         events: pruneEmptyValues(events),
-      });
+      };
+      // Generate a thumbnail by rendering the skeleton offscreen. Best-
+      // effort: if it fails (malformed bundle, GPU init flake), we save
+      // without a preview and the row falls back to the bone icon.
+      try {
+        symbol.previewDataUrl = await generateSpinePreview(symbol);
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.warn('[studio] spine preview generation failed:', e);
+      }
+      onSave(symbol);
     } catch (e) {
       setError((e as Error).message);
     } finally {

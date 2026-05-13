@@ -57,6 +57,14 @@ export interface SpineSymbolConfig {
    * slot is unbound (engine default behaviour: no animation for that event).
    */
   events: Partial<Record<SpineEvent, string>>;
+  /**
+   * PNG data URL of the symbol rendered offscreen at setup pose (or one
+   * frame of `idle`, when available). Generated at save time so the
+   * Symbols-tab row shows a real thumbnail and not just a bone icon.
+   * Optional — preview generation is best-effort and may fail on
+   * malformed bundles.
+   */
+  previewDataUrl?: string;
 }
 
 export type SymbolConfig =

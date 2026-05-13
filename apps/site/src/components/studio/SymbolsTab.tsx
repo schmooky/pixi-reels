@@ -385,7 +385,10 @@ function SymbolRow({
       : symbol.type === 'animatedSprite'
         ? symbol.sheetHash
         : null;
-  const thumb = useAssetPreview(previewHash);
+  const blobThumb = useAssetPreview(previewHash);
+  // Spine symbols carry their own pre-rendered PNG data URL captured at
+  // save time. Other types load their first/only asset blob as the thumb.
+  const thumb = symbol.type === 'spine' ? symbol.previewDataUrl ?? null : blobThumb;
 
   const meta =
     symbol.type === 'sprite'

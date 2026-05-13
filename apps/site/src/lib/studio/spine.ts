@@ -9,7 +9,8 @@
  * atlas to PixiJS Assets.
  */
 
-import { Assets, ImageSource, type TextureSource } from 'pixi.js';
+import { Application, Assets, ImageSource, type TextureSource } from 'pixi.js';
+import { Spine } from '@esotericsoftware/spine-pixi-v8';
 import type { SpineSymbolConfig } from './types.js';
 import { getAsset } from './db.js';
 
@@ -143,7 +144,9 @@ export async function loadStudioSpine(
   Assets.add({
     alias: atlasAlias,
     src: atlasUrl,
-    loadParser: 'spineTextureAtlasLoader',
+    // PixiJS v8 renamed `loadParser` → `parser` (deprecation warning
+    // otherwise). The spine atlas parser is registered under this name.
+    parser: 'spineTextureAtlasLoader',
     data: { images },
   });
   await Assets.load(atlasAlias);
@@ -172,5 +175,76 @@ export function newRunId(): string {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 }
 
-// `Texture` re-export keeps consumers from needing two pixi.js imports.
-export type { Texture };
+/**
+ * Render a spine symbol to an offscreen canvas and return a PNG data URL.
+ * Called from `SpineForm.handleSave` after the asset blobs are ingested,
+ * so the row in the Symbols tab shows a real thumbnail instead of a
+ * generic bone icon.
+ *
+ * Uses the same `loadStudioSpine` pipeline as the runtime, so if the
+ * preview generates cleanly the actual Run will too. A failure here is
+ * swallowed by the caller (preview is best-effort).
+ *
+ * Each call creates and tears down its own `Application` — overhead is
+ * a fraction of a second per save, and we never accumulate canvases.
+ */
+export async function generateSpinePreview(
+  symbol: SpineSymbolConfig,
+  opts: { size?: number } = {},
+): Promise<string> {
+  const size = opts.size ?? 192;
+  const app = new Application();
+  await app.init({
+    width: size,
+    height: size,
+    backgroundAlpha: 0,
+    antialias: true,
+    autoStart: false,
+  });
+
+  const runId = `preview-${newRunId()}`;
+  const { skeletonAlias, atlasAlias, blobUrls } = await loadStudioSpine(symbol, runId);
+
+  try {
+    const spine = Spine.from({ skeleton: skeletonAlias, atlas: atlasAlias });
+
+    // Advance into the idle animation if the user picked one — otherwise
+    // setup pose tends to look like a T-pose which doesn't make for a
+    // great thumbnail.
+    if (symbol.events.idle && spine.skeleton.data.findAnimation(symbol.events.idle)) {
+      spine.state.setAnimation(0, symbol.events.idle, true);
+      // Advance ~120ms in; long enough to be past the very first frame
+      // but short enough that loop start poses are well represented.
+      spine.state.update(0.12);
+      spine.state.apply(spine.skeleton);
+      spine.skeleton.update(0.12);
+      spine.skeleton.updateWorldTransform(2 /* Physics.update */);
+    }
+
+    // Center + scale-to-fit. Spine local bounds are post-update.
+    const bounds = spine.getBounds();
+    const pad = 16;
+    const drawable = Math.max(size - pad * 2, 1);
+    const maxDim = Math.max(bounds.width, bounds.height, 1);
+    const scale = Math.min(drawable / maxDim, 4);
+    spine.scale.set(scale);
+
+    const scaledBounds = spine.getBounds();
+    spine.x = size / 2 - (scaledBounds.x + scaledBounds.width / 2) + spine.x;
+    spine.y = size / 2 - (scaledBounds.y + scaledBounds.height / 2) + spine.y;
+
+    app.stage.addChild(spine);
+    app.renderer.render(app.stage);
+
+    const dataUrl = await app.renderer.extract.base64(app.stage);
+    return dataUrl;
+  } finally {
+    // Tear down regardless of success — leaving an offscreen Application
+    // around per save would balloon GPU contexts.
+    app.destroy(true, { children: true, texture: false });
+    for (const url of blobUrls) {
+      try { URL.revokeObjectURL(url); } catch { /* ignore */ }
+    }
+  }
+}
+
