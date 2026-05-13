@@ -132,6 +132,23 @@ const reelSet = new ReelSetBuilder()
   .ticker(app.ticker)
   .build();
 
+// Multiways slots build at `maxRows` until the first `setShape` + spin
+// commits a jagged shape. On page load that looks like a uniform 6x5 —
+// not great for a recipe whose whole point is per-reel row variation.
+// Run a silent initial spin+skip with a fresh random shape so the
+// landing grid the user first sees already shows the jagged silhouette.
+const initialShape = randomShape();
+const initialGrid = initialShape.map((rows) =>
+  Array.from({ length: rows }, () => randSymbol()),
+);
+{
+  const p = reelSet.spin();
+  reelSet.setShape(initialShape);
+  reelSet.setResult(initialGrid);
+  reelSet.skip();
+  await p;
+}
+
 return {
   reelSet,
   onSpin: async () => {
@@ -141,11 +158,11 @@ return {
     // between SPIN and STOP).
     const stage0 = buildGridWithGuaranteedWin(shape);
     const p = reelSet.spin();
-    await new Promise((r) => setTimeout(r, 120));
+    await new Promise((r) => setTimeout(r, 80));
     reelSet.setShape(shape);
     reelSet.setResult(stage0);
     await p;
-    await new Promise((r) => setTimeout(r, 240));
+    await new Promise((r) => setTimeout(r, 120));
 
     // Build the full cascade chain upfront. Each stage is a grid; each
     // stage-N → stage-(N+1) transition has a winners list captured in
@@ -172,9 +189,9 @@ return {
     // stages[i], so the lookup is `stageIdx - 1`.
     await runCascade(reelSet, stages, {
       winners: (_prev, _next, stageIdx) => winnersByStage[stageIdx - 1] ?? [],
-      vanishDuration: 300,
-      dropDuration: 420,
-      pauseBetween: 160,
+      vanishDuration: 180,
+      dropDuration: 240,
+      pauseBetween: 60,
     });
   },
 };
