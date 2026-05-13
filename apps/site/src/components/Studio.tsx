@@ -129,6 +129,11 @@ export default function Studio() {
   const onSpinRef = useRef<(() => Promise<void>) | null>(null);
   const cleanupRef = useRef<(() => void) | null>(null);
   const lastInjectablesRef = useRef<StudioInjectables | null>(null);
+  // Set by `run()` to a closure that recentres + scales the current reelSet
+  // inside the (possibly-resized) canvas pane. Called from the ResizeObserver
+  // so layout changes (fullscreen toggle, panel resize, window resize) all
+  // refit through a single path.
+  const fitRef = useRef<(() => void) | null>(null);
 
   const [config, setConfig] = useState<StudioConfig | null>(null);
   const [tab, setTab] = useState<TabId>('code');
@@ -190,8 +195,25 @@ export default function Studio() {
       });
     })();
 
+    // Refit whenever the canvas pane changes size. PixiJS's `resizeTo: host`
+    // only listens on window resize; CSS layout swaps (the fullscreen
+    // toggle, future panel drags) leave the renderer with stale dimensions.
+    // ResizeObserver fires for all of those.
+    const host = canvasHostRef.current;
+    let observer: ResizeObserver | null = null;
+    if (host && typeof ResizeObserver !== 'undefined') {
+      observer = new ResizeObserver(() => {
+        const env = envRef.current;
+        if (!env) return;
+        try { env.app.resize(); } catch { /* ignore */ }
+        fitRef.current?.();
+      });
+      observer.observe(host);
+    }
+
     return () => {
       cancelled = true;
+      observer?.disconnect();
       teardownRun();
       if (envRef.current) {
         try { envRef.current.app.destroy(true, { children: true }); } catch { /* ignore */ }
@@ -221,6 +243,7 @@ export default function Studio() {
     nextResultRef.current = null;
     onSpinRef.current = null;
     cleanupRef.current = null;
+    fitRef.current = null;
     if (lastInjectablesRef.current) {
       revokeBlobUrls(lastInjectablesRef.current.blobUrls);
       lastInjectablesRef.current = null;
@@ -308,12 +331,16 @@ export default function Studio() {
     enableDebug(reelSet);
 
     const PADDING = 24;
+    // Aspect-preserving fit. Upscales freely so the reels look right in a
+    // fullscreen canvas pane (with the previous Math.min(1, …) clamp they
+    // looked tiny in the middle). Always re-derives raw dimensions from
+    // post-divide-by-scale so successive refits don't compound.
     const fit = () => {
       const rawW = reelSet.width / (reelSet.scale.x || 1);
       const rawH = reelSet.height / (reelSet.scale.y || 1);
       const availW = Math.max(40, env.app.screen.width - PADDING * 2);
       const availH = Math.max(40, env.app.screen.height - PADDING * 2);
-      const scale = Math.min(1, availW / rawW, availH / rawH);
+      const scale = Math.min(availW / rawW, availH / rawH);
       reelSet.scale.set(scale);
       reelSet.x = (env.app.screen.width - rawW * scale) / 2;
       reelSet.y = (env.app.screen.height - rawH * scale) / 2;
@@ -321,13 +348,10 @@ export default function Studio() {
     env.app.stage.removeChildren();
     env.app.stage.addChild(reelSet);
     fit();
-    const onResize = () => fit();
-    env.app.renderer.on('resize', onResize);
-    const origDestroy = reelSet.destroy.bind(reelSet);
-    reelSet.destroy = function patched(...args: unknown[]) {
-      try { env.app.renderer.off('resize', onResize); } catch { /* ignore */ }
-      return origDestroy(...(args as []));
-    };
+    // The boot useEffect's ResizeObserver calls through this ref on every
+    // host-size change — single fit path for window resize, fullscreen
+    // toggle, and future panel drags.
+    fitRef.current = fit;
 
     reelSetRef.current = reelSet;
     nextResultRef.current = built.nextResult ?? null;
