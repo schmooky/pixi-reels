@@ -20,7 +20,9 @@ import {
   type SpriteSymbolOptions,
   type AnimatedSpriteSymbolOptions,
 } from 'pixi-reels';
+import { SpineReelSymbol, type SpineReelSymbolOptions } from 'pixi-reels/spine';
 import { getAsset } from './db.js';
+import { loadStudioSpine, newRunId, studioEventsToEngineOverrides } from './spine.js';
 import type { StudioConfig, SymbolConfig } from './types.js';
 
 export interface UserSymbolBinding {
@@ -49,6 +51,7 @@ export async function applyStudioConfig(
   const textures: Record<string, Texture> = {};
   const userSymbols: Record<string, UserSymbolBinding> = {};
   const blobUrls: string[] = [];
+  const runId = newRunId();
 
   for (const symbol of config.symbols) {
     if (symbol.type === 'sprite') {
@@ -76,14 +79,27 @@ export async function applyStudioConfig(
         } satisfies AnimatedSpriteSymbolOptions,
       };
     } else if (symbol.type === 'spine') {
-      // Spine binding is deferred to a follow-up — the atlas-rewrite path
-      // needs more code than fits in this scaffold. The studio UI will
-      // refuse to register a spine symbol until that lands; non-spine
-      // symbols build fine.
-      throw new Error(
-        `Spine symbols are not yet wired in v1 of studio (symbol id='${symbol.id}'). ` +
-        'Use sprite or animatedSprite for now.',
+      const { skeletonAlias, atlasAlias, blobUrls: spineUrls } = await loadStudioSpine(
+        symbol,
+        runId,
       );
+      blobUrls.push(...spineUrls);
+
+      const overrides = studioEventsToEngineOverrides(symbol.events);
+      const options: SpineReelSymbolOptions = {
+        spineMap: { [symbol.id]: { skeleton: skeletonAlias, atlas: atlasAlias } },
+        // Apply user-picked names as the engine defaults so every method
+        // (playWin, playBlur, …) targets the right animation without
+        // per-symbol-id overrides.
+        idleAnimation: overrides.idle,
+        winAnimation: overrides.win,
+        landingAnimation: overrides.landing,
+        outAnimation: overrides.out,
+        blurAnimation: overrides.blur,
+        autoPlayBlur: Boolean(overrides.blur),
+        autoPlayLanding: Boolean(overrides.landing),
+      };
+      userSymbols[symbol.id] = { Class: SpineReelSymbol, options: options as Record<string, unknown> };
     }
   }
 
@@ -131,10 +147,9 @@ export function revokeBlobUrls(blobUrls: string[]): void {
 }
 
 /**
- * @internal Re-exported so the UI can probe whether a SymbolConfig type
- * is currently supported by the runtime — used to grey out the
- * Spine-symbol "add" path with a "coming soon" hint.
+ * @internal All three types are supported now. Kept as a hook for future
+ * runtime gating (e.g. browser-feature checks).
  */
-export function isSymbolTypeSupported(t: SymbolConfig['type']): boolean {
-  return t !== 'spine';
+export function isSymbolTypeSupported(_t: SymbolConfig['type']): boolean {
+  return true;
 }

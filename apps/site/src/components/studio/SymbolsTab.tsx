@@ -8,6 +8,7 @@ import type {
   SymbolConfig,
   SymbolType,
 } from '@/lib/studio/types.js';
+import { SpineForm } from './SpineForm.tsx';
 
 interface Props {
   config: StudioConfig;
@@ -52,11 +53,16 @@ export function SymbolsTab({ config, onChange }: Props): JSX.Element {
               type="spine"
               label="Spine"
               icon={<Bone size={14} />}
-              hint="Coming soon"
-              onClick={() => { /* no-op */ }}
-              disabled
+              hint="Atlas + JSON + textures"
+              onClick={() => setAdding('spine')}
             />
           </div>
+        ) : adding === 'spine' ? (
+          <SpineForm
+            usedIds={usedIds}
+            onCancel={() => setAdding(null)}
+            onSave={onSave}
+          />
         ) : (
           <AddSymbolForm
             type={adding}
@@ -125,6 +131,8 @@ interface FormProps {
 }
 
 function AddSymbolForm({ type, usedIds, onCancel, onSave }: FormProps): JSX.Element {
+  // Spine is dispatched at the call site (SymbolsTab) — this component
+  // handles only sprite + animatedSprite.
   const [id, setId] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [frameWidth, setFrameWidth] = useState(96);
@@ -384,13 +392,19 @@ function SymbolRow({
       ? 'Sprite'
       : symbol.type === 'animatedSprite'
         ? `Animated · ${symbol.frameCount}f · ${symbol.frameWidth}×${symbol.frameHeight} · ${symbol.fps}fps`
-        : 'Spine';
+        : (() => {
+            const pageCount = Object.keys(symbol.textureHashes).length;
+            const eventCount = Object.values(symbol.events).filter(Boolean).length;
+            return `Spine · ${pageCount} page${pageCount === 1 ? '' : 's'} · ${eventCount}/5 events`;
+          })();
 
   return (
     <div className="flex items-center gap-3 rounded-md border border-border bg-background/40 p-2">
       <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center overflow-hidden rounded border border-border bg-background/60">
         {thumb ? (
           <img src={thumb} alt="" className="max-h-full max-w-full object-contain" />
+        ) : symbol.type === 'spine' ? (
+          <Bone size={14} className="text-muted-foreground/40" />
         ) : (
           <ImageIcon size={14} className="text-muted-foreground/40" />
         )}
