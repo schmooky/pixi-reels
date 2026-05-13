@@ -184,6 +184,20 @@ export const RECIPES: RecipeMeta[] = [
     tags: ['debug', 'prototyping', 'custom-symbol', 'graphics'],
   },
   {
+    slug: 'multiways-cascade',
+    group: 'multiways',
+    title: 'MultiWays cascade',
+    oneLiner: 'Per-spin row variation on a strip-spin landing; cascade tumble pops winners and drops new symbols in from above. Shape-aware on every reel.',
+    steps: [
+      'Build with .multiways({minRows, maxRows, reelPixelHeight}) — no .cascade() needed',
+      'Each round, call setShape(rowsPerReel) BEFORE setResult()',
+      'reelSet.spin() — strip-spin lands the multiways grid (AdjustPhase reshapes during SPIN→STOP)',
+      'On a winning row, runCascade(reelSet, [...stages]) tumbles winners and drops new symbols in from above',
+    ],
+    apis: ['ReelSetBuilder.multiways', 'ReelSet.setShape', 'runCascade'],
+    tags: ['multiways', 'cascade', 'hybrid', 'recent'],
+  },
+  {
     slug: 'sticky-wild-multiways',
     group: 'multiways',
     title: 'Sticky wild on MultiWays',
