@@ -1,0 +1,85 @@
+---
+layout: ../../layouts/Recipe.astro
+title: Peek symbol from buffer-above
+description: Pre-fill the buffer-above slot so a teaser symbol sits just out of frame — visible during scroll-in on the next spin.
+tags: [buffer, peek, tension, reveal]
+steps:
+  - Seed initialFrame with a ColumnTarget so the buffer-above slot is set at build time
+  - On each spin, pass the same shape to setResult so the teaser carries forward
+  - When the next spin starts, that symbol is the first to scroll into the visible area
+apis:
+  - ReelSetBuilder.initialFrame
+  - ReelSet.setResult
+  - ColumnTarget
+---
+
+import code from '../../recipes/peek-from-above.recipe.ts?raw';
+import { RecipeRunner } from '../../components/RecipeRunner.tsx';
+
+<RecipeRunner code={code} client:only="react" />
+
+## What you're seeing
+
+Every reel has an extra "PEEK" symbol prefilled in the buffer-above slot — the one cell that lives just above the visible window. During the spin, that symbol scrolls through visibility before random symbols take over, giving the player a brief glimpse of "what's queued."
+
+The same shape works for `initialFrame` (seeds the first spin) and `setResult` (seeds every subsequent one).
+
+## The minimum code
+
+```ts
+// Seed the buffer-above at build time. ColumnTarget is the explicit shape —
+// `bufferAbove[0]` is the slot closest to the visible top row.
+const initialFrame: ColumnTarget[] = [
+  { visible: ['A', 'B', 'C'], bufferAbove: ['COIN'] },
+  { visible: ['A', 'B', 'C'], bufferAbove: ['COIN'] },
+  { visible: ['A', 'B', 'C'], bufferAbove: ['COIN'] },
+];
+
+const reelSet = new ReelSetBuilder()
+  .reels(3)
+  .visibleSymbols(3)
+  .bufferSymbols(1)
+  .symbols((r) => { /* ... */ })
+  .ticker(app.ticker)
+  .initialFrame(initialFrame)
+  .build();
+
+// Re-seed on every spin so the peek persists
+const promise = reelSet.spin();
+const visible = await server.spin();
+reelSet.setResult(visible.map((col) => ({ visible: col, bufferAbove: ['COIN'] })));
+await promise;
+```
+
+## Indexing convention
+
+For a reel with `bufferAbove = 2` and `visibleRows = 3`, the explicit form maps to numeric slots like this:
+
+| `ColumnTarget` field | Cell |
+| --- | --- |
+| `bufferAbove[1]` | furthest above visible |
+| `bufferAbove[0]` | closest above visible |
+| `visible[0]` | visible row 0 (top) |
+| `visible[1]` | visible row 1 |
+| `visible[2]` | visible row 2 (bottom) |
+| `bufferBelow[0]` | closest below visible |
+
+See [Buffer indexing](/guides/buffer-indexing/) for the full reference, including the legacy negative-index form (`frame[col][-1]`) you may meet in older code.
+
+## Legacy negative-index form
+
+`initialFrame` and `setResult` also accept the legacy `string[][]` shape — handy for one-liners. The two forms are interchangeable end-to-end:
+
+```ts
+const grid: string[][] = [['A','B','C'], ['A','B','C'], ['A','B','C']];
+for (const col of grid) col[-1] = 'COIN';  // -1 = closest above visible
+reelSet.setResult(grid);
+```
+
+The catch: `arr[-1] = 'X'` stores a string property `"-1"` on the array, which `structuredClone`, `JSON.stringify`, and `postMessage` all drop. Use the explicit `ColumnTarget` form for any grid that crosses a worker, network, or serializer boundary.
+
+## Where to go next
+
+- [Anticipation teaser](/recipes/anticipation-teaser/) — pair buffer-above with `setAnticipation` so a slow reel approaches a known high-value symbol
+- [Buffer indexing](/guides/buffer-indexing/) — the full convention reference
+- [Anticipate a reel](/recipes/anticipate-a-reel/) — base anticipation mechanic

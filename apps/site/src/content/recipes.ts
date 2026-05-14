@@ -184,6 +184,20 @@ export const RECIPES: RecipeMeta[] = [
     tags: ['debug', 'prototyping', 'custom-symbol', 'graphics'],
   },
   {
+    slug: 'multiways-cascade',
+    group: 'multiways',
+    title: 'MultiWays cascade',
+    oneLiner: 'Per-spin row variation on a strip-spin landing; cascade tumble pops winners and drops new symbols in from above. Shape-aware on every reel.',
+    steps: [
+      'Build with .multiways({minRows, maxRows, reelPixelHeight}) — no .cascade() needed',
+      'Each round, call setShape(rowsPerReel) BEFORE setResult()',
+      'reelSet.spin() — strip-spin lands the multiways grid (AdjustPhase reshapes during SPIN→STOP)',
+      'On a winning row, runCascade(reelSet, [...stages]) tumbles winners and drops new symbols in from above',
+    ],
+    apis: ['ReelSetBuilder.multiways', 'ReelSet.setShape', 'runCascade'],
+    tags: ['multiways', 'cascade', 'hybrid', 'recent'],
+  },
+  {
     slug: 'sticky-wild-multiways',
     group: 'multiways',
     title: 'Sticky wild on MultiWays',
@@ -282,6 +296,32 @@ export const RECIPES: RecipeMeta[] = [
     ],
     apis: ['ReelSet.setAnticipation', 'spin:stopping event', 'AnticipationPhase'],
     tags: ['anticipation', 'tension'],
+  },
+  {
+    slug: 'peek-from-above',
+    group: 'tension',
+    title: 'Peek symbol from buffer-above',
+    oneLiner: 'Pre-fill the buffer-above slot so a teaser symbol sits just out of frame — visible during scroll-in on the next spin.',
+    steps: [
+      'Pass an initialFrame and set frame[col][-1] to seed buffer-above at build time',
+      'On every spin, set grid[col][-1] before reelSet.setResult(grid) so the teaser carries forward',
+      'When the next spin starts, that symbol is the first to scroll into the visible area',
+    ],
+    apis: ['ReelSetBuilder.initialFrame', 'ReelSet.setResult', 'ColumnTarget'],
+    tags: ['buffer', 'peek', 'tension', 'reveal'],
+  },
+  {
+    slug: 'anticipation-teaser',
+    group: 'tension',
+    title: 'Anticipation teaser',
+    oneLiner: 'Combine setAnticipation with a buffer-above prefill so a slow reel approaches a known high-value symbol — the player literally sees the bonus coming.',
+    steps: [
+      'Call setAnticipation([...reels]) to slow specific reels before they land',
+      'Set result[col][-1] = HIGH_VALUE on those same reels to pin a symbol just above the visible area',
+      'During anticipation deceleration, the symbol is visible at the top edge of the reel',
+    ],
+    apis: ['ReelSet.setAnticipation', 'ReelSet.setResult', 'AnticipationPhase'],
+    tags: ['anticipation', 'tension', 'buffer', 'peek'],
   },
   {
     slug: 'paylines-custom-animation',

@@ -45,7 +45,7 @@ A new `AdjustPhase` is inserted between `SpinPhase` and `StopPhase` **only when 
 
 - The frame builder is unchanged at the per-reel level. Cross-reel coordination (big-symbol OCCUPIED painting, MultiWays shape) lives in `SpinController` ahead of per-reel `FrameBuilder.build()` calls.
 - `DebugSnapshot.visibleRows` widens from `number` to `number[]`. Callers that deep-read the snapshot need to adapt — but the snapshot is debug-only and not protected by semver.
-- Cascade + MultiWays is rejected at build (`mode('cascade')` + `multiways()` throws). Combination is niche and was deferred.
+- Cascade + MultiWays is supported via the per-chain shape rule documented in [ADR 015](./015-cascade-multiways-interplay.md). (Originally deferred behind a build-time throw; lifted by issue #74.)
 - Big symbols + MultiWays is rejected at build (registering `SymbolData.size > 1×1` on a `.multiways(...)` slot throws). Game-design guardrail more than an engine guardrail.
 
 ## Alternatives considered

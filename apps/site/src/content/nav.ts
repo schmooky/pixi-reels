@@ -25,6 +25,7 @@ export const GUIDES_NAV: NavSection[] = [
       { label: 'Per-reel geometry', href: '/guides/per-reel-geometry/' },
       { label: 'MultiWays', href: '/guides/multiways/' },
       { label: 'Big symbols', href: '/guides/big-symbols/' },
+      { label: 'Buffer indexing', href: '/guides/buffer-indexing/' },
       { label: 'Speed modes', href: '/guides/speed-modes/' },
       { label: 'Win animations', href: '/guides/win-animations/' },
     ],

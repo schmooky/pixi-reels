@@ -73,6 +73,7 @@ You'll find:
 - **Recipes** — small how-tos for common mechanics (walking wilds, sticky wilds, cascade, mystery reveal, hold & win, ...). Each ships with a live mini-demo.
 - **Demos** — full mechanic sandboxes with cheat panels. One click forces a scatter, a near-miss, a guaranteed jackpot.
 - **Sandbox** — in-browser TypeScript playground; edit the file, hit Run, reels rebuild.
+- **Studio** — bring-your-own-assets workbench. Drop in sprites or Spine bundles, wire them to symbol ids, edit builder code, share the result via a password-protected link (see [`apps/share-api`](apps/share-api/) for the relay).
 - **Wiki** — API reference.
 
 ## Examples
@@ -90,7 +91,7 @@ Runnable apps in [`examples/`](examples/):
 
 ```ts
 reelSet.spin(): Promise<SpinResult>             // Start spinning
-reelSet.setResult(symbols: string[][])          // Pass the target grid (triggers the stop)
+reelSet.setResult(symbols: string[][] | ColumnTarget[]) // Pass the target grid (triggers the stop). Use frame[col][-1] (or { bufferAbove: [...] }) to prefill cells above the visible window — see /recipes/buffer-indexing-cheatsheet/.
 reelSet.setAnticipation([3, 4])                 // Slow reels 3+4 before their landing
 reelSet.setStopDelays([0, 140, 280, 600, 1100]) // Override per-reel stop stagger
 reelSet.skip()                                  // Slam-stop
