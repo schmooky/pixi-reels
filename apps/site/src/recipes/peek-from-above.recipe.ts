@@ -4,18 +4,19 @@
 //
 // Peek symbol from buffer-above.
 //
-// Each reel has a "TEASE" symbol prefilled in the buffer-above slot — the
+// Each reel has a "PEEK" symbol prefilled in the buffer-above slot — the
 // one cell that lives just above the visible window. During the spin, that
 // symbol scrolls through the visible area before the random spin symbols
 // take over, giving the player a brief glimpse of what's "next".
 
-const A = 'A', B = 'B', C = 'C';
 const TEASE = 'tease';
 const TEASE_CARD = { id: TEASE, color: 0xff8c42, label: 'PEEK', textColor: 0xffffff };
 
-const VALUES = [A, B, C];
-function randomVisible() {
-  return VALUES[Math.floor(Math.random() * VALUES.length)];
+// Pull three visible cards from the real CARD_DECK so the spin lands on
+// registered symbols every time.
+const CARD_IDS = CARD_DECK.map((c) => c.id);
+function rv() {
+  return CARD_IDS[Math.floor(Math.random() * CARD_IDS.length)];
 }
 
 // ── initialFrame seeds the FIRST spin's buffer-above ────────────────────
@@ -23,9 +24,9 @@ function randomVisible() {
 // `setResult` honours (after this release): negative indices target buffer-
 // above slots, indexed from -1 (closest to visible) to -bufferAbove (furthest).
 const initialFrame = [
-  [A, B, C],
-  [A, B, C],
-  [A, B, C],
+  ['7', '8', '9'],
+  ['7', '8', '9'],
+  ['7', '8', '9'],
 ];
 for (const col of initialFrame) col[-1] = TEASE;
 
@@ -52,9 +53,9 @@ return {
     // next spin shows the peek again. The negative-index slot survives the
     // whole pipeline (pins + big-symbol coordinator + skip path) end-to-end.
     const result = [
-      [randomVisible(), randomVisible(), randomVisible()],
-      [randomVisible(), randomVisible(), randomVisible()],
-      [randomVisible(), randomVisible(), randomVisible()],
+      [rv(), rv(), rv()],
+      [rv(), rv(), rv()],
+      [rv(), rv(), rv()],
     ];
     for (const col of result) col[-1] = TEASE;
 

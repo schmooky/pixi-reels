@@ -6,7 +6,7 @@ Site: https://pixi-reels.schmooky.dev
 Repo: https://github.com/schmooky/pixi-reels
 Package: https://www.npmjs.com/package/pixi-reels
 
-Generated: 2026-05-10T21:42:17.302Z
+Generated: 2026-05-14T18:18:35.467Z
 
 ## Quick start
 
@@ -37,6 +37,10 @@ reelSet.setResult([['cherry','cherry','cherry'], ...]);
 ### Big symbols
 URL: https://pixi-reels.schmooky.dev/guides/big-symbols/
 A big symbol is a single symbol that visually occupies an N×M block of cells. Declared via SymbolData.size; server places the anchor cell only and the engine paints OCCUPIED across the rest. Includes block lookup, validation, and mask interaction.
+
+### Buffer indexing
+URL: https://pixi-reels.schmooky.dev/guides/buffer-indexing/
+How indices map to cells in initialFrame and setResult — visible rows, buffer-above, buffer-below, and the two accepted input forms.
 
 ### Cheats & testing
 URL: https://pixi-reels.schmooky.dev/guides/cheats-and-testing/
@@ -135,6 +139,16 @@ Steps:
   - During a spin, decide which reels deserve anticipation
   - Call reelSet.setAnticipation([...reelIndices]) BEFORE calling setResult()
   - The marked reels will enter the ANTICIPATION phase before STOP
+
+### Anticipation teaser
+URL: https://pixi-reels.schmooky.dev/recipes/anticipation-teaser/
+Combine setAnticipation with a buffer-above prefill so a slow reel approaches a known high-value symbol — the player literally sees the bonus coming.
+Tags: anticipation, tension, buffer, peek
+APIs: ReelSet.setAnticipation, ReelSet.setResult, AnticipationPhase
+Steps:
+  - Call setAnticipation([...reels]) to slow specific reels before they land
+  - Set result[col][-1] = HIGH_VALUE on those same reels to pin a symbol just above the visible area
+  - During the anticipation decelerate, the symbol is visible at the top edge of the reel
 
 ### MxN big symbols — every shape
 URL: https://pixi-reels.schmooky.dev/recipes/big-symbols-mxn/
@@ -282,6 +296,17 @@ Steps:
   - AdjustPhase commits the new geometry; cell symbols snap, pin overlays tween
 Real game example: The Dog House (Pragmatic Play) (https://pixi-reels.schmooky.dev/videos/dog-house-megaways.mp4)
 
+### MultiWays cascade
+URL: https://pixi-reels.schmooky.dev/recipes/multiways-cascade/
+Per-spin row variation on a strip-spin landing; the cascade tumble pops winners and drops new symbols in from above. Shape-aware on every reel.
+Tags: multiways, cascade, hybrid, recent
+APIs: ReelSetBuilder.multiways, ReelSet.setShape, runCascade
+Steps:
+  - Build with .multiways({minRows, maxRows, reelPixelHeight}) — no .cascade() needed
+  - Each round, call setShape(rowsPerReel) BEFORE setResult()
+  - reelSet.spin() — classic strip-spin lands the multiways grid (AdjustPhase reshapes during SPIN→STOP)
+  - On a winning row, runCascade(reelSet, [...stages]) tumbles winners and drops new symbols in from above
+
 ### Mystery reveal (CellPin)
 URL: https://pixi-reels.schmooky.dev/recipes/mystery-reveal-pin/
 Mystery symbols land, then all reveal to the same random class via 'eval' pins. Auto-cleared at next spin.
@@ -321,6 +346,16 @@ Steps:
   - Create a WinPresenter — it only animates symbols
   - Subscribe to `win:group`, draw a line (or outline, or number) from `reelSet.getCellBounds`
   - Drop your own GSAP fade in + out so visuals don't pile up between wins
+
+### Peek symbol from buffer-above
+URL: https://pixi-reels.schmooky.dev/recipes/peek-from-above/
+Pre-fill the buffer-above slot so a teaser symbol sits just out of frame — visible during scroll-in on the next spin.
+Tags: buffer, peek, tension, reveal
+APIs: ReelSetBuilder.initialFrame, ReelSet.setResult, ColumnTarget
+Steps:
+  - Pass an initialFrame and set frame[col][-1] to seed the buffer-above slot at build time
+  - On each spin, set grid[col][-1] before reelSet.setResult(grid) so the teaser carries forward
+  - When the next spin starts, that symbol is the first to scroll into the visible area
 
 ### Positional multiplier cells
 URL: https://pixi-reels.schmooky.dev/recipes/positional-multiplier-pin/
@@ -573,6 +608,70 @@ return {
     await new Promise(r => setTimeout(r, 220));
     reelSet.setAnticipation([3, 4]);
     reelSet.setResult(GRID);
+    await p;
+  },
+};
+```
+
+### anticipation-teaser
+URL: https://pixi-reels.schmooky.dev/recipes/anticipation-teaser/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//                   WILD_CARD, app
+//
+// Anticipation teaser — pair setAnticipation with a buffer-above prefill so
+// a slow reel approaches a known high-value symbol. The user literally sees
+// the bonus coming as the reel decelerates.
+
+const COIN = 'coin';
+const COIN_CARD = { id: COIN, color: 0xfacc15, label: 'BIG', textColor: 0x6b5400 };
+
+const CARD_IDS = CARD_DECK.map((c) => c.id);
+function rv() { return CARD_IDS[Math.floor(Math.random() * CARD_IDS.length)]; }
+
+const reelSet = new ReelSetBuilder()
+  .reels(5)
+  .visibleSymbols(3)
+  .symbolSize(80, 80)
+  .symbolGap(4, 4)
+  .bufferSymbols(1)
+  .symbols((r) => {
+    for (const sym of [...CARD_DECK, WILD_CARD, COIN_CARD]) {
+      r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
+    }
+  })
+  .speed('normal', SpeedPresets.NORMAL)
+  .speed('turbo', SpeedPresets.TURBO)
+  .ticker(app.ticker)
+  .build();
+
+// Long anticipation delay so the teaser cell is clearly visible above the
+// decelerating reel. Same pattern as the base anticipate-a-reel recipe.
+reelSet.speed.addProfile('demo', { ...SpeedPresets.NORMAL, anticipationDelay: 1800 });
+reelSet.setSpeed('demo');
+
+return {
+  reelSet,
+  onSpin: async () => {
+    // Land result — reels 3 and 4 will anticipate.
+    const result = [
+      [rv(), rv(), rv()],
+      [rv(), rv(), rv()],
+      [rv(), rv(), rv()],
+      [rv(), rv(), rv()],
+      [rv(), rv(), rv()],
+    ];
+    // Prefill BIG on the buffer-above of the anticipated reels — when they
+    // slow down for the anticipation phase, the coin is visible at the top
+    // edge, "approaching" the visible area.
+    result[3][-1] = COIN;
+    result[4][-1] = COIN;
+
+    const p = reelSet.spin();
+    await new Promise((r) => setTimeout(r, 220));
+    reelSet.setAnticipation([3, 4]);
+    reelSet.setResult(result);
     await p;
   },
 };
@@ -2084,6 +2183,208 @@ return {
 };
 ```
 
+### multiways-cascade
+URL: https://pixi-reels.schmooky.dev/recipes/multiways-cascade/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//                   PIXI, gsap, app, runCascade
+
+// MultiWays + cascade tumble — proper ways-style winner removal.
+//
+// A "ways" win on a multiways slot: a symbol appears on N consecutive
+// reels starting from reel 0. EVERY instance of that symbol on those
+// reels is a winner — not just one cell per column, the way a payline
+// game would resolve it. So if reel 1 has two Qs and reel 2 has three Qs,
+// a Q-ways win pops all five of them.
+//
+// Visual flow each round:
+//   1. setShape(rowsPerReel) rolls a per-reel row count in [minRows, maxRows].
+//   2. reelSet.spin() — classic strip-spin lands the multiways grid.
+//   3. Detect a ways win. If found, runCascade pops every winning cell;
+//      survivors fall, new symbols drop in from above.
+//   4. Repeat until no more ways wins (capped at MAX_CASCADES per round).
+
+const REELS = 6;
+const MIN_ROWS = 2;
+const MAX_ROWS = 5;
+const REEL_PIXEL_HEIGHT = 360;
+const SYMBOL_SIZE = REEL_PIXEL_HEIGHT / MAX_ROWS;
+const GAP = 4;
+
+const IDS = ['7', '8', '9', '10', 'J', 'Q'];
+const MIN_WAYS_REELS = 3;
+const MAX_CASCADES = 4;
+
+function randSymbol() {
+  return IDS[Math.floor(Math.random() * IDS.length)];
+}
+
+function randomShape() {
+  return Array.from({ length: REELS }, () =>
+    MIN_ROWS + Math.floor(Math.random() * (MAX_ROWS - MIN_ROWS + 1)),
+  );
+}
+
+function buildGridWithGuaranteedWin(shape) {
+  // Random fill, then plant the same symbol on reels 0, 1, 2 — with multiple
+  // copies on reels that have room — so the ways win removes multiple cells
+  // per column, which is the whole point of multiways-style cascading.
+  const grid = shape.map((rows) =>
+    Array.from({ length: rows }, () => randSymbol()),
+  );
+  if (Math.random() < 0.7) {
+    const target = randSymbol();
+    for (let c = 0; c < MIN_WAYS_REELS; c++) {
+      const len = grid[c].length;
+      // At least one copy at row 0; plant 1-2 more copies at distinct rows
+      // when the reel has room.
+      const positions = new Set([0]);
+      const extraCount = len >= 4 ? 2 : len >= 3 ? 1 : 0;
+      while (positions.size < 1 + extraCount) {
+        positions.add(Math.floor(Math.random() * len));
+      }
+      for (const row of positions) grid[c][row] = target;
+    }
+  }
+  return grid;
+}
+
+function findAllWaysWins(grid) {
+  // Every symbol whose presence spans the first N consecutive reels
+  // (N >= MIN_WAYS_REELS) is a separate ways win. A real multiways game
+  // pays them all in the same evaluation — Q-ways and 10-ways can both
+  // hit simultaneously and both contribute winners to the same cascade.
+  const wins = [];
+  for (const id of IDS) {
+    let reelCount = 0;
+    for (let c = 0; c < grid.length; c++) {
+      if (grid[c].includes(id)) reelCount++;
+      else break;
+    }
+    if (reelCount >= MIN_WAYS_REELS) wins.push({ id, reelCount });
+  }
+  return wins;
+}
+
+function collectAllWinners(grid, wins) {
+  // For every winning symbol, every instance on that symbol's winning
+  // reels is a winner. Cells can't double-count: a cell shows one id,
+  // so it appears in at most one win's winner list.
+  const winners = [];
+  for (const win of wins) {
+    for (let c = 0; c < win.reelCount; c++) {
+      for (let row = 0; row < grid[c].length; row++) {
+        if (grid[c][row] === win.id) winners.push({ reel: c, row });
+      }
+    }
+  }
+  return winners;
+}
+
+function applyCascade(grid, winners) {
+  // Group winners by reel, then per reel: drop the winning rows, shift
+  // survivors down, fill the cleared top slots with new random symbols.
+  // Cell count per reel stays the same — multiways shape doesn't change
+  // mid-cascade.
+  const winnersByReel = new Map();
+  for (const w of winners) {
+    if (!winnersByReel.has(w.reel)) winnersByReel.set(w.reel, new Set());
+    winnersByReel.get(w.reel).add(w.row);
+  }
+  return grid.map((col, c) => {
+    const winRows = winnersByReel.get(c);
+    if (!winRows || winRows.size === 0) return [...col];
+    const survivors = col.filter((_, row) => !winRows.has(row));
+    const newCount = col.length - survivors.length;
+    const newSymbols = Array.from({ length: newCount }, () => randSymbol());
+    return [...newSymbols, ...survivors];
+  });
+}
+
+const reelSet = new ReelSetBuilder()
+  .reels(REELS)
+  .multiways({ minRows: MIN_ROWS, maxRows: MAX_ROWS, reelPixelHeight: REEL_PIXEL_HEIGHT })
+  .symbolSize(SYMBOL_SIZE, SYMBOL_SIZE)
+  .symbolGap(GAP, GAP)
+  .symbols((r) => {
+    for (const sym of CARD_DECK) {
+      if (IDS.includes(sym.id)) {
+        r.register(sym.id, CardSymbol, {
+          color: sym.color, label: sym.label, textColor: sym.textColor,
+        });
+      }
+    }
+  })
+  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 120, bounceDistance: 0, bounceDuration: 0 })
+  .ticker(app.ticker)
+  .build();
+
+// Multiways slots build at `maxRows` until the first `setShape` + spin
+// commits a jagged shape. On page load that looks like a uniform 6x5 —
+// not great for a recipe whose whole point is per-reel row variation.
+// Run a silent initial spin+skip with a fresh random shape so the
+// landing grid the user first sees already shows the jagged silhouette.
+const initialShape = randomShape();
+const initialGrid = initialShape.map((rows) =>
+  Array.from({ length: rows }, () => randSymbol()),
+);
+{
+  const p = reelSet.spin();
+  reelSet.setShape(initialShape);
+  reelSet.setResult(initialGrid);
+  reelSet.skip();
+  await p;
+}
+
+return {
+  reelSet,
+  onSpin: async () => {
+    const shape = randomShape();
+
+    // Round 1 — strip-spin lands the multiways grid (AdjustPhase reshapes
+    // between SPIN and STOP).
+    const stage0 = buildGridWithGuaranteedWin(shape);
+    const p = reelSet.spin();
+    await new Promise((r) => setTimeout(r, 80));
+    reelSet.setShape(shape);
+    reelSet.setResult(stage0);
+    await p;
+    await new Promise((r) => setTimeout(r, 120));
+
+    // Build the full cascade chain upfront. Each stage is a grid; each
+    // stage-N → stage-(N+1) transition has a winners list captured in
+    // `winnersByStage`. runCascade reads that list via the `winners`
+    // callback below.
+    const stages = [stage0];
+    const winnersByStage = [];
+    let current = stage0;
+    while (winnersByStage.length < MAX_CASCADES) {
+      const wins = findAllWaysWins(current);
+      if (wins.length === 0) break;
+      const winners = collectAllWinners(current, wins);
+      winnersByStage.push(winners);
+      current = applyCascade(current, winners);
+      stages.push(current);
+    }
+
+    if (winnersByStage.length === 0) return;
+
+    // runCascade walks `stages`; for the stage-N → stage-(N+1) transition
+    // it invokes the winners callback with stageIndex = N + 1 (it's the
+    // post-increment value of the iteration counter, not the source index).
+    // Our winnersByStage[i] holds the winners that produced stages[i+1] from
+    // stages[i], so the lookup is `stageIdx - 1`.
+    await runCascade(reelSet, stages, {
+      winners: (_prev, _next, stageIdx) => winnersByStage[stageIdx - 1] ?? [],
+      vanishDuration: 180,
+      dropDuration: 240,
+      pauseBetween: 60,
+    });
+  },
+};
+```
+
 ### multiways
 URL: https://pixi-reels.schmooky.dev/recipes/multiways/
 ```ts
@@ -2574,6 +2875,78 @@ return {
     await presenter.show(WINS);
   },
   cleanup: () => { presenter.destroy(); lineLayer.destroy({ children: true }); },
+};
+```
+
+### peek-from-above
+URL: https://pixi-reels.schmooky.dev/recipes/peek-from-above/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//                   WILD_CARD, app
+//
+// Peek symbol from buffer-above.
+//
+// Each reel has a "PEEK" symbol prefilled in the buffer-above slot — the
+// one cell that lives just above the visible window. During the spin, that
+// symbol scrolls through the visible area before the random spin symbols
+// take over, giving the player a brief glimpse of what's "next".
+
+const TEASE = 'tease';
+const TEASE_CARD = { id: TEASE, color: 0xff8c42, label: 'PEEK', textColor: 0xffffff };
+
+// Pull three visible cards from the real CARD_DECK so the spin lands on
+// registered symbols every time.
+const CARD_IDS = CARD_DECK.map((c) => c.id);
+function rv() {
+  return CARD_IDS[Math.floor(Math.random() * CARD_IDS.length)];
+}
+
+// ── initialFrame seeds the FIRST spin's buffer-above ────────────────────
+// Set frame[col][-1] = TEASE on every reel — this is exactly the convention
+// `setResult` honours (after this release): negative indices target buffer-
+// above slots, indexed from -1 (closest to visible) to -bufferAbove (furthest).
+const initialFrame = [
+  ['7', '8', '9'],
+  ['7', '8', '9'],
+  ['7', '8', '9'],
+];
+for (const col of initialFrame) col[-1] = TEASE;
+
+const reelSet = new ReelSetBuilder()
+  .reels(3)
+  .visibleSymbols(3)
+  .symbolSize(90, 90)
+  .symbolGap(4, 4)
+  .bufferSymbols(1)
+  .symbols((r) => {
+    for (const sym of [...CARD_DECK, WILD_CARD, TEASE_CARD]) {
+      r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
+    }
+  })
+  .speed('normal', { ...SpeedPresets.NORMAL, minimumSpinTime: 900 })
+  .ticker(app.ticker)
+  .initialFrame(initialFrame)
+  .build();
+
+return {
+  reelSet,
+  onSpin: async () => {
+    // Land on a random grid AND re-seed the buffer-above with TEASE so the
+    // next spin shows the peek again. The negative-index slot survives the
+    // whole pipeline (pins + big-symbol coordinator + skip path) end-to-end.
+    const result = [
+      [rv(), rv(), rv()],
+      [rv(), rv(), rv()],
+      [rv(), rv(), rv()],
+    ];
+    for (const col of result) col[-1] = TEASE;
+
+    const p = reelSet.spin();
+    await new Promise((r) => setTimeout(r, 250));
+    reelSet.setResult(result);
+    await p;
+  },
 };
 ```
 

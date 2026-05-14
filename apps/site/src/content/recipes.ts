@@ -324,19 +324,6 @@ export const RECIPES: RecipeMeta[] = [
     tags: ['anticipation', 'tension', 'buffer', 'peek'],
   },
   {
-    slug: 'buffer-indexing-cheatsheet',
-    group: 'cell-coords',
-    title: 'Buffer indexing cheatsheet',
-    oneLiner: 'Quick reference for the index-to-cell mapping used by initialFrame and setResult — visible rows, buffer-above, buffer-below, and both input forms.',
-    steps: [
-      'Negative indices on frame[col] target buffer-above cells',
-      'Indices 0..visibleRows-1 are the visible window',
-      'Indices >= visibleRows target buffer-below cells',
-    ],
-    apis: ['ReelSet.setResult', 'ReelSetBuilder.initialFrame', 'ColumnTarget'],
-    tags: ['reference', 'buffer', 'indexing'],
-  },
-  {
     slug: 'paylines-custom-animation',
     group: 'wins',
     title: 'Custom per-symbol animation',
