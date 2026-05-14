@@ -11,6 +11,11 @@ coverage/
 *.tsbuildinfo
 .idea
 
+# Per-app env files — production secrets live here in dev. Never commit.
+.env
+.env.*
+!.env.example
+
 # Sync'd by scripts/build-all-publishable.mjs from repo root — do not edit
 # the copies under packages/*/ directly.
 packages/*/README.md
