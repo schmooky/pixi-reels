@@ -37,15 +37,31 @@ export function isColumnTargetGrid(
 
 /**
  * Clone a per-reel target grid while preserving negative-index slots used by
- * buffer-above targeting. A bare `[...col]` only copies numeric indices, so
- * `col[-1] = 'X'` is silently dropped by spread — this helper mirrors those
- * slots onto the copy.
+ * buffer-above targeting.
+ *
+ * **CONTRIBUTOR NOTE — do not replace with plain spread.**
+ *
+ * The legacy public API supports `frame[col][-1] = 'COIN'` for targeting
+ * the cell just above the visible window. JavaScript stores that as a
+ * string property `"-1"` on the array object. Standard spread (`[...col]`),
+ * `structuredClone`, `JSON.stringify`, `Array.from`, and `postMessage`
+ * **all silently drop** those non-numeric properties. Any code path that
+ * needs to clone a result grid in the engine **must** route through this
+ * helper, or buffer-above targeting will silently break end-to-end and the
+ * integration tests in `tests/integration/setResult-bufferAbove.test.ts`
+ * will fail. See `tests/unit/ColumnTarget.test.ts` for the canary.
+ *
+ * Two existing call sites depend on this:
+ *   - `ReelSet._applyPinsToGrid`
+ *   - `SpinController._coordinateBigSymbols`
+ *
+ * If you add a third clone site, use this helper there too.
  */
 export function cloneTargetGrid(grid: string[][], bufferAbove: number): string[][] {
   return grid.map((col) => cloneColumn(col, bufferAbove));
 }
 
-/** Single-column form of {@link cloneTargetGrid}. */
+/** Single-column form of {@link cloneTargetGrid}. Same contributor rules. */
 export function cloneColumn(col: string[], bufferAbove: number): string[] {
   const out = [...col];
   for (let i = 1; i <= bufferAbove; i++) {
@@ -83,10 +99,28 @@ export function columnTargetToArray(target: ColumnTarget): string[] {
  * Normalize either input form into the legacy `string[][]` shape the
  * pipeline runs on. Cheap when the input is already `string[][]` — returns
  * it unchanged. Otherwise materializes one `string[]` per column.
+ *
+ * Throws with a readable message if the columns are a mix of the two
+ * shapes (e.g. `[ ['a','b'], { visible: ['c','d'] } ]`). TypeScript blocks
+ * this at compile time, but a JS caller bypassing types would otherwise
+ * crash later with a confusing `[...col]`-not-iterable error inside the
+ * pipeline; we fail loudly at the entry point instead.
  */
 export function toLegacyTargetGrid(
   grid: string[][] | ColumnTarget[],
 ): string[][] {
-  if (!isColumnTargetGrid(grid)) return grid;
-  return grid.map(columnTargetToArray);
+  if (grid.length === 0) return grid as string[][];
+  const firstIsArray = Array.isArray(grid[0]);
+  for (let i = 1; i < grid.length; i++) {
+    if (Array.isArray(grid[i]) !== firstIsArray) {
+      const a = firstIsArray ? 'string[]' : 'ColumnTarget';
+      const b = Array.isArray(grid[i]) ? 'string[]' : 'ColumnTarget';
+      throw new Error(
+        `setResult/initialFrame: mixed input shapes — column 0 is ${a} ` +
+        `but column ${i} is ${b}. Use one shape consistently for all reels.`,
+      );
+    }
+  }
+  if (firstIsArray) return grid as string[][];
+  return (grid as ColumnTarget[]).map(columnTargetToArray);
 }

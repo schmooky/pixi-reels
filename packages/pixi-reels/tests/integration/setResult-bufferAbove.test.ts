@@ -5,6 +5,17 @@
  * this file drives the full public pipeline so the spread clones in
  * `ReelSet._applyPinsToGrid`, `SpinController._coordinateBigSymbols`, and
  * `Reel.placeSymbols` are actually exercised.
+ *
+ * Coverage map:
+ *   - Skip-path (Reel.placeSymbols consumes the result grid directly) — these
+ *     tests use `spinAndLand`, which lands via `skip()`.
+ *   - Non-skip wrap-path (FrameBuilder.build → cached frame → strip wrap) —
+ *     covered transitively: ColumnTarget unit tests prove `decorated[i]`
+ *     preserves negative-index slots; FrameBuilder unit tests prove
+ *     `FrameBuilder.build` reads them; the wrap mechanism is unchanged by
+ *     this PR. End-to-end verification of the wrap path happens in the site
+ *     preview as a smoke test on the peek-from-above / anticipation-teaser
+ *     recipes — vitest can't advance GSAP tweens (see stop-phase.test.ts).
  */
 import { describe, it, expect } from 'vitest';
 import { createTestReelSet } from '../../src/testing/index.js';
@@ -187,3 +198,4 @@ describe('setResult — explicit ColumnTarget[] form', () => {
     }
   });
 });
+

@@ -5,6 +5,7 @@ import {
   columnTargetToArray,
   isColumnTargetGrid,
   toLegacyTargetGrid,
+  type ColumnTarget,
 } from '../../src/frame/ColumnTarget.js';
 
 describe('ColumnTarget helpers', () => {
@@ -112,6 +113,29 @@ describe('ColumnTarget helpers', () => {
       expect(out[0][2]).toBe('z');
       expect((out[0] as Record<number, string>)[-1]).toBe('above');
       expect((out[1] as Record<number, string>)[-1]).toBeUndefined();
+    });
+
+    it('throws a readable error when columns mix string[] and ColumnTarget', () => {
+      // TypeScript blocks this at compile time; the guard catches JS callers
+      // bypassing types so they fail loudly at the API entry instead of with
+      // a confusing `[...col]` crash deep inside the pipeline.
+      const mixed = [
+        ['a', 'b', 'c'],
+        { visible: ['d', 'e', 'f'] },
+      ] as unknown as string[][];
+      expect(() => toLegacyTargetGrid(mixed)).toThrowError(/mixed input shapes/);
+    });
+
+    it('throws when the first column is ColumnTarget and a later column is string[]', () => {
+      const mixed = [
+        { visible: ['a', 'b', 'c'] },
+        ['d', 'e', 'f'],
+      ] as unknown as ColumnTarget[];
+      expect(() => toLegacyTargetGrid(mixed)).toThrowError(/mixed input shapes/);
+    });
+
+    it('handles empty array without throwing', () => {
+      expect(toLegacyTargetGrid([])).toEqual([]);
     });
   });
 });

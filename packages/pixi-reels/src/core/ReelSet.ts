@@ -975,8 +975,10 @@ export class ReelSet extends Container implements Disposable {
    * not mutate the input. When there are no pins, returns the input as-is
    * (fast path; identical behaviour to pre-pin code).
    *
-   * Uses `cloneTargetGrid` rather than plain spread so buffer-above targets
-   * stored as negative-index string properties survive the clone.
+   * IMPORTANT: clones via `cloneTargetGrid`, not `symbols.map(col => [...col])`.
+   * Spread drops the negative-index string properties that carry buffer-above
+   * targets (`col[-1] = 'COIN'`). If you refactor this method, keep the
+   * helper. See `cloneTargetGrid`'s TSDoc for the full contract.
    */
   private _applyPinsToGrid(symbols: string[][]): string[][] {
     if (this._pins.size === 0) return symbols;

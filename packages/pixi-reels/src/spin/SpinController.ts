@@ -584,8 +584,11 @@ export class SpinController implements Disposable {
    * Pure: returns a new grid; does not mutate the input. Zero-overhead for
    * slots with no big symbols (the loop runs but never matches metadata).
    *
-   * Uses `cloneTargetGrid` for the clone so buffer-above target slots stored
-   * as negative-index string properties survive into `decorated[col]`.
+   * IMPORTANT: clones via `cloneTargetGrid`, not `grid.map(col => [...col])`.
+   * Plain spread drops the negative-index string properties that carry
+   * buffer-above targets — every downstream consumer (FrameBuilder,
+   * placeSymbols) expects them to survive into `decorated[col]`. See the
+   * helper's TSDoc for the full contract.
    */
   private _coordinateBigSymbols(
     grid: string[][],
