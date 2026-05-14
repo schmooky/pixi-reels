@@ -17,6 +17,8 @@ import type { CellPin, CellPinOptions, PinExpireReason, MovePinOptions, CellCoor
 import { pinKey } from '../pins/CellPin.js';
 import { getGsap } from '../utils/gsapRef.js';
 import type { FrameMiddleware } from '../frame/FrameBuilder.js';
+import type { ColumnTarget } from '../frame/ColumnTarget.js';
+import { cloneTargetGrid, toLegacyTargetGrid } from '../frame/ColumnTarget.js';
 
 export interface ReelSetParams {
   config: ReelSetInternalConfig;
@@ -282,12 +284,23 @@ export class ReelSet extends Container implements Disposable {
   /**
    * Set the target result symbols. Triggers the stop sequence.
    *
+   * Two input shapes are accepted:
+   *
+   *   1. **Legacy `string[][]`** — one column per reel, row-indexed. Set
+   *      `frame[col][-1]` (or `[-2]`, etc.) to target a buffer-above slot,
+   *      `frame[col][visibleRows]` for buffer-below.
+   *   2. **Explicit `ColumnTarget[]`** — `{ visible, bufferAbove?, bufferBelow? }`
+   *      per column. Preferred for code that crosses worker/network boundaries,
+   *      structuredClones, or JSON-serializes (the legacy form's negative-index
+   *      slots don't survive standard cloning; the explicit form does).
+   *
    * If any pins are active (`reelSet.pin(...)`), their symbols are overlaid
    * onto the result before it reaches the stop sequencer — so pinned cells
    * always land on the pin's `symbolId` regardless of what the server sent.
    */
-  setResult(symbols: string[][]): void {
-    const withPins = this._applyPinsToGrid(symbols);
+  setResult(symbols: string[][] | ColumnTarget[]): void {
+    const grid = toLegacyTargetGrid(symbols);
+    const withPins = this._applyPinsToGrid(grid);
     this._resultSetForCurrentSpin = true;
     this._spinController.setResult(withPins);
   }
@@ -961,11 +974,14 @@ export class ReelSet extends Container implements Disposable {
    * Return a deep copy of `symbols` with active pins overlaid. Pure — does
    * not mutate the input. When there are no pins, returns the input as-is
    * (fast path; identical behaviour to pre-pin code).
+   *
+   * Uses `cloneTargetGrid` rather than plain spread so buffer-above targets
+   * stored as negative-index string properties survive the clone.
    */
   private _applyPinsToGrid(symbols: string[][]): string[][] {
     if (this._pins.size === 0) return symbols;
 
-    const cloned = symbols.map((col) => [...col]);
+    const cloned = cloneTargetGrid(symbols, this._reels[0]?.bufferAbove ?? 0);
     for (const pin of this._pins.values()) {
       if (pin.col < cloned.length && pin.row < cloned[pin.col].length) {
         cloned[pin.col][pin.row] = pin.symbolId;

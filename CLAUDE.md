@@ -347,6 +347,25 @@ Tests are in `packages/pixi-reels/tests/` using Vitest. Run with `pnpm test`.
 3. `_positionSpine()` sets `spine.x = cellWidth/2, spine.y = cellHeight/2`
 4. Every new spine created in `onActivate` gets positioned via stored `_cellWidth/_cellHeight`
 
+### Place a buffer-above or buffer-below target symbol
+Two forms, both supported by `initialFrame` and `setResult`:
+
+```ts
+// Legacy negative-index form — ergonomic one-liner.
+const grid: string[][] = [['A','B','C'], ['A','B','C']];
+grid[0][-1] = 'COIN';      // closest above visible on reel 0
+grid[1][3]  = 'SCATTER';   // closest below visible on reel 1 (visibleRows=3)
+reelSet.setResult(grid);
+
+// Explicit ColumnTarget — survives structuredClone / JSON / postMessage.
+reelSet.setResult([
+  { visible: ['A','B','C'], bufferAbove: ['COIN'] },
+  { visible: ['A','B','C'], bufferBelow: ['SCATTER'] },
+]);
+```
+
+`bufferAbove[0]` is the slot closest to the visible top row; later indices go further above. Same for `bufferBelow[0]` and the visible bottom row.
+
 ## Known Gotchas
 
 - **GSAP freezes in hidden tabs** — always sync GSAP ticker with PixiJS ticker in examples
