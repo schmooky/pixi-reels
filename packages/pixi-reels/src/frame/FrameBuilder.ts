@@ -154,9 +154,9 @@ class TargetPlacementMiddleware implements FrameMiddleware {
 
   process(context: FrameContext, next: () => void): void {
     if (context.targetSymbols) {
-      for (let row = 0; row < context.targetSymbols.length; row++) {
+      for (let row = -context.bufferAbove; row < context.targetSymbols.length; row++) {
         const idx = context.bufferAbove + row;
-        if (idx < context.symbols.length) {
+        if (context.targetSymbols[row] && idx < context.symbols.length) {
           context.symbols[idx] = context.targetSymbols[row];
         }
       }
