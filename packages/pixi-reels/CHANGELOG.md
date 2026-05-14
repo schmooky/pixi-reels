@@ -1,5 +1,21 @@
 # pixi-reels
 
+## 0.5.0
+
+### Minor Changes
+
+- [#111](https://github.com/schmooky/pixi-reels/pull/111) [`dc2a526`](https://github.com/schmooky/pixi-reels/commit/dc2a526cf13c8670d10680f9104b93675332468f) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Add: cascade + multiways combination. `ReelSetBuilder.multiways(...)` can now be paired with `.cascade(...)` or `spinningMode(new CascadeMode())` — the build-time throw added in ADR 012 is lifted. `AdjustPhase` runs between `SpinPhase` and `DropStopPhase` so the new shape commits before the drop-in fills it. Shape changes apply per-spin only; mid-cascade-chain reshape is unsupported (see ADR 015). Closes [#74](https://github.com/schmooky/pixi-reels/issues/74).
+
+- [#116](https://github.com/schmooky/pixi-reels/pull/116) [`7afe3a9`](https://github.com/schmooky/pixi-reels/commit/7afe3a9a6edd70aaab4c985fb0167050e93fbd49) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Add: `ColumnTarget` — explicit `{ visible, bufferAbove?, bufferBelow? }` input shape. Accepted by both `ReelSet.setResult` and `ReelSetBuilder.initialFrame` alongside the legacy `string[][]` form. Survives `structuredClone`, JSON, and `postMessage` (the legacy negative-index form does not).
+
+  Fix: `setResult` (legacy `string[][]` form) now honours `frame[col][-1]…[-bufferAbove]` end-to-end. Previously the negative-index slots were dropped inside `_applyPinsToGrid` (when pins were active) and `_coordinateBigSymbols` (always) by plain spread clones, so the convention only worked through `initialFrame`. The clones now use a property-preserving helper.
+
+  Fix: `Reel.placeSymbols` (skip / turbo land path) now reads the negative-index slot for the buffer-above cell instead of always random-filling it. Buffer-below targeting via `symbolIds[visibleRows]` is unchanged.
+
+### Patch Changes
+
+- [#115](https://github.com/schmooky/pixi-reels/pull/115) [`1f30d8e`](https://github.com/schmooky/pixi-reels/commit/1f30d8e1b5d997872c85400122ee2613d35e0933) Thanks [@MaksimKiselev](https://github.com/MaksimKiselev)! - Fix: negative indices in `initialFrame` now correctly populate buffer-above slots. Setting `frame[col][-1]` (or `[-2]` for deeper buffers) places the symbol in the corresponding buffer-above cell instead of being silently ignored.
+
 ## 0.4.0
 
 ### Minor Changes
