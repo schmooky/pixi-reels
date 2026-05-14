@@ -2,6 +2,7 @@ import type { Ticker } from 'pixi.js';
 import { ReelSetBuilder } from '../core/ReelSetBuilder.js';
 import type { ReelSet } from '../core/ReelSet.js';
 import type { SpinResult } from '../events/ReelEvents.js';
+import type { ColumnTarget } from '../frame/ColumnTarget.js';
 import { debugSnapshot, debugGrid } from '../debug/debug.js';
 import { FakeTicker } from './FakeTicker.js';
 import { HeadlessSymbol } from './HeadlessSymbol.js';
@@ -27,6 +28,10 @@ export interface TestReelSetOptions {
   symbolData?: Record<string, Partial<import('../config/types.js').SymbolData>>;
   symbolSize?: { width: number; height: number };
   symbolGap?: { x: number; y: number };
+  /** Number of symbols above + below the visible area. Defaults to the builder default. */
+  bufferSymbols?: number;
+  /** Initial symbol grid (any form `ReelSetBuilder.initialFrame` accepts). */
+  initialFrame?: string[][] | ColumnTarget[];
 }
 
 export interface TestReelSetHandle {
@@ -97,6 +102,14 @@ export function createTestReelSet(opts: TestReelSetOptions = {}): TestReelSetHan
 
   if (opts.symbolData) {
     builder.symbolData(opts.symbolData);
+  }
+
+  if (opts.bufferSymbols !== undefined) {
+    builder.bufferSymbols(opts.bufferSymbols);
+  }
+
+  if (opts.initialFrame) {
+    builder.initialFrame(opts.initialFrame as string[][]);
   }
 
   const reelSet = builder.build();

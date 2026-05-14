@@ -19,6 +19,7 @@ import type { Disposable } from '../utils/Disposable.js';
 import { TickerRef } from '../utils/TickerRef.js';
 import { OCCUPIED_SENTINEL } from '../core/Reel.js';
 import type { CellPin } from '../pins/CellPin.js';
+import { cloneTargetGrid } from '../frame/ColumnTarget.js';
 
 /**
  * MultiWays/big-symbol coordination hook injected by `ReelSet` into
@@ -582,12 +583,18 @@ export class SpinController implements Disposable {
    *
    * Pure: returns a new grid; does not mutate the input. Zero-overhead for
    * slots with no big symbols (the loop runs but never matches metadata).
+   *
+   * IMPORTANT: clones via `cloneTargetGrid`, not `grid.map(col => [...col])`.
+   * Plain spread drops the negative-index string properties that carry
+   * buffer-above targets — every downstream consumer (FrameBuilder,
+   * placeSymbols) expects them to survive into `decorated[col]`. See the
+   * helper's TSDoc for the full contract.
    */
   private _coordinateBigSymbols(
     grid: string[][],
     visibleRowsForReel: (i: number) => number,
   ): string[][] {
-    const out = grid.map((col) => [...col]);
+    const out = cloneTargetGrid(grid, this._reels[0]?.bufferAbove ?? 0);
     const symData = this._hooks.symbolsData;
 
     for (let col = 0; col < out.length; col++) {

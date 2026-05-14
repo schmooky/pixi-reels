@@ -464,17 +464,30 @@ export class Reel implements Disposable {
     this._replaceSymbol(arrayIndex, symbolId);
   }
 
-  /** Place symbols immediately at target positions (for skip/turbo). */
+  /**
+   * Place symbols immediately at target positions (for skip/turbo).
+   *
+   * `symbolIds[0..n-1]` is the visible area. `symbolIds[n..]` (if present)
+   * targets buffer-below slots. Buffer-above slots are addressed via
+   * negative-index string properties: `symbolIds[-1]` is the slot closest to
+   * the visible top row, `symbolIds[-bufferAbove]` the furthest above.
+   * Unset slots are filled with random symbols, matching the previous
+   * behaviour when only visible-area entries were provided.
+   */
   placeSymbols(symbolIds: string[]): void {
     const totalSlots = this.symbols.length;
+    const bufferAbove = this._bufferAbove;
     for (let i = 0; i < totalSlots; i++) {
-      const targetId =
-        i < this._bufferAbove
-          ? this._randomProvider.next(true)
-          : i < this._bufferAbove + symbolIds.length
-            ? symbolIds[i - this._bufferAbove]
-            : this._randomProvider.next(true);
-
+      let targetId: string | undefined;
+      if (i < bufferAbove) {
+        // Buffer above: look up via negative-index string property.
+        // i=0 → -bufferAbove (furthest); i=bufferAbove-1 → -1 (closest).
+        const bufRow = i - bufferAbove;
+        targetId = (symbolIds as Record<number, string | undefined>)[bufRow];
+      } else {
+        targetId = symbolIds[i - bufferAbove];
+      }
+      if (targetId === undefined) targetId = this._randomProvider.next(true);
       this._replaceSymbol(i, targetId);
     }
     this.motion.snapToGrid();
