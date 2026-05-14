@@ -50,8 +50,15 @@ jobs:
 
   changeset-gate:
     # Fails the PR when library source changed but no changeset file was added.
-    # Escape hatch: apply the `skip-changeset` label (docs/CI-only PRs, reverts).
-    if: github.event_name == 'pull_request' && !contains(github.event.pull_request.labels.*.name, 'skip-changeset')
+    # Escape hatches:
+    #   - `skip-changeset` label (docs/CI-only PRs, reverts, dependabot dev-dep bumps).
+    #   - `changeset-release/main` head ref (the auto-generated "Version Packages" PR
+    #     from changesets/action only DELETES changesets to consume them, so it
+    #     would otherwise be perpetually red).
+    if: >-
+      github.event_name == 'pull_request'
+      && !contains(github.event.pull_request.labels.*.name, 'skip-changeset')
+      && github.head_ref != 'changeset-release/main'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
