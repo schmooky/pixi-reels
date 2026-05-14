@@ -6,7 +6,7 @@ Site: https://pixi-reels.schmooky.dev
 Repo: https://github.com/schmooky/pixi-reels
 Package: https://www.npmjs.com/package/pixi-reels
 
-Generated: 2026-05-14T18:18:35.467Z
+Generated: 2026-05-14T18:46:24.894Z
 
 ## Quick start
 
@@ -353,8 +353,8 @@ Pre-fill the buffer-above slot so a teaser symbol sits just out of frame — vis
 Tags: buffer, peek, tension, reveal
 APIs: ReelSetBuilder.initialFrame, ReelSet.setResult, ColumnTarget
 Steps:
-  - Pass an initialFrame and set frame[col][-1] to seed the buffer-above slot at build time
-  - On each spin, set grid[col][-1] before reelSet.setResult(grid) so the teaser carries forward
+  - Seed initialFrame with a ColumnTarget so the buffer-above slot is set at build time
+  - On each spin, pass the same shape to setResult so the teaser carries forward
   - When the next spin starts, that symbol is the first to scroll into the visible area
 
 ### Positional multiplier cells
@@ -655,18 +655,16 @@ return {
   reelSet,
   onSpin: async () => {
     // Land result — reels 3 and 4 will anticipate.
+    // Explicit ColumnTarget form: bufferAbove on reels 3 and 4 holds the BIG
+    // coin, so when those reels decelerate for the anticipation phase it is
+    // visible at the top edge, "approaching" the visible area.
     const result = [
-      [rv(), rv(), rv()],
-      [rv(), rv(), rv()],
-      [rv(), rv(), rv()],
-      [rv(), rv(), rv()],
-      [rv(), rv(), rv()],
+      { visible: [rv(), rv(), rv()] },
+      { visible: [rv(), rv(), rv()] },
+      { visible: [rv(), rv(), rv()] },
+      { visible: [rv(), rv(), rv()], bufferAbove: [COIN] },
+      { visible: [rv(), rv(), rv()], bufferAbove: [COIN] },
     ];
-    // Prefill BIG on the buffer-above of the anticipated reels — when they
-    // slow down for the anticipation phase, the coin is visible at the top
-    // edge, "approaching" the visible area.
-    result[3][-1] = COIN;
-    result[4][-1] = COIN;
 
     const p = reelSet.spin();
     await new Promise((r) => setTimeout(r, 220));
@@ -2903,15 +2901,14 @@ function rv() {
 }
 
 // ── initialFrame seeds the FIRST spin's buffer-above ────────────────────
-// Set frame[col][-1] = TEASE on every reel — this is exactly the convention
-// `setResult` honours (after this release): negative indices target buffer-
-// above slots, indexed from -1 (closest to visible) to -bufferAbove (furthest).
+// Explicit ColumnTarget form — { visible, bufferAbove }. Same shape that
+// setResult accepts; both APIs treat the negative-index legacy form and this
+// one interchangeably.
 const initialFrame = [
-  ['7', '8', '9'],
-  ['7', '8', '9'],
-  ['7', '8', '9'],
+  { visible: ['7', '8', '9'], bufferAbove: [TEASE] },
+  { visible: ['7', '8', '9'], bufferAbove: [TEASE] },
+  { visible: ['7', '8', '9'], bufferAbove: [TEASE] },
 ];
-for (const col of initialFrame) col[-1] = TEASE;
 
 const reelSet = new ReelSetBuilder()
   .reels(3)
@@ -2933,14 +2930,13 @@ return {
   reelSet,
   onSpin: async () => {
     // Land on a random grid AND re-seed the buffer-above with TEASE so the
-    // next spin shows the peek again. The negative-index slot survives the
-    // whole pipeline (pins + big-symbol coordinator + skip path) end-to-end.
+    // next spin shows the peek again. Same explicit ColumnTarget shape used
+    // for the initial frame above.
     const result = [
-      [rv(), rv(), rv()],
-      [rv(), rv(), rv()],
-      [rv(), rv(), rv()],
+      { visible: [rv(), rv(), rv()], bufferAbove: [TEASE] },
+      { visible: [rv(), rv(), rv()], bufferAbove: [TEASE] },
+      { visible: [rv(), rv(), rv()], bufferAbove: [TEASE] },
     ];
-    for (const col of result) col[-1] = TEASE;
 
     const p = reelSet.spin();
     await new Promise((r) => setTimeout(r, 250));

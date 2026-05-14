@@ -30,10 +30,13 @@ Pairing it with a buffer-above prefill (`result[col][-1] = 'COIN'`) turns the wa
 const promise = reelSet.spin();
 await waitForServer();
 
-const result = await server.spin();
+const visible = await server.spin();
 // Reels 3 and 4 are the tension reels — the player is waiting on them.
-result[3][-1] = 'BONUS';
-result[4][-1] = 'BONUS';
+// bufferAbove on those reels holds the high-value symbol the player will
+// see slide into view as the reel decelerates.
+const result: ColumnTarget[] = visible.map((col, i) => (
+  i === 3 || i === 4 ? { visible: col, bufferAbove: ['BONUS'] } : { visible: col }
+));
 
 reelSet.setAnticipation([3, 4]);
 reelSet.setResult(result);
@@ -55,19 +58,18 @@ await promise;
 
 The buffer-above prefill is read by the same `FrameBuilder` pipeline that landed the result. Pins, big symbols, and held reels all coexist with it.
 
-## Explicit form
+## Legacy negative-index form
 
-For game code that crosses worker boundaries, use the `ColumnTarget[]` shape:
+The same effect with `string[][]`:
 
 ```ts
-reelSet.setResult([
-  { visible: result[0] },
-  { visible: result[1] },
-  { visible: result[2] },
-  { visible: result[3], bufferAbove: ['BONUS'] },
-  { visible: result[4], bufferAbove: ['BONUS'] },
-]);
+const result: string[][] = await server.spin();
+result[3][-1] = 'BONUS';
+result[4][-1] = 'BONUS';
+reelSet.setResult(result);
 ```
+
+Use this only when the grid doesn't cross a serializer or worker boundary — `arr[-1]` doesn't survive `structuredClone`, `JSON.stringify`, or `postMessage`. See [Buffer indexing](/guides/buffer-indexing/) for the trade-off in detail.
 
 ## Where to go next
 

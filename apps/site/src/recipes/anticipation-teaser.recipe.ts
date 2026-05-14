@@ -37,18 +37,16 @@ return {
   reelSet,
   onSpin: async () => {
     // Land result — reels 3 and 4 will anticipate.
+    // Explicit ColumnTarget form: bufferAbove on reels 3 and 4 holds the BIG
+    // coin, so when those reels decelerate for the anticipation phase it is
+    // visible at the top edge, "approaching" the visible area.
     const result = [
-      [rv(), rv(), rv()],
-      [rv(), rv(), rv()],
-      [rv(), rv(), rv()],
-      [rv(), rv(), rv()],
-      [rv(), rv(), rv()],
+      { visible: [rv(), rv(), rv()] },
+      { visible: [rv(), rv(), rv()] },
+      { visible: [rv(), rv(), rv()] },
+      { visible: [rv(), rv(), rv()], bufferAbove: [COIN] },
+      { visible: [rv(), rv(), rv()], bufferAbove: [COIN] },
     ];
-    // Prefill BIG on the buffer-above of the anticipated reels — when they
-    // slow down for the anticipation phase, the coin is visible at the top
-    // edge, "approaching" the visible area.
-    result[3][-1] = COIN;
-    result[4][-1] = COIN;
 
     const p = reelSet.spin();
     await new Promise((r) => setTimeout(r, 220));

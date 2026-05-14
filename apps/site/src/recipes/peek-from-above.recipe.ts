@@ -20,15 +20,14 @@ function rv() {
 }
 
 // ── initialFrame seeds the FIRST spin's buffer-above ────────────────────
-// Set frame[col][-1] = TEASE on every reel — this is exactly the convention
-// `setResult` honours (after this release): negative indices target buffer-
-// above slots, indexed from -1 (closest to visible) to -bufferAbove (furthest).
+// Explicit ColumnTarget form — { visible, bufferAbove }. Same shape that
+// setResult accepts; both APIs treat the negative-index legacy form and this
+// one interchangeably.
 const initialFrame = [
-  ['7', '8', '9'],
-  ['7', '8', '9'],
-  ['7', '8', '9'],
+  { visible: ['7', '8', '9'], bufferAbove: [TEASE] },
+  { visible: ['7', '8', '9'], bufferAbove: [TEASE] },
+  { visible: ['7', '8', '9'], bufferAbove: [TEASE] },
 ];
-for (const col of initialFrame) col[-1] = TEASE;
 
 const reelSet = new ReelSetBuilder()
   .reels(3)
@@ -50,14 +49,13 @@ return {
   reelSet,
   onSpin: async () => {
     // Land on a random grid AND re-seed the buffer-above with TEASE so the
-    // next spin shows the peek again. The negative-index slot survives the
-    // whole pipeline (pins + big-symbol coordinator + skip path) end-to-end.
+    // next spin shows the peek again. Same explicit ColumnTarget shape used
+    // for the initial frame above.
     const result = [
-      [rv(), rv(), rv()],
-      [rv(), rv(), rv()],
-      [rv(), rv(), rv()],
+      { visible: [rv(), rv(), rv()], bufferAbove: [TEASE] },
+      { visible: [rv(), rv(), rv()], bufferAbove: [TEASE] },
+      { visible: [rv(), rv(), rv()], bufferAbove: [TEASE] },
     ];
-    for (const col of result) col[-1] = TEASE;
 
     const p = reelSet.spin();
     await new Promise((r) => setTimeout(r, 250));

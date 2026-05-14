@@ -2,7 +2,7 @@
 'pixi-reels': minor
 ---
 
-Add: `ColumnTarget` — explicit `{ visible, bufferAbove?, bufferBelow? }` input shape for `setResult`. Survives `structuredClone`, JSON, and `postMessage` (the legacy negative-index form does not). Either shape is accepted.
+Add: `ColumnTarget` — explicit `{ visible, bufferAbove?, bufferBelow? }` input shape. Accepted by both `ReelSet.setResult` and `ReelSetBuilder.initialFrame` alongside the legacy `string[][]` form. Survives `structuredClone`, JSON, and `postMessage` (the legacy negative-index form does not).
 
 Fix: `setResult` (legacy `string[][]` form) now honours `frame[col][-1]…[-bufferAbove]` end-to-end. Previously the negative-index slots were dropped inside `_applyPinsToGrid` (when pins were active) and `_coordinateBigSymbols` (always) by plain spread clones, so the convention only worked through `initialFrame`. The clones now use a property-preserving helper.
 

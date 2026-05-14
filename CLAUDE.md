@@ -348,23 +348,20 @@ Tests are in `packages/pixi-reels/tests/` using Vitest. Run with `pnpm test`.
 4. Every new spine created in `onActivate` gets positioned via stored `_cellWidth/_cellHeight`
 
 ### Place a buffer-above or buffer-below target symbol
-Two forms, both supported by `initialFrame` and `setResult`:
+Both `initialFrame` (build-time seed) and `setResult` (per-spin land) accept the explicit `ColumnTarget` form — prefer this one. `bufferAbove[0]` is the slot closest to the visible top row; later indices go further above. Same for `bufferBelow[0]` and the visible bottom row.
 
 ```ts
-// Legacy negative-index form — ergonomic one-liner.
-const grid: string[][] = [['A','B','C'], ['A','B','C']];
-grid[0][-1] = 'COIN';      // closest above visible on reel 0
-grid[1][3]  = 'SCATTER';   // closest below visible on reel 1 (visibleRows=3)
-reelSet.setResult(grid);
+import type { ColumnTarget } from 'pixi-reels';
 
-// Explicit ColumnTarget — survives structuredClone / JSON / postMessage.
-reelSet.setResult([
+const grid: ColumnTarget[] = [
   { visible: ['A','B','C'], bufferAbove: ['COIN'] },
   { visible: ['A','B','C'], bufferBelow: ['SCATTER'] },
-]);
+];
+reelSet.setResult(grid);
+builder.initialFrame(grid); // same shape works at build time
 ```
 
-`bufferAbove[0]` is the slot closest to the visible top row; later indices go further above. Same for `bufferBelow[0]` and the visible bottom row.
+The legacy `string[][]` form with negative-index slots (`grid[0][-1] = 'COIN'`) is also accepted and works end-to-end, but does NOT survive `structuredClone`/JSON/postMessage — reach for it only for in-process one-liners.
 
 ## Known Gotchas
 

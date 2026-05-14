@@ -45,6 +45,8 @@ grid[0][-2] = 'WILD';     // furthest above on reel 0
 grid[1][3]  = 'SCATTER';  // closest below visible on reel 1
 
 reelSet.setResult(grid);
+// or — same shape, build-time seed:
+builder.initialFrame(grid);
 ```
 
 This works because `arr[-1] = 'X'` creates a string property `"-1"` on the array object. The engine special-cases negative-index access in the frame-builder pipeline so the convention behaves exactly like the symmetric `arr[visibleRows]` form for buffer-below.
@@ -68,9 +70,11 @@ const grid: ColumnTarget[] = [
 ];
 
 reelSet.setResult(grid);
+// or — same shape, build-time seed:
+builder.initialFrame(grid);
 ```
 
-Survives any clone, serializes cleanly to JSON, and TypeScript narrows on the field names rather than the negative-key access pattern. `setResult` accepts both forms interchangeably.
+Survives any clone, serializes cleanly to JSON, and TypeScript narrows on the field names rather than the negative-key access pattern. Both `setResult` and `initialFrame` accept either form interchangeably.
 
 ## Which slots are honoured where
 
