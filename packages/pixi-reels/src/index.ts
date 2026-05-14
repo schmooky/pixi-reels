@@ -87,6 +87,7 @@ export { FrameBuilder } from './frame/FrameBuilder.js';
 export type { FrameContext, FrameMiddleware } from './frame/FrameBuilder.js';
 export { RandomSymbolProvider } from './frame/RandomSymbolProvider.js';
 export { OffsetCalculator } from './frame/OffsetCalculator.js';
+export type { ColumnTarget } from './frame/ColumnTarget.js';
 
 // Pool
 export { ObjectPool } from './pool/ObjectPool.js';

@@ -49,17 +49,20 @@ describe('builder validation', () => {
     ).toThrow(/cannot combine multiways\(\) with visibleRowsPerReel\(\)/);
   });
 
-  it('rejects multiways() + cascade mode', () => {
-    expect(() =>
-      new ReelSetBuilder()
-        .reels(3)
-        .multiways({ minRows: 2, maxRows: 7, reelPixelHeight: 600 })
-        .symbolSize(100, 100)
-        .spinningMode(new CascadeMode())
-        .ticker(new FakeTicker() as unknown as Ticker)
-        .symbols((r) => r.register('a', HeadlessSymbol, {}))
-        .build(),
-    ).toThrow(/multiways.* not supported with cascade/);
+  it('accepts multiways() + cascade mode (issue #74)', () => {
+    const reelSet = new ReelSetBuilder()
+      .reels(3)
+      .multiways({ minRows: 2, maxRows: 7, reelPixelHeight: 600 })
+      .symbolSize(100, 100)
+      .spinningMode(new CascadeMode())
+      .ticker(new FakeTicker() as unknown as Ticker)
+      .symbols((r) => r.register('a', HeadlessSymbol, {}))
+      .build();
+    try {
+      expect(reelSet.isMultiWaysSlot).toBe(true);
+    } finally {
+      reelSet.destroy();
+    }
   });
 
   it('rejects multiways with minRows > maxRows', () => {
