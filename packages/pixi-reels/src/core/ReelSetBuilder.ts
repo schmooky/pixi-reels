@@ -25,6 +25,8 @@ import { PhaseFactory } from '../spin/phases/PhaseFactory.js';
 import type { SpinningMode } from '../spin/modes/SpinningMode.js';
 import { StandardMode } from '../spin/modes/StandardMode.js';
 import type { FrameMiddleware } from '../frame/FrameBuilder.js';
+import type { ColumnTarget } from '../frame/ColumnTarget.js';
+import { toLegacyTargetGrid } from '../frame/ColumnTarget.js';
 import type { CascadeDropConfig } from '../cascade/DropRecipes.js';
 import { DropStartPhase } from '../spin/phases/DropStartPhase.js';
 import { DropStopPhase } from '../spin/phases/DropStopPhase.js';
@@ -409,9 +411,22 @@ export class ReelSetBuilder {
     return this;
   }
 
-  /** Set the initial symbol grid (visible symbols only). */
-  initialFrame(frame: string[][]): this {
-    this._initialFrame = frame;
+  /**
+   * Set the initial symbol grid the reels show before the first spin.
+   *
+   * Two input shapes are accepted, mirroring `ReelSet.setResult`:
+   *
+   *   1. **Legacy `string[][]`** — one column per reel, row-indexed. Use
+   *      `frame[col][-1]` (or `[-2]`, etc.) to target buffer-above slots,
+   *      `frame[col][visibleRows]` for buffer-below.
+   *   2. **Explicit `ColumnTarget[]`** — `{ visible, bufferAbove?, bufferBelow? }`
+   *      per column. Preferred when the seed comes from outside this process
+   *      (JSON config, worker message, server-rendered state) — the legacy
+   *      form's negative-index slots don't survive standard cloning, the
+   *      explicit form does.
+   */
+  initialFrame(frame: string[][] | ColumnTarget[]): this {
+    this._initialFrame = toLegacyTargetGrid(frame);
     return this;
   }
 
