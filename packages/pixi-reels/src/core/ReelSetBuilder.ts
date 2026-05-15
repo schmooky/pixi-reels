@@ -27,9 +27,11 @@ import { StandardMode } from '../spin/modes/StandardMode.js';
 import type { FrameMiddleware } from '../frame/FrameBuilder.js';
 import type { ColumnTarget } from '../frame/ColumnTarget.js';
 import { toLegacyTargetGrid } from '../frame/ColumnTarget.js';
-import type { CascadeDropConfig } from '../cascade/DropRecipes.js';
-import { DropStartPhase } from '../spin/phases/DropStartPhase.js';
-import { DropStopPhase } from '../spin/phases/DropStopPhase.js';
+import type { TumbleConfig, ResolvedTumbleConfig } from '../cascade/TumbleConfig.js';
+import { resolveTumbleConfig } from '../cascade/TumbleConfig.js';
+import { CascadeFallPhase } from '../spin/phases/CascadeFallPhase.js';
+import { CascadePlacePhase } from '../spin/phases/CascadePlacePhase.js';
+import { CascadeDropInPhase } from '../spin/phases/CascadeDropInPhase.js';
 import { AdjustPhase } from '../spin/phases/AdjustPhase.js';
 
 /**
@@ -80,7 +82,7 @@ export class ReelSetBuilder {
   private _middlewares: FrameMiddleware[] = [];
   private _initialFrame?: string[][];
   private _symbolDataOverrides: Record<string, Partial<SymbolData>> = {};
-  private _cascadeDropConfig?: CascadeDropConfig;
+  private _tumbleConfig?: ResolvedTumbleConfig;
   private _defaultSpinMode: 'standard' | 'cascade' = 'standard';
   /** Per-reel static row counts (jagged shapes like 3-5-5-5-3). */
   private _visibleRowsPerReel?: number[];
@@ -393,20 +395,38 @@ export class ReelSetBuilder {
   }
 
   /**
-   * Enable cascade drop-in mechanics.
+   * Enable tumble cascade mechanics. Replaces strip-spin + bounce-stop with
+   * a three-phase pipeline:
    *
-   * Replaces the strip-spin + bounce stop cycle with a stationary wait
-   * followed by symbols dropping in from above the viewport.
+   *   1. **`cascade:fall`** — on `spin()`, existing visible symbols fall
+   *      off the bottom of the viewport.
+   *   2. **`cascade:place`** — when `setResult()` arrives, new symbol
+   *      identities swap into the buffer at their final grid positions.
+   *   3. **`cascade:dropIn`** — new symbols animate from above (and
+   *      survivors slide down to fill holes) into the grid.
    *
-   * Usage is identical to standard spin — `spin()` / `setResult()` / `await`.
-   * Use `reelSet.setDropOrder()` to control which columns drop first.
+   * For a Moment B refill after wins are cleared, call
+   * `reelSet.refill({ winners, grid })` — that skips fall + wait and runs
+   * `place` + `dropIn` only, with gravity-correct geometry driven by the
+   * `winners` list (untouched symbols don't animate; survivors slide;
+   * new symbols come from above).
+   *
+   * Every phase boundary fires a `cascade:*` event on
+   * `reelSet.events` — per-symbol events (`cascade:fall:symbol` /
+   * `cascade:dropIn:symbol`) carry the symbol, view, and the timing the
+   * library is about to apply, so listeners can run parallel tweens on
+   * any other property in sync with the library's `view.y` motion.
+   *
+   * Override any individual phase via `.phases(f => f.register('cascade:fall', MyPhase))`.
    *
    * @example
-   * import { DropRecipes } from 'pixi-reels';
-   * builder.cascade(DropRecipes.cascadeDrop)
+   * builder.tumble({
+   *   fall:   { duration: 300, ease: 'sine.in',       rowStagger: 60 },
+   *   dropIn: { duration: 600, ease: 'back.out(1.5)', rowStagger: 60, distance: 'perHole' },
+   * });
    */
-  cascade(config: CascadeDropConfig): this {
-    this._cascadeDropConfig = config;
+  tumble(config?: TumbleConfig): this {
+    this._tumbleConfig = resolveTumbleConfig(config);
     this._defaultSpinMode = 'cascade';
     return this;
   }
@@ -537,14 +557,16 @@ export class ReelSetBuilder {
       frameBuilder.use(mw);
     }
 
-    // Wire cascade drop-in phases under cascade-specific keys so the
-    // standard 'start' / 'stop' phases stay available. The default spin
-    // mode flips to 'cascade' when .cascade() was called, preserving
-    // existing behaviour for callers that don't pass `spin({ mode })`.
-    if (this._cascadeDropConfig) {
-      const dropConfig = this._cascadeDropConfig;
-      this._phaseFactory.register('dropStart', DropStartPhase);
-      this._phaseFactory.registerFactory('dropStop', (reel, speed) => new DropStopPhase(reel, speed, dropConfig));
+    // Wire the three tumble cascade phases under their named keys. The
+    // defaults registered here can be overridden via `.phases(...)` after
+    // `.tumble(...)` was called. The default spin mode flips to 'cascade'
+    // when `.tumble()` ran.
+    if (this._tumbleConfig) {
+      const fall = this._tumbleConfig.fall;
+      const drop = this._tumbleConfig.dropIn;
+      this._phaseFactory.registerFactory('cascade:fall', (reel, speed) => new CascadeFallPhase(reel, speed, fall));
+      this._phaseFactory.register('cascade:place', CascadePlacePhase);
+      this._phaseFactory.registerFactory('cascade:dropIn', (reel, speed) => new CascadeDropInPhase(reel, speed, drop));
     }
 
     // MultiWays: wire AdjustPhase. Stay out of non-MultiWays chains entirely

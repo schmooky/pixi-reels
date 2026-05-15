@@ -1,9 +1,11 @@
+import type { Container } from 'pixi.js';
 import type {
   SpeedProfile,
   Win,
   SymbolPosition,
 } from '../config/types.js';
 import type { CellPin, PinExpireReason } from '../pins/CellPin.js';
+import type { ReelSymbol } from '../symbols/ReelSymbol.js';
 
 // Re-export SymbolPosition (lives in config/types) so existing imports
 // from this module keep working.
@@ -90,6 +92,63 @@ export interface ReelSetEvents extends Record<string, unknown[]> {
   'adjust:start': [info: { reelIndex: number; fromRows: number; toRows: number }];
   /** MultiWays: per-reel AdjustPhase exit. */
   'adjust:complete': [info: { reelIndex: number }];
+  /**
+   * Tumble cascade: this reel's fall-out animation just started. Fires once
+   * per reel per `spin()` (never on `refill()` — refill skips the fall).
+   */
+  'cascade:fall:start': [info: { reelIndex: number }];
+  /**
+   * Tumble cascade: about to animate one symbol's fall-out. Fires once per
+   * visible symbol per `cascade:fall:start`, right BEFORE the GSAP tween
+   * begins — listeners can start parallel tweens on any other view property
+   * (scale, alpha, badge text, spine track) and they'll run in sync with
+   * the library's `view.y` animation.
+   *
+   *   - `symbol` — the `ReelSymbol` about to fall (current id, current view)
+   *   - `view` — the symbol's PixiJS container (same as `symbol.view`)
+   *   - `duration`, `ease`, `distance` — what the library will animate
+   */
+  'cascade:fall:symbol': [info: {
+    symbol: ReelSymbol;
+    view: Container;
+    reelIndex: number;
+    rowIndex: number;
+    duration: number;
+    ease: string;
+    distance: number;
+  }];
+  /** Tumble cascade: this reel's fall-out animation finished. */
+  'cascade:fall:end': [info: { reelIndex: number }];
+  /**
+   * Tumble cascade: new symbol identities just landed in the reel buffer.
+   * Fires AFTER `placeSymbols` snaps everything to grid, BEFORE the drop-in
+   * tween starts — the canonical spot to apply per-symbol decorations
+   * (multiplier badges, sticky markers) so they fall WITH the symbol.
+   */
+  'cascade:place:done': [info: {
+    reelIndex: number;
+    placedSymbols: readonly ReelSymbol[];
+  }];
+  /** Tumble cascade: this reel's drop-in animation just started. */
+  'cascade:dropIn:start': [info: { reelIndex: number }];
+  /**
+   * Tumble cascade: about to animate one symbol's drop-in. Same contract as
+   * `cascade:fall:symbol` — fires right BEFORE the tween, listeners may
+   * start parallel tweens. `offsetRows` is the number of cells this symbol
+   * will traverse (1 for top-row refills, more for survivors sliding past
+   * larger holes).
+   */
+  'cascade:dropIn:symbol': [info: {
+    symbol: ReelSymbol;
+    view: Container;
+    reelIndex: number;
+    rowIndex: number;
+    duration: number;
+    ease: string;
+    offsetRows: number;
+  }];
+  /** Tumble cascade: this reel's drop-in animation finished. */
+  'cascade:dropIn:end': [info: { reelIndex: number }];
   /**
    * Fires whenever the engine creates a visual overlay symbol for a pin
    * during a spin's motion phase. The `overlay` argument is the pooled

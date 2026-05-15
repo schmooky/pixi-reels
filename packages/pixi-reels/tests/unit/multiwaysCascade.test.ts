@@ -1,7 +1,6 @@
 import type { Ticker } from 'pixi.js';
 import { describe, it, expect } from 'vitest';
 import { ReelSetBuilder } from '../../src/core/ReelSetBuilder.js';
-import { DropRecipes } from '../../src/cascade/DropRecipes.js';
 import { FakeTicker } from '../../src/testing/FakeTicker.js';
 import { HeadlessSymbol } from '../../src/testing/HeadlessSymbol.js';
 import { captureEvents } from '../../src/testing/testHarness.js';
@@ -30,7 +29,7 @@ function buildMultiwaysCascadeHarness(opts: {
       reelPixelHeight: opts.reelPixelHeight ?? 600,
     })
     .symbolSize(100, 100)
-    .cascade(DropRecipes.cascadeDrop)
+    .tumble()
     .ticker(ticker as unknown as Ticker)
     .symbols((r) => r.register('a', HeadlessSymbol, {}))
     .phases((factory) => {
@@ -58,16 +57,16 @@ describe('MultiWays + Cascade (issue #74)', () => {
     const h = buildMultiwaysCascadeHarness();
     try {
       expect(h.reelSet.isMultiWaysSlot).toBe(true);
-      // Default mode falls back to cascade because .cascade() was called.
+      // Default mode falls back to cascade because .tumble() was called.
       expect(h.reelSet.reels.map((r) => r.visibleRows)).toEqual([6, 6, 6]);
     } finally {
       h.destroy();
     }
   });
 
-  it('uses cascade start phase on a multiways cascade spin', async () => {
+  it('uses cascade fall phase on a multiways cascade spin', async () => {
     // Skip-path tests can only observe phases created before skip() invalidates
-    // the generation — that's `dropStart` for cascade (mirrors perSpinMode.test).
+    // the generation — that's `cascade:fall` for tumble (mirrors perSpinMode.test).
     // The "Adjust runs" guarantee is asserted via events in the next test.
     const h = buildMultiwaysCascadeHarness();
     try {
@@ -81,8 +80,8 @@ describe('MultiWays + Cascade (issue #74)', () => {
       h.reelSet.skip();
       await promise;
 
-      expect(h.created.some((n) => n.startsWith('dropStart:'))).toBe(true);
-      // Standard StartPhase must NOT be created — cascade mode replaced it.
+      expect(h.created.some((n) => n.startsWith('cascade:fall:'))).toBe(true);
+      // Standard StartPhase must NOT be created — tumble mode replaced it.
       expect(h.created.some((n) => n.startsWith('start:'))).toBe(false);
       expect(h.reelSet.reels.map((r) => r.visibleRows)).toEqual([3, 4, 2]);
     } finally {

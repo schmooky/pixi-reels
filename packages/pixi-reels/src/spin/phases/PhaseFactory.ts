@@ -40,7 +40,7 @@ export class PhaseFactory {
    * Use this when the phase needs extra args at construction time.
    *
    * @example
-   * factory.registerFactory('stop', (reel, speed) => new DropStopPhase(reel, speed, dropConfig));
+   * factory.registerFactory('cascade:dropIn', (reel, speed) => new CascadeDropInPhase(reel, speed, dropConfig));
    */
   registerFactory<T extends ReelPhase<any>>(
     name: string,

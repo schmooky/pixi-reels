@@ -19,6 +19,7 @@ import { getGsap } from '../utils/gsapRef.js';
 import type { FrameMiddleware } from '../frame/FrameBuilder.js';
 import type { ColumnTarget } from '../frame/ColumnTarget.js';
 import { cloneTargetGrid, toLegacyTargetGrid } from '../frame/ColumnTarget.js';
+import type { Cell } from '../cascade/tumbleAlgorithm.js';
 
 export interface ReelSetParams {
   config: ReelSetInternalConfig;
@@ -257,7 +258,7 @@ export class ReelSet extends Container implements Disposable {
    *
    * Pass `{ mode: 'standard' | 'cascade' }` to override the builder-time
    * default for a single spin (e.g. classic strip-spin on the first round,
-   * drop-in on the cascade waves). `'cascade'` requires `.cascade(...)`
+   * drop-in on the cascade waves). `'cascade'` requires `.tumble(...)`
    * on the builder.
    *
    * @example
@@ -303,6 +304,34 @@ export class ReelSet extends Container implements Disposable {
     const withPins = this._applyPinsToGrid(grid);
     this._resultSetForCurrentSpin = true;
     this._spinController.setResult(withPins);
+  }
+
+  /**
+   * Tumble cascade: cascade refill (Moment B). Call this AFTER you've faded
+   * out the winning symbols in your own code, with the list of winner cells
+   * and the next grid the server returned.
+   *
+   *   - Untouched survivors don't animate.
+   *   - Survivors above a hole slide down to fill it.
+   *   - New symbols enter from above into the top `winners.length` rows
+   *     of each reel.
+   *
+   * The new grid must follow the gravity convention: per reel, the top
+   * `winnerRows.length` rows are the new symbols, the remaining rows are
+   * survivors in their original top-to-bottom order. This matches what
+   * server-side gravity simulations emit.
+   *
+   * Resolves with the same `SpinResult` shape as `spin()`. Requires the
+   * builder to have been configured with `.tumble(...)`.
+   *
+   * @example
+   * const winners = detectWins(currentGrid);
+   * await fadeOutWinners(reelSet, winners);
+   * const next = await server.cascade(winners);
+   * await reelSet.refill({ winners, grid: next });
+   */
+  async refill(opts: { winners: Cell[]; grid: string[][] | ColumnTarget[] }): Promise<SpinResult> {
+    return this._spinController.refill(opts);
   }
 
   /** Set which reels should show anticipation before stopping. */

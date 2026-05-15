@@ -1,7 +1,6 @@
 import type { Ticker } from 'pixi.js';
 import { describe, expect, it } from 'vitest';
 import { ReelSetBuilder } from '../../src/core/ReelSetBuilder.js';
-import { DropRecipes } from '../../src/cascade/DropRecipes.js';
 import { FakeTicker } from '../../src/testing/FakeTicker.js';
 import { HeadlessSymbol } from '../../src/testing/HeadlessSymbol.js';
 
@@ -29,7 +28,7 @@ function buildHarness(opts: { withCascade: boolean }): Harness {
         return phase;
       }) as typeof factory.create;
     });
-  if (opts.withCascade) builder.cascade(DropRecipes.cascadeDrop);
+  if (opts.withCascade) builder.tumble();
   const reelSet = builder.build();
   return {
     reelSet,
@@ -50,9 +49,9 @@ async function runSkippedSpin(h: Harness, mode?: 'standard' | 'cascade'): Promis
 }
 
 describe('ReelSet.spin — per-spin mode', () => {
-  it('throws if cascade mode is requested without .cascade(...)', async () => {
+  it('throws if cascade mode is requested without .tumble(...)', async () => {
     const h = buildHarness({ withCascade: false });
-    await expect(h.reelSet.spin({ mode: 'cascade' })).rejects.toThrow(/cascade/);
+    await expect(h.reelSet.spin({ mode: 'cascade' })).rejects.toThrow(/tumble/);
     h.destroy();
   });
 
@@ -64,16 +63,16 @@ describe('ReelSet.spin — per-spin mode', () => {
 
     h.created.length = 0;
     await runSkippedSpin(h, 'cascade');
-    expect(h.created).toContain('dropStart:DropStartPhase');
+    expect(h.created).toContain('cascade:fall:CascadeFallPhase');
 
     h.destroy();
   });
 
-  it('uses cascade as the default when .cascade(...) was called', async () => {
+  it('uses cascade as the default when .tumble(...) was called', async () => {
     const h = buildHarness({ withCascade: true });
 
     await runSkippedSpin(h);
-    expect(h.created).toContain('dropStart:DropStartPhase');
+    expect(h.created).toContain('cascade:fall:CascadeFallPhase');
 
     h.destroy();
   });

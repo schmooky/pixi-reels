@@ -13,13 +13,18 @@ import type { StartPhaseConfig } from './phases/StartPhase.js';
 import type { StopPhaseConfig } from './phases/StopPhase.js';
 import type { AnticipationPhaseConfig } from './phases/AnticipationPhase.js';
 import type { AdjustPhaseConfig } from './phases/AdjustPhase.js';
+import type { CascadeFallPhaseConfig } from './phases/CascadeFallPhase.js';
+import type { CascadePlacePhaseConfig } from './phases/CascadePlacePhase.js';
+import type { CascadeDropInPhaseConfig } from './phases/CascadeDropInPhase.js';
 import type { SpinningMode } from './modes/SpinningMode.js';
 import { StandardMode } from './modes/StandardMode.js';
 import type { Disposable } from '../utils/Disposable.js';
 import { TickerRef } from '../utils/TickerRef.js';
 import { OCCUPIED_SENTINEL } from '../core/Reel.js';
 import type { CellPin } from '../pins/CellPin.js';
-import { cloneTargetGrid } from '../frame/ColumnTarget.js';
+import { cloneTargetGrid, toLegacyTargetGrid } from '../frame/ColumnTarget.js';
+import type { ColumnTarget } from '../frame/ColumnTarget.js';
+import type { Cell } from '../cascade/tumbleAlgorithm.js';
 
 /**
  * MultiWays/big-symbol coordination hook injected by `ReelSet` into
@@ -166,9 +171,9 @@ export class SpinController implements Disposable {
     }
 
     const mode = options?.mode ?? this._defaultSpinMode;
-    if (mode === 'cascade' && !this._phaseFactory.has('dropStart')) {
+    if (mode === 'cascade' && !this._phaseFactory.has('cascade:fall')) {
       throw new Error(
-        "spin({ mode: 'cascade' }) requires .cascade(...) on the builder.",
+        "spin({ mode: 'cascade' }) requires .tumble(...) on the builder.",
       );
     }
     this._currentSpinMode = mode;
@@ -243,6 +248,115 @@ export class SpinController implements Disposable {
       this._skipPending = false;
       this.skip();
     }
+  }
+
+  /**
+   * Tumble cascade: place + drop-in for a refill (Moment B). Skips the
+   * fall and the wait-for-result — the caller already cleared the winning
+   * cells in user code and is now handing us the next grid directly.
+   *
+   * Throws if a spin or refill is already in flight, or if `.tumble(...)`
+   * was not configured on the builder.
+   */
+  async refill(opts: {
+    winners: Cell[];
+    grid: string[][] | ColumnTarget[];
+  }): Promise<SpinResult> {
+    if (this._isSpinning) {
+      throw new Error('Cannot refill while a spin or refill is in progress.');
+    }
+    if (!this._phaseFactory.has('cascade:place')) {
+      throw new Error('refill() requires .tumble(...) on the builder.');
+    }
+
+    this._isSpinning = true;
+    this._wasSkipped = false;
+    this._skipPending = false;
+    this._spinStartTime = performance.now();
+    this._resultSymbols = null;
+    this._anticipationReels = [];
+    this._stopDelayOverride = null;
+    this._landedReels.clear();
+    this._activePhases.clear();
+    this._heldReels = new Set();
+    this._spinGeneration++;
+    this._currentSpinMode = 'cascade';
+
+    const generation = this._spinGeneration;
+    const speed = this._speedManager.active;
+
+    // Normalize grid + build per-reel frames upfront. No waiting on
+    // `setResult` here — the caller provided everything.
+    const grid = toLegacyTargetGrid(opts.grid);
+    this._resultSymbols = grid;
+    const decorated = this._coordinateBigSymbols(grid, (i) => this._reels[i].visibleRows);
+    const frames: string[][] = [];
+    for (let i = 0; i < this._reels.length; i++) {
+      const reel = this._reels[i];
+      frames.push(
+        this._frameBuilder.build(i, reel.visibleRows, reel.bufferAbove, reel.bufferBelow, decorated[i]),
+      );
+    }
+    this._cachedFrames = frames;
+
+    // Group winners per reel and sort ascending — the gravity algorithm
+    // expects ascending winner rows when it builds nonWinnerRows.
+    const winnersByReel = new Map<number, number[]>();
+    for (const w of opts.winners) {
+      let arr = winnersByReel.get(w.reel);
+      if (!arr) {
+        arr = [];
+        winnersByReel.set(w.reel, arr);
+      }
+      arr.push(w.row);
+    }
+    for (const arr of winnersByReel.values()) arr.sort((a, b) => a - b);
+
+    this._events.emit('spin:start');
+
+    const resultPromise = new Promise<SpinResult>((resolve) => {
+      this._currentSpinResolve = resolve;
+    });
+
+    for (let i = 0; i < this._reels.length; i++) {
+      const winnerRows = winnersByReel.get(i) ?? [];
+      void this._refillReel(i, speed, generation, winnerRows);
+    }
+
+    return resultPromise;
+  }
+
+  private async _refillReel(
+    reelIndex: number,
+    speed: SpeedProfile,
+    generation: number,
+    winnerRows: number[],
+  ): Promise<void> {
+    if (generation !== this._spinGeneration) return;
+
+    const reel = this._reels[reelIndex];
+    const targetFrame = this._frameFor(reelIndex);
+    const stopDelay = this._stopDelayFor(reelIndex, speed);
+
+    const placePhase = this._phaseFactory.create<any>('cascade:place', reel, speed);
+    this._activePhases.set(reelIndex, placePhase);
+    await placePhase.run({
+      targetFrame,
+      winnerRows,
+      delay: stopDelay,
+      events: this._events,
+    } satisfies CascadePlacePhaseConfig);
+    if (generation !== this._spinGeneration) return;
+
+    const dropInPhase = this._phaseFactory.create<any>('cascade:dropIn', reel, speed);
+    this._activePhases.set(reelIndex, dropInPhase);
+    await dropInPhase.run({
+      winnerRows,
+      events: this._events,
+    } satisfies CascadeDropInPhaseConfig);
+    if (generation !== this._spinGeneration) return;
+
+    this._markLanded(reelIndex);
   }
 
   setAnticipation(reelIndices: number[]): void {
@@ -391,18 +505,25 @@ export class SpinController implements Disposable {
     if (generation !== this._spinGeneration) return;
 
     const reel = this._reels[reelIndex];
+    const isTumble = this._currentSpinMode === 'cascade';
 
-    const phaseKeys = this._currentSpinMode === 'cascade'
-      ? { start: 'dropStart', stop: 'dropStop' }
-      : { start: 'start', stop: 'stop' };
-
-    // START → SPIN: chain via phase.run() promises (no busy-polling).
-    const startPhase = this._phaseFactory.create<any>(phaseKeys.start, reel, speed);
-    this._activePhases.set(reelIndex, startPhase);
-    await startPhase.run({
-      spinningMode: this._spinningMode,
-      delay: reelIndex * speed.spinDelay,
-    } as StartPhaseConfig);
+    // START or FALL: chain via phase.run() promises (no busy-polling).
+    if (isTumble) {
+      const fallPhase = this._phaseFactory.create<any>('cascade:fall', reel, speed);
+      this._activePhases.set(reelIndex, fallPhase);
+      await fallPhase.run({
+        spinningMode: this._spinningMode,
+        delay: reelIndex * speed.spinDelay,
+        events: this._events,
+      } satisfies CascadeFallPhaseConfig);
+    } else {
+      const startPhase = this._phaseFactory.create<any>('start', reel, speed);
+      this._activePhases.set(reelIndex, startPhase);
+      await startPhase.run({
+        spinningMode: this._spinningMode,
+        delay: reelIndex * speed.spinDelay,
+      } satisfies StartPhaseConfig);
+    }
 
     if (generation !== this._spinGeneration) return;
 
@@ -448,10 +569,32 @@ export class SpinController implements Disposable {
       this._events.emit('spin:stopping', reelIndex);
     }
 
-    const stopPhase = this._phaseFactory.create<any>(phaseKeys.stop, reel, speed);
-    this._activePhases.set(reelIndex, stopPhase);
-    await stopPhase.run({ targetFrame, delay: stopDelay } as StopPhaseConfig);
-    if (generation !== this._spinGeneration) return;
+    if (isTumble) {
+      // Tumble stop = place + dropIn. Both phases are user-overridable via
+      // the factory; the orchestration here is internal.
+      const placePhase = this._phaseFactory.create<any>('cascade:place', reel, speed);
+      this._activePhases.set(reelIndex, placePhase);
+      await placePhase.run({
+        targetFrame,
+        winnerRows: [],
+        delay: stopDelay,
+        events: this._events,
+      } satisfies CascadePlacePhaseConfig);
+      if (generation !== this._spinGeneration) return;
+
+      const dropInPhase = this._phaseFactory.create<any>('cascade:dropIn', reel, speed);
+      this._activePhases.set(reelIndex, dropInPhase);
+      await dropInPhase.run({
+        winnerRows: [],
+        events: this._events,
+      } satisfies CascadeDropInPhaseConfig);
+      if (generation !== this._spinGeneration) return;
+    } else {
+      const stopPhase = this._phaseFactory.create<any>('stop', reel, speed);
+      this._activePhases.set(reelIndex, stopPhase);
+      await stopPhase.run({ targetFrame, delay: stopDelay } satisfies StopPhaseConfig);
+      if (generation !== this._spinGeneration) return;
+    }
 
     this._markLanded(reelIndex);
   }

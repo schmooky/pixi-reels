@@ -7,7 +7,7 @@ import type { Container, Ticker } from 'pixi.js';
 export interface SpinOptions {
   /**
    * Phase chain selector for this spin.
-   * `'cascade'` requires `.cascade(...)` on the builder.
+   * `'cascade'` requires `.tumble(...)` on the builder.
    */
   mode?: 'standard' | 'cascade';
 
