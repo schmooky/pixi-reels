@@ -4,7 +4,7 @@ title: MultiWays cascade
 description: Per-spin row variation on a strip-spin landing; the cascade tumble pops winners and drops new symbols in from above. Shape-aware on every reel.
 tags: [multiways, cascade, hybrid, recent]
 steps:
-  - Build with .multiways({minRows, maxRows, reelPixelHeight}) — no .cascade() needed
+  - Build with .multiways({minRows, maxRows, reelPixelHeight}) — no .tumble() needed
   - Each round, call setShape(rowsPerReel) BEFORE setResult()
   - reelSet.spin() — classic strip-spin lands the multiways grid (AdjustPhase reshapes during SPIN→STOP)
   - On a winning row, runCascade(reelSet, [...stages]) tumbles winners and drops new symbols in from above
@@ -63,7 +63,7 @@ The initial strip-spin is the multiways primary motion: `AdjustPhase` runs betwe
 
 ## Two ways to combine cascade with multiways
 
-This recipe uses the **post-landing tumble** approach (`runCascade` on a strip-spun landing). The library also supports the **cascade-mode spin** approach: build with `.multiways(...).cascade(DropRecipes....)` and call `spin({ mode: 'cascade' })` for a full top-down drop-in landing on a multiways shape. The cascade-mode path runs `DropStart → Spin → Adjust → DropStop` per reel — see [ADR 015](/architecture/adr/015-cascade-multiways-interplay/) for the design rationale and the per-chain shape rule.
+This recipe uses the **post-landing tumble** approach (`runCascade` on a strip-spun landing). The library also supports the **cascade-mode spin** approach: build with `.multiways(...).tumble({ fall, dropIn })` and call `spin({ mode: 'cascade' })` for a full top-down drop-in landing on a multiways shape. The cascade-mode path runs `cascade:fall → Spin → Adjust → cascade:place → cascade:dropIn` per reel — see [ADR 015](/architecture/adr/015-cascade-multiways-interplay/) for the design rationale and the per-chain shape rule.
 
 Pick the post-landing pattern when you want a classic spin feel with cascade tumbles on winners (this recipe). Pick the cascade-mode pattern when every round should drop in from above with no strip motion at all.
 

@@ -63,10 +63,10 @@ The library has two distinct cascade tools and they solve different problems:
 
 | | `runCascade(reelSet, stages, ...)` | `reelSet.spin({ mode: 'cascade' })` |
 |---|---|---|
-| What runs | The visual tumble: pop, fall, drop-in | A full new spin using cascade phases (`dropStart` / `dropStop`) |
+| What runs | The visual tumble: pop, fall, drop-in | A full new spin using cascade phases (`cascade:fall` / `cascade:place` / `cascade:dropIn`) |
 | Reels move? | No — landed reels stay landed; only winning + falling cells move | Yes — the whole frame drops in from above |
 | Use case | Post-spin cascade animation on a single landed result (this recipe) | Discrete cascade respins between rounds (e.g. free-spin features that explicitly cascade-respin) |
-| Builder requirement | None | `.cascade(DropRecipes....)` must be on the builder |
+| Builder requirement | None | `.tumble({ fall, dropIn })` must be on the builder |
 
 This recipe uses `runCascade` because the user-visible mechanic is "win on the spin, watch the winners pop". For "pure cascade respin" gameplay where every round is a top-down drop, see [Cascade 6×5 tumble](/recipes/cascade-6x5/).
 
@@ -77,7 +77,7 @@ The exact code running in the demo above:
 ```ts
 // @ts-nocheck
 // Injected: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, WILD_CARD,
-//           DropRecipes, PIXI, gsap, app, runCascade, pickWeighted
+//           PIXI, gsap, app, runCascade, pickWeighted
 
 // 5 reels x 5 rows — matches the Arc Lord shape shown in the reference
 // clip above. Cascade pops the upper-middle row twice on the left three

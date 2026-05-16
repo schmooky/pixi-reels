@@ -90,7 +90,10 @@ when to use this vs the per-cell pattern.
 ```ts
 const reelSet = new ReelSetBuilder()
   // ...
-  .cascade(DropRecipes.stiffDrop) // register cascade phases
+  .tumble({
+    fall:   { duration: 280, ease: 'power3.in',  rowStagger: 60 },
+    dropIn: { duration: 450, ease: 'power3.out', rowStagger: 60, distance: 'perHole' },
+  })
   .ticker(app.ticker)
   .build();
 
@@ -100,7 +103,7 @@ await reelSet.spin({ mode: 'cascade' }); // respin — cascade drop-in
 
 `SpinOptions.mode` overrides the builder's default phase chain on a
 per-call basis. The engine throws if you pick `'cascade'` without
-`.cascade(...)` on the builder — the error names the missing method.
+`.tumble(...)` on the builder — the error names the missing method.
 See the [spin-then-cascade recipe](/recipes/spin-then-cascade/).
 
 ## Full event map

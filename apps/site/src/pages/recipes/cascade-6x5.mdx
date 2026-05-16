@@ -4,14 +4,14 @@ title: Cascade 6×5 tumble
 description: Modern tumble/cascade mechanic with an ever-growing win multiplier — the MultiWays-adjacent style every slot studio is shipping.
 tags: [starter, cascade, 6x5, multiplier]
 steps:
-  - Build a 6×5 ReelSet with .cascade() for drop-in mechanics (no strip spin)
+  - Build a 6×5 ReelSet with .tumble({ fall, dropIn }) for drop-in mechanics
   - Spin — symbols drop in left-to-right, row by row, with bounce
   - Detect cluster/line wins and spotlight them
-  - Tumble (vanish winners, survivors fall, new symbols drop from above) and repeat
+  - Tumble (remove winners, then reelSet.refill({ winners, grid })) and repeat
   - Each tumble increments the win multiplier
 apis:
-  - ReelSetBuilder.cascade
-  - DropRecipes
+  - ReelSetBuilder.tumble
+  - ReelSet.refill
   - ReelSet.setDropOrder
   - ReelSet.setResult
   - SymbolSpotlight.cycle
@@ -22,10 +22,10 @@ import { RecipeRunner } from '../../components/RecipeRunner.tsx';
 
 <RecipeRunner code={code} client:only="react" />
 
-A cascade/tumble slot on the engine. `.cascade()` replaces the strip-spin mechanic with a drop-in: symbols fall from above the viewport when the result arrives, with configurable per-row stagger and easing. The cascade loop itself (cluster detection, survivor shift, refill) stays in your code.
+A cascade/tumble slot on the engine. `.tumble({ fall, dropIn })` replaces the strip-spin mechanic with a drop-in: existing symbols fall off on `spin()` click, new symbols arrive when `setResult` returns. The cascade loop itself (cluster detection, survivor shift, refill) is driven from your code via `reelSet.refill({ winners, grid })`.
 
 ```ts
-import { ReelSetBuilder, SpriteSymbol, DropRecipes } from 'pixi-reels';
+import { ReelSetBuilder, SpriteSymbol, type Cell } from 'pixi-reels';
 
 const reelSet = new ReelSetBuilder()
   .reels(6)
@@ -34,7 +34,10 @@ const reelSet = new ReelSetBuilder()
   .symbols((r) => {
     for (const id of SYMBOLS) r.register(id, SpriteSymbol, { textures });
   })
-  .cascade(DropRecipes.stiffDrop)     // row-by-row drop, hard stop (no bounce)
+  .tumble({
+    fall:   { duration: 280, ease: 'power3.in',  rowStagger: 60 },
+    dropIn: { duration: 450, ease: 'power3.out', rowStagger: 60, distance: 'perHole' },
+  })
   .ticker(app.ticker)
   .build();
 
@@ -45,8 +48,8 @@ document.getElementById('spin')!.addEventListener('click', async () => {
   multiplier = 1;
 
   // Initial drop: columns land left-to-right
-  const p = reelSet.spin();
   reelSet.setDropOrder('ltr');
+  const p = reelSet.spin();
   reelSet.setResult(await server.spin());
   let grid = (await p).symbols;
 
@@ -62,12 +65,13 @@ document.getElementById('spin')!.addEventListener('click', async () => {
     multiplier++;
     showMultiplier(multiplier);
 
-    // Cascade refill: all columns drop simultaneously
-    const next = tumble(grid, wins);          // remove + fall + refill
-    const promise = reelSet.spin();
-    reelSet.setDropOrder('all');
-    reelSet.setResult(next);
-    grid = (await promise).symbols;
+    // Cascade refill: survivors slide, new symbols drop from above into holes
+    const winners: Cell[] = wins.flatMap((w) =>
+      w.positions.map((p) => ({ reel: p.reelIndex, row: p.rowIndex })),
+    );
+    const next = await server.cascade(winners);
+    await reelSet.refill({ winners, grid: next });
+    grid = next;
   }
 });
 ```
@@ -79,34 +83,38 @@ document.getElementById('spin')!.addEventListener('click', async () => {
 ```ts
 reelSet.setDropOrder('ltr');   // left → right (initial spin reveal)
 reelSet.setDropOrder('rtl');   // right → left
-reelSet.setDropOrder('all');   // all columns simultaneously (cascade refills)
+reelSet.setDropOrder('all');   // all columns simultaneously
 reelSet.setDropOrder([0, 0, 150, 150, 300, 300]); // custom ms per reel
 ```
 
-## Drop recipes
+## Tumble config — pick a feel
 
-`DropRecipes` ships three presets you can pass directly to `.cascade()`:
+`.tumble({ fall, dropIn })` is pure animation values; swap them to change the entire feel without touching code.
 
-| Preset | rowDelay | dropDuration | fallDuration | easing |
+| Feel | fall.ease | dropIn.ease | dropIn.rowStagger | notes |
 |---|---|---|---|---|
-| `cascadeDrop` | 80 ms | 600 ms | 300 ms | `bounce.out` |
-| `stiffDrop` | 60 ms | 450 ms | 280 ms | `power3.out` |
-| `simultaneousDrop` | 0 ms | 500 ms | 300 ms | `bounce.out` |
-| `slamDrop` | 0 ms | 0 ms | 0 ms | — |
+| Classic | `sine.in` | `back.out(1.6)` | 50 ms | soft overshoot, all-rounder |
+| Cartoon bounce | `sine.in` | `bounce.out` | 70 ms | multi-bounce land |
+| Slam stop | `power4.in` | `expo.out` | 25 ms | heavy, hard land |
+| Rain column | `sine.in` | `sine.in` | 0 ms (+ `distance: 'auto'`) | whole column drops as a slab |
+| Wave | `sine.in` | `back.out(2.0)` | 110 ms | rolling top-to-bottom arrival |
+
+See [the full tumble recipe doc](https://github.com/schmooky/pixi-reels/blob/main/docs/recipes/tumble-cascade.md) for the recipe vocabulary and the per-symbol event hooks (`cascade:fall:symbol` / `cascade:dropIn:symbol`) you'd use for squish, spine, badge mutations, etc.
 
 ## The cascade loop is your code
 
-pixi-reels deliberately doesn't own the tumble rules — every game has quirks (cluster size, adjacency, minimum matches, sticky survivors). What you get from the library:
+pixi-reels deliberately doesn't own the win-detection rules — every game has quirks (cluster size, adjacency, minimum matches, sticky survivors). What you get from the library:
 
-- **`.cascade()`** — drop-in mechanic, no strip spinning
+- **`.tumble()`** — three named phases (`cascade:fall` / `cascade:place` / `cascade:dropIn`), each independently overridable
+- **`refill({ winners, grid })`** — gravity-correct Moment B: untouched survivors stay, survivors above a hole slide, new symbols enter from above
 - **`setDropOrder()`** — per-spin column reveal order
-- **`setResult()`** on every tumble so each stage's grid is deterministic
+- **`setResult()`** on the initial spin so the server result drives the first landing
 - **`spotlight.cycle`** for the between-tumble win reveal
 
 Your responsibilities:
 
 - `detectClusterWins(grid)` — cluster/adjacency rules
-- `tumble(grid, wins)` — compute the next-stage grid (surviving symbols + fresh fill)
+- `server.cascade(winners)` — compute the next-stage grid (server-side gravity sim, survivors-pack-to-bottom convention)
 - `showMultiplier(n)` — the UI meter
 
 ## Related recipes

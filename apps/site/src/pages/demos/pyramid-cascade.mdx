@@ -17,12 +17,15 @@ new ReelSetBuilder()
   .reels(5)
   .visibleRowsPerReel([3, 5, 5, 5, 3])
   .reelAnchor('center')   // diamond shape
-  .cascade(DropRecipes.stiffDrop)
+  .tumble({
+    fall:   { duration: 280, ease: 'power3.in',  rowStagger: 60 },
+    dropIn: { duration: 450, ease: 'power3.out', rowStagger: 60, distance: 'perHole' },
+  })
 ```
 
-`stiffDrop` instead of `cascadeDrop` because we want the symbols to land
-hard - the bouncy default fights the win animation that arrives a frame
-later.
+A stiff `power3.out` drop-in (no overshoot) keeps the symbols landing
+hard — the bouncy default would fight the win animation that arrives a
+frame later.
 
 ## Gravity refill (not "redrop the whole frame")
 

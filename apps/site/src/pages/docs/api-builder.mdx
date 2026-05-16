@@ -35,7 +35,7 @@ Missing any of these throws at `.build()` time with a human-readable list of pro
 | `.spinningMode(mode)` | `new StandardMode()` |
 | `.frameMiddleware(mw)` | *(none)* |
 | `.phases((f) => { f.register(...) })` | built-in START/SPIN/STOP/ANTICIPATION |
-| `.cascade(dropRecipe)` | *(unset; required for `spin({ mode: 'cascade' })`)* |
+| `.tumble({ fall, dropIn })` | *(unset; required for `spin({ mode: 'cascade' })` and `reelSet.refill(...)`)* |
 | `.multiways({ minRows, maxRows, reelPixelHeight })` | *(unset; required for `setShape(...)`)* |
 | `.maskStrategy(strategy)` | per-reel `RectMaskStrategy` (auto-switches to `SharedRectMaskStrategy` when big or unmasked symbols are registered with `symbolGap.x > 0`) |
 | `.gsap(instance)` | bound from package import (use this for SSR / multi-bundle DI) |
@@ -71,7 +71,7 @@ const reelSet = new ReelSetBuilder()
 | Field | Type | Notes |
 |---|---|---|
 | `holdReels` | `number[]` | Reel indices to FREEZE for this spin. Held reels skip START/SPIN/STOP and stay on their current symbols. They count as already-landed for `spin:allLanded`. Out-of-range / duplicate / non-integer entries are silently filtered. `setAnticipation([...])` and `setStopDelays([...])` filter held indices too. |
-| `mode` | `'standard' \| 'cascade'` | Phase chain selector for this spin. Overrides the builder default. `'cascade'` requires `.cascade(...)` on the builder — the engine throws at `spin()` if cascade phases aren't registered. |
+| `mode` | `'standard' \| 'cascade'` | Phase chain selector for this spin. Overrides the builder default. `'cascade'` requires `.tumble(...)` on the builder — the engine throws at `spin()` if cascade phases aren't registered. |
 
 ```ts
 // Hold reels 0 and 4; only the middle three reroll.
