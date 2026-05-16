@@ -1,6 +1,6 @@
 // @ts-nocheck
 // Injected: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, WILD_CARD,
-//           DropRecipes, WinPresenter, PIXI, gsap, app, pickWeighted, runCascade.
+//           WinPresenter, PIXI, gsap, app, pickWeighted, runCascade.
 
 const IDS = ['7', '8', '9', '10', 'J', 'Q'];
 const REELS = 6, ROWS = 4, SIZE = 72;
@@ -22,7 +22,10 @@ const reelSet = new ReelSetBuilder()
     }
   })
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150 })
-  .cascade(DropRecipes.stiffDrop)
+  .tumble({
+    fall:   { duration: 280, ease: 'power3.in',  rowStagger: 60 },
+    dropIn: { duration: 450, ease: 'power3.out', rowStagger: 60, distance: 'perHole' },
+  })
   .ticker(app.ticker).build();
 
 // One presenter. Clusters and paylines are the same shape here — just a

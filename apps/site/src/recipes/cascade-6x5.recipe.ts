@@ -1,6 +1,6 @@
 // @ts-nocheck
 // Injected: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, WILD_CARD,
-//           DropRecipes, PIXI, gsap, app, pickWeighted,
+//           PIXI, gsap, app, pickWeighted,
 //           runCascade (cascade sequence helper)
 
 const IDS = ['7', '8', '9', '10', 'J', 'Q'];
@@ -22,7 +22,10 @@ const reelSet = new ReelSetBuilder()
     }
   })
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150 })
-  .cascade(DropRecipes.stiffDrop)
+  .tumble({
+    fall:   { duration: 280, ease: 'power3.in',  rowStagger: 60 },
+    dropIn: { duration: 450, ease: 'power3.out', rowStagger: 60, distance: 'perHole' },
+  })
   .ticker(app.ticker).build();
 
 return {

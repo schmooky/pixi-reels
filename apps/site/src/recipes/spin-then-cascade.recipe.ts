@@ -1,6 +1,6 @@
 // @ts-nocheck
 // Injected: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, WILD_CARD,
-//           DropRecipes, PIXI, gsap, app, runCascade, pickWeighted
+//           PIXI, gsap, app, runCascade, pickWeighted
 
 // Hybrid spin-then-cascade: round 1 spins like a classic strip slot
 // (top-to-bottom motion, START → SPIN → STOP). The landing has a

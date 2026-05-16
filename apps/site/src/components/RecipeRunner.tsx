@@ -6,7 +6,7 @@ import type { Texture } from 'pixi.js';
 import * as PIXI from 'pixi.js';
 import { gsap } from 'gsap';
 import {
-  ReelSetBuilder, SpeedPresets, SpriteSymbol, AnimatedSpriteSymbol, DropRecipes, CascadeAnticipationPhase,
+  ReelSetBuilder, SpeedPresets, SpriteSymbol, AnimatedSpriteSymbol,
   enableDebug, WinPresenter,
   RectMaskStrategy, SharedRectMaskStrategy,
   type ReelSet, ReelSymbol,
@@ -128,7 +128,6 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
       try {
         const factory = new AsyncFunction(
           'ReelSetBuilder', 'SpeedPresets', 'BlurSpriteSymbol', 'SpriteSymbol', 'AnimatedSpriteSymbol',
-          'DropRecipes', 'CascadeAnticipationPhase',
           'WinPresenter',
           'app', 'textures', 'blurTextures', 'SYMBOL_IDS', 'pickWeighted', 'gsap', 'PIXI',
           'runCascade', 'tumbleToGrid', 'diffCells', 'EmptySymbol', 'ReelSymbol',
@@ -143,7 +142,6 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
         // are unaffected — `await x` on a non-Promise resolves to x.
         result = (await factory(
           ReelSetBuilder, SpeedPresets, BlurSpriteSymbol, SpriteSymbol, AnimatedSpriteSymbol,
-          DropRecipes, CascadeAnticipationPhase,
           WinPresenter,
           app, textures, blurTextures, SYMBOL_IDS, pickWeighted, gsap, PIXI,
           runCascade, tumbleToGrid, diffCells, EmptySymbol, ReelSymbol,

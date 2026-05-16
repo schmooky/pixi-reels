@@ -189,7 +189,7 @@ export const RECIPES: RecipeMeta[] = [
     title: 'MultiWays cascade',
     oneLiner: 'Per-spin row variation on a strip-spin landing; cascade tumble pops winners and drops new symbols in from above. Shape-aware on every reel.',
     steps: [
-      'Build with .multiways({minRows, maxRows, reelPixelHeight}) — no .cascade() needed',
+      'Build with .multiways({minRows, maxRows, reelPixelHeight}) — no .tumble() needed',
       'Each round, call setShape(rowsPerReel) BEFORE setResult()',
       'reelSet.spin() — strip-spin lands the multiways grid (AdjustPhase reshapes during SPIN→STOP)',
       'On a winning row, runCascade(reelSet, [...stages]) tumbles winners and drops new symbols in from above',
@@ -231,12 +231,12 @@ export const RECIPES: RecipeMeta[] = [
     title: 'Cascade 6×5 tumble',
     oneLiner: 'Modern tumble mechanic with an ever-growing multiplier — MultiWays-adjacent.',
     steps: [
-      'Build a 6×5 ReelSet with .cascade() for drop-in mechanics',
+      'Build a 6×5 ReelSet with .tumble({ fall, dropIn }) for drop-in mechanics',
       'Spin, detect cluster/line wins, spotlight them',
-      'Tumble (remove winners, fall, refill) and repeat',
+      'Tumble (remove winners, then reelSet.refill({ winners, grid })) and repeat',
       'Each tumble increments the win multiplier',
     ],
-    apis: ['ReelSetBuilder.cascade', 'DropRecipes', 'ReelSet.setDropOrder', 'ReelSet.setResult'],
+    apis: ['ReelSetBuilder.tumble', 'ReelSet.refill', 'ReelSet.setDropOrder', 'ReelSet.setResult'],
     tags: ['starter', 'cascade', '6x5'],
   },
   {
@@ -355,11 +355,11 @@ export const RECIPES: RecipeMeta[] = [
     title: 'Spin first, cascade after',
     oneLiner: 'Open every play with a classic strip-spin, then cascade the respins — one ReelSet, the per-spin mode override does the switch.',
     steps: [
-      'Build with a default mode AND .cascade(...) registered',
+      'Build with a default mode AND .tumble(...) registered',
       'Round 1 — call spin() (default standard)',
       'Cascade respins — call spin({ mode: "cascade" }) per round',
     ],
-    apis: ['ReelSetBuilder.cascade', 'reelSet.spin', 'SpinOptions.mode'],
+    apis: ['ReelSetBuilder.tumble', 'reelSet.spin', 'SpinOptions.mode'],
     tags: ['hybrid', 'cascade', 'spin-mode', 'recent'],
   },
   {

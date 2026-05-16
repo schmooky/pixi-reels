@@ -3,12 +3,11 @@ import { gsap } from 'gsap';
 import {
   ReelSetBuilder,
   SpeedPresets,
-  DropRecipes,
   enableDebug,
+  type Cell,
 } from 'pixi-reels';
 import { SpineReelSymbol } from 'pixi-reels/spine';
 import type { SymbolPosition } from 'pixi-reels';
-import { tumbleToGrid, type Cell } from '../../shared/cascadeLoop.js';
 import { WinBox } from '../../shared/WinBox.js';
 import { roundBus } from '../../shared/roundBus.js';
 import { mountUiOverlay, type UiOverlay } from '../../shared/uiOverlay.js';
@@ -101,7 +100,10 @@ export async function boot(opts: BootOptions): Promise<() => void> {
     .speed('superTurbo', { ...SpeedPresets.SUPER_TURBO, stopDelay: 0 })
     // Stiff drop — no bounce on land. The bouncy default fights the win
     // animation when it arrives a frame later.
-    .cascade(DropRecipes.stiffDrop)
+    .tumble({
+      fall:   { duration: 280, ease: 'power3.in',  rowStagger: 60 },
+      dropIn: { duration: 450, ease: 'power3.out', rowStagger: 60, distance: 'perHole' },
+    })
     .ticker(app.ticker)
     .build();
 
@@ -197,8 +199,8 @@ export async function boot(opts: BootOptions): Promise<() => void> {
 
       await vanish(dedupedCells);
       const nextGrid = computeRefillGrid(grid, dedupedCells);
-      const winnerCells: Cell[] = dedupedCells.map((c) => ({ reel: c.reelIndex, row: c.rowIndex }));
-      await tumbleToGrid(reelSet, nextGrid, winnerCells, { dropDuration: 380 });
+      const winners: Cell[] = dedupedCells.map((c) => ({ reel: c.reelIndex, row: c.rowIndex }));
+      await reelSet.refill({ winners, grid: nextGrid });
       grid = nextGrid;
       await wait(120);
 
