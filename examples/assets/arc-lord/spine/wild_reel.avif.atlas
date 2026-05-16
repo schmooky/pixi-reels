@@ -1,0 +1,173 @@
+wild_reel.avif
+size:2048,2048
+filter:MipMapLinearLinear,Linear
+scale:0.16
+Frame
+bounds:2,392,163,826
+Frame shadow
+bounds:2,1220,163,826
+Rectangle 40
+bounds:992,1239,163,807
+Rectangle 40_add
+bounds:2,62,163,806
+rotate:90
+bookGlow1
+bounds:1322,469,56,49
+offsets:2,2,60,53
+cloud 1
+bounds:1322,918,159,234
+cloud 10
+bounds:1322,1401,141,294
+cloud 10_add
+bounds:1487,1752,141,294
+cloud 11
+bounds:1157,883,163,381
+cloud 12
+bounds:1322,1697,163,349
+cloud 12_add
+bounds:1157,532,163,349
+cloud 2
+bounds:830,180,163,210
+cloud 3
+bounds:1322,520,163,155
+cloud 5
+bounds:1160,217,137,41
+rotate:90
+cloud 6
+bounds:1160,356,156,107
+cloud 7
+bounds:1630,1779,163,267
+cloud 7_add
+bounds:1795,1779,163,267
+cloud 8
+bounds:1322,677,151,239
+cloud 9
+bounds:810,28,150,207
+rotate:90
+cloud 9_add
+bounds:1019,8,150,207
+hit/hit_00018
+bounds:992,435,1,1
+hit/hit_00028
+bounds:992,435,1,1
+hit/hit_00019
+bounds:810,215,17,10
+offsets:69,18,163,826
+hit/hit_00020
+bounds:995,217,163,219
+offsets:0,0,163,826
+hit/hit_00021
+bounds:1630,1614,163,219
+offsets:0,0,163,826
+rotate:90
+hit/hit_00022
+bounds:1465,1526,163,169
+offsets:0,0,163,826
+hit/hit_00023
+bounds:1630,1457,163,155
+offsets:0,21,163,826
+hit/hit_00024
+bounds:1795,1457,145,155
+offsets:8,23,163,826
+hit/hit_00025
+bounds:1487,1243,145,156
+offsets:8,23,163,826
+hit/hit_00026
+bounds:1960,1940,106,49
+offsets:19,72,163,826
+rotate:90
+hit/hit_00027
+bounds:1157,462,1,1
+offsets:19,120,163,826
+land
+bounds:1322,1154,163,245
+lightning/lightning_00015
+bounds:167,1220,163,826
+lightning/lightning_00016
+bounds:167,392,163,826
+lightning/lightning_00017
+bounds:332,1220,163,826
+lightning/lightning_00025
+bounds:332,1220,163,826
+lightning/lightning_00018
+bounds:332,392,163,826
+lightning/lightning_00019
+bounds:497,1220,163,826
+lightning/lightning_00020
+bounds:497,392,163,826
+lightning/lightning_00021
+bounds:662,1220,163,826
+lightning/lightning_00022
+bounds:662,392,163,826
+lightning/lightning_00023
+bounds:827,1220,163,826
+lightning/lightning_00024
+bounds:827,392,163,826
+lightning/lightning_00026
+bounds:2,227,163,826
+rotate:90
+sparcle_00
+bounds:1487,1161,50,15
+offsets:27,15,82,46
+sparcle_01
+bounds:85,2,75,25
+offsets:3,10,82,46
+sparcle_02
+bounds:1487,1723,81,27
+offsets:1,13,82,46
+sparcle_03
+bounds:2,28,81,32
+offsets:1,10,82,46
+sparcle_04
+bounds:1630,1425,77,30
+offsets:4,13,82,46
+sparcle_05
+bounds:1171,141,74,30
+offsets:5,13,82,46
+rotate:90
+sparcle_06
+bounds:1203,325,75,29
+offsets:5,13,82,46
+sparcle_07
+bounds:1960,1867,71,32
+offsets:6,11,82,46
+rotate:90
+sparcle_08
+bounds:2011,1975,71,32
+offsets:6,11,82,46
+rotate:90
+sparcle_09
+bounds:1709,1425,71,30
+offsets:6,13,82,46
+sparcle_10
+bounds:85,29,71,31
+offsets:5,12,82,46
+sparcle_11
+bounds:1380,489,72,29
+offsets:4,14,82,46
+sparcle_12
+bounds:1171,69,70,29
+offsets:5,15,82,46
+rotate:90
+sparcle_13
+bounds:2,2,71,24
+offsets:4,17,82,46
+sparcle_14
+bounds:995,180,35,21
+offsets:21,20,82,46
+rotate:90
+thunder
+bounds:992,438,163,799
+thunder fx
+bounds:1157,1266,163,780
+thunder hit 1
+bounds:1157,465,163,65
+thunder hit 2
+bounds:1851,1614,163,103
+offsets:0,1,163,107
+rotate:90
+thunder hit glow
+bounds:1465,1401,163,123
+offsets:0,7,163,137
+white_glow
+bounds:1487,1178,76,63

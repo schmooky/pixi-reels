@@ -1,0 +1,93 @@
+symbol-12.avif
+size:512,256
+filter:MipMapLinearLinear,Linear
+pma:true
+scale:0.16
+B
+bounds:446,207,34,45
+rotate:90
+B shadow
+bounds:109,2,9,11
+B_gl
+bounds:214,40,17,22
+N
+bounds:214,2,36,43
+rotate:90
+N shadow
+bounds:120,2,9,11
+N_gl
+bounds:86,2,18,21
+rotate:90
+O
+bounds:167,24,38,45
+rotate:90
+O shadow
+bounds:494,243,10,11
+O_gl
+bounds:329,100,19,23
+rotate:90
+S
+bounds:298,101,29,44
+S shadow
+bounds:142,2,8,11
+S_gl
+bounds:318,147,15,22
+U
+bounds:233,46,34,45
+rotate:90
+U shadow
+bounds:131,2,9,11
+U_gl
+bounds:493,185,17,22
+entrance
+bounds:167,99,66,70
+entrance roof
+bounds:167,64,64,33
+entrance roof_gl
+bounds:493,209,32,17
+rotate:90
+facade second floor C
+bounds:235,147,81,22
+facade second floor_gold C
+bounds:400,243,92,11
+facade second floor_gold C_gl
+bounds:109,15,46,5
+frame
+bounds:2,88,163,166
+frame_gl1
+bounds:2,3,82,83
+frame_gl2
+bounds:167,171,82,83
+frame_gl3
+bounds:251,171,82,83
+golden dome C
+bounds:86,22,79,64
+golden dome L
+bounds:400,198,44,43
+golden_big_gl
+bounds:259,4,40,32
+rotate:90
+golden_small_gl
+bounds:329,121,22,22
+ground floor L
+bounds:335,168,25,50
+rotate:90
+ground floor R
+bounds:235,82,25,50
+rotate:90
+shadow
+bounds:335,195,63,59
+star
+bounds:446,198,6,7
+offsets:1,1,8,9
+text glow
+bounds:335,145,36,21
+tower L
+bounds:235,109,36,61
+rotate:90
+window roof L
+bounds:353,122,21,19
+rotate:90
+window_gl
+bounds:287,97,10,9
+rotate:90

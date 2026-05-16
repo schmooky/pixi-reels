@@ -48,6 +48,12 @@
       "runtimeExecutable": "pnpm",
       "runtimeArgs": ["--filter", "pyramid-cascade", "exec", "vite", "--port", "5179", "--strictPort"],
       "port": 5179
+    },
+    {
+      "name": "arc-lord",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "arc-lord", "exec", "vite", "--port", "5180", "--strictPort"],
+      "port": 5180
     }
   ]
 }

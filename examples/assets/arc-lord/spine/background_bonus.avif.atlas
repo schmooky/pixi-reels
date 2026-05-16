@@ -1,0 +1,60 @@
+background_bonus.avif
+size:2048,2048
+filter:MipMapLinearLinear,Linear
+scale:0.9
+cloud 1
+bounds:1734,1421,619,249
+offsets:1,2,620,251
+rotate:90
+cloud 10
+bounds:2,42,789,352
+offsets:1,0,790,352
+cloud 11
+bounds:2,396,866,947
+offsets:0,1,866,950
+cloud 3
+bounds:1461,168,1175,495
+offsets:0,1,1175,496
+rotate:90
+cloud 8
+bounds:870,378,965,589
+offsets:0,1,965,590
+rotate:90
+land
+bounds:2,1345,1730,695
+land2
+bounds:793,2,374,546
+rotate:90
+
+background_bonus_2.avif
+size:2048,2048
+filter:MipMapLinearLinear,Linear
+scale:0.9
+cloud 12
+bounds:1017,1488,865,482
+cloud 2
+bounds:240,614,818,511
+offsets:0,0,819,511
+rotate:90
+cloud 4
+bounds:753,500,932,341
+rotate:90
+cloud 5
+bounds:240,341,491,271
+cloud 6
+bounds:240,2,742,337
+offsets:0,0,743,337
+cloud 7
+bounds:2,1434,1013,536
+cloud 9
+bounds:1096,898,664,588
+offsets:0,1,665,589
+land1
+bounds:984,173,358,318
+offsets:1,0,359,318
+rocks
+bounds:2,242,1190,236
+offsets:1,0,1191,236
+rotate:90
+thunder glow
+bounds:1096,493,669,403
