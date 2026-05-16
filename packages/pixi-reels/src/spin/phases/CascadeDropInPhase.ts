@@ -12,8 +12,11 @@ import { computeDropOffsets } from '../../cascade/tumbleAlgorithm.js';
 
 export interface CascadeDropInPhaseConfig {
   /** Visible rows whose old symbols were winners — drives per-row drop
-   *  geometry. Empty for Moment A: every row falls from above. */
+   *  geometry. Empty AND `initial: false` ⇒ no animation on this reel. */
   winnerRows: number[];
+  /** `true` for Moment A (initial spin: every row drops from above);
+   *  `false` for Moment B (refill: only winner-displaced rows animate). */
+  initial: boolean;
   /** Reel-set event bus, injected by SpinController. */
   events: EventEmitter<ReelSetEvents>;
 }
@@ -60,19 +63,23 @@ export class CascadeDropInPhase extends ReelPhase<CascadeDropInPhaseConfig> {
 
     events.emit('cascade:dropIn:start', { reelIndex });
 
-    const offsets = computeDropOffsets(visible, config.winnerRows);
+    const offsets = computeDropOffsets(visible, config.winnerRows, { initial: config.initial });
 
     // Build jobs and reset view.y to the pre-drop position. Survivors that
-    // don't move (offsetRows === 0) are skipped — leaving their view.y
-    // untouched at the placeSymbols-snapped grid position.
+    // don't move (offsetRows === 0) are revealed where placeSymbols left
+    // them. Movers are repositioned above the viewport, THEN revealed —
+    // this avoids a single-frame flash at the grid position between
+    // CascadePlacePhase (snaps view.y) and the first tween frame.
     const jobs: DropJob[] = [];
     for (const off of offsets) {
       const sym = reel.getSymbolAt(off.row);
-      // Safety reset; CascadePlacePhase normally handles this already.
-      sym.view.alpha = 1;
       sym.view.visible = true;
 
-      if (off.offsetRows === 0) continue;
+      if (off.offsetRows === 0) {
+        // Survivor — already at grid Y from placeSymbols; just ensure visible.
+        sym.view.alpha = 1;
+        continue;
+      }
 
       const finalY = sym.view.y;
       let startY: number;
@@ -92,7 +99,10 @@ export class CascadeDropInPhase extends ReelPhase<CascadeDropInPhaseConfig> {
           startY = finalY - this._drop.distance;
       }
 
+      // Move FIRST, then reveal — so the symbol never appears at the grid
+      // position during the place→drop handover.
       sym.view.y = startY;
+      sym.view.alpha = 1;
       jobs.push({
         row: off.row,
         symbol: sym,

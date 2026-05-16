@@ -4,13 +4,16 @@ import { ReelPhase } from './ReelPhase.js';
 import type { ReelSymbol } from '../../symbols/ReelSymbol.js';
 import type { EventEmitter } from '../../events/EventEmitter.js';
 import type { ReelSetEvents } from '../../events/ReelEvents.js';
+import { computeDropOffsets } from '../../cascade/tumbleAlgorithm.js';
 
 export interface CascadePlacePhaseConfig {
   /** Full target frame for this reel: buffer-above + visible + buffer-below. */
   targetFrame: string[];
   /** Visible rows whose old symbols were "winners" cleared since the last
-   *  placement. Empty for Moment A (initial spin). */
+   *  placement. Empty AND `initial: false` ⇒ no movement on this reel. */
   winnerRows: number[];
+  /** `true` for Moment A (initial spin); `false` for Moment B (refill). */
+  initial: boolean;
   /** Per-reel delay before placement, in ms. */
   delay?: number;
   /** Reel-set event bus, injected by SpinController. */
@@ -65,14 +68,21 @@ export class CascadePlacePhase extends ReelPhase<CascadePlacePhaseConfig> {
     reel.snapToGrid();
     reel.notifySpinEnd();
 
-    // After placement, every visible view sits at its grid position with
-    // alpha=1 visible=true so listeners on `cascade:place:done` see a
-    // coherent state regardless of what CascadeFallPhase did.
+    // Visibility split: SURVIVORS (offsetRows === 0) become visible
+    // immediately at grid Y; MOVERS stay at alpha=0 so they don't flash
+    // at grid Y for a frame between PlacePhase and CascadeDropInPhase
+    // moving them above the viewport. The DropIn phase reveals movers
+    // AFTER repositioning view.y, which produces a seamless drop-in.
+    const offsets = computeDropOffsets(
+      reel.visibleRows,
+      this._config.winnerRows,
+      { initial: this._config.initial },
+    );
     const placedSymbols: ReelSymbol[] = [];
-    for (let row = 0; row < reel.visibleRows; row++) {
-      const sym = reel.getSymbolAt(row);
-      sym.view.alpha = 1;
+    for (const off of offsets) {
+      const sym = reel.getSymbolAt(off.row);
       sym.view.visible = true;
+      sym.view.alpha = off.offsetRows === 0 ? 1 : 0;
       placedSymbols.push(sym);
     }
 
@@ -92,7 +102,8 @@ export class CascadePlacePhase extends ReelPhase<CascadePlacePhaseConfig> {
       this._delayedCall = null;
     }
     // If skipped before placement, force the placement so the reel lands
-    // on the right identities.
+    // on the right identities AND every visible view is fully revealed
+    // (skip == "show me the final landed state right now").
     if (this._config) {
       const reel = this._reel;
       const visible = this._config.targetFrame.slice(

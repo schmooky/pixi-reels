@@ -2,9 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { computeDropOffsets } from '../../src/cascade/tumbleAlgorithm.js';
 
 describe('computeDropOffsets', () => {
-  describe('Moment A (no winners — initial drop)', () => {
+  describe('Moment A (initial drop)', () => {
     it('treats every visible row as a new symbol', () => {
-      const offsets = computeDropOffsets(5, []);
+      const offsets = computeDropOffsets(5, [], { initial: true });
       expect(offsets).toEqual([
         { row: 0, originalRow: -5, offsetRows: 5 },
         { row: 1, originalRow: -4, offsetRows: 5 },
@@ -15,17 +15,39 @@ describe('computeDropOffsets', () => {
     });
 
     it('gives every symbol the same fall distance (visibleRows cells)', () => {
-      const offsets = computeDropOffsets(7, []);
+      const offsets = computeDropOffsets(7, [], { initial: true });
       const distances = offsets.map((o) => o.offsetRows);
       expect(distances).toEqual([7, 7, 7, 7, 7, 7, 7]);
     });
 
     it('stacks origins above the viewport so they form a vertical column', () => {
-      const offsets = computeDropOffsets(4, []);
+      const offsets = computeDropOffsets(4, [], { initial: true });
       // Each new symbol's virtual origin sits exactly (winCount - row) cells
       // above its target — so origins span -4..-1, the new column.
       const origins = offsets.map((o) => o.originalRow);
       expect(origins).toEqual([-4, -3, -2, -1]);
+    });
+
+    it('ignores winnerRows entirely when initial=true', () => {
+      // Even with stale winnerRows passed by mistake, initial overrides:
+      // every row is treated as new.
+      const offsets = computeDropOffsets(3, [0, 2], { initial: true });
+      expect(offsets.map((o) => o.offsetRows)).toEqual([3, 3, 3]);
+    });
+  });
+
+  describe('Moment B (cascade refill — no winners on this reel)', () => {
+    it('returns all-zero offsets so the reel does NOT animate', () => {
+      // CRITICAL: in a refill where this reel had no winners, NO row
+      // should move — they're all survivors at their existing positions.
+      const offsets = computeDropOffsets(5, []);
+      expect(offsets.map((o) => o.offsetRows)).toEqual([0, 0, 0, 0, 0]);
+      expect(offsets.map((o) => o.originalRow)).toEqual([0, 1, 2, 3, 4]);
+    });
+
+    it('also returns all-zero with explicit initial:false', () => {
+      const offsets = computeDropOffsets(5, [], { initial: false });
+      expect(offsets.map((o) => o.offsetRows)).toEqual([0, 0, 0, 0, 0]);
     });
   });
 
@@ -101,11 +123,17 @@ describe('computeDropOffsets', () => {
     });
 
     it('handles a single-row reel', () => {
-      expect(computeDropOffsets(1, [])).toEqual([
+      // Initial spin: the single row IS the new symbol.
+      expect(computeDropOffsets(1, [], { initial: true })).toEqual([
         { row: 0, originalRow: -1, offsetRows: 1 },
       ]);
+      // Refill with the row as winner: the new symbol drops in.
       expect(computeDropOffsets(1, [0])).toEqual([
         { row: 0, originalRow: -1, offsetRows: 1 },
+      ]);
+      // Refill with NO winners on this reel: nothing moves.
+      expect(computeDropOffsets(1, [])).toEqual([
+        { row: 0, originalRow: 0, offsetRows: 0 },
       ]);
     });
 

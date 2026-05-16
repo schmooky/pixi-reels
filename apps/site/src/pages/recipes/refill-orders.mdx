@@ -83,7 +83,7 @@ All reels drop simultaneously, but within each reel the bottom row lands first a
 .tumble({
   dropIn: {
     rowStagger: 90,
-    rowOrder: 'topToBottom',  // default — could be omitted
+    rowOrder: 'topToBottom',  // explicit override of the default ('bottomToTop')
     distance: 'perHole',
   },
 })
@@ -92,7 +92,7 @@ reelSet.setDropOrder('all');
 await reelSet.refill({ winners, grid: stage1 });
 ```
 
-The natural "rain from above" drop-in. Top row arrives first, bottom row last. With `distance: 'perHole'` the top-row new symbols actually fall the shortest distance — but the per-row stagger reverses the perceived order so the player reads "new symbols pour in from the top."
+The natural "rain from above" drop-in. Top row arrives first, bottom row last. Overrides the default (`'bottomToTop'`) — pick this when your slot's metaphor really is "stuff falls from the sky." With `distance: 'perHole'` the top-row new symbols actually fall the shortest distance, but the per-row stagger reverses the perceived order so the player reads "new symbols pour in from the top."
 
 ## Picking the refill order
 

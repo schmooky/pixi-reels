@@ -343,6 +343,7 @@ export class SpinController implements Disposable {
     await placePhase.run({
       targetFrame,
       winnerRows,
+      initial: false,
       delay: stopDelay,
       events: this._events,
     } satisfies CascadePlacePhaseConfig);
@@ -352,6 +353,7 @@ export class SpinController implements Disposable {
     this._activePhases.set(reelIndex, dropInPhase);
     await dropInPhase.run({
       winnerRows,
+      initial: false,
       events: this._events,
     } satisfies CascadeDropInPhaseConfig);
     if (generation !== this._spinGeneration) return;
@@ -577,6 +579,7 @@ export class SpinController implements Disposable {
       await placePhase.run({
         targetFrame,
         winnerRows: [],
+        initial: true,
         delay: stopDelay,
         events: this._events,
       } satisfies CascadePlacePhaseConfig);
@@ -586,6 +589,7 @@ export class SpinController implements Disposable {
       this._activePhases.set(reelIndex, dropInPhase);
       await dropInPhase.run({
         winnerRows: [],
+        initial: true,
         events: this._events,
       } satisfies CascadeDropInPhaseConfig);
       if (generation !== this._spinGeneration) return;

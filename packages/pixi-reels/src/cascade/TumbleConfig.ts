@@ -59,12 +59,14 @@ export interface TumbleDropInConfig {
   /**
    * Which row lands first when `rowStagger > 0`.
    *
-   *   - `'topToBottom'` (default) — top row arrives first, bottom row last.
-   *     Reads as "new symbols pour from above" — the natural drop-in feel.
-   *   - `'bottomToTop'` — bottom row arrives first. Reads as "stacking up
-   *     from below"; rare but occasionally fits puzzle / match-3 themes.
+   *   - `'bottomToTop'` (default) — bottom row arrives first, top row last.
+   *     Paired with `setDropOrder('ltr')` per-reel stagger this gives the
+   *     canonical "bottom-left first, top-right last" reveal that every
+   *     commercial tumble slot ships with.
+   *   - `'topToBottom'` — top row arrives first. Reads as "new symbols
+   *     pour from above"; fits gravity-themed or rain-style slots.
    */
-  rowOrder?: 'topToBottom' | 'bottomToTop';
+  rowOrder?: 'bottomToTop' | 'topToBottom';
 
   /**
    * How far symbols fall, in cells.
@@ -105,7 +107,7 @@ export function resolveTumbleConfig(config: TumbleConfig | undefined): ResolvedT
       duration: config?.dropIn?.duration ?? 600,
       ease: config?.dropIn?.ease ?? 'back.out(1.5)',
       rowStagger: config?.dropIn?.rowStagger ?? 60,
-      rowOrder: config?.dropIn?.rowOrder ?? 'topToBottom',
+      rowOrder: config?.dropIn?.rowOrder ?? 'bottomToTop',
       distance: config?.dropIn?.distance ?? 'perHole',
     },
   };

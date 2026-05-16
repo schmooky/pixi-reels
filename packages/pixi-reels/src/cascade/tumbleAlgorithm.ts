@@ -49,15 +49,26 @@ export interface DropOffset {
  * top `winnerRows.length` rows and survivors at the bottom rows in their
  * original top-to-bottom order. This matches how server-side gravity
  * simulations emit cascade results.
+ *
+ * @param options.initial - When `true` (Moment A — the player's first
+ *   spin click), every row is treated as new regardless of `winnerRows`
+ *   (which is normally empty for initial spins). When `false` (Moment B
+ *   — cascade refill), an empty `winnerRows` means *no movement on this
+ *   reel*; survivor reels in a refill correctly return all-zero offsets.
+ *   Default `false` so callers can't accidentally trigger a full re-drop
+ *   on a reel that had no winners.
  */
 export function computeDropOffsets(
   visibleRows: number,
   winnerRows: readonly number[],
+  options: { initial?: boolean } = {},
 ): DropOffset[] {
-  // Empty winners → Moment A: treat every row as new. winCount becomes the
-  // full column height so each row's "virtual origin" sits above the viewport.
-  const winCount = winnerRows.length === 0 ? visibleRows : winnerRows.length;
-  const winSet = new Set(winnerRows);
+  const initial = options.initial ?? false;
+  // Initial: every visible row is new (Moment A). The empty-winners case
+  // in refill (Moment B) gives winCount=0 → all rows resolve to survivors
+  // with originalRow === row → offsetRows === 0 → no animation.
+  const winCount = initial ? visibleRows : winnerRows.length;
+  const winSet = initial ? new Set<number>() : new Set(winnerRows);
 
   // Survivor rows in the OLD grid, ascending. Indexed by survivor-position
   // (0..nonWinnerRows.length-1) so the bottom rows of the new grid can pull
