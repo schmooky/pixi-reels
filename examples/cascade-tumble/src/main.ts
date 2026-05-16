@@ -141,27 +141,28 @@ function makeSpinner(): Container {
 }
 
 // ------------------------------------------------------------
-// WIN FADE-OUT — caller-owned. The library does NOT animate this step.
+// WIN DESTRUCTION — caller-owned. The library does NOT animate this step.
 // ------------------------------------------------------------
+//
+// Brief scale-up "charge" then implode (scale to 0 + spin + fade).
+// Alternating rotation direction by column gives the cluster a sense of
+// breaking apart. Cleanup is automatic — the next placeSymbols (via
+// refill) resets alpha/scale/rotation on every visible view through
+// `_replaceSymbol`.
 
-async function fadeOutWinners(reelSet: ReelSet, winners: Cell[]): Promise<void> {
+async function destroyWinners(reelSet: ReelSet, winners: Cell[]): Promise<void> {
   reelSet.viewport.showDim(0.35);
-  const tweens: Promise<void>[] = [];
-  for (const w of winners) {
+  await Promise.all(winners.map((w) => {
     const view = reelSet.reels[w.reel].getSymbolAt(w.row).view;
     view.zIndex = 1000;
-    tweens.push(
-      new Promise<void>((resolve) => {
-        gsap.to(view, {
-          alpha: 0,
-          duration: 0.25,
-          ease: 'power2.in',
-          onComplete: () => resolve(),
-        });
-      }),
-    );
-  }
-  await Promise.all(tweens);
+    const dir = w.reel % 2 === 0 ? 1 : -1;
+    return new Promise<void>((resolve) => {
+      gsap.timeline({ onComplete: () => resolve() })
+        .to(view.scale, { x: 1.25, y: 1.25, duration: 0.08, ease: 'back.out(2.5)' })
+        .to(view, { rotation: dir * 0.8, alpha: 0, duration: 0.24, ease: 'power2.in' }, '<+=0.05')
+        .to(view.scale, { x: 0, y: 0, duration: 0.24, ease: 'power2.in' }, '<');
+    });
+  }));
   reelSet.viewport.hideDim();
 }
 
@@ -189,7 +190,14 @@ function buildReelSet(app: Application, textures: Record<string, Texture>): Reel
     .speed('turbo', { ...SpeedPresets.TURBO, stopDelay: 80 })
     .speed('superTurbo', { ...SpeedPresets.SUPER_TURBO, stopDelay: 0 })
     .tumble({
-      fall:   { duration: 280, ease: 'sine.in',       rowStagger: 40 },
+      // Fall: bottom-row first within each reel (rowOrder default
+      // 'bottomToTop'). Combined with the per-reel left-to-right stagger
+      // from speed.spinDelay, this gives the canonical
+      // "bottom-left falls first, top-right last" feel.
+      fall:   { duration: 280, ease: 'sine.in', rowStagger: 50 },
+      // Drop-in: top-down (rowOrder default 'topToBottom') with per-row
+      // stagger. For cascade refills we'll override to simultaneous
+      // via setDropOrder('all') below.
       dropIn: { duration: 480, ease: 'back.out(1.6)', rowStagger: 50, distance: 'perHole' },
     })
     .ticker(app.ticker)
@@ -292,6 +300,10 @@ async function main(): Promise<void> {
     multiplierEl.textContent = '';
 
     // ─── MOMENT A: fall on click, wait for server, drop in ───────
+    // Initial drop reveals left-to-right (per-reel stagger) — pairs with
+    // the in-reel row stagger (bottomToTop default) to give the canonical
+    // "bottom-left first, top-right last" cascading reveal.
+    reelSet.setDropOrder('ltr');
     const spinDone = reelSet.spin();      // triggers cascade:fall on every reel
     const grid = await mockServer.spin();  // server can take any duration
     reelSet.setResult(grid);               // resolves wait → place → dropIn
@@ -311,7 +323,7 @@ async function main(): Promise<void> {
       totalWin += winners.length * 5 * cascadeLevel;
       ui.showWin(totalWin);
 
-      await fadeOutWinners(reelSet, winners);
+      await destroyWinners(reelSet, winners);
       await wait(PAUSE_AFTER_REMOVAL_MS);
 
       // Bump the multiplier as the symbols leave the frame. The player
@@ -320,6 +332,11 @@ async function main(): Promise<void> {
       await tickMultiplier(multiplier);
 
       const next = await mockServer.cascade(current, winners);
+      // Cascade refill: every reel drops simultaneously — the most common
+      // pattern across commercial cascade slots. ('ltr'/'rtl' on the
+      // refill reads as "the slot is doing a fresh reveal", which fights
+      // the player's expectation of a quick refill.)
+      reelSet.setDropOrder('all');
       await reelSet.refill({ winners, grid: next });
       current = next;
     }

@@ -18,11 +18,22 @@ export interface TumbleFallConfig {
   ease?: string;
 
   /**
-   * Delay between successive rows starting their fall, in ms. `0` (default)
-   * makes every row fall together. Positive values stagger top-to-bottom:
-   * row 0 starts at 0, row 1 at `rowStagger`, etc.
+   * Delay between successive rows starting their fall, in ms. `0` makes
+   * every row fall together. Default 0.
    */
   rowStagger?: number;
+
+  /**
+   * Which row of each reel begins its fall first.
+   *
+   *   - `'bottomToTop'` (default) — bottom row falls first, top row last.
+   *     Pairs with the per-reel left-to-right stagger from `speed.spinDelay`
+   *     to give the canonical "bottom-left falls first, top-right last"
+   *     feel of commercial tumble slots.
+   *   - `'topToBottom'` — top row falls first. Reads as the column
+   *     "peeling" downward; useful for theme-specific effects.
+   */
+  rowOrder?: 'bottomToTop' | 'topToBottom';
 }
 
 export interface TumbleDropInConfig {
@@ -40,9 +51,20 @@ export interface TumbleDropInConfig {
 
   /**
    * Delay between successive rows starting their drop, in ms. Default 60.
-   * Stagger order is top-to-bottom (row 0 lands first).
+   * `0` makes every animated row drop in simultaneously — the most common
+   * choice for cascade refills.
    */
   rowStagger?: number;
+
+  /**
+   * Which row lands first when `rowStagger > 0`.
+   *
+   *   - `'topToBottom'` (default) — top row arrives first, bottom row last.
+   *     Reads as "new symbols pour from above" — the natural drop-in feel.
+   *   - `'bottomToTop'` — bottom row arrives first. Reads as "stacking up
+   *     from below"; rare but occasionally fits puzzle / match-3 themes.
+   */
+  rowOrder?: 'topToBottom' | 'bottomToTop';
 
   /**
    * How far symbols fall, in cells.
@@ -53,7 +75,7 @@ export interface TumbleDropInConfig {
    *   - `'auto'` — every symbol falls the full visible-rows distance. Useful
    *     when you want the entire column to drop in unison.
    *   - `number` — explicit pixel distance applied uniformly to every
-   *     animated symbol.
+    *     animated symbol.
    */
   distance?: 'perHole' | 'auto' | number;
 }
@@ -77,11 +99,13 @@ export function resolveTumbleConfig(config: TumbleConfig | undefined): ResolvedT
       duration: config?.fall?.duration ?? 300,
       ease: config?.fall?.ease ?? 'sine.in',
       rowStagger: config?.fall?.rowStagger ?? 0,
+      rowOrder: config?.fall?.rowOrder ?? 'bottomToTop',
     },
     dropIn: {
       duration: config?.dropIn?.duration ?? 600,
       ease: config?.dropIn?.ease ?? 'back.out(1.5)',
       rowStagger: config?.dropIn?.rowStagger ?? 60,
+      rowOrder: config?.dropIn?.rowOrder ?? 'topToBottom',
       distance: config?.dropIn?.distance ?? 'perHole',
     },
   };

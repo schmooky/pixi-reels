@@ -253,6 +253,19 @@ export const RECIPES: RecipeMeta[] = [
     tags: ['cascade', 'tumble', 'presets', 'recent'],
   },
   {
+    slug: 'refill-orders',
+    group: 'cascade',
+    title: 'Cascade refill orders',
+    oneLiner: 'Four interactive canvases — same destruction, only the post-win refill ordering changes. Simultaneous, LTR wave, bottom-up, top-down.',
+    steps: [
+      'Initial reveal is identical (LTR wave) on every canvas',
+      'Winners destruct the same way; the post-removal pause is fixed',
+      'Only the refill drop-in order differs (setDropOrder + rowStagger + rowOrder)',
+    ],
+    apis: ['ReelSet.refill', 'ReelSet.setDropOrder', 'TumbleDropInConfig.rowStagger', 'TumbleDropInConfig.rowOrder'],
+    tags: ['cascade', 'tumble', 'refill', 'presets', 'recent'],
+  },
+  {
     slug: 'hold-and-win',
     group: 'starters',
     title: 'Hold & Win respin',

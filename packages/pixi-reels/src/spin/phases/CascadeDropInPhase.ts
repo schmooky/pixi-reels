@@ -125,9 +125,16 @@ export class CascadeDropInPhase extends ReelPhase<CascadeDropInPhaseConfig> {
     const tl = getGsap().timeline({ onComplete: finish });
     this._timeline = tl;
 
+    // For 'bottomToTop' order: walk jobs in reverse so the bottom-row job
+    // gets staggerIndex 0 (fires first), the next one up gets 1, etc.
+    // Note: `jobs` is already in row order (top-to-bottom) because offsets
+    // are built in that order, so reversing the iteration is correct.
+    const reverseOrder = this._drop.rowOrder === 'bottomToTop';
+
     for (let i = 0; i < jobs.length; i++) {
       const job = jobs[i];
-      const offset = i * staggerSec;
+      const staggerIndex = reverseOrder ? jobs.length - 1 - i : i;
+      const offset = staggerIndex * staggerSec;
 
       tl.call(
         () => events.emit('cascade:dropIn:symbol', {

@@ -2,20 +2,17 @@
 // Injected: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
 //           PIXI, gsap, app, pickWeighted, destroyWinners
 
-// WAVE: heavy per-row stagger (110 ms) plus a soft overshoot. Rows
-// arrive in sequence top-to-bottom, reading as a rolling wave. Good
-// fit for narrative reveals where you want the player's eye to track
-// each row.
+// TOP-DOWN ROW REFILL — within each reel, the top row arrives first
+// and the bottom row arrives last (rowOrder: 'topToBottom'). All reels
+// drop simultaneously. Reads as "new symbols pour from above" — the
+// natural drop-in metaphor.
 
 const IDS = ['7', '8', '9', '10', 'J', 'Q'];
 const REELS = 6, ROWS = 4, SIZE = 64;
 const CLUSTER = '10';
 const HIT_ROW = 2;
 const HIT_COLS = [0, 1, 2];
-
-// Medium pause — wave is already long because of the per-row stagger;
-// the pause sets up the rhythm of the next wave without over-stalling.
-const PAUSE_AFTER_REMOVAL_MS = 280;
+const PAUSE_AFTER_REMOVAL_MS = 240;
 
 function randSymbol(exclude) {
   let s;
@@ -34,8 +31,12 @@ const reelSet = new ReelSetBuilder()
   })
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150 })
   .tumble({
-    fall:   { duration: 180, ease: 'sine.in',       rowStagger: 90 },
-    dropIn: { duration: 320, ease: 'back.out(2.0)', rowStagger: 110, distance: 'perHole' },
+    fall:   { duration: 240, ease: 'sine.in',       rowStagger: 40 },
+    dropIn: {
+      duration: 380, ease: 'back.out(1.5)', distance: 'perHole',
+      rowStagger: 90,
+      rowOrder: 'topToBottom',
+    },
   })
   .ticker(app.ticker).build();
 
@@ -55,16 +56,17 @@ return {
       return next;
     });
 
-    const spinDone = reelSet.spin();
     reelSet.setDropOrder('ltr');
+    const spinDone = reelSet.spin();
     await new Promise((r) => setTimeout(r, 220));
     reelSet.setResult(stage0);
     await spinDone;
 
-    await new Promise((r) => setTimeout(r, 220));
+    await new Promise((r) => setTimeout(r, 200));
     const winners = HIT_COLS.map((c) => ({ reel: c, row: HIT_ROW }));
     await destroyWinners(reelSet, winners);
     await new Promise((r) => setTimeout(r, PAUSE_AFTER_REMOVAL_MS));
+    reelSet.setDropOrder('all');
     await reelSet.refill({ winners, grid: stage1 });
   },
 };

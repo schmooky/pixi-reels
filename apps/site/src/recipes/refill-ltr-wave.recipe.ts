@@ -2,20 +2,18 @@
 // Injected: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
 //           PIXI, gsap, app, pickWeighted, destroyWinners
 
-// WAVE: heavy per-row stagger (110 ms) plus a soft overshoot. Rows
-// arrive in sequence top-to-bottom, reading as a rolling wave. Good
-// fit for narrative reveals where you want the player's eye to track
-// each row.
+// LEFT-TO-RIGHT WAVE REFILL — each column lands in sequence from left
+// to right. Each reel's rows arrive together (no in-reel stagger), but
+// reel 0 lands before reel 1 before reel 2... Reads as a column-by-column
+// "filling up" of the grid.
 
 const IDS = ['7', '8', '9', '10', 'J', 'Q'];
 const REELS = 6, ROWS = 4, SIZE = 64;
 const CLUSTER = '10';
 const HIT_ROW = 2;
 const HIT_COLS = [0, 1, 2];
-
-// Medium pause — wave is already long because of the per-row stagger;
-// the pause sets up the rhythm of the next wave without over-stalling.
-const PAUSE_AFTER_REMOVAL_MS = 280;
+const PAUSE_AFTER_REMOVAL_MS = 220;
+const REEL_WAVE_STEP_MS = 90;
 
 function randSymbol(exclude) {
   let s;
@@ -34,8 +32,10 @@ const reelSet = new ReelSetBuilder()
   })
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150 })
   .tumble({
-    fall:   { duration: 180, ease: 'sine.in',       rowStagger: 90 },
-    dropIn: { duration: 320, ease: 'back.out(2.0)', rowStagger: 110, distance: 'perHole' },
+    fall:   { duration: 240, ease: 'sine.in',       rowStagger: 40 },
+    // rowStagger: 0 — rows in a reel arrive together; the per-reel
+    // stagger is set via setDropOrder('ltr', step) on the refill below.
+    dropIn: { duration: 380, ease: 'back.out(1.4)', rowStagger: 0, distance: 'perHole' },
   })
   .ticker(app.ticker).build();
 
@@ -55,16 +55,18 @@ return {
       return next;
     });
 
-    const spinDone = reelSet.spin();
     reelSet.setDropOrder('ltr');
+    const spinDone = reelSet.spin();
     await new Promise((r) => setTimeout(r, 220));
     reelSet.setResult(stage0);
     await spinDone;
 
-    await new Promise((r) => setTimeout(r, 220));
+    await new Promise((r) => setTimeout(r, 200));
     const winners = HIT_COLS.map((c) => ({ reel: c, row: HIT_ROW }));
     await destroyWinners(reelSet, winners);
     await new Promise((r) => setTimeout(r, PAUSE_AFTER_REMOVAL_MS));
+    // Refill: each reel delayed by REEL_WAVE_STEP_MS — left-to-right wave.
+    reelSet.setDropOrder('ltr', REEL_WAVE_STEP_MS);
     await reelSet.refill({ winners, grid: stage1 });
   },
 };

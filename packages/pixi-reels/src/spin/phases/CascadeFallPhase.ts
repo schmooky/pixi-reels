@@ -112,11 +112,14 @@ export class CascadeFallPhase extends ReelPhase<CascadeFallPhaseConfig> {
     });
     this._timeline = tl;
 
+    const reverseOrder = this._fall.rowOrder === 'bottomToTop';
+
     for (let row = 0; row < visibleRows; row++) {
       const view = views[row];
       const symbol = symbols[row];
       const startY = startYs[row];
-      const offset = row * staggerSec;
+      const orderIndex = reverseOrder ? visibleRows - 1 - row : row;
+      const offset = orderIndex * staggerSec;
 
       // Fire the per-symbol event right before the tween starts so listeners
       // can stage parallel tweens with full knowledge of duration/ease.

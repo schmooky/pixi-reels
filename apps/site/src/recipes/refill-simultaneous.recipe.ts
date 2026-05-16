@@ -2,20 +2,16 @@
 // Injected: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
 //           PIXI, gsap, app, pickWeighted, destroyWinners
 
-// WAVE: heavy per-row stagger (110 ms) plus a soft overshoot. Rows
-// arrive in sequence top-to-bottom, reading as a rolling wave. Good
-// fit for narrative reveals where you want the player's eye to track
-// each row.
+// SIMULTANEOUS REFILL — every cell drops at the same moment. The most
+// common refill pattern in commercial tumble slots: snappy, no extra
+// pacing, the player sees the new symbols arrive as one beat.
 
 const IDS = ['7', '8', '9', '10', 'J', 'Q'];
 const REELS = 6, ROWS = 4, SIZE = 64;
 const CLUSTER = '10';
 const HIT_ROW = 2;
 const HIT_COLS = [0, 1, 2];
-
-// Medium pause — wave is already long because of the per-row stagger;
-// the pause sets up the rhythm of the next wave without over-stalling.
-const PAUSE_AFTER_REMOVAL_MS = 280;
+const PAUSE_AFTER_REMOVAL_MS = 220;
 
 function randSymbol(exclude) {
   let s;
@@ -34,8 +30,9 @@ const reelSet = new ReelSetBuilder()
   })
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150 })
   .tumble({
-    fall:   { duration: 180, ease: 'sine.in',       rowStagger: 90 },
-    dropIn: { duration: 320, ease: 'back.out(2.0)', rowStagger: 110, distance: 'perHole' },
+    fall:   { duration: 240, ease: 'sine.in',       rowStagger: 40 },
+    // rowStagger: 0 — every row in a reel drops together (no in-reel stagger).
+    dropIn: { duration: 380, ease: 'back.out(1.4)', rowStagger: 0, distance: 'perHole' },
   })
   .ticker(app.ticker).build();
 
@@ -55,16 +52,20 @@ return {
       return next;
     });
 
-    const spinDone = reelSet.spin();
+    // Moment A — initial reveal with the canonical left-to-right wave.
     reelSet.setDropOrder('ltr');
+    const spinDone = reelSet.spin();
     await new Promise((r) => setTimeout(r, 220));
     reelSet.setResult(stage0);
     await spinDone;
 
-    await new Promise((r) => setTimeout(r, 220));
+    await new Promise((r) => setTimeout(r, 200));
     const winners = HIT_COLS.map((c) => ({ reel: c, row: HIT_ROW }));
     await destroyWinners(reelSet, winners);
     await new Promise((r) => setTimeout(r, PAUSE_AFTER_REMOVAL_MS));
+    // Moment B — every column drops together. setDropOrder('all') = 0 ms
+    // per-reel delay; the in-reel rowStagger is already 0 above.
+    reelSet.setDropOrder('all');
     await reelSet.refill({ winners, grid: stage1 });
   },
 };

@@ -1,6 +1,6 @@
 // @ts-nocheck
 // Injected: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
-//           PIXI, gsap, app, pickWeighted
+//           PIXI, gsap, app, pickWeighted, destroyWinners
 
 // SLAM: accelerating fall (power4.in) and a hard, fast land (expo.out).
 // Short durations + small stagger keep the whole tumble under 0.5 s.
@@ -63,10 +63,7 @@ return {
 
     await new Promise((r) => setTimeout(r, 160));
     const winners = HIT_COLS.map((c) => ({ reel: c, row: HIT_ROW }));
-    await Promise.all(winners.map((w) => new Promise((resolve) => {
-      const view = reelSet.reels[w.reel].getSymbolAt(w.row).view;
-      gsap.to(view, { alpha: 0, duration: 0.2, ease: 'power2.in', onComplete: resolve });
-    })));
+    await destroyWinners(reelSet, winners);
     await new Promise((r) => setTimeout(r, PAUSE_AFTER_REMOVAL_MS));
     await reelSet.refill({ winners, grid: stage1 });
   },

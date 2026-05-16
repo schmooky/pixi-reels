@@ -1,6 +1,6 @@
 // @ts-nocheck
 // Injected: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
-//           PIXI, gsap, app, pickWeighted
+//           PIXI, gsap, app, pickWeighted, destroyWinners
 
 // CARTOON BOUNCE: bounce.out gives a multi-bounce settle. Long stagger
 // makes the row-by-row arrival feel playful. Good fit for kid-friendly
@@ -62,10 +62,7 @@ return {
 
     await new Promise((r) => setTimeout(r, 220));
     const winners = HIT_COLS.map((c) => ({ reel: c, row: HIT_ROW }));
-    await Promise.all(winners.map((w) => new Promise((resolve) => {
-      const view = reelSet.reels[w.reel].getSymbolAt(w.row).view;
-      gsap.to(view, { alpha: 0, duration: 0.3, ease: 'power2.in', onComplete: resolve });
-    })));
+    await destroyWinners(reelSet, winners);
     await new Promise((r) => setTimeout(r, PAUSE_AFTER_REMOVAL_MS));
     await reelSet.refill({ winners, grid: stage1 });
   },
