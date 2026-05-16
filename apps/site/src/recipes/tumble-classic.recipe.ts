@@ -12,6 +12,11 @@ const CLUSTER = '10';
 const HIT_ROW = 2;
 const HIT_COLS = [0, 1, 2];
 
+// Pause between "winners faded out" and "refill drop-in starts". Most
+// commercial slots dial this between 150 and 400 ms — too short feels
+// like a teleport, too long stalls the cascade momentum.
+const PAUSE_AFTER_REMOVAL_MS = 250;
+
 function randSymbol(exclude) {
   let s;
   do { s = IDS[Math.floor(Math.random() * IDS.length)]; } while (s === exclude);
@@ -65,6 +70,7 @@ return {
       const view = reelSet.reels[w.reel].getSymbolAt(w.row).view;
       gsap.to(view, { alpha: 0, duration: 0.3, ease: 'power2.in', onComplete: resolve });
     })));
+    await new Promise((r) => setTimeout(r, PAUSE_AFTER_REMOVAL_MS));
     await reelSet.refill({ winners, grid: stage1 });
   },
 };

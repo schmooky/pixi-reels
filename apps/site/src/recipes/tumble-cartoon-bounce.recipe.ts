@@ -12,6 +12,10 @@ const CLUSTER = '10';
 const HIT_ROW = 2;
 const HIT_COLS = [0, 1, 2];
 
+// Longer pause so the previous bounce has time to settle before new
+// symbols arrive — the bouncy land needs breathing room.
+const PAUSE_AFTER_REMOVAL_MS = 320;
+
 function randSymbol(exclude) {
   let s;
   do { s = IDS[Math.floor(Math.random() * IDS.length)]; } while (s === exclude);
@@ -62,6 +66,7 @@ return {
       const view = reelSet.reels[w.reel].getSymbolAt(w.row).view;
       gsap.to(view, { alpha: 0, duration: 0.3, ease: 'power2.in', onComplete: resolve });
     })));
+    await new Promise((r) => setTimeout(r, PAUSE_AFTER_REMOVAL_MS));
     await reelSet.refill({ winners, grid: stage1 });
   },
 };

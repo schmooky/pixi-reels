@@ -13,6 +13,11 @@ const CLUSTER = '10';
 const HIT_ROW = 2;
 const HIT_COLS = [0, 1, 2];
 
+// Dramatic pause — the empty board is part of the visual story for
+// rain-column feels. 380 ms lets the absence of symbols register before
+// the next slab drops.
+const PAUSE_AFTER_REMOVAL_MS = 380;
+
 function randSymbol(exclude) {
   let s;
   do { s = IDS[Math.floor(Math.random() * IDS.length)]; } while (s === exclude);
@@ -63,6 +68,7 @@ return {
       const view = reelSet.reels[w.reel].getSymbolAt(w.row).view;
       gsap.to(view, { alpha: 0, duration: 0.3, ease: 'power2.in', onComplete: resolve });
     })));
+    await new Promise((r) => setTimeout(r, PAUSE_AFTER_REMOVAL_MS));
     await reelSet.refill({ winners, grid: stage1 });
   },
 };

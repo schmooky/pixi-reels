@@ -48,6 +48,11 @@ await spinDone;
 ### 1c. Drive a spin + cascade loop
 
 ```ts
+// Breathing room between "winners faded out" and "refill drop-in starts".
+// Commercial tumble slots dial this between 150 ms (snappy) and 500 ms
+// (dramatic). 250-300 ms is the comfortable middle.
+const PAUSE_AFTER_REMOVAL_MS = 300;
+
 async function play() {
   const spinDone = reelSet.spin();
   const grid = await server.spin();
@@ -60,12 +65,15 @@ async function play() {
     if (winners.length === 0) break;
 
     await fadeOutWinners(reelSet, winners);
+    await wait(PAUSE_AFTER_REMOVAL_MS);   // beat: "the wins are GONE"
     const next = await server.cascade(winners);
     await reelSet.refill({ winners, grid: next });
     current = next;
   }
 }
 ```
+
+**The pause matters.** Without it, the refill drop-in begins the same frame the winners hit alpha 0 — the player perceives a teleport. With a 150-500 ms beat the brain registers two distinct events ("wins cleared" → "new symbols arrived"). Match this to your fade-out duration and to the recipe's drop-in stagger: faster feels (slam, snappy fades) want ~120 ms; bouncy or wave feels want ~300-400 ms so the previous tumble's motion has time to settle.
 
 The new-grid contract for `refill`: per reel, the top `winners.length` rows are the new symbols, the remaining rows are the survivors in their original top-to-bottom order. Untouched cells don't animate; survivors slide; new symbols drop from above.
 

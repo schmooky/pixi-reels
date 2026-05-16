@@ -20,6 +20,13 @@ const VISIBLE_ROWS = 5;
 const SYMBOL_SIZE = 95;
 const SYMBOL_GAP = 5;
 
+// Breathing room between "winners faded out" and "refill drop-in starts".
+// Commercial tumble slots dial this between 150 ms (snappy) and 500 ms
+// (dramatic). 300 ms is a comfortable default — long enough for the
+// player to register that the wins are gone, short enough to keep
+// cascade momentum.
+const PAUSE_AFTER_REMOVAL_MS = 300;
+
 const SYMBOL_MAP: Record<string, string> = {
   low1: 'round/round_1',
   low2: 'round/round_2',
@@ -305,6 +312,7 @@ async function main(): Promise<void> {
       ui.showWin(totalWin);
 
       await fadeOutWinners(reelSet, winners);
+      await wait(PAUSE_AFTER_REMOVAL_MS);
 
       // Bump the multiplier as the symbols leave the frame. The player
       // reads the new value while staring at the holes.

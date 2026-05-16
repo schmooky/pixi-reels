@@ -13,6 +13,10 @@ const CLUSTER = '10';
 const HIT_ROW = 2;
 const HIT_COLS = [0, 1, 2];
 
+// Medium pause — wave is already long because of the per-row stagger;
+// the pause sets up the rhythm of the next wave without over-stalling.
+const PAUSE_AFTER_REMOVAL_MS = 280;
+
 function randSymbol(exclude) {
   let s;
   do { s = IDS[Math.floor(Math.random() * IDS.length)]; } while (s === exclude);
@@ -63,6 +67,7 @@ return {
       const view = reelSet.reels[w.reel].getSymbolAt(w.row).view;
       gsap.to(view, { alpha: 0, duration: 0.3, ease: 'power2.in', onComplete: resolve });
     })));
+    await new Promise((r) => setTimeout(r, PAUSE_AFTER_REMOVAL_MS));
     await reelSet.refill({ winners, grid: stage1 });
   },
 };

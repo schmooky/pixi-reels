@@ -13,6 +13,10 @@ const CLUSTER = '10';
 const HIT_ROW = 2;
 const HIT_COLS = [0, 1, 2];
 
+// Short pause — slam is snappy by design. 120 ms is just enough for the
+// player to register "the winners are gone" before the next slam arrives.
+const PAUSE_AFTER_REMOVAL_MS = 120;
+
 function randSymbol(exclude) {
   let s;
   do { s = IDS[Math.floor(Math.random() * IDS.length)]; } while (s === exclude);
@@ -63,6 +67,7 @@ return {
       const view = reelSet.reels[w.reel].getSymbolAt(w.row).view;
       gsap.to(view, { alpha: 0, duration: 0.2, ease: 'power2.in', onComplete: resolve });
     })));
+    await new Promise((r) => setTimeout(r, PAUSE_AFTER_REMOVAL_MS));
     await reelSet.refill({ winners, grid: stage1 });
   },
 };

@@ -21,7 +21,10 @@ import rainCode from '../../recipes/tumble-rain-column.recipe.ts?raw';
 import waveCode from '../../recipes/tumble-wave.recipe.ts?raw';
 import { RecipeRunner } from '../../components/RecipeRunner.tsx';
 
-Every canvas below runs the **exact same scripted spin**: 6×4 cards land with a pre-wired 3-cluster of `10` on row 2, those three winners fade out, the cascade refill drops survivors into the holes and brings a fresh row from above. The only thing that varies between canvases is the `.tumble({...})` config — that's how much feel you can swap with zero code change.
+Every canvas below runs the **exact same scripted spin**: 6×4 cards land with a pre-wired 3-cluster of `10` on row 2, those three winners fade out, **the loop pauses for a configured beat**, then the cascade refill drops survivors into the holes and brings a fresh row from above. Two things vary between canvases:
+
+1. `.tumble({ fall, dropIn })` — the animation feel itself.
+2. `PAUSE_AFTER_REMOVAL_MS` — the breathing room between the win-fade and the refill drop-in. Different feels want different pauses: snappy slams want ~120 ms, bouncy / dramatic feels want ~300-400 ms. Each canvas's value is tuned to match its tumble shape.
 
 ## Classic — the all-rounder default
 
@@ -90,13 +93,15 @@ Heavy `rowStagger` (110 ms on drop-in) makes rows arrive in distinct beats — y
 
 ## Picking between them
 
-| Feel | Pick when | Avoid when |
-|---|---|---|
-| Classic | All-rounder; you're not sure | — |
-| Cartoon bounce | Kid-friendly / candy / fruit | Player attention budget is tight |
-| Slam | Premium art, turbo mode, high-stakes theme | You want time for the player to "feel" each cascade |
-| Rain column | Match-3 / chess-board / puzzle | Reels are visually distinct (the cohesive slab look fights the column gaps) |
-| Wave | Narrative reveals, "show me the row" tension | Very dense grids — the stagger makes the whole tumble feel long |
+| Feel | Pause | Pick when | Avoid when |
+|---|---|---|---|
+| Classic | 250 ms | All-rounder; you're not sure | — |
+| Cartoon bounce | 320 ms | Kid-friendly / candy / fruit | Player attention budget is tight |
+| Slam | 120 ms | Premium art, turbo mode, high-stakes theme | You want time for the player to "feel" each cascade |
+| Rain column | 380 ms | Match-3 / chess-board / puzzle | Reels are visually distinct (the cohesive slab look fights the column gaps) |
+| Wave | 280 ms | Narrative reveals, "show me the row" tension | Very dense grids — the stagger makes the whole tumble feel long |
+
+The **Pause** column is `PAUSE_AFTER_REMOVAL_MS` in each recipe — the gap between the win-fade ending and the refill drop-in starting. It's not a library setting; it's just an `await wait(ms)` in your spin loop. Tuning it per feel is the single biggest lever on cascade pacing after the tumble config itself.
 
 Beyond these five: anything goes. `ease` accepts any [GSAP easing string](https://gsap.com/docs/v3/Eases). `rowStagger` is plain ms. `distance` is `'perHole'` / `'auto'` / a number. Mix to taste; the algorithm and lifecycle stay exactly the same.
 
