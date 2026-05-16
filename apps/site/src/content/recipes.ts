@@ -266,6 +266,19 @@ export const RECIPES: RecipeMeta[] = [
     tags: ['cascade', 'tumble', 'refill', 'presets', 'recent'],
   },
   {
+    slug: 'fall-delays',
+    group: 'cascade',
+    title: 'Lead-in delay before the fall',
+    oneLiner: 'Four interactive canvases — same spin, only the gap between SPIN click and the first frame of fall-out varies. From 0 ms (instant) to 700 ms (dramatic).',
+    steps: [
+      'Click SPIN — handler runs immediately',
+      'Optionally await a lead-in pause (0 / 150 / 350 / 700 ms)',
+      'Call reelSet.spin() — the fall begins',
+    ],
+    apis: ['ReelSet.spin', '(user-code: await wait(ms))'],
+    tags: ['cascade', 'tumble', 'lead-in', 'pacing', 'recent'],
+  },
+  {
     slug: 'hold-and-win',
     group: 'starters',
     title: 'Hold & Win respin',
