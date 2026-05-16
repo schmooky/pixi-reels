@@ -240,6 +240,19 @@ export const RECIPES: RecipeMeta[] = [
     tags: ['starter', 'cascade', '6x5'],
   },
   {
+    slug: 'tumble-feels',
+    group: 'cascade',
+    title: 'Tumble feels — every preset',
+    oneLiner: 'Five interactive canvases — same spin + cascade-refill, only .tumble({ fall, dropIn }) changes. Click each to compare feels.',
+    steps: [
+      'Same builder + same scripted spin on every canvas',
+      'Only the .tumble({ fall, dropIn }) shape differs between them',
+      'Pick whichever reads right for your art / theme / pace',
+    ],
+    apis: ['ReelSetBuilder.tumble', 'ReelSet.refill', 'TumbleFallConfig', 'TumbleDropInConfig'],
+    tags: ['cascade', 'tumble', 'presets', 'recent'],
+  },
+  {
     slug: 'hold-and-win',
     group: 'starters',
     title: 'Hold & Win respin',
