@@ -1,0 +1,40 @@
+---
+layout: ../../layouts/Demo.astro
+title: Arc Lord — spine + zvuk
+subtitle: 6×5 tumble · Spine 2D symbols · @schmooky/zvuk audio engine
+tags: [cascade, tumble, spine, audio, real-game]
+description: A full slot showcasing the new .tumble() / refill() API with Spine 2D symbol art and the zvuk audio engine. Bottom-left fall reveal, simultaneous refill, win-implode destruction, and a multiplier that ticks up per cascade.
+---
+
+import ArcLordDemo from '../../components/demos/ArcLordDemo.tsx';
+
+<ArcLordDemo client:only="react" />
+
+## What you're seeing
+
+A real-game demo built from the same `.tumble()` API as the recipes:
+
+- **10 spine symbols** loaded from binary `.skel` + atlas pairs (two atlas conventions: own-page `.avif.atlas` for the premium, shared-page `.atlas` for commons and mids).
+- **[`@schmooky/zvuk`](https://www.npmjs.com/package/@schmooky/zvuk)** audio engine with `music` + `sfx` buses. Reel-spin loop fades in on the first `cascade:fall:start`, out on the first `cascade:dropIn:start` — the empty server-wait gap is filled with motion AND sound, not just visuals. Per-reel landing thud, win-destruction SFX synced to the implode tween.
+- **Canonical patterns from the recipes**: bottom-left-first fall (default `rowOrder: 'bottomToTop'`), left-to-right reveal on the initial spin (`setDropOrder('ltr')`), simultaneous refill on every cascade (`setDropOrder('all')`), 280 ms pause between win-fade and refill.
+- **Cascade multiplier**: +1 per cascade level. First cascade also fires `multiplier_activate` SFX. Cleared cells are awarded `winners × 10 × multiplier`.
+
+## Why this demo matters
+
+Every other recipe on the site is a single-mechanic showcase (animation feel, refill order, lead-in). Arc Lord is the **integration test** — it ships everything together with real spine art and real game audio, so you can see and hear what the API actually feels like when you build a slot on top of it.
+
+If you can clone this folder, swap the spine assets + the `weights({...})` table, and you're ~80 % of the way to a different theme on the same engine.
+
+## Where the code lives
+
+- **`examples/arc-lord/src/setup.ts`** — the exported `boot(opts)` function this demo embeds. The standalone version at [`examples/arc-lord/src/main.ts`](https://github.com/schmooky/pixi-reels/blob/main/examples/arc-lord/src/main.ts) calls the same `boot` with `document.body` as host and a fullscreen HUD.
+- **`examples/arc-lord/src/spineAssets.ts`** — atlas-extension map + idempotent loader. Look here for the two-atlas-convention trick.
+- **`examples/arc-lord/src/audio.ts`** — zvuk engine + bus setup, named sound aliases, reel-spin loop helpers.
+
+Run the standalone version with `pnpm examples:dev:arclord` (port 5180) — same code, fullscreen, your local browser's audio context unrestricted.
+
+## Related
+
+- [Cascade refill orders](/recipes/refill-orders/) — the simultaneous refill choice Arc Lord uses.
+- [Tumble feels](/recipes/tumble-feels/) — the `back.out(1.4)` overshoot used here is a `tumble-classic`-adjacent tuning.
+- [Lead-in delay before the fall](/recipes/fall-delays/) — Arc Lord uses 180 ms (between subtle and anticipation).

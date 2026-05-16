@@ -9,7 +9,7 @@ import { createEngine, type Engine } from '@schmooky/zvuk';
  * count toward the gesture quota.
  */
 
-const SFX_BASE = '/arc-lord/sound/';
+const DEFAULT_SFX_BASE = '/arc-lord/sound/';
 
 /** Every loaded sound alias. Adding a new one? Update the table + load(). */
 export const SOUNDS = {
@@ -46,27 +46,24 @@ export function audio(): Engine {
   return _engine;
 }
 
-let _loaded = false;
-let _loadPromise: Promise<void> | null = null;
+const _loadedFor = new Map<string, Promise<void>>();
 
-export function loadAllSounds(): Promise<void> {
-  if (_loaded) return Promise.resolve();
-  if (_loadPromise) return _loadPromise;
+export function loadAllSounds(basePath: string = DEFAULT_SFX_BASE): Promise<void> {
+  const cached = _loadedFor.get(basePath);
+  if (cached) return cached;
   const engine = audio();
-  _loadPromise = (async () => {
-    // music bus: ambient bed
-    await engine.loadSound(SOUNDS.ambient, `${SFX_BASE}${SOUNDS.ambient}.webm`, { bus: 'music' });
-    // sfx bus: everything else
+  const work = (async () => {
+    await engine.loadSound(SOUNDS.ambient, `${basePath}${SOUNDS.ambient}.webm`, { bus: 'music' });
     const sfxList: SoundName[] = [
       'clickSpin', 'reelSpin', 'reelStop', 'destroy',
       'lowWin', 'winStart', 'winEnd', 'winCount', 'multiActivate',
     ];
     for (const name of sfxList) {
-      await engine.loadSound(SOUNDS[name], `${SFX_BASE}${SOUNDS[name]}.webm`, { bus: 'sfx' });
+      await engine.loadSound(SOUNDS[name], `${basePath}${SOUNDS[name]}.webm`, { bus: 'sfx' });
     }
-    _loaded = true;
   })();
-  return _loadPromise;
+  _loadedFor.set(basePath, work);
+  return work;
 }
 
 /** Play a one-shot SFX with a tiny pitch/volume jitter so repeats don't

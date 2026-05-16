@@ -42,22 +42,29 @@ const ATLAS_EXT: Record<ArcSymbolId, string> = {
   '9': '.atlas',
 };
 
-const BASE = '/arc-lord/spine/';
+const DEFAULT_BASE = '/arc-lord/spine/';
 
-let loadPromise: Promise<void> | null = null;
+const loaded = new Map<string, Promise<void>>();
 
-/** Idempotent — safe to call from multiple boot() invocations. */
-export function loadArcLordSpines(): Promise<void> {
-  if (loadPromise) return loadPromise;
-  loadPromise = (async () => {
+/**
+ * Idempotent per `basePath` — safe to call from multiple boot()
+ * invocations. The standalone example uses `/arc-lord/spine/`; the docs
+ * site can pass the same URL because the site's publicDir mirrors the
+ * same directory.
+ */
+export function loadArcLordSpines(basePath: string = DEFAULT_BASE): Promise<void> {
+  const cached = loaded.get(basePath);
+  if (cached) return cached;
+  const work = (async () => {
     for (const id of SYMBOL_IDS) {
       const atlasAlias = `arclord-${id}-atlas`;
       const skelAlias  = `arclord-${id}-skel`;
-      await Assets.load({ alias: atlasAlias, src: `${BASE}symbol-${id}${ATLAS_EXT[id]}` });
-      await Assets.load({ alias: skelAlias,  src: `${BASE}symbol-${id}.skel` });
+      await Assets.load({ alias: atlasAlias, src: `${basePath}symbol-${id}${ATLAS_EXT[id]}` });
+      await Assets.load({ alias: skelAlias,  src: `${basePath}symbol-${id}.skel` });
     }
   })();
-  return loadPromise;
+  loaded.set(basePath, work);
+  return work;
 }
 
 export function buildArcLordSpineMap(): Record<string, { skeleton: string; atlas: string }> {
