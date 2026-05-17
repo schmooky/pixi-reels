@@ -191,6 +191,43 @@ export interface ReelSetEvents extends Record<string, unknown[]> {
   /** Tumble cascade: this reel's drop-in animation finished. */
   'cascade:dropIn:end': [info: { reelIndex: number }];
   /**
+   * Tumble cascade — two-stage refill only: this reel's GRAVITY stage just
+   * started. Gravity = surviving symbols sliding down to fill the holes the
+   * winners left behind, without any new symbols entering yet. New symbols
+   * stay hidden above the viewport until `cascade:dropIn:start` fires later
+   * in the same refill (after `gravityHoldMs`).
+   *
+   * NEVER fires in the default `mode: 'combined'` refill — only when the
+   * caller opts into `mode: 'gravity-then-drop'` on `refill()` /
+   * `runCascade({ refillMode: ... })`.
+   */
+  'cascade:gravity:start': [info: { reelIndex: number }];
+  /**
+   * Tumble cascade — two-stage refill only: about to animate one survivor
+   * sliding down. Same contract as `cascade:dropIn:symbol` but scoped to
+   * survivors (no new symbols). `offsetRows` is how many cells this
+   * survivor will slide down.
+   *
+   * Reels where no survivor moves (e.g. all winners landed at the top of
+   * the column) skip this event entirely — the gravity stage has nothing
+   * to animate there.
+   */
+  'cascade:gravity:symbol': [info: {
+    symbol: ReelSymbol;
+    view: Container;
+    reelIndex: number;
+    rowIndex: number;
+    duration: number;
+    ease: string;
+    offsetRows: number;
+  }];
+  /**
+   * Tumble cascade — two-stage refill only: this reel's gravity stage just
+   * finished. Fires per-reel; the global hold (`gravityHoldMs`) begins
+   * AFTER the slowest reel reports this event.
+   */
+  'cascade:gravity:end': [info: { reelIndex: number }];
+  /**
    * Tumble cascade: a `reelSet.runCascade(...)` call just started.
    *
    * Fires once at the top of `runCascade`, BEFORE the first `detectWinners`

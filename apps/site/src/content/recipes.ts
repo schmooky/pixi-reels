@@ -266,6 +266,20 @@ export const RECIPES: RecipeMeta[] = [
     tags: ['cascade', 'tumble', 'refill', 'presets', 'recent'],
   },
   {
+    slug: 'tumble-anticipation',
+    group: 'cascade',
+    title: 'Cascade anticipation refill',
+    oneLiner: 'Two-stage refill: survivors slide down first, then a global anticipation beat for multipliers / mascots, then new symbols drop in column by column.',
+    steps: [
+      'Initial reveal is a normal left-to-right wave',
+      'Winners destruct, then survivors slide down (cascade:gravity:* events fire)',
+      'Global gravityHoldMs window — plug anticipation visuals in here',
+      'New symbols drop in from above, column by column (cascade:dropIn:* events)',
+    ],
+    apis: ['ReelSet.refill', 'RunCascadeOptions.refillMode', 'RunCascadeOptions.gravityHoldMs', 'RunCascadeOptions.onGravityComplete'],
+    tags: ['cascade', 'tumble', 'refill', 'two-stage', 'anticipation', 'recent'],
+  },
+  {
     slug: 'fall-delays',
     group: 'cascade',
     title: 'Lead-in delay before the fall',

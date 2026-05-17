@@ -157,6 +157,49 @@ export interface RunCascadeOptions {
    */
   destroyOptions?: DestroySymbolsOptions;
   /**
+   * How each refill in the chain animates.
+   *
+   *   - `'combined'` (default) — survivors and new symbols animate
+   *     together in one drop-in beat. The Sweet Bonanza / Sugar Rush feel.
+   *   - `'gravity-then-drop'` — survivors slide down to fill holes FIRST,
+   *     then a global pause (`gravityHoldMs`), then new symbols enter
+   *     from above with the per-reel stop delay applied. The Mummyland
+   *     Treasures / Reactoonz feel — gives space for an anticipation
+   *     beat between gravity and new-symbol entry.
+   *
+   * Per-column stagger inside the new-symbol drop is controlled by
+   * `setDropOrder('ltr', stepMs)` exactly as in combined mode — when the
+   * step is shorter than `dropIn.duration` you get overlapping waves;
+   * when it's at least as long you get strictly sequential columns.
+   */
+  refillMode?: 'combined' | 'gravity-then-drop';
+  /**
+   * Pause between gravity end (last reel finished sliding) and drop-in
+   * start (first reel begins new-symbol entry), in ms. Only used when
+   * `refillMode === 'gravity-then-drop'`. Default `250`.
+   *
+   * The natural place for asymmetric anticipation visuals: register a
+   * listener on `cascade:gravity:end` (one per reel) and trigger your
+   * mascot / multiplier roll / SFX from there. Use `onGravityComplete`
+   * if you need to AWAIT something before the drop-in starts (the hold
+   * extends to cover your async work).
+   */
+  gravityHoldMs?: number;
+  /**
+   * Per-cascade hook fired AFTER the gravity stage finishes on every
+   * reel and BEFORE the drop-in stage starts. Only fires when
+   * `refillMode === 'gravity-then-drop'`. Awaiting inside extends the
+   * hold beyond `gravityHoldMs` — useful for "wait for the multiplier
+   * count-up to finish before new symbols land".
+   *
+   *   - `chain` — same 1-indexed chain stage as `cascade:chain:start`.
+   *   - `winners` — cells cleared this cascade.
+   */
+  onGravityComplete?: (info: {
+    chain: number;
+    winners: readonly Cell[];
+  }) => Promise<void> | void;
+  /**
    * Abort signal for caller-driven cancellation. The loop exits at the
    * next await boundary, the in-flight refill (if any) is slammed via
    * `slamStop()`, and the resolved summary reports `wasSkipped: true`.
@@ -461,6 +504,25 @@ export class ReelSet extends Container implements Disposable {
   async refill(opts: {
     winners: ReadonlyArray<Cell>;
     grid: string[][] | ColumnTarget[];
+    /**
+     * Pick the refill animation flavor. See `RunCascadeOptions.refillMode`
+     * for the full description; the same modes apply here when you drive
+     * the cascade loop yourself.
+     */
+    mode?: 'combined' | 'gravity-then-drop';
+    /**
+     * Pause (ms) between the gravity stage and the drop-in stage. Only
+     * applies when `mode === 'gravity-then-drop'`. Default `250`.
+     */
+    gravityHoldMs?: number;
+    /**
+     * Awaitable hook fired between the gravity and drop-in stages of a
+     * two-stage refill. Only fires when `mode === 'gravity-then-drop'`.
+     * Awaiting inside extends the hold beyond `gravityHoldMs` — use for
+     * "wait until the multiplier count-up finishes before new symbols
+     * land".
+     */
+    onGravityComplete?: () => Promise<void> | void;
   }): Promise<SpinResult> {
     return this._spinController.refill(opts);
   }
@@ -651,7 +713,16 @@ export class ReelSet extends Container implements Disposable {
         const next = await opts.nextGrid(current, winners, chainLength);
         if (wasSkipped) break;
 
-        await this.refill({ winners: [...winners], grid: next });
+        const refillMode = opts.refillMode ?? 'combined';
+        await this.refill({
+          winners: [...winners],
+          grid: next,
+          mode: refillMode,
+          gravityHoldMs: opts.gravityHoldMs,
+          onGravityComplete: opts.onGravityComplete
+            ? () => opts.onGravityComplete!({ chain: stage, winners })
+            : undefined,
+        });
         chainLength += 1;
         current = this.getVisibleGrid();
 

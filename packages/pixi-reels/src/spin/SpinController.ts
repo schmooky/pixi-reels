@@ -328,12 +328,27 @@ export class SpinController implements Disposable {
    * fall and the wait-for-result — the caller already cleared the winning
    * cells in user code and is now handing us the next grid directly.
    *
+   * Two refill modes:
+   *
+   *   - `'combined'` (default) — survivors and new symbols animate together
+   *     in one drop-in phase. The classic Sweet Bonanza / Sugar Rush feel.
+   *   - `'gravity-then-drop'` — survivors slide down to fill holes FIRST
+   *     (gravity stage), then a global pause of `gravityHoldMs` ms, then
+   *     new symbols drop in from above (drop-in stage). The Mummyland
+   *     Treasures / Reactoonz feel — gives space for anticipation visuals
+   *     between the two beats. Per-reel stop delays (`setDropOrder`) apply
+   *     to the drop-in stage only; the gravity stage runs simultaneously
+   *     across all reels.
+   *
    * Throws if a spin or refill is already in flight, or if `.tumble(...)`
    * was not configured on the builder.
    */
   async refill(opts: {
     winners: ReadonlyArray<Cell>;
     grid: string[][] | ColumnTarget[];
+    mode?: 'combined' | 'gravity-then-drop';
+    gravityHoldMs?: number;
+    onGravityComplete?: () => Promise<void> | void;
   }): Promise<SpinResult> {
     if (this._isSpinning) {
       throw new Error('Cannot refill while a spin or refill is in progress.');
@@ -404,9 +419,27 @@ export class SpinController implements Disposable {
       return resultPromise;
     }
 
-    for (let i = 0; i < this._reels.length; i++) {
-      const winnerRows = winnersByReel.get(i) ?? [];
-      void this._refillReel(i, speed, generation, winnerRows);
+    const mode = opts.mode ?? 'combined';
+
+    if (mode === 'gravity-then-drop') {
+      // Two-stage orchestration. All reels do place + gravity in parallel
+      // (no per-reel stop delay — gravity is a global "settling" beat,
+      // not a reveal). Once every reel's gravity is done, wait
+      // `gravityHoldMs`, then start the drop-in stage with the user's
+      // per-reel stop delays applied — that's where column stagger lives.
+      const gravityHoldMs = opts.gravityHoldMs ?? 250;
+      void this._refillTwoStage(
+        speed,
+        generation,
+        winnersByReel,
+        gravityHoldMs,
+        opts.onGravityComplete,
+      );
+    } else {
+      for (let i = 0; i < this._reels.length; i++) {
+        const winnerRows = winnersByReel.get(i) ?? [];
+        void this._refillReel(i, speed, generation, winnerRows);
+      }
     }
 
     return resultPromise;
@@ -440,6 +473,113 @@ export class SpinController implements Disposable {
     await dropInPhase.run({
       winnerRows,
       initial: false,
+      events: this._events,
+    } satisfies CascadeDropInPhaseConfig);
+    if (generation !== this._spinGeneration) return;
+
+    this._markLanded(reelIndex);
+  }
+
+  /**
+   * Two-stage refill: place + gravity (all reels parallel, no stop delay),
+   * global hold, then drop-in (all reels parallel, with stop delays).
+   * Survivors slide first; new symbols enter after the hold. See `refill`
+   * for the player-facing description.
+   */
+  private async _refillTwoStage(
+    speed: SpeedProfile,
+    generation: number,
+    winnersByReel: Map<number, number[]>,
+    gravityHoldMs: number,
+    onGravityComplete?: () => Promise<void> | void,
+  ): Promise<void> {
+    // Stage 1 — place + gravity. Place phase runs with delay = 0 so all
+    // reels swap identities in lockstep; the staggered "reveal" lives in
+    // stage 2.
+    const stage1 = this._reels.map(async (_, i) => {
+      if (generation !== this._spinGeneration) return;
+      const reel = this._reels[i];
+      const targetFrame = this._frameFor(i);
+      const winnerRows = winnersByReel.get(i) ?? [];
+
+      const placePhase = this._phaseFactory.create<any>('cascade:place', reel, speed);
+      this._activePhases.set(i, placePhase);
+      await placePhase.run({
+        targetFrame,
+        winnerRows,
+        initial: false,
+        delay: 0,
+        events: this._events,
+      } satisfies CascadePlacePhaseConfig);
+      if (generation !== this._spinGeneration) return;
+
+      const gravityPhase = this._phaseFactory.create<any>('cascade:dropIn', reel, speed);
+      this._activePhases.set(i, gravityPhase);
+      await gravityPhase.run({
+        winnerRows,
+        initial: false,
+        role: 'gravity',
+        events: this._events,
+      } satisfies CascadeDropInPhaseConfig);
+    });
+    await Promise.all(stage1);
+    if (generation !== this._spinGeneration) return;
+
+    // Global hold — the beat where the player reads "the wins are gone, the
+    // surviving symbols have settled" and any user-code anticipation
+    // visuals (multiplier bump, mascot react) play. setTimeout is fine: a
+    // skip during this window bumps the generation, the post-await guard
+    // bails before the drop-in stage runs.
+    if (gravityHoldMs > 0) {
+      await new Promise<void>((r) => setTimeout(r, gravityHoldMs));
+      if (generation !== this._spinGeneration) return;
+    }
+
+    // Awaitable hook — extends the hold for "wait for X before drop-in".
+    // Errors are surfaced so the caller's bug doesn't silently hang the
+    // drop-in stage forever; the catch bumps the generation, which causes
+    // the post-await guard to bail and `_finishSpin` will be triggered by
+    // the slam path if user code calls skip() in response.
+    if (onGravityComplete) {
+      await onGravityComplete();
+      if (generation !== this._spinGeneration) return;
+    }
+
+    // Stage 2 — drop-in (new symbols only). Per-reel stop delays apply
+    // here so `setDropOrder('ltr', step)` produces the column-by-column
+    // refill wave. The drop-in phase calls `notifyLanded` when its tween
+    // completes, which marks the reel landed and resolves `refill()`.
+    for (let i = 0; i < this._reels.length; i++) {
+      void this._refillReelDropInOnly(i, speed, generation, winnersByReel.get(i) ?? []);
+    }
+  }
+
+  private async _refillReelDropInOnly(
+    reelIndex: number,
+    speed: SpeedProfile,
+    generation: number,
+    winnerRows: number[],
+  ): Promise<void> {
+    if (generation !== this._spinGeneration) return;
+
+    const reel = this._reels[reelIndex];
+    const stopDelay = this._stopDelayFor(reelIndex, speed);
+
+    // setDropOrder produces per-reel start delays; honour them here as a
+    // sleep before kicking off the drop-in phase. Sleeping outside the
+    // phase keeps the phase API simple — it doesn't need its own delay
+    // parameter (Phase delay is a CascadePlacePhase concern).
+    if (stopDelay > 0) {
+      await new Promise<void>((r) => setTimeout(r, stopDelay));
+      if (generation !== this._spinGeneration) return;
+    }
+
+    const dropInPhase = this._phaseFactory.create<any>('cascade:dropIn', reel, speed);
+    this._activePhases.set(reelIndex, dropInPhase);
+    await dropInPhase.run({
+      winnerRows,
+      initial: false,
+      role: 'new',
       events: this._events,
     } satisfies CascadeDropInPhaseConfig);
     if (generation !== this._spinGeneration) return;

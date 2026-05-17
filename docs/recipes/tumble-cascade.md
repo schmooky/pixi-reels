@@ -558,6 +558,98 @@ reelSet.events.on('cascade:dropIn:start', () => audio.unduck());
 
 ---
 
+## Recipe 8 — Cascade anticipation refill (two-stage)
+
+The default refill is **combined**: survivors and new symbols fall in one tween. Sweet Bonanza, Sugar Rush, Gates of Olympus — they all use combined.
+
+A handful of slots split it in two for an anticipation beat:
+
+1. **Gravity** — survivors slide down to fill the holes. New symbols stay hidden above the viewport.
+2. **Hold** — a global pause where the multiplier rolls, the mascot reacts, the SFX peaks.
+3. **Drop-in** — new symbols enter from above, often staggered per column.
+
+That extra beat between gravity and refill is the whole point: it gives anticipation visuals room to land. Opt in by setting `mode: 'gravity-then-drop'` on `refill()` (or `refillMode: 'gravity-then-drop'` on `runCascade`).
+
+### 8a. The minimal two-stage call
+
+```ts
+await reelSet.destroySymbols(winners);
+await wait(220);
+
+reelSet.setDropOrder('ltr', 110);    // per-column wave for stage B
+
+await reelSet.refill({
+  winners,
+  grid: nextGrid,
+  mode: 'gravity-then-drop',
+  gravityHoldMs: 350,
+});
+```
+
+`setDropOrder` controls the column stagger DURING THE DROP-IN STAGE ONLY. The gravity stage always runs all reels in parallel — gravity is a global "settling" beat, not a reveal. Within the drop-in stage:
+
+- `step < dropIn.duration` → columns overlap (cascading wave)
+- `step >= dropIn.duration` → columns strictly sequential (column N fully lands before N+1 starts)
+
+### 8b. Driving from `runCascade` with an async hook
+
+```ts
+await reelSet.runCascade({
+  detectWinners,
+  nextGrid,
+  refillMode: 'gravity-then-drop',
+  gravityHoldMs: 0,                     // hand all timing to the hook
+  onGravityComplete: async ({ chain }) => {
+    await tickMultiplier(chain + 1);    // await the count-up animation
+  },
+});
+```
+
+The hook fires once per cascade — after every reel reports `cascade:gravity:end` and before any `cascade:dropIn:start`. Awaiting inside extends the gap arbitrarily; use `gravityHoldMs: 0` when the hook owns the timing.
+
+### 8c. Anticipation visuals via events
+
+```ts
+let gravityEndCount = 0;
+reelSet.events.on('cascade:gravity:end', () => {
+  gravityEndCount += 1;
+  if (gravityEndCount === reelSet.reels.length) {
+    multiplierBadge.pop();        // runs inside gravityHoldMs
+    gravityEndCount = 0;
+  }
+});
+```
+
+### 8d. When NOT to use it
+
+- Cascade chains that average >5 deep. The extra beat compounds into a noticeably slower round.
+- Slots where the winning cluster typically anchors at the top of its column. There are no survivors to slide, so the gravity beat is an empty pause. Profile your win shapes first.
+- Anything where combined mode + `setDropOrder('all')` already reads "right". Don't add a beat the player isn't asking for.
+
+### 8e. Event order
+
+```text
+cascade:destroy:start          ← winners begin imploding
+cascade:destroy:end            ← winners gone
+
+(pauseAfterDestroyMs)
+
+cascade:place:end              ← identities swapped (per reel)
+cascade:gravity:start          ← survivors begin sliding (per reel)
+cascade:gravity:symbol         ← per-survivor-tween (no new symbols)
+cascade:gravity:end            ← survivors landed (per reel)
+
+(gravityHoldMs + onGravityComplete await)
+
+cascade:dropIn:start           ← new symbols begin entering (per reel)
+cascade:dropIn:symbol          ← per-new-symbol-tween (no survivors)
+cascade:dropIn:end             ← new symbols landed (per reel)
+```
+
+In combined mode `cascade:gravity:*` does not fire — survivors and new symbols share one `cascade:dropIn:*` beat.
+
+---
+
 ## Event payloads at a glance
 
 | Event | When | Payload |
@@ -570,19 +662,22 @@ reelSet.events.on('cascade:dropIn:start', () => audio.unduck());
 | `cascade:fall:symbol` | Each symbol's fall-out tween is about to start. | `{ symbol, view, reelIndex, rowIndex, duration, ease, distance }` |
 | `cascade:fall:end` | A reel's last fall tween settled. | `{ reelIndex }` |
 | `cascade:place:end` | New identities placed AND snapped to grid, **before** drop-in starts. Canonical spot for badge / decoration application. Place has no `:start` because it's a synchronous swap. `isInitial: true` on Moment A; on Moment B `winnerRows` lists the row indices whose old symbols were cleared (so listeners can skip survivors). | `{ reelIndex, placedSymbols, isInitial, winnerRows }` |
-| `cascade:dropIn:start` | A reel's drop-in begins. | `{ reelIndex }` |
+| `cascade:dropIn:start` | A reel's drop-in begins. In two-stage mode this fires for stage B only (after `gravityHoldMs`). | `{ reelIndex }` |
 | `cascade:dropIn:symbol` | Each symbol's drop-in tween is about to start. `offsetRows` is the number of cells this symbol traverses (1 for top-row refills, more for survivors sliding past larger holes). | `{ symbol, view, reelIndex, rowIndex, duration, ease, offsetRows }` |
 | `cascade:dropIn:end` | A reel's last drop-in tween settled. | `{ reelIndex }` |
+| `cascade:gravity:start` | A reel's gravity stage begins (two-stage refill only). Survivors are about to slide; new symbols are parked off-viewport at alpha 0. Does not fire in combined mode. | `{ reelIndex }` |
+| `cascade:gravity:symbol` | A survivor's slide tween is about to start (two-stage refill only). Same shape as `cascade:dropIn:symbol`, scoped to survivors. | `{ symbol, view, reelIndex, rowIndex, duration, ease, offsetRows }` |
+| `cascade:gravity:end` | A reel's gravity stage settled (two-stage refill only). The global `gravityHoldMs` window begins after the slowest reel reports this. | `{ reelIndex }` |
 | `cascade:destroy:start` | `destroySymbols(cells)` is about to start. Fires from every call — both direct and inside `runCascade`. Empty-batch calls do not emit. | `{ cells }` |
 | `cascade:destroy:end` | `destroySymbols(cells)` finished — every `playDestroy()` resolved and the viewport dim (if any) was restored. | `{ cells }` |
 
 ---
 
-## When events aren't enough — replace a phase
+## Recipe 9 — When events aren't enough, replace a phase
 
 Each of `cascade:fall`, `cascade:place`, `cascade:dropIn` is a `ReelPhase` subclass registered in the factory under its own key. Override any one independently without touching the others.
 
-### 8a. Sideways exit (replaces `cascade:fall`)
+### 9a. Sideways exit (replaces `cascade:fall`)
 
 Symbols fly off the side of the screen instead of falling down.
 
@@ -600,7 +695,7 @@ builder.tumble({ /* ... */ }).phases((f) => f.register('cascade:fall', CometFall
 
 The other two phases keep their library defaults. `place` and `dropIn` continue to run as usual after your `cascade:fall` completes.
 
-### 8b. Slower place with cinematic pause (replaces `cascade:place`)
+### 9b. Slower place with cinematic pause (replaces `cascade:place`)
 
 If your game wants a held beat between fall and drop-in (e.g. for a "feature trigger" reveal):
 
