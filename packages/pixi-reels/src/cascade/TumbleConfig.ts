@@ -77,10 +77,14 @@ export interface TumbleDropInConfig {
    *   - `'perHole'` (default) — gravity-correct. Each symbol falls exactly
    *     as far as its hole demands: new symbols from above, survivors slide
    *     down the count of holes below them, untouched symbols don't move.
-   *   - `'auto'` — every symbol falls the full visible-rows distance. Useful
-   *     when you want the entire column to drop in unison.
+   *   - `'auto'` — every symbol falls the full visible-rows distance. Best
+   *     for Moment A (initial drop, "the entire column drops in unison")
+   *     and for refills made up entirely of new symbols. For refills with
+   *     SURVIVORS the engine silently falls back to per-hole geometry for
+   *     those movers — `'auto'` would teleport a sliding survivor above
+   *     the viewport before dropping it back down, which reads as a flash.
    *   - `number` — explicit pixel distance applied uniformly to every
-    *     animated symbol.
+   *     animated symbol.
    */
   distance?: 'perHole' | 'auto' | number;
 }

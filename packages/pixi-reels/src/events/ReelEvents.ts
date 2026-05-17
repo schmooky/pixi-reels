@@ -22,10 +22,9 @@ export interface SpinResult {
 }
 
 /**
- * Summary returned by `reelSet.runCascade(...)` and delivered on
- * `cascade:round:end`. Defined here (rather than in `core/ReelSet.ts`)
- * so the event signature can reference it directly — `core/ReelSet.ts`
- * re-exports the type under the same name.
+ * Summary returned by `reelSet.runCascade(...)`. Defined here (rather than
+ * in `core/ReelSet.ts`) so the public events module owns the shape;
+ * `core/ReelSet.ts` re-exports the type under the same name.
  */
 export interface RunCascadeResult {
   /** Number of refill stages that actually ran (0 = the initial grid had no wins). */
@@ -228,22 +227,6 @@ export interface ReelSetEvents extends Record<string, unknown[]> {
    */
   'cascade:gravity:end': [info: { reelIndex: number }];
   /**
-   * Tumble cascade: a `reelSet.runCascade(...)` call just started.
-   *
-   * Fires once at the top of `runCascade`, BEFORE the first `detectWinners`
-   * call — the canonical "a cascade round is now in flight" signal. Pair
-   * with `cascade:round:end` for "round started" / "round ended" UI flips
-   * (HUD lock, music bus enable) without polling `isSpinning` (which
-   * oscillates between refills in cascade mode).
-   *
-   *   - `initialGrid` — the grid the round opened on (post-initial-spin,
-   *     pre-first-detection).
-   *
-   * NOT fired when you compose the loop yourself with bare `refill()`
-   * calls — `runCascade` owns the event.
-   */
-  'cascade:round:start': [info: { initialGrid: string[][] }];
-  /**
    * Tumble cascade: a single chain stage just started.
    *
    * Fired inside `runCascade(...)` after `detectWinners` returns a non-empty
@@ -289,26 +272,21 @@ export interface ReelSetEvents extends Record<string, unknown[]> {
   'cascade:destroy:start': [info: { cells: readonly { reel: number; row: number }[] }];
   /**
    * Tumble cascade: `destroySymbols(cells, ...)` just finished — every
-   * cell's `playDestroy()` resolved and the viewport dim (if any) was
+   * cell's `playDestroy()` settled and the viewport dim (if any) was
    * restored. Mirror of `cascade:destroy:start`.
+   *
+   *   - `cells` — the cells the call was invoked with (same identity as
+   *     the `start` payload).
+   *   - `failed` — optional; present only when one or more
+   *     `playDestroy()` promises rejected. The next `refill()` /
+   *     `setResult()` resets these cells via `_replaceSymbol`, so the
+   *     visible state recovers automatically — listen if you want to
+   *     log / replay-mark / alarm on the rejection.
    */
-  'cascade:destroy:end': [info: { cells: readonly { reel: number; row: number }[] }];
-  /**
-   * Tumble cascade: a full cascade chain has finished. The mirror of
-   * `cascade:round:start` — carries the round summary.
-   *
-   * Fired once by `reelSet.runCascade(...)` after the detect → destroy →
-   * refill loop exits — either because `detectWinners` returned an empty
-   * list, the chain hit `maxChain`, or the player slammed via `skip()`.
-   *
-   * Payload is the same {@link RunCascadeResult} shape returned by
-   * `runCascade(...)` itself, so a listener and an awaited result see
-   * the same fields.
-   *
-   * NOT fired when you compose a cascade loop yourself (calling `refill()`
-   * directly). Roll your own emit / observer if you go that route.
-   */
-  'cascade:round:end': [info: RunCascadeResult];
+  'cascade:destroy:end': [info: {
+    cells: readonly { reel: number; row: number }[];
+    failed?: readonly { reel: number; row: number }[];
+  }];
   /**
    * Fires whenever the engine creates a visual overlay symbol for a pin
    * during a spin's motion phase. The `overlay` argument is the pooled

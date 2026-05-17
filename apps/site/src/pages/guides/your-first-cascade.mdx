@@ -138,11 +138,10 @@ function detectWinners(grid: string[][]): Cell[] {
 
 `runCascade` is the one-call replacement for a hand-rolled `while` loop. It:
 
-1. Fires `cascade:round:start` once.
-2. Calls `detectWinners(grid)` with the current visible grid.
-3. If empty, ends the chain and fires `cascade:round:end` with the round summary.
-4. Otherwise calls `reelSet.destroySymbols(winners)`, then `nextGrid(grid, winners)`, then `reelSet.refill(...)`.
-5. Loops back to step 2 with the post-refill grid.
+1. Calls `detectWinners(grid)` with the current visible grid.
+2. If empty, ends the chain and resolves with `RunCascadeResult` (`{ chainLength, totalWinners, finalGrid, wasSkipped }`).
+3. Otherwise fires `cascade:chain:start`, calls `reelSet.destroySymbols(winners)`, then `nextGrid(grid, winners)`, then `reelSet.refill(...)`, then fires `cascade:chain:end`.
+4. Loops back to step 1 with the post-refill grid.
 
 It also takes an `AbortSignal` so a button-tap mid-round can end the chain cleanly — we'll wire that up in Step 6, so the signature accepts one from the start:
 

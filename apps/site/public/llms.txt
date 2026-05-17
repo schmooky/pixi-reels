@@ -6,7 +6,7 @@ Site: https://pixi-reels.schmooky.dev
 Repo: https://github.com/schmooky/pixi-reels
 Package: https://www.npmjs.com/package/pixi-reels
 
-Generated: 2026-05-17T07:10:17.976Z
+Generated: 2026-05-17T08:34:35.635Z
 
 ## Quick start
 
@@ -188,7 +188,7 @@ Steps:
   - Spin — symbols drop in left-to-right, row by row, with bounce
   - reelSet.runCascade({ detectWinners, nextGrid }) owns the destroy → refill loop
   - onCascade fires per refill — bump the multiplier there
-  - cascade:round:end tells you the chain ended
+  - The awaited RunCascadeResult tells you the chain ended
 
 ### Cascade pops with WinPresenter
 URL: https://pixi-reels.schmooky.dev/recipes/cascade-winpresenter/
@@ -435,7 +435,7 @@ APIs: reelSet.spin, ReelSet.runCascade, ReelSet.destroySymbols, ReelSet.refill
 Steps:
   - Round 1: a normal spin lands the initial grid
   - reelSet.runCascade({ detectWinners, nextGrid }) owns the pop-fall-refill loop for every chain stage
-  - cascade:round:end fires once when no more winners are found
+  - The awaited promise resolves with RunCascadeResult when no more winners are found
 
 ### Big symbols with Spine
 URL: https://pixi-reels.schmooky.dev/recipes/spine-big-symbols/
@@ -510,6 +510,17 @@ Steps:
   - The returned Spritesheet exposes `sheet.textures[frameId]` for every frame
   - Pass the base + blur texture maps to `SpriteSymbol` (crisp) or `BlurSpriteSymbol` (swaps on phase events)
 
+### Cascade anticipation refill — gravity, hold, column wave
+URL: https://pixi-reels.schmooky.dev/recipes/tumble-anticipation/
+Split the cascade refill in two. Survivors slide down to fill the holes first, a global anticipation beat for multipliers and mascots, then new symbols drop in column by column. First-class on pixi-reels.
+Tags: cascade, tumble, refill, two-stage, anticipation, recipes
+APIs: ReelSet.refill, ReelSet.runCascade, ReelSet.setDropOrder, RunCascadeOptions.refillMode, RunCascadeOptions.gravityHoldMs, RunCascadeOptions.onGravityComplete
+Steps:
+  - Initial reveal is a normal left-to-right wave
+  - Winners destruct, then survivors slide down (cascade:gravity:* events fire)
+  - Global gravityHoldMs window — plug anticipation visuals in here
+  - New symbols drop in from above, column by column (cascade:dropIn:* events)
+
 ### Tumble feels — every preset, side by side
 URL: https://pixi-reels.schmooky.dev/recipes/tumble-feels/
 Five interactive canvases, same spin + cascade-refill loop. Only the .tumble({ fall, dropIn }) config changes between them. Click each SPIN to compare the feel without writing a line of code.
@@ -519,17 +530,6 @@ Steps:
   - Same builder, same spin + refill loop on every canvas
   - Only the .tumble({ fall, dropIn }) shape differs
   - Pick the preset that reads right for your art / theme / pace
-
-### Mummyland-style two-stage refill — gravity, hold, column wave
-URL: https://pixi-reels.schmooky.dev/recipes/tumble-mummyland/
-Survivors slide down to fill the holes first, then a global anticipation beat, then new symbols drop in column by column. The cascade-feel popularised by Mummyland Treasures and Reactoonz, now first-class on pixi-reels.
-Tags: cascade, tumble, refill, two-stage, mummyland, recipes
-APIs: ReelSet.refill, ReelSet.runCascade, ReelSet.setDropOrder, RunCascadeOptions.refillMode, RunCascadeOptions.gravityHoldMs, RunCascadeOptions.onGravityComplete
-Steps:
-  - Initial reveal is a normal left-to-right wave
-  - Winners destruct, then survivors slide down (cascade:gravity:* events fire)
-  - Global gravityHoldMs window — plug anticipation visuals in here
-  - New symbols drop in from above, column by column (cascade:dropIn:* events)
 
 ### Value-carrying coin (Hold & Win)
 URL: https://pixi-reels.schmooky.dev/recipes/value-coin-pin/
@@ -3933,8 +3933,8 @@ return {
     await new Promise((r) => setTimeout(r, 300));
 
     // Cascade chain — driven by `reelSet.runCascade({...})`. The library
-    // owns the detect → destroy → pause → refill loop and emits
-    // `cascade:round:end` when no more winners are found. Game-rule
+    // owns the detect → destroy → pause → refill loop and resolves with
+    // `RunCascadeResult` when no more winners are found. Game-rule
     // callbacks: `detectWinners` (cells whose symbol id matches the
     // current trigger) and `nextGrid` (post-gravity grid via the helper).
     reelSet.setDropOrder('all');
@@ -4597,6 +4597,114 @@ return {
 };
 ```
 
+### tumble-anticipation
+URL: https://pixi-reels.schmooky.dev/recipes/tumble-anticipation/
+```ts
+// @ts-nocheck
+// Injected: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//           PIXI, gsap, app, pickWeighted
+
+// CASCADE ANTICIPATION REFILL — two-stage. Survivors slide down to fill
+// holes FIRST (gravity stage), then a global pause for anticipation
+// visuals, then new symbols enter from above with a per-column wave.
+//
+// Same scripted win as the refill-orders recipes: a 3-cluster of `10` on
+// row 2 of the leftmost three reels. What changes:
+//
+//   1. After destroy, `mode: 'gravity-then-drop'` splits the refill in two.
+//      Stage A: only survivors animate — the row 2 cells slide down from
+//      row 1 to row 2. (In this layout there are no survivors below the
+//      winner because the cluster is on the bottom of the board, but the
+//      `cascade:gravity:start/end` events still fire per reel, marking
+//      where you'd plug anticipation logic in a denser cluster.)
+//   2. The library waits `gravityHoldMs` (250 ms here — bump for more
+//      drama, e.g. 500–800 ms for a mascot pop or multiplier roll).
+//   3. Stage B: new symbols drop in from above. `setDropOrder('ltr', 110)`
+//      gives a left-to-right wave — reel 0 drops first, then 1, then 2…
+//      Set the step ≥ `dropIn.duration` (here 380 ms) to make the columns
+//      strictly sequential (column 1 fully lands before column 2 starts);
+//      a smaller step gives overlap.
+
+const IDS = ['7', '8', '9', '10', 'J', 'Q'];
+const REELS = 6, ROWS = 4, SIZE = 64;
+const CLUSTER = '10';
+const HIT_ROW = 2;
+const HIT_COLS = [0, 1, 2];
+const PAUSE_AFTER_REMOVAL_MS = 220;
+const GRAVITY_HOLD_MS = 350;        // window for anticipation visuals
+const COLUMN_STEP_MS = 110;         // per-reel start delay on the drop-in wave
+
+function randSymbol(exclude) {
+  let s;
+  do { s = IDS[Math.floor(Math.random() * IDS.length)]; } while (s === exclude);
+  return s;
+}
+
+const reelSet = new ReelSetBuilder()
+  .reels(REELS).visibleSymbols(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
+  .symbols((r) => {
+    for (const sym of CARD_DECK) {
+      if (IDS.includes(sym.id)) {
+        r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
+      }
+    }
+  })
+  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150 })
+  .tumble({
+    fall:   { duration: 240, ease: 'sine.in',       rowStagger: 40 },
+    // Gravity uses the same `dropIn` config (it's the same phase, just
+    // filtered to survivors). 380 ms with a soft back-out reads as
+    // "settled with a tiny bounce" — pairs well with the held beat.
+    dropIn: { duration: 380, ease: 'back.out(1.4)', rowStagger: 0, distance: 'perHole' },
+  })
+  .ticker(app.ticker).build();
+
+return {
+  reelSet,
+  onSpin: async () => {
+    const stage0 = Array.from({ length: REELS }, (_, c) =>
+      Array.from({ length: ROWS }, (_, r) =>
+        r === HIT_ROW && HIT_COLS.includes(c) ? CLUSTER : randSymbol(CLUSTER),
+      ),
+    );
+    const stage1 = stage0.map((col, c) => {
+      if (!HIT_COLS.includes(c)) return [...col];
+      const next = [...col];
+      for (let r = HIT_ROW; r > 0; r--) next[r] = next[r - 1];
+      next[0] = randSymbol(CLUSTER);
+      return next;
+    });
+
+    reelSet.setDropOrder('ltr');
+    const spinDone = reelSet.spin();
+    await new Promise((r) => setTimeout(r, 220));
+    reelSet.setResult(stage0);
+    await spinDone;
+
+    await new Promise((r) => setTimeout(r, 200));
+
+    const winners = HIT_COLS.map((c) => ({ reel: c, row: HIT_ROW }));
+    await reelSet.destroySymbols(winners);
+    await new Promise((r) => setTimeout(r, PAUSE_AFTER_REMOVAL_MS));
+
+    // Per-column wave for the new-symbol drop-in stage. The step controls
+    // overlap vs sequential:
+    //   - step <  dropIn.duration → reels overlap (cascading wave)
+    //   - step >= dropIn.duration → reels strictly sequential
+    // The gravity stage IGNORES this setting — it always runs all reels
+    // in parallel, since gravity is a global "settling" beat.
+    reelSet.setDropOrder('ltr', COLUMN_STEP_MS);
+
+    await reelSet.refill({
+      winners,
+      grid: stage1,
+      mode: 'gravity-then-drop',
+      gravityHoldMs: GRAVITY_HOLD_MS,
+    });
+  },
+};
+```
+
 ### tumble-cartoon-bounce
 URL: https://pixi-reels.schmooky.dev/recipes/tumble-cartoon-bounce/
 ```ts
@@ -4745,114 +4853,6 @@ return {
     await destroyWinners(reelSet, winners);
     await new Promise((r) => setTimeout(r, PAUSE_AFTER_REMOVAL_MS));
     await reelSet.refill({ winners, grid: stage1 });
-  },
-};
-```
-
-### tumble-mummyland
-URL: https://pixi-reels.schmooky.dev/recipes/tumble-mummyland/
-```ts
-// @ts-nocheck
-// Injected: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
-//           PIXI, gsap, app, pickWeighted
-
-// MUMMYLAND-STYLE TWO-STAGE REFILL — survivors slide down to fill holes
-// FIRST (gravity stage), then a global pause for anticipation visuals,
-// then new symbols enter from above with a per-column wave.
-//
-// Same scripted win as the refill-orders recipes: a 3-cluster of `10` on
-// row 2 of the leftmost three reels. What changes:
-//
-//   1. After destroy, `mode: 'gravity-then-drop'` splits the refill in two.
-//      Stage A: only survivors animate — the row 2 cells slide down from
-//      row 1 to row 2. (In this layout there are no survivors below the
-//      winner because the cluster is on the bottom of the board, but the
-//      `cascade:gravity:start/end` events still fire per reel, marking
-//      where you'd plug anticipation logic in a denser cluster.)
-//   2. The library waits `gravityHoldMs` (250 ms here — bump for more
-//      drama, e.g. 500–800 ms for a mascot pop or multiplier roll).
-//   3. Stage B: new symbols drop in from above. `setDropOrder('ltr', 110)`
-//      gives a left-to-right wave — reel 0 drops first, then 1, then 2…
-//      Set the step ≥ `dropIn.duration` (here 380 ms) to make the columns
-//      strictly sequential (column 1 fully lands before column 2 starts);
-//      a smaller step gives overlap.
-
-const IDS = ['7', '8', '9', '10', 'J', 'Q'];
-const REELS = 6, ROWS = 4, SIZE = 64;
-const CLUSTER = '10';
-const HIT_ROW = 2;
-const HIT_COLS = [0, 1, 2];
-const PAUSE_AFTER_REMOVAL_MS = 220;
-const GRAVITY_HOLD_MS = 350;        // window for anticipation visuals
-const COLUMN_STEP_MS = 110;         // per-reel start delay on the drop-in wave
-
-function randSymbol(exclude) {
-  let s;
-  do { s = IDS[Math.floor(Math.random() * IDS.length)]; } while (s === exclude);
-  return s;
-}
-
-const reelSet = new ReelSetBuilder()
-  .reels(REELS).visibleSymbols(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
-  .symbols((r) => {
-    for (const sym of CARD_DECK) {
-      if (IDS.includes(sym.id)) {
-        r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
-      }
-    }
-  })
-  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150 })
-  .tumble({
-    fall:   { duration: 240, ease: 'sine.in',       rowStagger: 40 },
-    // Gravity uses the same `dropIn` config (it's the same phase, just
-    // filtered to survivors). 380 ms with a soft back-out reads as
-    // "settled with a tiny bounce" — pairs well with the held beat.
-    dropIn: { duration: 380, ease: 'back.out(1.4)', rowStagger: 0, distance: 'perHole' },
-  })
-  .ticker(app.ticker).build();
-
-return {
-  reelSet,
-  onSpin: async () => {
-    const stage0 = Array.from({ length: REELS }, (_, c) =>
-      Array.from({ length: ROWS }, (_, r) =>
-        r === HIT_ROW && HIT_COLS.includes(c) ? CLUSTER : randSymbol(CLUSTER),
-      ),
-    );
-    const stage1 = stage0.map((col, c) => {
-      if (!HIT_COLS.includes(c)) return [...col];
-      const next = [...col];
-      for (let r = HIT_ROW; r > 0; r--) next[r] = next[r - 1];
-      next[0] = randSymbol(CLUSTER);
-      return next;
-    });
-
-    reelSet.setDropOrder('ltr');
-    const spinDone = reelSet.spin();
-    await new Promise((r) => setTimeout(r, 220));
-    reelSet.setResult(stage0);
-    await spinDone;
-
-    await new Promise((r) => setTimeout(r, 200));
-
-    const winners = HIT_COLS.map((c) => ({ reel: c, row: HIT_ROW }));
-    await reelSet.destroySymbols(winners);
-    await new Promise((r) => setTimeout(r, PAUSE_AFTER_REMOVAL_MS));
-
-    // Per-column wave for the new-symbol drop-in stage. The step controls
-    // overlap vs sequential:
-    //   - step <  dropIn.duration → reels overlap (cascading wave)
-    //   - step >= dropIn.duration → reels strictly sequential
-    // The gravity stage IGNORES this setting — it always runs all reels
-    // in parallel, since gravity is a global "settling" beat.
-    reelSet.setDropOrder('ltr', COLUMN_STEP_MS);
-
-    await reelSet.refill({
-      winners,
-      grid: stage1,
-      mode: 'gravity-then-drop',
-      gravityHoldMs: GRAVITY_HOLD_MS,
-    });
   },
 };
 ```

@@ -124,7 +124,18 @@ export class CascadeDropInPhase extends ReelPhase<CascadeDropInPhaseConfig> {
       let startY: number;
       switch (this._drop.distance) {
         case 'auto':
-          startY = finalY - visible * cellHeight;
+          // `'auto'` = "every mover falls the full visible-rows distance,"
+          // which is correct for Moment A (every row is new) and for new
+          // arrivals in Moment B (originalRow < 0). For a Moment B SURVIVOR
+          // (originalRow >= 0), 'auto' would teleport the symbol from its
+          // actual prior row up above the viewport, then back down — a
+          // visible discontinuity. Fall back to perHole geometry for those
+          // movers so the survivor really does slide from its old row.
+          if (!config.initial && off.originalRow >= 0) {
+            startY = off.originalRow * cellHeight;
+          } else {
+            startY = finalY - visible * cellHeight;
+          }
           break;
         case 'perHole':
           startY = off.originalRow * cellHeight;

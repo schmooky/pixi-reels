@@ -120,9 +120,8 @@ export abstract class ReelSymbol implements Disposable {
 
   /**
    * Play the cascade-destruction animation for this symbol. Called by
-   * consumers (typically via a `destroyWinners(reelSet, winners)` helper)
-   * to disintegrate a winning cell before the next cascade refill drops
-   * fresh symbols in.
+   * consumers (typically via `reelSet.destroySymbols(...)`) to disintegrate
+   * a winning cell before the next cascade refill drops fresh symbols in.
    *
    * Default implementation: brief scale-up "charge" then implode (scale 0
    * + spin + fade), squishing around the symbol's bounding-box CENTER
@@ -141,8 +140,14 @@ export abstract class ReelSymbol implements Disposable {
    * (alternate by column) instead of relying on random.
    * `opts.delay` — seconds to wait before the animation starts. Use to
    * stagger a cluster of winners (e.g. `i * 0.015`).
+   * `opts.signal` — abort signal. If aborted (now or mid-animation), the
+   * tween is killed and the view is snapped to its destroyed pose
+   * (`alpha: 0`, transform restored). The promise resolves normally — abort
+   * means "skip to the end," not "fail". Subclasses that override this
+   * method MUST honor the signal or document why they can't (e.g. a Spine
+   * `disintegration` track is uninterruptible).
    */
-  async playDestroy(opts?: { direction?: 1 | -1; delay?: number }): Promise<void> {
+  async playDestroy(opts?: { direction?: 1 | -1; delay?: number; signal?: AbortSignal }): Promise<void> {
     const view = this.view;
     // Capture original transform so pool reuse sees a clean state.
     const originalPivotX = view.pivot.x;
@@ -162,19 +167,51 @@ export abstract class ReelSymbol implements Disposable {
 
     const dir = opts?.direction ?? (Math.random() < 0.5 ? 1 : -1);
     const delay = opts?.delay ?? 0;
+    const signal = opts?.signal;
+
+    const snapDestroyed = (): void => {
+      view.alpha = 0;
+      view.scale.set(0, 0);
+    };
+
+    // Pre-abort: skip the tween entirely and snap to the destroyed pose.
+    if (signal?.aborted) {
+      snapDestroyed();
+      view.pivot.set(originalPivotX, originalPivotY);
+      view.x = originalX;
+      view.y = originalY;
+      view.rotation = 0;
+      view.scale.set(1, 1);
+      view.alpha = 0;
+      return;
+    }
 
     await new Promise<void>((resolve) => {
-      getGsap()
-        .timeline({ onComplete: () => resolve(), delay })
+      const tl = getGsap()
+        .timeline({ onComplete: () => {
+          if (signal) signal.removeEventListener('abort', onAbort);
+          resolve();
+        }, delay })
         // Brief scale-up "charge" so the impending destruction has a beat
         // of anticipation before the implode.
         .to(view.scale, { x: 1.25, y: 1.25, duration: 0.08, ease: 'back.out(2.5)' })
         // Then implode: scale → 0, fade, slight spin.
         .to(view, { rotation: dir * 0.8, alpha: 0, duration: 0.24, ease: 'power2.in' }, '<+=0.05')
         .to(view.scale, { x: 0, y: 0, duration: 0.24, ease: 'power2.in' }, '<');
+
+      const onAbort = (): void => {
+        tl.kill();
+        snapDestroyed();
+        resolve();
+      };
+      if (signal) signal.addEventListener('abort', onAbort, { once: true });
     });
 
-    // Restore transform — alpha stays 0 (the symbol IS destroyed).
+    // Restore transform — alpha stays 0 (the symbol IS destroyed). Scale
+    // restored to 1 so pool reuse via `_replaceSymbol`'s same-id fast path
+    // doesn't inherit a stale 0× scale; _replaceSymbol also resets scale
+    // explicitly but a defensive restore here makes the destroyed cell
+    // observably "ready to be re-skinned" between calls.
     view.pivot.set(originalPivotX, originalPivotY);
     view.x = originalX;
     view.y = originalY;

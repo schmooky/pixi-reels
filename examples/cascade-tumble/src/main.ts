@@ -390,10 +390,10 @@ async function main(): Promise<void> {
     //
     // The library owns the detect → destroy → pause → refill orchestration.
     // We supply: (1) win detection, (2) next-grid computation, (3) the
-    // per-cascade multiplier + UI side effects. `cascade:round:end` fires
-    // at the end automatically. AbortController ends the round cleanly
-    // when the player slams between refills (where `reelSet.skip()` is
-    // a no-op because no phase is active).
+    // per-cascade multiplier + UI side effects. The awaited summary
+    // (`RunCascadeResult`) tells us how the chain ended. AbortController
+    // ends the round cleanly when the player slams between refills
+    // (where `reelSet.skip()` is a no-op because no phase is active).
     //
     // Cascade refills: every reel drops simultaneously — the canonical
     // commercial pattern. ('ltr' / 'rtl' on a refill reads as a fresh
@@ -437,23 +437,18 @@ async function main(): Promise<void> {
 
   // ─── LIFECYCLE-EVENT HOOKS (showcased for DX) ─────────────
   //
-  // The new `cascade:round:start` / `cascade:chain:start` / `cascade:round:end`
-  // events let you wire round-scoped UI without inspecting `isSpinning`
-  // (which oscillates per-refill in cascade mode). Wired here as a
-  // demo — log lines so you can watch them in the console without
-  // adding more UI clutter.
-  reelSet.events.on('cascade:round:start', ({ initialGrid }) => {
-    // eslint-disable-next-line no-console
-    console.log('[cascade] round started — initial grid:',
-      initialGrid.map((c) => c.join(',')).join(' | '));
-  });
+  // `cascade:chain:start` / `cascade:chain:end` fire per refill stage,
+  // letting sibling modules (audio bus, HUD, analytics) react without
+  // polling `isSpinning` (which oscillates per-refill in cascade mode).
+  // Wired here as demo log lines.
   reelSet.events.on('cascade:chain:start', ({ chain, winners }) => {
     // eslint-disable-next-line no-console
     console.log(`[cascade] chain ${chain} — ${winners.length} winner(s)`);
   });
-  reelSet.events.on('cascade:round:end', ({ chainLength, totalWinners, wasSkipped }) => {
+  reelSet.events.on('cascade:chain:end', ({ chain, nextGrid }) => {
     // eslint-disable-next-line no-console
-    console.log(`[cascade] round done — ${chainLength} stage(s), ${totalWinners} winner(s)${wasSkipped ? ' (slammed)' : ''}`);
+    console.log(`[cascade] chain ${chain} done — next grid:`,
+      nextGrid.map((c) => c.join(',')).join(' | '));
   });
 
   reposition();

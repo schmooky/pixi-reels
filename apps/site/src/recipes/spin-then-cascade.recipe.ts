@@ -88,8 +88,8 @@ return {
     await new Promise((r) => setTimeout(r, 300));
 
     // Cascade chain — driven by `reelSet.runCascade({...})`. The library
-    // owns the detect → destroy → pause → refill loop and emits
-    // `cascade:round:end` when no more winners are found. Game-rule
+    // owns the detect → destroy → pause → refill loop and resolves with
+    // `RunCascadeResult` when no more winners are found. Game-rule
     // callbacks: `detectWinners` (cells whose symbol id matches the
     // current trigger) and `nextGrid` (post-gravity grid via the helper).
     reelSet.setDropOrder('all');

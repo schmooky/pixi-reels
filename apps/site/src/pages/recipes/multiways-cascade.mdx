@@ -54,7 +54,7 @@ document.getElementById('spin')!.addEventListener('click', async () => {
 
   // Cascade chain: detect ways wins → destroy → refill → re-detect.
   // `runCascade` re-evaluates wins after every refill; when none are
-  // found, the chain ends and `cascade:round:end` fires.
+  // found, the chain ends and the awaited promise resolves.
   reelSet.setDropOrder('all');
   await reelSet.runCascade({
     detectWinners: (g) => collectAllWaysWinners(g),

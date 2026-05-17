@@ -39,19 +39,12 @@ function buildTumbleHarness(initialFrame: string[][]): Harness {
 }
 
 describe('ReelSet.runCascade', () => {
-  it('returns chainLength=0 + fires cascade:round:end when there are no wins', async () => {
+  it('returns chainLength=0 with the awaited summary when there are no wins', async () => {
     const { reelSet, destroy } = buildTumbleHarness([
       ['a', 'b', 'a'],
       ['b', 'a', 'b'],
       ['a', 'b', 'a'],
     ]);
-
-    const completeEvents: Array<{ chainLength: number; totalWinners: number; wasSkipped: boolean }> = [];
-    reelSet.events.on('cascade:round:end', (info) => completeEvents.push({
-      chainLength: info.chainLength,
-      totalWinners: info.totalWinners,
-      wasSkipped: info.wasSkipped,
-    }));
 
     const summary = await reelSet.runCascade({
       detectWinners: () => [],
@@ -65,9 +58,6 @@ describe('ReelSet.runCascade', () => {
       finalGrid: reelSet.getVisibleGrid(),
       wasSkipped: false,
     });
-    expect(completeEvents).toEqual([
-      { chainLength: 0, totalWinners: 0, wasSkipped: false },
-    ]);
     destroy();
   });
 
@@ -214,7 +204,7 @@ describe('ReelSet.runCascade', () => {
     destroy();
   });
 
-  it('emits cascade:round:start once, then chain:start/end per stage, then cascade:round:end', async () => {
+  it('emits chain:start/end per stage in order', async () => {
     const { reelSet, destroy } = buildTumbleHarness([
       ['a', 'b', 'c'],
       ['a', 'b', 'c'],
@@ -222,10 +212,8 @@ describe('ReelSet.runCascade', () => {
     ]);
 
     const events: string[] = [];
-    reelSet.events.on('cascade:round:start', () => events.push('round:start'));
     reelSet.events.on('cascade:chain:start', ({ chain }) => events.push(`chain:start:${chain}`));
     reelSet.events.on('cascade:chain:end',   ({ chain }) => events.push(`chain:end:${chain}`));
-    reelSet.events.on('cascade:round:end',   () => events.push('round:end'));
 
     let calls = 0;
     await reelSet.runCascade({
@@ -240,34 +228,11 @@ describe('ReelSet.runCascade', () => {
     });
 
     expect(events).toEqual([
-      'round:start',
       'chain:start:1',
       'chain:end:1',
       'chain:start:2',
       'chain:end:2',
-      'round:end',
     ]);
-    destroy();
-  });
-
-  it('round:start fires before any detectWinners call, round:end fires after the last refill', async () => {
-    const { reelSet, destroy } = buildTumbleHarness([
-      ['a', 'b', 'c'],
-      ['a', 'b', 'c'],
-      ['a', 'b', 'c'],
-    ]);
-
-    const trace: string[] = [];
-    reelSet.events.on('cascade:round:start', () => trace.push('round:start'));
-    reelSet.events.on('cascade:round:end',   () => trace.push('round:end'));
-
-    await reelSet.runCascade({
-      detectWinners: () => { trace.push('detect'); return []; },
-      nextGrid: (g) => g,
-      pauseAfterDestroyMs: 0,
-    });
-
-    expect(trace).toEqual(['round:start', 'detect', 'round:end']);
     destroy();
   });
 

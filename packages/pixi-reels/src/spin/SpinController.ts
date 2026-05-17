@@ -143,12 +143,25 @@ export class SpinController implements Disposable {
    */
   private _skipPreviousSpeedName: string | null = null;
   /**
-   * Speed profile name we boosted INTO. Used as a sentinel on the next
-   * `spin()`-restore — if the active name no longer matches, the player
-   * (or app code) manually changed speed between rounds and we must not
-   * clobber that choice with our pre-boost value.
+   * Speed profile name we boosted INTO. Kept for telemetry / debugging;
+   * the restore decision uses `_manualSpeedSinceBoost` instead, which
+   * correctly distinguishes "user didn't touch speed" from "user happened
+   * to manually re-set to the boosted value" (the activeName check alone
+   * can't tell those apart).
    */
   private _skipBoostedToName: string | null = null;
+  /**
+   * `true` when the app called `setSpeed()` between the round-start boost
+   * and the next `spin()` — i.e. the user made an explicit speed choice
+   * after the boost. The next `spin()` restore path checks this flag and
+   * SKIPS the restore so the manual choice survives, even if the manual
+   * choice happens to be the same name we boosted into.
+   *
+   * Set by `notifyManualSpeedChange()` (called from `ReelSet.setSpeed`).
+   * Cleared at the start of every `spin()` together with the boost
+   * bookkeeping.
+   */
+  private _manualSpeedSinceBoost = false;
   /**
    * Cascade-mode round flag. When true, the next `refill()` skips its
    * phase chain and slams instantly. Set when the player presses `skip()`
@@ -223,23 +236,21 @@ export class SpinController implements Disposable {
     }
     this._currentSpinMode = mode;
 
-    // Round boundary: a new `spin()` ends the previous round. If the player
-    // boosted via `skip()` last round AND the boosted profile is still
-    // active (i.e. nothing manually re-set it in between), restore the
-    // speed they had before. If the active name no longer matches what we
-    // boosted into, the app changed speed between rounds and we must not
-    // clobber that choice.
+    // Round boundary: a new `spin()` ends the previous round. If the
+    // player boosted via `skip()` last round AND did NOT manually call
+    // `setSpeed()` between rounds, restore the pre-boost speed. The
+    // manual-flag check is what distinguishes "user untouched, restore"
+    // from "user explicitly chose the boosted name, leave alone" — the
+    // activeName comparison alone can't tell those apart.
     if (this._skipPreviousSpeedName !== null) {
       const prev = this._skipPreviousSpeedName;
-      const boostedTo = this._skipBoostedToName;
       this._skipPreviousSpeedName = null;
       this._skipBoostedToName = null;
-      if (boostedTo === null || this._speedManager.activeName === boostedTo) {
-        if (this._speedManager.activeName !== prev) {
-          this._speedManager.set(prev);
-        }
+      if (!this._manualSpeedSinceBoost && this._speedManager.activeName !== prev) {
+        this._speedManager.set(prev);
       }
     }
+    this._manualSpeedSinceBoost = false;
     this._skipStage = 0;
     this._autoSlamRefills = false;
 
@@ -281,10 +292,38 @@ export class SpinController implements Disposable {
 
     for (let i = 0; i < this._reels.length; i++) {
       if (this._heldReels.has(i)) continue;
-      this._startReel(i, speed, generation);
+      this._runReelTask(this._startReel(i, speed, generation), 'spin', i, generation);
     }
 
     return resultPromise;
+  }
+
+  /**
+   * Wrap a per-reel async phase chain with an error guard. If the chain
+   * rejects we log the error and force a slam so:
+   *   1. the spin promise resolves with `wasSkipped: true` instead of
+   *      hanging forever waiting for the failed reel to land,
+   *   2. every other reel is brought to a clean landed state,
+   *   3. the next `spin()` / `refill()` starts from a coherent snapshot.
+   *
+   * Generation-guarded so a late rejection from a stale spin (one that
+   * was already replaced by a fresh `spin()` call) is dropped silently.
+   */
+  private _runReelTask(
+    p: Promise<void>,
+    kind: 'spin' | 'refill',
+    reelIndex: number,
+    generation: number,
+  ): void {
+    p.catch((err: unknown) => {
+      if (generation !== this._spinGeneration) return;
+      // eslint-disable-next-line no-console
+      console.error(
+        `[pixi-reels] reel ${reelIndex} (${kind}) phase chain threw — slamming to recover:`,
+        err,
+      );
+      this._slam();
+    });
   }
 
   /**
@@ -340,8 +379,11 @@ export class SpinController implements Disposable {
    *     to the drop-in stage only; the gravity stage runs simultaneously
    *     across all reels.
    *
-   * Throws if a spin or refill is already in flight, or if `.tumble(...)`
-   * was not configured on the builder.
+   * Throws if a spin or refill is already in flight, if `.tumble(...)` was
+   * not configured on the builder, if the grid shape doesn't match the
+   * reel set, or if any winner cell is out of range. All validation runs
+   * BEFORE the spinning state is taken so a thrown error leaves the engine
+   * idle (callers can retry without re-entry errors).
    */
   async refill(opts: {
     winners: ReadonlyArray<Cell>;
@@ -355,6 +397,38 @@ export class SpinController implements Disposable {
     }
     if (!this._phaseFactory.has('cascade:place')) {
       throw new Error('refill() requires .tumble(...) on the builder.');
+    }
+
+    // Validate input shape + bounds. Normalize grid once so per-column
+    // length checks see the legacy `string[][]` form regardless of input.
+    const normalizedGrid = toLegacyTargetGrid(opts.grid);
+    if (normalizedGrid.length !== this._reels.length) {
+      throw new RangeError(
+        `refill: grid has ${normalizedGrid.length} column(s) but the reel set has ` +
+        `${this._reels.length}.`,
+      );
+    }
+    for (let i = 0; i < normalizedGrid.length; i++) {
+      const expected = this._reels[i].visibleRows;
+      if (normalizedGrid[i].length !== expected) {
+        throw new RangeError(
+          `refill: grid column ${i} has ${normalizedGrid[i].length} row(s) but ` +
+          `reel ${i} has ${expected} visible row(s).`,
+        );
+      }
+    }
+    for (const w of opts.winners) {
+      if (!Number.isInteger(w.reel) || w.reel < 0 || w.reel >= this._reels.length) {
+        throw new RangeError(
+          `refill: winner.reel ${w.reel} out of range [0, ${this._reels.length}).`,
+        );
+      }
+      const rows = this._reels[w.reel].visibleRows;
+      if (!Number.isInteger(w.row) || w.row < 0 || w.row >= rows) {
+        throw new RangeError(
+          `refill: winner.row ${w.row} out of range [0, ${rows}) for reel ${w.reel}.`,
+        );
+      }
     }
 
     this._isSpinning = true;
@@ -377,10 +451,10 @@ export class SpinController implements Disposable {
     const speed = this._speedManager.active;
 
     // Normalize grid + build per-reel frames upfront. No waiting on
-    // `setResult` here — the caller provided everything.
-    const grid = toLegacyTargetGrid(opts.grid);
-    this._resultSymbols = grid;
-    const decorated = this._coordinateBigSymbols(grid, (i) => this._reels[i].visibleRows);
+    // `setResult` here — the caller provided everything. Reuses the
+    // already-validated `normalizedGrid` from the entry guards.
+    this._resultSymbols = normalizedGrid;
+    const decorated = this._coordinateBigSymbols(normalizedGrid, (i) => this._reels[i].visibleRows);
     const frames: string[][] = [];
     for (let i = 0; i < this._reels.length; i++) {
       const reel = this._reels[i];
@@ -428,17 +502,22 @@ export class SpinController implements Disposable {
       // `gravityHoldMs`, then start the drop-in stage with the user's
       // per-reel stop delays applied — that's where column stagger lives.
       const gravityHoldMs = opts.gravityHoldMs ?? 250;
-      void this._refillTwoStage(
+      this._refillTwoStage(
         speed,
         generation,
         winnersByReel,
         gravityHoldMs,
         opts.onGravityComplete,
-      );
+      ).catch((err: unknown) => {
+        if (generation !== this._spinGeneration) return;
+        // eslint-disable-next-line no-console
+        console.error('[pixi-reels] two-stage refill threw — slamming to recover:', err);
+        this._slam();
+      });
     } else {
       for (let i = 0; i < this._reels.length; i++) {
         const winnerRows = winnersByReel.get(i) ?? [];
-        void this._refillReel(i, speed, generation, winnerRows);
+        this._runReelTask(this._refillReel(i, speed, generation, winnerRows), 'refill', i, generation);
       }
     }
 
@@ -550,7 +629,12 @@ export class SpinController implements Disposable {
     // refill wave. The drop-in phase calls `notifyLanded` when its tween
     // completes, which marks the reel landed and resolves `refill()`.
     for (let i = 0; i < this._reels.length; i++) {
-      void this._refillReelDropInOnly(i, speed, generation, winnersByReel.get(i) ?? []);
+      this._runReelTask(
+        this._refillReelDropInOnly(i, speed, generation, winnersByReel.get(i) ?? []),
+        'refill',
+        i,
+        generation,
+      );
     }
   }
 
@@ -636,12 +720,36 @@ export class SpinController implements Disposable {
    *
    * Subsequent presses in the same round slam each current drop.
    *
+   * Throws if called before `setResult()` arrives (no result to slam onto
+   * — slamming now would land the reels on the random spin-buffer state).
+   * Use {@link requestSkip} for the deferred slam pattern: it queues the
+   * slam and fires it the moment `setResult()` arrives, so the reels land
+   * on the intended grid. (Refill paths set the result at entry, so this
+   * guard fires only during the pre-`setResult` window of `spin()`.)
+   *
    * Callers who want only the slam without the boost or auto-slam side
    * effects (tests, anti-cheat, programmatic automation) should use
    * `slamStop()` instead.
    */
   skip(): void {
     if (!this._isSpinning) return;
+
+    // Pre-result guard. Slamming before setResult() lands on the random
+    // spin-buffer state (standard mode = random visible grid; cascade
+    // mode = alpha-0 fall-out residue, i.e. invisible). Both are wrong;
+    // fail loud and steer the caller to `requestSkip()` which queues the
+    // intent until setResult arrives.
+    //
+    // Held-only spins (every reel held) resolve on a microtask without
+    // ever taking a result and never reach this branch.
+    if (!this._resultSymbols) {
+      throw new Error(
+        'skip() called before setResult() — there is nothing to land on yet ' +
+        '(standard mode would land on random buffer fill; cascade mode would land ' +
+        "invisible). Use reelSet.requestSkip() to queue the slam until setResult() " +
+        'arrives, or wait for setResult() before calling skip().',
+      );
+    }
 
     if (this._skipStage === 0) {
       if (this._currentSpinMode === 'cascade') {
@@ -681,9 +789,15 @@ export class SpinController implements Disposable {
    * The slam path itself: force-complete active phases, place results (or
    * snap to current symbols when no result is set), mark every un-landed
    * reel as landed. Shared by `skip()` (stage 1+), `requestSkip()`'s
-   * deferred path, and `slamStop()`.
+   * deferred path, `slamStop()`, and the per-reel error-recovery path
+   * inside `_runReelTask`.
+   *
+   * Idempotent: a second call once the spin has finished is a no-op. Lets
+   * cascading rejection handlers each safely invoke `_slam` without
+   * triple-emitting `skip:requested`.
    */
   private _slam(): void {
+    if (!this._isSpinning) return;
     this._wasSkipped = true;
     this._events.emit('skip:requested');
 
@@ -743,6 +857,19 @@ export class SpinController implements Disposable {
     }
 
     this._events.emit('skip:completed');
+  }
+
+  /**
+   * Called by `ReelSet.setSpeed()` after the speed manager applies a
+   * user-driven profile change. Sets the flag the next `spin()` checks
+   * to decide whether to undo a prior `skip()` boost. Internal-only —
+   * not part of the SpinController public API.
+   *
+   * Idempotent if no boost is pending (the flag is consulted only when
+   * `_skipPreviousSpeedName !== null`).
+   */
+  notifyManualSpeedChange(): void {
+    this._manualSpeedSinceBoost = true;
   }
 
   /**

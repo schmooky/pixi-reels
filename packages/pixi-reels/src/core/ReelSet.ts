@@ -78,14 +78,21 @@ export interface DestroySymbolsOptions {
    * a number for a custom alpha. Default: `false` (no dim).
    */
   dim?: boolean | number;
+  /**
+   * Abort signal. Aborting mid-destroy kills every in-flight
+   * `playDestroy` tween and snaps the cells to their destroyed pose
+   * (`alpha: 0`) without waiting for the natural end of the animation.
+   * The returned promise still resolves normally — abort means
+   * "fast-forward to the destroyed state," not "fail." Forwarded
+   * automatically by `runCascade`'s own `signal`.
+   */
+  signal?: AbortSignal;
 }
 
 /**
- * Summary returned by {@link ReelSet.runCascade}. Also delivered to
- * listeners on the `cascade:round:end` event.
- *
- * Aliased from the canonical definition in `events/ReelEvents.ts` so the
- * event and the method return type share one shape.
+ * Summary returned by {@link ReelSet.runCascade}. Re-exported from the
+ * canonical definition in `events/ReelEvents.ts` so the events module
+ * stays the single source of truth for shared shapes.
  */
 export type RunCascadeResult = RunCascadeResultBase;
 
@@ -595,19 +602,40 @@ export class ReelSet extends Container implements Disposable {
 
     const z = opts?.zIndex === undefined ? 1000 : opts.zIndex;
 
+    const signal = opts?.signal;
     this._events.emit('cascade:destroy:start', { cells });
     try {
-      await Promise.all(cells.map((cell, i) => {
+      // allSettled (not all) so a single misbehaving playDestroy doesn't
+      // strand its siblings mid-animation. Failed cells are surfaced via
+      // the `failed` field on `cascade:destroy:end` so listeners can log
+      // / replay-mark / alarm; the cell stays at whatever pose its tween
+      // left it in (typically still visible) — the next `refill()` resets
+      // it via `_replaceSymbol` regardless.
+      const results = await Promise.allSettled(cells.map((cell, i) => {
         const sym = this._reels[cell.reel].getSymbolAt(cell.row);
         if (z !== null) sym.view.zIndex = z;
         return sym.playDestroy({
           direction: resolveDirection(cell, i),
           delay: resolveDelay(cell, i),
+          signal,
         });
       }));
+      const failed: Cell[] = [];
+      for (let i = 0; i < results.length; i++) {
+        if (results[i].status === 'rejected') {
+          failed.push(cells[i]);
+          // eslint-disable-next-line no-console
+          console.warn(
+            `[pixi-reels] destroySymbols: cell (${cells[i].reel}, ${cells[i].row}) ` +
+            'playDestroy rejected:',
+            (results[i] as PromiseRejectedResult).reason,
+          );
+        }
+      }
+      this._events.emit('cascade:destroy:end',
+        failed.length > 0 ? { cells, failed } : { cells });
     } finally {
       if (dim) this._viewport.hideDim();
-      this._events.emit('cascade:destroy:end', { cells });
     }
   }
 
@@ -615,8 +643,8 @@ export class ReelSet extends Container implements Disposable {
    * Run the canonical cascade chain on top of `refill()`. Loops:
    * detect winners → destroy → pause → refill → emit — until
    * `detectWinners` returns an empty list (or `maxChain` is hit, or the
-   * player slammed via `skip()`). Resolves with the final grid and a
-   * summary; also fires `cascade:round:end` on the event bus.
+   * player slammed via `skip()` / abort). Resolves with the final grid
+   * and a summary.
    *
    * The orchestration is library-owned; the **game rules** (what counts
    * as a winner, how the next grid is computed) stay in your callbacks.
@@ -628,31 +656,28 @@ export class ReelSet extends Container implements Disposable {
    * ```ts
    * await reelSet.spin();
    * reelSet.setResult(await server.spin());
-   * await reelSet.runCascade({
+   * const summary = await reelSet.runCascade({
    *   detectWinners: (grid) => detectClusters(grid),
    *   nextGrid: async (grid, winners) => server.cascade(winners),
    *   onCascade: ({ chain, winners }) => bumpMultiplier(chain),
    * });
+   * console.log(summary.chainLength, summary.totalWinners);
    * ```
    *
    * Composes with everything else in the library:
    *  - `setDropOrder(...)` is honoured on every refill in the chain — set
    *    it before `runCascade` and the same order applies to every drop.
    *  - `cascade:fall:symbol`, `cascade:place:end`, `cascade:dropIn:symbol`
-   *    fire on each refill in addition to the final `cascade:round:end`.
-   *  - `reelSet.skip()` ends the chain immediately; the final
-   *    `cascade:round:end` payload reports `wasSkipped: true`.
+   *    fire on each refill.
+   *  - `reelSet.skip()` ends the chain immediately; the returned summary
+   *    reports `wasSkipped: true`.
    *
-   * Event order, per call:
-   *   1. `cascade:round:start` — round opened (fires once, before `detectWinners`).
-   *   2. For each chain stage with winners:
-   *      `cascade:chain:start` →
-   *        `cascade:destroy:start` → (destroy tweens) → `cascade:destroy:end` →
-   *        `onCascade` callback →
-   *        pause → next refill (`cascade:fall:*` is skipped; `cascade:place:end`
-   *        + `cascade:dropIn:*` fire per reel) →
-   *      `cascade:chain:end`.
-   *   3. `cascade:round:end` — round closed (fires once, always).
+   * Event order per stage with winners: `cascade:chain:start` →
+   *   `cascade:destroy:start` → (destroy tweens) → `cascade:destroy:end` →
+   *   `onCascade` → pause → refill (`cascade:place:end` +
+   *   `cascade:dropIn:*` per reel) → `cascade:chain:end`. The chain itself
+   *   is delimited by the returned `Promise` — `await` the call to know
+   *   when it's done.
    *
    * Requires `.tumble(...)` on the builder (same as `refill()`).
    */
@@ -682,8 +707,6 @@ export class ReelSet extends Container implements Disposable {
     let totalWinners = 0;
     let current = this.getVisibleGrid();
 
-    this._events.emit('cascade:round:start', { initialGrid: current });
-
     try {
       while (chainLength < maxChain && !wasSkipped) {
         const winners = await opts.detectWinners(current, chainLength);
@@ -697,7 +720,15 @@ export class ReelSet extends Container implements Disposable {
           currentGrid: current,
         });
 
-        await this.destroySymbols(winners, opts.destroyOptions);
+        // Forward the round-level abort signal into destroySymbols so a
+        // mid-destroy abort kills the in-flight tweens immediately instead
+        // of letting them run their full ~300 ms. The opts.destroyOptions
+        // signal (if any) takes precedence to honor explicit per-batch
+        // overrides; otherwise we use the cascade-level one.
+        const destroyOpts = opts.destroyOptions?.signal
+          ? opts.destroyOptions
+          : { ...opts.destroyOptions, signal: opts.signal };
+        await this.destroySymbols(winners, destroyOpts);
         if (wasSkipped) break;
 
         if (opts.onCascade) {
@@ -745,7 +776,6 @@ export class ReelSet extends Container implements Disposable {
       finalGrid: current,
       wasSkipped,
     };
-    this._events.emit('cascade:round:end', summary);
     return summary;
   }
 
@@ -755,8 +785,14 @@ export class ReelSet extends Container implements Disposable {
   }
 
   /**
-   * Override the per-reel stop delay for the current spin (in ms).
-   * Pass one value per reel. Cleared at the start of each new spin.
+   * Override the per-reel stop delay (in ms). Pass one value per reel.
+   *
+   * **Sticky.** The override persists indefinitely — it survives across
+   * `spin()` AND `refill()` boundaries until you call `setStopDelays()`
+   * (or `setDropOrder()`) again. The persistence is deliberate: cascade
+   * recipes that set `setDropOrder('all')` once before `runCascade(...)`
+   * want every internal `refill()` to honor it. If your rounds use
+   * different patterns, re-set explicitly per round.
    *
    * @example
    * // Stagger the last two reels more than the default for dramatic effect:
@@ -777,10 +813,14 @@ export class ReelSet extends Container implements Disposable {
    *     auto-slam with no animation. One press ends a multi-drop
    *     cascade.
    *
-   * Subsequent presses also slam each current drop. Callers that want a
-   * slam *without* the round-scoped side effects (tests, anti-cheat) should
-   * use `slamStop()`. Callers expecting a slam before `setResult()` arrives
-   * should use `requestSkip()`.
+   * Subsequent presses also slam each current drop.
+   *
+   * Throws if called before `setResult()` arrives (nothing to land on —
+   * slamming now would land on random spin-buffer content). The universal
+   * "spin/skip" button pattern should call `requestSkip()` in that window
+   * (or wrap `skip()` in a try/catch that routes to `requestSkip()` in
+   * the catch). Callers that want a slam *without* the round-scoped side
+   * effects (tests, anti-cheat) should use `slamStop()`.
    */
   skip(): void {
     this._spinController.skip();
@@ -849,13 +889,24 @@ export class ReelSet extends Container implements Disposable {
    * stagger step defaults to the active speed profile's stopDelay (or
    * 150 ms if stopDelay is 0).
    *
-   * The override persists across calls — set it once before the next
-   * `spin()` or `refill()` and it applies to that sequence. The cascade
-   * pattern is:
+   * **Sticky.** The override persists indefinitely — until another
+   * `setDropOrder()` / `setStopDelays()` call overwrites it (a `null` /
+   * absent override falls back to the default `i * speed.stopDelay`
+   * stagger). It survives across `spin()` AND `refill()` boundaries by
+   * design, because `runCascade(...)` calls `refill()` in a loop and the
+   * order set once before the chain must apply to every iteration.
    *
-   *   - `setDropOrder('ltr')` before `spin()` — left-to-right reveal
-   *   - `setDropOrder('all')` before each `refill()` — all columns drop
-   *     simultaneously (the canonical commercial-cascade refill)
+   * The canonical cascade pattern resets it per phase:
+   *
+   *   - `setDropOrder('ltr')` before `spin()` — left-to-right reveal on
+   *     the initial drop.
+   *   - `setDropOrder('all')` before `runCascade()` — every refill in the
+   *     chain drops all columns simultaneously (the commercial-cascade
+   *     pattern).
+   *
+   * If you leave the order set between rounds and don't re-set before the
+   * next `spin()`, the previous value carries over. Re-set explicitly per
+   * round if your rounds use different patterns.
    *
    * Call again with a different value to change it; the previous value
    * is replaced, not stacked.
@@ -1103,6 +1154,11 @@ export class ReelSet extends Container implements Disposable {
   setSpeed(name: string): void {
     const { previous, current } = this._speedManager.set(name);
     this._events.emit('speed:changed', current, previous);
+    // Tell the spin controller this was a user-driven change (not the
+    // internal `skip()` boost), so the next `spin()`'s restore path
+    // leaves the choice alone even if the name happens to match the
+    // value we boosted into.
+    this._spinController.notifyManualSpeedChange();
   }
 
   // ─── Spotlight API ────────────────────────────────────────

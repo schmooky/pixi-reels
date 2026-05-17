@@ -6,7 +6,7 @@ tags: [hybrid, cascade, runCascade, recent]
 steps:
   - "Round 1: a normal spin lands the initial grid"
   - "reelSet.runCascade({ detectWinners, nextGrid }) owns the pop-fall-refill loop for every chain stage"
-  - "cascade:round:end fires once when no more winners are found"
+  - "The awaited promise resolves with RunCascadeResult when no more winners are found"
 apis:
   - reelSet.spin
   - ReelSet.runCascade

@@ -17,7 +17,7 @@ Each SPIN click plays the **full cascade sequence** from a single click:
 1. Land on stage 0 via `reelSet.spin()` + `setResult(...)`.
 2. `reelSet.runCascade({ detectWinners, nextGrid })` owns the chain.
 3. For every cascade level: detect winners → `destroySymbols` → pause → `refill`.
-4. When `detectWinners` returns `[]`, `cascade:round:end` fires and the round ends.
+4. When `detectWinners` returns `[]`, the awaited `runCascade` promise resolves with `RunCascadeResult` and the round ends.
 
 The library owns the orchestration; your two callbacks own the **game rules** (what's a winner, what's the next grid).
 

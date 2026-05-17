@@ -20,14 +20,14 @@ Both emitters' `on(name, cb)` returns an `off()` function for unsubscription. Th
 | Spin lifecycle | `spin:start` · `spin:allStarted` · `spin:stopping` · `spin:reelLanded` · `spin:allLanded` · `spin:complete` | Every `spin()` |
 | Skip / slam | `skip:requested` · `skip:completed` · `skip:boosted` | `skip()` · `requestSkip()` · `slamStop()` |
 | Speed | `speed:changed` | `setSpeed()` |
-| Cascade | `cascade:round:start` · `cascade:round:end` · `cascade:chain:start` · `cascade:chain:end` · `cascade:fall:start` · `cascade:fall:symbol` · `cascade:fall:end` · `cascade:place:end` · `cascade:dropIn:start` · `cascade:dropIn:symbol` · `cascade:dropIn:end` · `cascade:destroy:start` · `cascade:destroy:end` | `.tumble()` + `spin({mode:'cascade'})` / `refill()` / `runCascade()` / `destroySymbols()` |
+| Cascade | `cascade:chain:start` · `cascade:chain:end` · `cascade:fall:start` · `cascade:fall:symbol` · `cascade:fall:end` · `cascade:place:end` · `cascade:dropIn:start` · `cascade:dropIn:symbol` · `cascade:dropIn:end` · `cascade:destroy:start` · `cascade:destroy:end` · `cascade:gravity:start` · `cascade:gravity:symbol` · `cascade:gravity:end` | `.tumble()` + `spin({mode:'cascade'})` / `refill()` / `runCascade()` / `destroySymbols()` |
 | Spotlight | `spotlight:start` · `spotlight:end` | `spotlight.cycle(...)` |
 | Wins | `win:start` · `win:group` · `win:symbol` · `win:end` | `WinPresenter.show(...)` |
 | Pins | `pin:placed` · `pin:moved` · `pin:expired` · `pin:migrated` · `pin:overlayCreated` · `pin:overlayDestroyed` | `pin()` · `unpin()` · `movePin()` · MultiWays reshape |
 | MultiWays | `shape:changed` · `adjust:start` · `adjust:complete` | `setShape()` |
 | Lifecycle | `destroyed` | `destroy()` |
 
-Every cascade event uses the same three-part shape: `cascade:<scope>:<step>`. Scopes are `round` (the runCascade lifecycle), `chain` (one stage inside a chain), `fall` / `place` / `dropIn` (phase-level animation), `destroy` (one batch of destroySymbols). Steps are `start` / `symbol` / `end` — `:symbol` appears only on the per-cell variants of fall and dropIn. `:place` has only `:end` because placement is a single-moment swap with no animation.
+Every cascade event uses the same three-part shape: `cascade:<scope>:<step>`. Scopes are `chain` (one stage inside the runCascade loop), `fall` / `place` / `dropIn` / `gravity` (phase-level animation), `destroy` (one batch of destroySymbols). Steps are `start` / `symbol` / `end` — `:symbol` appears only on the per-cell variants of fall, dropIn, and gravity. `:place` has only `:end` because placement is a single-moment swap with no animation. The runCascade chain itself is delimited by the returned `Promise` — `await` the call to know when it's done.
 
 ## Spin lifecycle
 
@@ -72,12 +72,9 @@ reelSet.events.on('skip:boosted', ({ previous, current }) => {
 
 Available only when the builder used `.tumble({...})`. The per-symbol events fire **before** the library's `view.y` tween starts so listeners can run parallel tweens that finish in lockstep.
 
-### Round-scoped (runCascade lifecycle)
+### Chain-scoped (one stage inside the loop)
 
-| Event | Payload | When |
-|---|---|---|
-| `cascade:round:start` | `{ initialGrid: string[][] }` | Fired once at the top of `runCascade(...)` — the round just opened, before the first `detectWinners`. Use to lock auto-play, fade in a cascade music bus, log a round-start. **Not** emitted when you hand-roll a loop with bare `refill()` calls. |
-| `cascade:round:end` | `info: RunCascadeResult` | Mirror of `cascade:round:start`. Fired once after the detect → destroy → refill loop exits (clean end, `maxChain` hit, or slam). Payload is the same `{ chainLength, totalWinners, finalGrid, wasSkipped }` shape returned by `runCascade()`. |
+`runCascade(...)` returns `Promise<RunCascadeResult>` — `await` the call to know when the chain is over and read the summary. There's no separate round-start / round-end event because "round" isn't a reel-engine concept (the slot industry uses "round" for a bet→payout transaction; for the engine, a round is press-spin → all-stopped, which `spin:start` / `spin:allLanded` already cover).
 
 ```ts
 interface RunCascadeResult {
@@ -87,8 +84,6 @@ interface RunCascadeResult {
   wasSkipped: boolean;     // true if the player slammed mid-chain
 }
 ```
-
-### Chain-scoped (one stage inside the loop)
 
 | Event | Payload | When |
 |---|---|---|
@@ -117,25 +112,28 @@ interface RunCascadeResult {
 ### Event order inside one `runCascade()` call
 
 ```text
-cascade:round:start
-  for each chain stage with winners:
-    cascade:chain:start
-      cascade:destroy:start
-        (destroy tweens, one per cell, parallel)
-      cascade:destroy:end
-      onCascade callback (optional)
-      pause (pauseAfterDestroyMs)
-      (refill: per reel — cascade:place:end → cascade:dropIn:start → ... → cascade:dropIn:end)
-    cascade:chain:end
-cascade:round:end
+for each chain stage with winners:
+  cascade:chain:start
+    cascade:destroy:start
+      (destroy tweens, one per cell, parallel)
+    cascade:destroy:end
+    onCascade callback (optional)
+    pause (pauseAfterDestroyMs)
+    (refill: per reel — cascade:place:end → cascade:dropIn:start → ... → cascade:dropIn:end)
+  cascade:chain:end
+// then the awaited runCascade promise resolves with RunCascadeResult
 ```
 
 ### Common patterns
 
 ```ts
-// Round-scoped HUD: lock auto-play, dim peripheral UI, play a music bed.
-reelSet.events.on('cascade:round:start', () => hud.lock());
-reelSet.events.on('cascade:round:end',   () => hud.unlock());
+// Lock auto-play around the call itself — `await` IS the lifecycle.
+hud.lock();
+try {
+  await reelSet.runCascade({ detectWinners, nextGrid });
+} finally {
+  hud.unlock();
+}
 
 // Per-chain SFX cues.
 reelSet.events.on('cascade:chain:start', ({ chain }) => sfx.play(`chain_${Math.min(chain, 5)}`));

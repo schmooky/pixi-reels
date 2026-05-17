@@ -43,17 +43,15 @@ Internally the engine wires three `ReelPhase` subclasses:
 
 Each phase fires before/after events on `reelSet.events`. The per-symbol events (`cascade:fall:symbol`, `cascade:dropIn:symbol`) fire **before** the library's tween starts so listeners can stage parallel tweens that finish in lockstep.
 
-Round- and chain-scoped events live alongside the per-phase ones, so a HUD or audio bus can sit on a single bus:
+Chain- and destroy-scoped events live alongside the per-phase ones, so a HUD or audio bus can sit on a single bus:
 
 | Event | When | What it's for |
 |---|---|---|
-| `cascade:round:start` | `runCascade()` opens | Lock auto-play, fade in cascade music bus, log a round-start to analytics. |
 | `cascade:chain:start` | Each chain stage opens (after `detectWinners`, before `destroySymbols`) | Per-chain SFX cue, light up a chain counter, freeze the spin button. |
 | `cascade:destroy:start` / `cascade:destroy:end` | Around every `destroySymbols(...)` batch — direct calls included | Shatter SFX, viewport dim independent of `destroyOptions.dim`. |
 | `cascade:chain:end` | Each chain stage closed (after refill drop-in settled) | Per-chain teardown, queue the next decoration burst. |
-| `cascade:round:end` | `runCascade()` exits | Unlock UI, show "big win" overlay if `chainLength > 2`, fade out music. Carries `RunCascadeResult`. |
 
-`runCascade` owns these events — if you compose your own loop with bare `refill()` calls, only the phase-level ones fire.
+The runCascade chain itself is delimited by the returned `Promise` — `await` the call when you need a single "round is over" hook. The slot industry uses "round" for a bet→payout transaction (your concern, not the engine's); for the engine, the closest analogue is `spin:start` / `spin:allLanded`. The chain events are emitted by `runCascade`; if you hand-roll a loop with bare `refill()` calls, only the per-phase events fire.
 
 You override any individual phase by registering a subclass under its name:
 
@@ -115,7 +113,7 @@ while (true) {
 }
 ```
 
-…or call **`reelSet.runCascade({ detectWinners, nextGrid })`**, which is the same loop with `cascade:round:start` fired on entry and `cascade:round:end` (carrying the summary) at the end. The two callbacks may be `async` — `nextGrid` is the natural place to `await server.cascade(winners)`.
+…or call **`reelSet.runCascade({ detectWinners, nextGrid })`**, which is the same loop with `cascade:chain:start` / `cascade:chain:end` fired per stage and the awaited `RunCascadeResult` carrying the summary. The two callbacks may be `async` — `nextGrid` is the natural place to `await server.cascade(winners)`.
 
 ## Per-cascade options
 
@@ -177,9 +175,9 @@ await reelSet.runCascade({
 When the signal aborts, `runCascade`:
 
 - Sets the internal `wasSkipped` flag.
-- If an `refill()` is in flight, calls `slamStop()` so the await unblocks immediately.
+- If a `refill()` is in flight, calls `slamStop()` so the await unblocks immediately.
 - Exits at the next await boundary.
-- Fires `cascade:round:end` with `wasSkipped: true`.
+- Resolves with `RunCascadeResult` carrying `wasSkipped: true`.
 
 This is the canonical "player slam" pattern. The standard `reelSet.skip()` is still the right tool inside event listeners or while the engine is actively in motion — both work together.
 

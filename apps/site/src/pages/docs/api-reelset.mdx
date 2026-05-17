@@ -39,7 +39,7 @@ Available when the builder was configured with `.tumble({...})`. See the [cascad
 |---|---|---|
 | `refill` | `(opts: { winners: ReadonlyArray<Cell>; grid: string[][] \| ColumnTarget[] }) => Promise<SpinResult>` | Moment B: place + drop-in for survivors and new symbols. Skip the fall and the wait-for-result entirely. Throws without `.tumble()`. |
 | `destroySymbols` | `(cells: ReadonlyArray<Cell>, opts?: DestroySymbolsOptions) => Promise<void>` | Defer to each symbol's `playDestroy()`. Lifts zIndex so destroys aren't clipped; alternates rotation by column. Optional `direction`, `delay`, `zIndex`, `dim`. |
-| `runCascade` | `(opts: RunCascadeOptions) => Promise<RunCascadeResult>` | One-call cascade orchestration. Loops detect → destroy → pause → refill. Pass `signal: AbortSignal` for caller-driven cancellation (use this for "player tapped slam between refills" — `reelSet.skip()` is a no-op when the engine is idle). Emits `cascade:round:start` on entry and `cascade:round:end` on exit. |
+| `runCascade` | `(opts: RunCascadeOptions) => Promise<RunCascadeResult>` | One-call cascade orchestration. Loops detect → destroy → pause → refill. Pass `signal: AbortSignal` for caller-driven cancellation (use this for "player tapped slam between refills" — `reelSet.skip()` is a no-op when the engine is idle). Per-stage progress fires via `cascade:chain:start` / `cascade:chain:end`; the awaited promise tells you when the chain itself is over. |
 
 ```ts
 import type { Cell, RunCascadeResult } from 'pixi-reels';
@@ -65,7 +65,7 @@ console.log(summary.chainLength, summary.totalWinners, summary.wasSkipped);
 | `Cell` | `{ reel: number; row: number }` | A grid cell — `reel` is column, `row` is the visible row. Used by `destroySymbols`, `runCascade`'s `detectWinners`, and `refill({ winners })`. |
 | `DestroySymbolsOptions` | `{ direction?, delay?, zIndex?, dim? }` | Defaults: alternating direction by column (`(cell) => cell.reel % 2 === 0 ? 1 : -1`), zero delay, zIndex `1000`, no viewport dim. Each field accepts either a value OR a `(cell, index) => value` function for per-cell control. Pass `zIndex: null` to suppress the bump (useful when another presenter already drove the visual). |
 | `RunCascadeOptions` | `{ detectWinners, nextGrid, onCascade?, pauseAfterDestroyMs?, maxChain?, destroyOptions?, signal? }` | `detectWinners` and `nextGrid` carry the game rules; everything else is timing / cancellation. Both callbacks may be `async`. Defaults: `pauseAfterDestroyMs: 250`, `maxChain: 32`. `onCascade` payload is `{ chain, winners, currentGrid }` — same grid that `cascade:chain:start` reported. |
-| `RunCascadeResult` | `{ chainLength, totalWinners, finalGrid, wasSkipped }` | Returned by `runCascade` AND delivered to `cascade:round:end` listeners. `chainLength === 0` means no wins on the initial grid (no refill ran). |
+| `RunCascadeResult` | `{ chainLength, totalWinners, finalGrid, wasSkipped }` | Returned by `runCascade`. `chainLength === 0` means no wins on the initial grid (no refill ran). |
 
 ```ts
 // Cancellation via AbortSignal — the right shape for "player tapped slam

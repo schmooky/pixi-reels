@@ -449,9 +449,9 @@ export async function mountMechanic(
 
       // Tumble/cascade loop — runs ONLY when the mechanic enabled `.tumble()`.
       // Uses the library's `reelSet.runCascade(...)` orchestrator: it owns
-      // the detect → destroy → pause → refill loop and emits `cascade:round:end`
-      // at the end. We supply the game rules (3-in-a-row left-anchored
-      // winner detection + a gravity-correct nextGrid).
+      // the detect → destroy → pause → refill loop and resolves with the
+      // summary. We supply the game rules (3-in-a-row left-anchored winner
+      // detection + a gravity-correct nextGrid).
       if (cfg.tumble) {
         reelSet.setDropOrder('all');
         const { chainLength } = await reelSet.runCascade({
