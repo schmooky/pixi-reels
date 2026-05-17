@@ -53,7 +53,9 @@ function randomGrid(): string[][] {
 
 const mockServer = {
   async spin(): Promise<string[][]> {
-    await wait(400 + Math.random() * 400);
+    // Fake real-world server latency: 2-5 seconds. The UI shows a spinner
+    // during this wait via the `serverWait` overlay below.
+    await wait(2000 + Math.random() * 3000);
     return randomGrid();
   },
   async cascade(prev: string[][], winners: Cell[]): Promise<string[][]> {
@@ -76,35 +78,82 @@ const mockServer = {
   },
 };
 
-function detectWinners(grid: string[][]): Cell[] {
-  const winners: Cell[] = [];
-  for (let row = 0; row < ROWS; row++) {
-    const head = grid[0][row];
+// Each entry is one row index per reel; the line wins if reel 0's symbol
+// matches on 3+ consecutive reels along that pattern. 15 lines: 5 straights,
+// 2 diagonals-then-flat, 4 zigzags, 4 V-shapes / shallow Vs.
+const PAYLINES: readonly (readonly number[])[] = [
+  [0, 0, 0, 0, 0, 0],
+  [1, 1, 1, 1, 1, 1],
+  [2, 2, 2, 2, 2, 2],
+  [3, 3, 3, 3, 3, 3],
+  [4, 4, 4, 4, 4, 4],
+  [0, 1, 2, 3, 4, 4],
+  [4, 3, 2, 1, 0, 0],
+  [0, 2, 0, 2, 0, 2],
+  [4, 2, 4, 2, 4, 2],
+  [1, 3, 1, 3, 1, 3],
+  [3, 1, 3, 1, 3, 1],
+  [1, 2, 3, 2, 1, 1],
+  [3, 2, 1, 2, 3, 3],
+  [0, 2, 4, 2, 0, 2],
+  [4, 2, 0, 2, 4, 2],
+];
+
+interface WinReport {
+  /** Cells to destroy (de-duped across all winning lines). */
+  cells: Cell[];
+  /** Sum of match lengths across winning lines — drives the award. */
+  matchedCells: number;
+  /** Count of paylines that hit. */
+  lineHits: number;
+}
+
+function detectWinners(grid: string[][]): WinReport {
+  const cells = new Map<number, Cell>();
+  let matchedCells = 0;
+  let lineHits = 0;
+  for (const line of PAYLINES) {
+    const head = grid[0][line[0]];
+    if (head === '0') continue; // wild '0' acts as anchor — skip lines anchored on it for now
     let run = 1;
     for (let r = 1; r < REELS; r++) {
-      if (grid[r][row] === head) run++;
+      if (grid[r][line[r]] === head) run++;
       else break;
     }
     if (run >= 3) {
-      for (let r = 0; r < run; r++) winners.push({ reel: r, row });
+      lineHits++;
+      matchedCells += run;
+      for (let r = 0; r < run; r++) {
+        const row = line[r];
+        const key = r * ROWS + row;
+        if (!cells.has(key)) cells.set(key, { reel: r, row });
+      }
     }
   }
-  return winners;
+  return { cells: [...cells.values()], matchedCells, lineHits };
 }
 
 async function destroyWinners(reelSet: ReelSet, winners: Cell[]): Promise<void> {
   if (winners.length === 0) return;
   reelSet.viewport.showDim(0.35);
   sfx('destroy', { volume: 0.9 });
+  // Two-stage spine-driven win flow:
+  //   1. Each winning cell plays its spine `win` track (celebration loop /
+  //      one-shot — defined per skeleton). Player sees the reward beat.
+  //   2. Each cell then plays its spine `out` (disintegration) track via
+  //      `playDestroy()` — the library-side override on `SpineReelSymbol`
+  //      routes `playDestroy()` to the spine `out` animation, falling back
+  //      to the GSAP implode only if the skeleton lacks the track.
+  await Promise.all(winners.map((w) => {
+    const sym = reelSet.reels[w.reel].getSymbolAt(w.row);
+    sym.view.zIndex = 1000;
+    return sym.playWin();
+  }));
   await Promise.all(winners.map((w, i) => {
-    const view = reelSet.reels[w.reel].getSymbolAt(w.row).view;
-    view.zIndex = 1000;
-    const dir = w.reel % 2 === 0 ? 1 : -1;
-    return new Promise<void>((resolve) => {
-      gsap.timeline({ onComplete: () => resolve(), delay: i * 0.015 })
-        .to(view.scale, { x: 1.25, y: 1.25, duration: 0.08, ease: 'back.out(2.5)' })
-        .to(view, { rotation: dir * 0.8, alpha: 0, duration: 0.24, ease: 'power2.in' }, '<+=0.05')
-        .to(view.scale, { x: 0, y: 0, duration: 0.24, ease: 'power2.in' }, '<');
+    const sym = reelSet.reels[w.reel].getSymbolAt(w.row);
+    return sym.playDestroy({
+      direction: w.reel % 2 === 0 ? 1 : -1,
+      delay: i * 0.015,
     });
   }));
   reelSet.viewport.hideDim();
@@ -131,7 +180,7 @@ export async function boot(opts: BootOptions): Promise<() => void> {
 
   const app = new Application();
   await app.init({
-    background: 0x0a0518,
+    background: 0xffffff,
     antialias: true,
     ...(fullScreen ? { resizeTo: window } : { resizeTo: host }),
   });
@@ -190,6 +239,21 @@ export async function boot(opts: BootOptions): Promise<() => void> {
   frame.stroke({ color: 0xffd166, width: 1, alpha: 0.25 });
   reelSet.addChildAt(frame, 0);
 
+  // Server-wait spinner — shown over the reels while mockServer.spin() resolves
+  // (2-5 s of fake latency). Hidden whenever the engine is doing visible work.
+  const serverWait = new Container();
+  serverWait.visible = false;
+  const spinnerRing = new Graphics();
+  spinnerRing.arc(0, 0, 28, 0, Math.PI * 1.55);
+  spinnerRing.stroke({ color: 0xffd166, width: 5, cap: 'round' });
+  serverWait.addChild(spinnerRing);
+  gsap.to(serverWait, { rotation: Math.PI * 2, duration: 0.9, ease: 'none', repeat: -1 });
+  serverWait.x = totalW / 2;
+  serverWait.y = totalH / 2;
+  serverWait.zIndex = 2000;
+  reelSet.sortableChildren = true;
+  reelSet.addChild(serverWait);
+
   app.stage.addChild(wrapper);
 
   function reposition(): void {
@@ -216,7 +280,7 @@ export async function boot(opts: BootOptions): Promise<() => void> {
   spinBtn.cursor = 'pointer';
   const btnBg = new Graphics();
   btnBg.circle(0, 0, 36); btnBg.fill({ color: 0xffd166 });
-  btnBg.circle(0, 0, 36); btnBg.stroke({ color: 0xfff4cc, width: 2 });
+  btnBg.circle(0, 0, 36); btnBg.stroke({ color: 0x1a0f2e, width: 2 });
   spinBtn.addChild(btnBg);
   const btnGlyph = new Graphics();
   btnGlyph.moveTo(-10, -12).lineTo(14, 0).lineTo(-10, 12).closePath();
@@ -242,6 +306,21 @@ export async function boot(opts: BootOptions): Promise<() => void> {
   let multiplier = 1;
   let totalWin = 0;
   let disposed = false;
+  /**
+   * Set when the player presses the spin button during the LEAD_IN_MS lead-in
+   * or any other window where the engine isn't yet spinning. `handleSpin`
+   * checks this right after `reelSet.spin()` and fires `requestSkip()` so the
+   * player's tap-to-slam intent isn't silently dropped on the floor.
+   */
+  let pendingSkip = false;
+
+  // E2e probe: exposes user-code-level state (which `__PIXI_REELS_DEBUG`
+  // can't see) so Playwright can wait on "round fully complete" instead of
+  // polling engine isSpinning, which oscillates between cascade refills.
+  (globalThis as unknown as { __ARC_LORD?: unknown }).__ARC_LORD = {
+    get busy(): boolean { return isSpinning; },
+    get pendingSkip(): boolean { return pendingSkip; },
+  };
 
   function setStatus(text: string): void {
     if (statusEl) statusEl.textContent = text;
@@ -256,10 +335,26 @@ export async function boot(opts: BootOptions): Promise<() => void> {
       unlocked = true;
     }
     if (isSpinning) {
-      try { reelSet.skip(); } catch { /* idle */ }
+      // Engine is mid-spin → slam now. Otherwise (lead-in, between-refill
+      // pause, post-cascade settling) queue the skip so `handleSpin` can
+      // fire it as soon as a spin/refill is actually in flight — the
+      // alternative is silently dropping the tap and looking frozen.
+      try {
+        if (reelSet.isSpinning) reelSet.skip();
+        else pendingSkip = true;
+      } catch { /* idle */ }
       return;
     }
-    void handleSpin();
+    // Reset isSpinning on any thrown error so a rapid double-tap that
+    // races handleSpin into a bad state doesn't leave the button stuck
+    // in "always-skip" mode (which looks like the game is frozen).
+    pendingSkip = false;
+    handleSpin().catch((err) => {
+      // eslint-disable-next-line no-console
+      console.error('arc-lord: handleSpin failed', err);
+      isSpinning = false;
+      pendingSkip = false;
+    });
   });
 
   async function tickWin(target: number): Promise<void> {
@@ -292,32 +387,55 @@ export async function boot(opts: BootOptions): Promise<() => void> {
 
     reelSet.setDropOrder('ltr');
     const spinDone = reelSet.spin();
-    const grid = await mockServer.spin();
+    // Consume any skip-intent tapped during the lead-in: `requestSkip()`
+    // queues until `setResult()` arrives, then slams.
+    if (pendingSkip) {
+      pendingSkip = false;
+      reelSet.requestSkip();
+    }
+    serverWait.visible = true;
+    let grid: string[][];
+    try {
+      grid = await mockServer.spin();
+    } finally {
+      serverWait.visible = false;
+    }
     reelSet.setResult(grid);
     await spinDone;
     if (disposed) return;
 
     let current = grid;
     while (!disposed) {
-      const winners = detectWinners(current);
-      if (winners.length === 0) break;
+      const report = detectWinners(current);
+      if (report.cells.length === 0) break;
 
       sfx('winStart', { volume: 0.7 });
-      await destroyWinners(reelSet, winners);
+      await destroyWinners(reelSet, report.cells);
       await wait(PAUSE_AFTER_REMOVAL_MS);
 
       multiplier += 1;
       if (multEl) multEl.textContent = `${multiplier}`;
       if (multiplier === 2) sfx('multiActivate', { volume: 0.8 });
 
-      const award = winners.length * 10 * multiplier;
+      // matchedCells counts each cell once per winning line — a single 5-of-a-kind
+      // that hits 3 paylines pays 3× as much as one that only hits the straight.
+      const award = report.matchedCells * 10 * multiplier;
       void tickWin(totalWin + award);
 
-      const next = await mockServer.cascade(current, winners);
+      const next = await mockServer.cascade(current, report.cells);
       reelSet.setDropOrder('all');
-      await reelSet.refill({ winners, grid: next });
+      const refillDone = reelSet.refill({ winners: report.cells, grid: next });
+      // Tap during the between-refill pause? Fire skip now so the engine
+      // auto-slams this refill as well — `skip()` is round-aware in cascade
+      // mode, so once flagged the rest of the round fast-forwards.
+      if (pendingSkip) {
+        pendingSkip = false;
+        try { reelSet.skip(); } catch { /* idle */ }
+      }
+      await refillDone;
       current = next;
     }
+    pendingSkip = false;
 
     sfx('winEnd', { volume: 0.6 });
     isSpinning = false;

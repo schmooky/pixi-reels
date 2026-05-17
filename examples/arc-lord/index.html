@@ -7,24 +7,24 @@
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
-      background: radial-gradient(ellipse at center, #1a0f2e 0%, #0a0518 100%);
+      background: #ffffff;
       overflow: hidden;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      color: #ffd166;
+      color: #1a0f2e;
     }
     canvas { display: block; }
     #hud {
       position: fixed; top: 12px; left: 50%; transform: translateX(-50%);
       display: flex; gap: 24px; align-items: center;
-      font-size: 14px; text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
+      font-size: 14px;
       pointer-events: none; z-index: 1000;
     }
-    #hud .label { opacity: 0.65; margin-right: 4px; }
+    #hud .label { opacity: 0.55; margin-right: 4px; }
     #hud .value { font-weight: 700; font-size: 18px; }
-    #multiplier { color: #ffe66d; }
-    #win { color: #6dffc6; }
+    #multiplier { color: #c89c1f; }
+    #win { color: #2a9d68; }
     #status { position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%);
-      font-size: 11px; opacity: 0.6; pointer-events: none; }
+      font-size: 11px; opacity: 0.55; pointer-events: none; }
   </style>
 </head>
 <body>

@@ -141,27 +141,20 @@ function makeSpinner(): Container {
 }
 
 // ------------------------------------------------------------
-// WIN DESTRUCTION — caller-owned. The library does NOT animate this step.
+// WIN DESTRUCTION — defers to each symbol's playDestroy().
 // ------------------------------------------------------------
 //
-// Brief scale-up "charge" then implode (scale to 0 + spin + fade).
-// Alternating rotation direction by column gives the cluster a sense of
-// breaking apart. Cleanup is automatic — the next placeSymbols (via
-// refill) resets alpha/scale/rotation on every visible view through
-// `_replaceSymbol`.
+// The library ships a sensible default (centre-pivot scale + fade +
+// spin) on ReelSymbol.playDestroy(). Subclasses can override for
+// art-appropriate effects. Per-symbol invocation keeps the destruction
+// decision on the symbol side, not in the spin handler.
 
 async function destroyWinners(reelSet: ReelSet, winners: Cell[]): Promise<void> {
   reelSet.viewport.showDim(0.35);
   await Promise.all(winners.map((w) => {
-    const view = reelSet.reels[w.reel].getSymbolAt(w.row).view;
-    view.zIndex = 1000;
-    const dir = w.reel % 2 === 0 ? 1 : -1;
-    return new Promise<void>((resolve) => {
-      gsap.timeline({ onComplete: () => resolve() })
-        .to(view.scale, { x: 1.25, y: 1.25, duration: 0.08, ease: 'back.out(2.5)' })
-        .to(view, { rotation: dir * 0.8, alpha: 0, duration: 0.24, ease: 'power2.in' }, '<+=0.05')
-        .to(view.scale, { x: 0, y: 0, duration: 0.24, ease: 'power2.in' }, '<');
-    });
+    const sym = reelSet.reels[w.reel].getSymbolAt(w.row);
+    sym.view.zIndex = 1000;
+    return sym.playDestroy({ direction: w.reel % 2 === 0 ? 1 : -1 });
   }));
   reelSet.viewport.hideDim();
 }
@@ -206,7 +199,7 @@ function buildReelSet(app: Application, textures: Record<string, Texture>): Reel
 
 async function main(): Promise<void> {
   const app = new Application();
-  await app.init({ background: 0x0f3460, resizeTo: window, antialias: true });
+  await app.init({ background: 0xffffff, resizeTo: window, antialias: true });
   document.body.appendChild(app.canvas);
 
   gsap.ticker.remove(gsap.updateRoot);
@@ -264,12 +257,47 @@ async function main(): Promise<void> {
   });
 
   const ui = createUI({
-    onSpin: () => void handleSpin(),
+    onSpin: () => handleSpinPress(),
     onSpeedChange: (s) => reelSet.setSpeed(s),
     speeds: ['normal', 'turbo', 'superTurbo'],
   });
 
   let isSpinning = false;
+  /**
+   * Queued slam intent: set when the player taps during a window where
+   * user-code is mid-round but the engine isn't yet spinning (the gaps
+   * between cascade refills, mostly). Consumed after the next `spin()` or
+   * `refill()` so the tap-to-slam isn't silently dropped.
+   */
+  let pendingSkip = false;
+
+  function handleSpinPress(): void {
+    if (isSpinning) {
+      // Engine spinning → slam now. Otherwise queue, then fire as soon as
+      // the next spin/refill is in flight.
+      try {
+        if (reelSet.isSpinning) reelSet.skip();
+        else pendingSkip = true;
+      } catch { /* idle */ }
+      return;
+    }
+    pendingSkip = false;
+    handleSpin().catch((err) => {
+      // eslint-disable-next-line no-console
+      console.error('cascade-tumble: handleSpin failed', err);
+      isSpinning = false;
+      pendingSkip = false;
+      ui.setSpinning(false);
+    });
+  }
+
+  // E2e probe — exposes user-code-level state Playwright can wait on.
+  // Engine `isSpinning` oscillates per-refill in cascade mode, so we need
+  // a stable "round in progress" flag to detect round completion.
+  (globalThis as unknown as { __CASCADE_TUMBLE?: unknown }).__CASCADE_TUMBLE = {
+    get busy(): boolean { return isSpinning; },
+    get pendingSkip(): boolean { return pendingSkip; },
+  };
 
   // Quick number-roll. Runs in the gap between win-fade and refill drop-in,
   // where the player's attention is free.
@@ -289,11 +317,6 @@ async function main(): Promise<void> {
   }
 
   async function handleSpin(): Promise<void> {
-    if (isSpinning) {
-      try { reelSet.skip(); } catch { /* guarded internally */ }
-      return;
-    }
-
     isSpinning = true;
     ui.setSpinning(true);
     ui.showWin(0);
@@ -305,6 +328,12 @@ async function main(): Promise<void> {
     // "bottom-left first, top-right last" cascading reveal.
     reelSet.setDropOrder('ltr');
     const spinDone = reelSet.spin();      // triggers cascade:fall on every reel
+    // Consume any skip queued before the engine started — `requestSkip()`
+    // holds until `setResult()` arrives, then slams cleanly on the result.
+    if (pendingSkip) {
+      pendingSkip = false;
+      reelSet.requestSkip();
+    }
     const grid = await mockServer.spin();  // server can take any duration
     reelSet.setResult(grid);               // resolves wait → place → dropIn
     await spinDone;
@@ -337,11 +366,19 @@ async function main(): Promise<void> {
       // refill reads as "the slot is doing a fresh reveal", which fights
       // the player's expectation of a quick refill.)
       reelSet.setDropOrder('all');
-      await reelSet.refill({ winners, grid: next });
+      const refillDone = reelSet.refill({ winners, grid: next });
+      // Tap during the between-refill pause? Fire skip now so this refill
+      // (and every subsequent one in the round) auto-slams.
+      if (pendingSkip) {
+        pendingSkip = false;
+        try { reelSet.skip(); } catch { /* idle */ }
+      }
+      await refillDone;
       current = next;
     }
 
     if (cascadeLevel === 0) multiplierEl.textContent = '';
+    pendingSkip = false;
     isSpinning = false;
     ui.setSpinning(false);
   }
