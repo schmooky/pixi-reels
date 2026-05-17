@@ -1,6 +1,6 @@
 // @ts-nocheck
 // Injected: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
-//           PIXI, gsap, app, pickWeighted, destroyWinners
+//           PIXI, gsap, app, pickWeighted
 
 // SIMULTANEOUS REFILL — every cell drops at the same moment. The most
 // common refill pattern in commercial tumble slots: snappy, no extra
@@ -61,7 +61,7 @@ return {
 
     await new Promise((r) => setTimeout(r, 200));
     const winners = HIT_COLS.map((c) => ({ reel: c, row: HIT_ROW }));
-    await destroyWinners(reelSet, winners);
+    await reelSet.destroySymbols(winners);
     await new Promise((r) => setTimeout(r, PAUSE_AFTER_REMOVAL_MS));
     // Moment B — every column drops together. setDropOrder('all') = 0 ms
     // per-reel delay; the in-reel rowStagger is already 0 above.

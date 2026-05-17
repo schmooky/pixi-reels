@@ -1,6 +1,6 @@
 // @ts-nocheck
 // Injected: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
-//           PIXI, gsap, app, pickWeighted, destroyWinners
+//           PIXI, gsap, app, pickWeighted
 
 // SUSPENSE — 700 ms lead-in. Dramatic. The reels stand still while
 // the music swells, a "GO!" stinger fires, or a feature-pick UI flashes.
@@ -62,7 +62,7 @@ return {
 
     await new Promise((r) => setTimeout(r, 200));
     const winners = HIT_COLS.map((c) => ({ reel: c, row: HIT_ROW }));
-    await destroyWinners(reelSet, winners);
+    await reelSet.destroySymbols(winners);
     await new Promise((r) => setTimeout(r, 220));
     reelSet.setDropOrder('all');
     await reelSet.refill({ winners, grid: stage1 });

@@ -37,9 +37,9 @@ Available when the builder was configured with `.tumble({...})`. See the [cascad
 
 | Method | Signature | Notes |
 |---|---|---|
-| `refill` | `(opts: { winners: ReadonlyArray<Cell>; grid: string[][] \| ColumnTarget[] }) => Promise<SpinResult>` | Moment B: place + drop-in for survivors and new symbols. Skip the fall and the wait-for-result entirely. Throws without `.tumble()`. |
-| `destroySymbols` | `(cells: ReadonlyArray<Cell>, opts?: DestroySymbolsOptions) => Promise<void>` | Defer to each symbol's `playDestroy()`. Lifts zIndex so destroys aren't clipped; alternates rotation by column. Optional `direction`, `delay`, `zIndex`, `dim`. |
-| `runCascade` | `(opts: RunCascadeOptions) => Promise<RunCascadeResult>` | One-call cascade orchestration. Loops detect → destroy → pause → refill. Pass `signal: AbortSignal` for caller-driven cancellation (use this for "player tapped slam between refills" — `reelSet.skip()` is a no-op when the engine is idle). Per-stage progress fires via `cascade:chain:start` / `cascade:chain:end`; the awaited promise tells you when the chain itself is over. |
+| `refill` | `(opts: { winners; grid; mode?; gravityHoldMs?; gravityHold?; onGravityComplete? }) => Promise<SpinResult>` | Moment B: place + drop-in for survivors and new symbols. Skip the fall and the wait-for-result entirely. Default `mode: 'combined'` animates survivors and new symbols together. Pass `mode: 'gravity-then-drop'` to split into a survivor-settle stage, a hold, then a drop-in stage — see [Two-stage refill](#two-stage-refill) below. Throws without `.tumble()`. |
+| `destroySymbols` | `(cells: ReadonlyArray<Cell>, opts?: DestroySymbolsOptions) => Promise<void>` | Defer to each symbol's `playDestroy()`. Lifts zIndex so destroys aren't clipped; alternates rotation by column. Optional `direction`, `delay`, `zIndex`, `dim`, `signal`. |
+| `runCascade` | `(opts: RunCascadeOptions) => Promise<RunCascadeResult>` | One-call cascade orchestration. Loops detect → destroy → pause → refill. Pass `signal: AbortSignal` for caller-driven cancellation (use this for "player tapped slam between refills" — `reelSet.skip()` is a no-op when the engine is idle). The same `mode` / `gravityHoldMs` / `gravityHold` / `onGravityComplete` options apply per chain (passed as `refillMode` + `gravityHold(info)` builder); see [Two-stage refill](#two-stage-refill). Per-stage progress fires via `cascade:chain:start` / `cascade:chain:end`; the awaited promise tells you when the chain itself is over. |
 
 ```ts
 import type { Cell, RunCascadeResult } from 'pixi-reels';
@@ -64,7 +64,7 @@ console.log(summary.chainLength, summary.totalWinners, summary.wasSkipped);
 |---|---|---|
 | `Cell` | `{ reel: number; row: number }` | A grid cell — `reel` is column, `row` is the visible row. Used by `destroySymbols`, `runCascade`'s `detectWinners`, and `refill({ winners })`. |
 | `DestroySymbolsOptions` | `{ direction?, delay?, zIndex?, dim? }` | Defaults: alternating direction by column (`(cell) => cell.reel % 2 === 0 ? 1 : -1`), zero delay, zIndex `1000`, no viewport dim. Each field accepts either a value OR a `(cell, index) => value` function for per-cell control. Pass `zIndex: null` to suppress the bump (useful when another presenter already drove the visual). |
-| `RunCascadeOptions` | `{ detectWinners, nextGrid, onCascade?, pauseAfterDestroyMs?, maxChain?, destroyOptions?, signal? }` | `detectWinners` and `nextGrid` carry the game rules; everything else is timing / cancellation. Both callbacks may be `async`. Defaults: `pauseAfterDestroyMs: 250`, `maxChain: 32`. `onCascade` payload is `{ chain, winners, currentGrid }` — same grid that `cascade:chain:start` reported. |
+| `RunCascadeOptions` | `{ detectWinners, nextGrid, onCascade?, pauseAfterDestroyMs?, maxChain?, destroyOptions?, signal?, refillMode?, gravityHoldMs?, gravityHold?, onGravityComplete? }` | `detectWinners` and `nextGrid` carry the game rules; everything else is timing / cancellation / gravity flavor. Both callbacks may be `async`. Defaults: `pauseAfterDestroyMs: 250`, `maxChain: 32`, `refillMode: 'combined'`, `gravityHoldMs: 250`. `onCascade` payload is `{ chain, winners, currentGrid }` — same grid that `cascade:chain:start` reported. `gravityHold` is a **builder** here: `(info: { chain, winners }) => Promise<void>` — called once per chain stage; the returned promise gates that stage's drop-in. `onGravityComplete` is `(info) => void \| Promise<void>` and fires after both hold sources resolve, before drop-in starts. |
 | `RunCascadeResult` | `{ chainLength, totalWinners, finalGrid, wasSkipped }` | Returned by `runCascade`. `chainLength === 0` means no wins on the initial grid (no refill ran). |
 
 ```ts
@@ -80,6 +80,38 @@ const { wasSkipped } = await reelSet.runCascade({
 ```
 
 `runCascade` listens to `skip:requested` too — calling `reelSet.skip()` during an in-flight refill works as expected, but the AbortSignal pattern is the one that handles the idle-window case.
+
+### Two-stage refill
+
+`refill({ mode: 'gravity-then-drop' })` splits the refill into two beats: survivors slide first, then a global hold for anticipation visuals, then new symbols enter. This is the Reactoonz / Gates of Olympus / Mummyland feel — `'combined'` (default) is the Sweet Bonanza / Sugar Rush feel.
+
+```ts
+// Single refill — pass the promise directly.
+await reelSet.refill({
+  winners,
+  grid: nextGrid,
+  mode: 'gravity-then-drop',
+  gravityHoldMs: 150,                 // minimum wall-clock floor (default 250)
+  gravityHold: multiplierRoll.done,   // OR an already-in-flight animation
+  onGravityComplete: () => sfx.peak(),// awaitable hook between stages
+});
+```
+
+`gravityHoldMs` and `gravityHold` race in **parallel** via `Promise.all` — whichever finishes LAST gates the drop-in. Pass both when you want a wall-clock floor under an animation that might be fast. `onGravityComplete` runs *after* both, so it can read post-hold state.
+
+```ts
+// Per-cascade — runCascade calls the builder once per chain stage.
+await reelSet.runCascade({
+  detectWinners, nextGrid,
+  refillMode:    'gravity-then-drop',
+  gravityHoldMs: 150,
+  gravityHold:   ({ chain }) => multiplier.bumpTo(chain + 1).done,
+});
+```
+
+The events `cascade:gravity:start` / `cascade:gravity:symbol` / `cascade:gravity:end` fire only in this mode — see the [events reference](/docs/api-events/#cascade-tumble).
+
+> **Heads-up.** If your `gravityHold` promise never resolves, the engine will wait forever — the cascade hangs. There's no built-in timeout. If your animation source can stall (animation library error, missed user input, hung XHR), wrap it in your own `Promise.race([yourPromise, timeoutReject])` before passing it in, or rely on `gravityHoldMs` alone. A rejection in `gravityHold` propagates through `Promise.all` and rejects the `refill()` / `runCascade()` call — handle it in your own `try` block.
 
 ## MultiWays
 

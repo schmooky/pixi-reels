@@ -1,6 +1,6 @@
 // @ts-nocheck
 // Injected: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
-//           PIXI, gsap, app, pickWeighted, destroyWinners
+//           PIXI, gsap, app, pickWeighted
 
 // LEFT-TO-RIGHT WAVE REFILL — each column lands in sequence from left
 // to right. Each reel's rows arrive together (no in-reel stagger), but
@@ -63,7 +63,7 @@ return {
 
     await new Promise((r) => setTimeout(r, 200));
     const winners = HIT_COLS.map((c) => ({ reel: c, row: HIT_ROW }));
-    await destroyWinners(reelSet, winners);
+    await reelSet.destroySymbols(winners);
     await new Promise((r) => setTimeout(r, PAUSE_AFTER_REMOVAL_MS));
     // Refill: each reel delayed by REEL_WAVE_STEP_MS — left-to-right wave.
     reelSet.setDropOrder('ltr', REEL_WAVE_STEP_MS);

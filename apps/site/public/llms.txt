@@ -6,7 +6,7 @@ Site: https://pixi-reels.schmooky.dev
 Repo: https://github.com/schmooky/pixi-reels
 Package: https://www.npmjs.com/package/pixi-reels
 
-Generated: 2026-05-17T08:34:35.635Z
+Generated: 2026-05-17T11:31:54.688Z
 
 ## Quick start
 
@@ -1750,7 +1750,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/fall-delay-anticipation/
 ```ts
 // @ts-nocheck
 // Injected: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
-//           PIXI, gsap, app, pickWeighted, destroyWinners
+//           PIXI, gsap, app, pickWeighted
 
 // ANTICIPATION — 350 ms lead-in. Enough room for a full "spin-up"
 // sound effect to play, a button-press animation to complete, or a
@@ -1813,7 +1813,7 @@ return {
 
     await new Promise((r) => setTimeout(r, 200));
     const winners = HIT_COLS.map((c) => ({ reel: c, row: HIT_ROW }));
-    await destroyWinners(reelSet, winners);
+    await reelSet.destroySymbols(winners);
     await new Promise((r) => setTimeout(r, 220));
     reelSet.setDropOrder('all');
     await reelSet.refill({ winners, grid: stage1 });
@@ -1826,7 +1826,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/fall-delay-instant/
 ```ts
 // @ts-nocheck
 // Injected: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
-//           PIXI, gsap, app, pickWeighted, destroyWinners
+//           PIXI, gsap, app, pickWeighted
 
 // INSTANT — fall starts the moment you click SPIN. No lead-in. The
 // default. Snappiest possible feel; players who tap-spin many rounds
@@ -1890,7 +1890,7 @@ return {
 
     await new Promise((r) => setTimeout(r, 200));
     const winners = HIT_COLS.map((c) => ({ reel: c, row: HIT_ROW }));
-    await destroyWinners(reelSet, winners);
+    await reelSet.destroySymbols(winners);
     await new Promise((r) => setTimeout(r, 220));
     reelSet.setDropOrder('all');
     await reelSet.refill({ winners, grid: stage1 });
@@ -1903,7 +1903,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/fall-delay-subtle/
 ```ts
 // @ts-nocheck
 // Injected: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
-//           PIXI, gsap, app, pickWeighted, destroyWinners
+//           PIXI, gsap, app, pickWeighted
 
 // SUBTLE LEAD-IN — 150 ms before the fall starts. Just enough for the
 // SPIN button click to register and a short "tap" SFX to lead. Below
@@ -1965,7 +1965,7 @@ return {
 
     await new Promise((r) => setTimeout(r, 200));
     const winners = HIT_COLS.map((c) => ({ reel: c, row: HIT_ROW }));
-    await destroyWinners(reelSet, winners);
+    await reelSet.destroySymbols(winners);
     await new Promise((r) => setTimeout(r, 220));
     reelSet.setDropOrder('all');
     await reelSet.refill({ winners, grid: stage1 });
@@ -1978,7 +1978,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/fall-delay-suspense/
 ```ts
 // @ts-nocheck
 // Injected: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
-//           PIXI, gsap, app, pickWeighted, destroyWinners
+//           PIXI, gsap, app, pickWeighted
 
 // SUSPENSE — 700 ms lead-in. Dramatic. The reels stand still while
 // the music swells, a "GO!" stinger fires, or a feature-pick UI flashes.
@@ -2040,7 +2040,7 @@ return {
 
     await new Promise((r) => setTimeout(r, 200));
     const winners = HIT_COLS.map((c) => ({ reel: c, row: HIT_ROW }));
-    await destroyWinners(reelSet, winners);
+    await reelSet.destroySymbols(winners);
     await new Promise((r) => setTimeout(r, 220));
     reelSet.setDropOrder('all');
     await reelSet.refill({ winners, grid: stage1 });
@@ -3480,7 +3480,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/refill-bottom-up/
 ```ts
 // @ts-nocheck
 // Injected: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
-//           PIXI, gsap, app, pickWeighted, destroyWinners
+//           PIXI, gsap, app, pickWeighted
 
 // BOTTOM-UP ROW REFILL — within each reel, the bottom row arrives first
 // and the top row arrives last (rowOrder: 'bottomToTop'). All reels
@@ -3545,7 +3545,7 @@ return {
 
     await new Promise((r) => setTimeout(r, 200));
     const winners = HIT_COLS.map((c) => ({ reel: c, row: HIT_ROW }));
-    await destroyWinners(reelSet, winners);
+    await reelSet.destroySymbols(winners);
     await new Promise((r) => setTimeout(r, PAUSE_AFTER_REMOVAL_MS));
     reelSet.setDropOrder('all');
     await reelSet.refill({ winners, grid: stage1 });
@@ -3558,7 +3558,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/refill-ltr-wave/
 ```ts
 // @ts-nocheck
 // Injected: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
-//           PIXI, gsap, app, pickWeighted, destroyWinners
+//           PIXI, gsap, app, pickWeighted
 
 // LEFT-TO-RIGHT WAVE REFILL — each column lands in sequence from left
 // to right. Each reel's rows arrive together (no in-reel stagger), but
@@ -3621,7 +3621,7 @@ return {
 
     await new Promise((r) => setTimeout(r, 200));
     const winners = HIT_COLS.map((c) => ({ reel: c, row: HIT_ROW }));
-    await destroyWinners(reelSet, winners);
+    await reelSet.destroySymbols(winners);
     await new Promise((r) => setTimeout(r, PAUSE_AFTER_REMOVAL_MS));
     // Refill: each reel delayed by REEL_WAVE_STEP_MS — left-to-right wave.
     reelSet.setDropOrder('ltr', REEL_WAVE_STEP_MS);
@@ -3635,7 +3635,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/refill-simultaneous/
 ```ts
 // @ts-nocheck
 // Injected: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
-//           PIXI, gsap, app, pickWeighted, destroyWinners
+//           PIXI, gsap, app, pickWeighted
 
 // SIMULTANEOUS REFILL — every cell drops at the same moment. The most
 // common refill pattern in commercial tumble slots: snappy, no extra
@@ -3696,7 +3696,7 @@ return {
 
     await new Promise((r) => setTimeout(r, 200));
     const winners = HIT_COLS.map((c) => ({ reel: c, row: HIT_ROW }));
-    await destroyWinners(reelSet, winners);
+    await reelSet.destroySymbols(winners);
     await new Promise((r) => setTimeout(r, PAUSE_AFTER_REMOVAL_MS));
     // Moment B — every column drops together. setDropOrder('all') = 0 ms
     // per-reel delay; the in-reel rowStagger is already 0 above.
@@ -4710,7 +4710,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/tumble-cartoon-bounce/
 ```ts
 // @ts-nocheck
 // Injected: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
-//           PIXI, gsap, app, pickWeighted, destroyWinners
+//           PIXI, gsap, app, pickWeighted
 
 // CARTOON BOUNCE: bounce.out gives a multi-bounce settle. Long stagger
 // makes the row-by-row arrival feel playful. Good fit for kid-friendly
@@ -4772,7 +4772,7 @@ return {
 
     await new Promise((r) => setTimeout(r, 220));
     const winners = HIT_COLS.map((c) => ({ reel: c, row: HIT_ROW }));
-    await destroyWinners(reelSet, winners);
+    await reelSet.destroySymbols(winners);
     await new Promise((r) => setTimeout(r, PAUSE_AFTER_REMOVAL_MS));
     await reelSet.refill({ winners, grid: stage1 });
   },
@@ -4784,7 +4784,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/tumble-classic/
 ```ts
 // @ts-nocheck
 // Injected: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
-//           PIXI, gsap, app, pickWeighted, destroyWinners
+//           PIXI, gsap, app, pickWeighted
 
 // CLASSIC tumble feel: sine.in fall, soft overshoot dropIn — the
 // all-rounder default. Good baseline before reaching for the more
@@ -4850,7 +4850,7 @@ return {
     // enter from above into the holes.
     await new Promise((r) => setTimeout(r, 220));
     const winners = HIT_COLS.map((c) => ({ reel: c, row: HIT_ROW }));
-    await destroyWinners(reelSet, winners);
+    await reelSet.destroySymbols(winners);
     await new Promise((r) => setTimeout(r, PAUSE_AFTER_REMOVAL_MS));
     await reelSet.refill({ winners, grid: stage1 });
   },
@@ -4862,7 +4862,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/tumble-rain-column/
 ```ts
 // @ts-nocheck
 // Injected: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
-//           PIXI, gsap, app, pickWeighted, destroyWinners
+//           PIXI, gsap, app, pickWeighted
 
 // RAIN COLUMN: the whole column drops as a slab. rowStagger = 0 makes
 // every row start together; distance: 'auto' makes every animated row
@@ -4926,7 +4926,7 @@ return {
 
     await new Promise((r) => setTimeout(r, 200));
     const winners = HIT_COLS.map((c) => ({ reel: c, row: HIT_ROW }));
-    await destroyWinners(reelSet, winners);
+    await reelSet.destroySymbols(winners);
     await new Promise((r) => setTimeout(r, PAUSE_AFTER_REMOVAL_MS));
     await reelSet.refill({ winners, grid: stage1 });
   },
@@ -4938,7 +4938,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/tumble-slam/
 ```ts
 // @ts-nocheck
 // Injected: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
-//           PIXI, gsap, app, pickWeighted, destroyWinners
+//           PIXI, gsap, app, pickWeighted
 
 // SLAM: accelerating fall (power4.in) and a hard, fast land (expo.out).
 // Short durations + small stagger keep the whole tumble under 0.5 s.
@@ -5001,7 +5001,7 @@ return {
 
     await new Promise((r) => setTimeout(r, 160));
     const winners = HIT_COLS.map((c) => ({ reel: c, row: HIT_ROW }));
-    await destroyWinners(reelSet, winners);
+    await reelSet.destroySymbols(winners);
     await new Promise((r) => setTimeout(r, PAUSE_AFTER_REMOVAL_MS));
     await reelSet.refill({ winners, grid: stage1 });
   },
@@ -5013,7 +5013,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/tumble-wave/
 ```ts
 // @ts-nocheck
 // Injected: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
-//           PIXI, gsap, app, pickWeighted, destroyWinners
+//           PIXI, gsap, app, pickWeighted
 
 // WAVE: heavy per-row stagger (110 ms) plus a soft overshoot. Rows
 // arrive in sequence top-to-bottom, reading as a rolling wave. Good
@@ -5076,7 +5076,7 @@ return {
 
     await new Promise((r) => setTimeout(r, 220));
     const winners = HIT_COLS.map((c) => ({ reel: c, row: HIT_ROW }));
-    await destroyWinners(reelSet, winners);
+    await reelSet.destroySymbols(winners);
     await new Promise((r) => setTimeout(r, PAUSE_AFTER_REMOVAL_MS));
     await reelSet.refill({ winners, grid: stage1 });
   },

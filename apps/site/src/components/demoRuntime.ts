@@ -191,11 +191,15 @@ export async function mountMechanic(
   cfg: MechanicConfig,
 ): Promise<() => void> {
   // Size the PIXI canvas to the container. The right side reserves a
-  // BUTTON_COL_WIDTH-wide column for the tall vertical spin button.
-  const width = Math.min(
+  // BUTTON_COL_WIDTH-wide column for the tall vertical spin button. Width
+  // adapts to `host.clientWidth` so the demo fits any viewport (mobile
+  // portrait, tablet, rotate) — see the ResizeObserver wired up after the
+  // layout block.
+  const computeWidth = (): number => Math.min(
     host.clientWidth || 800,
     cfg.reelCount * (cfg.symbolSize.width + 6) + 80 + BUTTON_COL_WIDTH,
   );
+  let width = computeWidth();
   const height = cfg.visibleRows * (cfg.symbolSize.height + 6) + 80;
 
   const app = new Application();
@@ -326,13 +330,7 @@ export async function mountMechanic(
     .fill({ color: 0xffffff, alpha: 1 })
     .roundRect(0, 0, totalW, totalH, 18)
     .stroke({ color: 0xe5dccf, width: 1, alpha: 0.9 });
-  const reelArea = width - BUTTON_COL_WIDTH;
-  frame.x = (reelArea - totalW) / 2;
-  frame.y = (height - totalH) / 2;
   app.stage.addChild(frame);
-
-  reelSet.x = frame.x + padX;
-  reelSet.y = frame.y + padY;
   app.stage.addChild(reelSet);
 
   // Fake-server-wait spinner — centered on the reel frame. Shown only
@@ -343,11 +341,38 @@ export async function mountMechanic(
   const cascadeSpinner = new Graphics();
   cascadeSpinner.arc(0, 0, 28, 0, Math.PI * 1.55);
   cascadeSpinner.stroke({ color: 0xffd166, width: 5, cap: 'round' });
-  cascadeSpinner.x = frame.x + totalW / 2;
-  cascadeSpinner.y = frame.y + totalH / 2;
   cascadeSpinner.visible = false;
   gsap.to(cascadeSpinner, { rotation: Math.PI * 2, duration: 0.9, ease: 'none', repeat: -1 });
   app.stage.addChild(cascadeSpinner);
+
+  // Recompute width-dependent positions AND scale the reels to fit. Called
+  // once at boot and on every host resize so the canvas stays fit on mobile
+  // rotation / responsive breakpoints. Height is reel-geometry-bound; if the
+  // host can't fit the intrinsic reel width, we scale everything (frame +
+  // reelSet + spinner) down uniformly so all five columns stay visible
+  // beside the spin button — mirroring RecipeRunner's `fit()` pattern.
+  const relayout = (): void => {
+    width = computeWidth();
+    app.renderer.resize(width, height);
+    const reelArea = width - BUTTON_COL_WIDTH;
+    const scale = Math.min(1, reelArea / totalW, height / totalH);
+    const scaledW = totalW * scale;
+    const scaledH = totalH * scale;
+    frame.scale.set(scale);
+    frame.x = (reelArea - scaledW) / 2;
+    frame.y = (height - scaledH) / 2;
+    reelSet.scale.set(scale);
+    reelSet.x = frame.x + padX * scale;
+    reelSet.y = frame.y + padY * scale;
+    cascadeSpinner.scale.set(scale);
+    cascadeSpinner.x = frame.x + scaledW / 2;
+    cascadeSpinner.y = frame.y + scaledH / 2;
+  };
+  relayout();
+  const resizeObserver = typeof ResizeObserver !== 'undefined'
+    ? new ResizeObserver(() => relayout())
+    : null;
+  resizeObserver?.observe(host);
 
   // Attach debug to window — matches what every guide/demo advertises.
   enableDebug(reelSet);
@@ -375,16 +400,16 @@ export async function mountMechanic(
   spinBtn.setAttribute('aria-label', 'Spin');
   // Circular button on the right edge, vertically centered. Sized to fit
   // inside the reserved BUTTON_COL_WIDTH column to the right of the reels.
+  // Sizing + classes mirror RecipeRunner.tsx so demos and recipes share
+  // one button look (56×56, right-edge centered, shadow-md). The
+  // BUTTON_COL_WIDTH column stays wide enough for generous right-margin.
   spinBtn.className = [
     'absolute right-3 top-1/2 -translate-y-1/2',
-    'inline-flex items-center justify-center rounded-full',
-    'border border-border/70 bg-background/80 text-foreground shadow-sm backdrop-blur',
+    'inline-flex h-14 w-14 items-center justify-center rounded-full',
+    'border border-border/70 bg-background/80 text-foreground shadow-md backdrop-blur',
     'transition-all hover:bg-primary hover:text-primary-foreground hover:border-primary',
     'disabled:cursor-not-allowed disabled:opacity-50',
   ].join(' ');
-  const btnDiameter = BUTTON_COL_WIDTH - 24;
-  spinBtn.style.width = `${btnDiameter}px`;
-  spinBtn.style.height = `${btnDiameter}px`;
   spinBtn.style.zIndex = '5';
   host.appendChild(spinBtn);
 
@@ -505,9 +530,10 @@ export async function mountMechanic(
   api.setStatus('Ready. Toggle a cheat, then press SPIN.');
 
   return () => {
-    try { spinBtn.remove(); } catch {}
-    try { reelSet.destroy(); } catch {}
-    try { app.destroy(true, { children: true }); } catch {}
+    try { resizeObserver?.disconnect(); } catch (err) { console.warn('demoRuntime: observer disconnect failed', err); }
+    try { spinBtn.remove(); } catch (err) { console.warn('demoRuntime: spinBtn remove failed', err); }
+    try { reelSet.destroy(); } catch (err) { console.warn('demoRuntime: reelSet destroy failed', err); }
+    try { app.destroy(true, { children: true }); } catch (err) { console.warn('demoRuntime: app destroy failed', err); }
   };
 }
 

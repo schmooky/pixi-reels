@@ -101,6 +101,9 @@ interface RunCascadeResult {
 | `cascade:dropIn:start` | `{ reelIndex: number }` | A reel's drop-in begins. |
 | `cascade:dropIn:symbol` | `{ symbol: ReelSymbol, view: Container, reelIndex: number, rowIndex: number, duration: number, ease: string, offsetRows: number }` | One symbol's drop-in tween is about to start. `offsetRows` is the number of cells this symbol traverses (1 for top-row refills, more for survivors sliding past larger holes). |
 | `cascade:dropIn:end` | `{ reelIndex: number }` | A reel's last drop-in tween settled. |
+| `cascade:gravity:start` | `{ reelIndex: number }` | **Two-stage refill only** (`mode: 'gravity-then-drop'`) — a reel's survivor-settle phase begins, before new symbols enter. Not emitted when refill is `'combined'`. |
+| `cascade:gravity:symbol` | `{ symbol: ReelSymbol, view: Container, reelIndex: number, rowIndex: number, duration: number, ease: string, offsetRows: number }` | One survivor's settle tween about to start. Same payload shape as `dropIn:symbol`, scoped to survivors only. |
+| `cascade:gravity:end` | `{ reelIndex: number }` | A reel's survivor settle landed. The library now waits for `gravityHoldMs` + `gravityHold` to resolve (in parallel via `Promise.all`) before the drop-in stage begins. Use this as the asymmetric-anticipation cue. |
 
 ### Destroy-batch-scoped
 
@@ -110,6 +113,8 @@ interface RunCascadeResult {
 | `cascade:destroy:end` | `{ cells: readonly Cell[] }` | `destroySymbols(...)` finished — every `playDestroy()` resolved and the viewport dim (if any) was restored. |
 
 ### Event order inside one `runCascade()` call
+
+Combined-mode refill (default — `refillMode: 'combined'`):
 
 ```text
 for each chain stage with winners:
@@ -122,6 +127,21 @@ for each chain stage with winners:
     (refill: per reel — cascade:place:end → cascade:dropIn:start → ... → cascade:dropIn:end)
   cascade:chain:end
 // then the awaited runCascade promise resolves with RunCascadeResult
+```
+
+Two-stage refill (`refillMode: 'gravity-then-drop'`) splits the refill into a gravity stage and a drop-in stage with an anticipation window between them:
+
+```text
+for each chain stage with winners:
+  cascade:chain:start
+    cascade:destroy:start → ... → cascade:destroy:end
+    onCascade callback (optional)
+    pause (pauseAfterDestroyMs)
+    (gravity stage: per reel — cascade:place:end → cascade:gravity:start → cascade:gravity:symbol* → cascade:gravity:end)
+    hold (Promise.all of `gravityHoldMs` setTimeout + caller-supplied `gravityHold` promise)
+    onGravityComplete callback (optional)
+    (drop-in stage: per reel — cascade:dropIn:start → cascade:dropIn:symbol* → cascade:dropIn:end)
+  cascade:chain:end
 ```
 
 ### Common patterns
