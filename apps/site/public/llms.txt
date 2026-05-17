@@ -6,7 +6,7 @@ Site: https://pixi-reels.schmooky.dev
 Repo: https://github.com/schmooky/pixi-reels
 Package: https://www.npmjs.com/package/pixi-reels
 
-Generated: 2026-05-14T18:46:24.894Z
+Generated: 2026-05-16T20:30:35.041Z
 
 ## Quick start
 
@@ -174,12 +174,12 @@ Steps:
 URL: https://pixi-reels.schmooky.dev/recipes/cascade-6x5/
 Modern tumble/cascade mechanic with an ever-growing win multiplier — the MultiWays-adjacent style every slot studio is shipping.
 Tags: starter, cascade, 6x5, multiplier
-APIs: ReelSetBuilder.cascade, DropRecipes, ReelSet.setDropOrder, ReelSet.setResult, SymbolSpotlight.cycle
+APIs: ReelSetBuilder.tumble, ReelSet.refill, ReelSet.setDropOrder, ReelSet.setResult, SymbolSpotlight.cycle
 Steps:
-  - Build a 6×5 ReelSet with .cascade() for drop-in mechanics (no strip spin)
+  - Build a 6×5 ReelSet with .tumble({ fall, dropIn }) for drop-in mechanics
   - Spin — symbols drop in left-to-right, row by row, with bounce
   - Detect cluster/line wins and spotlight them
-  - Tumble (vanish winners, survivors fall, new symbols drop from above) and repeat
+  - Tumble (remove winners, then reelSet.refill({ winners, grid })) and repeat
   - Each tumble increments the win multiplier
 
 ### Cascade pops with WinPresenter
@@ -243,6 +243,16 @@ Steps:
   - Pin every row of that reel with { turns: N } — the column becomes wild for the next N spins
   - The engine decrements turns on each spin:allLanded and expires pins at zero
 
+### Lead-in delay — how long before the fall starts
+URL: https://pixi-reels.schmooky.dev/recipes/fall-delays/
+Four interactive canvases. Same spin, same destruction, same .tumble() feel — only the pause between SPIN click and the first frame of fall-out animation changes. From snappy 0 ms to dramatic 700 ms.
+Tags: cascade, tumble, lead-in, pacing, recipes
+APIs: ReelSet.spin, (user-code: await new Promise((r) => setTimeout(r, ms)))
+Steps:
+  - Click SPIN — your handler runs immediately
+  - Optionally await a lead-in pause (0 / 150 / 350 / 700 ms here)
+  - Call reelSet.spin() — the fall begins
+
 ### Feature mode swap
 URL: https://pixi-reels.schmooky.dev/recipes/feature-mode-swap/
 Toggle a bonus mode on and off at runtime by adding and removing a frame middleware — no ReelSet rebuild, no rebuild latency.
@@ -302,7 +312,7 @@ Per-spin row variation on a strip-spin landing; the cascade tumble pops winners 
 Tags: multiways, cascade, hybrid, recent
 APIs: ReelSetBuilder.multiways, ReelSet.setShape, runCascade
 Steps:
-  - Build with .multiways({minRows, maxRows, reelPixelHeight}) — no .cascade() needed
+  - Build with .multiways({minRows, maxRows, reelPixelHeight}) — no .tumble() needed
   - Each round, call setShape(rowsPerReel) BEFORE setResult()
   - reelSet.spin() — classic strip-spin lands the multiways grid (AdjustPhase reshapes during SPIN→STOP)
   - On a winning row, runCascade(reelSet, [...stages]) tumbles winners and drops new symbols in from above
@@ -377,6 +387,16 @@ Steps:
   - Pass an array to .visibleRowsPerReel([3, 5, 5, 5, 3]) instead of .visibleRows(n)
   - Optionally set .reelAnchor('center' | 'top' | 'bottom') to control vertical alignment
   - The engine computes per-reel offsetY automatically; getCellBounds(col, row) reflects it
+
+### Cascade refill orders — pick the post-win flow
+URL: https://pixi-reels.schmooky.dev/recipes/refill-orders/
+Three interactive canvases. Same scripted win, same destruction, same .tumble() feel — only the cascade-refill ordering changes. See which one fits your slot's rhythm.
+Tags: cascade, tumble, refill, presets, recipes
+APIs: ReelSet.refill, ReelSet.setDropOrder, TumbleDropInConfig.rowStagger, TumbleDropInConfig.rowOrder
+Steps:
+  - Initial reveal is the same (left-to-right wave) on every canvas
+  - Winners destruct the same way — the post-removal pause is fixed
+  - Only the refill drop-in order changes (setDropOrder + rowStagger + rowOrder)
 
 ### How to remove a symbol in a cascade
 URL: https://pixi-reels.schmooky.dev/recipes/remove-symbol/
@@ -482,6 +502,16 @@ Steps:
   - The returned Spritesheet exposes `sheet.textures[frameId]` for every frame
   - Pass the base + blur texture maps to `SpriteSymbol` (crisp) or `BlurSpriteSymbol` (swaps on phase events)
 
+### Tumble feels — every preset, side by side
+URL: https://pixi-reels.schmooky.dev/recipes/tumble-feels/
+Five interactive canvases, same spin + cascade-refill loop. Only the .tumble({ fall, dropIn }) config changes between them. Click each SPIN to compare the feel without writing a line of code.
+Tags: cascade, tumble, presets, recipes
+APIs: ReelSetBuilder.tumble, ReelSet.refill, TumbleFallConfig, TumbleDropInConfig
+Steps:
+  - Same builder, same spin + refill loop on every canvas
+  - Only the .tumble({ fall, dropIn }) shape differs
+  - Pick the preset that reads right for your art / theme / pace
+
 ### Value-carrying coin (Hold & Win)
 URL: https://pixi-reels.schmooky.dev/recipes/value-coin-pin/
 Classic Hold & Win architecture — one 1x1 ReelSet per cell, coin symbols carry their payout value in the pin payload, pinned cells skip their spin entirely.
@@ -510,6 +540,11 @@ Steps:
 URL: https://pixi-reels.schmooky.dev/demos/anticipation-slam/
 Two tension tools — anticipation (slow a reel to tease a trigger) and skip (player smashes the button to slam-land now).
 Tags: anticipation, skip
+
+### Arc Lord — spine + zvuk
+URL: https://pixi-reels.schmooky.dev/demos/arc-lord/
+A full slot showcasing the new .tumble() / refill() API with Spine 2D symbol art and the zvuk audio engine. Bottom-left fall reveal, simultaneous refill, win-implode destruction, and a multiplier that ticks up per cascade.
+Tags: cascade, tumble, spine, audio, real-game
 
 ### Big symbols (2x2 BIG WILD)
 URL: https://pixi-reels.schmooky.dev/demos/big-symbols/
@@ -957,7 +992,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/cascade-6x5/
 ```ts
 // @ts-nocheck
 // Injected: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, WILD_CARD,
-//           DropRecipes, PIXI, gsap, app, pickWeighted,
+//           PIXI, gsap, app, pickWeighted,
 //           runCascade (cascade sequence helper)
 
 const IDS = ['7', '8', '9', '10', 'J', 'Q'];
@@ -979,7 +1014,10 @@ const reelSet = new ReelSetBuilder()
     }
   })
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150 })
-  .cascade(DropRecipes.stiffDrop)
+  .tumble({
+    fall:   { duration: 280, ease: 'power3.in',  rowStagger: 60 },
+    dropIn: { duration: 450, ease: 'power3.out', rowStagger: 60, distance: 'perHole' },
+  })
   .ticker(app.ticker).build();
 
 return {
@@ -1029,7 +1067,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/cascade-winpresenter/
 ```ts
 // @ts-nocheck
 // Injected: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, WILD_CARD,
-//           DropRecipes, WinPresenter, PIXI, gsap, app, pickWeighted, runCascade.
+//           WinPresenter, PIXI, gsap, app, pickWeighted, runCascade.
 
 const IDS = ['7', '8', '9', '10', 'J', 'Q'];
 const REELS = 6, ROWS = 4, SIZE = 72;
@@ -1051,7 +1089,10 @@ const reelSet = new ReelSetBuilder()
     }
   })
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150 })
-  .cascade(DropRecipes.stiffDrop)
+  .tumble({
+    fall:   { duration: 280, ease: 'power3.in',  rowStagger: 60 },
+    dropIn: { duration: 450, ease: 'power3.out', rowStagger: 60, distance: 'perHole' },
+  })
   .ticker(app.ticker).build();
 
 // One presenter. Clusters and paylines are the same shape here — just a
@@ -1660,6 +1701,309 @@ return {
     grid[col][1] = WILD;
     spinCount++;
     return grid;
+  },
+};
+```
+
+### fall-delay-anticipation
+URL: https://pixi-reels.schmooky.dev/recipes/fall-delay-anticipation/
+```ts
+// @ts-nocheck
+// Injected: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//           PIXI, gsap, app, pickWeighted, destroyWinners
+
+// ANTICIPATION — 350 ms lead-in. Enough room for a full "spin-up"
+// sound effect to play, a button-press animation to complete, or a
+// "READY" tone to fire. The pause is clearly perceived as deliberate.
+// Common in mid-tier slots where the player expects a beat between
+// click and motion.
+
+const IDS = ['7', '8', '9', '10', 'J', 'Q'];
+const REELS = 6, ROWS = 4, SIZE = 64;
+const CLUSTER = '10';
+const HIT_ROW = 2;
+const HIT_COLS = [0, 1, 2];
+const LEAD_IN_MS = 350;
+
+function randSymbol(exclude) {
+  let s;
+  do { s = IDS[Math.floor(Math.random() * IDS.length)]; } while (s === exclude);
+  return s;
+}
+
+const reelSet = new ReelSetBuilder()
+  .reels(REELS).visibleSymbols(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
+  .symbols((r) => {
+    for (const sym of CARD_DECK) {
+      if (IDS.includes(sym.id)) {
+        r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
+      }
+    }
+  })
+  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150 })
+  .tumble({
+    fall:   { duration: 280, ease: 'sine.in',       rowStagger: 50 },
+    dropIn: { duration: 420, ease: 'back.out(1.5)', rowStagger: 0,  distance: 'perHole' },
+  })
+  .ticker(app.ticker).build();
+
+return {
+  reelSet,
+  onSpin: async () => {
+    const stage0 = Array.from({ length: REELS }, (_, c) =>
+      Array.from({ length: ROWS }, (_, r) =>
+        r === HIT_ROW && HIT_COLS.includes(c) ? CLUSTER : randSymbol(CLUSTER),
+      ),
+    );
+    const stage1 = stage0.map((col, c) => {
+      if (!HIT_COLS.includes(c)) return [...col];
+      const next = [...col];
+      for (let r = HIT_ROW; r > 0; r--) next[r] = next[r - 1];
+      next[0] = randSymbol(CLUSTER);
+      return next;
+    });
+
+    if (LEAD_IN_MS > 0) await new Promise((r) => setTimeout(r, LEAD_IN_MS));
+
+    reelSet.setDropOrder('ltr');
+    const spinDone = reelSet.spin();
+    await new Promise((r) => setTimeout(r, 220));
+    reelSet.setResult(stage0);
+    await spinDone;
+
+    await new Promise((r) => setTimeout(r, 200));
+    const winners = HIT_COLS.map((c) => ({ reel: c, row: HIT_ROW }));
+    await destroyWinners(reelSet, winners);
+    await new Promise((r) => setTimeout(r, 220));
+    reelSet.setDropOrder('all');
+    await reelSet.refill({ winners, grid: stage1 });
+  },
+};
+```
+
+### fall-delay-instant
+URL: https://pixi-reels.schmooky.dev/recipes/fall-delay-instant/
+```ts
+// @ts-nocheck
+// Injected: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//           PIXI, gsap, app, pickWeighted, destroyWinners
+
+// INSTANT — fall starts the moment you click SPIN. No lead-in. The
+// default. Snappiest possible feel; players who tap-spin many rounds
+// per minute appreciate it. Pair with no sound lead-in or a sound that
+// triggers WITH the fall, not before.
+
+const IDS = ['7', '8', '9', '10', 'J', 'Q'];
+const REELS = 6, ROWS = 4, SIZE = 64;
+const CLUSTER = '10';
+const HIT_ROW = 2;
+const HIT_COLS = [0, 1, 2];
+const LEAD_IN_MS = 0;
+
+function randSymbol(exclude) {
+  let s;
+  do { s = IDS[Math.floor(Math.random() * IDS.length)]; } while (s === exclude);
+  return s;
+}
+
+const reelSet = new ReelSetBuilder()
+  .reels(REELS).visibleSymbols(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
+  .symbols((r) => {
+    for (const sym of CARD_DECK) {
+      if (IDS.includes(sym.id)) {
+        r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
+      }
+    }
+  })
+  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150 })
+  .tumble({
+    fall:   { duration: 280, ease: 'sine.in',       rowStagger: 50 },
+    dropIn: { duration: 420, ease: 'back.out(1.5)', rowStagger: 0,  distance: 'perHole' },
+  })
+  .ticker(app.ticker).build();
+
+return {
+  reelSet,
+  onSpin: async () => {
+    const stage0 = Array.from({ length: REELS }, (_, c) =>
+      Array.from({ length: ROWS }, (_, r) =>
+        r === HIT_ROW && HIT_COLS.includes(c) ? CLUSTER : randSymbol(CLUSTER),
+      ),
+    );
+    const stage1 = stage0.map((col, c) => {
+      if (!HIT_COLS.includes(c)) return [...col];
+      const next = [...col];
+      for (let r = HIT_ROW; r > 0; r--) next[r] = next[r - 1];
+      next[0] = randSymbol(CLUSTER);
+      return next;
+    });
+
+    // Lead-in pause BEFORE the fall starts. LEAD_IN_MS = 0 means the
+    // reels begin falling the same frame the click handler runs.
+    if (LEAD_IN_MS > 0) await new Promise((r) => setTimeout(r, LEAD_IN_MS));
+
+    reelSet.setDropOrder('ltr');
+    const spinDone = reelSet.spin();
+    await new Promise((r) => setTimeout(r, 220));
+    reelSet.setResult(stage0);
+    await spinDone;
+
+    await new Promise((r) => setTimeout(r, 200));
+    const winners = HIT_COLS.map((c) => ({ reel: c, row: HIT_ROW }));
+    await destroyWinners(reelSet, winners);
+    await new Promise((r) => setTimeout(r, 220));
+    reelSet.setDropOrder('all');
+    await reelSet.refill({ winners, grid: stage1 });
+  },
+};
+```
+
+### fall-delay-subtle
+URL: https://pixi-reels.schmooky.dev/recipes/fall-delay-subtle/
+```ts
+// @ts-nocheck
+// Injected: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//           PIXI, gsap, app, pickWeighted, destroyWinners
+
+// SUBTLE LEAD-IN — 150 ms before the fall starts. Just enough for the
+// SPIN button click to register and a short "tap" SFX to lead. Below
+// the threshold where the player thinks "why isn't anything happening?"
+// — still feels responsive.
+
+const IDS = ['7', '8', '9', '10', 'J', 'Q'];
+const REELS = 6, ROWS = 4, SIZE = 64;
+const CLUSTER = '10';
+const HIT_ROW = 2;
+const HIT_COLS = [0, 1, 2];
+const LEAD_IN_MS = 150;
+
+function randSymbol(exclude) {
+  let s;
+  do { s = IDS[Math.floor(Math.random() * IDS.length)]; } while (s === exclude);
+  return s;
+}
+
+const reelSet = new ReelSetBuilder()
+  .reels(REELS).visibleSymbols(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
+  .symbols((r) => {
+    for (const sym of CARD_DECK) {
+      if (IDS.includes(sym.id)) {
+        r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
+      }
+    }
+  })
+  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150 })
+  .tumble({
+    fall:   { duration: 280, ease: 'sine.in',       rowStagger: 50 },
+    dropIn: { duration: 420, ease: 'back.out(1.5)', rowStagger: 0,  distance: 'perHole' },
+  })
+  .ticker(app.ticker).build();
+
+return {
+  reelSet,
+  onSpin: async () => {
+    const stage0 = Array.from({ length: REELS }, (_, c) =>
+      Array.from({ length: ROWS }, (_, r) =>
+        r === HIT_ROW && HIT_COLS.includes(c) ? CLUSTER : randSymbol(CLUSTER),
+      ),
+    );
+    const stage1 = stage0.map((col, c) => {
+      if (!HIT_COLS.includes(c)) return [...col];
+      const next = [...col];
+      for (let r = HIT_ROW; r > 0; r--) next[r] = next[r - 1];
+      next[0] = randSymbol(CLUSTER);
+      return next;
+    });
+
+    if (LEAD_IN_MS > 0) await new Promise((r) => setTimeout(r, LEAD_IN_MS));
+
+    reelSet.setDropOrder('ltr');
+    const spinDone = reelSet.spin();
+    await new Promise((r) => setTimeout(r, 220));
+    reelSet.setResult(stage0);
+    await spinDone;
+
+    await new Promise((r) => setTimeout(r, 200));
+    const winners = HIT_COLS.map((c) => ({ reel: c, row: HIT_ROW }));
+    await destroyWinners(reelSet, winners);
+    await new Promise((r) => setTimeout(r, 220));
+    reelSet.setDropOrder('all');
+    await reelSet.refill({ winners, grid: stage1 });
+  },
+};
+```
+
+### fall-delay-suspense
+URL: https://pixi-reels.schmooky.dev/recipes/fall-delay-suspense/
+```ts
+// @ts-nocheck
+// Injected: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//           PIXI, gsap, app, pickWeighted, destroyWinners
+
+// SUSPENSE — 700 ms lead-in. Dramatic. The reels stand still while
+// the music swells, a "GO!" stinger fires, or a feature-pick UI flashes.
+// Use sparingly: fine for bonus / free-spin / jackpot reveals, exhausting
+// on every base-game spin.
+
+const IDS = ['7', '8', '9', '10', 'J', 'Q'];
+const REELS = 6, ROWS = 4, SIZE = 64;
+const CLUSTER = '10';
+const HIT_ROW = 2;
+const HIT_COLS = [0, 1, 2];
+const LEAD_IN_MS = 700;
+
+function randSymbol(exclude) {
+  let s;
+  do { s = IDS[Math.floor(Math.random() * IDS.length)]; } while (s === exclude);
+  return s;
+}
+
+const reelSet = new ReelSetBuilder()
+  .reels(REELS).visibleSymbols(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
+  .symbols((r) => {
+    for (const sym of CARD_DECK) {
+      if (IDS.includes(sym.id)) {
+        r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
+      }
+    }
+  })
+  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150 })
+  .tumble({
+    fall:   { duration: 280, ease: 'sine.in',       rowStagger: 50 },
+    dropIn: { duration: 420, ease: 'back.out(1.5)', rowStagger: 0,  distance: 'perHole' },
+  })
+  .ticker(app.ticker).build();
+
+return {
+  reelSet,
+  onSpin: async () => {
+    const stage0 = Array.from({ length: REELS }, (_, c) =>
+      Array.from({ length: ROWS }, (_, r) =>
+        r === HIT_ROW && HIT_COLS.includes(c) ? CLUSTER : randSymbol(CLUSTER),
+      ),
+    );
+    const stage1 = stage0.map((col, c) => {
+      if (!HIT_COLS.includes(c)) return [...col];
+      const next = [...col];
+      for (let r = HIT_ROW; r > 0; r--) next[r] = next[r - 1];
+      next[0] = randSymbol(CLUSTER);
+      return next;
+    });
+
+    if (LEAD_IN_MS > 0) await new Promise((r) => setTimeout(r, LEAD_IN_MS));
+
+    reelSet.setDropOrder('ltr');
+    const spinDone = reelSet.spin();
+    await new Promise((r) => setTimeout(r, 220));
+    reelSet.setResult(stage0);
+    await spinDone;
+
+    await new Promise((r) => setTimeout(r, 200));
+    const winners = HIT_COLS.map((c) => ({ reel: c, row: HIT_ROW }));
+    await destroyWinners(reelSet, winners);
+    await new Promise((r) => setTimeout(r, 220));
+    reelSet.setDropOrder('all');
+    await reelSet.refill({ winners, grid: stage1 });
   },
 };
 ```
@@ -3100,6 +3444,237 @@ return {
 };
 ```
 
+### refill-bottom-up
+URL: https://pixi-reels.schmooky.dev/recipes/refill-bottom-up/
+```ts
+// @ts-nocheck
+// Injected: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//           PIXI, gsap, app, pickWeighted, destroyWinners
+
+// BOTTOM-UP ROW REFILL — within each reel, the bottom row arrives first
+// and the top row arrives last (rowOrder: 'bottomToTop'). All reels
+// drop simultaneously (setDropOrder('all')). Reads as a "stacking up"
+// motion — fits puzzle / match-3 / chess-board themes where the board
+// builds itself from below.
+
+const IDS = ['7', '8', '9', '10', 'J', 'Q'];
+const REELS = 6, ROWS = 4, SIZE = 64;
+const CLUSTER = '10';
+const HIT_ROW = 2;
+const HIT_COLS = [0, 1, 2];
+const PAUSE_AFTER_REMOVAL_MS = 240;
+
+function randSymbol(exclude) {
+  let s;
+  do { s = IDS[Math.floor(Math.random() * IDS.length)]; } while (s === exclude);
+  return s;
+}
+
+const reelSet = new ReelSetBuilder()
+  .reels(REELS).visibleSymbols(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
+  .symbols((r) => {
+    for (const sym of CARD_DECK) {
+      if (IDS.includes(sym.id)) {
+        r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
+      }
+    }
+  })
+  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150 })
+  .tumble({
+    fall:   { duration: 240, ease: 'sine.in',       rowStagger: 40 },
+    dropIn: {
+      duration: 380, ease: 'back.out(1.5)', distance: 'perHole',
+      rowStagger: 90,
+      rowOrder: 'bottomToTop',
+    },
+  })
+  .ticker(app.ticker).build();
+
+return {
+  reelSet,
+  onSpin: async () => {
+    const stage0 = Array.from({ length: REELS }, (_, c) =>
+      Array.from({ length: ROWS }, (_, r) =>
+        r === HIT_ROW && HIT_COLS.includes(c) ? CLUSTER : randSymbol(CLUSTER),
+      ),
+    );
+    const stage1 = stage0.map((col, c) => {
+      if (!HIT_COLS.includes(c)) return [...col];
+      const next = [...col];
+      for (let r = HIT_ROW; r > 0; r--) next[r] = next[r - 1];
+      next[0] = randSymbol(CLUSTER);
+      return next;
+    });
+
+    reelSet.setDropOrder('ltr');
+    const spinDone = reelSet.spin();
+    await new Promise((r) => setTimeout(r, 220));
+    reelSet.setResult(stage0);
+    await spinDone;
+
+    await new Promise((r) => setTimeout(r, 200));
+    const winners = HIT_COLS.map((c) => ({ reel: c, row: HIT_ROW }));
+    await destroyWinners(reelSet, winners);
+    await new Promise((r) => setTimeout(r, PAUSE_AFTER_REMOVAL_MS));
+    reelSet.setDropOrder('all');
+    await reelSet.refill({ winners, grid: stage1 });
+  },
+};
+```
+
+### refill-ltr-wave
+URL: https://pixi-reels.schmooky.dev/recipes/refill-ltr-wave/
+```ts
+// @ts-nocheck
+// Injected: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//           PIXI, gsap, app, pickWeighted, destroyWinners
+
+// LEFT-TO-RIGHT WAVE REFILL — each column lands in sequence from left
+// to right. Each reel's rows arrive together (no in-reel stagger), but
+// reel 0 lands before reel 1 before reel 2... Reads as a column-by-column
+// "filling up" of the grid.
+
+const IDS = ['7', '8', '9', '10', 'J', 'Q'];
+const REELS = 6, ROWS = 4, SIZE = 64;
+const CLUSTER = '10';
+const HIT_ROW = 2;
+const HIT_COLS = [0, 1, 2];
+const PAUSE_AFTER_REMOVAL_MS = 220;
+const REEL_WAVE_STEP_MS = 90;
+
+function randSymbol(exclude) {
+  let s;
+  do { s = IDS[Math.floor(Math.random() * IDS.length)]; } while (s === exclude);
+  return s;
+}
+
+const reelSet = new ReelSetBuilder()
+  .reels(REELS).visibleSymbols(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
+  .symbols((r) => {
+    for (const sym of CARD_DECK) {
+      if (IDS.includes(sym.id)) {
+        r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
+      }
+    }
+  })
+  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150 })
+  .tumble({
+    fall:   { duration: 240, ease: 'sine.in',       rowStagger: 40 },
+    // rowStagger: 0 — rows in a reel arrive together; the per-reel
+    // stagger is set via setDropOrder('ltr', step) on the refill below.
+    dropIn: { duration: 380, ease: 'back.out(1.4)', rowStagger: 0, distance: 'perHole' },
+  })
+  .ticker(app.ticker).build();
+
+return {
+  reelSet,
+  onSpin: async () => {
+    const stage0 = Array.from({ length: REELS }, (_, c) =>
+      Array.from({ length: ROWS }, (_, r) =>
+        r === HIT_ROW && HIT_COLS.includes(c) ? CLUSTER : randSymbol(CLUSTER),
+      ),
+    );
+    const stage1 = stage0.map((col, c) => {
+      if (!HIT_COLS.includes(c)) return [...col];
+      const next = [...col];
+      for (let r = HIT_ROW; r > 0; r--) next[r] = next[r - 1];
+      next[0] = randSymbol(CLUSTER);
+      return next;
+    });
+
+    reelSet.setDropOrder('ltr');
+    const spinDone = reelSet.spin();
+    await new Promise((r) => setTimeout(r, 220));
+    reelSet.setResult(stage0);
+    await spinDone;
+
+    await new Promise((r) => setTimeout(r, 200));
+    const winners = HIT_COLS.map((c) => ({ reel: c, row: HIT_ROW }));
+    await destroyWinners(reelSet, winners);
+    await new Promise((r) => setTimeout(r, PAUSE_AFTER_REMOVAL_MS));
+    // Refill: each reel delayed by REEL_WAVE_STEP_MS — left-to-right wave.
+    reelSet.setDropOrder('ltr', REEL_WAVE_STEP_MS);
+    await reelSet.refill({ winners, grid: stage1 });
+  },
+};
+```
+
+### refill-simultaneous
+URL: https://pixi-reels.schmooky.dev/recipes/refill-simultaneous/
+```ts
+// @ts-nocheck
+// Injected: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//           PIXI, gsap, app, pickWeighted, destroyWinners
+
+// SIMULTANEOUS REFILL — every cell drops at the same moment. The most
+// common refill pattern in commercial tumble slots: snappy, no extra
+// pacing, the player sees the new symbols arrive as one beat.
+
+const IDS = ['7', '8', '9', '10', 'J', 'Q'];
+const REELS = 6, ROWS = 4, SIZE = 64;
+const CLUSTER = '10';
+const HIT_ROW = 2;
+const HIT_COLS = [0, 1, 2];
+const PAUSE_AFTER_REMOVAL_MS = 220;
+
+function randSymbol(exclude) {
+  let s;
+  do { s = IDS[Math.floor(Math.random() * IDS.length)]; } while (s === exclude);
+  return s;
+}
+
+const reelSet = new ReelSetBuilder()
+  .reels(REELS).visibleSymbols(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
+  .symbols((r) => {
+    for (const sym of CARD_DECK) {
+      if (IDS.includes(sym.id)) {
+        r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
+      }
+    }
+  })
+  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150 })
+  .tumble({
+    fall:   { duration: 240, ease: 'sine.in',       rowStagger: 40 },
+    // rowStagger: 0 — every row in a reel drops together (no in-reel stagger).
+    dropIn: { duration: 380, ease: 'back.out(1.4)', rowStagger: 0, distance: 'perHole' },
+  })
+  .ticker(app.ticker).build();
+
+return {
+  reelSet,
+  onSpin: async () => {
+    const stage0 = Array.from({ length: REELS }, (_, c) =>
+      Array.from({ length: ROWS }, (_, r) =>
+        r === HIT_ROW && HIT_COLS.includes(c) ? CLUSTER : randSymbol(CLUSTER),
+      ),
+    );
+    const stage1 = stage0.map((col, c) => {
+      if (!HIT_COLS.includes(c)) return [...col];
+      const next = [...col];
+      for (let r = HIT_ROW; r > 0; r--) next[r] = next[r - 1];
+      next[0] = randSymbol(CLUSTER);
+      return next;
+    });
+
+    // Moment A — initial reveal with the canonical left-to-right wave.
+    reelSet.setDropOrder('ltr');
+    const spinDone = reelSet.spin();
+    await new Promise((r) => setTimeout(r, 220));
+    reelSet.setResult(stage0);
+    await spinDone;
+
+    await new Promise((r) => setTimeout(r, 200));
+    const winners = HIT_COLS.map((c) => ({ reel: c, row: HIT_ROW }));
+    await destroyWinners(reelSet, winners);
+    await new Promise((r) => setTimeout(r, PAUSE_AFTER_REMOVAL_MS));
+    // Moment B — every column drops together. setDropOrder('all') = 0 ms
+    // per-reel delay; the in-reel rowStagger is already 0 above.
+    reelSet.setDropOrder('all');
+    await reelSet.refill({ winners, grid: stage1 });
+  },
+};
+```
+
 ### remove-symbol
 URL: https://pixi-reels.schmooky.dev/recipes/remove-symbol/
 ```ts
@@ -3216,7 +3791,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/spin-then-cascade/
 ```ts
 // @ts-nocheck
 // Injected: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, WILD_CARD,
-//           DropRecipes, PIXI, gsap, app, runCascade, pickWeighted
+//           PIXI, gsap, app, runCascade, pickWeighted
 
 // Hybrid spin-then-cascade: round 1 spins like a classic strip slot
 // (top-to-bottom motion, START → SPIN → STOP). The landing has a
@@ -3963,6 +4538,384 @@ return {
     Array.from({ length: 5 }, () =>
       Array.from({ length: 3 }, () => IDS[Math.floor(Math.random() * IDS.length)])
     ),
+};
+```
+
+### tumble-cartoon-bounce
+URL: https://pixi-reels.schmooky.dev/recipes/tumble-cartoon-bounce/
+```ts
+// @ts-nocheck
+// Injected: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//           PIXI, gsap, app, pickWeighted, destroyWinners
+
+// CARTOON BOUNCE: bounce.out gives a multi-bounce settle. Long stagger
+// makes the row-by-row arrival feel playful. Good fit for kid-friendly
+// themes, candy-style art, or anywhere "weighty fun" is the vibe.
+
+const IDS = ['7', '8', '9', '10', 'J', 'Q'];
+const REELS = 6, ROWS = 4, SIZE = 64;
+const CLUSTER = '10';
+const HIT_ROW = 2;
+const HIT_COLS = [0, 1, 2];
+
+// Longer pause so the previous bounce has time to settle before new
+// symbols arrive — the bouncy land needs breathing room.
+const PAUSE_AFTER_REMOVAL_MS = 320;
+
+function randSymbol(exclude) {
+  let s;
+  do { s = IDS[Math.floor(Math.random() * IDS.length)]; } while (s === exclude);
+  return s;
+}
+
+const reelSet = new ReelSetBuilder()
+  .reels(REELS).visibleSymbols(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
+  .symbols((r) => {
+    for (const sym of CARD_DECK) {
+      if (IDS.includes(sym.id)) {
+        r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
+      }
+    }
+  })
+  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150 })
+  .tumble({
+    fall:   { duration: 320, ease: 'sine.in',    rowStagger: 60 },
+    dropIn: { duration: 700, ease: 'bounce.out', rowStagger: 70, distance: 'perHole' },
+  })
+  .ticker(app.ticker).build();
+
+return {
+  reelSet,
+  onSpin: async () => {
+    const stage0 = Array.from({ length: REELS }, (_, c) =>
+      Array.from({ length: ROWS }, (_, r) =>
+        r === HIT_ROW && HIT_COLS.includes(c) ? CLUSTER : randSymbol(CLUSTER),
+      ),
+    );
+    const stage1 = stage0.map((col, c) => {
+      if (!HIT_COLS.includes(c)) return [...col];
+      const next = [...col];
+      for (let r = HIT_ROW; r > 0; r--) next[r] = next[r - 1];
+      next[0] = randSymbol(CLUSTER);
+      return next;
+    });
+
+    const spinDone = reelSet.spin();
+    reelSet.setDropOrder('ltr');
+    await new Promise((r) => setTimeout(r, 220));
+    reelSet.setResult(stage0);
+    await spinDone;
+
+    await new Promise((r) => setTimeout(r, 220));
+    const winners = HIT_COLS.map((c) => ({ reel: c, row: HIT_ROW }));
+    await destroyWinners(reelSet, winners);
+    await new Promise((r) => setTimeout(r, PAUSE_AFTER_REMOVAL_MS));
+    await reelSet.refill({ winners, grid: stage1 });
+  },
+};
+```
+
+### tumble-classic
+URL: https://pixi-reels.schmooky.dev/recipes/tumble-classic/
+```ts
+// @ts-nocheck
+// Injected: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//           PIXI, gsap, app, pickWeighted, destroyWinners
+
+// CLASSIC tumble feel: sine.in fall, soft overshoot dropIn — the
+// all-rounder default. Good baseline before reaching for the more
+// stylistic variants.
+
+const IDS = ['7', '8', '9', '10', 'J', 'Q'];
+const REELS = 6, ROWS = 4, SIZE = 64;
+const CLUSTER = '10';
+const HIT_ROW = 2;
+const HIT_COLS = [0, 1, 2];
+
+// Pause between "winners faded out" and "refill drop-in starts". Most
+// commercial slots dial this between 150 and 400 ms — too short feels
+// like a teleport, too long stalls the cascade momentum.
+const PAUSE_AFTER_REMOVAL_MS = 250;
+
+function randSymbol(exclude) {
+  let s;
+  do { s = IDS[Math.floor(Math.random() * IDS.length)]; } while (s === exclude);
+  return s;
+}
+
+const reelSet = new ReelSetBuilder()
+  .reels(REELS).visibleSymbols(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
+  .symbols((r) => {
+    for (const sym of CARD_DECK) {
+      if (IDS.includes(sym.id)) {
+        r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
+      }
+    }
+  })
+  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150 })
+  .tumble({
+    fall:   { duration: 280, ease: 'sine.in',       rowStagger: 40 },
+    dropIn: { duration: 480, ease: 'back.out(1.6)', rowStagger: 50, distance: 'perHole' },
+  })
+  .ticker(app.ticker).build();
+
+return {
+  reelSet,
+  onSpin: async () => {
+    const stage0 = Array.from({ length: REELS }, (_, c) =>
+      Array.from({ length: ROWS }, (_, r) =>
+        r === HIT_ROW && HIT_COLS.includes(c) ? CLUSTER : randSymbol(CLUSTER),
+      ),
+    );
+    const stage1 = stage0.map((col, c) => {
+      if (!HIT_COLS.includes(c)) return [...col];
+      const next = [...col];
+      for (let r = HIT_ROW; r > 0; r--) next[r] = next[r - 1];
+      next[0] = randSymbol(CLUSTER);
+      return next;
+    });
+
+    // Moment A: drop on click, wait, drop in.
+    const spinDone = reelSet.spin();
+    reelSet.setDropOrder('ltr');
+    await new Promise((r) => setTimeout(r, 220));
+    reelSet.setResult(stage0);
+    await spinDone;
+
+    // Moment B: fade winners, then refill — survivors slide, new symbols
+    // enter from above into the holes.
+    await new Promise((r) => setTimeout(r, 220));
+    const winners = HIT_COLS.map((c) => ({ reel: c, row: HIT_ROW }));
+    await destroyWinners(reelSet, winners);
+    await new Promise((r) => setTimeout(r, PAUSE_AFTER_REMOVAL_MS));
+    await reelSet.refill({ winners, grid: stage1 });
+  },
+};
+```
+
+### tumble-rain-column
+URL: https://pixi-reels.schmooky.dev/recipes/tumble-rain-column/
+```ts
+// @ts-nocheck
+// Injected: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//           PIXI, gsap, app, pickWeighted, destroyWinners
+
+// RAIN COLUMN: the whole column drops as a slab. rowStagger = 0 makes
+// every row start together; distance: 'auto' makes every animated row
+// traverse the FULL visible-rows distance. Looks like a piece of a
+// board falling. Good fit for puzzle / match-3 styled boards.
+
+const IDS = ['7', '8', '9', '10', 'J', 'Q'];
+const REELS = 6, ROWS = 4, SIZE = 64;
+const CLUSTER = '10';
+const HIT_ROW = 2;
+const HIT_COLS = [0, 1, 2];
+
+// Dramatic pause — the empty board is part of the visual story for
+// rain-column feels. 380 ms lets the absence of symbols register before
+// the next slab drops.
+const PAUSE_AFTER_REMOVAL_MS = 380;
+
+function randSymbol(exclude) {
+  let s;
+  do { s = IDS[Math.floor(Math.random() * IDS.length)]; } while (s === exclude);
+  return s;
+}
+
+const reelSet = new ReelSetBuilder()
+  .reels(REELS).visibleSymbols(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
+  .symbols((r) => {
+    for (const sym of CARD_DECK) {
+      if (IDS.includes(sym.id)) {
+        r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
+      }
+    }
+  })
+  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150 })
+  .tumble({
+    fall:   { duration: 240, ease: 'sine.in', rowStagger: 0 },
+    dropIn: { duration: 380, ease: 'sine.in', rowStagger: 0, distance: 'auto' },
+  })
+  .ticker(app.ticker).build();
+
+return {
+  reelSet,
+  onSpin: async () => {
+    const stage0 = Array.from({ length: REELS }, (_, c) =>
+      Array.from({ length: ROWS }, (_, r) =>
+        r === HIT_ROW && HIT_COLS.includes(c) ? CLUSTER : randSymbol(CLUSTER),
+      ),
+    );
+    const stage1 = stage0.map((col, c) => {
+      if (!HIT_COLS.includes(c)) return [...col];
+      const next = [...col];
+      for (let r = HIT_ROW; r > 0; r--) next[r] = next[r - 1];
+      next[0] = randSymbol(CLUSTER);
+      return next;
+    });
+
+    const spinDone = reelSet.spin();
+    reelSet.setDropOrder('all');
+    await new Promise((r) => setTimeout(r, 200));
+    reelSet.setResult(stage0);
+    await spinDone;
+
+    await new Promise((r) => setTimeout(r, 200));
+    const winners = HIT_COLS.map((c) => ({ reel: c, row: HIT_ROW }));
+    await destroyWinners(reelSet, winners);
+    await new Promise((r) => setTimeout(r, PAUSE_AFTER_REMOVAL_MS));
+    await reelSet.refill({ winners, grid: stage1 });
+  },
+};
+```
+
+### tumble-slam
+URL: https://pixi-reels.schmooky.dev/recipes/tumble-slam/
+```ts
+// @ts-nocheck
+// Injected: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//           PIXI, gsap, app, pickWeighted, destroyWinners
+
+// SLAM: accelerating fall (power4.in) and a hard, fast land (expo.out).
+// Short durations + small stagger keep the whole tumble under 0.5 s.
+// Reads as "serious / high-stakes" — typical for premium slot art or
+// turbo modes.
+
+const IDS = ['7', '8', '9', '10', 'J', 'Q'];
+const REELS = 6, ROWS = 4, SIZE = 64;
+const CLUSTER = '10';
+const HIT_ROW = 2;
+const HIT_COLS = [0, 1, 2];
+
+// Short pause — slam is snappy by design. 120 ms is just enough for the
+// player to register "the winners are gone" before the next slam arrives.
+const PAUSE_AFTER_REMOVAL_MS = 120;
+
+function randSymbol(exclude) {
+  let s;
+  do { s = IDS[Math.floor(Math.random() * IDS.length)]; } while (s === exclude);
+  return s;
+}
+
+const reelSet = new ReelSetBuilder()
+  .reels(REELS).visibleSymbols(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
+  .symbols((r) => {
+    for (const sym of CARD_DECK) {
+      if (IDS.includes(sym.id)) {
+        r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
+      }
+    }
+  })
+  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150 })
+  .tumble({
+    fall:   { duration: 180, ease: 'power4.in', rowStagger: 20 },
+    dropIn: { duration: 260, ease: 'expo.out',  rowStagger: 25, distance: 'perHole' },
+  })
+  .ticker(app.ticker).build();
+
+return {
+  reelSet,
+  onSpin: async () => {
+    const stage0 = Array.from({ length: REELS }, (_, c) =>
+      Array.from({ length: ROWS }, (_, r) =>
+        r === HIT_ROW && HIT_COLS.includes(c) ? CLUSTER : randSymbol(CLUSTER),
+      ),
+    );
+    const stage1 = stage0.map((col, c) => {
+      if (!HIT_COLS.includes(c)) return [...col];
+      const next = [...col];
+      for (let r = HIT_ROW; r > 0; r--) next[r] = next[r - 1];
+      next[0] = randSymbol(CLUSTER);
+      return next;
+    });
+
+    const spinDone = reelSet.spin();
+    reelSet.setDropOrder('ltr');
+    await new Promise((r) => setTimeout(r, 180));
+    reelSet.setResult(stage0);
+    await spinDone;
+
+    await new Promise((r) => setTimeout(r, 160));
+    const winners = HIT_COLS.map((c) => ({ reel: c, row: HIT_ROW }));
+    await destroyWinners(reelSet, winners);
+    await new Promise((r) => setTimeout(r, PAUSE_AFTER_REMOVAL_MS));
+    await reelSet.refill({ winners, grid: stage1 });
+  },
+};
+```
+
+### tumble-wave
+URL: https://pixi-reels.schmooky.dev/recipes/tumble-wave/
+```ts
+// @ts-nocheck
+// Injected: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//           PIXI, gsap, app, pickWeighted, destroyWinners
+
+// WAVE: heavy per-row stagger (110 ms) plus a soft overshoot. Rows
+// arrive in sequence top-to-bottom, reading as a rolling wave. Good
+// fit for narrative reveals where you want the player's eye to track
+// each row.
+
+const IDS = ['7', '8', '9', '10', 'J', 'Q'];
+const REELS = 6, ROWS = 4, SIZE = 64;
+const CLUSTER = '10';
+const HIT_ROW = 2;
+const HIT_COLS = [0, 1, 2];
+
+// Medium pause — wave is already long because of the per-row stagger;
+// the pause sets up the rhythm of the next wave without over-stalling.
+const PAUSE_AFTER_REMOVAL_MS = 280;
+
+function randSymbol(exclude) {
+  let s;
+  do { s = IDS[Math.floor(Math.random() * IDS.length)]; } while (s === exclude);
+  return s;
+}
+
+const reelSet = new ReelSetBuilder()
+  .reels(REELS).visibleSymbols(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
+  .symbols((r) => {
+    for (const sym of CARD_DECK) {
+      if (IDS.includes(sym.id)) {
+        r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
+      }
+    }
+  })
+  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150 })
+  .tumble({
+    fall:   { duration: 180, ease: 'sine.in',       rowStagger: 90 },
+    dropIn: { duration: 320, ease: 'back.out(2.0)', rowStagger: 110, distance: 'perHole' },
+  })
+  .ticker(app.ticker).build();
+
+return {
+  reelSet,
+  onSpin: async () => {
+    const stage0 = Array.from({ length: REELS }, (_, c) =>
+      Array.from({ length: ROWS }, (_, r) =>
+        r === HIT_ROW && HIT_COLS.includes(c) ? CLUSTER : randSymbol(CLUSTER),
+      ),
+    );
+    const stage1 = stage0.map((col, c) => {
+      if (!HIT_COLS.includes(c)) return [...col];
+      const next = [...col];
+      for (let r = HIT_ROW; r > 0; r--) next[r] = next[r - 1];
+      next[0] = randSymbol(CLUSTER);
+      return next;
+    });
+
+    const spinDone = reelSet.spin();
+    reelSet.setDropOrder('ltr');
+    await new Promise((r) => setTimeout(r, 220));
+    reelSet.setResult(stage0);
+    await spinDone;
+
+    await new Promise((r) => setTimeout(r, 220));
+    const winners = HIT_COLS.map((c) => ({ reel: c, row: HIT_ROW }));
+    await destroyWinners(reelSet, winners);
+    await new Promise((r) => setTimeout(r, PAUSE_AFTER_REMOVAL_MS));
+    await reelSet.refill({ winners, grid: stage1 });
+  },
 };
 ```
 
