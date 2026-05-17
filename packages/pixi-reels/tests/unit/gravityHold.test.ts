@@ -191,7 +191,97 @@ describe('refill — gravityHold promise', () => {
   });
 });
 
+describe('refill — gravityHold rejection surfacing', () => {
+  it('emits cascade:gravity:error with the rejection reason when gravityHold rejects', async () => {
+    // The rejection used to be silently swallowed (logged to console
+    // only). Now it's also surfaced via a structured event so a HUD /
+    // error reporter can hook it without scraping the console.
+    const { reelSet, destroy } = buildTumbleHarness([
+      ['a', 'a', 'a'],
+      ['a', 'a', 'a'],
+      ['a', 'a', 'a'],
+    ]);
+
+    const errors: unknown[] = [];
+    reelSet.events.on('cascade:gravity:error', (info) => errors.push(info.error));
+
+    const sentinel = new Error('multiplier-roll-blew-up');
+    // Silence the console.error the engine emits — we're explicitly
+    // exercising the error path.
+    const originalError = console.error;
+    console.error = (): void => {};
+    try {
+      // Refill resolves with wasSkipped=true (engine slams to recover);
+      // the original rejection comes through via the event.
+      await reelSet.refill({
+        winners: [{ reel: 0, row: 2 }, { reel: 1, row: 2 }, { reel: 2, row: 2 }],
+        grid: [['d', 'a', 'a'], ['d', 'a', 'a'], ['d', 'a', 'a']],
+        mode: 'gravity-then-drop',
+        gravityHoldMs: 0,
+        gravityHold: Promise.reject(sentinel),
+      });
+    } finally {
+      console.error = originalError;
+    }
+
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toBe(sentinel);
+    destroy();
+  });
+});
+
 describe('runCascade — gravityHold per-cascade promise builder', () => {
+  it('invokes the builder AT gravity-end (after every reel reports cascade:gravity:end), not at refill-start', async () => {
+    // The docstring promises the builder fires "at the gravity-end
+    // boundary" — i.e. AFTER every reel has reported `cascade:gravity:end`.
+    // Before the fix, the runCascade body called the builder while
+    // assembling the refill args, which lined the side effects up with
+    // refill-START, not refill gravity-END. This test pins the contract.
+    const { reelSet, destroy } = buildTumbleHarness([
+      ['a', 'a', 'a'],
+      ['a', 'a', 'a'],
+      ['a', 'a', 'a'],
+    ]);
+
+    const timeline: string[] = [];
+    reelSet.events.on('cascade:fall:end',     (info) => timeline.push(`fall:end:${info.reelIndex}`));
+    reelSet.events.on('cascade:gravity:end',  (info) => timeline.push(`gravity:end:${info.reelIndex}`));
+    reelSet.events.on('cascade:dropIn:start', (info) => timeline.push(`dropIn:start:${info.reelIndex}`));
+
+    let detects = 0;
+    await reelSet.runCascade({
+      detectWinners: () => {
+        detects += 1;
+        if (detects > 1) return [];
+        return [{ reel: 0, row: 2 }, { reel: 1, row: 2 }, { reel: 2, row: 2 }];
+      },
+      nextGrid: (grid) => grid.map((c) => ['d', c[0], c[1]]),
+      pauseAfterDestroyMs: 0,
+      refillMode: 'gravity-then-drop',
+      gravityHoldMs: 0,
+      gravityHold: () => {
+        timeline.push('builder:invoked');
+        return Promise.resolve();
+      },
+    });
+
+    // Find the builder marker. It must appear AFTER every reel's
+    // `cascade:gravity:end` and BEFORE every reel's `cascade:dropIn:start`.
+    const builderIdx = timeline.indexOf('builder:invoked');
+    expect(builderIdx).toBeGreaterThan(-1);
+
+    const lastGravityEndIdx = timeline.lastIndexOf('gravity:end:2');
+    const firstDropInStartIdx = timeline.indexOf('dropIn:start:0');
+    expect(lastGravityEndIdx).toBeGreaterThan(-1);
+    expect(firstDropInStartIdx).toBeGreaterThan(-1);
+
+    // Builder fires AFTER the last gravity:end and BEFORE the first dropIn:start.
+    expect(builderIdx).toBeGreaterThan(lastGravityEndIdx);
+    expect(builderIdx).toBeLessThan(firstDropInStartIdx);
+
+    destroy();
+  });
+
   it('invokes gravityHold once per chain stage and awaits the result', async () => {
     const { reelSet, destroy } = buildTumbleHarness([
       ['a', 'a', 'a'],

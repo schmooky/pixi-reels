@@ -363,7 +363,11 @@ function SharedStudio({ config, assets, codeAccessible }: SharedStudioProps): JS
 
   async function handleSpin(): Promise<void> {
     if (isSpinning) {
-      try { reelSetRef.current?.skip(); } catch { /* ignore */ }
+      // skip() THROWS before `setResult()` arrives — route to requestSkip()
+      // in the catch so a player tap during the server-wait window still
+      // queues the slam and fires it the moment the result is in.
+      try { reelSetRef.current?.skip(); }
+      catch { reelSetRef.current?.requestSkip(); }
       return;
     }
     if (!reelSetRef.current && !onSpinRef.current) return;

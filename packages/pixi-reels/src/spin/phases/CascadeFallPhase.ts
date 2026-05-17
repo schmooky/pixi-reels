@@ -43,6 +43,13 @@ export class CascadeFallPhase extends ReelPhase<CascadeFallPhaseConfig> {
   /** Views actively being faded out. Tracked so `onSkip` can hide them
    *  rather than leaving them at mid-fall position. */
   private _fallingViews: Container[] = [];
+  /** Captured on enter so `onSkip` can emit the paired `cascade:fall:end`
+   *  without needing the config closure (which lives only inside `_beginFall`). */
+  private _events: EventEmitter<ReelSetEvents> | null = null;
+  /** Whether `cascade:fall:start` was emitted yet. `onSkip` emits the
+   *  matching `:end` ONLY when `:start` already fired — a skip during the
+   *  pre-fall delay window must not produce an unpaired `:end`. */
+  private _startEmitted = false;
 
   constructor(reel: Reel, speed: SpeedProfile, fall: Required<TumbleFallConfig>) {
     super(reel, speed);
@@ -54,6 +61,9 @@ export class CascadeFallPhase extends ReelPhase<CascadeFallPhaseConfig> {
     reel.spinningMode = config.spinningMode;
     reel.speed = 0;
     reel.notifySpinStart();
+
+    this._events = config.events;
+    this._startEmitted = false;
 
     const delaySec = (config.delay ?? 0) / 1000;
     if (delaySec > 0) {
@@ -91,12 +101,18 @@ export class CascadeFallPhase extends ReelPhase<CascadeFallPhaseConfig> {
     this._fallingViews = views;
 
     events.emit('cascade:fall:start', { reelIndex });
+    this._startEmitted = true;
 
     if (fallSec <= 0) {
       // Instant fall: hide and complete.
       for (const v of views) v.alpha = 0;
       events.emit('cascade:fall:end', { reelIndex });
       this._fallingViews = [];
+      // Null the start-emitted flag so a later `forceComplete` doesn't
+      // re-emit `cascade:fall:end` on a phase that already balanced its
+      // start/end pair.
+      this._startEmitted = false;
+      this._events = null;
       this._complete();
       return;
     }
@@ -107,6 +123,8 @@ export class CascadeFallPhase extends ReelPhase<CascadeFallPhaseConfig> {
         for (const v of views) v.alpha = 0;
         this._fallingViews = [];
         events.emit('cascade:fall:end', { reelIndex });
+        this._startEmitted = false;
+        this._events = null;
         this._complete();
       },
     });
@@ -151,6 +169,15 @@ export class CascadeFallPhase extends ReelPhase<CascadeFallPhaseConfig> {
     this._kill();
     for (const v of this._fallingViews) v.alpha = 0;
     this._fallingViews = [];
+    // Emit the paired `cascade:fall:end` so listeners that count
+    // start/end events stay balanced. Only emit if `:start` already
+    // fired — a skip during the pre-fall delay window has no
+    // matching `:start`, so an `:end` here would be unpaired.
+    if (this._startEmitted && this._events) {
+      this._events.emit('cascade:fall:end', { reelIndex: this._reel.reelIndex });
+    }
+    this._startEmitted = false;
+    this._events = null;
   }
 
   private _kill(): void {

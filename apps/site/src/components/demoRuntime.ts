@@ -414,11 +414,6 @@ export async function mountMechanic(
   host.appendChild(spinBtn);
 
   let spinning = false;
-  // Queued slam intent: set when the player taps the button while user-code is
-  // mid-spin but the engine itself isn't yet (e.g. inside the 240 ms setTimeout
-  // below). Consumed once the engine is actually in flight, via `requestSkip()`
-  // which is queued-until-setResult by design.
-  let pendingSkip = false;
   const setSpinState = (on: boolean): void => {
     spinning = on;
     spinBtn.innerHTML = on ? ICON_SKIP : ICON_SPIN;
@@ -433,29 +428,28 @@ export async function mountMechanic(
 
   const runSpin = async (): Promise<void> => {
     if (spinning) {
-      // Engine spinning → use `requestSkip()`. It auto-routes: if
-      // `setResult()` hasn't fired yet (we're in the fall + server-wait
-      // window), the library queues the slam and fires it the moment the
-      // result arrives — so the reels land on the intended grid instead
-      // of snapping to a random buffer. Once `setResult()` is in, the
-      // same call slams immediately. If user-code is mid-async (engine
-      // idle between refills), queue the intent ourselves so the next
-      // refill consumes it.
+      // Engine spinning → `requestSkip()` auto-routes: if `setResult()`
+      // hasn't fired yet (we're in the fall + server-wait window), the
+      // library queues the slam and fires it the moment the result
+      // arrives — so the reels land on the intended grid instead of
+      // snapping to a random buffer. Once `setResult()` is in, the same
+      // call slams immediately.
+      //
+      // Mid-cascade taps when the engine is idle BETWEEN refills are
+      // ignored here by design: `requestSkip()` is a no-op when the
+      // engine isn't spinning, and there's no engine-level "fast-forward
+      // remaining cascades" surface. Recipes that need that behaviour
+      // wire `runCascade({ signal })` to an `AbortController` — see the
+      // `examples/cascade-tumble` example.
       if (reelSet.isSpinning) reelSet.requestSkip();
-      else pendingSkip = true;
       return;
     }
     setSpinState(true);
-    pendingSkip = false;
     try {
       cfg.beforeSpin?.(engine);
       const { symbols, anticipationReels, meta } = engine.next();
       api.setStatus('Spinning…');
       const promise = reelSet.spin();
-      if (pendingSkip) {
-        pendingSkip = false;
-        reelSet.requestSkip();
-      }
       // Fake-server window — the moment AFTER reels fall but BEFORE the
       // new ones can be filled in. Spinner shows after the 200 ms debounce
       // so short waits don't flicker.
@@ -485,13 +479,6 @@ export async function mountMechanic(
             cascadeNextGrid(prev, [...winners], allSymbolIds, cfg.weights ?? {}),
           onCascade: ({ chain }) => {
             api.toast(`Cascade × ${chain}`, 'win');
-            // Honor a queued slam tap that landed while user-code was
-            // between cascades: ask the engine to slam every remaining
-            // refill in this round.
-            if (pendingSkip) {
-              pendingSkip = false;
-              try { reelSet.skip(); } catch { /* idle */ }
-            }
           },
           maxChain: 8,
         });
@@ -518,7 +505,6 @@ export async function mountMechanic(
       console.error('demoRuntime: runSpin failed', err);
       api.setStatus('Spin failed — try again.');
     } finally {
-      pendingSkip = false;
       setSpinState(false);
     }
   };

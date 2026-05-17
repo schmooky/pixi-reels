@@ -227,6 +227,20 @@ export interface ReelSetEvents extends Record<string, unknown[]> {
    */
   'cascade:gravity:end': [info: { reelIndex: number }];
   /**
+   * Tumble cascade — two-stage refill only: a user-supplied gate
+   * (`gravityHold` promise/factory or `onGravityComplete` callback)
+   * rejected or threw. The engine logs the error to `console.error` and
+   * slams the refill so the awaited `refill()` / `runCascade()` promise
+   * still settles — but the original rejection reason would otherwise be
+   * lost. Listen here to forward the error to your own logger / alarm /
+   * error reporter.
+   *
+   *   - `error` — whatever the user-supplied promise rejected with (or
+   *     `onGravityComplete` threw). Typed `unknown` because user code is
+   *     free to throw anything.
+   */
+  'cascade:gravity:error': [info: { error: unknown }];
+  /**
    * Tumble cascade: a single chain stage just started.
    *
    * Fired inside `runCascade(...)` after `detectWinners` returns a non-empty

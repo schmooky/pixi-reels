@@ -328,7 +328,11 @@ export default function Sandbox() {
 
   async function handleSpin() {
     if (isSpinning) {
-      try { currentReelSetRef.current?.skip(); } catch { /* ignore */ }
+      // skip() THROWS before `setResult()` arrives — route to requestSkip()
+      // in the catch so a player tap during the server-wait window still
+      // queues the slam and fires it the moment the result is in.
+      try { currentReelSetRef.current?.skip(); }
+      catch { currentReelSetRef.current?.requestSkip(); }
       return;
     }
     const reelSet = currentReelSetRef.current;

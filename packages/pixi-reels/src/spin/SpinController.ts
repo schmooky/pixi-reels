@@ -404,7 +404,16 @@ export class SpinController implements Disposable {
     grid: string[][] | ColumnTarget[];
     mode?: 'combined' | 'gravity-then-drop';
     gravityHoldMs?: number;
-    gravityHold?: Promise<void>;
+    /**
+     * Promise (or zero-arg factory) gating the drop-in stage. Pass a
+     * factory function — `() => Promise<void>` — to defer creation until
+     * the engine actually reaches the gravity-end boundary; the side
+     * effect of building the promise (e.g. starting a multiplier
+     * animation) then lines up with the gravity-end beat the player sees.
+     * Pass a bare `Promise<void>` if you already have an in-flight
+     * animation handle you just want the engine to wait on.
+     */
+    gravityHold?: Promise<void> | (() => Promise<void>);
     onGravityComplete?: () => Promise<void> | void;
   }): Promise<SpinResult> {
     if (this._isSpinning) {
@@ -528,8 +537,20 @@ export class SpinController implements Disposable {
         opts.onGravityComplete,
       ).catch((err: unknown) => {
         if (generation !== this._spinGeneration) return;
+        // The likely culprits at this layer are a `gravityHold` promise
+        // (or factory) rejection and an `onGravityComplete` callback
+        // throw. Surface BOTH a structured event (so a HUD / error
+        // reporter can react) AND a console.error (so an unhandled
+        // user-code rejection still leaves an obvious diagnostic).
+        // We still slam so the engine returns to a coherent idle state
+        // — without this the refill promise would hang forever.
+        this._events.emit('cascade:gravity:error', { error: err });
         // eslint-disable-next-line no-console
-        console.error('[pixi-reels] two-stage refill threw — slamming to recover:', err);
+        console.error(
+          '[pixi-reels] two-stage refill threw (likely from a user-supplied ' +
+          'gravityHold/onGravityComplete) — slamming to recover:',
+          err,
+        );
         this._slam();
       });
     } else {
@@ -588,7 +609,7 @@ export class SpinController implements Disposable {
     generation: number,
     winnersByReel: Map<number, number[]>,
     gravityHoldMs: number,
-    gravityHold?: Promise<void>,
+    gravityHold?: Promise<void> | (() => Promise<void>),
     onGravityComplete?: () => Promise<void> | void,
   ): Promise<void> {
     // Stage 1 — place + gravity. Place phase runs with delay = 0 so all
@@ -631,12 +652,18 @@ export class SpinController implements Disposable {
     // the drop-in — pass both when you want a min-wall-clock floor under
     // an animation that might be fast. Skip during this window bumps the
     // generation; the post-await guard bails before the drop-in stage.
+    //
+    // `gravityHold` accepts a factory (`() => Promise<void>`) so that its
+    // side effects (e.g. starting a multiplier-roll animation) fire HERE,
+    // at gravity-end — not back when the refill args were assembled. A
+    // bare Promise is also accepted for callers that already hold an
+    // in-flight handle.
     const holdPromises: Promise<void>[] = [];
     if (gravityHoldMs > 0) {
       holdPromises.push(new Promise<void>((r) => setTimeout(r, gravityHoldMs)));
     }
     if (gravityHold) {
-      holdPromises.push(gravityHold);
+      holdPromises.push(typeof gravityHold === 'function' ? gravityHold() : gravityHold);
     }
     if (holdPromises.length > 0) {
       await Promise.all(holdPromises);

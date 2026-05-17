@@ -66,6 +66,10 @@ export class CascadeDropInPhase extends ReelPhase<CascadeDropInPhaseConfig> {
   private readonly _drop: Required<TumbleDropInConfig>;
   private _timeline: gsap.core.Timeline | null = null;
   private _jobs: DropJob[] = [];
+  /** Captured on enter so `onSkip` can emit the paired `:end` event
+   *  without needing the config closure. */
+  private _events: EventEmitter<ReelSetEvents> | null = null;
+  private _endEvent: 'cascade:dropIn:end' | 'cascade:gravity:end' = 'cascade:dropIn:end';
 
   constructor(reel: Reel, speed: SpeedProfile, drop: Required<TumbleDropInConfig>) {
     super(reel, speed);
@@ -88,6 +92,12 @@ export class CascadeDropInPhase extends ReelPhase<CascadeDropInPhaseConfig> {
     const startEvent = role === 'gravity' ? 'cascade:gravity:start' : 'cascade:dropIn:start';
     const symbolEvent = role === 'gravity' ? 'cascade:gravity:symbol' : 'cascade:dropIn:symbol';
     const endEvent = role === 'gravity' ? 'cascade:gravity:end' : 'cascade:dropIn:end';
+
+    // Capture for `onSkip` — the `:start` event was just emitted, so any
+    // skip from here must produce the paired `:end` to keep listeners
+    // balanced.
+    this._events = events;
+    this._endEvent = endEvent;
 
     events.emit(startEvent, { reelIndex });
 
@@ -188,6 +198,10 @@ export class CascadeDropInPhase extends ReelPhase<CascadeDropInPhaseConfig> {
       this._timeline = null;
       this._jobs = [];
       events.emit(endEvent, { reelIndex });
+      // Null the stored events ref so `onSkip` (if `forceComplete` is
+      // called after natural completion) doesn't re-emit `:end` and
+      // double-fire on balanced listeners.
+      this._events = null;
       // Only stage that lands the reel: 'all' (combined) and 'new' (final
       // stage of two-stage). The gravity stage hands off to the drop-in
       // stage; that's where `notifyLanded` belongs.
@@ -267,6 +281,16 @@ export class CascadeDropInPhase extends ReelPhase<CascadeDropInPhaseConfig> {
       const sym = reel.getSymbolAt(row);
       sym.view.alpha = 1;
       sym.view.visible = true;
+    }
+
+    // Emit the paired `:end` event so listeners that count start/end
+    // events stay balanced across skips. `:start` was already emitted at
+    // the top of `onEnter`, so a skip here always has a matching `:start`
+    // — no guard needed (unlike `CascadeFallPhase`, where `:start` fires
+    // after a configurable delay).
+    if (this._events) {
+      this._events.emit(this._endEvent, { reelIndex: this._reel.reelIndex });
+      this._events = null;
     }
   }
 }

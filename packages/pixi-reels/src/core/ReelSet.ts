@@ -193,15 +193,26 @@ export interface RunCascadeOptions {
    */
   gravityHoldMs?: number;
   /**
-   * Per-cascade promise-builder. Called once at the gravity-end boundary
-   * of every refill; the returned promise is awaited in parallel with
-   * `gravityHoldMs` (Promise.all — whichever finishes LAST gates the
-   * drop-in). Only fires when `refillMode === 'gravity-then-drop'`. Use
-   * when each cascade in the chain starts its own anticipation animation
-   * and you want the engine to wait for it by handle.
+   * Per-cascade promise-builder. Invoked once per chain stage at the
+   * **gravity-end boundary** (i.e. AFTER every reel's gravity stage has
+   * settled, just before the global hold begins). The returned promise
+   * is awaited in parallel with `gravityHoldMs` via `Promise.all` —
+   * whichever finishes LAST gates the drop-in. Only fires when
+   * `refillMode === 'gravity-then-drop'`.
+   *
+   * Use this when each cascade starts its own anticipation animation
+   * (multiplier roll, mascot reaction, anticipation SFX) and you want
+   * the builder's *side effects* (e.g. `multiplier.bumpTo(chain + 1)`)
+   * to fire AT gravity-end — not back when the refill args were
+   * assembled. The library calls your function at the right beat and
+   * awaits the promise you return.
    *
    *   - `chain` — same 1-indexed chain stage as `cascade:chain:start`.
    *   - `winners` — cells cleared this cascade.
+   *
+   * A rejection from the returned promise is surfaced via the
+   * `cascade:gravity:error` event AND logged via `console.error`; the
+   * engine slams the refill so the awaited promise still settles.
    */
   gravityHold?: (info: {
     chain: number;
@@ -540,15 +551,23 @@ export class ReelSet extends Container implements Disposable {
      */
     gravityHoldMs?: number;
     /**
-     * Promise that gates the drop-in stage. Only applies when
-     * `mode === 'gravity-then-drop'`. Pass an already-in-flight animation
-     * / SFX / network call's completion promise here when you want the
-     * drop-in to wait for it without wrapping in a callback. Combines
-     * via `Promise.all` with `gravityHoldMs` — pass both to floor the
-     * hold to a minimum wall-clock duration even if the promise
-     * resolves earlier.
+     * Promise (or zero-arg factory) gating the drop-in stage. Only
+     * applies when `mode === 'gravity-then-drop'`.
+     *
+     *   - `Promise<void>` — pass an already-in-flight animation / SFX /
+     *     network call's completion handle when you want the drop-in to
+     *     wait for it. The promise is awaited as-is.
+     *   - `() => Promise<void>` — pass a factory when the *side effects*
+     *     of starting the promise (a `multiplier.bumpTo()`, a Spine
+     *     track switch, an SFX cue) should fire AT gravity-end, not at
+     *     refill-start. The engine calls the factory at the gravity-end
+     *     boundary and awaits its returned promise.
+     *
+     * Combines via `Promise.all` with `gravityHoldMs` — pass both to
+     * floor the hold to a minimum wall-clock duration even if the
+     * promise resolves earlier.
      */
-    gravityHold?: Promise<void>;
+    gravityHold?: Promise<void> | (() => Promise<void>);
     /**
      * Awaitable callback fired AFTER `gravityHoldMs` + `gravityHold` both
      * resolve, BEFORE the drop-in stage. Only fires when
@@ -764,7 +783,21 @@ export class ReelSet extends Container implements Disposable {
         }
 
         if (pauseMs > 0) {
-          await new Promise<void>((r) => setTimeout(r, pauseMs));
+          // Abort-cancellable wait. A plain `setTimeout` would run to
+          // completion regardless of `signal.aborted`, adding up to
+          // `pauseMs` of dead air between an abort and the loop exit.
+          // We race the timer against `signal.aborted` so an abort mid-
+          // pause unblocks the loop within a microtask.
+          await new Promise<void>((resolve) => {
+            const timer = setTimeout(resolve, pauseMs);
+            if (!opts.signal) return;
+            const onAbortPause = (): void => {
+              clearTimeout(timer);
+              resolve();
+            };
+            if (opts.signal.aborted) onAbortPause();
+            else opts.signal.addEventListener('abort', onAbortPause, { once: true });
+          });
           if (wasSkipped) break;
         }
 
@@ -772,13 +805,20 @@ export class ReelSet extends Container implements Disposable {
         if (wasSkipped) break;
 
         const refillMode = opts.refillMode ?? 'combined';
+        // Wrap `opts.gravityHold` in a FACTORY so the user's builder is
+        // invoked at gravity-end (inside `_refillTwoStage`), not at
+        // refill-start. This matters when the builder has side effects —
+        // e.g. `multiplier.bumpTo(chain + 1); return multiplier.done` —
+        // that the player should see synchronized with the gravity-end
+        // beat. Without the wrapping the bump would fire ~the duration
+        // of the gravity stage too early.
         await this.refill({
           winners: [...winners],
           grid: next,
           mode: refillMode,
           gravityHoldMs: opts.gravityHoldMs,
           gravityHold: opts.gravityHold
-            ? opts.gravityHold({ chain: stage, winners })
+            ? () => opts.gravityHold!({ chain: stage, winners })
             : undefined,
           onGravityComplete: opts.onGravityComplete
             ? () => opts.onGravityComplete!({ chain: stage, winners })
@@ -859,6 +899,13 @@ export class ReelSet extends Container implements Disposable {
   /**
    * Slam-stop safe before `setResult()` arrives — queues until then.
    * Bypasses the two-stage `skip()` machine: an explicit slam intent.
+   *
+   * Note on `skipStage`: when this call queues a slam (pre-`setResult`)
+   * rather than firing one, `skipStage` stays at `0` until `setResult()`
+   * arrives and the queued slam actually runs. If your UI labels the
+   * button off `skipStage`, expect a beat of "Skip" still shown while
+   * the queued intent is in flight — the queued state isn't exposed as
+   * its own stage on purpose (kept the `0 | 1 | 2` shape stable).
    */
   requestSkip(): void {
     this._spinController.requestSkip();
@@ -878,6 +925,11 @@ export class ReelSet extends Container implements Disposable {
    * player presses the slam button, `2` after. Read this to drive button
    * labels (e.g. "Skip" → "Skipped"). `1` is reserved for forward compat
    * and is not currently reachable.
+   *
+   * `requestSkip()` that gets queued pre-`setResult()` does NOT advance
+   * the stage until the queued slam actually fires (i.e. once
+   * `setResult()` arrives). If you need a "queued" UI state, track that
+   * yourself alongside `skipStage`.
    */
   get skipStage(): 0 | 1 | 2 {
     return this._spinController.skipStage;
@@ -1455,9 +1507,18 @@ export class ReelSet extends Container implements Disposable {
     // onFlightCreated hook — fires after the flight symbol is in place but
     // before the tween begins. This is where consumers switch a Spine
     // symbol onto a `run` animation for the flight duration.
+    //
+    // A throw from the hook MUST NOT abort the move: the pin map is
+    // already updated and the tween needs to run for the flight symbol
+    // to reach its destination — leaking a flight symbol on the unmasked
+    // container is worse than a noisy console.error. Log so the bug is
+    // diagnosable instead of silently eaten.
     try {
       opts?.onFlightCreated?.(flight);
-    } catch { /* caller bug — don't let a hook kill the animation */ }
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('[pixi-reels] movePin onFlightCreated hook threw — continuing the flight to avoid leaking the flight symbol:', err);
+    }
 
     // Tween.
     const duration = (opts?.duration ?? 400) / 1000;
@@ -1474,9 +1535,17 @@ export class ReelSet extends Container implements Disposable {
 
     // onFlightCompleted hook — fires before releasing the flight symbol,
     // so consumers can return a Spine to `idle` or play a landing animation.
+    //
+    // A throw from the hook MUST NOT prevent the rest of the cleanup
+    // (apply the pin at destination, release the flight symbol to the
+    // pool) — otherwise we leak a flight symbol AND leave the pin map
+    // out of sync with the reels. Log so the bug is diagnosable.
     try {
       opts?.onFlightCompleted?.(flight);
-    } catch { /* ignore */ }
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('[pixi-reels] movePin onFlightCompleted hook threw — continuing cleanup:', err);
+    }
 
     // Apply the pin visually at the destination cell.
     const toVisible = toReel.getVisibleSymbols();

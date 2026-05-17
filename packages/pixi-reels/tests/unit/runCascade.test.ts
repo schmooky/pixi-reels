@@ -267,6 +267,44 @@ describe('ReelSet.runCascade', () => {
     destroy();
   });
 
+  it('aborting during pauseAfterDestroyMs exits the loop without waiting out the timer', async () => {
+    // Before the fix, the in-loop setTimeout ran to completion regardless
+    // of abort — adding up to `pauseAfterDestroyMs` of dead air between
+    // slam intent and loop exit. Now the timeout is cancelled on abort,
+    // so the loop unblocks within a microtask.
+    const { reelSet, destroy } = buildTumbleHarness([
+      ['a', 'a', 'a'],
+      ['a', 'a', 'a'],
+      ['a', 'a', 'a'],
+    ]);
+
+    const controller = new AbortController();
+    const start = Date.now();
+    let detects = 0;
+    const summary = await reelSet.runCascade({
+      detectWinners: () => {
+        detects += 1;
+        return [{ reel: 0, row: 0 }];
+      },
+      nextGrid: (grid) => grid.map((col) => ['b', col[0], col[1]]),
+      onCascade: () => {
+        // Abort right at the start of the pause window so the test
+        // measures only the pause itself, not surrounding awaits.
+        if (detects === 1) controller.abort();
+      },
+      pauseAfterDestroyMs: 2000,  // 2 s — the test would time out if not aborted
+      signal: controller.signal,
+      destroyOptions: { zIndex: null },
+    });
+    const elapsed = Date.now() - start;
+
+    expect(summary.wasSkipped).toBe(true);
+    // Must be well below the 2000 ms pause. Generous bound so the test
+    // is stable under slow CI; the bug was "waits the FULL pauseMs."
+    expect(elapsed).toBeLessThan(800);
+    destroy();
+  });
+
   it('treats a skip:requested mid-chain as wasSkipped and stops further refills', async () => {
     const { reelSet, destroy } = buildTumbleHarness([
       ['a', 'a', 'a'],
