@@ -30,6 +30,13 @@ export default function ArcLordDemo() {
           // land cleanly into their slot — matches what most commercial
           // cascade slots do before playing a per-symbol landing animation.
           tumble: true,
+          // Fake server round-trip on the initial spin — symbols fall,
+          // then we wait 1-5 s for "the server" before the new ones can
+          // be filled in. Spinner appears at the 200 ms debounce
+          // threshold. A slam-stop during the wait is queued by the
+          // library (`requestSkip()`), so the reels land on the intended
+          // grid the moment the result arrives.
+          fakeServerDelay: () => 1000 + Math.random() * 4000,
         })
       }
     />

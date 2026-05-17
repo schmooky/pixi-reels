@@ -71,6 +71,20 @@ export interface MechanicConfig {
    * Pass `true` for default tumble feel, or a config to customize.
    */
   tumble?: true | TumbleConfig;
+  /**
+   * Optional fake-server delay (ms) inserted on the initial spin between
+   * `reelSet.spin()` and `reelSet.setResult()` — the moment AFTER the
+   * symbols fall out and BEFORE the new ones can be filled in. Returns
+   * the wait per spin; pass `() => 1000 + Math.random() * 4000` to
+   * simulate a real 1-5 s server response.
+   *
+   * A canvas spinner overlays the empty reels after a 200 ms debounce,
+   * so short waits don't flicker. A slam-stop pressed DURING this wait
+   * is deferred via `requestSkip()` — the engine queues the slam and
+   * fires it the moment `setResult()` arrives, so the reels land on the
+   * intended result instead of snapping to a random buffer.
+   */
+  fakeServerDelay?: () => number;
   /** Runs after every completed spin. Return a promise for win animations. */
   onLanded?: (ctx: LandedCtx) => Promise<void> | void;
   /** Custom spin button label. */
@@ -321,6 +335,20 @@ export async function mountMechanic(
   reelSet.y = frame.y + padY;
   app.stage.addChild(reelSet);
 
+  // Fake-server-wait spinner — centered on the reel frame. Shown only
+  // when `cfg.fakeServerDelay` is set AND the wait exceeds the 200 ms
+  // debounce threshold. Sits in the gap between fall (symbols gone) and
+  // fill (new symbols arrive) on the initial spin. Drawn outside the
+  // reelSet so it isn't masked.
+  const cascadeSpinner = new Graphics();
+  cascadeSpinner.arc(0, 0, 28, 0, Math.PI * 1.55);
+  cascadeSpinner.stroke({ color: 0xffd166, width: 5, cap: 'round' });
+  cascadeSpinner.x = frame.x + totalW / 2;
+  cascadeSpinner.y = frame.y + totalH / 2;
+  cascadeSpinner.visible = false;
+  gsap.to(cascadeSpinner, { rotation: Math.PI * 2, duration: 0.9, ease: 'none', repeat: -1 });
+  app.stage.addChild(cascadeSpinner);
+
   // Attach debug to window — matches what every guide/demo advertises.
   enableDebug(reelSet);
 
@@ -380,10 +408,15 @@ export async function mountMechanic(
 
   const runSpin = async (): Promise<void> => {
     if (spinning) {
-      // Engine spinning → slam now. Otherwise (user-code mid-async, engine
-      // idle) queue the intent — silently dropping the tap is what makes
-      // rapid double-clicks feel like the button is broken.
-      if (reelSet.isSpinning) reelSet.skip();
+      // Engine spinning → use `requestSkip()`. It auto-routes: if
+      // `setResult()` hasn't fired yet (we're in the fall + server-wait
+      // window), the library queues the slam and fires it the moment the
+      // result arrives — so the reels land on the intended grid instead
+      // of snapping to a random buffer. Once `setResult()` is in, the
+      // same call slams immediately. If user-code is mid-async (engine
+      // idle between refills), queue the intent ourselves so the next
+      // refill consumes it.
+      if (reelSet.isSpinning) reelSet.requestSkip();
       else pendingSkip = true;
       return;
     }
@@ -398,10 +431,19 @@ export async function mountMechanic(
         pendingSkip = false;
         reelSet.requestSkip();
       }
-      setTimeout(() => {
+      // Fake-server window — the moment AFTER reels fall but BEFORE the
+      // new ones can be filled in. Spinner shows after the 200 ms debounce
+      // so short waits don't flicker.
+      const waitMs = cfg.fakeServerDelay?.() ?? 240;
+      const showAt = window.setTimeout(() => { cascadeSpinner.visible = true; }, 200);
+      try {
         if (anticipationReels.length) reelSet.setAnticipation(anticipationReels);
-        reelSet.setResult(symbols);
-      }, 240);
+        await wait(waitMs);
+      } finally {
+        window.clearTimeout(showAt);
+        cascadeSpinner.visible = false;
+      }
+      reelSet.setResult(symbols);
       const result = await promise;
       api.setStatus(`Landed · ${summarize(result.symbols)}`);
 
