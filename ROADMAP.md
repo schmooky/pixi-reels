@@ -75,7 +75,7 @@ self-contained (usually a recipe + MDX page).
 
 | Item | Status | Bucket | Priority | Notes |
 |---|---|---|---|---|
-| Single spin button with slam-stop on re-click | [todo] | recipe | p0 | One button, second click calls `skip()`. |
+| Single spin button with slam-stop on re-click | [done] | recipe | p0 | Shipped via round-aware `skip()` — one button, second click slams the reels. First click in a round also boosts speed (standard) or auto-slams refills (cascade). |
 | Remove "Live recipe" footer text | [todo] | recipe | p0 | Chrome cleanup. |
 | "Open in Sandbox" button on each recipe | [todo] | recipe | p1 | Deep-link from recipe -> sandbox with recipe pre-loaded. |
 

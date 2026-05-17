@@ -51,13 +51,11 @@ class EmptySymbol extends ReelSymbol {
 }
 
 /**
- * Shared "destroy winners" effect for tumble recipes. Brief scale-up
- * "charge" → implode (scale 0 + spin + fade) over ~320ms. Alternates
- * rotation direction by column for visual interest. Returns when every
- * winner cell is gone.
- *
- * Cleanup is automatic: the next `placeSymbols` (via `refill`) resets
- * alpha, scale and rotation on every visible view in `_replaceSymbol`.
+ * Shared "destroy winners" helper for tumble recipes. Defers to each
+ * symbol's own `playDestroy()` so the animation is owned on the symbol
+ * side — sprite symbols get the default centre-pivot implode; custom
+ * subclasses (Spine, particles) can override with art-appropriate
+ * disintegration. Returns when every winner cell is gone.
  */
 async function destroyWinners(
   reelSet: ReelSet,
@@ -65,15 +63,8 @@ async function destroyWinners(
 ): Promise<void> {
   await Promise.all(winners.map((w) => {
     const sym = reelSet.reels[w.reel].getSymbolAt(w.row);
-    const view = sym.view;
-    view.zIndex = 1000;
-    const dir = w.reel % 2 === 0 ? 1 : -1;
-    return new Promise<void>((resolve) => {
-      gsap.timeline({ onComplete: () => resolve() })
-        .to(view.scale, { x: 1.25, y: 1.25, duration: 0.08, ease: 'back.out(2.5)' })
-        .to(view, { rotation: dir * 0.8, alpha: 0, duration: 0.24, ease: 'power2.in' }, '<+=0.05')
-        .to(view.scale, { x: 0, y: 0, duration: 0.24, ease: 'power2.in' }, '<');
-    });
+    sym.view.zIndex = 1000;
+    return sym.playDestroy({ direction: w.reel % 2 === 0 ? 1 : -1 });
   }));
 }
 

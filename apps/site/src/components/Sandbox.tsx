@@ -11,16 +11,41 @@ import { gsap } from 'gsap';
 import {
   ReelSetBuilder,
   SpeedPresets,
+  SpriteSymbol,
   enableDebug,
   WinPresenter,
   AnimatedSpriteSymbol,
+  RectMaskStrategy,
+  SharedRectMaskStrategy,
   type ReelSet,
   ReelSymbol,
 } from 'pixi-reels';
+import { SpineReelSymbol } from 'pixi-reels/spine';
 import { BlurSpriteSymbol } from '../../../../examples/shared/BlurSpriteSymbol.ts';
+import { CardSymbol, CARD_DECK, WILD_CARD } from '../../../../examples/shared/CardSymbol.ts';
 import { loadPrototypeSymbols } from '../../../../examples/shared/prototypeSpriteLoader.ts';
+import {
+  loadGeneratedSpines,
+  buildSpineMap,
+} from '../../../../examples/shared/generatedSpineLoader.ts';
 import { transform as sucraseTransform } from 'sucrase';
 import { runCascade, tumbleToGrid, diffCells } from '../../../../examples/shared/cascadeLoop.ts';
+
+/**
+ * Shared "destroy winners" helper for tumble recipes — kept in lock-step
+ * with `RecipeRunner.tsx` so a recipe runs identically in both runners.
+ * Defers to each symbol's own `playDestroy()` for art-appropriate effects.
+ */
+async function destroyWinners(
+  reelSet: ReelSet,
+  winners: ReadonlyArray<{ reel: number; row: number }>,
+): Promise<void> {
+  await Promise.all(winners.map((w) => {
+    const sym = reelSet.reels[w.reel].getSymbolAt(w.row);
+    sym.view.zIndex = 1000;
+    return sym.playDestroy({ direction: w.reel % 2 === 0 ? 1 : -1 });
+  }));
+}
 
 class EmptySymbol extends ReelSymbol {
   protected onActivate(_symbolId: string): void {}
@@ -225,44 +250,33 @@ export default function Sandbox() {
     let built: BuildResult;
     try {
       const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor as FunctionConstructor;
+      // Keep this param list in lock-step with RecipeRunner.tsx — the
+      // "Open in Sandbox" button copies recipe code verbatim, and a recipe
+      // that compiles in the recipe page must also run here. Missing a
+      // symbol here is what produces "Can't find variable: CARD_DECK" for
+      // tumble recipes opened from /recipes/*.
       const factory = new AsyncFunction(
-        'ReelSetBuilder',
-        'SpeedPresets',
-        'BlurSpriteSymbol',
-        'AnimatedSpriteSymbol',
+        'ReelSetBuilder', 'SpeedPresets', 'BlurSpriteSymbol', 'SpriteSymbol', 'AnimatedSpriteSymbol',
         'WinPresenter',
-        'app',
-        'textures',
-        'blurTextures',
-        'SYMBOL_IDS',
-        'pickWeighted',
-        'gsap',
-        'PIXI',
-        'runCascade',
-        'tumbleToGrid',
-        'diffCells',
-        'EmptySymbol',
+        'app', 'textures', 'blurTextures', 'SYMBOL_IDS', 'pickWeighted', 'gsap', 'PIXI',
+        'runCascade', 'tumbleToGrid', 'diffCells', 'EmptySymbol', 'ReelSymbol',
+        'destroyWinners',
+        'RectMaskStrategy', 'SharedRectMaskStrategy',
+        'CardSymbol', 'CARD_DECK', 'WILD_CARD',
+        'SpineReelSymbol', 'loadGeneratedSpines', 'buildSpineMap',
         factorySource,
       );
       // Await the factory so recipes that need async setup
       // (e.g. dynamic texture loaders) work.
       built = (await factory(
-        ReelSetBuilder,
-        SpeedPresets,
-        BlurSpriteSymbol,
-        AnimatedSpriteSymbol,
+        ReelSetBuilder, SpeedPresets, BlurSpriteSymbol, SpriteSymbol, AnimatedSpriteSymbol,
         WinPresenter,
-        env.app,
-        env.textures,
-        env.blurTextures,
-        env.SYMBOL_IDS,
-        pickWeighted,
-        gsap,
-        PIXI,
-        runCascade,
-        tumbleToGrid,
-        diffCells,
-        EmptySymbol,
+        env.app, env.textures, env.blurTextures, env.SYMBOL_IDS, pickWeighted, gsap, PIXI,
+        runCascade, tumbleToGrid, diffCells, EmptySymbol, ReelSymbol,
+        destroyWinners,
+        RectMaskStrategy, SharedRectMaskStrategy,
+        CardSymbol, CARD_DECK, WILD_CARD,
+        SpineReelSymbol, loadGeneratedSpines, buildSpineMap,
       )) as BuildResult;
     } catch (e) {
       setStatus({ kind: 'err', msg: `Runtime error: ${(e as Error).message}` });

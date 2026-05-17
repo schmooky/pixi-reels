@@ -1,7 +1,7 @@
 ---
 layout: ../../layouts/Recipe.astro
 title: Cascade refill orders — pick the post-win flow
-description: Four interactive canvases. Same scripted win, same destruction, same .tumble() feel — only the cascade-refill ordering changes. See which one fits your slot's rhythm.
+description: Three interactive canvases. Same scripted win, same destruction, same .tumble() feel — only the cascade-refill ordering changes. See which one fits your slot's rhythm.
 tags: [cascade, tumble, refill, presets, recipes]
 steps:
   - "Initial reveal is the same (left-to-right wave) on every canvas"
@@ -17,7 +17,6 @@ apis:
 import simultaneousCode from '../../recipes/refill-simultaneous.recipe.ts?raw';
 import ltrCode from '../../recipes/refill-ltr-wave.recipe.ts?raw';
 import bottomUpCode from '../../recipes/refill-bottom-up.recipe.ts?raw';
-import topDownCode from '../../recipes/refill-top-down.recipe.ts?raw';
 import { RecipeRunner } from '../../components/RecipeRunner.tsx';
 
 Each canvas below runs the same scripted spin: 6×4 cards land left-to-right with a pre-wired 3-cluster of `10` on row 2. The winners go through the same `destroyWinners` implode effect. Only the **refill drop-in order** varies between canvases — controlled by `setDropOrder()` on the reel set and `rowStagger` / `rowOrder` on the builder's `.tumble({ dropIn })` config.
@@ -74,36 +73,6 @@ await reelSet.refill({ winners, grid: stage1 });
 ```
 
 All reels drop simultaneously, but within each reel the bottom row lands first and the top row lands last. Reads as the board "stacking up from below". Pairs well with puzzle / match-3 / chess-board themes where the slot's metaphor is a physical board being built.
-
-## Top-down row arrival
-
-<RecipeRunner code={topDownCode} client:only="react" />
-
-```ts
-.tumble({
-  dropIn: {
-    rowStagger: 90,
-    rowOrder: 'topToBottom',  // explicit override of the default ('bottomToTop')
-    distance: 'perHole',
-  },
-})
-// ...
-reelSet.setDropOrder('all');
-await reelSet.refill({ winners, grid: stage1 });
-```
-
-The natural "rain from above" drop-in. Top row arrives first, bottom row last. Overrides the default (`'bottomToTop'`) — pick this when your slot's metaphor really is "stuff falls from the sky." With `distance: 'perHole'` the top-row new symbols actually fall the shortest distance, but the per-row stagger reverses the perceived order so the player reads "new symbols pour in from the top."
-
-## Picking the refill order
-
-| Refill | When it fits | Avoid when |
-|---|---|---|
-| **Simultaneous** | Default; you're not sure | — |
-| **Left-to-right wave** | Slow cadence is fine; the wave IS the visual | Deep cascade chains (the per-spin overhead compounds) |
-| **Bottom-up** | Puzzle / match-3 / chess-board themes | Naturalistic / gravity-themed slots |
-| **Top-down** | Naturalistic, "rain from above" theme | When you want the lowest-effort refill (use Simultaneous instead) |
-
-`setDropOrder` + `rowStagger` + `rowOrder` compose freely. A column-wave fall AND a per-row stagger AND a non-default rowOrder all coexist — the drop-in timeline lays them out additively.
 
 ## Going further
 

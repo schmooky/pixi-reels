@@ -15,7 +15,10 @@ description: The main orchestrator. Created via ReelSetBuilder.
 | `spin` | `() => Promise<SpinResult>` | Start all reels. Resolves when `spin:complete` fires. |
 | `setResult` | `(symbols: string[][]) => void` | Set the target grid. Triggers stop sequence. |
 | `setAnticipation` | `(reelIndices: number[]) => void` | Mark reels that should enter ANTICIPATION. |
-| `skip` | `() => void` | Force-land all reels immediately. |
+| `skip` | `() => void` | Round-aware slam. First press in a round slams the current drop AND applies a side effect: in standard mode, boost speed profile to the fastest registered one (emits `skip:boosted`, restored on next `spin()`); in cascade/tumble mode, flag every subsequent `refill()` to auto-slam. Subsequent presses also slam. |
+| `requestSkip` | `() => void` | Queue a slam if `setResult()` hasn't arrived yet, otherwise slam now. Bypasses the round-side-effect machine — pure slam intent. |
+| `slamStop` | `() => void` | Unconditional slam. No speed boost, no auto-slam flag. For tests / anti-cheat / explicit programmatic land-now intent. |
+| `skipStage` | `readonly 0 \| 1 \| 2` | `0` until the first `skip()` press of the round, `2` after. Drive UI button labels off this. |
 | `isSpinning` | `readonly boolean` | `true` between `spin:start` and `spin:complete`. |
 
 ## Speed API

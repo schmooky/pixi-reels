@@ -21,6 +21,7 @@ type ReelSetEvents = {
   'spin:complete':     [result: SpinResult];
   'skip:requested':    [];
   'skip:completed':    [];
+  'skip:boosted':      [info: { previous: SpeedProfile; current: SpeedProfile }];
   'speed:changed':     [profile: SpeedProfile, previous: SpeedProfile];
   'spotlight:start':   [positions: SymbolPosition[]];
   'spotlight:end':     [];

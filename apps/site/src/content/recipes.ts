@@ -421,10 +421,11 @@ export const RECIPES: RecipeMeta[] = [
     oneLiner: 'Let the player smash the button to land the reels now.',
     steps: [
       'On spin click: if isSpinning, call reelSet.skip() — otherwise spin()',
-      'Optionally setResult() before skip so the forced landing is on target',
+      'First skip() in a round lands the spin AND applies a side effect (speed boost in standard mode; auto-slam future refills in cascade) — subsequent presses also slam',
+      'Use requestSkip() when result may not be in yet, or slamStop() for an unconditional land (tests, anti-cheat)',
       'Inspect result.wasSkipped on the returned promise',
     ],
-    apis: ['ReelSet.skip', 'ReelSet.isSpinning', 'SpinResult.wasSkipped'],
+    apis: ['ReelSet.skip', 'ReelSet.requestSkip', 'ReelSet.slamStop', 'ReelSet.skipStage', 'ReelSet.isSpinning', 'SpinResult.wasSkipped'],
     tags: ['skip', 'UX'],
   },
   {
