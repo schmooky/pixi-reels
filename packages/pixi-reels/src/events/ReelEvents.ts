@@ -135,10 +135,20 @@ export interface ReelSetEvents extends Record<string, unknown[]> {
    * Fires AFTER `placeSymbols` snaps everything to grid, BEFORE the drop-in
    * tween starts — the canonical spot to apply per-symbol decorations
    * (multiplier badges, sticky markers) so they fall WITH the symbol.
+   *
+   *   - `isInitial: true` on Moment A (after a `spin()` click). Every visible
+   *     row is "new" — `winnerRows` is `[]` because there's no prior grid.
+   *   - `isInitial: false` on Moment B (a `refill()`). `winnerRows` lists the
+   *     row indices whose old symbols were cleared by the win; rows in that
+   *     set are new arrivals, the rest are survivors sliding down to fill
+   *     holes. Pair with `computeDropOffsets` (or just walk `winnerRows`
+   *     yourself) if you need to decorate only new arrivals.
    */
   'cascade:place:done': [info: {
     reelIndex: number;
     placedSymbols: readonly ReelSymbol[];
+    isInitial: boolean;
+    winnerRows: readonly number[];
   }];
   /** Tumble cascade: this reel's drop-in animation just started. */
   'cascade:dropIn:start': [info: { reelIndex: number }];
@@ -160,6 +170,30 @@ export interface ReelSetEvents extends Record<string, unknown[]> {
   }];
   /** Tumble cascade: this reel's drop-in animation finished. */
   'cascade:dropIn:end': [info: { reelIndex: number }];
+  /**
+   * Tumble cascade: a full cascade chain has finished.
+   *
+   * Fired once by `reelSet.runCascade(...)` after the detect → destroy →
+   * refill loop exits — either because `detectWinners` returned an empty
+   * list, the chain hit `maxChain`, or the player slammed via `skip()`.
+   *
+   *   - `chainLength` — number of refill stages that actually ran (0 means
+   *     the initial grid had no wins, so no refill fired).
+   *   - `totalWinners` — sum of `winners.length` across every refill stage.
+   *   - `finalGrid` — the grid after the last refill (or the input grid if
+   *     `chainLength === 0`).
+   *   - `wasSkipped` — `true` when the chain ended early because the player
+   *     slammed mid-cascade. Use this to gate "show big-win UI" effects.
+   *
+   * NOT fired when you compose a cascade loop yourself (calling `refill()`
+   * directly). Roll your own emit / observer if you go that route.
+   */
+  'cascade:complete': [info: {
+    chainLength: number;
+    totalWinners: number;
+    finalGrid: string[][];
+    wasSkipped: boolean;
+  }];
   /**
    * Fires whenever the engine creates a visual overlay symbol for a pin
    * during a spin's motion phase. The `overlay` argument is the pooled

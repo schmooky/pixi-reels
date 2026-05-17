@@ -47,6 +47,134 @@ export interface FrameAPI {
 }
 
 /**
+ * Options for {@link ReelSet.destroySymbols}. Every field is optional;
+ * the defaults produce the canonical "winners disintegrate" look (alternating
+ * rotation by column, no stagger, no viewport dim, zIndex bumped to 1000
+ * so destroy effects render above neighbouring cells).
+ */
+export interface DestroySymbolsOptions {
+  /**
+   * Per-cell rotation direction. Default: alternates by column
+   * (`reel % 2 === 0 ? 1 : -1`) — produces a cohesive cluster pop.
+   * Pass `1` / `-1` to force one direction, or a function for full control.
+   */
+  direction?: 1 | -1 | ((cell: Cell, index: number) => 1 | -1);
+  /**
+   * Per-cell start delay in seconds. Default `0` (every cell starts together).
+   * Pass `(cell, i) => i * 0.03` for a per-cell stagger.
+   */
+  delay?: number | ((cell: Cell, index: number) => number);
+  /**
+   * zIndex applied to each cell's view for the duration of the animation
+   * so destroy effects aren't clipped behind neighbours. Default `1000`.
+   * The library does NOT restore the previous zIndex — the cell is
+   * destroyed (alpha 0) and will be replaced on the next `refill()` /
+   * `setResult()`. Pass `null` to skip the bump.
+   */
+  zIndex?: number | null;
+  /**
+   * Dim the viewport (`viewport.showDim(alpha)`) while the destroy
+   * animation runs, restoring on completion. Pass `false` to skip,
+   * a number for a custom alpha. Default: `false` (no dim).
+   */
+  dim?: boolean | number;
+}
+
+/**
+ * Summary returned by {@link ReelSet.runCascade}. Also delivered to
+ * listeners on the `cascade:complete` event.
+ */
+export interface RunCascadeResult {
+  /** Number of refill stages that actually ran (0 = the initial grid had no wins). */
+  chainLength: number;
+  /** Sum of `winners.length` across every refill stage. */
+  totalWinners: number;
+  /** Grid after the last refill (or the input grid if `chainLength === 0`). */
+  finalGrid: string[][];
+  /** True when the chain ended early because the player slammed mid-cascade. */
+  wasSkipped: boolean;
+}
+
+/**
+ * Options for {@link ReelSet.runCascade}. The two required callbacks
+ * (`detectWinners`, `nextGrid`) encode game rules; everything else is
+ * timing / cancellation / forwarded-to-destroy plumbing with sensible
+ * defaults.
+ */
+export interface RunCascadeOptions {
+  /**
+   * Win-detection callback. Receives the current grid (a fresh copy from
+   * `getVisibleGrid()`) and the chain level (0 on the first iteration).
+   * Returns the cells whose symbols are "winners" that should be cleared
+   * before the next refill. Return `[]` to end the chain. Sync or async.
+   */
+  detectWinners: (
+    grid: string[][],
+    chainLevel: number,
+  ) => readonly Cell[] | Promise<readonly Cell[]>;
+  /**
+   * Next-grid callback. Given the post-destroy grid and the winners that
+   * were cleared, return the grid the survivors + new symbols should
+   * land on. This is your server-side gravity simulation (or the
+   * fallback `cascadeNextGrid` from your client). Sync or async.
+   *
+   * Must follow the gravity convention: top `winners.length` rows per
+   * reel are new symbols; the rest are survivors in original top-to-
+   * bottom order. Same contract as `refill({ grid })`.
+   */
+  nextGrid: (
+    grid: string[][],
+    winners: readonly Cell[],
+    chainLevel: number,
+  ) => string[][] | Promise<string[][]>;
+  /**
+   * Per-cascade hook fired AFTER `destroySymbols` and BEFORE the refill
+   * starts. Use it to bump multipliers, play SFX, run "winners gone"
+   * UI animations. Return a promise to delay the refill (e.g. for a
+   * number-roll animation).
+   */
+  onCascade?: (info: {
+    chain: number;
+    winners: readonly Cell[];
+    previousGrid: string[][];
+  }) => Promise<void> | void;
+  /**
+   * Milliseconds to wait between win-destroy completing and the next
+   * refill starting. Commercial slots dial this between 150 ms (snappy)
+   * and 500 ms (dramatic). Default `250`.
+   */
+  pauseAfterDestroyMs?: number;
+  /**
+   * Safety cap on cascade-chain length. Defaults to `32` — a sane
+   * upper bound that protects against pathological server bugs while
+   * being well above any commercial slot's natural cap. Pass `Infinity`
+   * to disable.
+   */
+  maxChain?: number;
+  /**
+   * Forwarded to `destroySymbols(cells, opts)` on every cascade. Useful
+   * for direction overrides, per-cell stagger, viewport dim, etc.
+   */
+  destroyOptions?: DestroySymbolsOptions;
+  /**
+   * Abort signal for caller-driven cancellation. The loop exits at the
+   * next await boundary, the in-flight refill (if any) is slammed via
+   * `slamStop()`, and the resolved summary reports `wasSkipped: true`.
+   *
+   * Use this for "player tapped SLAM mid-cascade" — `reelSet.skip()` is
+   * a no-op when called between refills (the engine is idle), so it
+   * can't end the chain from a button handler. AbortController can.
+   *
+   * ```ts
+   * const controller = new AbortController();
+   * skipButton.addEventListener('click', () => controller.abort());
+   * await reelSet.runCascade({ ..., signal: controller.signal });
+   * ```
+   */
+  signal?: AbortSignal;
+}
+
+/**
  * The whole slot board as one object.
  *
  * A `ReelSet` is a PixiJS `Container` that owns every reel, the spin
@@ -326,12 +454,197 @@ export class ReelSet extends Container implements Disposable {
    *
    * @example
    * const winners = detectWins(currentGrid);
-   * await fadeOutWinners(reelSet, winners);
+   * await reelSet.destroySymbols(winners);
    * const next = await server.cascade(winners);
    * await reelSet.refill({ winners, grid: next });
    */
   async refill(opts: { winners: Cell[]; grid: string[][] | ColumnTarget[] }): Promise<SpinResult> {
     return this._spinController.refill(opts);
+  }
+
+  /**
+   * Destroy a batch of cells in parallel, deferring to each symbol's own
+   * `playDestroy()` so subclasses (Spine, particles, custom sprites) can
+   * provide art-appropriate disintegration without the spin handler caring.
+   *
+   * This is the canonical "fade out the winners" step in a cascade chain:
+   * call it between win-detection and `refill()`. Every cell's view is
+   * lifted with a high zIndex so the destroy animation isn't clipped by
+   * neighbours, and rotation direction alternates by column for cohesive
+   * cluster pops.
+   *
+   *   - Empty `cells` resolves immediately, no work.
+   *   - Out-of-range cells throw — the contract is that you've already
+   *     run win detection on the visible grid, so coords must be valid.
+   *
+   * @example
+   * const winners = detectWinners(reelSet.getVisibleGrid());
+   * await reelSet.destroySymbols(winners);
+   * await reelSet.refill({ winners, grid: nextGrid });
+   *
+   * @example
+   * // Per-cell stagger — disintegrate left-to-right with a 30 ms beat.
+   * await reelSet.destroySymbols(winners, {
+   *   delay: (cell, i) => i * 0.03,
+   * });
+   */
+  async destroySymbols(
+    cells: ReadonlyArray<Cell>,
+    opts?: DestroySymbolsOptions,
+  ): Promise<void> {
+    if (cells.length === 0) return;
+
+    const resolveDirection = (cell: Cell, i: number): 1 | -1 => {
+      const d = opts?.direction;
+      if (typeof d === 'function') return d(cell, i);
+      if (d === 1 || d === -1) return d;
+      return cell.reel % 2 === 0 ? 1 : -1;
+    };
+    const resolveDelay = (cell: Cell, i: number): number => {
+      const d = opts?.delay;
+      if (typeof d === 'function') return d(cell, i);
+      return d ?? 0;
+    };
+
+    // Validate up-front so partial work doesn't leave the grid in a half-
+    // destroyed state. Cheap O(n) walk; fails loud with the bad coord.
+    for (const cell of cells) {
+      if (cell.reel < 0 || cell.reel >= this._reels.length) {
+        throw new RangeError(
+          `destroySymbols: cell.reel ${cell.reel} out of range [0, ${this._reels.length})`,
+        );
+      }
+      const reel = this._reels[cell.reel];
+      if (cell.row < 0 || cell.row >= reel.visibleRows) {
+        throw new RangeError(
+          `destroySymbols: cell.row ${cell.row} out of range [0, ${reel.visibleRows}) ` +
+          `for reel ${cell.reel}`,
+        );
+      }
+    }
+
+    const dim = opts?.dim;
+    if (dim) {
+      this._viewport.showDim(typeof dim === 'number' ? dim : 0.35);
+    }
+
+    const z = opts?.zIndex === undefined ? 1000 : opts.zIndex;
+
+    try {
+      await Promise.all(cells.map((cell, i) => {
+        const sym = this._reels[cell.reel].getSymbolAt(cell.row);
+        if (z !== null) sym.view.zIndex = z;
+        return sym.playDestroy({
+          direction: resolveDirection(cell, i),
+          delay: resolveDelay(cell, i),
+        });
+      }));
+    } finally {
+      if (dim) this._viewport.hideDim();
+    }
+  }
+
+  /**
+   * Run the canonical cascade chain on top of `refill()`. Loops:
+   * detect winners → destroy → pause → refill → emit — until
+   * `detectWinners` returns an empty list (or `maxChain` is hit, or the
+   * player slammed via `skip()`). Resolves with the final grid and a
+   * summary; also fires `cascade:complete` on the event bus.
+   *
+   * The orchestration is library-owned; the **game rules** (what counts
+   * as a winner, how the next grid is computed) stay in your callbacks.
+   * This is the cascade equivalent of `spin()` + `setResult()` — three
+   * lines instead of fifteen, and the slam path is handled for you.
+   *
+   * Typical usage:
+   *
+   * ```ts
+   * await reelSet.spin();
+   * reelSet.setResult(await server.spin());
+   * await reelSet.runCascade({
+   *   detectWinners: (grid) => detectClusters(grid),
+   *   nextGrid: async (grid, winners) => server.cascade(winners),
+   *   onCascade: ({ chain, winners }) => bumpMultiplier(chain),
+   * });
+   * ```
+   *
+   * Composes with everything else in the library:
+   *  - `setDropOrder(...)` is honoured on every refill in the chain — set
+   *    it before `runCascade` and the same order applies to every drop.
+   *  - `cascade:fall:symbol`, `cascade:place:done`, `cascade:dropIn:symbol`
+   *    fire on each refill in addition to the final `cascade:complete`.
+   *  - `reelSet.skip()` ends the chain immediately; the final
+   *    `cascade:complete` payload reports `wasSkipped: true`.
+   *
+   * Requires `.tumble(...)` on the builder (same as `refill()`).
+   */
+  async runCascade(opts: RunCascadeOptions): Promise<RunCascadeResult> {
+    const pauseMs = opts.pauseAfterDestroyMs ?? 250;
+    const maxChain = opts.maxChain ?? 32;
+    let wasSkipped = false;
+    const onSkip = (): void => { wasSkipped = true; };
+    this._events.on('skip:requested', onSkip);
+
+    const onAbort = (): void => {
+      wasSkipped = true;
+      // If a refill is currently animating, slam it so the await unblocks
+      // immediately rather than after the full drop-in. slamStop is a no-op
+      // when the engine is idle (between refills), so we only need this
+      // guard for in-flight cancellation.
+      if (this._spinController.isSpinning) {
+        this._spinController.slamStop();
+      }
+    };
+    if (opts.signal) {
+      if (opts.signal.aborted) onAbort();
+      else opts.signal.addEventListener('abort', onAbort, { once: true });
+    }
+
+    let chainLength = 0;
+    let totalWinners = 0;
+    let current = this.getVisibleGrid();
+
+    try {
+      while (chainLength < maxChain && !wasSkipped) {
+        const winners = await opts.detectWinners(current, chainLength);
+        if (winners.length === 0) break;
+        totalWinners += winners.length;
+
+        await this.destroySymbols(winners, opts.destroyOptions);
+        if (wasSkipped) break;
+
+        if (opts.onCascade) {
+          await opts.onCascade({ chain: chainLength + 1, winners, previousGrid: current });
+          if (wasSkipped) break;
+        }
+
+        if (pauseMs > 0) {
+          await new Promise<void>((r) => setTimeout(r, pauseMs));
+          if (wasSkipped) break;
+        }
+
+        const next = await opts.nextGrid(current, winners, chainLength);
+        if (wasSkipped) break;
+
+        await this.refill({ winners: [...winners], grid: next });
+        chainLength += 1;
+        current = this.getVisibleGrid();
+      }
+    } finally {
+      this._events.off('skip:requested', onSkip);
+      if (opts.signal) {
+        opts.signal.removeEventListener('abort', onAbort);
+      }
+    }
+
+    const summary = {
+      chainLength,
+      totalWinners,
+      finalGrid: current,
+      wasSkipped,
+    };
+    this._events.emit('cascade:complete', summary);
+    return summary;
   }
 
   /** Set which reels should show anticipation before stopping. */

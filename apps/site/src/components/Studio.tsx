@@ -32,7 +32,6 @@ import {
   type SymbolData,
 } from 'pixi-reels';
 import { transform as sucraseTransform } from 'sucrase';
-import { runCascade, tumbleToGrid, diffCells } from '../../../../examples/shared/cascadeLoop.ts';
 import {
   loadConfig,
   saveConfig,
@@ -58,7 +57,7 @@ const DEFAULT_CODE = `// @ts-nocheck
 //   - textures        — Record<symbolId, Texture> from your uploaded assets
 //   - userSymbols     — Record<symbolId, { Class, options }>; pass into r.register
 //   - userSymbolData  — Record<symbolId, { unmask?: boolean }>; auto-applied at build()
-//   - pickWeighted, gsap, PIXI, runCascade, tumbleToGrid, diffCells
+//   - pickWeighted, gsap, PIXI
 //
 // Unmask is plumbed automatically: toggle "unmask on" on a symbol's row and
 // the studio's ReelSetBuilder applies the override at .build() time. The
@@ -326,9 +325,6 @@ export default function Studio() {
         'pickWeighted',
         'gsap',
         'PIXI',
-        'runCascade',
-        'tumbleToGrid',
-        'diffCells',
         factorySource,
       );
       built = (await factory(
@@ -344,9 +340,6 @@ export default function Studio() {
         pickWeighted,
         gsap,
         PIXI,
-        runCascade,
-        tumbleToGrid,
-        diffCells,
       )) as BuildResult;
     } catch (e) {
       setStatus({ kind: 'err', msg: `Runtime error: ${(e as Error).message}` });

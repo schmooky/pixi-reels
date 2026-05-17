@@ -3,47 +3,136 @@ layout: ../../layouts/Docs.astro
 title: Events
 section: wiki
 eyebrow: API
-description: Every typed event a ReelSet emits.
+description: The full typed event surface — spin, cascade, pin, MultiWays, win, speed, spotlight.
 ---
 
-Events live on `reelSet.events` (typed `EventEmitter<ReelSetEvents>`) and on
-individual reels (`reel.events`, typed `EventEmitter<ReelEvents>`).
+Two emitters:
 
-## ReelSet events
+- `reelSet.events` — typed `EventEmitter<ReelSetEvents>`. Domain-level events for the whole board.
+- `reel.events` — typed `EventEmitter<ReelEvents>`. Per-column phase / symbol / land events.
 
-```ts
-type ReelSetEvents = {
-  'spin:start':        [];
-  'spin:allStarted':   [];
-  'spin:stopping':     [reelIndex: number];
-  'spin:reelLanded':   [reelIndex: number, symbols: string[]];
-  'spin:allLanded':    [result: SpinResult];
-  'spin:complete':     [result: SpinResult];
-  'skip:requested':    [];
-  'skip:completed':    [];
-  'skip:boosted':      [info: { previous: SpeedProfile; current: SpeedProfile }];
-  'speed:changed':     [profile: SpeedProfile, previous: SpeedProfile];
-  'spotlight:start':   [positions: SymbolPosition[]];
-  'spotlight:end':     [];
-  'destroyed':         [];
-};
-```
+Both emitters' `on(name, cb)` returns an `off()` function for unsubscription. The library cleans up its own listeners on `destroy()`; the engine never reject-throws inside a listener, so a buggy callback can't crash a spin.
 
-### SpinResult
+## Quick map
+
+| Family | Events | Fires from |
+|---|---|---|
+| Spin lifecycle | `spin:start` · `spin:allStarted` · `spin:stopping` · `spin:reelLanded` · `spin:allLanded` · `spin:complete` | Every `spin()` |
+| Skip / slam | `skip:requested` · `skip:completed` · `skip:boosted` | `skip()` · `requestSkip()` · `slamStop()` |
+| Speed | `speed:changed` | `setSpeed()` |
+| Cascade | `cascade:fall:start` · `cascade:fall:symbol` · `cascade:fall:end` · `cascade:place:done` · `cascade:dropIn:start` · `cascade:dropIn:symbol` · `cascade:dropIn:end` · `cascade:complete` | `.tumble()` + `spin({mode:'cascade'})` / `refill()` / `runCascade()` |
+| Spotlight | `spotlight:start` · `spotlight:end` | `spotlight.cycle(...)` |
+| Wins | `win:start` · `win:group` · `win:symbol` · `win:end` | `WinPresenter.show(...)` |
+| Pins | `pin:placed` · `pin:moved` · `pin:expired` · `pin:migrated` · `pin:overlayCreated` · `pin:overlayDestroyed` | `pin()` · `unpin()` · `movePin()` · MultiWays reshape |
+| MultiWays | `shape:changed` · `adjust:start` · `adjust:complete` | `setShape()` |
+| Lifecycle | `destroyed` | `destroy()` |
+
+## Spin lifecycle
+
+| Event | Payload | When |
+|---|---|---|
+| `spin:start` | — | Any `spin()` or `refill()` call. Cascades emit this per refill. |
+| `spin:allStarted` | — | Every non-held reel is in the `SPIN` phase. Cascade refills skip this event. |
+| `spin:stopping` | `reelIndex` | A reel begins `STOP` (held reels never fire). |
+| `spin:reelLanded` | `reelIndex, symbols` | An individual reel landed. |
+| `spin:allLanded` | `SpinResult` | Last non-held reel landed. |
+| `spin:complete` | `SpinResult` | Immediately after `spin:allLanded`. |
 
 ```ts
 interface SpinResult {
   symbols: string[][];   // final visible grid [reelIndex][rowIndex]
-  wasSkipped: boolean;   // true if skip() ended the spin
+  wasSkipped: boolean;   // true if skip() / requestSkip() / slamStop() ended the spin
   duration: number;      // ms from spin:start to spin:complete
 }
 ```
 
-## Reel events
+## Skip / slam
+
+| Event | Payload | When |
+|---|---|---|
+| `skip:requested` | — | A slam fires (from `skip()`, `requestSkip()` after result arrives, or `slamStop()`). |
+| `skip:completed` | — | Every un-landed reel has been force-landed. |
+| `skip:boosted` | `{ previous: SpeedProfile; current: SpeedProfile }` | First `skip()` press of a STANDARD-mode round; the engine bumped to the fastest profile for the rest of the round. Cascade rounds set `_autoSlamRefills` instead and never emit this. |
+
+## Speed
+
+| Event | Payload | When |
+|---|---|---|
+| `speed:changed` | `profile, previous` | `setSpeed()` (or the round-end restore after `skip:boosted`). |
+
+## Cascade (tumble)
+
+Available only when the builder used `.tumble({...})`. The per-symbol events fire **before** the library's `view.y` tween starts so listeners can run parallel tweens that finish in lockstep.
+
+| Event | Payload | When |
+|---|---|---|
+| `cascade:fall:start` | `{ reelIndex }` | A reel's fall-out begins (Moment A only — refill skips fall). |
+| `cascade:fall:symbol` | `{ symbol, view, reelIndex, rowIndex, duration, ease, distance }` | Each symbol's fall tween is about to start. |
+| `cascade:fall:end` | `{ reelIndex }` | A reel's last fall tween settled. |
+| `cascade:place:done` | `{ reelIndex, placedSymbols, isInitial, winnerRows }` | New identities placed AND snapped to grid, **before** drop-in starts. Canonical spot for badge / decoration application. `isInitial: true` on Moment A; `isInitial: false` + populated `winnerRows` on refills. |
+| `cascade:dropIn:start` | `{ reelIndex }` | A reel's drop-in begins. |
+| `cascade:dropIn:symbol` | `{ symbol, view, reelIndex, rowIndex, duration, ease, offsetRows }` | Each symbol's drop-in tween is about to start. `offsetRows` is the number of cells this symbol traverses (1 for top-row refills, more for survivors sliding past larger holes). |
+| `cascade:dropIn:end` | `{ reelIndex }` | A reel's last drop-in tween settled. |
+| `cascade:complete` | `{ chainLength, totalWinners, finalGrid, wasSkipped }` | Fired once by `runCascade()` after the detect → destroy → refill loop exits. Does NOT fire when you compose the loop yourself with bare `refill()` calls. |
+
+```ts
+// Decorate ONLY new arrivals (skip survivors).
+reelSet.events.on('cascade:place:done', ({ placedSymbols, isInitial, winnerRows }) => {
+  const newRowSet = new Set(isInitial ? placedSymbols.map((_, i) => i) : winnerRows);
+  for (const [row, sym] of placedSymbols.entries()) {
+    if (newRowSet.has(row)) addMultiplierBadge(sym);
+  }
+});
+```
+
+## Spotlight
+
+| Event | Payload | When |
+|---|---|---|
+| `spotlight:start` | `positions: SymbolPosition[]` | `spotlight.cycle(...)` began. |
+| `spotlight:end` | — | Spotlight finished. |
+
+## Wins
+
+Emitted by `WinPresenter` only — pure plumbing-free if you don't use it.
+
+| Event | Payload | When |
+|---|---|---|
+| `win:start` | `wins: readonly Win[]` | A presenter sequence began (full list, sorted by `value` desc by default). |
+| `win:group` | `win: Win, cells: readonly SymbolPosition[]` | Each individual win, before its cells animate. |
+| `win:symbol` | `symbol: unknown, cell: SymbolPosition, win: Win` | Each cell, one at a time when `stagger > 0`. |
+| `win:end` | `reason: 'complete' \| 'aborted'` | Sequence finished. |
+
+## Pins
+
+| Event | Payload | When |
+|---|---|---|
+| `pin:placed` | `pin: CellPin` | `reelSet.pin(...)` succeeded. |
+| `pin:moved` | `pin: CellPin, from: { col, row }` | `reelSet.movePin(...)` resolved. |
+| `pin:expired` | `pin: CellPin, reason: PinExpireReason` | Pin removed by `unpin`, exhausted `turns`, or `'eval'` reset. |
+| `pin:migrated` | `pin: CellPin, info: { fromRow, toRow, clamped, reelIndex }` | MultiWays reshape moved a pin. |
+| `pin:overlayCreated` | `pin: CellPin, overlay: unknown` | Mid-spin overlay symbol mounted (use to drive a Spine track). |
+| `pin:overlayDestroyed` | `pin: CellPin, overlay: unknown` | Mid-spin overlay torn down on land. |
+
+## MultiWays
+
+| Event | Payload | When |
+|---|---|---|
+| `shape:changed` | `rowsPerReel: number[]` | `setShape(...)` accepted. Fires before any geometry change. |
+| `adjust:start` | `{ reelIndex, fromRows, toRows }` | Per-reel `AdjustPhase` entered. |
+| `adjust:complete` | `{ reelIndex }` | Per-reel `AdjustPhase` finished. |
+
+## Lifecycle
+
+| Event | Payload | When |
+|---|---|---|
+| `destroyed` | — | `reelSet.destroy()` called. Listeners attached BEFORE this fire one last time, then the emitter clears every listener. |
+
+## Per-reel events
 
 ```ts
 type ReelEvents = {
-  'phase:enter':     [phaseName: string];
+  'phase:enter':     [phaseName: string];   // 'start' | 'spin' | 'stop' | 'anticipation' | 'adjust' | 'cascade:fall' | 'cascade:place' | 'cascade:dropIn'
   'phase:exit':      [phaseName: string];
   'symbol:created':  [symbolId: string, row: number];
   'symbol:recycled': [symbolId: string, row: number];
@@ -52,15 +141,15 @@ type ReelEvents = {
 };
 ```
 
-## Usage
-
 ```ts
-reelSet.events.on('spin:complete', (result) => { /* full result */ });
-
-const off = reelSet.events.on('spin:stopping', (i) => console.log('reel', i));
-off();   // unsubscribe
-
 reelSet.getReel(4).events.on('phase:enter', (name) => {
   if (name === 'anticipation') playTensionMusic();
 });
 ```
+
+## Listener etiquette
+
+- Subscribe once at startup; `on()` returns an `off()` you can store for hot-swap modules.
+- Throwing inside a listener does **not** crash the engine, but it logs noisily and other listeners on the same event still run. Catch your own errors.
+- `on()` is synchronous; async listeners run "fire and forget." If you must `await` per-event work, queue it yourself — the engine doesn't.
+- The library emits `cascade:*:symbol` events BEFORE its own tween starts. Your listener can read the same `view` and queue a parallel tween — they'll run in lockstep.

@@ -4,7 +4,6 @@ import {
   ReelSetBuilder,
   SpeedPresets,
   enableDebug,
-  type Cell,
 } from 'pixi-reels';
 import { SpineReelSymbol } from 'pixi-reels/spine';
 import type { SymbolPosition } from 'pixi-reels';
@@ -179,88 +178,48 @@ export async function boot(opts: BootOptions): Promise<() => void> {
     await spinPromise;
     if (disposed) return;
 
+    // Cascade chain — `reelSet.runCascade` owns detect → destroy → refill.
+    // We supply the game rules (ways evaluation + gravity-correct nextGrid)
+    // and use `onCascade` for the round-side-effects (status text, win
+    // bus, multiplier bump). Same canonical orchestrator every cascade
+    // recipe and the cascade-tumble example use.
     let cascadeLevel = 0;
     let totalWin = 0;
-    let wins = evaluateWays(grid);
-
-    while (wins.length > 0 && !disposed) {
-      cascadeLevel++;
-      const multi = cascadeLevel;
-      const dedupedCells = dedupeCells(wins.flatMap((w) => w.cells));
-      const roundWin = wins.reduce((s, w) => s + w.amount * multi, 0);
-      totalWin += roundWin;
-
-      ui.setStatus(
-        cascadeLevel === 1
-          ? `${wins.length} WAY${wins.length > 1 ? 'S' : ''} WIN`
-          : `CASCADE x${multi} - ${wins.length} WAY${wins.length > 1 ? 'S' : ''}`,
-      );
-      roundBus.emit('win:add', roundWin);
-
-      await vanish(dedupedCells);
-      const nextGrid = computeRefillGrid(grid, dedupedCells);
-      const winners: Cell[] = dedupedCells.map((c) => ({ reel: c.reelIndex, row: c.rowIndex }));
-      await reelSet.refill({ winners, grid: nextGrid });
-      grid = nextGrid;
-      await wait(120);
-
-      wins = evaluateWays(grid);
-    }
+    let lastWinsForUi: WaysWin[] = [];
+    reelSet.setDropOrder('all');
+    await reelSet.runCascade({
+      detectWinners: (g) => {
+        const wins = evaluateWays(g);
+        lastWinsForUi = wins;
+        if (wins.length === 0) return [];
+        return dedupeCells(wins.flatMap((w) => w.cells))
+          .map((c) => ({ reel: c.reelIndex, row: c.rowIndex }));
+      },
+      nextGrid: (prev, winners) => {
+        const cells: SymbolPosition[] = winners.map((w) => ({ reelIndex: w.reel, rowIndex: w.row }));
+        return computeRefillGrid(prev, cells);
+      },
+      onCascade: ({ chain }) => {
+        cascadeLevel = chain;
+        const multi = chain;
+        const wins = lastWinsForUi;
+        const roundWin = wins.reduce((s, w) => s + w.amount * multi, 0);
+        totalWin += roundWin;
+        ui.setStatus(
+          chain === 1
+            ? `${wins.length} WAY${wins.length > 1 ? 'S' : ''} WIN`
+            : `CASCADE x${multi} - ${wins.length} WAY${wins.length > 1 ? 'S' : ''}`,
+        );
+        roundBus.emit('win:add', roundWin);
+      },
+      pauseAfterDestroyMs: 120,
+    });
 
     if (cascadeLevel === 0) ui.setStatus('');
     else if (totalWin > 0) ui.setStatus(`${cascadeLevel} CASCADE${cascadeLevel > 1 ? 'S' : ''} - ${totalWin} TOTAL`);
 
     isSpinning = false;
     ui.setSpinning(false);
-  }
-
-  /**
-   * Pop the winner cells: scale-from-center + alpha to 0. After this, the
-   * symbol views are alpha=0 — `tumbleToGrid` calls `placeSymbols` to swap
-   * identities for the next stage. We reset alpha back to 1 ourselves so
-   * survivors stay visible AND new symbols falling into cleared cells
-   * appear at full opacity.
-   */
-  async function vanish(cells: SymbolPosition[]): Promise<void> {
-    if (cells.length === 0) return;
-    interface Prep {
-      view: Container;
-      origX: number; origY: number;
-      origPivotX: number; origPivotY: number;
-    }
-    const prepped: Prep[] = [];
-    for (const c of cells) {
-      const view = reelSet.getReel(c.reelIndex).getSymbolAt(c.rowIndex).view;
-      const b = view.getLocalBounds();
-      const cx = b.x + b.width / 2;
-      const cy = b.y + b.height / 2;
-      const origPivotX = view.pivot.x;
-      const origPivotY = view.pivot.y;
-      const origX = view.x;
-      const origY = view.y;
-      view.pivot.set(cx, cy);
-      view.x = origX + (cx - origPivotX);
-      view.y = origY + (cy - origPivotY);
-      prepped.push({ view, origX, origY, origPivotX, origPivotY });
-    }
-    await Promise.all(
-      prepped.map(
-        (p) =>
-          new Promise<void>((resolve) => {
-            gsap
-              .timeline({ onComplete: resolve })
-              .to(p.view, { alpha: 0, duration: 0.28, ease: 'power2.in' }, 0)
-              .to(p.view.scale, { x: 0.4, y: 0.4, duration: 0.28, ease: 'power2.in' }, 0);
-          }),
-      ),
-    );
-    for (const p of prepped) {
-      p.view.scale.set(1, 1);
-      p.view.alpha = 1;
-      p.view.pivot.set(p.origPivotX, p.origPivotY);
-      p.view.x = p.origX;
-      p.view.y = p.origY;
-    }
   }
 
   reposition();
@@ -375,5 +334,3 @@ function computeRefillGrid(currentGrid: string[][], removed: SymbolPosition[]): 
   }
   return grid;
 }
-
-function wait(ms: number): Promise<void> { return new Promise((r) => setTimeout(r, ms)); }

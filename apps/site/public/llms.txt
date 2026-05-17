@@ -6,7 +6,7 @@ Site: https://pixi-reels.schmooky.dev
 Repo: https://github.com/schmooky/pixi-reels
 Package: https://www.npmjs.com/package/pixi-reels
 
-Generated: 2026-05-16T20:30:35.041Z
+Generated: 2026-05-17T02:50:49.284Z
 
 ## Quick start
 
@@ -41,6 +41,10 @@ A big symbol is a single symbol that visually occupies an N×M block of cells. D
 ### Buffer indexing
 URL: https://pixi-reels.schmooky.dev/guides/buffer-indexing/
 How indices map to cells in initialFrame and setResult — visible rows, buffer-above, buffer-below, and the two accepted input forms.
+
+### Cascades — the mental model
+URL: https://pixi-reels.schmooky.dev/guides/cascades/
+Two moments, three phases, gravity-correct refills. The mental model behind .tumble() so you stop fighting the API.
 
 ### Cheats & testing
 URL: https://pixi-reels.schmooky.dev/guides/cheats-and-testing/
@@ -82,6 +86,10 @@ Register and implement reel symbols — sprites, animations, Spine, or custom.
 URL: https://pixi-reels.schmooky.dev/guides/win-animations/
 Highlight winning symbols, cycle through lines, and dim the losers.
 
+### Build your first cascade slot
+URL: https://pixi-reels.schmooky.dev/guides/your-first-cascade/
+From `npm install` to a working cascade slot in ~80 lines of TypeScript. No prior pixi-reels knowledge required.
+
 ### Your first reelset
 URL: https://pixi-reels.schmooky.dev/guides/your-first-reelset/
 Build, spin, and react to a reel set from scratch.
@@ -90,11 +98,11 @@ Build, spin, and react to a reel set from scratch.
 
 ### ReelSetBuilder
 URL: https://pixi-reels.schmooky.dev/docs/api-builder/
-Fluent builder for ReelSet. Reduces ~100 lines of manual wiring to ~10.
+Fluent builder for ReelSet. Reduces ~100 lines of manual wiring to ~10, validates everything at .build() time.
 
 ### Events
 URL: https://pixi-reels.schmooky.dev/docs/api-events/
-Every typed event a ReelSet emits.
+The full typed event surface — spin, cascade, pin, MultiWays, win, speed, spotlight.
 
 ### Phases
 URL: https://pixi-reels.schmooky.dev/docs/api-phases/
@@ -102,7 +110,7 @@ START, SPIN, ANTICIPATION, STOP — the four lifecycle phases and how to extend 
 
 ### ReelSet
 URL: https://pixi-reels.schmooky.dev/docs/api-reelset/
-The main orchestrator. Created via ReelSetBuilder.
+The main orchestrator. Created via ReelSetBuilder, drives every spin, refill, pin, and win animation.
 
 ### Glossary
 URL: https://pixi-reels.schmooky.dev/docs/glossary/
@@ -172,25 +180,25 @@ Steps:
 
 ### Cascade 6×5 tumble
 URL: https://pixi-reels.schmooky.dev/recipes/cascade-6x5/
-Modern tumble/cascade mechanic with an ever-growing win multiplier — the MultiWays-adjacent style every slot studio is shipping.
+Modern tumble/cascade mechanic on the runCascade orchestrator — the MultiWays-adjacent style every slot studio is shipping.
 Tags: starter, cascade, 6x5, multiplier
-APIs: ReelSetBuilder.tumble, ReelSet.refill, ReelSet.setDropOrder, ReelSet.setResult, SymbolSpotlight.cycle
+APIs: ReelSetBuilder.tumble, ReelSet.runCascade, ReelSet.destroySymbols, ReelSet.refill, ReelSet.setDropOrder
 Steps:
   - Build a 6×5 ReelSet with .tumble({ fall, dropIn }) for drop-in mechanics
   - Spin — symbols drop in left-to-right, row by row, with bounce
-  - Detect cluster/line wins and spotlight them
-  - Tumble (remove winners, then reelSet.refill({ winners, grid })) and repeat
-  - Each tumble increments the win multiplier
+  - reelSet.runCascade({ detectWinners, nextGrid }) owns the destroy → refill loop
+  - onCascade fires per refill — bump the multiplier there
+  - cascade:complete tells you the chain ended
 
 ### Cascade pops with WinPresenter
 URL: https://pixi-reels.schmooky.dev/recipes/cascade-winpresenter/
 Drive cascade cell pops with the same WinPresenter you use for paylines. One API, one shape.
 Tags: wins, cascade
-APIs: WinPresenter, runCascade (onWinnersVanish), win:group event
+APIs: WinPresenter, ReelSet.runCascade (onCascade), win:group event
 Steps:
   - Build a WinPresenter — no special cluster config, it already works
-  - In runCascade's onWinnersVanish, pass the winners as one Win and await it
-  - Tumble + drop continues when the pop resolves
+  - In runCascade's onCascade callback, hand winners to the presenter and await it
+  - destroySymbols runs after — disable its zIndex lift so its alpha→0 stays invisible
 
 ### Cell bounds — overlays, paylines & hit areas
 URL: https://pixi-reels.schmooky.dev/recipes/cell-bounds/
@@ -310,12 +318,12 @@ Real game example: The Dog House (Pragmatic Play) (https://pixi-reels.schmooky.d
 URL: https://pixi-reels.schmooky.dev/recipes/multiways-cascade/
 Per-spin row variation on a strip-spin landing; the cascade tumble pops winners and drops new symbols in from above. Shape-aware on every reel.
 Tags: multiways, cascade, hybrid, recent
-APIs: ReelSetBuilder.multiways, ReelSet.setShape, runCascade
+APIs: ReelSetBuilder.multiways, ReelSetBuilder.tumble, ReelSet.setShape, ReelSet.runCascade
 Steps:
-  - Build with .multiways({minRows, maxRows, reelPixelHeight}) — no .tumble() needed
+  - Build with .multiways({minRows, maxRows, reelPixelHeight}) + .tumble({...}) for the refill phases
   - Each round, call setShape(rowsPerReel) BEFORE setResult()
-  - reelSet.spin() — classic strip-spin lands the multiways grid (AdjustPhase reshapes during SPIN→STOP)
-  - On a winning row, runCascade(reelSet, [...stages]) tumbles winners and drops new symbols in from above
+  - reelSet.spin({ mode: 'standard' }) — classic strip-spin lands the multiways grid (AdjustPhase reshapes during SPIN→STOP)
+  - reelSet.runCascade({ detectWinners, nextGrid }) tumbles winners and drops new symbols in from above
 
 ### Mystery reveal (CellPin)
 URL: https://pixi-reels.schmooky.dev/recipes/mystery-reveal-pin/
@@ -402,11 +410,12 @@ Steps:
 URL: https://pixi-reels.schmooky.dev/recipes/remove-symbol/
 Fade the winners out, then drop the next-stage symbols in from above — a proper cascade with no reel respin.
 Tags: cascade, animation
-APIs: runCascade, tumbleToGrid, diffCells, Reel.placeSymbols
+APIs: ReelSet.destroySymbols, ReelSet.refill, ReelSet.runCascade
 Steps:
-  - Compute which cells are "winners" by diffing stage N against stage N+1
-  - Animate alpha 1 → 0 on winners (the pop)
-  - Tumble: replace symbols in-place and tween them down from above — no spin, no reel acceleration
+  - Detect winners on the visible grid (game-rule callback)
+  - reelSet.destroySymbols(winners) fades them out
+  - reelSet.refill({ winners, grid }) slides survivors down and drops new symbols in from above
+  - reelSet.runCascade({ detectWinners, nextGrid }) wires all three together for a multi-cascade chain
 
 ### How to slam-stop
 URL: https://pixi-reels.schmooky.dev/recipes/slam-stop/
@@ -422,11 +431,11 @@ Steps:
 URL: https://pixi-reels.schmooky.dev/recipes/spin-then-cascade/
 Open every play with a classic strip-spin. The landing's winning cells pop, survivors fall down, new symbols drop in from above — repeat for every cascade in the chain.
 Tags: hybrid, cascade, runCascade, recent
-APIs: reelSet.spin, runCascade, reel.placeSymbols
+APIs: reelSet.spin, ReelSet.runCascade, ReelSet.destroySymbols, ReelSet.refill
 Steps:
   - Round 1: a normal spin lands the initial grid
-  - Detect winners on that grid (server-side or client-side eval)
-  - runCascade animates the pop, fall, and drop-in for every chain stage
+  - reelSet.runCascade({ detectWinners, nextGrid }) owns the pop-fall-refill loop for every chain stage
+  - cascade:complete fires once when no more winners are found
 Real game example: Arc Lord by Backseat Gaming (https://pixi-reels.schmooky.dev/videos/arc-lord.mp4)
 
 ### Big symbols with Spine
@@ -553,7 +562,7 @@ Tags: big-symbols, wild, lines
 
 ### Cascade + multiplier
 URL: https://pixi-reels.schmooky.dev/demos/cascade-multiplier/
-A tumble slot — wins vanish, the next stage lands. Built around runCascade(), which accepts an array or an async generator, so you can feed either a full batch response or a server stream.
+A tumble slot — wins vanish, the next stage lands. Built around reelSet.runCascade(), which loops detect → destroy → refill until no more winners are found.
 Tags: cascade, tumble, multiplier
 
 ### Classic line pays
@@ -992,11 +1001,17 @@ URL: https://pixi-reels.schmooky.dev/recipes/cascade-6x5/
 ```ts
 // @ts-nocheck
 // Injected: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, WILD_CARD,
-//           PIXI, gsap, app, pickWeighted,
-//           runCascade (cascade sequence helper)
+//           PIXI, gsap, app, pickWeighted
+
+// Cascade-tumble end-to-end on the modern API — no helpers, no scripted
+// stages. `reelSet.runCascade({ detectWinners, nextGrid })` owns the
+// orchestration; the two callbacks own the game rules.
 
 const IDS = ['7', '8', '9', '10', 'J', 'Q'];
 const REELS = 6, ROWS = 4, SIZE = 72;
+const CLUSTER = '10';
+const HIT_ROW = 2;
+const HIT_COLS = [0, 1, 2];
 
 function randSymbol(exclude) {
   let s;
@@ -1023,10 +1038,6 @@ const reelSet = new ReelSetBuilder()
 return {
   reelSet,
   onSpin: async () => {
-    const CLUSTER = '10';
-    const HIT_ROW = 2;
-    const HIT_COLS = [0, 1, 2];
-
     // Stage 0: cluster of CLUSTER on row 2, cols 0–2.
     const stage0 = Array.from({ length: REELS }, (_, c) =>
       Array.from({ length: ROWS }, (_, r) =>
@@ -1034,29 +1045,36 @@ return {
       )
     );
 
-    // Stage 1: winners removed, survivors fall one row, new symbols fill top.
-    const stage1 = stage0.map((col, c) => {
-      if (!HIT_COLS.includes(c)) return [...col];
-      const next = [...col];
-      for (let r = HIT_ROW; r > 0; r--) next[r] = next[r - 1];
-      next[0] = randSymbol(CLUSTER);
-      return next;
-    });
-
-    // Initial spin: symbols drop in left-to-right
-    const p = reelSet.spin();
-    await new Promise(r => setTimeout(r, 200));
+    // Moment A — initial spin lands the stage-0 cluster, left-to-right reveal.
     reelSet.setDropOrder('ltr');
+    const spinDone = reelSet.spin();
+    await new Promise(r => setTimeout(r, 200));
     reelSet.setResult(stage0);
-    await p;
+    await spinDone;
     await new Promise(r => setTimeout(r, 300));
 
-    // Cascade tumble: vanish winners, survivors fall, new symbols drop from above
-    await runCascade(reelSet, [stage0, stage1], {
-      winners: () => HIT_COLS.map(c => ({ reel: c, row: HIT_ROW })),
-      vanishDuration: 300,
-      dropDuration: 420,
-      pauseBetween: 120,
+    // Moment B — cascade refill driven entirely by runCascade. The
+    // first call to detectWinners returns the planted cluster; the second
+    // returns [] (no more wins on the post-refill grid), ending the chain.
+    // The orchestration (destroy → pause → refill → re-detect) is library-owned.
+    reelSet.setDropOrder('all');
+    let detected = false;
+    await reelSet.runCascade({
+      detectWinners: () => {
+        if (detected) return [];
+        detected = true;
+        return HIT_COLS.map(c => ({ reel: c, row: HIT_ROW }));
+      },
+      nextGrid: (prev, winners) => {
+        // Survivors slide down 1; new symbol at row 0.
+        const next = prev.map(col => [...col]);
+        for (const w of winners) {
+          for (let r = w.row; r > 0; r--) next[w.reel][r] = next[w.reel][r - 1];
+          next[w.reel][0] = randSymbol(CLUSTER);
+        }
+        return next;
+      },
+      pauseAfterDestroyMs: 250,
     });
   },
 };
@@ -1067,11 +1085,18 @@ URL: https://pixi-reels.schmooky.dev/recipes/cascade-winpresenter/
 ```ts
 // @ts-nocheck
 // Injected: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, WILD_CARD,
-//           WinPresenter, PIXI, gsap, app, pickWeighted, runCascade.
+//           WinPresenter, PIXI, gsap, app, pickWeighted.
+
+// Cascade win presentation via `WinPresenter` instead of the default
+// `destroySymbols` implode. The orchestrator is still `reelSet.runCascade`;
+// `onCascade` is where we hand control to the presenter for a per-cascade
+// scale-pop, then the library refills as usual.
 
 const IDS = ['7', '8', '9', '10', 'J', 'Q'];
 const REELS = 6, ROWS = 4, SIZE = 72;
 const CLUSTER = '10';
+const HIT_ROW = 2;
+const HIT_COLS = [0, 1, 2];
 
 function randSymbol(exclude) {
   let s;
@@ -1128,44 +1153,54 @@ reelSet.events.on('spin:start', () => presenter.abort());
 return {
   reelSet,
   onSpin: async () => {
-    const HIT_ROW = 2;
-    const HIT_COLS = [0, 1, 2];
-
     const stage0 = Array.from({ length: REELS }, (_, c) =>
       Array.from({ length: ROWS }, (_, r) =>
         r === HIT_ROW && HIT_COLS.includes(c) ? CLUSTER : randSymbol(CLUSTER)
       )
     );
-    const stage1 = stage0.map((col, c) => {
-      if (!HIT_COLS.includes(c)) return [...col];
-      const next = [...col];
-      for (let r = HIT_ROW; r > 0; r--) next[r] = next[r - 1];
-      next[0] = randSymbol(CLUSTER);
-      return next;
-    });
 
+    // Moment A — initial drop, left-to-right reveal.
+    reelSet.setDropOrder('ltr');
     const p = reelSet.spin();
     await new Promise(r => setTimeout(r, 200));
-    reelSet.setDropOrder('ltr');
     reelSet.setResult(stage0);
     await p;
     await new Promise(r => setTimeout(r, 300));
 
-    // Drive the cascade. Replace the default fade with WinPresenter —
-    // same API as paylines, just cells.
-    await runCascade(reelSet, [stage0, stage1], {
-      winners: () => HIT_COLS.map(c => ({ reel: c, row: HIT_ROW })),
-      vanishDuration: 0,
-      pauseBetween: 80,
-      dropDuration: 420,
-      onWinnersVanish: async (_rs, winners, stageIndex) => {
+    // Moment B — runCascade owns the loop. `onCascade` swaps the default
+    // implode for a WinPresenter scale-pop. The library calls
+    // `destroySymbols` AFTER `onCascade` resolves — using `destroyOptions:
+    // { zIndex: null }` keeps that fade-to-zero invisible (the presenter
+    // already faded them visually).
+    reelSet.setDropOrder('all');
+    let presented = false;
+    await reelSet.runCascade({
+      detectWinners: (grid) => {
+        if (presented) return [];
+        return HIT_COLS.map(c => grid[c][HIT_ROW] === CLUSTER ? { reel: c, row: HIT_ROW } : null).filter(Boolean);
+      },
+      nextGrid: (prev, winners) => {
+        const next = prev.map(col => [...col]);
+        for (const w of winners) {
+          for (let r = w.row; r > 0; r--) next[w.reel][r] = next[w.reel][r - 1];
+          next[w.reel][0] = randSymbol(CLUSTER);
+        }
+        presented = true;
+        return next;
+      },
+      onCascade: async ({ chain, winners }) => {
         if (winners.length === 0) return;
         await presenter.show([{
-          id: stageIndex,
+          id: chain,
           cells: winners.map(w => ({ reelIndex: w.reel, rowIndex: w.row })),
           value: winners.length * 10,
         }]);
       },
+      // Suppress the implode tween entirely — the presenter already drove
+      // the visual feedback. Skipping the zIndex lift keeps the destroy
+      // alpha:0 step instant and invisible.
+      destroyOptions: { zIndex: null },
+      pauseAfterDestroyMs: 80,
     });
   },
   cleanup: () => presenter.destroy(),
@@ -2530,9 +2565,9 @@ URL: https://pixi-reels.schmooky.dev/recipes/multiways-cascade/
 ```ts
 // @ts-nocheck
 // Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
-//                   PIXI, gsap, app, runCascade
+//                   PIXI, gsap, app
 
-// MultiWays + cascade tumble — proper ways-style winner removal.
+// MultiWays + cascade tumble — ways-style winner removal.
 //
 // A "ways" win on a multiways slot: a symbol appears on N consecutive
 // reels starting from reel 0. EVERY instance of that symbol on those
@@ -2542,10 +2577,10 @@ URL: https://pixi-reels.schmooky.dev/recipes/multiways-cascade/
 //
 // Visual flow each round:
 //   1. setShape(rowsPerReel) rolls a per-reel row count in [minRows, maxRows].
-//   2. reelSet.spin() — classic strip-spin lands the multiways grid.
-//   3. Detect a ways win. If found, runCascade pops every winning cell;
-//      survivors fall, new symbols drop in from above.
-//   4. Repeat until no more ways wins (capped at MAX_CASCADES per round).
+//   2. reelSet.spin({ mode: 'standard' }) — classic strip-spin lands the multiways grid.
+//   3. reelSet.runCascade({ detectWinners, nextGrid }) pops every winning cell;
+//      survivors fall, new symbols drop in from above. Loops until no more
+//      ways wins (capped at MAX_CASCADES per round).
 
 const REELS = 6;
 const MIN_ROWS = 2;
@@ -2579,8 +2614,6 @@ function buildGridWithGuaranteedWin(shape) {
     const target = randSymbol();
     for (let c = 0; c < MIN_WAYS_REELS; c++) {
       const len = grid[c].length;
-      // At least one copy at row 0; plant 1-2 more copies at distinct rows
-      // when the reel has room.
       const positions = new Set([0]);
       const extraCount = len >= 4 ? 2 : len >= 3 ? 1 : 0;
       while (positions.size < 1 + extraCount) {
@@ -2625,10 +2658,9 @@ function collectAllWinners(grid, wins) {
 }
 
 function applyCascade(grid, winners) {
-  // Group winners by reel, then per reel: drop the winning rows, shift
-  // survivors down, fill the cleared top slots with new random symbols.
-  // Cell count per reel stays the same — multiways shape doesn't change
-  // mid-cascade.
+  // Per-reel gravity: drop winning rows, shift survivors down, fill the
+  // cleared top slots with new random symbols. Cell count per reel stays
+  // the same — multiways shape doesn't change mid-cascade.
   const winnersByReel = new Map();
   for (const w of winners) {
     if (!winnersByReel.has(w.reel)) winnersByReel.set(w.reel, new Set());
@@ -2659,6 +2691,10 @@ const reelSet = new ReelSetBuilder()
     }
   })
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 120, bounceDistance: 0, bounceDuration: 0 })
+  .tumble({
+    fall:   { duration: 0, ease: 'none', rowStagger: 0 },              // not used — refill skips fall
+    dropIn: { duration: 280, ease: 'back.out(1.4)', rowStagger: 0, distance: 'perHole' },
+  })
   .ticker(app.ticker)
   .build();
 
@@ -2672,7 +2708,7 @@ const initialGrid = initialShape.map((rows) =>
   Array.from({ length: rows }, () => randSymbol()),
 );
 {
-  const p = reelSet.spin();
+  const p = reelSet.spin({ mode: 'standard' });
   reelSet.setShape(initialShape);
   reelSet.setResult(initialGrid);
   reelSet.skip();
@@ -2687,41 +2723,31 @@ return {
     // Round 1 — strip-spin lands the multiways grid (AdjustPhase reshapes
     // between SPIN and STOP).
     const stage0 = buildGridWithGuaranteedWin(shape);
-    const p = reelSet.spin();
+    const p = reelSet.spin({ mode: 'standard' });
     await new Promise((r) => setTimeout(r, 80));
     reelSet.setShape(shape);
     reelSet.setResult(stage0);
     await p;
     await new Promise((r) => setTimeout(r, 120));
 
-    // Build the full cascade chain upfront. Each stage is a grid; each
-    // stage-N → stage-(N+1) transition has a winners list captured in
-    // `winnersByStage`. runCascade reads that list via the `winners`
-    // callback below.
-    const stages = [stage0];
-    const winnersByStage = [];
-    let current = stage0;
-    while (winnersByStage.length < MAX_CASCADES) {
-      const wins = findAllWaysWins(current);
-      if (wins.length === 0) break;
-      const winners = collectAllWinners(current, wins);
-      winnersByStage.push(winners);
-      current = applyCascade(current, winners);
-      stages.push(current);
-    }
-
-    if (winnersByStage.length === 0) return;
-
-    // runCascade walks `stages`; for the stage-N → stage-(N+1) transition
-    // it invokes the winners callback with stageIndex = N + 1 (it's the
-    // post-increment value of the iteration counter, not the source index).
-    // Our winnersByStage[i] holds the winners that produced stages[i+1] from
-    // stages[i], so the lookup is `stageIdx - 1`.
-    await runCascade(reelSet, stages, {
-      winners: (_prev, _next, stageIdx) => winnersByStage[stageIdx - 1] ?? [],
-      vanishDuration: 180,
-      dropDuration: 240,
-      pauseBetween: 60,
+    // Cascade chain — `reelSet.runCascade` owns detect → destroy → pause
+    // → refill. We supply the game rules via the two callbacks. The
+    // `detectWinners` callback re-evaluates ways wins on the post-refill
+    // grid each iteration; when no more ways wins exist, the chain ends.
+    let cascadeCount = 0;
+    reelSet.setDropOrder('all');
+    await reelSet.runCascade({
+      detectWinners: (grid) => {
+        if (cascadeCount >= MAX_CASCADES) return [];
+        const wins = findAllWaysWins(grid);
+        if (wins.length === 0) return [];
+        return collectAllWinners(grid, wins);
+      },
+      nextGrid: (prev, winners) => {
+        cascadeCount += 1;
+        return applyCascade(prev, [...winners]);
+      },
+      pauseAfterDestroyMs: 60,
     });
   },
 };
@@ -3680,8 +3706,12 @@ URL: https://pixi-reels.schmooky.dev/recipes/remove-symbol/
 ```ts
 // @ts-nocheck
 // Injected: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, WILD_CARD,
-//           PIXI, gsap, app, pickWeighted,
-//           runCascade, tumbleToGrid (cascade helpers)
+//           PIXI, gsap, app, pickWeighted
+
+// Cascade-style removal of a single symbol id: pop every cell whose symbol
+// matches `X`, gravity-shift survivors, fill cleared top slots with new
+// symbols. The whole flow is one `reelSet.runCascade(...)` call — same
+// orchestrator every cascade recipe uses.
 
 const A = '7', B = '8', C = '9';
 const X = 'wild'; // the winner that vanishes
@@ -3694,12 +3724,13 @@ const BEFORE = [
   [X, B, C],
   [A, C, X],
 ];
-const AFTER = [
-  [C, A, B],
-  [B, C, A],
-  [A, B, C],
-  [B, A, C],
-];
+
+function randSymbolNotIn(exclude) {
+  let s;
+  do { s = [A, B, C][Math.floor(Math.random() * 3)]; }
+  while (exclude.has(s));
+  return s;
+}
 
 const reelSet = new ReelSetBuilder()
   .reels(REELS).visibleSymbols(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
@@ -3711,27 +3742,45 @@ const reelSet = new ReelSetBuilder()
     }
   })
   .speed('normal', SpeedPresets.NORMAL).speed('turbo', SpeedPresets.TURBO)
+  .tumble({
+    fall:   { duration: 0, ease: 'none', rowStagger: 0 },              // not used — refill skips fall
+    dropIn: { duration: 380, ease: 'back.out(1.6)', rowStagger: 0, distance: 'perHole' },
+  })
   .ticker(app.ticker).build();
 
 return {
   reelSet,
   onSpin: async () => {
-    // Land BEFORE via a normal spin.
-    const p = reelSet.spin();
+    // Land BEFORE via a normal strip-spin.
+    const p = reelSet.spin({ mode: 'standard' });
     await new Promise(r => setTimeout(r, 150));
     reelSet.setResult(BEFORE);
     await p;
     await new Promise(r => setTimeout(r, 300));
 
-    // runCascade: stage 0 = BEFORE (already showing), stage 1 = AFTER.
-    // winners() identifies the X cells that should vanish before the drop.
-    await runCascade(reelSet, [BEFORE, AFTER], {
-      winners: () => BEFORE.flatMap((col, reel) =>
-        col.map((sym, row) => sym === X ? { reel, row } : null).filter(Boolean)
+    // One-shot cascade: detect every X on the visible grid → destroy →
+    // refill with a gravity-correct nextGrid. After the refill there are
+    // no more Xs, so `detectWinners` returns [] and the chain ends.
+    reelSet.setDropOrder('all');
+    await reelSet.runCascade({
+      detectWinners: (grid) => grid.flatMap((col, reel) =>
+        col.map((sym, row) => sym === X ? { reel, row } : null).filter(Boolean),
       ),
-      vanishDuration: 320,
-      dropDuration: 440,
-      pauseBetween: 120,
+      nextGrid: (prev, winners) => {
+        const losers = new Map();
+        for (const w of winners) {
+          if (!losers.has(w.reel)) losers.set(w.reel, new Set());
+          losers.get(w.reel).add(w.row);
+        }
+        return prev.map((col, reel) => {
+          const drop = losers.get(reel);
+          if (!drop || drop.size === 0) return [...col];
+          const survivors = col.filter((_, row) => !drop.has(row));
+          const fillers = Array.from({ length: drop.size }, () => randSymbolNotIn(new Set([X])));
+          return [...fillers, ...survivors];
+        });
+      },
+      pauseAfterDestroyMs: 120,
     });
   },
 };
@@ -3791,26 +3840,21 @@ URL: https://pixi-reels.schmooky.dev/recipes/spin-then-cascade/
 ```ts
 // @ts-nocheck
 // Injected: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, WILD_CARD,
-//           PIXI, gsap, app, runCascade, pickWeighted
+//           PIXI, gsap, app, pickWeighted
 
 // Hybrid spin-then-cascade: round 1 spins like a classic strip slot
 // (top-to-bottom motion, START → SPIN → STOP). The landing has a
 // winning cluster — those cells pop, survivors fall, new symbols drop
-// in from above. The new top-row fill happens to create a SECOND
-// cluster, so we cascade again. Each cascade pop is purely visual
-// (runCascade), not a re-spin — the landed reels stay landed.
+// in from above. Each pop is a `reelSet.refill(...)` call driven by
+// `reelSet.runCascade({ detectWinners, nextGrid })`, NOT a re-spin.
 //
 // IMPORTANT recipe-design note: the chain only ever touches the LEFT
-// THREE columns (cols 1-3 if you count from 1). Cols 4 and 5 land
-// during the strip-spin and STAY UNTOUCHED for the rest of the play.
-// That's deliberate — it makes the cascade chain unmistakable to the
-// reader. Real games typically chain across overlapping clusters; here
-// we keep the demo's affected area visually contiguous.
+// THREE columns. Cols 4 and 5 land during the strip-spin and STAY
+// UNTOUCHED for the rest of the play. That's deliberate — `runCascade`
+// detects winners per-grid each round; only the columns that have
+// winning cells animate. Real games typically chain across overlapping
+// clusters; here we keep the demo's affected area visually contiguous.
 
-// 5 reels x 5 rows — matches the Arc Lord shape shown in the reference
-// clip above. The cascade chain pops the upper-middle row twice on the
-// left three columns; the two right columns and the bottom three rows
-// stay completely still throughout the chain.
 const IDS = ['7', '8', '9', '10', 'J', 'Q'];
 const REELS = 5, ROWS = 5, SIZE = 64;
 const HIT_COLS = [0, 1, 2];                     // left three columns
@@ -3837,6 +3881,14 @@ const reelSet = new ReelSetBuilder()
     }
   })
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 120 })
+  // Cascade refills layer on top of a standard strip-spin: leave the
+  // builder's default mode as 'standard' for the first spin, and the
+  // refill chain below uses `reelSet.refill()` directly (which doesn't
+  // need `.tumble()` for the strip-spin landing itself).
+  .tumble({
+    fall:   { duration: 0, ease: 'none', rowStagger: 0 },              // not used — refill skips fall
+    dropIn: { duration: 360, ease: 'back.out(1.6)', rowStagger: 0, distance: 'perHole' },
+  })
   .ticker(app.ticker)
   .build();
 
@@ -3868,41 +3920,40 @@ return {
       return next;
     };
 
-    // Stage 1 — '10's vanish at HIT_ROW. Survivors fall: the Js at row
-    // 0 fall into HIT_ROW, creating cluster #2. New random symbols
-    // drop in at row 0. Cols 3-4 (0-indexed) and rows below HIT_ROW
-    // are unchanged — cascadeLoop's no-winners-skip path leaves them
-    // completely alone.
-    const stage1 = stage0.map((col, c) =>
-      HIT_COLS.includes(c)
-        ? dropAtHitRow(col, randSymbolNotIn(new Set([TRIGGER1, TRIGGER2])))
-        : [...col],
-    );
-
-    // Stage 2 — 'J's vanish at HIT_ROW. Stage-1's row-0 (a random)
-    // falls into HIT_ROW; new random at row 0. No further cluster.
-    const stage2 = stage1.map((col, c) =>
-      HIT_COLS.includes(c)
-        ? dropAtHitRow(col, randSymbolNotIn(new Set([TRIGGER1, TRIGGER2])))
-        : [...col],
-    );
-
     // Round 1: classic strip-spin lands on stage 0.
-    const p = reelSet.spin();
+    const p = reelSet.spin({ mode: 'standard' });
     await new Promise((r) => setTimeout(r, 150));
     reelSet.setResult(stage0);
     await p;
     await new Promise((r) => setTimeout(r, 300));
 
-    // Cascade chain: stage 0 → 1 → 2, popping the middle row twice.
-    // Both pops happen on the same three columns (HIT_COLS); cols 3-4
-    // never animate because cascadeLoop skips reels with no winners
-    // and unchanged symbols.
-    await runCascade(reelSet, [stage0, stage1, stage2], {
-      winners: () => HIT_COLS.map((c) => ({ reel: c, row: HIT_ROW })),
-      vanishDuration: 320,
-      dropDuration: 440,
-      pauseBetween: 160,
+    // Cascade chain — driven by `reelSet.runCascade({...})`. The library
+    // owns the detect → destroy → pause → refill loop and emits
+    // `cascade:complete` when no more winners are found. Game-rule
+    // callbacks: `detectWinners` (cells whose symbol id matches the
+    // current trigger) and `nextGrid` (post-gravity grid via the helper).
+    reelSet.setDropOrder('all');
+
+    let trigger = TRIGGER1;
+    await reelSet.runCascade({
+      detectWinners: (grid) => HIT_COLS
+        .map((c) => grid[c][HIT_ROW] === trigger ? { reel: c, row: HIT_ROW } : null)
+        .filter(Boolean),
+      nextGrid: (prev, winners) => {
+        const fill = randSymbolNotIn(new Set([TRIGGER1, TRIGGER2]));
+        const out = prev.map((col, c) =>
+          winners.some((w) => w.reel === c)
+            ? dropAtHitRow(col, fill)
+            : [...col],
+        );
+        // After popping the 10s, the next trigger is the J that just
+        // fell into HIT_ROW. Real games would compute this from the
+        // post-refill grid via `detectWinners` again — we hard-step it
+        // so the demo is unmistakable.
+        trigger = trigger === TRIGGER1 ? TRIGGER2 : '__none__';
+        return out;
+      },
+      pauseAfterDestroyMs: 160,
     });
   },
 };

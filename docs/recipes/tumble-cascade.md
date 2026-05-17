@@ -3,9 +3,16 @@
 A tumble slot has two distinct animation moments:
 
 - **Moment A — Spin click.** Existing symbols fall off the bottom of the viewport. The reels sit empty (or show a spinner) while the server responds. New symbols drop in from above.
-- **Moment B — Cascade refill.** After a win, the matching cells are cleared by user code. Survivor symbols slide down to fill the gaps below them; new symbols drop into the holes at the top.
+- **Moment B — Cascade refill.** After a win, the matching cells are cleared. Survivor symbols slide down to fill the gaps below them; new symbols drop into the holes at the top.
 
-The library handles both via three named phases — `cascade:fall`, `cascade:place`, `cascade:dropIn` — wired through `builder.tumble(...)` and `reelSet.spin()` / `reelSet.refill(...)`. Animation timings are config; every other behaviour (badges, multipliers, SFX, win-clear) is user code listening to `cascade:*` events.
+The library handles both via three named phases — `cascade:fall`, `cascade:place`, `cascade:dropIn` — wired through `builder.tumble(...)` and four verbs on `reelSet`:
+
+- **`reelSet.spin()` + `setResult(grid)`** — Moment A. Returns a promise that resolves on `spin:complete`.
+- **`reelSet.destroySymbols(cells)`** — deferred to each symbol's `playDestroy()`. Sprite implode by default; Spine subclasses can override to play a disintegration animation.
+- **`reelSet.refill({ winners, grid })`** — Moment B for one cascade level.
+- **`reelSet.runCascade({ detectWinners, nextGrid })`** — the canonical detect → destroy → pause → refill loop, with `cascade:complete` fired when the chain ends. Use this in 95% of cases.
+
+Animation timings are config; every other behaviour (badges, multipliers, SFX) is user code via `cascade:*` events.
 
 Everything below is config-driven unless flagged otherwise. Lift the snippets directly.
 
@@ -45,26 +52,43 @@ reelSet.setResult(grid);
 await spinDone;
 ```
 
-### 1c. Drive a spin + cascade loop
+### 1c. Drive a spin + cascade loop — the library way
 
 ```ts
-// Breathing room between "winners faded out" and "refill drop-in starts".
-// Commercial tumble slots dial this between 150 ms (snappy) and 500 ms
-// (dramatic). 250-300 ms is the comfortable middle.
+async function play() {
+  // Moment A — fall, wait, drop in.
+  const spinDone = reelSet.spin();
+  reelSet.setResult(await server.spin());
+  await spinDone;
+
+  // Moment B — runCascade owns the detect → destroy → pause → refill
+  // loop and fires `cascade:complete` when the chain ends.
+  await reelSet.runCascade({
+    detectWinners: (grid) => detectWinners(grid),
+    nextGrid:      (_, winners) => server.cascade(winners),
+    pauseAfterDestroyMs: 300,  // 150-500 ms tasteful range
+  });
+}
+```
+
+### 1d. Compose the loop yourself
+
+When you need per-cascade asymmetric pauses, conditional bonus triggers, or any orchestration `runCascade` can't express, drive `refill` directly:
+
+```ts
 const PAUSE_AFTER_REMOVAL_MS = 300;
 
 async function play() {
   const spinDone = reelSet.spin();
-  const grid = await server.spin();
-  reelSet.setResult(grid);
+  reelSet.setResult(await server.spin());
   await spinDone;
 
-  let current = grid;
+  let current = reelSet.getVisibleGrid();
   while (true) {
     const winners: Cell[] = detectWinners(current);
     if (winners.length === 0) break;
 
-    await fadeOutWinners(reelSet, winners);
+    await reelSet.destroySymbols(winners);
     await wait(PAUSE_AFTER_REMOVAL_MS);   // beat: "the wins are GONE"
     const next = await server.cascade(winners);
     await reelSet.refill({ winners, grid: next });
@@ -73,7 +97,7 @@ async function play() {
 }
 ```
 
-**The pause matters.** Without it, the refill drop-in begins the same frame the winners hit alpha 0 — the player perceives a teleport. With a 150-500 ms beat the brain registers two distinct events ("wins cleared" → "new symbols arrived"). Match this to your fade-out duration and to the recipe's drop-in stagger: faster feels (slam, snappy fades) want ~120 ms; bouncy or wave feels want ~300-400 ms so the previous tumble's motion has time to settle.
+**The pause matters.** Without it, the refill drop-in begins the same frame the winners hit alpha 0 — the player perceives a teleport. With a 150-500 ms beat the brain registers two distinct events ("wins cleared" → "new symbols arrived"). Match it to your animation feel: snappy slams want ~120 ms; bouncy or wave feels want ~300-400 ms.
 
 The new-grid contract for `refill`: per reel, the top `winners.length` rows are the new symbols, the remaining rows are the survivors in their original top-to-bottom order. Untouched cells don't animate; survivors slide; new symbols drop from above.
 
@@ -165,23 +189,19 @@ async function play() {
   ui.setMultiplier(1);
 
   const spinDone = reelSet.spin();
-  const grid = await server.spin();
-  reelSet.setResult(grid);
+  reelSet.setResult(await server.spin());
   await spinDone;
 
-  let current = grid;
-  while (true) {
-    const winners = detectWinners(current);
-    if (winners.length === 0) break;
-
-    await fadeOutWinners(reelSet, winners);
-    multiplier += 1;
-    await tickMultiplierUi(multiplier);   // 0.4 s number roll
-
-    const next = await server.cascade(winners);
-    await reelSet.refill({ winners, grid: next });
-    current = next;
-  }
+  // onCascade fires after destroySymbols, before refill — the exact moment
+  // when the player's eye is on the holes. Bump the meter there.
+  await reelSet.runCascade({
+    detectWinners: (grid) => detectWinners(grid),
+    nextGrid:      (_, winners) => server.cascade(winners),
+    onCascade: async () => {
+      multiplier += 1;
+      await tickMultiplierUi(multiplier); // 0.4 s number roll
+    },
+  });
 }
 
 async function tickMultiplierUi(target: number): Promise<void> {
@@ -276,15 +296,15 @@ Every variant works because the `await` flow is explicit: the multiplier ticks _
 
 `cascade:fall:symbol` and `cascade:dropIn:symbol` fire once per symbol, **right before** the library's GSAP tween on `view.y` begins. Listeners can start parallel tweens on any other property (scale, alpha, tint, badge text, spine track) — they'll run in sync with the library's motion.
 
-The library guarantees the per-symbol event fires **before** the `view.y` tween — listener tweens see the symbol's pre-fall state and can lock in matching durations from `ctx.duration`.
+The library guarantees the per-symbol event fires **before** the `view.y` tween — listener tweens see the symbol's pre-fall state and can lock in matching durations from the payload's `duration`.
 
 ### 4a. Squish-on-impact for drop-in
 
 Symbols compress slightly as they land, then snap back. Pairs well with `ease: 'back.out(...)'` for a punchy feel.
 
 ```ts
-reelSet.events.on('cascade:dropIn:symbol', ({ view, ctx }) => {
-  const dropSec = ctx.duration / 1000;
+reelSet.events.on('cascade:dropIn:symbol', ({ view, duration }) => {
+  const dropSec = duration / 1000;
   gsap.to(view.scale, {
     x: 1.15, y: 0.85,
     duration: dropSec * 0.85,    // peaks just before land
@@ -299,11 +319,11 @@ reelSet.events.on('cascade:dropIn:symbol', ({ view, ctx }) => {
 ### 4b. Trail fade on fall (lower alpha as the symbol exits)
 
 ```ts
-reelSet.events.on('cascade:fall:symbol', ({ view, ctx }) => {
+reelSet.events.on('cascade:fall:symbol', ({ view, duration, ease }) => {
   gsap.fromTo(view, { alpha: 1 }, {
     alpha: 0.2,
-    duration: ctx.duration / 1000,
-    ease: ctx.ease,
+    duration: duration / 1000,
+    ease,
     overwrite: 'auto',
   });
 });
@@ -334,14 +354,14 @@ reelSet.events.on('cascade:dropIn:symbol', ({ symbol }) => {
 If your symbols carry a per-cell multiplier badge that the game wants to "level up" as the symbol leaves frame:
 
 ```ts
-reelSet.events.on('cascade:fall:symbol', ({ symbol, ctx }) => {
+reelSet.events.on('cascade:fall:symbol', ({ symbol, duration }) => {
   if (!('badge' in symbol)) return;
   const before = symbol.badge.value;
   const after = before * 2;
   const counter = { v: before };
   gsap.to(counter, {
     v: after,
-    duration: (ctx.duration / 1000) * 0.6,
+    duration: (duration / 1000) * 0.6,
     ease: 'power2.out',
     onUpdate: () => symbol.badge.setValue(Math.round(counter.v)),
     overwrite: 'auto',
@@ -356,11 +376,11 @@ This is distinct from Recipe 3 (which animates a global UI element). Use Recipe 
 Pause the per-symbol effect by `rowIndex` to spread tween starts even further than the library's `rowStagger`.
 
 ```ts
-reelSet.events.on('cascade:dropIn:symbol', ({ view, ctx }) => {
+reelSet.events.on('cascade:dropIn:symbol', ({ view, duration, rowIndex }) => {
   gsap.from(view, {
     alpha: 0,
-    duration: ctx.duration / 1000,
-    delay: ctx.rowIndex * 0.06,  // extra 60 ms per row on top of rowStagger
+    duration: duration / 1000,
+    delay: rowIndex * 0.06,  // extra 60 ms per row on top of rowStagger
     overwrite: 'auto',
   });
 });
@@ -542,13 +562,14 @@ reelSet.events.on('cascade:dropIn:start', () => audio.unduck());
 
 | Event | When | Payload |
 |---|---|---|
-| `cascade:fall:start` | A reel's fall-out begins (Moment A only). | `{ reelIndex }` |
+| `cascade:fall:start` | A reel's fall-out begins (Moment A only — refills skip fall). | `{ reelIndex }` |
 | `cascade:fall:symbol` | Each symbol's fall-out tween is about to start. | `{ symbol, view, reelIndex, rowIndex, duration, ease, distance }` |
 | `cascade:fall:end` | A reel's last fall tween settled. | `{ reelIndex }` |
-| `cascade:place:done` | New identities placed AND snapped to grid, **before** drop-in starts. Canonical spot for badge / decoration application. | `{ reelIndex, placedSymbols }` |
+| `cascade:place:done` | New identities placed AND snapped to grid, **before** drop-in starts. Canonical spot for badge / decoration application. `isInitial: true` on Moment A; on Moment B `winnerRows` lists the row indices whose old symbols were cleared (so listeners can skip survivors). | `{ reelIndex, placedSymbols, isInitial, winnerRows }` |
 | `cascade:dropIn:start` | A reel's drop-in begins. | `{ reelIndex }` |
-| `cascade:dropIn:symbol` | Each symbol's drop-in tween is about to start. | `{ symbol, view, reelIndex, rowIndex, duration, ease, offsetRows }` |
+| `cascade:dropIn:symbol` | Each symbol's drop-in tween is about to start. `offsetRows` is the number of cells this symbol traverses (1 for top-row refills, more for survivors sliding past larger holes). | `{ symbol, view, reelIndex, rowIndex, duration, ease, offsetRows }` |
 | `cascade:dropIn:end` | A reel's last drop-in tween settled. | `{ reelIndex }` |
+| `cascade:complete` | Fired once by `reelSet.runCascade(...)` after the detect → destroy → refill loop exits. Does **not** fire when you compose the loop yourself with bare `refill()` calls. | `{ chainLength, totalWinners, finalGrid, wasSkipped }` |
 
 ---
 

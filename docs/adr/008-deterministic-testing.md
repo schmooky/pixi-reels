@@ -43,7 +43,7 @@ It's a real `ReelSymbol` subclass. `Reel` doesn't know the difference between `H
 
 - 96 tests run in Node in under half a second. Every PR runs them in CI.
 - The library's own `StopPhase` slicing bug (regression test in `tests/integration/stop-phase.test.ts`) was caught and fixed with this harness.
-- Cascade physics invariants (ADR 010) are enforced by tests that call `tumbleToGrid` with real reel sets and read pre-drop y offsets.
+- Cascade physics invariants (ADR 010) are enforced by tests that exercise `reelSet.runCascade` and `computeDropOffsets` against real reel sets.
 - Consumers can use the same harness to test their own mechanics — `createTestReelSet` is public API.
 
 ### Negative

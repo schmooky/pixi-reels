@@ -293,7 +293,9 @@ export function cascadeSequence(sequence: string[][][]): Cheat {
  * the landed grid, remaining stages come back in `meta.stages` so the demo
  * can animate the whole chain from one SPIN click.
  *
- * Pair with `runCascade(reelSet, meta.stages)` from `cascadeLoop.ts`.
+ * Pair with `reelSet.runCascade({ detectWinners, nextGrid })`: drive
+ * `nextGrid` from `meta.stages[chainLevel + 1]` and end the chain when
+ * the index runs out.
  */
 export function cascadingStages(stages: string[][][]): Cheat {
   const frozen = stages.map((g) => cloneGrid(g));

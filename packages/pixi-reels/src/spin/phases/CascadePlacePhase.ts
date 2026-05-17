@@ -89,6 +89,8 @@ export class CascadePlacePhase extends ReelPhase<CascadePlacePhaseConfig> {
     events.emit('cascade:place:done', {
       reelIndex: reel.reelIndex,
       placedSymbols,
+      isInitial: this._config.initial,
+      winnerRows: this._config.winnerRows,
     });
 
     this._complete();

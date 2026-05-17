@@ -1,10 +1,17 @@
 // @ts-nocheck
 // Injected: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, WILD_CARD,
-//           WinPresenter, PIXI, gsap, app, pickWeighted, runCascade.
+//           WinPresenter, PIXI, gsap, app, pickWeighted.
+
+// Cascade win presentation via `WinPresenter` instead of the default
+// `destroySymbols` implode. The orchestrator is still `reelSet.runCascade`;
+// `onCascade` is where we hand control to the presenter for a per-cascade
+// scale-pop, then the library refills as usual.
 
 const IDS = ['7', '8', '9', '10', 'J', 'Q'];
 const REELS = 6, ROWS = 4, SIZE = 72;
 const CLUSTER = '10';
+const HIT_ROW = 2;
+const HIT_COLS = [0, 1, 2];
 
 function randSymbol(exclude) {
   let s;
@@ -61,44 +68,54 @@ reelSet.events.on('spin:start', () => presenter.abort());
 return {
   reelSet,
   onSpin: async () => {
-    const HIT_ROW = 2;
-    const HIT_COLS = [0, 1, 2];
-
     const stage0 = Array.from({ length: REELS }, (_, c) =>
       Array.from({ length: ROWS }, (_, r) =>
         r === HIT_ROW && HIT_COLS.includes(c) ? CLUSTER : randSymbol(CLUSTER)
       )
     );
-    const stage1 = stage0.map((col, c) => {
-      if (!HIT_COLS.includes(c)) return [...col];
-      const next = [...col];
-      for (let r = HIT_ROW; r > 0; r--) next[r] = next[r - 1];
-      next[0] = randSymbol(CLUSTER);
-      return next;
-    });
 
+    // Moment A — initial drop, left-to-right reveal.
+    reelSet.setDropOrder('ltr');
     const p = reelSet.spin();
     await new Promise(r => setTimeout(r, 200));
-    reelSet.setDropOrder('ltr');
     reelSet.setResult(stage0);
     await p;
     await new Promise(r => setTimeout(r, 300));
 
-    // Drive the cascade. Replace the default fade with WinPresenter —
-    // same API as paylines, just cells.
-    await runCascade(reelSet, [stage0, stage1], {
-      winners: () => HIT_COLS.map(c => ({ reel: c, row: HIT_ROW })),
-      vanishDuration: 0,
-      pauseBetween: 80,
-      dropDuration: 420,
-      onWinnersVanish: async (_rs, winners, stageIndex) => {
+    // Moment B — runCascade owns the loop. `onCascade` swaps the default
+    // implode for a WinPresenter scale-pop. The library calls
+    // `destroySymbols` AFTER `onCascade` resolves — using `destroyOptions:
+    // { zIndex: null }` keeps that fade-to-zero invisible (the presenter
+    // already faded them visually).
+    reelSet.setDropOrder('all');
+    let presented = false;
+    await reelSet.runCascade({
+      detectWinners: (grid) => {
+        if (presented) return [];
+        return HIT_COLS.map(c => grid[c][HIT_ROW] === CLUSTER ? { reel: c, row: HIT_ROW } : null).filter(Boolean);
+      },
+      nextGrid: (prev, winners) => {
+        const next = prev.map(col => [...col]);
+        for (const w of winners) {
+          for (let r = w.row; r > 0; r--) next[w.reel][r] = next[w.reel][r - 1];
+          next[w.reel][0] = randSymbol(CLUSTER);
+        }
+        presented = true;
+        return next;
+      },
+      onCascade: async ({ chain, winners }) => {
         if (winners.length === 0) return;
         await presenter.show([{
-          id: stageIndex,
+          id: chain,
           cells: winners.map(w => ({ reelIndex: w.reel, rowIndex: w.row })),
           value: winners.length * 10,
         }]);
       },
+      // Suppress the implode tween entirely — the presenter already drove
+      // the visual feedback. Skipping the zIndex lift keeps the destroy
+      // alpha:0 step instant and invisible.
+      destroyOptions: { zIndex: null },
+      pauseAfterDestroyMs: 80,
     });
   },
   cleanup: () => presenter.destroy(),

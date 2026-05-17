@@ -4,14 +4,15 @@ title: MultiWays cascade
 description: Per-spin row variation on a strip-spin landing; the cascade tumble pops winners and drops new symbols in from above. Shape-aware on every reel.
 tags: [multiways, cascade, hybrid, recent]
 steps:
-  - Build with .multiways({minRows, maxRows, reelPixelHeight}) — no .tumble() needed
+  - Build with .multiways({minRows, maxRows, reelPixelHeight}) + .tumble({...}) for the refill phases
   - Each round, call setShape(rowsPerReel) BEFORE setResult()
-  - reelSet.spin() — classic strip-spin lands the multiways grid (AdjustPhase reshapes during SPIN→STOP)
-  - On a winning row, runCascade(reelSet, [...stages]) tumbles winners and drops new symbols in from above
+  - "reelSet.spin({ mode: 'standard' }) — classic strip-spin lands the multiways grid (AdjustPhase reshapes during SPIN→STOP)"
+  - reelSet.runCascade({ detectWinners, nextGrid }) tumbles winners and drops new symbols in from above
 apis:
   - ReelSetBuilder.multiways
+  - ReelSetBuilder.tumble
   - ReelSet.setShape
-  - runCascade
+  - ReelSet.runCascade
 ---
 
 import code from '../../recipes/multiways-cascade.recipe.ts?raw';
@@ -19,19 +20,24 @@ import { RecipeRunner } from '../../components/RecipeRunner.tsx';
 
 <RecipeRunner code={code} client:only="react" />
 
-A slot that varies its shape per spin AND uses cascade-style tumbling on winners — the cascade-Megaways pattern that BTG's *Bonanza* and *Extra Chilli* popularized. The initial landing is a classic strip-spin (so the multiways `AdjustPhase` reshapes the reels between SPIN and STOP); winners then pop, survivors fall, and new symbols drop in from above via `runCascade`. The reels never re-spin between tumbles.
+A slot that varies its shape per spin AND uses cascade-style tumbling on winners — the cascade-Megaways pattern that BTG's *Bonanza* and *Extra Chilli* popularized. The initial landing is a classic strip-spin (so the multiways `AdjustPhase` reshapes the reels between SPIN and STOP); winners then pop, survivors fall, and new symbols drop in from above via `reelSet.runCascade(...)`. The reels never re-spin between tumbles.
 
 A *ways* win is the multiways win pattern: a symbol that lands on N consecutive reels starting from reel 0 wins, and **every** instance of that symbol on those reels is part of the win — not just one cell per column the way a payline game would resolve it. This recipe pops them all in one cascade. If the resulting fill creates another ways win, the chain continues (capped at 4 cascades per round for demo legibility).
 
 ```ts
 import { ReelSetBuilder, SpriteSymbol } from 'pixi-reels';
-import { runCascade } from './shared/cascadeLoop';   // examples/shared
 
 const reelSet = new ReelSetBuilder()
   .reels(6)
   .multiways({ minRows: 2, maxRows: 5, reelPixelHeight: 360 })
   .symbolSize(72, 72)
   .symbols((r) => { /* register your symbols */ })
+  // tumble() registers cascade:place + cascade:dropIn so refill() can run.
+  // We don't use cascade:fall here — the initial drop is a strip-spin.
+  .tumble({
+    fall:   { duration: 0, ease: 'none', rowStagger: 0 },
+    dropIn: { duration: 280, ease: 'back.out(1.4)', rowStagger: 0, distance: 'perHole' },
+  })
   .ticker(app.ticker)
   .build();
 
@@ -39,31 +45,36 @@ document.getElementById('spin')!.addEventListener('click', async () => {
   const shape = rollShape();             // your random or server-driven shape
   const grid  = buildGrid(shape);        // grid lengths must match `shape`
 
-  // Round 1 — strip-spin lands the multiways grid.
-  const p = reelSet.spin();
+  // Round 1 — strip-spin lands the multiways grid (override the builder's
+  // cascade default so AdjustPhase runs between SPIN and STOP).
+  const p = reelSet.spin({ mode: 'standard' });
   reelSet.setShape(shape);
   reelSet.setResult(grid);
   await p;
 
-  // Tumble: vanish winners → survivors fall → new symbols drop in from above.
-  const wins = detectWins(grid);
-  if (wins.length) {
-    await runCascade(reelSet, [grid, ...nextStages], { winners: () => wins });
-  }
+  // Cascade chain: detect ways wins → destroy → refill → re-detect.
+  // `runCascade` re-evaluates wins after every refill; when none are
+  // found, the chain ends and `cascade:complete` fires.
+  reelSet.setDropOrder('all');
+  await reelSet.runCascade({
+    detectWinners: (g) => collectAllWaysWinners(g),
+    nextGrid:      (prev, winners) => applyCascade(prev, [...winners]),
+    maxChain:      4,
+  });
 });
 ```
 
 ## Why this works on a multiways slot
 
-`runCascade` reads each reel's `visibleRows` at call time via `reel.getVisibleSymbols().length`. A reel that landed at 2 rows and a reel that landed at 5 rows cascade independently in the same chain — the helper builds per-reel fall jobs against each reel's live geometry, so jagged multiways shapes aren't a special case.
+`reelSet.refill({ winners, grid })` reads each reel's `visibleRows` at call time. A reel that landed at 2 rows and a reel that landed at 5 rows refill independently in the same chain — the engine builds per-reel fall jobs against each reel's live geometry, so jagged multiways shapes aren't a special case.
 
-Crucially, the helper also accepts a `winners` callback with **multiple cells per column**. A ways win that hits three cells on a single 5-row reel will pop all three; the three cleared rows refill from above with new symbols entering staggered (`tumbleToGrid` handles per-reel offset math), regardless of where the winners were in the column.
+A ways win that hits three cells on a single 5-row reel pops all three; the three cleared rows refill from above with new symbols entering staggered, regardless of where the winners were in the column. Your `nextGrid` callback supplies the post-gravity column; the engine handles the geometry.
 
 The initial strip-spin is the multiways primary motion: `AdjustPhase` runs between `SpinPhase` and `StopPhase`, commits the new shape, and `StopPhase` lands the reel at its new row count. By the time `runCascade` runs, every reel is already at its post-reshape geometry.
 
 ## Two ways to combine cascade with multiways
 
-This recipe uses the **post-landing tumble** approach (`runCascade` on a strip-spun landing). The library also supports the **cascade-mode spin** approach: build with `.multiways(...).tumble({ fall, dropIn })` and call `spin({ mode: 'cascade' })` for a full top-down drop-in landing on a multiways shape. The cascade-mode path runs `cascade:fall → Spin → Adjust → cascade:place → cascade:dropIn` per reel — see [ADR 015](/architecture/adr/015-cascade-multiways-interplay/) for the design rationale and the per-chain shape rule.
+This recipe uses the **post-landing tumble** approach (`runCascade` on a strip-spun landing). The library also supports the **cascade-mode spin** approach: build with `.multiways(...).tumble({...})` and call `spin({ mode: 'cascade' })` for a full top-down drop-in landing on a multiways shape. The cascade-mode path runs `cascade:fall → Spin → Adjust → cascade:place → cascade:dropIn` per reel — see [ADR 015](/architecture/adr/015-cascade-multiways-interplay/) for the design rationale and the per-chain shape rule.
 
 Pick the post-landing pattern when you want a classic spin feel with cascade tumbles on winners (this recipe). Pick the cascade-mode pattern when every round should drop in from above with no strip motion at all.
 

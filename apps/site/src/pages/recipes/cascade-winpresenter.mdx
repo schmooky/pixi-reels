@@ -5,11 +5,11 @@ description: Drive cascade cell pops with the same WinPresenter you use for payl
 tags: [wins, cascade]
 steps:
   - Build a WinPresenter — no special cluster config, it already works
-  - In runCascade's onWinnersVanish, pass the winners as one Win and await it
-  - Tumble + drop continues when the pop resolves
+  - In runCascade's onCascade callback, hand winners to the presenter and await it
+  - destroySymbols runs after — disable its zIndex lift so its alpha→0 stays invisible
 apis:
   - WinPresenter
-  - runCascade (onWinnersVanish)
+  - ReelSet.runCascade (onCascade)
   - win:group event
 ---
 
@@ -25,26 +25,29 @@ const presenter = new WinPresenter(reelSet, {
   symbolAnim: async (symbol) => /* your pop animation */,
 });
 
-await runCascade(reelSet, stages, {
-  vanishDuration: 0,       // we drive the pop ourselves
-  onWinnersVanish: async (_rs, winners, stageIndex) => {
+await reelSet.runCascade({
+  detectWinners: (g) => yourDetector(g),
+  nextGrid:      (prev, winners) => yourNextGrid(prev, winners),
+  onCascade: async ({ chain, winners }) => {
+    if (winners.length === 0) return;
     await presenter.show([{
-      id: stageIndex,
+      id: chain,
       cells: winners.map(w => ({ reelIndex: w.reel, rowIndex: w.row })),
       value: winners.length * 10,
     }]);
   },
+  // `destroySymbols` runs AFTER `onCascade` resolves. The presenter already
+  // drove the visual feedback, so we suppress the implode's zIndex bump
+  // (the destroy still snaps the cells to alpha 0, but invisibly).
+  destroyOptions: { zIndex: null },
 });
 ```
 
 ## One shape, two use cases
 
-A "win" is just cells. Whether those cells came from a payline, a cluster,
-or a cascade pop, the presenter treats them the same. No
-`isPayline` / `isCluster` narrowing — just `win.cells`.
+A "win" is just cells. Whether those cells came from a payline, a cluster, or a cascade pop, the presenter treats them the same. No `isPayline` / `isCluster` narrowing — just `win.cells`.
 
-For mixed rounds (a scatter cluster + a payline in the same spin), pass
-them together:
+For mixed rounds (a scatter cluster + a payline in the same spin), pass them together:
 
 ```ts
 await presenter.show([
@@ -55,7 +58,6 @@ await presenter.show([
 
 ## UX guardrails
 
-- `vanishDuration: 0` disables the `runCascade` default fade so your pop
-  is the only thing the player sees. If you want both, keep the default
-  fade and don't `await` `presenter.show`.
+- `destroyOptions: { zIndex: null }` keeps the library's implode invisible — the presenter already played the visual.
 - `presenter.abort()` on `spin:start` — slam-spin mid-cascade cancels cleanly.
+- If you'd rather KEEP the library's implode AS WELL as the presenter pop, drop `destroyOptions` entirely. The presenter resolves before `destroySymbols` runs, so they read as one continuous pop.

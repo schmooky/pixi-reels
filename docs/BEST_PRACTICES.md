@@ -252,7 +252,7 @@ If a class you're writing holds resources, implement `Disposable` and hook into 
 |---|---|---|
 | Calling `setResult()` before all reels are in SPIN | Reels stop early on the *previous* spin's frame | The library already waits; don't call `setResult` inside `spin:start`. Wait for `spin:allStarted` (or just call it when your server response arrives — the library buffers). |
 | Forgetting `ticker(app.ticker)` on the builder | `Error: ticker() must be called …` at `build()` | Required call. Builder validates at `.build()` time. |
-| `diffCells` on a pattern cascade | Survivors animate as "new" symbols dropping from above | Pass semantic `winners: (prev) => Cell[]` to `runCascade`. See [ADR 010](./adr/010-cascade-physics.md). |
+| Computing winners from a grid diff | Survivors animate as "new" symbols dropping from above | Compute winners from your match rules inside `detectWinners`. The library's API takes `Cell[]` of match winners, not a diff. See [ADR 010](./adr/010-cascade-physics.md). |
 | Putting cheat code in game bundle | Bundle bloat + players find cheats | Cheats are `examples/shared/` only. [ADR 009](./adr/009-cheats-live-outside-lib.md). |
 | Importing `SpineReelSymbol` from the main barrel | Your bundle includes the Spine runtime even if you only use sprites | Import from `pixi-reels/spine`. [ADR 011](./adr/011-spine-subpath-and-vocabulary.md). |
 | Running `gsap` from its default ticker | Animations freeze in hidden tabs or iframes | Sync GSAP with the PixiJS ticker: `gsap.ticker.remove(gsap.updateRoot); app.ticker.add(t => gsap.updateRoot(t.lastTime / 1000))`. |

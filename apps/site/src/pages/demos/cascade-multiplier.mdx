@@ -3,7 +3,7 @@ layout: ../../layouts/Demo.astro
 title: Cascade + multiplier
 subtitle: 5×5 · one click plays the whole tumble · drop-in for streamed server responses
 tags: [cascade, tumble, multiplier]
-description: A tumble slot — wins vanish, the next stage lands. Built around runCascade(), which accepts an array or an async generator, so you can feed either a full batch response or a server stream.
+description: A tumble slot — wins vanish, the next stage lands. Built around reelSet.runCascade(), which loops detect → destroy → refill until no more winners are found.
 ---
 
 import CascadeDemo from '../../components/demos/CascadeDemo.tsx';
@@ -14,14 +14,12 @@ import CascadeDemo from '../../components/demos/CascadeDemo.tsx';
 
 Each SPIN click plays the **full cascade sequence** from a single click:
 
-1. Land on stage 0.
-2. Identify winners (cells changing between stage *N* and stage *N+1*).
-3. Fade the winners out.
-4. Spin + land on stage *N+1*.
-5. Repeat until the stage stream is exhausted.
+1. Land on stage 0 via `reelSet.spin()` + `setResult(...)`.
+2. `reelSet.runCascade({ detectWinners, nextGrid })` owns the chain.
+3. For every cascade level: detect winners → `destroySymbols` → pause → `refill`.
+4. When `detectWinners` returns `[]`, `cascade:complete` fires and the round ends.
 
-This is driven by `runCascade(reelSet, stages)` from
-[`examples/shared/cascadeLoop.ts`](https://github.com/schmooky/pixi-reels/blob/main/examples/shared/cascadeLoop.ts).
+The library owns the orchestration; your two callbacks own the **game rules** (what's a winner, what's the next grid).
 
 ## Setup
 
@@ -30,95 +28,85 @@ This is driven by `runCascade(reelSet, stages)` from
 If your server returns **all** cascade stages in one response:
 
 ```ts
-import { runCascade } from '@/shared/cascadeLoop';
-
 async function spin() {
   const response = await fetch('/api/spin').then((r) => r.json());
-  // response.stages: string[][][]   — stage 0 first, tumble stages next
+  // response.stages: string[][][] — stage 0 first, tumble stages next.
 
-  // Land the first stage via the regular spin API
-  const promise = reelSet.spin();
-  setTimeout(() => reelSet.setResult(response.stages[0]), 200);
-  await promise;
+  // Land the first stage via the regular spin API.
+  const p = reelSet.spin();
+  reelSet.setResult(response.stages[0]);
+  await p;
 
-  // Play the rest automatically
-  await runCascade(reelSet, response.stages, {
-    vanishDuration: 320,
-    pauseBetween: 140,
-    onStageLanded: (grid, i) => {
-      multiplier++;
-      hud.showMultiplier(multiplier);
+  // Cascade through the remaining stages.
+  let level = 0;
+  reelSet.setDropOrder('all');
+  await reelSet.runCascade({
+    detectWinners: (grid) =>
+      level + 1 < response.stages.length
+        ? diffWinners(grid, response.stages[level + 1])
+        : [],
+    nextGrid: () => {
+      level += 1;
+      return response.stages[level];
     },
+    onCascade: ({ chain }) => hud.showMultiplier(chain + 1),
+    pauseAfterDestroyMs: 140,
   });
 }
 ```
 
+`diffWinners` is whatever match-detector your game uses — it's NOT a naive grid diff, because survivors that slide past cleared rows would look "changed" by id. Compute winners from your match rules.
+
 ### 2. Stream stages from a server that dribbles responses
 
-If your backend computes cascades one at a time and streams them:
+If your backend computes cascades one at a time and streams them, do the same shape but `await` the next stage inside `nextGrid`:
 
 ```ts
-async function* streamFromServer(): AsyncIterable<string[][]> {
-  const conn = openWebSocket('/spin');
-  for await (const msg of conn) {
-    if (msg.type === 'stage') yield msg.grid;
-    else if (msg.type === 'end') return;
-  }
-}
-
 const stream = streamFromServer();
-
-// stage 0 — land the first response manually
 const first = (await stream.next()).value!;
+
 const p = reelSet.spin();
-setTimeout(() => reelSet.setResult(first), 200);
+reelSet.setResult(first);
 await p;
 
-// remaining stages — runCascade consumes the generator
-await runCascade(reelSet, stream, { pauseBetween: 100 });
-```
-
-`runCascade` accepts `string[][][]` **or** `AsyncIterable<string[][]>`, so the
-same code works for both cases.
-
-### 3. Custom vanish animation
-
-By default, winners fade alpha 1 → 0 over `vanishDuration` ms. Override
-`onWinnersVanish` to do anything else — scale down, play per-symbol
-`symbol.playWin()` on each winner, emit particles, etc.
-
-```ts
-await runCascade(reelSet, stages, {
-  onWinnersVanish: async (reelSet, winners) => {
-    await Promise.all(winners.map(async ({ reel, row }) => {
-      const sym = reelSet.getReel(reel).getSymbolAt(row);
-      await sym.playWin();        // your ReelSymbol's built-in win anim
-    }));
+await reelSet.runCascade({
+  detectWinners: (g) => yourMatchDetector(g),
+  nextGrid:      async () => {
+    const r = await stream.next();
+    return r.done ? r.value /* shouldn't happen if detect returns [] first */ : r.value;
   },
+  pauseAfterDestroyMs: 100,
 });
 ```
 
+`nextGrid` can be `async`, so awaiting a fresh server response between cascades is a one-liner.
+
+### 3. Custom vanish animation
+
+By default, `destroySymbols` defers to each symbol's `playDestroy()` (sprite implode by default). Three ways to customize:
+
+- **Per-symbol** — your `SpriteSymbol`/`SpineSymbol` subclass overrides `playDestroy()`. Every cascade uses it.
+- **Per-cascade options** — pass `destroyOptions: { direction, delay, dim }` to `runCascade`.
+- **Replace entirely** — drive the visual yourself inside `onCascade`, then pass `destroyOptions: { zIndex: null }` so the engine's implode is invisible. See [cascade with WinPresenter](/recipes/cascade-winpresenter/).
+
 ### 4. Identifying winners
 
-`diffCells(prev, next)` returns cells whose symbol id changes between two
-grids. That's the default winner-detection used inside `runCascade`. If your
-server sends winners explicitly, just pass your own `onWinnersVanish` and
-ignore the diff.
+The canonical winner shape is `Cell[]` — `{ reel, row }` for every cell your match rules consider a winner. Compute it from the grid your `detectWinners` callback receives; never from a naive diff of "the next grid differs at row X." That bug only surfaces when survivors slide past cleared rows, and is the most common cascade implementation mistake.
 
 ## Cheats on this page
 
-- **One-click 4-stage cascade** (default on) — `cascadingStages(STAGES)` bundles the whole tumble in one response; `runCascade` plays it.
+- **One-click 4-stage cascade** (default on) — `cascadingStages(STAGES)` bundles the whole tumble in one response; `runCascade` consumes `meta.stages` via `nextGrid`.
 - **One stage per click (legacy)** — `cascadeSequence(STAGES)`; each click lands one stage. Useful for stepping through the sequence manually.
 
-## Test the loop
+## Test the chain
 
 ```ts
-import { runCascade, diffCells } from '@/shared/cascadeLoop';
+import { computeDropOffsets } from 'pixi-reels';
 
-expect(diffCells(stage0, stage1)).toEqual([
-  { reel: 0, row: 1 }, { reel: 1, row: 1 },
-]);
-
-// Full generator flow — use a fake reelSet for unit tests, or spinAndLand()
-// from the pixi-reels testing utilities for integration.
+// Validate your server's gravity sim offline.
+const offsets = computeDropOffsets(5 /* visible rows */, [1, 3] /* winnerRows */);
+expect(offsets.find(o => o.row === 0)?.offsetRows).toBe(1); // new symbol, 1 slot
+expect(offsets.find(o => o.row === 4)?.offsetRows).toBe(0); // survivor, no move
 ```
+
+For end-to-end tests that drive a real `ReelSet`, use the [testing utilities](/docs/testing/) — `createTestReelSet`, `FakeTicker`, `spinAndLand`, `captureEvents`.

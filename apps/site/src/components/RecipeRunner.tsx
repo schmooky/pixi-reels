@@ -20,7 +20,6 @@ import {
   buildSpineMap,
 } from '../../../../examples/shared/generatedSpineLoader.ts';
 import { transform as sucraseTransform } from 'sucrase';
-import { runCascade, tumbleToGrid, diffCells } from '../../../../examples/shared/cascadeLoop.ts';
 import { cn } from '@/lib/utils';
 import { CanvasSkeleton } from './CanvasSkeleton';
 import { useMinDisplay } from './useMinDisplay';
@@ -48,24 +47,6 @@ class EmptySymbol extends ReelSymbol {
   async playWin(): Promise<void> {}
   stopAnimation(): void {}
   resize(_w: number, _h: number): void {}
-}
-
-/**
- * Shared "destroy winners" helper for tumble recipes. Defers to each
- * symbol's own `playDestroy()` so the animation is owned on the symbol
- * side — sprite symbols get the default centre-pivot implode; custom
- * subclasses (Spine, particles) can override with art-appropriate
- * disintegration. Returns when every winner cell is gone.
- */
-async function destroyWinners(
-  reelSet: ReelSet,
-  winners: ReadonlyArray<{ reel: number; row: number }>,
-): Promise<void> {
-  await Promise.all(winners.map((w) => {
-    const sym = reelSet.reels[w.reel].getSymbolAt(w.row);
-    sym.view.zIndex = 1000;
-    return sym.playDestroy({ direction: w.reel % 2 === 0 ? 1 : -1 });
-  }));
 }
 
 interface RunResult {
@@ -148,8 +129,7 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
           'ReelSetBuilder', 'SpeedPresets', 'BlurSpriteSymbol', 'SpriteSymbol', 'AnimatedSpriteSymbol',
           'WinPresenter',
           'app', 'textures', 'blurTextures', 'SYMBOL_IDS', 'pickWeighted', 'gsap', 'PIXI',
-          'runCascade', 'tumbleToGrid', 'diffCells', 'EmptySymbol', 'ReelSymbol',
-          'destroyWinners',
+          'EmptySymbol', 'ReelSymbol',
           'RectMaskStrategy', 'SharedRectMaskStrategy',
           'CardSymbol', 'CARD_DECK', 'WILD_CARD',
           'SpineReelSymbol', 'loadGeneratedSpines', 'buildSpineMap',
@@ -163,8 +143,7 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
           ReelSetBuilder, SpeedPresets, BlurSpriteSymbol, SpriteSymbol, AnimatedSpriteSymbol,
           WinPresenter,
           app, textures, blurTextures, SYMBOL_IDS, pickWeighted, gsap, PIXI,
-          runCascade, tumbleToGrid, diffCells, EmptySymbol, ReelSymbol,
-          destroyWinners,
+          EmptySymbol, ReelSymbol,
           RectMaskStrategy, SharedRectMaskStrategy,
           CardSymbol, CARD_DECK, WILD_CARD,
           SpineReelSymbol, loadGeneratedSpines, buildSpineMap,

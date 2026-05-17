@@ -117,6 +117,14 @@ export { pinKey } from './pins/CellPin.js';
 // ReelSet frame API (runtime middleware)
 export type { FrameAPI } from './core/ReelSet.js';
 
+// ReelSet cascade-API option types — exported so consumers can pass typed
+// option objects around or extend them for engine-on-engine adapters.
+export type {
+  DestroySymbolsOptions,
+  RunCascadeOptions,
+  RunCascadeResult,
+} from './core/ReelSet.js';
+
 // Events
 export { EventEmitter } from './events/EventEmitter.js';
 export type {

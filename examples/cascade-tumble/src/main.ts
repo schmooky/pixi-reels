@@ -140,24 +140,10 @@ function makeSpinner(): Container {
   return c;
 }
 
-// ------------------------------------------------------------
-// WIN DESTRUCTION — defers to each symbol's playDestroy().
-// ------------------------------------------------------------
-//
-// The library ships a sensible default (centre-pivot scale + fade +
-// spin) on ReelSymbol.playDestroy(). Subclasses can override for
-// art-appropriate effects. Per-symbol invocation keeps the destruction
-// decision on the symbol side, not in the spin handler.
-
-async function destroyWinners(reelSet: ReelSet, winners: Cell[]): Promise<void> {
-  reelSet.viewport.showDim(0.35);
-  await Promise.all(winners.map((w) => {
-    const sym = reelSet.reels[w.reel].getSymbolAt(w.row);
-    sym.view.zIndex = 1000;
-    return sym.playDestroy({ direction: w.reel % 2 === 0 ? 1 : -1 });
-  }));
-  reelSet.viewport.hideDim();
-}
+// WIN DESTRUCTION is now a one-liner: `reelSet.destroySymbols(winners, { dim: 0.35 })`.
+// The lib defers to each symbol's `playDestroy()` (sprite implode by default;
+// Spine subclasses can route to a disintegration animation) and handles the
+// zIndex bump + viewport dim for us.
 
 // ------------------------------------------------------------
 // MAIN
@@ -264,29 +250,29 @@ async function main(): Promise<void> {
 
   let isSpinning = false;
   /**
-   * Queued slam intent: set when the player taps during a window where
-   * user-code is mid-round but the engine isn't yet spinning (the gaps
-   * between cascade refills, mostly). Consumed after the next `spin()` or
-   * `refill()` so the tap-to-slam isn't silently dropped.
+   * AbortController for the current cascade chain. The button handler
+   * aborts it when the player taps slam mid-round — `reelSet.skip()` is a
+   * no-op between refills (engine idle), so the engine alone can't end
+   * the chain. AbortController on runCascade ends it at the next await
+   * boundary AND slams an in-flight refill. Reset per round.
    */
-  let pendingSkip = false;
+  let cascadeAbort: AbortController | null = null;
 
   function handleSpinPress(): void {
     if (isSpinning) {
-      // Engine spinning → slam now. Otherwise queue, then fire as soon as
-      // the next spin/refill is in flight.
+      // Slam in-flight (if any) AND cancel the cascade chain so the round
+      // exits even if the engine is currently between refills.
       try {
         if (reelSet.isSpinning) reelSet.skip();
-        else pendingSkip = true;
       } catch { /* idle */ }
+      cascadeAbort?.abort();
       return;
     }
-    pendingSkip = false;
     handleSpin().catch((err) => {
       // eslint-disable-next-line no-console
       console.error('cascade-tumble: handleSpin failed', err);
       isSpinning = false;
-      pendingSkip = false;
+      cascadeAbort = null;
       ui.setSpinning(false);
     });
   }
@@ -296,7 +282,7 @@ async function main(): Promise<void> {
   // a stable "round in progress" flag to detect round completion.
   (globalThis as unknown as { __CASCADE_TUMBLE?: unknown }).__CASCADE_TUMBLE = {
     get busy(): boolean { return isSpinning; },
-    get pendingSkip(): boolean { return pendingSkip; },
+    get pendingSkip(): boolean { return !!cascadeAbort?.signal.aborted; },
   };
 
   // Quick number-roll. Runs in the gap between win-fade and refill drop-in,
@@ -326,59 +312,44 @@ async function main(): Promise<void> {
     // Initial drop reveals left-to-right (per-reel stagger) — pairs with
     // the in-reel row stagger (bottomToTop default) to give the canonical
     // "bottom-left first, top-right last" cascading reveal.
+    cascadeAbort = new AbortController();
+
     reelSet.setDropOrder('ltr');
     const spinDone = reelSet.spin();      // triggers cascade:fall on every reel
-    // Consume any skip queued before the engine started — `requestSkip()`
-    // holds until `setResult()` arrives, then slams cleanly on the result.
-    if (pendingSkip) {
-      pendingSkip = false;
-      reelSet.requestSkip();
-    }
     const grid = await mockServer.spin();  // server can take any duration
     reelSet.setResult(grid);               // resolves wait → place → dropIn
     await spinDone;
 
-    // ─── MOMENT B: cascade refill loop ───────────────────────────
-    let current = grid;
-    let multiplier = 1;
-    let cascadeLevel = 0;
+    // ─── MOMENT B: cascade refill loop via reelSet.runCascade ────
+    // The library owns the detect → destroy → pause → refill orchestration.
+    // We supply: (1) win detection, (2) next-grid computation, (3) the
+    // per-cascade multiplier + UI side effects. `cascade:complete` fires
+    // at the end automatically; AbortController ends the round cleanly
+    // when the player slams between refills (where reelSet.skip() is a no-op).
+    //
+    // Cascade refills: every reel drops simultaneously — the canonical
+    // commercial pattern. ('ltr'/'rtl' on a refill reads as a fresh
+    // reveal, which fights the player's expectation of a quick refill.)
+    reelSet.setDropOrder('all');
+
     let totalWin = 0;
+    const { chainLength } = await reelSet.runCascade({
+      detectWinners: (g) => detectWinners(g),
+      nextGrid: (prev, winners) => mockServer.cascade(prev, [...winners]),
+      pauseAfterDestroyMs: PAUSE_AFTER_REMOVAL_MS,
+      destroyOptions: { dim: 0.35 },
+      signal: cascadeAbort.signal,
+      onCascade: async ({ chain, winners }) => {
+        totalWin += winners.length * 5 * chain;
+        ui.showWin(totalWin);
+        // Bump the multiplier as the symbols leave the frame. The player
+        // reads the new value while staring at the holes.
+        await tickMultiplier(chain + 1);
+      },
+    });
 
-    while (true) {
-      const winners = detectWinners(current);
-      if (winners.length === 0) break;
-
-      cascadeLevel += 1;
-      totalWin += winners.length * 5 * cascadeLevel;
-      ui.showWin(totalWin);
-
-      await destroyWinners(reelSet, winners);
-      await wait(PAUSE_AFTER_REMOVAL_MS);
-
-      // Bump the multiplier as the symbols leave the frame. The player
-      // reads the new value while staring at the holes.
-      multiplier += 1;
-      await tickMultiplier(multiplier);
-
-      const next = await mockServer.cascade(current, winners);
-      // Cascade refill: every reel drops simultaneously — the most common
-      // pattern across commercial cascade slots. ('ltr'/'rtl' on the
-      // refill reads as "the slot is doing a fresh reveal", which fights
-      // the player's expectation of a quick refill.)
-      reelSet.setDropOrder('all');
-      const refillDone = reelSet.refill({ winners, grid: next });
-      // Tap during the between-refill pause? Fire skip now so this refill
-      // (and every subsequent one in the round) auto-slams.
-      if (pendingSkip) {
-        pendingSkip = false;
-        try { reelSet.skip(); } catch { /* idle */ }
-      }
-      await refillDone;
-      current = next;
-    }
-
-    if (cascadeLevel === 0) multiplierEl.textContent = '';
-    pendingSkip = false;
+    if (chainLength === 0) multiplierEl.textContent = '';
+    cascadeAbort = null;
     isSpinning = false;
     ui.setSpinning(false);
   }

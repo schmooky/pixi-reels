@@ -1,6 +1,6 @@
 import { Application, Graphics } from 'pixi.js';
 import { ReelSetBuilder, SpeedPresets, enableDebug } from 'pixi-reels';
-import type { ReelSet } from 'pixi-reels';
+import type { ReelSet, TumbleConfig } from 'pixi-reels';
 import { gsap } from 'gsap';
 import { BlockSymbol } from './BlockSymbol.ts';
 import { BlurSpriteSymbol } from '../../../../examples/shared/BlurSpriteSymbol.ts';
@@ -28,6 +28,17 @@ export interface MiniConfig {
     | Array<{ id: string; color: number; glyph?: string }>
     | { kind: 'sprite'; ids: string[]; blurOnSpin?: boolean };
   weights?: Record<string, number>;
+  /**
+   * Opt-in tumble cascade phases — needed for any recipe that calls
+   * `reelSet.refill(...)` or `reelSet.runCascade(...)`. Pass `true` for
+   * library defaults, or a `TumbleConfig` to customise fall / dropIn.
+   *
+   * NOTE: enabling this flips the builder's default spin mode to
+   * `'cascade'`. Recipes that combine a strip-spin first round with
+   * a cascade chain should pass `spin({ mode: 'standard' })` for the
+   * initial spin.
+   */
+  tumble?: true | TumbleConfig;
 }
 
 export interface MiniHandle {
@@ -92,7 +103,7 @@ export async function mountMiniReels(
     if (s.glyph) glyphs[s.id] = s.glyph;
   }
 
-  const reelSet = new ReelSetBuilder()
+  const builder = new ReelSetBuilder()
     .reels(cfg.reelCount)
     .visibleSymbols(cfg.visibleRows)
     .symbolSize(size.width, size.height)
@@ -116,8 +127,13 @@ export async function mountMiniReels(
     .weights(cfg.weights ?? {})
     .speed('normal', SpeedPresets.NORMAL)
     .speed('turbo', SpeedPresets.TURBO)
-    .ticker(app.ticker)
-    .build();
+    .ticker(app.ticker);
+
+  if (cfg.tumble) {
+    builder.tumble(cfg.tumble === true ? undefined : cfg.tumble);
+  }
+
+  const reelSet = builder.build();
 
   // Blur-on-spin wiring (sprite mode only, on by default).
   if (spriteCfg && (spriteCfg.blurOnSpin ?? true)) {

@@ -17,7 +17,6 @@ import {
   type SymbolData,
 } from 'pixi-reels';
 import { transform as sucraseTransform } from 'sucrase';
-import { runCascade, tumbleToGrid, diffCells } from '../../../../examples/shared/cascadeLoop.ts';
 import { getShare, ShareApiError } from '@/lib/studio/share/api.js';
 import { openEnvelope } from '@/lib/studio/share/crypto.js';
 import { decodePayload, verifyPayloadHashes } from '@/lib/studio/share/payload.js';
@@ -311,9 +310,6 @@ function SharedStudio({ config, assets, codeAccessible }: SharedStudioProps): JS
         'pickWeighted',
         'gsap',
         'PIXI',
-        'runCascade',
-        'tumbleToGrid',
-        'diffCells',
         factorySource,
       );
       built = (await factory(
@@ -329,9 +325,6 @@ function SharedStudio({ config, assets, codeAccessible }: SharedStudioProps): JS
         pickWeighted,
         gsap,
         PIXI,
-        runCascade,
-        tumbleToGrid,
-        diffCells,
       )) as typeof built;
     } catch (e) {
       setError(`Runtime error: ${(e as Error).message}`);

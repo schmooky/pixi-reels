@@ -29,23 +29,6 @@ import {
   buildSpineMap,
 } from '../../../../examples/shared/generatedSpineLoader.ts';
 import { transform as sucraseTransform } from 'sucrase';
-import { runCascade, tumbleToGrid, diffCells } from '../../../../examples/shared/cascadeLoop.ts';
-
-/**
- * Shared "destroy winners" helper for tumble recipes — kept in lock-step
- * with `RecipeRunner.tsx` so a recipe runs identically in both runners.
- * Defers to each symbol's own `playDestroy()` for art-appropriate effects.
- */
-async function destroyWinners(
-  reelSet: ReelSet,
-  winners: ReadonlyArray<{ reel: number; row: number }>,
-): Promise<void> {
-  await Promise.all(winners.map((w) => {
-    const sym = reelSet.reels[w.reel].getSymbolAt(w.row);
-    sym.view.zIndex = 1000;
-    return sym.playDestroy({ direction: w.reel % 2 === 0 ? 1 : -1 });
-  }));
-}
 
 class EmptySymbol extends ReelSymbol {
   protected onActivate(_symbolId: string): void {}
@@ -68,7 +51,6 @@ const DEFAULT_CODE = `// ─── pixi-reels sandbox ────────�
 //   - SYMBOL_IDS   -- string[] of every available prototype atlas id
 //   - pickWeighted(weights) -- weighted random sampler
 //   - gsap, PIXI   -- animation + full PixiJS namespace
-//   - runCascade, tumbleToGrid, diffCells -- cascade sequence helpers
 //   - EmptySymbol  -- blank ReelSymbol subclass (for hold-and-win patterns)
 //
 // Return { reelSet, nextResult? } — \`nextResult()\` is called each spin.
@@ -259,8 +241,7 @@ export default function Sandbox() {
         'ReelSetBuilder', 'SpeedPresets', 'BlurSpriteSymbol', 'SpriteSymbol', 'AnimatedSpriteSymbol',
         'WinPresenter',
         'app', 'textures', 'blurTextures', 'SYMBOL_IDS', 'pickWeighted', 'gsap', 'PIXI',
-        'runCascade', 'tumbleToGrid', 'diffCells', 'EmptySymbol', 'ReelSymbol',
-        'destroyWinners',
+        'EmptySymbol', 'ReelSymbol',
         'RectMaskStrategy', 'SharedRectMaskStrategy',
         'CardSymbol', 'CARD_DECK', 'WILD_CARD',
         'SpineReelSymbol', 'loadGeneratedSpines', 'buildSpineMap',
@@ -272,8 +253,7 @@ export default function Sandbox() {
         ReelSetBuilder, SpeedPresets, BlurSpriteSymbol, SpriteSymbol, AnimatedSpriteSymbol,
         WinPresenter,
         env.app, env.textures, env.blurTextures, env.SYMBOL_IDS, pickWeighted, gsap, PIXI,
-        runCascade, tumbleToGrid, diffCells, EmptySymbol, ReelSymbol,
-        destroyWinners,
+        EmptySymbol, ReelSymbol,
         RectMaskStrategy, SharedRectMaskStrategy,
         CardSymbol, CARD_DECK, WILD_CARD,
         SpineReelSymbol, loadGeneratedSpines, buildSpineMap,

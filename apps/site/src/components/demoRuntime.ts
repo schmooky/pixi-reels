@@ -448,36 +448,31 @@ export async function mountMechanic(
       api.setStatus(`Landed · ${summarize(result.symbols)}`);
 
       // Tumble/cascade loop — runs ONLY when the mechanic enabled `.tumble()`.
-      // Uses `reelSet.refill()` directly (the latest cascade API) — no shared
-      // `runCascade` helper or scripted-stages cheat needed. Detects 3+-in-a-
-      // row left-anchored winners per row, applies gravity, and refills until
-      // the grid has no more wins.
+      // Uses the library's `reelSet.runCascade(...)` orchestrator: it owns
+      // the detect → destroy → pause → refill loop and emits `cascade:complete`
+      // at the end. We supply the game rules (3-in-a-row left-anchored
+      // winner detection + a gravity-correct nextGrid).
       if (cfg.tumble) {
-        let current = result.symbols;
-        let level = 0;
-        while (level < 8) {
-          const winners = detectWinners(current, cfg.reelCount, cfg.visibleRows);
-          if (winners.length === 0) break;
-          level++;
-          api.toast(`Cascade × ${level}`, 'win');
-          // Symbol-side destruction (the library override on SpineReelSymbol
-          // routes to spine `out`; sprite/card symbols use the GSAP implode).
-          await Promise.all(winners.map((w) =>
-            reelSet.reels[w.reel].getSymbolAt(w.row).playDestroy({
-              direction: w.reel % 2 === 0 ? 1 : -1,
-            })
-          ));
-          const next = cascadeNextGrid(current, winners, allSymbolIds, cfg.weights ?? {});
-          reelSet.setDropOrder('all');
-          const refillDone = reelSet.refill({ winners, grid: next });
-          if (pendingSkip) {
-            pendingSkip = false;
-            try { reelSet.skip(); } catch { /* idle */ }
-          }
-          await refillDone;
-          current = next;
+        reelSet.setDropOrder('all');
+        const { chainLength } = await reelSet.runCascade({
+          detectWinners: (grid) => detectWinners(grid, cfg.reelCount, cfg.visibleRows),
+          nextGrid: (prev, winners) =>
+            cascadeNextGrid(prev, [...winners], allSymbolIds, cfg.weights ?? {}),
+          onCascade: ({ chain }) => {
+            api.toast(`Cascade × ${chain}`, 'win');
+            // Honor a queued slam tap that landed while user-code was
+            // between cascades: ask the engine to slam every remaining
+            // refill in this round.
+            if (pendingSkip) {
+              pendingSkip = false;
+              try { reelSet.skip(); } catch { /* idle */ }
+            }
+          },
+          maxChain: 8,
+        });
+        if (chainLength > 0) {
+          api.setStatus(`Cascade done · ${chainLength} stage${chainLength === 1 ? '' : 's'}`);
         }
-        if (level > 0) api.setStatus(`Cascade done · ${level} stage${level === 1 ? '' : 's'}`);
       }
 
       if (cfg.onLanded) {
