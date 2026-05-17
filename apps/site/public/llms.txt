@@ -6,7 +6,7 @@ Site: https://pixi-reels.schmooky.dev
 Repo: https://github.com/schmooky/pixi-reels
 Package: https://www.npmjs.com/package/pixi-reels
 
-Generated: 2026-05-17T02:50:49.284Z
+Generated: 2026-05-17T04:08:53.770Z
 
 ## Quick start
 
@@ -188,7 +188,7 @@ Steps:
   - Spin — symbols drop in left-to-right, row by row, with bounce
   - reelSet.runCascade({ detectWinners, nextGrid }) owns the destroy → refill loop
   - onCascade fires per refill — bump the multiplier there
-  - cascade:complete tells you the chain ended
+  - cascade:round:end tells you the chain ended
 
 ### Cascade pops with WinPresenter
 URL: https://pixi-reels.schmooky.dev/recipes/cascade-winpresenter/
@@ -435,7 +435,7 @@ APIs: reelSet.spin, ReelSet.runCascade, ReelSet.destroySymbols, ReelSet.refill
 Steps:
   - Round 1: a normal spin lands the initial grid
   - reelSet.runCascade({ detectWinners, nextGrid }) owns the pop-fall-refill loop for every chain stage
-  - cascade:complete fires once when no more winners are found
+  - cascade:round:end fires once when no more winners are found
 
 ### Big symbols with Spine
 URL: https://pixi-reels.schmooky.dev/recipes/spine-big-symbols/
@@ -3923,7 +3923,7 @@ return {
 
     // Cascade chain — driven by `reelSet.runCascade({...})`. The library
     // owns the detect → destroy → pause → refill loop and emits
-    // `cascade:complete` when no more winners are found. Game-rule
+    // `cascade:round:end` when no more winners are found. Game-rule
     // callbacks: `detectWinners` (cells whose symbol id matches the
     // current trigger) and `nextGrid` (post-gravity grid via the helper).
     reelSet.setDropOrder('all');

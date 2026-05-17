@@ -25,7 +25,7 @@ export interface CascadePlacePhaseConfig {
  * (Moment A) or right at the start of `refill()` (Moment B).
  *
  * Mechanically tiny: it calls `reel.placeSymbols(visible)` to swap visible
- * symbol identities, then fires `cascade:place:done`. Listeners on that
+ * symbol identities, then fires `cascade:place:end`. Listeners on that
  * event (badges, decorations, multiplier overlays) run synchronously
  * BEFORE `CascadeDropInPhase` starts the drop tweens — so anything you
  * attach to a new symbol falls WITH it, not after landing.
@@ -63,7 +63,7 @@ export class CascadePlacePhase extends ReelPhase<CascadePlacePhaseConfig> {
     // reuse can leak the post-fall y onto same-id replacements when
     // `_placeSymbolView` runs BEFORE the motion snap inside placeSymbols.
     // Calling snapToGrid here guarantees every view sits at its grid Y
-    // before listeners on `cascade:place:done` (or CascadeDropInPhase) read
+    // before listeners on `cascade:place:end` (or CascadeDropInPhase) read
     // them.
     reel.snapToGrid();
     reel.notifySpinEnd();
@@ -86,7 +86,7 @@ export class CascadePlacePhase extends ReelPhase<CascadePlacePhaseConfig> {
       placedSymbols.push(sym);
     }
 
-    events.emit('cascade:place:done', {
+    events.emit('cascade:place:end', {
       reelIndex: reel.reelIndex,
       placedSymbols,
       isInitial: this._config.initial,

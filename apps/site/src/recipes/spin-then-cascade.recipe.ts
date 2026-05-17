@@ -89,7 +89,7 @@ return {
 
     // Cascade chain — driven by `reelSet.runCascade({...})`. The library
     // owns the detect → destroy → pause → refill loop and emits
-    // `cascade:complete` when no more winners are found. Game-rule
+    // `cascade:round:end` when no more winners are found. Game-rule
     // callbacks: `detectWinners` (cells whose symbol id matches the
     // current trigger) and `nextGrid` (post-gravity grid via the helper).
     reelSet.setDropOrder('all');

@@ -39,7 +39,7 @@ function buildTumbleHarness(initialFrame: string[][]): Harness {
 }
 
 describe('ReelSet.runCascade', () => {
-  it('returns chainLength=0 + fires cascade:complete when there are no wins', async () => {
+  it('returns chainLength=0 + fires cascade:round:end when there are no wins', async () => {
     const { reelSet, destroy } = buildTumbleHarness([
       ['a', 'b', 'a'],
       ['b', 'a', 'b'],
@@ -47,7 +47,7 @@ describe('ReelSet.runCascade', () => {
     ]);
 
     const completeEvents: Array<{ chainLength: number; totalWinners: number; wasSkipped: boolean }> = [];
-    reelSet.events.on('cascade:complete', (info) => completeEvents.push({
+    reelSet.events.on('cascade:round:end', (info) => completeEvents.push({
       chainLength: info.chainLength,
       totalWinners: info.totalWinners,
       wasSkipped: info.wasSkipped,
@@ -214,7 +214,7 @@ describe('ReelSet.runCascade', () => {
     destroy();
   });
 
-  it('emits cascade:roundStart once, then chain:start/end per stage, then cascade:complete', async () => {
+  it('emits cascade:round:start once, then chain:start/end per stage, then cascade:round:end', async () => {
     const { reelSet, destroy } = buildTumbleHarness([
       ['a', 'b', 'c'],
       ['a', 'b', 'c'],
@@ -222,10 +222,10 @@ describe('ReelSet.runCascade', () => {
     ]);
 
     const events: string[] = [];
-    reelSet.events.on('cascade:roundStart', () => events.push('roundStart'));
+    reelSet.events.on('cascade:round:start', () => events.push('round:start'));
     reelSet.events.on('cascade:chain:start', ({ chain }) => events.push(`chain:start:${chain}`));
     reelSet.events.on('cascade:chain:end',   ({ chain }) => events.push(`chain:end:${chain}`));
-    reelSet.events.on('cascade:complete',    () => events.push('complete'));
+    reelSet.events.on('cascade:round:end',   () => events.push('round:end'));
 
     let calls = 0;
     await reelSet.runCascade({
@@ -240,17 +240,17 @@ describe('ReelSet.runCascade', () => {
     });
 
     expect(events).toEqual([
-      'roundStart',
+      'round:start',
       'chain:start:1',
       'chain:end:1',
       'chain:start:2',
       'chain:end:2',
-      'complete',
+      'round:end',
     ]);
     destroy();
   });
 
-  it('roundStart fires before any detectWinners call, complete fires after the last refill', async () => {
+  it('round:start fires before any detectWinners call, round:end fires after the last refill', async () => {
     const { reelSet, destroy } = buildTumbleHarness([
       ['a', 'b', 'c'],
       ['a', 'b', 'c'],
@@ -258,8 +258,8 @@ describe('ReelSet.runCascade', () => {
     ]);
 
     const trace: string[] = [];
-    reelSet.events.on('cascade:roundStart', () => trace.push('roundStart'));
-    reelSet.events.on('cascade:complete',   () => trace.push('complete'));
+    reelSet.events.on('cascade:round:start', () => trace.push('round:start'));
+    reelSet.events.on('cascade:round:end',   () => trace.push('round:end'));
 
     await reelSet.runCascade({
       detectWinners: () => { trace.push('detect'); return []; },
@@ -267,7 +267,7 @@ describe('ReelSet.runCascade', () => {
       pauseAfterDestroyMs: 0,
     });
 
-    expect(trace).toEqual(['roundStart', 'detect', 'complete']);
+    expect(trace).toEqual(['round:start', 'detect', 'round:end']);
     destroy();
   });
 
@@ -338,7 +338,7 @@ describe('ReelSet.runCascade', () => {
   });
 });
 
-describe('cascade:place:done payload', () => {
+describe('cascade:place:end payload', () => {
   it('reports isInitial=true and empty winnerRows on the initial drop', async () => {
     // Test the phase directly so we don't depend on a real gsap ticker
     // driving the fall-phase delayed-calls. The phase is a pure unit
@@ -355,7 +355,7 @@ describe('cascade:place:done payload', () => {
 
     const events: Array<{ isInitial: boolean; winnerRows: readonly number[] }> = [];
     const localBus = new EventEmitter<import('../../src/events/ReelEvents.js').ReelSetEvents>();
-    localBus.on('cascade:place:done', (info) => events.push({
+    localBus.on('cascade:place:end', (info) => events.push({
       isInitial: info.isInitial,
       winnerRows: info.winnerRows,
     }));
@@ -386,7 +386,7 @@ describe('cascade:place:done payload', () => {
 
     const events: Array<{ isInitial: boolean; winnerRows: readonly number[] }> = [];
     const localBus = new EventEmitter<import('../../src/events/ReelEvents.js').ReelSetEvents>();
-    localBus.on('cascade:place:done', (info) => events.push({
+    localBus.on('cascade:place:end', (info) => events.push({
       isInitial: info.isInitial,
       winnerRows: info.winnerRows,
     }));

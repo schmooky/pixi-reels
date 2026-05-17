@@ -10,7 +10,7 @@ The library handles both via three named phases — `cascade:fall`, `cascade:pla
 - **`reelSet.spin()` + `setResult(grid)`** — Moment A. Returns a promise that resolves on `spin:complete`.
 - **`reelSet.destroySymbols(cells)`** — deferred to each symbol's `playDestroy()`. Sprite implode by default; Spine subclasses can override to play a disintegration animation.
 - **`reelSet.refill({ winners, grid })`** — Moment B for one cascade level.
-- **`reelSet.runCascade({ detectWinners, nextGrid })`** — the canonical detect → destroy → pause → refill loop, with `cascade:complete` fired when the chain ends. Use this in 95% of cases.
+- **`reelSet.runCascade({ detectWinners, nextGrid })`** — the canonical detect → destroy → pause → refill loop, with `cascade:round:start` fired on entry and `cascade:round:end` (carrying the summary) when the chain ends. Use this in 95% of cases.
 
 Animation timings are config; every other behaviour (badges, multipliers, SFX) is user code via `cascade:*` events.
 
@@ -62,7 +62,7 @@ async function play() {
   await spinDone;
 
   // Moment B — runCascade owns the detect → destroy → pause → refill
-  // loop and fires `cascade:complete` when the chain ends.
+  // loop and fires `cascade:round:end` when the chain ends.
   await reelSet.runCascade({
     detectWinners: (grid) => detectWinners(grid),
     nextGrid:      (_, winners) => server.cascade(winners),
@@ -562,14 +562,19 @@ reelSet.events.on('cascade:dropIn:start', () => audio.unduck());
 
 | Event | When | Payload |
 |---|---|---|
+| `cascade:round:start` | Fired once at the top of `runCascade(...)`, before the first `detectWinners` call. **Not** emitted when you compose the loop yourself with bare `refill()` calls. | `{ initialGrid }` |
+| `cascade:round:end` | Mirror of `cascade:round:start`. Fired once after the detect → destroy → refill loop exits. Carries the same shape as `RunCascadeResult`. | `{ chainLength, totalWinners, finalGrid, wasSkipped }` |
+| `cascade:chain:start` | A single chain stage opens — `detectWinners` returned a non-empty list, destroy is about to run. `chain` is 1-indexed. | `{ chain, winners, currentGrid }` |
+| `cascade:chain:end` | A single chain stage closes — both destroy AND refill drop-in finished. About to loop back to `detectWinners`. | `{ chain, winners, nextGrid }` |
 | `cascade:fall:start` | A reel's fall-out begins (Moment A only — refills skip fall). | `{ reelIndex }` |
 | `cascade:fall:symbol` | Each symbol's fall-out tween is about to start. | `{ symbol, view, reelIndex, rowIndex, duration, ease, distance }` |
 | `cascade:fall:end` | A reel's last fall tween settled. | `{ reelIndex }` |
-| `cascade:place:done` | New identities placed AND snapped to grid, **before** drop-in starts. Canonical spot for badge / decoration application. `isInitial: true` on Moment A; on Moment B `winnerRows` lists the row indices whose old symbols were cleared (so listeners can skip survivors). | `{ reelIndex, placedSymbols, isInitial, winnerRows }` |
+| `cascade:place:end` | New identities placed AND snapped to grid, **before** drop-in starts. Canonical spot for badge / decoration application. Place has no `:start` because it's a synchronous swap. `isInitial: true` on Moment A; on Moment B `winnerRows` lists the row indices whose old symbols were cleared (so listeners can skip survivors). | `{ reelIndex, placedSymbols, isInitial, winnerRows }` |
 | `cascade:dropIn:start` | A reel's drop-in begins. | `{ reelIndex }` |
 | `cascade:dropIn:symbol` | Each symbol's drop-in tween is about to start. `offsetRows` is the number of cells this symbol traverses (1 for top-row refills, more for survivors sliding past larger holes). | `{ symbol, view, reelIndex, rowIndex, duration, ease, offsetRows }` |
 | `cascade:dropIn:end` | A reel's last drop-in tween settled. | `{ reelIndex }` |
-| `cascade:complete` | Fired once by `reelSet.runCascade(...)` after the detect → destroy → refill loop exits. Does **not** fire when you compose the loop yourself with bare `refill()` calls. | `{ chainLength, totalWinners, finalGrid, wasSkipped }` |
+| `cascade:destroy:start` | `destroySymbols(cells)` is about to start. Fires from every call — both direct and inside `runCascade`. Empty-batch calls do not emit. | `{ cells }` |
+| `cascade:destroy:end` | `destroySymbols(cells)` finished — every `playDestroy()` resolved and the viewport dim (if any) was restored. | `{ cells }` |
 
 ---
 

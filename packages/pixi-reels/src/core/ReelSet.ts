@@ -2,7 +2,7 @@ import { Container } from 'pixi.js';
 import type { Disposable } from '../utils/Disposable.js';
 import type { ReelSetInternalConfig, CellBounds, SymbolData, SpinOptions } from '../config/types.js';
 import { EventEmitter } from '../events/EventEmitter.js';
-import type { ReelSetEvents, SpinResult, } from '../events/ReelEvents.js';
+import type { ReelSetEvents, SpinResult, RunCascadeResult as RunCascadeResultBase } from '../events/ReelEvents.js';
 import { Reel, } from './Reel.js';
 import { ReelViewport } from './ReelViewport.js';
 import { SpinController } from '../spin/SpinController.js';
@@ -82,18 +82,12 @@ export interface DestroySymbolsOptions {
 
 /**
  * Summary returned by {@link ReelSet.runCascade}. Also delivered to
- * listeners on the `cascade:complete` event.
+ * listeners on the `cascade:round:end` event.
+ *
+ * Aliased from the canonical definition in `events/ReelEvents.ts` so the
+ * event and the method return type share one shape.
  */
-export interface RunCascadeResult {
-  /** Number of refill stages that actually ran (0 = the initial grid had no wins). */
-  chainLength: number;
-  /** Sum of `winners.length` across every refill stage. */
-  totalWinners: number;
-  /** Grid after the last refill (or the input grid if `chainLength === 0`). */
-  finalGrid: string[][];
-  /** True when the chain ended early because the player slammed mid-cascade. */
-  wasSkipped: boolean;
-}
+export type RunCascadeResult = RunCascadeResultBase;
 
 /**
  * Options for {@link ReelSet.runCascade}. The two required callbacks
@@ -132,11 +126,17 @@ export interface RunCascadeOptions {
    * starts. Use it to bump multipliers, play SFX, run "winners gone"
    * UI animations. Return a promise to delay the refill (e.g. for a
    * number-roll animation).
+   *
+   *   - `chain` — same 1-indexed chain stage as `cascade:chain:start`.
+   *   - `winners` — cells that were just destroyed.
+   *   - `currentGrid` — the grid as it stood at `cascade:chain:start`
+   *     (same reference). The symbols at `winners` are visually gone but
+   *     the grid array still names them — `nextGrid` will replace them.
    */
   onCascade?: (info: {
     chain: number;
     winners: readonly Cell[];
-    previousGrid: string[][];
+    currentGrid: string[][];
   }) => Promise<void> | void;
   /**
    * Milliseconds to wait between win-destroy completing and the next
@@ -458,7 +458,10 @@ export class ReelSet extends Container implements Disposable {
    * const next = await server.cascade(winners);
    * await reelSet.refill({ winners, grid: next });
    */
-  async refill(opts: { winners: Cell[]; grid: string[][] | ColumnTarget[] }): Promise<SpinResult> {
+  async refill(opts: {
+    winners: ReadonlyArray<Cell>;
+    grid: string[][] | ColumnTarget[];
+  }): Promise<SpinResult> {
     return this._spinController.refill(opts);
   }
 
@@ -551,7 +554,7 @@ export class ReelSet extends Container implements Disposable {
    * detect winners → destroy → pause → refill → emit — until
    * `detectWinners` returns an empty list (or `maxChain` is hit, or the
    * player slammed via `skip()`). Resolves with the final grid and a
-   * summary; also fires `cascade:complete` on the event bus.
+   * summary; also fires `cascade:round:end` on the event bus.
    *
    * The orchestration is library-owned; the **game rules** (what counts
    * as a winner, how the next grid is computed) stay in your callbacks.
@@ -573,21 +576,21 @@ export class ReelSet extends Container implements Disposable {
    * Composes with everything else in the library:
    *  - `setDropOrder(...)` is honoured on every refill in the chain — set
    *    it before `runCascade` and the same order applies to every drop.
-   *  - `cascade:fall:symbol`, `cascade:place:done`, `cascade:dropIn:symbol`
-   *    fire on each refill in addition to the final `cascade:complete`.
+   *  - `cascade:fall:symbol`, `cascade:place:end`, `cascade:dropIn:symbol`
+   *    fire on each refill in addition to the final `cascade:round:end`.
    *  - `reelSet.skip()` ends the chain immediately; the final
-   *    `cascade:complete` payload reports `wasSkipped: true`.
+   *    `cascade:round:end` payload reports `wasSkipped: true`.
    *
    * Event order, per call:
-   *   1. `cascade:roundStart` — round opened (fires once, before `detectWinners`).
+   *   1. `cascade:round:start` — round opened (fires once, before `detectWinners`).
    *   2. For each chain stage with winners:
    *      `cascade:chain:start` →
    *        `cascade:destroy:start` → (destroy tweens) → `cascade:destroy:end` →
    *        `onCascade` callback →
-   *        pause → next refill (`cascade:fall:*` is skipped; `cascade:place:done`
+   *        pause → next refill (`cascade:fall:*` is skipped; `cascade:place:end`
    *        + `cascade:dropIn:*` fire per reel) →
    *      `cascade:chain:end`.
-   *   3. `cascade:complete` — round closed (fires once, always).
+   *   3. `cascade:round:end` — round closed (fires once, always).
    *
    * Requires `.tumble(...)` on the builder (same as `refill()`).
    */
@@ -617,7 +620,7 @@ export class ReelSet extends Container implements Disposable {
     let totalWinners = 0;
     let current = this.getVisibleGrid();
 
-    this._events.emit('cascade:roundStart', { initialGrid: current });
+    this._events.emit('cascade:round:start', { initialGrid: current });
 
     try {
       while (chainLength < maxChain && !wasSkipped) {
@@ -636,7 +639,7 @@ export class ReelSet extends Container implements Disposable {
         if (wasSkipped) break;
 
         if (opts.onCascade) {
-          await opts.onCascade({ chain: stage, winners, previousGrid: current });
+          await opts.onCascade({ chain: stage, winners, currentGrid: current });
           if (wasSkipped) break;
         }
 
@@ -665,13 +668,13 @@ export class ReelSet extends Container implements Disposable {
       }
     }
 
-    const summary = {
+    const summary: RunCascadeResult = {
       chainLength,
       totalWinners,
       finalGrid: current,
       wasSkipped,
     };
-    this._events.emit('cascade:complete', summary);
+    this._events.emit('cascade:round:end', summary);
     return summary;
   }
 

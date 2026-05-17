@@ -8,9 +8,9 @@ Cascade DX pass: collapse ~30 lines of slot orchestration to ~3 with a canonical
 
 **`reelSet.runCascade({ detectWinners, nextGrid, onCascade?, pauseAfterDestroyMs?, maxChain?, destroyOptions?, signal? })`** — the canonical cascade chain orchestration. Loops detect → destroy → pause → refill until `detectWinners` returns `[]`. Caller supplies the game-rules callbacks; the library owns the timing. Both callbacks may be `async`. Pass `signal: AbortSignal` for caller-driven cancellation (the right shape for "player tapped slam between refills," where `reelSet.skip()` is a no-op because the engine is idle).
 
-**`cascade:complete`** event — fires once after `runCascade` exits, with `{ chainLength, totalWinners, finalGrid, wasSkipped }`. Single hook for "the round is over."
+**`cascade:round:end`** event — fires once after `runCascade` exits, carrying `RunCascadeResult` (`{ chainLength, totalWinners, finalGrid, wasSkipped }`). Single hook for "the round is over." Paired with `cascade:round:start`.
 
-**`cascade:place:done`** payload now includes `isInitial: boolean` and `winnerRows: readonly number[]` so decoration listeners can tell new arrivals from survivors sliding into a hole.
+**`cascade:place:end`** payload now includes `isInitial: boolean` and `winnerRows: readonly number[]` so decoration listeners can tell new arrivals from survivors sliding into a hole.
 
 Also exports the named option / result types — `DestroySymbolsOptions`, `RunCascadeOptions`, `RunCascadeResult` — so apps can pass typed config objects around or extend them in adapter layers.
 

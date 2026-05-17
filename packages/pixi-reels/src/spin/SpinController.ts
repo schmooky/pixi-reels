@@ -332,7 +332,7 @@ export class SpinController implements Disposable {
    * was not configured on the builder.
    */
   async refill(opts: {
-    winners: Cell[];
+    winners: ReadonlyArray<Cell>;
     grid: string[][] | ColumnTarget[];
   }): Promise<SpinResult> {
     if (this._isSpinning) {

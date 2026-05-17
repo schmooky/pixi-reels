@@ -21,6 +21,23 @@ export interface SpinResult {
   duration: number;
 }
 
+/**
+ * Summary returned by `reelSet.runCascade(...)` and delivered on
+ * `cascade:round:end`. Defined here (rather than in `core/ReelSet.ts`)
+ * so the event signature can reference it directly — `core/ReelSet.ts`
+ * re-exports the type under the same name.
+ */
+export interface RunCascadeResult {
+  /** Number of refill stages that actually ran (0 = the initial grid had no wins). */
+  chainLength: number;
+  /** Sum of `winners.length` across every refill stage. */
+  totalWinners: number;
+  /** Grid after the last refill (or the input grid if `chainLength === 0`). */
+  finalGrid: string[][];
+  /** True when the chain ended early because the player slammed mid-cascade. */
+  wasSkipped: boolean;
+}
+
 /** Events emitted by a ReelSet. */
 export interface ReelSetEvents extends Record<string, unknown[]> {
   'spin:start': [];
@@ -136,6 +153,9 @@ export interface ReelSetEvents extends Record<string, unknown[]> {
    * tween starts — the canonical spot to apply per-symbol decorations
    * (multiplier badges, sticky markers) so they fall WITH the symbol.
    *
+   * `cascade:place` is a single-moment placement (no animation), so it has
+   * no `:start` counterpart — only this `:end`.
+   *
    *   - `isInitial: true` on Moment A (after a `spin()` click). Every visible
    *     row is "new" — `winnerRows` is `[]` because there's no prior grid.
    *   - `isInitial: false` on Moment B (a `refill()`). `winnerRows` lists the
@@ -144,7 +164,7 @@ export interface ReelSetEvents extends Record<string, unknown[]> {
    *     holes. Pair with `computeDropOffsets` (or just walk `winnerRows`
    *     yourself) if you need to decorate only new arrivals.
    */
-  'cascade:place:done': [info: {
+  'cascade:place:end': [info: {
     reelIndex: number;
     placedSymbols: readonly ReelSymbol[];
     isInitial: boolean;
@@ -175,7 +195,7 @@ export interface ReelSetEvents extends Record<string, unknown[]> {
    *
    * Fires once at the top of `runCascade`, BEFORE the first `detectWinners`
    * call — the canonical "a cascade round is now in flight" signal. Pair
-   * with `cascade:complete` for "round started" / "round ended" UI flips
+   * with `cascade:round:end` for "round started" / "round ended" UI flips
    * (HUD lock, music bus enable) without polling `isSpinning` (which
    * oscillates between refills in cascade mode).
    *
@@ -185,7 +205,7 @@ export interface ReelSetEvents extends Record<string, unknown[]> {
    * NOT fired when you compose the loop yourself with bare `refill()`
    * calls — `runCascade` owns the event.
    */
-  'cascade:roundStart': [info: { initialGrid: string[][] }];
+  'cascade:round:start': [info: { initialGrid: string[][] }];
   /**
    * Tumble cascade: a single chain stage just started.
    *
@@ -237,29 +257,21 @@ export interface ReelSetEvents extends Record<string, unknown[]> {
    */
   'cascade:destroy:end': [info: { cells: readonly { reel: number; row: number }[] }];
   /**
-   * Tumble cascade: a full cascade chain has finished.
+   * Tumble cascade: a full cascade chain has finished. The mirror of
+   * `cascade:round:start` — carries the round summary.
    *
    * Fired once by `reelSet.runCascade(...)` after the detect → destroy →
    * refill loop exits — either because `detectWinners` returned an empty
    * list, the chain hit `maxChain`, or the player slammed via `skip()`.
    *
-   *   - `chainLength` — number of refill stages that actually ran (0 means
-   *     the initial grid had no wins, so no refill fired).
-   *   - `totalWinners` — sum of `winners.length` across every refill stage.
-   *   - `finalGrid` — the grid after the last refill (or the input grid if
-   *     `chainLength === 0`).
-   *   - `wasSkipped` — `true` when the chain ended early because the player
-   *     slammed mid-cascade. Use this to gate "show big-win UI" effects.
+   * Payload is the same {@link RunCascadeResult} shape returned by
+   * `runCascade(...)` itself, so a listener and an awaited result see
+   * the same fields.
    *
    * NOT fired when you compose a cascade loop yourself (calling `refill()`
    * directly). Roll your own emit / observer if you go that route.
    */
-  'cascade:complete': [info: {
-    chainLength: number;
-    totalWinners: number;
-    finalGrid: string[][];
-    wasSkipped: boolean;
-  }];
+  'cascade:round:end': [info: RunCascadeResult];
   /**
    * Fires whenever the engine creates a visual overlay symbol for a pin
    * during a spin's motion phase. The `overlay` argument is the pooled

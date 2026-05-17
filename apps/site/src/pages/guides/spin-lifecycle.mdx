@@ -51,12 +51,20 @@ reels are in the SPIN phase.
 
 ## Pattern: player slam-stop
 
+The library exposes three slam verbs with three different intents:
+
+| Verb | Intent | Side effects |
+|---|---|---|
+| `skip()` | Round-aware "player tapped the slam button" | First press of the round also boosts speed (standard mode) or auto-slams future refills (cascade mode). Emits `skip:boosted` when boost applies. |
+| `requestSkip()` | "Slam when ready" — safe BEFORE `setResult()` arrives | No boost, no auto-slam. Queues until `setResult()`, then slams once. |
+| `slamStop()` | Unconditional "land NOW" — tests / anti-cheat / programmatic | No boost, no auto-slam. |
+
 ```ts
 button.addEventListener('click', () => {
   if (reelSet.isSpinning) {
     // requestSkip is the safe variant — if the player taps before the
     // server response arrives, it queues until setResult() and then
-    // slams. skip() does nothing useful when called pre-result.
+    // slams. skip() in pre-result state is a no-op.
     reelSet.requestSkip();
   } else {
     reelSet.spin();
@@ -64,10 +72,9 @@ button.addEventListener('click', () => {
 });
 ```
 
-`skip()` / `requestSkip()` both force-land on whatever `setResult()` told the
-engine. `result.wasSkipped === true`. The lifecycle hooks (`spin:reelLanded`,
-`spin:allLanded`, `spin:complete`) all still fire on the slam path — so win
-presenters and effect chains keep working without a separate code path.
+All three force-land on whatever `setResult()` told the engine. `result.wasSkipped === true`. The lifecycle hooks (`spin:reelLanded`, `spin:allLanded`, `spin:complete`) all still fire on the slam path — so win presenters and effect chains keep working without a separate code path.
+
+The `skipStage` getter reports the round's stage (`0` before any press, `2` after) — drive a "SPIN → SKIPPED" button label from it.
 
 ## Pattern: hold some reels
 
@@ -116,8 +123,9 @@ See the [spin-then-cascade recipe](/recipes/spin-then-cascade/).
 | `spin:reelLanded` | `(reelIndex, symbols)` | Individual reel landed (held reels never fire) |
 | `spin:allLanded` | `(result)` | Last non-held reel landed |
 | `spin:complete` | `(result)` | Just after `spin:allLanded` |
-| `skip:requested` | — | `skip()` / `requestSkip()` actually fires the slam |
+| `skip:requested` | — | A slam fired — from `skip()`, `requestSkip()` (after `setResult`), or `slamStop()` |
 | `skip:completed` | — | All non-held reels force-landed |
+| `skip:boosted` | `({ previous, current })` | First `skip()` press of a standard-mode round; engine bumped speed to the fastest registered profile for the rest of the round. Cascade mode auto-slams refills instead. |
 | `speed:changed` | `(profile, previous)` | `setSpeed()` called |
 | `spotlight:start` | `(positions)` | `spotlight.cycle(...)` began |
 | `spotlight:end` | — | Spotlight finished |

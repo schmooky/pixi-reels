@@ -8,7 +8,7 @@ steps:
   - Spin — symbols drop in left-to-right, row by row, with bounce
   - reelSet.runCascade({ detectWinners, nextGrid }) owns the destroy → refill loop
   - onCascade fires per refill — bump the multiplier there
-  - cascade:complete tells you the chain ended
+  - cascade:round:end tells you the chain ended
 apis:
   - ReelSetBuilder.tumble
   - ReelSet.runCascade
@@ -67,7 +67,7 @@ document.getElementById('spin')!.addEventListener('click', async () => {
 });
 ```
 
-The library's `cascade:complete` event fires once after `runCascade` exits — listen if you want a single hook for "the cascade chain is over" (big-win UI, autoplay continuation, analytics).
+The library's `cascade:round:end` event fires once after `runCascade` exits, carrying `RunCascadeResult` — listen if you want a single hook for "the cascade chain is over" (big-win UI, autoplay continuation, analytics).
 
 ## Drop order controls the reveal feel
 
@@ -101,7 +101,7 @@ See [the full tumble recipe doc](https://github.com/schmooky/pixi-reels/blob/mai
 - **`.tumble({ fall, dropIn })`** — three named phases (`cascade:fall` / `cascade:place` / `cascade:dropIn`), each independently overridable
 - **`reelSet.destroySymbols(cells)`** — defers to each symbol's `playDestroy()`; sprite symbols get an implode, Spine subclasses route to `out`
 - **`reelSet.refill({ winners, grid })`** — gravity-correct Moment B: untouched survivors stay, survivors above a hole slide, new symbols enter from above
-- **`reelSet.runCascade({ detectWinners, nextGrid })`** — the canonical detect → destroy → pause → refill orchestration with `cascade:complete` at the end
+- **`reelSet.runCascade({ detectWinners, nextGrid })`** — the canonical detect → destroy → pause → refill orchestration with `cascade:round:start` / `cascade:round:end` framing the chain
 - **`reelSet.setDropOrder()`** — per-call column reveal order (set once, persists across the chain)
 
 Your responsibilities:
