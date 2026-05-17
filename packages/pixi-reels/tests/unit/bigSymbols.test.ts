@@ -79,7 +79,7 @@ describe('big symbols', () => {
           ['a', 'a', 'a'],
         ]);
       }).toThrow(/exceeds reel/);
-      reelSet.skip();
+      reelSet.slamStop();
       await promise.catch(() => {});
     } finally {
       destroy();
@@ -102,7 +102,7 @@ describe('big symbols', () => {
           ['wide', 'a', 'a'],
         ]);
       }).toThrow(/exceeds reel count/);
-      reelSet.skip();
+      reelSet.slamStop();
       await promise.catch(() => {});
     } finally {
       destroy();

@@ -351,14 +351,51 @@ export class ReelSet extends Container implements Disposable {
     this._spinController.setStopDelays(delays);
   }
 
-  /** Skip/slam-stop: immediately land all reels on target. */
+  /**
+   * Round-aware skip — the button-press entry point. The first press in a
+   * round slams the current drop AND applies a round-scoped side effect:
+   *
+   *   - Standard mode: boost the active speed profile to the fastest
+   *     registered one (emits `skip:boosted`). Restored on the next
+   *     `spin()` (unless the app manually changed speed in between).
+   *   - Cascade/tumble mode: flag every subsequent `refill()` to
+   *     auto-slam with no animation. One press ends a multi-drop
+   *     cascade.
+   *
+   * Subsequent presses also slam each current drop. Callers that want a
+   * slam *without* the round-scoped side effects (tests, anti-cheat) should
+   * use `slamStop()`. Callers expecting a slam before `setResult()` arrives
+   * should use `requestSkip()`.
+   */
   skip(): void {
     this._spinController.skip();
   }
 
-  /** Slam-stop safe before `setResult()` arrives — queues until then. */
+  /**
+   * Slam-stop safe before `setResult()` arrives — queues until then.
+   * Bypasses the two-stage `skip()` machine: an explicit slam intent.
+   */
   requestSkip(): void {
     this._spinController.requestSkip();
+  }
+
+  /**
+   * Hard slam-stop — always lands every un-landed reel immediately. Bypasses
+   * the two-stage `skip()` machine and any speed boost. For tests, anti-cheat
+   * flows, or any caller with unambiguous "end now" intent.
+   */
+  slamStop(): void {
+    this._spinController.slamStop();
+  }
+
+  /**
+   * Current `skip()` position within the active round. `0` until the
+   * player presses the slam button, `2` after. Read this to drive button
+   * labels (e.g. "Skip" → "Skipped"). `1` is reserved for forward compat
+   * and is not currently reachable.
+   */
+  get skipStage(): 0 | 1 | 2 {
+    return this._spinController.skipStage;
   }
 
   /**
@@ -391,13 +428,22 @@ export class ReelSet extends Container implements Disposable {
   }
 
   /**
-   * Set the drop order for cascade drop-in mechanics.
+   * Set the per-reel drop order for the next stop / refill sequence.
    *
-   * A convenience wrapper over setStopDelays() for common patterns.
-   * The stagger step defaults to the active speed profile's stopDelay
-   * (or 150 ms if stopDelay is 0).
+   * Convenience wrapper over `setStopDelays()` for common patterns. The
+   * stagger step defaults to the active speed profile's stopDelay (or
+   * 150 ms if stopDelay is 0).
    *
-   * Call this before or after setResult() — both work.
+   * The override persists across calls — set it once before the next
+   * `spin()` or `refill()` and it applies to that sequence. The cascade
+   * pattern is:
+   *
+   *   - `setDropOrder('ltr')` before `spin()` — left-to-right reveal
+   *   - `setDropOrder('all')` before each `refill()` — all columns drop
+   *     simultaneously (the canonical commercial-cascade refill)
+   *
+   * Call again with a different value to change it; the previous value
+   * is replaced, not stacked.
    *
    * @example
    * reelSet.setDropOrder('ltr');  // left-to-right

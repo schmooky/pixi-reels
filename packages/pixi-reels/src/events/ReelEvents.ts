@@ -31,6 +31,17 @@ export interface ReelSetEvents extends Record<string, unknown[]> {
   'spin:complete': [result: SpinResult];
   'skip:requested': [];
   'skip:completed': [];
+  /**
+   * Round-aware `skip()` first-press boost: in standard (non-cascade)
+   * mode, the engine switched the active speed profile to the fastest
+   * registered one for the rest of this round. Fires once per round on
+   * the first `skip()` press only, alongside the slam — never on
+   * subsequent presses, never on `slamStop()` or `requestSkip()`, and
+   * never in cascade mode (which auto-slams refills instead of boosting
+   * speed). The round-end restore on the next `spin()` does not fire
+   * this event; listen to `speed:changed` if you need that signal.
+   */
+  'skip:boosted': [info: { previous: SpeedProfile; current: SpeedProfile }];
   'speed:changed': [profile: SpeedProfile, previous: SpeedProfile];
   'spotlight:start': [positions: SymbolPosition[]];
   'spotlight:end': [];

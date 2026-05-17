@@ -21,7 +21,7 @@ describe('expanding wild (pin-based, 1×N)', () => {
         ['a', 'a', 'a'],
         ['a', 'a', 'a'],
       ]);
-      reelSet.skip();
+      reelSet.slamStop();
       await promise;
       expectGrid(reelSet, [
         ['a', 'a', 'a'],

@@ -403,7 +403,7 @@ describe('CellPin — visual overlay during spin motion', () => {
         ['a', 'b', 'c'], ['a', 'b', 'c'], ['a', 'b', 'c'],
         ['a', 'b', 'c'], ['a', 'b', 'c'],
       ]);
-      h.reelSet.skip();
+      h.reelSet.slamStop();
       await promise;
 
       // Overlay destroyed after landing
@@ -430,7 +430,7 @@ describe('CellPin — visual overlay during spin motion', () => {
         ['a', 'b', 'c'], ['a', 'b', 'c'], ['a', 'b', 'c'],
         ['a', 'b', 'c'], ['a', 'b', 'c'],
       ]);
-      h.reelSet.skip();
+      h.reelSet.slamStop();
       await promise;
 
       expect(overlays.size).toBe(0);
@@ -456,7 +456,7 @@ describe('CellPin — visual overlay during spin motion', () => {
         ['a', 'b', 'c'], ['a', 'b', 'c'], ['a', 'b', 'c'],
         ['a', 'b', 'c'], ['a', 'b', 'c'],
       ]);
-      h.reelSet.skip();
+      h.reelSet.slamStop();
       await promise;
 
       expect(overlays.size).toBe(0);
@@ -483,7 +483,7 @@ describe('CellPin — visual overlay during spin motion', () => {
         ['a', 'b', 'c'], ['a', 'b', 'c'], ['a', 'b', 'c'],
         ['a', 'b', 'c'], ['a', 'b', 'c'],
       ]);
-      h.reelSet.skip();
+      h.reelSet.slamStop();
       await promise;
     } finally {
       h.destroy();
@@ -520,7 +520,7 @@ describe('CellPin — overlay events (pin:overlayCreated / :overlayDestroyed)', 
         ['a', 'b', 'c'], ['a', 'b', 'c'], ['a', 'b', 'c'],
         ['a', 'b', 'c'], ['a', 'b', 'c'],
       ]);
-      h.reelSet.skip();
+      h.reelSet.slamStop();
       await promise;
     } finally {
       h.destroy();
@@ -548,7 +548,7 @@ describe('CellPin — overlay events (pin:overlayCreated / :overlayDestroyed)', 
         ['a', 'b', 'c'], ['a', 'b', 'c'], ['a', 'b', 'c'],
         ['a', 'b', 'c'], ['a', 'b', 'c'],
       ]);
-      h.reelSet.skip();
+      h.reelSet.slamStop();
       await promise;
 
       expect(capturedPinCol).toBe(2);
@@ -573,7 +573,7 @@ describe('CellPin — overlay events (pin:overlayCreated / :overlayDestroyed)', 
         ['a', 'b', 'c'], ['a', 'b', 'c'], ['a', 'b', 'c'],
         ['a', 'b', 'c'], ['a', 'b', 'c'],
       ]);
-      h.reelSet.skip();
+      h.reelSet.slamStop();
       await promise;
     } finally {
       h.destroy();

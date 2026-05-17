@@ -43,9 +43,12 @@ export interface TumbleDropInConfig {
   duration?: number;
 
   /**
-   * GSAP easing string for the drop-in trajectory. Default `'back.out(1.5)'`
-   * — a soft overshoot. Use `'bounce.out'` for cartoon bounce, `'sine.in'`
-   * for gravity, `'expo.in'` for slam.
+   * GSAP easing string for the drop-in trajectory. Default `'power2.out'`
+   * — symbols decelerate cleanly into their slot with NO overshoot, which
+   * matches the canonical commercial-slot pattern: fall straight in, then
+   * play a per-symbol landing spine animation. Use `'back.out(1.5)'` for a
+   * soft overshoot, `'bounce.out'` for cartoon bounce, `'sine.in'` for
+   * gravity, `'expo.in'` for slam.
    */
   ease?: string;
 
@@ -105,7 +108,12 @@ export function resolveTumbleConfig(config: TumbleConfig | undefined): ResolvedT
     },
     dropIn: {
       duration: config?.dropIn?.duration ?? 600,
-      ease: config?.dropIn?.ease ?? 'back.out(1.5)',
+      // No overshoot in the default: most commercial cascade slots have
+      // symbols fall straight into their slot, then play a per-symbol
+      // landing spine animation. `power2.out` is a clean decelerating
+      // ease that lands without an overshoot bounce. Recipes that want
+      // the springy feel can opt into `back.out(...)` explicitly.
+      ease: config?.dropIn?.ease ?? 'power2.out',
       rowStagger: config?.dropIn?.rowStagger ?? 60,
       rowOrder: config?.dropIn?.rowOrder ?? 'bottomToTop',
       distance: config?.dropIn?.distance ?? 'perHole',

@@ -39,7 +39,7 @@ export interface TestReelSetHandle {
   ticker: FakeTicker;
   /** Advance the ticker by `ms` milliseconds. */
   advance(ms: number, stepMs?: number): void;
-  /** Run one full spin that lands on `grid`. Uses `skip()` for deterministic synchronous completion. */
+  /** Run one full spin that lands on `grid`. Uses `slamStop()` for deterministic synchronous completion. */
   spinAndLand(grid: string[][]): Promise<SpinResult>;
   /** Destroy the reel set. */
   destroy(): void;
@@ -133,14 +133,15 @@ export function createTestReelSet(opts: TestReelSetOptions = {}): TestReelSetHan
 /**
  * Deterministically run a spin to a target grid.
  *
- * Internally: `spin() → setResult(grid) → skip()`. The `skip()` path bypasses
- * all async phases and directly places the symbols, so the returned promise
- * resolves on a microtask.
+ * Internally: `spin() → setResult(grid) → slamStop()`. `slamStop()` bypasses
+ * all async phases and directly places the symbols (and bypasses the
+ * two-stage `skip()` boost machine), so the returned promise resolves on a
+ * microtask.
  */
 export async function spinAndLand(reelSet: ReelSet, grid: string[][]): Promise<SpinResult> {
   const promise = reelSet.spin();
   reelSet.setResult(grid);
-  reelSet.skip();
+  reelSet.slamStop();
   return promise;
 }
 

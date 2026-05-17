@@ -421,8 +421,8 @@ export class ReelSetBuilder {
    *
    * @example
    * builder.tumble({
-   *   fall:   { duration: 300, ease: 'sine.in',       rowStagger: 60 },
-   *   dropIn: { duration: 600, ease: 'back.out(1.5)', rowStagger: 60, distance: 'perHole' },
+   *   fall:   { duration: 300, ease: 'sine.in',    rowStagger: 60 },
+   *   dropIn: { duration: 600, ease: 'power2.out', rowStagger: 60, distance: 'perHole' },
    * });
    */
   tumble(config?: TumbleConfig): this {

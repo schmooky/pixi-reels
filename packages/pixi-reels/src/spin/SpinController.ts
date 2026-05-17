@@ -121,6 +121,41 @@ export class SpinController implements Disposable {
   private _currentSpinResolve: ((result: SpinResult) => void) | null = null;
   /** Incremented on each new spin. If a callback sees a stale generation, it no-ops. */
   private _spinGeneration = 0;
+  /**
+   * Round-aware `skip()` state. Lives across `refill()` calls within a
+   * round (one `spin()` + its cascade refills) and resets on the next
+   * `spin()`.
+   *
+   * `0` — no press yet this round.
+   * `2` — a press has slammed (and applied the round's side effect: a
+   *       speed boost in standard mode or auto-slam-refills in cascade).
+   *       Subsequent presses also slam.
+   *
+   * `1` is reserved (kept for forward compat in the type) but currently
+   * unreachable — every press slams now, side effects are applied on the
+   * first press together with the slam.
+   */
+  private _skipStage: 0 | 1 | 2 = 0;
+  /**
+   * Speed profile name that was active when the round-start boost fired,
+   * captured so the next `spin()` can restore it. `null` between rounds and
+   * during rounds where the player never pressed skip.
+   */
+  private _skipPreviousSpeedName: string | null = null;
+  /**
+   * Speed profile name we boosted INTO. Used as a sentinel on the next
+   * `spin()`-restore — if the active name no longer matches, the player
+   * (or app code) manually changed speed between rounds and we must not
+   * clobber that choice with our pre-boost value.
+   */
+  private _skipBoostedToName: string | null = null;
+  /**
+   * Cascade-mode round flag. When true, the next `refill()` skips its
+   * phase chain and slams instantly. Set when the player presses `skip()`
+   * during a cascade round (one press = "fast-forward to end of round").
+   * Cleared on the next `spin()` alongside the rest of the stage state.
+   */
+  private _autoSlamRefills = false;
 
   constructor(
     reels: Reel[],
@@ -165,6 +200,16 @@ export class SpinController implements Disposable {
     return this._isDestroyed;
   }
 
+  /**
+   * Current `skip()` position within the active round. `0` until the
+   * player presses the slam button, `2` after. Use to drive UI button
+   * labels (e.g. "Skip" → "Skipped"). `1` is reserved for forward compat
+   * and is not currently reachable.
+   */
+  get skipStage(): 0 | 1 | 2 {
+    return this._skipStage;
+  }
+
   async spin(options?: SpinOptions): Promise<SpinResult> {
     if (this._isSpinning) {
       throw new Error('Cannot start a new spin while one is in progress.');
@@ -178,13 +223,38 @@ export class SpinController implements Disposable {
     }
     this._currentSpinMode = mode;
 
+    // Round boundary: a new `spin()` ends the previous round. If the player
+    // boosted via `skip()` last round AND the boosted profile is still
+    // active (i.e. nothing manually re-set it in between), restore the
+    // speed they had before. If the active name no longer matches what we
+    // boosted into, the app changed speed between rounds and we must not
+    // clobber that choice.
+    if (this._skipPreviousSpeedName !== null) {
+      const prev = this._skipPreviousSpeedName;
+      const boostedTo = this._skipBoostedToName;
+      this._skipPreviousSpeedName = null;
+      this._skipBoostedToName = null;
+      if (boostedTo === null || this._speedManager.activeName === boostedTo) {
+        if (this._speedManager.activeName !== prev) {
+          this._speedManager.set(prev);
+        }
+      }
+    }
+    this._skipStage = 0;
+    this._autoSlamRefills = false;
+
     this._isSpinning = true;
     this._wasSkipped = false;
     this._skipPending = false;
     this._spinStartTime = performance.now();
     this._resultSymbols = null;
     this._anticipationReels = [];
-    this._stopDelayOverride = null;
+    // NOTE: _stopDelayOverride is NOT cleared here. The contract is that
+    // `setDropOrder()` (or `setStopDelays()`) is called right before
+    // `spin()` / `refill()` and represents user intent for the upcoming
+    // sequence. Clearing it on entry would silently drop the value the
+    // user just set. The override persists until the next setDropOrder()
+    // call overwrites it.
     this._landedReels.clear();
     this._activePhases.clear();
     this._heldReels = this._normalizeHoldReels(options?.holdReels);
@@ -245,8 +315,11 @@ export class SpinController implements Disposable {
     this._resultSymbols = symbols;
     this._tryBeginStopSequence();
     if (this._skipPending) {
+      // Deferred `requestSkip()` is an explicit slam intent — bypass the
+      // two-stage `skip()` machine and slam directly.
       this._skipPending = false;
-      this.skip();
+      this._slam();
+      this._skipStage = 2;
     }
   }
 
@@ -275,7 +348,10 @@ export class SpinController implements Disposable {
     this._spinStartTime = performance.now();
     this._resultSymbols = null;
     this._anticipationReels = [];
-    this._stopDelayOverride = null;
+    // _stopDelayOverride preserved across entry — see spin() for rationale.
+    // Cascade recipes set `setDropOrder('all')` right before refill() and
+    // would otherwise see their setting clobbered, falling back to the
+    // default `i * speed.stopDelay` left-to-right stagger.
     this._landedReels.clear();
     this._activePhases.clear();
     this._heldReels = new Set();
@@ -317,6 +393,16 @@ export class SpinController implements Disposable {
     const resultPromise = new Promise<SpinResult>((resolve) => {
       this._currentSpinResolve = resolve;
     });
+
+    // Auto-slam: skip() set this earlier in the round to mean "fast-forward
+    // the rest of this cascade." Bypass the place + dropIn phase chain and
+    // land instantly — `_slam()` sees no active phases, `_resultSymbols` is
+    // set, and per-reel placement happens synchronously.
+    if (this._autoSlamRefills) {
+      this._slam();
+      this._skipStage = 2;
+      return resultPromise;
+    }
 
     for (let i = 0; i < this._reels.length; i++) {
       const winnerRows = winnersByReel.get(i) ?? [];
@@ -379,20 +465,85 @@ export class SpinController implements Disposable {
 
   /**
    * Slam-stop safe before `setResult()` arrives. Queues until a result is
-   * set, then fires `skip()`. Otherwise equivalent to `skip()`.
+   * set, then slams. Bypasses the two-stage `skip()` machine — this API is
+   * for callers with explicit slam intent (e.g. UIs that wire the queued
+   * slam separately from a stage-aware button).
    */
   requestSkip(): void {
     if (!this._isSpinning) return;
     if (this._resultSymbols) {
-      this.skip();
+      this._slam();
+      this._skipStage = 2;
       return;
     }
     this._skipPending = true;
   }
 
+  /**
+   * Round-aware skip — the button-press entry point used by the universal
+   * "spin/skip" button pattern across recipes. First press in a round
+   * slams the current drop AND applies the round's speed effect as a
+   * side-effect:
+   *
+   *   - Standard mode: boost the active speed profile to the fastest
+   *     registered one and emit `skip:boosted`. The speed change takes
+   *     effect on subsequent spins (mid-spin speed switching is not
+   *     supported by phases). Restored to the player's original profile
+   *     on the next `spin()`.
+   *   - Cascade/tumble mode: flag the round so every subsequent
+   *     `refill()` auto-slams instantly (no animation). One press ends
+   *     a multi-drop cascade round.
+   *
+   * Subsequent presses in the same round slam each current drop.
+   *
+   * Callers who want only the slam without the boost or auto-slam side
+   * effects (tests, anti-cheat, programmatic automation) should use
+   * `slamStop()` instead.
+   */
   skip(): void {
     if (!this._isSpinning) return;
 
+    if (this._skipStage === 0) {
+      if (this._currentSpinMode === 'cascade') {
+        // Cascade: phase durations are static (don't read `speed.spinSpeed`),
+        // so a boost would be invisible. Auto-slam future refills instead.
+        this._autoSlamRefills = true;
+      } else {
+        // Standard: try to boost speed for the rest of the round. If the
+        // active profile is already the fastest (or only one is registered),
+        // we just slam — no boost is observable.
+        const fastest = this._findFastestSpeedName();
+        if (fastest !== null && fastest !== this._speedManager.activeName) {
+          const { previous, current } = this._speedManager.set(fastest);
+          this._skipPreviousSpeedName = previous.name;
+          this._skipBoostedToName = current.name;
+          this._events.emit('skip:boosted', { previous, current });
+        }
+      }
+    }
+
+    this._slam();
+    this._skipStage = 2;
+  }
+
+  /**
+   * Hard slam-stop. Always lands every un-landed reel immediately, regardless
+   * of stage. Sets `skipStage` to 2 so future `skip()` presses in this round
+   * also slam (the boost ship has sailed).
+   */
+  slamStop(): void {
+    if (!this._isSpinning) return;
+    this._slam();
+    this._skipStage = 2;
+  }
+
+  /**
+   * The slam path itself: force-complete active phases, place results (or
+   * snap to current symbols when no result is set), mark every un-landed
+   * reel as landed. Shared by `skip()` (stage 1+), `requestSkip()`'s
+   * deferred path, and `slamStop()`.
+   */
+  private _slam(): void {
     this._wasSkipped = true;
     this._events.emit('skip:requested');
 
@@ -452,6 +603,27 @@ export class SpinController implements Disposable {
     }
 
     this._events.emit('skip:completed');
+  }
+
+  /**
+   * Pick the registered speed profile with the highest `spinSpeed` (pixels
+   * per frame at full motion). Returns `null` if only one profile exists,
+   * since a "boost to yourself" is meaningless.
+   */
+  private _findFastestSpeedName(): string | null {
+    const names = this._speedManager.profileNames;
+    if (names.length < 2) return null;
+    let bestName: string | null = null;
+    let bestSpeed = -Infinity;
+    for (const name of names) {
+      const p = this._speedManager.getProfile(name);
+      if (!p) continue;
+      if (p.spinSpeed > bestSpeed) {
+        bestSpeed = p.spinSpeed;
+        bestName = name;
+      }
+    }
+    return bestName;
   }
 
   destroy(): void {

@@ -74,7 +74,7 @@ describe('pin migration (MultiWays)', () => {
         ['a', 'a', 'a'],
         ['a', 'a', 'a'],
       ]);
-      reelSet.skip();
+      reelSet.slamStop();
       await promise;
 
       // Pin migrated 4 -> 2. Overlay should be at the new (col=1, row=2) cell.
@@ -107,7 +107,7 @@ describe('pin migration (MultiWays)', () => {
       reelSet.setResult([
         ['a','a','a','a','a'], ['a','a','a','a','a'], ['a','a','a','a','a'],
       ]);
-      reelSet.skip();
+      reelSet.slamStop();
       await p;
       expect(reelSet.getPin(1, 4)?.row).toBe(4);
       expect(reelSet.getPin(1, 4)?.originRow).toBe(4);
@@ -118,7 +118,7 @@ describe('pin migration (MultiWays)', () => {
       reelSet.setResult([
         ['a','a','a'], ['a','a','a'], ['a','a','a'],
       ]);
-      reelSet.skip();
+      reelSet.slamStop();
       await p;
       expect(reelSet.getPin(1, 2)?.row).toBe(2);
       expect(reelSet.getPin(1, 2)?.originRow).toBe(2); // FROZEN — origin updated
@@ -131,7 +131,7 @@ describe('pin migration (MultiWays)', () => {
         ['a','a','a','a','a','a','a'],
         ['a','a','a','a','a','a','a'],
       ]);
-      reelSet.skip();
+      reelSet.slamStop();
       await p;
       // Confirm NOT restored to row 4 (which 'origin' would do).
       expect(reelSet.getPin(1, 4)).toBeUndefined();
@@ -156,7 +156,7 @@ describe('pin migration (MultiWays)', () => {
       let p = reelSet.spin();
       reelSet.setShape([5, 5, 5]);
       reelSet.setResult([['a','a','a','a','a'], ['a','a','a','a','a'], ['a','a','a','a','a']]);
-      reelSet.skip();
+      reelSet.slamStop();
       await p;
       // Pin still at row 4.
       expect(reelSet.getPin(1, 4)?.row).toBe(4);
@@ -165,7 +165,7 @@ describe('pin migration (MultiWays)', () => {
       p = reelSet.spin();
       reelSet.setShape([3, 3, 3]);
       reelSet.setResult([['a','a','a'], ['a','a','a'], ['a','a','a']]);
-      reelSet.skip();
+      reelSet.slamStop();
       await p;
       const clampedPin = reelSet.getPin(1, 2);
       expect(clampedPin).toBeDefined();
@@ -180,7 +180,7 @@ describe('pin migration (MultiWays)', () => {
       p = reelSet.spin();
       reelSet.setShape([5, 5, 5]);
       reelSet.setResult([['a','a','a','a','a'], ['a','a','a','a','a'], ['a','a','a','a','a']]);
-      reelSet.skip();
+      reelSet.slamStop();
       await p;
       const restoredPin = reelSet.getPin(1, 4);
       expect(restoredPin).toBeDefined();

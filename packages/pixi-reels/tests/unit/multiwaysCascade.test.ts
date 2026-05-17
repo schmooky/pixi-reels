@@ -77,7 +77,7 @@ describe('MultiWays + Cascade (issue #74)', () => {
         ['a', 'a', 'a', 'a'],
         ['a', 'a'],
       ]);
-      h.reelSet.skip();
+      h.reelSet.slamStop();
       await promise;
 
       expect(h.created.some((n) => n.startsWith('cascade:fall:'))).toBe(true);
@@ -100,7 +100,7 @@ describe('MultiWays + Cascade (issue #74)', () => {
         ['a', 'a', 'a', 'a'],
         ['a', 'a'],
       ]);
-      h.reelSet.skip();
+      h.reelSet.slamStop();
       await promise;
       expect(log.filter((e) => e.event === 'adjust:start').length).toBe(3);
       expect(log.filter((e) => e.event === 'adjust:complete').length).toBe(3);
@@ -120,7 +120,7 @@ describe('MultiWays + Cascade (issue #74)', () => {
         ['a', 'a', 'a', 'a'],
         ['a', 'a'],
       ]);
-      h.reelSet.skip();
+      h.reelSet.slamStop();
       await promise;
       expect(h.reelSet.reels.map((r) => r.visibleRows)).toEqual([3, 4, 2]);
 
@@ -132,7 +132,7 @@ describe('MultiWays + Cascade (issue #74)', () => {
         ['a', 'a'],
         ['a', 'a', 'a', 'a', 'a', 'a'],
       ]);
-      h.reelSet.skip();
+      h.reelSet.slamStop();
       await promise;
       expect(h.reelSet.reels.map((r) => r.visibleRows)).toEqual([5, 2, 6]);
     } finally {
@@ -149,7 +149,7 @@ describe('MultiWays + Cascade (issue #74)', () => {
         ['a', 'a', 'a', 'a', 'a', 'a'],
         ['a', 'a', 'a', 'a', 'a', 'a'],
       ]);
-      h.reelSet.skip();
+      h.reelSet.slamStop();
       await promise;
       // Builds at maxRows=6; no setShape → reshape is a no-op.
       expect(h.reelSet.reels.map((r) => r.visibleRows)).toEqual([6, 6, 6]);

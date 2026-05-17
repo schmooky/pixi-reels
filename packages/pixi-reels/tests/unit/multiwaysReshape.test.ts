@@ -59,7 +59,7 @@ describe('MultiWays reshape', () => {
       // Past setResult — a second setShape must throw to avoid corrupting
       // the cached frames.
       expect(() => reelSet.setShape([2, 2, 2])).toThrow(/BEFORE setResult/);
-      reelSet.skip();
+      reelSet.slamStop();
       await promise;
     } finally {
       destroy();
@@ -113,7 +113,7 @@ describe('MultiWays reshape', () => {
         ['b', 'b', 'b', 'b'],
         ['a', 'a'],
       ]);
-      reelSet.skip();
+      reelSet.slamStop();
       await promise;
       expect(reelSet.reels.map((r) => r.visibleRows)).toEqual([3, 4, 2]);
       // Each reel emitted adjust:start and adjust:complete (skip path force-completes).

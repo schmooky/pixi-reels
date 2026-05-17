@@ -178,6 +178,23 @@ export class SpineReelSymbol extends ReelSymbol {
   }
 
   /**
+   * Cascade-destruction override. If the skeleton has the configured
+   * `out` (disintegration) animation, play it. Otherwise fall back to the
+   * base class's GSAP scale-and-fade so a partial skeleton still cascades
+   * cleanly. `opts.delay` is honored (seconds, mirrors the GSAP version)
+   * so callers can stagger a winning cluster; `opts.direction` is ignored —
+   * spine animations bake their own rotation curves.
+   */
+  override async playDestroy(opts?: { direction?: 1 | -1; delay?: number }): Promise<void> {
+    const outName = this._animNameFor('out');
+    const hasOut = !!this._currentSpine?.skeleton.data.findAnimation(outName);
+    if (!hasOut) return super.playDestroy(opts);
+    const delay = opts?.delay ?? 0;
+    if (delay > 0) await new Promise((r) => setTimeout(r, delay * 1000));
+    return this.playOut();
+  }
+
+  /**
    * Swap the primary track to the blur animation for the SPIN phase. Reverts
    * to idle automatically on `stopAnimation()` or next activate.
    *
