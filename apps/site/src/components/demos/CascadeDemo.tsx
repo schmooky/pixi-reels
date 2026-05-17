@@ -26,6 +26,11 @@ export default function CascadeDemo() {
           cheats,
           cheatTitle: 'Cascade cheats',
           tumble: true,
+          // Mock 2-6 s server response — the "Moment A" gap between
+          // fall-out and refill where the spinner sits. demoRuntime's
+          // 200 ms debounce hides the spinner for sub-debounce waits, so
+          // the floor here is comfortably above it.
+          fakeServerDelay: () => 2000 + Math.random() * 4000,
         })
       }
     />
