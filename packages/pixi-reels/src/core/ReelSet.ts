@@ -530,6 +530,7 @@ export class ReelSet extends Container implements Disposable {
 
     const z = opts?.zIndex === undefined ? 1000 : opts.zIndex;
 
+    this._events.emit('cascade:destroy:start', { cells });
     try {
       await Promise.all(cells.map((cell, i) => {
         const sym = this._reels[cell.reel].getSymbolAt(cell.row);
@@ -541,6 +542,7 @@ export class ReelSet extends Container implements Disposable {
       }));
     } finally {
       if (dim) this._viewport.hideDim();
+      this._events.emit('cascade:destroy:end', { cells });
     }
   }
 
@@ -576,6 +578,17 @@ export class ReelSet extends Container implements Disposable {
    *  - `reelSet.skip()` ends the chain immediately; the final
    *    `cascade:complete` payload reports `wasSkipped: true`.
    *
+   * Event order, per call:
+   *   1. `cascade:roundStart` — round opened (fires once, before `detectWinners`).
+   *   2. For each chain stage with winners:
+   *      `cascade:chain:start` →
+   *        `cascade:destroy:start` → (destroy tweens) → `cascade:destroy:end` →
+   *        `onCascade` callback →
+   *        pause → next refill (`cascade:fall:*` is skipped; `cascade:place:done`
+   *        + `cascade:dropIn:*` fire per reel) →
+   *      `cascade:chain:end`.
+   *   3. `cascade:complete` — round closed (fires once, always).
+   *
    * Requires `.tumble(...)` on the builder (same as `refill()`).
    */
   async runCascade(opts: RunCascadeOptions): Promise<RunCascadeResult> {
@@ -604,17 +617,26 @@ export class ReelSet extends Container implements Disposable {
     let totalWinners = 0;
     let current = this.getVisibleGrid();
 
+    this._events.emit('cascade:roundStart', { initialGrid: current });
+
     try {
       while (chainLength < maxChain && !wasSkipped) {
         const winners = await opts.detectWinners(current, chainLength);
         if (winners.length === 0) break;
         totalWinners += winners.length;
 
+        const stage = chainLength + 1;
+        this._events.emit('cascade:chain:start', {
+          chain: stage,
+          winners,
+          currentGrid: current,
+        });
+
         await this.destroySymbols(winners, opts.destroyOptions);
         if (wasSkipped) break;
 
         if (opts.onCascade) {
-          await opts.onCascade({ chain: chainLength + 1, winners, previousGrid: current });
+          await opts.onCascade({ chain: stage, winners, previousGrid: current });
           if (wasSkipped) break;
         }
 
@@ -629,6 +651,12 @@ export class ReelSet extends Container implements Disposable {
         await this.refill({ winners: [...winners], grid: next });
         chainLength += 1;
         current = this.getVisibleGrid();
+
+        this._events.emit('cascade:chain:end', {
+          chain: stage,
+          winners,
+          nextGrid: current,
+        });
       }
     } finally {
       this._events.off('skip:requested', onSkip);

@@ -1,6 +1,0 @@
-global_multi.avif
-size:512,256
-filter:MipMapLinearLinear,Linear
-multiplier frame
-bounds:2,2,254,219
-offsets:3,3,260,225

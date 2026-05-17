@@ -20,7 +20,7 @@ Both emitters' `on(name, cb)` returns an `off()` function for unsubscription. Th
 | Spin lifecycle | `spin:start` · `spin:allStarted` · `spin:stopping` · `spin:reelLanded` · `spin:allLanded` · `spin:complete` | Every `spin()` |
 | Skip / slam | `skip:requested` · `skip:completed` · `skip:boosted` | `skip()` · `requestSkip()` · `slamStop()` |
 | Speed | `speed:changed` | `setSpeed()` |
-| Cascade | `cascade:fall:start` · `cascade:fall:symbol` · `cascade:fall:end` · `cascade:place:done` · `cascade:dropIn:start` · `cascade:dropIn:symbol` · `cascade:dropIn:end` · `cascade:complete` | `.tumble()` + `spin({mode:'cascade'})` / `refill()` / `runCascade()` |
+| Cascade | `cascade:roundStart` · `cascade:fall:start` · `cascade:fall:symbol` · `cascade:fall:end` · `cascade:place:done` · `cascade:dropIn:start` · `cascade:dropIn:symbol` · `cascade:dropIn:end` · `cascade:destroy:start` · `cascade:destroy:end` · `cascade:chain:start` · `cascade:chain:end` · `cascade:complete` | `.tumble()` + `spin({mode:'cascade'})` / `refill()` / `runCascade()` / `destroySymbols()` |
 | Spotlight | `spotlight:start` · `spotlight:end` | `spotlight.cycle(...)` |
 | Wins | `win:start` · `win:group` · `win:symbol` · `win:end` | `WinPresenter.show(...)` |
 | Pins | `pin:placed` · `pin:moved` · `pin:expired` · `pin:migrated` · `pin:overlayCreated` · `pin:overlayDestroyed` | `pin()` · `unpin()` · `movePin()` · MultiWays reshape |
@@ -66,6 +66,7 @@ Available only when the builder used `.tumble({...})`. The per-symbol events fir
 
 | Event | Payload | When |
 |---|---|---|
+| `cascade:roundStart` | `{ initialGrid }` | Fired once at the top of `runCascade()` — the round just opened, no detection yet. Pair with `cascade:complete` for "round in flight" UI flips that don't depend on `isSpinning` (which oscillates between refills). |
 | `cascade:fall:start` | `{ reelIndex }` | A reel's fall-out begins (Moment A only — refill skips fall). |
 | `cascade:fall:symbol` | `{ symbol, view, reelIndex, rowIndex, duration, ease, distance }` | Each symbol's fall tween is about to start. |
 | `cascade:fall:end` | `{ reelIndex }` | A reel's last fall tween settled. |
@@ -73,7 +74,23 @@ Available only when the builder used `.tumble({...})`. The per-symbol events fir
 | `cascade:dropIn:start` | `{ reelIndex }` | A reel's drop-in begins. |
 | `cascade:dropIn:symbol` | `{ symbol, view, reelIndex, rowIndex, duration, ease, offsetRows }` | Each symbol's drop-in tween is about to start. `offsetRows` is the number of cells this symbol traverses (1 for top-row refills, more for survivors sliding past larger holes). |
 | `cascade:dropIn:end` | `{ reelIndex }` | A reel's last drop-in tween settled. |
+| `cascade:destroy:start` | `{ cells }` | `destroySymbols(...)` is about to start. Fires from EVERY call (direct or inside `runCascade`). Empty-batch calls don't emit. |
+| `cascade:destroy:end` | `{ cells }` | `destroySymbols(...)` finished — every `playDestroy()` resolved and the viewport dim (if any) was restored. |
+| `cascade:chain:start` | `{ chain, winners, currentGrid }` | A chain stage inside `runCascade()` just opened — winners were detected, destroy is about to run. `chain` is 1-indexed. |
+| `cascade:chain:end` | `{ chain, winners, nextGrid }` | A chain stage finished — both destroy AND refill drop-in are done, about to loop back to `detectWinners`. |
 | `cascade:complete` | `{ chainLength, totalWinners, finalGrid, wasSkipped }` | Fired once by `runCascade()` after the detect → destroy → refill loop exits. Does NOT fire when you compose the loop yourself with bare `refill()` calls. |
+
+```ts
+// Round-scoped HUD: lock auto-play, dim peripheral UI, play a music bed.
+reelSet.events.on('cascade:roundStart', () => hud.lock());
+reelSet.events.on('cascade:complete',   () => hud.unlock());
+
+// Per-chain SFX cues.
+reelSet.events.on('cascade:chain:start', ({ chain }) => sfx.play(`chain_${Math.min(chain, 5)}`));
+
+// Destroy cue, even when consumers call `destroySymbols` outside runCascade.
+reelSet.events.on('cascade:destroy:start', ({ cells }) => sfx.play('shatter', cells.length));
+```
 
 ```ts
 // Decorate ONLY new arrivals (skip survivors).

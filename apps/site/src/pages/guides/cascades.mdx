@@ -43,6 +43,18 @@ Internally the engine wires three `ReelPhase` subclasses:
 
 Each phase fires before/after events on `reelSet.events`. The per-symbol events (`cascade:fall:symbol`, `cascade:dropIn:symbol`) fire **before** the library's tween starts so listeners can stage parallel tweens that finish in lockstep.
 
+Round- and chain-scoped events live alongside the per-phase ones, so a HUD or audio bus can sit on a single bus:
+
+| Event | When | What it's for |
+|---|---|---|
+| `cascade:roundStart` | `runCascade()` opens | Lock auto-play, fade in cascade music bus, log a round-start to analytics. |
+| `cascade:chain:start` | Each chain stage opens (after `detectWinners`, before `destroySymbols`) | Per-chain SFX cue, light up a chain counter, freeze the spin button. |
+| `cascade:destroy:start` / `cascade:destroy:end` | Around every `destroySymbols(...)` batch — direct calls included | Shatter SFX, viewport dim independent of `destroyOptions.dim`. |
+| `cascade:chain:end` | Each chain stage closed (after refill drop-in settled) | Per-chain teardown, queue the next decoration burst. |
+| `cascade:complete` | `runCascade()` exits | Unlock UI, show "big win" overlay if `chainLength > 2`, fade out music. |
+
+`runCascade` owns these events — if you compose your own loop with bare `refill()` calls, only the phase-level ones fire.
+
 You override any individual phase by registering a subclass under its name:
 
 ```ts

@@ -25,7 +25,6 @@
     "examples:dev:bigsymbols": "pnpm --filter big-symbols dev",
     "examples:dev:multiways": "pnpm --filter multiways dev",
     "examples:dev:pyramid": "pnpm --filter pyramid-cascade dev",
-    "examples:dev:arclord": "pnpm --filter arc-lord dev",
     "examples:dev:sandbox": "pnpm --filter sandbox dev",
     "examples:build": "pnpm --filter './examples/*' build",
     "site:dev": "pnpm --filter @pixi-reels/site dev",

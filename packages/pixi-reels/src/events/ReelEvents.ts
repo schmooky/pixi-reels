@@ -171,6 +171,72 @@ export interface ReelSetEvents extends Record<string, unknown[]> {
   /** Tumble cascade: this reel's drop-in animation finished. */
   'cascade:dropIn:end': [info: { reelIndex: number }];
   /**
+   * Tumble cascade: a `reelSet.runCascade(...)` call just started.
+   *
+   * Fires once at the top of `runCascade`, BEFORE the first `detectWinners`
+   * call — the canonical "a cascade round is now in flight" signal. Pair
+   * with `cascade:complete` for "round started" / "round ended" UI flips
+   * (HUD lock, music bus enable) without polling `isSpinning` (which
+   * oscillates between refills in cascade mode).
+   *
+   *   - `initialGrid` — the grid the round opened on (post-initial-spin,
+   *     pre-first-detection).
+   *
+   * NOT fired when you compose the loop yourself with bare `refill()`
+   * calls — `runCascade` owns the event.
+   */
+  'cascade:roundStart': [info: { initialGrid: string[][] }];
+  /**
+   * Tumble cascade: a single chain stage just started.
+   *
+   * Fired inside `runCascade(...)` after `detectWinners` returns a non-empty
+   * list, BEFORE `destroySymbols` runs. The canonical place to cue
+   * per-cascade SFX, light up a chain counter HUD, or freeze auto-play
+   * controls for the duration of the stage. Pair with `cascade:chain:end`
+   * for symmetric setup / teardown.
+   *
+   *   - `chain` — 1-indexed chain stage number (1 on the first refill,
+   *     2 on the second, etc.).
+   *   - `winners` — cells about to be destroyed this stage.
+   *   - `currentGrid` — grid as it stands right now (pre-destroy).
+   */
+  'cascade:chain:start': [info: {
+    chain: number;
+    winners: readonly { reel: number; row: number }[];
+    currentGrid: string[][];
+  }];
+  /**
+   * Tumble cascade: a single chain stage just finished — both destroy AND
+   * refill drop-in are done, and the chain is about to loop back to the
+   * next `detectWinners` (or exit). The mirror of `cascade:chain:start`.
+   *
+   *   - `chain` — same 1-indexed chain stage number as `chain:start`.
+   *   - `winners` — cells that were destroyed this stage.
+   *   - `nextGrid` — the grid the next chain iteration will read.
+   */
+  'cascade:chain:end': [info: {
+    chain: number;
+    winners: readonly { reel: number; row: number }[];
+    nextGrid: string[][];
+  }];
+  /**
+   * Tumble cascade: `destroySymbols(cells, ...)` is about to start. Fires
+   * once per call — both inside `runCascade` and when consumers call
+   * `destroySymbols` directly. Empty cell lists do NOT emit this event
+   * (the call returns immediately with no animation).
+   *
+   * Use this to cue a `destroy` SFX, dim a HUD, or capture the pre-destroy
+   * grid for replay logging. Synchronous; the destroy tweens start right
+   * after listeners return.
+   */
+  'cascade:destroy:start': [info: { cells: readonly { reel: number; row: number }[] }];
+  /**
+   * Tumble cascade: `destroySymbols(cells, ...)` just finished — every
+   * cell's `playDestroy()` resolved and the viewport dim (if any) was
+   * restored. Mirror of `cascade:destroy:start`.
+   */
+  'cascade:destroy:end': [info: { cells: readonly { reel: number; row: number }[] }];
+  /**
    * Tumble cascade: a full cascade chain has finished.
    *
    * Fired once by `reelSet.runCascade(...)` after the detect → destroy →

@@ -214,6 +214,94 @@ describe('ReelSet.runCascade', () => {
     destroy();
   });
 
+  it('emits cascade:roundStart once, then chain:start/end per stage, then cascade:complete', async () => {
+    const { reelSet, destroy } = buildTumbleHarness([
+      ['a', 'b', 'c'],
+      ['a', 'b', 'c'],
+      ['a', 'b', 'c'],
+    ]);
+
+    const events: string[] = [];
+    reelSet.events.on('cascade:roundStart', () => events.push('roundStart'));
+    reelSet.events.on('cascade:chain:start', ({ chain }) => events.push(`chain:start:${chain}`));
+    reelSet.events.on('cascade:chain:end',   ({ chain }) => events.push(`chain:end:${chain}`));
+    reelSet.events.on('cascade:complete',    () => events.push('complete'));
+
+    let calls = 0;
+    await reelSet.runCascade({
+      detectWinners: () => {
+        calls += 1;
+        if (calls > 2) return [];
+        return [{ reel: 0, row: 0 }];
+      },
+      nextGrid: (grid) => grid.map((col) => ['d', col[0], col[1]]),
+      pauseAfterDestroyMs: 0,
+      destroyOptions: { zIndex: null },
+    });
+
+    expect(events).toEqual([
+      'roundStart',
+      'chain:start:1',
+      'chain:end:1',
+      'chain:start:2',
+      'chain:end:2',
+      'complete',
+    ]);
+    destroy();
+  });
+
+  it('roundStart fires before any detectWinners call, complete fires after the last refill', async () => {
+    const { reelSet, destroy } = buildTumbleHarness([
+      ['a', 'b', 'c'],
+      ['a', 'b', 'c'],
+      ['a', 'b', 'c'],
+    ]);
+
+    const trace: string[] = [];
+    reelSet.events.on('cascade:roundStart', () => trace.push('roundStart'));
+    reelSet.events.on('cascade:complete',   () => trace.push('complete'));
+
+    await reelSet.runCascade({
+      detectWinners: () => { trace.push('detect'); return []; },
+      nextGrid: (g) => g,
+      pauseAfterDestroyMs: 0,
+    });
+
+    expect(trace).toEqual(['roundStart', 'detect', 'complete']);
+    destroy();
+  });
+
+  it('emits cascade:destroy:start/end around the destroy batch inside runCascade', async () => {
+    const { reelSet, destroy } = buildTumbleHarness([
+      ['a', 'a', 'a'],
+      ['a', 'a', 'a'],
+      ['a', 'a', 'a'],
+    ]);
+
+    const events: string[] = [];
+    reelSet.events.on('cascade:destroy:start', ({ cells }) => {
+      events.push(`destroy:start:${cells.length}`);
+    });
+    reelSet.events.on('cascade:destroy:end', ({ cells }) => {
+      events.push(`destroy:end:${cells.length}`);
+    });
+
+    let calls = 0;
+    await reelSet.runCascade({
+      detectWinners: () => {
+        calls += 1;
+        if (calls > 1) return [];
+        return [{ reel: 0, row: 0 }, { reel: 1, row: 0 }];
+      },
+      nextGrid: (grid) => grid.map((col) => ['d', col[0], col[1]]),
+      pauseAfterDestroyMs: 0,
+      destroyOptions: { zIndex: null },
+    });
+
+    expect(events).toEqual(['destroy:start:2', 'destroy:end:2']);
+    destroy();
+  });
+
   it('treats a skip:requested mid-chain as wasSkipped and stops further refills', async () => {
     const { reelSet, destroy } = buildTumbleHarness([
       ['a', 'a', 'a'],

@@ -90,9 +90,12 @@ test('rapid double-click triggers slam and round completes cleanly', async ({ pa
   // locator mid-test.
   const btn = page.locator('button').first();
 
-  // Capture skip events so we know whether the second click actually
-  // routed through reelSet.skip(). With cascade mode that fires
-  // `skip:requested` synchronously inside `_slam`.
+  // Capture skip events so we can assert that the slam DID route through
+  // the engine by the time the round completes. `requestSkip()` defers
+  // the slam until `setResult()` arrives (the right behavior for cascade
+  // games with long server waits — slamming pre-`setResult` would land
+  // the reels on whatever filler was in the buffer), so we don't probe
+  // synchronously right after click 2; we verify the contract at round end.
   await page.evaluate(() => {
     (window as any).__SKIP_EVENTS = [];
     const rs = (window as any).__PIXI_REELS_DEBUG.reelSet;
@@ -100,14 +103,15 @@ test('rapid double-click triggers slam and round completes cleanly', async ({ pa
     rs.events.on('skip:boosted', () => (window as any).__SKIP_EVENTS.push('boosted'));
   });
 
-  // Click 1 starts the spin; click 2 (a few ms later) slams cascade mode.
+  // Click 1 starts the round; click 2 a few ms later — during the lead-in
+  // or the long server wait — queues the slam through `requestSkip()`.
   await btn.click();
   await page.waitForTimeout(50);
   await btn.click();
 
-  // Probe immediately — at this point click 2 has dispatched and any
-  // synchronous skip handling has happened.
-  const justAfterClick2 = await page.evaluate(() => {
+  await waitForRoundComplete(page);
+
+  const final = await page.evaluate(() => {
     const rs = (window as any).__PIXI_REELS_DEBUG.reelSet;
     return {
       isSpinning: rs.isSpinning,
@@ -115,16 +119,11 @@ test('rapid double-click triggers slam and round completes cleanly', async ({ pa
       events: (window as any).__SKIP_EVENTS.slice(),
     };
   });
-  expect(justAfterClick2.skipStage).toBe(2);
-  expect(justAfterClick2.events).toContain('requested');
-
-  await waitForRoundComplete(page);
-
-  const final = await page.evaluate(() => {
-    const rs = (window as any).__PIXI_REELS_DEBUG.reelSet;
-    return { isSpinning: rs.isSpinning, skipStage: rs.skipStage };
-  });
   expect(final.isSpinning).toBe(false);
+  // Slam must have routed through the engine at least once by round end.
+  // `requestSkip()` flushes to `_slam()` when `setResult()` arrives, which
+  // emits `skip:requested` and bumps `skipStage` to 2.
+  expect(final.events).toContain('requested');
   expect(final.skipStage).toBe(2);
   expect(errors).toEqual([]);
 });

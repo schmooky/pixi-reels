@@ -69,6 +69,33 @@ describe('ReelSet.destroySymbols', () => {
     destroy();
   });
 
+  it('emits cascade:destroy:start/end around the batch', async () => {
+    const { reelSet, destroy } = createTestReelSet({ reels: 3, visibleRows: 3 });
+    const events: string[] = [];
+    reelSet.events.on('cascade:destroy:start', ({ cells }) =>
+      events.push(`start:${cells.length}`));
+    reelSet.events.on('cascade:destroy:end', ({ cells }) =>
+      events.push(`end:${cells.length}`));
+
+    await reelSet.destroySymbols([
+      { reel: 0, row: 0 },
+      { reel: 2, row: 2 },
+    ]);
+
+    expect(events).toEqual(['start:2', 'end:2']);
+    destroy();
+  });
+
+  it('does not emit cascade:destroy:* on an empty batch (no work, no event)', async () => {
+    const { reelSet, destroy } = createTestReelSet({ reels: 2, visibleRows: 2 });
+    let calls = 0;
+    reelSet.events.on('cascade:destroy:start', () => calls++);
+    reelSet.events.on('cascade:destroy:end',   () => calls++);
+    await reelSet.destroySymbols([]);
+    expect(calls).toBe(0);
+    destroy();
+  });
+
   it('passes alternating direction by column when no override is set', async () => {
     // playDestroy itself doesn't expose the direction it received; check the
     // public observable: every cell ends at alpha 0 (no exception thrown),

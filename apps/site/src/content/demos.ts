@@ -9,14 +9,6 @@ export interface DemoMeta {
 
 export const DEMOS: DemoMeta[] = [
   {
-    slug: 'arc-lord',
-    title: 'Arc Lord — spine + zvuk',
-    subtitle: '6×5 tumble · Spine 2D · @schmooky/zvuk audio',
-    summary: 'Full real-game demo: Spine 2D symbols, zvuk audio engine, the new .tumble() / refill() API end-to-end with destruction, cascade multiplier, and reel-spin sound loop.',
-    tags: ['cascade', 'tumble', 'spine', 'audio'],
-    cheatHighlights: ['Spine 2D symbols', 'Real audio engine (zvuk)', 'Cascade multiplier'],
-  },
-  {
     slug: 'classic-lines',
     title: 'Classic line pays',
     subtitle: '5×3 · left-to-right lines',

@@ -436,7 +436,6 @@ Steps:
   - Round 1: a normal spin lands the initial grid
   - reelSet.runCascade({ detectWinners, nextGrid }) owns the pop-fall-refill loop for every chain stage
   - cascade:complete fires once when no more winners are found
-Real game example: Arc Lord by Backseat Gaming (https://pixi-reels.schmooky.dev/videos/arc-lord.mp4)
 
 ### Big symbols with Spine
 URL: https://pixi-reels.schmooky.dev/recipes/spine-big-symbols/
@@ -549,11 +548,6 @@ Steps:
 URL: https://pixi-reels.schmooky.dev/demos/anticipation-slam/
 Two tension tools — anticipation (slow a reel to tease a trigger) and skip (player smashes the button to slam-land now).
 Tags: anticipation, skip
-
-### Arc Lord — spine + zvuk
-URL: https://pixi-reels.schmooky.dev/demos/arc-lord/
-A full slot showcasing the new .tumble() / refill() API with Spine 2D symbol art and the zvuk audio engine. Bottom-left fall reveal, simultaneous refill, win-implode destruction, and a multiplier that ticks up per cascade.
-Tags: cascade, tumble, spine, audio, real-game
 
 ### Big symbols (2x2 BIG WILD)
 URL: https://pixi-reels.schmooky.dev/demos/big-symbols/

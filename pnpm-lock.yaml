@@ -164,31 +164,6 @@ importers:
         specifier: ^6.0.3
         version: 6.0.3
 
-  examples/arc-lord:
-    dependencies:
-      '@schmooky/zvuk':
-        specifier: ^1.11.0
-        version: 1.11.0
-      gsap:
-        specifier: ^3.15.0
-        version: 3.15.0
-      pixi-reels:
-        specifier: workspace:*
-        version: link:../../packages/pixi-reels
-      pixi.js:
-        specifier: ^8.18.1
-        version: 8.18.1
-    devDependencies:
-      '@esotericsoftware/spine-pixi-v8':
-        specifier: ^4.2.110
-        version: 4.2.110(pixi.js@8.18.1)
-      typescript:
-        specifier: ^6.0.3
-        version: 6.0.3
-      vite:
-        specifier: ^8.0.9
-        version: 8.0.9(@types/node@24.12.2)(esbuild@0.27.7)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3)
-
   examples/big-symbols:
     dependencies:
       '@esotericsoftware/spine-pixi-v8':
@@ -1947,11 +1922,6 @@ packages:
 
   '@rushstack/ts-command-line@5.3.8':
     resolution: {integrity: sha512-vKL4fVR2TdnMdCmlP71nZUzbNANOYlR7NfN+J/YL9UIvicDIEB+ZtH38LcJECOZUwHia8C5Mg98kc4kPt/ev5w==}
-
-  '@schmooky/zvuk@1.11.0':
-    resolution: {integrity: sha512-2b0i39+3KA42aszYIqGJ0ZiqdktqApxykZGWuOFzse7UmEJM8iYSGabYYPZYklIzYziISlx4etN00ZNTmCcnRQ==}
-    engines: {node: '>=20'}
-    hasBin: true
 
   '@shikijs/core@4.0.2':
     resolution: {integrity: sha512-hxT0YF4ExEqB8G/qFdtJvpmHXBYJ2lWW7qTHDarVkIudPFE6iCIrqdgWxGn5s+ppkGXI0aEGlibI0PAyzP3zlw==}
@@ -6760,10 +6730,6 @@ snapshots:
       string-argv: 0.3.2
     transitivePeerDependencies:
       - '@types/node'
-
-  '@schmooky/zvuk@1.11.0':
-    dependencies:
-      eventemitter3: 5.0.4
 
   '@shikijs/core@4.0.2':
     dependencies:
