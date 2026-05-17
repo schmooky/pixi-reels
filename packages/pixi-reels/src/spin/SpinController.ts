@@ -372,12 +372,26 @@ export class SpinController implements Disposable {
    *   - `'combined'` (default) — survivors and new symbols animate together
    *     in one drop-in phase. The classic Sweet Bonanza / Sugar Rush feel.
    *   - `'gravity-then-drop'` — survivors slide down to fill holes FIRST
-   *     (gravity stage), then a global pause of `gravityHoldMs` ms, then
-   *     new symbols drop in from above (drop-in stage). The Mummyland
-   *     Treasures / Reactoonz feel — gives space for anticipation visuals
-   *     between the two beats. Per-reel stop delays (`setDropOrder`) apply
-   *     to the drop-in stage only; the gravity stage runs simultaneously
-   *     across all reels.
+   *     (gravity stage), then a global hold, then new symbols drop in from
+   *     above (drop-in stage). The Mummyland Treasures / Reactoonz feel —
+   *     gives space for anticipation visuals between the two beats. Per-reel
+   *     stop delays (`setDropOrder`) apply to the drop-in stage only; the
+   *     gravity stage runs simultaneously across all reels.
+   *
+   * The hold between gravity and drop-in is the **max** of three sources
+   * (Promise.all semantics — whichever finishes LAST gates the drop-in):
+   *
+   *   - `gravityHoldMs` (default `250`) — fixed wall-clock pause via setTimeout.
+   *   - `gravityHold: Promise<void>` — caller-supplied promise. Use when you
+   *     already have an in-flight animation/SFX/etc. and want to wait for it
+   *     by handle rather than wrapping in a callback.
+   *   - `onGravityComplete: () => Promise<void> | void` — callback invoked
+   *     at the gravity-end boundary; its returned promise is awaited.
+   *
+   * `gravityHoldMs` and `gravityHold` race in parallel (Promise.all of the
+   * two — both must finish before drop-in starts). `onGravityComplete` runs
+   * AFTER both complete, so it can read final state of whatever they were
+   * waiting on.
    *
    * Throws if a spin or refill is already in flight, if `.tumble(...)` was
    * not configured on the builder, if the grid shape doesn't match the
@@ -390,6 +404,7 @@ export class SpinController implements Disposable {
     grid: string[][] | ColumnTarget[];
     mode?: 'combined' | 'gravity-then-drop';
     gravityHoldMs?: number;
+    gravityHold?: Promise<void>;
     onGravityComplete?: () => Promise<void> | void;
   }): Promise<SpinResult> {
     if (this._isSpinning) {
@@ -498,15 +513,18 @@ export class SpinController implements Disposable {
     if (mode === 'gravity-then-drop') {
       // Two-stage orchestration. All reels do place + gravity in parallel
       // (no per-reel stop delay — gravity is a global "settling" beat,
-      // not a reveal). Once every reel's gravity is done, wait
-      // `gravityHoldMs`, then start the drop-in stage with the user's
-      // per-reel stop delays applied — that's where column stagger lives.
+      // not a reveal). Once every reel's gravity is done, wait for the
+      // combined hold (Promise.all of `gravityHoldMs` setTimeout +
+      // optional `gravityHold` promise + optional `onGravityComplete`
+      // callback's returned promise), then start the drop-in stage with
+      // the user's per-reel stop delays applied.
       const gravityHoldMs = opts.gravityHoldMs ?? 250;
       this._refillTwoStage(
         speed,
         generation,
         winnersByReel,
         gravityHoldMs,
+        opts.gravityHold,
         opts.onGravityComplete,
       ).catch((err: unknown) => {
         if (generation !== this._spinGeneration) return;
@@ -570,6 +588,7 @@ export class SpinController implements Disposable {
     generation: number,
     winnersByReel: Map<number, number[]>,
     gravityHoldMs: number,
+    gravityHold?: Promise<void>,
     onGravityComplete?: () => Promise<void> | void,
   ): Promise<void> {
     // Stage 1 — place + gravity. Place phase runs with delay = 0 so all
@@ -606,19 +625,31 @@ export class SpinController implements Disposable {
 
     // Global hold — the beat where the player reads "the wins are gone, the
     // surviving symbols have settled" and any user-code anticipation
-    // visuals (multiplier bump, mascot react) play. setTimeout is fine: a
-    // skip during this window bumps the generation, the post-await guard
-    // bails before the drop-in stage runs.
+    // visuals (multiplier bump, mascot react) play. Two sources race in
+    // PARALLEL via Promise.all: a fixed `gravityHoldMs` setTimeout and a
+    // caller-supplied `gravityHold` promise. Whichever finishes last gates
+    // the drop-in — pass both when you want a min-wall-clock floor under
+    // an animation that might be fast. Skip during this window bumps the
+    // generation; the post-await guard bails before the drop-in stage.
+    const holdPromises: Promise<void>[] = [];
     if (gravityHoldMs > 0) {
-      await new Promise<void>((r) => setTimeout(r, gravityHoldMs));
+      holdPromises.push(new Promise<void>((r) => setTimeout(r, gravityHoldMs)));
+    }
+    if (gravityHold) {
+      holdPromises.push(gravityHold);
+    }
+    if (holdPromises.length > 0) {
+      await Promise.all(holdPromises);
       if (generation !== this._spinGeneration) return;
     }
 
-    // Awaitable hook — extends the hold for "wait for X before drop-in".
-    // Errors are surfaced so the caller's bug doesn't silently hang the
-    // drop-in stage forever; the catch bumps the generation, which causes
-    // the post-await guard to bail and `_finishSpin` will be triggered by
-    // the slam path if user code calls skip() in response.
+    // Awaitable callback — runs AFTER the parallel hold sources resolve,
+    // so it can read final state of whatever they were waiting on
+    // (e.g. a multiplier display that just finished counting up). Errors
+    // are surfaced so the caller's bug doesn't silently hang the drop-in
+    // stage forever; the catch bumps the generation, which causes the
+    // post-await guard to bail and `_finishSpin` will be triggered by the
+    // slam path if user code calls skip() in response.
     if (onGravityComplete) {
       await onGravityComplete();
       if (generation !== this._spinGeneration) return;

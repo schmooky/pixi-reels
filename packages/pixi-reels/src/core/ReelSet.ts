@@ -181,23 +181,38 @@ export interface RunCascadeOptions {
    */
   refillMode?: 'combined' | 'gravity-then-drop';
   /**
-   * Pause between gravity end (last reel finished sliding) and drop-in
-   * start (first reel begins new-symbol entry), in ms. Only used when
-   * `refillMode === 'gravity-then-drop'`. Default `250`.
+   * Fixed wall-clock pause between gravity end and drop-in start, in ms.
+   * Only used when `refillMode === 'gravity-then-drop'`. Default `250`.
+   * Combines via `Promise.all` with `gravityHold` if both are provided.
    *
    * The natural place for asymmetric anticipation visuals: register a
    * listener on `cascade:gravity:end` (one per reel) and trigger your
-   * mascot / multiplier roll / SFX from there. Use `onGravityComplete`
-   * if you need to AWAIT something before the drop-in starts (the hold
-   * extends to cover your async work).
+   * mascot / multiplier roll / SFX from there. Use `gravityHold` if you
+   * already have an in-flight animation promise, or `onGravityComplete`
+   * if you need a post-hold callback.
    */
   gravityHoldMs?: number;
   /**
-   * Per-cascade hook fired AFTER the gravity stage finishes on every
-   * reel and BEFORE the drop-in stage starts. Only fires when
-   * `refillMode === 'gravity-then-drop'`. Awaiting inside extends the
-   * hold beyond `gravityHoldMs` — useful for "wait for the multiplier
-   * count-up to finish before new symbols land".
+   * Per-cascade promise-builder. Called once at the gravity-end boundary
+   * of every refill; the returned promise is awaited in parallel with
+   * `gravityHoldMs` (Promise.all — whichever finishes LAST gates the
+   * drop-in). Only fires when `refillMode === 'gravity-then-drop'`. Use
+   * when each cascade in the chain starts its own anticipation animation
+   * and you want the engine to wait for it by handle.
+   *
+   *   - `chain` — same 1-indexed chain stage as `cascade:chain:start`.
+   *   - `winners` — cells cleared this cascade.
+   */
+  gravityHold?: (info: {
+    chain: number;
+    winners: readonly Cell[];
+  }) => Promise<void>;
+  /**
+   * Per-cascade callback fired AFTER `gravityHoldMs` + `gravityHold` both
+   * resolve, BEFORE the drop-in stage. Only fires when
+   * `refillMode === 'gravity-then-drop'`. Use for last-mile side effects
+   * that need to read post-hold state (e.g. snapshot the multiplier
+   * value that just finished its count-up).
    *
    *   - `chain` — same 1-indexed chain stage as `cascade:chain:start`.
    *   - `winners` — cells cleared this cascade.
@@ -518,16 +533,28 @@ export class ReelSet extends Container implements Disposable {
      */
     mode?: 'combined' | 'gravity-then-drop';
     /**
-     * Pause (ms) between the gravity stage and the drop-in stage. Only
-     * applies when `mode === 'gravity-then-drop'`. Default `250`.
+     * Fixed wall-clock pause (ms) between the gravity stage and the
+     * drop-in stage. Only applies when `mode === 'gravity-then-drop'`.
+     * Default `250`. Combines via `Promise.all` with `gravityHold` if
+     * both are provided — whichever finishes LAST gates the drop-in.
      */
     gravityHoldMs?: number;
     /**
-     * Awaitable hook fired between the gravity and drop-in stages of a
-     * two-stage refill. Only fires when `mode === 'gravity-then-drop'`.
-     * Awaiting inside extends the hold beyond `gravityHoldMs` — use for
-     * "wait until the multiplier count-up finishes before new symbols
-     * land".
+     * Promise that gates the drop-in stage. Only applies when
+     * `mode === 'gravity-then-drop'`. Pass an already-in-flight animation
+     * / SFX / network call's completion promise here when you want the
+     * drop-in to wait for it without wrapping in a callback. Combines
+     * via `Promise.all` with `gravityHoldMs` — pass both to floor the
+     * hold to a minimum wall-clock duration even if the promise
+     * resolves earlier.
+     */
+    gravityHold?: Promise<void>;
+    /**
+     * Awaitable callback fired AFTER `gravityHoldMs` + `gravityHold` both
+     * resolve, BEFORE the drop-in stage. Only fires when
+     * `mode === 'gravity-then-drop'`. Use for last-mile side effects that
+     * need to read the post-hold state (e.g. snapshot the multiplier
+     * value that finished counting up during the hold).
      */
     onGravityComplete?: () => Promise<void> | void;
   }): Promise<SpinResult> {
@@ -750,6 +777,9 @@ export class ReelSet extends Container implements Disposable {
           grid: next,
           mode: refillMode,
           gravityHoldMs: opts.gravityHoldMs,
+          gravityHold: opts.gravityHold
+            ? opts.gravityHold({ chain: stage, winners })
+            : undefined,
           onGravityComplete: opts.onGravityComplete
             ? () => opts.onGravityComplete!({ chain: stage, winners })
             : undefined,

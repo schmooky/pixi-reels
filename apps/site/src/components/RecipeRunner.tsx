@@ -1,6 +1,6 @@
 /** @jsxImportSource react */
 import { useEffect, useRef, useState } from 'react';
-import { RefreshCw, ExternalLink, Square } from 'lucide-react';
+import { RefreshCw, ExternalLink, SkipForward } from 'lucide-react';
 import { Application } from 'pixi.js';
 import type { Texture } from 'pixi.js';
 import * as PIXI from 'pixi.js';
@@ -243,19 +243,22 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
           type="button"
           onClick={() => void handleSpin()}
           disabled={!!error || !ready}
-          title={spinning ? 'Stop' : 'Spin'}
-          aria-label={spinning ? 'Stop' : 'Spin'}
+          title={spinning ? 'Skip' : 'Spin'}
+          aria-label={spinning ? 'Skip' : 'Spin'}
           className={cn(
-            'absolute bottom-3 right-3 inline-flex h-10 w-10 items-center justify-center rounded-full',
-            'border border-border/70 bg-background/80 text-foreground shadow-sm backdrop-blur',
+            // Right edge, vertically centered. Bigger touch target than
+            // the corner bottom-right pill — easier to hit on mobile, more
+            // obvious as the primary action on the canvas.
+            'absolute right-3 top-1/2 -translate-y-1/2 inline-flex h-14 w-14 items-center justify-center rounded-full',
+            'border border-border/70 bg-background/80 text-foreground shadow-md backdrop-blur',
             'transition-all hover:bg-primary hover:text-primary-foreground hover:border-primary',
             spinning && 'bg-primary text-primary-foreground border-primary',
             'disabled:cursor-not-allowed disabled:opacity-50',
           )}
         >
           {spinning
-            ? <Square size={14} strokeWidth={2.5} />
-            : <RefreshCw size={16} strokeWidth={2.25} />}
+            ? <SkipForward size={22} strokeWidth={2.25} />
+            : <RefreshCw size={22} strokeWidth={2.25} />}
         </button>
         <button
           type="button"
