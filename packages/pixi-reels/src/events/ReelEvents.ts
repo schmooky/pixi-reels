@@ -134,6 +134,12 @@ export interface ReelSetEvents extends Record<string, unknown[]> {
    *   - `symbol` — the `ReelSymbol` about to fall (current id, current view)
    *   - `view` — the symbol's PixiJS container (same as `symbol.view`)
    *   - `duration`, `ease`, `distance` — what the library will animate
+   *   - `signal` — aborts when the fall is skipped / slammed. Register a
+   *     one-shot `signal.addEventListener('abort', cleanup, { once: true })`
+   *     to kill any parallel tweens or `gsap.delayedCall` handles your
+   *     listener started, so a slam-stop doesn't leave squish / bounce
+   *     timers firing after the library has snapped the view to its
+   *     final position.
    */
   'cascade:fall:symbol': [info: {
     symbol: ReelSymbol;
@@ -143,6 +149,7 @@ export interface ReelSetEvents extends Record<string, unknown[]> {
     duration: number;
     ease: string;
     distance: number;
+    signal: AbortSignal;
   }];
   /** Tumble cascade: this reel's fall-out animation finished. */
   'cascade:fall:end': [info: { reelIndex: number }];
@@ -177,6 +184,11 @@ export interface ReelSetEvents extends Record<string, unknown[]> {
    * start parallel tweens. `offsetRows` is the number of cells this symbol
    * will traverse (1 for top-row refills, more for survivors sliding past
    * larger holes).
+   *
+   * `signal` aborts when the drop-in is skipped / slammed. Use it to kill
+   * parallel tweens or `gsap.delayedCall` handles (landing squish, bounce,
+   * badge animations) so a slam-stop doesn't leave timers firing after
+   * the library has snapped the view to its grid position.
    */
   'cascade:dropIn:symbol': [info: {
     symbol: ReelSymbol;
@@ -186,6 +198,7 @@ export interface ReelSetEvents extends Record<string, unknown[]> {
     duration: number;
     ease: string;
     offsetRows: number;
+    signal: AbortSignal;
   }];
   /** Tumble cascade: this reel's drop-in animation finished. */
   'cascade:dropIn:end': [info: { reelIndex: number }];
@@ -219,6 +232,7 @@ export interface ReelSetEvents extends Record<string, unknown[]> {
     duration: number;
     ease: string;
     offsetRows: number;
+    signal: AbortSignal;
   }];
   /**
    * Tumble cascade — two-stage refill only: this reel's gravity stage just

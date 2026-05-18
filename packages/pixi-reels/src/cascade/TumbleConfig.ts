@@ -124,3 +124,42 @@ export function resolveTumbleConfig(config: TumbleConfig | undefined): ResolvedT
     },
   };
 }
+
+/**
+ * Merge a partial `TumbleFallConfig` over a fully-resolved base. Used by
+ * `CascadeFallPhase` at `onEnter` time to apply per-speed-profile
+ * overrides without losing the build-time defaults. Returns a new object
+ * — the base is never mutated.
+ */
+export function mergeFallConfig(
+  base: Required<TumbleFallConfig>,
+  override: TumbleFallConfig | undefined,
+): Required<TumbleFallConfig> {
+  if (!override) return base;
+  return {
+    duration: override.duration ?? base.duration,
+    ease: override.ease ?? base.ease,
+    rowStagger: override.rowStagger ?? base.rowStagger,
+    rowOrder: override.rowOrder ?? base.rowOrder,
+  };
+}
+
+/**
+ * Merge a partial `TumbleDropInConfig` over a fully-resolved base. Used by
+ * `CascadeDropInPhase` at `onEnter` time to apply per-speed-profile
+ * overrides without losing the build-time defaults. Returns a new object
+ * — the base is never mutated.
+ */
+export function mergeDropInConfig(
+  base: Required<TumbleDropInConfig>,
+  override: TumbleDropInConfig | undefined,
+): Required<TumbleDropInConfig> {
+  if (!override) return base;
+  return {
+    duration: override.duration ?? base.duration,
+    ease: override.ease ?? base.ease,
+    rowStagger: override.rowStagger ?? base.rowStagger,
+    rowOrder: override.rowOrder ?? base.rowOrder,
+    distance: override.distance ?? base.distance,
+  };
+}
