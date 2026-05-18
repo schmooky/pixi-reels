@@ -1,5 +1,152 @@
 # pixi-reels
 
+## 0.6.0
+
+### Minor Changes
+
+- [#120](https://github.com/schmooky/pixi-reels/pull/120) [`579ed0c`](https://github.com/schmooky/pixi-reels/commit/579ed0c2d16ba36b2672a55c251b9e029db4f088) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Add: two-stage cascade refill (gravity → hold → drop-in) for tumble slots that want an anticipation beat between survivors landing and new symbols entering.
+
+  The default refill animates survivors and new symbols together in one beat (the Sweet Bonanza / Sugar Rush feel). A handful of slots split it in two: survivors slide first, a global beat for anticipation visuals (multiplier roll, mascot react, SFX peak), then new symbols enter — often staggered per column. That flavor is now first-class.
+
+  Opt in via `mode: 'gravity-then-drop'` on `refill()` (or `refillMode: 'gravity-then-drop'` on `runCascade()`):
+
+  ```ts
+  await reelSet.destroySymbols(winners);
+  reelSet.setDropOrder("ltr", 110); // per-column wave for stage B
+
+  await reelSet.refill({
+    winners,
+    grid: nextGrid,
+    mode: "gravity-then-drop",
+    gravityHoldMs: 350, // anticipation window
+  });
+  ```
+
+  New options:
+
+  - `refill({ mode })` — `'combined'` (default, unchanged) or `'gravity-then-drop'`.
+  - `refill({ gravityHoldMs })` — global pause between gravity end and drop-in start. Default `250`.
+  - `refill({ onGravityComplete })` — awaitable hook between stages; extends the hold for async work (multiplier count-ups, etc.).
+  - `runCascade({ refillMode, gravityHoldMs, onGravityComplete })` — same options forwarded into every refill in the chain. The hook receives `{ chain, winners }`.
+
+  New events:
+
+  - `cascade:gravity:start` — `{ reelIndex }`. A reel's gravity stage begins.
+  - `cascade:gravity:symbol` — same shape as `cascade:dropIn:symbol`, scoped to survivors.
+  - `cascade:gravity:end` — `{ reelIndex }`. A reel's gravity stage settled.
+
+  These fire only in two-stage mode; combined mode is unchanged. Per-column stagger inside the drop-in stage uses the existing `setDropOrder('ltr', stepMs)` — `step < dropIn.duration` gives an overlapping wave, `step >= dropIn.duration` gives strictly sequential columns. The gravity stage always runs all reels in parallel.
+
+  See the [Cascade anticipation refill recipe](https://pixi-reels.com/recipes/tumble-anticipation/) for a live example.
+
+- [#120](https://github.com/schmooky/pixi-reels/pull/120) [`579ed0c`](https://github.com/schmooky/pixi-reels/commit/579ed0c2d16ba36b2672a55c251b9e029db4f088) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Cascade DX pass: collapse ~30 lines of slot orchestration to ~3 with a canonical detect → destroy → refill chain, retire the legacy `examples/shared/cascadeLoop.ts` helper, and align every recipe / example / doc onto the new API.
+
+  **`reelSet.destroySymbols(cells, opts?)`** — the canonical "fade out winners" step. Defers to each symbol's `playDestroy()` so subclasses (Spine, particles) get art-appropriate disintegration without the spin handler caring. Bumps each view's zIndex so destroys aren't clipped, alternates rotation by column for cohesive cluster pops, optional viewport dim. Replaces ~10 lines of duplicated `destroyWinners` helpers in every cascade recipe.
+
+  **`reelSet.runCascade({ detectWinners, nextGrid, onCascade?, pauseAfterDestroyMs?, maxChain?, destroyOptions?, signal? })`** — the canonical cascade chain orchestration. Loops detect → destroy → pause → refill until `detectWinners` returns `[]`. Caller supplies the game-rules callbacks; the library owns the timing. Both callbacks may be `async`. Pass `signal: AbortSignal` for caller-driven cancellation (the right shape for "player tapped slam between refills," where `reelSet.skip()` is a no-op because the engine is idle). The awaited `RunCascadeResult` (`{ chainLength, totalWinners, finalGrid, wasSkipped }`) is the canonical "the chain is over" signal — no separate event for that, since "round" is a slot-UX term (bet→payout) rather than a reel-engine one and the engine-level "press-spin → all-stopped" is already covered by `spin:start` / `spin:allLanded`.
+
+  **`cascade:place:end`** payload now includes `isInitial: boolean` and `winnerRows: readonly number[]` so decoration listeners can tell new arrivals from survivors sliding into a hole.
+
+  Also exports the named option / result types — `DestroySymbolsOptions`, `RunCascadeOptions`, `RunCascadeResult` — so apps can pass typed config objects around or extend them in adapter layers.
+
+  Non-breaking for the library API. Removed the legacy `examples/shared/cascadeLoop.ts` helper (`runCascade(reelSet, stages, opts)`, `tumbleToGrid`, `diffCells`) since every recipe + example + integration test has been migrated to the new `reelSet.runCascade` / `reelSet.destroySymbols` / `reelSet.refill` surface. Site recipes (`cascade-6x5`, `spin-then-cascade`, `multiways-cascade`, `cascade-winpresenter`, `remove-symbol`) and React recipe components (`RemoveSymbolRecipe`, `CascadeStarterRecipe`) all use the new API; the `cascade-tumble` and `pyramid-cascade` examples were rewritten the same way.
+
+  New guide `your-first-cascade.mdx` walks a tutorial through the canonical API end-to-end. `cascades.mdx` documents the two-moments mental model, the `pauseAfterDestroyMs` / `destroyOptions` / `signal` knobs on `runCascade`, and the choice between `refill()` and `runCascade()`.
+
+- [#120](https://github.com/schmooky/pixi-reels/pull/120) [`579ed0c`](https://github.com/schmooky/pixi-reels/commit/579ed0c2d16ba36b2672a55c251b9e029db4f088) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Add: chain- and destroy-scoped cascade lifecycle events so HUDs and audio buses can hook a cascade chain without polling `isSpinning` (which oscillates between refills).
+
+  New events on `reelSet.events`:
+
+  - `cascade:chain:start` — `{ chain, winners, currentGrid }`. Fired inside `runCascade(...)` after `detectWinners` returns winners, before `destroySymbols` runs. `chain` is 1-indexed.
+  - `cascade:chain:end` — `{ chain, winners, nextGrid }`. Mirror of `chain:start` — fired after the refill drop-in settles, before the loop iterates to the next `detectWinners`.
+  - `cascade:destroy:start` / `cascade:destroy:end` — `{ cells }`. Fired around every `destroySymbols(...)` call (both direct and inside `runCascade`). Empty-batch calls do not emit. Use these to cue a shatter SFX, dim a HUD, or capture pre-destroy grids for replay logging — without overriding the cascade loop.
+
+  Event ordering per `runCascade()` call (per stage with winners):
+
+  `cascade:chain:start` → `cascade:destroy:start` → (destroy tweens) → `cascade:destroy:end` → `onCascade` callback → pause → refill (`cascade:place:end` + `cascade:dropIn:*` per reel) → `cascade:chain:end`
+
+  The runCascade chain itself is delimited by the returned `Promise` — `await` the call to know when it's done and read the `RunCascadeResult` summary. There is intentionally no `cascade:round:*` event pair: "round" in slot UX is a bet→payout transaction (your concern, not the engine's), and the engine-level "press-spin → all-stopped" is already covered by `spin:start` / `spin:allLanded`.
+
+  Every cascade event uses a consistent three-part `cascade:<scope>:<step>` taxonomy.
+
+- [#120](https://github.com/schmooky/pixi-reels/pull/120) [`579ed0c`](https://github.com/schmooky/pixi-reels/commit/579ed0c2d16ba36b2672a55c251b9e029db4f088) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Add `gravityHold: Promise<void>` to `refill()` and `runCascade()` so callers can gate the drop-in stage on an already-in-flight animation / SFX / network call without wrapping it in a callback.
+
+  ```ts
+  // Single refill — pass the promise directly.
+  await reelSet.refill({
+    winners,
+    grid: next,
+    mode: "gravity-then-drop",
+    gravityHoldMs: 150, // minimum wall-clock floor
+    gravityHold: multiplierRoll.done, // wait for the in-flight roll
+  });
+  ```
+
+  `gravityHoldMs` and `gravityHold` race in **parallel** via `Promise.all` — whichever finishes LAST gates the drop-in. Pass both when you want a wall-clock floor under an animation that might finish quickly. `onGravityComplete` (the existing callback hook) still runs AFTER both resolve, so it can read post-hold state.
+
+  ```ts
+  // Per-cascade — runCascade calls the builder once per stage.
+  await reelSet.runCascade({
+    detectWinners,
+    nextGrid,
+    refillMode: "gravity-then-drop",
+    gravityHoldMs: 150,
+    gravityHold: ({ chain, winners }) => {
+      multiplier.bumpTo(chain + 1);
+      return multiplier.done; // each cascade waits for its own roll
+    },
+  });
+  ```
+
+  Site recipes: SPIN/SKIP button is now bigger (56x56 vs 40x40), vertically centered on the right edge of the canvas, and uses the `SkipForward` icon (lucide-react) instead of `Square` when active. Larger touch target, more obvious as the primary action.
+
+- [#120](https://github.com/schmooky/pixi-reels/pull/120) [`579ed0c`](https://github.com/schmooky/pixi-reels/commit/579ed0c2d16ba36b2672a55c251b9e029db4f088) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Round-aware slam-stop: single-press `skip()` with side effects, new `slamStop()`, new `skipStage`.
+
+  `ReelSet.skip()` is now round-aware. A "round" is one `spin()` plus all its `refill()`s, until the next `spin()`. The first press of `skip()` in a round slams the current drop AND applies a round-scoped side effect:
+
+  - **Standard mode**: boosts the active speed profile to the fastest registered one (emits `skip:boosted`). The speed takes effect on the NEXT spin (mid-spin speed switching is not supported by phases). Boost persists across `refill()` calls and is restored on the next `spin()` — unless the app changed speed manually between rounds, in which case the manual choice is preserved.
+  - **Cascade/tumble mode**: flags the round so every subsequent `refill()` auto-slams with no animation. One press ends a multi-drop cascade.
+
+  Subsequent `skip()` presses in the same round each slam the current drop. The universal `if (isSpinning) reelSet.skip()` button pattern across recipes now always lands the spin on a single press, while still benefiting from the boost / auto-slam side effect.
+
+  Breaking:
+
+  - `skip()` no longer needs two presses to slam — single press lands the drop. Callers that already relied on `skip()` slamming work as before. Callers expecting a _non-slamming_ "boost only" press should use `reelSet.setSpeed('superTurbo')` directly.
+  - `skip()` THROWS if called before `setResult()` arrives (no result to land on — pre-result slam would land on random spin-buffer state). Use `requestSkip()` for the deferred-slam pattern, or wrap `skip()` in `try { ... } catch {}` and route to `requestSkip()` in the catch. Refill paths take a result at entry, so this guard only fires in the initial-spin pre-`setResult` window.
+  - `requestSkip()` bypasses staging entirely and slams when `setResult()` arrives.
+  - The test harness `spinAndLand()` was migrated to `slamStop()` to keep its semantics explicit.
+
+  Added:
+
+  - `ReelSet.slamStop()` — always slams, no side effects.
+  - `ReelSet.skipStage` — `0 | 1 | 2` getter; `0` until the first press, `2` after. (`1` is reserved for forward compat.)
+  - `skip:boosted` event — `{ previous, current }: SpeedProfile`. Fires only on standard-mode boost; cascade auto-slam doesn't emit it.
+  - `ReelSymbol.playDestroy(opts?)` — `opts.direction: 1 | -1` for coherent rotation (e.g. `w.reel % 2 === 0 ? 1 : -1`), `opts.delay: number` (seconds) for per-winner stagger, and `opts.signal: AbortSignal` so a mid-destroy abort can snap to the destroyed pose without waiting for the full ~300 ms tween. Default direction stays random for back-compat.
+
+- [#120](https://github.com/schmooky/pixi-reels/pull/120) [`579ed0c`](https://github.com/schmooky/pixi-reels/commit/579ed0c2d16ba36b2672a55c251b9e029db4f088) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Replace `.cascade()` with `.tumble()` and split cascade-drop into three independently overridable phases.
+
+  Breaking changes: `.cascade(DropRecipes...)` is removed. `DropRecipes`, `DropStartPhase`, `DropStopPhase`, `CascadeAnticipationPhase`, and their `*Config` types no longer export from `pixi-reels`. Use `.tumble({ fall, dropIn })` on the builder and override individual phases via `.phases(f => f.register('cascade:fall'|'cascade:place'|'cascade:dropIn', MyPhase))`.
+
+  New: `reelSet.refill({ winners, grid })` for Moment B cascade refills. Gravity-correct geometry — untouched survivors stay, survivors above a hole slide down, new symbols enter from above into the top `winners.length` rows. Per-symbol `cascade:fall:symbol` / `cascade:dropIn:symbol` events fire right before each tween so listeners can run parallel tweens on any view property in sync with the library's motion. Per-reel boundary events: `cascade:fall:start` / `cascade:fall:end` / `cascade:place:end` / `cascade:dropIn:start` / `cascade:dropIn:end`.
+
+  See `docs/recipes/tumble-cascade.md` for the full recipe (drop-on-click, server wait with spinner, cascading multiplier).
+
+### Patch Changes
+
+- [#120](https://github.com/schmooky/pixi-reels/pull/120) [`579ed0c`](https://github.com/schmooky/pixi-reels/commit/579ed0c2d16ba36b2672a55c251b9e029db4f088) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Fix five audit-discovered defects in the tumble-cascade pipeline:
+
+  - `CascadeFallPhase` / `CascadeDropInPhase` now emit their `:end` events on skip. Previously a slam mid-fall (or mid-drop, mid-gravity) killed the timeline without firing the paired `cascade:fall:end` / `cascade:dropIn:end` / `cascade:gravity:end`, so any HUD or audio bus pairing `:start` / `:end` to track in-flight cascade work drifted out of balance on every slam. The pre-fall delay window (where `:start` has not yet fired) still skips silently, so no unpaired `:end` is emitted.
+
+  - `runCascade({ gravityHold })` now invokes the per-cascade builder at the **gravity-end boundary** as documented, not at refill-start. Side effects in the builder (e.g. `multiplier.bumpTo(chain + 1); return multiplier.done`) now line up with the gravity-end beat the player sees. To support this, `refill({ gravityHold })` accepts a factory `() => Promise<void>` in addition to a bare `Promise<void>` — pass a factory when the side effect of starting the promise should fire at gravity-end; pass a bare promise when you already hold an in-flight handle.
+
+  - `runCascade({ pauseAfterDestroyMs })` wait is now cancellable via `signal`. Previously an abort during the pause ran the setTimeout to completion before the loop exited — up to `pauseAfterDestroyMs` of dead air between slam intent and exit. Now the wait races against `signal.aborted` and unblocks within a microtask.
+
+  - A new `cascade:gravity:error` event surfaces user-supplied `gravityHold` / `onGravityComplete` rejections (or throws). The engine still slams to recover so the refill promise settles, but the original rejection reason is no longer silently swallowed — listen on the event to forward the error to your own logger / alarm. The console.error log was also tightened to identify the likely culprit.
+
+  - `movePin` `onFlightCreated` / `onFlightCompleted` hook throws now log via `console.error` instead of being silently swallowed. The animation still continues (a throwing hook MUST NOT leak a flight symbol or leave the pin map out of sync) but the bug is no longer invisible.
+
+  Also clarifies the `skip()` documentation: `skip()` THROWS before `setResult()` arrives. The docstring on `requestSkip()` and `skipStage` now notes that queued-pre-`setResult` requests do not advance `skipStage` until the slam fires.
+
 ## 0.5.0
 
 ### Minor Changes
