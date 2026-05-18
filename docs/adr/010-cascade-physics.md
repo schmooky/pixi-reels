@@ -10,58 +10,51 @@ We hit this exact bug twice in the demo build (scatter-triggers-fs and cascade-m
 
 ## Decision
 
-**`tumbleToGrid(reelSet, nextGrid, winners, opts)` computes per-survivor fall distance from the winner list. Cells whose computed fall distance is zero are never touched.** No animation job is created for them, their `view.y` is not mutated, they sit on the grid unchanged.
+**`reelSet.refill({ winners, grid })` computes per-survivor fall distance from the winner list. Cells whose computed fall distance is zero are never touched.** No animation job is created for them, their `view.y` is not mutated, they sit on the grid unchanged. The algorithm is exported as `computeDropOffsets(visibleRows, winnerRows)` so consumers can validate server-side gravity sims offline.
 
 ### The algorithm, per column
 
 Let `V` = visible rows, `winnerRows` = rows of the column that were removed (ascending), `nonWinnerRows` = surviving rows in order, `winCount = winnerRows.length`.
 
-After `reel.placeSymbols(nextGrid[r])` puts the new symbols at their correct final grid positions, walk final row `R` from 0 to `V - 1`:
+After `reel.placeSymbols(visible)` puts the new symbols at their correct final grid positions, walk final row `R` from 0 to `V - 1`:
 
 | Condition on R | Kind | Pre-drop offset (slots above target) |
 |---|---|---|
 | `R < winCount` | New symbol filling a cleared top slot | `R + 1` (staggered entrance: row 0 from 1 slot up, row 1 from 2, …) |
 | `R >= winCount` | Survivor from original row `nonWinnerRows[R - winCount]` | `R - originalRow` — **zero means: do not touch this cell.** |
 
-The tween runs in one pass with `easeOutCubic`.
+The tween runs through `CascadeDropInPhase` with the builder's configured `dropIn` ease and stagger.
 
-### Why `diffCells` is a trap for pattern cascades
+### Why a grid-diff is a trap for pattern cascades
 
-`diffCells(prev, next)` returns cells whose symbol id changed. That's the right answer when the only changed cells are new symbols falling from above *and the survivors never slide past cleared slots*. But with a winner at the bottom of a column, survivors slide down; every row's symbol id changes; `diffCells` reports every row as a "winner"; `tumbleToGrid` treats survivors as new symbols falling from above; the whole column animates. Visually: a reel respin, not a cascade.
+A naive "diff the two grids and call everything changed a winner" approach gives the right answer when the only changed cells are new symbols falling from above *and the survivors never slide past cleared slots*. But with a winner at the bottom of a column, survivors slide down; every row's symbol id changes; the diff reports every row as a "winner"; the refill animates every cell as a new arrival from above. Visually: a reel respin, not a cascade.
 
-**Rule**: callers with a pattern cascade (match-3, scatter cluster, line match) must pass a semantic `winners` list derived from their match logic, not from `diffCells`. `runCascade` supports this via an explicit `winners: (prev, next) => Cell[]` option. The default is still `diffCells` for the gravity-clean common case.
+**Rule**: the library's public API takes a `Cell[]` of **match winners**, not a diff. Inside `reelSet.runCascade({ detectWinners, nextGrid })`, your `detectWinners` callback returns the cells your game rules consider winners — never a diff of two grids.
 
 ## Consequences
 
 ### Positive
 
 - Cascade demos look correct. The visual matches the player's expectation.
-- The invariant is enforced by four targeted tests in `tests/integration/cascadeLoop.test.ts` — covering top-winner, bottom-winner, middle-winner, and stacked-top-winners cases. A naive implementation fails those tests immediately.
-- `runCascade`'s API stays simple: array or `AsyncIterable` of stages, one callback each for vanish and landing.
+- The invariant is enforced by targeted tests in `tests/unit/runCascade.test.ts` and `tests/unit/cascadeAlgorithm.test.ts` — covering top-winner, bottom-winner, middle-winner, and stacked-top-winners cases. A naive implementation fails those tests immediately.
+- `runCascade`'s API stays simple: two callbacks (`detectWinners`, `nextGrid`), the library owns the timing.
 
 ### Negative
 
-- The cheat-engine cascade sequences (`cascadeSequence`, `cascadingStages`) must be physically valid or the demo authoring is more fiddly. The `/recipes/remove-symbol/` page documents the trap and shows the correct pattern.
-- Adopters sometimes want "just respin the whole column" for a particular mechanic. Nothing stops them — they use `reelSet.spin() + setResult()` instead of `tumbleToGrid`. The library has both.
+- Cheat-engine cascade sequences (`cascadeSequence`, `cascadingStages`) must be physically valid or the demo authoring is more fiddly. The `/recipes/remove-symbol/` page documents the trap and shows the correct pattern.
+- Adopters sometimes want "just respin the whole column" for a particular mechanic. Nothing stops them — they use `reelSet.spin() + setResult()` instead of `refill()`. The library has both.
 
 ## Verification
 
 ```ts
+import { computeDropOffsets } from 'pixi-reels';
+
 // Winner at the middle of a 5-row column. Survivors above should fall 1,
 // survivors below should not move at all.
-const h = createTestReelSet({ reels: 1, visibleRows: 5, symbolIds: ['a','b','c','d','e','x'] });
-await h.spinAndLand([['a','b','c','d','e']]);
-
-const movedRows: number[] = [];
-await tumbleToGrid(h.reelSet, [['x','a','b','d','e']], [{ reel: 0, row: 2 }], {
-  animate: async (_d, onFrame) => {
-    for (let row = 0; row < 5; row++) {
-      const y = h.reelSet.getReel(0).getSymbolAt(row).view.y;
-      if (y < row * SLOT_HEIGHT - 0.5) movedRows.push(row);
-    }
-    onFrame(1);
-  },
-});
-// Rows 0, 1, 2 animated. Rows 3, 4 are untouched.
-expect(movedRows.sort()).toEqual([0, 1, 2]);
+const offsets = computeDropOffsets(5, [2]);
+expect(offsets.find(o => o.row === 0)?.offsetRows).toBe(1); // new top
+expect(offsets.find(o => o.row === 1)?.offsetRows).toBe(1); // survivor row 0 → 1
+expect(offsets.find(o => o.row === 2)?.offsetRows).toBe(1); // survivor row 1 → 2
+expect(offsets.find(o => o.row === 3)?.offsetRows).toBe(0); // survivor row 3, no move
+expect(offsets.find(o => o.row === 4)?.offsetRows).toBe(0); // survivor row 4, no move
 ```

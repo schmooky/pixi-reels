@@ -84,7 +84,7 @@ export const DEMOS: DemoMeta[] = [
     slug: 'pyramid-cascade',
     title: 'Pyramid cascade (3-5-5-5-3)',
     subtitle: 'Jagged diamond · ways pay · real gravity refill',
-    summary: 'visibleRowsPerReel + center anchor builds a diamond. Cascade refills use tumbleToGrid - survivors stay put, only the cleared slots refill from above.',
+    summary: 'visibleRowsPerReel + center anchor builds a diamond. Cascade refills use reelSet.refill({ winners, grid }) - survivors stay put, only the cleared slots refill from above.',
     tags: ['pyramid', 'cascade', 'gravity'],
     cheatHighlights: ['Stiff drop (no bounce)', 'Survivors don\'t re-drop', 'Cascade multiplier'],
   },

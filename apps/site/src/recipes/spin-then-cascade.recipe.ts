@@ -1,25 +1,20 @@
 // @ts-nocheck
 // Injected: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, WILD_CARD,
-//           DropRecipes, PIXI, gsap, app, runCascade, pickWeighted
+//           PIXI, gsap, app, pickWeighted
 
 // Hybrid spin-then-cascade: round 1 spins like a classic strip slot
 // (top-to-bottom motion, START → SPIN → STOP). The landing has a
 // winning cluster — those cells pop, survivors fall, new symbols drop
-// in from above. The new top-row fill happens to create a SECOND
-// cluster, so we cascade again. Each cascade pop is purely visual
-// (runCascade), not a re-spin — the landed reels stay landed.
+// in from above. Each pop is a `reelSet.refill(...)` call driven by
+// `reelSet.runCascade({ detectWinners, nextGrid })`, NOT a re-spin.
 //
 // IMPORTANT recipe-design note: the chain only ever touches the LEFT
-// THREE columns (cols 1-3 if you count from 1). Cols 4 and 5 land
-// during the strip-spin and STAY UNTOUCHED for the rest of the play.
-// That's deliberate — it makes the cascade chain unmistakable to the
-// reader. Real games typically chain across overlapping clusters; here
-// we keep the demo's affected area visually contiguous.
+// THREE columns. Cols 4 and 5 land during the strip-spin and STAY
+// UNTOUCHED for the rest of the play. That's deliberate — `runCascade`
+// detects winners per-grid each round; only the columns that have
+// winning cells animate. Real games typically chain across overlapping
+// clusters; here we keep the demo's affected area visually contiguous.
 
-// 5 reels x 5 rows — matches the Arc Lord shape shown in the reference
-// clip above. The cascade chain pops the upper-middle row twice on the
-// left three columns; the two right columns and the bottom three rows
-// stay completely still throughout the chain.
 const IDS = ['7', '8', '9', '10', 'J', 'Q'];
 const REELS = 5, ROWS = 5, SIZE = 64;
 const HIT_COLS = [0, 1, 2];                     // left three columns
@@ -46,6 +41,14 @@ const reelSet = new ReelSetBuilder()
     }
   })
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 120 })
+  // Cascade refills layer on top of a standard strip-spin: leave the
+  // builder's default mode as 'standard' for the first spin, and the
+  // refill chain below uses `reelSet.refill()` directly (which doesn't
+  // need `.tumble()` for the strip-spin landing itself).
+  .tumble({
+    fall:   { duration: 0, ease: 'none', rowStagger: 0 },              // not used — refill skips fall
+    dropIn: { duration: 360, ease: 'back.out(1.6)', rowStagger: 0, distance: 'perHole' },
+  })
   .ticker(app.ticker)
   .build();
 
@@ -77,41 +80,40 @@ return {
       return next;
     };
 
-    // Stage 1 — '10's vanish at HIT_ROW. Survivors fall: the Js at row
-    // 0 fall into HIT_ROW, creating cluster #2. New random symbols
-    // drop in at row 0. Cols 3-4 (0-indexed) and rows below HIT_ROW
-    // are unchanged — cascadeLoop's no-winners-skip path leaves them
-    // completely alone.
-    const stage1 = stage0.map((col, c) =>
-      HIT_COLS.includes(c)
-        ? dropAtHitRow(col, randSymbolNotIn(new Set([TRIGGER1, TRIGGER2])))
-        : [...col],
-    );
-
-    // Stage 2 — 'J's vanish at HIT_ROW. Stage-1's row-0 (a random)
-    // falls into HIT_ROW; new random at row 0. No further cluster.
-    const stage2 = stage1.map((col, c) =>
-      HIT_COLS.includes(c)
-        ? dropAtHitRow(col, randSymbolNotIn(new Set([TRIGGER1, TRIGGER2])))
-        : [...col],
-    );
-
     // Round 1: classic strip-spin lands on stage 0.
-    const p = reelSet.spin();
+    const p = reelSet.spin({ mode: 'standard' });
     await new Promise((r) => setTimeout(r, 150));
     reelSet.setResult(stage0);
     await p;
     await new Promise((r) => setTimeout(r, 300));
 
-    // Cascade chain: stage 0 → 1 → 2, popping the middle row twice.
-    // Both pops happen on the same three columns (HIT_COLS); cols 3-4
-    // never animate because cascadeLoop skips reels with no winners
-    // and unchanged symbols.
-    await runCascade(reelSet, [stage0, stage1, stage2], {
-      winners: () => HIT_COLS.map((c) => ({ reel: c, row: HIT_ROW })),
-      vanishDuration: 320,
-      dropDuration: 440,
-      pauseBetween: 160,
+    // Cascade chain — driven by `reelSet.runCascade({...})`. The library
+    // owns the detect → destroy → pause → refill loop and resolves with
+    // `RunCascadeResult` when no more winners are found. Game-rule
+    // callbacks: `detectWinners` (cells whose symbol id matches the
+    // current trigger) and `nextGrid` (post-gravity grid via the helper).
+    reelSet.setDropOrder('all');
+
+    let trigger = TRIGGER1;
+    await reelSet.runCascade({
+      detectWinners: (grid) => HIT_COLS
+        .map((c) => grid[c][HIT_ROW] === trigger ? { reel: c, row: HIT_ROW } : null)
+        .filter(Boolean),
+      nextGrid: (prev, winners) => {
+        const fill = randSymbolNotIn(new Set([TRIGGER1, TRIGGER2]));
+        const out = prev.map((col, c) =>
+          winners.some((w) => w.reel === c)
+            ? dropAtHitRow(col, fill)
+            : [...col],
+        );
+        // After popping the 10s, the next trigger is the J that just
+        // fell into HIT_ROW. Real games would compute this from the
+        // post-refill grid via `detectWinners` again — we hard-step it
+        // so the demo is unmistakable.
+        trigger = trigger === TRIGGER1 ? TRIGGER2 : '__none__';
+        return out;
+      },
+      pauseAfterDestroyMs: 160,
     });
   },
 };

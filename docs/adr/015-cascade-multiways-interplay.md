@@ -34,13 +34,13 @@ DropStartPhase  →  SpinPhase  →  AdjustPhase  →  DropStopPhase
 
 - Pin migration semantics are identical to the non-cascade multiways case — `setShape()` migrates pins to their new rows; `AdjustPhase` tweens overlays from the captured pre-reshape pose to the post-reshape cell.
 - Big symbols + multiways still throws. Anchor coordinates don't have stable semantics under reshape; this is unchanged.
-- `runCascade(...)` (the post-landing tumble helper in `examples/shared/cascadeLoop.ts`) was never gated by the throw and already worked on multiways grids in practice — its per-reel `visibleRows` reads are shape-aware. The change in this ADR only affects the cascade-mode *spin* path.
+- `reelSet.runCascade(...)` (the post-landing tumble orchestrator) was never gated by the throw and already worked on multiways grids in practice — its per-reel `visibleRows` reads are shape-aware. The change in this ADR only affects the cascade-mode *spin* path.
 
 ## Consequences
 
 - The `ReelSetBuilder` validation has one fewer guardrail. `validation.test.ts` now asserts the combination *builds* instead of asserting it throws.
 - ADR 012:48 is no longer current. That line should read "Cascade + MultiWays is supported via the per-chain shape rule documented in ADR 015."
-- The `multiways-cascade` recipe demonstrates the combination end-to-end: random per-spin shape, cascade drop-in landing, optional `runCascade` chain on the landed grid.
+- The `multiways-cascade` recipe demonstrates the combination end-to-end: random per-spin shape, cascade drop-in landing, optional `reelSet.runCascade` chain on the landed grid.
 - A future relaxation — allowing shape change mid-cascade-chain — is a non-breaking additive change. It needs the fall-out animation to capture pre-reshape views and `AdjustPhase` to run between fall and drop-in, neither of which is in v1.
 
 ## Alternatives considered

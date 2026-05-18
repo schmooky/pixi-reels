@@ -13,13 +13,18 @@ import type { StartPhaseConfig } from './phases/StartPhase.js';
 import type { StopPhaseConfig } from './phases/StopPhase.js';
 import type { AnticipationPhaseConfig } from './phases/AnticipationPhase.js';
 import type { AdjustPhaseConfig } from './phases/AdjustPhase.js';
+import type { CascadeFallPhaseConfig } from './phases/CascadeFallPhase.js';
+import type { CascadePlacePhaseConfig } from './phases/CascadePlacePhase.js';
+import type { CascadeDropInPhaseConfig } from './phases/CascadeDropInPhase.js';
 import type { SpinningMode } from './modes/SpinningMode.js';
 import { StandardMode } from './modes/StandardMode.js';
 import type { Disposable } from '../utils/Disposable.js';
 import { TickerRef } from '../utils/TickerRef.js';
 import { OCCUPIED_SENTINEL } from '../core/Reel.js';
 import type { CellPin } from '../pins/CellPin.js';
-import { cloneTargetGrid } from '../frame/ColumnTarget.js';
+import { cloneTargetGrid, toLegacyTargetGrid } from '../frame/ColumnTarget.js';
+import type { ColumnTarget } from '../frame/ColumnTarget.js';
+import type { Cell } from '../cascade/tumbleAlgorithm.js';
 
 /**
  * MultiWays/big-symbol coordination hook injected by `ReelSet` into
@@ -116,6 +121,54 @@ export class SpinController implements Disposable {
   private _currentSpinResolve: ((result: SpinResult) => void) | null = null;
   /** Incremented on each new spin. If a callback sees a stale generation, it no-ops. */
   private _spinGeneration = 0;
+  /**
+   * Round-aware `skip()` state. Lives across `refill()` calls within a
+   * round (one `spin()` + its cascade refills) and resets on the next
+   * `spin()`.
+   *
+   * `0` — no press yet this round.
+   * `2` — a press has slammed (and applied the round's side effect: a
+   *       speed boost in standard mode or auto-slam-refills in cascade).
+   *       Subsequent presses also slam.
+   *
+   * `1` is reserved (kept for forward compat in the type) but currently
+   * unreachable — every press slams now, side effects are applied on the
+   * first press together with the slam.
+   */
+  private _skipStage: 0 | 1 | 2 = 0;
+  /**
+   * Speed profile name that was active when the round-start boost fired,
+   * captured so the next `spin()` can restore it. `null` between rounds and
+   * during rounds where the player never pressed skip.
+   */
+  private _skipPreviousSpeedName: string | null = null;
+  /**
+   * Speed profile name we boosted INTO. Kept for telemetry / debugging;
+   * the restore decision uses `_manualSpeedSinceBoost` instead, which
+   * correctly distinguishes "user didn't touch speed" from "user happened
+   * to manually re-set to the boosted value" (the activeName check alone
+   * can't tell those apart).
+   */
+  private _skipBoostedToName: string | null = null;
+  /**
+   * `true` when the app called `setSpeed()` between the round-start boost
+   * and the next `spin()` — i.e. the user made an explicit speed choice
+   * after the boost. The next `spin()` restore path checks this flag and
+   * SKIPS the restore so the manual choice survives, even if the manual
+   * choice happens to be the same name we boosted into.
+   *
+   * Set by `notifyManualSpeedChange()` (called from `ReelSet.setSpeed`).
+   * Cleared at the start of every `spin()` together with the boost
+   * bookkeeping.
+   */
+  private _manualSpeedSinceBoost = false;
+  /**
+   * Cascade-mode round flag. When true, the next `refill()` skips its
+   * phase chain and slams instantly. Set when the player presses `skip()`
+   * during a cascade round (one press = "fast-forward to end of round").
+   * Cleared on the next `spin()` alongside the rest of the stage state.
+   */
+  private _autoSlamRefills = false;
 
   constructor(
     reels: Reel[],
@@ -160,18 +213,46 @@ export class SpinController implements Disposable {
     return this._isDestroyed;
   }
 
+  /**
+   * Current `skip()` position within the active round. `0` until the
+   * player presses the slam button, `2` after. Use to drive UI button
+   * labels (e.g. "Skip" → "Skipped"). `1` is reserved for forward compat
+   * and is not currently reachable.
+   */
+  get skipStage(): 0 | 1 | 2 {
+    return this._skipStage;
+  }
+
   async spin(options?: SpinOptions): Promise<SpinResult> {
     if (this._isSpinning) {
       throw new Error('Cannot start a new spin while one is in progress.');
     }
 
     const mode = options?.mode ?? this._defaultSpinMode;
-    if (mode === 'cascade' && !this._phaseFactory.has('dropStart')) {
+    if (mode === 'cascade' && !this._phaseFactory.has('cascade:fall')) {
       throw new Error(
-        "spin({ mode: 'cascade' }) requires .cascade(...) on the builder.",
+        "spin({ mode: 'cascade' }) requires .tumble(...) on the builder.",
       );
     }
     this._currentSpinMode = mode;
+
+    // Round boundary: a new `spin()` ends the previous round. If the
+    // player boosted via `skip()` last round AND did NOT manually call
+    // `setSpeed()` between rounds, restore the pre-boost speed. The
+    // manual-flag check is what distinguishes "user untouched, restore"
+    // from "user explicitly chose the boosted name, leave alone" — the
+    // activeName comparison alone can't tell those apart.
+    if (this._skipPreviousSpeedName !== null) {
+      const prev = this._skipPreviousSpeedName;
+      this._skipPreviousSpeedName = null;
+      this._skipBoostedToName = null;
+      if (!this._manualSpeedSinceBoost && this._speedManager.activeName !== prev) {
+        this._speedManager.set(prev);
+      }
+    }
+    this._manualSpeedSinceBoost = false;
+    this._skipStage = 0;
+    this._autoSlamRefills = false;
 
     this._isSpinning = true;
     this._wasSkipped = false;
@@ -179,7 +260,12 @@ export class SpinController implements Disposable {
     this._spinStartTime = performance.now();
     this._resultSymbols = null;
     this._anticipationReels = [];
-    this._stopDelayOverride = null;
+    // NOTE: _stopDelayOverride is NOT cleared here. The contract is that
+    // `setDropOrder()` (or `setStopDelays()`) is called right before
+    // `spin()` / `refill()` and represents user intent for the upcoming
+    // sequence. Clearing it on entry would silently drop the value the
+    // user just set. The override persists until the next setDropOrder()
+    // call overwrites it.
     this._landedReels.clear();
     this._activePhases.clear();
     this._heldReels = this._normalizeHoldReels(options?.holdReels);
@@ -206,10 +292,38 @@ export class SpinController implements Disposable {
 
     for (let i = 0; i < this._reels.length; i++) {
       if (this._heldReels.has(i)) continue;
-      this._startReel(i, speed, generation);
+      this._runReelTask(this._startReel(i, speed, generation), 'spin', i, generation);
     }
 
     return resultPromise;
+  }
+
+  /**
+   * Wrap a per-reel async phase chain with an error guard. If the chain
+   * rejects we log the error and force a slam so:
+   *   1. the spin promise resolves with `wasSkipped: true` instead of
+   *      hanging forever waiting for the failed reel to land,
+   *   2. every other reel is brought to a clean landed state,
+   *   3. the next `spin()` / `refill()` starts from a coherent snapshot.
+   *
+   * Generation-guarded so a late rejection from a stale spin (one that
+   * was already replaced by a fresh `spin()` call) is dropped silently.
+   */
+  private _runReelTask(
+    p: Promise<void>,
+    kind: 'spin' | 'refill',
+    reelIndex: number,
+    generation: number,
+  ): void {
+    p.catch((err: unknown) => {
+      if (generation !== this._spinGeneration) return;
+      // eslint-disable-next-line no-console
+      console.error(
+        `[pixi-reels] reel ${reelIndex} (${kind}) phase chain threw — slamming to recover:`,
+        err,
+      );
+      this._slam();
+    });
   }
 
   /**
@@ -240,9 +354,379 @@ export class SpinController implements Disposable {
     this._resultSymbols = symbols;
     this._tryBeginStopSequence();
     if (this._skipPending) {
+      // Deferred `requestSkip()` is an explicit slam intent — bypass the
+      // two-stage `skip()` machine and slam directly.
       this._skipPending = false;
-      this.skip();
+      this._slam();
+      this._skipStage = 2;
     }
+  }
+
+  /**
+   * Tumble cascade: place + drop-in for a refill (Moment B). Skips the
+   * fall and the wait-for-result — the caller already cleared the winning
+   * cells in user code and is now handing us the next grid directly.
+   *
+   * Two refill modes:
+   *
+   *   - `'combined'` (default) — survivors and new symbols animate together
+   *     in one drop-in phase. The classic Sweet Bonanza / Sugar Rush feel.
+   *   - `'gravity-then-drop'` — survivors slide down to fill holes FIRST
+   *     (gravity stage), then a global hold, then new symbols drop in from
+   *     above (drop-in stage). The Mummyland Treasures / Reactoonz feel —
+   *     gives space for anticipation visuals between the two beats. Per-reel
+   *     stop delays (`setDropOrder`) apply to the drop-in stage only; the
+   *     gravity stage runs simultaneously across all reels.
+   *
+   * The hold between gravity and drop-in is the **max** of three sources
+   * (Promise.all semantics — whichever finishes LAST gates the drop-in):
+   *
+   *   - `gravityHoldMs` (default `250`) — fixed wall-clock pause via setTimeout.
+   *   - `gravityHold: Promise<void>` — caller-supplied promise. Use when you
+   *     already have an in-flight animation/SFX/etc. and want to wait for it
+   *     by handle rather than wrapping in a callback.
+   *   - `onGravityComplete: () => Promise<void> | void` — callback invoked
+   *     at the gravity-end boundary; its returned promise is awaited.
+   *
+   * `gravityHoldMs` and `gravityHold` race in parallel (Promise.all of the
+   * two — both must finish before drop-in starts). `onGravityComplete` runs
+   * AFTER both complete, so it can read final state of whatever they were
+   * waiting on.
+   *
+   * Throws if a spin or refill is already in flight, if `.tumble(...)` was
+   * not configured on the builder, if the grid shape doesn't match the
+   * reel set, or if any winner cell is out of range. All validation runs
+   * BEFORE the spinning state is taken so a thrown error leaves the engine
+   * idle (callers can retry without re-entry errors).
+   */
+  async refill(opts: {
+    winners: ReadonlyArray<Cell>;
+    grid: string[][] | ColumnTarget[];
+    mode?: 'combined' | 'gravity-then-drop';
+    gravityHoldMs?: number;
+    /**
+     * Promise (or zero-arg factory) gating the drop-in stage. Pass a
+     * factory function — `() => Promise<void>` — to defer creation until
+     * the engine actually reaches the gravity-end boundary; the side
+     * effect of building the promise (e.g. starting a multiplier
+     * animation) then lines up with the gravity-end beat the player sees.
+     * Pass a bare `Promise<void>` if you already have an in-flight
+     * animation handle you just want the engine to wait on.
+     */
+    gravityHold?: Promise<void> | (() => Promise<void>);
+    onGravityComplete?: () => Promise<void> | void;
+  }): Promise<SpinResult> {
+    if (this._isSpinning) {
+      throw new Error('Cannot refill while a spin or refill is in progress.');
+    }
+    if (!this._phaseFactory.has('cascade:place')) {
+      throw new Error('refill() requires .tumble(...) on the builder.');
+    }
+
+    // Validate input shape + bounds. Normalize grid once so per-column
+    // length checks see the legacy `string[][]` form regardless of input.
+    const normalizedGrid = toLegacyTargetGrid(opts.grid);
+    if (normalizedGrid.length !== this._reels.length) {
+      throw new RangeError(
+        `refill: grid has ${normalizedGrid.length} column(s) but the reel set has ` +
+        `${this._reels.length}.`,
+      );
+    }
+    for (let i = 0; i < normalizedGrid.length; i++) {
+      const expected = this._reels[i].visibleRows;
+      if (normalizedGrid[i].length !== expected) {
+        throw new RangeError(
+          `refill: grid column ${i} has ${normalizedGrid[i].length} row(s) but ` +
+          `reel ${i} has ${expected} visible row(s).`,
+        );
+      }
+    }
+    for (const w of opts.winners) {
+      if (!Number.isInteger(w.reel) || w.reel < 0 || w.reel >= this._reels.length) {
+        throw new RangeError(
+          `refill: winner.reel ${w.reel} out of range [0, ${this._reels.length}).`,
+        );
+      }
+      const rows = this._reels[w.reel].visibleRows;
+      if (!Number.isInteger(w.row) || w.row < 0 || w.row >= rows) {
+        throw new RangeError(
+          `refill: winner.row ${w.row} out of range [0, ${rows}) for reel ${w.reel}.`,
+        );
+      }
+    }
+
+    this._isSpinning = true;
+    this._wasSkipped = false;
+    this._skipPending = false;
+    this._spinStartTime = performance.now();
+    this._resultSymbols = null;
+    this._anticipationReels = [];
+    // _stopDelayOverride preserved across entry — see spin() for rationale.
+    // Cascade recipes set `setDropOrder('all')` right before refill() and
+    // would otherwise see their setting clobbered, falling back to the
+    // default `i * speed.stopDelay` left-to-right stagger.
+    this._landedReels.clear();
+    this._activePhases.clear();
+    this._heldReels = new Set();
+    this._spinGeneration++;
+    this._currentSpinMode = 'cascade';
+
+    const generation = this._spinGeneration;
+    const speed = this._speedManager.active;
+
+    // Normalize grid + build per-reel frames upfront. No waiting on
+    // `setResult` here — the caller provided everything. Reuses the
+    // already-validated `normalizedGrid` from the entry guards.
+    this._resultSymbols = normalizedGrid;
+    const decorated = this._coordinateBigSymbols(normalizedGrid, (i) => this._reels[i].visibleRows);
+    const frames: string[][] = [];
+    for (let i = 0; i < this._reels.length; i++) {
+      const reel = this._reels[i];
+      frames.push(
+        this._frameBuilder.build(i, reel.visibleRows, reel.bufferAbove, reel.bufferBelow, decorated[i]),
+      );
+    }
+    this._cachedFrames = frames;
+
+    // Group winners per reel and sort ascending — the gravity algorithm
+    // expects ascending winner rows when it builds nonWinnerRows.
+    const winnersByReel = new Map<number, number[]>();
+    for (const w of opts.winners) {
+      let arr = winnersByReel.get(w.reel);
+      if (!arr) {
+        arr = [];
+        winnersByReel.set(w.reel, arr);
+      }
+      arr.push(w.row);
+    }
+    for (const arr of winnersByReel.values()) arr.sort((a, b) => a - b);
+
+    this._events.emit('spin:start');
+
+    const resultPromise = new Promise<SpinResult>((resolve) => {
+      this._currentSpinResolve = resolve;
+    });
+
+    // Auto-slam: skip() set this earlier in the round to mean "fast-forward
+    // the rest of this cascade." Bypass the place + dropIn phase chain and
+    // land instantly — `_slam()` sees no active phases, `_resultSymbols` is
+    // set, and per-reel placement happens synchronously.
+    if (this._autoSlamRefills) {
+      this._slam();
+      this._skipStage = 2;
+      return resultPromise;
+    }
+
+    const mode = opts.mode ?? 'combined';
+
+    if (mode === 'gravity-then-drop') {
+      // Two-stage orchestration. All reels do place + gravity in parallel
+      // (no per-reel stop delay — gravity is a global "settling" beat,
+      // not a reveal). Once every reel's gravity is done, wait for the
+      // combined hold (Promise.all of `gravityHoldMs` setTimeout +
+      // optional `gravityHold` promise + optional `onGravityComplete`
+      // callback's returned promise), then start the drop-in stage with
+      // the user's per-reel stop delays applied.
+      const gravityHoldMs = opts.gravityHoldMs ?? 250;
+      this._refillTwoStage(
+        speed,
+        generation,
+        winnersByReel,
+        gravityHoldMs,
+        opts.gravityHold,
+        opts.onGravityComplete,
+      ).catch((err: unknown) => {
+        if (generation !== this._spinGeneration) return;
+        // The likely culprits at this layer are a `gravityHold` promise
+        // (or factory) rejection and an `onGravityComplete` callback
+        // throw. Surface BOTH a structured event (so a HUD / error
+        // reporter can react) AND a console.error (so an unhandled
+        // user-code rejection still leaves an obvious diagnostic).
+        // We still slam so the engine returns to a coherent idle state
+        // — without this the refill promise would hang forever.
+        this._events.emit('cascade:gravity:error', { error: err });
+        // eslint-disable-next-line no-console
+        console.error(
+          '[pixi-reels] two-stage refill threw (likely from a user-supplied ' +
+          'gravityHold/onGravityComplete) — slamming to recover:',
+          err,
+        );
+        this._slam();
+      });
+    } else {
+      for (let i = 0; i < this._reels.length; i++) {
+        const winnerRows = winnersByReel.get(i) ?? [];
+        this._runReelTask(this._refillReel(i, speed, generation, winnerRows), 'refill', i, generation);
+      }
+    }
+
+    return resultPromise;
+  }
+
+  private async _refillReel(
+    reelIndex: number,
+    speed: SpeedProfile,
+    generation: number,
+    winnerRows: number[],
+  ): Promise<void> {
+    if (generation !== this._spinGeneration) return;
+
+    const reel = this._reels[reelIndex];
+    const targetFrame = this._frameFor(reelIndex);
+    const stopDelay = this._stopDelayFor(reelIndex, speed);
+
+    const placePhase = this._phaseFactory.create<any>('cascade:place', reel, speed);
+    this._activePhases.set(reelIndex, placePhase);
+    await placePhase.run({
+      targetFrame,
+      winnerRows,
+      initial: false,
+      delay: stopDelay,
+      events: this._events,
+    } satisfies CascadePlacePhaseConfig);
+    if (generation !== this._spinGeneration) return;
+
+    const dropInPhase = this._phaseFactory.create<any>('cascade:dropIn', reel, speed);
+    this._activePhases.set(reelIndex, dropInPhase);
+    await dropInPhase.run({
+      winnerRows,
+      initial: false,
+      events: this._events,
+    } satisfies CascadeDropInPhaseConfig);
+    if (generation !== this._spinGeneration) return;
+
+    this._markLanded(reelIndex);
+  }
+
+  /**
+   * Two-stage refill: place + gravity (all reels parallel, no stop delay),
+   * global hold, then drop-in (all reels parallel, with stop delays).
+   * Survivors slide first; new symbols enter after the hold. See `refill`
+   * for the player-facing description.
+   */
+  private async _refillTwoStage(
+    speed: SpeedProfile,
+    generation: number,
+    winnersByReel: Map<number, number[]>,
+    gravityHoldMs: number,
+    gravityHold?: Promise<void> | (() => Promise<void>),
+    onGravityComplete?: () => Promise<void> | void,
+  ): Promise<void> {
+    // Stage 1 — place + gravity. Place phase runs with delay = 0 so all
+    // reels swap identities in lockstep; the staggered "reveal" lives in
+    // stage 2.
+    const stage1 = this._reels.map(async (_, i) => {
+      if (generation !== this._spinGeneration) return;
+      const reel = this._reels[i];
+      const targetFrame = this._frameFor(i);
+      const winnerRows = winnersByReel.get(i) ?? [];
+
+      const placePhase = this._phaseFactory.create<any>('cascade:place', reel, speed);
+      this._activePhases.set(i, placePhase);
+      await placePhase.run({
+        targetFrame,
+        winnerRows,
+        initial: false,
+        delay: 0,
+        events: this._events,
+      } satisfies CascadePlacePhaseConfig);
+      if (generation !== this._spinGeneration) return;
+
+      const gravityPhase = this._phaseFactory.create<any>('cascade:dropIn', reel, speed);
+      this._activePhases.set(i, gravityPhase);
+      await gravityPhase.run({
+        winnerRows,
+        initial: false,
+        role: 'gravity',
+        events: this._events,
+      } satisfies CascadeDropInPhaseConfig);
+    });
+    await Promise.all(stage1);
+    if (generation !== this._spinGeneration) return;
+
+    // Global hold — the beat where the player reads "the wins are gone, the
+    // surviving symbols have settled" and any user-code anticipation
+    // visuals (multiplier bump, mascot react) play. Two sources race in
+    // PARALLEL via Promise.all: a fixed `gravityHoldMs` setTimeout and a
+    // caller-supplied `gravityHold` promise. Whichever finishes last gates
+    // the drop-in — pass both when you want a min-wall-clock floor under
+    // an animation that might be fast. Skip during this window bumps the
+    // generation; the post-await guard bails before the drop-in stage.
+    //
+    // `gravityHold` accepts a factory (`() => Promise<void>`) so that its
+    // side effects (e.g. starting a multiplier-roll animation) fire HERE,
+    // at gravity-end — not back when the refill args were assembled. A
+    // bare Promise is also accepted for callers that already hold an
+    // in-flight handle.
+    const holdPromises: Promise<void>[] = [];
+    if (gravityHoldMs > 0) {
+      holdPromises.push(new Promise<void>((r) => setTimeout(r, gravityHoldMs)));
+    }
+    if (gravityHold) {
+      holdPromises.push(typeof gravityHold === 'function' ? gravityHold() : gravityHold);
+    }
+    if (holdPromises.length > 0) {
+      await Promise.all(holdPromises);
+      if (generation !== this._spinGeneration) return;
+    }
+
+    // Awaitable callback — runs AFTER the parallel hold sources resolve,
+    // so it can read final state of whatever they were waiting on
+    // (e.g. a multiplier display that just finished counting up). Errors
+    // are surfaced so the caller's bug doesn't silently hang the drop-in
+    // stage forever; the catch bumps the generation, which causes the
+    // post-await guard to bail and `_finishSpin` will be triggered by the
+    // slam path if user code calls skip() in response.
+    if (onGravityComplete) {
+      await onGravityComplete();
+      if (generation !== this._spinGeneration) return;
+    }
+
+    // Stage 2 — drop-in (new symbols only). Per-reel stop delays apply
+    // here so `setDropOrder('ltr', step)` produces the column-by-column
+    // refill wave. The drop-in phase calls `notifyLanded` when its tween
+    // completes, which marks the reel landed and resolves `refill()`.
+    for (let i = 0; i < this._reels.length; i++) {
+      this._runReelTask(
+        this._refillReelDropInOnly(i, speed, generation, winnersByReel.get(i) ?? []),
+        'refill',
+        i,
+        generation,
+      );
+    }
+  }
+
+  private async _refillReelDropInOnly(
+    reelIndex: number,
+    speed: SpeedProfile,
+    generation: number,
+    winnerRows: number[],
+  ): Promise<void> {
+    if (generation !== this._spinGeneration) return;
+
+    const reel = this._reels[reelIndex];
+    const stopDelay = this._stopDelayFor(reelIndex, speed);
+
+    // setDropOrder produces per-reel start delays; honour them here as a
+    // sleep before kicking off the drop-in phase. Sleeping outside the
+    // phase keeps the phase API simple — it doesn't need its own delay
+    // parameter (Phase delay is a CascadePlacePhase concern).
+    if (stopDelay > 0) {
+      await new Promise<void>((r) => setTimeout(r, stopDelay));
+      if (generation !== this._spinGeneration) return;
+    }
+
+    const dropInPhase = this._phaseFactory.create<any>('cascade:dropIn', reel, speed);
+    this._activePhases.set(reelIndex, dropInPhase);
+    await dropInPhase.run({
+      winnerRows,
+      initial: false,
+      role: 'new',
+      events: this._events,
+    } satisfies CascadeDropInPhaseConfig);
+    if (generation !== this._spinGeneration) return;
+
+    this._markLanded(reelIndex);
   }
 
   setAnticipation(reelIndices: number[]): void {
@@ -263,20 +747,115 @@ export class SpinController implements Disposable {
 
   /**
    * Slam-stop safe before `setResult()` arrives. Queues until a result is
-   * set, then fires `skip()`. Otherwise equivalent to `skip()`.
+   * set, then slams. Bypasses the two-stage `skip()` machine — this API is
+   * for callers with explicit slam intent (e.g. UIs that wire the queued
+   * slam separately from a stage-aware button).
    */
   requestSkip(): void {
     if (!this._isSpinning) return;
     if (this._resultSymbols) {
-      this.skip();
+      this._slam();
+      this._skipStage = 2;
       return;
     }
     this._skipPending = true;
   }
 
+  /**
+   * Round-aware skip — the button-press entry point used by the universal
+   * "spin/skip" button pattern across recipes. First press in a round
+   * slams the current drop AND applies the round's speed effect as a
+   * side-effect:
+   *
+   *   - Standard mode: boost the active speed profile to the fastest
+   *     registered one and emit `skip:boosted`. The speed change takes
+   *     effect on subsequent spins (mid-spin speed switching is not
+   *     supported by phases). Restored to the player's original profile
+   *     on the next `spin()`.
+   *   - Cascade/tumble mode: flag the round so every subsequent
+   *     `refill()` auto-slams instantly (no animation). One press ends
+   *     a multi-drop cascade round.
+   *
+   * Subsequent presses in the same round slam each current drop.
+   *
+   * Throws if called before `setResult()` arrives (no result to slam onto
+   * — slamming now would land the reels on the random spin-buffer state).
+   * Use {@link requestSkip} for the deferred slam pattern: it queues the
+   * slam and fires it the moment `setResult()` arrives, so the reels land
+   * on the intended grid. (Refill paths set the result at entry, so this
+   * guard fires only during the pre-`setResult` window of `spin()`.)
+   *
+   * Callers who want only the slam without the boost or auto-slam side
+   * effects (tests, anti-cheat, programmatic automation) should use
+   * `slamStop()` instead.
+   */
   skip(): void {
     if (!this._isSpinning) return;
 
+    // Pre-result guard. Slamming before setResult() lands on the random
+    // spin-buffer state (standard mode = random visible grid; cascade
+    // mode = alpha-0 fall-out residue, i.e. invisible). Both are wrong;
+    // fail loud and steer the caller to `requestSkip()` which queues the
+    // intent until setResult arrives.
+    //
+    // Held-only spins (every reel held) resolve on a microtask without
+    // ever taking a result and never reach this branch.
+    if (!this._resultSymbols) {
+      throw new Error(
+        'skip() called before setResult() — there is nothing to land on yet ' +
+        '(standard mode would land on random buffer fill; cascade mode would land ' +
+        "invisible). Use reelSet.requestSkip() to queue the slam until setResult() " +
+        'arrives, or wait for setResult() before calling skip().',
+      );
+    }
+
+    if (this._skipStage === 0) {
+      if (this._currentSpinMode === 'cascade') {
+        // Cascade: phase durations are static (don't read `speed.spinSpeed`),
+        // so a boost would be invisible. Auto-slam future refills instead.
+        this._autoSlamRefills = true;
+      } else {
+        // Standard: try to boost speed for the rest of the round. If the
+        // active profile is already the fastest (or only one is registered),
+        // we just slam — no boost is observable.
+        const fastest = this._findFastestSpeedName();
+        if (fastest !== null && fastest !== this._speedManager.activeName) {
+          const { previous, current } = this._speedManager.set(fastest);
+          this._skipPreviousSpeedName = previous.name;
+          this._skipBoostedToName = current.name;
+          this._events.emit('skip:boosted', { previous, current });
+        }
+      }
+    }
+
+    this._slam();
+    this._skipStage = 2;
+  }
+
+  /**
+   * Hard slam-stop. Always lands every un-landed reel immediately, regardless
+   * of stage. Sets `skipStage` to 2 so future `skip()` presses in this round
+   * also slam (the boost ship has sailed).
+   */
+  slamStop(): void {
+    if (!this._isSpinning) return;
+    this._slam();
+    this._skipStage = 2;
+  }
+
+  /**
+   * The slam path itself: force-complete active phases, place results (or
+   * snap to current symbols when no result is set), mark every un-landed
+   * reel as landed. Shared by `skip()` (stage 1+), `requestSkip()`'s
+   * deferred path, `slamStop()`, and the per-reel error-recovery path
+   * inside `_runReelTask`.
+   *
+   * Idempotent: a second call once the spin has finished is a no-op. Lets
+   * cascading rejection handlers each safely invoke `_slam` without
+   * triple-emitting `skip:requested`.
+   */
+  private _slam(): void {
+    if (!this._isSpinning) return;
     this._wasSkipped = true;
     this._events.emit('skip:requested');
 
@@ -338,6 +917,40 @@ export class SpinController implements Disposable {
     this._events.emit('skip:completed');
   }
 
+  /**
+   * Called by `ReelSet.setSpeed()` after the speed manager applies a
+   * user-driven profile change. Sets the flag the next `spin()` checks
+   * to decide whether to undo a prior `skip()` boost. Internal-only —
+   * not part of the SpinController public API.
+   *
+   * Idempotent if no boost is pending (the flag is consulted only when
+   * `_skipPreviousSpeedName !== null`).
+   */
+  notifyManualSpeedChange(): void {
+    this._manualSpeedSinceBoost = true;
+  }
+
+  /**
+   * Pick the registered speed profile with the highest `spinSpeed` (pixels
+   * per frame at full motion). Returns `null` if only one profile exists,
+   * since a "boost to yourself" is meaningless.
+   */
+  private _findFastestSpeedName(): string | null {
+    const names = this._speedManager.profileNames;
+    if (names.length < 2) return null;
+    let bestName: string | null = null;
+    let bestSpeed = -Infinity;
+    for (const name of names) {
+      const p = this._speedManager.getProfile(name);
+      if (!p) continue;
+      if (p.spinSpeed > bestSpeed) {
+        bestSpeed = p.spinSpeed;
+        bestName = name;
+      }
+    }
+    return bestName;
+  }
+
   destroy(): void {
     if (this._isDestroyed) return;
     this._tickerRef.destroy();
@@ -391,18 +1004,25 @@ export class SpinController implements Disposable {
     if (generation !== this._spinGeneration) return;
 
     const reel = this._reels[reelIndex];
+    const isTumble = this._currentSpinMode === 'cascade';
 
-    const phaseKeys = this._currentSpinMode === 'cascade'
-      ? { start: 'dropStart', stop: 'dropStop' }
-      : { start: 'start', stop: 'stop' };
-
-    // START → SPIN: chain via phase.run() promises (no busy-polling).
-    const startPhase = this._phaseFactory.create<any>(phaseKeys.start, reel, speed);
-    this._activePhases.set(reelIndex, startPhase);
-    await startPhase.run({
-      spinningMode: this._spinningMode,
-      delay: reelIndex * speed.spinDelay,
-    } as StartPhaseConfig);
+    // START or FALL: chain via phase.run() promises (no busy-polling).
+    if (isTumble) {
+      const fallPhase = this._phaseFactory.create<any>('cascade:fall', reel, speed);
+      this._activePhases.set(reelIndex, fallPhase);
+      await fallPhase.run({
+        spinningMode: this._spinningMode,
+        delay: reelIndex * speed.spinDelay,
+        events: this._events,
+      } satisfies CascadeFallPhaseConfig);
+    } else {
+      const startPhase = this._phaseFactory.create<any>('start', reel, speed);
+      this._activePhases.set(reelIndex, startPhase);
+      await startPhase.run({
+        spinningMode: this._spinningMode,
+        delay: reelIndex * speed.spinDelay,
+      } satisfies StartPhaseConfig);
+    }
 
     if (generation !== this._spinGeneration) return;
 
@@ -448,10 +1068,34 @@ export class SpinController implements Disposable {
       this._events.emit('spin:stopping', reelIndex);
     }
 
-    const stopPhase = this._phaseFactory.create<any>(phaseKeys.stop, reel, speed);
-    this._activePhases.set(reelIndex, stopPhase);
-    await stopPhase.run({ targetFrame, delay: stopDelay } as StopPhaseConfig);
-    if (generation !== this._spinGeneration) return;
+    if (isTumble) {
+      // Tumble stop = place + dropIn. Both phases are user-overridable via
+      // the factory; the orchestration here is internal.
+      const placePhase = this._phaseFactory.create<any>('cascade:place', reel, speed);
+      this._activePhases.set(reelIndex, placePhase);
+      await placePhase.run({
+        targetFrame,
+        winnerRows: [],
+        initial: true,
+        delay: stopDelay,
+        events: this._events,
+      } satisfies CascadePlacePhaseConfig);
+      if (generation !== this._spinGeneration) return;
+
+      const dropInPhase = this._phaseFactory.create<any>('cascade:dropIn', reel, speed);
+      this._activePhases.set(reelIndex, dropInPhase);
+      await dropInPhase.run({
+        winnerRows: [],
+        initial: true,
+        events: this._events,
+      } satisfies CascadeDropInPhaseConfig);
+      if (generation !== this._spinGeneration) return;
+    } else {
+      const stopPhase = this._phaseFactory.create<any>('stop', reel, speed);
+      this._activePhases.set(reelIndex, stopPhase);
+      await stopPhase.run({ targetFrame, delay: stopDelay } satisfies StopPhaseConfig);
+      if (generation !== this._spinGeneration) return;
+    }
 
     this._markLanded(reelIndex);
   }

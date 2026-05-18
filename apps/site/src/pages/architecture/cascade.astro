@@ -202,25 +202,29 @@ import Legend from '../../components/arch/Legend.astro';
   <h2>API surface</h2>
 
   <ul>
-    <li><code>tumbleToGrid(reelSet, nextGrid, winners, opts)</code> — the primitive. Takes a <code>Cell[]</code> of real winners; per-reel fall distance math happens here.</li>
-    <li><code>runCascade(reelSet, stages, opts)</code> — orchestrates multiple stages. Default winner detection is <code>diffCells(prev, next)</code>; pass a custom <code>winners: (prev, next) =&gt; Cell[]</code> for match-pattern cascades.</li>
-    <li><code>diffCells(prev, next)</code> — utility, equal cells → zero. Fine for gravity-clean sequences; wrong for patterns where survivors' new rows hold different symbol ids than before.</li>
+    <li><code>reelSet.destroySymbols(winners, opts?)</code> — the "pop" primitive. Defers to each symbol's own <code>playDestroy()</code> so subclasses (Spine, particles) get art-appropriate disintegration. Lifts zIndex so destroys aren't clipped; alternates rotation by column for cohesive cluster pops.</li>
+    <li><code>{`reelSet.refill({ winners, grid })`}</code> — the "place + drop" primitive. Reads each reel's <code>visibleRows</code>, computes per-cell fall distances from <code>winners</code>, animates only the cells that actually move. Untouched survivors stay perfectly still.</li>
+    <li><code>{`reelSet.runCascade({ detectWinners, nextGrid })`}</code> — the chain orchestrator. Loops detect → destroy → pause → refill until <code>detectWinners</code> returns <code>[]</code>. Per-stage progress fires via <code>cascade:chain:start</code> / <code>cascade:chain:end</code>; the awaited <code>RunCascadeResult</code> carries the summary. Pass <code>signal: AbortSignal</code> for caller-driven cancellation.</li>
+    <li><code>computeDropOffsets(visibleRows, winnerRows)</code> — the algorithm the engine itself uses, exported so you can validate server-side gravity sims offline.</li>
   </ul>
 
-  <h2>The trap with <code>diffCells</code></h2>
+  <h2>Why winners must be *semantic*, not diffed</h2>
 
   <p>
     Consider <code>prevCol = [A, C, X]</code>, <code>X</code> at row 2 wins.
     The correct next col is <code>[N, A, C]</code> — new symbol at row 0,
-    survivors shifted down. <code>diffCells</code> reports <em>three</em>
-    changed cells (row 0: A→N, row 1: C→A, row 2: X→C). Treating those as
-    "three winners" would animate three new symbols falling from above,
-    instead of one new + two survivors sliding by one slot.
+    survivors shifted down. A naive "diff the two grids" approach reports
+    <em>three</em> changed cells (row 0: A→N, row 1: C→A, row 2: X→C).
+    Treating those as "three winners" would animate three new symbols
+    falling from above, instead of one new + two survivors sliding by one
+    slot. The library's API takes a <code>Cell[]</code> of <em>match
+    winners</em>, not a diff — so the answer is unambiguous.
   </p>
 
   <p>
-    For pattern cascades, always pass your own winner list derived from the
-    actual match, never from the diff. The <a href="/recipes/remove-symbol/">remove-symbol recipe</a>
-    does exactly this.
+    Your <code>detectWinners</code> callback in
+    <code>runCascade</code> always returns the cells your game rules
+    consider winners. The <a href="/recipes/remove-symbol/">remove-symbol recipe</a>
+    shows the minimal case.
   </p>
 </Architecture>

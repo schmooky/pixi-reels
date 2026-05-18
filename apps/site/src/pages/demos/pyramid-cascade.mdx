@@ -17,41 +17,37 @@ new ReelSetBuilder()
   .reels(5)
   .visibleRowsPerReel([3, 5, 5, 5, 3])
   .reelAnchor('center')   // diamond shape
-  .cascade(DropRecipes.stiffDrop)
+  .tumble({
+    fall:   { duration: 280, ease: 'power3.in',  rowStagger: 60 },
+    dropIn: { duration: 450, ease: 'power3.out', rowStagger: 60, distance: 'perHole' },
+  })
 ```
 
-`stiffDrop` instead of `cascadeDrop` because we want the symbols to land
-hard - the bouncy default fights the win animation that arrives a frame
-later.
+A stiff `power3.out` drop-in (no overshoot) keeps the symbols landing hard — the bouncy default would fight the win animation that arrives a frame later.
 
 ## Gravity refill (not "redrop the whole frame")
 
-The default cascade phase falls **all** old symbols out then drops **all**
-new ones in. That's wrong for a tumble: survivors should stay put, only
-the gaps left by winners should refill from above.
+A naive cascade phase would fall **all** old symbols out then drop **all** new ones in. That's wrong for a tumble: survivors should stay put, only the gaps left by winners should refill from above.
 
-The fix is `tumbleToGrid()` from `examples/shared/cascadeLoop.ts`:
+The fix is the canonical cascade pair, `reelSet.destroySymbols(winners)` + `reelSet.refill({ winners, grid })`:
 
 ```ts
-await vanish(winnerCells);                              // pop animation
-const next = computeRefillGrid(grid, winnerCells);      // shift survivors + new top
-await tumbleToGrid(reelSet, next, winnerCells, { dropDuration: 380 });
+await reelSet.destroySymbols(winnerCells);                  // pop animation
+const next = computeRefillGrid(grid, winnerCells);          // gravity-correct grid
+await reelSet.refill({ winners: winnerCells, grid: next }); // survivors slide; new arrive
 ```
 
-Per column it computes per-cell offsets:
+Per column the engine computes per-cell offsets:
 
 - New symbol filling cleared row R -> starts (R+1) slots above the viewport.
 - Survivor at final row R, originally at row N -> falls (R - N) slots.
 - A symbol whose `R === N` doesn't move at all.
 
-So a 5-row reel with a single winner at row 0 only animates one symbol -
-the new top. Everything below stays put.
+So a 5-row reel with a single winner at row 0 only animates one symbol — the new top. Everything below stays put. Jagged shapes work the same way; each reel's `visibleRows` is read at refill time.
 
 ## Ways evaluation on a jagged grid
 
-Same algorithm as MultiWays: walk reels left-to-right counting reels
-that contain the kind (or wild). The pyramid's 3-row outer reels just
-have fewer cells per reel - the chain logic doesn't care:
+Same algorithm as MultiWays: walk reels left-to-right counting reels that contain the kind (or wild). The pyramid's 3-row outer reels just have fewer cells per reel — the chain logic doesn't care:
 
 ```ts
 for (let c = 0; c < REEL_COUNT; c++) {
@@ -64,11 +60,8 @@ for (let c = 0; c < REEL_COUNT; c++) {
 
 ## Round flow
 
-1. `roundBus.emit('round:reset')` - WinBox to 0.
-2. Initial `reelSet.spin()` -> `setDropOrder('ltr')` -> `setResult(grid)`.
-3. Loop until no wins:
-   - Evaluate ways, dedupe winning cells across overlapping wins.
-   - `roundBus.emit('win:add', cascadeWin)` - WinBox additively tickups.
-   - `vanish(cells)` - scale-from-center + alpha to 0.
-   - `tumbleToGrid(...)` - gravity refill.
-4. Status shows `N CASCADES - TOTAL`.
+1. `roundBus.emit('round:reset')` — WinBox to 0.
+2. Initial `reelSet.spin()` → `setDropOrder('ltr')` → `setResult(grid)`.
+3. `reelSet.runCascade({ detectWinners, nextGrid })` loops the chain — the awaited promise resolves with `RunCascadeResult` when it ends.
+4. Inside `onCascade`: `roundBus.emit('win:add', cascadeWin)` — WinBox additively tickups.
+5. Status shows `N CASCADES — TOTAL`.

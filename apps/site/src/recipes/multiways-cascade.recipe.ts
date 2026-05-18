@@ -1,8 +1,8 @@
 // @ts-nocheck
 // Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
-//                   PIXI, gsap, app, runCascade
+//                   PIXI, gsap, app
 
-// MultiWays + cascade tumble — proper ways-style winner removal.
+// MultiWays + cascade tumble — ways-style winner removal.
 //
 // A "ways" win on a multiways slot: a symbol appears on N consecutive
 // reels starting from reel 0. EVERY instance of that symbol on those
@@ -12,10 +12,10 @@
 //
 // Visual flow each round:
 //   1. setShape(rowsPerReel) rolls a per-reel row count in [minRows, maxRows].
-//   2. reelSet.spin() — classic strip-spin lands the multiways grid.
-//   3. Detect a ways win. If found, runCascade pops every winning cell;
-//      survivors fall, new symbols drop in from above.
-//   4. Repeat until no more ways wins (capped at MAX_CASCADES per round).
+//   2. reelSet.spin({ mode: 'standard' }) — classic strip-spin lands the multiways grid.
+//   3. reelSet.runCascade({ detectWinners, nextGrid }) pops every winning cell;
+//      survivors fall, new symbols drop in from above. Loops until no more
+//      ways wins (capped at MAX_CASCADES per round).
 
 const REELS = 6;
 const MIN_ROWS = 2;
@@ -49,8 +49,6 @@ function buildGridWithGuaranteedWin(shape) {
     const target = randSymbol();
     for (let c = 0; c < MIN_WAYS_REELS; c++) {
       const len = grid[c].length;
-      // At least one copy at row 0; plant 1-2 more copies at distinct rows
-      // when the reel has room.
       const positions = new Set([0]);
       const extraCount = len >= 4 ? 2 : len >= 3 ? 1 : 0;
       while (positions.size < 1 + extraCount) {
@@ -95,10 +93,9 @@ function collectAllWinners(grid, wins) {
 }
 
 function applyCascade(grid, winners) {
-  // Group winners by reel, then per reel: drop the winning rows, shift
-  // survivors down, fill the cleared top slots with new random symbols.
-  // Cell count per reel stays the same — multiways shape doesn't change
-  // mid-cascade.
+  // Per-reel gravity: drop winning rows, shift survivors down, fill the
+  // cleared top slots with new random symbols. Cell count per reel stays
+  // the same — multiways shape doesn't change mid-cascade.
   const winnersByReel = new Map();
   for (const w of winners) {
     if (!winnersByReel.has(w.reel)) winnersByReel.set(w.reel, new Set());
@@ -129,6 +126,10 @@ const reelSet = new ReelSetBuilder()
     }
   })
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 120, bounceDistance: 0, bounceDuration: 0 })
+  .tumble({
+    fall:   { duration: 0, ease: 'none', rowStagger: 0 },              // not used — refill skips fall
+    dropIn: { duration: 280, ease: 'back.out(1.4)', rowStagger: 0, distance: 'perHole' },
+  })
   .ticker(app.ticker)
   .build();
 
@@ -142,7 +143,7 @@ const initialGrid = initialShape.map((rows) =>
   Array.from({ length: rows }, () => randSymbol()),
 );
 {
-  const p = reelSet.spin();
+  const p = reelSet.spin({ mode: 'standard' });
   reelSet.setShape(initialShape);
   reelSet.setResult(initialGrid);
   reelSet.skip();
@@ -157,41 +158,31 @@ return {
     // Round 1 — strip-spin lands the multiways grid (AdjustPhase reshapes
     // between SPIN and STOP).
     const stage0 = buildGridWithGuaranteedWin(shape);
-    const p = reelSet.spin();
+    const p = reelSet.spin({ mode: 'standard' });
     await new Promise((r) => setTimeout(r, 80));
     reelSet.setShape(shape);
     reelSet.setResult(stage0);
     await p;
     await new Promise((r) => setTimeout(r, 120));
 
-    // Build the full cascade chain upfront. Each stage is a grid; each
-    // stage-N → stage-(N+1) transition has a winners list captured in
-    // `winnersByStage`. runCascade reads that list via the `winners`
-    // callback below.
-    const stages = [stage0];
-    const winnersByStage = [];
-    let current = stage0;
-    while (winnersByStage.length < MAX_CASCADES) {
-      const wins = findAllWaysWins(current);
-      if (wins.length === 0) break;
-      const winners = collectAllWinners(current, wins);
-      winnersByStage.push(winners);
-      current = applyCascade(current, winners);
-      stages.push(current);
-    }
-
-    if (winnersByStage.length === 0) return;
-
-    // runCascade walks `stages`; for the stage-N → stage-(N+1) transition
-    // it invokes the winners callback with stageIndex = N + 1 (it's the
-    // post-increment value of the iteration counter, not the source index).
-    // Our winnersByStage[i] holds the winners that produced stages[i+1] from
-    // stages[i], so the lookup is `stageIdx - 1`.
-    await runCascade(reelSet, stages, {
-      winners: (_prev, _next, stageIdx) => winnersByStage[stageIdx - 1] ?? [],
-      vanishDuration: 180,
-      dropDuration: 240,
-      pauseBetween: 60,
+    // Cascade chain — `reelSet.runCascade` owns detect → destroy → pause
+    // → refill. We supply the game rules via the two callbacks. The
+    // `detectWinners` callback re-evaluates ways wins on the post-refill
+    // grid each iteration; when no more ways wins exist, the chain ends.
+    let cascadeCount = 0;
+    reelSet.setDropOrder('all');
+    await reelSet.runCascade({
+      detectWinners: (grid) => {
+        if (cascadeCount >= MAX_CASCADES) return [];
+        const wins = findAllWaysWins(grid);
+        if (wins.length === 0) return [];
+        return collectAllWinners(grid, wins);
+      },
+      nextGrid: (prev, winners) => {
+        cascadeCount += 1;
+        return applyCascade(prev, [...winners]);
+      },
+      pauseAfterDestroyMs: 60,
     });
   },
 };

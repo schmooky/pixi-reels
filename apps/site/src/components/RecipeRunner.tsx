@@ -1,12 +1,12 @@
 /** @jsxImportSource react */
 import { useEffect, useRef, useState } from 'react';
-import { RefreshCw, ExternalLink, Square } from 'lucide-react';
+import { RefreshCw, ExternalLink, SkipForward } from 'lucide-react';
 import { Application } from 'pixi.js';
 import type { Texture } from 'pixi.js';
 import * as PIXI from 'pixi.js';
 import { gsap } from 'gsap';
 import {
-  ReelSetBuilder, SpeedPresets, SpriteSymbol, AnimatedSpriteSymbol, DropRecipes, CascadeAnticipationPhase,
+  ReelSetBuilder, SpeedPresets, SpriteSymbol, AnimatedSpriteSymbol,
   enableDebug, WinPresenter,
   RectMaskStrategy, SharedRectMaskStrategy,
   type ReelSet, ReelSymbol,
@@ -20,7 +20,6 @@ import {
   buildSpineMap,
 } from '../../../../examples/shared/generatedSpineLoader.ts';
 import { transform as sucraseTransform } from 'sucrase';
-import { runCascade, tumbleToGrid, diffCells } from '../../../../examples/shared/cascadeLoop.ts';
 import { cn } from '@/lib/utils';
 import { CanvasSkeleton } from './CanvasSkeleton';
 import { useMinDisplay } from './useMinDisplay';
@@ -128,10 +127,9 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
       try {
         const factory = new AsyncFunction(
           'ReelSetBuilder', 'SpeedPresets', 'BlurSpriteSymbol', 'SpriteSymbol', 'AnimatedSpriteSymbol',
-          'DropRecipes', 'CascadeAnticipationPhase',
           'WinPresenter',
           'app', 'textures', 'blurTextures', 'SYMBOL_IDS', 'pickWeighted', 'gsap', 'PIXI',
-          'runCascade', 'tumbleToGrid', 'diffCells', 'EmptySymbol', 'ReelSymbol',
+          'EmptySymbol', 'ReelSymbol',
           'RectMaskStrategy', 'SharedRectMaskStrategy',
           'CardSymbol', 'CARD_DECK', 'WILD_CARD',
           'SpineReelSymbol', 'loadGeneratedSpines', 'buildSpineMap',
@@ -143,10 +141,9 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
         // are unaffected — `await x` on a non-Promise resolves to x.
         result = (await factory(
           ReelSetBuilder, SpeedPresets, BlurSpriteSymbol, SpriteSymbol, AnimatedSpriteSymbol,
-          DropRecipes, CascadeAnticipationPhase,
           WinPresenter,
           app, textures, blurTextures, SYMBOL_IDS, pickWeighted, gsap, PIXI,
-          runCascade, tumbleToGrid, diffCells, EmptySymbol, ReelSymbol,
+          EmptySymbol, ReelSymbol,
           RectMaskStrategy, SharedRectMaskStrategy,
           CardSymbol, CARD_DECK, WILD_CARD,
           SpineReelSymbol, loadGeneratedSpines, buildSpineMap,
@@ -201,7 +198,11 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
   async function handleSpin() {
     if (!ready || !!error) return;
     if (spinning) {
-      try { reelSetRef.current?.skip(); } catch { /* ignore */ }
+      // skip() THROWS before `setResult()` arrives — route to requestSkip()
+      // in the catch so a player tap during the server-wait window still
+      // queues the slam and fires it the moment the result is in.
+      try { reelSetRef.current?.skip(); }
+      catch { reelSetRef.current?.requestSkip(); }
       return;
     }
     setSpinning(true);
@@ -246,19 +247,22 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
           type="button"
           onClick={() => void handleSpin()}
           disabled={!!error || !ready}
-          title={spinning ? 'Stop' : 'Spin'}
-          aria-label={spinning ? 'Stop' : 'Spin'}
+          title={spinning ? 'Skip' : 'Spin'}
+          aria-label={spinning ? 'Skip' : 'Spin'}
           className={cn(
-            'absolute bottom-3 right-3 inline-flex h-10 w-10 items-center justify-center rounded-full',
-            'border border-border/70 bg-background/80 text-foreground shadow-sm backdrop-blur',
+            // Right edge, vertically centered. Bigger touch target than
+            // the corner bottom-right pill — easier to hit on mobile, more
+            // obvious as the primary action on the canvas.
+            'absolute right-3 top-1/2 -translate-y-1/2 inline-flex h-14 w-14 items-center justify-center rounded-full',
+            'border border-border/70 bg-background/80 text-foreground shadow-md backdrop-blur',
             'transition-all hover:bg-primary hover:text-primary-foreground hover:border-primary',
             spinning && 'bg-primary text-primary-foreground border-primary',
             'disabled:cursor-not-allowed disabled:opacity-50',
           )}
         >
           {spinning
-            ? <Square size={14} strokeWidth={2.5} />
-            : <RefreshCw size={16} strokeWidth={2.25} />}
+            ? <SkipForward size={22} strokeWidth={2.25} />
+            : <RefreshCw size={22} strokeWidth={2.25} />}
         </button>
         <button
           type="button"

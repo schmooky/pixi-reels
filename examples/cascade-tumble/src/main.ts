@@ -1,19 +1,43 @@
-import { Application, Container, Graphics } from 'pixi.js';
+import { Application, Container, Graphics, type Texture } from 'pixi.js';
 import { gsap } from 'gsap';
 import {
   ReelSetBuilder,
   SpeedPresets,
-  DropRecipes,
   enableDebug,
+  SpriteSymbol,
+  type Cell,
+  type ReelSet,
 } from 'pixi-reels';
 import { loadPrototypeSymbols } from '../../shared/prototypeSpriteLoader.js';
-import { SpriteSymbol } from 'pixi-reels';
 import { createUI } from '../../shared/ui.js';
+
+// ─── LAYOUT ─────────────────────────────────────────────────
+//
+// 6 reels × 5 rows, sprite symbols. This is the canonical "Sweet Bonanza
+// / Sugar Rush" cascade footprint — the one most production cascade slots
+// ship with.
 
 const REEL_COUNT = 6;
 const VISIBLE_ROWS = 5;
 const SYMBOL_SIZE = 95;
 const SYMBOL_GAP = 5;
+
+/**
+ * Lead-in window between the SPIN click and the moment the engine actually
+ * begins the fall-out animation. A short hold-back (~180 ms) makes the
+ * click feel "received" — the button visibly transitions to STOP before
+ * the symbols move. Without it the button-state flip and the fall start
+ * land on the same frame and the player can't tell the click registered.
+ */
+const LEAD_IN_MS = 180;
+
+/**
+ * Breathing room between "winners faded out" and "refill drop-in starts".
+ * Production tumble slots dial this between 150 ms (snappy) and 500 ms
+ * (dramatic). 280 ms is the sweet spot — long enough for the player to
+ * register that the wins are gone, short enough to keep cascade momentum.
+ */
+const PAUSE_AFTER_REMOVAL_MS = 280;
 
 const SYMBOL_MAP: Record<string, string> = {
   low1: 'round/round_1',
@@ -24,11 +48,24 @@ const SYMBOL_MAP: Record<string, string> = {
   med2: 'royal/royal_2',
   high1: 'royal/royal_3',
   high2: 'royal/royal_4',
-  wild: 'wild/wild_1',
+  wild:  'wild/wild_1',
 };
 const GAME_SYMBOLS = Object.keys(SYMBOL_MAP);
 
-function randomSymbol(): string {
+// ─── MOCK SERVER — DELIBERATELY SLOW INITIAL RESPONSE ───────
+//
+// The initial-spin latency is 1.5-4.5 s on purpose: this is what makes
+// the "empty reels + spinner" window visible in the demo. Production
+// servers vary wildly here (200 ms to multiple seconds for bonus
+// rolls), and the engine's job is to stay visually coherent across the
+// whole range. Cascade refills are 100-250 ms because most real backends
+// precompute the cascade chain alongside the initial result.
+
+function wait(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function pickWeighted(): string {
   const r = Math.random();
   if (r < 0.03) return 'wild';
   if (r < 0.08) return 'high1';
@@ -43,66 +80,94 @@ function randomSymbol(): string {
 
 function randomGrid(): string[][] {
   return Array.from({ length: REEL_COUNT }, () =>
-    Array.from({ length: VISIBLE_ROWS }, randomSymbol),
+    Array.from({ length: VISIBLE_ROWS }, pickWeighted),
   );
 }
 
-function detectWins(grid: string[][]): { reelIndex: number; rowIndex: number }[][] {
-  const wins: { reelIndex: number; rowIndex: number }[][] = [];
+const mockServer = {
+  async spin(): Promise<string[][]> {
+    // 1.5-4.5 s — the long, visible "thinking" window.
+    await wait(1500 + Math.random() * 3000);
+    return randomGrid();
+  },
+
+  async cascade(prevGrid: string[][], winners: Cell[]): Promise<string[][]> {
+    // 100-250 ms — refills are quick because the gravity sim is cheap.
+    await wait(100 + Math.random() * 150);
+
+    // Server-side gravity: survivors pack to the bottom, new symbols
+    // fill the top. The library's algorithm expects this convention
+    // (see the cascades guide).
+    const next: string[][] = prevGrid.map((col) => [...col]);
+    const winnersByReel = new Map<number, Set<number>>();
+    for (const w of winners) {
+      const set = winnersByReel.get(w.reel) ?? new Set<number>();
+      set.add(w.row);
+      winnersByReel.set(w.reel, set);
+    }
+    for (let reel = 0; reel < REEL_COUNT; reel++) {
+      const losers = winnersByReel.get(reel);
+      if (!losers || losers.size === 0) continue;
+      const survivors: string[] = [];
+      for (let row = 0; row < VISIBLE_ROWS; row++) {
+        if (!losers.has(row)) survivors.push(next[reel][row]);
+      }
+      const fillers = Array.from({ length: losers.size }, pickWeighted);
+      next[reel] = [...fillers, ...survivors];
+    }
+    return next;
+  },
+};
+
+// ─── WIN DETECTION ──────────────────────────────────────────
+//
+// Left-anchored runs of 3+ matching symbols on the same visible row.
+// `wild` matches anything; a row starting on wild is skipped (it's not
+// itself a trigger). This matches the classic Sweet Bonanza convention.
+
+function detectWinners(grid: string[][]): Cell[] {
+  const winners: Cell[] = [];
   for (let row = 0; row < VISIBLE_ROWS; row++) {
-    const first = grid[0][row];
-    if (first === 'wild') continue;
-    let count = 1;
-    for (let r = 1; r < REEL_COUNT; r++) {
-      if (grid[r][row] === first || grid[r][row] === 'wild') count++;
+    const head = grid[0][row];
+    if (head === 'wild') continue;
+    let run = 1;
+    for (let reel = 1; reel < REEL_COUNT; reel++) {
+      if (grid[reel][row] === head || grid[reel][row] === 'wild') run++;
       else break;
     }
-    if (count >= 3) {
-      wins.push(Array.from({ length: count }, (_, i) => ({ reelIndex: i, rowIndex: row })));
+    if (run >= 3) {
+      for (let reel = 0; reel < run; reel++) winners.push({ reel, row });
     }
   }
-  return wins;
+  return winners;
 }
 
-function computeRefillGrid(
-  currentGrid: string[][],
-  removedPositions: { reelIndex: number; rowIndex: number }[],
-): string[][] {
-  const newGrid = currentGrid.map((col) => [...col]);
+// ─── SPINNER OVERLAY ───────────────────────────────────────
+//
+// A simple rotating arc. Shown during the empty wait between
+// `cascade:fall:end` (all reels finished falling) and `cascade:dropIn:start`
+// (the first reel begins filling) — i.e. exactly the indeterminate
+// server-roundtrip window.
 
-  const removedByReel = new Map<number, Set<number>>();
-  for (const p of removedPositions) {
-    if (!removedByReel.has(p.reelIndex)) removedByReel.set(p.reelIndex, new Set());
-    removedByReel.get(p.reelIndex)!.add(p.rowIndex);
-  }
-
-  for (let col = 0; col < REEL_COUNT; col++) {
-    const removed = removedByReel.get(col);
-    if (!removed || removed.size === 0) continue;
-
-    const survivors = newGrid[col].filter((_, row) => !removed.has(row));
-    const newSymbols = Array.from({ length: VISIBLE_ROWS - survivors.length }, randomSymbol);
-    newGrid[col] = [...newSymbols, ...survivors];
-  }
-
-  return newGrid;
+function makeSpinner(): Container {
+  const c = new Container();
+  const ring = new Graphics();
+  ring.arc(0, 0, 28, 0, Math.PI * 1.55);
+  ring.stroke({ color: 0xc89c1f, width: 5, cap: 'round' });
+  c.addChild(ring);
+  c.visible = false;
+  gsap.to(c, { rotation: Math.PI * 2, duration: 0.9, ease: 'none', repeat: -1 });
+  return c;
 }
 
-async function main() {
-  const app = new Application();
-  await app.init({ background: 0x0f3460, resizeTo: window, antialias: true });
-  document.body.appendChild(app.canvas);
+// ─── BUILDER ────────────────────────────────────────────────
 
-  gsap.ticker.remove(gsap.updateRoot);
-  app.ticker.add(() => gsap.updateRoot(app.ticker.lastTime / 1000));
-
-  const { textures } = await loadPrototypeSymbols();
-  const symbolTextures: Record<string, typeof textures[string]> = {};
+function buildReelSet(app: Application, textures: Record<string, Texture>): ReelSet {
+  const symbolTextures: Record<string, Texture> = {};
   for (const [id, atlasKey] of Object.entries(SYMBOL_MAP)) {
     symbolTextures[id] = textures[atlasKey];
   }
-
-  const reelSet = new ReelSetBuilder()
+  return new ReelSetBuilder()
     .reels(REEL_COUNT)
     .visibleSymbols(VISIBLE_ROWS)
     .symbolSize(SYMBOL_SIZE, SYMBOL_SIZE)
@@ -113,26 +178,60 @@ async function main() {
       }
     })
     .weights({ low1: 18, low2: 18, low3: 18, low4: 18, med1: 12, med2: 12, high1: 6, high2: 6, wild: 3 })
-    .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150 })
-    .speed('turbo', { ...SpeedPresets.TURBO, stopDelay: 80 })
+    .speed('normal',     { ...SpeedPresets.NORMAL,      stopDelay: 150 })
+    .speed('turbo',      { ...SpeedPresets.TURBO,       stopDelay: 80 })
     .speed('superTurbo', { ...SpeedPresets.SUPER_TURBO, stopDelay: 0 })
-    .cascade(DropRecipes.cascadeDrop)
+    .tumble({
+      // Fall: per-reel left-to-right stagger from speed.spinDelay, plus
+      // in-reel bottom-to-top from rowOrder default — gives the canonical
+      // "bottom-left falls first, top-right last" cascading exit.
+      fall:   { duration: 280, ease: 'sine.in', rowStagger: 50 },
+      // Drop-in: 'perHole' gravity is the production default. Each
+      // symbol falls exactly the distance its hole demands; survivors
+      // that didn't move skip the tween entirely.
+      dropIn: { duration: 480, ease: 'back.out(1.6)', rowStagger: 50, distance: 'perHole' },
+    })
     .ticker(app.ticker)
     .build();
+}
 
+// ─── MAIN ───────────────────────────────────────────────────
+
+async function main(): Promise<void> {
+  const app = new Application();
+  await app.init({ background: 0xffffff, resizeTo: window, antialias: true });
+  document.body.appendChild(app.canvas);
+
+  // GSAP MUST share Pixi's ticker so tweens run in hidden tabs / iframes.
+  // Without this, cascades freeze when the user switches tabs.
+  gsap.ticker.remove(gsap.updateRoot);
+  app.ticker.add(() => gsap.updateRoot(app.ticker.lastTime / 1000));
+
+  const { textures } = await loadPrototypeSymbols();
+  const reelSet = buildReelSet(app, textures);
   enableDebug(reelSet);
 
-  const totalWidth = REEL_COUNT * (SYMBOL_SIZE + SYMBOL_GAP) - SYMBOL_GAP;
+  const totalWidth  = REEL_COUNT  * (SYMBOL_SIZE + SYMBOL_GAP) - SYMBOL_GAP;
   const totalHeight = VISIBLE_ROWS * (SYMBOL_SIZE + SYMBOL_GAP) - SYMBOL_GAP;
   const wrapper = new Container();
   wrapper.addChild(reelSet);
+
+  const spinner = makeSpinner();
+  spinner.x = totalWidth  / 2;
+  spinner.y = totalHeight / 2;
+  wrapper.addChild(spinner);
+
   app.stage.addChild(wrapper);
 
-  function reposition() {
+  function reposition(): void {
     const pad = 16, uiH = 80;
-    const s = Math.min((app.screen.width - pad * 2) / totalWidth, (app.screen.height - pad * 2 - uiH) / totalHeight, 1);
+    const s = Math.min(
+      (app.screen.width  - pad * 2)        / totalWidth,
+      (app.screen.height - pad * 2 - uiH)  / totalHeight,
+      1,
+    );
     wrapper.scale.set(s);
-    wrapper.x = (app.screen.width - totalWidth * s) / 2;
+    wrapper.x = (app.screen.width  - totalWidth  * s) / 2;
     wrapper.y = (app.screen.height - totalHeight * s - uiH) / 2;
   }
 
@@ -142,93 +241,221 @@ async function main() {
   reelSet.addChildAt(frame, 0);
 
   const multiplierEl = document.getElementById('multiplier')!;
+  const statusEl     = document.getElementById('status')!;
+
+  // ─── SERVER-WAIT SPINNER WIRING ───────────────────────────
+  //
+  // Show the spinner from the moment ALL reels have finished falling out
+  // until the FIRST reel begins its drop-in. That window is exactly the
+  // indeterminate server wait — empty reels with a loading indicator.
+  //
+  // We track this with two events instead of polling, so the wait window
+  // is precisely the engine's empty-reel beat (no off-by-one).
+
+  let fallEnded = 0;
+  reelSet.events.on('cascade:fall:end', () => {
+    fallEnded += 1;
+    if (fallEnded === REEL_COUNT) spinner.visible = true;
+  });
+  reelSet.events.on('cascade:dropIn:start', () => {
+    spinner.visible = false;
+    fallEnded = 0;
+  });
+
+  // ─── UI STATE ─────────────────────────────────────────────
+  //
+  // The button is a single SPIN/STOP toggle from `createUI`. Three
+  // possible "round in flight" states matter for rapid clicks:
+  //
+  //   1. Engine spinning (`reelSet.isSpinning === true`) — `skip()`
+  //      slams immediately. The library's round-aware skip handles
+  //      the cascade case (`_autoSlamRefills` flag).
+  //   2. User-code mid-round but engine idle (e.g. inside the
+  //      `LEAD_IN_MS` wait, between `setResult` and the first refill
+  //      tween, in `pauseAfterDestroyMs`). `skip()` is a no-op here
+  //      because the engine isn't running any phase. We queue the
+  //      intent so the next time control passes through user-code
+  //      (e.g. the next chain iteration), we fire `skip()`.
+  //   3. Engine pre-`setResult` (during the server wait) — the
+  //      library's `requestSkip()` handles this case: it queues the
+  //      slam and fires it the moment `setResult` arrives, so the
+  //      reels land on the intended grid instead of a random buffer.
+  //
+  // The AbortController gives us a fourth lever: it ends the cascade
+  // chain at the next await boundary AND slams an in-flight refill.
+  // Together they cover every rapid-click window the user can hit.
+
   const ui = createUI({
-    onSpin: () => handleSpin(),
+    onSpin: () => handleSpinPress(),
     onSpeedChange: (s) => reelSet.setSpeed(s),
     speeds: ['normal', 'turbo', 'superTurbo'],
   });
 
   let isSpinning = false;
+  let pendingSkip = false;
+  let cascadeAbort: AbortController | null = null;
 
-  async function explode(positions: { reelIndex: number; rowIndex: number }[]): Promise<void> {
-    reelSet.viewport.showDim(0.35);
-
-    const winPromises: Promise<void>[] = [];
-    for (const pos of positions) {
-      const symbol = reelSet.reels[pos.reelIndex].getSymbolAt(pos.rowIndex);
-      if (symbol) {
-        symbol.view.zIndex = 1000;
-        winPromises.push(symbol.playWin());
-      }
+  function handleSpinPress(): void {
+    if (!isSpinning) {
+      pendingSkip = false;
+      handleSpin().catch((err) => {
+        // eslint-disable-next-line no-console
+        console.error('cascade-tumble: handleSpin failed', err);
+        isSpinning = false;
+        cascadeAbort = null;
+        pendingSkip = false;
+        ui.setSpinning(false);
+      });
+      return;
     }
-    await Promise.all(winPromises);
-
-    const fadePromises: Promise<void>[] = [];
-    for (const pos of positions) {
-      const symbol = reelSet.reels[pos.reelIndex].getSymbolAt(pos.rowIndex);
-      if (symbol) {
-        fadePromises.push(
-          new Promise<void>((resolve) => {
-            gsap.to(symbol.view, { alpha: 0, duration: 0.25, ease: 'power2.in', onComplete: resolve });
-          }),
-        );
-      }
+    // Engine in flight → use the right slam tool for the current
+    // window. `requestSkip()` is queue-safe pre-setResult; `skip()`
+    // slams in-flight phases; the AbortController ends the chain
+    // at the next await boundary (covers the idle-between-refills
+    // window where neither skip() nor requestSkip() can act).
+    if (reelSet.isSpinning) {
+      try { reelSet.requestSkip(); } catch { /* idle */ }
+    } else {
+      pendingSkip = true;
     }
-    await Promise.all(fadePromises);
-    reelSet.viewport.hideDim();
+    cascadeAbort?.abort();
   }
 
-  async function handleSpin() {
-    if (isSpinning) { try { reelSet.skip(); } catch {} return; }
+  // E2e probe — exposes user-code-level state Playwright can wait on.
+  // Engine `isSpinning` oscillates per-refill in cascade mode, so we need
+  // a stable "round in progress" flag to detect round completion.
+  (globalThis as unknown as { __CASCADE_TUMBLE?: unknown }).__CASCADE_TUMBLE = {
+    get busy(): boolean { return isSpinning; },
+    get pendingSkip(): boolean { return pendingSkip || !!cascadeAbort?.signal.aborted; },
+  };
 
+  async function tickMultiplier(target: number): Promise<void> {
+    const counter = { v: Math.max(0, target - 1) };
+    await new Promise<void>((resolve) => {
+      gsap.to(counter, {
+        v: target,
+        duration: 0.4,
+        ease: 'power2.out',
+        onUpdate: () => {
+          multiplierEl.textContent = `MULTIPLIER ×${Math.round(counter.v)}`;
+        },
+        onComplete: () => resolve(),
+      });
+    });
+  }
+
+  async function handleSpin(): Promise<void> {
     isSpinning = true;
     ui.setSpinning(true);
     ui.showWin(0);
     multiplierEl.textContent = '';
+    statusEl.textContent = '';
 
-    // Initial drop: left-to-right column stagger, row-by-row within each column
-    let spinPromise = reelSet.spin();
-    await wait(300);
+    // Fresh AbortController per round — abort() flips the flag inside
+    // `runCascade` so the chain ends at the next await boundary even
+    // when the engine itself is idle (between refills).
+    cascadeAbort = new AbortController();
+
+    // Lead-in: the button visibly transitions to STOP before the symbols
+    // move. A tap during this window queues `pendingSkip` and is consumed
+    // by `requestSkip()` once the engine spin actually starts. We do NOT
+    // bail on `cascadeAbort.signal.aborted` here — a rapid double-click
+    // means "spin then slam," not "cancel before starting." The abort
+    // flag flows into runCascade, which will short-circuit the cascade
+    // chain at the next await boundary.
+    if (LEAD_IN_MS > 0) await wait(LEAD_IN_MS);
+
+    // ─── MOMENT A: fall, wait, drop in ─────────────────────
+    //
+    // Initial drop reveals left-to-right (per-reel stagger). Combined
+    // with the per-reel bottom-to-top from rowOrder default, this
+    // gives the canonical "bottom-left first, top-right last" reveal.
     reelSet.setDropOrder('ltr');
-    let grid = randomGrid();
-    reelSet.setResult(grid);
-    await spinPromise;
+    const spinDone = reelSet.spin();
 
-    let wins = detectWins(grid);
-    let cascadeLevel = 0;
-    let totalWin = 0;
-
-    while (wins.length > 0) {
-      cascadeLevel++;
-      const allPositions = wins.flat();
-      totalWin += allPositions.length * 5 * cascadeLevel;
-
-      multiplierEl.textContent = `CASCADE x${cascadeLevel}`;
-      ui.showWin(totalWin);
-
-      await explode(allPositions);
-      await wait(100);
-
-      // Cascade refill: all columns drop simultaneously
-      grid = computeRefillGrid(grid, allPositions);
-      spinPromise = reelSet.spin();
-      reelSet.setDropOrder('all');
-      reelSet.setResult(grid);
-      await spinPromise;
-
-      await wait(150);
-      wins = detectWins(grid);
+    // Consume any skip-intent tapped during the lead-in. `requestSkip()`
+    // queues until `setResult()` arrives, then slams — so even taps
+    // inside the long server wait route through to a clean slam on the
+    // intended result grid.
+    if (pendingSkip) {
+      pendingSkip = false;
+      reelSet.requestSkip();
     }
 
-    if (cascadeLevel === 0) multiplierEl.textContent = '';
+    const grid = await mockServer.spin();
+    reelSet.setResult(grid);
+    await spinDone;
+
+    // ─── MOMENT B: cascade refill loop via reelSet.runCascade ────
+    //
+    // The library owns the detect → destroy → pause → refill orchestration.
+    // We supply: (1) win detection, (2) next-grid computation, (3) the
+    // per-cascade multiplier + UI side effects. The awaited summary
+    // (`RunCascadeResult`) tells us how the chain ended. AbortController
+    // ends the round cleanly when the player slams between refills
+    // (where `reelSet.skip()` is a no-op because no phase is active).
+    //
+    // Cascade refills: every reel drops simultaneously — the canonical
+    // commercial pattern. ('ltr' / 'rtl' on a refill reads as a fresh
+    // reveal, which fights the player's expectation of a quick refill.)
+    reelSet.setDropOrder('all');
+
+    let totalWin = 0;
+    const { chainLength } = await reelSet.runCascade({
+      detectWinners: (g) => detectWinners(g),
+      nextGrid: (prev, winners) => mockServer.cascade(prev, [...winners]),
+      pauseAfterDestroyMs: PAUSE_AFTER_REMOVAL_MS,
+      destroyOptions: { dim: 0.35 },
+      signal: cascadeAbort.signal,
+      onCascade: async ({ chain, winners }) => {
+        totalWin += winners.length * 5 * chain;
+        ui.showWin(totalWin);
+        // Bump the multiplier as the symbols leave the frame. The player
+        // reads the new value while staring at the holes.
+        await tickMultiplier(chain + 1);
+        // Honor a queued slam tap that landed while user-code was
+        // mid-await: ask the engine to slam every remaining refill.
+        if (pendingSkip) {
+          pendingSkip = false;
+          try { reelSet.skip(); } catch { /* idle */ }
+        }
+      },
+    });
+
+    if (chainLength === 0) {
+      multiplierEl.textContent = '';
+      statusEl.textContent = 'No wins — try again.';
+    } else {
+      statusEl.textContent = `${chainLength} cascade${chainLength === 1 ? '' : 's'} · WIN ${totalWin}`;
+    }
+
+    cascadeAbort = null;
     isSpinning = false;
+    pendingSkip = false;
     ui.setSpinning(false);
   }
 
-  function wait(ms: number): Promise<void> { return new Promise((r) => setTimeout(r, ms)); }
+  // ─── LIFECYCLE-EVENT HOOKS (showcased for DX) ─────────────
+  //
+  // `cascade:chain:start` / `cascade:chain:end` fire per refill stage,
+  // letting sibling modules (audio bus, HUD, analytics) react without
+  // polling `isSpinning` (which oscillates per-refill in cascade mode).
+  // Wired here as demo log lines.
+  reelSet.events.on('cascade:chain:start', ({ chain, winners }) => {
+    // eslint-disable-next-line no-console
+    console.log(`[cascade] chain ${chain} — ${winners.length} winner(s)`);
+  });
+  reelSet.events.on('cascade:chain:end', ({ chain, nextGrid }) => {
+    // eslint-disable-next-line no-console
+    console.log(`[cascade] chain ${chain} done — next grid:`,
+      nextGrid.map((c) => c.join(',')).join(' | '));
+  });
 
   reposition();
   window.addEventListener('resize', reposition);
 }
 
-main().catch(console.error);
+main().catch((err) => {
+  // eslint-disable-next-line no-console
+  console.error(err);
+});

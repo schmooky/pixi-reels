@@ -11,6 +11,11 @@ coverage/
 *.tsbuildinfo
 .idea
 
+# Playwright e2e per-run output — traces, error contexts, screenshots.
+# Regenerated on every `pnpm test:e2e` run.
+test-results/
+playwright-report/
+
 # Per-app env files — production secrets live here in dev. Never commit.
 .env
 .env.*

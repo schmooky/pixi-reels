@@ -11,16 +11,24 @@ import { gsap } from 'gsap';
 import {
   ReelSetBuilder,
   SpeedPresets,
+  SpriteSymbol,
   enableDebug,
   WinPresenter,
   AnimatedSpriteSymbol,
+  RectMaskStrategy,
+  SharedRectMaskStrategy,
   type ReelSet,
   ReelSymbol,
 } from 'pixi-reels';
+import { SpineReelSymbol } from 'pixi-reels/spine';
 import { BlurSpriteSymbol } from '../../../../examples/shared/BlurSpriteSymbol.ts';
+import { CardSymbol, CARD_DECK, WILD_CARD } from '../../../../examples/shared/CardSymbol.ts';
 import { loadPrototypeSymbols } from '../../../../examples/shared/prototypeSpriteLoader.ts';
+import {
+  loadGeneratedSpines,
+  buildSpineMap,
+} from '../../../../examples/shared/generatedSpineLoader.ts';
 import { transform as sucraseTransform } from 'sucrase';
-import { runCascade, tumbleToGrid, diffCells } from '../../../../examples/shared/cascadeLoop.ts';
 
 class EmptySymbol extends ReelSymbol {
   protected onActivate(_symbolId: string): void {}
@@ -43,7 +51,6 @@ const DEFAULT_CODE = `// ─── pixi-reels sandbox ────────�
 //   - SYMBOL_IDS   -- string[] of every available prototype atlas id
 //   - pickWeighted(weights) -- weighted random sampler
 //   - gsap, PIXI   -- animation + full PixiJS namespace
-//   - runCascade, tumbleToGrid, diffCells -- cascade sequence helpers
 //   - EmptySymbol  -- blank ReelSymbol subclass (for hold-and-win patterns)
 //
 // Return { reelSet, nextResult? } — \`nextResult()\` is called each spin.
@@ -225,44 +232,31 @@ export default function Sandbox() {
     let built: BuildResult;
     try {
       const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor as FunctionConstructor;
+      // Keep this param list in lock-step with RecipeRunner.tsx — the
+      // "Open in Sandbox" button copies recipe code verbatim, and a recipe
+      // that compiles in the recipe page must also run here. Missing a
+      // symbol here is what produces "Can't find variable: CARD_DECK" for
+      // tumble recipes opened from /recipes/*.
       const factory = new AsyncFunction(
-        'ReelSetBuilder',
-        'SpeedPresets',
-        'BlurSpriteSymbol',
-        'AnimatedSpriteSymbol',
+        'ReelSetBuilder', 'SpeedPresets', 'BlurSpriteSymbol', 'SpriteSymbol', 'AnimatedSpriteSymbol',
         'WinPresenter',
-        'app',
-        'textures',
-        'blurTextures',
-        'SYMBOL_IDS',
-        'pickWeighted',
-        'gsap',
-        'PIXI',
-        'runCascade',
-        'tumbleToGrid',
-        'diffCells',
-        'EmptySymbol',
+        'app', 'textures', 'blurTextures', 'SYMBOL_IDS', 'pickWeighted', 'gsap', 'PIXI',
+        'EmptySymbol', 'ReelSymbol',
+        'RectMaskStrategy', 'SharedRectMaskStrategy',
+        'CardSymbol', 'CARD_DECK', 'WILD_CARD',
+        'SpineReelSymbol', 'loadGeneratedSpines', 'buildSpineMap',
         factorySource,
       );
       // Await the factory so recipes that need async setup
       // (e.g. dynamic texture loaders) work.
       built = (await factory(
-        ReelSetBuilder,
-        SpeedPresets,
-        BlurSpriteSymbol,
-        AnimatedSpriteSymbol,
+        ReelSetBuilder, SpeedPresets, BlurSpriteSymbol, SpriteSymbol, AnimatedSpriteSymbol,
         WinPresenter,
-        env.app,
-        env.textures,
-        env.blurTextures,
-        env.SYMBOL_IDS,
-        pickWeighted,
-        gsap,
-        PIXI,
-        runCascade,
-        tumbleToGrid,
-        diffCells,
-        EmptySymbol,
+        env.app, env.textures, env.blurTextures, env.SYMBOL_IDS, pickWeighted, gsap, PIXI,
+        EmptySymbol, ReelSymbol,
+        RectMaskStrategy, SharedRectMaskStrategy,
+        CardSymbol, CARD_DECK, WILD_CARD,
+        SpineReelSymbol, loadGeneratedSpines, buildSpineMap,
       )) as BuildResult;
     } catch (e) {
       setStatus({ kind: 'err', msg: `Runtime error: ${(e as Error).message}` });
@@ -334,7 +328,11 @@ export default function Sandbox() {
 
   async function handleSpin() {
     if (isSpinning) {
-      try { currentReelSetRef.current?.skip(); } catch { /* ignore */ }
+      // skip() THROWS before `setResult()` arrives — route to requestSkip()
+      // in the catch so a player tap during the server-wait window still
+      // queues the slam and fires it the moment the result is in.
+      try { currentReelSetRef.current?.skip(); }
+      catch { currentReelSetRef.current?.requestSkip(); }
       return;
     }
     const reelSet = currentReelSetRef.current;

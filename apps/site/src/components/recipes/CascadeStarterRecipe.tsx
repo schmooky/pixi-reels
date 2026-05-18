@@ -1,7 +1,6 @@
 /** @jsxImportSource react */
 import RecipeBoard from '../RecipeBoard.tsx';
 import { mountMiniReels, sleep } from '../miniRuntime.ts';
-import { runCascade } from '../../../../../examples/shared/cascadeLoop.ts';
 
 const IDS = [
   'round/round_1', 'round/round_2', 'round/round_3',
@@ -11,6 +10,9 @@ const IDS = [
 
 const REELS = 6;
 const ROWS = 4;
+const CLUSTER_SYM = 'royal/royal_1';
+const HIT_ROW = 2;
+const CLUSTER_COLS = [0, 1, 2];
 
 function randomSymbol(exclude?: string): string {
   let pick = IDS[Math.floor(Math.random() * IDS.length)];
@@ -19,34 +21,16 @@ function randomSymbol(exclude?: string): string {
 }
 
 /**
- * Build a sequence of cascade stages for the demo:
- *   stage 0: a visible cluster of `clusterSym` on row `hitRow`, cols 0..clusterSize-1
- *   stage 1: winners replaced by random fillers; survivors have fallen; fresh
- *            symbols fill the top slots. The new top-row may or may not
- *            produce another cluster — we intentionally pick fillers that
- *            don't repeat clusterSym so the chain stops cleanly.
+ * Build the initial landing: a visible cluster of `CLUSTER_SYM` on
+ * row `HIT_ROW`, cols 0..2. Everything else is filler that doesn't
+ * collide with the cluster id.
  */
-function buildStages(): string[][][] {
-  const clusterSym = 'royal/royal_1';
-  const hitRow = 2;
-  const clusterCols = [0, 1, 2];
-
-  const stage0: string[][] = Array.from({ length: REELS }, (_, c) => Array.from({ length: ROWS }, (_, r) => {
-    if (r === hitRow && clusterCols.includes(c)) return clusterSym;
-    return randomSymbol(clusterSym);
-  }));
-
-  // Stage 1 gravity: in each winning column, the cell at hitRow is empty, so
-  // the survivor above it drops down by one and a fresh random fills the top.
-  const stage1: string[][] = stage0.map((col, c) => {
-    if (!clusterCols.includes(c)) return [...col];
-    const newCol = [...col];
-    for (let r = hitRow; r > 0; r--) newCol[r] = newCol[r - 1];
-    newCol[0] = randomSymbol(clusterSym);
-    return newCol;
-  });
-
-  return [stage0, stage1];
+function buildInitialGrid(): string[][] {
+  return Array.from({ length: REELS }, (_, c) =>
+    Array.from({ length: ROWS }, (_, r) =>
+      r === HIT_ROW && CLUSTER_COLS.includes(c) ? CLUSTER_SYM : randomSymbol(CLUSTER_SYM),
+    ),
+  );
 }
 
 export default function CascadeStarterRecipe() {
@@ -58,40 +42,59 @@ export default function CascadeStarterRecipe() {
           reelCount: REELS, visibleRows: ROWS,
           symbolSize: { width: 54, height: 54 },
           symbols: { kind: 'sprite', ids: IDS },
+          tumble: {
+            fall:   { duration: 280, ease: 'sine.in',       rowStagger: 40 },
+            dropIn: { duration: 420, ease: 'back.out(1.6)', rowStagger: 40, distance: 'perHole' },
+          },
         });
         return {
           destroy,
           run: async () => {
-            const stages = buildStages();
+            const grid = buildInitialGrid();
 
-            // Land stage 0 via a normal spin.
+            // Moment A — drop the initial grid in. With tumble enabled
+            // on the builder, `reelSet.spin()` uses cascade phases.
+            reelSet.setDropOrder('ltr');
             const p = reelSet.spin();
             await sleep(180);
-            reelSet.setResult(stages[0]);
+            reelSet.setResult(grid);
             await p;
             await sleep(300);
 
-            // Spotlight the winning cluster briefly.
-            const clusterCells = [
-              { reel: 0, row: 2 },
-              { reel: 1, row: 2 },
-              { reel: 2, row: 2 },
-            ];
+            // Spotlight the cluster briefly so the viewer sees what's
+            // about to pop.
+            const clusterCells = CLUSTER_COLS.map((c) => ({ reel: c, row: HIT_ROW }));
             await reelSet.spotlight.cycle(
               [{ positions: clusterCells.map((c) => ({ reelIndex: c.reel, rowIndex: c.row })) }],
               { displayDuration: 500 },
             );
             reelSet.spotlight.hide();
 
-            // Run the cascade: fade only the cluster cells, then drop
-            // survivors + fresh fill. We override `winners` because the
-            // default diffCells flags every row in a gravity column — we
-            // only want the matching cluster to pop, not every survivor.
-            await runCascade(reelSet, stages, {
-              winners: () => clusterCells,
-              vanishDuration: 300,
-              dropDuration: 420,
-              pauseBetween: 120,
+            // Moment B — one-shot cascade driven by reelSet.runCascade.
+            // The cluster cells pop, survivors fall, new symbols drop in.
+            // The second detectWinners returns [] (no more clusters), so
+            // the chain ends after one refill.
+            reelSet.setDropOrder('all');
+            let popped = false;
+            await reelSet.runCascade({
+              detectWinners: () => {
+                if (popped) return [];
+                popped = true;
+                return clusterCells;
+              },
+              nextGrid: (prev, winners) => {
+                // Gravity: in each winning column, the cell at HIT_ROW
+                // is empty, so the survivor above falls down by one and
+                // a fresh symbol fills the top.
+                return prev.map((col, c) => {
+                  if (!winners.some((w) => w.reel === c)) return [...col];
+                  const next = [...col];
+                  for (let r = HIT_ROW; r > 0; r--) next[r] = next[r - 1];
+                  next[0] = randomSymbol(CLUSTER_SYM);
+                  return next;
+                });
+              },
+              pauseAfterDestroyMs: 120,
             });
           },
         };

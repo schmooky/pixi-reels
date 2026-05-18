@@ -14,6 +14,7 @@ export const GUIDES_NAV: NavSection[] = [
     items: [
       { label: 'Getting started', href: '/guides/getting-started/' },
       { label: 'Your first reelset', href: '/guides/your-first-reelset/' },
+      { label: 'Your first cascade', href: '/guides/your-first-cascade/' },
     ],
   },
   {
@@ -22,6 +23,7 @@ export const GUIDES_NAV: NavSection[] = [
       { label: 'Symbols', href: '/guides/symbols/' },
       { label: 'Spine pins + movePin', href: '/guides/spine-pins/' },
       { label: 'Spin lifecycle', href: '/guides/spin-lifecycle/' },
+      { label: 'Cascades — mental model', href: '/guides/cascades/' },
       { label: 'Per-reel geometry', href: '/guides/per-reel-geometry/' },
       { label: 'MultiWays', href: '/guides/multiways/' },
       { label: 'Big symbols', href: '/guides/big-symbols/' },

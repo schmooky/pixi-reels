@@ -35,7 +35,7 @@ describe('SpinController.skip — symbol lifecycle hooks', () => {
       ['b', 'b', 'b'],
       ['a', 'a', 'a'],
     ]);
-    reelSet.skip();
+    reelSet.slamStop();
     await promise;
 
     for (const reel of reelSet.reels) {

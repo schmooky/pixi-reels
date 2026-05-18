@@ -31,7 +31,7 @@ async function spinAndLandWithHold(
 ) {
   const promise = h.reelSet.spin({ holdReels });
   h.reelSet.setResult(grid);
-  h.reelSet.skip();
+  h.reelSet.slamStop();
   return promise;
 }
 
@@ -247,7 +247,7 @@ describe('SpinOptions.holdReels — interaction with setAnticipation', () => {
         ['d', 'd', 'd'],
         ['e', 'e', 'e'],
       ]);
-      h.reelSet.skip();
+      h.reelSet.slamStop();
       await promise;
 
       // No assertion failure thrown means the filter held — anticipation

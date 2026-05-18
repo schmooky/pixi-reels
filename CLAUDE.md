@@ -324,8 +324,9 @@ Tests are in `packages/pixi-reels/tests/` using Vitest. Run with `pnpm test`.
 1. Create `packages/pixi-reels/src/symbols/MySymbol.ts` extending `ReelSymbol`
 2. Implement `onActivate`, `onDeactivate`, `playWin`, `stopAnimation`, `resize`
 3. `resize()` MUST store dimensions and reposition internals — it's called on every symbol swap
-4. Export from `src/index.ts`
-5. Register in builder: `builder.symbols(r => r.register('id', MySymbol, opts))`
+4. (Optional) override `playDestroy(opts)` for cascade destruction. Default is a ~320 ms scale/spin/fade implode. Override for art-appropriate destruction (Spine `disintegration` track, shatter atlas swap). Respect `opts.signal` for mid-tween abort, or document why you can't (e.g. uninterruptible Spine track)
+5. Export from `src/index.ts`
+6. Register in builder: `builder.symbols(r => r.register('id', MySymbol, opts))`
 
 ### Add a new spin phase
 1. Create `packages/pixi-reels/src/spin/phases/MyPhase.ts` extending `ReelPhase<MyConfig>`

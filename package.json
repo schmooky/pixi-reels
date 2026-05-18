@@ -11,6 +11,8 @@
     "build": "pnpm --filter pixi-reels build && pnpm --filter classic-spin build && pnpm --filter cascade-tumble build && pnpm --filter hold-and-win build && pnpm --filter big-symbols build && pnpm --filter multiways build && pnpm --filter pyramid-cascade build",
     "build:all": "node scripts/build-all-publishable.mjs",
     "test": "pnpm check:lint && pnpm --filter pixi-reels test",
+    "test:e2e": "playwright test",
+    "test:e2e:install": "playwright install chromium",
     "typecheck": "pnpm --filter pixi-reels typecheck",
     "lint": "pnpm --filter pixi-reels lint",
     "check:no-fancy-unicode": "node scripts/check-no-fancy-unicode.mjs",
@@ -54,6 +56,7 @@
     "@changesets/cli": "^2.31.0",
     "@commitlint/cli": "^20.5.0",
     "@commitlint/config-conventional": "^20.5.0",
+    "@playwright/test": "^1.60.0",
     "husky": "^9.1.7",
     "lint-staged": "^16.4.0"
   }

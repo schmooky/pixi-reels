@@ -64,14 +64,16 @@ export type { AdjustPhaseConfig } from './spin/phases/AdjustPhase.js';
 // internal hand-off type built by SpinController and consumed by
 // AdjustPhase — consumers don't construct one directly.
 
-// Cascade drop-in
-export { DropRecipes } from './cascade/DropRecipes.js';
-export type { CascadeDropConfig } from './cascade/DropRecipes.js';
-export { DropStartPhase } from './spin/phases/DropStartPhase.js';
-export type { DropStartPhaseConfig } from './spin/phases/DropStartPhase.js';
-export { DropStopPhase } from './spin/phases/DropStopPhase.js';
-export type { DropStopPhaseConfig } from './spin/phases/DropStopPhase.js';
-export { CascadeAnticipationPhase } from './cascade/CascadeAnticipationPhase.js';
+// Tumble cascade
+export type { TumbleConfig, TumbleFallConfig, TumbleDropInConfig } from './cascade/TumbleConfig.js';
+export type { Cell, DropOffset } from './cascade/tumbleAlgorithm.js';
+export { computeDropOffsets } from './cascade/tumbleAlgorithm.js';
+export { CascadeFallPhase } from './spin/phases/CascadeFallPhase.js';
+export type { CascadeFallPhaseConfig } from './spin/phases/CascadeFallPhase.js';
+export { CascadePlacePhase } from './spin/phases/CascadePlacePhase.js';
+export type { CascadePlacePhaseConfig } from './spin/phases/CascadePlacePhase.js';
+export { CascadeDropInPhase } from './spin/phases/CascadeDropInPhase.js';
+export type { CascadeDropInPhaseConfig } from './spin/phases/CascadeDropInPhase.js';
 
 // Spinning modes
 export type { SpinningMode } from './spin/modes/SpinningMode.js';
@@ -114,6 +116,14 @@ export { pinKey } from './pins/CellPin.js';
 
 // ReelSet frame API (runtime middleware)
 export type { FrameAPI } from './core/ReelSet.js';
+
+// ReelSet cascade-API option types — exported so consumers can pass typed
+// option objects around or extend them for engine-on-engine adapters.
+export type {
+  DestroySymbolsOptions,
+  RunCascadeOptions,
+  RunCascadeResult,
+} from './core/ReelSet.js';
 
 // Events
 export { EventEmitter } from './events/EventEmitter.js';

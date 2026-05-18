@@ -178,6 +178,74 @@ export class SpineReelSymbol extends ReelSymbol {
   }
 
   /**
+   * Cascade-destruction override. If the skeleton has the configured
+   * `out` (disintegration) animation, play it. Otherwise fall back to the
+   * base class's GSAP scale-and-fade so a partial skeleton still cascades
+   * cleanly. `opts.delay` is honored (seconds, mirrors the GSAP version)
+   * so callers can stagger a winning cluster; `opts.direction` is ignored —
+   * spine animations bake their own rotation curves. `opts.signal` aborts
+   * the (pre-delay or in-flight) animation early — the spine state is
+   * snapped to the next track entry and the resolve fires immediately;
+   * the view is left at `alpha: 0` for parity with the GSAP fallback so
+   * the destroyed pose is consistent across symbol kinds.
+   */
+  override async playDestroy(opts?: { direction?: 1 | -1; delay?: number; signal?: AbortSignal }): Promise<void> {
+    const outName = this._animNameFor('out');
+    const hasOut = !!this._currentSpine?.skeleton.data.findAnimation(outName);
+    if (!hasOut) return super.playDestroy(opts);
+
+    const signal = opts?.signal;
+    if (signal?.aborted) {
+      this.view.alpha = 0;
+      return;
+    }
+
+    const delay = opts?.delay ?? 0;
+    if (delay > 0) {
+      // Honor abort during the pre-delay window — skip the disintegrate
+      // entirely if the player slammed before it could start.
+      const aborted = await new Promise<boolean>((resolve) => {
+        const t = setTimeout(() => {
+          if (signal) signal.removeEventListener('abort', onAbort);
+          resolve(false);
+        }, delay * 1000);
+        const onAbort = (): void => {
+          clearTimeout(t);
+          resolve(true);
+        };
+        if (signal) signal.addEventListener('abort', onAbort, { once: true });
+      });
+      if (aborted) {
+        this.view.alpha = 0;
+        return;
+      }
+    }
+
+    // Race the play against abort. On abort, settle the one-shot promise
+    // (which resolves the awaiter) and snap the view to the destroyed pose
+    // — the underlying spine track ticks until the next track set, but
+    // alpha=0 keeps it invisible.
+    if (signal) {
+      const onAbort = (): void => {
+        this._resolveOneShot();
+        this.view.alpha = 0;
+      };
+      if (signal.aborted) {
+        onAbort();
+        return;
+      }
+      signal.addEventListener('abort', onAbort, { once: true });
+      try {
+        await this.playOut();
+      } finally {
+        signal.removeEventListener('abort', onAbort);
+      }
+      return;
+    }
+    return this.playOut();
+  }
+
+  /**
    * Swap the primary track to the blur animation for the SPIN phase. Reverts
    * to idle automatically on `stopAnimation()` or next activate.
    *

@@ -1,7 +1,7 @@
 /** @jsxImportSource react */
 import RecipeBoard from '../RecipeBoard.tsx';
-import { mountMiniReels, spinToGrid, fadeOutCells, sleep } from '../miniRuntime.ts';
-import { tumbleToGrid, type Cell } from '../../../../../examples/shared/cascadeLoop.ts';
+import { mountMiniReels, spinToGrid, sleep } from '../miniRuntime.ts';
+import type { Cell } from 'pixi-reels';
 
 const A = 'round/round_1';
 const B = 'round/round_2';
@@ -11,10 +11,11 @@ const IDS = [A, B, C, X];
 
 /**
  * BEFORE: X cells are the winners to remove.
- * AFTER: the grid after real cascade gravity — winners cleared, survivors
- * preserve their symbol id but slide DOWN past cleared slots, and new
- * symbols appear at the top. See `/architecture/cascade/` for the full
- * physics.
+ * AFTER:  the grid after real cascade gravity — winners cleared,
+ * survivors slide DOWN past cleared slots, new symbols enter from
+ * above. The contract matches `reelSet.refill({ winners, grid })`:
+ * per reel, the top `winners.length` rows are new, the rest are
+ * survivors in their original top-to-bottom order.
  */
 const BEFORE: string[][] = [
   [X, A, B],
@@ -50,16 +51,25 @@ export default function RemoveSymbolRecipe() {
           symbolSize: { width: 80, height: 80 },
           symbols: { kind: 'sprite', ids: IDS },
           weights: { [A]: 25, [B]: 25, [C]: 25, [X]: 25 },
+          tumble: {
+            fall:   { duration: 0, ease: 'none', rowStagger: 0 },
+            dropIn: { duration: 440, ease: 'back.out(1.6)', rowStagger: 0, distance: 'perHole' },
+          },
         });
         return {
           destroy,
           run: async () => {
+            // Land BEFORE via a normal strip-spin (the builder's tumble
+            // config doesn't kick in until refill).
             await spinToGrid(reelSet, BEFORE);
             await sleep(300);
+
+            // Canonical cascade primitives — same two calls every cascade
+            // chain uses, just one cascade level.
             const winners = winnersOfX(BEFORE);
-            await fadeOutCells(reelSet, winners, 340);
+            await reelSet.destroySymbols(winners);
             await sleep(120);
-            await tumbleToGrid(reelSet, AFTER, winners, { dropDuration: 440 });
+            await reelSet.refill({ winners, grid: AFTER });
           },
         };
       }}

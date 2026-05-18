@@ -1,6 +1,6 @@
 import { Application, Graphics } from 'pixi.js';
 import { ReelSetBuilder, SpeedPresets, enableDebug } from 'pixi-reels';
-import type { ReelSet } from 'pixi-reels';
+import type { ReelSet, TumbleConfig } from 'pixi-reels';
 import { gsap } from 'gsap';
 import { BlockSymbol } from './BlockSymbol.ts';
 import { BlurSpriteSymbol } from '../../../../examples/shared/BlurSpriteSymbol.ts';
@@ -28,6 +28,17 @@ export interface MiniConfig {
     | Array<{ id: string; color: number; glyph?: string }>
     | { kind: 'sprite'; ids: string[]; blurOnSpin?: boolean };
   weights?: Record<string, number>;
+  /**
+   * Opt-in tumble cascade phases — needed for any recipe that calls
+   * `reelSet.refill(...)` or `reelSet.runCascade(...)`. Pass `true` for
+   * library defaults, or a `TumbleConfig` to customise fall / dropIn.
+   *
+   * NOTE: enabling this flips the builder's default spin mode to
+   * `'cascade'`. Recipes that combine a strip-spin first round with
+   * a cascade chain should pass `spin({ mode: 'standard' })` for the
+   * initial spin.
+   */
+  tumble?: true | TumbleConfig;
 }
 
 export interface MiniHandle {
@@ -46,7 +57,12 @@ export async function mountMiniReels(
 ): Promise<MiniHandle> {
   const size = cfg.symbolSize ?? { width: 72, height: 72 };
   const padX = 10, padY = 10, gap = 4;
-  const width = cfg.reelCount * (size.width + gap) - gap + padX * 2 + 40;
+  // Width adapts to host on mobile / responsive layouts. Height is reel-
+  // geometry-bound and never changes — the host's column is laid out around
+  // the reels, not the other way around.
+  const intrinsicWidth = cfg.reelCount * (size.width + gap) - gap + padX * 2 + 40;
+  const computeWidth = (): number => Math.min(host.clientWidth || intrinsicWidth, intrinsicWidth);
+  let width = computeWidth();
   const height = cfg.visibleRows * (size.height + gap) - gap + padY * 2 + 40;
 
   const app = new Application();
@@ -92,7 +108,7 @@ export async function mountMiniReels(
     if (s.glyph) glyphs[s.id] = s.glyph;
   }
 
-  const reelSet = new ReelSetBuilder()
+  const builder = new ReelSetBuilder()
     .reels(cfg.reelCount)
     .visibleSymbols(cfg.visibleRows)
     .symbolSize(size.width, size.height)
@@ -116,8 +132,13 @@ export async function mountMiniReels(
     .weights(cfg.weights ?? {})
     .speed('normal', SpeedPresets.NORMAL)
     .speed('turbo', SpeedPresets.TURBO)
-    .ticker(app.ticker)
-    .build();
+    .ticker(app.ticker);
+
+  if (cfg.tumble) {
+    builder.tumble(cfg.tumble === true ? undefined : cfg.tumble);
+  }
+
+  const reelSet = builder.build();
 
   // Blur-on-spin wiring (sprite mode only, on by default).
   if (spriteCfg && (spriteCfg.blurOnSpin ?? true)) {
@@ -157,13 +178,32 @@ export async function mountMiniReels(
     .fill({ color: 0xffffff, alpha: 1 })
     .roundRect(0, 0, totalW, totalH, 14)
     .stroke({ color: 0xe5dccf, width: 1, alpha: 0.9 });
-  frame.x = (width - totalW) / 2;
-  frame.y = (height - totalH) / 2;
   app.stage.addChild(frame);
-
-  reelSet.x = frame.x + padX;
-  reelSet.y = frame.y + padY;
   app.stage.addChild(reelSet);
+
+  // Recompute width-dependent positions AND scale the reels to fit. Called
+  // once at boot then whenever the wrapping column changes size (mobile
+  // rotate, responsive breakpoints inside a multi-canvas recipe page). If
+  // host width drops below the intrinsic reel width we scale the whole
+  // group down uniformly — same `fit()` pattern as RecipeRunner.
+  const relayout = (): void => {
+    width = computeWidth();
+    app.renderer.resize(width, height);
+    const scale = Math.min(1, width / totalW, height / totalH);
+    const scaledW = totalW * scale;
+    const scaledH = totalH * scale;
+    frame.scale.set(scale);
+    frame.x = (width - scaledW) / 2;
+    frame.y = (height - scaledH) / 2;
+    reelSet.scale.set(scale);
+    reelSet.x = frame.x + padX * scale;
+    reelSet.y = frame.y + padY * scale;
+  };
+  relayout();
+  const resizeObserver = typeof ResizeObserver !== 'undefined'
+    ? new ResizeObserver(() => relayout())
+    : null;
+  resizeObserver?.observe(host);
 
   enableDebug(reelSet);
 
@@ -171,8 +211,9 @@ export async function mountMiniReels(
     app,
     reelSet,
     destroy() {
-      try { reelSet.destroy(); } catch {}
-      try { app.destroy(true, { children: true }); } catch {}
+      try { resizeObserver?.disconnect(); } catch (err) { console.warn('miniRuntime: observer disconnect failed', err); }
+      try { reelSet.destroy(); } catch (err) { console.warn('miniRuntime: reelSet destroy failed', err); }
+      try { app.destroy(true, { children: true }); } catch (err) { console.warn('miniRuntime: app destroy failed', err); }
     },
   };
 }

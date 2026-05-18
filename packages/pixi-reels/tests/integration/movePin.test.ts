@@ -110,7 +110,7 @@ describe('movePin — errors', () => {
         ['a', 'b', 'c'], ['a', 'b', 'c'], ['a', 'b', 'c'],
         ['a', 'b', 'c'], ['a', 'b', 'c'],
       ]);
-      h.reelSet.skip();
+      h.reelSet.slamStop();
       await spinPromise;
     } finally {
       h.destroy();
