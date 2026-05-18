@@ -8,6 +8,7 @@ import type { ReelSymbol } from '../../symbols/ReelSymbol.js';
 import type { EventEmitter } from '../../events/EventEmitter.js';
 import type { ReelSetEvents } from '../../events/ReelEvents.js';
 import type { TumbleDropInConfig } from '../../cascade/TumbleConfig.js';
+import { mergeDropInConfig } from '../../cascade/TumbleConfig.js';
 import { computeDropOffsets } from '../../cascade/tumbleAlgorithm.js';
 
 export interface CascadeDropInPhaseConfig {
@@ -63,16 +64,28 @@ export class CascadeDropInPhase extends ReelPhase<CascadeDropInPhaseConfig> {
   readonly name = 'cascade:dropIn';
   readonly skippable = true;
 
-  private readonly _drop: Required<TumbleDropInConfig>;
+  private readonly _baseDrop: Required<TumbleDropInConfig>;
+  /** Resolved at `onEnter` time by merging the active speed profile's
+   *  `tumble.dropIn` override (if any) over `_baseDrop`. Lives only for
+   *  the duration of a single run so a `setSpeed` between phases is
+   *  honoured on the next entry. */
+  private _drop: Required<TumbleDropInConfig>;
   private _timeline: gsap.core.Timeline | null = null;
   private _jobs: DropJob[] = [];
   /** Captured on enter so `onSkip` can emit the paired `:end` event
    *  without needing the config closure. */
   private _events: EventEmitter<ReelSetEvents> | null = null;
   private _endEvent: 'cascade:dropIn:end' | 'cascade:gravity:end' = 'cascade:dropIn:end';
+  /** Per-run abort controller exposed on `cascade:dropIn:symbol` (or
+   *  `cascade:gravity:symbol`) as `signal`. Aborts on `onSkip` so
+   *  listener-scheduled tweens (landing squish, badge fade) can clean up
+   *  alongside the library's own timeline. Stays un-aborted on natural
+   *  completion. */
+  private _skipAbort: AbortController | null = null;
 
   constructor(reel: Reel, speed: SpeedProfile, drop: Required<TumbleDropInConfig>) {
     super(reel, speed);
+    this._baseDrop = drop;
     this._drop = drop;
   }
 
@@ -83,6 +96,11 @@ export class CascadeDropInPhase extends ReelPhase<CascadeDropInPhaseConfig> {
     const events = config.events;
     const reelIndex = reel.reelIndex;
     const role = config.role ?? 'all';
+
+    // Apply speed-profile tumble override. Falls back to the build-time
+    // base when the profile doesn't define one.
+    this._drop = mergeDropInConfig(this._baseDrop, this._speed.tumble?.dropIn);
+    this._skipAbort = new AbortController();
 
     // Pick the event triplet for this role. Gravity uses its own channel so
     // listeners can distinguish "survivors slid into the holes" from "new
@@ -202,6 +220,10 @@ export class CascadeDropInPhase extends ReelPhase<CascadeDropInPhaseConfig> {
       // called after natural completion) doesn't re-emit `:end` and
       // double-fire on balanced listeners.
       this._events = null;
+      // Natural completion: drop the controller un-aborted. Listener
+      // tweens scheduled off `cascade:dropIn:symbol` (squish, bounce)
+      // are expected to settle on their own timeline.
+      this._skipAbort = null;
       // Only stage that lands the reel: 'all' (combined) and 'new' (final
       // stage of two-stage). The gravity stage hands off to the drop-in
       // stage; that's where `notifyLanded` belongs.
@@ -234,15 +256,20 @@ export class CascadeDropInPhase extends ReelPhase<CascadeDropInPhaseConfig> {
       const offset = staggerIndex * staggerSec;
 
       tl.call(
-        () => events.emit(symbolEvent, {
-          symbol: job.symbol,
-          view: job.view,
-          reelIndex,
-          rowIndex: job.row,
-          duration: this._drop.duration,
-          ease: this._drop.ease,
-          offsetRows: job.offsetRows,
-        }),
+        () => {
+          const signal = this._skipAbort?.signal;
+          if (!signal) return;
+          events.emit(symbolEvent, {
+            symbol: job.symbol,
+            view: job.view,
+            reelIndex,
+            rowIndex: job.row,
+            duration: this._drop.duration,
+            ease: this._drop.ease,
+            offsetRows: job.offsetRows,
+            signal,
+          });
+        },
         undefined,
         offset,
       );
@@ -282,6 +309,16 @@ export class CascadeDropInPhase extends ReelPhase<CascadeDropInPhaseConfig> {
       sym.view.alpha = 1;
       sym.view.visible = true;
     }
+
+    // Abort BEFORE emitting `:end` so listeners registered on the
+    // per-symbol `signal` get the cancellation first — squish/bounce
+    // tweens they scheduled off `cascade:dropIn:symbol` must die before
+    // `:end` consumers run any landed-state setup that would otherwise
+    // collide with mid-air tweens.
+    if (this._skipAbort && !this._skipAbort.signal.aborted) {
+      this._skipAbort.abort();
+    }
+    this._skipAbort = null;
 
     // Emit the paired `:end` event so listeners that count start/end
     // events stay balanced across skips. `:start` was already emitted at

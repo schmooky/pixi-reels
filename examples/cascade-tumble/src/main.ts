@@ -178,9 +178,33 @@ function buildReelSet(app: Application, textures: Record<string, Texture>): Reel
       }
     })
     .weights({ low1: 18, low2: 18, low3: 18, low4: 18, med1: 12, med2: 12, high1: 6, high2: 6, wild: 3 })
-    .speed('normal',     { ...SpeedPresets.NORMAL,      stopDelay: 150 })
-    .speed('turbo',      { ...SpeedPresets.TURBO,       stopDelay: 80 })
-    .speed('superTurbo', { ...SpeedPresets.SUPER_TURBO, stopDelay: 0 })
+    // Per-speed tumble overrides: faster speeds get progressively
+    // shorter cascade timings on top of the base config below. Without
+    // this, `setSpeed('turbo')` would only shrink the per-reel
+    // `stopDelay` — the in-reel fall/drop tweens would still run at
+    // the base 280 ms / 480 ms and the turbo button wouldn't feel any
+    // different through the cascade. With it, turbo halves the durations
+    // and superTurbo snaps everything in 60–80 ms.
+    .speed('normal', {
+      ...SpeedPresets.NORMAL,
+      stopDelay: 150,
+    })
+    .speed('turbo', {
+      ...SpeedPresets.TURBO,
+      stopDelay: 80,
+      tumble: {
+        fall:   { duration: 140, rowStagger: 20 },
+        dropIn: { duration: 220, rowStagger: 20 },
+      },
+    })
+    .speed('superTurbo', {
+      ...SpeedPresets.SUPER_TURBO,
+      stopDelay: 0,
+      tumble: {
+        fall:   { duration: 60, rowStagger: 0 },
+        dropIn: { duration: 80, rowStagger: 0 },
+      },
+    })
     .tumble({
       // Fall: per-reel left-to-right stagger from speed.spinDelay, plus
       // in-reel bottom-to-top from rowOrder default — gives the canonical
@@ -260,6 +284,47 @@ async function main(): Promise<void> {
   reelSet.events.on('cascade:dropIn:start', () => {
     spinner.visible = false;
     fallEnded = 0;
+  });
+
+  // ─── LANDING SQUISH (skip-safe via info.signal) ───────────
+  //
+  // Listener-side decoration: when each symbol's drop-in tween starts,
+  // we run a parallel scale squish synced to the library's fall, then a
+  // small bounce on landing. Both are scheduled off GSAP, independent
+  // of the library's own timeline — so on a slam-stop the library snaps
+  // the view to grid but our squish/bounce tweens would keep running
+  // (the delayedCall fires `duration` ms later regardless), leaving the
+  // symbol scaled or off-position.
+  //
+  // The `info.signal` AbortSignal fires when the phase is skipped. We
+  // register a one-shot cleanup that kills our tweens and resets scale
+  // — so slam-stop visually matches "snap to grid" instead of "snap to
+  // grid then bounce again."
+  reelSet.events.on('cascade:dropIn:symbol', (info) => {
+    const { view, duration, signal } = info;
+    const fallSec   = duration / 1000;
+    const bounceSec = 0.1;
+
+    const squish = gsap.to(view.scale, {
+      x: 1.15,
+      y: 0.78,
+      duration: fallSec,
+      ease: 'sine.in',
+    });
+
+    const landed = gsap.delayedCall(fallSec, () => {
+      const gridY = view.y;
+      gsap.timeline()
+        .to(view,       { y: gridY - 12, duration: bounceSec, ease: 'sine.out' })
+        .to(view.scale, { x: 1, y: 1,    duration: bounceSec, ease: 'sine.out' }, '<')
+        .to(view,       { y: gridY,      duration: bounceSec, ease: 'sine.in'  });
+    });
+
+    signal.addEventListener('abort', () => {
+      squish.kill();
+      landed.kill();
+      view.scale.set(1, 1);
+    }, { once: true });
   });
 
   // ─── UI STATE ─────────────────────────────────────────────

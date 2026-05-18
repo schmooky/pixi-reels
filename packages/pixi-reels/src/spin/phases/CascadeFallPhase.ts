@@ -9,6 +9,7 @@ import type { ReelSymbol } from '../../symbols/ReelSymbol.js';
 import type { EventEmitter } from '../../events/EventEmitter.js';
 import type { ReelSetEvents } from '../../events/ReelEvents.js';
 import type { TumbleFallConfig } from '../../cascade/TumbleConfig.js';
+import { mergeFallConfig } from '../../cascade/TumbleConfig.js';
 
 export interface CascadeFallPhaseConfig {
   /** Required by the start-phase contract — set on the reel even though
@@ -37,7 +38,12 @@ export class CascadeFallPhase extends ReelPhase<CascadeFallPhaseConfig> {
   readonly name = 'cascade:fall';
   readonly skippable = true;
 
-  private readonly _fall: Required<TumbleFallConfig>;
+  private readonly _baseFall: Required<TumbleFallConfig>;
+  /** Resolved at `onEnter` time by merging the active speed profile's
+   *  `tumble.fall` override (if any) over `_baseFall`. Lives only for the
+   *  duration of a single run so a `setSpeed` between phases is honoured
+   *  on the next entry. */
+  private _fall: Required<TumbleFallConfig>;
   private _timeline: gsap.core.Timeline | null = null;
   private _delayedCall: gsap.core.Tween | null = null;
   /** Views actively being faded out. Tracked so `onSkip` can hide them
@@ -50,9 +56,16 @@ export class CascadeFallPhase extends ReelPhase<CascadeFallPhaseConfig> {
    *  matching `:end` ONLY when `:start` already fired — a skip during the
    *  pre-fall delay window must not produce an unpaired `:end`. */
   private _startEmitted = false;
+  /** Per-run abort controller exposed to listeners on `cascade:fall:symbol`
+   *  as `signal`. Aborts on `onSkip` so listener-scheduled tweens (squish,
+   *  badge fade, etc.) can clean themselves up alongside the library's
+   *  own timeline. Stays un-aborted on natural completion — only explicit
+   *  skips trigger it. */
+  private _skipAbort: AbortController | null = null;
 
   constructor(reel: Reel, speed: SpeedProfile, fall: Required<TumbleFallConfig>) {
     super(reel, speed);
+    this._baseFall = fall;
     this._fall = fall;
   }
 
@@ -62,8 +75,13 @@ export class CascadeFallPhase extends ReelPhase<CascadeFallPhaseConfig> {
     reel.speed = 0;
     reel.notifySpinStart();
 
+    // Apply speed-profile tumble override. Falls back to the build-time
+    // base when the profile doesn't define one.
+    this._fall = mergeFallConfig(this._baseFall, this._speed.tumble?.fall);
+
     this._events = config.events;
     this._startEmitted = false;
+    this._skipAbort = new AbortController();
 
     const delaySec = (config.delay ?? 0) / 1000;
     if (delaySec > 0) {
@@ -104,7 +122,9 @@ export class CascadeFallPhase extends ReelPhase<CascadeFallPhaseConfig> {
     this._startEmitted = true;
 
     if (fallSec <= 0) {
-      // Instant fall: hide and complete.
+      // Instant fall: hide and complete. No symbol events fire (no tween
+      // to attach decoration to), so the AbortController is dropped
+      // un-aborted — listeners can't have registered cleanup against it.
       for (const v of views) v.alpha = 0;
       events.emit('cascade:fall:end', { reelIndex });
       this._fallingViews = [];
@@ -113,6 +133,7 @@ export class CascadeFallPhase extends ReelPhase<CascadeFallPhaseConfig> {
       // start/end pair.
       this._startEmitted = false;
       this._events = null;
+      this._skipAbort = null;
       this._complete();
       return;
     }
@@ -125,6 +146,10 @@ export class CascadeFallPhase extends ReelPhase<CascadeFallPhaseConfig> {
         events.emit('cascade:fall:end', { reelIndex });
         this._startEmitted = false;
         this._events = null;
+        // Natural completion: drop the controller un-aborted. Listener
+        // tweens scheduled off `cascade:fall:symbol` are expected to
+        // settle on their own timeline.
+        this._skipAbort = null;
         this._complete();
       },
     });
@@ -141,16 +166,24 @@ export class CascadeFallPhase extends ReelPhase<CascadeFallPhaseConfig> {
 
       // Fire the per-symbol event right before the tween starts so listeners
       // can stage parallel tweens with full knowledge of duration/ease.
+      // `signal` aborts when this phase is skipped, so listener-scheduled
+      // tweens (squish, badge, etc.) can be cleaned up alongside the
+      // library's own timeline.
       tl.call(
-        () => events.emit('cascade:fall:symbol', {
-          symbol,
-          view,
-          reelIndex,
-          rowIndex: row,
-          duration: this._fall.duration,
-          ease: this._fall.ease,
-          distance: fallDistance,
-        }),
+        () => {
+          const signal = this._skipAbort?.signal;
+          if (!signal) return;
+          events.emit('cascade:fall:symbol', {
+            symbol,
+            view,
+            reelIndex,
+            rowIndex: row,
+            duration: this._fall.duration,
+            ease: this._fall.ease,
+            distance: fallDistance,
+            signal,
+          });
+        },
         undefined,
         offset,
       );
@@ -169,6 +202,14 @@ export class CascadeFallPhase extends ReelPhase<CascadeFallPhaseConfig> {
     this._kill();
     for (const v of this._fallingViews) v.alpha = 0;
     this._fallingViews = [];
+    // Abort BEFORE emitting `:end` so listeners registered against
+    // `signal` see the cancellation in the same microtask their `:end`
+    // handler would (some consumers branch on `wasSkipped`-flavoured
+    // state and rely on the order).
+    if (this._skipAbort && !this._skipAbort.signal.aborted) {
+      this._skipAbort.abort();
+    }
+    this._skipAbort = null;
     // Emit the paired `cascade:fall:end` so listeners that count
     // start/end events stay balanced. Only emit if `:start` already
     // fired — a skip during the pre-fall delay window has no

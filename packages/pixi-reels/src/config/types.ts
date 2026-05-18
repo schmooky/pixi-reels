@@ -1,4 +1,5 @@
 import type { Container, Ticker } from 'pixi.js';
+import type { TumbleConfig } from '../cascade/TumbleConfig.js';
 
 /**
  * Options accepted by `reelSet.spin(options?)`. All fields are optional —
@@ -66,6 +67,26 @@ export interface SpeedProfile {
   readonly accelerationDuration?: number;
   /** Minimum spin time in ms before stop is allowed. Default: 500. */
   readonly minimumSpinTime?: number;
+  /**
+   * Optional per-speed tumble timing overrides. When the active speed
+   * profile defines this, the cascade fall + drop-in phases merge these
+   * fields over the base config registered via `.tumble(...)` at build
+   * time — `setSpeed('turbo')` can shorten `fall.duration`,
+   * `dropIn.duration`, per-row staggers, and the drop ease without the
+   * caller maintaining a parallel `setTumble` API.
+   *
+   * Fields are deep-merged with `Partial` semantics: omitted fields fall
+   * back to the base config. To suppress the cascade animation entirely
+   * for a profile (the canonical "snap on turbo" pattern), set
+   * `fall.duration: 0` and `dropIn.duration: 0` — both phases short-circuit
+   * to their existing snap path.
+   *
+   * Phases capture the resolved config at `onEnter` time, so a `setSpeed`
+   * call between two refills picks up the new timings on the next refill.
+   * In-flight tweens keep their construction-time timings (mid-tween
+   * mutation is not supported).
+   */
+  readonly tumble?: TumbleConfig;
 }
 
 /** Per-symbol configuration data. */
