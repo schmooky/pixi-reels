@@ -68,7 +68,7 @@ class MockSpine extends Container {
           ? { name }
           : null,
     },
-    setToSetupPose: vi.fn(),
+    setupPose: vi.fn(),
   };
 }
 
