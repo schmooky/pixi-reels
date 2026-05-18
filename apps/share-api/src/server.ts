@@ -62,13 +62,13 @@ const ShareEnvelopeSchema = z.object({
 const SharePayloadSymbolSchema = z.object({
   id: z.string().min(1).max(64),
   type: z.enum(['sprite', 'animatedSprite', 'spine']),
-  data: z.record(z.unknown()),
+  data: z.record(z.string(), z.unknown()),
 });
 
 const SharePayloadSchema = z.object({
   code: z.string(),
   symbols: z.array(SharePayloadSymbolSchema),
-  assets: z.record(z.string()),
+  assets: z.record(z.string(), z.string()),
 });
 
 const AnalyticsSchema = z.object({

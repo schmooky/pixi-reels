@@ -147,7 +147,7 @@ export class SpineReelSymbol extends ReelSymbol {
       // Reset the skeleton to its setup pose, otherwise a symbol that ends on
       // an invisible "out" frame (e.g. after `playOut()` / disintegrate) is
       // still invisible when the pool reassigns it on the next spin.
-      this._currentSpine.skeleton.setToSetupPose();
+      this._currentSpine.skeleton.setupPose();
       this._currentSpine.visible = false;
       this._currentSpine = null;
     }

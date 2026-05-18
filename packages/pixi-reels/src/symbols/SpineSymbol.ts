@@ -73,7 +73,7 @@ export class SpineSymbol extends ReelSymbol {
     // Set to idle
     if (this._spine.skeleton.data.findSkin(this._defaultSkin)) {
       this._spine.skeleton.setSkinByName(this._defaultSkin);
-      this._spine.skeleton.setSlotsToSetupPose();
+      this._spine.skeleton.setupPoseSlots();
     }
     if (this._spine.skeleton.data.findAnimation(this._idleAnimation)) {
       this._spine.state.setAnimation(0, this._idleAnimation, true);
