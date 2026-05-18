@@ -27,5 +27,3 @@ events.on('cascade:dropIn:symbol', ({ view, duration, signal }) => {
   signal.addEventListener('abort', () => { t.kill(); view.scale.set(1, 1); }, { once: true });
 });
 ```
-
-Fix: `SpineReelSymbol` now calls `Skeleton.setupPose()` instead of `setToSetupPose()` on pool recycle. Spine renamed this method as a breaking change inside the `@esotericsoftware/spine-pixi-v8@4.3.0` minor bump; with the previous call site the library would `TypeError` the moment any Spine symbol was deactivated on the current peer dep.

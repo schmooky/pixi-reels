@@ -147,10 +147,7 @@ export class SpineReelSymbol extends ReelSymbol {
       // Reset the skeleton to its setup pose, otherwise a symbol that ends on
       // an invisible "out" frame (e.g. after `playOut()` / disintegrate) is
       // still invisible when the pool reassigns it on the next spin.
-      // Spine 4.3 renamed `setToSetupPose()` → `setupPose()` as a breaking
-      // change inside a minor bump; spine-pixi-v8 4.3.x re-exports the new
-      // API only.
-      this._currentSpine.skeleton.setupPose();
+      this._currentSpine.skeleton.setToSetupPose();
       this._currentSpine.visible = false;
       this._currentSpine = null;
     }
