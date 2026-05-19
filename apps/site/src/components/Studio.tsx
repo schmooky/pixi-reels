@@ -19,6 +19,8 @@ import {
 } from 'lucide-react';
 import { SymbolsTab } from './studio/SymbolsTab.tsx';
 import { ShareDialog } from './studio/ShareDialog.tsx';
+import { CanvasSkeleton } from './CanvasSkeleton.tsx';
+import { useMinDisplay } from './useMinDisplay.ts';
 import { cn } from '@/lib/utils';
 import { Kbd, KbdChord } from '@/components/ui/kbd';
 import { Application, type Texture } from 'pixi.js';
@@ -229,10 +231,23 @@ export default function Studio() {
   // automatically. Empty until the first successful Run.
   const [speeds, setSpeeds] = useState<string[]>([]);
   const [speedName, setSpeedName] = useState<string>('normal');
+
+  // Latched boot flag — keep the skeleton on screen for at least 250 ms
+  // after first paint so very fast IDB+atlas loads don't flash a 1-frame
+  // skeleton. Mirrors RecipeRunner's pattern.
+  const showSkeleton = useMinDisplay(isBooting, 250);
   // Set when a recipe link (#code=…) arrives and we already have saved work
   // in IDB — opens the overwrite/preview/cancel modal. While non-null the
   // user hasn't decided yet; the persisted config stays untouched.
   const [pendingHashCode, setPendingHashCode] = useState<string | null>(null);
+  // Set when an incoming recipe should auto-run as soon as boot completes
+  // and the new code is in `config`. Set in three places:
+  //   1. boot effect, when a #code= hash arrives with no prior work
+  //   2. Replace action in the RecipePrompt modal
+  //   3. Preview action in the RecipePrompt modal
+  // Cancel doesn't set it (the user kept their existing code; they didn't
+  // ask to run anything).
+  const [pendingAutoRun, setPendingAutoRun] = useState<boolean>(false);
   // True while previewing a recipe loaded via "Preview only" — disables the
   // debounced save effect so the user's saved Studio code in IDB is preserved.
   const [isEphemeral, setIsEphemeral] = useState(false);
@@ -271,6 +286,7 @@ export default function Studio() {
         setPendingHashCode(hashCode);
       } else if (hashCode) {
         cfg = { code: hashCode, symbols: persisted?.symbols ?? [] };
+        setPendingAutoRun(true);
       } else {
         cfg = persisted && persisted.code
           ? persisted
@@ -537,12 +553,26 @@ export default function Studio() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab, config]);
 
+  // Auto-run a freshly applied recipe once boot is done and the new code
+  // has reached `config`. Fires once per pending request; cleared
+  // immediately so a manual config change later doesn't re-trigger.
+  useEffect(() => {
+    if (!pendingAutoRun || isBooting || !envRef.current || !config) return;
+    setPendingAutoRun(false);
+    void run();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingAutoRun, isBooting, config]);
+
   // ── Recipe-prompt actions ──────────────────────────────────────────
   function applyHashCode(code: string, ephemeral: boolean): void {
     setConfig((c) => (c ? { ...c, code } : c));
     setIsEphemeral(ephemeral);
     setPendingHashCode(null);
     setTab('code');
+    // Recipes are meant to be seen running, not just read. Schedule an
+    // auto-run that fires once the next render's `config` has propagated
+    // and boot is complete.
+    setPendingAutoRun(true);
   }
   // Exit preview: reload the saved config from IDB so the recipe code in
   // memory is discarded. Re-runs Pixi-side teardown on next Run.
@@ -597,6 +627,7 @@ export default function Studio() {
       )}>
         <div className={cn('relative flex-1', !fullscreen && 'min-h-[480px]')}>
           <div ref={canvasHostRef} className="h-full w-full bg-background" />
+          {showSkeleton && <CanvasSkeleton label="Loading studio…" />}
           {speeds.length > 1 && (
             <div
               role="radiogroup"
@@ -722,40 +753,45 @@ export default function Studio() {
         </div>
 
         {/* Tab body */}
-        {tab === 'code' && config && (
+        {tab === 'code' && (
           <div className={cn(fullscreen ? 'min-h-0 flex-1' : 'h-[560px]')}>
-            <Editor
-              defaultLanguage="typescript"
-              value={config.code}
-              onChange={(v) => setCode(v ?? '')}
-              theme="vs-dark"
-              options={{
-                fontSize: 13,
-                minimap: { enabled: false },
-                scrollBeyondLastLine: false,
-                tabSize: 2,
-                renderWhitespace: 'selection',
-                padding: { top: 10, bottom: 10 },
-              }}
-              onMount={(_editor, monaco) => {
-                // Injected globals (ReelSetBuilder, userSymbols, app, …)
-                // aren't declared anywhere Monaco can resolve, so semantic
-                // diagnostics produce a sea of red squiggles. The code is
-                // transpiled at Run via sucrase (types stripped, no
-                // type-checking), so these errors aren't real — silence
-                // them here. Syntax errors still surface.
-                monaco.languages.typescript.typescriptDefaults.setDiagnosticsOptions({
-                  noSemanticValidation: true,
-                  noSyntaxValidation: false,
-                });
-              }}
-            />
+            {config ? (
+              <Editor
+                defaultLanguage="typescript"
+                value={config.code}
+                onChange={(v) => setCode(v ?? '')}
+                theme="vs-dark"
+                loading={<EditorSkeleton />}
+                options={{
+                  fontSize: 13,
+                  minimap: { enabled: false },
+                  scrollBeyondLastLine: false,
+                  tabSize: 2,
+                  renderWhitespace: 'selection',
+                  padding: { top: 10, bottom: 10 },
+                }}
+                onMount={(_editor, monaco) => {
+                  // Injected globals (ReelSetBuilder, userSymbols, app, …)
+                  // aren't declared anywhere Monaco can resolve, so semantic
+                  // diagnostics produce a sea of red squiggles. The code is
+                  // transpiled at Run via sucrase (types stripped, no
+                  // type-checking), so these errors aren't real — silence
+                  // them here. Syntax errors still surface.
+                  monaco.languages.typescript.typescriptDefaults.setDiagnosticsOptions({
+                    noSemanticValidation: true,
+                    noSyntaxValidation: false,
+                  });
+                }}
+              />
+            ) : (
+              <EditorSkeleton />
+            )}
           </div>
         )}
 
-        {tab === 'symbols' && config && (
+        {tab === 'symbols' && (
           <div className={cn(fullscreen ? 'min-h-0 flex-1' : 'h-[560px]')}>
-            <SymbolsTab config={config} onChange={setConfig} />
+            {config ? <SymbolsTab config={config} onChange={setConfig} /> : <EditorSkeleton />}
           </div>
         )}
       </div>
@@ -801,6 +837,43 @@ function TabButton({ active, onClick, icon, children }: TabButtonProps): JSX.Ele
       {icon}
       {children}
     </button>
+  );
+}
+
+// Code-line placeholder shown in the editor pane while:
+//   (1) the persisted StudioConfig is still loading from IndexedDB
+//   (2) Monaco's own worker bundle is still downloading
+// Matches Monaco's `vs-dark` background so the swap is invisible. Pulse
+// delays stagger top-to-bottom so the eye sees motion rather than a
+// static grey block.
+const EDITOR_LINE_WIDTHS = [38, 64, 28, 80, 52, 58, 22, 72, 44, 78, 50, 34, 60, 26, 70];
+
+function EditorSkeleton(): JSX.Element {
+  return (
+    <div
+      className="flex h-full w-full overflow-hidden bg-[#1e1e1e]"
+      role="status"
+      aria-label="Loading editor"
+    >
+      <div className="flex w-10 flex-col gap-2.5 py-3 pr-2" aria-hidden>
+        {EDITOR_LINE_WIDTHS.map((_, i) => (
+          <div
+            key={i}
+            className="h-2.5 w-2.5 self-end rounded-sm bg-white/10 animate-pulse"
+            style={{ animationDelay: `${i * 70}ms` }}
+          />
+        ))}
+      </div>
+      <div className="flex flex-1 flex-col gap-2.5 py-3 pl-2 pr-4" aria-hidden>
+        {EDITOR_LINE_WIDTHS.map((w, i) => (
+          <div
+            key={i}
+            className="h-2.5 rounded-sm bg-white/10 animate-pulse"
+            style={{ width: `${w}%`, animationDelay: `${i * 70}ms` }}
+          />
+        ))}
+      </div>
+    </div>
   );
 }
 
