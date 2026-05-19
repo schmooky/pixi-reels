@@ -9,14 +9,33 @@ import { gsap } from 'gsap';
 import {
   ReelSetBuilder,
   SpeedPresets,
+  SpriteSymbol,
+  AnimatedSpriteSymbol,
   enableDebug,
   WinPresenter,
   RectMaskStrategy,
   SharedRectMaskStrategy,
   type ReelSet,
   type SymbolData,
+  ReelSymbol,
 } from 'pixi-reels';
+import { SpineReelSymbol } from 'pixi-reels/spine';
+import { BlurSpriteSymbol } from '../../../../examples/shared/BlurSpriteSymbol.ts';
+import { CardSymbol, CARD_DECK, WILD_CARD } from '../../../../examples/shared/CardSymbol.ts';
+import { loadPrototypeSymbols } from '../../../../examples/shared/prototypeSpriteLoader.ts';
+import {
+  loadGeneratedSpines,
+  buildSpineMap,
+} from '../../../../examples/shared/generatedSpineLoader.ts';
 import { transform as sucraseTransform } from 'sucrase';
+
+class EmptySymbol extends ReelSymbol {
+  protected onActivate(_symbolId: string): void {}
+  protected onDeactivate(): void {}
+  async playWin(): Promise<void> {}
+  stopAnimation(): void {}
+  resize(_w: number, _h: number): void {}
+}
 import { getShare, ShareApiError } from '@/lib/studio/share/api.js';
 import { openEnvelope } from '@/lib/studio/share/crypto.js';
 import { decodePayload, verifyPayloadHashes } from '@/lib/studio/share/payload.js';
@@ -211,6 +230,11 @@ interface SharedStudioProps {
 function SharedStudio({ config, assets, codeAccessible }: SharedStudioProps): JSX.Element {
   const canvasHostRef = useRef<HTMLDivElement | null>(null);
   const appRef = useRef<Application | null>(null);
+  // Prototype-atlas textures + blur variants loaded once at boot, injected
+  // into shared code so recipe-style snippets that reference
+  // `BlurSpriteSymbol` / `textures` work out of the box. Mirrors Studio.tsx
+  // — anything a recipe injects must be injected here too.
+  const builtinsRef = useRef<{ textures: Record<string, Texture>; blurTextures: Record<string, Texture>; SYMBOL_IDS: string[] } | null>(null);
   const reelSetRef = useRef<ReelSet | null>(null);
   const nextResultRef = useRef<(() => string[][]) | null>(null);
   const onSpinRef = useRef<(() => Promise<void>) | null>(null);
@@ -246,6 +270,10 @@ function SharedStudio({ config, assets, codeAccessible }: SharedStudioProps): JS
       host.innerHTML = '';
       host.appendChild(app.canvas);
       appRef.current = app;
+
+      const { textures, blurTextures } = await loadPrototypeSymbols();
+      if (cancelled) return;
+      builtinsRef.current = { textures, blurTextures, SYMBOL_IDS: Object.keys(textures) };
     })();
 
     const observer = typeof ResizeObserver !== 'undefined' && canvasHostRef.current
@@ -297,34 +325,36 @@ function SharedStudio({ config, assets, codeAccessible }: SharedStudioProps): JS
     let built: { reelSet?: ReelSet; nextResult?: () => string[][]; onSpin?: () => Promise<void>; cleanup?: () => void };
     try {
       const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor as FunctionConstructor;
+      // Lock-stepped with Studio.tsx and RecipeRunner.tsx — recipe-style
+      // shared studios must resolve the same globals here as they did at
+      // authoring time.
+      const builtins = builtinsRef.current;
+      if (!builtins) {
+        setError('Prototype atlas not loaded yet.');
+        return;
+      }
       const factory = new AsyncFunction(
-        'ReelSetBuilder',
-        'SpeedPresets',
+        'ReelSetBuilder', 'SpeedPresets', 'BlurSpriteSymbol', 'SpriteSymbol', 'AnimatedSpriteSymbol',
         'WinPresenter',
-        'RectMaskStrategy',
-        'SharedRectMaskStrategy',
-        'app',
-        'textures',
-        'userSymbols',
-        'userSymbolData',
-        'pickWeighted',
-        'gsap',
-        'PIXI',
+        'app', 'textures', 'blurTextures', 'SYMBOL_IDS', 'pickWeighted', 'gsap', 'PIXI',
+        'EmptySymbol', 'ReelSymbol',
+        'RectMaskStrategy', 'SharedRectMaskStrategy',
+        'CardSymbol', 'CARD_DECK', 'WILD_CARD',
+        'SpineReelSymbol', 'loadGeneratedSpines', 'buildSpineMap',
+        'userSymbols', 'userSymbolData',
         factorySource,
       );
+      const mergedTextures = { ...builtins.textures, ...injectables.textures };
       built = (await factory(
         makeStudioReelSetBuilder(injectables.userSymbolData),
-        SpeedPresets,
+        SpeedPresets, BlurSpriteSymbol, SpriteSymbol, AnimatedSpriteSymbol,
         WinPresenter,
-        RectMaskStrategy,
-        SharedRectMaskStrategy,
-        app,
-        injectables.textures,
-        injectables.userSymbols,
-        injectables.userSymbolData,
-        pickWeighted,
-        gsap,
-        PIXI,
+        app, mergedTextures, builtins.blurTextures, builtins.SYMBOL_IDS, pickWeighted, gsap, PIXI,
+        EmptySymbol, ReelSymbol,
+        RectMaskStrategy, SharedRectMaskStrategy,
+        CardSymbol, CARD_DECK, WILD_CARD,
+        SpineReelSymbol, loadGeneratedSpines, buildSpineMap,
+        injectables.userSymbols, injectables.userSymbolData,
       )) as typeof built;
     } catch (e) {
       setError(`Runtime error: ${(e as Error).message}`);

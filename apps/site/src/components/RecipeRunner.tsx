@@ -223,8 +223,8 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
     }
   }
 
-  function openInSandbox() {
-    window.location.href = `/sandbox/#code=${btoa(unescape(encodeURIComponent(code)))}`;
+  function openInStudio() {
+    window.location.href = `/studio/#code=${btoa(unescape(encodeURIComponent(code)))}`;
   }
 
   return (
@@ -266,13 +266,13 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
         </button>
         <button
           type="button"
-          onClick={openInSandbox}
-          title="Open in Sandbox"
-          aria-label="Open in Sandbox"
+          onClick={openInStudio}
+          title="Open in Studio"
+          aria-label="Open in Studio"
           className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-md border border-border/40 bg-background/70 px-2 py-1 text-[10px] text-muted-foreground backdrop-blur transition-colors hover:text-foreground"
         >
           <ExternalLink size={10} />
-          Sandbox
+          Studio
         </button>
       </div>
     </div>
