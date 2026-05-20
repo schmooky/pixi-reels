@@ -13,9 +13,14 @@ import {
   Maximize2,
   Minimize2,
   Share2,
+  Eye,
+  Gauge,
+  X,
 } from 'lucide-react';
 import { SymbolsTab } from './studio/SymbolsTab.tsx';
 import { ShareDialog } from './studio/ShareDialog.tsx';
+import { CanvasSkeleton } from './CanvasSkeleton.tsx';
+import { useMinDisplay } from './useMinDisplay.ts';
 import { cn } from '@/lib/utils';
 import { Kbd, KbdChord } from '@/components/ui/kbd';
 import { Application, type Texture } from 'pixi.js';
@@ -24,13 +29,24 @@ import { gsap } from 'gsap';
 import {
   ReelSetBuilder,
   SpeedPresets,
+  SpriteSymbol,
+  AnimatedSpriteSymbol,
   enableDebug,
   WinPresenter,
   RectMaskStrategy,
   SharedRectMaskStrategy,
   type ReelSet,
   type SymbolData,
+  ReelSymbol,
 } from 'pixi-reels';
+import { SpineReelSymbol } from 'pixi-reels/spine';
+import { BlurSpriteSymbol } from '../../../../examples/shared/BlurSpriteSymbol.ts';
+import { CardSymbol, CARD_DECK, WILD_CARD } from '../../../../examples/shared/CardSymbol.ts';
+import { loadPrototypeSymbols } from '../../../../examples/shared/prototypeSpriteLoader.ts';
+import {
+  loadGeneratedSpines,
+  buildSpineMap,
+} from '../../../../examples/shared/generatedSpineLoader.ts';
 import { transform as sucraseTransform } from 'sucrase';
 import {
   loadConfig,
@@ -44,68 +60,100 @@ import {
 } from '@/lib/studio/applyConfig.js';
 import type { StudioConfig } from '@/lib/studio/types.js';
 
+class EmptySymbol extends ReelSymbol {
+  protected onActivate(_symbolId: string): void {}
+  protected onDeactivate(): void {}
+  async playWin(): Promise<void> {}
+  stopAnimation(): void {}
+  resize(_w: number, _h: number): void {}
+}
+
 const DEFAULT_CODE = `// @ts-nocheck
 // ─── pixi-reels studio ─────────────────────────────────────────────────
-// Upload your assets and define symbol IDs in the "Symbols" tab.
-// Each symbol you configure shows up here as \`userSymbols.<id>\`.
-// Hit Run (Cmd/Ctrl+Enter) to build the reels.
+// Edit this code and press Run (Cmd/Ctrl+Enter). Recipes from /recipes/*
+// open here too — anything that runs in a recipe runs here.
 //
-// Injected globals:
+// Built-in globals (ready out of the box):
 //   - ReelSetBuilder, SpeedPresets, WinPresenter
+//   - SpriteSymbol, AnimatedSpriteSymbol, BlurSpriteSymbol
+//   - CardSymbol, CARD_DECK, WILD_CARD  (graphics-only debug cards)
+//   - SpineReelSymbol, loadGeneratedSpines, buildSpineMap
 //   - RectMaskStrategy, SharedRectMaskStrategy
-//   - app             — PixiJS Application (.ticker, .screen)
-//   - textures        — Record<symbolId, Texture> from your uploaded assets
-//   - userSymbols     — Record<symbolId, { Class, options }>; pass into r.register
-//   - userSymbolData  — Record<symbolId, { unmask?: boolean }>; auto-applied at build()
+//   - EmptySymbol, ReelSymbol
+//   - app          — PixiJS Application (.ticker, .screen)
+//   - textures, blurTextures, SYMBOL_IDS  — prototype atlas, preloaded
 //   - pickWeighted, gsap, PIXI
 //
-// Unmask is plumbed automatically: toggle "unmask on" on a symbol's row and
-// the studio's ReelSetBuilder applies the override at .build() time. The
-// engine then auto-picks SharedRectMaskStrategy so neighbouring cells aren't
-// half-cropped at the column gap. You can still call .maskStrategy(new
-// SharedRectMaskStrategy()) or .symbolData({...}) explicitly to override.
+// Bring-your-own assets (Symbols tab):
+//   - userSymbols     — Record<id, { Class, options }> from your uploads
+//   - userSymbolData  — Record<id, { unmask?: boolean }>, auto-applied
 //
-// Return { reelSet, nextResult? } from buildReels().
+// Return { reelSet, nextResult? } from buildReels(). Or return { onSpin }
+// for a fully custom spin handler.
 // ───────────────────────────────────────────────────────────────────────
 
 function buildReels() {
-  const ids = Object.keys(userSymbols);
-  if (ids.length === 0) {
-    throw new Error('No symbols configured. Switch to the Symbols tab and add one.');
-  }
-
-  const REELS = 5;
-  const ROWS = 3;
-  const SIZE = 90;
+  const SYMBOLS = [...CARD_DECK, WILD_CARD];
+  const weights = {
+    '7': 20, '8': 20, '9': 20, '10': 14, J: 14, Q: 10, K: 6, A: 5, wild: 3,
+  };
 
   const reelSet = new ReelSetBuilder()
-    .reels(REELS)
-    .visibleSymbols(ROWS)
-    .symbolSize(SIZE, SIZE)
+    .reels(5)
+    .visibleSymbols(3)
+    .symbolSize(90, 90)
     .symbolGap(4, 4)
     .symbols((r) => {
-      for (const id of ids) {
-        const u = userSymbols[id];
-        r.register(id, u.Class, u.options);
+      for (const sym of SYMBOLS) {
+        r.register(sym.id, CardSymbol, {
+          color: sym.color,
+          label: sym.label,
+          textColor: sym.textColor,
+        });
       }
     })
+    .weights(weights)
     .speed('normal', SpeedPresets.NORMAL)
     .speed('turbo', SpeedPresets.TURBO)
     .ticker(app.ticker)
     .build();
 
-  const weights = Object.fromEntries(ids.map((id) => [id, 1]));
-  const nextResult = () =>
-    Array.from({ length: REELS }, () =>
-      Array.from({ length: ROWS }, () => pickWeighted(weights)),
-    );
-
-  return { reelSet, nextResult };
+  return {
+    reelSet,
+    nextResult: () =>
+      Array.from({ length: 5 }, () =>
+        Array.from({ length: 3 }, () => pickWeighted(weights)),
+      ),
+  };
 }
 `;
 
 interface StudioEnv {
   app: Application;
+  textures: Record<string, Texture>;
+  blurTextures: Record<string, Texture>;
+  SYMBOL_IDS: string[];
+}
+
+/**
+ * Read `#code=<base64>` from `location.hash` once on mount. Returns the
+ * decoded source (or null), and clears the hash from the URL so a refresh
+ * doesn't re-trigger the recipe-open prompt. Mirrors the encoder in
+ * RecipeRunner's `openInStudio()`.
+ */
+function consumeHashCode(): string | null {
+  if (typeof location === 'undefined') return null;
+  if (!location.hash.startsWith('#code=')) return null;
+  let decoded: string;
+  try {
+    decoded = decodeURIComponent(escape(atob(location.hash.slice(6))));
+  } catch {
+    return null;
+  }
+  try {
+    history.replaceState(null, '', location.pathname + location.search);
+  } catch { /* ignore */ }
+  return decoded;
 }
 
 interface BuildResult {
@@ -177,6 +225,32 @@ export default function Studio() {
   const [isSpinning, setIsSpinning] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
+  // Speed selector. Populated from `reelSet.speed.profileNames` on every
+  // Run so the segmented control reflects whatever the user's builder
+  // registered — `.speed('mySpeed', ...)` in user code shows up
+  // automatically. Empty until the first successful Run.
+  const [speeds, setSpeeds] = useState<string[]>([]);
+  const [speedName, setSpeedName] = useState<string>('normal');
+
+  // Latched boot flag — keep the skeleton on screen for at least 250 ms
+  // after first paint so very fast IDB+atlas loads don't flash a 1-frame
+  // skeleton. Mirrors RecipeRunner's pattern.
+  const showSkeleton = useMinDisplay(isBooting, 250);
+  // Set when a recipe link (#code=…) arrives and we already have saved work
+  // in IDB — opens the overwrite/preview/cancel modal. While non-null the
+  // user hasn't decided yet; the persisted config stays untouched.
+  const [pendingHashCode, setPendingHashCode] = useState<string | null>(null);
+  // Set when an incoming recipe should auto-run as soon as boot completes
+  // and the new code is in `config`. Set in three places:
+  //   1. boot effect, when a #code= hash arrives with no prior work
+  //   2. Replace action in the RecipePrompt modal
+  //   3. Preview action in the RecipePrompt modal
+  // Cancel doesn't set it (the user kept their existing code; they didn't
+  // ask to run anything).
+  const [pendingAutoRun, setPendingAutoRun] = useState<boolean>(false);
+  // True while previewing a recipe loaded via "Preview only" — disables the
+  // debounced save effect so the user's saved Studio code in IDB is preserved.
+  const [isEphemeral, setIsEphemeral] = useState(false);
 
   // ESC exits fullscreen.
   useEffect(() => {
@@ -197,9 +271,27 @@ export default function Studio() {
       if (!host) return;
 
       const persisted = await loadConfig().catch(() => null);
-      const cfg: StudioConfig = persisted && persisted.code
-        ? persisted
-        : { code: DEFAULT_CODE, symbols: persisted?.symbols ?? [] };
+      const hashCode = consumeHashCode();
+      const hasPriorWork = !!(persisted && (persisted.code || persisted.symbols.length > 0));
+
+      // Three landing states:
+      //   1. hash + prior work → load persisted as initial; prompt user to pick
+      //      replace / preview-only / cancel before applying the hash code.
+      //   2. hash + no prior work → just use the hash code directly (first
+      //      visit), persistence kicks in via the debounced save effect.
+      //   3. no hash → normal flow.
+      let cfg: StudioConfig;
+      if (hashCode && hasPriorWork) {
+        cfg = persisted!;
+        setPendingHashCode(hashCode);
+      } else if (hashCode) {
+        cfg = { code: hashCode, symbols: persisted?.symbols ?? [] };
+        setPendingAutoRun(true);
+      } else {
+        cfg = persisted && persisted.code
+          ? persisted
+          : { code: DEFAULT_CODE, symbols: persisted?.symbols ?? [] };
+      }
       if (cancelled) return;
       setConfig(cfg);
 
@@ -219,14 +311,19 @@ export default function Studio() {
       host.innerHTML = '';
       host.appendChild(app.canvas);
 
-      envRef.current = { app };
+      // Preload the prototype atlas so recipe-style code (BlurSpriteSymbol +
+      // `textures` lookups) works without any explicit loader call.
+      const { textures, blurTextures } = await loadPrototypeSymbols();
+      if (cancelled) return;
+
+      envRef.current = {
+        app,
+        textures,
+        blurTextures,
+        SYMBOL_IDS: Object.keys(textures),
+      };
       setIsBooting(false);
-      setStatus({
-        kind: 'idle',
-        msg: cfg.symbols.length === 0
-          ? 'No symbols yet — open the Symbols tab to add one, then press Run.'
-          : 'Press Run to mount the reels.',
-      });
+      setStatus({ kind: 'idle', msg: 'Press Run to mount the reels.' });
     })();
 
     // Refit whenever the canvas pane changes size. PixiJS's `resizeTo: host`
@@ -258,13 +355,15 @@ export default function Studio() {
   }, []);
 
   // ── Persist config changes (debounced) ─────────────────────────────
+  // Skip while previewing a recipe (`isEphemeral`) so the user's saved
+  // Studio code in IDB stays intact until they explicitly save.
   useEffect(() => {
-    if (!config) return;
+    if (!config || isEphemeral) return;
     const handle = setTimeout(() => {
       void saveConfig(config).catch(() => { /* persistence is best-effort */ });
     }, 300);
     return () => clearTimeout(handle);
-  }, [config]);
+  }, [config, isEphemeral]);
 
   function setCode(next: string): void {
     setConfig((c) => (c ? { ...c, code: next } : c));
@@ -312,34 +411,35 @@ export default function Studio() {
     let built: BuildResult;
     try {
       const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor as FunctionConstructor;
+      // Keep this param list in lock-step with RecipeRunner.tsx and
+      // ShareViewer.tsx — anything a recipe references must be injected
+      // identically across all three runtimes, otherwise "Open in Studio"
+      // (and shared studios using recipe-style code) produce
+      // "Can't find variable: X" at run time.
       const factory = new AsyncFunction(
-        'ReelSetBuilder',
-        'SpeedPresets',
+        'ReelSetBuilder', 'SpeedPresets', 'BlurSpriteSymbol', 'SpriteSymbol', 'AnimatedSpriteSymbol',
         'WinPresenter',
-        'RectMaskStrategy',
-        'SharedRectMaskStrategy',
-        'app',
-        'textures',
-        'userSymbols',
-        'userSymbolData',
-        'pickWeighted',
-        'gsap',
-        'PIXI',
+        'app', 'textures', 'blurTextures', 'SYMBOL_IDS', 'pickWeighted', 'gsap', 'PIXI',
+        'EmptySymbol', 'ReelSymbol',
+        'RectMaskStrategy', 'SharedRectMaskStrategy',
+        'CardSymbol', 'CARD_DECK', 'WILD_CARD',
+        'SpineReelSymbol', 'loadGeneratedSpines', 'buildSpineMap',
+        'userSymbols', 'userSymbolData',
         factorySource,
       );
+      // User uploads merge into `textures` so recipe-style `textures[id]`
+      // lookups also pick them up; ids collide → studio uploads win.
+      const mergedTextures = { ...env.textures, ...injectables.textures };
       built = (await factory(
         makeStudioReelSetBuilder(injectables.userSymbolData),
-        SpeedPresets,
+        SpeedPresets, BlurSpriteSymbol, SpriteSymbol, AnimatedSpriteSymbol,
         WinPresenter,
-        RectMaskStrategy,
-        SharedRectMaskStrategy,
-        env.app,
-        injectables.textures,
-        injectables.userSymbols,
-        injectables.userSymbolData,
-        pickWeighted,
-        gsap,
-        PIXI,
+        env.app, mergedTextures, env.blurTextures, env.SYMBOL_IDS, pickWeighted, gsap, PIXI,
+        EmptySymbol, ReelSymbol,
+        RectMaskStrategy, SharedRectMaskStrategy,
+        CardSymbol, CARD_DECK, WILD_CARD,
+        SpineReelSymbol, loadGeneratedSpines, buildSpineMap,
+        injectables.userSymbols, injectables.userSymbolData,
       )) as BuildResult;
     } catch (e) {
       setStatus({ kind: 'err', msg: `Runtime error: ${(e as Error).message}` });
@@ -387,10 +487,28 @@ export default function Studio() {
 
     reelSetRef.current = reelSet;
     nextResultRef.current = built.nextResult ?? null;
+
+    // Sync the speed selector with whatever the user's builder registered.
+    // If the previously-selected name still exists we keep it (so toggling
+    // turbo and re-Running doesn't snap back to normal); otherwise fall
+    // back to the engine's active profile.
+    try {
+      const names = reelSet.speed.profileNames;
+      setSpeeds(names);
+      const next = names.includes(speedName) ? speedName : reelSet.speed.activeName;
+      if (next !== speedName) setSpeedName(next);
+      if (next !== reelSet.speed.activeName) reelSet.setSpeed(next);
+    } catch { /* ignore — builder didn't register any profiles */ }
+
     setStatus({
       kind: 'ok',
       msg: `Mounted. ${reelSet.reels.length} reel${reelSet.reels.length === 1 ? '' : 's'} × ${reelSet.reels[0]?.symbols.length ?? 0} slots (incl. buffers).`,
     });
+  }
+
+  function handleSpeedChange(name: string): void {
+    setSpeedName(name);
+    try { reelSetRef.current?.setSpeed(name); } catch { /* ignore — profile missing */ }
   }
 
   async function handleSpin(): Promise<void> {
@@ -435,14 +553,73 @@ export default function Studio() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab, config]);
 
+  // Auto-run a freshly applied recipe once boot is done and the new code
+  // has reached `config`. Fires once per pending request; cleared
+  // immediately so a manual config change later doesn't re-trigger.
+  useEffect(() => {
+    if (!pendingAutoRun || isBooting || !envRef.current || !config) return;
+    setPendingAutoRun(false);
+    void run();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingAutoRun, isBooting, config]);
+
+  // ── Recipe-prompt actions ──────────────────────────────────────────
+  function applyHashCode(code: string, ephemeral: boolean): void {
+    setConfig((c) => (c ? { ...c, code } : c));
+    setIsEphemeral(ephemeral);
+    setPendingHashCode(null);
+    setTab('code');
+    // Recipes are meant to be seen running, not just read. Schedule an
+    // auto-run that fires once the next render's `config` has propagated
+    // and boot is complete.
+    setPendingAutoRun(true);
+  }
+  // Exit preview: reload the saved config from IDB so the recipe code in
+  // memory is discarded. Re-runs Pixi-side teardown on next Run.
+  async function discardPreview(): Promise<void> {
+    const persisted = await loadConfig().catch(() => null);
+    const cfg = persisted && persisted.code
+      ? persisted
+      : { code: DEFAULT_CODE, symbols: persisted?.symbols ?? [] };
+    setConfig(cfg);
+    setIsEphemeral(false);
+  }
+  // Flip ephemeral off so the debounced save effect picks up the current
+  // (recipe) code and writes it to IDB on the next change tick.
+  function savePreviewAsStudio(): void {
+    setIsEphemeral(false);
+  }
+
   return (
-    <div
-      className={cn(
-        fullscreen
-          ? 'fixed inset-x-0 top-14 bottom-0 z-40 grid grid-cols-2 gap-4 bg-background p-4'
-          : 'grid grid-cols-1 gap-4 lg:grid-cols-[1fr_minmax(360px,520px)]',
+    <div className={cn('flex flex-col gap-3', fullscreen && 'fixed inset-x-0 top-14 bottom-0 z-40 bg-background p-4')}>
+      {isEphemeral && (
+        <div className="flex items-center gap-2 rounded-md border border-amber-400/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
+          <Eye size={13} className="flex-shrink-0" />
+          <span>Previewing a recipe — changes won't be saved to your Studio.</span>
+          <button
+            type="button"
+            onClick={savePreviewAsStudio}
+            className="ml-auto rounded-md bg-amber-500/20 px-2 py-0.5 font-semibold text-amber-100 hover:bg-amber-500/30"
+          >
+            Save to my Studio
+          </button>
+          <button
+            type="button"
+            onClick={() => void discardPreview()}
+            className="rounded-md border border-amber-400/40 px-2 py-0.5 text-amber-100 hover:bg-amber-500/10"
+          >
+            Discard
+          </button>
+        </div>
       )}
-    >
+
+      <div
+        className={cn(
+          fullscreen
+            ? 'grid flex-1 grid-cols-2 gap-4 min-h-0'
+            : 'grid grid-cols-1 gap-4 lg:grid-cols-[1fr_minmax(360px,520px)]',
+        )}
+      >
       {/* ── Canvas pane ─── */}
       <div className={cn(
         'flex flex-col overflow-hidden rounded-xl border border-border bg-card',
@@ -450,6 +627,36 @@ export default function Studio() {
       )}>
         <div className={cn('relative flex-1', !fullscreen && 'min-h-[480px]')}>
           <div ref={canvasHostRef} className="h-full w-full bg-background" />
+          {showSkeleton && <CanvasSkeleton label="Loading studio…" />}
+          {speeds.length > 1 && (
+            <div
+              role="radiogroup"
+              aria-label="Spin speed"
+              className={cn(
+                'absolute bottom-3 left-3 inline-flex items-center gap-0.5 rounded-full',
+                'border border-border/70 bg-background/80 p-0.5 pl-2 shadow-sm backdrop-blur',
+              )}
+            >
+              <Gauge size={12} strokeWidth={2.25} className="mr-1 flex-shrink-0 text-muted-foreground" />
+              {speeds.map((name) => (
+                <button
+                  key={name}
+                  type="button"
+                  role="radio"
+                  aria-checked={speedName === name}
+                  onClick={() => handleSpeedChange(name)}
+                  className={cn(
+                    'rounded-full px-2.5 py-1 text-[10px] font-mono uppercase tracking-wide transition-colors',
+                    speedName === name
+                      ? 'bg-primary text-primary-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground',
+                  )}
+                >
+                  {name}
+                </button>
+              ))}
+            </div>
+          )}
           <button
             type="button"
             onClick={() => void handleSpin()}
@@ -546,46 +753,61 @@ export default function Studio() {
         </div>
 
         {/* Tab body */}
-        {tab === 'code' && config && (
+        {tab === 'code' && (
           <div className={cn(fullscreen ? 'min-h-0 flex-1' : 'h-[560px]')}>
-            <Editor
-              defaultLanguage="typescript"
-              value={config.code}
-              onChange={(v) => setCode(v ?? '')}
-              theme="vs-dark"
-              options={{
-                fontSize: 13,
-                minimap: { enabled: false },
-                scrollBeyondLastLine: false,
-                tabSize: 2,
-                renderWhitespace: 'selection',
-                padding: { top: 10, bottom: 10 },
-              }}
-              onMount={(_editor, monaco) => {
-                // Injected globals (ReelSetBuilder, userSymbols, app, …)
-                // aren't declared anywhere Monaco can resolve, so semantic
-                // diagnostics produce a sea of red squiggles. The code is
-                // transpiled at Run via sucrase (types stripped, no
-                // type-checking), so these errors aren't real — silence
-                // them here. Syntax errors still surface.
-                monaco.languages.typescript.typescriptDefaults.setDiagnosticsOptions({
-                  noSemanticValidation: true,
-                  noSyntaxValidation: false,
-                });
-              }}
-            />
+            {config ? (
+              <Editor
+                defaultLanguage="typescript"
+                value={config.code}
+                onChange={(v) => setCode(v ?? '')}
+                theme="vs-dark"
+                loading={<EditorSkeleton />}
+                options={{
+                  fontSize: 13,
+                  minimap: { enabled: false },
+                  scrollBeyondLastLine: false,
+                  tabSize: 2,
+                  renderWhitespace: 'selection',
+                  padding: { top: 10, bottom: 10 },
+                }}
+                onMount={(_editor, monaco) => {
+                  // Injected globals (ReelSetBuilder, userSymbols, app, …)
+                  // aren't declared anywhere Monaco can resolve, so semantic
+                  // diagnostics produce a sea of red squiggles. The code is
+                  // transpiled at Run via sucrase (types stripped, no
+                  // type-checking), so these errors aren't real — silence
+                  // them here. Syntax errors still surface.
+                  monaco.languages.typescript.typescriptDefaults.setDiagnosticsOptions({
+                    noSemanticValidation: true,
+                    noSyntaxValidation: false,
+                  });
+                }}
+              />
+            ) : (
+              <EditorSkeleton />
+            )}
           </div>
         )}
 
-        {tab === 'symbols' && config && (
+        {tab === 'symbols' && (
           <div className={cn(fullscreen ? 'min-h-0 flex-1' : 'h-[560px]')}>
-            <SymbolsTab config={config} onChange={setConfig} />
+            {config ? <SymbolsTab config={config} onChange={setConfig} /> : <EditorSkeleton />}
           </div>
         )}
       </div>
 
+      </div>
+
       {shareOpen && config && (
         <ShareDialog config={config} onClose={() => setShareOpen(false)} />
+      )}
+
+      {pendingHashCode !== null && (
+        <RecipePrompt
+          onCancel={() => setPendingHashCode(null)}
+          onReplace={() => applyHashCode(pendingHashCode, false)}
+          onPreview={() => applyHashCode(pendingHashCode, true)}
+        />
       )}
     </div>
   );
@@ -615,6 +837,98 @@ function TabButton({ active, onClick, icon, children }: TabButtonProps): JSX.Ele
       {icon}
       {children}
     </button>
+  );
+}
+
+// Code-line placeholder shown in the editor pane while:
+//   (1) the persisted StudioConfig is still loading from IndexedDB
+//   (2) Monaco's own worker bundle is still downloading
+// Matches Monaco's `vs-dark` background so the swap is invisible. Pulse
+// delays stagger top-to-bottom so the eye sees motion rather than a
+// static grey block.
+const EDITOR_LINE_WIDTHS = [38, 64, 28, 80, 52, 58, 22, 72, 44, 78, 50, 34, 60, 26, 70];
+
+function EditorSkeleton(): JSX.Element {
+  return (
+    <div
+      className="flex h-full w-full overflow-hidden bg-[#1e1e1e]"
+      role="status"
+      aria-label="Loading editor"
+    >
+      <div className="flex w-10 flex-col gap-2.5 py-3 pr-2" aria-hidden>
+        {EDITOR_LINE_WIDTHS.map((_, i) => (
+          <div
+            key={i}
+            className="h-2.5 w-2.5 self-end rounded-sm bg-white/10 animate-pulse"
+            style={{ animationDelay: `${i * 70}ms` }}
+          />
+        ))}
+      </div>
+      <div className="flex flex-1 flex-col gap-2.5 py-3 pl-2 pr-4" aria-hidden>
+        {EDITOR_LINE_WIDTHS.map((w, i) => (
+          <div
+            key={i}
+            className="h-2.5 rounded-sm bg-white/10 animate-pulse"
+            style={{ width: `${w}%`, animationDelay: `${i * 70}ms` }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+interface RecipePromptProps {
+  onCancel: () => void;
+  onReplace: () => void;
+  onPreview: () => void;
+}
+
+function RecipePrompt({ onCancel, onReplace, onPreview }: RecipePromptProps): JSX.Element {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" role="dialog">
+      <div className="w-full max-w-md overflow-hidden rounded-xl border border-border bg-card shadow-xl">
+        <div className="flex items-center justify-between border-b border-border/60 px-4 py-3">
+          <div className="text-sm font-semibold">Open recipe in Studio?</div>
+          <button
+            type="button"
+            onClick={onCancel}
+            className="rounded p-1 text-muted-foreground hover:text-foreground"
+            aria-label="Cancel"
+          >
+            <X size={14} />
+          </button>
+        </div>
+        <div className="space-y-3 p-4 text-sm">
+          <p className="text-muted-foreground">
+            You already have code saved in Studio. Replace it with the recipe, or load
+            the recipe as a read-only preview without touching your saved code.
+          </p>
+          <div className="flex flex-col gap-2 pt-1">
+            <button
+              type="button"
+              onClick={onReplace}
+              className="inline-flex items-center justify-center gap-1.5 rounded-md bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground hover:brightness-110"
+            >
+              Replace saved code
+            </button>
+            <button
+              type="button"
+              onClick={onPreview}
+              className="inline-flex items-center justify-center gap-1.5 rounded-md border border-border bg-transparent px-3 py-2 text-xs text-foreground hover:bg-secondary/50"
+            >
+              <Eye size={12} /> Preview only — don't save
+            </button>
+            <button
+              type="button"
+              onClick={onCancel}
+              className="inline-flex items-center justify-center gap-1.5 rounded-md border border-border/60 bg-transparent px-3 py-2 text-xs text-muted-foreground hover:text-foreground"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 

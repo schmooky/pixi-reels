@@ -1,6 +1,6 @@
 /** @jsxImportSource react */
 import { useEffect, useRef, useState } from 'react';
-import { ImageIcon, Film, Bone, Upload, X, Trash2, AlertCircle } from 'lucide-react';
+import { ImageIcon, Film, Bone, Upload, X, Trash2, AlertCircle, Lock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getAsset, ingestFile } from '@/lib/studio/db.js';
 import type {
@@ -8,6 +8,7 @@ import type {
   SymbolConfig,
   SymbolType,
 } from '@/lib/studio/types.js';
+import { CARD_DECK, WILD_CARD } from '../../../../../examples/shared/CardSymbol.ts';
 import { SpineForm } from './SpineForm.tsx';
 
 interface Props {
@@ -39,6 +40,8 @@ export function SymbolsTab({ config, onChange }: Props): JSX.Element {
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div className="flex-1 overflow-y-auto p-4">
+        <BuiltInSymbols />
+
         {/* Add-symbol controls */}
         {adding === null ? (
           <div className="mb-4 grid grid-cols-3 gap-2">
@@ -520,4 +523,58 @@ function useAssetPreview(hash: string | null): string | null {
     };
   }, [hash]);
   return url;
+}
+
+// ── Built-in symbols section ────────────────────────────────────────
+// Pure-Graphics card symbols pre-registered by every Studio environment
+// (and every recipe, RecipeRunner, and ShareViewer too). The user
+// doesn't upload these — they're imported in code via `CARD_DECK` and
+// `WILD_CARD`. Surfacing them here so the Symbols tab doesn't feel
+// empty on first visit and the user knows what's already available.
+
+const BUILT_IN_CARDS: ReadonlyArray<{ id: string; color: number; label: string; textColor?: number }> = [
+  ...CARD_DECK,
+  WILD_CARD,
+];
+
+function hex(n: number): string {
+  return `#${n.toString(16).padStart(6, '0')}`;
+}
+
+function BuiltInSymbols(): JSX.Element {
+  return (
+    <details className="group mb-4 rounded-lg border border-border bg-background/30" open>
+      <summary className="flex cursor-pointer items-center justify-between gap-2 rounded-lg px-3 py-2 text-xs hover:bg-background/50">
+        <div className="flex items-center gap-2">
+          <Lock size={11} className="text-muted-foreground" />
+          <span className="font-semibold">Built-in</span>
+          <span className="text-muted-foreground">
+            cards · use <code className="rounded bg-muted/60 px-1 py-0.5 font-mono text-[10px]">CARD_DECK</code> /{' '}
+            <code className="rounded bg-muted/60 px-1 py-0.5 font-mono text-[10px]">WILD_CARD</code>
+          </span>
+        </div>
+        <span className="text-[10px] text-muted-foreground/60">{BUILT_IN_CARDS.length}</span>
+      </summary>
+      <div className="border-t border-border/60 p-3">
+        <div className="grid grid-cols-9 gap-1.5">
+          {BUILT_IN_CARDS.map((card) => (
+            <div
+              key={card.id}
+              className="flex aspect-square items-center justify-center rounded border border-black/20 text-[11px] font-bold shadow-sm"
+              style={{
+                backgroundColor: hex(card.color),
+                color: hex(card.textColor ?? 0xffffff),
+              }}
+              title={`id: "${card.id}" — register with CardSymbol`}
+            >
+              {card.label}
+            </div>
+          ))}
+        </div>
+        <p className="mt-2 text-[11px] text-muted-foreground">
+          Graphics-only debug symbols — always available in the Code tab. Add custom sprites / Spine below to override or extend.
+        </p>
+      </div>
+    </details>
+  );
 }

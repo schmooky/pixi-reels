@@ -66,7 +66,6 @@ async function collectPages() {
     const rel = relative(PAGES, file);
     const base = baseNoExt(rel.split('/').pop());
     if (SKIP_BASENAMES.has(base)) continue;
-    if (rel.startsWith('sandbox/')) continue;
     if (rel.includes('[')) continue; // dynamic routes
 
     const raw = await readFile(file, 'utf-8');
