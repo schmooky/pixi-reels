@@ -46,41 +46,64 @@ function installSequenceGsap(progressSequence: number[]): void {
 }
 
 /**
- * gsap.to shim that captures the tween's callbacks but does NOT fire them.
- * Lets a test hold the tween in-flight while exercising destroy / abort.
- * `controller.complete()` lands it; `controller.tween.kill()` is wired.
+ * gsap.to shim that captures every tween's callbacks but does NOT fire
+ * them. Each `to(...)` call is tracked in an array so a multi-reel
+ * parallel nudge produces N independent in-flight tweens. The returned
+ * controller lets a test fire them all (`fireAll`) or just the live
+ * ones (`fireLive`), and exposes a kill counter.
  */
 function installDeferredGsap(): {
-  fire(): void;
+  fireAll(): void;
+  fire(): void; // alias for fireAll — kept for older tests
   killCount: () => number;
 } {
-  let onComplete: (() => void) | undefined;
-  let onUpdate: (() => void) | undefined;
-  let lastTarget: { p: number } | null = null;
+  type Slot = {
+    onUpdate?: () => void;
+    onComplete?: () => void;
+    target: { p: number };
+    killed: boolean;
+    completed: boolean;
+  };
+  const slots: Slot[] = [];
   let kills = 0;
   const sync = {
     ...defaultGsap,
     to: (target: { p: number }, vars: { onUpdate?: () => void; onComplete?: () => void }) => {
-      onComplete = vars.onComplete;
-      onUpdate = vars.onUpdate;
-      lastTarget = target;
+      const slot: Slot = {
+        onUpdate: vars.onUpdate,
+        onComplete: vars.onComplete,
+        target,
+        killed: false,
+        completed: false,
+      };
+      slots.push(slot);
       return {
-        kill: () => { kills++; },
+        kill: () => { kills++; slot.killed = true; },
         progress: (p: number) => {
-          if (lastTarget) lastTarget.p = p;
-          onUpdate?.();
-          if (p === 1) onComplete?.();
+          if (slot.killed || slot.completed) return;
+          slot.target.p = p;
+          slot.onUpdate?.();
+          if (p === 1) {
+            slot.completed = true;
+            slot.onComplete?.();
+          }
         },
       } as unknown as gsap.core.Tween;
     },
   } as unknown as typeof defaultGsap;
   setGsap(sync);
+  const fireAll = () => {
+    for (const slot of slots) {
+      if (slot.killed || slot.completed) continue;
+      slot.target.p = 1;
+      slot.onUpdate?.();
+      slot.completed = true;
+      slot.onComplete?.();
+    }
+  };
   return {
-    fire: () => {
-      if (lastTarget) lastTarget.p = 1;
-      onUpdate?.();
-      onComplete?.();
-    },
+    fireAll,
+    fire: fireAll,
     killCount: () => kills,
   };
 }
@@ -874,6 +897,158 @@ describe('nudge', () => {
             incoming: ['wild'],
           }),
         ).rejects.toThrow(/cross-reel/);
+      } finally {
+        destroy();
+      }
+    });
+
+    it('cross-reel: nudging the col that holds only OCCUPIED stubs also throws', async () => {
+      installSyncGsap();
+      const { reelSet, spinAndLand, destroy } = createTestReelSet({
+        reels: 2,
+        visibleRows: 3,
+        bufferSymbols: 1,
+        symbolIds: ['a', 'bonus', 'wild'],
+        symbolData: {
+          bonus: { weight: 0, size: { w: 2, h: 2 } },
+        },
+      });
+      try {
+        // 2x2 anchor on col 0 row 0. Col 1 carries the OCCUPIED stubs.
+        await spinAndLand([
+          ['bonus', 'a', 'a'],
+          ['a', 'a', 'a'],
+        ]);
+        // Nudging col 1 (the stubs) would drift them away from their
+        // anchor on col 0. Same failure mode, opposite reel.
+        await expect(
+          reelSet.nudge(1, {
+            distance: 1,
+            direction: 'down',
+            incoming: ['wild'],
+          }),
+        ).rejects.toThrow(/cross-reel/);
+      } finally {
+        destroy();
+      }
+    });
+
+    it('1x2 nudges down to half-visible, then up to fully visible again', async () => {
+      installSyncGsap();
+      const { reelSet, spinAndLand, destroy } = createTestReelSet({
+        reels: 1,
+        visibleRows: 3,
+        bufferSymbols: 1,
+        symbolIds: ['a', 'b', 'bigW'],
+        symbolData: {
+          bigW: { weight: 0, size: { w: 1, h: 2 } },
+        },
+      });
+      try {
+        // Land block at rows 0+1 (anchor at strip[1], stub at strip[2]).
+        await spinAndLand([['bigW', 'bigW', 'a']]);
+        // Nudge down by 2 — anchor → strip[3] (row 2), stub → strip[4]
+        // (bufferBelow). Visible row 2 shows top of the block.
+        const half = await reelSet.nudge(0, {
+          distance: 2,
+          direction: 'down',
+          incoming: ['a', 'b'],
+        });
+        // Visible: [a, b, bigW] — block's anchor is now visible row 2.
+        // The block extends into bufferBelow, so row 2 reads the anchor.
+        expect(half.symbols).toEqual(['a', 'b', 'bigW']);
+
+        // Nudge up by 1 — block returns to rows 1+2.
+        const full = await reelSet.nudge(0, {
+          distance: 1,
+          direction: 'up',
+          incoming: ['a'],
+        });
+        expect(full.symbols).toEqual(['b', 'bigW', 'bigW']);
+      } finally {
+        destroy();
+      }
+    });
+  });
+
+  describe('multi-reel parallel + cancellation', () => {
+    it('Promise.all with one aborted call: others land normally', async () => {
+      const deferred = installDeferredGsap();
+      const { reelSet, spinAndLand, destroy } = createTestReelSet({
+        reels: 3,
+        visibleRows: 3,
+        symbolIds: ['a', 'b', 'c', 'wild', 'star'],
+      });
+      try {
+        await spinAndLand([
+          ['a', 'b', 'c'],
+          ['a', 'b', 'c'],
+          ['a', 'b', 'c'],
+        ]);
+        const controller = new AbortController();
+        const cancelled: number[] = [];
+        const completed: number[] = [];
+        reelSet.events.on('nudge:cancelled', (info) => cancelled.push(info.reelIndex));
+        reelSet.events.on('nudge:complete', (info) => completed.push(info.reelIndex));
+
+        // Three parallel nudges; only the middle one is cancellable.
+        const promises = [
+          reelSet.nudge(0, { distance: 1, direction: 'down', incoming: ['wild'] }),
+          reelSet
+            .nudge(1, { distance: 1, direction: 'down', incoming: ['star'], signal: controller.signal })
+            .catch((e: Error) => ({ aborted: e.name === 'AbortError' })),
+          reelSet.nudge(2, { distance: 1, direction: 'down', incoming: ['wild'] }),
+        ];
+
+        // Abort the middle one before driving the deferred tweens.
+        controller.abort();
+        // Drive the still-live tweens to completion.
+        deferred.fire();
+
+        const results = await Promise.all(promises);
+        expect(results[0]).toEqual({ symbols: ['wild', 'a', 'b'] });
+        expect(results[1]).toEqual({ aborted: true });
+        expect(results[2]).toEqual({ symbols: ['wild', 'a', 'b'] });
+
+        // Bus events: 2 completes, 1 cancelled. Reels [0, 2] complete,
+        // reel 1 cancelled.
+        expect(cancelled).toEqual([1]);
+        expect(completed.sort()).toEqual([0, 2]);
+      } finally {
+        destroy();
+      }
+    });
+
+    it('skipNudge() with no arg skips multiple in-flight nudges', async () => {
+      const deferred = installDeferredGsap();
+      const { reelSet, spinAndLand, destroy } = createTestReelSet({
+        reels: 3,
+        visibleRows: 3,
+        symbolIds: ['a', 'b', 'c', 'wild'],
+      });
+      try {
+        await spinAndLand([
+          ['a', 'b', 'c'],
+          ['a', 'b', 'c'],
+          ['a', 'b', 'c'],
+        ]);
+        const promises = [
+          reelSet.nudge(0, { distance: 1, direction: 'down', incoming: ['wild'] }),
+          reelSet.nudge(1, { distance: 1, direction: 'down', incoming: ['wild'] }),
+          reelSet.nudge(2, { distance: 1, direction: 'down', incoming: ['wild'] }),
+        ];
+        // All three are mid-tween (deferred shim doesn't auto-complete).
+        expect(reelSet.reels.every((r) => r.isNudging)).toBe(true);
+        // No-arg skipNudge skips every in-flight nudge.
+        reelSet.skipNudge();
+        const results = await Promise.all(promises);
+        expect(results).toHaveLength(3);
+        for (const r of results) {
+          expect(r.symbols).toEqual(['wild', 'a', 'b']);
+        }
+        // All reels are clean post-skip.
+        expect(reelSet.reels.every((r) => !r.isNudging)).toBe(true);
+        void deferred;
       } finally {
         destroy();
       }
