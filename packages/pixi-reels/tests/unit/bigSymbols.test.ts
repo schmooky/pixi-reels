@@ -340,6 +340,13 @@ describe('big symbols', () => {
   // to `strip[last].y` exactly for bufferBelow=2 and triggers a phantom wrap
   // on the first displace tick. With the fix, maxY scales with bufferBelow
   // and nudge counts wraps exactly `distance` times.
+  //
+  // We assert the EXACT strip layout (anchor at strip[2], stubs at strip[3..4])
+  // and not just visibleSymbols. Pre-fix the visible symbols read
+  // `['?', 'tall', 'tall']` because the block landed at strip[3..5] with the
+  // tail spilling into bufferBelow — exactly the "tail in lower buffer"
+  // regression. Asserting strip-by-index catches that even if a future bug
+  // happens to also produce the right `visibleSymbols` accidentally.
   it('nudge DOWN preserves block position when bufferBelow >= 2 (pre-fix: off-by-one)', async () => {
     const { reelSet, spinAndLand, destroy } = createTestReelSet({
       reels: 1,
@@ -356,15 +363,34 @@ describe('big symbols', () => {
       ]);
       expect(reelSet.getVisibleGrid()[0]).toEqual(['tall', 'a', 'a']);
 
+      const reel = reelSet.reels[0];
+      const OCC = '__pixi_reels_occupied__';
+
+      // Pre-nudge: anchor at strip[0], stubs at strip[1..2].
+      const preStrip = reel.symbols.map((s) => s.symbolId);
+      expect(preStrip[0]).toBe('tall');
+      expect(preStrip[1]).toBe(OCC);
+      expect(preStrip[2]).toBe(OCC);
+
       // DOWN by 2: anchor moves from strip[0] (row -2) to strip[2] (row 0).
       // Block fills all three visible rows. Pre-fix this landed at strip[3]
-      // because the wrap fired one tick too early.
+      // because the wrap fired one tick too early — the tail slipped into
+      // bufferBelow and only the top 2/3 of the block stayed visible.
       const result = await reelSet.nudge(0, {
         distance: 2,
         direction: 'down',
         incoming: ['a', 'a'],
       });
       expect(result.symbols).toEqual(['tall', 'tall', 'tall']);
+
+      const postStrip = reel.symbols.map((s) => s.symbolId);
+      expect(postStrip[2]).toBe('tall'); // anchor at row 0
+      expect(postStrip[3]).toBe(OCC);
+      expect(postStrip[4]).toBe(OCC);
+      // Bufferbelow must NOT carry any block cell — that was the
+      // regression: tail ended up at strip[5] (= bufferBelow[0]).
+      expect(postStrip[5]).not.toBe(OCC);
+      expect(postStrip[5]).not.toBe('tall');
 
       // UP by 2 returns to tail-visible.
       const result2 = await reelSet.nudge(0, {
@@ -373,6 +399,52 @@ describe('big symbols', () => {
         incoming: ['a', 'a'],
       });
       expect(result2.symbols).toEqual(['tall', 'a', 'a']);
+
+      const finalStrip = reel.symbols.map((s) => s.symbolId);
+      expect(finalStrip[0]).toBe('tall');
+      expect(finalStrip[1]).toBe(OCC);
+      expect(finalStrip[2]).toBe(OCC);
+    } finally {
+      destroy();
+    }
+  });
+
+  // The user-reported regression: when the recipe runs DOWN only (no UP),
+  // pre-fix the block ended in a head-visible state with the tail in
+  // bufferBelow. Post-fix the block ends in fully-visible state (anchor at
+  // row 0). This test mirrors that exact scenario verbatim.
+  it('DOWN-only nudge from tail-visible lands the block fully visible, not head-visible', async () => {
+    const { reelSet, spinAndLand, destroy } = createTestReelSet({
+      reels: 1,
+      visibleRows: 3,
+      bufferSymbols: 2,
+      symbolIds: ['a', 'tall'],
+      symbolData: { tall: { weight: 0, size: { w: 1, h: 3 } } },
+    });
+    try {
+      await spinAndLand([
+        { visible: ['a', 'a', 'a'], bufferAbove: [undefined, 'tall'] },
+      ]);
+
+      const result = await reelSet.nudge(0, {
+        distance: 2,
+        direction: 'down',
+        incoming: ['a', 'a'],
+      });
+
+      // All three visible rows show the block.
+      expect(result.symbols).toEqual(['tall', 'tall', 'tall']);
+
+      // And specifically the block did NOT land in head-visible with the
+      // tail spilling into bufferBelow. Strip layout:
+      //   bufferAbove(2) | visible(3) | bufferBelow(2)
+      //   [0..1]         | [2..4]     | [5..6]
+      // Correct: anchor strip[2], stubs strip[3..4].
+      // Regression: anchor strip[3], stubs strip[4..5] (stub at bufferBelow[0]).
+      const OCC = '__pixi_reels_occupied__';
+      const ids = reelSet.reels[0].symbols.map((s) => s.symbolId);
+      expect(ids[2]).toBe('tall');
+      expect(ids[5]).not.toBe(OCC);
     } finally {
       destroy();
     }
