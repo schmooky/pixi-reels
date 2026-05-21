@@ -113,6 +113,33 @@ per-call basis. The engine throws if you pick `'cascade'` without
 `.tumble(...)` on the builder — the error names the missing method.
 See the [spin-then-cascade recipe](/recipes/spin-then-cascade/).
 
+## Pattern: nudge after landing
+
+After a spin lands, you can shift a single reel by N positions to
+reveal caller-supplied symbols — the classic UK fruit-machine "nudge."
+The spin pipeline is idle during a nudge; the nudge's own tween drives
+the strip.
+
+```ts
+await reelSet.spin();
+// landed on a near-miss
+await reelSet.nudge(2, { distance: 1, direction: 'down', incoming: ['wild'] });
+// reel 2 has now shifted; nudge:complete fired
+```
+
+Multi-reel beats are `Promise.all([...])` of independent calls. Cancel
+mid-tween via `NudgeOptions.signal` (rejects with `AbortError` +
+`nudge:cancelled`), or fast-forward via `reelSet.skipNudge(col)`
+(resolves normally).
+
+Read the full contract in the [nudge guide](/guides/nudge/). Live
+recipes: [nudge](/recipes/nudge/),
+[skip](/recipes/nudge-skip/),
+[abort](/recipes/nudge-abort/),
+[stagger](/recipes/nudge-stagger/),
+[spotlight after a nudge](/recipes/nudge-spotlight/),
+[big symbols](/recipes/nudge-big-symbol/).
+
 ## Full event map
 
 | Event | Payload | When |
@@ -138,8 +165,9 @@ See the [spin-then-cascade recipe](/recipes/spin-then-cascade/).
 | `shape:changed` | `(rowsPerReel)` | MultiWays `setShape(...)` accepted |
 | `adjust:start` | `({ reelIndex, fromRows, toRows })` | AdjustPhase entered for a reel |
 | `adjust:complete` | `({ reelIndex })` | AdjustPhase finished |
-| `nudge:start` | `({ reelIndex, distance, direction })` | `reelSet.nudge(...)` tween about to begin |
+| `nudge:start` | `({ reelIndex, distance, direction })` | `reelSet.nudge(...)` pre-placement done; tween about to begin |
 | `nudge:complete` | `({ reelIndex, distance, direction, symbols })` | Nudged reel has snapped to its new grid position |
+| `nudge:cancelled` | `({ reelIndex, distance, direction, reason })` | `NudgeOptions.signal` aborted or the reel was destroyed mid-tween. **Does not fire alongside `nudge:complete`.** |
 | `destroyed` | — | `destroy()` called |
 
 ## Deeper dive
