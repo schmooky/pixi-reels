@@ -158,6 +158,20 @@ export const RECIPES: RecipeMeta[] = [
     tags: ['big-symbols', 'layout', 'sizing'],
   },
   {
+    slug: 'big-symbol-partial-land',
+    group: 'big-symbols',
+    title: 'Land a big symbol partially in buffer',
+    oneLiner: 'A tall 1xH block lands with its anchor in bufferAbove — only the bottom cell shows at row 0. Nudge to drag the rest into view. Works end-to-end through setResult, refill, nudge, and the cross-reel resolver.',
+    steps: [
+      'Pass an anchor at `bufferAbove[i]` via the explicit `ColumnTarget` form (or row -i-1 via legacy negative-index)',
+      "Coordinator paints OCCUPIED at the rest of the block's cells (negative rows, visible rows, or bufferBelow as needed)",
+      '`_finalizeFrame` sizes the anchor sprite to span the whole block; the mask clips the off-screen portion',
+      '`getVisibleSymbols` resolves visible cells to the anchor id via a NEGATIVE `anchorRow` in `_occupancy`',
+    ],
+    apis: ['ReelSet.setResult', 'ColumnTarget.bufferAbove', 'ColumnTarget.bufferBelow', 'ReelSet.getSymbolFootprint'],
+    tags: ['big-symbols', 'buffer', 'nudge', 'recent'],
+  },
+  {
     slug: 'get-block-bounds',
     group: 'big-symbols',
     title: 'getBlockBounds — outline a big symbol',
