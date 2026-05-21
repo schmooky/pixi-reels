@@ -72,11 +72,30 @@ Pass any cell of a block — anchor or non-anchor — both APIs return the same 
 The engine throws fail-fast at `setResult()` if a block doesn't fit:
 
 - `"big symbol 'giant' (3x3) at (col=4, row=2) exceeds reel count 6."`
-- `"big symbol 'tallBar' (1x3) at (col=0, row=3) exceeds reel 0 height 5."`
+- `"big symbol 'tallBar' (1x3) at (col=0, row=3) extends past the bottom of the strip on reel 0 (anchor row + h = 6 > visibleRows + bufferBelow = 4)."`
+
+The vertical check is against the **full strip** (visible + bufferBelow), not just visible — anchors are allowed to land partially, with the block extending into bufferAbove or bufferBelow.
 
 Pinning the **non-anchor** cell of a big symbol throws — pin the anchor instead, which covers the block visually because the anchor's view spans it.
 
 The **build-time** check refuses big symbols with non-zero weight (`big symbol 'bonus' (2x2) must have weight 0 — ...`). Random fill can't place blocks in v1, so non-zero weight would silently never be picked.
+
+## Partial-visibility landings (buffer-row anchors)
+
+Big-symbol anchors are NOT restricted to visible rows. A 1×H block can land with its anchor in `bufferAbove` so only the bottom of the block ("the tail") shows at the top of the visible window — the classic UK fruit-machine setup where the player sees a sliver of a tall wild and nudges to reveal it. Equivalently, a block can anchor at the last visible row with its lower cells spilling into `bufferBelow` ("head visible").
+
+Use the explicit `ColumnTarget` form to target buffer slots:
+
+```ts
+// 1x3 wild lands with its tail at visible row 0; anchor + two stubs are
+// off-screen in bufferAbove. Requires bufferSymbols(2) or more.
+reelSet.setResult([
+  { visible: [...], bufferAbove: [undefined, 'tallWild'] },
+  // ...
+]);
+```
+
+`ReelSet.getSymbolFootprint(col, 0)` for the visible cell returns `anchor.row = -2` (negative) — `ReelSet.getBlockBounds(col, 0)` returns the full block's pixel rect including the off-screen portion (the mask clips the rendered output to the visible window). See [Land a big symbol partially in buffer](/recipes/big-symbol-partial-land/) for the runnable demo.
 
 ## Mask interaction (`SharedRectMaskStrategy`)
 
@@ -126,7 +145,8 @@ Pin overlays render at zIndex `10000` (an internal `ReelSet` constant — not pa
 
 - [Guide: Per-reel geometry](/guides/per-reel-geometry/) — overview + constraint matrix + mask strategy
 - [Guide: MultiWays](/guides/multiways/) — mutually exclusive with big symbols
-- [`big-symbols`](/recipes/big-symbols/) recipe — single 2×2 bonus
 - [`big-symbols-mxn`](/recipes/big-symbols-mxn/) recipe — every shape: 1×3, 2×2, 3×3, 2×4
+- [`big-symbol-partial-land`](/recipes/big-symbol-partial-land/) recipe — tail-visible landings via `bufferAbove`
+- [`nudge-big-symbol`](/recipes/nudge-big-symbol/) recipe — nudge a block through visible + buffer
 - [`card-symbol-debug`](/recipes/card-symbol-debug/) recipe — the debug `CardSymbol` used in these recipes
 - [`cell-bounds`](/recipes/cell-bounds/) recipe — pixel rects for any cell

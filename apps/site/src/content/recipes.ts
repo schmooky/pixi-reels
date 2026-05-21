@@ -172,6 +172,20 @@ export const RECIPES: RecipeMeta[] = [
     tags: ['big-symbols', 'buffer', 'nudge', 'recent'],
   },
   {
+    slug: 'big-symbol-held-respin',
+    group: 'big-symbols',
+    title: 'Hold a buffer-anchored big symbol across a respin',
+    oneLiner: 'A tall wild lands with its anchor in bufferAbove (tail-visible at row 0). Hold that reel via `spin({ holdReels: [...] })`, respin the others; the block stays intact because the held strip is never touched. Then nudge the held reel to reveal the full block.',
+    steps: [
+      'Land a 1xH wild with its anchor in `bufferAbove` on the trigger reel (only the bottom cell shows at row 0)',
+      'Call `reelSet.spin({ holdReels: [triggerReel] })` to skip START/SPIN/STOP on that column',
+      'Pass a full-width grid to `setResult` — the held column entry is ignored',
+      'Nudge the held reel after the respin to drag the full block into visibility',
+    ],
+    apis: ['ReelSet.spin', 'SpinOptions.holdReels', 'ReelSet.setResult', 'ColumnTarget.bufferAbove', 'ReelSet.nudge'],
+    tags: ['big-symbols', 'buffer', 'hold-reels', 'respin', 'nudge', 'recent'],
+  },
+  {
     slug: 'get-block-bounds',
     group: 'big-symbols',
     title: 'getBlockBounds — outline a big symbol',

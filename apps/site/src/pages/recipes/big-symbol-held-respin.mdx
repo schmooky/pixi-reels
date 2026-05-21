@@ -1,0 +1,127 @@
+---
+layout: ../../layouts/Recipe.astro
+title: Hold a buffer-anchored big symbol across a respin
+description: A tall wild lands with its anchor in bufferAbove (tail visible at row 0). Hold that reel via spin holdReels, respin the others, then nudge to drag the wild into full view. The held reel preserves the block end-to-end across the no-op spin.
+tags: [big-symbols, buffer, hold-reels, respin, nudge]
+steps:
+  - "Land a 1xH wild with its anchor in bufferAbove on the trigger reel — only the bottom cell of the block shows at row 0"
+  - "Call reelSet.spin with holdReels including the trigger reel to skip START/SPIN/STOP on that column"
+  - "Pass a full-width grid to setResult — the held column entry is ignored"
+  - "Nudge the held reel after the respin to drag the full block into visibility"
+apis:
+  - ReelSet.spin
+  - SpinOptions.holdReels
+  - ReelSet.setResult
+  - ColumnTarget.bufferAbove
+  - ReelSet.nudge
+---
+
+import code from '../../recipes/big-symbol-held-respin.recipe.ts?raw';
+import { RecipeRunner } from '../../components/RecipeRunner.tsx';
+
+<RecipeRunner code={code} client:only="react" />
+
+The classic UK fruit-machine bonus: a tall wild lands with most of its
+body hidden above the visible window — only the **tail** (the bottom
+cell) shows at row 0. The player gets a respin of the OTHER reels with
+the wild reel held; the tail keeps peeking in. After the respin, a nudge
+drags the whole wild into view. This recipe wires the full sequence.
+
+## Why this works end-to-end
+
+Three pieces have to cooperate, and they do — the audit case for the
+buffer-row anchor feature:
+
+1. **`setResult` accepts an anchor in `bufferAbove`.** Pass the anchor
+   id at `bufferAbove[i]` (or `frame[col][-i-1]` via legacy negative
+   indexing) and `_coordinateBigSymbols` paints `OCCUPIED` across the
+   rest of the block — even when stubs fall in visible rows. The
+   validation rule is the full strip (`anchorRow + h <= visibleRows +
+   bufferBelow`), not just visible.
+
+2. **`spin({ holdReels: [...] })` skips the held reels entirely.**
+   START / SPIN / STOP never fire on the held column. The strip
+   array, the anchor sprite's resized dimensions, and the
+   `_occupancy` map all carry through unchanged. Big-symbol blocks
+   that crossed into bufferAbove or bufferBelow at the previous land
+   stay exactly where they were.
+
+3. **`nudge()` on the held reel moves the block as a unit.** The same
+   survival check (`anchor + h - 1 + distance < total`) applies; for
+   a 1×3 wild at `strip[0]` and a `distance=2` down nudge, `0 + 3 - 1
+   + 2 = 4 < 7` (where total is `bufferAbove(2) + visibleRows(3) +
+   bufferBelow(2)`). The wrap pipeline never splits the anchor from
+   its stubs.
+
+## What the recipe runs
+
+```ts
+// 1. Land the tail-visible wild.
+const initialGrid = [
+  ct(), ct(),
+  // Anchor at bufferAbove[1] = row -2. Block spans rows -2, -1, 0.
+  { visible: [filler(), filler(), filler()], bufferAbove: [undefined, 'tall'] },
+  ct(), ct(),
+];
+const spin1 = reelSet.spin();
+reelSet.setResult(initialGrid);
+await spin1;
+
+// 2. Respin reels 0, 1, 3, 4 — reel 2 held, block preserved.
+const spin2 = reelSet.spin({ holdReels: [2] });
+reelSet.setResult([
+  ct(), ct(),
+  ct(), // ignored — reel 2 is held
+  ct(), ct(),
+]);
+await spin2;
+
+// 3. Nudge the held reel to reveal the block.
+await reelSet.nudge(2, {
+  distance: 2,
+  direction: 'down',
+  incoming: [filler(), filler()],
+});
+```
+
+## Required configuration
+
+- **`bufferSymbols(n)` where `n` >= the largest off-screen extension.**
+  For a 1×3 wild with its tail at row 0, the anchor sits at row -2 —
+  needs `bufferAbove >= 2`. The builder sets both buffers to the same
+  value, so `bufferSymbols(2)` works.
+
+- **The big-symbol id needs `weight: 0`.** Random fill can't place
+  blocks; non-zero weight throws at build.
+
+- **Bounce should be 0 for big symbols.**
+  `bounceDistance: 0, bounceDuration: 0` in the speed profile — the
+  default landing bounce doesn't account for stubs and produces a
+  visual jitter on big anchors.
+
+## What still throws
+
+- **Cross-reel (`w > 1`) blocks held across a respin work, but you
+  can't nudge them** — nudging shifts only the one held reel, and the
+  block's right-side cells live on other reels.
+
+- **Mixing `string[]` and `ColumnTarget` columns inside one `setResult`
+  call.** `toLegacyTargetGrid` rejects mixed shapes — pick one form for
+  the whole grid. The recipe uses `ColumnTarget` everywhere, including
+  the held reel's placeholder, because the wild reel needs the
+  `bufferAbove` field.
+
+- **An anchor in `bufferAbove` whose h pushes the block past
+  `bufferBelow`.** `_coordinateBigSymbols` validates against the full
+  strip; an over-tall anchor throws with `extends past the bottom of
+  the strip`.
+
+## Related
+
+- [Land a big symbol partially in buffer](/recipes/big-symbol-partial-land/) —
+  same buffer-anchor entry, but with both nudge directions instead of a
+  hold-then-respin.
+- [Hold & Win pin](/recipes/hold-and-win/) — the spiritual cousin: hold
+  CHIP symbols as 1×1 pins across respins (no big-symbol layout).
+- [Nudge through a big symbol](/recipes/nudge-big-symbol/) — the survival
+  rules for nudging blocks through the strip.

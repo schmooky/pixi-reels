@@ -335,6 +335,49 @@ describe('big symbols', () => {
     }
   });
 
+  // ReelMotion wrap thresholds depended on the assumption bufferBelow === 1
+  // — `_maxY` was hard-coded to `(visibleRows + 1) * slotH`, which collapses
+  // to `strip[last].y` exactly for bufferBelow=2 and triggers a phantom wrap
+  // on the first displace tick. With the fix, maxY scales with bufferBelow
+  // and nudge counts wraps exactly `distance` times.
+  it('nudge DOWN preserves block position when bufferBelow >= 2 (pre-fix: off-by-one)', async () => {
+    const { reelSet, spinAndLand, destroy } = createTestReelSet({
+      reels: 1,
+      visibleRows: 3,
+      bufferSymbols: 2, // bufferAbove=2 AND bufferBelow=2 — total strip = 7.
+      symbolIds: ['a', 'tall'],
+      symbolData: { tall: { weight: 0, size: { w: 1, h: 3 } } },
+    });
+    try {
+      // 1x3 anchor at bufferAbove[1] = row -2 → block at rows -2, -1, 0.
+      // Tail visible: visible[0] = stub→'tall', visible[1..2] = 'a'.
+      await spinAndLand([
+        { visible: ['a', 'a', 'a'], bufferAbove: [undefined, 'tall'] },
+      ]);
+      expect(reelSet.getVisibleGrid()[0]).toEqual(['tall', 'a', 'a']);
+
+      // DOWN by 2: anchor moves from strip[0] (row -2) to strip[2] (row 0).
+      // Block fills all three visible rows. Pre-fix this landed at strip[3]
+      // because the wrap fired one tick too early.
+      const result = await reelSet.nudge(0, {
+        distance: 2,
+        direction: 'down',
+        incoming: ['a', 'a'],
+      });
+      expect(result.symbols).toEqual(['tall', 'tall', 'tall']);
+
+      // UP by 2 returns to tail-visible.
+      const result2 = await reelSet.nudge(0, {
+        distance: 2,
+        direction: 'up',
+        incoming: ['a', 'a'],
+      });
+      expect(result2.symbols).toEqual(['tall', 'a', 'a']);
+    } finally {
+      destroy();
+    }
+  });
+
   it('throws if the buffer-anchored block extends past the bottom of the strip', async () => {
     const { reelSet, destroy } = createTestReelSet({
       reels: 1,

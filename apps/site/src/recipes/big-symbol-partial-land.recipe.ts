@@ -85,14 +85,17 @@ return {
     // 2. Nudge DOWN by 2 — anchor moves from row -2 to row 0; block now
     //    fills visible rows 0, 1, 2. Fully visible.
     //
-    //    Survival check (down): anchor (-2 maps to strip index 0 with
-    //    bufferAbove=2) + h - 1 + distance = 0 + 3 - 1 + 2 = 4 < total 6 ✓.
+    //    Survival check (down): anchor strip index + h - 1 + distance < total
+    //    (0 + 3 - 1 + 2 = 4 < 7) — total = bufferAbove(2) + visibleRows(3) +
+    //    bufferBelow(2). The block stays on the strip end-to-end.
     //
-    //    `incoming` describes the new bufferAbove slot that becomes visible
-    //    above the block (none — the block fills visible). The 2 incoming
-    //    slots correspond to the rows that BECOME visible above the
-    //    surviving block; here they end up in bufferAbove (off-screen)
-    //    because the block occupies the whole visible window.
+    //    `incoming` is the new visible-area content arriving from the top.
+    //    Buffer slots and big-symbol cells (anchor / OCCUPIED stubs) are
+    //    protected during pre-placement, so any incoming entries that would
+    //    land on a protected slot are dropped. Here every visible row is
+    //    consumed by the block, so the incoming pair is consumed by the
+    //    wrap pipeline (queue → random buffer fill) rather than appearing
+    //    on screen. Pass real ids regardless; the engine ignores unused ones.
     await reelSet.nudge(2, {
       distance: 2,
       direction: 'down',
@@ -102,6 +105,7 @@ return {
     await new Promise((r) => setTimeout(r, 800));
 
     // 3. Nudge UP by 2 — anchor moves back from row 0 to row -2.
+    //    Survival check (up): anchor strip index - distance >= 0 (2 - 2 = 0).
     //    Block returns to tail-visible state.
     await reelSet.nudge(2, {
       distance: 2,

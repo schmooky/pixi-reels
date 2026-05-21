@@ -10,4 +10,6 @@ The validation error message changed: `exceeds reel height` was visible-only; no
 
 `getSymbolFootprint` may return a negative `anchor.row` for blocks anchored in bufferAbove. `getBlockBounds` handles this by computing pixel coordinates from the row offset directly rather than delegating to `getCellBounds` (which still rejects negative rows). Consumers reading `anchor.row` should accept negative values.
 
-Live recipe: `/recipes/big-symbol-partial-land/`.
+Fix: `ReelMotion._maxY` was hard-coded to `(visibleRows + 1) * slotH`, which collapsed to `strip[last].y` exactly when `bufferBelow >= 2` and fired a phantom wrap on the first nudge displacement — the anchor landed one strip slot too far. The threshold now scales with `bufferBelow` (`maxY = (visibleRows + bufferBelow) * slotH`), symmetric with the existing `minY = -(bufferAbove + 1) * slotH`. Nudges with `bufferBelow >= 2` now match the documented survival math.
+
+Live recipes: `/recipes/big-symbol-partial-land/`, `/recipes/big-symbol-held-respin/`.

@@ -6,7 +6,7 @@ Site: https://pixi-reels.schmooky.dev
 Repo: https://github.com/schmooky/pixi-reels
 Package: https://www.npmjs.com/package/pixi-reels
 
-Generated: 2026-05-17T11:31:54.688Z
+Generated: 2026-05-21T21:45:33.313Z
 
 ## Quick start
 
@@ -61,6 +61,10 @@ Install pixi-reels and run your first reel set in under 2 minutes.
 ### MultiWays
 URL: https://pixi-reels.schmooky.dev/guides/multiways/
 Per-spin row variation. Each reel can land on a different row count between minRows and maxRows, with cell height derived from a fixed reel pixel height. The engine reshapes each reel between SPIN and STOP and AdjustPhase tweens any pin overlays; pins migrate via originRow.
+
+### Nudge
+URL: https://pixi-reels.schmooky.dev/guides/nudge/
+Push a reel down or up by one or more positions after it has stopped — the classic UK fruit-machine nudge.
 
 ### Per-reel geometry
 URL: https://pixi-reels.schmooky.dev/guides/per-reel-geometry/
@@ -157,6 +161,28 @@ Steps:
   - Call setAnticipation([...reels]) to slow specific reels before they land
   - Set result[col][-1] = HIGH_VALUE on those same reels to pin a symbol just above the visible area
   - During the anticipation decelerate, the symbol is visible at the top edge of the reel
+
+### Hold a buffer-anchored big symbol across a respin
+URL: https://pixi-reels.schmooky.dev/recipes/big-symbol-held-respin/
+A tall wild lands with its anchor in bufferAbove (tail visible at row 0). Hold that reel via spin holdReels, respin the others, then nudge to drag the wild into full view. The held reel preserves the block end-to-end across the no-op spin.
+Tags: big-symbols, buffer, hold-reels, respin, nudge
+APIs: ReelSet.spin, SpinOptions.holdReels, ReelSet.setResult, ColumnTarget.bufferAbove, ReelSet.nudge
+Steps:
+  - Land a 1xH wild with its anchor in bufferAbove on the trigger reel — only the bottom cell of the block shows at row 0
+  - Call reelSet.spin with holdReels including the trigger reel to skip START/SPIN/STOP on that column
+  - Pass a full-width grid to setResult — the held column entry is ignored
+  - Nudge the held reel after the respin to drag the full block into visibility
+
+### Land a big symbol partially in buffer
+URL: https://pixi-reels.schmooky.dev/recipes/big-symbol-partial-land/
+A tall 1xH block lands with its anchor in bufferAbove — only the bottom cell shows at the top of the visible window. Nudge to drag the rest into view. Works end-to-end through setResult, refill, nudge, and the cross-reel resolver.
+Tags: big-symbols, buffer, nudge, recent
+APIs: ReelSet.setResult, SymbolData.size, ColumnTarget.bufferAbove, ColumnTarget.bufferBelow, ReelSet.getSymbolFootprint
+Steps:
+  - Pass an anchor at `bufferAbove[i]` via the explicit `ColumnTarget` form (or row `-i-1` via legacy negative-index)
+  - Coordinator paints OCCUPIED at the rest of the block's cells (negative rows, visible rows, or bufferBelow as needed)
+  - `_finalizeFrame` sizes the anchor sprite to span the whole block; the mask clips the off-screen portion
+  - `getVisibleSymbols` resolves visible cells to the anchor id via a NEGATIVE `anchorRow` in `_occupancy`
 
 ### MxN big symbols — every shape
 URL: https://pixi-reels.schmooky.dev/recipes/big-symbols-mxn/
@@ -344,6 +370,72 @@ Steps:
   - Build a result grid with count - 1 scatters, none on the near reel
   - setAnticipation([nearReelIndex]) BEFORE setResult()
   - Let the player feel the hold on the last reel
+
+### How to nudge a reel
+URL: https://pixi-reels.schmooky.dev/recipes/nudge/
+Shift one reel down or up by N positions after it has landed — the classic UK fruit-machine nudge, with the reveal symbols supplied by the caller.
+Tags: nudge, fruit-machine, recent
+APIs: ReelSet.nudge, NudgeOptions, nudge:start, nudge:complete
+Steps:
+  - Wait for spin() to land
+  - Call reelSet.nudge(col, { distance, direction, incoming }) — incoming is required, top-down order of the new visible positions
+  - Await the promise to read the new visible column for re-running win detection
+  - For multi-reel beats, wrap several nudge() calls in Promise.all([...])
+
+### Abort a nudge
+URL: https://pixi-reels.schmooky.dev/recipes/nudge-abort/
+Cancel a running nudge via AbortSignal — the strip still snaps to its deterministic landed position, but the `nudge()` promise rejects with `AbortError` and `nudge:cancelled` fires on the bus.
+Tags: nudge, abort, cancellation, signal, recent
+APIs: NudgeOptions.signal, AbortController, nudge:cancelled
+Steps:
+  - Wire an `AbortController` into `NudgeOptions.signal`
+  - Trigger the abort while the tween is running
+  - Catch `AbortError` to take the cancellation path; non-abort errors re-throw
+  - `nudge:cancelled` fires on the bus carrying the cancellation reason
+
+### Nudge through a big symbol
+URL: https://pixi-reels.schmooky.dev/recipes/nudge-big-symbol/
+A 1xH block on the target reel is nudged through as a unit. The engine survival-checks anchor + h fits on the strip post-rotation; cross-reel (w>1) blocks still throw.
+Tags: nudge, big-symbols, block, recent
+APIs: ReelSet.nudge, SymbolData.size
+Steps:
+  - Land with a 1x2 MEGA wild at column 2, rows 0+1
+  - Nudge column 2 DOWN by 2 — block survives (`1 + 2 - 1 + 2 < 5`) and anchor lands at row 2 with stub in bufferBelow
+  - Nudge column 2 UP by 1 — block returns to rows 1+2, fully visible
+  - The whole block moves as a unit; the wrap mechanism never splits anchor from stubs
+
+### Skip an in-flight nudge
+URL: https://pixi-reels.schmooky.dev/recipes/nudge-skip/
+Fast-forward a running nudge tween to its landed state with `reelSet.skipNudge(col)`. The original `nudge()` promise resolves normally — the consumer's success path still runs.
+Tags: nudge, skip, ux, recent
+APIs: ReelSet.skipNudge, Reel.isNudging
+Steps:
+  - Run a long sequential nudge (1.5s per reel) so the player has time to react
+  - The canvas button morphs into a skip icon while the recipe handler is running
+  - Tap during a nudge — the RecipeRunner detects an in-flight nudge and calls `reelSet.skipNudge()`
+  - The original `nudge()` promise resolves at the deterministic landed position
+
+### Spotlight after a nudge
+URL: https://pixi-reels.schmooky.dev/recipes/nudge-spotlight/
+Land a near-miss, nudge three reels down by one to complete a wild line across the top row, then run SymbolSpotlight on the new winners — the canonical "rescue spin via nudge, then celebrate" beat.
+Tags: nudge, spotlight, wins, fruit-machine, recent
+APIs: ReelSet.nudge, ReelSet.spotlight.show, ReelSet.spotlight.hide, nudge:complete
+Steps:
+  - Spin and land on a flat result with no wilds anywhere
+  - Promise.all three `reelSet.nudge(col, ...)` calls so the middle reels drop in `wild` at row 0 together
+  - Build the winning cells (row 0 on each nudged reel) and call `reelSet.spotlight.show(cells, ...)`
+  - Await spotlight completion, then `spotlight.hide()` to return the symbols to the grid
+
+### Staggered nudge — wave reveal
+URL: https://pixi-reels.schmooky.dev/recipes/nudge-stagger/
+Use `NudgeOptions.startDelay` inside a `Promise.all([...])` to dispatch parallel nudges with a per-reel offset. Reads as a wave — faster than sequential, more theatrical than synchronised parallel.
+Tags: nudge, stagger, wave, ux, recent
+APIs: ReelSet.nudge, NudgeOptions.startDelay
+Steps:
+  - Map over the target reels with `Promise.all(cols.map(...))`
+  - Pass `startDelay: i * STAGGER_MS` per call so each reel waits a beat longer to begin
+  - All tweens run concurrently — total wall time = last reel's delay + duration
+  - Validation throws still fire synchronously; only the mutation is deferred
 
 ### Custom per-symbol animation
 URL: https://pixi-reels.schmooky.dev/recipes/paylines-custom-animation/
@@ -720,6 +812,255 @@ return {
     reelSet.setAnticipation([3, 4]);
     reelSet.setResult(result);
     await p;
+  },
+};
+```
+
+### big-symbol-held-respin
+URL: https://pixi-reels.schmooky.dev/recipes/big-symbol-held-respin/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//                   PIXI, app
+
+// HELD-REEL RESPIN with a buffer-anchored big symbol.
+//
+// Classic UK fruit-machine bonus: reel 3 lands with a tall wild whose
+// anchor sits in bufferAbove (only the tail of the block shows at row 0
+// — "the wild is peeking in from the top"). The player gets a re-spin of
+// the OTHER reels; reel 3 is held. The held reel preserves the block
+// across spins because `SpinOptions.holdReels` skips START/SPIN/STOP on
+// the held column — the strip array, the anchor's size, and the
+// occupancy map all carry through.
+//
+// Sequence:
+//   1. Spin all reels; land tail-visible 1x3 wild on reel 2 (column index 2).
+//   2. Respin reels 0, 1, 3, 4 with `holdReels: [2]`. Reel 2 stays put
+//      (block intact, tail visible).
+//   3. Player nudges reel 2 down by 2 to drag the block into full view.
+//
+// What this proves:
+//   - `holdReels` + buffer-anchored block: the held reel's `_finalizeFrame`
+//     state is preserved (occupancy + anchor size).
+//   - `_coordinateBigSymbols` runs on the result grid passed by the
+//     player for the non-held reels; the held column's placeholder entry
+//     is ignored.
+//   - A nudge AFTER the respin still moves the held block intact —
+//     proving the strip layout survived the no-op spin.
+
+const TALL = { id: 'tall', color: 0xff8c42, label: 'TALL', textColor: 0x4a1d00, w: 1, h: 3 };
+const REELS = 5;
+const HELD_REEL = 2;
+const ROWS = 3;
+const SIZE = 80;
+const GAP = 4;
+
+const reelSet = new ReelSetBuilder()
+  .reels(REELS)
+  .visibleSymbols(ROWS)
+  // bufferAbove >= 2 lets the 1x3 anchor sit at row -2 (block extends
+  // through row 0 — tail visible).
+  .bufferSymbols(2)
+  .symbolSize(SIZE, SIZE)
+  .symbolGap(GAP, GAP)
+  .symbols((registry) => {
+    for (const card of CARD_DECK) {
+      registry.register(card.id, CardSymbol, {
+        color: card.color, label: card.label, textColor: card.textColor,
+      });
+    }
+    registry.register(TALL.id, CardSymbol, {
+      color: TALL.color, label: TALL.label, textColor: TALL.textColor,
+    });
+  })
+  .weights(Object.fromEntries(CARD_DECK.map((c, i) => [c.id, 12 - i])))
+  .symbolData({ [TALL.id]: { weight: 0, zIndex: 5, size: { w: TALL.w, h: TALL.h } } })
+  .speed('normal', { ...SpeedPresets.NORMAL, bounceDistance: 0, bounceDuration: 0 })
+  .ticker(app.ticker)
+  .build();
+
+const FILLER_IDS = ['7', '8', '9', '10', 'J'];
+const filler = () => FILLER_IDS[Math.floor(Math.random() * FILLER_IDS.length)];
+const ct = () => ({ visible: [filler(), filler(), filler()] });
+
+return {
+  reelSet,
+  onSpin: async () => {
+    // ── 1. Initial spin lands the tail-visible wild on reel 2. ──────
+    const initialGrid = [
+      ct(), ct(),
+      // Reel 2: anchor at bufferAbove[1] = row -2. Block spans rows
+      // -2, -1, 0. Only row 0 shows the block's bottom cell.
+      { visible: [filler(), filler(), filler()], bufferAbove: [undefined, TALL.id] },
+      ct(), ct(),
+    ];
+    const spin1 = reelSet.spin();
+    await new Promise((r) => setTimeout(r, 240));
+    reelSet.setResult(initialGrid);
+    await spin1;
+    await new Promise((r) => setTimeout(r, 900));
+
+    // ── 2. Respin everything EXCEPT reel 2. ─────────────────────────
+    //
+    // `holdReels: [HELD_REEL]` tells the engine to skip START/SPIN/STOP
+    // on reel 2 entirely. The grid we pass below MUST include all 5
+    // columns (every shipped slot expects a full grid), but the entry at
+    // index 2 is ignored — the held reel keeps whatever it had.
+    //
+    // The block on reel 2 (anchor at strip[0], stubs at strip[1..2])
+    // survives because:
+    //   - no motion runs on reel 2 (strip array unchanged)
+    //   - `_finalizeFrame` doesn't re-run (occupancy unchanged)
+    //   - the anchor's sized sprite stays at its post-land dimensions
+    //
+    // We hand the held column a ColumnTarget so the input shape is
+    // homogeneous — `setResult` rejects mixed `string[] | ColumnTarget`
+    // grids. The held entry's contents are not validated against the
+    // current strip; they're simply dropped during frame building.
+    const respinGrid = [
+      ct(), ct(),
+      ct(), // ignored — reel 2 is held
+      ct(), ct(),
+    ];
+    const spin2 = reelSet.spin({ holdReels: [HELD_REEL] });
+    await new Promise((r) => setTimeout(r, 240));
+    reelSet.setResult(respinGrid);
+    await spin2;
+    await new Promise((r) => setTimeout(r, 900));
+
+    // ── 3. Nudge the held reel DOWN by 2 to reveal the full block. ──
+    //
+    // Survival check (down): anchor strip index (0) + h - 1 + distance =
+    // 0 + 3 - 1 + 2 = 4 < total 7 ✓. The block moves as a unit from
+    // strip[0..2] to strip[2..4]. Visible[0..2] = ['tall', 'tall', 'tall'].
+    await reelSet.nudge(HELD_REEL, {
+      distance: 2,
+      direction: 'down',
+      incoming: [filler(), filler()],
+      duration: 620,
+    });
+  },
+};
+```
+
+### big-symbol-partial-land
+URL: https://pixi-reels.schmooky.dev/recipes/big-symbol-partial-land/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//                   PIXI, app
+
+// PARTIAL-LAND pattern.
+//
+// A tall 1x3 wild lands with its ANCHOR in bufferAbove — most of the
+// block is hidden above the visible window, only its bottom cell shows
+// at row 0 ("tail visible"). The player nudges DOWN by 2 to drag the
+// whole block into view, then nudges UP by 2 to push it back into
+// hiding. The classic "the big symbol is peeking — nudge to reveal"
+// fruit-machine beat.
+//
+// This is enabled by:
+//   - `_coordinateBigSymbols` scans the full strip range (including
+//     bufferAbove and bufferBelow) for big-symbol anchors. The user
+//     supplies the anchor at `bufferAbove[1]`; the engine paints
+//     OCCUPIED at `bufferAbove[0]` and `visible[0]` automatically.
+//   - `_finalizeFrame` sizes anchors that sit in bufferAbove with the
+//     block's body extending into visible. The mask clips the off-screen
+//     portion; the visible portion of the sprite shows through.
+//   - `getVisibleSymbols` resolves visible row 0 to the anchor's id via
+//     a NEGATIVE `anchorRow` in `_occupancy`.
+
+const TALL = { id: 'tall', color: 0xff8c42, label: 'TALL', textColor: 0x4a1d00, w: 1, h: 3 };
+const REELS = 5;
+const ROWS = 3;
+const SIZE = 80;
+const GAP = 4;
+
+const reelSet = new ReelSetBuilder()
+  .reels(REELS)
+  .visibleSymbols(ROWS)
+  // Need bufferAbove >= 2 so the 1x3 block's anchor can sit at row -2
+  // with the block extending through row 0.
+  .bufferSymbols(2)
+  .symbolSize(SIZE, SIZE)
+  .symbolGap(GAP, GAP)
+  .symbols((registry) => {
+    for (const card of CARD_DECK) {
+      registry.register(card.id, CardSymbol, {
+        color: card.color, label: card.label, textColor: card.textColor,
+      });
+    }
+    registry.register(TALL.id, CardSymbol, {
+      color: TALL.color, label: TALL.label, textColor: TALL.textColor,
+    });
+  })
+  .weights(Object.fromEntries(CARD_DECK.map((c, i) => [c.id, 12 - i])))
+  .symbolData({ [TALL.id]: { weight: 0, zIndex: 5, size: { w: TALL.w, h: TALL.h } } })
+  // Big symbols don't tolerate the default landing bounce — zero it.
+  .speed('normal', { ...SpeedPresets.NORMAL, bounceDistance: 0, bounceDuration: 0 })
+  .ticker(app.ticker)
+  .build();
+
+const FILLER_IDS = ['7', '8', '9', '10', 'J'];
+const filler = () => FILLER_IDS[Math.floor(Math.random() * FILLER_IDS.length)];
+const ct = () => ({ visible: [filler(), filler(), filler()] });
+
+return {
+  reelSet,
+  onSpin: async () => {
+    // 1. Land the 1x3 TALL with anchor at `bufferAbove[1]` (= row -2).
+    //    Block spans rows -2, -1, 0. Only visible row 0 shows the block's
+    //    bottom cell; rows 1 and 2 are random fillers.
+    //
+    //    The engine paints OCCUPIED at row -1 and row 0 automatically;
+    //    we leave `bufferAbove[0]` undefined and `visible[0]` as filler
+    //    (both get overwritten by the coordinator).
+    //
+    //    NOTE: `setResult` requires every column to use the same input
+    //    shape (string[] OR ColumnTarget — never mixed). The other reels
+    //    are also ColumnTargets even though they don't need buffer entries.
+    const grid = [
+      ct(), ct(),
+      { visible: [filler(), filler(), filler()], bufferAbove: [undefined, TALL.id] },
+      ct(), ct(),
+    ];
+    const p = reelSet.spin();
+    await new Promise((r) => setTimeout(r, 220));
+    reelSet.setResult(grid);
+    await p;
+    await new Promise((r) => setTimeout(r, 700));
+
+    // 2. Nudge DOWN by 2 — anchor moves from row -2 to row 0; block now
+    //    fills visible rows 0, 1, 2. Fully visible.
+    //
+    //    Survival check (down): anchor strip index + h - 1 + distance < total
+    //    (0 + 3 - 1 + 2 = 4 < 7) — total = bufferAbove(2) + visibleRows(3) +
+    //    bufferBelow(2). The block stays on the strip end-to-end.
+    //
+    //    `incoming` is the new visible-area content arriving from the top.
+    //    Buffer slots and big-symbol cells (anchor / OCCUPIED stubs) are
+    //    protected during pre-placement, so any incoming entries that would
+    //    land on a protected slot are dropped. Here every visible row is
+    //    consumed by the block, so the incoming pair is consumed by the
+    //    wrap pipeline (queue → random buffer fill) rather than appearing
+    //    on screen. Pass real ids regardless; the engine ignores unused ones.
+    await reelSet.nudge(2, {
+      distance: 2,
+      direction: 'down',
+      incoming: [filler(), filler()],
+      duration: 640,
+    });
+    await new Promise((r) => setTimeout(r, 800));
+
+    // 3. Nudge UP by 2 — anchor moves back from row 0 to row -2.
+    //    Survival check (up): anchor strip index - distance >= 0 (2 - 2 = 0).
+    //    Block returns to tail-visible state.
+    await reelSet.nudge(2, {
+      distance: 2,
+      direction: 'up',
+      incoming: [filler(), filler()],
+      duration: 540,
+    });
   },
 };
 ```
@@ -3067,6 +3408,712 @@ return {
     reelSet.setAnticipation([4]);
     reelSet.setResult(GRID);
     await p;
+  },
+};
+```
+
+### nudge-abort
+URL: https://pixi-reels.schmooky.dev/recipes/nudge-abort/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//                   WILD_CARD, app
+
+// ABORT NUDGE pattern.
+//
+// The handler kicks off a 2s nudge with an AbortController whose signal
+// is wired into the call. ~700ms later the controller aborts — the GSAP
+// tween is killed, the strip still snaps to the deterministic landed
+// position (the contract is "incoming lands at these positions"), and
+// the `nudge()` promise REJECTS with an `AbortError`.
+//
+// The handler catches the AbortError, logs it, and moves on. `nudge:cancelled`
+// fires on the bus carrying the reason. Use abort for "tear it all down"
+// semantics — error path runs, follow-up steps are skipped. Use skipNudge
+// for "land it now" semantics (see /recipes/nudge-skip/) where the
+// success path should still run.
+
+const SYMBOLS = [...CARD_DECK, WILD_CARD];
+const FILLER = ['7', '8', '9', '10', 'J'];
+const filler = () => FILLER[Math.floor(Math.random() * FILLER.length)];
+const col3 = () => [filler(), filler(), filler()];
+
+const reelSet = new ReelSetBuilder()
+  .reels(5)
+  .visibleSymbols(3)
+  .symbolSize(72, 72)
+  .symbolGap(4, 4)
+  .symbols((r) => {
+    for (const sym of SYMBOLS) {
+      r.register(sym.id, CardSymbol, {
+        color: sym.color,
+        label: sym.label,
+        textColor: sym.textColor,
+      });
+    }
+  })
+  .speed('normal', SpeedPresets.NORMAL)
+  .ticker(app.ticker)
+  .build();
+
+reelSet.events.on('nudge:cancelled', (info) => {
+  console.log('[nudge:cancelled]', info);
+});
+
+return {
+  reelSet,
+  onSpin: async () => {
+    const p = reelSet.spin();
+    await new Promise((resolve) => setTimeout(resolve, 220));
+    reelSet.setResult([col3(), col3(), col3(), col3(), col3()]);
+    await p;
+    await new Promise((resolve) => setTimeout(resolve, 320));
+
+    const controller = new AbortController();
+    // Abort the nudge ~700ms in — the tween will be killed mid-flight.
+    setTimeout(() => {
+      console.log('aborting nudge after 700ms');
+      controller.abort();
+    }, 700);
+
+    try {
+      await reelSet.nudge(2, {
+        distance: 1,
+        direction: 'down',
+        incoming: ['wild'],
+        duration: 2000,
+        signal: controller.signal,
+      });
+      // Not reached on abort.
+      console.log('nudge completed normally');
+    } catch (err) {
+      if (err && err.name === 'AbortError') {
+        // Expected — clean up here. Strip is at its post-nudge landing
+        // position regardless, so subsequent reads are deterministic.
+        console.log('caught AbortError; strip still snapped to landed:', err.message);
+      } else {
+        throw err;
+      }
+    }
+  },
+};
+```
+
+### nudge-big-symbol
+URL: https://pixi-reels.schmooky.dev/recipes/nudge-big-symbol/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//                   PIXI, app
+
+// NUDGE THROUGH A BIG SYMBOL.
+//
+// Demonstrates that a 1xH block on the target reel is nudged as a unit
+// when the rotation preserves the block. Sequence:
+//
+//   1. Land with a 1x2 "MEGA" wild at rows 0+1 (anchor at row 0).
+//   2. Nudge DOWN by 2 — anchor moves to row 2, stub spills into
+//      bufferBelow. Only the TOP half of the block is visible.
+//   3. Nudge UP by 1 — block snaps back into full visibility at rows 1+2.
+//
+// Survival check (down direction): anchorRow + h - 1 + distance < total.
+// For the down-by-2 step: 1 + 2 - 1 + 2 = 4 < 5 (with bufferAbove=1,
+// visibleRows=3, bufferBelow=1, total=5) — block fits.
+//
+// Cross-reel blocks (w > 1) throw; that case is intentionally excluded.
+
+const MEGA = { id: 'mega', color: 0xff8c42, label: 'MEGA', textColor: 0x4a1d00, w: 1, h: 2 };
+const REELS = 5;
+const ROWS = 3;
+const SIZE = 80;
+const GAP = 4;
+
+const reelSet = new ReelSetBuilder()
+  .reels(REELS)
+  .visibleSymbols(ROWS)
+  .symbolSize(SIZE, SIZE)
+  .symbolGap(GAP, GAP)
+  .symbols((registry) => {
+    for (const card of CARD_DECK) {
+      registry.register(card.id, CardSymbol, {
+        color: card.color, label: card.label, textColor: card.textColor,
+      });
+    }
+    registry.register(MEGA.id, CardSymbol, {
+      color: MEGA.color, label: MEGA.label, textColor: MEGA.textColor,
+    });
+  })
+  .weights(Object.fromEntries(CARD_DECK.map((c, i) => [c.id, 12 - i])))
+  .symbolData({
+    [MEGA.id]: { weight: 0, zIndex: 5, size: { w: MEGA.w, h: MEGA.h } },
+  })
+  // Big symbols don't tolerate the default 56px landing bounce — zero it
+  // so the anchor lands flush on grid.
+  .speed('normal', { ...SpeedPresets.NORMAL, bounceDistance: 0, bounceDuration: 0 })
+  .ticker(app.ticker)
+  .build();
+
+const FILLER_IDS = ['7', '8', '9', '10', 'J'];
+const filler = () => FILLER_IDS[Math.floor(Math.random() * FILLER_IDS.length)];
+const col3 = () => [filler(), filler(), filler()];
+
+return {
+  reelSet,
+  onSpin: async () => {
+    // 1. Land a 1x2 MEGA wild at column 2, rows 0+1. The OCCUPIED stub
+    //    at row 1 is placed by the big-symbol coordinator inside setResult.
+    const grid = [col3(), col3(), [MEGA.id, MEGA.id, filler()], col3(), col3()];
+    const p = reelSet.spin();
+    await new Promise((r) => setTimeout(r, 220));
+    reelSet.setResult(grid);
+    await p;
+    await new Promise((r) => setTimeout(r, 500));
+
+    // 2. Nudge column 2 DOWN by 2. Survival: 1 + 2 - 1 + 2 = 4 < 5 ✓.
+    //    After: anchor at row 2, stub at bufferBelow → only top half of
+    //    the block is visible.
+    await reelSet.nudge(2, {
+      distance: 2,
+      direction: 'down',
+      incoming: [filler(), filler()],
+      duration: 600,
+    });
+    await new Promise((r) => setTimeout(r, 700));
+
+    // 3. Nudge UP by 1 to bring the full block back into view at rows 1+2.
+    //    Survival up: anchorRow (3) >= distance (1) ✓.
+    await reelSet.nudge(2, {
+      distance: 1,
+      direction: 'up',
+      incoming: [filler()],
+      duration: 480,
+    });
+  },
+};
+```
+
+### nudge-parallel
+URL: https://pixi-reels.schmooky.dev/recipes/nudge-parallel/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//                   WILD_CARD, app
+
+// PARALLEL nudges — every reel's tween fires at the same frame via
+// `Promise.all([...])`. Reads as one synchronised beat; the whole row
+// of wilds drops into place together. Total time = duration (regardless
+// of how many reels you're nudging).
+
+const SYMBOLS = [...CARD_DECK, WILD_CARD];
+const FILLER = ['7', '8', '9', '10', 'J'];
+const filler = () => FILLER[Math.floor(Math.random() * FILLER.length)];
+const col3 = () => [filler(), filler(), filler()];
+
+const NUDGE_COLS = [1, 2, 3];
+const NUDGE_DURATION = 480;
+
+const reelSet = new ReelSetBuilder()
+  .reels(5)
+  .visibleSymbols(3)
+  .symbolSize(72, 72)
+  .symbolGap(4, 4)
+  .symbols((r) => {
+    for (const sym of SYMBOLS) {
+      r.register(sym.id, CardSymbol, {
+        color: sym.color,
+        label: sym.label,
+        textColor: sym.textColor,
+      });
+    }
+  })
+  .speed('normal', SpeedPresets.NORMAL)
+  .ticker(app.ticker)
+  .build();
+
+reelSet.events.on('nudge:start', (info) => {
+  console.log(`[par] nudge:start reel=${info.reelIndex}`);
+});
+reelSet.events.on('nudge:complete', (info) => {
+  console.log(`[par] nudge:complete reel=${info.reelIndex}`);
+});
+
+return {
+  reelSet,
+  onSpin: async () => {
+    const p = reelSet.spin();
+    await new Promise((resolve) => setTimeout(resolve, 220));
+    reelSet.setResult([col3(), col3(), col3(), col3(), col3()]);
+    await p;
+
+    // Let the eye settle on the landed board before the nudges begin.
+    await new Promise((resolve) => setTimeout(resolve, 400));
+
+    // PARALLEL — every call fires synchronously; `Promise.all` only waits
+    // for the slowest one to finish. Total wall time = NUDGE_DURATION.
+    await Promise.all(
+      NUDGE_COLS.map((col) =>
+        reelSet.nudge(col, {
+          distance: 1,
+          direction: 'down',
+          incoming: ['wild'],
+          duration: NUDGE_DURATION,
+        }),
+      ),
+    );
+  },
+};
+```
+
+### nudge-sequential
+URL: https://pixi-reels.schmooky.dev/recipes/nudge-sequential/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//                   WILD_CARD, app
+
+// SEQUENTIAL nudges — each reel waits for the previous reel's nudge to
+// land before starting. Reads as three deliberate beats; players can
+// follow each reveal individually. Total time = N * duration.
+
+const SYMBOLS = [...CARD_DECK, WILD_CARD];
+const FILLER = ['7', '8', '9', '10', 'J'];
+const filler = () => FILLER[Math.floor(Math.random() * FILLER.length)];
+const col3 = () => [filler(), filler(), filler()];
+
+const NUDGE_COLS = [1, 2, 3];
+const NUDGE_DURATION = 480;
+
+const reelSet = new ReelSetBuilder()
+  .reels(5)
+  .visibleSymbols(3)
+  .symbolSize(72, 72)
+  .symbolGap(4, 4)
+  .symbols((r) => {
+    for (const sym of SYMBOLS) {
+      r.register(sym.id, CardSymbol, {
+        color: sym.color,
+        label: sym.label,
+        textColor: sym.textColor,
+      });
+    }
+  })
+  .speed('normal', SpeedPresets.NORMAL)
+  .ticker(app.ticker)
+  .build();
+
+reelSet.events.on('nudge:start', (info) => {
+  console.log(`[seq] nudge:start reel=${info.reelIndex}`);
+});
+reelSet.events.on('nudge:complete', (info) => {
+  console.log(`[seq] nudge:complete reel=${info.reelIndex}`);
+});
+
+return {
+  reelSet,
+  onSpin: async () => {
+    const p = reelSet.spin();
+    await new Promise((resolve) => setTimeout(resolve, 220));
+    reelSet.setResult([col3(), col3(), col3(), col3(), col3()]);
+    await p;
+
+    // Let the eye settle on the landed board before the nudges begin.
+    await new Promise((resolve) => setTimeout(resolve, 400));
+
+    // SEQUENTIAL — each `await` blocks the next iteration until this
+    // reel's tween finishes. Total wall time = NUDGE_COLS.length * NUDGE_DURATION.
+    for (const col of NUDGE_COLS) {
+      await reelSet.nudge(col, {
+        distance: 1,
+        direction: 'down',
+        incoming: ['wild'],
+        duration: NUDGE_DURATION,
+      });
+    }
+  },
+};
+```
+
+### nudge-skip
+URL: https://pixi-reels.schmooky.dev/recipes/nudge-skip/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//                   WILD_CARD, app
+
+// SKIP NUDGE pattern.
+//
+// The handler runs a deliberately slow 1500ms-per-reel sequential nudge.
+// While it's mid-tween the spin button morphs into a skip button — one
+// tap calls `reelSet.skipNudge()` which fast-forwards the active tween
+// to its landed state. The `nudge()` promise still resolves normally,
+// so the consumer's success path (win re-detect, spotlight, whatever)
+// runs unchanged — only the animation got cut short.
+
+const SYMBOLS = [...CARD_DECK, WILD_CARD];
+const FILLER = ['7', '8', '9', '10', 'J'];
+const filler = () => FILLER[Math.floor(Math.random() * FILLER.length)];
+const col3 = () => [filler(), filler(), filler()];
+
+const NUDGE_COLS = [1, 2, 3];
+const NUDGE_DURATION = 1500;
+
+const reelSet = new ReelSetBuilder()
+  .reels(5)
+  .visibleSymbols(3)
+  .symbolSize(72, 72)
+  .symbolGap(4, 4)
+  .symbols((r) => {
+    for (const sym of SYMBOLS) {
+      r.register(sym.id, CardSymbol, {
+        color: sym.color,
+        label: sym.label,
+        textColor: sym.textColor,
+      });
+    }
+  })
+  .speed('normal', SpeedPresets.NORMAL)
+  .ticker(app.ticker)
+  .build();
+
+return {
+  reelSet,
+  onSpin: async () => {
+    const p = reelSet.spin();
+    await new Promise((resolve) => setTimeout(resolve, 220));
+    reelSet.setResult([col3(), col3(), col3(), col3(), col3()]);
+    await p;
+    await new Promise((resolve) => setTimeout(resolve, 320));
+
+    // Sequential nudges, each 1.5s long. Tap the canvas button during
+    // any of them to fast-forward — the loop's `await` resolves
+    // immediately at that tween's landed state and the loop continues
+    // with the next reel.
+    for (const col of NUDGE_COLS) {
+      await reelSet.nudge(col, {
+        distance: 1,
+        direction: 'down',
+        incoming: ['wild'],
+        duration: NUDGE_DURATION,
+      });
+    }
+  },
+  // No `onSkip` override needed — the RecipeRunner's built-in fallback
+  // detects an in-flight nudge and calls `reelSet.skipNudge()` for us.
+  // The recipe deliberately leaves the default behaviour in place so
+  // readers can copy the minimal pattern.
+};
+```
+
+### nudge-spotlight
+URL: https://pixi-reels.schmooky.dev/recipes/nudge-spotlight/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//                   WILD_CARD, app
+
+// NUDGE → SPOTLIGHT pattern.
+//
+// The handler lands a flat near-miss, nudges three reels down by one so
+// the centre row turns into WILD-WILD-WILD, then runs SymbolSpotlight on
+// the new winning line. Demonstrates the canonical "rescue spin via
+// nudge, then celebrate" beat.
+
+const SYMBOLS = [...CARD_DECK, WILD_CARD];
+const FILLER = ['7', '8', '9', '10', 'J'];
+const filler = () => FILLER[Math.floor(Math.random() * FILLER.length)];
+const col3 = () => [filler(), filler(), filler()];
+
+const NUDGE_COLS = [1, 2, 3];
+const NUDGE_DURATION = 380;
+const WIN_ROW = 0; // After down-nudge, incoming[0] lands at visible row 0.
+
+const reelSet = new ReelSetBuilder()
+  .reels(5)
+  .visibleSymbols(3)
+  .symbolSize(72, 72)
+  .symbolGap(4, 4)
+  .symbols((r) => {
+    for (const sym of SYMBOLS) {
+      r.register(sym.id, CardSymbol, {
+        color: sym.color,
+        label: sym.label,
+        textColor: sym.textColor,
+      });
+    }
+  })
+  .speed('normal', SpeedPresets.NORMAL)
+  .ticker(app.ticker)
+  .build();
+
+return {
+  reelSet,
+  onSpin: async () => {
+    // 1. Land on a near-miss: no wilds anywhere.
+    const p = reelSet.spin();
+    await new Promise((resolve) => setTimeout(resolve, 220));
+    reelSet.setResult([col3(), col3(), col3(), col3(), col3()]);
+    await p;
+    await new Promise((resolve) => setTimeout(resolve, 320));
+
+    // 2. Parallel nudge of the middle three reels — `wild` lands at the
+    //    top of each nudged column. After this, visible row 0 reads
+    //    [..., wild, wild, wild, ...].
+    await Promise.all(
+      NUDGE_COLS.map((col) =>
+        reelSet.nudge(col, {
+          distance: 1,
+          direction: 'down',
+          incoming: ['wild'],
+          duration: NUDGE_DURATION,
+        }),
+      ),
+    );
+
+    // 3. Spotlight the new win line. `spotlight.show` re-parents the
+    //    winning symbols above the reel mask, dims the rest of the
+    //    viewport, and runs each symbol's `playWin()` animation. Resolves
+    //    once the animation chain completes — at which point `hide()`
+    //    returns the symbols to their reels.
+    const winners = NUDGE_COLS.map((col) => ({ reelIndex: col, row: WIN_ROW }));
+    await reelSet.spotlight.show(winners, {
+      dimAmount: 0.6,
+      playWinAnimation: true,
+    });
+    reelSet.spotlight.hide();
+  },
+};
+```
+
+### nudge-stagger
+URL: https://pixi-reels.schmooky.dev/recipes/nudge-stagger/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//                   WILD_CARD, app
+
+// STAGGER NUDGE pattern.
+//
+// Promise.all with per-call `startDelay` produces a wave effect: every
+// reel runs its own tween concurrently, but each starts at a different
+// time. Cleaner than a sequential loop (each reel doesn't have to wait
+// for the previous to fully land), more visible than parallel (reels
+// kick off in sequence so the eye can follow the wave).
+
+const SYMBOLS = [...CARD_DECK, WILD_CARD];
+const FILLER = ['7', '8', '9', '10', 'J'];
+const filler = () => FILLER[Math.floor(Math.random() * FILLER.length)];
+const col3 = () => [filler(), filler(), filler()];
+
+const NUDGE_COLS = [0, 1, 2, 3, 4];
+const NUDGE_DURATION = 520;
+const STAGGER_MS = 90;
+
+const reelSet = new ReelSetBuilder()
+  .reels(5)
+  .visibleSymbols(3)
+  .symbolSize(72, 72)
+  .symbolGap(4, 4)
+  .symbols((r) => {
+    for (const sym of SYMBOLS) {
+      r.register(sym.id, CardSymbol, {
+        color: sym.color,
+        label: sym.label,
+        textColor: sym.textColor,
+      });
+    }
+  })
+  .speed('normal', SpeedPresets.NORMAL)
+  .ticker(app.ticker)
+  .build();
+
+return {
+  reelSet,
+  onSpin: async () => {
+    const p = reelSet.spin();
+    await new Promise((resolve) => setTimeout(resolve, 220));
+    reelSet.setResult([col3(), col3(), col3(), col3(), col3()]);
+    await p;
+    await new Promise((resolve) => setTimeout(resolve, 320));
+
+    // All five reels dispatch synchronously inside Promise.all; each one's
+    // tween is deferred by `startDelay`. Total wall time:
+    //   startDelay of last reel + duration = 4*90 + 520 = 880ms.
+    // (Versus 5 * 520 = 2600ms for sequential or 520ms for fully parallel.)
+    await Promise.all(
+      NUDGE_COLS.map((col, i) =>
+        reelSet.nudge(col, {
+          distance: 1,
+          direction: 'down',
+          incoming: ['wild'],
+          duration: NUDGE_DURATION,
+          startDelay: i * STAGGER_MS,
+        }),
+      ),
+    );
+  },
+};
+```
+
+### nudge-tail-reveal
+URL: https://pixi-reels.schmooky.dev/recipes/nudge-tail-reveal/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, app
+
+// TAIL-REVEAL pattern.
+//
+// Big symbol lands fully visible. We nudge it UP by 1 so the anchor
+// crosses into bufferAbove — only the bottom cell of the block
+// remains in the visible window ("tail visible"). The engine's
+// `_finalizeFrame` sizes the anchor to span the whole block even
+// though it lives above visible, so the visible portion renders as
+// the bottom of the sprite, masked at the top edge.
+//
+// A beat later we nudge DOWN by 1 to bring the full block back into
+// view. The classic "the player sees the tail of the wild peeking in,
+// then nudges to reveal it fully" UX.
+
+const MEGA = { id: 'mega', color: 0xff8c42, label: 'MEGA', textColor: 0x4a1d00, w: 1, h: 2 };
+const REELS = 5;
+const ROWS = 3;
+const SIZE = 80;
+const GAP = 4;
+
+const reelSet = new ReelSetBuilder()
+  .reels(REELS)
+  .visibleSymbols(ROWS)
+  .symbolSize(SIZE, SIZE)
+  .symbolGap(GAP, GAP)
+  .symbols((registry) => {
+    for (const card of CARD_DECK) {
+      registry.register(card.id, CardSymbol, {
+        color: card.color, label: card.label, textColor: card.textColor,
+      });
+    }
+    registry.register(MEGA.id, CardSymbol, {
+      color: MEGA.color, label: MEGA.label, textColor: MEGA.textColor,
+    });
+  })
+  .weights(Object.fromEntries(CARD_DECK.map((c, i) => [c.id, 12 - i])))
+  .symbolData({ [MEGA.id]: { weight: 0, zIndex: 5, size: { w: MEGA.w, h: MEGA.h } } })
+  .speed('normal', { ...SpeedPresets.NORMAL, bounceDistance: 0, bounceDuration: 0 })
+  .ticker(app.ticker)
+  .build();
+
+const FILLER_IDS = ['7', '8', '9', '10', 'J'];
+const filler = () => FILLER_IDS[Math.floor(Math.random() * FILLER_IDS.length)];
+const col3 = () => [filler(), filler(), filler()];
+
+return {
+  reelSet,
+  onSpin: async () => {
+    // 1. Land 1x2 MEGA anchored at column 2, row 0. Block fills rows 0+1.
+    const grid = [col3(), col3(), [MEGA.id, MEGA.id, filler()], col3(), col3()];
+    const p = reelSet.spin();
+    await new Promise((r) => setTimeout(r, 220));
+    reelSet.setResult(grid);
+    await p;
+    await new Promise((r) => setTimeout(r, 500));
+
+    // 2. Nudge UP by 1. anchor at strip[1] → strip[0] (bufferAbove).
+    //    Stub follows: strip[2] → strip[1] (visible row 0).
+    //    Block is now "tail visible": top in bufferAbove (clipped), bottom
+    //    showing at row 0. `_finalizeFrame` sizes the anchor sprite to the
+    //    full block height; the mask clips the half above visible.
+    await reelSet.nudge(2, {
+      distance: 1,
+      direction: 'up',
+      incoming: [filler()],
+      duration: 540,
+    });
+    await new Promise((r) => setTimeout(r, 800));
+
+    // 3. Nudge DOWN by 1 to fully reveal the block at rows 0+1 again.
+    //    The classic "nudge to reveal the wild" beat.
+    await reelSet.nudge(2, {
+      distance: 1,
+      direction: 'down',
+      incoming: [filler()],
+      duration: 540,
+    });
+  },
+};
+```
+
+### nudge
+URL: https://pixi-reels.schmooky.dev/recipes/nudge/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//                   WILD_CARD, app
+
+// Classic UK fruit-machine nudge demo. After every spin lands, the engine
+// fires two nudges in sequence:
+//   1. Reel 1 down by 1 — a wild slides in from the top.
+//   2. Reel 3 up by 1   — a wild slides in from the bottom.
+// One press shows both directions in one beat.
+
+const SYMBOLS = [...CARD_DECK, WILD_CARD];
+
+const FILLER = ['7', '8', '9', '10', 'J'];
+const filler = () => FILLER[Math.floor(Math.random() * FILLER.length)];
+const col3 = () => [filler(), filler(), filler()];
+
+const reelSet = new ReelSetBuilder()
+  .reels(5)
+  .visibleSymbols(3)
+  .symbolSize(90, 90)
+  .symbolGap(4, 4)
+  .symbols((r) => {
+    for (const sym of SYMBOLS) {
+      r.register(sym.id, CardSymbol, {
+        color: sym.color,
+        label: sym.label,
+        textColor: sym.textColor,
+      });
+    }
+  })
+  .speed('normal', SpeedPresets.NORMAL)
+  .speed('turbo', SpeedPresets.TURBO)
+  .ticker(app.ticker)
+  .build();
+
+// Log every nudge to the recipe console — useful for observing the
+// `nudge:start` / `nudge:complete` pair.
+reelSet.events.on('nudge:start', (info) => {
+  console.log('[nudge:start]', info);
+});
+reelSet.events.on('nudge:complete', (info) => {
+  console.log('[nudge:complete]', info);
+});
+
+return {
+  reelSet,
+  onSpin: async () => {
+    // Land on a flat near-miss — no wilds visible anywhere.
+    const p = reelSet.spin();
+    await new Promise((resolve) => setTimeout(resolve, 220));
+    reelSet.setResult([col3(), col3(), col3(), col3(), col3()]);
+    await p;
+
+    // Give the eye a beat to register the landed board.
+    await new Promise((resolve) => setTimeout(resolve, 500));
+
+    // 1. Nudge reel 1 DOWN by 1 — `wild` enters from the top.
+    await reelSet.nudge(1, {
+      distance: 1,
+      direction: 'down',
+      incoming: ['wild'],
+      duration: 420,
+    });
+
+    // 2. Nudge reel 3 UP by 1 — `wild` enters from the bottom.
+    await reelSet.nudge(3, {
+      distance: 1,
+      direction: 'up',
+      incoming: ['wild'],
+      duration: 420,
+    });
   },
 };
 ```

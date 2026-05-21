@@ -295,6 +295,7 @@ export class Reel implements Disposable {
       config.symbolGapY,
       config.bufferAbove,
       config.visibleRows,
+      config.bufferBelow,
       (symbol, row, direction) => this._onSymbolWrapped(symbol, row, direction),
     );
 
@@ -1031,7 +1032,7 @@ export class Reel implements Disposable {
     }
 
     // Update motion: new slot height + bounds.
-    this.motion.reshape(newSymbolHeight, this._symbolGapY, bufferAbove, newVisibleRows);
+    this.motion.reshape(newSymbolHeight, this._symbolGapY, bufferAbove, newVisibleRows, bufferBelow);
     this.motion.snapToGrid();
     this.refreshZIndex();
   }
