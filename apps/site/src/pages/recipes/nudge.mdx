@@ -1,0 +1,126 @@
+---
+layout: ../../layouts/Recipe.astro
+title: How to nudge a reel
+description: Shift one reel down or up by N positions after it has landed — the classic UK fruit-machine nudge, with the reveal symbols supplied by the caller.
+tags: [nudge, fruit-machine, recent]
+steps:
+  - Wait for spin() to land
+  - Call reelSet.nudge(col, { distance, direction, incoming }) — incoming is required, top-down order of the new visible positions
+  - Await the promise to read the new visible column for re-running win detection
+  - For multi-reel beats, wrap several nudge() calls in Promise.all([...])
+apis:
+  - ReelSet.nudge
+  - NudgeOptions
+  - nudge:start
+  - nudge:complete
+---
+
+import code from '../../recipes/nudge.recipe.ts?raw';
+import { RecipeRunner } from '../../components/RecipeRunner.tsx';
+
+<RecipeRunner code={code} client:only="react" />
+
+## The minimum code
+
+```ts
+await reelSet.spin();
+await reelSet.setResult(grid);
+
+// Down nudge — `wild` slides in from the top and becomes the new top row.
+await reelSet.nudge(2, {
+  distance: 1,
+  direction: 'down',
+  incoming: ['wild'],
+});
+
+// Up nudge — `wild` slides in from the bottom and becomes the new bottom row.
+await reelSet.nudge(3, {
+  distance: 1,
+  direction: 'up',
+  incoming: ['wild'],
+});
+```
+
+## `incoming` is top-down — always
+
+The `incoming` array describes the **final visible position** of the new
+symbols, top-to-bottom — not the order they enter the screen. The engine
+handles the wrap mechanics internally so the caller can think in terms of
+"what does the player see after."
+
+For a 3-row column landed on `['A', 'B', 'C']`:
+
+| Call | New visible (top → bottom) |
+| --- | --- |
+| `nudge(c, { distance: 1, direction: 'down', incoming: ['X'] })` | `['X', 'A', 'B']` |
+| `nudge(c, { distance: 2, direction: 'down', incoming: ['X', 'Y'] })` | `['X', 'Y', 'A']` |
+| `nudge(c, { distance: 1, direction: 'up',   incoming: ['X'] })` | `['B', 'C', 'X']` |
+| `nudge(c, { distance: 2, direction: 'up',   incoming: ['X', 'Y'] })` | `['C', 'X', 'Y']` |
+
+## Re-detect wins after the nudge
+
+The returned promise resolves with the new visible column, which is the
+right input for a win re-detection pass:
+
+```ts
+const { symbols: newColumn } = await reelSet.nudge(2, {
+  distance: 1,
+  direction: 'down',
+  incoming: ['wild'],
+});
+
+// Either re-detect against the column you just got, or pull the full grid:
+const grid = reelSet.getVisibleGrid();
+const wins = detectWins(grid);
+if (wins.length) winPresenter.show(wins);
+```
+
+## Sequential vs parallel
+
+Sequence nudges to give each reveal its own beat; `Promise.all` them when
+multiple reels should resolve as a single beat:
+
+```ts
+// Sequential — three separate reveals.
+await reelSet.nudge(0, { distance: 1, direction: 'down', incoming: ['wild'] });
+await reelSet.nudge(1, { distance: 1, direction: 'down', incoming: ['wild'] });
+await reelSet.nudge(2, { distance: 1, direction: 'down', incoming: ['wild'] });
+
+// Parallel — one beat, every reel lands together.
+await Promise.all([
+  reelSet.nudge(0, { distance: 1, direction: 'down', incoming: ['wild'] }),
+  reelSet.nudge(1, { distance: 1, direction: 'down', incoming: ['wild'] }),
+  reelSet.nudge(2, { distance: 1, direction: 'down', incoming: ['wild'] }),
+]);
+```
+
+Each call emits its own `nudge:start` / `nudge:complete` pair, so per-reel
+SFX and HUDs work cleanly in both modes.
+
+## Test it
+
+```ts
+import { createTestReelSet, expectGrid } from 'pixi-reels';
+
+const { reelSet, spinAndLand, destroy } = createTestReelSet({
+  reels: 3, visibleRows: 3, symbolIds: ['a', 'b', 'c', 'wild'],
+});
+try {
+  await spinAndLand([
+    ['a', 'b', 'c'],
+    ['a', 'b', 'c'],
+    ['a', 'b', 'c'],
+  ]);
+  await reelSet.nudge(1, { distance: 1, direction: 'down', incoming: ['wild'] });
+  expectGrid(reelSet, [
+    ['a', 'b', 'c'],
+    ['wild', 'a', 'b'],
+    ['a', 'b', 'c'],
+  ]);
+} finally {
+  destroy();
+}
+```
+
+See the [nudge guide](/guides/nudge/) for the full event map and a
+walkthrough of when the engine wraps vs pre-places symbols.

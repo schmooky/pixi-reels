@@ -456,6 +456,20 @@ export const RECIPES: RecipeMeta[] = [
     tags: ['anticipation', 'engagement'],
   },
   {
+    slug: 'nudge',
+    group: 'tension',
+    title: 'Nudge a reel',
+    oneLiner: 'After landing, shift one reel down or up by N positions to reveal caller-supplied symbols — the classic UK fruit-machine nudge.',
+    steps: [
+      'Wait for the spin to land',
+      'Call reelSet.nudge(col, { distance, direction, incoming }) — incoming is required, top-down order of the new visible positions',
+      'Await the promise to read the new visible column for re-running win detection',
+      'For multi-reel beats, wrap several nudge() calls in Promise.all([...])',
+    ],
+    apis: ['ReelSet.nudge', 'NudgeOptions', 'nudge:start', 'nudge:complete'],
+    tags: ['nudge', 'fruit-machine', 'recent'],
+  },
+  {
     slug: 'texture-atlas-symbols',
     group: 'symbol-formats',
     title: 'Texture atlas symbols',

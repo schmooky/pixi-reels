@@ -4,6 +4,7 @@ import type { ReelSetInternalConfig, CellBounds, SymbolData, SpinOptions } from 
 import { EventEmitter } from '../events/EventEmitter.js';
 import type { ReelSetEvents, SpinResult, RunCascadeResult as RunCascadeResultBase } from '../events/ReelEvents.js';
 import { Reel, } from './Reel.js';
+import type { NudgeOptions } from './Reel.js';
 import { ReelViewport } from './ReelViewport.js';
 import { SpinController } from '../spin/SpinController.js';
 import { SpeedManager } from '../speed/SpeedManager.js';
@@ -962,6 +963,65 @@ export class ReelSet extends Container implements Disposable {
       );
     }
     this._reels[col].setSymbolAt(row, symbolId);
+  }
+
+  /**
+   * Shift a single reel by `distance` positions after it has landed, revealing
+   * caller-supplied symbols. Classic UK fruit-machine "nudge."
+   *
+   * Per-reel by design — multi-reel sync is via `Promise.all([...])` of
+   * independent calls. Each call emits its own `nudge:start` / `nudge:complete`
+   * pair on the ReelSet bus and `phase:enter('nudge')` / `phase:exit('nudge')`
+   * on the per-reel bus.
+   *
+   * Throws if:
+   *   - the reel set is currently spinning (avoid races with the spin pipeline),
+   *   - `col` is out of range,
+   *   - any visible cell on the target reel has an active pin,
+   *   - `Reel.nudge` itself rejects (bad distance / direction / incoming).
+   *
+   * @example
+   * await reelSet.spin(); // landed
+   * await reelSet.nudge(2, { distance: 1, direction: 'down', incoming: ['wild'] });
+   *
+   * @example Parallel nudges across two reels:
+   * await Promise.all([
+   *   reelSet.nudge(2, { distance: 1, direction: 'down', incoming: ['wild'] }),
+   *   reelSet.nudge(3, { distance: 1, direction: 'down', incoming: ['wild'] }),
+   * ]);
+   */
+  async nudge(col: number, options: NudgeOptions): Promise<{ symbols: string[] }> {
+    if (this._spinController.isSpinning) {
+      throw new Error('nudge: cannot nudge while a spin or refill is in progress.');
+    }
+    if (!Number.isInteger(col) || col < 0 || col >= this._reels.length) {
+      throw new RangeError(`nudge: col ${col} out of range [0, ${this._reels.length}).`);
+    }
+    // Pin overlap detection lives at the ReelSet layer (Reel can't see pins).
+    // Nudges would shift symbols out from under a pinned cell visually but
+    // leave the pin record stale — fail loudly instead.
+    for (const pin of this._pins.values()) {
+      if (pin.col === col) {
+        throw new Error(
+          `nudge: reel ${col} has an active pin at row ${pin.row}. ` +
+          `Call unpin(${col}, ${pin.row}) first if you intend to nudge through it.`,
+        );
+      }
+    }
+
+    this._events.emit('nudge:start', {
+      reelIndex: col,
+      distance: options.distance,
+      direction: options.direction,
+    });
+    const result = await this._reels[col].nudge(options);
+    this._events.emit('nudge:complete', {
+      reelIndex: col,
+      distance: options.distance,
+      direction: options.direction,
+      symbols: result.symbols,
+    });
+    return result;
   }
 
   /**

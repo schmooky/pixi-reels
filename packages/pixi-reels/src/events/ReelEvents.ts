@@ -331,6 +331,35 @@ export interface ReelSetEvents extends Record<string, unknown[]> {
    * Use this hook to stop any animations or listeners you attached.
    */
   'pin:overlayDestroyed': [pin: CellPin, overlay: unknown];
+  /**
+   * A reel-at-rest nudge just began. Fires once per `reelSet.nudge(...)` call,
+   * right before the GSAP tween starts. Listeners can cue SFX, dim a HUD, or
+   * lock other inputs for the duration of the nudge.
+   *
+   * Nudges are always per-reel — multi-reel sync is via `Promise.all([...])`
+   * of independent calls, each of which emits its own start/complete pair.
+   *
+   *   - `direction: 'down'` — symbols visually move down, new symbols enter
+   *     from the top of the visible window.
+   *   - `direction: 'up'` — opposite: symbols move up, new symbols enter
+   *     from the bottom.
+   */
+  'nudge:start': [info: {
+    reelIndex: number;
+    distance: number;
+    direction: 'up' | 'down';
+  }];
+  /**
+   * A reel-at-rest nudge finished — the strip has snapped to its post-nudge
+   * grid position. Mirror of `nudge:start`. `symbols` is the full new visible
+   * column top-to-bottom (handy for win-detection re-runs).
+   */
+  'nudge:complete': [info: {
+    reelIndex: number;
+    distance: number;
+    direction: 'up' | 'down';
+    symbols: string[];
+  }];
   'destroyed': [];
 }
 

@@ -1,0 +1,142 @@
+---
+layout: ../../layouts/Docs.astro
+title: Nudge
+section: guides
+eyebrow: Building blocks
+description: Push a reel down or up by one or more positions after it has stopped — the classic UK fruit-machine nudge.
+---
+
+A **nudge** moves a single reel by a few symbol positions *after* the spin has
+landed, revealing new symbols the caller supplies. Classic fruit-machine
+mechanic: "land a near-miss, then offer to nudge column 3 down by 1 for a
+guaranteed win."
+
+```ts
+await reelSet.spin();
+
+await reelSet.nudge(2, {
+  distance: 1,
+  direction: 'down',
+  incoming: ['wild'],
+});
+```
+
+That call shifts reel `2` down by one row. The old top row drops to the
+middle, the old middle drops to the bottom, the old bottom symbol leaves the
+visible window, and `'wild'` slides in at the new top.
+
+## The contract
+
+```ts
+interface NudgeOptions {
+  /** Number of full positions to shift. Positive integer. */
+  distance: number;
+  /**
+   *  - 'down' — symbols move down; new symbols enter from the top.
+   *            `incoming[0]` lands at the new top row.
+   *  - 'up'   — symbols move up;   new symbols enter from the bottom.
+   *            `incoming[0]` lands right below the surviving symbols;
+   *            `incoming[distance-1]` lands at the new bottom row.
+   */
+  direction: 'up' | 'down';
+  /**
+   * Symbol ids in top-down order of their FINAL visible position. The
+   * length must equal `distance` exactly — nudges are deterministic by
+   * design (the player knows what they're getting).
+   */
+  incoming: string[];
+  /** Tween duration in ms. Default: `200 * distance`. */
+  duration?: number;
+  /** GSAP ease name. Default: `'back.out(1.2)'`. */
+  ease?: string;
+}
+
+reelSet.nudge(col: number, options: NudgeOptions): Promise<{ symbols: string[] }>;
+```
+
+The promise resolves with the new visible column top-to-bottom, ready to
+feed straight into a win re-detection step.
+
+## How `incoming` lays out
+
+For a 3-row column landed on `['A', 'B', 'C']` (top, middle, bottom):
+
+| Call | New visible (top → bottom) |
+| --- | --- |
+| `nudge(c, { distance: 1, direction: 'down', incoming: ['X'] })` | `['X', 'A', 'B']` |
+| `nudge(c, { distance: 2, direction: 'down', incoming: ['X', 'Y'] })` | `['X', 'Y', 'A']` |
+| `nudge(c, { distance: 1, direction: 'up',   incoming: ['X'] })` | `['B', 'C', 'X']` |
+| `nudge(c, { distance: 2, direction: 'up',   incoming: ['X', 'Y'] })` | `['C', 'X', 'Y']` |
+
+`incoming[0]` is always the topmost NEW symbol; `incoming[distance-1]` is
+always the bottommost NEW symbol. Pre-existing symbols slide in the
+matching direction.
+
+If `distance > visibleRows`, the entire visible window is replaced and the
+extra `incoming` entries land in the off-screen buffer on the opposite
+side — useful for staging a sequence of cascade-like reveals.
+
+## Sequential vs parallel
+
+Nudges are per-reel. Drive multiple reels **sequentially** when each
+reveal should land before the next begins, or **in parallel** when they
+should resolve as a single beat:
+
+```ts
+// Sequential — three nudges, three beats.
+await reelSet.nudge(0, { distance: 1, direction: 'down', incoming: ['wild'] });
+await reelSet.nudge(1, { distance: 1, direction: 'down', incoming: ['wild'] });
+await reelSet.nudge(2, { distance: 1, direction: 'down', incoming: ['wild'] });
+
+// Parallel — one beat, all three reels nudge together.
+await Promise.all([
+  reelSet.nudge(0, { distance: 1, direction: 'down', incoming: ['wild'] }),
+  reelSet.nudge(1, { distance: 1, direction: 'down', incoming: ['wild'] }),
+  reelSet.nudge(2, { distance: 1, direction: 'down', incoming: ['wild'] }),
+]);
+```
+
+Each call emits its own `nudge:start` / `nudge:complete` pair, so a UI
+overlay or SFX cue can light up per-reel either way.
+
+## Events
+
+| Event | Payload | When |
+| --- | --- | --- |
+| `nudge:start` | `({ reelIndex, distance, direction })` | A `nudge()` call's tween is about to begin. |
+| `nudge:complete` | `({ reelIndex, distance, direction, symbols })` | The reel has snapped to its post-nudge grid; `symbols` is the new visible column. |
+| `phase:enter` (per-reel) | `('nudge')` | Mirror of `nudge:start`, scoped to the affected reel's event bus. |
+| `phase:exit` (per-reel) | `('nudge')` | Mirror of `nudge:complete`. |
+| `landed` (per-reel) | `(symbols)` | Fires after the snap — same handler that fires on a normal spin land. |
+
+```ts
+reelSet.events.on('nudge:complete', ({ reelIndex, symbols }) => {
+  console.log(`reel ${reelIndex} now reads`, symbols);
+  // Re-run win detection on `reelSet.getVisibleGrid()` here.
+});
+```
+
+## When `nudge()` throws
+
+Fail-loud, by design — silent nudges into invalid state would be impossible
+to debug. The call throws synchronously (no rejected promise) for argument
+shape errors and asynchronously for state errors:
+
+- The reel set is currently spinning, refilling, or in a cascade.
+- `col` is out of `[0, reelCount)`.
+- The target reel has an active pin (pins are positional and would go
+  stale; call `unpin(col, row)` first if you intend to nudge through).
+- `distance < 1` or not an integer.
+- `direction` is neither `'up'` nor `'down'`.
+- `incoming.length !== distance`.
+- An `incoming` id is not registered, or is a big symbol (big symbols span
+  multiple cells — they need `placeSymbols` instead).
+- The visible window currently contains a big symbol or OCCUPIED cell on
+  the target reel — same reason.
+
+Other reels are never touched by a nudge call; spotlights, pins on
+unrelated reels, and other reels' symbols all carry through.
+
+## Recipes
+
+- [Fruit-machine nudge](/recipes/nudge/) — the minimum runnable demo.

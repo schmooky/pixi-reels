@@ -138,6 +138,8 @@ See the [spin-then-cascade recipe](/recipes/spin-then-cascade/).
 | `shape:changed` | `(rowsPerReel)` | MultiWays `setShape(...)` accepted |
 | `adjust:start` | `({ reelIndex, fromRows, toRows })` | AdjustPhase entered for a reel |
 | `adjust:complete` | `({ reelIndex })` | AdjustPhase finished |
+| `nudge:start` | `({ reelIndex, distance, direction })` | `reelSet.nudge(...)` tween about to begin |
+| `nudge:complete` | `({ reelIndex, distance, direction, symbols })` | Nudged reel has snapped to its new grid position |
 | `destroyed` | — | `destroy()` called |
 
 ## Deeper dive

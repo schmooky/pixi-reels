@@ -28,6 +28,7 @@ export const GUIDES_NAV: NavSection[] = [
       { label: 'MultiWays', href: '/guides/multiways/' },
       { label: 'Big symbols', href: '/guides/big-symbols/' },
       { label: 'Buffer indexing', href: '/guides/buffer-indexing/' },
+      { label: 'Nudge', href: '/guides/nudge/' },
       { label: 'Speed modes', href: '/guides/speed-modes/' },
       { label: 'Win animations', href: '/guides/win-animations/' },
     ],

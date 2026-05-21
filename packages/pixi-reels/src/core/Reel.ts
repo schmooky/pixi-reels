@@ -11,6 +11,49 @@ import type { RandomSymbolProvider } from '../frame/RandomSymbolProvider.js';
 import type { ReelViewport } from './ReelViewport.js';
 import type { SpinningMode } from '../spin/modes/SpinningMode.js';
 import { StandardMode } from '../spin/modes/StandardMode.js';
+import { getGsap } from '../utils/gsapRef.js';
+
+/**
+ * Options for `Reel.nudge()` / `ReelSet.nudge()` — a post-stop reposition
+ * that shifts the reel by `distance` symbol positions and reveals new
+ * caller-supplied symbols. Modelled on classic UK fruit-machine nudges.
+ *
+ * Nudges run only while the reel is at rest (post-stop). Calling on a
+ * moving reel throws.
+ */
+export interface NudgeOptions {
+  /**
+   * Number of full symbol positions to shift. Must be a positive integer.
+   * `incoming.length` must equal this exactly.
+   */
+  distance: number;
+  /**
+   * Travel direction.
+   *
+   *   - `'down'` — symbols visually move down the screen; the new symbols
+   *     enter from the top of the visible window. `incoming[0]` ends up at
+   *     the new top row.
+   *   - `'up'` — symbols move up; new symbols enter from the bottom.
+   *     `incoming[0]` ends up at the topmost NEW row (right below the
+   *     surviving symbols), `incoming[distance-1]` becomes the new bottom.
+   */
+  direction: 'up' | 'down';
+  /**
+   * Symbol ids that appear in the new visible window, in top-down order of
+   * their final visible position. Length must equal `distance`. The engine
+   * pre-places these in the buffer (where it fits) and feeds the rest
+   * through the wrap pipeline as the strip moves.
+   *
+   * If `distance > visibleRows`, the trailing `incoming` entries beyond
+   * the visible window end up in the opposite buffer (still on-strip,
+   * available to future nudges or spins) rather than being dropped.
+   */
+  incoming: string[];
+  /** Total animation duration in ms. Defaults to `200 * distance`. */
+  duration?: number;
+  /** GSAP easing function name. Defaults to `'back.out(1.2)'`. */
+  ease?: string;
+}
 
 /**
  * Internal placeholder for OCCUPIED cells inside a big-symbol block. Has
@@ -112,6 +155,15 @@ export class Reel implements Disposable {
   private _symbolGapX: number;
   private _isDestroyed = false;
   private _isStopping = false;
+  private _isNudging = false;
+  /**
+   * Symbol-id queue consulted by `_onSymbolWrapped` during a nudge. Each
+   * wrap pulls one id from the front; when empty (or `null`), the wrap
+   * falls back to `stopSequencer` (if `_isStopping`) or `_randomProvider`.
+   *
+   * Populated by `nudge()` and cleared once the tween completes.
+   */
+  private _nudgeQueue: string[] | null = null;
   /**
    * Internal stub instances reused for OCCUPIED cells inside a big-symbol
    * block. Allocated on demand (one per concurrent OCCUPIED cell on this
@@ -208,6 +260,11 @@ export class Reel implements Disposable {
 
   set isStopping(value: boolean) {
     this._isStopping = value;
+  }
+
+  /** True while a `nudge()` tween is in flight on this reel. */
+  get isNudging(): boolean {
+    return this._isNudging;
   }
 
   get bufferAbove(): number {
@@ -421,10 +478,10 @@ export class Reel implements Disposable {
    * caller-facing surface that also throws on pinned cells.
    */
   setSymbolAt(visibleRow: number, symbolId: string): void {
-    if (this.speed !== 0 || this._isStopping) {
+    if (this.speed !== 0 || this._isStopping || this._isNudging) {
       throw new Error(
-        `setSymbolAt: cannot swap mid-spin (speed=${this.speed}, isStopping=${this._isStopping}). ` +
-        `Wait for the spin to land before calling, or use the result grid via setResult().`,
+        `setSymbolAt: cannot swap mid-motion (speed=${this.speed}, isStopping=${this._isStopping}, isNudging=${this._isNudging}). ` +
+        `Wait for the spin or nudge to land before calling, or use the result grid via setResult().`,
       );
     }
     if (!Number.isInteger(visibleRow) || visibleRow < 0 || visibleRow >= this._visibleRows) {
@@ -462,6 +519,169 @@ export class Reel implements Disposable {
       );
     }
     this._replaceSymbol(arrayIndex, symbolId);
+  }
+
+  /**
+   * Shift the reel by `distance` symbol positions, animating the strip with
+   * a GSAP tween and revealing caller-supplied `incoming` symbols. The reel
+   * must be at rest (post-stop) — throws otherwise.
+   *
+   * The wrap pipeline drives identity changes during the tween: any incoming
+   * symbol whose final destination is within the reach of the current
+   * `bufferAbove` / `bufferBelow` is pre-placed; the rest stream through the
+   * wrap callback. From the caller's perspective `incoming` is always the
+   * top-down list of NEW visible positions — the engine handles whether
+   * each one comes from buffer pre-set or a live wrap.
+   *
+   * Throws if:
+   *   - the reel is spinning, stopping, or already nudging,
+   *   - `distance < 1`, `direction` is not `'up'`/`'down'`, or
+   *     `incoming.length !== distance`,
+   *   - any `incoming` id is unregistered or is a big symbol,
+   *   - the current visible window contains a big-symbol anchor or OCCUPIED
+   *     cell. Nudges don't support big symbols on this reel.
+   *
+   * Resolves with `{ symbols }` — the new visible column top-to-bottom.
+   */
+  async nudge(options: NudgeOptions): Promise<{ symbols: string[] }> {
+    if (this._isDestroyed) {
+      throw new Error('nudge: reel has been destroyed.');
+    }
+    if (this.speed !== 0 || this._isStopping || this._isNudging) {
+      throw new Error(
+        `nudge: cannot nudge a reel in motion (speed=${this.speed}, isStopping=${this._isStopping}, isNudging=${this._isNudging}). ` +
+        `Wait for the spin or previous nudge to land first.`,
+      );
+    }
+    const { distance, direction, incoming } = options;
+    if (!Number.isInteger(distance) || distance < 1) {
+      throw new Error(`nudge: distance must be a positive integer, got ${distance}.`);
+    }
+    if (direction !== 'up' && direction !== 'down') {
+      throw new Error(`nudge: direction must be 'up' or 'down', got ${String(direction)}.`);
+    }
+    if (!Array.isArray(incoming) || incoming.length !== distance) {
+      throw new Error(
+        `nudge: incoming must be an array of exactly ${distance} symbol id(s), got length ${incoming?.length}.`,
+      );
+    }
+    for (const id of incoming) {
+      if (!Object.prototype.hasOwnProperty.call(this._symbolsData, id)) {
+        throw new Error(`nudge: incoming symbol '${id}' is not registered. Register it via builder.symbols(...).`);
+      }
+      const meta = this._symbolsData[id];
+      if (meta?.size && (meta.size.w > 1 || meta.size.h > 1)) {
+        throw new Error(
+          `nudge: incoming symbol '${id}' is a big symbol (${meta.size.w}x${meta.size.h}). ` +
+          `Big symbols are not supported in nudges.`,
+        );
+      }
+    }
+    for (let row = 0; row < this._visibleRows; row++) {
+      if (this._occupancy[row]) {
+        throw new Error(
+          `nudge: visible row ${row} is part of a big-symbol block (anchor at row ${this._occupancy[row]!.anchorRow}). ` +
+          `Big symbols are not supported in nudges.`,
+        );
+      }
+      const sym = this.symbols[this._bufferAbove + row];
+      const meta = this._symbolsData[sym.symbolId];
+      if (meta?.size && (meta.size.w > 1 || meta.size.h > 1)) {
+        throw new Error(
+          `nudge: visible row ${row} holds big symbol '${sym.symbolId}' (${meta.size.w}x${meta.size.h}). ` +
+          `Big symbols are not supported in nudges.`,
+        );
+      }
+    }
+
+    const duration = options.duration ?? 200 * distance;
+    const ease = options.ease ?? 'back.out(1.2)';
+    const slotH = this.motion.slotHeight;
+    const bufferAbove = this._bufferAbove;
+    const bufferBelow = this.bufferBelow;
+
+    // Pre-place incoming into the appropriate buffer, build the wrap queue
+    // for the rest. See guides/nudge.mdx for a derivation of the formulas.
+    if (direction === 'down') {
+      const bufferSet = Math.min(distance, bufferAbove);
+      for (let i = 0; i < bufferSet; i++) {
+        const stripIdx = bufferAbove - bufferSet + i;
+        const incIdx = distance - bufferSet + i;
+        this._replaceSymbol(stripIdx, incoming[incIdx]);
+      }
+      const queue: string[] = [];
+      const wrapsToVisible = distance - bufferAbove;
+      for (let k = 1; k <= distance; k++) {
+        if (k <= wrapsToVisible) {
+          queue.push(incoming[wrapsToVisible - k]);
+        } else {
+          queue.push(this._randomProvider.next());
+        }
+      }
+      this._nudgeQueue = queue;
+    } else {
+      const bufferSet = Math.min(distance, bufferBelow);
+      for (let i = 0; i < bufferSet; i++) {
+        const stripIdx = bufferAbove + this._visibleRows + i;
+        this._replaceSymbol(stripIdx, incoming[i]);
+      }
+      const queue: string[] = [];
+      const wrapsToVisible = distance - bufferBelow;
+      for (let k = 1; k <= distance; k++) {
+        if (k <= wrapsToVisible) {
+          queue.push(incoming[bufferBelow + k - 1]);
+        } else {
+          queue.push(this._randomProvider.next());
+        }
+      }
+      this._nudgeQueue = queue;
+    }
+
+    // Re-snap so pre-set symbols sit on the grid before the tween begins.
+    this.motion.snapToGrid();
+    this.refreshZIndex();
+
+    this._isNudging = true;
+    this.events.emit('phase:enter', 'nudge');
+
+    const totalDelta = direction === 'down' ? distance * slotH : -distance * slotH;
+    // Cap per-tick displacement at < half a slot so ReelMotion fires exactly
+    // one wrap per `displace` call (mirrors SpinningMode.computeDeltaY).
+    const stepLimit = slotH * 0.45;
+
+    await new Promise<void>((resolve) => {
+      const state = { p: 0 };
+      let lastDisplaced = 0;
+      getGsap().to(state, {
+        p: 1,
+        duration: duration / 1000,
+        ease,
+        onUpdate: () => {
+          const target = state.p * totalDelta;
+          let remaining = target - lastDisplaced;
+          while (Math.abs(remaining) > stepLimit) {
+            const step = remaining > 0 ? stepLimit : -stepLimit;
+            this.motion.displace(step);
+            remaining -= step;
+          }
+          if (remaining !== 0) {
+            this.motion.displace(remaining);
+          }
+          lastDisplaced = target;
+        },
+        onComplete: () => {
+          this.snapToGrid();
+          this._isNudging = false;
+          this._nudgeQueue = null;
+          this.events.emit('phase:exit', 'nudge');
+          resolve();
+        },
+      });
+    });
+
+    const symbols = this.getVisibleSymbols();
+    this.events.emit('landed', symbols);
+    return { symbols };
   }
 
   /**
@@ -604,6 +824,8 @@ export class Reel implements Disposable {
 
   destroy(): void {
     if (this._isDestroyed) return;
+    this._nudgeQueue = null;
+    this._isNudging = false;
     for (const symbol of this.symbols) {
       if (symbol instanceof OccupiedStub) {
         symbol.destroy();
@@ -692,7 +914,14 @@ export class Reel implements Disposable {
 
   private _onSymbolWrapped(symbol: ReelSymbol, row: number, direction: 'up' | 'down'): void {
     let newSymbolId: string;
-    if (this._isStopping && this.stopSequencer.hasRemaining) {
+    if (this._nudgeQueue && this._nudgeQueue.length > 0) {
+      // Nudge queue is exhaustively pre-built by `nudge()` to cover every
+      // wrap fired during the tween (caller-supplied incoming first, then
+      // random padding for wraps that target the off-screen buffer). Always
+      // wins over the stop sequencer so a queued slam-stop on a stale spin
+      // can't bleed symbols into a fresh nudge.
+      newSymbolId = this._nudgeQueue.shift()!;
+    } else if (this._isStopping && this.stopSequencer.hasRemaining) {
       newSymbolId = this.stopSequencer.next();
     } else {
       newSymbolId = this._randomProvider.next();
