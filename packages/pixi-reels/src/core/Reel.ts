@@ -217,12 +217,6 @@ export class Reel implements Disposable {
    */
   private _nudgeReject: ((err: Error) => void) | null = null;
   /**
-   * The final-frame snapshot the active nudge is targeting. Lets
-   * `skipNudge()` jump straight to the landed state without re-deriving
-   * positions from the half-tweened strip. `null` between nudges.
-   */
-  private _nudgeFinalize: (() => void) | null = null;
-  /**
    * Internal stub instances reused for OCCUPIED cells inside a big-symbol
    * block. Allocated on demand (one per concurrent OCCUPIED cell on this
    * reel), never pooled through `SymbolFactory`. The views are invisible —
@@ -840,11 +834,8 @@ export class Reel implements Disposable {
       this._nudgeQueue = null;
       this._nudgeTween = null;
       this._nudgeReject = null;
-      this._nudgeFinalize = null;
       this.events.emit('phase:exit', 'nudge');
     };
-
-    this._nudgeFinalize = finalize;
 
     try {
       await new Promise<void>((resolve, reject) => {
@@ -1083,7 +1074,6 @@ export class Reel implements Disposable {
       this._nudgeReject = null;
     }
     this._nudgeQueue = null;
-    this._nudgeFinalize = null;
     this._isNudging = false;
     for (const symbol of this.symbols) {
       if (symbol instanceof OccupiedStub) {
