@@ -16,6 +16,8 @@ apis:
 ---
 
 import code from '../../recipes/nudge.recipe.ts?raw';
+import sequentialCode from '../../recipes/nudge-sequential.recipe.ts?raw';
+import parallelCode from '../../recipes/nudge-parallel.recipe.ts?raw';
 import { RecipeRunner } from '../../components/RecipeRunner.tsx';
 
 <RecipeRunner code={code} client:only="react" />
@@ -77,25 +79,63 @@ if (wins.length) winPresenter.show(wins);
 
 ## Sequential vs parallel
 
-Sequence nudges to give each reveal its own beat; `Promise.all` them when
-multiple reels should resolve as a single beat:
+Nudges are always per-reel — there's no batched API. Multi-reel beats are
+just multiple `nudge(...)` calls, and the orchestration is entirely yours:
+`await` them one at a time for a deliberate beat, or `Promise.all([...])`
+them for a single synchronised one. Same engine output, same events fire,
+only the pacing changes.
+
+Each canvas below lands the same flat board and then nudges reels 1, 2,
+and 3 down by one. The only difference is whether the calls await each
+other.
+
+### Sequential — three separate beats
+
+<RecipeRunner code={sequentialCode} client:only="react" />
 
 ```ts
-// Sequential — three separate reveals.
-await reelSet.nudge(0, { distance: 1, direction: 'down', incoming: ['wild'] });
-await reelSet.nudge(1, { distance: 1, direction: 'down', incoming: ['wild'] });
-await reelSet.nudge(2, { distance: 1, direction: 'down', incoming: ['wild'] });
-
-// Parallel — one beat, every reel lands together.
-await Promise.all([
-  reelSet.nudge(0, { distance: 1, direction: 'down', incoming: ['wild'] }),
-  reelSet.nudge(1, { distance: 1, direction: 'down', incoming: ['wild'] }),
-  reelSet.nudge(2, { distance: 1, direction: 'down', incoming: ['wild'] }),
-]);
+for (const col of [1, 2, 3]) {
+  await reelSet.nudge(col, {
+    distance: 1,
+    direction: 'down',
+    incoming: ['wild'],
+    duration: 480,
+  });
+}
 ```
 
-Each call emits its own `nudge:start` / `nudge:complete` pair, so per-reel
-SFX and HUDs work cleanly in both modes.
+Each `await` parks the loop until that reel's GSAP tween lands. Reads as
+three reveals — players can register reel 1's wild before reel 2 starts
+moving. Total wall time = `cols.length * duration`. Use for scripted
+reveals where each reel earns its own beat (jackpot teasers, "watch this
+one too" moments, narrative bonus rounds).
+
+### Parallel — one synchronised beat
+
+<RecipeRunner code={parallelCode} client:only="react" />
+
+```ts
+await Promise.all(
+  [1, 2, 3].map((col) =>
+    reelSet.nudge(col, {
+      distance: 1,
+      direction: 'down',
+      incoming: ['wild'],
+      duration: 480,
+    }),
+  ),
+);
+```
+
+Every `nudge(...)` is invoked synchronously inside `Promise.all`, so the
+GSAP tweens all start on the same frame. The whole row of wilds drops in
+together. Total wall time = `duration` (no matter how many reels).
+Use for base-game responsiveness, line-completion reveals, and any time
+the reveal IS the row landing as a unit.
+
+Both modes fire their own `nudge:start` / `nudge:complete` pair per reel,
+so per-reel SFX and HUD overlays work cleanly either way — only the
+clock differs.
 
 ## Test it
 
