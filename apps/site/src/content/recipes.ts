@@ -470,6 +470,20 @@ export const RECIPES: RecipeMeta[] = [
     tags: ['nudge', 'fruit-machine', 'recent'],
   },
   {
+    slug: 'nudge-spotlight',
+    group: 'tension',
+    title: 'Spotlight after a nudge',
+    oneLiner: 'Land a near-miss, parallel-nudge three reels to complete a wild line, then run SymbolSpotlight on the new winners. The "rescue spin" beat in three primitives.',
+    steps: [
+      'Spin and land on a flat near-miss',
+      'Promise.all three reelSet.nudge calls so the middle reels drop in `wild` together',
+      'Build win cells from the nudged reels and call reelSet.spotlight.show(...)',
+      'Await spotlight completion, then spotlight.hide()',
+    ],
+    apis: ['ReelSet.nudge', 'ReelSet.spotlight.show', 'ReelSet.spotlight.hide', 'nudge:complete'],
+    tags: ['nudge', 'spotlight', 'wins', 'fruit-machine', 'recent'],
+  },
+  {
     slug: 'texture-atlas-symbols',
     group: 'symbol-formats',
     title: 'Texture atlas symbols',
