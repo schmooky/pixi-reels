@@ -660,17 +660,18 @@ export class Reel implements Disposable {
     }
 
     // Scan the ENTIRE strip (not just visible) for big-symbol anchors.
-    // A block survives the rotation iff:
-    //   - down: anchor + h - 1 + distance < total      — block stays on
-    //     the strip; the bottom may extend into bufferBelow (rendered
-    //     half-clipped by the mask, which is fine — `_finalizeFrame`
-    //     sizes anchors at visible rows already).
-    //   - up:   anchor - distance >= bufferAbove        — anchor lands
-    //     IN visible. We deliberately reject anchor → bufferAbove because
-    //     `_finalizeFrame` doesn't size anchors that sit above visible
-    //     today, so the block would render at 1x1 with an invisible stub.
-    //     Tracked as a follow-up; for now, fail loud rather than render
-    //     a broken block. (See bufferAbove-anchor TODO in _finalizeFrame.)
+    // A block survives the rotation iff none of its cells crosses the wrap
+    // boundary during the `distance` displace ticks:
+    //   - down: anchor + h - 1 + distance < total
+    //     (the block's bottommost cell stays on the strip; it may land
+    //     in bufferBelow — rendered half-clipped by the mask, which is
+    //     fine: `_finalizeFrame` sizes anchors that extend past visible
+    //     in either direction.)
+    //   - up:   anchor - distance >= 0
+    //     (the anchor stays on the strip; it may land in bufferAbove —
+    //     rendered correctly because `_finalizeFrame` scans bufferAbove
+    //     anchors too and sizes them to the full block.)
+    //
     // Cross-reel blocks (w > 1) can never be nudged on a single reel —
     // the other-reel cells stay put and the block splits visually + logically.
     for (let i = 0; i < total; i++) {
@@ -690,15 +691,15 @@ export class Reel implements Disposable {
       if (h > 1) {
         const survives = direction === 'down'
           ? i + h - 1 + distance < total
-          : i - distance >= this._bufferAbove;
+          : i - distance >= 0;
         if (!survives) {
           const failureDetail = direction === 'down'
             ? `anchor + h + distance < total (${i} + ${h} + ${distance} = ${i + h + distance} vs ${total})`
-            : `anchor - distance >= bufferAbove (${i} - ${distance} = ${i - distance} vs ${this._bufferAbove}). ` +
-              `Block anchor must land IN visible; the engine doesn't render anchors that land in bufferAbove today.`;
+            : `anchor - distance >= 0 (${i} - ${distance} = ${i - distance})`;
           throw new Error(
             `nudge: block '${sym.symbolId}' (${w}x${h}) at strip[${i}] wouldn't survive a ` +
-            `distance=${distance} ${direction} nudge. Survival: ${failureDetail}.`,
+            `distance=${distance} ${direction} nudge — the wrap boundary would split the ` +
+            `anchor from its stubs. Block survival: ${failureDetail}.`,
           );
         }
       }
@@ -757,11 +758,25 @@ export class Reel implements Disposable {
     // Pre-place incoming into the appropriate buffer; build the wrap queue
     // for the rest. Random fillers use `next(true)` so buffer-excluded
     // symbols don't leak into off-screen slots (matching placeSymbols).
+    //
+    // **Big-symbol awareness**: if a buffer slot we're about to write to
+    // currently holds an `OccupiedStub` (a non-anchor cell of a surviving
+    // block), we MUST NOT overwrite it — that would split the block from
+    // its anchor. The corresponding `incoming` slot is silently dropped
+    // for that position; the block "wins" the visible row it survives
+    // into. Same for slots that hold a same-reel big-symbol anchor.
+    const isProtectedSlot = (stripIdx: number): boolean => {
+      const sym = this.symbols[stripIdx];
+      if (sym instanceof OccupiedStub) return true;
+      const meta = this._symbolsData[sym.symbolId];
+      return !!(meta?.size && (meta.size.w > 1 || meta.size.h > 1));
+    };
     if (direction === 'down') {
       const bufferSet = Math.min(distance, bufferAbove);
       for (let i = 0; i < bufferSet; i++) {
         const stripIdx = bufferAbove - bufferSet + i;
         const incIdx = distance - bufferSet + i;
+        if (isProtectedSlot(stripIdx)) continue;
         this._replaceSymbol(stripIdx, incoming[incIdx]);
       }
       const queue: string[] = [];
@@ -778,6 +793,7 @@ export class Reel implements Disposable {
       const bufferSet = Math.min(distance, bufferBelow);
       for (let i = 0; i < bufferSet; i++) {
         const stripIdx = bufferAbove + this._visibleRows + i;
+        if (isProtectedSlot(stripIdx)) continue;
         this._replaceSymbol(stripIdx, incoming[i]);
       }
       const queue: string[] = [];
@@ -1297,17 +1313,37 @@ export class Reel implements Disposable {
   }
 
   /**
-   * After the visible target frame has been placed, scan visible rows to
+   * After the visible target frame has been placed, scan the strip to
    * size big-symbol anchors and populate the OCCUPIED occupancy map.
    *
    * Called from `snapToGrid` and `placeSymbols` so it runs both for normal
    * stop landing AND for skip/turbo. For non-anchor rows of a block, the
    * anchor symbol is sized to span the block; the OCCUPIED stub at that
    * row stays invisible underneath.
+   *
+   * **Two scans:**
+   *
+   *  1. Visible anchors — sizes blocks whose anchor is in `[0, visibleRows)`.
+   *     This is the common case (most blocks land fully visible).
+   *  2. BufferAbove anchors — sizes blocks whose anchor sits above visible
+   *     but whose body extends into the visible window. This is the "tail
+   *     visible" partial-visibility case: a 1xH block whose top is clipped
+   *     by the reel mask, with only its bottom cells showing in the visible
+   *     window. Without this scan, the anchor sprite would stay at the
+   *     default 1x1 size and the block wouldn't render its visible portion
+   *     correctly.
+   *
+   * For bufferAbove anchors, `_occupancy[visibleRow].anchorRow` is set to
+   * a NEGATIVE value — the offset from `bufferAbove`. So
+   * `this.symbols[this._bufferAbove + anchorRow]` walks back to the anchor
+   * regardless of which side it lives on. Consumers (`getSymbolFootprint`,
+   * `getBlockBounds`) handle negative anchor rows by clipping bounds to
+   * the visible portion of the block.
    */
   private _finalizeFrame(): void {
     this._occupancy = new Array(this._visibleRows).fill(null);
 
+    // Scan 1: visible-row anchors.
     for (let row = 0; row < this._visibleRows; row++) {
       const sym = this.symbols[this._bufferAbove + row];
       if (sym instanceof OccupiedStub) continue;
@@ -1328,6 +1364,36 @@ export class Reel implements Disposable {
         const occRow = row + dy;
         if (occRow < this._visibleRows) {
           this._occupancy[occRow] = { anchorRow: row };
+        }
+      }
+    }
+
+    // Scan 2: bufferAbove anchors whose block extends into visible.
+    // Iterating strip cells [0, bufferAbove); the anchor's visible-row
+    // equivalent is `stripIdx - bufferAbove` (negative).
+    for (let stripIdx = 0; stripIdx < this._bufferAbove; stripIdx++) {
+      const sym = this.symbols[stripIdx];
+      if (sym instanceof OccupiedStub) continue;
+      const meta = this._symbolsData[sym.symbolId];
+      if (!meta?.size) continue;
+      const w = meta.size.w;
+      const h = meta.size.h;
+      if (w === 1 && h === 1) continue;
+
+      // Does the block extend into visible? The block spans strip indices
+      // [stripIdx, stripIdx + h). Visible starts at `bufferAbove`.
+      const blockBottomStrip = stripIdx + h - 1;
+      if (blockBottomStrip < this._bufferAbove) continue;
+
+      const blockW = w * this._symbolWidth + (w - 1) * this._symbolGapX;
+      const blockH = h * this._symbolHeight + (h - 1) * this._symbolGapY;
+      sym.resize(blockW, blockH);
+
+      const anchorRow = stripIdx - this._bufferAbove; // negative
+      for (let dy = 1; dy < h; dy++) {
+        const occRow = anchorRow + dy;
+        if (occRow >= 0 && occRow < this._visibleRows) {
+          this._occupancy[occRow] = { anchorRow };
         }
       }
     }

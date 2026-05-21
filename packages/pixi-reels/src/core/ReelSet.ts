@@ -1344,19 +1344,29 @@ export class ReelSet extends Container implements Disposable {
    */
   getBlockBounds(col: number, row: number): CellBounds {
     const fp = this.getSymbolFootprint(col, row);
-    const anchorBounds = this.getCellBounds(fp.anchor.col, fp.anchor.row);
-    // Block covers w * cellWidth + (w-1) * gapX horizontally — the
-    // (w-1) inter-cell gaps are part of the block's visible footprint.
-    // Same vertically for cellHeight + gapY.
     const reel = this._reels[fp.anchor.col];
     const gapX = this._configGapX;
     const slotH = reel.motion.slotHeight;
-    const cellW = anchorBounds.width;
-    const cellH = anchorBounds.height;
+    const cellW = reel.symbolWidth;
+    const cellH = reel.symbolHeight;
     const gapY = slotH - cellH;
+
+    // For anchors that sit in bufferAbove (`fp.anchor.row < 0`), the
+    // block extends above the visible window. Pixel coordinates of the
+    // anchor row are derived directly from the row offset (negative
+    // values land above visible row 0). The returned rect is the FULL
+    // block's pixel footprint, including the clipped-by-mask portion in
+    // bufferAbove — consumers drawing overlays can intersect with the
+    // visible viewport themselves if they need a clipped rect.
+    const anchorRowCount = fp.anchor.row; // may be negative
+    const anchorX = this._viewport.x + reel.container.x;
+    const anchorY = this._viewport.y + reel.offsetY + anchorRowCount * slotH;
+    // Block covers w * cellWidth + (w-1) * gapX horizontally — the
+    // (w-1) inter-cell gaps are part of the block's visible footprint.
+    // Same vertically for cellHeight + gapY.
     return {
-      x: anchorBounds.x,
-      y: anchorBounds.y,
+      x: anchorX,
+      y: anchorY,
       width: fp.size.w * cellW + (fp.size.w - 1) * gapX,
       height: fp.size.h * cellH + (fp.size.h - 1) * gapY,
     };

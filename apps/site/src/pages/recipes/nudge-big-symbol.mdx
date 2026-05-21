@@ -14,6 +14,7 @@ apis:
 ---
 
 import code from '../../recipes/nudge-big-symbol.recipe.ts?raw';
+import tailRevealCode from '../../recipes/nudge-tail-reveal.recipe.ts?raw';
 import { RecipeRunner } from '../../components/RecipeRunner.tsx';
 
 <RecipeRunner code={code} client:only="react" />
@@ -25,24 +26,58 @@ every block on the strip against an explicit survival formula:
 | Direction | Survival condition |
 | --- | --- |
 | `'down'` | `anchorStripIdx + h - 1 + distance < total` |
-| `'up'`   | `anchorStripIdx - distance >= bufferAbove` |
+| `'up'`   | `anchorStripIdx - distance >= 0` |
 
 Where `total = bufferAbove + visibleRows + bufferBelow` and
 `anchorStripIdx` is the anchor's index along the full strip (0 is the
 topmost bufferAbove cell, `bufferAbove` is visible row 0).
 
-**Asymmetry by design.** Down-nudges can land the block partially in
-bufferBelow (the anchor stays in visible; the stub spills below the
-mask — see the recipe). Up-nudges must keep the anchor IN visible:
-the engine's `_finalizeFrame` doesn't size anchors that sit above
-visible today, so allowing anchor → bufferAbove would render a broken
-1x1 block. Filed as a follow-up; for now the engine fails loud rather
-than rendering a half-broken state.
+**Partial visibility works in both directions.** A block whose anchor
+lives in bufferAbove (tail visible at the top of the window) renders
+correctly: `_finalizeFrame` sizes anchors above visible too. Same for
+anchors in the last visible row whose stubs spill into bufferBelow.
+The mask clips the off-screen portion; the visible portion of the
+sprite shows through. Use this for the classic "nudge the tail into
+view" reveal:
 
-Blocks that wouldn't survive throw with a precise message naming the
+```ts
+// Block landed with anchor in bufferAbove + tail at row 0.
+// Nudge down by 1 brings the full block into rows 0+1.
+await reelSet.nudge(2, { distance: 1, direction: 'down', incoming: [...] });
+```
+
+Blocks that wouldn't survive (anchor or any stub crosses the wrap
+boundary off the strip) throw with a precise message naming the
 violated condition. Cross-reel blocks (`w > 1`) always throw —
 splitting an anchor from its right-side cells on a different reel
 isn't safe under any single-reel nudge.
+
+## Tail-visible → nudge to reveal
+
+The classic UK fruit-machine beat: a tall wild lands with most of it
+hidden in bufferAbove — only the bottom cell ("the tail") shows at the
+top of the visible window. The player nudges to drag the whole block
+into view.
+
+<RecipeRunner code={tailRevealCode} client:only="react" />
+
+```ts
+// 1. Land 1x2 MEGA at column 2, rows 0+1 (anchor at row 0).
+reelSet.setResult([..., [MEGA, MEGA, filler], ...]);
+
+// 2. Nudge UP by 1 → anchor lives in bufferAbove now, only the bottom
+//    cell of the block is in the visible window. Top half is clipped.
+await reelSet.nudge(2, { distance: 1, direction: 'up', incoming: [filler] });
+
+// 3. Nudge DOWN by 1 → the full block snaps back into view at rows 0+1.
+await reelSet.nudge(2, { distance: 1, direction: 'down', incoming: [filler] });
+```
+
+`_finalizeFrame` scans bufferAbove for anchors whose blocks extend
+into visible, sizes the anchor sprite to the full block, and writes
+the visible-row occupancy with a negative `anchorRow` referencing the
+out-of-window anchor. The mask clips the off-screen portion; the
+visible portion of the sprite shows through naturally.
 
 ## What the recipe does
 

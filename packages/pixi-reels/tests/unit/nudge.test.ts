@@ -819,7 +819,7 @@ describe('nudge', () => {
       }
     });
 
-    it('throws when up-nudge would land the anchor in bufferAbove', async () => {
+    it('1x2 up-nudge lands anchor in bufferAbove with tail visible — block renders correctly', async () => {
       installSyncGsap();
       const { reelSet, spinAndLand, destroy } = createTestReelSet({
         reels: 1,
@@ -832,17 +832,52 @@ describe('nudge', () => {
       });
       try {
         // 1x2 at visible rows 0+1 — anchor at strip[1], stub at strip[2].
-        // Survival for up distance=1: anchor - distance = 0 >= bufferAbove=1?
-        // No — 0 < 1. The anchor would land in bufferAbove which the engine
-        // doesn't render today.
+        await spinAndLand([['bigW', 'bigW', 'a']]);
+        // Nudge up by 1 — anchor lands at strip[0] (bufferAbove), stub at
+        // strip[1] (visible row 0). The block is "tail visible": top in
+        // buffer, bottom showing. `_finalizeFrame` scans bufferAbove now,
+        // so the anchor sprite is sized to the full block and the visible
+        // row 0 cell resolves to 'bigW' via the negative-anchorRow occupancy.
+        const result = await reelSet.nudge(0, {
+          distance: 1,
+          direction: 'up',
+          incoming: ['a'],
+        });
+        // Visible row 0 = 'bigW' (the block's tail via occupancy).
+        // Rows 1+2 = the rest of the strip after rotation.
+        expect(result.symbols[0]).toBe('bigW');
+        // Occupancy correctly references the bufferAbove anchor (negative row).
+        // Internal state: visible row 0 has occupancy pointing to anchorRow = -1.
+        const reel = reelSet.reels[0];
+        // Reel.getSymbolAt resolves through occupancy → returns the anchor symbol.
+        expect(reel.getSymbolAt(0).symbolId).toBe('bigW');
+      } finally {
+        destroy();
+      }
+    });
+
+    it('throws when up-nudge would push anchor off the top of the strip', async () => {
+      installSyncGsap();
+      const { reelSet, spinAndLand, destroy } = createTestReelSet({
+        reels: 1,
+        visibleRows: 3,
+        bufferSymbols: 1,
+        symbolIds: ['a', 'b', 'c', 'bigW'],
+        symbolData: {
+          bigW: { weight: 0, size: { w: 1, h: 2 } },
+        },
+      });
+      try {
+        // Anchor at strip[1] (visible row 0). Up by 2 → strip[-1] (off-strip).
+        // Survival check: 1 - 2 = -1 < 0 → throw.
         await spinAndLand([['bigW', 'bigW', 'a']]);
         await expect(
           reelSet.nudge(0, {
-            distance: 1,
+            distance: 2,
             direction: 'up',
-            incoming: ['a'],
+            incoming: ['a', 'b'],
           }),
-        ).rejects.toThrow(/land IN visible/);
+        ).rejects.toThrow(/wouldn't survive/);
       } finally {
         destroy();
       }

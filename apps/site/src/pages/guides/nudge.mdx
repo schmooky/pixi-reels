@@ -152,25 +152,26 @@ mutation is deferred.
 ## Big symbols on the reel
 
 A 1xH block on the target reel is nudged through as a unit, as long as
-its post-rotation position keeps the whole block on the strip AND the
-anchor lands in visible (for up):
+its post-rotation position keeps the whole block on the strip:
 
 | Direction | Survival condition |
 | --- | --- |
 | `'down'` | `anchorStripIdx + h - 1 + distance < total` |
-| `'up'`   | `anchorStripIdx - distance >= bufferAbove` |
+| `'up'`   | `anchorStripIdx - distance >= 0` |
 
 Where `total = bufferAbove + visibleRows + bufferBelow` and
 `anchorStripIdx` is the anchor's index on the full strip (0 = topmost
 bufferAbove cell, `bufferAbove` = visible row 0).
 
-Down can land the block half-clipped into bufferBelow (the anchor stays
-in visible; the stub spills below the mask — renders fine). Up must
-keep the anchor in visible because `_finalizeFrame` doesn't size
-anchors that sit above visible today. Use case: a 1xH wild lands with
-stubs in bufferBelow; nudge up to reveal the full block in the visible
-window. Cross-reel blocks (w > 1) always throw — splitting an anchor
-from its right-side cells on another reel isn't safe.
+The block can land **partially** in either buffer and still render
+correctly — `_finalizeFrame` scans both bufferAbove and visible-row
+anchors, sizing the sprite to span the whole block whichever side the
+anchor lives on. The mask clips the off-screen portion, the visible
+portion shows the block's tail or head. The classic use case: a 1xH
+wild lands with its anchor in bufferAbove (tail visible at row 0);
+nudge down to reveal the full block. Cross-reel blocks (w > 1) always
+throw — splitting an anchor from its right-side cells on another reel
+isn't safe.
 
 ```ts
 // 1x2 wild lives in visible row 1 + bufferBelow. Nudge up by 1 reveals
