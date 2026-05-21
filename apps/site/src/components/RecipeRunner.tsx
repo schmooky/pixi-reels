@@ -12,14 +12,13 @@ import {
   type ReelSet, ReelSymbol,
 } from 'pixi-reels';
 import { SpineReelSymbol } from 'pixi-reels/spine';
-import { BlurSpriteSymbol } from '@examples/shared/BlurSpriteSymbol.ts';
-import { CardSymbol, CARD_DECK, WILD_CARD } from '@examples/shared/CardSymbol.ts';
-import { EmptySymbol } from '@examples/shared/EmptySymbol.ts';
-import { loadPrototypeSymbols } from '@examples/shared/prototypeSpriteLoader.ts';
+import { BlurSpriteSymbol } from '../../../../examples/shared/BlurSpriteSymbol.ts';
+import { CardSymbol, CARD_DECK, WILD_CARD } from '../../../../examples/shared/CardSymbol.ts';
+import { loadPrototypeSymbols } from '../../../../examples/shared/prototypeSpriteLoader.ts';
 import {
   loadGeneratedSpines,
   buildSpineMap,
-} from '@examples/shared/generatedSpineLoader.ts';
+} from '../../../../examples/shared/generatedSpineLoader.ts';
 import { transform as sucraseTransform } from 'sucrase';
 import { cn } from '@/lib/utils';
 import { CanvasSkeleton } from './CanvasSkeleton';
@@ -40,6 +39,14 @@ function pickWeighted(weights: Record<string, number>): string {
     if (r <= 0) return id;
   }
   return Object.keys(weights)[0];
+}
+
+class EmptySymbol extends ReelSymbol {
+  protected onActivate(_symbolId: string): void {}
+  protected onDeactivate(): void {}
+  async playWin(): Promise<void> {}
+  stopAnimation(): void {}
+  resize(_w: number, _h: number): void {}
 }
 
 interface RunResult {
