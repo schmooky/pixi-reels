@@ -53,6 +53,14 @@ interface RunResult {
   reelSet?: ReelSet;
   nextResult?: () => string[][];
   onSpin?: () => Promise<void>;
+  /**
+   * Optional override for the canvas button's "skip while running"
+   * behaviour. Recipes that drive a nudge / cascade / custom timeline
+   * can intercept the player's mid-action button press here. If absent,
+   * the runner falls back to: nudge in flight → `skipNudge()`; otherwise
+   * try `skip()` and fall through to `requestSkip()`.
+   */
+  onSkip?: () => void;
   cleanup?: () => void;
 }
 
@@ -74,6 +82,7 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
   const reelSetRef = useRef<ReelSet | null>(null);
   const nextResultRef = useRef<(() => string[][]) | null>(null);
   const onSpinRef = useRef<(() => Promise<void>) | null>(null);
+  const onSkipRef = useRef<(() => void) | null>(null);
   const cleanupRef = useRef<(() => void) | null>(null);
   const [spinning, setSpinning] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -161,6 +170,7 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
       reelSetRef.current = result.reelSet ?? null;
       nextResultRef.current = result.nextResult ?? null;
       onSpinRef.current = result.onSpin ?? null;
+      onSkipRef.current = result.onSkip ?? null;
       cleanupRef.current = result.cleanup ?? null;
 
       if (result.reelSet) {
@@ -198,6 +208,19 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
   async function handleSpin() {
     if (!ready || !!error) return;
     if (spinning) {
+      // Recipe-supplied skip handler wins — lets a nudge / cascade / custom
+      // timeline recipe intercept the player's mid-action tap. Otherwise
+      // fall through to the built-in heuristics.
+      if (onSkipRef.current) {
+        onSkipRef.current();
+        return;
+      }
+      // Nudge in flight → skip THAT first (the spin pipeline is idle).
+      const reelSet = reelSetRef.current;
+      if (reelSet && reelSet.reels.some((r) => r.isNudging)) {
+        reelSet.skipNudge();
+        return;
+      }
       // skip() THROWS before `setResult()` arrives — route to requestSkip()
       // in the catch so a player tap during the server-wait window still
       // queues the slam and fires it the moment the result is in.

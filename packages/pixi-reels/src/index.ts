@@ -2,7 +2,7 @@
 export { ReelSet } from './core/ReelSet.js';
 export { ReelSetBuilder } from './core/ReelSetBuilder.js';
 export { Reel, OCCUPIED_SENTINEL } from './core/Reel.js';
-export type { ReelConfig } from './core/Reel.js';
+export type { ReelConfig, NudgeOptions } from './core/Reel.js';
 export { ReelViewport } from './core/ReelViewport.js';
 export { ReelMotion } from './core/ReelMotion.js';
 export { StopSequencer } from './core/StopSequencer.js';

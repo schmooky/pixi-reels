@@ -11,6 +11,88 @@ import type { RandomSymbolProvider } from '../frame/RandomSymbolProvider.js';
 import type { ReelViewport } from './ReelViewport.js';
 import type { SpinningMode } from '../spin/modes/SpinningMode.js';
 import { StandardMode } from '../spin/modes/StandardMode.js';
+import { getGsap } from '../utils/gsapRef.js';
+
+/**
+ * Options for `Reel.nudge()` / `ReelSet.nudge()` — a post-stop reposition
+ * that shifts the reel by `distance` symbol positions and reveals new
+ * caller-supplied symbols. Modelled on classic UK fruit-machine nudges.
+ *
+ * Nudges run only while the reel is at rest (post-stop). Calling on a
+ * moving reel throws.
+ */
+export interface NudgeOptions {
+  /**
+   * Number of full symbol positions to shift. Must be a positive integer
+   * strictly less than the reel's total strip capacity
+   * (`bufferAbove + visibleRows + bufferBelow`). `incoming.length` must
+   * equal this exactly.
+   */
+  distance: number;
+  /**
+   * Travel direction.
+   *
+   *   - `'down'` — symbols visually move down the screen; new symbols
+   *     enter from the top.
+   *   - `'up'` — symbols visually move up; new symbols enter from the
+   *     bottom.
+   */
+  direction: 'up' | 'down';
+  /**
+   * Symbol ids in **top-down order of their final on-strip position** —
+   * including any overflow into the off-screen buffer. Length must equal
+   * `distance` exactly.
+   *
+   *   - `incoming[0]` ends up at the topmost new position. For `'down'`
+   *     this is the new top visible row (or, if `distance > bufferAbove + visibleRows`,
+   *     spills into bufferBelow tail-first via the trailing entries).
+   *     For `'up'` with `distance > visibleRows`, `incoming[0]` lands in
+   *     bufferAbove (still topmost).
+   *   - `incoming[distance-1]` ends up at the bottommost new position.
+   *     Mirror of the above.
+   *
+   * For the common case of `distance <= visibleRows`, every entry is a
+   * visible row top-to-bottom and you can ignore the overflow rules.
+   */
+  incoming: string[];
+  /** Total animation duration in ms. Defaults to `200 * distance`. */
+  duration?: number;
+  /**
+   * GSAP easing function name. Defaults to `'power2.out'` — a smooth
+   * deceleration with NO overshoot. If you pass an overshooting ease
+   * (`back.out(N)`, `elastic.out(...)`), the engine clamps the displacement
+   * so wraps never fire past the landing position; the eased value is
+   * computed but the strip's travel is bounded.
+   */
+  ease?: string;
+  /**
+   * Optional delay (ms) before the tween begins. Validation throws fire
+   * immediately on the call, but the actual reel mutation + tween are
+   * deferred by this much. Useful with `Promise.all([...])` to stagger
+   * parallel nudges:
+   *
+   * ```ts
+   * await Promise.all(
+   *   cols.map((col, i) =>
+   *     reelSet.nudge(col, { ..., startDelay: i * 80 }),
+   *   ),
+   * );
+   * ```
+   *
+   * `ReelSet.nudge(col, options, { stagger })` is sugar for the common
+   * uniform-stagger case.
+   */
+  startDelay?: number;
+  /**
+   * Abort the nudge mid-flight. If signalled before the tween starts, the
+   * call rejects with an `AbortError` and no strip mutation happens. If
+   * signalled during the tween, the tween is killed, the strip is snapped
+   * to its post-nudge position (deterministic landing — the contract is
+   * "incoming lands at these positions"), and the promise rejects with an
+   * `AbortError`. `nudge:cancelled` fires on the reel-set bus.
+   */
+  signal?: AbortSignal;
+}
 
 /**
  * Internal placeholder for OCCUPIED cells inside a big-symbol block. Has
@@ -112,6 +194,28 @@ export class Reel implements Disposable {
   private _symbolGapX: number;
   private _isDestroyed = false;
   private _isStopping = false;
+  private _isNudging = false;
+  /**
+   * Symbol-id queue consulted by `_onSymbolWrapped` during a nudge. Each
+   * wrap pulls one id from the front; when empty (or `null`), the wrap
+   * falls back to `stopSequencer` (if `_isStopping`) or `_randomProvider`.
+   *
+   * Populated by `nudge()` and cleared once the tween completes.
+   */
+  private _nudgeQueue: string[] | null = null;
+  /**
+   * GSAP tween handle for the active nudge animation. Stored so `destroy()`
+   * and `skipNudge()` can `kill()` it cleanly; cleared in `onComplete` and
+   * on cancellation. `null` between nudges.
+   */
+  private _nudgeTween: ReturnType<ReturnType<typeof getGsap>['to']> | null = null;
+  /**
+   * Rejection function for the in-flight nudge's promise. Called by
+   * `destroy()` and `signal.abort()` so consumers `await`-ing the nudge
+   * see a deterministic error instead of a hung promise. Cleared on
+   * `onComplete`. `null` between nudges.
+   */
+  private _nudgeReject: ((err: Error) => void) | null = null;
   /**
    * Internal stub instances reused for OCCUPIED cells inside a big-symbol
    * block. Allocated on demand (one per concurrent OCCUPIED cell on this
@@ -208,6 +312,11 @@ export class Reel implements Disposable {
 
   set isStopping(value: boolean) {
     this._isStopping = value;
+  }
+
+  /** True while a `nudge()` tween is in flight on this reel. */
+  get isNudging(): boolean {
+    return this._isNudging;
   }
 
   get bufferAbove(): number {
@@ -421,10 +530,10 @@ export class Reel implements Disposable {
    * caller-facing surface that also throws on pinned cells.
    */
   setSymbolAt(visibleRow: number, symbolId: string): void {
-    if (this.speed !== 0 || this._isStopping) {
+    if (this.speed !== 0 || this._isStopping || this._isNudging) {
       throw new Error(
-        `setSymbolAt: cannot swap mid-spin (speed=${this.speed}, isStopping=${this._isStopping}). ` +
-        `Wait for the spin to land before calling, or use the result grid via setResult().`,
+        `setSymbolAt: cannot swap mid-motion (speed=${this.speed}, isStopping=${this._isStopping}, isNudging=${this._isNudging}). ` +
+        `Wait for the spin or nudge to land before calling, or use the result grid via setResult().`,
       );
     }
     if (!Number.isInteger(visibleRow) || visibleRow < 0 || visibleRow >= this._visibleRows) {
@@ -462,6 +571,369 @@ export class Reel implements Disposable {
       );
     }
     this._replaceSymbol(arrayIndex, symbolId);
+  }
+
+  /**
+   * Shift the reel by `distance` symbol positions, animating the strip with
+   * a GSAP tween and revealing caller-supplied `incoming` symbols. The reel
+   * must be at rest (post-stop) — throws otherwise.
+   *
+   * The wrap pipeline drives identity changes during the tween: any incoming
+   * symbol whose final destination is reachable via pre-placement (within
+   * the leading buffer) is set up front; the rest stream through the wrap
+   * callback as the strip moves. `incoming` is always top-down by final
+   * on-strip position — see `NudgeOptions.incoming` for the overflow rules.
+   *
+   * **Big symbols are supported** as long as every block on the strip
+   * (anchor + stubs) survives the rotation without crossing the wrap
+   * boundary:
+   *   - down: anchorRow + h - 1 + distance < total
+   *   - up:   anchorRow ≥ distance
+   *
+   * Blocks that wouldn't survive throw, as do cross-reel blocks (w > 1).
+   * Use case: a 1xH block lands with stubs in bufferBelow — nudge up to
+   * bring the whole block into view.
+   *
+   * Throws if:
+   *   - the reel is spinning, stopping, already nudging, or destroyed,
+   *   - `distance < 1`, `>= total strip capacity`, `direction` invalid, or
+   *     `incoming.length !== distance`,
+   *   - any `incoming` id is unregistered or is a big symbol,
+   *   - any block on the reel wouldn't survive the rotation,
+   *   - any cell on this reel is part of a cross-reel block (w > 1),
+   *   - the abort signal is already aborted on entry.
+   *
+   * Resolves with `{ symbols }` — the new visible column top-to-bottom.
+   * Rejects with an `AbortError` if `options.signal` aborts mid-tween or
+   * if the reel is destroyed before the tween completes.
+   *
+   * @param onPrepared Internal hook fired once pre-placement + grid snap
+   *   are done but before the tween starts. `ReelSet.nudge` uses this to
+   *   emit `nudge:start` after the strip has been mutated, so listeners
+   *   observe the about-to-animate state, not the pre-mutation state.
+   */
+  async nudge(
+    options: NudgeOptions,
+    onPrepared?: () => void,
+  ): Promise<{ symbols: string[] }> {
+    if (this._isDestroyed) {
+      throw new Error('nudge: reel has been destroyed.');
+    }
+    if (this.speed !== 0 || this._isStopping || this._isNudging) {
+      throw new Error(
+        `nudge: cannot nudge a reel in motion (speed=${this.speed}, isStopping=${this._isStopping}, isNudging=${this._isNudging}). ` +
+        `Wait for the spin or previous nudge to land first.`,
+      );
+    }
+    const { distance, direction, incoming, signal } = options;
+    if (!Number.isInteger(distance) || distance < 1) {
+      throw new Error(`nudge: distance must be a positive integer, got ${distance}.`);
+    }
+    const total = this.symbols.length;
+    if (distance >= total) {
+      throw new Error(
+        `nudge: distance ${distance} must be strictly less than total strip capacity ` +
+        `(bufferAbove + visibleRows + bufferBelow = ${total}). At distance = total the strip ` +
+        `rotates fully and pre-placed buffer entries would be silently dropped.`,
+      );
+    }
+    if (direction !== 'up' && direction !== 'down') {
+      throw new Error(`nudge: direction must be 'up' or 'down', got ${String(direction)}.`);
+    }
+    if (!Array.isArray(incoming) || incoming.length !== distance) {
+      throw new Error(
+        `nudge: incoming must be an array of exactly ${distance} symbol id(s), got length ${incoming?.length}.`,
+      );
+    }
+    for (const id of incoming) {
+      if (!Object.prototype.hasOwnProperty.call(this._symbolsData, id)) {
+        throw new Error(`nudge: incoming symbol '${id}' is not registered. Register it via builder.symbols(...).`);
+      }
+      const meta = this._symbolsData[id];
+      if (meta?.size && (meta.size.w > 1 || meta.size.h > 1)) {
+        throw new Error(
+          `nudge: incoming symbol '${id}' is a big symbol (${meta.size.w}x${meta.size.h}). ` +
+          `Big symbols are not supported as incoming items (they need an anchor + OCCUPIED ` +
+          `coordinator). Pre-existing big symbols on the strip CAN be nudged through.`,
+        );
+      }
+    }
+
+    // Scan the ENTIRE strip (not just visible) for big-symbol anchors.
+    // A block survives the rotation iff none of its cells crosses the wrap
+    // boundary during the `distance` displace ticks:
+    //   - down: anchor + h - 1 + distance < total
+    //     (the block's bottommost cell stays on the strip; it may land
+    //     in bufferBelow — rendered half-clipped by the mask, which is
+    //     fine: `_finalizeFrame` sizes anchors that extend past visible
+    //     in either direction.)
+    //   - up:   anchor - distance >= 0
+    //     (the anchor stays on the strip; it may land in bufferAbove —
+    //     rendered correctly because `_finalizeFrame` scans bufferAbove
+    //     anchors too and sizes them to the full block.)
+    //
+    // Cross-reel blocks (w > 1) can never be nudged on a single reel —
+    // the other-reel cells stay put and the block splits visually + logically.
+    for (let i = 0; i < total; i++) {
+      const sym = this.symbols[i];
+      if (sym instanceof OccupiedStub) continue;
+      const meta = this._symbolsData[sym.symbolId];
+      if (!meta?.size) continue;
+      const { w, h } = meta.size;
+      if (w === 1 && h === 1) continue;
+      if (w > 1) {
+        throw new Error(
+          `nudge: reel ${this.reelIndex} carries cross-reel big symbol '${sym.symbolId}' ` +
+          `(${w}x${h}) at strip[${i}]. Cross-reel blocks can't be nudged from a single ` +
+          `reel — the other-reel cells would stay put and split the block.`,
+        );
+      }
+      if (h > 1) {
+        const survives = direction === 'down'
+          ? i + h - 1 + distance < total
+          : i - distance >= 0;
+        if (!survives) {
+          const failureDetail = direction === 'down'
+            ? `anchor + h + distance < total (${i} + ${h} + ${distance} = ${i + h + distance} vs ${total})`
+            : `anchor - distance >= 0 (${i} - ${distance} = ${i - distance})`;
+          throw new Error(
+            `nudge: block '${sym.symbolId}' (${w}x${h}) at strip[${i}] wouldn't survive a ` +
+            `distance=${distance} ${direction} nudge — the wrap boundary would split the ` +
+            `anchor from its stubs. Block survival: ${failureDetail}.`,
+          );
+        }
+      }
+    }
+    // Cross-reel stubs (cells with OCCUPIED sentinel whose anchor lives on
+    // another reel) appear with `symbolId === OCCUPIED_SENTINEL` and no
+    // entry in our local `_occupancy` map.
+    for (let row = 0; row < this._visibleRows; row++) {
+      const sym = this.symbols[this._bufferAbove + row];
+      if (sym.symbolId === OCCUPIED_SENTINEL && !this._occupancy[row]) {
+        throw new Error(
+          `nudge: visible row ${row} is a non-anchor cell of a cross-reel big symbol. ` +
+          `Cross-reel blocks can't be nudged from a single reel.`,
+        );
+      }
+    }
+
+    // Abort signal check — bail before any mutation if already aborted.
+    if (signal?.aborted) {
+      const err = new Error('nudge: aborted before start.');
+      err.name = 'AbortError';
+      throw err;
+    }
+
+    // Optional pre-tween delay — useful for staggered Promise.all calls.
+    // Validation already passed, so consumers can rely on synchronous
+    // error throws for invalid input.
+    const startDelay = options.startDelay ?? 0;
+    if (startDelay > 0) {
+      await new Promise<void>((resolve, reject) => {
+        const tId = setTimeout(resolve, startDelay);
+        if (signal) {
+          const onAbort = () => {
+            clearTimeout(tId);
+            const err = new Error('nudge: aborted during startDelay.');
+            err.name = 'AbortError';
+            reject(err);
+          };
+          signal.addEventListener('abort', onAbort, { once: true });
+        }
+      });
+      // Re-check destroy / motion after the async gap.
+      if (this._isDestroyed) {
+        const err = new Error('nudge: reel destroyed during startDelay.');
+        err.name = 'AbortError';
+        throw err;
+      }
+    }
+
+    const duration = options.duration ?? 200 * distance;
+    const ease = options.ease ?? 'power2.out';
+    const slotH = this.motion.slotHeight;
+    const bufferAbove = this._bufferAbove;
+    const bufferBelow = this.bufferBelow;
+
+    // Pre-place incoming into the appropriate buffer; build the wrap queue
+    // for the rest. Random fillers use `next(true)` so buffer-excluded
+    // symbols don't leak into off-screen slots (matching placeSymbols).
+    //
+    // **Big-symbol awareness**: if a buffer slot we're about to write to
+    // currently holds an `OccupiedStub` (a non-anchor cell of a surviving
+    // block), we MUST NOT overwrite it — that would split the block from
+    // its anchor. The corresponding `incoming` slot is silently dropped
+    // for that position; the block "wins" the visible row it survives
+    // into. Same for slots that hold a same-reel big-symbol anchor.
+    const isProtectedSlot = (stripIdx: number): boolean => {
+      const sym = this.symbols[stripIdx];
+      if (sym instanceof OccupiedStub) return true;
+      const meta = this._symbolsData[sym.symbolId];
+      return !!(meta?.size && (meta.size.w > 1 || meta.size.h > 1));
+    };
+    if (direction === 'down') {
+      const bufferSet = Math.min(distance, bufferAbove);
+      for (let i = 0; i < bufferSet; i++) {
+        const stripIdx = bufferAbove - bufferSet + i;
+        const incIdx = distance - bufferSet + i;
+        if (isProtectedSlot(stripIdx)) continue;
+        this._replaceSymbol(stripIdx, incoming[incIdx]);
+      }
+      const queue: string[] = [];
+      const wrapsToVisible = distance - bufferAbove;
+      for (let k = 1; k <= distance; k++) {
+        if (k <= wrapsToVisible) {
+          queue.push(incoming[wrapsToVisible - k]);
+        } else {
+          queue.push(this._randomProvider.next(true));
+        }
+      }
+      this._nudgeQueue = queue;
+    } else {
+      const bufferSet = Math.min(distance, bufferBelow);
+      for (let i = 0; i < bufferSet; i++) {
+        const stripIdx = bufferAbove + this._visibleRows + i;
+        if (isProtectedSlot(stripIdx)) continue;
+        this._replaceSymbol(stripIdx, incoming[i]);
+      }
+      const queue: string[] = [];
+      const wrapsToVisible = distance - bufferBelow;
+      for (let k = 1; k <= distance; k++) {
+        if (k <= wrapsToVisible) {
+          queue.push(incoming[bufferBelow + k - 1]);
+        } else {
+          queue.push(this._randomProvider.next(true));
+        }
+      }
+      this._nudgeQueue = queue;
+    }
+
+    // Re-snap so pre-set symbols sit on the grid before the tween begins.
+    this.motion.snapToGrid();
+    this.refreshZIndex();
+
+    this._isNudging = true;
+    this.events.emit('phase:enter', 'nudge');
+    // Hook fires AFTER pre-placement so listeners see the about-to-tween
+    // state (ReelSet uses this to emit `nudge:start` at the right time).
+    onPrepared?.();
+
+    const totalDelta = direction === 'down' ? distance * slotH : -distance * slotH;
+    // Cap per-tick displacement at < half a slot so ReelMotion fires exactly
+    // one wrap per `displace` call (mirrors SpinningMode.computeDeltaY).
+    const stepLimit = slotH * 0.45;
+
+    // Finalize closure — runs at natural completion AND on skip / abort.
+    // Captured here so `skipNudge()` can jump straight to the landed state
+    // without re-deriving anything from the half-tweened strip.
+    const finalize = () => {
+      // Drain any remaining queue entries by completing the remaining
+      // displacement in one shot. Each pending wrap fires its callback
+      // and pulls from `_nudgeQueue` exactly as if the tween had run.
+      const remainingQueue = this._nudgeQueue?.length ?? 0;
+      if (remainingQueue > 0) {
+        // Complete the remaining wraps. The strip's cumulative position
+        // after k of D wraps is k * slotH worth of displacement (in the
+        // tween's direction). We're at some intermediate position; just
+        // drive to the final position one step at a time so each wrap fires.
+        const stepsLeft = remainingQueue;
+        const stepDir = direction === 'down' ? stepLimit : -stepLimit;
+        // ceil(slotH / stepLimit) substeps per wrap = ceil(1/0.45) = 3
+        // per remaining wrap. Conservative — actual wraps fire when the
+        // tail symbol crosses the boundary.
+        for (let i = 0; i < stepsLeft * 3 && (this._nudgeQueue?.length ?? 0) > 0; i++) {
+          this.motion.displace(stepDir);
+        }
+      }
+      this.snapToGrid();
+      this._isNudging = false;
+      this._nudgeQueue = null;
+      this._nudgeTween = null;
+      this._nudgeReject = null;
+      this.events.emit('phase:exit', 'nudge');
+    };
+
+    try {
+      await new Promise<void>((resolve, reject) => {
+        this._nudgeReject = reject;
+
+        const onAbort = () => {
+          if (this._nudgeTween) {
+            this._nudgeTween.kill();
+            this._nudgeTween = null;
+          }
+          finalize();
+          const err = new Error('nudge: aborted.');
+          err.name = 'AbortError';
+          reject(err);
+        };
+
+        if (signal) {
+          signal.addEventListener('abort', onAbort, { once: true });
+        }
+
+        const state = { p: 0 };
+        let lastDisplaced = 0;
+        this._nudgeTween = getGsap().to(state, {
+          p: 1,
+          duration: duration / 1000,
+          ease,
+          onUpdate: () => {
+            // Clamp `state.p * totalDelta` to the intended trajectory so
+            // overshooting eases (back.out(N), elastic.out, ...) can't fire
+            // a spurious wrap past the landing position. The eased curve
+            // is still computed by GSAP; we just don't ride the overshoot
+            // into the wrap mechanism.
+            const eased = state.p * totalDelta;
+            const target = direction === 'down'
+              ? Math.min(eased, totalDelta)
+              : Math.max(eased, totalDelta);
+            let remaining = target - lastDisplaced;
+            while (Math.abs(remaining) > stepLimit) {
+              const step = remaining > 0 ? stepLimit : -stepLimit;
+              this.motion.displace(step);
+              remaining -= step;
+            }
+            if (remaining !== 0) {
+              this.motion.displace(remaining);
+            }
+            lastDisplaced = target;
+          },
+          onComplete: () => {
+            if (signal) signal.removeEventListener('abort', onAbort);
+            finalize();
+            resolve();
+          },
+        });
+      });
+    } catch (err) {
+      // Re-throw so the caller's await sees it; finalize already ran in
+      // the abort path. Don't re-finalize on caught errors.
+      throw err;
+    }
+
+    const symbols = this.getVisibleSymbols();
+    return { symbols };
+  }
+
+  /**
+   * Fast-forward the active nudge tween to its landed state and resolve.
+   * No-op if no nudge is in flight. The tween's `onComplete` fires
+   * synchronously, the strip snaps to the final position, `_nudgeQueue`
+   * drains, and the original `nudge()` promise resolves on the next
+   * microtask.
+   *
+   * Useful for player-driven "skip" buttons or accessibility paths that
+   * want to land immediately without waiting for the full animation.
+   */
+  skipNudge(): void {
+    if (!this._isNudging || !this._nudgeTween) return;
+    // GSAP's progress(1) fires onComplete which invokes our finalize +
+    // resolves the awaiting promise. Drop the tween reference first so
+    // `destroy()` doesn't try to kill an already-completed tween.
+    const tween = this._nudgeTween;
+    this._nudgeTween = null;
+    tween.progress(1);
   }
 
   /**
@@ -604,6 +1076,21 @@ export class Reel implements Disposable {
 
   destroy(): void {
     if (this._isDestroyed) return;
+    // Kill any in-flight nudge tween BEFORE we tear down views — otherwise
+    // its next onUpdate writes to destroyed PixiJS containers and crashes.
+    // Reject the outstanding promise so awaiters see a deterministic error.
+    if (this._nudgeTween) {
+      this._nudgeTween.kill();
+      this._nudgeTween = null;
+    }
+    if (this._nudgeReject) {
+      const err = new Error('nudge: reel was destroyed.');
+      err.name = 'AbortError';
+      this._nudgeReject(err);
+      this._nudgeReject = null;
+    }
+    this._nudgeQueue = null;
+    this._isNudging = false;
     for (const symbol of this.symbols) {
       if (symbol instanceof OccupiedStub) {
         symbol.destroy();
@@ -692,16 +1179,30 @@ export class Reel implements Disposable {
 
   private _onSymbolWrapped(symbol: ReelSymbol, row: number, direction: 'up' | 'down'): void {
     let newSymbolId: string;
-    if (this._isStopping && this.stopSequencer.hasRemaining) {
+    if (this._nudgeQueue && this._nudgeQueue.length > 0) {
+      // Nudge queue is exhaustively pre-built by `nudge()` to cover every
+      // wrap fired during the tween (caller-supplied incoming first, then
+      // random padding for wraps that target the off-screen buffer). Always
+      // wins over the stop sequencer so a queued slam-stop on a stale spin
+      // can't bleed symbols into a fresh nudge.
+      newSymbolId = this._nudgeQueue.shift()!;
+    } else if (this._isStopping && this.stopSequencer.hasRemaining) {
       newSymbolId = this.stopSequencer.next();
     } else {
       newSymbolId = this._randomProvider.next();
     }
 
     this._replaceSymbol(this.symbols.indexOf(symbol), newSymbolId);
-    // Array was rearranged by ReelMotion (pop+unshift or shift+push), so the
-    // array index of every remaining symbol changed — refresh all zIndexes.
-    this.refreshZIndex();
+    // During a nudge tween, defer the O(N) zIndex rescan to `snapToGrid()`
+    // in the tween's finalize step — `distance` wraps fire back-to-back
+    // and a single refresh at the end produces the same final state.
+    // Spin / cascade refill paths keep the per-wrap refresh so live
+    // bottom-to-top stacking stays correct mid-spin.
+    if (!this._isNudging) {
+      // Array was rearranged by ReelMotion (pop+unshift or shift+push), so the
+      // array index of every remaining symbol changed — refresh all zIndexes.
+      this.refreshZIndex();
+    }
   }
 
   private _replaceSymbol(index: number, newSymbolId: string): void {
@@ -812,17 +1313,37 @@ export class Reel implements Disposable {
   }
 
   /**
-   * After the visible target frame has been placed, scan visible rows to
+   * After the visible target frame has been placed, scan the strip to
    * size big-symbol anchors and populate the OCCUPIED occupancy map.
    *
    * Called from `snapToGrid` and `placeSymbols` so it runs both for normal
    * stop landing AND for skip/turbo. For non-anchor rows of a block, the
    * anchor symbol is sized to span the block; the OCCUPIED stub at that
    * row stays invisible underneath.
+   *
+   * **Two scans:**
+   *
+   *  1. Visible anchors — sizes blocks whose anchor is in `[0, visibleRows)`.
+   *     This is the common case (most blocks land fully visible).
+   *  2. BufferAbove anchors — sizes blocks whose anchor sits above visible
+   *     but whose body extends into the visible window. This is the "tail
+   *     visible" partial-visibility case: a 1xH block whose top is clipped
+   *     by the reel mask, with only its bottom cells showing in the visible
+   *     window. Without this scan, the anchor sprite would stay at the
+   *     default 1x1 size and the block wouldn't render its visible portion
+   *     correctly.
+   *
+   * For bufferAbove anchors, `_occupancy[visibleRow].anchorRow` is set to
+   * a NEGATIVE value — the offset from `bufferAbove`. So
+   * `this.symbols[this._bufferAbove + anchorRow]` walks back to the anchor
+   * regardless of which side it lives on. Consumers (`getSymbolFootprint`,
+   * `getBlockBounds`) handle negative anchor rows by clipping bounds to
+   * the visible portion of the block.
    */
   private _finalizeFrame(): void {
     this._occupancy = new Array(this._visibleRows).fill(null);
 
+    // Scan 1: visible-row anchors.
     for (let row = 0; row < this._visibleRows; row++) {
       const sym = this.symbols[this._bufferAbove + row];
       if (sym instanceof OccupiedStub) continue;
@@ -843,6 +1364,36 @@ export class Reel implements Disposable {
         const occRow = row + dy;
         if (occRow < this._visibleRows) {
           this._occupancy[occRow] = { anchorRow: row };
+        }
+      }
+    }
+
+    // Scan 2: bufferAbove anchors whose block extends into visible.
+    // Iterating strip cells [0, bufferAbove); the anchor's visible-row
+    // equivalent is `stripIdx - bufferAbove` (negative).
+    for (let stripIdx = 0; stripIdx < this._bufferAbove; stripIdx++) {
+      const sym = this.symbols[stripIdx];
+      if (sym instanceof OccupiedStub) continue;
+      const meta = this._symbolsData[sym.symbolId];
+      if (!meta?.size) continue;
+      const w = meta.size.w;
+      const h = meta.size.h;
+      if (w === 1 && h === 1) continue;
+
+      // Does the block extend into visible? The block spans strip indices
+      // [stripIdx, stripIdx + h). Visible starts at `bufferAbove`.
+      const blockBottomStrip = stripIdx + h - 1;
+      if (blockBottomStrip < this._bufferAbove) continue;
+
+      const blockW = w * this._symbolWidth + (w - 1) * this._symbolGapX;
+      const blockH = h * this._symbolHeight + (h - 1) * this._symbolGapY;
+      sym.resize(blockW, blockH);
+
+      const anchorRow = stripIdx - this._bufferAbove; // negative
+      for (let dy = 1; dy < h; dy++) {
+        const occRow = anchorRow + dy;
+        if (occRow >= 0 && occRow < this._visibleRows) {
+          this._occupancy[occRow] = { anchorRow };
         }
       }
     }

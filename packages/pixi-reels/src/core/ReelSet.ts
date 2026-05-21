@@ -4,6 +4,7 @@ import type { ReelSetInternalConfig, CellBounds, SymbolData, SpinOptions } from 
 import { EventEmitter } from '../events/EventEmitter.js';
 import type { ReelSetEvents, SpinResult, RunCascadeResult as RunCascadeResultBase } from '../events/ReelEvents.js';
 import { Reel, } from './Reel.js';
+import type { NudgeOptions } from './Reel.js';
 import { ReelViewport } from './ReelViewport.js';
 import { SpinController } from '../spin/SpinController.js';
 import { SpeedManager } from '../speed/SpeedManager.js';
@@ -965,6 +966,142 @@ export class ReelSet extends Container implements Disposable {
   }
 
   /**
+   * Shift a single reel by `distance` positions after it has landed, revealing
+   * caller-supplied symbols. Classic UK fruit-machine "nudge."
+   *
+   * Per-reel by design — multi-reel sync is via `Promise.all([...])` of
+   * independent calls. Each call emits its own `nudge:start` / `nudge:complete`
+   * pair on the ReelSet bus and `phase:enter('nudge')` / `phase:exit('nudge')`
+   * on the per-reel bus.
+   *
+   * Big-symbol blocks on the target reel are nudged through as a unit as
+   * long as they fit on the strip post-rotation. Use case: a 1xH block
+   * lands with stubs in bufferBelow; nudge up to reveal it fully.
+   *
+   * `nudge:start` fires AFTER pre-placement so listeners observe the
+   * about-to-tween state, mirroring `nudge:complete` which fires after
+   * the strip has snapped. To capture the pre-nudge state, snapshot the
+   * grid in your call site before awaiting.
+   *
+   * Throws (synchronously) if:
+   *   - the reel set is currently spinning (avoid races with the spin pipeline),
+   *   - `col` is out of range,
+   *   - any visible cell on the target reel has an active pin,
+   *   - `Reel.nudge` itself rejects (bad distance / direction / incoming /
+   *     incompatible big-symbol layout).
+   *
+   * Rejects with an `AbortError` if `options.signal` aborts or the reel
+   * is destroyed mid-tween. `nudge:cancelled` fires on the bus in that case.
+   *
+   * @example
+   * await reelSet.spin(); // landed
+   * await reelSet.nudge(2, { distance: 1, direction: 'down', incoming: ['wild'] });
+   *
+   * @example Parallel nudges across two reels:
+   * await Promise.all([
+   *   reelSet.nudge(2, { distance: 1, direction: 'down', incoming: ['wild'] }),
+   *   reelSet.nudge(3, { distance: 1, direction: 'down', incoming: ['wild'] }),
+   * ]);
+   *
+   * @example Staggered parallel via `startDelay`:
+   * await Promise.all(
+   *   [1, 2, 3].map((col, i) =>
+   *     reelSet.nudge(col, { ...opts, startDelay: i * 80 }),
+   *   ),
+   * );
+   *
+   * @example Abortable nudge:
+   * const controller = new AbortController();
+   * skipButton.onclick = () => controller.abort();
+   * await reelSet.nudge(2, { ...opts, signal: controller.signal })
+   *   .catch((e) => { if (e.name !== 'AbortError') throw e; });
+   */
+  async nudge(col: number, options: NudgeOptions): Promise<{ symbols: string[] }> {
+    // TODO(reentrancy): a `spin()` / `setResult()` / `pin()` / `setShape()`
+    // call made while a nudge is in flight will race on the same reel.
+    // We currently guard the *forward* direction (nudge refuses while
+    // spinning) but not the reverse. Add `_assertNoNudgeInFlight()` to
+    // those entry points before broad production use.
+    if (this._spinController.isSpinning) {
+      throw new Error('nudge: cannot nudge while a spin or refill is in progress.');
+    }
+    if (!Number.isInteger(col) || col < 0 || col >= this._reels.length) {
+      throw new RangeError(`nudge: col ${col} out of range [0, ${this._reels.length}).`);
+    }
+    // Pin overlap detection lives at the ReelSet layer (Reel can't see pins).
+    // Nudges would shift symbols out from under a pinned cell visually but
+    // leave the pin record stale — fail loudly instead.
+    for (const pin of this._pins.values()) {
+      if (pin.col === col) {
+        throw new Error(
+          `nudge: reel ${col} has an active pin at row ${pin.row}. ` +
+          `Call unpin(${col}, ${pin.row}) first if you intend to nudge through it.`,
+        );
+      }
+    }
+
+    try {
+      const result = await this._reels[col].nudge(options, () => {
+        // Fires after Reel.nudge has validated, pre-placed, and snapped —
+        // right before the GSAP tween starts. Now the bus event matches
+        // observable state.
+        this._events.emit('nudge:start', {
+          reelIndex: col,
+          distance: options.distance,
+          direction: options.direction,
+        });
+      });
+      this._events.emit('nudge:complete', {
+        reelIndex: col,
+        distance: options.distance,
+        direction: options.direction,
+        symbols: result.symbols,
+      });
+      return result;
+    } catch (err) {
+      const isAbort = err instanceof Error && err.name === 'AbortError';
+      // If the ReelSet was destroyed mid-nudge, `super.destroy({children: true})`
+      // has already torn down our event bus (PixiJS Container has its own
+      // `_events` field that we shadow — after super.destroy ours is gone too).
+      // Skip the emit; the consumer's `nudge()` await will still see the
+      // AbortError via the re-throw below.
+      if (isAbort && !this._isDestroyed) {
+        this._events.emit('nudge:cancelled', {
+          reelIndex: col,
+          distance: options.distance,
+          direction: options.direction,
+          reason: err.message,
+        });
+      }
+      throw err;
+    }
+  }
+
+  /**
+   * Fast-forward an in-flight nudge to its landed state. No-op if the
+   * given reel isn't currently nudging.
+   *
+   * The tween's `onComplete` fires synchronously, the strip snaps to the
+   * final position, and the original `nudge()` promise resolves on the
+   * next microtask. `nudge:complete` fires normally — from a listener's
+   * POV the nudge just landed fast.
+   *
+   * @param col Reel index, or `undefined` to skip all in-flight nudges.
+   */
+  skipNudge(col?: number): void {
+    if (col === undefined) {
+      for (const reel of this._reels) {
+        if (reel.isNudging) reel.skipNudge();
+      }
+      return;
+    }
+    if (!Number.isInteger(col) || col < 0 || col >= this._reels.length) {
+      throw new RangeError(`skipNudge: col ${col} out of range [0, ${this._reels.length}).`);
+    }
+    this._reels[col].skipNudge();
+  }
+
+  /**
    * Set the per-reel drop order for the next stop / refill sequence.
    *
    * Convenience wrapper over `setStopDelays()` for common patterns. The
@@ -1207,19 +1344,29 @@ export class ReelSet extends Container implements Disposable {
    */
   getBlockBounds(col: number, row: number): CellBounds {
     const fp = this.getSymbolFootprint(col, row);
-    const anchorBounds = this.getCellBounds(fp.anchor.col, fp.anchor.row);
-    // Block covers w * cellWidth + (w-1) * gapX horizontally — the
-    // (w-1) inter-cell gaps are part of the block's visible footprint.
-    // Same vertically for cellHeight + gapY.
     const reel = this._reels[fp.anchor.col];
     const gapX = this._configGapX;
     const slotH = reel.motion.slotHeight;
-    const cellW = anchorBounds.width;
-    const cellH = anchorBounds.height;
+    const cellW = reel.symbolWidth;
+    const cellH = reel.symbolHeight;
     const gapY = slotH - cellH;
+
+    // For anchors that sit in bufferAbove (`fp.anchor.row < 0`), the
+    // block extends above the visible window. Pixel coordinates of the
+    // anchor row are derived directly from the row offset (negative
+    // values land above visible row 0). The returned rect is the FULL
+    // block's pixel footprint, including the clipped-by-mask portion in
+    // bufferAbove — consumers drawing overlays can intersect with the
+    // visible viewport themselves if they need a clipped rect.
+    const anchorRowCount = fp.anchor.row; // may be negative
+    const anchorX = this._viewport.x + reel.container.x;
+    const anchorY = this._viewport.y + reel.offsetY + anchorRowCount * slotH;
+    // Block covers w * cellWidth + (w-1) * gapX horizontally — the
+    // (w-1) inter-cell gaps are part of the block's visible footprint.
+    // Same vertically for cellHeight + gapY.
     return {
-      x: anchorBounds.x,
-      y: anchorBounds.y,
+      x: anchorX,
+      y: anchorY,
       width: fp.size.w * cellW + (fp.size.w - 1) * gapX,
       height: fp.size.h * cellH + (fp.size.h - 1) * gapY,
     };

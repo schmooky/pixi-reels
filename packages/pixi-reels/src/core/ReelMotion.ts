@@ -108,7 +108,12 @@ export class ReelMotion {
 
   private _wrapTopToBottom(): void {
     const firstSymbol = this._symbols[0];
-    if (firstSymbol.view.y >= this._minY) return;
+    // Symmetric with `_wrapBottomToTop`'s `y < maxY` guard: wrap as soon as
+    // the symbol reaches the boundary (`y <= minY`), not strictly past it.
+    // Required for `Reel.nudge()` which lands on exact integer slot offsets;
+    // strict `<` would miss the wrap at exactly minY and the nudge would
+    // visually no-op.
+    if (firstSymbol.view.y > this._minY) return;
     const lastSymbol = this._symbols[this._symbols.length - 1];
     firstSymbol.view.y = lastSymbol.view.y + this._slotHeight;
     // Maintain array order: first symbol becomes the new last.

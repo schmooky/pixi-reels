@@ -129,11 +129,11 @@ describe('Reel.setSymbolAt', () => {
       // markers; setSymbolAt's guard checks both. Toggle each in turn
       // and confirm the guard fires, then restore.
       reel.speed = 5;
-      expect(() => reel.setSymbolAt(0, 'wild')).toThrow(/cannot swap mid-spin/);
+      expect(() => reel.setSymbolAt(0, 'wild')).toThrow(/cannot swap mid-motion/);
       reel.speed = 0;
 
       reel.isStopping = true;
-      expect(() => reel.setSymbolAt(0, 'wild')).toThrow(/cannot swap mid-spin/);
+      expect(() => reel.setSymbolAt(0, 'wild')).toThrow(/cannot swap mid-motion/);
       reel.isStopping = false;
 
       // After clearing both, the swap goes through.

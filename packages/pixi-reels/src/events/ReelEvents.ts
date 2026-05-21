@@ -331,6 +331,56 @@ export interface ReelSetEvents extends Record<string, unknown[]> {
    * Use this hook to stop any animations or listeners you attached.
    */
   'pin:overlayDestroyed': [pin: CellPin, overlay: unknown];
+  /**
+   * A reel-at-rest nudge is about to tween. Fires **after** `Reel.nudge`
+   * has finished pre-placing incoming symbols into the buffer and snapping
+   * the strip to its pre-tween grid — i.e. the observable state at the
+   * moment this event fires is the about-to-animate state, not the
+   * pre-mutation state. To capture the pre-nudge frame, snapshot the
+   * grid before awaiting the call.
+   *
+   * Nudges are always per-reel — multi-reel sync is via `Promise.all([...])`
+   * of independent calls, each of which emits its own start/complete pair.
+   *
+   *   - `direction: 'down'` — symbols visually move down, new symbols enter
+   *     from the top of the visible window.
+   *   - `direction: 'up'` — opposite: symbols move up, new symbols enter
+   *     from the bottom.
+   */
+  'nudge:start': [info: {
+    reelIndex: number;
+    distance: number;
+    direction: 'up' | 'down';
+  }];
+  /**
+   * A reel-at-rest nudge finished — the strip has snapped to its post-nudge
+   * grid position. Mirror of `nudge:start`. `symbols` is the full new visible
+   * column top-to-bottom (handy for win-detection re-runs).
+   */
+  'nudge:complete': [info: {
+    reelIndex: number;
+    distance: number;
+    direction: 'up' | 'down';
+    symbols: string[];
+  }];
+  /**
+   * A nudge was cancelled via `options.signal.abort()` or by destroying
+   * the reel mid-tween. The strip has been snapped to its post-nudge
+   * landed position (deterministic landing — the contract is "incoming
+   * lands at these positions" regardless of how the tween ended), but
+   * the original `nudge()` promise rejected with an `AbortError`.
+   *
+   * Listeners that animate alongside the nudge (HUDs, SFX) should treat
+   * this as a "stop and clean up" signal, NOT a "the nudge finished
+   * normally" signal — call animations should be cut, not played out.
+   * `nudge:complete` does NOT fire alongside this event.
+   */
+  'nudge:cancelled': [info: {
+    reelIndex: number;
+    distance: number;
+    direction: 'up' | 'down';
+    reason: string;
+  }];
   'destroyed': [];
 }
 
