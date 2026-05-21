@@ -856,6 +856,55 @@ describe('nudge', () => {
       }
     });
 
+    it('regression: pre-placement does NOT overwrite an OCCUPIED stub of a surviving block', async () => {
+      installSyncGsap();
+      const { reelSet, spinAndLand, destroy } = createTestReelSet({
+        reels: 1,
+        visibleRows: 3,
+        bufferSymbols: 1,
+        symbolIds: ['a', 'b', 'c', 'bigW'],
+        symbolData: {
+          bigW: { weight: 0, size: { w: 1, h: 2 } },
+        },
+      });
+      try {
+        // Set up state where the up-nudge's pre-placement TARGET slot
+        // (strip[4] = bufferBelow row 0) holds an OCCUPIED stub of a
+        // surviving block. Anchor at visible row 2 (strip[3]), stub at
+        // strip[4]. Pre-fix this overwrote the stub with the caller's
+        // incoming symbol, splitting the block.
+        await spinAndLand([['a', 'bigW', 'bigW']]);
+        // Snapshot pre-nudge: anchor at visible row 1, stub at row 2.
+        // strip[4] holds the bufferBelow filler (not a stub here — this
+        // setup makes anchor at strip[2]). Set up the actual test state:
+        // need anchor at strip[3] with stub at strip[4]. Nudge once first
+        // to reach that state.
+        // Actually a simpler setup: 1x2 anchored at row 2 already has
+        // stub at bufferBelow. But setResult validates anchor + h <= rows
+        // so we can't directly setResult that.
+        // We'll reach it via a down-nudge: anchor moves from strip[2]
+        // (row 1) to strip[3] (row 2), stub moves to strip[4].
+        await reelSet.nudge(0, {
+          distance: 1,
+          direction: 'down',
+          incoming: ['a'],
+        });
+        // Now: anchor at strip[3], stub at strip[4]. Up-nudge should
+        // bring it back to visible without overwriting the stub.
+        const result = await reelSet.nudge(0, {
+          distance: 1,
+          direction: 'up',
+          incoming: ['b'],
+        });
+        // Block stays intact; visible rows 1+2 read 'bigW' via the
+        // anchor's occupancy.
+        expect(result.symbols[1]).toBe('bigW');
+        expect(result.symbols[2]).toBe('bigW');
+      } finally {
+        destroy();
+      }
+    });
+
     it('throws when up-nudge would push anchor off the top of the strip', async () => {
       installSyncGsap();
       const { reelSet, spinAndLand, destroy } = createTestReelSet({
