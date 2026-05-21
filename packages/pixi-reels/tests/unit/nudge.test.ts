@@ -819,6 +819,35 @@ describe('nudge', () => {
       }
     });
 
+    it('throws when up-nudge would land the anchor in bufferAbove', async () => {
+      installSyncGsap();
+      const { reelSet, spinAndLand, destroy } = createTestReelSet({
+        reels: 1,
+        visibleRows: 3,
+        bufferSymbols: 1,
+        symbolIds: ['a', 'b', 'c', 'bigW'],
+        symbolData: {
+          bigW: { weight: 0, size: { w: 1, h: 2 } },
+        },
+      });
+      try {
+        // 1x2 at visible rows 0+1 — anchor at strip[1], stub at strip[2].
+        // Survival for up distance=1: anchor - distance = 0 >= bufferAbove=1?
+        // No — 0 < 1. The anchor would land in bufferAbove which the engine
+        // doesn't render today.
+        await spinAndLand([['bigW', 'bigW', 'a']]);
+        await expect(
+          reelSet.nudge(0, {
+            distance: 1,
+            direction: 'up',
+            incoming: ['a'],
+          }),
+        ).rejects.toThrow(/land IN visible/);
+      } finally {
+        destroy();
+      }
+    });
+
     it('throws when a 1xH block would split — anchor too close to the wrap boundary', async () => {
       installSyncGsap();
       const { reelSet, spinAndLand, destroy } = createTestReelSet({

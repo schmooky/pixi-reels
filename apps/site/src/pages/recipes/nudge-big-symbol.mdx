@@ -24,14 +24,25 @@ every block on the strip against an explicit survival formula:
 
 | Direction | Survival condition |
 | --- | --- |
-| `'down'` | `anchorRow + h - 1 + distance < total` |
-| `'up'`   | `anchorRow >= distance` |
+| `'down'` | `anchorStripIdx + h - 1 + distance < total` |
+| `'up'`   | `anchorStripIdx - distance >= bufferAbove` |
 
-Where `total = bufferAbove + visibleRows + bufferBelow`. Blocks that
-wouldn't survive throw with a precise message naming the violated
-condition. Cross-reel blocks (`w > 1`) always throw — splitting an
-anchor from its right-side cells on a different reel isn't safe under
-any single-reel nudge.
+Where `total = bufferAbove + visibleRows + bufferBelow` and
+`anchorStripIdx` is the anchor's index along the full strip (0 is the
+topmost bufferAbove cell, `bufferAbove` is visible row 0).
+
+**Asymmetry by design.** Down-nudges can land the block partially in
+bufferBelow (the anchor stays in visible; the stub spills below the
+mask — see the recipe). Up-nudges must keep the anchor IN visible:
+the engine's `_finalizeFrame` doesn't size anchors that sit above
+visible today, so allowing anchor → bufferAbove would render a broken
+1x1 block. Filed as a follow-up; for now the engine fails loud rather
+than rendering a half-broken state.
+
+Blocks that wouldn't survive throw with a precise message naming the
+violated condition. Cross-reel blocks (`w > 1`) always throw —
+splitting an anchor from its right-side cells on a different reel
+isn't safe under any single-reel nudge.
 
 ## What the recipe does
 

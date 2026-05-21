@@ -666,12 +666,19 @@ export class Reel implements Disposable {
     }
 
     // Scan the ENTIRE strip (not just visible) for big-symbol anchors.
-    // A block survives the rotation iff none of its cells crosses the wrap
-    // boundary during the `distance` displace ticks:
-    //   - down: anchorIdx + h - 1 + distance < total
-    //   - up:   anchorIdx >= distance
-    // Cross-reel blocks (w > 1) can never be nudged on a single reel — the
-    // other-reel cells stay put and the block splits visually + logically.
+    // A block survives the rotation iff:
+    //   - down: anchor + h - 1 + distance < total      — block stays on
+    //     the strip; the bottom may extend into bufferBelow (rendered
+    //     half-clipped by the mask, which is fine — `_finalizeFrame`
+    //     sizes anchors at visible rows already).
+    //   - up:   anchor - distance >= bufferAbove        — anchor lands
+    //     IN visible. We deliberately reject anchor → bufferAbove because
+    //     `_finalizeFrame` doesn't size anchors that sit above visible
+    //     today, so the block would render at 1x1 with an invisible stub.
+    //     Tracked as a follow-up; for now, fail loud rather than render
+    //     a broken block. (See bufferAbove-anchor TODO in _finalizeFrame.)
+    // Cross-reel blocks (w > 1) can never be nudged on a single reel —
+    // the other-reel cells stay put and the block splits visually + logically.
     for (let i = 0; i < total; i++) {
       const sym = this.symbols[i];
       if (sym instanceof OccupiedStub) continue;
@@ -689,12 +696,15 @@ export class Reel implements Disposable {
       if (h > 1) {
         const survives = direction === 'down'
           ? i + h - 1 + distance < total
-          : i >= distance;
+          : i - distance >= this._bufferAbove;
         if (!survives) {
+          const failureDetail = direction === 'down'
+            ? `anchor + h + distance < total (${i} + ${h} + ${distance} = ${i + h + distance} vs ${total})`
+            : `anchor - distance >= bufferAbove (${i} - ${distance} = ${i - distance} vs ${this._bufferAbove}). ` +
+              `Block anchor must land IN visible; the engine doesn't render anchors that land in bufferAbove today.`;
           throw new Error(
             `nudge: block '${sym.symbolId}' (${w}x${h}) at strip[${i}] wouldn't survive a ` +
-            `distance=${distance} ${direction} nudge — the wrap boundary would split the ` +
-            `anchor from its stubs. Block survival: ${direction === 'down' ? `anchor + h + distance < total (${i} + ${h} + ${distance} = ${i + h + distance} vs ${total})` : `anchor >= distance (${i} vs ${distance})`}.`,
+            `distance=${distance} ${direction} nudge. Survival: ${failureDetail}.`,
           );
         }
       }
