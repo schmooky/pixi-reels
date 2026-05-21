@@ -1,0 +1,102 @@
+---
+layout: ../../layouts/Recipe.astro
+title: Staggered nudge — wave reveal
+description: Use `NudgeOptions.startDelay` inside a `Promise.all([...])` to dispatch parallel nudges with a per-reel offset. Reads as a wave — faster than sequential, more theatrical than synchronised parallel.
+tags: [nudge, stagger, wave, ux, recent]
+steps:
+  - Map over the target reels with `Promise.all(cols.map(...))`
+  - Pass `startDelay: i * STAGGER_MS` per call so each reel waits a beat longer to begin
+  - All tweens run concurrently — total wall time = last reel's delay + duration
+  - Validation throws still fire synchronously; only the mutation is deferred
+apis:
+  - ReelSet.nudge
+  - NudgeOptions.startDelay
+---
+
+import code from '../../recipes/nudge-stagger.recipe.ts?raw';
+import { RecipeRunner } from '../../components/RecipeRunner.tsx';
+
+<RecipeRunner code={code} client:only="react" />
+
+`startDelay` is the sugar for a wave-style reveal. Every reel's tween
+starts at a different time but runs concurrently — sharper than a
+sequential `await` loop (no reel waits for the previous to fully land),
+more readable than a fully synchronised parallel (the eye can follow
+the wave reel by reel).
+
+## The pattern
+
+```ts
+const NUDGE_COLS = [0, 1, 2, 3, 4];
+const NUDGE_DURATION = 520;
+const STAGGER_MS = 90;
+
+await Promise.all(
+  NUDGE_COLS.map((col, i) =>
+    reelSet.nudge(col, {
+      distance: 1,
+      direction: 'down',
+      incoming: ['wild'],
+      duration: NUDGE_DURATION,
+      startDelay: i * STAGGER_MS,
+    }),
+  ),
+);
+```
+
+Total wall time:
+
+| Mode | Time |
+| --- | --- |
+| Sequential (`for await`) | `cols.length * duration` |
+| Parallel (no stagger) | `duration` |
+| **Staggered (this recipe)** | `(cols.length - 1) * stagger + duration` |
+
+For 5 reels × 520 ms duration × 90 ms stagger that's `4 * 90 + 520 = 880 ms`
+total. Each reel's tween still runs its full 520 ms — just spread
+across the window.
+
+## Irregular stagger profiles
+
+For ease-style stagger curves (faster start, slower end), just compute
+per-reel delays explicitly:
+
+```ts
+const delays = [0, 50, 110, 180, 260]; // accelerating wave
+await Promise.all(
+  cols.map((col, i) =>
+    reelSet.nudge(col, { ...opts, startDelay: delays[i] }),
+  ),
+);
+```
+
+## Validation throws still fire synchronously
+
+`startDelay` only defers the **strip mutation** + tween. Argument-shape
+errors (`distance` out of range, unknown `incoming` id, pin overlap on
+the target reel) still throw on the call site:
+
+```ts
+// Throws immediately even though startDelay=1000 was passed.
+await reelSet.nudge(2, {
+  distance: 0,             // invalid
+  direction: 'down',
+  incoming: [],
+  startDelay: 1000,
+});
+```
+
+This keeps "where did the error come from" debuggable. Errors don't get
+laundered into a delayed rejection a second later.
+
+## Cancelling a staggered wave mid-flight
+
+Pass the same `AbortSignal` to every call and reels whose tween hasn't
+started yet bail before mutating anything; reels already mid-tween snap
+to landed and reject with `AbortError`. See [Abort a nudge](/recipes/nudge-abort/).
+
+## Related
+
+- [Nudge a reel](/recipes/nudge/) — sequential / parallel / now stagger.
+- [Spotlight after a nudge](/recipes/nudge-spotlight/) — pair with
+  `WinPresenter`.
