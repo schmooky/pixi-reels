@@ -974,11 +974,24 @@ export class ReelSet extends Container implements Disposable {
    * pair on the ReelSet bus and `phase:enter('nudge')` / `phase:exit('nudge')`
    * on the per-reel bus.
    *
-   * Throws if:
+   * Big-symbol blocks on the target reel are nudged through as a unit as
+   * long as they fit on the strip post-rotation. Use case: a 1xH block
+   * lands with stubs in bufferBelow; nudge up to reveal it fully.
+   *
+   * `nudge:start` fires AFTER pre-placement so listeners observe the
+   * about-to-tween state, mirroring `nudge:complete` which fires after
+   * the strip has snapped. To capture the pre-nudge state, snapshot the
+   * grid in your call site before awaiting.
+   *
+   * Throws (synchronously) if:
    *   - the reel set is currently spinning (avoid races with the spin pipeline),
    *   - `col` is out of range,
    *   - any visible cell on the target reel has an active pin,
-   *   - `Reel.nudge` itself rejects (bad distance / direction / incoming).
+   *   - `Reel.nudge` itself rejects (bad distance / direction / incoming /
+   *     incompatible big-symbol layout).
+   *
+   * Rejects with an `AbortError` if `options.signal` aborts or the reel
+   * is destroyed mid-tween. `nudge:cancelled` fires on the bus in that case.
    *
    * @example
    * await reelSet.spin(); // landed
@@ -989,8 +1002,26 @@ export class ReelSet extends Container implements Disposable {
    *   reelSet.nudge(2, { distance: 1, direction: 'down', incoming: ['wild'] }),
    *   reelSet.nudge(3, { distance: 1, direction: 'down', incoming: ['wild'] }),
    * ]);
+   *
+   * @example Staggered parallel via `startDelay`:
+   * await Promise.all(
+   *   [1, 2, 3].map((col, i) =>
+   *     reelSet.nudge(col, { ...opts, startDelay: i * 80 }),
+   *   ),
+   * );
+   *
+   * @example Abortable nudge:
+   * const controller = new AbortController();
+   * skipButton.onclick = () => controller.abort();
+   * await reelSet.nudge(2, { ...opts, signal: controller.signal })
+   *   .catch((e) => { if (e.name !== 'AbortError') throw e; });
    */
   async nudge(col: number, options: NudgeOptions): Promise<{ symbols: string[] }> {
+    // TODO(reentrancy): a `spin()` / `setResult()` / `pin()` / `setShape()`
+    // call made while a nudge is in flight will race on the same reel.
+    // We currently guard the *forward* direction (nudge refuses while
+    // spinning) but not the reverse. Add `_assertNoNudgeInFlight()` to
+    // those entry points before broad production use.
     if (this._spinController.isSpinning) {
       throw new Error('nudge: cannot nudge while a spin or refill is in progress.');
     }
@@ -1009,19 +1040,65 @@ export class ReelSet extends Container implements Disposable {
       }
     }
 
-    this._events.emit('nudge:start', {
-      reelIndex: col,
-      distance: options.distance,
-      direction: options.direction,
-    });
-    const result = await this._reels[col].nudge(options);
-    this._events.emit('nudge:complete', {
-      reelIndex: col,
-      distance: options.distance,
-      direction: options.direction,
-      symbols: result.symbols,
-    });
-    return result;
+    try {
+      const result = await this._reels[col].nudge(options, () => {
+        // Fires after Reel.nudge has validated, pre-placed, and snapped —
+        // right before the GSAP tween starts. Now the bus event matches
+        // observable state.
+        this._events.emit('nudge:start', {
+          reelIndex: col,
+          distance: options.distance,
+          direction: options.direction,
+        });
+      });
+      this._events.emit('nudge:complete', {
+        reelIndex: col,
+        distance: options.distance,
+        direction: options.direction,
+        symbols: result.symbols,
+      });
+      return result;
+    } catch (err) {
+      const isAbort = err instanceof Error && err.name === 'AbortError';
+      // If the ReelSet was destroyed mid-nudge, `super.destroy({children: true})`
+      // has already torn down our event bus (PixiJS Container has its own
+      // `_events` field that we shadow — after super.destroy ours is gone too).
+      // Skip the emit; the consumer's `nudge()` await will still see the
+      // AbortError via the re-throw below.
+      if (isAbort && !this._isDestroyed) {
+        this._events.emit('nudge:cancelled', {
+          reelIndex: col,
+          distance: options.distance,
+          direction: options.direction,
+          reason: err.message,
+        });
+      }
+      throw err;
+    }
+  }
+
+  /**
+   * Fast-forward an in-flight nudge to its landed state. No-op if the
+   * given reel isn't currently nudging.
+   *
+   * The tween's `onComplete` fires synchronously, the strip snaps to the
+   * final position, and the original `nudge()` promise resolves on the
+   * next microtask. `nudge:complete` fires normally — from a listener's
+   * POV the nudge just landed fast.
+   *
+   * @param col Reel index, or `undefined` to skip all in-flight nudges.
+   */
+  skipNudge(col?: number): void {
+    if (col === undefined) {
+      for (const reel of this._reels) {
+        if (reel.isNudging) reel.skipNudge();
+      }
+      return;
+    }
+    if (!Number.isInteger(col) || col < 0 || col >= this._reels.length) {
+      throw new RangeError(`skipNudge: col ${col} out of range [0, ${this._reels.length}).`);
+    }
+    this._reels[col].skipNudge();
   }
 
   /**
