@@ -29,7 +29,7 @@ describe('ReelSet.skip — round-aware slam + boost', () => {
     ];
     const promise = h.reelSet.spin();
     h.reelSet.setResult(grid.map((visible) => ({ visible })));
-    h.reelSet.skip();
+    h.reelSet.skipSpin();
 
     expect(h.reelSet.skipStage).toBe(2);
     expect(h.reelSet.speed.activeName).toBe('superTurbo');
@@ -55,9 +55,9 @@ describe('ReelSet.skip — round-aware slam + boost', () => {
 
     const promise = h.reelSet.spin();
     h.reelSet.setResult(grid.map((visible) => ({ visible })));
-    h.reelSet.skip();
-    h.reelSet.skip();
-    h.reelSet.skip();
+    h.reelSet.skipSpin();
+    h.reelSet.skipSpin();
+    h.reelSet.skipSpin();
     expect(h.reelSet.skipStage).toBe(2);
     expect(boosted).toHaveLength(1);
     await promise;
@@ -74,7 +74,7 @@ describe('ReelSet.skip — round-aware slam + boost', () => {
 
     const first = h.reelSet.spin();
     h.reelSet.setResult(grid.map((visible) => ({ visible })));
-    h.reelSet.skip();
+    h.reelSet.skipSpin();
     await first;
 
     // Round ended on slam; speed is still boosted until the NEXT spin.
@@ -102,7 +102,7 @@ describe('ReelSet.skip — round-aware slam + boost', () => {
 
     const promise = h.reelSet.spin();
     h.reelSet.setResult(grid.map((visible) => ({ visible })));
-    h.reelSet.skip();
+    h.reelSet.skipSpin();
     expect(boosted).toHaveLength(0);
     expect(h.reelSet.skipStage).toBe(2);
     await promise;
@@ -119,7 +119,7 @@ describe('ReelSet.skip — round-aware slam + boost', () => {
 
     const promise = h.reelSet.spin();
     h.reelSet.setResult(grid.map((visible) => ({ visible })));
-    h.reelSet.skip();
+    h.reelSet.skipSpin();
     expect(boosted).toHaveLength(0);
     expect(h.reelSet.skipStage).toBe(2);
     await promise;
@@ -171,7 +171,7 @@ describe('ReelSet.skip — round-aware slam + boost', () => {
     // Round 1: press skip, boost normal → superTurbo + slam.
     const first = h.reelSet.spin();
     h.reelSet.setResult(grid.map((visible) => ({ visible })));
-    h.reelSet.skip();
+    h.reelSet.skipSpin();
     await first;
     expect(h.reelSet.speed.activeName).toBe('superTurbo');
 

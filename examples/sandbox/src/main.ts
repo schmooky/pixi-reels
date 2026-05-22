@@ -52,7 +52,7 @@ async function main() {
   let isSpinning = false;
   async function handleSpin() {
     if (isSpinning) {
-      try { reelSet.skip(); } catch {}
+      try { reelSet.skipSpin(); } catch {}
       return;
     }
     isSpinning = true;

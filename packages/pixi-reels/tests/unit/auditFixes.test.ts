@@ -139,7 +139,7 @@ describe('ReelSet.skip — pre-setResult guard', () => {
   it('throws if called in standard mode before setResult', async () => {
     const h = createTestReelSet({ reels: 2, visibleRows: 2, symbolIds: ['a'] });
     const promise = h.reelSet.spin();
-    expect(() => h.reelSet.skip()).toThrow(/skip\(\) called before setResult/);
+    expect(() => h.reelSet.skipSpin()).toThrow(/skip\(\) called before setResult/);
     // Recovery: result + slamStop ends the spin cleanly.
     h.reelSet.setResult([{ visible: ['a', 'a'] }, { visible: ['a', 'a'] }]);
     h.reelSet.slamStop();
@@ -153,7 +153,7 @@ describe('ReelSet.skip — pre-setResult guard', () => {
       ['a', 'a'],
     ]);
     const promise = reelSet.spin({ mode: 'cascade' });
-    expect(() => reelSet.skip()).toThrow(/skip\(\) called before setResult/);
+    expect(() => reelSet.skipSpin()).toThrow(/skip\(\) called before setResult/);
     reelSet.setResult([{ visible: ['b', 'a'] }, { visible: ['b', 'a'] }]);
     reelSet.slamStop();
     await promise;
@@ -164,7 +164,7 @@ describe('ReelSet.skip — pre-setResult guard', () => {
     const h = createTestReelSet({ reels: 2, visibleRows: 2, symbolIds: ['a'] });
     const promise = h.reelSet.spin();
     h.reelSet.setResult([{ visible: ['a', 'a'] }, { visible: ['a', 'a'] }]);
-    expect(() => h.reelSet.skip()).not.toThrow();
+    expect(() => h.reelSet.skipSpin()).not.toThrow();
     await promise;
     h.destroy();
   });
@@ -250,7 +250,7 @@ describe('ReelSet.skip — manual setSpeed survives restore', () => {
     // Round 1: skip boost from normal → superTurbo.
     const first = h.reelSet.spin();
     h.reelSet.setResult([{ visible: ['a', 'a'] }, { visible: ['a', 'a'] }]);
-    h.reelSet.skip();
+    h.reelSet.skipSpin();
     await first;
     expect(h.reelSet.speed.activeName).toBe('superTurbo');
 
@@ -276,7 +276,7 @@ describe('ReelSet.skip — manual setSpeed survives restore', () => {
 
     const first = h.reelSet.spin();
     h.reelSet.setResult([{ visible: ['a', 'a'] }, { visible: ['a', 'a'] }]);
-    h.reelSet.skip();
+    h.reelSet.skipSpin();
     await first;
     expect(h.reelSet.speed.activeName).toBe('superTurbo');
 

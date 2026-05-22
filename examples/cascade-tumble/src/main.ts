@@ -458,7 +458,7 @@ async function main(): Promise<void> {
     // per-cascade multiplier + UI side effects. The awaited summary
     // (`RunCascadeResult`) tells us how the chain ended. AbortController
     // ends the round cleanly when the player slams between refills
-    // (where `reelSet.skip()` is a no-op because no phase is active).
+    // (where `reelSet.skipSpin()` is a no-op because no phase is active).
     //
     // Cascade refills: every reel drops simultaneously — the canonical
     // commercial pattern. ('ltr' / 'rtl' on a refill reads as a fresh
@@ -482,7 +482,7 @@ async function main(): Promise<void> {
         // mid-await: ask the engine to slam every remaining refill.
         if (pendingSkip) {
           pendingSkip = false;
-          try { reelSet.skip(); } catch { /* idle */ }
+          try { reelSet.skipSpin(); } catch { /* idle */ }
         }
       },
     });

@@ -62,7 +62,7 @@ That's it. The engine handles cell-height derivation, AdjustPhase reshape, mask 
 
 Set `pinMigrationDuration(0)` to skip the overlay tween (instant snap). Pass any GSAP ease string to `pinMigrationEase` — `'power2.out'` (default), `'back.out(1.4)'`, `'expo.inOut'`, etc. Reels without active pins on this spin see the same instant geometry change either way; the duration only matters when there's an overlay to migrate.
 
-`pinMigrationDuration` does **not** apply when the player slam-stops the spin (`reelSet.skip()`). Skip is meant to land *now*; running a 300 ms tween on the way there would defeat the purpose. Pin overlays migrate instantly on skip regardless of `pinMigrationDuration`.
+`pinMigrationDuration` does **not** apply when the player slam-stops the spin (`reelSet.skipSpin()`). Skip is meant to land *now*; running a 300 ms tween on the way there would defeat the purpose. Pin overlays migrate instantly on skip regardless of `pinMigrationDuration`.
 
 ## Reshape + AdjustPhase are multiways-only
 

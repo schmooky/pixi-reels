@@ -516,7 +516,7 @@ export default function Studio() {
       // skip() THROWS before `setResult()` arrives — route to requestSkip()
       // in the catch so a player tap during the server-wait window still
       // queues the slam and fires it the moment the result is in.
-      try { reelSetRef.current?.skip(); }
+      try { reelSetRef.current?.skipSpin(); }
       catch { reelSetRef.current?.requestSkip(); }
       return;
     }

@@ -59,7 +59,7 @@ spinButton.addEventListener('click', () => {
   // the catch so a tap during the server-wait window still queues the
   // slam — and still picks up the boost / cascade auto-slam side effects
   // when the result lands.
-  try { reelSet.skip(); }
+  try { reelSet.skipSpin(); }
   catch { reelSet.requestSkip(); }
 });
 ```

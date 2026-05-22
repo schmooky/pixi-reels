@@ -146,7 +146,7 @@ const initialGrid = initialShape.map((rows) =>
   const p = reelSet.spin({ mode: 'standard' });
   reelSet.setShape(initialShape);
   reelSet.setResult(initialGrid.map((visible) => ({ visible })));
-  reelSet.skip();
+  reelSet.skipSpin();
   await p;
 }
 

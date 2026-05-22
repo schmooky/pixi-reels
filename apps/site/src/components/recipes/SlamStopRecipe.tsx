@@ -32,7 +32,7 @@ export default function SlamStopRecipe() {
             const promise = reelSet.spin();
             reelSet.setResult(GRID.map((visible) => ({ visible })));
             await sleep(560);
-            reelSet.skip();
+            reelSet.skipSpin();
             const r = await promise;
             if (!r.wasSkipped) console.warn('expected wasSkipped');
           },

@@ -186,7 +186,7 @@ let cascadeAbort: AbortController | null = null;
 
 button.addEventListener('click', async () => {
   if (isPlaying) {
-    reelSet.skip();              // slam in-flight engine motion (no-op if idle)
+    reelSet.skipSpin();              // slam in-flight engine motion (no-op if idle)
     cascadeAbort?.abort();       // end the cascade chain at the next await boundary
     return;
   }
@@ -203,7 +203,7 @@ button.addEventListener('click', async () => {
 
 The two-pronged slam handler is deliberate:
 
-- `reelSet.skip()` slams the engine's in-flight motion. If the engine is idle (between refills, during the `pauseAfterDestroyMs` beat) it's a no-op — that's safe to call unconditionally.
+- `reelSet.skipSpin()` slams the engine's in-flight motion. If the engine is idle (between refills, during the `pauseAfterDestroyMs` beat) it's a no-op — that's safe to call unconditionally.
 - `AbortController.abort()` flips a flag `runCascade` observes at the next await boundary. Works whether the engine is mid-refill or idle.
 
 Combined: the engine slams its in-flight motion AND the cascade chain ends. See [the cancellation section in the cascades guide](/guides/cascades/#cancelling-a-chain--the-abortsignal-pattern) for the rationale.

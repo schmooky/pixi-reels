@@ -222,7 +222,7 @@ async function main() {
   }
 
   async function handleSpin() {
-    if (isSpinning) { try { mainReelSet.skip(); } catch {} return; }
+    if (isSpinning) { try { mainReelSet.skipSpin(); } catch {} return; }
     if (inBonus) return;
 
     isSpinning = true;

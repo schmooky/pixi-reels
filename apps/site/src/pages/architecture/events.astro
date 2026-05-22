@@ -223,7 +223,7 @@ import Legend from '../../components/arch/Legend.astro';
         Use <code>isSpinning</code> to branch the same button between "start" and "slam-stop."
       </p>
       <pre class="text-[11px] !my-0"><code>{`button.addEventListener('click', () => {
-  if (reelSet.isSpinning) reelSet.skip();
+  if (reelSet.isSpinning) reelSet.skipSpin();
   else               reelSet.spin();
 });`}</code></pre>
     </div>

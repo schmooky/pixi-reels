@@ -163,7 +163,7 @@ export async function boot(opts: BootOptions): Promise<() => void> {
   async function handleSpin(): Promise<void> {
     if (disposed) return;
     if (isSpinning) {
-      try { reelSet.skip(); } catch { /* idle */ }
+      try { reelSet.skipSpin(); } catch { /* idle */ }
       return;
     }
     isSpinning = true;

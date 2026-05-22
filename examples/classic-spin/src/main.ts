@@ -155,7 +155,7 @@ async function main() {
 
   async function handleSpin() {
     if (isSpinning) {
-      try { reelSet.skip(); } catch {}
+      try { reelSet.skipSpin(); } catch {}
       return;
     }
 

@@ -90,7 +90,7 @@ export default function SpriteClassicDemo() {
           controls.appendChild(skipBtn);
 
           skipBtn.addEventListener('click', () => {
-            if (handle.reelSet.isSpinning) handle.reelSet.skip();
+            if (handle.reelSet.isSpinning) handle.reelSet.skipSpin();
           });
 
           let spinning = false;

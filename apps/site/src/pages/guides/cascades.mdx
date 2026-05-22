@@ -156,7 +156,7 @@ destroyOptions: {
 
 ## Cancelling a chain — the AbortSignal pattern
 
-`reelSet.skip()` slams the in-flight phase but **early-returns when the engine is idle** (the moment between two refills, or during the `pauseAfterDestroyMs` beat). That means a tap to slam can land in a window where `skip()` does nothing — and your cascade chain keeps running.
+`reelSet.skipSpin()` slams the in-flight phase but **early-returns when the engine is idle** (the moment between two refills, or during the `pauseAfterDestroyMs` beat). That means a tap to slam can land in a window where `skip()` does nothing — and your cascade chain keeps running.
 
 The fix is an `AbortController`. Hand its `signal` to `runCascade`, abort it from the button handler:
 
@@ -179,7 +179,7 @@ When the signal aborts, `runCascade`:
 - Exits at the next await boundary.
 - Resolves with `RunCascadeResult` carrying `wasSkipped: true`.
 
-This is the canonical "player slam" pattern. The standard `reelSet.skip()` is still the right tool inside event listeners or while the engine is actively in motion — both work together.
+This is the canonical "player slam" pattern. The standard `reelSet.skipSpin()` is still the right tool inside event listeners or while the engine is actively in motion — both work together.
 
 ## Choosing between `refill()` and `runCascade()`
 

@@ -238,7 +238,7 @@ export interface RunCascadeOptions {
    * next await boundary, the in-flight refill (if any) is slammed via
    * `slamStop()`, and the resolved summary reports `wasSkipped: true`.
    *
-   * Use this for "player tapped SLAM mid-cascade" — `reelSet.skip()` is
+   * Use this for "player tapped SLAM mid-cascade" — `reelSet.skipSpin()` is
    * a no-op when called between refills (the engine is idle), so it
    * can't end the chain from a button handler. AbortController can.
    *
@@ -264,7 +264,7 @@ export interface RunCascadeOptions {
  *     controller consumes this and each reel queues its target symbols
  *   - `setAnticipation(reelIndices)` — slow the given reels before they
  *     stop, for "will the third scatter land?" tension
- *   - `skip()` — land immediately; useful for slam-stop UX
+ *   - `skipSpin()` lands the in-flight spin immediately. The slam-stop button calls this.
  *
  * Everything else is subsystems: `speed`, `spotlight`, `events`, `viewport`.
  * Construction goes through {@link ReelSetBuilder}, never `new ReelSet()`
@@ -691,7 +691,7 @@ export class ReelSet extends Container implements Disposable {
    * Run the canonical cascade chain on top of `refill()`. Loops:
    * detect winners → destroy → pause → refill → emit — until
    * `detectWinners` returns an empty list (or `maxChain` is hit, or the
-   * player slammed via `skip()` / abort). Resolves with the final grid
+   * player slammed via `skipSpin()` / abort). Resolves with the final grid
    * and a summary.
    *
    * The orchestration is library-owned; the **game rules** (what counts
@@ -717,7 +717,7 @@ export class ReelSet extends Container implements Disposable {
    *    it before `runCascade` and the same order applies to every drop.
    *  - `cascade:fall:symbol`, `cascade:place:end`, `cascade:dropIn:symbol`
    *    fire on each refill.
-   *  - `reelSet.skip()` ends the chain immediately; the returned summary
+   *  - `reelSet.skipSpin()` ends the chain immediately; the returned summary
    *    reports `wasSkipped: true`.
    *
    * Event order per stage with winners: `cascade:chain:start` →
@@ -875,38 +875,47 @@ export class ReelSet extends Container implements Disposable {
   }
 
   /**
-   * Round-aware skip — the button-press entry point. The first press in a
-   * round slams the current drop AND applies a round-scoped side effect:
+   * Round-aware spin skip. The button-press entry point. The first press
+   * in a round slams the current drop AND applies a round-scoped side
+   * effect:
    *
    *   - Standard mode: boost the active speed profile to the fastest
    *     registered one (emits `skip:boosted`). Restored on the next
    *     `spin()` (unless the app manually changed speed in between).
    *   - Cascade/tumble mode: flag every subsequent `refill()` to
-   *     auto-slam with no animation. One press ends a multi-drop
-   *     cascade.
+   *     auto-slam with no animation. One press ends a multi-drop cascade.
    *
    * Subsequent presses also slam each current drop.
    *
-   * Throws if called before `setResult()` arrives (nothing to land on —
+   * Throws if called before `setResult()` arrives (nothing to land on:
    * slamming now would land on random spin-buffer content). The universal
    * "spin/skip" button pattern should call `requestSkip()` in that window
-   * (or wrap `skip()` in a try/catch that routes to `requestSkip()` in
-   * the catch). Callers that want a slam *without* the round-scoped side
+   * (or wrap `skipSpin()` in a try/catch that routes to `requestSkip()`
+   * in the catch). Callers that want a slam without the round-scoped side
    * effects (tests, anti-cheat) should use `slamStop()`.
+   *
+   * Pairs with `skipNudge()` (skip an in-flight `nudge()`) and `slamStop()`
+   * (unconditional land-now, no boost). Three distinct actions:
+   *
+   *   - `skipSpin()` lands the in-flight spin and applies the round-scoped
+   *     boost / auto-slam-refills side effect.
+   *   - `skipNudge()` fast-forwards an in-flight `nudge()` to its landed
+   *     position. Spin state is unrelated.
+   *   - `slamStop()` lands every un-landed reel unconditionally. No boost.
    */
-  skip(): void {
+  skipSpin(): void {
     this._spinController.skip();
   }
 
   /**
-   * Slam-stop safe before `setResult()` arrives — queues until then.
-   * Bypasses the two-stage `skip()` machine: an explicit slam intent.
+   * Slam-stop safe before `setResult()` arrives: queues until then.
+   * Bypasses the two-stage `skipSpin()` machine. An explicit slam intent.
    *
    * Note on `skipStage`: when this call queues a slam (pre-`setResult`)
    * rather than firing one, `skipStage` stays at `0` until `setResult()`
    * arrives and the queued slam actually runs. If your UI labels the
    * button off `skipStage`, expect a beat of "Skip" still shown while
-   * the queued intent is in flight — the queued state isn't exposed as
+   * the queued intent is in flight; the queued state is not exposed as
    * its own stage on purpose (kept the `0 | 1 | 2` shape stable).
    */
   requestSkip(): void {
@@ -914,18 +923,22 @@ export class ReelSet extends Container implements Disposable {
   }
 
   /**
-   * Hard slam-stop — always lands every un-landed reel immediately. Bypasses
-   * the two-stage `skip()` machine and any speed boost. For tests, anti-cheat
-   * flows, or any caller with unambiguous "end now" intent.
+   * Hard slam-stop. Always lands every un-landed reel immediately.
+   * Bypasses the two-stage `skipSpin()` machine and any speed boost.
+   * For tests, anti-cheat flows, or any caller with unambiguous
+   * "end now" intent.
+   *
+   * Pairs with `skipSpin()` (round-aware land + boost) and `skipNudge()`
+   * (fast-forward an in-flight `nudge()`).
    */
   slamStop(): void {
     this._spinController.slamStop();
   }
 
   /**
-   * Current `skip()` position within the active round. `0` until the
+   * Current `skipSpin()` position within the active round. `0` until the
    * player presses the slam button, `2` after. Read this to drive button
-   * labels (e.g. "Skip" → "Skipped"). `1` is reserved for forward compat
+   * labels (e.g. "Skip" to "Skipped"). `1` is reserved for forward compat
    * and is not currently reachable.
    *
    * `requestSkip()` that gets queued pre-`setResult()` does NOT advance
@@ -1079,13 +1092,18 @@ export class ReelSet extends Container implements Disposable {
   }
 
   /**
-   * Fast-forward an in-flight nudge to its landed state. No-op if the
-   * given reel isn't currently nudging.
+   * Fast-forward an in-flight `nudge()` to its landed state. No-op if the
+   * given reel is not currently nudging.
    *
    * The tween's `onComplete` fires synchronously, the strip snaps to the
    * final position, and the original `nudge()` promise resolves on the
-   * next microtask. `nudge:complete` fires normally — from a listener's
+   * next microtask. `nudge:complete` fires normally. From a listener's
    * POV the nudge just landed fast.
+   *
+   * Pairs with `skipSpin()` (round-aware spin land + boost) and
+   * `slamStop()` (unconditional spin land-now). These three are distinct:
+   * spin actions do not affect a nudge in flight, and `skipNudge` does
+   * not touch spin state.
    *
    * @param col Reel index, or `undefined` to skip all in-flight nudges.
    */

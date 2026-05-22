@@ -46,7 +46,7 @@ describe('ReelSet.skip — cascade auto-slam', () => {
     const spinDone = h.reelSet.spin({ mode: 'cascade' });
     h.reelSet.setResult(grid.map((visible) => ({ visible })));
     // One press: cascade mode short-circuits the boost and slams.
-    h.reelSet.skip();
+    h.reelSet.skipSpin();
     await spinDone;
 
     expect(boosted).toHaveLength(0);
@@ -83,7 +83,7 @@ describe('ReelSet.skip — cascade auto-slam', () => {
     // Round 1: trigger auto-slam.
     const first = h.reelSet.spin({ mode: 'cascade' });
     h.reelSet.setResult(grid.map((visible) => ({ visible })));
-    h.reelSet.skip();
+    h.reelSet.skipSpin();
     await first;
     expect(h.reelSet.skipStage).toBe(2);
 

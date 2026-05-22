@@ -321,7 +321,7 @@ describe('ReelSet.runCascade', () => {
       nextGrid: (grid) => grid.map((col) => ['b', col[0], col[1]]),
       onCascade: () => {
         // Simulate the engine firing `skip:requested` mid-chain (as it
-        // would when reelSet.skip() lands during an in-flight refill).
+        // would when reelSet.skipSpin() lands during an in-flight refill).
         // Direct emit avoids depending on real GSAP-driven destroy timing
         // in the FakeTicker harness; the contract being verified is
         // "runCascade observes skip:requested and exits at the next

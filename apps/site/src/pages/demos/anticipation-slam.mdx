@@ -26,12 +26,12 @@ setTimeout(() => {
 
 ## Slam-stop (skip)
 
-`ReelSet.skip()` force-lands every reel immediately, using the target from
+`ReelSet.skipSpin()` force-lands every reel immediately, using the target from
 `setResult()` if one was set. The returned `SpinResult` has `wasSkipped: true`.
 
 ```ts
 spinButton.addEventListener('click', () => {
-  if (reelSet.isSpinning) reelSet.skip();
+  if (reelSet.isSpinning) reelSet.skipSpin();
   else reelSet.spin();
 });
 ```
