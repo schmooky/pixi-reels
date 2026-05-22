@@ -31,7 +31,7 @@ const initialFrame = [
 
 const reelSet = new ReelSetBuilder()
   .reels(3)
-  .visibleSymbols(3)
+  .visibleRows(3)
   .symbolSize(90, 90)
   .symbolGap(4, 4)
   .bufferSymbols(1)

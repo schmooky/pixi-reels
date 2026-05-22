@@ -169,7 +169,7 @@ function buildReelSet(app: Application, textures: Record<string, Texture>): Reel
   }
   return new ReelSetBuilder()
     .reels(REEL_COUNT)
-    .visibleSymbols(VISIBLE_ROWS)
+    .visibleRows(VISIBLE_ROWS)
     .symbolSize(SYMBOL_SIZE, SYMBOL_SIZE)
     .symbolGap(SYMBOL_GAP, SYMBOL_GAP)
     .symbols((r) => {

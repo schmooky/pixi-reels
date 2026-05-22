@@ -14,7 +14,7 @@ function rv() { return CARD_IDS[Math.floor(Math.random() * CARD_IDS.length)]; }
 
 const reelSet = new ReelSetBuilder()
   .reels(5)
-  .visibleSymbols(3)
+  .visibleRows(3)
   .symbolSize(80, 80)
   .symbolGap(4, 4)
   .bufferSymbols(1)

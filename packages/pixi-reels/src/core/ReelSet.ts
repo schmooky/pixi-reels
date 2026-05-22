@@ -272,7 +272,7 @@ export interface RunCascadeOptions {
  *
  * ```ts
  * const reelSet = new ReelSetBuilder()
- *   .reels(5).visibleSymbols(3).symbolSize(140, 140)
+ *   .reels(5).visibleRows(3).symbolSize(140, 140)
  *   .symbols((r) => r.register('cherry', SpriteSymbol, { textures }))
  *   .ticker(app.ticker)
  *   .build();

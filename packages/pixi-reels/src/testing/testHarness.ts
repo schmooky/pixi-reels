@@ -89,7 +89,7 @@ export function createTestReelSet(opts: TestReelSetOptions = {}): TestReelSetHan
   } else if (Array.isArray(opts.visibleRows)) {
     builder.visibleRowsPerReel(opts.visibleRows);
   } else {
-    builder.visibleSymbols(opts.visibleRows ?? 3);
+    builder.visibleRows(opts.visibleRows ?? 3);
   }
 
   if (opts.symbolGap) {

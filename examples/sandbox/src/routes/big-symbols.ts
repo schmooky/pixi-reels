@@ -32,7 +32,7 @@ export function buildBigSymbols({ app, textures, blurTextures }: SandboxContext)
 
   const reelSet = new ReelSetBuilder()
     .reels(REELS)
-    .visibleSymbols(ROWS)
+    .visibleRows(ROWS)
     .symbolSize(SYMBOL_SIZE, SYMBOL_SIZE)
     .symbolGap(GAP, GAP)
     .symbols((registry) => {

@@ -78,7 +78,7 @@ export default function SingleReelRespinRecipe() {
         for (let col = 0; col < COLS; col++) {
           const rs = new ReelSetBuilder()
             .reels(1)
-            .visibleSymbols(ROWS)
+            .visibleRows(ROWS)
             .symbolSize(CELL, CELL)
             .symbolGap(0, GAP)
             .symbols((r) => {

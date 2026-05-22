@@ -29,7 +29,7 @@ import { ReelSetBuilder, SpriteSymbol, type Cell } from 'pixi-reels';
 
 const reelSet = new ReelSetBuilder()
   .reels(6)
-  .visibleSymbols(5)
+  .visibleRows(5)
   .symbolSize(110, 110)
   .symbols((r) => {
     for (const id of SYMBOLS) r.register(id, SpriteSymbol, { textures });

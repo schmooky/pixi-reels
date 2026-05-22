@@ -40,7 +40,7 @@ for (const cell of cells) {
 for (let col = 0; col < 5; col++) {
   for (let row = 0; row < 3; row++) {
     const mini = new ReelSetBuilder()
-      .reels(1).visibleSymbols(1)
+      .reels(1).visibleRows(1)
       .symbolSize(CELL, CELL)
       .symbols((r) => {
         r.register('coin', BlurSpriteSymbol, { textures, blurTextures });

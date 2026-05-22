@@ -26,7 +26,7 @@ import { ReelSetBuilder } from 'pixi-reels';
 import { BlockSymbol } from './BlockSymbol';
 
 const reelSet = new ReelSetBuilder()
-  .reels(5).visibleSymbols(3).symbolSize(96, 96)
+  .reels(5).visibleRows(3).symbolSize(96, 96)
   .symbols((r) => {
     r.register('cherry', BlockSymbol, { colors: { cherry: 0xff6d70 } });
     r.register('seven',  BlockSymbol, { colors: { seven: 0xffffff } });

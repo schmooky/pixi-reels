@@ -18,7 +18,7 @@ const MYSTERY_CARD = { id: MYSTERY, color: 0x34495e, label: '?', textColor: 0xff
 
 const reelSet = new ReelSetBuilder()
   .reels(COLS)
-  .visibleSymbols(ROWS)
+  .visibleRows(ROWS)
   .symbolSize(SIZE, SIZE)
   .symbolGap(4, 4)
   .symbols((r) => {

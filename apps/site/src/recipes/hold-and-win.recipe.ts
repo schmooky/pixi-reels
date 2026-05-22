@@ -17,7 +17,7 @@ const cells = [];
 for (let col = 0; col < COLS; col++) {
   for (let row = 0; row < ROWS; row++) {
     const mini = new ReelSetBuilder()
-      .reels(1).visibleSymbols(1)
+      .reels(1).visibleRows(1)
       .symbolSize(CELL, CELL).symbolGap(0, 0)
       .symbols(r => {
         r.register(COIN, CardSymbol, {

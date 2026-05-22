@@ -74,7 +74,7 @@ export function buildSandbox(ctx: SandboxContext): SandboxResult {
 
   const reelSet = new ReelSetBuilder()
     .reels(REELS)
-    .visibleSymbols(ROWS)
+    .visibleRows(ROWS)
     .symbolSize(SYMBOL_SIZE, SYMBOL_SIZE)
     .symbolGap(GAP, GAP)
     .symbols((registry) => {

@@ -200,7 +200,7 @@ off(); // unsubscribe
 import { ReelSetBuilder, SpriteSymbol } from 'pixi-reels';
 
 const reelSet = new ReelSetBuilder()
-  .reels(6).visibleSymbols(5).symbolSize(95, 95).symbolGap(5, 5)
+  .reels(6).visibleRows(5).symbolSize(95, 95).symbolGap(5, 5)
   .symbols((r) => { /* register your sprites */ })
   .tumble({
     fall:   { duration: 280, ease: 'sine.in',       rowStagger: 40 },

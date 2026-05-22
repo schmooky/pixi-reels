@@ -9,7 +9,7 @@ function buildCascadeHarness() {
   const ticker = new FakeTicker();
   const reelSet = new ReelSetBuilder()
     .reels(3)
-    .visibleSymbols(3)
+    .visibleRows(3)
     .symbolSize(100, 100)
     .ticker(ticker as unknown as Ticker)
     .speed('normal', SpeedPresets.NORMAL)

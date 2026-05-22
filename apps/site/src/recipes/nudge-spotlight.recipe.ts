@@ -20,7 +20,7 @@ const WIN_ROW = 0; // After down-nudge, incoming[0] lands at visible row 0.
 
 const reelSet = new ReelSetBuilder()
   .reels(5)
-  .visibleSymbols(3)
+  .visibleRows(3)
   .symbolSize(72, 72)
   .symbolGap(4, 4)
   .symbols((r) => {

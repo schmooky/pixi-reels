@@ -92,7 +92,7 @@ export async function mountPrototypeReels(
 
   const reelSet = new ReelSetBuilder()
     .reels(cfg.reelCount)
-    .visibleSymbols(cfg.visibleRows)
+    .visibleRows(cfg.visibleRows)
     .symbolSize(size.width, size.height)
     .symbolGap(gap, gap)
     .symbols((r) => {

@@ -16,7 +16,7 @@ function buildHarness(opts: { withCascade: boolean }): Harness {
   const created: string[] = [];
   const builder = new ReelSetBuilder()
     .reels(1)
-    .visibleSymbols(2)
+    .visibleRows(2)
     .symbolSize(100, 100)
     .ticker(ticker as unknown as Ticker)
     .symbols((r) => r.register('a', HeadlessSymbol, {}))

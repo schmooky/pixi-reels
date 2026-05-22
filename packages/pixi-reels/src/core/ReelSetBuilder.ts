@@ -38,23 +38,21 @@ import { AdjustPhase } from '../spin/phases/AdjustPhase.js';
  * The configurator you call before every reel set.
  *
  * `ReelSetBuilder` is a fluent, chainable builder: every call returns the
- * builder so you can string setup onto one expression. It exists for two
- * reasons — it hides the twenty-odd subsystems you'd otherwise have to
- * wire by hand, and its `.build()` step validates that every required
- * piece is present (throws at construction, not at first spin).
+ * builder so you can string setup onto one expression. It hides the
+ * twenty-odd subsystems you would otherwise have to wire by hand, and its
+ * `.build()` step validates that every required piece is present (throws
+ * at construction, not at first spin).
  *
- * Required calls (in any order): `.reels(n)`, `.visibleSymbols(n)`,
+ * Required calls (in any order): `.reels(n)`, `.visibleRows(n)`,
  * `.symbolSize(w, h)`, `.symbols((registry) => ...)`, `.ticker(app.ticker)`.
  * Optional: `.symbolGap()`, `.weights()`, `.symbolData()`, `.speed()`,
  * `.bufferSymbols()`, `.offset()`, `.frameMiddleware()`, `.phases()`,
  * `.spinningMode()`.
  *
- * Reduces ~100 lines of manual wiring to ~10 lines of configuration.
- *
  * ```ts
  * const reelSet = new ReelSetBuilder()
  *   .reels(5)
- *   .visibleSymbols(3)
+ *   .visibleRows(3)
  *   .symbolSize(200, 200)
  *   .symbols((r) => {
  *     r.register('cherry', SpriteSymbol, { textures: { cherry: tex } });
@@ -121,21 +119,8 @@ export class ReelSetBuilder {
   }
 
   /**
-   * Alias of {@link visibleRows} — kept for backwards compatibility with
-   * the original API. New code should prefer `visibleRows(n)` so the
-   * naming aligns with `visibleRowsPerReel([...])` (both are about rows;
-   * the original name pre-dated jagged shapes).
-   *
-   * @deprecated Use `visibleRows(n)` instead.
-   */
-  visibleSymbols(count: number): this {
-    return this.visibleRows(count);
-  }
-
-  /**
    * Per-reel static row counts. Length MUST equal `reels()`. Mutually
-   * exclusive with `visibleRows()` / `visibleSymbols()` — calling both
-   * throws at `build()`.
+   * exclusive with `visibleRows()`; calling both throws at `build()`.
    *
    * @example
    * builder.reels(5).visibleRowsPerReel([3, 5, 5, 5, 3])  // pyramid

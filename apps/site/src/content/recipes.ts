@@ -98,7 +98,7 @@ export const RECIPES: RecipeMeta[] = [
     title: 'Per-reel shape (pyramid)',
     oneLiner: 'Non-uniform reel set — 3-5-5-5-3 pyramid, diamond, half-pyramid. Static shape set at build time.',
     steps: [
-      'Pass an array to .visibleRowsPerReel([3, 5, 5, 5, 3]) instead of .visibleSymbols(n)',
+      'Pass an array to .visibleRowsPerReel([3, 5, 5, 5, 3]) instead of .visibleRows(n)',
       'Optionally set .reelAnchor("center" | "top" | "bottom") to control vertical alignment',
       'getCellBounds(col, row) reflects per-reel offsetY automatically',
     ],

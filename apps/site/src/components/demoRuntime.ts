@@ -247,7 +247,7 @@ export async function mountMechanic(
 
   const builder = new ReelSetBuilder()
     .reels(cfg.reelCount)
-    .visibleSymbols(cfg.visibleRows)
+    .visibleRows(cfg.visibleRows)
     .symbolSize(cfg.symbolSize.width, cfg.symbolSize.height)
     .symbolGap(6, 6)
     .symbols((r) => {

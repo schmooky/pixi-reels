@@ -60,7 +60,7 @@ async function main() {
 
   const mainReelSet = new ReelSetBuilder()
     .reels(REEL_COUNT)
-    .visibleSymbols(VISIBLE_ROWS)
+    .visibleRows(VISIBLE_ROWS)
     .symbolSize(SYMBOL_SIZE, SYMBOL_SIZE)
     .symbolGap(SYMBOL_GAP, SYMBOL_GAP)
     .symbols((r) => {
@@ -128,7 +128,7 @@ async function main() {
 
       const cellReelSet = new ReelSetBuilder()
         .reels(1)
-        .visibleSymbols(1)
+        .visibleRows(1)
         .symbolSize(SYMBOL_SIZE - 10, SYMBOL_SIZE - 10)
         .symbolGap(0, 0)
         .symbols((r) => {

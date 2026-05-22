@@ -102,7 +102,7 @@ export default function HoldAndWinStarterRecipe() {
 
           const mini = new ReelSetBuilder()
             .reels(1)
-            .visibleSymbols(1)
+            .visibleRows(1)
             .symbolSize(CELL - 2, CELL - 2)
             .symbolGap(0, 0)
             .symbols((r) => {

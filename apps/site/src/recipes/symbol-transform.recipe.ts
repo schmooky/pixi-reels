@@ -17,7 +17,7 @@ const GRID = [
 ];
 
 const reelSet = new ReelSetBuilder()
-  .reels(COLS).visibleSymbols(ROWS).symbolSize(CELL, CELL).symbolGap(4, 4)
+  .reels(COLS).visibleRows(ROWS).symbolSize(CELL, CELL).symbolGap(4, 4)
   .symbols(r => {
     for (const sym of CARD_DECK) {
       if (IDS.includes(sym.id)) {
