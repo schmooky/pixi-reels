@@ -3,7 +3,7 @@
 //                   WILD_CARD, WinPresenter, PIXI, gsap, app, pickWeighted
 
 const A = '7', B = '8', C = '9';
-const SEVEN = 'A'; // premium card stand-in for the original royal "seven"
+const SEVEN = 'A'; // letter-card stand-in. constant kept as SEVEN for readability
 const IDS = [A, B, C, SEVEN];
 const COLS = 5, ROWS = 3, SIZE = 90;
 
@@ -50,7 +50,7 @@ function bouncePulse(view, peak, durationMs) {
 
 // Instead of `symbol.playWin()`, route each winner through a GSAP timeline.
 // The callback receives the symbol, the cell, and the owning win. so you
-// can style per win (bigger bounce on the premium line via `win.id`).
+// can style per win (bigger bounce on the top-paying line via `win.id`).
 const presenter = new WinPresenter(reelSet, {
   stagger: 70,
   cycleGap: 400,

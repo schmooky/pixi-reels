@@ -52,7 +52,7 @@ Gentle gravity fall + soft overshoot landing. `back.out(1.6)` overshoots its tar
 
 `bounce.out` does a real multi-bounce settle — symbols actually bounce on landing. Longer durations (700 ms) let each bounce read. Best paired with kid-friendly themes or candy / fruit art. Be careful with this one on dense grids — the bouncing arrival can read as "still moving" to the player and slow the perceived pace.
 
-## Slam — turbo / premium feel
+## Slam. hard-landing, sub-half-second tumble
 
 <RecipeRunner code={slamCode} client:only="react" />
 
@@ -63,7 +63,7 @@ Gentle gravity fall + soft overshoot landing. `back.out(1.6)` overshoots its tar
 })
 ```
 
-`power4.in` accelerates the fall steeply (heavy, gravity-like). `expo.out` lands hard with no overshoot. The whole tumble plays in under half a second. Pair with deeper symbol art and Hold-and-Win or jackpot-style sound for serious / high-stakes themes. Also a fine basis for a turbo mode toggle on a default-classic build.
+`power4.in` accelerates the fall steeply (heavy, gravity-like). `expo.out` lands hard with no overshoot. The whole tumble plays in under half a second. A reasonable basis for a turbo mode toggle on top of a default-classic build.
 
 ## Rain column — board-falls-as-a-slab
 
@@ -97,7 +97,7 @@ Heavy `rowStagger` (110 ms on drop-in) makes rows arrive in distinct beats — y
 |---|---|---|---|
 | Classic | 250 ms | All-rounder; you're not sure | — |
 | Cartoon bounce | 320 ms | Kid-friendly / candy / fruit | Player attention budget is tight |
-| Slam | 120 ms | Premium art, turbo mode, high-stakes theme | You want time for the player to "feel" each cascade |
+| Slam | 120 ms | Turbo mode, sub-half-second tumbles | You want a longer beat between cascades |
 | Rain column | 380 ms | Match-3 / chess-board / puzzle | Reels are visually distinct (the cohesive slab look fights the column gaps) |
 | Wave | 280 ms | Narrative reveals, "show me the row" tension | Very dense grids — the stagger makes the whole tumble feel long |
 

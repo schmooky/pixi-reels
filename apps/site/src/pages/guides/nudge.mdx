@@ -3,7 +3,7 @@ layout: ../../layouts/Docs.astro
 title: Nudge
 section: guides
 eyebrow: Building blocks
-description: Push a reel down or up by one or more positions after it has stopped. the classic UK fruit-machine nudge.
+description: Push a reel down or up by one or more positions after it has stopped, revealing caller-supplied symbols.
 ---
 
 import code from '../../recipes/nudge.recipe.ts?raw';
@@ -12,9 +12,9 @@ import parallelCode from '../../recipes/nudge-parallel.recipe.ts?raw';
 import { RecipeRunner } from '../../components/RecipeRunner.tsx';
 
 A **nudge** moves a single reel by a few symbol positions *after* the spin has
-landed, revealing new symbols the caller supplies. Classic fruit-machine
-mechanic: "land a near-miss, then offer to nudge column 3 down by 1 for a
-guaranteed win."
+landed, revealing new symbols the caller supplies. Common pattern: land
+a near-miss, then nudge one column down by 1 to reveal the missing
+symbol.
 
 ```ts
 await reelSet.spin();
@@ -255,7 +255,7 @@ unrelated reels, and other reels' symbols all carry through.
 
 ## Recipes
 
-- [Fruit-machine nudge](/recipes/nudge/). the minimum runnable demo.
+- [Nudge a reel](/recipes/nudge/). the minimum runnable demo.
 - [Spotlight after a nudge](/recipes/nudge-spotlight/). nudge into a
   win line, then run `WinPresenter` on the new cells.
 - [Nudge through a big symbol](/recipes/nudge-big-symbol/). block
@@ -264,5 +264,5 @@ unrelated reels, and other reels' symbols all carry through.
   the dual entry point: land in tail-visible state via `setResult`'s
   `bufferAbove`, nudge to reveal.
 - [Nudge a big symbol in, then hold it across a respin](/recipes/big-symbol-held-respin/).
-  the classic fruit-machine bonus beat: reveal a buffer-anchored wild,
-  then hold the reel through a respin of the others.
+  reveal a buffer-anchored wild, then hold the reel through a respin
+  of the others.

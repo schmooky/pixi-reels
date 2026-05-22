@@ -2,8 +2,7 @@
 // Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
 //                   WILD_CARD, app
 
-// Classic UK fruit-machine nudge demo. After every spin lands, the engine
-// fires two nudges in sequence:
+// Nudge demo. After every spin lands, the engine fires two nudges in sequence:
 //   1. Reel 1 down by 1. a wild slides in from the top.
 //   2. Reel 3 up by 1  . a wild slides in from the bottom.
 // One press shows both directions in one beat.

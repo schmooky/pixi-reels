@@ -1,7 +1,7 @@
 ---
 layout: ../../layouts/Recipe.astro
 title: Staggered nudge — wave reveal
-description: Use `NudgeOptions.startDelay` inside a `Promise.all([...])` to dispatch parallel nudges with a per-reel offset. Reads as a wave — faster than sequential, more theatrical than synchronised parallel.
+description: Use `NudgeOptions.startDelay` inside a `Promise.all([...])` to dispatch parallel nudges with a per-reel offset. Total wall time = last reel's delay + duration.
 tags: [nudge, stagger, wave, ux, recent]
 steps:
   - Map over the target reels with `Promise.all(cols.map(...))`

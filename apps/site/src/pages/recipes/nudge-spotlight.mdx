@@ -1,8 +1,8 @@
 ---
 layout: ../../layouts/Recipe.astro
 title: Spotlight after a nudge
-description: Land a near-miss, nudge three reels down by one to complete a wild line across the top row, then run SymbolSpotlight on the new winners — the canonical "rescue spin via nudge, then celebrate" beat.
-tags: [nudge, spotlight, wins, fruit-machine, recent]
+description: Land a near-miss, nudge three reels down by one to complete a wild line across the top row, then run SymbolSpotlight on the new winners. Chains nudge() and spotlight.show() in their canonical order.
+tags: [nudge, spotlight, wins, recent]
 steps:
   - Spin and land on a flat result with no wilds anywhere
   - Promise.all three `reelSet.nudge(col, ...)` calls so the middle reels drop in `wild` at row 0 together
@@ -20,9 +20,8 @@ import { RecipeRunner } from '../../components/RecipeRunner.tsx';
 
 <RecipeRunner code={code} client:only="react" />
 
-The "rescue spin" beat — land a near-miss, nudge to complete a line, then
-celebrate it — is the original UK fruit-machine gameplay loop. This recipe
-chains three primitives in their canonical order:
+Land a near-miss, nudge to complete a line, then run a win presenter on
+the new cells. This recipe chains three primitives in order:
 
 1. **Spin** lands on a flat near-miss (no wilds anywhere).
 2. **Parallel nudge** of reels 1, 2, 3 each shifts down by one and drops
@@ -59,14 +58,13 @@ reelSet.spotlight.hide();
 
 ## Sequencing trade-offs
 
-**Parallel nudges → one spotlight.** Reads as a single celebratory beat:
-the row of wilds drops together, then lights up together. Best for
-base-game win reveals.
+**Parallel nudges. one spotlight.** All three tweens start on the same
+frame; the row of wilds drops together, then a single `spotlight.show`
+covers all three new cells.
 
-**Sequential nudges → sequential spotlights.** Drag the tension out —
-each reel reveals, each one spotlighted individually. Use for high-tier
-features (jackpot teases, bonus reveals) where the player should feel
-each step.
+**Sequential nudges. sequential spotlights.** Each reel reveals, then
+its own `spotlight.show` runs, then `spotlight.hide` before the next
+reel's nudge begins. Total wall time scales with `cols.length`.
 
 ```ts
 // Sequential variant: nudge, spotlight, nudge, spotlight, ...
@@ -124,4 +122,4 @@ are still in the right places regardless of how the tween ended.
 
 - [Nudge guide](/guides/nudge/) — full event map, big-symbol survival
   rules, contract for `incoming`.
-- [Fruit-machine nudge recipe](/recipes/nudge/) — minimum nudge demo.
+- [Nudge a reel](/recipes/nudge/). minimum nudge demo.

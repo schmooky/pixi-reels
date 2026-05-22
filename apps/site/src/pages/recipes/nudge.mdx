@@ -1,8 +1,8 @@
 ---
 layout: ../../layouts/Recipe.astro
 title: How to nudge a reel
-description: Shift one reel down or up by N positions after it has landed — the classic UK fruit-machine nudge, with the reveal symbols supplied by the caller.
-tags: [nudge, fruit-machine, recent]
+description: Shift one reel down or up by N positions after it has landed, with the reveal symbols supplied by the caller.
+tags: [nudge, recent]
 steps:
   - Wait for spin() to land
   - Call reelSet.nudge(col, { distance, direction, incoming }) — incoming is required, top-down order of the new visible positions
@@ -104,11 +104,10 @@ for (const col of [1, 2, 3]) {
 }
 ```
 
-Each `await` parks the loop until that reel's GSAP tween lands. Reads as
-three reveals — players can register reel 1's wild before reel 2 starts
-moving. Total wall time = `cols.length * duration`. Use for scripted
-reveals where each reel earns its own beat (jackpot teasers, "watch this
-one too" moments, narrative bonus rounds).
+Each `await` parks the loop until that reel's GSAP tween lands. Total
+wall time = `cols.length * duration`. Use this shape when the caller
+wants each reel's resolved promise (and its `nudge:complete` event) to
+fire in order, one after the previous one fully landed.
 
 ### Parallel — one synchronised beat
 
@@ -130,11 +129,11 @@ await Promise.all(
 Every `nudge(...)` is invoked synchronously inside `Promise.all`, so the
 GSAP tweens all start on the same frame. The whole row of wilds drops in
 together. Total wall time = `duration` (no matter how many reels).
-Use for base-game responsiveness, line-completion reveals, and any time
-the reveal IS the row landing as a unit.
+Use this shape when the reveal IS the row landing as a unit and you only
+need a single `Promise.all` resolution to drive the next step.
 
 Both modes fire their own `nudge:start` / `nudge:complete` pair per reel,
-so per-reel SFX and HUD overlays work cleanly either way — only the
+so per-reel SFX and HUD overlays work cleanly either way. Only the
 clock differs.
 
 ### Staggered — sugar for "wave" reveals

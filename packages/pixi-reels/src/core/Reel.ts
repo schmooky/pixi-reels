@@ -16,7 +16,7 @@ import { getGsap } from '../utils/gsapRef.js';
 /**
  * Options for `Reel.nudge()` / `ReelSet.nudge()`. a post-stop reposition
  * that shifts the reel by `distance` symbol positions and reveals new
- * caller-supplied symbols. Modelled on classic UK fruit-machine nudges.
+ * caller-supplied symbols.
  *
  * Nudges run only while the reel is at rest (post-stop). Calling on a
  * moving reel throws.

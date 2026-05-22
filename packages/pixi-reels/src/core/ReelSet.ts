@@ -1011,7 +1011,7 @@ export class ReelSet extends Container implements Disposable {
 
   /**
    * Shift a single reel by `distance` positions after it has landed, revealing
-   * caller-supplied symbols. Classic UK fruit-machine "nudge."
+   * caller-supplied symbols.
    *
    * Per-reel by design. multi-reel sync is via `Promise.all([...])` of
    * independent calls. Each call emits its own `nudge:start` / `nudge:complete`

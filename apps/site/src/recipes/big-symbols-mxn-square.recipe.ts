@@ -3,9 +3,8 @@
 //                   SharedRectMaskStrategy, PIXI, gsap, app, textures,
 //                   blurTextures, SYMBOL_IDS, pickWeighted
 //
-// SQUARE big symbol — 2×2. The most common big-symbol shape: bonus icons,
-// jackpot reveals, premium symbol art that benefits from extra screen real
-// estate without distorting the grid's aspect ratio.
+// SQUARE big symbol. 2x2. The shape's defining property: equal width and
+// height, so the symbol scales without distorting the grid's aspect ratio.
 
 const SQUARE = { id: 'square', color: 0xa3e4d7, label: '2×2', textColor: 0x0e5345, w: 2, h: 2 };
 const REELS = 6;

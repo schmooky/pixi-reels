@@ -21,7 +21,7 @@ import { RecipeRunner } from '../../components/RecipeRunner.tsx';
 
 Each canvas below runs the same scripted spin: 6×4 cards land left-to-right with a pre-wired 3-cluster of `10` on row 2. The winners go through the same `reelSet.destroySymbols(...)` implode effect. Only the **refill drop-in order** varies between canvases — controlled by `setDropOrder()` on the reel set and `rowStagger` / `rowOrder` on the builder's `.tumble({ dropIn })` config.
 
-Most commercial tumble slots use **simultaneous** for refills. The other three are useful for specific themes (puzzle, narrative, premium) — but all four read as "the new symbols arrived" without you writing motion code.
+The default is **simultaneous**. The other three vary the drop-in order across rows or columns. all four refill the grid in one phase without you writing motion code.
 
 ## Simultaneous — the canonical default
 

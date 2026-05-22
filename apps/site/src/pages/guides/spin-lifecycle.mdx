@@ -116,9 +116,9 @@ See the [spin-then-cascade recipe](/recipes/spin-then-cascade/).
 ## Pattern: nudge after landing
 
 After a spin lands, you can shift a single reel by N positions to
-reveal caller-supplied symbols — the classic UK fruit-machine "nudge."
-The spin pipeline is idle during a nudge; the nudge's own tween drives
-the strip.
+reveal caller-supplied symbols via `reelSet.nudge(col, ...)`. The spin
+pipeline is idle during a nudge; the nudge's own tween drives the
+strip.
 
 ```ts
 await reelSet.spin();

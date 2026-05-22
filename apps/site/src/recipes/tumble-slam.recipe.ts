@@ -4,8 +4,8 @@
 
 // SLAM: accelerating fall (power4.in) and a hard, fast land (expo.out).
 // Short durations + small stagger keep the whole tumble under 0.5 s.
-// Reads as "serious / high-stakes". typical for premium slot art or
-// turbo modes.
+// A short, hard-landing tumble. Pair with a turbo speed profile when
+// you want the cascade to finish in well under a second.
 
 const IDS = ['7', '8', '9', '10', 'J', 'Q'];
 const REELS = 6, ROWS = 4, SIZE = 64;

@@ -1,12 +1,12 @@
 ---
 layout: ../../layouts/Recipe.astro
 title: Anticipation teaser
-description: Combine setAnticipation with a buffer-above prefill so a slow reel approaches a known high-value symbol. the player literally sees the bonus coming.
+description: Pair setAnticipation with a buffer-above prefill so the next cell to scroll into view on a slow reel is a caller-chosen symbol.
 tags: [anticipation, tension, buffer, peek]
 steps:
   - Call setAnticipation([...reels]) to slow specific reels before they land
-  - Set result[col][-1] = HIGH_VALUE on those same reels to pin a symbol just above the visible area
-  - During the anticipation decelerate, the symbol is visible at the top edge of the reel
+  - Pass a ColumnTarget with bufferAbove ['BONUS'] on those same reels so the symbol sits one slot above the visible window
+  - During the anticipation decelerate, the buffer-above cell is the next to enter view
 apis:
   - ReelSet.setAnticipation
   - ReelSet.setResult

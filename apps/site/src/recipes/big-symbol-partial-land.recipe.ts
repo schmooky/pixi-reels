@@ -8,8 +8,7 @@
 // block is hidden above the visible window, only its bottom cell shows
 // at row 0 ("tail visible"). The player nudges DOWN by 2 to drag the
 // whole block into view, then nudges UP by 2 to push it back into
-// hiding. The classic "the big symbol is peeking. nudge to reveal"
-// fruit-machine beat.
+// hiding.
 //
 // This is enabled by:
 //   - `_coordinateBigSymbols` scans the full strip range (including

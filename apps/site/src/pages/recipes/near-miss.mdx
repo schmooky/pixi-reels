@@ -1,12 +1,12 @@
 ---
 layout: ../../layouts/Recipe.astro
 title: How to fake a near-miss
-description: Place N-1 scatters, add anticipation on the reel that "almost" landed one — the most engagement-per-byte flourish a slot has.
-tags: [anticipation, engagement]
+description: Place N-1 scatters, add anticipation on the reel that "almost" landed one. Stops short of a scatter trigger while the slow reel decelerates.
+tags: [anticipation, near-miss]
 steps:
   - Build a result grid with count - 1 scatters, none on the near reel
   - setAnticipation([nearReelIndex]) BEFORE setResult()
-  - Let the player feel the hold on the last reel
+  - Let the slow reel decelerate on the last column
 apis:
   - ReelSet.setAnticipation
   - ReelSet.setResult

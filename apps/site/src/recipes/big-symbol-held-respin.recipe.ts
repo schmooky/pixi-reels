@@ -4,10 +4,10 @@
 
 // NUDGE-IN, THEN HOLD a buffer-anchored big symbol across a respin.
 //
-// Classic UK fruit-machine bonus: reel 3 lands with a tall wild whose
-// anchor sits in bufferAbove (only the tail of the block shows at row 0
-//. "the wild is peeking in from the top"). The player nudges to drag
-// the wild into full view, then gets a re-spin of the OTHER reels while
+// NUDGE-IN, THEN HOLD a buffer-anchored big symbol across a respin.
+// Reel 3 lands with a tall wild whose anchor sits in bufferAbove (only
+// the tail of the block shows at row 0). The player nudges to drag the
+// wild into full view, then gets a re-spin of the OTHER reels while
 // reel 3 is held. The held reel preserves the now-revealed block across
 // the respin because `SpinOptions.holdReels` skips START/SPIN/STOP on
 // the held column. the strip array, the anchor's size, and the
