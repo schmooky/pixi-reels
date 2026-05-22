@@ -1325,7 +1325,12 @@ export class Reel implements Disposable {
    * **Two scans:**
    *
    *  1. Visible anchors — sizes blocks whose anchor is in `[0, visibleRows)`.
-   *     This is the common case (most blocks land fully visible).
+   *     This is the common case (most blocks land fully visible). Blocks
+   *     whose stubs spill into bufferBelow are handled here: the anchor is
+   *     in visible, the sprite is sized to span `h * cellH`, and the mask
+   *     clips the off-screen tail. No occupancy entry is written for the
+   *     bufferBelow stubs because `_occupancy` is keyed by visible rows
+   *     only — consumers can't query a non-visible cell anyway.
    *  2. BufferAbove anchors — sizes blocks whose anchor sits above visible
    *     but whose body extends into the visible window. This is the "tail
    *     visible" partial-visibility case: a 1xH block whose top is clipped
@@ -1333,6 +1338,14 @@ export class Reel implements Disposable {
    *     window. Without this scan, the anchor sprite would stay at the
    *     default 1x1 size and the block wouldn't render its visible portion
    *     correctly.
+   *
+   * **No Scan 3 for bufferBelow-only anchors.** A block whose anchor is at
+   * `row >= visibleRows` would lie entirely off-screen (the strip ends at
+   * `visibleRows + bufferBelow - 1` and `h >= 1`, so no visible cell is
+   * covered). The cross-reel coordinator already accepts such anchors as a
+   * legal-but-invisible placement; there's nothing to size and nothing for
+   * the consumer-facing query API to return. If you ever add a scenario
+   * where bufferBelow-only anchors need rendering, add Scan 3 here.
    *
    * For bufferAbove anchors, `_occupancy[visibleRow].anchorRow` is set to
    * a NEGATIVE value — the offset from `bufferAbove`. So

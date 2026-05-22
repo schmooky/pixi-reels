@@ -1238,14 +1238,19 @@ export class SpinController implements Disposable {
     grid: string[][],
     visibleRowsForReel: (i: number) => number,
   ): string[][] {
-    const bufferAbove0 = this._reels[0]?.bufferAbove ?? 0;
-    const out = cloneTargetGrid(grid, bufferAbove0);
+    const bufferAbove = this._reels[0]?.bufferAbove ?? 0;
+    const bufferBelow = this._reels[0]?.bufferBelow ?? 0;
+    const out = cloneTargetGrid(grid, bufferAbove);
     const symData = this._hooks.symbolsData;
 
-    // Buffer geometry is uniform across reels in every shipped slot
-    // (set by the builder); we assume that here.
-    const bufferAbove = bufferAbove0;
-    const bufferBelow = this._reels[0]?.bufferBelow ?? 0;
+    // Buffer geometry is read from reel[0] and treated as uniform across
+    // all reels. This holds today because `ReelSetBuilder.bufferSymbols(n)`
+    // is the only buffer-setting API and applies a single global value;
+    // there is no per-reel buffer API. If you ever add one (e.g. a
+    // `bufferSymbolsPerReel([...])` builder method), propagate per-reel
+    // values into the validator loop below — the `targetRows` lookup
+    // already supports per-reel geometry; only the buffers are still
+    // global here.
 
     // Read a per-reel target slot for any row in `[-bufferAbove, rows + bufferBelow)`.
     // Negative rows live as string properties (`out[col][-1]`); positive rows
