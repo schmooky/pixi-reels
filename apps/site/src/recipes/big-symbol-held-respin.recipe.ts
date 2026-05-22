@@ -2,30 +2,34 @@
 // Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
 //                   PIXI, app
 
-// HELD-REEL RESPIN with a buffer-anchored big symbol.
+// NUDGE-IN, THEN HOLD a buffer-anchored big symbol across a respin.
 //
 // Classic UK fruit-machine bonus: reel 3 lands with a tall wild whose
 // anchor sits in bufferAbove (only the tail of the block shows at row 0
-// — "the wild is peeking in from the top"). The player gets a re-spin of
-// the OTHER reels; reel 3 is held. The held reel preserves the block
-// across spins because `SpinOptions.holdReels` skips START/SPIN/STOP on
+// — "the wild is peeking in from the top"). The player nudges to drag
+// the wild into full view, then gets a re-spin of the OTHER reels while
+// reel 3 is held. The held reel preserves the now-revealed block across
+// the respin because `SpinOptions.holdReels` skips START/SPIN/STOP on
 // the held column — the strip array, the anchor's size, and the
 // occupancy map all carry through.
 //
 // Sequence:
 //   1. Spin all reels; land tail-visible 1x3 wild on reel 2 (column index 2).
-//   2. Respin reels 0, 1, 3, 4 with `holdReels: [2]`. Reel 2 stays put
-//      (block intact, tail visible).
-//   3. Player nudges reel 2 down by 2 to drag the block into full view.
+//   2. Player nudges reel 2 down by 2 to drag the block into full view.
+//   3. Respin reels 0, 1, 3, 4 with `holdReels: [2]`. Reel 2 stays put
+//      (now-revealed block intact, fully visible).
 //
 // What this proves:
-//   - `holdReels` + buffer-anchored block: the held reel's `_finalizeFrame`
-//     state is preserved (occupancy + anchor size).
+//   - `setResult` accepts a big-symbol anchor in `bufferAbove`; the
+//     coordinator paints OCCUPIED stubs across the strip.
+//   - `nudge()` slides the block as a unit from its buffer-anchored
+//     landing into fully-visible state (strip rotates by `distance`).
+//   - `holdReels` + a big-symbol block: the held reel's strip array,
+//     occupancy map, and resized anchor sprite all survive the no-op
+//     spin. The block stays exactly where the nudge left it.
 //   - `_coordinateBigSymbols` runs on the result grid passed by the
 //     player for the non-held reels; the held column's placeholder entry
 //     is ignored.
-//   - A nudge AFTER the respin still moves the held block intact —
-//     proving the strip layout survived the no-op spin.
 
 const TALL = { id: 'tall', color: 0xff8c42, label: 'TALL', textColor: 0x4a1d00, w: 1, h: 3 };
 const REELS = 5;

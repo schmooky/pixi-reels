@@ -174,13 +174,13 @@ export const RECIPES: RecipeMeta[] = [
   {
     slug: 'big-symbol-held-respin',
     group: 'big-symbols',
-    title: 'Hold a buffer-anchored big symbol across a respin',
-    oneLiner: 'A tall wild lands with its anchor in bufferAbove (tail-visible at row 0). Hold that reel via `spin({ holdReels: [...] })`, respin the others; the block stays intact because the held strip is never touched. Then nudge the held reel to reveal the full block.',
+    title: 'Nudge a big symbol in, then hold it across a respin',
+    oneLiner: 'A tall wild lands with its anchor in bufferAbove (tail-visible at row 0). Nudge the trigger reel to drag the full block into view, then call `spin({ holdReels: [...] })` so the revealed wild survives a respin of the other reels — the held strip is never touched.',
     steps: [
       'Land a 1xH wild with its anchor in `bufferAbove` on the trigger reel (only the bottom cell shows at row 0)',
+      'Nudge the trigger reel down to drag the full block into visibility',
       'Call `reelSet.spin({ holdReels: [triggerReel] })` to skip START/SPIN/STOP on that column',
-      'Pass a full-width grid to `setResult` — the held column entry is ignored',
-      'Nudge the held reel after the respin to drag the full block into visibility',
+      'Pass a full-width grid to `setResult` — the held column entry is ignored; the revealed block stays put',
     ],
     apis: ['ReelSet.spin', 'SpinOptions.holdReels', 'ReelSet.setResult', 'ColumnTarget.bufferAbove', 'ReelSet.nudge'],
     tags: ['big-symbols', 'buffer', 'hold-reels', 'respin', 'nudge', 'recent'],
