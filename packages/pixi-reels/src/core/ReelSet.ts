@@ -417,8 +417,8 @@ export class ReelSet extends Container implements Disposable {
       {
         isMultiWaysSlot: this._isMultiWaysSlot,
         symbolsData: this._symbolsData,
-        peekTargetShape: () => this._peekTargetShape(),
-        clearTargetShape: () => this._clearTargetShape(),
+        peekTargetShape: () => this.peekTargetShape(),
+        clearTargetShape: () => this.clearTargetShape(),
         multiwaysReelPixelHeight: this._multiwaysReelPixelHeight,
         symbolGapY: params.config.grid.symbolGap.y,
         getPinsOnReel: (reelIndex) => this._pinsOnReel(reelIndex),
@@ -1237,23 +1237,13 @@ export class ReelSet extends Container implements Disposable {
     }
   }
 
-  /**
-   * Internal: read the pending MultiWays target shape (does not clear).
-   * Used by `SpinController` via the hooks interface. Not part of the
-   * public API — call `setShape()` to change shape.
-   *
-   * @internal
-   */
-  private _peekTargetShape(): number[] | null {
+  /** Wired internally by SpinController. Consumers do not call this directly. */
+  private peekTargetShape(): number[] | null {
     return this._targetShape;
   }
 
-  /**
-   * Internal: clear the pending MultiWays target shape after the spin lands.
-   *
-   * @internal
-   */
-  private _clearTargetShape(): void {
+  /** Wired internally by SpinController. Consumers do not call this directly. */
+  private clearTargetShape(): void {
     this._targetShape = null;
   }
 
@@ -1293,7 +1283,7 @@ export class ReelSet extends Container implements Disposable {
 
     // Resolve OCCUPIED → anchor row on this reel. Cross-reel OCCUPIED
     // requires walking left to find the anchoring column with size.w > col.
-    const anchorRow = reel._getAnchorRow(row);
+    const anchorRow = reel.getAnchorRow(row);
     const anchorSym = reel.getSymbolAt(row);
     const meta = this._symbolsData[anchorSym.symbolId];
     const size = meta?.size && (meta.size.w > 1 || meta.size.h > 1)
@@ -1308,7 +1298,7 @@ export class ReelSet extends Container implements Disposable {
     for (let c = col - 1; c >= 0; c--) {
       const leftReel = this._reels[c];
       if (anchorRow >= leftReel.visibleRows) break;
-      const leftAnchorRow = leftReel._getAnchorRow(anchorRow);
+      const leftAnchorRow = leftReel.getAnchorRow(anchorRow);
       const leftSym = leftReel.getSymbolAt(anchorRow);
       const leftMeta = this._symbolsData[leftSym.symbolId];
       if (leftMeta?.size && leftMeta.size.w > col - c) {

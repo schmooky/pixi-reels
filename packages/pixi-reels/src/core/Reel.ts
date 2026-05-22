@@ -439,17 +439,8 @@ export class Reel implements Disposable {
     return this.symbols[this._bufferAbove + anchorRow];
   }
 
-  /**
-   * Anchor row for a visible row. Equals `visibleRow` for normal cells;
-   * for non-anchor cells inside a big-symbol block, returns the row where
-   * the anchor lives.
-   *
-   * @internal — used by `ReelSet.getSymbolFootprint` and the cross-reel
-   * resolver wired in `ReelSet`'s constructor. Not intended for consumer
-   * use; prefer `ReelSet.getSymbolFootprint(col, row)` which returns full
-   * anchor + size info.
-   */
-  _getAnchorRow(visibleRow: number): number {
+  /** Wired internally by ReelSet and SymbolSpotlight. Consumers do not call this directly. */
+  getAnchorRow(visibleRow: number): number {
     const occ = this._occupancy[visibleRow];
     return occ ? occ.anchorRow : visibleRow;
   }
