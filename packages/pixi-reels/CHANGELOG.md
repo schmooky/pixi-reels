@@ -1,5 +1,38 @@
 # pixi-reels
 
+## 0.9.0
+
+### Minor Changes
+
+- [#138](https://github.com/schmooky/pixi-reels/pull/138) [`2728db7`](https://github.com/schmooky/pixi-reels/commit/2728db7db37e231649fc91711511da788cc0d073) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Add: big-symbol anchors can now sit in bufferAbove or bufferBelow. The classic UK fruit-machine landing — a 1xH wild lands with most of it hidden above the visible window, only the bottom cell ("the tail") shows at row 0 — works end-to-end through `setResult`, `refill`, and `nudge`.
+
+  `_coordinateBigSymbols` now iterates the full strip range (`-bufferAbove` to `visibleRows + bufferBelow`) and validates against strip capacity instead of just visible. Anchors at any strip slot are accepted as long as the block fits end-to-end. Pass an anchor at `bufferAbove[i]` via the explicit `ColumnTarget` form (`{ visible: [...], bufferAbove: [...] }`) or via the legacy `frame[col][-1]` negative-index form; the coordinator paints OCCUPIED stubs at the rest of the block's cells (in buffer, visible, or buffer-below as needed).
+
+  The validation error message changed: `exceeds reel height` was visible-only; now reads `extends past the bottom of the strip` with the exact computed values. The new check is more permissive — a 1x4 block on a 3-visible-row reel with 1 bufferBelow is now LEGAL where it previously threw.
+
+  `getSymbolFootprint` may return a negative `anchor.row` for blocks anchored in bufferAbove. `getBlockBounds` handles this by computing pixel coordinates from the row offset directly rather than delegating to `getCellBounds` (which still rejects negative rows). Consumers reading `anchor.row` should accept negative values.
+
+  Fix: `ReelMotion._maxY` was hard-coded to `(visibleRows + 1) * slotH`, which collapsed to `strip[last].y` exactly when `bufferBelow >= 2` and fired a phantom wrap on the first nudge displacement — the anchor landed one strip slot too far. The threshold now scales with `bufferBelow` (`maxY = (visibleRows + bufferBelow) * slotH`), symmetric with the existing `minY = -(bufferAbove + 1) * slotH`. Nudges with `bufferBelow >= 2` now match the documented survival math.
+
+  Live recipes: `/recipes/big-symbol-partial-land/`, `/recipes/big-symbol-held-respin/`.
+
+### Patch Changes
+
+- [#138](https://github.com/schmooky/pixi-reels/pull/138) [`2728db7`](https://github.com/schmooky/pixi-reels/commit/2728db7db37e231649fc91711511da788cc0d073) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Internal: sharpen comments around the big-symbol coordinator's
+  uniform-buffer assumption and `_finalizeFrame`'s scan asymmetry — both
+  were silently load-bearing on contracts that weren't spelled out.
+  Also extends `ColumnTarget.bufferAbove` / `bufferBelow` JSDoc to
+  explicitly document the big-symbol anchor capability — discoverable
+  in IDE tooltips. No runtime change.
+
+- [#138](https://github.com/schmooky/pixi-reels/pull/138) [`2728db7`](https://github.com/schmooky/pixi-reels/commit/2728db7db37e231649fc91711511da788cc0d073) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Fix: `ReelSet.setResult` and `ReelSetBuilder.initialFrame` now throw a `RangeError` when a `ColumnTarget.bufferAbove` / `bufferBelow` carries more entries than the engine's configured `bufferSymbols(...)`, instead of silently dropping the extras.
+
+  Previously, calling `.bufferSymbols(1)` and passing `bufferAbove: ['X', 'Y']` would materialize both `arr[-1]='X'` and `arr[-2]='Y'`, but the next clone (`cloneColumn`) only iterates `-1..-bufferAbove` — `Y` was written to the array, dropped on the next pass, and never reached the reel. No error, no warning; the only symptom was "my targeted symbol never lands." Same problem on the `bufferBelow` side via indices past `visible + bufferBelow`.
+
+  The check now fails fast at the API entry point with a column-pointing message: `setResult column 2: bufferAbove has 2 entries but engine bufferSymbols=1 — extra entries would be silently dropped. Increase bufferSymbols(...) on the builder or remove the extra entries.` The legacy `frame[col][-k]` form is also validated for negative-index keys beyond `-bufferAbove`. The legacy form's array `length` is intentionally not checked — in MultiWays the per-reel `visibleRows` changes between `setShape()` and `setResult()`, and any length-based check would false-positive on legitimate post-reshape calls.
+
+  This is user-visible error behavior: input that previously silently failed now throws. Callers passing more entries than the configured buffer size should either increase `bufferSymbols(...)` or trim the extra entries.
+
 ## 0.8.0
 
 ### Minor Changes
