@@ -31,7 +31,6 @@ const DEFAULT_GLOBS = [
   'examples/shared',
   'examples/classic-spin/src',
   'examples/cascade-tumble/src',
-  'examples/hold-and-win/src',
   'examples/big-symbols/src',
   'examples/multiways/src',
   'examples/pyramid-cascade/src',

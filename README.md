@@ -105,7 +105,6 @@ Runnable apps in [`examples/`](examples/):
 |------------------|------------------------------------------------------------|----------------------------------------|
 | `classic-spin`   | 5x3 line-pay slot with sprite symbols and speed toggle     | `pnpm --filter classic-spin dev`       |
 | `cascade-tumble` | 6x5 tumble mechanic with win spotlight between stages      | `pnpm --filter cascade-tumble dev`     |
-| `hold-and-win`   | 5x3 base game + respin bonus with locking coins            | `pnpm --filter hold-and-win dev`       |
 | `sandbox`        | Single editable TS file, HMR rebuild                       | `pnpm --filter sandbox dev`            |
 
 ## Peer dependencies

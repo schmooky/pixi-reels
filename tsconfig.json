@@ -20,7 +20,6 @@
     { "path": "./packages/pixi-reels" },
     { "path": "./examples/classic-spin" },
     { "path": "./examples/cascade-tumble" },
-    { "path": "./examples/hold-and-win" },
     { "path": "./examples/big-symbols" },
     { "path": "./examples/multiways" },
     { "path": "./examples/pyramid-cascade" },

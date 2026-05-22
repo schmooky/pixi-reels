@@ -135,7 +135,6 @@ If you've tried three approaches and none work, do not try a fourth random appro
 - `packages/pixi-reels/` — The npm-publishable library
 - `examples/classic-spin/` — Standard 5x3 slot demo (sprite symbols)
 - `examples/cascade-tumble/` — 6x5 cascade/tumble demo (sprite symbols)
-- `examples/hold-and-win/` — Hold & Win respin demo (sprite symbols)
 - `examples/sandbox/` — Live-editable playground (sprite symbols + HMR)
 - `examples/shared/` — Shared example utilities (mock server, UI, BlurSpriteSymbol, atlas loader)
 - `examples/assets/prototype-symbols/` — Open-licensed sprite atlas used by every example
@@ -158,7 +157,6 @@ pnpm --filter pixi-reels typecheck
 # Run an example
 pnpm --filter classic-spin dev       # port 5173
 pnpm --filter cascade-tumble dev     # port 5174
-pnpm --filter hold-and-win dev       # port 5175
 
 # Build all examples as static sites
 pnpm examples:build

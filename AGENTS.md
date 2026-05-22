@@ -65,7 +65,6 @@ pixi-reels/
 │   ├── shared/                    cheats, cascade loop, seeded RNG, spine loaders, mock server
 │   ├── classic-spin/              5x3 line pays
 │   ├── cascade-tumble/            6x5 cascade
-│   ├── hold-and-win/              hold-and-win respin
 │   └── assets/                    prototype-symbols sprite atlas
 ├── apps/site/                     Astro + shadcn docs site
 ├── docs/
