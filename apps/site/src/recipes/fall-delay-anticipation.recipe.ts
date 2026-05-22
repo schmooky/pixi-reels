@@ -2,7 +2,7 @@
 // Injected: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
 //           PIXI, gsap, app, pickWeighted
 
-// ANTICIPATION — 350 ms lead-in. Enough room for a full "spin-up"
+// ANTICIPATION. 350 ms lead-in. Enough room for a full "spin-up"
 // sound effect to play, a button-press animation to complete, or a
 // "READY" tone to fire. The pause is clearly perceived as deliberate.
 // Common in mid-tier slots where the player expects a beat between

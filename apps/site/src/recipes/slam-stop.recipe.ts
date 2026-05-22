@@ -33,7 +33,7 @@ return {
   reelSet,
   onSpin: async () => {
     const p = reelSet.spin();
-    // requestSkip queues until setResult arrives — call it from a player tap
+    // requestSkip queues until setResult arrives. call it from a player tap
     // anywhere in the round and the engine will land as soon as it has a
     // target, no race-window to manage in your UI code.
     setTimeout(() => reelSet.requestSkip(), 560);

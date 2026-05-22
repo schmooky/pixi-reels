@@ -1,0 +1,83 @@
+---
+layout: ../../layouts/Recipe.astro
+title: EmptySymbol. render nothing for a registered id
+description: Register an EmptySymbol against an id like 'empty' to reserve a grid slot that produces no visual output. Useful for hold-and-win mechanics, miss cells, and any board where blank is the intended visual.
+tags: [symbols, empty, hold-and-win]
+steps:
+  - "Register the empty id with EmptySymbol. `r.register('empty', EmptySymbol, {})`"
+  - "Weight empty heavily so most cells land blank; weight real symbols lightly so they pop"
+  - "The reel renders empty cells as zero pixels. no sprite, no graphic, no animation"
+apis:
+  - ReelSymbol
+  - SymbolRegistry.register
+  - ReelSetBuilder.symbols
+  - ReelSetBuilder.weights
+---
+
+import code from '../../recipes/empty-symbol.recipe.ts?raw';
+import { RecipeRunner } from '../../components/RecipeRunner.tsx';
+
+<RecipeRunner code={code} client:only="react" />
+
+`EmptySymbol` is a tiny `ReelSymbol` subclass that does the minimum
+required to be a registered symbol. all of its lifecycle hooks are
+no-ops:
+
+```ts
+export class EmptySymbol extends ReelSymbol {
+  protected onActivate(_symbolId: string): void {}
+  protected onDeactivate(): void {}
+  async playWin(): Promise<void> {}
+  stopAnimation(): void {}
+  resize(_w: number, _h: number): void {}
+}
+```
+
+It still occupies a strip slot. the reel needs SOMETHING in every
+cell. but the cell renders as nothing. This is what you reach for
+when "blank" is the intended visual.
+
+## When to use it
+
+The canonical use is **Hold & Win**. A 5x3 bonus board fills with
+pinned coins between respins, but the cells _without_ coins need a
+neutral background. not the base-game symbol set. Register an empty
+id, weight it heavily on the bonus reels, and the board reads as
+"coins on a blank field" instead of "coins between cherry/lemon/seven".
+
+Other patterns where it fits:
+
+- **Miss cells in cluster / scatter games.** The board only shows
+  symbols where wins exist; everywhere else is blank.
+- **Random-fill placeholders for protected slots.** Cells that get
+  pinned later still need an id to land between spins; empty is the
+  least visually intrusive choice.
+- **Debugging.** Drop an empty id into the registry to confirm a
+  cell is being targeted but rendering nothing. fast bisection when
+  a symbol won't show up.
+
+## What this recipe shows
+
+Three reels, three rows, two registered symbols: `coin` and `empty`.
+Weights `{ coin: 1, empty: 6 }` give coins a ~14% per-cell hit rate,
+so most cells land blank. Hitting Spin a few times shows coins
+scattering through a sea of nothing. exactly the visual hold-and-win
+mechanics build on.
+
+## What EmptySymbol is not
+
+- **Not a way to skip a cell entirely.** The cell is still there; it
+  still occupies a strip slot; spin motion still rotates through it.
+  It just doesn't render. If you need a cell to physically not exist,
+  use per-reel geometry (different `visibleRows` per column) instead.
+- **Not the same as `OCCUPIED_SENTINEL`.** That's the engine's
+  internal big-symbol stub. EmptySymbol is a regular symbol you
+  register; OCCUPIED is the painted-by-coordinator marker.
+
+## Related
+
+- [Hold & Win respin](/recipes/hold-and-win/). the canonical
+  consumer; empty cells form the board between pinned coins.
+- [Value coin pin](/recipes/value-coin-pin/) and
+  [Collector pin](/recipes/collector-symbol-pin/). both register
+  `EmptySymbol` as the non-pin background.

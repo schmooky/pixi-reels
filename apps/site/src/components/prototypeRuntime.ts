@@ -133,7 +133,7 @@ export async function mountPrototypeReels(
   //
   // Symbols wrap in during SPIN (each wrap acquires a fresh pooled symbol).
   // We also listen to `symbol:created` so newly-wrapped-in cells inherit the
-  // reel's current blur state — not just the ones present at phase:enter.
+  // reel's current blur state. not just the ones present at phase:enter.
   if (cfg.blurOnSpin ?? true) {
     const blurring = new Array<boolean>(cfg.reelCount).fill(false);
     for (let r = 0; r < cfg.reelCount; r++) {

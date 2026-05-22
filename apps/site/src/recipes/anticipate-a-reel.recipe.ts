@@ -3,12 +3,12 @@
 //                   WILD_CARD, app, pickWeighted
 
 const A = '7', B = '8', C = '9';
-const S = 'scatter'; // scatter — registered as a custom card below
+const S = 'scatter'; // scatter. registered as a custom card below
 const IDS = [A, B, C, S];
 
 const SCATTER_SYM = { id: S, color: 0xff6b35, label: 'SCAT', textColor: 0xffffff };
 
-// Two scatters on reels 0 and 2 — anticipation holds reels 3 and 4.
+// Two scatters on reels 0 and 2. anticipation holds reels 3 and 4.
 const GRID = [
   [S, A, B],
   [A, B, C],

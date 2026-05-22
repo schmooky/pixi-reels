@@ -2,7 +2,7 @@
 // Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
 //                   WILD_CARD, PIXI, gsap, app, pickWeighted
 //
-// Walking wild — CellPin.movePin() edition.
+// Walking wild. CellPin.movePin() edition.
 //
 // The wild migrates one column left between spins. No ghost sprite, no
 // stage-level overlay: the engine reparents a pooled symbol to the viewport's
@@ -35,7 +35,7 @@ const reelSet = new ReelSetBuilder()
 // ── Walk the wild ────────────────────────────────────────────────────────
 // After each spin lands, pin every new wild (if any) at its landing cell,
 // then walk every existing pin one column to the left. When a wild reaches
-// column 0, unpin it — it has walked off the board.
+// column 0, unpin it. it has walked off the board.
 async function walkPinsLeft() {
   const current = [...reelSet.pins.values()];
   for (const pin of current) {
@@ -73,7 +73,7 @@ async function walkPinsLeft() {
   }
 }
 
-// Overlay event hook — fires whenever an overlay ReelSymbol is created
+// Overlay event hook. fires whenever an overlay ReelSymbol is created
 // (at spin:start for every active pin). This is the Spine-animation hook:
 // for a SpineSymbol you'd cast and call `overlay.setAnimation('idle', true)`
 // or similar. Here we give every sticky-wild overlay a gentle pulse so it's
@@ -104,7 +104,7 @@ reelSet.events.on('spin:allLanded', ({ symbols }) => {
 // Script: arrive on reel 4, then walk left on each subsequent spin.
 const arrivals = [
   { col: 4, row: 1 },
-  null, // no new wild — existing one walks
+  null, // no new wild. existing one walks
   null,
   null,
   { col: 3, row: 2 }, // a second walker arrives

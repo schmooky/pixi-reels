@@ -109,12 +109,12 @@ const scripts = [
     g[2][1] = '10';
     return g;
   },
-  // Spin 2: respin — winners are still pinned, non-winners get fresh symbols
+  // Spin 2: respin. winners are still pinned, non-winners get fresh symbols
   () =>
     Array.from({ length: COLS }, () =>
       Array.from({ length: ROWS }, () => FILLER[Math.floor(Math.random() * FILLER.length)]),
     ),
-  // Spin 3: another respin — winners still pinned from previous turn decrement
+  // Spin 3: another respin. winners still pinned from previous turn decrement
   () =>
     Array.from({ length: COLS }, () =>
       Array.from({ length: ROWS }, () => FILLER[Math.floor(Math.random() * FILLER.length)]),

@@ -4,7 +4,7 @@ title: MultiWays
 description: Per-spin row variation. Each reel lands on a different row count between minRows and maxRows. The reel pixel height stays fixed; cell heights are derived per spin. Total ways = product of per-reel rows.
 tags: [multiways, shape, geometry, reshape, variable-rows]
 steps:
-  - "Build with .multiways({ minRows, maxRows, reelPixelHeight }) — defines the height budget"
+  - "Build with .multiways({ minRows, maxRows, reelPixelHeight }). defines the height budget"
   - "Each spin, pick a per-reel row count and call reelSet.setShape(rowsPerReel) BEFORE setResult()"
   - "AdjustPhase commits the new geometry; cell symbols snap, pin overlays tween"
 apis:
@@ -22,9 +22,9 @@ import { RecipeRunner } from '../../components/RecipeRunner.tsx';
 
 <RecipeRunner code={code} client:only="react" />
 
-MultiWays is the engine surface behind any slot where each reel lands on a different number of rows per spin and the total "ways" count is the product of per-reel rows. The setup: a fixed pixel-height per reel column, a configurable `[minRows, maxRows]` range, and `setShape(rowsPerReel)` chosen per spin. The demo above runs **6 reels × 2-7 rows per reel** — for example a `[3, 4, 3, 7, 7, 3]` landing pays as `3 × 4 × 3 × 7 × 7 × 3 = 5,292 ways`. Cell height is derived live (`reelPixelHeight / visibleRows[i]`), so a 2-row reel renders as two huge cells and a 7-row reel renders as seven small ones. Between SPIN and STOP the engine commits the new geometry per reel (resizes the strip's symbols, reshapes the motion layer) and then runs `AdjustPhase` to tween any pin overlays from their old cell to their new cell — the cell symbols themselves snap because they're still spinning at full speed.
+MultiWays is the engine surface behind any slot where each reel lands on a different number of rows per spin and the total "ways" count is the product of per-reel rows. The setup: a fixed pixel-height per reel column, a configurable `[minRows, maxRows]` range, and `setShape(rowsPerReel)` chosen per spin. The demo above runs **6 reels × 2-7 rows per reel**. for example a `[3, 4, 3, 7, 7, 3]` landing pays as `3 × 4 × 3 × 7 × 7 × 3 = 5,292 ways`. Cell height is derived live (`reelPixelHeight / visibleRows[i]`), so a 2-row reel renders as two huge cells and a 7-row reel renders as seven small ones. Between SPIN and STOP the engine commits the new geometry per reel (resizes the strip's symbols, reshapes the motion layer) and then runs `AdjustPhase` to tween any pin overlays from their old cell to their new cell. the cell symbols themselves snap because they're still spinning at full speed.
 
-The card-suit graphics in the demo are a no-asset prototyping default (`CardSymbol` from `examples/shared/CardSymbol.ts`) so each cell renders crisply at any size. In a real slot you'd ship `SpriteSymbol` / `AnimatedSpriteSymbol` / `SpineSymbol` — see [`card-symbol-debug`](/recipes/card-symbol-debug/) for when (not) to use the debug class.
+The card-suit graphics in the demo are a no-asset prototyping default (`CardSymbol` from `examples/shared/CardSymbol.ts`) so each cell renders crisply at any size. In a real slot you'd ship `SpriteSymbol` / `AnimatedSpriteSymbol` / `SpineSymbol`. see [`card-symbol-debug`](/recipes/card-symbol-debug/) for when (not) to use the debug class.
 
 ## The whole mechanic
 
@@ -32,7 +32,7 @@ The card-suit graphics in the demo are a no-asset prototyping default (`CardSymb
 const reelSet = new ReelSetBuilder()
   .reels(6)
   .multiways({ minRows: 2, maxRows: 7, reelPixelHeight: 480 })
-  .pinMigrationDuration(350)        // ms — cell + overlay reshape tween. 0 for instant snap.
+  .pinMigrationDuration(350)        // ms. cell + overlay reshape tween. 0 for instant snap.
   .pinMigrationEase('back.out(1.2)') // any GSAP ease string
   .symbolSize(68, 68)         // SPIN-time cell size (uniform across reels)
   // ...
@@ -50,17 +50,17 @@ That's it. The engine handles cell-height derivation, AdjustPhase reshape, mask 
 
 ## Order of operations
 
-1. **`spin()`** — reels start scrolling at the previous shape's cell height.
-2. **`setShape(rowsPerReel)`** — records the target shape, **migrates pins** eagerly to their new rows, emits `shape:changed`. No visual reshape yet — the geometry change happens later in step 4.
-3. **`setResult(grid)`** — server result, with `grid[i].length === rowsPerReel[i]` per reel.
-4. **Reshape + AdjustPhase** runs per reel after `SpinPhase` resolves. The engine emits `adjust:start`, then commits the new visible-row count and cell height (cell symbols on the strip snap instantly — they're still spinning at full speed), refreshes pin overlays, emits `adjust:complete`. If any pin overlays exist on the reel, `AdjustPhase` then tweens them from their captured pre-reshape pose to the new cell over `pinMigrationDuration` with `pinMigrationEase`. With no overlays the phase is skipped (no tween work to do).
+1. **`spin()`**. reels start scrolling at the previous shape's cell height.
+2. **`setShape(rowsPerReel)`**. records the target shape, **migrates pins** eagerly to their new rows, emits `shape:changed`. No visual reshape yet. the geometry change happens later in step 4.
+3. **`setResult(grid)`**. server result, with `grid[i].length === rowsPerReel[i]` per reel.
+4. **Reshape + AdjustPhase** runs per reel after `SpinPhase` resolves. The engine emits `adjust:start`, then commits the new visible-row count and cell height (cell symbols on the strip snap instantly. they're still spinning at full speed), refreshes pin overlays, emits `adjust:complete`. If any pin overlays exist on the reel, `AdjustPhase` then tweens them from their captured pre-reshape pose to the new cell over `pinMigrationDuration` with `pinMigrationEase`. With no overlays the phase is skipped (no tween work to do).
 5. **StopPhase** lands the reels at the new shape with the bounce.
 
 ## Animation
 
-`pinMigrationDuration` + `pinMigrationEase` control **pin-overlay** migration only — the wild visibly slides and scales from its old cell to its new one over the duration. The underlying reel cells snap instantly because the reel is still spinning at full speed when the reshape runs (tweening individual cell symbols would fight the spinning motion layer and look broken).
+`pinMigrationDuration` + `pinMigrationEase` control **pin-overlay** migration only. the wild visibly slides and scales from its old cell to its new one over the duration. The underlying reel cells snap instantly because the reel is still spinning at full speed when the reshape runs (tweening individual cell symbols would fight the spinning motion layer and look broken).
 
-Set `pinMigrationDuration(0)` to skip the overlay tween (instant snap). Pass any GSAP ease string to `pinMigrationEase` — `'power2.out'` (default), `'back.out(1.4)'`, `'expo.inOut'`, etc. Reels without active pins on this spin see the same instant geometry change either way; the duration only matters when there's an overlay to migrate.
+Set `pinMigrationDuration(0)` to skip the overlay tween (instant snap). Pass any GSAP ease string to `pinMigrationEase`. `'power2.out'` (default), `'back.out(1.4)'`, `'expo.inOut'`, etc. Reels without active pins on this spin see the same instant geometry change either way; the duration only matters when there's an overlay to migrate.
 
 `pinMigrationDuration` does **not** apply when the player slam-stops the spin (`reelSet.skipSpin()`). Skip is meant to land *now*; running a 300 ms tween on the way there would defeat the purpose. Pin overlays migrate instantly on skip regardless of `pinMigrationDuration`.
 
@@ -70,7 +70,7 @@ Non-MultiWays slots run the original `start → spin → stop` chain unchanged. 
 
 ## Pin migration
 
-Pins survive MultiWays reshapes. Each pin has a frozen `originRow` (defaults to its placement row); on every reshape the pin moves to `min(originRow, newRows - 1)`. If the new shape doesn't fit the origin, the pin clamps to the last row (`pin:migrated` fires with `clamped: true`); if a later, larger shape DOES fit the origin again, the pin moves back. This prevents wander — a pin at `originRow=4` stays anchored to row 4 across `7 -> 3 -> 5` shape transitions.
+Pins survive MultiWays reshapes. Each pin has a frozen `originRow` (defaults to its placement row); on every reshape the pin moves to `min(originRow, newRows - 1)`. If the new shape doesn't fit the origin, the pin clamps to the last row (`pin:migrated` fires with `clamped: true`); if a later, larger shape DOES fit the origin again, the pin moves back. This prevents wander. a pin at `originRow=4` stays anchored to row 4 across `7 -> 3 -> 5` shape transitions.
 
 ## Constraints
 
@@ -80,7 +80,7 @@ Pins survive MultiWays reshapes. Each pin has a frozen `originRow` (defaults to 
 
 ## Related
 
-- [Guide: Per-reel geometry, MultiWays & big symbols](/guides/per-reel-geometry/) — full mechanics primer
-- [Per-reel shape (pyramid)](/recipes/pyramid-shape/) — non-MultiWays static shape
-- [MxN big symbols](/recipes/big-symbols-mxn/) — N×M blocks (mutually exclusive with MultiWays)
-- [Sticky wild on MultiWays](/recipes/sticky-wild-multiways/) — pin migration with `originRow`
+- [Guide: Per-reel geometry, MultiWays & big symbols](/guides/per-reel-geometry/). full mechanics primer
+- [Per-reel shape (pyramid)](/recipes/pyramid-shape/). non-MultiWays static shape
+- [MxN big symbols](/recipes/big-symbols-mxn/). N×M blocks (mutually exclusive with MultiWays)
+- [Sticky wild on MultiWays](/recipes/sticky-wild-multiways/). pin migration with `originRow`

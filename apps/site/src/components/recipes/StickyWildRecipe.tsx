@@ -18,7 +18,7 @@ function fillerGrid(cols: number, rows: number): string[][] {
 
 /**
  * Sticky-wild scenario. Every wild that lands during the free-spin round
- * persists as an overlay sprite — the underlying reels scroll normally on
+ * persists as an overlay sprite. the underlying reels scroll normally on
  * each respin but the sticky wilds stay fixed on top, pop-scale on arrival.
  */
 export default function StickyWildRecipe() {
@@ -65,7 +65,7 @@ export default function StickyWildRecipe() {
             reelSet.setSpeed('turbo');
             clearGhosts();
             const stuck: Array<{ reel: number; row: number }> = [];
-            // Scripted wild arrivals — one new wild per respin.
+            // Scripted wild arrivals. one new wild per respin.
             const arrivals: Array<{ reel: number; row: number }> = [
               { reel: 1, row: 1 },
               { reel: 3, row: 0 },

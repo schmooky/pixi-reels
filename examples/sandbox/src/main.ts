@@ -1,9 +1,9 @@
 /**
- * Sandbox bootstrap — DO NOT EDIT (unless you want to change the runner).
+ * Sandbox bootstrap. DO NOT EDIT (unless you want to change the runner).
  *
  * This file sets up the PixiJS Application, loads the prototype-symbols
  * atlas, creates the UI, and handles resize. It delegates reel construction
- * to `sandbox.ts` — edit THAT file to experiment with reel configurations.
+ * to `sandbox.ts`. edit THAT file to experiment with reel configurations.
  *
  * On Vite HMR, when `sandbox.ts` changes, the page reloads and your new
  * reel config is mounted.

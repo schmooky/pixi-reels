@@ -2,10 +2,10 @@
 // Injected: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
 //           PIXI, gsap, app, pickWeighted
 
-// SUBTLE LEAD-IN — 150 ms before the fall starts. Just enough for the
+// SUBTLE LEAD-IN. 150 ms before the fall starts. Just enough for the
 // SPIN button click to register and a short "tap" SFX to lead. Below
 // the threshold where the player thinks "why isn't anything happening?"
-// — still feels responsive.
+//. still feels responsive.
 
 const IDS = ['7', '8', '9', '10', 'J', 'Q'];
 const REELS = 6, ROWS = 4, SIZE = 64;

@@ -35,7 +35,7 @@ async function spinAndLandWithHold(
   return promise;
 }
 
-describe('SpinOptions.holdReels — basic behaviour', () => {
+describe('SpinOptions.holdReels. basic behaviour', () => {
   it('spins only non-held reels; held reels keep their visible rows', async () => {
     const h = makeHarness();
     try {
@@ -51,7 +51,7 @@ describe('SpinOptions.holdReels — basic behaviour', () => {
       const before = h.reelSet.reels.map((r) => r.getVisibleSymbols());
 
       // Second spin: hold reels 0 and 4. Server tries to write 'wild'
-      // everywhere — held entries must be ignored.
+      // everywhere. held entries must be ignored.
       const wildAll: string[][] = Array.from({ length: 5 }, () => ['wild', 'wild', 'wild']);
       await spinAndLandWithHold(h, wildAll, [0, 4]);
 
@@ -100,7 +100,7 @@ describe('SpinOptions.holdReels — basic behaviour', () => {
   });
 });
 
-describe('SpinOptions.holdReels — events', () => {
+describe('SpinOptions.holdReels. events', () => {
   it('does not emit spin:reelLanded for held reels', async () => {
     const h = makeHarness();
     try {
@@ -114,8 +114,8 @@ describe('SpinOptions.holdReels — events', () => {
 
       // Note: we drive the spin via `skip()` so no `spin:stopping` fires
       // for any reel (existing slam-stop semantics). The point of this
-      // test is `spin:reelLanded` — which DOES fire from the skip path
-      // via _markLanded — must NOT include held indices.
+      // test is `spin:reelLanded`. which DOES fire from the skip path
+      // via _markLanded. must NOT include held indices.
       const log = captureEvents(h.reelSet, ['spin:reelLanded']);
       const target: string[][] = [
         ['a', 'a', 'a'],
@@ -164,7 +164,7 @@ describe('SpinOptions.holdReels — events', () => {
   });
 });
 
-describe('SpinOptions.holdReels — degenerate cases', () => {
+describe('SpinOptions.holdReels. degenerate cases', () => {
   it('all reels held: resolves with the current visible grid, no events for reels', async () => {
     const h = makeHarness();
     try {
@@ -225,7 +225,7 @@ describe('SpinOptions.holdReels — degenerate cases', () => {
   });
 });
 
-describe('SpinOptions.holdReels — interaction with setAnticipation', () => {
+describe('SpinOptions.holdReels. interaction with setAnticipation', () => {
   it('filters held indices out of the anticipation list silently', async () => {
     const h = makeHarness();
     try {
@@ -238,7 +238,7 @@ describe('SpinOptions.holdReels — interaction with setAnticipation', () => {
       ]);
 
       const promise = h.reelSet.spin({ holdReels: [3] });
-      // Set anticipation including the held reel — implementation must drop it.
+      // Set anticipation including the held reel. implementation must drop it.
       h.reelSet.setAnticipation([2, 3, 4]);
       h.reelSet.setResult([
         { visible: ['a', 'a', 'a'] },
@@ -250,7 +250,7 @@ describe('SpinOptions.holdReels — interaction with setAnticipation', () => {
       h.reelSet.slamStop();
       await promise;
 
-      // No assertion failure thrown means the filter held — anticipation
+      // No assertion failure thrown means the filter held. anticipation
       // never tried to enter a phase chain on the held reel.
       expect(h.reelSet.reels[3].getVisibleSymbols()).toEqual(['d', 'd', 'd']);
     } finally {

@@ -1,5 +1,5 @@
 /**
- * Expanding-wild recipe — degenerate big-symbol case. Builds a normal slot
+ * Expanding-wild recipe. degenerate big-symbol case. Builds a normal slot
  * and uses the pin API with `turns: 'eval'` to fill a column when a wild
  * lands.
  *

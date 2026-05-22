@@ -15,7 +15,7 @@ class CountingSymbol extends HeadlessSymbol {
   }
 }
 
-describe('SpinController.skip — symbol lifecycle hooks', () => {
+describe('SpinController.skip. symbol lifecycle hooks', () => {
   it('fires onReelSpinEnd and onReelLanded once per visible-row symbol on slam-stop', async () => {
     const ticker = new FakeTicker();
     const reelSet = new ReelSetBuilder()

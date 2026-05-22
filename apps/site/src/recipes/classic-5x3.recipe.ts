@@ -2,7 +2,7 @@
 // Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
 //                   WILD_CARD, app, pickWeighted
 
-// Cards make a clean prototyping canvas — no asset loading, no motion-blur
+// Cards make a clean prototyping canvas. no asset loading, no motion-blur
 // strip, scales crisply at any cell size. Swap to SpriteSymbol +
 // AnimatedSpriteSymbol when you ship.
 

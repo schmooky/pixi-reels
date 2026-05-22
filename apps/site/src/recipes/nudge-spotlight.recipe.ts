@@ -46,7 +46,7 @@ return {
     await p;
     await new Promise((resolve) => setTimeout(resolve, 320));
 
-    // 2. Parallel nudge of the middle three reels — `wild` lands at the
+    // 2. Parallel nudge of the middle three reels. `wild` lands at the
     //    top of each nudged column. After this, visible row 0 reads
     //    [..., wild, wild, wild, ...].
     await Promise.all(
@@ -63,7 +63,7 @@ return {
     // 3. Spotlight the new win line. `spotlight.show` re-parents the
     //    winning symbols above the reel mask, dims the rest of the
     //    viewport, and runs each symbol's `playWin()` animation. Resolves
-    //    once the animation chain completes — at which point `hide()`
+    //    once the animation chain completes. at which point `hide()`
     //    returns the symbols to their reels.
     const winners = NUDGE_COLS.map((col) => ({ reelIndex: col, row: WIN_ROW }));
     await reelSet.spotlight.show(winners, {

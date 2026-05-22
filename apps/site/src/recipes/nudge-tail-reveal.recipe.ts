@@ -4,7 +4,7 @@
 // TAIL-REVEAL pattern.
 //
 // Big symbol lands fully visible. We nudge it UP by 1 so the anchor
-// crosses into bufferAbove — only the bottom cell of the block
+// crosses into bufferAbove. only the bottom cell of the block
 // remains in the visible window ("tail visible"). The engine's
 // `_finalizeFrame` sizes the anchor to span the whole block even
 // though it lives above visible, so the visible portion renders as

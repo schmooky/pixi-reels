@@ -81,7 +81,7 @@ describe('pin migration (MultiWays)', () => {
       // After reshape, slotHeight = 700/3 ~ 233. Y at row 2 ~ 466.7.
       // Before, with 7 rows of 100, y at row 4 was 400.
       const overlayAfter = (reelSet as any)._pinOverlays.get('1:2');
-      // Overlays are destroyed on spin:allLanded, so we won't have one after — the
+      // Overlays are destroyed on spin:allLanded, so we won't have one after. the
       // checks above (yBefore, _pinOverlays presence) prove the in-flight reshape
       // path; the post-land state is tested by visiting the reel directly.
       void overlayAfter;
@@ -125,7 +125,7 @@ describe('pin migration (MultiWays)', () => {
       reelSet.slamStop();
       await p;
       expect(reelSet.getPin(1, 2)?.row).toBe(2);
-      expect(reelSet.getPin(1, 2)?.originRow).toBe(2); // FROZEN — origin updated
+      expect(reelSet.getPin(1, 2)?.originRow).toBe(2); // FROZEN. origin updated
 
       // Spin 3: shape grows back. With 'frozen', pin STAYS at row 2 (not restored to 4).
       p = reelSet.spin();

@@ -6,7 +6,7 @@
 //
 // When mystery symbols land, we pick one random non-mystery class and pin
 // it at each mystery cell with `turns: 'eval'`. The pins are cleared
-// automatically at the next spin:start — no manual cleanup.
+// automatically at the next spin:start. no manual cleanup.
 
 const FILLER = ['7', '8', '10', 'Q'];
 const MYSTERY = 'mystery';
@@ -45,10 +45,10 @@ const reelSet = new ReelSetBuilder()
 // Animation flow:
 //   1. shake each mystery '?' card horizontally for ~280ms (anticipation)
 //   2. scale it down to 0 over 180ms (mystery vanishes)
-//   3. pin the reveal symbol — engine swaps the symbol identity at rest
+//   3. pin the reveal symbol. engine swaps the symbol identity at rest
 //   4. scale the new symbol UP from 0 with a back.out overshoot
 //
-// Without these tweens the reveal would be an instant swap on land —
+// Without these tweens the reveal would be an instant swap on land.
 // player wouldn't even register that the mystery had to be opened.
 
 async function revealCell(col, row, revealId) {
@@ -62,7 +62,7 @@ async function revealCell(col, row, revealId) {
   oldSym.view.x = ox + SIZE / 2;
   oldSym.view.y = oy + SIZE / 2;
 
-  // Shake — small horizontal jiggle, four oscillations.
+  // Shake. small horizontal jiggle, four oscillations.
   await new Promise((resolve) => {
     gsap.to(oldSym.view, {
       x: oldSym.view.x + 6,
@@ -74,7 +74,7 @@ async function revealCell(col, row, revealId) {
     });
   });
 
-  // Scale-down — mystery vanishes.
+  // Scale-down. mystery vanishes.
   await new Promise((resolve) => {
     gsap.to(oldSym.view.scale, {
       x: 0, y: 0,
@@ -92,7 +92,7 @@ async function revealCell(col, row, revealId) {
   oldSym.view.y = oy;
   oldSym.view.scale.set(1);
 
-  // Swap identity via pin — same as before, just wrapped in animation.
+  // Swap identity via pin. same as before, just wrapped in animation.
   reelSet.pin(col, row, revealId, { turns: 'eval' });
 
   // The pin call replaced the symbol at this cell; grab the new one

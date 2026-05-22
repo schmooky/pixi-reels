@@ -53,11 +53,11 @@ export default function MysteryRevealRecipe() {
             await Promise.all(cells.map(async ({ r, row }) => {
               const reel = reelSet.getReel(r);
               const sym = reel.getSymbolAt(row);
-              // Shake (x offset — origin doesn't matter here).
+              // Shake (x offset. origin doesn't matter here).
               await new Promise<void>((resolve) => {
                 gsap.to(sym.view, { x: '+=6', duration: 0.05, yoyo: true, repeat: 5, ease: 'sine.inOut', onComplete: () => { sym.view.x = 0; resolve(); } });
               });
-              // Swap + pop in — scale around the cell's visual center.
+              // Swap + pop in. scale around the cell's visual center.
               const visible = reel.getVisibleSymbols();
               visible[row] = reveal;
               reel.placeSymbols(visible);

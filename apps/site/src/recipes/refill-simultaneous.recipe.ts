@@ -2,7 +2,7 @@
 // Injected: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
 //           PIXI, gsap, app, pickWeighted
 
-// SIMULTANEOUS REFILL — every cell drops at the same moment. The most
+// SIMULTANEOUS REFILL. every cell drops at the same moment. The most
 // common refill pattern in commercial tumble slots: snappy, no extra
 // pacing, the player sees the new symbols arrive as one beat.
 
@@ -31,7 +31,7 @@ const reelSet = new ReelSetBuilder()
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150 })
   .tumble({
     fall:   { duration: 240, ease: 'sine.in',       rowStagger: 40 },
-    // rowStagger: 0 — every row in a reel drops together (no in-reel stagger).
+    // rowStagger: 0. every row in a reel drops together (no in-reel stagger).
     dropIn: { duration: 380, ease: 'back.out(1.4)', rowStagger: 0, distance: 'perHole' },
   })
   .ticker(app.ticker).build();
@@ -52,7 +52,7 @@ return {
       return next;
     });
 
-    // Moment A — initial reveal with the canonical left-to-right wave.
+    // Moment A. initial reveal with the canonical left-to-right wave.
     reelSet.setDropOrder('ltr');
     const spinDone = reelSet.spin();
     await new Promise((r) => setTimeout(r, 220));
@@ -63,7 +63,7 @@ return {
     const winners = HIT_COLS.map((c) => ({ reel: c, row: HIT_ROW }));
     await reelSet.destroySymbols(winners);
     await new Promise((r) => setTimeout(r, PAUSE_AFTER_REMOVAL_MS));
-    // Moment B — every column drops together. setDropOrder('all') = 0 ms
+    // Moment B. every column drops together. setDropOrder('all') = 0 ms
     // per-reel delay; the in-reel rowStagger is already 0 above.
     reelSet.setDropOrder('all');
     await reelSet.refill({ winners, grid: stage1 });

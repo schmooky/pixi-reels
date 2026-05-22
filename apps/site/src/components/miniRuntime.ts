@@ -20,8 +20,8 @@ export interface MiniConfig {
   symbolSize?: { width: number; height: number };
   /**
    * Two shapes:
-   *   - array of `{ id, color, glyph? }` — BlockSymbol (abstract teaching).
-   *   - `{ kind: 'sprite', ids: [...] }` — BlurSpriteSymbol with the
+   *   - array of `{ id, color, glyph? }`. BlockSymbol (abstract teaching).
+   *   - `{ kind: 'sprite', ids: [...] }`. BlurSpriteSymbol with the
    *     prototype atlas (real slot art). Ids must be atlas frame names.
    */
   symbols:
@@ -29,7 +29,7 @@ export interface MiniConfig {
     | { kind: 'sprite'; ids: string[]; blurOnSpin?: boolean };
   weights?: Record<string, number>;
   /**
-   * Opt-in tumble cascade phases — needed for any recipe that calls
+   * Opt-in tumble cascade phases. needed for any recipe that calls
    * `reelSet.refill(...)` or `reelSet.runCascade(...)`. Pass `true` for
    * library defaults, or a `TumbleConfig` to customise fall / dropIn.
    *
@@ -49,7 +49,7 @@ export interface MiniHandle {
 
 /**
  * Boot a compact PixiJS reel set into `host` for a recipe micro-demo.
- * No cheat panel, no SPIN/Skip/Turbo chrome — the caller drives it directly.
+ * No cheat panel, no SPIN/Skip/Turbo chrome. the caller drives it directly.
  */
 export async function mountMiniReels(
   host: HTMLDivElement,
@@ -58,7 +58,7 @@ export async function mountMiniReels(
   const size = cfg.symbolSize ?? { width: 72, height: 72 };
   const padX = 10, padY = 10, gap = 4;
   // Width adapts to host on mobile / responsive layouts. Height is reel-
-  // geometry-bound and never changes — the host's column is laid out around
+  // geometry-bound and never changes. the host's column is laid out around
   // the reels, not the other way around.
   const intrinsicWidth = cfg.reelCount * (size.width + gap) - gap + padX * 2 + 40;
   const computeWidth = (): number => Math.min(host.clientWidth || intrinsicWidth, intrinsicWidth);
@@ -167,7 +167,7 @@ export async function mountMiniReels(
       }
     });
   }
-  // allIds retained for callers via the returned `handle` — not exposed today
+  // allIds retained for callers via the returned `handle`. not exposed today
   // but useful if a future recipe wants to enumerate the registered set.
   void allIds;
 
@@ -185,7 +185,7 @@ export async function mountMiniReels(
   // once at boot then whenever the wrapping column changes size (mobile
   // rotate, responsive breakpoints inside a multi-canvas recipe page). If
   // host width drops below the intrinsic reel width we scale the whole
-  // group down uniformly — same `fit()` pattern as RecipeRunner.
+  // group down uniformly. same `fit()` pattern as RecipeRunner.
   const relayout = (): void => {
     width = computeWidth();
     app.renderer.resize(width, height);
@@ -273,7 +273,7 @@ export async function fadeOutCells(
     requestAnimationFrame(step);
   });
 
-  // Restore pivot/position. Alpha stays 0 — identity gets swapped by the
+  // Restore pivot/position. Alpha stays 0. identity gets swapped by the
   // caller's next placeSymbols. Scale stays at its end value for the same
   // reason; _replaceSymbol resets both on the new activation.
   for (const p of pinned) {

@@ -1,0 +1,105 @@
+---
+layout: ../../layouts/Recipe.astro
+title: Big symbol falls into view through a cascade
+description: A tall wild lands with its tail peeking in from bufferAbove. The cells below the tail form a winning cluster, clear in the cascade, and the wild's anchor falls down through the strip into full visibility.
+tags: [big-symbols, buffer, cascade, tumble, recent]
+steps:
+  - "Land a 1xH wild with its anchor in `bufferAbove`. tail visible at row 0"
+  - "Plant a winning cluster on a row below the tail so detectWinners returns those cells"
+  - "In `nextGrid`, return a refill grid that places the wild's anchor at a more visible row. bufferAbove or visible"
+  - "The cascade refill animates each strip cell, including the moved anchor sprite, into its new position"
+apis:
+  - ReelSet.runCascade
+  - ReelSet.setResult
+  - ColumnTarget.bufferAbove
+  - SymbolData.size
+  - ReelSetBuilder.tumble
+---
+
+import code from '../../recipes/big-symbol-cascade-fall.recipe.ts?raw';
+import { RecipeRunner } from '../../components/RecipeRunner.tsx';
+
+<RecipeRunner code={code} client:only="react" />
+
+A tall 1×3 wild lands with most of its body hidden above the visible
+window. only the **tail** shows at row 0. The other reels plant a
+3-of-a-kind MATCH cluster on row 1. The cluster wins, the cells clear,
+and the cascade refill drops the wild's anchor down through the strip
+into full visibility.
+
+This is the "big symbol falls when supporting cells are cleared" beat
+common in cluster / tumble slots. the high-value symbol reveals
+itself across multiple cascade chains as the cells below it
+disappear.
+
+## Why this works
+
+`runCascade` doesn't have any opinion about big symbols. It just calls
+`detectWinners` and `nextGrid` and feeds the result back through
+`refill()`. The refill path runs the same `_coordinateBigSymbols`
+coordinator as `setResult`, so:
+
+- The refill grid can contain a big-symbol anchor at **any** strip
+  slot. visible, bufferAbove, or bufferBelow.
+- The coordinator paints OCCUPIED stubs across the rest of the block
+  in the new position.
+- The visible anchor sprite re-sizes via `_finalizeFrame` after the
+  refill snap.
+- The drop animation tweens each strip cell into its new slot. for a
+  block, this is the anchor sprite (sized to span the whole block)
+  dropping as a unit.
+
+## What this recipe scripts
+
+```ts
+// 1. Initial spin: tall at bufferAbove[1], MATCH cluster at row 1.
+const initialGrid = [
+  {
+    visible: [filler(), 'match', filler(), filler()],
+    bufferAbove: [undefined, 'tall'], // anchor at row -2
+  },
+  { visible: [filler(), 'match', filler(), filler()] },
+  { visible: [filler(), 'match', filler(), filler()] },
+];
+await reelSet.setResult(initialGrid);
+
+// 2. Cascade: row-1 cluster wins, wild falls to visible[0..2].
+await reelSet.runCascade({
+  detectWinners: () => [0, 1, 2].map((reel) => ({ reel, row: 1 })),
+  nextGrid: () => [
+    {
+      visible: ['tall', filler(), filler(), filler()],
+      bufferAbove: [filler()],
+    },
+    { visible: [filler(), filler(), filler(), filler()] },
+    { visible: [filler(), filler(), filler(), filler()] },
+  ],
+});
+```
+
+The `nextGrid` here scripts a one-shot reveal. anchor moves from
+`row -2` to `row 0` in a single cascade step. Real games might stage
+this across multiple chains (anchor moves down one row per cascade
+until fully visible), which is just a matter of returning different
+grids on each call.
+
+## What still throws
+
+- **Big-symbol anchors cannot land at a row that would push the block
+  past the strip end.** Same validator as `setResult`. see
+  [Big symbols guide](/guides/big-symbols/#validation).
+- **MultiWays + big symbols** is rejected at build, regardless of
+  cascade mode.
+- **Cross-reel (`w > 1`) blocks cannot be moved via cascade** if the
+  fall would require relocating the block to a different left-edge
+  column. Reposition w=1 blocks freely; for wider blocks, keep the
+  anchor column constant across refills.
+
+## Related
+
+- [Land a big symbol partially in buffer](/recipes/big-symbol-partial-land/).
+  the static landing without a cascade follow-up.
+- [Nudge a big symbol in, then hold it across a respin](/recipes/big-symbol-held-respin/).
+  player-driven reveal via nudge instead of cascade.
+- [Cascade 6×5](/recipes/cascade-6x5/). the cascade orchestration
+  pattern without big-symbol involvement.

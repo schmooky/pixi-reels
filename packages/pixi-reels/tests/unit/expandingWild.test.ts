@@ -10,7 +10,7 @@ describe('expanding wild (pin-based, 1×N)', () => {
     });
     try {
       // Expanding wild: pin every cell in column 1 for 'eval' lifetime.
-      // Pins must be placed AFTER spin() starts — 'eval' pins from the
+      // Pins must be placed AFTER spin() starts. 'eval' pins from the
       // previous spin are cleared at the next spin:start.
       const promise = reelSet.spin();
       for (let r = 0; r < 3; r++) {

@@ -2,7 +2,7 @@
 // Injected: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
 //           PIXI, gsap, app, pickWeighted
 
-// SUSPENSE — 700 ms lead-in. Dramatic. The reels stand still while
+// SUSPENSE. 700 ms lead-in. Dramatic. The reels stand still while
 // the music swells, a "GO!" stinger fires, or a feature-pick UI flashes.
 // Use sparingly: fine for bonus / free-spin / jackpot reveals, exhausting
 // on every base-game spin.

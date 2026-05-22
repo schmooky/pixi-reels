@@ -8,7 +8,7 @@ const C = 'round/round_3';
 const S = 'bonus/bonus_1';           // scatter
 const IDS = [A, B, C, S];
 
-// Two scatters on reels 0 and 2, reel 4 blanks — classic near-miss.
+// Two scatters on reels 0 and 2, reel 4 blanks. classic near-miss.
 const GRID: string[][] = [
   [S, A, B],
   [B, A, C],

@@ -274,7 +274,7 @@ async function main() {
     let totalWin = 0;
 
     while (respins > 0) {
-      statusEl.textContent = `HOLD & WIN — Respins: ${respins}`;
+      statusEl.textContent = `HOLD & WIN. Respins: ${respins}`;
 
       const freeCells = bonusCells.filter((c) => !c.locked);
       if (freeCells.length === 0) break;
@@ -346,7 +346,7 @@ async function main() {
         gsap.to(cell.bg, { alpha: 0.5, duration: 0.15, yoyo: true, repeat: 5 });
       }
     } else {
-      statusEl.textContent = `BONUS COMPLETE — WIN: ${totalWin}x`;
+      statusEl.textContent = `BONUS COMPLETE. WIN: ${totalWin}x`;
     }
     ui.showWin(totalWin);
     await wait(3000);

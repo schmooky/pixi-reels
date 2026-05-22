@@ -13,7 +13,7 @@ const HIT_ROW = 2;
 const HIT_COLS = [0, 1, 2];
 
 // Longer pause so the previous bounce has time to settle before new
-// symbols arrive — the bouncy land needs breathing room.
+// symbols arrive. the bouncy land needs breathing room.
 const PAUSE_AFTER_REMOVAL_MS = 320;
 
 function randSymbol(exclude) {

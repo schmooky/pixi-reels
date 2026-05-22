@@ -1,7 +1,7 @@
 ---
 layout: ../../layouts/Recipe.astro
 title: Anticipation teaser
-description: Combine setAnticipation with a buffer-above prefill so a slow reel approaches a known high-value symbol — the player literally sees the bonus coming.
+description: Combine setAnticipation with a buffer-above prefill so a slow reel approaches a known high-value symbol. the player literally sees the bonus coming.
 tags: [anticipation, tension, buffer, peek]
 steps:
   - Call setAnticipation([...reels]) to slow specific reels before they land
@@ -20,7 +20,7 @@ import { RecipeRunner } from '../../components/RecipeRunner.tsx';
 
 ## The idea
 
-`setAnticipation` slows a reel so the player has time to feel the tension. On its own, the slow reel shows whatever random symbols happen to be wrapping onto the strip — sometimes the high-value lands, sometimes it doesn't.
+`setAnticipation` slows a reel so the player has time to feel the tension. On its own, the slow reel shows whatever random symbols happen to be wrapping onto the strip. sometimes the high-value lands, sometimes it doesn't.
 
 Pairing it with a buffer-above prefill (`bufferAbove: ['COIN']` on the column's `ColumnTarget`) turns the wait into a reveal: the COIN is the next cell to enter the visible area, so as the reel decelerates the player watches it slide into place. The effect is stronger than anticipation alone.
 
@@ -31,7 +31,7 @@ const promise = reelSet.spin();
 await waitForServer();
 
 const visible = await server.spin();
-// Reels 3 and 4 are the tension reels — the player is waiting on them.
+// Reels 3 and 4 are the tension reels. the player is waiting on them.
 // bufferAbove on those reels holds the high-value symbol the player will
 // see slide into view as the reel decelerates.
 const result: ColumnTarget[] = visible.map((col, i) => (
@@ -46,13 +46,13 @@ await promise;
 ## When to use which symbol
 
 - **Same as the win**: if reels 3+4 ARE landing on BONUS, prefill BONUS. The reveal is the win itself.
-- **The "tease" variant**: if reels 3+4 are NOT landing on BONUS, prefill BONUS anyway — the slow reel briefly shows the bonus passing overhead before it scrolls out and the actual (non-bonus) symbol lands. This is a near-miss effect. **Caveat:** some slot jurisdictions restrict deliberately engineered near-misses. Confirm with your compliance team before shipping this variant.
+- **The "tease" variant**: if reels 3+4 are NOT landing on BONUS, prefill BONUS anyway. the slow reel briefly shows the bonus passing overhead before it scrolls out and the actual (non-bonus) symbol lands. This is a near-miss effect. **Caveat:** some slot jurisdictions restrict deliberately engineered near-misses. Confirm with your compliance team before shipping this variant.
 
 ## How the reveal works
 
 1. `spin()` starts → all reels accelerate
 2. `setResult` + `setAnticipation` arrives → reels 0–2 enter `StopPhase` first
-3. Reels 3 and 4 enter `AnticipationPhase` — they slow down, holding for `anticipationDelay`
+3. Reels 3 and 4 enter `AnticipationPhase`. they slow down, holding for `anticipationDelay`
 4. During that hold, the strip wraps slowly. The buffer-above cell (containing `BONUS`) is the next to enter view
 5. After `anticipationDelay` elapses, those reels enter `StopPhase` and land
 
@@ -60,6 +60,6 @@ The buffer-above prefill is read by the same `FrameBuilder` pipeline that landed
 
 ## Where to go next
 
-- [Peek symbol from buffer-above](/recipes/peek-from-above/) — the base mechanic on its own
-- [Buffer indexing cheatsheet](/guides/buffer-indexing/) — full convention reference
-- [Anticipate a reel](/recipes/anticipate-a-reel/) — anticipation without the buffer-above pairing
+- [Peek symbol from buffer-above](/recipes/peek-from-above/). the base mechanic on its own
+- [Buffer indexing cheatsheet](/guides/buffer-indexing/). full convention reference
+- [Anticipate a reel](/recipes/anticipate-a-reel/). anticipation without the buffer-above pairing

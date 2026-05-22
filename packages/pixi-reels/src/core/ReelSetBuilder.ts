@@ -26,7 +26,7 @@ import type { SpinningMode } from '../spin/modes/SpinningMode.js';
 import { StandardMode } from '../spin/modes/StandardMode.js';
 import type { FrameMiddleware } from '../frame/FrameBuilder.js';
 import type { ColumnTarget } from '../frame/ColumnTarget.js';
-import { columnTargetToArray } from '../frame/ColumnTarget.js';
+import { assertBufferCountsInRange, columnTargetToArray } from '../frame/ColumnTarget.js';
 import type { TumbleConfig, ResolvedTumbleConfig } from '../cascade/TumbleConfig.js';
 import { resolveTumbleConfig } from '../cascade/TumbleConfig.js';
 import { CascadeFallPhase } from '../spin/phases/CascadeFallPhase.js';
@@ -78,13 +78,13 @@ export class ReelSetBuilder {
   private _spinningMode: SpinningMode = new StandardMode();
   private _phaseFactory = new PhaseFactory();
   private _middlewares: FrameMiddleware[] = [];
-  private _initialFrame?: string[][];
+  private _initialFrame?: ColumnTarget[];
   private _symbolDataOverrides: Record<string, Partial<SymbolData>> = {};
   private _tumbleConfig?: ResolvedTumbleConfig;
   private _defaultSpinMode: 'standard' | 'cascade' = 'standard';
   /** Per-reel static row counts (jagged shapes like 3-5-5-5-3). */
   private _visibleRowsPerReel?: number[];
-  /** Per-reel pixel-box heights — used for both pyramids and MultiWays. */
+  /** Per-reel pixel-box heights. used for both pyramids and MultiWays. */
   private _reelPixelHeights?: number[];
   /** Vertical alignment of short reels inside the tallest reel's box. */
   private _reelAnchor: ReelAnchor = 'center';
@@ -107,7 +107,7 @@ export class ReelSetBuilder {
 
   /**
    * Number of visible rows per reel (uniform across all reels).
-   * Mutually exclusive with `visibleRowsPerReel()` — calling both throws
+   * Mutually exclusive with `visibleRowsPerReel()`. calling both throws
    * at `build()`.
    *
    * @example
@@ -140,7 +140,7 @@ export class ReelSetBuilder {
    *     height per reel is derived as `reelPixelHeight / visibleRows[i]`.
    *
    * Precedence: when both `reelPixelHeights` and `reelAnchor` are set,
-   * `reelPixelHeights` wins — anchor is derived from the explicit boxes.
+   * `reelPixelHeights` wins. anchor is derived from the explicit boxes.
    */
   reelPixelHeights(heights: number[]): this {
     this._reelPixelHeights = [...heights];
@@ -155,11 +155,11 @@ export class ReelSetBuilder {
 
   /**
    * Custom mask strategy for the viewport. Defaults to {@link RectMaskStrategy}
-   * (one clip rect per reel — clean for pyramid + uniform layouts).
+   * (one clip rect per reel. clean for pyramid + uniform layouts).
    *
    * Use {@link SharedRectMaskStrategy} when reels have horizontal gaps
    * AND symbols (typically big symbols) need to overlap across reel
-   * boundaries — the per-reel default would clip them at the gaps.
+   * boundaries. the per-reel default would clip them at the gaps.
    *
    * Or pass any custom `MaskStrategy` for non-rectangular masks (rounded
    * frames, hexagonal grids, etc.).
@@ -207,7 +207,7 @@ export class ReelSetBuilder {
    * tween).
    *
    * AdjustPhase plays on top of whatever stop staggering you've configured
-   * — its duration is independent of `stopDelay`.
+   *. its duration is independent of `stopDelay`.
    */
   pinMigrationDuration(value: number | ((reelIndex: number) => number)): this {
     this._pinMigrationDuration = value;
@@ -247,7 +247,7 @@ export class ReelSetBuilder {
    *
    * Buffer rows are off-screen cells the reel keeps around the visible
    * window so symbols can fade/slide in cleanly. The motion layer's wrap
-   * detection assumes at least one buffer row above and one below — the
+   * detection assumes at least one buffer row above and one below. the
    * minimum supported value is **1**. Passing `0` (or a negative number)
    * is clamped to `1` and a single console warning is printed; the
    * builder does not throw, so existing user code keeps running.
@@ -286,7 +286,7 @@ export class ReelSetBuilder {
   /**
    * Per-symbol metadata overrides (zIndex, unmask, or a custom weight that
    * replaces the one from `weights()`). Merged into the final symbolsData map
-   * — any field you don't specify falls back to the default.
+   *. any field you don't specify falls back to the default.
    *
    * @example
    * .symbolData({
@@ -335,7 +335,7 @@ export class ReelSetBuilder {
    * silently drop on hidden tabs in only one of the two instances.
    *
    * Calling `.gsap(myGsap)` rebinds every internal phase, motion tween,
-   * pin-flight tween, and SpriteSymbol win pulse to the GSAP you pass —
+   * pin-flight tween, and SpriteSymbol win pulse to the GSAP you pass.
    * guaranteed to be the same instance that drives your own animations.
    *
    * Default: the `gsap` import resolved at the engine's own
@@ -343,7 +343,7 @@ export class ReelSetBuilder {
    * same instance (the common case in production bundles with proper
    * `dedupe`), you do NOT need to call this.
    *
-   * Idempotent — calling again with the same instance is a no-op. Calling
+   * Idempotent. calling again with the same instance is a no-op. Calling
    * with a different instance after `.build()` only affects tweens
    * started after the swap.
    *
@@ -383,21 +383,21 @@ export class ReelSetBuilder {
    * Enable tumble cascade mechanics. Replaces strip-spin + bounce-stop with
    * a three-phase pipeline:
    *
-   *   1. **`cascade:fall`** — on `spin()`, existing visible symbols fall
+   *   1. **`cascade:fall`**. on `spin()`, existing visible symbols fall
    *      off the bottom of the viewport.
-   *   2. **`cascade:place`** — when `setResult()` arrives, new symbol
+   *   2. **`cascade:place`**. when `setResult()` arrives, new symbol
    *      identities swap into the buffer at their final grid positions.
-   *   3. **`cascade:dropIn`** — new symbols animate from above (and
+   *   3. **`cascade:dropIn`**. new symbols animate from above (and
    *      survivors slide down to fill holes) into the grid.
    *
    * For a Moment B refill after wins are cleared, call
-   * `reelSet.refill({ winners, grid })` — that skips fall + wait and runs
+   * `reelSet.refill({ winners, grid })`. that skips fall + wait and runs
    * `place` + `dropIn` only, with gravity-correct geometry driven by the
    * `winners` list (untouched symbols don't animate; survivors slide;
    * new symbols come from above).
    *
    * Every phase boundary fires a `cascade:*` event on
-   * `reelSet.events` — per-symbol events (`cascade:fall:symbol` /
+   * `reelSet.events`. per-symbol events (`cascade:fall:symbol` /
    * `cascade:dropIn:symbol`) carry the symbol, view, and the timing the
    * library is about to apply, so listeners can run parallel tweens on
    * any other property in sync with the library's `view.y` motion.
@@ -432,7 +432,11 @@ export class ReelSetBuilder {
    * ]);
    */
   initialFrame(frame: ColumnTarget[]): this {
-    this._initialFrame = frame.map(columnTargetToArray);
+    // Stored un-materialized so `build()` can validate it against the
+    // final bufferSymbols config. Builder methods are order-free, so
+    // `bufferSymbols()` may not have been called yet when `initialFrame()`
+    // runs.
+    this._initialFrame = frame;
     return this;
   }
 
@@ -566,17 +570,17 @@ export class ReelSetBuilder {
       });
     }
 
-    // Create viewport — width covers all reels, height covers tallest box.
+    // Create viewport. width covers all reels, height covers tallest box.
     const viewportWidth = reelCount * (symbolWidth + this._symbolGap.x) - this._symbolGap.x;
     const viewportHeight = tallest;
 
     // Auto-pick `SharedRectMaskStrategy` when the layout has horizontal
     // gaps AND any registered symbol needs to span across reel boundaries:
     //
-    //   - **big symbols** (footprint w > 1 or h > 1) — the per-reel mask
+    //   - **big symbols** (footprint w > 1 or h > 1). the per-reel mask
     //     would clip cross-reel big symbols at every column gap (visible
     //     vertical strips through the symbol), so we share a single mask.
-    //   - **unmasked symbols** (`SymbolData.unmask: true`) — these render
+    //   - **unmasked symbols** (`SymbolData.unmask: true`). these render
     //     above the per-reel mask anyway, but neighboring (masked)
     //     symbols still get clipped at the gap. Players see a
     //     half-cropped neighbor next to the unmasked overlay. Sharing
@@ -589,7 +593,7 @@ export class ReelSetBuilder {
     const hasUnmaskedSymbols = Object.values(symbolsData).some((d) => d.unmask);
 
     // Pyramid + unmask is not supported. `ReelMotion.snapToGrid()` and
-    // `displace()` write reel-local Y to every symbol view — including
+    // `displace()` write reel-local Y to every symbol view. including
     // unmasked views that live in `viewport.unmaskedContainer`. On a
     // pyramid (any reel with offsetY != 0), the unmasked view's at-rest
     // Y is misset by `reel.container.y`. The activate path compensates,
@@ -633,6 +637,22 @@ export class ReelSetBuilder {
       this._offset,
     );
 
+    // Validate + materialize the initial frame now that buffer counts are
+    // fully resolved. `initialFrame()` stores the raw `ColumnTarget[]` so
+    // the validator runs against the final bufferSymbols config.
+    let materializedInitialFrame: string[][] | undefined;
+    if (this._initialFrame) {
+      const bufferAboveArr = new Array(reelCount).fill(bufferAbove);
+      const bufferBelowArr = new Array(reelCount).fill(bufferBelow);
+      assertBufferCountsInRange(
+        this._initialFrame,
+        bufferAboveArr,
+        bufferBelowArr,
+        'initialFrame',
+      );
+      materializedInitialFrame = this._initialFrame.map(columnTargetToArray);
+    }
+
     // Create reels with per-reel geometry.
     const reels: Reel[] = [];
     const maskRects: ReelMaskRect[] = [];
@@ -641,8 +661,8 @@ export class ReelSetBuilder {
       const initialCellH = initialSymbolHeight[reelIndex];
 
       // Per-reel initial frame at its own visibleRows count.
-      const initialFrame = this._initialFrame
-        ? frameBuilder.build(reelIndex, rows, bufferAbove, bufferBelow, this._initialFrame[reelIndex])
+      const initialFrame = materializedInitialFrame
+        ? frameBuilder.build(reelIndex, rows, bufferAbove, bufferBelow, materializedInitialFrame[reelIndex])
         : frameBuilder.build(reelIndex, rows, bufferAbove, bufferBelow);
 
       const reelConfig: ReelConfig = {
@@ -702,10 +722,10 @@ export class ReelSetBuilder {
       errors.push('one of visibleRows(n) or visibleRowsPerReel([...]) or multiways({...}) must be called.');
     }
     if (hasUniform && hasShape) {
-      errors.push('cannot call both visibleRows() and visibleRowsPerReel() — pick one.');
+      errors.push('cannot call both visibleRows() and visibleRowsPerReel(). pick one.');
     }
     if (hasMega && hasShape) {
-      errors.push('cannot combine multiways() with visibleRowsPerReel() — MultiWays shapes are server-driven.');
+      errors.push('cannot combine multiways() with visibleRowsPerReel(). MultiWays shapes are server-driven.');
     }
 
     if (this._reelCount && hasShape && this._visibleRowsPerReel!.length !== this._reelCount) {
@@ -739,10 +759,10 @@ export class ReelSetBuilder {
       }
       // multiways({reelPixelHeight}) sets a uniform reel-pixel height for
       // every reel; reelPixelHeights([...]) sets per-reel heights for
-      // pyramid layouts. Setting both is ambiguous — fail loud.
+      // pyramid layouts. Setting both is ambiguous. fail loud.
       if (this._reelPixelHeights) {
         errors.push(
-          'cannot combine multiways({reelPixelHeight}) with reelPixelHeights([...]) — ' +
+          'cannot combine multiways({reelPixelHeight}) with reelPixelHeights([...]). ' +
           'multiways slots use a uniform reel pixel height. Drop reelPixelHeights() or ' +
           'remove the multiways() configuration.',
         );
@@ -761,7 +781,7 @@ export class ReelSetBuilder {
     }
 
     // Big symbols (size > 1x1) are placed by the server at anchor cells
-    // only — random fill skips them in v1 (a 2x2 with a non-zero weight
+    // only. random fill skips them in v1 (a 2x2 with a non-zero weight
     // would silently never get picked, since RandomFillMiddleware can't
     // place blocks). Throw to surface the misunderstanding.
     for (const id of this._symbolRegistry.symbolIds) {
@@ -771,7 +791,7 @@ export class ReelSetBuilder {
       const weight = override.weight ?? this._weights[id];
       if (weight !== undefined && weight > 0) {
         errors.push(
-          `big symbol '${id}' (size ${size.w}x${size.h}) must have weight 0 — ` +
+          `big symbol '${id}' (size ${size.w}x${size.h}) must have weight 0. ` +
           'big symbols are placed by the server at anchor cells only and never enter ' +
           'random fill in v1. Set weight to 0 (or omit it) and place the symbol via setResult().',
         );

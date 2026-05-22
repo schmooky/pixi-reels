@@ -56,7 +56,7 @@ describe('MultiWays reshape', () => {
         { visible: ['a', 'a', 'a'] },
         { visible: ['a', 'a', 'a'] },
       ]);
-      // Past setResult — a second setShape must throw to avoid corrupting
+      // Past setResult. a second setShape must throw to avoid corrupting
       // the cached frames.
       expect(() => reelSet.setShape([2, 2, 2])).toThrow(/BEFORE setResult/);
       reelSet.slamStop();

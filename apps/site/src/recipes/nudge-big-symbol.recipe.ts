@@ -8,13 +8,13 @@
 // when the rotation preserves the block. Sequence:
 //
 //   1. Land with a 1x2 "MEGA" wild at rows 0+1 (anchor at row 0).
-//   2. Nudge DOWN by 2 — anchor moves to row 2, stub spills into
+//   2. Nudge DOWN by 2. anchor moves to row 2, stub spills into
 //      bufferBelow. Only the TOP half of the block is visible.
-//   3. Nudge UP by 1 — block snaps back into full visibility at rows 1+2.
+//   3. Nudge UP by 1. block snaps back into full visibility at rows 1+2.
 //
 // Survival check (down direction): anchorRow + h - 1 + distance < total.
 // For the down-by-2 step: 1 + 2 - 1 + 2 = 4 < 5 (with bufferAbove=1,
-// visibleRows=3, bufferBelow=1, total=5) — block fits.
+// visibleRows=3, bufferBelow=1, total=5). block fits.
 //
 // Cross-reel blocks (w > 1) throw; that case is intentionally excluded.
 
@@ -43,7 +43,7 @@ const reelSet = new ReelSetBuilder()
   .symbolData({
     [MEGA.id]: { weight: 0, zIndex: 5, size: { w: MEGA.w, h: MEGA.h } },
   })
-  // Big symbols don't tolerate the default 56px landing bounce — zero it
+  // Big symbols don't tolerate the default 56px landing bounce. zero it
   // so the anchor lands flush on grid.
   .speed('normal', { ...SpeedPresets.NORMAL, bounceDistance: 0, bounceDuration: 0 })
   .ticker(app.ticker)

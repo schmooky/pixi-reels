@@ -3,24 +3,15 @@ import { useEffect, useRef, useState } from 'react';
 import { Application, Container, Graphics, Sprite } from 'pixi.js';
 import type { Texture } from 'pixi.js';
 import { gsap } from 'gsap';
-import { ReelSetBuilder, ReelSymbol, SpeedPresets, type ReelSet } from 'pixi-reels';
+import { ReelSetBuilder, SpeedPresets, type ReelSet } from 'pixi-reels';
 import { Play, RotateCcw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { BlurSpriteSymbol } from '../../../../../examples/shared/BlurSpriteSymbol.ts';
+import { EmptySymbol } from '../../../../../examples/shared/EmptySymbol.ts';
 import { loadPrototypeSymbols } from '../../../../../examples/shared/prototypeSpriteLoader.ts';
 
 const COIN = 'feature/feature_1';
 const EMPTY = 'empty';
-
-/** Renders nothing — gives the reel strip blank slots between coins so
- *  misses land on a visually empty cell (hit-or-miss feel). */
-class EmptySymbol extends ReelSymbol {
-  protected onActivate(): void {}
-  protected onDeactivate(): void {}
-  async playWin(): Promise<void> {}
-  stopAnimation(): void {}
-  resize(_w: number, _h: number): void {}
-}
 
 const COLS = 5;
 const ROWS = 3;
@@ -44,7 +35,7 @@ function syncGsap(app: Application): void {
 
 /**
  * Hold & Win "hit-or-miss" demo. Each cell is its own 1x1 ReelSet whose only
- * symbol is the coin — so the spin animation just scrolls coins by, and the
+ * symbol is the coin. so the spin animation just scrolls coins by, and the
  * result is binary: hit (coin stays), miss (cell goes empty). On a hit, an
  * overlay Sprite locks in place so the reel is hidden next round and can't
  * re-spin that slot.
@@ -87,7 +78,7 @@ export default function HoldAndWinStarterRecipe() {
       frame.roundRect(0, 0, width, height, 12).stroke({ color: 0xe5dccf, width: 1, alpha: 0.9 });
       app.stage.addChild(frame);
 
-      // 15 per-cell 1x1 ReelSets, each strip is 100% COIN — classic hit-or-miss.
+      // 15 per-cell 1x1 ReelSets, each strip is 100% COIN. classic hit-or-miss.
       const cells: CellHandle[] = [];
       for (let col = 0; col < COLS; col++) {
         for (let row = 0; row < ROWS; row++) {
@@ -152,7 +143,7 @@ export default function HoldAndWinStarterRecipe() {
       for (const cell of s.cells) cell.reelSet.visible = true;
 
       // Scripted arrivals so the scenario reads clearly: trigger spin hits 3,
-      // respin hits 1, respin hits 1 — grid filling up one coin at a time.
+      // respin hits 1, respin hits 1. grid filling up one coin at a time.
       const rounds: Array<Array<{ col: number; row: number }>> = [
         [{ col: 0, row: 2 }, { col: 2, row: 0 }, { col: 4, row: 1 }],
         [{ col: 1, row: 0 }],

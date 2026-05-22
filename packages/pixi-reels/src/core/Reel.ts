@@ -14,7 +14,7 @@ import { StandardMode } from '../spin/modes/StandardMode.js';
 import { getGsap } from '../utils/gsapRef.js';
 
 /**
- * Options for `Reel.nudge()` / `ReelSet.nudge()` — a post-stop reposition
+ * Options for `Reel.nudge()` / `ReelSet.nudge()`. a post-stop reposition
  * that shifts the reel by `distance` symbol positions and reveals new
  * caller-supplied symbols. Modelled on classic UK fruit-machine nudges.
  *
@@ -32,14 +32,14 @@ export interface NudgeOptions {
   /**
    * Travel direction.
    *
-   *   - `'down'` — symbols visually move down the screen; new symbols
+   *   - `'down'`. symbols visually move down the screen; new symbols
    *     enter from the top.
-   *   - `'up'` — symbols visually move up; new symbols enter from the
+   *   - `'up'`. symbols visually move up; new symbols enter from the
    *     bottom.
    */
   direction: 'up' | 'down';
   /**
-   * Symbol ids in **top-down order of their final on-strip position** —
+   * Symbol ids in **top-down order of their final on-strip position**.
    * including any overflow into the off-screen buffer. Length must equal
    * `distance` exactly.
    *
@@ -58,7 +58,7 @@ export interface NudgeOptions {
   /** Total animation duration in ms. Defaults to `200 * distance`. */
   duration?: number;
   /**
-   * GSAP easing function name. Defaults to `'power2.out'` — a smooth
+   * GSAP easing function name. Defaults to `'power2.out'`. a smooth
    * deceleration with NO overshoot. If you pass an overshooting ease
    * (`back.out(N)`, `elastic.out(...)`), the engine clamps the displacement
    * so wraps never fire past the landing position; the eased value is
@@ -87,7 +87,7 @@ export interface NudgeOptions {
    * Abort the nudge mid-flight. If signalled before the tween starts, the
    * call rejects with an `AbortError` and no strip mutation happens. If
    * signalled during the tween, the tween is killed, the strip is snapped
-   * to its post-nudge position (deterministic landing — the contract is
+   * to its post-nudge position (deterministic landing. the contract is
    * "incoming lands at these positions"), and the promise rejects with an
    * `AbortError`. `nudge:cancelled` fires on the reel-set bus.
    */
@@ -96,7 +96,7 @@ export interface NudgeOptions {
 
 /**
  * Internal placeholder for OCCUPIED cells inside a big-symbol block. Has
- * no animation, no rendering — its view is invisible. Not registered in
+ * no animation, no rendering. its view is invisible. Not registered in
  * `SymbolFactory`; allocated directly by `Reel` and disposed with it.
  */
 class OccupiedStub extends ReelSymbol {
@@ -140,7 +140,7 @@ export interface ReelConfig {
 
 /**
  * Internal sentinel marking non-anchor cells of a big symbol's block.
- * Never crosses the public API — `getVisibleSymbols()` resolves it to the
+ * Never crosses the public API. `getVisibleSymbols()` resolves it to the
  * anchor's id.
  */
 export const OCCUPIED_SENTINEL = '__pixi_reels_occupied__';
@@ -150,11 +150,11 @@ export const OCCUPIED_SENTINEL = '__pixi_reels_occupied__';
  *
  * A `Reel` owns:
  *   - the `ReelSymbol[]` currently on screen (a small buffer above the
- *     visible rows + the visible rows + a small buffer below — so symbols
+ *     visible rows + the visible rows + a small buffer below. so symbols
  *     can fade in from off-screen cleanly)
  *   - the `ReelMotion` that adds a Y delta each tick and wraps symbols
  *     that scroll off the ends
- *   - a `StopSequencer` — the queue of target symbols the reel still has
+ *   - a `StopSequencer`. the queue of target symbols the reel still has
  *     to land on before it can stop
  *
  * You generally do not touch a `Reel` directly. Drive the `ReelSet` and
@@ -219,7 +219,7 @@ export class Reel implements Disposable {
   /**
    * Internal stub instances reused for OCCUPIED cells inside a big-symbol
    * block. Allocated on demand (one per concurrent OCCUPIED cell on this
-   * reel), never pooled through `SymbolFactory`. The views are invisible —
+   * reel), never pooled through `SymbolFactory`. The views are invisible.
    * the anchor symbol is sized up to cover the whole block.
    */
   private _occupiedStubs: OccupiedStub[] = [];
@@ -267,7 +267,7 @@ export class Reel implements Disposable {
 
     // Create container positioned at the reel's X column. Sortable so that
     // per-symbol zIndex (set from symbolData.zIndex + visual row) controls
-    // render order — bottom-row symbols render in front, and flagged "big"
+    // render order. bottom-row symbols render in front, and flagged "big"
     // symbols like wild/bonus can override to render above neighbors.
     this.container = new Container();
     this.container.sortableChildren = true;
@@ -275,7 +275,7 @@ export class Reel implements Disposable {
     this.container.y = this._offsetY;
     // Explicit zIndex so the reel's layer in `ReelViewport.maskedContainer`
     // (sortableChildren = true) is deterministic. Rightmost reel draws on
-    // top by default — same visual order as insertion, but now set via
+    // top by default. same visual order as insertion, but now set via
     // zIndex so callers can flip it for bottom-left diagonal overflow.
     this.container.zIndex = config.reelIndex;
 
@@ -295,6 +295,7 @@ export class Reel implements Disposable {
       config.symbolGapY,
       config.bufferAbove,
       config.visibleRows,
+      config.bufferBelow,
       (symbol, row, direction) => this._onSymbolWrapped(symbol, row, direction),
     );
 
@@ -388,13 +389,13 @@ export class Reel implements Disposable {
   /**
    * Get visible symbol IDs (top to bottom, excluding buffers).
    *
-   * Big-symbol cells resolve to the anchor's id — both **same-reel**
+   * Big-symbol cells resolve to the anchor's id. both **same-reel**
    * (the anchor lives on this reel) and **cross-reel** (the anchor is on
    * a leftward reel of a wider block). The cross-reel resolver is
    * injected by `ReelSet`; without it, cross-reel OCCUPIED cells would
    * return the OCCUPIED sentinel, which is the only difference vs.
    * `ReelSet.getVisibleGrid()`. With the resolver wired, the two are
-   * equivalent for any reel — `reels.map(r => r.getVisibleSymbols())`
+   * equivalent for any reel. `reels.map(r => r.getVisibleSymbols())`
    * matches `reelSet.getVisibleGrid()`.
    */
   getVisibleSymbols(): string[] {
@@ -450,7 +451,7 @@ export class Reel implements Disposable {
    * symbol whose anchor lives at `anchorRow`. Pass `null` to clear the
    * occupancy mark.
    *
-   * @internal — called by `_finalizeFrame` and the big-symbol coordinator.
+   * @internal. called by `_finalizeFrame` and the big-symbol coordinator.
    */
   _setOccupancy(visibleRow: number, anchorRow: number | null): void {
     if (anchorRow === null) {
@@ -495,13 +496,13 @@ export class Reel implements Disposable {
    * Swap the symbol at a single visible row in-place, without restarting
    * the spin or rebuilding the rest of the strip.
    *
-   * Useful for live presentation effects at rest — converting a wild
-   * after a cascade pop, swapping to a sticky variant after a win —
+   * Useful for live presentation effects at rest. converting a wild
+   * after a cascade pop, swapping to a sticky variant after a win.
    * without going through the full `placeSymbols` / `setResult` paths.
    *
    * The symbol's `zIndex`, parent (masked vs unmasked), and visual state
    * are reset by `_replaceSymbol` so callers don't need to follow up
-   * with `refreshZIndex`. The motion layer is **not** snapped — call
+   * with `refreshZIndex`. The motion layer is **not** snapped. call
    * `snapToGrid()` separately if you need to re-grid.
    *
    * Throws if:
@@ -511,10 +512,10 @@ export class Reel implements Disposable {
    *   - `visibleRow` is out of `[0, visibleRows)`.
    *   - `symbolId` is not registered.
    *   - the row is a non-anchor cell of an existing big-symbol block.
-   *   - the row currently holds the anchor of a big-symbol block — big
+   *   - the row currently holds the anchor of a big-symbol block. big
    *     blocks span multiple cells (and possibly reels) and require
    *     `placeSymbols` + the cross-reel OCCUPIED coordinator.
-   *   - `symbolId` itself is a big symbol — same reason.
+   *   - `symbolId` itself is a big symbol. same reason.
    *
    * Pin overlap is **not** detected at this layer (Reel doesn't see the
    * pin map). Use `ReelSet.setSymbolAt(col, row, id)` for the safe
@@ -567,13 +568,13 @@ export class Reel implements Disposable {
   /**
    * Shift the reel by `distance` symbol positions, animating the strip with
    * a GSAP tween and revealing caller-supplied `incoming` symbols. The reel
-   * must be at rest (post-stop) — throws otherwise.
+   * must be at rest (post-stop). throws otherwise.
    *
    * The wrap pipeline drives identity changes during the tween: any incoming
    * symbol whose final destination is reachable via pre-placement (within
    * the leading buffer) is set up front; the rest stream through the wrap
    * callback as the strip moves. `incoming` is always top-down by final
-   * on-strip position — see `NudgeOptions.incoming` for the overflow rules.
+   * on-strip position. see `NudgeOptions.incoming` for the overflow rules.
    *
    * **Big symbols are supported** as long as every block on the strip
    * (anchor + stubs) survives the rotation without crossing the wrap
@@ -582,7 +583,7 @@ export class Reel implements Disposable {
    *   - up:   anchorRow ≥ distance
    *
    * Blocks that wouldn't survive throw, as do cross-reel blocks (w > 1).
-   * Use case: a 1xH block lands with stubs in bufferBelow — nudge up to
+   * Use case: a 1xH block lands with stubs in bufferBelow. nudge up to
    * bring the whole block into view.
    *
    * Throws if:
@@ -594,7 +595,7 @@ export class Reel implements Disposable {
    *   - any cell on this reel is part of a cross-reel block (w > 1),
    *   - the abort signal is already aborted on entry.
    *
-   * Resolves with `{ symbols }` — the new visible column top-to-bottom.
+   * Resolves with `{ symbols }`. the new visible column top-to-bottom.
    * Rejects with an `AbortError` if `options.signal` aborts mid-tween or
    * if the reel is destroyed before the tween completes.
    *
@@ -655,15 +656,15 @@ export class Reel implements Disposable {
     // boundary during the `distance` displace ticks:
     //   - down: anchor + h - 1 + distance < total
     //     (the block's bottommost cell stays on the strip; it may land
-    //     in bufferBelow — rendered half-clipped by the mask, which is
+    //     in bufferBelow. rendered half-clipped by the mask, which is
     //     fine: `_finalizeFrame` sizes anchors that extend past visible
     //     in either direction.)
     //   - up:   anchor - distance >= 0
-    //     (the anchor stays on the strip; it may land in bufferAbove —
+    //     (the anchor stays on the strip; it may land in bufferAbove.
     //     rendered correctly because `_finalizeFrame` scans bufferAbove
     //     anchors too and sizes them to the full block.)
     //
-    // Cross-reel blocks (w > 1) can never be nudged on a single reel —
+    // Cross-reel blocks (w > 1) can never be nudged on a single reel.
     // the other-reel cells stay put and the block splits visually + logically.
     for (let i = 0; i < total; i++) {
       const sym = this.symbols[i];
@@ -676,7 +677,7 @@ export class Reel implements Disposable {
         throw new Error(
           `nudge: reel ${this.reelIndex} carries cross-reel big symbol '${sym.symbolId}' ` +
           `(${w}x${h}) at strip[${i}]. Cross-reel blocks can't be nudged from a single ` +
-          `reel — the other-reel cells would stay put and split the block.`,
+          `reel. the other-reel cells would stay put and split the block.`,
         );
       }
       if (h > 1) {
@@ -689,7 +690,7 @@ export class Reel implements Disposable {
             : `anchor - distance >= 0 (${i} - ${distance} = ${i - distance})`;
           throw new Error(
             `nudge: block '${sym.symbolId}' (${w}x${h}) at strip[${i}] wouldn't survive a ` +
-            `distance=${distance} ${direction} nudge — the wrap boundary would split the ` +
+            `distance=${distance} ${direction} nudge. the wrap boundary would split the ` +
             `anchor from its stubs. Block survival: ${failureDetail}.`,
           );
         }
@@ -708,14 +709,14 @@ export class Reel implements Disposable {
       }
     }
 
-    // Abort signal check — bail before any mutation if already aborted.
+    // Abort signal check. bail before any mutation if already aborted.
     if (signal?.aborted) {
       const err = new Error('nudge: aborted before start.');
       err.name = 'AbortError';
       throw err;
     }
 
-    // Optional pre-tween delay — useful for staggered Promise.all calls.
+    // Optional pre-tween delay. useful for staggered Promise.all calls.
     // Validation already passed, so consumers can rely on synchronous
     // error throws for invalid input.
     const startDelay = options.startDelay ?? 0;
@@ -752,7 +753,7 @@ export class Reel implements Disposable {
     //
     // **Big-symbol awareness**: if a buffer slot we're about to write to
     // currently holds an `OccupiedStub` (a non-anchor cell of a surviving
-    // block), we MUST NOT overwrite it — that would split the block from
+    // block), we MUST NOT overwrite it. that would split the block from
     // its anchor. The corresponding `incoming` slot is silently dropped
     // for that position; the block "wins" the visible row it survives
     // into. Same for slots that hold a same-reel big-symbol anchor.
@@ -814,7 +815,7 @@ export class Reel implements Disposable {
     // one wrap per `displace` call (mirrors SpinningMode.computeDeltaY).
     const stepLimit = slotH * 0.45;
 
-    // Finalize closure — runs at natural completion AND on skip / abort.
+    // Finalize closure. runs at natural completion AND on skip / abort.
     // Captured here so `skipNudge()` can jump straight to the landed state
     // without re-deriving anything from the half-tweened strip.
     const finalize = () => {
@@ -830,7 +831,7 @@ export class Reel implements Disposable {
         const stepsLeft = remainingQueue;
         const stepDir = direction === 'down' ? stepLimit : -stepLimit;
         // ceil(slotH / stepLimit) substeps per wrap = ceil(1/0.45) = 3
-        // per remaining wrap. Conservative — actual wraps fire when the
+        // per remaining wrap. Conservative. actual wraps fire when the
         // tail symbol crosses the boundary.
         for (let i = 0; i < stepsLeft * 3 && (this._nudgeQueue?.length ?? 0) > 0; i++) {
           this.motion.displace(stepDir);
@@ -959,7 +960,7 @@ export class Reel implements Disposable {
   }
 
   /**
-   * @internal — MultiWays orchestration only.
+   * @internal. MultiWays orchestration only.
    *
    * Commit a new visible-row count and per-reel cell height. Resizes every
    * existing symbol on the strip to the new cell height, rebuilds the
@@ -967,7 +968,7 @@ export class Reel implements Disposable {
    * motion layer, and recomputes `_reelHeight` from the new geometry so
    * `reelHeight` stays consistent. Idempotent if the shape doesn't change.
    *
-   * Only the engine should call this — `SpinController._applyReshape` is
+   * Only the engine should call this. `SpinController._applyReshape` is
    * the single source of truth for reshape orchestration. Direct external
    * calls are unsupported and may leave pin overlays, the cross-reel
    * resolver, and the parent `ReelSet`'s shape state out of sync. Use
@@ -983,7 +984,7 @@ export class Reel implements Disposable {
     const newTotal = bufferAbove + newVisibleRows + bufferBelow;
 
     // Grow: append additional symbols at the bottom buffer. New symbols are
-    // parented based on `unmask` flag — same rule as `_replaceSymbol`.
+    // parented based on `unmask` flag. same rule as `_replaceSymbol`.
     while (this.symbols.length < newTotal) {
       const id = this._randomProvider.next(true);
       const sym = this._symbolFactory.acquire(id);
@@ -1022,7 +1023,7 @@ export class Reel implements Disposable {
     }
 
     // Update motion: new slot height + bounds.
-    this.motion.reshape(newSymbolHeight, this._symbolGapY, bufferAbove, newVisibleRows);
+    this.motion.reshape(newSymbolHeight, this._symbolGapY, bufferAbove, newVisibleRows, bufferBelow);
     this.motion.snapToGrid();
     this.refreshZIndex();
   }
@@ -1043,12 +1044,12 @@ export class Reel implements Disposable {
    * Recompute `zIndex` for every symbol in the reel.
    *
    * Formula: `symbolData.zIndex ?? 0` (scaled by 100 to leave room for row
-   * ordering), plus the symbol's current array index — so bottom-row symbols
+   * ordering), plus the symbol's current array index. so bottom-row symbols
    * render in front of top-row symbols and any symbol with a higher
    * configured base zIndex (e.g. wild, bonus) renders above its neighbors.
    *
    * Called automatically after wraps, snaps, and direct placement. Also
-   * called inline by `_replaceSymbol` for the single newly-placed symbol —
+   * called inline by `_replaceSymbol` for the single newly-placed symbol.
    * so consumers who swap one symbol at a time (via the public APIs that
    * funnel into `_replaceSymbol`) get correct layering for free, no
    * manual `refreshZIndex` required. Call it manually after mutating
@@ -1067,7 +1068,7 @@ export class Reel implements Disposable {
 
   destroy(): void {
     if (this._isDestroyed) return;
-    // Kill any in-flight nudge tween BEFORE we tear down views — otherwise
+    // Kill any in-flight nudge tween BEFORE we tear down views. otherwise
     // its next onUpdate writes to destroyed PixiJS containers and crashes.
     // Reject the outstanding promise so awaiters see a deterministic error.
     if (this._nudgeTween) {
@@ -1101,7 +1102,7 @@ export class Reel implements Disposable {
   }
 
   /**
-   * Whether the symbol with this id has `unmask: true` in its data — i.e.
+   * Whether the symbol with this id has `unmask: true` in its data. i.e.
    * its view should be parented to `viewport.unmaskedContainer` to render
    * above the reel mask.
    */
@@ -1143,7 +1144,7 @@ export class Reel implements Disposable {
   /**
    * Convert a view's current y back to reel-local coords. The view may
    * be parented to either `this.container` (already reel-local) or
-   * `viewport.unmaskedContainer` (viewport-local — needs the reel offset
+   * `viewport.unmaskedContainer` (viewport-local. needs the reel offset
    * subtracted).
    */
   private _toReelLocalY(view: Container): number {
@@ -1185,13 +1186,13 @@ export class Reel implements Disposable {
 
     this._replaceSymbol(this.symbols.indexOf(symbol), newSymbolId);
     // During a nudge tween, defer the O(N) zIndex rescan to `snapToGrid()`
-    // in the tween's finalize step — `distance` wraps fire back-to-back
+    // in the tween's finalize step. `distance` wraps fire back-to-back
     // and a single refresh at the end produces the same final state.
     // Spin / cascade refill paths keep the per-wrap refresh so live
     // bottom-to-top stacking stays correct mid-spin.
     if (!this._isNudging) {
       // Array was rearranged by ReelMotion (pop+unshift or shift+push), so the
-      // array index of every remaining symbol changed — refresh all zIndexes.
+      // array index of every remaining symbol changed. refresh all zIndexes.
       this.refreshZIndex();
     }
   }
@@ -1205,7 +1206,7 @@ export class Reel implements Disposable {
     // the destination from `_parentForSymbolId(newSymbolId)` (or
     // `this.container` for OCCUPIED stubs, which never carry `unmask`).
 
-    // Capture old Y in reel-local coords before releasing — old view may
+    // Capture old Y in reel-local coords before releasing. old view may
     // have been parented to viewport.unmaskedContainer and need an offset
     // subtraction to be reused as the new symbol's reel-local Y.
     const reelLocalY = isOldStub
@@ -1213,7 +1214,7 @@ export class Reel implements Disposable {
       : this._toReelLocalY(oldSymbol.view);
 
     // OCCUPIED: install a stub. Stubs are not pooled through SymbolFactory
-    // and never carry an `unmask` flag — they always live in `this.container`.
+    // and never carry an `unmask` flag. they always live in `this.container`.
     if (newSymbolId === OCCUPIED_SENTINEL) {
       if (isOldStub) {
         oldSymbol.view.alpha = 0;
@@ -1227,7 +1228,7 @@ export class Reel implements Disposable {
       stub.view.visible = true;
       stub.view.scale.set(1, 1);
       stub.view.zIndex = index;
-      // Stubs are never unmasked — always live in this reel's container.
+      // Stubs are never unmasked. always live in this reel's container.
       if (stub.view.parent !== this.container) this.container.addChild(stub.view);
       this.symbols[index] = stub;
       return;
@@ -1314,9 +1315,14 @@ export class Reel implements Disposable {
    *
    * **Two scans:**
    *
-   *  1. Visible anchors — sizes blocks whose anchor is in `[0, visibleRows)`.
-   *     This is the common case (most blocks land fully visible).
-   *  2. BufferAbove anchors — sizes blocks whose anchor sits above visible
+   *  1. Visible anchors. sizes blocks whose anchor is in `[0, visibleRows)`.
+   *     This is the common case (most blocks land fully visible). Blocks
+   *     whose stubs spill into bufferBelow are handled here: the anchor is
+   *     in visible, the sprite is sized to span `h * cellH`, and the mask
+   *     clips the off-screen tail. No occupancy entry is written for the
+   *     bufferBelow stubs because `_occupancy` is keyed by visible rows
+   *     only. consumers can't query a non-visible cell anyway.
+   *  2. BufferAbove anchors. sizes blocks whose anchor sits above visible
    *     but whose body extends into the visible window. This is the "tail
    *     visible" partial-visibility case: a 1xH block whose top is clipped
    *     by the reel mask, with only its bottom cells showing in the visible
@@ -1324,8 +1330,16 @@ export class Reel implements Disposable {
    *     default 1x1 size and the block wouldn't render its visible portion
    *     correctly.
    *
+   * **No Scan 3 for bufferBelow-only anchors.** A block whose anchor is at
+   * `row >= visibleRows` would lie entirely off-screen (the strip ends at
+   * `visibleRows + bufferBelow - 1` and `h >= 1`, so no visible cell is
+   * covered). The cross-reel coordinator already accepts such anchors as a
+   * legal-but-invisible placement; there's nothing to size and nothing for
+   * the consumer-facing query API to return. If you ever add a scenario
+   * where bufferBelow-only anchors need rendering, add Scan 3 here.
+   *
    * For bufferAbove anchors, `_occupancy[visibleRow].anchorRow` is set to
-   * a NEGATIVE value — the offset from `bufferAbove`. So
+   * a NEGATIVE value. the offset from `bufferAbove`. So
    * `this.symbols[this._bufferAbove + anchorRow]` walks back to the anchor
    * regardless of which side it lives on. Consumers (`getSymbolFootprint`,
    * `getBlockBounds`) handle negative anchor rows by clipping bounds to

@@ -2,7 +2,7 @@
 // Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
 //                   WILD_CARD, PIXI, gsap, app, pickWeighted
 //
-// Sticky wild — CellPin edition.
+// Sticky wild. CellPin edition.
 //
 // Instead of manually tracking "stuck" positions in an array and re-injecting
 // them into the grid before every setResult(), we just call reelSet.pin() when
@@ -66,7 +66,7 @@ return {
     const grid = Array.from({ length: COLS }, () =>
       Array.from({ length: ROWS }, () => FILLER[Math.floor(Math.random() * FILLER.length)]),
     );
-    // Place a fresh wild each spin — the engine's pin overlay keeps prior
+    // Place a fresh wild each spin. the engine's pin overlay keeps prior
     // sticky wilds in place, so we only ever need to add the NEW one here.
     const next = arrivals[idx];
     grid[next.col][next.row] = WILD;

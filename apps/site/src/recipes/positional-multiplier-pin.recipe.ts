@@ -6,10 +6,10 @@
 //
 // Specific grid positions carry a multiplier value. When any winning
 // symbol lands on one of these cells, the win passing through that cell
-// gets boosted. The cell's symbol is still whatever the strip rolled —
+// gets boosted. The cell's symbol is still whatever the strip rolled.
 // the multiplier is metadata on the pin.
 //
-// Trick: we pin the cell with symbolId MIRROR_ANY — a sentinel meaning
+// Trick: we pin the cell with symbolId MIRROR_ANY. a sentinel meaning
 // "don't override the rolled symbol". We read the rolled symbol at
 // spin:allLanded, re-pin it with the multiplier payload preserved so the
 // badge display stays correct. (A cleaner CellDecorator primitive would

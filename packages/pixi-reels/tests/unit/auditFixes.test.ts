@@ -7,7 +7,7 @@ import { SpeedPresets, createTestReelSet } from '../../src/index.js';
 import { computeDropOffsets } from '../../src/cascade/tumbleAlgorithm.js';
 import type { Cell, ReelSet } from '../../src/index.js';
 
-// Shared headless tumble harness — zero-duration tweens so phases settle
+// Shared headless tumble harness. zero-duration tweens so phases settle
 // on a single FakeTicker frame and tests are deterministic.
 function buildTumbleHarness(initialFrame: string[][]) {
   const ticker = new FakeTicker();
@@ -34,7 +34,7 @@ function buildTumbleHarness(initialFrame: string[][]) {
 }
 
 // ── refill() input validation ────────────────────────────────────────────
-describe('ReelSet.refill — input validation', () => {
+describe('ReelSet.refill. input validation', () => {
   it('throws RangeError when grid column count mismatches reel count', async () => {
     const { reelSet, destroy } = buildTumbleHarness([
       ['a', 'b', 'c'],
@@ -135,7 +135,7 @@ describe('ReelSet.refill — input validation', () => {
 });
 
 // ── skip() pre-setResult guard ───────────────────────────────────────────
-describe('ReelSet.skip — pre-setResult guard', () => {
+describe('ReelSet.skip. pre-setResult guard', () => {
   it('throws if called in standard mode before setResult', async () => {
     const h = createTestReelSet({ reels: 2, visibleRows: 2, symbolIds: ['a'] });
     const promise = h.reelSet.spin();
@@ -171,11 +171,11 @@ describe('ReelSet.skip — pre-setResult guard', () => {
 });
 
 // ── distance: 'auto' falls back to per-hole for survivors ────────────────
-describe('CascadeDropInPhase — distance: auto fallback for survivors', () => {
+describe('CascadeDropInPhase. distance: auto fallback for survivors', () => {
   it('survivors slide from their old row, not from above the viewport (distance: auto, Moment B)', async () => {
     // The bug: with `distance: 'auto'`, a survivor (originalRow >= 0) was
     // teleported to `finalY - visibleRows * cellHeight` (above the viewport)
-    // before being dropped — visible discontinuity. The fix: fall back to
+    // before being dropped. visible discontinuity. The fix: fall back to
     // perHole geometry for survivors in non-initial mode.
     //
     // The phase mutates `view.y` to its computed `startY` IMMEDIATELY in
@@ -202,7 +202,7 @@ describe('CascadeDropInPhase — distance: auto fallback for survivors', () => {
       distance: 'auto',
     });
 
-    // Kick off but don't await — we want to read view.y right after the
+    // Kick off but don't await. we want to read view.y right after the
     // synchronous onEnter runs.
     void phase.run({
       winnerRows: [2],   // bottom row destroyed → row 0 = new, rows 1,2 = survivors from 0,1
@@ -232,7 +232,7 @@ describe('CascadeDropInPhase — distance: auto fallback for survivors', () => {
     ]);
 
     // The initial path uses 'auto' for every row regardless of originalRow.
-    // We test this indirectly via computeDropOffsets — on initial drop with
+    // We test this indirectly via computeDropOffsets. on initial drop with
     // empty winners, every row is treated as new (originalRow < 0). The
     // 'auto' branch fires for all of them, not the perHole fallback.
     const offsets = computeDropOffsets(3, [], { initial: true });
@@ -242,7 +242,7 @@ describe('CascadeDropInPhase — distance: auto fallback for survivors', () => {
 });
 
 // ── manual setSpeed clears the boost-restore intent ──────────────────────
-describe('ReelSet.skip — manual setSpeed survives restore', () => {
+describe('ReelSet.skip. manual setSpeed survives restore', () => {
   it('does NOT restore pre-boost speed when user manually re-set to boosted name', async () => {
     const h = createTestReelSet({ reels: 2, visibleRows: 2, symbolIds: ['a'] });
     h.reelSet.speed.addProfile('superTurbo', SpeedPresets.SUPER_TURBO);
@@ -261,7 +261,7 @@ describe('ReelSet.skip — manual setSpeed survives restore', () => {
     h.reelSet.setSpeed('superTurbo');
     expect(h.reelSet.speed.activeName).toBe('superTurbo');
 
-    // Round 2: spin() must NOT restore — the user chose superTurbo.
+    // Round 2: spin() must NOT restore. the user chose superTurbo.
     const second = h.reelSet.spin();
     expect(h.reelSet.speed.activeName).toBe('superTurbo');
     h.reelSet.setResult([{ visible: ['a', 'a'] }, { visible: ['a', 'a'] }]);
@@ -280,7 +280,7 @@ describe('ReelSet.skip — manual setSpeed survives restore', () => {
     await first;
     expect(h.reelSet.speed.activeName).toBe('superTurbo');
 
-    // No manual setSpeed — restore should fire.
+    // No manual setSpeed. restore should fire.
     const second = h.reelSet.spin();
     expect(h.reelSet.speed.activeName).toBe('normal');
     h.reelSet.setResult([{ visible: ['a', 'a'] }, { visible: ['a', 'a'] }]);
@@ -291,7 +291,7 @@ describe('ReelSet.skip — manual setSpeed survives restore', () => {
 });
 
 // ── destroySymbols honors AbortSignal ────────────────────────────────────
-describe('ReelSet.destroySymbols — AbortSignal', () => {
+describe('ReelSet.destroySymbols. AbortSignal', () => {
   it('snaps cells to alpha=0 on pre-aborted signal without running tweens', async () => {
     const { reelSet, destroy } = buildTumbleHarness([
       ['a', 'b', 'c'],
@@ -307,7 +307,7 @@ describe('ReelSet.destroySymbols — AbortSignal', () => {
     await reelSet.destroySymbols(cells, { signal: controller.signal, zIndex: null });
     const elapsed = performance.now() - t0;
 
-    // Pre-abort path skips the tween entirely — should complete in <50 ms
+    // Pre-abort path skips the tween entirely. should complete in <50 ms
     // even though the default playDestroy timeline is ~320 ms.
     expect(elapsed).toBeLessThan(50);
     expect(reelSet.getReel(0).getSymbolAt(0).view.alpha).toBe(0);
@@ -317,7 +317,7 @@ describe('ReelSet.destroySymbols — AbortSignal', () => {
 });
 
 // ── destroySymbols Promise.allSettled + failed payload ──────────────────
-describe('ReelSet.destroySymbols — Promise.allSettled', () => {
+describe('ReelSet.destroySymbols. Promise.allSettled', () => {
   it('continues when one cell rejects and surfaces it in cascade:destroy:end', async () => {
     const { reelSet, destroy } = buildTumbleHarness([
       ['a', 'b', 'c'],
@@ -375,15 +375,15 @@ describe('ReelSet.destroySymbols — Promise.allSettled', () => {
 });
 
 // ── _runReelTask recovery from a per-reel rejection ──────────────────────
-describe('SpinController — per-reel rejection recovery', () => {
-  it('a rejected refill phase chain does NOT hang refill() — it slams instead', async () => {
+describe('SpinController. per-reel rejection recovery', () => {
+  it('a rejected refill phase chain does NOT hang refill(). it slams instead', async () => {
     const { reelSet, destroy } = buildTumbleHarness([
       ['a', 'b', 'c'],
       ['a', 'b', 'c'],
       ['a', 'b', 'c'],
     ]);
 
-    // Register a phase that rejects on entry for cascade:dropIn — simulate
+    // Register a phase that rejects on entry for cascade:dropIn. simulate
     // a bug in a user-supplied phase override that nukes one reel's chain.
     // We can't easily inject mid-test on the wired factory; instead we
     // mock the reel's notifyLanded to throw on a specific reel, which

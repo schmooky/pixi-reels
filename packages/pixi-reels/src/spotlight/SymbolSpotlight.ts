@@ -47,12 +47,12 @@ interface PromotedSymbol {
  *      back where it came from and removes the dim overlay.
  *
  * Two modes:
- *   - `show(positions, options)` — one-shot. Cell highlight + promote +
+ *   - `show(positions, options)`. one-shot. Cell highlight + promote +
  *     play win. Returns when the animation fully ends.
- *   - `cycle(lines, options)` — iterate multiple win lines with a
+ *   - `cycle(lines, options)`. iterate multiple win lines with a
  *     configurable per-line duration and gap, optionally repeating.
  *
- * Win detection is NOT part of this. pixi-reels never computes wins —
+ * Win detection is NOT part of this. pixi-reels never computes wins.
  * your server / game code decides which cells are winners and passes
  * them here. See [ADR 007](../../docs/adr/007-scope.md).
  */
@@ -109,7 +109,7 @@ export class SymbolSpotlight implements Disposable {
       if (seen.has(key)) continue;
       seen.add(key);
 
-      // Track for hide() only when we're actually moving the view —
+      // Track for hide() only when we're actually moving the view.
       // otherwise the entry's `originalParent` would become stale if the
       // shared symbol pool recycles this instance into a different reel
       // before the next hide(), and `hide()` would reparent it back to a
@@ -143,7 +143,7 @@ export class SymbolSpotlight implements Disposable {
     }
 
     // Return promoted symbols. Skip any whose view has been moved out of
-    // the spotlight container — that means the shared symbol pool has
+    // the spotlight container. that means the shared symbol pool has
     // recycled them into another reel since show(), and reparenting back
     // to `originalParent` would steal them from their new owner.
     for (const { symbol, originalParent } of this._promoted) {

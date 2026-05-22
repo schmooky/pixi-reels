@@ -1,7 +1,7 @@
 ---
 layout: ../../layouts/Recipe.astro
 title: How to slam-stop
-description: Let the player tap the spin button again to land the reels immediately — `requestSkip()` queues until the result is in, no race-window to manage.
+description: Let the player tap the spin button again to land the reels immediately. `requestSkip()` queues until the result is in, no race-window to manage.
 tags: [skip, UX, recent]
 steps:
   - Bind the player tap to reelSet.requestSkip()
@@ -44,11 +44,11 @@ spinButton.addEventListener('click', async () => {
 
 | | `skip()` | `requestSkip()` |
 |---|---|---|
-| Result already set | slams now (and applies round-aware side effects — speed boost in standard mode, cascade auto-slam in tumble mode) | slams now |
-| Result not set yet | **THROWS** — caller must catch | **queues** until result arrives, then slams |
+| Result already set | slams now (and applies round-aware side effects. speed boost in standard mode, cascade auto-slam in tumble mode) | slams now |
+| Result not set yet | **THROWS**. caller must catch | **queues** until result arrives, then slams |
 | Caller responsibility | catch the throw and either route to `requestSkip()` or wait for `setResult()` | none |
 
-For player-facing slam-stop UX, prefer `requestSkip()` — it removes the timing trap.
+For player-facing slam-stop UX, prefer `requestSkip()`. it removes the timing trap.
 
 If you want the round-aware boost behaviour of `skip()` but also need to be tap-safe pre-`setResult`, use both:
 
@@ -57,7 +57,7 @@ spinButton.addEventListener('click', () => {
   if (!reelSet.isSpinning) { /* start a new spin */ return; }
   // skip() THROWS before setResult arrives. Route to requestSkip() in
   // the catch so a tap during the server-wait window still queues the
-  // slam — and still picks up the boost / cascade auto-slam side effects
+  // slam. and still picks up the boost / cascade auto-slam side effects
   // when the result lands.
   try { reelSet.skipSpin(); }
   catch { reelSet.requestSkip(); }
@@ -70,7 +70,7 @@ spinButton.addEventListener('click', () => {
 2. Force-completes every active spin phase (including GSAP tweens).
 3. Calls `reel.placeSymbols(targetRow)` on every reel with the result from `setResult()`.
 4. Snaps the reel container `y` back to `0`.
-5. Fires `spin:reelLanded` per reel + `spin:allLanded` + `spin:complete` with `wasSkipped: true` — same lifecycle hooks as a normal landing.
+5. Fires `spin:reelLanded` per reel + `spin:allLanded` + `spin:complete` with `wasSkipped: true`. same lifecycle hooks as a normal landing.
 
 ## Test it
 

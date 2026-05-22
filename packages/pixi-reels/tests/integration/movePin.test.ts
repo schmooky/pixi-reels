@@ -1,5 +1,5 @@
 /**
- * movePin — state + visual + event integration tests.
+ * movePin. state + visual + event integration tests.
  *
  * GSAP drives the flight animation in real time. Tests use `duration: 1`
  * (one millisecond) so the promise resolves fast enough for vitest's
@@ -19,7 +19,7 @@ function makeHarness() {
   });
 }
 
-describe('movePin — state', () => {
+describe('movePin. state', () => {
   it('atomically moves the pin from source to destination', async () => {
     const h = makeHarness();
     try {
@@ -95,7 +95,7 @@ describe('movePin — state', () => {
   });
 });
 
-describe('movePin — errors', () => {
+describe('movePin. errors', () => {
   it('throws when called while spinning', async () => {
     const h = makeHarness();
     try {
@@ -169,7 +169,7 @@ describe('movePin — errors', () => {
   });
 });
 
-describe('movePin — self-move', () => {
+describe('movePin. self-move', () => {
   it('is a no-op when from === to (state unchanged, event still fires)', async () => {
     const h = makeHarness();
     try {
@@ -191,7 +191,7 @@ describe('movePin — self-move', () => {
   });
 });
 
-describe('movePin — events', () => {
+describe('movePin. events', () => {
   it('fires pin:moved with the new pin and the old coordinates', async () => {
     const h = makeHarness();
     try {
@@ -218,7 +218,7 @@ describe('movePin — events', () => {
   });
 });
 
-describe('movePin — chained moves', () => {
+describe('movePin. chained moves', () => {
   it('supports walking across multiple columns via repeated calls', async () => {
     const h = makeHarness();
     try {
@@ -248,10 +248,10 @@ describe('movePin — chained moves', () => {
   });
 });
 
-describe('movePin — flight callbacks', () => {
+describe('movePin. flight callbacks', () => {
   /**
    * onFlightCreated / onFlightCompleted expose the pooled flight ReelSymbol
-   * so consumers can drive animation state on it — e.g. switch a Spine
+   * so consumers can drive animation state on it. e.g. switch a Spine
    * symbol onto a `run` animation for the duration of the flight.
    */
   it('invokes onFlightCreated with the flight ReelSymbol before the tween', async () => {
@@ -259,7 +259,7 @@ describe('movePin — flight callbacks', () => {
     try {
       h.reelSet.pin(2, 1, 'wild');
 
-      // Capture state AT callback time — the flight instance is recycled
+      // Capture state AT callback time. the flight instance is recycled
       // back to the pool after the move, so its symbolId is '' by the time
       // the outer assertion runs.
       let capturedSymbolId: string | null = null;

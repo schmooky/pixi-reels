@@ -57,7 +57,7 @@ export { AdjustPhase } from './spin/phases/AdjustPhase.js';
 export type { AdjustPhaseConfig } from './spin/phases/AdjustPhase.js';
 // Note: `PinOverlayTween` is intentionally not re-exported. It's an
 // internal hand-off type built by SpinController and consumed by
-// AdjustPhase — consumers don't construct one directly.
+// AdjustPhase. consumers don't construct one directly.
 
 // Tumble cascade
 export type { TumbleConfig, TumbleFallConfig, TumbleDropInConfig } from './cascade/TumbleConfig.js';
@@ -91,7 +91,7 @@ export { ObjectPool } from './pool/ObjectPool.js';
 export { SymbolSpotlight } from './spotlight/SymbolSpotlight.js';
 export type { SpotlightOptions, WinLine, CycleOptions } from './spotlight/SymbolSpotlight.js';
 
-// Wins (symbol-highlight presenter — no line drawing, events-driven)
+// Wins (symbol-highlight presenter. no line drawing, events-driven)
 export { WinPresenter } from './wins/WinPresenter.js';
 export type { WinPresenterOptions, WinSymbolAnim } from './wins/WinPresenter.js';
 export { sortByValueDesc } from './wins/Win.js';
@@ -110,7 +110,7 @@ export { pinKey } from './pins/CellPin.js';
 // ReelSet frame API (runtime middleware)
 export type { FrameAPI } from './core/ReelSet.js';
 
-// ReelSet cascade-API option types — exported so consumers can pass typed
+// ReelSet cascade-API option types. exported so consumers can pass typed
 // option objects around or extend them for engine-on-engine adapters.
 export type {
   DestroySymbolsOptions,

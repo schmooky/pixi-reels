@@ -3,10 +3,10 @@ import { describe, expect, it } from 'vitest';
 import { HeadlessSymbol, SymbolRegistry } from '../../src/index.js';
 import { SymbolFactory } from '../../src/symbols/SymbolFactory.js';
 
-// Stub — real filters need document/WebGL.
+// Stub. real filters need document/WebGL.
 const stubFilter = {} as Filter;
 
-describe('ReelSymbol pool recycle — view state reset', () => {
+describe('ReelSymbol pool recycle. view state reset', () => {
   it('clears alpha, scale, rotation, filters, zIndex on deactivate', () => {
     const symbol = new HeadlessSymbol();
     symbol.activate('a');

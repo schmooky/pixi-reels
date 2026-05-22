@@ -1,7 +1,7 @@
 ---
 layout: ../../layouts/Recipe.astro
 title: Peek symbol from buffer-above
-description: Pre-fill the buffer-above slot so a teaser symbol sits just out of frame — visible during scroll-in on the next spin.
+description: Pre-fill the buffer-above slot so a teaser symbol sits just out of frame. visible during scroll-in on the next spin.
 tags: [buffer, peek, tension, reveal]
 steps:
   - Seed initialFrame with a ColumnTarget so the buffer-above slot is set at build time
@@ -20,14 +20,14 @@ import { RecipeRunner } from '../../components/RecipeRunner.tsx';
 
 ## What you're seeing
 
-Every reel has an extra "PEEK" symbol prefilled in the buffer-above slot — the one cell that lives just above the visible window. During the spin, that symbol scrolls through visibility before random symbols take over, giving the player a brief glimpse of "what's queued."
+Every reel has an extra "PEEK" symbol prefilled in the buffer-above slot. the one cell that lives just above the visible window. During the spin, that symbol scrolls through visibility before random symbols take over, giving the player a brief glimpse of "what's queued."
 
 The same shape works for `initialFrame` (seeds the first spin) and `setResult` (seeds every subsequent one).
 
 ## The minimum code
 
 ```ts
-// Seed the buffer-above at build time. ColumnTarget is the explicit shape —
+// Seed the buffer-above at build time. ColumnTarget is the explicit shape.
 // `bufferAbove[0]` is the slot closest to the visible top row.
 const initialFrame: ColumnTarget[] = [
   { visible: ['A', 'B', 'C'], bufferAbove: ['COIN'] },
@@ -68,7 +68,7 @@ See [Buffer indexing](/guides/buffer-indexing/) for the full reference.
 
 ## Where to go next
 
-- [Anticipation teaser](/recipes/anticipation-teaser/) — pair buffer-above with `setAnticipation` so a slow reel approaches a known high-value symbol
-- [Buffer indexing](/guides/buffer-indexing/) — the full convention reference
-- [Anticipate a reel](/recipes/anticipate-a-reel/) — base anticipation mechanic
-- [Nudge a reel](/recipes/nudge/) — after the spin lands, push that buffer-above symbol into view with `reelSet.nudge(col, { distance: 1, direction: 'down', incoming: ['X'] })`
+- [Anticipation teaser](/recipes/anticipation-teaser/). pair buffer-above with `setAnticipation` so a slow reel approaches a known high-value symbol
+- [Buffer indexing](/guides/buffer-indexing/). the full convention reference
+- [Anticipate a reel](/recipes/anticipate-a-reel/). base anticipation mechanic
+- [Nudge a reel](/recipes/nudge/). after the spin lands, push that buffer-above symbol into view with `reelSet.nudge(col, { distance: 1, direction: 'down', incoming: ['X'] })`

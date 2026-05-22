@@ -66,7 +66,7 @@ describe('MultiWays + Cascade (issue #74)', () => {
 
   it('uses cascade fall phase on a multiways cascade spin', async () => {
     // Skip-path tests can only observe phases created before skip() invalidates
-    // the generation — that's `cascade:fall` for tumble (mirrors perSpinMode.test).
+    // the generation. that's `cascade:fall` for tumble (mirrors perSpinMode.test).
     // The "Adjust runs" guarantee is asserted via events in the next test.
     const h = buildMultiwaysCascadeHarness();
     try {
@@ -81,7 +81,7 @@ describe('MultiWays + Cascade (issue #74)', () => {
       await promise;
 
       expect(h.created.some((n) => n.startsWith('cascade:fall:'))).toBe(true);
-      // Standard StartPhase must NOT be created — tumble mode replaced it.
+      // Standard StartPhase must NOT be created. tumble mode replaced it.
       expect(h.created.some((n) => n.startsWith('start:'))).toBe(false);
       expect(h.reelSet.reels.map((r) => r.visibleRows)).toEqual([3, 4, 2]);
     } finally {

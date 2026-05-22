@@ -41,7 +41,7 @@ function drawPayline(cols, row, color) {
   overlayGfx.stroke({ color, width: 3, alpha: 0.85 });
 }
 
-// Fixed result: middle row is all SEVEN — a full-row payline win.
+// Fixed result: middle row is all SEVEN. a full-row payline win.
 const WIN_ROW = 1;
 const GRID = [
   [A,     SEVEN, C],
@@ -65,7 +65,7 @@ return {
     // Let the landing bounce settle.
     await new Promise(r => setTimeout(r, 280));
 
-    // Find SEVEN on WIN_ROW — typically all 5 here.
+    // Find SEVEN on WIN_ROW. typically all 5 here.
     const winCols = [];
     for (let col = 0; col < COLS; col++) {
       if (reelSet.getReel(col).getVisibleSymbols()[WIN_ROW] === SEVEN) winCols.push(col);

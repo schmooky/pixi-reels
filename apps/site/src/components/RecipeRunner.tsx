@@ -14,6 +14,7 @@ import {
 import { SpineReelSymbol } from 'pixi-reels/spine';
 import { BlurSpriteSymbol } from '../../../../examples/shared/BlurSpriteSymbol.ts';
 import { CardSymbol, CARD_DECK, WILD_CARD } from '../../../../examples/shared/CardSymbol.ts';
+import { EmptySymbol } from '../../../../examples/shared/EmptySymbol.ts';
 import { loadPrototypeSymbols } from '../../../../examples/shared/prototypeSpriteLoader.ts';
 import {
   loadGeneratedSpines,
@@ -39,14 +40,6 @@ function pickWeighted(weights: Record<string, number>): string {
     if (r <= 0) return id;
   }
   return Object.keys(weights)[0];
-}
-
-class EmptySymbol extends ReelSymbol {
-  protected onActivate(_symbolId: string): void {}
-  protected onDeactivate(): void {}
-  async playWin(): Promise<void> {}
-  stopAnimation(): void {}
-  resize(_w: number, _h: number): void {}
 }
 
 interface RunResult {
@@ -147,7 +140,7 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
         // AsyncFunction so recipes that need async setup (e.g. dynamic
         // texture loaders added by future recipes) can `return await`
         // the built RunResult. Sync recipes that return a plain object
-        // are unaffected — `await x` on a non-Promise resolves to x.
+        // are unaffected. `await x` on a non-Promise resolves to x.
         result = (await factory(
           ReelSetBuilder, SpeedPresets, BlurSpriteSymbol, SpriteSymbol, AnimatedSpriteSymbol,
           WinPresenter,
@@ -208,7 +201,7 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
   async function handleSpin() {
     if (!ready || !!error) return;
     if (spinning) {
-      // Recipe-supplied skip handler wins — lets a nudge / cascade / custom
+      // Recipe-supplied skip handler wins. lets a nudge / cascade / custom
       // timeline recipe intercept the player's mid-action tap. Otherwise
       // fall through to the built-in heuristics.
       if (onSkipRef.current) {
@@ -221,7 +214,7 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
         reelSet.skipNudge();
         return;
       }
-      // skip() THROWS before `setResult()` arrives — route to requestSkip()
+      // skipSpin() THROWS before setResult() arrives. Route to requestSkip()
       // in the catch so a player tap during the server-wait window still
       // queues the slam and fires it the moment the result is in.
       try { reelSetRef.current?.skipSpin(); }
@@ -274,7 +267,7 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
           aria-label={spinning ? 'Skip' : 'Spin'}
           className={cn(
             // Right edge, vertically centered. Bigger touch target than
-            // the corner bottom-right pill — easier to hit on mobile, more
+            // the corner bottom-right pill. easier to hit on mobile, more
             // obvious as the primary action on the canvas.
             'absolute right-3 top-1/2 -translate-y-1/2 inline-flex h-14 w-14 items-center justify-center rounded-full',
             'border border-border/70 bg-background/80 text-foreground shadow-md backdrop-blur',

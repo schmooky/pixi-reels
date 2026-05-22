@@ -1,13 +1,13 @@
 // @ts-nocheck
 // Injected: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, WILD_CARD,
 //           PIXI, gsap, app, pickWeighted,
-//           EmptySymbol (blank ReelSymbol — renders nothing, used for miss cells)
+//           EmptySymbol (blank ReelSymbol. renders nothing, used for miss cells)
 
 const COIN = 'wild';
 const EMPTY = 'empty';
 const COLS = 5, ROWS = 3, CELL = 60, GAP = 4;
 
-// Build 15 independent 1×1 ReelSets — one per cell.
+// Build 15 independent 1×1 ReelSets. one per cell.
 const colWidth = COLS * (CELL + GAP) - GAP;
 const colHeight = ROWS * (CELL + GAP) - GAP;
 const startX = (app.screen.width - colWidth) / 2;
@@ -50,7 +50,7 @@ const heldKeys = new Set();
 const overlays = [];
 
 // Build a held-coin overlay matching the WILD card visual (no texture
-// needed — cards are pure Graphics).
+// needed. cards are pure Graphics).
 function makeCoinOverlay() {
   const g = new PIXI.Container();
   const rect = new PIXI.Graphics();

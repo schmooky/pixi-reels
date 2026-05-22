@@ -54,7 +54,7 @@ function installSequenceGsap(progressSequence: number[]): void {
  */
 function installDeferredGsap(): {
   fireAll(): void;
-  fire(): void; // alias for fireAll — kept for older tests
+  fire(): void; // alias for fireAll. kept for older tests
   killCount: () => number;
 } {
   type Slot = {
@@ -117,7 +117,7 @@ describe('nudge', () => {
   });
 
   describe('down nudge', () => {
-    it('shifts the visible window down by 1 — incoming becomes the new top', async () => {
+    it('shifts the visible window down by 1. incoming becomes the new top', async () => {
       const { reelSet, spinAndLand, destroy } = createTestReelSet({
         reels: 3,
         visibleRows: 3,
@@ -146,7 +146,7 @@ describe('nudge', () => {
       }
     });
 
-    it('shifts down by 2 with default buffer=1 — exercises the wrap queue', async () => {
+    it('shifts down by 2 with default buffer=1. exercises the wrap queue', async () => {
       const { reelSet, spinAndLand, destroy } = createTestReelSet({
         reels: 1,
         visibleRows: 3,
@@ -165,7 +165,7 @@ describe('nudge', () => {
       }
     });
 
-    it('shifts down by 3 — every visible row is incoming', async () => {
+    it('shifts down by 3. every visible row is incoming', async () => {
       const { reelSet, spinAndLand, destroy } = createTestReelSet({
         reels: 1,
         visibleRows: 3,
@@ -187,7 +187,7 @@ describe('nudge', () => {
   });
 
   describe('up nudge', () => {
-    it('shifts the visible window up by 1 — incoming becomes the new bottom', async () => {
+    it('shifts the visible window up by 1. incoming becomes the new bottom', async () => {
       const { reelSet, spinAndLand, destroy } = createTestReelSet({
         reels: 1,
         visibleRows: 3,
@@ -449,7 +449,7 @@ describe('nudge', () => {
         reelSet.reels[0].events.on('landed', (symbols: string[]) => landedCalls.push([...symbols]));
         await reelSet.nudge(0, { distance: 1, direction: 'down', incoming: ['wild'] });
         // `landed` is the spin-stop event. A nudge fires `nudge:complete`,
-        // never `landed` — counting on it for win re-detection would
+        // never `landed`. counting on it for win re-detection would
         // double-fire.
         expect(landedCalls).toEqual([]);
       } finally {
@@ -470,7 +470,7 @@ describe('nudge', () => {
         await spinAndLand([['a', 'a', 'a']]);
         // total = bufferAbove(1) + visible(3) + bufferBelow(1) = 5.
         // distance=5 would fully rotate the strip and drop the pre-placed
-        // bufferAbove entry — we refuse instead of silently losing it.
+        // bufferAbove entry. we refuse instead of silently losing it.
         await expect(
           reelSet.nudge(0, {
             distance: 5,
@@ -568,9 +568,9 @@ describe('nudge', () => {
           direction: 'down',
           incoming: ['wild'],
         });
-        // Tween is deferred — no completion yet.
+        // Tween is deferred. no completion yet.
         expect(reelSet.reels[0].isNudging).toBe(true);
-        // Skip the nudge — should land + resolve.
+        // Skip the nudge. should land + resolve.
         reelSet.skipNudge(0);
         const result = await p;
         expect(result.symbols).toEqual(['wild', 'a', 'b']);
@@ -667,7 +667,7 @@ describe('nudge', () => {
         const err = await p.catch((e) => e);
         expect(err.name).toBe('AbortError');
         expect(cancelled).toHaveLength(1);
-        // Deterministic landing — strip is at its post-nudge position
+        // Deterministic landing. strip is at its post-nudge position
         // even though the tween was killed mid-flight.
         expectGrid(reelSet, [['wild', 'a', 'b']]);
         void deferred;
@@ -787,7 +787,7 @@ describe('nudge', () => {
   });
 
   describe('big symbols on the strip', () => {
-    it('nudges a 1x2 wild down through fully — anchor at visible row 0, stub at row 1', async () => {
+    it('nudges a 1x2 wild down through fully. anchor at visible row 0, stub at row 1', async () => {
       installSyncGsap();
       const { reelSet, spinAndLand, destroy } = createTestReelSet({
         reels: 1,
@@ -803,7 +803,7 @@ describe('nudge', () => {
         // SetResult validates anchor + h fits in visibleRows.
         await spinAndLand([['a', 'bigW', 'bigW']]);
         // The strip already shows the full block. Nudge DOWN by 1 shifts
-        // it to rows 2+3 — but row 3 doesn't exist. Block survival check:
+        // it to rows 2+3. but row 3 doesn't exist. Block survival check:
         // anchor at strip[2], h=2, distance=1 down. Survival: 2 + 2 - 1 + 1 = 4 < 5 ✓.
         // After nudge: anchor at strip[3], stub at strip[4] (bufferBelow).
         // visible row 0 = 'a' (incoming), row 1 = 'a' (old top-visible),
@@ -819,7 +819,7 @@ describe('nudge', () => {
       }
     });
 
-    it('1x2 up-nudge lands anchor in bufferAbove with tail visible — block renders correctly', async () => {
+    it('1x2 up-nudge lands anchor in bufferAbove with tail visible. block renders correctly', async () => {
       installSyncGsap();
       const { reelSet, spinAndLand, destroy } = createTestReelSet({
         reels: 1,
@@ -831,9 +831,9 @@ describe('nudge', () => {
         },
       });
       try {
-        // 1x2 at visible rows 0+1 — anchor at strip[1], stub at strip[2].
+        // 1x2 at visible rows 0+1. anchor at strip[1], stub at strip[2].
         await spinAndLand([['bigW', 'bigW', 'a']]);
-        // Nudge up by 1 — anchor lands at strip[0] (bufferAbove), stub at
+        // Nudge up by 1. anchor lands at strip[0] (bufferAbove), stub at
         // strip[1] (visible row 0). The block is "tail visible": top in
         // buffer, bottom showing. `_finalizeFrame` scans bufferAbove now,
         // so the anchor sprite is sized to the full block and the visible
@@ -875,7 +875,7 @@ describe('nudge', () => {
         // incoming symbol, splitting the block.
         await spinAndLand([['a', 'bigW', 'bigW']]);
         // Snapshot pre-nudge: anchor at visible row 1, stub at row 2.
-        // strip[4] holds the bufferBelow filler (not a stub here — this
+        // strip[4] holds the bufferBelow filler (not a stub here. this
         // setup makes anchor at strip[2]). Set up the actual test state:
         // need anchor at strip[3] with stub at strip[4]. Nudge once first
         // to reach that state.
@@ -932,7 +932,7 @@ describe('nudge', () => {
       }
     });
 
-    it('throws when a 1xH block would split — anchor too close to the wrap boundary', async () => {
+    it('throws when a 1xH block would split. anchor too close to the wrap boundary', async () => {
       installSyncGsap();
       const { reelSet, spinAndLand, destroy } = createTestReelSet({
         reels: 1,
@@ -944,7 +944,7 @@ describe('nudge', () => {
         },
       });
       try {
-        // 1x2 at visible rows 1+2 — anchor at strip[2], stub at strip[3].
+        // 1x2 at visible rows 1+2. anchor at strip[2], stub at strip[3].
         // total = 5. Survival for down distance=2: 2 + 2 - 1 + 2 = 5, NOT < 5,
         // so the block's bottom would wrap off strip[N-1] mid-rotation.
         await spinAndLand([['a', 'bigW', 'bigW']]);
@@ -1060,18 +1060,18 @@ describe('nudge', () => {
       try {
         // Land block at rows 0+1 (anchor at strip[1], stub at strip[2]).
         await spinAndLand([['bigW', 'bigW', 'a']]);
-        // Nudge down by 2 — anchor → strip[3] (row 2), stub → strip[4]
+        // Nudge down by 2. anchor → strip[3] (row 2), stub → strip[4]
         // (bufferBelow). Visible row 2 shows top of the block.
         const half = await reelSet.nudge(0, {
           distance: 2,
           direction: 'down',
           incoming: ['a', 'b'],
         });
-        // Visible: [a, b, bigW] — block's anchor is now visible row 2.
+        // Visible: [a, b, bigW]. block's anchor is now visible row 2.
         // The block extends into bufferBelow, so row 2 reads the anchor.
         expect(half.symbols).toEqual(['a', 'b', 'bigW']);
 
-        // Nudge up by 1 — block returns to rows 1+2.
+        // Nudge up by 1. block returns to rows 1+2.
         const full = await reelSet.nudge(0, {
           distance: 1,
           direction: 'up',

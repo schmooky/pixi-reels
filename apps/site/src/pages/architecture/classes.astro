@@ -4,7 +4,7 @@ import Legend from '../../components/arch/Legend.astro';
 ---
 <Architecture
   title="Classes"
-  subtitle="The composition tree — what owns what, and what passes through."
+  subtitle="The composition tree. what owns what, and what passes through."
   eyebrow="Objects"
 >
   <p>
@@ -15,7 +15,7 @@ import Legend from '../../components/arch/Legend.astro';
     destroys its children on <code>destroy()</code>.
   </p>
 
-  <h2>What each class does — in plain English</h2>
+  <h2>What each class does. in plain English</h2>
 
   <p>
     If a name feels opaque, read its one-liner here first. The SVG after
@@ -29,7 +29,7 @@ import Legend from '../../components/arch/Legend.astro';
         <span class="text-xs text-muted-foreground">builder</span>
       </div>
       <p class="mt-1 text-foreground/80">
-        A fluent, chainable configurator. You call <code>.reels(5).visibleRows(3)...</code> and end with <code>.build()</code>. It exists so every required piece of setup is forced into one place — forget <code>.ticker(app.ticker)</code> and <code>.build()</code> throws before your game boots.
+        A fluent, chainable configurator. You call <code>.reels(5).visibleRows(3)...</code> and end with <code>.build()</code>. It exists so every required piece of setup is forced into one place. Forget <code>.ticker(app.ticker)</code> and <code>.build()</code> throws before your game boots.
       </p>
     </div>
 
@@ -49,7 +49,7 @@ import Legend from '../../components/arch/Legend.astro';
         <span class="text-xs text-muted-foreground">one column</span>
       </div>
       <p class="mt-1 text-foreground/80">
-        One vertical column of symbols. A Reel owns the symbols currently on screen, their vertical position, and the "what do I land on" queue. You rarely touch a Reel directly — you drive the whole <code>ReelSet</code> and let it fan out.
+        One vertical column of symbols. A Reel owns the symbols currently on screen, their vertical position, and the "what do I land on" queue. You rarely touch a Reel directly. you drive the whole <code>ReelSet</code> and let it fan out.
       </p>
     </div>
 
@@ -69,7 +69,7 @@ import Legend from '../../components/arch/Legend.astro';
         <span class="text-xs text-muted-foreground">vertical scroll</span>
       </div>
       <p class="mt-1 text-foreground/80">
-        The physics of one reel. Adds a Y delta every tick and wraps symbols that fall off the bottom back to the top. When a symbol wraps, it fires a callback that tells the reel "time to swap identity" — that's how a spinning reel eventually shows the target grid.
+        The physics of one reel. Adds a Y delta every tick and wraps symbols that fall off the bottom back to the top. When a symbol wraps, it fires a callback that tells the reel "time to swap identity". that's how a spinning reel eventually shows the target grid.
       </p>
     </div>
 
@@ -109,7 +109,7 @@ import Legend from '../../components/arch/Legend.astro';
         <span class="text-xs text-muted-foreground">strategy</span>
       </div>
       <p class="mt-1 text-foreground/80">
-        The top-level "what does a spin even mean" strategy. <code>StandardMode</code> runs every reel through the phase machine. <code>CascadeMode</code> replaces whole columns atomically for tumble mechanics. <code>ImmediateMode</code> snaps straight to the result — useful in tests.
+        The top-level "what does a spin even mean" strategy. <code>StandardMode</code> runs every reel through the phase machine. <code>CascadeMode</code> replaces whole columns atomically for tumble mechanics. <code>ImmediateMode</code> snaps straight to the result. useful in tests.
       </p>
     </div>
 
@@ -129,7 +129,7 @@ import Legend from '../../components/arch/Legend.astro';
         <span class="text-xs text-muted-foreground">abstract cell</span>
       </div>
       <p class="mt-1 text-foreground/80">
-        One visible cell on a reel. Abstract base class — subclass it to draw whatever you like. Built-in subclasses: <code>SpriteSymbol</code> (plain texture), <code>AnimatedSpriteSymbol</code> (sprite sheet), <code>SpineSymbol</code> (Spine skeleton, optional peer). Implement <code>onActivate</code>, <code>onDeactivate</code>, <code>playWin</code>, <code>stopAnimation</code>, <code>resize</code> for a new kind.
+        One visible cell on a reel. Abstract base class. subclass it to draw whatever you like. Built-in subclasses: <code>SpriteSymbol</code> (plain texture), <code>AnimatedSpriteSymbol</code> (sprite sheet), <code>SpineSymbol</code> (Spine skeleton, optional peer). Implement <code>onActivate</code>, <code>onDeactivate</code>, <code>playWin</code>, <code>stopAnimation</code>, <code>resize</code> for a new kind.
       </p>
     </div>
 
@@ -139,7 +139,7 @@ import Legend from '../../components/arch/Legend.astro';
         <span class="text-xs text-muted-foreground">pool</span>
       </div>
       <p class="mt-1 text-foreground/80">
-        <code>SymbolRegistry</code> records "symbol id X is rendered by class Y with options Z". <code>SymbolFactory</code> is the cache on top — it pools instances so scrolling a 5x3 reel for five seconds allocates zero new symbol objects.
+        <code>SymbolRegistry</code> records "symbol id X is rendered by class Y with options Z". <code>SymbolFactory</code> is the cache on top. it pools instances so scrolling a 5x3 reel for five seconds allocates zero new symbol objects.
       </p>
     </div>
 
@@ -169,7 +169,7 @@ import Legend from '../../components/arch/Legend.astro';
         <span class="text-xs text-muted-foreground">pub / sub</span>
       </div>
       <p class="mt-1 text-foreground/80">
-        Typed pub/sub. Event names are colon-namespaced (<code>spin:start</code>, <code>spin:reelLanded</code>, <code>speed:changed</code>). Every exit path from a spin fires an event — wire audio and HUD to events, not to method calls, so <code>skip()</code> and <code>destroy()</code> stay correct without your HUD knowing about them.
+        Typed pub/sub. Event names are colon-namespaced (<code>spin:start</code>, <code>spin:reelLanded</code>, <code>speed:changed</code>). Every exit path from a spin fires an event. wire audio and HUD to events, not to method calls, so <code>skip()</code> and <code>destroy()</code> stay correct without your HUD knowing about them.
       </p>
     </div>
 
@@ -179,7 +179,7 @@ import Legend from '../../components/arch/Legend.astro';
         <span class="text-xs text-muted-foreground">safe ticker</span>
       </div>
       <p class="mt-1 text-foreground/80">
-        A thin wrapper around <code>PIXI.Ticker</code> that tracks every callback it adds and removes them all on <code>destroy()</code>. Nobody in this codebase calls <code>ticker.add()</code> directly — that's how we keep teardown correct.
+        A thin wrapper around <code>PIXI.Ticker</code> that tracks every callback it adds and removes them all on <code>destroy()</code>. Nobody in this codebase calls <code>ticker.add()</code> directly. that's how we keep teardown correct.
       </p>
     </div>
 
@@ -189,7 +189,7 @@ import Legend from '../../components/arch/Legend.astro';
         <span class="text-xs text-muted-foreground">interface</span>
       </div>
       <p class="mt-1 text-foreground/80">
-        The cleanup contract. Anything that allocates implements it. <code>reelSet.destroy()</code> cascades through the whole tree — you never have to chase individual pieces yourself.
+        The cleanup contract. Anything that allocates implements it. <code>reelSet.destroy()</code> cascades through the whole tree. you never have to chase individual pieces yourself.
       </p>
     </div>
 
@@ -342,7 +342,7 @@ import Legend from '../../components/arch/Legend.astro';
 
     <div class="mt-4">
       <Legend items={[
-        { kind: 'primary', label: 'Public API', note: 'Builder — you construct this' },
+        { kind: 'primary', label: 'Public API', note: 'Builder. you construct this' },
         { kind: 'accent', label: 'Scene graph', note: 'ReelSet and its reels' },
         { kind: 'subtle', label: 'Internals', note: 'Subsystems, motion, sequencer' },
         { kind: 'muted', label: 'Grouping', note: 'conceptual, not a class' },
@@ -369,7 +369,7 @@ import Legend from '../../components/arch/Legend.astro';
   <p>
     If you extend pixi-reels with a new subsystem that holds resources, it
     must implement the <code>Disposable</code> interface and be destroyed
-    from this chain — there's no hidden GC to catch you.
+    from this chain. there's no hidden GC to catch you.
   </p>
 
   <h2>Disposable everywhere</h2>
@@ -415,6 +415,6 @@ import Legend from '../../components/arch/Legend.astro';
     <li>Extend <code>ReelSymbol</code> for a new rendering style (Spine, animated sprite, custom Graphics).</li>
     <li>Extend <code>ReelPhase&lt;TConfig&gt;</code> for a new spin phase, register it via <code>builder.phases(f =&gt; f.register(...))</code>.</li>
     <li>Implement <code>SpinningMode</code> for a different motion model (cascade, hover, immediate).</li>
-    <li>Implement <code>FrameMiddleware</code> to hook into per-frame symbol generation — random fill and target placement are themselves just middleware.</li>
+    <li>Implement <code>FrameMiddleware</code> to hook into per-frame symbol generation. random fill and target placement are themselves just middleware.</li>
   </ul>
 </Architecture>

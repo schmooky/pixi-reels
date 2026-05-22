@@ -13,7 +13,7 @@ const CLUSTER = '10';
 const HIT_ROW = 2;
 const HIT_COLS = [0, 1, 2];
 
-// Medium pause — wave is already long because of the per-row stagger;
+// Medium pause. wave is already long because of the per-row stagger;
 // the pause sets up the rhythm of the next wave without over-stalling.
 const PAUSE_AFTER_REMOVAL_MS = 280;
 

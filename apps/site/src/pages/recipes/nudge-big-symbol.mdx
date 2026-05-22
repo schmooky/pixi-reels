@@ -5,8 +5,8 @@ description: A 1xH block on the target reel is nudged through as a unit. The eng
 tags: [nudge, big-symbols, block, recent]
 steps:
   - Land with a 1x2 MEGA wild at column 2, rows 0+1
-  - Nudge column 2 DOWN by 2 — block survives (`1 + 2 - 1 + 2 < 5`) and anchor lands at row 2 with stub in bufferBelow
-  - Nudge column 2 UP by 1 — block returns to rows 1+2, fully visible
+  - Nudge column 2 DOWN by 2. block survives (`1 + 2 - 1 + 2 < 5`) and anchor lands at row 2 with stub in bufferBelow
+  - Nudge column 2 UP by 1. block returns to rows 1+2, fully visible
   - The whole block moves as a unit; the wrap mechanism never splits anchor from stubs
 apis:
   - ReelSet.nudge
@@ -48,14 +48,14 @@ await reelSet.nudge(2, { distance: 1, direction: 'down', incoming: [...] });
 
 Blocks that wouldn't survive (anchor or any stub crosses the wrap
 boundary off the strip) throw with a precise message naming the
-violated condition. Cross-reel blocks (`w > 1`) always throw —
+violated condition. Cross-reel blocks (`w > 1`) always throw.
 splitting an anchor from its right-side cells on a different reel
 isn't safe under any single-reel nudge.
 
 ## Tail-visible → nudge to reveal
 
 The classic UK fruit-machine beat: a tall wild lands with most of it
-hidden in bufferAbove — only the bottom cell ("the tail") shows at the
+hidden in bufferAbove. only the bottom cell ("the tail") shows at the
 top of the visible window. The player nudges to drag the whole block
 into view.
 
@@ -112,12 +112,8 @@ await reelSet.nudge(2, {
   stubs.
 - **Big symbols in `incoming`.** The `incoming` array is 1x1 cells.
   Placing a new big symbol via a nudge would require the cross-reel
-  OCCUPIED coordinator and a different API surface — use `setResult`
+  OCCUPIED coordinator and a different API surface. use `setResult`
   or `placeSymbols` for that.
-- **Anchors in bufferAbove that should render partially.** Engine's
-  `_finalizeFrame` only resizes anchors at visible cells today; a
-  block whose anchor is above visible with its tail in view doesn't
-  render at the right size. Tracked as a follow-up.
 
 ## Error messages
 
@@ -125,18 +121,21 @@ Each throw spells out the violation so you can debug from the stack alone:
 
 ```text
 nudge: block 'MEGA' (1x2) at strip[2] wouldn't survive a distance=3 down
-nudge — the wrap boundary would split the anchor from its stubs. Block
+nudge. the wrap boundary would split the anchor from its stubs. Block
 survival: anchor + h + distance < total (2 + 2 + 3 = 7 vs 5).
 ```
 
 ```text
 nudge: reel 0 carries cross-reel big symbol 'BONUS' (2x2) at strip[1].
-Cross-reel blocks can't be nudged from a single reel — the other-reel
+Cross-reel blocks can't be nudged from a single reel. the other-reel
 cells would stay put and split the block.
 ```
 
 ## Related
 
-- [MxN big symbols](/recipes/big-symbols-mxn/) — placement, footprint,
+- [Land a big symbol partially in buffer](/recipes/big-symbol-partial-land/).
+  the complementary entry: land directly into the tail-visible state via
+  `setResult`'s `bufferAbove` slot, then nudge to reveal.
+- [MxN big symbols](/recipes/big-symbols-mxn/). placement, footprint,
   bounds.
-- [Nudge guide](/guides/nudge/) — full survival formula derivation.
+- [Nudge guide](/guides/nudge/). full survival formula derivation.

@@ -7,7 +7,7 @@
 // Same 15-mini-ReelSet architecture as value-coin-pin. Coins land and are
 // pinned with a payload.value. When a collector lands adjacent to pinned
 // coins, it absorbs every adjacent coin's payload and stores the total in
-// its own pin payload. Absorbed coins are unpinned — they "fly" to the
+// its own pin payload. Absorbed coins are unpinned. they "fly" to the
 // collector conceptually, though here we just update badges.
 
 const COIN = 'coin';
@@ -16,7 +16,7 @@ const EMPTY = 'empty';
 const COLS = 5, ROWS = 3, CELL = 60, GAP = 4;
 const COIN_VALUES = [10, 25, 50, 100];
 
-// Thematic cards for this recipe — gold coin, purple collector.
+// Thematic cards for this recipe. gold coin, purple collector.
 const COIN_CARD = { id: COIN, color: 0xf1c40f, label: 'COIN', textColor: 0x6b5400 };
 const COLLECTOR_CARD = { id: COLLECTOR, color: 0x9b59b6, label: 'COLL', textColor: 0xffffff };
 

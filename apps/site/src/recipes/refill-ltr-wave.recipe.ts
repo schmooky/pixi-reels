@@ -2,7 +2,7 @@
 // Injected: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
 //           PIXI, gsap, app, pickWeighted
 
-// LEFT-TO-RIGHT WAVE REFILL — each column lands in sequence from left
+// LEFT-TO-RIGHT WAVE REFILL. each column lands in sequence from left
 // to right. Each reel's rows arrive together (no in-reel stagger), but
 // reel 0 lands before reel 1 before reel 2... Reads as a column-by-column
 // "filling up" of the grid.
@@ -33,7 +33,7 @@ const reelSet = new ReelSetBuilder()
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150 })
   .tumble({
     fall:   { duration: 240, ease: 'sine.in',       rowStagger: 40 },
-    // rowStagger: 0 — rows in a reel arrive together; the per-reel
+    // rowStagger: 0. rows in a reel arrive together; the per-reel
     // stagger is set via setDropOrder('ltr', step) on the refill below.
     dropIn: { duration: 380, ease: 'back.out(1.4)', rowStagger: 0, distance: 'perHole' },
   })
@@ -65,7 +65,7 @@ return {
     const winners = HIT_COLS.map((c) => ({ reel: c, row: HIT_ROW }));
     await reelSet.destroySymbols(winners);
     await new Promise((r) => setTimeout(r, PAUSE_AFTER_REMOVAL_MS));
-    // Refill: each reel delayed by REEL_WAVE_STEP_MS — left-to-right wave.
+    // Refill: each reel delayed by REEL_WAVE_STEP_MS. left-to-right wave.
     reelSet.setDropOrder('ltr', REEL_WAVE_STEP_MS);
     await reelSet.refill({ winners, grid: stage1 });
   },

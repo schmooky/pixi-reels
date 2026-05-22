@@ -4,13 +4,13 @@
 
 // Hybrid spin-then-cascade: round 1 spins like a classic strip slot
 // (top-to-bottom motion, START → SPIN → STOP). The landing has a
-// winning cluster — those cells pop, survivors fall, new symbols drop
+// winning cluster. those cells pop, survivors fall, new symbols drop
 // in from above. Each pop is a `reelSet.refill(...)` call driven by
 // `reelSet.runCascade({ detectWinners, nextGrid })`, NOT a re-spin.
 //
 // IMPORTANT recipe-design note: the chain only ever touches the LEFT
 // THREE columns. Cols 4 and 5 land during the strip-spin and STAY
-// UNTOUCHED for the rest of the play. That's deliberate — `runCascade`
+// UNTOUCHED for the rest of the play. That's deliberate. `runCascade`
 // detects winners per-grid each round; only the columns that have
 // winning cells animate. Real games typically chain across overlapping
 // clusters; here we keep the demo's affected area visually contiguous.
@@ -46,7 +46,7 @@ const reelSet = new ReelSetBuilder()
   // refill chain below uses `reelSet.refill()` directly (which doesn't
   // need `.tumble()` for the strip-spin landing itself).
   .tumble({
-    fall:   { duration: 0, ease: 'none', rowStagger: 0 },              // not used — refill skips fall
+    fall:   { duration: 0, ease: 'none', rowStagger: 0 },              // not used. refill skips fall
     dropIn: { duration: 360, ease: 'back.out(1.6)', rowStagger: 0, distance: 'perHole' },
   })
   .ticker(app.ticker)
@@ -55,16 +55,16 @@ const reelSet = new ReelSetBuilder()
 return {
   reelSet,
   onSpin: async () => {
-    // Stage 0 — strip-spin lands here. Force the left-three columns to
+    // Stage 0. strip-spin lands here. Force the left-three columns to
     // stack: TRIGGER2 ('J') at row 0, TRIGGER1 ('10') at row 1, random
     // elsewhere. The Js at row 0 are pre-positioned so that AFTER the
-    // first cascade pops the 10s, the Js fall into row 1 — creating a
+    // first cascade pops the 10s, the Js fall into row 1. creating a
     // NEW cluster of three Js without any extra authoring.
     const stage0 = Array.from({ length: REELS }, (_, c) =>
       Array.from({ length: ROWS }, (_, r) => {
         if (HIT_COLS.includes(c)) {
-          if (r === 0)        return TRIGGER2;  // 'J' on top — future cascade-2 cluster
-          if (r === HIT_ROW)  return TRIGGER1;  // '10' in middle — current cluster
+          if (r === 0)        return TRIGGER2;  // 'J' on top. future cascade-2 cluster
+          if (r === HIT_ROW)  return TRIGGER1;  // '10' in middle. current cluster
         }
         return randSymbolNotIn(new Set([TRIGGER1, TRIGGER2]));
       }),
@@ -87,7 +87,7 @@ return {
     await p;
     await new Promise((r) => setTimeout(r, 300));
 
-    // Cascade chain — driven by `reelSet.runCascade({...})`. The library
+    // Cascade chain. driven by `reelSet.runCascade({...})`. The library
     // owns the detect → destroy → pause → refill loop and resolves with
     // `RunCascadeResult` when no more winners are found. Game-rule
     // callbacks: `detectWinners` (cells whose symbol id matches the
@@ -108,7 +108,7 @@ return {
         );
         // After popping the 10s, the next trigger is the J that just
         // fell into HIT_ROW. Real games would compute this from the
-        // post-refill grid via `detectWinners` again — we hard-step it
+        // post-refill grid via `detectWinners` again. we hard-step it
         // so the demo is unmistakable.
         trigger = trigger === TRIGGER1 ? TRIGGER2 : '__none__';
         return out;

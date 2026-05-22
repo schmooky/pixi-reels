@@ -49,7 +49,7 @@ function bouncePulse(view, peak, durationMs) {
 }
 
 // Instead of `symbol.playWin()`, route each winner through a GSAP timeline.
-// The callback receives the symbol, the cell, and the owning win — so you
+// The callback receives the symbol, the cell, and the owning win. so you
 // can style per win (bigger bounce on the premium line via `win.id`).
 const presenter = new WinPresenter(reelSet, {
   stagger: 70,

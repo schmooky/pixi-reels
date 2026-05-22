@@ -2,7 +2,7 @@
 // Injected: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
 //           PIXI, gsap, app, pickWeighted
 
-// CASCADE ANTICIPATION REFILL — two-stage. Survivors slide down to fill
+// CASCADE ANTICIPATION REFILL. two-stage. Survivors slide down to fill
 // holes FIRST (gravity stage), then a global pause for anticipation
 // visuals, then new symbols enter from above with a per-column wave.
 //
@@ -10,15 +10,15 @@
 // row 2 of the leftmost three reels. What changes:
 //
 //   1. After destroy, `mode: 'gravity-then-drop'` splits the refill in two.
-//      Stage A: only survivors animate — the row 2 cells slide down from
+//      Stage A: only survivors animate. the row 2 cells slide down from
 //      row 1 to row 2. (In this layout there are no survivors below the
 //      winner because the cluster is on the bottom of the board, but the
 //      `cascade:gravity:start/end` events still fire per reel, marking
 //      where you'd plug anticipation logic in a denser cluster.)
-//   2. The library waits `gravityHoldMs` (250 ms here — bump for more
+//   2. The library waits `gravityHoldMs` (250 ms here. bump for more
 //      drama, e.g. 500–800 ms for a mascot pop or multiplier roll).
 //   3. Stage B: new symbols drop in from above. `setDropOrder('ltr', 110)`
-//      gives a left-to-right wave — reel 0 drops first, then 1, then 2…
+//      gives a left-to-right wave. reel 0 drops first, then 1, then 2…
 //      Set the step ≥ `dropIn.duration` (here 380 ms) to make the columns
 //      strictly sequential (column 1 fully lands before column 2 starts);
 //      a smaller step gives overlap.
@@ -52,7 +52,7 @@ const reelSet = new ReelSetBuilder()
     fall:   { duration: 240, ease: 'sine.in',       rowStagger: 40 },
     // Gravity uses the same `dropIn` config (it's the same phase, just
     // filtered to survivors). 380 ms with a soft back-out reads as
-    // "settled with a tiny bounce" — pairs well with the held beat.
+    // "settled with a tiny bounce". pairs well with the held beat.
     dropIn: { duration: 380, ease: 'back.out(1.4)', rowStagger: 0, distance: 'perHole' },
   })
   .ticker(app.ticker).build();
@@ -89,7 +89,7 @@ return {
     // overlap vs sequential:
     //   - step <  dropIn.duration → reels overlap (cascading wave)
     //   - step >= dropIn.duration → reels strictly sequential
-    // The gravity stage IGNORES this setting — it always runs all reels
+    // The gravity stage IGNORES this setting. it always runs all reels
     // in parallel, since gravity is a global "settling" beat.
     reelSet.setDropOrder('ltr', COLUMN_STEP_MS);
 

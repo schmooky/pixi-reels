@@ -2,10 +2,10 @@
 // Injected: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
 //           PIXI, gsap, app, pickWeighted
 
-// BOTTOM-UP ROW REFILL — within each reel, the bottom row arrives first
+// BOTTOM-UP ROW REFILL. within each reel, the bottom row arrives first
 // and the top row arrives last (rowOrder: 'bottomToTop'). All reels
 // drop simultaneously (setDropOrder('all')). Reads as a "stacking up"
-// motion — fits puzzle / match-3 / chess-board themes where the board
+// motion. fits puzzle / match-3 / chess-board themes where the board
 // builds itself from below.
 
 const IDS = ['7', '8', '9', '10', 'J', 'Q'];

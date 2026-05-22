@@ -52,7 +52,7 @@ export default function CascadeStarterRecipe() {
           run: async () => {
             const grid = buildInitialGrid();
 
-            // Moment A — drop the initial grid in. With tumble enabled
+            // Moment A. drop the initial grid in. With tumble enabled
             // on the builder, `reelSet.spin()` uses cascade phases.
             reelSet.setDropOrder('ltr');
             const p = reelSet.spin();
@@ -70,7 +70,7 @@ export default function CascadeStarterRecipe() {
             );
             reelSet.spotlight.hide();
 
-            // Moment B — one-shot cascade driven by reelSet.runCascade.
+            // Moment B. one-shot cascade driven by reelSet.runCascade.
             // The cluster cells pop, survivors fall, new symbols drop in.
             // The second detectWinners returns [] (no more clusters), so
             // the chain ends after one refill.

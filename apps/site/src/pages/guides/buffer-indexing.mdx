@@ -66,8 +66,13 @@ builder.initialFrame(grid);
 
 Any cell you do not set is filled by the random symbol provider. Buffer cells get a separate "buffer" pass from the provider, so buffer-only symbol weights are configurable separately from visible-area draws.
 
+## Buffer rows and big symbols
+
+A big-symbol anchor (`SymbolData.size.h > 1`) can sit in `bufferAbove[i]` or at a visible row whose stubs spill into `bufferBelow`. The coordinator paints `OCCUPIED` across the rest of the block automatically. Passing the anchor alone is enough. The validation rule is `anchorRow + h <= visibleRows + bufferBelow`: the block must fit on the strip end-to-end, not necessarily inside the visible window.
+
 ## See also
 
 - [Peek symbol from buffer-above](/recipes/peek-from-above/) for the minimum runnable demo.
 - [Anticipation teaser](/recipes/anticipation-teaser/) for pairing buffer-above with `setAnticipation`.
+- [Land a big symbol partially in buffer](/recipes/big-symbol-partial-land/) for a tail-visible 1xH wild via `bufferAbove`.
 - [API: ReelSet](/docs/api-reelset/) for the full `setResult` signature.

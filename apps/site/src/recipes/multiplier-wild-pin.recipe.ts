@@ -2,7 +2,7 @@
 // Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
 //                   WILD_CARD, PIXI, gsap, app, pickWeighted
 //
-// Multiplier wild — the wild carries a per-instance multiplier value.
+// Multiplier wild. the wild carries a per-instance multiplier value.
 //
 // CellPin's `payload` field stores arbitrary per-instance data alongside the
 // symbol. Game layer reads it during win evaluation to scale payouts.

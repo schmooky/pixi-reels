@@ -3,12 +3,12 @@
 //                   WILD_CARD, app, pickWeighted
 
 const A = '7', B = '8', C = '9';
-const S = 'scatter'; // scatter — registered as a custom card below
+const S = 'scatter'; // scatter. registered as a custom card below
 const IDS = [A, B, C, S];
 
 const SCATTER_SYM = { id: S, color: 0xff6b35, label: 'SCAT', textColor: 0xffffff };
 
-// Two scatters on reels 0 and 2; reel 4 has none — classic near-miss.
+// Two scatters on reels 0 and 2; reel 4 has none. classic near-miss.
 const GRID = [
   [S, A, B],
   [B, A, C],

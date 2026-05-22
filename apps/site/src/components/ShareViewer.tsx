@@ -22,6 +22,7 @@ import {
 import { SpineReelSymbol } from 'pixi-reels/spine';
 import { BlurSpriteSymbol } from '../../../../examples/shared/BlurSpriteSymbol.ts';
 import { CardSymbol, CARD_DECK, WILD_CARD } from '../../../../examples/shared/CardSymbol.ts';
+import { EmptySymbol } from '../../../../examples/shared/EmptySymbol.ts';
 import { loadPrototypeSymbols } from '../../../../examples/shared/prototypeSpriteLoader.ts';
 import {
   loadGeneratedSpines,
@@ -29,13 +30,6 @@ import {
 } from '../../../../examples/shared/generatedSpineLoader.ts';
 import { transform as sucraseTransform } from 'sucrase';
 
-class EmptySymbol extends ReelSymbol {
-  protected onActivate(_symbolId: string): void {}
-  protected onDeactivate(): void {}
-  async playWin(): Promise<void> {}
-  stopAnimation(): void {}
-  resize(_w: number, _h: number): void {}
-}
 import { getShare, ShareApiError } from '@/lib/studio/share/api.js';
 import { openEnvelope } from '@/lib/studio/share/crypto.js';
 import { decodePayload, verifyPayloadHashes } from '@/lib/studio/share/payload.js';
@@ -115,7 +109,7 @@ export default function ShareViewer(): JSX.Element {
         const res = await getShare(id);
         if (cancelled) return;
         if (res.payload) {
-          // Public mode — payload is plaintext, load it directly.
+          // Public mode. payload is plaintext, load it directly.
           const decoded = await decodePayload(res.payload);
           setPhase({ kind: 'ready', meta: res.meta, config: decoded.config, assets: decoded.assets });
         } else if (res.envelope) {
@@ -233,7 +227,7 @@ function SharedStudio({ config, assets, codeAccessible }: SharedStudioProps): JS
   // Prototype-atlas textures + blur variants loaded once at boot, injected
   // into shared code so recipe-style snippets that reference
   // `BlurSpriteSymbol` / `textures` work out of the box. Mirrors Studio.tsx
-  // — anything a recipe injects must be injected here too.
+  //. anything a recipe injects must be injected here too.
   const builtinsRef = useRef<{ textures: Record<string, Texture>; blurTextures: Record<string, Texture>; SYMBOL_IDS: string[] } | null>(null);
   const reelSetRef = useRef<ReelSet | null>(null);
   const nextResultRef = useRef<(() => string[][]) | null>(null);
@@ -246,7 +240,7 @@ function SharedStudio({ config, assets, codeAccessible }: SharedStudioProps): JS
   const [error, setError] = useState<string | null>(null);
   const [isSpinning, setIsSpinning] = useState(false);
 
-  // Asset getter — pulls from the in-memory map decoded from the share.
+  // Asset getter. pulls from the in-memory map decoded from the share.
   // No IndexedDB writes; closing the tab discards the shared assets.
   const getAsset = async (hash: string): Promise<StoredAsset | null> => assets.get(hash) ?? null;
 
@@ -325,7 +319,7 @@ function SharedStudio({ config, assets, codeAccessible }: SharedStudioProps): JS
     let built: { reelSet?: ReelSet; nextResult?: () => string[][]; onSpin?: () => Promise<void>; cleanup?: () => void };
     try {
       const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor as FunctionConstructor;
-      // Lock-stepped with Studio.tsx and RecipeRunner.tsx — recipe-style
+      // Lock-stepped with Studio.tsx and RecipeRunner.tsx. recipe-style
       // shared studios must resolve the same globals here as they did at
       // authoring time.
       const builtins = builtinsRef.current;
@@ -393,7 +387,7 @@ function SharedStudio({ config, assets, codeAccessible }: SharedStudioProps): JS
 
   async function handleSpin(): Promise<void> {
     if (isSpinning) {
-      // skip() THROWS before `setResult()` arrives — route to requestSkip()
+      // skipSpin() THROWS before setResult() arrives. Route to requestSkip()
       // in the catch so a player tap during the server-wait window still
       // queues the slam and fires it the moment the result is in.
       try { reelSetRef.current?.skipSpin(); }

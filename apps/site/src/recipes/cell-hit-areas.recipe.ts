@@ -30,7 +30,7 @@ const parseKey = (k) => k.split(',').map(Number);
 
 function redraw() {
   overlayGfx.clear();
-  // Picked cells — solid orange.
+  // Picked cells. solid orange.
   for (const k of picked) {
     const [col, row] = parseKey(k);
     const b = reelSet.getCellBounds(col, row);
@@ -38,7 +38,7 @@ function redraw() {
       .roundRect(b.x + 3, b.y + 3, b.width - 6, b.height - 6, 10)
       .stroke({ color: 0xff6b35, width: 3, alpha: 1 });
   }
-  // Hover cell — soft grey preview (only if not already picked).
+  // Hover cell. soft grey preview (only if not already picked).
   if (hoverKey && !picked.has(hoverKey)) {
     const [col, row] = parseKey(hoverKey);
     const b = reelSet.getCellBounds(col, row);
@@ -74,7 +74,7 @@ for (let col = 0; col < COLS; col++) {
   for (let row = 0; row < ROWS; row++) {
     const b = reelSet.getCellBounds(col, row);
     const hit = new PIXI.Graphics();
-    // Filled with alpha 0 — invisible but still hit-testable.
+    // Filled with alpha 0. invisible but still hit-testable.
     hit.rect(b.x, b.y, b.width, b.height).fill({ color: 0xffffff, alpha: 0 });
     hit.eventMode = 'static';
     hit.cursor = 'pointer';

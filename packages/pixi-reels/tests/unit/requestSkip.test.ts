@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createTestReelSet, expectGrid } from '../../src/index.js';
 
-describe('ReelSet.requestSkip — pre-result-safe slam-stop', () => {
+describe('ReelSet.requestSkip. pre-result-safe slam-stop', () => {
   it('queues until setResult and lands on the target grid (not buffer)', async () => {
     const h = createTestReelSet({ reels: 3, visibleRows: 3, symbolIds: ['a', 'b', 'c'] });
 

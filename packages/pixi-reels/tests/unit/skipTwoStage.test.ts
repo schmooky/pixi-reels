@@ -5,14 +5,14 @@ import type { SpeedProfile } from '../../src/config/types.js';
 
 /**
  * The default test builder only registers `normal`. Two-stage skip needs a
- * faster profile to boost into — register the standard three.
+ * faster profile to boost into. register the standard three.
  */
 function registerAllSpeeds(reelSet: ReelSet): void {
   reelSet.speed.addProfile('turbo', SpeedPresets.TURBO);
   reelSet.speed.addProfile('superTurbo', SpeedPresets.SUPER_TURBO);
 }
 
-describe('ReelSet.skip — round-aware slam + boost', () => {
+describe('ReelSet.skip. round-aware slam + boost', () => {
   it('first press slams the current spin AND boosts speed for the rest of the round', async () => {
     const h = createTestReelSet({ reels: 3, visibleRows: 3, symbolIds: ['a', 'b'] });
     registerAllSpeeds(h.reelSet);
@@ -112,7 +112,7 @@ describe('ReelSet.skip — round-aware slam + boost', () => {
 
   it('falls through to slam on first press when only one speed profile is registered', async () => {
     const h = createTestReelSet({ reels: 2, visibleRows: 2, symbolIds: ['a'] });
-    // Default test builder registers only 'normal' — no boost target available.
+    // Default test builder registers only 'normal'. no boost target available.
     const grid = [['a', 'a'], ['a', 'a']];
     const boosted: unknown[] = [];
     h.reelSet.events.on('skip:boosted', (info) => boosted.push(info));
@@ -175,7 +175,7 @@ describe('ReelSet.skip — round-aware slam + boost', () => {
     await first;
     expect(h.reelSet.speed.activeName).toBe('superTurbo');
 
-    // App manually changes speed between rounds — must survive restore.
+    // App manually changes speed between rounds. must survive restore.
     h.reelSet.setSpeed('turbo');
     expect(h.reelSet.speed.activeName).toBe('turbo');
 

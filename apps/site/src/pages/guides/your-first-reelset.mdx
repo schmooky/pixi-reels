@@ -17,7 +17,7 @@ import { ReelSetBuilder } from 'pixi-reels';
 const builder = new ReelSetBuilder();
 ```
 
-> **Verify:** `builder instanceof ReelSetBuilder` — if the import fails, you
+> **Verify:** `builder instanceof ReelSetBuilder`. if the import fails, you
 > didn't install the package or your bundler can't find ESM modules.
 
 ## 2. Configure the grid
@@ -28,7 +28,7 @@ builder
   .visibleRows(3)
   .symbolSize(140, 140)
   .symbolGap(4, 4)           // optional
-  .bufferSymbols(1);         // optional — default 1
+  .bufferSymbols(1);         // optional. default 1
 ```
 
 > **Verify:** nothing visible yet, no errors. Configuration is deferred until `.build()`.

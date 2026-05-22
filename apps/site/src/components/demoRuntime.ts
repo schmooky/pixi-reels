@@ -51,8 +51,8 @@ export interface MechanicConfig {
   symbolSize: { width: number; height: number };
   /**
    * Symbol set. Two shapes:
-   *   - `kind: 'block'` (default) — colored rounded rects with a glyph.
-   *   - `kind: 'sprite'` — ids must be frame names from the prototype atlas
+   *   - `kind: 'block'` (default). colored rounded rects with a glyph.
+   *   - `kind: 'sprite'`. ids must be frame names from the prototype atlas
    *     (`royal/royal_1`, `wild/wild_1`, …). Uses `BlurSpriteSymbol` with
    *     blur-on-spin.
    */
@@ -73,14 +73,14 @@ export interface MechanicConfig {
   tumble?: true | TumbleConfig;
   /**
    * Optional fake-server delay (ms) inserted on the initial spin between
-   * `reelSet.spin()` and `reelSet.setResult()` — the moment AFTER the
+   * `reelSet.spin()` and `reelSet.setResult()`. the moment AFTER the
    * symbols fall out and BEFORE the new ones can be filled in. Returns
    * the wait per spin; pass `() => 1000 + Math.random() * 4000` to
    * simulate a real 1-5 s server response.
    *
    * A canvas spinner overlays the empty reels after a 200 ms debounce,
    * so short waits don't flicker. A slam-stop pressed DURING this wait
-   * is deferred via `requestSkip()` — the engine queues the slam and
+   * is deferred via `requestSkip()`. the engine queues the slam and
    * fires it the moment `setResult()` arrives, so the reels land on the
    * intended result instead of snapping to a random buffer.
    */
@@ -179,7 +179,7 @@ export interface LandedCtx {
   /**
    * Trigger another spin programmatically (e.g. a free-spins autoplay loop).
    * Resolves after the spin has completed and `onLanded` finished. Safe to
-   * call from inside `onLanded` — it schedules on the next tick so the
+   * call from inside `onLanded`. it schedules on the next tick so the
    * current handler can unwind first.
    */
   requestSpin: () => Promise<void>;
@@ -193,7 +193,7 @@ export async function mountMechanic(
   // Size the PIXI canvas to the container. The right side reserves a
   // BUTTON_COL_WIDTH-wide column for the tall vertical spin button. Width
   // adapts to `host.clientWidth` so the demo fits any viewport (mobile
-  // portrait, tablet, rotate) — see the ResizeObserver wired up after the
+  // portrait, tablet, rotate). see the ResizeObserver wired up after the
   // layout block.
   const computeWidth = (): number => Math.min(
     host.clientWidth || 800,
@@ -318,14 +318,14 @@ export async function mountMechanic(
     });
   }
 
-  // Frame behind the reels — centered in the LEFT region of the canvas,
+  // Frame behind the reels. centered in the LEFT region of the canvas,
   // leaving BUTTON_COL_WIDTH on the right for the tall vertical spin button.
   const frame = new Graphics();
   const padX = 10;
   const padY = 10;
   const totalW = cfg.reelCount * (cfg.symbolSize.width + 6) - 6 + padX * 2;
   const totalH = cfg.visibleRows * (cfg.symbolSize.height + 6) - 6 + padY * 2;
-  // Neutral white well with a subtle warm border — matches the site's light palette.
+  // Neutral white well with a subtle warm border. matches the site's light palette.
   frame.roundRect(0, 0, totalW, totalH, 18)
     .fill({ color: 0xffffff, alpha: 1 })
     .roundRect(0, 0, totalW, totalH, 18)
@@ -333,7 +333,7 @@ export async function mountMechanic(
   app.stage.addChild(frame);
   app.stage.addChild(reelSet);
 
-  // Fake-server-wait spinner — centered on the reel frame. Shown only
+  // Fake-server-wait spinner. centered on the reel frame. Shown only
   // when `cfg.fakeServerDelay` is set AND the wait exceeds the 200 ms
   // debounce threshold. Sits in the gap between fall (symbols gone) and
   // fill (new symbols arrive) on the initial spin. Drawn outside the
@@ -350,7 +350,7 @@ export async function mountMechanic(
   // rotation / responsive breakpoints. Height is reel-geometry-bound; if the
   // host can't fit the intrinsic reel width, we scale everything (frame +
   // reelSet + spinner) down uniformly so all five columns stay visible
-  // beside the spin button — mirroring RecipeRunner's `fit()` pattern.
+  // beside the spin button. mirroring RecipeRunner's `fit()` pattern.
   const relayout = (): void => {
     width = computeWidth();
     app.renderer.resize(width, height);
@@ -374,7 +374,7 @@ export async function mountMechanic(
     : null;
   resizeObserver?.observe(host);
 
-  // Attach debug to window — matches what every guide/demo advertises.
+  // Attach debug to window. matches what every guide/demo advertises.
   enableDebug(reelSet);
 
   // Engine
@@ -387,8 +387,8 @@ export async function mountMechanic(
   for (const c of cfg.cheats) engine.register({ ...c });
 
   // Spin button icons.
-  //   - ICON_SPIN (idle): refresh arrows — "start a new spin"
-  //   - ICON_SKIP (mid-spin): lucide skip-forward — triangle + bar, the
+  //   - ICON_SPIN (idle): refresh arrows. "start a new spin"
+  //   - ICON_SKIP (mid-spin): lucide skip-forward. triangle + bar, the
   //     canonical "jump to end" glyph. Conveys "land the reels now"
   //     better than a stop-square would.
   const ICON_SPIN = `<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>`;
@@ -431,7 +431,7 @@ export async function mountMechanic(
       // Engine spinning → `requestSkip()` auto-routes: if `setResult()`
       // hasn't fired yet (we're in the fall + server-wait window), the
       // library queues the slam and fires it the moment the result
-      // arrives — so the reels land on the intended grid instead of
+      // arrives. so the reels land on the intended grid instead of
       // snapping to a random buffer. Once `setResult()` is in, the same
       // call slams immediately.
       //
@@ -439,7 +439,7 @@ export async function mountMechanic(
       // ignored here by design: `requestSkip()` is a no-op when the
       // engine isn't spinning, and there's no engine-level "fast-forward
       // remaining cascades" surface. Recipes that need that behaviour
-      // wire `runCascade({ signal })` to an `AbortController` — see the
+      // wire `runCascade({ signal })` to an `AbortController`. see the
       // `examples/cascade-tumble` example.
       if (reelSet.isSpinning) reelSet.requestSkip();
       return;
@@ -450,7 +450,7 @@ export async function mountMechanic(
       const { symbols, anticipationReels, meta } = engine.next();
       api.setStatus('Spinning…');
       const promise = reelSet.spin();
-      // Fake-server window — the moment AFTER reels fall but BEFORE the
+      // Fake-server window. the moment AFTER reels fall but BEFORE the
       // new ones can be filled in. Spinner shows after the 200 ms debounce
       // so short waits don't flicker.
       const waitMs = cfg.fakeServerDelay?.() ?? 240;
@@ -466,7 +466,7 @@ export async function mountMechanic(
       const result = await promise;
       api.setStatus(`Landed · ${summarize(result.symbols)}`);
 
-      // Tumble/cascade loop — runs ONLY when the mechanic enabled `.tumble()`.
+      // Tumble/cascade loop. runs ONLY when the mechanic enabled `.tumble()`.
       // Uses the library's `reelSet.runCascade(...)` orchestrator: it owns
       // the detect → destroy → pause → refill loop and resolves with the
       // summary. We supply the game rules (3-in-a-row left-anchored winner
@@ -503,14 +503,14 @@ export async function mountMechanic(
     } catch (err) {
       // eslint-disable-next-line no-console
       console.error('demoRuntime: runSpin failed', err);
-      api.setStatus('Spin failed — try again.');
+      api.setStatus('Spin failed. try again.');
     } finally {
       setSpinState(false);
     }
   };
   spinBtn.addEventListener('click', () => { void runSpin(); });
 
-  // Cheat panel — React shadcn, rendered by the sandbox
+  // Cheat panel. React shadcn, rendered by the sandbox
   api.mountPanel(engine, cfg.cheatTitle ?? 'Demo cheats');
 
   api.setStatus('Ready. Toggle a cheat, then press SPIN.');

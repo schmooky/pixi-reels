@@ -48,7 +48,7 @@ async function runSkippedSpin(h: Harness, mode?: 'standard' | 'cascade'): Promis
   await p;
 }
 
-describe('ReelSet.spin — per-spin mode', () => {
+describe('ReelSet.spin. per-spin mode', () => {
   it('throws if cascade mode is requested without .tumble(...)', async () => {
     const h = buildHarness({ withCascade: false });
     await expect(h.reelSet.spin({ mode: 'cascade' })).rejects.toThrow(/tumble/);

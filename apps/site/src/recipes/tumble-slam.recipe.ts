@@ -4,7 +4,7 @@
 
 // SLAM: accelerating fall (power4.in) and a hard, fast land (expo.out).
 // Short durations + small stagger keep the whole tumble under 0.5 s.
-// Reads as "serious / high-stakes" — typical for premium slot art or
+// Reads as "serious / high-stakes". typical for premium slot art or
 // turbo modes.
 
 const IDS = ['7', '8', '9', '10', 'J', 'Q'];
@@ -13,7 +13,7 @@ const CLUSTER = '10';
 const HIT_ROW = 2;
 const HIT_COLS = [0, 1, 2];
 
-// Short pause — slam is snappy by design. 120 ms is just enough for the
+// Short pause. slam is snappy by design. 120 ms is just enough for the
 // player to register "the winners are gone" before the next slam arrives.
 const PAUSE_AFTER_REMOVAL_MS = 120;
 

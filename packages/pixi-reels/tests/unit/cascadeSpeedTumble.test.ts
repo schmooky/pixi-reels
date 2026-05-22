@@ -23,7 +23,7 @@ import type { ReelSet, ReelSetEvents, SpeedProfile } from '../../src/index.js';
  *      cascade phases to the symbol-event payload (i.e. the phase reads
  *      `this._speed.tumble` at onEnter, not the build-time base).
  *   3. The per-symbol `signal: AbortSignal` aborts on `phase.forceComplete()`
- *      and stays un-aborted on natural completion — letting listener-side
+ *      and stays un-aborted on natural completion. letting listener-side
  *      squish / bounce tweens hang off it via `signal.addEventListener`.
  *
  * Note on GSAP in tests: `tl.call(...)` callbacks at offset 0 don't fire
@@ -116,8 +116,8 @@ describe('mergeFallConfig / mergeDropInConfig', () => {
   });
 });
 
-describe('CascadeFallPhase — SpeedProfile.tumble override (snap path)', () => {
-  it('profile with fall.duration: 0 routes through the snap path — no per-symbol events, paired :start/:end', async () => {
+describe('CascadeFallPhase. SpeedProfile.tumble override (snap path)', () => {
+  it('profile with fall.duration: 0 routes through the snap path. no per-symbol events, paired :start/:end', async () => {
     const h = buildHarness([['a', 'b', 'c']]);
     const bus = new EventEmitter<ReelSetEvents>();
     const events: string[] = [];
@@ -140,7 +140,7 @@ describe('CascadeFallPhase — SpeedProfile.tumble override (snap path)', () => 
     h.destroy();
   });
 
-  it('profile without tumble field keeps the base — snap path fires only when the base.duration is 0', async () => {
+  it('profile without tumble field keeps the base. snap path fires only when the base.duration is 0', async () => {
     const h = buildHarness([['a', 'b', 'c']]);
     const bus = new EventEmitter<ReelSetEvents>();
     const events: string[] = [];
@@ -159,8 +159,8 @@ describe('CascadeFallPhase — SpeedProfile.tumble override (snap path)', () => 
   });
 });
 
-describe('CascadeDropInPhase — SpeedProfile.tumble override (snap path)', () => {
-  it('profile with dropIn.duration: 0 routes through the snap path — paired :start/:end, no per-symbol events', async () => {
+describe('CascadeDropInPhase. SpeedProfile.tumble override (snap path)', () => {
+  it('profile with dropIn.duration: 0 routes through the snap path. paired :start/:end, no per-symbol events', async () => {
     const h = buildHarness([['a', 'b', 'c']]);
     const bus = new EventEmitter<ReelSetEvents>();
     const events: string[] = [];
@@ -182,7 +182,7 @@ describe('CascadeDropInPhase — SpeedProfile.tumble override (snap path)', () =
   });
 });
 
-describe('CascadeFallPhase — SpeedProfile.tumble override (timeline path)', () => {
+describe('CascadeFallPhase. SpeedProfile.tumble override (timeline path)', () => {
   it('emits the merged duration/ease on cascade:fall:symbol', async () => {
     const h = buildHarness([['a', 'b', 'c']]);
     const bus = new EventEmitter<ReelSetEvents>();
@@ -243,7 +243,7 @@ describe('CascadeFallPhase — SpeedProfile.tumble override (timeline path)', ()
   });
 });
 
-describe('CascadeDropInPhase — SpeedProfile.tumble override (timeline path)', () => {
+describe('CascadeDropInPhase. SpeedProfile.tumble override (timeline path)', () => {
   it('emits the merged duration/ease on cascade:dropIn:symbol', async () => {
     const h = buildHarness([['a', 'b', 'c']]);
     const bus = new EventEmitter<ReelSetEvents>();
@@ -276,7 +276,7 @@ describe('CascadeDropInPhase — SpeedProfile.tumble override (timeline path)', 
   });
 });
 
-describe('cascade:fall:symbol — AbortSignal', () => {
+describe('cascade:fall:symbol. AbortSignal', () => {
   it('signal is not aborted at the time of emission', async () => {
     const h = buildHarness([['a', 'b', 'c']]);
     const bus = new EventEmitter<ReelSetEvents>();
@@ -321,7 +321,7 @@ describe('cascade:fall:symbol — AbortSignal', () => {
   });
 });
 
-describe('cascade:dropIn:symbol — AbortSignal', () => {
+describe('cascade:dropIn:symbol. AbortSignal', () => {
   it('aborts every dropIn signal when the phase is skipped mid-tween', async () => {
     const h = buildHarness([['a', 'b', 'c']]);
     const bus = new EventEmitter<ReelSetEvents>();
@@ -348,7 +348,7 @@ describe('cascade:dropIn:symbol — AbortSignal', () => {
   });
 });
 
-describe('cascade:gravity:symbol — AbortSignal', () => {
+describe('cascade:gravity:symbol. AbortSignal', () => {
   it('aborts gravity signals on skip when role=gravity', async () => {
     const h = buildHarness([['a', 'b', 'c']]);
     const bus = new EventEmitter<ReelSetEvents>();
@@ -364,7 +364,7 @@ describe('cascade:gravity:symbol — AbortSignal', () => {
     const phase = new CascadeDropInPhase(reel, SpeedPresets.NORMAL, drop);
 
     // winnerRows=[1] on a 3-row reel gives the survivor at row 0 an
-    // offsetRows=1 slide — a real gravity-stage job the phase will animate.
+    // offsetRows=1 slide. a real gravity-stage job the phase will animate.
     const done = phase.run({
       winnerRows: [1],
       initial: false,

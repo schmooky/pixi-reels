@@ -103,7 +103,7 @@ export async function boot(opts: BootOptions): Promise<() => void> {
   frame.stroke({ color: 0x7ed6c8, width: 3, alpha: 0.85 });
   reelSet.addChildAt(frame, 0);
 
-  // Per-page WAYS counter — rendered as an inline DOM element above the
+  // Per-page WAYS counter. rendered as an inline DOM element above the
   // canvas. Lives inside the host so embedded site demos don't pollute body.
   const waysEl = document.createElement('div');
   waysEl.style.cssText =

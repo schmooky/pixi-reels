@@ -7,7 +7,7 @@
 // Each grid cell is its own 1×1 ReelSet. Coins flash past during the spin.
 // When a coin lands, we pin it on its mini-reel with `turns: 'permanent'`
 // and a payload carrying the coin value. Pinned cells skip their spin on
-// subsequent rounds — the engine keeps showing the coin, its payload is
+// subsequent rounds. the engine keeps showing the coin, its payload is
 // readable from `reelSet.pins`, and the running total updates live.
 
 const COIN = 'coin';
@@ -15,10 +15,10 @@ const EMPTY = 'empty';
 const COLS = 5, ROWS = 3, CELL = 60, GAP = 4;
 const COIN_VALUES = [10, 25, 50, 100];
 
-// Coin card definition — distinctive gold so it stands out against empty cells.
+// Coin card definition. distinctive gold so it stands out against empty cells.
 const COIN_CARD = { id: COIN, color: 0xf1c40f, label: 'COIN', textColor: 0x6b5400 };
 
-// Build 15 independent 1×1 ReelSets — one per cell.
+// Build 15 independent 1×1 ReelSets. one per cell.
 const colWidth = COLS * (CELL + GAP) - GAP;
 const colHeight = ROWS * (CELL + GAP) - GAP;
 const startX = (app.screen.width - colWidth) / 2;
@@ -153,7 +153,7 @@ return {
       }
       await Promise.all(spinPromises);
 
-      // Pin every hit with its value payload — the engine keeps the coin
+      // Pin every hit with its value payload. the engine keeps the coin
       // visible for the rest of the feature.
       for (const cell of activeCells) {
         if (!hits.some((h) => h.col === cell.col && h.row === cell.row)) continue;

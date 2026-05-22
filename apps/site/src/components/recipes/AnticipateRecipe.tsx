@@ -29,7 +29,7 @@ export default function AnticipateRecipe() {
           symbols: { kind: 'sprite', ids: IDS },
         });
         // Slow anticipation specifically for the recipe demo so the "hold"
-        // on reels 3 and 4 is visible — the default 450ms is gameplay-tuned
+        // on reels 3 and 4 is visible. the default 450ms is gameplay-tuned
         // but reads as a blink in a teaching context.
         reelSet.speed.addProfile('anticipateDemo', {
           ...SpeedPresets.NORMAL,

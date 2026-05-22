@@ -37,7 +37,7 @@ function sleep(ms: number): Promise<void> {
 /**
  * Scripted recipe: the 5×3 board is built from five independent 1-reel
  * ReelSets, one per column. "Holding" a reel just means not calling
- * `.spin()` on that column's reelset — nothing moves, nothing to undo.
+ * `.spin()` on that column's reelset. nothing moves, nothing to undo.
  */
 export default function SingleReelRespinRecipe() {
   return (
@@ -128,7 +128,7 @@ export default function SingleReelRespinRecipe() {
             try { app.destroy(true, { children: true }); } catch { /* ignore */ }
           },
           run: async () => {
-            // 1. Full board spin — every column moves in parallel.
+            // 1. Full board spin. every column moves in parallel.
             const firstGrid = Array.from({ length: COLS }, () => randomCol());
             firstGrid[0][1] = MARK;
             const all = columns.map((c, i) => {

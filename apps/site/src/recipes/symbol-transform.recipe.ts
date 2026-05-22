@@ -7,7 +7,7 @@ const HIGH = ['10', 'J'];
 const IDS = [...LOW, ...HIGH];
 const COLS = 5, ROWS = 3, CELL = 90;
 
-// Predictable grid — always has low-pays to upgrade.
+// Predictable grid. always has low-pays to upgrade.
 const GRID = [
   ['7', '8', '7'],
   ['8', '9', '10'],
@@ -68,7 +68,7 @@ return {
     restoreOld();
 
     // Swap identity. setSymbolAt is the one-cell rewrite that doesn't
-    // touch the rest of the reel — leaves the symbol pool / motion layer
+    // touch the rest of the reel. leaves the symbol pool / motion layer
     // alone and only cycles the single ReelSymbol at this row.
     reelSet.setSymbolAt(pick.r, pick.row, upgradeId);
 
