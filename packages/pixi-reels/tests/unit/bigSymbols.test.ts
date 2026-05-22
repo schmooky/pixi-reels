@@ -450,14 +450,84 @@ describe('big symbols', () => {
     }
   });
 
+  // Cross-reel buffer-above anchor: a 2x2 block whose anchor sits at
+  // bufferAbove[0] on the left reel. The block covers col 0 rows -1, 0 and
+  // col 1 rows -1, 0. On col 1, the visible[0] OccupiedStub must resolve
+  // back to the anchor on col 0 via the cross-reel resolver, even though
+  // the anchor lives at a NEGATIVE row.
+  //
+  // This exercises three branches together that no other test hits:
+  //   - `_coordinateBigSymbols` painting OCCUPIED at `(col=1, row=-1)`
+  //     AND `(col=1, row=0)` for a w>1 block anchored above visible.
+  //   - The cross-reel resolver's `symbols[bufferAbove + anchor.row]`
+  //     read with a negative `anchor.row`.
+  //   - `getSymbolFootprint` walking left from a cross-reel OCCUPIED cell
+  //     whose own `_getAnchorRow` returns the visible row (no per-reel
+  //     occupancy on col 1 because Scan 2 only sees its own anchor) and
+  //     finding the leftward big-symbol owner that covers it.
+  it('cross-reel 2x2 with anchor in bufferAbove — resolves visible cells and footprint correctly', async () => {
+    const { reelSet, spinAndLand, destroy } = createTestReelSet({
+      reels: 2,
+      visibleRows: 3,
+      bufferSymbols: 2,
+      symbolIds: ['a', 'big'],
+      symbolData: { big: { weight: 0, size: { w: 2, h: 2 } } },
+    });
+    try {
+      // Anchor at (col=0, bufferAbove[0]) = (col=0, row=-1). Block covers
+      // (0,-1)(anchor), (1,-1)(stub), (0,0)(stub), (1,0)(stub).
+      // Visible: row 0 across both cols shows the bottom of the block;
+      // rows 1, 2 are random fillers.
+      await spinAndLand([
+        { visible: ['a', 'a', 'a'], bufferAbove: ['big'] },
+        { visible: ['a', 'a', 'a'] },
+      ]);
+
+      // Visible row 0 on BOTH columns resolves to 'big':
+      //   - col 0: via local `_occupancy[0].anchorRow = -1` (Scan 2)
+      //   - col 1: via the cross-reel resolver walking left to col 0
+      const grid = reelSet.getVisibleGrid();
+      expect(grid[0][0]).toBe('big');
+      expect(grid[1][0]).toBe('big');
+      expect(grid[0][1]).toBe('a');
+      expect(grid[1][1]).toBe('a');
+
+      // Footprint from EITHER cell of the visible bottom row of the block
+      // points back to the same anchor at (0, -1).
+      const fpLeft = reelSet.getSymbolFootprint(0, 0);
+      expect(fpLeft.anchor).toEqual({ col: 0, row: -1 });
+      expect(fpLeft.size).toEqual({ w: 2, h: 2 });
+
+      const fpRight = reelSet.getSymbolFootprint(1, 0);
+      expect(fpRight.anchor).toEqual({ col: 0, row: -1 });
+      expect(fpRight.size).toEqual({ w: 2, h: 2 });
+
+      // Block bounds span both reels and reach above visible row 0.
+      const r = reelSet.getBlockBounds(1, 0);
+      expect(r.width).toBeGreaterThan(0);
+      expect(r.height).toBeGreaterThan(0);
+      // 1x1 cell bounds for comparison: block height must be ~2x.
+      const cell = reelSet.getCellBounds(0, 1);
+      expect(r.height).toBeGreaterThan(cell.height);
+      expect(r.width).toBeGreaterThan(cell.width);
+    } finally {
+      destroy();
+    }
+  });
+
   it('throws if the buffer-anchored block extends past the bottom of the strip', async () => {
     const { reelSet, destroy } = createTestReelSet({
       reels: 1,
       visibleRows: 3,
       bufferSymbols: 1,
-      // total = 5. 1x4 anchor at row -1 needs rows -1..2 (4 cells) → fits.
-      // 1x4 anchor at row 1 needs rows 1..4 → fits exactly (1+4 = 5 = visible+below).
-      // 1x4 anchor at row 2 needs rows 2..5 → 5 > 4 → throws.
+      // Strip layout: bufferAbove(1) | visible(3) | bufferBelow(1) — 5 cells.
+      // The check is `anchor.row + h > visibleRows + bufferBelow`, i.e.
+      // `row + 4 > 4`. So legal anchor rows for h=4 are {-1, 0}:
+      //   row=-1 → -1+4 = 3 → 3 > 4 ? no → fits (cells -1..2).
+      //   row= 0 →  0+4 = 4 → 4 > 4 ? no → fits exactly (cells 0..3,
+      //                                          last cell in bufferBelow).
+      //   row= 1 →  1+4 = 5 → 5 > 4 ? yes → throws.
+      //   row= 2 →  2+4 = 6 → 6 > 4 ? yes → throws (what this test uses).
       symbolIds: ['a', 'tall'],
       symbolData: { tall: { weight: 0, size: { w: 1, h: 4 } } },
     });
