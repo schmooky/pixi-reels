@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
+  assertBufferCountsInRange,
   cloneColumn,
   cloneTargetGrid,
   columnTargetToArray,
@@ -136,6 +137,95 @@ describe('ColumnTarget helpers', () => {
 
     it('handles empty array without throwing', () => {
       expect(toLegacyTargetGrid([])).toEqual([]);
+    });
+  });
+
+  describe('assertBufferCountsInRange', () => {
+    const aboveOne = [1, 1, 1];
+    const belowOne = [1, 1, 1];
+
+    it('passes when all columns are within bounds (explicit form)', () => {
+      const grid: ColumnTarget[] = [
+        { visible: ['a', 'b', 'c'] },
+        { visible: ['a', 'b', 'c'], bufferAbove: ['X'] },
+        { visible: ['a', 'b', 'c'], bufferBelow: ['Y'] },
+      ];
+      expect(() =>
+        assertBufferCountsInRange(grid, aboveOne, belowOne, 'setResult'),
+      ).not.toThrow();
+    });
+
+    it('passes when legacy negative-index keys are within bufferAbove', () => {
+      const col: string[] = ['a', 'b', 'c'];
+      (col as Record<number, string>)[-1] = 'X';
+      const grid: string[][] = [['a', 'b', 'c'], col, ['a', 'b', 'c']];
+      expect(() =>
+        assertBufferCountsInRange(grid, aboveOne, belowOne, 'setResult'),
+      ).not.toThrow();
+    });
+
+    it('throws when explicit bufferAbove length exceeds engine count', () => {
+      const grid: ColumnTarget[] = [
+        { visible: ['a', 'b', 'c'] },
+        { visible: ['a', 'b', 'c'], bufferAbove: ['X', 'Y'] }, // 2 > 1
+        { visible: ['a', 'b', 'c'] },
+      ];
+      expect(() =>
+        assertBufferCountsInRange(grid, aboveOne, belowOne, 'setResult'),
+      ).toThrowError(/setResult column 1: bufferAbove has 2 entries but engine bufferSymbols=1/);
+    });
+
+    it('throws when explicit bufferBelow length exceeds engine count', () => {
+      const grid: ColumnTarget[] = [
+        { visible: ['a', 'b', 'c'] },
+        { visible: ['a', 'b', 'c'], bufferBelow: ['X', 'Y'] }, // 2 > 1
+        { visible: ['a', 'b', 'c'] },
+      ];
+      expect(() =>
+        assertBufferCountsInRange(grid, aboveOne, belowOne, 'setResult'),
+      ).toThrowError(/setResult column 1: bufferBelow has 2 entries but engine bufferSymbols=1/);
+    });
+
+    it('throws when legacy frame[col][-k] exceeds engine bufferAbove', () => {
+      const col: string[] = ['a', 'b', 'c'];
+      (col as Record<number, string>)[-1] = 'X';
+      (col as Record<number, string>)[-2] = 'Y'; // out of range with above=1
+      const grid: string[][] = [['a', 'b', 'c'], col, ['a', 'b', 'c']];
+      expect(() =>
+        assertBufferCountsInRange(grid, aboveOne, belowOne, 'setResult'),
+      ).toThrowError(/setResult column 1: frame\[1\]\[-2\] is set but engine bufferSymbols=1/);
+    });
+
+    it('does not validate legacy form length (visibleRows is unreliable in MultiWays)', () => {
+      // A long column array used to trip the validator; we deliberately
+      // skip this check now so MultiWays setShape→setResult flows are not
+      // broken. See assertBufferCountsInRange JSDoc for the full rationale.
+      const grid: string[][] = [['a', 'b', 'c'], ['a', 'b', 'c', 'X', 'Y'], ['a', 'b', 'c']];
+      expect(() =>
+        assertBufferCountsInRange(grid, aboveOne, belowOne, 'setResult'),
+      ).not.toThrow();
+    });
+
+    it('uses the supplied callerLabel in the message', () => {
+      const grid: ColumnTarget[] = [{ visible: ['a'], bufferAbove: ['X', 'Y'] }];
+      expect(() =>
+        assertBufferCountsInRange(grid, [1], [1], 'initialFrame'),
+      ).toThrowError(/^initialFrame column 0: bufferAbove/);
+    });
+
+    it('handles per-reel buffer counts that vary by index', () => {
+      // reel 0: above=2, reel 1: above=1
+      const grid: ColumnTarget[] = [
+        { visible: ['a', 'b', 'c'], bufferAbove: ['X', 'Y'] }, // OK (above=2)
+        { visible: ['a', 'b', 'c'], bufferAbove: ['X', 'Y'] }, // throws (above=1)
+      ];
+      expect(() =>
+        assertBufferCountsInRange(grid, [2, 1], [1, 1], 'setResult'),
+      ).toThrowError(/setResult column 1: bufferAbove has 2 entries but engine bufferSymbols=1/);
+    });
+
+    it('no-op for empty grid', () => {
+      expect(() => assertBufferCountsInRange([], [], [], 'setResult')).not.toThrow();
     });
   });
 });

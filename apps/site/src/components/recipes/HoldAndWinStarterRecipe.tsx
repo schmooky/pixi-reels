@@ -3,24 +3,15 @@ import { useEffect, useRef, useState } from 'react';
 import { Application, Container, Graphics, Sprite } from 'pixi.js';
 import type { Texture } from 'pixi.js';
 import { gsap } from 'gsap';
-import { ReelSetBuilder, ReelSymbol, SpeedPresets, type ReelSet } from 'pixi-reels';
+import { ReelSetBuilder, SpeedPresets, type ReelSet } from 'pixi-reels';
 import { Play, RotateCcw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { BlurSpriteSymbol } from '../../../../../examples/shared/BlurSpriteSymbol.ts';
+import { EmptySymbol } from '../../../../../examples/shared/EmptySymbol.ts';
 import { loadPrototypeSymbols } from '../../../../../examples/shared/prototypeSpriteLoader.ts';
 
 const COIN = 'feature/feature_1';
 const EMPTY = 'empty';
-
-/** Renders nothing — gives the reel strip blank slots between coins so
- *  misses land on a visually empty cell (hit-or-miss feel). */
-class EmptySymbol extends ReelSymbol {
-  protected onActivate(): void {}
-  protected onDeactivate(): void {}
-  async playWin(): Promise<void> {}
-  stopAnimation(): void {}
-  resize(_w: number, _h: number): void {}
-}
 
 const COLS = 5;
 const ROWS = 3;

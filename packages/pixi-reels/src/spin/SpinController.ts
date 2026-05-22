@@ -1238,24 +1238,60 @@ export class SpinController implements Disposable {
     grid: string[][],
     visibleRowsForReel: (i: number) => number,
   ): string[][] {
-    const out = cloneTargetGrid(grid, this._reels[0]?.bufferAbove ?? 0);
+    const bufferAbove = this._reels[0]?.bufferAbove ?? 0;
+    const bufferBelow = this._reels[0]?.bufferBelow ?? 0;
+    const out = cloneTargetGrid(grid, bufferAbove);
     const symData = this._hooks.symbolsData;
+
+    // Buffer geometry is read from reel[0] and treated as uniform across
+    // all reels. This holds today because `ReelSetBuilder.bufferSymbols(n)`
+    // is the only buffer-setting API and applies a single global value;
+    // there is no per-reel buffer API. If you ever add one (e.g. a
+    // `bufferSymbolsPerReel([...])` builder method), propagate per-reel
+    // values into the validator loop below — the `targetRows` lookup
+    // already supports per-reel geometry; only the buffers are still
+    // global here.
+
+    // Read a per-reel target slot for any row in `[-bufferAbove, rows + bufferBelow)`.
+    // Negative rows live as string properties (`out[col][-1]`); positive rows
+    // are normal array indices. We tolerate both forms because the legacy
+    // `string[][]` input passes through unchanged and the `ColumnTarget`
+    // form has already been materialized into the same shape by
+    // `toLegacyTargetGrid`.
+    const readSlot = (col: number, row: number): string | undefined => {
+      const arr = out[col] as string[] & Record<number, string | undefined>;
+      return arr[row];
+    };
+    const writeSlot = (col: number, row: number, value: string): void => {
+      const arr = out[col] as string[] & Record<number, string>;
+      arr[row] = value;
+    };
 
     for (let col = 0; col < out.length; col++) {
       const rows = visibleRowsForReel(col);
-      for (let row = 0; row < rows && row < out[col].length; row++) {
-        const id = out[col][row];
+      // Iterate the FULL strip range, not just visible. A big-symbol anchor
+      // may sit in bufferAbove (partial-visibility from the top — only the
+      // block's tail shows in row 0) or in bufferBelow (the head shows at
+      // the last visible row, the rest is clipped below the mask).
+      // `_finalizeFrame` sizes anchors anywhere on the strip, so the engine
+      // renders both cases correctly.
+      for (let row = -bufferAbove; row < rows + bufferBelow; row++) {
+        const id = readSlot(col, row);
+        if (id === undefined) continue;
         const meta = symData[id];
         if (!meta?.size) continue;
         const w = meta.size.w;
         const h = meta.size.h;
         if (w === 1 && h === 1) continue;
 
-        // Validate block fit on this reel and across columns to the right.
-        if (row + h > rows) {
+        // Validate block fit on this reel: anchor + h must stay on the
+        // strip. The strip ends at `rows + bufferBelow - 1` (last bufferBelow
+        // slot) and starts at `-bufferAbove` (first bufferAbove slot).
+        if (row + h > rows + bufferBelow) {
           throw new Error(
             `big symbol '${id}' (${w}x${h}) at (col=${col}, row=${row}) ` +
-            `exceeds reel ${col} height ${rows}.`,
+            `extends past the bottom of the strip on reel ${col} ` +
+            `(anchor row + h = ${row + h} > visibleRows + bufferBelow = ${rows + bufferBelow}).`,
           );
         }
         if (col + w > out.length) {
@@ -1267,19 +1303,22 @@ export class SpinController implements Disposable {
         for (let dx = 0; dx < w; dx++) {
           const targetReel = col + dx;
           const targetRows = visibleRowsForReel(targetReel);
-          if (row + h > targetRows) {
+          if (row + h > targetRows + bufferBelow) {
             throw new Error(
               `big symbol '${id}' (${w}x${h}) at (col=${col}, row=${row}) ` +
-              `exceeds reel ${targetReel} height ${targetRows}.`,
+              `extends past the bottom of the strip on reel ${targetReel} ` +
+              `(anchor row + h = ${row + h} > visibleRows + bufferBelow = ${targetRows + bufferBelow}).`,
             );
           }
         }
 
         // Paint OCCUPIED across the block (skip the anchor itself at dx=0,dy=0).
+        // Stub cells may land in bufferAbove (negative row), visible, or
+        // bufferBelow (row >= visibleRows). `writeSlot` handles all three.
         for (let dy = 0; dy < h; dy++) {
           for (let dx = 0; dx < w; dx++) {
             if (dx === 0 && dy === 0) continue;
-            out[col + dx][row + dy] = OCCUPIED_SENTINEL;
+            writeSlot(col + dx, row + dy, OCCUPIED_SENTINEL);
           }
         }
       }

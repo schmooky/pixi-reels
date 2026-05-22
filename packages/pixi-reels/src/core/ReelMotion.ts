@@ -28,12 +28,20 @@ export class ReelMotion {
     symbolGapY: number,
     private _bufferAbove: number,
     visibleRows: number,
+    bufferBelow: number,
     private _onSymbolWrapped: (symbol: ReelSymbol, arrayIndex: number, direction: 'up' | 'down') => void,
   ) {
     this._symbolHeight = symbolHeight;
     this._symbolGapY = symbolGapY;
     this._slotHeight = symbolHeight + symbolGapY;
-    this._maxY = (visibleRows + 1) * this._slotHeight;
+    // Wrap thresholds sit one slot beyond the strip on each side. The last
+    // strip cell rests at y = (visibleRows + bufferBelow - 1) * slotH, so
+    // maxY = (visibleRows + bufferBelow) * slotH keeps it strictly below
+    // the wrap boundary at rest. Symmetric with minY's `bufferAbove + 1`.
+    // Pre-fix the formula was `(visibleRows + 1) * slotH`, which collapsed
+    // to maxY === strip[last].y for bufferBelow >= 2 and fired a phantom
+    // wrap on the first nudge displacement (anchor moved one slot too far).
+    this._maxY = (visibleRows + bufferBelow) * this._slotHeight;
     this._minY = -(this._bufferAbove + 1) * this._slotHeight;
   }
 
@@ -85,12 +93,12 @@ export class ReelMotion {
    * `Reel.reshape()` directly via the same array reference, so this method
    * doesn't take a new array.
    */
-  reshape(symbolHeight: number, symbolGapY: number, bufferAbove: number, visibleRows: number): void {
+  reshape(symbolHeight: number, symbolGapY: number, bufferAbove: number, visibleRows: number, bufferBelow: number): void {
     this._symbolHeight = symbolHeight;
     this._symbolGapY = symbolGapY;
     this._slotHeight = symbolHeight + symbolGapY;
     this._bufferAbove = bufferAbove;
-    this._maxY = (visibleRows + 1) * this._slotHeight;
+    this._maxY = (visibleRows + bufferBelow) * this._slotHeight;
     this._minY = -(this._bufferAbove + 1) * this._slotHeight;
   }
 

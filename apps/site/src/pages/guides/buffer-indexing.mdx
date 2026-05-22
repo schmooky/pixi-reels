@@ -99,7 +99,12 @@ Reach for the **explicit `ColumnTarget` form** when:
 - You want stronger TypeScript narrowing on which slots are set
 - A reviewer would be more confused than helped by `arr[-1] = 'X'`
 
+## Buffer rows + big symbols
+
+A big-symbol anchor (`SymbolData.size.h > 1`) can sit in `bufferAbove[i]` or at a visible row whose stubs spill into `bufferBelow`. The coordinator paints `OCCUPIED` across the rest of the block automatically — passing the anchor alone is enough. See the [`big-symbols` guide](/guides/big-symbols/#partial-visibility-landings-buffer-row-anchors) for the runnable demo. The validation rule is `anchorRow + h <= visibleRows + bufferBelow` — the block must fit on the strip end-to-end, but not necessarily inside the visible window.
+
 ## Recipes
 
 - [Peek symbol from buffer-above](/recipes/peek-from-above/) — the minimum runnable demo
 - [Anticipation teaser](/recipes/anticipation-teaser/) — pair buffer-above with `setAnticipation` for tense reveals
+- [Land a big symbol partially in buffer](/recipes/big-symbol-partial-land/) — tail-visible 1×H wild via `bufferAbove`

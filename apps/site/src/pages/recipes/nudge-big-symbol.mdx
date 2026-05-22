@@ -114,10 +114,6 @@ await reelSet.nudge(2, {
   Placing a new big symbol via a nudge would require the cross-reel
   OCCUPIED coordinator and a different API surface — use `setResult`
   or `placeSymbols` for that.
-- **Anchors in bufferAbove that should render partially.** Engine's
-  `_finalizeFrame` only resizes anchors at visible cells today; a
-  block whose anchor is above visible with its tail in view doesn't
-  render at the right size. Tracked as a follow-up.
 
 ## Error messages
 
@@ -137,6 +133,9 @@ cells would stay put and split the block.
 
 ## Related
 
+- [Land a big symbol partially in buffer](/recipes/big-symbol-partial-land/) —
+  the complementary entry: land directly into the tail-visible state via
+  `setResult`'s `bufferAbove` slot, then nudge to reveal.
 - [MxN big symbols](/recipes/big-symbols-mxn/) — placement, footprint,
   bounds.
 - [Nudge guide](/guides/nudge/) — full survival formula derivation.

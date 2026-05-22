@@ -26,7 +26,7 @@ import type { SpinningMode } from '../spin/modes/SpinningMode.js';
 import { StandardMode } from '../spin/modes/StandardMode.js';
 import type { FrameMiddleware } from '../frame/FrameBuilder.js';
 import type { ColumnTarget } from '../frame/ColumnTarget.js';
-import { toLegacyTargetGrid } from '../frame/ColumnTarget.js';
+import { assertBufferCountsInRange, toLegacyTargetGrid } from '../frame/ColumnTarget.js';
 import type { TumbleConfig, ResolvedTumbleConfig } from '../cascade/TumbleConfig.js';
 import { resolveTumbleConfig } from '../cascade/TumbleConfig.js';
 import { CascadeFallPhase } from '../spin/phases/CascadeFallPhase.js';
@@ -80,7 +80,7 @@ export class ReelSetBuilder {
   private _spinningMode: SpinningMode = new StandardMode();
   private _phaseFactory = new PhaseFactory();
   private _middlewares: FrameMiddleware[] = [];
-  private _initialFrame?: string[][];
+  private _initialFrame?: string[][] | ColumnTarget[];
   private _symbolDataOverrides: Record<string, Partial<SymbolData>> = {};
   private _tumbleConfig?: ResolvedTumbleConfig;
   private _defaultSpinMode: 'standard' | 'cascade' = 'standard';
@@ -446,7 +446,12 @@ export class ReelSetBuilder {
    *      explicit form does.
    */
   initialFrame(frame: string[][] | ColumnTarget[]): this {
-    this._initialFrame = toLegacyTargetGrid(frame);
+    // Stored un-materialized so `build()` can validate it against the
+    // final bufferSymbols config (which may not be set yet when
+    // `initialFrame()` is called — builder methods are order-free) and
+    // produce form-faithful error messages (explicit `bufferAbove[]`
+    // vs legacy `frame[col][-k]`).
+    this._initialFrame = frame;
     return this;
   }
 
@@ -647,6 +652,23 @@ export class ReelSetBuilder {
       this._offset,
     );
 
+    // Validate + materialize the initial frame now that buffer counts are
+    // fully resolved. `initialFrame()` stores the raw input so the
+    // validator sees the original form and can produce form-faithful
+    // error messages (explicit `bufferAbove[]` vs legacy `frame[col][-k]`).
+    let materializedInitialFrame: string[][] | undefined;
+    if (this._initialFrame) {
+      const bufferAboveArr = new Array(reelCount).fill(bufferAbove);
+      const bufferBelowArr = new Array(reelCount).fill(bufferBelow);
+      assertBufferCountsInRange(
+        this._initialFrame,
+        bufferAboveArr,
+        bufferBelowArr,
+        'initialFrame',
+      );
+      materializedInitialFrame = toLegacyTargetGrid(this._initialFrame);
+    }
+
     // Create reels with per-reel geometry.
     const reels: Reel[] = [];
     const maskRects: ReelMaskRect[] = [];
@@ -655,8 +677,8 @@ export class ReelSetBuilder {
       const initialCellH = initialSymbolHeight[reelIndex];
 
       // Per-reel initial frame at its own visibleRows count.
-      const initialFrame = this._initialFrame
-        ? frameBuilder.build(reelIndex, rows, bufferAbove, bufferBelow, this._initialFrame[reelIndex])
+      const initialFrame = materializedInitialFrame
+        ? frameBuilder.build(reelIndex, rows, bufferAbove, bufferBelow, materializedInitialFrame[reelIndex])
         : frameBuilder.build(reelIndex, rows, bufferAbove, bufferBelow);
 
       const reelConfig: ReelConfig = {

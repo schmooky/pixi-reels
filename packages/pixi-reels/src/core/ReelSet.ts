@@ -19,7 +19,7 @@ import { pinKey } from '../pins/CellPin.js';
 import { getGsap } from '../utils/gsapRef.js';
 import type { FrameMiddleware } from '../frame/FrameBuilder.js';
 import type { ColumnTarget } from '../frame/ColumnTarget.js';
-import { cloneTargetGrid, toLegacyTargetGrid } from '../frame/ColumnTarget.js';
+import { assertBufferCountsInRange, cloneTargetGrid, toLegacyTargetGrid } from '../frame/ColumnTarget.js';
 import type { Cell } from '../cascade/tumbleAlgorithm.js';
 
 export interface ReelSetParams {
@@ -505,6 +505,12 @@ export class ReelSet extends Container implements Disposable {
    * always land on the pin's `symbolId` regardless of what the server sent.
    */
   setResult(symbols: string[][] | ColumnTarget[]): void {
+    assertBufferCountsInRange(
+      symbols,
+      this._reels.map((r) => r.bufferAbove),
+      this._reels.map((r) => r.bufferBelow),
+      'setResult',
+    );
     const grid = toLegacyTargetGrid(symbols);
     const withPins = this._applyPinsToGrid(grid);
     this._resultSetForCurrentSpin = true;
