@@ -186,6 +186,20 @@ export const RECIPES: RecipeMeta[] = [
     tags: ['big-symbols', 'buffer', 'hold-reels', 'respin', 'nudge', 'recent'],
   },
   {
+    slug: 'big-symbol-cascade-fall',
+    group: 'big-symbols',
+    title: 'Big symbol falls into view through a cascade',
+    oneLiner: "A tall wild lands with its tail peeking in from bufferAbove. The cells below the tail form a winning cluster, clear in the cascade, and the wild's anchor falls down through the strip into full visibility.",
+    steps: [
+      'Land a 1xH wild with its anchor in `bufferAbove` — tail visible at row 0',
+      'Plant a winning cluster on a row below the tail so `detectWinners` returns those cells',
+      "In `nextGrid`, return a refill grid that places the wild's anchor at a more visible row",
+      'The cascade refill animates each strip cell, including the moved anchor sprite, into its new position',
+    ],
+    apis: ['ReelSet.runCascade', 'ReelSet.setResult', 'ColumnTarget.bufferAbove', 'SymbolData.size', 'ReelSetBuilder.tumble'],
+    tags: ['big-symbols', 'buffer', 'cascade', 'tumble', 'recent'],
+  },
+  {
     slug: 'get-block-bounds',
     group: 'big-symbols',
     title: 'getBlockBounds — outline a big symbol',
