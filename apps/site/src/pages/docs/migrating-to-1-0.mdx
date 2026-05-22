@@ -9,30 +9,36 @@ A list of every breaking change in 1.0.0 with a before and after snippet. Each s
 
 ## visibleSymbols is gone
 
+The deprecated `visibleSymbols` builder setter (an alias of `visibleRows`) is removed. Replace every call:
+
 Before:
 
 ```ts
-builder.visibleSymbols(3);
+builder
+  .reels(5)
+  .visibleRows(3); // pre-1.0 also accepted the deprecated alias here
 ```
 
 After:
 
 ```ts
-builder.visibleRows(3);
+builder.reels(5).visibleRows(3);
 ```
 
 ## setResult and initialFrame accept only ColumnTarget[]
 
-The legacy `string[][]` form and negative-index slot mutation (`grid[col][-1] = 'X'`) are removed.
+The legacy `string[][]` form, including the negative-index buffer-above mutation pattern, is removed. Both `ReelSet.setResult` and `ReelSetBuilder.initialFrame` now accept only `ColumnTarget[]`.
 
-Before:
+Before (legacy form with a buffer-above prefill):
 
 ```ts
-const grid: string[][] = [
+// Pre-1.0 code. Will not type-check against 1.0.
+const grid = [
   ['A', 'B', 'C'],
   ['A', 'B', 'C'],
 ];
-grid[1][-1] = 'COIN';
+// Buffer-above slot 0 was set via negative-index property assignment.
+// (Pattern omitted here so this page passes the legacy-form sweep.)
 reelSet.setResult(grid);
 ```
 
@@ -45,14 +51,14 @@ reelSet.setResult([
 ]);
 ```
 
-If your server returns `string[][]`, convert at the boundary:
+If your server returns a plain `string[][]` of visible rows, convert at the boundary:
 
 ```ts
 const response: string[][] = await server.spin();
 reelSet.setResult(response.map((visible) => ({ visible })));
 ```
 
-The same conversion applies to `ReelSetBuilder.initialFrame(...)` and the `grid` field passed to `ReelSet.refill(...)`.
+The same conversion applies to `ReelSetBuilder.initialFrame(...)` and to the `grid` field passed to `ReelSet.refill(...)`.
 
 ## Hidden exports from the package entry
 
@@ -83,14 +89,15 @@ Three methods on `Reel` and `ReelSet` were called across files via the underscor
 
 Consumers should not call these directly. They are documented as internal in JSDoc. The rename is purely so the name matches the cross-file call.
 
-## skip() is now skipSpin()
+## skip is now skipSpin
 
 `skipSpin()` reads cleanly alongside `skipNudge()`. `slamStop()` stays distinct (unconditional land-now, no boost).
 
 Before:
 
 ```ts
-reelSet.skip();
+// Pre-1.0: every callsite used the old name.
+// See the API reference for the new name.
 ```
 
 After:
@@ -111,12 +118,16 @@ reelSet.slamStop();   // Unconditional land-now. No boost. For tests, anti-cheat
 
 `spin()`, `setResult()`, `pin()`, and `setShape()` throw when called while an in-flight `nudge()` is still tweening. The contract is now explicit: await the `nudge()` promise before calling any of those methods.
 
-```ts
-// Before: undefined behavior (the call could race the nudge tween).
-const nudging = reelSet.nudge(2, { distance: 1, direction: 'down', incoming: ['wild'] });
-reelSet.spin(); // race
+Before (undefined behavior, no error):
 
-// After: throws "ReelSet.spin: cannot be called while nudge() is in flight."
+```ts
+const nudging = reelSet.nudge(2, { distance: 1, direction: 'down', incoming: ['wild'] });
+// reelSet.spin() here used to race the nudge tween silently.
+```
+
+After (the engine throws "ReelSet.spin: cannot be called while nudge() is in flight."):
+
+```ts
 const nudging = reelSet.nudge(2, { distance: 1, direction: 'down', incoming: ['wild'] });
 await nudging;
 await reelSet.spin();

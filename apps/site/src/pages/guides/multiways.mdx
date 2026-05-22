@@ -78,7 +78,7 @@ reelSet.pin(col, row, id, { migration: 'frozen' });
 
 When a reel has no pinned cells on this spin, the `AdjustPhase` tween is skipped (no phase instance is constructed and no overlay tween runs). `adjust:start` and `adjust:complete` still fire around the reshape itself whenever the row count or cell height actually changes — they're emitted by the engine's reshape step, not by the tween phase. If neither the shape nor any overlays change for a reel, nothing fires and no work is done.
 
-The tween is also bypassed on `reelSet.skipSpin()` — slam-stop is meant to land immediately, so pin overlays snap to their new cells regardless of `pinMigrationDuration`.
+The tween is also bypassed on `reelSet.skipSpin()`. Slam-stop is meant to land immediately, so pin overlays snap to their new cells regardless of `pinMigrationDuration`.
 
 ## Events specific to MultiWays
 

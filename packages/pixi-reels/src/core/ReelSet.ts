@@ -238,9 +238,9 @@ export interface RunCascadeOptions {
    * next await boundary, the in-flight refill (if any) is slammed via
    * `slamStop()`, and the resolved summary reports `wasSkipped: true`.
    *
-   * Use this for "player tapped SLAM mid-cascade" — `reelSet.skipSpin()` is
+   * Use this for "player tapped SLAM mid-cascade". `reelSet.skipSpin()` is
    * a no-op when called between refills (the engine is idle), so it
-   * can't end the chain from a button handler. AbortController can.
+   * cannot end the chain from a button handler. AbortController can.
    *
    * ```ts
    * const controller = new AbortController();
