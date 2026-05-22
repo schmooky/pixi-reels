@@ -13,7 +13,6 @@
   "ignore": [
     "@pixi-reels/site",
     "classic-spin",
-    "cascade-tumble",
-    "hold-and-win"
+    "cascade-tumble"
   ]
 }
