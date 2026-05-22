@@ -350,6 +350,13 @@ export class ReelSet extends Container implements Disposable {
 
   /** Set at construction by the builder when `.multiways(...)` was called. */
   private _isMultiWaysSlot: boolean;
+
+  /**
+   * True while a `nudge()` call is between its first tween starting and the
+   * last tween settling. Used by spin/setResult/pin/setShape to throw rather
+   * than race the in-flight nudge.
+   */
+  private _nudgeInFlight = false;
   private _multiwaysMinRows = 0;
   private _multiwaysMaxRows = 0;
   private _multiwaysReelPixelHeight = 0;
@@ -484,6 +491,7 @@ export class ReelSet extends Container implements Disposable {
    * setResult interaction, setAnticipation filtering).
    */
   async spin(options?: SpinOptions): Promise<SpinResult> {
+    this._assertNoNudgeInFlight('spin');
     return this._spinController.spin(options);
   }
 
@@ -507,6 +515,7 @@ export class ReelSet extends Container implements Disposable {
    * ]);
    */
   setResult(symbols: ColumnTarget[]): void {
+    this._assertNoNudgeInFlight('setResult');
     const withPins = this._applyPinsToGrid(this._cloneTargets(symbols));
     this._resultSetForCurrentSpin = true;
     this._spinController.setResult(withPins.map(columnTargetToArray));
@@ -1004,6 +1013,10 @@ export class ReelSet extends Container implements Disposable {
    *   - `Reel.nudge` itself rejects (bad distance / direction / incoming /
    *     incompatible big-symbol layout).
    *
+   * While `nudge()` is in flight, calling `spin()`, `setResult()`, `pin()`,
+   * or `setShape()` throws. Await the returned promise before calling any
+   * of those methods.
+   *
    * Rejects with an `AbortError` if `options.signal` aborts or the reel
    * is destroyed mid-tween. `nudge:cancelled` fires on the bus in that case.
    *
@@ -1031,11 +1044,6 @@ export class ReelSet extends Container implements Disposable {
    *   .catch((e) => { if (e.name !== 'AbortError') throw e; });
    */
   async nudge(col: number, options: NudgeOptions): Promise<{ symbols: string[] }> {
-    // TODO(reentrancy): a `spin()` / `setResult()` / `pin()` / `setShape()`
-    // call made while a nudge is in flight will race on the same reel.
-    // We currently guard the *forward* direction (nudge refuses while
-    // spinning) but not the reverse. Add `_assertNoNudgeInFlight()` to
-    // those entry points before broad production use.
     if (this._spinController.isSpinning) {
       throw new Error('nudge: cannot nudge while a spin or refill is in progress.');
     }
@@ -1044,7 +1052,7 @@ export class ReelSet extends Container implements Disposable {
     }
     // Pin overlap detection lives at the ReelSet layer (Reel can't see pins).
     // Nudges would shift symbols out from under a pinned cell visually but
-    // leave the pin record stale — fail loudly instead.
+    // leave the pin record stale: fail loudly instead.
     for (const pin of this._pins.values()) {
       if (pin.col === col) {
         throw new Error(
@@ -1054,9 +1062,10 @@ export class ReelSet extends Container implements Disposable {
       }
     }
 
+    this._nudgeInFlight = true;
     try {
       const result = await this._reels[col].nudge(options, () => {
-        // Fires after Reel.nudge has validated, pre-placed, and snapped —
+        // Fires after Reel.nudge has validated, pre-placed, and snapped:
         // right before the GSAP tween starts. Now the bus event matches
         // observable state.
         this._events.emit('nudge:start', {
@@ -1076,7 +1085,7 @@ export class ReelSet extends Container implements Disposable {
       const isAbort = err instanceof Error && err.name === 'AbortError';
       // If the ReelSet was destroyed mid-nudge, `super.destroy({children: true})`
       // has already torn down our event bus (PixiJS Container has its own
-      // `_events` field that we shadow — after super.destroy ours is gone too).
+      // `_events` field that we shadow: after super.destroy ours is gone too).
       // Skip the emit; the consumer's `nudge()` await will still see the
       // AbortError via the re-throw below.
       if (isAbort && !this._isDestroyed) {
@@ -1088,6 +1097,17 @@ export class ReelSet extends Container implements Disposable {
         });
       }
       throw err;
+    } finally {
+      this._nudgeInFlight = false;
+    }
+  }
+
+  private _assertNoNudgeInFlight(method: string): void {
+    if (this._nudgeInFlight) {
+      throw new Error(
+        `ReelSet.${method}: cannot be called while nudge() is in flight. ` +
+        `Await the nudge() promise before calling ${method}.`,
+      );
     }
   }
 
@@ -1201,6 +1221,7 @@ export class ReelSet extends Container implements Disposable {
    *  - any entry falls outside `[multiways.minRows, multiways.maxRows]`
    */
   setShape(rowsPerReel: number[]): void {
+    this._assertNoNudgeInFlight('setShape');
     if (!this._isMultiWaysSlot) {
       throw new Error('setShape(): slot was not built with .multiways(...) — call ReelSetBuilder.multiways() first.');
     }
@@ -1468,8 +1489,11 @@ export class ReelSet extends Container implements Disposable {
    * Pin a symbol to a grid cell. Applied immediately if the reel is idle;
    * applied at the next `setResult()` otherwise. Fires `pin:placed`.
    *
-   * Passing the same `(col, row)` replaces the previous pin — the old one
+   * Passing the same `(col, row)` replaces the previous pin. The old one
    * is replaced silently (no `pin:expired` fires for replacement).
+   *
+   * Negative rows are rejected. Place buffer-row anchors via `setResult()`
+   * with `bufferAbove` / `bufferBelow` on the column's `ColumnTarget`.
    *
    * @example
    * // Sticky wild for 3 spins
@@ -1478,10 +1502,11 @@ export class ReelSet extends Container implements Disposable {
    * // Hold & Win coin with a payout value
    * reelSet.pin(col, row, 'coin', { turns: 'permanent', payload: { value: 50 } })
    *
-   * // Expanding wild — fill column for the current spin's evaluation only
+   * // Expanding wild: fill column for the current spin's evaluation only
    * for (let r = 0; r < 3; r++) reelSet.pin(2, r, 'wild', { turns: 'eval' })
    */
   pin(col: number, row: number, symbolId: string, options?: CellPinOptions): CellPin {
+    this._assertNoNudgeInFlight('pin');
     if (col < 0 || col >= this._reels.length) {
       throw new Error(`pin(): col ${col} out of range [0, ${this._reels.length})`);
     }
