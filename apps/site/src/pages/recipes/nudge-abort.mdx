@@ -54,10 +54,10 @@ try {
 
 Abort and skip take opposite stances on what should happen next:
 
-- **`skipNudge(col)`**. "the player wants it landed RIGHT NOW, run the
-  success path". `nudge()` resolves; `nudge:complete` fires.
-- **`signal.abort()`**. "tear down everything that depended on this
-  nudge". `nudge()` rejects; `nudge:cancelled` fires; the catch block
+- **`skipNudge(col)`**. land now, run the success path. `nudge()`
+  resolves; `nudge:complete` fires.
+- **`signal.abort()`**. tear down everything that depended on this
+  nudge. `nudge()` rejects; `nudge:cancelled` fires; the catch block
   runs.
 
 The deciding question is what the consumer's await block represents.

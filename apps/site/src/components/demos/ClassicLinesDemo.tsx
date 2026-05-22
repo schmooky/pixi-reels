@@ -6,15 +6,15 @@ import { forceLine, forceGrid, forceScatters } from '../../../../../examples/sha
 // prototype-symbols atlas frame names.
 const IDS = [
   'round/round_1', 'round/round_2', 'round/round_3', 'round/round_4',
-  'royal/royal_1',        // the "premium line" symbol (was 'seven')
+  'royal/royal_1',        // the high-pay symbol (was 'seven')
   'wild/wild_1',          // the wild
   'bonus/bonus_1',        // the scatter (was 'bell')
 ];
-const PREMIUM = 'royal/royal_1';
+const HIGH_PAY = 'royal/royal_1';
 const WILD = 'wild/wild_1';
 const SCATTER = 'bonus/bonus_1';
 
-const JACKPOT_GRID: string[][] = Array.from({ length: 5 }, () => [PREMIUM, PREMIUM, PREMIUM]);
+const JACKPOT_GRID: string[][] = Array.from({ length: 5 }, () => [HIGH_PAY, HIGH_PAY, HIGH_PAY]);
 
 export default function ClassicLinesDemo() {
   return (
@@ -23,7 +23,7 @@ export default function ClassicLinesDemo() {
       tags={['5×3', 'lines', 'spotlight']}
       height={500}
       cheats={[
-        { id: 'line-mid', label: 'Force middle-row line', description: 'Full row of royals on row 2.', enabled: false, cheat: forceLine(1, PREMIUM) },
+        { id: 'line-mid', label: 'Force middle-row line', description: 'Full row of royals on row 2.', enabled: false, cheat: forceLine(1, HIGH_PAY) },
         { id: 'line-top', label: 'Force top-row line', description: 'Full row of wilds on row 1.', enabled: false, cheat: forceLine(0, WILD) },
         { id: 'jackpot', label: 'Full-grid royal jackpot', description: '15 royals. Pure theatre.', enabled: false, cheat: forceGrid(JACKPOT_GRID) },
         { id: 'scatter5', label: 'Sprinkle 5 bonuses', description: '5 scatters, random positions.', enabled: false, cheat: forceScatters(5, SCATTER) },
@@ -39,7 +39,7 @@ export default function ClassicLinesDemo() {
             'round/round_2': 38,
             'round/round_3': 32,
             'round/round_4': 28,
-            [PREMIUM]: 10,
+            [HIGH_PAY]: 10,
             [SCATTER]: 4,
             [WILD]: 3,
           },

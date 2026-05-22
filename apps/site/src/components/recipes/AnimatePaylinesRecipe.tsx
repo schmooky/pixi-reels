@@ -7,10 +7,10 @@ import { mountMiniReels, spinToGrid, sleep } from '../miniRuntime.ts';
 const A = 'round/round_1';
 const B = 'round/round_2';
 const C = 'round/round_3';
-const SEVEN = 'royal/royal_1';             // the premium line symbol
+const SEVEN = 'royal/royal_1';             // the high-pay row symbol
 const IDS = [A, B, C, SEVEN];
 
-// Three full rows of different symbols = three "paylines" with the premium
+// Three full rows of different symbols = three "paylines" with SEVEN
 // on top, B on row 1, C on row 2. The spotlight cycles through each row.
 const GRID: string[][] = [
   [SEVEN, B, C],

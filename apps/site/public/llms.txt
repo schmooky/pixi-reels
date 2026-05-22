@@ -8,7 +8,7 @@ Site: https://pixi-reels.schmooky.dev
 Repo: https://github.com/schmooky/pixi-reels
 Package: https://www.npmjs.com/package/pixi-reels
 
-Generated: 2026-05-22T13:00:57.915Z
+Generated: 2026-05-22T13:08:28.712Z
 
 ## Quick start
 
@@ -2309,9 +2309,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/fall-delay-anticipation/
 
 // ANTICIPATION. 350 ms lead-in. Enough room for a full "spin-up"
 // sound effect to play, a button-press animation to complete, or a
-// "READY" tone to fire. The pause is clearly perceived as deliberate.
-// Common in mid-tier slots where the player expects a beat between
-// click and motion.
+// "READY" tone to fire before the strip starts moving.
 
 const IDS = ['7', '8', '9', '10', 'J', 'Q'];
 const REELS = 6, ROWS = 4, SIZE = 64;
@@ -4184,8 +4182,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/nudge-tail-reveal/
 // the bottom of the sprite, masked at the top edge.
 //
 // A beat later we nudge DOWN by 1 to bring the full block back into
-// view. The classic "the player sees the tail of the wild peeking in,
-// then nudges to reveal it fully" UX.
+// view. Tail in bufferAbove. nudge to reveal.
 
 const MEGA = { id: 'mega', color: 0xff8c42, label: 'MEGA', textColor: 0x4a1d00, w: 1, h: 2 };
 const REELS = 5;
@@ -4897,9 +4894,8 @@ URL: https://pixi-reels.schmooky.dev/recipes/refill-simultaneous/
 // Injected: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
 //           PIXI, gsap, app, pickWeighted
 
-// SIMULTANEOUS REFILL. every cell drops at the same moment. The most
-// common refill pattern in commercial tumble slots: snappy, no extra
-// pacing, the player sees the new symbols arrive as one beat.
+// SIMULTANEOUS REFILL. every cell drops at the same moment. Snappy,
+// no extra pacing, all new symbols arrive in one beat.
 
 const IDS = ['7', '8', '9', '10', 'J', 'Q'];
 const REELS = 6, ROWS = 4, SIZE = 64;
@@ -5973,8 +5969,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/tumble-cartoon-bounce/
 //           PIXI, gsap, app, pickWeighted
 
 // CARTOON BOUNCE: bounce.out gives a multi-bounce settle. Long stagger
-// makes the row-by-row arrival feel playful. Good fit for kid-friendly
-// themes, candy-style art, or anywhere "weighty fun" is the vibe.
+// spreads the row-by-row arrival in time.
 
 const IDS = ['7', '8', '9', '10', 'J', 'Q'];
 const REELS = 6, ROWS = 4, SIZE = 64;
@@ -6276,9 +6271,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/tumble-wave/
 //           PIXI, gsap, app, pickWeighted
 
 // WAVE: heavy per-row stagger (110 ms) plus a soft overshoot. Rows
-// arrive in sequence top-to-bottom, reading as a rolling wave. Good
-// fit for narrative reveals where you want the player's eye to track
-// each row.
+// arrive in sequence top-to-bottom.
 
 const IDS = ['7', '8', '9', '10', 'J', 'Q'];
 const REELS = 6, ROWS = 4, SIZE = 64;

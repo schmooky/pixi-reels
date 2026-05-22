@@ -10,7 +10,7 @@ export interface StopPhaseConfig {
 }
 
 /**
- * Stops the reel on the target frame with a weighted, slot-machine feel.
+ * Stops the reel on the target frame.
  *
  * Sequence:
  * 1. Wait for the staggered delay.
@@ -21,7 +21,7 @@ export interface StopPhaseConfig {
  * 3. When the sequencer is exhausted, snap to grid and bounce:
  *    - overshoot downward by `bounceDistance` with `power1.out`
  *    - settle back upward with `power1.out`
- *    Both legs share a duration for a symmetric, weighty landing.
+ *    Both legs share a duration so the down + up motion is symmetric.
  */
 export class StopPhase extends ReelPhase<StopPhaseConfig> {
   readonly name = 'stop';
@@ -54,7 +54,7 @@ export class StopPhase extends ReelPhase<StopPhaseConfig> {
     reel.setStopFrame(this._config.targetFrame);
     reel.isStopping = true;
     // Restore full spin speed. anticipation or other phases may have lowered
-    // it. Weighty stops need full momentum through the final frame.
+    // it. The full momentum carries through the final frame placement.
     reel.speed = speed.spinSpeed;
 
     this._stage = 'spinning';

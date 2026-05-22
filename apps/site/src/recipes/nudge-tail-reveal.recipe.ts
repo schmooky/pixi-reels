@@ -11,8 +11,7 @@
 // the bottom of the sprite, masked at the top edge.
 //
 // A beat later we nudge DOWN by 1 to bring the full block back into
-// view. The classic "the player sees the tail of the wild peeking in,
-// then nudges to reveal it fully" UX.
+// view. Tail in bufferAbove. nudge to reveal.
 
 const MEGA = { id: 'mega', color: 0xff8c42, label: 'MEGA', textColor: 0x4a1d00, w: 1, h: 2 };
 const REELS = 5;

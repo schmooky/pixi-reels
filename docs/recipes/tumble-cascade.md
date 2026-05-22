@@ -120,7 +120,7 @@ Gentle gravity fall, soft overshoot landing. The all-rounder.
 
 ### 2b. Cartoon bounce
 
-Loud landing with a couple of bounces. Reads as playful. good for kid-friendly themes.
+Loud landing with a couple of bounces.
 
 ```ts
 .tumble({
@@ -131,7 +131,7 @@ Loud landing with a couple of bounces. Reads as playful. good for kid-friendly t
 
 ### 2c. Slam stop
 
-Heavy accelerating fall, hard land. Reads as serious / high-stakes.
+Heavy accelerating fall, hard land. Sub-half-second tumble.
 
 ```ts
 .tumble({

@@ -3,8 +3,7 @@
 //           PIXI, gsap, app, pickWeighted
 
 // CARTOON BOUNCE: bounce.out gives a multi-bounce settle. Long stagger
-// makes the row-by-row arrival feel playful. Good fit for kid-friendly
-// themes, candy-style art, or anywhere "weighty fun" is the vibe.
+// spreads the row-by-row arrival in time.
 
 const IDS = ['7', '8', '9', '10', 'J', 'Q'];
 const REELS = 6, ROWS = 4, SIZE = 64;

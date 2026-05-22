@@ -3,7 +3,7 @@ import DemoSandbox from '../DemoSandbox.tsx';
 import { mountPrototypeReels } from '../prototypeRuntime.ts';
 import { forceLine, forceGrid, forceScatters, forceCell } from '../../../../../examples/shared/cheats.ts';
 
-// Symbol set for the demo. royals as premiums, rounds as low, bonus + wild.
+// Symbol set for the demo. royals as high-pay, rounds as low-pay, bonus + wild.
 const SYMBOL_IDS = [
   'round/round_1', 'round/round_2', 'round/round_3', 'round/round_4',
   'royal/royal_1', 'royal/royal_2', 'royal/royal_3',

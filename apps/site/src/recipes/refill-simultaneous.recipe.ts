@@ -2,9 +2,8 @@
 // Injected: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
 //           PIXI, gsap, app, pickWeighted
 
-// SIMULTANEOUS REFILL. every cell drops at the same moment. The most
-// common refill pattern in commercial tumble slots: snappy, no extra
-// pacing, the player sees the new symbols arrive as one beat.
+// SIMULTANEOUS REFILL. every cell drops at the same moment. Snappy,
+// no extra pacing, all new symbols arrive in one beat.
 
 const IDS = ['7', '8', '9', '10', 'J', 'Q'];
 const REELS = 6, ROWS = 4, SIZE = 64;

@@ -31,9 +31,8 @@ const promise = reelSet.spin();
 await waitForServer();
 
 const visible = await server.spin();
-// Reels 3 and 4 are the tension reels. the player is waiting on them.
-// bufferAbove on those reels holds the high-value symbol the player will
-// see slide into view as the reel decelerates.
+// Reels 3 and 4 are the slow reels. bufferAbove on those reels holds
+// the symbol that slides into view as each reel decelerates.
 const result: ColumnTarget[] = visible.map((col, i) => (
   i === 3 || i === 4 ? { visible: col, bufferAbove: ['BONUS'] } : { visible: col }
 ));

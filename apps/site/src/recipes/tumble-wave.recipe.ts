@@ -3,9 +3,7 @@
 //           PIXI, gsap, app, pickWeighted
 
 // WAVE: heavy per-row stagger (110 ms) plus a soft overshoot. Rows
-// arrive in sequence top-to-bottom, reading as a rolling wave. Good
-// fit for narrative reveals where you want the player's eye to track
-// each row.
+// arrive in sequence top-to-bottom.
 
 const IDS = ['7', '8', '9', '10', 'J', 'Q'];
 const REELS = 6, ROWS = 4, SIZE = 64;

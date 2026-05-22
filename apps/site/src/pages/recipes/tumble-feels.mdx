@@ -37,9 +37,9 @@ Every canvas below runs the **exact same scripted spin**: 6×4 cards land with a
 })
 ```
 
-Gentle gravity fall + soft overshoot landing. `back.out(1.6)` overshoots its target by ~60 % and settles. feels weighty without being cartoony. Start here, tweak from here. Almost every commercial cascade slot ships within a hair of this shape.
+Gentle gravity fall + soft overshoot landing. `back.out(1.6)` overshoots its target by ~60 % and settles. Start here; tweak from here. A reasonable default if you have no other constraints.
 
-## Cartoon bounce. playful, weighty
+## Cartoon bounce. multi-bounce settle
 
 <RecipeRunner code={bounceCode} client:only="react" />
 
@@ -50,7 +50,7 @@ Gentle gravity fall + soft overshoot landing. `back.out(1.6)` overshoots its tar
 })
 ```
 
-`bounce.out` does a real multi-bounce settle. symbols actually bounce on landing. Longer durations (700 ms) let each bounce read. Best paired with kid-friendly themes or candy / fruit art. Be careful with this one on dense grids. the bouncing arrival can read as "still moving" to the player and slow the perceived pace.
+`bounce.out` does a real multi-bounce settle. Symbols actually bounce on landing. Longer durations (700 ms) let each bounce read. Be careful with this one on dense grids: the bouncing arrival overlaps the next phase visually and can slow the perceived pace.
 
 ## Slam. hard-landing, sub-half-second tumble
 
@@ -76,7 +76,7 @@ Gentle gravity fall + soft overshoot landing. `back.out(1.6)` overshoots its tar
 })
 ```
 
-`rowStagger: 0` makes every row start together. `distance: 'auto'` overrides the gravity-correct per-hole distance with a uniform full-column-height drop, so the new column appears as a coherent slab from above the viewport. Match-3 / puzzle / chess-board games. anything where "the board itself moves" is the visual idea.
+`rowStagger: 0` makes every row start together. `distance: 'auto'` overrides the gravity-correct per-hole distance with a uniform full-column-height drop, so the new column appears as a coherent slab from above the viewport. Match-3, puzzle, or chess-board grids where "the board itself moves" is the visual idea.
 
 ## Wave. rolling top-to-bottom reveal
 
@@ -89,17 +89,17 @@ Gentle gravity fall + soft overshoot landing. `back.out(1.6)` overshoots its tar
 })
 ```
 
-Heavy `rowStagger` (110 ms on drop-in) makes rows arrive in distinct beats. you can almost count them. `back.out(2.0)` adds a stronger overshoot than Classic. Reads as a narrative reveal: row 0 lands, then row 1, then row 2. Pair with row-by-row sound cues for a story-driven cascade feel. The visual rhythm naturally amplifies cascade chains. the more cascades, the more rows of "ta-ta-ta-ta" you get to count.
+Heavy `rowStagger` (110 ms on drop-in) makes each row land in its own beat. `back.out(2.0)` adds a stronger overshoot than Classic. Row 0 lands, then row 1, then row 2. Pair with row-by-row sound cues if you want a per-row audio hit. The more cascades in a chain, the more rows arrive in sequence.
 
 ## Picking between them
 
 | Feel | Pause | Pick when | Avoid when |
 |---|---|---|---|
-| Classic | 250 ms | All-rounder; you're not sure |. |
-| Cartoon bounce | 320 ms | Kid-friendly / candy / fruit | Player attention budget is tight |
+| Classic | 250 ms | Default if you have no other constraints |. |
+| Cartoon bounce | 320 ms | Soft overshoot, multi-bounce landing | Dense grids where the bounce overlaps the next phase |
 | Slam | 120 ms | Turbo mode, sub-half-second tumbles | You want a longer beat between cascades |
-| Rain column | 380 ms | Match-3 / chess-board / puzzle | Reels are visually distinct (the cohesive slab look fights the column gaps) |
-| Wave | 280 ms | Narrative reveals, "show me the row" tension | Very dense grids. the stagger makes the whole tumble feel long |
+| Rain column | 380 ms | Match-3 / chess-board / puzzle grids | Reels are visually distinct (the cohesive slab look fights the column gaps) |
+| Wave | 280 ms | Strong per-row stagger, row-by-row arrival | Very dense grids. the stagger makes the whole tumble feel long |
 
 The **Pause** column is `PAUSE_AFTER_REMOVAL_MS` in each recipe. the gap between the win-fade ending and the refill drop-in starting. It's not a library setting; it's just an `await wait(ms)` in your spin loop. Tuning it per feel is the single biggest lever on cascade pacing after the tumble config itself.
 

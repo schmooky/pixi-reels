@@ -4,9 +4,7 @@
 
 // ANTICIPATION. 350 ms lead-in. Enough room for a full "spin-up"
 // sound effect to play, a button-press animation to complete, or a
-// "READY" tone to fire. The pause is clearly perceived as deliberate.
-// Common in mid-tier slots where the player expects a beat between
-// click and motion.
+// "READY" tone to fire before the strip starts moving.
 
 const IDS = ['7', '8', '9', '10', 'J', 'Q'];
 const REELS = 6, ROWS = 4, SIZE = 64;
