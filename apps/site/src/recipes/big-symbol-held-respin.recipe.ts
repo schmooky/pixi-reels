@@ -79,7 +79,19 @@ return {
     await spin1;
     await new Promise((r) => setTimeout(r, 900));
 
-    // ── 2. Respin everything EXCEPT reel 2. ─────────────────────────
+    // ── 2. Nudge the held reel DOWN by 2 to reveal the full block. ──
+    //
+    // Survival check (down): anchor strip index (0) + h - 1 + distance =
+    // 0 + 3 - 1 + 2 = 4 < total 7 ✓. The block moves as a unit from
+    // strip[0..2] to strip[2..4]. Visible[0..2] = ['tall', 'tall', 'tall'].
+    await reelSet.nudge(HELD_REEL, {
+      distance: 2,
+      direction: 'down',
+      incoming: [filler(), filler()],
+      duration: 620,
+    });
+
+    // ── 3. Respin everything EXCEPT reel 2. ─────────────────────────
     //
     // `holdReels: [HELD_REEL]` tells the engine to skip START/SPIN/STOP
     // on reel 2 entirely. The grid we pass below MUST include all 5
@@ -106,17 +118,5 @@ return {
     reelSet.setResult(respinGrid);
     await spin2;
     await new Promise((r) => setTimeout(r, 900));
-
-    // ── 3. Nudge the held reel DOWN by 2 to reveal the full block. ──
-    //
-    // Survival check (down): anchor strip index (0) + h - 1 + distance =
-    // 0 + 3 - 1 + 2 = 4 < total 7 ✓. The block moves as a unit from
-    // strip[0..2] to strip[2..4]. Visible[0..2] = ['tall', 'tall', 'tall'].
-    await reelSet.nudge(HELD_REEL, {
-      distance: 2,
-      direction: 'down',
-      incoming: [filler(), filler()],
-      duration: 620,
-    });
   },
 };
