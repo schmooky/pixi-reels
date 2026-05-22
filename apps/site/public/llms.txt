@@ -1,12 +1,14 @@
 # pixi-reels
 
-Slot machine reel engine for PixiJS v8 — fluent builder, typed events, default phases, speed modes, win animations, cell pins, MultiWays, big symbols, holds, per-spin mode override, debug recorder.
+pixi-reels 1.0.0 is a reel engine for PixiJS v8.
+It ships reel-only primitives. Win math, paytable math, RNG, and audio live in consumer code.
+This file inlines every guide and recipe for offline LLM context.
 
 Site: https://pixi-reels.schmooky.dev
 Repo: https://github.com/schmooky/pixi-reels
 Package: https://www.npmjs.com/package/pixi-reels
 
-Generated: 2026-05-17T11:31:54.688Z
+Generated: 2026-05-22T11:12:52.832Z
 
 ## Quick start
 
@@ -22,14 +24,15 @@ const app = new Application();
 await app.init({ width: 800, height: 480 });
 
 const reelSet = new ReelSetBuilder()
-  .reels(5).visibleSymbols(3).symbolSize(120, 120)
+  .reels(5).visibleRows(3).symbolSize(120, 120)
   .symbols(r => r.register('cherry', SpriteSymbol, { textures: { cherry: cherryTex } }))
   .ticker(app.ticker)
   .build();
 app.stage.addChild(reelSet);
 
-const result = await reelSet.spin();
-reelSet.setResult([['cherry','cherry','cherry'], ...]);
+const result = reelSet.spin();
+reelSet.setResult([{ visible: ['cherry','cherry','cherry'] }, /* one per reel */ ]);
+await result;
 ```
 
 ## Guides
@@ -40,7 +43,7 @@ A big symbol is a single symbol that visually occupies an N×M block of cells. D
 
 ### Buffer indexing
 URL: https://pixi-reels.schmooky.dev/guides/buffer-indexing/
-How indices map to cells in initialFrame and setResult — visible rows, buffer-above, buffer-below, and the two accepted input forms.
+How ColumnTarget indices map to cells in initialFrame and setResult. Visible rows, buffer-above, buffer-below.
 
 ### Cascades — the mental model
 URL: https://pixi-reels.schmooky.dev/guides/cascades/
@@ -61,6 +64,10 @@ Install pixi-reels and run your first reel set in under 2 minutes.
 ### MultiWays
 URL: https://pixi-reels.schmooky.dev/guides/multiways/
 Per-spin row variation. Each reel can land on a different row count between minRows and maxRows, with cell height derived from a fixed reel pixel height. The engine reshapes each reel between SPIN and STOP and AdjustPhase tweens any pin overlays; pins migrate via originRow.
+
+### Nudge
+URL: https://pixi-reels.schmooky.dev/guides/nudge/
+Push a reel down or up by one or more positions after it has stopped — the classic UK fruit-machine nudge.
 
 ### Per-reel geometry
 URL: https://pixi-reels.schmooky.dev/guides/per-reel-geometry/
@@ -115,6 +122,10 @@ The main orchestrator. Created via ReelSetBuilder, drives every spin, refill, pi
 ### Glossary
 URL: https://pixi-reels.schmooky.dev/docs/glossary/
 Plain-English definitions for every term you will see in pixi-reels docs, code, and slot-game conversations.
+
+### Migrating to 1.0.0
+URL: https://pixi-reels.schmooky.dev/docs/migrating-to-1-0/
+Mechanical changes to move from 0.x to 1.0.0.
 
 ## Architecture deep-dives
 
@@ -344,6 +355,72 @@ Steps:
   - Build a result grid with count - 1 scatters, none on the near reel
   - setAnticipation([nearReelIndex]) BEFORE setResult()
   - Let the player feel the hold on the last reel
+
+### How to nudge a reel
+URL: https://pixi-reels.schmooky.dev/recipes/nudge/
+Shift one reel down or up by N positions after it has landed — the classic UK fruit-machine nudge, with the reveal symbols supplied by the caller.
+Tags: nudge, fruit-machine, recent
+APIs: ReelSet.nudge, NudgeOptions, nudge:start, nudge:complete
+Steps:
+  - Wait for spin() to land
+  - Call reelSet.nudge(col, { distance, direction, incoming }) — incoming is required, top-down order of the new visible positions
+  - Await the promise to read the new visible column for re-running win detection
+  - For multi-reel beats, wrap several nudge() calls in Promise.all([...])
+
+### Abort a nudge
+URL: https://pixi-reels.schmooky.dev/recipes/nudge-abort/
+Cancel a running nudge via AbortSignal — the strip still snaps to its deterministic landed position, but the `nudge()` promise rejects with `AbortError` and `nudge:cancelled` fires on the bus.
+Tags: nudge, abort, cancellation, signal, recent
+APIs: NudgeOptions.signal, AbortController, nudge:cancelled
+Steps:
+  - Wire an `AbortController` into `NudgeOptions.signal`
+  - Trigger the abort while the tween is running
+  - Catch `AbortError` to take the cancellation path; non-abort errors re-throw
+  - `nudge:cancelled` fires on the bus carrying the cancellation reason
+
+### Nudge through a big symbol
+URL: https://pixi-reels.schmooky.dev/recipes/nudge-big-symbol/
+A 1xH block on the target reel is nudged through as a unit. The engine survival-checks anchor + h fits on the strip post-rotation; cross-reel (w>1) blocks still throw.
+Tags: nudge, big-symbols, block, recent
+APIs: ReelSet.nudge, SymbolData.size
+Steps:
+  - Land with a 1x2 MEGA wild at column 2, rows 0+1
+  - Nudge column 2 DOWN by 2 — block survives (`1 + 2 - 1 + 2 < 5`) and anchor lands at row 2 with stub in bufferBelow
+  - Nudge column 2 UP by 1 — block returns to rows 1+2, fully visible
+  - The whole block moves as a unit; the wrap mechanism never splits anchor from stubs
+
+### Skip an in-flight nudge
+URL: https://pixi-reels.schmooky.dev/recipes/nudge-skip/
+Fast-forward a running nudge tween to its landed state with `reelSet.skipNudge(col)`. The original `nudge()` promise resolves normally — the consumer's success path still runs.
+Tags: nudge, skip, ux, recent
+APIs: ReelSet.skipNudge, Reel.isNudging
+Steps:
+  - Run a long sequential nudge (1.5s per reel) so the player has time to react
+  - The canvas button morphs into a skip icon while the recipe handler is running
+  - Tap during a nudge — the RecipeRunner detects an in-flight nudge and calls `reelSet.skipNudge()`
+  - The original `nudge()` promise resolves at the deterministic landed position
+
+### Spotlight after a nudge
+URL: https://pixi-reels.schmooky.dev/recipes/nudge-spotlight/
+Land a near-miss, nudge three reels down by one to complete a wild line across the top row, then run SymbolSpotlight on the new winners — the canonical "rescue spin via nudge, then celebrate" beat.
+Tags: nudge, spotlight, wins, fruit-machine, recent
+APIs: ReelSet.nudge, ReelSet.spotlight.show, ReelSet.spotlight.hide, nudge:complete
+Steps:
+  - Spin and land on a flat result with no wilds anywhere
+  - Promise.all three `reelSet.nudge(col, ...)` calls so the middle reels drop in `wild` at row 0 together
+  - Build the winning cells (row 0 on each nudged reel) and call `reelSet.spotlight.show(cells, ...)`
+  - Await spotlight completion, then `spotlight.hide()` to return the symbols to the grid
+
+### Staggered nudge — wave reveal
+URL: https://pixi-reels.schmooky.dev/recipes/nudge-stagger/
+Use `NudgeOptions.startDelay` inside a `Promise.all([...])` to dispatch parallel nudges with a per-reel offset. Reads as a wave — faster than sequential, more theatrical than synchronised parallel.
+Tags: nudge, stagger, wave, ux, recent
+APIs: ReelSet.nudge, NudgeOptions.startDelay
+Steps:
+  - Map over the target reels with `Promise.all(cols.map(...))`
+  - Pass `startDelay: i * STAGGER_MS` per call so each reel waits a beat longer to begin
+  - All tweens run concurrently — total wall time = last reel's delay + duration
+  - Validation throws still fire synchronously; only the mutation is deferred
 
 ### Custom per-symbol animation
 URL: https://pixi-reels.schmooky.dev/recipes/paylines-custom-animation/
@@ -633,7 +710,7 @@ const GRID = [
 
 const reelSet = new ReelSetBuilder()
   .reels(5)
-  .visibleSymbols(3)
+  .visibleRows(3)
   .symbolSize(90, 90)
   .symbolGap(4, 4)
   .symbols(r => {
@@ -656,7 +733,7 @@ return {
     const p = reelSet.spin();
     await new Promise(r => setTimeout(r, 220));
     reelSet.setAnticipation([3, 4]);
-    reelSet.setResult(GRID);
+    reelSet.setResult(GRID.map((visible) => ({ visible })));
     await p;
   },
 };
@@ -681,7 +758,7 @@ function rv() { return CARD_IDS[Math.floor(Math.random() * CARD_IDS.length)]; }
 
 const reelSet = new ReelSetBuilder()
   .reels(5)
-  .visibleSymbols(3)
+  .visibleRows(3)
   .symbolSize(80, 80)
   .symbolGap(4, 4)
   .bufferSymbols(1)
@@ -718,7 +795,7 @@ return {
     const p = reelSet.spin();
     await new Promise((r) => setTimeout(r, 220));
     reelSet.setAnticipation([3, 4]);
-    reelSet.setResult(result);
+    reelSet.setResult(result.map((visible) => ({ visible })));
     await p;
   },
 };
@@ -1025,7 +1102,7 @@ function randSymbol(exclude) {
 }
 
 const reelSet = new ReelSetBuilder()
-  .reels(REELS).visibleSymbols(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
+  .reels(REELS).visibleRows(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
   .symbols(r => {
     for (const sym of CARD_DECK) {
       if (IDS.includes(sym.id)) {
@@ -1054,7 +1131,7 @@ return {
     reelSet.setDropOrder('ltr');
     const spinDone = reelSet.spin();
     await new Promise(r => setTimeout(r, 200));
-    reelSet.setResult(stage0);
+    reelSet.setResult(stage0.map((visible) => ({ visible })));
     await spinDone;
     await new Promise(r => setTimeout(r, 300));
 
@@ -1110,7 +1187,7 @@ function randSymbol(exclude) {
 }
 
 const reelSet = new ReelSetBuilder()
-  .reels(REELS).visibleSymbols(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
+  .reels(REELS).visibleRows(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
   .symbols(r => {
     for (const sym of CARD_DECK) {
       if (IDS.includes(sym.id)) {
@@ -1168,7 +1245,7 @@ return {
     reelSet.setDropOrder('ltr');
     const p = reelSet.spin();
     await new Promise(r => setTimeout(r, 200));
-    reelSet.setResult(stage0);
+    reelSet.setResult(stage0.map((visible) => ({ visible })));
     await p;
     await new Promise(r => setTimeout(r, 300));
 
@@ -1225,7 +1302,7 @@ const IDS = [A, B, C, SEVEN];
 const COLS = 5, ROWS = 3, SIZE = 90;
 
 const reelSet = new ReelSetBuilder()
-  .reels(COLS).visibleSymbols(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
+  .reels(COLS).visibleRows(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
   .symbols(r => {
     for (const sym of [...CARD_DECK, WILD_CARD]) {
       r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
@@ -1276,7 +1353,7 @@ return {
 
     const p = reelSet.spin();
     await new Promise(r => setTimeout(r, 150));
-    reelSet.setResult(GRID);
+    reelSet.setResult(GRID.map((visible) => ({ visible })));
     await p;
 
     // Let the landing bounce settle.
@@ -1308,7 +1385,7 @@ const IDS = [A, B, C, SEVEN];
 const COLS = 5, ROWS = 3, SIZE = 90;
 
 const reelSet = new ReelSetBuilder()
-  .reels(COLS).visibleSymbols(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
+  .reels(COLS).visibleRows(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
   .symbols(r => {
     for (const sym of [...CARD_DECK, WILD_CARD]) {
       r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
@@ -1404,7 +1481,7 @@ return {
     await new Promise(r => setTimeout(r, 150));
     const grid = Array.from({ length: COLS }, () =>
       Array.from({ length: ROWS }, () => pickWeighted({ [A]: 10, [B]: 10, [C]: 10, [SEVEN]: 3 })));
-    reelSet.setResult(grid);
+    reelSet.setResult(grid.map((visible) => ({ visible })));
     await p;
   },
   cleanup: () => {
@@ -1436,7 +1513,7 @@ const weights = {
 
 const reelSet = new ReelSetBuilder()
   .reels(5)
-  .visibleSymbols(3)
+  .visibleRows(3)
   .symbolSize(90, 90)
   .symbolGap(4, 4)
   .symbols((r) => {
@@ -1497,7 +1574,7 @@ const cells = [];
 for (let col = 0; col < COLS; col++) {
   for (let row = 0; row < ROWS; row++) {
     const mini = new ReelSetBuilder()
-      .reels(1).visibleSymbols(1)
+      .reels(1).visibleRows(1)
       .symbolSize(CELL, CELL).symbolGap(0, 0)
       .symbols((r) => {
         r.register(COIN, CardSymbol, { color: COIN_CARD.color, label: COIN_CARD.label, textColor: COIN_CARD.textColor });
@@ -1624,7 +1701,7 @@ return {
       for (const cell of activeCells) {
         const hit = round.hits.find((h) => h.col === cell.col && h.row === cell.row);
         const target = hit ? (hit.type === 'collector' ? COLLECTOR : COIN) : EMPTY;
-        cell.reelSet.setResult([[target]]);
+        cell.reelSet.setResult([{ visible: [target] }]);
       }
       await Promise.all(spinPromises);
 
@@ -1687,7 +1764,7 @@ const STICKY_TURNS = 3;
 
 const reelSet = new ReelSetBuilder()
   .reels(COLS)
-  .visibleSymbols(ROWS)
+  .visibleRows(ROWS)
   .symbolSize(SIZE, SIZE)
   .symbolGap(4, 4)
   .symbols((r) => {
@@ -1772,7 +1849,7 @@ function randSymbol(exclude) {
 }
 
 const reelSet = new ReelSetBuilder()
-  .reels(REELS).visibleSymbols(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
+  .reels(REELS).visibleRows(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
   .symbols((r) => {
     for (const sym of CARD_DECK) {
       if (IDS.includes(sym.id)) {
@@ -1808,7 +1885,7 @@ return {
     reelSet.setDropOrder('ltr');
     const spinDone = reelSet.spin();
     await new Promise((r) => setTimeout(r, 220));
-    reelSet.setResult(stage0);
+    reelSet.setResult(stage0.map((visible) => ({ visible })));
     await spinDone;
 
     await new Promise((r) => setTimeout(r, 200));
@@ -1847,7 +1924,7 @@ function randSymbol(exclude) {
 }
 
 const reelSet = new ReelSetBuilder()
-  .reels(REELS).visibleSymbols(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
+  .reels(REELS).visibleRows(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
   .symbols((r) => {
     for (const sym of CARD_DECK) {
       if (IDS.includes(sym.id)) {
@@ -1885,7 +1962,7 @@ return {
     reelSet.setDropOrder('ltr');
     const spinDone = reelSet.spin();
     await new Promise((r) => setTimeout(r, 220));
-    reelSet.setResult(stage0);
+    reelSet.setResult(stage0.map((visible) => ({ visible })));
     await spinDone;
 
     await new Promise((r) => setTimeout(r, 200));
@@ -1924,7 +2001,7 @@ function randSymbol(exclude) {
 }
 
 const reelSet = new ReelSetBuilder()
-  .reels(REELS).visibleSymbols(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
+  .reels(REELS).visibleRows(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
   .symbols((r) => {
     for (const sym of CARD_DECK) {
       if (IDS.includes(sym.id)) {
@@ -1960,7 +2037,7 @@ return {
     reelSet.setDropOrder('ltr');
     const spinDone = reelSet.spin();
     await new Promise((r) => setTimeout(r, 220));
-    reelSet.setResult(stage0);
+    reelSet.setResult(stage0.map((visible) => ({ visible })));
     await spinDone;
 
     await new Promise((r) => setTimeout(r, 200));
@@ -1999,7 +2076,7 @@ function randSymbol(exclude) {
 }
 
 const reelSet = new ReelSetBuilder()
-  .reels(REELS).visibleSymbols(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
+  .reels(REELS).visibleRows(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
   .symbols((r) => {
     for (const sym of CARD_DECK) {
       if (IDS.includes(sym.id)) {
@@ -2035,7 +2112,7 @@ return {
     reelSet.setDropOrder('ltr');
     const spinDone = reelSet.spin();
     await new Promise((r) => setTimeout(r, 220));
-    reelSet.setResult(stage0);
+    reelSet.setResult(stage0.map((visible) => ({ visible })));
     await spinDone;
 
     await new Promise((r) => setTimeout(r, 200));
@@ -2072,7 +2149,7 @@ const COLS = 5, ROWS = 3, SIZE = 90;
 
 const reelSet = new ReelSetBuilder()
   .reels(COLS)
-  .visibleSymbols(ROWS)
+  .visibleRows(ROWS)
   .symbolSize(SIZE, SIZE)
   .symbolGap(4, 4)
   .symbols((r) => {
@@ -2212,7 +2289,7 @@ return {
         FILLER[Math.floor(Math.random() * FILLER.length)],
       ),
     );
-    reelSet.setResult(grid);
+    reelSet.setResult(grid.map((visible) => ({ visible })));
     await promise;
     spinCount++;
 
@@ -2324,7 +2401,7 @@ const cells = [];
 for (let col = 0; col < COLS; col++) {
   for (let row = 0; row < ROWS; row++) {
     const mini = new ReelSetBuilder()
-      .reels(1).visibleSymbols(1)
+      .reels(1).visibleRows(1)
       .symbolSize(CELL, CELL).symbolGap(0, 0)
       .symbols(r => {
         r.register(COIN, CardSymbol, {
@@ -2408,7 +2485,7 @@ return {
       await new Promise(r => setTimeout(r, 140));
       for (const cell of activeCells) {
         const isHit = hits.some(h => h.col === cell.col && h.row === cell.row);
-        cell.reelSet.setResult([[isHit ? COIN : EMPTY]]);
+        cell.reelSet.setResult([{ visible: [isHit ? COIN : EMPTY] }]);
       }
       await Promise.all(spinPromises);
 
@@ -2458,7 +2535,7 @@ const STICKY_TURNS = 3;
 
 const reelSet = new ReelSetBuilder()
   .reels(COLS)
-  .visibleSymbols(ROWS)
+  .visibleRows(ROWS)
   .symbolSize(SIZE, SIZE)
   .symbolGap(4, 4)
   .symbols((r) => {
@@ -2715,8 +2792,8 @@ const initialGrid = initialShape.map((rows) =>
 {
   const p = reelSet.spin({ mode: 'standard' });
   reelSet.setShape(initialShape);
-  reelSet.setResult(initialGrid);
-  reelSet.skip();
+  reelSet.setResult(initialGrid.map((visible) => ({ visible })));
+  reelSet.skipSpin();
   await p;
 }
 
@@ -2731,7 +2808,7 @@ return {
     const p = reelSet.spin({ mode: 'standard' });
     await new Promise((r) => setTimeout(r, 80));
     reelSet.setShape(shape);
-    reelSet.setResult(stage0);
+    reelSet.setResult(stage0.map((visible) => ({ visible })));
     await p;
     await new Promise((r) => setTimeout(r, 120));
 
@@ -2888,7 +2965,7 @@ const MYSTERY_CARD = { id: MYSTERY, color: 0x34495e, label: '?', textColor: 0xff
 
 const reelSet = new ReelSetBuilder()
   .reels(COLS)
-  .visibleSymbols(ROWS)
+  .visibleRows(ROWS)
   .symbolSize(SIZE, SIZE)
   .symbolGap(4, 4)
   .symbols((r) => {
@@ -3046,7 +3123,7 @@ const GRID = [
 
 const reelSet = new ReelSetBuilder()
   .reels(5)
-  .visibleSymbols(3)
+  .visibleRows(3)
   .symbolSize(90, 90)
   .symbolGap(4, 4)
   .symbols(r => {
@@ -3065,8 +3142,714 @@ return {
     const p = reelSet.spin();
     await new Promise(r => setTimeout(r, 220));
     reelSet.setAnticipation([4]);
-    reelSet.setResult(GRID);
+    reelSet.setResult(GRID.map((visible) => ({ visible })));
     await p;
+  },
+};
+```
+
+### nudge-abort
+URL: https://pixi-reels.schmooky.dev/recipes/nudge-abort/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//                   WILD_CARD, app
+
+// ABORT NUDGE pattern.
+//
+// The handler kicks off a 2s nudge with an AbortController whose signal
+// is wired into the call. ~700ms later the controller aborts — the GSAP
+// tween is killed, the strip still snaps to the deterministic landed
+// position (the contract is "incoming lands at these positions"), and
+// the `nudge()` promise REJECTS with an `AbortError`.
+//
+// The handler catches the AbortError, logs it, and moves on. `nudge:cancelled`
+// fires on the bus carrying the reason. Use abort for "tear it all down"
+// semantics — error path runs, follow-up steps are skipped. Use skipNudge
+// for "land it now" semantics (see /recipes/nudge-skip/) where the
+// success path should still run.
+
+const SYMBOLS = [...CARD_DECK, WILD_CARD];
+const FILLER = ['7', '8', '9', '10', 'J'];
+const filler = () => FILLER[Math.floor(Math.random() * FILLER.length)];
+const col3 = () => [filler(), filler(), filler()];
+
+const reelSet = new ReelSetBuilder()
+  .reels(5)
+  .visibleRows(3)
+  .symbolSize(72, 72)
+  .symbolGap(4, 4)
+  .symbols((r) => {
+    for (const sym of SYMBOLS) {
+      r.register(sym.id, CardSymbol, {
+        color: sym.color,
+        label: sym.label,
+        textColor: sym.textColor,
+      });
+    }
+  })
+  .speed('normal', SpeedPresets.NORMAL)
+  .ticker(app.ticker)
+  .build();
+
+reelSet.events.on('nudge:cancelled', (info) => {
+  console.log('[nudge:cancelled]', info);
+});
+
+return {
+  reelSet,
+  onSpin: async () => {
+    const p = reelSet.spin();
+    await new Promise((resolve) => setTimeout(resolve, 220));
+    reelSet.setResult([col3(), col3(), col3(), col3(), col3()].map((visible) => ({ visible })));
+    await p;
+    await new Promise((resolve) => setTimeout(resolve, 320));
+
+    const controller = new AbortController();
+    // Abort the nudge ~700ms in — the tween will be killed mid-flight.
+    setTimeout(() => {
+      console.log('aborting nudge after 700ms');
+      controller.abort();
+    }, 700);
+
+    try {
+      await reelSet.nudge(2, {
+        distance: 1,
+        direction: 'down',
+        incoming: ['wild'],
+        duration: 2000,
+        signal: controller.signal,
+      });
+      // Not reached on abort.
+      console.log('nudge completed normally');
+    } catch (err) {
+      if (err && err.name === 'AbortError') {
+        // Expected — clean up here. Strip is at its post-nudge landing
+        // position regardless, so subsequent reads are deterministic.
+        console.log('caught AbortError; strip still snapped to landed:', err.message);
+      } else {
+        throw err;
+      }
+    }
+  },
+};
+```
+
+### nudge-big-symbol
+URL: https://pixi-reels.schmooky.dev/recipes/nudge-big-symbol/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//                   PIXI, app
+
+// NUDGE THROUGH A BIG SYMBOL.
+//
+// Demonstrates that a 1xH block on the target reel is nudged as a unit
+// when the rotation preserves the block. Sequence:
+//
+//   1. Land with a 1x2 "MEGA" wild at rows 0+1 (anchor at row 0).
+//   2. Nudge DOWN by 2 — anchor moves to row 2, stub spills into
+//      bufferBelow. Only the TOP half of the block is visible.
+//   3. Nudge UP by 1 — block snaps back into full visibility at rows 1+2.
+//
+// Survival check (down direction): anchorRow + h - 1 + distance < total.
+// For the down-by-2 step: 1 + 2 - 1 + 2 = 4 < 5 (with bufferAbove=1,
+// visibleRows=3, bufferBelow=1, total=5) — block fits.
+//
+// Cross-reel blocks (w > 1) throw; that case is intentionally excluded.
+
+const MEGA = { id: 'mega', color: 0xff8c42, label: 'MEGA', textColor: 0x4a1d00, w: 1, h: 2 };
+const REELS = 5;
+const ROWS = 3;
+const SIZE = 80;
+const GAP = 4;
+
+const reelSet = new ReelSetBuilder()
+  .reels(REELS)
+  .visibleRows(ROWS)
+  .symbolSize(SIZE, SIZE)
+  .symbolGap(GAP, GAP)
+  .symbols((registry) => {
+    for (const card of CARD_DECK) {
+      registry.register(card.id, CardSymbol, {
+        color: card.color, label: card.label, textColor: card.textColor,
+      });
+    }
+    registry.register(MEGA.id, CardSymbol, {
+      color: MEGA.color, label: MEGA.label, textColor: MEGA.textColor,
+    });
+  })
+  .weights(Object.fromEntries(CARD_DECK.map((c, i) => [c.id, 12 - i])))
+  .symbolData({
+    [MEGA.id]: { weight: 0, zIndex: 5, size: { w: MEGA.w, h: MEGA.h } },
+  })
+  // Big symbols don't tolerate the default 56px landing bounce — zero it
+  // so the anchor lands flush on grid.
+  .speed('normal', { ...SpeedPresets.NORMAL, bounceDistance: 0, bounceDuration: 0 })
+  .ticker(app.ticker)
+  .build();
+
+const FILLER_IDS = ['7', '8', '9', '10', 'J'];
+const filler = () => FILLER_IDS[Math.floor(Math.random() * FILLER_IDS.length)];
+const col3 = () => [filler(), filler(), filler()];
+
+return {
+  reelSet,
+  onSpin: async () => {
+    // 1. Land a 1x2 MEGA wild at column 2, rows 0+1. The OCCUPIED stub
+    //    at row 1 is placed by the big-symbol coordinator inside setResult.
+    const grid = [col3(), col3(), [MEGA.id, MEGA.id, filler()], col3(), col3()];
+    const p = reelSet.spin();
+    await new Promise((r) => setTimeout(r, 220));
+    reelSet.setResult(grid.map((visible) => ({ visible })));
+    await p;
+    await new Promise((r) => setTimeout(r, 500));
+
+    // 2. Nudge column 2 DOWN by 2. Survival: 1 + 2 - 1 + 2 = 4 < 5 ✓.
+    //    After: anchor at row 2, stub at bufferBelow → only top half of
+    //    the block is visible.
+    await reelSet.nudge(2, {
+      distance: 2,
+      direction: 'down',
+      incoming: [filler(), filler()],
+      duration: 600,
+    });
+    await new Promise((r) => setTimeout(r, 700));
+
+    // 3. Nudge UP by 1 to bring the full block back into view at rows 1+2.
+    //    Survival up: anchorRow (3) >= distance (1) ✓.
+    await reelSet.nudge(2, {
+      distance: 1,
+      direction: 'up',
+      incoming: [filler()],
+      duration: 480,
+    });
+  },
+};
+```
+
+### nudge-parallel
+URL: https://pixi-reels.schmooky.dev/recipes/nudge-parallel/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//                   WILD_CARD, app
+
+// PARALLEL nudges — every reel's tween fires at the same frame via
+// `Promise.all([...])`. Reads as one synchronised beat; the whole row
+// of wilds drops into place together. Total time = duration (regardless
+// of how many reels you're nudging).
+
+const SYMBOLS = [...CARD_DECK, WILD_CARD];
+const FILLER = ['7', '8', '9', '10', 'J'];
+const filler = () => FILLER[Math.floor(Math.random() * FILLER.length)];
+const col3 = () => [filler(), filler(), filler()];
+
+const NUDGE_COLS = [1, 2, 3];
+const NUDGE_DURATION = 480;
+
+const reelSet = new ReelSetBuilder()
+  .reels(5)
+  .visibleRows(3)
+  .symbolSize(72, 72)
+  .symbolGap(4, 4)
+  .symbols((r) => {
+    for (const sym of SYMBOLS) {
+      r.register(sym.id, CardSymbol, {
+        color: sym.color,
+        label: sym.label,
+        textColor: sym.textColor,
+      });
+    }
+  })
+  .speed('normal', SpeedPresets.NORMAL)
+  .ticker(app.ticker)
+  .build();
+
+reelSet.events.on('nudge:start', (info) => {
+  console.log(`[par] nudge:start reel=${info.reelIndex}`);
+});
+reelSet.events.on('nudge:complete', (info) => {
+  console.log(`[par] nudge:complete reel=${info.reelIndex}`);
+});
+
+return {
+  reelSet,
+  onSpin: async () => {
+    const p = reelSet.spin();
+    await new Promise((resolve) => setTimeout(resolve, 220));
+    reelSet.setResult([col3(), col3(), col3(), col3(), col3()].map((visible) => ({ visible })));
+    await p;
+
+    // Let the eye settle on the landed board before the nudges begin.
+    await new Promise((resolve) => setTimeout(resolve, 400));
+
+    // PARALLEL — every call fires synchronously; `Promise.all` only waits
+    // for the slowest one to finish. Total wall time = NUDGE_DURATION.
+    await Promise.all(
+      NUDGE_COLS.map((col) =>
+        reelSet.nudge(col, {
+          distance: 1,
+          direction: 'down',
+          incoming: ['wild'],
+          duration: NUDGE_DURATION,
+        }),
+      ),
+    );
+  },
+};
+```
+
+### nudge-sequential
+URL: https://pixi-reels.schmooky.dev/recipes/nudge-sequential/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//                   WILD_CARD, app
+
+// SEQUENTIAL nudges — each reel waits for the previous reel's nudge to
+// land before starting. Reads as three deliberate beats; players can
+// follow each reveal individually. Total time = N * duration.
+
+const SYMBOLS = [...CARD_DECK, WILD_CARD];
+const FILLER = ['7', '8', '9', '10', 'J'];
+const filler = () => FILLER[Math.floor(Math.random() * FILLER.length)];
+const col3 = () => [filler(), filler(), filler()];
+
+const NUDGE_COLS = [1, 2, 3];
+const NUDGE_DURATION = 480;
+
+const reelSet = new ReelSetBuilder()
+  .reels(5)
+  .visibleRows(3)
+  .symbolSize(72, 72)
+  .symbolGap(4, 4)
+  .symbols((r) => {
+    for (const sym of SYMBOLS) {
+      r.register(sym.id, CardSymbol, {
+        color: sym.color,
+        label: sym.label,
+        textColor: sym.textColor,
+      });
+    }
+  })
+  .speed('normal', SpeedPresets.NORMAL)
+  .ticker(app.ticker)
+  .build();
+
+reelSet.events.on('nudge:start', (info) => {
+  console.log(`[seq] nudge:start reel=${info.reelIndex}`);
+});
+reelSet.events.on('nudge:complete', (info) => {
+  console.log(`[seq] nudge:complete reel=${info.reelIndex}`);
+});
+
+return {
+  reelSet,
+  onSpin: async () => {
+    const p = reelSet.spin();
+    await new Promise((resolve) => setTimeout(resolve, 220));
+    reelSet.setResult([col3(), col3(), col3(), col3(), col3()].map((visible) => ({ visible })));
+    await p;
+
+    // Let the eye settle on the landed board before the nudges begin.
+    await new Promise((resolve) => setTimeout(resolve, 400));
+
+    // SEQUENTIAL — each `await` blocks the next iteration until this
+    // reel's tween finishes. Total wall time = NUDGE_COLS.length * NUDGE_DURATION.
+    for (const col of NUDGE_COLS) {
+      await reelSet.nudge(col, {
+        distance: 1,
+        direction: 'down',
+        incoming: ['wild'],
+        duration: NUDGE_DURATION,
+      });
+    }
+  },
+};
+```
+
+### nudge-skip
+URL: https://pixi-reels.schmooky.dev/recipes/nudge-skip/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//                   WILD_CARD, app
+
+// SKIP NUDGE pattern.
+//
+// The handler runs a deliberately slow 1500ms-per-reel sequential nudge.
+// While it's mid-tween the spin button morphs into a skip button — one
+// tap calls `reelSet.skipNudge()` which fast-forwards the active tween
+// to its landed state. The `nudge()` promise still resolves normally,
+// so the consumer's success path (win re-detect, spotlight, whatever)
+// runs unchanged — only the animation got cut short.
+
+const SYMBOLS = [...CARD_DECK, WILD_CARD];
+const FILLER = ['7', '8', '9', '10', 'J'];
+const filler = () => FILLER[Math.floor(Math.random() * FILLER.length)];
+const col3 = () => [filler(), filler(), filler()];
+
+const NUDGE_COLS = [1, 2, 3];
+const NUDGE_DURATION = 1500;
+
+const reelSet = new ReelSetBuilder()
+  .reels(5)
+  .visibleRows(3)
+  .symbolSize(72, 72)
+  .symbolGap(4, 4)
+  .symbols((r) => {
+    for (const sym of SYMBOLS) {
+      r.register(sym.id, CardSymbol, {
+        color: sym.color,
+        label: sym.label,
+        textColor: sym.textColor,
+      });
+    }
+  })
+  .speed('normal', SpeedPresets.NORMAL)
+  .ticker(app.ticker)
+  .build();
+
+return {
+  reelSet,
+  onSpin: async () => {
+    const p = reelSet.spin();
+    await new Promise((resolve) => setTimeout(resolve, 220));
+    reelSet.setResult([col3(), col3(), col3(), col3(), col3()].map((visible) => ({ visible })));
+    await p;
+    await new Promise((resolve) => setTimeout(resolve, 320));
+
+    // Sequential nudges, each 1.5s long. Tap the canvas button during
+    // any of them to fast-forward — the loop's `await` resolves
+    // immediately at that tween's landed state and the loop continues
+    // with the next reel.
+    for (const col of NUDGE_COLS) {
+      await reelSet.nudge(col, {
+        distance: 1,
+        direction: 'down',
+        incoming: ['wild'],
+        duration: NUDGE_DURATION,
+      });
+    }
+  },
+  // No `onSkip` override needed — the RecipeRunner's built-in fallback
+  // detects an in-flight nudge and calls `reelSet.skipNudge()` for us.
+  // The recipe deliberately leaves the default behaviour in place so
+  // readers can copy the minimal pattern.
+};
+```
+
+### nudge-spotlight
+URL: https://pixi-reels.schmooky.dev/recipes/nudge-spotlight/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//                   WILD_CARD, app
+
+// NUDGE → SPOTLIGHT pattern.
+//
+// The handler lands a flat near-miss, nudges three reels down by one so
+// the centre row turns into WILD-WILD-WILD, then runs SymbolSpotlight on
+// the new winning line. Demonstrates the canonical "rescue spin via
+// nudge, then celebrate" beat.
+
+const SYMBOLS = [...CARD_DECK, WILD_CARD];
+const FILLER = ['7', '8', '9', '10', 'J'];
+const filler = () => FILLER[Math.floor(Math.random() * FILLER.length)];
+const col3 = () => [filler(), filler(), filler()];
+
+const NUDGE_COLS = [1, 2, 3];
+const NUDGE_DURATION = 380;
+const WIN_ROW = 0; // After down-nudge, incoming[0] lands at visible row 0.
+
+const reelSet = new ReelSetBuilder()
+  .reels(5)
+  .visibleRows(3)
+  .symbolSize(72, 72)
+  .symbolGap(4, 4)
+  .symbols((r) => {
+    for (const sym of SYMBOLS) {
+      r.register(sym.id, CardSymbol, {
+        color: sym.color,
+        label: sym.label,
+        textColor: sym.textColor,
+      });
+    }
+  })
+  .speed('normal', SpeedPresets.NORMAL)
+  .ticker(app.ticker)
+  .build();
+
+return {
+  reelSet,
+  onSpin: async () => {
+    // 1. Land on a near-miss: no wilds anywhere.
+    const p = reelSet.spin();
+    await new Promise((resolve) => setTimeout(resolve, 220));
+    reelSet.setResult([col3(), col3(), col3(), col3(), col3()].map((visible) => ({ visible })));
+    await p;
+    await new Promise((resolve) => setTimeout(resolve, 320));
+
+    // 2. Parallel nudge of the middle three reels — `wild` lands at the
+    //    top of each nudged column. After this, visible row 0 reads
+    //    [..., wild, wild, wild, ...].
+    await Promise.all(
+      NUDGE_COLS.map((col) =>
+        reelSet.nudge(col, {
+          distance: 1,
+          direction: 'down',
+          incoming: ['wild'],
+          duration: NUDGE_DURATION,
+        }),
+      ),
+    );
+
+    // 3. Spotlight the new win line. `spotlight.show` re-parents the
+    //    winning symbols above the reel mask, dims the rest of the
+    //    viewport, and runs each symbol's `playWin()` animation. Resolves
+    //    once the animation chain completes — at which point `hide()`
+    //    returns the symbols to their reels.
+    const winners = NUDGE_COLS.map((col) => ({ reelIndex: col, row: WIN_ROW }));
+    await reelSet.spotlight.show(winners, {
+      dimAmount: 0.6,
+      playWinAnimation: true,
+    });
+    reelSet.spotlight.hide();
+  },
+};
+```
+
+### nudge-stagger
+URL: https://pixi-reels.schmooky.dev/recipes/nudge-stagger/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//                   WILD_CARD, app
+
+// STAGGER NUDGE pattern.
+//
+// Promise.all with per-call `startDelay` produces a wave effect: every
+// reel runs its own tween concurrently, but each starts at a different
+// time. Cleaner than a sequential loop (each reel doesn't have to wait
+// for the previous to fully land), more visible than parallel (reels
+// kick off in sequence so the eye can follow the wave).
+
+const SYMBOLS = [...CARD_DECK, WILD_CARD];
+const FILLER = ['7', '8', '9', '10', 'J'];
+const filler = () => FILLER[Math.floor(Math.random() * FILLER.length)];
+const col3 = () => [filler(), filler(), filler()];
+
+const NUDGE_COLS = [0, 1, 2, 3, 4];
+const NUDGE_DURATION = 520;
+const STAGGER_MS = 90;
+
+const reelSet = new ReelSetBuilder()
+  .reels(5)
+  .visibleRows(3)
+  .symbolSize(72, 72)
+  .symbolGap(4, 4)
+  .symbols((r) => {
+    for (const sym of SYMBOLS) {
+      r.register(sym.id, CardSymbol, {
+        color: sym.color,
+        label: sym.label,
+        textColor: sym.textColor,
+      });
+    }
+  })
+  .speed('normal', SpeedPresets.NORMAL)
+  .ticker(app.ticker)
+  .build();
+
+return {
+  reelSet,
+  onSpin: async () => {
+    const p = reelSet.spin();
+    await new Promise((resolve) => setTimeout(resolve, 220));
+    reelSet.setResult([col3(), col3(), col3(), col3(), col3()].map((visible) => ({ visible })));
+    await p;
+    await new Promise((resolve) => setTimeout(resolve, 320));
+
+    // All five reels dispatch synchronously inside Promise.all; each one's
+    // tween is deferred by `startDelay`. Total wall time:
+    //   startDelay of last reel + duration = 4*90 + 520 = 880ms.
+    // (Versus 5 * 520 = 2600ms for sequential or 520ms for fully parallel.)
+    await Promise.all(
+      NUDGE_COLS.map((col, i) =>
+        reelSet.nudge(col, {
+          distance: 1,
+          direction: 'down',
+          incoming: ['wild'],
+          duration: NUDGE_DURATION,
+          startDelay: i * STAGGER_MS,
+        }),
+      ),
+    );
+  },
+};
+```
+
+### nudge-tail-reveal
+URL: https://pixi-reels.schmooky.dev/recipes/nudge-tail-reveal/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, app
+
+// TAIL-REVEAL pattern.
+//
+// Big symbol lands fully visible. We nudge it UP by 1 so the anchor
+// crosses into bufferAbove — only the bottom cell of the block
+// remains in the visible window ("tail visible"). The engine's
+// `_finalizeFrame` sizes the anchor to span the whole block even
+// though it lives above visible, so the visible portion renders as
+// the bottom of the sprite, masked at the top edge.
+//
+// A beat later we nudge DOWN by 1 to bring the full block back into
+// view. The classic "the player sees the tail of the wild peeking in,
+// then nudges to reveal it fully" UX.
+
+const MEGA = { id: 'mega', color: 0xff8c42, label: 'MEGA', textColor: 0x4a1d00, w: 1, h: 2 };
+const REELS = 5;
+const ROWS = 3;
+const SIZE = 80;
+const GAP = 4;
+
+const reelSet = new ReelSetBuilder()
+  .reels(REELS)
+  .visibleRows(ROWS)
+  .symbolSize(SIZE, SIZE)
+  .symbolGap(GAP, GAP)
+  .symbols((registry) => {
+    for (const card of CARD_DECK) {
+      registry.register(card.id, CardSymbol, {
+        color: card.color, label: card.label, textColor: card.textColor,
+      });
+    }
+    registry.register(MEGA.id, CardSymbol, {
+      color: MEGA.color, label: MEGA.label, textColor: MEGA.textColor,
+    });
+  })
+  .weights(Object.fromEntries(CARD_DECK.map((c, i) => [c.id, 12 - i])))
+  .symbolData({ [MEGA.id]: { weight: 0, zIndex: 5, size: { w: MEGA.w, h: MEGA.h } } })
+  .speed('normal', { ...SpeedPresets.NORMAL, bounceDistance: 0, bounceDuration: 0 })
+  .ticker(app.ticker)
+  .build();
+
+const FILLER_IDS = ['7', '8', '9', '10', 'J'];
+const filler = () => FILLER_IDS[Math.floor(Math.random() * FILLER_IDS.length)];
+const col3 = () => [filler(), filler(), filler()];
+
+return {
+  reelSet,
+  onSpin: async () => {
+    // 1. Land 1x2 MEGA anchored at column 2, row 0. Block fills rows 0+1.
+    const grid = [col3(), col3(), [MEGA.id, MEGA.id, filler()], col3(), col3()];
+    const p = reelSet.spin();
+    await new Promise((r) => setTimeout(r, 220));
+    reelSet.setResult(grid.map((visible) => ({ visible })));
+    await p;
+    await new Promise((r) => setTimeout(r, 500));
+
+    // 2. Nudge UP by 1. anchor at strip[1] → strip[0] (bufferAbove).
+    //    Stub follows: strip[2] → strip[1] (visible row 0).
+    //    Block is now "tail visible": top in bufferAbove (clipped), bottom
+    //    showing at row 0. `_finalizeFrame` sizes the anchor sprite to the
+    //    full block height; the mask clips the half above visible.
+    await reelSet.nudge(2, {
+      distance: 1,
+      direction: 'up',
+      incoming: [filler()],
+      duration: 540,
+    });
+    await new Promise((r) => setTimeout(r, 800));
+
+    // 3. Nudge DOWN by 1 to fully reveal the block at rows 0+1 again.
+    //    The classic "nudge to reveal the wild" beat.
+    await reelSet.nudge(2, {
+      distance: 1,
+      direction: 'down',
+      incoming: [filler()],
+      duration: 540,
+    });
+  },
+};
+```
+
+### nudge
+URL: https://pixi-reels.schmooky.dev/recipes/nudge/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//                   WILD_CARD, app
+
+// Classic UK fruit-machine nudge demo. After every spin lands, the engine
+// fires two nudges in sequence:
+//   1. Reel 1 down by 1 — a wild slides in from the top.
+//   2. Reel 3 up by 1   — a wild slides in from the bottom.
+// One press shows both directions in one beat.
+
+const SYMBOLS = [...CARD_DECK, WILD_CARD];
+
+const FILLER = ['7', '8', '9', '10', 'J'];
+const filler = () => FILLER[Math.floor(Math.random() * FILLER.length)];
+const col3 = () => [filler(), filler(), filler()];
+
+const reelSet = new ReelSetBuilder()
+  .reels(5)
+  .visibleRows(3)
+  .symbolSize(90, 90)
+  .symbolGap(4, 4)
+  .symbols((r) => {
+    for (const sym of SYMBOLS) {
+      r.register(sym.id, CardSymbol, {
+        color: sym.color,
+        label: sym.label,
+        textColor: sym.textColor,
+      });
+    }
+  })
+  .speed('normal', SpeedPresets.NORMAL)
+  .speed('turbo', SpeedPresets.TURBO)
+  .ticker(app.ticker)
+  .build();
+
+// Log every nudge to the recipe console — useful for observing the
+// `nudge:start` / `nudge:complete` pair.
+reelSet.events.on('nudge:start', (info) => {
+  console.log('[nudge:start]', info);
+});
+reelSet.events.on('nudge:complete', (info) => {
+  console.log('[nudge:complete]', info);
+});
+
+return {
+  reelSet,
+  onSpin: async () => {
+    // Land on a flat near-miss — no wilds visible anywhere.
+    const p = reelSet.spin();
+    await new Promise((resolve) => setTimeout(resolve, 220));
+    reelSet.setResult([col3(), col3(), col3(), col3(), col3()].map((visible) => ({ visible })));
+    await p;
+
+    // Give the eye a beat to register the landed board.
+    await new Promise((resolve) => setTimeout(resolve, 500));
+
+    // 1. Nudge reel 1 DOWN by 1 — `wild` enters from the top.
+    await reelSet.nudge(1, {
+      distance: 1,
+      direction: 'down',
+      incoming: ['wild'],
+      duration: 420,
+    });
+
+    // 2. Nudge reel 3 UP by 1 — `wild` enters from the bottom.
+    await reelSet.nudge(3, {
+      distance: 1,
+      direction: 'up',
+      incoming: ['wild'],
+      duration: 420,
+    });
   },
 };
 ```
@@ -3094,7 +3877,7 @@ const WINS = [0, 1, 2].map((row) => ({
 }));
 
 const reelSet = new ReelSetBuilder()
-  .reels(COLS).visibleSymbols(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
+  .reels(COLS).visibleRows(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
   .symbols(r => {
     for (const sym of [...CARD_DECK, WILD_CARD]) {
       r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
@@ -3143,7 +3926,7 @@ return {
   onSpin: async () => {
     const p = reelSet.spin();
     await new Promise(r => setTimeout(r, 150));
-    reelSet.setResult(GRID);
+    reelSet.setResult(GRID.map((visible) => ({ visible })));
     await p;
     await new Promise(r => setTimeout(r, 220));
     await presenter.show(WINS);
@@ -3181,7 +3964,7 @@ const WINS = [0, 1, 2].map((row) => ({
 const LINE_COLORS = [0xffe04a, 0x33d1ff, 0xff7aa2];
 
 const reelSet = new ReelSetBuilder()
-  .reels(COLS).visibleSymbols(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
+  .reels(COLS).visibleRows(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
   .symbols(r => {
     for (const sym of [...CARD_DECK, WILD_CARD]) {
       r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
@@ -3242,7 +4025,7 @@ return {
   onSpin: async () => {
     const p = reelSet.spin();
     await new Promise(r => setTimeout(r, 150));
-    reelSet.setResult(GRID);
+    reelSet.setResult(GRID.map((visible) => ({ visible })));
     await p;
     await new Promise(r => setTimeout(r, 220));
     await presenter.show(WINS);
@@ -3287,7 +4070,7 @@ const initialFrame = [
 
 const reelSet = new ReelSetBuilder()
   .reels(3)
-  .visibleSymbols(3)
+  .visibleRows(3)
   .symbolSize(90, 90)
   .symbolGap(4, 4)
   .bufferSymbols(1)
@@ -3315,7 +4098,7 @@ return {
 
     const p = reelSet.spin();
     await new Promise((r) => setTimeout(r, 250));
-    reelSet.setResult(result);
+    reelSet.setResult(result.map((visible) => ({ visible })));
     await p;
   },
 };
@@ -3354,7 +4137,7 @@ const MULTIPLIER_CELLS = [
 
 const reelSet = new ReelSetBuilder()
   .reels(COLS)
-  .visibleSymbols(ROWS)
+  .visibleRows(ROWS)
   .symbolSize(SIZE, SIZE)
   .symbolGap(4, 4)
   .symbols((r) => {
@@ -3502,7 +4285,7 @@ function randSymbol(exclude) {
 }
 
 const reelSet = new ReelSetBuilder()
-  .reels(REELS).visibleSymbols(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
+  .reels(REELS).visibleRows(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
   .symbols((r) => {
     for (const sym of CARD_DECK) {
       if (IDS.includes(sym.id)) {
@@ -3540,7 +4323,7 @@ return {
     reelSet.setDropOrder('ltr');
     const spinDone = reelSet.spin();
     await new Promise((r) => setTimeout(r, 220));
-    reelSet.setResult(stage0);
+    reelSet.setResult(stage0.map((visible) => ({ visible })));
     await spinDone;
 
     await new Promise((r) => setTimeout(r, 200));
@@ -3580,7 +4363,7 @@ function randSymbol(exclude) {
 }
 
 const reelSet = new ReelSetBuilder()
-  .reels(REELS).visibleSymbols(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
+  .reels(REELS).visibleRows(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
   .symbols((r) => {
     for (const sym of CARD_DECK) {
       if (IDS.includes(sym.id)) {
@@ -3616,7 +4399,7 @@ return {
     reelSet.setDropOrder('ltr');
     const spinDone = reelSet.spin();
     await new Promise((r) => setTimeout(r, 220));
-    reelSet.setResult(stage0);
+    reelSet.setResult(stage0.map((visible) => ({ visible })));
     await spinDone;
 
     await new Promise((r) => setTimeout(r, 200));
@@ -3655,7 +4438,7 @@ function randSymbol(exclude) {
 }
 
 const reelSet = new ReelSetBuilder()
-  .reels(REELS).visibleSymbols(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
+  .reels(REELS).visibleRows(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
   .symbols((r) => {
     for (const sym of CARD_DECK) {
       if (IDS.includes(sym.id)) {
@@ -3691,7 +4474,7 @@ return {
     reelSet.setDropOrder('ltr');
     const spinDone = reelSet.spin();
     await new Promise((r) => setTimeout(r, 220));
-    reelSet.setResult(stage0);
+    reelSet.setResult(stage0.map((visible) => ({ visible })));
     await spinDone;
 
     await new Promise((r) => setTimeout(r, 200));
@@ -3738,7 +4521,7 @@ function randSymbolNotIn(exclude) {
 }
 
 const reelSet = new ReelSetBuilder()
-  .reels(REELS).visibleSymbols(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
+  .reels(REELS).visibleRows(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
   .symbols(r => {
     for (const sym of [...CARD_DECK, WILD_CARD]) {
       if (IDS.includes(sym.id)) {
@@ -3759,7 +4542,7 @@ return {
     // Land BEFORE via a normal strip-spin.
     const p = reelSet.spin({ mode: 'standard' });
     await new Promise(r => setTimeout(r, 150));
-    reelSet.setResult(BEFORE);
+    reelSet.setResult(BEFORE.map((visible) => ({ visible })));
     await p;
     await new Promise(r => setTimeout(r, 300));
 
@@ -3812,7 +4595,7 @@ const GRID = [
 
 const reelSet = new ReelSetBuilder()
   .reels(5)
-  .visibleSymbols(3)
+  .visibleRows(3)
   .symbolSize(90, 90)
   .symbolGap(4, 4)
   .symbols(r => {
@@ -3834,7 +4617,7 @@ return {
     // target, no race-window to manage in your UI code.
     setTimeout(() => reelSet.requestSkip(), 560);
     // Server response arrives a moment later. requestSkip is already armed.
-    setTimeout(() => reelSet.setResult(GRID), 800);
+    setTimeout(() => reelSet.setResult(GRID.map((visible) => ({ visible }))), 800);
     await p;
   },
 };
@@ -3875,7 +4658,7 @@ function randSymbolNotIn(exclude) {
 }
 
 const reelSet = new ReelSetBuilder()
-  .reels(REELS).visibleSymbols(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
+  .reels(REELS).visibleRows(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
   .symbols((r) => {
     for (const sym of CARD_DECK) {
       if (IDS.includes(sym.id)) {
@@ -3928,7 +4711,7 @@ return {
     // Round 1: classic strip-spin lands on stage 0.
     const p = reelSet.spin({ mode: 'standard' });
     await new Promise((r) => setTimeout(r, 150));
-    reelSet.setResult(stage0);
+    reelSet.setResult(stage0.map((visible) => ({ visible })));
     await p;
     await new Promise((r) => setTimeout(r, 300));
 
@@ -4274,7 +5057,7 @@ const STICKY_TURNS = 3;
 
 const reelSet = new ReelSetBuilder()
   .reels(COLS)
-  .visibleSymbols(ROWS)
+  .visibleRows(ROWS)
   .symbolSize(SIZE, SIZE)
   .symbolGap(4, 4)
   .symbols((r) => {
@@ -4355,7 +5138,7 @@ const RESPIN_WINDOW = 2; // symbol stays pinned for 2 additional respins
 
 const reelSet = new ReelSetBuilder()
   .reels(COLS)
-  .visibleSymbols(ROWS)
+  .visibleRows(ROWS)
   .symbolSize(SIZE, SIZE)
   .symbolGap(4, 4)
   .symbols((r) => {
@@ -4492,7 +5275,7 @@ const GRID = [
 ];
 
 const reelSet = new ReelSetBuilder()
-  .reels(COLS).visibleSymbols(ROWS).symbolSize(CELL, CELL).symbolGap(4, 4)
+  .reels(COLS).visibleRows(ROWS).symbolSize(CELL, CELL).symbolGap(4, 4)
   .symbols(r => {
     for (const sym of CARD_DECK) {
       if (IDS.includes(sym.id)) {
@@ -4517,7 +5300,7 @@ return {
   onSpin: async () => {
     const p = reelSet.spin();
     await new Promise(r => setTimeout(r, 150));
-    reelSet.setResult(GRID);
+    reelSet.setResult(GRID.map((visible) => ({ visible })));
     const result = await p;
     await new Promise(r => setTimeout(r, 250));
 
@@ -4575,7 +5358,7 @@ const IDS = [
 
 const reelSet = new ReelSetBuilder()
   .reels(5)
-  .visibleSymbols(3)
+  .visibleRows(3)
   .symbolSize(90, 90)
   .symbolGap(4, 4)
   .symbols(r => {
@@ -4641,7 +5424,7 @@ function randSymbol(exclude) {
 }
 
 const reelSet = new ReelSetBuilder()
-  .reels(REELS).visibleSymbols(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
+  .reels(REELS).visibleRows(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
   .symbols((r) => {
     for (const sym of CARD_DECK) {
       if (IDS.includes(sym.id)) {
@@ -4678,7 +5461,7 @@ return {
     reelSet.setDropOrder('ltr');
     const spinDone = reelSet.spin();
     await new Promise((r) => setTimeout(r, 220));
-    reelSet.setResult(stage0);
+    reelSet.setResult(stage0.map((visible) => ({ visible })));
     await spinDone;
 
     await new Promise((r) => setTimeout(r, 200));
@@ -4733,7 +5516,7 @@ function randSymbol(exclude) {
 }
 
 const reelSet = new ReelSetBuilder()
-  .reels(REELS).visibleSymbols(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
+  .reels(REELS).visibleRows(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
   .symbols((r) => {
     for (const sym of CARD_DECK) {
       if (IDS.includes(sym.id)) {
@@ -4767,7 +5550,7 @@ return {
     const spinDone = reelSet.spin();
     reelSet.setDropOrder('ltr');
     await new Promise((r) => setTimeout(r, 220));
-    reelSet.setResult(stage0);
+    reelSet.setResult(stage0.map((visible) => ({ visible })));
     await spinDone;
 
     await new Promise((r) => setTimeout(r, 220));
@@ -4808,7 +5591,7 @@ function randSymbol(exclude) {
 }
 
 const reelSet = new ReelSetBuilder()
-  .reels(REELS).visibleSymbols(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
+  .reels(REELS).visibleRows(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
   .symbols((r) => {
     for (const sym of CARD_DECK) {
       if (IDS.includes(sym.id)) {
@@ -4843,7 +5626,7 @@ return {
     const spinDone = reelSet.spin();
     reelSet.setDropOrder('ltr');
     await new Promise((r) => setTimeout(r, 220));
-    reelSet.setResult(stage0);
+    reelSet.setResult(stage0.map((visible) => ({ visible })));
     await spinDone;
 
     // Moment B: fade winners, then refill — survivors slide, new symbols
@@ -4887,7 +5670,7 @@ function randSymbol(exclude) {
 }
 
 const reelSet = new ReelSetBuilder()
-  .reels(REELS).visibleSymbols(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
+  .reels(REELS).visibleRows(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
   .symbols((r) => {
     for (const sym of CARD_DECK) {
       if (IDS.includes(sym.id)) {
@@ -4921,7 +5704,7 @@ return {
     const spinDone = reelSet.spin();
     reelSet.setDropOrder('all');
     await new Promise((r) => setTimeout(r, 200));
-    reelSet.setResult(stage0);
+    reelSet.setResult(stage0.map((visible) => ({ visible })));
     await spinDone;
 
     await new Promise((r) => setTimeout(r, 200));
@@ -4962,7 +5745,7 @@ function randSymbol(exclude) {
 }
 
 const reelSet = new ReelSetBuilder()
-  .reels(REELS).visibleSymbols(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
+  .reels(REELS).visibleRows(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
   .symbols((r) => {
     for (const sym of CARD_DECK) {
       if (IDS.includes(sym.id)) {
@@ -4996,7 +5779,7 @@ return {
     const spinDone = reelSet.spin();
     reelSet.setDropOrder('ltr');
     await new Promise((r) => setTimeout(r, 180));
-    reelSet.setResult(stage0);
+    reelSet.setResult(stage0.map((visible) => ({ visible })));
     await spinDone;
 
     await new Promise((r) => setTimeout(r, 160));
@@ -5037,7 +5820,7 @@ function randSymbol(exclude) {
 }
 
 const reelSet = new ReelSetBuilder()
-  .reels(REELS).visibleSymbols(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
+  .reels(REELS).visibleRows(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
   .symbols((r) => {
     for (const sym of CARD_DECK) {
       if (IDS.includes(sym.id)) {
@@ -5071,7 +5854,7 @@ return {
     const spinDone = reelSet.spin();
     reelSet.setDropOrder('ltr');
     await new Promise((r) => setTimeout(r, 220));
-    reelSet.setResult(stage0);
+    reelSet.setResult(stage0.map((visible) => ({ visible })));
     await spinDone;
 
     await new Promise((r) => setTimeout(r, 220));
@@ -5116,7 +5899,7 @@ const cells = [];
 for (let col = 0; col < COLS; col++) {
   for (let row = 0; row < ROWS; row++) {
     const mini = new ReelSetBuilder()
-      .reels(1).visibleSymbols(1)
+      .reels(1).visibleRows(1)
       .symbolSize(CELL, CELL).symbolGap(0, 0)
       .symbols((r) => {
         r.register(COIN, CardSymbol, { color: COIN_CARD.color, label: COIN_CARD.label, textColor: COIN_CARD.textColor });
@@ -5237,7 +6020,7 @@ return {
       await new Promise((r) => setTimeout(r, 140));
       for (const cell of activeCells) {
         const isHit = hits.some((h) => h.col === cell.col && h.row === cell.row);
-        cell.reelSet.setResult([[isHit ? COIN : EMPTY]]);
+        cell.reelSet.setResult([{ visible: [isHit ? COIN : EMPTY] }]);
       }
       await Promise.all(spinPromises);
 
@@ -5276,7 +6059,7 @@ const COLS = 5, ROWS = 3, SIZE = 90;
 
 const reelSet = new ReelSetBuilder()
   .reels(COLS)
-  .visibleSymbols(ROWS)
+  .visibleRows(ROWS)
   .symbolSize(SIZE, SIZE)
   .symbolGap(4, 4)
   .symbols((r) => {
@@ -5388,7 +6171,7 @@ return {
       ),
     );
     if (arrival) grid[arrival.col][arrival.row] = WILD;
-    reelSet.setResult(grid);
+    reelSet.setResult(grid.map((visible) => ({ visible })));
     await promise;
     spinCount++;
   },
