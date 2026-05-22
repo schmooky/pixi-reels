@@ -14,12 +14,26 @@ export interface ColumnTarget {
    * Buffer-above target symbols. `bufferAbove[0]` is the slot closest to the
    * visible top row; `bufferAbove[bufferAboveCount-1]` is the furthest above.
    * Equivalent to legacy `frame[col][-1] … frame[col][-bufferAboveCount]`.
+   *
+   * **Big-symbol anchors may sit here.** Place a multi-cell symbol id (one
+   * whose `SymbolData.size.h > 1`) at any `bufferAbove[i]` and the
+   * coordinator paints OCCUPIED stubs across the rest of the block —
+   * including any cells that fall in visible. The block must fit on the
+   * strip end-to-end (`anchor.row + h <= visibleRows + bufferBelow`); the
+   * portion above visible is clipped by the reel mask. This is the
+   * "tail-visible" partial-landing pattern.
    */
   bufferAbove?: (string | undefined)[];
   /**
    * Buffer-below target symbols. `bufferBelow[0]` is the slot closest to the
    * visible bottom row; later indices go further below.
    * Equivalent to legacy `frame[col][visibleRows] … frame[col][visibleRows + n - 1]`.
+   *
+   * **Big-symbol stubs may sit here.** A block anchored at the last visible
+   * row with `h > 1` will have its non-anchor cells spill into `bufferBelow`
+   * automatically — you don't need to place stubs by hand. You can also
+   * place an anchor here, but the block then lies entirely off-screen
+   * (legal but invisible — the engine accepts the placement).
    */
   bufferBelow?: (string | undefined)[];
 }

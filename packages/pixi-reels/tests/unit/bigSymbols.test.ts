@@ -515,6 +515,53 @@ describe('big symbols', () => {
     }
   });
 
+  // Cross-reel block at the LAST visible row with stubs spilling into
+  // bufferBelow on both columns. Mirror of the cross-reel buffer-above
+  // test above, but for the bottom of the strip. Exercises
+  // `_coordinateBigSymbols` painting OCCUPIED into bufferBelow positions
+  // (`row >= visibleRows`) across multiple reels, and the per-Reel
+  // `placeSymbols` path consuming those positions during the slamStop
+  // skip-path landing.
+  it('cross-reel 2x2 anchored at last visible row — stubs spill into bufferBelow on both columns', async () => {
+    const { reelSet, spinAndLand, destroy } = createTestReelSet({
+      reels: 2,
+      visibleRows: 3,
+      bufferSymbols: 1,
+      symbolIds: ['a', 'big'],
+      symbolData: { big: { weight: 0, size: { w: 2, h: 2 } } },
+    });
+    try {
+      // Anchor at (col=0, row=2). Block covers (0,2)(anchor), (1,2)(stub),
+      // (0,3)(stub in bufferBelow[0]), (1,3)(stub in bufferBelow[0]).
+      await spinAndLand([
+        { visible: ['a', 'a', 'big'] },
+        { visible: ['a', 'a', 'a'] },
+      ]);
+
+      const grid = reelSet.getVisibleGrid();
+      expect(grid[0][2]).toBe('big');
+      expect(grid[1][2]).toBe('big'); // cross-reel resolver
+
+      const OCC = '__pixi_reels_occupied__';
+      // bufferBelow[0] lives at strip index `bufferAbove + visibleRows` = 1+3 = 4.
+      const reel0BufferBelow = reelSet.reels[0].symbols[4].symbolId;
+      const reel1BufferBelow = reelSet.reels[1].symbols[4].symbolId;
+      // Both bufferBelow slots got painted OCCUPIED by the coordinator
+      // and survived the skip-path placeSymbols.
+      expect(reel0BufferBelow).toBe(OCC);
+      expect(reel1BufferBelow).toBe(OCC);
+
+      // Footprint from either visible-row cell points to the same anchor.
+      const fpLeft = reelSet.getSymbolFootprint(0, 2);
+      const fpRight = reelSet.getSymbolFootprint(1, 2);
+      expect(fpLeft.anchor).toEqual({ col: 0, row: 2 });
+      expect(fpRight.anchor).toEqual({ col: 0, row: 2 });
+      expect(fpLeft.size).toEqual({ w: 2, h: 2 });
+    } finally {
+      destroy();
+    }
+  });
+
   it('throws if the buffer-anchored block extends past the bottom of the strip', async () => {
     const { reelSet, destroy } = createTestReelSet({
       reels: 1,
