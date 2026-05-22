@@ -8,7 +8,7 @@ Site: https://pixi-reels.schmooky.dev
 Repo: https://github.com/schmooky/pixi-reels
 Package: https://www.npmjs.com/package/pixi-reels
 
-Generated: 2026-05-22T13:08:28.712Z
+Generated: 2026-05-22T13:09:43.403Z
 
 ## Quick start
 
