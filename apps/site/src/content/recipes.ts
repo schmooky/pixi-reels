@@ -212,6 +212,20 @@ export const RECIPES: RecipeMeta[] = [
     tags: ['debug', 'prototyping', 'custom-symbol', 'graphics'],
   },
   {
+    slug: 'empty-symbol',
+    group: 'starters',
+    title: 'EmptySymbol — render nothing for a registered id',
+    oneLiner: 'Register an EmptySymbol against an id like `empty` to reserve a grid slot that produces no visual output. The canonical background for hold-and-win bonus boards, miss cells, and any pattern where "blank" is the intended visual.',
+    steps: [
+      "Import EmptySymbol from `examples/shared/EmptySymbol.ts`",
+      "Register the empty id — `r.register('empty', EmptySymbol, {})`",
+      'Weight empty heavily so most cells land blank; weight real symbols lightly so they pop',
+      'The cell still occupies a strip slot, but renders zero pixels',
+    ],
+    apis: ['ReelSymbol', 'SymbolRegistry.register', 'ReelSetBuilder.symbols', 'ReelSetBuilder.weights'],
+    tags: ['symbols', 'empty', 'hold-and-win', 'recent'],
+  },
+  {
     slug: 'multiways-cascade',
     group: 'multiways',
     title: 'MultiWays cascade',

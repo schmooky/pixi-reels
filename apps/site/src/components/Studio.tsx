@@ -42,6 +42,7 @@ import {
 import { SpineReelSymbol } from 'pixi-reels/spine';
 import { BlurSpriteSymbol } from '../../../../examples/shared/BlurSpriteSymbol.ts';
 import { CardSymbol, CARD_DECK, WILD_CARD } from '../../../../examples/shared/CardSymbol.ts';
+import { EmptySymbol } from '../../../../examples/shared/EmptySymbol.ts';
 import { loadPrototypeSymbols } from '../../../../examples/shared/prototypeSpriteLoader.ts';
 import {
   loadGeneratedSpines,
@@ -60,13 +61,6 @@ import {
 } from '@/lib/studio/applyConfig.js';
 import type { StudioConfig } from '@/lib/studio/types.js';
 
-class EmptySymbol extends ReelSymbol {
-  protected onActivate(_symbolId: string): void {}
-  protected onDeactivate(): void {}
-  async playWin(): Promise<void> {}
-  stopAnimation(): void {}
-  resize(_w: number, _h: number): void {}
-}
 
 const DEFAULT_CODE = `// @ts-nocheck
 // ─── pixi-reels studio ─────────────────────────────────────────────────

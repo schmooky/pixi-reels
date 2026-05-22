@@ -6,7 +6,7 @@ Site: https://pixi-reels.schmooky.dev
 Repo: https://github.com/schmooky/pixi-reels
 Package: https://www.npmjs.com/package/pixi-reels
 
-Generated: 2026-05-22T05:33:17.000Z
+Generated: 2026-05-22T05:40:50.592Z
 
 ## Quick start
 
@@ -266,6 +266,16 @@ Steps:
   - Pin landed coins with { turns 'permanent', payload: { value } }
   - On collector land, sum neighbor pin payloads and unpin absorbed coins
   - Pin the collector with the total in its own payload
+
+### EmptySymbol — render nothing for a registered id
+URL: https://pixi-reels.schmooky.dev/recipes/empty-symbol/
+Register an EmptySymbol against an id like 'empty' to reserve a grid slot that produces no visual output. Useful for hold-and-win mechanics, miss cells, and any board where blank is the intended visual.
+Tags: symbols, empty, hold-and-win
+APIs: ReelSymbol, SymbolRegistry.register, ReelSetBuilder.symbols, ReelSetBuilder.weights
+Steps:
+  - Register the empty id with EmptySymbol — `r.register('empty', EmptySymbol, {})`
+  - Weight empty heavily so most cells land blank; weight real symbols lightly so they pop
+  - The reel renders empty cells as zero pixels — no sprite, no graphic, no animation
 
 ### Expanding wild (sticky)
 URL: https://pixi-reels.schmooky.dev/recipes/expanding-wild-pin/
@@ -2011,6 +2021,68 @@ return {
     }
   },
 };
+```
+
+### empty-symbol
+URL: https://pixi-reels.schmooky.dev/recipes/empty-symbol/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, WILD_CARD,
+//                   PIXI, app, EmptySymbol
+
+// EMPTY SYMBOL pattern.
+//
+// `EmptySymbol` is a {@link ReelSymbol} subclass that renders nothing
+// and never animates. Register it against an id (here `'empty'`) to
+// reserve a slot in the grid that produces NO visual output.
+//
+// Why this is useful (and why hold-and-win mechanics need it):
+//   - Hold & Win bonuses spawn 1×1 "coin" pins on a grid that's
+//     otherwise blank between respins. Real symbols would compete for
+//     the player's attention with the pinned coins; an empty symbol
+//     gets out of the way.
+//   - Weighting an EMPTY id heavily (and a real symbol lightly) makes
+//     valuable symbols feel rare and exciting — every coin landing on
+//     an otherwise-blank board reads as a hit.
+//   - Random fill still needs SOME id to put in each cell. EmptySymbol
+//     is that id when "no symbol" is the desired visual.
+//
+// What this recipe runs:
+//   - 3 reels, 3 visible rows. Symbol set is `{ coin, empty }`.
+//   - Weights `{ coin: 1, empty: 6 }` — most cells land blank; coins
+//     scatter sparsely (~1 in 7 by weight).
+//   - Hit Spin to spin all three reels. Coins land in a sea of nothing.
+
+const COIN = 'coin';
+const EMPTY = 'empty';
+
+const REELS = 3;
+const ROWS = 3;
+const CELL = 88;
+const GAP = 6;
+
+const reelSet = new ReelSetBuilder()
+  .reels(REELS)
+  .visibleSymbols(ROWS)
+  .symbolSize(CELL, CELL)
+  .symbolGap(GAP, GAP)
+  .symbols((registry) => {
+    // Real symbol: a wild-card-styled "coin".
+    registry.register(COIN, CardSymbol, {
+      color: WILD_CARD.color,
+      label: WILD_CARD.label,
+      textColor: WILD_CARD.textColor,
+    });
+    // The empty cell: rendered as absolutely nothing.
+    registry.register(EMPTY, EmptySymbol, {});
+  })
+  // Coins are rare; the strip is mostly blank.
+  .weights({ [COIN]: 1, [EMPTY]: 6 })
+  .speed('normal', SpeedPresets.NORMAL)
+  .ticker(app.ticker)
+  .build();
+
+return { reelSet };
 ```
 
 ### expanding-wild-pin

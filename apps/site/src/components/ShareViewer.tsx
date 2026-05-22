@@ -22,6 +22,7 @@ import {
 import { SpineReelSymbol } from 'pixi-reels/spine';
 import { BlurSpriteSymbol } from '../../../../examples/shared/BlurSpriteSymbol.ts';
 import { CardSymbol, CARD_DECK, WILD_CARD } from '../../../../examples/shared/CardSymbol.ts';
+import { EmptySymbol } from '../../../../examples/shared/EmptySymbol.ts';
 import { loadPrototypeSymbols } from '../../../../examples/shared/prototypeSpriteLoader.ts';
 import {
   loadGeneratedSpines,
@@ -29,13 +30,6 @@ import {
 } from '../../../../examples/shared/generatedSpineLoader.ts';
 import { transform as sucraseTransform } from 'sucrase';
 
-class EmptySymbol extends ReelSymbol {
-  protected onActivate(_symbolId: string): void {}
-  protected onDeactivate(): void {}
-  async playWin(): Promise<void> {}
-  stopAnimation(): void {}
-  resize(_w: number, _h: number): void {}
-}
 import { getShare, ShareApiError } from '@/lib/studio/share/api.js';
 import { openEnvelope } from '@/lib/studio/share/crypto.js';
 import { decodePayload, verifyPayloadHashes } from '@/lib/studio/share/payload.js';
