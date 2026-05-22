@@ -38,7 +38,7 @@
 
 <!--
   Inline + raw JS so Vite doesn't try to resolve /pagefind/pagefind.js at build
-  time — that file is emitted by `pagefind --site dist` AFTER Astro finishes,
+  time. that file is emitted by `pagefind --site dist` AFTER Astro finishes,
   so a normal ESM import would fail the build. The dynamic import sits inside
   a string template literal hidden from the bundler.
 -->
@@ -58,7 +58,7 @@
         await pagefind.options({ baseUrl: '/' });
         return pagefind;
       } catch (e) {
-        console.warn('Pagefind index not built — run `pnpm build` in apps/site/ first.');
+        console.warn('Pagefind index not built. run `pnpm build` in apps/site/ first.');
         if (results) {
           results.innerHTML = '<li class="px-3 py-2 text-xs text-muted-foreground">Search index unavailable in dev. Run a production build to enable search.</li>';
         }

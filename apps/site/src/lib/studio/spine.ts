@@ -4,7 +4,7 @@
  * Loading a Spine bundle from user-uploaded blobs needs three things to
  * line up: the skeleton JSON, the atlas text, and one texture page per
  * filename the atlas references. The atlas references pages by relative
- * filename — those won't resolve from a blob URL — so we rewrite each
+ * filename. those won't resolve from a blob URL. so we rewrite each
  * texture line to point at the matching blob URL before handing the
  * atlas to PixiJS Assets.
  */
@@ -21,7 +21,7 @@ type AssetGetter = (hash: string) => Promise<StoredAsset | null>;
  * starts each page with the texture filename on its own non-indented line
  * (e.g. `wild.webp`), followed by indented metadata. Region blocks within
  * a page have arbitrary names that may contain dots, but they're always
- * indented or contain a colon — so the heuristic below is reliable for
+ * indented or contain a colon. so the heuristic below is reliable for
  * standard Spine atlas output.
  */
 export function parseAtlasTexturePages(atlasText: string): string[] {
@@ -75,7 +75,7 @@ interface SpineLoadResult {
   skeletonAlias: string;
   /** Alias the SpineReelSymbol's `spineMap.<id>.atlas` should reference. */
   atlasAlias: string;
-  /** All blob URLs created during load — caller revokes them on teardown. */
+  /** All blob URLs created during load. caller revokes them on teardown. */
   blobUrls: string[];
 }
 
@@ -84,7 +84,7 @@ interface SpineLoadResult {
  * the aliases `SpineReelSymbol` (and `Spine.from`) consume. Caller revokes
  * `blobUrls` on cleanup.
  *
- * Why the dance — the spine-pixi-v8 loaders match by file extension
+ * Why the dance. the spine-pixi-v8 loaders match by file extension
  * (`.atlas`, `.json`), which blob URLs don't have. So we sidestep extension
  * detection entirely:
  *
@@ -98,7 +98,7 @@ interface SpineLoadResult {
  *   - Skeleton: `Spine.from` calls `Assets.get(skeletonAlias)` and feeds
  *     the result to `SkeletonJson.readSkeletonData`, which expects the
  *     parsed JSON object. We `JSON.parse` ourselves and seed the cache
- *     directly — cleaner than coercing the JSON loader past its `.json`
+ *     directly. cleaner than coercing the JSON loader past its `.json`
  *     extension check.
  *
  * `runId` namespaces the aliases so successive Runs don't reuse stale
@@ -111,7 +111,7 @@ export async function loadStudioSpine(
 ): Promise<SpineLoadResult> {
   const blobUrls: string[] = [];
 
-  // 1. Build a TextureSource per page directly from the blob — bypasses
+  // 1. Build a TextureSource per page directly from the blob. bypasses
   //    the PixiJS texture loader's extension/MIME sniffing (blob URLs
   //    have no extension and the default loader's `test` rejects them).
   //    `ImageSource` extends `TextureSource`; the spine atlas parser
@@ -183,7 +183,7 @@ export interface SpinePreviewResult {
   /** PNG data URL captured from the offscreen render. */
   dataUrl: string;
   /**
-   * Fit scale we used at preview time — the spine's natural bounds
+   * Fit scale we used at preview time. the spine's natural bounds
    * scaled into a ~160px reference box. The studio reuses this as the
    * default `SpineReelSymbol.scale` so spines render at a sane size in
    * the user's cell instead of their setup-pose size (which is often
@@ -202,7 +202,7 @@ export interface SpinePreviewResult {
  * preview generates cleanly the actual Run will too. A failure here is
  * swallowed by the caller (preview is best-effort).
  *
- * Each call creates and tears down its own `Application` — overhead is
+ * Each call creates and tears down its own `Application`. overhead is
  * a fraction of a second per save, and we never accumulate canvases.
  */
 export async function generateSpinePreview(
@@ -256,7 +256,7 @@ export async function generateSpinePreview(
     const dataUrl = await app.renderer.extract.base64(app.stage);
     return { dataUrl, scale };
   } finally {
-    // Tear down regardless of success — leaving an offscreen Application
+    // Tear down regardless of success. leaving an offscreen Application
     // around per save would balloon GPU contexts.
     app.destroy(true, { children: true, texture: false });
     for (const url of blobUrls) {

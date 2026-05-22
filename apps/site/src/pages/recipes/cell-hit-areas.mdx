@@ -1,7 +1,7 @@
 ---
 layout: ../../layouts/Recipe.astro
-title: Cell hit areas — click to pick, hover to preview
-description: Use getCellBounds to attach pointer events to individual grid cells — cursor changes to a pointer on hover, click toggles a pick state, all cells stay selectable across spins.
+title: Cell hit areas. click to pick, hover to preview
+description: Use getCellBounds to attach pointer events to individual grid cells. cursor changes to a pointer on hover, click toggles a pick state, all cells stay selectable across spins.
 tags: [utility, hit-areas, interaction, cursor]
 steps:
   - For each cell call reelSet.getCellBounds(col, row)
@@ -18,7 +18,7 @@ import { RecipeRunner } from '../../components/RecipeRunner.tsx';
 
 <RecipeRunner code={code} client:only="react" />
 
-Hover a cell — cursor turns into a pointer and a grey outline appears. Click to pick; click again to unpick. Picks survive spins.
+Hover a cell. cursor turns into a pointer and a grey outline appears. Click to pick; click again to unpick. Picks survive spins.
 
 ## The minimum code
 
@@ -38,7 +38,7 @@ Three things to remember:
 
 1. **Fill with alpha 0**, not `visible = false`. An invisible-but-filled rect is still hit-testable; a `visible=false` one is not.
 2. **`eventMode = 'static'`** is the PixiJS v8 way to opt a node into the event system. `'dynamic'` works too but costs more per frame.
-3. **`cursor = 'pointer'`** is enough on its own — PixiJS sets the page cursor when the pointer is over a hit-enabled node.
+3. **`cursor = 'pointer'`** is enough on its own. PixiJS sets the page cursor when the pointer is over a hit-enabled node.
 
 ## Hover preview + pick state
 
@@ -78,7 +78,7 @@ overlay.zIndex = 9998;
 
 ## Use cases
 
-- **Pick-a-multiplier bonus** — lock one cell, spin, that cell pays ×N
-- **Sticky-wild placement feature** — player picks 3 cells, they become sticky wilds
-- **Free-form paytable viewer** — click a symbol to show its pays
-- **Debug tooling** — click a cell in dev to inspect `reelSet.getReel(col).getSymbolAt(row)`
+- **Pick-a-multiplier bonus**. lock one cell, spin, that cell pays ×N
+- **Sticky-wild placement feature**. player picks 3 cells, they become sticky wilds
+- **Free-form paytable viewer**. click a symbol to show its pays
+- **Debug tooling**. click a cell in dev to inspect `reelSet.getReel(col).getSymbolAt(row)`

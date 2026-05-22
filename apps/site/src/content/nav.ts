@@ -23,7 +23,7 @@ export const GUIDES_NAV: NavSection[] = [
       { label: 'Symbols', href: '/guides/symbols/' },
       { label: 'Spine pins + movePin', href: '/guides/spine-pins/' },
       { label: 'Spin lifecycle', href: '/guides/spin-lifecycle/' },
-      { label: 'Cascades — mental model', href: '/guides/cascades/' },
+      { label: 'Cascades. mental model', href: '/guides/cascades/' },
       { label: 'Per-reel geometry', href: '/guides/per-reel-geometry/' },
       { label: 'MultiWays', href: '/guides/multiways/' },
       { label: 'Big symbols', href: '/guides/big-symbols/' },

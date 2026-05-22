@@ -1,7 +1,7 @@
 ---
 layout: ../../layouts/Recipe.astro
 title: Sticky wild (CellPin)
-description: Sticky wild using the engine's CellPin primitive — no ghost sprites, no manual grid injection. Pin once on land, the engine handles the rest.
+description: Sticky wild using the engine's CellPin primitive. no ghost sprites, no manual grid injection. Pin once on land, the engine handles the rest.
 tags: [wild, respin, sticky, cell-pin]
 steps:
   - Listen for wilds landing via spin:allLanded
@@ -18,9 +18,9 @@ import { RecipeRunner } from '../../components/RecipeRunner.tsx';
 
 <RecipeRunner code={code} client:only="react" />
 
-This is the same sticky-wild demo — built with the `CellPin` primitive instead of ghost sprites and manual grid re-injection.
+This is the same sticky-wild demo. built with the `CellPin` primitive instead of ghost sprites and manual grid re-injection.
 
-Compare with the [original sticky-wild recipe](/recipes/sticky-wild/) which tracks a `stuck[]` array and overlays PIXI.Sprite ghosts on the stage. This version uses `reelSet.pin()` — the engine handles the overlay and the countdown.
+Compare with the [original sticky-wild recipe](/recipes/sticky-wild/) which tracks a `stuck[]` array and overlays PIXI.Sprite ghosts on the stage. This version uses `reelSet.pin()`. the engine handles the overlay and the countdown.
 
 ## The whole mechanic
 
@@ -42,18 +42,18 @@ That's it. Nine lines. No external state, no ghost sprites, no manual grid injec
 
 ## What the primitive does for you
 
-1. **Overlay** — on every `setResult()`, pinned cells' `symbolId` replaces whatever the server sent. The reel lands on the wild regardless of the spin's random result.
-2. **Lifecycle** — `turns: 3` decrements after each `spin:allLanded`. On reaching zero, the pin fires `pin:expired` and is removed.
-3. **Idle updates** — if you pin before any spin (or between spins), the cell updates immediately. `getVisibleSymbols()` reflects the pin.
+1. **Overlay**. on every `setResult()`, pinned cells' `symbolId` replaces whatever the server sent. The reel lands on the wild regardless of the spin's random result.
+2. **Lifecycle**. `turns: 3` decrements after each `spin:allLanded`. On reaching zero, the pin fires `pin:expired` and is removed.
+3. **Idle updates**. if you pin before any spin (or between spins), the cell updates immediately. `getVisibleSymbols()` reflects the pin.
 
 ## Variations
 
-- **`turns: 'permanent'`** — pin lives until you call `unpin()`. Good for Hold & Win.
-- **`turns: 'eval'`** — pin is valid for one spin's evaluation; cleared at next `spin:start`. Used by [expanding wild](/recipes/expanding-wild-pin/) and [mystery reveal](/recipes/mystery-reveal-pin/).
-- **Arbitrary payload** — attach `payload: { multiplier: 3 }` for [multiplier wild](/recipes/multiplier-wild-pin/).
+- **`turns: 'permanent'`**. pin lives until you call `unpin()`. Good for Hold & Win.
+- **`turns: 'eval'`**. pin is valid for one spin's evaluation; cleared at next `spin:start`. Used by [expanding wild](/recipes/expanding-wild-pin/) and [mystery reveal](/recipes/mystery-reveal-pin/).
+- **Arbitrary payload**. attach `payload: { multiplier: 3 }` for [multiplier wild](/recipes/multiplier-wild-pin/).
 
 ## Related
 
-- [Expanding wild](/recipes/expanding-wild-pin/) — `turns: 'eval'` fill
-- [Multiplier wild](/recipes/multiplier-wild-pin/) — same pattern + payload
-- [Sticky-win respin](/recipes/sticky-win-respin-pin/) — pin all winners for N respins
+- [Expanding wild](/recipes/expanding-wild-pin/). `turns: 'eval'` fill
+- [Multiplier wild](/recipes/multiplier-wild-pin/). same pattern + payload
+- [Sticky-win respin](/recipes/sticky-win-respin-pin/). pin all winners for N respins

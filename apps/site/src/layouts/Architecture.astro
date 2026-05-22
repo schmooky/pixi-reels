@@ -23,7 +23,7 @@ const fm = props.frontmatter ?? {};
 const title = props.title ?? fm.title ?? 'Architecture';
 const subtitle = props.subtitle ?? fm.subtitle ?? '';
 const eyebrow = props.eyebrow ?? fm.eyebrow ?? 'Architecture';
-const description = props.description ?? fm.description ?? `${title} — pixi-reels architecture deep dive.`;
+const description = props.description ?? fm.description ?? `${title}. pixi-reels architecture deep dive.`;
 const pathname = Astro.url.pathname;
 
 const jsonLd = [

@@ -3,7 +3,7 @@ import type { Disposable } from '../utils/Disposable.js';
 import { getGsap } from '../utils/gsapRef.js';
 
 /**
- * One visible cell on a reel — the thing that actually draws.
+ * One visible cell on a reel. the thing that actually draws.
  *
  * `ReelSymbol` is the abstract base class. Subclass it to pick a rendering
  * technology (`SpriteSymbol`, `AnimatedSpriteSymbol`, `SpineSymbol`, or a
@@ -13,14 +13,14 @@ import { getGsap } from '../utils/gsapRef.js';
  *
  * Required lifecycle hooks:
  *
- *   - `onActivate(symbolId)` — the pool just handed me a new identity. Swap
+ *   - `onActivate(symbolId)`. the pool just handed me a new identity. Swap
  *     texture, restart animations, bring myself out of any "ended" pose.
- *   - `onDeactivate()` — I am about to be pooled. Pause animations, clear
+ *   - `onDeactivate()`. I am about to be pooled. Pause animations, clear
  *     listeners, leave myself in a clean state for the next activation.
- *   - `playWin()` — the spotlight is celebrating me. Return a promise that
+ *   - `playWin()`. the spotlight is celebrating me. Return a promise that
  *     resolves when the one-shot animation is done.
- *   - `stopAnimation()` — spotlight is over, return to idle.
- *   - `resize(w, h)` — the reel's cell size changed (on every symbol swap).
+ *   - `stopAnimation()`. spotlight is over, return to idle.
+ *   - `resize(w, h)`. the reel's cell size changed (on every symbol swap).
  *     Store the dimensions and reposition internal children. Forgetting
  *     this is the single most common "why do my symbols scatter" bug.
  *
@@ -84,7 +84,7 @@ export abstract class ReelSymbol implements Disposable {
     this.view.zIndex = 0;
   }
 
-  /** Pool reset — aliases deactivate. */
+  /** Pool reset. aliases deactivate. */
   reset(): void {
     this.deactivate();
   }
@@ -130,19 +130,19 @@ export abstract class ReelSymbol implements Disposable {
    * via `_replaceSymbol`'s same-id fast path doesn't inherit a stale
    * pivot offset.
    *
-   * Override in subclasses for art-appropriate destruction — e.g. a
+   * Override in subclasses for art-appropriate destruction. e.g. a
    * Spine symbol can play its `disintegration` track here, or a sprite
    * symbol can swap to a shatter atlas. The promise must resolve when
    * the symbol is no longer visible.
    *
-   * `opts.direction` — rotation direction (`1` or `-1`). Default: random.
+   * `opts.direction`. rotation direction (`1` or `-1`). Default: random.
    * For coherent clusters, callers should pass `w.reel % 2 === 0 ? 1 : -1`
    * (alternate by column) instead of relying on random.
-   * `opts.delay` — seconds to wait before the animation starts. Use to
+   * `opts.delay`. seconds to wait before the animation starts. Use to
    * stagger a cluster of winners (e.g. `i * 0.015`).
-   * `opts.signal` — abort signal. If aborted (now or mid-animation), the
+   * `opts.signal`. abort signal. If aborted (now or mid-animation), the
    * tween is killed and the view is snapped to its destroyed pose
-   * (`alpha: 0`, transform restored). The promise resolves normally — abort
+   * (`alpha: 0`, transform restored). The promise resolves normally. abort
    * means "skip to the end," not "fail". Subclasses that override this
    * method MUST honor the signal or document why they can't (e.g. a Spine
    * `disintegration` track is uninterruptible).
@@ -156,7 +156,7 @@ export abstract class ReelSymbol implements Disposable {
     const originalY = view.y;
 
     // Pivot to bounds-center so scale + rotation squish around the visual
-    // centre instead of the view's (0,0) corner — and compensate position
+    // centre instead of the view's (0,0) corner. and compensate position
     // so the symbol doesn't visibly jump when the pivot moves.
     const bounds = view.getLocalBounds();
     const cx = bounds.x + bounds.width / 2;
@@ -207,7 +207,7 @@ export abstract class ReelSymbol implements Disposable {
       if (signal) signal.addEventListener('abort', onAbort, { once: true });
     });
 
-    // Restore transform — alpha stays 0 (the symbol IS destroyed). Scale
+    // Restore transform. alpha stays 0 (the symbol IS destroyed). Scale
     // restored to 1 so pool reuse via `_replaceSymbol`'s same-id fast path
     // doesn't inherit a stale 0× scale; _replaceSymbol also resets scale
     // explicitly but a defensive restore here makes the destroyed cell

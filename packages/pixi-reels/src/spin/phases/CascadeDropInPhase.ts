@@ -12,7 +12,7 @@ import { mergeDropInConfig } from '../../cascade/TumbleConfig.js';
 import { computeDropOffsets } from '../../cascade/tumbleAlgorithm.js';
 
 export interface CascadeDropInPhaseConfig {
-  /** Visible rows whose old symbols were winners — drives per-row drop
+  /** Visible rows whose old symbols were winners. drives per-row drop
    *  geometry. Empty AND `initial: false` ⇒ no animation on this reel. */
   winnerRows: number[];
   /** `true` for Moment A (initial spin: every row drops from above);
@@ -21,13 +21,13 @@ export interface CascadeDropInPhaseConfig {
   /**
    * Two-stage refill filter.
    *
-   *   - `'all'` (default) — animate every mover: survivors-sliding-down AND
+   *   - `'all'` (default). animate every mover: survivors-sliding-down AND
    *     new-symbols-from-above. The classic single-phase refill.
-   *   - `'gravity'` — animate only survivors that slide down to fill holes
+   *   - `'gravity'`. animate only survivors that slide down to fill holes
    *     (originalRow ≥ 0 with offsetRows > 0). New-symbol movers stay
-   *     repositioned above the viewport with alpha=0 — invisible, awaiting
+   *     repositioned above the viewport with alpha=0. invisible, awaiting
    *     the second stage. Emits `cascade:gravity:*` events.
-   *   - `'new'` — animate only new-symbol movers (originalRow < 0).
+   *   - `'new'`. animate only new-symbol movers (originalRow < 0).
    *     Survivors are already at their grid Y from the prior gravity stage,
    *     so this phase reveals them at alpha=1 and only tweens the new
    *     arrivals down from above. Emits `cascade:dropIn:*` events.
@@ -104,14 +104,14 @@ export class CascadeDropInPhase extends ReelPhase<CascadeDropInPhaseConfig> {
 
     // Pick the event triplet for this role. Gravity uses its own channel so
     // listeners can distinguish "survivors slid into the holes" from "new
-    // symbols entered". 'all' and 'new' both emit `cascade:dropIn:*` — they
+    // symbols entered". 'all' and 'new' both emit `cascade:dropIn:*`. they
     // are semantically the same drop-in beat (the 'new' role is just a
     // filtered variant where survivors already landed in stage 1).
     const startEvent = role === 'gravity' ? 'cascade:gravity:start' : 'cascade:dropIn:start';
     const symbolEvent = role === 'gravity' ? 'cascade:gravity:symbol' : 'cascade:dropIn:symbol';
     const endEvent = role === 'gravity' ? 'cascade:gravity:end' : 'cascade:dropIn:end';
 
-    // Capture for `onSkip` — the `:start` event was just emitted, so any
+    // Capture for `onSkip`. the `:start` event was just emitted, so any
     // skip from here must produce the paired `:end` to keep listeners
     // balanced.
     this._events = events;
@@ -123,17 +123,17 @@ export class CascadeDropInPhase extends ReelPhase<CascadeDropInPhaseConfig> {
 
     // Build jobs and reset view.y to the pre-drop position. Survivors that
     // don't move (offsetRows === 0) are revealed where placeSymbols left
-    // them. Movers are repositioned above the viewport, THEN revealed —
+    // them. Movers are repositioned above the viewport, THEN revealed.
     // this avoids a single-frame flash at the grid position between
     // CascadePlacePhase (snaps view.y) and the first tween frame.
     //
     // Two-stage refill (`role === 'gravity' | 'new'`) skips a subset of
     // movers depending on origin:
-    //   - 'gravity'  — animate survivor-shifters (originalRow ≥ 0). Keep
+    //   - 'gravity' . animate survivor-shifters (originalRow ≥ 0). Keep
     //                  new-symbol movers (originalRow < 0) repositioned
     //                  above the viewport with alpha = 0 so they're ready
     //                  to drop in stage 2 without a flash.
-    //   - 'new'      — animate new-symbol movers (originalRow < 0).
+    //   - 'new'     . animate new-symbol movers (originalRow < 0).
     //                  Survivors that slid in stage 1 are already at
     //                  their grid Y; reveal them at alpha = 1.
     const jobs: DropJob[] = [];
@@ -141,7 +141,7 @@ export class CascadeDropInPhase extends ReelPhase<CascadeDropInPhaseConfig> {
       const sym = reel.getSymbolAt(off.row);
 
       if (off.offsetRows === 0) {
-        // Untouched survivor — placeSymbols left it at finalY visible.
+        // Untouched survivor. placeSymbols left it at finalY visible.
         sym.view.visible = true;
         sym.view.alpha = 1;
         continue;
@@ -156,7 +156,7 @@ export class CascadeDropInPhase extends ReelPhase<CascadeDropInPhaseConfig> {
           // which is correct for Moment A (every row is new) and for new
           // arrivals in Moment B (originalRow < 0). For a Moment B SURVIVOR
           // (originalRow >= 0), 'auto' would teleport the symbol from its
-          // actual prior row up above the viewport, then back down — a
+          // actual prior row up above the viewport, then back down. a
           // visible discontinuity. Fall back to perHole geometry for those
           // movers so the survivor really does slide from its old row.
           if (!config.initial && off.originalRow >= 0) {
@@ -179,7 +179,7 @@ export class CascadeDropInPhase extends ReelPhase<CascadeDropInPhaseConfig> {
 
       if (skipForRole) {
         if (role === 'gravity' && isNewSymbol) {
-          // New symbol awaiting stage 2 — invisible (alpha = 0) but parked
+          // New symbol awaiting stage 2. invisible (alpha = 0) but parked
           // at the FINAL grid Y, not at startY. placeSymbols already snapped
           // view.y to grid Y; we leave it there so stage 2's `finalY =
           // sym.view.y` read picks up the correct landing position. (Stage 2
@@ -187,7 +187,7 @@ export class CascadeDropInPhase extends ReelPhase<CascadeDropInPhaseConfig> {
           sym.view.alpha = 0;
           sym.view.visible = true;
         } else if (role === 'new' && !isNewSymbol) {
-          // Survivor already animated by the gravity stage — reveal it
+          // Survivor already animated by the gravity stage. reveal it
           // where placeSymbols originally targeted (the final grid Y).
           sym.view.y = finalY;
           sym.view.alpha = 1;
@@ -196,7 +196,7 @@ export class CascadeDropInPhase extends ReelPhase<CascadeDropInPhaseConfig> {
         continue;
       }
 
-      // Move FIRST, then reveal — so the symbol never appears at the grid
+      // Move FIRST, then reveal. so the symbol never appears at the grid
       // position during the place→drop handover.
       sym.view.y = startY;
       sym.view.alpha = 1;
@@ -235,7 +235,7 @@ export class CascadeDropInPhase extends ReelPhase<CascadeDropInPhaseConfig> {
     const staggerSec = this._drop.rowStagger / 1000;
 
     if (jobs.length === 0 || dropSec <= 0) {
-      // Nothing to animate, or zero-duration recipe — snap and complete.
+      // Nothing to animate, or zero-duration recipe. snap and complete.
       for (const job of jobs) job.view.y = job.finalY;
       finish();
       return;
@@ -301,7 +301,7 @@ export class CascadeDropInPhase extends ReelPhase<CascadeDropInPhaseConfig> {
     // new-symbol movers off-viewport at alpha = 0, and those aren't in
     // `_jobs`. A skip during the gravity beat must still reveal the final
     // landed state, so force every visible row to its grid Y / alpha 1.
-    // Cheap belt-and-braces — for `role === 'all' | 'new'` this is a no-op
+    // Cheap belt-and-braces. for `role === 'all' | 'new'` this is a no-op
     // because non-job rows are already revealed.
     const reel = this._reel;
     for (let row = 0; row < reel.visibleRows; row++) {
@@ -311,7 +311,7 @@ export class CascadeDropInPhase extends ReelPhase<CascadeDropInPhaseConfig> {
     }
 
     // Abort BEFORE emitting `:end` so listeners registered on the
-    // per-symbol `signal` get the cancellation first — squish/bounce
+    // per-symbol `signal` get the cancellation first. squish/bounce
     // tweens they scheduled off `cascade:dropIn:symbol` must die before
     // `:end` consumers run any landed-state setup that would otherwise
     // collide with mid-air tweens.
@@ -323,7 +323,7 @@ export class CascadeDropInPhase extends ReelPhase<CascadeDropInPhaseConfig> {
     // Emit the paired `:end` event so listeners that count start/end
     // events stay balanced across skips. `:start` was already emitted at
     // the top of `onEnter`, so a skip here always has a matching `:start`
-    // — no guard needed (unlike `CascadeFallPhase`, where `:start` fires
+    //. no guard needed (unlike `CascadeFallPhase`, where `:start` fires
     // after a configurable delay).
     if (this._events) {
       this._events.emit(this._endEvent, { reelIndex: this._reel.reelIndex });

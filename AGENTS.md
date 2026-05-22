@@ -359,9 +359,9 @@ style enforces, framed the way an agent reads them.
 
 **1. Work like a pair-programming peer, not an autocomplete.** Before you
 edit, state what you plan to do, which files you expect to touch, and what
-"done" looks like. If that plan is a page long, the task is under-specified
-— push back and ask for a smaller goal. The four rules in section 11 are the
-concrete shape of this.
+"done" looks like. If that plan is a page long, the task is
+under-specified; push back and ask for a smaller goal. The four rules
+in section 11 are the concrete shape of this.
 
 **2. Small, reversible steps.** One commit per logical change. One PR per
 commit group. Never bundle a refactor with a feature. If your diff spans
@@ -371,8 +371,9 @@ typecheck` green.
 
 **3. Treat evals as ground truth.** `vitest` is the test harness; reach
 for it before you reach for the canvas. If you can't write a failing
-test that reproduces the request, you do not yet understand the request
-— stop and clarify. The headless harness in `src/testing/` exists for
+test that reproduces the request, you do not yet understand the
+request; stop and clarify. The headless harness in `src/testing/`
+exists for
 this: a spin runs in Node, no renderer. Use `createTestReelSet` instead
 of "let me poke it in the browser".
 

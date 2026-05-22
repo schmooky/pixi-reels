@@ -3,7 +3,7 @@ layout: ../../layouts/Docs.astro
 title: Symbols
 section: guides
 eyebrow: Building blocks
-description: Register and implement reel symbols — sprites, animations, Spine, or custom.
+description: Register and implement reel symbols. sprites, animations, Spine, or custom.
 ---
 
 A **symbol** is a visual cell on a reel. pixi-reels ships three implementations
@@ -19,7 +19,7 @@ and a base class for anything else:
 ## Register
 
 The builder exposes a `symbols()` callback that hands you a `SymbolRegistry`.
-You don't instantiate symbols yourself — the library pools them.
+You don't instantiate symbols yourself. the library pools them.
 
 ```ts
 builder.symbols((r) => {
@@ -74,7 +74,7 @@ builder.symbols((r) => {
 
 ## Headless testing
 
-For tests, use the built-in `HeadlessSymbol` — it renders nothing, lets you
+For tests, use the built-in `HeadlessSymbol`. it renders nothing, lets you
 skip textures entirely.
 
 ```ts

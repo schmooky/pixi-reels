@@ -8,7 +8,7 @@ Site: https://pixi-reels.schmooky.dev
 Repo: https://github.com/schmooky/pixi-reels
 Package: https://www.npmjs.com/package/pixi-reels
 
-Generated: 2026-05-22T12:33:17.882Z
+Generated: 2026-05-22T13:00:57.915Z
 
 ## Quick start
 
@@ -75,19 +75,19 @@ Each reel can have its own row count, cell height, and offset. Covers static pyr
 
 ### Speed modes
 URL: https://pixi-reels.schmooky.dev/guides/speed-modes/
-Normal, turbo, super-turbo — and adding your own.
+Normal, turbo, super-turbo. and adding your own.
 
 ### Spin lifecycle
 URL: https://pixi-reels.schmooky.dev/guides/spin-lifecycle/
-The full lifecycle of a spin — phases, events, and how to hook in.
+The full lifecycle of a spin. phases, events, and how to hook in.
 
 ### Spine pins + movePin
 URL: https://pixi-reels.schmooky.dev/guides/spine-pins/
-How CellPin and movePin behave when the pinned cell is a Spine skeleton — lifecycle, animation hooks, and a full walking-Spine-wild example.
+How CellPin and movePin behave when the pinned cell is a Spine skeleton. lifecycle, animation hooks, and a full walking-Spine-wild example.
 
 ### Symbols
 URL: https://pixi-reels.schmooky.dev/guides/symbols/
-Register and implement reel symbols — sprites, animations, Spine, or custom.
+Register and implement reel symbols. sprites, animations, Spine, or custom.
 
 ### Win animations
 URL: https://pixi-reels.schmooky.dev/guides/win-animations/
@@ -113,7 +113,7 @@ The full typed event surface. spin, cascade, pin, MultiWays, win, speed, spotlig
 
 ### Phases
 URL: https://pixi-reels.schmooky.dev/docs/api-phases/
-START, SPIN, ANTICIPATION, STOP — the four lifecycle phases and how to extend them.
+START, SPIN, ANTICIPATION, STOP. the four lifecycle phases and how to extend them.
 
 ### ReelSet
 URL: https://pixi-reels.schmooky.dev/docs/api-reelset/
@@ -151,7 +151,7 @@ URL: https://pixi-reels.schmooky.dev/architecture/testing/
 
 ### How to anticipate a reel
 URL: https://pixi-reels.schmooky.dev/recipes/anticipate-a-reel/
-Slow a specific reel before it lands to build tension — the classic "hold" on reels 4/5 when 2 scatters are already visible.
+Slow a specific reel before it lands to build tension. the classic "hold" on reels 4/5 when 2 scatters are already visible.
 Tags: anticipation, tension
 APIs: ReelSet.setAnticipation, AnticipationPhase, spin:stopping event
 Steps:
@@ -202,25 +202,25 @@ Steps:
   - `_finalizeFrame` sizes the anchor sprite to span the whole block; the mask clips the off-screen portion
   - `getVisibleSymbols` resolves visible cells to the anchor id via a NEGATIVE `anchorRow` in `_occupancy`
 
-### MxN big symbols — every shape
+### MxN big symbols. every shape
 URL: https://pixi-reels.schmooky.dev/recipes/big-symbols-mxn/
-Big symbols at any rectangular size — 2×2 squares, 1×3 tall bars, 3×3 giants, 2×4 wide banners. Same registration API for all four; each shape has its own use case. One interactive example per shape, with the placement logic spelled out.
+Big symbols at any rectangular size. 2×2 squares, 1×3 tall bars, 3×3 giants, 2×4 wide banners. Same registration API for all four; each shape has its own use case. One interactive example per shape, with the placement logic spelled out.
 Tags: big-symbols, layout, registration, sizing
 APIs: SymbolData.size, ReelSet.getSymbolFootprint, ReelSet.getBlockBounds, validation: 'block exceeds reel height/count'
 Steps:
-  - Register each oversized symbol with size { w, h } — any positive integers
+  - Register each oversized symbol with size { w, h }. any positive integers
   - The server places the symbol id at the anchor (top-left) cell only
   - Engine paints OCCUPIED across the rest of the block before per-reel framebuilding
 
-### CardSymbol — debug / prototyping helper
+### CardSymbol. debug / prototyping helper
 URL: https://pixi-reels.schmooky.dev/recipes/card-symbol-debug/
-A no-asset PIXI.Graphics symbol class for recipes, mechanic tests, and prototypes. Always crisp at any cell size. NOT for production — ship SpriteSymbol, AnimatedSpriteSymbol, or SpineSymbol instead.
+A no-asset PIXI.Graphics symbol class for recipes, mechanic tests, and prototypes. Always crisp at any cell size. NOT for production. ship SpriteSymbol, AnimatedSpriteSymbol, or SpineSymbol instead.
 Tags: debug, prototyping, custom-symbol, graphics
 APIs: CardSymbol, CARD_DECK, WILD_CARD, PIXI.Graphics
 Steps:
   - Import `CardSymbol`, `CARD_DECK` (and optional `WILD_CARD`) from `examples/shared/CardSymbol.ts`
   - Register one symbol id per card with its own color
-  - No textures, no atlases — geometry redrawn at every resize
+  - No textures, no atlases. geometry redrawn at every resize
 
 ### Cascade 6×5 tumble
 URL: https://pixi-reels.schmooky.dev/recipes/cascade-6x5/
@@ -240,11 +240,11 @@ Drive cascade cell pops with the same WinPresenter you use for paylines. One API
 Tags: wins, cascade
 APIs: WinPresenter, ReelSet.runCascade (onCascade), win:group event
 Steps:
-  - Build a WinPresenter — no special cluster config, it already works
+  - Build a WinPresenter. no special cluster config, it already works
   - In runCascade's onCascade callback, hand winners to the presenter and await it
-  - destroySymbols runs after — disable its zIndex lift so its alpha→0 stays invisible
+  - destroySymbols runs after. disable its zIndex lift so its alpha→0 stays invisible
 
-### Cell bounds — overlays, paylines & hit areas
+### Cell bounds. overlays, paylines & hit areas
 URL: https://pixi-reels.schmooky.dev/recipes/cell-bounds/
 getCellBounds(col, row) returns the pixel rectangle of any visible cell. Use it to draw payline lines, win-box outlines, or invisible hit areas that align exactly with symbols.
 Tags: utility, paylines, hit-areas, graphics
@@ -254,9 +254,9 @@ Steps:
   - Draw a PIXI.Graphics outline or line using those coordinates
   - addChild the graphic to reelSet so it moves with the board
 
-### Cell hit areas — click to pick, hover to preview
+### Cell hit areas. click to pick, hover to preview
 URL: https://pixi-reels.schmooky.dev/recipes/cell-hit-areas/
-Use getCellBounds to attach pointer events to individual grid cells — cursor changes to a pointer on hover, click toggles a pick state, all cells stay selectable across spins.
+Use getCellBounds to attach pointer events to individual grid cells. cursor changes to a pointer on hover, click toggles a pick state, all cells stay selectable across spins.
 Tags: utility, hit-areas, interaction, cursor
 APIs: ReelSet.getCellBounds, PIXI.Graphics.eventMode, PIXI.Graphics.cursor
 Steps:
@@ -297,43 +297,43 @@ Steps:
 
 ### Expanding wild (sticky)
 URL: https://pixi-reels.schmooky.dev/recipes/expanding-wild-pin/
-When a wild lands, the whole column fills with wild and stays expanded for N spins. Built with CellPin numeric turns — auto-expires when the counter runs out.
+When a wild lands, the whole column fills with wild and stays expanded for N spins. Built with CellPin numeric turns. auto-expires when the counter runs out.
 Tags: wild, expanding, sticky, cell-pin
 APIs: ReelSet.pin, CellPin.turns (number)
 Steps:
   - On spin:allLanded, find every reel containing a wild
-  - Pin every row of that reel with { turns: N } — the column becomes wild for the next N spins
+  - Pin every row of that reel with { turns: N }. the column becomes wild for the next N spins
   - The engine decrements turns on each spin:allLanded and expires pins at zero
 
-### Lead-in delay — how long before the fall starts
+### Lead-in delay. how long before the fall starts
 URL: https://pixi-reels.schmooky.dev/recipes/fall-delays/
-Four interactive canvases. Same spin, same destruction, same .tumble() feel — only the pause between SPIN click and the first frame of fall-out animation changes. From snappy 0 ms to dramatic 700 ms.
+Four interactive canvases. Same spin, same destruction, same .tumble() feel. only the pause between SPIN click and the first frame of fall-out animation changes. From snappy 0 ms to dramatic 700 ms.
 Tags: cascade, tumble, lead-in, pacing, recipes
 APIs: ReelSet.spin, (user-code: await new Promise((r) => setTimeout(r, ms)))
 Steps:
-  - Click SPIN — your handler runs immediately
+  - Click SPIN. your handler runs immediately
   - Optionally await a lead-in pause (0 / 150 / 350 / 700 ms here)
-  - Call reelSet.spin() — the fall begins
+  - Call reelSet.spin(). the fall begins
 
 ### Feature mode swap
 URL: https://pixi-reels.schmooky.dev/recipes/feature-mode-swap/
-Toggle a bonus mode on and off at runtime by adding and removing a frame middleware — no ReelSet rebuild, no rebuild latency.
+Toggle a bonus mode on and off at runtime by adding and removing a frame middleware. no ReelSet rebuild, no rebuild latency.
 Tags: mode, feature, middleware, frame
 APIs: ReelSet.frame.use, ReelSet.frame.remove, FrameMiddleware, FrameAPI
 Steps:
   - Write a FrameMiddleware that rewrites frames for the bonus mode
   - On feature entry, call reelSet.frame.use(middleware)
   - On feature exit, call reelSet.frame.remove(name)
-  - Change takes effect on the very next spin — no rebuild
+  - Change takes effect on the very next spin. no rebuild
 
-### getBlockBounds — outline a big symbol
+### getBlockBounds. outline a big symbol
 URL: https://pixi-reels.schmooky.dev/recipes/get-block-bounds/
-Draw one overlay rectangle that hugs an entire N×M block, regardless of which cell you pass. Works for any size — 1×1 (same as getCellBounds), 1×N expanding wilds, 2×2 / 3×3 blocks.
+Draw one overlay rectangle that hugs an entire N×M block, regardless of which cell you pass. Works for any size. 1×1 (same as getCellBounds), 1×N expanding wilds, 2×2 / 3×3 blocks.
 Tags: big-symbols, overlay, cell-bounds
 APIs: ReelSet.getBlockBounds, ReelSet.getSymbolFootprint
 Steps:
   - getBlockBounds(col, row) returns { x, y, width, height } in ReelSet-local pixels
-  - Pass any cell of a block — anchor or non-anchor — both return the same rect
+  - Pass any cell of a block. anchor or non-anchor. both return the same rect
   - Use for win frames, cluster outlines, hit-area overlays around big symbols
 
 ### Hold & Win respin
@@ -376,7 +376,7 @@ APIs: ReelSetBuilder.multiways, ReelSetBuilder.tumble, ReelSet.setShape, ReelSet
 Steps:
   - Build with .multiways({minRows, maxRows, reelPixelHeight}) + .tumble({...}) for the refill phases
   - Each round, call setShape(rowsPerReel) BEFORE setResult()
-  - reelSet.spin({ mode: 'standard' }) — classic strip-spin lands the multiways grid (AdjustPhase reshapes during SPIN→STOP)
+  - reelSet.spin({ mode: 'standard' }). classic strip-spin lands the multiways grid (AdjustPhase reshapes during SPIN→STOP)
   - reelSet.runCascade({ detectWinners, nextGrid }) tumbles winners and drops new symbols in from above
 
 ### Mystery reveal (CellPin)
@@ -406,13 +406,13 @@ Tags: nudge, recent
 APIs: ReelSet.nudge, NudgeOptions, nudge:start, nudge:complete
 Steps:
   - Wait for spin() to land
-  - Call reelSet.nudge(col, { distance, direction, incoming }) — incoming is required, top-down order of the new visible positions
+  - Call reelSet.nudge(col, { distance, direction, incoming }). incoming is required, top-down order of the new visible positions
   - Await the promise to read the new visible column for re-running win detection
   - For multi-reel beats, wrap several nudge() calls in Promise.all([...])
 
 ### Abort a nudge
 URL: https://pixi-reels.schmooky.dev/recipes/nudge-abort/
-Cancel a running nudge via AbortSignal — the strip still snaps to its deterministic landed position, but the `nudge()` promise rejects with `AbortError` and `nudge:cancelled` fires on the bus.
+Cancel a running nudge via AbortSignal. the strip still snaps to its deterministic landed position, but the `nudge()` promise rejects with `AbortError` and `nudge:cancelled` fires on the bus.
 Tags: nudge, abort, cancellation, signal, recent
 APIs: NudgeOptions.signal, AbortController, nudge:cancelled
 Steps:
@@ -434,13 +434,13 @@ Steps:
 
 ### Skip an in-flight nudge
 URL: https://pixi-reels.schmooky.dev/recipes/nudge-skip/
-Fast-forward a running nudge tween to its landed state with `reelSet.skipNudge(col)`. The original `nudge()` promise resolves normally — the consumer's success path still runs.
+Fast-forward a running nudge tween to its landed state with `reelSet.skipNudge(col)`. The original `nudge()` promise resolves normally. the consumer's success path still runs.
 Tags: nudge, skip, ux, recent
 APIs: ReelSet.skipNudge, Reel.isNudging
 Steps:
   - Run a long sequential nudge (1.5s per reel) so the player has time to react
   - The canvas button morphs into a skip icon while the recipe handler is running
-  - Tap during a nudge — the RecipeRunner detects an in-flight nudge and calls `reelSet.skipNudge()`
+  - Tap during a nudge. the RecipeRunner detects an in-flight nudge and calls `reelSet.skipNudge()`
   - The original `nudge()` promise resolves at the deterministic landed position
 
 ### Spotlight after a nudge
@@ -454,7 +454,7 @@ Steps:
   - Build the winning cells (row 0 on each nudged reel) and call `reelSet.spotlight.show(cells, ...)`
   - Await spotlight completion, then `spotlight.hide()` to return the symbols to the grid
 
-### Staggered nudge — wave reveal
+### Staggered nudge. wave reveal
 URL: https://pixi-reels.schmooky.dev/recipes/nudge-stagger/
 Use `NudgeOptions.startDelay` inside a `Promise.all([...])` to dispatch parallel nudges with a per-reel offset. Total wall time = last reel's delay + duration.
 Tags: nudge, stagger, wave, ux, recent
@@ -462,17 +462,17 @@ APIs: ReelSet.nudge, NudgeOptions.startDelay
 Steps:
   - Map over the target reels with `Promise.all(cols.map(...))`
   - Pass `startDelay: i * STAGGER_MS` per call so each reel waits a beat longer to begin
-  - All tweens run concurrently — total wall time = last reel's delay + duration
+  - All tweens run concurrently. total wall time = last reel's delay + duration
   - Validation throws still fire synchronously; only the mutation is deferred
 
 ### Custom per-symbol animation
 URL: https://pixi-reels.schmooky.dev/recipes/paylines-custom-animation/
-Skip playWin() — drive each cell with a GSAP timeline, styled per win.id.
+Skip playWin(). drive each cell with a GSAP timeline, styled per win.id.
 Tags: wins, gsap
 APIs: WinPresenter.symbolAnim, WinSymbolAnim type
 Steps:
   - Pass a `symbolAnim` callback to WinPresenter
-  - Receive (symbol, cell, win) and return a Promise — the presenter awaits it
+  - Receive (symbol, cell, win) and return a Promise. the presenter awaits it
   - Style per win by switching on `win.id` / `win.kind`
 
 ### Draw paylines yourself from win:group
@@ -481,7 +481,7 @@ The presenter never draws lines. Subscribe to win:group and use reelSet.getCellB
 Tags: wins, events, overlays
 APIs: ReelSet.getCellBounds, win:group / win:symbol / win:end events
 Steps:
-  - Create a WinPresenter — it only animates symbols
+  - Create a WinPresenter. it only animates symbols
   - Subscribe to `win:group`, draw a line (or outline, or number) from `reelSet.getCellBounds`
   - Drop your own GSAP fade in + out so visuals don't pile up between wins
 
@@ -497,7 +497,7 @@ Steps:
 
 ### Positional multiplier cells
 URL: https://pixi-reels.schmooky.dev/recipes/positional-multiplier-pin/
-Specific grid positions carry a multiplier. Any symbol landing on those cells boosts its own win contribution — Gonzo's Quest multiplier-reel style.
+Specific grid positions carry a multiplier. Any symbol landing on those cells boosts its own win contribution. Gonzo's Quest multiplier-reel style.
 Tags: multiplier, positional, payload, cell-pin
 APIs: ReelSet.pin, CellPin.payload, CellPin.turns ('eval')
 Steps:
@@ -516,19 +516,19 @@ Steps:
   - Optionally set .reelAnchor('center' | 'top' | 'bottom') to control vertical alignment
   - The engine computes per-reel offsetY automatically; getCellBounds(col, row) reflects it
 
-### Cascade refill orders — pick the post-win flow
+### Cascade refill orders. pick the post-win flow
 URL: https://pixi-reels.schmooky.dev/recipes/refill-orders/
-Three interactive canvases. Same scripted win, same destruction, same .tumble() feel — only the cascade-refill ordering changes. See which one fits your slot's rhythm.
+Three interactive canvases. Same scripted win, same destruction, same .tumble() feel. only the cascade-refill ordering changes. See which one fits your slot's rhythm.
 Tags: cascade, tumble, refill, presets, recipes
 APIs: ReelSet.refill, ReelSet.setDropOrder, TumbleDropInConfig.rowStagger, TumbleDropInConfig.rowOrder
 Steps:
   - Initial reveal is the same (left-to-right wave) on every canvas
-  - Winners destruct the same way — the post-removal pause is fixed
+  - Winners destruct the same way. the post-removal pause is fixed
   - Only the refill drop-in order changes (setDropOrder + rowStagger + rowOrder)
 
 ### How to remove a symbol in a cascade
 URL: https://pixi-reels.schmooky.dev/recipes/remove-symbol/
-Fade the winners out, then drop the next-stage symbols in from above — a proper cascade with no reel respin.
+Fade the winners out, then drop the next-stage symbols in from above. a proper cascade with no reel respin.
 Tags: cascade, animation
 APIs: ReelSet.destroySymbols, ReelSet.refill, ReelSet.runCascade
 Steps:
@@ -549,7 +549,7 @@ Steps:
 
 ### Spin first, cascade after
 URL: https://pixi-reels.schmooky.dev/recipes/spin-then-cascade/
-Open every play with a classic strip-spin. The landing's winning cells pop, survivors fall down, new symbols drop in from above — repeat for every cascade in the chain.
+Open every play with a classic strip-spin. The landing's winning cells pop, survivors fall down, new symbols drop in from above. repeat for every cascade in the chain.
 Tags: hybrid, cascade, runCascade, recent
 APIs: reelSet.spin, ReelSet.runCascade, ReelSet.destroySymbols, ReelSet.refill
 Steps:
@@ -559,24 +559,24 @@ Steps:
 
 ### Big symbols with Spine
 URL: https://pixi-reels.schmooky.dev/recipes/spine-big-symbols/
-Production-shape big-symbols recipe — a 2x2 wild placed at an anchor cell, with each cell a Spine skeleton that idles, lands, and plays a win animation. Same engine mechanic as the CardSymbol version, real art on top.
+Production-shape big-symbols recipe. a 2x2 wild placed at an anchor cell, with each cell a Spine skeleton that idles, lands, and plays a win animation. Same engine mechanic as the CardSymbol version, real art on top.
 Tags: big-symbols, spine, custom-symbol, animation
 APIs: SpineReelSymbol, loadGeneratedSpines, buildSpineMap, ReelSetBuilder.symbolData
 Steps:
-  - `await loadGeneratedSpines()` once before building — boots the atlas + 10 skeleton JSONs
+  - `await loadGeneratedSpines()` once before building. boots the atlas + 10 skeleton JSONs
   - Map your symbol ids to skeleton names with `buildSpineMap({ id: 'low_a', ... })`
   - Register every id with `SpineReelSymbol` and pass the same map to each registration
-  - Mark the big symbol with `size: { w: 2, h: 2 }` and `weight: 0` — anchor-only, never from random fill
+  - Mark the big symbol with `size: { w: 2, h: 2 }` and `weight: 0`. anchor-only, never from random fill
 
 ### Pyramid shape with Spine
 URL: https://pixi-reels.schmooky.dev/recipes/spine-pyramid-shape/
-Per-reel static shape (3-5-5-5-3 pyramid) rendered with Spine skeletons. The outer 3-row reels get taller cells than the inner 5-row reels — Spine scales each rig cleanly without the texture stretching you'd see with sprites.
+Per-reel static shape (3-5-5-5-3 pyramid) rendered with Spine skeletons. The outer 3-row reels get taller cells than the inner 5-row reels. Spine scales each rig cleanly without the texture stretching you'd see with sprites.
 Tags: shape, pyramid, spine, custom-symbol, animation
 APIs: SpineReelSymbol, loadGeneratedSpines, buildSpineMap, ReelSetBuilder.visibleRowsPerReel, ReelSetBuilder.reelAnchor
 Steps:
   - `await loadGeneratedSpines()` once before building
   - Use `.visibleRowsPerReel([3, 5, 5, 5, 3])` to declare the jagged shape
-  - Register every id with `SpineReelSymbol` — same registration as a uniform layout
+  - Register every id with `SpineReelSymbol`. same registration as a uniform layout
 
 ### Sticky wild on MultiWays
 URL: https://pixi-reels.schmooky.dev/recipes/sticky-wild-multiways/
@@ -584,13 +584,13 @@ Pin survives every MultiWays reshape. Wild stays at its originRow when the shape
 Tags: multiways, sticky, wild, cell-pin, pin-migration
 APIs: ReelSet.pin, CellPin.originRow, ReelSet.setShape, events: pin:migrated
 Steps:
-  - Pin wilds on spin:allLanded with { turns: N } — originRow defaults to current row
-  - Each spin, setShape(rowsPerReel) before setResult() — setShape migrates pins eagerly
+  - Pin wilds on spin:allLanded with { turns: N }. originRow defaults to current row
+  - Each spin, setShape(rowsPerReel) before setResult(). setShape migrates pins eagerly
   - When new shape can't fit originRow, pin clamps; when it can again, pin restores
 
 ### Sticky wild (CellPin)
 URL: https://pixi-reels.schmooky.dev/recipes/sticky-wild-pin/
-Sticky wild using the engine's CellPin primitive — no ghost sprites, no manual grid injection. Pin once on land, the engine handles the rest.
+Sticky wild using the engine's CellPin primitive. no ghost sprites, no manual grid injection. Pin once on land, the engine handles the rest.
 Tags: wild, respin, sticky, cell-pin
 APIs: ReelSet.pin, ReelSet.getPin, pin:expired event
 Steps:
@@ -600,18 +600,18 @@ Steps:
 
 ### Sticky-win respin
 URL: https://pixi-reels.schmooky.dev/recipes/sticky-win-respin-pin/
-Winning symbols lock for N respins while the rest of the grid spins independently — the Dead or Alive II / Razor Shark pattern.
+Winning symbols lock for N respins while the rest of the grid spins independently. the Dead or Alive II / Razor Shark pattern.
 Tags: respin, sticky, win, cell-pin
 APIs: ReelSet.pin, CellPin.turns (number), pin:expired event
 Steps:
   - Detect winners on spin:allLanded
-  - Pin each winner with turns N — N is the respin window
+  - Pin each winner with turns N. N is the respin window
   - Non-winners respin naturally on the next spin, winners stay pinned
   - Pins decrement after each landing and expire automatically
 
 ### Symbol transform
 URL: https://pixi-reels.schmooky.dev/recipes/symbol-transform/
-A symbol morphs into a different (usually higher-paying) one mid-round — after a win, on a timer, or when a condition is met. Common in cluster-pays and upgrade-style slots.
+A symbol morphs into a different (usually higher-paying) one mid-round. after a win, on a timer, or when a condition is met. Common in cluster-pays and upgrade-style slots.
 Tags: transform, animation, upgrade
 APIs: ReelSet.setSymbolAt, Reel.getSymbolAt, ReelSymbol.playWin
 Steps:
@@ -626,11 +626,11 @@ One atlas file, 80+ frames, zero per-image HTTP requests. Plus the separate-imag
 Tags: sprites, atlas, texturepacker
 APIs: PIXI.Assets.load, Spritesheet.textures, ReelSetBuilder.symbols, SpriteSymbol, BlurSpriteSymbol
 Steps:
-  - Load the TexturePacker JSON with `PIXI.Assets.load()` — PixiJS understands the format natively
+  - Load the TexturePacker JSON with `PIXI.Assets.load()`. PixiJS understands the format natively
   - The returned Spritesheet exposes `sheet.textures[frameId]` for every frame
   - Pass the base + blur texture maps to `SpriteSymbol` (crisp) or `BlurSpriteSymbol` (swaps on phase events)
 
-### Cascade anticipation refill — gravity, hold, column wave
+### Cascade anticipation refill. gravity, hold, column wave
 URL: https://pixi-reels.schmooky.dev/recipes/tumble-anticipation/
 Split the cascade refill in two. Survivors slide down to fill the holes first, a global anticipation beat for multipliers and mascots, then new symbols drop in column by column. First-class on pixi-reels.
 Tags: cascade, tumble, refill, two-stage, anticipation, recipes
@@ -638,10 +638,10 @@ APIs: ReelSet.refill, ReelSet.runCascade, ReelSet.setDropOrder, RunCascadeOption
 Steps:
   - Initial reveal is a normal left-to-right wave
   - Winners destruct, then survivors slide down (cascade:gravity:* events fire)
-  - Global gravityHoldMs window — plug anticipation visuals in here
+  - Global gravityHoldMs window. plug anticipation visuals in here
   - New symbols drop in from above, column by column (cascade:dropIn:* events)
 
-### Tumble feels — every preset, side by side
+### Tumble feels. every preset, side by side
 URL: https://pixi-reels.schmooky.dev/recipes/tumble-feels/
 Five interactive canvases, same spin + cascade-refill loop. Only the .tumble({ fall, dropIn }) config changes between them. Click each SPIN to compare the feel without writing a line of code.
 Tags: cascade, tumble, presets, recipes
@@ -664,13 +664,13 @@ Steps:
 
 ### Walking wild (movePin)
 URL: https://pixi-reels.schmooky.dev/recipes/walking-wild-pin/
-Walking wild migrating one column left each spin via reelSet.movePin() — no ghost sprites. With Spine-ready flight hooks for running/walking animations.
+Walking wild migrating one column left each spin via reelSet.movePin(). no ghost sprites. With Spine-ready flight hooks for running/walking animations.
 Tags: wild, walking, movement, spine, cell-pin
 APIs: ReelSet.pin, ReelSet.movePin, ReelSet.unpin, MovePinOptions.onFlightCreated, pin:overlayCreated event, pin:moved event
 Steps:
   - Pin new wilds on land with turns: 'permanent'
   - Before each spin, movePin() each existing pin one column left
-  - When a pin reaches column 0, unpin() — it walked off the board
+  - When a pin reaches column 0, unpin(). it walked off the board
   - Use onFlightCreated / onFlightCompleted to drive Spine animations
 
 ## Mechanic demos
@@ -687,7 +687,7 @@ Tags: big-symbols, wild, lines
 
 ### Cascade + multiplier
 URL: https://pixi-reels.schmooky.dev/demos/cascade-multiplier/
-A tumble slot — wins vanish, the next stage lands. Built around reelSet.runCascade(), which loops detect → destroy → refill until no more winners are found.
+A tumble slot. wins vanish, the next stage lands. Built around reelSet.runCascade(), which loops detect → destroy → refill until no more winners are found.
 Tags: cascade, tumble, multiplier
 
 ### Classic line pays
@@ -1226,7 +1226,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/big-symbols-mxn-giant/
 //                   SharedRectMaskStrategy, PIXI, gsap, app, textures,
 //                   blurTextures, SYMBOL_IDS, pickWeighted
 //
-// GIANT big symbol — 3×3. Mid-board feature anchor: jackpot reveal panels,
+// GIANT big symbol. 3×3. Mid-board feature anchor: jackpot reveal panels,
 // "free spins triggered" overlays, large character art. Eats nine cells out
 // of a 6×5 grid, so weight 0 and place sparingly via the server.
 
@@ -1341,7 +1341,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/big-symbols-mxn-tall/
 //                   SharedRectMaskStrategy, PIXI, gsap, app, textures,
 //                   blurTextures, SYMBOL_IDS, pickWeighted
 //
-// TALL big symbol — 1×3. One column wide, three rows tall. Reads as a
+// TALL big symbol. 1×3. One column wide, three rows tall. Reads as a
 // "stacked" symbol: think gold-bar towers, totems, or vertical wild
 // columns that span the visible area without occupying neighbouring reels.
 
@@ -1397,7 +1397,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/big-symbols-mxn-wide/
 //                   SharedRectMaskStrategy, PIXI, gsap, app, textures,
 //                   blurTextures, SYMBOL_IDS, pickWeighted
 //
-// WIDE big symbol — 2×4. Two columns wide, four rows tall — a banner-shaped
+// WIDE big symbol. 2×4. Two columns wide, four rows tall. a banner-shaped
 // block. Useful for "feature triggered" splash panels that need to span
 // adjacent reels but don't want to dominate the whole board the way a 3×3
 // giant does. Demands a tall enough grid (rows >= 4).
@@ -1454,12 +1454,12 @@ URL: https://pixi-reels.schmooky.dev/recipes/card-symbol-debug/
 //                   PIXI, gsap, app, textures, blurTextures, SYMBOL_IDS,
 //                   pickWeighted
 //
-// CardSymbol prototyping demo — a classic 5×3 layout using the importable
+// CardSymbol prototyping demo. a classic 5×3 layout using the importable
 // debug Graphics symbol from `examples/shared/CardSymbol.ts`. No textures,
 // no atlases, no loaders. Each card is a flat colored rectangle with a
 // centered letter that always renders crisply at any cell size.
 //
-// USE THIS FOR PROTOTYPING ONLY. CardSymbol is debug scaffolding — your
+// USE THIS FOR PROTOTYPING ONLY. CardSymbol is debug scaffolding. your
 // real game ships SpriteSymbol, AnimatedSpriteSymbol, or SpineSymbol.
 // See the recipe page for when (not) to use this class.
 
@@ -2788,8 +2788,8 @@ URL: https://pixi-reels.schmooky.dev/recipes/get-block-bounds/
 //                   SharedRectMaskStrategy, PIXI, gsap, app, textures,
 //                   blurTextures, SYMBOL_IDS, pickWeighted
 //
-// getBlockBounds — drawing a single overlay rectangle that hugs an entire
-// big-symbol block. Plants a 2×2 (or 1×3 — randomly chosen each spin) and
+// getBlockBounds. drawing a single overlay rectangle that hugs an entire
+// big-symbol block. Plants a 2×2 (or 1×3. randomly chosen each spin) and
 // outlines it on land. Works the same way for 1×1 cells (in which case
 // getBlockBounds === getCellBounds).
 
@@ -2817,7 +2817,7 @@ const reelSet = new ReelSetBuilder()
   })
   .weights(Object.fromEntries(CARD_DECK.map((c, i) => [c.id, 12 - i])))
   .symbolData(Object.fromEntries(SHAPES.map((s) => [s.id, { weight: 0, zIndex: 5, size: { w: s.w, h: s.h } }])))
-  // Big symbols make the default 56px landing bounce look broken —
+  // Big symbols make the default 56px landing bounce look broken.
   // the giant anchor overshoots into adjacent cells. Zero the bounce.
   .speed('normal', { ...SpeedPresets.NORMAL, bounceDistance: 0, bounceDuration: 0 })
   .speed('turbo', { ...SpeedPresets.TURBO, bounceDistance: 0, bounceDuration: 0 })
@@ -2834,7 +2834,7 @@ reelSet.events.on('spin:allLanded', () => {
   overlay.clear();
   if (!plantedAt || !plantedShape) return;
   // Pass the ANCHOR cell. getBlockBounds resolves to the same rect for
-  // every cell of the block — anchor or not — so picking any cell works.
+  // every cell of the block. anchor or not. so picking any cell works.
   const rect = reelSet.getBlockBounds(plantedAt.col, plantedAt.row);
   overlay
     .roundRect(rect.x - 3, rect.y - 3, rect.width + 6, rect.height + 6, 8)
@@ -3320,7 +3320,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/multiways/
 // Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
 //                   PIXI, gsap, app, pickWeighted
 //
-// MultiWays — per-spin row variation. Each reel lands on a different
+// MultiWays. per-spin row variation. Each reel lands on a different
 // row count in [minRows, maxRows]. The reel pixel height is fixed;
 // cell height per reel is derived live as
 // `reelPixelHeight / visibleRows[i]`, so a 2-row reel has tall cells
@@ -3353,7 +3353,7 @@ const reelSet = new ReelSetBuilder()
     }
   })
   .weights(Object.fromEntries(CARD_DECK.map((c, i) => [c.id, 12 - i])))
-  // Big symbols visually overshoot at landing on this layout — set
+  // Big symbols visually overshoot at landing on this layout. set
   // bounceDistance: 0 so each cell snaps flush regardless of which
   // shape was rolled this spin.
   .speed('normal', { ...SpeedPresets.NORMAL, bounceDistance: 0, bounceDuration: 0 })
@@ -3372,7 +3372,7 @@ const bannerBg = new PIXI.Graphics();
 banner.addChild(bannerBg);
 
 const bannerText = new PIXI.Text({
-  text: 'READY — press spin',
+  text: 'READY. press spin',
   style: {
     fontFamily: '"Roboto Condensed", "Arial Narrow", system-ui, sans-serif',
     fontSize: 14, fontWeight: '700',
@@ -3394,7 +3394,7 @@ function redrawBanner(text) {
   bannerText.text = text;
   bannerText.x = width / 2;
 }
-redrawBanner('READY — press spin');
+redrawBanner('READY. press spin');
 
 reelSet.events.on('spin:allLanded', () => {
   const visibleRowsPerReel = reelSet.reels.map((r) => r.visibleRows);
@@ -4699,11 +4699,11 @@ URL: https://pixi-reels.schmooky.dev/recipes/pyramid-shape/
 //                   PIXI, gsap, app, textures, blurTextures, SYMBOL_IDS,
 //                   pickWeighted
 //
-// Per-reel static shape — a 3-5-5-5-3 pyramid. Reels can have different
+// Per-reel static shape. a 3-5-5-5-3 pyramid. Reels can have different
 // row counts at build time. Cell width is uniform across reels; the
 // shorter outer reels are vertically centered by default (`reelAnchor: 'center'`).
 //
-// CARD SYMBOLS BELOW ARE DEBUG/PROTOTYPING ONLY — see /recipes/card-symbol-debug/.
+// CARD SYMBOLS BELOW ARE DEBUG/PROTOTYPING ONLY. see /recipes/card-symbol-debug/.
 
 const VISIBLE = [3, 5, 5, 5, 3];
 const SIZE = 80;
@@ -5233,19 +5233,19 @@ URL: https://pixi-reels.schmooky.dev/recipes/spine-big-symbols/
 //                   PIXI, gsap, app, textures, blurTextures, SYMBOL_IDS,
 //                   pickWeighted
 //
-// Big symbols rendered with Spine — a 2x2 wild placed at an anchor cell;
+// Big symbols rendered with Spine. a 2x2 wild placed at an anchor cell;
 // the engine paints OCCUPIED across the rest of the block. Same mechanic
 // as the CardSymbol big-symbols recipe, but each cell is a Spine skeleton
 // with idle/landing/win/destroy animations baked in.
 //
-// Reuses the wild skeleton for the 2x2 BIGWILD — Spine scales the whole
+// Reuses the wild skeleton for the 2x2 BIGWILD. Spine scales the whole
 // rig to whatever cell box the engine hands it without losing crispness.
 
 await loadGeneratedSpines();
 
 const REELS = 5;
 const ROWS = 4;
-// 140 = the spines' authored frame size — render 1:1 so the frame strokes
+// 140 = the spines' authored frame size. render 1:1 so the frame strokes
 // stay crisp and the wild's overflowing 200 px W reads at its intended size.
 const SIZE = 140;
 const GAP = 4;
@@ -5275,7 +5275,7 @@ const reelSet = new ReelSetBuilder()
       registry.register(id, SpineReelSymbol, {
         spineMap,
         autoPlayLanding: true,
-        // bigWild occupies a 2x2 block — render the spine at 2x scale
+        // bigWild occupies a 2x2 block. render the spine at 2x scale
         // so the rig fills the block instead of sitting tiny in the
         // top-left cell with empty space around it.
         scale: id === 'bigWild' ? 2 : 1,
@@ -5283,7 +5283,7 @@ const reelSet = new ReelSetBuilder()
     }
   })
   .weights(Object.fromEntries(CARDS.map((id, i) => [id, 12 - i])))
-  // wild fills cells from the random pool; bigWild is anchor-only — placed
+  // wild fills cells from the random pool; bigWild is anchor-only. placed
   // by the server, never by random fill, so weight 0 is mandatory.
   //
   // High zIndex on both wilds: their icon attachment is 200 px (vs the
@@ -5296,7 +5296,7 @@ const reelSet = new ReelSetBuilder()
     wild:    { weight: 3, zIndex: 999 },
     bigWild: { weight: 0, zIndex: 1000, size: { w: 2, h: 2 } },
   })
-  // Big symbols make the default 56px landing bounce look broken —
+  // Big symbols make the default 56px landing bounce look broken.
   // the 2x2 wild overshoots into adjacent cells. Zero the bounce so
   // the anchor lands flush on grid.
   .speed('normal', { ...SpeedPresets.NORMAL, bounceDistance: 0, bounceDuration: 0 })
@@ -5350,14 +5350,14 @@ URL: https://pixi-reels.schmooky.dev/recipes/spine-pyramid-shape/
 //                   textures, blurTextures, SYMBOL_IDS, pickWeighted
 //
 // Per-reel static shape (3-5-5-5-3 pyramid) rendered with Spine symbols.
-// Spine skeletons scale cleanly to whatever cell size each reel hands them —
+// Spine skeletons scale cleanly to whatever cell size each reel hands them.
 // the outer 3-row reels get taller cells than the inner 5-row reels, and
 // the rig stays crisp at both because it's vector, not a baked sprite.
 
 await loadGeneratedSpines();
 
 const VISIBLE = [3, 5, 5, 5, 3];
-// 140 = the spines' authored frame size — render 1:1 to keep frame strokes
+// 140 = the spines' authored frame size. render 1:1 to keep frame strokes
 // crisp. Spine still scales the rig if individual cells get smaller in tight
 // reshapes, but the baseline matches the bake.
 const SIZE = 140;
@@ -5434,9 +5434,9 @@ URL: https://pixi-reels.schmooky.dev/recipes/sticky-wild-multiways/
 // the pin survives every MultiWays reshape. When the next shape is shorter
 // than originRow, the pin clamps to the last visible row (`pin:migrated`
 // fires with clamped:true). When a later, larger shape can fit the
-// originRow again, the pin migrates back — no wander.
+// originRow again, the pin migrates back. no wander.
 //
-// CARD SYMBOLS BELOW ARE DEBUG/PROTOTYPING ONLY — see /recipes/card-symbol-debug/.
+// CARD SYMBOLS BELOW ARE DEBUG/PROTOTYPING ONLY. see /recipes/card-symbol-debug/.
 
 const REELS = 6;
 const MIN_ROWS = 2;
@@ -5471,7 +5471,7 @@ const reelSet = new ReelSetBuilder()
   .build();
 
 // On every landing, pin every wild for STICKY_TURNS spins. Each pin captures
-// its current row as `originRow` automatically — that's what lets the
+// its current row as `originRow` automatically. that's what lets the
 // engine restore the pin to its original row when shapes grow back.
 reelSet.events.on('spin:allLanded', ({ symbols }) => {
   for (let c = 0; c < symbols.length; c++) {
@@ -5486,8 +5486,8 @@ reelSet.events.on('spin:allLanded', ({ symbols }) => {
 // Cycle shapes so the demo deterministically shows clamp + restore.
 const SHAPE_CYCLE = [
   [5, 5, 5, 5, 5, 5],
-  [3, 3, 3, 3, 3, 3], // shrinks — high-row wilds clamp
-  [7, 7, 7, 7, 7, 7], // grows back — clamped wilds migrate back to originRow
+  [3, 3, 3, 3, 3, 3], // shrinks. high-row wilds clamp
+  [7, 7, 7, 7, 7, 7], // grows back. clamped wilds migrate back to originRow
   [4, 4, 4, 4, 4, 4],
 ];
 let spinCount = 0;

@@ -28,7 +28,7 @@ export const DEMOS: DemoMeta[] = [
     slug: 'hold-and-win-respin',
     title: 'Hold & Win respin',
     subtitle: '5×3 · coins lock, respin until jackpot',
-    summary: 'Coins lock in place, respin until the grid fills — or 3 coins on middle row.',
+    summary: 'Coins lock in place, respin until the grid fills. or 3 coins on middle row.',
     tags: ['hold-and-win', 'respin'],
     cheatHighlights: ['Guaranteed landing', 'Middle-row progression', 'Force full jackpot'],
   },

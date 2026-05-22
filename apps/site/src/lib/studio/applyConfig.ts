@@ -7,9 +7,9 @@
  * shared bundle.
  *
  * Returns:
- *   - `textures`: Record<symbolId, Texture> — for sprite/animated lookups
+ *   - `textures`: Record<symbolId, Texture>. for sprite/animated lookups
  *     in user code that wants direct texture access.
- *   - `userSymbols`: Record<symbolId, UserSymbolBinding> — { Class, options }
+ *   - `userSymbols`: Record<symbolId, UserSymbolBinding>. { Class, options }
  *     pairs the user code references via `userSymbols.<id>.Class`.
  */
 

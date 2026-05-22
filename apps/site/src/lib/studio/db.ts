@@ -3,7 +3,7 @@
  *
  * Two stores: `config` (single row at key='current') and `assets`
  * (content-addressed by SHA-256). Wrapping `idb` would be overkill for two
- * stores — the raw IDB API is fine here.
+ * stores. the raw IDB API is fine here.
  */
 
 import type { StudioConfig, StoredAsset } from './types.js';
@@ -129,7 +129,7 @@ function txComplete(tx: IDBTransaction): Promise<void> {
 
 /**
  * Compute SHA-256 hex of a blob's bytes. The studio uses this as the
- * canonical asset id — same bytes deduplicate, regardless of filename.
+ * canonical asset id. same bytes deduplicate, regardless of filename.
  */
 export async function sha256Hex(blob: Blob): Promise<string> {
   const buf = await blob.arrayBuffer();

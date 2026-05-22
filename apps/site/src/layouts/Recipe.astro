@@ -29,7 +29,7 @@ interface Props {
 const props = Astro.props as Props;
 const fm = props.frontmatter ?? {};
 const title = props.title ?? fm.title ?? 'Recipe';
-const description = props.description ?? fm.description ?? `${title} — step-by-step slot recipe built with pixi-reels.`;
+const description = props.description ?? fm.description ?? `${title}. step-by-step slot recipe built with pixi-reels.`;
 const steps = props.steps ?? fm.steps ?? [];
 const apis = props.apis ?? fm.apis ?? [];
 const tags = props.tags ?? fm.tags ?? [];

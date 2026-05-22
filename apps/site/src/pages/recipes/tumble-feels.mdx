@@ -1,6 +1,6 @@
 ---
 layout: ../../layouts/Recipe.astro
-title: Tumble feels — every preset, side by side
+title: Tumble feels. every preset, side by side
 description: Five interactive canvases, same spin + cascade-refill loop. Only the .tumble({ fall, dropIn }) config changes between them. Click each SPIN to compare the feel without writing a line of code.
 tags: [cascade, tumble, presets, recipes]
 steps:
@@ -23,10 +23,10 @@ import { RecipeRunner } from '../../components/RecipeRunner.tsx';
 
 Every canvas below runs the **exact same scripted spin**: 6×4 cards land with a pre-wired 3-cluster of `10` on row 2, those three winners fade out, **the loop pauses for a configured beat**, then the cascade refill drops survivors into the holes and brings a fresh row from above. Two things vary between canvases:
 
-1. `.tumble({ fall, dropIn })` — the animation feel itself.
-2. `PAUSE_AFTER_REMOVAL_MS` — the breathing room between the win-fade and the refill drop-in. Different feels want different pauses: snappy slams want ~120 ms, bouncy / dramatic feels want ~300-400 ms. Each canvas's value is tuned to match its tumble shape.
+1. `.tumble({ fall, dropIn })`. the animation feel itself.
+2. `PAUSE_AFTER_REMOVAL_MS`. the breathing room between the win-fade and the refill drop-in. Different feels want different pauses: snappy slams want ~120 ms, bouncy / dramatic feels want ~300-400 ms. Each canvas's value is tuned to match its tumble shape.
 
-## Classic — the all-rounder default
+## Classic. the all-rounder default
 
 <RecipeRunner code={classicCode} client:only="react" />
 
@@ -37,9 +37,9 @@ Every canvas below runs the **exact same scripted spin**: 6×4 cards land with a
 })
 ```
 
-Gentle gravity fall + soft overshoot landing. `back.out(1.6)` overshoots its target by ~60 % and settles — feels weighty without being cartoony. Start here, tweak from here. Almost every commercial cascade slot ships within a hair of this shape.
+Gentle gravity fall + soft overshoot landing. `back.out(1.6)` overshoots its target by ~60 % and settles. feels weighty without being cartoony. Start here, tweak from here. Almost every commercial cascade slot ships within a hair of this shape.
 
-## Cartoon bounce — playful, weighty
+## Cartoon bounce. playful, weighty
 
 <RecipeRunner code={bounceCode} client:only="react" />
 
@@ -50,7 +50,7 @@ Gentle gravity fall + soft overshoot landing. `back.out(1.6)` overshoots its tar
 })
 ```
 
-`bounce.out` does a real multi-bounce settle — symbols actually bounce on landing. Longer durations (700 ms) let each bounce read. Best paired with kid-friendly themes or candy / fruit art. Be careful with this one on dense grids — the bouncing arrival can read as "still moving" to the player and slow the perceived pace.
+`bounce.out` does a real multi-bounce settle. symbols actually bounce on landing. Longer durations (700 ms) let each bounce read. Best paired with kid-friendly themes or candy / fruit art. Be careful with this one on dense grids. the bouncing arrival can read as "still moving" to the player and slow the perceived pace.
 
 ## Slam. hard-landing, sub-half-second tumble
 
@@ -65,7 +65,7 @@ Gentle gravity fall + soft overshoot landing. `back.out(1.6)` overshoots its tar
 
 `power4.in` accelerates the fall steeply (heavy, gravity-like). `expo.out` lands hard with no overshoot. The whole tumble plays in under half a second. A reasonable basis for a turbo mode toggle on top of a default-classic build.
 
-## Rain column — board-falls-as-a-slab
+## Rain column. board-falls-as-a-slab
 
 <RecipeRunner code={rainCode} client:only="react" />
 
@@ -76,9 +76,9 @@ Gentle gravity fall + soft overshoot landing. `back.out(1.6)` overshoots its tar
 })
 ```
 
-`rowStagger: 0` makes every row start together. `distance: 'auto'` overrides the gravity-correct per-hole distance with a uniform full-column-height drop, so the new column appears as a coherent slab from above the viewport. Match-3 / puzzle / chess-board games — anything where "the board itself moves" is the visual idea.
+`rowStagger: 0` makes every row start together. `distance: 'auto'` overrides the gravity-correct per-hole distance with a uniform full-column-height drop, so the new column appears as a coherent slab from above the viewport. Match-3 / puzzle / chess-board games. anything where "the board itself moves" is the visual idea.
 
-## Wave — rolling top-to-bottom reveal
+## Wave. rolling top-to-bottom reveal
 
 <RecipeRunner code={waveCode} client:only="react" />
 
@@ -89,30 +89,30 @@ Gentle gravity fall + soft overshoot landing. `back.out(1.6)` overshoots its tar
 })
 ```
 
-Heavy `rowStagger` (110 ms on drop-in) makes rows arrive in distinct beats — you can almost count them. `back.out(2.0)` adds a stronger overshoot than Classic. Reads as a narrative reveal: row 0 lands, then row 1, then row 2. Pair with row-by-row sound cues for a story-driven cascade feel. The visual rhythm naturally amplifies cascade chains — the more cascades, the more rows of "ta-ta-ta-ta" you get to count.
+Heavy `rowStagger` (110 ms on drop-in) makes rows arrive in distinct beats. you can almost count them. `back.out(2.0)` adds a stronger overshoot than Classic. Reads as a narrative reveal: row 0 lands, then row 1, then row 2. Pair with row-by-row sound cues for a story-driven cascade feel. The visual rhythm naturally amplifies cascade chains. the more cascades, the more rows of "ta-ta-ta-ta" you get to count.
 
 ## Picking between them
 
 | Feel | Pause | Pick when | Avoid when |
 |---|---|---|---|
-| Classic | 250 ms | All-rounder; you're not sure | — |
+| Classic | 250 ms | All-rounder; you're not sure |. |
 | Cartoon bounce | 320 ms | Kid-friendly / candy / fruit | Player attention budget is tight |
 | Slam | 120 ms | Turbo mode, sub-half-second tumbles | You want a longer beat between cascades |
 | Rain column | 380 ms | Match-3 / chess-board / puzzle | Reels are visually distinct (the cohesive slab look fights the column gaps) |
-| Wave | 280 ms | Narrative reveals, "show me the row" tension | Very dense grids — the stagger makes the whole tumble feel long |
+| Wave | 280 ms | Narrative reveals, "show me the row" tension | Very dense grids. the stagger makes the whole tumble feel long |
 
-The **Pause** column is `PAUSE_AFTER_REMOVAL_MS` in each recipe — the gap between the win-fade ending and the refill drop-in starting. It's not a library setting; it's just an `await wait(ms)` in your spin loop. Tuning it per feel is the single biggest lever on cascade pacing after the tumble config itself.
+The **Pause** column is `PAUSE_AFTER_REMOVAL_MS` in each recipe. the gap between the win-fade ending and the refill drop-in starting. It's not a library setting; it's just an `await wait(ms)` in your spin loop. Tuning it per feel is the single biggest lever on cascade pacing after the tumble config itself.
 
 Beyond these five: anything goes. `ease` accepts any [GSAP easing string](https://gsap.com/docs/v3/Eases). `rowStagger` is plain ms. `distance` is `'perHole'` / `'auto'` / a number. Mix to taste; the algorithm and lifecycle stay exactly the same.
 
 ## Going beyond config
 
-If a feel needs effects the config can't express (squish, sticky badge tweens, spine state transitions, particle bursts) — those are events, not config fields. Subscribe to `cascade:fall:symbol` / `cascade:dropIn:symbol` and run parallel tweens on any view property; they fire **before** the library's `view.y` tween so your tweens stay in sync.
+If a feel needs effects the config can't express (squish, sticky badge tweens, spine state transitions, particle bursts). those are events, not config fields. Subscribe to `cascade:fall:symbol` / `cascade:dropIn:symbol` and run parallel tweens on any view property; they fire **before** the library's `view.y` tween so your tweens stay in sync.
 
 See [the full tumble recipe doc](https://github.com/schmooky/pixi-reels/blob/main/docs/recipes/tumble-cascade.md) for the per-symbol event hooks, the cascading-multiplier pattern, and the phase-override escape hatch.
 
 ## Related
 
-- [Cascade 6×5 tumble](/recipes/cascade-6x5/) — the same recipe with cluster-detection logic and a multiplier counter.
-- [Spin first, cascade after](/recipes/spin-then-cascade/) — open with a strip-spin, cascade the respins.
-- [Cascade with WinPresenter](/recipes/cascade-winpresenter/) — drive the win-fade through `WinPresenter` instead of plain gsap.
+- [Cascade 6×5 tumble](/recipes/cascade-6x5/). the same recipe with cluster-detection logic and a multiplier counter.
+- [Spin first, cascade after](/recipes/spin-then-cascade/). open with a strip-spin, cascade the respins.
+- [Cascade with WinPresenter](/recipes/cascade-winpresenter/). drive the win-fade through `WinPresenter` instead of plain gsap.

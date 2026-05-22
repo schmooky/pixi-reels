@@ -27,7 +27,7 @@ export interface CascadePlacePhaseConfig {
  * Mechanically tiny: it calls `reel.placeSymbols(visible)` to swap visible
  * symbol identities, then fires `cascade:place:end`. Listeners on that
  * event (badges, decorations, multiplier overlays) run synchronously
- * BEFORE `CascadeDropInPhase` starts the drop tweens — so anything you
+ * BEFORE `CascadeDropInPhase` starts the drop tweens. so anything you
  * attach to a new symbol falls WITH it, not after landing.
  */
 export class CascadePlacePhase extends ReelPhase<CascadePlacePhaseConfig> {

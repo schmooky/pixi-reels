@@ -16,7 +16,7 @@ export interface StopPhaseConfig {
  * 1. Wait for the staggered delay.
  * 2. Keep spinning at full speed with `isStopping` flagged. The target frame
  *    is loaded into the StopSequencer; each wrap event at the top of the
- *    reel pulls the next frame symbol — so targets arrive in the visible
+ *    reel pulls the next frame symbol. so targets arrive in the visible
  *    area naturally, carrying the full momentum of the spin.
  * 3. When the sequencer is exhausted, snap to grid and bounce:
  *    - overshoot downward by `bounceDistance` with `power1.out`
@@ -53,7 +53,7 @@ export class StopPhase extends ReelPhase<StopPhaseConfig> {
 
     reel.setStopFrame(this._config.targetFrame);
     reel.isStopping = true;
-    // Restore full spin speed — anticipation or other phases may have lowered
+    // Restore full spin speed. anticipation or other phases may have lowered
     // it. Weighty stops need full momentum through the final frame.
     reel.speed = speed.spinSpeed;
 
@@ -63,7 +63,7 @@ export class StopPhase extends ReelPhase<StopPhaseConfig> {
   update(_deltaMs: number): void {
     if (this._stage !== 'spinning') return;
     // Sequencer consumes one symbol per wrap via Reel._onSymbolWrapped.
-    // When it's empty, the target frame is fully placed — time to land.
+    // When it's empty, the target frame is fully placed. time to land.
     if (!this._reel.stopSequencer.hasRemaining) {
       this._landAndBounce();
     }

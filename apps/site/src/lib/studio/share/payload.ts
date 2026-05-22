@@ -75,7 +75,7 @@ export async function buildPayloadFromConfig(config: StudioConfig): Promise<{
 
 export interface DecodedShare {
   config: StudioConfig;
-  /** In-memory asset map for the viewer — fed to applyStudioConfig
+  /** In-memory asset map for the viewer. fed to applyStudioConfig
    *  via the injected getAsset. Not written to the user's IndexedDB. */
   assets: Map<string, StoredAsset>;
 }
@@ -90,7 +90,7 @@ export async function decodePayload(payload: SharePayload): Promise<DecodedShare
   for (const [hash, b64] of Object.entries(payload.assets)) {
     const bytes = b64ToBytes(b64);
     const blob = new Blob([new Uint8Array(bytes)]);
-    // The studio's StoredAsset shape needs more than just the bytes —
+    // The studio's StoredAsset shape needs more than just the bytes.
     // mime hints, original filename, size. Reconstruct sensibly.
     assets.set(hash, {
       hash,
@@ -102,7 +102,7 @@ export async function decodePayload(payload: SharePayload): Promise<DecodedShare
     });
   }
 
-  // SymbolConfig union — we stored the raw object in `.data`. Cast
+  // SymbolConfig union. we stored the raw object in `.data`. Cast
   // back; runtime shape is identical to what the studio writes.
   const symbols = payload.symbols.map((s) => s.data as unknown as SymbolConfig);
 

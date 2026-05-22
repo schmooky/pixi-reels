@@ -4,7 +4,7 @@ title: How to load sprite symbols from a TexturePacker atlas
 description: One atlas file, 80+ frames, zero per-image HTTP requests. Plus the separate-images fallback when you don't want to pack.
 tags: [sprites, atlas, texturepacker]
 steps:
-  - Load the TexturePacker JSON with `PIXI.Assets.load()` — PixiJS understands the format natively
+  - Load the TexturePacker JSON with `PIXI.Assets.load()`. PixiJS understands the format natively
   - The returned Spritesheet exposes `sheet.textures[frameId]` for every frame
   - Pass the base + blur texture maps to `SpriteSymbol` (crisp) or `BlurSpriteSymbol` (swaps on phase events)
 apis:
@@ -20,7 +20,7 @@ import { RecipeRunner } from '../../components/RecipeRunner.tsx';
 
 <RecipeRunner code={code} client:only="react" />
 
-Press Run — watch each symbol swap to its `_blur` variant while spinning, then back to the crisp base texture on land.
+Press Run. watch each symbol swap to its `_blur` variant while spinning, then back to the crisp base texture on land.
 
 ## The atlas path (preferred)
 
@@ -44,7 +44,7 @@ for (const [key, tex] of Object.entries(sheet.textures)) {
 }
 ```
 
-Then wire into the builder — `SpriteSymbol` for crisp-only, `BlurSpriteSymbol` for blur-on-spin:
+Then wire into the builder. `SpriteSymbol` for crisp-only, `BlurSpriteSymbol` for blur-on-spin:
 
 ```ts
 import { SpriteSymbol } from 'pixi-reels';
@@ -94,7 +94,7 @@ Trade-off: one HTTP request per symbol (small set = fine), one GPU texture per s
 
 All four extend the same `ReelSymbol` abstract class. Your reel set treats them identically.
 
-## Motion blur — why it matters
+## Motion blur. why it matters
 
 A reel spinning at ~30 pixels per frame with 152-pixel symbols presents one symbol every 5 frames. At 60 fps, that's 12 identity swaps per second. Without motion blur, each swap reads as a jittery stacked band. With pre-rendered blur, each swap reads as continuous downward motion.
 
@@ -102,6 +102,6 @@ A reel spinning at ~30 pixels per frame with 152-pixel symbols presents one symb
 
 ## Where this fits
 
-- Your atlas + your symbol ids — [`sprite-classic` demo](/demos/sprite-classic/) is the working reference. Fork it, swap the ids, done.
-- Your atlas, no blur — just use `SpriteSymbol` directly. Drop the blur loader.
-- Many textures on many GPU binds — [pack with TexturePacker](https://www.codeandweb.com/texturepacker) or any equivalent before you ship.
+- Your atlas + your symbol ids. [`sprite-classic` demo](/demos/sprite-classic/) is the working reference. Fork it, swap the ids, done.
+- Your atlas, no blur. just use `SpriteSymbol` directly. Drop the blur loader.
+- Many textures on many GPU binds. [pack with TexturePacker](https://www.codeandweb.com/texturepacker) or any equivalent before you ship.

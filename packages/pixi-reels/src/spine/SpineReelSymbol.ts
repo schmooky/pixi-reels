@@ -4,7 +4,7 @@ import { ReelSymbol } from '../symbols/ReelSymbol.js';
 /**
  * Per-symbol overrides so a skeleton with unusual animation names still works.
  *
- * Example: Bonanza's `low_1` has a typo (`ide` instead of `idle`) —
+ * Example: Bonanza's `low_1` has a typo (`ide` instead of `idle`).
  * `{ low1: { idle: 'ide' } }` fixes it without touching the asset.
  */
 export type SymbolAnimOverrides = Record<
@@ -22,7 +22,7 @@ export interface SpineReelSymbolOptions {
   /** Default landing (one-shot) animation name. Default: 'landing'. */
   landingAnimation?: string;
   /**
-   * Default "exit" animation name — used as the cascade pop / disintegrate.
+   * Default "exit" animation name. used as the cascade pop / disintegrate.
    * If the skeleton doesn't have it, callers should fall back to an alpha tween.
    * Default: 'disintegration'.
    */
@@ -53,7 +53,7 @@ export interface SpineReelSymbolOptions {
  * Caches one Spine instance per symbolId for instant swapping, plays idle on
  * activate, and exposes the canonical set of one-shot animations (`landing`,
  * `win`, `out`, reactions). Modeled on the Bonanza / Hold & Win slot-game
- * conventions — drop in any skeleton that follows the same vocabulary.
+ * conventions. drop in any skeleton that follows the same vocabulary.
  *
  * Import from the `pixi-reels/spine` subpath so non-Spine consumers can
  * tree-shake this module and `@esotericsoftware/spine-pixi-v8` out of their
@@ -162,7 +162,7 @@ export class SpineReelSymbol extends ReelSymbol {
   }
 
   /**
-   * Play the landing animation (one-shot). Call this when the reel settles —
+   * Play the landing animation (one-shot). Call this when the reel settles.
    * typically inside a `spin:reelLanded` listener.
    */
   async playLanding(): Promise<void> {
@@ -182,9 +182,9 @@ export class SpineReelSymbol extends ReelSymbol {
    * `out` (disintegration) animation, play it. Otherwise fall back to the
    * base class's GSAP scale-and-fade so a partial skeleton still cascades
    * cleanly. `opts.delay` is honored (seconds, mirrors the GSAP version)
-   * so callers can stagger a winning cluster; `opts.direction` is ignored —
+   * so callers can stagger a winning cluster; `opts.direction` is ignored.
    * spine animations bake their own rotation curves. `opts.signal` aborts
-   * the (pre-delay or in-flight) animation early — the spine state is
+   * the (pre-delay or in-flight) animation early. the spine state is
    * snapped to the next track entry and the resolve fires immediately;
    * the view is left at `alpha: 0` for parity with the GSAP fallback so
    * the destroyed pose is consistent across symbol kinds.
@@ -202,7 +202,7 @@ export class SpineReelSymbol extends ReelSymbol {
 
     const delay = opts?.delay ?? 0;
     if (delay > 0) {
-      // Honor abort during the pre-delay window — skip the disintegrate
+      // Honor abort during the pre-delay window. skip the disintegrate
       // entirely if the player slammed before it could start.
       const aborted = await new Promise<boolean>((resolve) => {
         const t = setTimeout(() => {
@@ -223,7 +223,7 @@ export class SpineReelSymbol extends ReelSymbol {
 
     // Race the play against abort. On abort, settle the one-shot promise
     // (which resolves the awaiter) and snap the view to the destroyed pose
-    // — the underlying spine track ticks until the next track set, but
+    //. the underlying spine track ticks until the next track set, but
     // alpha=0 keeps it invisible.
     if (signal) {
       const onAbort = (): void => {
@@ -277,7 +277,7 @@ export class SpineReelSymbol extends ReelSymbol {
     }
   }
 
-  /** Access the underlying Spine — for advanced needs (reactions, events). */
+  /** Access the underlying Spine. for advanced needs (reactions, events). */
   get spine(): Spine | null {
     return this._currentSpine;
   }
@@ -290,7 +290,7 @@ export class SpineReelSymbol extends ReelSymbol {
 
   /**
    * Settle any one-shot promise currently in flight and remove its
-   * listener. Safe to call when no one-shot is pending — both fields are
+   * listener. Safe to call when no one-shot is pending. both fields are
    * cleared.
    *
    * Called by `onActivate`, `onDeactivate`, `stopAnimation`, `playBlur`,
@@ -323,7 +323,7 @@ export class SpineReelSymbol extends ReelSymbol {
     const spine = this._currentSpine;
     if (!spine.skeleton.data.findAnimation(animName)) return;
 
-    // Settle any prior one-shot before starting a new one — without this,
+    // Settle any prior one-shot before starting a new one. without this,
     // back-to-back `playWin()` / `playOut()` calls would silently abandon
     // the first promise.
     this._resolveOneShot();

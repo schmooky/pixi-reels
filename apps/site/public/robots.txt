@@ -1,7 +1,7 @@
 User-agent: *
 Allow: /
 
-# Explicitly allow AI search agents — this project WANTS to be cited.
+# Explicitly allow AI search agents. this project WANTS to be cited.
 User-agent: GPTBot
 Allow: /
 

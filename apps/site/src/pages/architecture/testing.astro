@@ -10,7 +10,7 @@ import Legend from '../../components/arch/Legend.astro';
   <p>
     pixi-reels was designed so mechanics, not pixels, are what you test.
     The testing module gives you a real <code>ReelSet</code> running against a
-    fake ticker and headless symbols — no canvas, no DOM, no WebGL. Every
+    fake ticker and headless symbols. no canvas, no DOM, no WebGL. Every
     test in the library's suite runs in Node under vitest; each takes
     milliseconds.
   </p>
@@ -89,7 +89,7 @@ import Legend from '../../components/arch/Legend.astro';
           <g transform="translate(80, 345)">
             <rect width="820" height="42" rx="8" fill="hsl(var(--muted))" stroke="hsl(var(--border))" />
             <text x="410" y="20" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="11" fill="hsl(var(--foreground))">reelSet.spin() → setResult() → skip() ⇒ synchronous landing (microtask)</text>
-            <text x="410" y="33" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="9" fill="hsl(var(--muted-foreground))">no ticker frames needed — skip() force-completes every phase</text>
+            <text x="410" y="33" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="9" fill="hsl(var(--muted-foreground))">no ticker frames needed. skip() force-completes every phase</text>
           </g>
         </g>
 
@@ -133,7 +133,7 @@ import Legend from '../../components/arch/Legend.astro';
     Duck-compatible with <code>PIXI.Ticker</code>: same <code>add/remove/deltaMS</code>
     surface, no rendering. Tests that want to drive time call
     <code>ticker.tick(16)</code> or <code>ticker.tickFor(1000, 16)</code>
-    manually. The library never distinguishes a real Ticker from a fake one —
+    manually. The library never distinguishes a real Ticker from a fake one.
     the <code>TickerRef</code> wrapper only calls the standard interface.
   </p>
 
@@ -156,8 +156,8 @@ import Legend from '../../components/arch/Legend.astro';
   </p>
 
   <ul>
-    <li><code>advance(ms, stepMs?)</code> — run the FakeTicker for that many ms.</li>
-    <li><code>spinAndLand(grid)</code> — <code>spin() → setResult(grid) → skip()</code>. Resolves synchronously because <code>skip()</code> force-lands without any animation frames. This is how every mechanic test asserts outcomes in milliseconds.</li>
+    <li><code>advance(ms, stepMs?)</code>. run the FakeTicker for that many ms.</li>
+    <li><code>spinAndLand(grid)</code>. <code>spin() → setResult(grid) → skip()</code>. Resolves synchronously because <code>skip()</code> force-lands without any animation frames. This is how every mechanic test asserts outcomes in milliseconds.</li>
   </ul>
 
   <h2>Why this composition is testable</h2>

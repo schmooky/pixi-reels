@@ -10,7 +10,7 @@ import Legend from '../../components/arch/Legend.astro';
   <p>
     Each reel moves through four phases, independently. The diagram below
     shows the transitions and what triggers each one. Anticipation is
-    optional — a reel skips it unless <code>setAnticipation([i])</code> put
+    optional. a reel skips it unless <code>setAnticipation([i])</code> put
     its index on the list. <code>skip()</code> can short-circuit any phase
     into an immediate landing.
   </p>
@@ -154,7 +154,7 @@ import Legend from '../../components/arch/Legend.astro';
   <p>
     Internally <code>SpinController</code> increments <code>_spinGeneration</code>
     on every <code>spin()</code> and <code>skip()</code>. Every async chain
-    checks the generation before continuing — an in-flight phase from a
+    checks the generation before continuing. an in-flight phase from a
     previous spin quietly no-ops if the player spun again or skipped. That's
     how you can hammer the spin button without state corruption.
   </p>
@@ -172,7 +172,7 @@ import Legend from '../../components/arch/Legend.astro';
 
   <p>
     The <code>spinAndLand</code> test helper uses this exact path. That's why
-    it's synchronous — no ticker, no tweens, just direct symbol placement
+    it's synchronous. no ticker, no tweens, just direct symbol placement
     and event emission.
   </p>
 </Architecture>

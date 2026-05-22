@@ -1,7 +1,7 @@
 ---
 layout: ../../layouts/Recipe.astro
 title: Positional multiplier cells
-description: Specific grid positions carry a multiplier. Any symbol landing on those cells boosts its own win contribution — Gonzo's Quest multiplier-reel style.
+description: Specific grid positions carry a multiplier. Any symbol landing on those cells boosts its own win contribution. Gonzo's Quest multiplier-reel style.
 tags: [multiplier, positional, payload, cell-pin]
 steps:
   - Mark fixed cells as multiplier positions (or receive them per-spin from server)
@@ -41,7 +41,7 @@ reelSet.events.on('spin:allLanded', ({ symbols }) => {
 });
 ```
 
-Unlike a multiplier wild, the symbol at the cell is whatever the strip rolled. The multiplier is pure metadata on the pin's `payload`. We use `turns: 'eval'` because the metadata is per-spin — the next spin will re-pin with a fresh rolled symbol.
+Unlike a multiplier wild, the symbol at the cell is whatever the strip rolled. The multiplier is pure metadata on the pin's `payload`. We use `turns: 'eval'` because the metadata is per-spin. the next spin will re-pin with a fresh rolled symbol.
 
 ## Reading at win time
 
@@ -60,5 +60,5 @@ A cleaner future API would be a `CellDecorator` primitive that lets you attach m
 
 ## Related
 
-- [Multiplier wild](/recipes/multiplier-wild-pin/) — multiplier tied to a specific symbol, not a position
-- [Value-carrying coin](/recipes/value-coin-pin/) — payload pattern for Hold & Win
+- [Multiplier wild](/recipes/multiplier-wild-pin/). multiplier tied to a specific symbol, not a position
+- [Value-carrying coin](/recipes/value-coin-pin/). payload pattern for Hold & Win

@@ -7,7 +7,7 @@ import { useEffect, useRef, useState } from 'react';
  *
  * Used by the recipe runners to keep the loading skeleton on screen long
  * enough to register as a deliberate placeholder. Without this, recipes
- * that compile in <100ms would flash the skeleton for a single frame —
+ * that compile in <100ms would flash the skeleton for a single frame.
  * worse than no skeleton at all.
  *
  * Pass `loading` (truthy while we want the skeleton) and the minimum

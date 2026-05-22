@@ -16,7 +16,7 @@ export interface CanvasSkeletonProps {
 /**
  * Greyed-out reel-grid placeholder shown while a recipe's PixiJS canvas
  * is compiling/booting. Replaces the moment of blank space the user used
- * to see between page load and `setReady(true)`. Styling-only — never
+ * to see between page load and `setReady(true)`. Styling-only. never
  * mounts a canvas.
  */
 export function CanvasSkeleton({

@@ -3,8 +3,8 @@
 //                   SharedRectMaskStrategy, PIXI, gsap, app, textures,
 //                   blurTextures, SYMBOL_IDS, pickWeighted
 //
-// getBlockBounds — drawing a single overlay rectangle that hugs an entire
-// big-symbol block. Plants a 2×2 (or 1×3 — randomly chosen each spin) and
+// getBlockBounds. drawing a single overlay rectangle that hugs an entire
+// big-symbol block. Plants a 2×2 (or 1×3. randomly chosen each spin) and
 // outlines it on land. Works the same way for 1×1 cells (in which case
 // getBlockBounds === getCellBounds).
 
@@ -32,7 +32,7 @@ const reelSet = new ReelSetBuilder()
   })
   .weights(Object.fromEntries(CARD_DECK.map((c, i) => [c.id, 12 - i])))
   .symbolData(Object.fromEntries(SHAPES.map((s) => [s.id, { weight: 0, zIndex: 5, size: { w: s.w, h: s.h } }])))
-  // Big symbols make the default 56px landing bounce look broken —
+  // Big symbols make the default 56px landing bounce look broken.
   // the giant anchor overshoots into adjacent cells. Zero the bounce.
   .speed('normal', { ...SpeedPresets.NORMAL, bounceDistance: 0, bounceDuration: 0 })
   .speed('turbo', { ...SpeedPresets.TURBO, bounceDistance: 0, bounceDuration: 0 })
@@ -49,7 +49,7 @@ reelSet.events.on('spin:allLanded', () => {
   overlay.clear();
   if (!plantedAt || !plantedShape) return;
   // Pass the ANCHOR cell. getBlockBounds resolves to the same rect for
-  // every cell of the block — anchor or not — so picking any cell works.
+  // every cell of the block. anchor or not. so picking any cell works.
   const rect = reelSet.getBlockBounds(plantedAt.col, plantedAt.row);
   overlay
     .roundRect(rect.x - 3, rect.y - 3, rect.width + 6, rect.height + 6, 8)

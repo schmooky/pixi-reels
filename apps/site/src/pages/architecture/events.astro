@@ -185,18 +185,18 @@ import Legend from '../../components/arch/Legend.astro';
         </thead>
         <tbody>
           {[
-            ['spin:start', '—', 'Any spin() call'],
-            ['spin:allStarted', '—', 'Every reel is in SPIN phase'],
+            ['spin:start', '(none)', 'Any spin() call'],
+            ['spin:allStarted', '(none)', 'Every reel is in SPIN phase'],
             ['spin:stopping', 'reelIndex', 'A reel begins STOP (or ANTICIPATION)'],
             ['spin:reelLanded', 'reelIndex, symbols[]', 'A reel finished landing'],
             ['spin:allLanded', 'result: SpinResult', 'Last reel landed'],
             ['spin:complete', 'result: SpinResult', 'Just after spin:allLanded'],
-            ['skip:requested', '—', 'skip() called'],
-            ['skip:completed', '—', 'All reels force-landed'],
+            ['skip:requested', '(none)', 'skip() called'],
+            ['skip:completed', '(none)', 'All reels force-landed'],
             ['speed:changed', 'profile, previous', 'setSpeed() called'],
             ['spotlight:start', 'positions: SymbolPosition[]', 'spotlight.cycle(...) began'],
-            ['spotlight:end', '—', 'Spotlight sequence finished'],
-            ['destroyed', '—', 'destroy() called'],
+            ['spotlight:end', '(none)', 'Spotlight sequence finished'],
+            ['destroyed', '(none)', 'destroy() called'],
           ].map(([name, payload, when]) => (
             <tr class="border-t border-border/60">
               <td class="px-4 py-2.5 font-mono text-primary text-xs">{name}</td>

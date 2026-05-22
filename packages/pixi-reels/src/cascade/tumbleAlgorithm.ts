@@ -4,7 +4,7 @@
  * Two distinct moments use the same algorithm with different inputs:
  *
  *   - **Moment A (initial drop):** `winnerRows = []`. The entire visible
- *     column is treated as "new" — every row falls in from above the
+ *     column is treated as "new". every row falls in from above the
  *     viewport. The vertical distance per row is `visibleRows` cells, so
  *     all rows arrive at their grid positions in the same beat.
  *
@@ -16,7 +16,7 @@
  *     new symbols stacked above them.
  */
 
-/** A cell coordinate on the reel set — `reel` is column, `row` is visible row. */
+/** A cell coordinate on the reel set. `reel` is column, `row` is visible row. */
 export interface Cell {
   reel: number;
   row: number;
@@ -28,7 +28,7 @@ export interface DropOffset {
   /**
    * Where this symbol "came from" expressed as a virtual row index. Negative
    * values indicate "above the viewport" (e.g. -1 is one cell above row 0).
-   * Non-negative values indicate "this row in the OLD grid" — a survivor.
+   * Non-negative values indicate "this row in the OLD grid". a survivor.
    */
   originalRow: number;
   /**
@@ -42,7 +42,7 @@ export interface DropOffset {
  * Compute per-row drop offsets for one reel given its winner set.
  *
  * Returns one entry per visible row, top-to-bottom. Rows with
- * `offsetRows === 0` should NOT be animated — they're survivors that
+ * `offsetRows === 0` should NOT be animated. they're survivors that
  * didn't move.
  *
  * **Convention** (Moment B): the new grid must place new symbols at the
@@ -50,10 +50,10 @@ export interface DropOffset {
  * original top-to-bottom order. This matches how server-side gravity
  * simulations emit cascade results.
  *
- * @param options.initial - When `true` (Moment A — the player's first
+ * @param options.initial - When `true` (Moment A. the player's first
  *   spin click), every row is treated as new regardless of `winnerRows`
  *   (which is normally empty for initial spins). When `false` (Moment B
- *   — cascade refill), an empty `winnerRows` means *no movement on this
+ *  . cascade refill), an empty `winnerRows` means *no movement on this
  *   reel*; survivor reels in a refill correctly return all-zero offsets.
  *   Default `false` so callers can't accidentally trigger a full re-drop
  *   on a reel that had no winners.
@@ -82,11 +82,11 @@ export function computeDropOffsets(
   for (let row = 0; row < visibleRows; row++) {
     let originalRow: number;
     if (row < winCount) {
-      // New symbol — virtual origin sits above the viewport, stacked so
+      // New symbol. virtual origin sits above the viewport, stacked so
       // every "new" symbol falls the same distance (`winCount` cells).
       originalRow = row - winCount;
     } else {
-      // Survivor — read its OLD row from the precomputed survivor list.
+      // Survivor. read its OLD row from the precomputed survivor list.
       originalRow = nonWinnerRows[row - winCount];
     }
     offsets.push({ row, originalRow, offsetRows: row - originalRow });

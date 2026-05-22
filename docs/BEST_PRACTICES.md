@@ -16,7 +16,7 @@ anticipation   ────▶  reelSet.setAnticipation()   audio
                       grid                  i18n, analytics, wallet
 ```
 
-pixi-reels owns the middle column. You own the left and right columns. The flow is strictly left-to-right — the library never calls into your server, and it never generates money math.
+pixi-reels owns the middle column. You own the left and right columns. The flow is strictly left-to-right. the library never calls into your server, and it never generates money math.
 
 ## The shape of a spin
 
@@ -56,7 +56,7 @@ reelSet.events.on('spin:reelLanded',  () => audio.play('reel_stop'));
 reelSet.events.on('spin:complete',    () => audio.stop('spin_loop'));
 reelSet.events.on('spotlight:start',  () => audio.play('big_win_cue'));
 
-// DO NOT — couples your audio to the library's method calls and misses paths like skip().
+// DO NOT. couples your audio to the library's method calls and misses paths like skip().
 function onSpinButtonPress() {
   audio.play('spin_loop');
   reelSet.spin();
@@ -67,7 +67,7 @@ Every exit path from a spin (skip, destroy, interrupted by a new spin) fires the
 
 ## Testing your mechanic
 
-Build your test around `createTestReelSet`. Headless symbols, fake ticker, synchronous spin — your test doesn't care about PixiJS at all.
+Build your test around `createTestReelSet`. Headless symbols, fake ticker, synchronous spin. your test doesn't care about PixiJS at all.
 
 ```ts
 import { createTestReelSet, countSymbol } from 'pixi-reels';
@@ -170,20 +170,20 @@ interface Win {
 }
 ```
 
-One shape covers every win type — paylines, cluster pops, ways-to-win,
+One shape covers every win type. paylines, cluster pops, ways-to-win,
 scatters, bonus reveals. The presenter only cares about `cells`.
 
 ### Two presentation modes, one option
 
 | `stagger` | Visual |
 |---|---|
-| `0` (default) | All cells animate together — a clean flash |
-| `60`–`90` | Cells animate one after another — a left-to-right sweep if you pass cells in reel order |
+| `0` (default) | All cells animate together. a clean flash |
+| `60`–`90` | Cells animate one after another. a left-to-right sweep if you pass cells in reel order |
 
 ### Drawing your own overlays
 
-Every per-win visual — the polyline, a cluster outline, a win-amount
-popup, a sound cue — is your code reacting to events:
+Every per-win visual. the polyline, a cluster outline, a win-amount
+popup, a sound cue. is your code reacting to events:
 
 | Event | Fires | Payload |
 |---|---|---|
@@ -192,20 +192,20 @@ popup, a sound cue — is your code reacting to events:
 | `win:symbol` | once per cell per win per cycle | symbol, cell, win |
 | `win:end` | once per `show()` | `'complete'` or `'aborted'` |
 
-Plot graphics with `reelSet.getCellBounds(col, row)` — see the
+Plot graphics with `reelSet.getCellBounds(col, row)`. see the
 [paylines-events-only](/recipes/paylines-events-only/) recipe.
 
 ### Cascades reuse the same API
 
 In `runCascade`'s `onWinnersVanish` hook, call `presenter.show([{ cells: winners }])`.
-Cluster pops and payline hits are the same shape to the presenter — no
+Cluster pops and payline hits are the same shape to the presenter. no
 new type, no new method.
 
 ## Symbol layering and overflow
 
-Slot art often overflows the cell — a drop-shadowed wild, a celebration frame bigger than its box. Two knobs control render order:
+Slot art often overflows the cell. a drop-shadowed wild, a celebration frame bigger than its box. Two knobs control render order:
 
-- **Per-symbol base:** `symbolData.zIndex` on each registered symbol. The library multiplies it by `100` and adds the symbol's current visual row, so scatters / bonuses draw in front of regulars, and bottom-row symbols draw in front of upper rows — overflow naturally spills downward without clipping neighbours.
+- **Per-symbol base:** `symbolData.zIndex` on each registered symbol. The library multiplies it by `100` and adds the symbol's current visual row, so scatters / bonuses draw in front of regulars, and bottom-row symbols draw in front of upper rows. overflow naturally spills downward without clipping neighbours.
 - **Per-reel ordering:** `reel.container.zIndex` defaults to `reelIndex`, so the rightmost reel draws on top. If your art overflows bottom-left instead of bottom-right, flip the sign: `reel.container.zIndex = -reelIndex` right after building the reel set.
 
 For mid-spin celebrations that need to break out of the reel mask entirely, use `reelSet.spotlight` (dim + promote) or pass a renderer that draws into `reelSet.viewport.unmaskedContainer`.
@@ -240,17 +240,17 @@ This is where you honour `prefers-reduced-motion`: switch to a profile with mini
 ```ts
 function tearDownGame() {
   reelSet.destroy();
-  // DO NOT also call reelSet.reels[i].destroy() — double-free.
+  // DO NOT also call reelSet.reels[i].destroy(). double-free.
 }
 ```
 
-If a class you're writing holds resources, implement `Disposable` and hook into the chain from your top-level orchestrator. Never call `PIXI.Ticker.add` directly — wrap in a `TickerRef`.
+If a class you're writing holds resources, implement `Disposable` and hook into the chain from your top-level orchestrator. Never call `PIXI.Ticker.add` directly. wrap in a `TickerRef`.
 
 ## Common traps
 
 | Trap | Symptom | Fix |
 |---|---|---|
-| Calling `setResult()` before all reels are in SPIN | Reels stop early on the *previous* spin's frame | The library already waits; don't call `setResult` inside `spin:start`. Wait for `spin:allStarted` (or just call it when your server response arrives — the library buffers). |
+| Calling `setResult()` before all reels are in SPIN | Reels stop early on the *previous* spin's frame | The library already waits; don't call `setResult` inside `spin:start`. Wait for `spin:allStarted` (or just call it when your server response arrives. the library buffers). |
 | Forgetting `ticker(app.ticker)` on the builder | `Error: ticker() must be called …` at `build()` | Required call. Builder validates at `.build()` time. |
 | Computing winners from a grid diff | Survivors animate as "new" symbols dropping from above | Compute winners from your match rules inside `detectWinners`. The library's API takes `Cell[]` of match winners, not a diff. See [ADR 010](./adr/010-cascade-physics.md). |
 | Putting cheat code in game bundle | Bundle bloat + players find cheats | Cheats are `examples/shared/` only. [ADR 009](./adr/009-cheats-live-outside-lib.md). |
@@ -267,6 +267,6 @@ If a class you're writing holds resources, implement `Disposable` and hook into 
 
 ## Further reading
 
-- [ADR 007 — Scope](./adr/007-scope.md) is mandatory reading before proposing a feature.
+- [ADR 007. Scope](./adr/007-scope.md) is mandatory reading before proposing a feature.
 - [`AGENTS.md`](../AGENTS.md) at the repo root is the contributor / AI-agent guide.
 - The site at [pixi-reels.dev](https://pixi-reels.dev) has a `/recipes/` cookbook and an `/architecture/` visual deep-dive.

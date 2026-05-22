@@ -11,7 +11,7 @@ interface KbdProps {
 
 /**
  * Keyboard key chip. Renders either a text key ("Ctrl", "Shift") or a
- * lucide-react icon for the Cmd and Enter keys — avoids the non-ASCII
+ * lucide-react icon for the Cmd and Enter keys. avoids the non-ASCII
  * unicode glyphs the repo's fancy-unicode guard forbids.
  */
 export function Kbd({ children, icon, className }: KbdProps) {
@@ -26,7 +26,7 @@ export function Kbd({ children, icon, className }: KbdProps) {
 }
 
 /**
- * Key chord — renders multiple `<Kbd>` separated by a `+`. Use this for
+ * Key chord. renders multiple `<Kbd>` separated by a `+`. Use this for
  * shortcuts like "Cmd+Enter" or "Ctrl+S".
  */
 export function KbdChord({ children, className }: { children: ReactNode; className?: string }) {

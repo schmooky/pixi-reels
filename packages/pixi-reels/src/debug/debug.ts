@@ -3,7 +3,7 @@ import type { ReelSet } from '../core/ReelSet.js';
 import type { Reel } from '../core/Reel.js';
 
 /**
- * Debug snapshot — plain JSON representation of the entire reel state.
+ * Debug snapshot. plain JSON representation of the entire reel state.
  *
  * Designed for AI agents that cannot see the canvas.
  * Returns no PixiJS display objects, only serializable data.
@@ -113,7 +113,7 @@ export function debugGrid(reelSet: ReelSet): string {
 }
 
 /**
- * One captured frame from `startRecording()` — a `DebugSnapshot` plus the
+ * One captured frame from `startRecording()`. a `DebugSnapshot` plus the
  * tag the recording was started with and the spin event that triggered
  * the capture.
  */
@@ -162,7 +162,7 @@ export interface StartRecordingOptions {
  * Each event captures a `DebugSnapshot` and pushes it onto a process-
  * wide rolling log readable via {@link getFrames}.
  *
- * The `tag` is freeform — use it to label multiple recording sessions
+ * The `tag` is freeform. use it to label multiple recording sessions
  * so you can filter `getFrames(tag)` later. Call {@link stopRecording}
  * to detach the listeners (also fires automatically when the reel set
  * emits `'destroyed'`).
@@ -204,7 +204,7 @@ export function startRecording(
   const onReelLanded = () => capture('spin:reelLanded');
   const onAllLanded = () => capture('spin:allLanded');
   const onComplete = () => capture('spin:complete');
-  // Auto-detach when the reel set is destroyed — otherwise listeners hang
+  // Auto-detach when the reel set is destroyed. otherwise listeners hang
   // off a dead emitter and the WeakMap entry can't drop until GC.
   const onDestroyed = () => stopRecording(reelSet);
 
@@ -235,7 +235,7 @@ export function stopRecording(reelSet: ReelSet): void {
 /**
  * All recorded frames in capture order. When `tag` is provided, only
  * frames tagged with it are returned. Frames are not cleared between
- * recording sessions — call {@link clearFrames} to reset.
+ * recording sessions. call {@link clearFrames} to reset.
  */
 export function getFrames(tag?: string): readonly RecordedFrame[] {
   if (tag === undefined) return _recordedFrames.slice();
@@ -296,7 +296,7 @@ export function enableDebug(reelSet: ReelSet): void {
     /** Start a frame-state recording session on this reel set. */
     startRecording: (tag = 'default', options?: StartRecordingOptions) =>
       startRecording(reelSet, tag, options),
-    /** Stop a recording session — paired with `startRecording`. */
+    /** Stop a recording session. paired with `startRecording`. */
     stopRecording: () => stopRecording(reelSet),
     /** Pull recorded frames; pass `tag` to filter to one session. */
     getFrames: (tag?: string) => getFrames(tag),

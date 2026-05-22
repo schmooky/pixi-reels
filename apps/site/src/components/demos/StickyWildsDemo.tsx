@@ -18,7 +18,7 @@ type Sticky = { reel: number; row: number; spinsLeft: number };
 /**
  * Mounts/updates an overlay Container holding sticky-wild sprites. The reel
  * column behind each held cell continues to spin normally, but the overlay
- * sprite sits on top and never moves — so a held wild visibly stays put
+ * sprite sits on top and never moves. so a held wild visibly stays put
  * during the respin, matching how sticky-wild mechanics look in shipping games.
  */
 async function syncStickyOverlay(
@@ -131,7 +131,7 @@ export default function StickyWildsDemo() {
           onLanded: async ({ grid, reelSet, toast, api }) => {
             // Decrement existing stickies
             for (const s of stickies) s.spinsLeft--;
-            // Track any wilds on the grid — new ones start at 3, existing refresh to 3
+            // Track any wilds on the grid. new ones start at 3, existing refresh to 3
             let newThisSpin = 0;
             for (let r = 0; r < grid.length; r++) {
               for (let row = 0; row < grid[r].length; row++) {

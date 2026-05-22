@@ -38,7 +38,7 @@ await new Promise((r) => setTimeout(r, 220));
 reelSet.setResult(nearMissGrid);
 await p;
 
-// 2. Parallel nudge — all three tweens kick off the same frame.
+// 2. Parallel nudge. all three tweens kick off the same frame.
 await Promise.all(
   [1, 2, 3].map((col) =>
     reelSet.nudge(col, {
@@ -77,7 +77,7 @@ for (const col of [1, 2, 3]) {
 
 ## Re-detecting the win
 
-The nudge's resolved promise carries the new visible column — you can
+The nudge's resolved promise carries the new visible column. you can
 feed that straight into your win-detection logic instead of re-querying
 the grid:
 
@@ -115,11 +115,11 @@ await reelSet.nudge(2, { ...opts, signal: controller.signal })
   .catch((e) => { if (e.name !== 'AbortError') throw e; });
 ```
 
-Aborts and skips land the strip deterministically — your spotlight cells
+Aborts and skips land the strip deterministically. your spotlight cells
 are still in the right places regardless of how the tween ended.
 
 ## Related
 
-- [Nudge guide](/guides/nudge/) — full event map, big-symbol survival
+- [Nudge guide](/guides/nudge/). full event map, big-symbol survival
   rules, contract for `incoming`.
 - [Nudge a reel](/recipes/nudge/). minimum nudge demo.

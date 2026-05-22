@@ -9,11 +9,11 @@ export interface AdjustPhaseConfig {
   /**
    * Pin overlays on this reel that need to tween from their pre-reshape
    * cell to the post-reshape cell. Populated by `SpinController` BEFORE
-   * the reshape commits — `fromY` captures each overlay's on-screen Y at
+   * the reshape commits. `fromY` captures each overlay's on-screen Y at
    * the moment the snapshot was taken, `toY` is computed from the new
    * geometry.
    *
-   * AdjustPhase no longer commits geometry — `SpinController._applyReshape`
+   * AdjustPhase no longer commits geometry. `SpinController._applyReshape`
    * does that synchronously before the phase runs. The phase's only job is
    * the tween.
    */
@@ -23,13 +23,13 @@ export interface AdjustPhaseConfig {
 /**
  * Descriptor for one pin overlay's animation across a MultiWays reshape.
  *
- * @internal — constructed by `SpinController.buildPinOverlayTweens`. Not
+ * @internal. constructed by `SpinController.buildPinOverlayTweens`. Not
  * meant to be hand-built by consumers.
  */
 export interface PinOverlayTween {
-  /** The pin overlay symbol — its view is what we animate. */
+  /** The pin overlay symbol. its view is what we animate. */
   symbol: ReelSymbol;
-  /** Width to resize to after the tween (cell width — usually unchanged). */
+  /** Width to resize to after the tween (cell width. usually unchanged). */
   cellWidth: number;
   /** Cell height before reshape (the overlay's current size). */
   oldCellHeight: number;
@@ -48,7 +48,7 @@ export interface PinOverlayTween {
  *
  * The geometry commit (resize symbols, reshape motion) happens in
  * `SpinController._applyReshape` before this phase runs. AdjustPhase only
- * tweens any pin overlays from their pre-reshape cell to the new cell —
+ * tweens any pin overlays from their pre-reshape cell to the new cell.
  * cell symbols on the strip snap instantly because the reel is still
  * spinning at full speed when this phase runs (tweening cell scale would
  * fight the motion layer).
@@ -89,7 +89,7 @@ export class AdjustPhase extends ReelPhase<AdjustPhaseConfig> {
     }
 
     if (this._durationMs <= 0) {
-      // Instant snap path — match user's `pinMigrationDuration(0)`.
+      // Instant snap path. match user's `pinMigrationDuration(0)`.
       this._snapPinOverlays(overlays);
       this._complete();
       return;

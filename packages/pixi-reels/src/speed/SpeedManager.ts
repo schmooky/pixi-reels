@@ -3,7 +3,7 @@ import type { SpeedProfile } from '../config/types.js';
 /**
  * The tempo of your reels, as named presets.
  *
- * A `SpeedProfile` is a bundle of timings — how long the wind-up takes,
+ * A `SpeedProfile` is a bundle of timings. how long the wind-up takes,
  * how fast the reel scrolls at full speed, how deep the landing bounce
  * is, which GSAP easing drives each transition. `SpeedManager` holds
  * those profiles by name and tracks which one is active.
@@ -12,7 +12,7 @@ import type { SpeedProfile } from '../config/types.js';
  * own via `reelSet.speed.addProfile('cinematic', {...})`. Switch at
  * runtime with `reelSet.setSpeed('turbo')`.
  *
- * Speed changes take effect on the next spin — mid-spin switching
+ * Speed changes take effect on the next spin. mid-spin switching
  * is deliberately not supported to keep animation state simple.
  */
 export class SpeedManager {

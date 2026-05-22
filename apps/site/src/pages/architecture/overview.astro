@@ -155,7 +155,7 @@ import Legend from '../../components/arch/Legend.astro';
   <p>
     <code>ReelSetBuilder</code> is the only class a consumer ever instantiates
     directly. Its <code>.build()</code> method constructs the <code>ReelSet</code>
-    and every subsystem it needs — you never <code>new</code> a <code>SpinController</code>
+    and every subsystem it needs. you never <code>new</code> a <code>SpinController</code>
     or a <code>Reel</code> yourself.
   </p>
 
@@ -185,7 +185,7 @@ import Legend from '../../components/arch/Legend.astro';
     <code>FakeTicker</code>, <code>HeadlessSymbol</code>, and the
     <code>createTestReelSet</code> harness. You can build a working 5×3 reel
     set in Node with no renderer, run a full spin synchronously, and assert
-    the landed grid — see <a href="/architecture/testing/">Testing model</a>
+    the landed grid. see <a href="/architecture/testing/">Testing model</a>
     for how it hangs together.
   </p>
 
@@ -195,25 +195,25 @@ import Legend from '../../components/arch/Legend.astro';
     <div class="rounded-xl border border-border bg-card p-4">
       <div class="text-[11px] font-mono uppercase tracking-wider text-primary mb-1">packages/pixi-reels/src/</div>
       <ul class="text-sm space-y-1 text-foreground/80">
-        <li><code>core/</code> — ReelSet, Builder, Reel, Viewport, Motion, StopSequencer</li>
-        <li><code>spin/</code> — SpinController, phases, spinning modes</li>
-        <li><code>symbols/</code> — ReelSymbol + Sprite/AnimatedSprite/Spine/Headless</li>
-        <li><code>speed/</code> — SpeedManager + profiles</li>
-        <li><code>frame/</code> — FrameBuilder, middleware, RNG</li>
-        <li><code>spotlight/</code> — win animations</li>
-        <li><code>events/</code> — typed EventEmitter, event types</li>
-        <li><code>testing/</code> — FakeTicker, HeadlessSymbol, harness</li>
-        <li><code>debug/</code> — debugSnapshot, debugGrid, enableDebug</li>
+        <li><code>core/</code>. ReelSet, Builder, Reel, Viewport, Motion, StopSequencer</li>
+        <li><code>spin/</code>. SpinController, phases, spinning modes</li>
+        <li><code>symbols/</code>. ReelSymbol + Sprite/AnimatedSprite/Spine/Headless</li>
+        <li><code>speed/</code>. SpeedManager + profiles</li>
+        <li><code>frame/</code>. FrameBuilder, middleware, RNG</li>
+        <li><code>spotlight/</code>. win animations</li>
+        <li><code>events/</code>. typed EventEmitter, event types</li>
+        <li><code>testing/</code>. FakeTicker, HeadlessSymbol, harness</li>
+        <li><code>debug/</code>. debugSnapshot, debugGrid, enableDebug</li>
       </ul>
     </div>
     <div class="rounded-xl border border-border bg-card p-4">
       <div class="text-[11px] font-mono uppercase tracking-wider text-primary mb-1">examples/shared/</div>
       <ul class="text-sm space-y-1 text-foreground/80">
-        <li><code>cheats.ts</code> — CheatEngine + built-in cheats</li>
-        <li><code>BlurSpriteSymbol.ts</code> — sprite symbol with motion-blur swap</li>
-        <li><code>prototypeSpriteLoader.ts</code> — prototype-symbols atlas loader</li>
-        <li><code>mockServer.ts</code> — fake spin responses</li>
-        <li><code>seededRng.ts</code> — Mulberry32 PRNG</li>
+        <li><code>cheats.ts</code>. CheatEngine + built-in cheats</li>
+        <li><code>BlurSpriteSymbol.ts</code>. sprite symbol with motion-blur swap</li>
+        <li><code>prototypeSpriteLoader.ts</code>. prototype-symbols atlas loader</li>
+        <li><code>mockServer.ts</code>. fake spin responses</li>
+        <li><code>seededRng.ts</code>. Mulberry32 PRNG</li>
       </ul>
     </div>
   </div>

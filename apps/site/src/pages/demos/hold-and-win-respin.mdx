@@ -14,7 +14,7 @@ import HoldAndWinDemo from '../../components/demos/HoldAndWinDemo.tsx';
 
 - Each spin can land one or more **coin** symbols.
 - Coins **lock** in place for the rest of the round.
-- Respin until no new coins land for 3 spins — or the grid fills (grand jackpot).
+- Respin until no new coins land for 3 spins. or the grid fills (grand jackpot).
 - Bonus twist: 3 coins on the **middle row** = mini-jackpot.
 
 ## Setup
@@ -45,7 +45,7 @@ reelSet.events.on('spin:complete', ({ symbols }) => {
 
 ### 3. Feed held cells back into the next spin
 
-On every spin, build the target grid yourself — keep held cells as coins,
+On every spin, build the target grid yourself. keep held cells as coins,
 fill the rest with random non-coins. This is exactly what `holdAndWinProgress`
 does in the cheats library.
 
@@ -59,7 +59,7 @@ function buildGrid(held, size, coinChance) {
 
 ### 4. Cheat: guaranteed progression
 
-Use `holdAndWinProgress('coin', 1)` for demos — every spin lands a new coin,
+Use `holdAndWinProgress('coin', 1)` for demos. every spin lands a new coin,
 so you reach the jackpot in a few clicks instead of playing through RNG.
 
 ```ts

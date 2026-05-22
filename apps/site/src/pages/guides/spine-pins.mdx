@@ -3,12 +3,12 @@ layout: ../../layouts/Docs.astro
 title: Spine pins + movePin
 section: guides
 eyebrow: Building blocks
-description: How CellPin and movePin behave when the pinned cell is a Spine skeleton — lifecycle, animation hooks, and a full walking-Spine-wild example.
+description: How CellPin and movePin behave when the pinned cell is a Spine skeleton. lifecycle, animation hooks, and a full walking-Spine-wild example.
 ---
 
 `reelSet.pin()` and `reelSet.movePin()` work out of the box with Spine symbols because both go through the `SymbolFactory`. Whatever symbol class you registered for the id (`SpriteSymbol`, `AnimatedSpriteSymbol`, `SpineSymbol`, or your own subclass) is what the engine acquires for overlays and flight symbols. Position, size, reparenting, and pool lifecycle all work identically.
 
-The only extra concern Spine introduces is animation control during the in-motion phases — and the engine exposes hooks for that.
+The only extra concern Spine introduces is animation control during the in-motion phases. and the engine exposes hooks for that.
 
 ## The three Spine instances involved
 
@@ -107,7 +107,7 @@ async function walkLeft(pin: CellPin) {
 
 It is **not** the same instance as the reel-cell Spine. Any transient state you set on the cell Spine (animation tracks, skeleton colour, skin) is not inherited by the flight instance. The flight starts from `onActivate` defaults.
 
-This is usually what you want — your flight animation is its own entity — but be deliberate about it.
+This is usually what you want. your flight animation is its own entity. but be deliberate about it.
 
 ### 2. Overlay animations don't carry over to the landed cell
 
@@ -133,6 +133,6 @@ reelSet.events.on('pin:placed', (pin) => {
 
 ## Related
 
-- [Walking wild (movePin) recipe](/recipes/walking-wild-pin/) — the same pattern, runnable
-- [Symbols guide](/guides/symbols/) — authoring custom `ReelSymbol` subclasses
-- [Spin lifecycle](/guides/spin-lifecycle/) — events fired around a spin
+- [Walking wild (movePin) recipe](/recipes/walking-wild-pin/). the same pattern, runnable
+- [Symbols guide](/guides/symbols/). authoring custom `ReelSymbol` subclasses
+- [Spin lifecycle](/guides/spin-lifecycle/). events fired around a spin

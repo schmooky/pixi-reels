@@ -11,7 +11,7 @@
  *   2. Hash a save key with PBKDF2 + a separate salt for the server to
  *      verify on PUT. Server never sees the raw save key.
  *
- * All multi-byte values are base64 on the wire. Uses SubtleCrypto only —
+ * All multi-byte values are base64 on the wire. Uses SubtleCrypto only.
  * no extra deps.
  */
 

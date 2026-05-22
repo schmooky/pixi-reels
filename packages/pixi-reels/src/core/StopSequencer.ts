@@ -5,7 +5,7 @@
  * target frame (the exact list of symbol ids that should appear on
  * screen, top-to-bottom, including the off-screen buffers). As the reel
  * keeps scrolling downward during deceleration, every `ReelMotion` wrap
- * event asks this sequencer for the next symbol — and it hands them back
+ * event asks this sequencer for the next symbol. and it hands them back
  * from the END of the frame first, because new symbols arrive at the
  * top of a reel scrolling downward.
  *

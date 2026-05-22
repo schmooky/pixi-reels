@@ -24,7 +24,7 @@ type Cell = { reel: number; row: number };
 
 /**
  * Scale a symbol's view from its visual center. Containers are anchored at
- * top-left of the cell, so scaling directly shrinks from the corner —
+ * top-left of the cell, so scaling directly shrinks from the corner.
  * set pivot to the local bounds center and compensate position, then scale.
  */
 function scaleFromCenter(view: import('pixi.js').Container, target: number, duration: number): Promise<void> {
@@ -79,7 +79,7 @@ async function cyclePaylinesManually(reelSet: ReelSet, lines: Cell[][]): Promise
     // Zoom each winner sequentially for a more readable payline sweep.
     for (const c of line) {
       const view = reelSet.getReel(c.reel).getSymbolAt(c.row).view;
-      // Don't await each — let them overlap slightly so the sweep feels live.
+      // Don't await each. let them overlap slightly so the sweep feels live.
       void scaleFromCenter(view, 1.22, 0.18);
       await sleep(90);
     }

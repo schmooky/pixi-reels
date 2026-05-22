@@ -8,7 +8,7 @@
  * understand the whole library surface in one request.
  *
  * For recipes specifically, also inlines the parallel `*.recipe.ts` source
- * code from `src/recipes/` — that's the pattern an LLM most needs in
+ * code from `src/recipes/`. that's the pattern an LLM most needs in
  * order to write working code against the library.
  *
  * Wired into the docs build via `pnpm llms:gen` (run by predev/prebuild).
@@ -152,7 +152,7 @@ function relToSlug(rel) {
 /**
  * Pull the YAML-ish frontmatter block (`---\n...\n---`) from the top of
  * an .mdx or .astro file and parse the keys we care about. We don't need
- * a full YAML parser — only flat strings, flat string lists, and flat
+ * a full YAML parser. only flat strings, flat string lists, and flat
  * objects appear in this site's frontmatter.
  */
 function parseFrontmatter(raw) {

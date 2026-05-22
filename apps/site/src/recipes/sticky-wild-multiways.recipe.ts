@@ -7,9 +7,9 @@
 // the pin survives every MultiWays reshape. When the next shape is shorter
 // than originRow, the pin clamps to the last visible row (`pin:migrated`
 // fires with clamped:true). When a later, larger shape can fit the
-// originRow again, the pin migrates back — no wander.
+// originRow again, the pin migrates back. no wander.
 //
-// CARD SYMBOLS BELOW ARE DEBUG/PROTOTYPING ONLY — see /recipes/card-symbol-debug/.
+// CARD SYMBOLS BELOW ARE DEBUG/PROTOTYPING ONLY. see /recipes/card-symbol-debug/.
 
 const REELS = 6;
 const MIN_ROWS = 2;
@@ -44,7 +44,7 @@ const reelSet = new ReelSetBuilder()
   .build();
 
 // On every landing, pin every wild for STICKY_TURNS spins. Each pin captures
-// its current row as `originRow` automatically — that's what lets the
+// its current row as `originRow` automatically. that's what lets the
 // engine restore the pin to its original row when shapes grow back.
 reelSet.events.on('spin:allLanded', ({ symbols }) => {
   for (let c = 0; c < symbols.length; c++) {
@@ -59,8 +59,8 @@ reelSet.events.on('spin:allLanded', ({ symbols }) => {
 // Cycle shapes so the demo deterministically shows clamp + restore.
 const SHAPE_CYCLE = [
   [5, 5, 5, 5, 5, 5],
-  [3, 3, 3, 3, 3, 3], // shrinks — high-row wilds clamp
-  [7, 7, 7, 7, 7, 7], // grows back — clamped wilds migrate back to originRow
+  [3, 3, 3, 3, 3, 3], // shrinks. high-row wilds clamp
+  [7, 7, 7, 7, 7, 7], // grows back. clamped wilds migrate back to originRow
   [4, 4, 4, 4, 4, 4],
 ];
 let spinCount = 0;

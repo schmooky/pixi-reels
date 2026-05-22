@@ -17,7 +17,7 @@ import { RecipeRunner } from '../../components/RecipeRunner.tsx';
 
 <RecipeRunner code={code} client:only="react" />
 
-Mystery symbols all flip to the same random class after landing. Book of Oz and Mystery Reels use this. Built with `'eval'` pins — zero manual cleanup.
+Mystery symbols all flip to the same random class after landing. Book of Oz and Mystery Reels use this. Built with `'eval'` pins. zero manual cleanup.
 
 ## The whole mechanic
 
@@ -62,9 +62,9 @@ reelSet.events.on('spin:allLanded', async ({ symbols }) => {
 });
 ```
 
-The pin is placed *at* the reveal moment — before the animation starts, the cell shows `mystery`; after `pin()` is called, it shows the revealed class.
+The pin is placed *at* the reveal moment. before the animation starts, the cell shows `mystery`; after `pin()` is called, it shows the revealed class.
 
 ## Related
 
-- [Symbol transform](/recipes/symbol-transform/) — in-place morph on win (different mechanic)
-- [Book-style expanding symbol](/recipes/book-expanding-pin/) — another "reveal and fill" pattern
+- [Symbol transform](/recipes/symbol-transform/). in-place morph on win (different mechanic)
+- [Book-style expanding symbol](/recipes/book-expanding-pin/). another "reveal and fill" pattern

@@ -10,14 +10,14 @@ import Legend from '../../components/arch/Legend.astro';
   <p>
     A correct cascade drop has a simple invariant: <strong>a symbol only
     moves if there are cleared slots beneath its original row</strong>.
-    Getting this wrong is the classic cascade bug — naive implementations
+    Getting this wrong is the classic cascade bug. naive implementations
     shift every visible cell up by the winner count, then tween back down,
     making untouched symbols visually jump.
   </p>
 
   <p>
     pixi-reels computes per-cell fall distance from the winners list.
-    Survivors with no winners below them are <em>never touched</em> — no
+    Survivors with no winners below them are <em>never touched</em>. no
     animation job is created, their <code>view.y</code> stays exactly where
     <code>placeSymbols</code> put it.
   </p>
@@ -76,7 +76,7 @@ import Legend from '../../components/arch/Legend.astro';
         <!-- Arrow -->
         <path d="M 380 280 L 440 280" stroke="hsl(var(--muted-foreground))" stroke-width="2" fill="none" marker-end="url(#arr-m)" />
 
-        <!-- Stage 3: GRAVITY — survivors move down, empty slots float up -->
+        <!-- Stage 3: GRAVITY. survivors move down, empty slots float up -->
         {[
           { row: 0, sym: '', state: 'empty' },
           { row: 1, sym: '', state: 'empty' },
@@ -159,12 +159,12 @@ import Legend from '../../components/arch/Legend.astro';
       <tbody>
         <tr class="border-t border-border/60">
           <td class="px-4 py-2.5"><code>R &lt; winnerRows.length</code></td>
-          <td class="px-4 py-2.5 text-xs text-foreground/80">yes — falls from above the viewport</td>
+          <td class="px-4 py-2.5 text-xs text-foreground/80">yes. falls from above the viewport</td>
           <td class="px-4 py-2.5 font-mono text-xs text-primary">R + 1</td>
         </tr>
         <tr class="border-t border-border/60">
           <td class="px-4 py-2.5"><code>R ≥ winnerRows.length</code></td>
-          <td class="px-4 py-2.5 text-xs text-foreground/80">no — survivor from <code>nonWinnerRows[R - winCount]</code></td>
+          <td class="px-4 py-2.5 text-xs text-foreground/80">no. survivor from <code>nonWinnerRows[R - winCount]</code></td>
           <td class="px-4 py-2.5 font-mono text-xs text-accent">R - originalRow <span class="text-muted-foreground">(0 means: don't touch it)</span></td>
         </tr>
       </tbody>
@@ -202,23 +202,23 @@ import Legend from '../../components/arch/Legend.astro';
   <h2>API surface</h2>
 
   <ul>
-    <li><code>reelSet.destroySymbols(winners, opts?)</code> — the "pop" primitive. Defers to each symbol's own <code>playDestroy()</code> so subclasses (Spine, particles) get art-appropriate disintegration. Lifts zIndex so destroys aren't clipped; alternates rotation by column for cohesive cluster pops.</li>
-    <li><code>{`reelSet.refill({ winners, grid })`}</code> — the "place + drop" primitive. Reads each reel's <code>visibleRows</code>, computes per-cell fall distances from <code>winners</code>, animates only the cells that actually move. Untouched survivors stay perfectly still.</li>
-    <li><code>{`reelSet.runCascade({ detectWinners, nextGrid })`}</code> — the chain orchestrator. Loops detect → destroy → pause → refill until <code>detectWinners</code> returns <code>[]</code>. Per-stage progress fires via <code>cascade:chain:start</code> / <code>cascade:chain:end</code>; the awaited <code>RunCascadeResult</code> carries the summary. Pass <code>signal: AbortSignal</code> for caller-driven cancellation.</li>
-    <li><code>computeDropOffsets(visibleRows, winnerRows)</code> — the algorithm the engine itself uses, exported so you can validate server-side gravity sims offline.</li>
+    <li><code>reelSet.destroySymbols(winners, opts?)</code>. the "pop" primitive. Defers to each symbol's own <code>playDestroy()</code> so subclasses (Spine, particles) get art-appropriate disintegration. Lifts zIndex so destroys aren't clipped; alternates rotation by column for cohesive cluster pops.</li>
+    <li><code>{`reelSet.refill({ winners, grid })`}</code>. the "place + drop" primitive. Reads each reel's <code>visibleRows</code>, computes per-cell fall distances from <code>winners</code>, animates only the cells that actually move. Untouched survivors stay perfectly still.</li>
+    <li><code>{`reelSet.runCascade({ detectWinners, nextGrid })`}</code>. the chain orchestrator. Loops detect → destroy → pause → refill until <code>detectWinners</code> returns <code>[]</code>. Per-stage progress fires via <code>cascade:chain:start</code> / <code>cascade:chain:end</code>; the awaited <code>RunCascadeResult</code> carries the summary. Pass <code>signal: AbortSignal</code> for caller-driven cancellation.</li>
+    <li><code>computeDropOffsets(visibleRows, winnerRows)</code>. the algorithm the engine itself uses, exported so you can validate server-side gravity sims offline.</li>
   </ul>
 
   <h2>Why winners must be *semantic*, not diffed</h2>
 
   <p>
     Consider <code>prevCol = [A, C, X]</code>, <code>X</code> at row 2 wins.
-    The correct next col is <code>[N, A, C]</code> — new symbol at row 0,
+    The correct next col is <code>[N, A, C]</code>. new symbol at row 0,
     survivors shifted down. A naive "diff the two grids" approach reports
     <em>three</em> changed cells (row 0: A→N, row 1: C→A, row 2: X→C).
     Treating those as "three winners" would animate three new symbols
     falling from above, instead of one new + two survivors sliding by one
     slot. The library's API takes a <code>Cell[]</code> of <em>match
-    winners</em>, not a diff — so the answer is unambiguous.
+    winners</em>, not a diff. so the answer is unambiguous.
   </p>
 
   <p>

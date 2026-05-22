@@ -13,7 +13,7 @@ const FS_AUTOPLAY_DELAY = 900; // ms between auto-fired free spins
  * Primitive FS entry flow:
  *   trigger  → overlay "FREE SPINS x N · Enter" → counter chip shown → each
  *   free spin auto-fires with no player input → at 0 → "FS complete" overlay
- *   → return to base. No in-FS retriggers — once awarded, the count is fixed.
+ *   → return to base. No in-FS retriggers. once awarded, the count is fixed.
  */
 export default function ScatterFsDemo() {
   return (
@@ -22,7 +22,7 @@ export default function ScatterFsDemo() {
       tags={['5×3', 'scatter', 'free-spins', 'autoplay']}
       height={500}
       cheats={[
-        { id: 'force3', label: 'Force 3 scatters', description: 'Exactly 3 bonuses anywhere — guarantees FS trigger.', enabled: true, cheat: forceScatters(3, SCATTER) },
+        { id: 'force3', label: 'Force 3 scatters', description: 'Exactly 3 bonuses anywhere. guarantees FS trigger.', enabled: true, cheat: forceScatters(3, SCATTER) },
         { id: 'force4', label: 'Force 4 scatters', description: 'More spins awarded. Still no mid-FS retriggers.', enabled: false, cheat: forceScatters(4, SCATTER) },
         { id: 'near-miss-5', label: 'Near-miss on reel 5', description: '2 bonuses land, reel 5 blanks. Anticipation fires.', enabled: false, cheat: forceNearMiss(3, SCATTER, 4) },
       ]}
@@ -98,7 +98,7 @@ export default function ScatterFsDemo() {
                 fsTotal = 0;
                 api.setStatus('Base game. Force 3 scatters and press SPIN to trigger again.');
               } else {
-                // Auto-fire the next free spin — no player input needed.
+                // Auto-fire the next free spin. no player input needed.
                 await sleep(FS_AUTOPLAY_DELAY);
                 void requestSpin();
               }
@@ -131,8 +131,8 @@ export default function ScatterFsDemo() {
                 'Enter',
               );
               showCounter();
-              api.setStatus(`Free spin 1 / ${fsTotal} — autoplay…`);
-              // Kick off the FS autoplay loop — the player does nothing from here
+              api.setStatus(`Free spin 1 / ${fsTotal}. autoplay…`);
+              // Kick off the FS autoplay loop. the player does nothing from here
               // until the "Free spins complete" overlay shows.
               await sleep(400);
               void requestSpin();

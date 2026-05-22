@@ -1,6 +1,6 @@
 /**
  * Studio-side mirror of `apps/share-api/src/types.ts`. The two stay in
- * sync by convention — keep the JSON shape simple so drift is obvious
+ * sync by convention. keep the JSON shape simple so drift is obvious
  * if it ever happens.
  *
  * See the server's types.ts for design notes on the five share modes

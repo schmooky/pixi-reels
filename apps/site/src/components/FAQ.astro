@@ -6,11 +6,11 @@ const faqs = [
   },
   {
     q: 'Which PixiJS version is required?',
-    a: 'PixiJS v8 (^8.17.0) and GSAP v3 (^3.14.0). Spine is optional — only install @esotericsoftware/spine-pixi-v8 if you use SpineReelSymbol.',
+    a: 'PixiJS v8 (^8.17.0) and GSAP v3 (^3.14.0). Spine is optional. only install @esotericsoftware/spine-pixi-v8 if you use SpineReelSymbol.',
   },
   {
     q: 'Can I test mechanics without a renderer?',
-    a: 'Yes. Import from pixi-reels/testing: createTestReelSet, FakeTicker, HeadlessSymbol, spinAndLand, expectGrid, captureEvents, countSymbol. You can run full spin lifecycles and assert on grid outcomes in Node — no canvas, no DOM.',
+    a: 'Yes. Import from pixi-reels/testing: createTestReelSet, FakeTicker, HeadlessSymbol, spinAndLand, expectGrid, captureEvents, countSymbol. You can run full spin lifecycles and assert on grid outcomes in Node. no canvas, no DOM.',
   },
   {
     q: 'How do I force a specific outcome?',
@@ -22,7 +22,7 @@ const faqs = [
   },
   {
     q: 'Does it handle server-driven cascades?',
-    a: 'Yes. reelSet.runCascade({ detectWinners, nextGrid }) owns the detect → destroy → refill loop. Your `nextGrid` callback can be async — await your server inside it and return the next grid. Pass `signal: AbortSignal` for caller-driven cancellation (the right shape for "player tapped slam between refills"). The returned `RunCascadeResult` carries `{ chainLength, totalWinners, finalGrid, wasSkipped }`.',
+    a: 'Yes. reelSet.runCascade({ detectWinners, nextGrid }) owns the detect → destroy → refill loop. Your `nextGrid` callback can be async. await your server inside it and return the next grid. Pass `signal: AbortSignal` for caller-driven cancellation (the right shape for "player tapped slam between refills"). The returned `RunCascadeResult` carries `{ chainLength, totalWinners, finalGrid, wasSkipped }`.',
   },
   {
     q: 'Is it tree-shakeable?',

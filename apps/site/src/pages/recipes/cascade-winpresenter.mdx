@@ -4,9 +4,9 @@ title: Cascade pops with WinPresenter
 description: Drive cascade cell pops with the same WinPresenter you use for paylines. One API, one shape.
 tags: [wins, cascade]
 steps:
-  - Build a WinPresenter — no special cluster config, it already works
+  - Build a WinPresenter. no special cluster config, it already works
   - In runCascade's onCascade callback, hand winners to the presenter and await it
-  - destroySymbols runs after — disable its zIndex lift so its alpha→0 stays invisible
+  - destroySymbols runs after. disable its zIndex lift so its alpha→0 stays invisible
 apis:
   - WinPresenter
   - ReelSet.runCascade (onCascade)
@@ -45,7 +45,7 @@ await reelSet.runCascade({
 
 ## One shape, two use cases
 
-A "win" is just cells. Whether those cells came from a payline, a cluster, or a cascade pop, the presenter treats them the same. No `isPayline` / `isCluster` narrowing — just `win.cells`.
+A "win" is just cells. Whether those cells came from a payline, a cluster, or a cascade pop, the presenter treats them the same. No `isPayline` / `isCluster` narrowing. just `win.cells`.
 
 For mixed rounds (a scatter cluster + a payline in the same spin), pass them together:
 
@@ -58,6 +58,6 @@ await presenter.show([
 
 ## UX guardrails
 
-- `destroyOptions: { zIndex: null }` keeps the library's implode invisible — the presenter already played the visual.
-- `presenter.abort()` on `spin:start` — slam-spin mid-cascade cancels cleanly.
+- `destroyOptions: { zIndex: null }` keeps the library's implode invisible. the presenter already played the visual.
+- `presenter.abort()` on `spin:start`. slam-spin mid-cascade cancels cleanly.
 - If you'd rather KEEP the library's implode AS WELL as the presenter pop, drop `destroyOptions` entirely. The presenter resolves before `destroySymbols` runs, so they read as one continuous pop.

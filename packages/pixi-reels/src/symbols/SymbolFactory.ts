@@ -6,7 +6,7 @@ import { ObjectPool } from '../pool/ObjectPool.js';
  * Creates and pools ReelSymbol instances.
  *
  * Wraps SymbolRegistry for creation and ObjectPool for recycling.
- * Game code should not need to interact with this directly —
+ * Game code should not need to interact with this directly.
  * it's managed by Reel internally.
  */
 export class SymbolFactory {

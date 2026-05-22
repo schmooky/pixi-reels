@@ -13,11 +13,11 @@ interface Props {
 
 /**
  * Multi-file Spine symbol form. Three phases:
- *   1. Atlas + skeleton pick — parses each to extract texture filenames
+ *   1. Atlas + skeleton pick. parses each to extract texture filenames
  *      (from atlas) and animation names (from skeleton).
- *   2. Texture pages — user uploads PNG/WebP files. Files match against
+ *   2. Texture pages. user uploads PNG/WebP files. Files match against
  *      the atlas's expected filenames by name; missing pages stay flagged.
- *   3. Event mapping — five dropdowns (idle / spin / landing / win /
+ *   3. Event mapping. five dropdowns (idle / spin / landing / win /
  *      destroy), populated from the skeleton's animations.
  */
 export function SpineForm({ usedIds, onCancel, onSave }: Props): JSX.Element {
@@ -81,7 +81,7 @@ export function SpineForm({ usedIds, onCancel, onSave }: Props): JSX.Element {
     if (usedIds.has(trimmed)) return `Symbol id "${trimmed}" is already used.`;
     if (!skeletonFile) return 'Pick the skeleton (.json).';
     if (!atlasFile) return 'Pick the atlas (.atlas).';
-    if (requiredTextures.length === 0) return 'Atlas has no texture pages — is the file valid?';
+    if (requiredTextures.length === 0) return 'Atlas has no texture pages. is the file valid?';
     for (const t of requiredTextures) {
       if (!textureFiles[t]) return `Missing texture page "${t}". Upload it under that exact filename.`;
     }
@@ -111,7 +111,7 @@ export function SpineForm({ usedIds, onCancel, onSave }: Props): JSX.Element {
       };
       // Generate a thumbnail by rendering the skeleton offscreen, and
       // capture the fit scale at the same time. The scale becomes the
-      // SpineReelSymbol's default `scale` option — without it, spines
+      // SpineReelSymbol's default `scale` option. without it, spines
       // render at their setup-pose size (often hundreds of px) and look
       // gigantic in a typical 100-200px cell. Best-effort: if it fails,
       // we save without the thumbnail / scale and the row falls back
@@ -159,7 +159,7 @@ export function SpineForm({ usedIds, onCancel, onSave }: Props): JSX.Element {
             className="w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-sm focus:border-primary focus:outline-none"
           />
           <span className="mt-1 block text-[11px] text-muted-foreground">
-            e.g. "wild" — referenced as <code className="rounded bg-muted px-1">userSymbols.wild</code> in your code.
+            e.g. "wild". referenced as <code className="rounded bg-muted px-1">userSymbols.wild</code> in your code.
           </span>
         </label>
 
@@ -171,7 +171,7 @@ export function SpineForm({ usedIds, onCancel, onSave }: Props): JSX.Element {
           hint={animations.length > 0
             ? `${animations.length} animation${animations.length === 1 ? '' : 's'}: ${animations.join(', ')}`
             : skeletonFile
-              ? 'Parsed 0 animations — is this a valid skeleton JSON?'
+              ? 'Parsed 0 animations. is this a valid skeleton JSON?'
               : undefined}
         />
 
@@ -183,7 +183,7 @@ export function SpineForm({ usedIds, onCancel, onSave }: Props): JSX.Element {
           hint={requiredTextures.length > 0
             ? `${requiredTextures.length} texture page${requiredTextures.length === 1 ? '' : 's'} required: ${requiredTextures.join(', ')}`
             : atlasFile
-              ? 'No texture pages detected — is this a valid atlas?'
+              ? 'No texture pages detected. is this a valid atlas?'
               : undefined}
         />
 

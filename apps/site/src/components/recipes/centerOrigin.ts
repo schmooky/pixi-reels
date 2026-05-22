@@ -2,7 +2,7 @@ import type { Container } from 'pixi.js';
 
 /**
  * The `view` container of a ReelSymbol is positioned at the TOP-LEFT of its
- * cell — scaling or tweening it directly shrinks toward (0,0), not the cell
+ * cell. scaling or tweening it directly shrinks toward (0,0), not the cell
  * center. These helpers bind a view's pivot+position so transforms happen
  * around the cell's visual center, then restore the original anchoring.
  *
@@ -15,7 +15,7 @@ import type { Container } from 'pixi.js';
  * ```
  *
  * Internal renderables with a centered anchor (BlurSpriteSymbol's sprite,
- * BlockSymbol's inner, SpineReelSymbol's spine) don't need this — only the
+ * BlockSymbol's inner, SpineReelSymbol's spine) don't need this. only the
  * outer `view` does.
  */
 export function bindCenterPivot(

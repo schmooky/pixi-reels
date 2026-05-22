@@ -3,7 +3,7 @@ layout: ../../layouts/Docs.astro
 title: Spin lifecycle
 section: guides
 eyebrow: Building blocks
-description: The full lifecycle of a spin — phases, events, and how to hook in.
+description: The full lifecycle of a spin. phases, events, and how to hook in.
 ---
 
 A single spin moves through four phases per reel:
@@ -56,13 +56,13 @@ The library exposes three slam verbs with three different intents:
 | Verb | Intent | Side effects |
 |---|---|---|
 | `skip()` | Round-aware "player tapped the slam button" | First press of the round also boosts speed (standard mode) or auto-slams future refills (cascade mode). Emits `skip:boosted` when boost applies. |
-| `requestSkip()` | "Slam when ready" — safe BEFORE `setResult()` arrives | No boost, no auto-slam. Queues until `setResult()`, then slams once. |
-| `slamStop()` | Unconditional "land NOW" — tests / anti-cheat / programmatic | No boost, no auto-slam. |
+| `requestSkip()` | "Slam when ready". safe BEFORE `setResult()` arrives | No boost, no auto-slam. Queues until `setResult()`, then slams once. |
+| `slamStop()` | Unconditional "land NOW". tests / anti-cheat / programmatic | No boost, no auto-slam. |
 
 ```ts
 button.addEventListener('click', () => {
   if (reelSet.isSpinning) {
-    // requestSkip is the safe variant — if the player taps before the
+    // requestSkip is the safe variant. if the player taps before the
     // server response arrives, it queues until setResult() and then
     // slams. skip() in pre-result state is a no-op.
     reelSet.requestSkip();
@@ -72,14 +72,14 @@ button.addEventListener('click', () => {
 });
 ```
 
-All three force-land on whatever `setResult()` told the engine. `result.wasSkipped === true`. The lifecycle hooks (`spin:reelLanded`, `spin:allLanded`, `spin:complete`) all still fire on the slam path — so win presenters and effect chains keep working without a separate code path.
+All three force-land on whatever `setResult()` told the engine. `result.wasSkipped === true`. The lifecycle hooks (`spin:reelLanded`, `spin:allLanded`, `spin:complete`) all still fire on the slam path. so win presenters and effect chains keep working without a separate code path.
 
-The `skipStage` getter reports the round's stage (`0` before any press, `2` after) — drive a "SPIN → SKIPPED" button label from it.
+The `skipStage` getter reports the round's stage (`0` before any press, `2` after). drive a "SPIN → SKIPPED" button label from it.
 
 ## Pattern: hold some reels
 
 ```ts
-// Reels 0 and 4 are frozen for this spin — only the middle three reroll.
+// Reels 0 and 4 are frozen for this spin. only the middle three reroll.
 const spin = reelSet.spin({ holdReels: [0, 4] });
 reelSet.setResult(serverGrid); // entries at held indices are ignored
 await spin;
@@ -104,13 +104,13 @@ const reelSet = new ReelSetBuilder()
   .ticker(app.ticker)
   .build();
 
-await reelSet.spin();                  // round 1 — strip-spin (default mode)
-await reelSet.spin({ mode: 'cascade' }); // respin — cascade drop-in
+await reelSet.spin();                  // round 1. strip-spin (default mode)
+await reelSet.spin({ mode: 'cascade' }); // respin. cascade drop-in
 ```
 
 `SpinOptions.mode` overrides the builder's default phase chain on a
 per-call basis. The engine throws if you pick `'cascade'` without
-`.tumble(...)` on the builder — the error names the missing method.
+`.tumble(...)` on the builder. the error names the missing method.
 See the [spin-then-cascade recipe](/recipes/spin-then-cascade/).
 
 ## Pattern: nudge after landing
@@ -144,18 +144,18 @@ recipes: [nudge](/recipes/nudge/),
 
 | Event | Payload | When |
 |---|---|---|
-| `spin:start` | — | Any `spin()` call |
-| `spin:allStarted` | — | Every (non-held) reel is in SPIN phase |
+| `spin:start` |. | Any `spin()` call |
+| `spin:allStarted` |. | Every (non-held) reel is in SPIN phase |
 | `spin:stopping` | `(reelIndex)` | A reel begins STOP (held reels never fire) |
 | `spin:reelLanded` | `(reelIndex, symbols)` | Individual reel landed (held reels never fire) |
 | `spin:allLanded` | `(result)` | Last non-held reel landed |
 | `spin:complete` | `(result)` | Just after `spin:allLanded` |
-| `skip:requested` | — | A slam fired — from `skip()`, `requestSkip()` (after `setResult`), or `slamStop()` |
-| `skip:completed` | — | All non-held reels force-landed |
+| `skip:requested` |. | A slam fired. from `skip()`, `requestSkip()` (after `setResult`), or `slamStop()` |
+| `skip:completed` |. | All non-held reels force-landed |
 | `skip:boosted` | `({ previous, current })` | First `skip()` press of a standard-mode round; engine bumped speed to the fastest registered profile for the rest of the round. Cascade mode auto-slams refills instead. |
 | `speed:changed` | `(profile, previous)` | `setSpeed()` called |
 | `spotlight:start` | `(positions)` | `spotlight.cycle(...)` began |
-| `spotlight:end` | — | Spotlight finished |
+| `spotlight:end` |. | Spotlight finished |
 | `pin:placed` | `(pin)` | `reelSet.pin(...)` succeeded |
 | `pin:expired` | `(pin, reason)` | Pin removed by `unpin`, `turns` exhausted, or `'eval'` reset |
 | `pin:moved` | `(pin, from)` | `reelSet.movePin(...)` resolved |
@@ -168,10 +168,10 @@ recipes: [nudge](/recipes/nudge/),
 | `nudge:start` | `({ reelIndex, distance, direction })` | `reelSet.nudge(...)` pre-placement done; tween about to begin |
 | `nudge:complete` | `({ reelIndex, distance, direction, symbols })` | Nudged reel has snapped to its new grid position |
 | `nudge:cancelled` | `({ reelIndex, distance, direction, reason })` | `NudgeOptions.signal` aborted or the reel was destroyed mid-tween. **Does not fire alongside `nudge:complete`.** |
-| `destroyed` | — | `destroy()` called |
+| `destroyed` |. | `destroy()` called |
 
 ## Deeper dive
 
-- [Phases](/docs/api-phases/) — customize START/SPIN/STOP timing
-- [Events](/docs/api-events/) — types and exact signatures
-- [SpinOptions](/docs/api-builder/#spin-options) — `holdReels`, `mode`
+- [Phases](/docs/api-phases/). customize START/SPIN/STOP timing
+- [Events](/docs/api-events/). types and exact signatures
+- [SpinOptions](/docs/api-builder/#spin-options). `holdReels`, `mode`

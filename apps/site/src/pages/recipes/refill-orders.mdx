@@ -1,11 +1,11 @@
 ---
 layout: ../../layouts/Recipe.astro
-title: Cascade refill orders — pick the post-win flow
-description: Three interactive canvases. Same scripted win, same destruction, same .tumble() feel — only the cascade-refill ordering changes. See which one fits your slot's rhythm.
+title: Cascade refill orders. pick the post-win flow
+description: Three interactive canvases. Same scripted win, same destruction, same .tumble() feel. only the cascade-refill ordering changes. See which one fits your slot's rhythm.
 tags: [cascade, tumble, refill, presets, recipes]
 steps:
   - "Initial reveal is the same (left-to-right wave) on every canvas"
-  - "Winners destruct the same way — the post-removal pause is fixed"
+  - "Winners destruct the same way. the post-removal pause is fixed"
   - "Only the refill drop-in order changes (setDropOrder + rowStagger + rowOrder)"
 apis:
   - ReelSet.refill
@@ -19,11 +19,11 @@ import ltrCode from '../../recipes/refill-ltr-wave.recipe.ts?raw';
 import bottomUpCode from '../../recipes/refill-bottom-up.recipe.ts?raw';
 import { RecipeRunner } from '../../components/RecipeRunner.tsx';
 
-Each canvas below runs the same scripted spin: 6×4 cards land left-to-right with a pre-wired 3-cluster of `10` on row 2. The winners go through the same `reelSet.destroySymbols(...)` implode effect. Only the **refill drop-in order** varies between canvases — controlled by `setDropOrder()` on the reel set and `rowStagger` / `rowOrder` on the builder's `.tumble({ dropIn })` config.
+Each canvas below runs the same scripted spin: 6×4 cards land left-to-right with a pre-wired 3-cluster of `10` on row 2. The winners go through the same `reelSet.destroySymbols(...)` implode effect. Only the **refill drop-in order** varies between canvases. controlled by `setDropOrder()` on the reel set and `rowStagger` / `rowOrder` on the builder's `.tumble({ dropIn })` config.
 
 The default is **simultaneous**. The other three vary the drop-in order across rows or columns. all four refill the grid in one phase without you writing motion code.
 
-## Simultaneous — the canonical default
+## Simultaneous. the canonical default
 
 <RecipeRunner code={simultaneousCode} client:only="react" />
 
@@ -36,7 +36,7 @@ reelSet.setDropOrder('all');  // 0 ms delay between reels
 await reelSet.refill({ winners, grid: stage1 });
 ```
 
-No in-reel row stagger (`rowStagger: 0`), no cross-reel delay (`setDropOrder('all')`). Every cell that needs to move starts moving at the same frame. Snappy, no pacing overhead — the player gets back to a "ready" grid as fast as the drop-in animation runs. This is what 80%+ of commercial cascade slots ship.
+No in-reel row stagger (`rowStagger: 0`), no cross-reel delay (`setDropOrder('all')`). Every cell that needs to move starts moving at the same frame. Snappy, no pacing overhead. the player gets back to a "ready" grid as fast as the drop-in animation runs. This is what 80%+ of commercial cascade slots ship.
 
 ## Left-to-right wave
 
@@ -51,7 +51,7 @@ reelSet.setDropOrder('ltr', 90);  // 90 ms between reels, left to right
 await reelSet.refill({ winners, grid: stage1 });
 ```
 
-Each reel's rows still arrive together, but reel 0 lands first, then reel 1, then reel 2... Reads as the grid "filling up" column-by-column. Visually distinctive but it adds noticeable time to every cascade — picture six cascades in a chain × 6 columns × 90 ms = nearly 3 extra seconds across the round.
+Each reel's rows still arrive together, but reel 0 lands first, then reel 1, then reel 2... Reads as the grid "filling up" column-by-column. Visually distinctive but it adds noticeable time to every cascade. picture six cascades in a chain × 6 columns × 90 ms = nearly 3 extra seconds across the round.
 
 Use when the cascade chain is rare (deep features, bonus rounds) or when the column-by-column reveal IS the slot's hook.
 
@@ -76,6 +76,6 @@ All reels drop simultaneously, but within each reel the bottom row lands first a
 
 ## Going further
 
-- [Tumble feels](/recipes/tumble-feels/) — varies the easings and distances rather than the order. Pair with any refill pattern.
-- [Cascade 6×5 tumble](/recipes/cascade-6x5/) — full cluster-detection + multiplier on top of the cascade-refill loop.
-- [Spin first, cascade after](/recipes/spin-then-cascade/) — strip-spin landing → cascade refill (different mechanic).
+- [Tumble feels](/recipes/tumble-feels/). varies the easings and distances rather than the order. Pair with any refill pattern.
+- [Cascade 6×5 tumble](/recipes/cascade-6x5/). full cluster-detection + multiplier on top of the cascade-refill loop.
+- [Spin first, cascade after](/recipes/spin-then-cascade/). strip-spin landing → cascade refill (different mechanic).

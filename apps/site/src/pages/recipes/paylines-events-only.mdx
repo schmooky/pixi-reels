@@ -4,7 +4,7 @@ title: Draw paylines yourself from win:group
 description: The presenter never draws lines. Subscribe to win:group and use reelSet.getCellBounds to render any overlay.
 tags: [wins, events, overlays]
 steps:
-  - Create a WinPresenter — it only animates symbols
+  - Create a WinPresenter. it only animates symbols
   - Subscribe to `win:group`, draw a line (or outline, or number) from `reelSet.getCellBounds`
   - Drop your own GSAP fade in + out so visuals don't pile up between wins
 apis:
@@ -46,7 +46,7 @@ Overlays vary: payline polylines, cluster outlines, numbered badges, Spine
 line rigs, particle trails. Baking any one into the core API would either
 force a single look on every game, or grow a config surface that outlasts
 the feature. Events plus `reelSet.getCellBounds` keeps the decision on
-your side — draw whatever fits the art.
+your side. draw whatever fits the art.
 
 ## The event contract
 

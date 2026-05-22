@@ -3,12 +3,12 @@
 //                   PIXI, gsap, app, textures, blurTextures, SYMBOL_IDS,
 //                   pickWeighted
 //
-// CardSymbol prototyping demo — a classic 5×3 layout using the importable
+// CardSymbol prototyping demo. a classic 5×3 layout using the importable
 // debug Graphics symbol from `examples/shared/CardSymbol.ts`. No textures,
 // no atlases, no loaders. Each card is a flat colored rectangle with a
 // centered letter that always renders crisply at any cell size.
 //
-// USE THIS FOR PROTOTYPING ONLY. CardSymbol is debug scaffolding — your
+// USE THIS FOR PROTOTYPING ONLY. CardSymbol is debug scaffolding. your
 // real game ships SpriteSymbol, AnimatedSpriteSymbol, or SpineSymbol.
 // See the recipe page for when (not) to use this class.
 

@@ -21,7 +21,7 @@ export default defineConfig({
       alias: [
         // The subpath alias must win over the bare one, so order matters:
         // '@rollup/plugin-alias' style arrays respect order of definition.
-        // Both point at THIS branch's source — the site is always built
+        // Both point at THIS branch's source. the site is always built
         // against the local library, never against a published npm version.
         { find: /^pixi-reels\/spine$/, replacement: resolve(repoRoot, 'packages/pixi-reels/src/spine/index.ts') },
         { find: /^pixi-reels$/, replacement: resolve(repoRoot, 'packages/pixi-reels/src/index.ts') },

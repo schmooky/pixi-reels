@@ -1,6 +1,6 @@
 import { ReelSymbol } from './ReelSymbol.js';
 
-// Spine types imported dynamically — this is an optional peer dependency
+// Spine types imported dynamically. this is an optional peer dependency
 let SpineClass: any = null;
 
 async function loadSpine(): Promise<void> {
@@ -8,7 +8,7 @@ async function loadSpine(): Promise<void> {
     const spineModule = await import('@esotericsoftware/spine-pixi-v8');
     SpineClass = spineModule.Spine;
   } catch {
-    // Spine not available — SpineSymbol will throw on construction
+    // Spine not available. SpineSymbol will throw on construction
   }
 }
 
