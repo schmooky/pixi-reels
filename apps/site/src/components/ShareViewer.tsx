@@ -22,6 +22,16 @@ import {
 import { SpineReelSymbol } from 'pixi-reels/spine';
 import { BlurSpriteSymbol } from '../../../../examples/shared/BlurSpriteSymbol.ts';
 import { CardSymbol, CARD_DECK, WILD_CARD } from '../../../../examples/shared/CardSymbol.ts';
+import {
+  CoinSymbol,
+  COIN_TIER,
+  COIN_FEATURE,
+  COIN_MYSTERY,
+  COIN_TRIGGER,
+  coinValue,
+  coinMultiplier,
+  drawCoin,
+} from '../../../../examples/shared/CoinSymbol.ts';
 import { EmptySymbol } from '../../../../examples/shared/EmptySymbol.ts';
 import { loadPrototypeSymbols } from '../../../../examples/shared/prototypeSpriteLoader.ts';
 import {
@@ -334,6 +344,8 @@ function SharedStudio({ config, assets, codeAccessible }: SharedStudioProps): JS
         'EmptySymbol', 'ReelSymbol',
         'RectMaskStrategy', 'SharedRectMaskStrategy',
         'CardSymbol', 'CARD_DECK', 'WILD_CARD',
+        'CoinSymbol', 'COIN_TIER', 'COIN_FEATURE', 'COIN_MYSTERY', 'COIN_TRIGGER',
+        'coinValue', 'coinMultiplier', 'drawCoin',
         'SpineReelSymbol', 'loadGeneratedSpines', 'buildSpineMap',
         'userSymbols', 'userSymbolData',
         factorySource,
@@ -347,6 +359,8 @@ function SharedStudio({ config, assets, codeAccessible }: SharedStudioProps): JS
         EmptySymbol, ReelSymbol,
         RectMaskStrategy, SharedRectMaskStrategy,
         CardSymbol, CARD_DECK, WILD_CARD,
+        CoinSymbol, COIN_TIER, COIN_FEATURE, COIN_MYSTERY, COIN_TRIGGER,
+        coinValue, coinMultiplier, drawCoin,
         SpineReelSymbol, loadGeneratedSpines, buildSpineMap,
         injectables.userSymbols, injectables.userSymbolData,
       )) as typeof built;

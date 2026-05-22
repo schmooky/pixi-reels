@@ -1,14 +1,14 @@
 // @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
-//                   WILD_CARD, PIXI, gsap, app, pickWeighted, EmptySymbol
+// Injected globals: ReelSetBuilder, SpeedPresets, CoinSymbol, COIN_FEATURE,
+//                   PIXI, gsap, app, pickWeighted, EmptySymbol
 //
-// Collector symbol on a Hold & Win board.
+// Collector coin on a Hold & Win board.
 //
-// Same 15-mini-ReelSet architecture as value-coin-pin. Coins land and are
-// pinned with a payload.value. When a collector lands adjacent to pinned
-// coins, it absorbs every adjacent coin's payload and stores the total in
-// its own pin payload. Absorbed coins are unpinned. they "fly" to the
-// collector conceptually, though here we just update badges.
+// Same 15-mini-ReelSet architecture as value-coin-pin. Gold coins land and
+// are pinned with a payload.value. When a blue COLLECT coin lands adjacent
+// to pinned gold coins, it absorbs every adjacent coin's payload and stores
+// the total in its own pin payload. Absorbed coins are unpinned. they "fly"
+// to the collector conceptually, though here we just update the stamp text.
 
 const COIN = 'coin';
 const COLLECTOR = 'collector';
@@ -16,9 +16,8 @@ const EMPTY = 'empty';
 const COLS = 5, ROWS = 3, CELL = 60, GAP = 4;
 const COIN_VALUES = [10, 25, 50, 100];
 
-// Thematic cards for this recipe. gold coin, purple collector.
-const COIN_CARD = { id: COIN, color: 0xf1c40f, label: 'COIN', textColor: 0x6b5400 };
-const COLLECTOR_CARD = { id: COLLECTOR, color: 0x9b59b6, label: 'COLL', textColor: 0xffffff };
+// Blank gold coin for the value coin; branded COLLECT coin for the collector.
+const BLANK_COIN = { rimColor: 0xb8860b, faceColor: 0xf5d066 };
 
 const colWidth = COLS * (CELL + GAP) - GAP;
 const colHeight = ROWS * (CELL + GAP) - GAP;
@@ -32,8 +31,8 @@ for (let col = 0; col < COLS; col++) {
       .reels(1).visibleRows(1)
       .symbolSize(CELL, CELL).symbolGap(0, 0)
       .symbols((r) => {
-        r.register(COIN, CardSymbol, { color: COIN_CARD.color, label: COIN_CARD.label, textColor: COIN_CARD.textColor });
-        r.register(COLLECTOR, CardSymbol, { color: COLLECTOR_CARD.color, label: COLLECTOR_CARD.label, textColor: COLLECTOR_CARD.textColor });
+        r.register(COIN, CoinSymbol, BLANK_COIN);
+        r.register(COLLECTOR, CoinSymbol, COIN_FEATURE.COLLECT);
         r.register(EMPTY, EmptySymbol, {});
       })
       .weights({ [COIN]: 2, [COLLECTOR]: 1, [EMPTY]: 6 })
@@ -47,7 +46,7 @@ for (let col = 0; col < COLS; col++) {
   }
 }
 
-// ── Value badges + total ────────────────────────────────────────────────
+// ── Value stamps + total ────────────────────────────────────────────────
 const badges = new Map();
 const totalText = new PIXI.Text({
   text: 'TOTAL: 0',
@@ -71,11 +70,15 @@ function drawBadge(cell, value, isCollector = false) {
   const badge = new PIXI.Text({
     text: String(value),
     style: {
-      fontFamily: 'system-ui, sans-serif',
-      fontSize: 18,
+      fontFamily:
+        '"Roboto Condensed", "Arial Narrow", "Helvetica Neue Condensed", "Liberation Sans Narrow", system-ui, sans-serif',
+      fontSize: Math.floor(CELL * 0.3),
       fontWeight: '900',
-      fill: isCollector ? 0x90ee90 : 0xffd43b,
-      stroke: { color: 0x000000, width: 4 },
+      // Gold coins: dark "embossed" stamp. Collector: bright green overlay
+      // (visually overrides the COLLECT label while announcing the total).
+      fill: isCollector ? 0xbfffbf : 0x3a2900,
+      stroke: isCollector ? { color: 0x000000, width: 3 } : undefined,
+      align: 'center',
     },
   });
   badge.anchor.set(0.5);

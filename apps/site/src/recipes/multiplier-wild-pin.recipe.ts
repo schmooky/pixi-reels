@@ -1,14 +1,15 @@
 // @ts-nocheck
 // Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
-//                   WILD_CARD, PIXI, gsap, app, pickWeighted
+//                   CoinSymbol, WILD_CARD, PIXI, gsap, app, pickWeighted
 //
 // Multiplier wild. the wild carries a per-instance multiplier value.
 //
 // CellPin's `payload` field stores arbitrary per-instance data alongside the
 // symbol. Game layer reads it during win evaluation to scale payouts.
 //
-// We overlay the multiplier value as a PIXI text badge on top of the symbol
-// sprite whenever a multiplier wild is pinned or repositioned.
+// We overlay the multiplier value as a PIXI text stamp on the wild coin's
+// face whenever a multiplier wild is pinned. Filler cards stay rectangular
+// (they're playing-card themed). only the wild renders as a coin.
 
 const FILLER = ['7', '8', '10', 'Q'];
 const WILD = WILD_CARD.id;
@@ -16,15 +17,20 @@ const COLS = 5, ROWS = 3, SIZE = 90;
 const MULTIPLIERS = [2, 3, 5];
 const STICKY_TURNS = 3;
 
+// Blank gold coin for the wild. The multiplier "stamp" is drawn on top in
+// the badge layer below.
+const WILD_COIN = { rimColor: 0xb8860b, faceColor: 0xf5d066 };
+
 const reelSet = new ReelSetBuilder()
   .reels(COLS)
   .visibleRows(ROWS)
   .symbolSize(SIZE, SIZE)
   .symbolGap(4, 4)
   .symbols((r) => {
-    for (const sym of [...CARD_DECK, WILD_CARD]) {
+    for (const sym of CARD_DECK) {
       r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
     }
+    r.register(WILD, CoinSymbol, WILD_COIN);
   })
   .weights({
     '7': 22,
@@ -37,8 +43,9 @@ const reelSet = new ReelSetBuilder()
   .ticker(app.ticker)
   .build();
 
-// ── Multiplier badges (display layer) ────────────────────────────────────
-// A separate PIXI container overlays ×N badges on the reel.
+// ── Multiplier stamps (display layer) ────────────────────────────────────
+// A separate PIXI container draws each pinned wild's xN value centered on
+// the coin's face. Centered, dark text — reads as embossed on the coin.
 const badgeLayer = new PIXI.Container();
 reelSet.addChild(badgeLayer);
 
@@ -58,17 +65,18 @@ function drawBadge(col, row, multiplier) {
   const badge = new PIXI.Text({
     text: `x${multiplier}`,
     style: {
-      fontFamily: 'system-ui, sans-serif',
-      fontSize: 22,
+      fontFamily:
+        '"Roboto Condensed", "Arial Narrow", "Helvetica Neue Condensed", "Liberation Sans Narrow", system-ui, sans-serif',
+      fontSize: Math.floor(SIZE * 0.32),
       fontWeight: '900',
-      fill: 0xffd43b,
-      stroke: { color: 0x000000, width: 4 },
+      fill: 0x3a2900,
+      align: 'center',
     },
   });
   badge.anchor.set(0.5);
-  // Position: top-right of the cell
-  badge.x = col * (SIZE + 4) + SIZE - 16;
-  badge.y = row * (SIZE + 4) + 16;
+  // Centered on the coin's face.
+  badge.x = col * (SIZE + 4) + SIZE / 2;
+  badge.y = row * (SIZE + 4) + SIZE / 2;
   badgeLayer.addChild(badge);
   badges.set(`${col}:${row}`, badge);
 }

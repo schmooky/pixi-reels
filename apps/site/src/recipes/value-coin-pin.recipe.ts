@@ -1,22 +1,23 @@
 // @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
-//                   WILD_CARD, PIXI, gsap, app, pickWeighted, EmptySymbol
+// Injected globals: ReelSetBuilder, SpeedPresets, CoinSymbol, drawCoin,
+//                   PIXI, gsap, app, pickWeighted, EmptySymbol
 //
 // Hold & Win with CellPin.
 //
-// Each grid cell is its own 1×1 ReelSet. Coins flash past during the spin.
-// When a coin lands, we pin it on its mini-reel with `turns: 'permanent'`
-// and a payload carrying the coin value. Pinned cells skip their spin on
-// subsequent rounds. the engine keeps showing the coin, its payload is
-// readable from `reelSet.pins`, and the running total updates live.
+// Each grid cell is its own 1×1 ReelSet. Gold coins flash past during the
+// spin. When a coin lands, we pin it on its mini-reel with `turns: 'permanent'`
+// and a payload carrying the coin value. The value is stamped on the coin's
+// face. Pinned cells skip their spin on subsequent rounds. the engine keeps
+// showing the coin, its payload is readable from `reelSet.pins`, and the
+// running total updates live.
 
 const COIN = 'coin';
 const EMPTY = 'empty';
 const COLS = 5, ROWS = 3, CELL = 60, GAP = 4;
 const COIN_VALUES = [10, 25, 50, 100];
 
-// Coin card definition. distinctive gold so it stands out against empty cells.
-const COIN_CARD = { id: COIN, color: 0xf1c40f, label: 'COIN', textColor: 0x6b5400 };
+// Blank gold coin. value is added as a stamp on land (pin payload).
+const BLANK_COIN = { rimColor: 0xb8860b, faceColor: 0xf5d066 };
 
 // Build 15 independent 1×1 ReelSets. one per cell.
 const colWidth = COLS * (CELL + GAP) - GAP;
@@ -31,7 +32,7 @@ for (let col = 0; col < COLS; col++) {
       .reels(1).visibleRows(1)
       .symbolSize(CELL, CELL).symbolGap(0, 0)
       .symbols((r) => {
-        r.register(COIN, CardSymbol, { color: COIN_CARD.color, label: COIN_CARD.label, textColor: COIN_CARD.textColor });
+        r.register(COIN, CoinSymbol, BLANK_COIN);
         r.register(EMPTY, EmptySymbol, {});
       })
       .weights({ [COIN]: 1, [EMPTY]: 3 })
@@ -61,8 +62,9 @@ totalText.x = startX + colWidth / 2;
 totalText.y = startY + colHeight + 14;
 app.stage.addChild(totalText);
 
-// ── Value badges on pinned coins ────────────────────────────────────────
-// Subscribe to every mini-reel's pin events; draw the payload.value on top.
+// ── Value stamps on pinned coins ────────────────────────────────────────
+// Subscribe to every mini-reel's pin events; draw the payload.value as the
+// coin's "stamp". darker color than a floating badge — reads as embossed.
 const badges = new Map();
 function badgeKey(col, row) { return `${col},${row}`; }
 
@@ -73,11 +75,12 @@ function drawBadge(cell, value) {
   const badge = new PIXI.Text({
     text: String(value),
     style: {
-      fontFamily: 'system-ui, sans-serif',
-      fontSize: 20,
+      fontFamily:
+        '"Roboto Condensed", "Arial Narrow", "Helvetica Neue Condensed", "Liberation Sans Narrow", system-ui, sans-serif',
+      fontSize: Math.floor(CELL * 0.32),
       fontWeight: '900',
-      fill: 0xffd43b,
-      stroke: { color: 0x000000, width: 4 },
+      fill: 0x3a2900,
+      align: 'center',
     },
   });
   badge.anchor.set(0.5);

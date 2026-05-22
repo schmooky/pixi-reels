@@ -1,20 +1,21 @@
 // @ts-nocheck
 // Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
-//                   WILD_CARD, PIXI, gsap, app, pickWeighted
+//                   CoinSymbol, COIN_MYSTERY, PIXI, gsap, app, pickWeighted
 //
 // Mystery symbol (reveal-to-same-class) using CellPin with `turns: 'eval'`.
 //
-// When mystery symbols land, we pick one random non-mystery class and pin
+// When mystery coins land, we pick one random non-mystery class and pin
 // it at each mystery cell with `turns: 'eval'`. The pins are cleared
 // automatically at the next spin:start. no manual cleanup.
+//
+// Visual: filler is rectangular playing cards; mystery is a plain
+// purple-rimmed coin with no label. the "what is it?" reads from shape +
+// color alone — the player only learns the value through the reveal.
 
 const FILLER = ['7', '8', '10', 'Q'];
 const MYSTERY = 'mystery';
 const REVEAL_CANDIDATES = FILLER; // mystery can reveal to any filler
 const COLS = 5, ROWS = 3, SIZE = 90;
-
-// Dark slate card with a "?" label so the mystery cell is unmistakable.
-const MYSTERY_CARD = { id: MYSTERY, color: 0x34495e, label: '?', textColor: 0xffffff };
 
 const reelSet = new ReelSetBuilder()
   .reels(COLS)
@@ -22,9 +23,10 @@ const reelSet = new ReelSetBuilder()
   .symbolSize(SIZE, SIZE)
   .symbolGap(4, 4)
   .symbols((r) => {
-    for (const sym of [...CARD_DECK, MYSTERY_CARD]) {
+    for (const sym of CARD_DECK) {
       r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
     }
+    r.register(MYSTERY, CoinSymbol, COIN_MYSTERY);
   })
   .weights({
     '7': 22,
@@ -43,7 +45,7 @@ const reelSet = new ReelSetBuilder()
 // The pins override the visible symbols; the next spin clears them.
 //
 // Animation flow:
-//   1. shake each mystery '?' card horizontally for ~280ms (anticipation)
+//   1. shake each mystery coin horizontally for ~280ms (anticipation)
 //   2. scale it down to 0 over 180ms (mystery vanishes)
 //   3. pin the reveal symbol. engine swaps the symbol identity at rest
 //   4. scale the new symbol UP from 0 with a back.out overshoot

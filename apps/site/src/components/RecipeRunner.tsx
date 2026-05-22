@@ -14,6 +14,16 @@ import {
 import { SpineReelSymbol } from 'pixi-reels/spine';
 import { BlurSpriteSymbol } from '../../../../examples/shared/BlurSpriteSymbol.ts';
 import { CardSymbol, CARD_DECK, WILD_CARD } from '../../../../examples/shared/CardSymbol.ts';
+import {
+  CoinSymbol,
+  COIN_TIER,
+  COIN_FEATURE,
+  COIN_MYSTERY,
+  COIN_TRIGGER,
+  coinValue,
+  coinMultiplier,
+  drawCoin,
+} from '../../../../examples/shared/CoinSymbol.ts';
 import { EmptySymbol } from '../../../../examples/shared/EmptySymbol.ts';
 import { loadPrototypeSymbols } from '../../../../examples/shared/prototypeSpriteLoader.ts';
 import {
@@ -134,6 +144,8 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
           'EmptySymbol', 'ReelSymbol',
           'RectMaskStrategy', 'SharedRectMaskStrategy',
           'CardSymbol', 'CARD_DECK', 'WILD_CARD',
+          'CoinSymbol', 'COIN_TIER', 'COIN_FEATURE', 'COIN_MYSTERY', 'COIN_TRIGGER',
+          'coinValue', 'coinMultiplier', 'drawCoin',
           'SpineReelSymbol', 'loadGeneratedSpines', 'buildSpineMap',
           `"use strict"; ${js}`,
         );
@@ -148,6 +160,8 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
           EmptySymbol, ReelSymbol,
           RectMaskStrategy, SharedRectMaskStrategy,
           CardSymbol, CARD_DECK, WILD_CARD,
+          CoinSymbol, COIN_TIER, COIN_FEATURE, COIN_MYSTERY, COIN_TRIGGER,
+          coinValue, coinMultiplier, drawCoin,
           SpineReelSymbol, loadGeneratedSpines, buildSpineMap,
         )) as RunResult;
       } catch (e) {

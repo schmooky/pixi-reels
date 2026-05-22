@@ -8,7 +8,7 @@ Site: https://pixi-reels.schmooky.dev
 Repo: https://github.com/schmooky/pixi-reels
 Package: https://www.npmjs.com/package/pixi-reels
 
-Generated: 2026-05-22T13:09:43.403Z
+Generated: 2026-05-22T15:15:54.602Z
 
 ## Quick start
 
@@ -1960,16 +1960,16 @@ return {
 URL: https://pixi-reels.schmooky.dev/recipes/collector-symbol-pin/
 ```ts
 // @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
-//                   WILD_CARD, PIXI, gsap, app, pickWeighted, EmptySymbol
+// Injected globals: ReelSetBuilder, SpeedPresets, CoinSymbol, COIN_FEATURE,
+//                   PIXI, gsap, app, pickWeighted, EmptySymbol
 //
-// Collector symbol on a Hold & Win board.
+// Collector coin on a Hold & Win board.
 //
-// Same 15-mini-ReelSet architecture as value-coin-pin. Coins land and are
-// pinned with a payload.value. When a collector lands adjacent to pinned
-// coins, it absorbs every adjacent coin's payload and stores the total in
-// its own pin payload. Absorbed coins are unpinned. they "fly" to the
-// collector conceptually, though here we just update badges.
+// Same 15-mini-ReelSet architecture as value-coin-pin. Gold coins land and
+// are pinned with a payload.value. When a blue COLLECT coin lands adjacent
+// to pinned gold coins, it absorbs every adjacent coin's payload and stores
+// the total in its own pin payload. Absorbed coins are unpinned. they "fly"
+// to the collector conceptually, though here we just update the stamp text.
 
 const COIN = 'coin';
 const COLLECTOR = 'collector';
@@ -1977,9 +1977,8 @@ const EMPTY = 'empty';
 const COLS = 5, ROWS = 3, CELL = 60, GAP = 4;
 const COIN_VALUES = [10, 25, 50, 100];
 
-// Thematic cards for this recipe. gold coin, purple collector.
-const COIN_CARD = { id: COIN, color: 0xf1c40f, label: 'COIN', textColor: 0x6b5400 };
-const COLLECTOR_CARD = { id: COLLECTOR, color: 0x9b59b6, label: 'COLL', textColor: 0xffffff };
+// Blank gold coin for the value coin; branded COLLECT coin for the collector.
+const BLANK_COIN = { rimColor: 0xb8860b, faceColor: 0xf5d066 };
 
 const colWidth = COLS * (CELL + GAP) - GAP;
 const colHeight = ROWS * (CELL + GAP) - GAP;
@@ -1993,8 +1992,8 @@ for (let col = 0; col < COLS; col++) {
       .reels(1).visibleRows(1)
       .symbolSize(CELL, CELL).symbolGap(0, 0)
       .symbols((r) => {
-        r.register(COIN, CardSymbol, { color: COIN_CARD.color, label: COIN_CARD.label, textColor: COIN_CARD.textColor });
-        r.register(COLLECTOR, CardSymbol, { color: COLLECTOR_CARD.color, label: COLLECTOR_CARD.label, textColor: COLLECTOR_CARD.textColor });
+        r.register(COIN, CoinSymbol, BLANK_COIN);
+        r.register(COLLECTOR, CoinSymbol, COIN_FEATURE.COLLECT);
         r.register(EMPTY, EmptySymbol, {});
       })
       .weights({ [COIN]: 2, [COLLECTOR]: 1, [EMPTY]: 6 })
@@ -2008,7 +2007,7 @@ for (let col = 0; col < COLS; col++) {
   }
 }
 
-// ── Value badges + total ────────────────────────────────────────────────
+// ── Value stamps + total ────────────────────────────────────────────────
 const badges = new Map();
 const totalText = new PIXI.Text({
   text: 'TOTAL: 0',
@@ -2032,11 +2031,15 @@ function drawBadge(cell, value, isCollector = false) {
   const badge = new PIXI.Text({
     text: String(value),
     style: {
-      fontFamily: 'system-ui, sans-serif',
-      fontSize: 18,
+      fontFamily:
+        '"Roboto Condensed", "Arial Narrow", "Helvetica Neue Condensed", "Liberation Sans Narrow", system-ui, sans-serif',
+      fontSize: Math.floor(CELL * 0.3),
       fontWeight: '900',
-      fill: isCollector ? 0x90ee90 : 0xffd43b,
-      stroke: { color: 0x000000, width: 4 },
+      // Gold coins: dark "embossed" stamp. Collector: bright green overlay
+      // (visually overrides the COLLECT label while announcing the total).
+      fill: isCollector ? 0xbfffbf : 0x3a2900,
+      stroke: isCollector ? { color: 0x000000, width: 3 } : undefined,
+      align: 'center',
     },
   });
   badge.anchor.set(0.5);
@@ -2859,11 +2862,11 @@ return {
 URL: https://pixi-reels.schmooky.dev/recipes/hold-and-win/
 ```ts
 // @ts-nocheck
-// Injected: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, WILD_CARD,
+// Injected: ReelSetBuilder, SpeedPresets, CoinSymbol, COIN_TRIGGER, drawCoin,
 //           PIXI, gsap, app, pickWeighted,
 //           EmptySymbol (blank ReelSymbol. renders nothing, used for miss cells)
 
-const COIN = 'wild';
+const COIN = 'coin';
 const EMPTY = 'empty';
 const COLS = 5, ROWS = 3, CELL = 60, GAP = 4;
 
@@ -2880,11 +2883,7 @@ for (let col = 0; col < COLS; col++) {
       .reels(1).visibleRows(1)
       .symbolSize(CELL, CELL).symbolGap(0, 0)
       .symbols(r => {
-        r.register(COIN, CardSymbol, {
-          color: WILD_CARD.color,
-          label: WILD_CARD.label,
-          textColor: WILD_CARD.textColor,
-        });
+        r.register(COIN, CoinSymbol, COIN_TRIGGER);
         r.register(EMPTY, EmptySymbol, {});
       })
       // Mostly empty so coins flash past during the spin animation.
@@ -2909,30 +2908,30 @@ const rounds = [
 const heldKeys = new Set();
 const overlays = [];
 
-// Build a held-coin overlay matching the WILD card visual (no texture
-// needed. cards are pure Graphics).
+// Build a held-coin overlay matching the in-reel CoinSymbol visual via the
+// shared `drawCoin` helper. Same shape, same colors, no texture needed.
 function makeCoinOverlay() {
   const g = new PIXI.Container();
-  const rect = new PIXI.Graphics();
-  rect.rect(0, 0, CELL - 8, CELL - 8).fill({ color: WILD_CARD.color });
-  rect.rect(1, 1, CELL - 10, CELL - 10).stroke({ color: 0x000000, width: 2, alpha: 0.25 });
+  const SIZE = CELL - 8;
+  const coin = new PIXI.Graphics();
+  drawCoin(coin, SIZE, SIZE, COIN_TRIGGER);
   const label = new PIXI.Text({
-    text: WILD_CARD.label,
+    text: COIN_TRIGGER.label,
     style: {
       fontFamily:
         '"Roboto Condensed", "Arial Narrow", "Helvetica Neue Condensed", "Liberation Sans Narrow", system-ui, sans-serif',
-      fontSize: Math.floor((CELL - 8) * 0.32),
-      fontWeight: '700',
-      fill: WILD_CARD.textColor,
+      fontSize: Math.floor(SIZE * 0.24),
+      fontWeight: '800',
+      fill: COIN_TRIGGER.textColor,
       align: 'center',
     },
   });
   label.anchor.set(0.5);
-  label.x = (CELL - 8) / 2;
-  label.y = (CELL - 8) / 2;
-  g.addChild(rect);
+  label.x = SIZE / 2;
+  label.y = SIZE / 2;
+  g.addChild(coin);
   g.addChild(label);
-  g.pivot.set((CELL - 8) / 2, (CELL - 8) / 2);
+  g.pivot.set(SIZE / 2, SIZE / 2);
   return g;
 }
 
@@ -2965,7 +2964,7 @@ return {
       }
       await Promise.all(spinPromises);
 
-      // Lock in hits with a coin overlay sprite; hide their mini reel.
+      // Lock in hits with a coin overlay; hide their mini reel.
       for (const cell of activeCells) {
         const key = `${cell.col},${cell.row}`;
         if (!hits.some(h => h.col === cell.col && h.row === cell.row)) continue;
@@ -2993,15 +2992,16 @@ URL: https://pixi-reels.schmooky.dev/recipes/multiplier-wild-pin/
 ```ts
 // @ts-nocheck
 // Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
-//                   WILD_CARD, PIXI, gsap, app, pickWeighted
+//                   CoinSymbol, WILD_CARD, PIXI, gsap, app, pickWeighted
 //
 // Multiplier wild. the wild carries a per-instance multiplier value.
 //
 // CellPin's `payload` field stores arbitrary per-instance data alongside the
 // symbol. Game layer reads it during win evaluation to scale payouts.
 //
-// We overlay the multiplier value as a PIXI text badge on top of the symbol
-// sprite whenever a multiplier wild is pinned or repositioned.
+// We overlay the multiplier value as a PIXI text stamp on the wild coin's
+// face whenever a multiplier wild is pinned. Filler cards stay rectangular
+// (they're playing-card themed). only the wild renders as a coin.
 
 const FILLER = ['7', '8', '10', 'Q'];
 const WILD = WILD_CARD.id;
@@ -3009,15 +3009,20 @@ const COLS = 5, ROWS = 3, SIZE = 90;
 const MULTIPLIERS = [2, 3, 5];
 const STICKY_TURNS = 3;
 
+// Blank gold coin for the wild. The multiplier "stamp" is drawn on top in
+// the badge layer below.
+const WILD_COIN = { rimColor: 0xb8860b, faceColor: 0xf5d066 };
+
 const reelSet = new ReelSetBuilder()
   .reels(COLS)
   .visibleRows(ROWS)
   .symbolSize(SIZE, SIZE)
   .symbolGap(4, 4)
   .symbols((r) => {
-    for (const sym of [...CARD_DECK, WILD_CARD]) {
+    for (const sym of CARD_DECK) {
       r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
     }
+    r.register(WILD, CoinSymbol, WILD_COIN);
   })
   .weights({
     '7': 22,
@@ -3030,8 +3035,9 @@ const reelSet = new ReelSetBuilder()
   .ticker(app.ticker)
   .build();
 
-// ── Multiplier badges (display layer) ────────────────────────────────────
-// A separate PIXI container overlays ×N badges on the reel.
+// ── Multiplier stamps (display layer) ────────────────────────────────────
+// A separate PIXI container draws each pinned wild's xN value centered on
+// the coin's face. Centered, dark text — reads as embossed on the coin.
 const badgeLayer = new PIXI.Container();
 reelSet.addChild(badgeLayer);
 
@@ -3051,17 +3057,18 @@ function drawBadge(col, row, multiplier) {
   const badge = new PIXI.Text({
     text: `x${multiplier}`,
     style: {
-      fontFamily: 'system-ui, sans-serif',
-      fontSize: 22,
+      fontFamily:
+        '"Roboto Condensed", "Arial Narrow", "Helvetica Neue Condensed", "Liberation Sans Narrow", system-ui, sans-serif',
+      fontSize: Math.floor(SIZE * 0.32),
       fontWeight: '900',
-      fill: 0xffd43b,
-      stroke: { color: 0x000000, width: 4 },
+      fill: 0x3a2900,
+      align: 'center',
     },
   });
   badge.anchor.set(0.5);
-  // Position: top-right of the cell
-  badge.x = col * (SIZE + 4) + SIZE - 16;
-  badge.y = row * (SIZE + 4) + 16;
+  // Centered on the coin's face.
+  badge.x = col * (SIZE + 4) + SIZE / 2;
+  badge.y = row * (SIZE + 4) + SIZE / 2;
   badgeLayer.addChild(badge);
   badges.set(`${col}:${row}`, badge);
 }
@@ -3423,21 +3430,22 @@ URL: https://pixi-reels.schmooky.dev/recipes/mystery-reveal-pin/
 ```ts
 // @ts-nocheck
 // Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
-//                   WILD_CARD, PIXI, gsap, app, pickWeighted
+//                   CoinSymbol, COIN_MYSTERY, PIXI, gsap, app, pickWeighted
 //
 // Mystery symbol (reveal-to-same-class) using CellPin with `turns: 'eval'`.
 //
-// When mystery symbols land, we pick one random non-mystery class and pin
+// When mystery coins land, we pick one random non-mystery class and pin
 // it at each mystery cell with `turns: 'eval'`. The pins are cleared
 // automatically at the next spin:start. no manual cleanup.
+//
+// Visual: filler is rectangular playing cards; mystery is a plain
+// purple-rimmed coin with no label. the "what is it?" reads from shape +
+// color alone — the player only learns the value through the reveal.
 
 const FILLER = ['7', '8', '10', 'Q'];
 const MYSTERY = 'mystery';
 const REVEAL_CANDIDATES = FILLER; // mystery can reveal to any filler
 const COLS = 5, ROWS = 3, SIZE = 90;
-
-// Dark slate card with a "?" label so the mystery cell is unmistakable.
-const MYSTERY_CARD = { id: MYSTERY, color: 0x34495e, label: '?', textColor: 0xffffff };
 
 const reelSet = new ReelSetBuilder()
   .reels(COLS)
@@ -3445,9 +3453,10 @@ const reelSet = new ReelSetBuilder()
   .symbolSize(SIZE, SIZE)
   .symbolGap(4, 4)
   .symbols((r) => {
-    for (const sym of [...CARD_DECK, MYSTERY_CARD]) {
+    for (const sym of CARD_DECK) {
       r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
     }
+    r.register(MYSTERY, CoinSymbol, COIN_MYSTERY);
   })
   .weights({
     '7': 22,
@@ -3466,7 +3475,7 @@ const reelSet = new ReelSetBuilder()
 // The pins override the visible symbols; the next spin clears them.
 //
 // Animation flow:
-//   1. shake each mystery '?' card horizontally for ~280ms (anticipation)
+//   1. shake each mystery coin horizontally for ~280ms (anticipation)
 //   2. scale it down to 0 over 180ms (mystery vanishes)
 //   3. pin the reveal symbol. engine swaps the symbol identity at rest
 //   4. scale the new symbol UP from 0 with a back.out overshoot
@@ -4583,7 +4592,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/positional-multiplier-pin/
 ```ts
 // @ts-nocheck
 // Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
-//                   WILD_CARD, PIXI, gsap, app, pickWeighted
+//                   coinMultiplier, drawCoin, PIXI, gsap, app, pickWeighted
 //
 // Positional multiplier cells (Gonzo's Quest / Irish Riches style).
 //
@@ -4595,11 +4604,16 @@ URL: https://pixi-reels.schmooky.dev/recipes/positional-multiplier-pin/
 // Trick: we pin the cell with symbolId MIRROR_ANY. a sentinel meaning
 // "don't override the rolled symbol". We read the rolled symbol at
 // spin:allLanded, re-pin it with the multiplier payload preserved so the
-// badge display stays correct. (A cleaner CellDecorator primitive would
+// stamp display stays correct. (A cleaner CellDecorator primitive would
 // avoid this mirror dance, but it isn't required.)
+//
+// Visual: a small multiplier coin chip is anchored to the top-right of each
+// multiplier cell. The card lands behind it. The coin reads as a permanent
+// "this cell is x3" sticker.
 
 const FILLER = ['7', '8', '10', 'Q'];
 const COLS = 5, ROWS = 3, SIZE = 90;
+const CHIP = 36; // multiplier-coin diameter
 
 // Define fixed multiplier positions for this demo. In a real game, these
 // could come from the server with each spin.
@@ -4630,36 +4644,34 @@ const reelSet = new ReelSetBuilder()
   .ticker(app.ticker)
   .build();
 
-// ── Multiplier badges (fixed positions, always visible) ──────────────────
+// ── Multiplier coin chips (fixed positions, always visible) ──────────────
 const badgeLayer = new PIXI.Container();
 reelSet.addChild(badgeLayer);
 
 for (const cell of MULTIPLIER_CELLS) {
-  const ring = new PIXI.Graphics();
-  ring
-    .rect(
-      cell.col * (SIZE + 4) + 2,
-      cell.row * (SIZE + 4) + 2,
-      SIZE - 4,
-      SIZE - 4,
-    )
-    .stroke({ width: 3, color: 0x9b59b6, alpha: 0.95 });
-  badgeLayer.addChild(ring);
+  const opts = coinMultiplier(cell.mult);
+  const coin = new PIXI.Graphics();
+  drawCoin(coin, CHIP, CHIP, opts);
+  // Anchored to the top-right corner of the cell with a small inset.
+  coin.x = cell.col * (SIZE + 4) + SIZE - CHIP / 2 - 6;
+  coin.y = cell.row * (SIZE + 4) + CHIP / 2 + 6;
+  badgeLayer.addChild(coin);
 
-  const badge = new PIXI.Text({
-    text: `x${cell.mult}`,
+  const label = new PIXI.Text({
+    text: opts.label,
     style: {
-      fontFamily: 'system-ui, sans-serif',
-      fontSize: 22,
+      fontFamily:
+        '"Roboto Condensed", "Arial Narrow", "Helvetica Neue Condensed", "Liberation Sans Narrow", system-ui, sans-serif',
+      fontSize: Math.floor(CHIP * 0.45),
       fontWeight: '900',
-      fill: 0xfef08a,
-      stroke: { color: 0x6b21a8, width: 4 },
+      fill: opts.textColor,
+      align: 'center',
     },
   });
-  badge.anchor.set(0.5);
-  badge.x = cell.col * (SIZE + 4) + SIZE - 18;
-  badge.y = cell.row * (SIZE + 4) + 18;
-  badgeLayer.addChild(badge);
+  label.anchor.set(0.5);
+  label.x = coin.x;
+  label.y = coin.y;
+  badgeLayer.addChild(label);
 }
 
 // ── Cell metadata via pin payload ────────────────────────────────────────
@@ -6340,24 +6352,25 @@ return {
 URL: https://pixi-reels.schmooky.dev/recipes/value-coin-pin/
 ```ts
 // @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
-//                   WILD_CARD, PIXI, gsap, app, pickWeighted, EmptySymbol
+// Injected globals: ReelSetBuilder, SpeedPresets, CoinSymbol, drawCoin,
+//                   PIXI, gsap, app, pickWeighted, EmptySymbol
 //
 // Hold & Win with CellPin.
 //
-// Each grid cell is its own 1×1 ReelSet. Coins flash past during the spin.
-// When a coin lands, we pin it on its mini-reel with `turns: 'permanent'`
-// and a payload carrying the coin value. Pinned cells skip their spin on
-// subsequent rounds. the engine keeps showing the coin, its payload is
-// readable from `reelSet.pins`, and the running total updates live.
+// Each grid cell is its own 1×1 ReelSet. Gold coins flash past during the
+// spin. When a coin lands, we pin it on its mini-reel with `turns: 'permanent'`
+// and a payload carrying the coin value. The value is stamped on the coin's
+// face. Pinned cells skip their spin on subsequent rounds. the engine keeps
+// showing the coin, its payload is readable from `reelSet.pins`, and the
+// running total updates live.
 
 const COIN = 'coin';
 const EMPTY = 'empty';
 const COLS = 5, ROWS = 3, CELL = 60, GAP = 4;
 const COIN_VALUES = [10, 25, 50, 100];
 
-// Coin card definition. distinctive gold so it stands out against empty cells.
-const COIN_CARD = { id: COIN, color: 0xf1c40f, label: 'COIN', textColor: 0x6b5400 };
+// Blank gold coin. value is added as a stamp on land (pin payload).
+const BLANK_COIN = { rimColor: 0xb8860b, faceColor: 0xf5d066 };
 
 // Build 15 independent 1×1 ReelSets. one per cell.
 const colWidth = COLS * (CELL + GAP) - GAP;
@@ -6372,7 +6385,7 @@ for (let col = 0; col < COLS; col++) {
       .reels(1).visibleRows(1)
       .symbolSize(CELL, CELL).symbolGap(0, 0)
       .symbols((r) => {
-        r.register(COIN, CardSymbol, { color: COIN_CARD.color, label: COIN_CARD.label, textColor: COIN_CARD.textColor });
+        r.register(COIN, CoinSymbol, BLANK_COIN);
         r.register(EMPTY, EmptySymbol, {});
       })
       .weights({ [COIN]: 1, [EMPTY]: 3 })
@@ -6402,8 +6415,9 @@ totalText.x = startX + colWidth / 2;
 totalText.y = startY + colHeight + 14;
 app.stage.addChild(totalText);
 
-// ── Value badges on pinned coins ────────────────────────────────────────
-// Subscribe to every mini-reel's pin events; draw the payload.value on top.
+// ── Value stamps on pinned coins ────────────────────────────────────────
+// Subscribe to every mini-reel's pin events; draw the payload.value as the
+// coin's "stamp". darker color than a floating badge — reads as embossed.
 const badges = new Map();
 function badgeKey(col, row) { return `${col},${row}`; }
 
@@ -6414,11 +6428,12 @@ function drawBadge(cell, value) {
   const badge = new PIXI.Text({
     text: String(value),
     style: {
-      fontFamily: 'system-ui, sans-serif',
-      fontSize: 20,
+      fontFamily:
+        '"Roboto Condensed", "Arial Narrow", "Helvetica Neue Condensed", "Liberation Sans Narrow", system-ui, sans-serif',
+      fontSize: Math.floor(CELL * 0.32),
       fontWeight: '900',
-      fill: 0xffd43b,
-      stroke: { color: 0x000000, width: 4 },
+      fill: 0x3a2900,
+      align: 'center',
     },
   });
   badge.anchor.set(0.5);

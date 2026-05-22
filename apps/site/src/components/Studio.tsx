@@ -42,6 +42,16 @@ import {
 import { SpineReelSymbol } from 'pixi-reels/spine';
 import { BlurSpriteSymbol } from '../../../../examples/shared/BlurSpriteSymbol.ts';
 import { CardSymbol, CARD_DECK, WILD_CARD } from '../../../../examples/shared/CardSymbol.ts';
+import {
+  CoinSymbol,
+  COIN_TIER,
+  COIN_FEATURE,
+  COIN_MYSTERY,
+  COIN_TRIGGER,
+  coinValue,
+  coinMultiplier,
+  drawCoin,
+} from '../../../../examples/shared/CoinSymbol.ts';
 import { EmptySymbol } from '../../../../examples/shared/EmptySymbol.ts';
 import { loadPrototypeSymbols } from '../../../../examples/shared/prototypeSpriteLoader.ts';
 import {
@@ -71,6 +81,8 @@ const DEFAULT_CODE = `// @ts-nocheck
 //   - ReelSetBuilder, SpeedPresets, WinPresenter
 //   - SpriteSymbol, AnimatedSpriteSymbol, BlurSpriteSymbol
 //   - CardSymbol, CARD_DECK, WILD_CARD  (graphics-only debug cards)
+//   - CoinSymbol, COIN_TIER, COIN_FEATURE, COIN_MYSTERY, COIN_TRIGGER,
+//     coinValue, coinMultiplier, drawCoin  (graphics-only debug coins)
 //   - SpineReelSymbol, loadGeneratedSpines, buildSpineMap
 //   - RectMaskStrategy, SharedRectMaskStrategy
 //   - EmptySymbol, ReelSymbol
@@ -417,6 +429,8 @@ export default function Studio() {
         'EmptySymbol', 'ReelSymbol',
         'RectMaskStrategy', 'SharedRectMaskStrategy',
         'CardSymbol', 'CARD_DECK', 'WILD_CARD',
+        'CoinSymbol', 'COIN_TIER', 'COIN_FEATURE', 'COIN_MYSTERY', 'COIN_TRIGGER',
+        'coinValue', 'coinMultiplier', 'drawCoin',
         'SpineReelSymbol', 'loadGeneratedSpines', 'buildSpineMap',
         'userSymbols', 'userSymbolData',
         factorySource,
@@ -432,6 +446,8 @@ export default function Studio() {
         EmptySymbol, ReelSymbol,
         RectMaskStrategy, SharedRectMaskStrategy,
         CardSymbol, CARD_DECK, WILD_CARD,
+        CoinSymbol, COIN_TIER, COIN_FEATURE, COIN_MYSTERY, COIN_TRIGGER,
+        coinValue, coinMultiplier, drawCoin,
         SpineReelSymbol, loadGeneratedSpines, buildSpineMap,
         injectables.userSymbols, injectables.userSymbolData,
       )) as BuildResult;

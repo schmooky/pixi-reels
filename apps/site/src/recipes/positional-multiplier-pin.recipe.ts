@@ -1,6 +1,6 @@
 // @ts-nocheck
 // Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
-//                   WILD_CARD, PIXI, gsap, app, pickWeighted
+//                   coinMultiplier, drawCoin, PIXI, gsap, app, pickWeighted
 //
 // Positional multiplier cells (Gonzo's Quest / Irish Riches style).
 //
@@ -12,11 +12,16 @@
 // Trick: we pin the cell with symbolId MIRROR_ANY. a sentinel meaning
 // "don't override the rolled symbol". We read the rolled symbol at
 // spin:allLanded, re-pin it with the multiplier payload preserved so the
-// badge display stays correct. (A cleaner CellDecorator primitive would
+// stamp display stays correct. (A cleaner CellDecorator primitive would
 // avoid this mirror dance, but it isn't required.)
+//
+// Visual: a small multiplier coin chip is anchored to the top-right of each
+// multiplier cell. The card lands behind it. The coin reads as a permanent
+// "this cell is x3" sticker.
 
 const FILLER = ['7', '8', '10', 'Q'];
 const COLS = 5, ROWS = 3, SIZE = 90;
+const CHIP = 36; // multiplier-coin diameter
 
 // Define fixed multiplier positions for this demo. In a real game, these
 // could come from the server with each spin.
@@ -47,36 +52,34 @@ const reelSet = new ReelSetBuilder()
   .ticker(app.ticker)
   .build();
 
-// ── Multiplier badges (fixed positions, always visible) ──────────────────
+// ── Multiplier coin chips (fixed positions, always visible) ──────────────
 const badgeLayer = new PIXI.Container();
 reelSet.addChild(badgeLayer);
 
 for (const cell of MULTIPLIER_CELLS) {
-  const ring = new PIXI.Graphics();
-  ring
-    .rect(
-      cell.col * (SIZE + 4) + 2,
-      cell.row * (SIZE + 4) + 2,
-      SIZE - 4,
-      SIZE - 4,
-    )
-    .stroke({ width: 3, color: 0x9b59b6, alpha: 0.95 });
-  badgeLayer.addChild(ring);
+  const opts = coinMultiplier(cell.mult);
+  const coin = new PIXI.Graphics();
+  drawCoin(coin, CHIP, CHIP, opts);
+  // Anchored to the top-right corner of the cell with a small inset.
+  coin.x = cell.col * (SIZE + 4) + SIZE - CHIP / 2 - 6;
+  coin.y = cell.row * (SIZE + 4) + CHIP / 2 + 6;
+  badgeLayer.addChild(coin);
 
-  const badge = new PIXI.Text({
-    text: `x${cell.mult}`,
+  const label = new PIXI.Text({
+    text: opts.label,
     style: {
-      fontFamily: 'system-ui, sans-serif',
-      fontSize: 22,
+      fontFamily:
+        '"Roboto Condensed", "Arial Narrow", "Helvetica Neue Condensed", "Liberation Sans Narrow", system-ui, sans-serif',
+      fontSize: Math.floor(CHIP * 0.45),
       fontWeight: '900',
-      fill: 0xfef08a,
-      stroke: { color: 0x6b21a8, width: 4 },
+      fill: opts.textColor,
+      align: 'center',
     },
   });
-  badge.anchor.set(0.5);
-  badge.x = cell.col * (SIZE + 4) + SIZE - 18;
-  badge.y = cell.row * (SIZE + 4) + 18;
-  badgeLayer.addChild(badge);
+  label.anchor.set(0.5);
+  label.x = coin.x;
+  label.y = coin.y;
+  badgeLayer.addChild(label);
 }
 
 // ── Cell metadata via pin payload ────────────────────────────────────────
