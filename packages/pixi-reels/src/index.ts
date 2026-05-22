@@ -1,11 +1,9 @@
 // Core
 export { ReelSet } from './core/ReelSet.js';
 export { ReelSetBuilder } from './core/ReelSetBuilder.js';
-export { Reel, OCCUPIED_SENTINEL } from './core/Reel.js';
+export { Reel } from './core/Reel.js';
 export type { ReelConfig, NudgeOptions } from './core/Reel.js';
 export { ReelViewport } from './core/ReelViewport.js';
-export { ReelMotion } from './core/ReelMotion.js';
-export { StopSequencer } from './core/StopSequencer.js';
 
 // Config
 export { SpeedPresets } from './config/SpeedPresets.js';
@@ -26,8 +24,6 @@ export type {
   SymbolPosition,
   Win,
   MaskConfig,
-  ReelSetInternalConfig,
-  ResolvedReelGridConfig,
   MultiWaysConfig,
   ReelAnchor,
 } from './config/types.js';
@@ -43,7 +39,6 @@ export type { AnimatedSpriteSymbolOptions } from './symbols/AnimatedSpriteSymbol
 export { SpineSymbol } from './symbols/SpineSymbol.js';
 export type { SpineSymbolOptions } from './symbols/SpineSymbol.js';
 export { SymbolRegistry } from './symbols/SymbolRegistry.js';
-export { SymbolFactory } from './symbols/SymbolFactory.js';
 
 // Spin
 export { SpinController } from './spin/SpinController.js';
@@ -87,8 +82,6 @@ export { SpeedManager } from './speed/SpeedManager.js';
 // Frame
 export { FrameBuilder } from './frame/FrameBuilder.js';
 export type { FrameContext, FrameMiddleware } from './frame/FrameBuilder.js';
-export { RandomSymbolProvider } from './frame/RandomSymbolProvider.js';
-export { OffsetCalculator } from './frame/OffsetCalculator.js';
 export type { ColumnTarget } from './frame/ColumnTarget.js';
 
 // Pool
