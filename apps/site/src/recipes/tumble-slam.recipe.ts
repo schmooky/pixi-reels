@@ -58,7 +58,7 @@ return {
     const spinDone = reelSet.spin();
     reelSet.setDropOrder('ltr');
     await new Promise((r) => setTimeout(r, 180));
-    reelSet.setResult(stage0);
+    reelSet.setResult(stage0.map((visible) => ({ visible })));
     await spinDone;
 
     await new Promise((r) => setTimeout(r, 160));

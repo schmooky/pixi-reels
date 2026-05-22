@@ -232,7 +232,7 @@ async function main() {
 
     const spinPromise = mainReelSet.spin();
     const result = await mockMainSpin();
-    mainReelSet.setResult(result.symbols);
+    mainReelSet.setResult(result.symbols.map((visible) => ({ visible })));
     await spinPromise;
 
     isSpinning = false;
@@ -294,7 +294,7 @@ async function main() {
         const lands = Math.random() < 0.28;
         const value = lands ? BONUS_VALUES[Math.floor(Math.random() * BONUS_VALUES.length)] : 0;
         landResults.push({ cell, lands, value });
-        cell.reelSet!.setResult([['bonus']]);
+        cell.reelSet!.setResult([{ visible: ['bonus'] }]);
       }
 
       await Promise.all(spinPromises);

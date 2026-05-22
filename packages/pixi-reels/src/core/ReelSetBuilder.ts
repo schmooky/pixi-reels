@@ -26,7 +26,7 @@ import type { SpinningMode } from '../spin/modes/SpinningMode.js';
 import { StandardMode } from '../spin/modes/StandardMode.js';
 import type { FrameMiddleware } from '../frame/FrameBuilder.js';
 import type { ColumnTarget } from '../frame/ColumnTarget.js';
-import { toLegacyTargetGrid } from '../frame/ColumnTarget.js';
+import { columnTargetToArray } from '../frame/ColumnTarget.js';
 import type { TumbleConfig, ResolvedTumbleConfig } from '../cascade/TumbleConfig.js';
 import { resolveTumbleConfig } from '../cascade/TumbleConfig.js';
 import { CascadeFallPhase } from '../spin/phases/CascadeFallPhase.js';
@@ -434,19 +434,20 @@ export class ReelSetBuilder {
   /**
    * Set the initial symbol grid the reels show before the first spin.
    *
-   * Two input shapes are accepted, mirroring `ReelSet.setResult`:
+   * One `ColumnTarget` per reel. `visible` lists the symbols in the visible
+   * window; optional `bufferAbove` / `bufferBelow` prefill cells outside it
+   * (`[0]` is the slot closest to the visible window, later indices go
+   * further out).
    *
-   *   1. **Legacy `string[][]`** — one column per reel, row-indexed. Use
-   *      `frame[col][-1]` (or `[-2]`, etc.) to target buffer-above slots,
-   *      `frame[col][visibleRows]` for buffer-below.
-   *   2. **Explicit `ColumnTarget[]`** — `{ visible, bufferAbove?, bufferBelow? }`
-   *      per column. Preferred when the seed comes from outside this process
-   *      (JSON config, worker message, server-rendered state) — the legacy
-   *      form's negative-index slots don't survive standard cloning, the
-   *      explicit form does.
+   * @example
+   * builder.initialFrame([
+   *   { visible: ['A','B','C'] },
+   *   { visible: ['A','B','C'], bufferAbove: ['COIN'] },
+   *   { visible: ['A','B','C'], bufferBelow: ['SCATTER'] },
+   * ]);
    */
-  initialFrame(frame: string[][] | ColumnTarget[]): this {
-    this._initialFrame = toLegacyTargetGrid(frame);
+  initialFrame(frame: ColumnTarget[]): this {
+    this._initialFrame = frame.map(columnTargetToArray);
     return this;
   }
 

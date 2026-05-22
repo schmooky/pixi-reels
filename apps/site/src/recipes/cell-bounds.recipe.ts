@@ -59,7 +59,7 @@ return {
 
     const p = reelSet.spin();
     await new Promise(r => setTimeout(r, 150));
-    reelSet.setResult(GRID);
+    reelSet.setResult(GRID.map((visible) => ({ visible })));
     await p;
 
     // Let the landing bounce settle.

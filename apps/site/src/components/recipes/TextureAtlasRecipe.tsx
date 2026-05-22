@@ -30,7 +30,7 @@ export default function TextureAtlasRecipe() {
             );
             const p = reelSet.spin();
             await sleep(150);
-            reelSet.setResult(grid);
+            reelSet.setResult(grid.map((visible) => ({ visible })));
             await p;
           },
         };

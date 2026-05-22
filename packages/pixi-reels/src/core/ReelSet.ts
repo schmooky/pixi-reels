@@ -19,7 +19,7 @@ import { pinKey } from '../pins/CellPin.js';
 import { getGsap } from '../utils/gsapRef.js';
 import type { FrameMiddleware } from '../frame/FrameBuilder.js';
 import type { ColumnTarget } from '../frame/ColumnTarget.js';
-import { cloneTargetGrid, toLegacyTargetGrid } from '../frame/ColumnTarget.js';
+import { columnTargetToArray } from '../frame/ColumnTarget.js';
 import type { Cell } from '../cascade/tumbleAlgorithm.js';
 
 export interface ReelSetParams {
@@ -490,25 +490,26 @@ export class ReelSet extends Container implements Disposable {
   /**
    * Set the target result symbols. Triggers the stop sequence.
    *
-   * Two input shapes are accepted:
-   *
-   *   1. **Legacy `string[][]`** — one column per reel, row-indexed. Set
-   *      `frame[col][-1]` (or `[-2]`, etc.) to target a buffer-above slot,
-   *      `frame[col][visibleRows]` for buffer-below.
-   *   2. **Explicit `ColumnTarget[]`** — `{ visible, bufferAbove?, bufferBelow? }`
-   *      per column. Preferred for code that crosses worker/network boundaries,
-   *      structuredClones, or JSON-serializes (the legacy form's negative-index
-   *      slots don't survive standard cloning; the explicit form does).
+   * One `ColumnTarget` per reel. `visible` is the visible-window target;
+   * optional `bufferAbove` / `bufferBelow` target cells outside it.
    *
    * If any pins are active (`reelSet.pin(...)`), their symbols are overlaid
-   * onto the result before it reaches the stop sequencer — so pinned cells
+   * onto the result before it reaches the stop sequencer, so pinned cells
    * always land on the pin's `symbolId` regardless of what the server sent.
+   *
+   * @example
+   * reelSet.setResult([
+   *   { visible: ['A','B','C'] },
+   *   { visible: ['A','B','C'] },
+   *   { visible: ['A','B','C'], bufferAbove: ['COIN'] },
+   *   { visible: ['A','B','C'] },
+   *   { visible: ['A','B','C'] },
+   * ]);
    */
-  setResult(symbols: string[][] | ColumnTarget[]): void {
-    const grid = toLegacyTargetGrid(symbols);
-    const withPins = this._applyPinsToGrid(grid);
+  setResult(symbols: ColumnTarget[]): void {
+    const withPins = this._applyPinsToGrid(this._cloneTargets(symbols));
     this._resultSetForCurrentSpin = true;
-    this._spinController.setResult(withPins);
+    this._spinController.setResult(withPins.map(columnTargetToArray));
   }
 
   /**
@@ -537,7 +538,7 @@ export class ReelSet extends Container implements Disposable {
    */
   async refill(opts: {
     winners: ReadonlyArray<Cell>;
-    grid: string[][] | ColumnTarget[];
+    grid: ColumnTarget[];
     /**
      * Pick the refill animation flavor. See `RunCascadeOptions.refillMode`
      * for the full description; the same modes apply here when you drive
@@ -815,7 +816,7 @@ export class ReelSet extends Container implements Disposable {
         // of the gravity stage too early.
         await this.refill({
           winners: [...winners],
-          grid: next,
+          grid: next.map((visible) => ({ visible })),
           mode: refillMode,
           gravityHoldMs: opts.gravityHoldMs,
           gravityHold: opts.gravityHold
@@ -1763,25 +1764,32 @@ export class ReelSet extends Container implements Disposable {
   // ─── Pin internals ────────────────────────────────────────
 
   /**
-   * Return a deep copy of `symbols` with active pins overlaid. Pure — does
-   * not mutate the input. When there are no pins, returns the input as-is
-   * (fast path; identical behaviour to pre-pin code).
-   *
-   * IMPORTANT: clones via `cloneTargetGrid`, not `symbols.map(col => [...col])`.
-   * Spread drops the negative-index string properties that carry buffer-above
-   * targets (`col[-1] = 'COIN'`). If you refactor this method, keep the
-   * helper. See `cloneTargetGrid`'s TSDoc for the full contract.
+   * Overlay active pins onto `symbols`. Mutates the input in place; call
+   * `_cloneTargets` first if the caller needs to keep the original
+   * unmodified.
    */
-  private _applyPinsToGrid(symbols: string[][]): string[][] {
-    if (this._pins.size === 0) return symbols;
-
-    const cloned = cloneTargetGrid(symbols, this._reels[0]?.bufferAbove ?? 0);
+  private _applyPinsToGrid(symbols: ColumnTarget[]): ColumnTarget[] {
     for (const pin of this._pins.values()) {
-      if (pin.col < cloned.length && pin.row < cloned[pin.col].length) {
-        cloned[pin.col][pin.row] = pin.symbolId;
+      const col = symbols[pin.col];
+      if (!col) continue;
+      if (pin.row < col.visible.length) {
+        col.visible[pin.row] = pin.symbolId;
       }
     }
-    return cloned;
+    return symbols;
+  }
+
+  /**
+   * Deep clone a `ColumnTarget[]` so the caller can mutate the result
+   * without touching the original. Inner arrays are spread (one level deep);
+   * cells are strings, so further depth is not needed.
+   */
+  private _cloneTargets(grid: ColumnTarget[]): ColumnTarget[] {
+    return grid.map((c) => ({
+      visible: [...c.visible],
+      bufferAbove: c.bufferAbove ? [...c.bufferAbove] : undefined,
+      bufferBelow: c.bufferBelow ? [...c.bufferBelow] : undefined,
+    }));
   }
 
   /** Pins on a given reel, in row order. Used by AdjustPhase migration. */

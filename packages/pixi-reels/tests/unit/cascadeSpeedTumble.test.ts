@@ -55,7 +55,7 @@ function buildHarness(initialFrame: string[][]): Harness {
       fall:   { duration: 300, ease: 'sine.in',    rowStagger: 0 },
       dropIn: { duration: 600, ease: 'power2.out', rowStagger: 60, distance: 'perHole' },
     })
-    .initialFrame(initialFrame)
+    .initialFrame(initialFrame.map((visible) => ({ visible })))
     .ticker(ticker as unknown as Ticker)
     .build();
   return {

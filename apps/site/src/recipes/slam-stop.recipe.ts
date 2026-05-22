@@ -38,7 +38,7 @@ return {
     // target, no race-window to manage in your UI code.
     setTimeout(() => reelSet.requestSkip(), 560);
     // Server response arrives a moment later. requestSkip is already armed.
-    setTimeout(() => reelSet.setResult(GRID), 800);
+    setTimeout(() => reelSet.setResult(GRID.map((visible) => ({ visible }))), 800);
     await p;
   },
 };

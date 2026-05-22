@@ -133,7 +133,7 @@ export default function SingleReelRespinRecipe() {
             firstGrid[0][1] = MARK;
             const all = columns.map((c, i) => {
               const sp = c.spin();
-              c.setResult([firstGrid[i]]);
+              c.setResult([{ visible: firstGrid[i] }]);
               return sp;
             });
             await Promise.all(all);
@@ -145,7 +145,7 @@ export default function SingleReelRespinRecipe() {
             const next: string[] = [randomFiller(), MARK, randomFiller()];
             const p = columns[RESPIN_COL].spin();
             await sleep(140);
-            columns[RESPIN_COL].setResult([next]);
+            columns[RESPIN_COL].setResult([{ visible: next }]);
             await p;
             await sleep(900);
           },

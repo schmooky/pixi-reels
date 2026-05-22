@@ -104,7 +104,7 @@ return {
     await new Promise(r => setTimeout(r, 150));
     const grid = Array.from({ length: COLS }, () =>
       Array.from({ length: ROWS }, () => pickWeighted({ [A]: 10, [B]: 10, [C]: 10, [SEVEN]: 3 })));
-    reelSet.setResult(grid);
+    reelSet.setResult(grid.map((visible) => ({ visible })));
     await p;
   },
   cleanup: () => {

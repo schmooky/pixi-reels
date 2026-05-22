@@ -17,9 +17,9 @@ describe('expanding wild (pin-based, 1×N)', () => {
         reelSet.pin(1, r, 'wild', { turns: 'eval' });
       }
       reelSet.setResult([
-        ['a', 'a', 'a'],
-        ['a', 'a', 'a'],
-        ['a', 'a', 'a'],
+        { visible: ['a', 'a', 'a'] },
+        { visible: ['a', 'a', 'a'] },
+        { visible: ['a', 'a', 'a'] },
       ]);
       reelSet.slamStop();
       await promise;

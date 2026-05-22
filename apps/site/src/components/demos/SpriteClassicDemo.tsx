@@ -104,7 +104,7 @@ export default function SpriteClassicDemo() {
               const p = handle.reelSet.spin();
               setTimeout(() => {
                 if (anticipationReels.length) handle.reelSet.setAnticipation(anticipationReels);
-                handle.reelSet.setResult(symbols);
+                handle.reelSet.setResult(symbols.map((visible) => ({ visible })));
               }, 240);
               const result = await p;
               api.setStatus(`Landed · ${summarize(result.symbols)}`);

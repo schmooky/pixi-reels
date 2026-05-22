@@ -238,7 +238,7 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
         const p = reelSet.spin();
         await new Promise((r) => setTimeout(r, 150));
         const result = nextResultRef.current?.();
-        if (result) reelSet.setResult(result);
+        if (result) reelSet.setResult(result.map((visible) => ({ visible })));
         await p;
       }
     } catch { /* ignore */ } finally {

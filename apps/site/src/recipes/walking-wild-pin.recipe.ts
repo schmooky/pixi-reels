@@ -128,7 +128,7 @@ return {
       ),
     );
     if (arrival) grid[arrival.col][arrival.row] = WILD;
-    reelSet.setResult(grid);
+    reelSet.setResult(grid.map((visible) => ({ visible })));
     await promise;
     spinCount++;
   },

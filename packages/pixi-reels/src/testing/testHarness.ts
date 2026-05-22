@@ -30,8 +30,8 @@ export interface TestReelSetOptions {
   symbolGap?: { x: number; y: number };
   /** Number of symbols above + below the visible area. Defaults to the builder default. */
   bufferSymbols?: number;
-  /** Initial symbol grid (any form `ReelSetBuilder.initialFrame` accepts). */
-  initialFrame?: string[][] | ColumnTarget[];
+  /** Initial symbol grid. Same `ColumnTarget[]` form as `ReelSetBuilder.initialFrame`. */
+  initialFrame?: ColumnTarget[];
 }
 
 export interface TestReelSetHandle {
@@ -109,7 +109,7 @@ export function createTestReelSet(opts: TestReelSetOptions = {}): TestReelSetHan
   }
 
   if (opts.initialFrame) {
-    builder.initialFrame(opts.initialFrame as string[][]);
+    builder.initialFrame(opts.initialFrame);
   }
 
   const reelSet = builder.build();
@@ -140,7 +140,7 @@ export function createTestReelSet(opts: TestReelSetOptions = {}): TestReelSetHan
  */
 export async function spinAndLand(reelSet: ReelSet, grid: string[][]): Promise<SpinResult> {
   const promise = reelSet.spin();
-  reelSet.setResult(grid);
+  reelSet.setResult(grid.map((visible) => ({ visible })));
   reelSet.slamStop();
   return promise;
 }

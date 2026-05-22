@@ -73,9 +73,9 @@ describe('MultiWays + Cascade (issue #74)', () => {
       const promise = h.reelSet.spin({ mode: 'cascade' });
       h.reelSet.setShape([3, 4, 2]);
       h.reelSet.setResult([
-        ['a', 'a', 'a'],
-        ['a', 'a', 'a', 'a'],
-        ['a', 'a'],
+        { visible: ['a', 'a', 'a'] },
+        { visible: ['a', 'a', 'a', 'a'] },
+        { visible: ['a', 'a'] },
       ]);
       h.reelSet.slamStop();
       await promise;
@@ -96,9 +96,9 @@ describe('MultiWays + Cascade (issue #74)', () => {
       const promise = h.reelSet.spin({ mode: 'cascade' });
       h.reelSet.setShape([3, 4, 2]);
       h.reelSet.setResult([
-        ['a', 'a', 'a'],
-        ['a', 'a', 'a', 'a'],
-        ['a', 'a'],
+        { visible: ['a', 'a', 'a'] },
+        { visible: ['a', 'a', 'a', 'a'] },
+        { visible: ['a', 'a'] },
       ]);
       h.reelSet.slamStop();
       await promise;
@@ -116,9 +116,9 @@ describe('MultiWays + Cascade (issue #74)', () => {
       let promise = h.reelSet.spin({ mode: 'cascade' });
       h.reelSet.setShape([3, 4, 2]);
       h.reelSet.setResult([
-        ['a', 'a', 'a'],
-        ['a', 'a', 'a', 'a'],
-        ['a', 'a'],
+        { visible: ['a', 'a', 'a'] },
+        { visible: ['a', 'a', 'a', 'a'] },
+        { visible: ['a', 'a'] },
       ]);
       h.reelSet.slamStop();
       await promise;
@@ -128,9 +128,9 @@ describe('MultiWays + Cascade (issue #74)', () => {
       promise = h.reelSet.spin({ mode: 'cascade' });
       h.reelSet.setShape([5, 2, 6]);
       h.reelSet.setResult([
-        ['a', 'a', 'a', 'a', 'a'],
-        ['a', 'a'],
-        ['a', 'a', 'a', 'a', 'a', 'a'],
+        { visible: ['a', 'a', 'a', 'a', 'a'] },
+        { visible: ['a', 'a'] },
+        { visible: ['a', 'a', 'a', 'a', 'a', 'a'] },
       ]);
       h.reelSet.slamStop();
       await promise;
@@ -145,9 +145,9 @@ describe('MultiWays + Cascade (issue #74)', () => {
     try {
       const promise = h.reelSet.spin({ mode: 'cascade' });
       h.reelSet.setResult([
-        ['a', 'a', 'a', 'a', 'a', 'a'],
-        ['a', 'a', 'a', 'a', 'a', 'a'],
-        ['a', 'a', 'a', 'a', 'a', 'a'],
+        { visible: ['a', 'a', 'a', 'a', 'a', 'a'] },
+        { visible: ['a', 'a', 'a', 'a', 'a', 'a'] },
+        { visible: ['a', 'a', 'a', 'a', 'a', 'a'] },
       ]);
       h.reelSet.slamStop();
       await promise;

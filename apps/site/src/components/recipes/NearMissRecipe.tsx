@@ -33,7 +33,7 @@ export default function NearMissRecipe() {
             const promise = reelSet.spin();
             await sleep(220);
             reelSet.setAnticipation([4]);
-            reelSet.setResult(GRID);
+            reelSet.setResult(GRID.map((visible) => ({ visible })));
             await promise;
           },
         };

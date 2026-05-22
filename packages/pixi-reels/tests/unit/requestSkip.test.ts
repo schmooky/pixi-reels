@@ -17,7 +17,7 @@ describe('ReelSet.requestSkip — pre-result-safe slam-stop', () => {
     h.advance(50);
     expect(h.reelSet.isSpinning).toBe(true);
 
-    h.reelSet.setResult(grid);
+    h.reelSet.setResult(grid.map((visible) => ({ visible })));
     await promise;
 
     expectGrid(h.reelSet, grid);
@@ -35,7 +35,7 @@ describe('ReelSet.requestSkip — pre-result-safe slam-stop', () => {
     ];
 
     const promise = h.reelSet.spin();
-    h.reelSet.setResult(grid);
+    h.reelSet.setResult(grid.map((visible) => ({ visible })));
     h.reelSet.requestSkip();
     await promise;
 

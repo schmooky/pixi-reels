@@ -30,7 +30,7 @@ export default function SlamStopRecipe() {
           destroy,
           run: async () => {
             const promise = reelSet.spin();
-            reelSet.setResult(GRID);
+            reelSet.setResult(GRID.map((visible) => ({ visible })));
             await sleep(560);
             reelSet.skip();
             const r = await promise;

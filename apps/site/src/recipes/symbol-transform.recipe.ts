@@ -42,7 +42,7 @@ return {
   onSpin: async () => {
     const p = reelSet.spin();
     await new Promise(r => setTimeout(r, 150));
-    reelSet.setResult(GRID);
+    reelSet.setResult(GRID.map((visible) => ({ visible })));
     const result = await p;
     await new Promise(r => setTimeout(r, 250));
 

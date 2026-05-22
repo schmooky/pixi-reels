@@ -22,7 +22,7 @@ import type { Disposable } from '../utils/Disposable.js';
 import { TickerRef } from '../utils/TickerRef.js';
 import { OCCUPIED_SENTINEL } from '../core/Reel.js';
 import type { CellPin } from '../pins/CellPin.js';
-import { cloneTargetGrid, toLegacyTargetGrid } from '../frame/ColumnTarget.js';
+import { columnTargetToArray } from '../frame/ColumnTarget.js';
 import type { ColumnTarget } from '../frame/ColumnTarget.js';
 import type { Cell } from '../cascade/tumbleAlgorithm.js';
 
@@ -401,7 +401,7 @@ export class SpinController implements Disposable {
    */
   async refill(opts: {
     winners: ReadonlyArray<Cell>;
-    grid: string[][] | ColumnTarget[];
+    grid: ColumnTarget[];
     mode?: 'combined' | 'gravity-then-drop';
     gravityHoldMs?: number;
     /**
@@ -423,9 +423,10 @@ export class SpinController implements Disposable {
       throw new Error('refill() requires .tumble(...) on the builder.');
     }
 
-    // Validate input shape + bounds. Normalize grid once so per-column
-    // length checks see the legacy `string[][]` form regardless of input.
-    const normalizedGrid = toLegacyTargetGrid(opts.grid);
+    // Materialize the column targets into the legacy `string[][]` form the
+    // internal pipeline runs on. Per-column length checks read off the
+    // normalized form.
+    const normalizedGrid = opts.grid.map(columnTargetToArray);
     if (normalizedGrid.length !== this._reels.length) {
       throw new RangeError(
         `refill: grid has ${normalizedGrid.length} column(s) but the reel set has ` +
@@ -1228,17 +1229,23 @@ export class SpinController implements Disposable {
    * Pure: returns a new grid; does not mutate the input. Zero-overhead for
    * slots with no big symbols (the loop runs but never matches metadata).
    *
-   * IMPORTANT: clones via `cloneTargetGrid`, not `grid.map(col => [...col])`.
-   * Plain spread drops the negative-index string properties that carry
-   * buffer-above targets — every downstream consumer (FrameBuilder,
-   * placeSymbols) expects them to survive into `decorated[col]`. See the
-   * helper's TSDoc for the full contract.
+   * The clone preserves negative-index string properties (`arr[-1]`, ...)
+   * that carry buffer-above targets in the legacy form, so downstream
+   * consumers (FrameBuilder, placeSymbols) still see them on `decorated[col]`.
    */
   private _coordinateBigSymbols(
     grid: string[][],
     visibleRowsForReel: (i: number) => number,
   ): string[][] {
-    const out = cloneTargetGrid(grid, this._reels[0]?.bufferAbove ?? 0);
+    const bufAbove = this._reels[0]?.bufferAbove ?? 0;
+    const out: string[][] = grid.map((col) => {
+      const colOut = [...col];
+      for (let i = 1; i <= bufAbove; i++) {
+        const v = (col as Record<number, string | undefined>)[-i];
+        if (v !== undefined) (colOut as Record<number, string>)[-i] = v;
+      }
+      return colOut;
+    });
     const symData = this._hooks.symbolsData;
 
     for (let col = 0; col < out.length; col++) {

@@ -27,7 +27,7 @@ function buildTumbleHarness(initialFrame: string[][]): Harness {
       fall:   { duration: 0, ease: 'none', rowStagger: 0 },
       dropIn: { duration: 0, ease: 'none', rowStagger: 0, distance: 'perHole' },
     })
-    .initialFrame(initialFrame)
+    .initialFrame(initialFrame.map((visible) => ({ visible })))
     .ticker(ticker as unknown as Ticker)
     .build();
   return {
@@ -212,9 +212,9 @@ describe('ReelSet.runCascade — two-stage (gravity-then-drop)', () => {
     await reelSet.refill({
       winners,
       grid: [
-        ['d', 'a', 'a'],
-        ['d', 'a', 'a'],
-        ['d', 'a', 'a'],
+        { visible: ['d', 'a', 'a'] },
+        { visible: ['d', 'a', 'a'] },
+        { visible: ['d', 'a', 'a'] },
       ],
       mode: 'gravity-then-drop',
       gravityHoldMs: 0,

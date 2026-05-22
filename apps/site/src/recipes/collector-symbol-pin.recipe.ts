@@ -156,7 +156,7 @@ return {
       for (const cell of activeCells) {
         const hit = round.hits.find((h) => h.col === cell.col && h.row === cell.row);
         const target = hit ? (hit.type === 'collector' ? COLLECTOR : COIN) : EMPTY;
-        cell.reelSet.setResult([[target]]);
+        cell.reelSet.setResult([{ visible: [target] }]);
       }
       await Promise.all(spinPromises);
 

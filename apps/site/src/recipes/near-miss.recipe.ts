@@ -38,7 +38,7 @@ return {
     const p = reelSet.spin();
     await new Promise(r => setTimeout(r, 220));
     reelSet.setAnticipation([4]);
-    reelSet.setResult(GRID);
+    reelSet.setResult(GRID.map((visible) => ({ visible })));
     await p;
   },
 };

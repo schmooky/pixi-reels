@@ -48,7 +48,7 @@ return {
     // Land on a flat near-miss — no wilds visible anywhere.
     const p = reelSet.spin();
     await new Promise((resolve) => setTimeout(resolve, 220));
-    reelSet.setResult([col3(), col3(), col3(), col3(), col3()]);
+    reelSet.setResult([col3(), col3(), col3(), col3(), col3()].map((visible) => ({ visible })));
     await p;
 
     // Give the eye a beat to register the landed board.

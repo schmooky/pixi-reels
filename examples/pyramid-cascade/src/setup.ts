@@ -174,7 +174,7 @@ export async function boot(opts: BootOptions): Promise<() => void> {
     const spinPromise = reelSet.spin();
     reelSet.setDropOrder('ltr');
     let grid = randomGrid();
-    reelSet.setResult(grid);
+    reelSet.setResult(grid.map((visible) => ({ visible })));
     await spinPromise;
     if (disposed) return;
 

@@ -52,9 +52,9 @@ describe('MultiWays reshape', () => {
       const promise = reelSet.spin();
       reelSet.setShape([3, 3, 3]);
       reelSet.setResult([
-        ['a', 'a', 'a'],
-        ['a', 'a', 'a'],
-        ['a', 'a', 'a'],
+        { visible: ['a', 'a', 'a'] },
+        { visible: ['a', 'a', 'a'] },
+        { visible: ['a', 'a', 'a'] },
       ]);
       // Past setResult — a second setShape must throw to avoid corrupting
       // the cached frames.
@@ -109,9 +109,9 @@ describe('MultiWays reshape', () => {
       const promise = reelSet.spin();
       reelSet.setShape([3, 4, 2]);
       reelSet.setResult([
-        ['a', 'a', 'a'],
-        ['b', 'b', 'b', 'b'],
-        ['a', 'a'],
+        { visible: ['a', 'a', 'a'] },
+        { visible: ['b', 'b', 'b', 'b'] },
+        { visible: ['a', 'a'] },
       ]);
       reelSet.slamStop();
       await promise;

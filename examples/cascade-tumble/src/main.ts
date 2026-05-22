@@ -448,7 +448,7 @@ async function main(): Promise<void> {
     }
 
     const grid = await mockServer.spin();
-    reelSet.setResult(grid);
+    reelSet.setResult(grid.map((visible) => ({ visible })));
     await spinDone;
 
     // ─── MOMENT B: cascade refill loop via reelSet.runCascade ────

@@ -62,7 +62,7 @@ async function main() {
     const spinPromise = reelSet.spin();
     const target = result.nextResult();
     await new Promise((r) => setTimeout(r, 200));
-    reelSet.setResult(target);
+    reelSet.setResult(target.map((visible) => ({ visible })));
     await spinPromise;
 
     isSpinning = false;

@@ -77,7 +77,7 @@ export default function StickyWildRecipe() {
               grid[arrival.reel][arrival.row] = WILD;
               const p = reelSet.spin();
               await sleep(120);
-              reelSet.setResult(grid);
+              reelSet.setResult(grid.map((visible) => ({ visible })));
               await p;
               stuck.push(arrival);
               addGhost(arrival.reel, arrival.row);

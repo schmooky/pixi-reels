@@ -70,9 +70,9 @@ describe('pin migration (MultiWays)', () => {
 
       reelSet.setShape([3, 3, 3]);
       reelSet.setResult([
-        ['a', 'a', 'a'],
-        ['a', 'a', 'a'],
-        ['a', 'a', 'a'],
+        { visible: ['a', 'a', 'a'] },
+        { visible: ['a', 'a', 'a'] },
+        { visible: ['a', 'a', 'a'] },
       ]);
       reelSet.slamStop();
       await promise;
@@ -105,7 +105,9 @@ describe('pin migration (MultiWays)', () => {
       let p = reelSet.spin();
       reelSet.setShape([5, 5, 5]);
       reelSet.setResult([
-        ['a','a','a','a','a'], ['a','a','a','a','a'], ['a','a','a','a','a'],
+        { visible: ['a','a','a','a','a'] },
+        { visible: ['a','a','a','a','a'] },
+        { visible: ['a','a','a','a','a'] },
       ]);
       reelSet.slamStop();
       await p;
@@ -116,7 +118,9 @@ describe('pin migration (MultiWays)', () => {
       p = reelSet.spin();
       reelSet.setShape([3, 3, 3]);
       reelSet.setResult([
-        ['a','a','a'], ['a','a','a'], ['a','a','a'],
+        { visible: ['a','a','a'] },
+        { visible: ['a','a','a'] },
+        { visible: ['a','a','a'] },
       ]);
       reelSet.slamStop();
       await p;
@@ -127,9 +131,9 @@ describe('pin migration (MultiWays)', () => {
       p = reelSet.spin();
       reelSet.setShape([7, 7, 7]);
       reelSet.setResult([
-        ['a','a','a','a','a','a','a'],
-        ['a','a','a','a','a','a','a'],
-        ['a','a','a','a','a','a','a'],
+        { visible: ['a','a','a','a','a','a','a'] },
+        { visible: ['a','a','a','a','a','a','a'] },
+        { visible: ['a','a','a','a','a','a','a'] },
       ]);
       reelSet.slamStop();
       await p;
@@ -155,7 +159,11 @@ describe('pin migration (MultiWays)', () => {
       // Spin 1: shape fits → no migration.
       let p = reelSet.spin();
       reelSet.setShape([5, 5, 5]);
-      reelSet.setResult([['a','a','a','a','a'], ['a','a','a','a','a'], ['a','a','a','a','a']]);
+      reelSet.setResult([
+        { visible: ['a','a','a','a','a'] },
+        { visible: ['a','a','a','a','a'] },
+        { visible: ['a','a','a','a','a'] },
+      ]);
       reelSet.slamStop();
       await p;
       // Pin still at row 4.
@@ -164,7 +172,11 @@ describe('pin migration (MultiWays)', () => {
       // Spin 2: shape shrinks → clamp to row 2.
       p = reelSet.spin();
       reelSet.setShape([3, 3, 3]);
-      reelSet.setResult([['a','a','a'], ['a','a','a'], ['a','a','a']]);
+      reelSet.setResult([
+        { visible: ['a','a','a'] },
+        { visible: ['a','a','a'] },
+        { visible: ['a','a','a'] },
+      ]);
       reelSet.slamStop();
       await p;
       const clampedPin = reelSet.getPin(1, 2);
@@ -179,7 +191,11 @@ describe('pin migration (MultiWays)', () => {
       // Spin 3: shape grows back to fit originRow → restore to row 4.
       p = reelSet.spin();
       reelSet.setShape([5, 5, 5]);
-      reelSet.setResult([['a','a','a','a','a'], ['a','a','a','a','a'], ['a','a','a','a','a']]);
+      reelSet.setResult([
+        { visible: ['a','a','a','a','a'] },
+        { visible: ['a','a','a','a','a'] },
+        { visible: ['a','a','a','a','a'] },
+      ]);
       reelSet.slamStop();
       await p;
       const restoredPin = reelSet.getPin(1, 4);

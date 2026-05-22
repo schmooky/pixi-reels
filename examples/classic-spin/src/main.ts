@@ -166,7 +166,7 @@ async function main() {
 
     const spinPromise = reelSet.spin();
     const serverResult = await mockSpin();
-    reelSet.setResult(serverResult.symbols);
+    reelSet.setResult(serverResult.symbols.map((visible) => ({ visible })));
     await spinPromise;
 
     isSpinning = false;

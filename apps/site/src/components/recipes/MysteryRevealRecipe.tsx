@@ -39,7 +39,7 @@ export default function MysteryRevealRecipe() {
             ];
             const p = reelSet.spin();
             await sleep(150);
-            reelSet.setResult(grid);
+            reelSet.setResult(grid.map((visible) => ({ visible })));
             await p;
             await sleep(350);
             // Reveal: one shared symbol for all mystery cells.

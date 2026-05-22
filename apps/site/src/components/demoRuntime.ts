@@ -462,7 +462,7 @@ export async function mountMechanic(
         window.clearTimeout(showAt);
         cascadeSpinner.visible = false;
       }
-      reelSet.setResult(symbols);
+      reelSet.setResult(symbols.map((visible) => ({ visible })));
       const result = await promise;
       api.setStatus(`Landed · ${summarize(result.symbols)}`);
 

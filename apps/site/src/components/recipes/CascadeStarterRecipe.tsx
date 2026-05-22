@@ -57,7 +57,7 @@ export default function CascadeStarterRecipe() {
             reelSet.setDropOrder('ltr');
             const p = reelSet.spin();
             await sleep(180);
-            reelSet.setResult(grid);
+            reelSet.setResult(grid.map((visible) => ({ visible })));
             await p;
             await sleep(300);
 

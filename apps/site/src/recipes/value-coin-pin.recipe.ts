@@ -149,7 +149,7 @@ return {
       await new Promise((r) => setTimeout(r, 140));
       for (const cell of activeCells) {
         const isHit = hits.some((h) => h.col === cell.col && h.row === cell.row);
-        cell.reelSet.setResult([[isHit ? COIN : EMPTY]]);
+        cell.reelSet.setResult([{ visible: [isHit ? COIN : EMPTY] }]);
       }
       await Promise.all(spinPromises);
 

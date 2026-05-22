@@ -61,7 +61,7 @@ return {
     const grid = [col3(), col3(), [MEGA.id, MEGA.id, filler()], col3(), col3()];
     const p = reelSet.spin();
     await new Promise((r) => setTimeout(r, 220));
-    reelSet.setResult(grid);
+    reelSet.setResult(grid.map((visible) => ({ visible })));
     await p;
     await new Promise((r) => setTimeout(r, 500));
 

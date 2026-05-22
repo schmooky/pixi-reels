@@ -317,7 +317,7 @@ describe('nudge', () => {
         await expect(
           reelSet.nudge(0, { distance: 1, direction: 'down', incoming: ['wild'] }),
         ).rejects.toThrow(/cannot nudge while a spin/);
-        reelSet.setResult([['a', 'b', 'a']]);
+        reelSet.setResult([{ visible: ['a', 'b', 'a'] }]);
         reelSet.slamStop();
         await p;
       } finally {
@@ -917,8 +917,8 @@ describe('nudge', () => {
         },
       });
       try {
-        // Anchor at strip[1] (visible row 0). Up by 2 → strip[-1] (off-strip).
-        // Survival check: 1 - 2 = -1 < 0 → throw.
+        // Anchor at strip index 1 (visible row 0). Up by 2 lands at strip
+        // index -1, which is off-strip. Survival check: 1 - 2 < 0, throw.
         await spinAndLand([['bigW', 'bigW', 'a']]);
         await expect(
           reelSet.nudge(0, {

@@ -59,7 +59,7 @@ return {
 
     const p = reelSet.spin();
     await new Promise((r) => setTimeout(r, 250));
-    reelSet.setResult(result);
+    reelSet.setResult(result.map((visible) => ({ visible })));
     await p;
   },
 };

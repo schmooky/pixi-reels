@@ -48,7 +48,7 @@ return {
     // Land BEFORE via a normal strip-spin.
     const p = reelSet.spin({ mode: 'standard' });
     await new Promise(r => setTimeout(r, 150));
-    reelSet.setResult(BEFORE);
+    reelSet.setResult(BEFORE.map((visible) => ({ visible })));
     await p;
     await new Promise(r => setTimeout(r, 300));
 

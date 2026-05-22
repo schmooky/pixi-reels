@@ -400,8 +400,11 @@ describe('CellPin — visual overlay during spin motion', () => {
       expect(overlays.has('2:1')).toBe(true);
 
       h.reelSet.setResult([
-        ['a', 'b', 'c'], ['a', 'b', 'c'], ['a', 'b', 'c'],
-        ['a', 'b', 'c'], ['a', 'b', 'c'],
+        { visible: ['a', 'b', 'c'] },
+        { visible: ['a', 'b', 'c'] },
+        { visible: ['a', 'b', 'c'] },
+        { visible: ['a', 'b', 'c'] },
+        { visible: ['a', 'b', 'c'] },
       ]);
       h.reelSet.slamStop();
       await promise;
@@ -427,8 +430,11 @@ describe('CellPin — visual overlay during spin motion', () => {
       expect(overlays.size).toBe(3);
 
       h.reelSet.setResult([
-        ['a', 'b', 'c'], ['a', 'b', 'c'], ['a', 'b', 'c'],
-        ['a', 'b', 'c'], ['a', 'b', 'c'],
+        { visible: ['a', 'b', 'c'] },
+        { visible: ['a', 'b', 'c'] },
+        { visible: ['a', 'b', 'c'] },
+        { visible: ['a', 'b', 'c'] },
+        { visible: ['a', 'b', 'c'] },
       ]);
       h.reelSet.slamStop();
       await promise;
@@ -453,8 +459,11 @@ describe('CellPin — visual overlay during spin motion', () => {
       expect(overlays.size).toBe(1); // overlay created mid-spin
 
       h.reelSet.setResult([
-        ['a', 'b', 'c'], ['a', 'b', 'c'], ['a', 'b', 'c'],
-        ['a', 'b', 'c'], ['a', 'b', 'c'],
+        { visible: ['a', 'b', 'c'] },
+        { visible: ['a', 'b', 'c'] },
+        { visible: ['a', 'b', 'c'] },
+        { visible: ['a', 'b', 'c'] },
+        { visible: ['a', 'b', 'c'] },
       ]);
       h.reelSet.slamStop();
       await promise;
@@ -480,8 +489,11 @@ describe('CellPin — visual overlay during spin motion', () => {
       expect(overlays.size).toBe(0);
 
       h.reelSet.setResult([
-        ['a', 'b', 'c'], ['a', 'b', 'c'], ['a', 'b', 'c'],
-        ['a', 'b', 'c'], ['a', 'b', 'c'],
+        { visible: ['a', 'b', 'c'] },
+        { visible: ['a', 'b', 'c'] },
+        { visible: ['a', 'b', 'c'] },
+        { visible: ['a', 'b', 'c'] },
+        { visible: ['a', 'b', 'c'] },
       ]);
       h.reelSet.slamStop();
       await promise;
@@ -517,8 +529,11 @@ describe('CellPin — overlay events (pin:overlayCreated / :overlayDestroyed)', 
       expect(overlay.view).toBeDefined();
 
       h.reelSet.setResult([
-        ['a', 'b', 'c'], ['a', 'b', 'c'], ['a', 'b', 'c'],
-        ['a', 'b', 'c'], ['a', 'b', 'c'],
+        { visible: ['a', 'b', 'c'] },
+        { visible: ['a', 'b', 'c'] },
+        { visible: ['a', 'b', 'c'] },
+        { visible: ['a', 'b', 'c'] },
+        { visible: ['a', 'b', 'c'] },
       ]);
       h.reelSet.slamStop();
       await promise;
@@ -545,8 +560,11 @@ describe('CellPin — overlay events (pin:overlayCreated / :overlayDestroyed)', 
 
       const promise = h.reelSet.spin();
       h.reelSet.setResult([
-        ['a', 'b', 'c'], ['a', 'b', 'c'], ['a', 'b', 'c'],
-        ['a', 'b', 'c'], ['a', 'b', 'c'],
+        { visible: ['a', 'b', 'c'] },
+        { visible: ['a', 'b', 'c'] },
+        { visible: ['a', 'b', 'c'] },
+        { visible: ['a', 'b', 'c'] },
+        { visible: ['a', 'b', 'c'] },
       ]);
       h.reelSet.slamStop();
       await promise;
@@ -570,8 +588,11 @@ describe('CellPin — overlay events (pin:overlayCreated / :overlayDestroyed)', 
       expect(events.length).toBeGreaterThanOrEqual(1);
 
       h.reelSet.setResult([
-        ['a', 'b', 'c'], ['a', 'b', 'c'], ['a', 'b', 'c'],
-        ['a', 'b', 'c'], ['a', 'b', 'c'],
+        { visible: ['a', 'b', 'c'] },
+        { visible: ['a', 'b', 'c'] },
+        { visible: ['a', 'b', 'c'] },
+        { visible: ['a', 'b', 'c'] },
+        { visible: ['a', 'b', 'c'] },
       ]);
       h.reelSet.slamStop();
       await promise;

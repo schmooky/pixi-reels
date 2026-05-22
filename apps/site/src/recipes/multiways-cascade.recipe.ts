@@ -145,7 +145,7 @@ const initialGrid = initialShape.map((rows) =>
 {
   const p = reelSet.spin({ mode: 'standard' });
   reelSet.setShape(initialShape);
-  reelSet.setResult(initialGrid);
+  reelSet.setResult(initialGrid.map((visible) => ({ visible })));
   reelSet.skip();
   await p;
 }
@@ -161,7 +161,7 @@ return {
     const p = reelSet.spin({ mode: 'standard' });
     await new Promise((r) => setTimeout(r, 80));
     reelSet.setShape(shape);
-    reelSet.setResult(stage0);
+    reelSet.setResult(stage0.map((visible) => ({ visible })));
     await p;
     await new Promise((r) => setTimeout(r, 120));
 

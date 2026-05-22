@@ -43,7 +43,7 @@ function buildHarness(opts: { withCascade: boolean }): Harness {
 
 async function runSkippedSpin(h: Harness, mode?: 'standard' | 'cascade'): Promise<void> {
   const p = mode ? h.reelSet.spin({ mode }) : h.reelSet.spin();
-  h.reelSet.setResult([['a', 'a']]);
+  h.reelSet.setResult([{ visible: ['a', 'a'] }]);
   h.reelSet.slamStop();
   await p;
 }

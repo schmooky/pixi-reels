@@ -23,7 +23,7 @@ function buildTumbleHarness(initialFrame: string[][]) {
       fall:   { duration: 0, ease: 'none', rowStagger: 0 },
       dropIn: { duration: 0, ease: 'none', rowStagger: 0, distance: 'perHole' },
     })
-    .initialFrame(initialFrame)
+    .initialFrame(initialFrame.map((visible) => ({ visible })))
     .ticker(ticker as unknown as Ticker)
     .build();
   return {
@@ -45,8 +45,8 @@ describe('ReelSet.refill — input validation', () => {
       reelSet.refill({
         winners: [{ reel: 0, row: 0 }],
         grid: [
-          ['d', 'a', 'b'],
-          ['d', 'a', 'b'],
+          { visible: ['d', 'a', 'b'] },
+          { visible: ['d', 'a', 'b'] },
         ],
       }),
     ).rejects.toThrow(/grid has 2 column.* but the reel set has 3/);
@@ -65,9 +65,9 @@ describe('ReelSet.refill — input validation', () => {
       reelSet.refill({
         winners: [{ reel: 0, row: 0 }],
         grid: [
-          ['d', 'a'],
-          ['d', 'a', 'b'],
-          ['d', 'a', 'b'],
+          { visible: ['d', 'a'] },
+          { visible: ['d', 'a', 'b'] },
+          { visible: ['d', 'a', 'b'] },
         ],
       }),
     ).rejects.toThrow(/grid column 0 has 2 row.* but reel 0 has 3/);
@@ -85,9 +85,9 @@ describe('ReelSet.refill — input validation', () => {
       reelSet.refill({
         winners: [{ reel: 5, row: 0 }],
         grid: [
-          ['d', 'a', 'b'],
-          ['d', 'a', 'b'],
-          ['d', 'a', 'b'],
+          { visible: ['d', 'a', 'b'] },
+          { visible: ['d', 'a', 'b'] },
+          { visible: ['d', 'a', 'b'] },
         ],
       }),
     ).rejects.toThrow(/winner\.reel 5 out of range \[0, 3\)/);
@@ -105,9 +105,9 @@ describe('ReelSet.refill — input validation', () => {
       reelSet.refill({
         winners: [{ reel: 0, row: 99 }],
         grid: [
-          ['d', 'a', 'b'],
-          ['d', 'a', 'b'],
-          ['d', 'a', 'b'],
+          { visible: ['d', 'a', 'b'] },
+          { visible: ['d', 'a', 'b'] },
+          { visible: ['d', 'a', 'b'] },
         ],
       }),
     ).rejects.toThrow(/winner\.row 99 out of range \[0, 3\) for reel 0/);
@@ -124,9 +124,9 @@ describe('ReelSet.refill — input validation', () => {
     const result = await reelSet.refill({
       winners: [{ reel: 0, row: 0 }],
       grid: [
-        ['d', 'b', 'c'],
-        ['a', 'b', 'c'],
-        ['a', 'b', 'c'],
+        { visible: ['d', 'b', 'c'] },
+        { visible: ['a', 'b', 'c'] },
+        { visible: ['a', 'b', 'c'] },
       ],
     });
     expect(result.wasSkipped).toBe(false);
@@ -141,7 +141,7 @@ describe('ReelSet.skip — pre-setResult guard', () => {
     const promise = h.reelSet.spin();
     expect(() => h.reelSet.skip()).toThrow(/skip\(\) called before setResult/);
     // Recovery: result + slamStop ends the spin cleanly.
-    h.reelSet.setResult([['a', 'a'], ['a', 'a']]);
+    h.reelSet.setResult([{ visible: ['a', 'a'] }, { visible: ['a', 'a'] }]);
     h.reelSet.slamStop();
     await promise;
     h.destroy();
@@ -154,7 +154,7 @@ describe('ReelSet.skip — pre-setResult guard', () => {
     ]);
     const promise = reelSet.spin({ mode: 'cascade' });
     expect(() => reelSet.skip()).toThrow(/skip\(\) called before setResult/);
-    reelSet.setResult([['b', 'a'], ['b', 'a']]);
+    reelSet.setResult([{ visible: ['b', 'a'] }, { visible: ['b', 'a'] }]);
     reelSet.slamStop();
     await promise;
     destroy();
@@ -163,7 +163,7 @@ describe('ReelSet.skip — pre-setResult guard', () => {
   it('still works the moment setResult arrives', async () => {
     const h = createTestReelSet({ reels: 2, visibleRows: 2, symbolIds: ['a'] });
     const promise = h.reelSet.spin();
-    h.reelSet.setResult([['a', 'a'], ['a', 'a']]);
+    h.reelSet.setResult([{ visible: ['a', 'a'] }, { visible: ['a', 'a'] }]);
     expect(() => h.reelSet.skip()).not.toThrow();
     await promise;
     h.destroy();
@@ -249,7 +249,7 @@ describe('ReelSet.skip — manual setSpeed survives restore', () => {
 
     // Round 1: skip boost from normal → superTurbo.
     const first = h.reelSet.spin();
-    h.reelSet.setResult([['a', 'a'], ['a', 'a']]);
+    h.reelSet.setResult([{ visible: ['a', 'a'] }, { visible: ['a', 'a'] }]);
     h.reelSet.skip();
     await first;
     expect(h.reelSet.speed.activeName).toBe('superTurbo');
@@ -264,7 +264,7 @@ describe('ReelSet.skip — manual setSpeed survives restore', () => {
     // Round 2: spin() must NOT restore — the user chose superTurbo.
     const second = h.reelSet.spin();
     expect(h.reelSet.speed.activeName).toBe('superTurbo');
-    h.reelSet.setResult([['a', 'a'], ['a', 'a']]);
+    h.reelSet.setResult([{ visible: ['a', 'a'] }, { visible: ['a', 'a'] }]);
     h.reelSet.slamStop();
     await second;
     h.destroy();
@@ -275,7 +275,7 @@ describe('ReelSet.skip — manual setSpeed survives restore', () => {
     h.reelSet.speed.addProfile('superTurbo', SpeedPresets.SUPER_TURBO);
 
     const first = h.reelSet.spin();
-    h.reelSet.setResult([['a', 'a'], ['a', 'a']]);
+    h.reelSet.setResult([{ visible: ['a', 'a'] }, { visible: ['a', 'a'] }]);
     h.reelSet.skip();
     await first;
     expect(h.reelSet.speed.activeName).toBe('superTurbo');
@@ -283,7 +283,7 @@ describe('ReelSet.skip — manual setSpeed survives restore', () => {
     // No manual setSpeed — restore should fire.
     const second = h.reelSet.spin();
     expect(h.reelSet.speed.activeName).toBe('normal');
-    h.reelSet.setResult([['a', 'a'], ['a', 'a']]);
+    h.reelSet.setResult([{ visible: ['a', 'a'] }, { visible: ['a', 'a'] }]);
     h.reelSet.slamStop();
     await second;
     h.destroy();
@@ -404,9 +404,9 @@ describe('SpinController — per-reel rejection recovery', () => {
     const result = await reelSet.refill({
       winners: [{ reel: 0, row: 0 }, { reel: 1, row: 0 }, { reel: 2, row: 0 }],
       grid: [
-        ['d', 'a', 'b'],
-        ['d', 'a', 'b'],
-        ['d', 'a', 'b'],
+        { visible: ['d', 'a', 'b'] },
+        { visible: ['d', 'a', 'b'] },
+        { visible: ['d', 'a', 'b'] },
       ],
     });
     expect(result.wasSkipped).toBe(true);

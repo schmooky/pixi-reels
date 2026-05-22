@@ -44,7 +44,7 @@ return {
   onSpin: async () => {
     const p = reelSet.spin();
     await new Promise((resolve) => setTimeout(resolve, 220));
-    reelSet.setResult([col3(), col3(), col3(), col3(), col3()]);
+    reelSet.setResult([col3(), col3(), col3(), col3(), col3()].map((visible) => ({ visible })));
     await p;
 
     // Let the eye settle on the landed board before the nudges begin.

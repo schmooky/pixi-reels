@@ -159,7 +159,7 @@ return {
         FILLER[Math.floor(Math.random() * FILLER.length)],
       ),
     );
-    reelSet.setResult(grid);
+    reelSet.setResult(grid.map((visible) => ({ visible })));
     await promise;
     spinCount++;
 

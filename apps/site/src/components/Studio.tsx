@@ -529,7 +529,7 @@ export default function Studio() {
         const p = reelSetRef.current.spin();
         const result = nextResultRef.current?.();
         await new Promise((r) => setTimeout(r, 150));
-        if (result) reelSetRef.current.setResult(result);
+        if (result) reelSetRef.current.setResult(result.map((visible) => ({ visible })));
         await p;
       }
     } catch (e) {

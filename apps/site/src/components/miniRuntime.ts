@@ -286,7 +286,7 @@ export async function fadeOutCells(
 export async function spinToGrid(reelSet: ReelSet, grid: string[][], delay = 200): Promise<void> {
   const promise = reelSet.spin();
   await new Promise((r) => setTimeout(r, delay));
-  reelSet.setResult(grid);
+  reelSet.setResult(grid.map((visible) => ({ visible })));
   await promise;
 }
 

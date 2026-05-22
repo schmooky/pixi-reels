@@ -199,7 +199,7 @@ export async function boot(opts: BootOptions): Promise<() => void> {
     const spinPromise = reelSet.spin();
     const result = await mockSpin(++spinCount);
     if (disposed) return;
-    reelSet.setResult(result.grid);
+    reelSet.setResult(result.grid.map((visible) => ({ visible })));
     await spinPromise;
     if (disposed) return;
 

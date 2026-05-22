@@ -65,7 +65,7 @@ export default function WalkingWildRecipe() {
             spin1[walkerCol][walkerRow] = WILD;
             let p = reelSet.spin();
             await sleep(150);
-            reelSet.setResult(spin1);
+            reelSet.setResult(spin1.map((visible) => ({ visible })));
             await p;
             positionGhostOn(walkerCol, walkerRow);
             ghost.visible = true;
@@ -87,7 +87,7 @@ export default function WalkingWildRecipe() {
 
               p = reelSet.spin();
               await sleep(100);
-              reelSet.setResult(grid);
+              reelSet.setResult(grid.map((visible) => ({ visible })));
               await p;
               walkerCol = target;
               await sleep(500);
@@ -100,7 +100,7 @@ export default function WalkingWildRecipe() {
             // One final base spin with no wild.
             p = reelSet.spin();
             await sleep(100);
-            reelSet.setResult(fillerGrid(5, 3));
+            reelSet.setResult(fillerGrid(5, 3).map((visible) => ({ visible })));
             await p;
           },
         };

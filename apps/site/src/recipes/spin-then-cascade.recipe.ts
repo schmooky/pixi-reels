@@ -83,7 +83,7 @@ return {
     // Round 1: classic strip-spin lands on stage 0.
     const p = reelSet.spin({ mode: 'standard' });
     await new Promise((r) => setTimeout(r, 150));
-    reelSet.setResult(stage0);
+    reelSet.setResult(stage0.map((visible) => ({ visible })));
     await p;
     await new Promise((r) => setTimeout(r, 300));
 

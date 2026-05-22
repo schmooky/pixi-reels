@@ -107,8 +107,11 @@ describe('movePin — errors', () => {
       ).rejects.toThrow(/cannot move pin while spinning/);
 
       h.reelSet.setResult([
-        ['a', 'b', 'c'], ['a', 'b', 'c'], ['a', 'b', 'c'],
-        ['a', 'b', 'c'], ['a', 'b', 'c'],
+        { visible: ['a', 'b', 'c'] },
+        { visible: ['a', 'b', 'c'] },
+        { visible: ['a', 'b', 'c'] },
+        { visible: ['a', 'b', 'c'] },
+        { visible: ['a', 'b', 'c'] },
       ]);
       h.reelSet.slamStop();
       await spinPromise;

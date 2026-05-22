@@ -44,7 +44,7 @@ describe('ReelSet.skip — cascade auto-slam', () => {
 
     // Moment A — initial drop.
     const spinDone = h.reelSet.spin({ mode: 'cascade' });
-    h.reelSet.setResult(grid);
+    h.reelSet.setResult(grid.map((visible) => ({ visible })));
     // One press: cascade mode short-circuits the boost and slams.
     h.reelSet.skip();
     await spinDone;
@@ -60,9 +60,9 @@ describe('ReelSet.skip — cascade auto-slam', () => {
     const refilled = h.reelSet.refill({
       winners: [{ reel: 0, row: 0 }, { reel: 1, row: 0 }, { reel: 2, row: 0 }],
       grid: [
-        ['b', 'a', 'b'],
-        ['a', 'b', 'a'],
-        ['b', 'b', 'b'],
+        { visible: ['b', 'a', 'b'] },
+        { visible: ['a', 'b', 'a'] },
+        { visible: ['b', 'b', 'b'] },
       ],
     });
     await refilled;
@@ -82,7 +82,7 @@ describe('ReelSet.skip — cascade auto-slam', () => {
 
     // Round 1: trigger auto-slam.
     const first = h.reelSet.spin({ mode: 'cascade' });
-    h.reelSet.setResult(grid);
+    h.reelSet.setResult(grid.map((visible) => ({ visible })));
     h.reelSet.skip();
     await first;
     expect(h.reelSet.skipStage).toBe(2);
@@ -92,7 +92,7 @@ describe('ReelSet.skip — cascade auto-slam', () => {
     // the stop sequence rather than landing instantly.
     const second = h.reelSet.spin({ mode: 'cascade' });
     expect(h.reelSet.skipStage).toBe(0);
-    h.reelSet.setResult(grid);
+    h.reelSet.setResult(grid.map((visible) => ({ visible })));
     // We never called skip — the spin should still be running phases.
     // slamStop to wrap the test deterministically.
     h.reelSet.slamStop();

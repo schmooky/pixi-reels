@@ -74,9 +74,9 @@ describe('big symbols', () => {
       const promise = reelSet.spin();
       expect(() => {
         reelSet.setResult([
-          ['giant', 'a', 'a'],
-          ['a', 'a', 'a'],
-          ['a', 'a', 'a'],
+          { visible: ['giant', 'a', 'a'] },
+          { visible: ['a', 'a', 'a'] },
+          { visible: ['a', 'a', 'a'] },
         ]);
       }).toThrow(/exceeds reel/);
       reelSet.slamStop();
@@ -97,9 +97,9 @@ describe('big symbols', () => {
       const promise = reelSet.spin();
       expect(() => {
         reelSet.setResult([
-          ['a', 'a', 'a'],
-          ['a', 'a', 'a'],
-          ['wide', 'a', 'a'],
+          { visible: ['a', 'a', 'a'] },
+          { visible: ['a', 'a', 'a'] },
+          { visible: ['wide', 'a', 'a'] },
         ]);
       }).toThrow(/exceeds reel count/);
       reelSet.slamStop();

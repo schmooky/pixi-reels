@@ -18,7 +18,7 @@ function buildTumbleHarness(initialFrame: string[][]) {
       fall:   { duration: 0, ease: 'none', rowStagger: 0 },
       dropIn: { duration: 0, ease: 'none', rowStagger: 0, distance: 'perHole' },
     })
-    .initialFrame(initialFrame)
+    .initialFrame(initialFrame.map((visible) => ({ visible })))
     .ticker(ticker as unknown as Ticker)
     .build();
   return {
@@ -52,9 +52,9 @@ describe('refill — gravityHold promise', () => {
     const refilling = reelSet.refill({
       winners: [{ reel: 0, row: 2 }, { reel: 1, row: 2 }, { reel: 2, row: 2 }],
       grid: [
-        ['d', 'a', 'a'],
-        ['d', 'a', 'a'],
-        ['d', 'a', 'a'],
+        { visible: ['d', 'a', 'a'] },
+        { visible: ['d', 'a', 'a'] },
+        { visible: ['d', 'a', 'a'] },
       ],
       mode: 'gravity-then-drop',
       gravityHoldMs: 0,        // no fixed pause — only the promise gates
@@ -91,9 +91,9 @@ describe('refill — gravityHold promise', () => {
     const refilling = reelSet.refill({
       winners: [{ reel: 0, row: 2 }, { reel: 1, row: 2 }, { reel: 2, row: 2 }],
       grid: [
-        ['d', 'a', 'a'],
-        ['d', 'a', 'a'],
-        ['d', 'a', 'a'],
+        { visible: ['d', 'a', 'a'] },
+        { visible: ['d', 'a', 'a'] },
+        { visible: ['d', 'a', 'a'] },
       ],
       mode: 'gravity-then-drop',
       gravityHoldMs: 20,       // short fixed floor
@@ -131,9 +131,9 @@ describe('refill — gravityHold promise', () => {
     await reelSet.refill({
       winners: [{ reel: 0, row: 2 }, { reel: 1, row: 2 }, { reel: 2, row: 2 }],
       grid: [
-        ['d', 'a', 'a'],
-        ['d', 'a', 'a'],
-        ['d', 'a', 'a'],
+        { visible: ['d', 'a', 'a'] },
+        { visible: ['d', 'a', 'a'] },
+        { visible: ['d', 'a', 'a'] },
       ],
       mode: 'gravity-then-drop',
       gravityHoldMs: 80,
@@ -162,9 +162,9 @@ describe('refill — gravityHold promise', () => {
     const refilling = reelSet.refill({
       winners: [{ reel: 0, row: 2 }, { reel: 1, row: 2 }, { reel: 2, row: 2 }],
       grid: [
-        ['d', 'a', 'a'],
-        ['d', 'a', 'a'],
-        ['d', 'a', 'a'],
+        { visible: ['d', 'a', 'a'] },
+        { visible: ['d', 'a', 'a'] },
+        { visible: ['d', 'a', 'a'] },
       ],
       mode: 'gravity-then-drop',
       gravityHoldMs: 10,
@@ -215,7 +215,11 @@ describe('refill — gravityHold rejection surfacing', () => {
       // the original rejection comes through via the event.
       await reelSet.refill({
         winners: [{ reel: 0, row: 2 }, { reel: 1, row: 2 }, { reel: 2, row: 2 }],
-        grid: [['d', 'a', 'a'], ['d', 'a', 'a'], ['d', 'a', 'a']],
+        grid: [
+          { visible: ['d', 'a', 'a'] },
+          { visible: ['d', 'a', 'a'] },
+          { visible: ['d', 'a', 'a'] },
+        ],
         mode: 'gravity-then-drop',
         gravityHoldMs: 0,
         gravityHold: Promise.reject(sentinel),

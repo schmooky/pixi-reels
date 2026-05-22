@@ -59,7 +59,7 @@ return {
     const spinDone = reelSet.spin();
     reelSet.setDropOrder('ltr');
     await new Promise((r) => setTimeout(r, 220));
-    reelSet.setResult(stage0);
+    reelSet.setResult(stage0.map((visible) => ({ visible })));
     await spinDone;
 
     // Moment B: fade winners, then refill — survivors slide, new symbols

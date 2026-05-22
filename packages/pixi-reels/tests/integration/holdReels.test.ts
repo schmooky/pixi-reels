@@ -30,7 +30,7 @@ async function spinAndLandWithHold(
   holdReels: number[],
 ) {
   const promise = h.reelSet.spin({ holdReels });
-  h.reelSet.setResult(grid);
+  h.reelSet.setResult(grid.map((visible) => ({ visible })));
   h.reelSet.slamStop();
   return promise;
 }
@@ -241,11 +241,11 @@ describe('SpinOptions.holdReels — interaction with setAnticipation', () => {
       // Set anticipation including the held reel — implementation must drop it.
       h.reelSet.setAnticipation([2, 3, 4]);
       h.reelSet.setResult([
-        ['a', 'a', 'a'],
-        ['b', 'b', 'b'],
-        ['c', 'c', 'c'],
-        ['d', 'd', 'd'],
-        ['e', 'e', 'e'],
+        { visible: ['a', 'a', 'a'] },
+        { visible: ['b', 'b', 'b'] },
+        { visible: ['c', 'c', 'c'] },
+        { visible: ['d', 'd', 'd'] },
+        { visible: ['e', 'e', 'e'] },
       ]);
       h.reelSet.slamStop();
       await promise;
