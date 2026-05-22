@@ -389,7 +389,6 @@ export interface ReelEvents extends Record<string, unknown[]> {
   'phase:enter': [phaseName: string];
   'phase:exit': [phaseName: string];
   'symbol:created': [symbolId: string, row: number];
-  'symbol:recycled': [symbolId: string, row: number];
   'landed': [symbols: string[]];
   'destroyed': [];
 }
