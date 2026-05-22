@@ -1,0 +1,129 @@
+---
+layout: ../../layouts/Docs.astro
+title: Migrating to 1.0.0
+section: docs
+description: Mechanical changes to move from 0.x to 1.0.0.
+---
+
+A list of every breaking change in 1.0.0 with a before and after snippet. Each section is mechanical: find the pattern, apply the rewrite.
+
+## visibleSymbols is gone
+
+Before:
+
+```ts
+builder.visibleSymbols(3);
+```
+
+After:
+
+```ts
+builder.visibleRows(3);
+```
+
+## setResult and initialFrame accept only ColumnTarget[]
+
+The legacy `string[][]` form and negative-index slot mutation (`grid[col][-1] = 'X'`) are removed.
+
+Before:
+
+```ts
+const grid: string[][] = [
+  ['A', 'B', 'C'],
+  ['A', 'B', 'C'],
+];
+grid[1][-1] = 'COIN';
+reelSet.setResult(grid);
+```
+
+After:
+
+```ts
+reelSet.setResult([
+  { visible: ['A', 'B', 'C'] },
+  { visible: ['A', 'B', 'C'], bufferAbove: ['COIN'] },
+]);
+```
+
+If your server returns `string[][]`, convert at the boundary:
+
+```ts
+const response: string[][] = await server.spin();
+reelSet.setResult(response.map((visible) => ({ visible })));
+```
+
+The same conversion applies to `ReelSetBuilder.initialFrame(...)` and the `grid` field passed to `ReelSet.refill(...)`.
+
+## Hidden exports from the package entry
+
+Eight types and classes are no longer re-exported from `pixi-reels`. They remain in the source tree but are not part of the public API.
+
+| Removed export | What it was | Replacement |
+|---|---|---|
+| `OCCUPIED_SENTINEL` | The cross-reel stub the engine paints into big-symbol non-anchor cells | Never produce or consume directly. `ReelSet.getVisibleGrid()` resolves stubs to anchor ids. |
+| `ReelMotion` | Per-`Reel` Y-displacement and wrap helper | Wired by `Reel` itself. |
+| `StopSequencer` | Per-`Reel` target-frame manager | Wired by `Reel` itself. |
+| `ReelSetInternalConfig` | Shape internal to the builder-to-engine handoff | Use `ReelSetBuilder` to wire a `ReelSet`. |
+| `ResolvedReelGridConfig` | Same | Same. |
+| `SymbolFactory` | Pooling layer for symbol instances | Register symbol classes via `builder.symbols(registry => ...)`. |
+| `RandomSymbolProvider` | Weighted symbol picker | Pass weights via `builder.weights({...})`. |
+| `OffsetCalculator` | Geometry helper for `ReelViewport` | Internal. |
+
+If you imported any of these from `pixi-reels`, remove the import. If you genuinely need the internal, import from the source path directly (acknowledging that internals can change without a major bump).
+
+## Internal-leaking methods lost their leading underscore
+
+Three methods on `Reel` and `ReelSet` were called across files via the underscore convention. They are renamed to match how they are reached, with JSDoc that documents the call sites.
+
+| Before | After |
+|---|---|
+| `Reel._getAnchorRow(visibleRow)` | `Reel.getAnchorRow(visibleRow)` |
+| `ReelSet._peekTargetShape()` | `ReelSet.peekTargetShape()` |
+| `ReelSet._clearTargetShape()` | `ReelSet.clearTargetShape()` |
+
+Consumers should not call these directly. They are documented as internal in JSDoc. The rename is purely so the name matches the cross-file call.
+
+## skip() is now skipSpin()
+
+`skipSpin()` reads cleanly alongside `skipNudge()`. `slamStop()` stays distinct (unconditional land-now, no boost).
+
+Before:
+
+```ts
+reelSet.skip();
+```
+
+After:
+
+```ts
+reelSet.skipSpin();
+```
+
+The new naming makes the three actions readable side by side:
+
+```ts
+reelSet.skipSpin();   // Round-aware spin land. Applies the boost / auto-slam side effect.
+reelSet.skipNudge();  // Fast-forward an in-flight nudge() to its landed position.
+reelSet.slamStop();   // Unconditional land-now. No boost. For tests, anti-cheat.
+```
+
+## Concurrent calls during nudge() now throw
+
+`spin()`, `setResult()`, `pin()`, and `setShape()` throw when called while an in-flight `nudge()` is still tweening. The contract is now explicit: await the `nudge()` promise before calling any of those methods.
+
+```ts
+// Before: undefined behavior (the call could race the nudge tween).
+const nudging = reelSet.nudge(2, { distance: 1, direction: 'down', incoming: ['wild'] });
+reelSet.spin(); // race
+
+// After: throws "ReelSet.spin: cannot be called while nudge() is in flight."
+const nudging = reelSet.nudge(2, { distance: 1, direction: 'down', incoming: ['wild'] });
+await nudging;
+await reelSet.spin();
+```
+
+If you have UI code that allows the player to press spin during a nudge, route through `reelSet.skipNudge()` first to fast-forward the nudge to its landed position, then call `spin()`.
+
+## symbol:recycled event removed
+
+The `'symbol:recycled'` field on the per-`Reel` `ReelEvents` interface is removed. It was never emitted by any code path. If you had a listener registered for it, delete the listener.

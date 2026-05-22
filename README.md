@@ -5,16 +5,21 @@
 [![Bundle size](https://img.shields.io/bundlephobia/minzip/pixi-reels?label=gzip)](https://bundlephobia.com/package/pixi-reels)
 [![CI](https://github.com/schmooky/pixi-reels/actions/workflows/ci.yml/badge.svg)](https://github.com/schmooky/pixi-reels/actions/workflows/ci.yml)
 [![Release](https://github.com/schmooky/pixi-reels/actions/workflows/release.yml/badge.svg)](https://github.com/schmooky/pixi-reels/actions/workflows/release.yml)
-[![CodeQL](https://github.com/schmooky/pixi-reels/actions/workflows/codeql.yml/badge.svg)](https://github.com/schmooky/pixi-reels/actions/workflows/codeql.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](./LICENSE)
 [![PixiJS v8](https://img.shields.io/badge/PixiJS-v8-e91e63)](https://pixijs.com/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 
-A slot machine reel engine for [PixiJS v8](https://pixijs.com/). Fluent builder, typed events, and the weighty spin+stop feel modeled on real-money games — in about 35 kB gzipped.
+`pixi-reels` 1.0.0 is a reel engine for [PixiJS v8](https://pixijs.com/). It ships reel-only primitives: spin lifecycle, symbols, speed profiles, pins, cascades, win presenter. Win math, paytable math, RNG, and audio live in consumer code.
+
+Install:
 
 ```bash
 pnpm add pixi-reels pixi.js gsap
 ```
+
+Docs and recipes at [pixi-reels.dev](https://pixi-reels.dev). Agent-facing instructions are in [AGENTS.md](./AGENTS.md).
+
+## Quick start
 
 ```ts
 import { Application } from 'pixi.js';
@@ -25,7 +30,7 @@ await app.init({ width: 900, height: 540, background: '#0a0d14' });
 document.body.appendChild(app.canvas);
 
 const reelSet = new ReelSetBuilder()
-  .reels(5).visibleSymbols(3).symbolSize(140, 140)
+  .reels(5).visibleRows(3).symbolSize(140, 140)
   .symbols((r) => {
     r.register('cherry', SpriteSymbol, { textures: { cherry: cherryTex } });
     r.register('seven',  SpriteSymbol, { textures: { seven:  sevenTex } });
@@ -39,74 +44,31 @@ const reelSet = new ReelSetBuilder()
 
 app.stage.addChild(reelSet);
 
-// Kick off the spin, tell it where to land, await the bounce.
 const spin = reelSet.spin();
-reelSet.setResult(await fetchSpinFromServer());
-const { symbols } = await spin;
+const result: string[][] = await fetchSpinFromServer();
+reelSet.setResult(result.map((visible) => ({ visible })));
+await spin;
 ```
-
-## What it does
-
-- **Spin lifecycle** — `START -> SPIN -> ANTICIPATION -> STOP` phases, each pluggable.
-- **Weighty stops** — the reel carries momentum through the target frame, snaps, then bounces. No floaty ease-in deceleration.
-- **Speed modes** — Normal / Turbo / SuperTurbo built in, or register your own profile.
-- **Skip / slam-stop** — second tap of the spin button immediately lands the reels on target.
-- **Win spotlight** — dim non-winners, promote winning symbols above the mask, cycle lines.
-- **Symbol plugins** — SpriteSymbol, AnimatedSpriteSymbol, SpineSymbol, or implement `ReelSymbol`.
-- **Frame middleware** — intercept the symbol generator (e.g. "no triples", multiplier injection).
-- **Object pooling** — zero-allocation spinning via `ObjectPool<T>`.
-- **Typed events** — `spin:start`, `spin:reelLanded`, `speed:changed`, `spotlight:end`, ...
-- **Headless testing** — `createTestReelSet` + `FakeTicker` run the full lifecycle in Node.
-- **Debug mode** — `enableDebug(reelSet)` exposes JSON and ASCII snapshots on `window`.
-
-## Docs
-
-The docs site lives in [`apps/site`](apps/site/). Run it locally:
-
-```bash
-pnpm site:dev       # http://localhost:4321
-```
-
-You'll find:
-
-- **Guides** — getting started, spin lifecycle, symbols, speed modes, win animations, debugging.
-- **Recipes** — small how-tos for common mechanics (walking wilds, sticky wilds, cascade, mystery reveal, hold & win, ...). Each ships with a live mini-demo.
-- **Demos** — full mechanic sandboxes with cheat panels. One click forces a scatter, a near-miss, a guaranteed jackpot.
-- **Sandbox** — in-browser TypeScript playground; edit the file, hit Run, reels rebuild.
-- **Studio** — bring-your-own-assets workbench. Drop in sprites or Spine bundles, wire them to symbol ids, edit builder code, share the result via a password-protected link (see [`apps/share-api`](apps/share-api/) for the relay).
-- **Wiki** — API reference.
-
-## Examples
-
-Runnable apps in [`examples/`](examples/):
-
-| Example          | What it shows                                              | Run                                    |
-|------------------|------------------------------------------------------------|----------------------------------------|
-| `classic-spin`   | 5x3 line-pay slot with Spine symbols and speed toggle      | `pnpm --filter classic-spin dev`       |
-| `cascade-tumble` | 6x5 tumble mechanic with win spotlight between stages      | `pnpm --filter cascade-tumble dev`     |
-| `hold-and-win`   | 5x3 base game + respin bonus with locking coins            | `pnpm --filter hold-and-win dev`       |
-| `sandbox`        | Single editable TS file, HMR rebuild                       | `pnpm --filter sandbox dev`            |
 
 ## Core API at a glance
 
 ```ts
 reelSet.spin(): Promise<SpinResult>             // Start spinning
-reelSet.setResult(symbols: string[][] | ColumnTarget[]) // Pass the target grid (triggers the stop). Use frame[col][-1] (or { bufferAbove: [...] }) to prefill cells above the visible window — see /recipes/buffer-indexing-cheatsheet/.
-reelSet.setAnticipation([3, 4])                 // Slow reels 3+4 before their landing
+reelSet.setResult(symbols: ColumnTarget[])      // Pass the target grid. Triggers the stop.
+reelSet.setAnticipation([3, 4])                 // Slow reels 3+4 before they land
 reelSet.setStopDelays([0, 140, 280, 600, 1100]) // Override per-reel stop stagger
-reelSet.skip()                                  // Slam-stop
+reelSet.skipSpin()                              // Round-aware slam plus boost / auto-slam side effect
+reelSet.slamStop()                              // Unconditional land-now (no boost)
+reelSet.skipNudge()                             // Fast-forward an in-flight nudge() to its landed position
 reelSet.setSpeed('turbo')                       // Switch speed profile
 reelSet.spotlight.show(positions, opts)         // One-shot win highlight
-reelSet.spotlight.cycle(lines, opts)            // Cycle through win lines
 reelSet.events.on('spin:reelLanded', (i, s) => {/* ... */})
 reelSet.destroy()                               // Full teardown
 ```
 
-Full reference: `/wiki/` on the docs site.
+See [docs/api-reelset/](https://pixi-reels.dev/docs/api-reelset/) for the full reference and [docs/migrating-to-1-0/](https://pixi-reels.dev/docs/migrating-to-1-0/) for the breaking-change list.
 
-## Spine symbols (optional)
-
-pixi-reels ships a Spine adapter on a separate subpath so the runtime tree-shakes out when you don't need it:
+## Spine symbols (optional subpath)
 
 ```ts
 import { SpineReelSymbol } from 'pixi-reels/spine';
@@ -122,14 +84,12 @@ Install the peer: `pnpm add @esotericsoftware/spine-pixi-v8`.
 
 ## Debug mode
 
-Handy for development and essential when an AI agent needs to inspect reel state without parsing a canvas:
-
 ```ts
 import { enableDebug } from 'pixi-reels';
 enableDebug(reelSet);
 ```
 
-In the browser console (or via Playwright / an agent's `eval`):
+In the browser console (or via Playwright / agent eval):
 
 ```
 __PIXI_REELS_DEBUG.log()       // ASCII grid + state snapshot
@@ -137,31 +97,26 @@ __PIXI_REELS_DEBUG.snapshot()  // Full JSON state
 __PIXI_REELS_DEBUG.trace()     // Log every domain event as it fires
 ```
 
-## Architecture
+## Examples
 
-```
-ReelSetBuilder --builds--> ReelSet
-                             |- SpinController ..... orchestrates the phases per reel
-                             |- SpeedManager ....... named profiles + live switching
-                             |- SymbolSpotlight .... win animations
-                             |- ReelViewport ....... masked + unmasked containers
-                             '- Reel[] ............. one per column
-                                  |- ReelSymbol[] .. SpriteSymbol / AnimatedSpriteSymbol / SpineSymbol
-                                  |- ReelMotion .... y displacement + wrap
-                                  '- StopSequencer . target-frame consumption
-```
+Runnable apps in [`examples/`](examples/):
 
-Single ticker, no circular deps, no default exports, tree-shakes cleanly.
+| Example          | What it shows                                              | Run                                    |
+|------------------|------------------------------------------------------------|----------------------------------------|
+| `classic-spin`   | 5x3 line-pay slot with sprite symbols and speed toggle     | `pnpm --filter classic-spin dev`       |
+| `cascade-tumble` | 6x5 tumble mechanic with win spotlight between stages      | `pnpm --filter cascade-tumble dev`     |
+| `hold-and-win`   | 5x3 base game + respin bonus with locking coins            | `pnpm --filter hold-and-win dev`       |
+| `sandbox`        | Single editable TS file, HMR rebuild                       | `pnpm --filter sandbox dev`            |
 
 ## Peer dependencies
 
 - `pixi.js` ^8.17.0
 - `gsap` ^3.14.0
-- `@esotericsoftware/spine-pixi-v8` ^4.2.108 _(optional — only if you use `SpineReelSymbol`)_
+- `@esotericsoftware/spine-pixi-v8` ^4.2.108 (optional, only if you use `SpineReelSymbol`)
 
 ## Contributing
 
-PRs welcome. [CONTRIBUTING.md](./CONTRIBUTING.md) covers the workflow, changesets, and the handful of style rules the lint guards enforce.
+PRs welcome. [CONTRIBUTING.md](./CONTRIBUTING.md) covers the workflow, changesets, and the style rules the lint guards enforce.
 
 ## License
 

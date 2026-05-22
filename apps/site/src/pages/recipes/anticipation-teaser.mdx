@@ -22,7 +22,7 @@ import { RecipeRunner } from '../../components/RecipeRunner.tsx';
 
 `setAnticipation` slows a reel so the player has time to feel the tension. On its own, the slow reel shows whatever random symbols happen to be wrapping onto the strip — sometimes the high-value lands, sometimes it doesn't.
 
-Pairing it with a buffer-above prefill (`result[col][-1] = 'COIN'`) turns the wait into a reveal: the COIN is the next cell to enter the visible area, so as the reel decelerates the player watches it slide into place. The effect is much stronger than anticipation alone.
+Pairing it with a buffer-above prefill (`bufferAbove: ['COIN']` on the column's `ColumnTarget`) turns the wait into a reveal: the COIN is the next cell to enter the visible area, so as the reel decelerates the player watches it slide into place. The effect is stronger than anticipation alone.
 
 ## The minimum code
 
@@ -57,19 +57,6 @@ await promise;
 5. After `anticipationDelay` elapses, those reels enter `StopPhase` and land
 
 The buffer-above prefill is read by the same `FrameBuilder` pipeline that landed the result. Pins, big symbols, and held reels all coexist with it.
-
-## Legacy negative-index form
-
-The same effect with `string[][]`:
-
-```ts
-const result: string[][] = await server.spin();
-result[3][-1] = 'BONUS';
-result[4][-1] = 'BONUS';
-reelSet.setResult(result);
-```
-
-Use this only when the grid doesn't cross a serializer or worker boundary — `arr[-1]` doesn't survive `structuredClone`, `JSON.stringify`, or `postMessage`. See [Buffer indexing](/guides/buffer-indexing/) for the trade-off in detail.
 
 ## Where to go next
 

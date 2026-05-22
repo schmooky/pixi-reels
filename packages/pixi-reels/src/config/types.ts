@@ -253,14 +253,7 @@ export interface CellBounds {
   height: number;
 }
 
-/**
- * A cell on the visible grid — `reelIndex` is the column, `rowIndex` the
- * row from the top. This is the canonical grid-cell shape used across
- * events (`win:symbol`, `spotlight:start`), `Spotlight.show`, and
- * `ClusterWin.cells`.
- *
- * Named `SymbolPosition` for back-compat with the original events module.
- */
+/** A cell on the visible grid. `reelIndex` is the column; `rowIndex` is the row from the top. */
 export interface SymbolPosition {
   reelIndex: number;
   rowIndex: number;

@@ -64,19 +64,7 @@ For a reel with `bufferAbove = 2` and `visibleRows = 3`, the explicit form maps 
 | `visible[2]` | visible row 2 (bottom) |
 | `bufferBelow[0]` | closest below visible |
 
-See [Buffer indexing](/guides/buffer-indexing/) for the full reference, including the legacy negative-index form (`frame[col][-1]`) you may meet in older code.
-
-## Legacy negative-index form
-
-`initialFrame` and `setResult` also accept the legacy `string[][]` shape — handy for one-liners. The two forms are interchangeable end-to-end:
-
-```ts
-const grid: string[][] = [['A','B','C'], ['A','B','C'], ['A','B','C']];
-for (const col of grid) col[-1] = 'COIN';  // -1 = closest above visible
-reelSet.setResult(grid);
-```
-
-The catch: `arr[-1] = 'X'` stores a string property `"-1"` on the array, which `structuredClone`, `JSON.stringify`, and `postMessage` all drop. Use the explicit `ColumnTarget` form for any grid that crosses a worker, network, or serializer boundary.
+See [Buffer indexing](/guides/buffer-indexing/) for the full reference.
 
 ## Where to go next
 

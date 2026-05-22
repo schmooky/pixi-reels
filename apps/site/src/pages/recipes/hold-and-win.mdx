@@ -85,7 +85,7 @@ Behaviour:
 - `SpinResult.symbols` reports the full visible grid (held rows unchanged, non-held rows landed).
 
 When to pick which:
-- **Per-cell hold-and-win** (this recipe's main pattern, with coins locked one cell at a time): the per-column `ReelSet` array is still the cleanest model — each cell is its own `ReelSet` with `visibleSymbols(1)`.
+- **Per-cell hold-and-win** (this recipe's main pattern, with coins locked one cell at a time): the per-column `ReelSet` array is still the cleanest model. Each cell is its own `ReelSet` with `visibleRows(1)`.
 - **Single-reel respin / partial reroll** (whole columns held, others spin): use `spin({ holdReels })` on a single `ReelSet`. Spotlight, anticipation, win presenters keep working since everything stays inside one engine.
 
 ## Related recipes

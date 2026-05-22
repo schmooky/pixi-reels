@@ -13,7 +13,7 @@ Every method returns `this` so you can chain. `build()` validates and returns a 
 | Method | |
 |---|---|
 | `.reels(n)` | Number of columns. |
-| `.visibleRows(n)` or `.visibleRowsPerReel([n,...])` or `.multiways({...})` | One of these picks the row layout. `visibleSymbols(n)` is the legacy alias of `visibleRows(n)`. |
+| `.visibleRows(n)` or `.visibleRowsPerReel([n,...])` or `.multiways({...})` | One of these picks the row layout. |
 | `.symbolSize(w, h)` | Per-symbol dimensions in px. |
 | `.symbols((r) => { r.register(...) })` | At least one symbol id. |
 | `.ticker(pixiTicker)` | Drives frame updates. |
@@ -42,7 +42,7 @@ Missing any of these throws at `.build()` with a human-readable list of problems
 | `.pinMigrationEase(ease)` | `'power2.out'` (MultiWays only) |
 | `.maskStrategy(strategy)` | Per-reel `RectMaskStrategy`. Auto-switches to `SharedRectMaskStrategy` when big or unmasked symbols are registered with `symbolGap.x > 0`. |
 | `.gsap(instance)` | Bound from the package's own `gsap` import. Use this when your app and the engine resolve to different `gsap` instances (symlinked workspaces, npm link, misconfigured `dedupe`). |
-| `.initialFrame(string[][] \| ColumnTarget[])` | Random per `weights()`. Use `ColumnTarget[]` for any grid that crosses worker / JSON boundaries. |
+| `.initialFrame(ColumnTarget[])` | Random per `weights()`. One `ColumnTarget` per reel: `{ visible, bufferAbove?, bufferBelow? }`. |
 
 ## .build()
 

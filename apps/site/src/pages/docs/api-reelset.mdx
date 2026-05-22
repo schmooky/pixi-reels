@@ -15,14 +15,15 @@ Every method on this page is non-async unless its return type is `Promise`. Prom
 | Method | Signature | Notes |
 |---|---|---|
 | `spin` | `(options?: SpinOptions) => Promise<SpinResult>` | Start a spin. Resolves on `spin:complete`. Pass `{ holdReels: [...] }` to freeze columns, `{ mode: 'cascade' }` to override the builder default for one call. |
-| `setResult` | `(symbols: string[][] \| ColumnTarget[]) => void` | Set the target grid. Triggers the stop sequence. Accepts the legacy `string[][]` form OR the explicit `ColumnTarget[]` form (preferred for grids that cross worker/JSON boundaries — negative-index slots don't survive `structuredClone`). |
+| `setResult` | `(symbols: ColumnTarget[]) => void` | Set the target grid. Triggers the stop sequence. One `ColumnTarget` per reel: `{ visible, bufferAbove?, bufferBelow? }`. |
 | `setAnticipation` | `(reelIndices: number[]) => void` | Mark reels that should enter `ANTICIPATION` before stopping. Held indices are filtered silently. |
 | `setStopDelays` | `(delays: number[]) => void` | One ms-delay per reel, overriding `reelIndex * speed.stopDelay` for the current spin. Persists across `refill()` calls in the same round. |
 | `setDropOrder` | `(order: 'ltr' \| 'rtl' \| 'all' \| number[], step?: number) => void` | Wraps `setStopDelays`. Common patterns: `'ltr'` (initial cascade reveal), `'all'` (canonical refill), `[0,0,200,200,400]` (V-shape). |
-| `skip` | `() => void` | Round-aware slam. First press boosts speed (standard mode) or flags refills to auto-slam (cascade mode); subsequent presses also slam. |
-| `requestSkip` | `() => void` | Safe pre-`setResult` slam — queues until the result arrives, then slams. Bypasses the round-side-effect machine. |
+| `skipSpin` | `() => void` | Round-aware slam. First press boosts speed (standard mode) or flags refills to auto-slam (cascade mode); subsequent presses also slam. |
+| `requestSkip` | `() => void` | Safe pre-`setResult` slam. Queues until the result arrives, then slams. Bypasses the round-side-effect machine. |
 | `slamStop` | `() => void` | Unconditional slam. No boost, no auto-slam flag. For tests / anti-cheat / programmatic land-now intent. |
-| `skipStage` | `readonly 0 \| 1 \| 2` | `0` until the first `skip()` press of the round, `2` after. Drive UI labels from this. |
+| `skipNudge` | `(col?: number) => void` | Fast-forward an in-flight `nudge()` to its landed state. Distinct from `skipSpin` and `slamStop`: those land a spin; this lands a nudge. |
+| `skipStage` | `readonly 0 \| 1 \| 2` | `0` until the first `skipSpin()` press of the round, `2` after. Drive UI labels from this. |
 | `isSpinning` | `readonly boolean` | `true` between `spin:start` and `spin:complete`. Oscillates per refill in a cascade round — see [cascades guide](/guides/cascades/). |
 
 ```ts
