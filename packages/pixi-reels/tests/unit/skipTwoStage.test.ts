@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { createTestReelSet, SpeedPresets } from '../../src/index.js';
+import { SpeedPresets } from '../../src/index.js';
+import { createTestReelSet } from '../../src/testing/index.js';
 import type { ReelSet } from '../../src/index.js';
 import type { SpeedProfile } from '../../src/config/types.js';
 

@@ -41,33 +41,29 @@ export type { SpineSymbolOptions } from './symbols/SpineSymbol.js';
 export { SymbolRegistry } from './symbols/SymbolRegistry.js';
 
 // Spin
-export { SpinController } from './spin/SpinController.js';
-export type { SpinControllerHooks } from './spin/SpinController.js';
+// `SpinController` and `SpinControllerHooks` are internal wiring built by
+// `ReelSet`. Consumers never construct one. Same shape as `ReelMotion` /
+// `StopSequencer`, which were hidden in 1.0.0.
+//
+// The built-in phase CLASSES (StartPhase, SpinPhase, StopPhase, etc.) are
+// also internal. Consumers register custom phases via
+// `builder.phases(f => f.register('name', class extends ReelPhase { ... }))`,
+// they do not subclass the built-ins. Phase Config TYPES stay exported as
+// stable shape descriptions for documentation.
 export { ReelPhase } from './spin/phases/ReelPhase.js';
 export { PhaseFactory } from './spin/phases/PhaseFactory.js';
-export { StartPhase } from './spin/phases/StartPhase.js';
 export type { StartPhaseConfig } from './spin/phases/StartPhase.js';
-export { SpinPhase } from './spin/phases/SpinPhase.js';
 export type { SpinPhaseConfig } from './spin/phases/SpinPhase.js';
-export { StopPhase } from './spin/phases/StopPhase.js';
 export type { StopPhaseConfig } from './spin/phases/StopPhase.js';
-export { AnticipationPhase } from './spin/phases/AnticipationPhase.js';
 export type { AnticipationPhaseConfig } from './spin/phases/AnticipationPhase.js';
-export { AdjustPhase } from './spin/phases/AdjustPhase.js';
 export type { AdjustPhaseConfig } from './spin/phases/AdjustPhase.js';
-// Note: `PinOverlayTween` is intentionally not re-exported. It's an
-// internal hand-off type built by SpinController and consumed by
-// AdjustPhase. consumers don't construct one directly.
 
 // Tumble cascade
 export type { TumbleConfig, TumbleFallConfig, TumbleDropInConfig } from './cascade/TumbleConfig.js';
 export type { Cell, DropOffset } from './cascade/tumbleAlgorithm.js';
 export { computeDropOffsets } from './cascade/tumbleAlgorithm.js';
-export { CascadeFallPhase } from './spin/phases/CascadeFallPhase.js';
 export type { CascadeFallPhaseConfig } from './spin/phases/CascadeFallPhase.js';
-export { CascadePlacePhase } from './spin/phases/CascadePlacePhase.js';
 export type { CascadePlacePhaseConfig } from './spin/phases/CascadePlacePhase.js';
-export { CascadeDropInPhase } from './spin/phases/CascadeDropInPhase.js';
 export type { CascadeDropInPhaseConfig } from './spin/phases/CascadeDropInPhase.js';
 
 // Spinning modes
@@ -114,6 +110,8 @@ export type { FrameAPI } from './core/ReelSet.js';
 // option objects around or extend them for engine-on-engine adapters.
 export type {
   DestroySymbolsOptions,
+  RefillOptions,
+  RefillResult,
   RunCascadeOptions,
   RunCascadeResult,
 } from './core/ReelSet.js';
@@ -147,14 +145,6 @@ export type {
   StartRecordingOptions,
 } from './debug/debug.js';
 
-// Testing utilities (tree-shakeable)
-export {
-  FakeTicker,
-  HeadlessSymbol,
-  createTestReelSet,
-  spinAndLand,
-  captureEvents,
-  expectGrid,
-  countSymbol,
-} from './testing/index.js';
-export type { TestReelSetOptions, TestReelSetHandle } from './testing/index.js';
+// Testing utilities ship at the `pixi-reels/testing` subpath. Importing
+// from there keeps the headless harness out of production bundles even
+// when the consumer's tree-shaker can't prove it's dead code.

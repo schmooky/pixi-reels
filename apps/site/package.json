@@ -5,9 +5,12 @@
   "scripts": {
     "sync-assets": "node -e \"const fs=require('fs');fs.cpSync('../../examples/assets/prototype-symbols','public/prototype-symbols',{recursive:true});fs.mkdirSync('src/generated',{recursive:true});fs.copyFileSync('../../packages/pixi-reels/CHANGELOG.md','src/generated/CHANGELOG.md');\"",
     "llms:gen": "node scripts/build-llms.mjs",
-    "predev": "pnpm sync-assets && pnpm llms:gen",
-    "prebuild": "pnpm sync-assets && pnpm llms:gen",
-    "prepreview": "pnpm sync-assets && pnpm llms:gen",
+    "api:gen": "typedoc && node scripts/postprocess-api.mjs",
+    "api:check-sync": "node scripts/check-api-sync.mjs",
+    "og:render": "node scripts/render-og.mjs",
+    "predev": "pnpm sync-assets && pnpm llms:gen && pnpm api:gen && pnpm og:render",
+    "prebuild": "pnpm sync-assets && pnpm llms:gen && pnpm api:gen && pnpm og:render",
+    "prepreview": "pnpm sync-assets && pnpm llms:gen && pnpm api:gen && pnpm og:render",
     "dev": "astro dev",
     "start": "astro dev",
     "build": "astro build && pagefind --site dist",
@@ -17,7 +20,7 @@
   "dependencies": {
     "@astrojs/mdx": "^5.0.3",
     "@astrojs/react": "^5.0.3",
-    "@esotericsoftware/spine-pixi-v8": "^4.2.110",
+    "@esotericsoftware/spine-pixi-v8": "~4.2.110",
     "@monaco-editor/react": "^4.7.0",
     "@radix-ui/react-collapsible": "^1.1.12",
     "@radix-ui/react-separator": "^1.1.8",
@@ -31,6 +34,7 @@
     "clsx": "^2.1.1",
     "gsap": "^3.15.0",
     "lucide-react": "^1.8.0",
+    "mermaid": "^11.15.0",
     "pixi-reels": "workspace:*",
     "pixi.js": "^8.18.1",
     "react": "^19.2.5",
@@ -43,7 +47,10 @@
   "devDependencies": {
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
-    "pagefind": "^1.4.0",
+    "pagefind": "^1.5.2",
+    "sharp": "^0.34.5",
+    "typedoc": "^0.28.19",
+    "typedoc-plugin-markdown": "^4.11.0",
     "typescript": "^6.0.3"
   }
 }

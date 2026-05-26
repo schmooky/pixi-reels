@@ -4,6 +4,7 @@ import Hero from '../components/Hero.astro';
 import FeatureGrid from '../components/FeatureGrid.astro';
 import CodeShowcase from '../components/CodeShowcase.astro';
 import DemoCallout from '../components/DemoCallout.astro';
+import Partners from '../components/Partners.astro';
 import FAQ from '../components/FAQ.astro';
 import {
   SITE,
@@ -43,6 +44,10 @@ const jsonLd = [
   <FeatureGrid />
   <CodeShowcase />
   <DemoCallout />
+  {/* Partners section disabled for 1.0 launch. The component, content
+      registry, and partner issue template stay so re-enabling is a one-
+      line change once we have more than one studio to list. */}
+  {/* <Partners /> */}
   <FAQ />
 
   <section class="pb-24">

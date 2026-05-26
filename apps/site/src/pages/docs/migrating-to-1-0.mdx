@@ -2,10 +2,10 @@
 layout: ../../layouts/Docs.astro
 title: Migrating to 1.0.0
 section: docs
-description: Mechanical changes to move from 0.x to 1.0.0.
+description: Mechanical changes to move from 0.x to 1.0.0. Every breaking change with a before and after.
 ---
 
-A list of every breaking change in 1.0.0 with a before and after snippet. Each section is mechanical: find the pattern, apply the rewrite.
+A list of every breaking change in 1.0.0 with a before and after snippet. Each section is mechanical: find the pattern, apply the rewrite. The page is intentionally greppable. every pre-1.0 pattern appears verbatim in a `Before` code block so a `git grep skip()` or `git grep visibleSymbols` in your repo lands on the matching rewrite here.
 
 ## visibleSymbols is gone
 
@@ -14,9 +14,10 @@ The deprecated `visibleSymbols` builder setter (an alias of `visibleRows`) is re
 Before:
 
 ```ts
+// Pre-1.0 code. .visibleSymbols(3) is removed in 1.0.
 builder
   .reels(5)
-  .visibleRows(3); // pre-1.0 also accepted the deprecated alias here
+  .visibleSymbols(3);
 ```
 
 After:
@@ -33,12 +34,12 @@ Before (legacy form with a buffer-above prefill):
 
 ```ts
 // Pre-1.0 code. Will not type-check against 1.0.
-const grid = [
+const grid: string[][] = [
   ['A', 'B', 'C'],
   ['A', 'B', 'C'],
 ];
-// Buffer-above slot 0 was set via negative-index property assignment.
-// (Pattern omitted here so this page passes the legacy-form sweep.)
+// Buffer-above slot 0 was set via negative-index property assignment:
+(grid[1] as any)[-1] = 'COIN';
 reelSet.setResult(grid);
 ```
 
@@ -77,6 +78,35 @@ Eight types and classes are no longer re-exported from `pixi-reels`. They remain
 
 If you imported any of these from `pixi-reels`, remove the import. If you genuinely need the internal, import from the source path directly (acknowledging that internals can change without a major bump).
 
+## SpinController and the built-in phase classes are hidden
+
+`SpinController`, `SpinControllerHooks`, and the built-in phase classes (`StartPhase`, `SpinPhase`, `StopPhase`, `AnticipationPhase`, `AdjustPhase`, `CascadeFallPhase`, `CascadePlacePhase`, `CascadeDropInPhase`) are no longer exported. Consumers never construct a `SpinController` directly. it's wired by `ReelSet`. and custom phases extend `ReelPhase` rather than the built-ins (the built-ins were not designed for safe subclassing).
+
+The phase Config TYPES stay exported (`StartPhaseConfig`, `SpinPhaseConfig`, etc.) as stable shape descriptions.
+
+Before:
+
+```ts
+// Pre-1.0 code. Removed in 1.0.
+import { SpinController, StartPhase, SpinPhase } from 'pixi-reels';
+
+class MyStartPhase extends StartPhase {
+  // ...
+}
+```
+
+After:
+
+```ts
+import { ReelPhase, type StartPhaseConfig } from 'pixi-reels';
+
+class MyStartPhase extends ReelPhase<StartPhaseConfig> {
+  // ...
+}
+
+builder.phases((f) => f.register('start', MyStartPhase));
+```
+
 ## Internal-leaking methods lost their leading underscore
 
 Three methods on `Reel` and `ReelSet` were called across files via the underscore convention. They are renamed to match how they are reached, with JSDoc that documents the call sites.
@@ -87,7 +117,20 @@ Three methods on `Reel` and `ReelSet` were called across files via the underscor
 | `ReelSet._peekTargetShape()` | `ReelSet.peekTargetShape()` |
 | `ReelSet._clearTargetShape()` | `ReelSet.clearTargetShape()` |
 
-Consumers should not call these directly. They are documented as internal in JSDoc. The rename is purely so the name matches the cross-file call.
+Consumers should not call these directly. They are marked `@internal` and stripped from the published `.d.ts` (see next section).
+
+## Internal methods stripped from .d.ts (`stripInternal`)
+
+`tsconfig.json` now has `"stripInternal": true`. Methods marked `@internal` in JSDoc remain in the runtime JS (so cross-file internal callers still work) but are absent from the published `.d.ts`. TypeScript consumers no longer see them on autocomplete.
+
+Affected methods on `Reel`:
+
+- `setStopFrame`, `setCrossReelResolver`, `getAnchorRow`, `notifySpinStart`, `notifySpinEnd`, `notifyLanded`, `snapToGrid`, `reshape`.
+
+If your code typechecked against `Reel.reshape(...)` or any of the above, switch to the public alternative:
+
+- For reshape: `reelSet.setShape([...])`. it gates on a MultiWays slot and migrates pins atomically.
+- For grid inspection: `reelSet.getVisibleGrid()`, `reelSet.getSymbolFootprint()`, `reelSet.getBlockBounds()`.
 
 ## skip is now skipSpin
 
@@ -96,8 +139,8 @@ Consumers should not call these directly. They are documented as internal in JSD
 Before:
 
 ```ts
-// Pre-1.0: every callsite used the old name.
-// See the API reference for the new name.
+// Pre-1.0 code. reelSet.skip() is removed in 1.0.
+reelSet.skip();
 ```
 
 After:
@@ -113,6 +156,68 @@ reelSet.skipSpin();   // Round-aware spin land. Applies the boost / auto-slam si
 reelSet.skipNudge();  // Fast-forward an in-flight nudge() to its landed position.
 reelSet.slamStop();   // Unconditional land-now. No boost. For tests, anti-cheat.
 ```
+
+## refill() returns RefillResult, accepts a signal
+
+`reelSet.refill()` now takes a typed `RefillOptions` object and returns a typed `RefillResult` (mirroring `runCascade`'s shape) instead of the misnamed `SpinResult`. The shape change is purely additive at the call boundary (existing callers that discard the return value keep working).
+
+Before:
+
+```ts
+// Pre-1.0. refill returned SpinResult.
+const result: SpinResult = await reelSet.refill({ winners, grid });
+console.log(result.symbols); // string[][]
+```
+
+After:
+
+```ts
+import type { RefillOptions, RefillResult } from 'pixi-reels';
+
+const result: RefillResult = await reelSet.refill({
+  winners,
+  grid,
+  signal: ac.signal, // new: abort mid-refill, the await unblocks immediately
+});
+console.log(result.finalGrid, result.winnersRefilled, result.wasSkipped);
+```
+
+The new fields (`winnersRefilled`, `finalGrid`, `wasSkipped`, `duration`) match `RunCascadeResult`. one stage's worth.
+
+## Testing utilities moved to pixi-reels/testing
+
+The headless harness is now a separate subpath export so production bundles never pull it in, even with imperfect tree-shaking.
+
+Before:
+
+```ts
+// Pre-1.0. Removed from the main entry in 1.0.
+import {
+  createTestReelSet,
+  FakeTicker,
+  HeadlessSymbol,
+  spinAndLand,
+  captureEvents,
+  expectGrid,
+  countSymbol,
+} from 'pixi-reels';
+```
+
+After:
+
+```ts
+import {
+  createTestReelSet,
+  FakeTicker,
+  HeadlessSymbol,
+  spinAndLand,
+  captureEvents,
+  expectGrid,
+  countSymbol,
+} from 'pixi-reels/testing';
+```
+
+The types (`TestReelSetOptions`, `TestReelSetHandle`) move with them. The Spine subpath (`pixi-reels/spine`) is unchanged.
 
 ## Concurrent calls during nudge() now throw
 
@@ -138,3 +243,7 @@ If you have UI code that allows the player to press spin during a nudge, route t
 ## symbol:recycled event removed
 
 The `'symbol:recycled'` field on the per-`Reel` `ReelEvents` interface is removed. It was never emitted by any code path. If you had a listener registered for it, delete the listener.
+
+## /guides/spine-pins/ renamed to /guides/pins/
+
+The pin primitive is general (works with `SpriteSymbol`, `AnimatedSpriteSymbol`, `SpineSymbol`, or any subclass of `ReelSymbol`); the old URL is misleading. The new canonical URL is `/guides/pins/`. The site emits a permanent redirect from the old path, so existing bookmarks keep working.

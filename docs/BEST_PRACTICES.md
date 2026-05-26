@@ -269,4 +269,4 @@ If a class you're writing holds resources, implement `Disposable` and hook into 
 
 - [ADR 007. Scope](./adr/007-scope.md) is mandatory reading before proposing a feature.
 - [`AGENTS.md`](../AGENTS.md) at the repo root is the contributor / AI-agent guide.
-- The site at [pixi-reels.dev](https://pixi-reels.dev) has a `/recipes/` cookbook and an `/architecture/` visual deep-dive.
+- The site at [pixi-reels.schmooky.dev](https://pixi-reels.schmooky.dev) has a `/recipes/` cookbook and an `/architecture/` visual deep-dive.

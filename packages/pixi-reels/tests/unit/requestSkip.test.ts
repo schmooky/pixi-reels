@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createTestReelSet, expectGrid } from '../../src/index.js';
+import { createTestReelSet, expectGrid } from '../../src/testing/index.js';
 
 describe('ReelSet.requestSkip. pre-result-safe slam-stop', () => {
   it('queues until setResult and lands on the target grid (not buffer)', async () => {

@@ -8,7 +8,7 @@ Site: https://pixi-reels.schmooky.dev
 Repo: https://github.com/schmooky/pixi-reels
 Package: https://www.npmjs.com/package/pixi-reels
 
-Generated: 2026-05-22T18:00:41.459Z
+Generated: 2026-05-26T10:30:50.055Z
 
 ## Quick start
 
@@ -73,6 +73,10 @@ Push a reel down or up by one or more positions after it has stopped, revealing 
 URL: https://pixi-reels.schmooky.dev/guides/per-reel-geometry/
 Each reel can have its own row count, cell height, and offset. Covers static pyramid layouts, the mask strategy that clips them cleanly, and how this interacts with MultiWays and big symbols (which have their own guides).
 
+### Pins
+URL: https://pixi-reels.schmooky.dev/guides/pins/
+CellPin is the cell-persistence primitive. It survives spins, migrates on reshape, and works with any ReelSymbol subclass. This guide covers lifecycle, events, movePin, and Spine-specific animation hooks.
+
 ### Speed modes
 URL: https://pixi-reels.schmooky.dev/guides/speed-modes/
 Normal, turbo, super-turbo. and adding your own.
@@ -80,10 +84,6 @@ Normal, turbo, super-turbo. and adding your own.
 ### Spin lifecycle
 URL: https://pixi-reels.schmooky.dev/guides/spin-lifecycle/
 The full lifecycle of a spin. phases, events, and how to hook in.
-
-### Spine pins + movePin
-URL: https://pixi-reels.schmooky.dev/guides/spine-pins/
-How CellPin and movePin behave when the pinned cell is a Spine skeleton. lifecycle, animation hooks, and a full walking-Spine-wild example.
 
 ### Symbols
 URL: https://pixi-reels.schmooky.dev/guides/symbols/
@@ -125,7 +125,7 @@ Plain-English definitions for every term you will see in pixi-reels docs, code, 
 
 ### Migrating to 1.0.0
 URL: https://pixi-reels.schmooky.dev/docs/migrating-to-1-0/
-Mechanical changes to move from 0.x to 1.0.0.
+Mechanical changes to move from 0.x to 1.0.0. Every breaking change with a before and after.
 
 ## Architecture deep-dives
 

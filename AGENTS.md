@@ -10,7 +10,7 @@ Instructions for AI agents (Claude, Codex, Cursor, etc.) and human contributors 
 
 ```
 packages/pixi-reels/   <- the published library (npm: pixi-reels)
-apps/site/             <- the docs site (pixi-reels.dev, not published)
+apps/site/             <- the docs site (pixi-reels.schmooky.dev, not published)
 examples/              <- three example apps + shared reference code (not published)
 ```
 
@@ -263,7 +263,7 @@ __PIXI_REELS_DEBUG.trace()      // log every domain event as it fires
 ## 10. When in doubt
 
 1. Read the relevant ADR. Index at [`docs/adr/README.md`](./docs/adr/README.md). **ADR 007 (Scope) is mandatory reading.**
-2. Check the site at [pixi-reels.dev](https://pixi-reels.dev). `/architecture/` has visual explainers, `/recipes/` has single-idea how-tos.
+2. Check the site at [pixi-reels.schmooky.dev](https://pixi-reels.schmooky.dev). `/architecture/` has visual explainers, `/recipes/` has single-idea how-tos.
 3. Write a test that reproduces what you're trying to do. If you can't, you probably don't understand the problem yet.
 4. Ask before speculating. Describe what you'd do and why, and wait for a go. Silent guesses are the source of every bad PR.
 

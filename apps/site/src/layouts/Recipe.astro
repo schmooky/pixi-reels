@@ -1,7 +1,7 @@
 ---
 import Base from './Base.astro';
 import { ChevronLeft } from 'lucide-react';
-import { articleLd, howToLd, breadcrumbLd, SITE } from '../lib/seo.ts';
+import { articleLd, howToLd, breadcrumbLd, ogImageForSection, SITE } from '../lib/seo.ts';
 import RealGameVideo from '../components/RealGameVideo.astro';
 
 interface RealGameVideoFrontmatter {
@@ -56,8 +56,8 @@ const jsonLd = [
   description={description}
   path={pathname}
   type="article"
+  image={ogImageForSection('recipes')}
   article={{ section: 'Recipes', tags }}
-  keywords={tags}
   jsonLd={jsonLd}
 >
   <div class="container max-w-[880px] py-10 animate-fade-in">

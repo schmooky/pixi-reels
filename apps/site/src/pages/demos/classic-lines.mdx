@@ -74,7 +74,7 @@ reelSet.events.on('spin:complete', async (result) => {
 ### 4. Force outcomes in tests
 
 ```ts
-import { createTestReelSet } from 'pixi-reels';
+import { createTestReelSet } from 'pixi-reels/testing';
 import { CheatEngine, forceLine } from '@/shared/cheats';
 
 const { reelSet, spinAndLand, destroy } = createTestReelSet({

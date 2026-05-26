@@ -98,6 +98,94 @@ export interface DestroySymbolsOptions {
 export type RunCascadeResult = RunCascadeResultBase;
 
 /**
+ * Options for {@link ReelSet.refill}. The two required fields encode
+ * what just happened (`winners`) and what the next visible state should
+ * be (`grid`). Everything else is timing / cancellation / animation
+ * flavor with sensible defaults.
+ *
+ * Use this directly when you're driving your own cascade loop. For the
+ * common case of "destroy → refill → check → repeat", use
+ * {@link ReelSet.runCascade} instead. it composes refill, destroySymbols,
+ * and win-detection into one call with the same cancellation semantics.
+ */
+export interface RefillOptions {
+  /** Winners that were just destroyed. Their cells will be refilled per gravity. */
+  winners: ReadonlyArray<Cell>;
+  /**
+   * Target grid after refill. Convention: the top `winners.length` rows
+   * per reel are new symbols falling in from above; the rest are
+   * survivors in their original top-to-bottom order. Same contract as
+   * the `nextGrid` callback in `runCascade`.
+   */
+  grid: ColumnTarget[];
+  /**
+   * Pick the refill animation flavor.
+   *
+   *   - `'combined'` (default). survivors and new symbols animate
+   *     together in one drop-in beat. The Sweet Bonanza / Sugar Rush feel.
+   *   - `'gravity-then-drop'`. survivors slide down to fill holes FIRST,
+   *     then a global pause (`gravityHoldMs` + `gravityHold`), then new
+   *     symbols enter from above. Useful when you want a multiplier or
+   *     SFX beat between the two motions.
+   */
+  mode?: 'combined' | 'gravity-then-drop';
+  /**
+   * Fixed wall-clock pause (ms) between the gravity stage and the
+   * drop-in stage. Only applies when `mode === 'gravity-then-drop'`.
+   * Default `250`. Combines via `Promise.all` with `gravityHold` if
+   * both are provided. whichever finishes LAST gates the drop-in.
+   */
+  gravityHoldMs?: number;
+  /**
+   * Promise (or zero-arg factory) gating the drop-in stage. Only
+   * applies when `mode === 'gravity-then-drop'`.
+   *
+   *   - `Promise<void>`. pass an already-in-flight animation / SFX /
+   *     network call's completion handle when you want the drop-in to
+   *     wait for it. The promise is awaited as-is.
+   *   - `() => Promise<void>`. pass a factory when the *side effects*
+   *     of starting the promise should fire AT gravity-end, not at
+   *     refill-start.
+   *
+   * Combines via `Promise.all` with `gravityHoldMs`. pass both to
+   * floor the hold to a minimum wall-clock duration even if the
+   * promise resolves earlier.
+   */
+  gravityHold?: Promise<void> | (() => Promise<void>);
+  /**
+   * Awaitable callback fired AFTER `gravityHoldMs` + `gravityHold` both
+   * resolve, BEFORE the drop-in stage. Only fires when
+   * `mode === 'gravity-then-drop'`. Use for last-mile side effects that
+   * need to read the post-hold state.
+   */
+  onGravityComplete?: () => Promise<void> | void;
+  /**
+   * Abort signal. Aborting mid-refill slams the in-flight animation so
+   * the await unblocks immediately rather than waiting for the drop-in
+   * to finish. The returned promise still resolves normally with
+   * `wasSkipped: true`. Mirrors the abort contract on
+   * {@link RunCascadeOptions.signal} and {@link DestroySymbolsOptions.signal}.
+   */
+  signal?: AbortSignal;
+}
+
+/**
+ * Summary returned by {@link ReelSet.refill}. Symmetric with
+ * {@link RunCascadeResult}. same vocabulary, narrower scope (one stage
+ * vs. the full chain).
+ */
+export interface RefillResult {
+  /** Number of winner cells that were refilled. Equals `winners.length`. */
+  winnersRefilled: number;
+  /** Visible grid after the refill landed. Matches `getVisibleGrid()`. */
+  finalGrid: string[][];
+  /** True if the refill was aborted via `signal` (slammed to land). */
+  wasSkipped: boolean;
+  /** Total refill duration in milliseconds. */
+  duration: number;
+}
+
+/**
  * Options for {@link ReelSet.runCascade}. The two required callbacks
  * (`detectWinners`, `nextGrid`) encode game rules; everything else is
  * timing / cancellation / forwarded-to-destroy plumbing with sensible
@@ -549,59 +637,61 @@ export class ReelSet extends Container implements Disposable {
    * survivors in their original top-to-bottom order. This matches what
    * server-side gravity simulations emit.
    *
-   * Resolves with the same `SpinResult` shape as `spin()`. Requires the
-   * builder to have been configured with `.tumble(...)`.
+   * Resolves with a {@link RefillResult} (mirror of {@link RunCascadeResult}.
+   * one stage's worth). Requires the builder to have been configured with
+   * `.tumble(...)`.
+   *
+   * For the common destroy → refill → check → repeat loop, prefer
+   * {@link ReelSet.runCascade}. it composes refill, destroySymbols, and
+   * win-detection with the same cancellation semantics.
    *
    * @example
    * const winners = detectWins(currentGrid);
    * await reelSet.destroySymbols(winners);
    * const next = await server.cascade(winners);
-   * await reelSet.refill({ winners, grid: next });
+   * const result = await reelSet.refill({ winners, grid: next });
+   * console.log(result.finalGrid, result.wasSkipped);
+   *
+   * @example
+   * // Abort mid-refill: slams the in-flight animation, resolves with wasSkipped.
+   * const ac = new AbortController();
+   * skipButton.onclick = () => ac.abort();
+   * const result = await reelSet.refill({
+   *   winners, grid: next, signal: ac.signal,
+   * });
    */
-  async refill(opts: {
-    winners: ReadonlyArray<Cell>;
-    grid: ColumnTarget[];
-    /**
-     * Pick the refill animation flavor. See `RunCascadeOptions.refillMode`
-     * for the full description; the same modes apply here when you drive
-     * the cascade loop yourself.
-     */
-    mode?: 'combined' | 'gravity-then-drop';
-    /**
-     * Fixed wall-clock pause (ms) between the gravity stage and the
-     * drop-in stage. Only applies when `mode === 'gravity-then-drop'`.
-     * Default `250`. Combines via `Promise.all` with `gravityHold` if
-     * both are provided. whichever finishes LAST gates the drop-in.
-     */
-    gravityHoldMs?: number;
-    /**
-     * Promise (or zero-arg factory) gating the drop-in stage. Only
-     * applies when `mode === 'gravity-then-drop'`.
-     *
-     *   - `Promise<void>`. pass an already-in-flight animation / SFX /
-     *     network call's completion handle when you want the drop-in to
-     *     wait for it. The promise is awaited as-is.
-     *   - `() => Promise<void>`. pass a factory when the *side effects*
-     *     of starting the promise (a `multiplier.bumpTo()`, a Spine
-     *     track switch, an SFX cue) should fire AT gravity-end, not at
-     *     refill-start. The engine calls the factory at the gravity-end
-     *     boundary and awaits its returned promise.
-     *
-     * Combines via `Promise.all` with `gravityHoldMs`. pass both to
-     * floor the hold to a minimum wall-clock duration even if the
-     * promise resolves earlier.
-     */
-    gravityHold?: Promise<void> | (() => Promise<void>);
-    /**
-     * Awaitable callback fired AFTER `gravityHoldMs` + `gravityHold` both
-     * resolve, BEFORE the drop-in stage. Only fires when
-     * `mode === 'gravity-then-drop'`. Use for last-mile side effects that
-     * need to read the post-hold state (e.g. snapshot the multiplier
-     * value that finished counting up during the hold).
-     */
-    onGravityComplete?: () => Promise<void> | void;
-  }): Promise<SpinResult> {
-    return this._spinController.refill(opts);
+  async refill(opts: RefillOptions): Promise<RefillResult> {
+    const startTime = performance.now();
+    let wasSkipped = false;
+
+    const onSkip = (): void => { wasSkipped = true; };
+    this._events.on('skip:requested', onSkip);
+
+    const onAbort = (): void => {
+      wasSkipped = true;
+      if (this._spinController.isSpinning) {
+        this._spinController.slamStop();
+      }
+    };
+    if (opts.signal) {
+      if (opts.signal.aborted) onAbort();
+      else opts.signal.addEventListener('abort', onAbort, { once: true });
+    }
+
+    try {
+      const spinResult = await this._spinController.refill(opts);
+      return {
+        winnersRefilled: opts.winners.length,
+        finalGrid: spinResult.symbols,
+        wasSkipped: wasSkipped || spinResult.wasSkipped,
+        duration: performance.now() - startTime,
+      };
+    } finally {
+      this._events.off('skip:requested', onSkip);
+      if (opts.signal) {
+        opts.signal.removeEventListener('abort', onAbort);
+      }
+    }
   }
 
   /**

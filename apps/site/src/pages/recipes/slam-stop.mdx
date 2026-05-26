@@ -75,7 +75,7 @@ spinButton.addEventListener('click', () => {
 ## Test it
 
 ```ts
-import { createTestReelSet, captureEvents } from 'pixi-reels';
+import { createTestReelSet, captureEvents } from 'pixi-reels/testing';
 
 const { reelSet, spinAndLand } = createTestReelSet({ reels: 5, visibleRows: 3, symbolIds: ['a','b','c'] });
 const log = captureEvents(reelSet, ['skip:requested', 'skip:completed', 'spin:complete']);

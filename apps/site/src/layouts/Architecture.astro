@@ -2,7 +2,7 @@
 import Base from './Base.astro';
 import DocsSidebar from '../components/DocsSidebar.astro';
 import { ChevronLeft } from 'lucide-react';
-import { articleLd, breadcrumbLd, SITE } from '../lib/seo.ts';
+import { articleLd, breadcrumbLd, ogImageForSection, SITE } from '../lib/seo.ts';
 import { ARCH_PAGES } from '../content/architectureNav.ts';
 import { WIKI_NAV } from '../content/nav.ts';
 
@@ -46,6 +46,7 @@ const next = currentIdx >= 0 && currentIdx < ARCH_PAGES.length - 1 ? ARCH_PAGES[
   description={description}
   path={pathname}
   type="article"
+  image={ogImageForSection('architecture')}
   article={{ section: 'Architecture' }}
   jsonLd={jsonLd}
 >

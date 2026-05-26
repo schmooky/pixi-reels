@@ -18,7 +18,7 @@ Together they let you write assertions like *"this mechanic produces exactly
 ## 1. Headless reel set
 
 ```ts
-import { createTestReelSet, expectGrid } from 'pixi-reels';
+import { createTestReelSet, expectGrid } from 'pixi-reels/testing';
 
 const { reelSet, spinAndLand, destroy } = createTestReelSet({
   reels: 5,
@@ -95,7 +95,7 @@ const forcePairWild: Cheat = (ctx) => {
 ## 3. Assert events fired correctly
 
 ```ts
-import { captureEvents } from 'pixi-reels';
+import { captureEvents } from 'pixi-reels/testing';
 
 const log = captureEvents(reelSet, ['spin:start', 'spin:complete']);
 await spinAndLand(grid);

@@ -1,6 +1,7 @@
 import type { Filter } from 'pixi.js';
 import { describe, expect, it } from 'vitest';
-import { HeadlessSymbol, SymbolRegistry } from '../../src/index.js';
+import { SymbolRegistry } from '../../src/index.js';
+import { HeadlessSymbol } from '../../src/testing/HeadlessSymbol.js';
 import { SymbolFactory } from '../../src/symbols/SymbolFactory.js';
 
 // Stub. real filters need document/WebGL.

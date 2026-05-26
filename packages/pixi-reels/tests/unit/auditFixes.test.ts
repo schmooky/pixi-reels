@@ -3,7 +3,8 @@ import type { Ticker } from 'pixi.js';
 import { ReelSetBuilder } from '../../src/core/ReelSetBuilder.js';
 import { HeadlessSymbol } from '../../src/testing/HeadlessSymbol.js';
 import { FakeTicker } from '../../src/testing/FakeTicker.js';
-import { SpeedPresets, createTestReelSet } from '../../src/index.js';
+import { SpeedPresets } from '../../src/index.js';
+import { createTestReelSet } from '../../src/testing/index.js';
 import { computeDropOffsets } from '../../src/cascade/tumbleAlgorithm.js';
 import type { Cell, ReelSet } from '../../src/index.js';
 

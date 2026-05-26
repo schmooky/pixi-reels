@@ -21,9 +21,9 @@ export const GUIDES_NAV: NavSection[] = [
     title: 'Building blocks',
     items: [
       { label: 'Symbols', href: '/guides/symbols/' },
-      { label: 'Spine pins + movePin', href: '/guides/spine-pins/' },
+      { label: 'Pins', href: '/guides/pins/' },
       { label: 'Spin lifecycle', href: '/guides/spin-lifecycle/' },
-      { label: 'Cascades. mental model', href: '/guides/cascades/' },
+      { label: 'Cascades', href: '/guides/cascades/' },
       { label: 'Per-reel geometry', href: '/guides/per-reel-geometry/' },
       { label: 'MultiWays', href: '/guides/multiways/' },
       { label: 'Big symbols', href: '/guides/big-symbols/' },
@@ -44,7 +44,7 @@ export const GUIDES_NAV: NavSection[] = [
 
 export const WIKI_NAV: NavSection[] = [
   {
-    title: 'API',
+    title: 'API guides',
     items: [
       { label: 'ReelSet', href: '/docs/api-reelset/' },
       { label: 'Builder', href: '/docs/api-builder/' },
@@ -53,8 +53,10 @@ export const WIKI_NAV: NavSection[] = [
     ],
   },
   {
-    title: 'Reference',
+    title: 'Full reference',
     items: [
+      { label: 'API index (TypeDoc)', href: '/api/' },
+      { label: 'Migrating to 1.0', href: '/docs/migrating-to-1-0/' },
       { label: 'Glossary', href: '/docs/glossary/' },
       { label: 'Changelog', href: '/changelog/' },
     ],

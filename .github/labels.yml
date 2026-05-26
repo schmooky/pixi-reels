@@ -100,6 +100,9 @@
 - name: skip-changelog
   color: ededed
   description: Exclude from release-drafter changelog
+- name: partner
+  color: f97316
+  description: Studio listing request for the landing-page partners grid
 
 # --- Dependabot / automation ---
 - name: dependencies

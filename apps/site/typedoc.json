@@ -1,0 +1,40 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "entryPoints": [
+    "../../packages/pixi-reels/src/index.ts",
+    "../../packages/pixi-reels/src/spine/index.ts",
+    "../../packages/pixi-reels/src/testing/index.ts"
+  ],
+  "entryPointStrategy": "expand",
+  "tsconfig": "../../packages/pixi-reels/tsconfig.json",
+  "out": "src/pages/api",
+  "plugin": ["typedoc-plugin-markdown"],
+  "entryFileName": "index",
+  "readme": "none",
+  "githubPages": false,
+  "hideGenerator": true,
+  "excludePrivate": true,
+  "excludeInternal": true,
+  "excludeExternals": true,
+  "sort": ["alphabetical"],
+  "categorizeByGroup": true,
+  "navigation": {
+    "includeCategories": true,
+    "includeGroups": true
+  },
+  "hidePageHeader": false,
+  "hidePageTitle": false,
+  "hideBreadcrumbs": false,
+  "useCodeBlocks": true,
+  "expandObjects": true,
+  "expandParameters": true,
+  "parametersFormat": "table",
+  "propertiesFormat": "table",
+  "enumMembersFormat": "table",
+  "typeDeclarationFormat": "table",
+  "indexFormat": "table",
+  "fileExtension": ".md",
+  "outputFileStrategy": "modules",
+  "flattenOutputFiles": false,
+  "router": "kind"
+}

@@ -381,7 +381,11 @@ export class Reel implements Disposable {
     }
   }
 
-  /** Set the target frame for stopping. */
+  /**
+   * Set the target frame for stopping.
+   *
+   * @internal Called by SpinController during the stop sequence.
+   */
   setStopFrame(frame: string[]): void {
     this.stopSequencer.setFrame(frame);
   }
@@ -440,7 +444,12 @@ export class Reel implements Disposable {
     return this.symbols[this._bufferAbove + anchorRow];
   }
 
-  /** Wired internally by ReelSet and SymbolSpotlight. Consumers do not call this directly. */
+  /**
+   * Resolve a visible row to its anchor row when a big symbol occupies it.
+   *
+   * @internal Wired by ReelSet and SymbolSpotlight. Consumers should call
+   * `ReelSet.getSymbolFootprint()` or `ReelSet.getBlockBounds()` instead.
+   */
   getAnchorRow(visibleRow: number): number {
     const occ = this._occupancy[visibleRow];
     return occ ? occ.anchorRow : visibleRow;
@@ -461,21 +470,33 @@ export class Reel implements Disposable {
     }
   }
 
-  /** Notify all visible symbols that the reel has started spinning. */
+  /**
+   * Notify all visible symbols that the reel has started spinning.
+   *
+   * @internal Called by SpinController on phase transition.
+   */
   notifySpinStart(): void {
     for (let i = this._bufferAbove; i < this._bufferAbove + this._visibleRows; i++) {
       this.symbols[i].onReelSpinStart();
     }
   }
 
-  /** Notify all visible symbols that the reel is about to stop (just before bounce). */
+  /**
+   * Notify all visible symbols that the reel is about to stop (just before bounce).
+   *
+   * @internal Called by SpinController on phase transition.
+   */
   notifySpinEnd(): void {
     for (let i = this._bufferAbove; i < this._bufferAbove + this._visibleRows; i++) {
       this.symbols[i].onReelSpinEnd();
     }
   }
 
-  /** Notify all visible symbols that the reel has landed on its target. */
+  /**
+   * Notify all visible symbols that the reel has landed on its target.
+   *
+   * @internal Called by SpinController on phase transition.
+   */
   notifyLanded(): void {
     for (let i = this._bufferAbove; i < this._bufferAbove + this._visibleRows; i++) {
       this.symbols[i].onReelLanded();
@@ -485,6 +506,8 @@ export class Reel implements Disposable {
   /**
    * Snap all symbols to grid and finalize big-symbol layout. Called at the
    * end of every stop sequence.
+   *
+   * @internal SpinController and AdjustPhase finalization only.
    */
   snapToGrid(): void {
     this.motion.snapToGrid();

@@ -78,9 +78,9 @@ Two groups of terms are mixed here: **slot vocabulary** (concepts every slot use
 
 **`ReelViewport`**. The clipping and layering container. Holds the mask (so symbols that scroll above/below the visible area don't leak) plus a "promoted" layer where winning symbols get lifted above the mask for a celebration animation.
 
-**`SpinController`**. The brain of a spin. Drives every reel through its lifecycle phases, coordinates `setResult()`, and emits events.
+**Spin controller (internal)**. The brain of a spin. Drives every reel through its lifecycle phases, coordinates `setResult()`, and emits events. Wired by `ReelSet`. consumers never construct one. In 1.0 it is no longer exported from the package entry.
 
-**`ReelPhase`**. A single stage in a reel's life during a spin. pixi-reels ships four: `StartPhase` (wind-up), `SpinPhase` (constant-speed blur), `AnticipationPhase` (optional suspense slow-down), `StopPhase` (decelerate, snap, bounce). Add your own via `PhaseFactory`.
+**`ReelPhase`**. A single stage in a reel's life during a spin. pixi-reels ships built-in phases for wind-up, constant-speed blur, optional anticipation slow-down, and the decelerate-snap-bounce stop. Add your own by extending `ReelPhase` and registering via the `PhaseFactory` callback in `builder.phases(f => f.register('name', MyPhase))`. The built-in phase classes are internal; only the Config TYPES (`StartPhaseConfig`, `SpinPhaseConfig`, etc.) are exported as stable shape descriptions.
 
 **`SpinningMode`**. The big strategy switch that decides what a spin even means. `StandardMode` is the default (each reel runs through the phases independently). `CascadeMode` replaces columns atomically for tumble mechanics. `ImmediateMode` is a no-motion mode for testing.
 
@@ -100,7 +100,13 @@ Two groups of terms are mixed here: **slot vocabulary** (concepts every slot use
 
 **`enableDebug(reelSet)`**. Attaches `window.__PIXI_REELS_DEBUG` with `.log()`, `.snapshot()`, `.grid()`, `.trace()`. the only way to inspect reel state through a `canvas` (including from an AI agent).
 
-**`createTestReelSet`**. The headless harness. Builds a `ReelSet` with a `FakeTicker` + `HeadlessSymbol` so you can run a full spin lifecycle in Node, with no DOM or canvas, and assert on the final grid.
+**`CellPin`**. The cell-persistence primitive. Lock a symbol id to a cell with `reelSet.pin(col, row, id)`; the engine acquires an overlay during spin, migrates the cell on reshape, and supports an animated `movePin(from, to)` tween. Works with any `ReelSymbol` subclass. The pin primitive is general, not Spine-specific.
+
+**`RefillOptions` / `RefillResult`**. The typed pair around `reelSet.refill(opts)`. Pass `{ winners, grid, mode?, signal? }`; receive `{ winnersRefilled, finalGrid, wasSkipped, duration }`. Mirrors the shape of `RunCascadeOptions` / `RunCascadeResult` so the cascade-loop primitives compose cleanly.
+
+**`RunCascadeOptions` / `RunCascadeResult`**. The pair around `reelSet.runCascade(opts)`. The two required callbacks (`detectWinners`, `nextGrid`) encode game rules; the result reports `chainLength`, `totalWinners`, `finalGrid`, and `wasSkipped`. `signal: AbortSignal` lets the caller slam mid-chain.
+
+**`createTestReelSet`**. The headless harness. Builds a `ReelSet` with a `FakeTicker` + `HeadlessSymbol` so you can run a full spin lifecycle in Node, with no DOM or canvas, and assert on the final grid. In 1.0 it ships at the `pixi-reels/testing` subpath so the harness drops out of production bundles.
 
 **`CheatEngine` (examples)**. Deterministic outcome generator used by demos and tests. Lives in `examples/shared/`, not in the library. ADR 009 covers why.
 

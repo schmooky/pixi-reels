@@ -17,7 +17,7 @@ Install:
 pnpm add pixi-reels pixi.js gsap
 ```
 
-Docs and recipes at [pixi-reels.dev](https://pixi-reels.dev). Agent-facing instructions are in [AGENTS.md](./AGENTS.md).
+Docs and recipes at [pixi-reels.schmooky.dev](https://pixi-reels.schmooky.dev). Agent-facing instructions are in [AGENTS.md](./AGENTS.md).
 
 ## Quick start
 
@@ -66,7 +66,7 @@ reelSet.events.on('spin:reelLanded', (i, s) => {/* ... */})
 reelSet.destroy()                               // Full teardown
 ```
 
-See [docs/api-reelset/](https://pixi-reels.dev/docs/api-reelset/) for the full reference and [docs/migrating-to-1-0/](https://pixi-reels.dev/docs/migrating-to-1-0/) for the breaking-change list.
+See [/api/](https://pixi-reels.schmooky.dev/api/) for the full TypeDoc reference and [docs/migrating-to-1-0/](https://pixi-reels.schmooky.dev/docs/migrating-to-1-0/) for the breaking-change list.
 
 ## Spine symbols (optional subpath)
 

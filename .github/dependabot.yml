@@ -31,10 +31,18 @@ updates:
           - minor
           - patch
     ignore:
-      # Pinned intentionally - bump these deliberately.
+      # Pinned intentionally - bump these deliberately. The package.json
+      # ranges also enforce the pin: spine uses '~4.2.110' (locked to
+      # 4.2.x patches; 4.3.x is a breaking API change), pixi.js and gsap
+      # use '^' but the ignore here keeps the bot from opening PRs.
       - dependency-name: '@esotericsoftware/spine-pixi-v8'
       - dependency-name: 'pixi.js'
       - dependency-name: 'gsap'
+      # Vite 8.0.10+ rolldown bindings break @tailwindcss/vite and astro 6.x.
+      # Pinned to 8.0.9 via package.json ranges. Revisit when astro and
+      # tailwind catch up.
+      - dependency-name: 'vite'
+        versions: ['>= 8.0.10']
 
   # GitHub Actions workflows under .github/workflows
   - package-ecosystem: github-actions

@@ -15,7 +15,12 @@
     "./spine": {
       "import": "./dist/spine.js",
       "require": "./dist/spine.cjs",
-      "types": "./dist/spine.d.ts"
+      "types": "./dist/spine/index.d.ts"
+    },
+    "./testing": {
+      "import": "./dist/testing.js",
+      "require": "./dist/testing.cjs",
+      "types": "./dist/testing/index.d.ts"
     }
   },
   "files": [
@@ -38,7 +43,7 @@
     "lint": "eslint src/"
   },
   "peerDependencies": {
-    "@esotericsoftware/spine-pixi-v8": "^4.2.110",
+    "@esotericsoftware/spine-pixi-v8": "~4.2.110",
     "gsap": "^3.15.0",
     "pixi.js": "^8.18.1"
   },
@@ -48,13 +53,13 @@
     }
   },
   "devDependencies": {
-    "@esotericsoftware/spine-pixi-v8": "^4.2.110",
+    "@esotericsoftware/spine-pixi-v8": "~4.2.110",
     "gsap": "^3.15.0",
     "pixi.js": "^8.18.1",
     "typescript": "^6.0.3",
     "vite": "^8.0.9",
     "vite-plugin-dts": "^4.5.4",
-    "vitest": "^4.1.4"
+    "vitest": "^4.1.7"
   },
   "license": "MIT",
   "author": "schmooky",

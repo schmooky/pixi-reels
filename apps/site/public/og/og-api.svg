@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fff7ec"/>
+      <stop offset="1" stop-color="#ffe6cc"/>
+    </linearGradient>
+    <linearGradient id="orange" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f97316"/>
+      <stop offset="1" stop-color="#ffa436"/>
+    </linearGradient>
+    <pattern id="grid" width="36" height="36" patternUnits="userSpaceOnUse">
+      <path d="M 36 0 L 0 0 0 36" fill="none" stroke="#f4cfa3" stroke-width="1" opacity="0.6"/>
+    </pattern>
+    <filter id="softShadow"><feGaussianBlur in="SourceAlpha" stdDeviation="6"/><feOffset dx="0" dy="6"/><feComponentTransfer><feFuncA type="linear" slope="0.18"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect width="1200" height="630" fill="url(#grid)"/>
+
+  <g transform="translate(80,120)">
+    <g>
+      <rect x="-12" y="-44" width="120" height="38" rx="19" fill="#f97316" opacity="0.14"/>
+      <text x="48" y="-17" text-anchor="middle" font-family="ui-monospace,monospace" font-size="14" font-weight="700" fill="#c2410c" letter-spacing="2.5">API · 1.0</text>
+    </g>
+    <text x="0" y="72" font-family="Inter,system-ui,sans-serif" font-size="100" font-weight="700" fill="#1c1410" letter-spacing="-3">Every public API,</text>
+    <text x="0" y="186" font-family="Inter,system-ui,sans-serif" font-size="100" font-weight="700" fill="url(#orange)" letter-spacing="-3">searchable.</text>
+    <text x="0" y="256" font-family="Inter,system-ui,sans-serif" font-size="28" font-weight="400" fill="#5a4a3c">Auto-generated from JSDoc. 113 exports, every method,</text>
+    <text x="0" y="296" font-family="Inter,system-ui,sans-serif" font-size="28" font-weight="400" fill="#5a4a3c">every event payload. Full-text search built in.</text>
+    <text x="0" y="396" font-family="ui-monospace,monospace" font-size="18" fill="#8a6a4c">◆ pixi-reels.schmooky.dev/api/</text>
+  </g>
+
+  <!-- Right: code-shaped panel -->
+  <g transform="translate(760,140)" filter="url(#softShadow)">
+    <rect x="0" y="0" width="360" height="350" rx="20" fill="#1c1410"/>
+    <!-- Title strip -->
+    <rect x="0" y="0" width="360" height="40" rx="20" fill="#2a1d15"/>
+    <rect x="0" y="20" width="360" height="20" fill="#2a1d15"/>
+    <circle cx="20" cy="20" r="6" fill="#f97316"/>
+    <circle cx="40" cy="20" r="6" fill="#ffa436"/>
+    <circle cx="60" cy="20" r="6" fill="#ffc766"/>
+    <text x="180" y="26" text-anchor="middle" font-family="ui-monospace,monospace" font-size="12" font-weight="700" fill="#8a6a4c" letter-spacing="1.5">ReelSet.ts</text>
+
+    <g font-family="ui-monospace,monospace" font-size="15" font-weight="500">
+      <text x="20" y="78" fill="#ffa436">class</text>
+      <text x="80" y="78" fill="#fff7ec">ReelSet</text>
+      <text x="180" y="78" fill="#8a6a4c">extends</text>
+      <text x="265" y="78" fill="#fff7ec">Container</text>
+      <text x="345" y="78" fill="#8a6a4c">{</text>
+
+      <text x="40" y="116" fill="#ffc766">spin</text>
+      <text x="78" y="116" fill="#fff7ec">():</text>
+      <text x="110" y="116" fill="#ffa436">Promise</text>
+      <text x="180" y="116" fill="#fff7ec">&lt;</text>
+      <text x="190" y="116" fill="#ffa436">SpinResult</text>
+      <text x="280" y="116" fill="#fff7ec">&gt;</text>
+
+      <text x="40" y="148" fill="#ffc766">setResult</text>
+      <text x="125" y="148" fill="#fff7ec">(g:</text>
+      <text x="160" y="148" fill="#ffa436">ColumnTarget</text>
+      <text x="270" y="148" fill="#fff7ec">[])</text>
+
+      <text x="40" y="180" fill="#ffc766">skipSpin</text>
+      <text x="120" y="180" fill="#fff7ec">()</text>
+
+      <text x="40" y="212" fill="#ffc766">pin</text>
+      <text x="70" y="212" fill="#fff7ec">(col, row, id):</text>
+      <text x="218" y="212" fill="#ffa436">CellPin</text>
+
+      <text x="40" y="244" fill="#ffc766">refill</text>
+      <text x="92" y="244" fill="#fff7ec">(o:</text>
+      <text x="128" y="244" fill="#ffa436">RefillOptions</text>
+      <text x="248" y="244" fill="#fff7ec">):</text>
+      <text x="272" y="244" fill="#ffa436">RefillResult</text>
+
+      <text x="40" y="276" fill="#ffc766">runCascade</text>
+      <text x="138" y="276" fill="#fff7ec">(o:</text>
+      <text x="173" y="276" fill="#ffa436">RunCascadeOptions</text>
+      <text x="335" y="276" fill="#fff7ec">)</text>
+
+      <text x="40" y="308" fill="#ffc766">nudge</text>
+      <text x="90" y="308" fill="#fff7ec">(col, opts):</text>
+      <text x="200" y="308" fill="#ffa436">Promise</text>
+      <text x="270" y="308" fill="#fff7ec">&lt;...&gt;</text>
+
+      <text x="20" y="332" fill="#8a6a4c">}</text>
+    </g>
+  </g>
+</svg>
