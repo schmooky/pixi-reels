@@ -166,6 +166,14 @@ jobs:
           # uses its built-in default (registry.npmjs.org) and has no
           # token, so OIDC trusted publishing kicks in.
 
+      - name: Upgrade npm to a version that supports OIDC trusted publishing
+        # Node 22 LTS ships with npm 10.x. Trusted publishing was added in
+        # npm 11.5.1. Without this step npm bails with ENEEDAUTH because
+        # the older CLI doesn't even attempt the OIDC handshake.
+        run: |
+          npm install -g npm@latest
+          npm --version
+
       - name: Install
         run: pnpm install --frozen-lockfile
 
