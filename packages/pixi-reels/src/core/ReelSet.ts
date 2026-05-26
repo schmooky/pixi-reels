@@ -49,17 +49,11 @@ export interface FrameAPI {
 
 /**
  * Options for {@link ReelSet.destroySymbols}. Every field is optional;
- * the defaults produce the canonical "winners disintegrate" look (alternating
- * rotation by column, no stagger, no viewport dim, zIndex bumped to 1000
- * so destroy effects render above neighbouring cells).
+ * the defaults produce the canonical "winners poof" look (no stagger,
+ * no viewport dim, zIndex bumped to 1000 so destroy effects render
+ * above neighbouring cells).
  */
 export interface DestroySymbolsOptions {
-  /**
-   * Per-cell rotation direction. Default: alternates by column
-   * (`reel % 2 === 0 ? 1 : -1`). produces a cohesive cluster pop.
-   * Pass `1` / `-1` to force one direction, or a function for full control.
-   */
-  direction?: 1 | -1 | ((cell: Cell, index: number) => 1 | -1);
   /**
    * Per-cell start delay in seconds. Default `0` (every cell starts together).
    * Pass `(cell, i) => i * 0.03` for a per-cell stagger.
@@ -726,12 +720,6 @@ export class ReelSet extends Container implements Disposable {
   ): Promise<void> {
     if (cells.length === 0) return;
 
-    const resolveDirection = (cell: Cell, i: number): 1 | -1 => {
-      const d = opts?.direction;
-      if (typeof d === 'function') return d(cell, i);
-      if (d === 1 || d === -1) return d;
-      return cell.reel % 2 === 0 ? 1 : -1;
-    };
     const resolveDelay = (cell: Cell, i: number): number => {
       const d = opts?.delay;
       if (typeof d === 'function') return d(cell, i);
@@ -775,7 +763,6 @@ export class ReelSet extends Container implements Disposable {
         const sym = this._reels[cell.reel].getSymbolAt(cell.row);
         if (z !== null) sym.view.zIndex = z;
         return sym.playDestroy({
-          direction: resolveDirection(cell, i),
           delay: resolveDelay(cell, i),
           signal,
         });

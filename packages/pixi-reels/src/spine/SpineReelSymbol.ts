@@ -182,14 +182,13 @@ export class SpineReelSymbol extends ReelSymbol {
    * `out` (disintegration) animation, play it. Otherwise fall back to the
    * base class's GSAP scale-and-fade so a partial skeleton still cascades
    * cleanly. `opts.delay` is honored (seconds, mirrors the GSAP version)
-   * so callers can stagger a winning cluster; `opts.direction` is ignored.
-   * spine animations bake their own rotation curves. `opts.signal` aborts
+   * so callers can stagger a winning cluster. `opts.signal` aborts
    * the (pre-delay or in-flight) animation early. the spine state is
    * snapped to the next track entry and the resolve fires immediately;
    * the view is left at `alpha: 0` for parity with the GSAP fallback so
    * the destroyed pose is consistent across symbol kinds.
    */
-  override async playDestroy(opts?: { direction?: 1 | -1; delay?: number; signal?: AbortSignal }): Promise<void> {
+  override async playDestroy(opts?: { delay?: number; signal?: AbortSignal }): Promise<void> {
     const outName = this._animNameFor('out');
     const hasOut = !!this._currentSpine?.skeleton.data.findAnimation(outName);
     if (!hasOut) return super.playDestroy(opts);

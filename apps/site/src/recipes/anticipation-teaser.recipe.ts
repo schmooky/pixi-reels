@@ -51,7 +51,12 @@ return {
     const p = reelSet.spin();
     await new Promise((r) => setTimeout(r, 220));
     reelSet.setAnticipation([3, 4]);
-    reelSet.setResult(result.map((visible) => ({ visible })));
+    // `result` is already ColumnTarget[] (it carries bufferAbove on reels
+    // 3 and 4). Do NOT re-wrap. previous code wrote
+    // `setResult(result.map((visible) => ({ visible })))` which nested each
+    // ColumnTarget inside another visible-only wrapper, silently discarding
+    // bufferAbove and breaking the COIN teaser.
+    reelSet.setResult(result);
     await p;
   },
 };

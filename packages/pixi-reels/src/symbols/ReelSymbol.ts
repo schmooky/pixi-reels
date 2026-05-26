@@ -135,9 +135,12 @@ export abstract class ReelSymbol implements Disposable {
    * symbol can swap to a shatter atlas. The promise must resolve when
    * the symbol is no longer visible.
    *
-   * `opts.direction`. rotation direction (`1` or `-1`). Default: random.
-   * For coherent clusters, callers should pass `w.reel % 2 === 0 ? 1 : -1`
-   * (alternate by column) instead of relying on random.
+   * Default animation: a snappy "poof". tiny anticipation pop (~60 ms)
+   * then a fast implode to `scale: 0` + `alpha: 0` (~140 ms), centered on
+   * the symbol's bounds. ~200 ms total. No rotation. designed to read
+   * cleanly under win-cluster pacing without competing with the win
+   * presenter.
+   *
    * `opts.delay`. seconds to wait before the animation starts. Use to
    * stagger a cluster of winners (e.g. `i * 0.015`).
    * `opts.signal`. abort signal. If aborted (now or mid-animation), the
@@ -147,7 +150,7 @@ export abstract class ReelSymbol implements Disposable {
    * method MUST honor the signal or document why they can't (e.g. a Spine
    * `disintegration` track is uninterruptible).
    */
-  async playDestroy(opts?: { direction?: 1 | -1; delay?: number; signal?: AbortSignal }): Promise<void> {
+  async playDestroy(opts?: { delay?: number; signal?: AbortSignal }): Promise<void> {
     const view = this.view;
     // Capture original transform so pool reuse sees a clean state.
     const originalPivotX = view.pivot.x;
@@ -155,7 +158,7 @@ export abstract class ReelSymbol implements Disposable {
     const originalX = view.x;
     const originalY = view.y;
 
-    // Pivot to bounds-center so scale + rotation squish around the visual
+    // Pivot to bounds-center so the scale collapses around the visual
     // centre instead of the view's (0,0) corner. and compensate position
     // so the symbol doesn't visibly jump when the pivot moves.
     const bounds = view.getLocalBounds();
@@ -165,7 +168,6 @@ export abstract class ReelSymbol implements Disposable {
     view.x = originalX + (cx - originalPivotX);
     view.y = originalY + (cy - originalPivotY);
 
-    const dir = opts?.direction ?? (Math.random() < 0.5 ? 1 : -1);
     const delay = opts?.delay ?? 0;
     const signal = opts?.signal;
 
@@ -180,7 +182,6 @@ export abstract class ReelSymbol implements Disposable {
       view.pivot.set(originalPivotX, originalPivotY);
       view.x = originalX;
       view.y = originalY;
-      view.rotation = 0;
       view.scale.set(1, 1);
       view.alpha = 0;
       return;
@@ -192,12 +193,13 @@ export abstract class ReelSymbol implements Disposable {
           if (signal) signal.removeEventListener('abort', onAbort);
           resolve();
         }, delay })
-        // Brief scale-up "charge" so the impending destruction has a beat
-        // of anticipation before the implode.
-        .to(view.scale, { x: 1.25, y: 1.25, duration: 0.08, ease: 'back.out(2.5)' })
-        // Then implode: scale → 0, fade, slight spin.
-        .to(view, { rotation: dir * 0.8, alpha: 0, duration: 0.24, ease: 'power2.in' }, '<+=0.05')
-        .to(view.scale, { x: 0, y: 0, duration: 0.24, ease: 'power2.in' }, '<');
+        // Brief anticipation pop. small upscale, ~60 ms, with overshoot
+        // so the implode reads as a release. No rotation.
+        .to(view.scale, { x: 1.1, y: 1.1, duration: 0.06, ease: 'back.out(2.5)' })
+        // Snap implode. scale -> 0 + alpha -> 0 together, snappy ease-in
+        // so the symbol collapses into the cell centre and is gone.
+        .to(view.scale, { x: 0, y: 0, duration: 0.14, ease: 'power3.in' }, '<+=0.04')
+        .to(view, { alpha: 0, duration: 0.14, ease: 'power3.in' }, '<');
 
       const onAbort = (): void => {
         tl.kill();
@@ -215,7 +217,6 @@ export abstract class ReelSymbol implements Disposable {
     view.pivot.set(originalPivotX, originalPivotY);
     view.x = originalX;
     view.y = originalY;
-    view.rotation = 0;
     view.scale.set(1, 1);
   }
 

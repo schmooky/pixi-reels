@@ -386,7 +386,7 @@ describe('ReelSet.destroySymbols. AbortSignal', () => {
     const elapsed = performance.now() - t0;
 
     // Pre-abort path skips the tween entirely. should complete in <50 ms
-    // even though the default playDestroy timeline is ~320 ms.
+    // even though the default playDestroy timeline is ~200 ms.
     expect(elapsed).toBeLessThan(50);
     expect(reelSet.getReel(0).getSymbolAt(0).view.alpha).toBe(0);
     expect(reelSet.getReel(1).getSymbolAt(1).view.alpha).toBe(0);

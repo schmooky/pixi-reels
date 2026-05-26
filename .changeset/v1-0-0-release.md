@@ -16,6 +16,7 @@ Breaking changes:
 - Rename `ReelSet.skip()` to `ReelSet.skipSpin()` for symmetry with `skipNudge()`.
 - Remove the unused `symbol:recycled` event from `ReelEvents`.
 - Replace the inline-options-object signature of `ReelSet.refill()` with a typed `RefillOptions` interface and a `RefillResult` return type that mirrors `RunCascadeResult`. Adds `signal: AbortSignal` for mid-refill cancellation. The result now exposes `winnersRefilled`, `finalGrid`, `wasSkipped`, and `duration` instead of the previous `SpinResult` shape (which was misnamed for a refill).
+- Remove the `direction` option from `DestroySymbolsOptions` and from `ReelSymbol.playDestroy()`. The default destroy animation is now a pure "poof". a tiny anticipation pop (~60 ms) then a fast scale-to-0 + alpha-to-0 implode (~140 ms), ~200 ms total. No rotation. Subclasses that override `playDestroy` should drop the `direction` parameter from their signature; SpineReelSymbol was already ignoring it.
 - Move the headless testing harness to a dedicated subpath: `import { createTestReelSet, FakeTicker, HeadlessSymbol, spinAndLand, captureEvents, expectGrid, countSymbol } from 'pixi-reels/testing'`. The harness is no longer re-exported from `pixi-reels` so production bundles never pull it in.
 
 Fixes:

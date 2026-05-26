@@ -8,7 +8,7 @@ Site: https://pixi-reels.schmooky.dev
 Repo: https://github.com/schmooky/pixi-reels
 Package: https://www.npmjs.com/package/pixi-reels
 
-Generated: 2026-05-26T17:26:40.140Z
+Generated: 2026-05-26T17:35:09.409Z
 
 ## Quick start
 
@@ -838,7 +838,12 @@ return {
     const p = reelSet.spin();
     await new Promise((r) => setTimeout(r, 220));
     reelSet.setAnticipation([3, 4]);
-    reelSet.setResult(result.map((visible) => ({ visible })));
+    // `result` is already ColumnTarget[] (it carries bufferAbove on reels
+    // 3 and 4). Do NOT re-wrap. previous code wrote
+    // `setResult(result.map((visible) => ({ visible })))` which nested each
+    // ColumnTarget inside another visible-only wrapper, silently discarding
+    // bufferAbove and breaking the COIN teaser.
+    reelSet.setResult(result);
     await p;
   },
 };
