@@ -116,7 +116,7 @@ describe('ReelSet.refill. input validation', () => {
     destroy();
   });
 
-  it('accepts valid input and resolves normally', async () => {
+  it('accepts valid input and resolves with the full RefillResult shape', async () => {
     const { reelSet, destroy } = buildTumbleHarness([
       ['a', 'b', 'c'],
       ['a', 'b', 'c'],
@@ -130,7 +130,84 @@ describe('ReelSet.refill. input validation', () => {
         { visible: ['a', 'b', 'c'] },
       ],
     });
+
+    // Lock in every field of RefillResult so accidental shape changes
+    // surface here, not in a downstream consumer's runtime.
     expect(result.wasSkipped).toBe(false);
+    expect(result.winnersRefilled).toBe(1);
+    expect(result.finalGrid).toEqual([
+      ['d', 'b', 'c'],
+      ['a', 'b', 'c'],
+      ['a', 'b', 'c'],
+    ]);
+    // duration is wall-clock, but it has to be finite, non-negative, and
+    // reflect actual work (not zero from a misread clock).
+    expect(typeof result.duration).toBe('number');
+    expect(Number.isFinite(result.duration)).toBe(true);
+    expect(result.duration).toBeGreaterThanOrEqual(0);
+    // Also confirm the public grid actually moved to the target.
+    expect(reelSet.getVisibleGrid()).toEqual(result.finalGrid);
+    destroy();
+  });
+
+  it('aborts mid-refill via RefillOptions.signal and reports wasSkipped=true', async () => {
+    const { reelSet, destroy } = buildTumbleHarness([
+      ['a', 'b', 'c'],
+      ['a', 'b', 'c'],
+      ['a', 'b', 'c'],
+    ]);
+
+    const controller = new AbortController();
+    // Abort on the next microtask so the refill starts but does not
+    // finish its full animation. The engine should slam to land and
+    // report wasSkipped=true, not hang or reject.
+    queueMicrotask(() => controller.abort());
+
+    const result = await reelSet.refill({
+      winners: [{ reel: 0, row: 0 }],
+      grid: [
+        { visible: ['d', 'b', 'c'] },
+        { visible: ['a', 'b', 'c'] },
+        { visible: ['a', 'b', 'c'] },
+      ],
+      signal: controller.signal,
+    });
+
+    expect(result.wasSkipped).toBe(true);
+    expect(result.winnersRefilled).toBe(1);
+    expect(result.finalGrid).toEqual([
+      ['d', 'b', 'c'],
+      ['a', 'b', 'c'],
+      ['a', 'b', 'c'],
+    ]);
+    // After slam, the engine is idle and the visible grid matches target.
+    expect(reelSet.isSpinning).toBe(false);
+    expect(reelSet.getVisibleGrid()).toEqual(result.finalGrid);
+    destroy();
+  });
+
+  it('honours a pre-aborted signal without running any animation', async () => {
+    const { reelSet, destroy } = buildTumbleHarness([
+      ['a', 'b', 'c'],
+      ['a', 'b', 'c'],
+      ['a', 'b', 'c'],
+    ]);
+
+    const controller = new AbortController();
+    controller.abort();
+
+    const result = await reelSet.refill({
+      winners: [{ reel: 0, row: 0 }],
+      grid: [
+        { visible: ['d', 'b', 'c'] },
+        { visible: ['a', 'b', 'c'] },
+        { visible: ['a', 'b', 'c'] },
+      ],
+      signal: controller.signal,
+    });
+
+    expect(result.wasSkipped).toBe(true);
+    expect(reelSet.isSpinning).toBe(false);
     destroy();
   });
 });
