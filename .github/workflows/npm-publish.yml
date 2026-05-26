@@ -86,7 +86,13 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
-          registry-url: 'https://registry.npmjs.org'
+          # Do NOT set registry-url. setup-node would auto-write an
+          # .npmrc with `_authToken=${NODE_AUTH_TOKEN}` AND export
+          # NODE_AUTH_TOKEN=XXXXX-XXXXX-XXXXX-XXXXX as a placeholder.
+          # npm CLI then treats the placeholder as a real token, skips
+          # OIDC trusted publishing, and 404s. With no registry-url, npm
+          # uses its built-in default (registry.npmjs.org) and has no
+          # token, so OIDC trusted publishing kicks in.
 
       - name: Install
         run: pnpm install --frozen-lockfile
@@ -152,7 +158,13 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
-          registry-url: 'https://registry.npmjs.org'
+          # Do NOT set registry-url. setup-node would auto-write an
+          # .npmrc with `_authToken=${NODE_AUTH_TOKEN}` AND export
+          # NODE_AUTH_TOKEN=XXXXX-XXXXX-XXXXX-XXXXX as a placeholder.
+          # npm CLI then treats the placeholder as a real token, skips
+          # OIDC trusted publishing, and 404s. With no registry-url, npm
+          # uses its built-in default (registry.npmjs.org) and has no
+          # token, so OIDC trusted publishing kicks in.
 
       - name: Install
         run: pnpm install --frozen-lockfile
