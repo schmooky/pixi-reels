@@ -4,7 +4,7 @@
 [![npm downloads](https://img.shields.io/npm/dm/pixi-reels?color=cb3837&logo=npm)](https://www.npmjs.com/package/pixi-reels)
 [![Bundle size](https://img.shields.io/bundlephobia/minzip/pixi-reels?label=gzip)](https://bundlephobia.com/package/pixi-reels)
 [![CI](https://github.com/schmooky/pixi-reels/actions/workflows/ci.yml/badge.svg)](https://github.com/schmooky/pixi-reels/actions/workflows/ci.yml)
-[![Release](https://github.com/schmooky/pixi-reels/actions/workflows/release.yml/badge.svg)](https://github.com/schmooky/pixi-reels/actions/workflows/release.yml)
+[![Release](https://github.com/schmooky/pixi-reels/actions/workflows/npm-publish.yml/badge.svg)](https://github.com/schmooky/pixi-reels/actions/workflows/npm-publish.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](./LICENSE)
 [![PixiJS v8](https://img.shields.io/badge/PixiJS-v8-e91e63)](https://pixijs.com/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)

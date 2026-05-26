@@ -326,18 +326,19 @@ type, what to skip, how internal-dep cascades work.
 
 ### What happens after merge to `main`
 
-1. The release workflow (`.github/workflows/release.yml`) sees a pending
-   `.changeset/*.md` and opens a **"Version Packages"** PR that applies the
-   bumps, regenerates each affected package's `CHANGELOG.md`, and deletes
-   the consumed changeset files.
-2. When a maintainer merges the Version Packages PR, the same workflow runs
-   a second time; this time there are no pending changesets, so it runs
+1. The publish workflow (`.github/workflows/npm-publish.yml`, `release` job)
+   sees a pending `.changeset/*.md` and opens a **"Version Packages"** PR
+   that applies the bumps, regenerates each affected package's
+   `CHANGELOG.md`, and deletes the consumed changeset files.
+2. When a maintainer merges the Version Packages PR, the same job runs a
+   second time; this time there are no pending changesets, so it runs
    `pnpm release` (topological build + `changeset publish`) and publishes
-   every newly-bumped package to npm with signed provenance.
+   every newly-bumped package to npm with signed provenance via OIDC
+   trusted publishing (no NPM_TOKEN secret in the loop).
 
 ### What happens on non-`main` branches
 
-Every push triggers `snapshot.yml` which publishes
+Every push triggers the `snapshot` job in `npm-publish.yml`, which publishes
 `pixi-reels@<base>-<branch-tag>-<sha>` under a per-branch dist-tag. No
 changeset? The script writes a throwaway one for the run and deletes it
 after. Reviewers install your WIP with:

@@ -56,8 +56,8 @@ they should tell the same story.
 
 ## Snapshot releases
 
-Every push to a branch that is **not** `main` triggers
-`.github/workflows/snapshot.yml`, which publishes every publishable package as
+Every push to a branch that is **not** `main` triggers the `snapshot` job
+in `.github/workflows/npm-publish.yml`, which publishes every publishable package as
 `pixi-reels@<base>-<branch-tag>-<sha>` under a per-branch dist-tag. Reviewers
 can install your WIP directly without waiting for a stable release:
 
@@ -75,6 +75,5 @@ A nightly cron also runs at 03:00 UTC against the default branch so the
 ## See also
 
 - [`AGENTS.md`](../AGENTS.md) — full contributor flow and house style rules.
-- [`.github/workflows/release.yml`](../.github/workflows/release.yml) — CI pipeline that runs `changesets/action@v1` on push to `main`.
-- [`.github/workflows/snapshot.yml`](../.github/workflows/snapshot.yml) — snapshot releases from any branch + nightly cron.
+- [`.github/workflows/npm-publish.yml`](../.github/workflows/npm-publish.yml) — unified publish pipeline. `release` job runs `changesets/action@v1` on push to `main`; `snapshot` job handles every other branch + the nightly cron. Both auth to npm via OIDC trusted publishing against the `npm-publish` GitHub Environment.
 - [`commitlint.config.cjs`](../commitlint.config.cjs) — Conventional Commits rule set.
