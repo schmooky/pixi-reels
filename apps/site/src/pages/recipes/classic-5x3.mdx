@@ -16,8 +16,11 @@ apis:
 
 import code from '../../recipes/classic-5x3.recipe.ts?raw';
 import { RecipeRunner } from '../../components/RecipeRunner.tsx';
+import RecipeFrame from '../../components/RecipeFrame.astro';
 
-<RecipeRunner code={code} client:only="react" />
+<RecipeFrame>
+  <RecipeRunner code={code} client:only="react" />
+</RecipeFrame>
 
 A complete working starter for a classic lines slot. Drop this into a Vite + PixiJS app, wire up `loadTextures()`, and you have a live reel set with spotlight-animated line wins.
 

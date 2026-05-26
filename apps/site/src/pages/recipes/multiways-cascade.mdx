@@ -17,8 +17,11 @@ apis:
 
 import code from '../../recipes/multiways-cascade.recipe.ts?raw';
 import { RecipeRunner } from '../../components/RecipeRunner.tsx';
+import RecipeFrame from '../../components/RecipeFrame.astro';
 
-<RecipeRunner code={code} client:only="react" />
+<RecipeFrame>
+  <RecipeRunner code={code} client:only="react" />
+</RecipeFrame>
 
 A slot that varies its shape per spin AND uses cascade-style tumbling on winners. the cascade-Megaways pattern that BTG's *Bonanza* and *Extra Chilli* popularized. The initial landing is a classic strip-spin (so the multiways `AdjustPhase` reshapes the reels between SPIN and STOP); winners then pop, survivors fall, and new symbols drop in from above via `reelSet.runCascade(...)`. The reels never re-spin between tumbles.
 

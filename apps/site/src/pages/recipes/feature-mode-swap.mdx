@@ -17,8 +17,11 @@ apis:
 
 import code from '../../recipes/feature-mode-swap.recipe.ts?raw';
 import { RecipeRunner } from '../../components/RecipeRunner.tsx';
+import RecipeFrame from '../../components/RecipeFrame.astro';
 
-<RecipeRunner code={code} client:only="react" />
+<RecipeFrame>
+  <RecipeRunner code={code} client:only="react" />
+</RecipeFrame>
 
 The base game and the bonus feature usually only differ in strip weighting. More wilds, fewer low-pays, maybe a symbol replacement. In the past, swapping between them meant destroying the `ReelSet` and rebuilding. a lot of work to change a few probabilities.
 

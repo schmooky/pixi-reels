@@ -266,11 +266,13 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
   }
 
   return (
-    <div className="my-5 overflow-hidden rounded-xl border border-border bg-card">
-      <div
-        className="relative flex w-full items-center justify-center bg-background"
-        style={{ height }}
-      >
+    // Outer card frame + my-5 margin are supplied by the surrounding
+    // <RecipeFrame> Astro wrapper so the layout is stable before JS
+    // hydrates. Don't add a duplicate card here.
+    <div
+      className="relative flex w-full items-center justify-center bg-background"
+      style={{ height }}
+    >
         <div
           ref={hostRef}
           className="h-full w-full [&_canvas]:block [&_canvas]:h-full [&_canvas]:w-full"
@@ -312,7 +314,6 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
           <ExternalLink size={10} />
           Studio
         </button>
-      </div>
     </div>
   );
 }

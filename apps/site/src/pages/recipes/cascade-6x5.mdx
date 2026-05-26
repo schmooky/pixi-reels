@@ -19,8 +19,11 @@ apis:
 
 import code from '../../recipes/cascade-6x5.recipe.ts?raw';
 import { RecipeRunner } from '../../components/RecipeRunner.tsx';
+import RecipeFrame from '../../components/RecipeFrame.astro';
 
-<RecipeRunner code={code} client:only="react" />
+<RecipeFrame>
+  <RecipeRunner code={code} client:only="react" />
+</RecipeFrame>
 
 A cascade/tumble slot on the modern API. `.tumble({ fall, dropIn })` replaces the strip-spin mechanic with a drop-in: existing symbols fall off on `spin()` click, new symbols arrive when `setResult` returns. The cascade loop. destroy winners, pause, refill. is owned by **`reelSet.runCascade(...)`**; you supply two callbacks (`detectWinners`, `nextGrid`) that encode the game rules.
 

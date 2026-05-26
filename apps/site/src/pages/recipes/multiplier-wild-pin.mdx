@@ -15,8 +15,11 @@ apis:
 
 import code from '../../recipes/multiplier-wild-pin.recipe.ts?raw';
 import { RecipeRunner } from '../../components/RecipeRunner.tsx';
+import RecipeFrame from '../../components/RecipeFrame.astro';
 
-<RecipeRunner code={code} client:only="react" />
+<RecipeFrame>
+  <RecipeRunner code={code} client:only="react" />
+</RecipeFrame>
 
 `CellPin.payload` carries arbitrary per-instance data alongside the pinned symbol. Multiplier wilds, value-carrying coins, tiered symbols. any "this cell has extra game state" mechanic goes here.
 

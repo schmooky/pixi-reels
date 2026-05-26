@@ -16,8 +16,11 @@ apis:
 
 import code from '../../recipes/nudge-abort.recipe.ts?raw';
 import { RecipeRunner } from '../../components/RecipeRunner.tsx';
+import RecipeFrame from '../../components/RecipeFrame.astro';
 
-<RecipeRunner code={code} client:only="react" />
+<RecipeFrame>
+  <RecipeRunner code={code} client:only="react" />
+</RecipeFrame>
 
 This recipe runs a 2-second nudge with an `AbortController` whose signal
 is wired in. ~700 ms later the controller aborts. the GSAP tween is

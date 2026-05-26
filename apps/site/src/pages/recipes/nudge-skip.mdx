@@ -15,8 +15,11 @@ apis:
 
 import code from '../../recipes/nudge-skip.recipe.ts?raw';
 import { RecipeRunner } from '../../components/RecipeRunner.tsx';
+import RecipeFrame from '../../components/RecipeFrame.astro';
 
-<RecipeRunner code={code} client:only="react" />
+<RecipeFrame>
+  <RecipeRunner code={code} client:only="react" />
+</RecipeFrame>
 
 Skip lands a nudge **immediately**, success path. The `nudge()` promise
 resolves with the new visible column on the next microtask. exactly as

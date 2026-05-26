@@ -17,8 +17,11 @@ apis:
 
 import code from '../../recipes/texture-atlas-symbols.recipe.ts?raw';
 import { RecipeRunner } from '../../components/RecipeRunner.tsx';
+import RecipeFrame from '../../components/RecipeFrame.astro';
 
-<RecipeRunner code={code} client:only="react" />
+<RecipeFrame>
+  <RecipeRunner code={code} client:only="react" />
+</RecipeFrame>
 
 Press Run. watch each symbol swap to its `_blur` variant while spinning, then back to the crisp base texture on land.
 

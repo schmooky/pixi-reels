@@ -16,8 +16,11 @@ apis:
 
 import code from '../../recipes/card-symbol-debug.recipe.ts?raw';
 import { RecipeRunner } from '../../components/RecipeRunner.tsx';
+import RecipeFrame from '../../components/RecipeFrame.astro';
 
-<RecipeRunner code={code} client:only="react" />
+<RecipeFrame>
+  <RecipeRunner code={code} client:only="react" />
+</RecipeFrame>
 
 > **`CardSymbol` is debug scaffolding, not production art.** Real slots ship `SpriteSymbol` / `AnimatedSpriteSymbol` / `SpineSymbol`. This page exists to explain when CardSymbol IS the right tool. and when it isn't.
 

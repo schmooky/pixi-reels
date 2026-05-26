@@ -16,8 +16,11 @@ apis:
 
 import code from '../../recipes/empty-symbol.recipe.ts?raw';
 import { RecipeRunner } from '../../components/RecipeRunner.tsx';
+import RecipeFrame from '../../components/RecipeFrame.astro';
 
-<RecipeRunner code={code} client:only="react" />
+<RecipeFrame>
+  <RecipeRunner code={code} client:only="react" />
+</RecipeFrame>
 
 `EmptySymbol` is a tiny `ReelSymbol` subclass that does the minimum
 required to be a registered symbol. all of its lifecycle hooks are

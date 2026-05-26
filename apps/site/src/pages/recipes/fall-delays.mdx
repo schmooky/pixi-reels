@@ -17,6 +17,7 @@ import subtleCode from '../../recipes/fall-delay-subtle.recipe.ts?raw';
 import anticipationCode from '../../recipes/fall-delay-anticipation.recipe.ts?raw';
 import suspenseCode from '../../recipes/fall-delay-suspense.recipe.ts?raw';
 import { RecipeRunner } from '../../components/RecipeRunner.tsx';
+import RecipeFrame from '../../components/RecipeFrame.astro';
 
 The lead-in is the gap between the player clicking SPIN and the reels visibly starting to fall. It's not a library feature. just an `await new Promise((r) => setTimeout(r, ms))` before `reelSet.spin()` in your handler. But it dramatically changes the slot's perceived pace, and pairing the right lead-in with your spin SFX is the difference between a satisfying click and a button that "doesn't feel like it did anything."
 
@@ -24,7 +25,9 @@ Every canvas below runs the same scripted spin + destruction. Only the `LEAD_IN_
 
 ## 0 ms. instant
 
-<RecipeRunner code={instantCode} client:only="react" />
+<RecipeFrame>
+  <RecipeRunner code={instantCode} client:only="react" />
+</RecipeFrame>
 
 ```ts
 const LEAD_IN_MS = 0;
@@ -41,7 +44,9 @@ The fall starts the same frame the click handler runs. Snappiest possible feel; 
 
 ## 150 ms. subtle
 
-<RecipeRunner code={subtleCode} client:only="react" />
+<RecipeFrame>
+  <RecipeRunner code={subtleCode} client:only="react" />
+</RecipeFrame>
 
 ```ts
 const LEAD_IN_MS = 150;
@@ -51,7 +56,9 @@ Just enough room for a short "tap" SFX to play before the reels move. The pause 
 
 ## 350 ms. anticipation
 
-<RecipeRunner code={anticipationCode} client:only="react" />
+<RecipeFrame>
+  <RecipeRunner code={anticipationCode} client:only="react" />
+</RecipeFrame>
 
 ```ts
 const LEAD_IN_MS = 350;
@@ -61,7 +68,9 @@ A clearly perceived deliberate pause. Room for a full "spin-up" SFX, a button-pr
 
 ## 700 ms. suspense
 
-<RecipeRunner code={suspenseCode} client:only="react" />
+<RecipeFrame>
+  <RecipeRunner code={suspenseCode} client:only="react" />
+</RecipeFrame>
 
 ```ts
 const LEAD_IN_MS = 700;

@@ -1,0 +1,62 @@
+---
+/**
+ * Server-rendered placeholder around `<RecipeRunner client:only="react">`.
+ *
+ * Without this wrapper the React recipe canvas doesn't exist in the DOM
+ * until JS loads and hydrates, so the surrounding doc text shifts down
+ * by ~300 px the moment the bundle arrives. With it: the card frame +
+ * loading skeleton are in the first HTML payload, the layout is stable
+ * from first paint, and the React canvas takes over the same space when
+ * it mounts.
+ *
+ * Pairs with RecipeRunner.tsx which no longer renders its own outer
+ * card or `my-5` margin (this component supplies both). The static
+ * skeleton hides itself via CSS `:has()` the moment the slotted React
+ * component hydrates.
+ *
+ * Usage:
+ *   <RecipeFrame>
+ *     <RecipeRunner code={code} client:only="react" />
+ *   </RecipeFrame>
+ *
+ * Override `height` to match a non-default recipe canvas height; the
+ * placeholder reserves that exact pixel count so React's mount is a
+ * pure content swap, never a layout reflow.
+ */
+
+interface Props {
+  /** Canvas height in px. Must match RecipeRunner's `height` prop. */
+  height?: number;
+}
+const { height = 300 } = Astro.props;
+---
+<div
+  class="recipe-frame relative my-5 overflow-hidden rounded-xl border border-border bg-card"
+  data-recipe-frame
+>
+  <div
+    class="recipe-frame__skeleton relative flex w-full items-center justify-center bg-background"
+    style={`height: ${height}px`}
+  >
+    <div class="flex flex-col items-center gap-3 text-muted-foreground/50">
+      <div
+        class="h-10 w-10 animate-spin rounded-full border-2 border-current border-t-transparent"
+        aria-hidden="true"
+      ></div>
+      <p class="font-mono text-xs uppercase tracking-wider">Loading recipe…</p>
+    </div>
+  </div>
+  <slot />
+</div>
+
+<style>
+  /*
+    Hide the static skeleton the moment <RecipeRunner client:only="react">
+    hydrates. The `astro-island` element gains a non-empty React tree on
+    mount; before that the skeleton fills the reserved space. `:has()` is
+    supported in every browser we care about (95%+ as of 2025).
+  */
+  .recipe-frame:has(astro-island > *) .recipe-frame__skeleton {
+    display: none;
+  }
+</style>

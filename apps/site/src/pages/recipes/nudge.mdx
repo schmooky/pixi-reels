@@ -19,8 +19,11 @@ import code from '../../recipes/nudge.recipe.ts?raw';
 import sequentialCode from '../../recipes/nudge-sequential.recipe.ts?raw';
 import parallelCode from '../../recipes/nudge-parallel.recipe.ts?raw';
 import { RecipeRunner } from '../../components/RecipeRunner.tsx';
+import RecipeFrame from '../../components/RecipeFrame.astro';
 
-<RecipeRunner code={code} client:only="react" />
+<RecipeFrame>
+  <RecipeRunner code={code} client:only="react" />
+</RecipeFrame>
 
 ## The minimum code
 
@@ -91,7 +94,9 @@ other.
 
 ### Sequential. three separate beats
 
-<RecipeRunner code={sequentialCode} client:only="react" />
+<RecipeFrame>
+  <RecipeRunner code={sequentialCode} client:only="react" />
+</RecipeFrame>
 
 ```ts
 for (const col of [1, 2, 3]) {
@@ -111,7 +116,9 @@ fire in order, one after the previous one fully landed.
 
 ### Parallel. one synchronised beat
 
-<RecipeRunner code={parallelCode} client:only="react" />
+<RecipeFrame>
+  <RecipeRunner code={parallelCode} client:only="react" />
+</RecipeFrame>
 
 ```ts
 await Promise.all(

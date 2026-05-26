@@ -16,8 +16,11 @@ apis:
 import code from '../../recipes/nudge-big-symbol.recipe.ts?raw';
 import tailRevealCode from '../../recipes/nudge-tail-reveal.recipe.ts?raw';
 import { RecipeRunner } from '../../components/RecipeRunner.tsx';
+import RecipeFrame from '../../components/RecipeFrame.astro';
 
-<RecipeRunner code={code} client:only="react" />
+<RecipeFrame>
+  <RecipeRunner code={code} client:only="react" />
+</RecipeFrame>
 
 A 1xH block on the target reel is nudged through as a single unit
 provided the rotation keeps the block intact. The engine pre-flights
@@ -58,7 +61,9 @@ A tall wild lands with most of it hidden in bufferAbove. only the
 bottom cell ("the tail") shows at the top of the visible window. The
 player nudges to drag the whole block into view.
 
-<RecipeRunner code={tailRevealCode} client:only="react" />
+<RecipeFrame>
+  <RecipeRunner code={tailRevealCode} client:only="react" />
+</RecipeFrame>
 
 ```ts
 // 1. Land 1x2 MEGA at column 2, rows 0+1 (anchor at row 0).

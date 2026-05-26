@@ -19,8 +19,11 @@ realGameVideo:
 
 import code from '../../recipes/multiways.recipe.ts?raw';
 import { RecipeRunner } from '../../components/RecipeRunner.tsx';
+import RecipeFrame from '../../components/RecipeFrame.astro';
 
-<RecipeRunner code={code} client:only="react" />
+<RecipeFrame>
+  <RecipeRunner code={code} client:only="react" />
+</RecipeFrame>
 
 MultiWays is the engine surface behind any slot where each reel lands on a different number of rows per spin and the total "ways" count is the product of per-reel rows. The setup: a fixed pixel-height per reel column, a configurable `[minRows, maxRows]` range, and `setShape(rowsPerReel)` chosen per spin. The demo above runs **6 reels × 2-7 rows per reel**. for example a `[3, 4, 3, 7, 7, 3]` landing pays as `3 × 4 × 3 × 7 × 7 × 3 = 5,292 ways`. Cell height is derived live (`reelPixelHeight / visibleRows[i]`), so a 2-row reel renders as two huge cells and a 7-row reel renders as seven small ones. Between SPIN and STOP the engine commits the new geometry per reel (resizes the strip's symbols, reshapes the motion layer) and then runs `AdjustPhase` to tween any pin overlays from their old cell to their new cell. the cell symbols themselves snap because they're still spinning at full speed.
 

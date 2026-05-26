@@ -16,8 +16,11 @@ apis:
 
 import code from '../../recipes/sticky-wild-multiways.recipe.ts?raw';
 import { RecipeRunner } from '../../components/RecipeRunner.tsx';
+import RecipeFrame from '../../components/RecipeFrame.astro';
 
-<RecipeRunner code={code} client:only="react" />
+<RecipeFrame>
+  <RecipeRunner code={code} client:only="react" />
+</RecipeFrame>
 
 The combination most studios get wrong: a sticky wild on a MultiWays slot. The naive implementation forgets where the wild was *supposed* to be after a few reshapes. so the wild walks downward as shapes shrink and never finds its way back up.
 

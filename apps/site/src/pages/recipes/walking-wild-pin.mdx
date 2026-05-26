@@ -19,8 +19,11 @@ apis:
 
 import code from '../../recipes/walking-wild-pin.recipe.ts?raw';
 import { RecipeRunner } from '../../components/RecipeRunner.tsx';
+import RecipeFrame from '../../components/RecipeFrame.astro';
 
-<RecipeRunner code={code} client:only="react" />
+<RecipeFrame>
+  <RecipeRunner code={code} client:only="react" />
+</RecipeFrame>
 
 Walking wild done with the engine primitive. No stage-level ghost sprites; the engine reparents a pooled `ReelSymbol` to `viewport.unmaskedContainer` for the flight, tweens it across column boundaries, releases it back to the pool on land, and fires hooks at every transition so you can drive animation state on Spine assets.
 

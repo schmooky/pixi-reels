@@ -14,8 +14,11 @@ apis:
 
 import code from '../../recipes/mystery-reveal-pin.recipe.ts?raw';
 import { RecipeRunner } from '../../components/RecipeRunner.tsx';
+import RecipeFrame from '../../components/RecipeFrame.astro';
 
-<RecipeRunner code={code} client:only="react" />
+<RecipeFrame>
+  <RecipeRunner code={code} client:only="react" />
+</RecipeFrame>
 
 Mystery symbols all flip to the same random class after landing. Book of Oz and Mystery Reels use this. Built with `'eval'` pins. zero manual cleanup.
 

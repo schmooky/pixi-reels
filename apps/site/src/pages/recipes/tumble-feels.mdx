@@ -20,6 +20,7 @@ import slamCode from '../../recipes/tumble-slam.recipe.ts?raw';
 import rainCode from '../../recipes/tumble-rain-column.recipe.ts?raw';
 import waveCode from '../../recipes/tumble-wave.recipe.ts?raw';
 import { RecipeRunner } from '../../components/RecipeRunner.tsx';
+import RecipeFrame from '../../components/RecipeFrame.astro';
 
 Every canvas below runs the **exact same scripted spin**: 6×4 cards land with a pre-wired 3-cluster of `10` on row 2, those three winners fade out, **the loop pauses for a configured beat**, then the cascade refill drops survivors into the holes and brings a fresh row from above. Two things vary between canvases:
 
@@ -28,7 +29,9 @@ Every canvas below runs the **exact same scripted spin**: 6×4 cards land with a
 
 ## Classic. the all-rounder default
 
-<RecipeRunner code={classicCode} client:only="react" />
+<RecipeFrame>
+  <RecipeRunner code={classicCode} client:only="react" />
+</RecipeFrame>
 
 ```ts
 .tumble({
@@ -41,7 +44,9 @@ Gentle gravity fall + soft overshoot landing. `back.out(1.6)` overshoots its tar
 
 ## Cartoon bounce. multi-bounce settle
 
-<RecipeRunner code={bounceCode} client:only="react" />
+<RecipeFrame>
+  <RecipeRunner code={bounceCode} client:only="react" />
+</RecipeFrame>
 
 ```ts
 .tumble({
@@ -54,7 +59,9 @@ Gentle gravity fall + soft overshoot landing. `back.out(1.6)` overshoots its tar
 
 ## Slam. hard-landing, sub-half-second tumble
 
-<RecipeRunner code={slamCode} client:only="react" />
+<RecipeFrame>
+  <RecipeRunner code={slamCode} client:only="react" />
+</RecipeFrame>
 
 ```ts
 .tumble({
@@ -67,7 +74,9 @@ Gentle gravity fall + soft overshoot landing. `back.out(1.6)` overshoots its tar
 
 ## Rain column. board-falls-as-a-slab
 
-<RecipeRunner code={rainCode} client:only="react" />
+<RecipeFrame>
+  <RecipeRunner code={rainCode} client:only="react" />
+</RecipeFrame>
 
 ```ts
 .tumble({
@@ -80,7 +89,9 @@ Gentle gravity fall + soft overshoot landing. `back.out(1.6)` overshoots its tar
 
 ## Wave. rolling top-to-bottom reveal
 
-<RecipeRunner code={waveCode} client:only="react" />
+<RecipeFrame>
+  <RecipeRunner code={waveCode} client:only="react" />
+</RecipeFrame>
 
 ```ts
 .tumble({

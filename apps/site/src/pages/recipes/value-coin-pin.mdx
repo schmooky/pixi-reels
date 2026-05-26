@@ -17,8 +17,11 @@ apis:
 
 import code from '../../recipes/value-coin-pin.recipe.ts?raw';
 import { RecipeRunner } from '../../components/RecipeRunner.tsx';
+import RecipeFrame from '../../components/RecipeFrame.astro';
 
-<RecipeRunner code={code} client:only="react" />
+<RecipeFrame>
+  <RecipeRunner code={code} client:only="react" />
+</RecipeFrame>
 
 The Lightning Link / Dragon Link Hold & Win pattern, built with CellPin. The grid is **not** one 5×3 ReelSet. it's **15 independent 1×1 ReelSets**, one per cell. Each spins on its own, each holds coins on its own, and the CellPin primitive handles the "hold" part.
 

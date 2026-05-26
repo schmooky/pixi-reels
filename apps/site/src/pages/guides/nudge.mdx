@@ -10,6 +10,7 @@ import code from '../../recipes/nudge.recipe.ts?raw';
 import sequentialCode from '../../recipes/nudge-sequential.recipe.ts?raw';
 import parallelCode from '../../recipes/nudge-parallel.recipe.ts?raw';
 import { RecipeRunner } from '../../components/RecipeRunner.tsx';
+import RecipeFrame from '../../components/RecipeFrame.astro';
 
 A **nudge** moves a single reel by a few symbol positions *after* the spin has
 landed, revealing new symbols the caller supplies. Common pattern: land
@@ -30,7 +31,9 @@ That call shifts reel `2` down by one row. The old top row drops to the
 middle, the old middle drops to the bottom, the old bottom symbol leaves the
 visible window, and `'wild'` slides in at the new top.
 
-<RecipeRunner code={code} client:only="react" />
+<RecipeFrame>
+  <RecipeRunner code={code} client:only="react" />
+</RecipeFrame>
 
 ## The contract
 
@@ -103,7 +106,9 @@ output, same events fire, only the pacing changes.
 
 ### Sequential. three separate beats
 
-<RecipeRunner code={sequentialCode} client:only="react" />
+<RecipeFrame>
+  <RecipeRunner code={sequentialCode} client:only="react" />
+</RecipeFrame>
 
 ```ts
 for (const col of [1, 2, 3]) {
@@ -117,7 +122,9 @@ register reel 1's wild before reel 2 even starts. Total wall time =
 
 ### Parallel. one synchronised beat
 
-<RecipeRunner code={parallelCode} client:only="react" />
+<RecipeFrame>
+  <RecipeRunner code={parallelCode} client:only="react" />
+</RecipeFrame>
 
 ```ts
 await Promise.all(

@@ -18,8 +18,11 @@ apis:
 
 import code from '../../recipes/big-symbol-cascade-fall.recipe.ts?raw';
 import { RecipeRunner } from '../../components/RecipeRunner.tsx';
+import RecipeFrame from '../../components/RecipeFrame.astro';
 
-<RecipeRunner code={code} client:only="react" />
+<RecipeFrame>
+  <RecipeRunner code={code} client:only="react" />
+</RecipeFrame>
 
 A tall 1×3 wild lands with most of its body hidden above the visible
 window. only the **tail** shows at row 0. The other reels plant a

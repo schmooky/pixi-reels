@@ -16,8 +16,11 @@ apis:
 
 import code from '../../recipes/spin-then-cascade.recipe.ts?raw';
 import { RecipeRunner } from '../../components/RecipeRunner.tsx';
+import RecipeFrame from '../../components/RecipeFrame.astro';
 
-<RecipeRunner code={code} client:only="react" />
+<RecipeFrame>
+  <RecipeRunner code={code} client:only="react" />
+</RecipeFrame>
 
 A common request: "the first round of the play should feel like a normal slot, but if there's a hit, the winners should pop and new symbols should drop in from above. like a tumble." That's exactly what the demo above does:
 

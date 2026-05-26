@@ -16,8 +16,11 @@ apis:
 
 import code from '../../recipes/symbol-transform.recipe.ts?raw';
 import { RecipeRunner } from '../../components/RecipeRunner.tsx';
+import RecipeFrame from '../../components/RecipeFrame.astro';
 
-<RecipeRunner code={code} client:only="react" />
+<RecipeFrame>
+  <RecipeRunner code={code} client:only="react" />
+</RecipeFrame>
 
 After every spin, a random low-pay cell upgrades to a high-pay symbol with a scale-fade-swap animation.
 

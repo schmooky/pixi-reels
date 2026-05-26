@@ -18,6 +18,7 @@ import simultaneousCode from '../../recipes/refill-simultaneous.recipe.ts?raw';
 import ltrCode from '../../recipes/refill-ltr-wave.recipe.ts?raw';
 import bottomUpCode from '../../recipes/refill-bottom-up.recipe.ts?raw';
 import { RecipeRunner } from '../../components/RecipeRunner.tsx';
+import RecipeFrame from '../../components/RecipeFrame.astro';
 
 Each canvas below runs the same scripted spin: 6×4 cards land left-to-right with a pre-wired 3-cluster of `10` on row 2. The winners go through the same `reelSet.destroySymbols(...)` implode effect. Only the **refill drop-in order** varies between canvases. controlled by `setDropOrder()` on the reel set and `rowStagger` / `rowOrder` on the builder's `.tumble({ dropIn })` config.
 
@@ -25,7 +26,9 @@ The default is **simultaneous**. The other three vary the drop-in order across r
 
 ## Simultaneous. the canonical default
 
-<RecipeRunner code={simultaneousCode} client:only="react" />
+<RecipeFrame>
+  <RecipeRunner code={simultaneousCode} client:only="react" />
+</RecipeFrame>
 
 ```ts
 .tumble({
@@ -40,7 +43,9 @@ No in-reel row stagger (`rowStagger: 0`), no cross-reel delay (`setDropOrder('al
 
 ## Left-to-right wave
 
-<RecipeRunner code={ltrCode} client:only="react" />
+<RecipeFrame>
+  <RecipeRunner code={ltrCode} client:only="react" />
+</RecipeFrame>
 
 ```ts
 .tumble({
@@ -57,7 +62,9 @@ Use when the cascade chain is rare (deep features, bonus rounds) or when the col
 
 ## Bottom-up row arrival
 
-<RecipeRunner code={bottomUpCode} client:only="react" />
+<RecipeFrame>
+  <RecipeRunner code={bottomUpCode} client:only="react" />
+</RecipeFrame>
 
 ```ts
 .tumble({

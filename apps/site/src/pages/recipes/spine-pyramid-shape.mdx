@@ -17,8 +17,11 @@ apis:
 
 import code from '../../recipes/spine-pyramid-shape.recipe.ts?raw';
 import { RecipeRunner } from '../../components/RecipeRunner.tsx';
+import RecipeFrame from '../../components/RecipeFrame.astro';
 
-<RecipeRunner code={code} client:only="react" />
+<RecipeFrame>
+  <RecipeRunner code={code} client:only="react" />
+</RecipeFrame>
 
 Same per-reel static shape as the [CardSymbol pyramid](/recipes/pyramid-shape/), real Spine art on top. The shape is `3-5-5-5-3`: outer reels are 3 rows tall, inner reels are 5 rows. Cell *width* is uniform across reels, but cell *height* differs by reel. the engine sizes each cell so the reel's pixel column adds up to the same height. With sprite art that means the outer reels stretch their textures vertically; with Spine each rig redraws at the cell's actual size, so the outer cells stay crisp.
 

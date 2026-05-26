@@ -15,8 +15,11 @@ apis:
 
 import code from '../../recipes/cell-hit-areas.recipe.ts?raw';
 import { RecipeRunner } from '../../components/RecipeRunner.tsx';
+import RecipeFrame from '../../components/RecipeFrame.astro';
 
-<RecipeRunner code={code} client:only="react" />
+<RecipeFrame>
+  <RecipeRunner code={code} client:only="react" />
+</RecipeFrame>
 
 Hover a cell. cursor turns into a pointer and a grey outline appears. Click to pick; click again to unpick. Picks survive spins.
 

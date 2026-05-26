@@ -16,8 +16,11 @@ apis:
 
 import code from '../../recipes/positional-multiplier-pin.recipe.ts?raw';
 import { RecipeRunner } from '../../components/RecipeRunner.tsx';
+import RecipeFrame from '../../components/RecipeFrame.astro';
 
-<RecipeRunner code={code} client:only="react" />
+<RecipeFrame>
+  <RecipeRunner code={code} client:only="react" />
+</RecipeFrame>
 
 Some cells carry a multiplier regardless of what lands on them. Any win passing through boosts. Gonzo's Quest (NetEnt) and Irish Riches (Blueprint Gaming) both use this pattern.
 

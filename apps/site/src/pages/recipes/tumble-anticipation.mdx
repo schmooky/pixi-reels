@@ -19,6 +19,7 @@ apis:
 
 import anticipationCode from '../../recipes/tumble-anticipation.recipe.ts?raw';
 import { RecipeRunner } from '../../components/RecipeRunner.tsx';
+import RecipeFrame from '../../components/RecipeFrame.astro';
 
 Most tumble cascades animate survivors and new symbols **together** in one beat. the Sweet Bonanza / Sugar Rush feel. A handful of slots split it in two:
 
@@ -31,7 +32,9 @@ That extra beat between gravity and refill is the whole point: it gives anticipa
 
 ## The recipe
 
-<RecipeRunner code={anticipationCode} client:only="react" />
+<RecipeFrame>
+  <RecipeRunner code={anticipationCode} client:only="react" />
+</RecipeFrame>
 
 ```ts
 await reelSet.destroySymbols(winners);

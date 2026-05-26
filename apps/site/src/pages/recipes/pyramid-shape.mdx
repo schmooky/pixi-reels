@@ -15,8 +15,11 @@ apis:
 
 import code from '../../recipes/pyramid-shape.recipe.ts?raw';
 import { RecipeRunner } from '../../components/RecipeRunner.tsx';
+import RecipeFrame from '../../components/RecipeFrame.astro';
 
-<RecipeRunner code={code} client:only="react" />
+<RecipeFrame>
+  <RecipeRunner code={code} client:only="react" />
+</RecipeFrame>
 
 Per-reel static shape. non-uniform row counts across reels, fixed at build time. The classic example is a `3-5-5-5-3` pyramid where the outer reels are shorter than the inner ones. The engine handles the geometry (per-reel `offsetY`, mask sizing, cell positioning) so you only declare the shape.
 

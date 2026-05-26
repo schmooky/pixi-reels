@@ -14,8 +14,11 @@ apis:
 
 import code from '../../recipes/get-block-bounds.recipe.ts?raw';
 import { RecipeRunner } from '../../components/RecipeRunner.tsx';
+import RecipeFrame from '../../components/RecipeFrame.astro';
 
-<RecipeRunner code={code} client:only="react" />
+<RecipeFrame>
+  <RecipeRunner code={code} client:only="react" />
+</RecipeFrame>
 
 `reelSet.getBlockBounds(col, row)` returns the **single rectangle** that covers the whole block at `(col, row)`. anchor or not. in ReelSet-local pixel coordinates. The recipe above plants a 2×2 or 1×3 block (randomly chosen) every spin and draws an orange outline around it on `spin:allLanded`. Same code, different shape.
 

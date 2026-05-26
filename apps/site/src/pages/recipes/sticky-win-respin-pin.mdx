@@ -16,8 +16,11 @@ apis:
 
 import code from '../../recipes/sticky-win-respin-pin.recipe.ts?raw';
 import { RecipeRunner } from '../../components/RecipeRunner.tsx';
+import RecipeFrame from '../../components/RecipeFrame.astro';
 
-<RecipeRunner code={code} client:only="react" />
+<RecipeFrame>
+  <RecipeRunner code={code} client:only="react" />
+</RecipeFrame>
 
 One of the most common resolution loops in the modern slot market. When a winning combination lands, the winning symbols lock in place; everything else respins. If a *new* winner lands during the respin, the counter resets. Otherwise the feature winds down.
 

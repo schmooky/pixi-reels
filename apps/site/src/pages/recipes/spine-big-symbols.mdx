@@ -17,8 +17,11 @@ apis:
 
 import code from '../../recipes/spine-big-symbols.recipe.ts?raw';
 import { RecipeRunner } from '../../components/RecipeRunner.tsx';
+import RecipeFrame from '../../components/RecipeFrame.astro';
 
-<RecipeRunner code={code} client:only="react" />
+<RecipeFrame>
+  <RecipeRunner code={code} client:only="react" />
+</RecipeFrame>
 
 Same big-symbols mechanic as the [CardSymbol recipe](/recipes/big-symbols/), but every cell is a Spine 2D skeleton. `idle` plays on land, `landing` plays as the squash-and-stretch on touchdown, `win` fires when `WinPresenter` highlights a payline, and `destroy` is wired up for cascades. The 2x2 bigWild reuses the regular wild skeleton; Spine scales it to the larger cell box without losing crispness.
 

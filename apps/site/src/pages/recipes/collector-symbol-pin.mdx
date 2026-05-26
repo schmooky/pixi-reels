@@ -17,8 +17,11 @@ apis:
 
 import code from '../../recipes/collector-symbol-pin.recipe.ts?raw';
 import { RecipeRunner } from '../../components/RecipeRunner.tsx';
+import RecipeFrame from '../../components/RecipeFrame.astro';
 
-<RecipeRunner code={code} client:only="react" />
+<RecipeFrame>
+  <RecipeRunner code={code} client:only="react" />
+</RecipeFrame>
 
 Cash Noire (NetEnt) and similar titles pair a Hold & Win board with a "collector" symbol that sweeps up nearby coin values. Here we build it with the same [per-cell ReelSet architecture](/recipes/value-coin-pin/) plus one extra step: on collector land, query the neighbors' pins, sum their payloads, unpin them, and pin the collector with the accumulated total.
 

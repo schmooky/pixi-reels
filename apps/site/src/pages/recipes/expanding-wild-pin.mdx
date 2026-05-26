@@ -14,8 +14,11 @@ apis:
 
 import code from '../../recipes/expanding-wild-pin.recipe.ts?raw';
 import { RecipeRunner } from '../../components/RecipeRunner.tsx';
+import RecipeFrame from '../../components/RecipeFrame.astro';
 
-<RecipeRunner code={code} client:only="react" />
+<RecipeFrame>
+  <RecipeRunner code={code} client:only="react" />
+</RecipeFrame>
 
 Classic expanding wild. wild on land, whole column covered. held for three spins before the expansion releases. Neon Staxx (NetEnt) and Wild Toro (ELK Studios) use variations on this pattern.
 

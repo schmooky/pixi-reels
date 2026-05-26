@@ -19,6 +19,7 @@ import tallCode from '../../recipes/big-symbols-mxn-tall.recipe.ts?raw';
 import giantCode from '../../recipes/big-symbols-mxn-giant.recipe.ts?raw';
 import wideCode from '../../recipes/big-symbols-mxn-wide.recipe.ts?raw';
 import { RecipeRunner } from '../../components/RecipeRunner.tsx';
+import RecipeFrame from '../../components/RecipeFrame.astro';
 
 The engine's big-symbol mechanism doesn't hard-code `w === h`. Any positive integer size works. what changes per shape is the *visual intent* and the *grid budget* it consumes. This recipe walks through the four most common shapes one at a time, with the placement logic shown in each block. Each demo always plants its shape so every spin shows the mechanic.
 
@@ -26,7 +27,9 @@ The engine's big-symbol mechanism doesn't hard-code `w === h`. Any positive inte
 
 ## Square. 2×2
 
-<RecipeRunner code={squareCode} client:only="react" />
+<RecipeFrame>
+  <RecipeRunner code={squareCode} client:only="react" />
+</RecipeFrame>
 
 The most common big-symbol shape. Equal width and height means it fits on any 5+ reel grid with 3+ rows without distorting the grid's aspect ratio.
 
@@ -53,7 +56,9 @@ grid[col][row] = 'square';
 
 ## Tall bar. 1×3
 
-<RecipeRunner code={tallCode} client:only="react" />
+<RecipeFrame>
+  <RecipeRunner code={tallCode} client:only="react" />
+</RecipeFrame>
 
 One column, three rows. The block stays inside a single reel. it's effectively a "stacked" symbol. Reads as a totem, gold-bar tower, or a vertical wild column that fills its reel without spilling into neighbours.
 
@@ -80,7 +85,9 @@ grid[col][row] = 'tall';
 
 ## Giant. 3×3
 
-<RecipeRunner code={giantCode} client:only="react" />
+<RecipeFrame>
+  <RecipeRunner code={giantCode} client:only="react" />
+</RecipeFrame>
 
 A board-dominating feature anchor. On a 6×5 grid a 3×3 covers nine cells. half the visible area on the rows it lands across. Use sparingly: this is "free spins triggered" energy, not "weighted symbol" energy.
 
@@ -105,7 +112,9 @@ grid[col][row] = 'giant';
 
 ## Wide banner. 2×4
 
-<RecipeRunner code={wideCode} client:only="react" />
+<RecipeFrame>
+  <RecipeRunner code={wideCode} client:only="react" />
+</RecipeFrame>
 
 Two columns, four rows. A block that's *taller* than wide. a banner pose rather than a square. Useful when you want to span adjacent reels (so the symbol clearly belongs to multiple reels' lines / ways) but still want a bold vertical presence.
 
