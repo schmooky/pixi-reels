@@ -95,7 +95,7 @@ return {
 
     await reelSet.refill({
       winners,
-      grid: stage1,
+      grid: stage1.map((visible) => ({ visible })),
       mode: 'gravity-then-drop',
       gravityHoldMs: GRAVITY_HOLD_MS,
     });

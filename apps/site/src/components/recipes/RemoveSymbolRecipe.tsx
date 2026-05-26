@@ -69,7 +69,7 @@ export default function RemoveSymbolRecipe() {
             const winners = winnersOfX(BEFORE);
             await reelSet.destroySymbols(winners);
             await sleep(120);
-            await reelSet.refill({ winners, grid: AFTER });
+            await reelSet.refill({ winners, grid: AFTER.map((visible) => ({ visible })) });
           },
         };
       }}

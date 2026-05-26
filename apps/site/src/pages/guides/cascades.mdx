@@ -97,8 +97,12 @@ const winners = detectWinners(reelSet.getVisibleGrid());
 await reelSet.destroySymbols(winners);
 
 // 3. Refill survivors + new symbols.
-const next = await server.cascade(winners);
-await reelSet.refill({ winners, grid: next });
+//    grid is ColumnTarget[]. for the common per-reel visible case, wrap
+//    your server's string[][] with .map(visible => ({ visible })). For
+//    big-symbol anchors that land into the buffer, use the full
+//    ColumnTarget shape with bufferAbove / bufferBelow.
+const next: string[][] = await server.cascade(winners);
+await reelSet.refill({ winners, grid: next.map((visible) => ({ visible })) });
 ```
 
 That's the minimal cascade chain. one win, one refill. For multi-cascade rounds, wrap it in a loop:
@@ -109,7 +113,8 @@ while (true) {
   if (winners.length === 0) break;
   await reelSet.destroySymbols(winners);
   await wait(PAUSE_AFTER_REMOVAL_MS);
-  await reelSet.refill({ winners, grid: await server.cascade(winners) });
+  const next = await server.cascade(winners);
+  await reelSet.refill({ winners, grid: next.map((visible) => ({ visible })) });
 }
 ```
 

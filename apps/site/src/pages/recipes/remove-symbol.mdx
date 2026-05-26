@@ -32,7 +32,8 @@ The whole sequence lives behind two verbs:
 ```ts
 const winners = detectMyWins(reelSet.getVisibleGrid());
 await reelSet.destroySymbols(winners);
-await reelSet.refill({ winners, grid: await server.cascade(winners) });
+const next = await server.cascade(winners);
+await reelSet.refill({ winners, grid: next.map((visible) => ({ visible })) });
 ```
 
 `refill({ winners, grid })` reads the gravity convention from `grid` and animates only the cells that actually need to move.

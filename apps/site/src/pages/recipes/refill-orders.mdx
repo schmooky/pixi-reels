@@ -33,7 +33,7 @@ The default is **simultaneous**. The other three vary the drop-in order across r
 })
 // ...
 reelSet.setDropOrder('all');  // 0 ms delay between reels
-await reelSet.refill({ winners, grid: stage1 });
+await reelSet.refill({ winners, grid: stage1.map((visible) => ({ visible })) });
 ```
 
 No in-reel row stagger (`rowStagger: 0`), no cross-reel delay (`setDropOrder('all')`). Every cell that needs to move starts moving at the same frame. Snappy, no pacing overhead. the player gets back to a "ready" grid as fast as the drop-in animation runs. This is what 80%+ of commercial cascade slots ship.
@@ -48,7 +48,7 @@ No in-reel row stagger (`rowStagger: 0`), no cross-reel delay (`setDropOrder('al
 })
 // ...
 reelSet.setDropOrder('ltr', 90);  // 90 ms between reels, left to right
-await reelSet.refill({ winners, grid: stage1 });
+await reelSet.refill({ winners, grid: stage1.map((visible) => ({ visible })) });
 ```
 
 Each reel's rows still arrive together, but reel 0 lands first, then reel 1, then reel 2... Reads as the grid "filling up" column-by-column. Visually distinctive but it adds noticeable time to every cascade. picture six cascades in a chain × 6 columns × 90 ms = nearly 3 extra seconds across the round.
@@ -69,7 +69,7 @@ Use when the cascade chain is rare (deep features, bonus rounds) or when the col
 })
 // ...
 reelSet.setDropOrder('all');  // all reels at once
-await reelSet.refill({ winners, grid: stage1 });
+await reelSet.refill({ winners, grid: stage1.map((visible) => ({ visible })) });
 ```
 
 All reels drop simultaneously, but within each reel the bottom row lands first and the top row lands last. Reads as the board "stacking up from below". Pairs well with puzzle / match-3 / chess-board themes where the slot's metaphor is a physical board being built.

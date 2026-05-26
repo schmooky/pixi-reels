@@ -65,6 +65,6 @@ return {
     // Moment B. every column drops together. setDropOrder('all') = 0 ms
     // per-reel delay; the in-reel rowStagger is already 0 above.
     reelSet.setDropOrder('all');
-    await reelSet.refill({ winners, grid: stage1 });
+    await reelSet.refill({ winners, grid: stage1.map((visible) => ({ visible })) });
   },
 };

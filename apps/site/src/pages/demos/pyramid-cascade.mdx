@@ -33,8 +33,11 @@ The fix is the canonical cascade pair, `reelSet.destroySymbols(winners)` + `reel
 
 ```ts
 await reelSet.destroySymbols(winnerCells);                  // pop animation
-const next = computeRefillGrid(grid, winnerCells);          // gravity-correct grid
-await reelSet.refill({ winners: winnerCells, grid: next }); // survivors slide; new arrive
+const next = computeRefillGrid(grid, winnerCells);          // gravity-correct grid (string[][])
+await reelSet.refill({                                       // survivors slide; new arrive
+  winners: winnerCells,
+  grid: next.map((visible) => ({ visible })),               // wrap as ColumnTarget[]
+});
 ```
 
 Per column the engine computes per-cell offsets:

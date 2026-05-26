@@ -248,7 +248,15 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
         if (result) reelSet.setResult(result.map((visible) => ({ visible })));
         await p;
       }
-    } catch { /* ignore */ } finally {
+    } catch (err) {
+      // Don't surface mid-spin transient errors in the UI (recipe runner
+      // shouldn't flash error banners during normal cleanup races). DO
+      // log them. silently swallowing here previously hid a real shape
+      // bug where recipes passed `string[][]` to `refill({ grid })` and
+      // the engine threw inside a Promise that no one was watching.
+      // eslint-disable-next-line no-console -- diagnostic surface
+      console.error('[RecipeRunner] handleSpin threw:', err);
+    } finally {
       setSpinning(false);
     }
   }

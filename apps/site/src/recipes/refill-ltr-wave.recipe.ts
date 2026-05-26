@@ -67,6 +67,6 @@ return {
     await new Promise((r) => setTimeout(r, PAUSE_AFTER_REMOVAL_MS));
     // Refill: each reel delayed by REEL_WAVE_STEP_MS. left-to-right wave.
     reelSet.setDropOrder('ltr', REEL_WAVE_STEP_MS);
-    await reelSet.refill({ winners, grid: stage1 });
+    await reelSet.refill({ winners, grid: stage1.map((visible) => ({ visible })) });
   },
 };
