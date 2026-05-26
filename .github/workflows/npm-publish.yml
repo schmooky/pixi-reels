@@ -200,52 +200,6 @@ jobs:
           echo "tag=$SAN" >> "$GITHUB_OUTPUT"
           echo "Snapshot dist-tag: $SAN"
 
-      # TEMPORARY: dump the OIDC token claims + scan env for any
-      # NODE_AUTH_TOKEN / NPM_TOKEN leaks. Prints only the JWT payload,
-      # never the raw token. Remove once the publish flow is green.
-      - name: Debug OIDC claims + auth env
-        continue-on-error: true
-        env:
-          AID_TOKEN_REQ_URL: ${{ env.ACTIONS_ID_TOKEN_REQUEST_URL }}
-          AID_TOKEN_REQ_TOKEN: ${{ env.ACTIONS_ID_TOKEN_REQUEST_TOKEN }}
-        run: |
-          set +e
-          echo "── 1. Auth-related env vars present (values masked) ──"
-          env | grep -iE '^(NODE_AUTH_TOKEN|NPM_TOKEN|NPM_CONFIG|ACTIONS_ID_TOKEN)=' \
-            | sed 's/=.*$/=<set>/' || echo "(none)"
-
-          echo ""
-          echo "── 2. .npmrc contents ──"
-          cat "${NPM_CONFIG_USERCONFIG:-$HOME/.npmrc}" 2>/dev/null \
-            | sed 's/_authToken=.*/_authToken=<redacted>/' || echo "(no .npmrc)"
-
-          echo ""
-          echo "── 3. OIDC token claims ──"
-          if [ -z "${ACTIONS_ID_TOKEN_REQUEST_URL:-}" ]; then
-            echo "ACTIONS_ID_TOKEN_REQUEST_URL is empty. id-token: write missing?"
-            exit 0
-          fi
-          RESP=$(curl -sS \
-            -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
-            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=npm:registry.npmjs.org")
-          echo "curl exit: $?"
-          TOKEN=$(echo "$RESP" | jq -r '.value // empty')
-          if [ -z "$TOKEN" ]; then
-            echo "Token fetch failed. Raw response:"
-            echo "$RESP" | head -c 400
-            exit 0
-          fi
-          PAYLOAD_B64=$(echo "$TOKEN" | cut -d. -f2)
-          PAD=$(( (4 - ${#PAYLOAD_B64} % 4) % 4 ))
-          [ "$PAD" -gt 0 ] && PADDED="$PAYLOAD_B64$(printf '=%.0s' $(seq 1 "$PAD"))" || PADDED="$PAYLOAD_B64"
-          DECODED=$(echo "$PADDED" | tr '_-' '/+' | base64 -d 2>/dev/null)
-          echo "$DECODED" | jq '{
-            iss, sub, aud,
-            repository, repository_owner, repository_id,
-            workflow_ref, job_workflow_ref, environment,
-            ref, ref_type, event_name, workflow
-          }'
-
       - name: Publish snapshot
         run: pnpm snapshot
         env:
