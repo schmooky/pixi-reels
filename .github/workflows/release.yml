@@ -32,11 +32,16 @@ concurrency:
 jobs:
   release:
     runs-on: ubuntu-latest
+    # Pinning to a GitHub Environment lets a single npm trusted-publisher
+    # entry cover both release.yml and snapshot.yml (same environment, two
+    # workflows). The environment also gives us a place to add manual
+    # approval later if we want a human-in-the-loop before a publish.
+    environment: npm-publish
     permissions:
       # changesets/action needs these to open the Version Packages PR.
       contents: write
       pull-requests: write
-      # required for npm provenance attestation.
+      # Required for npm OIDC trusted publishing + provenance attestation.
       id-token: write
     steps:
       - name: Checkout
@@ -82,7 +87,11 @@ jobs:
           commit: 'chore: version packages'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-          # Turn on npm provenance so each published package ships with a
-          # signed attestation linking it back to this workflow run.
+          # Auth is handled by npm OIDC trusted publishing. The npm CLI
+          # (11.5.1+) requests a short-lived publishing token from npmjs.com
+          # using this workflow's GitHub OIDC id-token. No long-lived
+          # NPM_TOKEN secret needed. Configure the trusted publisher at
+          # https://www.npmjs.com/package/pixi-reels/access pointing at
+          # this repo, this workflow filename, and the npm-publish
+          # environment above.
           NPM_CONFIG_PROVENANCE: 'true'

@@ -45,9 +45,12 @@ concurrency:
 jobs:
   snapshot:
     runs-on: ubuntu-latest
+    # Same GitHub Environment as release.yml so a single npm trusted-
+    # publisher entry covers both workflows.
+    environment: npm-publish
     permissions:
       contents: read
-      # Required for npm provenance attestation.
+      # Required for npm OIDC trusted publishing + provenance attestation.
       id-token: write
     steps:
       - name: Checkout
@@ -95,6 +98,7 @@ jobs:
         run: pnpm snapshot
         env:
           SNAPSHOT_TAG: ${{ steps.tag.outputs.tag }}
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Auth via npm OIDC trusted publishing (see release.yml for the
+          # full setup note). No NPM_TOKEN env needed.
           NPM_CONFIG_PROVENANCE: 'true'
