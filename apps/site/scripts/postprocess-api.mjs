@@ -80,37 +80,53 @@ function deriveDescription(content) {
 }
 
 /**
- * Rewrite internal `.md` links to Astro's URL convention.
+ * Compute the Astro URL where a TypeDoc-generated source file lands.
  *
- * TypeDoc emits links like `[X](../classes/index.X.md)` and
- * `[Y](./Y.md#anchor)`. Astro serves the rendered HTML at
- * `/api/classes/index.X/` (extension stripped, trailing slash). The
- * generated `.md` text was passing the literal `.md` URLs through, so a
- * click would either 404 or, on hosts that serve `.md` as a static file,
- * dump raw markdown into the browser.
- *
- * Rules:
- *   - `index.md` → `./`         (current dir's index)
- *   - `foo/index.md` → `foo/`   (subdir index)
- *   - `foo.md`  → `foo/`         (sibling page becomes a dir route)
- *   - external `http(s)://...md` URLs are left untouched
- *   - any `#fragment` suffix is preserved
+ * `apps/site/src/pages/api/modules/spine.md`         → `/api/modules/spine/`
+ * `apps/site/src/pages/api/modules/index.md`         → `/api/modules/`
+ * `apps/site/src/pages/api/classes/index.ReelSet.md` → `/api/classes/index.ReelSet/`
+ * `apps/site/src/pages/api/index.md`                 → `/api/`
  */
-function rewriteMdLinks(content) {
+function fileToAstroUrl(file) {
+  const rel = path.relative(apiRoot, file).split(path.sep).join('/');
+  const noExt = rel.endsWith('.md') ? rel.slice(0, -3) : rel;
+  if (noExt === 'index') return '/api/';
+  if (noExt.endsWith('/index')) return `/api/${noExt.slice(0, -'index'.length)}`;
+  return `/api/${noExt}/`;
+}
+
+/**
+ * Rewrite internal `.md` links to absolute Astro URLs.
+ *
+ * TypeDoc emits links like `[X](../classes/index.X.md)` computed
+ * relative to the SOURCE FILE'S directory on disk. The naive
+ * "browser-resolves-against-page-URL" approach fails when Astro routes
+ * a source file at a trailing-slash directory URL. e.g. source
+ * `modules/spine.md` is served at `/api/modules/spine/`, so a browser
+ * resolves `../classes/Y/` against that URL → `/api/modules/classes/Y/`
+ * (wrong, the real file is at `/api/classes/Y/`).
+ *
+ * Correct algorithm:
+ *   1. Resolve the link's path against the source file's directory on
+ *      disk → the absolute path of the target source `.md` file.
+ *   2. Convert that source path to its Astro URL via fileToAstroUrl().
+ *   3. Emit the result as an absolute URL (no relative path at all).
+ *
+ * Untouched: external `http(s)://`, `mailto:`, protocol-relative `//`.
+ * Preserved: any `#fragment` suffix on the link.
+ */
+function rewriteMdLinks(content, sourceFile) {
+  const sourceDir = path.dirname(sourceFile);
   return content.replace(
     /\]\(([^)\s]+?\.md)(#[^)\s]*)?\)/g,
     (match, url, fragment) => {
       if (/^(?:https?:|mailto:|\/\/)/i.test(url)) return match;
       const frag = fragment ?? '';
-      let rewritten;
-      if (url === 'index.md') {
-        rewritten = './';
-      } else if (url.endsWith('/index.md')) {
-        rewritten = url.slice(0, -'index.md'.length);
-      } else {
-        rewritten = `${url.slice(0, -'.md'.length)}/`;
-      }
-      return `](${rewritten}${frag})`;
+      // Resolve the link's URL against the SOURCE file's directory on
+      // disk. path.resolve handles `./` and `../` segments correctly.
+      const targetSourceFile = path.resolve(sourceDir, url);
+      const astroUrl = fileToAstroUrl(targetSourceFile);
+      return `](${astroUrl}${frag})`;
     },
   );
 }
@@ -124,10 +140,13 @@ function processFile(file) {
   // titles read as `ReelSet`, not `index.ReelSet`.
   const cleanBase = basename.replace(/^(index|spine|testing)\./, '');
 
-  // Rewrite intra-doc `.md` links to Astro's extensionless URL form
-  // BEFORE deriving title/description (so any links embedded in JSDoc
-  // descriptions are clean by the time they land in frontmatter).
-  content = rewriteMdLinks(content);
+  // Rewrite intra-doc `.md` links to absolute Astro URLs BEFORE deriving
+  // title/description (so any links embedded in JSDoc descriptions are
+  // clean by the time they land in frontmatter). Absolute paths sidestep
+  // the trailing-slash directory-routing depth-mismatch that bit
+  // `modules/spine.md` (served at /api/modules/spine/, three levels deep
+  // vs. the source file's two-level path).
+  content = rewriteMdLinks(content, file);
 
   const title = pickTitle(content, cleanBase);
   const description = deriveDescription(content);
