@@ -79,6 +79,42 @@ function deriveDescription(content) {
   return text.length > 0 ? text : null;
 }
 
+/**
+ * Rewrite internal `.md` links to Astro's URL convention.
+ *
+ * TypeDoc emits links like `[X](../classes/index.X.md)` and
+ * `[Y](./Y.md#anchor)`. Astro serves the rendered HTML at
+ * `/api/classes/index.X/` (extension stripped, trailing slash). The
+ * generated `.md` text was passing the literal `.md` URLs through, so a
+ * click would either 404 or, on hosts that serve `.md` as a static file,
+ * dump raw markdown into the browser.
+ *
+ * Rules:
+ *   - `index.md` → `./`         (current dir's index)
+ *   - `foo/index.md` → `foo/`   (subdir index)
+ *   - `foo.md`  → `foo/`         (sibling page becomes a dir route)
+ *   - external `http(s)://...md` URLs are left untouched
+ *   - any `#fragment` suffix is preserved
+ */
+function rewriteMdLinks(content) {
+  return content.replace(
+    /\]\(([^)\s]+?\.md)(#[^)\s]*)?\)/g,
+    (match, url, fragment) => {
+      if (/^(?:https?:|mailto:|\/\/)/i.test(url)) return match;
+      const frag = fragment ?? '';
+      let rewritten;
+      if (url === 'index.md') {
+        rewritten = './';
+      } else if (url.endsWith('/index.md')) {
+        rewritten = url.slice(0, -'index.md'.length);
+      } else {
+        rewritten = `${url.slice(0, -'.md'.length)}/`;
+      }
+      return `](${rewritten}${frag})`;
+    },
+  );
+}
+
 function processFile(file) {
   let content = fs.readFileSync(file, 'utf8');
   if (content.startsWith('---\n')) return false; // already has frontmatter
@@ -87,6 +123,12 @@ function processFile(file) {
   // Strip the `index.` prefix from TypeDoc's per-module symbol filenames so
   // titles read as `ReelSet`, not `index.ReelSet`.
   const cleanBase = basename.replace(/^(index|spine|testing)\./, '');
+
+  // Rewrite intra-doc `.md` links to Astro's extensionless URL form
+  // BEFORE deriving title/description (so any links embedded in JSDoc
+  // descriptions are clean by the time they land in frontmatter).
+  content = rewriteMdLinks(content);
+
   const title = pickTitle(content, cleanBase);
   const description = deriveDescription(content);
   const layout = relativeLayoutPath(file);
