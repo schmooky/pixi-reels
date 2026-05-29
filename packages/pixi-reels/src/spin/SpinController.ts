@@ -119,6 +119,14 @@ export class SpinController implements Disposable {
   private _skipPending = false;
   private _isDestroyed = false;
   private _currentSpinResolve: ((result: SpinResult) => void) | null = null;
+  private _currentSpinReject: ((error: Error) => void) | null = null;
+  /**
+   * Set by `_abortSpin()` so the shared settle point `_finishSpin()` rejects
+   * the spin promise (and skips the success events) instead of resolving.
+   */
+  private _pendingAbortError: Error | null = null;
+  /** Removes the active spin's abort listener and clears its watchdog timer. */
+  private _spinWatchdogCleanup: (() => void) | null = null;
   /** Incremented on each new spin. If a callback sees a stale generation, it no-ops. */
   private _spinGeneration = 0;
   /**
@@ -228,6 +236,11 @@ export class SpinController implements Disposable {
       throw new Error('Cannot start a new spin while one is in progress.');
     }
 
+    // Already-aborted signal: never even start the reels.
+    if (options?.signal?.aborted) {
+      return Promise.reject(this._abortError(options.signal));
+    }
+
     const mode = options?.mode ?? this._defaultSpinMode;
     if (mode === 'cascade' && !this._phaseFactory.has('cascade:fall')) {
       throw new Error(
@@ -257,6 +270,7 @@ export class SpinController implements Disposable {
     this._isSpinning = true;
     this._wasSkipped = false;
     this._skipPending = false;
+    this._pendingAbortError = null;
     this._spinStartTime = performance.now();
     this._resultSymbols = null;
     this._anticipationReels = [];
@@ -276,9 +290,11 @@ export class SpinController implements Disposable {
 
     this._events.emit('spin:start');
 
-    const resultPromise = new Promise<SpinResult>((resolve) => {
+    const resultPromise = new Promise<SpinResult>((resolve, reject) => {
       this._currentSpinResolve = resolve;
+      this._currentSpinReject = reject;
     });
+    this._armSpinWatchdog(options, generation);
 
     // Degenerate case: every reel held → resolve next microtask with the
     // current visible grid. Spin emitted, but no animation runs.
@@ -459,6 +475,7 @@ export class SpinController implements Disposable {
     this._isSpinning = true;
     this._wasSkipped = false;
     this._skipPending = false;
+    this._pendingAbortError = null;
     this._spinStartTime = performance.now();
     this._resultSymbols = null;
     this._anticipationReels = [];
@@ -506,6 +523,10 @@ export class SpinController implements Disposable {
 
     const resultPromise = new Promise<SpinResult>((resolve) => {
       this._currentSpinResolve = resolve;
+      // Refills are driven from an already-known grid, so they carry no
+      // external watchdog. Drop any stale reject handle from the spin() that
+      // opened this round.
+      this._currentSpinReject = null;
     });
 
     // Auto-slam: skip() set this earlier in the round to mean "fast-forward
@@ -954,6 +975,7 @@ export class SpinController implements Disposable {
 
   destroy(): void {
     if (this._isDestroyed) return;
+    this._clearSpinWatchdog();
     this._tickerRef.destroy();
     this._activePhases.clear();
     this._isDestroyed = true;
@@ -1351,7 +1373,94 @@ export class SpinController implements Disposable {
     }
   }
 
+  /**
+   * Wire up the optional abort signal and timeout watchdog for this spin.
+   * Both routes call `_abortSpin`, which force-stops the reels and rejects the
+   * spin promise. Cleared by `_finishSpin` / `_abortSpin` when the spin settles.
+   */
+  private _armSpinWatchdog(options: SpinOptions | undefined, generation: number): void {
+    this._clearSpinWatchdog();
+
+    const signal = options?.signal;
+    const timeoutMs = options?.timeoutMs;
+    if (!signal && (timeoutMs === undefined || timeoutMs <= 0)) return;
+
+    const cleanups: Array<() => void> = [];
+
+    if (signal) {
+      const onAbort = (): void => {
+        if (generation !== this._spinGeneration) return;
+        this._abortSpin(this._abortError(signal));
+      };
+      signal.addEventListener('abort', onAbort);
+      cleanups.push(() => signal.removeEventListener('abort', onAbort));
+    }
+
+    if (timeoutMs !== undefined && timeoutMs > 0) {
+      const timer = setTimeout(() => {
+        if (generation !== this._spinGeneration) return;
+        this._abortSpin(
+          new Error(
+            `spin() exceeded its ${timeoutMs}ms watchdog without landing. ` +
+              'setResult() / requestSkip() / slamStop() was never called (most often a ' +
+              'failed or timed-out server request). The reels have been force-stopped.',
+          ),
+        );
+      }, timeoutMs);
+      cleanups.push(() => clearTimeout(timer));
+    }
+
+    this._spinWatchdogCleanup = () => {
+      for (const c of cleanups) c();
+    };
+  }
+
+  private _clearSpinWatchdog(): void {
+    if (this._spinWatchdogCleanup) {
+      this._spinWatchdogCleanup();
+      this._spinWatchdogCleanup = null;
+    }
+  }
+
+  private _abortError(signal: AbortSignal): Error {
+    const reason = (signal as AbortSignal & { reason?: unknown }).reason;
+    if (reason instanceof Error) return reason;
+    if (typeof reason === 'string' && reason.length > 0) return new Error(reason);
+    return new Error('spin() was aborted via SpinOptions.signal before the reels landed.');
+  }
+
+  /**
+   * Force-stop an in-flight spin and reject its promise. Reuses the proven
+   * `_slam()` recovery (kills phase tweens, snaps reels to a clean grid when no
+   * result is set), then `_finishSpin()` rejects instead of resolving because
+   * `_pendingAbortError` is set.
+   */
+  private _abortSpin(error: Error): void {
+    if (!this._isSpinning) return;
+    this._clearSpinWatchdog();
+    this._pendingAbortError = error;
+    this._slam();
+  }
+
   private _finishSpin(): void {
+    this._clearSpinWatchdog();
+
+    // Abort/timeout path: reject and skip the success events. _slam() already
+    // force-stopped the reels on the way here.
+    const abortError = this._pendingAbortError;
+    if (abortError) {
+      this._pendingAbortError = null;
+      this._isSpinning = false;
+      this._activePhases.clear();
+      this._cachedFrames = null;
+      this._hooks.clearTargetShape();
+      const reject = this._currentSpinReject;
+      this._currentSpinResolve = null;
+      this._currentSpinReject = null;
+      if (reject) reject(abortError);
+      return;
+    }
+
     const result: SpinResult = {
       symbols: this._reels.map((r) => r.getVisibleSymbols()),
       wasSkipped: this._wasSkipped,
@@ -1372,6 +1481,7 @@ export class SpinController implements Disposable {
       this._currentSpinResolve(result);
       this._currentSpinResolve = null;
     }
+    this._currentSpinReject = null;
   }
 
   private _onTick(ticker: Ticker): void {

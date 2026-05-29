@@ -259,8 +259,17 @@ export function clearFrames(): void {
  * __PIXI_REELS_DEBUG.stopRecording()
  * __PIXI_REELS_DEBUG.getFrames('myTag')
  * ```
+ *
+ * For a single reel set, leave `key` unset. With multiple reel sets, pass a
+ * distinct `key` per call so they don't clobber each other on `window`: each is
+ * reachable at `__PIXI_REELS_DEBUG_INSTANCES[key]`, and `__PIXI_REELS_DEBUG`
+ * always points at the most recently enabled one for convenience.
+ *
+ * This attaches to `window` and logs — call it only in dev/QA builds, never in
+ * a production bundle (the snapshot exposes internal state and is not
+ * semver-protected, so do not wire monitoring/telemetry to it).
  */
-export function enableDebug(reelSet: ReelSet): void {
+export function enableDebug(reelSet: ReelSet, key?: string): void {
   if (typeof window === 'undefined') return;
 
   let maskOverlay: Graphics | null = null;
@@ -327,6 +336,18 @@ export function enableDebug(reelSet: ReelSet): void {
     },
   };
 
-  (window as any).__PIXI_REELS_DEBUG = debug;
-  console.log('[pixi-reels] Debug mode enabled. Use __PIXI_REELS_DEBUG.log() to inspect state.');
+  const w = window as unknown as {
+    __PIXI_REELS_DEBUG?: typeof debug;
+    __PIXI_REELS_DEBUG_INSTANCES?: Record<string, typeof debug>;
+  };
+  // Per-instance registry so multiple reel sets don't overwrite one another.
+  const registry = (w.__PIXI_REELS_DEBUG_INSTANCES ??= {});
+  const resolvedKey = key ?? `reelset_${Object.keys(registry).length}`;
+  registry[resolvedKey] = debug;
+  // Back-compat: the bare global points at the most recently enabled instance.
+  w.__PIXI_REELS_DEBUG = debug;
+  console.log(
+    `[pixi-reels] Debug mode enabled (key "${resolvedKey}"). ` +
+      `Use __PIXI_REELS_DEBUG.log() or __PIXI_REELS_DEBUG_INSTANCES["${resolvedKey}"].`,
+  );
 }

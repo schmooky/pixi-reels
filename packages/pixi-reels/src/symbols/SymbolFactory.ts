@@ -11,17 +11,24 @@ import { ObjectPool } from '../pool/ObjectPool.js';
  */
 export class SymbolFactory {
   private _pool: ObjectPool<ReelSymbol>;
+  private _capacityPerKey: number;
 
   constructor(
     private _registry: SymbolRegistry,
     maxPoolPerKey: number = 20,
   ) {
+    this._capacityPerKey = maxPoolPerKey;
     this._pool = new ObjectPool<ReelSymbol>(
       (key: string) => this._registry.create(key),
       (item: ReelSymbol) => item.reset(),
       (item: ReelSymbol) => item.destroy(),
       maxPoolPerKey,
     );
+  }
+
+  /** Max recycled instances kept per symbol id before overflow is destroyed. */
+  get capacityPerKey(): number {
+    return this._capacityPerKey;
   }
 
   /** Get a symbol (from pool or newly created), activated with symbolId. */

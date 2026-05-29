@@ -102,8 +102,15 @@ export interface CellPinOptions {
   migration?: PinMigration;
 }
 
-/** Reason a pin expired. Fired with `pin:expired`. */
-export type PinExpireReason = 'turns' | 'explicit' | 'eval';
+/**
+ * Reason a pin expired. Fired with `pin:expired`.
+ *   - `'turns'`     — its turn counter reached zero.
+ *   - `'explicit'`  — removed via `unpin()`.
+ *   - `'eval'`      — an eval callback returned false.
+ *   - `'collision'` — a reshape clamped it onto a cell another pin already
+ *                     holds, so it was dropped deterministically.
+ */
+export type PinExpireReason = 'turns' | 'explicit' | 'eval' | 'collision';
 
 /** A grid coordinate. */
 export interface CellCoord {

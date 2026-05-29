@@ -63,4 +63,31 @@ describe('ObjectPool', () => {
     pool.destroy();
     expect(pool.isDestroyed).toBe(true);
   });
+
+  it('ignores a double-release so one instance never aliases into two cells', () => {
+    const pool = new ObjectPool((k: string) => ({ k }));
+    const item = pool.acquire('a');
+    pool.release('a', item);
+    pool.release('a', item); // double release must be ignored
+    expect(pool.size('a')).toBe(1);
+
+    const first = pool.acquire('a');
+    const second = pool.acquire('a');
+    expect(first).toBe(item);
+    expect(second).not.toBe(first); // second acquire is a fresh instance, not an alias
+  });
+
+  it('acquire after destroy throws (fail loud, no resurrection)', () => {
+    const pool = new ObjectPool((k: string) => ({ k }));
+    pool.destroy();
+    expect(() => pool.acquire('a')).toThrow(/after destroy/);
+  });
+
+  it('release after destroy is a no-op and does not resurrect the pool', () => {
+    const pool = new ObjectPool((k: string) => ({ k }));
+    const item = pool.acquire('a');
+    pool.destroy();
+    pool.release('a', item);
+    expect(pool.totalSize).toBe(0);
+  });
 });

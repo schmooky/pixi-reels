@@ -3,7 +3,7 @@
  * invariant that broke when symbols were pool-recycled across reels mid-
  * spotlight.
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { createTestReelSet } from '../../src/testing/index.js';
 
 const SYMBOLS = ['a', 'b', 'c', 'wild'];
@@ -143,6 +143,97 @@ describe('SymbolSpotlight — symbol parent invariant after recycling', () => {
 
       // Hide restores it to the original reel container.
       expect(beforeSym.view.parent).toBe(beforeParent);
+    } finally {
+      h.destroy();
+    }
+  });
+});
+
+describe('SymbolSpotlight.cycle', () => {
+  it('shows every win line for the configured duration (not just the first)', async () => {
+    const h = createTestReelSet({ reels: 5, visibleRows: 3, symbolIds: SYMBOLS });
+    try {
+      await h.spinAndLand([
+        ['a', 'a', 'a'],
+        ['b', 'b', 'b'],
+        ['c', 'c', 'c'],
+        ['wild', 'wild', 'wild'],
+        ['a', 'b', 'c'],
+      ]);
+
+      const lineOneSym = h.reelSet.reels[0].getSymbolAt(0);
+      const lineTwoSym = h.reelSet.reels[1].getSymbolAt(0);
+      const spyOne = vi.spyOn(lineOneSym, 'playWin');
+      const spyTwo = vi.spyOn(lineTwoSym, 'playWin');
+
+      const lines = [
+        { positions: [{ reelIndex: 0, rowIndex: 0 }] },
+        { positions: [{ reelIndex: 1, rowIndex: 0 }] },
+      ];
+
+      vi.useFakeTimers();
+      try {
+        const done = h.reelSet.spotlight.cycle(lines, {
+          displayDuration: 100,
+          gapDuration: 50,
+          cycles: 1,
+          promoteAboveMask: false,
+        });
+        // line1 (display+gap) + line2 (display+gap) = 300ms; advance past it.
+        await vi.advanceTimersByTimeAsync(400);
+        await done;
+      } finally {
+        vi.useRealTimers();
+      }
+
+      // Before the fix, cycle() aborted its own signal on the first show() and
+      // never reached the second line, so spyTwo would be 0.
+      expect(spyOne).toHaveBeenCalledTimes(1);
+      expect(spyTwo).toHaveBeenCalledTimes(1);
+      // Cycle fully torn down at the end.
+      expect(h.reelSet.spotlight.isActive).toBe(false);
+    } finally {
+      h.destroy();
+    }
+  });
+
+  it('hide() interrupts a running cycle promptly', async () => {
+    const h = createTestReelSet({ reels: 5, visibleRows: 3, symbolIds: SYMBOLS });
+    try {
+      await h.spinAndLand([
+        ['a', 'a', 'a'],
+        ['b', 'b', 'b'],
+        ['c', 'c', 'c'],
+        ['wild', 'wild', 'wild'],
+        ['a', 'b', 'c'],
+      ]);
+
+      const lineTwoSym = h.reelSet.reels[1].getSymbolAt(0);
+      const spyTwo = vi.spyOn(lineTwoSym, 'playWin');
+
+      const lines = [
+        { positions: [{ reelIndex: 0, rowIndex: 0 }] },
+        { positions: [{ reelIndex: 1, rowIndex: 0 }] },
+      ];
+
+      vi.useFakeTimers();
+      try {
+        const done = h.reelSet.spotlight.cycle(lines, {
+          displayDuration: 1000,
+          gapDuration: 50,
+          cycles: -1, // infinite — must be stoppable
+          promoteAboveMask: false,
+        });
+        await vi.advanceTimersByTimeAsync(10); // inside line 1's display window
+        h.reelSet.spotlight.hide();
+        await vi.advanceTimersByTimeAsync(5000);
+        await done; // resolves because hide() aborted the cycle
+      } finally {
+        vi.useRealTimers();
+      }
+
+      expect(spyTwo).not.toHaveBeenCalled();
+      expect(h.reelSet.spotlight.isActive).toBe(false);
     } finally {
       h.destroy();
     }

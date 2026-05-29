@@ -139,6 +139,13 @@ export class ReelViewport extends Container implements Disposable {
   private _maskHeight: number;
   private _maskRects: ReelMaskRect[] = [];
   private _isDestroyed = false;
+  /**
+   * Number of active dim requests. The single overlay is shared by the
+   * spotlight and cascade `destroySymbols({ dim })`; reference-counting it
+   * keeps the dim up until the LAST consumer releases it, so an overlapping
+   * pair can't hide it out from under the other.
+   */
+  private _dimCount = 0;
 
   constructor(
     width: number,
@@ -193,15 +200,17 @@ export class ReelViewport extends Container implements Disposable {
     return this._isDestroyed;
   }
 
-  /** Show the dim overlay with given opacity. */
+  /** Show the dim overlay with given opacity. Reference-counted with hideDim. */
   showDim(alpha: number = 0.5): void {
+    this._dimCount++;
     this.dimOverlay.alpha = alpha;
     this.dimOverlay.visible = true;
   }
 
-  /** Hide the dim overlay. */
+  /** Release one dim request; hides the overlay only when the last one clears. */
   hideDim(): void {
-    this.dimOverlay.visible = false;
+    if (this._dimCount > 0) this._dimCount--;
+    if (this._dimCount === 0) this.dimOverlay.visible = false;
   }
 
   /** Update mask size and per-reel rects. Used after pyramid/MultiWays shape changes. */

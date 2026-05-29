@@ -85,21 +85,35 @@ export function assertBufferCountsInRange(
     const maxAbove = bufferAbovePerReel[c] ?? 0;
     const maxBelow = bufferBelowPerReel[c] ?? 0;
     const item = grid[c];
-    const aboveLen = item.bufferAbove?.length ?? 0;
-    const belowLen = item.bufferBelow?.length ?? 0;
-    if (aboveLen > maxAbove) {
+    // Validate by the highest DEFINED index, not raw `.length`. A sparse array
+    // (e.g. ['X', undefined, undefined], as serializers that pre-size arrays
+    // produce) materializes only its defined entries, so its length must not
+    // trip the guard. A defined entry at index >= max IS dropped downstream
+    // (only slots 0..max-1 are consumed), so that index is the real ceiling.
+    const aboveMax = highestDefinedIndex(item.bufferAbove);
+    const belowMax = highestDefinedIndex(item.bufferBelow);
+    if (aboveMax >= maxAbove) {
       throw new RangeError(
-        `${callerLabel} column ${c}: bufferAbove has ${aboveLen} entries ` +
-        `but engine bufferSymbols=${maxAbove}; extra entries would be silently dropped. ` +
-        `Increase bufferSymbols(...) on the builder or remove the extra entries.`,
+        `${callerLabel} column ${c}: bufferAbove has a symbol at index ${aboveMax}, ` +
+        `beyond engine bufferSymbols=${maxAbove}; it would be silently dropped. ` +
+        `Increase bufferSymbols(...) on the builder or remove the extra entry.`,
       );
     }
-    if (belowLen > maxBelow) {
+    if (belowMax >= maxBelow) {
       throw new RangeError(
-        `${callerLabel} column ${c}: bufferBelow has ${belowLen} entries ` +
-        `but engine bufferSymbols=${maxBelow}; extra entries would be silently dropped. ` +
-        `Increase bufferSymbols(...) on the builder or remove the extra entries.`,
+        `${callerLabel} column ${c}: bufferBelow has a symbol at index ${belowMax}, ` +
+        `beyond engine bufferSymbols=${maxBelow}; it would be silently dropped. ` +
+        `Increase bufferSymbols(...) on the builder or remove the extra entry.`,
       );
     }
   }
+}
+
+/** Highest index holding a defined value, or -1 if the array is empty/undefined. */
+function highestDefinedIndex(arr: (string | undefined)[] | undefined): number {
+  if (!arr) return -1;
+  for (let i = arr.length - 1; i >= 0; i--) {
+    if (arr[i] !== undefined) return i;
+  }
+  return -1;
 }

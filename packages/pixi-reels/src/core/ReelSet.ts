@@ -250,7 +250,7 @@ export interface RunCascadeOptions {
   maxChain?: number;
   /**
    * Forwarded to `destroySymbols(cells, opts)` on every cascade. Useful
-   * for direction overrides, per-cell stagger, viewport dim, etc.
+   * for per-cell stagger, viewport dim, an abort signal, etc.
    */
   destroyOptions?: DestroySymbolsOptions;
   /**
@@ -441,11 +441,12 @@ export class ReelSet extends Container implements Disposable {
   private _isMultiWaysSlot: boolean;
 
   /**
-   * True while a `nudge()` call is between its first tween starting and the
-   * last tween settling. Used by spin/setResult/pin/setShape to throw rather
-   * than race the in-flight nudge.
+   * Number of `nudge()` calls currently in flight. Reference-counted (not a
+   * boolean) so parallel nudges across reels don't clear the guard early: the
+   * first to settle would otherwise let spin/setResult/pin/setShape race a
+   * still-live nudge. Used by those methods to throw while any nudge runs.
    */
-  private _nudgeInFlight = false;
+  private _nudgesInFlight = 0;
   private _multiwaysMinRows = 0;
   private _multiwaysMaxRows = 0;
   private _multiwaysReelPixelHeight = 0;
@@ -696,8 +697,8 @@ export class ReelSet extends Container implements Disposable {
    * This is the canonical "fade out the winners" step in a cascade chain:
    * call it between win-detection and `refill()`. Every cell's view is
    * lifted with a high zIndex so the destroy animation isn't clipped by
-   * neighbours, and rotation direction alternates by column for cohesive
-   * cluster pops.
+   * neighbours. The default `playDestroy` is a brief scale/fade implode;
+   * override it per symbol class for art-appropriate destruction.
    *
    *   - Empty `cells` resolves immediately, no work.
    *   - Out-of-range cells throw. the contract is that you've already
@@ -1160,7 +1161,7 @@ export class ReelSet extends Container implements Disposable {
       }
     }
 
-    this._nudgeInFlight = true;
+    this._nudgesInFlight++;
     try {
       const result = await this._reels[col].nudge(options, () => {
         // Fires after Reel.nudge has validated, pre-placed, and snapped:
@@ -1196,12 +1197,12 @@ export class ReelSet extends Container implements Disposable {
       }
       throw err;
     } finally {
-      this._nudgeInFlight = false;
+      this._nudgesInFlight--;
     }
   }
 
   private _assertNoNudgeInFlight(method: string): void {
-    if (this._nudgeInFlight) {
+    if (this._nudgesInFlight > 0) {
       throw new Error(
         `ReelSet.${method}: cannot be called while nudge() is in flight. ` +
         `Await the nudge() promise before calling ${method}.`,
@@ -1951,7 +1952,21 @@ export class ReelSet extends Container implements Disposable {
       clamped: boolean;
     }[] = [];
 
-    const reelPins = this._pinsOnReel(reelIndex);
+    // Process top-to-bottom so collision resolution is deterministic: the
+    // first (topmost) pin to claim a clamped cell keeps it.
+    const reelPins = this._pinsOnReel(reelIndex).sort((a, b) => a.row - b.row);
+
+    // Rows that will be occupied after migration. Seed with pins that stay put
+    // (a mover clamped onto one of these collides and is expired).
+    const occupied = new Set<number>();
+    const movers: {
+      pin: CellPin;
+      fromRow: number;
+      target: number;
+      clamped: boolean;
+      nextOriginRow: number;
+    }[] = [];
+
     for (const pin of reelPins) {
       const fromRow = pin.row;
 
@@ -1978,11 +1993,28 @@ export class ReelSet extends Container implements Disposable {
         clamped = target !== pin.originRow;
       }
 
-      if (target === fromRow && nextOriginRow === pin.originRow) continue;
+      if (target === fromRow && nextOriginRow === pin.originRow) {
+        occupied.add(fromRow); // stays put; claims its cell
+        continue;
+      }
+      movers.push({ pin, fromRow, target, clamped, nextOriginRow });
+    }
 
+    for (const { pin, fromRow, target, clamped, nextOriginRow } of movers) {
       const fromKey = pinKey(pin.col, fromRow);
-      const toKey = pinKey(pin.col, target);
 
+      if (occupied.has(target)) {
+        // Target cell already taken (by a stayer or an earlier mover). Expire
+        // this pin deterministically instead of overwriting the other pin in
+        // `_pins` and orphaning its overlay.
+        this._pins.delete(fromKey);
+        this._destroyPinOverlay(fromKey);
+        this._events.emit('pin:expired', pin, 'collision');
+        continue;
+      }
+      occupied.add(target);
+
+      const toKey = pinKey(pin.col, target);
       this._pins.delete(fromKey);
       const moved: CellPin = { ...pin, row: target, originRow: nextOriginRow };
       this._pins.set(toKey, moved);
@@ -2003,6 +2035,16 @@ export class ReelSet extends Container implements Disposable {
       });
     }
     return migrations;
+  }
+
+  /**
+   * The on-screen Y of a pin overlay sitting on cell `row` of `reel`, given the
+   * cell pitch `slotHeight`. Single source of truth for overlay placement;
+   * `getSymbolAt(row).view.y` equals `row * slotHeight` for a snapped reel
+   * (ReelMotion lays symbols at that pitch), so all overlay sites agree.
+   */
+  private _pinOverlayCellY(reel: Reel, row: number, slotHeight: number): number {
+    return reel.container.y + row * slotHeight;
   }
 
   /**
@@ -2094,7 +2136,7 @@ export class ReelSet extends Container implements Disposable {
     // symbol-view y is reel-local; pyramid layouts add `reel.container.y`
     // (the per-reel offsetY) so overlays line up with the actual cell.
     overlay.view.x = reel.container.x;
-    overlay.view.y = reel.container.y + reel.getSymbolAt(pin.row).view.y;
+    overlay.view.y = this._pinOverlayCellY(reel, pin.row, reel.motion.slotHeight);
     overlay.view.zIndex = ReelSet.PIN_OVERLAY_Z_INDEX;
     this._viewport.unmaskedContainer.addChild(overlay.view);
     this._pinOverlays.set(key, { pin, overlay });
@@ -2120,7 +2162,7 @@ export class ReelSet extends Container implements Disposable {
       const { pin, overlay } = entry;
       overlay.resize(reel.symbolWidth, reel.symbolHeight);
       overlay.view.x = reel.container.x;
-      overlay.view.y = reel.container.y + pin.row * reel.motion.slotHeight;
+      overlay.view.y = this._pinOverlayCellY(reel, pin.row, reel.motion.slotHeight);
     }
   }
 
@@ -2149,7 +2191,7 @@ export class ReelSet extends Container implements Disposable {
         oldCellHeight: reel.symbolHeight,
         newCellHeight: targetSymbolHeight,
         fromY: overlay.view.y,
-        toY: reel.container.y + pin.row * newSlot,
+        toY: this._pinOverlayCellY(reel, pin.row, newSlot),
         x: reel.container.x,
       });
     }

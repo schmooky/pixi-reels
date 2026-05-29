@@ -14,6 +14,13 @@ import { StandardMode } from '../spin/modes/StandardMode.js';
 import { getGsap } from '../utils/gsapRef.js';
 
 /**
+ * Upper bound (ms) on a single `update()` delta. Matches Pixi's default
+ * minFPS-derived `maxElapsedMS`; bounds spin displacement when a backgrounded
+ * tab refocuses or a non-Pixi ticker reports a huge delta.
+ */
+const MAX_TICK_MS = 100;
+
+/**
  * Options for `Reel.nudge()` / `ReelSet.nudge()`. a post-stop reposition
  * that shifts the reel by `distance` symbol positions and reveals new
  * caller-supplied symbols.
@@ -370,10 +377,16 @@ export class Reel implements Disposable {
   update(deltaMs: number): void {
     if (this.speed === 0) return;
 
+    // Clamp pathological frame spikes (a backgrounded tab refocusing, a custom
+    // or fake ticker without Pixi's minFPS floor) to a sane per-tick budget.
+    // Defence in depth on top of each mode's own displacement cap — the tumble
+    // mode caps at a full slot, so an unbounded deltaMs there could still skip.
+    const dt = Math.min(deltaMs, MAX_TICK_MS);
+
     const deltaY = this.spinningMode.computeDeltaY(
       this.motion.slotHeight,
       this.speed,
-      deltaMs,
+      dt,
     );
 
     if (deltaY !== 0) {
@@ -1106,22 +1119,25 @@ export class Reel implements Disposable {
     }
     this._nudgeQueue = null;
     this._isNudging = false;
+    // Destroy every symbol's view. We must NOT release live symbols back into
+    // the shared pool here: the container.destroy({ children: true }) below
+    // would then destroy the views of symbols now sitting in the pool, so the
+    // next acquire() would hand out a destroyed view. (Full and partial reel
+    // teardown both run through here.)
     for (const symbol of this.symbols) {
-      if (symbol instanceof OccupiedStub) {
-        symbol.destroy();
-      } else {
-        this._symbolFactory.release(symbol);
-      }
+      symbol.destroy();
     }
     for (const stub of this._occupiedStubs) {
       if (!stub.isDestroyed) stub.destroy();
     }
     this._occupiedStubs = [];
     this.symbols = [];
-    this.events.removeAllListeners();
     this.container.destroy({ children: true });
     this._isDestroyed = true;
+    // Emit 'destroyed' while listeners are still attached, THEN remove them —
+    // emitting after removeAllListeners() would reach nobody.
     this.events.emit('destroyed');
+    this.events.removeAllListeners();
   }
 
   /**

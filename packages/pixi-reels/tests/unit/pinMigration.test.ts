@@ -205,4 +205,45 @@ describe('pin migration (MultiWays)', () => {
       destroy();
     }
   });
+
+  it('expires a pin that collides onto a cell another pin already holds (M8)', async () => {
+    const { reelSet, destroy } = createTestReelSet({
+      reels: 3,
+      multiways: { minRows: 2, maxRows: 7, reelPixelHeight: 700 },
+      symbolIds: ['a', 'wild', 'scatter'],
+      symbolSize: { width: 100, height: 100 },
+    });
+    try {
+      const expired = captureEvents(reelSet, ['pin:expired']);
+      const p = reelSet.spin();
+      reelSet.pin(1, 3, 'wild', { turns: 'permanent' }); // originRow 3
+      reelSet.pin(1, 4, 'scatter', { turns: 'permanent' }); // originRow 4
+
+      // Shrink reel 1 to 2 rows: both pins clamp to the last row (1) and collide.
+      reelSet.setShape([2, 2, 2]);
+      reelSet.setResult([
+        { visible: ['a', 'a'] },
+        { visible: ['a', 'a'] },
+        { visible: ['a', 'a'] },
+      ]);
+      reelSet.slamStop();
+      await p;
+
+      // The topmost pin (row 3) keeps the clamped cell; the lower one is dropped.
+      // Before the fix, the second pin silently overwrote the first in `_pins`
+      // (so this would be 'scatter') and orphaned the first overlay.
+      expect(reelSet.getPin(1, 1)?.symbolId).toBe('wild');
+      const reel1Pins = [
+        ...((reelSet as unknown as { _pins: Map<string, { col: number }> })._pins).values(),
+      ].filter((pin) => pin.col === 1);
+      expect(reel1Pins).toHaveLength(1);
+
+      // The collision fired pin:expired('collision') for the dropped pin.
+      const collisions = expired.filter((e) => e.args[1] === 'collision');
+      expect(collisions).toHaveLength(1);
+      expect((collisions[0].args[0] as { symbolId: string }).symbolId).toBe('scatter');
+    } finally {
+      destroy();
+    }
+  });
 });

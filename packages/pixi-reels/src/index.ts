@@ -36,7 +36,7 @@ export { SpriteSymbol } from './symbols/SpriteSymbol.js';
 export type { SpriteSymbolOptions } from './symbols/SpriteSymbol.js';
 export { AnimatedSpriteSymbol } from './symbols/AnimatedSpriteSymbol.js';
 export type { AnimatedSpriteSymbolOptions } from './symbols/AnimatedSpriteSymbol.js';
-export { SpineSymbol } from './symbols/SpineSymbol.js';
+export { SpineSymbol, whenSpineReady } from './symbols/SpineSymbol.js';
 export type { SpineSymbolOptions } from './symbols/SpineSymbol.js';
 export { SymbolRegistry } from './symbols/SymbolRegistry.js';
 
@@ -127,6 +127,7 @@ export type {
 // Utils
 export type { Disposable } from './utils/Disposable.js';
 export { TickerRef } from './utils/TickerRef.js';
+export { driveGsapWithTicker } from './utils/gsapTicker.js';
 
 // Debug
 export {

@@ -3,17 +3,28 @@ import { ReelSymbol } from './ReelSymbol.js';
 // Spine types imported dynamically. this is an optional peer dependency
 let SpineClass: any = null;
 
-async function loadSpine(): Promise<void> {
+// Kick off the optional import at module init and keep the promise so callers
+// can wait for it. Without this, constructing a SpineSymbol on a cold start
+// (before the dynamic import resolves) throws the "not installed" error even
+// when Spine IS installed — it just hadn't finished loading yet.
+const spineReady: Promise<void> = (async () => {
   try {
     const spineModule = await import('@esotericsoftware/spine-pixi-v8');
     SpineClass = spineModule.Spine;
   } catch {
-    // Spine not available. SpineSymbol will throw on construction
+    // Spine not available. SpineSymbol will throw on construction.
   }
-}
+})();
 
-// Attempt to load Spine on module init
-loadSpine();
+/**
+ * Resolves once the optional `@esotericsoftware/spine-pixi-v8` import has
+ * settled (whether or not it was installed). Await this before constructing
+ * `SpineSymbol`s if you build the reel set immediately on app start, so a cold
+ * load can't throw the misleading "not installed" error.
+ */
+export function whenSpineReady(): Promise<void> {
+  return spineReady;
+}
 
 export interface SpineSymbolOptions {
   /** Map of symbolId → SkeletonData. */
@@ -24,6 +35,13 @@ export interface SpineSymbolOptions {
   winAnimation?: string;
   /** Default skin name. Default: 'default'. */
   defaultSkin?: string;
+  /**
+   * Fail loud on unmapped animations. When `true`, activating or winning with
+   * a configured animation name that the skeleton doesn't define throws instead
+   * of silently showing nothing (catches typos like `ide` vs `idle`). Default
+   * `false` to preserve the lenient behavior. See ADR 011.
+   */
+  strict?: boolean;
 }
 
 /**
@@ -40,19 +58,23 @@ export class SpineSymbol extends ReelSymbol {
   private _defaultSkin: string;
   private _winResolve: (() => void) | null = null;
   private _currentSkeletonKey: string = '';
+  private _strict: boolean;
 
   constructor(options: SpineSymbolOptions) {
     super();
     if (!SpineClass) {
       throw new Error(
-        'SpineSymbol requires @esotericsoftware/spine-pixi-v8 to be installed. ' +
-        'Install it with: npm install @esotericsoftware/spine-pixi-v8',
+        'SpineSymbol could not use @esotericsoftware/spine-pixi-v8. Either it is ' +
+        'not installed (npm install @esotericsoftware/spine-pixi-v8), or its ' +
+        'dynamic import has not resolved yet on a cold start — await ' +
+        'whenSpineReady() before constructing SpineSymbols.',
       );
     }
     this._skeletonDataMap = options.skeletonDataMap;
     this._idleAnimation = options.idleAnimation ?? 'idle';
     this._winAnimation = options.winAnimation ?? 'win';
     this._defaultSkin = options.defaultSkin ?? 'default';
+    this._strict = options.strict ?? false;
   }
 
   protected onActivate(symbolId: string): void {
@@ -77,6 +99,11 @@ export class SpineSymbol extends ReelSymbol {
     }
     if (this._spine.skeleton.data.findAnimation(this._idleAnimation)) {
       this._spine.state.setAnimation(0, this._idleAnimation, true);
+    } else if (this._strict) {
+      throw new Error(
+        `SpineSymbol(strict): idle animation '${this._idleAnimation}' not found ` +
+        `on skeleton '${symbolId}'.`,
+      );
     }
   }
 
@@ -96,7 +123,15 @@ export class SpineSymbol extends ReelSymbol {
 
   async playWin(): Promise<void> {
     if (!this._spine) return;
-    if (!this._spine.skeleton.data.findAnimation(this._winAnimation)) return;
+    if (!this._spine.skeleton.data.findAnimation(this._winAnimation)) {
+      if (this._strict) {
+        throw new Error(
+          `SpineSymbol(strict): win animation '${this._winAnimation}' not found ` +
+          `on skeleton '${this._currentSkeletonKey}'.`,
+        );
+      }
+      return;
+    }
 
     return new Promise<void>((resolve) => {
       this._winResolve = resolve;

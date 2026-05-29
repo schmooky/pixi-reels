@@ -42,6 +42,28 @@ export interface SpinOptions {
    *     filtered.
    */
   holdReels?: number[];
+
+  /**
+   * Abort the spin from the outside. If this signal aborts before the reels
+   * land, the `spin()` promise REJECTS — with `signal.reason` when it is an
+   * `Error`, otherwise a generic abort error — and the reels are force-stopped
+   * to a clean grid. Wire this to the same `AbortController` that cancels the
+   * spin's server request so a failed or cancelled fetch can never leave the
+   * reels spinning forever.
+   */
+  signal?: AbortSignal;
+
+  /**
+   * Watchdog ceiling, in milliseconds. If the reels have not landed within
+   * `timeoutMs` of `spin()` starting (i.e. `setResult()` / `requestSkip()` /
+   * `slamStop()` was never called), the `spin()` promise REJECTS and the reels
+   * are force-stopped to a clean grid.
+   *
+   * Off by default — the engine imposes no timeout. Opt in for defence in depth
+   * against an integration whose error path forgets to settle the spin. Values
+   * `<= 0` are ignored.
+   */
+  timeoutMs?: number;
 }
 
 /** Timing and animation profile for a speed mode. */

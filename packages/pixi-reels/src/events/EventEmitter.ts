@@ -71,11 +71,23 @@ export class EventEmitter<TEvents extends Record<string, unknown[]>> {
     const snapshot = entries.slice();
     for (const entry of snapshot) {
       if (entry.once) {
-        this.off(event, entry.fn as any, entry.context);
+        // Remove this specific entry by identity. Calling off(fn, context)
+        // would drop *every* listener with the same fn reference — including a
+        // separate persistent on() registration of the same handler.
+        this._removeEntry(event, entry);
       }
       entry.fn.apply(entry.context, args);
     }
     return true;
+  }
+
+  private _removeEntry(event: keyof TEvents, entry: ListenerEntry): void {
+    const entries = this._listeners.get(event);
+    if (!entries) return;
+    const idx = entries.indexOf(entry);
+    if (idx === -1) return;
+    entries.splice(idx, 1);
+    if (entries.length === 0) this._listeners.delete(event);
   }
 
   removeAllListeners(event?: keyof TEvents): this {

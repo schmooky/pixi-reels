@@ -62,7 +62,7 @@ describe('assertBufferCountsInRange', () => {
     ];
     expect(() =>
       assertBufferCountsInRange(grid, aboveOne, belowOne, 'setResult'),
-    ).toThrowError(/setResult column 1: bufferAbove has 2 entries but engine bufferSymbols=1/);
+    ).toThrowError(/setResult column 1: bufferAbove has a symbol at index 1, beyond engine bufferSymbols=1/);
   });
 
   it('throws when bufferBelow length exceeds engine count', () => {
@@ -73,7 +73,7 @@ describe('assertBufferCountsInRange', () => {
     ];
     expect(() =>
       assertBufferCountsInRange(grid, aboveOne, belowOne, 'setResult'),
-    ).toThrowError(/setResult column 1: bufferBelow has 2 entries but engine bufferSymbols=1/);
+    ).toThrowError(/setResult column 1: bufferBelow has a symbol at index 1, beyond engine bufferSymbols=1/);
   });
 
   it('uses the supplied callerLabel in the message', () => {
@@ -90,10 +90,28 @@ describe('assertBufferCountsInRange', () => {
     ];
     expect(() =>
       assertBufferCountsInRange(grid, [2, 1], [1, 1], 'setResult'),
-    ).toThrowError(/setResult column 1: bufferAbove has 2 entries but engine bufferSymbols=1/);
+    ).toThrowError(/setResult column 1: bufferAbove has a symbol at index 1, beyond engine bufferSymbols=1/);
   });
 
   it('no-op for empty grid', () => {
     expect(() => assertBufferCountsInRange([], [], [], 'setResult')).not.toThrow();
+  });
+
+  it('counts the highest DEFINED index, not raw length (sparse array passes) [M9]', () => {
+    // length 3 but only index 0 is defined → a single entry materializes.
+    const grid: ColumnTarget[] = [
+      { visible: ['a', 'b', 'c'], bufferAbove: ['X', undefined, undefined] },
+    ];
+    expect(() => assertBufferCountsInRange(grid, [1], [1], 'setResult')).not.toThrow();
+  });
+
+  it('still throws when a defined entry sits beyond the buffer range (sparse) [M9]', () => {
+    // ['X', undefined, 'Y'] with bufferSymbols=2 → 'Y' at index 2 would be dropped.
+    const grid: ColumnTarget[] = [
+      { visible: ['a'], bufferAbove: ['X', undefined, 'Y'] },
+    ];
+    expect(() =>
+      assertBufferCountsInRange(grid, [2], [2], 'setResult'),
+    ).toThrowError(/bufferAbove has a symbol at index 2, beyond engine bufferSymbols=2/);
   });
 });

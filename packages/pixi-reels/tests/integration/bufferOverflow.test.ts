@@ -28,7 +28,7 @@ describe('setResult buffer overflow throws', () => {
           { visible: ['a', 'b', 'c'], bufferAbove: ['X', 'Y'] },
           { visible: ['a', 'b', 'c'] },
         ]),
-      ).toThrowError(/setResult column 1: bufferAbove has 2 entries but engine bufferSymbols=1/);
+      ).toThrowError(/setResult column 1: bufferAbove has a symbol at index 1, beyond engine bufferSymbols=1/);
     } finally {
       h.destroy();
     }
@@ -43,7 +43,7 @@ describe('setResult buffer overflow throws', () => {
           { visible: ['a', 'b', 'c'], bufferBelow: ['X', 'Y'] },
           { visible: ['a', 'b', 'c'] },
         ]),
-      ).toThrowError(/setResult column 1: bufferBelow has 2 entries but engine bufferSymbols=1/);
+      ).toThrowError(/setResult column 1: bufferBelow has a symbol at index 1, beyond engine bufferSymbols=1/);
     } finally {
       h.destroy();
     }
@@ -111,7 +111,7 @@ describe('initialFrame buffer overflow throws', () => {
         { visible: ['a', 'b', 'c'] },
       ]);
     expect(() => builder.build()).toThrowError(
-      /initialFrame column 1: bufferAbove has 2 entries but engine bufferSymbols=1/,
+      /initialFrame column 1: bufferAbove has a symbol at index 1, beyond engine bufferSymbols=1/,
     );
   });
 
@@ -124,7 +124,7 @@ describe('initialFrame buffer overflow throws', () => {
         { visible: ['a', 'b', 'c'] },
       ]);
     expect(() => builder.build()).toThrowError(
-      /initialFrame column 1: bufferBelow has 2 entries but engine bufferSymbols=1/,
+      /initialFrame column 1: bufferBelow has a symbol at index 1, beyond engine bufferSymbols=1/,
     );
   });
 
@@ -138,7 +138,7 @@ describe('initialFrame buffer overflow throws', () => {
         { visible: ['a', 'b', 'c'] },
       ])
       .bufferSymbols(1);
-    expect(() => builder.build()).toThrowError(/bufferAbove has 2 entries/);
+    expect(() => builder.build()).toThrowError(/bufferAbove has a symbol at index 1/);
   });
 
   it('accepts initialFrame within bounds (regression)', () => {

@@ -79,8 +79,18 @@ export class SymbolSpotlight implements Disposable {
 
   /** Show spotlight on specific positions. */
   async show(positions: SymbolPosition[], options: SpotlightOptions = {}): Promise<void> {
-    this.hide(); // Clear any existing spotlight
+    this.hide(); // Cancel any running cycle and clear the previous spotlight
+    await this._showInternal(positions, options);
+  }
 
+  /**
+   * Promote + play win for one set of positions. Unlike the public `show()`,
+   * this does NOT call `hide()` first, so it never aborts a running cycle.
+   */
+  private async _showInternal(
+    positions: SymbolPosition[],
+    options: SpotlightOptions = {},
+  ): Promise<void> {
     const {
       dimAmount = 0.5,
       playWinAnimation = true,
@@ -141,7 +151,15 @@ export class SymbolSpotlight implements Disposable {
       this._cycleAbort.abort();
       this._cycleAbort = null;
     }
+    this._teardownVisual();
+  }
 
+  /**
+   * Return promoted symbols and remove the dim overlay, WITHOUT aborting a
+   * running cycle. The cycle loop calls this between lines; `hide()` adds the
+   * abort on top for the public stop-everything behaviour.
+   */
+  private _teardownVisual(): void {
     // Return promoted symbols. Skip any whose view has been moved out of
     // the spotlight container. that means the shared symbol pool has
     // recycled them into another reel since show(), and reparenting back
@@ -177,21 +195,29 @@ export class SymbolSpotlight implements Disposable {
 
     if (winLines.length === 0) return;
 
-    this._cycleAbort = new AbortController();
-    const signal = this._cycleAbort.signal;
+    // Stop anything already showing/cycling, then start a fresh controller.
+    this.hide();
+    const abort = new AbortController();
+    this._cycleAbort = abort;
+    const signal = abort.signal;
 
     let cycleCount = 0;
     while (cycles === -1 || cycleCount < cycles) {
       for (const line of winLines) {
         if (signal.aborted) return;
-        await this.show(line.positions, options);
+        // Use the internal show/teardown so the cycle does not abort itself.
+        await this._showInternal(line.positions, options);
         await this._wait(displayDuration, signal);
         if (signal.aborted) return;
-        this.hide();
+        this._teardownVisual();
         await this._wait(gapDuration, signal);
       }
       cycleCount++;
     }
+
+    // Normal completion: clear only our own controller (a newer cycle/show
+    // that pre-empted us would have aborted this signal and returned above).
+    if (this._cycleAbort === abort) this._cycleAbort = null;
   }
 
   destroy(): void {

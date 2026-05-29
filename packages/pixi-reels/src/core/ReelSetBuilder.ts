@@ -99,6 +99,10 @@ export class ReelSetBuilder {
   /** True if the user explicitly set a mask strategy (no auto-pick override). */
   private _maskStrategyExplicit = false;
 
+  private _rng: () => number = Math.random;
+
+  private _poolCapacity?: number;
+
   /** Set number of reel columns. */
   reels(count: number): this {
     this._reelCount = count;
@@ -324,6 +328,40 @@ export class ReelSetBuilder {
   }
 
   /**
+   * Inject the source of randomness used to fill the scrolling strip (buffer
+   * fill, the symbols shown during SPIN before `setResult` lands, nudge
+   * padding). Must return a value in [0, 1). Default: `Math.random`.
+   *
+   * **Why you'd set this:** server-authoritative *outcomes* do not make the
+   * on-screen strip reproducible — the symbols a player sees scrolling are
+   * drawn from this RNG. Injecting a seeded, audited PRNG lets you replay the
+   * exact visual sequence from a seed, which provably-fair and regulated
+   * real-money deployments are eventually required to produce.
+   *
+   * @example
+   * import { ReelSetBuilder } from 'pixi-reels';
+   * const seeded = mulberry32(serverSeed); // your audited PRNG
+   * const reelSet = new ReelSetBuilder().reels(5).visibleRows(3)
+   *   .symbols(...).ticker(app.ticker).rng(seeded).build();
+   */
+  rng(fn: () => number): this {
+    this._rng = fn;
+    return this;
+  }
+
+  /**
+   * Override the per-symbol-id recycle-pool capacity. By default the engine
+   * sizes the pool to the whole strip (every visible + buffer cell), so even a
+   * grid that is briefly all one symbol recycles instead of churning through
+   * `destroy()` + recreate. Set this only to cap memory on very large grids, or
+   * to raise headroom for unusually heavy simultaneous symbol swaps.
+   */
+  poolCapacity(maxPerSymbol: number): this {
+    this._poolCapacity = maxPerSymbol;
+    return this;
+  }
+
+  /**
    * Inject the GSAP instance the engine should use for tweens.
    *
    * **When you need this:** if your app already imports `gsap` and your
@@ -537,9 +575,19 @@ export class ReelSetBuilder {
       ticker,
     };
 
-    // Create subsystems
-    const symbolFactory = new SymbolFactory(this._symbolRegistry);
-    const randomProvider = new RandomSymbolProvider(symbolsData);
+    // Create subsystems.
+    // Pool cap per symbol id. The worst case for a single id is the whole
+    // strip (every visible + buffer cell) showing it at once, so size the pool
+    // to that to avoid destroy()+recreate churn on large/MultiWays grids. A
+    // floor of 20 preserves headroom for small grids; an explicit
+    // .poolCapacity() overrides the derivation.
+    const totalStripCells = visibleRowsPerReel.reduce(
+      (sum, rows) => sum + rows + bufferAbove + bufferBelow,
+      0,
+    );
+    const poolCapacity = this._poolCapacity ?? Math.max(20, totalStripCells);
+    const symbolFactory = new SymbolFactory(this._symbolRegistry, poolCapacity);
+    const randomProvider = new RandomSymbolProvider(symbolsData, this._rng);
     const frameBuilder = new FrameBuilder(randomProvider);
 
     // Add custom middlewares
