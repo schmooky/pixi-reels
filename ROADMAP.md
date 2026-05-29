@@ -29,9 +29,9 @@ self-contained (usually a recipe + MDX page).
 | Expanding reels at runtime (add rows) | [todo] | minor | p3 | Reel must support live resize. |
 | Split symbols (two symbols per cell) | [todo] | minor | p2 | Cell-fraction occupancy. |
 | Horizontal reels | [todo] | **major** | p2 | Orientation is hardcoded to vertical. |
-| MultiWays (variable `visibleRows` per reel) | [todo] | **major** | p1 | Frame/geometry rewrite. |
-| Cluster grid (WxH, no reel concept) | [todo] | **major** | p1 | New non-reel mode + viewport. |
-| Colossal / big symbols (2x2, 3x3 overlay) | [todo] | **major** | p1 | Multi-cell symbol occupancy. |
+| MultiWays (variable `visibleRows` per reel) | [done] | **major** | p1 | Shipped via `.multiways()` + AdjustPhase (ADR 012). |
+| Cluster grid (WxH, no reel concept) | [todo] | **major** | p1 | New non-reel mode + viewport. Out of scope (ADR 007). |
+| Colossal / big symbols (2x2, 3x3 overlay) | [done] | **major** | p1 | Shipped via registration + OCCUPIED coordinator (ADR 013). |
 | Infinity Reels (dynamic column count) | [todo] | **major** | p3 | Columns added on each win. |
 | Horizontal-expand (add columns mid-spin) | [todo] | **major** | p3 | Related to Infinity Reels. |
 
@@ -50,7 +50,7 @@ self-contained (usually a recipe + MDX page).
 | Mystery symbol (reveal to matching) | [todo] | recipe | p1 | `setResult` + delayed `placeSymbols`. |
 | Mystery stacks (stacked mystery reveal) | [todo] | recipe | p2 | Combine stacked + mystery. |
 | Symbol upgrade / morph | [todo] | recipe | p2 | Post-win symbol-class promotion. |
-| Nudge (shift a reel by N rows) | [todo] | recipe | p2 | May need `reel.nudge(n)` API. |
+| Nudge (shift a reel by N rows) | [done] | recipe | p2 | Shipped: `reel.nudge()` / `reelSet.nudge()`. |
 | Chain-reaction wilds | [todo] | recipe | p2 | Win spawns a wild; cascade triggers chain. |
 | Portal / symbol teleport | [todo] | recipe | p3 | Swap two cells with motion. |
 | Reel modifiers pre-spin (random wilds, locked reels) | [todo] | recipe | p2 | FrameBuilder middleware demo. |

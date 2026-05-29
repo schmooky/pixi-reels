@@ -6,7 +6,7 @@ Deferred follow-ups from the per-reel-geometry / MultiWays / big-symbols PR (#60
 
 ### Pool & memory
 
-- [ ] **`maxPoolPerKey` is a global constant** (currently `20`). For a 6×7 MultiWays with reshape churn, peak demand can hit ~54 instances per symbol id. Expose as a builder option (`.poolCapacity(50)`) or auto-derive from `reelCount * maxRows + bufferTotal`. Today the pool quietly grows beyond the cap; surfacing the knob makes overflow predictable.
+- [x] ~~**`maxPoolPerKey` is a global constant** (currently `20`).~~ Resolved — the builder now auto-derives the per-key cap from the strip size (`reelCount * (maxRows + 2·bufferSymbols)`, floored at 20) and exposes a `.poolCapacity(n)` override. At capacity the overflow is disposed (it never silently grows past the cap).
 - [ ] **`bufferSymbols` is global, not per-reel.** Pyramid layouts overallocate on short reels. Not a bug — just memory. A per-reel form (`.bufferSymbolsPerReel([...])`) would tighten short reels.
 - [ ] **`OccupiedStub` array on `Reel` only grows.** Stubs are reused via `if (!stub.view.parent) return stub` but never released. Bounded by max-ever-concurrent OCCUPIED cells; consider an LRU shrink or just leaving it (we documented in `OccupiedStub` JSDoc).
 - [ ] **`SymbolFactory.size(symbolId)` debug accessor.** Today there's no way to inspect pool churn during MultiWays reshape. A debug-only count would help diagnose thrashing.
@@ -57,7 +57,7 @@ Deferred follow-ups from the per-reel-geometry / MultiWays / big-symbols PR (#60
 - [ ] **Per-reel X offsets** / irregular column spacing. Same `offsetY` pattern applied to X.
 - [ ] **Animated cell-resize tween on MultiWays reshape.** Current scope: pin overlays only. The cell tween was attempted in this PR but reverted because it fights the spinning motion layer.
 - [ ] **Big symbols on MultiWays.** Game-design guardrail today; a v2 might expose explicit truncation/skip strategies.
-- [ ] **Cascade + MultiWays.** Niche combination; build-time throw today.
+- [x] ~~**Cascade + MultiWays.** Niche combination; build-time throw today.~~ Shipped via the per-chain shape rule (ADR 015, issue #74); see `multiwaysCascade` tests.
 - [ ] **Big symbols during spin scroll.** Currently only place at landing.
 - [ ] **Big symbols from random fill.** Today's `weight: 0` requirement reflects this; v2 frame middleware could place blocks during scroll.
 - [ ] **Pool shrink on MultiWays collapse.** High-water mark today.

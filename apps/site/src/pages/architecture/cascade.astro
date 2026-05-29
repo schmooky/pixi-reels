@@ -142,7 +142,7 @@ flowchart LR
   <h2>API surface</h2>
 
   <ul>
-    <li><code>reelSet.destroySymbols(winners, opts?)</code>. the "pop" primitive. Defers to each symbol's own <code>playDestroy()</code> so subclasses (Spine, particles) get art-appropriate disintegration. Lifts zIndex so destroys aren't clipped; alternates rotation by column for cohesive cluster pops.</li>
+    <li><code>reelSet.destroySymbols(winners, opts?)</code>. the "pop" primitive. Defers to each symbol's own <code>playDestroy()</code> so subclasses (Spine, particles) get art-appropriate disintegration (the default is a brief scale/fade implode). Lifts zIndex so destroys aren't clipped.</li>
     <li><code>{`reelSet.refill({ winners, grid })`}</code>. the "place + drop" primitive. Reads each reel's <code>visibleRows</code>, computes per-cell fall distances from <code>winners</code>, animates only the cells that actually move. Untouched survivors stay perfectly still.</li>
     <li><code>{`reelSet.runCascade({ detectWinners, nextGrid })`}</code>. the chain orchestrator. Loops detect → destroy → pause → refill until <code>detectWinners</code> returns <code>[]</code>. Per-stage progress fires via <code>cascade:chain:start</code> / <code>cascade:chain:end</code>; the awaited <code>RunCascadeResult</code> carries the summary. Pass <code>signal: AbortSignal</code> for caller-driven cancellation.</li>
     <li><code>computeDropOffsets(visibleRows, winnerRows)</code>. the algorithm the engine itself uses, exported so you can validate server-side gravity sims offline.</li>

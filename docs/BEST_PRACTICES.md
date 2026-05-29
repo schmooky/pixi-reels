@@ -70,7 +70,7 @@ Every exit path from a spin (skip, destroy, interrupted by a new spin) fires the
 Build your test around `createTestReelSet`. Headless symbols, fake ticker, synchronous spin. your test doesn't care about PixiJS at all.
 
 ```ts
-import { createTestReelSet, countSymbol } from 'pixi-reels';
+import { createTestReelSet, countSymbol } from 'pixi-reels/testing';
 import { CheatEngine, forceScatters } from '@/shared/cheats';
 
 it('3 scatters triggers the bonus handler', async () => {

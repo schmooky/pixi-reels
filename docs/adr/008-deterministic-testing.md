@@ -1,6 +1,6 @@
 # ADR 008: Deterministic testing harness
 
-## Status: Accepted
+## Status: Accepted (updated 2026-05-29 — the harness now ships at the `pixi-reels/testing` subpath, not the main barrel)
 
 ## Context
 
@@ -49,12 +49,12 @@ It's a real `ReelSymbol` subclass. `Reel` doesn't know the difference between `H
 ### Negative
 
 - The harness cannot exercise asynchronous spin-phase timing. A test that wants to watch a reel mid-SPIN cannot — `skip()` is all-or-nothing. For timing-sensitive visual regressions, rely on the site's preview + browser verification.
-- The testing module is counted against the library's bundle until a consumer imports from it. Published bundles still separate testing out via the `./testing` subpath? — **no**, we export from the main barrel today. If that becomes a bundle-size concern, a future ADR can split it to a subpath.
+- The testing module is split out via the `./testing` subpath, so it is not counted against the main bundle unless a consumer imports from `pixi-reels/testing`. (Originally exported from the main barrel; moved to a subpath in 1.0.0.)
 
 ## Verification
 
 ```ts
-import { createTestReelSet, expectGrid, captureEvents } from 'pixi-reels';
+import { createTestReelSet, expectGrid, captureEvents } from 'pixi-reels/testing';
 
 const h = createTestReelSet({ reels: 5, visibleRows: 3, symbolIds: ['a', 'b', 'c'] });
 try {
