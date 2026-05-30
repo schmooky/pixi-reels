@@ -137,7 +137,19 @@ export class CascadeDropInPhase extends ReelPhase<CascadeDropInPhaseConfig> {
     //                  Survivors that slid in stage 1 are already at
     //                  their grid Y; reveal them at alpha = 1.
     const jobs: DropJob[] = [];
+    // Big symbols: every occupied cell of a block resolves (via getAnchorRow /
+    // getSymbolAt) to the SAME anchor view. Animate that view ONCE, driven by
+    // the first visible row of the block (top-to-bottom). Without this the
+    // anchor gets one job per occupied row, so: multiple GSAP tweens fight
+    // over its `view.y` (the jitter), `finalY = sym.view.y` is re-read after a
+    // sibling job already moved the view to its startY (wrong landing Y), and
+    // per-symbol listeners (landing squish/bounce) fire N times on one view.
+    const handledAnchors = new Set<number>();
     for (const off of offsets) {
+      const anchorRow = reel.getAnchorRow(off.row);
+      if (anchorRow !== off.row && handledAnchors.has(anchorRow)) continue;
+      handledAnchors.add(anchorRow);
+
       const sym = reel.getSymbolAt(off.row);
 
       if (off.offsetRows === 0) {
