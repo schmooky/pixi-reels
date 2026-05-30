@@ -16,7 +16,7 @@
     "cors": "^2.8.6",
     "dotenv": "^16.6.1",
     "express": "^5.2.1",
-    "express-rate-limit": "^7.5.1",
+    "express-rate-limit": "^8.5.2",
     "nanoid": "^5.1.11",
     "zod": "^3.25.76"
   },
