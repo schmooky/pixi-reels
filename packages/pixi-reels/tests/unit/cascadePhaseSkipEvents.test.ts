@@ -18,7 +18,7 @@ import type { ReelSet, ReelSetEvents } from '../../src/index.js';
  *
  *   - A skip after `:start` MUST emit the matching `:end`.
  *   - A skip BEFORE `:start` (during the pre-fall delay window) must NOT
- *     emit `:end` — that would be unpaired.
+ *     emit `:end`. that would be unpaired.
  *   - Natural completion still emits `:end` exactly once (no double-fire
  *     when `forceComplete` runs after a phase has already finished).
  */
@@ -46,7 +46,7 @@ function buildHarness(initialFrame: string[][]): Harness {
       fall:   { duration: 200, ease: 'none', rowStagger: 0 },
       dropIn: { duration: 200, ease: 'none', rowStagger: 0, distance: 'perHole' },
     })
-    .initialFrame(initialFrame)
+    .initialFrame(initialFrame.map((visible) => ({ visible })))
     .ticker(ticker as unknown as Ticker)
     .build();
   return {
@@ -56,7 +56,7 @@ function buildHarness(initialFrame: string[][]): Harness {
   };
 }
 
-describe('CascadeFallPhase — skip event pairing', () => {
+describe('CascadeFallPhase. skip event pairing', () => {
   it('emits cascade:fall:end on skip after :start has fired', async () => {
     const h = buildHarness([
       ['a', 'b', 'c'],
@@ -80,7 +80,7 @@ describe('CascadeFallPhase — skip event pairing', () => {
     expect(events).toEqual(['start:0']);
 
     // Force-complete in the middle of the tween (gsap timeline still
-    // running) — this is the slam path the engine takes.
+    // running). this is the slam path the engine takes.
     phase.forceComplete();
     await done;
     expect(events).toEqual(['start:0', 'end:0']);
@@ -104,7 +104,7 @@ describe('CascadeFallPhase — skip event pairing', () => {
       delay: 5000,
       events: bus,
     });
-    // No events yet — we're inside the delay window.
+    // No events yet. we're inside the delay window.
     expect(events).toEqual([]);
 
     phase.forceComplete();
@@ -134,14 +134,14 @@ describe('CascadeFallPhase — skip event pairing', () => {
     });
     expect(ends).toEqual([0]);
 
-    // forceComplete after natural finish — should NOT re-emit.
+    // forceComplete after natural finish. should NOT re-emit.
     phase.forceComplete();
     expect(ends).toEqual([0]);
     h.destroy();
   });
 });
 
-describe('CascadeDropInPhase — skip event pairing', () => {
+describe('CascadeDropInPhase. skip event pairing', () => {
   it('emits cascade:dropIn:end on skip (default role)', async () => {
     const h = buildHarness([
       ['a', 'b', 'c'],
@@ -186,7 +186,7 @@ describe('CascadeDropInPhase — skip event pairing', () => {
     const phase = new CascadeDropInPhase(reel, SpeedPresets.NORMAL, drop);
 
     // winnerRows=[1] on a 3-row reel gives the survivor at row 0 an
-    // `offsetRows=1` slide — i.e. a real gravity-stage job that produces
+    // `offsetRows=1` slide. i.e. a real gravity-stage job that produces
     // a non-trivial gsap timeline. Without this, every winner config we
     // could choose either leaves no work (the phase finishes
     // synchronously in onEnter before forceComplete runs) or animates

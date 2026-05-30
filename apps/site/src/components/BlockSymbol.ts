@@ -9,7 +9,7 @@ import { ReelSymbol } from 'pixi-reels';
  *
  * Internals: the visual (graphics + label) lives in an `_inner` container
  * positioned at (w/2, h/2) with geometry drawn symmetrically around the
- * origin. Scaling `_inner` therefore scales around the visual center — not
+ * origin. Scaling `_inner` therefore scales around the visual center. not
  * the top-left of the outer `view`. Reel layout continues to position via
  * `view.y` / `view.x`, unchanged.
  */
@@ -84,7 +84,7 @@ export class BlockSymbol extends ReelSymbol {
   resize(width: number, height: number): void {
     this._w = width;
     this._h = height;
-    // Inner container sits at the visual center of the cell — scaling happens around here.
+    // Inner container sits at the visual center of the cell. scaling happens around here.
     this._inner.position.set(width / 2, height / 2);
     this._label.x = 0;
     this._label.y = 0;

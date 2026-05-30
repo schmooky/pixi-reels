@@ -3,12 +3,12 @@
 //                   WILD_CARD, PIXI, gsap, app, pickWeighted
 
 const A = '7', B = '8', C = '9';
-const SEVEN = 'A'; // premium card stand-in for the original royal "seven"
+const SEVEN = 'A'; // letter-card stand-in. constant kept as SEVEN for readability
 const IDS = [A, B, C, SEVEN];
 const COLS = 5, ROWS = 3, SIZE = 90;
 
 const reelSet = new ReelSetBuilder()
-  .reels(COLS).visibleSymbols(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
+  .reels(COLS).visibleRows(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
   .symbols(r => {
     for (const sym of [...CARD_DECK, WILD_CARD]) {
       r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
@@ -30,7 +30,7 @@ const parseKey = (k) => k.split(',').map(Number);
 
 function redraw() {
   overlayGfx.clear();
-  // Picked cells — solid orange.
+  // Picked cells. solid orange.
   for (const k of picked) {
     const [col, row] = parseKey(k);
     const b = reelSet.getCellBounds(col, row);
@@ -38,7 +38,7 @@ function redraw() {
       .roundRect(b.x + 3, b.y + 3, b.width - 6, b.height - 6, 10)
       .stroke({ color: 0xff6b35, width: 3, alpha: 1 });
   }
-  // Hover cell — soft grey preview (only if not already picked).
+  // Hover cell. soft grey preview (only if not already picked).
   if (hoverKey && !picked.has(hoverKey)) {
     const [col, row] = parseKey(hoverKey);
     const b = reelSet.getCellBounds(col, row);
@@ -74,7 +74,7 @@ for (let col = 0; col < COLS; col++) {
   for (let row = 0; row < ROWS; row++) {
     const b = reelSet.getCellBounds(col, row);
     const hit = new PIXI.Graphics();
-    // Filled with alpha 0 — invisible but still hit-testable.
+    // Filled with alpha 0. invisible but still hit-testable.
     hit.rect(b.x, b.y, b.width, b.height).fill({ color: 0xffffff, alpha: 0 });
     hit.eventMode = 'static';
     hit.cursor = 'pointer';
@@ -104,7 +104,7 @@ return {
     await new Promise(r => setTimeout(r, 150));
     const grid = Array.from({ length: COLS }, () =>
       Array.from({ length: ROWS }, () => pickWeighted({ [A]: 10, [B]: 10, [C]: 10, [SEVEN]: 3 })));
-    reelSet.setResult(grid);
+    reelSet.setResult(grid.map((visible) => ({ visible })));
     await p;
   },
   cleanup: () => {

@@ -1,10 +1,10 @@
 ---
 layout: ../../layouts/Recipe.astro
 title: Land a big symbol partially in buffer
-description: A tall 1xH block lands with its anchor in bufferAbove — only the bottom cell shows at the top of the visible window. Nudge to drag the rest into view. Works end-to-end through setResult, refill, nudge, and the cross-reel resolver.
+description: A tall 1xH block lands with its anchor in bufferAbove. only the bottom cell shows at the top of the visible window. Nudge to drag the rest into view. Works end-to-end through setResult, refill, nudge, and the cross-reel resolver.
 tags: [big-symbols, buffer, nudge, recent]
 steps:
-  - "Pass an anchor at `bufferAbove[i]` via the explicit `ColumnTarget` form (or row `-i-1` via legacy negative-index)"
+  - "Pass an anchor at `bufferAbove[i]` on the column's `ColumnTarget`"
   - "Coordinator paints OCCUPIED at the rest of the block's cells (negative rows, visible rows, or bufferBelow as needed)"
   - "`_finalizeFrame` sizes the anchor sprite to span the whole block; the mask clips the off-screen portion"
   - "`getVisibleSymbols` resolves visible cells to the anchor id via a NEGATIVE `anchorRow` in `_occupancy`"
@@ -18,14 +18,17 @@ apis:
 
 import code from '../../recipes/big-symbol-partial-land.recipe.ts?raw';
 import { RecipeRunner } from '../../components/RecipeRunner.tsx';
+import RecipeFrame from '../../components/RecipeFrame.astro';
 
-<RecipeRunner code={code} client:only="react" />
+<RecipeFrame>
+  <RecipeRunner code={code} client:only="react" />
+</RecipeFrame>
 
 Before this change `_coordinateBigSymbols` only iterated visible rows;
 trying to set a big-symbol anchor at `bufferAbove[i]` or
 `bufferBelow[i]` either threw (`exceeds reel height`) or silently
 failed to paint OCCUPIED stubs. Now the coordinator scans the full
-strip range — anchor + h must stay on the strip, but it doesn't have
+strip range. anchor + h must stay on the strip, but it doesn't have
 to stay in the visible window.
 
 The recipe above lands a `1x3` TALL block with its anchor at row -2
@@ -51,17 +54,6 @@ reelSet.setResult([
 ]);
 ```
 
-Equivalent legacy form (negative-index string properties on the column
-array — note this DOES NOT survive `structuredClone`/JSON/postMessage,
-so prefer the `ColumnTarget` form for any grid that crosses a worker /
-network / serializer boundary):
-
-```ts
-const col: string[] = [filler(), filler(), filler()];
-(col as Record<number, string>)[-2] = 'TALL';
-reelSet.setResult([col, /* ... */]);
-```
-
 ## Where the block can live
 
 For a `1xH` block on a strip with `bufferAbove + visibleRows + bufferBelow`
@@ -81,54 +73,53 @@ violated rule (`extends past the bottom of the strip` or
 
 ## How it works end-to-end
 
-1. **`setResult` / `refill`** — both call `_coordinateBigSymbols(grid)`
-   which now iterates the full strip range. For every big-symbol
-   anchor it finds (in buffer or visible), it paints OCCUPIED at the
-   block's non-anchor cells. The legacy negative-index pattern is
-   preserved via `cloneTargetGrid`.
+1. **`setResult` / `refill`**: both call `_coordinateBigSymbols(grid)`
+   which iterates the full strip range. For every big-symbol anchor it
+   finds (in buffer or visible), it paints OCCUPIED at the block's
+   non-anchor cells.
 
-2. **`FrameBuilder.TargetPlacementMiddleware`** — places target symbols
+2. **`FrameBuilder.TargetPlacementMiddleware`**. places target symbols
    into the strip's symbol array, mapping row coordinates to strip
    indices via `bufferAbove + row`. Already handles negative rows.
 
-3. **`StopSequencer` / `placeSymbols`** — consume the frame and place
+3. **`StopSequencer` / `placeSymbols`**. consume the frame and place
    real `ReelSymbol`s or `OccupiedStub`s at each strip slot.
 
-4. **`Reel._finalizeFrame`** — after every snap, two passes:
+4. **`Reel._finalizeFrame`**. after every snap, two passes:
    - Scan 1: visible-row anchors (the common case).
    - Scan 2: bufferAbove anchors whose blocks extend into visible. For
      these, `_occupancy[visibleRow].anchorRow` is set to a NEGATIVE
      value (offset from `bufferAbove`).
 
-5. **`getVisibleSymbols` / `getSymbolAt`** — index back to the anchor
+5. **`getVisibleSymbols` / `getSymbolAt`**. index back to the anchor
    via `this.symbols[bufferAbove + anchorRow]`, which works whether
    `anchorRow` is positive or negative.
 
-6. **`getSymbolFootprint`** — returns `anchor.row` (possibly negative)
+6. **`getSymbolFootprint`**. returns `anchor.row` (possibly negative)
    so external consumers can locate the anchor cell.
 
-7. **`getBlockBounds`** — handles negative `anchor.row` by computing
+7. **`getBlockBounds`**. handles negative `anchor.row` by computing
    pixel coordinates directly from the row offset rather than
    delegating to `getCellBounds` (which still rejects negative rows by
    design).
 
 ## What still throws
 
-- **MultiWays + big symbols** — already rejected at build (existing
+- **MultiWays + big symbols**. already rejected at build (existing
   constraint, unchanged).
-- **Cross-reel blocks via nudge** — `w > 1` blocks throw inside
+- **Cross-reel blocks via nudge**. `w > 1` blocks throw inside
   `reelSet.nudge(col, ...)`. Buffer-row anchors don't change this:
   nudging a single reel can't shift a block whose other-reel cells
   stay put.
-- **Random-fill big symbols** — big symbols must still have `weight: 0`
+- **Random-fill big symbols**. big symbols must still have `weight: 0`
   so the random provider never picks one (random fill of a 1x1 slot
   can't paint a multi-cell block coherently).
 
 ## Related
 
-- [Big symbols MxN](/recipes/big-symbols-mxn/) — every shape variant.
-- [Nudge through a big symbol](/recipes/nudge-big-symbol/) — full-block
+- [Big symbols MxN](/recipes/big-symbols-mxn/). every shape variant.
+- [Nudge through a big symbol](/recipes/nudge-big-symbol/). full-block
   nudges + the tail-reveal canvas (the in-window mirror of this
   recipe).
-- [Peek symbol from buffer-above](/recipes/peek-from-above/) — the 1x1
+- [Peek symbol from buffer-above](/recipes/peek-from-above/). the 1x1
   analogue: tease a single symbol above the visible window.

@@ -18,7 +18,7 @@ body:
         - Spine integration (SpineReelSymbol, spine loader)
         - Cascade / tumble
         - Cheats / testing utilities
-        - Docs site (apps/site, pixi-reels.dev)
+        - Docs site (apps/site, pixi-reels.schmooky.dev)
         - One of the example apps (examples/*)
         - Build, CI, or release tooling
         - Unsure / other

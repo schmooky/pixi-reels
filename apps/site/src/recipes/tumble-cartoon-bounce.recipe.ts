@@ -3,8 +3,7 @@
 //           PIXI, gsap, app, pickWeighted
 
 // CARTOON BOUNCE: bounce.out gives a multi-bounce settle. Long stagger
-// makes the row-by-row arrival feel playful. Good fit for kid-friendly
-// themes, candy-style art, or anywhere "weighty fun" is the vibe.
+// spreads the row-by-row arrival in time.
 
 const IDS = ['7', '8', '9', '10', 'J', 'Q'];
 const REELS = 6, ROWS = 4, SIZE = 64;
@@ -13,7 +12,7 @@ const HIT_ROW = 2;
 const HIT_COLS = [0, 1, 2];
 
 // Longer pause so the previous bounce has time to settle before new
-// symbols arrive — the bouncy land needs breathing room.
+// symbols arrive. the bouncy land needs breathing room.
 const PAUSE_AFTER_REMOVAL_MS = 320;
 
 function randSymbol(exclude) {
@@ -23,7 +22,7 @@ function randSymbol(exclude) {
 }
 
 const reelSet = new ReelSetBuilder()
-  .reels(REELS).visibleSymbols(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
+  .reels(REELS).visibleRows(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
   .symbols((r) => {
     for (const sym of CARD_DECK) {
       if (IDS.includes(sym.id)) {
@@ -57,13 +56,13 @@ return {
     const spinDone = reelSet.spin();
     reelSet.setDropOrder('ltr');
     await new Promise((r) => setTimeout(r, 220));
-    reelSet.setResult(stage0);
+    reelSet.setResult(stage0.map((visible) => ({ visible })));
     await spinDone;
 
     await new Promise((r) => setTimeout(r, 220));
     const winners = HIT_COLS.map((c) => ({ reel: c, row: HIT_ROW }));
     await reelSet.destroySymbols(winners);
     await new Promise((r) => setTimeout(r, PAUSE_AFTER_REMOVAL_MS));
-    await reelSet.refill({ winners, grid: stage1 });
+    await reelSet.refill({ winners, grid: stage1.map((visible) => ({ visible })) });
   },
 };

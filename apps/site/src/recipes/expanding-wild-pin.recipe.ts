@@ -2,7 +2,7 @@
 // Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
 //                   WILD_CARD, PIXI, gsap, app, pickWeighted
 //
-// Expanding wild — when a wild lands, fill its entire column with wild
+// Expanding wild. when a wild lands, fill its entire column with wild
 // and keep the expansion for N spins. Each column-fill pin has `turns: 3`,
 // so the expanded column sticks around for three more spins before the
 // engine auto-expires the fill.
@@ -14,7 +14,7 @@ const STICKY_TURNS = 3;
 
 const reelSet = new ReelSetBuilder()
   .reels(COLS)
-  .visibleSymbols(ROWS)
+  .visibleRows(ROWS)
   .symbolSize(SIZE, SIZE)
   .symbolGap(4, 4)
   .symbols((r) => {

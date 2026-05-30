@@ -14,7 +14,7 @@ import { createUI } from '../../shared/ui.js';
 // ─── LAYOUT ─────────────────────────────────────────────────
 //
 // 6 reels × 5 rows, sprite symbols. This is the canonical "Sweet Bonanza
-// / Sugar Rush" cascade footprint — the one most production cascade slots
+// / Sugar Rush" cascade footprint. the one most production cascade slots
 // ship with.
 
 const REEL_COUNT = 6;
@@ -25,7 +25,7 @@ const SYMBOL_GAP = 5;
 /**
  * Lead-in window between the SPIN click and the moment the engine actually
  * begins the fall-out animation. A short hold-back (~180 ms) makes the
- * click feel "received" — the button visibly transitions to STOP before
+ * click feel "received". the button visibly transitions to STOP before
  * the symbols move. Without it the button-state flip and the fall start
  * land on the same frame and the player can't tell the click registered.
  */
@@ -34,7 +34,7 @@ const LEAD_IN_MS = 180;
 /**
  * Breathing room between "winners faded out" and "refill drop-in starts".
  * Production tumble slots dial this between 150 ms (snappy) and 500 ms
- * (dramatic). 280 ms is the sweet spot — long enough for the player to
+ * (dramatic). 280 ms is the sweet spot. long enough for the player to
  * register that the wins are gone, short enough to keep cascade momentum.
  */
 const PAUSE_AFTER_REMOVAL_MS = 280;
@@ -52,7 +52,7 @@ const SYMBOL_MAP: Record<string, string> = {
 };
 const GAME_SYMBOLS = Object.keys(SYMBOL_MAP);
 
-// ─── MOCK SERVER — DELIBERATELY SLOW INITIAL RESPONSE ───────
+// ─── MOCK SERVER. DELIBERATELY SLOW INITIAL RESPONSE ───────
 //
 // The initial-spin latency is 1.5-4.5 s on purpose: this is what makes
 // the "empty reels + spinner" window visible in the demo. Production
@@ -86,13 +86,13 @@ function randomGrid(): string[][] {
 
 const mockServer = {
   async spin(): Promise<string[][]> {
-    // 1.5-4.5 s — the long, visible "thinking" window.
+    // 1.5-4.5 s. the long, visible "thinking" window.
     await wait(1500 + Math.random() * 3000);
     return randomGrid();
   },
 
   async cascade(prevGrid: string[][], winners: Cell[]): Promise<string[][]> {
-    // 100-250 ms — refills are quick because the gravity sim is cheap.
+    // 100-250 ms. refills are quick because the gravity sim is cheap.
     await wait(100 + Math.random() * 150);
 
     // Server-side gravity: survivors pack to the bottom, new symbols
@@ -146,7 +146,7 @@ function detectWinners(grid: string[][]): Cell[] {
 //
 // A simple rotating arc. Shown during the empty wait between
 // `cascade:fall:end` (all reels finished falling) and `cascade:dropIn:start`
-// (the first reel begins filling) — i.e. exactly the indeterminate
+// (the first reel begins filling). i.e. exactly the indeterminate
 // server-roundtrip window.
 
 function makeSpinner(): Container {
@@ -169,7 +169,7 @@ function buildReelSet(app: Application, textures: Record<string, Texture>): Reel
   }
   return new ReelSetBuilder()
     .reels(REEL_COUNT)
-    .visibleSymbols(VISIBLE_ROWS)
+    .visibleRows(VISIBLE_ROWS)
     .symbolSize(SYMBOL_SIZE, SYMBOL_SIZE)
     .symbolGap(SYMBOL_GAP, SYMBOL_GAP)
     .symbols((r) => {
@@ -181,7 +181,7 @@ function buildReelSet(app: Application, textures: Record<string, Texture>): Reel
     // Per-speed tumble overrides: faster speeds get progressively
     // shorter cascade timings on top of the base config below. Without
     // this, `setSpeed('turbo')` would only shrink the per-reel
-    // `stopDelay` — the in-reel fall/drop tweens would still run at
+    // `stopDelay`. the in-reel fall/drop tweens would still run at
     // the base 280 ms / 480 ms and the turbo button wouldn't feel any
     // different through the cascade. With it, turbo halves the durations
     // and superTurbo snaps everything in 60–80 ms.
@@ -207,7 +207,7 @@ function buildReelSet(app: Application, textures: Record<string, Texture>): Reel
     })
     .tumble({
       // Fall: per-reel left-to-right stagger from speed.spinDelay, plus
-      // in-reel bottom-to-top from rowOrder default — gives the canonical
+      // in-reel bottom-to-top from rowOrder default. gives the canonical
       // "bottom-left falls first, top-right last" cascading exit.
       fall:   { duration: 280, ease: 'sine.in', rowStagger: 50 },
       // Drop-in: 'perHole' gravity is the production default. Each
@@ -271,7 +271,7 @@ async function main(): Promise<void> {
   //
   // Show the spinner from the moment ALL reels have finished falling out
   // until the FIRST reel begins its drop-in. That window is exactly the
-  // indeterminate server wait — empty reels with a loading indicator.
+  // indeterminate server wait. empty reels with a loading indicator.
   //
   // We track this with two events instead of polling, so the wait window
   // is precisely the engine's empty-reel beat (no off-by-one).
@@ -291,14 +291,14 @@ async function main(): Promise<void> {
   // Listener-side decoration: when each symbol's drop-in tween starts,
   // we run a parallel scale squish synced to the library's fall, then a
   // small bounce on landing. Both are scheduled off GSAP, independent
-  // of the library's own timeline — so on a slam-stop the library snaps
+  // of the library's own timeline. so on a slam-stop the library snaps
   // the view to grid but our squish/bounce tweens would keep running
   // (the delayedCall fires `duration` ms later regardless), leaving the
   // symbol scaled or off-position.
   //
   // The `info.signal` AbortSignal fires when the phase is skipped. We
   // register a one-shot cleanup that kills our tweens and resets scale
-  // — so slam-stop visually matches "snap to grid" instead of "snap to
+  //. so slam-stop visually matches "snap to grid" instead of "snap to
   // grid then bounce again."
   reelSet.events.on('cascade:dropIn:symbol', (info) => {
     const { view, duration, signal } = info;
@@ -332,7 +332,7 @@ async function main(): Promise<void> {
   // The button is a single SPIN/STOP toggle from `createUI`. Three
   // possible "round in flight" states matter for rapid clicks:
   //
-  //   1. Engine spinning (`reelSet.isSpinning === true`) — `skip()`
+  //   1. Engine spinning (`reelSet.isSpinning === true`). `skip()`
   //      slams immediately. The library's round-aware skip handles
   //      the cascade case (`_autoSlamRefills` flag).
   //   2. User-code mid-round but engine idle (e.g. inside the
@@ -341,7 +341,7 @@ async function main(): Promise<void> {
   //      because the engine isn't running any phase. We queue the
   //      intent so the next time control passes through user-code
   //      (e.g. the next chain iteration), we fire `skip()`.
-  //   3. Engine pre-`setResult` (during the server wait) — the
+  //   3. Engine pre-`setResult` (during the server wait). the
   //      library's `requestSkip()` handles this case: it queues the
   //      slam and fires it the moment `setResult` arrives, so the
   //      reels land on the intended grid instead of a random buffer.
@@ -386,7 +386,7 @@ async function main(): Promise<void> {
     cascadeAbort?.abort();
   }
 
-  // E2e probe — exposes user-code-level state Playwright can wait on.
+  // E2e probe. exposes user-code-level state Playwright can wait on.
   // Engine `isSpinning` oscillates per-refill in cascade mode, so we need
   // a stable "round in progress" flag to detect round completion.
   (globalThis as unknown as { __CASCADE_TUMBLE?: unknown }).__CASCADE_TUMBLE = {
@@ -416,7 +416,7 @@ async function main(): Promise<void> {
     multiplierEl.textContent = '';
     statusEl.textContent = '';
 
-    // Fresh AbortController per round — abort() flips the flag inside
+    // Fresh AbortController per round. abort() flips the flag inside
     // `runCascade` so the chain ends at the next await boundary even
     // when the engine itself is idle (between refills).
     cascadeAbort = new AbortController();
@@ -424,7 +424,7 @@ async function main(): Promise<void> {
     // Lead-in: the button visibly transitions to STOP before the symbols
     // move. A tap during this window queues `pendingSkip` and is consumed
     // by `requestSkip()` once the engine spin actually starts. We do NOT
-    // bail on `cascadeAbort.signal.aborted` here — a rapid double-click
+    // bail on `cascadeAbort.signal.aborted` here. a rapid double-click
     // means "spin then slam," not "cancel before starting." The abort
     // flag flows into runCascade, which will short-circuit the cascade
     // chain at the next await boundary.
@@ -439,7 +439,7 @@ async function main(): Promise<void> {
     const spinDone = reelSet.spin();
 
     // Consume any skip-intent tapped during the lead-in. `requestSkip()`
-    // queues until `setResult()` arrives, then slams — so even taps
+    // queues until `setResult()` arrives, then slams. so even taps
     // inside the long server wait route through to a clean slam on the
     // intended result grid.
     if (pendingSkip) {
@@ -448,7 +448,7 @@ async function main(): Promise<void> {
     }
 
     const grid = await mockServer.spin();
-    reelSet.setResult(grid);
+    reelSet.setResult(grid.map((visible) => ({ visible })));
     await spinDone;
 
     // ─── MOMENT B: cascade refill loop via reelSet.runCascade ────
@@ -458,9 +458,9 @@ async function main(): Promise<void> {
     // per-cascade multiplier + UI side effects. The awaited summary
     // (`RunCascadeResult`) tells us how the chain ended. AbortController
     // ends the round cleanly when the player slams between refills
-    // (where `reelSet.skip()` is a no-op because no phase is active).
+    // (where `reelSet.skipSpin()` is a no-op because no phase is active).
     //
-    // Cascade refills: every reel drops simultaneously — the canonical
+    // Cascade refills: every reel drops simultaneously. the canonical
     // commercial pattern. ('ltr' / 'rtl' on a refill reads as a fresh
     // reveal, which fights the player's expectation of a quick refill.)
     reelSet.setDropOrder('all');
@@ -482,14 +482,14 @@ async function main(): Promise<void> {
         // mid-await: ask the engine to slam every remaining refill.
         if (pendingSkip) {
           pendingSkip = false;
-          try { reelSet.skip(); } catch { /* idle */ }
+          try { reelSet.skipSpin(); } catch { /* idle */ }
         }
       },
     });
 
     if (chainLength === 0) {
       multiplierEl.textContent = '';
-      statusEl.textContent = 'No wins — try again.';
+      statusEl.textContent = 'No wins. try again.';
     } else {
       statusEl.textContent = `${chainLength} cascade${chainLength === 1 ? '' : 's'} · WIN ${totalWin}`;
     }
@@ -508,11 +508,11 @@ async function main(): Promise<void> {
   // Wired here as demo log lines.
   reelSet.events.on('cascade:chain:start', ({ chain, winners }) => {
     // eslint-disable-next-line no-console
-    console.log(`[cascade] chain ${chain} — ${winners.length} winner(s)`);
+    console.log(`[cascade] chain ${chain}. ${winners.length} winner(s)`);
   });
   reelSet.events.on('cascade:chain:end', ({ chain, nextGrid }) => {
     // eslint-disable-next-line no-console
-    console.log(`[cascade] chain ${chain} done — next grid:`,
+    console.log(`[cascade] chain ${chain} done. next grid:`,
       nextGrid.map((c) => c.join(',')).join(' | '));
   });
 

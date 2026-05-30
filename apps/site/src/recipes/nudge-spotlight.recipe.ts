@@ -20,7 +20,7 @@ const WIN_ROW = 0; // After down-nudge, incoming[0] lands at visible row 0.
 
 const reelSet = new ReelSetBuilder()
   .reels(5)
-  .visibleSymbols(3)
+  .visibleRows(3)
   .symbolSize(72, 72)
   .symbolGap(4, 4)
   .symbols((r) => {
@@ -42,11 +42,11 @@ return {
     // 1. Land on a near-miss: no wilds anywhere.
     const p = reelSet.spin();
     await new Promise((resolve) => setTimeout(resolve, 220));
-    reelSet.setResult([col3(), col3(), col3(), col3(), col3()]);
+    reelSet.setResult([col3(), col3(), col3(), col3(), col3()].map((visible) => ({ visible })));
     await p;
     await new Promise((resolve) => setTimeout(resolve, 320));
 
-    // 2. Parallel nudge of the middle three reels — `wild` lands at the
+    // 2. Parallel nudge of the middle three reels. `wild` lands at the
     //    top of each nudged column. After this, visible row 0 reads
     //    [..., wild, wild, wild, ...].
     await Promise.all(
@@ -63,7 +63,7 @@ return {
     // 3. Spotlight the new win line. `spotlight.show` re-parents the
     //    winning symbols above the reel mask, dims the rest of the
     //    viewport, and runs each symbol's `playWin()` animation. Resolves
-    //    once the animation chain completes — at which point `hide()`
+    //    once the animation chain completes. at which point `hide()`
     //    returns the symbols to their reels.
     const winners = NUDGE_COLS.map((col) => ({ reelIndex: col, row: WIN_ROW }));
     await reelSet.spotlight.show(winners, {

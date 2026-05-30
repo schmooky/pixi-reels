@@ -18,7 +18,7 @@ function fillerGrid(cols: number, rows: number): string[][] {
 
 /**
  * Walking-wild scenario. The underlying reels spin normally, but the wild
- * symbol is rendered as a separate overlay sprite parented to the stage —
+ * symbol is rendered as a separate overlay sprite parented to the stage.
  * so it stays visually in place (and animates between columns between
  * spins) rather than scrolling away with the reel.
  */
@@ -58,20 +58,20 @@ export default function WalkingWildRecipe() {
             reelSet.setSpeed('turbo');
             ghost.visible = false;
 
-            // Spin 1 — base game. Wild lands on the rightmost reel, row 1.
+            // Spin 1. base game. Wild lands on the rightmost reel, row 1.
             const walkerRow = 1;
             let walkerCol = 4;
             const spin1 = fillerGrid(5, 3);
             spin1[walkerCol][walkerRow] = WILD;
             let p = reelSet.spin();
             await sleep(150);
-            reelSet.setResult(spin1);
+            reelSet.setResult(spin1.map((visible) => ({ visible })));
             await p;
             positionGhostOn(walkerCol, walkerRow);
             ghost.visible = true;
             await sleep(700);
 
-            // Auto-respins — ghost slides one column left during each spin so
+            // Auto-respins. ghost slides one column left during each spin so
             // the wild visually stays "stuck" while the reels scroll beneath.
             for (let target = 3; target >= 0; target--) {
               const grid = fillerGrid(5, 3);
@@ -87,20 +87,20 @@ export default function WalkingWildRecipe() {
 
               p = reelSet.spin();
               await sleep(100);
-              reelSet.setResult(grid);
+              reelSet.setResult(grid.map((visible) => ({ visible })));
               await p;
               walkerCol = target;
               await sleep(500);
             }
 
-            // Walker exits — fade out ghost.
+            // Walker exits. fade out ghost.
             await new Promise<void>((resolve) => {
               gsap.to(ghost, { alpha: 0, duration: 0.35, ease: 'power2.in', onComplete: () => { ghost.visible = false; ghost.alpha = 1; resolve(); } });
             });
             // One final base spin with no wild.
             p = reelSet.spin();
             await sleep(100);
-            reelSet.setResult(fillerGrid(5, 3));
+            reelSet.setResult(fillerGrid(5, 3).map((visible) => ({ visible })));
             await p;
           },
         };

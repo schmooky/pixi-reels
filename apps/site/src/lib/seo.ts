@@ -1,3 +1,5 @@
+import { PIXI_REELS_VERSION } from './version.ts';
+
 export const SITE = {
   name: 'pixi-reels',
   url: 'https://pixi-reels.schmooky.dev',
@@ -5,33 +7,31 @@ export const SITE = {
   githubRepo: 'https://github.com/schmooky/pixi-reels',
   tagline: 'Open-source slot machine reel engine for PixiJS v8',
   description:
-    'Open-source slot reel engine for PixiJS v8. Fluent builder, typed events, the weighty spin+stop feel of real-money games, and mechanic sandboxes with cheat panels — classic lines, scatters, free spins, hold & win, cascades, sticky wilds, anticipation. MIT licensed.',
-  keywords: [
-    'pixi-reels',
-    'pixijs slot',
-    'pixijs slot machine',
-    'slot machine library',
-    'slot reel engine',
-    'slot engine javascript',
-    'html5 slot machine',
-    'open source slot',
-    'slot mechanics',
-    'cascade slot',
-    'hold and win',
-    'sticky wilds',
-    'pixijs v8',
-    'casino game framework',
-    'slot framework',
-    'free spins trigger',
-    'scatter symbol',
-    'anticipation reel',
-    'slam stop',
-    'slot game development',
-  ],
+    'Open-source reel engine for PixiJS v8. Fluent builder, typed events, configurable spin phases, win presenters, and a headless testing harness. Ships with runnable recipes for lines, scatters, free spins, hold & win, cascades, sticky wilds, and anticipation. MIT licensed.',
   // Organization/Author details for JSON-LD
   twitter: '',
-  defaultImage: '/og-default.svg',
+  defaultImage: '/og/og-default.png',
 };
+
+/**
+ * Resolve a section-specific OG image, falling back to the homepage one.
+ * Sections map to `public/og/og-<section>.png` rendered from the SVG
+ * sources by `scripts/render-og.mjs` (run via `pnpm og:render`).
+ */
+export function ogImageForSection(section: string | undefined): string {
+  switch (section) {
+    case 'guides':
+      return '/og/og-guides.png';
+    case 'recipes':
+      return '/og/og-recipes.png';
+    case 'api':
+      return '/og/og-api.png';
+    case 'architecture':
+      return '/og/og-architecture.png';
+    default:
+      return '/og/og-default.png';
+  }
+}
 
 export interface PageSeo {
   title: string;
@@ -49,7 +49,6 @@ export interface PageSeo {
     publishedTime?: string;
     modifiedTime?: string;
   };
-  keywords?: string[];
   /** JSON-LD objects to embed. */
   jsonLd?: unknown[];
   /** Override noindex for internal pages. */
@@ -77,6 +76,8 @@ export function softwareApplicationLd(): Record<string, unknown> {
     operatingSystem: 'Web Browser',
     description: SITE.description,
     url: SITE.url,
+    downloadUrl: 'https://www.npmjs.com/package/pixi-reels',
+    softwareVersion: PIXI_REELS_VERSION,
     license: 'https://opensource.org/licenses/MIT',
     offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
     author: { '@type': 'Organization', name: SITE.author, url: SITE.githubRepo },
@@ -97,6 +98,7 @@ export function softwareSourceCodeLd(): Record<string, unknown> {
     runtimePlatform: 'Web Browser',
     license: 'https://opensource.org/licenses/MIT',
     url: SITE.url,
+    version: PIXI_REELS_VERSION,
   };
 }
 

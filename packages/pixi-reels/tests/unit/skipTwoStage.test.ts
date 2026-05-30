@@ -1,18 +1,19 @@
 import { describe, expect, it } from 'vitest';
-import { createTestReelSet, SpeedPresets } from '../../src/index.js';
+import { SpeedPresets } from '../../src/index.js';
+import { createTestReelSet } from '../../src/testing/index.js';
 import type { ReelSet } from '../../src/index.js';
 import type { SpeedProfile } from '../../src/config/types.js';
 
 /**
  * The default test builder only registers `normal`. Two-stage skip needs a
- * faster profile to boost into — register the standard three.
+ * faster profile to boost into. register the standard three.
  */
 function registerAllSpeeds(reelSet: ReelSet): void {
   reelSet.speed.addProfile('turbo', SpeedPresets.TURBO);
   reelSet.speed.addProfile('superTurbo', SpeedPresets.SUPER_TURBO);
 }
 
-describe('ReelSet.skip — round-aware slam + boost', () => {
+describe('ReelSet.skip. round-aware slam + boost', () => {
   it('first press slams the current spin AND boosts speed for the rest of the round', async () => {
     const h = createTestReelSet({ reels: 3, visibleRows: 3, symbolIds: ['a', 'b'] });
     registerAllSpeeds(h.reelSet);
@@ -28,8 +29,8 @@ describe('ReelSet.skip — round-aware slam + boost', () => {
       ['a', 'a', 'a'],
     ];
     const promise = h.reelSet.spin();
-    h.reelSet.setResult(grid);
-    h.reelSet.skip();
+    h.reelSet.setResult(grid.map((visible) => ({ visible })));
+    h.reelSet.skipSpin();
 
     expect(h.reelSet.skipStage).toBe(2);
     expect(h.reelSet.speed.activeName).toBe('superTurbo');
@@ -54,10 +55,10 @@ describe('ReelSet.skip — round-aware slam + boost', () => {
     ];
 
     const promise = h.reelSet.spin();
-    h.reelSet.setResult(grid);
-    h.reelSet.skip();
-    h.reelSet.skip();
-    h.reelSet.skip();
+    h.reelSet.setResult(grid.map((visible) => ({ visible })));
+    h.reelSet.skipSpin();
+    h.reelSet.skipSpin();
+    h.reelSet.skipSpin();
     expect(h.reelSet.skipStage).toBe(2);
     expect(boosted).toHaveLength(1);
     await promise;
@@ -73,8 +74,8 @@ describe('ReelSet.skip — round-aware slam + boost', () => {
     expect(h.reelSet.speed.activeName).toBe('normal');
 
     const first = h.reelSet.spin();
-    h.reelSet.setResult(grid);
-    h.reelSet.skip();
+    h.reelSet.setResult(grid.map((visible) => ({ visible })));
+    h.reelSet.skipSpin();
     await first;
 
     // Round ended on slam; speed is still boosted until the NEXT spin.
@@ -84,7 +85,7 @@ describe('ReelSet.skip — round-aware slam + boost', () => {
     const second = h.reelSet.spin();
     expect(h.reelSet.skipStage).toBe(0);
     expect(h.reelSet.speed.activeName).toBe('normal');
-    h.reelSet.setResult(grid);
+    h.reelSet.setResult(grid.map((visible) => ({ visible })));
     h.reelSet.slamStop();
     await second;
 
@@ -101,8 +102,8 @@ describe('ReelSet.skip — round-aware slam + boost', () => {
     h.reelSet.events.on('skip:boosted', (info) => boosted.push(info));
 
     const promise = h.reelSet.spin();
-    h.reelSet.setResult(grid);
-    h.reelSet.skip();
+    h.reelSet.setResult(grid.map((visible) => ({ visible })));
+    h.reelSet.skipSpin();
     expect(boosted).toHaveLength(0);
     expect(h.reelSet.skipStage).toBe(2);
     await promise;
@@ -112,14 +113,14 @@ describe('ReelSet.skip — round-aware slam + boost', () => {
 
   it('falls through to slam on first press when only one speed profile is registered', async () => {
     const h = createTestReelSet({ reels: 2, visibleRows: 2, symbolIds: ['a'] });
-    // Default test builder registers only 'normal' — no boost target available.
+    // Default test builder registers only 'normal'. no boost target available.
     const grid = [['a', 'a'], ['a', 'a']];
     const boosted: unknown[] = [];
     h.reelSet.events.on('skip:boosted', (info) => boosted.push(info));
 
     const promise = h.reelSet.spin();
-    h.reelSet.setResult(grid);
-    h.reelSet.skip();
+    h.reelSet.setResult(grid.map((visible) => ({ visible })));
+    h.reelSet.skipSpin();
     expect(boosted).toHaveLength(0);
     expect(h.reelSet.skipStage).toBe(2);
     await promise;
@@ -135,7 +136,7 @@ describe('ReelSet.skip — round-aware slam + boost', () => {
     h.reelSet.events.on('skip:boosted', (info) => boosted.push(info));
 
     const promise = h.reelSet.spin();
-    h.reelSet.setResult(grid);
+    h.reelSet.setResult(grid.map((visible) => ({ visible })));
     h.reelSet.slamStop();
     await promise;
 
@@ -155,7 +156,7 @@ describe('ReelSet.skip — round-aware slam + boost', () => {
     const promise = h.reelSet.spin();
     h.advance(20);
     h.reelSet.requestSkip();
-    h.reelSet.setResult(grid);
+    h.reelSet.setResult(grid.map((visible) => ({ visible })));
     await promise;
 
     expect(boosted).toHaveLength(0);
@@ -170,19 +171,19 @@ describe('ReelSet.skip — round-aware slam + boost', () => {
 
     // Round 1: press skip, boost normal → superTurbo + slam.
     const first = h.reelSet.spin();
-    h.reelSet.setResult(grid);
-    h.reelSet.skip();
+    h.reelSet.setResult(grid.map((visible) => ({ visible })));
+    h.reelSet.skipSpin();
     await first;
     expect(h.reelSet.speed.activeName).toBe('superTurbo');
 
-    // App manually changes speed between rounds — must survive restore.
+    // App manually changes speed between rounds. must survive restore.
     h.reelSet.setSpeed('turbo');
     expect(h.reelSet.speed.activeName).toBe('turbo');
 
     // Round 2: spin() must NOT clobber 'turbo' with the pre-boost 'normal'.
     const second = h.reelSet.spin();
     expect(h.reelSet.speed.activeName).toBe('turbo');
-    h.reelSet.setResult(grid);
+    h.reelSet.setResult(grid.map((visible) => ({ visible })));
     h.reelSet.slamStop();
     await second;
 

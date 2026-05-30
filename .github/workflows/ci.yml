@@ -48,6 +48,13 @@ jobs:
       - name: Test
         run: pnpm --filter pixi-reels test
 
+      - name: Build library + examples
+        # `pnpm build` (root script) builds pixi-reels and every example app.
+        # Catches regressions where the lib's published surface stops resolving
+        # in a downstream consumer. e.g. a peer dep dropping out of a bundler's
+        # static analysis path. Examples don't ship; this is purely a gate.
+        run: pnpm build
+
   changeset-gate:
     # Fails the PR when library source changed but no changeset file was added.
     # Escape hatches:

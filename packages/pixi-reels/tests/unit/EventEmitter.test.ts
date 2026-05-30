@@ -107,6 +107,28 @@ describe('EventEmitter', () => {
     expect(fn2).toHaveBeenCalledTimes(1);
   });
 
+  it('once does not drop a persistent on() of the same fn reference', () => {
+    const emitter = new EventEmitter<TestEvents>();
+    const fn = vi.fn();
+    emitter.on('bar', fn); // persistent
+    emitter.once('bar', fn); // one-shot, same reference
+
+    emitter.emit('bar'); // both fire
+    expect(fn).toHaveBeenCalledTimes(2);
+
+    emitter.emit('bar'); // only the persistent on() remains
+    expect(fn).toHaveBeenCalledTimes(3);
+    expect(emitter.listenerCount('bar')).toBe(1);
+  });
+
+  it('a fired once leaves an accurate listenerCount', () => {
+    const emitter = new EventEmitter<TestEvents>();
+    emitter.once('bar', vi.fn());
+    expect(emitter.listenerCount('bar')).toBe(1);
+    emitter.emit('bar');
+    expect(emitter.listenerCount('bar')).toBe(0);
+  });
+
   it('listenerCount returns correct count', () => {
     const emitter = new EventEmitter<TestEvents>();
     expect(emitter.listenerCount('foo')).toBe(0);

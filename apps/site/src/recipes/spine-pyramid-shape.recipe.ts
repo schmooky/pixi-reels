@@ -4,14 +4,14 @@
 //                   textures, blurTextures, SYMBOL_IDS, pickWeighted
 //
 // Per-reel static shape (3-5-5-5-3 pyramid) rendered with Spine symbols.
-// Spine skeletons scale cleanly to whatever cell size each reel hands them —
+// Spine skeletons scale cleanly to whatever cell size each reel hands them.
 // the outer 3-row reels get taller cells than the inner 5-row reels, and
 // the rig stays crisp at both because it's vector, not a baked sprite.
 
 await loadGeneratedSpines();
 
 const VISIBLE = [3, 5, 5, 5, 3];
-// 140 = the spines' authored frame size — render 1:1 to keep frame strokes
+// 140 = the spines' authored frame size. render 1:1 to keep frame strokes
 // crisp. Spine still scales the rig if individual cells get smaller in tight
 // reshapes, but the baseline matches the bake.
 const SIZE = 140;

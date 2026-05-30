@@ -10,6 +10,8 @@ import type { Disposable } from '../utils/Disposable.js';
  */
 export class ObjectPool<T> implements Disposable {
   private _pools = new Map<string, T[]>();
+  /** Mirror of every item currently held in a pool, for O(1) double-release detection. */
+  private _pooled = new Set<T>();
   private _isDestroyed = false;
 
   constructor(
@@ -27,9 +29,16 @@ export class ObjectPool<T> implements Disposable {
    * Get an object from the pool, or create a new one if the pool is empty.
    */
   acquire(key: string): T {
+    if (this._isDestroyed) {
+      throw new Error(
+        `ObjectPool.acquire('${key}') called after destroy(). A ticker or promise ` +
+          `callback is still running past teardown; cancel it before destroying the pool.`,
+      );
+    }
     const pool = this._pools.get(key);
     if (pool && pool.length > 0) {
       const item = pool.pop()!;
+      this._pooled.delete(item);
       this._reset?.(item);
       return item;
     }
@@ -41,6 +50,12 @@ export class ObjectPool<T> implements Disposable {
    * If the pool is at capacity, the object is disposed instead.
    */
   release(key: string, item: T): void {
+    // Dropping a release after destroy() avoids resurrecting (and leaking) the pool.
+    if (this._isDestroyed) return;
+    // Guard against double-release: pooling the same instance twice would hand it
+    // to two different cells on the next two acquire() calls (silent aliasing).
+    if (this._pooled.has(item)) return;
+
     let pool = this._pools.get(key);
     if (!pool) {
       pool = [];
@@ -51,6 +66,7 @@ export class ObjectPool<T> implements Disposable {
       return;
     }
     pool.push(item);
+    this._pooled.add(item);
   }
 
   /** Get the number of pooled items for a key. */
@@ -77,6 +93,7 @@ export class ObjectPool<T> implements Disposable {
       }
     }
     this._pools.clear();
+    this._pooled.clear();
   }
 
   destroy(): void {

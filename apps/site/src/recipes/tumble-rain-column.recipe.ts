@@ -13,7 +13,7 @@ const CLUSTER = '10';
 const HIT_ROW = 2;
 const HIT_COLS = [0, 1, 2];
 
-// Dramatic pause — the empty board is part of the visual story for
+// Dramatic pause. the empty board is part of the visual story for
 // rain-column feels. 380 ms lets the absence of symbols register before
 // the next slab drops.
 const PAUSE_AFTER_REMOVAL_MS = 380;
@@ -25,7 +25,7 @@ function randSymbol(exclude) {
 }
 
 const reelSet = new ReelSetBuilder()
-  .reels(REELS).visibleSymbols(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
+  .reels(REELS).visibleRows(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
   .symbols((r) => {
     for (const sym of CARD_DECK) {
       if (IDS.includes(sym.id)) {
@@ -59,13 +59,13 @@ return {
     const spinDone = reelSet.spin();
     reelSet.setDropOrder('all');
     await new Promise((r) => setTimeout(r, 200));
-    reelSet.setResult(stage0);
+    reelSet.setResult(stage0.map((visible) => ({ visible })));
     await spinDone;
 
     await new Promise((r) => setTimeout(r, 200));
     const winners = HIT_COLS.map((c) => ({ reel: c, row: HIT_ROW }));
     await reelSet.destroySymbols(winners);
     await new Promise((r) => setTimeout(r, PAUSE_AFTER_REMOVAL_MS));
-    await reelSet.refill({ winners, grid: stage1 });
+    await reelSet.refill({ winners, grid: stage1.map((visible) => ({ visible })) });
   },
 };

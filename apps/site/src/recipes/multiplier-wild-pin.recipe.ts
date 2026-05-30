@@ -1,29 +1,35 @@
 // @ts-nocheck
 // Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
-//                   WILD_CARD, PIXI, gsap, app, pickWeighted
+//                   CoinSymbol, coinMultiplier, WILD_CARD, PIXI, gsap, app, pickWeighted
 //
-// Multiplier wild — the wild carries a per-instance multiplier value.
+// Multiplier wild. the wild carries a per-instance multiplier value.
 //
-// CellPin's `payload` field stores arbitrary per-instance data alongside the
-// symbol. Game layer reads it during win evaluation to scale payouts.
+// Each multiplier rung is its own WILD variant — the strip rolls
+// `wild_x2` / `wild_x3` / `wild_x5` as distinct symbols, so the player
+// sees the multiplier on the coin's face during the spin (not a blank
+// coin that "becomes" multiplied on stop).
 //
-// We overlay the multiplier value as a PIXI text badge on top of the symbol
-// sprite whenever a multiplier wild is pinned or repositioned.
+// CellPin's `payload` field still carries the numeric multiplier alongside
+// the symbol so game-layer win evaluation can read it without parsing the
+// symbol id. Filler cards stay rectangular (they're playing-card themed).
 
 const FILLER = ['7', '8', '10', 'Q'];
-const WILD = WILD_CARD.id;
 const COLS = 5, ROWS = 3, SIZE = 90;
 const MULTIPLIERS = [2, 3, 5];
 const STICKY_TURNS = 3;
+const wildId = (m) => `wild_x${m}`;
 
 const reelSet = new ReelSetBuilder()
   .reels(COLS)
-  .visibleSymbols(ROWS)
+  .visibleRows(ROWS)
   .symbolSize(SIZE, SIZE)
   .symbolGap(4, 4)
   .symbols((r) => {
-    for (const sym of [...CARD_DECK, WILD_CARD]) {
+    for (const sym of CARD_DECK) {
       r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
+    }
+    for (const m of MULTIPLIERS) {
+      r.register(wildId(m), CoinSymbol, coinMultiplier(m));
     }
   })
   .weights({
@@ -31,79 +37,38 @@ const reelSet = new ReelSetBuilder()
     '8': 22,
     '10': 18,
     Q: 18,
+    // Wilds land via scripted arrivals only. omit from weights to keep
+    // them off the random strip.
   })
   .speed('normal', SpeedPresets.NORMAL)
   .speed('turbo', SpeedPresets.TURBO)
   .ticker(app.ticker)
   .build();
 
-// ── Multiplier badges (display layer) ────────────────────────────────────
-// A separate PIXI container overlays ×N badges on the reel.
-const badgeLayer = new PIXI.Container();
-reelSet.addChild(badgeLayer);
-
-const badges = new Map(); // key = "col:row" -> PIXI.Text
-
-function clearBadge(col, row) {
-  const key = `${col}:${row}`;
-  const badge = badges.get(key);
-  if (badge) {
-    try { badge.destroy(); } catch {}
-    badges.delete(key);
-  }
-}
-
-function drawBadge(col, row, multiplier) {
-  clearBadge(col, row);
-  const badge = new PIXI.Text({
-    text: `x${multiplier}`,
-    style: {
-      fontFamily: 'system-ui, sans-serif',
-      fontSize: 22,
-      fontWeight: '900',
-      fill: 0xffd43b,
-      stroke: { color: 0x000000, width: 4 },
-    },
-  });
-  badge.anchor.set(0.5);
-  // Position: top-right of the cell
-  badge.x = col * (SIZE + 4) + SIZE - 16;
-  badge.y = row * (SIZE + 4) + 16;
-  badgeLayer.addChild(badge);
-  badges.set(`${col}:${row}`, badge);
-}
-
-reelSet.events.on('pin:placed', (pin) => {
-  const mult = pin.payload?.multiplier;
-  if (typeof mult === 'number') {
-    drawBadge(pin.col, pin.row, mult);
-  }
-});
-
-reelSet.events.on('pin:expired', (pin) => {
-  clearBadge(pin.col, pin.row);
-});
-
-// ── Pin wilds with a random multiplier on land ───────────────────────────
+// ── Pin wilds with their multiplier on land ───────────────────────────────
+// The multiplier is encoded in the wild's symbolId (wild_x2, wild_x3,
+// wild_x5). On land we re-pin with `payload.multiplier` so game code can
+// read the value numerically without parsing the id string.
 reelSet.events.on('spin:allLanded', ({ symbols }) => {
   for (let c = 0; c < symbols.length; c++) {
     for (let r = 0; r < symbols[c].length; r++) {
-      if (symbols[c][r] === WILD && !reelSet.getPin(c, r)) {
-        const mult = MULTIPLIERS[Math.floor(Math.random() * MULTIPLIERS.length)];
-        reelSet.pin(c, r, WILD, {
-          turns: STICKY_TURNS,
-          payload: { multiplier: mult },
-        });
-      }
+      const id = symbols[c][r];
+      if (!id?.startsWith?.('wild_x')) continue;
+      if (reelSet.getPin(c, r)) continue;
+      const multiplier = Number(id.slice('wild_x'.length));
+      reelSet.pin(c, r, id, {
+        turns: STICKY_TURNS,
+        payload: { multiplier },
+      });
     }
   }
 });
 
-// Scripted arrivals.
+// Scripted arrivals — one of each multiplier rung across the demo loop.
 const arrivals = [
-  { col: 1, row: 1 },
-  { col: 3, row: 0 },
-  { col: 2, row: 2 },
+  { col: 1, row: 1, mult: 2 },
+  { col: 3, row: 0, mult: 3 },
+  { col: 2, row: 2, mult: 5 },
 ];
 let spinCount = 0;
 
@@ -115,11 +80,8 @@ return {
       Array.from({ length: ROWS }, () => FILLER[Math.floor(Math.random() * FILLER.length)]),
     );
     const next = arrivals[idx];
-    grid[next.col][next.row] = WILD;
+    grid[next.col][next.row] = wildId(next.mult);
     spinCount++;
     return grid;
-  },
-  cleanup: () => {
-    try { badgeLayer.destroy({ children: true }); } catch {}
   },
 };

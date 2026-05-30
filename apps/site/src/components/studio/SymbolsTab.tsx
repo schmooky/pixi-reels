@@ -145,7 +145,7 @@ interface FormProps {
 }
 
 function AddSymbolForm({ type, usedIds, onCancel, onSave }: FormProps): JSX.Element {
-  // Spine is dispatched at the call site (SymbolsTab) — this component
+  // Spine is dispatched at the call site (SymbolsTab). this component
   // handles only sprite + animatedSprite.
   const [id, setId] = useState('');
   const [file, setFile] = useState<File | null>(null);
@@ -243,7 +243,7 @@ function AddSymbolForm({ type, usedIds, onCancel, onSave }: FormProps): JSX.Elem
       </div>
 
       <div className="space-y-3">
-        <Field label="Symbol id" hint='e.g. "wild" — referenced as userSymbols.wild in your code.'>
+        <Field label="Symbol id" hint='e.g. "wild". referenced as userSymbols.wild in your code.'>
           <input
             type="text"
             value={id}
@@ -447,7 +447,7 @@ function SymbolRow({
             ? 'bg-primary/15 text-primary'
             : 'bg-muted/60 text-muted-foreground hover:bg-muted',
         )}
-        title="When on, the symbol renders above the reel mask — animations can spill outside the cell. The builder auto-switches to a shared mask when any symbol is unmasked."
+        title="When on, the symbol renders above the reel mask. animations can spill outside the cell. The builder auto-switches to a shared mask when any symbol is unmasked."
       >
         unmask {symbol.unmask ? 'on' : 'off'}
       </button>
@@ -466,7 +466,7 @@ function SymbolRow({
 
 /**
  * Inline scale tuner for spine symbols. The auto-fit value computed at
- * save time is a *starting point* — Spine v8's `getBounds` consistently
+ * save time is a *starting point*. Spine v8's `getBounds` consistently
  * under-reports the visible mesh extent (often by 2-3×) so the user
  * typically needs to nudge. Pressing the buttons updates the config;
  * the next Run picks it up.
@@ -528,7 +528,7 @@ function useAssetPreview(hash: string | null): string | null {
 // ── Built-in symbols section ────────────────────────────────────────
 // Pure-Graphics card symbols pre-registered by every Studio environment
 // (and every recipe, RecipeRunner, and ShareViewer too). The user
-// doesn't upload these — they're imported in code via `CARD_DECK` and
+// doesn't upload these. they're imported in code via `CARD_DECK` and
 // `WILD_CARD`. Surfacing them here so the Symbols tab doesn't feel
 // empty on first visit and the user knows what's already available.
 
@@ -565,14 +565,14 @@ function BuiltInSymbols(): JSX.Element {
                 backgroundColor: hex(card.color),
                 color: hex(card.textColor ?? 0xffffff),
               }}
-              title={`id: "${card.id}" — register with CardSymbol`}
+              title={`id: "${card.id}". register with CardSymbol`}
             >
               {card.label}
             </div>
           ))}
         </div>
         <p className="mt-2 text-[11px] text-muted-foreground">
-          Graphics-only debug symbols — always available in the Code tab. Add custom sprites / Spine below to override or extend.
+          Graphics-only debug symbols. always available in the Code tab. Add custom sprites / Spine below to override or extend.
         </p>
       </div>
     </details>

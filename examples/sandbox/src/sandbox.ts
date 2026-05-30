@@ -1,6 +1,6 @@
 /**
  * ============================================================================
- *  pixi-reels — SANDBOX
+ *  pixi-reels. SANDBOX
  * ============================================================================
  *
  * Edit this file and save. Vite HMR reloads the page and rebuilds the reels.
@@ -11,7 +11,7 @@
  * centering, spin wiring, and the UI.
  *
  * Below are **copy-paste recipes** for every feature pixi-reels ships with.
- * The active configuration is the uncommented block — swap recipes in/out to
+ * The active configuration is the uncommented block. swap recipes in/out to
  * experiment.
  * ============================================================================
  */
@@ -74,7 +74,7 @@ export function buildSandbox(ctx: SandboxContext): SandboxResult {
 
   const reelSet = new ReelSetBuilder()
     .reels(REELS)
-    .visibleSymbols(ROWS)
+    .visibleRows(ROWS)
     .symbolSize(SYMBOL_SIZE, SYMBOL_SIZE)
     .symbolGap(GAP, GAP)
     .symbols((registry) => {
@@ -92,7 +92,7 @@ export function buildSandbox(ctx: SandboxContext): SandboxResult {
       wild: 3,
     })
 
-    // ── RECIPE: Symbol z-index override — wild renders above its neighbours.
+    // ── RECIPE: Symbol z-index override. wild renders above its neighbours.
     // Useful for sticky/expanding wilds, bonus icons, etc.
     .symbolData({
       wild: { weight: 3, zIndex: 5 },
@@ -156,10 +156,10 @@ function pickWeighted(): string {
 // To try one, set `ACTIVE_ROUTE = buildXxx` near the top of this file.
 //
 // Available routes:
-//   - ./routes/pyramid.js          — static 3-5-5-5-3 pyramid
-//   - ./routes/multiways.js         — per-spin row variation (2..7 rows)
-//   - ./routes/expanding-wild.js   — wild expands its full column for one spin
-//   - ./routes/big-symbols.js      — 2×2 bonus block via SymbolData.size
+//   - ./routes/pyramid.js         . static 3-5-5-5-3 pyramid
+//   - ./routes/multiways.js        . per-spin row variation (2..7 rows)
+//   - ./routes/expanding-wild.js  . wild expands its full column for one spin
+//   - ./routes/big-symbols.js     . 2×2 bonus block via SymbolData.size
 //
 // ============================================================================
 //  MORE RECIPES (uncomment/adapt in the block above)
@@ -184,7 +184,7 @@ function pickWeighted(): string {
 //   reelSet.spotlight.show([{ reelIndex: 0, rowIndex: 1 }, { reelIndex: 1, rowIndex: 1 }]);
 //   reelSet.spotlight.hide();
 //
-// ── Spine symbols (optional — requires @esotericsoftware/spine-pixi-v8)
+// ── Spine symbols (optional. requires @esotericsoftware/spine-pixi-v8)
 //   import { SpineReelSymbol } from 'pixi-reels/spine';
 //   registry.register('wild', SpineReelSymbol, {
 //     spineMap: { wild: { skeleton: 'wildData', atlas: 'myAtlas' } },

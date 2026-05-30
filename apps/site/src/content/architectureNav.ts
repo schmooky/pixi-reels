@@ -15,7 +15,7 @@ export const ARCH_PAGES: ArchPage[] = [
   {
     slug: 'classes',
     title: 'Classes',
-    subtitle: 'The composition tree — what owns what.',
+    subtitle: 'The composition tree. what owns what.',
     eyebrow: 'Objects',
   },
   {

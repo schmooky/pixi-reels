@@ -10,21 +10,21 @@ Instructions for AI agents (Claude, Codex, Cursor, etc.) and human contributors 
 
 ```
 packages/pixi-reels/   <- the published library (npm: pixi-reels)
-apps/site/             <- the docs site (pixi-reels.dev, not published)
+apps/site/             <- the docs site (pixi-reels.schmooky.dev, not published)
 examples/              <- three example apps + shared reference code (not published)
 ```
 
 The library builds to two entry points:
-- `pixi-reels` — core (reel set, phases, symbols, events, testing, debug).
-- `pixi-reels/spine` — Spine 2D symbols with the Bonbon animation vocabulary.
+- `pixi-reels`. core (reel set, phases, symbols, events, testing, debug).
+- `pixi-reels/spine`. Spine 2D symbols with the Bonbon animation vocabulary.
 
-Everything else — cheats, cascade loop, seeded RNG, mock server, Spine loaders — lives in `examples/shared/`. It is reference code, copy-pasteable, **not library API**.
+Everything else. cheats, cascade loop, seeded RNG, mock server, Spine loaders. lives in `examples/shared/`. It is reference code, copy-pasteable, **not library API**.
 
 ---
 
 ## 2. What this repo is NOT
 
-Read [ADR 007 — Scope](./docs/adr/007-scope.md) for the full list. The short version:
+Read [ADR 007. Scope](./docs/adr/007-scope.md) for the full list. The short version:
 
 | Out of scope | Why | Where it belongs |
 |---|---|---|
@@ -65,7 +65,6 @@ pixi-reels/
 │   ├── shared/                    cheats, cascade loop, seeded RNG, spine loaders, mock server
 │   ├── classic-spin/              5x3 line pays
 │   ├── cascade-tumble/            6x5 cascade
-│   ├── hold-and-win/              hold-and-win respin
 │   └── assets/                    prototype-symbols sprite atlas
 ├── apps/site/                     Astro + shadcn docs site
 ├── docs/
@@ -115,7 +114,7 @@ Break any of these and the build, the tests, or real consumers break. They are e
 ```ts
 // Compose, don't subclass.
 const reelSet = new ReelSetBuilder()
-  .reels(5).visibleSymbols(3).symbolSize(140, 140)
+  .reels(5).visibleRows(3).symbolSize(140, 140)
   .symbols((r) => r.register('cherry', SpriteSymbol, { textures: { cherry } }))
   .ticker(app.ticker)
   .build();
@@ -196,7 +195,7 @@ class SpinManager { /* ... */ }     // wrong; you already have ReelSet
 ### Add a new speed profile
 
 1. `packages/pixi-reels/src/config/SpeedPresets.ts`, or at runtime: `reelSet.speed.addProfile('name', profile)`.
-2. No test required — it's data.
+2. No test required. it's data.
 
 ### Add a frame middleware
 
@@ -207,7 +206,7 @@ class SpinManager { /* ... */ }     // wrong; you already have ReelSet
 ### Add a new recipe or demo to the site
 
 1. **Never** add it to the library. Recipes and demos live in `apps/site/src/components/`.
-2. Reuse `examples/shared/cheats.ts`. Extend it if you need a new cheat — don't define one inline in the demo.
+2. Reuse `examples/shared/cheats.ts`. Extend it if you need a new cheat. don't define one inline in the demo.
 3. Write the MDX in `apps/site/src/pages/recipes/` or `apps/site/src/pages/demos/` with frontmatter (title, subtitle, tags, steps).
 4. Update `apps/site/src/content/*.ts` metadata if adding to a gallery.
 
@@ -242,7 +241,7 @@ See [`.changeset/README.md`](./.changeset/README.md) for the flow.
 
 ## 9. Debugging production-canvas issues as an agent
 
-PixiJS renders to canvas — you can't "see" it. Use the debug module:
+PixiJS renders to canvas. you can't "see" it. Use the debug module:
 
 ```ts
 import { enableDebug } from 'pixi-reels';
@@ -257,14 +256,14 @@ __PIXI_REELS_DEBUG.snapshot()   // full JSON state
 __PIXI_REELS_DEBUG.trace()      // log every domain event as it fires
 ```
 
-[ADR 006](./docs/adr/006-debug-mode.md) documents the shape of the snapshot. No PixiJS types in the output — it is plain JSON, safe to `JSON.stringify`.
+[ADR 006](./docs/adr/006-debug-mode.md) documents the shape of the snapshot. No PixiJS types in the output. it is plain JSON, safe to `JSON.stringify`.
 
 ---
 
 ## 10. When in doubt
 
 1. Read the relevant ADR. Index at [`docs/adr/README.md`](./docs/adr/README.md). **ADR 007 (Scope) is mandatory reading.**
-2. Check the site at [pixi-reels.dev](https://pixi-reels.dev) — `/architecture/` has visual explainers, `/recipes/` has single-idea how-tos.
+2. Check the site at [pixi-reels.schmooky.dev](https://pixi-reels.schmooky.dev). `/architecture/` has visual explainers, `/recipes/` has single-idea how-tos.
 3. Write a test that reproduces what you're trying to do. If you can't, you probably don't understand the problem yet.
 4. Ask before speculating. Describe what you'd do and why, and wait for a go. Silent guesses are the source of every bad PR.
 
@@ -283,7 +282,7 @@ Strong success criteria let you loop independently. Weak criteria require clarif
 
 ---
 
-## 12. Conventional Commits + Changesets — the release flow
+## 12. Conventional Commits + Changesets. the release flow
 
 Every commit on this repo is linted as a Conventional Commit. The commit
 message controls the SEO of the resulting PR and informs the release notes;
@@ -295,12 +294,12 @@ separate signals that tell the same story.
 Format: `<type>(<scope>)!: <subject>`
 
 Types:
-- `feat` — new user-visible feature (minor bump)
-- `fix` — bug fix (patch bump)
-- `perf` — perf improvement (patch bump)
-- `refactor` — internal refactor (patch bump or skip)
-- `docs` / `test` / `build` / `ci` / `chore` — no release
-- `!` before the colon, or a `BREAKING CHANGE:` footer — major bump
+- `feat`. new user-visible feature (minor bump)
+- `fix`. bug fix (patch bump)
+- `perf`. perf improvement (patch bump)
+- `refactor`. internal refactor (patch bump or skip)
+- `docs` / `test` / `build` / `ci` / `chore`. no release
+- `!` before the colon, or a `BREAKING CHANGE:` footer. major bump
 
 Examples:
 ```
@@ -322,23 +321,24 @@ Pick the package(s) and the bump level, then write a short, past-tense
 sentence aimed at a consumer reading the changelog. The generated
 `.changeset/*.md` file is committed as part of your PR.
 
-Full rules live in [`.changeset/README.md`](./.changeset/README.md) — bump
+Full rules live in [`.changeset/README.md`](./.changeset/README.md). bump
 type, what to skip, how internal-dep cascades work.
 
 ### What happens after merge to `main`
 
-1. The release workflow (`.github/workflows/release.yml`) sees a pending
-   `.changeset/*.md` and opens a **"Version Packages"** PR that applies the
-   bumps, regenerates each affected package's `CHANGELOG.md`, and deletes
-   the consumed changeset files.
-2. When a maintainer merges the Version Packages PR, the same workflow runs
-   a second time; this time there are no pending changesets, so it runs
+1. The publish workflow (`.github/workflows/npm-publish.yml`, `release` job)
+   sees a pending `.changeset/*.md` and opens a **"Version Packages"** PR
+   that applies the bumps, regenerates each affected package's
+   `CHANGELOG.md`, and deletes the consumed changeset files.
+2. When a maintainer merges the Version Packages PR, the same job runs a
+   second time; this time there are no pending changesets, so it runs
    `pnpm release` (topological build + `changeset publish`) and publishes
-   every newly-bumped package to npm with signed provenance.
+   every newly-bumped package to npm with signed provenance via OIDC
+   trusted publishing (no NPM_TOKEN secret in the loop).
 
 ### What happens on non-`main` branches
 
-Every push triggers `snapshot.yml` which publishes
+Every push triggers the `snapshot` job in `npm-publish.yml`, which publishes
 `pixi-reels@<base>-<branch-tag>-<sha>` under a per-branch dist-tag. No
 changeset? The script writes a throwaway one for the run and deletes it
 after. Reviewers install your WIP with:
@@ -352,17 +352,17 @@ A nightly cron also runs at 03:00 UTC against the default branch so the
 
 ---
 
-## 13. Agent skills — Karpathy's advice applied to this repo
+## 13. Agent skills. Karpathy's advice applied to this repo
 
 Andrej Karpathy's heuristics for coding agents translate directly to
-`pixi-reels`. These are not novel — they are the same rules the house
+`pixi-reels`. These are not novel. they are the same rules the house
 style enforces, framed the way an agent reads them.
 
 **1. Work like a pair-programming peer, not an autocomplete.** Before you
 edit, state what you plan to do, which files you expect to touch, and what
-"done" looks like. If that plan is a page long, the task is under-specified
-— push back and ask for a smaller goal. The four rules in section 11 are the
-concrete shape of this.
+"done" looks like. If that plan is a page long, the task is
+under-specified; push back and ask for a smaller goal. The four rules
+in section 11 are the concrete shape of this.
 
 **2. Small, reversible steps.** One commit per logical change. One PR per
 commit group. Never bundle a refactor with a feature. If your diff spans
@@ -372,8 +372,9 @@ typecheck` green.
 
 **3. Treat evals as ground truth.** `vitest` is the test harness; reach
 for it before you reach for the canvas. If you can't write a failing
-test that reproduces the request, you do not yet understand the request
-— stop and clarify. The headless harness in `src/testing/` exists for
+test that reproduces the request, you do not yet understand the
+request; stop and clarify. The headless harness in `src/testing/`
+exists for
 this: a spin runs in Node, no renderer. Use `createTestReelSet` instead
 of "let me poke it in the browser".
 
@@ -391,7 +392,7 @@ in the consumer is better than one opinionated API that the next user
 has to fight.
 
 **6. Favour explicit data flow over implicit state.** The spin pipeline
-is a state machine driven by `setResult(grid)` — an explicit input. If
+is a state machine driven by `setResult(grid)`. an explicit input. If
 your change introduces a hidden queue, a shared flag, or "the controller
 remembers this for next spin", you have introduced a bug waiting to
 happen. Pass the state through the API, not through the class.
@@ -406,7 +407,7 @@ done. A done task has:
 
 **8. When stuck, narrow the surface.** If a test is failing in a
 mysterious way, reduce the scenario until the smallest thing that still
-fails. `FakeTicker` gives you deterministic frame stepping — use it to
+fails. `FakeTicker` gives you deterministic frame stepping. use it to
 binary-search the bug. Don't `console.log` your way through 100 ticks.
 
 **9. The `__PIXI_REELS_DEBUG` handle is mandatory.** You cannot see a

@@ -8,7 +8,7 @@ import { gsap as defaultGsap } from 'gsap';
  * symlinked workspaces (vite + a locally-linked pixi-reels, pnpm dev
  * setups, esbuild plugin chains), the gsap import inside the lib's
  * compiled `dist/index.js` and the gsap import in the consumer's source
- * can resolve to *different module instances* — each with its own root
+ * can resolve to *different module instances*. each with its own root
  * timeline. The consumer drives one, the lib's tweens live on the other,
  * and reels stall at progress 0.
  *

@@ -1,13 +1,13 @@
 ---
 layout: ../../layouts/Recipe.astro
 title: Feature mode swap
-description: Toggle a bonus mode on and off at runtime by adding and removing a frame middleware — no ReelSet rebuild, no rebuild latency.
+description: Toggle a bonus mode on and off at runtime by adding and removing a frame middleware. no ReelSet rebuild, no rebuild latency.
 tags: [mode, feature, middleware, frame]
 steps:
   - Write a FrameMiddleware that rewrites frames for the bonus mode
   - On feature entry, call reelSet.frame.use(middleware)
   - On feature exit, call reelSet.frame.remove(name)
-  - Change takes effect on the very next spin — no rebuild
+  - Change takes effect on the very next spin. no rebuild
 apis:
   - ReelSet.frame.use
   - ReelSet.frame.remove
@@ -17,10 +17,13 @@ apis:
 
 import code from '../../recipes/feature-mode-swap.recipe.ts?raw';
 import { RecipeRunner } from '../../components/RecipeRunner.tsx';
+import RecipeFrame from '../../components/RecipeFrame.astro';
 
-<RecipeRunner code={code} client:only="react" />
+<RecipeFrame>
+  <RecipeRunner code={code} client:only="react" />
+</RecipeFrame>
 
-The base game and the bonus feature usually only differ in strip weighting. More wilds, fewer low-pays, maybe a symbol replacement. In the past, swapping between them meant destroying the `ReelSet` and rebuilding — a lot of work to change a few probabilities.
+The base game and the bonus feature usually only differ in strip weighting. More wilds, fewer low-pays, maybe a symbol replacement. In the past, swapping between them meant destroying the `ReelSet` and rebuilding. a lot of work to change a few probabilities.
 
 `reelSet.frame.use()` and `.remove()` are the surface for toggling middleware at runtime. The `FrameBuilder` underneath always supported runtime mutation; this recipe shows the API.
 
@@ -53,10 +56,10 @@ Call `enterFeature()` when your bonus triggers; call `exitFeature()` when the re
 
 ## Why middleware over rebuild
 
-- **Zero rebuild** — no symbol pool recreation, no textures to reload, no state loss
-- **Clean boundary** — feature-mode logic lives in one named middleware; entry and exit are one line each
-- **Stackable** — add multiple feature-mode middleware together (more wilds + mystery injection + no-triples constraint)
-- **Diagnosable** — `reelSet.frame.middleware` lists the active pipeline at any time
+- **Zero rebuild**. no symbol pool recreation, no textures to reload, no state loss
+- **Clean boundary**. feature-mode logic lives in one named middleware; entry and exit are one line each
+- **Stackable**. add multiple feature-mode middleware together (more wilds + mystery injection + no-triples constraint)
+- **Diagnosable**. `reelSet.frame.middleware` lists the active pipeline at any time
 
 ## Middleware priorities
 
@@ -71,7 +74,7 @@ Your custom middleware should generally run after target-placement (priority ≥
 
 ## When to reach for `spin({ mode })` instead
 
-Frame middleware is the right tool for **same shape, different content** — the reels still strip-spin, the cells still land on grid; only the per-cell symbol probabilities change.
+Frame middleware is the right tool for **same shape, different content**. the reels still strip-spin, the cells still land on grid; only the per-cell symbol probabilities change.
 
 If the FEATURE you're toggling needs a **different motion model** (e.g. base game strip-spins, but the bonus drops symbols in from above like a cascade), the per-spin `mode` override is the cleaner path. Same `ReelSet`, no middleware needed:
 
@@ -90,7 +93,7 @@ const reelSet = new ReelSetBuilder()
 // to 'cascade', so you have to explicitly request 'standard' here).
 await reelSet.spin({ mode: 'standard' });
 
-// Bonus round: drop-in motion. Same reels, same pool, same spotlight —
+// Bonus round: drop-in motion. Same reels, same pool, same spotlight.
 // only the phase chain swaps.
 await reelSet.spin({ mode: 'cascade' });
 ```
@@ -99,6 +102,6 @@ The two tools compose: a feature can both swap its phase chain (`mode`) AND swap
 
 ## Related
 
-- [Spin first, cascade after](/recipes/spin-then-cascade/) — full demo of the per-spin `mode` override
-- [Mystery reveal (CellPin)](/recipes/mystery-reveal-pin/) — similar idea using pins instead of middleware
-- [Walking wild (movePin)](/recipes/walking-wild-pin/) — pair with feature mode swap for a "walking wild only during the bonus" pattern
+- [Spin first, cascade after](/recipes/spin-then-cascade/). full demo of the per-spin `mode` override
+- [Mystery reveal (CellPin)](/recipes/mystery-reveal-pin/). similar idea using pins instead of middleware
+- [Walking wild (movePin)](/recipes/walking-wild-pin/). pair with feature mode swap for a "walking wild only during the bonus" pattern

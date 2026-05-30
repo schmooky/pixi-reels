@@ -40,7 +40,6 @@ const SKIP_NAMES = new Set([
   '@pixi-reels/site',
   'classic-spin',
   'cascade-tumble',
-  'hold-and-win',
 ]);
 
 async function readJson(path) {

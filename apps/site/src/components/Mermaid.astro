@@ -1,0 +1,118 @@
+---
+/**
+ * Mermaid diagram renderer with the pixi-reels site theme.
+ *
+ * Usage:
+ *   <Mermaid chart={`
+ *     flowchart LR
+ *       Builder --> ReelSet
+ *       ReelSet --> Reels
+ *   `} />
+ *
+ * Renders client-side after page load. The init script is deduped via the
+ * `data-mermaid-init` marker so multiple `<Mermaid />` instances on one page
+ * only initialize mermaid once.
+ *
+ * Theme matches the site's CSS variables resolved at load time so dark-mode
+ * switches (when added) flow through without component changes.
+ */
+
+interface Props {
+  chart: string;
+  /** Optional caption rendered below the diagram. */
+  caption?: string;
+  /** Optional class on the wrapping <figure>. */
+  class?: string;
+}
+const { chart, caption, class: className } = Astro.props as Props;
+
+// Stable id so multiple charts on a page don't collide.
+const id = `mermaid-${Math.random().toString(36).slice(2, 10)}`;
+---
+<figure class:list={['not-prose my-8 rounded-2xl border border-border bg-card p-6 overflow-x-auto', className]}>
+  <pre class="mermaid" id={id} data-mermaid-source>{chart}</pre>
+  {caption && <figcaption class="mt-3 text-sm text-muted-foreground text-center">{caption}</figcaption>}
+</figure>
+
+<script>
+  // Resolve site CSS variables at runtime so the diagram inherits the
+  // current theme. Falls back to literal HSL values matching global.css
+  // when the document hasn't painted yet.
+  function resolveVar(name: string, fallback: string): string {
+    if (typeof document === 'undefined') return fallback;
+    const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    return v ? `hsl(${v})` : fallback;
+  }
+
+  async function initMermaid() {
+    // Bail before pulling in the ~500 KB mermaid library if there is no
+    // <pre class="mermaid"> on this page. Astro will only ship this
+    // script on pages that include the <Mermaid /> component, but a page
+    // can still mount the component with zero charts in some edge cases.
+    if (!document.querySelector('pre.mermaid')) return;
+    if (document.documentElement.dataset.mermaidInit === 'true') return;
+    document.documentElement.dataset.mermaidInit = 'true';
+
+    const mermaid = (await import('mermaid')).default;
+    mermaid.initialize({
+      startOnLoad: false,
+      securityLevel: 'strict',
+      theme: 'base',
+      themeVariables: {
+        // Map mermaid's vocabulary to the site palette.
+        background: resolveVar('--background', 'hsl(30, 35%, 99%)'),
+        primaryColor: resolveVar('--primary', 'hsl(22, 92%, 52%)'),
+        primaryTextColor: resolveVar('--primary-foreground', 'hsl(30, 40%, 98%)'),
+        primaryBorderColor: resolveVar('--primary', 'hsl(22, 92%, 52%)'),
+        secondaryColor: resolveVar('--muted', 'hsl(26, 30%, 96%)'),
+        secondaryTextColor: resolveVar('--foreground', 'hsl(20, 20%, 12%)'),
+        secondaryBorderColor: resolveVar('--border', 'hsl(20, 10%, 80%)'),
+        tertiaryColor: resolveVar('--accent', 'hsl(36, 100%, 50%)'),
+        tertiaryTextColor: resolveVar('--accent-foreground', 'hsl(20, 25%, 12%)'),
+        tertiaryBorderColor: resolveVar('--accent', 'hsl(36, 100%, 50%)'),
+        lineColor: resolveVar('--foreground', 'hsl(20, 20%, 12%)'),
+        textColor: resolveVar('--foreground', 'hsl(20, 20%, 12%)'),
+        mainBkg: resolveVar('--card', 'hsl(30, 35%, 99%)'),
+        nodeBorder: resolveVar('--primary', 'hsl(22, 92%, 52%)'),
+        clusterBkg: resolveVar('--muted', 'hsl(26, 30%, 96%)'),
+        clusterBorder: resolveVar('--border', 'hsl(20, 10%, 80%)'),
+        edgeLabelBackground: resolveVar('--background', 'hsl(30, 35%, 99%)'),
+        fontFamily: 'Inter, system-ui, sans-serif',
+        fontSize: '14px',
+      },
+      flowchart: { curve: 'basis', htmlLabels: true, padding: 16 },
+      sequence: { actorMargin: 60, boxMargin: 8 },
+    });
+    await mermaid.run({ querySelector: 'pre.mermaid' });
+  }
+
+  // Init on first paint; re-run on Astro view transitions if any.
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => void initMermaid());
+  } else {
+    void initMermaid();
+  }
+  document.addEventListener('astro:page-load', () => {
+    // After a page swap, mermaid needs to re-run on new <pre.mermaid> nodes.
+    delete document.documentElement.dataset.mermaidInit;
+    void initMermaid();
+  });
+</script>
+
+<style>
+  /* Smooth before the diagram swaps in. avoids the raw text flashing. */
+  pre.mermaid[data-mermaid-source]:not(:has(svg)) {
+    color: transparent;
+    user-select: none;
+  }
+  pre.mermaid {
+    text-align: center;
+    background: transparent;
+    padding: 0;
+    margin: 0;
+  }
+  pre.mermaid svg {
+    max-width: 100%;
+    height: auto;
+  }
+</style>

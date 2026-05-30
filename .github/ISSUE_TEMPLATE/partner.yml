@@ -1,0 +1,97 @@
+name: Add your studio (partner listing)
+description: Apply to be listed on the "Shipping with pixi-reels" section of the landing page.
+title: 'Partner: '
+labels: ['partner', 'area/site', 'needs-triage']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for shipping with pixi-reels. Filling this out lets us add your studio to the partners grid on the landing page (and, when you opt in, to the README).
+
+        Before submitting:
+
+        - Make sure you have the right to publish the logo you're sending.
+        - Skim the existing entries at [pixi-reels.schmooky.dev](https://pixi-reels.schmooky.dev/) so we can match the visual rhythm.
+        - One issue per studio. if you ship under multiple brands, file separately for each.
+
+  - type: input
+    id: studio-name
+    attributes:
+      label: Studio name (display)
+      description: How the name should appear on the site. Use the casing you actually ship with (e.g. "pixmove", not "Pixmove").
+      placeholder: pixmove
+    validations:
+      required: true
+
+  - type: input
+    id: studio-url
+    attributes:
+      label: Studio website
+      description: Full URL including `https://`. We link this from the logo tile.
+      placeholder: https://example.studio
+    validations:
+      required: true
+
+  - type: textarea
+    id: blurb
+    attributes:
+      label: One-line description
+      description: Optional. Shown on hover and to screen readers. Aim for under 100 characters.
+      placeholder: Slot game studio shipping pixi-reels-powered titles.
+    validations:
+      required: false
+
+  - type: textarea
+    id: logo
+    attributes:
+      label: Logo
+      description: |
+        Attach an **SVG** here (paste it directly, drag a file in, or link to a public Figma / CDN).
+
+        Guidelines:
+        - **SVG only.** PNG / JPG won't render cleanly at the small sizes we use.
+        - Two colors max is ideal; single-color works best.
+        - Keep the source `viewBox`. we size in CSS, so the intrinsic `width`/`height` don't matter.
+        - Roughly square or landscape (up to 3:1) works well. ultra-wide marks get clipped.
+        - No raster textures inside the SVG. paths only.
+
+        If your only logo is a raster, say so. we'll work with you to vectorize it.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: usage
+    attributes:
+      label: What mechanics are you shipping?
+      description: Optional. helps us understand which parts of pixi-reels are in real production use. Pick all that apply.
+      multiple: true
+      options:
+        - Classic line pays / scatters
+        - Cascade / tumble
+        - MultiWays / per-reel geometry
+        - Big symbols (N×M blocks)
+        - Pins (sticky / walking / expanding wilds)
+        - Hold & Win
+        - Nudge mechanics
+        - Custom symbol classes (Spine, animated, etc.)
+        - Other (mention below)
+    validations:
+      required: false
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Anything else?
+      description: Optional. Tell us about the title(s), public links to a game page, a Steam / Apple / Google listing, or anything else that helps us put your work in context.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: rights
+    attributes:
+      label: Rights & confirmations
+      options:
+        - label: I have the right to publish this logo for use on pixi-reels.schmooky.dev and its README.
+          required: true
+        - label: I understand that the maintainers may decline or remove a listing at their discretion (e.g. inactive studio, brand misuse, rebrand).
+          required: true

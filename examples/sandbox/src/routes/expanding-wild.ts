@@ -1,5 +1,5 @@
 /**
- * Expanding-wild recipe — degenerate big-symbol case. Builds a normal slot
+ * Expanding-wild recipe. degenerate big-symbol case. Builds a normal slot
  * and uses the pin API with `turns: 'eval'` to fill a column when a wild
  * lands.
  *
@@ -32,7 +32,7 @@ export function buildExpandingWild({ app, textures, blurTextures }: SandboxConte
 
   const reelSet = new ReelSetBuilder()
     .reels(REELS)
-    .visibleSymbols(ROWS)
+    .visibleRows(ROWS)
     .symbolSize(SYMBOL_SIZE, SYMBOL_SIZE)
     .symbolGap(GAP, GAP)
     .symbols((registry) => {

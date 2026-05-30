@@ -22,19 +22,19 @@
  * reel. Non-MultiWays slots never reshape, so this value is irrelevant
  * there.
  *
- * - **`'origin'`** (default) — the pin migrates to `min(originRow, newRows - 1)`
+ * - **`'origin'`** (default). the pin migrates to `min(originRow, newRows - 1)`
  *   on every reshape. Clamps when the shape is too small; **restores to
- *   the origin** when the shape grows back. Prevents wander — a pin at
+ *   the origin** when the shape grows back. Prevents wander. a pin at
  *   `originRow=3` clamped to row 2 on a 3-row shape returns to row 3 on
  *   a later 5-row shape. The right default for sticky wilds, trailing
  *   wilds, and any "this position has meaning" mechanic.
  *
- * - **`'frozen'`** — the pin stays at its current row if the new shape
+ * - **`'frozen'`**. the pin stays at its current row if the new shape
  *   fits, otherwise clamps to the last visible row AND **updates
  *   `originRow` to the clamped position** so it never restores. Use when
  *   the pin's row should be locked to wherever it is now, regardless of
  *   future shape changes (e.g. a walking-wild on MultiWays where the
- *   wild's "current row" IS the source of truth — restoring to a
+ *   wild's "current row" IS the source of truth. restoring to a
  *   pre-walk row would undo the walk).
  */
 export type PinMigration = 'origin' | 'frozen';
@@ -56,7 +56,7 @@ export interface CellPin {
    */
   readonly originRow: number;
   /**
-   * Migration policy across MultiWays reshapes. Default `'origin'` —
+   * Migration policy across MultiWays reshapes. Default `'origin'`.
    * see {@link PinMigration} for semantics.
    */
   readonly migration: PinMigration;
@@ -67,7 +67,7 @@ export interface CellPin {
    * - 'permanent' → persists until `unpin()` is called explicitly
    */
   readonly turns: number | 'eval' | 'permanent';
-  /** Optional per-instance data: multiplier, value, tier — game-specific. */
+  /** Optional per-instance data: multiplier, value, tier. game-specific. */
   payload?: Readonly<Record<string, unknown>>;
 }
 
@@ -95,15 +95,22 @@ export interface CellPinOptions {
    */
   originRow?: number;
   /**
-   * MultiWays migration policy. Default `'origin'` — clamp + restore.
+   * MultiWays migration policy. Default `'origin'`. clamp + restore.
    * Set to `'frozen'` for "lock at current row, never restore" semantics.
    * See {@link PinMigration}.
    */
   migration?: PinMigration;
 }
 
-/** Reason a pin expired. Fired with `pin:expired`. */
-export type PinExpireReason = 'turns' | 'explicit' | 'eval';
+/**
+ * Reason a pin expired. Fired with `pin:expired`.
+ *   - `'turns'`     — its turn counter reached zero.
+ *   - `'explicit'`  — removed via `unpin()`.
+ *   - `'eval'`      — an eval callback returned false.
+ *   - `'collision'` — a reshape clamped it onto a cell another pin already
+ *                     holds, so it was dropped deterministically.
+ */
+export type PinExpireReason = 'turns' | 'explicit' | 'eval' | 'collision';
 
 /** A grid coordinate. */
 export interface CellCoord {
@@ -111,7 +118,7 @@ export interface CellCoord {
   row: number;
 }
 
-/** Options for `reelSet.movePin()` — flight animation tuning + lifecycle hooks. */
+/** Options for `reelSet.movePin()`. flight animation tuning + lifecycle hooks. */
 export interface MovePinOptions {
   /** Animation duration in milliseconds. Default 400. */
   duration?: number;
@@ -124,7 +131,7 @@ export interface MovePinOptions {
   backfill?: string;
   /**
    * Fires after the flight symbol is acquired, positioned at `from`, and
-   * added to the viewport — but before the tween begins. Use this hook to
+   * added to the viewport. but before the tween begins. Use this hook to
    * drive animation state on the flight instance. For example: cast to
    * your `SpineSymbol` subclass and switch to a `run` animation for the
    * duration of the flight.

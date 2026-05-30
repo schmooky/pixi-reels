@@ -3,7 +3,7 @@ layout: ../../layouts/Docs.astro
 title: Phases
 section: wiki
 eyebrow: API
-description: START, SPIN, ANTICIPATION, STOP — the four lifecycle phases and how to extend them.
+description: START, SPIN, ANTICIPATION, STOP. the four lifecycle phases and how to extend them.
 ---
 
 A **phase** is one slice of a reel's spin lifecycle. Phases extend
@@ -52,5 +52,5 @@ class FlashPhase extends ReelPhase<{ duration: number }> {
 builder.phases((f) => f.register('flash', FlashPhase));
 ```
 
-Replacing built-ins works the same way — register with the same name (`'start'`,
+Replacing built-ins works the same way. register with the same name (`'start'`,
 `'spin'`, `'anticipation'`, `'stop'`) to override.

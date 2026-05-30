@@ -49,7 +49,7 @@ async function main() {
 
   const reelSet = new ReelSetBuilder()
     .reels(REEL_COUNT)
-    .visibleSymbols(VISIBLE_ROWS)
+    .visibleRows(VISIBLE_ROWS)
     .symbolSize(SYMBOL_SIZE, SYMBOL_SIZE)
     .symbolGap(SYMBOL_GAP, SYMBOL_GAP)
     .symbols((registry) => {
@@ -155,7 +155,7 @@ async function main() {
 
   async function handleSpin() {
     if (isSpinning) {
-      try { reelSet.skip(); } catch {}
+      try { reelSet.skipSpin(); } catch {}
       return;
     }
 
@@ -166,7 +166,7 @@ async function main() {
 
     const spinPromise = reelSet.spin();
     const serverResult = await mockSpin();
-    reelSet.setResult(serverResult.symbols);
+    reelSet.setResult(serverResult.symbols.map((visible) => ({ visible })));
     await spinPromise;
 
     isSpinning = false;

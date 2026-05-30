@@ -10,18 +10,18 @@ export interface StopPhaseConfig {
 }
 
 /**
- * Stops the reel on the target frame with a weighted, slot-machine feel.
+ * Stops the reel on the target frame.
  *
  * Sequence:
  * 1. Wait for the staggered delay.
  * 2. Keep spinning at full speed with `isStopping` flagged. The target frame
  *    is loaded into the StopSequencer; each wrap event at the top of the
- *    reel pulls the next frame symbol — so targets arrive in the visible
+ *    reel pulls the next frame symbol. so targets arrive in the visible
  *    area naturally, carrying the full momentum of the spin.
  * 3. When the sequencer is exhausted, snap to grid and bounce:
  *    - overshoot downward by `bounceDistance` with `power1.out`
  *    - settle back upward with `power1.out`
- *    Both legs share a duration for a symmetric, weighty landing.
+ *    Both legs share a duration so the down + up motion is symmetric.
  */
 export class StopPhase extends ReelPhase<StopPhaseConfig> {
   readonly name = 'stop';
@@ -53,8 +53,8 @@ export class StopPhase extends ReelPhase<StopPhaseConfig> {
 
     reel.setStopFrame(this._config.targetFrame);
     reel.isStopping = true;
-    // Restore full spin speed — anticipation or other phases may have lowered
-    // it. Weighty stops need full momentum through the final frame.
+    // Restore full spin speed. anticipation or other phases may have lowered
+    // it. The full momentum carries through the final frame placement.
     reel.speed = speed.spinSpeed;
 
     this._stage = 'spinning';
@@ -63,7 +63,7 @@ export class StopPhase extends ReelPhase<StopPhaseConfig> {
   update(_deltaMs: number): void {
     if (this._stage !== 'spinning') return;
     // Sequencer consumes one symbol per wrap via Reel._onSymbolWrapped.
-    // When it's empty, the target frame is fully placed — time to land.
+    // When it's empty, the target frame is fully placed. time to land.
     if (!this._reel.stopSequencer.hasRemaining) {
       this._landAndBounce();
     }
@@ -112,9 +112,19 @@ export class StopPhase extends ReelPhase<StopPhaseConfig> {
     reel.isStopping = false;
 
     if (this._stage !== 'done' && this._config) {
+      // Place the FULL target frame, not just the visible window — slicing to
+      // [bufferAbove, bufferAbove+visible] dropped buffer-above/below targets
+      // (e.g. a big symbol's tail parked in bufferAbove), so a direct skip()
+      // landed the wrong frame. targetFrame is a flat top-to-bottom strip;
+      // placeSymbols reads buffer-above from NEGATIVE indices and visible +
+      // buffer-below from positive indices, so convert before placing.
       const bufferAbove = reel.bufferAbove;
-      const visible = reel.visibleRows;
-      reel.placeSymbols(this._config.targetFrame.slice(bufferAbove, bufferAbove + visible));
+      const frame = this._config.targetFrame;
+      const placeForm = frame.slice(bufferAbove);
+      for (let j = 0; j < bufferAbove; j++) {
+        (placeForm as Record<number, string>)[j - bufferAbove] = frame[j];
+      }
+      reel.placeSymbols(placeForm);
     }
     reel.snapToGrid();
     reel.container.y = this._baseY;

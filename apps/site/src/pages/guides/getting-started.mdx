@@ -12,14 +12,14 @@ you from a fresh repo to a spinning reel set.
 ## Requirements
 
 - Node 20+ and pnpm (or npm/yarn)
-- A PixiJS v8 app — the engine plugs into `app.ticker`
+- A PixiJS v8 app. the engine plugs into `app.ticker`
 - If you want `SpineSymbol`, also install `@esotericsoftware/spine-pixi-v8`
 
 ## Install
 
 ```bash
 pnpm add pixi-reels pixi.js gsap
-# optional — for Spine symbols
+# optional. for Spine symbols
 pnpm add @esotericsoftware/spine-pixi-v8
 ```
 
@@ -36,7 +36,7 @@ document.body.appendChild(app.canvas);
 
 const reelSet = new ReelSetBuilder()
   .reels(5)
-  .visibleSymbols(3)
+  .visibleRows(3)
   .symbolSize(140, 140)
   .symbols((r) => {
     r.register('cherry', SpriteSymbol, { textures: { cherry: cherryTex } });
@@ -60,7 +60,7 @@ symbols. If you see nothing:
 
 | Symptom | Fix |
 |---|---|
-| Blank canvas | Call `reelSet.x = …; reelSet.y = …;` — it's anchored at (0,0). |
+| Blank canvas | Call `reelSet.x = …; reelSet.y = …;`. it's anchored at (0,0). |
 | `ticker() must be called` | Forgot `.ticker(app.ticker)`. |
 | Symbols invisible | Forgot to call `.register(...)` for a weighted symbol id. |
 

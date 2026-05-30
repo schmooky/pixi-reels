@@ -2,11 +2,9 @@
 // Injected: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
 //           PIXI, gsap, app, pickWeighted
 
-// ANTICIPATION — 350 ms lead-in. Enough room for a full "spin-up"
+// ANTICIPATION. 350 ms lead-in. Enough room for a full "spin-up"
 // sound effect to play, a button-press animation to complete, or a
-// "READY" tone to fire. The pause is clearly perceived as deliberate.
-// Common in mid-tier slots where the player expects a beat between
-// click and motion.
+// "READY" tone to fire before the strip starts moving.
 
 const IDS = ['7', '8', '9', '10', 'J', 'Q'];
 const REELS = 6, ROWS = 4, SIZE = 64;
@@ -22,7 +20,7 @@ function randSymbol(exclude) {
 }
 
 const reelSet = new ReelSetBuilder()
-  .reels(REELS).visibleSymbols(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
+  .reels(REELS).visibleRows(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
   .symbols((r) => {
     for (const sym of CARD_DECK) {
       if (IDS.includes(sym.id)) {
@@ -58,7 +56,7 @@ return {
     reelSet.setDropOrder('ltr');
     const spinDone = reelSet.spin();
     await new Promise((r) => setTimeout(r, 220));
-    reelSet.setResult(stage0);
+    reelSet.setResult(stage0.map((visible) => ({ visible })));
     await spinDone;
 
     await new Promise((r) => setTimeout(r, 200));
@@ -66,6 +64,6 @@ return {
     await reelSet.destroySymbols(winners);
     await new Promise((r) => setTimeout(r, 220));
     reelSet.setDropOrder('all');
-    await reelSet.refill({ winners, grid: stage1 });
+    await reelSet.refill({ winners, grid: stage1.map((visible) => ({ visible })) });
   },
 };

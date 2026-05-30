@@ -3,7 +3,7 @@ const snippet = `import { ReelSetBuilder, SpriteSymbol } from 'pixi-reels';
 
 const reelSet = new ReelSetBuilder()
   .reels(5)
-  .visibleSymbols(3)
+  .visibleRows(3)
   .symbolSize(140, 140)
   .symbols((r) => {
     r.register('cherry', SpriteSymbol, { textures: { cherry: cherryTex } });
@@ -18,10 +18,10 @@ const result = await reelSet.spin();
 console.log(result.symbols); // [[ 'cherry','seven','bar' ], ...]`;
 
 const bullets = [
-  { bold: 'One import', rest: ' — ReelSetBuilder wires every subsystem.' },
-  { bold: 'Runtime validation', rest: ' — forget a required call? You\'ll know at build().' },
-  { bold: 'Extension points everywhere', rest: ' — custom symbols, phases, spinning modes.' },
-  { bold: 'No PixiJS coupling in your logic', rest: ' — tests run in Node.' },
+  { bold: 'One import', rest: '. ReelSetBuilder wires every subsystem.' },
+  { bold: 'Runtime validation', rest: '. forget a required call? You\'ll know at build().' },
+  { bold: 'Extension points everywhere', rest: '. custom symbols, phases, spinning modes.' },
+  { bold: 'No PixiJS coupling in your logic', rest: '. tests run in Node.' },
 ];
 ---
 <section class="border-b border-border/60 py-20">

@@ -3,18 +3,19 @@ layout: ../../layouts/Docs.astro
 title: Nudge
 section: guides
 eyebrow: Building blocks
-description: Push a reel down or up by one or more positions after it has stopped — the classic UK fruit-machine nudge.
+description: Push a reel down or up by one or more positions after it has stopped, revealing caller-supplied symbols.
 ---
 
 import code from '../../recipes/nudge.recipe.ts?raw';
 import sequentialCode from '../../recipes/nudge-sequential.recipe.ts?raw';
 import parallelCode from '../../recipes/nudge-parallel.recipe.ts?raw';
 import { RecipeRunner } from '../../components/RecipeRunner.tsx';
+import RecipeFrame from '../../components/RecipeFrame.astro';
 
 A **nudge** moves a single reel by a few symbol positions *after* the spin has
-landed, revealing new symbols the caller supplies. Classic fruit-machine
-mechanic: "land a near-miss, then offer to nudge column 3 down by 1 for a
-guaranteed win."
+landed, revealing new symbols the caller supplies. Common pattern: land
+a near-miss, then nudge one column down by 1 to reveal the missing
+symbol.
 
 ```ts
 await reelSet.spin();
@@ -30,7 +31,9 @@ That call shifts reel `2` down by one row. The old top row drops to the
 middle, the old middle drops to the bottom, the old bottom symbol leaves the
 visible window, and `'wild'` slides in at the new top.
 
-<RecipeRunner code={code} client:only="react" />
+<RecipeFrame>
+  <RecipeRunner code={code} client:only="react" />
+</RecipeFrame>
 
 ## The contract
 
@@ -42,12 +45,12 @@ interface NudgeOptions {
    */
   distance: number;
   /**
-   *  - 'down' — symbols move down; new symbols enter from the top.
-   *  - 'up'   — symbols move up;   new symbols enter from the bottom.
+   *  - 'down'. symbols move down; new symbols enter from the top.
+   *  - 'up'  . symbols move up;   new symbols enter from the bottom.
    */
   direction: 'up' | 'down';
   /**
-   * Symbol ids in **top-down order of their FINAL on-strip position** —
+   * Symbol ids in **top-down order of their FINAL on-strip position**.
    * including any overflow into the off-screen buffer. Length must equal
    * `distance` exactly.
    */
@@ -86,24 +89,26 @@ For a 3-row column landed on `['A', 'B', 'C']` (top, middle, bottom):
 is always the bottommost. When `distance` exceeds `visibleRows`, the
 overflow lands in the off-screen buffer on the matching side:
 
-- `direction: 'down'` — trailing `incoming` entries spill into **bufferBelow**.
-- `direction: 'up'` — leading `incoming` entries spill into **bufferAbove**.
+- `direction: 'down'`. trailing `incoming` entries spill into **bufferBelow**.
+- `direction: 'up'`. leading `incoming` entries spill into **bufferAbove**.
 
-Either way, every entry stays on the strip — available to a follow-up
+Either way, every entry stays on the strip. available to a follow-up
 nudge or carried into the next spin's start frame. The engine refuses
 `distance >= total strip capacity` so a full rotation can't silently
 discard a pre-placed buffer entry.
 
 ## Sequential vs parallel
 
-Nudges are per-reel by design — `Promise.all([...])` is how multi-reel
+Nudges are per-reel by design. `Promise.all([...])` is how multi-reel
 beats happen. The orchestration is yours: await each call for a deliberate
 beat, or fire them together for a single synchronised one. Same engine
 output, same events fire, only the pacing changes.
 
-### Sequential — three separate beats
+### Sequential. three separate beats
 
-<RecipeRunner code={sequentialCode} client:only="react" />
+<RecipeFrame>
+  <RecipeRunner code={sequentialCode} client:only="react" />
+</RecipeFrame>
 
 ```ts
 for (const col of [1, 2, 3]) {
@@ -115,9 +120,11 @@ Each `await` parks the loop until that reel's tween lands. Players
 register reel 1's wild before reel 2 even starts. Total wall time =
 `cols.length × duration`.
 
-### Parallel — one synchronised beat
+### Parallel. one synchronised beat
 
-<RecipeRunner code={parallelCode} client:only="react" />
+<RecipeFrame>
+  <RecipeRunner code={parallelCode} client:only="react" />
+</RecipeFrame>
 
 ```ts
 await Promise.all(
@@ -131,7 +138,7 @@ Every call dispatches synchronously inside `Promise.all`, so the GSAP
 tweens all start the same frame. Whole row drops in together. Total wall
 time = `duration` (regardless of reel count).
 
-### Stagger — sugar in between
+### Stagger. sugar in between
 
 Pass per-call `startDelay` to introduce a fixed gap without writing a
 loop:
@@ -144,7 +151,7 @@ await Promise.all(
 );
 ```
 
-Reel 1 starts at t=0, reel 2 at t=80ms, reel 3 at t=160ms — all running
+Reel 1 starts at t=0, reel 2 at t=80ms, reel 3 at t=160ms. all running
 their own tween durations concurrently. Reads as a wave. Validation
 errors still throw synchronously on the call site; only the actual
 mutation is deferred.
@@ -164,13 +171,13 @@ Where `total = bufferAbove + visibleRows + bufferBelow` and
 bufferAbove cell, `bufferAbove` = visible row 0).
 
 The block can land **partially** in either buffer and still render
-correctly — `_finalizeFrame` scans both bufferAbove and visible-row
+correctly. `_finalizeFrame` scans both bufferAbove and visible-row
 anchors, sizing the sprite to span the whole block whichever side the
 anchor lives on. The mask clips the off-screen portion, the visible
 portion shows the block's tail or head. The classic use case: a 1xH
 wild lands with its anchor in bufferAbove (tail visible at row 0);
 nudge down to reveal the full block. Cross-reel blocks (w > 1) always
-throw — splitting an anchor from its right-side cells on another reel
+throw. splitting an anchor from its right-side cells on another reel
 isn't safe.
 
 ```ts
@@ -184,14 +191,14 @@ await reelSet.nudge(2, { distance: 1, direction: 'up', incoming: ['filler'] });
 Two paths to cut a nudge short:
 
 ```ts
-// 1. Skip — fast-forward to landed. Promise resolves normally.
+// 1. Skip. fast-forward to landed. Promise resolves normally.
 const p = reelSet.nudge(2, { ...opts });
 button.onclick = () => reelSet.skipNudge(2);
 const { symbols } = await p;
 ```
 
 ```ts
-// 2. Abort — reject with AbortError. Strip still snaps to landed.
+// 2. Abort. reject with AbortError. Strip still snaps to landed.
 const controller = new AbortController();
 const p = reelSet.nudge(2, { ...opts, signal: controller.signal });
 button.onclick = () => controller.abort();
@@ -200,9 +207,9 @@ catch (e) { if (e.name !== 'AbortError') throw e; }
 ```
 
 The difference is the **promise contract**. `skipNudge` resolves the
-`nudge()` call's promise normally — the consumer's success path runs.
+`nudge()` call's promise normally. the consumer's success path runs.
 An abort rejects with `AbortError` and fires `nudge:cancelled` on the
-bus — the consumer's error path runs. Pick by what should happen next:
+bus. the consumer's error path runs. Pick by what should happen next:
 "play the win presenter" → skip; "tear down the whole feature" → abort.
 
 Either way the strip lands at its deterministic post-nudge position; you
@@ -214,11 +221,11 @@ don't end up half-tweened.
 | --- | --- | --- |
 | `nudge:start` | `({ reelIndex, distance, direction })` | Pre-placement is done; tween about to begin. Listeners see the about-to-animate state. |
 | `nudge:complete` | `({ reelIndex, distance, direction, symbols })` | Strip snapped to post-nudge grid; `symbols` is the new visible column. |
-| `nudge:cancelled` | `({ reelIndex, distance, direction, reason })` | Signal aborted or reel destroyed mid-tween. **Does not fire alongside `nudge:complete`** — the call's promise rejected instead. |
+| `nudge:cancelled` | `({ reelIndex, distance, direction, reason })` | Signal aborted or reel destroyed mid-tween. **Does not fire alongside `nudge:complete`**. the call's promise rejected instead. |
 | `phase:enter` (per-reel) | `('nudge')` | Mirror of `nudge:start`, on the affected reel's bus. |
 | `phase:exit` (per-reel) | `('nudge')` | Mirror of `nudge:complete`. |
 
-A normal-spin `landed` event does **not** fire on a nudge — that surface
+A normal-spin `landed` event does **not** fire on a nudge. that surface
 is reserved for the spin pipeline. Use `nudge:complete` for win re-detection.
 
 ```ts
@@ -230,7 +237,7 @@ reelSet.events.on('nudge:complete', ({ reelIndex, symbols }) => {
 
 ## When `nudge()` throws (or rejects)
 
-Synchronous throws — argument shape errors. Async rejections — state errors
+Synchronous throws. argument shape errors. Async rejections. state errors
 during the tween or AbortSignal cancellation.
 
 **Throws synchronously:**
@@ -255,14 +262,14 @@ unrelated reels, and other reels' symbols all carry through.
 
 ## Recipes
 
-- [Fruit-machine nudge](/recipes/nudge/) — the minimum runnable demo.
-- [Spotlight after a nudge](/recipes/nudge-spotlight/) — nudge into a
+- [Nudge a reel](/recipes/nudge/). the minimum runnable demo.
+- [Spotlight after a nudge](/recipes/nudge-spotlight/). nudge into a
   win line, then run `WinPresenter` on the new cells.
-- [Nudge through a big symbol](/recipes/nudge-big-symbol/) — block
+- [Nudge through a big symbol](/recipes/nudge-big-symbol/). block
   survival math + tail-reveal canvas.
-- [Land a big symbol partially in buffer](/recipes/big-symbol-partial-land/) —
+- [Land a big symbol partially in buffer](/recipes/big-symbol-partial-land/).
   the dual entry point: land in tail-visible state via `setResult`'s
   `bufferAbove`, nudge to reveal.
-- [Nudge a big symbol in, then hold it across a respin](/recipes/big-symbol-held-respin/) —
-  the classic fruit-machine bonus beat: reveal a buffer-anchored wild,
-  then hold the reel through a respin of the others.
+- [Nudge a big symbol in, then hold it across a respin](/recipes/big-symbol-held-respin/).
+  reveal a buffer-anchored wild, then hold the reel through a respin
+  of the others.

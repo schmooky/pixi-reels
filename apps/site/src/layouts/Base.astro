@@ -10,13 +10,12 @@ interface Props extends Partial<PageSeo> {
   description?: string;
 }
 const {
-  title = `${SITE.name} — ${SITE.tagline}`,
+  title = `${SITE.name}. ${SITE.tagline}`,
   description = SITE.description,
   path,
   image,
   type,
   article,
-  keywords,
   jsonLd,
   noIndex,
 } = Astro.props as Props;
@@ -31,17 +30,29 @@ const {
       image={image}
       type={type}
       article={article}
-      keywords={keywords}
       jsonLd={jsonLd}
       noIndex={noIndex}
     />
-    {/* Roboto Condensed for the debug CardSymbol used in recipes. */}
+    {/*
+      Roboto Condensed is used by the debug CardSymbol inside recipe canvases.
+      Loaded asynchronously so it never blocks first paint on pages that
+      never render a card. Pattern: preload + onload-promote, with a
+      no-JS fallback. https://web.dev/articles/defer-non-critical-css
+    */}
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      rel="stylesheet"
+      rel="preload"
+      as="style"
       href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@400;700&display=swap"
+      onload="this.onload=null;this.rel='stylesheet'"
     />
+    <noscript>
+      <link
+        rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@400;700&display=swap"
+      />
+    </noscript>
   </head>
   <body>
     <Nav />

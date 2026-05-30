@@ -1,24 +1,26 @@
 // @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
-//                   WILD_CARD, PIXI, gsap, app, pickWeighted, EmptySymbol
+// Injected globals: ReelSetBuilder, SpeedPresets, CoinSymbol, COIN_FEATURE,
+//                   coinMultiplier, PIXI, gsap, app, pickWeighted, EmptySymbol
 //
-// Collector symbol on a Hold & Win board.
+// Collector coin on a Hold & Win board.
 //
-// Same 15-mini-ReelSet architecture as value-coin-pin. Coins land and are
-// pinned with a payload.value. When a collector lands adjacent to pinned
-// coins, it absorbs every adjacent coin's payload and stores the total in
-// its own pin payload. Absorbed coins are unpinned — they "fly" to the
-// collector conceptually, though here we just update badges.
+// Same 15-mini-ReelSet architecture as value-coin-pin. The value coins
+// roll x2 / x5 / x10 / x20 / x50 with their coefficient on the face —
+// each rung is its own CoinSymbol variant. When a blue COLLECT coin lands
+// adjacent to pinned value coins, it sums their payloads, unpins them,
+// and stores the total in its own pin payload.
 
-const COIN = 'coin';
 const COLLECTOR = 'collector';
 const EMPTY = 'empty';
 const COLS = 5, ROWS = 3, CELL = 60, GAP = 4;
-const COIN_VALUES = [10, 25, 50, 100];
 
-// Thematic cards for this recipe — gold coin, purple collector.
-const COIN_CARD = { id: COIN, color: 0xf1c40f, label: 'COIN', textColor: 0x6b5400 };
-const COLLECTOR_CARD = { id: COLLECTOR, color: 0x9b59b6, label: 'COLL', textColor: 0xffffff };
+// Value-coin ladder. matches value-coin-pin so the two recipes feel like
+// the same H&W board, just with the collector layered in.
+const LADDER = [2, 5, 10, 20, 50];
+const COIN_WEIGHTS = { 2: 12, 5: 6, 10: 4, 20: 2, 50: 1 };
+const coinId = (v) => `coin_x${v}`;
+const isCoinId = (id) => id?.startsWith?.('coin_x');
+const valueOf = (id) => Number(id.slice('coin_x'.length));
 
 const colWidth = COLS * (CELL + GAP) - GAP;
 const colHeight = ROWS * (CELL + GAP) - GAP;
@@ -29,14 +31,20 @@ const cells = [];
 for (let col = 0; col < COLS; col++) {
   for (let row = 0; row < ROWS; row++) {
     const mini = new ReelSetBuilder()
-      .reels(1).visibleSymbols(1)
+      .reels(1).visibleRows(1)
       .symbolSize(CELL, CELL).symbolGap(0, 0)
       .symbols((r) => {
-        r.register(COIN, CardSymbol, { color: COIN_CARD.color, label: COIN_CARD.label, textColor: COIN_CARD.textColor });
-        r.register(COLLECTOR, CardSymbol, { color: COLLECTOR_CARD.color, label: COLLECTOR_CARD.label, textColor: COLLECTOR_CARD.textColor });
+        for (const v of LADDER) {
+          r.register(coinId(v), CoinSymbol, coinMultiplier(v));
+        }
+        r.register(COLLECTOR, CoinSymbol, COIN_FEATURE.COLLECT);
         r.register(EMPTY, EmptySymbol, {});
       })
-      .weights({ [COIN]: 2, [COLLECTOR]: 1, [EMPTY]: 6 })
+      .weights({
+        ...Object.fromEntries(LADDER.map((v) => [coinId(v), COIN_WEIGHTS[v]])),
+        [COLLECTOR]: 8,
+        [EMPTY]: 60,
+      })
       .speed('normal', { ...SpeedPresets.NORMAL, minimumSpinTime: 320 + (col + row) * 60 })
       .ticker(app.ticker)
       .build();
@@ -47,8 +55,11 @@ for (let col = 0; col < COLS; col++) {
   }
 }
 
-// ── Value badges + total ────────────────────────────────────────────────
-const badges = new Map();
+// ── Total + collector stamp ─────────────────────────────────────────────
+// Value coins display their coefficient on the face. only the collector
+// needs an overlay (the absorbed total is computed at runtime, not from
+// the strip), so the badge map only ever holds collector entries.
+const collectorBadges = new Map();
 const totalText = new PIXI.Text({
   text: 'TOTAL: 0',
   style: {
@@ -64,31 +75,33 @@ totalText.x = startX + colWidth / 2;
 totalText.y = startY + colHeight + 14;
 app.stage.addChild(totalText);
 
-function drawBadge(cell, value, isCollector = false) {
+function drawCollectorBadge(cell, total) {
   const key = `${cell.col},${cell.row}`;
-  const existing = badges.get(key);
+  const existing = collectorBadges.get(key);
   if (existing) { try { existing.destroy(); } catch {} }
   const badge = new PIXI.Text({
-    text: String(value),
+    text: String(total),
     style: {
-      fontFamily: 'system-ui, sans-serif',
-      fontSize: 18,
+      fontFamily:
+        '"Roboto Condensed", "Arial Narrow", "Helvetica Neue Condensed", "Liberation Sans Narrow", system-ui, sans-serif',
+      fontSize: Math.floor(CELL * 0.3),
       fontWeight: '900',
-      fill: isCollector ? 0x90ee90 : 0xffd43b,
-      stroke: { color: 0x000000, width: 4 },
+      fill: 0xbfffbf,
+      stroke: { color: 0x000000, width: 3 },
+      align: 'center',
     },
   });
   badge.anchor.set(0.5);
   badge.x = cell.reelSet.x + CELL / 2;
   badge.y = cell.reelSet.y + CELL / 2;
   app.stage.addChild(badge);
-  badges.set(key, badge);
+  collectorBadges.set(key, badge);
 }
 
-function clearBadge(col, row) {
+function clearCollectorBadge(col, row) {
   const key = `${col},${row}`;
-  const badge = badges.get(key);
-  if (badge) { try { badge.destroy(); } catch {} badges.delete(key); }
+  const badge = collectorBadges.get(key);
+  if (badge) { try { badge.destroy(); } catch {} collectorBadges.delete(key); }
 }
 
 function cellAt(col, row) {
@@ -106,26 +119,26 @@ function recomputeTotal() {
 
 for (const cell of cells) {
   cell.reelSet.events.on('pin:placed', (pin) => {
-    if (typeof pin.payload?.value === 'number') {
-      drawBadge(cell, pin.payload.value, pin.symbolId === COLLECTOR);
-      recomputeTotal();
+    if (pin.symbolId === COLLECTOR && typeof pin.payload?.value === 'number') {
+      drawCollectorBadge(cell, pin.payload.value);
     }
+    recomputeTotal();
   });
-  cell.reelSet.events.on('pin:expired', () => {
-    clearBadge(cell.col, cell.row);
+  cell.reelSet.events.on('pin:expired', (pin) => {
+    if (pin?.symbolId === COLLECTOR) clearCollectorBadge(cell.col, cell.row);
     recomputeTotal();
   });
 }
 
-// ── Scripted demo: seed coins, then drop a collector in the middle ─────
+// ── Scripted demo: seed coins (varied values), then drop a collector ───
 const rounds = [
   { hits: [
-    { col: 1, row: 1, type: 'coin' },
-    { col: 2, row: 2, type: 'coin' },
-    { col: 3, row: 1, type: 'coin' },
+    { col: 1, row: 1, type: 'coin', value: 5 },
+    { col: 2, row: 2, type: 'coin', value: 10 },
+    { col: 3, row: 1, type: 'coin', value: 20 },
   ] },
   { hits: [
-    { col: 2, row: 0, type: 'coin' },
+    { col: 2, row: 0, type: 'coin', value: 50 },
   ] },
   { hits: [
     { col: 2, row: 1, type: 'collector' },
@@ -134,7 +147,7 @@ const rounds = [
 
 return {
   cleanup: () => {
-    for (const b of badges.values()) try { b.destroy(); } catch {}
+    for (const b of collectorBadges.values()) try { b.destroy(); } catch {}
     try { totalText.destroy(); } catch {}
     for (const c of cells) try { c.reelSet.destroy(); } catch {}
   },
@@ -155,8 +168,10 @@ return {
       await new Promise((r) => setTimeout(r, 140));
       for (const cell of activeCells) {
         const hit = round.hits.find((h) => h.col === cell.col && h.row === cell.row);
-        const target = hit ? (hit.type === 'collector' ? COLLECTOR : COIN) : EMPTY;
-        cell.reelSet.setResult([[target]]);
+        let target = EMPTY;
+        if (hit?.type === 'coin') target = coinId(hit.value);
+        else if (hit?.type === 'collector') target = COLLECTOR;
+        cell.reelSet.setResult([{ visible: [target] }]);
       }
       await Promise.all(spinPromises);
 
@@ -165,8 +180,10 @@ return {
         if (!hit) continue;
 
         if (hit.type === 'coin') {
-          const value = COIN_VALUES[Math.floor(Math.random() * COIN_VALUES.length)];
-          cell.reelSet.pin(0, 0, COIN, { turns: 'permanent', payload: { value } });
+          cell.reelSet.pin(0, 0, coinId(hit.value), {
+            turns: 'permanent',
+            payload: { value: hit.value },
+          });
           continue;
         }
 
@@ -182,7 +199,7 @@ return {
             const nCell = cellAt(n.col, n.row);
             if (!nCell) continue;
             const nPin = nCell.reelSet.getPin(0, 0);
-            if (nPin?.symbolId === COIN && typeof nPin.payload?.value === 'number') {
+            if (isCoinId(nPin?.symbolId) && typeof nPin.payload?.value === 'number') {
               total += nPin.payload.value;
               nCell.reelSet.unpin(0, 0);
             }

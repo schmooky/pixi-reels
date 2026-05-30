@@ -8,11 +8,11 @@ import { sortByValueDesc } from './Win.js';
 /**
  * What to play on each cell being highlighted.
  *
- *   - `'win'` — default. Calls `symbol.playWin()` (your subclass's hook).
- *   - `string` — a named animation. If the symbol exposes a
+ *   - `'win'`. default. Calls `symbol.playWin()` (your subclass's hook).
+ *   - `string`. a named animation. If the symbol exposes a
  *     `playAnimation(name)` method (e.g. SpineSymbol), it's invoked; else
  *     it falls back to `playWin()`.
- *   - `(symbol, cell, win) => Promise<void>` — drive the animation
+ *   - `(symbol, cell, win) => Promise<void>`. drive the animation
  *     yourself. Good for GSAP bounces, line-specific pulses, etc.
  */
 export type WinSymbolAnim =
@@ -59,7 +59,7 @@ interface ResolvedOptions {
 /**
  * Highlights winning cells on a reel set. One job: animate the symbols.
  *
- * The presenter doesn't draw lines, outlines, or any per-win visual — it
+ * The presenter doesn't draw lines, outlines, or any per-win visual. it
  * emits `win:start` / `win:group` / `win:symbol` / `win:end` events so
  * your code can hook anything it wants (polylines, Spine line rigs,
  * popup numbers, sound cues) by subscribing and using
@@ -68,7 +68,7 @@ interface ResolvedOptions {
  * Two knobs cover the common presentation modes:
  *
  *   - `stagger: 0` → all cells in a win pulse together
- *   - `stagger: 60` → cells start one after another — a left-to-right
+ *   - `stagger: 60` → cells start one after another. a left-to-right
  *     sweep if you pass cells in reel order
  *
  * ```ts
@@ -82,7 +82,7 @@ interface ResolvedOptions {
  * ```
  *
  * Cascades: drive `presenter.show([{ cells: winners }])` from
- * `runCascade`'s `onWinnersVanish` hook — cluster pops and payline hits
+ * `runCascade`'s `onWinnersVanish` hook. cluster pops and payline hits
  * are the same shape to the presenter.
  */
 export class WinPresenter implements Disposable {

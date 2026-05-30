@@ -2,7 +2,7 @@
 // Injected: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, WILD_CARD,
 //           PIXI, gsap, app, pickWeighted
 
-// Cascade-tumble end-to-end on the modern API — no helpers, no scripted
+// Cascade-tumble end-to-end on the modern API. no helpers, no scripted
 // stages. `reelSet.runCascade({ detectWinners, nextGrid })` owns the
 // orchestration; the two callbacks own the game rules.
 
@@ -19,7 +19,7 @@ function randSymbol(exclude) {
 }
 
 const reelSet = new ReelSetBuilder()
-  .reels(REELS).visibleSymbols(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
+  .reels(REELS).visibleRows(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
   .symbols(r => {
     for (const sym of CARD_DECK) {
       if (IDS.includes(sym.id)) {
@@ -44,15 +44,15 @@ return {
       )
     );
 
-    // Moment A — initial spin lands the stage-0 cluster, left-to-right reveal.
+    // Moment A. initial spin lands the stage-0 cluster, left-to-right reveal.
     reelSet.setDropOrder('ltr');
     const spinDone = reelSet.spin();
     await new Promise(r => setTimeout(r, 200));
-    reelSet.setResult(stage0);
+    reelSet.setResult(stage0.map((visible) => ({ visible })));
     await spinDone;
     await new Promise(r => setTimeout(r, 300));
 
-    // Moment B — cascade refill driven entirely by runCascade. The
+    // Moment B. cascade refill driven entirely by runCascade. The
     // first call to detectWinners returns the planted cluster; the second
     // returns [] (no more wins on the post-refill grid), ending the chain.
     // The orchestration (destroy → pause → refill → re-detect) is library-owned.

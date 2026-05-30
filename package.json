@@ -8,7 +8,7 @@
   },
   "packageManager": "pnpm@10.32.1",
   "scripts": {
-    "build": "pnpm --filter pixi-reels build && pnpm --filter classic-spin build && pnpm --filter cascade-tumble build && pnpm --filter hold-and-win build && pnpm --filter big-symbols build && pnpm --filter multiways build && pnpm --filter pyramid-cascade build",
+    "build": "pnpm --filter pixi-reels build && pnpm --filter classic-spin build && pnpm --filter cascade-tumble build && pnpm --filter big-symbols build && pnpm --filter multiways build && pnpm --filter pyramid-cascade build",
     "build:all": "node scripts/build-all-publishable.mjs",
     "test": "pnpm check:lint && pnpm --filter pixi-reels test",
     "test:e2e": "playwright test",
@@ -21,7 +21,6 @@
     "commitlint": "commitlint --edit",
     "examples:dev:classic": "pnpm --filter classic-spin dev",
     "examples:dev:cascade": "pnpm --filter cascade-tumble dev",
-    "examples:dev:holdwin": "pnpm --filter hold-and-win dev",
     "examples:dev:bigsymbols": "pnpm --filter big-symbols dev",
     "examples:dev:multiways": "pnpm --filter multiways dev",
     "examples:dev:pyramid": "pnpm --filter pyramid-cascade dev",
@@ -51,11 +50,11 @@
     ]
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.4.13",
+    "@biomejs/biome": "^2.4.15",
     "@changesets/changelog-github": "^0.6.0",
     "@changesets/cli": "^2.31.0",
-    "@commitlint/cli": "^20.5.0",
-    "@commitlint/config-conventional": "^20.5.0",
+    "@commitlint/cli": "^20.5.3",
+    "@commitlint/config-conventional": "^20.5.3",
     "@playwright/test": "^1.60.0",
     "husky": "^9.1.7",
     "lint-staged": "^16.4.0"

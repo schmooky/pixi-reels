@@ -3,7 +3,7 @@
 //                   SharedRectMaskStrategy, PIXI, gsap, app, textures,
 //                   blurTextures, SYMBOL_IDS, pickWeighted
 //
-// GIANT big symbol — 3×3. Mid-board feature anchor: jackpot reveal panels,
+// GIANT big symbol. 3×3. Mid-board feature anchor: jackpot reveal panels,
 // "free spins triggered" overlays, large character art. Eats nine cells out
 // of a 6×5 grid, so weight 0 and place sparingly via the server.
 

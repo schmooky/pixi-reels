@@ -9,7 +9,7 @@ function buildCascadeHarness() {
   const ticker = new FakeTicker();
   const reelSet = new ReelSetBuilder()
     .reels(3)
-    .visibleSymbols(3)
+    .visibleRows(3)
     .symbolSize(100, 100)
     .ticker(ticker as unknown as Ticker)
     .speed('normal', SpeedPresets.NORMAL)
@@ -30,7 +30,7 @@ function buildCascadeHarness() {
   };
 }
 
-describe('ReelSet.skip — cascade auto-slam', () => {
+describe('ReelSet.skip. cascade auto-slam', () => {
   it('first press in cascade slams current drop AND flags refills to auto-slam', async () => {
     const h = buildCascadeHarness();
     const boosted: unknown[] = [];
@@ -42,27 +42,27 @@ describe('ReelSet.skip — cascade auto-slam', () => {
       ['a', 'a', 'a'],
     ];
 
-    // Moment A — initial drop.
+    // Moment A. initial drop.
     const spinDone = h.reelSet.spin({ mode: 'cascade' });
-    h.reelSet.setResult(grid);
+    h.reelSet.setResult(grid.map((visible) => ({ visible })));
     // One press: cascade mode short-circuits the boost and slams.
-    h.reelSet.skip();
+    h.reelSet.skipSpin();
     await spinDone;
 
     expect(boosted).toHaveLength(0);
     expect(h.reelSet.skipStage).toBe(2);
-    // Speed must NOT have been changed — boost is not applicable in cascade.
+    // Speed must NOT have been changed. boost is not applicable in cascade.
     expect(h.reelSet.speed.activeName).toBe('normal');
     expect(h.reelSet.isSpinning).toBe(false);
 
-    // Moment B — a refill in the same round. Auto-slam flag set means
+    // Moment B. a refill in the same round. Auto-slam flag set means
     // the phase chain is bypassed and the round ends synchronously.
     const refilled = h.reelSet.refill({
       winners: [{ reel: 0, row: 0 }, { reel: 1, row: 0 }, { reel: 2, row: 0 }],
       grid: [
-        ['b', 'a', 'b'],
-        ['a', 'b', 'a'],
-        ['b', 'b', 'b'],
+        { visible: ['b', 'a', 'b'] },
+        { visible: ['a', 'b', 'a'] },
+        { visible: ['b', 'b', 'b'] },
       ],
     });
     await refilled;
@@ -82,18 +82,18 @@ describe('ReelSet.skip — cascade auto-slam', () => {
 
     // Round 1: trigger auto-slam.
     const first = h.reelSet.spin({ mode: 'cascade' });
-    h.reelSet.setResult(grid);
-    h.reelSet.skip();
+    h.reelSet.setResult(grid.map((visible) => ({ visible })));
+    h.reelSet.skipSpin();
     await first;
     expect(h.reelSet.skipStage).toBe(2);
 
-    // Round 2: fresh spin should NOT auto-slam — it should run phases.
+    // Round 2: fresh spin should NOT auto-slam. it should run phases.
     // We assert that by NOT pressing skip and confirming setResult arms
     // the stop sequence rather than landing instantly.
     const second = h.reelSet.spin({ mode: 'cascade' });
     expect(h.reelSet.skipStage).toBe(0);
-    h.reelSet.setResult(grid);
-    // We never called skip — the spin should still be running phases.
+    h.reelSet.setResult(grid.map((visible) => ({ visible })));
+    // We never called skip. the spin should still be running phases.
     // slamStop to wrap the test deterministically.
     h.reelSet.slamStop();
     await second;

@@ -70,9 +70,9 @@ describe('pin migration (MultiWays)', () => {
 
       reelSet.setShape([3, 3, 3]);
       reelSet.setResult([
-        ['a', 'a', 'a'],
-        ['a', 'a', 'a'],
-        ['a', 'a', 'a'],
+        { visible: ['a', 'a', 'a'] },
+        { visible: ['a', 'a', 'a'] },
+        { visible: ['a', 'a', 'a'] },
       ]);
       reelSet.slamStop();
       await promise;
@@ -81,7 +81,7 @@ describe('pin migration (MultiWays)', () => {
       // After reshape, slotHeight = 700/3 ~ 233. Y at row 2 ~ 466.7.
       // Before, with 7 rows of 100, y at row 4 was 400.
       const overlayAfter = (reelSet as any)._pinOverlays.get('1:2');
-      // Overlays are destroyed on spin:allLanded, so we won't have one after — the
+      // Overlays are destroyed on spin:allLanded, so we won't have one after. the
       // checks above (yBefore, _pinOverlays presence) prove the in-flight reshape
       // path; the post-land state is tested by visiting the reel directly.
       void overlayAfter;
@@ -105,7 +105,9 @@ describe('pin migration (MultiWays)', () => {
       let p = reelSet.spin();
       reelSet.setShape([5, 5, 5]);
       reelSet.setResult([
-        ['a','a','a','a','a'], ['a','a','a','a','a'], ['a','a','a','a','a'],
+        { visible: ['a','a','a','a','a'] },
+        { visible: ['a','a','a','a','a'] },
+        { visible: ['a','a','a','a','a'] },
       ]);
       reelSet.slamStop();
       await p;
@@ -116,20 +118,22 @@ describe('pin migration (MultiWays)', () => {
       p = reelSet.spin();
       reelSet.setShape([3, 3, 3]);
       reelSet.setResult([
-        ['a','a','a'], ['a','a','a'], ['a','a','a'],
+        { visible: ['a','a','a'] },
+        { visible: ['a','a','a'] },
+        { visible: ['a','a','a'] },
       ]);
       reelSet.slamStop();
       await p;
       expect(reelSet.getPin(1, 2)?.row).toBe(2);
-      expect(reelSet.getPin(1, 2)?.originRow).toBe(2); // FROZEN — origin updated
+      expect(reelSet.getPin(1, 2)?.originRow).toBe(2); // FROZEN. origin updated
 
       // Spin 3: shape grows back. With 'frozen', pin STAYS at row 2 (not restored to 4).
       p = reelSet.spin();
       reelSet.setShape([7, 7, 7]);
       reelSet.setResult([
-        ['a','a','a','a','a','a','a'],
-        ['a','a','a','a','a','a','a'],
-        ['a','a','a','a','a','a','a'],
+        { visible: ['a','a','a','a','a','a','a'] },
+        { visible: ['a','a','a','a','a','a','a'] },
+        { visible: ['a','a','a','a','a','a','a'] },
       ]);
       reelSet.slamStop();
       await p;
@@ -155,7 +159,11 @@ describe('pin migration (MultiWays)', () => {
       // Spin 1: shape fits → no migration.
       let p = reelSet.spin();
       reelSet.setShape([5, 5, 5]);
-      reelSet.setResult([['a','a','a','a','a'], ['a','a','a','a','a'], ['a','a','a','a','a']]);
+      reelSet.setResult([
+        { visible: ['a','a','a','a','a'] },
+        { visible: ['a','a','a','a','a'] },
+        { visible: ['a','a','a','a','a'] },
+      ]);
       reelSet.slamStop();
       await p;
       // Pin still at row 4.
@@ -164,7 +172,11 @@ describe('pin migration (MultiWays)', () => {
       // Spin 2: shape shrinks → clamp to row 2.
       p = reelSet.spin();
       reelSet.setShape([3, 3, 3]);
-      reelSet.setResult([['a','a','a'], ['a','a','a'], ['a','a','a']]);
+      reelSet.setResult([
+        { visible: ['a','a','a'] },
+        { visible: ['a','a','a'] },
+        { visible: ['a','a','a'] },
+      ]);
       reelSet.slamStop();
       await p;
       const clampedPin = reelSet.getPin(1, 2);
@@ -179,12 +191,57 @@ describe('pin migration (MultiWays)', () => {
       // Spin 3: shape grows back to fit originRow → restore to row 4.
       p = reelSet.spin();
       reelSet.setShape([5, 5, 5]);
-      reelSet.setResult([['a','a','a','a','a'], ['a','a','a','a','a'], ['a','a','a','a','a']]);
+      reelSet.setResult([
+        { visible: ['a','a','a','a','a'] },
+        { visible: ['a','a','a','a','a'] },
+        { visible: ['a','a','a','a','a'] },
+      ]);
       reelSet.slamStop();
       await p;
       const restoredPin = reelSet.getPin(1, 4);
       expect(restoredPin).toBeDefined();
       expect(restoredPin?.originRow).toBe(4);
+    } finally {
+      destroy();
+    }
+  });
+
+  it('expires a pin that collides onto a cell another pin already holds (M8)', async () => {
+    const { reelSet, destroy } = createTestReelSet({
+      reels: 3,
+      multiways: { minRows: 2, maxRows: 7, reelPixelHeight: 700 },
+      symbolIds: ['a', 'wild', 'scatter'],
+      symbolSize: { width: 100, height: 100 },
+    });
+    try {
+      const expired = captureEvents(reelSet, ['pin:expired']);
+      const p = reelSet.spin();
+      reelSet.pin(1, 3, 'wild', { turns: 'permanent' }); // originRow 3
+      reelSet.pin(1, 4, 'scatter', { turns: 'permanent' }); // originRow 4
+
+      // Shrink reel 1 to 2 rows: both pins clamp to the last row (1) and collide.
+      reelSet.setShape([2, 2, 2]);
+      reelSet.setResult([
+        { visible: ['a', 'a'] },
+        { visible: ['a', 'a'] },
+        { visible: ['a', 'a'] },
+      ]);
+      reelSet.slamStop();
+      await p;
+
+      // The topmost pin (row 3) keeps the clamped cell; the lower one is dropped.
+      // Before the fix, the second pin silently overwrote the first in `_pins`
+      // (so this would be 'scatter') and orphaned the first overlay.
+      expect(reelSet.getPin(1, 1)?.symbolId).toBe('wild');
+      const reel1Pins = [
+        ...((reelSet as unknown as { _pins: Map<string, { col: number }> })._pins).values(),
+      ].filter((pin) => pin.col === 1);
+      expect(reel1Pins).toHaveLength(1);
+
+      // The collision fired pin:expired('collision') for the dropped pin.
+      const collisions = expired.filter((e) => e.args[1] === 'collision');
+      expect(collisions).toHaveLength(1);
+      expect((collisions[0].args[0] as { symbolId: string }).symbolId).toBe('scatter');
     } finally {
       destroy();
     }

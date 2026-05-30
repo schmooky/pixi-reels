@@ -35,7 +35,7 @@ function syncGsap(app: Application): void {
 
 /**
  * Hold & Win "hit-or-miss" demo. Each cell is its own 1x1 ReelSet whose only
- * symbol is the coin — so the spin animation just scrolls coins by, and the
+ * symbol is the coin. so the spin animation just scrolls coins by, and the
  * result is binary: hit (coin stays), miss (cell goes empty). On a hit, an
  * overlay Sprite locks in place so the reel is hidden next round and can't
  * re-spin that slot.
@@ -78,7 +78,7 @@ export default function HoldAndWinStarterRecipe() {
       frame.roundRect(0, 0, width, height, 12).stroke({ color: 0xe5dccf, width: 1, alpha: 0.9 });
       app.stage.addChild(frame);
 
-      // 15 per-cell 1x1 ReelSets, each strip is 100% COIN — classic hit-or-miss.
+      // 15 per-cell 1x1 ReelSets, each strip is 100% COIN. classic hit-or-miss.
       const cells: CellHandle[] = [];
       for (let col = 0; col < COLS; col++) {
         for (let row = 0; row < ROWS; row++) {
@@ -93,7 +93,7 @@ export default function HoldAndWinStarterRecipe() {
 
           const mini = new ReelSetBuilder()
             .reels(1)
-            .visibleSymbols(1)
+            .visibleRows(1)
             .symbolSize(CELL - 2, CELL - 2)
             .symbolGap(0, 0)
             .symbols((r) => {
@@ -143,7 +143,7 @@ export default function HoldAndWinStarterRecipe() {
       for (const cell of s.cells) cell.reelSet.visible = true;
 
       // Scripted arrivals so the scenario reads clearly: trigger spin hits 3,
-      // respin hits 1, respin hits 1 — grid filling up one coin at a time.
+      // respin hits 1, respin hits 1. grid filling up one coin at a time.
       const rounds: Array<Array<{ col: number; row: number }>> = [
         [{ col: 0, row: 2 }, { col: 2, row: 0 }, { col: 4, row: 1 }],
         [{ col: 1, row: 0 }],
@@ -167,7 +167,7 @@ export default function HoldAndWinStarterRecipe() {
         await new Promise((r) => setTimeout(r, 140));
         for (const cell of activeCells) {
           const isHit = hits.some((h) => h.col === cell.col && h.row === cell.row);
-          cell.reelSet.setResult([[isHit ? COIN : EMPTY]]);
+          cell.reelSet.setResult([{ visible: [isHit ? COIN : EMPTY] }]);
         }
         await Promise.all(spinPromises);
 

@@ -9,7 +9,7 @@ const IDS = [
 
 const reelSet = new ReelSetBuilder()
   .reels(5)
-  .visibleSymbols(3)
+  .visibleRows(3)
   .symbolSize(90, 90)
   .symbolGap(4, 4)
   .symbols(r => {

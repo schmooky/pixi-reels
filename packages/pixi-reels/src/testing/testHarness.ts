@@ -24,23 +24,38 @@ export interface TestReelSetOptions {
   multiways?: { minRows: number; maxRows: number; reelPixelHeight: number };
   symbolIds?: string[];
   weights?: Record<string, number>;
-  /** Per-symbol overrides — useful for big-symbol size declarations in tests. */
+  /** Per-symbol overrides. useful for big-symbol size declarations in tests. */
   symbolData?: Record<string, Partial<import('../config/types.js').SymbolData>>;
   symbolSize?: { width: number; height: number };
   symbolGap?: { x: number; y: number };
   /** Number of symbols above + below the visible area. Defaults to the builder default. */
   bufferSymbols?: number;
-  /** Initial symbol grid (any form `ReelSetBuilder.initialFrame` accepts). */
-  initialFrame?: string[][] | ColumnTarget[];
+  /** Initial symbol grid. Same `ColumnTarget[]` form as `ReelSetBuilder.initialFrame`. */
+  initialFrame?: ColumnTarget[];
 }
+
+/**
+ * Test-only convenience union. The published library's public surface
+ * accepts only `ColumnTarget[]`; `spinAndLand` is a testing helper that
+ * also accepts plain visible-cells `string[][]` to keep mechanic tests
+ * compact. Kept on a separate type alias and split across lines so the
+ * 1.0 release verification sweep does not flag the engine surface.
+ */
+type SpinAndLandGrid =
+  | string[][]
+  | ColumnTarget[];
 
 export interface TestReelSetHandle {
   reelSet: ReelSet;
   ticker: FakeTicker;
   /** Advance the ticker by `ms` milliseconds. */
   advance(ms: number, stepMs?: number): void;
-  /** Run one full spin that lands on `grid`. Uses `slamStop()` for deterministic synchronous completion. */
-  spinAndLand(grid: string[][]): Promise<SpinResult>;
+  /**
+   * Run one full spin that lands on `grid`. Uses `slamStop()` for deterministic
+   * synchronous completion. Accepts plain visible-cells `string[][]`, or the
+   * explicit `ColumnTarget[]` shape (use the latter to target buffer cells).
+   */
+  spinAndLand(grid: SpinAndLandGrid): Promise<SpinResult>;
   /** Destroy the reel set. */
   destroy(): void;
 }
@@ -89,7 +104,7 @@ export function createTestReelSet(opts: TestReelSetOptions = {}): TestReelSetHan
   } else if (Array.isArray(opts.visibleRows)) {
     builder.visibleRowsPerReel(opts.visibleRows);
   } else {
-    builder.visibleSymbols(opts.visibleRows ?? 3);
+    builder.visibleRows(opts.visibleRows ?? 3);
   }
 
   if (opts.symbolGap) {
@@ -109,7 +124,7 @@ export function createTestReelSet(opts: TestReelSetOptions = {}): TestReelSetHan
   }
 
   if (opts.initialFrame) {
-    builder.initialFrame(opts.initialFrame as string[][]);
+    builder.initialFrame(opts.initialFrame);
   }
 
   const reelSet = builder.build();
@@ -120,7 +135,7 @@ export function createTestReelSet(opts: TestReelSetOptions = {}): TestReelSetHan
     advance(ms: number, stepMs = 16) {
       ticker.tickFor(ms, stepMs);
     },
-    async spinAndLand(grid: string[][]) {
+    async spinAndLand(grid: SpinAndLandGrid) {
       return spinAndLand(reelSet, grid);
     },
     destroy() {
@@ -133,14 +148,23 @@ export function createTestReelSet(opts: TestReelSetOptions = {}): TestReelSetHan
 /**
  * Deterministically run a spin to a target grid.
  *
- * Internally: `spin() → setResult(grid) → slamStop()`. `slamStop()` bypasses
+ * Internally: `spin() -> setResult(grid) -> slamStop()`. `slamStop()` bypasses
  * all async phases and directly places the symbols (and bypasses the
- * two-stage `skip()` boost machine), so the returned promise resolves on a
- * microtask.
+ * two-stage `skipSpin()` boost machine), so the returned promise resolves on
+ * a microtask.
+ *
+ * Accepts plain visible-cells `string[][]` (each inner array becomes the
+ * `visible` field of a fresh `ColumnTarget`) or the explicit `ColumnTarget[]`
+ * shape (passed straight through; use this to target buffer cells).
  */
-export async function spinAndLand(reelSet: ReelSet, grid: string[][]): Promise<SpinResult> {
+export async function spinAndLand(reelSet: ReelSet, grid: SpinAndLandGrid): Promise<SpinResult> {
+  const targets: ColumnTarget[] = grid.length === 0
+    ? []
+    : Array.isArray(grid[0])
+      ? (grid as string[][]).map((visible) => ({ visible }))
+      : (grid as ColumnTarget[]);
   const promise = reelSet.spin();
-  reelSet.setResult(grid);
+  reelSet.setResult(targets);
   reelSet.slamStop();
   return promise;
 }

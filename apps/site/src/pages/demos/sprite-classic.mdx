@@ -12,9 +12,9 @@ import SpriteClassicDemo from '../../components/demos/SpriteClassicDemo.tsx';
 
 ## What this demo shows
 
-- **Atlas loading** — one `PIXI.Assets.load('/prototype-symbols/prototype.json')` call resolves the spritesheet, `sheet.textures[id]` gives you every frame.
-- **Base + blur variants** — each symbol ships a companion `_blur` texture. The demo swaps to blur on `phase:enter 'spin'` and back on `phase:enter 'stop'`, per reel.
-- **Subpath-clean** — no Spine imports reach this demo. A consumer who only uses sprites never pays for the Spine runtime.
+- **Atlas loading**. one `PIXI.Assets.load('/prototype-symbols/prototype.json')` call resolves the spritesheet, `sheet.textures[id]` gives you every frame.
+- **Base + blur variants**. each symbol ships a companion `_blur` texture. The demo swaps to blur on `phase:enter 'spin'` and back on `phase:enter 'stop'`, per reel.
+- **Subpath-clean**. no Spine imports reach this demo. A consumer who only uses sprites never pays for the Spine runtime.
 
 Assets: [schmooky/prototype-symbols](https://github.com/schmooky/prototype-symbols). The full atlas is 84 frames at 2000×1006, ~400 kB gzipped webp.
 
@@ -78,7 +78,7 @@ function setReelBlur(reel, blurred) {
 }
 ```
 
-That's it — the reel set drives the blur automatically, per reel, on every spin.
+That's it. the reel set drives the blur automatically, per reel, on every spin.
 
 ## Why not `SpriteSymbol`?
 
@@ -87,7 +87,7 @@ Use plain `SpriteSymbol` if your art doesn't ship blur variants. It's simpler, s
 - A second texture map (`blurTextures`) and a `setBlurred(bool)` method.
 - Aspect-preserving fit (`fit: true`) so a blur variant that's taller than the base doesn't squish.
 
-Missing blur entries fall through to the base texture — you can ship blur for premiums and plain for low symbols without a second code path.
+Missing blur entries fall through to the base texture. You can ship blur for a subset of symbols and plain textures for the rest without a second code path.
 
 ## Cheats on this page
 
@@ -102,5 +102,5 @@ Missing blur entries fall through to the base texture — you can ship blur for 
 ## Where this fits
 
 - For **Spine symbols** with landing/win/disintegration animations, import `SpineReelSymbol` from `pixi-reels/spine` (requires the optional `@esotericsoftware/spine-pixi-v8` peer).
-- For **cluster / cascade mechanics**, see [cascade-multiplier](/demos/cascade-multiplier/) — works identically with sprite or Spine symbols.
+- For **cluster / cascade mechanics**, see [cascade-multiplier](/demos/cascade-multiplier/). works identically with sprite or Spine symbols.
 - For **loading from separate PNGs** (not an atlas), see [the texture-atlas-symbols recipe](/recipes/texture-atlas-symbols/).

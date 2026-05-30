@@ -20,7 +20,7 @@ function randSymbol(exclude) {
 }
 
 const reelSet = new ReelSetBuilder()
-  .reels(REELS).visibleSymbols(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
+  .reels(REELS).visibleRows(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
   .symbols(r => {
     for (const sym of CARD_DECK) {
       if (IDS.includes(sym.id)) {
@@ -35,7 +35,7 @@ const reelSet = new ReelSetBuilder()
   })
   .ticker(app.ticker).build();
 
-// One presenter. Clusters and paylines are the same shape here — just a
+// One presenter. Clusters and paylines are the same shape here. just a
 // set of cells. The presenter never draws lines, so there's nothing to
 // turn off for clusters.
 const presenter = new WinPresenter(reelSet, {
@@ -74,17 +74,17 @@ return {
       )
     );
 
-    // Moment A — initial drop, left-to-right reveal.
+    // Moment A. initial drop, left-to-right reveal.
     reelSet.setDropOrder('ltr');
     const p = reelSet.spin();
     await new Promise(r => setTimeout(r, 200));
-    reelSet.setResult(stage0);
+    reelSet.setResult(stage0.map((visible) => ({ visible })));
     await p;
     await new Promise(r => setTimeout(r, 300));
 
-    // Moment B — runCascade owns the loop. `onCascade` swaps the default
+    // Moment B. runCascade owns the loop. `onCascade` swaps the default
     // implode for a WinPresenter scale-pop. The library calls
-    // `destroySymbols` AFTER `onCascade` resolves — using `destroyOptions:
+    // `destroySymbols` AFTER `onCascade` resolves. using `destroyOptions:
     // { zIndex: null }` keeps that fade-to-zero invisible (the presenter
     // already faded them visually).
     reelSet.setDropOrder('all');
@@ -111,7 +111,7 @@ return {
           value: winners.length * 10,
         }]);
       },
-      // Suppress the implode tween entirely — the presenter already drove
+      // Suppress the implode tween entirely. the presenter already drove
       // the visual feedback. Skipping the zIndex lift keeps the destroy
       // alpha:0 step instant and invisible.
       destroyOptions: { zIndex: null },

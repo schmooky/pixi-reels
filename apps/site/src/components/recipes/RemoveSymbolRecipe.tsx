@@ -11,7 +11,7 @@ const IDS = [A, B, C, X];
 
 /**
  * BEFORE: X cells are the winners to remove.
- * AFTER:  the grid after real cascade gravity — winners cleared,
+ * AFTER:  the grid after real cascade gravity. winners cleared,
  * survivors slide DOWN past cleared slots, new symbols enter from
  * above. The contract matches `reelSet.refill({ winners, grid })`:
  * per reel, the top `winners.length` rows are new, the rest are
@@ -64,12 +64,12 @@ export default function RemoveSymbolRecipe() {
             await spinToGrid(reelSet, BEFORE);
             await sleep(300);
 
-            // Canonical cascade primitives — same two calls every cascade
+            // Canonical cascade primitives. same two calls every cascade
             // chain uses, just one cascade level.
             const winners = winnersOfX(BEFORE);
             await reelSet.destroySymbols(winners);
             await sleep(120);
-            await reelSet.refill({ winners, grid: AFTER });
+            await reelSet.refill({ winners, grid: AFTER.map((visible) => ({ visible })) });
           },
         };
       }}

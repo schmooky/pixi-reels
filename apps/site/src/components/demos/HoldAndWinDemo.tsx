@@ -55,7 +55,7 @@ export default function HoldAndWinDemo() {
             const total = reelSet.reels.length * grid[0].length;
             if (held.length >= total) {
               toast('GRAND JACKPOT · grid filled', 'win');
-              api.setStatus(`Full board (${held.length}/${total}) — grand jackpot`);
+              api.setStatus(`Full board (${held.length}/${total}). grand jackpot`);
             } else if (middleRowCoins >= 3) {
               toast(`3 coins middle row · mini jackpot`, 'win');
               api.setStatus(`Middle row filled · ${held.length}/${total} held`);

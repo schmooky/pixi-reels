@@ -3,9 +3,7 @@
 //           PIXI, gsap, app, pickWeighted
 
 // WAVE: heavy per-row stagger (110 ms) plus a soft overshoot. Rows
-// arrive in sequence top-to-bottom, reading as a rolling wave. Good
-// fit for narrative reveals where you want the player's eye to track
-// each row.
+// arrive in sequence top-to-bottom.
 
 const IDS = ['7', '8', '9', '10', 'J', 'Q'];
 const REELS = 6, ROWS = 4, SIZE = 64;
@@ -13,7 +11,7 @@ const CLUSTER = '10';
 const HIT_ROW = 2;
 const HIT_COLS = [0, 1, 2];
 
-// Medium pause — wave is already long because of the per-row stagger;
+// Medium pause. wave is already long because of the per-row stagger;
 // the pause sets up the rhythm of the next wave without over-stalling.
 const PAUSE_AFTER_REMOVAL_MS = 280;
 
@@ -24,7 +22,7 @@ function randSymbol(exclude) {
 }
 
 const reelSet = new ReelSetBuilder()
-  .reels(REELS).visibleSymbols(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
+  .reels(REELS).visibleRows(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
   .symbols((r) => {
     for (const sym of CARD_DECK) {
       if (IDS.includes(sym.id)) {
@@ -58,13 +56,13 @@ return {
     const spinDone = reelSet.spin();
     reelSet.setDropOrder('ltr');
     await new Promise((r) => setTimeout(r, 220));
-    reelSet.setResult(stage0);
+    reelSet.setResult(stage0.map((visible) => ({ visible })));
     await spinDone;
 
     await new Promise((r) => setTimeout(r, 220));
     const winners = HIT_COLS.map((c) => ({ reel: c, row: HIT_ROW }));
     await reelSet.destroySymbols(winners);
     await new Promise((r) => setTimeout(r, PAUSE_AFTER_REMOVAL_MS));
-    await reelSet.refill({ winners, grid: stage1 });
+    await reelSet.refill({ winners, grid: stage1.map((visible) => ({ visible })) });
   },
 };

@@ -18,7 +18,7 @@ function buildTumbleHarness(initialFrame: string[][]) {
       fall:   { duration: 0, ease: 'none', rowStagger: 0 },
       dropIn: { duration: 0, ease: 'none', rowStagger: 0, distance: 'perHole' },
     })
-    .initialFrame(initialFrame)
+    .initialFrame(initialFrame.map((visible) => ({ visible })))
     .ticker(ticker as unknown as Ticker)
     .build();
   return {
@@ -36,7 +36,7 @@ function deferred(): { promise: Promise<void>; resolve: () => void } {
   return { promise, resolve };
 }
 
-describe('refill — gravityHold promise', () => {
+describe('refill. gravityHold promise', () => {
   it('drop-in waits for the gravityHold promise (no gravityHoldMs)', async () => {
     const { reelSet, destroy } = buildTumbleHarness([
       ['a', 'a', 'a'],
@@ -52,12 +52,12 @@ describe('refill — gravityHold promise', () => {
     const refilling = reelSet.refill({
       winners: [{ reel: 0, row: 2 }, { reel: 1, row: 2 }, { reel: 2, row: 2 }],
       grid: [
-        ['d', 'a', 'a'],
-        ['d', 'a', 'a'],
-        ['d', 'a', 'a'],
+        { visible: ['d', 'a', 'a'] },
+        { visible: ['d', 'a', 'a'] },
+        { visible: ['d', 'a', 'a'] },
       ],
       mode: 'gravity-then-drop',
-      gravityHoldMs: 0,        // no fixed pause — only the promise gates
+      gravityHoldMs: 0,        // no fixed pause. only the promise gates
       gravityHold: hold,
     });
 
@@ -69,7 +69,7 @@ describe('refill — gravityHold promise', () => {
     expect(order.filter((e) => e.startsWith('gravity:end')).length).toBe(3);
     expect(order.filter((e) => e.startsWith('dropIn:start')).length).toBe(0);
 
-    // Release the promise — drop-in must start now.
+    // Release the promise. drop-in must start now.
     releaseHold();
     await refilling;
     expect(order.filter((e) => e.startsWith('dropIn:start')).length).toBe(3);
@@ -91,9 +91,9 @@ describe('refill — gravityHold promise', () => {
     const refilling = reelSet.refill({
       winners: [{ reel: 0, row: 2 }, { reel: 1, row: 2 }, { reel: 2, row: 2 }],
       grid: [
-        ['d', 'a', 'a'],
-        ['d', 'a', 'a'],
-        ['d', 'a', 'a'],
+        { visible: ['d', 'a', 'a'] },
+        { visible: ['d', 'a', 'a'] },
+        { visible: ['d', 'a', 'a'] },
       ],
       mode: 'gravity-then-drop',
       gravityHoldMs: 20,       // short fixed floor
@@ -131,13 +131,13 @@ describe('refill — gravityHold promise', () => {
     await reelSet.refill({
       winners: [{ reel: 0, row: 2 }, { reel: 1, row: 2 }, { reel: 2, row: 2 }],
       grid: [
-        ['d', 'a', 'a'],
-        ['d', 'a', 'a'],
-        ['d', 'a', 'a'],
+        { visible: ['d', 'a', 'a'] },
+        { visible: ['d', 'a', 'a'] },
+        { visible: ['d', 'a', 'a'] },
       ],
       mode: 'gravity-then-drop',
       gravityHoldMs: 80,
-      // Already-resolved promise — finishes immediately. The MS floor
+      // Already-resolved promise. finishes immediately. The MS floor
       // must still apply.
       gravityHold: Promise.resolve(),
     });
@@ -162,9 +162,9 @@ describe('refill — gravityHold promise', () => {
     const refilling = reelSet.refill({
       winners: [{ reel: 0, row: 2 }, { reel: 1, row: 2 }, { reel: 2, row: 2 }],
       grid: [
-        ['d', 'a', 'a'],
-        ['d', 'a', 'a'],
-        ['d', 'a', 'a'],
+        { visible: ['d', 'a', 'a'] },
+        { visible: ['d', 'a', 'a'] },
+        { visible: ['d', 'a', 'a'] },
       ],
       mode: 'gravity-then-drop',
       gravityHoldMs: 10,
@@ -191,7 +191,7 @@ describe('refill — gravityHold promise', () => {
   });
 });
 
-describe('refill — gravityHold rejection surfacing', () => {
+describe('refill. gravityHold rejection surfacing', () => {
   it('emits cascade:gravity:error with the rejection reason when gravityHold rejects', async () => {
     // The rejection used to be silently swallowed (logged to console
     // only). Now it's also surfaced via a structured event so a HUD /
@@ -206,7 +206,7 @@ describe('refill — gravityHold rejection surfacing', () => {
     reelSet.events.on('cascade:gravity:error', (info) => errors.push(info.error));
 
     const sentinel = new Error('multiplier-roll-blew-up');
-    // Silence the console.error the engine emits — we're explicitly
+    // Silence the console.error the engine emits. we're explicitly
     // exercising the error path.
     const originalError = console.error;
     console.error = (): void => {};
@@ -215,7 +215,11 @@ describe('refill — gravityHold rejection surfacing', () => {
       // the original rejection comes through via the event.
       await reelSet.refill({
         winners: [{ reel: 0, row: 2 }, { reel: 1, row: 2 }, { reel: 2, row: 2 }],
-        grid: [['d', 'a', 'a'], ['d', 'a', 'a'], ['d', 'a', 'a']],
+        grid: [
+          { visible: ['d', 'a', 'a'] },
+          { visible: ['d', 'a', 'a'] },
+          { visible: ['d', 'a', 'a'] },
+        ],
         mode: 'gravity-then-drop',
         gravityHoldMs: 0,
         gravityHold: Promise.reject(sentinel),
@@ -230,10 +234,10 @@ describe('refill — gravityHold rejection surfacing', () => {
   });
 });
 
-describe('runCascade — gravityHold per-cascade promise builder', () => {
+describe('runCascade. gravityHold per-cascade promise builder', () => {
   it('invokes the builder AT gravity-end (after every reel reports cascade:gravity:end), not at refill-start', async () => {
     // The docstring promises the builder fires "at the gravity-end
-    // boundary" — i.e. AFTER every reel has reported `cascade:gravity:end`.
+    // boundary". i.e. AFTER every reel has reported `cascade:gravity:end`.
     // Before the fix, the runCascade body called the builder while
     // assembling the refill args, which lined the side effects up with
     // refill-START, not refill gravity-END. This test pins the contract.

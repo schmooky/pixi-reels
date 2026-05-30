@@ -27,7 +27,7 @@ function buildTumbleHarness(initialFrame: string[][]): Harness {
       fall:   { duration: 0, ease: 'none', rowStagger: 0 },
       dropIn: { duration: 0, ease: 'none', rowStagger: 0, distance: 'perHole' },
     })
-    .initialFrame(initialFrame)
+    .initialFrame(initialFrame.map((visible) => ({ visible })))
     .ticker(ticker as unknown as Ticker)
     .build();
   return {
@@ -37,9 +37,9 @@ function buildTumbleHarness(initialFrame: string[][]): Harness {
   };
 }
 
-describe('ReelSet.runCascade — two-stage (gravity-then-drop)', () => {
+describe('ReelSet.runCascade. two-stage (gravity-then-drop)', () => {
   it('emits cascade:gravity:* and cascade:dropIn:* in the right order for a refill that has both survivors and new symbols', async () => {
-    // 3 reels × 3 rows. Clear the BOTTOM row (row 2) of every reel — that
+    // 3 reels × 3 rows. Clear the BOTTOM row (row 2) of every reel. that
     // gives both a slide (rows 0,1 fall to fill row 1,2) and a new symbol
     // (top row, row 0). Two-stage will animate the gravity slide first,
     // then drop the new top-row symbol.
@@ -212,9 +212,9 @@ describe('ReelSet.runCascade — two-stage (gravity-then-drop)', () => {
     await reelSet.refill({
       winners,
       grid: [
-        ['d', 'a', 'a'],
-        ['d', 'a', 'a'],
-        ['d', 'a', 'a'],
+        { visible: ['d', 'a', 'a'] },
+        { visible: ['d', 'a', 'a'] },
+        { visible: ['d', 'a', 'a'] },
       ],
       mode: 'gravity-then-drop',
       gravityHoldMs: 0,

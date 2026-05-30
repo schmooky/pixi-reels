@@ -7,7 +7,7 @@ steps:
   - Maintain a held Map of already-landed coin positions
   - Each respin, build a grid that keeps held cells and lands 0..N new ones
   - On every new coin, reset the respin counter to max
-  - When the grid is fully held — grand jackpot
+  - When the grid is fully held. grand jackpot
 apis:
   - ReelSet.spin
   - ReelSet.setResult
@@ -16,12 +16,15 @@ apis:
 
 import code from '../../recipes/hold-and-win.recipe.ts?raw';
 import { RecipeRunner } from '../../components/RecipeRunner.tsx';
+import RecipeFrame from '../../components/RecipeFrame.astro';
 
-<RecipeRunner code={code} client:only="react" />
+<RecipeFrame>
+  <RecipeRunner code={code} client:only="react" />
+</RecipeFrame>
 
-Press Run a few times — every coin that lands stays put on the next respin.
+Press Run a few times. every coin that lands stays put on the next respin.
 
-The full Hold & Win loop. Combines `setResult()` with a game-side `held` map to keep coins sticky across respins. The library doesn't own the mechanic — it gives you deterministic landings and event hooks; the respin accounting is yours.
+The full Hold & Win loop. Combines `setResult()` with a game-side `held` map to keep coins sticky across respins. The library doesn't own the mechanic. it gives you deterministic landings and event hooks; the respin accounting is yours.
 
 ```ts
 import { ReelSetBuilder, SpriteSymbol } from 'pixi-reels';
@@ -59,9 +62,9 @@ async function holdAndWinRound() {
 
 ## The three moving parts
 
-1. **`buildGridKeepingHeld(held)`** — every held position MUST appear with its locked symbolId; the rest are random / from your weighted generator.
-2. **`findNewCoins(grid, held)`** — any coin on the grid that isn't already in `held` is a new land.
-3. **Respin counter** — resets to `maxRespins` on every new land, decrements on every dry spin. When it hits zero, the round ends.
+1. **`buildGridKeepingHeld(held)`**. every held position MUST appear with its locked symbolId; the rest are random / from your weighted generator.
+2. **`findNewCoins(grid, held)`**. any coin on the grid that isn't already in `held` is a new land.
+3. **Respin counter**. resets to `maxRespins` on every new land, decrements on every dry spin. When it hits zero, the round ends.
 
 ## Full playable demo
 
@@ -79,18 +82,18 @@ await spin;
 ```
 
 Behaviour:
-- Held reels skip START / SPIN / STOP entirely — they don't move at all.
+- Held reels skip START / SPIN / STOP entirely. they don't move at all.
 - They count as already-landed for `spin:allLanded`, so the resolver fires once the non-held reels land.
 - `setAnticipation([...])` silently filters held indices; `setStopDelays([...])` ignores entries at held indices.
 - `SpinResult.symbols` reports the full visible grid (held rows unchanged, non-held rows landed).
 
 When to pick which:
-- **Per-cell hold-and-win** (this recipe's main pattern, with coins locked one cell at a time): the per-column `ReelSet` array is still the cleanest model — each cell is its own `ReelSet` with `visibleSymbols(1)`.
+- **Per-cell hold-and-win** (this recipe's main pattern, with coins locked one cell at a time): the per-column `ReelSet` array is still the cleanest model. Each cell is its own `ReelSet` with `visibleRows(1)`.
 - **Single-reel respin / partial reroll** (whole columns held, others spin): use `spin({ holdReels })` on a single `ReelSet`. Spotlight, anticipation, win presenters keep working since everything stays inside one engine.
 
 ## Related recipes
 
-- [`EmptySymbol`](/recipes/empty-symbol/) — the blank-cell symbol class this recipe registers as the bonus-board background
-- [Near-miss](/recipes/near-miss/) — tease a coin just off the board
-- [Anticipate a reel](/recipes/anticipate-a-reel/) — slow the final reel when close to a jackpot
-- [Sticky wild (CellPin)](/recipes/sticky-wild-pin/) — the engine-blessed sticky-symbol path
+- [`EmptySymbol`](/recipes/empty-symbol/). the blank-cell symbol class this recipe registers as the bonus-board background
+- [Near-miss](/recipes/near-miss/). tease a coin just off the board
+- [Anticipate a reel](/recipes/anticipate-a-reel/). slow the final reel when close to a jackpot
+- [Sticky wild (CellPin)](/recipes/sticky-wild-pin/). the engine-blessed sticky-symbol path

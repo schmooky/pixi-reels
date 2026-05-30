@@ -3,7 +3,7 @@
 //                   SharedRectMaskStrategy, PIXI, gsap, app, textures,
 //                   blurTextures, SYMBOL_IDS, pickWeighted
 //
-// TALL big symbol — 1×3. One column wide, three rows tall. Reads as a
+// TALL big symbol. 1×3. One column wide, three rows tall. Reads as a
 // "stacked" symbol: think gold-bar towers, totems, or vertical wild
 // columns that span the visible area without occupying neighbouring reels.
 

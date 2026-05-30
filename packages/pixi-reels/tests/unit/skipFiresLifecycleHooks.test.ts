@@ -15,12 +15,12 @@ class CountingSymbol extends HeadlessSymbol {
   }
 }
 
-describe('SpinController.skip — symbol lifecycle hooks', () => {
+describe('SpinController.skip. symbol lifecycle hooks', () => {
   it('fires onReelSpinEnd and onReelLanded once per visible-row symbol on slam-stop', async () => {
     const ticker = new FakeTicker();
     const reelSet = new ReelSetBuilder()
       .reels(3)
-      .visibleSymbols(3)
+      .visibleRows(3)
       .symbolSize(100, 100)
       .ticker(ticker as unknown as Ticker)
       .symbols((r) => {
@@ -31,9 +31,9 @@ describe('SpinController.skip — symbol lifecycle hooks', () => {
 
     const promise = reelSet.spin();
     reelSet.setResult([
-      ['a', 'a', 'a'],
-      ['b', 'b', 'b'],
-      ['a', 'a', 'a'],
+      { visible: ['a', 'a', 'a'] },
+      { visible: ['b', 'b', 'b'] },
+      { visible: ['a', 'a', 'a'] },
     ]);
     reelSet.slamStop();
     await promise;

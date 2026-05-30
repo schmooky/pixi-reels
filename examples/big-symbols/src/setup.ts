@@ -32,7 +32,7 @@ const SYMBOL_IDS = Object.keys(SPINE_MAP);
 
 const REEL_COUNT = 5;
 const VISIBLE_ROWS = 4;
-// 140 = the generated spines' authored frame size — matches the bake
+// 140 = the generated spines' authored frame size. matches the bake
 // so frame strokes stay crisp and the wild's 200 px W overflows by the
 // intended 60 px (~30 px each side past the frame border).
 const SYMBOL_SIZE = 140;
@@ -94,7 +94,7 @@ export async function boot(opts: BootOptions): Promise<() => void> {
         r.register(id, SpineReelSymbol, {
           spineMap,
           autoPlayLanding: true,
-          // bigWild occupies a 2x2 block — render the spine at 2x scale
+          // bigWild occupies a 2x2 block. render the spine at 2x scale
           // so the rig fills the block instead of sitting tiny in the
           // top-left cell with empty space around it.
           scale: id === 'bigWild' ? 2 : 1,
@@ -105,7 +105,7 @@ export async function boot(opts: BootOptions): Promise<() => void> {
       '9': 18, '10': 18,
       J: 14, Q: 12, K: 10, A: 8,
       wild: 4,
-      // Big symbols MUST have weight 0 — they're placed by the server only.
+      // Big symbols MUST have weight 0. they're placed by the server only.
       bigWild: 0,
     })
     .symbolData({
@@ -187,7 +187,7 @@ export async function boot(opts: BootOptions): Promise<() => void> {
   async function handleSpin(): Promise<void> {
     if (disposed) return;
     if (isSpinning) {
-      try { reelSet.skip(); } catch { /* idle */ }
+      try { reelSet.skipSpin(); } catch { /* idle */ }
       return;
     }
     isSpinning = true;
@@ -199,7 +199,7 @@ export async function boot(opts: BootOptions): Promise<() => void> {
     const spinPromise = reelSet.spin();
     const result = await mockSpin(++spinCount);
     if (disposed) return;
-    reelSet.setResult(result.grid);
+    reelSet.setResult(result.grid.map((visible) => ({ visible })));
     await spinPromise;
     if (disposed) return;
 

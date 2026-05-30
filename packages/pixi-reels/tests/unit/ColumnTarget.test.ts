@@ -1,231 +1,117 @@
 import { describe, it, expect } from 'vitest';
 import {
   assertBufferCountsInRange,
-  cloneColumn,
-  cloneTargetGrid,
   columnTargetToArray,
-  isColumnTargetGrid,
-  toLegacyTargetGrid,
   type ColumnTarget,
 } from '../../src/frame/ColumnTarget.js';
 
-describe('ColumnTarget helpers', () => {
-  describe('cloneColumn', () => {
-    it('preserves the regular numeric entries', () => {
-      const src = ['a', 'b', 'c'];
-      const out = cloneColumn(src, 0);
-      expect(out).toEqual(['a', 'b', 'c']);
-      expect(out).not.toBe(src);
-    });
-
-    it('preserves negative-index slots within bufferAbove', () => {
-      const src = ['a', 'b', 'c'];
-      (src as Record<number, string>)[-1] = 'above1';
-      (src as Record<number, string>)[-2] = 'above2';
-      const out = cloneColumn(src, 2);
-      expect((out as Record<number, string>)[-1]).toBe('above1');
-      expect((out as Record<number, string>)[-2]).toBe('above2');
-    });
-
-    it('drops negative-index slots beyond bufferAbove', () => {
-      const src = ['a', 'b', 'c'];
-      (src as Record<number, string>)[-1] = 'above1';
-      (src as Record<number, string>)[-2] = 'above2';
-      const out = cloneColumn(src, 1); // only -1 is in range
-      expect((out as Record<number, string>)[-1]).toBe('above1');
-      expect((out as Record<number, string>)[-2]).toBeUndefined();
-    });
+describe('columnTargetToArray', () => {
+  it('materializes visible only', () => {
+    const arr = columnTargetToArray({ visible: ['a', 'b', 'c'] });
+    expect(arr).toEqual(['a', 'b', 'c']);
   });
 
-  describe('cloneTargetGrid', () => {
-    it('clones every column preserving negative-index slots', () => {
-      const grid: string[][] = [['x', 'y'], ['p', 'q']];
-      (grid[0] as Record<number, string>)[-1] = 'a';
-      (grid[1] as Record<number, string>)[-1] = 'b';
-      const out = cloneTargetGrid(grid, 1);
-      expect((out[0] as Record<number, string>)[-1]).toBe('a');
-      expect((out[1] as Record<number, string>)[-1]).toBe('b');
+  it('materializes bufferBelow as numeric indices at and after visible.length', () => {
+    const arr = columnTargetToArray({
+      visible: ['a', 'b', 'c'],
+      bufferBelow: ['below1', 'below2'],
     });
+    expect(arr[3]).toBe('below1');
+    expect(arr[4]).toBe('below2');
   });
 
-  describe('isColumnTargetGrid', () => {
-    it('returns true for ColumnTarget[]', () => {
-      expect(isColumnTargetGrid([{ visible: ['a'] }, { visible: ['b'] }])).toBe(true);
+  it('skips undefined entries inside bufferBelow', () => {
+    const arr = columnTargetToArray({
+      visible: ['a', 'b'],
+      bufferBelow: [undefined, 'below2'],
     });
-
-    it('returns false for string[][]', () => {
-      expect(isColumnTargetGrid([['a'], ['b']])).toBe(false);
-    });
-
-    it('returns false for empty input', () => {
-      expect(isColumnTargetGrid([])).toBe(false);
-    });
+    expect(arr[2]).toBeUndefined();
+    expect(arr[3]).toBe('below2');
   });
 
-  describe('columnTargetToArray', () => {
-    it('materializes visible only', () => {
-      const arr = columnTargetToArray({ visible: ['a', 'b', 'c'] });
-      expect(arr).toEqual(['a', 'b', 'c']);
+  it('returns an array whose numeric length matches visible.length when only bufferAbove is set', () => {
+    const arr = columnTargetToArray({
+      visible: ['a', 'b', 'c'],
+      bufferAbove: ['above1', 'above2'],
     });
+    expect(arr.length).toBe(3);
+    expect([arr[0], arr[1], arr[2]]).toEqual(['a', 'b', 'c']);
+  });
+});
 
-    it('materializes bufferBelow as numeric indices >= visible.length', () => {
-      const arr = columnTargetToArray({
-        visible: ['a', 'b', 'c'],
-        bufferBelow: ['below1'],
-      });
-      expect(arr[3]).toBe('below1');
-    });
+describe('assertBufferCountsInRange', () => {
+  const aboveOne = [1, 1, 1];
+  const belowOne = [1, 1, 1];
 
-    it('materializes bufferAbove as negative-index slots', () => {
-      const arr = columnTargetToArray({
-        visible: ['a', 'b', 'c'],
-        bufferAbove: ['above1', 'above2'], // [0]=closest, [1]=furthest
-      });
-      expect((arr as Record<number, string>)[-1]).toBe('above1');
-      expect((arr as Record<number, string>)[-2]).toBe('above2');
-    });
-
-    it('handles undefined entries by skipping them', () => {
-      const arr = columnTargetToArray({
-        visible: ['a', 'b'],
-        bufferAbove: [undefined, 'above2'],
-        bufferBelow: [undefined],
-      });
-      expect((arr as Record<number, string>)[-1]).toBeUndefined();
-      expect((arr as Record<number, string>)[-2]).toBe('above2');
-      expect(arr[2]).toBeUndefined();
-    });
+  it('passes when all columns are within bounds', () => {
+    const grid: ColumnTarget[] = [
+      { visible: ['a', 'b', 'c'] },
+      { visible: ['a', 'b', 'c'], bufferAbove: ['X'] },
+      { visible: ['a', 'b', 'c'], bufferBelow: ['Y'] },
+    ];
+    expect(() =>
+      assertBufferCountsInRange(grid, aboveOne, belowOne, 'setResult'),
+    ).not.toThrow();
   });
 
-  describe('toLegacyTargetGrid', () => {
-    it('returns string[][] form unchanged', () => {
-      const grid: string[][] = [['a'], ['b']];
-      expect(toLegacyTargetGrid(grid)).toBe(grid);
-    });
-
-    it('converts ColumnTarget[] to string[][] with negative-index slots', () => {
-      const grid = [
-        { visible: ['x', 'y', 'z'], bufferAbove: ['above'] },
-        { visible: ['p', 'q', 'r'] },
-      ];
-      const out = toLegacyTargetGrid(grid);
-      expect(out[0][0]).toBe('x');
-      expect(out[0][1]).toBe('y');
-      expect(out[0][2]).toBe('z');
-      expect((out[0] as Record<number, string>)[-1]).toBe('above');
-      expect((out[1] as Record<number, string>)[-1]).toBeUndefined();
-    });
-
-    it('throws a readable error when columns mix string[] and ColumnTarget', () => {
-      // TypeScript blocks this at compile time; the guard catches JS callers
-      // bypassing types so they fail loudly at the API entry instead of with
-      // a confusing `[...col]` crash deep inside the pipeline.
-      const mixed = [
-        ['a', 'b', 'c'],
-        { visible: ['d', 'e', 'f'] },
-      ] as unknown as string[][];
-      expect(() => toLegacyTargetGrid(mixed)).toThrowError(/mixed input shapes/);
-    });
-
-    it('throws when the first column is ColumnTarget and a later column is string[]', () => {
-      const mixed = [
-        { visible: ['a', 'b', 'c'] },
-        ['d', 'e', 'f'],
-      ] as unknown as ColumnTarget[];
-      expect(() => toLegacyTargetGrid(mixed)).toThrowError(/mixed input shapes/);
-    });
-
-    it('handles empty array without throwing', () => {
-      expect(toLegacyTargetGrid([])).toEqual([]);
-    });
+  it('throws when bufferAbove length exceeds engine count', () => {
+    const grid: ColumnTarget[] = [
+      { visible: ['a', 'b', 'c'] },
+      { visible: ['a', 'b', 'c'], bufferAbove: ['X', 'Y'] },
+      { visible: ['a', 'b', 'c'] },
+    ];
+    expect(() =>
+      assertBufferCountsInRange(grid, aboveOne, belowOne, 'setResult'),
+    ).toThrowError(/setResult column 1: bufferAbove has a symbol at index 1, beyond engine bufferSymbols=1/);
   });
 
-  describe('assertBufferCountsInRange', () => {
-    const aboveOne = [1, 1, 1];
-    const belowOne = [1, 1, 1];
+  it('throws when bufferBelow length exceeds engine count', () => {
+    const grid: ColumnTarget[] = [
+      { visible: ['a', 'b', 'c'] },
+      { visible: ['a', 'b', 'c'], bufferBelow: ['X', 'Y'] },
+      { visible: ['a', 'b', 'c'] },
+    ];
+    expect(() =>
+      assertBufferCountsInRange(grid, aboveOne, belowOne, 'setResult'),
+    ).toThrowError(/setResult column 1: bufferBelow has a symbol at index 1, beyond engine bufferSymbols=1/);
+  });
 
-    it('passes when all columns are within bounds (explicit form)', () => {
-      const grid: ColumnTarget[] = [
-        { visible: ['a', 'b', 'c'] },
-        { visible: ['a', 'b', 'c'], bufferAbove: ['X'] },
-        { visible: ['a', 'b', 'c'], bufferBelow: ['Y'] },
-      ];
-      expect(() =>
-        assertBufferCountsInRange(grid, aboveOne, belowOne, 'setResult'),
-      ).not.toThrow();
-    });
+  it('uses the supplied callerLabel in the message', () => {
+    const grid: ColumnTarget[] = [{ visible: ['a'], bufferAbove: ['X', 'Y'] }];
+    expect(() =>
+      assertBufferCountsInRange(grid, [1], [1], 'initialFrame'),
+    ).toThrowError(/^initialFrame column 0: bufferAbove/);
+  });
 
-    it('passes when legacy negative-index keys are within bufferAbove', () => {
-      const col: string[] = ['a', 'b', 'c'];
-      (col as Record<number, string>)[-1] = 'X';
-      const grid: string[][] = [['a', 'b', 'c'], col, ['a', 'b', 'c']];
-      expect(() =>
-        assertBufferCountsInRange(grid, aboveOne, belowOne, 'setResult'),
-      ).not.toThrow();
-    });
+  it('handles per-reel buffer counts that vary by index', () => {
+    const grid: ColumnTarget[] = [
+      { visible: ['a', 'b', 'c'], bufferAbove: ['X', 'Y'] },
+      { visible: ['a', 'b', 'c'], bufferAbove: ['X', 'Y'] },
+    ];
+    expect(() =>
+      assertBufferCountsInRange(grid, [2, 1], [1, 1], 'setResult'),
+    ).toThrowError(/setResult column 1: bufferAbove has a symbol at index 1, beyond engine bufferSymbols=1/);
+  });
 
-    it('throws when explicit bufferAbove length exceeds engine count', () => {
-      const grid: ColumnTarget[] = [
-        { visible: ['a', 'b', 'c'] },
-        { visible: ['a', 'b', 'c'], bufferAbove: ['X', 'Y'] }, // 2 > 1
-        { visible: ['a', 'b', 'c'] },
-      ];
-      expect(() =>
-        assertBufferCountsInRange(grid, aboveOne, belowOne, 'setResult'),
-      ).toThrowError(/setResult column 1: bufferAbove has 2 entries but engine bufferSymbols=1/);
-    });
+  it('no-op for empty grid', () => {
+    expect(() => assertBufferCountsInRange([], [], [], 'setResult')).not.toThrow();
+  });
 
-    it('throws when explicit bufferBelow length exceeds engine count', () => {
-      const grid: ColumnTarget[] = [
-        { visible: ['a', 'b', 'c'] },
-        { visible: ['a', 'b', 'c'], bufferBelow: ['X', 'Y'] }, // 2 > 1
-        { visible: ['a', 'b', 'c'] },
-      ];
-      expect(() =>
-        assertBufferCountsInRange(grid, aboveOne, belowOne, 'setResult'),
-      ).toThrowError(/setResult column 1: bufferBelow has 2 entries but engine bufferSymbols=1/);
-    });
+  it('counts the highest DEFINED index, not raw length (sparse array passes) [M9]', () => {
+    // length 3 but only index 0 is defined → a single entry materializes.
+    const grid: ColumnTarget[] = [
+      { visible: ['a', 'b', 'c'], bufferAbove: ['X', undefined, undefined] },
+    ];
+    expect(() => assertBufferCountsInRange(grid, [1], [1], 'setResult')).not.toThrow();
+  });
 
-    it('throws when legacy frame[col][-k] exceeds engine bufferAbove', () => {
-      const col: string[] = ['a', 'b', 'c'];
-      (col as Record<number, string>)[-1] = 'X';
-      (col as Record<number, string>)[-2] = 'Y'; // out of range with above=1
-      const grid: string[][] = [['a', 'b', 'c'], col, ['a', 'b', 'c']];
-      expect(() =>
-        assertBufferCountsInRange(grid, aboveOne, belowOne, 'setResult'),
-      ).toThrowError(/setResult column 1: frame\[1\]\[-2\] is set but engine bufferSymbols=1/);
-    });
-
-    it('does not validate legacy form length (visibleRows is unreliable in MultiWays)', () => {
-      // A long column array used to trip the validator; we deliberately
-      // skip this check now so MultiWays setShape→setResult flows are not
-      // broken. See assertBufferCountsInRange JSDoc for the full rationale.
-      const grid: string[][] = [['a', 'b', 'c'], ['a', 'b', 'c', 'X', 'Y'], ['a', 'b', 'c']];
-      expect(() =>
-        assertBufferCountsInRange(grid, aboveOne, belowOne, 'setResult'),
-      ).not.toThrow();
-    });
-
-    it('uses the supplied callerLabel in the message', () => {
-      const grid: ColumnTarget[] = [{ visible: ['a'], bufferAbove: ['X', 'Y'] }];
-      expect(() =>
-        assertBufferCountsInRange(grid, [1], [1], 'initialFrame'),
-      ).toThrowError(/^initialFrame column 0: bufferAbove/);
-    });
-
-    it('handles per-reel buffer counts that vary by index', () => {
-      // reel 0: above=2, reel 1: above=1
-      const grid: ColumnTarget[] = [
-        { visible: ['a', 'b', 'c'], bufferAbove: ['X', 'Y'] }, // OK (above=2)
-        { visible: ['a', 'b', 'c'], bufferAbove: ['X', 'Y'] }, // throws (above=1)
-      ];
-      expect(() =>
-        assertBufferCountsInRange(grid, [2, 1], [1, 1], 'setResult'),
-      ).toThrowError(/setResult column 1: bufferAbove has 2 entries but engine bufferSymbols=1/);
-    });
-
-    it('no-op for empty grid', () => {
-      expect(() => assertBufferCountsInRange([], [], [], 'setResult')).not.toThrow();
-    });
+  it('still throws when a defined entry sits beyond the buffer range (sparse) [M9]', () => {
+    // ['X', undefined, 'Y'] with bufferSymbols=2 → 'Y' at index 2 would be dropped.
+    const grid: ColumnTarget[] = [
+      { visible: ['a'], bufferAbove: ['X', undefined, 'Y'] },
+    ];
+    expect(() =>
+      assertBufferCountsInRange(grid, [2], [2], 'setResult'),
+    ).toThrowError(/bufferAbove has a symbol at index 2, beyond engine bufferSymbols=2/);
   });
 });

@@ -12,7 +12,7 @@ import type { TumbleFallConfig } from '../../cascade/TumbleConfig.js';
 import { mergeFallConfig } from '../../cascade/TumbleConfig.js';
 
 export interface CascadeFallPhaseConfig {
-  /** Required by the start-phase contract — set on the reel even though
+  /** Required by the start-phase contract. set on the reel even though
    *  tumble mode never accelerates. */
   spinningMode: SpinningMode;
   /** Per-reel delay before this column begins its fall, in ms. */
@@ -53,13 +53,13 @@ export class CascadeFallPhase extends ReelPhase<CascadeFallPhaseConfig> {
    *  without needing the config closure (which lives only inside `_beginFall`). */
   private _events: EventEmitter<ReelSetEvents> | null = null;
   /** Whether `cascade:fall:start` was emitted yet. `onSkip` emits the
-   *  matching `:end` ONLY when `:start` already fired — a skip during the
+   *  matching `:end` ONLY when `:start` already fired. a skip during the
    *  pre-fall delay window must not produce an unpaired `:end`. */
   private _startEmitted = false;
   /** Per-run abort controller exposed to listeners on `cascade:fall:symbol`
    *  as `signal`. Aborts on `onSkip` so listener-scheduled tweens (squish,
    *  badge fade, etc.) can clean themselves up alongside the library's
-   *  own timeline. Stays un-aborted on natural completion — only explicit
+   *  own timeline. Stays un-aborted on natural completion. only explicit
    *  skips trigger it. */
   private _skipAbort: AbortController | null = null;
 
@@ -124,7 +124,7 @@ export class CascadeFallPhase extends ReelPhase<CascadeFallPhaseConfig> {
     if (fallSec <= 0) {
       // Instant fall: hide and complete. No symbol events fire (no tween
       // to attach decoration to), so the AbortController is dropped
-      // un-aborted — listeners can't have registered cleanup against it.
+      // un-aborted. listeners can't have registered cleanup against it.
       for (const v of views) v.alpha = 0;
       events.emit('cascade:fall:end', { reelIndex });
       this._fallingViews = [];
@@ -212,7 +212,7 @@ export class CascadeFallPhase extends ReelPhase<CascadeFallPhaseConfig> {
     this._skipAbort = null;
     // Emit the paired `cascade:fall:end` so listeners that count
     // start/end events stay balanced. Only emit if `:start` already
-    // fired — a skip during the pre-fall delay window has no
+    // fired. a skip during the pre-fall delay window has no
     // matching `:start`, so an `:end` here would be unpaired.
     if (this._startEmitted && this._events) {
       this._events.emit('cascade:fall:end', { reelIndex: this._reel.reelIndex });

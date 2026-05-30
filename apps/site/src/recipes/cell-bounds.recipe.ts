@@ -3,12 +3,12 @@
 //                   WILD_CARD, PIXI, gsap, app, pickWeighted
 
 const A = '7', B = '8', C = '9';
-const SEVEN = 'A'; // premium card stand-in for the original royal "seven"
+const SEVEN = 'A'; // letter-card stand-in. constant kept as SEVEN for readability
 const IDS = [A, B, C, SEVEN];
 const COLS = 5, ROWS = 3, SIZE = 90;
 
 const reelSet = new ReelSetBuilder()
-  .reels(COLS).visibleSymbols(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
+  .reels(COLS).visibleRows(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
   .symbols(r => {
     for (const sym of [...CARD_DECK, WILD_CARD]) {
       r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
@@ -41,7 +41,7 @@ function drawPayline(cols, row, color) {
   overlayGfx.stroke({ color, width: 3, alpha: 0.85 });
 }
 
-// Fixed result: middle row is all SEVEN — a full-row payline win.
+// Fixed result: middle row is all SEVEN. a full-row payline win.
 const WIN_ROW = 1;
 const GRID = [
   [A,     SEVEN, C],
@@ -59,13 +59,13 @@ return {
 
     const p = reelSet.spin();
     await new Promise(r => setTimeout(r, 150));
-    reelSet.setResult(GRID);
+    reelSet.setResult(GRID.map((visible) => ({ visible })));
     await p;
 
     // Let the landing bounce settle.
     await new Promise(r => setTimeout(r, 280));
 
-    // Find SEVEN on WIN_ROW — typically all 5 here.
+    // Find SEVEN on WIN_ROW. typically all 5 here.
     const winCols = [];
     for (let col = 0; col < COLS; col++) {
       if (reelSet.getReel(col).getVisibleSymbols()[WIN_ROW] === SEVEN) winCols.push(col);

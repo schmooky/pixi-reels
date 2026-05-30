@@ -2,7 +2,7 @@ import { Container, Graphics } from 'pixi.js';
 import type { Disposable } from '../utils/Disposable.js';
 
 /**
- * Bounding rectangle for one reel — what `MaskStrategy` builds the clip
+ * Bounding rectangle for one reel. what `MaskStrategy` builds the clip
  * geometry from. Local to ReelViewport (origin = viewport top-left).
  */
 export interface ReelMaskRect {
@@ -10,21 +10,21 @@ export interface ReelMaskRect {
   x: number;
   /** Top edge of the reel box (= reel.offsetY). */
   y: number;
-  /** Width of the reel column — equals one symbol cell wide. */
+  /** Width of the reel column. equals one symbol cell wide. */
   width: number;
-  /** Height of the reel box — equals reel.reelHeight. */
+  /** Height of the reel box. equals reel.reelHeight. */
   height: number;
 }
 
 /**
- * Strategy for building the viewport's clip mask. Public — pass a custom
+ * Strategy for building the viewport's clip mask. Public. pass a custom
  * implementation to `ReelSetBuilder.maskStrategy(...)` to clip the reels
  * with any shape PixiJS Graphics can express (rounded frames, hex grids,
  * etc.). v1 ships two strategies:
  *
- * - {@link RectMaskStrategy} — one rect per reel (default). Good for
+ * - {@link RectMaskStrategy}. one rect per reel (default). Good for
  *   pyramid layouts; symbols never leak buffer rows above/below.
- * - {@link SharedRectMaskStrategy} — single bounding-box rect spanning
+ * - {@link SharedRectMaskStrategy}. single bounding-box rect spanning
  *   every reel's tallest extent. Big symbols spanning multiple reels
  *   render correctly even when reels have horizontal gaps; cross-reel
  *   overlap (e.g. a 2×2 bonus straddling reel 2 and 3 with `symbolGap.x>0`)
@@ -42,7 +42,7 @@ export interface MaskStrategy {
  * `(offsetY, reelHeight)` box so pyramid shapes clip cleanly without
  * buffer-row peek above or below short reels.
  *
- * PixiJS masks support multiple shapes inside a single Graphics — the union
+ * PixiJS masks support multiple shapes inside a single Graphics. the union
  * of every filled shape is the visible region. So drawing one rect per reel
  * gives the engine a jagged-but-rectangular mask without a custom shader.
  *
@@ -79,13 +79,13 @@ export class RectMaskStrategy implements MaskStrategy {
 
 /**
  * Single bounding-box mask covering every reel's tallest extent. Use this
- * when symbols need to overlap across reel boundaries — typical for slots
+ * when symbols need to overlap across reel boundaries. typical for slots
  * with big symbols that span multiple columns (a 2×2 bonus, a 3×3 giant)
  * AND a non-zero `symbolGap.x`. Per-reel rects would clip those symbols at
  * the column gaps; a single shared rect keeps them visible.
  *
  * Pyramid layouts using this strategy will show buffer rows above/below
- * short reels (the "pyramid peek" — covered by frame art in production).
+ * short reels (the "pyramid peek". covered by frame art in production).
  *
  * @example
  * builder.maskStrategy(new SharedRectMaskStrategy())
@@ -115,12 +115,12 @@ export class SharedRectMaskStrategy implements MaskStrategy {
  * below the visible rows are hidden. It also provides three stacking
  * layers so win animations can break out of the mask:
  *
- *   - `maskedContainer` — the normal place for reels. Clipped to the
+ *   - `maskedContainer`. the normal place for reels. Clipped to the
  *     visible area so buffer rows never leak.
- *   - `unmaskedContainer` — rendered on top of the mask. Use for a symbol
+ *   - `unmaskedContainer`. rendered on top of the mask. Use for a symbol
  *     whose celebration animation expands beyond its cell (a big expanding
  *     wild, a splash frame).
- *   - `spotlightContainer` — above everything else. Win spotlight lifts
+ *   - `spotlightContainer`. above everything else. Win spotlight lifts
  *     winning symbols here temporarily so dim overlay + bounce don't clip.
  *
  * `dimOverlay` is a semi-transparent rectangle the spotlight fades in
@@ -139,6 +139,13 @@ export class ReelViewport extends Container implements Disposable {
   private _maskHeight: number;
   private _maskRects: ReelMaskRect[] = [];
   private _isDestroyed = false;
+  /**
+   * Number of active dim requests. The single overlay is shared by the
+   * spotlight and cascade `destroySymbols({ dim })`; reference-counting it
+   * keeps the dim up until the LAST consumer releases it, so an overlapping
+   * pair can't hide it out from under the other.
+   */
+  private _dimCount = 0;
 
   constructor(
     width: number,
@@ -156,25 +163,25 @@ export class ReelViewport extends Container implements Disposable {
     // Create mask graphic
     this._mask = this._maskStrategy.build(this._maskRects, width, height);
 
-    // Masked container — main symbol area
+    // Masked container. main symbol area
     this.maskedContainer = new Container();
     this.maskedContainer.sortableChildren = true;
     this.maskedContainer.addChild(this._mask);
     this.maskedContainer.mask = this._mask;
     this.addChild(this.maskedContainer);
 
-    // Unmasked container — for symbols with unmask flag
+    // Unmasked container. for symbols with unmask flag
     this.unmaskedContainer = new Container();
     this.unmaskedContainer.sortableChildren = true;
     this.addChild(this.unmaskedContainer);
 
-    // Dim overlay — for win animations
+    // Dim overlay. for win animations
     this.dimOverlay = new Graphics();
     this.dimOverlay.rect(0, 0, width, height).fill({ color: 0x000000, alpha: 0.5 });
     this.dimOverlay.visible = false;
     this.addChild(this.dimOverlay);
 
-    // Spotlight container — promoted symbols render above everything
+    // Spotlight container. promoted symbols render above everything
     this.spotlightContainer = new Container();
     this.spotlightContainer.sortableChildren = true;
     this.addChild(this.spotlightContainer);
@@ -193,15 +200,17 @@ export class ReelViewport extends Container implements Disposable {
     return this._isDestroyed;
   }
 
-  /** Show the dim overlay with given opacity. */
+  /** Show the dim overlay with given opacity. Reference-counted with hideDim. */
   showDim(alpha: number = 0.5): void {
+    this._dimCount++;
     this.dimOverlay.alpha = alpha;
     this.dimOverlay.visible = true;
   }
 
-  /** Hide the dim overlay. */
+  /** Release one dim request; hides the overlay only when the last one clears. */
   hideDim(): void {
-    this.dimOverlay.visible = false;
+    if (this._dimCount > 0) this._dimCount--;
+    if (this._dimCount === 0) this.dimOverlay.visible = false;
   }
 
   /** Update mask size and per-reel rects. Used after pyramid/MultiWays shape changes. */

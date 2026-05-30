@@ -66,22 +66,22 @@ describe('MultiWays + Cascade (issue #74)', () => {
 
   it('uses cascade fall phase on a multiways cascade spin', async () => {
     // Skip-path tests can only observe phases created before skip() invalidates
-    // the generation — that's `cascade:fall` for tumble (mirrors perSpinMode.test).
+    // the generation. that's `cascade:fall` for tumble (mirrors perSpinMode.test).
     // The "Adjust runs" guarantee is asserted via events in the next test.
     const h = buildMultiwaysCascadeHarness();
     try {
       const promise = h.reelSet.spin({ mode: 'cascade' });
       h.reelSet.setShape([3, 4, 2]);
       h.reelSet.setResult([
-        ['a', 'a', 'a'],
-        ['a', 'a', 'a', 'a'],
-        ['a', 'a'],
+        { visible: ['a', 'a', 'a'] },
+        { visible: ['a', 'a', 'a', 'a'] },
+        { visible: ['a', 'a'] },
       ]);
       h.reelSet.slamStop();
       await promise;
 
       expect(h.created.some((n) => n.startsWith('cascade:fall:'))).toBe(true);
-      // Standard StartPhase must NOT be created — tumble mode replaced it.
+      // Standard StartPhase must NOT be created. tumble mode replaced it.
       expect(h.created.some((n) => n.startsWith('start:'))).toBe(false);
       expect(h.reelSet.reels.map((r) => r.visibleRows)).toEqual([3, 4, 2]);
     } finally {
@@ -96,9 +96,9 @@ describe('MultiWays + Cascade (issue #74)', () => {
       const promise = h.reelSet.spin({ mode: 'cascade' });
       h.reelSet.setShape([3, 4, 2]);
       h.reelSet.setResult([
-        ['a', 'a', 'a'],
-        ['a', 'a', 'a', 'a'],
-        ['a', 'a'],
+        { visible: ['a', 'a', 'a'] },
+        { visible: ['a', 'a', 'a', 'a'] },
+        { visible: ['a', 'a'] },
       ]);
       h.reelSet.slamStop();
       await promise;
@@ -116,9 +116,9 @@ describe('MultiWays + Cascade (issue #74)', () => {
       let promise = h.reelSet.spin({ mode: 'cascade' });
       h.reelSet.setShape([3, 4, 2]);
       h.reelSet.setResult([
-        ['a', 'a', 'a'],
-        ['a', 'a', 'a', 'a'],
-        ['a', 'a'],
+        { visible: ['a', 'a', 'a'] },
+        { visible: ['a', 'a', 'a', 'a'] },
+        { visible: ['a', 'a'] },
       ]);
       h.reelSet.slamStop();
       await promise;
@@ -128,9 +128,9 @@ describe('MultiWays + Cascade (issue #74)', () => {
       promise = h.reelSet.spin({ mode: 'cascade' });
       h.reelSet.setShape([5, 2, 6]);
       h.reelSet.setResult([
-        ['a', 'a', 'a', 'a', 'a'],
-        ['a', 'a'],
-        ['a', 'a', 'a', 'a', 'a', 'a'],
+        { visible: ['a', 'a', 'a', 'a', 'a'] },
+        { visible: ['a', 'a'] },
+        { visible: ['a', 'a', 'a', 'a', 'a', 'a'] },
       ]);
       h.reelSet.slamStop();
       await promise;
@@ -145,9 +145,9 @@ describe('MultiWays + Cascade (issue #74)', () => {
     try {
       const promise = h.reelSet.spin({ mode: 'cascade' });
       h.reelSet.setResult([
-        ['a', 'a', 'a', 'a', 'a', 'a'],
-        ['a', 'a', 'a', 'a', 'a', 'a'],
-        ['a', 'a', 'a', 'a', 'a', 'a'],
+        { visible: ['a', 'a', 'a', 'a', 'a', 'a'] },
+        { visible: ['a', 'a', 'a', 'a', 'a', 'a'] },
+        { visible: ['a', 'a', 'a', 'a', 'a', 'a'] },
       ]);
       h.reelSet.slamStop();
       await promise;

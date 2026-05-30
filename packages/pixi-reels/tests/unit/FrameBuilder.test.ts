@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { FrameBuilder, type FrameMiddleware } from '../../src/frame/FrameBuilder.js';
 import { RandomSymbolProvider } from '../../src/frame/RandomSymbolProvider.js';
+import { columnTargetToArray } from '../../src/frame/ColumnTarget.js';
 
 describe('FrameBuilder', () => {
   function createBuilder() {
@@ -73,12 +74,11 @@ describe('FrameBuilder', () => {
     expect(order).toEqual([5, 20]);
   });
 
-  it('places target symbol in buffer-above slot via negative index', () => {
+  it('places target symbol in buffer-above slot 0', () => {
     const builder = createBuilder();
-    const target = ['x', 'y', 'z'];
-    target[-1] = 'bufAbove'; // JS string property "-1" — buffer-above convention
+    const target = columnTargetToArray({ visible: ['x', 'y', 'z'], bufferAbove: ['bufAbove'] });
     const frame = builder.build(0, 3, 1, 1, target);
-    expect(frame[0]).toBe('bufAbove'); // slot 0 = buffer above
+    expect(frame[0]).toBe('bufAbove');
     expect(frame[1]).toBe('x');
     expect(frame[2]).toBe('y');
     expect(frame[3]).toBe('z');
@@ -86,10 +86,11 @@ describe('FrameBuilder', () => {
 
   it('places target symbols in multiple buffer-above slots (bufferAbove = 2)', () => {
     const builder = createBuilder();
-    const target = ['x', 'y', 'z'];
-    target[-1] = 'above1'; // closest to visible area  →  symbols[1]
-    target[-2] = 'above2'; // furthest above            →  symbols[0]
-    const frame = builder.build(0, 3, 2, 1, target); // bufferAbove = 2, total = 6
+    const target = columnTargetToArray({
+      visible: ['x', 'y', 'z'],
+      bufferAbove: ['above1', 'above2'],
+    });
+    const frame = builder.build(0, 3, 2, 1, target);
     expect(frame[0]).toBe('above2');
     expect(frame[1]).toBe('above1');
     expect(frame[2]).toBe('x');

@@ -6,7 +6,7 @@ eyebrow: Building blocks
 description: A big symbol is a single symbol that visually occupies an N×M block of cells. Declared via SymbolData.size; server places the anchor cell only and the engine paints OCCUPIED across the rest. Includes block lookup, validation, and mask interaction.
 ---
 
-A "big symbol" is a single symbol that visually occupies a rectangular block of cells — a 2×2 bonus, a 3×3 giant, a 1×3 bar, a 2×4 banner. Declared at registration via `SymbolData.size`. The wire format stays `string[][]` — the engine does the heavy lifting.
+A "big symbol" is a single symbol that visually occupies a rectangular block of cells: a 2×2 bonus, a 3×3 giant, a 1×3 bar, a 2×4 banner. Declared at registration via `SymbolData.size`. The wire format is `ColumnTarget[]`: the server places the anchor cell and the engine paints OCCUPIED across the rest.
 
 This guide covers big symbols in depth. For the broader picture (pyramid layouts, MultiWays, mutual exclusivity rules), start at the [Per-reel geometry](/guides/per-reel-geometry/) overview.
 
@@ -20,41 +20,41 @@ Register the symbol like any other; add a `size: { w, h }` to its metadata:
 })
 .symbolData({
   bonus: { weight: 0, zIndex: 5, size: { w: 2, h: 2 } },
-  //         ^^^^^^^^^ big symbols MUST have weight 0 — random fill can't
+  //         ^^^^^^^^^ big symbols MUST have weight 0. random fill can't
   //                   place blocks in v1, so a non-zero weight would
   //                   silently never be picked. Builder throws otherwise.
 })
 ```
 
-`zIndex: 5` is recipe convention — sets the anchor's z-index above 1×1 neighbors so it draws on top.
+`zIndex: 5` is recipe convention. sets the anchor's z-index above 1×1 neighbors so it draws on top.
 
 ## How the wire format stays unchanged
 
-Server returns `string[][]` like every other result. The server places the symbol id at the **anchor cell** (top-left of the block) only — every other cell of the block can hold *any* string, the engine overwrites it.
+The server places the symbol id at the **anchor cell** of the block only; every other cell of the block can hold any string, since the engine overwrites it with `OCCUPIED_SENTINEL`.
 
 ```ts
-// 5×4 grid, 2×2 bonus anchored at (col=2, row=1):
+// 5x4 grid, 2x2 bonus anchored at (col=2, row=1):
 setResult([
-  ['low1', 'low2', 'low1', 'low2'],
-  ['low1', 'low2', 'low1', 'low2'],
-  ['low1', 'bonus',  '?',   'low2'],   // '?' is whatever; engine paints OCCUPIED
-  ['low1', '?',      '?',   'low2'],   // '?' is whatever; engine paints OCCUPIED
-  ['low1', 'low2', 'low1', 'low2'],
+  { visible: ['low1', 'low2', 'low1', 'low2'] },
+  { visible: ['low1', 'low2', 'low1', 'low2'] },
+  { visible: ['low1', 'bonus',  '?',   'low2'] }, // '?' is whatever; engine paints OCCUPIED
+  { visible: ['low1', '?',      '?',   'low2'] }, // '?' is whatever; engine paints OCCUPIED
+  { visible: ['low1', 'low2', 'low1', 'low2'] },
 ]);
 ```
 
 Internally:
 
 1. **Cross-reel coordinator** runs in `SpinController` ahead of per-reel frame building. It reads the result grid, finds big-symbol anchors, validates block fit, and paints `OCCUPIED_SENTINEL` across the rest of the block.
-2. **At land**, the anchor symbol is sized to span the whole `(w*cellW, h*cellH)` block. Non-anchor cells get an invisible `OccupiedStub` (a zero-alpha placeholder) — the anchor's view visually covers them.
-3. **Public API** never sees the sentinel. Both `Reel.getVisibleSymbols()` and `ReelSet.getVisibleGrid()` resolve OCCUPIED — same-reel and cross-reel — to the anchor's id. Iterating per reel and the grid surface return identical data.
+2. **At land**, the anchor symbol is sized to span the whole `(w*cellW, h*cellH)` block. Non-anchor cells get an invisible `OccupiedStub` (a zero-alpha placeholder). the anchor's view visually covers them.
+3. **Public API** never sees the sentinel. Both `Reel.getVisibleSymbols()` and `ReelSet.getVisibleGrid()` resolve OCCUPIED. same-reel and cross-reel. to the anchor's id. Iterating per reel and the grid surface return identical data.
 
 ## Block lookup
 
 Two related APIs:
 
-- **`reelSet.getSymbolFootprint(col, row)`** — logical info: `{ anchor, size }`. Use for evaluation / event payloads.
-- **`reelSet.getBlockBounds(col, row)`** — pixel rect covering the whole block. Use for overlays.
+- **`reelSet.getSymbolFootprint(col, row)`**. logical info: `{ anchor, size }`. Use for evaluation / event payloads.
+- **`reelSet.getBlockBounds(col, row)`**. pixel rect covering the whole block. Use for overlays.
 
 ```ts
 const fp = reelSet.getSymbolFootprint(col, row);
@@ -65,7 +65,7 @@ const rect = reelSet.getBlockBounds(col, row);
 gfx.rect(rect.x, rect.y, rect.width, rect.height).stroke({ color: 0xff6b35, width: 4 });
 ```
 
-Pass any cell of a block — anchor or non-anchor — both APIs return the same data. For 1×1 cells, `getBlockBounds` is equivalent to `getCellBounds`.
+Pass any cell of a block. anchor or non-anchor. both APIs return the same data. For 1×1 cells, `getBlockBounds` is equivalent to `getCellBounds`.
 
 ## Validation
 
@@ -74,15 +74,15 @@ The engine throws fail-fast at `setResult()` if a block doesn't fit:
 - `"big symbol 'giant' (3x3) at (col=4, row=2) exceeds reel count 6."`
 - `"big symbol 'tallBar' (1x3) at (col=0, row=3) extends past the bottom of the strip on reel 0 (anchor row + h = 6 > visibleRows + bufferBelow = 4)."`
 
-The vertical check is against the **full strip** (visible + bufferBelow), not just visible — anchors are allowed to land partially, with the block extending into bufferAbove or bufferBelow.
+The vertical check is against the **full strip** (visible + bufferBelow), not just visible. Anchors are allowed to land partially, with the block extending into bufferAbove or bufferBelow.
 
-Pinning the **non-anchor** cell of a big symbol throws — pin the anchor instead, which covers the block visually because the anchor's view spans it.
+Pinning the **non-anchor** cell of a big symbol throws. pin the anchor instead, which covers the block visually because the anchor's view spans it.
 
-The **build-time** check refuses big symbols with non-zero weight (`big symbol 'bonus' (2x2) must have weight 0 — ...`). Random fill can't place blocks in v1, so non-zero weight would silently never be picked.
+The **build-time** check refuses big symbols with non-zero weight (`big symbol 'bonus' (2x2) must have weight 0. ...`). Random fill can't place blocks in v1, so non-zero weight would silently never be picked.
 
 ## Partial-visibility landings (buffer-row anchors)
 
-Big-symbol anchors are NOT restricted to visible rows. A 1×H block can land with its anchor in `bufferAbove` so only the bottom of the block ("the tail") shows at the top of the visible window — the classic UK fruit-machine setup where the player sees a sliver of a tall wild and nudges to reveal it. Equivalently, a block can anchor at the last visible row with its lower cells spilling into `bufferBelow` ("head visible").
+Big-symbol anchors are NOT restricted to visible rows. A 1xH block can land with its anchor in `bufferAbove` so only the bottom of the block ("the tail") shows at the top of the visible window. Equivalently, a block can anchor at the last visible row with its lower cells spilling into `bufferBelow` ("head visible").
 
 Use the explicit `ColumnTarget` form to target buffer slots:
 
@@ -95,11 +95,11 @@ reelSet.setResult([
 ]);
 ```
 
-`ReelSet.getSymbolFootprint(col, 0)` for the visible cell returns `anchor.row = -2` (negative) — `ReelSet.getBlockBounds(col, 0)` returns the full block's pixel rect including the off-screen portion (the mask clips the rendered output to the visible window). See [Land a big symbol partially in buffer](/recipes/big-symbol-partial-land/) for the runnable demo.
+`ReelSet.getSymbolFootprint(col, 0)` for the visible cell returns `anchor.row = -2` (negative). `ReelSet.getBlockBounds(col, 0)` returns the full block's pixel rect including the off-screen portion (the mask clips the rendered output to the visible window). See [Land a big symbol partially in buffer](/recipes/big-symbol-partial-land/) for the runnable demo.
 
 ## Mask interaction (`SharedRectMaskStrategy`)
 
-If `symbolGap.x > 0`, the **default per-reel mask** has horizontal gaps between reel columns. A big symbol's anchor view extends across multiple reels' worth of width, but the per-reel mask **clips it at every column gap** — visible as transparent vertical strips through the symbol.
+If `symbolGap.x > 0`, the **default per-reel mask** has horizontal gaps between reel columns. A big symbol's anchor view extends across multiple reels' worth of width, but the per-reel mask **clips it at every column gap**. visible as transparent vertical strips through the symbol.
 
 The engine **auto-picks `SharedRectMaskStrategy`** when:
 
@@ -118,13 +118,13 @@ builder
   // ...
 ```
 
-`SharedRectMaskStrategy` draws a single bounding rect covering every reel's tallest extent. For pyramid + big-symbol slots, this means buffer rows above/below short reels become visible (the "pyramid peek") — handled in production by frame art covering the slot.
+`SharedRectMaskStrategy` draws a single bounding rect covering every reel's tallest extent. For pyramid + big-symbol slots, this means buffer rows above/below short reels become visible (the "pyramid peek"). handled in production by frame art covering the slot.
 
 ## zIndex layering
 
 Big-symbol anchors render at `symbolData.zIndex * 100 + arrayIndex` (typically ~500 with `zIndex: 5`). The 100× multiplier reserves room for per-row stacking inside a layer (bottom rows render above top rows on the same layer).
 
-Pin overlays render at zIndex `10000` (an internal `ReelSet` constant — not part of the public API). So a big symbol that's also pinned (`reelSet.pin(anchorCol, anchorRow, id, ...)`) gets its overlay rendered above the cell — the overlay covers the whole block visually because the overlay symbol is sized to the block.
+Pin overlays render at zIndex `10000` (an internal `ReelSet` constant. not part of the public API). So a big symbol that's also pinned (`reelSet.pin(anchorCol, anchorRow, id, ...)`) gets its overlay rendered above the cell. the overlay covers the whole block visually because the overlay symbol is sized to the block.
 
 | Layer | zIndex | Source |
 |---|---|---|
@@ -143,11 +143,11 @@ Pin overlays render at zIndex `10000` (an internal `ReelSet` constant — not pa
 
 ## See also
 
-- [Guide: Per-reel geometry](/guides/per-reel-geometry/) — overview + constraint matrix + mask strategy
-- [Guide: MultiWays](/guides/multiways/) — mutually exclusive with big symbols
-- [`big-symbols-mxn`](/recipes/big-symbols-mxn/) recipe — every shape: 1×3, 2×2, 3×3, 2×4
-- [`big-symbol-partial-land`](/recipes/big-symbol-partial-land/) recipe — tail-visible landings via `bufferAbove`
-- [`big-symbol-held-respin`](/recipes/big-symbol-held-respin/) recipe — nudge to reveal, then hold across a respin
-- [`nudge-big-symbol`](/recipes/nudge-big-symbol/) recipe — nudge a block through visible + buffer
-- [`card-symbol-debug`](/recipes/card-symbol-debug/) recipe — the debug `CardSymbol` used in these recipes
-- [`cell-bounds`](/recipes/cell-bounds/) recipe — pixel rects for any cell
+- [Guide: Per-reel geometry](/guides/per-reel-geometry/). overview + constraint matrix + mask strategy
+- [Guide: MultiWays](/guides/multiways/). mutually exclusive with big symbols
+- [`big-symbols-mxn`](/recipes/big-symbols-mxn/) recipe. every shape: 1×3, 2×2, 3×3, 2×4
+- [`big-symbol-partial-land`](/recipes/big-symbol-partial-land/) recipe. tail-visible landings via `bufferAbove`
+- [`big-symbol-held-respin`](/recipes/big-symbol-held-respin/) recipe. nudge to reveal, then hold across a respin
+- [`nudge-big-symbol`](/recipes/nudge-big-symbol/) recipe. nudge a block through visible + buffer
+- [`card-symbol-debug`](/recipes/card-symbol-debug/) recipe. the debug `CardSymbol` used in these recipes
+- [`cell-bounds`](/recipes/cell-bounds/) recipe. pixel rects for any cell

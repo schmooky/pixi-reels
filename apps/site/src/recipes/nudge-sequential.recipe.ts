@@ -2,7 +2,7 @@
 // Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
 //                   WILD_CARD, app
 
-// SEQUENTIAL nudges — each reel waits for the previous reel's nudge to
+// SEQUENTIAL nudges. each reel waits for the previous reel's nudge to
 // land before starting. Reads as three deliberate beats; players can
 // follow each reveal individually. Total time = N * duration.
 
@@ -16,7 +16,7 @@ const NUDGE_DURATION = 480;
 
 const reelSet = new ReelSetBuilder()
   .reels(5)
-  .visibleSymbols(3)
+  .visibleRows(3)
   .symbolSize(72, 72)
   .symbolGap(4, 4)
   .symbols((r) => {
@@ -44,13 +44,13 @@ return {
   onSpin: async () => {
     const p = reelSet.spin();
     await new Promise((resolve) => setTimeout(resolve, 220));
-    reelSet.setResult([col3(), col3(), col3(), col3(), col3()]);
+    reelSet.setResult([col3(), col3(), col3(), col3(), col3()].map((visible) => ({ visible })));
     await p;
 
     // Let the eye settle on the landed board before the nudges begin.
     await new Promise((resolve) => setTimeout(resolve, 400));
 
-    // SEQUENTIAL — each `await` blocks the next iteration until this
+    // SEQUENTIAL. each `await` blocks the next iteration until this
     // reel's tween finishes. Total wall time = NUDGE_COLS.length * NUDGE_DURATION.
     for (const col of NUDGE_COLS) {
       await reelSet.nudge(col, {

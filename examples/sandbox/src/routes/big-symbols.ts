@@ -1,5 +1,5 @@
 /**
- * Big-symbols recipe — register a 2×2 bonus and let the engine paint
+ * Big-symbols recipe. register a 2×2 bonus and let the engine paint
  * OCCUPIED across the block. Server places the symbol id at the anchor
  * cell only; engine fills the rest.
  *
@@ -32,7 +32,7 @@ export function buildBigSymbols({ app, textures, blurTextures }: SandboxContext)
 
   const reelSet = new ReelSetBuilder()
     .reels(REELS)
-    .visibleSymbols(ROWS)
+    .visibleRows(ROWS)
     .symbolSize(SYMBOL_SIZE, SYMBOL_SIZE)
     .symbolGap(GAP, GAP)
     .symbols((registry) => {
@@ -44,7 +44,7 @@ export function buildBigSymbols({ app, textures, blurTextures }: SandboxContext)
       }
     })
     .weights({ low1: 18, low2: 18, med1: 12, high1: 6, bonus: 1 })
-    // weight 0 — big symbols are placed by the server (or this demo's
+    // weight 0. big symbols are placed by the server (or this demo's
     // nextResult) at anchor cells; random fill cannot place blocks in v1.
     .symbolData({ bonus: { weight: 0, zIndex: 5, size: { w: 2, h: 2 } } })
     .speed('normal', SpeedPresets.NORMAL)

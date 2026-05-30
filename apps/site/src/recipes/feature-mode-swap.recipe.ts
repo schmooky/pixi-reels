@@ -6,7 +6,7 @@
 //
 // Two pipelines active across alternating 3-spin blocks:
 //   BASE mode:    stock FrameBuilder pipeline, no extras
-//   FEATURE mode: `feature-wild-injector` middleware present — every
+//   FEATURE mode: `feature-wild-injector` middleware present. every
 //                 visible cell has a 40% chance to be rewritten to WILD
 //                 at frame-build time
 //
@@ -19,7 +19,7 @@ const COLS = 5, ROWS = 3, SIZE = 90;
 
 const reelSet = new ReelSetBuilder()
   .reels(COLS)
-  .visibleSymbols(ROWS)
+  .visibleRows(ROWS)
   .symbolSize(SIZE, SIZE)
   .symbolGap(4, 4)
   .symbols((r) => {
@@ -69,7 +69,7 @@ function exitFeature() {
   reelSet.frame.remove('feature-wild-injector');
 }
 
-// ── Mode banner — big, obvious, unmissable ──────────────────────────────
+// ── Mode banner. big, obvious, unmissable ──────────────────────────────
 const bannerHeight = 42;
 const banner = new PIXI.Container();
 reelSet.addChild(banner);
@@ -152,14 +152,14 @@ return {
 
     // Server provides a boring, no-wild base result every time. In BASE mode
     // the grid stays boring. In FEATURE mode the wild-injector middleware
-    // rewrites ~40% of cells to WILD — the player instantly sees the payoff
+    // rewrites ~40% of cells to WILD. the player instantly sees the payoff
     // of being in the feature.
     const grid = Array.from({ length: COLS }, () =>
       Array.from({ length: ROWS }, () =>
         FILLER[Math.floor(Math.random() * FILLER.length)],
       ),
     );
-    reelSet.setResult(grid);
+    reelSet.setResult(grid.map((visible) => ({ visible })));
     await promise;
     spinCount++;
 

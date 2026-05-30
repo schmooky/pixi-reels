@@ -3,15 +3,15 @@ layout: ../../layouts/Docs.astro
 title: Events
 section: wiki
 eyebrow: API
-description: The full typed event surface — spin, cascade, pin, MultiWays, win, speed, spotlight.
+description: The full typed event surface. spin, cascade, pin, MultiWays, win, speed, spotlight.
 ---
 
 Two emitters:
 
-- `reelSet.events` — typed `EventEmitter<ReelSetEvents>`. Domain-level events for the whole board.
-- `reel.events` — typed `EventEmitter<ReelEvents>`. Per-column phase / symbol / land events.
+- `reelSet.events`. typed `EventEmitter<ReelSetEvents>`. Domain-level events for the whole board.
+- `reel.events`. typed `EventEmitter<ReelEvents>`. Per-column phase / symbol / land events.
 
-Both emitters' `on(name, cb)` returns an `off()` function for unsubscription. The library cleans up its own listeners on `destroy()`; a thrown exception inside a listener does not stop other listeners on the same event from running (but it is logged and may pollute your error console — handle your own errors).
+Both emitters' `on(name, cb)` returns an `off()` function for unsubscription. The library cleans up its own listeners on `destroy()`; a thrown exception inside a listener does not stop other listeners on the same event from running (but it is logged and may pollute your error console. handle your own errors).
 
 ## Quick map
 
@@ -27,14 +27,14 @@ Both emitters' `on(name, cb)` returns an `off()` function for unsubscription. Th
 | MultiWays | `shape:changed` · `adjust:start` · `adjust:complete` | `setShape()` |
 | Lifecycle | `destroyed` | `destroy()` |
 
-Every cascade event uses the same three-part shape: `cascade:<scope>:<step>`. Scopes are `chain` (one stage inside the runCascade loop), `fall` / `place` / `dropIn` / `gravity` (phase-level animation), `destroy` (one batch of destroySymbols). Steps are `start` / `symbol` / `end` — `:symbol` appears only on the per-cell variants of fall, dropIn, and gravity. `:place` has only `:end` because placement is a single-moment swap with no animation. The runCascade chain itself is delimited by the returned `Promise` — `await` the call to know when it's done.
+Every cascade event uses the same three-part shape: `cascade:<scope>:<step>`. Scopes are `chain` (one stage inside the runCascade loop), `fall` / `place` / `dropIn` / `gravity` (phase-level animation), `destroy` (one batch of destroySymbols). Steps are `start` / `symbol` / `end`. `:symbol` appears only on the per-cell variants of fall, dropIn, and gravity. `:place` has only `:end` because placement is a single-moment swap with no animation. The runCascade chain itself is delimited by the returned `Promise`. `await` the call to know when it's done.
 
 ## Spin lifecycle
 
 | Event | Payload | When |
 |---|---|---|
-| `spin:start` | — | Any `spin()` or `refill()` call. Cascades emit this per refill. |
-| `spin:allStarted` | — | Every non-held reel is in the `SPIN` phase. Cascade refills skip this event. |
+| `spin:start` |. | Any `spin()` or `refill()` call. Cascades emit this per refill. |
+| `spin:allStarted` |. | Every non-held reel is in the `SPIN` phase. Cascade refills skip this event. |
 | `spin:stopping` | `(reelIndex: number)` | A reel begins `STOP` (held reels never fire). |
 | `spin:reelLanded` | `(reelIndex: number, symbols: string[])` | An individual reel landed. `symbols` is its full visible column. |
 | `spin:allLanded` | `(result: SpinResult)` | Last non-held reel landed. |
@@ -52,8 +52,8 @@ interface SpinResult {
 
 | Event | Payload | When |
 |---|---|---|
-| `skip:requested` | — | A slam fires — from `skip()`, `requestSkip()` (after `setResult` arrives), or `slamStop()`. |
-| `skip:completed` | — | Every un-landed reel has been force-landed at the end of the slam. |
+| `skip:requested` |. | A slam fires. from `skip()`, `requestSkip()` (after `setResult` arrives), or `slamStop()`. |
+| `skip:completed` |. | Every un-landed reel has been force-landed at the end of the slam. |
 | `skip:boosted` | `({ previous: SpeedProfile, current: SpeedProfile })` | First `skip()` press of a STANDARD-mode round; engine bumped to the fastest registered profile for the rest of the round. Cascade rounds set the auto-slam-refills flag instead and never emit this event. Restore on the next `spin()` does **not** re-emit. |
 
 ```ts
@@ -74,7 +74,7 @@ Available only when the builder used `.tumble({...})`. The per-symbol events fir
 
 ### Chain-scoped (one stage inside the loop)
 
-`runCascade(...)` returns `Promise<RunCascadeResult>` — `await` the call to know when the chain is over and read the summary. There's no separate round-start / round-end event because "round" isn't a reel-engine concept (the slot industry uses "round" for a bet→payout transaction; for the engine, a round is press-spin → all-stopped, which `spin:start` / `spin:allLanded` already cover).
+`runCascade(...)` returns `Promise<RunCascadeResult>`. `await` the call to know when the chain is over and read the summary. There's no separate round-start / round-end event because "round" isn't a reel-engine concept (the slot industry uses "round" for a bet→payout transaction; for the engine, a round is press-spin → all-stopped, which `spin:start` / `spin:allLanded` already cover).
 
 ```ts
 interface RunCascadeResult {
@@ -87,21 +87,21 @@ interface RunCascadeResult {
 
 | Event | Payload | When |
 |---|---|---|
-| `cascade:chain:start` | `{ chain: number, winners: readonly Cell[], currentGrid: string[][] }` | A chain stage opens inside `runCascade()` — winners were detected, destroy is about to run. `chain` is 1-indexed. |
-| `cascade:chain:end` | `{ chain: number, winners: readonly Cell[], nextGrid: string[][] }` | A chain stage closes — both destroy AND refill drop-in finished. About to loop back to `detectWinners` (or exit if winners came back empty). |
+| `cascade:chain:start` | `{ chain: number, winners: readonly Cell[], currentGrid: string[][] }` | A chain stage opens inside `runCascade()`. winners were detected, destroy is about to run. `chain` is 1-indexed. |
+| `cascade:chain:end` | `{ chain: number, winners: readonly Cell[], nextGrid: string[][] }` | A chain stage closes. both destroy AND refill drop-in finished. About to loop back to `detectWinners` (or exit if winners came back empty). |
 
 ### Phase-scoped (animation events on each refill or initial drop)
 
 | Event | Payload | When |
 |---|---|---|
-| `cascade:fall:start` | `{ reelIndex: number }` | A reel's fall-out begins (Moment A only — refill skips fall). |
+| `cascade:fall:start` | `{ reelIndex: number }` | A reel's fall-out begins (Moment A only. refill skips fall). |
 | `cascade:fall:symbol` | `{ symbol: ReelSymbol, view: Container, reelIndex: number, rowIndex: number, duration: number, ease: string, distance: number }` | One symbol's fall tween is about to start. Read `symbol` / `view` to attach a parallel tween. |
 | `cascade:fall:end` | `{ reelIndex: number }` | A reel's last fall tween settled. |
 | `cascade:place:end` | `{ reelIndex: number, placedSymbols: readonly ReelSymbol[], isInitial: boolean, winnerRows: readonly number[] }` | New identities placed AND snapped to grid, **before** drop-in starts. Canonical decoration hook. `isInitial: true` on Moment A; `isInitial: false` + populated `winnerRows` on refills. Place has no `:start` because it's a synchronous swap. |
 | `cascade:dropIn:start` | `{ reelIndex: number }` | A reel's drop-in begins. |
 | `cascade:dropIn:symbol` | `{ symbol: ReelSymbol, view: Container, reelIndex: number, rowIndex: number, duration: number, ease: string, offsetRows: number }` | One symbol's drop-in tween is about to start. `offsetRows` is the number of cells this symbol traverses (1 for top-row refills, more for survivors sliding past larger holes). |
 | `cascade:dropIn:end` | `{ reelIndex: number }` | A reel's last drop-in tween settled. |
-| `cascade:gravity:start` | `{ reelIndex: number }` | **Two-stage refill only** (`mode: 'gravity-then-drop'`) — a reel's survivor-settle phase begins, before new symbols enter. Not emitted when refill is `'combined'`. |
+| `cascade:gravity:start` | `{ reelIndex: number }` | **Two-stage refill only** (`mode: 'gravity-then-drop'`). a reel's survivor-settle phase begins, before new symbols enter. Not emitted when refill is `'combined'`. |
 | `cascade:gravity:symbol` | `{ symbol: ReelSymbol, view: Container, reelIndex: number, rowIndex: number, duration: number, ease: string, offsetRows: number }` | One survivor's settle tween about to start. Same payload shape as `dropIn:symbol`, scoped to survivors only. |
 | `cascade:gravity:end` | `{ reelIndex: number }` | A reel's survivor settle landed. The library now waits for `gravityHoldMs` + `gravityHold` to resolve (in parallel via `Promise.all`) before the drop-in stage begins. Use this as the asymmetric-anticipation cue. |
 
@@ -109,12 +109,12 @@ interface RunCascadeResult {
 
 | Event | Payload | When |
 |---|---|---|
-| `cascade:destroy:start` | `{ cells: readonly Cell[] }` | `destroySymbols(...)` is about to start. Fires from EVERY call — both direct and inside `runCascade`. Empty-batch calls do **not** emit. |
-| `cascade:destroy:end` | `{ cells: readonly Cell[] }` | `destroySymbols(...)` finished — every `playDestroy()` resolved and the viewport dim (if any) was restored. |
+| `cascade:destroy:start` | `{ cells: readonly Cell[] }` | `destroySymbols(...)` is about to start. Fires from EVERY call. both direct and inside `runCascade`. Empty-batch calls do **not** emit. |
+| `cascade:destroy:end` | `{ cells: readonly Cell[] }` | `destroySymbols(...)` finished. every `playDestroy()` resolved and the viewport dim (if any) was restored. |
 
 ### Event order inside one `runCascade()` call
 
-Combined-mode refill (default — `refillMode: 'combined'`):
+Combined-mode refill (default. `refillMode: 'combined'`):
 
 ```text
 for each chain stage with winners:
@@ -124,7 +124,7 @@ for each chain stage with winners:
     cascade:destroy:end
     onCascade callback (optional)
     pause (pauseAfterDestroyMs)
-    (refill: per reel — cascade:place:end → cascade:dropIn:start → ... → cascade:dropIn:end)
+    (refill: per reel. cascade:place:end → cascade:dropIn:start → ... → cascade:dropIn:end)
   cascade:chain:end
 // then the awaited runCascade promise resolves with RunCascadeResult
 ```
@@ -137,17 +137,17 @@ for each chain stage with winners:
     cascade:destroy:start → ... → cascade:destroy:end
     onCascade callback (optional)
     pause (pauseAfterDestroyMs)
-    (gravity stage: per reel — cascade:place:end → cascade:gravity:start → cascade:gravity:symbol* → cascade:gravity:end)
+    (gravity stage: per reel. cascade:place:end → cascade:gravity:start → cascade:gravity:symbol* → cascade:gravity:end)
     hold (Promise.all of `gravityHoldMs` setTimeout + caller-supplied `gravityHold` promise)
     onGravityComplete callback (optional)
-    (drop-in stage: per reel — cascade:dropIn:start → cascade:dropIn:symbol* → cascade:dropIn:end)
+    (drop-in stage: per reel. cascade:dropIn:start → cascade:dropIn:symbol* → cascade:dropIn:end)
   cascade:chain:end
 ```
 
 ### Common patterns
 
 ```ts
-// Lock auto-play around the call itself — `await` IS the lifecycle.
+// Lock auto-play around the call itself. `await` IS the lifecycle.
 hud.lock();
 try {
   await reelSet.runCascade({ detectWinners, nextGrid });
@@ -181,26 +181,26 @@ reelSet.events.on('cascade:dropIn:symbol', ({ view, duration }) => {
 | Event | Payload | When |
 |---|---|---|
 | `spotlight:start` | `(positions: SymbolPosition[])` | `spotlight.cycle(...)` began. |
-| `spotlight:end` | — | Spotlight finished. |
+| `spotlight:end` |. | Spotlight finished. |
 
 ## Wins (WinPresenter)
 
-Emitted by `WinPresenter` only — listeners are dead weight if you don't use it.
+Emitted by `WinPresenter` only. listeners are dead weight if you don't use it.
 
 | Event | Payload | When |
 |---|---|---|
 | `win:start` | `(wins: readonly Win[])` | A presenter sequence began. List is sorted by `value` desc by default. |
-| `win:group` | `(win: Win, cells: readonly SymbolPosition[])` | Each individual win — fires once per win, before its cells animate. |
+| `win:group` | `(win: Win, cells: readonly SymbolPosition[])` | Each individual win. fires once per win, before its cells animate. |
 | `win:symbol` | `(symbol: unknown, cell: SymbolPosition, win: Win)` | Each cell, one at a time when `WinPresenter.stagger > 0`. Cast `symbol` to your concrete `ReelSymbol` subclass. |
-| `win:end` | `(reason: 'complete' \| 'aborted')` | Sequence finished — either naturally or via abort. |
+| `win:end` | `(reason: 'complete' \| 'aborted')` | Sequence finished. either naturally or via abort. |
 
 ## Pins
 
 | Event | Payload | When |
 |---|---|---|
-| `pin:placed` | `(pin: CellPin)` | `reelSet.pin(...)` succeeded. Replacing an existing pin does NOT fire `pin:expired` for the old one — only this event fires (silent replace). |
+| `pin:placed` | `(pin: CellPin)` | `reelSet.pin(...)` succeeded. Replacing an existing pin does NOT fire `pin:expired` for the old one. only this event fires (silent replace). |
 | `pin:moved` | `(pin: CellPin, from: { col: number; row: number })` | `reelSet.movePin(...)` resolved. The pin's `col`/`row` are already at the destination; `from` carries the origin. |
-| `pin:expired` | `(pin: CellPin, reason: PinExpireReason)` | Pin removed — `'explicit'` (via `unpin`), `'turns'` (numeric counter hit zero), or `'eval'` (round-scoped pin reset on the next spin). |
+| `pin:expired` | `(pin: CellPin, reason: PinExpireReason)` | Pin removed. `'explicit'` (via `unpin`), `'turns'` (numeric counter hit zero), or `'eval'` (round-scoped pin reset on the next spin). |
 | `pin:migrated` | `(pin: CellPin, info: { fromRow: number; toRow: number; clamped: boolean; reelIndex: number })` | MultiWays reshape moved a pin to a new row inside the same reel. `clamped: true` when the origin row no longer fits the new shape. Never emitted on non-MultiWays slots. |
 | `pin:overlayCreated` | `(pin: CellPin, overlay: unknown)` | Mid-spin overlay symbol mounted. Cast `overlay` to your concrete symbol class (typed as `unknown` to keep this module free of symbol-layer imports). |
 | `pin:overlayDestroyed` | `(pin: CellPin, overlay: unknown)` | Mid-spin overlay torn down on land / unpin / replacement. Fires BEFORE the symbol returns to the pool, so you can stop animations on a still-valid instance. |
@@ -209,7 +209,7 @@ Emitted by `WinPresenter` only — listeners are dead weight if you don't use it
 
 | Event | Payload | When |
 |---|---|---|
-| `shape:changed` | `(rowsPerReel: number[])` | `setShape(...)` accepted. Fires before any geometry change — pin migrations and AdjustPhase happen later in the spin. |
+| `shape:changed` | `(rowsPerReel: number[])` | `setShape(...)` accepted. Fires before any geometry change. pin migrations and AdjustPhase happen later in the spin. |
 | `adjust:start` | `({ reelIndex: number, fromRows: number, toRows: number })` | Per-reel `AdjustPhase` entered. |
 | `adjust:complete` | `({ reelIndex: number })` | Per-reel `AdjustPhase` finished. |
 
@@ -217,7 +217,7 @@ Emitted by `WinPresenter` only — listeners are dead weight if you don't use it
 
 | Event | Payload | When |
 |---|---|---|
-| `destroyed` | — | `reelSet.destroy()` called. Listeners attached BEFORE this fire one last time, then the emitter clears every listener. |
+| `destroyed` |. | `reelSet.destroy()` called. Listeners attached BEFORE this fire one last time, then the emitter clears every listener. |
 
 ## Per-reel events
 
@@ -230,7 +230,6 @@ type ReelEvents = {
     // | 'cascade:fall' | 'cascade:place' | 'cascade:dropIn'
   'phase:exit':      [phaseName: string];
   'symbol:created':  [symbolId: string, row: number];
-  'symbol:recycled': [symbolId: string, row: number];
   'landed':          [symbols: string[]];
   'destroyed':       [];
 };
@@ -245,6 +244,6 @@ reelSet.getReel(4).events.on('phase:enter', (name) => {
 ## Listener etiquette
 
 - Subscribe once at startup; `on()` returns an `off()` you can store for hot-swap modules.
-- Async listeners run "fire and forget." If you must `await` per-event work, queue it yourself — the engine doesn't.
-- The library emits `cascade:*:symbol` events BEFORE its own tween starts. Your listener can read the same `view` and queue a parallel tween — they'll run in lockstep.
+- Async listeners run "fire and forget." If you must `await` per-event work, queue it yourself. the engine doesn't.
+- The library emits `cascade:*:symbol` events BEFORE its own tween starts. Your listener can read the same `view` and queue a parallel tween. they'll run in lockstep.
 - The `Cell` type used in cascade payloads is `{ reel: number; row: number }` (column = `reel`, visible row = `row`). Same shape as `destroySymbols` input.

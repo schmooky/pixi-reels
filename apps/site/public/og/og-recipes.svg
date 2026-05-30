@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fff7ec"/>
+      <stop offset="1" stop-color="#ffe6cc"/>
+    </linearGradient>
+    <linearGradient id="orange" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f97316"/>
+      <stop offset="1" stop-color="#ffa436"/>
+    </linearGradient>
+    <pattern id="grid" width="36" height="36" patternUnits="userSpaceOnUse">
+      <path d="M 36 0 L 0 0 0 36" fill="none" stroke="#f4cfa3" stroke-width="1" opacity="0.6"/>
+    </pattern>
+    <filter id="softShadow"><feGaussianBlur in="SourceAlpha" stdDeviation="6"/><feOffset dx="0" dy="6"/><feComponentTransfer><feFuncA type="linear" slope="0.18"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect width="1200" height="630" fill="url(#grid)"/>
+
+  <g transform="translate(80,120)">
+    <g>
+      <rect x="-12" y="-44" width="170" height="38" rx="19" fill="#f97316" opacity="0.14"/>
+      <text x="73" y="-17" text-anchor="middle" font-family="ui-monospace,monospace" font-size="14" font-weight="700" fill="#c2410c" letter-spacing="2.5">RECIPES · 1.0</text>
+    </g>
+    <text x="0" y="72" font-family="Inter,system-ui,sans-serif" font-size="100" font-weight="700" fill="#1c1410" letter-spacing="-3">~70 mechanics,</text>
+    <text x="0" y="186" font-family="Inter,system-ui,sans-serif" font-size="100" font-weight="700" fill="url(#orange)" letter-spacing="-3">copy-paste ready.</text>
+    <text x="0" y="256" font-family="Inter,system-ui,sans-serif" font-size="28" font-weight="400" fill="#5a4a3c">Sticky wilds. Walking wilds. Cascade physics. MultiWays.</text>
+    <text x="0" y="296" font-family="Inter,system-ui,sans-serif" font-size="28" font-weight="400" fill="#5a4a3c">Big symbols. Mystery reveals. Each one runs in the browser.</text>
+    <text x="0" y="396" font-family="ui-monospace,monospace" font-size="18" fill="#8a6a4c">◆ pixi-reels.schmooky.dev/recipes/</text>
+  </g>
+
+  <!-- Right: recipe tile mosaic -->
+  <g transform="translate(770,140)" filter="url(#softShadow)" font-family="Inter,system-ui,sans-serif" font-size="13" font-weight="700" fill="#1c1410">
+    <g><rect x="0"   y="0"   width="170" height="80" rx="14" fill="#f97316"/><text x="14" y="32">Sticky wild</text><text x="14" y="56" font-size="11" font-weight="500" fill="#1c1410" opacity="0.75">pin · 30 LOC</text></g>
+    <g><rect x="180" y="0"   width="170" height="80" rx="14" fill="#ffa436"/><text x="194" y="32">Cascade 6×5</text><text x="194" y="56" font-size="11" font-weight="500" fill="#1c1410" opacity="0.75">tumble · winners</text></g>
+    <g><rect x="0"   y="92"  width="170" height="80" rx="14" fill="#ffc766"/><text x="14" y="124">MultiWays</text><text x="14" y="148" font-size="11" font-weight="500" fill="#1c1410" opacity="0.75">per-spin reshape</text></g>
+    <g><rect x="180" y="92"  width="170" height="80" rx="14" fill="#f97316"/><text x="194" y="124">Big symbol</text><text x="194" y="148" font-size="11" font-weight="500" fill="#1c1410" opacity="0.75">2×2 / 3×3 block</text></g>
+    <g><rect x="0"   y="184" width="170" height="80" rx="14" fill="#ffa436"/><text x="14" y="216">Walking wild</text><text x="14" y="240" font-size="11" font-weight="500" fill="#1c1410" opacity="0.75">movePin · GSAP</text></g>
+    <g><rect x="180" y="184" width="170" height="80" rx="14" fill="#ffc766"/><text x="194" y="216">Mystery</text><text x="194" y="240" font-size="11" font-weight="500" fill="#1c1410" opacity="0.75">reveal · pin</text></g>
+    <g><rect x="0"   y="276" width="170" height="80" rx="14" fill="#f97316"/><text x="14" y="308">Nudge</text><text x="14" y="332" font-size="11" font-weight="500" fill="#1c1410" opacity="0.75">tail-reveal</text></g>
+    <g><rect x="180" y="276" width="170" height="80" rx="14" fill="#ffa436"/><text x="194" y="308">Hold &amp; Win</text><text x="194" y="332" font-size="11" font-weight="500" fill="#1c1410" opacity="0.75">respin · coins</text></g>
+  </g>
+</svg>

@@ -18,7 +18,7 @@ function makeHarness() {
   });
 }
 
-describe('CellPin — no-pin baseline (regression)', () => {
+describe('CellPin. no-pin baseline (regression)', () => {
   it('setResult behaves identically when no pins are set', async () => {
     const h = makeHarness();
     try {
@@ -40,7 +40,7 @@ describe('CellPin — no-pin baseline (regression)', () => {
   });
 });
 
-describe('CellPin — overlay onto setResult', () => {
+describe('CellPin. overlay onto setResult', () => {
   it('forces the pinned symbol to land at (col, row)', async () => {
     const h = makeHarness();
     try {
@@ -85,7 +85,7 @@ describe('CellPin — overlay onto setResult', () => {
   });
 });
 
-describe('CellPin — turns countdown', () => {
+describe('CellPin. turns countdown', () => {
   it('decrements after each completed spin and expires at 0', async () => {
     const h = makeHarness();
     try {
@@ -96,22 +96,22 @@ describe('CellPin — turns countdown', () => {
         ['a', 'b', 'c'], ['a', 'b', 'c'],
       ];
 
-      // Spin 1 — wild lands, turns: 3 → 2
+      // Spin 1. wild lands, turns: 3 → 2
       await h.spinAndLand(target);
       expect(h.reelSet.reels[2].getVisibleSymbols()[1]).toBe('wild');
       expect(h.reelSet.getPin(2, 1)?.turns).toBe(2);
 
-      // Spin 2 — wild lands, turns: 2 → 1
+      // Spin 2. wild lands, turns: 2 → 1
       await h.spinAndLand(target);
       expect(h.reelSet.reels[2].getVisibleSymbols()[1]).toBe('wild');
       expect(h.reelSet.getPin(2, 1)?.turns).toBe(1);
 
-      // Spin 3 — wild lands, turns: 1 → 0 → expired
+      // Spin 3. wild lands, turns: 1 → 0 → expired
       await h.spinAndLand(target);
       expect(h.reelSet.reels[2].getVisibleSymbols()[1]).toBe('wild');
       expect(h.reelSet.getPin(2, 1)).toBeUndefined();
 
-      // Spin 4 — no pin, server's 'b' lands
+      // Spin 4. no pin, server's 'b' lands
       await h.spinAndLand(target);
       expect(h.reelSet.reels[2].getVisibleSymbols()[1]).toBe('b');
     } finally {
@@ -120,7 +120,7 @@ describe('CellPin — turns countdown', () => {
   });
 });
 
-describe("CellPin — 'eval' lifetime", () => {
+describe("CellPin. 'eval' lifetime", () => {
   it("applies during the current spin, clears at next spin:start", async () => {
     const h = makeHarness();
     try {
@@ -129,7 +129,7 @@ describe("CellPin — 'eval' lifetime", () => {
         ['a', 'b', 'c'], ['a', 'b', 'c'],
       ];
 
-      // Spin 1 — normal landing
+      // Spin 1. normal landing
       await h.spinAndLand(target);
       expect(h.reelSet.reels[0].getVisibleSymbols()[0]).toBe('a');
 
@@ -138,7 +138,7 @@ describe("CellPin — 'eval' lifetime", () => {
       expect(h.reelSet.reels[0].getVisibleSymbols()[0]).toBe('wild');
       expect(h.reelSet.pins.size).toBe(1);
 
-      // Spin 2 — eval pin is cleared on spin:start
+      // Spin 2. eval pin is cleared on spin:start
       await h.spinAndLand(target);
       expect(h.reelSet.pins.size).toBe(0);
       expect(h.reelSet.reels[0].getVisibleSymbols()[0]).toBe('a');
@@ -148,7 +148,7 @@ describe("CellPin — 'eval' lifetime", () => {
   });
 });
 
-describe('CellPin — permanent lifetime', () => {
+describe('CellPin. permanent lifetime', () => {
   it('persists indefinitely until unpin()', async () => {
     const h = makeHarness();
     try {
@@ -181,7 +181,7 @@ describe('CellPin — permanent lifetime', () => {
   });
 });
 
-describe('CellPin — payload', () => {
+describe('CellPin. payload', () => {
   it('carries arbitrary data that survives spins and is readable', async () => {
     const h = makeHarness();
     try {
@@ -204,7 +204,7 @@ describe('CellPin — payload', () => {
   });
 });
 
-describe('CellPin — idle application', () => {
+describe('CellPin. idle application', () => {
   it('applies the pin visually when the reel is not spinning', async () => {
     const h = makeHarness();
     try {
@@ -224,7 +224,7 @@ describe('CellPin — idle application', () => {
   });
 });
 
-describe('CellPin — events', () => {
+describe('CellPin. events', () => {
   it('fires pin:placed when pinned', () => {
     const h = makeHarness();
     try {
@@ -297,7 +297,7 @@ describe('CellPin — events', () => {
   });
 });
 
-describe('CellPin — bounds and errors', () => {
+describe('CellPin. bounds and errors', () => {
   it('throws when col is out of range', () => {
     const h = makeHarness();
     try {
@@ -328,12 +328,12 @@ describe('CellPin — bounds and errors', () => {
   });
 });
 
-describe('CellPin — multiple pins coexist', () => {
+describe('CellPin. multiple pins coexist', () => {
   it('applies many pins across reels and rows simultaneously', async () => {
     const h = makeHarness();
     try {
       // Pin a diagonal plus a couple variants. All use `turns: 'permanent'`
-      // or numeric turns — `eval` is specifically for post-landing placement
+      // or numeric turns. `eval` is specifically for post-landing placement
       // and would be cleared at spin:start, so not included here.
       h.reelSet.pin(0, 0, 'wild');
       h.reelSet.pin(1, 1, 'wild');
@@ -359,7 +359,7 @@ describe('CellPin — multiple pins coexist', () => {
   });
 });
 
-describe('CellPin — pin replaces existing pin at same cell', () => {
+describe('CellPin. pin replaces existing pin at same cell', () => {
   it('overwrites the previous pin silently', () => {
     const h = makeHarness();
     try {
@@ -377,7 +377,7 @@ describe('CellPin — pin replaces existing pin at same cell', () => {
   });
 });
 
-describe('CellPin — visual overlay during spin motion', () => {
+describe('CellPin. visual overlay during spin motion', () => {
   /**
    * During a spin, the reel strip scrolls through random symbols. A pinned
    * cell's underlying symbol cycles like any other; without an engine
@@ -400,8 +400,11 @@ describe('CellPin — visual overlay during spin motion', () => {
       expect(overlays.has('2:1')).toBe(true);
 
       h.reelSet.setResult([
-        ['a', 'b', 'c'], ['a', 'b', 'c'], ['a', 'b', 'c'],
-        ['a', 'b', 'c'], ['a', 'b', 'c'],
+        { visible: ['a', 'b', 'c'] },
+        { visible: ['a', 'b', 'c'] },
+        { visible: ['a', 'b', 'c'] },
+        { visible: ['a', 'b', 'c'] },
+        { visible: ['a', 'b', 'c'] },
       ]);
       h.reelSet.slamStop();
       await promise;
@@ -427,8 +430,11 @@ describe('CellPin — visual overlay during spin motion', () => {
       expect(overlays.size).toBe(3);
 
       h.reelSet.setResult([
-        ['a', 'b', 'c'], ['a', 'b', 'c'], ['a', 'b', 'c'],
-        ['a', 'b', 'c'], ['a', 'b', 'c'],
+        { visible: ['a', 'b', 'c'] },
+        { visible: ['a', 'b', 'c'] },
+        { visible: ['a', 'b', 'c'] },
+        { visible: ['a', 'b', 'c'] },
+        { visible: ['a', 'b', 'c'] },
       ]);
       h.reelSet.slamStop();
       await promise;
@@ -453,8 +459,11 @@ describe('CellPin — visual overlay during spin motion', () => {
       expect(overlays.size).toBe(1); // overlay created mid-spin
 
       h.reelSet.setResult([
-        ['a', 'b', 'c'], ['a', 'b', 'c'], ['a', 'b', 'c'],
-        ['a', 'b', 'c'], ['a', 'b', 'c'],
+        { visible: ['a', 'b', 'c'] },
+        { visible: ['a', 'b', 'c'] },
+        { visible: ['a', 'b', 'c'] },
+        { visible: ['a', 'b', 'c'] },
+        { visible: ['a', 'b', 'c'] },
       ]);
       h.reelSet.slamStop();
       await promise;
@@ -480,8 +489,11 @@ describe('CellPin — visual overlay during spin motion', () => {
       expect(overlays.size).toBe(0);
 
       h.reelSet.setResult([
-        ['a', 'b', 'c'], ['a', 'b', 'c'], ['a', 'b', 'c'],
-        ['a', 'b', 'c'], ['a', 'b', 'c'],
+        { visible: ['a', 'b', 'c'] },
+        { visible: ['a', 'b', 'c'] },
+        { visible: ['a', 'b', 'c'] },
+        { visible: ['a', 'b', 'c'] },
+        { visible: ['a', 'b', 'c'] },
       ]);
       h.reelSet.slamStop();
       await promise;
@@ -491,10 +503,10 @@ describe('CellPin — visual overlay during spin motion', () => {
   });
 });
 
-describe('CellPin — overlay events (pin:overlayCreated / :overlayDestroyed)', () => {
+describe('CellPin. overlay events (pin:overlayCreated / :overlayDestroyed)', () => {
   /**
    * These events expose the engine-managed overlay ReelSymbol so game code
-   * can drive animation state on it — e.g. set a Spine animation track for
+   * can drive animation state on it. e.g. set a Spine animation track for
    * the duration the pin is sticky during a spin.
    */
   it('fires pin:overlayCreated with the pin and the overlay symbol', async () => {
@@ -517,8 +529,11 @@ describe('CellPin — overlay events (pin:overlayCreated / :overlayDestroyed)', 
       expect(overlay.view).toBeDefined();
 
       h.reelSet.setResult([
-        ['a', 'b', 'c'], ['a', 'b', 'c'], ['a', 'b', 'c'],
-        ['a', 'b', 'c'], ['a', 'b', 'c'],
+        { visible: ['a', 'b', 'c'] },
+        { visible: ['a', 'b', 'c'] },
+        { visible: ['a', 'b', 'c'] },
+        { visible: ['a', 'b', 'c'] },
+        { visible: ['a', 'b', 'c'] },
       ]);
       h.reelSet.slamStop();
       await promise;
@@ -532,7 +547,7 @@ describe('CellPin — overlay events (pin:overlayCreated / :overlayDestroyed)', 
     try {
       h.reelSet.pin(2, 1, 'wild');
 
-      // Capture state at event time — the overlay is recycled to the pool
+      // Capture state at event time. the overlay is recycled to the pool
       // right after the event fires (deactivate zeroes _symbolId).
       let capturedOverlaySymbolId: string | null = null;
       let capturedPinCol = -1;
@@ -545,8 +560,11 @@ describe('CellPin — overlay events (pin:overlayCreated / :overlayDestroyed)', 
 
       const promise = h.reelSet.spin();
       h.reelSet.setResult([
-        ['a', 'b', 'c'], ['a', 'b', 'c'], ['a', 'b', 'c'],
-        ['a', 'b', 'c'], ['a', 'b', 'c'],
+        { visible: ['a', 'b', 'c'] },
+        { visible: ['a', 'b', 'c'] },
+        { visible: ['a', 'b', 'c'] },
+        { visible: ['a', 'b', 'c'] },
+        { visible: ['a', 'b', 'c'] },
       ]);
       h.reelSet.slamStop();
       await promise;
@@ -570,8 +588,11 @@ describe('CellPin — overlay events (pin:overlayCreated / :overlayDestroyed)', 
       expect(events.length).toBeGreaterThanOrEqual(1);
 
       h.reelSet.setResult([
-        ['a', 'b', 'c'], ['a', 'b', 'c'], ['a', 'b', 'c'],
-        ['a', 'b', 'c'], ['a', 'b', 'c'],
+        { visible: ['a', 'b', 'c'] },
+        { visible: ['a', 'b', 'c'] },
+        { visible: ['a', 'b', 'c'] },
+        { visible: ['a', 'b', 'c'] },
+        { visible: ['a', 'b', 'c'] },
       ]);
       h.reelSet.slamStop();
       await promise;

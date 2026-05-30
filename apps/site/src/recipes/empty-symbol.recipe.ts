@@ -14,14 +14,14 @@
 //     the player's attention with the pinned coins; an empty symbol
 //     gets out of the way.
 //   - Weighting an EMPTY id heavily (and a real symbol lightly) makes
-//     valuable symbols feel rare and exciting — every coin landing on
+//     valuable symbols feel rare and exciting. every coin landing on
 //     an otherwise-blank board reads as a hit.
 //   - Random fill still needs SOME id to put in each cell. EmptySymbol
 //     is that id when "no symbol" is the desired visual.
 //
 // What this recipe runs:
 //   - 3 reels, 3 visible rows. Symbol set is `{ coin, empty }`.
-//   - Weights `{ coin: 1, empty: 6 }` — most cells land blank; coins
+//   - Weights `{ coin: 1, empty: 6 }`. most cells land blank; coins
 //     scatter sparsely (~1 in 7 by weight).
 //   - Hit Spin to spin all three reels. Coins land in a sea of nothing.
 
@@ -35,7 +35,7 @@ const GAP = 6;
 
 const reelSet = new ReelSetBuilder()
   .reels(REELS)
-  .visibleSymbols(ROWS)
+  .visibleRows(ROWS)
   .symbolSize(CELL, CELL)
   .symbolGap(GAP, GAP)
   .symbols((registry) => {

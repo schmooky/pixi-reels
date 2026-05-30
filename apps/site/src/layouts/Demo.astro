@@ -22,7 +22,7 @@ const subtitle = props.subtitle ?? fm.subtitle ?? '';
 const description =
   props.description ??
   fm.description ??
-  `${title} — live slot mechanic sandbox built on pixi-reels.`;
+  `${title}. live slot mechanic sandbox built on pixi-reels.`;
 const tags = props.tags ?? fm.tags ?? [];
 const pathname = Astro.url.pathname;
 
@@ -41,7 +41,6 @@ const jsonLd = [
   path={pathname}
   type="article"
   article={{ section: 'Demos', tags }}
-  keywords={tags}
   jsonLd={jsonLd}
 >
   <div class="container max-w-[1100px] py-10 animate-fade-in">

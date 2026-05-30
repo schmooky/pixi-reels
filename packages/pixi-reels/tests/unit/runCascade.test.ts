@@ -28,7 +28,7 @@ function buildTumbleHarness(initialFrame: string[][]): Harness {
       fall:   { duration: 0, ease: 'none', rowStagger: 0 },
       dropIn: { duration: 0, ease: 'none', rowStagger: 0, distance: 'perHole' },
     })
-    .initialFrame(initialFrame)
+    .initialFrame(initialFrame.map((visible) => ({ visible })))
     .ticker(ticker as unknown as Ticker)
     .build();
   return {
@@ -103,7 +103,7 @@ describe('ReelSet.runCascade', () => {
       ['a', 'a', 'a'],
     ]);
 
-    // Detect always returns a winner — without maxChain this would loop forever.
+    // Detect always returns a winner. without maxChain this would loop forever.
     const summary = await reelSet.runCascade({
       detectWinners: () => [{ reel: 0, row: 0 }],
       nextGrid: (grid) => grid.map((col) => ['b', col[0], col[1]]),
@@ -269,7 +269,7 @@ describe('ReelSet.runCascade', () => {
 
   it('aborting during pauseAfterDestroyMs exits the loop without waiting out the timer', async () => {
     // Before the fix, the in-loop setTimeout ran to completion regardless
-    // of abort — adding up to `pauseAfterDestroyMs` of dead air between
+    // of abort. adding up to `pauseAfterDestroyMs` of dead air between
     // slam intent and loop exit. Now the timeout is cancelled on abort,
     // so the loop unblocks within a microtask.
     const { reelSet, destroy } = buildTumbleHarness([
@@ -292,7 +292,7 @@ describe('ReelSet.runCascade', () => {
         // measures only the pause itself, not surrounding awaits.
         if (detects === 1) controller.abort();
       },
-      pauseAfterDestroyMs: 2000,  // 2 s — the test would time out if not aborted
+      pauseAfterDestroyMs: 2000,  // 2 s. the test would time out if not aborted
       signal: controller.signal,
       destroyOptions: { zIndex: null },
     });
@@ -321,7 +321,7 @@ describe('ReelSet.runCascade', () => {
       nextGrid: (grid) => grid.map((col) => ['b', col[0], col[1]]),
       onCascade: () => {
         // Simulate the engine firing `skip:requested` mid-chain (as it
-        // would when reelSet.skip() lands during an in-flight refill).
+        // would when reelSet.skipSpin() lands during an in-flight refill).
         // Direct emit avoids depending on real GSAP-driven destroy timing
         // in the FakeTicker harness; the contract being verified is
         // "runCascade observes skip:requested and exits at the next
@@ -345,7 +345,7 @@ describe('cascade:place:end payload', () => {
   it('reports isInitial=true and empty winnerRows on the initial drop', async () => {
     // Test the phase directly so we don't depend on a real gsap ticker
     // driving the fall-phase delayed-calls. The phase is a pure unit
-    // here — give it a target frame, run it, capture the event payload.
+    // here. give it a target frame, run it, capture the event payload.
     const { CascadePlacePhase } = await import('../../src/spin/phases/CascadePlacePhase.js');
     const { EventEmitter } = await import('../../src/events/EventEmitter.js');
     const { SpeedPresets } = await import('../../src/config/SpeedPresets.js');

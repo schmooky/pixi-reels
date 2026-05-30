@@ -11,6 +11,17 @@ const repoRoot = resolve(here, '../..');
 // https://astro.build/config
 export default defineConfig({
   site: 'https://pixi-reels.schmooky.dev',
+  redirects: {
+    // Renamed in 1.0.0. the pin primitive is general, not Spine-specific.
+    '/guides/spine-pins/': '/guides/pins/',
+  },
+  // Prefetch on hover for instant subsequent navigations. Doesn't affect
+  // the initial paint, but turns sub-200ms transitions into 0ms ones for
+  // anyone reading the docs.
+  prefetch: {
+    defaultStrategy: 'hover',
+    prefetchAll: false,
+  },
   integrations: [
     mdx(),
     react(),
@@ -21,9 +32,10 @@ export default defineConfig({
       alias: [
         // The subpath alias must win over the bare one, so order matters:
         // '@rollup/plugin-alias' style arrays respect order of definition.
-        // Both point at THIS branch's source — the site is always built
+        // Both point at THIS branch's source. the site is always built
         // against the local library, never against a published npm version.
         { find: /^pixi-reels\/spine$/, replacement: resolve(repoRoot, 'packages/pixi-reels/src/spine/index.ts') },
+        { find: /^pixi-reels\/testing$/, replacement: resolve(repoRoot, 'packages/pixi-reels/src/testing/index.ts') },
         { find: /^pixi-reels$/, replacement: resolve(repoRoot, 'packages/pixi-reels/src/index.ts') },
         { find: '@', replacement: resolve(here, 'src') },
         // gsap is a peer dep pulled in by examples/shared (BlurSpriteSymbol);

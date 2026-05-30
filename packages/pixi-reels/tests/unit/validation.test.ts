@@ -20,22 +20,6 @@ describe('builder validation', () => {
     ).toThrow(/cannot call both visibleRows\(\) and visibleRowsPerReel\(\)/);
   });
 
-  it('visibleSymbols() is preserved as an alias for visibleRows()', () => {
-    // Back-compat: visibleSymbols still works exactly like visibleRows.
-    const builder = new ReelSetBuilder()
-      .reels(3)
-      .visibleSymbols(3)
-      .symbolSize(100, 100)
-      .ticker(new FakeTicker() as unknown as Ticker)
-      .symbols((r) => r.register('a', HeadlessSymbol, {}));
-    const reelSet = builder.build();
-    try {
-      expect(reelSet.reels.map((r) => r.visibleRows)).toEqual([3, 3, 3]);
-    } finally {
-      reelSet.destroy();
-    }
-  });
-
   it('rejects multiways() + visibleRowsPerReel()', () => {
     expect(() =>
       new ReelSetBuilder()
@@ -87,7 +71,7 @@ describe('builder validation', () => {
     expect(() =>
       new ReelSetBuilder()
         .reels(5)
-        .visibleSymbols(3)
+        .visibleRows(3)
         .symbolSize(100, 100)
         .reelPixelHeights([300, 300])
         .ticker(new FakeTicker() as unknown as Ticker)

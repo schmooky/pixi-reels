@@ -13,11 +13,20 @@ export class RandomSymbolProvider {
   private _totalWeight: number = 0;
   private _excludeSpinning = new Set<string>();
   private _excludeBuffer = new Set<string>();
+  private _rng: () => number;
 
-  constructor(symbolsData: Record<string, SymbolData>) {
+  /**
+   * @param symbolsData - Symbol id → weight/data map.
+   * @param rng - Source of randomness returning a value in [0, 1). Defaults to
+   *   `Math.random`. Regulated / provably-fair deployments must inject a
+   *   seeded, audited PRNG so the on-screen strip can be replayed from a seed.
+   */
+  constructor(symbolsData: Record<string, SymbolData>, rng: () => number = Math.random) {
+    this._rng = rng;
     this._symbols = Object.keys(symbolsData);
     this._weights = this._symbols.map((id) => symbolsData[id].weight);
     this._rebuildWeights();
+    this._assertUsable();
   }
 
   /** Get a random symbol, optionally excluding buffer-only symbols. */
@@ -47,7 +56,7 @@ export class RandomSymbolProvider {
       return this._symbols[0];
     }
 
-    const rand = Math.random() * total;
+    const rand = this._rng() * total;
     // Binary search
     let lo = 0;
     let hi = filtered.length - 1;
@@ -77,6 +86,28 @@ export class RandomSymbolProvider {
     this._symbols = Object.keys(symbolsData);
     this._weights = this._symbols.map((id) => symbolsData[id].weight);
     this._rebuildWeights();
+    this._assertUsable();
+    // Drop exclusions that reference symbols no longer present in this mode,
+    // otherwise a stale exclusion from the previous game mode silently lingers.
+    const present = new Set(this._symbols);
+    this._excludeSpinning = new Set(
+      [...this._excludeSpinning].filter((id) => present.has(id)),
+    );
+    this._excludeBuffer = new Set(
+      [...this._excludeBuffer].filter((id) => present.has(id)),
+    );
+  }
+
+  private _assertUsable(): void {
+    if (this._symbols.length === 0) {
+      throw new Error('RandomSymbolProvider requires at least one symbol.');
+    }
+    if (this._totalWeight <= 0) {
+      throw new Error(
+        'RandomSymbolProvider requires at least one symbol with weight > 0; ' +
+          'all registered symbols have weight 0, so the spinning strip cannot be filled.',
+      );
+    }
   }
 
   private _rebuildWeights(): void {
@@ -89,7 +120,7 @@ export class RandomSymbolProvider {
   }
 
   private _pickWeighted(): string {
-    const rand = Math.random() * this._totalWeight;
+    const rand = this._rng() * this._totalWeight;
     let lo = 0;
     let hi = this._cumulativeWeights.length - 1;
     while (lo < hi) {

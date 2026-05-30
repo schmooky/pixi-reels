@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fff7ec"/>
+      <stop offset="1" stop-color="#ffe6cc"/>
+    </linearGradient>
+    <linearGradient id="orange" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f97316"/>
+      <stop offset="1" stop-color="#ffa436"/>
+    </linearGradient>
+    <pattern id="grid" width="36" height="36" patternUnits="userSpaceOnUse">
+      <path d="M 36 0 L 0 0 0 36" fill="none" stroke="#f4cfa3" stroke-width="1" opacity="0.6"/>
+    </pattern>
+    <filter id="softShadow"><feGaussianBlur in="SourceAlpha" stdDeviation="6"/><feOffset dx="0" dy="6"/><feComponentTransfer><feFuncA type="linear" slope="0.18"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect width="1200" height="630" fill="url(#grid)"/>
+
+  <g transform="translate(80,120)">
+    <g>
+      <rect x="-12" y="-44" width="160" height="38" rx="19" fill="#f97316" opacity="0.14"/>
+      <text x="68" y="-17" text-anchor="middle" font-family="ui-monospace,monospace" font-size="14" font-weight="700" fill="#c2410c" letter-spacing="2.5">GUIDES · 1.0</text>
+    </g>
+    <text x="0" y="72" font-family="Inter,system-ui,sans-serif" font-size="100" font-weight="700" fill="#1c1410" letter-spacing="-3">Learn the engine,</text>
+    <text x="0" y="186" font-family="Inter,system-ui,sans-serif" font-size="100" font-weight="700" fill="url(#orange)" letter-spacing="-3">piece by piece.</text>
+    <text x="0" y="256" font-family="Inter,system-ui,sans-serif" font-size="28" font-weight="400" fill="#5a4a3c">Symbols, pins, cascades, MultiWays, big symbols, nudge,</text>
+    <text x="0" y="296" font-family="Inter,system-ui,sans-serif" font-size="28" font-weight="400" fill="#5a4a3c">spin lifecycle, debugging. one concept per page.</text>
+    <text x="0" y="396" font-family="ui-monospace,monospace" font-size="18" fill="#8a6a4c">◆ pixi-reels.schmooky.dev/guides/</text>
+  </g>
+
+  <!-- Right: concept stack -->
+  <g transform="translate(800,140)" filter="url(#softShadow)" font-family="ui-monospace,monospace" font-size="18" font-weight="700" fill="#1c1410">
+    <g>
+      <rect x="0" y="0" width="320" height="58" rx="14" fill="#f97316"/>
+      <text x="20" y="36" fill="#1c1410">→ Symbols</text>
+    </g>
+    <g transform="translate(0,72)">
+      <rect width="320" height="58" rx="14" fill="#ffa436"/>
+      <text x="20" y="36">→ Pins</text>
+    </g>
+    <g transform="translate(0,144)">
+      <rect width="320" height="58" rx="14" fill="#ffc766"/>
+      <text x="20" y="36">→ Spin lifecycle</text>
+    </g>
+    <g transform="translate(0,216)">
+      <rect width="320" height="58" rx="14" fill="#ffa436"/>
+      <text x="20" y="36">→ Cascades</text>
+    </g>
+    <g transform="translate(0,288)">
+      <rect width="320" height="58" rx="14" fill="#f97316"/>
+      <text x="20" y="36">→ MultiWays</text>
+    </g>
+  </g>
+</svg>

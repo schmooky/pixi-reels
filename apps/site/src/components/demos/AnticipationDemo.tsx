@@ -33,7 +33,7 @@ export default function AnticipationDemo() {
           cheatTitle: 'Anticipation cheats',
           onLanded: async ({ grid, toast, api }) => {
             const scatters = grid.flat().filter((s) => s === SCATTER).length;
-            if (scatters >= 3) toast(`${scatters} scatters — triggered`, 'win');
+            if (scatters >= 3) toast(`${scatters} scatters. triggered`, 'win');
             else if (scatters === 2) toast('Near-miss', 'warn');
             api.setStatus(`Scatters: ${scatters}. Try Skip button mid-spin to slam-stop.`);
           },

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { createTestReelSet, expectGrid } from '../../src/index.js';
+import { createTestReelSet, expectGrid } from '../../src/testing/index.js';
 
-describe('ReelSet.requestSkip — pre-result-safe slam-stop', () => {
+describe('ReelSet.requestSkip. pre-result-safe slam-stop', () => {
   it('queues until setResult and lands on the target grid (not buffer)', async () => {
     const h = createTestReelSet({ reels: 3, visibleRows: 3, symbolIds: ['a', 'b', 'c'] });
 
@@ -17,7 +17,7 @@ describe('ReelSet.requestSkip — pre-result-safe slam-stop', () => {
     h.advance(50);
     expect(h.reelSet.isSpinning).toBe(true);
 
-    h.reelSet.setResult(grid);
+    h.reelSet.setResult(grid.map((visible) => ({ visible })));
     await promise;
 
     expectGrid(h.reelSet, grid);
@@ -35,7 +35,7 @@ describe('ReelSet.requestSkip — pre-result-safe slam-stop', () => {
     ];
 
     const promise = h.reelSet.spin();
-    h.reelSet.setResult(grid);
+    h.reelSet.setResult(grid.map((visible) => ({ visible })));
     h.reelSet.requestSkip();
     await promise;
 

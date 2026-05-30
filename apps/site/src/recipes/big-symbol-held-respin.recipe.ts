@@ -4,13 +4,13 @@
 
 // NUDGE-IN, THEN HOLD a buffer-anchored big symbol across a respin.
 //
-// Classic UK fruit-machine bonus: reel 3 lands with a tall wild whose
-// anchor sits in bufferAbove (only the tail of the block shows at row 0
-// — "the wild is peeking in from the top"). The player nudges to drag
-// the wild into full view, then gets a re-spin of the OTHER reels while
+// NUDGE-IN, THEN HOLD a buffer-anchored big symbol across a respin.
+// Reel 3 lands with a tall wild whose anchor sits in bufferAbove (only
+// the tail of the block shows at row 0). The player nudges to drag the
+// wild into full view, then gets a re-spin of the OTHER reels while
 // reel 3 is held. The held reel preserves the now-revealed block across
 // the respin because `SpinOptions.holdReels` skips START/SPIN/STOP on
-// the held column — the strip array, the anchor's size, and the
+// the held column. the strip array, the anchor's size, and the
 // occupancy map all carry through.
 //
 // Sequence:
@@ -40,9 +40,9 @@ const GAP = 4;
 
 const reelSet = new ReelSetBuilder()
   .reels(REELS)
-  .visibleSymbols(ROWS)
+  .visibleRows(ROWS)
   // bufferAbove >= 2 lets the 1x3 anchor sit at row -2 (block extends
-  // through row 0 — tail visible).
+  // through row 0. tail visible).
   .bufferSymbols(2)
   .symbolSize(SIZE, SIZE)
   .symbolGap(GAP, GAP)
@@ -100,7 +100,7 @@ return {
     // `holdReels: [HELD_REEL]` tells the engine to skip START/SPIN/STOP
     // on reel 2 entirely. The grid we pass below MUST include all 5
     // columns (every shipped slot expects a full grid), but the entry at
-    // index 2 is ignored — the held reel keeps whatever it had.
+    // index 2 is ignored. the held reel keeps whatever it had.
     //
     // The block on reel 2 (anchor at strip[0], stubs at strip[1..2])
     // survives because:
@@ -108,13 +108,12 @@ return {
     //   - `_finalizeFrame` doesn't re-run (occupancy unchanged)
     //   - the anchor's sized sprite stays at its post-land dimensions
     //
-    // We hand the held column a ColumnTarget so the input shape is
-    // homogeneous — `setResult` rejects mixed `string[] | ColumnTarget`
-    // grids. The held entry's contents are not validated against the
-    // current strip; they're simply dropped during frame building.
+    // We hand the held column a placeholder ColumnTarget; the held
+    // entry's contents are not validated against the current strip
+    // and are simply dropped during frame building.
     const respinGrid = [
       ct(), ct(),
-      ct(), // ignored — reel 2 is held
+      ct(), // ignored. reel 2 is held
       ct(), ct(),
     ];
     const spin2 = reelSet.spin({ holdReels: [HELD_REEL] });

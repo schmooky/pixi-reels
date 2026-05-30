@@ -4,7 +4,7 @@
 
 // Cascade-style removal of a single symbol id: pop every cell whose symbol
 // matches `X`, gravity-shift survivors, fill cleared top slots with new
-// symbols. The whole flow is one `reelSet.runCascade(...)` call — same
+// symbols. The whole flow is one `reelSet.runCascade(...)` call. same
 // orchestrator every cascade recipe uses.
 
 const A = '7', B = '8', C = '9';
@@ -27,7 +27,7 @@ function randSymbolNotIn(exclude) {
 }
 
 const reelSet = new ReelSetBuilder()
-  .reels(REELS).visibleSymbols(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
+  .reels(REELS).visibleRows(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
   .symbols(r => {
     for (const sym of [...CARD_DECK, WILD_CARD]) {
       if (IDS.includes(sym.id)) {
@@ -37,7 +37,7 @@ const reelSet = new ReelSetBuilder()
   })
   .speed('normal', SpeedPresets.NORMAL).speed('turbo', SpeedPresets.TURBO)
   .tumble({
-    fall:   { duration: 0, ease: 'none', rowStagger: 0 },              // not used — refill skips fall
+    fall:   { duration: 0, ease: 'none', rowStagger: 0 },              // not used. refill skips fall
     dropIn: { duration: 380, ease: 'back.out(1.6)', rowStagger: 0, distance: 'perHole' },
   })
   .ticker(app.ticker).build();
@@ -48,7 +48,7 @@ return {
     // Land BEFORE via a normal strip-spin.
     const p = reelSet.spin({ mode: 'standard' });
     await new Promise(r => setTimeout(r, 150));
-    reelSet.setResult(BEFORE);
+    reelSet.setResult(BEFORE.map((visible) => ({ visible })));
     await p;
     await new Promise(r => setTimeout(r, 300));
 

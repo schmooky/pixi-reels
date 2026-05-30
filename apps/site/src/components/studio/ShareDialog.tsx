@@ -23,7 +23,7 @@ interface Props {
 const PRESETS: Array<{ id: ShareModePreset; label: string; hint: string }> = [
   { id: 'view-no-code', label: 'View only, no code', hint: 'Password to view. Code tab hidden.' },
   { id: 'view-with-code', label: 'View with code', hint: 'Password to view. Code visible read-only.' },
-  { id: 'edit-separate-save-pw', label: 'Editable, separate save password', hint: 'Two passwords — one to view, one to save.' },
+  { id: 'edit-separate-save-pw', label: 'Editable, separate save password', hint: 'Two passwords. one to view, one to save.' },
   { id: 'edit-shared-pw', label: 'Editable, view password saves', hint: 'One password unlocks view + save.' },
   { id: 'public', label: 'Public', hint: 'No password. Anyone with the link can view.' },
 ];
@@ -43,7 +43,7 @@ export function ShareDialog({ config, onClose }: Props): JSX.Element {
   const needsSavePw = mode.editable && mode.saveKeyDistinct;
 
   function validate(): string | null {
-    if (config.symbols.length === 0) return 'No symbols configured — add at least one in the Symbols tab.';
+    if (config.symbols.length === 0) return 'No symbols configured. add at least one in the Symbols tab.';
     if (needsViewPw && viewPassword.length < 6) return 'View password must be at least 6 characters.';
     if (needsSavePw && savePassword.length < 6) return 'Save password must be at least 6 characters.';
     return null;

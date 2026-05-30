@@ -2,10 +2,10 @@
 // Injected: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
 //           PIXI, gsap, app, pickWeighted
 
-// BOTTOM-UP ROW REFILL — within each reel, the bottom row arrives first
+// BOTTOM-UP ROW REFILL. within each reel, the bottom row arrives first
 // and the top row arrives last (rowOrder: 'bottomToTop'). All reels
 // drop simultaneously (setDropOrder('all')). Reads as a "stacking up"
-// motion — fits puzzle / match-3 / chess-board themes where the board
+// motion. fits puzzle / match-3 / chess-board themes where the board
 // builds itself from below.
 
 const IDS = ['7', '8', '9', '10', 'J', 'Q'];
@@ -22,7 +22,7 @@ function randSymbol(exclude) {
 }
 
 const reelSet = new ReelSetBuilder()
-  .reels(REELS).visibleSymbols(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
+  .reels(REELS).visibleRows(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
   .symbols((r) => {
     for (const sym of CARD_DECK) {
       if (IDS.includes(sym.id)) {
@@ -60,7 +60,7 @@ return {
     reelSet.setDropOrder('ltr');
     const spinDone = reelSet.spin();
     await new Promise((r) => setTimeout(r, 220));
-    reelSet.setResult(stage0);
+    reelSet.setResult(stage0.map((visible) => ({ visible })));
     await spinDone;
 
     await new Promise((r) => setTimeout(r, 200));
@@ -68,6 +68,6 @@ return {
     await reelSet.destroySymbols(winners);
     await new Promise((r) => setTimeout(r, PAUSE_AFTER_REMOVAL_MS));
     reelSet.setDropOrder('all');
-    await reelSet.refill({ winners, grid: stage1 });
+    await reelSet.refill({ winners, grid: stage1.map((visible) => ({ visible })) });
   },
 };

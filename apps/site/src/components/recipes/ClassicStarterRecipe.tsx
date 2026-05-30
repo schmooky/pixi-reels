@@ -33,7 +33,7 @@ export default function ClassicStarterRecipe() {
             ];
             const p = reelSet.spin();
             await sleep(150);
-            reelSet.setResult(grid);
+            reelSet.setResult(grid.map((visible) => ({ visible })));
             const result = await p;
             // Spotlight any 3+ in a row from left.
             const wins: { positions: { reelIndex: number; rowIndex: number }[] }[] = [];

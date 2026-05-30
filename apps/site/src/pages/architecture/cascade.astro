@@ -1,6 +1,7 @@
 ---
 import Architecture from '../../layouts/Architecture.astro';
 import Legend from '../../components/arch/Legend.astro';
+import Mermaid from '../../components/Mermaid.astro';
 ---
 <Architecture
   title="Cascade physics"
@@ -10,132 +11,71 @@ import Legend from '../../components/arch/Legend.astro';
   <p>
     A correct cascade drop has a simple invariant: <strong>a symbol only
     moves if there are cleared slots beneath its original row</strong>.
-    Getting this wrong is the classic cascade bug — naive implementations
+    Getting this wrong is the classic cascade bug. naive implementations
     shift every visible cell up by the winner count, then tween back down,
     making untouched symbols visually jump.
   </p>
 
   <p>
     pixi-reels computes per-cell fall distance from the winners list.
-    Survivors with no winners below them are <em>never touched</em> — no
+    Survivors with no winners below them are <em>never touched</em>. no
     animation job is created, their <code>view.y</code> stays exactly where
     <code>placeSymbols</code> put it.
   </p>
 
   <h2>The algorithm, in one column</h2>
 
+  <Mermaid chart={`
+flowchart LR
+  subgraph Before["1. Before"]
+    direction TB
+    B0["A (row 0)"]
+    B1["B winner (row 1)"]
+    B2["C (row 2)"]
+    B3["D winner (row 3)"]
+    B4["E (row 4)"]
+    B0 --- B1 --- B2 --- B3 --- B4
+  end
+
+  subgraph Remove["2. Remove winners"]
+    direction TB
+    R0["A"]
+    R1["empty"]
+    R2["C"]
+    R3["empty"]
+    R4["E"]
+    R0 --- R1 --- R2 --- R3 --- R4
+  end
+
+  subgraph Gravity["3. Gravity"]
+    direction TB
+    G0["empty"]
+    G1["empty"]
+    G2["A · fell 2"]
+    G3["C · fell 1"]
+    G4["E · no move"]
+    G0 --- G1 --- G2 --- G3 --- G4
+  end
+
+  subgraph Fill["4. Fill from top"]
+    direction TB
+    F0["X · new"]
+    F1["Y · new"]
+    F2["A · fell 2"]
+    F3["C · fell 1"]
+    F4["E · no move"]
+    F0 --- F1 --- F2 --- F3 --- F4
+  end
+
+  Before --> Remove --> Gravity --> Fill
+  `} caption="One column through the four cascade stages. Row 4 (E) never moves: no winners below it." />
+
   <div class="not-prose my-8">
-    <div class="rounded-2xl border border-border bg-card p-6 overflow-x-auto">
-      <svg viewBox="0 0 920 560" class="w-full h-auto min-w-[720px]">
-
-        <!-- Column labels -->
-        <g font-family="ui-monospace, Menlo, monospace" font-size="11" font-weight="700" fill="hsl(var(--muted-foreground))" letter-spacing="0.08em">
-          <text x="130" y="35" text-anchor="middle">BEFORE</text>
-          <text x="330" y="35" text-anchor="middle">REMOVE WINNERS</text>
-          <text x="530" y="35" text-anchor="middle">GRAVITY</text>
-          <text x="730" y="35" text-anchor="middle">FILL FROM TOP</text>
-        </g>
-
-        <!-- Stage 1: BEFORE -->
-        {[
-          { row: 0, sym: 'A', winner: false },
-          { row: 1, sym: 'B', winner: true },
-          { row: 2, sym: 'C', winner: false },
-          { row: 3, sym: 'D', winner: true },
-          { row: 4, sym: 'E', winner: false },
-        ].map((s) => (
-          <g transform={`translate(90, ${60 + s.row * 80})`}>
-            <rect width="80" height="70" rx="12" fill={s.winner ? 'hsl(var(--destructive) / 0.2)' : 'hsl(var(--card))'} stroke={s.winner ? 'hsl(var(--destructive))' : 'hsl(var(--border-strong))'} stroke-width="2" />
-            <text x="40" y="44" text-anchor="middle" font-family="Inter, sans-serif" font-size="26" font-weight="700" fill={s.winner ? 'hsl(var(--destructive))' : 'hsl(var(--foreground))'}>{s.sym}</text>
-          </g>
-        ))}
-
-        <!-- Arrow -->
-        <path d="M 180 280 L 240 280" stroke="hsl(var(--muted-foreground))" stroke-width="2" fill="none" marker-end="url(#arr-m)" />
-
-        <!-- Stage 2: REMOVE WINNERS -->
-        {[
-          { row: 0, sym: 'A', state: 'survivor' },
-          { row: 1, sym: '', state: 'empty' },
-          { row: 2, sym: 'C', state: 'survivor' },
-          { row: 3, sym: '', state: 'empty' },
-          { row: 4, sym: 'E', state: 'survivor' },
-        ].map((s) => (
-          <g transform={`translate(290, ${60 + s.row * 80})`}>
-            {s.state === 'empty' ? (
-              <rect width="80" height="70" rx="12" fill="none" stroke="hsl(var(--muted-foreground))" stroke-dasharray="5,4" stroke-width="2" />
-            ) : (
-              <g>
-                <rect width="80" height="70" rx="12" fill="hsl(var(--card))" stroke="hsl(var(--border-strong))" stroke-width="2" />
-                <text x="40" y="44" text-anchor="middle" font-family="Inter, sans-serif" font-size="26" font-weight="700" fill="hsl(var(--foreground))">{s.sym}</text>
-              </g>
-            )}
-          </g>
-        ))}
-
-        <!-- Arrow -->
-        <path d="M 380 280 L 440 280" stroke="hsl(var(--muted-foreground))" stroke-width="2" fill="none" marker-end="url(#arr-m)" />
-
-        <!-- Stage 3: GRAVITY — survivors move down, empty slots float up -->
-        {[
-          { row: 0, sym: '', state: 'empty' },
-          { row: 1, sym: '', state: 'empty' },
-          { row: 2, sym: 'A', state: 'fell-2', fallFrom: 0 },
-          { row: 3, sym: 'C', state: 'fell-1', fallFrom: 2 },
-          { row: 4, sym: 'E', state: 'stayed', fallFrom: 4 },
-        ].map((s) => (
-          <g transform={`translate(490, ${60 + s.row * 80})`}>
-            {s.state === 'empty' ? (
-              <rect width="80" height="70" rx="12" fill="none" stroke="hsl(var(--muted-foreground))" stroke-dasharray="5,4" stroke-width="2" />
-            ) : (
-              <g>
-                <rect width="80" height="70" rx="12" fill={s.state === 'stayed' ? 'hsl(var(--card))' : 'hsl(var(--accent) / 0.15)'} stroke={s.state === 'stayed' ? 'hsl(var(--border-strong))' : 'hsl(var(--accent))'} stroke-width="2" />
-                <text x="40" y="44" text-anchor="middle" font-family="Inter, sans-serif" font-size="26" font-weight="700" fill="hsl(var(--foreground))">{s.sym}</text>
-                {s.state !== 'stayed' && (
-                  <text x="40" y="62" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="9" font-weight="700" fill="hsl(var(--accent))">fell {s.row - s.fallFrom}</text>
-                )}
-                {s.state === 'stayed' && (
-                  <text x="40" y="62" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="9" font-weight="700" fill="hsl(var(--muted-foreground))">no move</text>
-                )}
-              </g>
-            )}
-          </g>
-        ))}
-
-        <!-- Arrow -->
-        <path d="M 580 280 L 640 280" stroke="hsl(var(--muted-foreground))" stroke-width="2" fill="none" marker-end="url(#arr-m)" />
-
-        <!-- Stage 4: FILL FROM TOP -->
-        {[
-          { row: 0, sym: 'X', state: 'new', fallFrom: 'above' },
-          { row: 1, sym: 'Y', state: 'new', fallFrom: 'above' },
-          { row: 2, sym: 'A', state: 'fell-2' },
-          { row: 3, sym: 'C', state: 'fell-1' },
-          { row: 4, sym: 'E', state: 'stayed' },
-        ].map((s) => (
-          <g transform={`translate(690, ${60 + s.row * 80})`}>
-            <rect width="80" height="70" rx="12" fill={s.state === 'new' ? 'hsl(var(--primary) / 0.18)' : s.state === 'stayed' ? 'hsl(var(--card))' : 'hsl(var(--accent) / 0.15)'} stroke={s.state === 'new' ? 'hsl(var(--primary))' : s.state === 'stayed' ? 'hsl(var(--border-strong))' : 'hsl(var(--accent))'} stroke-width="2" />
-            <text x="40" y="44" text-anchor="middle" font-family="Inter, sans-serif" font-size="26" font-weight="700" fill="hsl(var(--foreground))">{s.sym}</text>
-            {s.state === 'new' && <text x="40" y="62" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="9" font-weight="700" fill="hsl(var(--primary))">new</text>}
-            {s.state === 'stayed' && <text x="40" y="62" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="9" font-weight="700" fill="hsl(var(--muted-foreground))">no move</text>}
-          </g>
-        ))}
-
-        <defs>
-          <marker id="arr-m" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-            <path d="M 0 0 L 10 5 L 0 10 z" fill="hsl(var(--muted-foreground))" />
-          </marker>
-        </defs>
-      </svg>
-    </div>
-
-    <div class="mt-4">
-      <Legend items={[
-        { kind: 'subtle', label: 'Stayed put', note: 'no winners below → no animation' },
-        { kind: 'accent', label: 'Survivor fell', note: 'moved N slots where N = winners below' },
-        { kind: 'primary', label: 'New symbol', note: 'fell from above viewport' },
-      ]} />
-    </div>
+    <Legend items={[
+      { kind: 'subtle', label: 'Stayed put', note: 'no winners below → no animation' },
+      { kind: 'accent', label: 'Survivor fell', note: 'moved N slots where N = winners below' },
+      { kind: 'primary', label: 'New symbol', note: 'fell from above viewport' },
+    ]} />
   </div>
 
   <h2>Per-row fall distance formula</h2>
@@ -159,12 +99,12 @@ import Legend from '../../components/arch/Legend.astro';
       <tbody>
         <tr class="border-t border-border/60">
           <td class="px-4 py-2.5"><code>R &lt; winnerRows.length</code></td>
-          <td class="px-4 py-2.5 text-xs text-foreground/80">yes — falls from above the viewport</td>
+          <td class="px-4 py-2.5 text-xs text-foreground/80">yes. falls from above the viewport</td>
           <td class="px-4 py-2.5 font-mono text-xs text-primary">R + 1</td>
         </tr>
         <tr class="border-t border-border/60">
           <td class="px-4 py-2.5"><code>R ≥ winnerRows.length</code></td>
-          <td class="px-4 py-2.5 text-xs text-foreground/80">no — survivor from <code>nonWinnerRows[R - winCount]</code></td>
+          <td class="px-4 py-2.5 text-xs text-foreground/80">no. survivor from <code>nonWinnerRows[R - winCount]</code></td>
           <td class="px-4 py-2.5 font-mono text-xs text-accent">R - originalRow <span class="text-muted-foreground">(0 means: don't touch it)</span></td>
         </tr>
       </tbody>
@@ -202,23 +142,23 @@ import Legend from '../../components/arch/Legend.astro';
   <h2>API surface</h2>
 
   <ul>
-    <li><code>reelSet.destroySymbols(winners, opts?)</code> — the "pop" primitive. Defers to each symbol's own <code>playDestroy()</code> so subclasses (Spine, particles) get art-appropriate disintegration. Lifts zIndex so destroys aren't clipped; alternates rotation by column for cohesive cluster pops.</li>
-    <li><code>{`reelSet.refill({ winners, grid })`}</code> — the "place + drop" primitive. Reads each reel's <code>visibleRows</code>, computes per-cell fall distances from <code>winners</code>, animates only the cells that actually move. Untouched survivors stay perfectly still.</li>
-    <li><code>{`reelSet.runCascade({ detectWinners, nextGrid })`}</code> — the chain orchestrator. Loops detect → destroy → pause → refill until <code>detectWinners</code> returns <code>[]</code>. Per-stage progress fires via <code>cascade:chain:start</code> / <code>cascade:chain:end</code>; the awaited <code>RunCascadeResult</code> carries the summary. Pass <code>signal: AbortSignal</code> for caller-driven cancellation.</li>
-    <li><code>computeDropOffsets(visibleRows, winnerRows)</code> — the algorithm the engine itself uses, exported so you can validate server-side gravity sims offline.</li>
+    <li><code>reelSet.destroySymbols(winners, opts?)</code>. the "pop" primitive. Defers to each symbol's own <code>playDestroy()</code> so subclasses (Spine, particles) get art-appropriate disintegration (the default is a brief scale/fade implode). Lifts zIndex so destroys aren't clipped.</li>
+    <li><code>{`reelSet.refill({ winners, grid })`}</code>. the "place + drop" primitive. Reads each reel's <code>visibleRows</code>, computes per-cell fall distances from <code>winners</code>, animates only the cells that actually move. Untouched survivors stay perfectly still.</li>
+    <li><code>{`reelSet.runCascade({ detectWinners, nextGrid })`}</code>. the chain orchestrator. Loops detect → destroy → pause → refill until <code>detectWinners</code> returns <code>[]</code>. Per-stage progress fires via <code>cascade:chain:start</code> / <code>cascade:chain:end</code>; the awaited <code>RunCascadeResult</code> carries the summary. Pass <code>signal: AbortSignal</code> for caller-driven cancellation.</li>
+    <li><code>computeDropOffsets(visibleRows, winnerRows)</code>. the algorithm the engine itself uses, exported so you can validate server-side gravity sims offline.</li>
   </ul>
 
   <h2>Why winners must be *semantic*, not diffed</h2>
 
   <p>
     Consider <code>prevCol = [A, C, X]</code>, <code>X</code> at row 2 wins.
-    The correct next col is <code>[N, A, C]</code> — new symbol at row 0,
+    The correct next col is <code>[N, A, C]</code>. new symbol at row 0,
     survivors shifted down. A naive "diff the two grids" approach reports
     <em>three</em> changed cells (row 0: A→N, row 1: C→A, row 2: X→C).
     Treating those as "three winners" would animate three new symbols
     falling from above, instead of one new + two survivors sliding by one
     slot. The library's API takes a <code>Cell[]</code> of <em>match
-    winners</em>, not a diff — so the answer is unambiguous.
+    winners</em>, not a diff. so the answer is unambiguous.
   </p>
 
   <p>

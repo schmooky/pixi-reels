@@ -1,9 +1,9 @@
 /**
- * Sandbox bootstrap — DO NOT EDIT (unless you want to change the runner).
+ * Sandbox bootstrap. DO NOT EDIT (unless you want to change the runner).
  *
  * This file sets up the PixiJS Application, loads the prototype-symbols
  * atlas, creates the UI, and handles resize. It delegates reel construction
- * to `sandbox.ts` — edit THAT file to experiment with reel configurations.
+ * to `sandbox.ts`. edit THAT file to experiment with reel configurations.
  *
  * On Vite HMR, when `sandbox.ts` changes, the page reloads and your new
  * reel config is mounted.
@@ -52,7 +52,7 @@ async function main() {
   let isSpinning = false;
   async function handleSpin() {
     if (isSpinning) {
-      try { reelSet.skip(); } catch {}
+      try { reelSet.skipSpin(); } catch {}
       return;
     }
     isSpinning = true;
@@ -62,7 +62,7 @@ async function main() {
     const spinPromise = reelSet.spin();
     const target = result.nextResult();
     await new Promise((r) => setTimeout(r, 200));
-    reelSet.setResult(target);
+    reelSet.setResult(target.map((visible) => ({ visible })));
     await spinPromise;
 
     isSpinning = false;

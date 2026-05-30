@@ -4,7 +4,7 @@
 //
 // Peek symbol from buffer-above.
 //
-// Each reel has a "PEEK" symbol prefilled in the buffer-above slot — the
+// Each reel has a "PEEK" symbol prefilled in the buffer-above slot. the
 // one cell that lives just above the visible window. During the spin, that
 // symbol scrolls through the visible area before the random spin symbols
 // take over, giving the player a brief glimpse of what's "next".
@@ -20,7 +20,7 @@ function rv() {
 }
 
 // ── initialFrame seeds the FIRST spin's buffer-above ────────────────────
-// Explicit ColumnTarget form — { visible, bufferAbove }. Same shape that
+// Explicit ColumnTarget form. { visible, bufferAbove }. Same shape that
 // setResult accepts; both APIs treat the negative-index legacy form and this
 // one interchangeably.
 const initialFrame = [
@@ -31,7 +31,7 @@ const initialFrame = [
 
 const reelSet = new ReelSetBuilder()
   .reels(3)
-  .visibleSymbols(3)
+  .visibleRows(3)
   .symbolSize(90, 90)
   .symbolGap(4, 4)
   .bufferSymbols(1)
@@ -59,7 +59,7 @@ return {
 
     const p = reelSet.spin();
     await new Promise((r) => setTimeout(r, 250));
-    reelSet.setResult(result);
+    reelSet.setResult(result.map((visible) => ({ visible })));
     await p;
   },
 };

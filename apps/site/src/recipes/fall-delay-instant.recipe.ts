@@ -2,7 +2,7 @@
 // Injected: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
 //           PIXI, gsap, app, pickWeighted
 
-// INSTANT — fall starts the moment you click SPIN. No lead-in. The
+// INSTANT. fall starts the moment you click SPIN. No lead-in. The
 // default. Snappiest possible feel; players who tap-spin many rounds
 // per minute appreciate it. Pair with no sound lead-in or a sound that
 // triggers WITH the fall, not before.
@@ -21,7 +21,7 @@ function randSymbol(exclude) {
 }
 
 const reelSet = new ReelSetBuilder()
-  .reels(REELS).visibleSymbols(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
+  .reels(REELS).visibleRows(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
   .symbols((r) => {
     for (const sym of CARD_DECK) {
       if (IDS.includes(sym.id)) {
@@ -59,7 +59,7 @@ return {
     reelSet.setDropOrder('ltr');
     const spinDone = reelSet.spin();
     await new Promise((r) => setTimeout(r, 220));
-    reelSet.setResult(stage0);
+    reelSet.setResult(stage0.map((visible) => ({ visible })));
     await spinDone;
 
     await new Promise((r) => setTimeout(r, 200));
@@ -67,6 +67,6 @@ return {
     await reelSet.destroySymbols(winners);
     await new Promise((r) => setTimeout(r, 220));
     reelSet.setDropOrder('all');
-    await reelSet.refill({ winners, grid: stage1 });
+    await reelSet.refill({ winners, grid: stage1.map((visible) => ({ visible })) });
   },
 };

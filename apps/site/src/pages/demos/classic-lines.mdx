@@ -26,7 +26,7 @@ import { ReelSetBuilder } from 'pixi-reels';
 import { BlockSymbol } from './BlockSymbol';
 
 const reelSet = new ReelSetBuilder()
-  .reels(5).visibleSymbols(3).symbolSize(96, 96)
+  .reels(5).visibleRows(3).symbolSize(96, 96)
   .symbols((r) => {
     r.register('cherry', BlockSymbol, { colors: { cherry: 0xff6d70 } });
     r.register('seven',  BlockSymbol, { colors: { seven: 0xffffff } });
@@ -74,7 +74,7 @@ reelSet.events.on('spin:complete', async (result) => {
 ### 4. Force outcomes in tests
 
 ```ts
-import { createTestReelSet } from 'pixi-reels';
+import { createTestReelSet } from 'pixi-reels/testing';
 import { CheatEngine, forceLine } from '@/shared/cheats';
 
 const { reelSet, spinAndLand, destroy } = createTestReelSet({
@@ -90,7 +90,7 @@ for (let r = 0; r < 5; r++) {
 destroy();
 ```
 
-> **Verify:** the assertion passes — every reel's row-1 symbol is `seven`.
+> **Verify:** the assertion passes. every reel's row-1 symbol is `seven`.
 
 ## Cheats available in this demo
 

@@ -3,7 +3,7 @@ import type { ReelSet } from '../core/ReelSet.js';
 import type { Reel } from '../core/Reel.js';
 
 /**
- * Debug snapshot — plain JSON representation of the entire reel state.
+ * Debug snapshot. plain JSON representation of the entire reel state.
  *
  * Designed for AI agents that cannot see the canvas.
  * Returns no PixiJS display objects, only serializable data.
@@ -113,7 +113,7 @@ export function debugGrid(reelSet: ReelSet): string {
 }
 
 /**
- * One captured frame from `startRecording()` — a `DebugSnapshot` plus the
+ * One captured frame from `startRecording()`. a `DebugSnapshot` plus the
  * tag the recording was started with and the spin event that triggered
  * the capture.
  */
@@ -162,7 +162,7 @@ export interface StartRecordingOptions {
  * Each event captures a `DebugSnapshot` and pushes it onto a process-
  * wide rolling log readable via {@link getFrames}.
  *
- * The `tag` is freeform — use it to label multiple recording sessions
+ * The `tag` is freeform. use it to label multiple recording sessions
  * so you can filter `getFrames(tag)` later. Call {@link stopRecording}
  * to detach the listeners (also fires automatically when the reel set
  * emits `'destroyed'`).
@@ -204,7 +204,7 @@ export function startRecording(
   const onReelLanded = () => capture('spin:reelLanded');
   const onAllLanded = () => capture('spin:allLanded');
   const onComplete = () => capture('spin:complete');
-  // Auto-detach when the reel set is destroyed — otherwise listeners hang
+  // Auto-detach when the reel set is destroyed. otherwise listeners hang
   // off a dead emitter and the WeakMap entry can't drop until GC.
   const onDestroyed = () => stopRecording(reelSet);
 
@@ -235,7 +235,7 @@ export function stopRecording(reelSet: ReelSet): void {
 /**
  * All recorded frames in capture order. When `tag` is provided, only
  * frames tagged with it are returned. Frames are not cleared between
- * recording sessions — call {@link clearFrames} to reset.
+ * recording sessions. call {@link clearFrames} to reset.
  */
 export function getFrames(tag?: string): readonly RecordedFrame[] {
   if (tag === undefined) return _recordedFrames.slice();
@@ -259,8 +259,17 @@ export function clearFrames(): void {
  * __PIXI_REELS_DEBUG.stopRecording()
  * __PIXI_REELS_DEBUG.getFrames('myTag')
  * ```
+ *
+ * For a single reel set, leave `key` unset. With multiple reel sets, pass a
+ * distinct `key` per call so they don't clobber each other on `window`: each is
+ * reachable at `__PIXI_REELS_DEBUG_INSTANCES[key]`, and `__PIXI_REELS_DEBUG`
+ * always points at the most recently enabled one for convenience.
+ *
+ * This attaches to `window` and logs — call it only in dev/QA builds, never in
+ * a production bundle (the snapshot exposes internal state and is not
+ * semver-protected, so do not wire monitoring/telemetry to it).
  */
-export function enableDebug(reelSet: ReelSet): void {
+export function enableDebug(reelSet: ReelSet, key?: string): void {
   if (typeof window === 'undefined') return;
 
   let maskOverlay: Graphics | null = null;
@@ -296,7 +305,7 @@ export function enableDebug(reelSet: ReelSet): void {
     /** Start a frame-state recording session on this reel set. */
     startRecording: (tag = 'default', options?: StartRecordingOptions) =>
       startRecording(reelSet, tag, options),
-    /** Stop a recording session — paired with `startRecording`. */
+    /** Stop a recording session. paired with `startRecording`. */
     stopRecording: () => stopRecording(reelSet),
     /** Pull recorded frames; pass `tag` to filter to one session. */
     getFrames: (tag?: string) => getFrames(tag),
@@ -327,6 +336,18 @@ export function enableDebug(reelSet: ReelSet): void {
     },
   };
 
-  (window as any).__PIXI_REELS_DEBUG = debug;
-  console.log('[pixi-reels] Debug mode enabled. Use __PIXI_REELS_DEBUG.log() to inspect state.');
+  const w = window as unknown as {
+    __PIXI_REELS_DEBUG?: typeof debug;
+    __PIXI_REELS_DEBUG_INSTANCES?: Record<string, typeof debug>;
+  };
+  // Per-instance registry so multiple reel sets don't overwrite one another.
+  const registry = (w.__PIXI_REELS_DEBUG_INSTANCES ??= {});
+  const resolvedKey = key ?? `reelset_${Object.keys(registry).length}`;
+  registry[resolvedKey] = debug;
+  // Back-compat: the bare global points at the most recently enabled instance.
+  w.__PIXI_REELS_DEBUG = debug;
+  console.log(
+    `[pixi-reels] Debug mode enabled (key "${resolvedKey}"). ` +
+      `Use __PIXI_REELS_DEBUG.log() or __PIXI_REELS_DEBUG_INSTANCES["${resolvedKey}"].`,
+  );
 }

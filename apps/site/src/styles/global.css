@@ -2,7 +2,7 @@
 @config "../../tailwind.config.ts";
 
 /**
- * shadcn light palette — warm white + orange primary.
+ * shadcn light palette . warm white + orange primary.
  * All tokens are HSL triples so Tailwind's `hsl(var(--x))` wiring works.
  */
 @layer base {
@@ -128,7 +128,7 @@
     -webkit-mask-image: radial-gradient(ellipse at center, black, transparent 70%);
   }
 
-  /* Shared warm-dark surface — code blocks, reel well, mini-demo backdrops. */
+  /* Shared warm-dark surface . code blocks, reel well, mini-demo backdrops. */
   .surface-code {
     background: hsl(var(--code-bg));
     border: 1px solid hsl(var(--code-border));

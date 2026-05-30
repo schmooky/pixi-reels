@@ -33,7 +33,7 @@ const SYMBOL_IDS = Object.keys(SPINE_MAP);
 const REEL_COUNT = 5;
 const ROWS_PER_REEL = [3, 5, 5, 5, 3];
 const MAX_ROWS = Math.max(...ROWS_PER_REEL);
-// 140 = the generated spines' authored frame size — matches the bake
+// 140 = the generated spines' authored frame size. matches the bake
 // so frame strokes stay crisp.
 const SYMBOL_SIZE = 140;
 const SYMBOL_GAP = 4;
@@ -91,13 +91,13 @@ export async function boot(opts: BootOptions): Promise<() => void> {
       }
     })
     .weights({ '7': 18, '8': 16, '9': 14, '10': 12, J: 10, Q: 8, K: 7, A: 5, wild: 2 })
-    // Wild's icon attachment is 200 px — overflows the 140 px frame.
+    // Wild's icon attachment is 200 px. overflows the 140 px frame.
     // High zIndex keeps the W painted above neighbouring tiles.
     .symbolData({ wild: { zIndex: 999 } })
     .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 130 })
     .speed('turbo', { ...SpeedPresets.TURBO, stopDelay: 70 })
     .speed('superTurbo', { ...SpeedPresets.SUPER_TURBO, stopDelay: 0 })
-    // Stiff drop — no bounce on land. The bouncy default fights the win
+    // Stiff drop. no bounce on land. The bouncy default fights the win
     // animation when it arrives a frame later.
     .tumble({
       fall:   { duration: 280, ease: 'power3.in',  rowStagger: 60 },
@@ -163,7 +163,7 @@ export async function boot(opts: BootOptions): Promise<() => void> {
   async function handleSpin(): Promise<void> {
     if (disposed) return;
     if (isSpinning) {
-      try { reelSet.skip(); } catch { /* idle */ }
+      try { reelSet.skipSpin(); } catch { /* idle */ }
       return;
     }
     isSpinning = true;
@@ -174,11 +174,11 @@ export async function boot(opts: BootOptions): Promise<() => void> {
     const spinPromise = reelSet.spin();
     reelSet.setDropOrder('ltr');
     let grid = randomGrid();
-    reelSet.setResult(grid);
+    reelSet.setResult(grid.map((visible) => ({ visible })));
     await spinPromise;
     if (disposed) return;
 
-    // Cascade chain — `reelSet.runCascade` owns detect → destroy → refill.
+    // Cascade chain. `reelSet.runCascade` owns detect → destroy → refill.
     // We supply the game rules (ways evaluation + gravity-correct nextGrid)
     // and use `onCascade` for the round-side-effects (status text, win
     // bus, multiplier bump). Same canonical orchestrator every cascade

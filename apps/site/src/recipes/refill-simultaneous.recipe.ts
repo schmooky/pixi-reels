@@ -2,9 +2,8 @@
 // Injected: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
 //           PIXI, gsap, app, pickWeighted
 
-// SIMULTANEOUS REFILL — every cell drops at the same moment. The most
-// common refill pattern in commercial tumble slots: snappy, no extra
-// pacing, the player sees the new symbols arrive as one beat.
+// SIMULTANEOUS REFILL. every cell drops at the same moment. Snappy,
+// no extra pacing, all new symbols arrive in one beat.
 
 const IDS = ['7', '8', '9', '10', 'J', 'Q'];
 const REELS = 6, ROWS = 4, SIZE = 64;
@@ -20,7 +19,7 @@ function randSymbol(exclude) {
 }
 
 const reelSet = new ReelSetBuilder()
-  .reels(REELS).visibleSymbols(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
+  .reels(REELS).visibleRows(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
   .symbols((r) => {
     for (const sym of CARD_DECK) {
       if (IDS.includes(sym.id)) {
@@ -31,7 +30,7 @@ const reelSet = new ReelSetBuilder()
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150 })
   .tumble({
     fall:   { duration: 240, ease: 'sine.in',       rowStagger: 40 },
-    // rowStagger: 0 — every row in a reel drops together (no in-reel stagger).
+    // rowStagger: 0. every row in a reel drops together (no in-reel stagger).
     dropIn: { duration: 380, ease: 'back.out(1.4)', rowStagger: 0, distance: 'perHole' },
   })
   .ticker(app.ticker).build();
@@ -52,20 +51,20 @@ return {
       return next;
     });
 
-    // Moment A — initial reveal with the canonical left-to-right wave.
+    // Moment A. initial reveal with the canonical left-to-right wave.
     reelSet.setDropOrder('ltr');
     const spinDone = reelSet.spin();
     await new Promise((r) => setTimeout(r, 220));
-    reelSet.setResult(stage0);
+    reelSet.setResult(stage0.map((visible) => ({ visible })));
     await spinDone;
 
     await new Promise((r) => setTimeout(r, 200));
     const winners = HIT_COLS.map((c) => ({ reel: c, row: HIT_ROW }));
     await reelSet.destroySymbols(winners);
     await new Promise((r) => setTimeout(r, PAUSE_AFTER_REMOVAL_MS));
-    // Moment B — every column drops together. setDropOrder('all') = 0 ms
+    // Moment B. every column drops together. setDropOrder('all') = 0 ms
     // per-reel delay; the in-reel rowStagger is already 0 above.
     reelSet.setDropOrder('all');
-    await reelSet.refill({ winners, grid: stage1 });
+    await reelSet.refill({ winners, grid: stage1.map((visible) => ({ visible })) });
   },
 };

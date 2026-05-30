@@ -4,7 +4,7 @@
 
 Only the latest release of each published workspace package receives security fixes. Snapshot releases published from version branches (e.g. `pixi-reels@v0-2`) are previews and do not have an SLA — upgrade to the corresponding stable release for fixes.
 
-The docs site at https://pixi-reels.dev always tracks `main`.
+The docs site at https://pixi-reels.schmooky.dev always tracks `main`.
 
 ## Reporting a vulnerability
 
@@ -32,7 +32,7 @@ When reporting, please include:
 In scope:
 
 - Any workspace package under `packages/` published to npm.
-- The docs site at https://pixi-reels.dev.
+- The docs site at https://pixi-reels.schmooky.dev.
 - CI and release tooling under `.github/workflows` and `scripts/` that could compromise the npm publish pipeline or the snapshot flow.
 
 Out of scope:

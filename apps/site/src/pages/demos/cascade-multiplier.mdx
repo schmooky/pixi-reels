@@ -3,7 +3,7 @@ layout: ../../layouts/Demo.astro
 title: Cascade + multiplier
 subtitle: 5×5 · one click plays the whole tumble · drop-in for streamed server responses
 tags: [cascade, tumble, multiplier]
-description: A tumble slot — wins vanish, the next stage lands. Built around reelSet.runCascade(), which loops detect → destroy → refill until no more winners are found.
+description: A tumble slot. wins vanish, the next stage lands. Built around reelSet.runCascade(), which loops detect → destroy → refill until no more winners are found.
 ---
 
 import CascadeDemo from '../../components/demos/CascadeDemo.tsx';
@@ -30,7 +30,7 @@ If your server returns **all** cascade stages in one response:
 ```ts
 async function spin() {
   const response = await fetch('/api/spin').then((r) => r.json());
-  // response.stages: string[][][] — stage 0 first, tumble stages next.
+  // response.stages: string[][][]. stage 0 first, tumble stages next.
 
   // Land the first stage via the regular spin API.
   const p = reelSet.spin();
@@ -55,7 +55,7 @@ async function spin() {
 }
 ```
 
-`diffWinners` is whatever match-detector your game uses — it's NOT a naive grid diff, because survivors that slide past cleared rows would look "changed" by id. Compute winners from your match rules.
+`diffWinners` is whatever match-detector your game uses. it's NOT a naive grid diff, because survivors that slide past cleared rows would look "changed" by id. Compute winners from your match rules.
 
 ### 2. Stream stages from a server that dribbles responses
 
@@ -85,18 +85,18 @@ await reelSet.runCascade({
 
 By default, `destroySymbols` defers to each symbol's `playDestroy()` (sprite implode by default). Three ways to customize:
 
-- **Per-symbol** — your `SpriteSymbol`/`SpineSymbol` subclass overrides `playDestroy()`. Every cascade uses it.
-- **Per-cascade options** — pass `destroyOptions: { direction, delay, dim }` to `runCascade`.
-- **Replace entirely** — drive the visual yourself inside `onCascade`, then pass `destroyOptions: { zIndex: null }` so the engine's implode is invisible. See [cascade with WinPresenter](/recipes/cascade-winpresenter/).
+- **Per-symbol**. your `SpriteSymbol`/`SpineSymbol` subclass overrides `playDestroy()`. Every cascade uses it.
+- **Per-cascade options**. pass `destroyOptions: { direction, delay, dim }` to `runCascade`.
+- **Replace entirely**. drive the visual yourself inside `onCascade`, then pass `destroyOptions: { zIndex: null }` so the engine's implode is invisible. See [cascade with WinPresenter](/recipes/cascade-winpresenter/).
 
 ### 4. Identifying winners
 
-The canonical winner shape is `Cell[]` — `{ reel, row }` for every cell your match rules consider a winner. Compute it from the grid your `detectWinners` callback receives; never from a naive diff of "the next grid differs at row X." That bug only surfaces when survivors slide past cleared rows, and is the most common cascade implementation mistake.
+The canonical winner shape is `Cell[]`. `{ reel, row }` for every cell your match rules consider a winner. Compute it from the grid your `detectWinners` callback receives; never from a naive diff of "the next grid differs at row X." That bug only surfaces when survivors slide past cleared rows, and is the most common cascade implementation mistake.
 
 ## Cheats on this page
 
-- **One-click 4-stage cascade** (default on) — `cascadingStages(STAGES)` bundles the whole tumble in one response; `runCascade` consumes `meta.stages` via `nextGrid`.
-- **One stage per click (legacy)** — `cascadeSequence(STAGES)`; each click lands one stage. Useful for stepping through the sequence manually.
+- **One-click 4-stage cascade** (default on). `cascadingStages(STAGES)` bundles the whole tumble in one response; `runCascade` consumes `meta.stages` via `nextGrid`.
+- **One stage per click (legacy)**. `cascadeSequence(STAGES)`; each click lands one stage. Useful for stepping through the sequence manually.
 
 ## Test the chain
 
@@ -109,4 +109,4 @@ expect(offsets.find(o => o.row === 0)?.offsetRows).toBe(1); // new symbol, 1 slo
 expect(offsets.find(o => o.row === 4)?.offsetRows).toBe(0); // survivor, no move
 ```
 
-For end-to-end tests that drive a real `ReelSet`, use the [testing utilities](/docs/testing/) — `createTestReelSet`, `FakeTicker`, `spinAndLand`, `captureEvents`.
+For end-to-end tests that drive a real `ReelSet`, use the [testing utilities](/docs/testing/). `createTestReelSet`, `FakeTicker`, `spinAndLand`, `captureEvents`.

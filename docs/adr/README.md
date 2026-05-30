@@ -18,11 +18,12 @@ ADRs for pixi-reels. Each one captures a decision that shapes how the code is wr
 | [012](./012-per-reel-geometry-and-adjust-phase.md) | Per-reel geometry and the Adjust phase | Accepted (load-bearing) |
 | [013](./013-big-symbols-via-registration.md) | Big symbols via registration, not result data | Accepted |
 | [014](./014-mask-strategy-public.md) | MaskStrategy is a public extension point | Accepted |
+| [015](./015-cascade-multiways-interplay.md) | Cascade × MultiWays interplay | Accepted |
 
 ## Writing a new ADR
 
 1. Copy an existing file as a template.
-2. Number it sequentially (012, 013, …).
+2. Number it sequentially (016, 017, …).
 3. Status is one of: `Proposed` / `Accepted` / `Superseded by #NNN`.
 4. Mark it **load-bearing** if reversing the decision would break consumers or invalidate tests.
 5. Link it in the table above.

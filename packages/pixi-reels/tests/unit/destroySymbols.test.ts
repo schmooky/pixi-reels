@@ -96,10 +96,10 @@ describe('ReelSet.destroySymbols', () => {
     destroy();
   });
 
-  it('passes alternating direction by column when no override is set', async () => {
-    // playDestroy itself doesn't expose the direction it received; check the
-    // public observable: every cell ends at alpha 0 (no exception thrown),
-    // which means destroy ran with valid directions on every cell.
+  it('runs the poof animation on every cell and leaves them at alpha 0', async () => {
+    // No per-cell direction option in 1.0.0. the default playDestroy is a
+    // pure scale-and-fade poof. assert the public observable: every cell
+    // ends at alpha 0 (no exception thrown).
     const { reelSet, destroy } = createTestReelSet({ reels: 4, visibleRows: 1 });
     const cells = [0, 1, 2, 3].map((reel) => ({ reel, row: 0 }));
     await reelSet.destroySymbols(cells);

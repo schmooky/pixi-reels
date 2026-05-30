@@ -15,10 +15,13 @@ apis:
 
 import code from '../../recipes/multiplier-wild-pin.recipe.ts?raw';
 import { RecipeRunner } from '../../components/RecipeRunner.tsx';
+import RecipeFrame from '../../components/RecipeFrame.astro';
 
-<RecipeRunner code={code} client:only="react" />
+<RecipeFrame>
+  <RecipeRunner code={code} client:only="react" />
+</RecipeFrame>
 
-`CellPin.payload` carries arbitrary per-instance data alongside the pinned symbol. Multiplier wilds, value-carrying coins, tiered symbols — any "this cell has extra game state" mechanic goes here.
+`CellPin.payload` carries arbitrary per-instance data alongside the pinned symbol. Multiplier wilds, value-carrying coins, tiered symbols. any "this cell has extra game state" mechanic goes here.
 
 ## The whole mechanic
 
@@ -66,9 +69,9 @@ reelSet.events.on('pin:expired', (pin) => {
 });
 ```
 
-The engine fires both events regardless of whether a payload is set — the badge logic just checks.
+The engine fires both events regardless of whether a payload is set. the badge logic just checks.
 
 ## Related
 
-- [Value-carrying coin symbols](/recipes/value-coin-pin/) — same payload pattern for Hold & Win-style features
-- [Positional multiplier cells](/recipes/positional-multiplier-pin/) — multipliers tied to grid positions, not symbols
+- [Value-carrying coin symbols](/recipes/value-coin-pin/). same payload pattern for Hold & Win-style features
+- [Positional multiplier cells](/recipes/positional-multiplier-pin/). multipliers tied to grid positions, not symbols

@@ -2,7 +2,7 @@
 // Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
 //                   PIXI, gsap, app, pickWeighted
 //
-// MultiWays — per-spin row variation. Each reel lands on a different
+// MultiWays. per-spin row variation. Each reel lands on a different
 // row count in [minRows, maxRows]. The reel pixel height is fixed;
 // cell height per reel is derived live as
 // `reelPixelHeight / visibleRows[i]`, so a 2-row reel has tall cells
@@ -35,7 +35,7 @@ const reelSet = new ReelSetBuilder()
     }
   })
   .weights(Object.fromEntries(CARD_DECK.map((c, i) => [c.id, 12 - i])))
-  // Big symbols visually overshoot at landing on this layout — set
+  // Big symbols visually overshoot at landing on this layout. set
   // bounceDistance: 0 so each cell snaps flush regardless of which
   // shape was rolled this spin.
   .speed('normal', { ...SpeedPresets.NORMAL, bounceDistance: 0, bounceDuration: 0 })
@@ -54,7 +54,7 @@ const bannerBg = new PIXI.Graphics();
 banner.addChild(bannerBg);
 
 const bannerText = new PIXI.Text({
-  text: 'READY — press spin',
+  text: 'READY. press spin',
   style: {
     fontFamily: '"Roboto Condensed", "Arial Narrow", system-ui, sans-serif',
     fontSize: 14, fontWeight: '700',
@@ -76,7 +76,7 @@ function redrawBanner(text) {
   bannerText.text = text;
   bannerText.x = width / 2;
 }
-redrawBanner('READY — press spin');
+redrawBanner('READY. press spin');
 
 reelSet.events.on('spin:allLanded', () => {
   const visibleRowsPerReel = reelSet.reels.map((r) => r.visibleRows);

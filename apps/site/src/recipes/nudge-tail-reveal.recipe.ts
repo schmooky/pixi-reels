@@ -4,15 +4,14 @@
 // TAIL-REVEAL pattern.
 //
 // Big symbol lands fully visible. We nudge it UP by 1 so the anchor
-// crosses into bufferAbove — only the bottom cell of the block
+// crosses into bufferAbove. only the bottom cell of the block
 // remains in the visible window ("tail visible"). The engine's
 // `_finalizeFrame` sizes the anchor to span the whole block even
 // though it lives above visible, so the visible portion renders as
 // the bottom of the sprite, masked at the top edge.
 //
 // A beat later we nudge DOWN by 1 to bring the full block back into
-// view. The classic "the player sees the tail of the wild peeking in,
-// then nudges to reveal it fully" UX.
+// view. Tail in bufferAbove. nudge to reveal.
 
 const MEGA = { id: 'mega', color: 0xff8c42, label: 'MEGA', textColor: 0x4a1d00, w: 1, h: 2 };
 const REELS = 5;
@@ -22,7 +21,7 @@ const GAP = 4;
 
 const reelSet = new ReelSetBuilder()
   .reels(REELS)
-  .visibleSymbols(ROWS)
+  .visibleRows(ROWS)
   .symbolSize(SIZE, SIZE)
   .symbolGap(GAP, GAP)
   .symbols((registry) => {
@@ -52,7 +51,7 @@ return {
     const grid = [col3(), col3(), [MEGA.id, MEGA.id, filler()], col3(), col3()];
     const p = reelSet.spin();
     await new Promise((r) => setTimeout(r, 220));
-    reelSet.setResult(grid);
+    reelSet.setResult(grid.map((visible) => ({ visible })));
     await p;
     await new Promise((r) => setTimeout(r, 500));
 

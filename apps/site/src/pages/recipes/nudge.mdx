@@ -1,11 +1,11 @@
 ---
 layout: ../../layouts/Recipe.astro
 title: How to nudge a reel
-description: Shift one reel down or up by N positions after it has landed — the classic UK fruit-machine nudge, with the reveal symbols supplied by the caller.
-tags: [nudge, fruit-machine, recent]
+description: Shift one reel down or up by N positions after it has landed, with the reveal symbols supplied by the caller.
+tags: [nudge, recent]
 steps:
   - Wait for spin() to land
-  - Call reelSet.nudge(col, { distance, direction, incoming }) — incoming is required, top-down order of the new visible positions
+  - Call reelSet.nudge(col, { distance, direction, incoming }). incoming is required, top-down order of the new visible positions
   - Await the promise to read the new visible column for re-running win detection
   - For multi-reel beats, wrap several nudge() calls in Promise.all([...])
 apis:
@@ -19,8 +19,11 @@ import code from '../../recipes/nudge.recipe.ts?raw';
 import sequentialCode from '../../recipes/nudge-sequential.recipe.ts?raw';
 import parallelCode from '../../recipes/nudge-parallel.recipe.ts?raw';
 import { RecipeRunner } from '../../components/RecipeRunner.tsx';
+import RecipeFrame from '../../components/RecipeFrame.astro';
 
-<RecipeRunner code={code} client:only="react" />
+<RecipeFrame>
+  <RecipeRunner code={code} client:only="react" />
+</RecipeFrame>
 
 ## The minimum code
 
@@ -28,14 +31,14 @@ import { RecipeRunner } from '../../components/RecipeRunner.tsx';
 await reelSet.spin();
 await reelSet.setResult(grid);
 
-// Down nudge — `wild` slides in from the top and becomes the new top row.
+// Down nudge. `wild` slides in from the top and becomes the new top row.
 await reelSet.nudge(2, {
   distance: 1,
   direction: 'down',
   incoming: ['wild'],
 });
 
-// Up nudge — `wild` slides in from the bottom and becomes the new bottom row.
+// Up nudge. `wild` slides in from the bottom and becomes the new bottom row.
 await reelSet.nudge(3, {
   distance: 1,
   direction: 'up',
@@ -43,10 +46,10 @@ await reelSet.nudge(3, {
 });
 ```
 
-## `incoming` is top-down — always
+## `incoming` is top-down. always
 
 The `incoming` array describes the **final visible position** of the new
-symbols, top-to-bottom — not the order they enter the screen. The engine
+symbols, top-to-bottom. not the order they enter the screen. The engine
 handles the wrap mechanics internally so the caller can think in terms of
 "what does the player see after."
 
@@ -79,7 +82,7 @@ if (wins.length) winPresenter.show(wins);
 
 ## Sequential vs parallel
 
-Nudges are always per-reel — there's no batched API. Multi-reel beats are
+Nudges are always per-reel. there's no batched API. Multi-reel beats are
 just multiple `nudge(...)` calls, and the orchestration is entirely yours:
 `await` them one at a time for a deliberate beat, or `Promise.all([...])`
 them for a single synchronised one. Same engine output, same events fire,
@@ -89,9 +92,11 @@ Each canvas below lands the same flat board and then nudges reels 1, 2,
 and 3 down by one. The only difference is whether the calls await each
 other.
 
-### Sequential — three separate beats
+### Sequential. three separate beats
 
-<RecipeRunner code={sequentialCode} client:only="react" />
+<RecipeFrame>
+  <RecipeRunner code={sequentialCode} client:only="react" />
+</RecipeFrame>
 
 ```ts
 for (const col of [1, 2, 3]) {
@@ -104,15 +109,16 @@ for (const col of [1, 2, 3]) {
 }
 ```
 
-Each `await` parks the loop until that reel's GSAP tween lands. Reads as
-three reveals — players can register reel 1's wild before reel 2 starts
-moving. Total wall time = `cols.length * duration`. Use for scripted
-reveals where each reel earns its own beat (jackpot teasers, "watch this
-one too" moments, narrative bonus rounds).
+Each `await` parks the loop until that reel's GSAP tween lands. Total
+wall time = `cols.length * duration`. Use this shape when the caller
+wants each reel's resolved promise (and its `nudge:complete` event) to
+fire in order, one after the previous one fully landed.
 
-### Parallel — one synchronised beat
+### Parallel. one synchronised beat
 
-<RecipeRunner code={parallelCode} client:only="react" />
+<RecipeFrame>
+  <RecipeRunner code={parallelCode} client:only="react" />
+</RecipeFrame>
 
 ```ts
 await Promise.all(
@@ -130,14 +136,14 @@ await Promise.all(
 Every `nudge(...)` is invoked synchronously inside `Promise.all`, so the
 GSAP tweens all start on the same frame. The whole row of wilds drops in
 together. Total wall time = `duration` (no matter how many reels).
-Use for base-game responsiveness, line-completion reveals, and any time
-the reveal IS the row landing as a unit.
+Use this shape when the reveal IS the row landing as a unit and you only
+need a single `Promise.all` resolution to drive the next step.
 
 Both modes fire their own `nudge:start` / `nudge:complete` pair per reel,
-so per-reel SFX and HUD overlays work cleanly either way — only the
+so per-reel SFX and HUD overlays work cleanly either way. Only the
 clock differs.
 
-### Staggered — sugar for "wave" reveals
+### Staggered. sugar for "wave" reveals
 
 Pass `startDelay` per call inside a `Promise.all` for a uniform stagger
 without writing the loop yourself:
@@ -163,31 +169,31 @@ For irregular stagger profiles just compute per-reel delays in the map.
 ## Skip / abort a nudge
 
 `reelSet.skipNudge(col)` fast-forwards a single nudge to its landed state
-without rejecting the promise — the consumer's success path runs as if
+without rejecting the promise. the consumer's success path runs as if
 the tween had finished naturally. For "tear it down" semantics pass an
 `AbortSignal`:
 
 ```ts
-// Skip — resolves normally.
+// Skip. resolves normally.
 const p = reelSet.nudge(2, { distance: 1, direction: 'down', incoming: ['wild'], duration: 1500 });
 skipButton.onclick = () => reelSet.skipNudge(2);
 const { symbols } = await p; // success path
 
-// Abort — rejects with AbortError, fires nudge:cancelled.
+// Abort. rejects with AbortError, fires nudge:cancelled.
 const controller = new AbortController();
 abortButton.onclick = () => controller.abort();
 await reelSet.nudge(2, { ...opts, signal: controller.signal })
   .catch((e) => { if (e.name !== 'AbortError') throw e; });
 ```
 
-Either way the strip snaps to its deterministic post-nudge position —
+Either way the strip snaps to its deterministic post-nudge position.
 the landing contract is "`incoming` lands at these positions" regardless
 of how the tween ended.
 
 ## Test it
 
 ```ts
-import { createTestReelSet, expectGrid } from 'pixi-reels';
+import { createTestReelSet, expectGrid } from 'pixi-reels/testing';
 
 const { reelSet, spinAndLand, destroy } = createTestReelSet({
   reels: 3, visibleRows: 3, symbolIds: ['a', 'b', 'c', 'wild'],

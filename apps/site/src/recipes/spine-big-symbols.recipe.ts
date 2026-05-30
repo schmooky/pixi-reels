@@ -4,19 +4,19 @@
 //                   PIXI, gsap, app, textures, blurTextures, SYMBOL_IDS,
 //                   pickWeighted
 //
-// Big symbols rendered with Spine — a 2x2 wild placed at an anchor cell;
+// Big symbols rendered with Spine. a 2x2 wild placed at an anchor cell;
 // the engine paints OCCUPIED across the rest of the block. Same mechanic
 // as the CardSymbol big-symbols recipe, but each cell is a Spine skeleton
 // with idle/landing/win/destroy animations baked in.
 //
-// Reuses the wild skeleton for the 2x2 BIGWILD — Spine scales the whole
+// Reuses the wild skeleton for the 2x2 BIGWILD. Spine scales the whole
 // rig to whatever cell box the engine hands it without losing crispness.
 
 await loadGeneratedSpines();
 
 const REELS = 5;
 const ROWS = 4;
-// 140 = the spines' authored frame size — render 1:1 so the frame strokes
+// 140 = the spines' authored frame size. render 1:1 so the frame strokes
 // stay crisp and the wild's overflowing 200 px W reads at its intended size.
 const SIZE = 140;
 const GAP = 4;
@@ -46,7 +46,7 @@ const reelSet = new ReelSetBuilder()
       registry.register(id, SpineReelSymbol, {
         spineMap,
         autoPlayLanding: true,
-        // bigWild occupies a 2x2 block — render the spine at 2x scale
+        // bigWild occupies a 2x2 block. render the spine at 2x scale
         // so the rig fills the block instead of sitting tiny in the
         // top-left cell with empty space around it.
         scale: id === 'bigWild' ? 2 : 1,
@@ -54,7 +54,7 @@ const reelSet = new ReelSetBuilder()
     }
   })
   .weights(Object.fromEntries(CARDS.map((id, i) => [id, 12 - i])))
-  // wild fills cells from the random pool; bigWild is anchor-only — placed
+  // wild fills cells from the random pool; bigWild is anchor-only. placed
   // by the server, never by random fill, so weight 0 is mandatory.
   //
   // High zIndex on both wilds: their icon attachment is 200 px (vs the
@@ -67,7 +67,7 @@ const reelSet = new ReelSetBuilder()
     wild:    { weight: 3, zIndex: 999 },
     bigWild: { weight: 0, zIndex: 1000, size: { w: 2, h: 2 } },
   })
-  // Big symbols make the default 56px landing bounce look broken —
+  // Big symbols make the default 56px landing bounce look broken.
   // the 2x2 wild overshoots into adjacent cells. Zero the bounce so
   // the anchor lands flush on grid.
   .speed('normal', { ...SpeedPresets.NORMAL, bounceDistance: 0, bounceDuration: 0 })

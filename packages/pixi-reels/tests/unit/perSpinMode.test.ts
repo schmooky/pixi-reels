@@ -16,7 +16,7 @@ function buildHarness(opts: { withCascade: boolean }): Harness {
   const created: string[] = [];
   const builder = new ReelSetBuilder()
     .reels(1)
-    .visibleSymbols(2)
+    .visibleRows(2)
     .symbolSize(100, 100)
     .ticker(ticker as unknown as Ticker)
     .symbols((r) => r.register('a', HeadlessSymbol, {}))
@@ -43,12 +43,12 @@ function buildHarness(opts: { withCascade: boolean }): Harness {
 
 async function runSkippedSpin(h: Harness, mode?: 'standard' | 'cascade'): Promise<void> {
   const p = mode ? h.reelSet.spin({ mode }) : h.reelSet.spin();
-  h.reelSet.setResult([['a', 'a']]);
+  h.reelSet.setResult([{ visible: ['a', 'a'] }]);
   h.reelSet.slamStop();
   await p;
 }
 
-describe('ReelSet.spin — per-spin mode', () => {
+describe('ReelSet.spin. per-spin mode', () => {
   it('throws if cascade mode is requested without .tumble(...)', async () => {
     const h = buildHarness({ withCascade: false });
     await expect(h.reelSet.spin({ mode: 'cascade' })).rejects.toThrow(/tumble/);

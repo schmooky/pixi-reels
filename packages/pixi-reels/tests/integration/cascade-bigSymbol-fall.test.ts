@@ -26,7 +26,7 @@ function buildTumbleHarnessWithBigSymbol() {
   const ticker = new FakeTicker();
   const reelSet = new ReelSetBuilder()
     .reels(3)
-    .visibleSymbols(4)
+    .visibleRows(4)
     .bufferSymbols(2)
     .symbolSize(50, 50)
     .symbols((r) => {
@@ -47,7 +47,7 @@ function buildTumbleHarnessWithBigSymbol() {
   };
 }
 
-describe('cascade refill — buffer-anchored big symbol', () => {
+describe('cascade refill. buffer-anchored big symbol', () => {
   it('moves a 1x3 anchor from bufferAbove[1] to visible[0] via a one-step cascade refill', async () => {
     const { reelSet, destroy } = buildTumbleHarnessWithBigSymbol();
     try {
@@ -96,14 +96,14 @@ describe('cascade refill — buffer-anchored big symbol', () => {
       expect(afterGrid[0]).toEqual(['tall', 'tall', 'tall', 'a']);
 
       // Strip layout post-refill:
-      // bufferAbove(2) | visible(4) | bufferBelow(2) — 8 cells.
+      // bufferAbove(2) | visible(4) | bufferBelow(2). 8 cells.
       //   strip[0,1]   |  [2..5]    |  [6,7]
       // Anchor moved to strip[2] (visible[0]); stubs at strip[3..4].
       const reel0 = reelSet.reels[0];
       expect(reel0.symbols[2].symbolId).toBe('tall');
       expect(reel0.symbols[3].symbolId).toBe(OCCUPIED_SENTINEL);
       expect(reel0.symbols[4].symbolId).toBe(OCCUPIED_SENTINEL);
-      // bufferBelow must NOT carry any block cell — the block stopped
+      // bufferBelow must NOT carry any block cell. the block stopped
       // at strip[4].
       expect(reel0.symbols[5].symbolId).not.toBe(OCCUPIED_SENTINEL);
       expect(reel0.symbols[5].symbolId).not.toBe('tall');

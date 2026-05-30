@@ -103,7 +103,7 @@ export async function boot(opts: BootOptions): Promise<() => void> {
   frame.stroke({ color: 0x7ed6c8, width: 3, alpha: 0.85 });
   reelSet.addChildAt(frame, 0);
 
-  // Per-page WAYS counter — rendered as an inline DOM element above the
+  // Per-page WAYS counter. rendered as an inline DOM element above the
   // canvas. Lives inside the host so embedded site demos don't pollute body.
   const waysEl = document.createElement('div');
   waysEl.style.cssText =
@@ -133,7 +133,7 @@ export async function boot(opts: BootOptions): Promise<() => void> {
   async function handleSpin(): Promise<void> {
     if (disposed) return;
     if (isSpinning) {
-      try { reelSet.skip(); } catch { /* idle */ }
+      try { reelSet.skipSpin(); } catch { /* idle */ }
       return;
     }
     isSpinning = true;
@@ -149,7 +149,7 @@ export async function boot(opts: BootOptions): Promise<() => void> {
     const spinPromise = reelSet.spin();
     reelSet.setShape(shape);
     const result = mockSpin(shape);
-    reelSet.setResult(result.grid);
+    reelSet.setResult(result.grid.map((visible) => ({ visible })));
     await spinPromise;
     if (disposed) return;
 

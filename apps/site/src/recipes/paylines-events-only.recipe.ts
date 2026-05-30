@@ -7,7 +7,7 @@
 // numbers) yourself by subscribing to `win:group` / `win:symbol`.
 
 const A = '7', B = '8', C = '9';
-const SEVEN = 'A'; // premium card stand-in for the original royal "seven"
+const SEVEN = 'A'; // letter-card stand-in. constant kept as SEVEN for readability
 const IDS = [A, B, C, SEVEN];
 const COLS = 5, ROWS = 3, SIZE = 90;
 
@@ -24,7 +24,7 @@ const WINS = [0, 1, 2].map((row) => ({
 const LINE_COLORS = [0xffe04a, 0x33d1ff, 0xff7aa2];
 
 const reelSet = new ReelSetBuilder()
-  .reels(COLS).visibleSymbols(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
+  .reels(COLS).visibleRows(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
   .symbols(r => {
     for (const sym of [...CARD_DECK, WILD_CARD]) {
       r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
@@ -85,7 +85,7 @@ return {
   onSpin: async () => {
     const p = reelSet.spin();
     await new Promise(r => setTimeout(r, 150));
-    reelSet.setResult(GRID);
+    reelSet.setResult(GRID.map((visible) => ({ visible })));
     await p;
     await new Promise(r => setTimeout(r, 220));
     await presenter.show(WINS);

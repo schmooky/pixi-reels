@@ -1,4 +1,4 @@
-# Spine recipe — MultiWays- and big-symbol-ready skeletons
+# Spine recipe. MultiWays- and big-symbol-ready skeletons
 
 Pixi-reels resizes Spine symbols on every cell-size change. For MultiWays slots that means every reshape; for big symbols that means landing on an `N×M` block; even for non-uniform pyramids it means each reel may have its own cell height. This recipe captures what your skeleton needs to provide so the engine can scale it cleanly across all those cases.
 
@@ -15,7 +15,7 @@ If you're building a 1×1 symbol for a fixed-shape slot, only sections "Skeleton
 
 | Name | Type | Description |
 |---|---|---|
-| `idle` | loop | Default state. Plays whenever the symbol is visible and not winning/landing. Seamless loop — root returns to origin on the loop boundary. |
+| `idle` | loop | Default state. Plays whenever the symbol is visible and not winning/landing. Seamless loop. root returns to origin on the loop boundary. |
 | `win` | loop or one-shot | Called by `playWin()`. Loops if the animation is set as looping in the skeleton; otherwise plays once and holds the last frame. |
 
 ## Optional animations
@@ -51,7 +51,7 @@ resize(w: number, h: number): void {
 
 - Capture `this._naturalW/H` from `skeleton.getBounds()` on construction.
 - `Math.min` preserves aspect. If the cell aspect ratio differs from the skeleton aspect ratio, the symbol letterboxes within the cell.
-- Called on every swap AND every AdjustPhase reshape. **Be idempotent** — calling `resize(x, x)` twice must yield the same result.
+- Called on every swap AND every AdjustPhase reshape. **Be idempotent**. calling `resize(x, x)` twice must yield the same result.
 - Called on big-symbol landing with `(w*cellW, h*cellH)`.
 
 ## Update driver
@@ -61,7 +61,7 @@ resize(w: number, h: number): void {
 
 ## Skins
 
-Use Spine skins for palette/variant swaps. The lib does not set skins by default — set in a custom `SpineSymbol` subclass via `skeleton.setSkin(name)` inside `onActivate`.
+Use Spine skins for palette/variant swaps. The lib does not set skins by default. set in a custom `SpineSymbol` subclass via `skeleton.setSkin(name)` inside `onActivate`.
 
 ## Failure modes (how to spot a broken skeleton)
 
@@ -79,6 +79,6 @@ Use Spine skins for palette/variant swaps. The lib does not set skins by default
 - Animating root position in `idle` or `win_end`.
 - Non-uniform external scale (different X/Y).
 - Hardcoded pixel offsets in animations (offsets should be relative to the skeleton's natural size).
-- Multiple skeletons per symbol — composite via slots/skins, or build a custom `ReelSymbol` subclass.
+- Multiple skeletons per symbol. composite via slots/skins, or build a custom `ReelSymbol` subclass.
 - Adding a second ticker inside the skeleton.
 - Using specific bone names from outside the subclass.

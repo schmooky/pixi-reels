@@ -1,11 +1,11 @@
 import type { ReelSymbol } from '../symbols/ReelSymbol.js';
 
 /**
- * The physics of one reel — move symbols down, wrap them around.
+ * The physics of one reel. move symbols down, wrap them around.
  *
  * Every frame, `ReelMotion.update(delta)` adds `delta` to each symbol's
  * Y coordinate. A symbol whose position falls off the bottom wraps back
- * to the top (and vice versa — reels can run upward). Each wrap fires
+ * to the top (and vice versa. reels can run upward). Each wrap fires
  * the `_onSymbolWrapped` callback so the owning `Reel` can ask the
  * `FrameBuilder` for the next identity to paint on it.
  *

@@ -14,6 +14,16 @@ import {
 import { SpineReelSymbol } from 'pixi-reels/spine';
 import { BlurSpriteSymbol } from '../../../../examples/shared/BlurSpriteSymbol.ts';
 import { CardSymbol, CARD_DECK, WILD_CARD } from '../../../../examples/shared/CardSymbol.ts';
+import {
+  CoinSymbol,
+  COIN_TIER,
+  COIN_FEATURE,
+  COIN_MYSTERY,
+  COIN_TRIGGER,
+  coinValue,
+  coinMultiplier,
+  drawCoin,
+} from '../../../../examples/shared/CoinSymbol.ts';
 import { EmptySymbol } from '../../../../examples/shared/EmptySymbol.ts';
 import { loadPrototypeSymbols } from '../../../../examples/shared/prototypeSpriteLoader.ts';
 import {
@@ -134,13 +144,15 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
           'EmptySymbol', 'ReelSymbol',
           'RectMaskStrategy', 'SharedRectMaskStrategy',
           'CardSymbol', 'CARD_DECK', 'WILD_CARD',
+          'CoinSymbol', 'COIN_TIER', 'COIN_FEATURE', 'COIN_MYSTERY', 'COIN_TRIGGER',
+          'coinValue', 'coinMultiplier', 'drawCoin',
           'SpineReelSymbol', 'loadGeneratedSpines', 'buildSpineMap',
           `"use strict"; ${js}`,
         );
         // AsyncFunction so recipes that need async setup (e.g. dynamic
         // texture loaders added by future recipes) can `return await`
         // the built RunResult. Sync recipes that return a plain object
-        // are unaffected — `await x` on a non-Promise resolves to x.
+        // are unaffected. `await x` on a non-Promise resolves to x.
         result = (await factory(
           ReelSetBuilder, SpeedPresets, BlurSpriteSymbol, SpriteSymbol, AnimatedSpriteSymbol,
           WinPresenter,
@@ -148,6 +160,8 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
           EmptySymbol, ReelSymbol,
           RectMaskStrategy, SharedRectMaskStrategy,
           CardSymbol, CARD_DECK, WILD_CARD,
+          CoinSymbol, COIN_TIER, COIN_FEATURE, COIN_MYSTERY, COIN_TRIGGER,
+          coinValue, coinMultiplier, drawCoin,
           SpineReelSymbol, loadGeneratedSpines, buildSpineMap,
         )) as RunResult;
       } catch (e) {
@@ -201,7 +215,7 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
   async function handleSpin() {
     if (!ready || !!error) return;
     if (spinning) {
-      // Recipe-supplied skip handler wins — lets a nudge / cascade / custom
+      // Recipe-supplied skip handler wins. lets a nudge / cascade / custom
       // timeline recipe intercept the player's mid-action tap. Otherwise
       // fall through to the built-in heuristics.
       if (onSkipRef.current) {
@@ -214,10 +228,10 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
         reelSet.skipNudge();
         return;
       }
-      // skip() THROWS before `setResult()` arrives — route to requestSkip()
+      // skipSpin() THROWS before setResult() arrives. Route to requestSkip()
       // in the catch so a player tap during the server-wait window still
       // queues the slam and fires it the moment the result is in.
-      try { reelSetRef.current?.skip(); }
+      try { reelSetRef.current?.skipSpin(); }
       catch { reelSetRef.current?.requestSkip(); }
       return;
     }
@@ -231,10 +245,18 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
         const p = reelSet.spin();
         await new Promise((r) => setTimeout(r, 150));
         const result = nextResultRef.current?.();
-        if (result) reelSet.setResult(result);
+        if (result) reelSet.setResult(result.map((visible) => ({ visible })));
         await p;
       }
-    } catch { /* ignore */ } finally {
+    } catch (err) {
+      // Don't surface mid-spin transient errors in the UI (recipe runner
+      // shouldn't flash error banners during normal cleanup races). DO
+      // log them. silently swallowing here previously hid a real shape
+      // bug where recipes passed `string[][]` to `refill({ grid })` and
+      // the engine threw inside a Promise that no one was watching.
+      // eslint-disable-next-line no-console -- diagnostic surface
+      console.error('[RecipeRunner] handleSpin threw:', err);
+    } finally {
       setSpinning(false);
     }
   }
@@ -244,11 +266,13 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
   }
 
   return (
-    <div className="my-5 overflow-hidden rounded-xl border border-border bg-card">
-      <div
-        className="relative flex w-full items-center justify-center bg-background"
-        style={{ height }}
-      >
+    // Outer card frame + my-5 margin are supplied by the surrounding
+    // <RecipeFrame> Astro wrapper so the layout is stable before JS
+    // hydrates. Don't add a duplicate card here.
+    <div
+      className="relative flex w-full items-center justify-center bg-background"
+      style={{ height }}
+    >
         <div
           ref={hostRef}
           className="h-full w-full [&_canvas]:block [&_canvas]:h-full [&_canvas]:w-full"
@@ -267,7 +291,7 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
           aria-label={spinning ? 'Skip' : 'Spin'}
           className={cn(
             // Right edge, vertically centered. Bigger touch target than
-            // the corner bottom-right pill — easier to hit on mobile, more
+            // the corner bottom-right pill. easier to hit on mobile, more
             // obvious as the primary action on the canvas.
             'absolute right-3 top-1/2 -translate-y-1/2 inline-flex h-14 w-14 items-center justify-center rounded-full',
             'border border-border/70 bg-background/80 text-foreground shadow-md backdrop-blur',
@@ -290,7 +314,6 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
           <ExternalLink size={10} />
           Studio
         </button>
-      </div>
     </div>
   );
 }

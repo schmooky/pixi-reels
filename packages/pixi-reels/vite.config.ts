@@ -15,6 +15,9 @@ export default defineConfig({
         index: resolve(__dirname, 'src/index.ts'),
         // Subpath export: `import { SpineReelSymbol } from 'pixi-reels/spine'`
         spine: resolve(__dirname, 'src/spine/index.ts'),
+        // Subpath export: `import { createTestReelSet } from 'pixi-reels/testing'`
+        //. keeps the headless harness out of production bundles.
+        testing: resolve(__dirname, 'src/testing/index.ts'),
       },
       formats: ['es', 'cjs'],
     },

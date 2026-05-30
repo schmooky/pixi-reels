@@ -4,6 +4,7 @@ import Hero from '../components/Hero.astro';
 import FeatureGrid from '../components/FeatureGrid.astro';
 import CodeShowcase from '../components/CodeShowcase.astro';
 import DemoCallout from '../components/DemoCallout.astro';
+import Partners from '../components/Partners.astro';
 import FAQ from '../components/FAQ.astro';
 import {
   SITE,
@@ -20,7 +21,7 @@ const faqs = [
   { question: 'Can I test slot mechanics without a renderer?', answer: 'Yes. The pixi-reels testing module exports createTestReelSet, FakeTicker, HeadlessSymbol, spinAndLand, expectGrid, captureEvents, and countSymbol for running full spin lifecycles in Node.' },
   { question: 'How do I force a specific spin outcome?', answer: 'Call ReelSet.setResult(grid) during a spin, or use the CheatEngine (examples/shared/cheats.ts) with built-in cheats: forceGrid, forceLine, forceScatters, forceNearMiss, forceCell, holdAndWinProgress, cascadeSequence, cascadingStages, forceAnticipation.' },
   { question: 'Which slot mechanics are supported out of the box?', answer: 'Line pays, scatter-triggered free spins, hold & win, cascade/tumble with multipliers, sticky wilds, and anticipation plus slam-stop. Each ships as a live demo with a cheat panel.' },
-  { question: 'Does pixi-reels handle multi-response server cascades?', answer: 'Yes, via reelSet.runCascade({ detectWinners, nextGrid }). Both callbacks can be async — await your server inside nextGrid and return the next grid. The returned RunCascadeResult carries chainLength, totalWinners, finalGrid, and wasSkipped. Pass signal: AbortSignal for caller-driven cancellation (player slam between refills).' },
+  { question: 'Does pixi-reels handle multi-response server cascades?', answer: 'Yes, via reelSet.runCascade({ detectWinners, nextGrid }). Both callbacks can be async. await your server inside nextGrid and return the next grid. The returned RunCascadeResult carries chainLength, totalWinners, finalGrid, and wasSkipped. Pass signal: AbortSignal for caller-driven cancellation (player slam between refills).' },
   { question: 'Is pixi-reels tree-shakeable?', answer: 'Yes. ESM + CJS dual format, optional Spine peer, and the testing utilities live in a sub-module so they drop out of production builds.' },
 ];
 
@@ -33,7 +34,7 @@ const jsonLd = [
 ];
 ---
 <Base
-  title={`${SITE.name} — ${SITE.tagline}`}
+  title={`${SITE.name}. ${SITE.tagline}`}
   description={SITE.description}
   path="/"
   type="website"
@@ -43,6 +44,10 @@ const jsonLd = [
   <FeatureGrid />
   <CodeShowcase />
   <DemoCallout />
+  {/* Partners section disabled for 1.0 launch. The component, content
+      registry, and partner issue template stay so re-enabling is a one-
+      line change once we have more than one studio to list. */}
+  {/* <Partners /> */}
   <FAQ />
 
   <section class="pb-24">

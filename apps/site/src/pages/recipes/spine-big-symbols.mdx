@@ -1,13 +1,13 @@
 ---
 layout: ../../layouts/Recipe.astro
 title: Big symbols with Spine
-description: Production-shape big-symbols recipe — a 2x2 wild placed at an anchor cell, with each cell a Spine skeleton that idles, lands, and plays a win animation. Same engine mechanic as the CardSymbol version, real art on top.
+description: Production-shape big-symbols recipe. a 2x2 wild placed at an anchor cell, with each cell a Spine skeleton that idles, lands, and plays a win animation. Same engine mechanic as the CardSymbol version, real art on top.
 tags: [big-symbols, spine, custom-symbol, animation]
 steps:
-  - "`await loadGeneratedSpines()` once before building — boots the atlas + 10 skeleton JSONs"
+  - "`await loadGeneratedSpines()` once before building. boots the atlas + 10 skeleton JSONs"
   - "Map your symbol ids to skeleton names with `buildSpineMap({ id: 'low_a', ... })`"
   - "Register every id with `SpineReelSymbol` and pass the same map to each registration"
-  - "Mark the big symbol with `size: { w: 2, h: 2 }` and `weight: 0` — anchor-only, never from random fill"
+  - "Mark the big symbol with `size: { w: 2, h: 2 }` and `weight: 0`. anchor-only, never from random fill"
 apis:
   - SpineReelSymbol
   - loadGeneratedSpines
@@ -17,10 +17,13 @@ apis:
 
 import code from '../../recipes/spine-big-symbols.recipe.ts?raw';
 import { RecipeRunner } from '../../components/RecipeRunner.tsx';
+import RecipeFrame from '../../components/RecipeFrame.astro';
 
-<RecipeRunner code={code} client:only="react" />
+<RecipeFrame>
+  <RecipeRunner code={code} client:only="react" />
+</RecipeFrame>
 
-Same big-symbols mechanic as the [CardSymbol recipe](/recipes/big-symbols/), but every cell is a Spine 2D skeleton — `idle` plays on land, `landing` plays as the squash-and-stretch on touchdown, `win` fires when `WinPresenter` highlights a payline, and `destroy` is wired up for cascades. The 2x2 bigWild reuses the regular wild skeleton; Spine scales it to the larger cell box without losing crispness.
+Same big-symbols mechanic as the [CardSymbol recipe](/recipes/big-symbols/), but every cell is a Spine 2D skeleton. `idle` plays on land, `landing` plays as the squash-and-stretch on touchdown, `win` fires when `WinPresenter` highlights a payline, and `destroy` is wired up for cascades. The 2x2 bigWild reuses the regular wild skeleton; Spine scales it to the larger cell box without losing crispness.
 
 ## Boot the atlas first
 
@@ -29,7 +32,7 @@ Same big-symbols mechanic as the [CardSymbol recipe](/recipes/big-symbols/), but
 ```ts
 import { loadGeneratedSpines, buildSpineMap } from '../../shared/generatedSpineLoader';
 
-await loadGeneratedSpines();   // idempotent — safe to call from every boot
+await loadGeneratedSpines();   // idempotent. safe to call from every boot
 ```
 
 The default base path is `'/generated-symbols/'`. Both `examples/assets/` (`publicDir`) and the docs site (`apps/site/public/generated-symbols/`) serve the same 10 JSONs + atlas + page from there.
@@ -65,7 +68,7 @@ builder.symbols((registry) => {
 
 ## Big-symbol metadata
 
-Same shape as the CardSymbol recipe — the engine doesn't care what renders the cell; size and weight are what make a symbol "big":
+Same shape as the CardSymbol recipe. the engine doesn't care what renders the cell; size and weight are what make a symbol "big":
 
 ```ts
 .symbolData({
@@ -113,7 +116,7 @@ Run `bun run build` in `tools/symbol-gen/` to regenerate. Output drops in `tools
 
 ## Related
 
-- [Big symbols (CardSymbol)](/recipes/big-symbols/) — same mechanic with the no-asset debug class
-- [MxN big symbols](/recipes/big-symbols-mxn/) — wide / tall / giant block shapes
-- [Spine pyramid shape](/recipes/spine-pyramid-shape/) — same skeletons on a non-uniform layout
-- [Get block bounds](/recipes/get-block-bounds/) — overlay the engine's view of the block
+- [Big symbols (CardSymbol)](/recipes/big-symbols/). same mechanic with the no-asset debug class
+- [MxN big symbols](/recipes/big-symbols-mxn/). wide / tall / giant block shapes
+- [Spine pyramid shape](/recipes/spine-pyramid-shape/). same skeletons on a non-uniform layout
+- [Get block bounds](/recipes/get-block-bounds/). overlay the engine's view of the block

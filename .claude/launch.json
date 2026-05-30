@@ -20,12 +20,6 @@
       "port": 5174
     },
     {
-      "name": "hold-and-win",
-      "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["--filter", "hold-and-win", "exec", "vite", "--port", "5175", "--strictPort"],
-      "port": 5175
-    },
-    {
       "name": "sandbox",
       "runtimeExecutable": "pnpm",
       "runtimeArgs": ["--filter", "sandbox", "exec", "vite", "--port", "5176", "--strictPort"],

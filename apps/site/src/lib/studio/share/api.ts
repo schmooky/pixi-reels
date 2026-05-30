@@ -1,6 +1,6 @@
 /**
  * Thin fetch wrapper over the share-api. Studio dialog and viewer both
- * go through these helpers — keeps URL building, error mapping, and
+ * go through these helpers. keeps URL building, error mapping, and
  * JSON parsing in one place.
  */
 

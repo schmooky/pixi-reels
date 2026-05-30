@@ -2,17 +2,17 @@
 // Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
 //                   PIXI, gsap, app
 
-// MultiWays + cascade tumble — ways-style winner removal.
+// MultiWays + cascade tumble. ways-style winner removal.
 //
 // A "ways" win on a multiways slot: a symbol appears on N consecutive
 // reels starting from reel 0. EVERY instance of that symbol on those
-// reels is a winner — not just one cell per column, the way a payline
+// reels is a winner. not just one cell per column, the way a payline
 // game would resolve it. So if reel 1 has two Qs and reel 2 has three Qs,
 // a Q-ways win pops all five of them.
 //
 // Visual flow each round:
 //   1. setShape(rowsPerReel) rolls a per-reel row count in [minRows, maxRows].
-//   2. reelSet.spin({ mode: 'standard' }) — classic strip-spin lands the multiways grid.
+//   2. reelSet.spin({ mode: 'standard' }). classic strip-spin lands the multiways grid.
 //   3. reelSet.runCascade({ detectWinners, nextGrid }) pops every winning cell;
 //      survivors fall, new symbols drop in from above. Loops until no more
 //      ways wins (capped at MAX_CASCADES per round).
@@ -39,8 +39,8 @@ function randomShape() {
 }
 
 function buildGridWithGuaranteedWin(shape) {
-  // Random fill, then plant the same symbol on reels 0, 1, 2 — with multiple
-  // copies on reels that have room — so the ways win removes multiple cells
+  // Random fill, then plant the same symbol on reels 0, 1, 2. with multiple
+  // copies on reels that have room. so the ways win removes multiple cells
   // per column, which is the whole point of multiways-style cascading.
   const grid = shape.map((rows) =>
     Array.from({ length: rows }, () => randSymbol()),
@@ -63,7 +63,7 @@ function buildGridWithGuaranteedWin(shape) {
 function findAllWaysWins(grid) {
   // Every symbol whose presence spans the first N consecutive reels
   // (N >= MIN_WAYS_REELS) is a separate ways win. A real multiways game
-  // pays them all in the same evaluation — Q-ways and 10-ways can both
+  // pays them all in the same evaluation. Q-ways and 10-ways can both
   // hit simultaneously and both contribute winners to the same cascade.
   const wins = [];
   for (const id of IDS) {
@@ -95,7 +95,7 @@ function collectAllWinners(grid, wins) {
 function applyCascade(grid, winners) {
   // Per-reel gravity: drop winning rows, shift survivors down, fill the
   // cleared top slots with new random symbols. Cell count per reel stays
-  // the same — multiways shape doesn't change mid-cascade.
+  // the same. multiways shape doesn't change mid-cascade.
   const winnersByReel = new Map();
   for (const w of winners) {
     if (!winnersByReel.has(w.reel)) winnersByReel.set(w.reel, new Set());
@@ -127,14 +127,14 @@ const reelSet = new ReelSetBuilder()
   })
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 120, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
-    fall:   { duration: 0, ease: 'none', rowStagger: 0 },              // not used — refill skips fall
+    fall:   { duration: 0, ease: 'none', rowStagger: 0 },              // not used. refill skips fall
     dropIn: { duration: 280, ease: 'back.out(1.4)', rowStagger: 0, distance: 'perHole' },
   })
   .ticker(app.ticker)
   .build();
 
 // Multiways slots build at `maxRows` until the first `setShape` + spin
-// commits a jagged shape. On page load that looks like a uniform 6x5 —
+// commits a jagged shape. On page load that looks like a uniform 6x5.
 // not great for a recipe whose whole point is per-reel row variation.
 // Run a silent initial spin+skip with a fresh random shape so the
 // landing grid the user first sees already shows the jagged silhouette.
@@ -145,8 +145,8 @@ const initialGrid = initialShape.map((rows) =>
 {
   const p = reelSet.spin({ mode: 'standard' });
   reelSet.setShape(initialShape);
-  reelSet.setResult(initialGrid);
-  reelSet.skip();
+  reelSet.setResult(initialGrid.map((visible) => ({ visible })));
+  reelSet.skipSpin();
   await p;
 }
 
@@ -155,17 +155,17 @@ return {
   onSpin: async () => {
     const shape = randomShape();
 
-    // Round 1 — strip-spin lands the multiways grid (AdjustPhase reshapes
+    // Round 1. strip-spin lands the multiways grid (AdjustPhase reshapes
     // between SPIN and STOP).
     const stage0 = buildGridWithGuaranteedWin(shape);
     const p = reelSet.spin({ mode: 'standard' });
     await new Promise((r) => setTimeout(r, 80));
     reelSet.setShape(shape);
-    reelSet.setResult(stage0);
+    reelSet.setResult(stage0.map((visible) => ({ visible })));
     await p;
     await new Promise((r) => setTimeout(r, 120));
 
-    // Cascade chain — `reelSet.runCascade` owns detect → destroy → pause
+    // Cascade chain. `reelSet.runCascade` owns detect → destroy → pause
     // → refill. We supply the game rules via the two callbacks. The
     // `detectWinners` callback re-evaluates ways wins on the post-refill
     // grid each iteration; when no more ways wins exist, the chain ends.

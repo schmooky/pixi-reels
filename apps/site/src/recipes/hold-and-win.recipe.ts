@@ -1,13 +1,13 @@
 // @ts-nocheck
-// Injected: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, WILD_CARD,
+// Injected: ReelSetBuilder, SpeedPresets, CoinSymbol, COIN_TRIGGER, drawCoin,
 //           PIXI, gsap, app, pickWeighted,
-//           EmptySymbol (blank ReelSymbol — renders nothing, used for miss cells)
+//           EmptySymbol (blank ReelSymbol. renders nothing, used for miss cells)
 
-const COIN = 'wild';
+const COIN = 'coin';
 const EMPTY = 'empty';
 const COLS = 5, ROWS = 3, CELL = 60, GAP = 4;
 
-// Build 15 independent 1×1 ReelSets — one per cell.
+// Build 15 independent 1×1 ReelSets. one per cell.
 const colWidth = COLS * (CELL + GAP) - GAP;
 const colHeight = ROWS * (CELL + GAP) - GAP;
 const startX = (app.screen.width - colWidth) / 2;
@@ -17,14 +17,10 @@ const cells = [];
 for (let col = 0; col < COLS; col++) {
   for (let row = 0; row < ROWS; row++) {
     const mini = new ReelSetBuilder()
-      .reels(1).visibleSymbols(1)
+      .reels(1).visibleRows(1)
       .symbolSize(CELL, CELL).symbolGap(0, 0)
       .symbols(r => {
-        r.register(COIN, CardSymbol, {
-          color: WILD_CARD.color,
-          label: WILD_CARD.label,
-          textColor: WILD_CARD.textColor,
-        });
+        r.register(COIN, CoinSymbol, COIN_TRIGGER);
         r.register(EMPTY, EmptySymbol, {});
       })
       // Mostly empty so coins flash past during the spin animation.
@@ -49,30 +45,30 @@ const rounds = [
 const heldKeys = new Set();
 const overlays = [];
 
-// Build a held-coin overlay matching the WILD card visual (no texture
-// needed — cards are pure Graphics).
+// Build a held-coin overlay matching the in-reel CoinSymbol visual via the
+// shared `drawCoin` helper. Same shape, same colors, no texture needed.
 function makeCoinOverlay() {
   const g = new PIXI.Container();
-  const rect = new PIXI.Graphics();
-  rect.rect(0, 0, CELL - 8, CELL - 8).fill({ color: WILD_CARD.color });
-  rect.rect(1, 1, CELL - 10, CELL - 10).stroke({ color: 0x000000, width: 2, alpha: 0.25 });
+  const SIZE = CELL - 8;
+  const coin = new PIXI.Graphics();
+  drawCoin(coin, SIZE, SIZE, COIN_TRIGGER);
   const label = new PIXI.Text({
-    text: WILD_CARD.label,
+    text: COIN_TRIGGER.label,
     style: {
       fontFamily:
         '"Roboto Condensed", "Arial Narrow", "Helvetica Neue Condensed", "Liberation Sans Narrow", system-ui, sans-serif',
-      fontSize: Math.floor((CELL - 8) * 0.32),
-      fontWeight: '700',
-      fill: WILD_CARD.textColor,
+      fontSize: Math.floor(SIZE * 0.24),
+      fontWeight: '800',
+      fill: COIN_TRIGGER.textColor,
       align: 'center',
     },
   });
   label.anchor.set(0.5);
-  label.x = (CELL - 8) / 2;
-  label.y = (CELL - 8) / 2;
-  g.addChild(rect);
+  label.x = SIZE / 2;
+  label.y = SIZE / 2;
+  g.addChild(coin);
   g.addChild(label);
-  g.pivot.set((CELL - 8) / 2, (CELL - 8) / 2);
+  g.pivot.set(SIZE / 2, SIZE / 2);
   return g;
 }
 
@@ -101,11 +97,11 @@ return {
       await new Promise(r => setTimeout(r, 140));
       for (const cell of activeCells) {
         const isHit = hits.some(h => h.col === cell.col && h.row === cell.row);
-        cell.reelSet.setResult([[isHit ? COIN : EMPTY]]);
+        cell.reelSet.setResult([{ visible: [isHit ? COIN : EMPTY] }]);
       }
       await Promise.all(spinPromises);
 
-      // Lock in hits with a coin overlay sprite; hide their mini reel.
+      // Lock in hits with a coin overlay; hide their mini reel.
       for (const cell of activeCells) {
         const key = `${cell.col},${cell.row}`;
         if (!hits.some(h => h.col === cell.col && h.row === cell.row)) continue;

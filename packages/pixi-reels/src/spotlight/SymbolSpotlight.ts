@@ -47,12 +47,12 @@ interface PromotedSymbol {
  *      back where it came from and removes the dim overlay.
  *
  * Two modes:
- *   - `show(positions, options)` — one-shot. Cell highlight + promote +
+ *   - `show(positions, options)`. one-shot. Cell highlight + promote +
  *     play win. Returns when the animation fully ends.
- *   - `cycle(lines, options)` — iterate multiple win lines with a
+ *   - `cycle(lines, options)`. iterate multiple win lines with a
  *     configurable per-line duration and gap, optionally repeating.
  *
- * Win detection is NOT part of this. pixi-reels never computes wins —
+ * Win detection is NOT part of this. pixi-reels never computes wins.
  * your server / game code decides which cells are winners and passes
  * them here. See [ADR 007](../../docs/adr/007-scope.md).
  */
@@ -79,8 +79,18 @@ export class SymbolSpotlight implements Disposable {
 
   /** Show spotlight on specific positions. */
   async show(positions: SymbolPosition[], options: SpotlightOptions = {}): Promise<void> {
-    this.hide(); // Clear any existing spotlight
+    this.hide(); // Cancel any running cycle and clear the previous spotlight
+    await this._showInternal(positions, options);
+  }
 
+  /**
+   * Promote + play win for one set of positions. Unlike the public `show()`,
+   * this does NOT call `hide()` first, so it never aborts a running cycle.
+   */
+  private async _showInternal(
+    positions: SymbolPosition[],
+    options: SpotlightOptions = {},
+  ): Promise<void> {
     const {
       dimAmount = 0.5,
       playWinAnimation = true,
@@ -105,11 +115,11 @@ export class SymbolSpotlight implements Disposable {
 
       // Avoid promoting the same physical symbol twice (e.g. a 2×2 big
       // symbol's anchor cell + its OCCUPIED cells all resolve to one symbol).
-      const key = `${pos.reelIndex}:${reel._getAnchorRow(pos.rowIndex)}`;
+      const key = `${pos.reelIndex}:${reel.getAnchorRow(pos.rowIndex)}`;
       if (seen.has(key)) continue;
       seen.add(key);
 
-      // Track for hide() only when we're actually moving the view —
+      // Track for hide() only when we're actually moving the view.
       // otherwise the entry's `originalParent` would become stale if the
       // shared symbol pool recycles this instance into a different reel
       // before the next hide(), and `hide()` would reparent it back to a
@@ -141,9 +151,17 @@ export class SymbolSpotlight implements Disposable {
       this._cycleAbort.abort();
       this._cycleAbort = null;
     }
+    this._teardownVisual();
+  }
 
+  /**
+   * Return promoted symbols and remove the dim overlay, WITHOUT aborting a
+   * running cycle. The cycle loop calls this between lines; `hide()` adds the
+   * abort on top for the public stop-everything behaviour.
+   */
+  private _teardownVisual(): void {
     // Return promoted symbols. Skip any whose view has been moved out of
-    // the spotlight container — that means the shared symbol pool has
+    // the spotlight container. that means the shared symbol pool has
     // recycled them into another reel since show(), and reparenting back
     // to `originalParent` would steal them from their new owner.
     for (const { symbol, originalParent } of this._promoted) {
@@ -177,21 +195,29 @@ export class SymbolSpotlight implements Disposable {
 
     if (winLines.length === 0) return;
 
-    this._cycleAbort = new AbortController();
-    const signal = this._cycleAbort.signal;
+    // Stop anything already showing/cycling, then start a fresh controller.
+    this.hide();
+    const abort = new AbortController();
+    this._cycleAbort = abort;
+    const signal = abort.signal;
 
     let cycleCount = 0;
     while (cycles === -1 || cycleCount < cycles) {
       for (const line of winLines) {
         if (signal.aborted) return;
-        await this.show(line.positions, options);
+        // Use the internal show/teardown so the cycle does not abort itself.
+        await this._showInternal(line.positions, options);
         await this._wait(displayDuration, signal);
         if (signal.aborted) return;
-        this.hide();
+        this._teardownVisual();
         await this._wait(gapDuration, signal);
       }
       cycleCount++;
     }
+
+    // Normal completion: clear only our own controller (a newer cycle/show
+    // that pre-empted us would have aborted this signal and returned above).
+    if (this._cycleAbort === abort) this._cycleAbort = null;
   }
 
   destroy(): void {

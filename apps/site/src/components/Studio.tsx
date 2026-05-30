@@ -42,6 +42,16 @@ import {
 import { SpineReelSymbol } from 'pixi-reels/spine';
 import { BlurSpriteSymbol } from '../../../../examples/shared/BlurSpriteSymbol.ts';
 import { CardSymbol, CARD_DECK, WILD_CARD } from '../../../../examples/shared/CardSymbol.ts';
+import {
+  CoinSymbol,
+  COIN_TIER,
+  COIN_FEATURE,
+  COIN_MYSTERY,
+  COIN_TRIGGER,
+  coinValue,
+  coinMultiplier,
+  drawCoin,
+} from '../../../../examples/shared/CoinSymbol.ts';
 import { EmptySymbol } from '../../../../examples/shared/EmptySymbol.ts';
 import { loadPrototypeSymbols } from '../../../../examples/shared/prototypeSpriteLoader.ts';
 import {
@@ -65,22 +75,24 @@ import type { StudioConfig } from '@/lib/studio/types.js';
 const DEFAULT_CODE = `// @ts-nocheck
 // ─── pixi-reels studio ─────────────────────────────────────────────────
 // Edit this code and press Run (Cmd/Ctrl+Enter). Recipes from /recipes/*
-// open here too — anything that runs in a recipe runs here.
+// open here too. anything that runs in a recipe runs here.
 //
 // Built-in globals (ready out of the box):
 //   - ReelSetBuilder, SpeedPresets, WinPresenter
 //   - SpriteSymbol, AnimatedSpriteSymbol, BlurSpriteSymbol
 //   - CardSymbol, CARD_DECK, WILD_CARD  (graphics-only debug cards)
+//   - CoinSymbol, COIN_TIER, COIN_FEATURE, COIN_MYSTERY, COIN_TRIGGER,
+//     coinValue, coinMultiplier, drawCoin  (graphics-only debug coins)
 //   - SpineReelSymbol, loadGeneratedSpines, buildSpineMap
 //   - RectMaskStrategy, SharedRectMaskStrategy
 //   - EmptySymbol, ReelSymbol
-//   - app          — PixiJS Application (.ticker, .screen)
-//   - textures, blurTextures, SYMBOL_IDS  — prototype atlas, preloaded
+//   - app         . PixiJS Application (.ticker, .screen)
+//   - textures, blurTextures, SYMBOL_IDS . prototype atlas, preloaded
 //   - pickWeighted, gsap, PIXI
 //
 // Bring-your-own assets (Symbols tab):
-//   - userSymbols     — Record<id, { Class, options }> from your uploads
-//   - userSymbolData  — Record<id, { unmask?: boolean }>, auto-applied
+//   - userSymbols    . Record<id, { Class, options }> from your uploads
+//   - userSymbolData . Record<id, { unmask?: boolean }>, auto-applied
 //
 // Return { reelSet, nextResult? } from buildReels(). Or return { onSpin }
 // for a fully custom spin handler.
@@ -94,7 +106,7 @@ function buildReels() {
 
   const reelSet = new ReelSetBuilder()
     .reels(5)
-    .visibleSymbols(3)
+    .visibleRows(3)
     .symbolSize(90, 90)
     .symbolGap(4, 4)
     .symbols((r) => {
@@ -172,7 +184,7 @@ function pickWeighted(weights: Record<string, number>): string {
  * place of the engine's. Auto-applies the per-symbol overrides from the
  * Symbols tab (currently: `unmask`) in `.build()`, so the user doesn't
  * have to remember `.symbolData(userSymbolData)` themselves. The
- * Symbols-tab UI is the source of truth for these flags — if the user
+ * Symbols-tab UI is the source of truth for these flags. if the user
  * also calls `.symbolData(...)` manually with the same id, the merge
  * order in ReelSetBuilder.symbolData (line 309: spread merge) means
  * our studio data wins. That matches user intent: toggling the row
@@ -180,7 +192,7 @@ function pickWeighted(weights: Record<string, number>): string {
  *
  * Bundling the overrides into a factory-built subclass keeps user code
  * looking exactly like sandbox/recipe code (`new ReelSetBuilder()` with
- * no args) — no studio-specific API to learn.
+ * no args). no studio-specific API to learn.
  */
 function makeStudioReelSetBuilder(
   studioOverrides: Record<string, Partial<SymbolData>>,
@@ -221,17 +233,17 @@ export default function Studio() {
   const [shareOpen, setShareOpen] = useState(false);
   // Speed selector. Populated from `reelSet.speed.profileNames` on every
   // Run so the segmented control reflects whatever the user's builder
-  // registered — `.speed('mySpeed', ...)` in user code shows up
+  // registered. `.speed('mySpeed', ...)` in user code shows up
   // automatically. Empty until the first successful Run.
   const [speeds, setSpeeds] = useState<string[]>([]);
   const [speedName, setSpeedName] = useState<string>('normal');
 
-  // Latched boot flag — keep the skeleton on screen for at least 250 ms
+  // Latched boot flag. keep the skeleton on screen for at least 250 ms
   // after first paint so very fast IDB+atlas loads don't flash a 1-frame
   // skeleton. Mirrors RecipeRunner's pattern.
   const showSkeleton = useMinDisplay(isBooting, 250);
   // Set when a recipe link (#code=…) arrives and we already have saved work
-  // in IDB — opens the overwrite/preview/cancel modal. While non-null the
+  // in IDB. opens the overwrite/preview/cancel modal. While non-null the
   // user hasn't decided yet; the persisted config stays untouched.
   const [pendingHashCode, setPendingHashCode] = useState<string | null>(null);
   // Set when an incoming recipe should auto-run as soon as boot completes
@@ -242,7 +254,7 @@ export default function Studio() {
   // Cancel doesn't set it (the user kept their existing code; they didn't
   // ask to run anything).
   const [pendingAutoRun, setPendingAutoRun] = useState<boolean>(false);
-  // True while previewing a recipe loaded via "Preview only" — disables the
+  // True while previewing a recipe loaded via "Preview only". disables the
   // debounced save effect so the user's saved Studio code in IDB is preserved.
   const [isEphemeral, setIsEphemeral] = useState(false);
 
@@ -406,7 +418,7 @@ export default function Studio() {
     try {
       const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor as FunctionConstructor;
       // Keep this param list in lock-step with RecipeRunner.tsx and
-      // ShareViewer.tsx — anything a recipe references must be injected
+      // ShareViewer.tsx. anything a recipe references must be injected
       // identically across all three runtimes, otherwise "Open in Studio"
       // (and shared studios using recipe-style code) produce
       // "Can't find variable: X" at run time.
@@ -417,6 +429,8 @@ export default function Studio() {
         'EmptySymbol', 'ReelSymbol',
         'RectMaskStrategy', 'SharedRectMaskStrategy',
         'CardSymbol', 'CARD_DECK', 'WILD_CARD',
+        'CoinSymbol', 'COIN_TIER', 'COIN_FEATURE', 'COIN_MYSTERY', 'COIN_TRIGGER',
+        'coinValue', 'coinMultiplier', 'drawCoin',
         'SpineReelSymbol', 'loadGeneratedSpines', 'buildSpineMap',
         'userSymbols', 'userSymbolData',
         factorySource,
@@ -432,6 +446,8 @@ export default function Studio() {
         EmptySymbol, ReelSymbol,
         RectMaskStrategy, SharedRectMaskStrategy,
         CardSymbol, CARD_DECK, WILD_CARD,
+        CoinSymbol, COIN_TIER, COIN_FEATURE, COIN_MYSTERY, COIN_TRIGGER,
+        coinValue, coinMultiplier, drawCoin,
         SpineReelSymbol, loadGeneratedSpines, buildSpineMap,
         injectables.userSymbols, injectables.userSymbolData,
       )) as BuildResult;
@@ -475,7 +491,7 @@ export default function Studio() {
     env.app.stage.addChild(reelSet);
     fit();
     // The boot useEffect's ResizeObserver calls through this ref on every
-    // host-size change — single fit path for window resize, fullscreen
+    // host-size change. single fit path for window resize, fullscreen
     // toggle, and future panel drags.
     fitRef.current = fit;
 
@@ -492,7 +508,7 @@ export default function Studio() {
       const next = names.includes(speedName) ? speedName : reelSet.speed.activeName;
       if (next !== speedName) setSpeedName(next);
       if (next !== reelSet.speed.activeName) reelSet.setSpeed(next);
-    } catch { /* ignore — builder didn't register any profiles */ }
+    } catch { /* ignore. builder didn't register any profiles */ }
 
     setStatus({
       kind: 'ok',
@@ -502,15 +518,15 @@ export default function Studio() {
 
   function handleSpeedChange(name: string): void {
     setSpeedName(name);
-    try { reelSetRef.current?.setSpeed(name); } catch { /* ignore — profile missing */ }
+    try { reelSetRef.current?.setSpeed(name); } catch { /* ignore. profile missing */ }
   }
 
   async function handleSpin(): Promise<void> {
     if (isSpinning) {
-      // skip() THROWS before `setResult()` arrives — route to requestSkip()
+      // skipSpin() THROWS before setResult() arrives. Route to requestSkip()
       // in the catch so a player tap during the server-wait window still
       // queues the slam and fires it the moment the result is in.
-      try { reelSetRef.current?.skip(); }
+      try { reelSetRef.current?.skipSpin(); }
       catch { reelSetRef.current?.requestSkip(); }
       return;
     }
@@ -523,7 +539,7 @@ export default function Studio() {
         const p = reelSetRef.current.spin();
         const result = nextResultRef.current?.();
         await new Promise((r) => setTimeout(r, 150));
-        if (result) reelSetRef.current.setResult(result);
+        if (result) reelSetRef.current.setResult(result.map((visible) => ({ visible })));
         await p;
       }
     } catch (e) {
@@ -589,7 +605,7 @@ export default function Studio() {
       {isEphemeral && (
         <div className="flex items-center gap-2 rounded-md border border-amber-400/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
           <Eye size={13} className="flex-shrink-0" />
-          <span>Previewing a recipe — changes won't be saved to your Studio.</span>
+          <span>Previewing a recipe. changes won't be saved to your Studio.</span>
           <button
             type="button"
             onClick={savePreviewAsStudio}
@@ -728,7 +744,7 @@ export default function Studio() {
               type="button"
               onClick={() => setFullscreen((v) => !v)}
               className="inline-flex items-center gap-1.5 rounded-md border border-border bg-transparent px-2.5 py-1.5 text-xs text-muted-foreground hover:text-foreground"
-              title={fullscreen ? 'Exit fullscreen (Esc)' : 'Enter fullscreen — Monaco and reels fill the viewport 50/50'}
+              title={fullscreen ? 'Exit fullscreen (Esc)' : 'Enter fullscreen. Monaco and reels fill the viewport 50/50'}
               aria-label={fullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
             >
               {fullscreen ? <Minimize2 size={12} strokeWidth={2.5} /> : <Maximize2 size={12} strokeWidth={2.5} />}
@@ -738,7 +754,7 @@ export default function Studio() {
               onClick={() => setShareOpen(true)}
               disabled={!config || config.symbols.length === 0}
               className="inline-flex items-center gap-1.5 rounded-md border border-border bg-transparent px-2.5 py-1.5 text-xs text-muted-foreground hover:text-foreground disabled:opacity-50"
-              title="Share this studio — uploads encrypted to the share-api, gives you a link"
+              title="Share this studio. uploads encrypted to the share-api, gives you a link"
               aria-label="Share"
             >
               <Share2 size={12} strokeWidth={2.5} />
@@ -769,7 +785,7 @@ export default function Studio() {
                   // aren't declared anywhere Monaco can resolve, so semantic
                   // diagnostics produce a sea of red squiggles. The code is
                   // transpiled at Run via sucrase (types stripped, no
-                  // type-checking), so these errors aren't real — silence
+                  // type-checking), so these errors aren't real. silence
                   // them here. Syntax errors still surface.
                   monaco.languages.typescript.typescriptDefaults.setDiagnosticsOptions({
                     noSemanticValidation: true,
@@ -910,7 +926,7 @@ function RecipePrompt({ onCancel, onReplace, onPreview }: RecipePromptProps): JS
               onClick={onPreview}
               className="inline-flex items-center justify-center gap-1.5 rounded-md border border-border bg-transparent px-3 py-2 text-xs text-foreground hover:bg-secondary/50"
             >
-              <Eye size={12} /> Preview only — don't save
+              <Eye size={12} /> Preview only. don't save
             </button>
             <button
               type="button"

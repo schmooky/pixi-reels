@@ -3,11 +3,11 @@
 //                   PIXI, gsap, app, textures, blurTextures, SYMBOL_IDS,
 //                   pickWeighted
 //
-// Per-reel static shape — a 3-5-5-5-3 pyramid. Reels can have different
+// Per-reel static shape. a 3-5-5-5-3 pyramid. Reels can have different
 // row counts at build time. Cell width is uniform across reels; the
 // shorter outer reels are vertically centered by default (`reelAnchor: 'center'`).
 //
-// CARD SYMBOLS BELOW ARE DEBUG/PROTOTYPING ONLY — see /recipes/card-symbol-debug/.
+// CARD SYMBOLS BELOW ARE DEBUG/PROTOTYPING ONLY. see /recipes/card-symbol-debug/.
 
 const VISIBLE = [3, 5, 5, 5, 3];
 const SIZE = 80;

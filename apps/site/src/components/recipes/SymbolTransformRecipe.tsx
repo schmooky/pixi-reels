@@ -34,7 +34,7 @@ export default function SymbolTransformRecipe() {
             ];
             const p = reelSet.spin();
             await sleep(150);
-            reelSet.setResult(grid);
+            reelSet.setResult(grid.map((visible) => ({ visible })));
             const result = await p;
             await sleep(250);
             // Pick a random low-pay cell and upgrade it to a high-pay.

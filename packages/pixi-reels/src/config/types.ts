@@ -2,7 +2,7 @@ import type { Container, Ticker } from 'pixi.js';
 import type { TumbleConfig } from '../cascade/TumbleConfig.js';
 
 /**
- * Options accepted by `reelSet.spin(options?)`. All fields are optional —
+ * Options accepted by `reelSet.spin(options?)`. All fields are optional.
  * passing nothing reproduces the legacy "every reel spins" behaviour.
  */
 export interface SpinOptions {
@@ -15,7 +15,7 @@ export interface SpinOptions {
   /**
    * Reel indices to HOLD this spin. Held reels skip START / SPIN / STOP
    * entirely and stay on whatever symbols they're currently showing.
-   * They count as already-landed for the `spin:allLanded` resolver — only
+   * They count as already-landed for the `spin:allLanded` resolver. only
    * non-held reels actually animate.
    *
    * Use cases:
@@ -26,22 +26,44 @@ export interface SpinOptions {
    * Notes:
    *   - `setResult(grid)` still expects a full `reelCount`-length grid;
    *     entries at held indices are ignored. Pass anything (including
-   *     the held reels' current visible rows) — the engine doesn't read
+   *     the held reels' current visible rows). the engine doesn't read
    *     held columns.
    *   - `setAnticipation([...])` silently filters held indices.
    *   - `setStopDelays([...])` entries at held indices are ignored.
    *   - The resolved `SpinResult.symbols` is the full visible grid AFTER
-   *     the spin lands — held reels contribute their unchanged rows,
+   *     the spin lands. held reels contribute their unchanged rows,
    *     non-held reels contribute their landed rows.
    *   - No `spin:reelLanded` / `spin:stopping` event fires for held reels.
    *   - Big-symbol blocks crossing held into non-held reels are not
-   *     supported — the engine doesn't reposition or reshape held reels
+   *     supported. the engine doesn't reposition or reshape held reels
    *     to accommodate them. Author results that keep big symbols inside
    *     a contiguous run of non-held reels.
    *   - Indices outside `[0, reelCount)` and duplicate entries are silently
    *     filtered.
    */
   holdReels?: number[];
+
+  /**
+   * Abort the spin from the outside. If this signal aborts before the reels
+   * land, the `spin()` promise REJECTS — with `signal.reason` when it is an
+   * `Error`, otherwise a generic abort error — and the reels are force-stopped
+   * to a clean grid. Wire this to the same `AbortController` that cancels the
+   * spin's server request so a failed or cancelled fetch can never leave the
+   * reels spinning forever.
+   */
+  signal?: AbortSignal;
+
+  /**
+   * Watchdog ceiling, in milliseconds. If the reels have not landed within
+   * `timeoutMs` of `spin()` starting (i.e. `setResult()` / `requestSkip()` /
+   * `slamStop()` was never called), the `spin()` promise REJECTS and the reels
+   * are force-stopped to a clean grid.
+   *
+   * Off by default — the engine imposes no timeout. Opt in for defence in depth
+   * against an integration whose error path forgets to settle the spin. Values
+   * `<= 0` are ignored.
+   */
+  timeoutMs?: number;
 }
 
 /** Timing and animation profile for a speed mode. */
@@ -71,14 +93,14 @@ export interface SpeedProfile {
    * Optional per-speed tumble timing overrides. When the active speed
    * profile defines this, the cascade fall + drop-in phases merge these
    * fields over the base config registered via `.tumble(...)` at build
-   * time — `setSpeed('turbo')` can shorten `fall.duration`,
+   * time. `setSpeed('turbo')` can shorten `fall.duration`,
    * `dropIn.duration`, per-row staggers, and the drop ease without the
    * caller maintaining a parallel `setTumble` API.
    *
    * Fields are deep-merged with `Partial` semantics: omitted fields fall
    * back to the base config. To suppress the cascade animation entirely
    * for a profile (the canonical "snap on turbo" pattern), set
-   * `fall.duration: 0` and `dropIn.duration: 0` — both phases short-circuit
+   * `fall.duration: 0` and `dropIn.duration: 0`. both phases short-circuit
    * to their existing snap path.
    *
    * Phases capture the resolved config at `onEnter` time, so a `setSpeed`
@@ -97,7 +119,7 @@ export interface SymbolData {
   zIndex?: number;
   /**
    * If true, the engine parents this symbol's view to
-   * `viewport.unmaskedContainer` instead of the reel's masked container —
+   * `viewport.unmaskedContainer` instead of the reel's masked container.
    * the symbol renders above the reel mask, useful for oversized win
    * animations (expanding wilds, splash frames) that should not be
    * clipped at the cell boundary.
@@ -110,14 +132,14 @@ export interface SymbolData {
    * coordinates. While the reel is spinning, an unmasked symbol on the
    * strip will appear shifted vertically by the reel's offset (the
    * `reel.container.y` translation is only applied on activate, not on
-   * every motion frame). Treat `unmask: true` as a *landed-state* flag —
+   * every motion frame). Treat `unmask: true` as a *landed-state* flag.
    * it is correct at rest and during static frames, but not designed to
    * stay visually accurate while the reel is spinning. If you need a
    * mid-spin "stays visible above mask" overlay, use a cell pin instead.
    *
    * **Pyramid layouts not supported:** when any reel has a non-zero
    * `offsetY` (pyramid / trapezoid offsets), `motion.snapToGrid()` and
-   * `motion.displace()` will write reel-local Y to the unmasked view —
+   * `motion.displace()` will write reel-local Y to the unmasked view.
    * shifting the rendered position by `reel.container.y`. The builder
    * throws at config time if both conditions are present. Use cell pins
    * for above-mask overlays on pyramid slots.
@@ -133,7 +155,7 @@ export interface SymbolData {
   unmask?: boolean;
   /**
    * Footprint in cells. Default `{ w: 1, h: 1 }`. When `w * h > 1` this
-   * symbol is a "big symbol" — at landing it occupies an `w × h` block of
+   * symbol is a "big symbol". at landing it occupies an `w × h` block of
    * cells anchored at the (col, row) where its id appears in the result.
    * Big-symbol registration is rejected on MultiWays slots.
    */
@@ -144,7 +166,7 @@ export interface SymbolData {
 export type ReelAnchor = 'top' | 'center' | 'bottom';
 
 /**
- * MultiWays configuration knobs. Set via `builder.multiways({ ... })` —
+ * MultiWays configuration knobs. Set via `builder.multiways({ ... })`.
  * mutually exclusive with big-symbol registration.
  */
 export interface MultiWaysConfig {
@@ -247,20 +269,13 @@ export interface CellBounds {
   x: number;
   /** Top edge of the cell in ReelSet-local pixels. */
   y: number;
-  /** Cell width — equals the configured symbol width. */
+  /** Cell width. equals the configured symbol width. */
   width: number;
-  /** Cell height — equals the configured symbol height. */
+  /** Cell height. equals the configured symbol height. */
   height: number;
 }
 
-/**
- * A cell on the visible grid — `reelIndex` is the column, `rowIndex` the
- * row from the top. This is the canonical grid-cell shape used across
- * events (`win:symbol`, `spotlight:start`), `Spotlight.show`, and
- * `ClusterWin.cells`.
- *
- * Named `SymbolPosition` for back-compat with the original events module.
- */
+/** A cell on the visible grid. `reelIndex` is the column; `rowIndex` is the row from the top. */
 export interface SymbolPosition {
   reelIndex: number;
   rowIndex: number;
@@ -269,12 +284,12 @@ export interface SymbolPosition {
 /**
  * One "win" as the presenter sees it: an ordered set of cells to highlight.
  *
- * Use cases collapse onto this one shape — whether those cells came from a
+ * Use cases collapse onto this one shape. whether those cells came from a
  * classic payline ("row 1 across all 5 reels"), a cascade pop ("this cluster
  * vanished"), a scatter splash, or a bonus reveal.
  *
- * The presenter's job is to **animate these cells**. Anything beyond that —
- * drawing a polyline, a cluster outline, a number popup, a sound cue — is
+ * The presenter's job is to **animate these cells**. Anything beyond that.
+ * drawing a polyline, a cluster outline, a number popup, a sound cue. is
  * user-land code reacting to the `win:*` events. pixi-reels never draws wins.
  *
  * Order of `cells` matters when `WinPresenter.stagger > 0` (e.g. a
@@ -284,7 +299,7 @@ export interface SymbolPosition {
 export interface Win {
   /** Cells to highlight. Order matters when `stagger > 0`. */
   cells: ReadonlyArray<SymbolPosition>;
-  /** Optional payout — used for the default value-desc sort. */
+  /** Optional payout. used for the default value-desc sort. */
   value?: number;
   /** Optional tag for routing events to different handlers. */
   kind?: string;
@@ -299,7 +314,7 @@ export interface MaskConfig {
 }
 
 /**
- * Resolved grid view used internally — every defaulted field is filled in,
+ * Resolved grid view used internally. every defaulted field is filled in,
  * but per-reel-shape and MultiWays extensions stay optional because they're
  * genuinely opt-in.
  */

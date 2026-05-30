@@ -8,7 +8,7 @@
  * understand the whole library surface in one request.
  *
  * For recipes specifically, also inlines the parallel `*.recipe.ts` source
- * code from `src/recipes/` — that's the pattern an LLM most needs in
+ * code from `src/recipes/`. that's the pattern an LLM most needs in
  * order to write working code against the library.
  *
  * Wired into the docs build via `pnpm llms:gen` (run by predev/prebuild).
@@ -152,7 +152,7 @@ function relToSlug(rel) {
 /**
  * Pull the YAML-ish frontmatter block (`---\n...\n---`) from the top of
  * an .mdx or .astro file and parse the keys we care about. We don't need
- * a full YAML parser — only flat strings, flat string lists, and flat
+ * a full YAML parser. only flat strings, flat string lists, and flat
  * objects appear in this site's frontmatter.
  */
 function parseFrontmatter(raw) {
@@ -193,7 +193,9 @@ function render(sections, recipes) {
   const lines = [];
   lines.push('# pixi-reels');
   lines.push('');
-  lines.push('Slot machine reel engine for PixiJS v8 — fluent builder, typed events, default phases, speed modes, win animations, cell pins, MultiWays, big symbols, holds, per-spin mode override, debug recorder.');
+  lines.push('pixi-reels 1.0.0 is a reel engine for PixiJS v8.');
+  lines.push('It ships reel-only primitives. Win math, paytable math, RNG, and audio live in consumer code.');
+  lines.push('This file inlines every guide and recipe for offline LLM context.');
   lines.push('');
   lines.push(`Site: ${SITE_URL}`);
   lines.push('Repo: https://github.com/schmooky/pixi-reels');
@@ -215,14 +217,15 @@ function render(sections, recipes) {
   lines.push('await app.init({ width: 800, height: 480 });');
   lines.push('');
   lines.push('const reelSet = new ReelSetBuilder()');
-  lines.push('  .reels(5).visibleSymbols(3).symbolSize(120, 120)');
+  lines.push('  .reels(5).visibleRows(3).symbolSize(120, 120)');
   lines.push("  .symbols(r => r.register('cherry', SpriteSymbol, { textures: { cherry: cherryTex } }))");
   lines.push('  .ticker(app.ticker)');
   lines.push('  .build();');
   lines.push('app.stage.addChild(reelSet);');
   lines.push('');
-  lines.push('const result = await reelSet.spin();');
-  lines.push("reelSet.setResult([['cherry','cherry','cherry'], ...]);");
+  lines.push('const result = reelSet.spin();');
+  lines.push("reelSet.setResult([{ visible: ['cherry','cherry','cherry'] }, /* one per reel */ ]);");
+  lines.push('await result;');
   lines.push('```');
   lines.push('');
 

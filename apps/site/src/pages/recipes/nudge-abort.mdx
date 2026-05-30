@@ -1,7 +1,7 @@
 ---
 layout: ../../layouts/Recipe.astro
 title: Abort a nudge
-description: Cancel a running nudge via AbortSignal — the strip still snaps to its deterministic landed position, but the `nudge()` promise rejects with `AbortError` and `nudge:cancelled` fires on the bus.
+description: Cancel a running nudge via AbortSignal. the strip still snaps to its deterministic landed position, but the `nudge()` promise rejects with `AbortError` and `nudge:cancelled` fires on the bus.
 tags: [nudge, abort, cancellation, signal, recent]
 steps:
   - "Wire an `AbortController` into `NudgeOptions.signal`"
@@ -16,11 +16,14 @@ apis:
 
 import code from '../../recipes/nudge-abort.recipe.ts?raw';
 import { RecipeRunner } from '../../components/RecipeRunner.tsx';
+import RecipeFrame from '../../components/RecipeFrame.astro';
 
-<RecipeRunner code={code} client:only="react" />
+<RecipeFrame>
+  <RecipeRunner code={code} client:only="react" />
+</RecipeFrame>
 
 This recipe runs a 2-second nudge with an `AbortController` whose signal
-is wired in. ~700 ms later the controller aborts — the GSAP tween is
+is wired in. ~700 ms later the controller aborts. the GSAP tween is
 killed, the strip still snaps to the deterministic post-nudge position
 (the engine's contract is "incoming lands here regardless"), and the
 `nudge()` promise REJECTS with an `AbortError`. The handler's catch
@@ -43,7 +46,7 @@ try {
   });
 } catch (err) {
   if (err.name === 'AbortError') {
-    // Cancellation path — strip is still snapped, feature was torn down.
+    // Cancellation path. strip is still snapped, feature was torn down.
   } else {
     throw err;
   }
@@ -54,10 +57,10 @@ try {
 
 Abort and skip take opposite stances on what should happen next:
 
-- **`skipNudge(col)`** — "the player wants it landed RIGHT NOW, run the
-  success path". `nudge()` resolves; `nudge:complete` fires.
-- **`signal.abort()`** — "tear down everything that depended on this
-  nudge". `nudge()` rejects; `nudge:cancelled` fires; the catch block
+- **`skipNudge(col)`**. land now, run the success path. `nudge()`
+  resolves; `nudge:complete` fires.
+- **`signal.abort()`**. tear down everything that depended on this
+  nudge. `nudge()` rejects; `nudge:cancelled` fires; the catch block
   runs.
 
 The deciding question is what the consumer's await block represents.
@@ -71,7 +74,7 @@ See [Skip a nudge](/recipes/nudge-skip/) for the resolved path.
 
 `startDelay` is also abortable. If `signal.abort()` fires during the
 pre-tween delay, the `nudge()` rejects with `AbortError` and **no strip
-mutation happens** — the engine never reaches pre-placement. Useful for
+mutation happens**. the engine never reaches pre-placement. Useful for
 staggered `Promise.all` waves where you want the user's cancel to skip
 every reel that hasn't started yet.
 
@@ -95,13 +98,13 @@ reelSet.events.on('nudge:cancelled', ({ reelIndex, distance, direction, reason }
 });
 ```
 
-The event does **not** fire alongside `nudge:complete` — they're
+The event does **not** fire alongside `nudge:complete`. they're
 mutually exclusive. Listeners that animate alongside the nudge should
 treat `nudge:cancelled` as a "cut and clean up" signal rather than a
 "played out" one.
 
 ## Related
 
-- [Skip a nudge](/recipes/nudge-skip/) — resolve normally instead of
+- [Skip a nudge](/recipes/nudge-skip/). resolve normally instead of
   rejecting.
-- [Nudge guide](/guides/nudge/) — full event map and contract.
+- [Nudge guide](/guides/nudge/). full event map and contract.

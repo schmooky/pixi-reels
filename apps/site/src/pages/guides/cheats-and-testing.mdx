@@ -9,8 +9,8 @@ description: Force deterministic outcomes, run spin lifecycles in Node, write me
 pixi-reels is built so you can test **mechanics**, not canvases. Two tools
 make that possible:
 
-- **`createTestReelSet`** — a headless reel set wired to a `FakeTicker`. No renderer, no DOM.
-- **`CheatEngine`** (in `examples/shared/cheats`) — a pluggable outcome source that forces grids, scatters, lines, cascades on demand.
+- **`createTestReelSet`**. a headless reel set wired to a `FakeTicker`. No renderer, no DOM.
+- **`CheatEngine`** (in `examples/shared/cheats`). a pluggable outcome source that forces grids, scatters, lines, cascades on demand.
 
 Together they let you write assertions like *"this mechanic produces exactly
 3 scatters, triggers anticipation on reel 5, and emits `spin:complete`."*
@@ -18,7 +18,7 @@ Together they let you write assertions like *"this mechanic produces exactly
 ## 1. Headless reel set
 
 ```ts
-import { createTestReelSet, expectGrid } from 'pixi-reels';
+import { createTestReelSet, expectGrid } from 'pixi-reels/testing';
 
 const { reelSet, spinAndLand, destroy } = createTestReelSet({
   reels: 5,
@@ -95,7 +95,7 @@ const forcePairWild: Cheat = (ctx) => {
 ## 3. Assert events fired correctly
 
 ```ts
-import { captureEvents } from 'pixi-reels';
+import { captureEvents } from 'pixi-reels/testing';
 
 const log = captureEvents(reelSet, ['spin:start', 'spin:complete']);
 await spinAndLand(grid);

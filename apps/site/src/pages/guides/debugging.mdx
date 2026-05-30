@@ -60,8 +60,32 @@ Current grid:
 └────────┴────────┴────────┴────────┴────────┘
 ```
 
+The snapshot shapes are typed as `DebugSnapshot` and `DebugReelSnapshot`. they're plain data so they survive `structuredClone` / `postMessage` / `JSON.stringify` without losing fidelity.
+
+## Recording sessions
+
+When a bug only reproduces over many frames, recording the engine's per-frame state lets you replay it offline. `startRecording` wires a recorder into the ticker; `stopRecording` releases it. `getFrames` returns the array of `RecordedFrame` entries between the two; `clearFrames` resets the buffer for the next take.
+
+```ts
+import { startRecording, stopRecording, getFrames, clearFrames, type StartRecordingOptions } from 'pixi-reels';
+
+const opts: StartRecordingOptions = { reelSet, sampleEveryNFrames: 1 };
+startRecording(opts);
+await reelSet.spin();
+reelSet.setResult([/* ... */]);
+await /* the spin */;
+stopRecording();
+
+const frames = getFrames(); // RecordedFrame[]
+console.log(`captured ${frames.length} frames`);
+clearFrames(); // ready for the next round
+```
+
+Each `RecordedFrame` carries a `DebugSnapshot`, the timestamp, and the elapsed ms since the first frame. Pipe it into a tracing UI or feed it to a comparison test.
+
 ## Gotchas
 
-- `debugGrid` returns plain text — safe to log, assert against, or paste anywhere.
+- `debugGrid` returns plain text. safe to log, assert against, or paste anywhere.
 - `enableDebug` is a no-op in Node (it checks `typeof window`).
 - Snapshots contain no PixiJS objects, so `JSON.stringify()` will always work.
+- The `DEFAULTS` constant (exported from `pixi-reels`) holds every default value the builder applies. read it when you want to set a value relative to the engine's default (e.g. `builder.bufferSymbols(DEFAULTS.bufferSymbols + 2)`).

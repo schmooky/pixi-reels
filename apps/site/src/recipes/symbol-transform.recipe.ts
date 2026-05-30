@@ -7,7 +7,7 @@ const HIGH = ['10', 'J'];
 const IDS = [...LOW, ...HIGH];
 const COLS = 5, ROWS = 3, CELL = 90;
 
-// Predictable grid — always has low-pays to upgrade.
+// Predictable grid. always has low-pays to upgrade.
 const GRID = [
   ['7', '8', '7'],
   ['8', '9', '10'],
@@ -17,7 +17,7 @@ const GRID = [
 ];
 
 const reelSet = new ReelSetBuilder()
-  .reels(COLS).visibleSymbols(ROWS).symbolSize(CELL, CELL).symbolGap(4, 4)
+  .reels(COLS).visibleRows(ROWS).symbolSize(CELL, CELL).symbolGap(4, 4)
   .symbols(r => {
     for (const sym of CARD_DECK) {
       if (IDS.includes(sym.id)) {
@@ -42,7 +42,7 @@ return {
   onSpin: async () => {
     const p = reelSet.spin();
     await new Promise(r => setTimeout(r, 150));
-    reelSet.setResult(GRID);
+    reelSet.setResult(GRID.map((visible) => ({ visible })));
     const result = await p;
     await new Promise(r => setTimeout(r, 250));
 
@@ -68,7 +68,7 @@ return {
     restoreOld();
 
     // Swap identity. setSymbolAt is the one-cell rewrite that doesn't
-    // touch the rest of the reel — leaves the symbol pool / motion layer
+    // touch the rest of the reel. leaves the symbol pool / motion layer
     // alone and only cycles the single ReelSymbol at this row.
     reelSet.setSymbolAt(pick.r, pick.row, upgradeId);
 

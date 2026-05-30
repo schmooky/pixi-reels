@@ -3,7 +3,7 @@
 //                   WILD_CARD, WinPresenter, PIXI, gsap, app, pickWeighted
 
 const A = '7', B = '8', C = '9';
-const SEVEN = 'A'; // premium card stand-in for the original royal "seven"
+const SEVEN = 'A'; // letter-card stand-in. constant kept as SEVEN for readability
 const IDS = [A, B, C, SEVEN];
 const COLS = 5, ROWS = 3, SIZE = 90;
 
@@ -18,7 +18,7 @@ const WINS = [0, 1, 2].map((row) => ({
 }));
 
 const reelSet = new ReelSetBuilder()
-  .reels(COLS).visibleSymbols(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
+  .reels(COLS).visibleRows(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
   .symbols(r => {
     for (const sym of [...CARD_DECK, WILD_CARD]) {
       r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
@@ -49,8 +49,8 @@ function bouncePulse(view, peak, durationMs) {
 }
 
 // Instead of `symbol.playWin()`, route each winner through a GSAP timeline.
-// The callback receives the symbol, the cell, and the owning win — so you
-// can style per win (bigger bounce on the premium line via `win.id`).
+// The callback receives the symbol, the cell, and the owning win. so you
+// can style per win (bigger bounce on the top-paying line via `win.id`).
 const presenter = new WinPresenter(reelSet, {
   stagger: 70,
   cycleGap: 400,
@@ -67,7 +67,7 @@ return {
   onSpin: async () => {
     const p = reelSet.spin();
     await new Promise(r => setTimeout(r, 150));
-    reelSet.setResult(GRID);
+    reelSet.setResult(GRID.map((visible) => ({ visible })));
     await p;
     await new Promise(r => setTimeout(r, 220));
     await presenter.show(WINS);

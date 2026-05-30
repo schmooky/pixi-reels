@@ -4,21 +4,21 @@
 
 // CASCADE-FALL pattern.
 //
-// A tall 1x3 wild lands with its anchor in bufferAbove — tail visible
+// A tall 1x3 wild lands with its anchor in bufferAbove. tail visible
 // at row 0. The other reels land a 3-of-a-kind cluster on a row BELOW
 // the wild's tail. The cluster wins, the cells clear, and the cascade
 // refill drops the wild downward into full visibility.
 //
 // This is the "big symbol falls when supporting cells are cleared"
-// beat — common in cluster / tumble slots where high-value symbols
+// beat. common in cluster / tumble slots where high-value symbols
 // reveal themselves over multiple cascade chains.
 //
 // What this proves:
 //   - `runCascade`'s `nextGrid` callback can return a grid that
-//     repositions a big-symbol anchor — moving it from bufferAbove[1]
+//     repositions a big-symbol anchor. moving it from bufferAbove[1]
 //     (row -2) to visible[0] (row 0) in one cascade step.
 //   - `_coordinateBigSymbols` runs on the refill grid the same as on
-//     a setResult grid — buffer-row anchors are accepted, OCCUPIED
+//     a setResult grid. buffer-row anchors are accepted, OCCUPIED
 //     stubs painted across the moved block's new position.
 //   - The visual block "falls" because the refill animation drops
 //     each strip cell, including the anchor sprite, into its new slot.
@@ -32,7 +32,7 @@ const GAP = 4;
 
 const reelSet = new ReelSetBuilder()
   .reels(REELS)
-  .visibleSymbols(ROWS)
+  .visibleRows(ROWS)
   // Anchor at bufferAbove[1] (row -2) needs bufferAbove >= 2.
   .bufferSymbols(2)
   .symbolSize(SIZE, SIZE)

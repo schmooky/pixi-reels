@@ -2,7 +2,7 @@
 // Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
 //                   WILD_CARD, app
 
-// PARALLEL nudges — every reel's tween fires at the same frame via
+// PARALLEL nudges. every reel's tween fires at the same frame via
 // `Promise.all([...])`. Reads as one synchronised beat; the whole row
 // of wilds drops into place together. Total time = duration (regardless
 // of how many reels you're nudging).
@@ -17,7 +17,7 @@ const NUDGE_DURATION = 480;
 
 const reelSet = new ReelSetBuilder()
   .reels(5)
-  .visibleSymbols(3)
+  .visibleRows(3)
   .symbolSize(72, 72)
   .symbolGap(4, 4)
   .symbols((r) => {
@@ -45,13 +45,13 @@ return {
   onSpin: async () => {
     const p = reelSet.spin();
     await new Promise((resolve) => setTimeout(resolve, 220));
-    reelSet.setResult([col3(), col3(), col3(), col3(), col3()]);
+    reelSet.setResult([col3(), col3(), col3(), col3(), col3()].map((visible) => ({ visible })));
     await p;
 
     // Let the eye settle on the landed board before the nudges begin.
     await new Promise((resolve) => setTimeout(resolve, 400));
 
-    // PARALLEL — every call fires synchronously; `Promise.all` only waits
+    // PARALLEL. every call fires synchronously; `Promise.all` only waits
     // for the slowest one to finish. Total wall time = NUDGE_DURATION.
     await Promise.all(
       NUDGE_COLS.map((col) =>

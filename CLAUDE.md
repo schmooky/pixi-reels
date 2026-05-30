@@ -1,4 +1,4 @@
-# CLAUDE.md — AI Agent Guide for pixi-reels
+# CLAUDE.md. AI Agent Guide for pixi-reels
 
 ## Agent Behavioral Guidelines
 
@@ -12,7 +12,7 @@ Sections 1-4 below are adapted verbatim from the [karpathy-guidelines](https://g
 
 Before implementing:
 - State your assumptions explicitly. If uncertain, ask.
-- If multiple interpretations exist, present them — don't pick silently.
+- If multiple interpretations exist, present them. don't pick silently.
 - If a simpler approach exists, say so. Push back when warranted.
 - If something is unclear, stop. Name what's confusing. Ask.
 
@@ -36,7 +36,7 @@ When editing existing code:
 - Don't "improve" adjacent code, comments, or formatting.
 - Don't refactor things that aren't broken.
 - Match existing style, even if you'd do it differently.
-- If you notice unrelated dead code, mention it — don't delete it.
+- If you notice unrelated dead code, mention it. don't delete it.
 
 When your changes create orphans:
 - Remove imports/variables/functions that YOUR changes made unused.
@@ -66,7 +66,7 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 
 ### 5. Always Ship a Changeset for Library Changes
 
-**Hard rule, enforced by CI.** If your diff touches `packages/pixi-reels/src/**` or `packages/pixi-reels/package.json`, you MUST add a `.changeset/*.md` file in the same PR. No exceptions for "small" fixes — `fix:` and `perf:` are patch bumps, not skips.
+**Hard rule, enforced by CI.** If your diff touches `packages/pixi-reels/src/**` or `packages/pixi-reels/package.json`, you MUST add a `.changeset/*.md` file in the same PR. No exceptions for "small" fixes. `fix:` and `perf:` are patch bumps, not skips.
 
 How to decide the bump:
 - `feat:` → `minor` (additive, non-breaking)
@@ -74,13 +74,13 @@ How to decide the bump:
 - any commit with `!` or `BREAKING CHANGE:` → `major` (pre-`1.0.0` is not exempt)
 - truly no user-visible change (tests, internal-only refactor, comments) → apply the `skip-changeset` PR label instead of faking a bump
 
-Write the file by hand or run `pnpm changeset`. Summary should read like a changelog line to a downstream consumer — lead with the verb (`Add:`, `Fix:`, `Remove:`). See [.changeset/README.md](.changeset/README.md) and [AGENTS.md](AGENTS.md) section 12 for the full flow.
+Write the file by hand or run `pnpm changeset`. Summary should read like a changelog line to a downstream consumer. lead with the verb (`Add:`, `Fix:`, `Remove:`). See [.changeset/README.md](.changeset/README.md) and [AGENTS.md](AGENTS.md) section 12 for the full flow.
 
 The CI `changeset-gate` job in [.github/workflows/ci.yml](.github/workflows/ci.yml) fails any PR that modifies the library without a new changeset file. The `skip-changeset` label is the only escape hatch.
 
 ---
 
-## Stability Rules — How to Ship Code That Holds Up
+## Stability Rules. How to Ship Code That Holds Up
 
 These are habits, not gates. Sections 1-5 above are hard rules; this section is the craft.
 
@@ -89,7 +89,7 @@ These are habits, not gates. Sections 1-5 above are hard rules; this section is 
 A passing typecheck is not "done." A compiled bundle is not "done." Done means you watched the thing behave correctly.
 
 - After every lib change, in order: `pnpm --filter pixi-reels typecheck` → `pnpm --filter pixi-reels test` → `pnpm check:lint`. Don't skip steps.
-- If your change is observable in a running reel, run the relevant example (`pnpm --filter sandbox dev` for the fastest iteration) and drive it. Use `__PIXI_REELS_DEBUG.log()` and `.trace()` — they exist because the canvas is opaque to you.
+- If your change is observable in a running reel, run the relevant example (`pnpm --filter sandbox dev` for the fastest iteration) and drive it. Use `__PIXI_REELS_DEBUG.log()` and `.trace()`. they exist because the canvas is opaque to you.
 - If you cannot verify a behavior end-to-end (no browser, no real server, no spine asset), **say so explicitly** in the PR description. "Typecheck passes but I could not confirm the spotlight renders" is honest; "shipped" is not.
 
 ### Read state, don't remember it
@@ -108,18 +108,18 @@ Silent failures are the #1 way AI-written code rots in production. An error you 
 
 If the diff description needs the word "and" twice, split it. Small PRs get merged; big PRs get reverted. A good pixi-reels PR is typically under ~300 lines of real change, has one changeset entry, and tells one story.
 
-### Use the pools, ticker, and disposable patterns — don't invent parallels
+### Use the pools, ticker, and disposable patterns. don't invent parallels
 
-This repo already has `ObjectPool`, `TickerRef`, `Disposable`, `EventEmitter`, `FrameBuilder`. If you find yourself writing "a quick wrapper around `ticker.add`" or "a small helper to hold a list of symbols," stop — the primitive already exists. Grep for it. The existing ones are tested and leak-free; your parallel will not be.
+This repo already has `ObjectPool`, `TickerRef`, `Disposable`, `EventEmitter`, `FrameBuilder`. If you find yourself writing "a quick wrapper around `ticker.add`" or "a small helper to hold a list of symbols," stop. the primitive already exists. Grep for it. The existing ones are tested and leak-free; your parallel will not be.
 
 ### Touching PixiJS? Respect the invariants
 
 - `ReelSymbol.resize()` is called on **every** symbol swap. Anything positional lives there, not in the constructor.
 - SpriteSymbols anchor at `(0, 0)`; SpineSymbols center via `resize()`. Don't mix models inside one class.
 - `ReelMotion` wraps via `_maxY` / `_minY`; never mutate symbol Y outside the motion layer.
-- GSAP must be driven off `app.ticker` in examples (the example scaffolding already does this — don't add a second driver).
+- GSAP must be driven off `app.ticker` in examples (the example scaffolding already does this. don't add a second driver).
 
-Violating these produces bugs that only appear on hidden tabs, long sessions, or specific aspect ratios — exactly the ones humans will only notice after a release.
+Violating these produces bugs that only appear on hidden tabs, long sessions, or specific aspect ratios. exactly the ones humans will only notice after a release.
 
 ### When stuck, stop and report
 
@@ -132,13 +132,12 @@ If you've tried three approaches and none work, do not try a fourth random appro
 `pixi-reels` is an open-source, batteries-included slot machine reel engine for PixiJS v8. It provides a fluent builder API, typed events, default spin phases, speed modes, and win animation support.
 
 **Monorepo layout:**
-- `packages/pixi-reels/` — The npm-publishable library
-- `examples/classic-spin/` — Standard 5x3 slot demo (sprite symbols)
-- `examples/cascade-tumble/` — 6x5 cascade/tumble demo (sprite symbols)
-- `examples/hold-and-win/` — Hold & Win respin demo (sprite symbols)
-- `examples/sandbox/` — Live-editable playground (sprite symbols + HMR)
-- `examples/shared/` — Shared example utilities (mock server, UI, BlurSpriteSymbol, atlas loader)
-- `examples/assets/prototype-symbols/` — Open-licensed sprite atlas used by every example
+- `packages/pixi-reels/`. The npm-publishable library
+- `examples/classic-spin/`. Standard 5x3 slot demo (sprite symbols)
+- `examples/cascade-tumble/`. 6x5 cascade/tumble demo (sprite symbols)
+- `examples/sandbox/`. Live-editable playground (sprite symbols + HMR)
+- `examples/shared/`. Shared example utilities (mock server, UI, BlurSpriteSymbol, atlas loader)
+- `examples/assets/prototype-symbols/`. Open-licensed sprite atlas used by every example
 
 ## Quick Commands
 
@@ -158,7 +157,6 @@ pnpm --filter pixi-reels typecheck
 # Run an example
 pnpm --filter classic-spin dev       # port 5173
 pnpm --filter cascade-tumble dev     # port 5174
-pnpm --filter hold-and-win dev       # port 5175
 
 # Build all examples as static sites
 pnpm examples:build
@@ -200,17 +198,17 @@ spin() → START → SPIN → [ANTICIPATION] → STOP → IDLE
 
 ### Key Design Patterns
 
-- **Builder** — `ReelSetBuilder` wires 10+ subsystems into one call
-- **Strategy** — `SpinningMode` interface (Standard, Cascade, Immediate)
-- **Template Method** — `ReelSymbol.activate/deactivate` lifecycle
-- **Middleware** — `FrameBuilder` pipeline for frame preparation
-- **Object Pool** — `ObjectPool<T>` for symbol recycling
-- **Observer** — `EventEmitter<T>` for typed domain events
-- **Factory** — `PhaseFactory` for spin phase creation
+- **Builder**. `ReelSetBuilder` wires 10+ subsystems into one call
+- **Strategy**. `SpinningMode` interface (Standard, Cascade, Immediate)
+- **Template Method**. `ReelSymbol.activate/deactivate` lifecycle
+- **Middleware**. `FrameBuilder` pipeline for frame preparation
+- **Object Pool**. `ObjectPool<T>` for symbol recycling
+- **Observer**. `EventEmitter<T>` for typed domain events
+- **Factory**. `PhaseFactory` for spin phase creation
 
-## Debug Mode — For AI Agents
+## Debug Mode. For AI Agents
 
-PixiJS renders to canvas — AI agents cannot see it. Use the debug system instead:
+PixiJS renders to canvas. AI agents cannot see it. Use the debug system instead:
 
 ```typescript
 import { enableDebug, debugSnapshot, debugGrid } from 'pixi-reels';
@@ -218,7 +216,7 @@ import { enableDebug, debugSnapshot, debugGrid } from 'pixi-reels';
 enableDebug(reelSet); // Attaches to window.__PIXI_REELS_DEBUG
 
 // In browser console (or via eval):
-__PIXI_REELS_DEBUG.snapshot()  // Full JSON state — no PixiJS types, serializable
+__PIXI_REELS_DEBUG.snapshot()  // Full JSON state. no PixiJS types, serializable
 __PIXI_REELS_DEBUG.grid()      // ASCII table of visible symbols
 __PIXI_REELS_DEBUG.log()       // console.log both of the above
 __PIXI_REELS_DEBUG.trace()     // Log every domain event as it fires
@@ -299,15 +297,15 @@ pool/ → symbols/ → frame/
 
 ## Conventions
 
-- **No default exports** — always named exports
-- **`.js` extension in imports** — required for ESM compatibility
-- **No barrel re-exports in subdirectories** — only `src/index.ts` is the barrel
-- **Disposable pattern** — every class that allocates resources implements `Disposable`
-- **TickerRef** — never use `ticker.add()` directly; wrap in TickerRef for auto-cleanup
-- **Anchor (0,0)** — SpriteSymbol uses top-left anchor; SpineSymbol centers via `resize()`
-- **Events use colon namespacing** — `spin:start`, `speed:changed`, etc.
-- **GSAP must sync with PixiJS** — examples call `gsap.ticker.remove(gsap.updateRoot)` and drive GSAP from `app.ticker` to work in hidden tabs/iframes
-- **Spine assets** — atlas references `.webp` textures; `publicDir` in vite.config serves them from `examples/assets/`
+- **No default exports**. always named exports
+- **`.js` extension in imports**. required for ESM compatibility
+- **No barrel re-exports in subdirectories**. only `src/index.ts` is the barrel
+- **Disposable pattern**. every class that allocates resources implements `Disposable`
+- **TickerRef**. never use `ticker.add()` directly; wrap in TickerRef for auto-cleanup
+- **Anchor (0,0)**. SpriteSymbol uses top-left anchor; SpineSymbol centers via `resize()`
+- **Events use colon namespacing**. `spin:start`, `speed:changed`, etc.
+- **GSAP must sync with PixiJS**. examples call `gsap.ticker.remove(gsap.updateRoot)` and drive GSAP from `app.ticker` to work in hidden tabs/iframes
+- **Spine assets**. atlas references `.webp` textures; `publicDir` in vite.config serves them from `examples/assets/`
 
 ## Testing
 
@@ -323,7 +321,7 @@ Tests are in `packages/pixi-reels/tests/` using Vitest. Run with `pnpm test`.
 ### Add a new symbol type
 1. Create `packages/pixi-reels/src/symbols/MySymbol.ts` extending `ReelSymbol`
 2. Implement `onActivate`, `onDeactivate`, `playWin`, `stopAnimation`, `resize`
-3. `resize()` MUST store dimensions and reposition internals — it's called on every symbol swap
+3. `resize()` MUST store dimensions and reposition internals. it's called on every symbol swap
 4. (Optional) override `playDestroy(opts)` for cascade destruction. Default is a ~320 ms scale/spin/fade implode. Override for art-appropriate destruction (Spine `disintegration` track, shatter atlas swap). Respect `opts.signal` for mid-tween abort, or document why you can't (e.g. uninterruptible Spine track)
 5. Export from `src/index.ts`
 6. Register in builder: `builder.symbols(r => r.register('id', MySymbol, opts))`
@@ -349,7 +347,7 @@ Tests are in `packages/pixi-reels/tests/` using Vitest. Run with `pnpm test`.
 4. Every new spine created in `onActivate` gets positioned via stored `_cellWidth/_cellHeight`
 
 ### Place a buffer-above or buffer-below target symbol
-Both `initialFrame` (build-time seed) and `setResult` (per-spin land) accept the explicit `ColumnTarget` form — prefer this one. `bufferAbove[0]` is the slot closest to the visible top row; later indices go further above. Same for `bufferBelow[0]` and the visible bottom row.
+Both `initialFrame` (build-time seed) and `setResult` (per-spin land) accept the explicit `ColumnTarget` form. prefer this one. `bufferAbove[0]` is the slot closest to the visible top row; later indices go further above. Same for `bufferBelow[0]` and the visible bottom row.
 
 ```ts
 import type { ColumnTarget } from 'pixi-reels';
@@ -362,12 +360,12 @@ reelSet.setResult(grid);
 builder.initialFrame(grid); // same shape works at build time
 ```
 
-The legacy `string[][]` form with negative-index slots (`grid[0][-1] = 'COIN'`) is also accepted and works end-to-end, but does NOT survive `structuredClone`/JSON/postMessage — reach for it only for in-process one-liners.
+The legacy `string[][]` form with negative-index slots (`grid[0][-1] = 'COIN'`) is also accepted and works end-to-end, but does NOT survive `structuredClone`/JSON/postMessage. reach for it only for in-process one-liners.
 
 ## Known Gotchas
 
-- **GSAP freezes in hidden tabs** — always sync GSAP ticker with PixiJS ticker in examples
-- **Spine atlas requires texture pages** — `.webp` files must be served from the same directory as `.atlas`
-- **Symbol resize is critical** — `Reel._replaceSymbol()` calls `resize()` on every swap; without it symbols scatter
-- **Preview browser can't decode images** — the Claude Code preview environment has no image codecs; test Spine rendering in a real browser
-- **ReelMotion wrapping** — symbols wrap when crossing `_maxY`/`_minY` boundaries; the callback triggers symbol identity swap via `_onSymbolWrapped`
+- **GSAP freezes in hidden tabs**. always sync GSAP ticker with PixiJS ticker in examples
+- **Spine atlas requires texture pages**. `.webp` files must be served from the same directory as `.atlas`
+- **Symbol resize is critical**. `Reel._replaceSymbol()` calls `resize()` on every swap; without it symbols scatter
+- **Preview browser can't decode images**. the Claude Code preview environment has no image codecs; test Spine rendering in a real browser
+- **ReelMotion wrapping**. symbols wrap when crossing `_maxY`/`_minY` boundaries; the callback triggers symbol identity swap via `_onSymbolWrapped`

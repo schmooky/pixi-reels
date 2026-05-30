@@ -14,7 +14,7 @@ describe('big symbols', () => {
         ['a', 'a', 'a'],
         ['a', 'a', 'a'],
         ['bonus', 'X', 'a'], // server places anchor; engine paints OCCUPIED
-        ['Y', 'Z', 'a'],     // ignored — engine paints OCCUPIED
+        ['Y', 'Z', 'a'],     // ignored. engine paints OCCUPIED
         ['a', 'a', 'a'],
       ]);
       // Same-reel resolution at the Reel level.
@@ -68,7 +68,7 @@ describe('big symbols', () => {
       reels: 3,
       visibleRows: 3,
       // total strip = bufferAbove(1) + visibleRows(3) + bufferBelow(1) = 5.
-      // 1x6 block at row 0 needs rows 0..5 — last row (5) is one past
+      // 1x6 block at row 0 needs rows 0..5. last row (5) is one past
       // the strip end.
       symbolIds: ['a', 'giant'],
       symbolData: { giant: { weight: 0, size: { w: 1, h: 6 } } },
@@ -77,9 +77,9 @@ describe('big symbols', () => {
       const promise = reelSet.spin();
       expect(() => {
         reelSet.setResult([
-          ['giant', 'a', 'a'],
-          ['a', 'a', 'a'],
-          ['a', 'a', 'a'],
+          { visible: ['giant', 'a', 'a'] },
+          { visible: ['a', 'a', 'a'] },
+          { visible: ['a', 'a', 'a'] },
         ]);
       }).toThrow(/extends past the bottom of the strip/);
       reelSet.slamStop();
@@ -100,9 +100,9 @@ describe('big symbols', () => {
       const promise = reelSet.spin();
       expect(() => {
         reelSet.setResult([
-          ['a', 'a', 'a'],
-          ['a', 'a', 'a'],
-          ['wide', 'a', 'a'],
+          { visible: ['a', 'a', 'a'] },
+          { visible: ['a', 'a', 'a'] },
+          { visible: ['wide', 'a', 'a'] },
         ]);
       }).toThrow(/exceeds reel count/);
       reelSet.slamStop();
@@ -143,10 +143,10 @@ describe('big symbols', () => {
       const r1 = reelSet.getBlockBounds(2, 0);
       expect(r1.width).toBe(200);
       expect(r1.height).toBe(200);
-      // From a non-anchor cell — same rect.
+      // From a non-anchor cell. same rect.
       const r2 = reelSet.getBlockBounds(3, 1);
       expect(r2).toEqual(r1);
-      // 1x1 cell — equivalent to getCellBounds.
+      // 1x1 cell. equivalent to getCellBounds.
       const r3 = reelSet.getBlockBounds(0, 0);
       expect(r3.width).toBe(100);
       expect(r3.height).toBe(100);
@@ -172,10 +172,10 @@ describe('big symbols', () => {
   // visible at the bottom). The coordinator scans the full strip range,
   // `_finalizeFrame` sizes anchors anywhere on the strip, and
   // `getVisibleSymbols` / `getSymbolFootprint` / `getBlockBounds` all
-  // resolve consistently — including via a negative `anchor.row` for
+  // resolve consistently. including via a negative `anchor.row` for
   // buffer-above anchors.
 
-  it('lands a 1x3 with anchor in bufferAbove — visible row 0 reads the anchor id', async () => {
+  it('lands a 1x3 with anchor in bufferAbove. visible row 0 reads the anchor id', async () => {
     const { reelSet, spinAndLand, destroy } = createTestReelSet({
       reels: 1,
       visibleRows: 3,
@@ -185,7 +185,7 @@ describe('big symbols', () => {
     });
     try {
       // ColumnTarget form. Anchor at bufferAbove[1] = row -2. Block
-      // spans rows -2, -1, 0 — only the bottom cell shows in visible
+      // spans rows -2, -1, 0. only the bottom cell shows in visible
       // row 0. The coordinator paints OCCUPIED at row -1 and row 0
       // automatically; the user's `visible[0]` is overwritten.
       await spinAndLand([
@@ -203,7 +203,7 @@ describe('big symbols', () => {
     }
   });
 
-  it('lands a 1x2 with anchor in bufferAbove[0] — top two rows of the block are off-screen, bottom shows at row 0+1', async () => {
+  it('lands a 1x2 with anchor in bufferAbove[0]. top two rows of the block are off-screen, bottom shows at row 0+1', async () => {
     const { reelSet, spinAndLand, destroy } = createTestReelSet({
       reels: 1,
       visibleRows: 3,
@@ -226,7 +226,7 @@ describe('big symbols', () => {
     }
   });
 
-  it('lands a 1x2 with anchor at last visible row — stub spills into bufferBelow', async () => {
+  it('lands a 1x2 with anchor at last visible row. stub spills into bufferBelow', async () => {
     const { reelSet, spinAndLand, destroy } = createTestReelSet({
       reels: 1,
       visibleRows: 3,
@@ -235,7 +235,7 @@ describe('big symbols', () => {
       symbolData: { tall: { weight: 0, size: { w: 1, h: 2 } } },
     });
     try {
-      // Anchor at visible row 2 (last). Block spans rows 2, 3 — row 3
+      // Anchor at visible row 2 (last). Block spans rows 2, 3. row 3
       // is bufferBelow[0]. Pre-feature this threw (`row + h > rows`);
       // now it's a legal partial-visibility placement.
       await spinAndLand([
@@ -268,7 +268,7 @@ describe('big symbols', () => {
       const fp = reelSet.getSymbolFootprint(0, 0);
       expect(fp.anchor.row).toBe(-2);
       expect(fp.size).toEqual({ w: 1, h: 3 });
-      // getBlockBounds handles the negative row — returns the full
+      // getBlockBounds handles the negative row. returns the full
       // block's pixel rect (the off-screen portion is clipped by mask).
       const r = reelSet.getBlockBounds(0, 0);
       expect(r.height).toBeGreaterThan(0);
@@ -293,7 +293,7 @@ describe('big symbols', () => {
         { visible: ['x', 'a', 'a'], bufferAbove: ['tall'] },
       ]);
       expect(reelSet.getVisibleGrid()[0]).toEqual(['tall', 'a', 'a']);
-      // Nudge down by 1 — the anchor slides into visible row 0, stub
+      // Nudge down by 1. the anchor slides into visible row 0, stub
       // moves to row 1. Block fully visible.
       const result = await reelSet.nudge(0, {
         distance: 1,
@@ -336,7 +336,7 @@ describe('big symbols', () => {
   });
 
   // ReelMotion wrap thresholds depended on the assumption bufferBelow === 1
-  // — `_maxY` was hard-coded to `(visibleRows + 1) * slotH`, which collapses
+  //. `_maxY` was hard-coded to `(visibleRows + 1) * slotH`, which collapses
   // to `strip[last].y` exactly for bufferBelow=2 and triggers a phantom wrap
   // on the first displace tick. With the fix, maxY scales with bufferBelow
   // and nudge counts wraps exactly `distance` times.
@@ -344,20 +344,20 @@ describe('big symbols', () => {
   // We assert the EXACT strip layout (anchor at strip[2], stubs at strip[3..4])
   // and not just visibleSymbols. Pre-fix the visible symbols read
   // `['?', 'tall', 'tall']` because the block landed at strip[3..5] with the
-  // tail spilling into bufferBelow — exactly the "tail in lower buffer"
+  // tail spilling into bufferBelow. exactly the "tail in lower buffer"
   // regression. Asserting strip-by-index catches that even if a future bug
   // happens to also produce the right `visibleSymbols` accidentally.
   it('nudge DOWN preserves block position when bufferBelow >= 2 (pre-fix: off-by-one)', async () => {
     const { reelSet, spinAndLand, destroy } = createTestReelSet({
       reels: 1,
       visibleRows: 3,
-      bufferSymbols: 2, // bufferAbove=2 AND bufferBelow=2 — total strip = 7.
+      bufferSymbols: 2, // bufferAbove=2 AND bufferBelow=2. total strip = 7.
       symbolIds: ['a', 'tall'],
       symbolData: { tall: { weight: 0, size: { w: 1, h: 3 } } },
     });
     try {
-      // 1x3 anchor at bufferAbove[1] = row -2 → block at rows -2, -1, 0.
-      // Tail visible: visible[0] = stub→'tall', visible[1..2] = 'a'.
+      // 1x3 anchor at bufferAbove[1] = row -2: block at rows -2, -1, 0.
+      // Tail visible: visible[0] = stub mapped to 'tall', visible[1..2] = 'a'.
       await spinAndLand([
         { visible: ['a', 'a', 'a'], bufferAbove: [undefined, 'tall'] },
       ]);
@@ -374,7 +374,7 @@ describe('big symbols', () => {
 
       // DOWN by 2: anchor moves from strip[0] (row -2) to strip[2] (row 0).
       // Block fills all three visible rows. Pre-fix this landed at strip[3]
-      // because the wrap fired one tick too early — the tail slipped into
+      // because the wrap fired one tick too early. the tail slipped into
       // bufferBelow and only the top 2/3 of the block stayed visible.
       const result = await reelSet.nudge(0, {
         distance: 2,
@@ -387,7 +387,7 @@ describe('big symbols', () => {
       expect(postStrip[2]).toBe('tall'); // anchor at row 0
       expect(postStrip[3]).toBe(OCC);
       expect(postStrip[4]).toBe(OCC);
-      // Bufferbelow must NOT carry any block cell — that was the
+      // Bufferbelow must NOT carry any block cell. that was the
       // regression: tail ended up at strip[5] (= bufferBelow[0]).
       expect(postStrip[5]).not.toBe(OCC);
       expect(postStrip[5]).not.toBe('tall');
@@ -465,7 +465,7 @@ describe('big symbols', () => {
   //     whose own `_getAnchorRow` returns the visible row (no per-reel
   //     occupancy on col 1 because Scan 2 only sees its own anchor) and
   //     finding the leftward big-symbol owner that covers it.
-  it('cross-reel 2x2 with anchor in bufferAbove — resolves visible cells and footprint correctly', async () => {
+  it('cross-reel 2x2 with anchor in bufferAbove. resolves visible cells and footprint correctly', async () => {
     const { reelSet, spinAndLand, destroy } = createTestReelSet({
       reels: 2,
       visibleRows: 3,
@@ -522,7 +522,7 @@ describe('big symbols', () => {
   // (`row >= visibleRows`) across multiple reels, and the per-Reel
   // `placeSymbols` path consuming those positions during the slamStop
   // skip-path landing.
-  it('cross-reel 2x2 anchored at last visible row — stubs spill into bufferBelow on both columns', async () => {
+  it('cross-reel 2x2 anchored at last visible row. stubs spill into bufferBelow on both columns', async () => {
     const { reelSet, spinAndLand, destroy } = createTestReelSet({
       reels: 2,
       visibleRows: 3,
@@ -567,7 +567,7 @@ describe('big symbols', () => {
       reels: 1,
       visibleRows: 3,
       bufferSymbols: 1,
-      // Strip layout: bufferAbove(1) | visible(3) | bufferBelow(1) — 5 cells.
+      // Strip layout: bufferAbove(1) | visible(3) | bufferBelow(1). 5 cells.
       // The check is `anchor.row + h > visibleRows + bufferBelow`, i.e.
       // `row + 4 > 4`. So legal anchor rows for h=4 are {-1, 0}:
       //   row=-1 → -1+4 = 3 → 3 > 4 ? no → fits (cells -1..2).

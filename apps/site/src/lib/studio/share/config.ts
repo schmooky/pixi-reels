@@ -1,6 +1,6 @@
 /**
  * Where the share-api lives, from build-time env. Set
- * `PUBLIC_SHARE_API_URL` in `.env` (or the deploy environment) — Astro
+ * `PUBLIC_SHARE_API_URL` in `.env` (or the deploy environment). Astro
  * exposes anything `PUBLIC_*` to the client.
  *
  *   dev:  http://localhost:8787

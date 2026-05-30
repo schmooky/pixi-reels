@@ -1,12 +1,12 @@
 ---
 layout: ../../layouts/Recipe.astro
 title: Skip an in-flight nudge
-description: Fast-forward a running nudge tween to its landed state with `reelSet.skipNudge(col)`. The original `nudge()` promise resolves normally — the consumer's success path still runs.
+description: Fast-forward a running nudge tween to its landed state with `reelSet.skipNudge(col)`. The original `nudge()` promise resolves normally. the consumer's success path still runs.
 tags: [nudge, skip, ux, recent]
 steps:
   - Run a long sequential nudge (1.5s per reel) so the player has time to react
   - The canvas button morphs into a skip icon while the recipe handler is running
-  - Tap during a nudge — the RecipeRunner detects an in-flight nudge and calls `reelSet.skipNudge()`
+  - Tap during a nudge. the RecipeRunner detects an in-flight nudge and calls `reelSet.skipNudge()`
   - The original `nudge()` promise resolves at the deterministic landed position
 apis:
   - ReelSet.skipNudge
@@ -15,11 +15,14 @@ apis:
 
 import code from '../../recipes/nudge-skip.recipe.ts?raw';
 import { RecipeRunner } from '../../components/RecipeRunner.tsx';
+import RecipeFrame from '../../components/RecipeFrame.astro';
 
-<RecipeRunner code={code} client:only="react" />
+<RecipeFrame>
+  <RecipeRunner code={code} client:only="react" />
+</RecipeFrame>
 
 Skip lands a nudge **immediately**, success path. The `nudge()` promise
-resolves with the new visible column on the next microtask — exactly as
+resolves with the new visible column on the next microtask. exactly as
 if the tween had run to completion. Use this for player-driven turbo
 buttons or accessibility shortcuts where the post-nudge UI (win
 re-detect, spotlight, HUD update) should still fire.
@@ -36,7 +39,7 @@ const { symbols } = await p; // success path
 
 Call `skipNudge(col)` to skip a single reel, or `skipNudge()` (no
 argument) to skip every in-flight nudge across all reels. A skip on a
-reel that isn't nudging is a no-op — safe to call defensively.
+reel that isn't nudging is a no-op. safe to call defensively.
 
 ## Skip vs abort
 
@@ -59,11 +62,11 @@ mid-action tap. Its priority order:
 2. Else if any reel `isNudging`, call `reelSet.skipNudge()`.
 3. Else call the spin pipeline's `skip()` / `requestSkip()`.
 
-So this recipe needs no custom handler — the default behaviour does
+So this recipe needs no custom handler. the default behaviour does
 the right thing.
 
 ## Related
 
-- [Abort a nudge](/recipes/nudge-abort/) — reject the promise, fire
+- [Abort a nudge](/recipes/nudge-abort/). reject the promise, fire
   `nudge:cancelled`.
-- [Nudge guide](/guides/nudge/) — full event map and contract.
+- [Nudge guide](/guides/nudge/). full event map and contract.

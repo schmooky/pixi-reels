@@ -2,17 +2,17 @@
 import Base from './Base.astro';
 import DocsSidebar from '../components/DocsSidebar.astro';
 import { GUIDES_NAV, WIKI_NAV, type NavSection } from '../content/nav.ts';
-import { articleLd, breadcrumbLd, SITE } from '../lib/seo.ts';
+import { articleLd, breadcrumbLd, ogImageForSection, SITE } from '../lib/seo.ts';
 
 interface Props {
   title?: string;
   description?: string;
-  section?: 'guides' | 'wiki' | 'demos';
+  section?: 'guides' | 'wiki' | 'demos' | 'api' | 'docs';
   eyebrow?: string;
   frontmatter?: {
     title?: string;
     description?: string;
-    section?: 'guides' | 'wiki' | 'demos';
+    section?: 'guides' | 'wiki' | 'demos' | 'api' | 'docs';
     eyebrow?: string;
   };
 }
@@ -23,29 +23,54 @@ const title = props.title ?? fm.title ?? 'pixi-reels';
 const description =
   props.description ??
   fm.description ??
-  `${title} — pixi-reels, open-source slot machine reel engine for PixiJS v8.`;
-const section = (props.section ?? fm.section ?? 'guides') as 'guides' | 'wiki' | 'demos';
+  `${title}. pixi-reels, open-source slot machine reel engine for PixiJS v8.`;
+const section = (props.section ?? fm.section ?? 'guides') as 'guides' | 'wiki' | 'demos' | 'api' | 'docs';
 const eyebrow = props.eyebrow ?? fm.eyebrow;
 const pathname = Astro.url.pathname;
+
+// Auto-detect API and docs sections by URL when frontmatter doesn't set them.
+// TypeDoc-generated pages live under /api/, hand-written narrative under /docs/.
+const resolvedSection = section === 'guides' && pathname.startsWith('/api/')
+  ? 'api'
+  : section === 'guides' && pathname.startsWith('/docs/')
+    ? 'docs'
+    : section;
 
 const navMap: Record<string, NavSection[]> = {
   guides: GUIDES_NAV,
   wiki: WIKI_NAV,
+  docs: WIKI_NAV,
+  api: WIKI_NAV,
   demos: [],
 };
-const nav = navMap[section] ?? [];
+const nav = navMap[resolvedSection] ?? [];
 
 const sectionLabel: Record<string, string> = {
   guides: 'Guides',
   wiki: 'Docs',
+  docs: 'Docs',
+  api: 'API reference',
   demos: 'Demos',
 };
+
+// Section-specific OG: guides get the guides image, recipes get recipes,
+// API ref gets the code-styled api image, etc. SEO layer also accepts
+// per-page overrides via frontmatter.image.
+const ogImageSection = resolvedSection === 'api'
+  ? 'api'
+  : resolvedSection === 'guides'
+    ? 'guides'
+    : pathname.startsWith('/architecture/')
+      ? 'architecture'
+      : pathname.startsWith('/recipes/')
+        ? 'recipes'
+        : undefined;
 
 const jsonLd = [
   articleLd({ title, description, path: pathname }),
   breadcrumbLd([
     { name: SITE.name, url: '/' },
-    { name: sectionLabel[section], url: `/${section}/` },
+    { name: sectionLabel[resolvedSection], url: `/${resolvedSection === 'api' ? 'api' : resolvedSection}/` },
     { name: title, url: pathname },
   ]),
 ];
@@ -55,7 +80,8 @@ const jsonLd = [
   description={description}
   path={pathname}
   type="article"
-  article={{ section: sectionLabel[section] }}
+  image={ogImageForSection(ogImageSection)}
+  article={{ section: sectionLabel[resolvedSection] }}
   jsonLd={jsonLd}
 >
   <div class="container grid gap-10 py-12 md:grid-cols-[220px_minmax(0,1fr)]">

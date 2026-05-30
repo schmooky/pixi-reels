@@ -1,11 +1,9 @@
 // Core
 export { ReelSet } from './core/ReelSet.js';
 export { ReelSetBuilder } from './core/ReelSetBuilder.js';
-export { Reel, OCCUPIED_SENTINEL } from './core/Reel.js';
+export { Reel } from './core/Reel.js';
 export type { ReelConfig, NudgeOptions } from './core/Reel.js';
 export { ReelViewport } from './core/ReelViewport.js';
-export { ReelMotion } from './core/ReelMotion.js';
-export { StopSequencer } from './core/StopSequencer.js';
 
 // Config
 export { SpeedPresets } from './config/SpeedPresets.js';
@@ -26,8 +24,6 @@ export type {
   SymbolPosition,
   Win,
   MaskConfig,
-  ReelSetInternalConfig,
-  ResolvedReelGridConfig,
   MultiWaysConfig,
   ReelAnchor,
 } from './config/types.js';
@@ -40,39 +36,34 @@ export { SpriteSymbol } from './symbols/SpriteSymbol.js';
 export type { SpriteSymbolOptions } from './symbols/SpriteSymbol.js';
 export { AnimatedSpriteSymbol } from './symbols/AnimatedSpriteSymbol.js';
 export type { AnimatedSpriteSymbolOptions } from './symbols/AnimatedSpriteSymbol.js';
-export { SpineSymbol } from './symbols/SpineSymbol.js';
+export { SpineSymbol, whenSpineReady } from './symbols/SpineSymbol.js';
 export type { SpineSymbolOptions } from './symbols/SpineSymbol.js';
 export { SymbolRegistry } from './symbols/SymbolRegistry.js';
-export { SymbolFactory } from './symbols/SymbolFactory.js';
 
 // Spin
-export { SpinController } from './spin/SpinController.js';
-export type { SpinControllerHooks } from './spin/SpinController.js';
+// `SpinController` and `SpinControllerHooks` are internal wiring built by
+// `ReelSet`. Consumers never construct one. Same shape as `ReelMotion` /
+// `StopSequencer`, which were hidden in 1.0.0.
+//
+// The built-in phase CLASSES (StartPhase, SpinPhase, StopPhase, etc.) are
+// also internal. Consumers register custom phases via
+// `builder.phases(f => f.register('name', class extends ReelPhase { ... }))`,
+// they do not subclass the built-ins. Phase Config TYPES stay exported as
+// stable shape descriptions for documentation.
 export { ReelPhase } from './spin/phases/ReelPhase.js';
 export { PhaseFactory } from './spin/phases/PhaseFactory.js';
-export { StartPhase } from './spin/phases/StartPhase.js';
 export type { StartPhaseConfig } from './spin/phases/StartPhase.js';
-export { SpinPhase } from './spin/phases/SpinPhase.js';
 export type { SpinPhaseConfig } from './spin/phases/SpinPhase.js';
-export { StopPhase } from './spin/phases/StopPhase.js';
 export type { StopPhaseConfig } from './spin/phases/StopPhase.js';
-export { AnticipationPhase } from './spin/phases/AnticipationPhase.js';
 export type { AnticipationPhaseConfig } from './spin/phases/AnticipationPhase.js';
-export { AdjustPhase } from './spin/phases/AdjustPhase.js';
 export type { AdjustPhaseConfig } from './spin/phases/AdjustPhase.js';
-// Note: `PinOverlayTween` is intentionally not re-exported. It's an
-// internal hand-off type built by SpinController and consumed by
-// AdjustPhase — consumers don't construct one directly.
 
 // Tumble cascade
 export type { TumbleConfig, TumbleFallConfig, TumbleDropInConfig } from './cascade/TumbleConfig.js';
 export type { Cell, DropOffset } from './cascade/tumbleAlgorithm.js';
 export { computeDropOffsets } from './cascade/tumbleAlgorithm.js';
-export { CascadeFallPhase } from './spin/phases/CascadeFallPhase.js';
 export type { CascadeFallPhaseConfig } from './spin/phases/CascadeFallPhase.js';
-export { CascadePlacePhase } from './spin/phases/CascadePlacePhase.js';
 export type { CascadePlacePhaseConfig } from './spin/phases/CascadePlacePhase.js';
-export { CascadeDropInPhase } from './spin/phases/CascadeDropInPhase.js';
 export type { CascadeDropInPhaseConfig } from './spin/phases/CascadeDropInPhase.js';
 
 // Spinning modes
@@ -87,8 +78,6 @@ export { SpeedManager } from './speed/SpeedManager.js';
 // Frame
 export { FrameBuilder } from './frame/FrameBuilder.js';
 export type { FrameContext, FrameMiddleware } from './frame/FrameBuilder.js';
-export { RandomSymbolProvider } from './frame/RandomSymbolProvider.js';
-export { OffsetCalculator } from './frame/OffsetCalculator.js';
 export type { ColumnTarget } from './frame/ColumnTarget.js';
 
 // Pool
@@ -98,7 +87,7 @@ export { ObjectPool } from './pool/ObjectPool.js';
 export { SymbolSpotlight } from './spotlight/SymbolSpotlight.js';
 export type { SpotlightOptions, WinLine, CycleOptions } from './spotlight/SymbolSpotlight.js';
 
-// Wins (symbol-highlight presenter — no line drawing, events-driven)
+// Wins (symbol-highlight presenter. no line drawing, events-driven)
 export { WinPresenter } from './wins/WinPresenter.js';
 export type { WinPresenterOptions, WinSymbolAnim } from './wins/WinPresenter.js';
 export { sortByValueDesc } from './wins/Win.js';
@@ -117,10 +106,12 @@ export { pinKey } from './pins/CellPin.js';
 // ReelSet frame API (runtime middleware)
 export type { FrameAPI } from './core/ReelSet.js';
 
-// ReelSet cascade-API option types — exported so consumers can pass typed
+// ReelSet cascade-API option types. exported so consumers can pass typed
 // option objects around or extend them for engine-on-engine adapters.
 export type {
   DestroySymbolsOptions,
+  RefillOptions,
+  RefillResult,
   RunCascadeOptions,
   RunCascadeResult,
 } from './core/ReelSet.js';
@@ -136,6 +127,7 @@ export type {
 // Utils
 export type { Disposable } from './utils/Disposable.js';
 export { TickerRef } from './utils/TickerRef.js';
+export { driveGsapWithTicker } from './utils/gsapTicker.js';
 
 // Debug
 export {
@@ -154,14 +146,6 @@ export type {
   StartRecordingOptions,
 } from './debug/debug.js';
 
-// Testing utilities (tree-shakeable)
-export {
-  FakeTicker,
-  HeadlessSymbol,
-  createTestReelSet,
-  spinAndLand,
-  captureEvents,
-  expectGrid,
-  countSymbol,
-} from './testing/index.js';
-export type { TestReelSetOptions, TestReelSetHandle } from './testing/index.js';
+// Testing utilities ship at the `pixi-reels/testing` subpath. Importing
+// from there keeps the headless harness out of production bundles even
+// when the consumer's tree-shaker can't prove it's dead code.

@@ -19,7 +19,7 @@ import { pinKey } from '../pins/CellPin.js';
 import { getGsap } from '../utils/gsapRef.js';
 import type { FrameMiddleware } from '../frame/FrameBuilder.js';
 import type { ColumnTarget } from '../frame/ColumnTarget.js';
-import { assertBufferCountsInRange, cloneTargetGrid, toLegacyTargetGrid } from '../frame/ColumnTarget.js';
+import { assertBufferCountsInRange, columnTargetToArray } from '../frame/ColumnTarget.js';
 import type { Cell } from '../cascade/tumbleAlgorithm.js';
 
 export interface ReelSetParams {
@@ -35,7 +35,7 @@ export interface ReelSetParams {
 
 /**
  * The runtime-mutable frame-builder pipeline exposed on `reelSet.frame`.
- * Matches `FrameBuilder.use/remove` — the internal machinery that already
+ * Matches `FrameBuilder.use/remove`. the internal machinery that already
  * exists; this is the ergonomic surface.
  */
 export interface FrameAPI {
@@ -49,17 +49,11 @@ export interface FrameAPI {
 
 /**
  * Options for {@link ReelSet.destroySymbols}. Every field is optional;
- * the defaults produce the canonical "winners disintegrate" look (alternating
- * rotation by column, no stagger, no viewport dim, zIndex bumped to 1000
- * so destroy effects render above neighbouring cells).
+ * the defaults produce the canonical "winners poof" look (no stagger,
+ * no viewport dim, zIndex bumped to 1000 so destroy effects render
+ * above neighbouring cells).
  */
 export interface DestroySymbolsOptions {
-  /**
-   * Per-cell rotation direction. Default: alternates by column
-   * (`reel % 2 === 0 ? 1 : -1`) — produces a cohesive cluster pop.
-   * Pass `1` / `-1` to force one direction, or a function for full control.
-   */
-  direction?: 1 | -1 | ((cell: Cell, index: number) => 1 | -1);
   /**
    * Per-cell start delay in seconds. Default `0` (every cell starts together).
    * Pass `(cell, i) => i * 0.03` for a per-cell stagger.
@@ -68,7 +62,7 @@ export interface DestroySymbolsOptions {
   /**
    * zIndex applied to each cell's view for the duration of the animation
    * so destroy effects aren't clipped behind neighbours. Default `1000`.
-   * The library does NOT restore the previous zIndex — the cell is
+   * The library does NOT restore the previous zIndex. the cell is
    * destroyed (alpha 0) and will be replaced on the next `refill()` /
    * `setResult()`. Pass `null` to skip the bump.
    */
@@ -83,7 +77,7 @@ export interface DestroySymbolsOptions {
    * Abort signal. Aborting mid-destroy kills every in-flight
    * `playDestroy` tween and snaps the cells to their destroyed pose
    * (`alpha: 0`) without waiting for the natural end of the animation.
-   * The returned promise still resolves normally — abort means
+   * The returned promise still resolves normally. abort means
    * "fast-forward to the destroyed state," not "fail." Forwarded
    * automatically by `runCascade`'s own `signal`.
    */
@@ -96,6 +90,94 @@ export interface DestroySymbolsOptions {
  * stays the single source of truth for shared shapes.
  */
 export type RunCascadeResult = RunCascadeResultBase;
+
+/**
+ * Options for {@link ReelSet.refill}. The two required fields encode
+ * what just happened (`winners`) and what the next visible state should
+ * be (`grid`). Everything else is timing / cancellation / animation
+ * flavor with sensible defaults.
+ *
+ * Use this directly when you're driving your own cascade loop. For the
+ * common case of "destroy → refill → check → repeat", use
+ * {@link ReelSet.runCascade} instead. it composes refill, destroySymbols,
+ * and win-detection into one call with the same cancellation semantics.
+ */
+export interface RefillOptions {
+  /** Winners that were just destroyed. Their cells will be refilled per gravity. */
+  winners: ReadonlyArray<Cell>;
+  /**
+   * Target grid after refill. Convention: the top `winners.length` rows
+   * per reel are new symbols falling in from above; the rest are
+   * survivors in their original top-to-bottom order. Same contract as
+   * the `nextGrid` callback in `runCascade`.
+   */
+  grid: ColumnTarget[];
+  /**
+   * Pick the refill animation flavor.
+   *
+   *   - `'combined'` (default). survivors and new symbols animate
+   *     together in one drop-in beat. The Sweet Bonanza / Sugar Rush feel.
+   *   - `'gravity-then-drop'`. survivors slide down to fill holes FIRST,
+   *     then a global pause (`gravityHoldMs` + `gravityHold`), then new
+   *     symbols enter from above. Useful when you want a multiplier or
+   *     SFX beat between the two motions.
+   */
+  mode?: 'combined' | 'gravity-then-drop';
+  /**
+   * Fixed wall-clock pause (ms) between the gravity stage and the
+   * drop-in stage. Only applies when `mode === 'gravity-then-drop'`.
+   * Default `250`. Combines via `Promise.all` with `gravityHold` if
+   * both are provided. whichever finishes LAST gates the drop-in.
+   */
+  gravityHoldMs?: number;
+  /**
+   * Promise (or zero-arg factory) gating the drop-in stage. Only
+   * applies when `mode === 'gravity-then-drop'`.
+   *
+   *   - `Promise<void>`. pass an already-in-flight animation / SFX /
+   *     network call's completion handle when you want the drop-in to
+   *     wait for it. The promise is awaited as-is.
+   *   - `() => Promise<void>`. pass a factory when the *side effects*
+   *     of starting the promise should fire AT gravity-end, not at
+   *     refill-start.
+   *
+   * Combines via `Promise.all` with `gravityHoldMs`. pass both to
+   * floor the hold to a minimum wall-clock duration even if the
+   * promise resolves earlier.
+   */
+  gravityHold?: Promise<void> | (() => Promise<void>);
+  /**
+   * Awaitable callback fired AFTER `gravityHoldMs` + `gravityHold` both
+   * resolve, BEFORE the drop-in stage. Only fires when
+   * `mode === 'gravity-then-drop'`. Use for last-mile side effects that
+   * need to read the post-hold state.
+   */
+  onGravityComplete?: () => Promise<void> | void;
+  /**
+   * Abort signal. Aborting mid-refill slams the in-flight animation so
+   * the await unblocks immediately rather than waiting for the drop-in
+   * to finish. The returned promise still resolves normally with
+   * `wasSkipped: true`. Mirrors the abort contract on
+   * {@link RunCascadeOptions.signal} and {@link DestroySymbolsOptions.signal}.
+   */
+  signal?: AbortSignal;
+}
+
+/**
+ * Summary returned by {@link ReelSet.refill}. Symmetric with
+ * {@link RunCascadeResult}. same vocabulary, narrower scope (one stage
+ * vs. the full chain).
+ */
+export interface RefillResult {
+  /** Number of winner cells that were refilled. Equals `winners.length`. */
+  winnersRefilled: number;
+  /** Visible grid after the refill landed. Matches `getVisibleGrid()`. */
+  finalGrid: string[][];
+  /** True if the refill was aborted via `signal` (slammed to land). */
+  wasSkipped: boolean;
+  /** Total refill duration in milliseconds. */
+  duration: number;
+}
 
 /**
  * Options for {@link ReelSet.runCascade}. The two required callbacks
@@ -123,23 +205,30 @@ export interface RunCascadeOptions {
    * Must follow the gravity convention: top `winners.length` rows per
    * reel are new symbols; the rest are survivors in original top-to-
    * bottom order. Same contract as `refill({ grid })`.
+   *
+   * May return `string[][]` (visible cells only) or `ColumnTarget[]`
+   * (when the next grid places anchors in `bufferAbove` / `bufferBelow`).
    */
   nextGrid: (
     grid: string[][],
     winners: readonly Cell[],
     chainLevel: number,
-  ) => string[][] | Promise<string[][]>;
+  ) =>
+    | string[][]
+    | ColumnTarget[]
+    | Promise<string[][]>
+    | Promise<ColumnTarget[]>;
   /**
    * Per-cascade hook fired AFTER `destroySymbols` and BEFORE the refill
    * starts. Use it to bump multipliers, play SFX, run "winners gone"
    * UI animations. Return a promise to delay the refill (e.g. for a
    * number-roll animation).
    *
-   *   - `chain` — same 1-indexed chain stage as `cascade:chain:start`.
-   *   - `winners` — cells that were just destroyed.
-   *   - `currentGrid` — the grid as it stood at `cascade:chain:start`
+   *   - `chain`. same 1-indexed chain stage as `cascade:chain:start`.
+   *   - `winners`. cells that were just destroyed.
+   *   - `currentGrid`. the grid as it stood at `cascade:chain:start`
    *     (same reference). The symbols at `winners` are visually gone but
-   *     the grid array still names them — `nextGrid` will replace them.
+   *     the grid array still names them. `nextGrid` will replace them.
    */
   onCascade?: (info: {
     chain: number;
@@ -153,7 +242,7 @@ export interface RunCascadeOptions {
    */
   pauseAfterDestroyMs?: number;
   /**
-   * Safety cap on cascade-chain length. Defaults to `32` — a sane
+   * Safety cap on cascade-chain length. Defaults to `32`. a sane
    * upper bound that protects against pathological server bugs while
    * being well above any commercial slot's natural cap. Pass `Infinity`
    * to disable.
@@ -161,22 +250,22 @@ export interface RunCascadeOptions {
   maxChain?: number;
   /**
    * Forwarded to `destroySymbols(cells, opts)` on every cascade. Useful
-   * for direction overrides, per-cell stagger, viewport dim, etc.
+   * for per-cell stagger, viewport dim, an abort signal, etc.
    */
   destroyOptions?: DestroySymbolsOptions;
   /**
    * How each refill in the chain animates.
    *
-   *   - `'combined'` (default) — survivors and new symbols animate
+   *   - `'combined'` (default). survivors and new symbols animate
    *     together in one drop-in beat. The Sweet Bonanza / Sugar Rush feel.
-   *   - `'gravity-then-drop'` — survivors slide down to fill holes FIRST,
+   *   - `'gravity-then-drop'`. survivors slide down to fill holes FIRST,
    *     then a global pause (`gravityHoldMs`), then new symbols enter
    *     from above with the per-reel stop delay applied. The Mummyland
-   *     Treasures / Reactoonz feel — gives space for an anticipation
+   *     Treasures / Reactoonz feel. gives space for an anticipation
    *     beat between gravity and new-symbol entry.
    *
    * Per-column stagger inside the new-symbol drop is controlled by
-   * `setDropOrder('ltr', stepMs)` exactly as in combined mode — when the
+   * `setDropOrder('ltr', stepMs)` exactly as in combined mode. when the
    * step is shorter than `dropIn.duration` you get overlapping waves;
    * when it's at least as long you get strictly sequential columns.
    */
@@ -197,19 +286,19 @@ export interface RunCascadeOptions {
    * Per-cascade promise-builder. Invoked once per chain stage at the
    * **gravity-end boundary** (i.e. AFTER every reel's gravity stage has
    * settled, just before the global hold begins). The returned promise
-   * is awaited in parallel with `gravityHoldMs` via `Promise.all` —
+   * is awaited in parallel with `gravityHoldMs` via `Promise.all`.
    * whichever finishes LAST gates the drop-in. Only fires when
    * `refillMode === 'gravity-then-drop'`.
    *
    * Use this when each cascade starts its own anticipation animation
    * (multiplier roll, mascot reaction, anticipation SFX) and you want
    * the builder's *side effects* (e.g. `multiplier.bumpTo(chain + 1)`)
-   * to fire AT gravity-end — not back when the refill args were
+   * to fire AT gravity-end. not back when the refill args were
    * assembled. The library calls your function at the right beat and
    * awaits the promise you return.
    *
-   *   - `chain` — same 1-indexed chain stage as `cascade:chain:start`.
-   *   - `winners` — cells cleared this cascade.
+   *   - `chain`. same 1-indexed chain stage as `cascade:chain:start`.
+   *   - `winners`. cells cleared this cascade.
    *
    * A rejection from the returned promise is surfaced via the
    * `cascade:gravity:error` event AND logged via `console.error`; the
@@ -226,8 +315,8 @@ export interface RunCascadeOptions {
    * that need to read post-hold state (e.g. snapshot the multiplier
    * value that just finished its count-up).
    *
-   *   - `chain` — same 1-indexed chain stage as `cascade:chain:start`.
-   *   - `winners` — cells cleared this cascade.
+   *   - `chain`. same 1-indexed chain stage as `cascade:chain:start`.
+   *   - `winners`. cells cleared this cascade.
    */
   onGravityComplete?: (info: {
     chain: number;
@@ -238,9 +327,9 @@ export interface RunCascadeOptions {
    * next await boundary, the in-flight refill (if any) is slammed via
    * `slamStop()`, and the resolved summary reports `wasSkipped: true`.
    *
-   * Use this for "player tapped SLAM mid-cascade" — `reelSet.skip()` is
+   * Use this for "player tapped SLAM mid-cascade". `reelSet.skipSpin()` is
    * a no-op when called between refills (the engine is idle), so it
-   * can't end the chain from a button handler. AbortController can.
+   * cannot end the chain from a button handler. AbortController can.
    *
    * ```ts
    * const controller = new AbortController();
@@ -258,21 +347,21 @@ export interface RunCascadeOptions {
  * controller, the speed manager, and the win spotlight. You `addChild` it
  * to your stage and then drive it from the four public verbs below:
  *
- *   - `spin()` — start the reels moving, returns a promise that resolves
+ *   - `spin()`. start the reels moving, returns a promise that resolves
  *     when every reel has landed (or been slam-stopped)
- *   - `setResult(grid)` — tell the reels what to land on; the spin
+ *   - `setResult(grid)`. tell the reels what to land on; the spin
  *     controller consumes this and each reel queues its target symbols
- *   - `setAnticipation(reelIndices)` — slow the given reels before they
+ *   - `setAnticipation(reelIndices)`. slow the given reels before they
  *     stop, for "will the third scatter land?" tension
- *   - `skip()` — land immediately; useful for slam-stop UX
+ *   - `skipSpin()` lands the in-flight spin immediately. The slam-stop button calls this.
  *
  * Everything else is subsystems: `speed`, `spotlight`, `events`, `viewport`.
  * Construction goes through {@link ReelSetBuilder}, never `new ReelSet()`
- * directly — the builder enforces that every required piece is wired.
+ * directly. the builder enforces that every required piece is wired.
  *
  * ```ts
  * const reelSet = new ReelSetBuilder()
- *   .reels(5).visibleSymbols(3).symbolSize(140, 140)
+ *   .reels(5).visibleRows(3).symbolSize(140, 140)
  *   .symbols((r) => r.register('cherry', SpriteSymbol, { textures }))
  *   .ticker(app.ticker)
  *   .build();
@@ -303,8 +392,8 @@ export class ReelSet extends Container implements Disposable {
    * stacking inside a layer (bottom rows render in front of top rows on
    * the same layer). The 10000 ceiling on pin overlays is set very high
    * so a consumer who sets `symbolData.zIndex: 50` (= 5000) still sits
-   * below pins. If you need to stack ABOVE pin overlays — e.g. a win-
-   * presenter symbol promotion — re-parent the symbol to
+   * below pins. If you need to stack ABOVE pin overlays. e.g. a win-
+   * presenter symbol promotion. re-parent the symbol to
    * `viewport.spotlightContainer`, which is its own DisplayObject layer
    * above pin overlays.
    */
@@ -324,7 +413,7 @@ export class ReelSet extends Container implements Disposable {
   /**
    * Visual overlays rendered above the reel viewport while a spin is in
    * motion. Each overlay is a pooled ReelSymbol sitting in the viewport's
-   * unmaskedContainer at the pin's cell position — it keeps the pinned
+   * unmaskedContainer at the pin's cell position. it keeps the pinned
    * symbol visible while the underlying reel scrolls. Created on
    * spin:start, destroyed on spin:allLanded. The pin is co-stored so
    * _destroyPinOverlay always has it available even after the pin is
@@ -342,7 +431,7 @@ export class ReelSet extends Container implements Disposable {
   /**
    * True once `setResult()` has been called for the current spin. Reset on
    * every `spin:start`. Used to enforce the contract that `setShape()`
-   * must be called BEFORE `setResult()` — calling it after corrupts the
+   * must be called BEFORE `setResult()`. calling it after corrupts the
    * cached frames (pins were applied at their pre-migration rows; a later
    * setShape would migrate them but the frames are already built).
    */
@@ -350,6 +439,14 @@ export class ReelSet extends Container implements Disposable {
 
   /** Set at construction by the builder when `.multiways(...)` was called. */
   private _isMultiWaysSlot: boolean;
+
+  /**
+   * Number of `nudge()` calls currently in flight. Reference-counted (not a
+   * boolean) so parallel nudges across reels don't clear the guard early: the
+   * first to settle would otherwise let spin/setResult/pin/setShape race a
+   * still-live nudge. Used by those methods to throw while any nudge runs.
+   */
+  private _nudgesInFlight = 0;
   private _multiwaysMinRows = 0;
   private _multiwaysMaxRows = 0;
   private _multiwaysReelPixelHeight = 0;
@@ -379,13 +476,13 @@ export class ReelSet extends Container implements Disposable {
     // Wire each reel's cross-reel resolver so `Reel.getVisibleSymbols()`
     // returns the anchor's id even when the OCCUPIED cell's anchor lives
     // on a different reel. Without this, per-reel surface returns the
-    // sentinel for cross-reel cells — making it inconsistent with
+    // sentinel for cross-reel cells. making it inconsistent with
     // `ReelSet.getVisibleGrid()`.
     for (const reel of this._reels) {
       reel.setCrossReelResolver((col, row) => {
         const fp = this.getSymbolFootprint(col, row);
         const anchorReel = this._reels[fp.anchor.col];
-        // Anchor row is on its OWN reel — read its symbolId directly to
+        // Anchor row is on its OWN reel. read its symbolId directly to
         // avoid recursing back through this resolver.
         return anchorReel.symbols[anchorReel.bufferAbove + fp.anchor.row].symbolId;
       });
@@ -417,8 +514,8 @@ export class ReelSet extends Container implements Disposable {
       {
         isMultiWaysSlot: this._isMultiWaysSlot,
         symbolsData: this._symbolsData,
-        peekTargetShape: () => this._peekTargetShape(),
-        clearTargetShape: () => this._clearTargetShape(),
+        peekTargetShape: () => this.peekTargetShape(),
+        clearTargetShape: () => this.clearTargetShape(),
         multiwaysReelPixelHeight: this._multiwaysReelPixelHeight,
         symbolGapY: params.config.grid.symbolGap.y,
         getPinsOnReel: (reelIndex) => this._pinsOnReel(reelIndex),
@@ -456,7 +553,7 @@ export class ReelSet extends Container implements Disposable {
    * reels land.
    *
    * Pass `{ holdReels: [i, ...] }` to keep specific columns frozen for
-   * this spin — they skip START / SPIN / STOP entirely and stay on
+   * this spin. they skip START / SPIN / STOP entirely and stay on
    * whatever symbols they're currently showing. The use cases are
    * Hold & Win respins, sticky / expanding wilds, and "the trigger
    * column stays in place" bonus rounds.
@@ -467,7 +564,7 @@ export class ReelSet extends Container implements Disposable {
    * on the builder.
    *
    * @example
-   * // Plain spin — every reel animates.
+   * // Plain spin. every reel animates.
    * await reelSet.spin();
    *
    * @example
@@ -484,37 +581,40 @@ export class ReelSet extends Container implements Disposable {
    * setResult interaction, setAnticipation filtering).
    */
   async spin(options?: SpinOptions): Promise<SpinResult> {
+    this._assertNoNudgeInFlight('spin');
     return this._spinController.spin(options);
   }
 
   /**
    * Set the target result symbols. Triggers the stop sequence.
    *
-   * Two input shapes are accepted:
-   *
-   *   1. **Legacy `string[][]`** — one column per reel, row-indexed. Set
-   *      `frame[col][-1]` (or `[-2]`, etc.) to target a buffer-above slot,
-   *      `frame[col][visibleRows]` for buffer-below.
-   *   2. **Explicit `ColumnTarget[]`** — `{ visible, bufferAbove?, bufferBelow? }`
-   *      per column. Preferred for code that crosses worker/network boundaries,
-   *      structuredClones, or JSON-serializes (the legacy form's negative-index
-   *      slots don't survive standard cloning; the explicit form does).
+   * One `ColumnTarget` per reel. `visible` is the visible-window target;
+   * optional `bufferAbove` / `bufferBelow` target cells outside it.
    *
    * If any pins are active (`reelSet.pin(...)`), their symbols are overlaid
-   * onto the result before it reaches the stop sequencer — so pinned cells
+   * onto the result before it reaches the stop sequencer, so pinned cells
    * always land on the pin's `symbolId` regardless of what the server sent.
+   *
+   * @example
+   * reelSet.setResult([
+   *   { visible: ['A','B','C'] },
+   *   { visible: ['A','B','C'] },
+   *   { visible: ['A','B','C'], bufferAbove: ['COIN'] },
+   *   { visible: ['A','B','C'] },
+   *   { visible: ['A','B','C'] },
+   * ]);
    */
-  setResult(symbols: string[][] | ColumnTarget[]): void {
+  setResult(symbols: ColumnTarget[]): void {
+    this._assertNoNudgeInFlight('setResult');
     assertBufferCountsInRange(
       symbols,
       this._reels.map((r) => r.bufferAbove),
       this._reels.map((r) => r.bufferBelow),
       'setResult',
     );
-    const grid = toLegacyTargetGrid(symbols);
-    const withPins = this._applyPinsToGrid(grid);
+    const withPins = this._applyPinsToGrid(this._cloneTargets(symbols));
     this._resultSetForCurrentSpin = true;
-    this._spinController.setResult(withPins);
+    this._spinController.setResult(withPins.map(columnTargetToArray));
   }
 
   /**
@@ -532,59 +632,61 @@ export class ReelSet extends Container implements Disposable {
    * survivors in their original top-to-bottom order. This matches what
    * server-side gravity simulations emit.
    *
-   * Resolves with the same `SpinResult` shape as `spin()`. Requires the
-   * builder to have been configured with `.tumble(...)`.
+   * Resolves with a {@link RefillResult} (mirror of {@link RunCascadeResult}.
+   * one stage's worth). Requires the builder to have been configured with
+   * `.tumble(...)`.
+   *
+   * For the common destroy → refill → check → repeat loop, prefer
+   * {@link ReelSet.runCascade}. it composes refill, destroySymbols, and
+   * win-detection with the same cancellation semantics.
    *
    * @example
    * const winners = detectWins(currentGrid);
    * await reelSet.destroySymbols(winners);
    * const next = await server.cascade(winners);
-   * await reelSet.refill({ winners, grid: next });
+   * const result = await reelSet.refill({ winners, grid: next });
+   * console.log(result.finalGrid, result.wasSkipped);
+   *
+   * @example
+   * // Abort mid-refill: slams the in-flight animation, resolves with wasSkipped.
+   * const ac = new AbortController();
+   * skipButton.onclick = () => ac.abort();
+   * const result = await reelSet.refill({
+   *   winners, grid: next, signal: ac.signal,
+   * });
    */
-  async refill(opts: {
-    winners: ReadonlyArray<Cell>;
-    grid: string[][] | ColumnTarget[];
-    /**
-     * Pick the refill animation flavor. See `RunCascadeOptions.refillMode`
-     * for the full description; the same modes apply here when you drive
-     * the cascade loop yourself.
-     */
-    mode?: 'combined' | 'gravity-then-drop';
-    /**
-     * Fixed wall-clock pause (ms) between the gravity stage and the
-     * drop-in stage. Only applies when `mode === 'gravity-then-drop'`.
-     * Default `250`. Combines via `Promise.all` with `gravityHold` if
-     * both are provided — whichever finishes LAST gates the drop-in.
-     */
-    gravityHoldMs?: number;
-    /**
-     * Promise (or zero-arg factory) gating the drop-in stage. Only
-     * applies when `mode === 'gravity-then-drop'`.
-     *
-     *   - `Promise<void>` — pass an already-in-flight animation / SFX /
-     *     network call's completion handle when you want the drop-in to
-     *     wait for it. The promise is awaited as-is.
-     *   - `() => Promise<void>` — pass a factory when the *side effects*
-     *     of starting the promise (a `multiplier.bumpTo()`, a Spine
-     *     track switch, an SFX cue) should fire AT gravity-end, not at
-     *     refill-start. The engine calls the factory at the gravity-end
-     *     boundary and awaits its returned promise.
-     *
-     * Combines via `Promise.all` with `gravityHoldMs` — pass both to
-     * floor the hold to a minimum wall-clock duration even if the
-     * promise resolves earlier.
-     */
-    gravityHold?: Promise<void> | (() => Promise<void>);
-    /**
-     * Awaitable callback fired AFTER `gravityHoldMs` + `gravityHold` both
-     * resolve, BEFORE the drop-in stage. Only fires when
-     * `mode === 'gravity-then-drop'`. Use for last-mile side effects that
-     * need to read the post-hold state (e.g. snapshot the multiplier
-     * value that finished counting up during the hold).
-     */
-    onGravityComplete?: () => Promise<void> | void;
-  }): Promise<SpinResult> {
-    return this._spinController.refill(opts);
+  async refill(opts: RefillOptions): Promise<RefillResult> {
+    const startTime = performance.now();
+    let wasSkipped = false;
+
+    const onSkip = (): void => { wasSkipped = true; };
+    this._events.on('skip:requested', onSkip);
+
+    const onAbort = (): void => {
+      wasSkipped = true;
+      if (this._spinController.isSpinning) {
+        this._spinController.slamStop();
+      }
+    };
+    if (opts.signal) {
+      if (opts.signal.aborted) onAbort();
+      else opts.signal.addEventListener('abort', onAbort, { once: true });
+    }
+
+    try {
+      const spinResult = await this._spinController.refill(opts);
+      return {
+        winnersRefilled: opts.winners.length,
+        finalGrid: spinResult.symbols,
+        wasSkipped: wasSkipped || spinResult.wasSkipped,
+        duration: performance.now() - startTime,
+      };
+    } finally {
+      this._events.off('skip:requested', onSkip);
+      if (opts.signal) {
+        opts.signal.removeEventListener('abort', onAbort);
+      }
+    }
   }
 
   /**
@@ -595,11 +697,11 @@ export class ReelSet extends Container implements Disposable {
    * This is the canonical "fade out the winners" step in a cascade chain:
    * call it between win-detection and `refill()`. Every cell's view is
    * lifted with a high zIndex so the destroy animation isn't clipped by
-   * neighbours, and rotation direction alternates by column for cohesive
-   * cluster pops.
+   * neighbours. The default `playDestroy` is a brief scale/fade implode;
+   * override it per symbol class for art-appropriate destruction.
    *
    *   - Empty `cells` resolves immediately, no work.
-   *   - Out-of-range cells throw — the contract is that you've already
+   *   - Out-of-range cells throw. the contract is that you've already
    *     run win detection on the visible grid, so coords must be valid.
    *
    * @example
@@ -608,7 +710,7 @@ export class ReelSet extends Container implements Disposable {
    * await reelSet.refill({ winners, grid: nextGrid });
    *
    * @example
-   * // Per-cell stagger — disintegrate left-to-right with a 30 ms beat.
+   * // Per-cell stagger. disintegrate left-to-right with a 30 ms beat.
    * await reelSet.destroySymbols(winners, {
    *   delay: (cell, i) => i * 0.03,
    * });
@@ -619,12 +721,6 @@ export class ReelSet extends Container implements Disposable {
   ): Promise<void> {
     if (cells.length === 0) return;
 
-    const resolveDirection = (cell: Cell, i: number): 1 | -1 => {
-      const d = opts?.direction;
-      if (typeof d === 'function') return d(cell, i);
-      if (d === 1 || d === -1) return d;
-      return cell.reel % 2 === 0 ? 1 : -1;
-    };
     const resolveDelay = (cell: Cell, i: number): number => {
       const d = opts?.delay;
       if (typeof d === 'function') return d(cell, i);
@@ -662,13 +758,12 @@ export class ReelSet extends Container implements Disposable {
       // strand its siblings mid-animation. Failed cells are surfaced via
       // the `failed` field on `cascade:destroy:end` so listeners can log
       // / replay-mark / alarm; the cell stays at whatever pose its tween
-      // left it in (typically still visible) — the next `refill()` resets
+      // left it in (typically still visible). the next `refill()` resets
       // it via `_replaceSymbol` regardless.
       const results = await Promise.allSettled(cells.map((cell, i) => {
         const sym = this._reels[cell.reel].getSymbolAt(cell.row);
         if (z !== null) sym.view.zIndex = z;
         return sym.playDestroy({
-          direction: resolveDirection(cell, i),
           delay: resolveDelay(cell, i),
           signal,
         });
@@ -694,14 +789,14 @@ export class ReelSet extends Container implements Disposable {
 
   /**
    * Run the canonical cascade chain on top of `refill()`. Loops:
-   * detect winners → destroy → pause → refill → emit — until
+   * detect winners → destroy → pause → refill → emit. until
    * `detectWinners` returns an empty list (or `maxChain` is hit, or the
-   * player slammed via `skip()` / abort). Resolves with the final grid
+   * player slammed via `skipSpin()` / abort). Resolves with the final grid
    * and a summary.
    *
    * The orchestration is library-owned; the **game rules** (what counts
    * as a winner, how the next grid is computed) stay in your callbacks.
-   * This is the cascade equivalent of `spin()` + `setResult()` — three
+   * This is the cascade equivalent of `spin()` + `setResult()`. three
    * lines instead of fifteen, and the slam path is handled for you.
    *
    * Typical usage:
@@ -718,18 +813,18 @@ export class ReelSet extends Container implements Disposable {
    * ```
    *
    * Composes with everything else in the library:
-   *  - `setDropOrder(...)` is honoured on every refill in the chain — set
+   *  - `setDropOrder(...)` is honoured on every refill in the chain. set
    *    it before `runCascade` and the same order applies to every drop.
    *  - `cascade:fall:symbol`, `cascade:place:end`, `cascade:dropIn:symbol`
    *    fire on each refill.
-   *  - `reelSet.skip()` ends the chain immediately; the returned summary
+   *  - `reelSet.skipSpin()` ends the chain immediately; the returned summary
    *    reports `wasSkipped: true`.
    *
    * Event order per stage with winners: `cascade:chain:start` →
    *   `cascade:destroy:start` → (destroy tweens) → `cascade:destroy:end` →
    *   `onCascade` → pause → refill (`cascade:place:end` +
    *   `cascade:dropIn:*` per reel) → `cascade:chain:end`. The chain itself
-   *   is delimited by the returned `Promise` — `await` the call to know
+   *   is delimited by the returned `Promise`. `await` the call to know
    *   when it's done.
    *
    * Requires `.tumble(...)` on the builder (same as `refill()`).
@@ -814,14 +909,22 @@ export class ReelSet extends Container implements Disposable {
         const refillMode = opts.refillMode ?? 'combined';
         // Wrap `opts.gravityHold` in a FACTORY so the user's builder is
         // invoked at gravity-end (inside `_refillTwoStage`), not at
-        // refill-start. This matters when the builder has side effects —
-        // e.g. `multiplier.bumpTo(chain + 1); return multiplier.done` —
+        // refill-start. This matters when the builder has side effects.
+        // e.g. `multiplier.bumpTo(chain + 1); return multiplier.done`.
         // that the player should see synchronized with the gravity-end
         // beat. Without the wrapping the bump would fire ~the duration
         // of the gravity stage too early.
+        // `nextGrid` may return `string[][]` (visible cells) or `ColumnTarget[]`
+        // (when the next grid places anchors in buffer rows). Detect the
+        // shape and forward as `ColumnTarget[]` to `refill`.
+        const nextTargets: ColumnTarget[] = next.length === 0
+          ? []
+          : Array.isArray(next[0])
+            ? (next as string[][]).map((visible) => ({ visible }))
+            : (next as ColumnTarget[]);
         await this.refill({
           winners: [...winners],
-          grid: next,
+          grid: nextTargets,
           mode: refillMode,
           gravityHoldMs: opts.gravityHoldMs,
           gravityHold: opts.gravityHold
@@ -864,7 +967,7 @@ export class ReelSet extends Container implements Disposable {
   /**
    * Override the per-reel stop delay (in ms). Pass one value per reel.
    *
-   * **Sticky.** The override persists indefinitely — it survives across
+   * **Sticky.** The override persists indefinitely. it survives across
    * `spin()` AND `refill()` boundaries until you call `setStopDelays()`
    * (or `setDropOrder()`) again. The persistence is deliberate: cascade
    * recipes that set `setDropOrder('all')` once before `runCascade(...)`
@@ -880,38 +983,47 @@ export class ReelSet extends Container implements Disposable {
   }
 
   /**
-   * Round-aware skip — the button-press entry point. The first press in a
-   * round slams the current drop AND applies a round-scoped side effect:
+   * Round-aware spin skip. The button-press entry point. The first press
+   * in a round slams the current drop AND applies a round-scoped side
+   * effect:
    *
    *   - Standard mode: boost the active speed profile to the fastest
    *     registered one (emits `skip:boosted`). Restored on the next
    *     `spin()` (unless the app manually changed speed in between).
    *   - Cascade/tumble mode: flag every subsequent `refill()` to
-   *     auto-slam with no animation. One press ends a multi-drop
-   *     cascade.
+   *     auto-slam with no animation. One press ends a multi-drop cascade.
    *
    * Subsequent presses also slam each current drop.
    *
-   * Throws if called before `setResult()` arrives (nothing to land on —
+   * Throws if called before `setResult()` arrives (nothing to land on:
    * slamming now would land on random spin-buffer content). The universal
    * "spin/skip" button pattern should call `requestSkip()` in that window
-   * (or wrap `skip()` in a try/catch that routes to `requestSkip()` in
-   * the catch). Callers that want a slam *without* the round-scoped side
+   * (or wrap `skipSpin()` in a try/catch that routes to `requestSkip()`
+   * in the catch). Callers that want a slam without the round-scoped side
    * effects (tests, anti-cheat) should use `slamStop()`.
+   *
+   * Pairs with `skipNudge()` (skip an in-flight `nudge()`) and `slamStop()`
+   * (unconditional land-now, no boost). Three distinct actions:
+   *
+   *   - `skipSpin()` lands the in-flight spin and applies the round-scoped
+   *     boost / auto-slam-refills side effect.
+   *   - `skipNudge()` fast-forwards an in-flight `nudge()` to its landed
+   *     position. Spin state is unrelated.
+   *   - `slamStop()` lands every un-landed reel unconditionally. No boost.
    */
-  skip(): void {
+  skipSpin(): void {
     this._spinController.skip();
   }
 
   /**
-   * Slam-stop safe before `setResult()` arrives — queues until then.
-   * Bypasses the two-stage `skip()` machine: an explicit slam intent.
+   * Slam-stop safe before `setResult()` arrives: queues until then.
+   * Bypasses the two-stage `skipSpin()` machine. An explicit slam intent.
    *
    * Note on `skipStage`: when this call queues a slam (pre-`setResult`)
    * rather than firing one, `skipStage` stays at `0` until `setResult()`
    * arrives and the queued slam actually runs. If your UI labels the
    * button off `skipStage`, expect a beat of "Skip" still shown while
-   * the queued intent is in flight — the queued state isn't exposed as
+   * the queued intent is in flight; the queued state is not exposed as
    * its own stage on purpose (kept the `0 | 1 | 2` shape stable).
    */
   requestSkip(): void {
@@ -919,18 +1031,22 @@ export class ReelSet extends Container implements Disposable {
   }
 
   /**
-   * Hard slam-stop — always lands every un-landed reel immediately. Bypasses
-   * the two-stage `skip()` machine and any speed boost. For tests, anti-cheat
-   * flows, or any caller with unambiguous "end now" intent.
+   * Hard slam-stop. Always lands every un-landed reel immediately.
+   * Bypasses the two-stage `skipSpin()` machine and any speed boost.
+   * For tests, anti-cheat flows, or any caller with unambiguous
+   * "end now" intent.
+   *
+   * Pairs with `skipSpin()` (round-aware land + boost) and `skipNudge()`
+   * (fast-forward an in-flight `nudge()`).
    */
   slamStop(): void {
     this._spinController.slamStop();
   }
 
   /**
-   * Current `skip()` position within the active round. `0` until the
+   * Current `skipSpin()` position within the active round. `0` until the
    * player presses the slam button, `2` after. Read this to drive button
-   * labels (e.g. "Skip" → "Skipped"). `1` is reserved for forward compat
+   * labels (e.g. "Skip" to "Skipped"). `1` is reserved for forward compat
    * and is not currently reachable.
    *
    * `requestSkip()` that gets queued pre-`setResult()` does NOT advance
@@ -947,8 +1063,8 @@ export class ReelSet extends Container implements Disposable {
    *
    * Caller-facing wrapper over `Reel.setSymbolAt` that ALSO refuses
    * pinned cells (since `Reel` itself can't see the pin map). Use this
-   * for live presentation effects — sticky-after-win, mid-feature
-   * rewrites — without going through `setResult()`.
+   * for live presentation effects. sticky-after-win, mid-feature
+   * rewrites. without going through `setResult()`.
    *
    * Throws (in addition to the per-reel guards documented on
    * `Reel.setSymbolAt`) if `(col, row)` currently has an active pin.
@@ -973,9 +1089,9 @@ export class ReelSet extends Container implements Disposable {
 
   /**
    * Shift a single reel by `distance` positions after it has landed, revealing
-   * caller-supplied symbols. Classic UK fruit-machine "nudge."
+   * caller-supplied symbols.
    *
-   * Per-reel by design — multi-reel sync is via `Promise.all([...])` of
+   * Per-reel by design. multi-reel sync is via `Promise.all([...])` of
    * independent calls. Each call emits its own `nudge:start` / `nudge:complete`
    * pair on the ReelSet bus and `phase:enter('nudge')` / `phase:exit('nudge')`
    * on the per-reel bus.
@@ -995,6 +1111,10 @@ export class ReelSet extends Container implements Disposable {
    *   - any visible cell on the target reel has an active pin,
    *   - `Reel.nudge` itself rejects (bad distance / direction / incoming /
    *     incompatible big-symbol layout).
+   *
+   * While `nudge()` is in flight, calling `spin()`, `setResult()`, `pin()`,
+   * or `setShape()` throws. Await the returned promise before calling any
+   * of those methods.
    *
    * Rejects with an `AbortError` if `options.signal` aborts or the reel
    * is destroyed mid-tween. `nudge:cancelled` fires on the bus in that case.
@@ -1023,11 +1143,6 @@ export class ReelSet extends Container implements Disposable {
    *   .catch((e) => { if (e.name !== 'AbortError') throw e; });
    */
   async nudge(col: number, options: NudgeOptions): Promise<{ symbols: string[] }> {
-    // TODO(reentrancy): a `spin()` / `setResult()` / `pin()` / `setShape()`
-    // call made while a nudge is in flight will race on the same reel.
-    // We currently guard the *forward* direction (nudge refuses while
-    // spinning) but not the reverse. Add `_assertNoNudgeInFlight()` to
-    // those entry points before broad production use.
     if (this._spinController.isSpinning) {
       throw new Error('nudge: cannot nudge while a spin or refill is in progress.');
     }
@@ -1036,7 +1151,7 @@ export class ReelSet extends Container implements Disposable {
     }
     // Pin overlap detection lives at the ReelSet layer (Reel can't see pins).
     // Nudges would shift symbols out from under a pinned cell visually but
-    // leave the pin record stale — fail loudly instead.
+    // leave the pin record stale: fail loudly instead.
     for (const pin of this._pins.values()) {
       if (pin.col === col) {
         throw new Error(
@@ -1046,9 +1161,10 @@ export class ReelSet extends Container implements Disposable {
       }
     }
 
+    this._nudgesInFlight++;
     try {
       const result = await this._reels[col].nudge(options, () => {
-        // Fires after Reel.nudge has validated, pre-placed, and snapped —
+        // Fires after Reel.nudge has validated, pre-placed, and snapped:
         // right before the GSAP tween starts. Now the bus event matches
         // observable state.
         this._events.emit('nudge:start', {
@@ -1068,7 +1184,7 @@ export class ReelSet extends Container implements Disposable {
       const isAbort = err instanceof Error && err.name === 'AbortError';
       // If the ReelSet was destroyed mid-nudge, `super.destroy({children: true})`
       // has already torn down our event bus (PixiJS Container has its own
-      // `_events` field that we shadow — after super.destroy ours is gone too).
+      // `_events` field that we shadow: after super.destroy ours is gone too).
       // Skip the emit; the consumer's `nudge()` await will still see the
       // AbortError via the re-throw below.
       if (isAbort && !this._isDestroyed) {
@@ -1080,17 +1196,33 @@ export class ReelSet extends Container implements Disposable {
         });
       }
       throw err;
+    } finally {
+      this._nudgesInFlight--;
+    }
+  }
+
+  private _assertNoNudgeInFlight(method: string): void {
+    if (this._nudgesInFlight > 0) {
+      throw new Error(
+        `ReelSet.${method}: cannot be called while nudge() is in flight. ` +
+        `Await the nudge() promise before calling ${method}.`,
+      );
     }
   }
 
   /**
-   * Fast-forward an in-flight nudge to its landed state. No-op if the
-   * given reel isn't currently nudging.
+   * Fast-forward an in-flight `nudge()` to its landed state. No-op if the
+   * given reel is not currently nudging.
    *
    * The tween's `onComplete` fires synchronously, the strip snaps to the
    * final position, and the original `nudge()` promise resolves on the
-   * next microtask. `nudge:complete` fires normally — from a listener's
+   * next microtask. `nudge:complete` fires normally. From a listener's
    * POV the nudge just landed fast.
+   *
+   * Pairs with `skipSpin()` (round-aware spin land + boost) and
+   * `slamStop()` (unconditional spin land-now). These three are distinct:
+   * spin actions do not affect a nudge in flight, and `skipNudge` does
+   * not touch spin state.
    *
    * @param col Reel index, or `undefined` to skip all in-flight nudges.
    */
@@ -1114,7 +1246,7 @@ export class ReelSet extends Container implements Disposable {
    * stagger step defaults to the active speed profile's stopDelay (or
    * 150 ms if stopDelay is 0).
    *
-   * **Sticky.** The override persists indefinitely — until another
+   * **Sticky.** The override persists indefinitely. until another
    * `setDropOrder()` / `setStopDelays()` call overwrites it (a `null` /
    * absent override falls back to the default `i * speed.stopDelay`
    * stagger). It survives across `spin()` AND `refill()` boundaries by
@@ -1123,9 +1255,9 @@ export class ReelSet extends Container implements Disposable {
    *
    * The canonical cascade pattern resets it per phase:
    *
-   *   - `setDropOrder('ltr')` before `spin()` — left-to-right reveal on
+   *   - `setDropOrder('ltr')` before `spin()`. left-to-right reveal on
    *     the initial drop.
-   *   - `setDropOrder('all')` before `runCascade()` — every refill in the
+   *   - `setDropOrder('all')` before `runCascade()`. every refill in the
    *     chain drops all columns simultaneously (the commercial-cascade
    *     pattern).
    *
@@ -1180,7 +1312,7 @@ export class ReelSet extends Container implements Disposable {
    * reshape motion) before the stop sequence runs.
    *
    * Must be called between `spin()` and `setResult()`. The shape stays in
-   * effect for the current spin only — call again on every spin.
+   * effect for the current spin only. call again on every spin.
    *
    * Throws if:
    *  - this slot was not built with `.multiways(...)`
@@ -1188,8 +1320,9 @@ export class ReelSet extends Container implements Disposable {
    *  - any entry falls outside `[multiways.minRows, multiways.maxRows]`
    */
   setShape(rowsPerReel: number[]): void {
+    this._assertNoNudgeInFlight('setShape');
     if (!this._isMultiWaysSlot) {
-      throw new Error('setShape(): slot was not built with .multiways(...) — call ReelSetBuilder.multiways() first.');
+      throw new Error('setShape(): slot was not built with .multiways(...). call ReelSetBuilder.multiways() first.');
     }
     if (this._resultSetForCurrentSpin) {
       throw new Error(
@@ -1229,7 +1362,7 @@ export class ReelSet extends Container implements Disposable {
     this._targetShape = [...rowsPerReel];
     this._events.emit('shape:changed', [...rowsPerReel]);
 
-    // Migrate pins to their post-reshape rows EAGERLY — before any
+    // Migrate pins to their post-reshape rows EAGERLY. before any
     // `setResult` overlay or frame build runs. Otherwise a pin at row=4
     // on a 7-row reel is silently dropped when setResult overlays it onto
     // a 3-row grid (row 4 is out of bounds for the new shape).
@@ -1242,23 +1375,13 @@ export class ReelSet extends Container implements Disposable {
     }
   }
 
-  /**
-   * Internal: read the pending MultiWays target shape (does not clear).
-   * Used by `SpinController` via the hooks interface. Not part of the
-   * public API — call `setShape()` to change shape.
-   *
-   * @internal
-   */
-  private _peekTargetShape(): number[] | null {
+  /** Wired internally by SpinController. Consumers do not call this directly. */
+  private peekTargetShape(): number[] | null {
     return this._targetShape;
   }
 
-  /**
-   * Internal: clear the pending MultiWays target shape after the spin lands.
-   *
-   * @internal
-   */
-  private _clearTargetShape(): void {
+  /** Wired internally by SpinController. Consumers do not call this directly. */
+  private clearTargetShape(): void {
     this._targetShape = null;
   }
 
@@ -1268,7 +1391,7 @@ export class ReelSet extends Container implements Disposable {
    * `'bonus'` cells.
    *
    * Equivalent to `reelSet.reels.map(r => r.getVisibleSymbols())` because
-   * each reel has a cross-reel resolver wired in by ReelSet's constructor —
+   * each reel has a cross-reel resolver wired in by ReelSet's constructor.
    * the per-reel surface and the grid surface are the same.
    */
   getVisibleGrid(): string[][] {
@@ -1298,7 +1421,7 @@ export class ReelSet extends Container implements Disposable {
 
     // Resolve OCCUPIED → anchor row on this reel. Cross-reel OCCUPIED
     // requires walking left to find the anchoring column with size.w > col.
-    const anchorRow = reel._getAnchorRow(row);
+    const anchorRow = reel.getAnchorRow(row);
     const anchorSym = reel.getSymbolAt(row);
     const meta = this._symbolsData[anchorSym.symbolId];
     const size = meta?.size && (meta.size.w > 1 || meta.size.h > 1)
@@ -1313,7 +1436,7 @@ export class ReelSet extends Container implements Disposable {
     for (let c = col - 1; c >= 0; c--) {
       const leftReel = this._reels[c];
       if (anchorRow >= leftReel.visibleRows) break;
-      const leftAnchorRow = leftReel._getAnchorRow(anchorRow);
+      const leftAnchorRow = leftReel.getAnchorRow(anchorRow);
       const leftSym = leftReel.getSymbolAt(anchorRow);
       const leftMeta = this._symbolsData[leftSym.symbolId];
       if (leftMeta?.size && leftMeta.size.w > col - c) {
@@ -1331,7 +1454,7 @@ export class ReelSet extends Container implements Disposable {
   /**
    * Pixel rectangle covering a big symbol's whole `N×M` block, in
    * ReelSet-local coordinates. Returns the anchor cell's bounds for 1×1
-   * symbols. Pass any cell of a block — anchor or non-anchor — and you
+   * symbols. Pass any cell of a block. anchor or non-anchor. and you
    * get the same rect.
    *
    * Useful for win presenters drawing an outline around a whole bonus, or
@@ -1362,12 +1485,12 @@ export class ReelSet extends Container implements Disposable {
     // anchor row are derived directly from the row offset (negative
     // values land above visible row 0). The returned rect is the FULL
     // block's pixel footprint, including the clipped-by-mask portion in
-    // bufferAbove — consumers drawing overlays can intersect with the
+    // bufferAbove. consumers drawing overlays can intersect with the
     // visible viewport themselves if they need a clipped rect.
     const anchorRowCount = fp.anchor.row; // may be negative
     const anchorX = this._viewport.x + reel.container.x;
     const anchorY = this._viewport.y + reel.offsetY + anchorRowCount * slotH;
-    // Block covers w * cellWidth + (w-1) * gapX horizontally — the
+    // Block covers w * cellWidth + (w-1) * gapX horizontally. the
     // (w-1) inter-cell gaps are part of the block's visible footprint.
     // Same vertically for cellHeight + gapY.
     return {
@@ -1465,8 +1588,11 @@ export class ReelSet extends Container implements Disposable {
    * Pin a symbol to a grid cell. Applied immediately if the reel is idle;
    * applied at the next `setResult()` otherwise. Fires `pin:placed`.
    *
-   * Passing the same `(col, row)` replaces the previous pin — the old one
+   * Passing the same `(col, row)` replaces the previous pin. The old one
    * is replaced silently (no `pin:expired` fires for replacement).
+   *
+   * Negative rows are rejected. Place buffer-row anchors via `setResult()`
+   * with `bufferAbove` / `bufferBelow` on the column's `ColumnTarget`.
    *
    * @example
    * // Sticky wild for 3 spins
@@ -1475,10 +1601,11 @@ export class ReelSet extends Container implements Disposable {
    * // Hold & Win coin with a payout value
    * reelSet.pin(col, row, 'coin', { turns: 'permanent', payload: { value: 50 } })
    *
-   * // Expanding wild — fill column for the current spin's evaluation only
+   * // Expanding wild: fill column for the current spin's evaluation only
    * for (let r = 0; r < 3; r++) reelSet.pin(2, r, 'wild', { turns: 'eval' })
    */
   pin(col: number, row: number, symbolId: string, options?: CellPinOptions): CellPin {
+    this._assertNoNudgeInFlight('pin');
     if (col < 0 || col >= this._reels.length) {
       throw new Error(`pin(): col ${col} out of range [0, ${this._reels.length})`);
     }
@@ -1535,7 +1662,7 @@ export class ReelSet extends Container implements Disposable {
   /**
    * All active pins, keyed by `"col:row"`.
    *
-   * Reads are safe at any time — during a spin the map reflects pins that
+   * Reads are safe at any time. during a spin the map reflects pins that
    * will apply to the NEXT `setResult()`, not the one already in flight.
    */
   get pins(): ReadonlyMap<string, CellPin> {
@@ -1563,7 +1690,7 @@ export class ReelSet extends Container implements Disposable {
    *  - Calling with `from === to` is a no-op that still fires `pin:moved`.
    *
    * @example
-   * // Walking wild — move the pinned wild one column left each spin
+   * // Walking wild. move the pinned wild one column left each spin
    * reelSet.events.on('spin:complete', async () => {
    *   for (const pin of [...reelSet.pins.values()]) {
    *     if (pin.col > 0) {
@@ -1621,18 +1748,18 @@ export class ReelSet extends Container implements Disposable {
     }
 
     // Update pin state first (atomic). The map now reflects the new position
-    // immediately — any subsequent spin sees the pin at `to`.
+    // immediately. any subsequent spin sees the pin at `to`.
     this._pins.delete(fromKey);
     const movedPin: CellPin = { ...pin, col: to.col, row: to.row, originRow: to.row };
     this._pins.set(toKey, movedPin);
 
     // An overlay at the old cell (from a prior spin-interrupted state)
-    // is no longer accurate — drop it; the flight symbol takes over.
+    // is no longer accurate. drop it; the flight symbol takes over.
     this._destroyPinOverlay(fromKey);
 
     // Gather viewport-local coordinates for both cells. The flight symbol
     // will be parented to `viewport.unmaskedContainer`, whose local space
-    // matches `maskedContainer` (both sit at (0,0) inside viewport) — so
+    // matches `maskedContainer` (both sit at (0,0) inside viewport). so
     // `reel.container.x + symbol.view.x/y` gives us the right offset.
     const fromReel = this._reels[from.col];
     const fromCellY = fromReel.getSymbolAt(from.row).view.y;
@@ -1640,7 +1767,7 @@ export class ReelSet extends Container implements Disposable {
     const fromX = fromReel.container.x;
     const toX = toReel.container.x;
 
-    // Backfill the vacated cell with a filler. Takes effect immediately —
+    // Backfill the vacated cell with a filler. Takes effect immediately.
     // the vacated cell visually swaps to the backfill while the flight
     // symbol is still in motion.
     const backfill =
@@ -1657,20 +1784,20 @@ export class ReelSet extends Container implements Disposable {
     flight.view.y = fromCellY;
     this._viewport.unmaskedContainer.addChild(flight.view);
 
-    // onFlightCreated hook — fires after the flight symbol is in place but
+    // onFlightCreated hook. fires after the flight symbol is in place but
     // before the tween begins. This is where consumers switch a Spine
     // symbol onto a `run` animation for the flight duration.
     //
     // A throw from the hook MUST NOT abort the move: the pin map is
     // already updated and the tween needs to run for the flight symbol
-    // to reach its destination — leaking a flight symbol on the unmasked
+    // to reach its destination. leaking a flight symbol on the unmasked
     // container is worse than a noisy console.error. Log so the bug is
     // diagnosable instead of silently eaten.
     try {
       opts?.onFlightCreated?.(flight);
     } catch (err) {
       // eslint-disable-next-line no-console
-      console.error('[pixi-reels] movePin onFlightCreated hook threw — continuing the flight to avoid leaking the flight symbol:', err);
+      console.error('[pixi-reels] movePin onFlightCreated hook threw. continuing the flight to avoid leaking the flight symbol:', err);
     }
 
     // Tween.
@@ -1686,18 +1813,18 @@ export class ReelSet extends Container implements Disposable {
       });
     });
 
-    // onFlightCompleted hook — fires before releasing the flight symbol,
+    // onFlightCompleted hook. fires before releasing the flight symbol,
     // so consumers can return a Spine to `idle` or play a landing animation.
     //
     // A throw from the hook MUST NOT prevent the rest of the cleanup
     // (apply the pin at destination, release the flight symbol to the
-    // pool) — otherwise we leak a flight symbol AND leave the pin map
+    // pool). otherwise we leak a flight symbol AND leave the pin map
     // out of sync with the reels. Log so the bug is diagnosable.
     try {
       opts?.onFlightCompleted?.(flight);
     } catch (err) {
       // eslint-disable-next-line no-console
-      console.error('[pixi-reels] movePin onFlightCompleted hook threw — continuing cleanup:', err);
+      console.error('[pixi-reels] movePin onFlightCompleted hook threw. continuing cleanup:', err);
     }
 
     // Apply the pin visually at the destination cell.
@@ -1718,18 +1845,18 @@ export class ReelSet extends Container implements Disposable {
   // ─── Frame pipeline (strip generation) ────────────────────
   //
   // Exposes the runtime-mutable FrameBuilder middleware pipeline on ReelSet
-  // so recipes can add/remove frame middleware after build — the entry
+  // so recipes can add/remove frame middleware after build. the entry
   // point for mode-specific strip changes (feature weights, mystery
   // injection, positional overrides) without a full rebuild.
   //
   // The internal machinery was already present on FrameBuilder; this is
-  // pure exposure — no behaviour change for recipes that don't call it.
+  // pure exposure. no behaviour change for recipes that don't call it.
 
   /**
    * Runtime-mutable middleware pipeline for symbol-frame generation.
    *
    * @example
-   * // Feature entry — swap to a middleware that injects more wilds
+   * // Feature entry. swap to a middleware that injects more wilds
    * reelSet.frame.use(moreWildsMiddleware);
    *
    * // Feature exit
@@ -1769,25 +1896,32 @@ export class ReelSet extends Container implements Disposable {
   // ─── Pin internals ────────────────────────────────────────
 
   /**
-   * Return a deep copy of `symbols` with active pins overlaid. Pure — does
-   * not mutate the input. When there are no pins, returns the input as-is
-   * (fast path; identical behaviour to pre-pin code).
-   *
-   * IMPORTANT: clones via `cloneTargetGrid`, not `symbols.map(col => [...col])`.
-   * Spread drops the negative-index string properties that carry buffer-above
-   * targets (`col[-1] = 'COIN'`). If you refactor this method, keep the
-   * helper. See `cloneTargetGrid`'s TSDoc for the full contract.
+   * Overlay active pins onto `symbols`. Mutates the input in place; call
+   * `_cloneTargets` first if the caller needs to keep the original
+   * unmodified.
    */
-  private _applyPinsToGrid(symbols: string[][]): string[][] {
-    if (this._pins.size === 0) return symbols;
-
-    const cloned = cloneTargetGrid(symbols, this._reels[0]?.bufferAbove ?? 0);
+  private _applyPinsToGrid(symbols: ColumnTarget[]): ColumnTarget[] {
     for (const pin of this._pins.values()) {
-      if (pin.col < cloned.length && pin.row < cloned[pin.col].length) {
-        cloned[pin.col][pin.row] = pin.symbolId;
+      const col = symbols[pin.col];
+      if (!col) continue;
+      if (pin.row < col.visible.length) {
+        col.visible[pin.row] = pin.symbolId;
       }
     }
-    return cloned;
+    return symbols;
+  }
+
+  /**
+   * Deep clone a `ColumnTarget[]` so the caller can mutate the result
+   * without touching the original. Inner arrays are spread (one level deep);
+   * cells are strings, so further depth is not needed.
+   */
+  private _cloneTargets(grid: ColumnTarget[]): ColumnTarget[] {
+    return grid.map((c) => ({
+      visible: [...c.visible],
+      bufferAbove: c.bufferAbove ? [...c.bufferAbove] : undefined,
+      bufferBelow: c.bufferBelow ? [...c.bufferBelow] : undefined,
+    }));
   }
 
   /** Pins on a given reel, in row order. Used by AdjustPhase migration. */
@@ -1801,7 +1935,7 @@ export class ReelSet extends Container implements Disposable {
 
   /**
    * MultiWays: relocate pins on a reel for a new visible-row count. The new
-   * row is computed as `min(originRow, newRows - 1)` — clamped only when
+   * row is computed as `min(originRow, newRows - 1)`. clamped only when
    * the origin no longer fits. Returns the migrated pins so AdjustPhase
    * can build tween descriptors. Mutates the pins map in place.
    */
@@ -1818,7 +1952,21 @@ export class ReelSet extends Container implements Disposable {
       clamped: boolean;
     }[] = [];
 
-    const reelPins = this._pinsOnReel(reelIndex);
+    // Process top-to-bottom so collision resolution is deterministic: the
+    // first (topmost) pin to claim a clamped cell keeps it.
+    const reelPins = this._pinsOnReel(reelIndex).sort((a, b) => a.row - b.row);
+
+    // Rows that will be occupied after migration. Seed with pins that stay put
+    // (a mover clamped onto one of these collides and is expired).
+    const occupied = new Set<number>();
+    const movers: {
+      pin: CellPin;
+      fromRow: number;
+      target: number;
+      clamped: boolean;
+      nextOriginRow: number;
+    }[] = [];
+
     for (const pin of reelPins) {
       const fromRow = pin.row;
 
@@ -1845,11 +1993,28 @@ export class ReelSet extends Container implements Disposable {
         clamped = target !== pin.originRow;
       }
 
-      if (target === fromRow && nextOriginRow === pin.originRow) continue;
+      if (target === fromRow && nextOriginRow === pin.originRow) {
+        occupied.add(fromRow); // stays put; claims its cell
+        continue;
+      }
+      movers.push({ pin, fromRow, target, clamped, nextOriginRow });
+    }
 
+    for (const { pin, fromRow, target, clamped, nextOriginRow } of movers) {
       const fromKey = pinKey(pin.col, fromRow);
-      const toKey = pinKey(pin.col, target);
 
+      if (occupied.has(target)) {
+        // Target cell already taken (by a stayer or an earlier mover). Expire
+        // this pin deterministically instead of overwriting the other pin in
+        // `_pins` and orphaning its overlay.
+        this._pins.delete(fromKey);
+        this._destroyPinOverlay(fromKey);
+        this._events.emit('pin:expired', pin, 'collision');
+        continue;
+      }
+      occupied.add(target);
+
+      const toKey = pinKey(pin.col, target);
       this._pins.delete(fromKey);
       const moved: CellPin = { ...pin, row: target, originRow: nextOriginRow };
       this._pins.set(toKey, moved);
@@ -1873,8 +2038,18 @@ export class ReelSet extends Container implements Disposable {
   }
 
   /**
+   * The on-screen Y of a pin overlay sitting on cell `row` of `reel`, given the
+   * cell pitch `slotHeight`. Single source of truth for overlay placement;
+   * `getSymbolAt(row).view.y` equals `row * slotHeight` for a snapped reel
+   * (ReelMotion lays symbols at that pitch), so all overlay sites agree.
+   */
+  private _pinOverlayCellY(reel: Reel, row: number, slotHeight: number): number {
+    return reel.container.y + row * slotHeight;
+  }
+
+  /**
    * Apply a pin to the idle reel's visible display immediately. Used when
-   * `pin()` is called while no spin is in flight — the grid updates right
+   * `pin()` is called while no spin is in flight. the grid updates right
    * away so `getVisibleSymbols()` reflects the pin.
    */
   private _applyPinVisually(col: number, row: number, symbolId: string): void {
@@ -1891,7 +2066,7 @@ export class ReelSet extends Container implements Disposable {
    * decrements numeric-turns pins and expires pins that hit zero.
    */
   private _onSpinLanded(): void {
-    // Overlays are only needed during spin motion — destroy them all.
+    // Overlays are only needed during spin motion. destroy them all.
     this._destroyAllPinOverlays();
 
     if (this._pins.size === 0) return;
@@ -1900,7 +2075,7 @@ export class ReelSet extends Container implements Disposable {
     for (const pin of this._pins.values()) {
       if (typeof pin.turns === 'number') {
         // turns is readonly on the public interface; the engine owns the
-        // mutation here — cast to the mutable internal representation.
+        // mutation here. cast to the mutable internal representation.
         (pin as { turns: number }).turns -= 1;
         if (pin.turns <= 0) expired.push(pin);
       }
@@ -1918,7 +2093,7 @@ export class ReelSet extends Container implements Disposable {
    * stays visible while the reel scrolls underneath.
    */
   private _onSpinStart(): void {
-    // Fresh spin — setResult hasn't been called yet, so setShape() is
+    // Fresh spin. setResult hasn't been called yet, so setShape() is
     // allowed again until setResult() flips this back.
     this._resultSetForCurrentSpin = false;
 
@@ -1935,7 +2110,7 @@ export class ReelSet extends Container implements Disposable {
     }
 
     // Create overlays for all remaining pins. The overlay is what the player
-    // sees during the spin motion phase — the underlying reel cell scrolls
+    // sees during the spin motion phase. the underlying reel cell scrolls
     // normally but is visually covered.
     for (const pin of this._pins.values()) {
       this._ensurePinOverlay(pin);
@@ -1946,7 +2121,7 @@ export class ReelSet extends Container implements Disposable {
    * Create an overlay ReelSymbol for a pin in the viewport's unmasked
    * container. No-op if one already exists at that cell. Fires
    * `pin:overlayCreated` after the overlay is positioned and added to the
-   * display list — that's the hook consumers use to drive animation state
+   * display list. that's the hook consumers use to drive animation state
    * (e.g. setting a Spine track).
    */
   private _ensurePinOverlay(pin: CellPin): void {
@@ -1956,12 +2131,12 @@ export class ReelSet extends Container implements Disposable {
     const reel = this._reels[pin.col];
     const overlay = this._symbolFactory.acquire(pin.symbolId);
     overlay.resize(reel.symbolWidth, reel.symbolHeight);
-    // Viewport.unmaskedContainer sits at (0,0) inside the viewport — same
+    // Viewport.unmaskedContainer sits at (0,0) inside the viewport. same
     // local space as maskedContainer. Reel x lives on the reel container;
     // symbol-view y is reel-local; pyramid layouts add `reel.container.y`
     // (the per-reel offsetY) so overlays line up with the actual cell.
     overlay.view.x = reel.container.x;
-    overlay.view.y = reel.container.y + reel.getSymbolAt(pin.row).view.y;
+    overlay.view.y = this._pinOverlayCellY(reel, pin.row, reel.motion.slotHeight);
     overlay.view.zIndex = ReelSet.PIN_OVERLAY_Z_INDEX;
     this._viewport.unmaskedContainer.addChild(overlay.view);
     this._pinOverlays.set(key, { pin, overlay });
@@ -1975,7 +2150,7 @@ export class ReelSet extends Container implements Disposable {
    * reshape (and from the skip path), so applications that just use
    * `setShape()` / `setResult()` never need to invoke it. **Call it
    * yourself only if** you mutate `Reel.symbolWidth`, `Reel.symbolHeight`,
-   * or a pin's row outside the normal MultiWays flow — e.g. a custom
+   * or a pin's row outside the normal MultiWays flow. e.g. a custom
    * mid-spin layout swap that bypasses `AdjustPhase`.
    *
    * No-op for reels with no active pin overlays.
@@ -1987,7 +2162,7 @@ export class ReelSet extends Container implements Disposable {
       const { pin, overlay } = entry;
       overlay.resize(reel.symbolWidth, reel.symbolHeight);
       overlay.view.x = reel.container.x;
-      overlay.view.y = reel.container.y + pin.row * reel.motion.slotHeight;
+      overlay.view.y = this._pinOverlayCellY(reel, pin.row, reel.motion.slotHeight);
     }
   }
 
@@ -2016,7 +2191,7 @@ export class ReelSet extends Container implements Disposable {
         oldCellHeight: reel.symbolHeight,
         newCellHeight: targetSymbolHeight,
         fromY: overlay.view.y,
-        toY: reel.container.y + pin.row * newSlot,
+        toY: this._pinOverlayCellY(reel, pin.row, newSlot),
         x: reel.container.x,
       });
     }

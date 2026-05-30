@@ -1,27 +1,27 @@
 ---
 layout: ../../layouts/Docs.astro
-title: Cascades — the mental model
+title: Cascades. the mental model
 section: guides
 eyebrow: Building blocks
 description: Two moments, three phases, gravity-correct refills. The mental model behind .tumble() so you stop fighting the API.
 ---
 
-A cascade slot — Sweet Bonanza, Gates of Olympus, Sugar Rush — has two visually distinct animations that look like one mechanic. Once you split them in your head, the [`.tumble()`](/docs/api-builder/#tumble) configuration and the [`reelSet.refill(...)`](/docs/api-reelset/#cascade-tumble) verb stop feeling magic.
+A cascade slot. Sweet Bonanza, Gates of Olympus, Sugar Rush. has two visually distinct animations that look like one mechanic. Once you split them in your head, the [`.tumble()`](/docs/api-builder/#tumble) configuration and the [`reelSet.refill(...)`](/docs/api-reelset/#cascade-tumble) verb stop feeling magic.
 
 This page is the explainer. For copy-pasteable code see the [recipes](/recipes/). For the verbs themselves see the [ReelSet reference](/docs/api-reelset/).
 
 ## The two moments
 
-**Moment A — the player presses spin.**
+**Moment A. the player presses spin.**
 Every visible symbol falls off the bottom of the viewport. The reels sit empty (or show a spinner) while the server thinks. New symbols then drop in from above and land on the result the server returned.
 
-**Moment B — a cascade refill.**
+**Moment B. a cascade refill.**
 After a win, your code clears the winning cells. Survivors above a hole slide down to fill it; new symbols enter from above into the top `winners.length` rows of each reel. The reels never re-spin.
 
 Both moments use the same animation engine. The split matters because:
 
-- **Moment A** is one beat — fall, wait, drop. It's symmetric to a normal `spin()` + `setResult()`.
-- **Moment B** is N beats — one per cascade level until detection finds no more wins. The reels' state at the start of each beat is whatever the previous beat landed on.
+- **Moment A** is one beat. fall, wait, drop. It's symmetric to a normal `spin()` + `setResult()`.
+- **Moment B** is N beats. one per cascade level until detection finds no more wins. The reels' state at the start of each beat is whatever the previous beat landed on.
 
 ```text
 [CLICK]                          [WIN!]              [WIN!]              [no wins]
@@ -37,7 +37,7 @@ Internally the engine wires three `ReelPhase` subclasses:
 
 | Phase | Fires on | What it does |
 |---|---|---|
-| `cascade:fall` | Moment A — `spin()` click | Tweens every visible symbol off the bottom of the viewport, then waits at speed 0. |
+| `cascade:fall` | Moment A. `spin()` click | Tweens every visible symbol off the bottom of the viewport, then waits at speed 0. |
 | `cascade:place` | Both moments | Swaps the symbol **identities** for the new grid and snaps every view to its grid position. Survivors are made visible immediately; new arrivals stay at alpha 0 until `cascade:dropIn` repositions them above the viewport. |
 | `cascade:dropIn` | Both moments | Tweens each "moving" view from its origin (above the viewport for new symbols, its old grid row for survivors) down to its current grid position. Survivors that didn't move skip the tween entirely. |
 
@@ -48,10 +48,10 @@ Chain- and destroy-scoped events live alongside the per-phase ones, so a HUD or 
 | Event | When | What it's for |
 |---|---|---|
 | `cascade:chain:start` | Each chain stage opens (after `detectWinners`, before `destroySymbols`) | Per-chain SFX cue, light up a chain counter, freeze the spin button. |
-| `cascade:destroy:start` / `cascade:destroy:end` | Around every `destroySymbols(...)` batch — direct calls included | Shatter SFX, viewport dim independent of `destroyOptions.dim`. |
+| `cascade:destroy:start` / `cascade:destroy:end` | Around every `destroySymbols(...)` batch. direct calls included | Shatter SFX, viewport dim independent of `destroyOptions.dim`. |
 | `cascade:chain:end` | Each chain stage closed (after refill drop-in settled) | Per-chain teardown, queue the next decoration burst. |
 
-The runCascade chain itself is delimited by the returned `Promise` — `await` the call when you need a single "round is over" hook. The slot industry uses "round" for a bet→payout transaction (your concern, not the engine's); for the engine, the closest analogue is `spin:start` / `spin:allLanded`. The chain events are emitted by `runCascade`; if you hand-roll a loop with bare `refill()` calls, only the per-phase events fire.
+The runCascade chain itself is delimited by the returned `Promise`. `await` the call when you need a single "round is over" hook. The slot industry uses "round" for a bet→payout transaction (your concern, not the engine's); for the engine, the closest analogue is `spin:start` / `spin:allLanded`. The chain events are emitted by `runCascade`; if you hand-roll a loop with bare `refill()` calls, only the per-phase events fire.
 
 You override any individual phase by registering a subclass under its name:
 
@@ -61,9 +61,9 @@ builder
   .phases((f) => f.register('cascade:fall', MyCometFallPhase));
 ```
 
-The other two phases keep their library defaults. **Reach for phase override only when no combination of events + config can express what you need** — 95% of the time a per-symbol listener is the right tool.
+The other two phases keep their library defaults. **Reach for phase override only when no combination of events + config can express what you need**. 95% of the time a per-symbol listener is the right tool.
 
-## Refill geometry — the survivor convention
+## Refill geometry. the survivor convention
 
 Cascade refills require your **next grid** to follow one convention: per reel, the top `winners.length` rows are new symbols, the remaining rows are survivors in their **original top-to-bottom order**. This matches what every server-side gravity sim emits.
 
@@ -80,7 +80,7 @@ Pre-refill:        Post-refill:        Why:
 
 If your server sim already follows this convention, you pass its output to `refill({ winners, grid })` directly. If it doesn't, you do the same shape transform in client code before calling refill.
 
-[`computeDropOffsets`](https://github.com/schmooky/pixi-reels/blob/main/packages/pixi-reels/src/cascade/tumbleAlgorithm.ts) is the algorithm the engine itself uses — exported from `pixi-reels` so you can validate your server output offline.
+[`computeDropOffsets`](https://github.com/schmooky/pixi-reels/blob/main/packages/pixi-reels/src/cascade/tumbleAlgorithm.ts) is the algorithm the engine itself uses. exported from `pixi-reels` so you can validate your server output offline.
 
 ## The verbs you'll actually use
 
@@ -97,11 +97,15 @@ const winners = detectWinners(reelSet.getVisibleGrid());
 await reelSet.destroySymbols(winners);
 
 // 3. Refill survivors + new symbols.
-const next = await server.cascade(winners);
-await reelSet.refill({ winners, grid: next });
+//    grid is ColumnTarget[]. for the common per-reel visible case, wrap
+//    your server's string[][] with .map(visible => ({ visible })). For
+//    big-symbol anchors that land into the buffer, use the full
+//    ColumnTarget shape with bufferAbove / bufferBelow.
+const next: string[][] = await server.cascade(winners);
+await reelSet.refill({ winners, grid: next.map((visible) => ({ visible })) });
 ```
 
-That's the minimal cascade chain — one win, one refill. For multi-cascade rounds, wrap it in a loop:
+That's the minimal cascade chain. one win, one refill. For multi-cascade rounds, wrap it in a loop:
 
 ```ts
 while (true) {
@@ -109,11 +113,12 @@ while (true) {
   if (winners.length === 0) break;
   await reelSet.destroySymbols(winners);
   await wait(PAUSE_AFTER_REMOVAL_MS);
-  await reelSet.refill({ winners, grid: await server.cascade(winners) });
+  const next = await server.cascade(winners);
+  await reelSet.refill({ winners, grid: next.map((visible) => ({ visible })) });
 }
 ```
 
-…or call **`reelSet.runCascade({ detectWinners, nextGrid })`**, which is the same loop with `cascade:chain:start` / `cascade:chain:end` fired per stage and the awaited `RunCascadeResult` carrying the summary. The two callbacks may be `async` — `nextGrid` is the natural place to `await server.cascade(winners)`.
+…or call **`reelSet.runCascade({ detectWinners, nextGrid })`**, which is the same loop with `cascade:chain:start` / `cascade:chain:end` fired per stage and the awaited `RunCascadeResult` carrying the summary. The two callbacks may be `async`. `nextGrid` is the natural place to `await server.cascade(winners)`.
 
 ## Per-cascade options
 
@@ -123,9 +128,9 @@ while (true) {
 |---|---|---|
 | `pauseAfterDestroyMs` | `250` | Tighten to `150` for snappy turbo modes; lengthen to `500` for cinematic feels. |
 | `maxChain` | `32` | Safety cap. Bump up only if your game can legitimately exceed 32 cascades. |
-| `onCascade` | — | Per-cascade hook. Bump multipliers, fire SFX, run "winners gone" UI here. Return a Promise to delay the next refill. |
+| `onCascade` |. | Per-cascade hook. Bump multipliers, fire SFX, run "winners gone" UI here. Return a Promise to delay the next refill. |
 | `destroyOptions` | `{}` | Forwarded to `destroySymbols(...)`. Use this for direction overrides, per-cell stagger, viewport dim. |
-| `signal` | — | `AbortSignal` for caller-driven cancellation. See [cancelling a chain](#cancelling-a-chain--the-abortsignal-pattern). |
+| `signal` |. | `AbortSignal` for caller-driven cancellation. See [cancelling a chain](#cancelling-a-chain--the-abortsignal-pattern). |
 
 ```ts
 await reelSet.runCascade({
@@ -154,9 +159,9 @@ destroyOptions: {
 }
 ```
 
-## Cancelling a chain — the AbortSignal pattern
+## Cancelling a chain via AbortSignal
 
-`reelSet.skip()` slams the in-flight phase but **early-returns when the engine is idle** (the moment between two refills, or during the `pauseAfterDestroyMs` beat). That means a tap to slam can land in a window where `skip()` does nothing — and your cascade chain keeps running.
+`reelSet.skipSpin()` slams the in-flight phase but **early-returns when the engine is idle** (the moment between two refills, or during the `pauseAfterDestroyMs` beat). That means a tap to slam can land in a window where `skipSpin()` does nothing, and your cascade chain keeps running.
 
 The fix is an `AbortController`. Hand its `signal` to `runCascade`, abort it from the button handler:
 
@@ -179,7 +184,7 @@ When the signal aborts, `runCascade`:
 - Exits at the next await boundary.
 - Resolves with `RunCascadeResult` carrying `wasSkipped: true`.
 
-This is the canonical "player slam" pattern. The standard `reelSet.skip()` is still the right tool inside event listeners or while the engine is actively in motion — both work together.
+This is the canonical "player slam" pattern. The standard `reelSet.skipSpin()` is still the right tool inside event listeners or while the engine is actively in motion. Both work together.
 
 ## Choosing between `refill()` and `runCascade()`
 
@@ -190,33 +195,33 @@ This is the canonical "player slam" pattern. The standard `reelSet.skip()` is st
 | You want explicit control over each await | You want the slam path to "just work" |
 | Tests / one-off automation | Production code |
 
-`runCascade` is a one-screen wrapper around `refill`. Read its source ([packages/pixi-reels/src/core/ReelSet.ts](https://github.com/schmooky/pixi-reels/blob/main/packages/pixi-reels/src/core/ReelSet.ts)) if you outgrow it — there's no magic; you'll lift the same five lines into your handler.
+`runCascade` is a one-screen wrapper around `refill`. Read its source ([packages/pixi-reels/src/core/ReelSet.ts](https://github.com/schmooky/pixi-reels/blob/main/packages/pixi-reels/src/core/ReelSet.ts)) if you outgrow it. there's no magic; you'll lift the same five lines into your handler.
 
 ## Composing with the rest of the library
 
-Cascades aren't a separate mode — they compose with everything else:
+Cascades aren't a separate mode. they compose with everything else:
 
 - **`setDropOrder('all')`** before each refill makes the canonical "every column drops together" pattern. Set once before `runCascade` and it persists across every refill in the chain.
 - **`setStopDelays([...])`** gives you per-reel custom delays for unusual reveal shapes (V-shape, outside-in, etc.).
 - **`speed.set('turbo')`** changes the strip-spin speed on standard rounds; cascade phase durations are static (see [`TumbleConfig`](/docs/api-builder/#tumble)). To do "fast cascades" you swap the `.tumble({})` config or override the phase.
 - **`pin(...)`** persists a cell across cascades. A pinned wild stays put through every refill in the round.
-- **`reelSet.viewport.showDim(alpha)`** dims the whole board — pair with `destroySymbols(..., { dim: true })` for a focus-pull on the winners.
+- **`reelSet.viewport.showDim(alpha)`** dims the whole board. pair with `destroySymbols(..., { dim: true })` for a focus-pull on the winners.
 
-## The empty wait — what to do during the server roundtrip
+## The empty wait. what to do during the server roundtrip
 
 Between `cascade:fall:end` (last reel finished falling) and `cascade:dropIn:start` (first reel started filling), the reels are empty and the server hasn't responded yet. Five common patterns, in order of complexity:
 
-1. **Spinner overlay** — show the moment all reels have fallen, hide on first drop-in. Cheap, works.
-2. **Pulsing reel frame** — no occluding overlay; the player can see the empty grid.
-3. **Skeleton placeholders** — low-cost squares in the empty cells.
-4. **Nothing at all** — if your server is `< 100 ms` the gap is barely visible.
-5. **Tighter fall + delayed reveal** — make `fall.duration` brief so the empty moment is short; rely on `dropIn` to carry visual energy.
+1. **Spinner overlay**. show the moment all reels have fallen, hide on first drop-in. Cheap, works.
+2. **Pulsing reel frame**. no occluding overlay; the player can see the empty grid.
+3. **Skeleton placeholders**. low-cost squares in the empty cells.
+4. **Nothing at all**. if your server is `< 100 ms` the gap is barely visible.
+5. **Tighter fall + delayed reveal**. make `fall.duration` brief so the empty moment is short; rely on `dropIn` to carry visual energy.
 
 See [recipe 5 in `docs/recipes/tumble-cascade.md`](https://github.com/schmooky/pixi-reels/blob/main/docs/recipes/tumble-cascade.md) for code.
 
 ## The pause matters
 
-Between **winners faded out** and **refill drop-in starts** there must be a beat. Without it, the refill begins the same frame the winners hit alpha 0 — the player perceives a teleport. With 150-500 ms of pause the brain registers two distinct events ("wins cleared" → "new symbols arrived").
+Between **winners faded out** and **refill drop-in starts** there must be a beat. Without it, the refill begins the same frame the winners hit alpha 0. the player perceives a teleport. With 150-500 ms of pause the brain registers two distinct events ("wins cleared" → "new symbols arrived").
 
 Match the pause to your animation:
 
@@ -252,6 +257,6 @@ Override the phase only when 1-3 don't fit. The override path requires implement
 
 ## Related references
 
-- [`ReelSetBuilder.tumble()` reference](/docs/api-builder/#tumble) — every config field with defaults and trade-offs
-- [`ReelSet.refill`, `destroySymbols`, `runCascade`](/docs/api-reelset/#cascade-tumble) — verb signatures
-- [Cascade event surface](/docs/api-events/#cascade-tumble) — payload shapes
+- [`ReelSetBuilder.tumble()` reference](/docs/api-builder/#tumble). every config field with defaults and trade-offs
+- [`ReelSet.refill`, `destroySymbols`, `runCascade`](/docs/api-reelset/#cascade-tumble). verb signatures
+- [Cascade event surface](/docs/api-events/#cascade-tumble). payload shapes
