@@ -47,18 +47,35 @@ export class CascadePlacePhase extends ReelPhase<CascadePlacePhaseConfig> {
     }
   }
 
+  /**
+   * Map the positional `targetFrame` (buffer-above … visible … buffer-below)
+   * into the index shape `Reel.placeSymbols` expects: visible rows at positive
+   * indices `[0..visibleRows)`, buffer-above rows as NEGATIVE-index properties
+   * (`[-1]` closest above … `[-bufferAbove]` furthest). placeSymbols reads
+   * buffer-above strip cells from those negative slots; a plain `slice` of just
+   * the visible window has none, so placeSymbols re-randomizes the buffer. that
+   * destroys a big-symbol anchor living in bufferAbove (a partial-visibility
+   * "tail-visible" block) and leaves its visible OCCUPIED stub uncovered, so
+   * the block's visible cell renders empty. Buffer-below cells are left to
+   * placeSymbols' random fill — they're masked and never carry a visible anchor.
+   */
+  private _placement(targetFrame: string[]): string[] {
+    const bufferAbove = this._reel.bufferAbove;
+    const placement = targetFrame.slice(bufferAbove, bufferAbove + this._reel.visibleRows);
+    for (let k = 1; k <= bufferAbove; k++) {
+      (placement as Record<number, string>)[-k] = targetFrame[bufferAbove - k];
+    }
+    return placement;
+  }
+
   private _doPlace(): void {
     this._delayedCall = null;
     if (!this._config) return;
 
     const reel = this._reel;
     const { targetFrame, events } = this._config;
-    const visible = targetFrame.slice(
-      reel.bufferAbove,
-      reel.bufferAbove + reel.visibleRows,
-    );
 
-    reel.placeSymbols(visible);
+    reel.placeSymbols(this._placement(targetFrame));
     // Defensive: CascadeFallPhase displaces views by `fallDistance` and pool
     // reuse can leak the post-fall y onto same-id replacements when
     // `_placeSymbolView` runs BEFORE the motion snap inside placeSymbols.
@@ -78,8 +95,19 @@ export class CascadePlacePhase extends ReelPhase<CascadePlacePhaseConfig> {
       this._config.winnerRows,
       { initial: this._config.initial },
     );
+    // Big symbols: every occupied cell of a block resolves to the SAME anchor
+    // view. Reveal it ONCE, keyed on the first visible row of the block
+    // (top-to-bottom), so the anchor's alpha reflects whether the BLOCK moves
+    // (mover ⇒ 0, stays hidden until the drop-in repositions it). Without the
+    // dedup the last occupied row wins, leaving a mover-anchor at alpha 1 at
+    // its grid Y. it flashes fully-formed there for a frame before the drop-in
+    // yanks it back up to fall again ("snap then re-drop").
     const placedSymbols: ReelSymbol[] = [];
+    const handledAnchors = new Set<number>();
     for (const off of offsets) {
+      const anchorRow = reel.getAnchorRow(off.row);
+      if (anchorRow !== off.row && handledAnchors.has(anchorRow)) continue;
+      handledAnchors.add(anchorRow);
       const sym = reel.getSymbolAt(off.row);
       sym.view.visible = true;
       sym.view.alpha = off.offsetRows === 0 ? 1 : 0;
@@ -108,11 +136,7 @@ export class CascadePlacePhase extends ReelPhase<CascadePlacePhaseConfig> {
     // (skip == "show me the final landed state right now").
     if (this._config) {
       const reel = this._reel;
-      const visible = this._config.targetFrame.slice(
-        reel.bufferAbove,
-        reel.bufferAbove + reel.visibleRows,
-      );
-      reel.placeSymbols(visible);
+      reel.placeSymbols(this._placement(this._config.targetFrame));
       for (let row = 0; row < reel.visibleRows; row++) {
         const view = reel.getSymbolAt(row).view;
         view.alpha = 1;
