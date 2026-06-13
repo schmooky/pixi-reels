@@ -12,6 +12,7 @@ import {
   type ReelSet, ReelSymbol,
 } from 'pixi-reels';
 import { SpineReelSymbol } from 'pixi-reels/spine';
+import { Spine } from '@esotericsoftware/spine-pixi-v8';
 import { BlurSpriteSymbol } from '../../../../examples/shared/BlurSpriteSymbol.ts';
 import { CardSymbol, CARD_DECK, WILD_CARD } from '../../../../examples/shared/CardSymbol.ts';
 import {
@@ -25,6 +26,14 @@ import {
   drawCoin,
 } from '../../../../examples/shared/CoinSymbol.ts';
 import { EmptySymbol } from '../../../../examples/shared/EmptySymbol.ts';
+import { HoldAndWinBuilder } from '../../../../examples/shared/HoldAndWinBuilder.ts';
+import {
+  GoldCoinSymbol,
+  coinWaves,
+  bezierFly,
+  settleMoneyFace,
+  freezeAtEnd,
+} from '../../../../examples/shared/holdAndWinFx.ts';
 import { loadPrototypeSymbols } from '../../../../examples/shared/prototypeSpriteLoader.ts';
 import {
   loadGeneratedSpines,
@@ -146,7 +155,9 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
           'CardSymbol', 'CARD_DECK', 'WILD_CARD',
           'CoinSymbol', 'COIN_TIER', 'COIN_FEATURE', 'COIN_MYSTERY', 'COIN_TRIGGER',
           'coinValue', 'coinMultiplier', 'drawCoin',
-          'SpineReelSymbol', 'loadGeneratedSpines', 'buildSpineMap',
+          'HoldAndWinBuilder',
+          'GoldCoinSymbol', 'coinWaves', 'bezierFly', 'settleMoneyFace', 'freezeAtEnd',
+          'SpineReelSymbol', 'Spine', 'loadGeneratedSpines', 'buildSpineMap',
           `"use strict"; ${js}`,
         );
         // AsyncFunction so recipes that need async setup (e.g. dynamic
@@ -162,7 +173,9 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
           CardSymbol, CARD_DECK, WILD_CARD,
           CoinSymbol, COIN_TIER, COIN_FEATURE, COIN_MYSTERY, COIN_TRIGGER,
           coinValue, coinMultiplier, drawCoin,
-          SpineReelSymbol, loadGeneratedSpines, buildSpineMap,
+          HoldAndWinBuilder,
+          GoldCoinSymbol, coinWaves, bezierFly, settleMoneyFace, freezeAtEnd,
+          SpineReelSymbol, Spine, loadGeneratedSpines, buildSpineMap,
         )) as RunResult;
       } catch (e) {
         setError(`Runtime error: ${(e as Error).message}`);

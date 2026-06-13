@@ -8,7 +8,7 @@ Site: https://pixi-reels.schmooky.dev
 Repo: https://github.com/schmooky/pixi-reels
 Package: https://www.npmjs.com/package/pixi-reels
 
-Generated: 2026-05-26T17:50:41.123Z
+Generated: 2026-06-13T16:36:14.752Z
 
 ## Quick start
 
@@ -76,6 +76,10 @@ Each reel can have its own row count, cell height, and offset. Covers static pyr
 ### Pins
 URL: https://pixi-reels.schmooky.dev/guides/pins/
 CellPin is the cell-persistence primitive. It survives spins, migrates on reshape, and works with any ReelSymbol subclass. This guide covers lifecycle, events, movePin, and Spine-specific animation hooks.
+
+### Recipe previews
+URL: https://pixi-reels.schmooky.dev/guides/recipe-previews/
+How to give a recipe a card thumbnail and inline body images. Convention-first — drop a file in public/ and it appears. Missing assets fall back to a generated placeholder, so the page always looks finished.
 
 ### Speed modes
 URL: https://pixi-reels.schmooky.dev/guides/speed-modes/
@@ -340,12 +344,36 @@ Steps:
 URL: https://pixi-reels.schmooky.dev/recipes/hold-and-win/
 Coins lock on land; every new coin resets the respin counter; fill the grid for the grand jackpot. The "coin" formula every studio is shipping in 2024.
 Tags: starter, hold-and-win, respin, jackpot
-APIs: ReelSet.spin, ReelSet.setResult, ReelSet.reels / getVisibleSymbols
+APIs: HoldAndWinBuilder (examples/shared), HoldAndWinBoard.enter / respin / release, HoldAndWinBoard.events, HoldAndWinBoard.cellCenter / symbolAt
 Steps:
-  - Maintain a held Map of already-landed coin positions
-  - Each respin, build a grid that keeps held cells and lands 0..N new ones
-  - On every new coin, reset the respin counter to max
-  - When the grid is fully held. grand jackpot
+  - Build the board once — grid, coin symbols, strip weights, respin count
+  - enter(seed) with the triggering coins, then await respin(hits) per round
+  - Board events drive the HUD — respins:changed, coin:locked, board:full
+  - release(cells) clears collected coins; cellCenter() aims the flight
+
+### Hold & Win: collector + flight choreography
+URL: https://pixi-reels.schmooky.dev/recipes/hold-and-win-collector/
+A board that opens holding three 5.00 coins, lands a 10.00, then lands a collector orb that pulls a value clone out of every coin along bezier arcs — summing up tick by tick. Next press resets with a column-wave sweep.
+Tags: hold-and-win, collector, spine, flight, choreography
+APIs: HoldAndWinBuilder (examples/shared), coinWaves / bezierFly (examples/shared/holdAndWinFx), HoldAndWinBoard.release / cellCenter / symbolAt, GoldCoinSymbol
+Steps:
+  - The board opens pre-seeded — enter(seed) runs at boot, before any spin
+  - Each respin spins only the free cells; held coins sit out
+  - The collector lands; value-label clones bezierFly() into it, the sum ticks up per arrival
+  - coinWaves() picks the choreography (sequence / by-row / by-col / all / chunks)
+  - No respin starts until the previous wave's land animations resolve
+  - The next press sweeps the board out by column and reseeds the opening state
+
+### Hold & Win: Spine coins + collect
+URL: https://pixi-reels.schmooky.dev/recipes/hold-and-win-spine/
+A 5x4 Hold & Win board where every cell is a real Spine skeleton — fall on land, idle while held, win on lock — plus MINI / MAJOR jackpot coins whose win animation IS the tier reveal, side plaques that celebrate, and a collect flight into a Spine counter.
+Tags: hold-and-win, spine, collect, respin, jackpot
+APIs: HoldAndWinBuilder (examples/shared), SpineReelSymbol (pixi-reels/spine), HoldAndWinBoard.release / cellCenter, HoldAndWinBoard.events
+Steps:
+  - Register SpineReelSymbol ids — fall / idle_counter / win map straight onto the reel lifecycle
+  - Jackpot coins land wearing their tier word; on lock the reveal spins it off into the money face
+  - coin:locked paints value labels and flashes the matching MINI / MAJOR side plaque
+  - On feature end, release() each cell and fly a Spine clone to the counter via cellCenter()
 
 ### Multiplier wild
 URL: https://pixi-reels.schmooky.dev/recipes/multiplier-wild-pin/
@@ -2877,129 +2905,720 @@ return {
 };
 ```
 
+### hold-and-win-collector
+URL: https://pixi-reels.schmooky.dev/recipes/hold-and-win-collector/
+```ts
+// @ts-nocheck
+// Injected: HoldAndWinBuilder, GoldCoinSymbol, SpineReelSymbol, Spine,
+//           coinWaves, bezierFly, PIXI, gsap, app
+//
+// Collector demo. The board starts holding three 5.00 coins. Spin one:
+// every free cell respins and a 10.00 lands. Spin again: a collector orb
+// lands, and a clone of each coin's VALUE flies into it along a bezier
+// arc, ticking the collector's total up on every arrival. The next press
+// resets the board back to the opening state with a column-wave sweep.
+
+const COLS = 5, ROWS = 3, CELL = 72, GAP = 6;
+const COIN = 'coin';
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const fmt = (v) => v.toFixed(2);
+
+// -- Spine assets (idempotent across recipe remounts) --
+const ASSETS = {
+  'hw-atlas': '/hw-spine/skeletons.atlas',
+  'hw-goldfont': '/hw-spine/goldfont.fnt',
+  'hw-jackpot': '/hw-spine/jackpot.json',
+  'hw-collector': '/hw-spine/collector.json',
+};
+for (const [alias, src] of Object.entries(ASSETS)) {
+  if (!PIXI.Assets.cache.has(alias)) {
+    try { PIXI.Assets.add({ alias, src }); } catch {}
+  }
+}
+await PIXI.Assets.load(Object.keys(ASSETS));
+
+const goldText = (text, size) => {
+  const t = new PIXI.BitmapText({ text, style: { fontFamily: 'GoldDigits', fontSize: size, letterSpacing: -1 } });
+  t.anchor.set(0.5);
+  return t;
+};
+
+const SETTLE_SIZE = CELL - 10;
+const SPINE_MAP = {
+  [COIN]: { skeleton: 'hw-jackpot', atlas: 'hw-atlas' },
+  collector: { skeleton: 'hw-collector', atlas: 'hw-atlas' },
+};
+
+// fit scales: gold coin at the clean mini_x pose, collector at its idle
+const scaleFor = {};
+{
+  const coinProbe = Spine.from({ skeleton: 'hw-jackpot', atlas: 'hw-atlas' });
+  coinProbe.state.setAnimation(0, 'mini_x', true);
+  try { coinProbe.update(0); } catch {}
+  let b = coinProbe.getLocalBounds();
+  scaleFor[COIN] = (CELL - 6) / Math.max(1, b.width, b.height);
+  coinProbe.destroy();
+
+  const orbProbe = Spine.from({ skeleton: 'hw-collector', atlas: 'hw-atlas' });
+  if (orbProbe.skeleton.data.findAnimation('idle_counter')) orbProbe.state.setAnimation(0, 'idle_counter', true);
+  try { orbProbe.update(0); } catch {}
+  b = orbProbe.getLocalBounds();
+  scaleFor.collector = (CELL + 6) / Math.max(1, b.width, b.height); // the orb may breathe past the cell
+  orbProbe.destroy();
+}
+
+// -- board --
+const board = new HoldAndWinBuilder()
+  .grid(COLS, ROWS)
+  .cellSize(CELL, { gap: GAP })
+  .symbols((r) => {
+    r.register(COIN, GoldCoinSymbol, {
+      spineMap: SPINE_MAP,
+      idleAnimation: 'idle',
+      scale: scaleFor[COIN],
+      settleSize: SETTLE_SIZE,
+    });
+    r.register('collector', SpineReelSymbol, {
+      spineMap: SPINE_MAP,
+      idleAnimation: 'idle_counter',
+      winAnimation: 'win',
+      landingAnimation: 'fall',
+      autoPlayLanding: true,
+      scale: scaleFor.collector,
+    });
+  })
+  .weights({ [COIN]: 1, empty: 3, collector: 0 })
+  .symbolData({ collector: { unmask: true } }) // its reactions breathe past the cell
+  .respins(3)
+  .cellChrome((g, size) => {
+    g.roundRect(0, 0, size, size, 10)
+      .fill({ color: 0xfaf6ef, alpha: 0.6 })
+      .stroke({ color: 0xe5dccf, width: 1, alpha: 0.8 });
+  })
+  .ticker(app.ticker)
+  .build();
+
+const boardW = COLS * CELL + (COLS - 1) * GAP;
+const boardH = ROWS * CELL + (ROWS - 1) * GAP;
+board.container.x = (app.screen.width - boardW) / 2;
+board.container.y = 64;
+app.stage.addChild(board.container);
+
+const hud = new PIXI.Text({
+  text: 'press spin',
+  style: { fontFamily: 'system-ui, sans-serif', fontSize: 13, fontWeight: '600', fill: 0x9c8f78 },
+});
+hud.anchor.set(0.5, 0);
+hud.position.set(app.screen.width / 2, board.container.y + boardH + 14);
+app.stage.addChild(hud);
+
+// -- value labels + the collector's running total, all event-driven --
+const labels = new PIXI.Container();
+app.stage.addChild(labels);
+const labelAt = new Map();
+const abs = (cell) => {
+  const c = board.cellCenter(cell);
+  return { x: board.container.x + c.x, y: board.container.y + c.y };
+};
+// Fit by font size (not scale) so scale-pop tweens stay correct: the
+// amount spans the coin face like the source game.
+const fitGold = (t, maxW, maxH) => {
+  if (t.width > 0 && t.height > 0) {
+    const k = Math.min(maxW / t.width, maxH / t.height);
+    t.style.fontSize = Math.max(8, Math.floor(t.style.fontSize * k));
+  }
+  return t;
+};
+const paintLabel = (coin) => {
+  const p = abs(coin.cell);
+  const t = fitGold(goldText(fmt(coin.data?.value ?? 0), 32), SETTLE_SIZE * 0.84, SETTLE_SIZE * 0.46);
+  t.position.set(p.x, p.y);
+  labels.addChild(t);
+  labelAt.set(`${coin.cell.col},${coin.cell.row}`, t);
+  return t;
+};
+
+const pendingFx = [];
+let sumText = null;
+board.events.on('coin:locked', ({ coin }) => {
+  if (coin.data?.collector) {
+    // the orb's own total, born at 0.00
+    sumText = fitGold(goldText('0.00', 32), SETTLE_SIZE * 0.8, SETTLE_SIZE * 0.42);
+    const p = abs(coin.cell);
+    sumText.position.set(p.x, p.y);
+    labels.addChild(sumText);
+    pendingFx.push(sleep(650)); // let the fall + activation read
+    return;
+  }
+  paintLabel(coin);
+  pendingFx.push(sleep(450)); // lock flourish
+});
+board.events.on('coin:released', ({ coin }) => {
+  const k = `${coin.cell.col},${coin.cell.row}`;
+  labelAt.get(k)?.destroy();
+  labelAt.delete(k);
+});
+
+// -- scripted scenario --
+const SEED = [
+  { cell: { col: 0, row: 1 }, id: COIN, data: { value: 5 } },
+  { cell: { col: 2, row: 2 }, id: COIN, data: { value: 5 } },
+  { cell: { col: 4, row: 0 }, id: COIN, data: { value: 5 } },
+];
+const HIT_TEN = [{ cell: { col: 3, row: 1 }, id: COIN, data: { value: 10 } }];
+const HIT_COLLECTOR = [{ cell: { col: 1, row: 1 }, id: 'collector', data: { collector: true } }];
+
+const seedBoard = () => {
+  board.enter(SEED);
+  for (const coin of SEED) paintLabel(coin);
+};
+seedBoard(); // the opening state: three 5.00 coins before any spin
+
+// -- the collect moment: VALUE CLONES fly into the orb over bezier arcs --
+const flyers = new Set();
+async function collectIntoOrb() {
+  const orbCell = HIT_COLLECTOR[0].cell;
+  const target = abs(orbCell);
+  const valueCoins = board.lockedCoins.filter((c) => !c.data?.collector);
+  let sum = 0;
+  for (const wave of coinWaves(valueCoins, 'sequence')) {
+    await Promise.all(wave.map((coin) => {
+      const from = abs(coin.cell);
+      const clone = fitGold(goldText(fmt(coin.data.value), 32), SETTLE_SIZE * 0.84, SETTLE_SIZE * 0.46); // the value itself flies
+      clone.position.set(from.x, from.y);
+      app.stage.addChild(clone);
+      flyers.add(clone);
+      return bezierFly(clone, from, target, {
+        lean: 'up',
+        curvature: 0.4,
+        arriveScale: 0.45,
+        duration: 0.55,
+      }).then(() => {
+        flyers.delete(clone);
+        try { clone.destroy(); } catch {}
+        sum += coin.data.value;
+        if (sumText) {
+          sumText.text = fmt(sum);
+          sumText.style.fontSize = 32; // refit: the digit count grows
+          fitGold(sumText, SETTLE_SIZE * 0.8, SETTLE_SIZE * 0.42);
+          gsap.fromTo(sumText.scale, { x: 1.45, y: 1.45 }, { x: 1, y: 1, duration: 0.22, ease: 'power2.out' });
+        }
+        void board.symbolAt(orbCell).playWin(); // the orb reacts to every arrival
+      });
+    }));
+    await sleep(90);
+  }
+  await sleep(500);
+}
+
+// -- the slick reset: column-wave sweep out, reseed, pop back in --
+async function slickReset() {
+  const sweep = coinWaves(board.lockedCoins, 'by-col');
+  for (const wave of sweep) {
+    wave.forEach((coin) => {
+      const k = `${coin.cell.col},${coin.cell.row}`;
+      const label = labelAt.get(k);
+      if (label) gsap.to(label.scale, { x: 0, y: 0, duration: 0.16, ease: 'back.in(2)' });
+    });
+    await sleep(70);
+  }
+  if (sumText) gsap.to(sumText.scale, { x: 0, y: 0, duration: 0.16, ease: 'back.in(2)' });
+  await new Promise((res) => gsap.to(board.container, { alpha: 0, duration: 0.22, ease: 'power2.in', onComplete: res }));
+
+  for (const t of labelAt.values()) t.destroy();
+  labelAt.clear();
+  if (sumText) { try { sumText.destroy(); } catch {} sumText = null; }
+  pendingFx.length = 0;
+  board.reset();
+  seedBoard();
+
+  // pop back: board fades in, labels arrive in a column wave
+  for (const t of labelAt.values()) t.scale.set(0);
+  gsap.to(board.container, { alpha: 1, duration: 0.25, ease: 'power2.out' });
+  for (const wave of coinWaves(SEED, 'by-col')) {
+    wave.forEach((coin) => {
+      const label = labelAt.get(`${coin.cell.col},${coin.cell.row}`);
+      if (label) gsap.to(label.scale, { x: 1, y: 1, duration: 0.28, ease: 'back.out(2.5)' });
+    });
+    await sleep(80);
+  }
+}
+
+let phase = 'ready'; // ready -> done -> (reset) -> ready
+
+return {
+  cleanup: () => {
+    for (const f of flyers) { try { gsap.killTweensOf(f); f.destroy(); } catch {} }
+    flyers.clear();
+    if (sumText) { try { sumText.destroy(); } catch {} }
+    try { gsap.killTweensOf(board.container); } catch {}
+    board.destroy();
+  },
+  onSpin: async () => {
+    if (phase === 'done') {
+      await slickReset();
+      phase = 'ready';
+      hud.text = 'press spin';
+      return;
+    }
+    phase = 'running';
+    hud.text = 'respin · held cells stay';
+    await board.respin(HIT_TEN);            // free cells spin, a 10.00 lands
+    await Promise.all(pendingFx.splice(0)); // no new spin while coins animate
+    await sleep(350);
+
+    hud.text = 'collector incoming';
+    await board.respin(HIT_COLLECTOR);      // free cells spin, the orb lands
+    await Promise.all(pendingFx.splice(0));
+    await sleep(250);
+
+    hud.text = 'collecting';
+    await collectIntoOrb();
+    phase = 'done';
+    hud.text = 'collected 25.00 · press spin to reset';
+  },
+};
+```
+
+### hold-and-win-spine
+URL: https://pixi-reels.schmooky.dev/recipes/hold-and-win-spine/
+```ts
+// @ts-nocheck
+// Injected: HoldAndWinBuilder, SpineReelSymbol, Spine, PIXI, gsap, app
+//
+// Hold & Win on a 5x4 board with the source game's full Spine cast
+// (converted 3.7 -> 4.2 via tools/spine-3.7-to-4.2): fruit symbols spin
+// past on the strips, gold value coins land with bitmap-font amounts,
+// MINI/MAJOR jackpot coins reveal their tier on lock, side plaques
+// celebrate, and the collect flight drains the board into the counter.
+
+const COLS = 5, ROWS = 4, CELL = 68, GAP = 6;
+const COIN = 'coin';
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const fmt = (v) => v.toFixed(2);
+
+// -- assets (idempotent across recipe remounts) --
+const ASSETS = {
+  'hw-atlas': '/hw-spine/skeletons.atlas',
+  'hw-goldfont': '/hw-spine/goldfont.fnt',
+  'hw-counter': '/hw-spine/counter.json',
+  'hw-jackpot': '/hw-spine/jackpot.json',
+  'hw-panel-mini': '/hw-spine/panel_mini.json',
+  'hw-panel-minor': '/hw-spine/panel_minor.json',
+  'hw-panel-major': '/hw-spine/panel_major.json',
+  'hw-panel-grand': '/hw-spine/panel_grand.json',
+  'hw-cherry': '/hw-spine/cherry.json',
+  'hw-lemon': '/hw-spine/lemon.json',
+  'hw-orange': '/hw-spine/orange.json',
+  'hw-plum': '/hw-spine/plum.json',
+  'hw-grape': '/hw-spine/grape.json',
+  'hw-watermelon': '/hw-spine/watermelon.json',
+  'hw-bar': '/hw-spine/bar.json',
+  'hw-bell': '/hw-spine/bell.json',
+};
+for (const [alias, src] of Object.entries(ASSETS)) {
+  if (!PIXI.Assets.cache.has(alias)) {
+    try { PIXI.Assets.add({ alias, src }); } catch {}
+  }
+}
+await PIXI.Assets.load(Object.keys(ASSETS));
+
+// Gold digit BitmapText (the game's own number font: 0-9 , .)
+const goldText = (text, size) => {
+  const t = new PIXI.BitmapText({ text, style: { fontFamily: 'GoldDigits', fontSize: size, letterSpacing: -1 } });
+  t.anchor.set(0.5);
+  return t;
+};
+
+// -- symbol cast --
+// ONE skeleton serves every coin. Its reveal one-shots (`mini`/`major`)
+// END on the gold money face (slot jp_coin_top), so the plain value coin
+// is that same skeleton posed on the reveal's final frame; its `coin`
+// animation (a one-turn coin spin) is the lock flourish and the collect
+// flight - all authored Spine, no tween fakery.
+//
+// The fruit symbols are win-only skeletons: their setup pose IS the static
+// face, `idle`/`fall` are missing and no-op. They live on the spin strips
+// for base-game flavour and never land (the server only sends coins).
+const SPINE_MAP = {
+  [COIN]:          { skeleton: 'hw-jackpot', atlas: 'hw-atlas' },
+  jackpot_mini:    { skeleton: 'hw-jackpot', atlas: 'hw-atlas' },
+  jackpot_major:   { skeleton: 'hw-jackpot', atlas: 'hw-atlas' },
+  cherry:          { skeleton: 'hw-cherry', atlas: 'hw-atlas' },
+  lemon:           { skeleton: 'hw-lemon', atlas: 'hw-atlas' },
+  orange:          { skeleton: 'hw-orange', atlas: 'hw-atlas' },
+  plum:            { skeleton: 'hw-plum', atlas: 'hw-atlas' },
+  grape:           { skeleton: 'hw-grape', atlas: 'hw-atlas' },
+  watermelon:      { skeleton: 'hw-watermelon', atlas: 'hw-atlas' },
+  bar:             { skeleton: 'hw-bar', atlas: 'hw-atlas' },
+  bell:            { skeleton: 'hw-bell', atlas: 'hw-atlas' },
+};
+
+// Jackpot coins land wearing their tier word (`mini_x` loop). The reveal is
+// driven on lock (see coin:locked below): the tier anim spins the word off
+// and the coin settles on the `coin` money face, where the amount paints in
+// the gold font. No `win` mapping - the board's auto playWin() must no-op
+// (the skeleton has no 'win' animation) so the reveal owns the moment.
+const TIER_OVERRIDES = {
+  jackpot_mini: { idle: 'mini_x' },
+  jackpot_major: { idle: 'major_x' },
+};
+
+// freezeAtEnd / settleMoneyFace / GoldCoinSymbol come from the shared
+// holdAndWinFx kit (injected) - see examples/shared/holdAndWinFx.ts.
+const SETTLE_SIZE = CELL - 10;
+
+// Skeletons are authored at wildly different sizes - measure each once and
+// fit to the cell. Pose first: setup-pose bounds can be degenerate (the
+// coin skeleton measures 3px at setup).
+const scaleFor = {};
+let FLOURISH_MS = 600; // lock-flourish duration, read off the skeleton below
+for (const [id, cfg] of Object.entries(SPINE_MAP)) {
+  const probe = Spine.from({ skeleton: cfg.skeleton, atlas: cfg.atlas });
+  // Coin-skeleton ids all measure at the clean mini_x pose: the money-face
+  // frame drags huge fx attachment bounds along and skews the fit.
+  const poseName =
+    cfg.skeleton === 'hw-jackpot' ? 'mini_x' : (TIER_OVERRIDES[id]?.idle ?? 'idle');
+  if (probe.skeleton.data.findAnimation(poseName)) {
+    probe.state.setAnimation(0, poseName, true);
+  }
+  if (cfg.skeleton === 'hw-jackpot') {
+    const flourish = probe.skeleton.data.findAnimation('coin');
+    if (flourish) FLOURISH_MS = flourish.duration * 1000 + 80;
+  }
+  try { probe.update(0); } catch {}
+  const b = probe.getLocalBounds();
+  probe.destroy();
+  scaleFor[id] = (CELL - 6) / Math.max(1, b.width, b.height);
+}
+
+// -- board --
+const board = new HoldAndWinBuilder()
+  .grid(COLS, ROWS)
+  .cellSize(CELL, { gap: GAP })
+  .symbols((r) => {
+    for (const id of Object.keys(SPINE_MAP)) {
+      r.register(id, id === COIN ? GoldCoinSymbol : SpineReelSymbol, {
+        spineMap: SPINE_MAP,
+        idleAnimation: 'idle',
+        winAnimation: 'win',
+        landingAnimation: 'fall',
+        autoPlayLanding: true,
+        scale: scaleFor[id],
+        animations: TIER_OVERRIDES,
+        settleSize: SETTLE_SIZE,
+      });
+    }
+  })
+  // Strip mix: base-game fruit flavour with the occasional coin flashing
+  // past. Jackpot coins are server-placed only - never from random fill.
+  .weights({
+    [COIN]: 2,
+    cherry: 2, lemon: 2, orange: 2, plum: 2, grape: 2,
+    watermelon: 1, bar: 1, bell: 1,
+    empty: 6,
+    jackpot_mini: 0, jackpot_major: 0,
+  })
+  // Reveal animations expand past the cell: the engine re-parents these to
+  // the unmasked container so they can't clip. Server-placed ids only.
+  .symbolData({ jackpot_mini: { unmask: true }, jackpot_major: { unmask: true } })
+  .respins(3)
+  .cellChrome((g, size) => {
+    g.roundRect(0, 0, size, size, 10)
+      .fill({ color: 0xfaf6ef, alpha: 0.6 })
+      .stroke({ color: 0xe5dccf, width: 1, alpha: 0.8 });
+  })
+  .ticker(app.ticker)
+  .build();
+
+const boardW = COLS * CELL + (COLS - 1) * GAP;
+const boardH = ROWS * CELL + (ROWS - 1) * GAP;
+board.container.x = (app.screen.width - boardW) / 2;
+board.container.y = 112;
+app.stage.addChild(board.container);
+
+// -- counter widget (their game's counter skeleton) + running total --
+const counter = Spine.from({ skeleton: 'hw-counter', atlas: 'hw-atlas' });
+if (counter.skeleton.data.findAnimation('idle')) {
+  counter.state.setAnimation(0, 'idle', true);
+  try { counter.update(0); } catch {}
+}
+const cb = counter.getLocalBounds();
+const cScale = Math.min(72 / Math.max(1, cb.height), 240 / Math.max(1, cb.width));
+counter.scale.set(cScale);
+const counterPos = { x: app.screen.width / 2, y: 54 };
+counter.x = counterPos.x - (cb.x + cb.width / 2) * cScale;
+counter.y = counterPos.y - (cb.y + cb.height / 2) * cScale;
+app.stage.addChild(counter);
+const playCounter = (name, loop = false) => {
+  if (!counter.skeleton.data.findAnimation(name)) return;
+  counter.state.setAnimation(0, name, loop);
+  if (!loop && counter.skeleton.data.findAnimation('idle')) {
+    counter.state.addAnimation(0, 'idle', true, 0);
+  }
+};
+
+const totalText = goldText('0.00', 26);
+totalText.position.set(counterPos.x, counterPos.y);
+app.stage.addChild(totalText);
+
+// -- the four jackpot plaques, above the reels: MINI MINOR | counter | MAJOR GRAND --
+const JACKPOTS = { mini: 100, minor: 250, major: 500, grand: 2500 };
+const PANEL_X = { mini: 0.13, minor: 0.32, major: 0.68, grand: 0.87 };
+const panels = {};
+const panelW = Math.min(120, app.screen.width * 0.17);
+for (const [tier, value] of Object.entries(JACKPOTS)) {
+  const plaque = Spine.from({ skeleton: `hw-panel-${tier}`, atlas: 'hw-atlas' });
+  if (plaque.skeleton.data.findAnimation('idle')) {
+    plaque.state.setAnimation(0, 'idle', true);
+    try { plaque.update(0); } catch {}
+  }
+  const pb = plaque.getLocalBounds();
+  const pScale = panelW / Math.max(1, pb.width);
+  plaque.scale.set(pScale);
+  const cx = app.screen.width * PANEL_X[tier];
+  const cy = 54;
+  plaque.x = cx - (pb.x + pb.width / 2) * pScale;
+  plaque.y = cy - (pb.y + pb.height / 2) * pScale;
+  app.stage.addChild(plaque);
+  const label = goldText(fmt(value), 13);
+  // value window: just below the plaque's center line, inside the panel
+  label.position.set(cx, cy + pb.height * pScale * 0.06);
+  app.stage.addChild(label);
+  panels[tier] = { plaque, label };
+}
+const flashPanel = (tier) => {
+  const p = panels[tier];
+  if (!p || !p.plaque.skeleton.data.findAnimation('win')) return;
+  p.plaque.state.setAnimation(0, 'win', false);
+  if (p.plaque.skeleton.data.findAnimation('idle')) p.plaque.state.addAnimation(0, 'idle', true, 0);
+};
+
+// -- HUD + per-coin value labels, driven only by board events --
+const hud = new PIXI.Text({
+  text: 'press spin',
+  style: { fontFamily: 'system-ui, sans-serif', fontSize: 13, fontWeight: '600', fill: 0x9c8f78 },
+});
+hud.anchor.set(0.5, 0);
+hud.position.set(app.screen.width / 2, board.container.y + boardH + 12);
+app.stage.addChild(hud);
+const refreshHud = () => {
+  hud.text = `respins ${board.respinsLeft} · held ${board.lockedCoins.length}/${board.capacity}`;
+};
+board.events.on('respins:changed', refreshHud);
+
+const labels = new PIXI.Container();
+app.stage.addChild(labels);
+const labelAt = new Map();
+// Fit by font size (not scale) so scale-pop tweens stay correct: the
+// amount spans the coin face like the source game - short values render
+// big, long ones shrink to fit.
+const fitGold = (t, maxW, maxH) => {
+  if (t.width > 0 && t.height > 0) {
+    const k = Math.min(maxW / t.width, maxH / t.height);
+    t.style.fontSize = Math.max(8, Math.floor(t.style.fontSize * k));
+  }
+  return t;
+};
+const paintLabel = (coin) => {
+  const c = board.cellCenter(coin.cell);
+  const t = fitGold(goldText(fmt(coin.data?.value ?? 0), 32), SETTLE_SIZE * 0.84, SETTLE_SIZE * 0.46);
+  t.position.set(board.container.x + c.x, board.container.y + c.y);
+  labels.addChild(t);
+  labelAt.set(`${coin.cell.col},${coin.cell.row}`, t);
+};
+// Every land effect registers its promise here; the run loop awaits the
+// batch before the next respin - no new spin while coins still animate.
+const pendingFx = [];
+board.events.on('coin:locked', ({ coin }) => {
+  refreshHud();
+  if (!coin.data?.kind) {
+    paintLabel(coin);
+    pendingFx.push(sleep(FLOURISH_MS)); // the lock flourish plays out
+    return;
+  }
+  // Jackpot reveal: spin the tier word off, settle on the money face, then
+  // paint the amount - the source game's exact under-the-hood sequence.
+  flashPanel(coin.data.kind);
+  const spine = board.symbolAt(coin.cell).spine;
+  if (spine && spine.skeleton.data.findAnimation(coin.data.kind)) {
+    // the reveal's final frame IS the money face - settle there on complete
+    const entry = spine.state.setAnimation(0, coin.data.kind, false);
+    entry.listener = { complete: () => settleMoneyFace(spine, SETTLE_SIZE, coin.data.kind) };
+    const delay = ((entry.animation && entry.animation.duration) || 0.6) * 1000 + 80;
+    const k = `${coin.cell.col},${coin.cell.row}`;
+    pendingFx.push(new Promise((res) => setTimeout(() => {
+      // still locked and not replaced by a replay?
+      if (board.lockedCoins.some((c) => `${c.cell.col},${c.cell.row}` === k) && !labelAt.has(k)) {
+        paintLabel(coin);
+      }
+      res();
+    }, delay)));
+  } else {
+    paintLabel(coin);
+  }
+});
+board.events.on('coin:released', ({ coin }) => {
+  const key = `${coin.cell.col},${coin.cell.row}`;
+  labelAt.get(key)?.destroy();
+  labelAt.delete(key);
+});
+
+// -- collect: released coins arc to the counter, column waves --
+const flyers = new Set();
+let total = 0;
+async function collectAll() {
+  // coinWaves picks the choreography: 'by-col' sweeps left to right;
+  // 'sequence', 'by-row', 'all' or { chunk: n } are drop-in alternatives.
+  for (const wave of coinWaves(board.lockedCoins, 'by-col')) {
+    await Promise.all(wave.map((coin, i) => {
+      const from = board.cellCenter(coin.cell);
+      // every coin flies as the skeleton's own spinning-coin animation
+      const fly = Spine.from({ skeleton: 'hw-jackpot', atlas: 'hw-atlas' });
+      fly.scale.set(scaleFor[coin.id] ?? scaleFor[COIN]);
+      if (fly.skeleton.data.findAnimation('coin')) fly.state.setAnimation(0, 'coin', true);
+      app.stage.addChild(fly);
+      flyers.add(fly);
+      board.release([coin.cell]); // cell empties under the flying clone
+      return bezierFly(
+        fly,
+        { x: board.container.x + from.x, y: board.container.y + from.y },
+        counterPos,
+        { lean: 'up', curvature: 0.3, arriveScale: 0.35, delay: i * 0.07 },
+      ).then(() => {
+        flyers.delete(fly);
+        try { fly.destroy(); } catch {}
+        total += coin.data?.value ?? 0;
+        totalText.text = fmt(total);
+        playCounter('increment');
+        gsap.fromTo(totalText.scale, { x: 1.35, y: 1.35 }, { x: 1, y: 1, duration: 0.25, ease: 'power2.out' });
+      });
+    }));
+  }
+  await sleep(500);
+}
+
+// -- scripted feature: seeds, two hit waves (one MINI, one MAJOR), then dry
+// spins to the end. In a real game the server decides every round; the loop
+// runs on result.done.
+const SEED = [
+  { cell: { col: 1, row: 1 }, id: COIN, data: { value: 25 } },
+  { cell: { col: 3, row: 2 }, id: COIN, data: { value: 50 } },
+  { cell: { col: 4, row: 0 }, id: COIN, data: { value: 10 } },
+];
+const ROUNDS = [
+  [
+    { cell: { col: 0, row: 3 }, id: COIN, data: { value: 20 } },
+    { cell: { col: 2, row: 1 }, id: 'jackpot_mini', data: { value: JACKPOTS.mini, kind: 'mini' } },
+  ],
+  [],
+  [{ cell: { col: 4, row: 3 }, id: 'jackpot_major', data: { value: JACKPOTS.major, kind: 'major' } }],
+  [], [], [],
+];
+
+return {
+  cleanup: () => {
+    for (const fly of flyers) { try { gsap.killTweensOf(fly); gsap.killTweensOf(fly.scale); fly.destroy(); } catch {} }
+    flyers.clear();
+    gsap.killTweensOf(totalText.scale);
+    for (const { plaque, label } of Object.values(panels)) { try { plaque.destroy(); label.destroy(); } catch {} }
+    board.destroy();
+    counter.destroy();
+  },
+  onSpin: async () => {
+    // reset for replay
+    for (const t of labelAt.values()) t.destroy();
+    labelAt.clear();
+    pendingFx.length = 0;
+    total = 0;
+    totalText.text = '0.00';
+    board.reset();
+
+    playCounter('appear');
+    board.enter(SEED);
+    // seeds land pre-locked via feature:enter, so they get labels directly
+    for (const coin of SEED) paintLabel(coin);
+    refreshHud();
+    await sleep(500);
+
+    for (const hits of ROUNDS) {
+      const result = await board.respin(hits);
+      await Promise.all(pendingFx.splice(0)); // land effects finish first
+      await sleep(450);
+      if (result.done) break;
+    }
+    await collectAll();
+    hud.text = `feature over · TOTAL ${fmt(total)} · press spin to replay`;
+  },
+};
+```
+
 ### hold-and-win
 URL: https://pixi-reels.schmooky.dev/recipes/hold-and-win/
 ```ts
 // @ts-nocheck
-// Injected: ReelSetBuilder, SpeedPresets, CoinSymbol, COIN_TRIGGER, drawCoin,
-//           PIXI, gsap, app, pickWeighted,
-//           EmptySymbol (blank ReelSymbol. renders nothing, used for miss cells)
+// Injected: HoldAndWinBuilder, CoinSymbol, COIN_TRIGGER, PIXI, app
 
 const COIN = 'coin';
-const EMPTY = 'empty';
 const COLS = 5, ROWS = 3, CELL = 60, GAP = 4;
 
-// Build 15 independent 1×1 ReelSets. one per cell.
-const colWidth = COLS * (CELL + GAP) - GAP;
-const colHeight = ROWS * (CELL + GAP) - GAP;
-const startX = (app.screen.width - colWidth) / 2;
-const startY = (app.screen.height - colHeight) / 2;
+// One builder call replaces the hand-rolled per-cell ReelSet loop: the board
+// owns the 15 independent 1x1 reels, the lock bookkeeping, the landing wave,
+// and the respin counter. Coins are opaque to it. `id` picks the registered
+// art, `data` (unused here) carries whatever the game layer wants.
+const board = new HoldAndWinBuilder()
+  .grid(COLS, ROWS)
+  .cellSize(CELL, { gap: GAP })
+  .symbols(r => r.register(COIN, CoinSymbol, COIN_TRIGGER))
+  // Mostly empty so coins flash past during the spin animation. `empty` is
+  // auto-registered by the board.
+  .weights({ [COIN]: 1, empty: 3 })
+  .respins(3)
+  .ticker(app.ticker)
+  .build();
 
-const cells = [];
-for (let col = 0; col < COLS; col++) {
-  for (let row = 0; row < ROWS; row++) {
-    const mini = new ReelSetBuilder()
-      .reels(1).visibleRows(1)
-      .symbolSize(CELL, CELL).symbolGap(0, 0)
-      .symbols(r => {
-        r.register(COIN, CoinSymbol, COIN_TRIGGER);
-        r.register(EMPTY, EmptySymbol, {});
-      })
-      // Mostly empty so coins flash past during the spin animation.
-      .weights({ [COIN]: 1, [EMPTY]: 3 })
-      .speed('normal', { ...SpeedPresets.NORMAL, minimumSpinTime: 320 + (col + row) * 60 })
-      .ticker(app.ticker)
-      .build();
-    mini.x = startX + col * (CELL + GAP);
-    mini.y = startY + row * (CELL + GAP);
-    app.stage.addChild(mini);
-    cells.push({ col, row, reelSet: mini });
-  }
-}
+const boardW = COLS * (CELL + GAP) - GAP;
+const boardH = ROWS * (CELL + GAP) - GAP;
+board.container.x = (app.screen.width - boardW) / 2;
+board.container.y = (app.screen.height - boardH) / 2 - 12;
+app.stage.addChild(board.container);
 
-// Scripted arrivals: 3 coins in round 1, 1 in round 2, 1 in round 3.
+// The HUD never tracks state itself. board events are the single source.
+const hud = new PIXI.Text({
+  text: 'press spin',
+  style: { fontFamily: 'system-ui, sans-serif', fontSize: 13, fontWeight: '600', fill: 0x8a7d66 },
+});
+hud.anchor.set(0.5, 0);
+hud.x = app.screen.width / 2;
+hud.y = board.container.y + boardH + 12;
+app.stage.addChild(hud);
+
+const refreshHud = () => {
+  hud.text = `respins ${board.respinsLeft} · held ${board.lockedCoins.length}/${board.capacity}`;
+};
+board.events.on('respins:changed', refreshHud);
+board.events.on('coin:locked', refreshHud);
+board.events.on('board:full', () => { hud.text = 'GRAND · board full'; });
+board.events.on('feature:end', ({ full }) => {
+  if (!full) hud.text = `over · ${board.lockedCoins.length} coins held`;
+});
+
+// Scripted arrivals: 3 coins in round 1, 1 in round 2, 1 in round 3. In a
+// real game the server decides each round's hits and the loop runs until
+// `result.done`.
 const rounds = [
   [{ col: 0, row: 2 }, { col: 2, row: 0 }, { col: 4, row: 1 }],
   [{ col: 1, row: 0 }],
   [{ col: 3, row: 2 }],
 ];
 
-const heldKeys = new Set();
-const overlays = [];
-
-// Build a held-coin overlay matching the in-reel CoinSymbol visual via the
-// shared `drawCoin` helper. Same shape, same colors, no texture needed.
-function makeCoinOverlay() {
-  const g = new PIXI.Container();
-  const SIZE = CELL - 8;
-  const coin = new PIXI.Graphics();
-  drawCoin(coin, SIZE, SIZE, COIN_TRIGGER);
-  const label = new PIXI.Text({
-    text: COIN_TRIGGER.label,
-    style: {
-      fontFamily:
-        '"Roboto Condensed", "Arial Narrow", "Helvetica Neue Condensed", "Liberation Sans Narrow", system-ui, sans-serif',
-      fontSize: Math.floor(SIZE * 0.24),
-      fontWeight: '800',
-      fill: COIN_TRIGGER.textColor,
-      align: 'center',
-    },
-  });
-  label.anchor.set(0.5);
-  label.x = SIZE / 2;
-  label.y = SIZE / 2;
-  g.addChild(coin);
-  g.addChild(label);
-  g.pivot.set(SIZE / 2, SIZE / 2);
-  return g;
-}
-
 return {
-  cleanup: () => {
-    for (const o of overlays) try { o.destroy(); } catch {}
-    for (const c of cells) try { c.reelSet.destroy(); } catch {}
-  },
+  cleanup: () => board.destroy(),
   onSpin: async () => {
-    // Reset prior state.
-    for (const o of overlays) try { o.destroy(); } catch {}
-    overlays.length = 0;
-    heldKeys.clear();
-    for (const c of cells) c.reelSet.visible = true;
-
+    board.reset();
+    board.enter([]);
     for (const hits of rounds) {
-      const spinPromises = [];
-      const activeCells = [];
-      for (const cell of cells) {
-        const key = `${cell.col},${cell.row}`;
-        if (heldKeys.has(key)) continue;
-        activeCells.push(cell);
-        spinPromises.push(cell.reelSet.spin());
-      }
-
-      await new Promise(r => setTimeout(r, 140));
-      for (const cell of activeCells) {
-        const isHit = hits.some(h => h.col === cell.col && h.row === cell.row);
-        cell.reelSet.setResult([{ visible: [isHit ? COIN : EMPTY] }]);
-      }
-      await Promise.all(spinPromises);
-
-      // Lock in hits with a coin overlay; hide their mini reel.
-      for (const cell of activeCells) {
-        const key = `${cell.col},${cell.row}`;
-        if (!hits.some(h => h.col === cell.col && h.row === cell.row)) continue;
-        const overlay = makeCoinOverlay();
-        overlay.x = cell.reelSet.x + CELL / 2;
-        overlay.y = cell.reelSet.y + CELL / 2;
-        overlay.alpha = 0;
-        overlay.scale.set(1.4);
-        app.stage.addChild(overlay);
-        overlays.push(overlay);
-        heldKeys.add(key);
-        gsap.to(overlay, { alpha: 1, duration: 0.22 });
-        gsap.to(overlay.scale, { x: 1, y: 1, duration: 0.35, ease: 'back.out(2)' });
-        cell.reelSet.visible = false;
-      }
-
+      await board.respin(hits.map(cell => ({ cell, id: COIN })));
       await new Promise(r => setTimeout(r, 650));
     }
   },

@@ -4,14 +4,15 @@ title: Hold & Win respin
 description: Coins lock on land; every new coin resets the respin counter; fill the grid for the grand jackpot. The "coin" formula every studio is shipping in 2024.
 tags: [starter, hold-and-win, respin, jackpot]
 steps:
-  - Maintain a held Map of already-landed coin positions
-  - Each respin, build a grid that keeps held cells and lands 0..N new ones
-  - On every new coin, reset the respin counter to max
-  - When the grid is fully held. grand jackpot
+  - Build the board once — grid, coin symbols, strip weights, respin count
+  - enter(seed) with the triggering coins, then await respin(hits) per round
+  - Board events drive the HUD — respins:changed, coin:locked, board:full
+  - release(cells) clears collected coins; cellCenter() aims the flight
 apis:
-  - ReelSet.spin
-  - ReelSet.setResult
-  - ReelSet.reels / getVisibleSymbols
+  - HoldAndWinBuilder (examples/shared)
+  - HoldAndWinBoard.enter / respin / release
+  - HoldAndWinBoard.events
+  - HoldAndWinBoard.cellCenter / symbolAt
 ---
 
 import code from '../../recipes/hold-and-win.recipe.ts?raw';
@@ -22,53 +23,38 @@ import RecipeFrame from '../../components/RecipeFrame.astro';
   <RecipeRunner code={code} client:only="react" />
 </RecipeFrame>
 
-Press Run a few times. every coin that lands stays put on the next respin.
+Press Run a few times. every coin that lands stays put on the next respin, and the HUD under the board is driven purely by board events.
 
-The full Hold & Win loop. Combines `setResult()` with a game-side `held` map to keep coins sticky across respins. The library doesn't own the mechanic. it gives you deterministic landings and event hooks; the respin accounting is yours.
+A Hold & Win board spins per **cell**, not per column — the engine's atomic spin unit is the reel, so each cell is its own 1×1 `ReelSet`. `HoldAndWinBuilder` (in `examples/shared/`, copy it into your game) owns that grid plus the choreography every H&W game repeats: spin the free cells, lock the hits, reset-or-decrement the counter, detect the full board. The library still doesn't own the mechanic; the board is built entirely on public engine API.
 
 ```ts
-import { ReelSetBuilder, SpriteSymbol } from 'pixi-reels';
+import { HoldAndWinBuilder } from './shared/HoldAndWinBuilder.ts';
 
-const held = new Map<string, string>();   // "r,row" -> symbolId
+const board = new HoldAndWinBuilder<{ value: number }>()
+  .grid(5, 3)
+  .cellSize(72, { gap: 4 })
+  .symbols(r => r.register('coin', CoinSymbol, COIN_TRIGGER))
+  .weights({ coin: 1, empty: 3 })   // coins flash past empties on the strip
+  .respins(3)
+  .ticker(app.ticker)
+  .build();
 
-async function holdAndWinRound() {
-  const maxRespins = 3;
-  let respinsLeft = maxRespins;
+board.events.on('coin:locked', ({ coin, locked, capacity }) => hud.update(coin, locked, capacity));
 
-  while (respinsLeft > 0) {
-    const promise = reelSet.spin();
-
-    // Produce a grid that keeps held coins in place, lands 0..N new coins
-    const grid = buildGridKeepingHeld(held);
-    reelSet.setResult(grid);
-    const result = await promise;
-
-    const newCoins = findNewCoins(result.symbols, held);
-    if (newCoins.length > 0) {
-      respinsLeft = maxRespins;     // reset on every new coin
-      for (const c of newCoins) held.set(`${c.r},${c.row}`, c.symbolId);
-    } else {
-      respinsLeft--;
-    }
-
-    const totalCells = reelSet.reels.length * reelSet.reels[0].getVisibleSymbols().length;
-    if (held.size === totalCells) {
-      console.log('GRAND JACKPOT');
-      break;
-    }
-  }
+// Feature flow — the server stays the only source of truth:
+board.enter(trigger.coins);                       // seeds land locked, counter fills
+while (true) {
+  const round = await server.respin(board.lockedCoins);
+  const result = await board.respin(round.hits);  // wave lands, hits lock, counter resolves
+  if (result.done) break;                         // anything can animate between rounds
 }
 ```
 
-## The three moving parts
+## Who owns what
 
-1. **`buildGridKeepingHeld(held)`**. every held position MUST appear with its locked symbolId; the rest are random / from your weighted generator.
-2. **`findNewCoins(grid, held)`**. any coin on the grid that isn't already in `held` is a new land.
-3. **Respin counter**. resets to `maxRespins` on every new land, decrements on every dry spin. When it hits zero, the round ends.
-
-## Full playable demo
-
-For the playable version with a cheat panel (force landing, guaranteed jackpot, reset), see the [hold-and-win-respin demo](/demos/hold-and-win-respin/).
+1. **The server** decides which cells hit and what each coin carries. A coin is `{ cell, id, data }` — `id` picks the registered art, `data` is an opaque payload the board never reads.
+2. **The board** owns choreography: independent per-cell spins with a staggered landing wave, lock bookkeeping, the reset-on-hit counter, `board:full`. It interprets nothing.
+3. **The game layer** owns meaning. Adders, doublers, collectors, jackpot tiers are all expressed through the board's three openings — events (every beat fires with the coin payload), `symbolAt(cell)` (the live symbol instance, cast to your own class), and `cellBounds()` / `cellCenter()` (pixel geometry for flights and trails). Collected coins that fly away are removed with `release(cells)`, which frees those cells for future respins — whether anything lands there again is, as always, the server's call.
 
 ## Simpler variant: `spin({ holdReels })` on a single ReelSet
 
@@ -88,12 +74,16 @@ Behaviour:
 - `SpinResult.symbols` reports the full visible grid (held rows unchanged, non-held rows landed).
 
 When to pick which:
-- **Per-cell hold-and-win** (this recipe's main pattern, with coins locked one cell at a time): the per-column `ReelSet` array is still the cleanest model. Each cell is its own `ReelSet` with `visibleRows(1)`.
+- **Per-cell hold-and-win** (this recipe's main pattern, with coins locked one cell at a time): `HoldAndWinBuilder`'s independent grid is the model — each cell is its own `ReelSet` with `visibleRows(1)`.
 - **Single-reel respin / partial reroll** (whole columns held, others spin): use `spin({ holdReels })` on a single `ReelSet`. Spotlight, anticipation, win presenters keep working since everything stays inside one engine.
+
+## Full playable demo
+
+For the playable version with a cheat panel (force landing, guaranteed jackpot, reset), see the [hold-and-win-respin demo](/demos/hold-and-win-respin/).
 
 ## Related recipes
 
-- [`EmptySymbol`](/recipes/empty-symbol/). the blank-cell symbol class this recipe registers as the bonus-board background
+- [`EmptySymbol`](/recipes/empty-symbol/). the blank-cell symbol class the board auto-registers for miss cells
 - [Near-miss](/recipes/near-miss/). tease a coin just off the board
 - [Anticipate a reel](/recipes/anticipate-a-reel/). slow the final reel when close to a jackpot
 - [Sticky wild (CellPin)](/recipes/sticky-wild-pin/). the engine-blessed sticky-symbol path

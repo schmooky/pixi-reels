@@ -1,0 +1,45 @@
+---
+/**
+ * Recipe card thumbnail. 16:10. Renders the recipe's preview media if a file
+ * exists at `public/recipes/<slug>/card.<ext>` (or an explicit `image`
+ * override), otherwise a generated placeholder. See `lib/recipeMedia.ts` for
+ * the lookup convention.
+ */
+import { findCardMedia } from '../lib/recipeMedia.ts';
+import RecipePlaceholder from './RecipePlaceholder.astro';
+
+interface Props {
+  slug: string;
+  title: string;
+  /** Optional explicit public URL override. */
+  image?: string;
+}
+
+const { slug, title, image } = Astro.props as Props;
+const media = findCardMedia(slug, image);
+---
+<div class="relative aspect-[16/10] w-full overflow-hidden border-b border-border/60 bg-muted/30">
+  {media?.kind === 'image' && (
+    <img
+      src={media.src}
+      alt={`${title} preview`}
+      loading="lazy"
+      decoding="async"
+      class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.04]"
+    />
+  )}
+  {media?.kind === 'video' && (
+    <video
+      autoplay
+      muted
+      loop
+      playsinline
+      preload="metadata"
+      aria-label={`${title} preview`}
+      class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.04]"
+    >
+      <source src={media.src} />
+    </video>
+  )}
+  {!media && <RecipePlaceholder title={title} />}
+</div>

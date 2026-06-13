@@ -20,6 +20,14 @@ export interface RecipeMeta {
   steps: string[];
   apis: string[];
   tags: string[];
+  /**
+   * Card preview, OPTIONAL. By convention you don't set this: drop a file at
+   * `public/recipes/<slug>/card.<ext>` (gif / webp / png / mp4 ...) and it is
+   * picked up automatically. With no file the card renders a generated
+   * placeholder from the title. Set this only to point at a non-conventional
+   * path. See the "Recipe previews" guide and `lib/recipeMedia.ts`.
+   */
+  image?: string;
 }
 
 /** Display order + label for each group on the /recipes/ index page. */
@@ -354,13 +362,41 @@ export const RECIPES: RecipeMeta[] = [
     title: 'Hold & Win respin',
     oneLiner: 'Coins lock on land, respin until the grid fills. the "coin" formula every studio is shipping.',
     steps: [
-      'Maintain a held Map of already-landed coin positions',
-      'Each respin, build a grid that keeps held cells and lands 0..N new ones',
-      'On every new coin, reset the respin counter to max',
-      'When the grid is fully held. grand jackpot',
+      'Build the board once with HoldAndWinBuilder — grid, coin symbols, respin count',
+      'enter(seed) with the triggering coins, then await respin(hits) per round',
+      'Board events drive the HUD — respins:changed, coin:locked, board:full',
+      'release(cells) clears collected coins; when the grid fills. grand jackpot',
     ],
-    apis: ['ReelSet.spin', 'ReelSet.setResult', 'Reel.getVisibleSymbols'],
+    apis: ['HoldAndWinBuilder', 'HoldAndWinBoard.respin', 'HoldAndWinBoard.events', 'HoldAndWinBoard.release'],
     tags: ['starter', 'hold-and-win', 'respin'],
+  },
+  {
+    slug: 'hold-and-win-spine',
+    group: 'starters',
+    title: 'Hold & Win: Spine coins + collect',
+    oneLiner: 'The hold & win board with production-style Spine coins. fall on land, idle while held, win on lock. MINI/MAJOR jackpot coins reveal their tier on lock, side plaques celebrate, and a collect flight drains the board into a Spine counter.',
+    steps: [
+      'Register SpineReelSymbol ids. fall / idle_counter / win map straight onto the reel lifecycle',
+      'Jackpot coins land wearing their tier word; on lock the reveal spins it off into the money face',
+      'coin:locked paints value labels and flashes the matching MINI / MAJOR plaque',
+      'On feature end, release() each cell and fly a Spine clone to the counter via cellCenter()',
+    ],
+    apis: ['HoldAndWinBuilder', 'SpineReelSymbol', 'HoldAndWinBoard.release', 'HoldAndWinBoard.cellCenter'],
+    tags: ['starter', 'hold-and-win', 'spine', 'collect', 'recent'],
+  },
+  {
+    slug: 'hold-and-win-collector',
+    group: 'starters',
+    title: 'Hold & Win: collector + flight choreography',
+    oneLiner: 'Opens holding three 5.00 coins; a 10.00 lands, then a collector orb pulls a value clone out of every coin along bezier arcs, summing tick by tick. Next press resets with a column-wave sweep.',
+    steps: [
+      'The board opens pre-seeded - enter(seed) runs at boot, before any spin',
+      'coinWaves() picks the choreography: sequence / by-row / by-col / all / index chunks',
+      'Value-label clones bezierFly() into the collector; the sum ticks up per arrival',
+      'Land effects gate the next respin; the next press sweeps out and reseeds',
+    ],
+    apis: ['HoldAndWinBuilder', 'coinWaves', 'bezierFly', 'HoldAndWinBoard.symbolAt'],
+    tags: ['starter', 'hold-and-win', 'collector', 'flight', 'spine', 'recent'],
   },
 
   // ── Mechanic recipes ───────────────────────────────────────────────

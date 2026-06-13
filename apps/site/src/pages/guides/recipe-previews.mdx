@@ -1,0 +1,75 @@
+---
+layout: ../../layouts/Docs.astro
+title: Recipe previews
+section: guides
+eyebrow: For authors
+description: How to give a recipe a card thumbnail and inline body images. Convention-first — drop a file in public/ and it appears. Missing assets fall back to a generated placeholder, so the page always looks finished.
+---
+
+Every recipe card and every recipe page can carry preview media — a gif, an animated webp, a static screenshot, or a short clip. It is **convention-first and zero-config**: you drop a file in the right place and it shows up. Nothing is required, because anything missing renders a generated placeholder built from the recipe title, so the index and the pages always look finished.
+
+## Card thumbnails
+
+Each recipe card on the [/recipes/](/recipes/) grid shows a **16:10** thumbnail. To give a recipe a real one, drop a file at:
+
+```
+public/recipes/<slug>/card.<ext>
+```
+
+where `<slug>` matches the recipe's URL (the `slug` in `content/recipes.ts`). That's the whole step — no registry edit. The card picks it up on the next build.
+
+Supported extensions, in priority order:
+
+```
+gif  webp  avif  png  jpg  jpeg  mp4  webm
+```
+
+Animated formats win over static, so if both `card.gif` and `card.png` exist, the gif is used. `mp4` / `webm` render as a muted, looping, autoplaying `<video>`. The image is `object-cover`, so any source proportion works — but compose for ~16:10 so nothing important sits where the crop bites.
+
+When no file is found, the card shows a placeholder: a tinted faux-reel board with a monogram from the title. It's deterministic (same title → same tint), so the grid stays varied and intentional rather than blank.
+
+## Inline body images
+
+Inside a recipe's MDX body, use the `RecipeImage` component for figures — gifs of a mechanic mid-motion, before/after stills, a frame breakdown:
+
+```mdx
+import RecipeImage from '../../components/RecipeImage.astro';
+
+<RecipeImage
+  src="/recipes/hold-and-win-spine/jackpot-reveal.gif"
+  alt="A MINI coin lands wearing its tier word, spins, and settles on the gold face"
+  caption="The tier reveal, frame by frame"
+/>
+```
+
+| Prop | Required | Notes |
+|---|---|---|
+| `src` | no | Public URL, e.g. `/recipes/<slug>/foo.gif`. Omit to force a placeholder. |
+| `alt` | **yes** | Accessible name **and** the placeholder's caption when `src` is missing. |
+| `caption` | no | Figure caption under the media. |
+| `ratio` | no | Placeholder box ratio, default `16/10`. Real media uses its own size. |
+
+Drop as many as you like. They follow the same rule as cards: if the file exists under `public/`, it renders; if not, you get a placeholder that **shows the `alt` text and the exact path to provide** — so an unfinished page reads as "art pending here: `public/recipes/x/foo.gif`", never as a broken image. Write the `alt` as if the image were already there; it does double duty.
+
+## Non-conventional paths
+
+If an asset lives somewhere other than `public/recipes/<slug>/card.*`, set an explicit `image` on the recipe in `content/recipes.ts`:
+
+```ts
+{
+  slug: 'my-recipe',
+  // ...
+  image: '/shared/my-shared-preview.gif',
+}
+```
+
+An `image` that points at a real file wins over the conventional lookup; one that points at nothing falls through to the convention, then to the placeholder.
+
+## Tips
+
+- **Keep gifs small.** A card is shown at ~370px wide; 800px source is plenty. Trim to 2–4 seconds and a tight loop. Prefer animated `webp` over `gif` for the same motion at a fraction of the bytes.
+- **Capture from the live demo.** Every recipe ships a runnable demo — record the canvas region for a 1:1 preview of exactly what the reader will run.
+- **Compose for the crop.** Cards are `object-cover` at 16:10; center the board, leave a little breathing room.
+- **Light background.** The site card is light; export with an opaque light backdrop (or composite onto one) so transparent canvases don't read as gray.
+
+The Hold & Win recipes — [respin](/recipes/hold-and-win/), [Spine coins](/recipes/hold-and-win-spine/), [collector](/recipes/hold-and-win-collector/) — ship real captured cards; browse the rest of the [grid](/recipes/) to see the placeholders the rest fall back to.

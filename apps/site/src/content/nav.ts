@@ -38,6 +38,7 @@ export const GUIDES_NAV: NavSection[] = [
     items: [
       { label: 'Cheats & testing', href: '/guides/cheats-and-testing/' },
       { label: 'Debugging', href: '/guides/debugging/' },
+      { label: 'Recipe previews', href: '/guides/recipe-previews/' },
     ],
   },
 ];

@@ -1,0 +1,82 @@
+---
+layout: ../../layouts/Recipe.astro
+title: "Hold & Win: Spine coins + collect"
+description: A 5x4 Hold & Win board where every cell is a real Spine skeleton — fall on land, idle while held, win on lock — plus MINI / MAJOR jackpot coins whose win animation IS the tier reveal, side plaques that celebrate, and a collect flight into a Spine counter.
+tags: [hold-and-win, spine, collect, respin, jackpot]
+steps:
+  - Register SpineReelSymbol ids — fall / idle_counter / win map straight onto the reel lifecycle
+  - Jackpot coins land wearing their tier word; on lock the reveal spins it off into the money face
+  - coin:locked paints value labels and flashes the matching MINI / MAJOR side plaque
+  - On feature end, release() each cell and fly a Spine clone to the counter via cellCenter()
+apis:
+  - HoldAndWinBuilder (examples/shared)
+  - SpineReelSymbol (pixi-reels/spine)
+  - HoldAndWinBoard.release / cellCenter
+  - HoldAndWinBoard.events
+---
+
+import code from '../../recipes/hold-and-win-spine.recipe.ts?raw';
+import { RecipeRunner } from '../../components/RecipeRunner.tsx';
+import RecipeFrame from '../../components/RecipeFrame.astro';
+import RecipeImage from '../../components/RecipeImage.astro';
+
+<RecipeFrame>
+  <RecipeRunner code={code} height={520} client:only="react" />
+</RecipeFrame>
+
+Press Run. three trigger coins seed the board, two respin waves land more, the counter drains down on misses, and when the feature ends every held coin flies off the board into the counter widget.
+
+The strips spin the source game's full base set — cherry, lemon, orange, plum, grape, watermelon, bar, bell — while only coins ever land. Value coins are the gold lightning coin with their amount in the game's own gold bitmap digit font (`25.00` — always two decimals); the digits, comma and dot glyphs were rebaked from the original sprite sheet into a BMFont (`/hw-spine/goldfont.fnt`) and rendered with `PIXI.BitmapText`.
+
+This is the [Hold & Win starter](/recipes/hold-and-win/) upgraded to production-style art. Every cell is still its own 1×1 `ReelSet` under `HoldAndWinBuilder`; the difference is the symbol class and the collect choreography.
+
+## The skeleton's vocabulary does the work
+
+The coin skeleton ships the exact animation set the reel lifecycle wants, so registration is one block — no custom symbol class:
+
+```ts
+r.register('coin', SpineReelSymbol, {
+  spineMap: { coin: { skeleton: 'hw-coin', atlas: 'hw-atlas' } },
+  idleAnimation: 'idle_counter',   // lit loop while held (and on the strip)
+  landingAnimation: 'fall',        // one-shot drop-in, autoPlayLanding fires it
+  winAnimation: 'win',             // the board calls playWin() on every lock
+  autoPlayLanding: true,
+  scale: CELL / 360,               // skeleton authored at ~352px
+});
+```
+
+`fall` plays when a cell lands, the board's lock calls `playWin()`, and the symbol settles back into `idle_counter`. The Hold & Win choreography never touches Spine directly.
+
+## Jackpot tiers: word on, spin, money face
+
+The MINI and MAJOR coins share one extra skeleton whose animations are named by tier. The coin lands wearing its tier word (`mini_x` / `major_x` idle loops); on lock, the tier one-shot (`mini` / `major`) spins the coin, throws the wording off and settles on the `coin` money-face loop — at which point the amount paints over it in the gold font, exactly like a plain value coin. The reveal is driven from the `coin:locked` event via `symbolAt(cell)`; the board itself stays oblivious. Jackpot coins land server-placed only (`weight: 0`), and the matching plaque above the reels plays its `win` on lock.
+
+<RecipeImage
+  src="/recipes/hold-and-win-spine/jackpot-reveal.gif"
+  alt="A MINI coin lands wearing its tier word, spins, and settles on the gold money face"
+  caption="The tier reveal, frame by frame"
+/>
+
+## Coins stay opaque, values stay game-side
+
+Each hit is `{ cell, id, data: { value, kind? } }`. The board never reads `data`; the recipe paints value labels from the `coin:locked` event (skipping jackpot coins — their art carries the tier), flashes plaques on `kind`, and sums on collect. Swap the payload for multipliers or collector flags — the board doesn't change.
+
+## The collect flight
+
+When the feature ends the recipe walks the locked coins and, per coin:
+
+1. spawns a throwaway Spine clone at `board.cellCenter(cell)`,
+2. calls `board.release([cell])` so the board cell empties under it (and the `coin:released` event clears the label),
+3. tweens the clone to the counter, which plays its own `increment` animation as the total ticks up.
+
+Flight and trail art are deliberately **not** a board feature — the board hands out exact pixel geometry and events, and the game layer owns whatever flies. A golden-trail Spine or particle ribbon drops into step 3 without touching anything else.
+
+## Asset note
+
+The skeletons are converted from a Spine **3.7.94** game export to **4.2** with [`tools/spine-3.7-to-4.2`](https://github.com/schmooky/pixi-reels/tree/main/tools/spine-3.7-to-4.2) — normalized-to-absolute bezier rewrite, skins/timeline restructure — and validated against the real `spine-core` 4.2 parser before ever reaching the browser.
+
+## Related recipes
+
+- [Hold & Win respin](/recipes/hold-and-win/). the same board with no-asset coins, plus the holdReels variant
+- [Spine big symbols](/recipes/spine-big-symbols/). SpineReelSymbol on a standard reel set
+- [Value coin (CellPin)](/recipes/value-coin-pin/). coin payloads via pins on a single ReelSet

@@ -1,6 +1,7 @@
 ---
 import Base from '../../layouts/Base.astro';
 import { RECIPES, RECIPE_GROUPS } from '../../content/recipes.ts';
+import RecipeThumb from '../../components/RecipeThumb.astro';
 import { ArrowRight } from 'lucide-react';
 import { breadcrumbLd, articleLd, SITE } from '../../lib/seo.ts';
 
@@ -74,12 +75,15 @@ for (const recipe of RECIPES) {
               {groupRecipes.map((r) => (
                 <a
                   href={`/recipes/${r.slug}/`}
-                  class="group flex flex-col rounded-xl border border-border bg-card p-5 transition-all hover:border-primary/40 hover:-translate-y-0.5"
+                  class="group flex flex-col overflow-hidden rounded-xl border border-border bg-card transition-all hover:border-primary/40 hover:-translate-y-0.5"
                 >
-                  <h3 class="text-base font-semibold tracking-tight">{r.title}</h3>
-                  <p class="mt-2 text-sm text-muted-foreground">{r.oneLiner}</p>
-                  <div class="mt-4 inline-flex items-center gap-1 text-xs font-medium text-foreground/60 transition-colors group-hover:text-foreground">
-                    Open recipe <ArrowRight size={13} strokeWidth={2} />
+                  <RecipeThumb slug={r.slug} title={r.title} image={r.image} />
+                  <div class="flex flex-1 flex-col p-5">
+                    <h3 class="text-base font-semibold tracking-tight">{r.title}</h3>
+                    <p class="mt-2 text-sm text-muted-foreground">{r.oneLiner}</p>
+                    <div class="mt-4 inline-flex items-center gap-1 text-xs font-medium text-foreground/60 transition-colors group-hover:text-foreground">
+                      Open recipe <ArrowRight size={13} strokeWidth={2} />
+                    </div>
                   </div>
                 </a>
               ))}
