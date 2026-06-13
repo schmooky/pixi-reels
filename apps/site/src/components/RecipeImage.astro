@@ -1,0 +1,48 @@
+---
+/**
+ * Inline preview image / gif / clip for a recipe MDX body.
+ *
+ * ```mdx
+ * import RecipeImage from '../../components/RecipeImage.astro';
+ *
+ * <RecipeImage src="/recipes/hold-and-win/collect.gif" alt="Coins arc into the counter" caption="The collect flight" />
+ * ```
+ *
+ * Renders the file if it exists under `public/`; otherwise a placeholder that
+ * surfaces the `alt` text and the exact path to drop a file at — so the page
+ * stays legible before the asset is provided. `alt` is required; it doubles
+ * as the placeholder caption and the image's accessible name.
+ */
+import { resolvePublicMedia, monogram } from '../lib/recipeMedia.ts';
+import RecipePlaceholder from './RecipePlaceholder.astro';
+
+interface Props {
+  src?: string;
+  alt: string;
+  /** Caption under the figure. */
+  caption?: string;
+  /** Aspect ratio for the placeholder box, e.g. "16/10" (default) or "5/4". */
+  ratio?: string;
+}
+
+const { src, alt, caption, ratio = '16/10' } = Astro.props as Props;
+const media = resolvePublicMedia(src);
+// Title the placeholder by alt so its hue/monogram are stable per image.
+const placeholderTitle = alt || monogram(src ?? 'preview');
+---
+<figure class="not-prose my-6">
+  {media?.kind === 'image' && (
+    <img src={media.src} alt={alt} loading="lazy" decoding="async" class="w-full rounded-xl border border-border bg-muted/30" />
+  )}
+  {media?.kind === 'video' && (
+    <video autoplay muted loop playsinline preload="metadata" aria-label={alt} class="w-full rounded-xl border border-border bg-muted/30">
+      <source src={media.src} />
+    </video>
+  )}
+  {!media && (
+    <div class="overflow-hidden rounded-xl border border-dashed border-border" style={`aspect-ratio: ${ratio};`}>
+      <RecipePlaceholder title={placeholderTitle} caption={alt} hint={src ? `public${src}` : undefined} />
+    </div>
+  )}
+  {caption && <figcaption class="mt-2 text-center text-xs text-muted-foreground">{caption}</figcaption>}
+</figure>
