@@ -74,7 +74,7 @@ export default function SpriteClassicDemo() {
           const mkPrimary = (label: string) => {
             const btn = document.createElement('button');
             btn.textContent = label;
-            btn.className = `${baseBtn} text-primary-foreground shadow-lg shadow-primary/30 bg-[linear-gradient(135deg,hsl(var(--primary)),hsl(var(--accent)))] hover:brightness-110`;
+            btn.className = `${baseBtn} bg-primary text-primary-foreground shadow hover:bg-primary/90`;
             return btn;
           };
           const mkSecondary = (label: string) => {

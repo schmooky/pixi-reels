@@ -69,6 +69,7 @@ const ALLOWED_NON_ASCII = new Set([
   '♣', '♛',                // card-suit / crown glyphs baked into generated-symbols icons
   '▶', '◀', '▲', '▼',      // solid-triangle arrowheads for ASCII flow diagrams
   '⌘',                     // Mac Cmd-key glyph in keyboard-shortcut UI (Pagefind search ⌘K)
+  '👉',                    // pointing-hand on the landing "Browse recipes" CTA
   // Box drawing characters — used by the debug ASCII grid and by
   // comment banners like `// ─── Section ───`.
   '─', '│', '┌', '┐', '└', '┘', '├', '┤', '┬', '┴', '┼',
@@ -84,9 +85,11 @@ function offendersInLine(line) {
     const code = ch.codePointAt(0);
     if (code < 0x80) continue;                   // ASCII
     if (ALLOWED_NON_ASCII.has(ch)) continue;
-    if (code >= 0xd800 && code <= 0xdbff) {       // high surrogate -> emoji
-      out.push(ch + (line[i + 1] ?? ''));
+    if (code >= 0xd800 && code <= 0xdbff) {       // high surrogate -> astral char (emoji)
+      const pair = ch + (line[i + 1] ?? '');
       i++;
+      if (ALLOWED_NON_ASCII.has(pair)) continue;  // allow-listed emoji
+      out.push(pair);
       continue;
     }
     out.push(ch);

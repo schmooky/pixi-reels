@@ -1,0 +1,56 @@
+---
+/*
+  Install-command pill with copy-to-clipboard. shadcn-style: bordered card,
+  mono text, a $ prompt, and a copy button that flips to a check on success.
+  No framework island . one tiny inline script wires every instance.
+*/
+interface Props {
+  command: string;
+  class?: string;
+}
+const { command, class: className = '' } = Astro.props as Props;
+---
+<div
+  class:list={[
+    'inline-flex items-center gap-3 rounded-lg border border-border bg-card px-4 py-2.5 font-mono text-sm shadow-sm',
+    className,
+  ]}
+>
+  <span class="select-none text-muted-foreground" aria-hidden>$</span>
+  <code class="text-foreground">{command}</code>
+  <button
+    type="button"
+    class="copy-cmd ml-1 inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    data-command={command}
+    aria-label="Copy command"
+  >
+    <svg class="icon-copy h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden>
+      <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+    </svg>
+    <svg class="icon-check hidden h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden>
+      <path d="M20 6 9 17l-5-5" />
+    </svg>
+  </button>
+</div>
+
+<script>
+  document.querySelectorAll<HTMLButtonElement>('.copy-cmd').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const cmd = btn.dataset.command ?? '';
+      try {
+        await navigator.clipboard.writeText(cmd);
+      } catch {
+        return;
+      }
+      const copy = btn.querySelector('.icon-copy');
+      const check = btn.querySelector('.icon-check');
+      copy?.classList.add('hidden');
+      check?.classList.remove('hidden');
+      setTimeout(() => {
+        copy?.classList.remove('hidden');
+        check?.classList.add('hidden');
+      }, 1600);
+    });
+  });
+</script>
