@@ -26,8 +26,27 @@ export interface Partner {
 
 export const PARTNERS: Partner[] = [
   {
-    name: 'pixmove',
+    name: 'Pixmove Games',
     logo: '/partners/pixmove.svg',
+    url: 'https://pixmove.com',
     blurb: 'Slot game studio shipping pixi-reels-powered titles.',
+  },
+  {
+    name: 'Playson',
+    logo: '/partners/playson.svg',
+    url: 'https://playson.com',
+    blurb: 'Slot game provider building production titles on the engine.',
+  },
+  {
+    name: '3 Oaks Gaming',
+    logo: '/partners/3oaks.svg',
+    url: 'https://3oaks.com',
+    blurb: 'Slot game provider building production titles on the engine.',
+  },
+  {
+    name: 'Mancala Gaming',
+    logo: '/partners/mancala.svg',
+    url: 'https://mancalagaming.com',
+    blurb: 'Slot, crash, and instant-game provider building on the engine.',
   },
 ];

@@ -52,14 +52,14 @@ export default function ScatterFsDemo() {
             const overlay = document.createElement('div');
             overlay.className = 'absolute inset-0 z-30 flex items-center justify-center';
             overlay.style.background =
-              'radial-gradient(600px 300px at 50% 45%, hsl(22 92% 52% / 0.45), transparent 65%), hsl(27 40% 7% / 0.65)';
+              'radial-gradient(600px 300px at 50% 45%, hsl(0 0% 100% / 0.08), transparent 65%), hsl(240 10% 4% / 0.65)';
             overlay.style.backdropFilter = 'blur(2px)';
             overlay.innerHTML = `
-              <div class="rounded-2xl border border-border bg-card/95 px-10 py-8 text-center shadow-2xl shadow-primary/30 animate-fade-in max-w-[360px]">
-                <div class="text-[11px] font-mono uppercase tracking-[0.14em] text-primary">${title}</div>
-                <div class="mt-3 text-5xl font-bold tracking-tight" style="background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent))); -webkit-background-clip: text; background-clip: text; color: transparent;">${big}</div>
+              <div class="rounded-2xl border border-border bg-card/95 px-10 py-8 text-center shadow-2xl shadow-black/30 animate-fade-in max-w-[360px]">
+                <div class="text-[11px] font-mono uppercase tracking-[0.14em] text-muted-foreground">${title}</div>
+                <div class="mt-3 text-5xl font-bold tracking-tight text-foreground">${big}</div>
                 <p class="mt-3 text-sm text-muted-foreground">${body}</p>
-                <button class="mt-6 inline-flex h-10 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-accent px-6 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/40 transition-all hover:brightness-110" data-cta>${cta}</button>
+                <button class="mt-6 inline-flex h-10 items-center justify-center rounded-lg bg-primary px-6 text-sm font-semibold text-primary-foreground shadow transition-colors hover:bg-primary/90" data-cta>${cta}</button>
               </div>
             `;
             host.appendChild(overlay);

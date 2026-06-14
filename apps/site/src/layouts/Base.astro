@@ -23,6 +23,18 @@ const {
 <!doctype html>
 <html lang="en">
   <head>
+    {/*
+      Set the theme class before first paint so there's no flash of the wrong
+      mode. Reads an explicit choice from localStorage, else the OS preference.
+      Kept inline (is:inline) so it ships verbatim and runs synchronously.
+    */}
+    <script is:inline>
+      (() => {
+        const stored = localStorage.getItem('theme');
+        const dark = stored === 'dark' || (!stored && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        document.documentElement.classList.toggle('dark', dark);
+      })();
+    </script>
     <SEO
       title={title}
       description={description}

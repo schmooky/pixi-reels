@@ -1,77 +1,96 @@
 ---
 import { PARTNERS } from '../content/partners.ts';
+import pixmoveSvg from '../../public/partners/pixmove.svg?raw';
+import playsonSvg from '../../public/partners/playson.svg?raw';
+import oaks3Svg from '../../public/partners/3oaks.svg?raw';
+import mancalaSvg from '../../public/partners/mancala.svg?raw';
 
 /**
- * "Studios shipping with pixi-reels" — landing-page logo strip.
+ * "Studios shipping with pixi-reels" — landing-page logo carousel.
  *
- * Reads from `content/partners.ts`. Each entry renders as a logo tile
- * with an optional outbound link. Designed to look right with anywhere
- * from 1 to ~12 entries: under 4 partners the row centers; above that
- * it auto-flows into multiple rows.
+ * Reads from `content/partners.ts`. Each logo is the real brand SVG, inlined
+ * (no border, no card) so its neutral parts (authored as `currentColor`)
+ * follow the theme — ink in light, paper in dark — while brand accents
+ * (pixmove yellow, Playson red, 3 Oaks orange/gold) stay fixed.
  *
- * No JS. logos are inline `<img>` tags rendering SVG. Hover lifts the
- * tile and lights the border in the brand orange.
+ * The strip auto-scrolls: the track holds two identical copies of the list,
+ * and `animate-marquee` translates it by -50%, so the loop is seamless for
+ * any number of partners. Pauses on hover; static under reduced-motion.
  */
+const SVG_BY_LOGO: Record<string, string> = {
+  '/partners/pixmove.svg': pixmoveSvg,
+  '/partners/playson.svg': playsonSvg,
+  '/partners/3oaks.svg': oaks3Svg,
+  '/partners/mancala.svg': mancalaSvg,
+};
+
+/**
+ * Scope an SVG's internal ids (gradients, clipPaths) to a token so the two
+ * carousel copies don't end up with duplicate ids in the document. No-op for
+ * logos that have no ids.
+ */
+function scopeSvgIds(raw: string, token: string): string {
+  return raw
+    .replace(/id="([^"]+)"/g, (_m, id) => `id="${token}-${id}"`)
+    .replace(/url\(#([^)]+)\)/g, (_m, id) => `url(#${token}-${id})`)
+    .replace(/(xlink:href|href)="#([^"]+)"/g, (_m, attr, id) => `${attr}="#${token}-${id}"`);
+}
+
 const partners = PARTNERS;
 ---
 
 <section class="border-b border-border/60 py-20" aria-labelledby="partners-heading">
   <div class="container">
     <div class="mx-auto mb-10 max-w-2xl text-center">
-      <div class="mb-3 inline-flex items-center gap-2 rounded-full border border-border/80 bg-card/60 px-3 py-1 text-[11px] font-mono uppercase tracking-[0.18em] text-muted-foreground backdrop-blur-sm">
-        <span class="inline-block h-1.5 w-1.5 rounded-full bg-primary"></span>
-        Studios &amp; providers
-      </div>
       <h2 id="partners-heading" class="text-balance text-3xl font-semibold tracking-tight sm:text-4xl">
-        Shipping with <span class="gradient-text">pixi-reels</span>
+        Partners of <span class="gradient-text">pixi-reels</span>
       </h2>
       <p class="mt-3 text-muted-foreground">
-        Game studios and providers building production slot titles on the engine.
+        Game studios and providers collaborating on the engine.
       </p>
     </div>
 
-    <ul class="mx-auto grid max-w-5xl grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5" role="list">
-      {partners.map((p) => {
-        const tile = (
-          <div class="group flex h-24 items-center justify-center rounded-2xl border border-border/80 bg-card/60 px-4 transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:bg-card hover:shadow-lg hover:shadow-primary/10">
-            <img
-              src={p.logo}
-              alt={`${p.name} logo`}
-              loading="lazy"
-              decoding="async"
-              class="max-h-12 w-auto opacity-90 transition-opacity group-hover:opacity-100"
-            />
-          </div>
-        );
-        return (
-          <li>
-            {p.url
-              ? (
-                <a
-                  href={p.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label={p.blurb ?? `${p.name} website`}
-                  class="block"
-                >
-                  {tile}
-                </a>
-              )
-              : tile}
-          </li>
-        );
-      })}
-    </ul>
-
-    <p class="mt-10 text-center text-sm text-muted-foreground">
-      Shipping with pixi-reels?
-      <a
-        href="https://github.com/schmooky/pixi-reels/issues/new?labels=partner&template=partner.yml&title=Partner%3A+%5Bstudio+name%5D"
-        class="font-medium text-foreground underline decoration-primary/40 underline-offset-4 transition-colors hover:text-primary hover:decoration-primary"
-      >
-        Add your studio to the list
-      </a>
-      .
-    </p>
+    <div class="group relative mx-auto max-w-2xl overflow-hidden [mask-image:linear-gradient(90deg,transparent,black_12%,black_88%,transparent)]">
+      <div class="flex w-max animate-marquee group-hover:[animation-play-state:paused] motion-reduce:animate-none">
+        {[0, 1].map((copy) => (
+          <ul class="flex shrink-0 items-center gap-16 pr-16" role="list" aria-hidden={copy === 1 ? 'true' : undefined}>
+            {partners.map((p, i) => {
+              const raw = SVG_BY_LOGO[p.logo];
+              const svg = raw ? scopeSvgIds(raw, `c${copy}p${i}`) : undefined;
+              const logo = svg
+                ? (
+                  <span
+                    role="img"
+                    aria-label={`${p.name} logo`}
+                    class="block text-foreground [&>svg]:h-10 [&>svg]:w-auto"
+                    set:html={svg}
+                  />
+                )
+                : (
+                  <img src={p.logo} alt={`${p.name} logo`} loading="lazy" decoding="async" class="h-10 w-auto" />
+                );
+              return (
+                <li>
+                  {p.url
+                    ? (
+                      <a
+                        href={p.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label={p.blurb ?? `${p.name} website`}
+                        tabindex={copy === 1 ? -1 : undefined}
+                        class="block opacity-80 transition-opacity hover:opacity-100"
+                      >
+                        {logo}
+                      </a>
+                    )
+                    : logo}
+                </li>
+              );
+            })}
+          </ul>
+        ))}
+      </div>
+    </div>
   </div>
 </section>

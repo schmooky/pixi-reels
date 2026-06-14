@@ -13,8 +13,8 @@
  * `data-mermaid-init` marker so multiple `<Mermaid />` instances on one page
  * only initialize mermaid once.
  *
- * Theme matches the site's CSS variables resolved at load time so dark-mode
- * switches (when added) flow through without component changes.
+ * Theme matches the site's CSS variables; colors are re-resolved and the
+ * diagram re-rendered whenever the light/dark theme toggles.
  */
 
 interface Props {
@@ -35,68 +35,106 @@ const id = `mermaid-${Math.random().toString(36).slice(2, 10)}`;
 </figure>
 
 <script>
-  // Resolve site CSS variables at runtime so the diagram inherits the
-  // current theme. Falls back to literal HSL values matching global.css
-  // when the document hasn't painted yet.
-  function resolveVar(name: string, fallback: string): string {
-    if (typeof document === 'undefined') return fallback;
+  // Read a site color token and return it in a form mermaid's color parser
+  // (khroma) understands. The CSS vars are space-separated HSL triples
+  // ("240 10% 3.9%"); khroma needs the comma form ("hsl(240, 10%, 3.9%)").
+  function color(name: string, fallback: string): string {
     const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-    return v ? `hsl(${v})` : fallback;
+    if (!v) return fallback;
+    const parts = v.split(/\s+/);
+    return parts.length === 3 ? `hsl(${parts[0]}, ${parts[1]}, ${parts[2]})` : v;
   }
 
-  async function initMermaid() {
-    // Bail before pulling in the ~500 KB mermaid library if there is no
-    // <pre class="mermaid"> on this page. Astro will only ship this
-    // script on pages that include the <Mermaid /> component, but a page
-    // can still mount the component with zero charts in some edge cases.
-    if (!document.querySelector('pre.mermaid')) return;
-    if (document.documentElement.dataset.mermaidInit === 'true') return;
-    document.documentElement.dataset.mermaidInit = 'true';
+  // Full monochrome palette: node/actor/note fills use a surface token (not
+  // --primary, which is ink in light / paper in dark), text uses --foreground,
+  // and notes are muted instead of mermaid's default yellow.
+  function themeVariables() {
+    return {
+      background: color('--card', '#ffffff'),
+      primaryColor: color('--secondary', '#f4f4f5'),
+      primaryTextColor: color('--foreground', '#0a0a0a'),
+      primaryBorderColor: color('--border', '#e4e4e7'),
+      secondaryColor: color('--muted', '#f4f4f5'),
+      secondaryTextColor: color('--foreground', '#0a0a0a'),
+      secondaryBorderColor: color('--border', '#e4e4e7'),
+      tertiaryColor: color('--muted', '#f4f4f5'),
+      tertiaryTextColor: color('--foreground', '#0a0a0a'),
+      tertiaryBorderColor: color('--border', '#e4e4e7'),
+      lineColor: color('--muted-foreground', '#71717a'),
+      textColor: color('--foreground', '#0a0a0a'),
+      mainBkg: color('--secondary', '#f4f4f5'),
+      nodeBorder: color('--border', '#e4e4e7'),
+      nodeTextColor: color('--foreground', '#0a0a0a'),
+      clusterBkg: color('--muted', '#f4f4f5'),
+      clusterBorder: color('--border', '#e4e4e7'),
+      titleColor: color('--foreground', '#0a0a0a'),
+      edgeLabelBackground: color('--card', '#ffffff'),
+      // Sequence diagrams — these are what the timeline charts use.
+      actorBkg: color('--secondary', '#f4f4f5'),
+      actorBorder: color('--border', '#e4e4e7'),
+      actorTextColor: color('--foreground', '#0a0a0a'),
+      actorLineColor: color('--border', '#e4e4e7'),
+      signalColor: color('--muted-foreground', '#71717a'),
+      signalTextColor: color('--foreground', '#0a0a0a'),
+      labelBoxBkgColor: color('--muted', '#f4f4f5'),
+      labelBoxBorderColor: color('--border', '#e4e4e7'),
+      labelTextColor: color('--foreground', '#0a0a0a'),
+      loopTextColor: color('--foreground', '#0a0a0a'),
+      noteBkgColor: color('--muted', '#f4f4f5'),
+      noteTextColor: color('--foreground', '#0a0a0a'),
+      noteBorderColor: color('--border', '#e4e4e7'),
+      activationBkgColor: color('--secondary', '#f4f4f5'),
+      activationBorderColor: color('--border', '#e4e4e7'),
+      sequenceNumberColor: color('--background', '#ffffff'),
+      fontFamily: 'Inter, system-ui, sans-serif',
+      fontSize: '14px',
+    };
+  }
 
-    const mermaid = (await import('mermaid')).default;
-    mermaid.initialize({
+  // Cache each chart's original source so we can re-render on theme change
+  // (after the first run, the <pre> holds the rendered SVG, not the source).
+  const sources = new WeakMap<Element, string>();
+  let mermaidLib: typeof import('mermaid').default | null = null;
+
+  async function render() {
+    const nodes = document.querySelectorAll('pre.mermaid');
+    if (!nodes.length) return;
+    if (!mermaidLib) mermaidLib = (await import('mermaid')).default;
+
+    nodes.forEach((el) => {
+      if (!sources.has(el)) sources.set(el, el.textContent ?? '');
+      el.innerHTML = sources.get(el) ?? '';
+      el.removeAttribute('data-processed');
+    });
+
+    mermaidLib.initialize({
       startOnLoad: false,
       securityLevel: 'strict',
       theme: 'base',
-      themeVariables: {
-        // Map mermaid's vocabulary to the site palette.
-        background: resolveVar('--background', 'hsl(30, 35%, 99%)'),
-        primaryColor: resolveVar('--primary', 'hsl(22, 92%, 52%)'),
-        primaryTextColor: resolveVar('--primary-foreground', 'hsl(30, 40%, 98%)'),
-        primaryBorderColor: resolveVar('--primary', 'hsl(22, 92%, 52%)'),
-        secondaryColor: resolveVar('--muted', 'hsl(26, 30%, 96%)'),
-        secondaryTextColor: resolveVar('--foreground', 'hsl(20, 20%, 12%)'),
-        secondaryBorderColor: resolveVar('--border', 'hsl(20, 10%, 80%)'),
-        tertiaryColor: resolveVar('--accent', 'hsl(36, 100%, 50%)'),
-        tertiaryTextColor: resolveVar('--accent-foreground', 'hsl(20, 25%, 12%)'),
-        tertiaryBorderColor: resolveVar('--accent', 'hsl(36, 100%, 50%)'),
-        lineColor: resolveVar('--foreground', 'hsl(20, 20%, 12%)'),
-        textColor: resolveVar('--foreground', 'hsl(20, 20%, 12%)'),
-        mainBkg: resolveVar('--card', 'hsl(30, 35%, 99%)'),
-        nodeBorder: resolveVar('--primary', 'hsl(22, 92%, 52%)'),
-        clusterBkg: resolveVar('--muted', 'hsl(26, 30%, 96%)'),
-        clusterBorder: resolveVar('--border', 'hsl(20, 10%, 80%)'),
-        edgeLabelBackground: resolveVar('--background', 'hsl(30, 35%, 99%)'),
-        fontFamily: 'Inter, system-ui, sans-serif',
-        fontSize: '14px',
-      },
+      themeVariables: themeVariables(),
       flowchart: { curve: 'basis', htmlLabels: true, padding: 16 },
       sequence: { actorMargin: 60, boxMargin: 8 },
     });
-    await mermaid.run({ querySelector: 'pre.mermaid' });
+    await mermaidLib.run({ querySelector: 'pre.mermaid' });
   }
 
-  // Init on first paint; re-run on Astro view transitions if any.
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => void initMermaid());
+    document.addEventListener('DOMContentLoaded', () => void render());
   } else {
-    void initMermaid();
+    void render();
   }
-  document.addEventListener('astro:page-load', () => {
-    // After a page swap, mermaid needs to re-run on new <pre.mermaid> nodes.
-    delete document.documentElement.dataset.mermaidInit;
-    void initMermaid();
-  });
+  document.addEventListener('astro:page-load', () => void render());
+
+  // Re-render when the .dark class on <html> flips (theme toggle), so the
+  // diagram colors track the active theme instead of the load-time one.
+  let isDark = document.documentElement.classList.contains('dark');
+  new MutationObserver(() => {
+    const next = document.documentElement.classList.contains('dark');
+    if (next !== isDark) {
+      isDark = next;
+      void render();
+    }
+  }).observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
 </script>
 
 <style>
