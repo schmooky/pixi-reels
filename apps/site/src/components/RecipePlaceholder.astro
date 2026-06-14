@@ -1,0 +1,59 @@
+---
+/**
+ * Generated stand-in for a missing recipe preview. Deterministic from the
+ * title: a faux reel board tinted with a stable per-recipe hue, a monogram
+ * badge, and optional caption / "drop a file here" hint. Theme-aware (uses
+ * design tokens for the base, a hue overlay for the accent), so it reads as
+ * an intentional placeholder in both light and dark mode rather than a
+ * broken image.
+ */
+import { hueFor, monogram } from '../lib/recipeMedia.ts';
+
+interface Props {
+  title: string;
+  /** Shown under the badge (e.g. an inline image's alt text). */
+  caption?: string;
+  /** Mono path hint, e.g. `public/recipes/x/card.gif`. */
+  hint?: string;
+}
+
+const { title, caption, hint } = Astro.props as Props;
+const hue = hueFor(title);
+const mono = monogram(title);
+const tintSoft = `hsl(${hue} 70% 55% / 0.16)`;
+const tintBadge = `hsl(${hue} 68% 52%)`;
+const cols = [0, 1, 2, 3, 4];
+---
+<div
+  class="relative flex h-full w-full items-center justify-center overflow-hidden bg-muted/40"
+  style={`background-image: linear-gradient(135deg, ${tintSoft}, transparent 72%);`}
+>
+  <svg
+    class="absolute inset-0 h-full w-full text-foreground/[0.06]"
+    viewBox="0 0 160 100"
+    preserveAspectRatio="xMidYMid slice"
+    aria-hidden="true"
+  >
+    {cols.map((c) => (
+      <g>
+        <rect x={15 + c * 26} y="12" width="22" height="76" rx="5" fill="currentColor" />
+        <rect x={19 + c * 26} y={18 + (c % 2) * 6} width="14" height="14" rx="3" fill="currentColor" />
+        <rect x={19 + c * 26} y={43 + (c % 3) * 3} width="14" height="14" rx="3" fill="currentColor" />
+        <rect x={19 + c * 26} y="69" width="14" height="14" rx="3" fill="currentColor" />
+      </g>
+    ))}
+  </svg>
+
+  <div class="relative flex flex-col items-center gap-2 px-5 text-center">
+    <div
+      class="flex h-11 w-11 items-center justify-center rounded-xl text-sm font-bold tracking-tight text-white shadow-sm"
+      style={`background: ${tintBadge};`}
+    >
+      {mono}
+    </div>
+    {caption && <div class="max-w-[34ch] text-xs font-medium leading-snug text-muted-foreground">{caption}</div>}
+    {hint && (
+      <code class="rounded bg-foreground/[0.06] px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground/80">{hint}</code>
+    )}
+  </div>
+</div>

@@ -174,6 +174,29 @@ export function faqLd(
   };
 }
 
+/**
+ * QAPage for a single question-and-answer page. The right schema when one URL
+ * is one question (vs FAQPage, which is many Q&A on one page). `answer` should
+ * be plain text (strip inline-code backticks before passing).
+ */
+export function qaPageLd(p: {
+  question: string;
+  answer: string;
+  path: string;
+}): Record<string, unknown> {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'QAPage',
+    mainEntity: {
+      '@type': 'Question',
+      name: p.question,
+      url: canonical(p.path),
+      answerCount: 1,
+      acceptedAnswer: { '@type': 'Answer', text: p.answer, url: canonical(p.path) },
+    },
+  };
+}
+
 export function webSiteLd(): Record<string, unknown> {
   return {
     '@context': 'https://schema.org',

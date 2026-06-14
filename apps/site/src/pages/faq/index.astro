@@ -1,0 +1,149 @@
+---
+import Base from '../../layouts/Base.astro';
+import { FAQ, FAQ_COUNT, FAQ_ANSWERED, FAQ_ANSWERED_COUNT } from '../../content/faq.ts';
+import { Check, ArrowRight, Search } from 'lucide-react';
+import { SITE, articleLd, breadcrumbLd, faqLd } from '../../lib/seo.ts';
+
+const title = 'FAQ. how do I build this slot mechanic?';
+const description =
+  'A searchable knowledge base of slot-development questions answered with pixi-reels: how to spin, respin, set symbols, run Hold & Win, lock coins, reveal a mystery value, fly coins into a collector, play a destroy animation, and hundreds more.';
+
+const stripCode = (s: string) => s.replace(/`/g, '');
+// FAQPage rich-result data is built from the ANSWERED questions only —
+// Google needs a real answer per Q. Open questions are still listed and
+// on-page searchable, just not in the structured data yet.
+const faqEntries = FAQ_ANSWERED.map((q) => ({
+  question: q.en,
+  answer: stripCode(q.answer!.en),
+}));
+
+const editUrl = `${SITE.githubRepo}/edit/main/apps/site/src/content/faq.ts`;
+---
+<Base
+  title={`FAQ · ${SITE.name}`}
+  description={description}
+  path="/faq/"
+  jsonLd={[
+    faqLd(faqEntries),
+    articleLd({ title, description, path: '/faq/' }),
+    breadcrumbLd([
+      { name: SITE.name, url: '/' },
+      { name: 'FAQ', url: '/faq/' },
+    ]),
+  ]}
+>
+  <section class="border-b border-border/60 py-14">
+    <div class="container max-w-3xl text-center">
+      <div class="inline-flex items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-primary">
+        Knowledge base
+      </div>
+      <h1 class="mt-4 text-4xl font-semibold tracking-tight sm:text-5xl">
+        <span class="gradient-text">How do I…?</span>
+      </h1>
+      <p class="mx-auto mt-5 max-w-xl text-muted-foreground">
+        The questions a slot developer actually asks — answered with pixi-reels.
+        Searchable, and growing.
+        <span class="font-medium text-foreground/80">{FAQ_ANSWERED_COUNT}</span> of
+        <span class="font-medium text-foreground/80">{FAQ_COUNT}</span> answered so far.
+      </p>
+
+      <div class="relative mx-auto mt-7 max-w-lg">
+        <Search size={16} strokeWidth={2} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+        <input
+          id="faq-search"
+          type="search"
+          autocomplete="off"
+          placeholder={`Search ${FAQ_COUNT} questions — try 'respin', 'mystery', 'collector'…`}
+          aria-label="Search the FAQ"
+          class="w-full rounded-full border border-border bg-card py-2.5 pl-10 pr-4 text-sm outline-none transition-colors focus:border-primary/50"
+        />
+      </div>
+      <p id="faq-noresults" class="mt-4 hidden text-sm text-muted-foreground">
+        No questions match. <a class="text-primary hover:underline" href={editUrl}>Add it →</a>
+      </p>
+    </div>
+  </section>
+
+  <section class="py-12">
+    <div class="container space-y-12">
+      {FAQ.map((group) => (
+        <div class="faq-group" id={group.id} data-group={group.id}>
+          <div class="mb-1 flex items-baseline gap-3">
+            <h2 class="text-sm font-semibold uppercase tracking-[0.14em] text-muted-foreground/90">{group.title.en}</h2>
+          </div>
+          <p class="mb-4 text-sm text-muted-foreground/80">{group.blurb.en}</p>
+          <ul class="divide-y divide-border/60 overflow-hidden rounded-xl border border-border bg-card">
+            {group.questions.map((q) => {
+              const answered = !!q.answer;
+              const Row = answered ? 'a' : 'div';
+              const href = answered ? `/faq/${q.id}/` : undefined;
+              return (
+                <li
+                  class="faq-q"
+                  id={q.id}
+                  data-text={q.en.toLowerCase()}
+                >
+                  <Row
+                    href={href}
+                    class:list={[
+                      'group flex items-start gap-3 px-4 py-3 transition-colors',
+                      answered ? 'hover:bg-secondary/30' : '',
+                    ]}
+                  >
+                    <span
+                      class:list={[
+                        'mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold',
+                        answered ? 'bg-primary/15 text-primary' : 'border border-border text-muted-foreground/50',
+                      ]}
+                      title={answered ? 'Answered' : 'Open question'}
+                    >
+                      {answered ? <Check size={12} strokeWidth={3} /> : '?'}
+                    </span>
+                    <span class="min-w-0 flex-1">
+                      <span class="block text-sm font-medium text-foreground">{q.en}</span>
+                    </span>
+                    {answered ? (
+                      <ArrowRight size={14} strokeWidth={2} className="mt-1 shrink-0 text-muted-foreground/50 transition-colors group-hover:text-foreground" />
+                    ) : (
+                      <span class="mt-0.5 shrink-0 rounded-full border border-border px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground/60">open</span>
+                    )}
+                  </Row>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      ))}
+    </div>
+  </section>
+
+  <script is:inline>
+    (() => {
+      const input = document.getElementById('faq-search');
+      const groups = Array.from(document.querySelectorAll('.faq-group'));
+      const noResults = document.getElementById('faq-noresults');
+      if (!input) return;
+      const norm = (s) => s.toLowerCase().trim();
+      const apply = () => {
+        const q = norm(input.value);
+        let anyVisible = false;
+        for (const g of groups) {
+          let groupVisible = false;
+          for (const item of g.querySelectorAll('.faq-q')) {
+            const hit = !q || (item.dataset.text || '').includes(q);
+            item.hidden = !hit;
+            if (hit) groupVisible = true;
+          }
+          g.hidden = !groupVisible;
+          if (groupVisible) anyVisible = true;
+        }
+        if (noResults) noResults.hidden = anyVisible;
+      };
+      input.addEventListener('input', apply);
+      // Support /faq/?q=respin and deep #anchors.
+      const params = new URLSearchParams(location.search);
+      const initial = params.get('q');
+      if (initial) { input.value = initial; apply(); }
+    })();
+  </script>
+</Base>
