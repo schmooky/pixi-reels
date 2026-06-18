@@ -1,0 +1,46 @@
+---
+layout: ../../layouts/Recipe.astro
+title: "Hold & Win: multiplier-strike coin"
+description: A multiplier coin lands, the strike FX (17-frame AnimatedSprite) fires over it, a ×N badge pops in the game's multiplier font, and every coin's value is multiplied. The multiplier lives in coin.data — the board never reads it.
+tags: [hold-and-win, multiplier, sprites, fx, coins]
+steps:
+  - Land a multiplier coin via the board (server-placed, carries data.mult)
+  - On lock, play the strike FX AnimatedSprite over the cell and pop a ×N badge
+  - Multiply every value coin's data.value and bump its label
+  - The board stays value-blind — the multiply is pure game state
+apis:
+  - HoldAndWinBuilder (examples/shared)
+  - loadHoldAndWinSprites (examples/shared)
+  - HoldAndWinBoard.lockedCoins / symbolAt
+  - PIXI.AnimatedSprite
+---
+
+import code from '../../recipes/hold-and-win-multiplier.recipe.ts?raw';
+import { RecipeRunner } from '../../components/RecipeRunner.tsx';
+import RecipeFrame from '../../components/RecipeFrame.astro';
+
+<RecipeFrame>
+  <RecipeRunner code={code} height={420} client:only="react" />
+</RecipeFrame>
+
+Press Run. The board holds four coins; a multiplier coin lands, the strike FX cracks over it, a `×3` badge pops in the game's multiplier font, and every coin's value triples.
+
+## The strike is an AnimatedSprite
+
+The multiplier-strike art is a 17-frame sprite sequence loaded from the `/hw-sprites/` set; on the multiplier coin's lock the recipe plays it once over the cell and pops the `×N` badge in the `DiamondMult` bitmap font:
+
+```ts
+const strikeFrames = sortFrames(strikeSheet);          // 00..16
+const fx = new PIXI.AnimatedSprite(strikeFrames);
+fx.loop = false; fx.play();                            // one strike
+```
+
+## The multiply is your rule
+
+`coin:locked` fires for the multiplier coin like any other; the recipe walks `board.lockedCoins` and multiplies each value coin's `data.value`, repainting the label. Swap `*= MULT` for a global multiplier applied at collect, or aim it at a single coin — the board never participates. This is the same value-blind pattern as the [payer / doubler coin](/recipes/hold-and-win-payer-coin/).
+
+## Related recipes
+
+- [Hold & Win: payer / doubler coin](/recipes/hold-and-win-payer-coin/). add or double instead of multiply
+- [Hold & Win: sprite coins](/recipes/hold-and-win-sprites/). the sprite board this builds on
+- [Multiplier wild](/recipes/multiplier-wild-pin/). per-instance multipliers via pins on a standard reel set

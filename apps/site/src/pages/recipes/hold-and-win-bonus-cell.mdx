@@ -1,0 +1,47 @@
+---
+layout: ../../layouts/Recipe.astro
+title: "Hold & Win: bonus cells"
+description: A few cells are marked as bonus cells from the start; a coin that lands on one flashes the cell active and doubles its value. Positional special cells are pure game state — the board only reports where each coin landed.
+tags: [hold-and-win, bonus-cell, positional, sprites]
+steps:
+  - Mark a set of cells as bonus cells and draw a glowing marker on each
+  - On coin:locked, check whether the coin's cell is a bonus cell
+  - If so, flash the marker active, fade it out and double that coin's value
+  - Repaint the boosted label — the board is untouched
+apis:
+  - HoldAndWinBuilder (examples/shared)
+  - HoldAndWinBoard.events (coin:locked) / cellCenter
+  - loadHoldAndWinSprites (examples/shared)
+---
+
+import code from '../../recipes/hold-and-win-bonus-cell.recipe.ts?raw';
+import { RecipeRunner } from '../../components/RecipeRunner.tsx';
+import RecipeFrame from '../../components/RecipeFrame.astro';
+
+<RecipeFrame>
+  <RecipeRunner code={code} height={420} client:only="react" />
+</RecipeFrame>
+
+Press Run. Three cells glow as bonus cells; as coins land, the ones that hit a bonus cell flash it active and land doubled.
+
+## Positional rules live in the game layer
+
+The board reports *where* each coin landed; "this position is special" is your rule. The bonus cells are a `Set` of cell keys, drawn with the `bonus_cell` sprite, and the boost is a check in the lock handler:
+
+```ts
+board.events.on('coin:locked', ({ coin }) => {
+  if (bonusCells.has(key(coin.cell))) {
+    coin.data.value *= 2;                      // game rule: bonus cell doubles
+    swapMarker(coin.cell, 'bonus_cell_active'); // flash + fade the marker
+  }
+  paintLabel(coin.cell, coin.data.value);
+});
+```
+
+The markers ride `board.container` so they track the board, and they're cleared the moment a coin claims the cell. Swap the rule for a `×N`, a collector flag, or a jackpot tier per position — same hook.
+
+## Related recipes
+
+- [Hold & Win: multiplier-strike coin](/recipes/hold-and-win-multiplier/). a multiplier that strikes the whole board
+- [Hold & Win: upgrade a coin in place](/recipes/hold-and-win-upgrade-coin/). promote a coin's tier without a respin
+- [Positional multiplier cells](/recipes/positional-multiplier-pin/). fixed multiplier positions via pins on a standard reel set

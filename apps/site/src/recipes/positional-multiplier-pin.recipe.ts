@@ -1,6 +1,6 @@
 // @ts-nocheck
 // Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
-//                   coinMultiplier, drawCoin, PIXI, gsap, app, pickWeighted
+//                   Spine, settleMoneyFace, PIXI, gsap, app, pickWeighted
 //
 // Positional multiplier cells (Gonzo's Quest / Irish Riches style).
 //
@@ -15,13 +15,21 @@
 // stamp display stays correct. (A cleaner CellDecorator primitive would
 // avoid this mirror dance, but it isn't required.)
 //
-// Visual: a small multiplier coin chip is anchored to the top-right of each
+// Visual: a small Spine gold-coin chip is anchored to the top-right of each
 // multiplier cell. The card lands behind it. The coin reads as a permanent
-// "this cell is x3" sticker.
+// "this cell is ×3" sticker.
 
 const FILLER = ['7', '8', '10', 'Q'];
 const COLS = 5, ROWS = 3, SIZE = 90;
-const CHIP = 36; // multiplier-coin diameter
+const CHIP = 40; // multiplier-coin diameter
+
+// the chip is the production Spine gold coin, posed on its money face
+const ASSETS = { 'hw-atlas': '/hw-spine/skeletons.atlas', 'hw-jackpot': '/hw-spine/jackpot.json' };
+for (const [alias, src] of Object.entries(ASSETS)) {
+  if (!PIXI.Assets.cache.has(alias)) { try { PIXI.Assets.add({ alias, src }); } catch {} }
+}
+await PIXI.Assets.load(Object.keys(ASSETS));
+await PIXI.Assets.load('/hw-sprites/hwfont-mult.fnt'); // the game's ×N multiplier bitmap font
 
 // Define fixed multiplier positions for this demo. In a real game, these
 // could come from the server with each spin.
@@ -56,29 +64,26 @@ const reelSet = new ReelSetBuilder()
 const badgeLayer = new PIXI.Container();
 reelSet.addChild(badgeLayer);
 
+const spineChips = [];
 for (const cell of MULTIPLIER_CELLS) {
-  const opts = coinMultiplier(cell.mult);
-  const coin = new PIXI.Graphics();
-  drawCoin(coin, CHIP, CHIP, opts);
   // Anchored to the top-right corner of the cell with a small inset.
-  coin.x = cell.col * (SIZE + 4) + SIZE - CHIP / 2 - 6;
-  coin.y = cell.row * (SIZE + 4) + CHIP / 2 + 6;
-  badgeLayer.addChild(coin);
+  const cx = cell.col * (SIZE + 4) + SIZE - CHIP / 2 - 6;
+  const cy = cell.row * (SIZE + 4) + CHIP / 2 + 6;
 
-  const label = new PIXI.Text({
-    text: opts.label,
-    style: {
-      fontFamily:
-        '"Roboto Condensed", "Arial Narrow", "Helvetica Neue Condensed", "Liberation Sans Narrow", system-ui, sans-serif',
-      fontSize: Math.floor(CHIP * 0.45),
-      fontWeight: '900',
-      fill: opts.textColor,
-      align: 'center',
-    },
-  });
+  const coin = Spine.from({ skeleton: 'hw-jackpot', atlas: 'hw-atlas' });
+  settleMoneyFace(coin, CHIP, 'mini'); // pose + scale onto the gold money face
+  try { coin.update(0); } catch {}
+  const cb = coin.getLocalBounds();
+  coin.x = cx - (cb.x + cb.width / 2) * coin.scale.x;
+  coin.y = cy - (cb.y + cb.height / 2) * coin.scale.y;
+  badgeLayer.addChild(coin);
+  spineChips.push(coin);
+
+  const label = new PIXI.BitmapText({ text: `${cell.mult}x`, style: { fontFamily: 'DiamondMult', fontSize: 32 } });
   label.anchor.set(0.5);
-  label.x = coin.x;
-  label.y = coin.y;
+  if (label.width > 0) label.scale.set(Math.min((CHIP * 0.82) / label.width, (CHIP * 0.7) / label.height, 1));
+  label.x = cx; // centered on the chip
+  label.y = cy;
   badgeLayer.addChild(label);
 }
 

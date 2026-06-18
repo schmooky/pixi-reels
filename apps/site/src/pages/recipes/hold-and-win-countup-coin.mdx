@@ -1,0 +1,46 @@
+---
+layout: ../../layouts/Recipe.astro
+title: "Hold & Win: count-up coin"
+description: Each coin's amount ticks up from 0.00 to its value as it settles, in a left-to-right wave, instead of snapping to the number. The count is a plain gsap tween that rewrites the gold-font label every frame.
+tags: [hold-and-win, coins, count-up, spine]
+steps:
+  - Land a coin and paint a 0.00 label on its face
+  - Tween a { v } counter to coin.data.value, rewriting the label every frame
+  - Pop the final width-fitted amount in when the count finishes
+  - coinWaves orders the count-ups into a reading-order wave
+apis:
+  - HoldAndWinBuilder (examples/shared)
+  - HoldAndWinBoard.cellCenter / lockedCoins
+  - coinWaves (examples/shared)
+---
+
+import code from '../../recipes/hold-and-win-countup-coin.recipe.ts?raw';
+import { RecipeRunner } from '../../components/RecipeRunner.tsx';
+import RecipeFrame from '../../components/RecipeFrame.astro';
+
+<RecipeFrame>
+  <RecipeRunner code={code} height={420} client:only="react" />
+</RecipeFrame>
+
+Press Run. A fresh board of coins arrives and each one ticks its amount up from `0.00` to its value, one after another in reading order, then pops to a width-fitted final number. Press again to re-roll.
+
+## A count is a tween over a number
+
+There's nothing reel-specific here — the count is a gsap tween over a `{ v }` object whose `onUpdate` rewrites the gold-font label:
+
+```ts
+const counter = { v: 0 };
+gsap.to(counter, {
+  v: coin.data.value, duration: 0.7, ease: 'power1.out',
+  onUpdate: () => { label.text = counter.v.toFixed(2); },
+  onComplete: () => { /* settle + pop to the fitted final amount */ },
+});
+```
+
+In a real feature you'd start this in your `cell:landed` / `coin:locked` handler so each coin counts up as it lands. `coinWaves(coins, 'sequence')` here drives them one per beat; switch to `'by-row'` or `'all'` for a different cadence.
+
+## Related recipes
+
+- [Hold & Win: mystery value coin](/recipes/hold-and-win-mystery-coin/). reveal with a spinning strip instead of a count
+- [Hold & Win: collector + flight choreography](/recipes/hold-and-win-collector/). the running total ticking on a collector
+- [Hold & Win: fly to a feature meter](/recipes/hold-and-win-meter/). the same tick, on a meter above the reels

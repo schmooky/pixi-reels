@@ -1,6 +1,6 @@
 // @ts-nocheck
 // Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
-//                   CoinSymbol, COIN_MYSTERY, PIXI, gsap, app, pickWeighted
+//                   SpineReelSymbol, Spine, PIXI, gsap, app, pickWeighted
 //
 // Mystery symbol (reveal-to-same-class) using CellPin with `turns: 'eval'`.
 //
@@ -8,14 +8,28 @@
 // it at each mystery cell with `turns: 'eval'`. The pins are cleared
 // automatically at the next spin:start. no manual cleanup.
 //
-// Visual: filler is rectangular playing cards; mystery is a plain
-// purple-rimmed coin with no label. the "what is it?" reads from shape +
-// color alone — the player only learns the value through the reveal.
+// Visual: filler is rectangular playing cards; mystery is the game's purple
+// plasma orb (a Spine skeleton) with no label. the "what is it?" reads from
+// shape alone — the player only learns the value through the reveal.
 
 const FILLER = ['7', '8', '10', 'Q'];
 const MYSTERY = 'mystery';
 const REVEAL_CANDIDATES = FILLER; // mystery can reveal to any filler
 const COLS = 5, ROWS = 3, SIZE = 90;
+
+// the mystery orb is the production Spine "collector" skeleton (purple orb)
+const ASSETS = { 'hw-atlas': '/hw-spine/skeletons.atlas', 'hw-collector': '/hw-spine/collector.json' };
+for (const [alias, src] of Object.entries(ASSETS)) {
+  if (!PIXI.Assets.cache.has(alias)) { try { PIXI.Assets.add({ alias, src }); } catch {} }
+}
+await PIXI.Assets.load(Object.keys(ASSETS));
+const SPINE_MAP = { [MYSTERY]: { skeleton: 'hw-collector', atlas: 'hw-atlas' } };
+const probe = Spine.from({ skeleton: 'hw-collector', atlas: 'hw-atlas' });
+if (probe.skeleton.data.findAnimation('idle_counter')) probe.state.setAnimation(0, 'idle_counter', true);
+try { probe.update(0); } catch {}
+const pb = probe.getLocalBounds();
+const MYSTERY_SCALE = (SIZE - 6) / Math.max(1, pb.width, pb.height);
+probe.destroy();
 
 const reelSet = new ReelSetBuilder()
   .reels(COLS)
@@ -26,7 +40,7 @@ const reelSet = new ReelSetBuilder()
     for (const sym of CARD_DECK) {
       r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
     }
-    r.register(MYSTERY, CoinSymbol, COIN_MYSTERY);
+    r.register(MYSTERY, SpineReelSymbol, { spineMap: SPINE_MAP, idleAnimation: 'idle_counter', scale: MYSTERY_SCALE });
   })
   .weights({
     '7': 22,

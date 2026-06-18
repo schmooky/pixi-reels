@@ -1,4 +1,5 @@
 export type RecipeGroup =
+  | 'basics'        // beginner building blocks. the smallest pieces explained
   | 'starters'
   | 'pyramid'       // static per-reel shape
   | 'multiways'     // per-spin row variation
@@ -32,6 +33,11 @@ export interface RecipeMeta {
 
 /** Display order + label for each group on the /recipes/ index page. */
 export const RECIPE_GROUPS: Array<{ id: RecipeGroup; label: string; description: string }> = [
+  {
+    id: 'basics',
+    label: 'Building blocks (start here)',
+    description: 'The smallest pieces, explained step by step. how a symbol class works, how a coin carries a value.',
+  },
   {
     id: 'starters',
     label: 'Starter templates',
@@ -99,6 +105,50 @@ export const RECIPE_GROUPS: Array<{ id: RecipeGroup; label: string; description:
  * controls which section the card renders under on the index page.
  */
 export const RECIPES: RecipeMeta[] = [
+  // ── Building blocks (beginners start here) ─────────────────────────
+  {
+    slug: 'coin-value-symbol',
+    group: 'basics',
+    title: 'Beginner: carry a value on a coin',
+    oneLiner: 'Build your own symbol class from scratch that draws a coin with a number on it. Learn what a ReelSymbol is, the few methods the engine calls, and how to read the value back.',
+    steps: [
+      'A symbol is any subclass of ReelSymbol; the engine makes one per cell',
+      'Take the value in the constructor and store it',
+      'Draw the coin + number in resize() (runs on every swap with the cell size)',
+      'Read the value back off the landed symbol instance any time',
+    ],
+    apis: ['ReelSymbol', 'ReelSetBuilder.symbols', 'Reel.getSymbolAt'],
+    tags: ['beginner', 'basics', 'symbol', 'coin', 'value', 'custom-symbol', 'recent'],
+  },
+  {
+    slug: 'coin-value-data',
+    group: 'basics',
+    title: 'Beginner: carry the value as data',
+    oneLiner: 'The same coin, but the number lives in data instead of the class. One generic coin carries any value the server sends, painted from coin:locked. The Hold & Win way.',
+    steps: [
+      'Keep ONE generic coin symbol with no number baked in',
+      "Send the amount in the hit's data: { cell, id: 'coin', data: { value: 25 } }",
+      'The board stores data and never reads it',
+      'Paint the number yourself from coin:locked, positioned with cellCenter()',
+    ],
+    apis: ['HoldAndWinBuilder', 'HoldAndWinBoard.events', 'HoldAndWinBoard.cellCenter'],
+    tags: ['beginner', 'basics', 'coin', 'value', 'data', 'hold-and-win', 'recent'],
+  },
+  {
+    slug: 'coin-value-overlay',
+    group: 'basics',
+    title: 'Beginner: number on a ready-made coin',
+    oneLiner: "Don't draw the coin — use art you already have (a sprite) and add the number on top. Your symbol's view holds two children: the art and a text label.",
+    steps: [
+      "Put the ready-made coin art (a Sprite) in your symbol's view",
+      'Add a PIXI.Text label as a second child, on top',
+      'Position and scale both in resize()',
+      'The label shows the value; the art does the rest',
+    ],
+    apis: ['ReelSymbol', 'loadHoldAndWinSprites', 'PIXI.Sprite'],
+    tags: ['beginner', 'basics', 'coin', 'value', 'composition', 'sprite', 'recent'],
+  },
+
   // ── Per-reel geometry / MultiWays / Big symbols ───────────────────
   {
     slug: 'pyramid-shape',
@@ -399,6 +449,232 @@ export const RECIPES: RecipeMeta[] = [
     tags: ['starter', 'hold-and-win', 'collector', 'flight', 'spine', 'recent'],
   },
 
+  // ── Hold & Win mechanic recipes (board + Spine coins) ──────────────
+  {
+    slug: 'hold-and-win-sprites',
+    group: 'features',
+    title: 'Hold & Win: sprite coins (no Spine)',
+    oneLiner: 'The whole board from TexturePacker sprites — number symbols that blur as they spin and a 30-frame coin flip on land. The sprite path that ships most often, no skeleton runtime.',
+    steps: [
+      'loadHoldAndWinSprites() returns base + blur textures, coin frames and the value font',
+      'Register number symbols on BlurSpriteSymbol (blur on spin, crisp on land)',
+      "Register the coin on AnimatedSpriteSymbol — the board's playWin() plays the flip",
+      'Everything else is the same HoldAndWinBuilder board as the Spine recipes',
+    ],
+    apis: ['HoldAndWinBuilder', 'loadHoldAndWinSprites', 'BlurSpriteSymbol', 'AnimatedSpriteSymbol'],
+    tags: ['hold-and-win', 'sprites', 'animated-sprite', 'blur', 'coins', 'recent'],
+  },
+  {
+    slug: 'hold-and-win-multiplier',
+    group: 'features',
+    title: 'Hold & Win: multiplier-strike coin',
+    oneLiner: "A multiplier coin lands, the strike FX fires over it, a ×N badge pops in the game's multiplier font, and every coin's value is multiplied. The board never reads the multiplier.",
+    steps: [
+      'Land a multiplier coin via the board (server-placed, carries data.mult)',
+      'On lock, play the 17-frame strike AnimatedSprite over the cell and pop a ×N badge',
+      "Multiply every value coin's data.value and bump its label",
+      'The board stays value-blind — the multiply is pure game state',
+    ],
+    apis: ['HoldAndWinBuilder', 'loadHoldAndWinSprites', 'HoldAndWinBoard.lockedCoins', 'PIXI.AnimatedSprite'],
+    tags: ['hold-and-win', 'multiplier', 'sprites', 'fx', 'coins', 'recent'],
+  },
+  {
+    slug: 'hold-and-win-collector-particles',
+    group: 'features',
+    title: 'Hold & Win: collector with particle streams',
+    oneLiner: "A collector lands and each coin's value flies into it on a bezier arc trailed by a stream of neon particles, ticking the total up. The board hands out geometry; the flight is yours.",
+    steps: [
+      'The board opens holding value coins; a collector lands (server-placed)',
+      'For each coin, fly the value into the collector on a bezier arc',
+      'Trail each flight with a stream of neon particle sprites',
+      'release() the cell and tick the collector total on arrival',
+    ],
+    apis: ['HoldAndWinBuilder', 'HoldAndWinBoard.cellCenter', 'HoldAndWinBoard.release', 'bezierFly'],
+    tags: ['hold-and-win', 'collector', 'particles', 'sprites', 'collect', 'recent'],
+  },
+  {
+    slug: 'hold-and-win-bonus-cell',
+    group: 'features',
+    title: 'Hold & Win: bonus cells',
+    oneLiner: 'A few cells are marked bonus cells from the start; a coin that lands on one flashes the cell active and doubles its value. Positional rules are pure game state.',
+    steps: [
+      'Mark a set of cells as bonus cells and draw a glowing marker on each',
+      "On coin:locked, check whether the coin's cell is a bonus cell",
+      'If so, flash the marker active, fade it out and double that coin',
+      'Repaint the boosted label — the board is untouched',
+    ],
+    apis: ['HoldAndWinBuilder', 'HoldAndWinBoard.events', 'HoldAndWinBoard.cellCenter', 'loadHoldAndWinSprites'],
+    tags: ['hold-and-win', 'bonus-cell', 'positional', 'sprites', 'recent'],
+  },
+  {
+    slug: 'hold-and-win-mystery-coin',
+    group: 'features',
+    title: 'Hold & Win: mystery value coin',
+    oneLiner: 'Coins land blank; on lock a strip of candidate amounts spins inside the coin face and decelerates onto the real value. The value lives in coin.data — the board never reads it.',
+    steps: [
+      'Coins land settled on the gold money face with no number painted yet',
+      'On coin:locked, scroll a masked strip of candidate amounts inside the coin and ease it onto the real value',
+      'Paint the final amount and play the coin flourish as the "ding"',
+      'Gate the next respin on the pending reveals so nothing lands mid-roll',
+    ],
+    apis: ['HoldAndWinBuilder', 'GoldCoinSymbol', 'HoldAndWinBoard.symbolAt', 'HoldAndWinBoard.events'],
+    tags: ['hold-and-win', 'coins', 'mystery', 'reveal', 'spine', 'recent'],
+  },
+  {
+    slug: 'hold-and-win-payer-coin',
+    group: 'features',
+    title: 'Hold & Win: payer / doubler coin',
+    oneLiner: 'A special payer orb lands and pumps its value into every other coin — a gold token arcs to each one and bumps it on arrival. One line changes it into a doubler.',
+    steps: [
+      'Open the board holding value coins; the payer is server-placed (weight 0)',
+      "On the payer's lock, walk board.lockedCoins and fly a gold token to each coin",
+      'On arrival, bump that coin\'s data.value, repaint the label and flash it',
+      'The board stays value-blind — the bump is pure game state',
+    ],
+    apis: ['HoldAndWinBuilder', 'HoldAndWinBoard.lockedCoins', 'bezierFly', 'coinWaves'],
+    tags: ['hold-and-win', 'coins', 'payer', 'collector', 'spine', 'recent'],
+  },
+  {
+    slug: 'hold-and-win-upgrade-coin',
+    group: 'features',
+    title: 'Hold & Win: upgrade a coin in place',
+    oneLiner: 'A held coin climbs the value ladder (5 → 10 → 25 → 50 → 100) with a flip-and-pop — no respin, no cell movement. The new tier lives in coin.data.',
+    steps: [
+      'Open the board holding coins at the lowest tier',
+      'On each press, bump every held coin one rung up the ladder',
+      "Play the coin's one-turn flourish and pop the new amount in",
+      'The board is untouched — only coin.data and the label change',
+    ],
+    apis: ['HoldAndWinBuilder', 'HoldAndWinBoard.symbolAt', 'GoldCoinSymbol'],
+    tags: ['hold-and-win', 'coins', 'upgrade', 'transform', 'spine', 'recent'],
+  },
+  {
+    slug: 'hold-and-win-countup-coin',
+    group: 'features',
+    title: 'Hold & Win: count-up coin',
+    oneLiner: "Each coin's amount ticks up from 0.00 to its value as it settles, in a reading-order wave, instead of snapping to the number.",
+    steps: [
+      'Land a coin and paint a 0.00 label on its face',
+      'Tween a { v } counter to coin.data.value, rewriting the label every frame',
+      'Pop the final width-fitted amount in when the count finishes',
+      'coinWaves orders the count-ups into a wave',
+    ],
+    apis: ['HoldAndWinBuilder', 'HoldAndWinBoard.cellCenter', 'coinWaves'],
+    tags: ['hold-and-win', 'coins', 'count-up', 'spine', 'recent'],
+  },
+  {
+    slug: 'hold-and-win-anticipation',
+    group: 'tension',
+    title: 'Hold & Win: last-cell anticipation',
+    oneLiner: "One builder knob slows the last still-spinning cell to a tension profile — the 'one more for the full board' moment. The recipe only listens to events.",
+    steps: [
+      'Build with anticipateWhen(({ locked, capacity }) => capacity - locked === 1)',
+      "When one cell is left, the board runs it on the 'tension' profile",
+      'respin:start tells you which cells spin — pulse the last one',
+      'board:full / isFull report the jackpot',
+    ],
+    apis: ['HoldAndWinBuilder.anticipateWhen', 'HoldAndWinBoard.events', 'HoldAndWinBoard.isFull'],
+    tags: ['hold-and-win', 'anticipation', 'tension', 'respin', 'spine', 'recent'],
+  },
+  {
+    slug: 'hold-and-win-meter',
+    group: 'features',
+    title: 'Hold & Win: fly to a feature meter',
+    oneLiner: "On collect, each coin's value flies UP into a meter above the reels (arriveScale shrink), ticking the total and filling a progress bar toward a target.",
+    steps: [
+      'Place a meter widget (spine counter + bar + total) above the board',
+      'Fly each value from cellCenter() up to the meter with arriveScale',
+      'On arrival, add to the total, fill the bar and tick the counter',
+      'release() each cell as its coin leaves',
+    ],
+    apis: ['HoldAndWinBuilder', 'HoldAndWinBoard.cellCenter', 'HoldAndWinBoard.release', 'bezierFly'],
+    tags: ['hold-and-win', 'coins', 'meter', 'collect', 'flight', 'spine', 'recent'],
+  },
+  {
+    slug: 'hold-and-win-row-jackpot',
+    group: 'features',
+    title: 'Hold & Win: row-complete jackpot',
+    oneLiner: 'When a coin completes a full row, that row flashes coin by coin, the MINI plaque fires, and the row total flies up into it. Row detection is pure game logic.',
+    steps: [
+      'On coin:locked, check whether the new coin completed a full row',
+      "If it did, flash the row coin by coin and fire the MINI plaque's win",
+      'Sum the row and fly the total up into the plaque',
+      'Gate the next press until the choreography settles',
+    ],
+    apis: ['HoldAndWinBuilder', 'HoldAndWinBoard.events', 'HoldAndWinBoard.symbolAt', 'bezierFly'],
+    tags: ['hold-and-win', 'coins', 'jackpot', 'row', 'plaque', 'spine', 'recent'],
+  },
+  {
+    slug: 'hold-and-win-base-to-feature',
+    group: 'features',
+    title: 'Hold & Win: enter from the base game and back',
+    oneLiner: 'A normal 5x3 spin that, on 3 BONUS, transitions in the same chain into the Hold & Win board, runs the feature, and swaps back to the base game on feature:end. Two display objects, one Spin button.',
+    steps: [
+      'Spin a normal ReelSet; count the BONUS symbols that land',
+      'On a 3-BONUS trigger, hide the base reels and reveal board.container',
+      'enter(seed) carries the trigger coins into the feature already locked',
+      'On feature:end, fade the board out and show the base game again',
+    ],
+    apis: ['ReelSetBuilder', 'HoldAndWinBuilder', 'HoldAndWinBoard.enter', 'HoldAndWinBoard.events'],
+    tags: ['hold-and-win', 'base-game', 'transition', 'feature', 'trigger', 'recent'],
+  },
+  {
+    slug: 'hold-and-win-cell-control',
+    group: 'features',
+    title: 'Hold & Win: drive each cell on its own',
+    oneLiner: 'board.reelAt(cell) hands you the raw 1x1 ReelSet — start it, slam-stop it, read the symbol inside it, independently of every other cell.',
+    steps: [
+      "board.reelAt(cell) returns that cell's ReelSet",
+      'Start cells on their own clocks (staggered) — each is independent',
+      'Slam-stop a single cell with reelAt(cell).skipSpin() while others spin',
+      'Read the live symbol with symbolAt(cell)',
+    ],
+    apis: ['HoldAndWinBoard.reelAt', 'HoldAndWinBoard.symbolAt', 'ReelSet.spin', 'ReelSet.skipSpin'],
+    tags: ['hold-and-win', 'cell', 'reel', 'control', 'start-stop', 'recent'],
+  },
+  {
+    slug: 'hold-and-win-tier-swap',
+    group: 'features',
+    title: 'Hold & Win: swap a symbol in place (coin → MINI → MAJOR)',
+    oneLiner: "board.setSymbolAt(cell, id, data) re-places one cell with a different symbol — a coin climbs the jackpot tiers — and rewrites its ledger entry, leaving every other coin where it was.",
+    steps: [
+      'Register the plain coin and the MINI / MAJOR jackpot variants',
+      'On each press, board.setSymbolAt(cell, tierId, data) swaps the art in place',
+      "The cell's ledger entry is rewritten so lockedCoins / totals stay correct",
+      'Neighbouring coins are untouched',
+    ],
+    apis: ['HoldAndWinBoard.setSymbolAt', 'HoldAndWinBoard.symbolAt', 'SpineReelSymbol'],
+    tags: ['hold-and-win', 'swap', 'jackpot', 'tier', 'upgrade', 'spine', 'recent'],
+  },
+  {
+    slug: 'hold-and-win-sticky-overlay',
+    group: 'features',
+    title: 'Hold & Win: an overlay that survives swaps and rides flights',
+    oneLiner: "A ×100 badge lives in coin.data, attached as a child of the symbol's view — so it survives an in-place swap (re-attached from data) and travels with the coin on a collect flight.",
+    steps: [
+      'Keep the overlay value in coin.data (badge, jackpot label)',
+      'Attach it as a CHILD of symbolAt(cell).view so it rides with the symbol',
+      'On an in-place swap, re-attach from coin.data (the new instance has a fresh view)',
+      'On a flight, rebuild it onto the flying clone from the same data',
+    ],
+    apis: ['HoldAndWinBoard.symbolAt', 'HoldAndWinBoard.setSymbolAt', 'HoldAndWinBoard.cellCenter', 'bezierFly'],
+    tags: ['hold-and-win', 'overlay', 'badge', 'swap', 'flight', 'recent'],
+  },
+  {
+    slug: 'hold-and-win-skip',
+    group: 'tension',
+    title: 'Hold & Win: skip the whole feature',
+    oneLiner: 'board.skip() slams every in-flight cell to its landed position and fires feature:skip; the game layer cuts its flights / collect short. feature:end stays the single "feature over" signal.',
+    steps: [
+      'Tap the button mid-feature — RecipeRunner routes it to onSkip',
+      'onSkip calls board.skip() to slam every in-flight spin (fires feature:skip)',
+      'The game layer cuts its own flights / collect short on the same signal',
+      'feature:end fires as the single "feature over" event',
+    ],
+    apis: ['HoldAndWinBoard.skip', 'HoldAndWinBoard.events', 'ReelSet.skipSpin'],
+    tags: ['hold-and-win', 'skip', 'fast-forward', 'events', 'recent'],
+  },
+
   // ── Mechanic recipes ───────────────────────────────────────────────
   {
     slug: 'symbol-transform',
@@ -690,27 +966,29 @@ export const RECIPES: RecipeMeta[] = [
     slug: 'value-coin-pin',
     group: 'features',
     title: 'Value-carrying coin (Hold & Win)',
-    oneLiner: 'Coin symbols carry their payout value in the pin payload; a running total updates as coins lock.',
+    oneLiner: 'Each coin carries a coefficient (×2 … ×50) in coin.data; the board locks hits and respins only the free cells natively — no pins, no hand-rolled grid. The ×N badge is painted from data, the total summed from board.lockedCoins.',
     steps: [
-      'On coin landing, pin with turns "permanent" and payload { value }',
-      'Draw the value badge on each pinned cell',
-      'Compute the running total by iterating reelSet.pins',
+      'Build the board with HoldAndWinBuilder; coins are opaque { cell, id, data }',
+      'Each hit carries its coefficient in data.value',
+      'Paint the ×N badge from data on coin:locked',
+      'Sum the running total from board.lockedCoins',
     ],
-    apis: ['ReelSet.pin', 'ReelSet.unpin', 'ReelSet.pins', 'CellPin.payload'],
-    tags: ['coin', 'hold-and-win', 'payload', 'cell-pin'],
+    apis: ['HoldAndWinBuilder', 'HoldAndWinBoard.respin', 'HoldAndWinBoard.lockedCoins', 'HoldAndWinBoard.events'],
+    tags: ['coin', 'hold-and-win', 'value', 'data', 'recent'],
   },
   {
     slug: 'collector-symbol-pin',
     group: 'features',
     title: 'Collector symbol',
-    oneLiner: 'Collector absorbs adjacent coin pin payloads into its own total. pins coordinating across cells.',
+    oneLiner: 'On the Hold & Win board, the collector orb absorbs its neighbours: walk board.lockedCoins, sum the adjacent coins, fly their values in and release() those cells. No pins.',
     steps: [
-      'Pin coins on land with { value } payloads',
-      'When a collector lands, iterate neighbors, sum pin payloads, unpin coins',
-      'Pin the collector with the absorbed total in its payload',
+      'Build the board with HoldAndWinBuilder; coins carry data.value',
+      'When the collector locks, find its neighbours in board.lockedCoins',
+      'Fly each neighbour value into the orb and release() the cell',
+      "Show the absorbed total on the collector's badge",
     ],
-    apis: ['ReelSet.pin', 'ReelSet.unpin', 'ReelSet.getPin', 'CellPin.payload'],
-    tags: ['coin', 'collector', 'payload', 'cell-pin'],
+    apis: ['HoldAndWinBuilder', 'HoldAndWinBoard.lockedCoins', 'HoldAndWinBoard.release', 'bezierFly'],
+    tags: ['coin', 'collector', 'hold-and-win', 'recent'],
   },
   {
     slug: 'mystery-reveal-pin',

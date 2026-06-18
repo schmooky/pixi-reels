@@ -1,0 +1,65 @@
+---
+layout: ../../layouts/Recipe.astro
+title: "Beginner: number on a ready-made coin"
+description: Don't draw the coin — use the artwork you already have (a sprite or Spine coin) and add the number on top. Your symbol's view holds two children, the art and a text label. The practical, production-style way.
+tags: [beginner, basics, coin, value, composition, sprite]
+steps:
+  - Put the ready-made coin art (a Sprite) in your symbol's view
+  - Add a PIXI.Text label as a second child, on top
+  - Position and scale both in resize()
+  - The label shows the value; the art does the rest
+apis:
+  - ReelSymbol (subclass it)
+  - loadHoldAndWinSprites (examples/shared)
+  - PIXI.Sprite / PIXI.Text
+---
+
+import code from '../../recipes/coin-value-overlay.recipe.ts?raw';
+import { RecipeRunner } from '../../components/RecipeRunner.tsx';
+import RecipeFrame from '../../components/RecipeFrame.astro';
+
+<RecipeFrame>
+  <RecipeRunner code={code} height={260} client:only="react" />
+</RecipeFrame>
+
+Press Run. The coin is real art (a sprite); the number is just a label sitting on top of it — together they make a value coin without you drawing a single circle.
+
+## Composition: art + label
+
+Drawing a coin with `PIXI.Graphics` (lesson 1) is great for learning, but in a real game the coin already exists as a sprite or a Spine skeleton. You don't redraw it — you put it in your symbol's `view` and **add the number as a second child on top**:
+
+```ts
+class LabeledCoin extends ReelSymbol {
+  constructor(options) {
+    super();
+    this.value = options.value;
+    this.sprite = new PIXI.Sprite(COIN_TEX);  // the ready-made art
+    this.sprite.anchor.set(0.5);
+    this.label = new PIXI.BitmapText({ text: '', style: { fontFamily: 'DiamondDigits', fontSize: 36 } });
+    this.label.anchor.set(0.5);
+    this.view.addChild(this.sprite);  // art behind
+    this.view.addChild(this.label);   // number on top
+  }
+  onActivate() { this.label.text = String(this.value); }
+  resize(width, height) {
+    this.sprite.position.set(width / 2, height / 2);
+    this.sprite.scale.set(Math.min(width / this.sprite.texture.width, height / this.sprite.texture.height));
+    this.label.style.fontSize = Math.floor(height * 0.34);
+    this.label.position.set(width / 2, height / 2);       // centered on the coin
+  }
+}
+```
+
+The label is a **`PIXI.BitmapText`** in the game's `DiamondDigits` font (it ships with the sprite set, so `loadHoldAndWinSprites()` already registered it). The sprite is added first (behind), the label second (on top); both are positioned in `resize()`, anchored `0.5` and centered so the number sits dead-center on the coin.
+
+## Where the art comes from
+
+Here the coin frames come from `loadHoldAndWinSprites()` (the sprite asset set), so `COIN_TEX = coin[0]` is a single still frame. Swap that for any `PIXI.Texture` — your own atlas frame, a `Spine`, anything. The label code doesn't change.
+
+This is exactly how the production recipes show amounts: a Spine or sprite coin does the art, and a `PIXI.BitmapText` value rides on top.
+
+## Related recipes
+
+- [Beginner: carry a value on a coin](/recipes/coin-value-symbol/). draw the whole coin yourself
+- [Beginner: carry the value as data](/recipes/coin-value-data/). keep the value in data, paint it on lock
+- [Hold & Win: sprite coins](/recipes/hold-and-win-sprites/). the full sprite board this art comes from

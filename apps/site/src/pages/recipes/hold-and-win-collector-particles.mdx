@@ -1,0 +1,45 @@
+---
+layout: ../../layouts/Recipe.astro
+title: "Hold & Win: collector with particle streams"
+description: A collector lands and each coin's value flies into it on a bezier arc trailed by a stream of neon particles, ticking the collector total up. Pure game-layer choreography over the board's cellCenter() and release().
+tags: [hold-and-win, collector, particles, sprites, collect]
+steps:
+  - The board opens holding value coins; a collector lands (server-placed)
+  - For each coin, fly the value into the collector on a bezier arc
+  - Trail each flight with a stream of neon particle sprites
+  - release() the cell and tick the collector total on arrival
+apis:
+  - HoldAndWinBuilder (examples/shared)
+  - HoldAndWinBoard.cellCenter / release / symbolAt
+  - bezierFly + coinWaves (examples/shared)
+---
+
+import code from '../../recipes/hold-and-win-collector-particles.recipe.ts?raw';
+import { RecipeRunner } from '../../components/RecipeRunner.tsx';
+import RecipeFrame from '../../components/RecipeFrame.astro';
+
+<RecipeFrame>
+  <RecipeRunner code={code} height={420} client:only="react" />
+</RecipeFrame>
+
+Press Run. A collector lands in the middle and, one coin at a time, each value arcs into it trailed by a burst of neon particles while the collector's total ticks up.
+
+## Particles ride the same arc as the value
+
+The flight is `bezierFly` from `board.cellCenter(cell)` to the collector. The particle stream is just more sprites on jittered copies of that arc, staggered by a per-particle `delay`, fading on arrival:
+
+```ts
+for (let i = 0; i < n; i++) {
+  const s = new PIXI.Sprite(neonTexture);
+  bezierFly(s, jitter(from), to, { delay: i * 0.04, arriveScale: 0.2 })
+    .then(() => fadeAndDestroy(s));
+}
+```
+
+The board only hands out geometry and clears the cell with `release()`; what flies along the arc — a coin clone, a particle ribbon, a character — is entirely yours.
+
+## Related recipes
+
+- [Hold & Win: collector + flight choreography](/recipes/hold-and-win-collector/). the Spine-coin collector, value clones into an on-board orb
+- [Hold & Win: fly to a feature meter](/recipes/hold-and-win-meter/). collect up to a meter instead of an on-board cell
+- [Hold & Win: sprite coins](/recipes/hold-and-win-sprites/). the sprite board this builds on

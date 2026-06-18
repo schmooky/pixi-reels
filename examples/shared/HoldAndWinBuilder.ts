@@ -93,6 +93,8 @@ export type HoldAndWinBoardEvents<TData = unknown> = {
   'respins:changed': [{ value: number; reason: HwRespinReason }];
   'respin:end': [{ round: number; hits: HwCoin<TData>[]; respinsLeft: number }];
   'board:full': [{ coins: HwCoin<TData>[] }];
+  /** Fired by `skip()` so the game layer can cut its own flights / collect short. */
+  'feature:skip': [{ inFlight: number }];
   'feature:end': [{ coins: HwCoin<TData>[]; rounds: number; full: boolean }];
 };
 
@@ -388,6 +390,30 @@ export class HoldAndWinBoard<TData = unknown> {
     return this._runtime(cell).reelSet.getReel(0).getSymbolAt(0);
   }
 
+  /**
+   * The cell's underlying 1×1 {@link ReelSet}, for driving one cell on its
+   * own — `reelAt(cell).spin()`, `.skipSpin()`, `.isSpinning`. The board
+   * normally owns start/stop (via enter / respin / release); reach for this
+   * when a game wants to start or stop a single cell independently.
+   */
+  reelAt(cell: HwCell): ReelSet {
+    return this._runtime(cell).reelSet;
+  }
+
+  /**
+   * Swap the symbol shown in a cell in place — coin → jackpot, mini → major,
+   * raise a tier — without disturbing any other cell. If the cell is locked,
+   * its ledger entry is rewritten to the new `id` / `data` so `lockedCoins`
+   * and any totals stay correct. Returns the new live symbol instance.
+   */
+  setSymbolAt(cell: HwCell, id: string, data?: TData): ReelSymbol {
+    this._place(cell, id);
+    const k = key(cell);
+    const prev = this._locked.get(k);
+    if (prev) this._locked.set(k, { cell, id, data: data ?? prev.data });
+    return this.symbolAt(cell);
+  }
+
   // ── Round choreography ───────────────────────────────────────────────
 
   /**
@@ -502,6 +528,26 @@ export class HoldAndWinBoard<TData = unknown> {
       this.events.emit('coin:released', { coin, remaining: this._locked.size });
     }
     return released;
+  }
+
+  /**
+   * Fast-forward whatever is spinning right now: every in-flight cell is
+   * slammed to its landed position, then `feature:skip` fires so the game
+   * layer can cut its own flights / collect short (abort the bezier tweens
+   * and jump to the end). The normal landing → `coin:locked` → `feature:end`
+   * flow still resolves; this only removes the waiting. Returns the number
+   * of cells that were in flight.
+   */
+  skip(): number {
+    let inFlight = 0;
+    for (const { reelSet } of this._cells.values()) {
+      if (reelSet.isSpinning) {
+        inFlight += 1;
+        try { reelSet.skipSpin(); } catch { /* result not in yet — ignore */ }
+      }
+    }
+    this.events.emit('feature:skip', { inFlight });
+    return inFlight;
   }
 
   /** Clear the board back to idle: no locks, blank cells, counter unset. */

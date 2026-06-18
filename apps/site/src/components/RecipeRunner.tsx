@@ -33,12 +33,14 @@ import {
   bezierFly,
   settleMoneyFace,
   freezeAtEnd,
+  fitText,
 } from '../../../../examples/shared/holdAndWinFx.ts';
 import { loadPrototypeSymbols } from '../../../../examples/shared/prototypeSpriteLoader.ts';
 import {
   loadGeneratedSpines,
   buildSpineMap,
 } from '../../../../examples/shared/generatedSpineLoader.ts';
+import { loadHoldAndWinSprites } from '../../../../examples/shared/holdAndWinSprites.ts';
 import { transform as sucraseTransform } from 'sucrase';
 import { cn } from '@/lib/utils';
 import { CanvasSkeleton } from './CanvasSkeleton';
@@ -156,8 +158,9 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
           'CoinSymbol', 'COIN_TIER', 'COIN_FEATURE', 'COIN_MYSTERY', 'COIN_TRIGGER',
           'coinValue', 'coinMultiplier', 'drawCoin',
           'HoldAndWinBuilder',
-          'GoldCoinSymbol', 'coinWaves', 'bezierFly', 'settleMoneyFace', 'freezeAtEnd',
+          'GoldCoinSymbol', 'coinWaves', 'bezierFly', 'settleMoneyFace', 'freezeAtEnd', 'fitText',
           'SpineReelSymbol', 'Spine', 'loadGeneratedSpines', 'buildSpineMap',
+          'loadHoldAndWinSprites',
           `"use strict"; ${js}`,
         );
         // AsyncFunction so recipes that need async setup (e.g. dynamic
@@ -174,8 +177,9 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
           CoinSymbol, COIN_TIER, COIN_FEATURE, COIN_MYSTERY, COIN_TRIGGER,
           coinValue, coinMultiplier, drawCoin,
           HoldAndWinBuilder,
-          GoldCoinSymbol, coinWaves, bezierFly, settleMoneyFace, freezeAtEnd,
+          GoldCoinSymbol, coinWaves, bezierFly, settleMoneyFace, freezeAtEnd, fitText,
           SpineReelSymbol, Spine, loadGeneratedSpines, buildSpineMap,
+          loadHoldAndWinSprites,
         )) as RunResult;
       } catch (e) {
         setError(`Runtime error: ${(e as Error).message}`);

@@ -33,7 +33,7 @@ import { HoldAndWinBuilder } from './shared/HoldAndWinBuilder.ts';
 const board = new HoldAndWinBuilder<{ value: number }>()
   .grid(5, 3)
   .cellSize(72, { gap: 4 })
-  .symbols(r => r.register('coin', CoinSymbol, COIN_TRIGGER))
+  .symbols(r => r.register('coin', GoldCoinSymbol, { spineMap, scale, settleSize }))
   .weights({ coin: 1, empty: 3 })   // coins flash past empties on the strip
   .respins(3)
   .ticker(app.ticker)
