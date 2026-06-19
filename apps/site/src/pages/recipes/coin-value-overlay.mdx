@@ -5,13 +5,13 @@ description: Don't draw the coin — use the artwork you already have (a sprite 
 tags: [beginner, basics, coin, value, composition, sprite]
 steps:
   - Put the ready-made coin art (a Sprite) in your symbol's view
-  - Add a PIXI.Text label as a second child, on top
+  - Add a PIXI.BitmapText label as a second child, on top
   - Position and scale both in resize()
   - The label shows the value; the art does the rest
 apis:
   - ReelSymbol (subclass it)
   - loadHoldAndWinSprites (examples/shared)
-  - PIXI.Sprite / PIXI.Text
+  - PIXI.Sprite / PIXI.BitmapText
 ---
 
 import code from '../../recipes/coin-value-overlay.recipe.ts?raw';

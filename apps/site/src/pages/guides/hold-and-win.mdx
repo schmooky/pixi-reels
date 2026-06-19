@@ -175,10 +175,12 @@ the built-in board doesn't fit, you have three escape hatches, in order of effor
    pick-and-reveal, cluster-collect, scratch-card — skip `HoldAndWinBuilder` and
    use `BoardGrid` directly. [Here's a non-Hold & Win board on the primitive](/recipes/board-grid-reveal/).
 3. **Fork the board.** Want lock-and-respin but with *different* rules? Copy
-   `HoldAndWinBoard` + `HoldAndWinState` into your project — they touch only public
-   `pixi-reels` API, so the copy stays on supported ground — and rewrite the
-   reducer. The respin-reset-on-hit rule and board-full-ends-the-feature rule live
-   in `HoldAndWinState`, yours to change.
+   `HoldAndWinBoard` + `HoldAndWinState` into your project and repoint their
+   imports at `pixi-reels` — everything they reach for (`BoardGrid`,
+   `EventEmitter`, the `Hw*` types, `cellKey`, `HwEffect`) is public API, so the
+   copy stays on supported ground — then rewrite the reducer. The
+   respin-reset-on-hit rule and board-full-ends-the-feature rule live in
+   `HoldAndWinState`, yours to change.
 
 The one thing the board will **never** do is read your `data` or encode a
 paytable. Meaning stays yours; the board only moves reels. That line — mechanism

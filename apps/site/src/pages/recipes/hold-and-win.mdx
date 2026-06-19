@@ -7,10 +7,10 @@ steps:
   - Build the board once — grid, coin symbols, strip weights, respin count
   - enter(seed) with the triggering coins, then await respin(hits) per round
   - Board events drive the HUD — respins:changed, coin:locked, board:full
-  - release(cells) clears collected coins; cellCenter() aims the flight
+  - board:full fires the GRAND when the grid fills; reset() clears the board for the next round
 apis:
   - HoldAndWinBuilder (pixi-reels)
-  - HoldAndWinBoard.enter / respin / release
+  - HoldAndWinBoard.enter / respin / reset
   - HoldAndWinBoard.events
   - HoldAndWinBoard.cellCenter / symbolAt
 ---

@@ -1,10 +1,10 @@
 ---
 layout: ../../layouts/Recipe.astro
 title: "Hold & Win: Spine coins + collect"
-description: A 5x4 Hold & Win board where every cell is a real Spine skeleton — fall on land, idle while held, win on lock — plus MINI / MAJOR jackpot coins whose win animation IS the tier reveal, side plaques that celebrate, and a collect flight into a Spine counter.
+description: A 5x4 Hold & Win board where every cell is a real Spine skeleton, with MINI / MAJOR jackpot coins whose tier one-shot IS the reveal, side plaques that celebrate, and a collect flight into a Spine counter.
 tags: [hold-and-win, spine, collect, respin, jackpot]
 steps:
-  - Register SpineReelSymbol ids — fall / idle_counter / win map straight onto the reel lifecycle
+  - Register each id against its skeleton via a spineMap (the jackpot coin uses a small custom class for its tier reveal)
   - Jackpot coins land wearing their tier word; on lock the reveal spins it off into the money face
   - coin:locked paints value labels and flashes the matching MINI / MAJOR side plaque
   - On feature end, release() each cell and fly a Spine clone to the counter via cellCenter()
@@ -30,22 +30,21 @@ The strips spin the source game's full base set — cherry, lemon, orange, plum,
 
 This is the [Hold & Win starter](/recipes/hold-and-win/) upgraded to production-style art. Every cell is still its own 1×1 `ReelSet` under `HoldAndWinBuilder`; the difference is the symbol class and the collect choreography.
 
-## The skeleton's vocabulary does the work
+## Registering the Spine coins
 
-The coin skeleton ships the exact animation set the reel lifecycle wants, so registration is one block — no custom symbol class:
+Each id maps to its skeleton through a `spineMap`; `SpineReelSymbol` drives the standard lifecycle, and the jackpot coin gets a small custom class (`GoldCoinSymbol`) because its "win" *is* the tier reveal:
 
 ```ts
-r.register('coin', SpineReelSymbol, {
-  spineMap: { coin: { skeleton: 'hw-coin', atlas: 'hw-atlas' } },
-  idleAnimation: 'idle_counter',   // lit loop while held (and on the strip)
-  landingAnimation: 'fall',        // one-shot drop-in, autoPlayLanding fires it
-  winAnimation: 'win',             // the board calls playWin() on every lock
-  autoPlayLanding: true,
-  scale: CELL / 360,               // skeleton authored at ~352px
+r.register(id, id === COIN ? GoldCoinSymbol : SpineReelSymbol, {
+  spineMap: SPINE_MAP,          // id → { skeleton: 'hw-jackpot' | 'hw-cherry' | …, atlas: 'hw-atlas' }
+  idleAnimation: 'idle',        // played only if the skeleton defines it
+  landingAnimation: 'fall',     // ditto — no-ops where the skeleton lacks it
+  winAnimation: 'win',          // the board calls playWin() on every lock
+  scale: scaleFor[id],          // computed by probing each skeleton's bounds
 });
 ```
 
-`fall` plays when a cell lands, the board's lock calls `playWin()`, and the symbol settles back into `idle_counter`. The Hold & Win choreography never touches Spine directly.
+The fruit skeletons ship a `win`; the jackpot coin ships its tier one-shots (`coin` / `mini` / `major` / …) instead and has no `idle` / `fall` / `win` of its own — those hooks simply no-op (`SpineReelSymbol` guards every `setAnimation` with `findAnimation`), the landing settles on the money face, and the tier word is the reveal. The Hold & Win choreography never touches Spine directly.
 
 ## Jackpot tiers: word on, spin, money face
 

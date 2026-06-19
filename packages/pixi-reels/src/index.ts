@@ -98,12 +98,17 @@ export type { BoardCell, BoardSpinTarget, BoardProfile, BoardGridOptions } from 
 export { HoldAndWinBuilder } from './board/HoldAndWinBuilder.js';
 export { HoldAndWinBoard } from './board/HoldAndWinBoard.js';
 export type { HwPhase } from './board/HoldAndWinState.js';
+// `cellKey` and `HwEffect` round out the surface a forked board needs: copy
+// HoldAndWinBoard + HoldAndWinState, repoint their imports at `pixi-reels`, and
+// everything they reach for is public.
+export { cellKey } from './board/HwTypes.js';
 export type {
   HwCell,
   HwCoin,
   HwRespinReason,
   HwRespinResult,
   HoldAndWinBoardEvents,
+  HwEffect,
   HwCellSizeOptions,
 } from './board/HwTypes.js';
 

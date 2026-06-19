@@ -5,7 +5,7 @@ description: A multiplier coin lands, the strike FX (17-frame AnimatedSprite) fi
 tags: [hold-and-win, multiplier, sprites, fx, coins]
 steps:
   - Land a multiplier coin via the board (server-placed, carries data.mult)
-  - On lock, play the strike FX AnimatedSprite over the cell and pop a ×N badge
+  - After the coin lands, play the strike FX AnimatedSprite over the cell and pop a ×N badge
   - Multiply every value coin's data.value and bump its label
   - The board stays value-blind — the multiply is pure game state
 apis:
@@ -37,7 +37,7 @@ fx.loop = false; fx.play();                            // one strike
 
 ## The multiply is your rule
 
-`coin:locked` fires for the multiplier coin like any other; the recipe walks `board.lockedCoins` and multiplies each value coin's `data.value`, repainting the label. Swap `*= MULT` for a global multiplier applied at collect, or aim it at a single coin — the board never participates. This is the same value-blind pattern as the [payer / doubler coin](/recipes/hold-and-win-payer-coin/).
+After the multiplier coin's respin wave resolves, the recipe walks `board.lockedCoins` and multiplies each value coin's `data.value`, repainting the label — the `coin:locked` handler itself only paints the plain value coins, the strike and multiply run once the wave settles. Swap `*= MULT` for a global multiplier applied at collect, or aim it at a single coin — the board never participates. This is the same value-blind pattern as the [payer / doubler coin](/recipes/hold-and-win-payer-coin/).
 
 ## Related recipes
 

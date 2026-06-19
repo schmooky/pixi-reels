@@ -223,7 +223,8 @@ export class HoldAndWinBoard<TData = unknown> implements Disposable {
    * Fast-forward whatever is spinning: every in-flight cell is slammed to its
    * landed position, then `feature:skip` fires so the game layer can cut its own
    * flights short. The normal landing → `coin:locked` → `feature:end` flow still
-   * resolves; this only removes the waiting. Returns the cells that were in flight.
+   * resolves; this only removes the waiting. Returns the number of cells that
+   * were in flight.
    */
   skip(): number {
     const inFlight = this._grid.skipSpinning();
