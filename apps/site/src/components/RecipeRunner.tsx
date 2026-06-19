@@ -10,6 +10,7 @@ import {
   enableDebug, WinPresenter,
   RectMaskStrategy, SharedRectMaskStrategy,
   type ReelSet, ReelSymbol,
+  EmptySymbol, HoldAndWinBuilder,
 } from 'pixi-reels';
 import { SpineReelSymbol } from 'pixi-reels/spine';
 import { Spine } from '@esotericsoftware/spine-pixi-v8';
@@ -25,8 +26,6 @@ import {
   coinMultiplier,
   drawCoin,
 } from '../../../../examples/shared/CoinSymbol.ts';
-import { EmptySymbol } from '../../../../examples/shared/EmptySymbol.ts';
-import { HoldAndWinBuilder } from '../../../../examples/shared/HoldAndWinBuilder.ts';
 import {
   GoldCoinSymbol,
   coinWaves,

@@ -289,7 +289,7 @@ export const RECIPES: RecipeMeta[] = [
     title: 'EmptySymbol: render nothing for a registered id',
     oneLiner: 'Register an EmptySymbol against an id like `empty` to reserve a grid slot that produces no visual output. The canonical background for hold-and-win bonus boards, miss cells, and any pattern where "blank" is the intended visual.',
     steps: [
-      "Import EmptySymbol from `examples/shared/EmptySymbol.ts`",
+      "Import EmptySymbol from `pixi-reels`",
       "Register the empty id via `r.register('empty', EmptySymbol, {})`",
       'Weight empty heavily so most cells land blank; weight real symbols lightly so they pop',
       'The cell still occupies a strip slot, but renders zero pixels',
@@ -450,6 +450,20 @@ export const RECIPES: RecipeMeta[] = [
   },
 
   // ── Hold & Win mechanic recipes (board + Spine coins) ──────────────
+  {
+    slug: 'hold-and-win-trace',
+    group: 'features',
+    title: 'Hold & Win: live event trace',
+    oneLiner: 'A board runs a full feature while every board.events beat prints to a live log — enter, respin:start, cell:landed, coin:locked, respins:changed, respin:end, board:full / feature:end. The lifecycle, made visible.',
+    steps: [
+      'Build a plain HoldAndWinBuilder board and subscribe to every event',
+      'enter(seed) opens the feature; a respin loop drives waves until done',
+      'Each event appends a colour-coded line to an on-canvas log, in fire order',
+      'Nothing touches board internals — the trace only listens',
+    ],
+    apis: ['HoldAndWinBuilder', 'HoldAndWinBoard.events', 'HoldAndWinBoard.phase'],
+    tags: ['hold-and-win', 'events', 'lifecycle', 'debugging', 'recent'],
+  },
   {
     slug: 'hold-and-win-sprites',
     group: 'features',

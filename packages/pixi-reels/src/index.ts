@@ -39,6 +39,7 @@ export type { AnimatedSpriteSymbolOptions } from './symbols/AnimatedSpriteSymbol
 export { SpineSymbol, whenSpineReady } from './symbols/SpineSymbol.js';
 export type { SpineSymbolOptions } from './symbols/SpineSymbol.js';
 export { SymbolRegistry } from './symbols/SymbolRegistry.js';
+export { EmptySymbol } from './symbols/EmptySymbol.js';
 
 // Spin
 // `SpinController` and `SpinControllerHooks` are internal wiring built by
@@ -86,6 +87,21 @@ export { ObjectPool } from './pool/ObjectPool.js';
 // Spotlight
 export { SymbolSpotlight } from './spotlight/SymbolSpotlight.js';
 export type { SpotlightOptions, WinLine, CycleOptions } from './spotlight/SymbolSpotlight.js';
+
+// Hold & Win board (a grid of independently spinning 1×1 cells + the
+// respin / lock / collect lifecycle). The generic BoardGrid mechanism stays
+// internal until a second board mechanic validates its shape.
+export { HoldAndWinBuilder } from './board/HoldAndWinBuilder.js';
+export { HoldAndWinBoard } from './board/HoldAndWinBoard.js';
+export type { HwPhase } from './board/HoldAndWinState.js';
+export type {
+  HwCell,
+  HwCoin,
+  HwRespinReason,
+  HwRespinResult,
+  HoldAndWinBoardEvents,
+  HwCellSizeOptions,
+} from './board/HwTypes.js';
 
 // Wins (symbol-highlight presenter. no line drawing, events-driven)
 export { WinPresenter } from './wins/WinPresenter.js';

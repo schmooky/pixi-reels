@@ -666,7 +666,7 @@ const ANSWERS: Record<string, { en: string; links?: FaqLink[] }> = {
     en: 'Override `playDestroy(opts)` on your `ReelSymbol`. The default is a ~320 ms scale / spin / fade implode; for Spine, play a `disintegration` or shatter track. Honour `opts.signal` so a slam can abort it mid-tween.',
   },
   'hw-001': {
-    en: 'A Hold & Win cell is its own 1×1 ReelSet — the engine\'s atomic spin unit is the reel, the mechanic\'s is the cell. `HoldAndWinBuilder` (in `examples/shared/`) builds the whole grid of independent cells plus the lock / respin choreography. Copy it into your game and drive it with `enter()` then `respin()` per round.',
+    en: 'A Hold & Win cell is its own 1×1 ReelSet — the engine\'s atomic spin unit is the reel, the mechanic\'s is the cell. `HoldAndWinBuilder` (in `pixi-reels`) builds the whole grid of independent cells plus the lock / respin choreography. Import it and drive it with `enter()` then `respin()` per round.',
     links: [
       { label: 'Recipe: Hold & Win respin', href: '/recipes/hold-and-win/' },
       { label: 'Recipe: Hold & Win — Spine coins', href: '/recipes/hold-and-win-spine/' },

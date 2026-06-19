@@ -8,7 +8,7 @@ Site: https://pixi-reels.schmooky.dev
 Repo: https://github.com/schmooky/pixi-reels
 Package: https://www.npmjs.com/package/pixi-reels
 
-Generated: 2026-06-17T20:13:48.900Z
+Generated: 2026-06-19T12:51:52.163Z
 
 ## Quick start
 
@@ -60,6 +60,10 @@ Snapshot the reel state as JSON, render an ASCII grid, trace every event.
 ### Getting started
 URL: https://pixi-reels.schmooky.dev/guides/getting-started/
 Install pixi-reels and run your first reel set in under 2 minutes.
+
+### Hold & Win
+URL: https://pixi-reels.schmooky.dev/guides/hold-and-win/
+The Hold & Win lifecycle end to end — the mental model, the state machine, the events, and how to wire the board to your game client.
 
 ### MultiWays
 URL: https://pixi-reels.schmooky.dev/guides/multiways/
@@ -282,7 +286,7 @@ Steps:
 URL: https://pixi-reels.schmooky.dev/recipes/coin-value-data/
 The same coin, but the number lives in data instead of being baked into the class. One generic coin symbol carries any value the server sends, painted from the coin:locked event. The Hold & Win way.
 Tags: beginner, basics, coin, value, data, hold-and-win
-APIs: HoldAndWinBuilder (examples/shared), HoldAndWinBoard.events (coin:locked), HoldAndWinBoard.cellCenter
+APIs: HoldAndWinBuilder (pixi-reels), HoldAndWinBoard.events (coin:locked), HoldAndWinBoard.cellCenter
 Steps:
   - Keep ONE generic coin symbol with no number baked in
   - Send the amount in the hit data — the coin id plus data carrying the value
@@ -315,7 +319,7 @@ Steps:
 URL: https://pixi-reels.schmooky.dev/recipes/collector-symbol-pin/
 On a HoldAndWinBuilder board, the collector orb absorbs its neighbours — walk board.lockedCoins, sum the adjacent coins, fly their values into the orb and release() those cells. No pins, no hand-rolled grid.
 Tags: coin, collector, hold-and-win
-APIs: HoldAndWinBuilder (examples/shared), HoldAndWinBoard.lockedCoins / release / symbolAt, bezierFly (examples/shared)
+APIs: HoldAndWinBuilder (pixi-reels), HoldAndWinBoard.lockedCoins / release / symbolAt, bezierFly (examples/shared)
 Steps:
   - Build the board with HoldAndWinBuilder; coins carry data.value
   - When the collector locks, find its neighbours in board.lockedCoins
@@ -377,7 +381,7 @@ Steps:
 URL: https://pixi-reels.schmooky.dev/recipes/hold-and-win/
 Coins lock on land; every new coin resets the respin counter; fill the grid for the grand jackpot. The "coin" formula every studio is shipping in 2024.
 Tags: starter, hold-and-win, respin, jackpot
-APIs: HoldAndWinBuilder (examples/shared), HoldAndWinBoard.enter / respin / release, HoldAndWinBoard.events, HoldAndWinBoard.cellCenter / symbolAt
+APIs: HoldAndWinBuilder (pixi-reels), HoldAndWinBoard.enter / respin / release, HoldAndWinBoard.events, HoldAndWinBoard.cellCenter / symbolAt
 Steps:
   - Build the board once — grid, coin symbols, strip weights, respin count
   - enter(seed) with the triggering coins, then await respin(hits) per round
@@ -399,7 +403,7 @@ Steps:
 URL: https://pixi-reels.schmooky.dev/recipes/hold-and-win-base-to-feature/
 A normal 5x3 spin that, when 3 BONUS land, transitions in the same chain into the Hold & Win board — every cell now its own reel — runs the feature, and swaps back to the base game on feature:end. Two display objects, one Spin button.
 Tags: hold-and-win, base-game, transition, feature, trigger
-APIs: ReelSetBuilder (base game), HoldAndWinBuilder (examples/shared), HoldAndWinBoard.enter / events (feature:enter, feature:end)
+APIs: ReelSetBuilder (base game), HoldAndWinBuilder (pixi-reels), HoldAndWinBoard.enter / events (feature:enter, feature:end)
 Steps:
   - Spin a normal ReelSet; count the BONUS symbols that land
   - On a 3-BONUS trigger, hide the base reels and reveal board.container
@@ -410,7 +414,7 @@ Steps:
 URL: https://pixi-reels.schmooky.dev/recipes/hold-and-win-bonus-cell/
 A few cells are marked as bonus cells from the start; a coin that lands on one flashes the cell active and doubles its value. Positional special cells are pure game state — the board only reports where each coin landed.
 Tags: hold-and-win, bonus-cell, positional, sprites
-APIs: HoldAndWinBuilder (examples/shared), HoldAndWinBoard.events (coin:locked) / cellCenter, loadHoldAndWinSprites (examples/shared)
+APIs: HoldAndWinBuilder (pixi-reels), HoldAndWinBoard.events (coin:locked) / cellCenter, loadHoldAndWinSprites (examples/shared)
 Steps:
   - Mark a set of cells as bonus cells and draw a glowing marker on each
   - On coin:locked, check whether the coin's cell is a bonus cell
@@ -432,7 +436,7 @@ Steps:
 URL: https://pixi-reels.schmooky.dev/recipes/hold-and-win-collector/
 A board that opens holding three 5.00 coins, lands a 10.00, then lands a collector orb that pulls a value clone out of every coin along bezier arcs — summing up tick by tick. Next press resets with a column-wave sweep.
 Tags: hold-and-win, collector, spine, flight, choreography
-APIs: HoldAndWinBuilder (examples/shared), coinWaves / bezierFly (examples/shared/holdAndWinFx), HoldAndWinBoard.release / cellCenter / symbolAt, GoldCoinSymbol
+APIs: HoldAndWinBuilder (pixi-reels), coinWaves / bezierFly (examples/shared/holdAndWinFx), HoldAndWinBoard.release / cellCenter / symbolAt, GoldCoinSymbol
 Steps:
   - The board opens pre-seeded — enter(seed) runs at boot, before any spin
   - Each respin spins only the free cells; held coins sit out
@@ -445,7 +449,7 @@ Steps:
 URL: https://pixi-reels.schmooky.dev/recipes/hold-and-win-collector-particles/
 A collector lands and each coin's value flies into it on a bezier arc trailed by a stream of neon particles, ticking the collector total up. Pure game-layer choreography over the board's cellCenter() and release().
 Tags: hold-and-win, collector, particles, sprites, collect
-APIs: HoldAndWinBuilder (examples/shared), HoldAndWinBoard.cellCenter / release / symbolAt, bezierFly + coinWaves (examples/shared)
+APIs: HoldAndWinBuilder (pixi-reels), HoldAndWinBoard.cellCenter / release / symbolAt, bezierFly + coinWaves (examples/shared)
 Steps:
   - The board opens holding value coins; a collector lands (server-placed)
   - For each coin, fly the value into the collector on a bezier arc
@@ -456,7 +460,7 @@ Steps:
 URL: https://pixi-reels.schmooky.dev/recipes/hold-and-win-countup-coin/
 Each coin's amount ticks up from 0.00 to its value as it settles, in a left-to-right wave, instead of snapping to the number. The count is a plain gsap tween that rewrites the gold-font label every frame.
 Tags: hold-and-win, coins, count-up, spine
-APIs: HoldAndWinBuilder (examples/shared), HoldAndWinBoard.cellCenter / lockedCoins, coinWaves (examples/shared)
+APIs: HoldAndWinBuilder (pixi-reels), HoldAndWinBoard.cellCenter / lockedCoins, coinWaves (examples/shared)
 Steps:
   - Land a coin and paint a 0.00 label on its face
   - Tween a { v } counter to coin.data.value, rewriting the label every frame
@@ -467,7 +471,7 @@ Steps:
 URL: https://pixi-reels.schmooky.dev/recipes/hold-and-win-meter/
 On collect, each coin's value flies UP out of its cell, shrinks into a meter widget above the reels (arriveScale), ticks the meter total up and fills a progress bar toward a target. The board hands out geometry; the flight is yours.
 Tags: hold-and-win, coins, meter, collect, flight, spine
-APIs: HoldAndWinBuilder (examples/shared), HoldAndWinBoard.cellCenter / release, bezierFly + coinWaves (examples/shared)
+APIs: HoldAndWinBuilder (pixi-reels), HoldAndWinBoard.cellCenter / release, bezierFly + coinWaves (examples/shared)
 Steps:
   - Place a meter widget (spine counter + progress bar + total) above the board
   - On collect, fly each coin's value from cellCenter() up to the meter with arriveScale
@@ -478,7 +482,7 @@ Steps:
 URL: https://pixi-reels.schmooky.dev/recipes/hold-and-win-multiplier/
 A multiplier coin lands, the strike FX (17-frame AnimatedSprite) fires over it, a ×N badge pops in the game's multiplier font, and every coin's value is multiplied. The multiplier lives in coin.data — the board never reads it.
 Tags: hold-and-win, multiplier, sprites, fx, coins
-APIs: HoldAndWinBuilder (examples/shared), loadHoldAndWinSprites (examples/shared), HoldAndWinBoard.lockedCoins / symbolAt, PIXI.AnimatedSprite
+APIs: HoldAndWinBuilder (pixi-reels), loadHoldAndWinSprites (examples/shared), HoldAndWinBoard.lockedCoins / symbolAt, PIXI.AnimatedSprite
 Steps:
   - Land a multiplier coin via the board (server-placed, carries data.mult)
   - On lock, play the strike FX AnimatedSprite over the cell and pop a ×N badge
@@ -489,7 +493,7 @@ Steps:
 URL: https://pixi-reels.schmooky.dev/recipes/hold-and-win-mystery-coin/
 A coin lands as a blank gold disc and its amount is unknown until, on lock, a strip of candidate values spins inside the coin face and decelerates onto the real number. The value lives in coin.data; the board never reads it.
 Tags: hold-and-win, coins, mystery, reveal, spine
-APIs: HoldAndWinBuilder (examples/shared), GoldCoinSymbol (examples/shared), HoldAndWinBoard.symbolAt / cellCenter, HoldAndWinBoard.events (coin:locked)
+APIs: HoldAndWinBuilder (pixi-reels), GoldCoinSymbol (examples/shared), HoldAndWinBoard.symbolAt / cellCenter, HoldAndWinBoard.events (coin:locked)
 Steps:
   - Coins land settled on the gold money face with no number painted yet
   - On coin:locked, scroll a masked strip of candidate amounts inside the coin and ease it onto the real value
@@ -500,7 +504,7 @@ Steps:
 URL: https://pixi-reels.schmooky.dev/recipes/hold-and-win-payer-coin/
 A special payer orb lands and pumps its value into every other coin on the board — a gold token arcs to each coin in turn and bumps its amount on arrival. The same pattern doubles every value with one line changed.
 Tags: hold-and-win, coins, payer, collector, spine
-APIs: HoldAndWinBuilder (examples/shared), HoldAndWinBoard.lockedCoins / symbolAt / cellCenter, bezierFly + coinWaves (examples/shared), SpineReelSymbol (pixi-reels/spine)
+APIs: HoldAndWinBuilder (pixi-reels), HoldAndWinBoard.lockedCoins / symbolAt / cellCenter, bezierFly + coinWaves (examples/shared), SpineReelSymbol (pixi-reels/spine)
 Steps:
   - Open the board holding value coins; the payer is a server-placed id (weight 0)
   - On the payer's lock, walk board.lockedCoins and fly a gold token to each value coin
@@ -511,7 +515,7 @@ Steps:
 URL: https://pixi-reels.schmooky.dev/recipes/hold-and-win-row-jackpot/
 When a coin completes a full row, that row flashes coin by coin, the MINI plaque above the board fires, and the row's summed value flies up into it. Row detection is pure game logic over board.lockedCoins — the board has no notion of paying rows.
 Tags: hold-and-win, coins, jackpot, row, plaque, spine
-APIs: HoldAndWinBuilder (examples/shared), HoldAndWinBoard.events (coin:locked) / lockedCoins / symbolAt, bezierFly + coinWaves (examples/shared)
+APIs: HoldAndWinBuilder (pixi-reels), HoldAndWinBoard.events (coin:locked) / lockedCoins / symbolAt, bezierFly + coinWaves (examples/shared)
 Steps:
   - On coin:locked, check whether the new coin completed a full row
   - If it did, flash the row coin by coin and fire the MINI plaque's win
@@ -533,7 +537,7 @@ Steps:
 URL: https://pixi-reels.schmooky.dev/recipes/hold-and-win-spine/
 A 5x4 Hold & Win board where every cell is a real Spine skeleton — fall on land, idle while held, win on lock — plus MINI / MAJOR jackpot coins whose win animation IS the tier reveal, side plaques that celebrate, and a collect flight into a Spine counter.
 Tags: hold-and-win, spine, collect, respin, jackpot
-APIs: HoldAndWinBuilder (examples/shared), SpineReelSymbol (pixi-reels/spine), HoldAndWinBoard.release / cellCenter, HoldAndWinBoard.events
+APIs: HoldAndWinBuilder (pixi-reels), SpineReelSymbol (pixi-reels/spine), HoldAndWinBoard.release / cellCenter, HoldAndWinBoard.events
 Steps:
   - Register SpineReelSymbol ids — fall / idle_counter / win map straight onto the reel lifecycle
   - Jackpot coins land wearing their tier word; on lock the reveal spins it off into the money face
@@ -544,7 +548,7 @@ Steps:
 URL: https://pixi-reels.schmooky.dev/recipes/hold-and-win-sprites/
 The Hold & Win board built entirely from TexturePacker sprites — number symbols that blur as they spin (BlurSpriteSymbol) and a 30-frame coin flip on land (AnimatedSpriteSymbol). The sprite path that ships most often, no skeleton runtime.
 Tags: hold-and-win, sprites, animated-sprite, blur, coins
-APIs: HoldAndWinBuilder (examples/shared), loadHoldAndWinSprites (examples/shared), BlurSpriteSymbol / AnimatedSpriteSymbol
+APIs: HoldAndWinBuilder (pixi-reels), loadHoldAndWinSprites (examples/shared), BlurSpriteSymbol / AnimatedSpriteSymbol
 Steps:
   - loadHoldAndWinSprites() returns the base + motion-blur textures, the coin frames and the value font
   - Register number symbols on BlurSpriteSymbol so they swap to blur on spin and crisp on land
@@ -573,11 +577,22 @@ Steps:
   - The cell's ledger entry is rewritten so lockedCoins / totals stay correct
   - Neighbouring coins are untouched
 
+### Hold & Win: live event trace
+URL: https://pixi-reels.schmooky.dev/recipes/hold-and-win-trace/
+A small board runs a full feature while every board.events beat prints to a live log — enter, respin:start, cell:landed, coin:locked, respins:changed, respin:end, board:full / feature:end. Watch the lifecycle instead of imagining it.
+Tags: hold-and-win, events, lifecycle, debugging
+APIs: HoldAndWinBuilder (pixi-reels), HoldAndWinBoard.events, HoldAndWinBoard.phase
+Steps:
+  - Build a plain HoldAndWinBuilder board and subscribe to every event
+  - enter(seed) opens the feature; a respin loop drives waves until done
+  - Each event appends a colour-coded line to an on-canvas log, in fire order
+  - Nothing touches board internals — the trace only listens
+
 ### Hold & Win: upgrade a coin in place
 URL: https://pixi-reels.schmooky.dev/recipes/hold-and-win-upgrade-coin/
 A held coin climbs the value ladder (5 → 10 → 25 → 50 → 100) with a flip-and-pop flourish — no respin, no cell movement. The new tier lives in coin.data; the label is just repainted.
 Tags: hold-and-win, coins, upgrade, transform, spine
-APIs: HoldAndWinBuilder (examples/shared), HoldAndWinBoard.symbolAt / lockedCoins, GoldCoinSymbol (examples/shared)
+APIs: HoldAndWinBuilder (pixi-reels), HoldAndWinBoard.symbolAt / lockedCoins, GoldCoinSymbol (examples/shared)
 Steps:
   - Open the board holding coins at the lowest tier
   - On each press, bump every held coin one rung up the value ladder
@@ -892,7 +907,7 @@ Steps:
 URL: https://pixi-reels.schmooky.dev/recipes/value-coin-pin/
 Each coin carries a coefficient (×2 … ×50) in coin.data; HoldAndWinBuilder locks hits and respins only the free cells natively — no pins, no hand-rolled grid. The ×N badge is painted from data, the running total summed from board.lockedCoins.
 Tags: coin, hold-and-win, value, data
-APIs: HoldAndWinBuilder (examples/shared), HoldAndWinBoard.respin / lockedCoins, HoldAndWinBoard.events (coin:locked)
+APIs: HoldAndWinBuilder (pixi-reels), HoldAndWinBoard.respin / lockedCoins, HoldAndWinBoard.events (coin:locked)
 Steps:
   - Build the board with HoldAndWinBuilder; coins are opaque { cell, id, data }
   - Each hit carries its coefficient in data.value
@@ -6291,6 +6306,127 @@ return {
     paintLabel(TARGET.cell, t.value, t.kind);
     hud.text = `swapped to ${t.label} · neighbours unchanged · press spin`;
     busy = false;
+  },
+};
+```
+
+### hold-and-win-trace
+URL: https://pixi-reels.schmooky.dev/recipes/hold-and-win-trace/
+```ts
+// @ts-nocheck
+// Injected: HoldAndWinBuilder, AnimatedSpriteSymbol, BlurSpriteSymbol,
+//           loadHoldAndWinSprites, PIXI, gsap, app
+//
+// The lifecycle, made visible. A small board runs a full feature while every
+// `board.events` beat prints to a live log on the right — enter, respin:start,
+// cell:landed, coin:locked, respins:changed, respin:end, board:full / feature:end.
+// This is the companion to the Hold & Win guide: watch the state machine instead
+// of imagining it. The board is a plain HoldAndWinBuilder board; nothing here
+// touches its internals — it only listens.
+
+const COLS = 4, ROWS = 3, CELL = 60, GAP = 6;
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+const { symbols, blur, coin } = await loadHoldAndWinSprites();
+const BASE = ['1', '2', '3', '4', '5', '6', '7', '8'];
+
+class BlurCell extends BlurSpriteSymbol {
+  onReelSpinStart() { this.setBlurred(true); }
+  onReelLanded() { this.setBlurred(false); }
+}
+
+const board = new HoldAndWinBuilder()
+  .grid(COLS, ROWS)
+  .cellSize(CELL, { gap: GAP })
+  .symbols((r) => {
+    for (const id of BASE) r.register(id, BlurCell, { textures: symbols, blurTextures: blur });
+    r.register('coin', AnimatedSpriteSymbol, { frames: { coin }, animationSpeed: 0.6, anchor: { x: 0.5, y: 0.5 } });
+  })
+  .weights({ ...Object.fromEntries(BASE.map((id) => [id, 2])), coin: 2, empty: 7 })
+  .respins(3)
+  .cellChrome((g, s) => {
+    g.roundRect(0, 0, s, s, 8).fill({ color: 0x140f2e, alpha: 0.55 }).stroke({ color: 0x6a5acd, width: 1, alpha: 0.6 });
+  })
+  .ticker(app.ticker)
+  .build();
+
+const boardW = COLS * CELL + (COLS - 1) * GAP;
+const boardH = ROWS * CELL + (ROWS - 1) * GAP;
+board.container.x = 26;
+board.container.y = (app.screen.height - boardH) / 2;
+app.stage.addChild(board.container);
+
+// ── the live event log ────────────────────────────────────────────────
+const panel = new PIXI.Container();
+panel.x = board.container.x + boardW + 30;
+panel.y = 14;
+app.stage.addChild(panel);
+const title = new PIXI.Text({ text: 'board.events →', style: { fontFamily: 'ui-monospace, monospace', fontSize: 13, fontWeight: '700', fill: 0xb9aee8 } });
+panel.addChild(title);
+
+const MONO = { fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', fontSize: 12 };
+const COLORS = {
+  'feature:enter': 0x8be9fd, 'respin:start': 0x9c8f78, 'cell:landed': 0x726a8c,
+  'coin:locked': 0x50fa7b, 'respins:changed': 0xf1fa8c, 'respin:end': 0x9c8f78,
+  'board:full': 0xffb86c, 'feature:end': 0xff79c6, 'coin:released': 0xbd93f9,
+  'feature:reset': 0x6272a4, 'feature:skip': 0xff5555,
+};
+const MAX = 16;
+const lines = [];
+function push(evt, detail) {
+  const t = new PIXI.Text({ text: `${evt}  ${detail}`, style: { ...MONO, fill: COLORS[evt] ?? 0xcccccc } });
+  lines.push(t);
+  panel.addChild(t);
+  if (lines.length > MAX) lines.shift().destroy();
+  lines.forEach((l, i) => { l.y = 24 + i * 17; });
+  gsap.fromTo(t, { alpha: 0, x: -6 }, { alpha: 1, x: 0, duration: 0.22 });
+}
+const cc = (c) => `(${c.col},${c.row})`;
+
+board.events.on('feature:enter', ({ seed, respins }) => push('feature:enter', `${seed.length} seed · respins ${respins}`));
+board.events.on('respin:start', ({ round, spinning }) => push('respin:start', `round ${round} · ${spinning.length} spinning`));
+board.events.on('cell:landed', ({ cell, coin }) => push('cell:landed', `${cc(cell)} ${coin ? 'COIN' : '—'}`));
+board.events.on('coin:locked', ({ locked, capacity }) => push('coin:locked', `${locked}/${capacity}`));
+board.events.on('respins:changed', ({ value, reason }) => push('respins:changed', `${value} (${reason})`));
+board.events.on('respin:end', ({ round, hits, respinsLeft }) => push('respin:end', `round ${round} · +${hits.length} · ${respinsLeft} left`));
+board.events.on('board:full', () => push('board:full', 'every cell locked'));
+board.events.on('feature:end', ({ rounds, full }) => push('feature:end', `${rounds} rounds · ${full ? 'BOARD FULL' : 'no respins left'}`));
+board.events.on('coin:released', ({ remaining }) => push('coin:released', `${remaining} left`));
+board.events.on('feature:reset', ({ clearedCoins }) => push('feature:reset', `cleared ${clearedCoins}`));
+board.events.on('feature:skip', ({ inFlight }) => push('feature:skip', `${inFlight} slammed`));
+
+const hud = new PIXI.Text({ text: 'press spin to run a feature', style: { fontFamily: 'system-ui, sans-serif', fontSize: 13, fontWeight: '600', fill: 0x9c8f78 } });
+hud.anchor.set(0, 1);
+hud.position.set(board.container.x, app.screen.height - 6);
+app.stage.addChild(hud);
+
+// Mock server: each free cell has a ~28% chance of landing a coin this wave.
+function pickHits() {
+  const hits = [];
+  for (const cell of board.freeCells) {
+    if (Math.random() < 0.28) hits.push({ cell, id: 'coin', data: { value: [1, 2, 5, 10][Math.floor(Math.random() * 4)] } });
+  }
+  return hits;
+}
+
+let running = false;
+return {
+  cleanup: () => { for (const l of lines) { try { l.destroy(); } catch {} } board.destroy(); },
+  onSpin: async () => {
+    if (running) return;
+    running = true;
+    for (const l of lines.splice(0)) { try { l.destroy(); } catch {} }
+    board.reset(); // → feature:reset, the first line of every run
+    await sleep(150);
+    board.enter([{ cell: { col: 0, row: 0 }, id: 'coin', data: { value: 5 } }]);
+    hud.text = 'running the respin loop…';
+    while (true) {
+      await sleep(440);
+      const res = await board.respin(pickHits()); // the board animates the wave
+      if (res.done) break; // full, or out of respins
+    }
+    hud.text = 'feature:end reached — press spin to run again';
+    running = false;
   },
 };
 ```
