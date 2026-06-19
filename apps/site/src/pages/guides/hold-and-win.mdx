@@ -156,6 +156,34 @@ Two deliberate distinctions:
   MINI → MAJOR), keeping the ledger correct. It throws on a free cell — placing a
   brand-new tracked coin is `enter`/`respin`'s job.
 
+## Own the board
+
+`pixi-reels` ships boards as two layers, on purpose:
+
+- **`BoardGrid`** — the primitive. A grid of cells that each spin independently.
+  It knows geometry, instances and spinning, and **nothing** about coins, locks,
+  respins or value.
+- **`HoldAndWinBoard`** — one opinionated board built *entirely on `BoardGrid`'s
+  public API*. It adds the lock / respin / collect rules.
+
+That split is the whole point: the engine never decides your game for you. When
+the built-in board doesn't fit, you have three escape hatches, in order of effort:
+
+1. **Configure it.** Stagger, respins, weights, anticipation, cell chrome — all
+   builder options. Most games never go past here.
+2. **Build on the primitive.** If your feature isn't lock-and-respin at all —
+   pick-and-reveal, cluster-collect, scratch-card — skip `HoldAndWinBuilder` and
+   use `BoardGrid` directly. [Here's a non-Hold & Win board on the primitive](/recipes/board-grid-reveal/).
+3. **Fork the board.** Want lock-and-respin but with *different* rules? Copy
+   `HoldAndWinBoard` + `HoldAndWinState` into your project — they touch only public
+   `pixi-reels` API, so the copy stays on supported ground — and rewrite the
+   reducer. The respin-reset-on-hit rule and board-full-ends-the-feature rule live
+   in `HoldAndWinState`, yours to change.
+
+The one thing the board will **never** do is read your `data` or encode a
+paytable. Meaning stays yours; the board only moves reels. That line — mechanism
+on our side, domain on yours — is the contract that keeps it out of your way.
+
 ## Where to go next
 
 - **See the lifecycle live** — the [event-trace board](/recipes/hold-and-win-trace/)

@@ -451,6 +451,20 @@ export const RECIPES: RecipeMeta[] = [
 
   // ── Hold & Win mechanic recipes (board + Spine coins) ──────────────
   {
+    slug: 'board-grid-reveal',
+    group: 'features',
+    title: 'Board primitive: build your own board',
+    oneLiner: 'A reveal-and-collect prize grid built directly on the generic BoardGrid primitive — every cell spins independently to a result you choose, and the rule is yours. Hold & Win is just one opinionated board on the same primitive.',
+    steps: [
+      'new BoardGrid({ cols, rows, cellSize, symbols, ticker }) lays out a grid of independent reels',
+      'A per-cell profile function gives the diagonal stagger wave',
+      'spinCells(targets) spins each cell to a result YOU choose; await the whole wave',
+      'Your own rule tallies the prizes and pops the top cell via symbolAt + cellBounds',
+    ],
+    apis: ['BoardGrid', 'BoardGrid.spinCells', 'BoardGrid.symbolAt', 'BlurSpriteSymbol'],
+    tags: ['board', 'primitive', 'boardgrid', 'build-your-own', 'recent'],
+  },
+  {
     slug: 'hold-and-win-trace',
     group: 'features',
     title: 'Hold & Win: live event trace',

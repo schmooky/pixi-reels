@@ -6,10 +6,11 @@ import { SharedRectMaskStrategy } from '../core/ReelViewport.js';
 import type { ReelSymbol } from '../symbols/ReelSymbol.js';
 import type { SymbolRegistry } from '../symbols/SymbolRegistry.js';
 import { EmptySymbol } from '../symbols/EmptySymbol.js';
+import { SpeedPresets } from '../config/SpeedPresets.js';
 import type { SpeedProfile, SymbolData } from '../config/types.js';
 import type { Disposable } from '../utils/Disposable.js';
 
-/** A cell coordinate in the grid. Structurally compatible with `HwCell`. */
+/** A cell coordinate in the grid. */
 export interface BoardCell {
   col: number;
   row: number;
@@ -21,67 +22,107 @@ export interface BoardSpinTarget {
   id: string;
 }
 
-export interface BoardGridConfig {
+/** A speed profile, or a per-cell function of one (e.g. a stagger wave). */
+export type BoardProfile = SpeedProfile | ((cell: BoardCell) => SpeedProfile);
+
+export interface BoardGridOptions {
+  /** Grid dimensions. */
   cols: number;
   rows: number;
-  cell: number;
-  gap: number;
-  /** Id a cell shows when blank — also placed in the off-window buffer slots. */
-  emptyId: string;
-  configurator: (registry: SymbolRegistry) => void;
-  weights: Record<string, number> | null;
-  symbolData: Record<string, Partial<SymbolData>> | null;
-  /**
-   * Named per-cell speed profiles. Each is registered on every cell's reel and
-   * selected by name via {@link BoardGrid.setProfile}. The names are the
-   * caller's vocabulary — this layer treats them opaquely.
-   */
-  profiles: Record<string, (cell: BoardCell) => SpeedProfile>;
-  chrome: ((g: Graphics, size: number) => void) | null;
+  /** Cell edge length in pixels. */
+  cellSize: number;
+  /** Gap between cells. Default 4. */
+  gap?: number;
+  /** Id a cell shows when blank — also placed in the off-window buffers. Default `'empty'`. */
+  emptyId?: string;
+  /** Register symbol classes, exactly like `ReelSetBuilder.symbols`. Applied to every cell. */
+  symbols: (registry: SymbolRegistry) => void;
+  /** Strip weights during the spin. */
+  weights?: Record<string, number>;
+  /** Per-symbol engine overrides, exactly like `ReelSetBuilder.symbolData`. */
+  symbolData?: Record<string, Partial<SymbolData>>;
+  /** Injected RNG for the spin strips (deterministic demos / tests). */
+  rng?: () => number;
+  /** Drives every cell's reel — required. */
   ticker: Ticker;
-  rng: (() => number) | null;
+  /** Per-cell background, drawn behind each reel. */
+  chrome?: (g: Graphics, size: number) => void;
+  /**
+   * Named speed profiles, each registered on every cell and selected by name
+   * via {@link BoardGrid.setProfile}. A value may be a flat profile or a
+   * per-cell function (for stagger waves). Defaults to a single `'default'`
+   * profile, which is the active one until you `setProfile` otherwise.
+   */
+  profiles?: Record<string, BoardProfile>;
 }
 
 const key = (c: BoardCell): string => `${c.col},${c.row}`;
+const DEFAULT_PROFILE = 'default';
 
 /**
  * A grid of cells that each spin **independently** — the generic "board of
- * reels" mechanism. Every cell is its own 1×1 {@link ReelSet}, so it inherits
- * the engine's phases, speed modes and pooling for free rather than a parallel
- * lighter reel.
+ * reels" primitive. Every cell is its own 1×1 {@link ReelSet}, so it inherits
+ * the engine's phases, speed modes and pooling rather than a parallel lighter
+ * reel.
  *
- * Deliberately mechanism-only: it knows nothing about coins, locks, respins or
- * anticipation. It lays the grid out, hands back per-cell geometry and live
- * symbol instances, places symbols instantly, and spins a **caller-chosen** set
- * of cells to caller-chosen results. The Hold & Win semantics live one layer up
- * in {@link HoldAndWinBoard}; this class is the seam a future public board API
- * would grow from.
+ * Deliberately mechanism-only: it knows nothing about coins, locks, respins,
+ * value or any game rule. It lays the grid out, hands back per-cell geometry
+ * and live symbol instances, places symbols instantly, and spins a
+ * **caller-chosen** set of cells to caller-chosen results. Build your own
+ * feature on top by owning the rules in your own code; {@link HoldAndWinBoard}
+ * is one such opinionated layer, built entirely on this public surface.
+ *
+ * ```ts
+ * const grid = new BoardGrid({
+ *   cols: 3, rows: 3, cellSize: 80,
+ *   symbols: (r) => r.register('prize', PrizeSymbol, {}),
+ *   weights: { prize: 1, empty: 4 },
+ *   ticker: app.ticker,
+ * });
+ * app.stage.addChild(grid.container);
+ *
+ * await grid.spinCells(
+ *   grid.cells().map((cell) => ({ cell, id: pick() })),  // you decide each result
+ *   (cell, id) => console.log('landed', cell, id),       // react as each settles
+ * );
+ * ```
  */
 export class BoardGrid implements Disposable {
   readonly container: Container;
   readonly cols: number;
   readonly rows: number;
   readonly cellSize: number;
+  readonly gap: number;
+  readonly emptyId: string;
 
-  private readonly _cfg: BoardGridConfig;
   private readonly _reels = new Map<string, ReelSet>();
   private readonly _cells: BoardCell[] = [];
   private _destroyed = false;
 
-  constructor(cfg: BoardGridConfig) {
-    this._cfg = cfg;
-    this.cols = cfg.cols;
-    this.rows = cfg.rows;
-    this.cellSize = cfg.cell;
+  constructor(opts: BoardGridOptions) {
+    if (!opts.ticker) throw new Error('BoardGrid: a ticker is required.');
+    this.cols = opts.cols;
+    this.rows = opts.rows;
+    this.cellSize = opts.cellSize;
+    this.gap = opts.gap ?? 4;
+    this.emptyId = opts.emptyId ?? 'empty';
     this.container = new Container();
 
-    for (let col = 0; col < cfg.cols; col++) {
-      for (let row = 0; row < cfg.rows; row++) {
+    const profiles: Record<string, BoardProfile> =
+      opts.profiles && Object.keys(opts.profiles).length > 0
+        ? opts.profiles
+        : { [DEFAULT_PROFILE]: { ...SpeedPresets.NORMAL, minimumSpinTime: 320 } };
+    const profileNames = Object.keys(profiles);
+    const profileFor = (p: BoardProfile, cell: BoardCell): SpeedProfile =>
+      typeof p === 'function' ? p(cell) : p;
+
+    for (let col = 0; col < opts.cols; col++) {
+      for (let row = 0; row < opts.rows; row++) {
         const cell: BoardCell = { col, row };
         const origin = this._origin(cell);
-        if (cfg.chrome) {
+        if (opts.chrome) {
           const bg = new Graphics();
-          cfg.chrome(bg, cfg.cell);
+          opts.chrome(bg, this.cellSize);
           bg.position.set(origin.x, origin.y);
           this.container.addChild(bg);
         }
@@ -89,25 +130,28 @@ export class BoardGrid implements Disposable {
         const builder = new ReelSetBuilder()
           .reels(1)
           .visibleRows(1)
-          .symbolSize(cfg.cell, cfg.cell)
+          .symbolSize(this.cellSize, this.cellSize)
           .symbolGap(0, 0)
           // Spine symbols overrun the default per-reel rect mask; a shared rect
           // keeps buffer-row art from painting over neighbouring cells.
           .maskStrategy(new SharedRectMaskStrategy())
           .symbols((registry) => {
-            cfg.configurator(registry);
-            if (!registry.has(cfg.emptyId)) registry.register(cfg.emptyId, EmptySymbol, {});
+            opts.symbols(registry);
+            if (!registry.has(this.emptyId)) registry.register(this.emptyId, EmptySymbol, {});
           })
           .initialFrame([
-            { visible: [cfg.emptyId], bufferAbove: [cfg.emptyId], bufferBelow: [cfg.emptyId] },
+            { visible: [this.emptyId], bufferAbove: [this.emptyId], bufferBelow: [this.emptyId] },
           ])
-          .ticker(cfg.ticker);
-        for (const [name, factory] of Object.entries(cfg.profiles)) {
-          builder.speed(name, factory(cell));
+          .ticker(opts.ticker)
+          // The active profile defaults to the engine's 'normal'; point it at
+          // the first registered name so any profile vocabulary works.
+          .initialSpeed(profileNames[0]);
+        for (const [name, profile] of Object.entries(profiles)) {
+          builder.speed(name, profileFor(profile, cell));
         }
-        if (cfg.weights) builder.weights(cfg.weights);
-        if (cfg.symbolData) builder.symbolData(cfg.symbolData);
-        if (cfg.rng) builder.rng(cfg.rng);
+        if (opts.weights) builder.weights(opts.weights);
+        if (opts.symbolData) builder.symbolData(opts.symbolData);
+        if (opts.rng) builder.rng(opts.rng);
 
         const reelSet = builder.build();
         reelSet.position.set(origin.x, origin.y);
@@ -126,13 +170,13 @@ export class BoardGrid implements Disposable {
   /** Board-local bounds of a cell. `container.toGlobal` for stage space. */
   cellBounds(cell: BoardCell): { x: number; y: number; width: number; height: number } {
     const origin = this._origin(cell);
-    return { x: origin.x, y: origin.y, width: this._cfg.cell, height: this._cfg.cell };
+    return { x: origin.x, y: origin.y, width: this.cellSize, height: this.cellSize };
   }
 
   /** Board-local center of a cell — flight / trail start and end points. */
   cellCenter(cell: BoardCell): { x: number; y: number } {
     const origin = this._origin(cell);
-    return { x: origin.x + this._cfg.cell / 2, y: origin.y + this._cfg.cell / 2 };
+    return { x: origin.x + this.cellSize / 2, y: origin.y + this.cellSize / 2 };
   }
 
   /** Live symbol instance currently shown in a cell. */
@@ -155,8 +199,8 @@ export class BoardGrid implements Disposable {
     // Negative-index addresses bufferAbove; index 1 the single bufferBelow.
     // Explicit empties keep the rest state from random-filling past the mask.
     const ids: string[] & Record<number, string> = [id];
-    ids[-1] = this._cfg.emptyId;
-    ids[1] = this._cfg.emptyId;
+    ids[-1] = this.emptyId;
+    ids[1] = this.emptyId;
     this._reel(cell).getReel(0).placeSymbols(ids);
   }
 
@@ -168,7 +212,7 @@ export class BoardGrid implements Disposable {
    */
   async spinCells(
     targets: BoardSpinTarget[],
-    onLanded: (cell: BoardCell, id: string) => void,
+    onLanded: (cell: BoardCell, id: string) => void = () => {},
   ): Promise<void> {
     await Promise.all(
       targets.map(async ({ cell, id }) => {
@@ -176,7 +220,7 @@ export class BoardGrid implements Disposable {
         const settle = reelSet.spin();
         // Buffers land empty too: off-window art can paint over neighbours.
         reelSet.setResult([
-          { visible: [id], bufferAbove: [this._cfg.emptyId], bufferBelow: [this._cfg.emptyId] },
+          { visible: [id], bufferAbove: [this.emptyId], bufferBelow: [this.emptyId] },
         ]);
         await settle;
         onLanded(cell, id);
@@ -215,8 +259,8 @@ export class BoardGrid implements Disposable {
 
   private _origin(cell: BoardCell): { x: number; y: number } {
     return {
-      x: cell.col * (this._cfg.cell + this._cfg.gap),
-      y: cell.row * (this._cfg.cell + this._cfg.gap),
+      x: cell.col * (this.cellSize + this.gap),
+      y: cell.row * (this.cellSize + this.gap),
     };
   }
 

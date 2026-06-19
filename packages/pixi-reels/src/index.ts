@@ -88,9 +88,13 @@ export { ObjectPool } from './pool/ObjectPool.js';
 export { SymbolSpotlight } from './spotlight/SymbolSpotlight.js';
 export type { SpotlightOptions, WinLine, CycleOptions } from './spotlight/SymbolSpotlight.js';
 
-// Hold & Win board (a grid of independently spinning 1×1 cells + the
-// respin / lock / collect lifecycle). The generic BoardGrid mechanism stays
-// internal until a second board mechanic validates its shape.
+// Boards — a grid of independently spinning 1×1 cells.
+//   BoardGrid is the generic mechanism (geometry, instances, spin a chosen
+//   set of cells) — build your own feature on it. HoldAndWinBoard is the
+//   opinionated lock / respin / collect layer, built entirely on BoardGrid's
+//   public surface, so you can copy it and change the rules.
+export { BoardGrid } from './board/BoardGrid.js';
+export type { BoardCell, BoardSpinTarget, BoardProfile, BoardGridOptions } from './board/BoardGrid.js';
 export { HoldAndWinBuilder } from './board/HoldAndWinBuilder.js';
 export { HoldAndWinBoard } from './board/HoldAndWinBoard.js';
 export type { HwPhase } from './board/HoldAndWinState.js';
