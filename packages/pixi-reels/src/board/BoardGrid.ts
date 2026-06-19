@@ -206,13 +206,18 @@ export class BoardGrid implements Disposable {
 
   /**
    * Spin each target cell and stop it showing its `id`; `onLanded` fires per
-   * cell as it settles, in stagger order. Resolves once the whole set lands.
-   * The caller selects which cells spin and to what — this layer applies no
-   * lock/free policy of its own. Set profiles via {@link setProfile} first.
+   * cell as it settles, in stagger order. The caller selects which cells spin
+   * and to what — this layer applies no lock/free policy of its own. Set
+   * profiles via {@link setProfile} first.
+   *
+   * `onLanded` may be **async**: if it returns a promise, that cell's task
+   * awaits it, so the returned promise resolves only once every cell has landed
+   * *and* its after-land work has finished. Cells still run concurrently, so an
+   * early cell's reveal overlaps with later cells still spinning.
    */
   async spinCells(
     targets: BoardSpinTarget[],
-    onLanded: (cell: BoardCell, id: string) => void = () => {},
+    onLanded: (cell: BoardCell, id: string) => void | Promise<void> = () => {},
   ): Promise<void> {
     await Promise.all(
       targets.map(async ({ cell, id }) => {
@@ -223,7 +228,7 @@ export class BoardGrid implements Disposable {
           { visible: [id], bufferAbove: [this.emptyId], bufferBelow: [this.emptyId] },
         ]);
         await settle;
-        onLanded(cell, id);
+        await onLanded(cell, id);
       }),
     );
   }
