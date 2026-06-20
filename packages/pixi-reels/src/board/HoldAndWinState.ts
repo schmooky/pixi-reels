@@ -118,6 +118,9 @@ export class HoldAndWinState<TData = unknown> {
       const k = cellKey(hit.cell);
       this._assertInGrid(hit.cell, 'respin');
       if (this._locked.has(k)) throw new Error(`HoldAndWinBoard: hit targets locked cell ${k}.`);
+      // A free cell can only land once per wave, so a duplicate hit is always a
+      // malformed result. Fail loud rather than silently dropping the first coin.
+      if (hitByKey.has(k)) throw new Error(`HoldAndWinBoard: respin() targets cell ${k} twice.`);
       hitByKey.set(k, hit);
     }
     this._waveLanded = [];

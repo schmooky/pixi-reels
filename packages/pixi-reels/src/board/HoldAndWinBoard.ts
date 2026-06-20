@@ -160,6 +160,10 @@ export class HoldAndWinBoard<TData = unknown> implements Disposable {
    * raise a tier — without disturbing any other cell. The ledger entry is
    * rewritten so `lockedCoins` and totals stay correct. Throws on a free cell.
    * Returns the new live symbol instance.
+   *
+   * Throws if called while a wave is in flight — `await respin()` first. To
+   * upgrade a coin in reaction to its own `coin:locked`, defer the swap until
+   * the awaited `respin()` resolves rather than swapping inside the listener.
    */
   setSymbolAt(cell: HwCell, id: string, data?: TData): ReelSymbol {
     this._state.swap(cell, id, data);
@@ -273,10 +277,11 @@ export class HoldAndWinBoard<TData = unknown> implements Disposable {
       // generic. One local cast keeps every other call site fully typed.
       (this.events.emit as (type: string, payload: unknown) => void)(fx.type, fx.payload);
       if (fx.type === 'coin:locked') {
-        // playWin is presentation; a hiccup must not break the feature flow.
+        // playWin is presentation; a hiccup must not break the feature flow, but
+        // it must not vanish silently either — log it like the rest of the engine.
         void this.symbolAt(fx.payload.coin.cell)
           .playWin()
-          .catch(() => undefined);
+          .catch((err) => console.warn('HoldAndWinBoard: coin win animation failed.', err));
       }
     }
   }

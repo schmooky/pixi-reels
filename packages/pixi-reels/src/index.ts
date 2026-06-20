@@ -97,6 +97,9 @@ export { BoardGrid } from './board/BoardGrid.js';
 export type { BoardCell, BoardSpinTarget, BoardProfile, BoardGridOptions } from './board/BoardGrid.js';
 export { HoldAndWinBuilder } from './board/HoldAndWinBuilder.js';
 export { HoldAndWinBoard } from './board/HoldAndWinBoard.js';
+// The pure reducer is public too: a fork copies HoldAndWinBoard + HoldAndWinState
+// and repoints both imports at `pixi-reels` (see the comment below).
+export { HoldAndWinState } from './board/HoldAndWinState.js';
 export type { HwPhase } from './board/HoldAndWinState.js';
 // `cellKey` and `HwEffect` round out the surface a forked board needs: copy
 // HoldAndWinBoard + HoldAndWinState, repoint their imports at `pixi-reels`, and

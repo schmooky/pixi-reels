@@ -95,6 +95,17 @@ describe('HoldAndWinState', () => {
       expect(() => s.beginWave([{ cell: { col: 0, row: 0 }, id: 'coin' }])).toThrow(/locked cell/);
     });
 
+    it('throws on a duplicate hit to the same cell (no silent drop)', () => {
+      const s = make();
+      s.enter([]);
+      expect(() =>
+        s.beginWave([
+          { cell: { col: 0, row: 0 }, id: 'coin' },
+          { cell: { col: 0, row: 0 }, id: 'coin' },
+        ]),
+      ).toThrow(/twice/);
+    });
+
     it('lands a hit (cell:landed + coin:locked) and a miss (cell:landed only)', () => {
       const s = make();
       s.enter([]);
@@ -144,6 +155,28 @@ describe('HoldAndWinState', () => {
       expect(types(effects)).toEqual(['respins:changed', 'respin:end', 'board:full', 'feature:end']);
       expect(effects[3].payload).toMatchObject({ full: true });
       expect(s.isFull).toBe(true);
+      expect(s.phase).toBe('idle');
+    });
+
+    it('ends the feature on the first respin when enter() already fills the board', () => {
+      const s = make(3);
+      // seed all 4 cells — the board is full before any wave
+      s.enter([
+        { cell: { col: 0, row: 0 }, id: 'coin' },
+        { cell: { col: 1, row: 0 }, id: 'coin' },
+        { cell: { col: 0, row: 1 }, id: 'coin' },
+        { cell: { col: 1, row: 1 }, id: 'coin' },
+      ]);
+      expect(s.phase).toBe('active');
+      expect(s.isFull).toBe(true);
+      // a respin has no free cells to spin; it must end the feature as full
+      const { round, spinning } = s.beginWave([]);
+      expect(round).toBe(1);
+      expect(spinning).toHaveLength(0);
+      const { effects, landed } = s.endWave();
+      expect(types(effects)).toEqual(['respins:changed', 'respin:end', 'board:full', 'feature:end']);
+      expect(effects[3].payload).toMatchObject({ full: true });
+      expect(landed).toHaveLength(0);
       expect(s.phase).toBe('idle');
     });
   });
