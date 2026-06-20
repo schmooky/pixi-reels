@@ -143,16 +143,30 @@ export function bezierFly(
   const baseScaleY = obj.scale.y;
   const arriveScale = opts.arriveScale ?? 1;
 
+  // Tween a marker prop ON the display object (not a private proxy) so that
+  // `gsap.killTweensOf(obj)` actually cancels the flight — that's how callers
+  // stop in-flight coins on cleanup / skip. Tweening a detached proxy (the old
+  // shape) made every such kill a silent no-op. `onInterrupt` settles the
+  // promise so a killed flight resolves its awaiters instead of hanging.
+  const flyer = obj as Container & { _pxrBezierT?: number };
+  flyer._pxrBezierT = 0;
+
   return new Promise((resolve) => {
-    const progress = { t: 0 };
-    gsap.to(progress, {
-      t: 1,
+    let settled = false;
+    const settle = (): void => {
+      if (!settled) {
+        settled = true;
+        resolve();
+      }
+    };
+    gsap.to(flyer, {
+      _pxrBezierT: 1,
       duration,
       delay: opts.delay ?? 0,
       ease: opts.ease ?? 'power1.inOut',
       onUpdate: () => {
         if (obj.destroyed) return; // cleanup may tear the target down mid-flight
-        const t = progress.t;
+        const t = flyer._pxrBezierT ?? 1;
         const u = 1 - t;
         obj.x = u * u * from.x + 2 * u * t * c.x + t * t * to.x;
         obj.y = u * u * from.y + 2 * u * t * c.y + t * t * to.y;
@@ -161,7 +175,8 @@ export function bezierFly(
           obj.scale.set(baseScaleX * s, baseScaleY * s);
         }
       },
-      onComplete: () => resolve(),
+      onComplete: settle,
+      onInterrupt: settle, // killTweensOf(obj) cancels the flight → settle, don't hang
     });
   });
 }

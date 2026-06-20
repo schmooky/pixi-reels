@@ -87,8 +87,8 @@ async function absorb(collectorCell) {
     sum += coin.data.value;
     sumText.text = String(sum);
     fitText(sumText, CELL * 0.82, CELL * 0.46);
-    void board.symbolAt(collectorCell).playWin?.();
   }
+  void board.symbolAt(collectorCell).playWin?.(); // once, after absorbing — per-neighbour restarts would never let 'win' finish
   return sum;
 }
 

@@ -15,7 +15,6 @@ const fmt = (v) => v.toFixed(2);
 const { symbols, blur, coin } = await loadHoldAndWinSprites();
 const partSheet = await PIXI.Assets.load('/hw-sprites/particles.json');
 const neonTex = partSheet.textures['neon_long_particle'];
-const sparkFrames = Object.entries(partSheet.textures).filter(([k]) => k.startsWith('particle_regular/')).sort(([a], [b]) => a.localeCompare(b)).map(([, t]) => t);
 
 const valueText = (text, size) => { const t = new PIXI.BitmapText({ text, style: { fontFamily: 'DiamondDigits', fontSize: size } }); t.anchor.set(0.5); return t; };
 
@@ -89,7 +88,7 @@ function emitStream(from, to, n) {
     flyers.add(s);
     const jx = (Math.random() - 0.5) * 30, jy = (Math.random() - 0.5) * 30;
     bezierFly(s, { x: from.x + jx, y: from.y + jy }, to, { lean: 'up', curvature: 0.3 + Math.random() * 0.2, duration: 0.45 + Math.random() * 0.2, delay: i * 0.04, arriveScale: 0.2 })
-      .then(() => { gsap.to(s, { alpha: 0, duration: 0.15, onComplete: () => { try { s.destroy(); } catch {} flyers.delete(s); } }); });
+      .then(() => { if (s.destroyed) { flyers.delete(s); return; } gsap.to(s, { alpha: 0, duration: 0.15, onComplete: () => { try { s.destroy(); } catch {} flyers.delete(s); } }); });
   }
 }
 
@@ -116,11 +115,11 @@ async function collect() {
         sumText.text = fmt(total);
         fit(sumText, CELL * 0.82, CELL * 0.4);
         gsap.fromTo(sumText.scale, { x: sumText.scale.x * 1.4, y: sumText.scale.y * 1.4 }, { x: sumText.scale.x, y: sumText.scale.y, duration: 0.22, ease: 'power2.out' });
-        void board.symbolAt(COLLECTOR_CELL).playWin?.();
       });
     }));
     await sleep(120);
   }
+  void board.symbolAt(COLLECTOR_CELL).playWin?.(); // react once, after the sweep — restarting it per-arrival never lets the win play through
   await sleep(400);
 }
 

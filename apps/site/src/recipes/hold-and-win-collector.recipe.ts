@@ -193,11 +193,11 @@ async function collectIntoOrb() {
           fitGold(sumText, SETTLE_SIZE * 0.8, SETTLE_SIZE * 0.42);
           gsap.fromTo(sumText.scale, { x: 1.45, y: 1.45 }, { x: 1, y: 1, duration: 0.22, ease: 'power2.out' });
         }
-        void board.symbolAt(orbCell).playWin(); // the orb reacts to every arrival
       });
     }));
     await sleep(90);
   }
+  void board.symbolAt(orbCell).playWin(); // the orb celebrates once the sweep is in — calling it per-arrival restarts 'win' before it can play through
   await sleep(500);
 }
 

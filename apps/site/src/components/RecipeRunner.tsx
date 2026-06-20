@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { RefreshCw, ExternalLink, SkipForward } from 'lucide-react';
 import { Application } from 'pixi.js';
-import type { Texture } from 'pixi.js';
+import type { Texture, Ticker } from 'pixi.js';
 import * as PIXI from 'pixi.js';
 import { gsap } from 'gsap';
 import {
@@ -45,7 +45,40 @@ import { cn } from '@/lib/utils';
 import { CanvasSkeleton } from './CanvasSkeleton';
 import { useMinDisplay } from './useMinDisplay';
 
-let gsapSynced = false;
+// GSAP is driven off a live PIXI app.ticker so tweens honor hidden-tab
+// throttling (the documented "GSAP freezes in hidden tabs" gotcha). Several
+// recipe canvases can be mounted at once, so we keep exactly ONE driver bound
+// to a live app and promote a survivor when that app unmounts. A one-shot
+// module flag (the previous shape) left gsap.updateRoot orphaned on a
+// destroyed ticker the moment the first app went away — freezing every later
+// recipe under client-side nav / React StrictMode / HMR.
+const liveApps = new Set<Application>();
+let gsapDriver: Application | null = null;
+let gsapTickerFn: ((ticker: Ticker) => void) | null = null;
+
+function ensureGsapDriver(): void {
+  if (gsapDriver && liveApps.has(gsapDriver)) return; // current driver still alive
+  // Detach gsap from its own internal ticker; we drive updateRoot ourselves.
+  try { gsap.ticker.remove(gsap.updateRoot); } catch { /* ignore */ }
+  const next: Application | null = liveApps.values().next().value ?? null;
+  gsapDriver = next;
+  if (next) {
+    gsapTickerFn = (ticker) => gsap.updateRoot(ticker.lastTime / 1000);
+    next.ticker.add(gsapTickerFn);
+  } else {
+    gsapTickerFn = null;
+  }
+}
+
+function releaseGsapApp(app: Application): void {
+  liveApps.delete(app);
+  if (gsapDriver === app) {
+    if (gsapTickerFn) { try { app.ticker.remove(gsapTickerFn); } catch { /* ignore */ } }
+    gsapDriver = null;
+    gsapTickerFn = null;
+    ensureGsapDriver(); // hand the driver to another live app, if one remains
+  }
+}
 
 // Use AsyncFunction so recipes can do top-level `await loadPixellabSymbols(...)`
 // inside the injected body. Plain `new Function(...)` returns a sync function
@@ -121,12 +154,6 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
       });
       if (cancelled) { app.destroy(true, { children: true }); return; }
 
-      if (!gsapSynced) {
-        gsapSynced = true;
-        try { gsap.ticker.remove(gsap.updateRoot); } catch { /* ignore */ }
-        app.ticker.add((t) => gsap.updateRoot(t.lastTime / 1000));
-      }
-
       host.innerHTML = '';
       host.appendChild(app.canvas);
 
@@ -136,6 +163,11 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
       const SYMBOL_IDS = Object.keys(textures);
       const env: Env = { app, textures, blurTextures, SYMBOL_IDS };
       envRef.current = env;
+
+      // Register only once the app is fully established (past every cancel
+      // bail-out), so add/release stays symmetric with the cleanup below.
+      liveApps.add(app);
+      ensureGsapDriver();
 
       let js: string;
       try {
@@ -220,7 +252,11 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
       cancelled = true;
       try { cleanupRef.current?.(); } catch { /* ignore */ }
       try { reelSetRef.current?.destroy(); } catch { /* ignore */ }
-      try { envRef.current?.app.destroy(true, { children: true }); } catch { /* ignore */ }
+      const app = envRef.current?.app;
+      if (app) {
+        releaseGsapApp(app); // hand off the gsap driver before the ticker dies
+        try { app.destroy(true, { children: true }); } catch { /* ignore */ }
+      }
       reelSetRef.current = null;
       onSpinRef.current = null;
       cleanupRef.current = null;

@@ -122,13 +122,13 @@ const flyers = new Set();
 async function payout(payerCell, payValue) {
   const from = abs(payerCell);
   const targets = board.lockedCoins.filter((c) => c.id === COIN);
+  void board.symbolAt(payerCell).playWin?.(); // the orb winds up once — re-firing it per coin restarts 'win' before it can play through
   for (const wave of coinWaves(targets, 'sequence')) {
     await Promise.all(wave.map((coin) => {
       const token = fitGold(goldText(fmt(payValue), 26), SETTLE_SIZE * 0.7, SETTLE_SIZE * 0.4);
       token.position.set(from.x, from.y);
       app.stage.addChild(token);
       flyers.add(token);
-      void board.symbolAt(payerCell).playWin?.(); // orb pulses as it pays
       return bezierFly(token, from, abs(coin.cell), { lean: 'up', curvature: 0.35, arriveScale: 0.6, duration: 0.5 })
         .then(() => {
           flyers.delete(token);
