@@ -8,6 +8,16 @@ const { SkeletonJson, AtlasAttachmentLoader, TextureAtlas } = await import(pathT
 const SRC = '/tmp/res-unpack/res';
 const DST = '/tmp/spine42';
 
+// Fail loud if either side is missing — otherwise the loops below no-op and the
+// script prints "OK: 0  FAIL: 0" with exit 0, giving false confidence that
+// conversion validated when nothing was actually checked.
+for (const [label, dir] of [['SRC', SRC], ['DST', DST]]) {
+  if (!fs.existsSync(dir)) {
+    console.error(`${label} directory does not exist: ${dir}`);
+    process.exit(1);
+  }
+}
+
 // 3.7-side expected duration: max key time across every timeline.
 function srcDuration(anim) {
   let max = 0;
@@ -93,3 +103,9 @@ for (const dir of fs.readdirSync(DST)) {
 }
 console.log(`OK: ${ok}  FAIL: ${fail}`);
 for (const f of failures.slice(0, 15)) console.log('  ' + f);
+
+if (ok + fail === 0) {
+  console.error(`No converted skeletons found under ${DST} — nothing was validated. Run the conversion first.`);
+  process.exit(1);
+}
+if (fail > 0) process.exit(1);

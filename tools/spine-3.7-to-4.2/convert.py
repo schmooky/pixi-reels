@@ -124,7 +124,11 @@ def convert(doc):
             if "rotateMix" in tc:
                 tc["mixRotate"] = tc.pop("rotateMix")
             if "translateMix" in tc:
+                # 3.7's single translateMix applied to both axes; 4.2 splits it
+                # into mixX/mixY. Write both so the JSON is explicit (the runtime
+                # would default mixY to mixX, but editors/tools should not have to).
                 tc["mixX"] = tc.pop("translateMix")
+                tc["mixY"] = tc["mixX"]
             if "scaleMix" in tc:
                 tc["mixScaleX"] = tc.pop("scaleMix")
             if "shearMix" in tc:
