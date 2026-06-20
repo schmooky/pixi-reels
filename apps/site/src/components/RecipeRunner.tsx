@@ -243,6 +243,37 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
         fit();
         app.renderer.on('resize', fit);
         enableDebug(rs);
+      } else {
+        // Board / custom-stage recipes (HoldAndWinBoard, BoardGrid) add their
+        // own content — the grid, HUD, side panels, flight layer — straight to
+        // app.stage at fixed pixel sizes and never scale it, so a composition
+        // wider than the canvas clips left/right. Scale + center the whole
+        // stage to fit: the board-of-reels equivalent of the reelSet fit above.
+        // Bounds come from real measurable children (cell chrome, sprites, HUD,
+        // panels), all created synchronously before the recipe returns. Mask
+        // graphics don't count (Pixi marks masks measurable:false), which is why
+        // an empty-on-load grid must carry chrome to be sized — board-grid-reveal
+        // does. Late flights/labels land inside this extent, so a setup-time fit
+        // (re-run on resize) holds for the whole run.
+        const fitStage = () => {
+          app.stage.scale.set(1);
+          app.stage.position.set(0, 0);
+          const b = app.stage.getLocalBounds();
+          if (!(b.width > 0) || !(b.height > 0)) return;
+          const pad = 16;
+          const scale = Math.min(
+            1,
+            (app.screen.width - pad * 2) / b.width,
+            (app.screen.height - pad * 2) / b.height,
+          );
+          app.stage.scale.set(scale);
+          app.stage.position.set(
+            (app.screen.width - b.width * scale) / 2 - b.x * scale,
+            (app.screen.height - b.height * scale) / 2 - b.y * scale,
+          );
+        };
+        fitStage();
+        app.renderer.on('resize', fitStage);
       }
 
       setReady(true);

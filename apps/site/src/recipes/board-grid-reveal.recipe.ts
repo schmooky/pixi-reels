@@ -30,6 +30,12 @@ const grid = new BoardGrid({
   weights: Object.fromEntries(IDS.map((id) => [id, 1])),
   // A per-cell profile is just a function of the cell — here, a diagonal wave.
   profiles: { wave: (cell) => ({ ...SpeedPresets.NORMAL, minimumSpinTime: 300 + (cell.col + cell.row) * 55 }) },
+  // A per-cell backing tile — BoardGrid draws it behind each reel. Also gives
+  // the grid real bounds while every cell is still empty, so the runner can
+  // size it to the canvas before the first reveal.
+  chrome: (g, size) => {
+    g.roundRect(0, 0, size, size, 10).fill({ color: 0xfaf6ef, alpha: 0.6 }).stroke({ color: 0xe5dccf, width: 1, alpha: 0.8 });
+  },
   ticker: app.ticker,
 });
 
