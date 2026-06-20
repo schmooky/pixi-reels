@@ -251,4 +251,41 @@ describe('HoldAndWinState', () => {
       expect(s.phase).toBe('active');
     });
   });
+
+  describe('stray-landing guards', () => {
+    it('land() is a no-op outside a wave', () => {
+      const s = make();
+      s.enter([]); // active, not spinning
+      const fx = s.land({ col: 0, row: 0 }, { cell: { col: 0, row: 0 }, id: 'coin' });
+      expect(fx).toEqual([]);
+      expect(s.isLocked({ col: 0, row: 0 })).toBe(false);
+    });
+
+    it('endWave() is a no-op outside a wave and leaves the counter untouched', () => {
+      const s = make(3);
+      s.enter([]); // active, not spinning
+      const { effects, landed } = s.endWave();
+      expect(effects).toEqual([]);
+      expect(landed).toHaveLength(0);
+      expect(s.respinsLeft).toBe(3);
+      expect(s.phase).toBe('active');
+    });
+
+    it('reset() mid-wave is not resurrected by a stray landing or the closing endWave', () => {
+      const s = make();
+      s.enter([{ cell: { col: 0, row: 0 }, id: 'coin' }]);
+      s.beginWave([{ cell: { col: 1, row: 0 }, id: 'coin' }]); // spinning
+      s.reset(); // hard clear back to idle, even with a wave in flight
+      expect(s.phase).toBe('idle');
+      expect(s.lockedCoins()).toHaveLength(0);
+      // a cell settling after the reset must not re-lock into the cleared ledger
+      const stray = s.land({ col: 1, row: 0 }, { cell: { col: 1, row: 0 }, id: 'coin' });
+      expect(stray).toEqual([]);
+      expect(s.lockedCoins()).toHaveLength(0);
+      // and the original wave's closing endWave must not flip back to active
+      const { effects } = s.endWave();
+      expect(effects).toEqual([]);
+      expect(s.phase).toBe('idle');
+    });
+  });
 });

@@ -128,6 +128,10 @@ export class HoldAndWinState<TData = unknown> {
 
   /** Record one cell's landing. `coin` is null on a miss. */
   land(cell: HwCell, coin: HwCoin<TData> | null): HwEffect<TData>[] {
+    // Outside a wave this is a stray landing — a sibling reel settling after
+    // the wave was aborted on error, or a cell landing after reset(). Drop it
+    // so it can't re-lock a coin into a cleared ledger or resurrect a feature.
+    if (this._phase !== 'spinning') return [];
     if (!coin) {
       return [{ type: 'cell:landed', payload: { cell, coin: null } }];
     }
@@ -145,6 +149,10 @@ export class HoldAndWinState<TData = unknown> {
 
   /** Close the wave: resolve the counter, detect full / feature end. */
   endWave(): { effects: HwEffect<TData>[]; landed: HwCoin<TData>[] } {
+    // The wave was aborted or reset out from under us (see land()'s guard).
+    // Closing it would re-arm the counter and flip a finished feature back to
+    // active off a wave that no longer exists. Do nothing.
+    if (this._phase !== 'spinning') return { effects: [], landed: [] };
     const landed = this._waveLanded;
     const effects: HwEffect<TData>[] = [];
     effects.push(

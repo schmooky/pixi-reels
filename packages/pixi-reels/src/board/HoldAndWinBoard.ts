@@ -206,10 +206,17 @@ export class HoldAndWinBoard<TData = unknown> implements Disposable {
         done: this._state.phase === 'idle',
       };
     } catch (err) {
-      // A driver error (e.g. an unregistered hit id) must not strand the board
-      // in 'spinning' — every later respin() would throw "wave in flight".
-      // Restore the phase, then rethrow so the caller still sees the failure.
+      // A synchronous throw between beginWave and endWave — most plausibly a
+      // game-layer event listener (respin:start / cell:landed / coin:locked)
+      // throwing — must not strand the board. (An unregistered symbol id does
+      // NOT land here: the engine logs and slams the reel internally, so the
+      // spin resolves rather than rejecting.) abortWave() restores the reducer
+      // phase, else every later respin() throws "wave in flight"; skipSpinning()
+      // lands any cell still in flight, else the next respin() throws "already
+      // spinning" on it. Stray landings from those slams are dropped by the
+      // reducer's not-spinning guard. Rethrow so the caller still sees it.
       this._state.abortWave();
+      this._grid.skipSpinning();
       throw err;
     }
   }
