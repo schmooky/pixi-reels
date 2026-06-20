@@ -215,9 +215,9 @@ async function slickReset() {
   if (sumText) gsap.to(sumText.scale, { x: 0, y: 0, duration: 0.16, ease: 'back.in(2)' });
   await new Promise((res) => gsap.to(board.container, { alpha: 0, duration: 0.22, ease: 'power2.in', onComplete: res }));
 
-  for (const t of labelAt.values()) t.destroy();
+  for (const t of labelAt.values()) { try { gsap.killTweensOf(t.scale); } catch {} t.destroy(); }
   labelAt.clear();
-  if (sumText) { try { sumText.destroy(); } catch {} sumText = null; }
+  if (sumText) { try { gsap.killTweensOf(sumText.scale); sumText.destroy(); } catch {} sumText = null; }
   pendingFx.length = 0;
   board.reset();
   seedBoard();
@@ -240,7 +240,9 @@ return {
   cleanup: () => {
     for (const f of flyers) { try { gsap.killTweensOf(f); f.destroy(); } catch {} }
     flyers.clear();
-    if (sumText) { try { sumText.destroy(); } catch {} }
+    for (const t of labelAt.values()) { try { gsap.killTweensOf(t.scale); } catch {} }
+    if (sumText) { try { gsap.killTweensOf(sumText.scale); sumText.destroy(); } catch {} }
+    pendingFx.length = 0;
     try { gsap.killTweensOf(board.container); } catch {}
     board.destroy();
   },

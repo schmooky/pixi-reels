@@ -156,6 +156,16 @@ let spinCount = 0;
 
 return {
   reelSet,
+  // A reveal can be mid-tween when the recipe is torn down (nav / HMR). Kill any
+  // tweens on the live symbol views before the engine frees them, so GSAP never
+  // animates a destroyed view.
+  cleanup: () => {
+    for (const reel of reelSet.reels) {
+      for (let r = 0; r < ROWS; r++) {
+        try { const v = reel.getSymbolAt(r).view; gsap.killTweensOf(v); gsap.killTweensOf(v.scale); } catch {}
+      }
+    }
+  },
   nextResult: () => {
     const script = scripts[spinCount % scripts.length];
     const grid = Array.from({ length: COLS }, () =>

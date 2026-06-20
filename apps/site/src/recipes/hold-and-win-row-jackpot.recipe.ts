@@ -181,7 +181,11 @@ return {
   cleanup: () => {
     for (const f of flyers) { try { gsap.killTweensOf(f); f.destroy(); } catch {} }
     flyers.clear();
-    for (const t of labelAt.values()) { try { t.destroy(); } catch {} }
+    for (const t of labelAt.values()) { try { gsap.killTweensOf(t.scale); t.destroy(); } catch {} }
+    labelAt.clear();
+    gsap.killTweensOf(awardText.scale);
+    pendingFx.length = 0;
+    try { hud.destroy(); awardText.destroy(); labels.destroy(); } catch {}
     board.destroy();
     plaque.destroy();
   },

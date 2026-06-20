@@ -175,12 +175,12 @@ return {
   cleanup: () => {
     for (const f of flyers) { try { gsap.killTweensOf(f); f.destroy(); } catch {} }
     flyers.clear();
-    for (const t of labelAt.values()) { try { t.destroy(); } catch {} }
+    for (const t of labelAt.values()) { try { gsap.killTweensOf(t.scale); t.destroy(); } catch {} }
     board.destroy();
   },
   onSpin: async () => {
     if (phase === 'done') {
-      for (const t of labelAt.values()) t.destroy();
+      for (const t of labelAt.values()) { try { gsap.killTweensOf(t.scale); t.destroy(); } catch {} }
       labelAt.clear();
       resetSeed();
       board.reset();

@@ -124,7 +124,7 @@ return {
   onSpin: async () => {
     if (busy) return;
     busy = true;
-    for (const t of labelAt.values()) t.destroy();
+    for (const t of labelAt.values()) { try { gsap.killTweensOf(t.scale); t.destroy(); } catch {} }
     labelAt.clear();
     board.reset();
 

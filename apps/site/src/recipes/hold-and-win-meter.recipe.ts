@@ -183,6 +183,8 @@ return {
     flyers.clear();
     gsap.killTweensOf(totalText.scale);
     for (const t of labelAt.values()) { try { t.destroy(); } catch {} }
+    labelAt.clear();
+    try { barBg.destroy(); barFill.destroy(); totalText.destroy(); hud.destroy(); labels.destroy(); } catch {}
     board.destroy();
     counter.destroy();
   },

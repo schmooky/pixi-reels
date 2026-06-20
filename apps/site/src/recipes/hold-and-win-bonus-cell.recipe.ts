@@ -65,6 +65,7 @@ const paintLabel = (cell, value) => {
 const BONUS = [{ col: 1, row: 0 }, { col: 3, row: 1 }, { col: 2, row: 2 }];
 const bonusSet = new Set(BONUS.map(ck));
 const markers = new Map();
+const fadingMarkers = new Set(); // markers mid fade-out, tracked so a reset can still kill them
 function placeMarkers() {
   for (const cell of BONUS) {
     const c = board.cellCenter(cell);
@@ -77,7 +78,12 @@ function placeMarkers() {
     gsap.to(s, { alpha: 0.55, duration: 0.7, ease: 'sine.inOut', repeat: -1, yoyo: true });
   }
 }
-function clearMarkers() { for (const s of markers.values()) { gsap.killTweensOf(s); try { s.destroy(); } catch {} } markers.clear(); }
+function clearMarkers() {
+  for (const s of markers.values()) { gsap.killTweensOf(s); gsap.killTweensOf(s.scale); try { s.destroy(); } catch {} }
+  markers.clear();
+  for (const s of fadingMarkers) { gsap.killTweensOf(s); gsap.killTweensOf(s.scale); try { s.destroy(); } catch {} }
+  fadingMarkers.clear();
+}
 
 board.events.on('coin:locked', ({ coin }) => {
   const onBonus = bonusSet.has(ck(coin.cell));
@@ -86,9 +92,10 @@ board.events.on('coin:locked', ({ coin }) => {
     const m = markers.get(ck(coin.cell));
     if (m) {
       m.texture = symbols['bonus_cell_active'];
-      gsap.to(m, { alpha: 0, duration: 0.45, ease: 'power2.in', onComplete: () => { try { m.destroy(); } catch {} } });
-      gsap.fromTo(m.scale, { x: m.scale.x, y: m.scale.y }, { x: m.scale.x * 1.5, y: m.scale.y * 1.5, duration: 0.45, ease: 'power2.out' });
       markers.delete(ck(coin.cell));
+      fadingMarkers.add(m); // tracked: a reset within the 0.45s fade can still kill it
+      gsap.to(m, { alpha: 0, duration: 0.45, ease: 'power2.in', onComplete: () => { try { m.destroy(); } catch {} fadingMarkers.delete(m); } });
+      gsap.fromTo(m.scale, { x: m.scale.x, y: m.scale.y }, { x: m.scale.x * 1.5, y: m.scale.y * 1.5, duration: 0.45, ease: 'power2.out' });
     }
   }
   const t = paintLabel(coin.cell, coin.data.value);
@@ -109,7 +116,7 @@ const reset = () => { clearMarkers(); for (const t of labelAt.values()) t.destro
 placeMarkers();
 
 return {
-  cleanup: () => { clearMarkers(); for (const t of labelAt.values()) { try { t.destroy(); } catch {} } board.destroy(); },
+  cleanup: () => { clearMarkers(); for (const t of labelAt.values()) { try { gsap.killTweensOf(t.scale); t.destroy(); } catch {} } labelAt.clear(); try { hud.destroy(); labels.destroy(); } catch {} board.destroy(); },
   onSpin: async () => {
     if (busy) return;
     busy = true;

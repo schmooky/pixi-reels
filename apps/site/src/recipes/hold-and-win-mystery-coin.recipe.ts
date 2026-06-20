@@ -182,9 +182,9 @@ const ROUNDS = [
 
 let total = 0;
 return {
-  cleanup: () => { for (const t of labelAt.values()) { try { t.destroy(); } catch {} } board.destroy(); },
+  cleanup: () => { for (const t of labelAt.values()) { try { gsap.killTweensOf(t.scale); t.destroy(); } catch {} } board.destroy(); },
   onSpin: async () => {
-    for (const t of labelAt.values()) t.destroy();
+    for (const t of labelAt.values()) { try { gsap.killTweensOf(t.scale); t.destroy(); } catch {} }
     labelAt.clear();
     pendingFx.length = 0;
     total = 0;

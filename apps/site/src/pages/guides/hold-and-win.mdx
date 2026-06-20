@@ -40,7 +40,7 @@ game logic you run on top of three openings:
 |---|---|
 | `board.events` | every beat of the round, with the coin payload |
 | `board.symbolAt(cell)` | the live `ReelSymbol` instance — call your own symbol's methods |
-| `board.cellCenter(cell)` / `cellBounds(cell)` | exact pixel geometry for flights & trails |
+| `board.cellCenter(cell)` / `board.cellBounds(cell)` | exact pixel geometry for flights & trails |
 
 Keep that split and any Hold & Win variant you can think of is a small amount of
 game code — the board never changes.
