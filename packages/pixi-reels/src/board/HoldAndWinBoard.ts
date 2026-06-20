@@ -183,28 +183,35 @@ export class HoldAndWinBoard<TData = unknown> implements Disposable {
    */
   async respin(hits: HwCoin<TData>[]): Promise<HwRespinResult<TData>> {
     const { round, spinning, hitByKey } = this._state.beginWave(hits);
+    try {
+      const tense = this._anticipating() && spinning.length > 0;
+      for (const cell of spinning) this._grid.setProfile(cell, tense ? 'tension' : 'normal');
+      this.events.emit('respin:start', { round, respinsLeft: this._state.respinsLeft, spinning });
 
-    const tense = this._anticipating() && spinning.length > 0;
-    for (const cell of spinning) this._grid.setProfile(cell, tense ? 'tension' : 'normal');
-    this.events.emit('respin:start', { round, respinsLeft: this._state.respinsLeft, spinning });
+      const targets = spinning.map((cell) => ({
+        cell,
+        id: hitByKey.get(cellKey(cell))?.id ?? this._emptyId,
+      }));
+      await this._grid.spinCells(targets, (cell) => {
+        this._apply(this._state.land(cell, hitByKey.get(cellKey(cell)) ?? null));
+      });
 
-    const targets = spinning.map((cell) => ({
-      cell,
-      id: hitByKey.get(cellKey(cell))?.id ?? this._emptyId,
-    }));
-    await this._grid.spinCells(targets, (cell) => {
-      this._apply(this._state.land(cell, hitByKey.get(cellKey(cell)) ?? null));
-    });
-
-    const { effects, landed } = this._state.endWave();
-    this._apply(effects);
-    return {
-      round,
-      hits: landed,
-      respinsLeft: this._state.respinsLeft,
-      full: this._state.isFull,
-      done: this._state.phase === 'idle',
-    };
+      const { effects, landed } = this._state.endWave();
+      this._apply(effects);
+      return {
+        round,
+        hits: landed,
+        respinsLeft: this._state.respinsLeft,
+        full: this._state.isFull,
+        done: this._state.phase === 'idle',
+      };
+    } catch (err) {
+      // A driver error (e.g. an unregistered hit id) must not strand the board
+      // in 'spinning' — every later respin() would throw "wave in flight".
+      // Restore the phase, then rethrow so the caller still sees the failure.
+      this._state.abortWave();
+      throw err;
+    }
   }
 
   /**

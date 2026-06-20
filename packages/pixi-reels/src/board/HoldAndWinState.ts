@@ -170,8 +170,23 @@ export class HoldAndWinState<TData = unknown> {
     return { effects, landed };
   }
 
+  /**
+   * Abandon an in-flight wave after a driver error: restore the phase from
+   * `spinning` back to `active` so a thrown spin doesn't strand the board (every
+   * later `beginWave` would otherwise throw "wave in flight"). Cells that already
+   * landed stay locked; the caller decides whether to retry or `reset`.
+   */
+  abortWave(): void {
+    if (this._phase !== 'spinning') return;
+    this._phase = 'active';
+    this._waveLanded = [];
+  }
+
   /** Remove locked coins — the collect moment. */
   release(cells: HwCell[]): { effects: HwEffect<TData>[]; released: HwCoin<TData>[] } {
+    if (this._phase === 'spinning') {
+      throw new Error('HoldAndWinBoard: release() while a wave is in flight — await respin() first.');
+    }
     const effects: HwEffect<TData>[] = [];
     const released: HwCoin<TData>[] = [];
     for (const cell of cells) {
@@ -192,6 +207,9 @@ export class HoldAndWinState<TData = unknown> {
    * the cell's reel directly.
    */
   swap(cell: HwCell, id: string, data: TData | undefined): void {
+    if (this._phase === 'spinning') {
+      throw new Error('HoldAndWinBoard: setSymbolAt() while a wave is in flight — await respin() first.');
+    }
     const k = cellKey(cell);
     const prev = this._locked.get(k);
     if (!prev) {

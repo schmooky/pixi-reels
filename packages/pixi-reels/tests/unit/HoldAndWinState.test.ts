@@ -208,4 +208,47 @@ describe('HoldAndWinState', () => {
       expect(s.lockedCoins()).toHaveLength(0);
     });
   });
+
+  describe('mid-wave guards', () => {
+    it('throws on release() while a wave is in flight', () => {
+      const s = make();
+      s.enter([{ cell: { col: 0, row: 0 }, id: 'coin' }]);
+      s.beginWave([]); // → spinning
+      expect(() => s.release([{ col: 0, row: 0 }])).toThrow(/wave is in flight/);
+    });
+
+    it('throws on swap() while a wave is in flight', () => {
+      const s = make();
+      s.enter([{ cell: { col: 0, row: 0 }, id: 'coin' }]);
+      s.beginWave([]); // → spinning
+      expect(() => s.swap({ col: 0, row: 0 }, 'major', undefined)).toThrow(/wave is in flight/);
+    });
+  });
+
+  describe('abortWave', () => {
+    it('restores phase from spinning to active so the board recovers', () => {
+      const s = make();
+      s.enter([{ cell: { col: 1, row: 1 }, id: 'coin' }]);
+      s.beginWave([{ cell: { col: 0, row: 0 }, id: 'coin' }]);
+      s.land({ col: 0, row: 0 }, { cell: { col: 0, row: 0 }, id: 'coin' });
+      expect(s.phase).toBe('spinning');
+      s.abortWave();
+      expect(s.phase).toBe('active');
+      // the cell that already landed stays locked
+      expect(s.isLocked({ col: 0, row: 0 })).toBe(true);
+      // recovery: a fresh wave begins without throwing "wave in flight",
+      // and the aborted wave's landing doesn't leak into the new one
+      expect(() => s.beginWave([])).not.toThrow();
+      const { landed } = s.endWave();
+      expect(landed).toHaveLength(0);
+    });
+
+    it('is a no-op when no wave is in flight', () => {
+      const s = make();
+      s.enter([]);
+      expect(s.phase).toBe('active');
+      s.abortWave();
+      expect(s.phase).toBe('active');
+    });
+  });
 });
