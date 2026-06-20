@@ -3,7 +3,7 @@
 //           loadHoldAndWinSprites, PIXI, gsap, app
 //
 // The lifecycle, made visible. A small board runs a full feature while every
-// `board.events` beat prints to a live log on the right — enter, respin:start,
+// `board.events` beat prints to a live log on the right — feature:enter, respin:start,
 // cell:landed, coin:locked, respins:changed, respin:end, board:full / feature:end.
 // This is the companion to the Hold & Win guide: watch the state machine instead
 // of imagining it. The board is a plain HoldAndWinBuilder board; nothing here

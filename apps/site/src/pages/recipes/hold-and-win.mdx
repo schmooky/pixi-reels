@@ -25,10 +25,10 @@ import RecipeFrame from '../../components/RecipeFrame.astro';
 
 Press Run a few times. every coin that lands stays put on the next respin, and the HUD under the board is driven purely by board events.
 
-A Hold & Win board spins per **cell**, not per column — the engine's atomic spin unit is the reel, so each cell is its own 1×1 `ReelSet`. `HoldAndWinBuilder` (in `examples/shared/`, copy it into your game) owns that grid plus the choreography every H&W game repeats: spin the free cells, lock the hits, reset-or-decrement the counter, detect the full board. The library still doesn't own the mechanic; the board is built entirely on public engine API.
+A Hold & Win board spins per **cell**, not per column — the engine's atomic spin unit is the reel, so each cell is its own 1×1 `ReelSet`. `HoldAndWinBuilder` (a core `pixi-reels` export) builds that grid plus the choreography every H&W game repeats: spin the free cells, lock the hits, reset-or-decrement the counter, detect the full board. The library owns the *mechanic* but nothing about *value* — the board is built entirely on `BoardGrid`, the engine's public board-of-reels primitive.
 
 ```ts
-import { HoldAndWinBuilder } from './shared/HoldAndWinBuilder.ts';
+import { HoldAndWinBuilder } from 'pixi-reels';
 
 const board = new HoldAndWinBuilder<{ value: number }>()
   .grid(5, 3)

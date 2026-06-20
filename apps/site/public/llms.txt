@@ -8,7 +8,7 @@ Site: https://pixi-reels.schmooky.dev
 Repo: https://github.com/schmooky/pixi-reels
 Package: https://www.npmjs.com/package/pixi-reels
 
-Generated: 2026-06-19T14:19:43.567Z
+Generated: 2026-06-20T11:23:30.013Z
 
 ## Quick start
 
@@ -590,7 +590,7 @@ Steps:
 
 ### Hold & Win: live event trace
 URL: https://pixi-reels.schmooky.dev/recipes/hold-and-win-trace/
-A small board runs a full feature while every board.events beat prints to a live log — enter, respin:start, cell:landed, coin:locked, respins:changed, respin:end, board:full / feature:end. Watch the lifecycle instead of imagining it.
+A small board runs a full feature while every board.events beat prints to a live log — feature:enter, respin:start, cell:landed, coin:locked, respins:changed, respin:end, board:full / feature:end. Watch the lifecycle instead of imagining it.
 Tags: hold-and-win, events, lifecycle, debugging
 APIs: HoldAndWinBuilder (pixi-reels), HoldAndWinBoard.events, HoldAndWinBoard.phase
 Steps:
@@ -6418,7 +6418,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/hold-and-win-trace/
 //           loadHoldAndWinSprites, PIXI, gsap, app
 //
 // The lifecycle, made visible. A small board runs a full feature while every
-// `board.events` beat prints to a live log on the right — enter, respin:start,
+// `board.events` beat prints to a live log on the right — feature:enter, respin:start,
 // cell:landed, coin:locked, respins:changed, respin:end, board:full / feature:end.
 // This is the companion to the Hold & Win guide: watch the state machine instead
 // of imagining it. The board is a plain HoldAndWinBuilder board; nothing here

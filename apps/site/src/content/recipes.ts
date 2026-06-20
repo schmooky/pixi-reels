@@ -468,7 +468,7 @@ export const RECIPES: RecipeMeta[] = [
     slug: 'hold-and-win-trace',
     group: 'features',
     title: 'Hold & Win: live event trace',
-    oneLiner: 'A board runs a full feature while every board.events beat prints to a live log — enter, respin:start, cell:landed, coin:locked, respins:changed, respin:end, board:full / feature:end. The lifecycle, made visible.',
+    oneLiner: 'A board runs a full feature while every board.events beat prints to a live log — feature:enter, respin:start, cell:landed, coin:locked, respins:changed, respin:end, board:full / feature:end. The lifecycle, made visible.',
     steps: [
       'Build a plain HoldAndWinBuilder board and subscribe to every event',
       'enter(seed) opens the feature; a respin loop drives waves until done',
