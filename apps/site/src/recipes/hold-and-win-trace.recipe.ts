@@ -96,11 +96,11 @@ function pickHits() {
 
 let running = false;
 return {
-  cleanup: () => { for (const l of lines) { try { l.destroy(); } catch {} } board.destroy(); },
+  cleanup: () => { for (const l of lines) { try { gsap.killTweensOf(l); l.destroy(); } catch {} } lines.length = 0; try { panel.destroy({ children: true }); hud.destroy(); } catch {} board.destroy(); },
   onSpin: async () => {
     if (running) return;
     running = true;
-    for (const l of lines.splice(0)) { try { l.destroy(); } catch {} }
+    for (const l of lines.splice(0)) { try { gsap.killTweensOf(l); l.destroy(); } catch {} }
     board.reset(); // → feature:reset, the first line of every run
     await sleep(150);
     board.enter([{ cell: { col: 0, row: 0 }, id: 'coin', data: { value: 5 } }]);

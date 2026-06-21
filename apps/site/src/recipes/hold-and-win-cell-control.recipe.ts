@@ -48,7 +48,7 @@ function spinCell(cell, id) {
 
 let busy = false;
 return {
-  cleanup: () => board.destroy(),
+  cleanup: () => { try { hud.destroy(); } catch {} board.destroy(); },
   onSpin: async () => {
     if (busy) return;
     busy = true;

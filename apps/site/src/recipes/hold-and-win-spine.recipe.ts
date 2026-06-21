@@ -337,6 +337,8 @@ return {
     flyers.clear();
     gsap.killTweensOf(totalText.scale);
     for (const { plaque, label } of Object.values(panels)) { try { plaque.destroy(); label.destroy(); } catch {} }
+    try { hud.destroy(); labels.destroy(); totalText.destroy(); } catch {}
+    labelAt.clear();
     board.destroy();
     counter.destroy();
   },

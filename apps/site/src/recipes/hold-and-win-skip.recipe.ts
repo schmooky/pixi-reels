@@ -79,7 +79,7 @@ async function collect() {
 
 let running = false;
 return {
-  cleanup: () => { for (const f of flyers) { try { gsap.killTweensOf(f); f.destroy(); } catch {} } for (const t of labelAt.values()) { try { t.destroy(); } catch {} } board.destroy(); },
+  cleanup: () => { for (const f of flyers) { try { gsap.killTweensOf(f); f.destroy(); } catch {} } flyers.clear(); for (const t of labelAt.values()) { try { t.destroy(); } catch {} } labelAt.clear(); try { meterText.destroy(); hud.destroy(); labels.destroy({ children: false }); } catch {} board.destroy(); },
   // RecipeRunner calls onSkip when the button is tapped mid-feature
   onSkip: () => {
     if (!running || skipping) return;

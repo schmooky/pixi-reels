@@ -58,7 +58,7 @@ app.stage.addChild(hud);
 
 let busy = false;
 return {
-  cleanup: () => { try { gsap.killTweensOf(ring); } catch {} grid.destroy(); },
+  cleanup: () => { try { gsap.killTweensOf(ring); } catch {} try { hud.destroy(); } catch {} grid.destroy(); },
   onSpin: async () => {
     if (busy) return;
     busy = true;

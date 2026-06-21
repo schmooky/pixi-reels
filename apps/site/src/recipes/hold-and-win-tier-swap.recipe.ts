@@ -98,7 +98,7 @@ seedBoard();
 
 let tier = 0, busy = false;
 return {
-  cleanup: () => { for (const t of labelAt.values()) { try { t.destroy(); } catch {} } board.destroy(); },
+  cleanup: () => { for (const t of labelAt.values()) { try { t.destroy(); } catch {} } labelAt.clear(); try { hud.destroy(); labels.destroy({ children: false }); } catch {} board.destroy(); },
   onSpin: async () => {
     if (busy) return;
     busy = true;

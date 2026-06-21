@@ -97,7 +97,7 @@ const rounds = [
 ];
 
 return {
-  cleanup: () => { for (const t of labelAt.values()) { try { t.destroy(); } catch {} } board.destroy(); },
+  cleanup: () => { for (const t of labelAt.values()) { try { t.destroy(); } catch {} } labelAt.clear(); try { hud.destroy(); labels.destroy(); } catch {} board.destroy(); },
   onSpin: async () => {
     for (const t of labelAt.values()) t.destroy();
     labelAt.clear();

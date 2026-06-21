@@ -112,7 +112,7 @@ const ROUNDS = [
 ];
 
 let busy = false;
-const reset = () => { clearMarkers(); for (const t of labelAt.values()) t.destroy(); labelAt.clear(); board.reset(); placeMarkers(); };
+const reset = () => { clearMarkers(); for (const t of labelAt.values()) { try { gsap.killTweensOf(t.scale); t.destroy(); } catch {} } labelAt.clear(); board.reset(); placeMarkers(); };
 placeMarkers();
 
 return {

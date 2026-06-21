@@ -133,13 +133,13 @@ async function upgradeCoin(coin) {
 
 let busy = false;
 return {
-  cleanup: () => { for (const t of labelAt.values()) { try { t.destroy(); } catch {} } board.destroy(); },
+  cleanup: () => { for (const t of labelAt.values()) { try { gsap.killTweensOf(t.scale); t.destroy(); } catch {} } labelAt.clear(); try { hud.destroy(); labels.destroy(); } catch {} board.destroy(); },
   onSpin: async () => {
     if (busy) return;
     busy = true;
     const maxed = board.lockedCoins.every((c) => c.data.value === LADDER[LADDER.length - 1]);
     if (maxed) {
-      for (const t of labelAt.values()) t.destroy();
+      for (const t of labelAt.values()) { try { gsap.killTweensOf(t.scale); t.destroy(); } catch {} }
       labelAt.clear();
       board.reset();
       seedBoard();

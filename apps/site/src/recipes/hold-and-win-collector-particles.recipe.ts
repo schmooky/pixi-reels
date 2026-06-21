@@ -131,7 +131,7 @@ async function collect() {
 
 let phase = 'ready';
 return {
-  cleanup: () => { for (const f of flyers) { try { gsap.killTweensOf(f); f.destroy(); } catch {} } flyers.clear(); for (const t of labelAt.values()) { try { t.destroy(); } catch {} } if (sumText) { try { gsap.killTweensOf(sumText.scale); gsap.killTweensOf(sumText); sumText.destroy(); } catch {} sumText = null; } board.destroy(); },
+  cleanup: () => { for (const f of flyers) { try { gsap.killTweensOf(f); f.destroy(); } catch {} } flyers.clear(); for (const t of labelAt.values()) { try { t.destroy(); } catch {} } labelAt.clear(); if (sumText) { try { gsap.killTweensOf(sumText.scale); gsap.killTweensOf(sumText); sumText.destroy(); } catch {} sumText = null; } try { hud.destroy(); labels.destroy(); } catch {} board.destroy(); },
   onSpin: async () => {
     if (phase === 'running') return;
     if (phase === 'done') { for (const t of labelAt.values()) t.destroy(); labelAt.clear(); if (sumText) { try { gsap.killTweensOf(sumText.scale); sumText.destroy(); } catch {} sumText = null; } total = 0; SEED.forEach((c, i) => (c.data.value = [10, 5, 25, 15][i])); board.reset(); seedBoard(); phase = 'ready'; return; }
