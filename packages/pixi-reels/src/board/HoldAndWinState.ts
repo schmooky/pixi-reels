@@ -178,7 +178,10 @@ export class HoldAndWinState<TData = unknown> {
         payload: { coins: this.lockedCoins(), rounds: this._round, full },
       });
     }
-    return { effects, landed };
+    // Hand back a caller-owned copy, not the live `_waveLanded` reference, so a
+    // consumer that mutates `respin().hits` can't reach into reducer state. The
+    // `respin:end` event payload above is already copied for the same reason.
+    return { effects, landed: [...landed] };
   }
 
   /**
