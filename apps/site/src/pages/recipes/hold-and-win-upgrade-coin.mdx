@@ -1,0 +1,43 @@
+---
+layout: ../../layouts/Recipe.astro
+title: "Hold & Win: upgrade a coin in place"
+description: A held coin climbs the value ladder (5 → 10 → 25 → 50 → 100) with a flip-and-pop flourish — no respin, no cell movement. The new tier lives in coin.data; the label is just repainted.
+tags: [hold-and-win, coins, upgrade, transform, spine]
+steps:
+  - Open the board holding coins at the lowest tier
+  - On each press, bump every held coin one rung up the value ladder
+  - Play the coin's one-turn flourish and pop the new amount in
+  - The board is untouched — only coin.data and the label change
+apis:
+  - HoldAndWinBuilder (pixi-reels)
+  - HoldAndWinBoard.symbolAt / lockedCoins
+  - GoldCoinSymbol (examples/shared)
+---
+
+import code from '../../recipes/hold-and-win-upgrade-coin.recipe.ts?raw';
+import { RecipeRunner } from '../../components/RecipeRunner.tsx';
+import RecipeFrame from '../../components/RecipeFrame.astro';
+
+<RecipeFrame>
+  <RecipeRunner code={code} height={420} client:only="react" />
+</RecipeFrame>
+
+Press Run. Every coin starts at `5.00`; each press promotes the whole board one rung up the ladder — `5 → 10 → 25 → 50 → 100` — flipping the coin and popping the new amount. When everything is maxed, the next press reseeds.
+
+## Upgrading is data + a repaint
+
+A tier upgrade doesn't move or re-spin anything. The value lives in `coin.data`; the recipe bumps it, plays the coin's own one-turn flourish (which reads as the coin flipping over), and repaints the label from the data:
+
+```ts
+coin.data.value = nextTier(coin.data.value);   // game state owns the value
+board.symbolAt(coin.cell).playWin();           // the coin flips
+paintLabel(coin.cell, coin.data.value);         // repaint from data
+```
+
+`board.symbolAt(cell)` hands back the live symbol so you can drive any animation it exposes; everything else on the board is undisturbed. To change the *art* on upgrade as well (a bronze coin becoming gold), swap the cell's id with `board.setSymbolAt(cell, id, data?)` instead of only the label.
+
+## Related recipes
+
+- [Hold & Win: payer / doubler coin](/recipes/hold-and-win-payer-coin/). a special coin that boosts every value at once
+- [Symbol transform](/recipes/symbol-transform/). morph one symbol id into a higher one on a standard reel set
+- [Hold & Win: mystery value coin](/recipes/hold-and-win-mystery-coin/). reveal the value with a spinning strip

@@ -31,6 +31,7 @@ export const GUIDES_NAV: NavSection[] = [
       { label: 'Nudge', href: '/guides/nudge/' },
       { label: 'Speed modes', href: '/guides/speed-modes/' },
       { label: 'Win animations', href: '/guides/win-animations/' },
+      { label: 'Hold & Win', href: '/guides/hold-and-win/' },
     ],
   },
   {
@@ -38,6 +39,7 @@ export const GUIDES_NAV: NavSection[] = [
     items: [
       { label: 'Cheats & testing', href: '/guides/cheats-and-testing/' },
       { label: 'Debugging', href: '/guides/debugging/' },
+      { label: 'Recipe previews', href: '/guides/recipe-previews/' },
     ],
   },
 ];

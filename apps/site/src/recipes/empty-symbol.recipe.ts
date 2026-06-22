@@ -1,6 +1,6 @@
 // @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, WILD_CARD,
-//                   PIXI, app, EmptySymbol
+// Injected globals: ReelSetBuilder, SpeedPresets, GoldCoinSymbol, Spine,
+//                   SharedRectMaskStrategy, PIXI, gsap, app, EmptySymbol, pickWeighted
 
 // EMPTY SYMBOL pattern.
 //
@@ -21,37 +21,57 @@
 //
 // What this recipe runs:
 //   - 3 reels, 3 visible rows. Symbol set is `{ coin, empty }`.
+//   - The coin is the production Spine gold coin (GoldCoinSymbol).
 //   - Weights `{ coin: 1, empty: 6 }`. most cells land blank; coins
 //     scatter sparsely (~1 in 7 by weight).
-//   - Hit Spin to spin all three reels. Coins land in a sea of nothing.
 
 const COIN = 'coin';
 const EMPTY = 'empty';
+const REELS = 3, ROWS = 3, CELL = 88, GAP = 6;
 
-const REELS = 3;
-const ROWS = 3;
-const CELL = 88;
-const GAP = 6;
+const ASSETS = { 'hw-atlas': '/hw-spine/skeletons.atlas', 'hw-jackpot': '/hw-spine/jackpot.json' };
+for (const [alias, src] of Object.entries(ASSETS)) {
+  if (!PIXI.Assets.cache.has(alias)) { try { PIXI.Assets.add({ alias, src }); } catch {} }
+}
+await PIXI.Assets.load(Object.keys(ASSETS));
+const SPINE_MAP = { [COIN]: { skeleton: 'hw-jackpot', atlas: 'hw-atlas' } };
+const probe = Spine.from({ skeleton: 'hw-jackpot', atlas: 'hw-atlas' });
+probe.state.setAnimation(0, 'mini_x', true);
+try { probe.update(0); } catch {}
+const pb = probe.getLocalBounds();
+const COIN_SCALE = (CELL - 8) / Math.max(1, pb.width, pb.height);
+probe.destroy();
 
 const reelSet = new ReelSetBuilder()
   .reels(REELS)
   .visibleRows(ROWS)
   .symbolSize(CELL, CELL)
   .symbolGap(GAP, GAP)
+  // Spine content ignores the per-reel rect mask; the shared strategy plus
+  // explicit empty buffers in every setResult keeps a scrolling coin clean.
+  .maskStrategy(new SharedRectMaskStrategy())
   .symbols((registry) => {
-    // Real symbol: a wild-card-styled "coin".
-    registry.register(COIN, CardSymbol, {
-      color: WILD_CARD.color,
-      label: WILD_CARD.label,
-      textColor: WILD_CARD.textColor,
-    });
-    // The empty cell: rendered as absolutely nothing.
+    registry.register(COIN, GoldCoinSymbol, { spineMap: SPINE_MAP, idleAnimation: 'idle', scale: COIN_SCALE, settleSize: CELL - 10 });
     registry.register(EMPTY, EmptySymbol, {});
   })
-  // Coins are rare; the strip is mostly blank.
   .weights({ [COIN]: 1, [EMPTY]: 6 })
+  .initialFrame(Array.from({ length: REELS }, () => ({ visible: [EMPTY, EMPTY, EMPTY], bufferAbove: [EMPTY], bufferBelow: [EMPTY] })))
   .speed('normal', SpeedPresets.NORMAL)
   .ticker(app.ticker)
   .build();
 
-return { reelSet };
+return {
+  reelSet,
+  onSpin: async () => {
+    const spin = reelSet.spin();
+    await new Promise((r) => setTimeout(r, 150));
+    // Coins scatter sparsely; buffers are forced empty so nothing spills.
+    const grid = Array.from({ length: REELS }, () => ({
+      visible: Array.from({ length: ROWS }, () => pickWeighted({ [COIN]: 1, [EMPTY]: 6 })),
+      bufferAbove: [EMPTY],
+      bufferBelow: [EMPTY],
+    }));
+    reelSet.setResult(grid);
+    await spin;
+  },
+};

@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { RefreshCw, ExternalLink, SkipForward } from 'lucide-react';
 import { Application } from 'pixi.js';
-import type { Texture } from 'pixi.js';
+import type { Texture, Ticker } from 'pixi.js';
 import * as PIXI from 'pixi.js';
 import { gsap } from 'gsap';
 import {
@@ -10,8 +10,10 @@ import {
   enableDebug, WinPresenter,
   RectMaskStrategy, SharedRectMaskStrategy,
   type ReelSet, ReelSymbol,
+  EmptySymbol, HoldAndWinBuilder, BoardGrid,
 } from 'pixi-reels';
 import { SpineReelSymbol } from 'pixi-reels/spine';
+import { Spine } from '@esotericsoftware/spine-pixi-v8';
 import { BlurSpriteSymbol } from '../../../../examples/shared/BlurSpriteSymbol.ts';
 import { CardSymbol, CARD_DECK, WILD_CARD } from '../../../../examples/shared/CardSymbol.ts';
 import {
@@ -24,18 +26,59 @@ import {
   coinMultiplier,
   drawCoin,
 } from '../../../../examples/shared/CoinSymbol.ts';
-import { EmptySymbol } from '../../../../examples/shared/EmptySymbol.ts';
+import {
+  GoldCoinSymbol,
+  coinWaves,
+  bezierFly,
+  settleMoneyFace,
+  freezeAtEnd,
+  fitText,
+} from '../../../../examples/shared/holdAndWinFx.ts';
 import { loadPrototypeSymbols } from '../../../../examples/shared/prototypeSpriteLoader.ts';
 import {
   loadGeneratedSpines,
   buildSpineMap,
 } from '../../../../examples/shared/generatedSpineLoader.ts';
+import { loadHoldAndWinSprites } from '../../../../examples/shared/holdAndWinSprites.ts';
 import { transform as sucraseTransform } from 'sucrase';
 import { cn } from '@/lib/utils';
 import { CanvasSkeleton } from './CanvasSkeleton';
 import { useMinDisplay } from './useMinDisplay';
 
-let gsapSynced = false;
+// GSAP is driven off a live PIXI app.ticker so tweens honor hidden-tab
+// throttling (the documented "GSAP freezes in hidden tabs" gotcha). Several
+// recipe canvases can be mounted at once, so we keep exactly ONE driver bound
+// to a live app and promote a survivor when that app unmounts. A one-shot
+// module flag (the previous shape) left gsap.updateRoot orphaned on a
+// destroyed ticker the moment the first app went away — freezing every later
+// recipe under client-side nav / React StrictMode / HMR.
+const liveApps = new Set<Application>();
+let gsapDriver: Application | null = null;
+let gsapTickerFn: ((ticker: Ticker) => void) | null = null;
+
+function ensureGsapDriver(): void {
+  if (gsapDriver && liveApps.has(gsapDriver)) return; // current driver still alive
+  // Detach gsap from its own internal ticker; we drive updateRoot ourselves.
+  try { gsap.ticker.remove(gsap.updateRoot); } catch { /* ignore */ }
+  const next: Application | null = liveApps.values().next().value ?? null;
+  gsapDriver = next;
+  if (next) {
+    gsapTickerFn = (ticker) => gsap.updateRoot(ticker.lastTime / 1000);
+    next.ticker.add(gsapTickerFn);
+  } else {
+    gsapTickerFn = null;
+  }
+}
+
+function releaseGsapApp(app: Application): void {
+  liveApps.delete(app);
+  if (gsapDriver === app) {
+    if (gsapTickerFn) { try { app.ticker.remove(gsapTickerFn); } catch { /* ignore */ } }
+    gsapDriver = null;
+    gsapTickerFn = null;
+    ensureGsapDriver(); // hand the driver to another live app, if one remains
+  }
+}
 
 // Use AsyncFunction so recipes can do top-level `await loadPixellabSymbols(...)`
 // inside the injected body. Plain `new Function(...)` returns a sync function
@@ -111,12 +154,6 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
       });
       if (cancelled) { app.destroy(true, { children: true }); return; }
 
-      if (!gsapSynced) {
-        gsapSynced = true;
-        try { gsap.ticker.remove(gsap.updateRoot); } catch { /* ignore */ }
-        app.ticker.add((t) => gsap.updateRoot(t.lastTime / 1000));
-      }
-
       host.innerHTML = '';
       host.appendChild(app.canvas);
 
@@ -126,6 +163,11 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
       const SYMBOL_IDS = Object.keys(textures);
       const env: Env = { app, textures, blurTextures, SYMBOL_IDS };
       envRef.current = env;
+
+      // Register only once the app is fully established (past every cancel
+      // bail-out), so add/release stays symmetric with the cleanup below.
+      liveApps.add(app);
+      ensureGsapDriver();
 
       let js: string;
       try {
@@ -146,7 +188,10 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
           'CardSymbol', 'CARD_DECK', 'WILD_CARD',
           'CoinSymbol', 'COIN_TIER', 'COIN_FEATURE', 'COIN_MYSTERY', 'COIN_TRIGGER',
           'coinValue', 'coinMultiplier', 'drawCoin',
-          'SpineReelSymbol', 'loadGeneratedSpines', 'buildSpineMap',
+          'HoldAndWinBuilder', 'BoardGrid',
+          'GoldCoinSymbol', 'coinWaves', 'bezierFly', 'settleMoneyFace', 'freezeAtEnd', 'fitText',
+          'SpineReelSymbol', 'Spine', 'loadGeneratedSpines', 'buildSpineMap',
+          'loadHoldAndWinSprites',
           `"use strict"; ${js}`,
         );
         // AsyncFunction so recipes that need async setup (e.g. dynamic
@@ -162,7 +207,10 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
           CardSymbol, CARD_DECK, WILD_CARD,
           CoinSymbol, COIN_TIER, COIN_FEATURE, COIN_MYSTERY, COIN_TRIGGER,
           coinValue, coinMultiplier, drawCoin,
-          SpineReelSymbol, loadGeneratedSpines, buildSpineMap,
+          HoldAndWinBuilder, BoardGrid,
+          GoldCoinSymbol, coinWaves, bezierFly, settleMoneyFace, freezeAtEnd, fitText,
+          SpineReelSymbol, Spine, loadGeneratedSpines, buildSpineMap,
+          loadHoldAndWinSprites,
         )) as RunResult;
       } catch (e) {
         setError(`Runtime error: ${(e as Error).message}`);
@@ -195,6 +243,37 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
         fit();
         app.renderer.on('resize', fit);
         enableDebug(rs);
+      } else {
+        // Board / custom-stage recipes (HoldAndWinBoard, BoardGrid) add their
+        // own content — the grid, HUD, side panels, flight layer — straight to
+        // app.stage at fixed pixel sizes and never scale it, so a composition
+        // wider than the canvas clips left/right. Scale + center the whole
+        // stage to fit: the board-of-reels equivalent of the reelSet fit above.
+        // Bounds come from real measurable children (cell chrome, sprites, HUD,
+        // panels), all created synchronously before the recipe returns. Mask
+        // graphics don't count (Pixi marks masks measurable:false), which is why
+        // an empty-on-load grid must carry chrome to be sized — board-grid-reveal
+        // does. Late flights/labels land inside this extent, so a setup-time fit
+        // (re-run on resize) holds for the whole run.
+        const fitStage = () => {
+          app.stage.scale.set(1);
+          app.stage.position.set(0, 0);
+          const b = app.stage.getLocalBounds();
+          if (!(b.width > 0) || !(b.height > 0)) return;
+          const pad = 16;
+          const scale = Math.min(
+            1,
+            (app.screen.width - pad * 2) / b.width,
+            (app.screen.height - pad * 2) / b.height,
+          );
+          app.stage.scale.set(scale);
+          app.stage.position.set(
+            (app.screen.width - b.width * scale) / 2 - b.x * scale,
+            (app.screen.height - b.height * scale) / 2 - b.y * scale,
+          );
+        };
+        fitStage();
+        app.renderer.on('resize', fitStage);
       }
 
       setReady(true);
@@ -204,7 +283,11 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
       cancelled = true;
       try { cleanupRef.current?.(); } catch { /* ignore */ }
       try { reelSetRef.current?.destroy(); } catch { /* ignore */ }
-      try { envRef.current?.app.destroy(true, { children: true }); } catch { /* ignore */ }
+      const app = envRef.current?.app;
+      if (app) {
+        releaseGsapApp(app); // hand off the gsap driver before the ticker dies
+        try { app.destroy(true, { children: true }); } catch { /* ignore */ }
+      }
       reelSetRef.current = null;
       onSpinRef.current = null;
       cleanupRef.current = null;

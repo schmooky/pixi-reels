@@ -39,6 +39,7 @@ export type { AnimatedSpriteSymbolOptions } from './symbols/AnimatedSpriteSymbol
 export { SpineSymbol, whenSpineReady } from './symbols/SpineSymbol.js';
 export type { SpineSymbolOptions } from './symbols/SpineSymbol.js';
 export { SymbolRegistry } from './symbols/SymbolRegistry.js';
+export { EmptySymbol } from './symbols/EmptySymbol.js';
 
 // Spin
 // `SpinController` and `SpinControllerHooks` are internal wiring built by
@@ -86,6 +87,33 @@ export { ObjectPool } from './pool/ObjectPool.js';
 // Spotlight
 export { SymbolSpotlight } from './spotlight/SymbolSpotlight.js';
 export type { SpotlightOptions, WinLine, CycleOptions } from './spotlight/SymbolSpotlight.js';
+
+// Boards — a grid of independently spinning 1×1 cells.
+//   BoardGrid is the generic mechanism (geometry, instances, spin a chosen
+//   set of cells) — build your own feature on it. HoldAndWinBoard is the
+//   opinionated lock / respin / collect layer, built entirely on BoardGrid's
+//   public surface, so you can copy it and change the rules.
+export { BoardGrid } from './board/BoardGrid.js';
+export type { BoardCell, BoardSpinTarget, BoardProfile, BoardGridOptions } from './board/BoardGrid.js';
+export { HoldAndWinBuilder } from './board/HoldAndWinBuilder.js';
+export { HoldAndWinBoard } from './board/HoldAndWinBoard.js';
+// The pure reducer is public too: a fork copies HoldAndWinBoard + HoldAndWinState
+// and repoints both imports at `pixi-reels` (see the comment below).
+export { HoldAndWinState } from './board/HoldAndWinState.js';
+export type { HwPhase } from './board/HoldAndWinState.js';
+// `cellKey` and `HwEffect` round out the surface a forked board needs: copy
+// HoldAndWinBoard + HoldAndWinState, repoint their imports at `pixi-reels`, and
+// everything they reach for is public.
+export { cellKey } from './board/HwTypes.js';
+export type {
+  HwCell,
+  HwCoin,
+  HwRespinReason,
+  HwRespinResult,
+  HoldAndWinBoardEvents,
+  HwEffect,
+  HwCellSizeOptions,
+} from './board/HwTypes.js';
 
 // Wins (symbol-highlight presenter. no line drawing, events-driven)
 export { WinPresenter } from './wins/WinPresenter.js';

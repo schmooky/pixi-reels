@@ -7,6 +7,7 @@ import { DEMOS } from '../content/demos.ts';
 import { RECIPES } from '../content/recipes.ts';
 import { ARCH_PAGES } from '../content/architectureNav.ts';
 import { GUIDES_NAV, WIKI_NAV } from '../content/nav.ts';
+import { FAQ_ANSWERED } from '../content/faq.ts';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const apiPagesRoot = path.resolve(here, '..', 'pages', 'api');
@@ -53,6 +54,7 @@ export const GET: APIRoute = async () => {
   entries.push({ loc: url('/demos/'), priority: '0.9', changefreq: 'weekly' });
   entries.push({ loc: url('/studio/'), priority: '0.9', changefreq: 'weekly' });
   entries.push({ loc: url('/recipes/'), priority: '0.9', changefreq: 'weekly' });
+  entries.push({ loc: url('/faq/'), priority: '0.9', changefreq: 'weekly' });
   entries.push({ loc: url('/architecture/'), priority: '0.9', changefreq: 'weekly' });
   entries.push({ loc: url('/api/'), priority: '0.9', changefreq: 'weekly' });
   entries.push({ loc: url('/changelog/'), priority: '0.7', changefreq: 'weekly' });
@@ -75,6 +77,10 @@ export const GET: APIRoute = async () => {
   }
   for (const d of DEMOS) {
     entries.push({ loc: url(`/demos/${d.slug}/`), priority: '0.85', changefreq: 'monthly' });
+  }
+  // Only ANSWERED questions have their own page; open ones live on /faq/.
+  for (const q of FAQ_ANSWERED) {
+    entries.push({ loc: url(`/faq/${q.id}/`), priority: '0.8', changefreq: 'monthly' });
   }
 
   // De-dup by loc

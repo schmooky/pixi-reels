@@ -59,7 +59,10 @@ return {
 
     const p = reelSet.spin();
     await new Promise((r) => setTimeout(r, 250));
-    reelSet.setResult(result.map((visible) => ({ visible })));
+    // `result` is already ColumnTarget[] ({ visible, bufferAbove }); pass it
+    // straight through. Wrapping it in `.map((visible) => ({ visible }))` would
+    // nest each object and drop the bufferAbove TEASE that re-seeds the peek.
+    reelSet.setResult(result);
     await p;
   },
 };

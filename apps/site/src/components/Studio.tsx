@@ -38,6 +38,7 @@ import {
   type ReelSet,
   type SymbolData,
   ReelSymbol,
+  EmptySymbol,
 } from 'pixi-reels';
 import { SpineReelSymbol } from 'pixi-reels/spine';
 import { BlurSpriteSymbol } from '../../../../examples/shared/BlurSpriteSymbol.ts';
@@ -52,7 +53,6 @@ import {
   coinMultiplier,
   drawCoin,
 } from '../../../../examples/shared/CoinSymbol.ts';
-import { EmptySymbol } from '../../../../examples/shared/EmptySymbol.ts';
 import { loadPrototypeSymbols } from '../../../../examples/shared/prototypeSpriteLoader.ts';
 import {
   loadGeneratedSpines,

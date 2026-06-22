@@ -1,0 +1,49 @@
+---
+layout: ../../layouts/Recipe.astro
+title: "Hold & Win: last-cell anticipation"
+description: One builder knob — anticipateWhen(({ locked, capacity }) => capacity - locked === 1) — flips the last still-spinning cell to a drawn-out tension profile, the "one more for the full-board jackpot" moment. The recipe only listens to events.
+tags: [hold-and-win, anticipation, tension, respin, spine]
+steps:
+  - Build with anticipateWhen(({ locked, capacity }) => capacity - locked === 1)
+  - When one cell is left, the board runs it on the 'tension' speed profile
+  - respin:start tells you which cells spin — pulse the last one and update the HUD
+  - On a full board, board:full / isFull report the jackpot
+apis:
+  - HoldAndWinBuilder.anticipateWhen
+  - HoldAndWinBoard.events (respin:start, cell:landed)
+  - HoldAndWinBoard.isFull / capacity
+---
+
+import code from '../../recipes/hold-and-win-anticipation.recipe.ts?raw';
+import { RecipeRunner } from '../../components/RecipeRunner.tsx';
+import RecipeFrame from '../../components/RecipeFrame.astro';
+
+<RecipeFrame>
+  <RecipeRunner code={code} height={440} client:only="react" />
+</RecipeFrame>
+
+Press Run. Coins fill the board round by round; when a single empty cell remains, that last cell spins on a slowed tension profile while the HUD calls the moment and the game's anticipation glow (`in` → `loop` sprite FX) builds over it — then it lands for the full-board jackpot.
+
+## The whole feature is one predicate
+
+`HoldAndWinBuilder` evaluates `anticipateWhen` before each wave with the live `{ locked, capacity, respinsLeft }`. When it returns true, every still-spinning cell switches from its `normal` profile to `tension` (the builder registers both, tension being ~1.1s slower):
+
+```ts
+new HoldAndWinBuilder()
+  .anticipateWhen(({ locked, capacity }) => capacity - locked === 1)
+  // ...
+```
+
+Because Hold & Win cells are independent reels, this works per cell out of the box — when only one is left, only that one is spinning, so only it goes tense. Widen the predicate (`capacity - locked <= 2`) to build tension earlier, or key it off `respinsLeft` for "last respin" drama instead.
+
+## The recipe just reacts
+
+The build is the feature; the recipe only listens. `respin:start` carries the spinning cells, so the HUD message and the anticipation glow (a sprite `AnimatedSprite` overlay from the `/hw-sprites/` set, played additively) are driven entirely from events — no polling, no timing code in the recipe.
+
+> Spin landing animates in real time in your browser; in the docs sandbox the throttled animation frame can make the slowed cell look paused — give it a moment, or open it in Studio.
+
+## Related recipes
+
+- [Anticipate a reel](/recipes/anticipate-a-reel/). setAnticipation on a standard reel set
+- [Fake a near-miss](/recipes/near-miss/). N-1 scatters plus anticipation on the "almost" reel
+- [Hold & Win: Spine coins + collect](/recipes/hold-and-win-spine/). the full feature with jackpot tiers

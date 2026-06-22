@@ -1,145 +1,86 @@
 // @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, CoinSymbol, coinMultiplier,
-//                   PIXI, gsap, app, pickWeighted, EmptySymbol
+// Injected: HoldAndWinBuilder, GoldCoinSymbol, Spine, fitText, pickWeighted, PIXI, gsap, app
 //
-// Hold & Win with CellPin.
+// Value-carrying coins on a Hold & Win board.
 //
-// Each grid cell is its own 1×1 ReelSet. The strip rolls a typical H&W coef
-// ladder. x2 / x5 / x10 / x20 / x50 of bet. Each rung is its OWN CoinSymbol
-// variant, so the player sees the value-bearing coins flash past during the
-// spin (not a blank gold coin that "becomes" valuable on stop).
-//
-// On land the engine pins the rolled coin with `turns: 'permanent'` and a
-// payload carrying the numeric coefficient. Pinned cells skip their spin
-// on subsequent rounds; the symbolId encodes the visual, the payload
-// encodes the game-side number, no value badge is needed on top.
+// Each coin carries a coefficient (×2 … ×50) in `coin.data`. The board locks
+// every hit and respins only the free cells natively — no pins, no
+// hand-rolled grid of mini-reels, just `HoldAndWinBuilder`. The ×N badge is
+// painted from the data; the running total is summed from `board.lockedCoins`.
 
-const EMPTY = 'empty';
-const COLS = 5, ROWS = 3, CELL = 60, GAP = 4;
+const COIN = 'coin', COLS = 5, ROWS = 3, CELL = 64, GAP = 6;
+// a typical coefficient ladder — ×2 common, ×50 rare; the server picks per hit
+const LADDER_W = { 2: 12, 5: 6, 10: 4, 20: 2, 50: 1 };
+const pickValue = () => Number(pickWeighted(LADDER_W));
 
-// Typical H&W coefficient ladder. Tilted heavy at the bottom. x2 / x5 are
-// common, x50 is rare. EMPTY weight keeps the overall coin-land rate at
-// ~25% per cell per spin (sum of coin weights = 25, vs EMPTY = 75).
-const LADDER = [2, 5, 10, 20, 50];
-const COIN_WEIGHTS = { 2: 12, 5: 6, 10: 4, 20: 2, 50: 1 };
-const idFor = (v) => `coin_x${v}`;
+const ASSETS = { 'hw-atlas': '/hw-spine/skeletons.atlas', 'hw-jackpot': '/hw-spine/jackpot.json' };
+for (const [alias, src] of Object.entries(ASSETS)) { if (!PIXI.Assets.cache.has(alias)) { try { PIXI.Assets.add({ alias, src }); } catch {} } }
+await PIXI.Assets.load(Object.keys(ASSETS));
+await PIXI.Assets.load('/hw-sprites/hwfont-mult.fnt'); // the game's ×N multiplier bitmap font
+const SPINE_MAP = { [COIN]: { skeleton: 'hw-jackpot', atlas: 'hw-atlas' } };
+const probe = Spine.from({ skeleton: 'hw-jackpot', atlas: 'hw-atlas' });
+probe.state.setAnimation(0, 'mini_x', true);
+try { probe.update(0); } catch {}
+const pb = probe.getLocalBounds();
+const COIN_SCALE = (CELL - 6) / Math.max(1, pb.width, pb.height);
+probe.destroy();
 
-const colWidth = COLS * (CELL + GAP) - GAP;
-const colHeight = ROWS * (CELL + GAP) - GAP;
-const startX = (app.screen.width - colWidth) / 2;
-const startY = (app.screen.height - colHeight) / 2 - 18;
+const board = new HoldAndWinBuilder()
+  .grid(COLS, ROWS)
+  .cellSize(CELL, { gap: GAP })
+  .symbols((r) => r.register(COIN, GoldCoinSymbol, { spineMap: SPINE_MAP, idleAnimation: 'idle', scale: COIN_SCALE, settleSize: CELL - 8 }))
+  .weights({ [COIN]: 1, empty: 3 }) // coins flash past empties on the strip
+  .respins(3)
+  .cellChrome((g, size) => g.roundRect(0, 0, size, size, 10).fill({ color: 0xfaf6ef, alpha: 0.6 }).stroke({ color: 0xe5dccf, width: 1, alpha: 0.8 }))
+  .ticker(app.ticker)
+  .build();
 
-const cells = [];
-for (let col = 0; col < COLS; col++) {
-  for (let row = 0; row < ROWS; row++) {
-    const mini = new ReelSetBuilder()
-      .reels(1).visibleRows(1)
-      .symbolSize(CELL, CELL).symbolGap(0, 0)
-      .symbols((r) => {
-        for (const v of LADDER) {
-          r.register(idFor(v), CoinSymbol, coinMultiplier(v));
-        }
-        r.register(EMPTY, EmptySymbol, {});
-      })
-      .weights({
-        ...Object.fromEntries(LADDER.map((v) => [idFor(v), COIN_WEIGHTS[v]])),
-        [EMPTY]: 75,
-      })
-      .speed('normal', { ...SpeedPresets.NORMAL, minimumSpinTime: 320 + (col + row) * 60 })
-      .ticker(app.ticker)
-      .build();
-    mini.x = startX + col * (CELL + GAP);
-    mini.y = startY + row * (CELL + GAP);
-    app.stage.addChild(mini);
-    cells.push({ col, row, reelSet: mini });
-  }
-}
+const boardW = COLS * CELL + (COLS - 1) * GAP, boardH = ROWS * CELL + (ROWS - 1) * GAP;
+board.container.x = (app.screen.width - boardW) / 2;
+board.container.y = (app.screen.height - boardH) / 2 - 14;
+app.stage.addChild(board.container);
 
-// ── Running total ───────────────────────────────────────────────────────
-const totalText = new PIXI.Text({
-  text: 'TOTAL: 0',
-  style: {
-    fontFamily: 'system-ui, sans-serif',
-    fontSize: 22,
-    fontWeight: '800',
-    fill: 0xfef08a,
-    stroke: { color: 0x000000, width: 4 },
-  },
-});
-totalText.anchor.set(0.5, 0);
-totalText.x = startX + colWidth / 2;
-totalText.y = startY + colHeight + 14;
-app.stage.addChild(totalText);
+// -- ×N badges (from coin.data) + running total (from board.lockedCoins) --
+const labels = new PIXI.Container();
+app.stage.addChild(labels);
+const labelAt = new Map();
+const abs = (cell) => { const c = board.cellCenter(cell); return { x: board.container.x + c.x, y: board.container.y + c.y }; };
+const badge = (cell, value) => {
+  const k = `${cell.col},${cell.row}`; labelAt.get(k)?.destroy();
+  const p = abs(cell);
+  const t = fitText(new PIXI.BitmapText({ text: `${value}x`, style: { fontFamily: 'DiamondMult', fontSize: 48 } }), CELL * 0.8, CELL * 0.5);
+  t.anchor.set(0.5); t.position.set(p.x, p.y);
+  labels.addChild(t); labelAt.set(k, t);
+};
+const total = new PIXI.Text({ text: 'TOTAL: 0', style: { fontFamily: 'system-ui, sans-serif', fontSize: 22, fontWeight: '800', fill: 0xfef08a, stroke: { color: 0x000000, width: 4 } } });
+total.anchor.set(0.5, 0); total.position.set(app.screen.width / 2, board.container.y + boardH + 12);
+app.stage.addChild(total);
+const refreshTotal = () => { total.text = `TOTAL: ${board.lockedCoins.reduce((a, c) => a + (c.data?.value ?? 0), 0)}`; };
 
-function recomputeTotal() {
-  let total = 0;
-  for (const cell of cells) {
-    const pin = cell.reelSet.getPin(0, 0);
-    if (typeof pin?.payload?.value === 'number') total += pin.payload.value;
-  }
-  totalText.text = `TOTAL: ${total}`;
-}
+board.events.on('coin:locked', ({ coin }) => { badge(coin.cell, coin.data.value); refreshTotal(); });
 
-for (const cell of cells) {
-  cell.reelSet.events.on('pin:placed', recomputeTotal);
-  cell.reelSet.events.on('pin:expired', recomputeTotal);
-}
-
-// ── Scripted round sequence ─────────────────────────────────────────────
-// Every ladder rung shows up at least once across the 3 rounds so the demo
-// covers the full variant range. Order is low→high so the running total
-// climbs visibly.
-const rounds = [
-  [
-    { col: 0, row: 2, value: 2 },
-    { col: 2, row: 0, value: 5 },
-    { col: 4, row: 1, value: 10 },
-  ],
-  [{ col: 1, row: 0, value: 20 }],
-  [{ col: 3, row: 2, value: 50 }],
+// scripted rounds — low → high so the running total climbs; the server would
+// decide each round's hit cells and coefficients in a real game
+const ROUNDS = [
+  [{ col: 0, row: 2 }, { col: 2, row: 0 }, { col: 4, row: 1 }],
+  [{ col: 1, row: 0 }],
+  [{ col: 3, row: 2 }],
+  [],
 ];
 
+let busy = false;
 return {
-  cleanup: () => {
-    try { totalText.destroy(); } catch {}
-    for (const c of cells) try { c.reelSet.destroy(); } catch {}
-  },
+  cleanup: () => { for (const t of labelAt.values()) { try { t.destroy(); } catch {} } labelAt.clear(); try { total.destroy(); labels.destroy(); } catch {} board.destroy(); },
   onSpin: async () => {
-    // Reset state at the start of every demo cycle.
-    for (const cell of cells) {
-      const pin = cell.reelSet.getPin(0, 0);
-      if (pin) cell.reelSet.unpin(0, 0);
-    }
-
-    for (const hits of rounds) {
-      const spinPromises = [];
-      const activeCells = [];
-      for (const cell of cells) {
-        // Pinned (= already held) cells skip their spin entirely.
-        if (cell.reelSet.getPin(0, 0)) continue;
-        activeCells.push(cell);
-        spinPromises.push(cell.reelSet.spin());
-      }
-
-      await new Promise((r) => setTimeout(r, 140));
-      for (const cell of activeCells) {
-        const hit = hits.find((h) => h.col === cell.col && h.row === cell.row);
-        cell.reelSet.setResult([{ visible: [hit ? idFor(hit.value) : EMPTY] }]);
-      }
-      await Promise.all(spinPromises);
-
-      // Pin every hit using its variant id; payload carries the coefficient
-      // for game-layer total / payout calculation.
-      for (const cell of activeCells) {
-        const hit = hits.find((h) => h.col === cell.col && h.row === cell.row);
-        if (!hit) continue;
-        cell.reelSet.pin(0, 0, idFor(hit.value), {
-          turns: 'permanent',
-          payload: { value: hit.value },
-        });
-      }
-
+    if (busy) return;
+    busy = true;
+    for (const t of labelAt.values()) t.destroy(); labelAt.clear();
+    board.reset(); board.enter([]); refreshTotal();
+    for (const cells of ROUNDS) {
+      const res = await board.respin(cells.map((cell) => ({ cell, id: COIN, data: { value: pickValue() } })));
       await new Promise((r) => setTimeout(r, 650));
+      if (res.done) break;
     }
+    busy = false;
   },
 };

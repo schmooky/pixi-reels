@@ -1,124 +1,111 @@
 // @ts-nocheck
-// Injected: ReelSetBuilder, SpeedPresets, CoinSymbol, COIN_TRIGGER, drawCoin,
-//           PIXI, gsap, app, pickWeighted,
-//           EmptySymbol (blank ReelSymbol. renders nothing, used for miss cells)
+// Injected: HoldAndWinBuilder, GoldCoinSymbol, Spine, PIXI, gsap, app
+//
+// Hold & Win starter — the minimal HoldAndWinBuilder board: grid, coin
+// symbol, strip weights, respin count. The coin is the production-style
+// Spine gold coin (GoldCoinSymbol), the same one the other H&W recipes use.
+// The board owns the 15 independent 1x1 reels, the lock bookkeeping, the
+// landing wave and the respin counter; coins stay opaque to it.
 
 const COIN = 'coin';
-const EMPTY = 'empty';
-const COLS = 5, ROWS = 3, CELL = 60, GAP = 4;
+const COLS = 5, ROWS = 3, CELL = 64, GAP = 6;
+const fmt = (v) => v.toFixed(2);
 
-// Build 15 independent 1×1 ReelSets. one per cell.
-const colWidth = COLS * (CELL + GAP) - GAP;
-const colHeight = ROWS * (CELL + GAP) - GAP;
-const startX = (app.screen.width - colWidth) / 2;
-const startY = (app.screen.height - colHeight) / 2;
-
-const cells = [];
-for (let col = 0; col < COLS; col++) {
-  for (let row = 0; row < ROWS; row++) {
-    const mini = new ReelSetBuilder()
-      .reels(1).visibleRows(1)
-      .symbolSize(CELL, CELL).symbolGap(0, 0)
-      .symbols(r => {
-        r.register(COIN, CoinSymbol, COIN_TRIGGER);
-        r.register(EMPTY, EmptySymbol, {});
-      })
-      // Mostly empty so coins flash past during the spin animation.
-      .weights({ [COIN]: 1, [EMPTY]: 3 })
-      .speed('normal', { ...SpeedPresets.NORMAL, minimumSpinTime: 320 + (col + row) * 60 })
-      .ticker(app.ticker)
-      .build();
-    mini.x = startX + col * (CELL + GAP);
-    mini.y = startY + row * (CELL + GAP);
-    app.stage.addChild(mini);
-    cells.push({ col, row, reelSet: mini });
-  }
+// the shared Spine coin set (gold lightning coin + bitmap value font)
+const ASSETS = {
+  'hw-atlas': '/hw-spine/skeletons.atlas',
+  'hw-goldfont': '/hw-spine/goldfont.fnt',
+  'hw-jackpot': '/hw-spine/jackpot.json',
+};
+for (const [alias, src] of Object.entries(ASSETS)) {
+  if (!PIXI.Assets.cache.has(alias)) { try { PIXI.Assets.add({ alias, src }); } catch {} }
 }
+await PIXI.Assets.load(Object.keys(ASSETS));
 
-// Scripted arrivals: 3 coins in round 1, 1 in round 2, 1 in round 3.
+const SPINE_MAP = { [COIN]: { skeleton: 'hw-jackpot', atlas: 'hw-atlas' } };
+const SETTLE_SIZE = CELL - 8;
+const probe = Spine.from({ skeleton: 'hw-jackpot', atlas: 'hw-atlas' });
+probe.state.setAnimation(0, 'mini_x', true);
+try { probe.update(0); } catch {}
+const pb = probe.getLocalBounds();
+const scale = (CELL - 6) / Math.max(1, pb.width, pb.height);
+probe.destroy();
+
+const board = new HoldAndWinBuilder()
+  .grid(COLS, ROWS)
+  .cellSize(CELL, { gap: GAP })
+  // The coin is a Spine symbol now — one registration, no custom class.
+  .symbols((r) => r.register(COIN, GoldCoinSymbol, {
+    spineMap: SPINE_MAP, idleAnimation: 'idle', scale, settleSize: SETTLE_SIZE,
+  }))
+  // Mostly empty so coins flash past during the spin animation. `empty` is
+  // auto-registered by the board.
+  .weights({ [COIN]: 1, empty: 3 })
+  .respins(3)
+  .cellChrome((g, size) => {
+    g.roundRect(0, 0, size, size, 10)
+      .fill({ color: 0xfaf6ef, alpha: 0.6 })
+      .stroke({ color: 0xe5dccf, width: 1, alpha: 0.8 });
+  })
+  .ticker(app.ticker)
+  .build();
+
+const boardW = COLS * (CELL + GAP) - GAP;
+const boardH = ROWS * (CELL + GAP) - GAP;
+board.container.x = (app.screen.width - boardW) / 2;
+board.container.y = (app.screen.height - boardH) / 2 - 12;
+app.stage.addChild(board.container);
+
+// value labels in the game's gold bitmap font, painted from the coin payload
+const labels = new PIXI.Container();
+app.stage.addChild(labels);
+const labelAt = new Map();
+const paintLabel = (cell, value) => {
+  const c = board.cellCenter(cell);
+  const t = new PIXI.BitmapText({ text: fmt(value), style: { fontFamily: 'GoldDigits', fontSize: 22 } });
+  t.anchor.set(0.5);
+  if (t.width > CELL * 0.8) t.scale.set((CELL * 0.8) / t.width);
+  t.position.set(board.container.x + c.x, board.container.y + c.y);
+  labels.addChild(t);
+  labelAt.set(`${cell.col},${cell.row}`, t);
+};
+
+// The HUD never tracks state itself. board events are the single source.
+const hud = new PIXI.Text({
+  text: 'press spin',
+  style: { fontFamily: 'system-ui, sans-serif', fontSize: 13, fontWeight: '600', fill: 0x8a7d66 },
+});
+hud.anchor.set(0.5, 0);
+hud.x = app.screen.width / 2;
+hud.y = board.container.y + boardH + 12;
+app.stage.addChild(hud);
+
+const refreshHud = () => { hud.text = `respins ${board.respinsLeft} · held ${board.lockedCoins.length}/${board.capacity}`; };
+board.events.on('respins:changed', refreshHud);
+board.events.on('coin:locked', ({ coin }) => { paintLabel(coin.cell, coin.data?.value ?? 0); refreshHud(); });
+board.events.on('board:full', () => { hud.text = 'GRAND · board full'; });
+board.events.on('feature:end', ({ full }) => { if (!full) hud.text = `over · ${board.lockedCoins.length} coins held`; });
+
+// Scripted arrivals: 3 coins in round 1, 1 in round 2, 1 in round 3. In a
+// real game the server decides each round's hits and the loop runs until
+// `result.done`.
+const val = () => [5, 10, 15, 25, 50][Math.floor(Math.random() * 5)];
 const rounds = [
   [{ col: 0, row: 2 }, { col: 2, row: 0 }, { col: 4, row: 1 }],
   [{ col: 1, row: 0 }],
   [{ col: 3, row: 2 }],
 ];
 
-const heldKeys = new Set();
-const overlays = [];
-
-// Build a held-coin overlay matching the in-reel CoinSymbol visual via the
-// shared `drawCoin` helper. Same shape, same colors, no texture needed.
-function makeCoinOverlay() {
-  const g = new PIXI.Container();
-  const SIZE = CELL - 8;
-  const coin = new PIXI.Graphics();
-  drawCoin(coin, SIZE, SIZE, COIN_TRIGGER);
-  const label = new PIXI.Text({
-    text: COIN_TRIGGER.label,
-    style: {
-      fontFamily:
-        '"Roboto Condensed", "Arial Narrow", "Helvetica Neue Condensed", "Liberation Sans Narrow", system-ui, sans-serif',
-      fontSize: Math.floor(SIZE * 0.24),
-      fontWeight: '800',
-      fill: COIN_TRIGGER.textColor,
-      align: 'center',
-    },
-  });
-  label.anchor.set(0.5);
-  label.x = SIZE / 2;
-  label.y = SIZE / 2;
-  g.addChild(coin);
-  g.addChild(label);
-  g.pivot.set(SIZE / 2, SIZE / 2);
-  return g;
-}
-
 return {
-  cleanup: () => {
-    for (const o of overlays) try { o.destroy(); } catch {}
-    for (const c of cells) try { c.reelSet.destroy(); } catch {}
-  },
+  cleanup: () => { for (const t of labelAt.values()) { try { t.destroy(); } catch {} } labelAt.clear(); try { hud.destroy(); labels.destroy(); } catch {} board.destroy(); },
   onSpin: async () => {
-    // Reset prior state.
-    for (const o of overlays) try { o.destroy(); } catch {}
-    overlays.length = 0;
-    heldKeys.clear();
-    for (const c of cells) c.reelSet.visible = true;
-
+    for (const t of labelAt.values()) t.destroy();
+    labelAt.clear();
+    board.reset();
+    board.enter([]);
     for (const hits of rounds) {
-      const spinPromises = [];
-      const activeCells = [];
-      for (const cell of cells) {
-        const key = `${cell.col},${cell.row}`;
-        if (heldKeys.has(key)) continue;
-        activeCells.push(cell);
-        spinPromises.push(cell.reelSet.spin());
-      }
-
-      await new Promise(r => setTimeout(r, 140));
-      for (const cell of activeCells) {
-        const isHit = hits.some(h => h.col === cell.col && h.row === cell.row);
-        cell.reelSet.setResult([{ visible: [isHit ? COIN : EMPTY] }]);
-      }
-      await Promise.all(spinPromises);
-
-      // Lock in hits with a coin overlay; hide their mini reel.
-      for (const cell of activeCells) {
-        const key = `${cell.col},${cell.row}`;
-        if (!hits.some(h => h.col === cell.col && h.row === cell.row)) continue;
-        const overlay = makeCoinOverlay();
-        overlay.x = cell.reelSet.x + CELL / 2;
-        overlay.y = cell.reelSet.y + CELL / 2;
-        overlay.alpha = 0;
-        overlay.scale.set(1.4);
-        app.stage.addChild(overlay);
-        overlays.push(overlay);
-        heldKeys.add(key);
-        gsap.to(overlay, { alpha: 1, duration: 0.22 });
-        gsap.to(overlay.scale, { x: 1, y: 1, duration: 0.35, ease: 'back.out(2)' });
-        cell.reelSet.visible = false;
-      }
-
-      await new Promise(r => setTimeout(r, 650));
+      await board.respin(hits.map((cell) => ({ cell, id: COIN, data: { value: val() } })));
+      await new Promise((r) => setTimeout(r, 650));
     }
   },
 };
