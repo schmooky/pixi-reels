@@ -10,27 +10,42 @@ export const SITE = {
     'Open-source reel engine for PixiJS v8. Fluent builder, typed events, configurable spin phases, win presenters, and a headless testing harness. Ships with runnable recipes for lines, scatters, free spins, hold & win, cascades, sticky wilds, and anticipation. MIT licensed.',
   // Organization/Author details for JSON-LD
   twitter: '',
-  defaultImage: '/og/og-default.png',
+  defaultImage: '/og/default.png',
 };
 
 /**
- * Resolve a section-specific OG image, falling back to the homepage one.
- * Sections map to `public/og/og-<section>.png` rendered from the SVG
- * sources by `scripts/render-og.mjs` (run via `pnpm og:render`).
+ * Map a route path to its generated OG card (`/og/<id>.png`). One image per
+ * route, rendered at build by `pages/og/[...path].png.ts` from `og/targets.ts`.
+ * The id convention here MUST match the ids that module emits; anything not
+ * covered falls back to the always-present `default` card. Base.astro calls
+ * this for every page, so layouts don't pass `image` unless they override.
  */
-export function ogImageForSection(section: string | undefined): string {
-  switch (section) {
-    case 'guides':
-      return '/og/og-guides.png';
-    case 'recipes':
-      return '/og/og-recipes.png';
-    case 'api':
-      return '/og/og-api.png';
-    case 'architecture':
-      return '/og/og-architecture.png';
-    default:
-      return '/og/og-default.png';
-  }
+export function ogUrlForPath(pathname: string | undefined): string {
+  const p = (pathname ?? '/').replace(/\/+$/, '') || '/';
+  if (p === '/') return '/og/home.png';
+
+  const item = (section: string, re: RegExp): string | null => {
+    const m = p.match(re);
+    return m ? `/og/${section}/${m[1]}.png` : null;
+  };
+
+  return (
+    item('recipes', /^\/recipes\/([^/]+)$/) ??
+    item('guides', /^\/guides\/([^/]+)$/) ??
+    item('faq', /^\/faq\/([^/]+)$/) ??
+    item('demos', /^\/demos\/([^/]+)$/) ??
+    item('docs', /^\/docs\/([^/]+)$/) ??
+    item('architecture', /^\/architecture\/([^/]+)$/) ??
+    (p === '/recipes' ? '/og/section/recipes.png' : null) ??
+    (p === '/guides' ? '/og/section/guides.png' : null) ??
+    (p === '/faq' ? '/og/section/faq.png' : null) ??
+    (p === '/demos' ? '/og/section/demos.png' : null) ??
+    (p === '/docs' ? '/og/section/docs.png' : null) ??
+    (p === '/architecture' ? '/og/section/architecture.png' : null) ??
+    (p === '/changelog' ? '/og/section/changelog.png' : null) ??
+    (p.startsWith('/api') ? '/og/section/api.png' : null) ??
+    SITE.defaultImage
+  );
 }
 
 export interface PageSeo {
