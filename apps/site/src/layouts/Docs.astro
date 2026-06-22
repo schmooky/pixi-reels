@@ -2,7 +2,7 @@
 import Base from './Base.astro';
 import DocsSidebar from '../components/DocsSidebar.astro';
 import { GUIDES_NAV, WIKI_NAV, type NavSection } from '../content/nav.ts';
-import { articleLd, breadcrumbLd, ogImageForSection, SITE } from '../lib/seo.ts';
+import { articleLd, breadcrumbLd, SITE } from '../lib/seo.ts';
 
 interface Props {
   title?: string;
@@ -53,19 +53,6 @@ const sectionLabel: Record<string, string> = {
   demos: 'Demos',
 };
 
-// Section-specific OG: guides get the guides image, recipes get recipes,
-// API ref gets the code-styled api image, etc. SEO layer also accepts
-// per-page overrides via frontmatter.image.
-const ogImageSection = resolvedSection === 'api'
-  ? 'api'
-  : resolvedSection === 'guides'
-    ? 'guides'
-    : pathname.startsWith('/architecture/')
-      ? 'architecture'
-      : pathname.startsWith('/recipes/')
-        ? 'recipes'
-        : undefined;
-
 const jsonLd = [
   articleLd({ title, description, path: pathname }),
   breadcrumbLd([
@@ -80,7 +67,6 @@ const jsonLd = [
   description={description}
   path={pathname}
   type="article"
-  image={ogImageForSection(ogImageSection)}
   article={{ section: sectionLabel[resolvedSection] }}
   jsonLd={jsonLd}
 >

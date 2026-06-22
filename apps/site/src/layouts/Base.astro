@@ -3,7 +3,7 @@ import Nav from '../components/Nav.astro';
 import Footer from '../components/Footer.astro';
 import SEO from '../components/SEO.astro';
 import '../styles/global.css';
-import { SITE, type PageSeo } from '../lib/seo.ts';
+import { SITE, ogUrlForPath, type PageSeo } from '../lib/seo.ts';
 
 interface Props extends Partial<PageSeo> {
   title?: string;
@@ -19,6 +19,10 @@ const {
   jsonLd,
   noIndex,
 } = Astro.props as Props;
+
+// Every route gets its own generated OG card (pages/og/[...path].png.ts),
+// resolved from the path. A page can still override via the `image` prop.
+const ogImage = image ?? ogUrlForPath(path ?? Astro.url.pathname);
 ---
 <!doctype html>
 <html lang="en">
@@ -39,7 +43,7 @@ const {
       title={title}
       description={description}
       path={path}
-      image={image}
+      image={ogImage}
       type={type}
       article={article}
       jsonLd={jsonLd}
