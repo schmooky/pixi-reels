@@ -18,7 +18,7 @@
     "express": "^5.2.1",
     "express-rate-limit": "^7.5.1",
     "nanoid": "^5.1.11",
-    "zod": "^3.25.76"
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",
