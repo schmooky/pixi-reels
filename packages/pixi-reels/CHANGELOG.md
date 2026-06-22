@@ -1,5 +1,19 @@
 # pixi-reels
 
+## 1.1.0
+
+### Minor Changes
+
+- [#158](https://github.com/schmooky/pixi-reels/pull/158) [`22f2b33`](https://github.com/schmooky/pixi-reels/commit/22f2b339a8b2f285a08678c080aaa854e988fde0) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Add: `BoardGrid` — the generic "board of reels" primitive is now a public export. A grid of cells that each spin independently (`cells`, `spinCells`, `symbolAt`/`reelAt`, `cellBounds`/`cellCenter`, `setProfile`, `place`), with no game rules of its own. `HoldAndWinBoard` is one opinionated board built on it; build your own the same way. `spinCells`' per-cell `onLanded` callback may be async — return a promise and `spinCells` resolves only once every cell has landed and its after-land work has finished.
+
+- [#158](https://github.com/schmooky/pixi-reels/pull/158) [`22f2b33`](https://github.com/schmooky/pixi-reels/commit/22f2b339a8b2f285a08678c080aaa854e988fde0) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Add: Hold & Win board. `HoldAndWinBuilder` builds a `HoldAndWinBoard` — a grid of independently spinning 1×1 cells with the full respin / lock / collect lifecycle (`enter`, `respin`, `release`, `setSymbolAt`, `skip`, `reset`), typed events (`coin:locked`, `board:full`, `feature:end`, …), per-cell geometry (`cellBounds`/`cellCenter`) and live symbol access (`symbolAt`/`reelAt`). Coins are opaque `{ cell, id, data }`, so value, multipliers, collectors and flights stay game-layer. Also exports `EmptySymbol` (a render-nothing symbol), plus `cellKey` and the `HwEffect` type so you can fork `HoldAndWinBoard` + `HoldAndWinState` and keep every import on public API.
+
+### Patch Changes
+
+- [#158](https://github.com/schmooky/pixi-reels/pull/158) [`22f2b33`](https://github.com/schmooky/pixi-reels/commit/22f2b339a8b2f285a08678c080aaa854e988fde0) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Fix: harden and complete the Hold & Win board public surface. `HoldAndWinState` (the pure reducer) is now exported from the barrel, so the documented "fork `HoldAndWinBoard` + `HoldAndWinState` and keep every import on public API" path actually resolves. `beginWave`/`respin` now throws on a duplicate hit targeting the same cell in one wave instead of silently dropping the first coin (a malformed result fails loud, matching `enter`'s duplicate-seed guard). A failed `playWin()` reaction to `coin:locked` is now logged via `console.warn` instead of being swallowed silently, and `setSymbolAt`'s JSDoc documents that it must not be called mid-wave.
+
+- [#158](https://github.com/schmooky/pixi-reels/pull/158) [`22f2b33`](https://github.com/schmooky/pixi-reels/commit/22f2b339a8b2f285a08678c080aaa854e988fde0) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Fix: harden `HoldAndWinBoard` recovery and mid-wave misuse. If `respin()` throws between starting and closing a wave — most plausibly a game-layer `respin:start` / `cell:landed` / `coin:locked` listener throwing — it now restores the reducer's phase and slams any still-spinning cells before rethrowing, so a failed wave no longer strands the board in `spinning` (where every later `respin()` threw "wave in flight") or leaves an orphaned reel (where the next `respin()` threw "already spinning"). The error still propagates to the caller. The reducer also ignores stray landings outside a wave, so a cell settling after a `reset()` or a recovered error can no longer re-lock a coin into a cleared ledger or flip a finished feature back to active. `release()` and `setSymbolAt()` still throw if called while a wave is in flight. `respin()` now returns a caller-owned `hits` array (a copy of the wave's landings) rather than a live reference into reducer state, so mutating the result can't reach back into the board.
+
 ## 1.0.1
 
 ### Patch Changes
