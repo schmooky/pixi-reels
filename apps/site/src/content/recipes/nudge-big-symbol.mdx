@@ -68,7 +68,8 @@ player nudges to drag the whole block into view.
 
 ```ts
 // 1. Land 1x2 MEGA at column 2, rows 0+1 (anchor at row 0).
-reelSet.setResult([..., [MEGA, MEGA, filler], ...]);
+const grid = [..., [MEGA, MEGA, filler], ...];
+reelSet.setResult(grid.map((visible) => ({ visible })));
 
 // 2. Nudge UP by 1 → anchor lives in bufferAbove now, only the bottom
 //    cell of the block is in the visible window. Top half is clipped.
@@ -89,7 +90,7 @@ visible portion of the sprite shows through naturally.
 ```ts
 // 1. Land a 1x2 wild on column 2 at rows 0+1.
 const grid = [col3(), col3(), [MEGA.id, MEGA.id, filler()], col3(), col3()];
-reelSet.setResult(grid);
+reelSet.setResult(grid.map((visible) => ({ visible })));
 
 // 2. Nudge column 2 down by 2. Anchor at strip[1] (visible row 0), h=2:
 //    survival = 1 + 2 - 1 + 2 = 4, which is < 5 (total). Block fits.
