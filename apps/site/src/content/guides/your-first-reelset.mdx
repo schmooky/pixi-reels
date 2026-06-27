@@ -80,11 +80,11 @@ Want a *specific* outcome? Call `setResult()` before the promise resolves:
 ```ts
 const promise = reelSet.spin();
 setTimeout(() => reelSet.setResult([
-  ['wild','seven','wild'],
-  ['seven','wild','seven'],
-  ['wild','seven','wild'],
-  ['seven','wild','seven'],
-  ['wild','seven','wild'],
+  { visible: ['wild','seven','wild'] },
+  { visible: ['seven','wild','seven'] },
+  { visible: ['wild','seven','wild'] },
+  { visible: ['seven','wild','seven'] },
+  { visible: ['wild','seven','wild'] },
 ]), 200);
 const result = await promise;
 ```

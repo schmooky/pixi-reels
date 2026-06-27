@@ -140,15 +140,18 @@ The server response stays `string[][]` for every shape above. The server sets th
 3. **Public API never sees the sentinel.** `Reel.getVisibleSymbols()` and `ReelSet.getVisibleGrid()` resolve OCCUPIED. both same-reel and cross-reel. to the anchor's id.
 
 ```ts
-// 6×5 grid with a 2×4 wide banner anchored at (col=2, row=1):
-setResult([
+// 6×5 grid with a 2×4 wide banner anchored at (col=2, row=1).
+// The server still produces an anchor-only string[][]; wrap each
+// column as a ColumnTarget at the setResult boundary.
+const grid = [
   ['low1', 'low2', 'low1', 'low2', 'low1'],
   ['low1', 'low2', 'low1', 'low2', 'low1'],
   ['low1', 'wide',  '?',    '?',    'low2'],   // wide anchor + 'wide' OCCUPIED below
   ['low1', '?',     '?',    '?',    'low2'],
   ['low1', '?',     '?',    '?',    'low2'],
   ['low1', 'low2', 'low1', 'low2', 'low1'],
-]);
+];
+setResult(grid.map((visible) => ({ visible })));
 ```
 
 The `?` cells can be any string; the engine overwrites them. Keep them readable for debug logs.
