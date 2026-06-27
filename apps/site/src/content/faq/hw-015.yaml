@@ -1,0 +1,8 @@
+id: hw-015
+group: hw
+question: How do I award a mini jackpot when a whole row of coins fills?
+answer: Check the locked cells for a full row in your `coin:locked` handler,
+  flash the row and award the mini jackpot in the game layer.
+links:
+  - label: "Recipe: Hold & Win — row-complete jackpot"
+    href: /recipes/hold-and-win-row-jackpot/

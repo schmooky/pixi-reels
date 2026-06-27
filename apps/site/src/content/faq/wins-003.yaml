@@ -1,0 +1,8 @@
+id: wins-003
+group: wins
+question: How do I play each symbol's own win animation?
+answer: "`WinPresenter` calls each winning symbol's `playWin()`; or call it
+  yourself on `reelSet.getReel(col).getSymbolAt(row)`."
+links:
+  - label: "Guide: Win animations"
+    href: /guides/win-animations/

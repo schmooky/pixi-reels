@@ -1,0 +1,6 @@
+id: spin-014
+group: spin
+question: How do I add a timeout/watchdog if the server never sends a result?
+answer: Pass `spin({ timeoutMs })` (or a `signal`) — if `setResult` never
+  arrives, the spin rejects so you can surface an error.
+links: []

@@ -1,0 +1,8 @@
+id: perf-008
+group: perf
+question: How do I keep tweens from leaking when a symbol is recycled mid-animation?
+answer: Kill the symbol's tweens in `onDeactivate` / `stopAnimation`; the
+  one-shot `playWin` etc. settle their promises on recycle.
+links:
+  - label: "Guide: Win animations"
+    href: /guides/win-animations/

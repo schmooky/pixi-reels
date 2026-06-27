@@ -1,0 +1,6 @@
+id: integ-009
+group: integ
+question: How do I handle a desync between the animation and the server state?
+answer: Reconcile to the server state on each response and re-`setResult` /
+  `setSymbolAt` if the display drifted.
+links: []

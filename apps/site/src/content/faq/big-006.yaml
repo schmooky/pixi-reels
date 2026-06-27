@@ -1,0 +1,8 @@
+id: big-006
+group: big
+question: How do I scale the big symbol's art to fill its whole block?
+answer: Render the symbol at the block size (e.g. a Spine `scale`) so it fills
+  the whole N×M, not just the anchor cell.
+links:
+  - label: "Recipe: Big symbols with Spine"
+    href: /recipes/spine-big-symbols/

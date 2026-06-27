@@ -1,0 +1,6 @@
+id: audio-004
+group: audio
+question: How do I duck the music during a big-win count-up?
+answer: Duck the music in your audio layer when the win roll-up starts (e.g. on
+  `win:start`).
+links: []

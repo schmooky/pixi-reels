@@ -1,0 +1,57 @@
+---
+title: Collector symbol
+group: features
+oneLiner: "On the Hold & Win board, the collector orb absorbs its neighbours:
+  walk board.lockedCoins, sum the adjacent coins, fly their values in and
+  release() those cells. No pins."
+description: On a HoldAndWinBuilder board, the collector orb absorbs its
+  neighbours — walk board.lockedCoins, sum the adjacent coins, fly their values
+  into the orb and release() those cells. No pins, no hand-rolled grid.
+order: 65
+steps:
+  - Build the board with HoldAndWinBuilder; coins carry data.value
+  - When the collector locks, find its neighbours in board.lockedCoins
+  - Fly each neighbour value into the orb and release() the cell
+  - Show the absorbed total on the collector's badge
+apis:
+  - HoldAndWinBuilder
+  - HoldAndWinBoard.lockedCoins
+  - HoldAndWinBoard.release
+  - bezierFly
+tags:
+  - coin
+  - collector
+  - hold-and-win
+  - recent
+---
+
+<RecipeDemo code="collector-symbol-pin" />
+
+A collector coin built on `HoldAndWinBuilder`. The board opens holding four value coins; the collector orb lands between them and pulls in the coins it touches.
+
+## Neighbours from the ledger, cleared with release()
+
+The board tracks where every coin is, so "absorb the adjacent coins" is a walk over `board.lockedCoins`. Each neighbour's value flies into the orb, then `release()` clears that cell:
+
+```ts
+const neighbours = [ /* the 4 orthogonal cells around the orb */ ];
+let sum = 0;
+for (const n of neighbours) {
+  const coin = board.lockedCoins.find((c) => c.id === 'coin' && key(c.cell) === key(n));
+  if (!coin) continue;
+  board.release([coin.cell]);                     // the cell clears (frees it for a respin)
+  await bezierFly(clone, abs(coin.cell), orbPos); // the value flies in
+  sum += coin.data.value;
+  board.symbolAt(orbCell).playWin();               // the orb reacts to each arrival
+}
+```
+
+`release()` is the board's collect primitive: it removes the coin from the ledger and frees the cell. The flight itself is game-layer (`bezierFly`); the board only hands out `cellCenter()` geometry and the coin payloads.
+
+> Like the value-coin recipe, this used to hand-roll a 15-reel grid and coordinate with `reelSet.pin()` / `unpin()`. On `HoldAndWinBuilder` the locking is native and the collector logic is just a `lockedCoins` walk + `release()` — no pins.
+
+## Related
+
+- [Hold & Win: collector + flight choreography](/recipes/hold-and-win-collector/). a collector that pulls in every coin
+- [Hold & Win: collector with particle streams](/recipes/hold-and-win-collector-particles/). the same collect, trailed by particles
+- [Value-carrying coin](/recipes/value-coin-pin/). the value coins this collector sweeps

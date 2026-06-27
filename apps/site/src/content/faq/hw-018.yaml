@@ -1,0 +1,6 @@
+id: hw-018
+group: hw
+question: How do I persist the locked board if the player reloads mid-feature?
+answer: Store the locked coins server-side and replay them into
+  `board.enter(...)` on reload.
+links: []

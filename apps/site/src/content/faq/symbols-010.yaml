@@ -1,0 +1,9 @@
+id: symbols-010
+group: symbols
+question: How do I swap a symbol to a blurred texture while spinning?
+answer: Use the shared `BlurSpriteSymbol` (`{ textures, blurTextures }`);
+  subclass it to swap on the engine's `onReelSpinStart` / `onReelLanded` hooks
+  so blur needs no per-cell event wiring.
+links:
+  - label: "Recipe: Hold & Win — sprite coins"
+    href: /recipes/hold-and-win-sprites/

@@ -1,0 +1,8 @@
+id: anim-001
+group: anim
+question: How do I play a win animation on a single symbol?
+answer: Call `playWin()` on the symbol —
+  `reelSet.getReel(col).getSymbolAt(row).playWin()`.
+links:
+  - label: "Guide: Win animations"
+    href: /guides/win-animations/

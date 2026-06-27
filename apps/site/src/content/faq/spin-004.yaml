@@ -1,0 +1,8 @@
+id: spin-004
+group: spin
+question: How do I stagger reel starts so they begin one after another?
+answer: The active `SpeedProfile`'s `spinDelay` staggers reel starts; tune it
+  per profile via `.speed(name, { …, spinDelay })`.
+links:
+  - label: "Guide: Speed modes"
+    href: /guides/speed-modes/

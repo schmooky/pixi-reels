@@ -1,0 +1,8 @@
+id: fs-007
+group: fs
+question: How do I run a different weight table during the feature?
+answer: Spin a feature ReelSet built with different `.weights(...)`, or swap
+  weights by toggling a `FrameMiddleware`.
+links:
+  - label: "Recipe: Feature mode swap"
+    href: /recipes/feature-mode-swap/

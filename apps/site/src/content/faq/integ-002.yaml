@@ -1,0 +1,6 @@
+id: integ-002
+group: integ
+question: How do I keep all payout math on the server and only present results?
+answer: Keep all payout math server-side; the engine only renders the grid and
+  fires presentation events.
+links: []

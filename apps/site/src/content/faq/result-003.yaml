@@ -1,0 +1,6 @@
+id: result-003
+group: result
+question: How do I read the final visible grid after a spin?
+answer: "`reelSet.getVisibleGrid()` returns the resolved visible `string[][]`
+  (also on `SpinResult.symbols`)."
+links: []

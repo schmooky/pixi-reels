@@ -1,0 +1,7 @@
+id: motion-004
+group: motion
+question: How do I make symbols rise up from below (roll-up)?
+answer: Upward roll-up is not a built-in direction flag — drive it as a cascade
+  drop-in variant or your own GSAP on each symbol `view`; the strip spin itself
+  is downward.
+links: []

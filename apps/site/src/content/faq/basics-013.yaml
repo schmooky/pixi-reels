@@ -1,0 +1,7 @@
+id: basics-013
+group: basics
+question: How do I drive the reels from my own game loop / ticker?
+answer: Pass your ticker with `.ticker(myTicker)` — the engine drives all motion
+  from it — and call `driveGsapWithTicker(ticker)` so GSAP advances off the same
+  clock.
+links: []

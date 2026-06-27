@@ -1,0 +1,8 @@
+id: basics-007
+group: basics
+question: How do I register the list of symbol ids my game uses?
+answer: Inside `.symbols((r) => …)`, call `r.register(id, SymbolClass, options)`
+  once per symbol id your game uses.
+links:
+  - label: "Guide: Symbols"
+    href: /guides/symbols/

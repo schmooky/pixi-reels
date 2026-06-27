@@ -1,0 +1,8 @@
+id: hw-007
+group: hw
+question: How do I carry the triggering coins into the feature already locked?
+answer: "`board.enter(seedCoins)` seeds them already locked and fills the respin
+  counter."
+links:
+  - label: "Recipe: Hold & Win — Spine coins"
+    href: /recipes/hold-and-win-spine/

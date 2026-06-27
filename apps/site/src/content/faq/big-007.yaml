@@ -1,0 +1,8 @@
+id: big-007
+group: big
+question: How do I hold a big symbol while the rest of the board respins?
+answer: "Land the block, then `spin({ holdReels: [its reels] })` so it survives
+  the respin."
+links:
+  - label: "Recipe: Big-symbol held respin"
+    href: /recipes/big-symbol-held-respin/

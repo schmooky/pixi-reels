@@ -1,0 +1,6 @@
+id: audio-003
+group: audio
+question: How do I rise the anticipation music as tension builds?
+answer: Start or raise it when you call `setAnticipation`; drive the layers from
+  your audio engine.
+links: []

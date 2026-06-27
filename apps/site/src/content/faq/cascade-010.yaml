@@ -1,0 +1,8 @@
+id: cascade-010
+group: cascade
+question: How do I let a special symbol survive the cascade and stick?
+answer: Pin it with `reelSet.pin(col, row, id)` so it sticks while the cascade
+  clears around it.
+links:
+  - label: "Recipe: Sticky-win respin"
+    href: /recipes/sticky-win-respin-pin/

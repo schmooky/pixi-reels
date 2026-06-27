@@ -1,0 +1,9 @@
+id: result-008
+group: result
+question: How do I guarantee at least one specific symbol lands this spin?
+answer: Place it explicitly in the `ColumnTarget` you pass to `setResult`, or
+  use the example `CheatEngine`'s `forceScatters` / `forceCell` (copy it from
+  `examples/shared/cheats`).
+links:
+  - label: "Guide: Cheats & testing"
+    href: /guides/cheats-and-testing/

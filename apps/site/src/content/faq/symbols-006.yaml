@@ -1,0 +1,7 @@
+id: symbols-006
+group: symbols
+question: How do I set how often each symbol appears (weights)?
+answer: "Pass relative weights to `.weights({ id: n })`: a higher number lands
+  more often. A weight of `0` means the symbol never comes from random fill, so
+  it can only be placed by the server / `setResult`."
+links: []

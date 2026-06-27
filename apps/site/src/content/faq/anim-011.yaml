@@ -1,0 +1,8 @@
+id: anim-011
+group: anim
+question: How do I abort a destroy animation mid-tween when the player slams?
+answer: "`playDestroy(opts)` honours `opts.signal`; on a slam, abort it and snap
+  the view to the destroyed pose."
+links:
+  - label: "Recipe: Slam-stop"
+    href: /recipes/slam-stop/

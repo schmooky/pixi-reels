@@ -1,0 +1,8 @@
+id: integ-001
+group: integ
+question: How do I drive every spin from a server (RGS) response?
+answer: Map each server response to `ColumnTarget[]` and feed `setResult` while
+  the spin is pending.
+links:
+  - label: "Recipe: Classic 5×3"
+    href: /recipes/classic-5x3/

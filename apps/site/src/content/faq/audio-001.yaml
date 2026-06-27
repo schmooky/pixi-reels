@@ -1,0 +1,7 @@
+id: audio-001
+group: audio
+question: How do I play a sound when a reel stops?
+answer: Listen for `spin:reelLanded` (or `spin:stopping`) and play the stop sound.
+links:
+  - label: "Guide: Spin lifecycle"
+    href: /guides/spin-lifecycle/

@@ -1,0 +1,8 @@
+id: perf-004
+group: perf
+question: How do I keep a 7×7 board with many masks from dropping frames?
+answer: Use `SharedRectMaskStrategy` so one mask clips the whole board instead
+  of one mask per cell.
+links:
+  - label: "Recipe: Big symbols (N×M)"
+    href: /recipes/big-symbols-mxn/

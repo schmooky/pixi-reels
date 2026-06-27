@@ -1,0 +1,8 @@
+id: fs-009
+group: fs
+question: How do I carry a running multiplier meter through the whole feature?
+answer: Keep the meter in your state, apply it to wins, and persist it across
+  the feature yourself.
+links:
+  - label: "Recipe: Cascade 6×5"
+    href: /recipes/cascade-6x5/

@@ -1,0 +1,8 @@
+id: antic-005
+group: antic
+question: How do I extend the spin time on specific reels for tension?
+answer: "`setAnticipation([...])` extends those reels via `anticipationDelay`;
+  for finer control raise their `minimumSpinTime`."
+links:
+  - label: "Recipe: Anticipation teaser"
+    href: /recipes/anticipation-teaser/

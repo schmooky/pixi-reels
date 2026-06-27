@@ -1,0 +1,7 @@
+id: coins-012
+group: coins
+question: How do I tick the collector total up as each value lands on it?
+answer: Increment the collector total in the `bezierFly().then(...)` arrival callback.
+links:
+  - label: "Recipe: Hold & Win — collector"
+    href: /recipes/hold-and-win-collector/

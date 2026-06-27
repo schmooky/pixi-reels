@@ -1,0 +1,6 @@
+id: triggers-001
+group: triggers
+question: How do I make a scatter pay regardless of its position?
+answer: Detect the scatter count from the grid regardless of position in your
+  win logic; the engine does not evaluate scatters.
+links: []

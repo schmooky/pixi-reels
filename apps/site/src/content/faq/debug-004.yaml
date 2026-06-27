@@ -1,0 +1,8 @@
+id: debug-004
+group: debug
+question: How do I diagnose a stuck spin that never lands?
+answer: "`__PIXI_REELS_DEBUG.log()` shows `isSpinning` and per-reel state so you
+  can see which reel never landed."
+links:
+  - label: "Guide: Debugging"
+    href: /guides/debugging/

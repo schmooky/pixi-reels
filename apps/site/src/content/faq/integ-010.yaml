@@ -1,0 +1,8 @@
+id: integ-010
+group: integ
+question: How do I satisfy regulatory replay (exact reproduction of any past spin)?
+answer: Re-inject the recorded seed + result for an exact reproduction; the
+  debug recorder captures frames as evidence.
+links:
+  - label: "Guide: Debugging"
+    href: /guides/debugging/

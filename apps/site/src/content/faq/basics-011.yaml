@@ -1,0 +1,6 @@
+id: basics-011
+group: basics
+question: How do I scale the whole board to fit different screen sizes?
+answer: Set `reelSet.scale` from the ratio of available space to
+  `reelSet.width`/`height`, and recompute it on the renderer `resize` event.
+links: []

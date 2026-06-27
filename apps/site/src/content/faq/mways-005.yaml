@@ -1,0 +1,8 @@
+id: mways-005
+group: mways
+question: How do I keep symbol size consistent as the row count changes?
+answer: "`.multiways({ reelPixelHeight })` fixes the reel's pixel box, so
+  symbols resize to fit whatever row count lands."
+links:
+  - label: "Guide: MultiWays"
+    href: /guides/multiways/

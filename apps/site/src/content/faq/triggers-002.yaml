@@ -1,0 +1,7 @@
+id: triggers-002
+group: triggers
+question: How do I count how many scatters are anywhere on the board?
+answer: Scan `reelSet.getVisibleGrid()` for the scatter id across all cells.
+links:
+  - label: "Recipe: Cell bounds"
+    href: /recipes/cell-bounds/

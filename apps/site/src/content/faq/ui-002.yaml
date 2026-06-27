@@ -1,0 +1,6 @@
+id: ui-002
+group: ui
+question: How do I disable the spin button while a spin is running?
+answer: Disable the button on `spin:start` and re-enable when the `spin()`
+  promise resolves (`spin:complete`).
+links: []

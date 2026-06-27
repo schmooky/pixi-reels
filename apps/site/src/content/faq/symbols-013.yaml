@@ -1,0 +1,7 @@
+id: symbols-013
+group: symbols
+question: How do I let a symbol's art overflow its cell without clipping?
+answer: "Mark the id `{ unmask: true }` via `.symbolData(...)` so the engine
+  reparents its view to the viewport's unmasked container, above the reel mask
+  (server-placed ids only)."
+links: []

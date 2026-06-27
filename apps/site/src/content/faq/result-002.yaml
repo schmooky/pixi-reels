@@ -1,0 +1,9 @@
+id: result-002
+group: result
+question: How do I force a specific outcome for a demo or trailer?
+answer: Call `reelSet.setResult(grid)` with the exact `ColumnTarget[]` you want;
+  the example `CheatEngine` (in `examples/shared/cheats`, copy it in) +
+  `forceGrid(grid)` forces it every spin.
+links:
+  - label: "Guide: Cheats & testing"
+    href: /guides/cheats-and-testing/

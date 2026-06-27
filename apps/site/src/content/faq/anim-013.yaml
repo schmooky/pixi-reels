@@ -1,0 +1,6 @@
+id: anim-013
+group: anim
+question: How do I charge a symbol up over several wins before it activates?
+answer: Track a per-symbol charge count in your state, advance its animation
+  each win, and activate when it hits the threshold.
+links: []

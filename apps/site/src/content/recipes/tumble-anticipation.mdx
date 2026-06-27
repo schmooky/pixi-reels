@@ -1,0 +1,121 @@
+---
+title: Cascade anticipation refill
+group: cascade
+oneLiner: "Two-stage refill: survivors slide down first, then a global
+  anticipation beat for multipliers / mascots, then new symbols drop in column
+  by column."
+description: Split the cascade refill in two. Survivors slide down to fill the
+  holes first, a global anticipation beat for multipliers and mascots, then new
+  symbols drop in column by column. First-class on pixi-reels.
+order: 20
+steps:
+  - Initial reveal is a normal left-to-right wave
+  - Winners destruct, then survivors slide down (cascade:gravity:* events fire)
+  - Global gravityHoldMs window. plug anticipation visuals in here
+  - New symbols drop in from above, column by column (cascade:dropIn:* events)
+apis:
+  - ReelSet.refill
+  - RunCascadeOptions.refillMode
+  - RunCascadeOptions.gravityHoldMs
+  - RunCascadeOptions.onGravityComplete
+tags:
+  - cascade
+  - tumble
+  - refill
+  - two-stage
+  - anticipation
+  - recent
+---
+
+Most tumble cascades animate survivors and new symbols **together** in one beat. the Sweet Bonanza / Sugar Rush feel. A handful of slots split it in two:
+
+1. Winners pop. The board dims for a frame.
+2. Surviving symbols **slide down** to fill the holes. New symbols don't appear yet.
+3. A held beat. the player reads the half-empty grid, the multiplier rolls, the mascot reacts.
+4. New symbols **enter from above**, often column by column.
+
+That extra beat between gravity and refill is the whole point: it gives anticipation visuals room to land, and it lets per-column staging feel deliberate instead of fighting the gravity motion underneath. `pixi-reels` ships this as `mode: 'gravity-then-drop'` on `refill()` / `runCascade()`.
+
+## The recipe
+
+<RecipeDemo code="tumble-anticipation" />
+
+```ts
+await reelSet.destroySymbols(winners);
+await wait(PAUSE_AFTER_REMOVAL_MS);
+
+reelSet.setDropOrder('ltr', 110);   // column wave for stage B
+
+await reelSet.refill({
+  winners,
+  grid: stage1,
+  mode: 'gravity-then-drop',
+  gravityHoldMs: 350,               // window for anticipation visuals
+});
+```
+
+Three knobs do the work:
+
+- **`mode: 'gravity-then-drop'`**. opt in. Default is `'combined'` (the classic one-beat refill).
+- **`gravityHoldMs`**. global pause between "all reels finished sliding" and "first reel starts the drop-in". 250–500 ms is the natural range. Awaiting inside an `onGravityComplete` hook extends it further.
+- **`setDropOrder('ltr', step)`**. per-reel start delay on the drop-in stage. When `step < dropIn.duration` the columns overlap (wave). When `step >= dropIn.duration` they're strictly sequential (column 1 fully lands before column 2 starts). The gravity stage ignores this. gravity is always simultaneous.
+
+## What fires when
+
+Two-stage refill emits a richer event stream than the combined refill:
+
+```text
+cascade:destroy:start          ← winners begin imploding
+cascade:destroy:end            ← winners gone
+
+(your PAUSE_AFTER_REMOVAL_MS)
+
+cascade:place:end              ← identities swapped (per reel)
+cascade:gravity:start          ← survivors begin sliding (per reel)
+cascade:gravity:symbol         ← per-symbol-tween (only survivors)
+cascade:gravity:end            ← survivors landed (per reel)
+
+(your gravityHoldMs + onGravityComplete await)
+
+cascade:dropIn:start           ← new symbols begin entering (per reel)
+cascade:dropIn:symbol          ← per-symbol-tween (only new symbols)
+cascade:dropIn:end             ← new symbols landed (per reel)
+```
+
+If a reel has no survivors that move (e.g. all winners landed at the top of that column), its gravity events still fire. just with no tweens between them. The drop-in stage always fires per reel.
+
+## Wiring anticipation visuals
+
+Two clean entry points:
+
+```ts
+// Sync: cue an SFX or fire a CSS class change.
+let gravityDone = 0;
+reelSet.events.on('cascade:gravity:end', () => {
+  gravityDone += 1;
+  if (gravityDone === REEL_COUNT) {
+    multiplierEl.classList.add('pulse');  // overlaps with gravityHoldMs
+  }
+});
+```
+
+```ts
+// Async: await a count-up animation BEFORE new symbols enter.
+await reelSet.runCascade({
+  detectWinners,
+  nextGrid,
+  refillMode: 'gravity-then-drop',
+  gravityHoldMs: 0,                       // hand control fully to the hook
+  onGravityComplete: async ({ chain }) => {
+    await tickMultiplier(chain + 1);      // resolves when the count-up lands
+  },
+});
+```
+
+The hook fires once per cascade, after every reel reports `cascade:gravity:end` and before any `cascade:dropIn:start`. Awaiting inside it extends the gap arbitrarily. keep `gravityHoldMs` low (or zero) when you're driving the timing from the hook.
+
+## Going further
+
+- [Cascade refill orders](/recipes/refill-orders/). the same scripted win, three different combined-mode refill orderings. Use those if you only need per-column reveal without the gravity/hold split.
+- [Tumble cascade guide](/docs/recipes/tumble-cascade/). full reference for `runCascade` and the cascade event taxonomy, including the two-stage variant.
+- [Cascade 6×5 tumble](/recipes/cascade-6x5/). full cluster-detection + multiplier on top of the cascade-refill loop (combined mode).

@@ -1,0 +1,6 @@
+id: meters-006
+group: meters
+question: How do I drive a progressive jackpot value that ticks up live?
+answer: A progressive value comes from your server feed; animate the ticking
+  number in your UI.
+links: []

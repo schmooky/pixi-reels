@@ -1,0 +1,8 @@
+id: pins-001
+group: pins
+question: How do I lock a single cell to a symbol so it survives spins?
+answer: "`reelSet.pin(col, row, id)` locks the cell to that symbol so it
+  survives spins."
+links:
+  - label: "Guide: Pins"
+    href: /guides/pins/

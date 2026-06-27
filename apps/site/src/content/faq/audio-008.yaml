@@ -1,0 +1,8 @@
+id: audio-008
+group: audio
+question: How do I sync a sound exactly to a Spine animation event?
+answer: Add a Spine animation event and play the sound from the skeleton's event
+  listener via the `.spine` getter.
+links:
+  - label: "Recipe: Hold & Win — Spine coins"
+    href: /recipes/hold-and-win-spine/

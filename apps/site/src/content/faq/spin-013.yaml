@@ -1,0 +1,6 @@
+id: spin-013
+group: spin
+question: How do I block a new spin until all animations finish?
+answer: Gate the spin button on the `spin()` promise (and any post-land
+  animation promises) before calling `spin()` again.
+links: []

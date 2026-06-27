@@ -1,0 +1,7 @@
+id: meters-003
+group: meters
+question: How do I level up a jar/symbol multiplier each time it wins?
+answer: Track the level in the symbol's pin payload and advance it each win.
+links:
+  - label: "Recipe: Multiplier wild (CellPin)"
+    href: /recipes/multiplier-wild-pin/

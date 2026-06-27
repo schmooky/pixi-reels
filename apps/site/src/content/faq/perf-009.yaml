@@ -1,0 +1,8 @@
+id: perf-009
+group: perf
+question: How do I batch Spine instances so the GPU does not choke?
+answer: Cache one Spine instance per id (as `SpineReelSymbol` does) and reuse it
+  across swaps instead of recreating skeletons.
+links:
+  - label: "Recipe: Big symbols with Spine"
+    href: /recipes/spine-big-symbols/

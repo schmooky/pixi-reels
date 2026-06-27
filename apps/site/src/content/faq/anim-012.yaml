@@ -1,0 +1,8 @@
+id: anim-012
+group: anim
+question: How do I make a symbol react to a neighbour (e.g. shake when hit)?
+answer: On the triggering event (e.g. `coin:locked` or a win), call a method on
+  the neighbour symbol's `view` to shake it.
+links:
+  - label: "Recipe: Hold & Win — collector"
+    href: /recipes/hold-and-win-collector/

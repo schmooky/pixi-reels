@@ -1,0 +1,6 @@
+id: perf-001
+group: perf
+question: How do I recycle symbols instead of recreating them every spin?
+answer: The engine already pools symbols via `ObjectPool`, recycling instances
+  instead of recreating them each spin.
+links: []

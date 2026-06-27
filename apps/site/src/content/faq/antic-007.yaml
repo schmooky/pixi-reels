@@ -1,0 +1,8 @@
+id: antic-007
+group: antic
+question: How do I anticipate the final cell when one more coin means the grand?
+answer: In Hold & Win, flip the remaining cells to a tension profile with the
+  builder's `anticipateWhen(({ locked, capacity }) => capacity - locked === 1)`.
+links:
+  - label: "Recipe: Hold & Win — last-cell anticipation"
+    href: /recipes/hold-and-win-anticipation/

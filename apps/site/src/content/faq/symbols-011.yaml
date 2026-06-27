@@ -1,0 +1,8 @@
+id: symbols-011
+group: symbols
+question: How do I attach custom data (a value, a tier) to a symbol instance?
+answer: Pass per-instance data through the symbol's constructor options, or
+  carry it in a pin payload via `reelSet.pin(col, row, id, { payload })`.
+links:
+  - label: "Recipe: Value-carrying coin"
+    href: /recipes/value-coin-pin/

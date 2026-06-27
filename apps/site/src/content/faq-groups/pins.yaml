@@ -1,0 +1,4 @@
+id: pins
+title: Sticky cells & pins
+blurb: Lock a cell to an id and keep it across spins.
+order: 9

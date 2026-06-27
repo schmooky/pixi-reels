@@ -1,0 +1,8 @@
+id: integ-003
+group: integ
+question: How do I show a spin while waiting for the server, then snap to its result?
+answer: Call `spin()` immediately, then `setResult(grid)` when the server
+  replies — the stop sequence lands on it.
+links:
+  - label: "Guide: Spin lifecycle"
+    href: /guides/spin-lifecycle/

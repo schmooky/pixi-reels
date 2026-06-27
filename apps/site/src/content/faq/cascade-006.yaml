@@ -1,0 +1,8 @@
+id: cascade-006
+group: cascade
+question: How do I increment a multiplier on each cascade step?
+answer: Listen for `cascade:chain:start` / `cascade:chain:end` and bump your
+  multiplier each chain; the meter itself is game-layer.
+links:
+  - label: "Recipe: Cascade 6×5"
+    href: /recipes/cascade-6x5/

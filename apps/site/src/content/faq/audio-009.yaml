@@ -1,0 +1,6 @@
+id: audio-009
+group: audio
+question: How do I cut all feature sounds cleanly when the player exits?
+answer: Stop your audio in the same teardown that hides the feature / calls
+  `board.destroy()`.
+links: []

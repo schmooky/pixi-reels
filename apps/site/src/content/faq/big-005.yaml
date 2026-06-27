@@ -1,0 +1,7 @@
+id: big-005
+group: big
+question: How do I land a tall block with only its bottom cell visible?
+answer: Anchor the tall block in `bufferAbove` so only its bottom cell shows at row 0.
+links:
+  - label: "Recipe: Big-symbol partial land"
+    href: /recipes/big-symbol-partial-land/

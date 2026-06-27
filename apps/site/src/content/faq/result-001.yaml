@@ -1,0 +1,8 @@
+id: result-001
+group: result
+question: How do I tell the reels exactly what grid to land on?
+answer: "Give `reelSet.setResult(grid)` an array of one `ColumnTarget` per reel:
+  `{ visible: ['A','B','C'], bufferAbove?: [...], bufferBelow?: [...] }`. The
+  visible array is the on-screen window; the buffers target cells just outside
+  it."
+links: []

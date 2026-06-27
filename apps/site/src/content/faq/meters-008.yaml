@@ -1,0 +1,6 @@
+id: meters-008
+group: meters
+question: How do I apply the meter's multiplier to the final win?
+answer: Multiply the win in your math layer; the engine presents whatever
+  cells/values you give it.
+links: []

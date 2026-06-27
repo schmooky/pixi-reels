@@ -1,0 +1,8 @@
+id: ui-001
+group: ui
+question: How do I wire a single spin button that also slam-stops?
+answer: On tap, `spin()` if idle, else `skipSpin()` (or `requestSkip()` if the
+  result has not arrived yet).
+links:
+  - label: "Recipe: Slam-stop"
+    href: /recipes/slam-stop/

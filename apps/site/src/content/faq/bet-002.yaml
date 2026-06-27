@@ -1,0 +1,6 @@
+id: bet-002
+group: bet
+question: How do I let the player change the bet level?
+answer: Bet level lives in your game state; pass it to the server and scale
+  values yourself.
+links: []

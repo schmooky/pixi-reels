@@ -1,0 +1,5 @@
+id: perf-002
+group: perf
+question: How do I cap how many instances of a symbol are pooled?
+answer: "`.poolCapacity(maxPerSymbol)` caps how many of each symbol the pool keeps."
+links: []

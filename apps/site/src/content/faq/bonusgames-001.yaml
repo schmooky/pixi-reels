@@ -1,0 +1,8 @@
+id: bonusgames-001
+group: bonusgames
+question: How do I run a pick-a-prize bonus on clickable cells?
+answer: Attach pointer events to cells via `getCellBounds` hit areas and reveal
+  prizes on click.
+links:
+  - label: "Recipe: Cell hit areas"
+    href: /recipes/cell-hit-areas/

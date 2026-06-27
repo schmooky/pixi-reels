@@ -1,0 +1,6 @@
+id: layout-001
+group: layout
+question: How do I lay the board out for portrait vs landscape?
+answer: Lay out your scene per orientation and scale/position the `ReelSet`
+  Container accordingly.
+links: []

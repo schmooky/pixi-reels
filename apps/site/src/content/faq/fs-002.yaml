@@ -1,0 +1,8 @@
+id: fs-002
+group: fs
+question: How do I swap to a different reel set / background for the feature?
+answer: Toggle a `FrameMiddleware` (or show a second ReelSet) to switch
+  strips/art at runtime with no rebuild.
+links:
+  - label: "Recipe: Feature mode swap"
+    href: /recipes/feature-mode-swap/

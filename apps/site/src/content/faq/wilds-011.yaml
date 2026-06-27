@@ -1,0 +1,7 @@
+id: wilds-011
+group: wilds
+question: How do I animate a wild crawling across reels along a path?
+answer: "`movePin` animates the wild between cells; chain the calls to follow a path."
+links:
+  - label: "Recipe: Walking wild (CellPin)"
+    href: /recipes/walking-wild-pin/

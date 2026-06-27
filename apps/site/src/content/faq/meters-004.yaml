@@ -1,0 +1,6 @@
+id: meters-004
+group: meters
+question: How do I fill a progress bar that unlocks a feature at 100%?
+answer: A progress bar is game-layer — fill it from your win events and trigger
+  the feature at 100%.
+links: []

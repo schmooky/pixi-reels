@@ -1,0 +1,96 @@
+---
+title: Lead-in delay before the fall
+group: cascade
+oneLiner: Four interactive canvases. same spin, only the gap between SPIN click
+  and the first frame of fall-out varies. From 0 ms (instant) to 700 ms
+  (dramatic).
+description: Four interactive canvases. Same spin, same destruction, same
+  .tumble() feel. only the pause between SPIN click and the first frame of
+  fall-out animation changes. From snappy 0 ms to dramatic 700 ms.
+order: 21
+steps:
+  - Click SPIN. handler runs immediately
+  - Optionally await a lead-in pause (0 / 150 / 350 / 700 ms)
+  - Call reelSet.spin(). the fall begins
+apis:
+  - ReelSet.spin
+  - "(user-code: await wait(ms))"
+tags:
+  - cascade
+  - tumble
+  - lead-in
+  - pacing
+  - recent
+---
+
+The lead-in is the gap between the player clicking SPIN and the reels visibly starting to fall. It's not a library feature. just an `await new Promise((r) => setTimeout(r, ms))` before `reelSet.spin()` in your handler. But it dramatically changes the slot's perceived pace, and pairing the right lead-in with your spin SFX is the difference between a satisfying click and a button that "doesn't feel like it did anything."
+
+Every canvas below runs the same scripted spin + destruction. Only the `LEAD_IN_MS` constant at the top of each recipe changes.
+
+## 0 ms. instant
+
+<RecipeDemo code="fall-delay-instant" />
+
+```ts
+const LEAD_IN_MS = 0;
+
+onSpin: async () => {
+  if (LEAD_IN_MS > 0) await new Promise((r) => setTimeout(r, LEAD_IN_MS));
+  reelSet.setDropOrder('ltr');
+  const spinDone = reelSet.spin();
+  // ...
+}
+```
+
+The fall starts the same frame the click handler runs. Snappiest possible feel; perfect for high-velocity play where the player taps-spins many rounds per minute. Pair with a sound that triggers WITH the fall, not before. a lead-in sound followed by an instant visual reads as mistimed.
+
+## 150 ms. subtle
+
+<RecipeDemo code="fall-delay-subtle" />
+
+```ts
+const LEAD_IN_MS = 150;
+```
+
+Just enough room for a short "tap" SFX to play before the reels move. The pause is below the threshold where players think *"why isn't anything happening?"*. still feels responsive, but you've earned a beat for sound design.
+
+## 350 ms. anticipation
+
+<RecipeDemo code="fall-delay-anticipation" />
+
+```ts
+const LEAD_IN_MS = 350;
+```
+
+A clearly perceived deliberate pause. Room for a full "spin-up" SFX, a button-press animation, or a "READY" tone. Common in mid-tier slots where the spin is the main event, not a transactional micro-action.
+
+## 700 ms. suspense
+
+<RecipeDemo code="fall-delay-suspense" />
+
+```ts
+const LEAD_IN_MS = 700;
+```
+
+Dramatic. The reels stand still while music swells, a "GO!" stinger fires, or a feature-pick UI flashes. **Use sparingly**. fine for bonus / free-spin / jackpot reveals, exhausting on every base-game spin. Players will skip this if you don't give them an UNSKIPPABLE reason to wait.
+
+## Picking the lead-in
+
+| Lead-in | Use for | Avoid for |
+|---|---|---|
+| **0 ms** (instant) | Turbo modes, fast-paced reskins | Slots that lean on sound design |
+| **150 ms** (subtle) | Default base game on most modern slots | Bonus rounds that need narrative beats |
+| **350 ms** (anticipation) | Mid-tier base game, story-driven themes | Turbo or high-volume play modes |
+| **700 ms** (suspense) | Feature reveals, free-spin triggers, jackpot intro | Base-game spins (player fatigue) |
+
+A common pattern: **scale the lead-in by speed mode.** In `'normal'` speed use 200-350 ms; in `'turbo'` drop to 50-100 ms; in `'superTurbo'` go to 0. Same handler, different `LEAD_IN_MS` selected from `reelSet.speed.activeName`.
+
+## Cascade refills don't get a lead-in
+
+Worth flagging: the lead-in only applies to the player's `spin()` click. Cascade refills (Moment B. `reelSet.refill(...)`) chain off the previous win-destruction and shouldn't pause again. If you add `await wait(LEAD_IN_MS)` in the cascade loop too, you stack pauses on every cascade level and the round drags. The lead-in is exclusively before the first `spin()` of a round.
+
+## Related
+
+- [Tumble feels](/recipes/tumble-feels/). varies the animation easing & duration; pairs with any lead-in.
+- [Cascade refill orders](/recipes/refill-orders/). varies the post-win drop pattern.
+- [Cascade 6×5 tumble](/recipes/cascade-6x5/). full cluster + multiplier example.

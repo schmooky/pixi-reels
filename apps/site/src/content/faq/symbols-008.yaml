@@ -1,0 +1,7 @@
+id: symbols-008
+group: symbols
+question: How do I anchor a symbol at the cell center vs the top-left?
+answer: "Pass `anchor` in the symbol options (e.g. `SpriteSymbol`'s `{ anchor: {
+  x: 0.5, y: 0.5 } }`); SpriteSymbol defaults to top-left, Spine centers in
+  `resize()`."
+links: []

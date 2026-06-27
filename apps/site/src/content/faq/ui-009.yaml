@@ -1,0 +1,6 @@
+id: ui-009
+group: ui
+question: How do I keep HUD text crisp at any board scale?
+answer: Render HUD text at device resolution (high `resolution`) or keep it in a
+  non-scaled HTML/overlay layer.
+links: []

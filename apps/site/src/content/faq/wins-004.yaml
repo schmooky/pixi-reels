@@ -1,0 +1,8 @@
+id: wins-004
+group: wins
+question: How do I show winning cells for a ways-to-win game (no lines)?
+answer: Read the winning cells from `win:group` and spotlight them with
+  `SymbolSpotlight.show(positions)` — no line geometry needed.
+links:
+  - label: "Recipe: Paylines (events only)"
+    href: /recipes/paylines-events-only/

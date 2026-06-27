@@ -1,12 +1,19 @@
 import { defineConfig } from 'astro/config';
 import mdx from '@astrojs/mdx';
 import react from '@astrojs/react';
+import keystatic from '@keystatic/astro';
 import tailwindcss from '@tailwindcss/vite';
 import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
 
 const here = fileURLToPath(new URL('.', import.meta.url));
 const repoRoot = resolve(here, '../..');
+
+// Keystatic's admin UI + API are injected as non-prerendered routes, which would
+// force a server adapter onto an otherwise fully static build. Storage is local,
+// so editing only happens under `astro dev` — register the integration for the
+// dev/start commands only and keep `astro build` static. Open /keystatic in dev.
+const isDev = process.argv.includes('dev') || process.argv.includes('start');
 
 // https://astro.build/config
 export default defineConfig({
@@ -25,6 +32,7 @@ export default defineConfig({
   integrations: [
     mdx(),
     react(),
+    ...(isDev ? [keystatic()] : []),
   ],
   vite: {
     plugins: [tailwindcss()],

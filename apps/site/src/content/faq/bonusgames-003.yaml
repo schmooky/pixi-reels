@@ -1,0 +1,6 @@
+id: bonusgames-003
+group: bonusgames
+question: How do I spin a bonus wheel and land it on a segment?
+answer: A wheel is a standalone PixiJS widget, not a reel feature — build it in
+  your game layer.
+links: []

@@ -1,0 +1,7 @@
+id: basics-012
+group: basics
+question: How do I change the symbols after the board is already built?
+answer: Use `reelSet.setResult(grid)` (animated, through a spin) or
+  `reelSet.setSymbolAt(col, row, id)` for an instant in-place swap while the
+  reels are idle.
+links: []

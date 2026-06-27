@@ -1,0 +1,6 @@
+id: wins-007
+group: wins
+question: How do I evaluate pays both ways (left-to-right and right-to-left)?
+answer: Evaluate both directions in your win logic and feed all winning cells to
+  the presenter — the engine is direction-agnostic.
+links: []

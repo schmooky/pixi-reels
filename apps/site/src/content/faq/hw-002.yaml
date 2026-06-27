@@ -1,0 +1,8 @@
+id: hw-002
+group: hw
+question: How do I lock a coin in place when it lands?
+answer: Stop spinning that cell and leave its symbol in place. With
+  `HoldAndWinBuilder` a hit cell simply is not respun next round; the
+  `coin:locked` event fires so you can play the lock animation and update the
+  HUD.
+links: []

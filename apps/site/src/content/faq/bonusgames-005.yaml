@@ -1,0 +1,6 @@
+id: bonusgames-005
+group: bonusgames
+question: How do I offer a gamble / double-up on a win?
+answer: A gamble / double-up is a standalone screen in your UI; the reel engine
+  is not involved.
+links: []

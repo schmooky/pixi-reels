@@ -1,0 +1,11 @@
+id: basics-001
+group: basics
+question: How do I create a reel set and show it on screen?
+answer: "Use the fluent `ReelSetBuilder`: chain `.reels()`, `.visibleRows()`,
+  `.symbolSize()`, register your symbols, then `.build()` returns a `ReelSet` (a
+  PixiJS `Container`) that you add to the stage."
+links:
+  - label: "Guide: Your first reelset"
+    href: /guides/your-first-reelset/
+  - label: "Recipe: Classic 5×3"
+    href: /recipes/classic-5x3/

@@ -1,0 +1,9 @@
+id: wins-011
+group: wins
+question: How do I skip the win presentation when the player taps?
+answer: "`WinPresenter.abort()` ends the in-flight presentation immediately; on
+  a bare `SymbolSpotlight`, `hide()` is the stop-everything call (it aborts a
+  running `cycle()` and clears the dim)."
+links:
+  - label: "Guide: Win animations"
+    href: /guides/win-animations/

@@ -1,0 +1,8 @@
+id: coins-014
+group: coins
+question: How do I make a coin double or boost every value already on the board?
+answer: "Same pattern: walk the locked coins and rewrite their values on lock
+  (e.g. `value *= 2`), then refresh the labels from your data."
+links:
+  - label: "Recipe: Hold & Win — payer / doubler coin"
+    href: /recipes/hold-and-win-payer-coin/

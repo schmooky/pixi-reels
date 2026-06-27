@@ -1,0 +1,7 @@
+id: bonusgames-007
+group: bonusgames
+question: How do I run a "pick until you hit 3 of a kind" collection bonus?
+answer: Cell hit-areas plus your own pick logic tallying matches until three of a kind.
+links:
+  - label: "Recipe: Cell hit areas"
+    href: /recipes/cell-hit-areas/

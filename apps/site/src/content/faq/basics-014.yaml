@@ -1,0 +1,6 @@
+id: basics-014
+group: basics
+question: How do I clean up and destroy the reel set when leaving the screen?
+answer: "`reelSet.destroy()` tears down the reels, pools, masks and ticker refs
+  (every subsystem implements `Disposable`)."
+links: []

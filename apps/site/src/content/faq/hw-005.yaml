@@ -1,0 +1,8 @@
+id: hw-005
+group: hw
+question: How do I decrement the respin counter on a dry spin?
+answer: A respin with no hits decrements the counter automatically
+  (`respins:changed` reason `'miss'`).
+links:
+  - label: "Recipe: Hold & Win respin"
+    href: /recipes/hold-and-win/

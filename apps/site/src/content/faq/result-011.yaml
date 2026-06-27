@@ -1,0 +1,6 @@
+id: result-011
+group: result
+question: How do I keep the visual result separate from the payout math?
+answer: Keep payout math on the server; the engine only consumes the visual grid
+  via `setResult` and never computes wins itself.
+links: []

@@ -1,0 +1,7 @@
+id: wilds-004
+group: wilds
+question: How do I put a multiplier number on a wild?
+answer: Carry the multiplier in the pin payload and render a ×N badge on the cell.
+links:
+  - label: "Recipe: Multiplier wild (CellPin)"
+    href: /recipes/multiplier-wild-pin/

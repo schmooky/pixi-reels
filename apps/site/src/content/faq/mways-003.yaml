@@ -1,0 +1,8 @@
+id: mways-003
+group: mways
+question: How do I compute and show the current ways count?
+answer: Ways = the product of the per-reel row counts; read the shape from
+  `getVisibleGrid()` lengths or your result.
+links:
+  - label: "Guide: MultiWays"
+    href: /guides/multiways/

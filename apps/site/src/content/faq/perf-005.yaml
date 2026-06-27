@@ -1,0 +1,6 @@
+id: perf-005
+group: perf
+question: How do I share one mask across many cells?
+answer: "`maskStrategy(new SharedRectMaskStrategy())` clips many cells with a
+  single mask."
+links: []

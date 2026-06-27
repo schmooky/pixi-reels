@@ -1,0 +1,6 @@
+id: basics-006
+group: basics
+question: How do I put specific symbols on the board at startup?
+answer: "Seed the opening grid with `.initialFrame(grid)` on the builder,
+  passing one `ColumnTarget` per reel — e.g. `{ visible: ['A', 'B', 'C'] }`."
+links: []

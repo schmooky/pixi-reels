@@ -1,0 +1,8 @@
+id: wilds-010
+group: wilds
+question: How do I make a walking wild leave a multiplier trail behind it?
+answer: Use `movePin` to walk it and pin a multiplier payload at each cell it
+  leaves behind.
+links:
+  - label: "Recipe: Walking wild (CellPin)"
+    href: /recipes/walking-wild-pin/

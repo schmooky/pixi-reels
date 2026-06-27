@@ -1,0 +1,9 @@
+id: big-001
+group: big
+question: How do I place a 2×2 symbol on the board?
+answer: "Give the id `size: { w: 2, h: 2 }` via `.symbolData(...)` and `weight:
+  0` via `.weights(...)`, place its anchor cell via `setResult`, and the engine
+  paints OCCUPIED across the block."
+links:
+  - label: "Recipe: Big symbols (N×M)"
+    href: /recipes/big-symbols-mxn/

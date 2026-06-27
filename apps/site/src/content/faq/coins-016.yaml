@@ -1,0 +1,9 @@
+id: coins-016
+group: coins
+question: How do I upgrade a coin's value tier in place (5 → 10 → 25)?
+answer: Swap the coin's id/data in place with `board.symbolAt(cell)` (or
+  `reelSet.setSymbolAt`) and repaint the label, without disturbing the rest of
+  the grid.
+links:
+  - label: "Recipe: Hold & Win — upgrade a coin in place"
+    href: /recipes/hold-and-win-upgrade-coin/

@@ -1,0 +1,8 @@
+id: triggers-005
+group: triggers
+question: How do I show a partial-trigger teaser (5 in, need 6)?
+answer: With 5 in and a 6th possible, `setAnticipation` on the deciding reel for
+  the tease.
+links:
+  - label: "Recipe: Near-miss"
+    href: /recipes/near-miss/

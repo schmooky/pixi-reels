@@ -1,0 +1,56 @@
+---
+title: "Hold & Win: fly to a feature meter"
+group: features
+oneLiner: On collect, each coin's value flies UP into a meter above the reels
+  (arriveScale shrink), ticking the total and filling a progress bar toward a
+  target.
+description: On collect, each coin's value flies UP out of its cell, shrinks
+  into a meter widget above the reels (arriveScale), ticks the meter total up
+  and fills a progress bar toward a target. The board hands out geometry; the
+  flight is yours.
+order: 36
+steps:
+  - Place a meter widget (spine counter + bar + total) above the board
+  - Fly each value from cellCenter() up to the meter with arriveScale
+  - On arrival, add to the total, fill the bar and tick the counter
+  - release() each cell as its coin leaves
+apis:
+  - HoldAndWinBuilder
+  - HoldAndWinBoard.cellCenter
+  - HoldAndWinBoard.release
+  - bezierFly
+tags:
+  - hold-and-win
+  - coins
+  - meter
+  - collect
+  - flight
+  - spine
+  - recent
+---
+
+<RecipeDemo code="hold-and-win-meter" height={460} />
+
+Press Run. Every held coin's amount lifts out of its cell, arcs up and shrinks into the meter above the reels; the meter total ticks up, its counter animation plays, and the progress bar fills toward the target. Press again to reset.
+
+## The board gives geometry, you fly to your own target
+
+The meter is your UI, positioned wherever your layout wants it. Collecting is `cellCenter()` for the start, `bezierFly` to the meter, and `release()` to clear the cell:
+
+```ts
+const from = abs(coin.cell);                 // board.cellCenter + container offset
+board.release([coin.cell]);                  // cell empties under the flying clone
+await bezierFly(clone, from, meterPos, {
+  lean: 'out', around: meterPos, arriveScale: 0.3,   // shrink into the meter
+});
+total += coin.data.value;                     // bump the meter on arrival
+drawBar(total / TARGET);                       // fill the progress bar
+```
+
+`arriveScale` shrinks the clone as it docks; `lean: 'out'` bows the arc away from board center toward the meter. Aim at any on-screen target — a side pot, a character's pouch, a jackpot wheel — by passing a different point, or a per-coin `control` for a fully custom path.
+
+## Related recipes
+
+- [Hold & Win: collector + flight choreography](/recipes/hold-and-win-collector/). collect INTO an on-board orb instead of up to a meter
+- [Hold & Win: count-up coin](/recipes/hold-and-win-countup-coin/). the same tick, on the coin face
+- [Hold & Win: Spine coins + collect](/recipes/hold-and-win-spine/). the collect flight into a spine counter

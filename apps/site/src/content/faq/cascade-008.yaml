@@ -1,0 +1,8 @@
+id: cascade-008
+group: cascade
+question: How do I drop multiplier orbs that sum up at the end of the tumble?
+answer: Track orb values across the tumble via the cascade events and apply the
+  sum on the final `cascade:chain:end`.
+links:
+  - label: "Recipe: Tumble anticipation"
+    href: /recipes/tumble-anticipation/

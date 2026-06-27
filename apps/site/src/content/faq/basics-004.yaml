@@ -1,0 +1,6 @@
+id: basics-004
+group: basics
+question: How do I set the pixel size of a single symbol cell?
+answer: "`.symbolSize(width, height)` on the builder sets the pixel box of one
+  cell; pair it with `.symbolGap(x, y)` for spacing."
+links: []

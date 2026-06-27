@@ -1,0 +1,8 @@
+id: hw-010
+group: hw
+question: How do I drive the whole feature from server-decided hits per round?
+answer: Loop `await board.respin(round.hits)` per round with the server's hit
+  list until `result.done`.
+links:
+  - label: "Recipe: Hold & Win respin"
+    href: /recipes/hold-and-win/

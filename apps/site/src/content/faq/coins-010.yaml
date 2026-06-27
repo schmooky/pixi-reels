@@ -1,0 +1,11 @@
+id: coins-010
+group: coins
+question: How do I make a collector coin pull every other coin's value into itself?
+answer: The collector is just another server-placed id. When it locks, walk the
+  locked coins and fly a clone of each value into the collector along a bezier
+  arc (`bezierFly`), ticking the collector's total up on every arrival.
+links:
+  - label: "Recipe: Hold & Win — collector"
+    href: /recipes/hold-and-win-collector/
+  - label: "Recipe: Hold & Win — collector with particles"
+    href: /recipes/hold-and-win-collector-particles/

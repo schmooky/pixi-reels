@@ -1,0 +1,8 @@
+id: motion-008
+group: motion
+question: How do I add rows to a reel at runtime (the board grows)?
+answer: MultiWays changes a reel's visible row count per spin (via `setShape` +
+  the AdjustPhase); a permanent static row change otherwise needs a rebuild.
+links:
+  - label: "Guide: MultiWays"
+    href: /guides/multiways/

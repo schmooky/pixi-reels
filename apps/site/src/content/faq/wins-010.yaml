@@ -1,0 +1,6 @@
+id: wins-010
+group: wins
+question: How do I zoom and scale the board into a big-win banner?
+answer: Scale `reelSet` (a Container) with a GSAP tween for the zoom, and build
+  the banner in your UI layer.
+links: []

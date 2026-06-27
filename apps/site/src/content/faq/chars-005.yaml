@@ -1,0 +1,9 @@
+id: chars-005
+group: chars
+question: How do I fly each collected symbol's value into the character's pouch
+  and total it?
+answer: "`bezierFly` the value clone to the character's position and add it to
+  your running total in the arrival callback."
+links:
+  - label: "Recipe: Hold & Win — collector"
+    href: /recipes/hold-and-win-collector/

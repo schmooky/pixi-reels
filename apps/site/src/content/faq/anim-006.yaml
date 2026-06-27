@@ -1,0 +1,8 @@
+id: anim-006
+group: anim
+question: How do I reveal a mystery symbol into a matching symbol across the board?
+answer: "Land mystery placeholders, then pin them all to one random id with `{
+  turns: 'eval' }` so they reveal together and clear next spin."
+links:
+  - label: "Recipe: Mystery reveal (CellPin)"
+    href: /recipes/mystery-reveal-pin/

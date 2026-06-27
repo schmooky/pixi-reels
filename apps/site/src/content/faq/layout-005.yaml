@@ -1,0 +1,7 @@
+id: layout-005
+group: layout
+question: How do I anchor a top feature meter relative to the reels?
+answer: Position the meter relative to `reelSet.y` / its bounds.
+links:
+  - label: "Recipe: Cell bounds"
+    href: /recipes/cell-bounds/

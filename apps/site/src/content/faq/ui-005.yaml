@@ -1,0 +1,8 @@
+id: ui-005
+group: ui
+question: How do I overlay a HUD that reads purely from board events?
+answer: Subscribe your HUD to the typed `reelSet.events` / `board.events` — they
+  are the single source of truth.
+links:
+  - label: "Recipe: Hold & Win respin"
+    href: /recipes/hold-and-win/

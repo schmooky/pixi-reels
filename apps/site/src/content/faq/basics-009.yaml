@@ -1,0 +1,7 @@
+id: basics-009
+group: basics
+question: How do I attach the reel set to my existing PixiJS app?
+answer: "`build()` returns a `ReelSet`, which is a PixiJS `Container`:
+  `app.stage.addChild(reelSet)`, and pass the app ticker via
+  `.ticker(app.ticker)`."
+links: []

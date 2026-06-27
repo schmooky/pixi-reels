@@ -1,0 +1,6 @@
+id: layout-006
+group: layout
+question: How do I play an intro that assembles the reels on load?
+answer: Animate the `ReelSet` / reel containers in with GSAP on load —
+  game-layer choreography.
+links: []

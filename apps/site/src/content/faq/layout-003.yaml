@@ -1,0 +1,6 @@
+id: layout-003
+group: layout
+question: How do I reflow the HUD when the orientation changes?
+answer: Reposition your HUD in your resize handler; the engine exposes the
+  board's size, the layout is yours.
+links: []

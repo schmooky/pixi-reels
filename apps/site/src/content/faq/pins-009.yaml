@@ -1,0 +1,8 @@
+id: pins-009
+group: pins
+question: How do I override the spin result so pinned cells always win out?
+answer: Pinned cells are overlaid onto the result before the stop sequencer, so
+  they always land on the pin id regardless of the server grid.
+links:
+  - label: "Guide: Pins"
+    href: /guides/pins/

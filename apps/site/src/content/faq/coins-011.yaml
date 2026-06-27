@@ -1,0 +1,8 @@
+id: coins-011
+group: coins
+question: How do I fly a value clone from each coin into the collector over an arc?
+answer: "Spawn a clone at `board.cellCenter(coin.cell)` and `bezierFly(clone,
+  from, to, { lean: 'up' })` into the collector."
+links:
+  - label: "Recipe: Hold & Win — collector"
+    href: /recipes/hold-and-win-collector/

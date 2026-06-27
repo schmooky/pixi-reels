@@ -1,0 +1,9 @@
+id: anim-009
+group: anim
+question: How do I await a one-shot animation and continue when it finishes?
+answer: "`await symbol.playWin()` resolves when the win one-shot finishes; on
+  `SpineReelSymbol`, `playLanding()` / `playOut()` do the same for the landing /
+  exit one-shots."
+links:
+  - label: "Guide: Win animations"
+    href: /guides/win-animations/

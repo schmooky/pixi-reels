@@ -1,0 +1,7 @@
+id: pins-002
+group: pins
+question: How do I unlock a pinned cell again?
+answer: "`reelSet.unpin(col, row)` removes it."
+links:
+  - label: "Guide: Pins"
+    href: /guides/pins/

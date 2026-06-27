@@ -1,0 +1,8 @@
+id: wilds-005
+group: wilds
+question: How do I randomly drop wilds onto the board before the spin?
+answer: Inject them with a `FrameMiddleware` (or place them in the `setResult`
+  grid) before the reels stop.
+links:
+  - label: "Recipe: Feature mode swap"
+    href: /recipes/feature-mode-swap/

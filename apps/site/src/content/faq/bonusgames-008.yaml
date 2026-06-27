@@ -1,0 +1,6 @@
+id: bonusgames-008
+group: bonusgames
+question: How do I award a random multiplier from a chest or orb?
+answer: Reveal it with your own widget/animation and feed the result into your
+  win math.
+links: []

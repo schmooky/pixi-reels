@@ -1,0 +1,8 @@
+id: anim-005
+group: anim
+question: How do I morph one symbol into a different (higher) one mid-round?
+answer: Swap to the higher id in place with `setSymbolAt`, playing a transition
+  tween in the old symbol's view first.
+links:
+  - label: "Recipe: Symbol transform"
+    href: /recipes/symbol-transform/

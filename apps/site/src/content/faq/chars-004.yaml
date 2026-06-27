@@ -1,0 +1,8 @@
+id: chars-004
+group: chars
+question: How do I make a fisherman collect every money-fish on the board?
+answer: On collect, walk the money-symbol cells and `bezierFly` each value into
+  the character; the board only gives you `cellCenter` + the payloads.
+links:
+  - label: "Recipe: Hold & Win — collector"
+    href: /recipes/hold-and-win-collector/

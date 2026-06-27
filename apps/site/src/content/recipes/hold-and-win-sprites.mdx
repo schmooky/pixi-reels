@@ -1,0 +1,71 @@
+---
+title: "Hold & Win: sprite coins (no Spine)"
+group: features
+oneLiner: The whole board from TexturePacker sprites — number symbols that blur
+  as they spin and a 30-frame coin flip on land. The sprite path that ships most
+  often, no skeleton runtime.
+description: The Hold & Win board built entirely from TexturePacker sprites —
+  number symbols that blur as they spin (BlurSpriteSymbol) and a 30-frame coin
+  flip on land (AnimatedSpriteSymbol). The sprite path that ships most often, no
+  skeleton runtime.
+order: 27
+steps:
+  - loadHoldAndWinSprites() returns base + blur textures, coin frames and the
+    value font
+  - Register number symbols on BlurSpriteSymbol (blur on spin, crisp on land)
+  - Register the coin on AnimatedSpriteSymbol — the board's playWin() plays the
+    flip
+  - Everything else is the same HoldAndWinBuilder board as the Spine recipes
+apis:
+  - HoldAndWinBuilder
+  - loadHoldAndWinSprites
+  - BlurSpriteSymbol
+  - AnimatedSpriteSymbol
+tags:
+  - hold-and-win
+  - sprites
+  - animated-sprite
+  - blur
+  - coins
+  - recent
+---
+
+<RecipeDemo code="hold-and-win-sprites" height={460} />
+
+Press Run. Two coins seed the board and more land over the respin waves; number symbols blur as the cells spin and snap crisp on land, and each coin plays a 30-frame flip before its value paints in the game's own digit font.
+
+## Same board, sprite symbols
+
+This is the [Spine coin recipe](/recipes/hold-and-win-spine/) with the skeleton runtime swapped out for plain sprites. `HoldAndWinBuilder` doesn't care which `ReelSymbol` subclass a cell uses, so the board, events and choreography are identical — only the registration changes:
+
+```ts
+const { symbols, blur, coin } = await loadHoldAndWinSprites();
+
+for (const id of BASE_IDS) r.register(id, BlurCell, { textures: symbols, blurTextures: blur });
+r.register('coin', AnimatedSpriteSymbol, { frames: { coin }, animationSpeed: 0.6 });
+```
+
+## Blur on spin, free of event wiring
+
+`BlurSpriteSymbol` swaps to a pre-rendered motion-blur texture; the engine already calls `onReelSpinStart` / `onReelLanded` on every visible symbol as the reel changes phase, so a three-line subclass wires the blur with no per-cell event plumbing:
+
+```ts
+class BlurCell extends BlurSpriteSymbol {
+  onReelSpinStart() { this.setBlurred(true); }
+  onReelLanded()    { this.setBlurred(false); }
+}
+```
+
+## The coin is an AnimatedSprite
+
+The 30-frame coin flip is just a frame array on `AnimatedSpriteSymbol`. The board calls `playWin()` when a coin locks, which plays the flip once and settles on the rest frame — the same lock beat the Spine coin gets from its skeleton.
+
+## Asset note
+
+The art is a sprite export (Supercharged Diamonds 3): a money-collect symbol set with matching motion-blur frames, a coin flip, and bitmap digit fonts, staged under `/hw-sprites/` and loaded with `loadHoldAndWinSprites()`. Together with the `/hw-spine/` set, the recipes cover both ways a studio ships Hold & Win art.
+
+## Related recipes
+
+- [Hold & Win: Spine coins + collect](/recipes/hold-and-win-spine/). the skeleton-runtime version of this board
+- [Texture atlas symbols](/recipes/texture-atlas-symbols/). BlurSpriteSymbol on a standard reel set
+- [Hold & Win: mystery value coin](/recipes/hold-and-win-mystery-coin/). a looping value reel inside the coin

@@ -1,0 +1,8 @@
+id: bonusgames-009
+group: bonusgames
+question: How do I run a trail / board-game bonus that hops across cells?
+answer: Tween a token between cells using `getCellBounds` positions; the
+  board-game logic is yours.
+links:
+  - label: "Recipe: Cell bounds"
+    href: /recipes/cell-bounds/

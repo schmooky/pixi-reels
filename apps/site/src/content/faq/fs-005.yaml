@@ -1,0 +1,7 @@
+id: fs-005
+group: fs
+question: How do I keep sticky wilds/multipliers persistent across all free spins?
+answer: Pin them with a long or `'permanent'` TTL so they survive every free spin.
+links:
+  - label: "Recipe: Sticky wild (CellPin)"
+    href: /recipes/sticky-wild-pin/

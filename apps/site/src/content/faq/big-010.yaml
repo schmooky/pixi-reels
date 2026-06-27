@@ -1,0 +1,8 @@
+id: big-010
+group: big
+question: How do I read the bounds of a big symbol block for an overlay?
+answer: "`reelSet.getBlockBounds(col, row)` returns the pixel rect of the whole
+  block for an overlay."
+links:
+  - label: "Recipe: Get block bounds"
+    href: /recipes/get-block-bounds/

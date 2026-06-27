@@ -1,0 +1,8 @@
+id: pins-010
+group: pins
+question: How do I animate a pin landing differently from a normal symbol?
+answer: Give the pinned symbol class its own `playWin` / landing animation, or
+  react to the `pin:placed` event.
+links:
+  - label: "Guide: Pins"
+    href: /guides/pins/

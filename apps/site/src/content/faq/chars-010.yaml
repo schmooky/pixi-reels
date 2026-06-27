@@ -1,0 +1,9 @@
+id: chars-010
+group: chars
+question: How do I aim a flight at a moving target (the character animates while
+  a coin flies)?
+answer: The helper tweens to a fixed point, so recompute the target each frame
+  in your own update (or re-issue `bezierFly`) as the character moves.
+links:
+  - label: "Recipe: Hold & Win — collector"
+    href: /recipes/hold-and-win-collector/

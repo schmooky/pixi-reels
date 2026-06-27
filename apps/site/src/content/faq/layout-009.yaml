@@ -1,0 +1,6 @@
+id: layout-009
+group: layout
+question: How do I support an ultrawide background behind a fixed board?
+answer: Keep the background full-bleed and the `ReelSet` at a fixed size
+  centered on top.
+links: []

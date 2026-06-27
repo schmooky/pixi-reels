@@ -1,0 +1,8 @@
+id: chars-008
+group: chars
+question: How do I have a special symbol shoot/affect another cell (sniper style)?
+answer: Read both cells' geometry from `getCellBounds`, fly an effect between
+  them, and swap the target via `setSymbolAt` or a pin.
+links:
+  - label: "Recipe: Collector symbol"
+    href: /recipes/collector-symbol-pin/

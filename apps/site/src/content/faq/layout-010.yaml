@@ -1,0 +1,6 @@
+id: layout-010
+group: layout
+question: How do I mirror the layout for RTL locales?
+answer: Flip your scene layout for RTL in your code; the engine has no locale
+  awareness.
+links: []

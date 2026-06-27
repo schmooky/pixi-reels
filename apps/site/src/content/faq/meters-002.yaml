@@ -1,0 +1,6 @@
+id: meters-002
+group: meters
+question: How do I increment the meter on each win and reset on a miss?
+answer: Drive it from win events (or the shared `roundBus`) — increment on a
+  win, reset on a dry spin in your handler.
+links: []

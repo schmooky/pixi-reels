@@ -1,0 +1,7 @@
+id: layout-007
+group: layout
+question: How do I transition between base and feature with a wipe?
+answer: Play a wipe in your scene during the mode swap (hide base, show feature).
+links:
+  - label: "Recipe: Feature mode swap"
+    href: /recipes/feature-mode-swap/

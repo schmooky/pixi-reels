@@ -1,0 +1,6 @@
+id: motion-009
+group: motion
+question: How do I add a whole new reel mid-feature (Infinity-Reels style)?
+answer: Adding whole columns mid-feature (Infinity Reels) is not built in — the
+  reel count is fixed at build; it is a custom extension on top of the engine.
+links: []

@@ -1,0 +1,10 @@
+id: antic-011
+group: antic
+question: How do I run built-in anticipation on a single cell, the way the
+  engine does it for a whole reel?
+answer: Hold & Win cells are independent reels, so the builder's
+  `anticipateWhen(...)` runs anticipation on the still-spinning cells out of the
+  box; for one cell, swap that mini-reel to a tension profile.
+links:
+  - label: "Recipe: Hold & Win — last-cell anticipation"
+    href: /recipes/hold-and-win-anticipation/

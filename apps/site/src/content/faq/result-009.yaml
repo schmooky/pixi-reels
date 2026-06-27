@@ -1,0 +1,8 @@
+id: result-009
+group: result
+question: How do I land a different row count on each reel in one result?
+answer: Build with `.multiways({ minRows, maxRows })` and pass a per-reel
+  `ColumnTarget[]` whose `visible` arrays differ in length.
+links:
+  - label: "Guide: MultiWays"
+    href: /guides/multiways/

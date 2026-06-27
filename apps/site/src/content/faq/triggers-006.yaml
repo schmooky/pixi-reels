@@ -1,0 +1,8 @@
+id: triggers-006
+group: triggers
+question: How do I show the scatters collecting into a trigger counter?
+answer: On each scatter land, `bezierFly` it to your trigger counter and bump
+  the count.
+links:
+  - label: "Recipe: Hold & Win — collector"
+    href: /recipes/hold-and-win-collector/

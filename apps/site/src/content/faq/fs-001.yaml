@@ -1,0 +1,8 @@
+id: fs-001
+group: fs
+question: How do I trigger free spins from 3 scatters?
+answer: Count scatters in the result and enter free spins in your game logic;
+  the engine reports the grid via `setResult` / events.
+links:
+  - label: "Recipe: Feature mode swap"
+    href: /recipes/feature-mode-swap/

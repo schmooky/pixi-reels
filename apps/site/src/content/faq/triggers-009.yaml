@@ -1,0 +1,8 @@
+id: triggers-009
+group: triggers
+question: How do I trigger different bonuses from different scatter sets?
+answer: Branch in your trigger logic on which scatter set landed and enter the
+  matching feature.
+links:
+  - label: "Recipe: Feature mode swap"
+    href: /recipes/feature-mode-swap/

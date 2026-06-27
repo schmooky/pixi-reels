@@ -1,0 +1,8 @@
+id: result-004
+group: result
+question: How do I apply a result that came from my server?
+answer: Map the server payload to `ColumnTarget[]` and pass it to
+  `reelSet.setResult(grid)` while the spin promise is still pending.
+links:
+  - label: "Recipe: Classic 5×3"
+    href: /recipes/classic-5x3/

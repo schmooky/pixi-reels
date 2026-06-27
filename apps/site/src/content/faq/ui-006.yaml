@@ -1,0 +1,8 @@
+id: ui-006
+group: ui
+question: How do I draw a value label centered on a specific cell?
+answer: Position your text at the center of `reelSet.getCellBounds(col, row)`
+  (or `board.cellCenter`).
+links:
+  - label: "Recipe: Cell bounds"
+    href: /recipes/cell-bounds/

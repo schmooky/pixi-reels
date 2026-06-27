@@ -1,0 +1,8 @@
+id: coins-013
+group: coins
+question: How do I make a payer coin add its value to every other coin?
+answer: On its lock, iterate `board.lockedCoins` and bump each value in your
+  game state, flying a token to each coin — the board stays value-agnostic.
+links:
+  - label: "Recipe: Hold & Win — payer / doubler coin"
+    href: /recipes/hold-and-win-payer-coin/

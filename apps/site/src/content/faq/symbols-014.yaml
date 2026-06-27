@@ -1,0 +1,6 @@
+id: symbols-014
+group: symbols
+question: How do I give two different ids the same artwork?
+answer: Register both ids with the same class and point them at the same texture
+  / skeleton in the options map.
+links: []

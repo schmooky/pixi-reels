@@ -1,0 +1,8 @@
+id: debug-007
+group: debug
+question: How do I run the engine headless with no canvas for tests?
+answer: The engine's logic modules are pure and testable without a canvas; use
+  the `pixi-reels/testing` entry.
+links:
+  - label: "Guide: Cheats & testing"
+    href: /guides/cheats-and-testing/

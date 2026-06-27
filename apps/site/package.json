@@ -20,6 +20,8 @@
     "@astrojs/mdx": "^5.0.3",
     "@astrojs/react": "^5.0.3",
     "@esotericsoftware/spine-pixi-v8": "~4.2.110",
+    "@keystatic/astro": "^5.1.0",
+    "@keystatic/core": "^0.5.50",
     "@monaco-editor/react": "^4.7.0",
     "@radix-ui/react-collapsible": "^1.1.12",
     "@radix-ui/react-separator": "^1.1.8",
@@ -41,7 +43,8 @@
     "sucrase": "^3.35.1",
     "tailwind-merge": "^3.5.0",
     "tailwindcss": "^4.2.2",
-    "tailwindcss-animate": "^1.0.7"
+    "tailwindcss-animate": "^1.0.7",
+    "yaml": "^2.9.0"
   },
   "devDependencies": {
     "@resvg/resvg-js": "^2.6.2",

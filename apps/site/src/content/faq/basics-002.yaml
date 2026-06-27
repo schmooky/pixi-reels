@@ -1,0 +1,5 @@
+id: basics-002
+group: basics
+question: How do I set how many reels (columns) the game has?
+answer: Set the column count with `.reels(n)` on the builder before `.build()`.
+links: []
