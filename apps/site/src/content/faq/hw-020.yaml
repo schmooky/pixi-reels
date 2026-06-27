@@ -1,0 +1,10 @@
+id: hw-020
+group: hw
+question: How do I drive each Hold & Win cell as its own reel — start it, stop
+  it, and read the symbol inside it independently?
+answer: "Each cell is its own 1×1 ReelSet: `board.reelAt(cell)` hands you the
+  reel to `spin()` / `skipSpin()` it on its own, and `board.symbolAt(cell)`
+  reads the live symbol inside it."
+links:
+  - label: "Recipe: Hold & Win — drive each cell on its own"
+    href: /recipes/hold-and-win-cell-control/

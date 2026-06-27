@@ -1,0 +1,8 @@
+id: motion-007
+group: motion
+question: How do I nudge a reel by one position after it stopped?
+answer: "`reelSet.nudge(col, { … })` shifts a reel up or down after it landed,
+  feeding caller-supplied incoming symbols."
+links:
+  - label: "Recipe: Nudge"
+    href: /recipes/nudge/

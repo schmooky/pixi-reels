@@ -1,0 +1,8 @@
+id: cascade-013
+group: cascade
+question: How do I order the refills (which column fills first)?
+answer: "`.tumble(...)` plus `setDropOrder` choose which column refills first —
+  simultaneous, LTR wave, bottom-up, or top-down."
+links:
+  - label: "Recipe: Refill orders"
+    href: /recipes/refill-orders/

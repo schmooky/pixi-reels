@@ -1,0 +1,8 @@
+id: wilds-008
+group: wilds
+question: How do I stack multiplier wilds so their values multiply together?
+answer: Keep each wild's multiplier in its pin payload and multiply the payloads
+  together in your win math.
+links:
+  - label: "Recipe: Multiplier wild (CellPin)"
+    href: /recipes/multiplier-wild-pin/

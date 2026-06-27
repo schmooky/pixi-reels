@@ -1,0 +1,8 @@
+id: coins-018
+group: coins
+question: How do I send a golden trail to the meter instead of a flying coin?
+answer: Send a trail sprite or particle along the same `bezierFly` path instead
+  of a coin clone — the board only hands out geometry.
+links:
+  - label: "Recipe: Hold & Win — collector"
+    href: /recipes/hold-and-win-collector/

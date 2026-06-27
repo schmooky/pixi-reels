@@ -1,0 +1,8 @@
+id: meters-007
+group: meters
+question: How do I show a coin-collect counter that aggregates bonus coins?
+answer: Aggregate collected coins in your state via `coin:locked` / collect
+  callbacks and show the total.
+links:
+  - label: "Recipe: Value-carrying coin"
+    href: /recipes/value-coin-pin/

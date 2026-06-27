@@ -1,0 +1,9 @@
+id: motion-012
+group: motion
+question: How do I keep a tall block intact while everything else scrolls?
+answer: Big-symbol blocks stay intact through spins and cascades automatically —
+  you place the anchor and the engine paints OCCUPIED across the rest of the
+  block.
+links:
+  - label: "Recipe: Big-symbol cascade fall"
+    href: /recipes/big-symbol-cascade-fall/

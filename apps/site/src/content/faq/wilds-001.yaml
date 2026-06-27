@@ -1,0 +1,7 @@
+id: wilds-001
+group: wilds
+question: How do I make a wild stay stuck across the next spins?
+answer: "Pin it: `reelSet.pin(col, row, 'wild', { turns })` keeps it across spins."
+links:
+  - label: "Recipe: Sticky wild (CellPin)"
+    href: /recipes/sticky-wild-pin/

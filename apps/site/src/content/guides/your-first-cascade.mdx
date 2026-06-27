@@ -1,0 +1,236 @@
+---
+title: Build your first cascade slot
+order: 2
+eyebrow: Tutorial
+description: From `npm install` to a working cascade slot in ~80 lines of
+  TypeScript. No prior pixi-reels knowledge required.
+---
+
+You'll build a 6×5 cascade slot. drop on click, detect 3-in-a-row wins, vanish the winners, refill from above, repeat until no more wins. ~80 lines of TypeScript. No prior `pixi-reels` knowledge required; PixiJS basics help.
+
+By the end you'll have a working slot. If you already know `pixi-reels`, skim the [cascades guide](/guides/cascades/) for the mental model and the [API reference](/docs/api-reelset/) for the verbs.
+
+## Step 0. Install
+
+```bash
+npm install pixi-reels pixi.js gsap
+```
+
+`pixi-reels` requires PixiJS v8 and uses GSAP for its tweens. Both are peer deps.
+
+## Step 1. Boot PixiJS
+
+```ts
+import { Application } from 'pixi.js';
+import { gsap } from 'gsap';
+
+const app = new Application();
+await app.init({ background: 0xffffff, resizeTo: window, antialias: true });
+document.body.appendChild(app.canvas);
+
+// CRITICAL: sync GSAP to PixiJS so tweens run in hidden tabs / iframes.
+gsap.ticker.remove(gsap.updateRoot);
+app.ticker.add(() => gsap.updateRoot(app.ticker.lastTime / 1000));
+```
+
+The GSAP sync looks weird but it's mandatory. otherwise GSAP freezes in background tabs, and your cascade animations stall mid-drop. See [the GSAP gotcha section in CLAUDE.md](https://github.com/schmooky/pixi-reels/blob/main/CLAUDE.md#known-gotchas).
+
+## Step 2. Wire the reel set
+
+```ts
+import { ReelSetBuilder, SpriteSymbol, SpeedPresets } from 'pixi-reels';
+
+const SYMBOLS = ['A', 'B', 'C', 'D', 'wild'];
+
+const reelSet = new ReelSetBuilder()
+  .reels(6)
+  .visibleRows(5)
+  .symbolSize(95, 95)
+  .symbolGap(5, 5)
+  .symbols((r) => {
+    for (const id of SYMBOLS) {
+      r.register(id, SpriteSymbol, { textures });  // your loaded sprite textures
+    }
+  })
+  .weights({ A: 18, B: 14, C: 10, D: 6, wild: 2 })
+  .speed('normal', SpeedPresets.NORMAL)
+  .tumble({
+    fall:   { duration: 280, ease: 'sine.in',       rowStagger: 40 },
+    dropIn: { duration: 480, ease: 'back.out(1.6)', rowStagger: 50, distance: 'perHole' },
+  })
+  .ticker(app.ticker)
+  .build();
+
+app.stage.addChild(reelSet);
+```
+
+`.tumble({...})` flips the default spin mode to cascade and wires the three phase classes (`cascade:fall`, `cascade:place`, `cascade:dropIn`). The config is animation parameters; everything else (multipliers, SFX, win-clear) is your code listening to events.
+
+## Step 3. A fake server
+
+In production you call your real backend. For this tutorial, a function that returns a random grid (and a cascade refill that follows the gravity convention):
+
+```ts
+function randSymbol(): string {
+  const weights: Record<string, number> = { A: 18, B: 14, C: 10, D: 6, wild: 2 };
+  const total = Object.values(weights).reduce((a, b) => a + b, 0);
+  let r = Math.random() * total;
+  for (const [id, w] of Object.entries(weights)) {
+    r -= w;
+    if (r <= 0) return id;
+  }
+  return 'A';
+}
+
+const server = {
+  spin: async (): Promise<string[][]> => {
+    await new Promise((r) => setTimeout(r, 400 + Math.random() * 600));
+    return Array.from({ length: 6 }, () => Array.from({ length: 5 }, randSymbol));
+  },
+
+  cascade: async (prev: string[][], winners: { reel: number; row: number }[]) => {
+    await new Promise((r) => setTimeout(r, 120));
+    const winnersByReel = new Map<number, Set<number>>();
+    for (const w of winners) {
+      if (!winnersByReel.has(w.reel)) winnersByReel.set(w.reel, new Set());
+      winnersByReel.get(w.reel)!.add(w.row);
+    }
+    return prev.map((col, reel) => {
+      const losers = winnersByReel.get(reel);
+      if (!losers || losers.size === 0) return [...col];
+      const survivors = col.filter((_, row) => !losers.has(row));
+      const fillers = Array.from({ length: losers.size }, randSymbol);
+      // Convention: top winners.length rows = new, rest = survivors in original order.
+      return [...fillers, ...survivors];
+    });
+  },
+};
+```
+
+The cascade function follows the [gravity convention](/guides/cascades/#refill-geometry--the-survivor-convention). If you have a real server, this is the contract its response must follow.
+
+## Step 4. Detect winners
+
+Game-rule code. left-anchored runs of 3+ matching symbols on the same row count as wins. `wild` matches anything.
+
+```ts
+import type { Cell } from 'pixi-reels';
+
+function detectWinners(grid: string[][]): Cell[] {
+  const winners: Cell[] = [];
+  for (let row = 0; row < 5; row++) {
+    const head = grid[0][row];
+    if (head === 'wild') continue;
+    let run = 1;
+    for (let reel = 1; reel < 6; reel++) {
+      if (grid[reel][row] === head || grid[reel][row] === 'wild') run++;
+      else break;
+    }
+    if (run >= 3) {
+      for (let reel = 0; reel < run; reel++) winners.push({ reel, row });
+    }
+  }
+  return winners;
+}
+```
+
+## Step 5. Drive a round
+
+`runCascade` is the one-call replacement for a hand-rolled `while` loop. It:
+
+1. Calls `detectWinners(grid)` with the current visible grid.
+2. If empty, ends the chain and resolves with `RunCascadeResult` (`{ chainLength, totalWinners, finalGrid, wasSkipped }`).
+3. Otherwise fires `cascade:chain:start`, calls `reelSet.destroySymbols(winners)`, then `nextGrid(grid, winners)`, then `reelSet.refill(...)`, then fires `cascade:chain:end`.
+4. Loops back to step 1 with the post-refill grid.
+
+It also takes an `AbortSignal` so a button-tap mid-round can end the chain cleanly. we'll wire that up in Step 6, so the signature accepts one from the start:
+
+```ts
+async function playRound(signal: AbortSignal): Promise<void> {
+  // Moment A. fall, wait, drop in.
+  reelSet.setDropOrder('ltr');                  // left-to-right reveal
+  const spinDone = reelSet.spin();
+  reelSet.setResult(await server.spin());
+  await spinDone;
+
+  // Moment B. cascade refill loop. runCascade owns the orchestration;
+  // your two callbacks own the game rules.
+  reelSet.setDropOrder('all');                  // all columns drop together on refills
+
+  const { chainLength, totalWinners, wasSkipped } = await reelSet.runCascade({
+    detectWinners: (grid) => detectWinners(grid),
+    nextGrid:      (prev, winners) => server.cascade(prev, winners),
+    onCascade:     ({ chain, winners }) => {
+      console.log(`cascade ${chain}: ${winners.length} winners`);
+    },
+    signal,                                     // honors player slam between refills
+  });
+
+  console.log(
+    `round done: ${chainLength} cascades, ${totalWinners} total winners` +
+    (wasSkipped ? ' (slammed)' : ''),
+  );
+}
+```
+
+## Step 6. Wire the button
+
+```ts
+const button = document.createElement('button');
+button.textContent = 'SPIN';
+button.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);padding:16px 32px;font-size:18px;';
+document.body.appendChild(button);
+
+let isPlaying = false;
+let cascadeAbort: AbortController | null = null;
+
+button.addEventListener('click', async () => {
+  if (isPlaying) {
+    reelSet.skipSpin();              // slam in-flight engine motion (no-op if idle)
+    cascadeAbort?.abort();       // end the cascade chain at the next await boundary
+    return;
+  }
+  isPlaying = true;
+  cascadeAbort = new AbortController();
+  try {
+    await playRound(cascadeAbort.signal);
+  } finally {
+    cascadeAbort = null;
+    isPlaying = false;
+  }
+});
+```
+
+The two-pronged slam handler is deliberate:
+
+- `reelSet.skipSpin()` slams the engine's in-flight motion. If the engine is idle (between refills, during the `pauseAfterDestroyMs` beat) it is a no-op, so the call is safe to make unconditionally.
+- `AbortController.abort()` flips a flag `runCascade` observes at the next await boundary. Works whether the engine is mid-refill or idle.
+
+Combined: the engine slams its in-flight motion AND the cascade chain ends. See [the cancellation section in the cascades guide](/guides/cascades/#cancelling-a-chain--the-abortsignal-pattern) for the rationale.
+
+## Step 7. Try it
+
+Click SPIN. Reels fall, the server roundtrip (400-1000 ms) shows empty reels, new symbols drop in. If `detectWinners` finds a 3-in-a-row, the winners disintegrate and survivors slide down. Loop until no more wins.
+
+Open the browser console. `window.__PIXI_REELS_DEBUG.log()` prints the visible grid and engine state. Useful when something looks wrong.
+
+## What you didn't have to do
+
+Compare with hand-rolling cascades:
+
+- **No tween bookkeeping**. `tumble({ fall, dropIn })` owns the animation timing.
+- **No survivor/gravity math**. `refill({ winners, grid })` reads the gravity convention from your `grid` and animates the right offsets.
+- **No "fade then drop" choreography**. `destroySymbols` defers to each symbol's `playDestroy()`, and the engine sequences `place` and `dropIn` for you.
+- **No slam-state machine**. `skip()` is round-aware; `wasSkipped` propagates through the chain.
+
+## Next steps
+
+Now that the slot works:
+
+- **Pick a feel**. five preset `tumble({...})` shapes side-by-side in [tumble feels](/recipes/tumble-feels/).
+- **Tune the lead-in**. the pause between SPIN click and first frame of fall. see [fall delays](/recipes/fall-delays/).
+- **Add a cascading multiplier**. bump a meter inside `onCascade`. see [cascade-6x5 recipe](/recipes/cascade-6x5/).
+- **Use Spine symbols with custom disintegration**. your `SpineReelSymbol` subclass overrides `playDestroy()` to play the `out` animation; everything else stays the same. See the [pyramid-cascade example](https://github.com/schmooky/pixi-reels/tree/main/examples/pyramid-cascade) for the spine wiring.
+- **Spin first, cascade after**. open with a strip-spin landing, then cascade. see [spin then cascade](/recipes/spin-then-cascade/).
+
+Stuck? Read [the cascades guide](/guides/cascades/). the mental model is what makes the verbs click.

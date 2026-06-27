@@ -1,0 +1,7 @@
+id: bet-003
+group: bet
+question: How do I scale coin values by the current bet?
+answer: Multiply the coin `data.value` by the bet in your code before displaying it.
+links:
+  - label: "Recipe: Value-carrying coin"
+    href: /recipes/value-coin-pin/

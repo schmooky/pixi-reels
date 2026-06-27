@@ -1,0 +1,10 @@
+id: chars-009
+group: chars
+question: How do I make persistent feature symbols interact across the board
+  (Money-Train style)?
+answer: On the Hold & Win board, coordinate persistent feature symbols from your
+  lock handler — walk `board.lockedCoins`, read each via `symbolAt(cell)`, and
+  act across cells (absorb, boost, move).
+links:
+  - label: "Recipe: Collector symbol"
+    href: /recipes/collector-symbol-pin/

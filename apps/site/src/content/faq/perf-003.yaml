@@ -1,0 +1,6 @@
+id: perf-003
+group: perf
+question: How do I dispose everything without leaking textures or tickers?
+answer: "`reelSet.destroy()` disposes the reels, pools, masks and ticker refs —
+  every subsystem implements `Disposable`."
+links: []

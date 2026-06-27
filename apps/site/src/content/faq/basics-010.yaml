@@ -1,0 +1,6 @@
+id: basics-010
+group: basics
+question: How do I center the reels inside the game canvas?
+answer: A `ReelSet` is a Container with normal `width`/`height`, so set
+  `reelSet.x`/`reelSet.y` to `(app.screen.width - reelSet.width) / 2`, etc.
+links: []

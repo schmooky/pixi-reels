@@ -1,0 +1,6 @@
+id: meters-001
+group: meters
+question: How do I show a multiplier meter above the reels?
+answer: Render the meter as your own PixiJS/HTML widget above the board; the
+  engine does not own the HUD.
+links: []

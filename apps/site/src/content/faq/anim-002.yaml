@@ -1,0 +1,8 @@
+id: anim-002
+group: anim
+question: How do I play an idle/breathing loop while a symbol sits?
+answer: Start an idle/breathing loop in the symbol's `onActivate`;
+  `SpineReelSymbol` loops its `idle` animation by default.
+links:
+  - label: "Recipe: Big symbols with Spine"
+    href: /recipes/spine-big-symbols/

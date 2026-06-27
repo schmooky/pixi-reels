@@ -1,0 +1,8 @@
+id: coins-004
+group: coins
+question: How do I attach the value as data without baking it into the id?
+answer: Carry the value in `coin.data` (the `HwCoin` payload) or a pin payload —
+  the id stays art-only.
+links:
+  - label: "Recipe: Value-carrying coin"
+    href: /recipes/value-coin-pin/

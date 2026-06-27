@@ -1,0 +1,8 @@
+id: wilds-003
+group: wilds
+question: How do I make a wild walk one reel left each respin?
+answer: "`reelSet.movePin({ col: fromCol, row: fromRow }, { col: toCol, row:
+  toRow })` shifts the wild one reel each respin with a flight."
+links:
+  - label: "Recipe: Walking wild (CellPin)"
+    href: /recipes/walking-wild-pin/

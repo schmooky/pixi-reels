@@ -1,0 +1,8 @@
+id: coins-023
+group: coins
+question: How do I aim collect flights at a specific feature meter with a custom path?
+answer: Pass an explicit `control` point to `bezierFly` (computed per coin
+  index) to aim the flight at a specific feature meter.
+links:
+  - label: "Recipe: Hold & Win — collector"
+    href: /recipes/hold-and-win-collector/

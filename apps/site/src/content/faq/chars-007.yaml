@@ -1,0 +1,8 @@
+id: chars-007
+group: chars
+question: How do I make a hammer/object smash specific cells and clear them?
+answer: Tween the object to the target cell's `getCellBounds`, then clear those
+  cells with `destroySymbols` / `setSymbolAt`.
+links:
+  - label: "Recipe: Remove symbol"
+    href: /recipes/remove-symbol/

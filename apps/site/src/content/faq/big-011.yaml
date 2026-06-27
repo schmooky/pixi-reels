@@ -1,0 +1,8 @@
+id: big-011
+group: big
+question: How do I clip a big symbol that lands past the top or bottom edge?
+answer: Buffer-anchored blocks that run past the top or bottom are clipped by
+  the viewport mask automatically.
+links:
+  - label: "Recipe: Big-symbol partial land"
+    href: /recipes/big-symbol-partial-land/

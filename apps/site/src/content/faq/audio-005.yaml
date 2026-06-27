@@ -1,0 +1,6 @@
+id: audio-005
+group: audio
+question: How do I pitch the count-up sound higher the longer it runs?
+answer: Ramp the playbackRate of the count-up sound in your audio code as the
+  total climbs.
+links: []

@@ -1,0 +1,6 @@
+id: fs-003
+group: fs
+question: How do I count down the remaining free spins?
+answer: Track the counter in your game state and update the HUD; the engine just
+  spins on demand.
+links: []

@@ -1,0 +1,6 @@
+id: fs-011
+group: fs
+question: How do I offer a buy-feature entry straight into the bonus?
+answer: Wire a button that skips the trigger and calls your enter-feature path
+  directly — pure game logic.
+links: []

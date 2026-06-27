@@ -1,0 +1,4 @@
+id: perf
+title: Performance & lifecycle
+blurb: Pooling, disposal, memory, big grids.
+order: 24

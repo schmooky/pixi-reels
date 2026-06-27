@@ -1,0 +1,8 @@
+id: wins-001
+group: wins
+question: How do I highlight the winning symbols and dim the rest?
+answer: "`reelSet.spotlight.show(positions)` dims the board and promotes the
+  winning cells, or use the higher-level `WinPresenter`."
+links:
+  - label: "Guide: Win animations"
+    href: /guides/win-animations/

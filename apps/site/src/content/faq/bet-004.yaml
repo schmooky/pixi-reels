@@ -1,0 +1,6 @@
+id: bet-004
+group: bet
+question: How do I show a paytable screen for the registered symbols?
+answer: Build a paytable screen from your registered symbol ids and pays — it is
+  UI, not an engine feature.
+links: []

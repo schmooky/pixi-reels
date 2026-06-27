@@ -1,0 +1,8 @@
+id: cascade-003
+group: cascade
+question: How do I play a destroy/pop animation on cleared symbols?
+answer: Override `playDestroy(opts)` on the symbol;
+  `reelSet.destroySymbols(cells)` plays it on the cleared cells.
+links:
+  - label: "Recipe: Remove symbol"
+    href: /recipes/remove-symbol/

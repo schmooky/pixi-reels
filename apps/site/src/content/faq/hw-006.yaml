@@ -1,0 +1,8 @@
+id: hw-006
+group: hw
+question: How do I end the feature when the board is full (grand jackpot)?
+answer: "`board.respin(...)` returns `{ full, done }` and fires `board:full`
+  when every cell is locked."
+links:
+  - label: "Recipe: Hold & Win respin"
+    href: /recipes/hold-and-win/

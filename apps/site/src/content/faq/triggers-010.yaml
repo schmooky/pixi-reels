@@ -1,0 +1,6 @@
+id: triggers-010
+group: triggers
+question: How do I scale the number of free spins by the scatter count?
+answer: Pick the spin count from the scatter total in your code before entering
+  the feature.
+links: []

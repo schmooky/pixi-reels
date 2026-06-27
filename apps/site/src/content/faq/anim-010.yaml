@@ -1,0 +1,10 @@
+id: anim-010
+group: anim
+question: How do I play a different destroy animation per symbol art (shatter vs
+  disintegrate)?
+answer: Override `playDestroy(opts)` per symbol class — Spine plays a
+  `disintegration` track, a sprite swaps to a shatter; the default is a
+  scale/spin/fade implode.
+links:
+  - label: "Recipe: Remove symbol"
+    href: /recipes/remove-symbol/

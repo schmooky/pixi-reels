@@ -1,0 +1,8 @@
+id: coins-006
+group: coins
+question: How do I land a coin wearing a MINI/MAJOR word and reveal it into a money face?
+answer: Land the coin showing the tier word, then on `coin:locked` play the
+  reveal animation that spins it and settles on the money face.
+links:
+  - label: "Recipe: Hold & Win — Spine coins"
+    href: /recipes/hold-and-win-spine/

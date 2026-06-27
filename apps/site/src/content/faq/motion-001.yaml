@@ -1,0 +1,8 @@
+id: motion-001
+group: motion
+question: How do I make symbols drop in from above instead of scrolling?
+answer: "Make the spin a drop-in: build with `.tumble({ dropIn })` and spin `{
+  mode: 'cascade' }`, or register `ImmediateMode` for an instant land."
+links:
+  - label: "Recipe: Tumble feels"
+    href: /recipes/tumble-feels/

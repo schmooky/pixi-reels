@@ -2,8 +2,9 @@
 /**
  * Generate `public/llms.txt` from the Astro page tree.
  *
- * Walks `apps/site/src/pages/{recipes,docs,guides,architecture,demos}` and
- * extracts each page's frontmatter (title, description, tags, apis, steps).
+ * Walks the route tree (`src/pages/{architecture,demos}`) plus the Keystatic
+ * content collections (`src/content/{recipes,guides,docs}`) and extracts each
+ * page's frontmatter (title, description, tags, apis, steps).
  * Groups by section and emits a single text file an LLM can fetch to
  * understand the whole library surface in one request.
  *
@@ -22,6 +23,9 @@ import { fileURLToPath } from 'node:url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '..');
 const PAGES = resolve(ROOT, 'src/pages');
+// Recipes/guides/docs prose moved to Keystatic content collections; demos and
+// architecture are still route MDX/astro under src/pages.
+const CONTENT = resolve(ROOT, 'src/content');
 const RECIPES_SRC = resolve(ROOT, 'src/recipes');
 const OUT = resolve(ROOT, 'public/llms.txt');
 
@@ -42,7 +46,9 @@ const SECTIONS = [
 const SKIP_BASENAMES = new Set(['llms.txt', 'index']);
 
 async function main() {
-  const pages = await collectPages();
+  // Walk both roots; slugs are computed relative to each base, so
+  // src/content/recipes/x.mdx → "recipes/x" exactly as the old page did.
+  const pages = [...(await collectPages(PAGES)), ...(await collectPages(CONTENT))];
   const recipes = await collectRecipes();
 
   const grouped = SECTIONS.map((s) => ({
@@ -58,12 +64,12 @@ async function main() {
   console.log(`[build-llms] Wrote ${total} pages + ${recipes.length} recipe sources to ${OUT}`);
 }
 
-async function collectPages() {
-  const entries = await walk(PAGES);
+async function collectPages(baseDir) {
+  const entries = await walk(baseDir);
   const out = [];
   for (const file of entries) {
     if (!/\.(mdx|astro)$/.test(file)) continue;
-    const rel = relative(PAGES, file);
+    const rel = relative(baseDir, file);
     const base = baseNoExt(rel.split('/').pop());
     if (SKIP_BASENAMES.has(base)) continue;
     if (rel.includes('[')) continue; // dynamic routes

@@ -1,0 +1,8 @@
+id: result-007
+group: result
+question: How do I use a seeded RNG so a spin is exactly reproducible?
+answer: Inject a deterministic generator with `.rng(fn)` on the builder — the
+  shared `SeededRng` works.
+links:
+  - label: "Guide: Cheats & testing"
+    href: /guides/cheats-and-testing/

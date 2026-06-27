@@ -1,0 +1,9 @@
+id: spin-011
+group: spin
+question: How do I respin just one reel?
+answer: "Hold the rest: `reelSet.spin({ holdReels: [everything but one] })`. For
+  a fully self-contained single reel, the Hold & Win pattern uses one 1×1
+  ReelSet per cell."
+links:
+  - label: "Recipe: Hold & Win respin"
+    href: /recipes/hold-and-win/

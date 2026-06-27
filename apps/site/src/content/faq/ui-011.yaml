@@ -1,0 +1,8 @@
+id: ui-011
+group: ui
+question: How do I render the board on a dark feature background vs a light base?
+answer: Draw the background in your scene per mode; the board renders on top of
+  whatever you provide.
+links:
+  - label: "Recipe: Hold & Win — Spine coins"
+    href: /recipes/hold-and-win-spine/

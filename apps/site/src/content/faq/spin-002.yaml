@@ -1,0 +1,7 @@
+id: spin-002
+group: spin
+question: How do I stop the reels on a result?
+answer: Once the server responds, call `reelSet.setResult(grid)` while the spin
+  promise is still pending. The stop sequence consumes it and each reel lands on
+  its target.
+links: []

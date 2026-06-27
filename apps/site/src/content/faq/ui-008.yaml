@@ -1,0 +1,7 @@
+id: ui-008
+group: ui
+question: How do I add clickable hit-areas per cell (pick-a-cell bonus)?
+answer: Set each cell's `hitArea` / pointer events from `getCellBounds`.
+links:
+  - label: "Recipe: Cell hit areas"
+    href: /recipes/cell-hit-areas/

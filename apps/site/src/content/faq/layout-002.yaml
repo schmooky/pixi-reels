@@ -1,0 +1,5 @@
+id: layout-002
+group: layout
+question: How do I scale the board to fit a fixed safe-area?
+answer: Scale `reelSet` to the safe-area box and recompute on resize.
+links: []

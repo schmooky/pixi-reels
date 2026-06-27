@@ -1,0 +1,6 @@
+id: hw-016
+group: hw
+question: How do I grow the board by a row when a trigger condition is met mid-feature?
+answer: Live row growth is not built into the board; rebuild it at the new size,
+  or pre-size it and reveal a row on the trigger.
+links: []

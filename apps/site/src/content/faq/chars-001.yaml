@@ -1,0 +1,6 @@
+id: chars-001
+group: chars
+question: How do I place a character above the reels that stays put?
+answer: It is a normal PixiJS display object — add your character `Container` to
+  the stage above the `ReelSet`; the engine does not own it.
+links: []

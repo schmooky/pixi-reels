@@ -1,0 +1,60 @@
+---
+title: "Hold & Win: payer / doubler coin"
+group: features
+oneLiner: A special payer orb lands and pumps its value into every other coin —
+  a gold token arcs to each one and bumps it on arrival. One line changes it
+  into a doubler.
+description: A special payer orb lands and pumps its value into every other coin
+  on the board — a gold token arcs to each coin in turn and bumps its amount on
+  arrival. The same pattern doubles every value with one line changed.
+order: 32
+steps:
+  - Open the board holding value coins; the payer is server-placed (weight 0)
+  - On the payer's lock, walk board.lockedCoins and fly a gold token to each coin
+  - On arrival, bump that coin's data.value, repaint the label and flash it
+  - The board stays value-blind — the bump is pure game state
+apis:
+  - HoldAndWinBuilder
+  - HoldAndWinBoard.lockedCoins
+  - bezierFly
+  - coinWaves
+tags:
+  - hold-and-win
+  - coins
+  - payer
+  - collector
+  - spine
+  - recent
+---
+
+<RecipeDemo code="hold-and-win-payer-coin" height={420} />
+
+Press Run. The board opens holding four coins; a payer orb lands and pays its value into every coin — a gold token arcs from the orb to each one, and on arrival that coin's amount jumps and flashes. Press again to reset.
+
+## A special coin that reaches across the board
+
+The board only knows `{ cell, id, data }`. "Affect the other coins" is game logic the recipe runs over `board.lockedCoins` once the payer lands:
+
+```ts
+const targets = board.lockedCoins.filter((c) => c.id === 'coin');
+for (const wave of coinWaves(targets, 'sequence')) {
+  await Promise.all(wave.map((coin) =>
+    bezierFly(token, from, abs(coin.cell), { lean: 'up', arriveScale: 0.6 }).then(() => {
+      coin.data.value += PAY_VALUE;          // game state owns the value
+      paintLabel(coin.cell, coin.data.value); // repaint from data
+      board.symbolAt(coin.cell).playWin();    // the coin reacts
+    })));
+}
+```
+
+`coinWaves(targets, 'sequence')` arrives them one at a time; `'by-row'`, `'by-col'`, `'all'` or `{ chunk: n }` change the rhythm without touching anything else.
+
+## Doubler is the same recipe
+
+Swap the arrival line for `coin.data.value *= 2` and fly each coin's *own* value as the token, and the payer becomes a doubler. The mechanic is "walk the locked coins, mutate their payload, repaint" — the board never participates, so any per-coin transform (add, double, multiply, set a tier) is the same three lines.
+
+## Related recipes
+
+- [Hold & Win: collector + flight choreography](/recipes/hold-and-win-collector/). pull every value INTO an on-board orb
+- [Hold & Win: upgrade a coin in place](/recipes/hold-and-win-upgrade-coin/). promote one coin's tier without flights
+- [Collector symbol](/recipes/collector-symbol-pin/). neighbour-absorb on the Hold & Win board

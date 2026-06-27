@@ -1,0 +1,4 @@
+id: debug
+title: Debugging & testing
+blurb: See the opaque canvas, make spins deterministic.
+order: 25

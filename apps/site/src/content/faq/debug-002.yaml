@@ -1,0 +1,8 @@
+id: debug-002
+group: debug
+question: How do I print an ASCII grid of the visible symbols?
+answer: "`__PIXI_REELS_DEBUG.grid()` (or `debugGrid()`) prints an ASCII table of
+  the visible symbols."
+links:
+  - label: "Guide: Debugging"
+    href: /guides/debugging/

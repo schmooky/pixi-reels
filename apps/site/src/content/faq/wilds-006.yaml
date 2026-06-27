@@ -1,0 +1,9 @@
+id: wilds-006
+group: wilds
+question: How do I expand a single special symbol to a full reel in free spins
+  (Book style)?
+answer: Pick the symbol at feature start and pin its whole column to wild — the
+  same expanding-wild pin pattern.
+links:
+  - label: "Recipe: Expanding wild (CellPin)"
+    href: /recipes/expanding-wild-pin/

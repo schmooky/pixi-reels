@@ -1,0 +1,8 @@
+id: wins-005
+group: wins
+question: How do I cycle through multiple winning lines one at a time?
+answer: "`reelSet.spotlight.cycle(lines)` (or `WinPresenter` with a `cycles`
+  count) steps through each winning line in turn."
+links:
+  - label: "Recipe: Cascade WinPresenter"
+    href: /recipes/cascade-winpresenter/

@@ -1,0 +1,8 @@
+id: coins-017
+group: coins
+question: How do I send collected coins flying to a feature meter above the reels?
+answer: "`board.cellCenter(cell)` gives the start; `bezierFly` to your meter's
+  screen position with `arriveScale` to shrink it in."
+links:
+  - label: "Recipe: Hold & Win — fly to a feature meter"
+    href: /recipes/hold-and-win-meter/

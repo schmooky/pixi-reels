@@ -1,0 +1,11 @@
+id: coins-005
+group: coins
+question: My coin is a mystery — how do I spin values inside it to reveal the
+  number it held?
+answer: Land the coin showing a mystery face, then on lock spin a strip of
+  candidate values inside the coin and ease it onto the real amount. Drive it
+  from the `coin:locked` event via `symbolAt(cell)` so the board itself stays
+  value-agnostic.
+links:
+  - label: "Recipe: Hold & Win — mystery value coin"
+    href: /recipes/hold-and-win-mystery-coin/

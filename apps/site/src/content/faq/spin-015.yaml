@@ -1,0 +1,7 @@
+id: spin-015
+group: spin
+question: How do I keep the reels animating correctly on a hidden/background tab?
+answer: Drive the engine from `app.ticker` and call
+  `driveGsapWithTicker(app.ticker)` so GSAP advances off the Pixi ticker instead
+  of rAF, which freezes on hidden tabs.
+links: []

@@ -1,0 +1,6 @@
+id: antic-002
+group: antic
+question: How do I trigger anticipation only when 2 scatters are already in?
+answer: Track landed scatters from `spin:reelLanded`, then call
+  `setAnticipation([next])` only once the count crosses your threshold.
+links: []

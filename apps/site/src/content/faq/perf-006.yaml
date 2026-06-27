@@ -1,0 +1,6 @@
+id: perf-006
+group: perf
+question: How do I avoid stutter on a long session of continuous spins?
+answer: Drive everything off one `app.ticker` and `driveGsapWithTicker` so
+  tweens do not accumulate; pooling keeps allocations flat.
+links: []

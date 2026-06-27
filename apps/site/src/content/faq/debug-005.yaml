@@ -1,0 +1,8 @@
+id: debug-005
+group: debug
+question: How do I force a guaranteed jackpot for a screenshot?
+answer: The example `CheatEngine` (in `examples/shared/cheats`) +
+  `holdAndWinProgress(coin, 1)` guarantees a coin every spin for a screenshot.
+links:
+  - label: "Guide: Cheats & testing"
+    href: /guides/cheats-and-testing/

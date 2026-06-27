@@ -1,0 +1,8 @@
+id: debug-001
+group: debug
+question: How do I dump the current board state as readable JSON?
+answer: "`enableDebug(reelSet)`, then `window.__PIXI_REELS_DEBUG.snapshot()`
+  returns a serializable state object (no PixiJS types)."
+links:
+  - label: "Guide: Debugging"
+    href: /guides/debugging/

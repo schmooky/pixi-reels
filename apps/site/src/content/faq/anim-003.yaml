@@ -1,0 +1,8 @@
+id: anim-003
+group: anim
+question: How do I play a landing animation when a symbol settles?
+answer: Play it from `onReelLanded`, or use `SpineReelSymbol`'s
+  `autoPlayLanding` + `playLanding()`.
+links:
+  - label: "Recipe: Big symbols with Spine"
+    href: /recipes/spine-big-symbols/

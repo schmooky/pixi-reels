@@ -1,0 +1,10 @@
+id: hw-021
+group: hw
+question: How do I make a single skip fast-forward every spin, flight and
+  collect at once, then fire one "feature done" event?
+answer: '`board.skip()` slams every in-flight cell to its landed position and
+  fires `feature:skip`; gate your own flights / collect on that signal to cut
+  them short, and treat `feature:end` as the single "all done" event.'
+links:
+  - label: "Recipe: Hold & Win — skip the whole feature"
+    href: /recipes/hold-and-win-skip/

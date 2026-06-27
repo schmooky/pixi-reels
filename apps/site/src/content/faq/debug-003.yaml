@@ -1,0 +1,7 @@
+id: debug-003
+group: debug
+question: How do I log every domain event as it fires?
+answer: "`__PIXI_REELS_DEBUG.trace()` logs every domain event as it fires."
+links:
+  - label: "Guide: Debugging"
+    href: /guides/debugging/

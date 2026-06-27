@@ -1,0 +1,8 @@
+id: mways-001
+group: mways
+question: How do I let each reel land a different number of rows?
+answer: Build with `.multiways({ minRows, maxRows })` and pass per-reel
+  `visible` arrays of different lengths to `setResult`.
+links:
+  - label: "Guide: MultiWays"
+    href: /guides/multiways/

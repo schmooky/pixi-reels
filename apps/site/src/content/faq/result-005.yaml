@@ -1,0 +1,8 @@
+id: result-005
+group: result
+question: How do I land a symbol just above the visible window (in the buffer)?
+answer: "Put the symbol in that reel's `bufferAbove`, e.g. `{ visible: [...],
+  bufferAbove: ['COIN'] }`."
+links:
+  - label: "Guide: Buffer indexing"
+    href: /guides/buffer-indexing/

@@ -1,0 +1,7 @@
+id: bonusgames-002
+group: bonusgames
+question: How do I reveal hidden prizes one tap at a time?
+answer: Same cell hit-areas — reveal each prize in its click handler.
+links:
+  - label: "Recipe: Cell hit areas"
+    href: /recipes/cell-hit-areas/

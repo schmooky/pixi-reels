@@ -1,0 +1,6 @@
+id: integ-006
+group: integ
+question: How do I map a server symbol-id scheme onto my registered ids?
+answer: Translate the server's symbol scheme to your registered ids when
+  building the `ColumnTarget[]`.
+links: []

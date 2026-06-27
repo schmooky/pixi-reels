@@ -1,0 +1,7 @@
+id: mways-008
+group: mways
+question: How do I keep a pyramid (fixed jagged shape) instead of random rows?
+answer: For a fixed jagged shape use `.visibleRowsPerReel([...])` instead of MultiWays.
+links:
+  - label: "Recipe: Pyramid shape"
+    href: /recipes/pyramid-shape/

@@ -1,0 +1,7 @@
+id: ui-010
+group: ui
+question: How do I show a "respins left" badge that updates live?
+answer: Bind it to the `respins:changed` event / `board.respinsLeft`.
+links:
+  - label: "Recipe: Hold & Win respin"
+    href: /recipes/hold-and-win/

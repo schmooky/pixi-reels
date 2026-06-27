@@ -1,0 +1,7 @@
+id: pins-005
+group: pins
+question: How do I read all currently pinned cells?
+answer: "`reelSet.pins` is a ReadonlyMap of every active pin."
+links:
+  - label: "Guide: Pins"
+    href: /guides/pins/

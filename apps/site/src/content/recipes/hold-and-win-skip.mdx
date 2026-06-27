@@ -1,0 +1,58 @@
+---
+title: "Hold & Win: skip the whole feature"
+group: tension
+oneLiner: board.skip() slams every in-flight cell to its landed position and
+  fires feature:skip; the game layer cuts its flights / collect short.
+  feature:end stays the single "feature over" signal.
+description: board.skip() slams every in-flight cell to its landed position and
+  fires feature:skip; the game layer cuts its own flights and collect short.
+  feature:end stays the single "feature over" signal.
+order: 42
+steps:
+  - Tap the button mid-feature — RecipeRunner routes it to onSkip
+  - onSkip calls board.skip() to slam every in-flight spin (fires feature:skip)
+  - The game layer cuts its own flights / collect short on the same signal
+  - feature:end fires as the single "feature over" event
+apis:
+  - HoldAndWinBoard.skip
+  - HoldAndWinBoard.events
+  - ReelSet.skipSpin
+tags:
+  - hold-and-win
+  - skip
+  - fast-forward
+  - events
+  - recent
+---
+
+<RecipeDemo code="hold-and-win-skip" height={420} />
+
+Press Run to start the feature, then tap the button again to skip — the spins land instantly, the flights cut short, the total lands, and `feature:end` fires once.
+
+## Two halves of a skip
+
+A Hold & Win round has an engine half (the cell spins) and a game half (flights, collect, count-up). A clean skip fast-forwards both:
+
+```ts
+// engine half — the board owns it:
+board.skip();   // every spinning cell -> skipSpin(); fires `feature:skip`
+
+// game half — your code owns it, on the same signal:
+let skipping = false;
+board.events.on('feature:skip', () => { skipping = true; });
+// ...in the collect loop: if (skipping) applyInstantly(); else bezierFly(...)
+```
+
+`board.skip()` walks every cell and slams the in-flight ones to their landed position (so the awaited `respin()` resolves immediately), then emits `feature:skip`. Your flights and collect listen for that and short-circuit — here the remaining waves apply instantly and any in-flight clones are killed.
+
+## One "done" signal
+
+The board still fires **`feature:end`** when the respin feature resolves (counter exhausted or board full) — skipped or not, that's the single event to hang "feature over" off. Anything after it (the collect) is game-layer and finishes under the same `skipping` flag.
+
+> The button wiring is `RunResult.onSkip`: RecipeRunner calls it when you tap the canvas button while a feature is running, instead of starting a new spin.
+
+## Related recipes
+
+- [Slam-stop](/recipes/slam-stop/). skipSpin on a single reel set
+- [Hold & Win: drive each cell on its own](/recipes/hold-and-win-cell-control/). per-cell skipSpin
+- [Hold & Win: collector + flight choreography](/recipes/hold-and-win-collector/). the flights a skip cuts short

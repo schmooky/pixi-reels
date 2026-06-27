@@ -1,0 +1,5 @@
+id: basics-005
+group: basics
+question: How do I add a gap between reels and between rows?
+answer: "`.symbolGap(x, y)` sets the pixel gap between reels (x) and between rows (y)."
+links: []

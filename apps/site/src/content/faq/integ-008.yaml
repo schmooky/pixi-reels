@@ -1,0 +1,6 @@
+id: integ-008
+group: integ
+question: How do I keep visuals honest when the server is the only source of truth?
+answer: Only ever render what `setResult` / the server says; never compute
+  outcomes client-side.
+links: []

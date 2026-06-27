@@ -1,0 +1,8 @@
+id: cascade-009
+group: cascade
+question: How do I spin once and then cascade (spin-then-tumble)?
+answer: "One ReelSet, override the mode per spin: classic strip-spin first, then
+  `spin({ mode: 'cascade' })` for the refills."
+links:
+  - label: "Recipe: Spin then cascade"
+    href: /recipes/spin-then-cascade/

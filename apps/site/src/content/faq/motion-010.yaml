@@ -1,0 +1,6 @@
+id: motion-010
+group: motion
+question: How do I make reels horizontal instead of vertical?
+answer: Orientation is vertical-only in the engine today; a horizontal board is
+  a custom layout, not a builder flag.
+links: []

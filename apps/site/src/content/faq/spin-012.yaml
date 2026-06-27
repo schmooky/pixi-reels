@@ -1,0 +1,8 @@
+id: spin-012
+group: spin
+question: How do I abort a spin that is already in flight?
+answer: Pass an `AbortSignal` via `spin({ signal })` and call
+  `controller.abort()`; the spin promise rejects with an AbortError.
+links:
+  - label: "Recipe: Nudge abort"
+    href: /recipes/nudge-abort/

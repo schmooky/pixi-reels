@@ -1,0 +1,133 @@
+---
+title: Land a big symbol partially in buffer
+group: big-symbols
+oneLiner: A tall 1xH block lands with its anchor in bufferAbove. Only the bottom
+  cell shows at row 0. Nudge to drag the rest into view. Works end-to-end
+  through setResult, refill, nudge, and the cross-reel resolver.
+description: A tall 1xH block lands with its anchor in bufferAbove. only the
+  bottom cell shows at the top of the visible window. Nudge to drag the rest
+  into view. Works end-to-end through setResult, refill, nudge, and the
+  cross-reel resolver.
+order: 8
+steps:
+  - Pass an anchor at `bufferAbove[i]` via the explicit `ColumnTarget` form (or
+    row -i-1 via legacy negative-index)
+  - Coordinator paints OCCUPIED at the rest of the block's cells (negative rows,
+    visible rows, or bufferBelow as needed)
+  - "`_finalizeFrame` sizes the anchor sprite to span the whole block; the mask
+    clips the off-screen portion"
+  - "`getVisibleSymbols` resolves visible cells to the anchor id via a NEGATIVE
+    `anchorRow` in `_occupancy`"
+apis:
+  - ReelSet.setResult
+  - ColumnTarget.bufferAbove
+  - ColumnTarget.bufferBelow
+  - ReelSet.getSymbolFootprint
+tags:
+  - big-symbols
+  - buffer
+  - nudge
+  - recent
+---
+
+<RecipeDemo code="big-symbol-partial-land" />
+
+Before this change `_coordinateBigSymbols` only iterated visible rows;
+trying to set a big-symbol anchor at `bufferAbove[i]` or
+`bufferBelow[i]` either threw (`exceeds reel height`) or silently
+failed to paint OCCUPIED stubs. Now the coordinator scans the full
+strip range. anchor + h must stay on the strip, but it doesn't have
+to stay in the visible window.
+
+The recipe above lands a `1x3` TALL block with its anchor at row -2
+(`bufferAbove[1]`), so two of the block's cells are clipped off the
+top of the visible window and only the **tail** shows at row 0. A nudge
+DOWN by 2 drags the whole block into view; a nudge UP by 2 pushes it
+back out.
+
+## The contract
+
+`ColumnTarget` already exposes `bufferAbove` and `bufferBelow`. Put a
+big-symbol id at any strip slot and the coordinator handles the rest:
+
+```ts
+reelSet.setResult([
+  // Anchor at row -2 (bufferAbove[1]) for a 1x3 block.
+  // The engine paints OCCUPIED at row -1 and row 0 automatically.
+  {
+    visible: [filler(), filler(), filler()],
+    bufferAbove: [undefined, 'TALL'],
+  },
+  // ...other columns
+]);
+```
+
+## Where the block can live
+
+For a `1xH` block on a strip with `bufferAbove + visibleRows + bufferBelow`
+cells, the anchor's strip index must be in `[0, total - h]`:
+
+| Anchor at row | Block occupies (row coords) | Visible portion |
+| --- | --- | --- |
+| `-h + 1` | `[-h+1, 0]` | Just the bottom cell at row 0 (the "tail") |
+| `-1` | `[-1, h-2]` | All but the topmost cell |
+| `0` | `[0, h-1]` | Entirely in visible if `h <= visibleRows` |
+| `visibleRows - h` | `[visibleRows - h, visibleRows - 1]` | Bottom-aligned, all visible |
+| `visibleRows - 1` | `[visibleRows - 1, visibleRows + h - 2]` | Just the top cell at the last visible row (the "head") |
+
+Anchors past these bounds throw with a precise message naming the
+violated rule (`extends past the bottom of the strip` or
+`exceeds reel count` for cross-reel overflows).
+
+## How it works end-to-end
+
+1. **`setResult` / `refill`**: both call `_coordinateBigSymbols(grid)`
+   which iterates the full strip range. For every big-symbol anchor it
+   finds (in buffer or visible), it paints OCCUPIED at the block's
+   non-anchor cells.
+
+2. **`FrameBuilder.TargetPlacementMiddleware`**. places target symbols
+   into the strip's symbol array, mapping row coordinates to strip
+   indices via `bufferAbove + row`. Already handles negative rows.
+
+3. **`StopSequencer` / `placeSymbols`**. consume the frame and place
+   real `ReelSymbol`s or `OccupiedStub`s at each strip slot.
+
+4. **`Reel._finalizeFrame`**. after every snap, two passes:
+   - Scan 1: visible-row anchors (the common case).
+   - Scan 2: bufferAbove anchors whose blocks extend into visible. For
+     these, `_occupancy[visibleRow].anchorRow` is set to a NEGATIVE
+     value (offset from `bufferAbove`).
+
+5. **`getVisibleSymbols` / `getSymbolAt`**. index back to the anchor
+   via `this.symbols[bufferAbove + anchorRow]`, which works whether
+   `anchorRow` is positive or negative.
+
+6. **`getSymbolFootprint`**. returns `anchor.row` (possibly negative)
+   so external consumers can locate the anchor cell.
+
+7. **`getBlockBounds`**. handles negative `anchor.row` by computing
+   pixel coordinates directly from the row offset rather than
+   delegating to `getCellBounds` (which still rejects negative rows by
+   design).
+
+## What still throws
+
+- **MultiWays + big symbols**. already rejected at build (existing
+  constraint, unchanged).
+- **Cross-reel blocks via nudge**. `w > 1` blocks throw inside
+  `reelSet.nudge(col, ...)`. Buffer-row anchors don't change this:
+  nudging a single reel can't shift a block whose other-reel cells
+  stay put.
+- **Random-fill big symbols**. big symbols must still have `weight: 0`
+  so the random provider never picks one (random fill of a 1x1 slot
+  can't paint a multi-cell block coherently).
+
+## Related
+
+- [Big symbols MxN](/recipes/big-symbols-mxn/). every shape variant.
+- [Nudge through a big symbol](/recipes/nudge-big-symbol/). full-block
+  nudges + the tail-reveal canvas (the in-window mirror of this
+  recipe).
+- [Peek symbol from buffer-above](/recipes/peek-from-above/). the 1x1
+  analogue: tease a single symbol above the visible window.

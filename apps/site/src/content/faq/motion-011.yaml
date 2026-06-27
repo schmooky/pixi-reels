@@ -1,0 +1,6 @@
+id: motion-011
+group: motion
+question: How do I fit two half-symbols in one cell (split symbols)?
+answer: Two symbols per cell is not a built-in; render a composite `ReelSymbol`
+  whose `view` holds both halves.
+links: []

@@ -1,0 +1,8 @@
+id: big-008
+group: big
+question: How do I tumble a big symbol down through the cascade intact?
+answer: The cascade carries the block as a unit — its tail falls through the
+  strip into full view.
+links:
+  - label: "Recipe: Big-symbol cascade fall"
+    href: /recipes/big-symbol-cascade-fall/

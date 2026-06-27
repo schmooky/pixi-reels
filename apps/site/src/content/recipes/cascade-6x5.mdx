@@ -1,0 +1,121 @@
+---
+title: Cascade 6×5 tumble
+group: starters
+oneLiner: Modern tumble mechanic with an ever-growing multiplier. MultiWays-adjacent.
+description: Modern tumble/cascade mechanic on the runCascade orchestrator. the
+  MultiWays-adjacent style every slot studio is shipping.
+order: 17
+steps:
+  - Build a 6×5 ReelSet with .tumble({ fall, dropIn }) for drop-in mechanics
+  - Spin, detect cluster/line wins, spotlight them
+  - Tumble (remove winners, then reelSet.refill({ winners, grid })) and repeat
+  - Each tumble increments the win multiplier
+apis:
+  - ReelSetBuilder.tumble
+  - ReelSet.refill
+  - ReelSet.setDropOrder
+  - ReelSet.setResult
+tags:
+  - starter
+  - cascade
+  - 6x5
+---
+
+<RecipeDemo code="cascade-6x5" />
+
+A cascade/tumble slot on the modern API. `.tumble({ fall, dropIn })` replaces the strip-spin mechanic with a drop-in: existing symbols fall off on `spin()` click, new symbols arrive when `setResult` returns. The cascade loop. destroy winners, pause, refill. is owned by **`reelSet.runCascade(...)`**; you supply two callbacks (`detectWinners`, `nextGrid`) that encode the game rules.
+
+```ts
+import { ReelSetBuilder, SpriteSymbol, type Cell } from 'pixi-reels';
+
+const reelSet = new ReelSetBuilder()
+  .reels(6)
+  .visibleRows(5)
+  .symbolSize(110, 110)
+  .symbols((r) => {
+    for (const id of SYMBOLS) r.register(id, SpriteSymbol, { textures });
+  })
+  .tumble({
+    fall:   { duration: 280, ease: 'power3.in',  rowStagger: 60 },
+    dropIn: { duration: 450, ease: 'power3.out', rowStagger: 60, distance: 'perHole' },
+  })
+  .ticker(app.ticker)
+  .build();
+
+app.stage.addChild(reelSet);
+
+let multiplier = 1;
+document.getElementById('spin')!.addEventListener('click', async () => {
+  multiplier = 1;
+
+  // Moment A. initial drop, left-to-right reveal.
+  reelSet.setDropOrder('ltr');
+  const spinDone = reelSet.spin();
+  reelSet.setResult(await server.spin());
+  await spinDone;
+
+  // Moment B. runCascade owns the loop. setDropOrder('all') is the
+  // canonical refill pattern (every column drops together).
+  reelSet.setDropOrder('all');
+  await reelSet.runCascade({
+    detectWinners: (grid) => detectClusterWins(grid),
+    nextGrid:      (_, winners) => server.cascade(winners),
+    onCascade:     ({ chain }) => {
+      multiplier += 1;
+      showMultiplier(multiplier);
+    },
+  });
+});
+```
+
+`runCascade(...)` returns `Promise<RunCascadeResult>`. `await` it for the single "the cascade chain is over" hook (big-win UI, autoplay continuation, analytics). The summary carries `chainLength`, `totalWinners`, `finalGrid`, and `wasSkipped`.
+
+## Drop order controls the reveal feel
+
+`setDropOrder` is a per-spin call. mix orders freely:
+
+```ts
+reelSet.setDropOrder('ltr');   // left → right (initial spin reveal)
+reelSet.setDropOrder('rtl');   // right → left
+reelSet.setDropOrder('all');   // all columns simultaneously
+reelSet.setDropOrder([0, 0, 150, 150, 300, 300]); // custom ms per reel
+```
+
+## Tumble config. pick a feel
+
+`.tumble({ fall, dropIn })` is pure animation values; swap them to change the entire feel without touching code.
+
+| Feel | fall.ease | dropIn.ease | dropIn.rowStagger | notes |
+|---|---|---|---|---|
+| Classic | `sine.in` | `back.out(1.6)` | 50 ms | soft overshoot, all-rounder |
+| Cartoon bounce | `sine.in` | `bounce.out` | 70 ms | multi-bounce land |
+| Slam stop | `power4.in` | `expo.out` | 25 ms | heavy, hard land |
+| Rain column | `sine.in` | `sine.in` | 0 ms (+ `distance: 'auto'`) | whole column drops as a slab |
+| Wave | `sine.in` | `back.out(2.0)` | 110 ms | rolling top-to-bottom arrival |
+
+See [the full tumble recipe doc](https://github.com/schmooky/pixi-reels/blob/main/docs/recipes/tumble-cascade.md) for the recipe vocabulary and the per-symbol event hooks (`cascade:fall:symbol` / `cascade:dropIn:symbol`) you'd use for squish, spine, badge mutations, etc.
+
+## What the library owns vs. what you own
+
+`pixi-reels` deliberately doesn't own the win-detection rules. every game has quirks (cluster size, adjacency, minimum matches, sticky survivors). What you get from the library:
+
+- **`.tumble({ fall, dropIn })`**. three named phases (`cascade:fall` / `cascade:place` / `cascade:dropIn`), each independently overridable
+- **`reelSet.destroySymbols(cells)`**. defers to each symbol's `playDestroy()`; sprite symbols get an implode, Spine subclasses route to `out`
+- **`reelSet.refill({ winners, grid })`**. gravity-correct Moment B: untouched survivors stay, survivors above a hole slide, new symbols enter from above
+- **`reelSet.runCascade({ detectWinners, nextGrid })`**. the canonical detect → destroy → pause → refill orchestration; `await` resolves with `RunCascadeResult` when the chain ends
+- **`reelSet.setDropOrder()`**. per-call column reveal order (set once, persists across the chain)
+
+Your responsibilities:
+
+- `detectWinners(grid)`. cluster / adjacency / line-pay rules
+- `nextGrid(prev, winners)`. server-side gravity sim (or the client fallback)
+- `showMultiplier(n)`, SFX, big-win UI. anything game-specific
+
+If you outgrow `runCascade` (per-cascade asymmetric pauses, conditional bonus triggers, custom slam handling), reach for `refill()` directly. The wrapper is opt-in.
+
+## Related recipes
+
+- [Tumble feels](/recipes/tumble-feels/). pick an animation feel side-by-side with the same orchestration
+- [Refill orders](/recipes/refill-orders/). `setDropOrder` patterns for the post-win drop
+- [Cascade with WinPresenter](/recipes/cascade-winpresenter/). drive fades via `WinPresenter` instead of `destroySymbols`
+- [Hold & Win](/recipes/hold-and-win/). a different respin pattern for comparison

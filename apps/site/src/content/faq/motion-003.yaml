@@ -1,0 +1,8 @@
+id: motion-003
+group: motion
+question: How do I stagger the fall of individual symbols into place?
+answer: "`.tumble({ dropIn: { rowStagger } })` delays each symbol's fall; the
+  `cascade:dropIn:symbol` events expose per-symbol timing."
+links:
+  - label: "Recipe: Fall delays"
+    href: /recipes/fall-delays/

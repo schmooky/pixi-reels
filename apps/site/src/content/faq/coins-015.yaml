@@ -1,0 +1,9 @@
+id: coins-015
+group: coins
+question: How do I make a row/column of cells all act as collectors that sweep the board?
+answer: Use `coinWaves(coins, 'by-row' | 'by-col')` to order the sweep and
+  `bezierFly` each value into the collector cell, optionally trailed by particle
+  streams.
+links:
+  - label: "Recipe: Hold & Win — collector with particles"
+    href: /recipes/hold-and-win-collector-particles/

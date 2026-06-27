@@ -1,0 +1,4 @@
+id: audio
+title: Sound & juice
+blurb: Hook sound and haptics to game events.
+order: 20

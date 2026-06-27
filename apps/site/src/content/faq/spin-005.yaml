@@ -1,0 +1,6 @@
+id: spin-005
+group: spin
+question: How do I make the reels stop left to right?
+answer: "`reelSet.setDropOrder('ltr')` (also `'rtl'` / `'all'` / a delays array)
+  sets stop order; the profile's `stopDelay` is the gap."
+links: []

@@ -1,0 +1,7 @@
+id: big-003
+group: big
+question: How do I make a 1×3 tall bar symbol?
+answer: "Give the id `size: { w: 1, h: 3 }` via `.symbolData(...)`."
+links:
+  - label: "Recipe: Big symbols (N×M)"
+    href: /recipes/big-symbols-mxn/

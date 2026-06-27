@@ -1,0 +1,9 @@
+id: mways-010
+group: mways
+question: How do I combine MultiWays with big symbols safely?
+answer: "They are mutually exclusive: registering a big symbol (a `size` larger
+  than 1×1) on a `.multiways(...)` slot throws at build time. Keep big symbols
+  and MultiWays on separate ReelSets."
+links:
+  - label: "Guide: Big symbols"
+    href: /guides/big-symbols/

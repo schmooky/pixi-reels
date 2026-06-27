@@ -1,0 +1,8 @@
+id: wins-006
+group: wins
+question: How do I draw connection lines between a connected cluster?
+answer: Draw the links yourself between cluster cells using `getCellBounds`; the
+  engine supplies geometry, you supply the lines.
+links:
+  - label: "Recipe: Cell bounds"
+    href: /recipes/cell-bounds/

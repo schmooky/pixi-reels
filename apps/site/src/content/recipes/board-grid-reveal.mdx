@@ -1,0 +1,86 @@
+---
+title: "Board primitive: build your own board"
+group: features
+oneLiner: A reveal-and-collect prize grid built directly on the generic
+  BoardGrid primitive — every cell spins independently to a result you choose,
+  and the rule is yours. Hold & Win is just one opinionated board on the same
+  primitive.
+description: A reveal-and-collect prize grid built directly on the generic
+  BoardGrid primitive — no HoldAndWinBuilder. Every cell spins independently to
+  a result you choose; the rule (tally, find the top) is yours. Hold & Win is
+  just one opinionated board on the same primitive.
+order: 25
+steps:
+  - new BoardGrid({ cols, rows, cellSize, symbols, ticker }) lays out a grid of
+    independent reels
+  - A per-cell profile function gives the diagonal stagger wave
+  - spinCells(targets) spins each cell to a result YOU choose; await the whole
+    wave
+  - Your own rule tallies the prizes and pops the top cell via symbolAt +
+    cellBounds
+apis:
+  - BoardGrid
+  - BoardGrid.spinCells
+  - BoardGrid.symbolAt
+  - BlurSpriteSymbol
+tags:
+  - board
+  - primitive
+  - boardgrid
+  - build-your-own
+  - recent
+---
+
+<RecipeDemo code="board-grid-reveal" height={400} />
+
+Press Run. Every cell spins at once on a diagonal wave, reveals a random prize,
+and the values tally — the top cell gets a gold ring. There is **no locking and
+no respins** here: those are Hold & Win's rules, and this isn't Hold & Win.
+
+## `BoardGrid` is the primitive; Hold & Win is one board on it
+
+`pixi-reels` ships two layers, and they map onto the Radix / shadcn split:
+
+- **`BoardGrid`** is the unstyled primitive — a grid of cells that each spin
+  independently. It knows geometry, instances and spinning, and **nothing** about
+  coins, locks, respins or value. You build your feature on it.
+- **`HoldAndWinBoard`** is one opinionated board built entirely on `BoardGrid`'s
+  public surface. It adds the lock / respin / collect rules. Because it only uses
+  the same public API you have, you can copy it and change the rules.
+
+This recipe is a *different* board on the same primitive, in ~40 lines:
+
+```ts
+const grid = new BoardGrid({
+  cols: 5, rows: 3, cellSize: 72,
+  symbols: (r) => { for (const id of IDS) r.register(id, BlurCell, { textures, blurTextures }); },
+  weights, ticker: app.ticker,
+  profiles: { wave: (cell) => ({ ...NORMAL, minimumSpinTime: 300 + (cell.col + cell.row) * 55 }) },
+});
+
+// YOU choose every result; the primitive just spins each cell to it.
+const targets = grid.cells().map((cell) => ({ cell, id: pickPrize() }));
+await grid.spinCells(targets);
+
+// The rule is yours.
+const total = targets.reduce((sum, t) => sum + PRIZE[t.id], 0);
+```
+
+## What the primitive gives you
+
+| Method | Use |
+|---|---|
+| `cells()` | every cell coordinate, to build your spin targets |
+| `spinCells(targets, onLanded?)` | spin a **chosen** set of cells to chosen results; `await` the wave; react per landing |
+| `symbolAt(cell)` / `reelAt(cell)` | the live `ReelSymbol` / `ReelSet` for one cell |
+| `cellBounds(cell)` / `cellCenter(cell)` | exact geometry for overlays, rings and flights |
+| `setProfile(cell, name)` | switch a cell's speed (e.g. an anticipation profile) |
+| `place(cell, id)` | drop a symbol in instantly, no spin |
+
+No rule is baked in. Lock-and-respin, pick-and-reveal, cluster-collect,
+scratch-card — each is a small amount of your code on the same primitive.
+
+## Related
+
+- [Hold & Win guide](/guides/hold-and-win/) — the opinionated board, in full
+- [Hold & Win: live event trace](/recipes/hold-and-win-trace/) — that board's lifecycle, live

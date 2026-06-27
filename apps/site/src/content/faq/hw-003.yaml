@@ -1,0 +1,8 @@
+id: hw-003
+group: hw
+question: How do I respin only the empty cells?
+answer: "`board.respin(hits)` spins only the free cells; the locked ones sit out
+  automatically."
+links:
+  - label: "Recipe: Hold & Win respin"
+    href: /recipes/hold-and-win/

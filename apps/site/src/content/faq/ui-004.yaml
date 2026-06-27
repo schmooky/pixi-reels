@@ -1,0 +1,5 @@
+id: ui-004
+group: ui
+question: How do I run autoplay for N spins with a stop condition?
+answer: Loop `await reelSet.spin()` N times with your own stop conditions.
+links: []

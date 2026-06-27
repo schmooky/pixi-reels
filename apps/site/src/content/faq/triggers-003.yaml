@@ -1,0 +1,8 @@
+id: triggers-003
+group: triggers
+question: How do I require 6+ coins to trigger Hold & Win?
+answer: Count the coin symbols in the result and call `board.enter(...)` when
+  the count meets your threshold.
+links:
+  - label: "Recipe: Hold & Win respin"
+    href: /recipes/hold-and-win/

@@ -1,0 +1,9 @@
+id: spin-010
+group: spin
+question: How do I hold some reels still while the others spin?
+answer: "Pass `reelSet.spin({ holdReels: [0, 4] })`. Held reels skip START /
+  SPIN / STOP entirely, do not move, and count as already-landed for the
+  all-landed resolver."
+links:
+  - label: "Recipe: Hold & Win respin"
+    href: /recipes/hold-and-win/

@@ -1,0 +1,8 @@
+id: pins-003
+group: pins
+question: How do I pin a cell for only N spins (a TTL)?
+answer: "`reelSet.pin(col, row, id, { turns: N })` auto-expires after N spins
+  (also `'eval'` or `'permanent'`)."
+links:
+  - label: "Guide: Pins"
+    href: /guides/pins/

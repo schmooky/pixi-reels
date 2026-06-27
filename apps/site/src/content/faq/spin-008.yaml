@@ -1,0 +1,7 @@
+id: spin-008
+group: spin
+question: How do I boost only the current spin without changing the speed profile?
+answer: The first `skipSpin()` boosts the in-flight spin's speed (it emits
+  `skip:boosted`) without changing your selected profile; the next round
+  restores it.
+links: []

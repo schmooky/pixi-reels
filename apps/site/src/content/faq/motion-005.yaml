@@ -1,0 +1,6 @@
+id: motion-005
+group: motion
+question: How do I spin one reel up and another down (mixed directions)?
+answer: Per-reel spin direction is not a built-in flag today; mix it by driving
+  specific reels with a custom `SpinningMode` or your own motion on those reels.
+links: []

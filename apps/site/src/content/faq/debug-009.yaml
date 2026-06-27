@@ -1,0 +1,8 @@
+id: debug-009
+group: debug
+question: How do I record and replay a spin frame by frame?
+answer: "`startRecording()` / `getFrames()` capture a spin's frames; replay them
+  to reproduce a bug."
+links:
+  - label: "Guide: Debugging"
+    href: /guides/debugging/

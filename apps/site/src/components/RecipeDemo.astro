@@ -1,0 +1,22 @@
+---
+/**
+ * Renders a live recipe demo from a `<RecipeDemo code="..." />` body marker.
+ *
+ * Replaces the old per-file pattern of importing `?raw` source and wiring up
+ * `<RecipeFrame><RecipeRunner /></RecipeFrame>` by hand. The `code` prop is the
+ * `.recipe.ts` basename; the source is resolved through the recipeCode registry.
+ */
+import RecipeFrame from './RecipeFrame.astro';
+import { RecipeRunner } from './RecipeRunner.tsx';
+import { getRecipeCode } from '../lib/recipeCode.ts';
+
+interface Props {
+  code: string;
+  height?: number;
+}
+const { code, height = 300 } = Astro.props as Props;
+const source = getRecipeCode(code);
+---
+<RecipeFrame height={height}>
+  <RecipeRunner code={source} height={height} client:only="react" />
+</RecipeFrame>

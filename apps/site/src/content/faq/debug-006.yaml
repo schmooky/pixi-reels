@@ -1,0 +1,8 @@
+id: debug-006
+group: debug
+question: How do I make a deterministic spin in a unit test?
+answer: Inject a fixed seeded `.rng(fn)` and `setResult` a known grid;
+  pure-logic tests need no renderer.
+links:
+  - label: "Guide: Cheats & testing"
+    href: /guides/cheats-and-testing/

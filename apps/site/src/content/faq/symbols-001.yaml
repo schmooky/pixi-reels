@@ -1,0 +1,8 @@
+id: symbols-001
+group: symbols
+question: How do I add a brand-new symbol type to the game?
+answer: Subclass `ReelSymbol`, implement `onActivate` / `resize` / `playWin` /
+  `stopAnimation`, then register it with `r.register(id, MySymbol, opts)`.
+links:
+  - label: "Guide: Symbols"
+    href: /guides/symbols/

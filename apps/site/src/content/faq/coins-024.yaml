@@ -1,0 +1,11 @@
+id: coins-024
+group: coins
+question: How do I attach a value overlay (100x, a jackpot label) that survives
+  an in-place symbol swap and rides along when the symbol flies?
+answer: Keep the value in `coin.data` and attach the overlay as a child of the
+  symbol's `view`; on an in-place swap re-attach it from `data` (the new
+  instance has a fresh view), and on a flight rebuild it onto the flying clone
+  from the same `data`.
+links:
+  - label: "Recipe: Hold & Win — overlay survives swaps and rides flights"
+    href: /recipes/hold-and-win-sticky-overlay/

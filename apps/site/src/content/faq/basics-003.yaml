@@ -1,0 +1,6 @@
+id: basics-003
+group: basics
+question: How do I set how many rows are visible?
+answer: Use `.visibleRows(n)` for a uniform row count, or
+  `.visibleRowsPerReel([...])` when each reel shows a different number of rows.
+links: []

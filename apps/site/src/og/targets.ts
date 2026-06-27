@@ -29,10 +29,12 @@ const recipeGroupLabel = new Map(RECIPE_GROUPS.map((g) => [g.id, g.label.replace
 const recipeBySlug = new Map(RECIPES.map((r) => [r.slug, r]));
 
 // ── content globs (frontmatter read eagerly; Vite-only, runs in the build) ──
-const recipeMods = import.meta.glob<FmModule>('/src/pages/recipes/*.mdx', { eager: true });
-const guideMods = import.meta.glob<FmModule>('/src/pages/guides/*.mdx', { eager: true });
+// Recipes/guides/docs now live in Keystatic content collections; demos are
+// still plain route MDX. Frontmatter is read eagerly (Vite-only, build time).
+const recipeMods = import.meta.glob<FmModule>('/src/content/recipes/*.mdx', { eager: true });
+const guideMods = import.meta.glob<FmModule>('/src/content/guides/*.mdx', { eager: true });
 const demoMods = import.meta.glob<FmModule>('/src/pages/demos/*.mdx', { eager: true });
-const docMods = import.meta.glob<FmModule>('/src/pages/docs/*.mdx', { eager: true });
+const docMods = import.meta.glob<FmModule>('/src/content/docs/*.mdx', { eager: true });
 
 function recipeTargets(): OgTarget[] {
   return Object.entries(recipeMods).map(([key, mod]) => {

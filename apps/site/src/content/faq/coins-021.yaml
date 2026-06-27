@@ -1,0 +1,8 @@
+id: coins-021
+group: coins
+question: How do I order the collect flights by row, by column, or all at once?
+answer: "`coinWaves(board.lockedCoins, 'by-col')` (also `'by-row'` /
+  `'sequence'` / `'all'` / `{ chunk }`) groups the flights into waves."
+links:
+  - label: "Recipe: Hold & Win — collector"
+    href: /recipes/hold-and-win-collector/

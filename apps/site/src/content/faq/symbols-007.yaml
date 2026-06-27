@@ -1,0 +1,6 @@
+id: symbols-007
+group: symbols
+question: How do I make one symbol much rarer than the rest?
+answer: "Give it a small number in `.weights({ rare: 1, common: 20 })`, or `0`
+  so it never comes from random fill (server-placed only)."
+links: []

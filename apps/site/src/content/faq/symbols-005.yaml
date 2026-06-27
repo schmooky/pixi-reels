@@ -1,0 +1,8 @@
+id: symbols-005
+group: symbols
+question: How do I render nothing for an empty cell?
+answer: Register the `EmptySymbol` class against an id like `empty` — it renders
+  nothing but still occupies the slot.
+links:
+  - label: "Recipe: EmptySymbol"
+    href: /recipes/empty-symbol/

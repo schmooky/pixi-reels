@@ -1,0 +1,8 @@
+id: big-004
+group: big
+question: How do I stop a big symbol from being placed by random fill?
+answer: "Give it `weight: 0` so it only ever comes from `setResult` / the
+  server, never random fill."
+links:
+  - label: "Recipe: Big symbols (N×M)"
+    href: /recipes/big-symbols-mxn/

@@ -1,0 +1,6 @@
+id: mways-007
+group: mways
+question: How do I add a top horizontal reel (4-row extra strip)?
+answer: An extra horizontal top strip is not a built-in; add it as a separate
+  small ReelSet above the board.
+links: []

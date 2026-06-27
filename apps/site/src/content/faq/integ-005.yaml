@@ -1,0 +1,6 @@
+id: integ-005
+group: integ
+question: How do I format currency values for different locales?
+answer: Format values with `Intl.NumberFormat` in your UI; the engine treats
+  values as opaque data.
+links: []

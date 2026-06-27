@@ -1,0 +1,8 @@
+id: anim-008
+group: anim
+question: How do I play an arbitrary named Spine animation on a symbol?
+answer: Reach the skeleton via `SpineReelSymbol`'s `.spine` getter and call
+  `spine.state.setAnimation(0, name, loop)`.
+links:
+  - label: "Recipe: Hold & Win — Spine coins"
+    href: /recipes/hold-and-win-spine/

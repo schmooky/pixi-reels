@@ -1,0 +1,8 @@
+id: integ-004
+group: integ
+question: How do I recover an interrupted feature on reload (resume state)?
+answer: Persist feature state server-side and replay it (e.g. `board.enter(...)`
+  with the saved coins) on reload.
+links:
+  - label: "Recipe: Hold & Win respin"
+    href: /recipes/hold-and-win/

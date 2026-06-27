@@ -1,0 +1,60 @@
+---
+title: "Hold & Win: enter from the base game and back"
+group: features
+oneLiner: A normal 5x3 spin that, on 3 BONUS, transitions in the same chain into
+  the Hold & Win board, runs the feature, and swaps back to the base game on
+  feature:end. Two display objects, one Spin button.
+description: A normal 5x3 spin that, when 3 BONUS land, transitions in the same
+  chain into the Hold & Win board — every cell now its own reel — runs the
+  feature, and swaps back to the base game on feature:end. Two display objects,
+  one Spin button.
+order: 38
+steps:
+  - Spin a normal ReelSet; count the BONUS symbols that land
+  - On a 3-BONUS trigger, hide the base reels and reveal board.container
+  - enter(seed) carries the trigger coins into the feature already locked
+  - On feature:end, fade the board out and show the base game again
+apis:
+  - ReelSetBuilder
+  - HoldAndWinBuilder
+  - HoldAndWinBoard.enter
+  - HoldAndWinBoard.events
+tags:
+  - hold-and-win
+  - base-game
+  - transition
+  - feature
+  - trigger
+  - recent
+---
+
+<RecipeDemo code="hold-and-win-base-to-feature" height={460} />
+
+Press Run a couple of times. The first spin teases two BONUS; the next lands three, and the same press drops you into the Hold & Win board — where each cell spins on its own — plays the respins, and returns to the base game when the feature is over.
+
+## Two display objects, one seam
+
+The base game is an ordinary `ReelSetBuilder` reel set; the feature is a `HoldAndWinBoard`. Both live on the same stage at the same spot; only one is visible at a time. The transition is just toggling visibility around the board's lifecycle events:
+
+```ts
+// trigger: 3 BONUS on the base reels
+base.visible = false;
+board.container.visible = true;
+board.enter(triggerCoins);          // the BONUS positions become the first locked coins
+// ... await the respin rounds ...
+// board fires feature:end when the counter is exhausted or the board is full
+board.container.visible = false;
+base.visible = true;                 // back to the base game
+```
+
+`enter(seed)` is the bridge: the symbols that triggered the feature carry straight into it as already-locked coins, so the board picks up exactly where the base game left off. `feature:enter` and `feature:end` are the two moments to cross-fade on.
+
+## Why a separate board
+
+A base reel set spins whole **columns**; Hold & Win needs each **cell** to spin and lock on its own, so the feature is its own object (a grid of 1×1 reels) rather than a mode flip on the base reels. Swapping the visible object keeps each engine doing what it's good at.
+
+## Related recipes
+
+- [Hold & Win respin](/recipes/hold-and-win/). the board on its own
+- [Feature mode swap](/recipes/feature-mode-swap/). a mid-spin mode flip via frame middleware (no second object)
+- [Require 6+ coins to trigger](/faq/triggers-003/). counting the trigger

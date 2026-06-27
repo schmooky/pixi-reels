@@ -1,0 +1,8 @@
+id: mways-006
+group: mways
+question: How do I run a cascade on a MultiWays board?
+answer: Combine `.multiways(...)` with `.tumble(...)`; the refills are
+  shape-aware per reel.
+links:
+  - label: "Recipe: MultiWays cascade"
+    href: /recipes/multiways-cascade/

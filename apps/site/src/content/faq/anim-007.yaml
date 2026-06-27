@@ -1,0 +1,9 @@
+id: anim-007
+group: anim
+question: How do I freeze a Spine animation on its final frame and hold it?
+answer: Park the one-shot just before its end with `timeScale = 0` so it never
+  completes and holds the last frame — the shared `freezeAtEnd` helper does
+  exactly this.
+links:
+  - label: "Recipe: Hold & Win — Spine coins"
+    href: /recipes/hold-and-win-spine/

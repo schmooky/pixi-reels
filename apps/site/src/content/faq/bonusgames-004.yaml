@@ -1,0 +1,6 @@
+id: bonusgames-004
+group: bonusgames
+question: How do I settle the wheel pointer with a believable bounce?
+answer: Tween the wheel rotation with a GSAP `back.out` ease to settle the
+  pointer — game-layer.
+links: []

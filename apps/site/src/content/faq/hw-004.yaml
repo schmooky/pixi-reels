@@ -1,0 +1,8 @@
+id: hw-004
+group: hw
+question: How do I reset the respin counter to 3 on every new coin?
+answer: The builder's `.respins(3)` sets the count, and every locked coin resets
+  it (the `respins:changed` reason is `'hit-reset'`).
+links:
+  - label: "Recipe: Hold & Win respin"
+    href: /recipes/hold-and-win/

@@ -1,0 +1,8 @@
+id: bet-006
+group: bet
+question: How do I recompute the ways count when the board shape changes?
+answer: Recompute ways as the product of row counts on `shape:changed` /
+  `adjust:complete`.
+links:
+  - label: "Guide: MultiWays"
+    href: /guides/multiways/

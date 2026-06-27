@@ -1,0 +1,5 @@
+id: ui-003
+group: ui
+question: How do I show the current bet and balance?
+answer: Bet and balance live in your game/UI state; the engine does not track money.
+links: []

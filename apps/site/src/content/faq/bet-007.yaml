@@ -1,0 +1,5 @@
+id: bet-007
+group: bet
+question: How do I price the buy-feature off the current bet?
+answer: Compute the buy-feature price from the current bet in your game logic.
+links: []

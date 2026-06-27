@@ -1,0 +1,6 @@
+id: antic-010
+group: antic
+question: How do I make the anticipation reel speed up briefly before slowing?
+answer: Use a profile whose `accelerationEase` / `decelerationEase` ramps up
+  before the anticipation slowdown; tune `accelerationDuration`.
+links: []

@@ -1,0 +1,8 @@
+id: symbols-004
+group: symbols
+question: How do I make a symbol from a Spine skeleton?
+answer: Use `SpineSymbol` (or `SpineReelSymbol`) from `pixi-reels/spine` with a
+  `skeletonDataMap` / `spineMap`.
+links:
+  - label: "Recipe: Big symbols with Spine"
+    href: /recipes/spine-big-symbols/

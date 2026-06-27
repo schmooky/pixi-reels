@@ -1,0 +1,8 @@
+id: audio-002
+group: audio
+question: How do I play a per-coin sound as each one lands in stagger order?
+answer: Play it in the `cell:landed` / `coin:locked` handler — they fire in
+  landing (stagger) order.
+links:
+  - label: "Recipe: Hold & Win respin"
+    href: /recipes/hold-and-win/

@@ -1,0 +1,8 @@
+id: wins-008
+group: wins
+question: How do I show a small/medium/big/mega win celebration by tier?
+answer: Pick the tier from the win amount in your code and play the matching
+  celebration; the engine exposes the win cells, the banner is game-layer.
+links:
+  - label: "Guide: Win animations"
+    href: /guides/win-animations/

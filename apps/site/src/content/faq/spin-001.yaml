@@ -1,0 +1,8 @@
+id: spin-001
+group: spin
+question: How do I start a spin?
+answer: Call `await reelSet.spin()`. It starts every reel with a staggered delay
+  and resolves with a `SpinResult` once all reels have landed.
+links:
+  - label: "Guide: Spin lifecycle"
+    href: /guides/spin-lifecycle/

@@ -1,0 +1,8 @@
+id: audio-010
+group: audio
+question: How do I keep audio aligned when the player slams the reels?
+answer: On `skipSpin()`, re-cue or shorten the landing sound — `skip:completed`
+  marks the slammed stop.
+links:
+  - label: "Recipe: Slam-stop"
+    href: /recipes/slam-stop/

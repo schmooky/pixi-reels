@@ -1,0 +1,6 @@
+id: symbols-012
+group: symbols
+question: How do I read which symbol is currently shown in a given cell?
+answer: "`reelSet.getVisibleGrid()` returns the whole `string[][]`, or read the
+  live instance with `reelSet.getReel(col).getSymbolAt(row)`."
+links: []

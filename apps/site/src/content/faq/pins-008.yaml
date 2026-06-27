@@ -1,0 +1,8 @@
+id: pins-008
+group: pins
+question: How do I make a pin migrate back to its origin row when there is room?
+answer: "Pin with `{ migration: 'origin', originRow }` so it restores toward its
+  origin row when the shape grows back."
+links:
+  - label: "Recipe: Sticky wild + MultiWays"
+    href: /recipes/sticky-wild-multiways/

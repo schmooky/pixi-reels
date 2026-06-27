@@ -1,0 +1,11 @@
+id: chars-002
+group: chars
+question: How do I throw a coin symbol at a character (a pig) above the reels?
+answer: "Read the source cell center with `board.cellCenter(cell)` and the
+  character's position, then tween a coin clone along a bezier arc with
+  `bezierFly(clone, from, to, { lean: 'up' })` — the flying object is the first
+  argument. Play the character's reaction on arrival. The flight is game-layer
+  choreography; the board only hands out pixel geometry and events."
+links:
+  - label: "Recipe: Hold & Win — collector"
+    href: /recipes/hold-and-win-collector/

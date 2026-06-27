@@ -1,0 +1,8 @@
+id: coins-022
+group: coins
+question: How do I curve the collect flight toward the screen edge or center?
+answer: "`bezierFly(..., { lean: 'up' | 'down' | 'in' | 'out', curvature })`
+  bends the arc; `around` sets the in/out reference point."
+links:
+  - label: "Recipe: Hold & Win — collector"
+    href: /recipes/hold-and-win-collector/

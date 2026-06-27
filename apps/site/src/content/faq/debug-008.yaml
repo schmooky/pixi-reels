@@ -1,0 +1,9 @@
+id: debug-008
+group: debug
+question: How do I add a cheat panel (force a symbol, force a hit)?
+answer: Wire the example `CheatEngine` (`forceGrid` / `forceScatters` /
+  `forceCell` / `holdAndWinProgress`, from `examples/shared/cheats`) to UI
+  toggles.
+links:
+  - label: "Guide: Cheats & testing"
+    href: /guides/cheats-and-testing/

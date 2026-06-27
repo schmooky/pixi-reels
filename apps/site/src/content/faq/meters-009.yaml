@@ -1,0 +1,6 @@
+id: meters-009
+group: meters
+question: How do I keep the meter and its server value from drifting apart?
+answer: Treat the server value as the source of truth and reconcile the
+  displayed meter to it on each response.
+links: []

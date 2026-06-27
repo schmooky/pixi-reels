@@ -1,0 +1,18 @@
+---
+import { getCollection, render } from 'astro:content';
+import Docs from '../../layouts/Docs.astro';
+import RecipeDemo from '../../components/RecipeDemo.astro';
+import RecipeImage from '../../components/RecipeImage.astro';
+
+export async function getStaticPaths() {
+  const guides = await getCollection('guides');
+  return guides.map((entry) => ({ params: { slug: entry.id }, props: { entry } }));
+}
+
+const { entry } = Astro.props;
+const { Content } = await render(entry);
+const { title, description, eyebrow } = entry.data;
+---
+<Docs title={title} description={description} eyebrow={eyebrow} section="guides">
+  <Content components={{ RecipeDemo, Image: RecipeImage }} />
+</Docs>

@@ -1,0 +1,8 @@
+id: cascade-004
+group: cascade
+question: How do I make survivors fall down into the gaps?
+answer: "`reelSet.refill({ winners, grid })` slides survivors into the gaps and
+  drops new symbols in from above."
+links:
+  - label: "Recipe: Cascade 6×5"
+    href: /recipes/cascade-6x5/

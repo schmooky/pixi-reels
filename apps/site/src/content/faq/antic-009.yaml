@@ -1,0 +1,7 @@
+id: antic-009
+group: antic
+question: How do I cancel anticipation cleanly if the tease misses?
+answer: Anticipation is just the slow stop — if the tease misses, the reel lands
+  normally, so there is nothing to cancel; stop your own glow/sound on
+  `spin:reelLanded`.
+links: []

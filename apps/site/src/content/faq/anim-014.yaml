@@ -1,0 +1,8 @@
+id: anim-014
+group: anim
+question: How do I keep GSAP tweens in sync with the Pixi ticker?
+answer: Call `driveGsapWithTicker(app.ticker)` once so GSAP advances off the
+  Pixi ticker (and survives hidden tabs).
+links:
+  - label: "Guide: Win animations"
+    href: /guides/win-animations/

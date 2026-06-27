@@ -1,0 +1,8 @@
+id: cascade-011
+group: cascade
+question: How do I show the win presenter between cascade steps?
+answer: Run `WinPresenter.show(wins)` inside your cascade loop, between
+  `destroySymbols` and `refill`.
+links:
+  - label: "Recipe: Cascade WinPresenter"
+    href: /recipes/cascade-winpresenter/

@@ -1,0 +1,8 @@
+id: pins-004
+group: pins
+question: How do I store a value/payload on a pinned cell?
+answer: Pass `{ payload }` to `pin(...)` and read it back from
+  `reelSet.getPin(col, row).payload`.
+links:
+  - label: "Recipe: Multiplier wild"
+    href: /recipes/multiplier-wild-pin/

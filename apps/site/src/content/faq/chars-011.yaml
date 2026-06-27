@@ -1,0 +1,8 @@
+id: chars-011
+group: chars
+question: How do I sequence many throws so they arrive one after another?
+answer: "`coinWaves(items, 'sequence')` plus a per-item `delay` on `bezierFly`
+  stagger the throws to arrive one after another."
+links:
+  - label: "Recipe: Hold & Win — collector"
+    href: /recipes/hold-and-win-collector/

@@ -1,0 +1,6 @@
+id: bonusgames-006
+group: bonusgames
+question: How do I climb a prize ladder with collect-or-gamble choices?
+answer: A prize ladder is a game-layer mini-game — build the ladder UI and its
+  collect/gamble logic yourself.
+links: []

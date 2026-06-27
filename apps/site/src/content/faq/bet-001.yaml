@@ -1,0 +1,8 @@
+id: bet-001
+group: bet
+question: How do I switch a game between paylines and ways-to-win?
+answer: Both are your evaluation choice — the engine lands a grid; you evaluate
+  lines or ways over it.
+links:
+  - label: "Guide: MultiWays"
+    href: /guides/multiways/

@@ -1,0 +1,8 @@
+id: antic-008
+group: antic
+question: How do I chain anticipation across multiple reels (rolling tension)?
+answer: Call `setAnticipation` with several reel indices; each slows in turn for
+  rolling tension.
+links:
+  - label: "Recipe: Near-miss"
+    href: /recipes/near-miss/

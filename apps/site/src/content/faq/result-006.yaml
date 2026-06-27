@@ -1,0 +1,8 @@
+id: result-006
+group: result
+question: How do I land a tall symbol partially off-screen so only its edge shows?
+answer: Anchor a tall block in `bufferAbove` so only its tail shows at row 0;
+  the viewport mask clips the off-screen part.
+links:
+  - label: "Recipe: Big-symbol partial land"
+    href: /recipes/big-symbol-partial-land/

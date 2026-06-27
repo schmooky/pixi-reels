@@ -1,0 +1,9 @@
+id: result-010
+group: result
+question: How do I send a structured result that survives JSON / postMessage?
+answer: Use the explicit `ColumnTarget` object form (`{ visible, bufferAbove,
+  bufferBelow }`) — it survives JSON / postMessage, unlike the negative-index
+  array form.
+links:
+  - label: "Guide: Buffer indexing"
+    href: /guides/buffer-indexing/

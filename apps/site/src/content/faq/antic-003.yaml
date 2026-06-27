@@ -1,0 +1,8 @@
+id: antic-003
+group: antic
+question: How do I fake a near-miss with a scatter just above the line?
+answer: Land N-1 scatters plus `setAnticipation` on the reel that almost
+  completes, and place the teased scatter in `bufferAbove`.
+links:
+  - label: "Recipe: Near-miss"
+    href: /recipes/near-miss/

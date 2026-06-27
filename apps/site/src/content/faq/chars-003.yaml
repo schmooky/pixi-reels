@@ -1,0 +1,8 @@
+id: chars-003
+group: chars
+question: How do I make the character react (chomp, bounce) when a coin hits it?
+answer: Resolve the `bezierFly` promise on arrival and play the character's
+  reaction in the `.then(...)`.
+links:
+  - label: "Recipe: Hold & Win — collector"
+    href: /recipes/hold-and-win-collector/

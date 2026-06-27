@@ -1,0 +1,9 @@
+id: symbols-009
+group: symbols
+question: How do I resize a symbol whenever the cell size changes?
+answer: Implement `resize(width, height)` on your `ReelSymbol` and put all
+  positioning there — it is called on every symbol swap, so the constructor is
+  the wrong place.
+links:
+  - label: "Guide: Symbols"
+    href: /guides/symbols/

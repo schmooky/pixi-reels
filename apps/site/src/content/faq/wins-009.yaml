@@ -1,0 +1,6 @@
+id: wins-009
+group: wins
+question: How do I count the win amount up with a rolling number?
+answer: Drive your own counter widget; the shared `roundBus` (`win:set` /
+  `win:add`) is a ready-made event bus for a running win total.
+links: []

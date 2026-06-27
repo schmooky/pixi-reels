@@ -1,0 +1,8 @@
+id: symbols-002
+group: symbols
+question: How do I make a symbol from a single texture/sprite?
+answer: "Use the built-in `SpriteSymbol`: `r.register(id, SpriteSymbol, {
+  textures })` maps each id to a `Texture`."
+links:
+  - label: "Recipe: Texture-atlas symbols"
+    href: /recipes/texture-atlas-symbols/

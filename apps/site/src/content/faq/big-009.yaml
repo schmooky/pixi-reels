@@ -1,0 +1,6 @@
+id: big-009
+group: big
+question: How do I split a big symbol into single symbols on a win?
+answer: After the win, swap the block id for single ids via `setSymbolAt` or the
+  next `setResult`.
+links: []

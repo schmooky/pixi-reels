@@ -1,0 +1,188 @@
+---
+title: Pins
+order: 4
+eyebrow: Building blocks
+description: CellPin is the cell-persistence primitive. It survives spins,
+  migrates on reshape, and works with any ReelSymbol subclass. This guide covers
+  lifecycle, events, movePin, and Spine-specific animation hooks.
+---
+
+A **pin** locks a cell to a specific symbol id and keeps it visible across spins. Pins are the primitive behind sticky wilds, expanding wilds, walking wilds, multiplier overlays, mystery reveals, and value coins. They are symbol-class-agnostic. `SpriteSymbol`, `AnimatedSpriteSymbol`, `SpineSymbol`, or your own subclass all work the same way.
+
+```ts
+// Pin a cell. The id resolves through the SymbolFactory, exactly like normal placement.
+const pin = reelSet.pin(col, row, 'sticky-wild', { turns: 'permanent' });
+
+// Move it elsewhere with an animated tween.
+await reelSet.movePin({ col, row }, { col: col - 1, row }, { duration: 600 });
+
+// Release it.
+reelSet.unpin(col, row);
+```
+
+## What a pin guarantees
+
+- The cell visually shows the pinned symbol id for the lifetime of the pin.
+- The pin survives `spin()`, `setResult()`, and `setShape()`. During a spin, an **overlay** symbol is acquired so the pinned cell stays visible while the reel scrolls underneath.
+- On reshape (`setShape`, MultiWays), the pin migrates per its `migration` policy (`'origin'` restores to the row it was first placed at; `'frozen'` clamps to the nearest valid row and rewrites its origin).
+- Concurrent calls (`spin`, `setResult`, `pin`, `setShape`) during an in-flight `nudge()` throw. Pins are not nudge-aware by design.
+
+See the [CellPin reference](/api/interfaces/CellPin/) for the full type.
+
+## The three symbol instances involved
+
+A single pin can be backed by up to three distinct symbol instances at different moments. All three are pooled. All three go through `onActivate(symbolId)`.
+
+| Instance | When it exists | Where it lives |
+|---|---|---|
+| **Reel-cell symbol** | Always (when idle / landed) | `reel.container` inside `viewport.maskedContainer` |
+| **Overlay symbol** | During a spin, per active pin | `viewport.unmaskedContainer`, zIndex 10000 |
+| **Flight symbol** | During `movePin` tween | `viewport.unmaskedContainer` |
+
+This split is invisible if you just want a sticky cell. It matters once you want to animate the pinned symbol during motion. each instance is its own object, and animation state does not carry between them.
+
+## Lifecycle in full
+
+```
+pin(col, row, 'wild', { turns: 'permanent' })
+  Reel cell gets a fresh symbol via SymbolFactory; onActivate runs.
+  fires pin:placed(pin)
+
+spin() begins
+  Per active pin, an overlay symbol is acquired, positioned at the pin's
+  cell, and added to unmaskedContainer.
+  fires pin:overlayCreated(pin, overlay)   <- set overlay animation here
+
+  Reel scrolls normally underneath. The overlay is what the player sees.
+
+spin lands
+  fires pin:overlayDestroyed(pin, overlay) <- stop animations here
+  Overlay released to pool. The reel-cell symbol takes over display.
+
+movePin(from, to, opts)
+  Flight symbol acquired, positioned at `from`, added to unmaskedContainer.
+  opts.onFlightCreated(flight) fires       <- start a motion animation here
+
+  GSAP tweens the flight's world coords from source to destination.
+
+  opts.onFlightCompleted(flight) fires     <- restore an idle animation here
+  Reel cell at destination updated, flight released.
+  fires pin:moved(newPin, oldCoord)
+
+unpin(col, row)  (or pin auto-expires after `turns: N`)
+  fires pin:expired(pin, reason)
+```
+
+## A minimal sprite-symbol example
+
+```ts
+import { ReelSetBuilder, SpriteSymbol } from 'pixi-reels';
+
+const reelSet = new ReelSetBuilder()
+  .reels(5).visibleRows(3).symbolSize(140, 140)
+  .symbols((r) => {
+    r.register('wild', SpriteSymbol, { textures: { wild: wildTex } });
+    // ...
+  })
+  .ticker(app.ticker)
+  .build();
+
+// Spin once, land, then pin a permanent wild at (2, 1).
+await reelSet.spin();
+reelSet.setResult([/* ... */]);
+await /* the spin promise */;
+reelSet.pin(2, 1, 'wild', { turns: 'permanent' });
+
+// Next spin scrolls underneath the pinned wild.
+await reelSet.spin();
+```
+
+No special wiring is needed for sprite symbols. the pin handles overlay creation, reshape migration, and unpin teardown internally.
+
+## Spine animation hooks
+
+Spine symbols add one extra concern. each of the three instances above runs its own animation track. If you want `idle-sticky` on the overlay and `run` on the flight, you wire that through the pin lifecycle events.
+
+The built-in `SpineSymbol` sets `idle` / `win` tracks internally. Walking-wild and similar mechanics need a small subclass that exposes track control:
+
+```ts
+import { SpineSymbol, type SpineSymbolOptions } from 'pixi-reels';
+
+export class WalkingSpineSymbol extends SpineSymbol {
+  constructor(options: SpineSymbolOptions) {
+    super(options);
+  }
+
+  /** Publicly swap the current animation track. */
+  setAnimation(name: string, loop = true): void {
+    const spine = (this as any)._spine;
+    if (!spine) return;
+    if (!spine.skeleton.data.findAnimation(name)) return;
+    spine.state.setAnimation(0, name, loop);
+  }
+}
+```
+
+Then wire the hooks:
+
+```ts
+// Overlay: sticky-idle while the reel spins underneath
+reelSet.events.on('pin:overlayCreated', (_pin, overlay) => {
+  (overlay as WalkingSpineSymbol).setAnimation('idle-sticky', true);
+});
+
+// Flight: run animation during movePin
+async function walkLeft(pin: CellPin) {
+  await reelSet.movePin(
+    { col: pin.col, row: pin.row },
+    { col: pin.col - 1, row: pin.row },
+    {
+      duration: 600,
+      onFlightCreated: (flight) => {
+        (flight as WalkingSpineSymbol).setAnimation('run', true);
+      },
+      onFlightCompleted: (flight) => {
+        (flight as WalkingSpineSymbol).setAnimation('idle', true);
+      },
+    },
+  );
+}
+```
+
+## Gotchas
+
+### 1. The flight symbol is a fresh acquire
+
+It is **not** the same instance as the reel-cell symbol. Any transient state you set on the cell (animation tracks, tint, skin) is not inherited by the flight instance. The flight starts from `onActivate` defaults.
+
+This is usually what you want. your flight animation is its own entity. but be deliberate about it.
+
+### 2. Overlay animations don't carry over to the landed cell
+
+On `spin:allLanded`, the overlay is released and the reel-cell symbol takes over display. If you set a special animation on the overlay (say `idle-sticky`), the reel cell will continue to show whatever its own `onActivate` set (plain `idle`).
+
+If you want the landed cell to keep a sticky animation, also set it on the reel cell on `pin:placed`:
+
+```ts
+reelSet.events.on('pin:placed', (pin) => {
+  if (reelSet.isSpinning) return; // overlay will handle it
+  const sym = reelSet.getReel(pin.col).getSymbolAt(pin.row);
+  (sym as WalkingSpineSymbol).setAnimation?.('idle-sticky', true);
+});
+```
+
+### 3. Callback errors don't crash `movePin`
+
+`onFlightCreated` and `onFlightCompleted` errors are caught internally. The tween always runs, the pin always moves, the flight is always released. This keeps a bug in your animation code from leaving the engine in a bad state.
+
+### 4. `resize()` runs on every acquire
+
+Every pooled symbol gets `resize(cellWidth, cellHeight)` called on acquire. For Spine, that computes a scale from `spine.getBounds()`. If the skeleton hasn't loaded yet (async data) you may see a zero-sized sprite for the first frame. In practice the skeleton is always ready by the time the pool is warm; keep an eye on it if you see a size pop.
+
+## Related
+
+- [Walking wild (movePin) recipe](/recipes/walking-wild-pin/). the same pattern, runnable
+- [Sticky wild recipe](/recipes/sticky-wild-pin/). minimum-viable pin usage
+- [Expanding wild recipe](/recipes/expanding-wild-pin/). per-reel pin expansion
+- [Symbols guide](/guides/symbols/). authoring custom `ReelSymbol` subclasses
+- [Spin lifecycle](/guides/spin-lifecycle/). events fired around a spin

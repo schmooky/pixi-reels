@@ -1,0 +1,6 @@
+id: fs-008
+group: fs
+question: How do I show a "feature complete, you won X" summary screen?
+answer: Build the "you won X" screen in your UI layer; the shared `roundBus` win
+  total feeds it.
+links: []

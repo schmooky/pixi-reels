@@ -1,0 +1,64 @@
+---
+title: Value-carrying coin (Hold & Win)
+group: features
+oneLiner: Each coin carries a coefficient (×2 … ×50) in coin.data; the board
+  locks hits and respins only the free cells natively — no pins, no hand-rolled
+  grid. The ×N badge is painted from data, the total summed from
+  board.lockedCoins.
+description: Each coin carries a coefficient (×2 … ×50) in coin.data;
+  HoldAndWinBuilder locks hits and respins only the free cells natively — no
+  pins, no hand-rolled grid. The ×N badge is painted from data, the running
+  total summed from board.lockedCoins.
+order: 64
+steps:
+  - Build the board with HoldAndWinBuilder; coins are opaque { cell, id, data }
+  - Each hit carries its coefficient in data.value
+  - Paint the ×N badge from data on coin:locked
+  - Sum the running total from board.lockedCoins
+apis:
+  - HoldAndWinBuilder
+  - HoldAndWinBoard.respin
+  - HoldAndWinBoard.lockedCoins
+  - HoldAndWinBoard.events
+tags:
+  - coin
+  - hold-and-win
+  - value
+  - data
+  - recent
+---
+
+<RecipeDemo code="value-coin-pin" />
+
+The Lightning Link / Dragon Link value-coin pattern, built on `HoldAndWinBuilder`. Each coin carries a coefficient (×2 … ×50) and the board does the holding for you — locked coins sit out, only the free cells respin.
+
+## The value lives in the coin's data
+
+A Hold & Win coin is `{ cell, id, data }`. The board never reads `data` — you put the coefficient there and it carries through the lock untouched:
+
+```ts
+await board.respin(cells.map((cell) => ({ cell, id: 'coin', data: { value: pickValue() } })));
+```
+
+`pickValue()` rolls the ladder (×2 common, ×50 rare). The board locks every hit and respins only `board.freeCells` on the next round — no pins, no per-cell grid to wire up.
+
+## Badge from data, total from the ledger
+
+The ×N badge is painted from the coin's data on `coin:locked`, and the running total is summed straight from `board.lockedCoins`:
+
+```ts
+board.events.on('coin:locked', ({ coin }) => {
+  badge(coin.cell, coin.data.value);                                   // ×N, painted from data
+  total.text = `TOTAL: ${board.lockedCoins.reduce((a, c) => a + c.data.value, 0)}`;
+});
+```
+
+The badge uses `fitText` (from the shared kit) so the multiplier spans the coin face and never overflows.
+
+> Earlier this recipe hand-rolled 15 individual 1×1 `ReelSet`s and used `reelSet.pin()` to hold coins. `HoldAndWinBuilder` is exactly that pattern packaged — independent per-cell reels + native locking — so the board *is* the mechanic now; pins aren't needed for the hold.
+
+## Related
+
+- [Hold & Win respin](/recipes/hold-and-win/). the minimal starter board
+- [Beginner: carry the value as data](/recipes/coin-value-data/). the value-in-data idea on its own
+- [Collector symbol](/recipes/collector-symbol-pin/). a collector that absorbs its neighbours
