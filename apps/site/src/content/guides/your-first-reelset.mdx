@@ -1,13 +1,20 @@
 ---
 title: Your first reelset
-order: 1
 eyebrow: Step-by-step
 description: Build, spin, and react to a reel set from scratch.
+order: 1
 ---
+So you want to make the reels in your slot and it's probably your first time seeing this lib/.
 
-In this guide you'll build a minimal slot from nothing. We'll do it in five
-steps, and each step has a "verify" check so you always know what should be
-true before moving on.
+In this guide you'll build a minimal slot from nothing.
+
+What slot? Ah! Something simple! 5x3 fruity slot.
+
+## 0. Set up
+
+We assume you have some pixi app already setup.
+
+Use `npm i pixi-reels` to install the lib (or use your desired package manager.
 
 ## 1. Create the builder
 
@@ -16,8 +23,9 @@ import { ReelSetBuilder } from 'pixi-reels';
 const builder = new ReelSetBuilder();
 ```
 
-> **Verify:** `builder instanceof ReelSetBuilder`. if the import fails, you
-> didn't install the package or your bundler can't find ESM modules.
+So builder is kinda "core"? Yeah, you could say that.
+
+It is the first thing you construct and then configure.
 
 ## 2. Configure the grid
 
@@ -30,12 +38,16 @@ builder
   .bufferSymbols(1);         // optional. default 1
 ```
 
-> **Verify:** nothing visible yet, no errors. Configuration is deferred until `.build()`.
+Nothing visible yet, no errors. Configuration is deferred until `.build()`.
+
+So it's just a config.
 
 ## 3. Register symbols
 
 Every symbol needs an id and a class. Use `SpriteSymbol` for static textures,
 `AnimatedSpriteSymbol` for sprite-sheet animation, `SpineSymbol` for Spine.
+
+We highly suggest that you create your own `Container` that hosts the visuals you need. Extend ReelSymbol and do as you like.
 
 ```ts
 import { SpriteSymbol } from 'pixi-reels';
@@ -47,14 +59,13 @@ builder.symbols((r) => {
 });
 ```
 
-> **Verify:** calling `.build()` without registering any symbols throws
-> `symbols() must register at least one symbol.`
+Calling `.build()` without registering any symbols throws`symbols() must register at least one symbol.`
 
 ## 4. Weights + ticker, then build
 
-```ts
-import { app } from './app';   // your PIXI.Application
+Here app is your pixi app.
 
+```ts
 builder
   .weights({ cherry: 40, seven: 8, wild: 5 })
   .ticker(app.ticker);
@@ -63,37 +74,51 @@ const reelSet = builder.build();
 app.stage.addChild(reelSet);
 ```
 
-> **Verify:** you see a 5-column, 3-row grid of randomly assigned symbols,
-> static (not spinning).
+Verify that you see a 5-column, 3-row grid of randomly assigned symbols, static (not spinning).
+
+In most slots you want the players to see some initial semi-random frame when they first open your game and for each subsequent one you'd wanna show player "what the last round was".
+
+```
+builder.initialFrame([
+    { visible: ['cherry', 'seven', 'cherry'] },
+    { visible: ['wild', 'cherry', 'seven'] },
+    { visible: ['seven', 'seven', 'cherry'] },
+    { visible: ['cherry', 'wild', 'cherry'] },
+    { visible: ['seven', 'cherry', 'cherry'] },
+  ])
+```
+
+For that you will just use `initialFrame` - yeah, it's that simple. You can even set the peeking symbols if you need.
 
 ## 5. Spin it
 
 ```ts
-document.getElementById('spin')!.addEventListener('click', async () => {
-  const result = await reelSet.spin();       // random grid
-  console.log(result.symbols);
-});
+const result = await reelSet.spin();
 ```
 
-Want a *specific* outcome? Call `setResult()` before the promise resolves:
+And it's spinning. You would never do it from a simple button click callback, best way is to put it into your fsm state that opens a new round and sends a request to RGS.
+
+6. ## Stop it
+
+To make the reels stop and show an outcome call`setResult()` before the promise resolves:
 
 ```ts
 const promise = reelSet.spin();
-setTimeout(() => reelSet.setResult([
+reelSet.setResult([
   { visible: ['wild','seven','wild'] },
   { visible: ['seven','wild','seven'] },
   { visible: ['wild','seven','wild'] },
   { visible: ['seven','wild','seven'] },
   { visible: ['wild','seven','wild'] },
-]), 200);
-const result = await promise;
+])
 ```
 
-> **Verify:** the reels land on exactly that grid, in that column order.
+You will see the reels stop and show you the result you've set.
+
+Take note that awaiting `reelSet.spin()` before setting result is a common pitfall since it resolves when you set the result 😃
 
 ## What next
 
-- React to events: [Spin lifecycle](/guides/spin-lifecycle/)
-- Change speed: [Speed modes](/guides/speed-modes/)
-- Play symbol animations on wins: [Win animations](/guides/win-animations/)
-- Test your slot deterministically: [Cheats & testing](/guides/cheats-and-testing/)
+* React to events: [Spin lifecycle](/guides/spin-lifecycle/)
+* Change speed: [Speed modes](/guides/speed-modes/)
+* Play symbol animations on wins: [Win animations](/guides/win-animations/)
