@@ -18,7 +18,7 @@
   },
   "dependencies": {
     "@astrojs/mdx": "^5.0.3",
-    "@astrojs/react": "^5.0.3",
+    "@astrojs/react": "^6.0.0",
     "@esotericsoftware/spine-pixi-v8": "~4.2.110",
     "@keystatic/astro": "^5.1.0",
     "@keystatic/core": "^0.5.50",
