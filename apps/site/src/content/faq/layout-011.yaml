@@ -12,6 +12,6 @@ answer: >-
   resolves with the engine's `SpinResult`. Add `reel.container` to the stage
   above your `ReelSet`.
 links:
-  - label: "Recipe: Paying-symbol banner reel (horizontal)"
-    href: /recipes/pay-symbol-marquee/
-recipe: pay-symbol-marquee
+  - label: "Recipe: Horizontal reel (paying-symbol banner)"
+    href: /recipes/horizontal-reel/
+recipe: horizontal-reel
