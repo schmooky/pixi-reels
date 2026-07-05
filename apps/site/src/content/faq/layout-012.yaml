@@ -1,14 +1,15 @@
 id: layout-012
 group: layout
-question: Can the paying-symbol strip change its symbols mid-round, or run
-  right-to-left?
-answer: Yes. `HorizontalReel.setContent(ids)` swaps the paying set live — symbols
-  already on the strip keep scrolling and the new set fades in as they recycle,
-  so it never snaps. `setDirection('ltr' | 'rtl')` flips travel at runtime, and
-  `start()` / `stop()` freeze or resume it. Listen to the `symbol:entered` event
-  ({ id, edge }) to react as each new tile wraps into view, or `symbolAt(slot)`
-  to read the live symbol in a visible slot.
+question: Does the horizontal banner reel use the same spin API as ReelSet, or a
+  different one?
+answer: The same one. `HorizontalReel` exposes `spin()`, `setResult(...)`,
+  `skipSpin()`, `isSpinning`, and the `spin:start` / `spin:complete` events —
+  mirroring `ReelSet`. The only shape difference is that `setResult` takes a flat
+  `string[]` of `visibleCount` ids (one row) instead of a `ColumnTarget[]` grid,
+  because it is a single row. `spin()` returns a promise that resolves with the
+  landed `{ symbols }`, so the "spin, await the server, setResult, await the
+  land" flow is identical to a normal reel.
 links:
-  - label: "Recipe: Paying-symbol marquee (horizontal reel)"
+  - label: "Recipe: Paying-symbol banner reel (horizontal)"
     href: /recipes/pay-symbol-marquee/
 recipe: pay-symbol-marquee

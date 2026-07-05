@@ -1,5 +1,5 @@
 import type { Graphics, Ticker } from 'pixi.js';
-import type { SymbolRegistry } from '../symbols/SymbolRegistry.js';
+import { SymbolRegistry } from '../symbols/SymbolRegistry.js';
 import { HorizontalReel } from './HorizontalReel.js';
 import type {
   HorizontalCascadeOptions,
@@ -8,12 +8,13 @@ import type {
 
 /**
  * Fluent builder for {@link HorizontalReel} — the sideways "these symbols pay
- * this round" banner that sits above the reels.
+ * this round" banner above the reels.
  *
- * Only `.symbols(...)`, `.content(...)` and `.ticker(...)` are required; every
- * other setting has a sensible default (a 4-wide, 72px, right-to-left smooth
- * scroll — the `1×4 reel` shape). Call `.scroll(px)` or `.cascade(...)` to pick
- * the motion; the last of the two wins.
+ * Its API mirrors {@link ReelSetBuilder}: register `.symbols(...)`, give it a
+ * `.ticker(...)`, and `.build()`. The reel then follows the engine's spin
+ * contract — `spin()` then `setResult(ids)` then `await` the land. Only
+ * `.symbols(...)` and `.ticker(...)` are required; everything else defaults
+ * (a 4-wide, 72px, right-to-left smooth-scroll strip — the `1×4 reel` shape).
  */
 export class HorizontalReelBuilder {
   private _visibleCount = 4;
@@ -22,13 +23,13 @@ export class HorizontalReelBuilder {
   private _gap = 4;
   private _direction: HorizontalDirection = 'rtl';
   private _mode: 'scroll' | 'cascade' = 'scroll';
-  private _speed = 1.4;
-  private _cascade: Required<HorizontalCascadeOptions> = { interval: 900, duration: 320 };
-  private _content: string[] | null = null;
+  private _speed = 22;
+  private _cascade: Required<HorizontalCascadeOptions> = { interval: 90, duration: 220 };
+  private _initialResult: string[] | null = null;
   private _configurator: ((registry: SymbolRegistry) => void) | null = null;
   private _chrome: ((g: Graphics, width: number, height: number) => void) | null = null;
   private _ticker: Ticker | null = null;
-  private _autoStart = true;
+  private _rng: (() => number) | null = null;
 
   /** How many symbol cells are visible at once. Default 4 (the `1×4` strip). */
   visibleCount(n: number): this {
@@ -45,20 +46,20 @@ export class HorizontalReelBuilder {
     return this;
   }
 
-  /** Travel direction. `rtl` scrolls leftward (default), `ltr` rightward. */
+  /** Travel direction while spinning. `rtl` scrolls leftward (default), `ltr` rightward. */
   direction(direction: HorizontalDirection): this {
     this._direction = direction;
     return this;
   }
 
-  /** Smooth marquee mode at `pxPerFrame` (default motion). */
-  scroll(pxPerFrame = 1.4): this {
+  /** Smooth marquee spin at `pxPerFrame` (default motion). */
+  scroll(pxPerFrame = 22): this {
     this._mode = 'scroll';
     this._speed = pxPerFrame;
     return this;
   }
 
-  /** Discrete one-cell stepping mode — the tumble reveal laid sideways. */
+  /** Discrete one-cell stepping spin — the tumble reveal laid sideways. */
   cascade(opts: HorizontalCascadeOptions = {}): this {
     this._mode = 'cascade';
     this._cascade = {
@@ -70,17 +71,20 @@ export class HorizontalReelBuilder {
 
   /**
    * Register the symbol classes shown on the strip, exactly like
-   * `ReelSetBuilder.symbols`. Every id used in `.content(...)` must be registered
-   * here.
+   * `ReelSetBuilder.symbols`. The spin blur feeds from these ids; every id
+   * passed to `setResult(...)` must be registered here. Required.
    */
   symbols(configurator: (registry: SymbolRegistry) => void): this {
     this._configurator = configurator;
     return this;
   }
 
-  /** The looping sequence of symbol ids the strip cycles through. Required. */
-  content(ids: string[]): this {
-    this._content = [...ids];
+  /**
+   * Visible symbols shown at rest before the first spin (`visibleCount` long).
+   * Defaults to the first `visibleCount` registered ids.
+   */
+  initialResult(ids: string[]): this {
+    this._initialResult = [...ids];
     return this;
   }
 
@@ -90,15 +94,15 @@ export class HorizontalReelBuilder {
     return this;
   }
 
-  /** Drives the motion — required. */
-  ticker(ticker: Ticker): this {
-    this._ticker = ticker;
+  /** Injected RNG for the spin blur (deterministic demos / tests). */
+  rng(fn: () => number): this {
+    this._rng = fn;
     return this;
   }
 
-  /** Start motion on build. Default true; pass false to build paused. */
-  autoStart(on: boolean): this {
-    this._autoStart = on;
+  /** Drives the spin — required. */
+  ticker(ticker: Ticker): this {
+    this._ticker = ticker;
     return this;
   }
 
@@ -106,11 +110,16 @@ export class HorizontalReelBuilder {
     if (!this._configurator) {
       throw new Error('HorizontalReelBuilder: .symbols(...) is required.');
     }
-    if (!this._content || this._content.length === 0) {
-      throw new Error('HorizontalReelBuilder: .content(...) is required (at least one id).');
-    }
     if (!this._ticker) {
       throw new Error('HorizontalReelBuilder: .ticker(...) is required.');
+    }
+    // Default the rest display to the first registered ids.
+    let initial = this._initialResult;
+    if (!initial) {
+      const reg = new SymbolRegistry();
+      this._configurator(reg);
+      const ids = reg.symbolIds;
+      initial = Array.from({ length: this._visibleCount }, (_, i) => ids[i % ids.length]);
     }
     return new HorizontalReel({
       visibleCount: this._visibleCount,
@@ -121,11 +130,11 @@ export class HorizontalReelBuilder {
       mode: this._mode,
       speed: this._speed,
       cascade: this._cascade,
-      content: this._content,
+      initialResult: initial,
       configurator: this._configurator,
       chrome: this._chrome,
       ticker: this._ticker,
-      autoStart: this._autoStart,
+      rng: this._rng,
     });
   }
 }

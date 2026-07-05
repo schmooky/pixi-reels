@@ -2,11 +2,12 @@
 "pixi-reels": minor
 ---
 
-Add: `HorizontalReel` + `HorizontalReelBuilder` — a single sideways-scrolling
-symbol strip for the "these symbols pay this round" banner above the reels.
-One row (not a matrix, not a spin lifecycle), travels `ltr` or `rtl`, in either
-`scroll` (smooth marquee) or `cascade` (discrete one-cell stepping) mode.
-`setContent(ids)` swaps the paying set live; `symbol:entered` / `cascade:step`
-events and `symbolAt(slot)` expose the strip to the game layer. Built on the
-shared pool / ticker / event primitives, so it recycles instances and cleans up
-via `destroy()`.
+Add: `HorizontalReel` + `HorizontalReelBuilder` — a one-row, sideways reel for
+the "these symbols pay this round" banner above the reels. It follows the same
+spin contract as `ReelSet`: `spin()` starts it and returns a promise,
+`setResult(ids)` hands it the round's paying symbols (a flat `string[]`, one per
+visible cell) and triggers the stop, and the promise resolves on land.
+`skipSpin()`, `isSpinning`, and the `spin:start` / `spin:complete` events all
+mirror `ReelSet`. Travels `ltr` or `rtl` in either `scroll` (smooth) or
+`cascade` (stepped) mode. Built on the shared symbol pool / `TickerRef` /
+`EventEmitter` primitives, cleaned up via `destroy()`.

@@ -1,107 +1,94 @@
 ---
-title: "Paying-symbol marquee (horizontal reel)"
+title: "Paying-symbol banner reel (horizontal)"
 group: features
-oneLiner: A single sideways-scrolling strip above the reels announcing which
-  symbols pay this round — one row, ltr or rtl, smooth scroll or stepped
-  cascade. Not a matrix, not a spin lifecycle.
-description: The "these symbols pay this round" banner that sits above the reels,
-  built with HorizontalReel. One row, no spin lifecycle, no win lines. Travels
-  ltr or rtl in either scroll (smooth marquee) or cascade (one-cell stepping)
-  mode; setContent swaps the paying set live.
+oneLiner: A one-row sideways reel above the reels that spins and lands on the
+  round's paying symbols. Same spin()/setResult() contract as ReelSet — ltr or
+  rtl, smooth scroll or stepped cascade.
+description: The "these symbols pay this round" banner above the reels, built
+  with HorizontalReel. One row, oriented sideways, following the same
+  spin()/setResult() contract as ReelSet. Travels ltr or rtl in either scroll
+  (smooth) or cascade (one-cell stepping) mode.
 order: 26
 steps:
-  - new HorizontalReelBuilder().visibleCount(5).cellSize(64) lays out one row
-    plus an off-edge buffer
-  - .direction('rtl').scroll(1.3) picks a smooth right-to-left marquee; the lower
-    strip uses .cascade({ interval, duration }) for stepped reveals
-  - .content(ids) is the looping paying set; the strip cycles it forever and
-    recycles instances as they wrap
-  - .autoStart(false) builds it paused — the button toggles start() / stop(),
-    re-rolling the paying set (setContent) each time it spins up
+  - new HorizontalReelBuilder().visibleCount(5).cellSize(64).symbols(...).ticker(...)
+    builds a one-row reel, just like ReelSetBuilder
+  - .direction('rtl').scroll(26) picks a smooth right-to-left spin; the lower
+    strip uses .cascade({ interval, duration }) for a stepped reveal
+  - spin() starts it and returns a promise, exactly like ReelSet.spin()
+  - setResult(ids) hands it the round's paying symbols (one per visible cell) and
+    triggers the stop; await the spin() promise for the landed result
 apis:
   - HorizontalReel
   - HorizontalReelBuilder
-  - HorizontalReel.start
-  - HorizontalReel.stop
-  - HorizontalReel.setContent
+  - HorizontalReel.spin
+  - HorizontalReel.setResult
   - CardSymbol
 tags:
-  - marquee
+  - banner
   - horizontal
   - paytable
-  - banner
+  - reel
   - recent
 ---
 
 <RecipeDemo code="pay-symbol-marquee" height={260} />
 
-Both strips start **paused**. Press Run to spin them up; press it again to stop
-them dead in place — that toggle is just `start()` / `stop()`. Each spin-up
-re-rolls the paying set. There is **no spin lifecycle, no win lines, no grid**
-here — this is the banner *above* the reels, not the reels themselves.
+Press Spin. Both strips spin, then land on a fresh set of the round's paying
+symbols. This is the banner *above* the reels — one row, oriented sideways — not
+the reels themselves.
 
-## Spin and stop it
+## Same contract as `ReelSet`
 
-`HorizontalReel` has no start/spin/stop *phases* like the vertical reel — it's a
-marquee, so "spin" and "stop" are just motion on/off:
-
-```ts
-const strip = new HorizontalReelBuilder()
-  /* … */
-  .autoStart(false)   // build it paused (default is true — runs immediately)
-  .build();
-
-strip.start();        // spin — begin / resume motion (idempotent)
-strip.stop();         // stop — freeze in place (idempotent)
-strip.isRunning;      // current state, e.g. to drive a toggle button
-```
-
-This recipe's button is exactly that toggle:
-
-```ts
-onSpin: () => {
-  if (strip.isRunning) strip.stop();
-  else { strip.setContent(rollPayingSet()); strip.start(); }
-};
-```
-
-## A horizontal reel is its own small mechanism
-
-The engine's `Reel` wraps symbols on the **Y** axis and bakes that assumption in
-throughout (`ReelMotion`, the stop sequencer, buffer rows). A sideways banner is
-a different axis, so `HorizontalReel` is a focused mechanism of its own — one
-row, no spin lifecycle — built on the same shared primitives (the symbol pool,
-`TickerRef`, the typed `EventEmitter`) rather than a rotated reel.
+A banner reel is still a reel: you spin it, hand it the server's result, and it
+lands. `HorizontalReel` follows the exact `ReelSet` flow, one row wide:
 
 ```ts
 const strip = new HorizontalReelBuilder()
   .visibleCount(5).cellSize(64, 64, { gap: 8 })
-  .direction('rtl').scroll(1.3)
+  .direction('rtl').scroll(26)
   .symbols((r) => { for (const c of CARD_DECK) r.register(c.id, CardSymbol, c); })
-  .content(payingIds)          // the looping "these pay" sequence
   .ticker(app.ticker)
   .build();
 app.stage.addChild(strip.container);
+
+const spin = strip.spin();          // starts scrolling, returns a promise
+strip.setResult(await server.pay);  // ['A','K','Q','J','10'] — one per visible cell
+const { symbols } = await spin;     // resolves when it lands on exactly that
 ```
 
-## Two motions: scroll and cascade
+`spin()` / `setResult(ids)` / `skipSpin()` / `isSpinning` and the `spin:start` /
+`spin:complete` events all mirror `ReelSet`. The only shape difference is that
+`setResult` takes a flat `string[]` of `visibleCount` ids (one row) instead of a
+`ColumnTarget[]` grid.
+
+## Why it's a separate class
+
+The engine's `Reel` wraps symbols on the **Y** axis and bakes that in throughout
+(`ReelMotion`, the stop sequencer, buffer rows). A sideways reel is a different
+axis, so `HorizontalReel` is a focused mechanism on the same shared primitives
+(the symbol pool, `TickerRef`, the typed `EventEmitter`) — it just exposes the
+familiar reel API on top.
+
+## Two spin motions: scroll and cascade
 
 | Mode | Call | Feel |
 |---|---|---|
-| `scroll` | `.scroll(pxPerFrame)` | smooth, continuous marquee (default) |
-| `cascade` | `.cascade({ interval, duration })` | hold, ease one cell over, repeat — the tumble reveal on its side |
+| `scroll` | `.scroll(pxPerFrame)` | smooth, decelerating spin (default) |
+| `cascade` | `.cascade({ interval, duration })` | stepped one-cell reveal — the tumble on its side |
 
-Both honour `direction`: `rtl` feeds from the right, `ltr` from the left.
+Both honour `direction`: `rtl` scrolls leftward, `ltr` rightward, and `setResult`
+lands the same symbols either way.
 
-## The live surface
+## The surface
 
 | Member | Use |
 |---|---|
-| `setContent(ids)` | swap the paying set for the next round — new symbols fade in as the strip recycles |
-| `setDirection('ltr' \| 'rtl')` | flip travel live; the feed edge swaps |
-| `start()` / `stop()` | freeze / resume the strip |
+| `spin()` | start spinning; resolves with the landed `{ symbols }` |
+| `setResult(ids)` | the round's paying symbols, one per visible cell; triggers the stop |
+| `skipSpin()` | slam straight to the pending result |
+| `isSpinning` | lifecycle state |
 | `symbolAt(slot)` | the live `ReelSymbol` in visible slot `slot`, left→right |
-| `events` | `symbol:entered ({ id, edge })` as each new tile wraps in; `cascade:step` per step |
+| `events` | `spin:start`, `spin:complete ({ symbols })` |
 | `destroy()` | drops the ticker subscription and pooled instances |
 
 ## Related

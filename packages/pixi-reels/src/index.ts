@@ -126,6 +126,7 @@ export type {
   HorizontalCascadeOptions,
   HorizontalReelConfig,
   HorizontalReelEvents,
+  HorizontalSpinResult,
 } from './horizontal/HorizontalReelTypes.js';
 
 // Wins (symbol-highlight presenter. no line drawing, events-driven)
