@@ -115,6 +115,18 @@ export type {
   HwCellSizeOptions,
 } from './board/HwTypes.js';
 
+// Horizontal reel — a single sideways-scrolling strip (the "these symbols pay
+// this round" banner above the reels). Not a matrix, not a spin lifecycle; its
+// own small mechanism on the shared pool / ticker / event primitives.
+export { HorizontalReel } from './horizontal/HorizontalReel.js';
+export { HorizontalReelBuilder } from './horizontal/HorizontalReelBuilder.js';
+export type {
+  HorizontalDirection,
+  HorizontalCascadeTiming,
+  HorizontalReelConfig,
+  HorizontalReelEvents,
+} from './horizontal/HorizontalReelTypes.js';
+
 // Wins (symbol-highlight presenter. no line drawing, events-driven)
 export { WinPresenter } from './wins/WinPresenter.js';
 export type { WinPresenterOptions, WinSymbolAnim } from './wins/WinPresenter.js';
