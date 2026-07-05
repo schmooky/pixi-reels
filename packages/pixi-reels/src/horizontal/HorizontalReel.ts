@@ -91,7 +91,7 @@ export class HorizontalReel implements Disposable {
 
   // Cascade state.
   private _cascadeT = 0;
-  private _cascadeRemoving: ReelSymbol[] = []; // winners being destroyed
+  private _cascadeRemoving: { inst: ReelSymbol; baseX: number; baseY: number }[] = []; // winners imploding
   private _cascadeMoving: CascadeMove[] = []; // survivors collapsing + new symbols refilling
   private _cascadeFinalWindow: ReelSymbol[] = []; // the window instances after the tumble
   private _cascadeWinners: number[] = [];
@@ -265,7 +265,10 @@ export class HorizontalReel implements Disposable {
 
     const winnerSet = new Set(winners);
     const window = this._slots.slice(1, 1 + this.visibleCount); // current visible instances
-    const removed = winners.map((w) => window[w]);
+    const removed = winners.map((w) => {
+      const inst = window[w];
+      return { inst, baseX: inst.view.x, baseY: inst.view.y }; // for center-scaled implode
+    });
     const survivors = window.filter((_, i) => !winnerSet.has(i)); // kept, in order
 
     // New symbols enter from the feed edge; acquire them now.
@@ -322,7 +325,7 @@ export class HorizontalReel implements Disposable {
     // Destroy any cascade-in-flight instances not yet folded into _slots
     // (removing winners + incoming new symbols). destroy() is idempotent, so
     // survivors already in _slots are safe to hit again below.
-    for (const c of this._cascadeRemoving) if (!c.isDestroyed) c.destroy();
+    for (const c of this._cascadeRemoving) if (!c.inst.isDestroyed) c.inst.destroy();
     for (const m of this._cascadeMoving) if (!m.inst.isDestroyed) m.inst.destroy();
     this._cascadeRemoving = [];
     this._cascadeMoving = [];
@@ -453,11 +456,20 @@ export class HorizontalReel implements Disposable {
     this._cascadeT += deltaMS;
     const fall = this._cfg.cascade.fall;
     const drop = this._cfg.cascade.drop;
-    // Phase 1: winners are removed (shrink + fade out).
+    // Phase 1: winners implode — a brief pop, then collapse to nothing, scaled
+    // about the CELL CENTRE (position-compensated so the symbol shrinks in place
+    // instead of into its top-left corner) with a fade. Mirrors the feel of the
+    // engine's ReelSymbol.playDestroy.
     const rt = Math.min(1, this._cascadeT / fall);
-    for (const out of this._cascadeRemoving) {
-      out.view.alpha = 1 - rt;
-      out.view.scale.set(1 - 0.4 * rt);
+    const pop = 0.18;
+    const s = rt < pop ? 1 + 0.12 * (rt / pop) : 1.12 * (1 - ((rt - pop) / (1 - pop)) ** 2);
+    const a = rt < pop ? 1 : 1 - (rt - pop) / (1 - pop);
+    for (const rem of this._cascadeRemoving) {
+      const view = rem.inst.view;
+      view.scale.set(Math.max(s, 0));
+      view.alpha = Math.max(a, 0);
+      view.x = rem.baseX + (this._cellW / 2) * (1 - s);
+      view.y = rem.baseY + (this._cellH / 2) * (1 - s);
     }
     // Phase 2: survivors collapse into the gaps and new symbols slide in from
     // the feed edge, both easing to their resting slots.
@@ -470,10 +482,10 @@ export class HorizontalReel implements Disposable {
   }
 
   private _finishCascade(): void {
-    // Winners are gone.
-    for (const out of this._cascadeRemoving) {
-      this.container.removeChild(out.view);
-      this._factory.release(out);
+    // Winners are gone (release resets their view scale/alpha for pool reuse).
+    for (const rem of this._cascadeRemoving) {
+      this.container.removeChild(rem.inst.view);
+      this._factory.release(rem.inst);
     }
     // Snap the collapsed + refilled window to rest and rebuild the conveyor
     // (buffers at either end are untouched).
