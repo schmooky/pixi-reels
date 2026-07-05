@@ -31,15 +31,25 @@ interface CascadeMove {
  *   - `spin()` starts it and returns a promise.
  *   - `setResult(ids)` hands it the round's paying symbols (one per visible
  *     cell) and triggers the stop; the `spin()` promise resolves on land.
- *   - `cascade(winners, newIds?)` is the tumble: the winning cells **fall
- *     away** and replacements **drop in**, exactly like the main reels'
- *     cascade. Pass every cell for a full "they all drop", or just the cells
- *     that were part of a winning combination.
+ *   - `cascade(winners, newIds?)` is the real tumble: the winning cells are
+ *     **removed**, the survivors **collapse** to close the gaps, and new symbols
+ *     **slide in from the feed edge**, exactly like the main reels' cascade.
+ *     Pass every cell for a full "they all drop", or just the winning cells.
  *
  * The engine's {@link Reel} wraps on the Y axis and bakes that in throughout, so
  * this is its own small mechanism on the shared primitives (the
  * {@link SymbolFactory} pool, {@link TickerRef}, the typed {@link EventEmitter})
  * rather than a rotated reel.
+ *
+ * **Known trade-off / future direction.** This class deliberately *mirrors* the
+ * {@link ReelSet} API rather than being one. That mirror is technical debt: it
+ * re-implements the spin lifecycle and a parallel `cascade` next to
+ * `ReelSet.runCascade`/`refill`, and it does not inherit anticipation, speed
+ * modes, holds, pins, the spotlight or debug. The intended fix is to give
+ * {@link Reel}/`ReelMotion`/`ReelViewport` an **orientation axis** so ONE reel
+ * does vertical or horizontal, and this class retires in favour of a 1-reel
+ * horizontal `ReelSet`. Deferred because that touches core motion and risks
+ * regressing the vertical path. See the "Horizontal reels" row in ROADMAP.md.
  *
  * ```ts
  * const spin = strip.spin();

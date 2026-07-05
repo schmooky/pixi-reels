@@ -28,7 +28,7 @@ self-contained (usually a recipe + MDX page).
 | Roll-up (symbols rise from below) | [todo] | minor | p3 | New `SpinningMode`. |
 | Expanding reels at runtime (add rows) | [todo] | minor | p3 | Reel must support live resize. |
 | Split symbols (two symbols per cell) | [todo] | minor | p2 | Cell-fraction occupancy. |
-| Horizontal reels | [todo] | **major** | p2 | Orientation is hardcoded to vertical. |
+| Horizontal reels | [partial] | **major** | p2 | `HorizontalReel` ships a standalone 1-row banner reel (minor, additive) that mirrors the `ReelSet` spin/`setResult`/`cascade` API. Real fix = generalize `Reel`/`ReelMotion`/`ReelViewport` with an **orientation axis** so ONE reel does vertical or horizontal and `HorizontalReel` retires (a 1-reel horizontal `ReelSet`), reusing anticipation/tumble/spotlight/debug for real instead of a mirror. **Deferred**: core-motion refactor, high regression risk to the vertical path. |
 | MultiWays (variable `visibleRows` per reel) | [done] | **major** | p1 | Shipped via `.multiways()` + AdjustPhase (ADR 012). |
 | Cluster grid (WxH, no reel concept) | [todo] | **major** | p1 | New non-reel mode + viewport. Out of scope (ADR 007). |
 | Colossal / big symbols (2x2, 3x3 overlay) | [done] | **major** | p1 | Shipped via registration + OCCUPIED coordinator (ADR 013). |
