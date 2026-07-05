@@ -1,65 +1,88 @@
 ---
 title: "Paying-symbol banner reel (horizontal)"
 group: features
-oneLiner: A one-row sideways reel above the reels that spins and lands on the
-  round's paying symbols. Same spin()/setResult() contract as ReelSet — ltr or
-  rtl, smooth scroll or stepped cascade.
+oneLiner: A single one-row reel above the reels that spins, lands, and cascades.
+  Same spin() / setResult(ColumnTarget[]) / SpinResult contract as ReelSet — one
+  column — plus a real cascade that removes winners, collapses survivors, and
+  refills from the feed side.
 description: The "these symbols pay this round" banner above the reels, built
-  with HorizontalReel. One row, oriented sideways, following the same
-  spin()/setResult() contract as ReelSet. Travels ltr or rtl in either scroll
-  (smooth) or cascade (one-cell stepping) mode.
+  with HorizontalReel — a single sideways reel. Same spin()/setResult()/SpinResult
+  contract as ReelSet (one ColumnTarget), plus a real cascade() tumble that
+  removes the winning cells, collapses the survivors, and refills from the feed side.
 order: 26
 steps:
-  - new HorizontalReelBuilder().visibleCount(5).cellSize(64).symbols(...).ticker(...)
-    builds a one-row reel, just like ReelSetBuilder
-  - .direction('rtl').scroll(26) picks a smooth right-to-left spin; the lower
-    strip uses .cascade({ interval, duration }) for a stepped reveal
-  - spin() starts it and returns a promise, exactly like ReelSet.spin()
-  - setResult(ids) hands it the round's paying symbols (one per visible cell) and
-    triggers the stop; await the spin() promise for the landed result
+  - new HorizontalReelBuilder().visibleCount(5).cellSize(76).symbols(...).ticker(...)
+    builds one sideways reel, just like ReelSetBuilder
+  - spin() starts it and returns a promise — exactly like ReelSet.spin()
+  - setResult(target) takes the same ColumnTarget[] as ReelSet; this reel is one
+    column, so pass one entry holding visibleCount ids
+  - await the spin() promise for the SpinResult, then cascade(winners, newIds) —
+    a real tumble that removes winners, collapses survivors, refills from the feed side
 apis:
   - HorizontalReel
   - HorizontalReelBuilder
   - HorizontalReel.spin
   - HorizontalReel.setResult
-  - CardSymbol
+  - HorizontalReel.cascade
 tags:
   - banner
   - horizontal
   - paytable
-  - reel
+  - cascade
   - recent
 ---
 
 <RecipeDemo code="pay-symbol-marquee" height={260} />
 
-Press Spin. Both strips spin, then land on a fresh set of the round's paying
-symbols. This is the banner *above* the reels — one row, oriented sideways — not
-the reels themselves.
+Press Spin. The reel spins, lands on the round's paying symbols, then a random
+winning combination **cascades** — those symbols are removed, the survivors
+collapse to close the gaps, and new symbols slide in from the feed side. It's a
+single row above the reels, not the reels themselves.
 
-## Same contract as `ReelSet`
+## Same contract as `ReelSet` — it's one reel
 
-A banner reel is still a reel: you spin it, hand it the server's result, and it
-lands. `HorizontalReel` follows the exact `ReelSet` flow, one row wide:
+A banner reel is still a reel. `HorizontalReel` reuses the engine's own types, so
+there's nothing new to learn and nothing incompatible to trip over:
 
 ```ts
-const strip = new HorizontalReelBuilder()
-  .visibleCount(5).cellSize(64, 64, { gap: 8 })
-  .direction('rtl').scroll(26)
+const reel = new HorizontalReelBuilder()
+  .visibleCount(5).cellSize(76, 76, { gap: 8 })
   .symbols((r) => { for (const c of CARD_DECK) r.register(c.id, CardSymbol, c); })
   .ticker(app.ticker)
   .build();
-app.stage.addChild(strip.container);
+app.stage.addChild(reel.container);
 
-const spin = strip.spin();          // starts scrolling, returns a promise
-strip.setResult(await server.pay);  // ['A','K','Q','J','10'] — one per visible cell
-const { symbols } = await spin;     // resolves when it lands on exactly that
+const spin = reel.spin();                 // starts scrolling, returns a promise
+reel.setResult([{ visible: await server.pay }]); // ColumnTarget[] — this reel is one column
+const { symbols } = await spin;           // SpinResult: symbols is [[...row]]
 ```
 
-`spin()` / `setResult(ids)` / `skipSpin()` / `isSpinning` and the `spin:start` /
-`spin:complete` events all mirror `ReelSet`. The only shape difference is that
-`setResult` takes a flat `string[]` of `visibleCount` ids (one row) instead of a
-`ColumnTarget[]` grid.
+`setResult` takes the **same `ColumnTarget[]`** as `ReelSet.setResult` — this reel
+is a single column, so you pass exactly one entry whose `visible` holds
+`visibleCount` ids. `spin()` resolves the engine's **`SpinResult`** (`symbols`,
+`wasSkipped`, `duration`); for one reel `symbols` is a one-column grid `[[...]]`.
+`skipSpin()`, `isSpinning`, and `spin:start` / `spin:complete` all match `ReelSet`.
+
+## Cascade — a real tumble, one row wide
+
+When a symbol on the main reels was part of a winning combination, cascade the
+matching cells here. It's the real tumble mechanic, not a swap-in-place:
+
+1. the winning symbols are **removed** (they poof out);
+2. the survivors **collapse** toward the settle edge to close the gaps, keeping
+   their order;
+3. new symbols **slide in from the feed edge** — the same side the spin brings
+   symbols from (`rtl` from the right, `ltr` from the left) — to refill.
+
+```ts
+// main reel reports cells 0 and 2 were in a win:
+await reel.cascade([0, 2], ['WILD', 'K']); // 0 & 2 removed, survivors collapse, WILD/K slide in
+// pass every index for a full "they all drop":
+await reel.cascade([0, 1, 2, 3, 4]);       // newIds default to random
+```
+
+`cascade(winners, newIds?)` resolves when the tumble settles and fires
+`cascade:complete` with the winners and the collapsed + refilled window.
 
 ## Why it's a separate class
 
@@ -69,26 +92,17 @@ axis, so `HorizontalReel` is a focused mechanism on the same shared primitives
 (the symbol pool, `TickerRef`, the typed `EventEmitter`) — it just exposes the
 familiar reel API on top.
 
-## Two spin motions: scroll and cascade
-
-| Mode | Call | Feel |
-|---|---|---|
-| `scroll` | `.scroll(pxPerFrame)` | smooth, decelerating spin (default) |
-| `cascade` | `.cascade({ interval, duration })` | stepped one-cell reveal — the tumble on its side |
-
-Both honour `direction`: `rtl` scrolls leftward, `ltr` rightward, and `setResult`
-lands the same symbols either way.
-
 ## The surface
 
 | Member | Use |
 |---|---|
-| `spin()` | start spinning; resolves with the landed `{ symbols }` |
-| `setResult(ids)` | the round's paying symbols, one per visible cell; triggers the stop |
+| `spin()` | start spinning; resolves with the `SpinResult` |
+| `setResult(target)` | `ColumnTarget[]` of length 1; triggers the stop |
+| `cascade(winners, newIds?)` | real tumble: remove winners, collapse survivors, refill from the feed side |
 | `skipSpin()` | slam straight to the pending result |
-| `isSpinning` | lifecycle state |
+| `isSpinning` / `isCascading` | lifecycle state |
 | `symbolAt(slot)` | the live `ReelSymbol` in visible slot `slot`, left→right |
-| `events` | `spin:start`, `spin:complete ({ symbols })` |
+| `events` | `spin:start`, `spin:complete (SpinResult)`, `cascade:complete` |
 | `destroy()` | drops the ticker subscription and pooled instances |
 
 ## Related

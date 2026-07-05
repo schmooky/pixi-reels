@@ -1,28 +1,17 @@
 import type { Graphics, Ticker } from 'pixi.js';
 import type { SymbolRegistry } from '../symbols/SymbolRegistry.js';
+import type { ColumnTarget } from '../frame/ColumnTarget.js';
+import type { SpinResult } from '../events/ReelEvents.js';
 
-/** Travel direction of the strip. `rtl` scrolls leftward, `ltr` rightward. */
+/** Travel direction of the spin. `rtl` scrolls leftward, `ltr` rightward. */
 export type HorizontalDirection = 'ltr' | 'rtl';
 
-/**
- * How the strip moves while spinning.
- *   - `scroll` — smooth, continuous pixel motion (a classic marquee blur).
- *   - `cascade` — discrete stepping: ease one cell over, repeat.
- */
-export type HorizontalMode = 'scroll' | 'cascade';
-
-/** Cascade-mode timing. */
-export interface HorizontalCascadeOptions {
-  /** Milliseconds the strip rests between steps. Default 90. */
-  interval?: number;
-  /** Milliseconds each one-cell shift takes. Default 220. */
-  duration?: number;
-}
-
-/** The landed result of a spin — mirrors `ReelSet`'s `SpinResult`. */
-export interface HorizontalSpinResult {
-  /** The visible symbol ids, left-to-right, after the strip landed. */
-  symbols: string[];
+/** Drop/fall timing for {@link HorizontalReel.cascade}. */
+export interface HorizontalCascadeTiming {
+  /** Milliseconds a winning symbol takes to fall away. Default 240. */
+  fall?: number;
+  /** Milliseconds a replacement takes to drop into the empty cell. Default 260. */
+  drop?: number;
 }
 
 /** Internal config produced by {@link HorizontalReelBuilder.build}. */
@@ -32,22 +21,26 @@ export interface HorizontalReelConfig {
   cellHeight: number;
   gap: number;
   direction: HorizontalDirection;
-  mode: HorizontalMode;
-  /** Pixels per frame while spinning in `scroll` mode. */
+  /** Pixels per frame while spinning. */
   speed: number;
-  cascade: Required<HorizontalCascadeOptions>;
-  /** Visible symbols shown at rest before the first spin. */
-  initialResult: string[];
+  cascade: Required<HorizontalCascadeTiming>;
+  /** Rest frame shown before the first spin — one `ColumnTarget` (this reel). */
+  initialFrame: ColumnTarget[];
   configurator: (registry: SymbolRegistry) => void;
   chrome: ((g: Graphics, width: number, height: number) => void) | null;
   ticker: Ticker;
   rng: (() => number) | null;
 }
 
-/** Typed events emitted by {@link HorizontalReel} — mirrors the `ReelSet` names. */
+/** Typed events emitted by {@link HorizontalReel} — mirrors the `ReelSet` names + shapes. */
 export type HorizontalReelEvents = {
-  /** The strip started spinning. */
+  /** The reel started spinning. */
   'spin:start': [];
-  /** The strip landed. Payload is the same result the `spin()` promise resolves with. */
-  'spin:complete': [result: HorizontalSpinResult];
+  /**
+   * The reel landed. Payload is the engine's {@link SpinResult}; for this
+   * single reel `symbols` is a one-column grid (`[[...visible]]`).
+   */
+  'spin:complete': [result: SpinResult];
+  /** A cascade finished: `winners` cells fell away and were replaced. */
+  'cascade:complete': [{ winners: number[]; symbols: string[] }];
 };

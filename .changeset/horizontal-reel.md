@@ -2,12 +2,14 @@
 "pixi-reels": minor
 ---
 
-Add: `HorizontalReel` + `HorizontalReelBuilder` — a one-row, sideways reel for
-the "these symbols pay this round" banner above the reels. It follows the same
-spin contract as `ReelSet`: `spin()` starts it and returns a promise,
-`setResult(ids)` hands it the round's paying symbols (a flat `string[]`, one per
-visible cell) and triggers the stop, and the promise resolves on land.
-`skipSpin()`, `isSpinning`, and the `spin:start` / `spin:complete` events all
-mirror `ReelSet`. Travels `ltr` or `rtl` in either `scroll` (smooth) or
-`cascade` (stepped) mode. Built on the shared symbol pool / `TickerRef` /
-`EventEmitter` primitives, cleaned up via `destroy()`.
+Add: `HorizontalReel` + `HorizontalReelBuilder` — a single one-row, sideways reel
+for the "these symbols pay this round" banner above the reels. It reuses the
+engine's own contract, so there is nothing incompatible to learn: `spin()`
+returns a promise, `setResult(symbols)` takes the same `ColumnTarget[]` as
+`ReelSet` (one entry — this reel is a single column), and the promise resolves
+with the engine's `SpinResult`. `skipSpin()`, `isSpinning`, and the `spin:start`
+/ `spin:complete` events all mirror `ReelSet`. `cascade(winners, newIds?)` runs
+a real tumble one row wide: the winning symbols are removed, the survivors
+collapse to close the gaps, and new symbols slide in from the feed side to
+refill. Built on the shared symbol pool / `TickerRef` / `EventEmitter`
+primitives, cleaned up via `destroy()`.

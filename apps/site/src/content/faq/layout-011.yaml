@@ -1,15 +1,15 @@
 id: layout-011
 group: layout
-question: How do I build the horizontal strip above the reels that shows which
+question: How do I build the horizontal reel above the reels that shows which
   symbols pay this round?
-answer: Use `HorizontalReelBuilder` — it builds a `HorizontalReel`, a one-row reel
-  oriented sideways. Register your symbols and give it a ticker, exactly like
-  `ReelSetBuilder`. It follows the same spin contract as `ReelSet`: `spin()`
-  starts it and returns a promise, `setResult(ids)` hands it the round's paying
-  symbols (a flat array, one per visible cell) and triggers the stop, and the
-  `spin()` promise resolves once it lands. Pick the motion with `.scroll(px)` or
-  `.cascade({ interval, duration })` and the travel with `.direction('ltr' |
-  'rtl')`. Add `strip.container` to the stage above your `ReelSet`.
+answer: Use `HorizontalReelBuilder` — it builds a `HorizontalReel`, a single
+  one-row reel oriented sideways. Register your symbols and give it a ticker,
+  exactly like `ReelSetBuilder`. It follows the same spin contract as `ReelSet`:
+  `spin()` starts it and returns a promise, `setResult([{ visible: ids }])` takes
+  the same `ColumnTarget[]` (this reel is one column, so pass one entry with
+  `visibleCount` ids) and triggers the stop, and the `spin()` promise resolves
+  with the engine's `SpinResult`. Add `reel.container` to the stage above your
+  `ReelSet`.
 links:
   - label: "Recipe: Paying-symbol banner reel (horizontal)"
     href: /recipes/pay-symbol-marquee/

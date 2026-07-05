@@ -122,11 +122,9 @@ export { HorizontalReel } from './horizontal/HorizontalReel.js';
 export { HorizontalReelBuilder } from './horizontal/HorizontalReelBuilder.js';
 export type {
   HorizontalDirection,
-  HorizontalMode,
-  HorizontalCascadeOptions,
+  HorizontalCascadeTiming,
   HorizontalReelConfig,
   HorizontalReelEvents,
-  HorizontalSpinResult,
 } from './horizontal/HorizontalReelTypes.js';
 
 // Wins (symbol-highlight presenter. no line drawing, events-driven)
