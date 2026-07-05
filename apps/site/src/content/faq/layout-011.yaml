@@ -1,0 +1,17 @@
+id: layout-011
+group: layout
+question: How do I build the horizontal strip above the reels that shows which
+  symbols pay this round?
+answer: Use `HorizontalReelBuilder` — it builds a `HorizontalReel`, a single
+  sideways-scrolling row (not a matrix, no spin lifecycle). Register your symbols
+  and pass the paying set to `.content(ids)`; it loops them forever. Pick the
+  motion with `.scroll(pxPerFrame)` for a smooth marquee or `.cascade({ interval,
+  duration })` for stepped one-cell reveals, and `.direction('ltr' | 'rtl')` for
+  travel. Add `strip.container` to the stage above your `ReelSet`. It's its own
+  mechanism rather than a rotated `Reel` because the engine's reel wraps on the
+  Y axis; the horizontal strip is built on the same shared pool / ticker / event
+  primitives.
+links:
+  - label: "Recipe: Paying-symbol marquee (horizontal reel)"
+    href: /recipes/pay-symbol-marquee/
+recipe: pay-symbol-marquee

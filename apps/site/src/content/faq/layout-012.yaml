@@ -1,0 +1,14 @@
+id: layout-012
+group: layout
+question: Can the paying-symbol strip change its symbols mid-round, or run
+  right-to-left?
+answer: Yes. `HorizontalReel.setContent(ids)` swaps the paying set live — symbols
+  already on the strip keep scrolling and the new set fades in as they recycle,
+  so it never snaps. `setDirection('ltr' | 'rtl')` flips travel at runtime, and
+  `start()` / `stop()` freeze or resume it. Listen to the `symbol:entered` event
+  ({ id, edge }) to react as each new tile wraps into view, or `symbolAt(slot)`
+  to read the live symbol in a visible slot.
+links:
+  - label: "Recipe: Paying-symbol marquee (horizontal reel)"
+    href: /recipes/pay-symbol-marquee/
+recipe: pay-symbol-marquee

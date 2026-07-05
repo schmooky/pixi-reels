@@ -11,6 +11,7 @@ import {
   RectMaskStrategy, SharedRectMaskStrategy,
   type ReelSet, ReelSymbol,
   EmptySymbol, HoldAndWinBuilder, BoardGrid,
+  HorizontalReel, HorizontalReelBuilder,
 } from 'pixi-reels';
 import { SpineReelSymbol } from 'pixi-reels/spine';
 import { Spine } from '@esotericsoftware/spine-pixi-v8';
@@ -189,6 +190,7 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
           'CoinSymbol', 'COIN_TIER', 'COIN_FEATURE', 'COIN_MYSTERY', 'COIN_TRIGGER',
           'coinValue', 'coinMultiplier', 'drawCoin',
           'HoldAndWinBuilder', 'BoardGrid',
+          'HorizontalReel', 'HorizontalReelBuilder',
           'GoldCoinSymbol', 'coinWaves', 'bezierFly', 'settleMoneyFace', 'freezeAtEnd', 'fitText',
           'SpineReelSymbol', 'Spine', 'loadGeneratedSpines', 'buildSpineMap',
           'loadHoldAndWinSprites',
@@ -208,6 +210,7 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
           CoinSymbol, COIN_TIER, COIN_FEATURE, COIN_MYSTERY, COIN_TRIGGER,
           coinValue, coinMultiplier, drawCoin,
           HoldAndWinBuilder, BoardGrid,
+          HorizontalReel, HorizontalReelBuilder,
           GoldCoinSymbol, coinWaves, bezierFly, settleMoneyFace, freezeAtEnd, fitText,
           SpineReelSymbol, Spine, loadGeneratedSpines, buildSpineMap,
           loadHoldAndWinSprites,

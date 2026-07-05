@@ -1,0 +1,83 @@
+---
+title: "Paying-symbol marquee (horizontal reel)"
+group: features
+oneLiner: A single sideways-scrolling strip above the reels announcing which
+  symbols pay this round — one row, ltr or rtl, smooth scroll or stepped
+  cascade. Not a matrix, not a spin lifecycle.
+description: The "these symbols pay this round" banner that sits above the reels,
+  built with HorizontalReel. One row, no spin lifecycle, no win lines. Travels
+  ltr or rtl in either scroll (smooth marquee) or cascade (one-cell stepping)
+  mode; setContent swaps the paying set live.
+order: 26
+steps:
+  - new HorizontalReelBuilder().visibleCount(5).cellSize(64) lays out one row
+    plus an off-edge buffer
+  - .direction('rtl').scroll(1.3) picks a smooth right-to-left marquee; the lower
+    strip uses .cascade({ interval, duration }) for stepped reveals
+  - .content(ids) is the looping paying set; the strip cycles it forever and
+    recycles instances as they wrap
+  - Press Run — setContent(next) swaps the paying set and setDirection flips
+    travel, live, with no rebuild
+apis:
+  - HorizontalReel
+  - HorizontalReelBuilder
+  - HorizontalReel.setContent
+  - HorizontalReel.setDirection
+  - CardSymbol
+tags:
+  - marquee
+  - horizontal
+  - paytable
+  - banner
+  - recent
+---
+
+<RecipeDemo code="pay-symbol-marquee" height={260} />
+
+Press Run. The paying set re-rolls on both strips, and the top marquee flips
+travel direction. There is **no spin, no win lines, no grid** here — this is the
+banner *above* the reels, not the reels themselves.
+
+## A horizontal reel is its own small mechanism
+
+The engine's `Reel` wraps symbols on the **Y** axis and bakes that assumption in
+throughout (`ReelMotion`, the stop sequencer, buffer rows). A sideways banner is
+a different axis, so `HorizontalReel` is a focused mechanism of its own — one
+row, no spin lifecycle — built on the same shared primitives (the symbol pool,
+`TickerRef`, the typed `EventEmitter`) rather than a rotated reel.
+
+```ts
+const strip = new HorizontalReelBuilder()
+  .visibleCount(5).cellSize(64, 64, { gap: 8 })
+  .direction('rtl').scroll(1.3)
+  .symbols((r) => { for (const c of CARD_DECK) r.register(c.id, CardSymbol, c); })
+  .content(payingIds)          // the looping "these pay" sequence
+  .ticker(app.ticker)
+  .build();
+app.stage.addChild(strip.container);
+```
+
+## Two motions: scroll and cascade
+
+| Mode | Call | Feel |
+|---|---|---|
+| `scroll` | `.scroll(pxPerFrame)` | smooth, continuous marquee (default) |
+| `cascade` | `.cascade({ interval, duration })` | hold, ease one cell over, repeat — the tumble reveal on its side |
+
+Both honour `direction`: `rtl` feeds from the right, `ltr` from the left.
+
+## The live surface
+
+| Member | Use |
+|---|---|
+| `setContent(ids)` | swap the paying set for the next round — new symbols fade in as the strip recycles |
+| `setDirection('ltr' \| 'rtl')` | flip travel live; the feed edge swaps |
+| `start()` / `stop()` | freeze / resume the strip |
+| `symbolAt(slot)` | the live `ReelSymbol` in visible slot `slot`, left→right |
+| `events` | `symbol:entered ({ id, edge })` as each new tile wraps in; `cascade:step` per step |
+| `destroy()` | drops the ticker subscription and pooled instances |
+
+## Related
+
+- [Board primitive: build your own board](/recipes/board-grid-reveal/) — the other
+  "small mechanism on shared primitives" in the library
