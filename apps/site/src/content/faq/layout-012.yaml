@@ -2,15 +2,17 @@ id: layout-012
 group: layout
 question: Can the horizontal banner reel cascade like the main reels when a
   symbol was part of a win?
-answer: Yes — `HorizontalReel.cascade(winners, newIds?)` runs the real tumble
+answer: >-
+  Yes — `HorizontalReel.cascade(winners, newIds?)` runs the real tumble
   mechanic, one row wide. Pass the visible cell indices that were part of a
-  winning combination; those symbols are removed, the surviving symbols collapse
-  toward the settle edge to close the gaps (keeping their order), and new symbols
-  slide in from the feed edge — the same side the spin brings symbols from (rtl
-  from the right, ltr from the left) — to refill. Pass every index for a full
-  "they all drop". It resolves when the tumble settles and fires a
-  `cascade:complete` event. The spin side (`spin()`, `setResult` with a length-1
-  `ColumnTarget[]`, `skipSpin()`, `SpinResult`) mirrors `ReelSet` exactly.
+  winning combination; those symbols are removed, the surviving symbols
+  collapse toward the settle edge to close the gaps (keeping their order), and
+  new symbols slide in from the feed edge — the same side the spin brings
+  symbols from (rtl from the right, ltr from the left) — to refill. Pass every
+  index for a full "they all drop". It resolves when the tumble settles and
+  fires a `cascade:complete` event. The spin side (`spin()`, `setResult` with a
+  length-1 `ColumnTarget[]`, `skipSpin()`, `SpinResult`) mirrors `ReelSet`
+  exactly.
 links:
   - label: "Recipe: Paying-symbol banner reel (horizontal)"
     href: /recipes/pay-symbol-marquee/
