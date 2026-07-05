@@ -16,13 +16,14 @@ steps:
     strip uses .cascade({ interval, duration }) for stepped reveals
   - .content(ids) is the looping paying set; the strip cycles it forever and
     recycles instances as they wrap
-  - Press Run — setContent(next) swaps the paying set and setDirection flips
-    travel, live, with no rebuild
+  - .autoStart(false) builds it paused — the button toggles start() / stop(),
+    re-rolling the paying set (setContent) each time it spins up
 apis:
   - HorizontalReel
   - HorizontalReelBuilder
+  - HorizontalReel.start
+  - HorizontalReel.stop
   - HorizontalReel.setContent
-  - HorizontalReel.setDirection
   - CardSymbol
 tags:
   - marquee
@@ -34,9 +35,35 @@ tags:
 
 <RecipeDemo code="pay-symbol-marquee" height={260} />
 
-Press Run. The paying set re-rolls on both strips, and the top marquee flips
-travel direction. There is **no spin, no win lines, no grid** here — this is the
-banner *above* the reels, not the reels themselves.
+Both strips start **paused**. Press Run to spin them up; press it again to stop
+them dead in place — that toggle is just `start()` / `stop()`. Each spin-up
+re-rolls the paying set. There is **no spin lifecycle, no win lines, no grid**
+here — this is the banner *above* the reels, not the reels themselves.
+
+## Spin and stop it
+
+`HorizontalReel` has no start/spin/stop *phases* like the vertical reel — it's a
+marquee, so "spin" and "stop" are just motion on/off:
+
+```ts
+const strip = new HorizontalReelBuilder()
+  /* … */
+  .autoStart(false)   // build it paused (default is true — runs immediately)
+  .build();
+
+strip.start();        // spin — begin / resume motion (idempotent)
+strip.stop();         // stop — freeze in place (idempotent)
+strip.isRunning;      // current state, e.g. to drive a toggle button
+```
+
+This recipe's button is exactly that toggle:
+
+```ts
+onSpin: () => {
+  if (strip.isRunning) strip.stop();
+  else { strip.setContent(rollPayingSet()); strip.start(); }
+};
+```
 
 ## A horizontal reel is its own small mechanism
 
