@@ -76,7 +76,8 @@ const TENSION_EXTRA_MS = 1100;
  * ```
  */
 export class HoldAndWinBoard<TData = unknown> implements Disposable {
-  readonly events = new EventEmitter<HoldAndWinBoardEvents<TData>>();
+  readonly events: EventEmitter<HoldAndWinBoardEvents<TData>> =
+    new EventEmitter<HoldAndWinBoardEvents<TData>>();
   readonly cols: number;
   readonly rows: number;
 

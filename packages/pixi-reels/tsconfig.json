@@ -2,7 +2,11 @@
   "extends": "../../tsconfig.json",
   "compilerOptions": {
     "outDir": "./dist",
-    "rootDir": "./src"
+    "rootDir": "./src",
+    // Every exported symbol must carry an explicit, locally-inferable type.
+    // Guarantees the published .d.ts never depends on cross-file inference and
+    // keeps the door open for a faster (swc/oxc/rolldown) declaration emitter.
+    "isolatedDeclarations": true
   },
   "include": ["src/**/*.ts"],
   "exclude": ["node_modules", "dist", "tests"]

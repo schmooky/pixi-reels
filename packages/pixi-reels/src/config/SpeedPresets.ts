@@ -47,4 +47,14 @@ export const SpeedPresets = {
     accelerationDuration: 50,
     minimumSpinTime: 100,
   },
-} as const satisfies Record<string, SpeedProfile>;
+} as const;
+
+// Conformance guard. `isolatedDeclarations` forbids a `satisfies` clause on an
+// exported const (it can't emit the declaration without full type-checking), so
+// the check lives here instead. If any preset above stops matching
+// `SpeedProfile`, the conditional resolves to `false` and violates the
+// `extends true` constraint. a compile error. It emits nothing at runtime.
+type AssertTrue<T extends true> = T;
+type _PresetsConform = AssertTrue<
+  (typeof SpeedPresets)[keyof typeof SpeedPresets] extends SpeedProfile ? true : false
+>;

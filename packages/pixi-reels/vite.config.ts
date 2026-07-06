@@ -27,6 +27,17 @@ export default defineConfig({
         'gsap',
         '@esotericsoftware/spine-pixi-v8',
       ],
+      // Emit one output file per source module instead of collapsing the
+      // library into a few big chunks. A downstream bundler then pulls only
+      // the modules reachable from what the consumer actually imports, so
+      // tree-shaking no longer depends on the consumer bundler being able to
+      // see through a concatenated mega-chunk. The named `lib.entry` files
+      // (index / spine / testing) stay at the dist root; everything else is
+      // laid out mirroring `src/`.
+      output: {
+        preserveModules: true,
+        preserveModulesRoot: 'src',
+      },
     },
     sourcemap: true,
     outDir: resolve(__dirname, 'dist'),

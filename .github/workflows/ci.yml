@@ -55,6 +55,13 @@ jobs:
         # static analysis path. Examples don't ship; this is purely a gate.
         run: pnpm build
 
+      - name: Package correctness (publint + are-the-types-wrong)
+        # Guards the publish layer: exports-map correctness, format/extension
+        # mismatches (publint --strict) and type resolution across the node10 /
+        # node16 / bundler resolvers for every entry (attw --pack). Runs on the
+        # dist/ produced by the build step above.
+        run: pnpm --filter pixi-reels check:pkg
+
   changeset-gate:
     # Fails the PR when library source changed but no changeset file was added.
     # Escape hatches:

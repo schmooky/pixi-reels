@@ -38,8 +38,9 @@ jobs:
       - name: Build docs site
         run: pnpm site:build
 
-      - name: Bundle size report
-        # Informational on PRs - prints the gzipped size of the library dist.
-        # Once the baseline is populated (`pnpm size:update` on main), switch
-        # to `pnpm size:check` to enforce the drift tolerance.
-        run: pnpm size
+      - name: Bundle size check
+        # Fails when the library's total gzipped ESM footprint drifts past the
+        # tolerance in scripts/size-check.mjs vs ci/size-baseline.json. Refresh
+        # the baseline with `pnpm size:update` when a change legitimately grows
+        # the dist.
+        run: pnpm size:check

@@ -20,11 +20,16 @@ const repoRoot = path.resolve(here, '..');
 // Packages to measure. Each entry lists the dist files we want to total up.
 // Other files in dist/ (types, sourcemaps) are ignored because they don't
 // affect the runtime footprint.
+// The build emits one ESM file per source module (`preserveModules`), so
+// measuring just `index.js` would only weigh the barrel. Total the whole ESM
+// tree instead. that is the real footprint a consumer can pull before
+// tree-shaking. `.cjs` is the same graph in another format, so we skip it to
+// avoid double-counting; maps and declarations don't ship to the runtime.
 const PACKAGES = [
   {
     name: 'pixi-reels',
     distDir: 'packages/pixi-reels/dist',
-    entries: ['index.js', 'index.cjs'],
+    match: (file) => file.endsWith('.js') && !file.endsWith('.d.ts'),
   },
 ];
 
@@ -38,21 +43,28 @@ function gzipSize(buf) {
   return zlib.gzipSync(buf, { level: zlib.constants.Z_BEST_COMPRESSION }).length;
 }
 
+function walk(dir) {
+  const out = [];
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) out.push(...walk(full));
+    else out.push(full);
+  }
+  return out;
+}
+
 function measure(pkg) {
-  const missing = [];
+  const root = path.join(repoRoot, pkg.distDir);
+  if (!fs.existsSync(root)) return { raw: 0, gz: 0, missing: [pkg.distDir] };
   let raw = 0;
   let gz = 0;
-  for (const entry of pkg.entries) {
-    const full = path.join(repoRoot, pkg.distDir, entry);
-    if (!fs.existsSync(full)) {
-      missing.push(entry);
-      continue;
-    }
+  for (const full of walk(root)) {
+    if (!pkg.match(full)) continue;
     const buf = fs.readFileSync(full);
     raw += buf.length;
     gz += gzipSize(buf);
   }
-  return { raw, gz, missing };
+  return { raw, gz, missing: [] };
 }
 
 function fmtKb(n) {

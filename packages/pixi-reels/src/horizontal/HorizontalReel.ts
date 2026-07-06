@@ -61,7 +61,7 @@ interface CascadeMove {
  */
 export class HorizontalReel implements Disposable {
   readonly container: Container;
-  readonly events = new EventEmitter<HorizontalReelEvents>();
+  readonly events: EventEmitter<HorizontalReelEvents> = new EventEmitter<HorizontalReelEvents>();
   readonly visibleCount: number;
 
   private readonly _cellW: number;

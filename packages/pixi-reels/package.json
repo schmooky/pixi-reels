@@ -8,19 +8,41 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "import": "./dist/index.js",
-      "require": "./dist/index.cjs",
-      "types": "./dist/index.d.ts"
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
     },
     "./spine": {
-      "import": "./dist/spine.js",
-      "require": "./dist/spine.cjs",
-      "types": "./dist/spine/index.d.ts"
+      "import": {
+        "types": "./dist/spine/index.d.ts",
+        "default": "./dist/spine.js"
+      },
+      "require": {
+        "types": "./dist/spine/index.d.cts",
+        "default": "./dist/spine.cjs"
+      }
     },
     "./testing": {
-      "import": "./dist/testing.js",
-      "require": "./dist/testing.cjs",
-      "types": "./dist/testing/index.d.ts"
+      "import": {
+        "types": "./dist/testing/index.d.ts",
+        "default": "./dist/testing.js"
+      },
+      "require": {
+        "types": "./dist/testing/index.d.cts",
+        "default": "./dist/testing.cjs"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "typesVersions": {
+    "*": {
+      "spine": ["./dist/spine/index.d.ts"],
+      "testing": ["./dist/testing/index.d.ts"]
     }
   },
   "files": [
@@ -31,16 +53,20 @@
     "CONTRIBUTING.md"
   ],
   "sideEffects": false,
+  "engines": {
+    "node": ">=20.19"
+  },
   "publishConfig": {
     "access": "public",
     "provenance": true
   },
   "scripts": {
-    "build": "vite build",
+    "build": "vite build && node scripts/emit-cts-types.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint src/"
+    "lint": "eslint src/",
+    "check:pkg": "publint --strict && attw --pack"
   },
   "peerDependencies": {
     "@esotericsoftware/spine-pixi-v8": "~4.2.110",
@@ -53,9 +79,11 @@
     }
   },
   "devDependencies": {
+    "@arethetypeswrong/cli": "^0.18.4",
     "@esotericsoftware/spine-pixi-v8": "~4.2.110",
     "gsap": "^3.15.0",
     "pixi.js": "^8.18.1",
+    "publint": "^0.3.21",
     "typescript": "^6.0.3",
     "vite": "^8.0.9",
     "vite-plugin-dts": "^4.5.4",
