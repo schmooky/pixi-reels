@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { SpeedManager } from '../../src/speed/SpeedManager.js';
-import { SpeedPresets } from '../../src/config/SpeedPresets.js';
+import { SpeedManager } from '../../src/speed/SpeedManager.ts';
+import { SpeedPresets } from '../../src/config/SpeedPresets.ts';
 
 describe('SpeedManager', () => {
   function createManager() {

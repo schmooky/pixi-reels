@@ -1,9 +1,9 @@
 import type { Graphics, Ticker } from 'pixi.js';
-import { SpeedPresets } from '../config/SpeedPresets.js';
-import type { SpeedProfile, SymbolData } from '../config/types.js';
-import type { SymbolRegistry } from '../symbols/SymbolRegistry.js';
-import { HoldAndWinBoard } from './HoldAndWinBoard.js';
-import type { HwCellSizeOptions } from './HwTypes.js';
+import { SpeedPresets } from '../config/SpeedPresets.ts';
+import type { SpeedProfile, SymbolData } from '../config/types.ts';
+import type { SymbolRegistry } from '../symbols/SymbolRegistry.ts';
+import { HoldAndWinBoard } from './HoldAndWinBoard.ts';
+import type { HwCellSizeOptions } from './HwTypes.ts';
 
 /**
  * Fluent builder for {@link HoldAndWinBoard}.

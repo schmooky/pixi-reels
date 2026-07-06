@@ -5,7 +5,7 @@
  * whether or not the optional peer dep is installed.
  */
 import { describe, it, expect } from 'vitest';
-import { whenSpineReady } from '../../src/symbols/SpineSymbol.js';
+import { whenSpineReady } from '../../src/symbols/SpineSymbol.ts';
 
 describe('whenSpineReady', () => {
   it('resolves once the optional Spine import settles', async () => {

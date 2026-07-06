@@ -1,6 +1,6 @@
 import { Graphics } from 'pixi.js';
-import type { ReelSet } from '../core/ReelSet.js';
-import type { Reel } from '../core/Reel.js';
+import type { ReelSet } from '../core/ReelSet.ts';
+import type { Reel } from '../core/Reel.ts';
 
 /**
  * Debug snapshot. plain JSON representation of the entire reel state.

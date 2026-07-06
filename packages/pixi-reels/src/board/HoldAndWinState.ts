@@ -1,5 +1,5 @@
-import type { HwCell, HwCoin, HwEffect, HwRespinReason } from './HwTypes.js';
-import { cellKey } from './HwTypes.js';
+import type { HwCell, HwCoin, HwEffect, HwRespinReason } from './HwTypes.ts';
+import { cellKey } from './HwTypes.ts';
 
 export type HwPhase = 'idle' | 'active' | 'spinning';
 

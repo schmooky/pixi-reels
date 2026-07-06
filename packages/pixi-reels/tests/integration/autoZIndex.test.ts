@@ -14,7 +14,7 @@
  * motion-wrap or snap re-ran `refreshZIndex` over the whole reel.
  */
 import { describe, it, expect } from 'vitest';
-import { createTestReelSet } from '../../src/testing/index.js';
+import { createTestReelSet } from '../../src/testing/index.ts';
 
 const SYMBOLS = ['a', 'wild', 'b'];
 

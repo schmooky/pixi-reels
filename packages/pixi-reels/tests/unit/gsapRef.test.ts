@@ -1,6 +1,6 @@
 import { afterEach, describe, it, expect, vi } from 'vitest';
 import { gsap as defaultGsap } from 'gsap';
-import { getGsap, setGsap } from '../../src/utils/gsapRef.js';
+import { getGsap, setGsap } from '../../src/utils/gsapRef.ts';
 
 describe('gsapRef', () => {
   afterEach(() => {
@@ -20,7 +20,7 @@ describe('gsapRef', () => {
   });
 
   it('builder.gsap(instance) wires through to getGsap()', async () => {
-    const { ReelSetBuilder } = await import('../../src/core/ReelSetBuilder.js');
+    const { ReelSetBuilder } = await import('../../src/core/ReelSetBuilder.ts');
     const fake = { timeline: vi.fn(), to: vi.fn(), delayedCall: vi.fn() } as unknown as typeof defaultGsap;
 
     new ReelSetBuilder().gsap(fake);
@@ -29,7 +29,7 @@ describe('gsapRef', () => {
   });
 
   it('builder.gsap() returns the builder for chaining', async () => {
-    const { ReelSetBuilder } = await import('../../src/core/ReelSetBuilder.js');
+    const { ReelSetBuilder } = await import('../../src/core/ReelSetBuilder.ts');
     const builder = new ReelSetBuilder();
     const fake = { timeline: vi.fn(), to: vi.fn(), delayedCall: vi.fn() } as unknown as typeof defaultGsap;
 

@@ -4,9 +4,9 @@
  * restores GSAP's own ticker on dispose.
  */
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { driveGsapWithTicker } from '../../src/utils/gsapTicker.js';
-import { getGsap, setGsap } from '../../src/utils/gsapRef.js';
-import { FakeTicker } from '../../src/testing/FakeTicker.js';
+import { driveGsapWithTicker } from '../../src/utils/gsapTicker.ts';
+import { getGsap, setGsap } from '../../src/utils/gsapRef.ts';
+import { FakeTicker } from '../../src/testing/FakeTicker.ts';
 
 describe('driveGsapWithTicker', () => {
   const realGsap = getGsap();

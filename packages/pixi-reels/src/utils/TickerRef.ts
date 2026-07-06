@@ -1,5 +1,5 @@
 import type { Ticker } from 'pixi.js';
-import type { Disposable } from './Disposable.js';
+import type { Disposable } from './Disposable.ts';
 
 type TickerCallback = (ticker: Ticker) => void;
 

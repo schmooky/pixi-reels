@@ -1,4 +1,4 @@
-import type { OffsetConfig, TrapezoidConfig } from '../config/types.js';
+import type { OffsetConfig, TrapezoidConfig } from '../config/types.ts';
 
 /**
  * Computes X-position offsets for symbols to create visual effects

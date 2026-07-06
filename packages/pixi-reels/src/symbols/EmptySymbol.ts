@@ -1,4 +1,4 @@
-import { ReelSymbol } from './ReelSymbol.js';
+import { ReelSymbol } from './ReelSymbol.ts';
 
 /**
  * A {@link ReelSymbol} that renders nothing and never animates.

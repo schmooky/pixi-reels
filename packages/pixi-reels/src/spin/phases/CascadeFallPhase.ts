@@ -1,15 +1,15 @@
 import type { gsap } from 'gsap';
 import type { Container } from 'pixi.js';
-import { getGsap } from '../../utils/gsapRef.js';
-import { ReelPhase } from './ReelPhase.js';
-import type { Reel } from '../../core/Reel.js';
-import type { SpeedProfile } from '../../config/types.js';
-import type { SpinningMode } from '../modes/SpinningMode.js';
-import type { ReelSymbol } from '../../symbols/ReelSymbol.js';
-import type { EventEmitter } from '../../events/EventEmitter.js';
-import type { ReelSetEvents } from '../../events/ReelEvents.js';
-import type { TumbleFallConfig } from '../../cascade/TumbleConfig.js';
-import { mergeFallConfig } from '../../cascade/TumbleConfig.js';
+import { getGsap } from '../../utils/gsapRef.ts';
+import { ReelPhase } from './ReelPhase.ts';
+import type { Reel } from '../../core/Reel.ts';
+import type { SpeedProfile } from '../../config/types.ts';
+import type { SpinningMode } from '../modes/SpinningMode.ts';
+import type { ReelSymbol } from '../../symbols/ReelSymbol.ts';
+import type { EventEmitter } from '../../events/EventEmitter.ts';
+import type { ReelSetEvents } from '../../events/ReelEvents.ts';
+import type { TumbleFallConfig } from '../../cascade/TumbleConfig.ts';
+import { mergeFallConfig } from '../../cascade/TumbleConfig.ts';
 
 export interface CascadeFallPhaseConfig {
   /** Required by the start-phase contract. set on the reel even though

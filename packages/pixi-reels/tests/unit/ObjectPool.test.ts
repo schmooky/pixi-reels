@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { ObjectPool } from '../../src/pool/ObjectPool.js';
+import { ObjectPool } from '../../src/pool/ObjectPool.ts';
 
 describe('ObjectPool', () => {
   it('creates new items via factory', () => {

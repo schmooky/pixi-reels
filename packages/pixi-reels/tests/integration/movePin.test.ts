@@ -7,7 +7,7 @@
  * are synchronous and happen before the tween starts.
  */
 import { describe, it, expect } from 'vitest';
-import { createTestReelSet, captureEvents } from '../../src/testing/index.js';
+import { createTestReelSet, captureEvents } from '../../src/testing/index.ts';
 
 const SYMBOLS = ['a', 'b', 'c', 'wild', 'filler'];
 

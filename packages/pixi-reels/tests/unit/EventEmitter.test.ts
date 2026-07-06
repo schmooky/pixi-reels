@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { EventEmitter } from '../../src/events/EventEmitter.js';
+import { EventEmitter } from '../../src/events/EventEmitter.ts';
 
 interface TestEvents extends Record<string, unknown[]> {
   'foo': [x: number, y: string];

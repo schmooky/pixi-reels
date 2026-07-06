@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { SpeedPresets } from '../../src/index.js';
-import { createTestReelSet } from '../../src/testing/index.js';
-import type { ReelSet } from '../../src/index.js';
-import type { SpeedProfile } from '../../src/config/types.js';
+import { SpeedPresets } from '../../src/index.ts';
+import { createTestReelSet } from '../../src/testing/index.ts';
+import type { ReelSet } from '../../src/index.ts';
+import type { SpeedProfile } from '../../src/config/types.ts';
 
 /**
  * The default test builder only registers `normal`. Two-stage skip needs a

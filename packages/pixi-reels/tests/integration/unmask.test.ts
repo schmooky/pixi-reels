@@ -15,7 +15,7 @@
  * offset so the at-rest cell position is correct in viewport coords.
  */
 import { describe, it, expect } from 'vitest';
-import { createTestReelSet } from '../../src/testing/index.js';
+import { createTestReelSet } from '../../src/testing/index.ts';
 
 const SYMBOLS = ['a', 'wild', 'b'];
 

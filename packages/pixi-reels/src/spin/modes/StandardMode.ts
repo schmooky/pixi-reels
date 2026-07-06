@@ -1,4 +1,4 @@
-import type { SpinningMode } from './SpinningMode.js';
+import type { SpinningMode } from './SpinningMode.ts';
 
 /**
  * Standard top-to-bottom reel spinning.

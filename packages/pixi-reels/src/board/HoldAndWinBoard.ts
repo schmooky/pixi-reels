@@ -1,21 +1,21 @@
 import type { Container, Graphics, Ticker } from 'pixi.js';
-import { EventEmitter } from '../events/EventEmitter.js';
-import type { ReelSet } from '../core/ReelSet.js';
-import type { ReelSymbol } from '../symbols/ReelSymbol.js';
-import type { SymbolRegistry } from '../symbols/SymbolRegistry.js';
-import type { SpeedProfile, SymbolData } from '../config/types.js';
-import type { Disposable } from '../utils/Disposable.js';
-import { BoardGrid } from './BoardGrid.js';
-import { HoldAndWinState } from './HoldAndWinState.js';
-import type { HwPhase } from './HoldAndWinState.js';
-import { cellKey } from './HwTypes.js';
+import { EventEmitter } from '../events/EventEmitter.ts';
+import type { ReelSet } from '../core/ReelSet.ts';
+import type { ReelSymbol } from '../symbols/ReelSymbol.ts';
+import type { SymbolRegistry } from '../symbols/SymbolRegistry.ts';
+import type { SpeedProfile, SymbolData } from '../config/types.ts';
+import type { Disposable } from '../utils/Disposable.ts';
+import { BoardGrid } from './BoardGrid.ts';
+import { HoldAndWinState } from './HoldAndWinState.ts';
+import type { HwPhase } from './HoldAndWinState.ts';
+import { cellKey } from './HwTypes.ts';
 import type {
   HoldAndWinBoardEvents,
   HwCell,
   HwCoin,
   HwEffect,
   HwRespinResult,
-} from './HwTypes.js';
+} from './HwTypes.ts';
 
 /** Internal config produced by {@link HoldAndWinBuilder.build}. */
 export interface HoldAndWinBoardConfig<TData> {

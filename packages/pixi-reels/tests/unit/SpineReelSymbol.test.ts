@@ -88,7 +88,7 @@ vi.mock('@esotericsoftware/spine-pixi-v8', () => {
 });
 
 // Import after the mock is registered.
-import { SpineReelSymbol } from '../../src/spine/SpineReelSymbol.js';
+import { SpineReelSymbol } from '../../src/spine/SpineReelSymbol.ts';
 import { Spine as MockSpineModule } from '@esotericsoftware/spine-pixi-v8';
 
 function getLastSpine(): MockSpine {

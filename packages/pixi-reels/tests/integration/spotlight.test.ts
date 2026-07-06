@@ -4,7 +4,7 @@
  * spotlight.
  */
 import { describe, it, expect, vi } from 'vitest';
-import { createTestReelSet } from '../../src/testing/index.js';
+import { createTestReelSet } from '../../src/testing/index.ts';
 
 const SYMBOLS = ['a', 'b', 'c', 'wild'];
 

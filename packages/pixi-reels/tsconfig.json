@@ -6,7 +6,13 @@
     // Every exported symbol must carry an explicit, locally-inferable type.
     // Guarantees the published .d.ts never depends on cross-file inference and
     // keeps the door open for a faster (swc/oxc/rolldown) declaration emitter.
-    "isolatedDeclarations": true
+    "isolatedDeclarations": true,
+    // Source imports name the real file (`./Reel.ts`), and TypeScript rewrites
+    // the specifier to `./Reel.js` on emit (both .js and .d.ts). This keeps the
+    // source honest about what it imports while the published output stays
+    // spec-correct ESM. Requires TS 5.7+.
+    "allowImportingTsExtensions": true,
+    "rewriteRelativeImportExtensions": true
   },
   "include": ["src/**/*.ts"],
   "exclude": ["node_modules", "dist", "tests"]

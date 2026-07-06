@@ -298,7 +298,7 @@ pool/ → symbols/ → frame/
 ## Conventions
 
 - **No default exports**. always named exports
-- **`.js` extension in imports**. required for ESM compatibility
+- **`.ts` extension in relative imports**. name the real file (`./Reel.ts`); the build rewrites it to `.js` in the published output (`rewriteRelativeImportExtensions` for the JS/declaration emit, plus `scripts/postbuild-types.mjs` for `vite-plugin-dts`). Never write extensionless relative imports
 - **No barrel re-exports in subdirectories**. only `src/index.ts` is the barrel
 - **Disposable pattern**. every class that allocates resources implements `Disposable`
 - **TickerRef**. never use `ticker.add()` directly; wrap in TickerRef for auto-cleanup

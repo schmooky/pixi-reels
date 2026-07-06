@@ -7,7 +7,7 @@
  * reel is untouched, and a `symbol:created` event fires.
  */
 import { describe, it, expect, vi } from 'vitest';
-import { createTestReelSet } from '../../src/testing/index.js';
+import { createTestReelSet } from '../../src/testing/index.ts';
 
 const SYMBOLS = ['a', 'b', 'wild'];
 

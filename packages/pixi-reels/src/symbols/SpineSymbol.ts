@@ -1,4 +1,4 @@
-import { ReelSymbol } from './ReelSymbol.js';
+import { ReelSymbol } from './ReelSymbol.ts';
 
 // Spine types imported dynamically. this is an optional peer dependency
 let SpineClass: any = null;

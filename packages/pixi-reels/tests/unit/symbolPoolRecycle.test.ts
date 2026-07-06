@@ -1,8 +1,8 @@
 import type { Filter } from 'pixi.js';
 import { describe, expect, it } from 'vitest';
-import { SymbolRegistry } from '../../src/index.js';
-import { HeadlessSymbol } from '../../src/testing/HeadlessSymbol.js';
-import { SymbolFactory } from '../../src/symbols/SymbolFactory.js';
+import { SymbolRegistry } from '../../src/index.ts';
+import { HeadlessSymbol } from '../../src/testing/HeadlessSymbol.ts';
+import { SymbolFactory } from '../../src/symbols/SymbolFactory.ts';
 
 // Stub. real filters need document/WebGL.
 const stubFilter = {} as Filter;

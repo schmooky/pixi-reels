@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { createTestReelSet } from '../../src/testing/index.js';
-import { ReelSetBuilder } from '../../src/core/ReelSetBuilder.js';
-import { CascadeMode } from '../../src/spin/modes/CascadeMode.js';
-import { FakeTicker } from '../../src/testing/FakeTicker.js';
-import { HeadlessSymbol } from '../../src/testing/HeadlessSymbol.js';
+import { createTestReelSet } from '../../src/testing/index.ts';
+import { ReelSetBuilder } from '../../src/core/ReelSetBuilder.ts';
+import { CascadeMode } from '../../src/spin/modes/CascadeMode.ts';
+import { FakeTicker } from '../../src/testing/FakeTicker.ts';
+import { HeadlessSymbol } from '../../src/testing/HeadlessSymbol.ts';
 import type { Ticker } from 'pixi.js';
 
 describe('builder validation', () => {

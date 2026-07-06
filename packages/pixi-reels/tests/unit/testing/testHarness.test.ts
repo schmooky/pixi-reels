@@ -4,7 +4,7 @@ import {
   expectGrid,
   countSymbol,
   captureEvents,
-} from '../../../src/testing/index.js';
+} from '../../../src/testing/index.ts';
 
 describe('createTestReelSet', () => {
   it('builds a reel set with configured dimensions', () => {

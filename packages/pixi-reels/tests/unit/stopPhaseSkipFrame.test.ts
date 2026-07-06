@@ -7,9 +7,9 @@
  * symbols, after the fix they survive.
  */
 import { describe, it, expect } from 'vitest';
-import { createTestReelSet } from '../../src/testing/index.js';
-import { StopPhase } from '../../src/spin/phases/StopPhase.js';
-import { SpeedPresets } from '../../src/config/SpeedPresets.js';
+import { createTestReelSet } from '../../src/testing/index.ts';
+import { StopPhase } from '../../src/spin/phases/StopPhase.ts';
+import { SpeedPresets } from '../../src/config/SpeedPresets.ts';
 
 describe('StopPhase.onSkip', () => {
   it('places buffer-above and buffer-below targets on a direct skip', async () => {

@@ -6,8 +6,8 @@
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { gsap as defaultGsap } from 'gsap';
-import { createTestReelSet } from '../../src/testing/index.js';
-import { setGsap } from '../../src/utils/gsapRef.js';
+import { createTestReelSet } from '../../src/testing/index.ts';
+import { setGsap } from '../../src/utils/gsapRef.ts';
 
 /**
  * gsap.to shim that captures each tween without firing it, and lets the test

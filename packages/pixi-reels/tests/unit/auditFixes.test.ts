@@ -1,12 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { Ticker } from 'pixi.js';
-import { ReelSetBuilder } from '../../src/core/ReelSetBuilder.js';
-import { HeadlessSymbol } from '../../src/testing/HeadlessSymbol.js';
-import { FakeTicker } from '../../src/testing/FakeTicker.js';
-import { SpeedPresets } from '../../src/index.js';
-import { createTestReelSet } from '../../src/testing/index.js';
-import { computeDropOffsets } from '../../src/cascade/tumbleAlgorithm.js';
-import type { Cell, ReelSet } from '../../src/index.js';
+import { ReelSetBuilder } from '../../src/core/ReelSetBuilder.ts';
+import { HeadlessSymbol } from '../../src/testing/HeadlessSymbol.ts';
+import { FakeTicker } from '../../src/testing/FakeTicker.ts';
+import { SpeedPresets } from '../../src/index.ts';
+import { createTestReelSet } from '../../src/testing/index.ts';
+import { computeDropOffsets } from '../../src/cascade/tumbleAlgorithm.ts';
+import type { Cell, ReelSet } from '../../src/index.ts';
 
 // Shared headless tumble harness. zero-duration tweens so phases settle
 // on a single FakeTicker frame and tests are deterministic.
@@ -258,8 +258,8 @@ describe('CascadeDropInPhase. distance: auto fallback for survivors', () => {
     //
     // The phase mutates `view.y` to its computed `startY` IMMEDIATELY in
     // `onEnter` (synchronous, before any tween ticks). We sample that.
-    const { CascadeDropInPhase } = await import('../../src/spin/phases/CascadeDropInPhase.js');
-    const { EventEmitter } = await import('../../src/events/EventEmitter.js');
+    const { CascadeDropInPhase } = await import('../../src/spin/phases/CascadeDropInPhase.ts');
+    const { EventEmitter } = await import('../../src/events/EventEmitter.ts');
 
     const { reelSet, destroy } = buildTumbleHarness([
       ['a', 'b', 'c'],
@@ -267,7 +267,7 @@ describe('CascadeDropInPhase. distance: auto fallback for survivors', () => {
       ['a', 'b', 'c'],
     ]);
 
-    const localBus = new EventEmitter<import('../../src/events/ReelEvents.js').ReelSetEvents>();
+    const localBus = new EventEmitter<import('../../src/events/ReelEvents.ts').ReelSetEvents>();
 
     const reel = reelSet.getReel(0);
     const cellHeight = reel.motion.slotHeight;

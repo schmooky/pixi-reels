@@ -1,5 +1,5 @@
 import { Spine, type TrackEntry } from '@esotericsoftware/spine-pixi-v8';
-import { ReelSymbol } from '../symbols/ReelSymbol.js';
+import { ReelSymbol } from '../symbols/ReelSymbol.ts';
 
 /**
  * Per-symbol overrides so a skeleton with unusual animation names still works.

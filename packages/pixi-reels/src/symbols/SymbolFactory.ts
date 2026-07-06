@@ -1,6 +1,6 @@
-import type { ReelSymbol } from './ReelSymbol.js';
-import type { SymbolRegistry } from './SymbolRegistry.js';
-import { ObjectPool } from '../pool/ObjectPool.js';
+import type { ReelSymbol } from './ReelSymbol.ts';
+import type { SymbolRegistry } from './SymbolRegistry.ts';
+import { ObjectPool } from '../pool/ObjectPool.ts';
 
 /**
  * Creates and pools ReelSymbol instances.

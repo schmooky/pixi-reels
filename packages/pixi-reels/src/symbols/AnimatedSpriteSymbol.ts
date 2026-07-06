@@ -1,5 +1,5 @@
 import { AnimatedSprite, type Texture } from 'pixi.js';
-import { ReelSymbol } from './ReelSymbol.js';
+import { ReelSymbol } from './ReelSymbol.ts';
 
 export interface AnimatedSpriteSymbolOptions {
   /** Map of symbolId → array of frame textures. */

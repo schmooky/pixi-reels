@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { computeDropOffsets } from '../../src/cascade/tumbleAlgorithm.js';
+import { computeDropOffsets } from '../../src/cascade/tumbleAlgorithm.ts';
 
 describe('computeDropOffsets', () => {
   describe('Moment A (initial drop)', () => {

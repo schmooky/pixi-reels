@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { HoldAndWinState } from '../../src/board/HoldAndWinState.js';
-import type { HwCell, HwEffect } from '../../src/board/HwTypes.js';
+import { HoldAndWinState } from '../../src/board/HoldAndWinState.ts';
+import type { HwCell, HwEffect } from '../../src/board/HwTypes.ts';
 
 // A 2×2 board → capacity 4. Cell order is irrelevant to the reducer.
 const CELLS: HwCell[] = [

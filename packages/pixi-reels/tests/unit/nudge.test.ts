@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { gsap as defaultGsap } from 'gsap';
-import { createTestReelSet, expectGrid } from '../../src/testing/index.js';
-import { setGsap } from '../../src/utils/gsapRef.js';
+import { createTestReelSet, expectGrid } from '../../src/testing/index.ts';
+import { setGsap } from '../../src/utils/gsapRef.ts';
 
 /**
  * Replace gsap.to with a synchronous shim that drives the tween straight to

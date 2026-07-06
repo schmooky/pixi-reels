@@ -1,5 +1,5 @@
 import type { Container, Ticker } from 'pixi.js';
-import type { TumbleConfig } from '../cascade/TumbleConfig.js';
+import type { TumbleConfig } from '../cascade/TumbleConfig.ts';
 
 /**
  * Options accepted by `reelSet.spin(options?)`. All fields are optional.

@@ -1,4 +1,4 @@
-import type { ReelSymbol } from './ReelSymbol.js';
+import type { ReelSymbol } from './ReelSymbol.ts';
 
 type SymbolConstructor<T extends ReelSymbol = ReelSymbol> = new (options: any) => T;
 

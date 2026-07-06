@@ -2,11 +2,11 @@
 // tree-shake both this module and the `@esotericsoftware/spine-pixi-v8`
 // runtime out of their production bundle.
 
-export { SpineSymbol } from '../symbols/SpineSymbol.js';
-export type { SpineSymbolOptions } from '../symbols/SpineSymbol.js';
+export { SpineSymbol } from '../symbols/SpineSymbol.ts';
+export type { SpineSymbolOptions } from '../symbols/SpineSymbol.ts';
 
-export { SpineReelSymbol } from './SpineReelSymbol.js';
+export { SpineReelSymbol } from './SpineReelSymbol.ts';
 export type {
   SpineReelSymbolOptions,
   SymbolAnimOverrides,
-} from './SpineReelSymbol.js';
+} from './SpineReelSymbol.ts';

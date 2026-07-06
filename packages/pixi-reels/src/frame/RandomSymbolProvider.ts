@@ -1,4 +1,4 @@
-import type { SymbolData } from '../config/types.js';
+import type { SymbolData } from '../config/types.ts';
 
 /**
  * Weighted random symbol selector using binary search on cumulative weights.

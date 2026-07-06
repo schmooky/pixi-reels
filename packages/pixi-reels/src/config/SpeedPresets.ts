@@ -1,4 +1,4 @@
-import type { SpeedProfile } from './types.js';
+import type { SpeedProfile } from './types.ts';
 
 /**
  * Built-in speed profiles covering common slot game needs.

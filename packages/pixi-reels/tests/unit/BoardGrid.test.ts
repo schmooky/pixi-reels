@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import type { Ticker } from 'pixi.js';
-import { BoardGrid } from '../../src/board/BoardGrid.js';
-import { FakeTicker } from '../../src/testing/FakeTicker.js';
-import { HeadlessSymbol } from '../../src/testing/HeadlessSymbol.js';
+import { BoardGrid } from '../../src/board/BoardGrid.ts';
+import { FakeTicker } from '../../src/testing/FakeTicker.ts';
+import { HeadlessSymbol } from '../../src/testing/HeadlessSymbol.ts';
 
 const ticker = () => new FakeTicker() as unknown as Ticker;
 const make = (over = {}) =>

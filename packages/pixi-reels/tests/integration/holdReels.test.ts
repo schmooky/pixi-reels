@@ -12,7 +12,7 @@
  *   - no `spin:reelLanded` / `spin:stopping` event fires for held reels
  */
 import { describe, it, expect } from 'vitest';
-import { captureEvents, createTestReelSet } from '../../src/testing/index.js';
+import { captureEvents, createTestReelSet } from '../../src/testing/index.ts';
 
 const SYMBOLS = ['a', 'b', 'c', 'd', 'e', 'wild'];
 

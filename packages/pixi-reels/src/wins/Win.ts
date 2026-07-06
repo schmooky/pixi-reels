@@ -1,4 +1,4 @@
-import type { SymbolPosition, Win } from '../config/types.js';
+import type { SymbolPosition, Win } from '../config/types.ts';
 
 export type { Win, SymbolPosition };
 

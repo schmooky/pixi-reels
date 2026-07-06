@@ -1,18 +1,18 @@
 import { Container, Graphics } from 'pixi.js';
 import type { Ticker } from 'pixi.js';
-import { EventEmitter } from '../events/EventEmitter.js';
-import { SymbolFactory } from '../symbols/SymbolFactory.js';
-import { SymbolRegistry } from '../symbols/SymbolRegistry.js';
-import type { ReelSymbol } from '../symbols/ReelSymbol.js';
-import { TickerRef } from '../utils/TickerRef.js';
-import type { Disposable } from '../utils/Disposable.js';
-import type { ColumnTarget } from '../frame/ColumnTarget.js';
-import type { SpinResult } from '../events/ReelEvents.js';
+import { EventEmitter } from '../events/EventEmitter.ts';
+import { SymbolFactory } from '../symbols/SymbolFactory.ts';
+import { SymbolRegistry } from '../symbols/SymbolRegistry.ts';
+import type { ReelSymbol } from '../symbols/ReelSymbol.ts';
+import { TickerRef } from '../utils/TickerRef.ts';
+import type { Disposable } from '../utils/Disposable.ts';
+import type { ColumnTarget } from '../frame/ColumnTarget.ts';
+import type { SpinResult } from '../events/ReelEvents.ts';
 import type {
   HorizontalDirection,
   HorizontalReelConfig,
   HorizontalReelEvents,
-} from './HorizontalReelTypes.js';
+} from './HorizontalReelTypes.ts';
 
 /** A symbol tweening from `fromX` to its resting `toX` during a cascade. */
 interface CascadeMove {

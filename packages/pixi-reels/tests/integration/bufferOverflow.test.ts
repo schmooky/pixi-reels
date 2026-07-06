@@ -10,10 +10,10 @@
  * at the entry point so the caller sees the misuse immediately.
  */
 import { describe, it, expect } from 'vitest';
-import { createTestReelSet } from '../../src/testing/index.js';
-import { ReelSetBuilder } from '../../src/core/ReelSetBuilder.js';
-import { FakeTicker } from '../../src/testing/FakeTicker.js';
-import { HeadlessSymbol } from '../../src/testing/HeadlessSymbol.js';
+import { createTestReelSet } from '../../src/testing/index.ts';
+import { ReelSetBuilder } from '../../src/core/ReelSetBuilder.ts';
+import { FakeTicker } from '../../src/testing/FakeTicker.ts';
+import { HeadlessSymbol } from '../../src/testing/HeadlessSymbol.ts';
 import type { Ticker } from 'pixi.js';
 
 const SYMBOLS = ['a', 'b', 'c', 'X', 'Y'];

@@ -1,26 +1,26 @@
 import { Container } from 'pixi.js';
-import type { Disposable } from '../utils/Disposable.js';
-import type { ReelSetInternalConfig, CellBounds, SymbolData, SpinOptions } from '../config/types.js';
-import { EventEmitter } from '../events/EventEmitter.js';
-import type { ReelSetEvents, SpinResult, RunCascadeResult as RunCascadeResultBase } from '../events/ReelEvents.js';
-import { Reel, } from './Reel.js';
-import type { NudgeOptions } from './Reel.js';
-import { ReelViewport } from './ReelViewport.js';
-import { SpinController } from '../spin/SpinController.js';
-import { SpeedManager } from '../speed/SpeedManager.js';
-import { SymbolSpotlight, } from '../spotlight/SymbolSpotlight.js';
-import type { SymbolFactory } from '../symbols/SymbolFactory.js';
-import type { ReelSymbol } from '../symbols/ReelSymbol.js';
-import type { FrameBuilder } from '../frame/FrameBuilder.js';
-import type { PhaseFactory } from '../spin/phases/PhaseFactory.js';
-import type { SpinningMode } from '../spin/modes/SpinningMode.js';
-import type { CellPin, CellPinOptions, PinExpireReason, MovePinOptions, CellCoord } from '../pins/CellPin.js';
-import { pinKey } from '../pins/CellPin.js';
-import { getGsap } from '../utils/gsapRef.js';
-import type { FrameMiddleware } from '../frame/FrameBuilder.js';
-import type { ColumnTarget } from '../frame/ColumnTarget.js';
-import { assertBufferCountsInRange, columnTargetToArray } from '../frame/ColumnTarget.js';
-import type { Cell } from '../cascade/tumbleAlgorithm.js';
+import type { Disposable } from '../utils/Disposable.ts';
+import type { ReelSetInternalConfig, CellBounds, SymbolData, SpinOptions } from '../config/types.ts';
+import { EventEmitter } from '../events/EventEmitter.ts';
+import type { ReelSetEvents, SpinResult, RunCascadeResult as RunCascadeResultBase } from '../events/ReelEvents.ts';
+import { Reel, } from './Reel.ts';
+import type { NudgeOptions } from './Reel.ts';
+import { ReelViewport } from './ReelViewport.ts';
+import { SpinController } from '../spin/SpinController.ts';
+import { SpeedManager } from '../speed/SpeedManager.ts';
+import { SymbolSpotlight, } from '../spotlight/SymbolSpotlight.ts';
+import type { SymbolFactory } from '../symbols/SymbolFactory.ts';
+import type { ReelSymbol } from '../symbols/ReelSymbol.ts';
+import type { FrameBuilder } from '../frame/FrameBuilder.ts';
+import type { PhaseFactory } from '../spin/phases/PhaseFactory.ts';
+import type { SpinningMode } from '../spin/modes/SpinningMode.ts';
+import type { CellPin, CellPinOptions, PinExpireReason, MovePinOptions, CellCoord } from '../pins/CellPin.ts';
+import { pinKey } from '../pins/CellPin.ts';
+import { getGsap } from '../utils/gsapRef.ts';
+import type { FrameMiddleware } from '../frame/FrameBuilder.ts';
+import type { ColumnTarget } from '../frame/ColumnTarget.ts';
+import { assertBufferCountsInRange, columnTargetToArray } from '../frame/ColumnTarget.ts';
+import type { Cell } from '../cascade/tumbleAlgorithm.ts';
 
 export interface ReelSetParams {
   config: ReelSetInternalConfig;
@@ -2178,9 +2178,9 @@ export class ReelSet extends Container implements Disposable {
     reelIndex: number,
     targetSymbolHeight: number,
     symbolGapY: number,
-  ): import('../spin/phases/AdjustPhase.js').PinOverlayTween[] {
+  ): import('../spin/phases/AdjustPhase.ts').PinOverlayTween[] {
     const reel = this._reels[reelIndex];
-    const out: import('../spin/phases/AdjustPhase.js').PinOverlayTween[] = [];
+    const out: import('../spin/phases/AdjustPhase.ts').PinOverlayTween[] = [];
     const newSlot = targetSymbolHeight + symbolGapY;
     for (const [, entry] of this._pinOverlays) {
       if (entry.pin.col !== reelIndex) continue;

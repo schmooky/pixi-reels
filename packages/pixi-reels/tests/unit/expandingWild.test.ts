@@ -1,5 +1,5 @@
 import { describe, it } from 'vitest';
-import { createTestReelSet, expectGrid } from '../../src/testing/index.js';
+import { createTestReelSet, expectGrid } from '../../src/testing/index.ts';
 
 describe('expanding wild (pin-based, 1×N)', () => {
   it('pins fill a column for one spin via pin overlay (eval pin)', async () => {

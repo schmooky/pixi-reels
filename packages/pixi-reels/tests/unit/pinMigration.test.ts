@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createTestReelSet, captureEvents } from '../../src/testing/index.js';
+import { createTestReelSet, captureEvents } from '../../src/testing/index.ts';
 
 describe('pin migration (MultiWays)', () => {
   it('originRow defaults to row at pin placement', () => {

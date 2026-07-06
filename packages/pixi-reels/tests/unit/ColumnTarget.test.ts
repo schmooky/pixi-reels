@@ -3,7 +3,7 @@ import {
   assertBufferCountsInRange,
   columnTargetToArray,
   type ColumnTarget,
-} from '../../src/frame/ColumnTarget.js';
+} from '../../src/frame/ColumnTarget.ts';
 
 describe('columnTargetToArray', () => {
   it('materializes visible only', () => {

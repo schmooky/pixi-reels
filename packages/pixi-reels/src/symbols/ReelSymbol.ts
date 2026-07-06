@@ -1,6 +1,6 @@
 import { Container } from 'pixi.js';
-import type { Disposable } from '../utils/Disposable.js';
-import { getGsap } from '../utils/gsapRef.js';
+import type { Disposable } from '../utils/Disposable.ts';
+import { getGsap } from '../utils/gsapRef.ts';
 
 /**
  * One visible cell on a reel. the thing that actually draws.

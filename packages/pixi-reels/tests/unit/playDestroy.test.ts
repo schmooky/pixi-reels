@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { HeadlessSymbol } from '../../src/testing/HeadlessSymbol.js';
+import { HeadlessSymbol } from '../../src/testing/HeadlessSymbol.ts';
 
 class TestSymbol extends HeadlessSymbol {}
 

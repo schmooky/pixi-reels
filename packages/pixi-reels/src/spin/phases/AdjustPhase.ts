@@ -1,9 +1,9 @@
 import type { gsap } from 'gsap';
-import { getGsap } from '../../utils/gsapRef.js';
-import { ReelPhase } from './ReelPhase.js';
-import type { Reel } from '../../core/Reel.js';
-import type { SpeedProfile } from '../../config/types.js';
-import type { ReelSymbol } from '../../symbols/ReelSymbol.js';
+import { getGsap } from '../../utils/gsapRef.ts';
+import { ReelPhase } from './ReelPhase.ts';
+import type { Reel } from '../../core/Reel.ts';
+import type { SpeedProfile } from '../../config/types.ts';
+import type { ReelSymbol } from '../../symbols/ReelSymbol.ts';
 
 export interface AdjustPhaseConfig {
   /**

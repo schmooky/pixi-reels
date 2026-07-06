@@ -1,4 +1,4 @@
-import type { Disposable } from '../utils/Disposable.js';
+import type { Disposable } from '../utils/Disposable.ts';
 
 /**
  * Generic object pool for reusing expensive-to-create objects.

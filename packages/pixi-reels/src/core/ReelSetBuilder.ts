@@ -1,6 +1,6 @@
 import type { Ticker } from 'pixi.js';
 import type { gsap } from 'gsap';
-import { setGsap } from '../utils/gsapRef.js';
+import { setGsap } from '../utils/gsapRef.ts';
 import type {
   SpeedProfile,
   SymbolData,
@@ -8,31 +8,31 @@ import type {
   ReelSetInternalConfig,
   MultiWaysConfig,
   ReelAnchor,
-} from '../config/types.js';
-import type { ReelMaskRect, MaskStrategy } from './ReelViewport.js';
-import { RectMaskStrategy, SharedRectMaskStrategy } from './ReelViewport.js';
-import { DEFAULTS } from '../config/defaults.js';
-import { SpeedPresets } from '../config/SpeedPresets.js';
-import { ReelSet, type ReelSetParams } from './ReelSet.js';
-import { Reel, type ReelConfig } from './Reel.js';
-import { ReelViewport } from './ReelViewport.js';
-import { SymbolRegistry } from '../symbols/SymbolRegistry.js';
-import { SymbolFactory } from '../symbols/SymbolFactory.js';
-import { RandomSymbolProvider } from '../frame/RandomSymbolProvider.js';
-import { FrameBuilder } from '../frame/FrameBuilder.js';
-import { OffsetCalculator } from '../frame/OffsetCalculator.js';
-import { PhaseFactory } from '../spin/phases/PhaseFactory.js';
-import type { SpinningMode } from '../spin/modes/SpinningMode.js';
-import { StandardMode } from '../spin/modes/StandardMode.js';
-import type { FrameMiddleware } from '../frame/FrameBuilder.js';
-import type { ColumnTarget } from '../frame/ColumnTarget.js';
-import { assertBufferCountsInRange, columnTargetToArray } from '../frame/ColumnTarget.js';
-import type { TumbleConfig, ResolvedTumbleConfig } from '../cascade/TumbleConfig.js';
-import { resolveTumbleConfig } from '../cascade/TumbleConfig.js';
-import { CascadeFallPhase } from '../spin/phases/CascadeFallPhase.js';
-import { CascadePlacePhase } from '../spin/phases/CascadePlacePhase.js';
-import { CascadeDropInPhase } from '../spin/phases/CascadeDropInPhase.js';
-import { AdjustPhase } from '../spin/phases/AdjustPhase.js';
+} from '../config/types.ts';
+import type { ReelMaskRect, MaskStrategy } from './ReelViewport.ts';
+import { RectMaskStrategy, SharedRectMaskStrategy } from './ReelViewport.ts';
+import { DEFAULTS } from '../config/defaults.ts';
+import { SpeedPresets } from '../config/SpeedPresets.ts';
+import { ReelSet, type ReelSetParams } from './ReelSet.ts';
+import { Reel, type ReelConfig } from './Reel.ts';
+import { ReelViewport } from './ReelViewport.ts';
+import { SymbolRegistry } from '../symbols/SymbolRegistry.ts';
+import { SymbolFactory } from '../symbols/SymbolFactory.ts';
+import { RandomSymbolProvider } from '../frame/RandomSymbolProvider.ts';
+import { FrameBuilder } from '../frame/FrameBuilder.ts';
+import { OffsetCalculator } from '../frame/OffsetCalculator.ts';
+import { PhaseFactory } from '../spin/phases/PhaseFactory.ts';
+import type { SpinningMode } from '../spin/modes/SpinningMode.ts';
+import { StandardMode } from '../spin/modes/StandardMode.ts';
+import type { FrameMiddleware } from '../frame/FrameBuilder.ts';
+import type { ColumnTarget } from '../frame/ColumnTarget.ts';
+import { assertBufferCountsInRange, columnTargetToArray } from '../frame/ColumnTarget.ts';
+import type { TumbleConfig, ResolvedTumbleConfig } from '../cascade/TumbleConfig.ts';
+import { resolveTumbleConfig } from '../cascade/TumbleConfig.ts';
+import { CascadeFallPhase } from '../spin/phases/CascadeFallPhase.ts';
+import { CascadePlacePhase } from '../spin/phases/CascadePlacePhase.ts';
+import { CascadeDropInPhase } from '../spin/phases/CascadeDropInPhase.ts';
+import { AdjustPhase } from '../spin/phases/AdjustPhase.ts';
 
 /**
  * The configurator you call before every reel set.

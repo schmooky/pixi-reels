@@ -5,7 +5,7 @@
  * the other (flicker / lost dim in cascade+win sequences).
  */
 import { describe, it, expect } from 'vitest';
-import { createTestReelSet } from '../../src/testing/index.js';
+import { createTestReelSet } from '../../src/testing/index.ts';
 
 describe('ReelViewport dim ref-counting', () => {
   it('keeps the dim up until the last overlapping consumer releases it', () => {

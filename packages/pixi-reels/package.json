@@ -61,7 +61,7 @@
     "provenance": true
   },
   "scripts": {
-    "build": "vite build && node scripts/emit-cts-types.mjs",
+    "build": "vite build && node scripts/postbuild-types.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",

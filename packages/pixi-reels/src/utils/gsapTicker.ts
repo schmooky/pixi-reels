@@ -1,5 +1,5 @@
 import type { Ticker } from 'pixi.js';
-import { getGsap } from './gsapRef.js';
+import { getGsap } from './gsapRef.ts';
 
 /**
  * Drive GSAP from a PixiJS ticker instead of its own requestAnimationFrame

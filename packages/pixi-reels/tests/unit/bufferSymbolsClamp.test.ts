@@ -25,7 +25,7 @@ describe('ReelSetBuilder.bufferSymbols clamp', () => {
   });
 
   it('accepts a positive integer unchanged', async () => {
-    const { ReelSetBuilder } = await import('../../src/core/ReelSetBuilder.js');
+    const { ReelSetBuilder } = await import('../../src/core/ReelSetBuilder.ts');
     const b = new ReelSetBuilder();
     b.bufferSymbols(3);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -34,7 +34,7 @@ describe('ReelSetBuilder.bufferSymbols clamp', () => {
   });
 
   it('clamps 0 to 1 and warns once', async () => {
-    const { ReelSetBuilder } = await import('../../src/core/ReelSetBuilder.js');
+    const { ReelSetBuilder } = await import('../../src/core/ReelSetBuilder.ts');
     const b = new ReelSetBuilder();
     b.bufferSymbols(0);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -44,7 +44,7 @@ describe('ReelSetBuilder.bufferSymbols clamp', () => {
   });
 
   it('clamps a negative count to 1', async () => {
-    const { ReelSetBuilder } = await import('../../src/core/ReelSetBuilder.js');
+    const { ReelSetBuilder } = await import('../../src/core/ReelSetBuilder.ts');
     const b = new ReelSetBuilder();
     b.bufferSymbols(-2);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -53,7 +53,7 @@ describe('ReelSetBuilder.bufferSymbols clamp', () => {
   });
 
   it('clamps NaN to 1', async () => {
-    const { ReelSetBuilder } = await import('../../src/core/ReelSetBuilder.js');
+    const { ReelSetBuilder } = await import('../../src/core/ReelSetBuilder.ts');
     const b = new ReelSetBuilder();
     b.bufferSymbols(Number.NaN);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -61,7 +61,7 @@ describe('ReelSetBuilder.bufferSymbols clamp', () => {
   });
 
   it('warns only once per process across multiple builders', async () => {
-    const { ReelSetBuilder } = await import('../../src/core/ReelSetBuilder.js');
+    const { ReelSetBuilder } = await import('../../src/core/ReelSetBuilder.ts');
     new ReelSetBuilder().bufferSymbols(0);
     new ReelSetBuilder().bufferSymbols(0);
     new ReelSetBuilder().bufferSymbols(-1);
@@ -69,7 +69,7 @@ describe('ReelSetBuilder.bufferSymbols clamp', () => {
   });
 
   it('returns the builder for chaining', async () => {
-    const { ReelSetBuilder } = await import('../../src/core/ReelSetBuilder.js');
+    const { ReelSetBuilder } = await import('../../src/core/ReelSetBuilder.ts');
     const b = new ReelSetBuilder();
     expect(b.bufferSymbols(0)).toBe(b);
     expect(b.bufferSymbols(2)).toBe(b);

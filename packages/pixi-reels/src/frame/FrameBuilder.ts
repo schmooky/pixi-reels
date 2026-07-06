@@ -1,4 +1,4 @@
-import type { RandomSymbolProvider } from './RandomSymbolProvider.js';
+import type { RandomSymbolProvider } from './RandomSymbolProvider.ts';
 
 /** Context passed through the middleware pipeline. */
 export interface FrameContext {

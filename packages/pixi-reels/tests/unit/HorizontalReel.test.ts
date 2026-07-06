@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import type { Ticker } from 'pixi.js';
-import { HorizontalReelBuilder } from '../../src/horizontal/HorizontalReelBuilder.js';
-import { FakeTicker } from '../../src/testing/FakeTicker.js';
-import { HeadlessSymbol } from '../../src/testing/HeadlessSymbol.js';
+import { HorizontalReelBuilder } from '../../src/horizontal/HorizontalReelBuilder.ts';
+import { FakeTicker } from '../../src/testing/FakeTicker.ts';
+import { HeadlessSymbol } from '../../src/testing/HeadlessSymbol.ts';
 
 const IDS = ['A', 'K', 'Q', 'J', '10', '9'];
 

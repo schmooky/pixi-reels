@@ -1,6 +1,6 @@
 import { Texture } from 'pixi.js';
 import { describe, it, expect } from 'vitest';
-import { AnimatedSpriteSymbol } from '../../src/index.js';
+import { AnimatedSpriteSymbol } from '../../src/index.ts';
 
 function mkTex(): Texture {
   // EMPTY is a 1x1 transparent texture safe to use in headless tests.

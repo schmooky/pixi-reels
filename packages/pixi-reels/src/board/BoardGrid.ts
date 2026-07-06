@@ -1,14 +1,14 @@
 import { Container, Graphics } from 'pixi.js';
 import type { Ticker } from 'pixi.js';
-import { ReelSetBuilder } from '../core/ReelSetBuilder.js';
-import type { ReelSet } from '../core/ReelSet.js';
-import { SharedRectMaskStrategy } from '../core/ReelViewport.js';
-import type { ReelSymbol } from '../symbols/ReelSymbol.js';
-import type { SymbolRegistry } from '../symbols/SymbolRegistry.js';
-import { EmptySymbol } from '../symbols/EmptySymbol.js';
-import { SpeedPresets } from '../config/SpeedPresets.js';
-import type { SpeedProfile, SymbolData } from '../config/types.js';
-import type { Disposable } from '../utils/Disposable.js';
+import { ReelSetBuilder } from '../core/ReelSetBuilder.ts';
+import type { ReelSet } from '../core/ReelSet.ts';
+import { SharedRectMaskStrategy } from '../core/ReelViewport.ts';
+import type { ReelSymbol } from '../symbols/ReelSymbol.ts';
+import type { SymbolRegistry } from '../symbols/SymbolRegistry.ts';
+import { EmptySymbol } from '../symbols/EmptySymbol.ts';
+import { SpeedPresets } from '../config/SpeedPresets.ts';
+import type { SpeedProfile, SymbolData } from '../config/types.ts';
+import type { Disposable } from '../utils/Disposable.ts';
 
 /** A cell coordinate in the grid. */
 export interface BoardCell {

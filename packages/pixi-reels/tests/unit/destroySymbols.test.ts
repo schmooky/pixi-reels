@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createTestReelSet } from '../../src/testing/testHarness.js';
+import { createTestReelSet } from '../../src/testing/testHarness.ts';
 
 describe('ReelSet.destroySymbols', () => {
   it('resolves immediately for an empty cells list', async () => {

@@ -1,4 +1,4 @@
-import type { SpinningMode } from './SpinningMode.js';
+import type { SpinningMode } from './SpinningMode.ts';
 
 /**
  * Cascade/tumble spinning mode.

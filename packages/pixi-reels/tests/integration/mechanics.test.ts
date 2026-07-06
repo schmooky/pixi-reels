@@ -6,7 +6,7 @@
  * "you can test a full slot mechanic without a renderer".
  */
 import { describe, it, expect } from 'vitest';
-import { createTestReelSet, expectGrid, countSymbol } from '../../src/testing/index.js';
+import { createTestReelSet, expectGrid, countSymbol } from '../../src/testing/index.ts';
 import {
   CheatEngine,
   forceLine,
@@ -15,7 +15,7 @@ import {
   holdAndWinProgress,
   cascadeSequence,
   forceAnticipation,
-} from '../../../../examples/shared/cheats.js';
+} from '../../../../examples/shared/cheats.ts';
 
 const SYMBOLS = ['a', 'b', 'c', 'scatter', 'wild', 'coin'];
 

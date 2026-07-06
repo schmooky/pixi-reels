@@ -5,7 +5,7 @@
  * single-wrap-per-call invariant and desyncing the symbol array from the view.
  */
 import { describe, it, expect } from 'vitest';
-import { StandardMode } from '../../src/spin/modes/StandardMode.js';
+import { StandardMode } from '../../src/spin/modes/StandardMode.ts';
 
 describe('StandardMode.computeDeltaY', () => {
   const mode = new StandardMode();

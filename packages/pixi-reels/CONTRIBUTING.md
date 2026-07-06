@@ -39,7 +39,7 @@ Node 20+ is required. The repo uses pnpm workspaces.
 - **Comments explain "why", not "what".** The code already says what it does; comments should capture the non-obvious reason a line exists.
 - **No emoji in source, commit messages, changelog entries, or UI strings.** The fancy-Unicode lint guard enforces this. Use ASCII punctuation.
 - **No default exports.** Always named. Tree-shaking and auto-imports both depend on this.
-- **`.js` extensions in imports.** Even from `.ts` sources — this is required by Node ESM resolution of the published build.
+- **`.ts` extensions in relative imports.** Name the real file (`./Reel.ts`). The build rewrites the specifier to `.js` for the published output — Rollup/`rewriteRelativeImportExtensions` for the runtime, `scripts/postbuild-types.mjs` for the declarations — so the shipped ESM stays spec-correct. Never write extensionless relative imports.
 
 ## GitHub Actions are pinned to SHAs
 

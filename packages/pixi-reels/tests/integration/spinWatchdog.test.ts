@@ -4,7 +4,7 @@
  * result never arrives, so a failed/cancelled fetch can't wedge the client.
  */
 import { describe, it, expect, vi } from 'vitest';
-import { createTestReelSet } from '../../src/testing/index.js';
+import { createTestReelSet } from '../../src/testing/index.ts';
 
 const SYMBOLS = ['a', 'b', 'c'];
 const GRID = [

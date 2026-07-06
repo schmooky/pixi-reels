@@ -1,8 +1,8 @@
-import type { Reel } from '../core/Reel.js';
-import type { ReelViewport } from '../core/ReelViewport.js';
-import type { SymbolPosition } from '../events/ReelEvents.js';
-import type { ReelSymbol } from '../symbols/ReelSymbol.js';
-import type { Disposable } from '../utils/Disposable.js';
+import type { Reel } from '../core/Reel.ts';
+import type { ReelViewport } from '../core/ReelViewport.ts';
+import type { SymbolPosition } from '../events/ReelEvents.ts';
+import type { ReelSymbol } from '../symbols/ReelSymbol.ts';
+import type { Disposable } from '../utils/Disposable.ts';
 
 export interface SpotlightOptions {
   /** Opacity of the dim overlay (0-1). Default: 0.5. */

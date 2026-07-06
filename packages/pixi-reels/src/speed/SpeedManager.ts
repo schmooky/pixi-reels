@@ -1,4 +1,4 @@
-import type { SpeedProfile } from '../config/types.js';
+import type { SpeedProfile } from '../config/types.ts';
 
 /**
  * The tempo of your reels, as named presets.

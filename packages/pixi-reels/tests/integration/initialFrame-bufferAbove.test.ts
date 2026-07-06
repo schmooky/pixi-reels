@@ -3,7 +3,7 @@
  * via the `ColumnTarget[]` form.
  */
 import { describe, it, expect } from 'vitest';
-import { createTestReelSet } from '../../src/testing/index.js';
+import { createTestReelSet } from '../../src/testing/index.ts';
 
 const SYMBOLS = ['a', 'b', 'c', 'coin'];
 

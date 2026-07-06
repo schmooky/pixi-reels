@@ -1,5 +1,5 @@
-import type { Reel } from '../../core/Reel.js';
-import type { SpeedProfile } from '../../config/types.js';
+import type { Reel } from '../../core/Reel.ts';
+import type { SpeedProfile } from '../../config/types.ts';
 
 /**
  * Abstract base for reel spin phases.

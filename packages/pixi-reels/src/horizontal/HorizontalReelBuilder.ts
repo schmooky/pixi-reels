@@ -1,11 +1,11 @@
 import type { Graphics, Ticker } from 'pixi.js';
-import { SymbolRegistry } from '../symbols/SymbolRegistry.js';
-import type { ColumnTarget } from '../frame/ColumnTarget.js';
-import { HorizontalReel } from './HorizontalReel.js';
+import { SymbolRegistry } from '../symbols/SymbolRegistry.ts';
+import type { ColumnTarget } from '../frame/ColumnTarget.ts';
+import { HorizontalReel } from './HorizontalReel.ts';
 import type {
   HorizontalCascadeTiming,
   HorizontalDirection,
-} from './HorizontalReelTypes.js';
+} from './HorizontalReelTypes.ts';
 
 /**
  * Fluent builder for {@link HorizontalReel} — the sideways "these symbols pay

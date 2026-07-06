@@ -6,7 +6,7 @@
  * just assert the math.
  */
 import { describe, it, expect } from 'vitest';
-import { createTestReelSet } from '../../src/testing/index.js';
+import { createTestReelSet } from '../../src/testing/index.ts';
 
 describe('getCellBounds — default gap (0)', () => {
   it('returns the top-left cell at origin', () => {

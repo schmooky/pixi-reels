@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { StopSequencer } from '../../src/core/StopSequencer.js';
+import { StopSequencer } from '../../src/core/StopSequencer.ts';
 
 describe('StopSequencer', () => {
   it('delivers symbols from the end of the frame first', () => {

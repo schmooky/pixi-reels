@@ -3,9 +3,9 @@ import type {
   SpeedProfile,
   Win,
   SymbolPosition,
-} from '../config/types.js';
-import type { CellPin, PinExpireReason } from '../pins/CellPin.js';
-import type { ReelSymbol } from '../symbols/ReelSymbol.js';
+} from '../config/types.ts';
+import type { CellPin, PinExpireReason } from '../pins/CellPin.ts';
+import type { ReelSymbol } from '../symbols/ReelSymbol.ts';
 
 // Re-export SymbolPosition (lives in config/types) so existing imports
 // from this module keep working.

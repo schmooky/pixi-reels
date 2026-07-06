@@ -1,11 +1,11 @@
 import type { Ticker } from 'pixi.js';
-import { ReelSetBuilder } from '../core/ReelSetBuilder.js';
-import type { ReelSet } from '../core/ReelSet.js';
-import type { SpinResult } from '../events/ReelEvents.js';
-import type { ColumnTarget } from '../frame/ColumnTarget.js';
-import { debugSnapshot, debugGrid } from '../debug/debug.js';
-import { FakeTicker } from './FakeTicker.js';
-import { HeadlessSymbol } from './HeadlessSymbol.js';
+import { ReelSetBuilder } from '../core/ReelSetBuilder.ts';
+import type { ReelSet } from '../core/ReelSet.ts';
+import type { SpinResult } from '../events/ReelEvents.ts';
+import type { ColumnTarget } from '../frame/ColumnTarget.ts';
+import { debugSnapshot, debugGrid } from '../debug/debug.ts';
+import { FakeTicker } from './FakeTicker.ts';
+import { HeadlessSymbol } from './HeadlessSymbol.ts';
 
 export interface TestReelSetOptions {
   reels?: number;
@@ -25,7 +25,7 @@ export interface TestReelSetOptions {
   symbolIds?: string[];
   weights?: Record<string, number>;
   /** Per-symbol overrides. useful for big-symbol size declarations in tests. */
-  symbolData?: Record<string, Partial<import('../config/types.js').SymbolData>>;
+  symbolData?: Record<string, Partial<import('../config/types.ts').SymbolData>>;
   symbolSize?: { width: number; height: number };
   symbolGap?: { x: number; y: number };
   /** Number of symbols above + below the visible area. Defaults to the builder default. */
@@ -172,7 +172,7 @@ export async function spinAndLand(reelSet: ReelSet, grid: SpinAndLandGrid): Prom
 /** Record every occurrence of the given events in order for assertion. */
 export function captureEvents(
   reelSet: ReelSet,
-  names: Array<keyof import('../events/ReelEvents.js').ReelSetEvents>,
+  names: Array<keyof import('../events/ReelEvents.ts').ReelSetEvents>,
 ): Array<{ event: string; args: unknown[] }> {
   const log: Array<{ event: string; args: unknown[] }> = [];
   for (const name of names) {

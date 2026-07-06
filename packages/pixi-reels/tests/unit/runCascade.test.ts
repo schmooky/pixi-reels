@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import type { Ticker } from 'pixi.js';
-import { ReelSetBuilder } from '../../src/core/ReelSetBuilder.js';
-import { HeadlessSymbol } from '../../src/testing/HeadlessSymbol.js';
-import { FakeTicker } from '../../src/testing/FakeTicker.js';
-import type { Cell, ReelSet } from '../../src/index.js';
+import { ReelSetBuilder } from '../../src/core/ReelSetBuilder.ts';
+import { HeadlessSymbol } from '../../src/testing/HeadlessSymbol.ts';
+import { FakeTicker } from '../../src/testing/FakeTicker.ts';
+import type { Cell, ReelSet } from '../../src/index.ts';
 
 interface Harness {
   reelSet: ReelSet;
@@ -346,9 +346,9 @@ describe('cascade:place:end payload', () => {
     // Test the phase directly so we don't depend on a real gsap ticker
     // driving the fall-phase delayed-calls. The phase is a pure unit
     // here. give it a target frame, run it, capture the event payload.
-    const { CascadePlacePhase } = await import('../../src/spin/phases/CascadePlacePhase.js');
-    const { EventEmitter } = await import('../../src/events/EventEmitter.js');
-    const { SpeedPresets } = await import('../../src/config/SpeedPresets.js');
+    const { CascadePlacePhase } = await import('../../src/spin/phases/CascadePlacePhase.ts');
+    const { EventEmitter } = await import('../../src/events/EventEmitter.ts');
+    const { SpeedPresets } = await import('../../src/config/SpeedPresets.ts');
 
     const { reelSet, destroy } = buildTumbleHarness([
       ['a', 'b', 'c'],
@@ -357,7 +357,7 @@ describe('cascade:place:end payload', () => {
     ]);
 
     const events: Array<{ isInitial: boolean; winnerRows: readonly number[] }> = [];
-    const localBus = new EventEmitter<import('../../src/events/ReelEvents.js').ReelSetEvents>();
+    const localBus = new EventEmitter<import('../../src/events/ReelEvents.ts').ReelSetEvents>();
     localBus.on('cascade:place:end', (info) => events.push({
       isInitial: info.isInitial,
       winnerRows: info.winnerRows,
@@ -377,9 +377,9 @@ describe('cascade:place:end payload', () => {
   });
 
   it('reports isInitial=false and the winnerRows it received on a refill', async () => {
-    const { CascadePlacePhase } = await import('../../src/spin/phases/CascadePlacePhase.js');
-    const { EventEmitter } = await import('../../src/events/EventEmitter.js');
-    const { SpeedPresets } = await import('../../src/config/SpeedPresets.js');
+    const { CascadePlacePhase } = await import('../../src/spin/phases/CascadePlacePhase.ts');
+    const { EventEmitter } = await import('../../src/events/EventEmitter.ts');
+    const { SpeedPresets } = await import('../../src/config/SpeedPresets.ts');
 
     const { reelSet, destroy } = buildTumbleHarness([
       ['a', 'b', 'c'],
@@ -388,7 +388,7 @@ describe('cascade:place:end payload', () => {
     ]);
 
     const events: Array<{ isInitial: boolean; winnerRows: readonly number[] }> = [];
-    const localBus = new EventEmitter<import('../../src/events/ReelEvents.js').ReelSetEvents>();
+    const localBus = new EventEmitter<import('../../src/events/ReelEvents.ts').ReelSetEvents>();
     localBus.on('cascade:place:end', (info) => events.push({
       isInitial: info.isInitial,
       winnerRows: info.winnerRows,

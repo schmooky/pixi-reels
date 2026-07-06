@@ -1,15 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import type { Ticker } from 'pixi.js';
-import { ReelSetBuilder } from '../../src/core/ReelSetBuilder.js';
-import { HeadlessSymbol } from '../../src/testing/HeadlessSymbol.js';
-import { FakeTicker } from '../../src/testing/FakeTicker.js';
-import { CascadeFallPhase } from '../../src/spin/phases/CascadeFallPhase.js';
-import { CascadeDropInPhase } from '../../src/spin/phases/CascadeDropInPhase.js';
-import { EventEmitter } from '../../src/events/EventEmitter.js';
-import { SpeedPresets } from '../../src/config/SpeedPresets.js';
-import { StandardMode } from '../../src/spin/modes/StandardMode.js';
-import { resolveTumbleConfig } from '../../src/cascade/TumbleConfig.js';
-import type { ReelSet, ReelSetEvents } from '../../src/index.js';
+import { ReelSetBuilder } from '../../src/core/ReelSetBuilder.ts';
+import { HeadlessSymbol } from '../../src/testing/HeadlessSymbol.ts';
+import { FakeTicker } from '../../src/testing/FakeTicker.ts';
+import { CascadeFallPhase } from '../../src/spin/phases/CascadeFallPhase.ts';
+import { CascadeDropInPhase } from '../../src/spin/phases/CascadeDropInPhase.ts';
+import { EventEmitter } from '../../src/events/EventEmitter.ts';
+import { SpeedPresets } from '../../src/config/SpeedPresets.ts';
+import { StandardMode } from '../../src/spin/modes/StandardMode.ts';
+import { resolveTumbleConfig } from '../../src/cascade/TumbleConfig.ts';
+import type { ReelSet, ReelSetEvents } from '../../src/index.ts';
 
 /**
  * The phase-`onSkip` paths emitted no `:end` event before this fix, so

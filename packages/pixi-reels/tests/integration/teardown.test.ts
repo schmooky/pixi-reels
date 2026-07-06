@@ -7,7 +7,7 @@
  *   H4 — no leaked ticker callbacks after destroy; double-destroy is idempotent.
  */
 import { describe, it, expect } from 'vitest';
-import { createTestReelSet } from '../../src/testing/index.js';
+import { createTestReelSet } from '../../src/testing/index.ts';
 
 const SYMBOLS = ['a', 'b', 'c'];
 const GRID = [

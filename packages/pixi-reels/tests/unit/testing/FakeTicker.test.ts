@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { FakeTicker } from '../../../src/testing/FakeTicker.js';
+import { FakeTicker } from '../../../src/testing/FakeTicker.ts';
 
 describe('FakeTicker', () => {
   it('fires callbacks when tick() is called', () => {

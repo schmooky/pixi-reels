@@ -4,8 +4,8 @@
  * under a per-instance key.
  */
 import { describe, it, expect, afterEach } from 'vitest';
-import { createTestReelSet } from '../../src/testing/index.js';
-import { enableDebug } from '../../src/debug/debug.js';
+import { createTestReelSet } from '../../src/testing/index.ts';
+import { enableDebug } from '../../src/debug/debug.ts';
 
 describe('enableDebug per-instance registry', () => {
   const g = globalThis as unknown as { window?: Record<string, unknown> };

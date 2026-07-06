@@ -1,7 +1,7 @@
 import type { gsap } from 'gsap';
-import { getGsap } from '../../utils/gsapRef.js';
-import { ReelPhase } from './ReelPhase.js';
-import type { SpinningMode } from '../modes/SpinningMode.js';
+import { getGsap } from '../../utils/gsapRef.ts';
+import { ReelPhase } from './ReelPhase.ts';
+import type { SpinningMode } from '../modes/SpinningMode.ts';
 
 export interface StartPhaseConfig {
   /** Spinning mode to set on enter. */

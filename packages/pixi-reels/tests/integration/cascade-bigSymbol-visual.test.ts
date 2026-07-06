@@ -15,10 +15,10 @@
  */
 import { describe, expect, it } from 'vitest';
 import type { Ticker } from 'pixi.js';
-import { ReelSetBuilder } from '../../src/core/ReelSetBuilder.js';
-import { HeadlessSymbol } from '../../src/testing/HeadlessSymbol.js';
-import { FakeTicker } from '../../src/testing/FakeTicker.js';
-import { OCCUPIED_SENTINEL } from '../../src/core/Reel.js';
+import { ReelSetBuilder } from '../../src/core/ReelSetBuilder.ts';
+import { HeadlessSymbol } from '../../src/testing/HeadlessSymbol.ts';
+import { FakeTicker } from '../../src/testing/FakeTicker.ts';
+import { OCCUPIED_SENTINEL } from '../../src/core/Reel.ts';
 
 function buildHarness() {
   const ticker = new FakeTicker();

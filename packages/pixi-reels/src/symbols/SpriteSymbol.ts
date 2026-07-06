@@ -1,7 +1,7 @@
 import { Sprite, type Texture } from 'pixi.js';
 import type { gsap } from 'gsap';
-import { getGsap } from '../utils/gsapRef.js';
-import { ReelSymbol } from './ReelSymbol.js';
+import { getGsap } from '../utils/gsapRef.ts';
+import { ReelSymbol } from './ReelSymbol.ts';
 
 export interface SpriteSymbolOptions {
   /** Map of symbolId → Texture. */

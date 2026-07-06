@@ -9,8 +9,8 @@ import {
   holdAndWinProgress,
   cascadeSequence,
   forceAnticipation,
-} from '../../../../examples/shared/cheats.js';
-import { SeededRng } from '../../../../examples/shared/seededRng.js';
+} from '../../../../examples/shared/cheats.ts';
+import { SeededRng } from '../../../../examples/shared/seededRng.ts';
 
 const SYMBOLS = ['a', 'b', 'c', 'scatter', 'wild', 'coin'];
 

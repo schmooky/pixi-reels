@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { createTestReelSet, expectGrid } from '../../src/testing/index.js';
-import { debugSnapshot } from '../../src/debug/debug.js';
+import { createTestReelSet, expectGrid } from '../../src/testing/index.ts';
+import { debugSnapshot } from '../../src/debug/debug.ts';
 
 describe('per-reel static shape (pyramid)', () => {
   it('builds a 3-5-5-5-3 pyramid', () => {

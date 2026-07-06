@@ -1,4 +1,4 @@
-import { ReelSymbol } from '../symbols/ReelSymbol.js';
+import { ReelSymbol } from '../symbols/ReelSymbol.ts';
 
 /**
  * A `ReelSymbol` implementation that does no rendering at all.

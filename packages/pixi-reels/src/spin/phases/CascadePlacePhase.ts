@@ -1,10 +1,10 @@
 import type { gsap } from 'gsap';
-import { getGsap } from '../../utils/gsapRef.js';
-import { ReelPhase } from './ReelPhase.js';
-import type { ReelSymbol } from '../../symbols/ReelSymbol.js';
-import type { EventEmitter } from '../../events/EventEmitter.js';
-import type { ReelSetEvents } from '../../events/ReelEvents.js';
-import { computeDropOffsets } from '../../cascade/tumbleAlgorithm.js';
+import { getGsap } from '../../utils/gsapRef.ts';
+import { ReelPhase } from './ReelPhase.ts';
+import type { ReelSymbol } from '../../symbols/ReelSymbol.ts';
+import type { EventEmitter } from '../../events/EventEmitter.ts';
+import type { ReelSetEvents } from '../../events/ReelEvents.ts';
+import { computeDropOffsets } from '../../cascade/tumbleAlgorithm.ts';
 
 export interface CascadePlacePhaseConfig {
   /** Full target frame for this reel: buffer-above + visible + buffer-below. */

@@ -4,8 +4,8 @@ import {
   sortByValueDesc,
   type SymbolPosition,
   type Win,
-} from '../../src/index.js';
-import { createTestReelSet } from '../../src/testing/index.js';
+} from '../../src/index.ts';
+import { createTestReelSet } from '../../src/testing/index.ts';
 
 function mkWin(cells: SymbolPosition[], value?: number, id?: number): Win {
   return { cells, value, id };

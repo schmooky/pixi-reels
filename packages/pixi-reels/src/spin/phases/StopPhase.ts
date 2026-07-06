@@ -1,6 +1,6 @@
 import type { gsap } from 'gsap';
-import { getGsap } from '../../utils/gsapRef.js';
-import { ReelPhase } from './ReelPhase.js';
+import { getGsap } from '../../utils/gsapRef.ts';
+import { ReelPhase } from './ReelPhase.ts';
 
 export interface StopPhaseConfig {
   /** Target symbols for this reel (full frame including buffers, top-to-bottom). */

@@ -1,9 +1,9 @@
 import type { Ticker } from 'pixi.js';
 import { describe, it, expect } from 'vitest';
-import { ReelSetBuilder } from '../../src/core/ReelSetBuilder.js';
-import { FakeTicker } from '../../src/testing/FakeTicker.js';
-import { HeadlessSymbol } from '../../src/testing/HeadlessSymbol.js';
-import { captureEvents } from '../../src/testing/testHarness.js';
+import { ReelSetBuilder } from '../../src/core/ReelSetBuilder.ts';
+import { FakeTicker } from '../../src/testing/FakeTicker.ts';
+import { HeadlessSymbol } from '../../src/testing/HeadlessSymbol.ts';
+import { captureEvents } from '../../src/testing/testHarness.ts';
 
 interface Harness {
   reelSet: ReturnType<ReelSetBuilder['build']>;

@@ -1,4 +1,4 @@
-import type { ReelSymbol } from '../symbols/ReelSymbol.js';
+import type { ReelSymbol } from '../symbols/ReelSymbol.ts';
 
 /**
  * The physics of one reel. move symbols down, wrap them around.

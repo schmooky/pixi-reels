@@ -1,4 +1,4 @@
-import { ReelPhase } from './ReelPhase.js';
+import { ReelPhase } from './ReelPhase.ts';
 
 export interface SpinPhaseConfig {
   /** Minimum time to spin before allowing stop. Overrides speed profile if set. */

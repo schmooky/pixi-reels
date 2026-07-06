@@ -1,7 +1,7 @@
 import type { Graphics, Ticker } from 'pixi.js';
-import type { SymbolRegistry } from '../symbols/SymbolRegistry.js';
-import type { ColumnTarget } from '../frame/ColumnTarget.js';
-import type { SpinResult } from '../events/ReelEvents.js';
+import type { SymbolRegistry } from '../symbols/SymbolRegistry.ts';
+import type { ColumnTarget } from '../frame/ColumnTarget.ts';
+import type { SpinResult } from '../events/ReelEvents.ts';
 
 /** Travel direction of the spin. `rtl` scrolls leftward, `ltr` rightward. */
 export type HorizontalDirection = 'ltr' | 'rtl';

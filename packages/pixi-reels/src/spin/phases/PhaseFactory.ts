@@ -1,10 +1,10 @@
-import type { Reel } from '../../core/Reel.js';
-import type { SpeedProfile } from '../../config/types.js';
-import { ReelPhase } from './ReelPhase.js';
-import { StartPhase } from './StartPhase.js';
-import { SpinPhase } from './SpinPhase.js';
-import { StopPhase } from './StopPhase.js';
-import { AnticipationPhase } from './AnticipationPhase.js';
+import type { Reel } from '../../core/Reel.ts';
+import type { SpeedProfile } from '../../config/types.ts';
+import { ReelPhase } from './ReelPhase.ts';
+import { StartPhase } from './StartPhase.ts';
+import { SpinPhase } from './SpinPhase.ts';
+import { StopPhase } from './StopPhase.ts';
+import { AnticipationPhase } from './AnticipationPhase.ts';
 
 type PhaseConstructor<T extends ReelPhase<any> = ReelPhase<any>> =
   new (reel: Reel, speed: SpeedProfile) => T;

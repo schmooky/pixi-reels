@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { createTestReelSet, captureEvents } from '../../src/testing/index.js';
-import { debugSnapshot } from '../../src/debug/debug.js';
+import { createTestReelSet, captureEvents } from '../../src/testing/index.ts';
+import { debugSnapshot } from '../../src/debug/debug.ts';
 
 describe('MultiWays reshape', () => {
   it('builds at maxRows by default and reports isMultiWaysSlot', () => {

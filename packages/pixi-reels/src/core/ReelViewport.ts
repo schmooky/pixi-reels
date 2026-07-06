@@ -1,5 +1,5 @@
 import { Container, Graphics } from 'pixi.js';
-import type { Disposable } from '../utils/Disposable.js';
+import type { Disposable } from '../utils/Disposable.ts';
 
 /**
  * Bounding rectangle for one reel. what `MaskStrategy` builds the clip

@@ -1,30 +1,30 @@
 import type { Ticker } from 'pixi.js';
-import type { Reel } from '../core/Reel.js';
-import type { SpeedProfile, SpinOptions, SymbolData } from '../config/types.js';
-import type { SpeedManager } from '../speed/SpeedManager.js';
-import type { FrameBuilder } from '../frame/FrameBuilder.js';
-import type { SpinResult } from '../events/ReelEvents.js';
-import { EventEmitter } from '../events/EventEmitter.js';
-import type { ReelSetEvents } from '../events/ReelEvents.js';
-import { PhaseFactory } from './phases/PhaseFactory.js';
-import type { SpinPhase } from './phases/SpinPhase.js';
-import type { ReelPhase } from './phases/ReelPhase.js';
-import type { StartPhaseConfig } from './phases/StartPhase.js';
-import type { StopPhaseConfig } from './phases/StopPhase.js';
-import type { AnticipationPhaseConfig } from './phases/AnticipationPhase.js';
-import type { AdjustPhaseConfig } from './phases/AdjustPhase.js';
-import type { CascadeFallPhaseConfig } from './phases/CascadeFallPhase.js';
-import type { CascadePlacePhaseConfig } from './phases/CascadePlacePhase.js';
-import type { CascadeDropInPhaseConfig } from './phases/CascadeDropInPhase.js';
-import type { SpinningMode } from './modes/SpinningMode.js';
-import { StandardMode } from './modes/StandardMode.js';
-import type { Disposable } from '../utils/Disposable.js';
-import { TickerRef } from '../utils/TickerRef.js';
-import { OCCUPIED_SENTINEL } from '../core/Reel.js';
-import type { CellPin } from '../pins/CellPin.js';
-import { columnTargetToArray } from '../frame/ColumnTarget.js';
-import type { ColumnTarget } from '../frame/ColumnTarget.js';
-import type { Cell } from '../cascade/tumbleAlgorithm.js';
+import type { Reel } from '../core/Reel.ts';
+import type { SpeedProfile, SpinOptions, SymbolData } from '../config/types.ts';
+import type { SpeedManager } from '../speed/SpeedManager.ts';
+import type { FrameBuilder } from '../frame/FrameBuilder.ts';
+import type { SpinResult } from '../events/ReelEvents.ts';
+import { EventEmitter } from '../events/EventEmitter.ts';
+import type { ReelSetEvents } from '../events/ReelEvents.ts';
+import { PhaseFactory } from './phases/PhaseFactory.ts';
+import type { SpinPhase } from './phases/SpinPhase.ts';
+import type { ReelPhase } from './phases/ReelPhase.ts';
+import type { StartPhaseConfig } from './phases/StartPhase.ts';
+import type { StopPhaseConfig } from './phases/StopPhase.ts';
+import type { AnticipationPhaseConfig } from './phases/AnticipationPhase.ts';
+import type { AdjustPhaseConfig } from './phases/AdjustPhase.ts';
+import type { CascadeFallPhaseConfig } from './phases/CascadeFallPhase.ts';
+import type { CascadePlacePhaseConfig } from './phases/CascadePlacePhase.ts';
+import type { CascadeDropInPhaseConfig } from './phases/CascadeDropInPhase.ts';
+import type { SpinningMode } from './modes/SpinningMode.ts';
+import { StandardMode } from './modes/StandardMode.ts';
+import type { Disposable } from '../utils/Disposable.ts';
+import { TickerRef } from '../utils/TickerRef.ts';
+import { OCCUPIED_SENTINEL } from '../core/Reel.ts';
+import type { CellPin } from '../pins/CellPin.ts';
+import { columnTargetToArray } from '../frame/ColumnTarget.ts';
+import type { ColumnTarget } from '../frame/ColumnTarget.ts';
+import type { Cell } from '../cascade/tumbleAlgorithm.ts';
 
 /**
  * MultiWays/big-symbol coordination hook injected by `ReelSet` into
@@ -69,7 +69,7 @@ export interface SpinControllerHooks {
     reelIndex: number,
     targetSymbolHeight: number,
     symbolGapY: number,
-  ): import('./phases/AdjustPhase.js').PinOverlayTween[];
+  ): import('./phases/AdjustPhase.ts').PinOverlayTween[];
 }
 
 /**

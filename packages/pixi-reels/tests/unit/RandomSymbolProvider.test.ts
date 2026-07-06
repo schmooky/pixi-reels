@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { RandomSymbolProvider } from '../../src/frame/RandomSymbolProvider.js';
+import { RandomSymbolProvider } from '../../src/frame/RandomSymbolProvider.ts';
 
 describe('RandomSymbolProvider', () => {
   it('returns symbols from the registered set', () => {

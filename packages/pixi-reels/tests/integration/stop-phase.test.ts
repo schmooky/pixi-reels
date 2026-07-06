@@ -7,7 +7,7 @@
  * placeSymbols behavior directly plus the slice semantics StopPhase now uses.
  */
 import { describe, it, expect } from 'vitest';
-import { createTestReelSet, expectGrid } from '../../src/testing/index.js';
+import { createTestReelSet, expectGrid } from '../../src/testing/index.ts';
 
 describe('placeSymbols visible-only semantics', () => {
   it('placing visible-only grid fills every visible cell with target', () => {

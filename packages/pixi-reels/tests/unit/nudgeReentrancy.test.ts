@@ -4,7 +4,7 @@
  * exercises the guard one method at a time.
  */
 import { describe, expect, it } from 'vitest';
-import { createTestReelSet } from '../../src/testing/index.js';
+import { createTestReelSet } from '../../src/testing/index.ts';
 
 function buildHarness() {
   return createTestReelSet({

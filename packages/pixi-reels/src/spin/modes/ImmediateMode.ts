@@ -1,4 +1,4 @@
-import type { SpinningMode } from './SpinningMode.js';
+import type { SpinningMode } from './SpinningMode.ts';
 
 /**
  * Immediate placement mode for super-turbo skip.

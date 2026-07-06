@@ -1,9 +1,9 @@
-import type { Win } from '../config/types.js';
-import type { ReelSet } from '../core/ReelSet.js';
-import type { SymbolPosition } from '../events/ReelEvents.js';
-import type { ReelSymbol } from '../symbols/ReelSymbol.js';
-import type { Disposable } from '../utils/Disposable.js';
-import { sortByValueDesc } from './Win.js';
+import type { Win } from '../config/types.ts';
+import type { ReelSet } from '../core/ReelSet.ts';
+import type { SymbolPosition } from '../events/ReelEvents.ts';
+import type { ReelSymbol } from '../symbols/ReelSymbol.ts';
+import type { Disposable } from '../utils/Disposable.ts';
+import { sortByValueDesc } from './Win.ts';
 
 /**
  * What to play on each cell being highlighted.

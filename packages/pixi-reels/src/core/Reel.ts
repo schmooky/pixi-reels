@@ -1,17 +1,17 @@
 import { Container } from 'pixi.js';
-import type { Disposable } from '../utils/Disposable.js';
-import { ReelSymbol } from '../symbols/ReelSymbol.js';
-import type { SymbolFactory } from '../symbols/SymbolFactory.js';
-import type { SymbolData } from '../config/types.js';
-import { ReelMotion } from './ReelMotion.js';
-import { StopSequencer } from './StopSequencer.js';
-import { EventEmitter } from '../events/EventEmitter.js';
-import type { ReelEvents } from '../events/ReelEvents.js';
-import type { RandomSymbolProvider } from '../frame/RandomSymbolProvider.js';
-import type { ReelViewport } from './ReelViewport.js';
-import type { SpinningMode } from '../spin/modes/SpinningMode.js';
-import { StandardMode } from '../spin/modes/StandardMode.js';
-import { getGsap } from '../utils/gsapRef.js';
+import type { Disposable } from '../utils/Disposable.ts';
+import { ReelSymbol } from '../symbols/ReelSymbol.ts';
+import type { SymbolFactory } from '../symbols/SymbolFactory.ts';
+import type { SymbolData } from '../config/types.ts';
+import { ReelMotion } from './ReelMotion.ts';
+import { StopSequencer } from './StopSequencer.ts';
+import { EventEmitter } from '../events/EventEmitter.ts';
+import type { ReelEvents } from '../events/ReelEvents.ts';
+import type { RandomSymbolProvider } from '../frame/RandomSymbolProvider.ts';
+import type { ReelViewport } from './ReelViewport.ts';
+import type { SpinningMode } from '../spin/modes/SpinningMode.ts';
+import { StandardMode } from '../spin/modes/StandardMode.ts';
+import { getGsap } from '../utils/gsapRef.ts';
 
 /**
  * Upper bound (ms) on a single `update()` delta. Matches Pixi's default

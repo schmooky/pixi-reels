@@ -83,7 +83,7 @@ If your change would create a file outside the tree above, stop and think. There
 Break any of these and the build, the tests, or real consumers break. They are enforced by lint guards, tests, or code review.
 
 - **No default exports.** Always named. Tree-shaking depends on this.
-- **`.js` extensions in imports.** Even from `.ts`. Node ESM resolution requires it.
+- **`.ts` extensions in relative imports.** Name the real file (`./Reel.ts`). The build rewrites it to `.js` in the published output (`rewriteRelativeImportExtensions`, and `scripts/postbuild-types.mjs` for the declarations). Never extensionless.
 - **Only `src/index.ts` is a barrel.** Subdirectories do not re-export. The Spine subpath barrel (`src/spine/index.ts`) is the single exception.
 - **`Disposable` on anything that allocates.** `destroy()` + `isDestroyed`. Wired into `ReelSet.destroy()`'s cascade.
 - **`TickerRef`, never `ticker.add()` directly.** The wrapper tracks callbacks and auto-removes on destroy.
@@ -150,7 +150,7 @@ export default class Foo {}         // wrong
 ```ts
 // No subdirectory barrels.
 // src/core/index.ts
-export * from './ReelSet.js';        // wrong
+export * from './ReelSet.ts';        // wrong
 ```
 
 ```ts

@@ -6,8 +6,8 @@
  * middleware added at runtime takes effect on the very next spin.
  */
 import { describe, it, expect } from 'vitest';
-import { createTestReelSet } from '../../src/testing/index.js';
-import type { FrameMiddleware } from '../../src/frame/FrameBuilder.js';
+import { createTestReelSet } from '../../src/testing/index.ts';
+import type { FrameMiddleware } from '../../src/frame/FrameBuilder.ts';
 
 const SYMBOLS = ['a', 'b', 'c', 'wild'];
 

@@ -4,9 +4,9 @@
  * capacity it is handed (which the builder derives from the strip size).
  */
 import { describe, it, expect } from 'vitest';
-import { SymbolFactory } from '../../src/symbols/SymbolFactory.js';
-import { SymbolRegistry } from '../../src/symbols/SymbolRegistry.js';
-import { HeadlessSymbol } from '../../src/testing/HeadlessSymbol.js';
+import { SymbolFactory } from '../../src/symbols/SymbolFactory.ts';
+import { SymbolRegistry } from '../../src/symbols/SymbolRegistry.ts';
+import { HeadlessSymbol } from '../../src/testing/HeadlessSymbol.ts';
 
 function registry(): SymbolRegistry {
   const r = new SymbolRegistry();

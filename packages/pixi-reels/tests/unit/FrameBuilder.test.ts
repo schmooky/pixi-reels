@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
-import { FrameBuilder, type FrameMiddleware } from '../../src/frame/FrameBuilder.js';
-import { RandomSymbolProvider } from '../../src/frame/RandomSymbolProvider.js';
-import { columnTargetToArray } from '../../src/frame/ColumnTarget.js';
+import { FrameBuilder, type FrameMiddleware } from '../../src/frame/FrameBuilder.ts';
+import { RandomSymbolProvider } from '../../src/frame/RandomSymbolProvider.ts';
+import { columnTargetToArray } from '../../src/frame/ColumnTarget.ts';
 
 describe('FrameBuilder', () => {
   function createBuilder() {
