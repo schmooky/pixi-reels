@@ -1,0 +1,58 @@
+---
+title: Staggered / sequential anticipation
+group: tension
+oneLiner: Tease reels one after another instead of all slowing at once.
+description: Pass a stagger to setAnticipation so each teasing reel starts (or
+  finishes) after the last, instead of every anticipation reel slowing down at
+  the same instant.
+order: 48
+steps:
+  - Call setAnticipation([...reels], stagger) with a second argument
+  - "Use a number for a constant sweep, or 'sequential' to hold each reel until
+    the previous one has landed"
+  - spin:stopping fires when a reel actually begins slowing, so tension SFX sync
+    to the real start
+apis:
+  - ReelSet.setAnticipation
+  - spin:stopping event
+  - spin:reelLanded event
+tags:
+  - anticipation
+  - tension
+  - stagger
+  - sequential
+---
+
+<RecipeDemo code="staggered-anticipation" />
+
+## The problem with parallel anticipation
+
+By default every reel you pass to `setAnticipation` begins its slow-down at the same instant, so with `anticipationDelay` (e.g. 450 ms) much larger than `stopDelay` (e.g. 140 ms) the teases overlap almost entirely. it reads as one shared slow-down, then the later reels pop in quickly.
+
+## Stagger the tease start
+
+The second argument to `setAnticipation` spaces the teases by **tease-order** (their position in the list you pass, not their raw reel index):
+
+```ts
+reelSet.setAnticipation([2, 3, 4], 0);          // parallel (default)
+reelSet.setAnticipation([2, 3, 4], 450);        // constant 450ms sweep, left→right
+reelSet.setAnticipation([2, 3, 4], [0, 300, 750]); // explicit per-reel offsets
+reelSet.setAnticipation([2, 3, 4], 'sequential');  // wait for each to LAND
+```
+
+`'sequential'` is the strongest: reel 3 does not begin teasing until reel 2 has fully landed, and reel 4 waits for reel 3. one reel holds the whole floor at a time.
+
+## Sync tension SFX to the real start
+
+`spin:stopping` now fires when a reel *actually* begins slowing (after its stagger offset), not when the result arrives — so a per-reel tease sound lines up with what the player sees:
+
+```ts
+reelSet.events.on('spin:stopping', (reelIndex) => {
+  if (anticipationReels.includes(reelIndex)) playTensionSound(reelIndex);
+});
+```
+
+## Related
+
+- [Slowing anticipation](/recipes/slowing-anticipation/) — make each reel decelerate deeper than the last.
+- [Scatter-driven anticipation](/recipes/scatter-anticipation/) — pick the tease reels straight from the result grid.

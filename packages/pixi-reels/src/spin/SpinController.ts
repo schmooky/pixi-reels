@@ -1,6 +1,13 @@
 import type { Ticker } from 'pixi.js';
 import type { Reel } from '../core/Reel.js';
-import type { SpeedProfile, SpinOptions, SymbolData } from '../config/types.js';
+import type {
+  AnticipationOptions,
+  AnticipationSlowdown,
+  AnticipationStagger,
+  SpeedProfile,
+  SpinOptions,
+  SymbolData,
+} from '../config/types.js';
 import type { SpeedManager } from '../speed/SpeedManager.js';
 import type { FrameBuilder } from '../frame/FrameBuilder.js';
 import type { SpinResult } from '../events/ReelEvents.js';
@@ -106,6 +113,39 @@ export class SpinController implements Disposable {
   private _spinStartTime = 0;
   private _resultSymbols: string[][] | null = null;
   private _anticipationReels: number[] = [];
+  /**
+   * How the START of each anticipation reel's slow-down is spaced. See
+   * {@link setAnticipation}. `0` (or a single tease reel) reproduces the
+   * legacy behaviour where every anticipation reel begins slowing at once.
+   */
+  private _anticipationStagger: AnticipationStagger = 0;
+  /**
+   * Progressive slow-down curve applied across the tease sequence, or `null`
+   * for the flat default (every anticipation reel drops to the phase default
+   * of 30% spin speed). See {@link setAnticipation}. Cleared per spin.
+   */
+  private _anticipationSlowdown: AnticipationSlowdown | null = null;
+  /**
+   * Explicit anticipation hold (ms) that OVERRIDES the active speed profile's
+   * `anticipationDelay`. Set via `setAnticipation(reels, { duration })`. `null`
+   * means "use the profile". A positive value also lets the tease play when the
+   * profile's `anticipationDelay` is `0` (Turbo / SuperTurbo). Cleared per spin.
+   */
+  private _anticipationDuration: number | null = null;
+  /**
+   * Reels that actually entered a tease this spin. populated when
+   * `anticipation:reel` fires, drained in `_markLanded` to fire
+   * `anticipation:reelEnd` only for reels that teased. Cleared per spin.
+   */
+  private _teasingReels = new Set<number>();
+  /**
+   * `'sequential'` anticipation chaining state: one deferred per anticipation
+   * reel, resolved when that reel lands (in `_markLanded`). Reel at tease-order
+   * `k` awaits the deferred of the reel at order `k-1` before starting its
+   * tease. Rebuilt each `setAnticipation('sequential')`; cleared per spin.
+   */
+  private _reelLandedResolvers: Map<number, () => void> = new Map();
+  private _reelLandedPromises: Map<number, Promise<void>> = new Map();
   private _stopDelayOverride: number[] | null = null;
   private _activePhases: Map<number, ReelPhase<any>> = new Map();
   private _landedReels = new Set<number>();
@@ -274,6 +314,12 @@ export class SpinController implements Disposable {
     this._spinStartTime = performance.now();
     this._resultSymbols = null;
     this._anticipationReels = [];
+    this._anticipationStagger = 0;
+    this._anticipationSlowdown = null;
+    this._anticipationDuration = null;
+    this._teasingReels.clear();
+    this._reelLandedResolvers.clear();
+    this._reelLandedPromises.clear();
     // NOTE: _stopDelayOverride is NOT cleared here. The contract is that
     // `setDropOrder()` (or `setStopDelays()`) is called right before
     // `spin()` / `refill()` and represents user intent for the upcoming
@@ -479,6 +525,12 @@ export class SpinController implements Disposable {
     this._spinStartTime = performance.now();
     this._resultSymbols = null;
     this._anticipationReels = [];
+    this._anticipationStagger = 0;
+    this._anticipationSlowdown = null;
+    this._anticipationDuration = null;
+    this._teasingReels.clear();
+    this._reelLandedResolvers.clear();
+    this._reelLandedPromises.clear();
     // _stopDelayOverride preserved across entry. see spin() for rationale.
     // Cascade recipes set `setDropOrder('all')` right before refill() and
     // would otherwise see their setting clobbered, falling back to the
@@ -751,20 +803,71 @@ export class SpinController implements Disposable {
     this._markLanded(reelIndex);
   }
 
-  setAnticipation(reelIndices: number[]): void {
+  /**
+   * Mark reels to tease, and shape how they slow down.
+   *
+   * The second argument is either a bare `stagger` value or a full
+   * `{ stagger, slowdown }` options object.
+   *
+   * `stagger` controls when each anticipation reel BEGINS slowing (offsets
+   * are by tease-order. position within `reelIndices`. not raw reel index):
+   *   - `0` (default): all teases start together (legacy parallel behaviour).
+   *   - `number`: reel at tease-order `k` starts after `k * stagger` ms.
+   *   - `number[]`: explicit per-tease-order offset in ms (`stagger[k]`).
+   *   - `'sequential'`: each reel waits until the previous anticipation reel
+   *     has fully landed before it starts. maximal one-at-a-time tension.
+   *
+   * `slowdown` makes the deceleration progressive across the sequence: each
+   * successive reel slows to a lower speed (`from` → `to`) and/or holds longer
+   * (`holdFrom` → `holdTo`). Omit it for the flat 30%-and-hold default.
+   *
+   * `duration` overrides the active speed profile's `anticipationDelay` (ms).
+   * Pass a positive value to make the tease play even in Turbo / SuperTurbo,
+   * whose profiles have `anticipationDelay: 0` and would otherwise skip it.
+   */
+  setAnticipation(
+    reelIndices: number[],
+    options: AnticipationStagger | AnticipationOptions = 0,
+  ): void {
+    const opts: AnticipationOptions =
+      typeof options === 'object' && !Array.isArray(options)
+        ? options
+        : { stagger: options };
+    const stagger = opts.stagger ?? 0;
+
     // Held reels never reach AnticipationPhase, but filter here too so the
     // public API is forgiving. callers can pass a flat list without
     // tracking which indices are held this spin.
     this._anticipationReels = reelIndices.filter((i) => !this._heldReels.has(i));
+    this._anticipationStagger = stagger;
+    this._anticipationSlowdown = opts.slowdown ?? null;
+    this._anticipationDuration = opts.duration ?? null;
+    this._teasingReels.clear();
+
+    // Sequential chaining needs a landed-deferred per anticipation reel so a
+    // reel can await the previous one's landing. Build them here (setResult
+    // resolves the spin phases synchronously, so the deferreds must exist
+    // before the anticipation branch runs on the next microtask).
+    this._reelLandedResolvers.clear();
+    this._reelLandedPromises.clear();
+    if (stagger === 'sequential') {
+      for (const i of this._anticipationReels) {
+        this._reelLandedPromises.set(
+          i,
+          new Promise<void>((resolve) => this._reelLandedResolvers.set(i, resolve)),
+        );
+      }
+    }
   }
 
   /**
    * Override the per-reel stop delay (in ms). Pass one value per reel.
    * When set, these replace the staggered `reelIndex * speed.stopDelay`
-   * pattern for the current spin. Cleared at the start of each new spin.
+   * pattern. Pass `null` to CLEAR the override and restore that default
+   * (distinct from passing all-zeros, which lands every reel at once).
    */
-  setStopDelays(delays: number[]): void {
-    this._stopDelayOverride = [...delays];
+  setStopDelays(delays: number[] | null): void {
+    this._stopDelayOverride = delays ? [...delays] : null;
   }
 
   /**
@@ -1081,12 +1184,37 @@ export class SpinController implements Disposable {
     const stopDelay = this._stopDelayFor(reelIndex, speed);
     const targetFrame = this._frameFor(reelIndex);
 
-    if (this._anticipationReels.includes(reelIndex) && speed.anticipationDelay > 0) {
+    // Effective tease hold: the per-call `duration` override wins over the
+    // profile's `anticipationDelay`, so a positive override plays the tease
+    // even in Turbo / SuperTurbo (whose profiles set anticipationDelay: 0).
+    const antBaseDuration = this._anticipationDuration ?? speed.anticipationDelay;
+
+    let didAnticipate = false;
+    if (this._anticipationReels.includes(reelIndex) && antBaseDuration > 0) {
+      // Stagger the START of the slow-down so anticipation reels tease one
+      // after another instead of all at once. The reel keeps spinning at full
+      // speed during this wait (its SpinPhase resolved but `reel.speed` is
+      // still spinSpeed and the ticker keeps advancing it), so earlier reels
+      // visibly hold while later ones stay at full blur.
+      const proceed = await this._awaitAnticipationOffset(reelIndex, generation);
+      if (!proceed) return; // slam / new spin superseded us during the wait
+
+      // A dedicated tease-start signal carrying the reel's place in the
+      // sequence, so games can layer per-step SFX / pitch ramps without
+      // re-deriving which reels are teasing from `spin:stopping`.
+      const order = this._anticipationReels.indexOf(reelIndex);
+      this._teasingReels.add(reelIndex);
+      this._events.emit('anticipation:reel', {
+        reelIndex,
+        order,
+        total: this._anticipationReels.length,
+      });
       this._events.emit('spin:stopping', reelIndex);
       const anticipationPhase = this._phaseFactory.create<any>('anticipation', reel, speed);
       this._activePhases.set(reelIndex, anticipationPhase);
-      await anticipationPhase.run({} as AnticipationPhaseConfig);
+      await anticipationPhase.run(this._anticipationConfigFor(reelIndex, speed));
       if (generation !== this._spinGeneration) return;
+      didAnticipate = true;
     } else {
       this._events.emit('spin:stopping', reelIndex);
     }
@@ -1116,7 +1244,13 @@ export class SpinController implements Disposable {
     } else {
       const stopPhase = this._phaseFactory.create<any>('stop', reel, speed);
       this._activePhases.set(reelIndex, stopPhase);
-      await stopPhase.run({ targetFrame, delay: stopDelay } satisfies StopPhaseConfig);
+      // After a tease, carry the slow anticipation speed into the stop so the
+      // reel crawls to its landing position instead of re-accelerating.
+      await stopPhase.run({
+        targetFrame,
+        delay: stopDelay,
+        preserveSpeed: didAnticipate,
+      } satisfies StopPhaseConfig);
       if (generation !== this._spinGeneration) return;
     }
 
@@ -1167,6 +1301,84 @@ export class SpinController implements Disposable {
     const adjust = this._phaseFactory.create<any>('adjust', reel, speed);
     this._activePhases.set(reelIndex, adjust);
     await adjust.run({ pinOverlays } satisfies AdjustPhaseConfig);
+  }
+
+  /**
+   * Wait for a reel's anticipation-start offset before it begins slowing.
+   * Returns `false` if the spin generation changed during the wait (a slam or
+   * a fresh spin superseded this task) so the caller bails cleanly.
+   *
+   * Offsets are keyed by tease-order (position within `_anticipationReels`),
+   * not raw reel index, so teasing `[2,3,4]` spaces them `[0, S, 2S]`
+   * regardless of which physical reels they are.
+   */
+  private async _awaitAnticipationOffset(
+    reelIndex: number,
+    generation: number,
+  ): Promise<boolean> {
+    const order = this._anticipationReels.indexOf(reelIndex);
+    if (order <= 0) return true; // first tease reel starts immediately
+
+    const stagger = this._anticipationStagger;
+    if (stagger === 'sequential') {
+      const prevLanded = this._reelLandedPromises.get(this._anticipationReels[order - 1]);
+      if (prevLanded) {
+        await prevLanded;
+        if (generation !== this._spinGeneration) return false;
+      }
+      return true;
+    }
+
+    const offsetMs = Array.isArray(stagger) ? (stagger[order] ?? 0) : order * stagger;
+    if (offsetMs > 0) {
+      await new Promise<void>((r) => setTimeout(r, offsetMs));
+      if (generation !== this._spinGeneration) return false;
+    }
+    return true;
+  }
+
+  /**
+   * Build the per-reel AnticipationPhase config from the active `slowdown`
+   * curve and `duration` override. Interpolates `from`→`to` (speed) and
+   * `holdFrom`→`holdTo` (duration) across tease-order so each successive reel
+   * decelerates deeper / holds longer. Base hold is the `duration` override
+   * when set, else the profile's `anticipationDelay`. Returns an empty config
+   * (phase defaults: 30% speed, `anticipationDelay` hold) when neither a
+   * slowdown nor a duration override is configured.
+   */
+  private _anticipationConfigFor(
+    reelIndex: number,
+    speed: SpeedProfile,
+  ): AnticipationPhaseConfig {
+    const slowdown = this._anticipationSlowdown;
+    const baseDuration = this._anticipationDuration;
+
+    // No slowdown curve: only the (optional) duration override matters. Passing
+    // it explicitly is what lets the tease run when the profile's
+    // anticipationDelay is 0 (Turbo / SuperTurbo).
+    if (!slowdown) {
+      return baseDuration != null ? { duration: baseDuration } : {};
+    }
+
+    const count = this._anticipationReels.length;
+    const order = this._anticipationReels.indexOf(reelIndex);
+    // Fraction along the tease sequence: 0 for the first reel, 1 for the last.
+    const f = count > 1 ? order / (count - 1) : 0;
+
+    const from = slowdown.from ?? 0.3;
+    const to = slowdown.to ?? from;
+    const holdFrom = slowdown.holdFrom ?? 1;
+    const holdTo = slowdown.holdTo ?? holdFrom;
+    const base = baseDuration ?? speed.anticipationDelay;
+
+    const config: AnticipationPhaseConfig = {
+      speedMultiplier: from + (to - from) * f,
+    };
+    const holdMult = holdFrom + (holdTo - holdFrom) * f;
+    // Set duration whenever an override is active OR the hold is scaled; leave
+    // it off only when the plain profile hold (holdMult 1, no override) applies.
+    if (baseDuration != null || holdMult !== 1) config.duration = base * holdMult;
+    return config;
   }
 
   private _stopDelayFor(reelIndex: number, speed: SpeedProfile): number {
@@ -1359,6 +1571,22 @@ export class SpinController implements Disposable {
   private _markLanded(reelIndex: number): void {
     if (this._landedReels.has(reelIndex)) return;
     this._landedReels.add(reelIndex);
+
+    // Unblock the next reel in a 'sequential' anticipation chain (no-op for
+    // other stagger modes, which register no resolvers).
+    const landedResolve = this._reelLandedResolvers.get(reelIndex);
+    if (landedResolve) {
+      this._reelLandedResolvers.delete(reelIndex);
+      landedResolve();
+    }
+
+    // Tease-end signal, fired only for reels that actually teased this spin, so
+    // a listener can stop that reel's tension SFX / glow without tracking the
+    // anticipation set itself. Fired before `spin:reelLanded` so consumers see
+    // "tease over" then "reel landed" in a natural order.
+    if (this._teasingReels.delete(reelIndex)) {
+      this._events.emit('anticipation:reelEnd', { reelIndex });
+    }
 
     const reel = this._reels[reelIndex];
     const symbols = reel.getVisibleSymbols();

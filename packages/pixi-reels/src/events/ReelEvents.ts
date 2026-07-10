@@ -42,6 +42,24 @@ export interface ReelSetEvents extends Record<string, unknown[]> {
   'spin:start': [];
   'spin:allStarted': [];
   'spin:stopping': [reelIndex: number];
+  /**
+   * A reel has BEGUN its anticipation tease (fired after any stagger offset,
+   * i.e. the moment it actually starts slowing). Carries the reel's place in
+   * the tease sequence so you can drive per-step tension SFX / a pitch ramp
+   * (`order / (total - 1)`) / escalating visuals without re-deriving which
+   * reels are teasing from `spin:stopping`. Only fires for reels that tease
+   * (in the anticipation set AND the effective hold is > 0).
+   *   - `reelIndex`: the reel now teasing.
+   *   - `order`: 0-based position within the anticipation set (0 = first tease).
+   *   - `total`: number of reels teasing this spin.
+   */
+  'anticipation:reel': [info: { reelIndex: number; order: number; total: number }];
+  /**
+   * A teasing reel's tease has ENDED (the reel landed). Fires only for reels
+   * that actually teased, just before that reel's `spin:reelLanded`. Pair with
+   * `anticipation:reel` to bracket a per-reel tension effect.
+   */
+  'anticipation:reelEnd': [info: { reelIndex: number }];
   'spin:reelLanded': [reelIndex: number, symbols: string[]];
   'spin:allLanded': [result: SpinResult];
   'spin:complete': [result: SpinResult];

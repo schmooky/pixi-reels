@@ -1,0 +1,51 @@
+---
+title: Skip the tease
+group: tension
+oneLiner: Let the player slam through a long anticipation at any point.
+description: Anticipation is skippable — a second button tap during the tease
+  slams the reels onto the result immediately, so an impatient player is never
+  trapped by a long dramatic build-up.
+order: 51
+steps:
+  - Run a long anticipation (here a sequential crawl)
+  - A second button press mid-tease calls skipSpin() / requestSkip()
+  - Every active tease is cut short and the reels land on the result at once
+apis:
+  - ReelSet.skipSpin
+  - ReelSet.requestSkip
+  - ReelSet.setAnticipation
+tags:
+  - anticipation
+  - tension
+  - skip
+---
+
+<RecipeDemo code="skip-anticipation" />
+
+<p class="text-sm opacity-70">Press <strong>Spin again while it's teasing</strong> to slam through the build-up.</p>
+
+## A tease you can always cut
+
+A long sequential crawl with a deep slow-down is dramatic — but a player who has seen it should never feel stuck waiting it out. `AnticipationPhase` is skippable, so a slam mid-tease force-completes every active tease and lands the reels on the result immediately.
+
+## Wiring the slam
+
+`skipSpin()` slams the current drop (and, first press of a round, applies the round's speed boost). Before `setResult()` arrives there is nothing to land on, so guard with `requestSkip()`, which queues the slam until the result is set:
+
+```ts
+button.addEventListener('click', () => {
+  if (reelSet.isSpinning) {
+    try { reelSet.skipSpin(); }      // slam the current drop + teases
+    catch { reelSet.requestSkip(); } // pre-result: queue the slam
+  } else {
+    startSpin();
+  }
+});
+```
+
+Because the slam force-completes the anticipation phases, any per-reel tension effect wired to `anticipation:reelEnd` (or `spin:reelLanded`) is torn down cleanly as each reel lands.
+
+## Related
+
+- [Slam-stop](/recipes/slam-stop/) — the base slam pattern.
+- [Staggered / sequential anticipation](/recipes/staggered-anticipation/)
