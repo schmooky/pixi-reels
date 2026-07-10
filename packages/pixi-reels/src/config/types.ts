@@ -66,6 +66,50 @@ export interface SpinOptions {
   timeoutMs?: number;
 }
 
+/**
+ * How the START of each anticipation reel's slow-down is spaced (offsets are
+ * by tease-order, i.e. position within the anticipation set, not raw reel
+ * index):
+ *   - `0` (default) — every anticipation reel begins slowing together.
+ *   - `number` — reel at tease-order `k` starts `k * value` ms after the first.
+ *   - `number[]` — explicit per-tease-order offset in ms.
+ *   - `'sequential'` — each reel waits until the previous anticipation reel
+ *     has fully landed before it starts.
+ */
+export type AnticipationStagger = number | number[] | 'sequential';
+
+/**
+ * Progressive slow-down across the tease sequence. Values interpolate linearly
+ * across tease-order (first anticipation reel → last), so each successive reel
+ * decelerates deeper and/or holds longer than the one before it. This is what
+ * turns a flat "everyone drops to 30%" tease into an escalating "each reel
+ * crawls slower than the last" build-up.
+ */
+export interface AnticipationSlowdown {
+  /** Speed multiplier (fraction of spin speed) the FIRST tease reel slows to. Default `0.3`. */
+  from?: number;
+  /** Speed multiplier the LAST tease reel slows to. Default = `from` (flat). Lower = slower/more tension. */
+  to?: number;
+  /** Hold-duration multiplier for the FIRST tease reel (scales `anticipationDelay`). Default `1`. */
+  holdFrom?: number;
+  /** Hold-duration multiplier for the LAST tease reel. Default = `holdFrom`. `>1` = later reels hold longer. */
+  holdTo?: number;
+}
+
+/** Full anticipation configuration. The object form of `setAnticipation`'s second argument. */
+export interface AnticipationOptions {
+  stagger?: AnticipationStagger;
+  slowdown?: AnticipationSlowdown;
+  /**
+   * Explicit tease hold in ms, overriding the active speed profile's
+   * `anticipationDelay`. Pass a positive value to keep the tease playing in
+   * Turbo / SuperTurbo (whose profiles set `anticipationDelay: 0`, which would
+   * otherwise skip anticipation entirely). When `slowdown.holdFrom/holdTo` are
+   * also set, this is the base they scale.
+   */
+  duration?: number;
+}
+
 /** Timing and animation profile for a speed mode. */
 export interface SpeedProfile {
   readonly name: string;

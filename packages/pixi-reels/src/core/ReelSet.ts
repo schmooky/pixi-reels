@@ -1,6 +1,13 @@
 import { Container } from 'pixi.js';
 import type { Disposable } from '../utils/Disposable.js';
-import type { ReelSetInternalConfig, CellBounds, SymbolData, SpinOptions } from '../config/types.js';
+import type {
+  ReelSetInternalConfig,
+  CellBounds,
+  SymbolData,
+  SpinOptions,
+  AnticipationStagger,
+  AnticipationOptions,
+} from '../config/types.js';
 import { EventEmitter } from '../events/EventEmitter.js';
 import type { ReelSetEvents, SpinResult, RunCascadeResult as RunCascadeResultBase } from '../events/ReelEvents.js';
 import { Reel, } from './Reel.js';
@@ -959,9 +966,57 @@ export class ReelSet extends Container implements Disposable {
     return summary;
   }
 
-  /** Set which reels should show anticipation before stopping. */
-  setAnticipation(reelIndices: number[]): void {
-    this._spinController.setAnticipation(reelIndices);
+  /**
+   * Set which reels should show anticipation before stopping, and how their
+   * slow-downs are spaced via `stagger`:
+   *
+   *   - `0` (default): every anticipation reel begins slowing at once (the
+   *     historical parallel behaviour).
+   *   - `number`: reel at tease-order `k` starts its slow-down `k * stagger`
+   *     ms after the first, so the tease sweeps across the reels.
+   *   - `number[]`: explicit per-tease-order offset in ms.
+   *   - `'sequential'`: each reel waits until the previous anticipation reel
+   *     has fully landed before it starts. maximal one-at-a-time tension.
+   *
+   * Offsets are by tease-order (position in `reelIndices`), not raw reel
+   * index. Reset at the start of every `spin()`.
+   *
+   * Pass a `{ stagger, slowdown, duration }` object to shape the tease more:
+   *   - `slowdown` interpolates across the tease sequence so each successive
+   *     reel slows to a lower speed (`from` → `to`) and/or holds longer
+   *     (`holdFrom` → `holdTo`) — the escalating "each reel crawls slower than
+   *     the last" build-up. See {@link AnticipationSlowdown}.
+   *   - `duration` (ms) overrides the profile's `anticipationDelay`, so the
+   *     tease plays even in Turbo / SuperTurbo (whose profiles use
+   *     `anticipationDelay: 0` and would otherwise skip anticipation).
+   *
+   * Listen to `anticipation:reel` ({ reelIndex, order, total }) to drive
+   * per-step tension SFX / a pitch ramp, and `anticipation:reelEnd` to stop it.
+   *
+   * @example
+   * // Classic "2 scatters showing" sweep across the last three reels:
+   * reelSet.setResult(grid);
+   * reelSet.setAnticipation([2, 3, 4], 450);          // 450ms apart
+   * reelSet.setAnticipation([2, 3, 4], 'sequential');  // strict one-by-one
+   *
+   * // Keep the tease alive in turbo (profile anticipationDelay is 0):
+   * reelSet.setAnticipation([2, 3, 4], { duration: 350, stagger: 200 });
+   *
+   * // Escalating slow-down: later reels crawl slower and hold longer.
+   * reelSet.setAnticipation([2, 3, 4], {
+   *   stagger: 400,
+   *   slowdown: { from: 0.45, to: 0.12, holdTo: 2 },
+   * });
+   *
+   * // Drive which reels tease straight from the result grid:
+   * const reels = anticipationForScatters(grid, { symbol: 'SCAT', trigger: 2 });
+   * reelSet.setAnticipation(reels, { stagger: 'sequential', slowdown: { from: 0.4, to: 0.1 } });
+   */
+  setAnticipation(
+    reelIndices: number[],
+    options: AnticipationStagger | AnticipationOptions = 0,
+  ): void {
+    this._spinController.setAnticipation(reelIndices, options);
   }
 
   /**
@@ -974,11 +1029,18 @@ export class ReelSet extends Container implements Disposable {
    * want every internal `refill()` to honor it. If your rounds use
    * different patterns, re-set explicitly per round.
    *
+   * Pass `null` to CLEAR the override and restore the default
+   * `i * speed.stopDelay` stagger. this is distinct from `[]` / all-zeros
+   * (which lands every reel simultaneously). Use it to undo a one-off
+   * per-round pattern without hard-coding the default back in.
+   *
    * @example
    * // Stagger the last two reels more than the default for dramatic effect:
    * reelSet.setStopDelays([0, 140, 280, 600, 1100]);
+   * // ...later, go back to the profile default:
+   * reelSet.setStopDelays(null);
    */
-  setStopDelays(delays: number[]): void {
+  setStopDelays(delays: number[] | null): void {
     this._spinController.setStopDelays(delays);
   }
 
@@ -1273,8 +1335,13 @@ export class ReelSet extends Container implements Disposable {
    * reelSet.setDropOrder('rtl');  // right-to-left
    * reelSet.setDropOrder('all');  // all columns simultaneously
    * reelSet.setDropOrder([0, 0, 200, 200, 400]); // custom per-reel delays
+   * reelSet.setDropOrder(null);   // clear the override, restore the default
    */
-  setDropOrder(order: 'ltr' | 'rtl' | 'all' | number[], stepMs?: number): void {
+  setDropOrder(order: 'ltr' | 'rtl' | 'all' | number[] | null, stepMs?: number): void {
+    if (order === null) {
+      this._spinController.setStopDelays(null);
+      return;
+    }
     if (Array.isArray(order)) {
       this._spinController.setStopDelays(order);
       return;

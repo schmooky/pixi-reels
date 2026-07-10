@@ -7,6 +7,15 @@ export interface StopPhaseConfig {
   targetFrame: string[];
   /** Delay before this reel starts stopping (for staggered stop). */
   delay?: number;
+  /**
+   * Keep the reel's CURRENT speed into the spin-out instead of restoring full
+   * spin speed. Set by the controller when this stop follows an anticipation
+   * tease, so the reel crawls its target into place at the slow anticipation
+   * speed and stops exactly there. rather than snapping back to full speed and
+   * doing a fast spin-out. A small floor is applied so a `slowdown.to: 0`
+   * curve can't stall the reel.
+   */
+  preserveSpeed?: boolean;
 }
 
 /**
@@ -53,9 +62,17 @@ export class StopPhase extends ReelPhase<StopPhaseConfig> {
 
     reel.setStopFrame(this._config.targetFrame);
     reel.isStopping = true;
-    // Restore full spin speed. anticipation or other phases may have lowered
-    // it. The full momentum carries through the final frame placement.
-    reel.speed = speed.spinSpeed;
+    if (this._config.preserveSpeed) {
+      // Following an anticipation tease: keep the current (slow) speed so the
+      // reel crawls its target frame into place and stops exactly there,
+      // rather than re-accelerating to full speed. Floor it so a near-zero
+      // anticipation speed can't stall the spin-out forever.
+      reel.speed = Math.max(reel.speed, speed.spinSpeed * 0.08);
+    } else {
+      // Restore full spin speed. anticipation or other phases may have lowered
+      // it. The full momentum carries through the final frame placement.
+      reel.speed = speed.spinSpeed;
+    }
 
     this._stage = 'spinning';
   }

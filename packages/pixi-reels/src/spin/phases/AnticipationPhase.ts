@@ -13,8 +13,9 @@ export interface AnticipationPhaseConfig {
  * Anticipation phase: slow-down tease before a reel stops.
  *
  * Decelerates to a fraction of spin speed, holds for a duration, then hands
- * off to StopPhase. StopPhase resets speed to full spin speed at the start
- * of its spin-out stage, so leaving speed low here is fine.
+ * off to StopPhase. The controller runs StopPhase with `preserveSpeed: true`
+ * after a tease, so this low speed carries into the spin-out and the reel
+ * crawls onto its landing frame instead of re-accelerating.
  */
 export class AnticipationPhase extends ReelPhase<AnticipationPhaseConfig> {
   readonly name = 'anticipation';

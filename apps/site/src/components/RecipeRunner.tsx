@@ -12,6 +12,7 @@ import {
   type ReelSet, ReelSymbol,
   EmptySymbol, HoldAndWinBuilder, BoardGrid,
   HorizontalReel, HorizontalReelBuilder,
+  anticipationForScatters,
 } from 'pixi-reels';
 import { SpineReelSymbol } from 'pixi-reels/spine';
 import { Spine } from '@esotericsoftware/spine-pixi-v8';
@@ -191,6 +192,7 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
           'coinValue', 'coinMultiplier', 'drawCoin',
           'HoldAndWinBuilder', 'BoardGrid',
           'HorizontalReel', 'HorizontalReelBuilder',
+          'anticipationForScatters',
           'GoldCoinSymbol', 'coinWaves', 'bezierFly', 'settleMoneyFace', 'freezeAtEnd', 'fitText',
           'SpineReelSymbol', 'Spine', 'loadGeneratedSpines', 'buildSpineMap',
           'loadHoldAndWinSprites',
@@ -211,6 +213,7 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
           coinValue, coinMultiplier, drawCoin,
           HoldAndWinBuilder, BoardGrid,
           HorizontalReel, HorizontalReelBuilder,
+          anticipationForScatters,
           GoldCoinSymbol, coinWaves, bezierFly, settleMoneyFace, freezeAtEnd, fitText,
           SpineReelSymbol, Spine, loadGeneratedSpines, buildSpineMap,
           loadHoldAndWinSprites,

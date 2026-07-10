@@ -26,6 +26,9 @@ export type {
   MaskConfig,
   MultiWaysConfig,
   ReelAnchor,
+  AnticipationStagger,
+  AnticipationSlowdown,
+  AnticipationOptions,
 } from './config/types.js';
 export type { ReelMaskRect, MaskStrategy } from './core/ReelViewport.js';
 export { RectMaskStrategy, SharedRectMaskStrategy } from './core/ReelViewport.js';
@@ -58,6 +61,10 @@ export type { SpinPhaseConfig } from './spin/phases/SpinPhase.js';
 export type { StopPhaseConfig } from './spin/phases/StopPhase.js';
 export type { AnticipationPhaseConfig } from './spin/phases/AnticipationPhase.js';
 export type { AdjustPhaseConfig } from './spin/phases/AdjustPhase.js';
+
+// Anticipation recipes
+export { anticipationForScatters } from './spin/anticipationRecipes.js';
+export type { ScatterAnticipationOptions } from './spin/anticipationRecipes.js';
 
 // Tumble cascade
 export type { TumbleConfig, TumbleFallConfig, TumbleDropInConfig } from './cascade/TumbleConfig.js';

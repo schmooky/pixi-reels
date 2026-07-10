@@ -1,0 +1,60 @@
+---
+title: Scatter-driven anticipation
+group: tension
+oneLiner: Pick the tease reels straight from the result grid.
+description: Use anticipationForScatters to derive which reels should tease from
+  the scatter positions in the result, with an all-remaining or scatter-only
+  mode so empty reels aren't slowed unnecessarily.
+order: 50
+steps:
+  - Call anticipationForScatters(grid, { symbol, trigger, mode })
+  - "Anticipation begins on the reel after the trigger-th scatter"
+  - "mode 'all-remaining' teases every following reel; 'scatter-only' teases
+    only reels that actually hold the symbol"
+apis:
+  - anticipationForScatters
+  - ReelSet.setAnticipation
+  - ReelSet.setResult
+tags:
+  - anticipation
+  - tension
+  - scatter
+  - feature-trigger
+---
+
+<RecipeDemo code="scatter-anticipation" />
+
+<p class="text-sm opacity-70">The gold "F" cards are the feature / scatter symbol (its id in code is <code>SCAT</code>). This demo alternates modes each spin.</p>
+
+## Derive the tease reels from the grid
+
+You already know the result when you call `setResult`. Let it decide which reels tease instead of hard-coding indices:
+
+```ts
+import { anticipationForScatters } from 'pixi-reels';
+
+const reels = anticipationForScatters(grid, { symbol: 'SCAT', trigger: 2 });
+reelSet.setResult(grid);
+reelSet.setAnticipation(reels, { stagger: 'sequential', slowdown: { from: 0.5, to: 0.12 } });
+```
+
+Anticipation begins on the reel **after** the one that lands the `trigger`-th scatter. With `SCAT` on reels 0 and 1, that's reels `[2, 3, 4]`.
+
+## all-remaining vs scatter-only
+
+```ts
+// 4 scatters (reels 0,1,3,4). every following reel teases, including the
+// empty reel 2 — maximum tension.
+anticipationForScatters(grid, { symbol: 'SCAT', mode: 'all-remaining' }); // [2, 3, 4]
+
+// 3 scatters (reels 0,1,3). only reel 3 can extend the count, so only reel 3
+// teases; reels 2 and 4 stop normally.
+anticipationForScatters(grid, { symbol: 'SCAT', mode: 'scatter-only' });  // [3]
+```
+
+Use `'scatter-only'` when a result can't complete the feature on some reels and you don't want to fake tension on reels that don't matter. Returns `[]` when the grid never reaches `trigger`, so `setAnticipation([])` is a harmless no-op.
+
+## Related
+
+- [Staggered / sequential anticipation](/recipes/staggered-anticipation/)
+- [Slowing anticipation](/recipes/slowing-anticipation/)
