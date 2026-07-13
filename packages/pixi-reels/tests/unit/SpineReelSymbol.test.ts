@@ -35,6 +35,10 @@ class MockAnimationState {
     return entry;
   }
 
+  getCurrent(_track: number): MockTrackEntry | null {
+    return this.current;
+  }
+
   addListener(listener: MockListener): void {
     this.listeners.push(listener);
   }

@@ -256,6 +256,9 @@ export class SpineReelSymbol extends ReelSymbol {
     if (!this._currentSpine) return;
     const name = this._animNameFor('blur');
     if (!this._currentSpine.skeleton.data.findAnimation(name)) return;
+    // Idempotent: the reel re-notifies spin state on mid-spin symbol
+    // installs; restarting the loop each time would snap it to frame 0.
+    if (this._currentSpine.state.getCurrent(0)?.animation?.name === name) return;
     this._resolveOneShot();
     this._currentSpine.state.setAnimation(0, name, true);
   }

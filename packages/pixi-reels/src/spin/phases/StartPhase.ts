@@ -74,6 +74,11 @@ export class StartPhase extends ReelPhase<StartPhaseConfig> {
   protected onSkip(): void {
     this._kill();
     this._reel.speed = this._speed.spinSpeed;
+    // The accel tween died with _kill() before its onComplete could fire
+    // notifySpinStart, but the reel keeps spinning through StopPhase.
+    // symbols must still learn they're in a spin (blur / static-spin
+    // presentations). Safe if it already fired: the hook is idempotent.
+    this._reel.notifySpinStart();
   }
 
   private _kill(): void {

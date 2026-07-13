@@ -266,6 +266,7 @@ Example `debugSnapshot()` fields:
 | `speed/` | SpeedManager |
 | `frame/` | FrameBuilder (middleware), RandomSymbolProvider, OffsetCalculator |
 | `pool/` | ObjectPool\<T\> |
+| `snapshot/` | SpinTextureCache + StaticSpinSymbol (spin on cached static/blurred textures) |
 | `spotlight/` | SymbolSpotlight (win animations) |
 | `events/` | EventEmitter\<T\>, ReelEvents (event type definitions) |
 | `utils/` | Disposable (interface), TickerRef (safe ticker wrapper) |
