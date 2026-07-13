@@ -138,6 +138,11 @@ export class SpineReelSymbol extends ReelSymbol {
     if (spine.skeleton.data.findAnimation(idleName)) {
       spine.state.setAnimation(0, idleName, true);
     }
+    // Apply the pose NOW. a freshly created (or setup-pose-reset) skeleton
+    // has no applied state until its next ticker update, so anything that
+    // renders it synchronously after activation. a same-frame first paint,
+    // or a SpinTextureCache snapshot capture. would see nothing.
+    spine.update(0);
   }
 
   protected onDeactivate(): void {
@@ -256,6 +261,9 @@ export class SpineReelSymbol extends ReelSymbol {
     if (!this._currentSpine) return;
     const name = this._animNameFor('blur');
     if (!this._currentSpine.skeleton.data.findAnimation(name)) return;
+    // Idempotent: the reel re-notifies spin state on mid-spin symbol
+    // installs; restarting the loop each time would snap it to frame 0.
+    if (this._currentSpine.state.getCurrent(0)?.animation?.name === name) return;
     this._resolveOneShot();
     this._currentSpine.state.setAnimation(0, name, true);
   }

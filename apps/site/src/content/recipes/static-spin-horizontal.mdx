@@ -1,0 +1,74 @@
+---
+title: Horizontal strip motion blur
+group: symbol-formats
+oneLiner: The same snapshot spin on a HorizontalReel — the smear follows the sideways travel.
+description: Put StaticSpinSymbol on a horizontal banner reel with blur axis
+  'x'. The bake smears along the strip's travel direction and pads the texture
+  wide instead of tall; everything else is identical to the vertical recipe.
+order: 64
+steps:
+  - Build a HorizontalReel and register StaticSpinSymbol like on the main reels
+  - "Pass blur: { axis: 'x' } to both prewarmSpinTextures and the symbol options"
+  - Give the strip its own SpinTextureCache (different cell geometry)
+  - Spin — slots blur sideways, land, and go live again
+apis:
+  - HorizontalReelBuilder
+  - StaticSpinSymbol
+  - SpinTextureCache
+  - MotionBlurOptions.axis
+tags:
+  - horizontal-reel
+  - blur
+  - static-spin
+---
+
+<RecipeDemo code="static-spin-horizontal" height={260} />
+
+## One option changes the axis
+
+The blur bake always smears along the reel's **travel direction**. Vertical
+reels use the default; the banner strip travels sideways, so:
+
+```ts
+const blur = { axis: 'x' };
+
+prewarmSpinTextures({ cache, ids, createSymbol, width: CELL, height: CELL, blur });
+
+registry.register(id, StaticSpinSymbol, {
+  createInner,
+  cache,
+  blur, // same object — bake and display agree on the axis
+});
+```
+
+With `axis: 'x'` the baked texture comes out **wider** than the cell
+(`width + 2 * padding`) instead of taller, and the wrapper fits snapshots to
+the cell by height so the sideways smear centers out of the cell on both
+sides. Default strength becomes 20% of the cell *width*.
+
+## The strip's stop is different — and so is its un-blur
+
+The main reels hold **full speed** until the final frame snaps in, so they
+un-blur at the snap. The strip instead **decelerates visibly** into its
+land, and blur reads wrong on a slowing conveyor. So the lifecycle adapts:
+
+- `spin()` — every slot gets `onReelSpinStart`; symbols fed in while
+  free-spinning join with `onReelSpinStart(true)` (no ramp — they appear
+  already blurred).
+- `setResult(...)` — the deceleration starts **and spin-end fires
+  immediately**: the outgoing symbols sharpen as the strip slows, and the
+  result window feeds in live. What lands is never blurred.
+- Land — `onReelLanded` fires (landing animations), motion stops.
+
+The same contract drives Spine `autoPlayBlur` symbols on the strip.
+
+Cascades are the exception by design: `reel.cascade(...)` keeps symbols
+**live** while they tumble, so destruction and refill animations stay
+visible.
+
+## Keep caches per geometry
+
+The strip's cells (76px here) differ from the main grid's, and its blur axis
+differs too. Cache entries are keyed by symbolId, so sharing one cache
+across both would regenerate textures back and forth every spin. One
+`SpinTextureCache` for the main reels, one for the strip.

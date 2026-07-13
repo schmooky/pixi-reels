@@ -22,6 +22,7 @@ import { buildPyramid } from './routes/pyramid.js';
 import { buildMultiWays } from './routes/multiways.js';
 import { buildExpandingWild } from './routes/expanding-wild.js';
 import { buildBigSymbols } from './routes/big-symbols.js';
+import { buildStaticSpin } from './routes/static-spin.js';
 
 export interface SandboxContext {
   app: Application;
@@ -39,9 +40,9 @@ export interface SandboxResult {
 
 // Swap this assignment to try a recipe from `./routes/*`. Set to `null` to
 // run the inline default classic 5×3 below.
-//   buildPyramid | buildMultiWays | buildExpandingWild | buildBigSymbols
+//   buildPyramid | buildMultiWays | buildExpandingWild | buildBigSymbols | buildStaticSpin
 const ACTIVE_ROUTE: ((ctx: SandboxContext) => SandboxResult) | null = null;
-void buildPyramid; void buildMultiWays; void buildExpandingWild; void buildBigSymbols;
+void buildPyramid; void buildMultiWays; void buildExpandingWild; void buildBigSymbols; void buildStaticSpin;
 
 const REELS = 5;
 const ROWS = 3;
@@ -160,6 +161,7 @@ function pickWeighted(): string {
 //   - ./routes/multiways.js        . per-spin row variation (2..7 rows)
 //   - ./routes/expanding-wild.js  . wild expands its full column for one spin
 //   - ./routes/big-symbols.js     . 2×2 bonus block via SymbolData.size
+//   - ./routes/static-spin.js     . spin cached snapshots w/ auto-baked blur
 //
 // ============================================================================
 //  MORE RECIPES (uncomment/adapt in the block above)

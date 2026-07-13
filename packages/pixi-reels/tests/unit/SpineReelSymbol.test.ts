@@ -35,6 +35,10 @@ class MockAnimationState {
     return entry;
   }
 
+  getCurrent(_track: number): MockTrackEntry | null {
+    return this.current;
+  }
+
   addListener(listener: MockListener): void {
     this.listeners.push(listener);
   }
@@ -61,6 +65,7 @@ class MockAnimationState {
 
 class MockSpine extends Container {
   state = new MockAnimationState();
+  update = vi.fn();
   skeleton = {
     data: {
       findAnimation: (name: string) =>

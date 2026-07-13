@@ -44,6 +44,17 @@ export type { SpineSymbolOptions } from './symbols/SpineSymbol.js';
 export { SymbolRegistry } from './symbols/SymbolRegistry.js';
 export { EmptySymbol } from './symbols/EmptySymbol.js';
 
+// Snapshot spin (spin on cached static / motion-blurred textures)
+export { SpinTextureCache, prewarmSpinTextures } from './snapshot/SpinTextureCache.js';
+export type {
+  SpinTextureCacheOptions,
+  MotionBlurOptions,
+  SnapshotRenderer,
+  PrewarmSpinTexturesOptions,
+} from './snapshot/SpinTextureCache.js';
+export { StaticSpinSymbol } from './snapshot/StaticSpinSymbol.js';
+export type { StaticSpinSymbolOptions } from './snapshot/StaticSpinSymbol.js';
+
 // Spin
 // `SpinController` and `SpinControllerHooks` are internal wiring built by
 // `ReelSet`. Consumers never construct one. Same shape as `ReelMotion` /

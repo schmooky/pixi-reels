@@ -1,0 +1,93 @@
+---
+title: Auto-baked motion blur (static spin)
+group: symbol-formats
+oneLiner: Spin cached snapshot textures with a baked blur — no blur art, no runtime filters.
+description: Snapshot every symbol once into a RenderTexture, bake a vertical
+  motion-blur variant offline, and spin those cached textures instead of the
+  live symbols. No blur atlas to author, no BlurFilter running per frame.
+order: 61
+steps:
+  - Create one SpinTextureCache with app.renderer and share it across the reel set
+  - Register each symbol as a StaticSpinSymbol wrapping your real symbol class
+  - Call prewarmSpinTextures() at load so the first spin never hitches
+  - Spin — the wrapper swaps to the cached blur and back on its own
+apis:
+  - SpinTextureCache
+  - StaticSpinSymbol
+  - prewarmSpinTextures
+tags:
+  - blur
+  - motion-blur
+  - static-spin
+  - performance
+  - snapshot
+---
+
+<RecipeDemo code="static-spin-blur" />
+
+## What actually happens on a spin
+
+`StaticSpinSymbol` wraps your real symbol (here a `CardSymbol`, but any
+`ReelSymbol` works) and listens to the reel's spin lifecycle:
+
+1. **Spin start** — the wrapper fetches the symbol's snapshot from the shared
+   `SpinTextureCache` (capturing it on a miss), **deactivates the wrapped
+   symbol**, and shows a plain sprite instead. Over `blurRampMs` it crossfades
+   from the crisp snapshot to the baked blur variant, matching the reel's
+   acceleration.
+2. **While spinning** — cells that scroll off and recycle through the pool only
+   retarget that sprite's texture. The wrapped symbol is never activated, so a
+   spinning reel costs a handful of textured quads, nothing else.
+3. **Land** — the sprite hides and the wrapped symbol reactivates on the landed
+   id. Wins, landing animations, and cascade destruction all run on the live
+   symbol exactly as before.
+
+## The blur is baked, not filtered
+
+`captureBlurred` renders the static snapshot through a `BlurFilter`
+**once**, into a padded `RenderTexture` (taller than the cell, so the smear
+isn't clipped), and caches the result per symbolId. During the spin the
+"blur" is just a texture — there is no filter pass per frame, per cell, or
+per reel.
+
+```ts
+const cache = new SpinTextureCache({ renderer: app.renderer });
+
+registry.register(id, StaticSpinSymbol, {
+  createInner: () => new MySymbol(opts), // your real symbol class
+  cache,
+  blurRampMs: 140,          // crisp→blurred crossfade; 0 = instant
+  // blur: { strength: 24 } // default: 20% of the cell height
+});
+```
+
+## Prewarm at load time
+
+A cache miss during a spin captures the symbol on the spot — correct, but it
+costs a `generateTexture` call at an awkward moment. Bake everything while
+your loading screen is still up:
+
+```ts
+prewarmSpinTextures({
+  cache,
+  ids: SYMBOL_IDS,
+  createSymbol: () => new MySymbol(opts),
+  width: CELL_W,
+  height: CELL_H,
+});
+```
+
+One scratch symbol is created, activated once per id, snapshotted, and
+destroyed. (This demo prewarms per id because `CardSymbol` draws from its
+constructor options; atlas or Spine symbols bake all ids in a single call.)
+
+## Tuning
+
+- `blurRampMs: 0` skips the crossfade — cells snap straight to the blur.
+- `spinTexture: 'static'` skips the blur pipeline entirely and spins the
+  crisp snapshot (the classic "cheap mode" for low-end devices).
+- `blur: { strength, quality, padding }` control the bake; the default
+  strength is 20% of the cell span along the travel axis.
+- Use **one cache per reel geometry**. Entries are keyed by symbolId, so
+  reels with different cell sizes (or a horizontal strip) should each get
+  their own cache instead of thrashing one.

@@ -201,6 +201,14 @@ export class Reel implements Disposable {
   private _symbolGapX: number;
   private _isDestroyed = false;
   private _isStopping = false;
+
+  /**
+   * True between `notifySpinStart()` and `notifySpinEnd()`. While set,
+   * `_replaceSymbol` fires `onReelSpinStart(true)` on each freshly
+   * installed symbol so it can join the spin presentation (pool recycling
+   * wipes per-instance state, so the symbol can't know on its own).
+   */
+  private _spinPresentationActive = false;
   private _isNudging = false;
   /**
    * Symbol-id queue consulted by `_onSymbolWrapped` during a nudge. Each
@@ -484,23 +492,31 @@ export class Reel implements Disposable {
   }
 
   /**
-   * Notify all visible symbols that the reel has started spinning.
+   * Notify all strip symbols (visible and buffer rows. buffers scroll into
+   * view within a frame of spin start) that the reel has started spinning,
+   * and arm mid-spin notification: every symbol installed by
+   * `_replaceSymbol` until `notifySpinEnd()` receives
+   * `onReelSpinStart(true)` so pool-recycled symbols joining a moving reel
+   * can apply their spin presentation (blur, static snapshot).
    *
    * @internal Called by SpinController on phase transition.
    */
   notifySpinStart(): void {
-    for (let i = this._bufferAbove; i < this._bufferAbove + this._visibleRows; i++) {
+    this._spinPresentationActive = true;
+    for (let i = 0; i < this.symbols.length; i++) {
       this.symbols[i].onReelSpinStart();
     }
   }
 
   /**
-   * Notify all visible symbols that the reel is about to stop (just before bounce).
+   * Notify all strip symbols that the reel is about to stop (just before
+   * bounce) and disarm mid-spin notification.
    *
    * @internal Called by SpinController on phase transition.
    */
   notifySpinEnd(): void {
-    for (let i = this._bufferAbove; i < this._bufferAbove + this._visibleRows; i++) {
+    this._spinPresentationActive = false;
+    for (let i = 0; i < this.symbols.length; i++) {
       this.symbols[i].onReelSpinEnd();
     }
   }
@@ -1286,6 +1302,7 @@ export class Reel implements Disposable {
       newSymbol.view.zIndex = this._computeSymbolZIndex(newSymbolId, index);
       this._parentForSymbolId(newSymbolId).addChild(newSymbol.view);
       this.symbols[index] = newSymbol;
+      if (this._spinPresentationActive) newSymbol.onReelSpinStart(true);
       this.events.emit('symbol:created', newSymbolId, index);
       return;
     }
@@ -1306,6 +1323,9 @@ export class Reel implements Disposable {
       if (oldSymbol.view.parent !== target) target.addChild(oldSymbol.view);
       // Reset Y in case spotlight or another mutator displaced it.
       this._placeSymbolView(oldSymbol.view, reelLocalY, this._isUnmasked(newSymbolId));
+      // The instance was never deactivated, so it usually still carries its
+      // spin state. re-notify anyway for uniformity (hooks are idempotent).
+      if (this._spinPresentationActive) oldSymbol.onReelSpinStart(true);
       return;
     }
 
@@ -1321,6 +1341,7 @@ export class Reel implements Disposable {
     this._parentForSymbolId(newSymbolId).addChild(newSymbol.view);
 
     this.symbols[index] = newSymbol;
+    if (this._spinPresentationActive) newSymbol.onReelSpinStart(true);
     this.events.emit('symbol:created', newSymbolId, index);
   }
 
