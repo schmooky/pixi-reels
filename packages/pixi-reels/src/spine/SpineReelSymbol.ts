@@ -138,6 +138,11 @@ export class SpineReelSymbol extends ReelSymbol {
     if (spine.skeleton.data.findAnimation(idleName)) {
       spine.state.setAnimation(0, idleName, true);
     }
+    // Apply the pose NOW. a freshly created (or setup-pose-reset) skeleton
+    // has no applied state until its next ticker update, so anything that
+    // renders it synchronously after activation. a same-frame first paint,
+    // or a SpinTextureCache snapshot capture. would see nothing.
+    spine.update(0);
   }
 
   protected onDeactivate(): void {

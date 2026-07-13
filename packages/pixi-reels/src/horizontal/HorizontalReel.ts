@@ -214,6 +214,13 @@ export class HorizontalReel implements Disposable {
     const windowFeeds = this._direction === 'rtl' ? [...ids] : [...ids].reverse();
     this._queue = [...windowFeeds, this._randomId()];
     this._state = 'stopping';
+    // The stop DECELERATES visibly (the drain ease in _advanceSpin), unlike
+    // the main reels, which hold full speed until the snap. Blur reads
+    // wrong on a slowing strip, so spin-end fires here — the outgoing
+    // symbols sharpen as the strip slows, and the result window feeds in
+    // live (crisp): what lands is never blurred. _repaint stops blur-
+    // joining new symbols once we leave 'spinning'.
+    for (const slot of this._slots) slot.onReelSpinEnd();
   }
 
   /**
@@ -413,9 +420,11 @@ export class HorizontalReel implements Disposable {
     next.resize(this._cellW, this._cellH);
     next.view.y = 0;
     this.container.addChild(next.view);
-    // Pool recycling wiped the symbol's state; if the strip is moving it
-    // must re-join the spin presentation (mirrors Reel._replaceSymbol).
-    if (this._state === 'spinning' || this._state === 'stopping') {
+    // Pool recycling wiped the symbol's state; while free-spinning it must
+    // re-join the spin presentation (mirrors Reel._replaceSymbol). During
+    // 'stopping' the feeds ARE the result window — they enter live so the
+    // landing symbols are never blurred (see setResult).
+    if (this._state === 'spinning') {
       next.onReelSpinStart(true);
     }
     return next;
@@ -449,9 +458,9 @@ export class HorizontalReel implements Disposable {
 
   private _land(): void {
     this._state = 'idle';
-    // Mirror StopPhase's order: spin-end first (drop blur / snapshots),
-    // then landed (landing animations), across every conveyor slot.
-    for (const slot of this._slots) slot.onReelSpinEnd();
+    // Spin-end already fired at setResult (the strip un-blurs when the
+    // deceleration starts); here only the landing hook runs, matching the
+    // main reels' notifyLanded at the moment motion stops.
     for (const slot of this._slots) slot.onReelLanded();
     // Single-reel SpinResult: a one-column grid, same shape as ReelSet's.
     const result: SpinResult = {

@@ -34,16 +34,22 @@ const build = (ticker: FakeTicker) =>
     .build();
 
 const events = (sym: unknown) => (sym as TrackingSymbol).events;
+const allSlots = (reel: ReturnType<typeof build>) => {
+  // visibleCount window + the two conveyor buffers, via the public window
+  // accessor where possible; buffers are asserted through the window after
+  // shifts, so the tests stay on public API.
+  const out: TrackingSymbol[] = [];
+  for (let i = 0; i < reel.visibleCount; i++) out.push(reel.symbolAt(i) as TrackingSymbol);
+  return out;
+};
 
 describe('HorizontalReel symbol spin hooks', () => {
-  it('fires onReelSpinStart on every conveyor slot when the spin starts', () => {
+  it('fires onReelSpinStart on every window slot when the spin starts', () => {
     const ticker = new FakeTicker();
     const reel = build(ticker);
 
     const p = reel.spin();
-    for (let i = 0; i < reel.visibleCount; i++) {
-      expect(events(reel.symbolAt(i))).toContain('start');
-    }
+    for (const sym of allSlots(reel)) expect(events(sym)).toContain('start');
 
     reel.setResult([{ visible: ['A', 'K', 'Q', 'J'] }]);
     ticker.tickFor(4000);
@@ -52,37 +58,51 @@ describe('HorizontalReel symbol spin hooks', () => {
     ticker.destroy();
   });
 
-  it('symbols fed in mid-spin get onReelSpinStart(true); landing fires end then landed', async () => {
+  it('symbols fed in while free-spinning join with onReelSpinStart(true)', () => {
     const ticker = new FakeTicker();
     const reel = build(ticker);
 
-    const p = reel.spin();
-    ticker.tickFor(400); // free spin — conveyor shifts recycle symbols
-    reel.setResult([{ visible: ['A', 'K', 'Q', 'J'] }]);
-    ticker.tickFor(4000);
-    const result = await p;
-    expect(result.symbols[0]).toEqual(['A', 'K', 'Q', 'J']);
+    void reel.spin();
+    ticker.tickFor(600); // conveyor shifts — pool recycles symbols mid-spin
 
-    let sawMidSpinJoin = false;
-    for (let i = 0; i < reel.visibleCount; i++) {
-      const e = events(reel.symbolAt(i));
-      const start = e.findIndex((x) => x === 'start' || x === 'start:mid');
-      const end = e.lastIndexOf('end');
-      const landed = e.lastIndexOf('landed');
-      expect(start).toBeGreaterThan(-1);
-      expect(end).toBeGreaterThan(start);
-      expect(landed).toBeGreaterThan(end);
-      if (e.includes('start:mid')) sawMidSpinJoin = true;
-    }
-    // The landed window was fed in while the strip was moving, so at
-    // least one of its symbols joined mid-spin.
+    const sawMidSpinJoin = allSlots(reel).some((s) => events(s).includes('start:mid'));
     expect(sawMidSpinJoin).toBe(true);
 
     reel.destroy();
     ticker.destroy();
   });
 
-  it('slam (skipSpin) still walks symbols through start → end → landed', async () => {
+  it('un-blurs at setResult: spin-end fires when the deceleration starts, and the result window feeds in live', async () => {
+    const ticker = new FakeTicker();
+    const reel = build(ticker);
+
+    const p = reel.spin();
+    ticker.tickFor(400);
+
+    // Everything on the strip at the moment the stop is triggered gets
+    // spin-end — the visible slow-down happens crisp.
+    reel.setResult([{ visible: ['A', 'K', 'Q', 'J'] }]);
+    for (const sym of allSlots(reel)) expect(events(sym)).toContain('end');
+
+    ticker.tickFor(4000);
+    const result = await p;
+    expect(result.symbols[0]).toEqual(['A', 'K', 'Q', 'J']);
+
+    for (const sym of allSlots(reel)) {
+      const e = events(sym);
+      // Landed cells were fed during 'stopping', so they carry no spin
+      // notifications at all (they entered live) — but every one of them
+      // got the landing hook, and none was told to blur after the stop.
+      expect(e.lastIndexOf('landed')).toBeGreaterThan(-1);
+      const lastStart = e.lastIndexOf('start:mid');
+      if (lastStart !== -1) expect(e.lastIndexOf('end')).toBeGreaterThan(lastStart);
+    }
+
+    reel.destroy();
+    ticker.destroy();
+  });
+
+  it('slam (skipSpin) lands live symbols with the landing hook fired', async () => {
     const ticker = new FakeTicker();
     const reel = build(ticker);
 
@@ -93,11 +113,13 @@ describe('HorizontalReel symbol spin hooks', () => {
     const result = await p;
     expect(result.wasSkipped).toBe(true);
 
-    for (let i = 0; i < reel.visibleCount; i++) {
-      const e = events(reel.symbolAt(i));
-      expect(e.findIndex((x) => x === 'start' || x === 'start:mid')).toBeGreaterThan(-1);
-      expect(e.lastIndexOf('landed')).toBeGreaterThan(e.lastIndexOf('end') - 1);
-      expect(e).toContain('end');
+    for (const sym of allSlots(reel)) {
+      const e = events(sym);
+      expect(e).toContain('landed');
+      // Slam feeds happen in 'stopping' — no blur-join after the result is set.
+      const lastEnd = e.lastIndexOf('end');
+      const lastStart = e.lastIndexOf('start:mid');
+      expect(lastStart).toBeLessThan(lastEnd === -1 ? 0 : lastEnd + 1);
     }
 
     reel.destroy();
@@ -108,21 +130,20 @@ describe('HorizontalReel symbol spin hooks', () => {
     const ticker = new FakeTicker();
     const reel = build(ticker);
 
-    // Land a known window first.
     const p = reel.spin();
     ticker.tickFor(100);
     reel.setResult([{ visible: ['A', 'K', 'Q', 'J'] }]);
     ticker.tickFor(4000);
     await p;
 
-    for (let i = 0; i < reel.visibleCount; i++) events(reel.symbolAt(i)).length = 0;
+    for (const sym of allSlots(reel)) events(sym).length = 0;
 
     const c = reel.cascade([1, 2]);
     ticker.tickFor(6000);
     await c;
 
-    for (let i = 0; i < reel.visibleCount; i++) {
-      const e = events(reel.symbolAt(i));
+    for (const sym of allSlots(reel)) {
+      const e = events(sym);
       expect(e.filter((x) => x.startsWith('start') || x === 'end')).toEqual([]);
     }
 

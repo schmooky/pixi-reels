@@ -65,6 +65,7 @@ class MockAnimationState {
 
 class MockSpine extends Container {
   state = new MockAnimationState();
+  update = vi.fn();
   skeleton = {
     data: {
       findAnimation: (name: string) =>
