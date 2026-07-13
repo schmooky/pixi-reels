@@ -87,13 +87,13 @@ describe('SpinTextureCache', () => {
     cache.destroy();
   });
 
-  it('captureBlurred bakes a padded texture (cell height + 2 * padding) and caches it', () => {
+  it('captureBlurred bakes a vertically padded texture (cell height + 2 * padding) and caches it', () => {
     const { renderer, calls, spy } = makeRenderer();
     const cache = new SpinTextureCache({ renderer });
     cache.captureStatic('cherry', new Container(), 100, 100);
 
-    const blurred = cache.captureBlurred('cherry', 100, 100, { strengthY: 24 });
-    const again = cache.captureBlurred('cherry', 100, 100, { strengthY: 24 });
+    const blurred = cache.captureBlurred('cherry', 100, 100, { strength: 24 });
+    const again = cache.captureBlurred('cherry', 100, 100, { strength: 24 });
 
     expect(again).toBe(blurred);
     // 1 static + 1 blurred generation
@@ -101,6 +101,26 @@ describe('SpinTextureCache', () => {
     const blurFrame = calls[1].frame;
     expect(blurFrame?.width).toBe(100);
     expect(blurFrame?.height).toBe(100 + 2 * 24);
+    cache.destroy();
+  });
+
+  it("captureBlurred with axis 'x' pads horizontally and regenerates when the axis flips", () => {
+    const { renderer, calls } = makeRenderer();
+    const cache = new SpinTextureCache({ renderer });
+    cache.captureStatic('cherry', new Container(), 100, 80);
+
+    const horizontal = cache.captureBlurred('cherry', 100, 80, { axis: 'x', strength: 24 });
+    const xFrame = calls[1].frame;
+    expect(xFrame?.width).toBe(100 + 2 * 24);
+    expect(xFrame?.height).toBe(80);
+
+    // Same id re-baked for a vertical reel: the x-axis entry is stale.
+    const vertical = cache.captureBlurred('cherry', 100, 80, { axis: 'y', strength: 24 });
+    expect(vertical).not.toBe(horizontal);
+    expect(horizontal.destroyed).toBe(true);
+    const yFrame = calls[2].frame;
+    expect(yFrame?.width).toBe(100);
+    expect(yFrame?.height).toBe(80 + 2 * 24);
     cache.destroy();
   });
 

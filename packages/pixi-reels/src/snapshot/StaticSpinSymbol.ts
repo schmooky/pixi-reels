@@ -26,7 +26,11 @@ export interface StaticSpinSymbolOptions {
    * Default: 120. Ignored when `spinTexture: 'static'`.
    */
   blurRampMs?: number;
-  /** Motion-blur tuning forwarded to `cache.captureBlurred`. */
+  /**
+   * Motion-blur tuning forwarded to `cache.captureBlurred`. On a
+   * `HorizontalReel` pass `{ axis: 'x' }` so the smear follows the strip's
+   * sideways travel (and snapshots fit the cell by height instead of width).
+   */
   blur?: MotionBlurOptions;
 }
 
@@ -44,9 +48,11 @@ export interface StaticSpinSymbolOptions {
  * reactivated on the final symbolId.
  *
  * With `spinTexture: 'blurred'` the sprite crossfades from the crisp
- * snapshot to a pre-baked vertical motion-blur variant over `blurRampMs`,
- * then spins the blurred texture. No filter runs during the spin; the blur
- * is baked once per symbolId and cached.
+ * snapshot to a pre-baked motion-blur variant over `blurRampMs`, then
+ * spins the blurred texture. The smear follows the reel's travel axis
+ * (`blur.axis` — vertical by default, `'x'` for a `HorizontalReel`). No
+ * filter runs during the spin; the blur is baked once per symbolId and
+ * cached.
  *
  * Register it like any other symbol:
  *
@@ -271,14 +277,20 @@ export class StaticSpinSymbol extends ReelSymbol {
     this._blurSprite.visible = false;
   }
 
-  /** Width-fit both sprites to the cell (keeps aspect; padded blur textures center out evenly). */
+  /**
+   * Uniformly fit both sprites to the cell along the axis the blur does
+   * NOT pad (keeps aspect; the padded axis then centers out evenly past
+   * the cell). Vertical reels fit by width; horizontal (`blur.axis: 'x'`)
+   * strips fit by height.
+   */
   private _fitSprites(): void {
-    if (this._cellW <= 0) return;
+    if (this._cellW <= 0 || this._cellH <= 0) return;
+    const fitByHeight = this._blurOpts?.axis === 'x';
     for (const sprite of [this._staticSprite, this._blurSprite]) {
       const tw = sprite.texture.width;
       const th = sprite.texture.height;
       if (tw <= 0 || th <= 0) continue;
-      sprite.scale.set(this._cellW / tw);
+      sprite.scale.set(fitByHeight ? this._cellH / th : this._cellW / tw);
     }
   }
 

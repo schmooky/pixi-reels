@@ -177,6 +177,10 @@ export class HorizontalReel implements Disposable {
     this._queue = [];
     this._wasSkipped = false;
     this._spinStart = performance.now();
+    // Same contract as Reel.notifySpinStart: every conveyor slot (buffers
+    // included) learns the strip is moving so spin presentations (blur,
+    // static snapshots) engage.
+    for (const slot of this._slots) slot.onReelSpinStart();
     this.events.emit('spin:start');
     return new Promise((resolve) => {
       this._resolve = resolve;
@@ -409,6 +413,11 @@ export class HorizontalReel implements Disposable {
     next.resize(this._cellW, this._cellH);
     next.view.y = 0;
     this.container.addChild(next.view);
+    // Pool recycling wiped the symbol's state; if the strip is moving it
+    // must re-join the spin presentation (mirrors Reel._replaceSymbol).
+    if (this._state === 'spinning' || this._state === 'stopping') {
+      next.onReelSpinStart(true);
+    }
     return next;
   }
 
@@ -440,6 +449,10 @@ export class HorizontalReel implements Disposable {
 
   private _land(): void {
     this._state = 'idle';
+    // Mirror StopPhase's order: spin-end first (drop blur / snapshots),
+    // then landed (landing animations), across every conveyor slot.
+    for (const slot of this._slots) slot.onReelSpinEnd();
+    for (const slot of this._slots) slot.onReelLanded();
     // Single-reel SpinResult: a one-column grid, same shape as ReelSet's.
     const result: SpinResult = {
       symbols: [this._windowIds()],

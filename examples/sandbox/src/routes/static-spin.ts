@@ -13,6 +13,7 @@
  */
 import type { Texture } from 'pixi.js';
 import {
+  HorizontalReelBuilder,
   ReelSetBuilder,
   SpeedPresets,
   SpinTextureCache,
@@ -78,6 +79,52 @@ export function buildStaticSpin({ app, textures }: SandboxContext): SandboxResul
 
   const width = REELS * (SYMBOL_SIZE + GAP) - GAP;
   const height = ROWS * (SYMBOL_SIZE + GAP) - GAP;
+
+  // Horizontal banner strip above the reels — same wrapper, sideways smear.
+  // Its cells are a different size, so it gets its own cache; `axis: 'x'`
+  // bakes the blur along the strip's travel direction.
+  const STRIP_CELL = 90;
+  const stripCache = new SpinTextureCache({ renderer: app.renderer });
+  const stripBlur = { axis: 'x' as const };
+  const createStripInner = () => new SpriteSymbol({ textures: symbolTextures });
+  prewarmSpinTextures({
+    cache: stripCache,
+    ids: SYMBOLS,
+    createSymbol: createStripInner,
+    width: STRIP_CELL,
+    height: STRIP_CELL,
+    blur: stripBlur,
+  });
+  const strip = new HorizontalReelBuilder()
+    .visibleCount(REELS)
+    .cellSize(STRIP_CELL, STRIP_CELL, { gap: GAP })
+    .symbols((registry) => {
+      for (const id of SYMBOLS) {
+        registry.register(id, StaticSpinSymbol, {
+          createInner: createStripInner,
+          cache: stripCache,
+          blurRampMs: 140,
+          blur: stripBlur,
+        });
+      }
+    })
+    .ticker(app.ticker)
+    .build();
+  strip.container.x = (width - (REELS * (STRIP_CELL + GAP) - GAP)) / 2;
+  strip.container.y = -STRIP_CELL - GAP * 3;
+  reelSet.addChild(strip.container);
+  // Spin the strip alongside the main reels; land it on random ids.
+  reelSet.events.on('spin:start', () => {
+    const spinP = strip.spin();
+    void spinP;
+    setTimeout(() => {
+      strip.setResult([
+        { visible: Array.from({ length: REELS }, () => SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)]) },
+      ]);
+    }, 900);
+  });
+  // Expose for console poking alongside __PIXI_REELS_DEBUG.
+  (window as unknown as { __STRIP: unknown }).__STRIP = strip;
   const nextResult = (): string[][] =>
     Array.from({ length: REELS }, () =>
       Array.from({ length: ROWS }, () => SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)]),

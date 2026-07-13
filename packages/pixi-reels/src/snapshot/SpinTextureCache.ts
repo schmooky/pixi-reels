@@ -18,15 +18,23 @@ export interface SnapshotRenderer {
 /** Tuning for the baked motion-blur variant of a snapshot. */
 export interface MotionBlurOptions {
   /**
-   * Vertical blur strength in pixels. Default: `cellHeight * 0.2`,
-   * matching the reel's travel direction. Horizontal blur is always 0.
+   * Smear axis — the reel's travel direction. `'y'` (default) for normal
+   * vertical reels; `'x'` for a `HorizontalReel` strip. The other axis is
+   * never blurred.
    */
-  strengthY?: number;
+  axis?: 'y' | 'x';
+  /**
+   * Blur strength in pixels along the axis. Default: 20% of the cell's
+   * span on that axis (`cellHeight * 0.2` for `'y'`, `cellWidth * 0.2`
+   * for `'x'`).
+   */
+  strength?: number;
   /** BlurFilter quality (number of passes). Default: 4. */
   quality?: number;
   /**
-   * Extra transparent pixels added above and below the cell so the smear
-   * isn't clipped at the texture edge. Default: `ceil(strengthY)`.
+   * Extra transparent pixels added on both sides of the cell along the
+   * axis so the smear isn't clipped at the texture edge.
+   * Default: `ceil(strength)`.
    */
   padding?: number;
 }
@@ -46,6 +54,8 @@ interface CacheEntry {
   owned: boolean;
   width: number;
   height: number;
+  /** Smear axis the blurred variant was baked for (blurred entries only). */
+  axis?: 'y' | 'x';
 }
 
 /**
@@ -140,10 +150,12 @@ export class SpinTextureCache implements Disposable {
   }
 
   /**
-   * Bake a vertically motion-blurred variant of the static snapshot for
-   * `symbolId` (which must exist. call `captureStatic` or `setStatic`
-   * first) and cache it. The result is `2 * padding` taller than the cell;
-   * draw it center-anchored at the cell center and the smear extends evenly
+   * Bake a motion-blurred variant of the static snapshot for `symbolId`
+   * (which must exist. call `captureStatic` or `setStatic` first) and
+   * cache it. The smear runs along `blur.axis` — the reel's travel
+   * direction (`'y'` default; `'x'` for a `HorizontalReel`) — and the
+   * result is `2 * padding` larger than the cell on that axis only. Draw
+   * it center-anchored at the cell center and the smear extends evenly
    * past the cell on both sides.
    */
   captureBlurred(
@@ -152,8 +164,13 @@ export class SpinTextureCache implements Disposable {
     height: number,
     blur?: MotionBlurOptions,
   ): Texture {
+    const axis = blur?.axis ?? this._blurDefaults.axis ?? 'y';
     const existing = this._blurred.get(symbolId);
-    if (existing && (!existing.owned || (existing.width === width && existing.height === height))) {
+    if (
+      existing &&
+      (!existing.owned ||
+        (existing.width === width && existing.height === height && existing.axis === axis))
+    ) {
       return existing.texture;
     }
     const staticTex = this.getStatic(symbolId);
@@ -164,9 +181,10 @@ export class SpinTextureCache implements Disposable {
       );
     }
 
-    const strengthY = blur?.strengthY ?? this._blurDefaults.strengthY ?? height * 0.2;
+    const strength =
+      blur?.strength ?? this._blurDefaults.strength ?? (axis === 'y' ? height : width) * 0.2;
     const quality = blur?.quality ?? this._blurDefaults.quality ?? 4;
-    const padding = blur?.padding ?? this._blurDefaults.padding ?? Math.ceil(strengthY);
+    const padding = blur?.padding ?? this._blurDefaults.padding ?? Math.ceil(strength);
 
     const wrap = new Container();
     const sprite = new Sprite(staticTex);
@@ -174,20 +192,30 @@ export class SpinTextureCache implements Disposable {
     // texture with different dimensions.
     sprite.width = width;
     sprite.height = height;
-    sprite.y = padding;
-    sprite.filters = [new BlurFilter({ strengthX: 0, strengthY, quality })];
+    if (axis === 'y') {
+      sprite.y = padding;
+      sprite.filters = [new BlurFilter({ strengthX: 0, strengthY: strength, quality })];
+    } else {
+      sprite.x = padding;
+      sprite.filters = [new BlurFilter({ strengthX: strength, strengthY: 0, quality })];
+    }
     wrap.addChild(sprite);
 
     const texture = this._renderer.generateTexture({
       target: wrap,
-      frame: new Rectangle(0, 0, width, height + padding * 2),
+      frame: new Rectangle(
+        0,
+        0,
+        width + (axis === 'x' ? padding * 2 : 0),
+        height + (axis === 'y' ? padding * 2 : 0),
+      ),
       resolution: this._resolution,
       antialias: true,
     });
     // Destroy the scratch scene but not the cached static texture.
     wrap.destroy({ children: true });
 
-    this._put(this._blurred, symbolId, { texture, owned: true, width, height });
+    this._put(this._blurred, symbolId, { texture, owned: true, width, height, axis });
     return texture;
   }
 
