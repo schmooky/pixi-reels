@@ -81,6 +81,7 @@ export class StaticSpinSymbol extends ReelSymbol {
   private _staticSprite: Sprite;
   private _blurSprite: Sprite;
   private _spinning = false;
+  private _anticipating = false;
   private _cellW = 0;
   private _cellH = 0;
   private _rampTween: gsap.core.Tween | null = null;
@@ -128,6 +129,7 @@ export class StaticSpinSymbol extends ReelSymbol {
   protected onDeactivate(): void {
     this._killRamp();
     this._spinning = false;
+    this._anticipating = false;
     this._staticSprite.visible = false;
     this._blurSprite.visible = false;
     if (this._inner.symbolId !== '') this._inner.deactivate();
@@ -141,6 +143,7 @@ export class StaticSpinSymbol extends ReelSymbol {
       return;
     }
     this._spinning = true;
+    this._anticipating = false;
     // Capture while the inner symbol is still live so a cache miss can
     // snapshot it in place, then put the inner symbol to sleep for the
     // duration of the spin.
@@ -148,9 +151,39 @@ export class StaticSpinSymbol extends ReelSymbol {
     if (this._inner.symbolId !== '') this._inner.deactivate();
   }
 
+  /**
+   * The reel entered its anticipation tease: it is slow enough to read, so
+   * crossfade the baked blur back out and ride the crisp snapshot until
+   * the land. Mid-tease installs arrive blurred (`_showSnapshot` instant)
+   * and immediately relax through this same hook.
+   */
+  override onReelAnticipationStart(): void {
+    if (!this._spinning || this._anticipating) return;
+    this._anticipating = true;
+    if (this._mode === 'static') return;
+
+    this._killRamp();
+    this._staticSprite.visible = true;
+    this._staticSprite.alpha = 1;
+    if (!this._blurSprite.visible || this._rampMs <= 0) {
+      this._blurSprite.visible = false;
+      return;
+    }
+    this._rampTween = getGsap().to(this._blurSprite, {
+      alpha: 0,
+      duration: this._rampMs / 1000,
+      ease: 'power1.out',
+      onComplete: () => {
+        this._rampTween = null;
+        this._blurSprite.visible = false;
+      },
+    });
+  }
+
   override onReelSpinEnd(): void {
     if (!this._spinning) return;
     this._spinning = false;
+    this._anticipating = false;
     this._killRamp();
     this._staticSprite.visible = false;
     this._blurSprite.visible = false;
@@ -225,6 +258,15 @@ export class StaticSpinSymbol extends ReelSymbol {
     }
 
     if (opts.instant) {
+      // Anticipating: the tease shows the crisp snapshot. never bring the
+      // blur back for re-notifications or same-id wraps mid-tease.
+      if (this._anticipating) {
+        this._killRamp();
+        this._blurSprite.visible = false;
+        this._staticSprite.visible = true;
+        this._staticSprite.alpha = 1;
+        return;
+      }
       // Already ramping? Let the running crossfade finish on the new
       // textures instead of snapping mid-fade.
       if (this._rampTween) return;

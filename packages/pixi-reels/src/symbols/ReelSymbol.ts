@@ -244,6 +244,16 @@ export abstract class ReelSymbol implements Disposable {
   onReelSpinEnd(): void {}
 
   /**
+   * Lifecycle hook: the owning reel entered its anticipation (tease) phase.
+   * it is still spinning, but slowed enough that the strip is readable.
+   * Spin presentations that obscure symbols (blur textures, smear
+   * animations) should relax so the player can follow the tease. Also
+   * fired on symbols installed while the reel is anticipating.
+   * Implementations MUST be idempotent. Default: no-op.
+   */
+  onReelAnticipationStart(): void {}
+
+  /**
    * Lifecycle hook: the owning reel has landed on its final symbols.
    * Default: no-op. Override (e.g. SpineReelSymbol.autoPlayLanding) to fire
    * a landing animation concurrently with the bounce.

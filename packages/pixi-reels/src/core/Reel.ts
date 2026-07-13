@@ -209,6 +209,7 @@ export class Reel implements Disposable {
    * wipes per-instance state, so the symbol can't know on its own).
    */
   private _spinPresentationActive = false;
+  private _anticipationActive = false;
   private _isNudging = false;
   /**
    * Symbol-id queue consulted by `_onSymbolWrapped` during a nudge. Each
@@ -503,8 +504,25 @@ export class Reel implements Disposable {
    */
   notifySpinStart(): void {
     this._spinPresentationActive = true;
+    this._anticipationActive = false;
     for (let i = 0; i < this.symbols.length; i++) {
       this.symbols[i].onReelSpinStart();
+    }
+  }
+
+  /**
+   * Notify all strip symbols that this reel entered its anticipation
+   * (tease) phase, and arm mid-anticipation notification: every symbol
+   * installed by `_replaceSymbol` until `notifySpinEnd()` also receives
+   * `onReelAnticipationStart()` so cells wrapping in during the tease
+   * apply the readable (un-blurred) presentation.
+   *
+   * @internal Called by SpinController when the anticipation phase starts.
+   */
+  notifyAnticipationStart(): void {
+    this._anticipationActive = true;
+    for (let i = 0; i < this.symbols.length; i++) {
+      this.symbols[i].onReelAnticipationStart();
     }
   }
 
@@ -516,6 +534,7 @@ export class Reel implements Disposable {
    */
   notifySpinEnd(): void {
     this._spinPresentationActive = false;
+    this._anticipationActive = false;
     for (let i = 0; i < this.symbols.length; i++) {
       this.symbols[i].onReelSpinEnd();
     }
@@ -1303,6 +1322,7 @@ export class Reel implements Disposable {
       this._parentForSymbolId(newSymbolId).addChild(newSymbol.view);
       this.symbols[index] = newSymbol;
       if (this._spinPresentationActive) newSymbol.onReelSpinStart(true);
+      if (this._anticipationActive) newSymbol.onReelAnticipationStart();
       this.events.emit('symbol:created', newSymbolId, index);
       return;
     }
@@ -1326,6 +1346,7 @@ export class Reel implements Disposable {
       // The instance was never deactivated, so it usually still carries its
       // spin state. re-notify anyway for uniformity (hooks are idempotent).
       if (this._spinPresentationActive) oldSymbol.onReelSpinStart(true);
+      if (this._anticipationActive) oldSymbol.onReelAnticipationStart();
       return;
     }
 
@@ -1342,6 +1363,7 @@ export class Reel implements Disposable {
 
     this.symbols[index] = newSymbol;
     if (this._spinPresentationActive) newSymbol.onReelSpinStart(true);
+    if (this._anticipationActive) newSymbol.onReelAnticipationStart();
     this.events.emit('symbol:created', newSymbolId, index);
   }
 
