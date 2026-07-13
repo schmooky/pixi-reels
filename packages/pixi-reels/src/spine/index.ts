@@ -8,5 +8,6 @@ export type { SpineSymbolOptions } from '../symbols/SpineSymbol.js';
 export { SpineReelSymbol } from './SpineReelSymbol.js';
 export type {
   SpineReelSymbolOptions,
+  SpineSymbolSource,
   SymbolAnimOverrides,
 } from './SpineReelSymbol.js';
