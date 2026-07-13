@@ -1,0 +1,123 @@
+---
+title: Symbol layering - zIndex, unmask, promote
+group: features
+oneLiner: Three tiers of "draw my symbol on top" - within one reel, above a rectangular grid, and above a jagged one.
+description: Overflowing art (jaws, bushes, expanding wilds) meets three
+  boundaries - the tile below it, the reel to its right, and the viewport
+  mask. Each has its own tool. symbolData zIndex sorts within a reel,
+  unmask lifts a symbol above a rectangular grid entirely, and on jagged
+  layouts (where unmask throws) you promote the landed view into the
+  spotlight layer. Three live demos with real Thunderkick game art.
+order: 71
+steps:
+  - Within one reel - symbolData zIndex elevates a symbol above its reel-mates
+  - Rectangular grid - unmask parents it above every reel and outside the mask
+  - Jagged grid - promote the landed view into viewport.spotlightContainer
+  - Hand promoted views back to their reel on the next spin:start
+apis:
+  - ReelSetBuilder.symbolData
+  - ReelViewport.unmaskedContainer
+  - ReelViewport.spotlightContainer
+tags:
+  - layering
+  - zindex
+  - unmask
+  - mask
+  - scatter
+---
+
+Overflowing symbol art runs into three different boundaries, in order of
+reach:
+
+1. **The tile next to it** (same reel) — fixed by `symbolData` `zIndex`.
+2. **The reel to its right** — reels are separate containers and rightmost
+   reels draw on top, so no zIndex can cross that line.
+3. **The viewport mask** — everything inside a reel is clipped to the grid.
+
+Each demo below solves one more of them.
+
+## 1. Within a reel: `symbolData` zIndex
+
+<RecipeDemo code="layering-scatter-zindex" height={420} />
+
+The scatter is registered with `zIndex: 10`; the mystery bush is
+deliberately left at the default layer. Watch a few spins: the tile *below*
+the bush paints over its leaves (within a layer, bottom rows draw in front),
+while the jaw is never clipped by anything in its own reel.
+
+```ts
+builder.symbolData({ scatter: { zIndex: 10 } });
+```
+
+The engine multiplies `zIndex` by 100 and adds the row index, so elevated
+symbols still stack correctly among themselves. The library's full z-budget
+(default cells ~0-10, elevated 100+, big-symbol anchors ~500, pin overlays
+10000, spotlight above all) is documented on `ReelSet`.
+
+Limits: this sorts **within one reel's container** only. The scatter here
+still loses to the reel on its right, and still clips at the mask — that's
+the next two demos.
+
+## 2. Rectangular grids: `unmask`
+
+<RecipeDemo code="layering-unmask" height={420} />
+
+`unmask: true` re-parents every instance of that symbolId into the
+viewport-wide `unmaskedContainer`: above **every** reel and rendered on top
+of the mask. The scatters here are forced onto the top/bottom rows — the
+jaw pokes clean out of the grid, and overlaps the neighbour to its right,
+with zero recipe code:
+
+```ts
+builder.symbolData({ scatter: { zIndex: 10, unmask: true } });
+```
+
+Notes:
+
+- It's **per symbolId, not per state** — an unmasked symbol also scrolls
+  above the mask while spinning. Keep it out of the random spin weights if
+  that bothers you (this demo forces scatters via `setResult` only).
+- With a horizontal `symbolGap`, the builder auto-selects
+  `SharedRectMaskStrategy` so masked neighbours aren't clipped at the gap
+  stripe next to an unmasked overlay.
+- On jagged center-anchored layouts the builder **throws**: the motion
+  layer writes reel-local Y to unmasked views and can't keep them aligned
+  on offset reels. Which brings us to...
+
+## 3. Jagged grids: promote into the spotlight layer
+
+<RecipeDemo code="layering-promote-jagged" height={420} />
+
+On a 3-4-4-4-4-3 grid, `unmask` is off the table — so lift the **landed**
+view out of its reel instead. `viewport.spotlightContainer` is the engine's
+top layer (above pins, above the mask), and the symbol pool is explicitly
+built to tolerate this re-parenting (it's what the win spotlight does):
+
+```ts
+function promote(sym) {
+  const layer = reelSet.viewport.spotlightContainer;
+  const globalPos = sym.view.getGlobalPosition();
+  promoted.push({ view: sym.view, parent: sym.view.parent, x: sym.view.x, y: sym.view.y });
+  layer.addChild(sym.view);
+  sym.view.position.copyFrom(layer.toLocal(globalPos));
+}
+
+reelSet.events.on('spin:start', () => {
+  for (const p of promoted) {
+    p.parent.addChild(p.view); // hand it back before the strip moves
+    p.view.position.set(p.x, p.y);
+  }
+  promoted.length = 0;
+});
+```
+
+Promote ~380ms after the reel's `spin:reelLanded` so the stop bounce has
+settled (guard the timer with a spin-generation counter in case the player
+slams into a new spin). The scatters here land on the short edge reels —
+their jaws hang past the grid's stepped outline, over the neighbouring
+reels, until the next spin reclaims them.
+
+## Asset credit
+
+Symbol skeletons and atlas are from a Thunderkick production game (Spine
+4.0 exports migrated to 4.2, used with permission).

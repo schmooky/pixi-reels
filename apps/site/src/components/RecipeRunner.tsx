@@ -42,6 +42,11 @@ import {
   loadGeneratedSpines,
   buildSpineMap,
 } from '../../../../examples/shared/generatedSpineLoader.ts';
+import {
+  loadThunderkickSpines,
+  buildThunderkickSpineMap,
+  THUNDERKICK_SYMBOL_IDS,
+} from '../../../../examples/shared/thunderkickSpineLoader.ts';
 import { loadHoldAndWinSprites } from '../../../../examples/shared/holdAndWinSprites.ts';
 import { transform as sucraseTransform } from 'sucrase';
 import { cn } from '@/lib/utils';
@@ -197,6 +202,7 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
           'SpinTextureCache', 'StaticSpinSymbol', 'prewarmSpinTextures',
           'GoldCoinSymbol', 'coinWaves', 'bezierFly', 'settleMoneyFace', 'freezeAtEnd', 'fitText',
           'SpineReelSymbol', 'Spine', 'loadGeneratedSpines', 'buildSpineMap',
+          'loadThunderkickSpines', 'buildThunderkickSpineMap', 'THUNDERKICK_SYMBOL_IDS',
           'loadHoldAndWinSprites',
           `"use strict"; ${js}`,
         );
@@ -219,6 +225,7 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
           SpinTextureCache, StaticSpinSymbol, prewarmSpinTextures,
           GoldCoinSymbol, coinWaves, bezierFly, settleMoneyFace, freezeAtEnd, fitText,
           SpineReelSymbol, Spine, loadGeneratedSpines, buildSpineMap,
+          loadThunderkickSpines, buildThunderkickSpineMap, THUNDERKICK_SYMBOL_IDS,
           loadHoldAndWinSprites,
         )) as RunResult;
       } catch (e) {
