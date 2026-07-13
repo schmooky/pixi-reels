@@ -54,19 +54,25 @@ symbols still stack correctly among themselves. The library's full z-budget
 (default cells ~0-10, elevated 100+, big-symbol anchors ~500, pin overlays
 10000, spotlight above all) is documented on `ReelSet`.
 
-Limits: this sorts **within one reel's container** only. The scatter here
-still loses to the reel on its right, and still clips at the mask — that's
-the next two demos.
+Limits — read this twice: `zIndex` sorts **within one reel's container**
+only. Reels are separate display containers, so **no zIndex value can ever
+lift a left reel's symbol above the reel on its right**, and nothing inside
+a reel escapes the viewport mask. Crossing reels or the mask takes
+`unmask` (demo 2) or promotion (demo 3) — there is no third way.
 
 ## 2. Rectangular grids: `unmask`
 
 <RecipeDemo code="layering-unmask" height={420} />
 
-`unmask: true` re-parents every instance of that symbolId into the
-viewport-wide `unmaskedContainer`: above **every** reel and rendered on top
-of the mask. The scatters here are forced onto the top/bottom rows — the
-jaw pokes clean out of the grid, and overlaps the neighbour to its right,
-with zero recipe code:
+`unmask: true` is an **at-rest** presentation. While the reel spins, the
+symbol stays masked like everything else — nothing scrolls visibly outside
+the grid. On land, every visible-row instance of that symbolId is lifted
+into the viewport-wide `unmaskedContainer`: above **every** reel (this is
+the only declarative way a left reel's symbol beats its right neighbour)
+and on top of the mask. The next spin start hands it back to its reel.
+The scatters here are forced onto the top/bottom rows — the landed jaw
+pokes clean out of the grid, and overlaps the neighbour to its right, with
+zero recipe code:
 
 ```ts
 builder.symbolData({ scatter: { zIndex: 10, unmask: true } });
@@ -74,9 +80,8 @@ builder.symbolData({ scatter: { zIndex: 10, unmask: true } });
 
 Notes:
 
-- It's **per symbolId, not per state** — an unmasked symbol also scrolls
-  above the mask while spinning. Keep it out of the random spin weights if
-  that bothers you (this demo forces scatters via `setResult` only).
+- Buffer-row instances are never lifted — an off-screen scatter parked
+  beyond the mask edge would read as a rendering bug.
 - With a horizontal `symbolGap`, the builder auto-selects
   `SharedRectMaskStrategy` so masked neighbours aren't clipped at the gap
   stripe next to an unmasked overlay.

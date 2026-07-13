@@ -292,10 +292,18 @@ export class ReelSetBuilder {
    * replaces the one from `weights()`). Merged into the final symbolsData map
    *. any field you don't specify falls back to the default.
    *
+   * `zIndex` sorts within ONE reel's container only. it can never lift a
+   * symbol above the reel to its right (reels are separate containers).
+   * Cross-reel and out-of-mask layering needs `unmask: true`, which is an
+   * **at-rest** presentation: while the reel spins the symbol stays masked
+   * like everything else; on land, visible-row instances are lifted into
+   * the viewport-wide `unmaskedContainer` (above every reel and the mask)
+   * and pulled back down when the next spin starts.
+   *
    * @example
    * .symbolData({
-   *   wild:  { zIndex: 5 },                // render above neighbours
-   *   bonus: { zIndex: 10, unmask: true }, // render outside the reel mask
+   *   wild:  { zIndex: 5 },                // above reel-mates (same reel only)
+   *   bonus: { zIndex: 10, unmask: true }, // landed: above all reels + mask
    * })
    */
   symbolData(overrides: Record<string, Partial<SymbolData>>): this {
