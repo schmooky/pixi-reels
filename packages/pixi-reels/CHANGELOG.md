@@ -1,5 +1,17 @@
 # pixi-reels
 
+## 1.5.0
+
+### Minor Changes
+
+- [#188](https://github.com/schmooky/pixi-reels/pull/188) [`a586390`](https://github.com/schmooky/pixi-reels/commit/a586390f79798f5fcbda3d7bdedc03e9292f64e5) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Add: anticipation-aware spin presentation — new `ReelSymbol.onReelAnticipationStart()` lifecycle hook, fired on every strip symbol when its reel enters the anticipation phase (and on symbols installed mid-tease). `StaticSpinSymbol` uses it to crossfade the baked motion blur back to the crisp snapshot, so the slowed tease strip is readable instead of smeared.
+
+- [#188](https://github.com/schmooky/pixi-reels/pull/188) [`a586390`](https://github.com/schmooky/pixi-reels/commit/a586390f79798f5fcbda3d7bdedc03e9292f64e5) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Add: `SpineReelSymbol` multi-skin skeleton support — spineMap entries accept an optional `skin`, so several symbolIds can share one multi-skin skeleton (e.g. a `lowSymbols` skeleton carrying `low1`..`low5` as skins) instead of shipping one skeleton per symbol.
+
+- [#188](https://github.com/schmooky/pixi-reels/pull/188) [`a586390`](https://github.com/schmooky/pixi-reels/commit/a586390f79798f5fcbda3d7bdedc03e9292f64e5) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Fix: `symbolData` `unmask` is now an at-rest presentation. While the reel spins, unmasked ids stay in the masked reel container like every other symbol — previously they scrolled visibly outside the grid and buffer-row instances sat parked beyond the mask edge, visually breaking the reels. On land, visible-row instances are lifted into the viewport-wide `unmaskedContainer` (above every reel and outside the mask), and re-masked the instant the reel begins to move on the next spin (at the start of the accel ramp, not once it reaches full speed — so a lifted symbol never floats above the mask while the strip scrolls under it).
+
+- [#188](https://github.com/schmooky/pixi-reels/pull/188) [`a586390`](https://github.com/schmooky/pixi-reels/commit/a586390f79798f5fcbda3d7bdedc03e9292f64e5) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Add: `symbolData` `unmask: true` now works on jagged / pyramid layouts (reels with a non-zero `offsetY`). Previously the builder threw at config time, because the motion layer writes bare reel-local Y and would drop the reel offset from a lifted view on every snap. Since unmask is now an at-rest presentation (a view is only lifted while the reel is stopped), `Reel._syncUnmaskedViewOffsets()` re-bakes `container.y` after each absolute `motion.snapToGrid()`, and the frequent mid-spin snaps never touch a lifted view. The `unmask + pyramid layout is not supported` build-time throw is removed.
+
 ## 1.4.0
 
 ### Minor Changes
