@@ -1,11 +1,11 @@
 ---
 /**
- * Discreet, theme-aware "assets provided by <studio>" badge.
+ * Theme-aware "assets provided by <studio>" credit.
  *
- * Placed at the foot of a recipe whose demo art is a partner studio's.
- * The logo SVG is inlined and authored fill-less, so `currentColor` drives
- * it: ink in light, paper in dark. The caption is small and italic. No
- * provenance detail beyond the attribution itself.
+ * A centred figure: the studio logo (inlined and authored fill-less, so
+ * `currentColor` drives it. ink in light, paper in dark), with a small
+ * italic caption beneath, read like the description of the mark above it.
+ * No border, no background. no provenance detail beyond the attribution.
  *
  * Usage in MDX: `<AssetCredit studio="Thunderkick" />`
  */
@@ -23,41 +23,37 @@ const LOGO_BY_STUDIO: Record<string, string> = {
 const logo = LOGO_BY_STUDIO[studio];
 ---
 
-<aside class="asset-credit" aria-label={`Assets provided by ${studio}`}>
+<figure class="asset-credit" aria-label={`Assets provided by ${studio}`}>
   {logo && <span class="asset-credit__logo" set:html={logo} />}
-  <span class="asset-credit__text">Assets provided by {studio}</span>
-</aside>
+  <figcaption class="asset-credit__text">Assets provided by {studio}</figcaption>
+</figure>
 
 <style>
   .asset-credit {
-    display: inline-flex;
+    display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 0.6rem;
-    width: fit-content;
-    max-width: 100%;
-    margin-top: 2.5rem;
-    padding: 0.45rem 0.8rem;
-    border: 1px solid hsl(var(--border));
-    border-radius: 0.5rem;
-    background: hsl(var(--muted) / 0.4);
+    gap: 0.7rem;
+    margin: 3rem 0 1rem;
   }
 
   /* Fill-less logo paths inherit currentColor. drive it from --foreground so
      the mark reads as ink on light, paper on dark. */
   .asset-credit__logo {
     display: inline-flex;
-    flex: none;
     color: hsl(var(--foreground));
   }
   .asset-credit__logo :global(svg) {
     display: block;
-    height: 0.95rem;
+    height: 2.75rem; /* roughly two-to-three lines of text tall */
     width: auto;
   }
 
   .asset-credit__text {
-    font-size: 0.78rem;
+    margin: 0;
+    font-size: 0.8rem;
     font-style: italic;
     color: hsl(var(--muted-foreground));
+    text-align: center;
   }
 </style>
