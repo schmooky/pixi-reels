@@ -513,10 +513,30 @@ export class Reel implements Disposable {
   notifySpinStart(): void {
     this._spinPresentationActive = true;
     this._anticipationActive = false;
+    // Safety net for callers that don't run `beginMotion()` first (skip
+    // path, cascade phases). No-op once already re-masked. idempotent.
+    this.beginMotion();
+    for (let i = 0; i < this.symbols.length; i++) {
+      this.symbols[i].onReelSpinStart();
+    }
+  }
+
+  /**
+   * Mark the reel as leaving rest and re-mask any lifted unmask symbols.
+   *
+   * Called the INSTANT this reel begins to move (start of the accel ramp),
+   * not at `notifySpinStart` which fires only once the reel reaches full
+   * speed. Unmask is an at-rest presentation: an unmasked symbol left in
+   * `viewport.unmaskedContainer` would float above the mask while the
+   * strip scrolls underneath it for the whole acceleration. Pull every
+   * lifted view back into the masked reel container up front, and clear
+   * `_atRest` so `_replaceSymbol` doesn't re-lift a result symbol mid-spin.
+   *
+   * @internal Called by StartPhase on launch. Idempotent.
+   */
+  beginMotion(): void {
+    if (!this._atRest) return;
     this._atRest = false;
-    // Unmask is an at-rest presentation: pull any lifted views back into
-    // the masked reel container before the strip starts moving, so nothing
-    // scrolls visibly outside the grid.
     for (let i = 0; i < this.symbols.length; i++) {
       const view = this.symbols[i].view;
       if (view.parent === this._viewport.unmaskedContainer) {
@@ -524,9 +544,6 @@ export class Reel implements Disposable {
         this.container.addChild(view);
         this._placeSymbolView(view, reelLocalY, false);
       }
-    }
-    for (let i = 0; i < this.symbols.length; i++) {
-      this.symbols[i].onReelSpinStart();
     }
   }
 

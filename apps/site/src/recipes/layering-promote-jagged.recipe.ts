@@ -57,8 +57,10 @@ const reelSet = new ReelSetBuilder()
   .weights(weights)
   // Still useful while landing: elevates the scatter within its own reel.
   .symbolData({ scatter: { zIndex: 10 } })
-  .speed('normal', SpeedPresets.NORMAL)
-  .speed('turbo', SpeedPresets.TURBO)
+  // Synchronized settle: all reels start and stop together (no stagger),
+  // and land with no bounce so the whole grid comes to rest as one.
+  .speed('normal', { ...SpeedPresets.NORMAL, spinDelay: 0, stopDelay: 0, bounceDistance: 0 })
+  .speed('turbo', { ...SpeedPresets.TURBO, spinDelay: 0, stopDelay: 0, bounceDistance: 0 })
   .ticker(app.ticker)
   .build();
 

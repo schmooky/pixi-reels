@@ -57,8 +57,10 @@ const reelSet = new ReelSetBuilder()
   // The lesson: scatter is elevated, mystery is NOT (default layer) —
   // watch the bush get clipped by the tile below it while the jaw never is.
   .symbolData({ scatter: { zIndex: 10 } })
-  .speed('normal', SpeedPresets.NORMAL)
-  .speed('turbo', SpeedPresets.TURBO)
+  // Synchronized settle: all reels start and stop together (no stagger),
+  // and land with no bounce so the whole grid comes to rest as one.
+  .speed('normal', { ...SpeedPresets.NORMAL, spinDelay: 0, stopDelay: 0, bounceDistance: 0 })
+  .speed('turbo', { ...SpeedPresets.TURBO, spinDelay: 0, stopDelay: 0, bounceDistance: 0 })
   .ticker(app.ticker)
   .build();
 
