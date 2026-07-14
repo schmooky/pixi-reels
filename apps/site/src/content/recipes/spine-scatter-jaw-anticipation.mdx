@@ -89,8 +89,10 @@ sym.view.position.copyFrom(layer.toLocal(globalPos));
 On the next `spin:start` every promoted view is handed back to its reel at
 its original position — the engine's symbol pool is built to tolerate
 exactly this kind of re-parenting (it's what spotlight promotion does).
-`symbolData`'s `unmask: true` would be the declarative version, but it is
-not available on jagged (center-anchored) layouts.
+`symbolData`'s `unmask: true` is the declarative version (and works on this
+jagged layout too); promotion is used here so only the scatters actually in
+play are lifted, per-instance, rather than every scatter every spin. See the
+[symbol layering](/recipes/symbol-layering) recipe for the trade-off.
 
 ## Hit or miss
 
@@ -100,7 +102,4 @@ rolls into `bonusGameWon`. On a miss the spin completes empty-handed —
 hold the disappointment for a beat, then `stopAnimation()` returns the
 scatters to idle.
 
-## Asset credit
-
-Symbol skeletons and atlas are from a Thunderkick production game (Spine
-4.0 exports migrated to 4.2, used with permission).
+<AssetCredit studio="Thunderkick" />
