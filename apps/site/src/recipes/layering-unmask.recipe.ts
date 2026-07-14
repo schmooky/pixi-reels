@@ -4,14 +4,13 @@
 //                   loadThunderkickSpines, buildThunderkickSpineMap,
 //                   app, pickWeighted
 //
-// symbolData `unmask: true` — the declarative fix, on a rectangular grid.
-// Unmasked symbols are parented to the viewport-wide unmaskedContainer:
-// above EVERY reel and outside the mask, so the jaw overflows the grid
-// edges and its right-hand neighbours with zero recipe code. Scatters are
-// forced onto edge rows so the out-of-mask peek is obvious.
-//
-// (This is per-symbol-id and rectangular-only: unmask throws on jagged
-// center-anchored layouts — see the third demo for those.)
+// symbolData `unmask: true` — the declarative fix, on the SAME jagged
+// 3-4-4-4-4-3 grid as the other demos. On land, unmasked scatters are
+// parented to the viewport-wide unmaskedContainer: above EVERY reel and
+// outside the mask, so the jaw overflows the grid edges and its right-hand
+// neighbours with zero recipe code. The engine bakes each reel's offset
+// into the lifted view, so this works on offset (center-anchored) reels
+// too — no manual promotion needed.
 
 await loadThunderkickSpines();
 
@@ -26,8 +25,7 @@ const weights = {
   mid1: 9, mid2: 8, mid3: 7, mid4: 6, high: 4,
 };
 
-const REELS = 6;
-const ROWS = 4;
+const ROWS_PER_REEL = [3, 4, 4, 4, 4, 3];
 
 const cache = new SpinTextureCache({ renderer: app.renderer });
 const createInner = () =>
@@ -47,8 +45,9 @@ prewarmSpinTextures({
 });
 
 const reelSet = new ReelSetBuilder()
-  .reels(REELS)
-  .visibleRows(ROWS)
+  .reels(6)
+  .visibleRowsPerReel(ROWS_PER_REEL)
+  .reelAnchor('center')
   .symbolSize(CELL_W, CELL_H)
   .symbolGap(0, 0)
   .symbols((r) => {
@@ -57,8 +56,10 @@ const reelSet = new ReelSetBuilder()
     }
   })
   .weights(weights)
-  // unmask parents the scatter into viewport.unmaskedContainer: above every
-  // reel AND outside the mask. zIndex still sorts within that container.
+  // unmask parents the scatter into viewport.unmaskedContainer on land:
+  // above every reel AND outside the mask. zIndex still sorts within that
+  // container. The reel's offsetY is baked in, so the short outer reels
+  // (which are centre-shifted) line up correctly.
   .symbolData({ scatter: { zIndex: 10, unmask: true } })
   // Synchronized settle: all reels start and stop together (no stagger),
   // and land with no bounce so the whole grid comes to rest as one.
@@ -70,16 +71,14 @@ const reelSet = new ReelSetBuilder()
 return {
   reelSet,
   nextResult: () => {
-    const grid = Array.from({ length: REELS }, () =>
-      Array.from({ length: ROWS }, () => pickWeighted(weights)),
+    const grid = ROWS_PER_REEL.map((rows) =>
+      Array.from({ length: rows }, () => pickWeighted(weights)),
     );
-    // Two scatters on edge rows (top or bottom) so the jaw visibly pokes
-    // out of the mask; one of them on a left reel so it overlaps the
-    // neighbour to its right.
-    const reels = [0, 1, 2, 3, 4, 5].sort(() => Math.random() - 0.5).slice(0, 2);
-    for (const reel of reels) {
-      grid[reel][Math.random() < 0.5 ? 0 : ROWS - 1] = 'scatter';
-    }
+    // Scatters on the short outer reels (0 and 5) at their edge rows, so
+    // the jaw pokes past the stepped grid outline AND the neighbour — the
+    // exact case that needs the reel offset baked into the lifted view.
+    grid[0][Math.random() < 0.5 ? 0 : grid[0].length - 1] = 'scatter';
+    grid[5][Math.random() < 0.5 ? 0 : grid[5].length - 1] = 'scatter';
     return grid;
   },
 };

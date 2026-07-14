@@ -605,6 +605,7 @@ export class Reel implements Disposable {
    */
   snapToGrid(): void {
     this.motion.snapToGrid();
+    this._syncUnmaskedViewOffsets();
     this._finalizeFrame();
     this.refreshZIndex();
   }
@@ -919,6 +920,7 @@ export class Reel implements Disposable {
 
     // Re-snap so pre-set symbols sit on the grid before the tween begins.
     this.motion.snapToGrid();
+    this._syncUnmaskedViewOffsets();
     this.refreshZIndex();
 
     this._isNudging = true;
@@ -1072,6 +1074,7 @@ export class Reel implements Disposable {
       this._replaceSymbol(i, targetId);
     }
     this.motion.snapToGrid();
+    this._syncUnmaskedViewOffsets();
     this._finalizeFrame();
     this.refreshZIndex();
   }
@@ -1142,6 +1145,7 @@ export class Reel implements Disposable {
     // Update motion: new slot height + bounds.
     this.motion.reshape(newSymbolHeight, this._symbolGapY, bufferAbove, newVisibleRows, bufferBelow);
     this.motion.snapToGrid();
+    this._syncUnmaskedViewOffsets();
     this.refreshZIndex();
   }
 
@@ -1285,6 +1289,33 @@ export class Reel implements Disposable {
     return view.parent === this._viewport.unmaskedContainer
       ? view.y - this.container.y
       : view.y;
+  }
+
+  /**
+   * Re-bake the reel's `container.x/y` offset into any currently-lifted
+   * (unmasked) view.
+   *
+   * `ReelMotion.snapToGrid()` writes bare reel-local Y to every symbol
+   * view — it has no notion that some views were re-parented into
+   * `viewport.unmaskedContainer` and need the reel offset added to stay
+   * aligned. Masked reels have `container.y === 0`, so the two spaces
+   * coincide and this is a no-op; on a jagged/pyramid layout (non-zero
+   * `offsetY`) the snap would drop the offset and jump the lifted view.
+   * Call this right after any ABSOLUTE motion snap. `displace()` is
+   * incremental (`+=`) and preserves the offset, so it needs no fixup.
+   *
+   * Lifted views only exist while the reel is at rest, so during a spin
+   * (when the frequent snaps happen) this loop finds nothing.
+   */
+  private _syncUnmaskedViewOffsets(): void {
+    if (this.container.y === 0 && this.container.x === 0) return;
+    for (let i = 0; i < this.symbols.length; i++) {
+      const view = this.symbols[i].view;
+      if (view.parent === this._viewport.unmaskedContainer) {
+        view.x = this.container.x;
+        view.y += this.container.y;
+      }
+    }
   }
 
   private _setupSymbolPositions(config: ReelConfig): void {

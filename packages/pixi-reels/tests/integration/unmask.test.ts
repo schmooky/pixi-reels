@@ -134,27 +134,74 @@ describe('unmask: true reparents the symbol view to viewport.unmaskedContainer',
   });
 });
 
-describe('unmask + pyramid layout fails fast at build()', () => {
-  it('throws when a pyramid reel set registers any unmasked symbol', () => {
-    expect(() =>
-      createTestReelSet({
-        reels: 5,
-        // Pyramid: differing visibleRows produces non-zero reel.offsetY.
-        visibleRows: [3, 4, 5, 4, 3],
-        symbolIds: SYMBOLS,
-        symbolData: { wild: { unmask: true } },
-      }),
-    ).toThrow(/unmask \+ pyramid layout is not supported/);
+describe('unmask on a jagged / pyramid layout (non-zero reel offsetY)', () => {
+  function makePyramid() {
+    return createTestReelSet({
+      reels: 5,
+      // Pyramid: the outer 3-row reels are centred, giving non-zero offsetY.
+      visibleRows: [3, 4, 5, 4, 3],
+      symbolIds: SYMBOLS,
+      symbolData: { wild: { unmask: true } },
+    });
+  }
+
+  it('builds without throwing', () => {
+    expect(() => makePyramid()).not.toThrow();
   });
 
-  it('does not throw on a flat layout with unmasked symbols', () => {
-    expect(() =>
-      createTestReelSet({
-        reels: 5,
-        visibleRows: 3,
-        symbolIds: SYMBOLS,
-        symbolData: { wild: { unmask: true } },
-      }),
-    ).not.toThrow();
+  it('lands an unmasked wild above the mask with the reel offset baked into Y', async () => {
+    const h = makePyramid();
+    try {
+      // Reel 0 is a 3-row reel → non-zero offsetY. Land a wild in its top row.
+      await h.spinAndLand([
+        ['wild', 'a', 'a'],
+        ['a', 'a', 'a', 'a'],
+        ['a', 'a', 'a', 'a', 'a'],
+        ['a', 'a', 'a', 'a'],
+        ['a', 'a', 'a'],
+      ]);
+
+      const reel = h.reelSet.reels[0];
+      expect(reel.container.y).not.toBe(0); // it really is an offset reel
+      const wildView = reel.getSymbolAt(0).view;
+      expect(wildView.parent).toBe(h.reelSet.viewport.unmaskedContainer);
+      expect(wildView.x).toBe(reel.container.x);
+      const slotH = reel.motion.slotHeight;
+      // Top visible row → reel-local 0, so viewport Y is exactly the offset.
+      expect(wildView.y).toBeCloseTo(reel.container.y + 0 * slotH, 3);
+    } finally {
+      h.destroy();
+    }
+  });
+
+  it('stays offset-correct after a second spin re-snaps the strip', async () => {
+    const h = makePyramid();
+    try {
+      await h.spinAndLand([
+        ['wild', 'a', 'a'],
+        ['a', 'a', 'a', 'a'],
+        ['a', 'a', 'a', 'a', 'a'],
+        ['a', 'a', 'a', 'a'],
+        ['a', 'a', 'a'],
+      ]);
+      // Land another wild on the same offset reel. the motion layer's
+      // absolute snap runs between spins; _syncUnmaskedViewOffsets must
+      // re-bake container.y so the lifted view isn't jumped by the offset.
+      await h.spinAndLand([
+        ['a', 'wild', 'a'],
+        ['a', 'a', 'a', 'a'],
+        ['a', 'a', 'a', 'a', 'a'],
+        ['a', 'a', 'a', 'a'],
+        ['a', 'a', 'a'],
+      ]);
+
+      const reel = h.reelSet.reels[0];
+      const wildView = reel.getSymbolAt(1).view;
+      expect(wildView.parent).toBe(h.reelSet.viewport.unmaskedContainer);
+      const slotH = reel.motion.slotHeight;
+      expect(wildView.y).toBeCloseTo(reel.container.y + 1 * slotH, 3);
+    } finally {
+      h.destroy();
+    }
   });
 });
