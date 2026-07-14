@@ -42,6 +42,10 @@ export class StartPhase extends ReelPhase<StartPhaseConfig> {
     this._delayedCall = null;
     const reel = this._reel;
     const speed = this._speed;
+    // Re-mask any lifted unmask symbols the instant this reel starts to
+    // move. notifySpinStart only fires at accel-end, which would leave an
+    // unmasked symbol floating above the mask for the whole ramp.
+    reel.beginMotion();
     const accelDuration = (speed.accelerationDuration ?? 300) / 1000;
     const accelEase = speed.accelerationEase ?? 'power2.in';
 

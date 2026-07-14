@@ -188,4 +188,68 @@ describe('StaticSpinSymbol', () => {
     expect(symbol.isDestroyed).toBe(true);
     cache.destroy();
   });
+
+  describe('anticipation', () => {
+    /** Reach the private snapshot sprites for visibility assertions. */
+    function sprites(symbol: StaticSpinSymbol) {
+      return symbol as unknown as {
+        _staticSprite: { visible: boolean; alpha: number };
+        _blurSprite: { visible: boolean; alpha: number };
+      };
+    }
+
+    it('swaps the blur for the crisp snapshot when the reel starts teasing', () => {
+      const { cache } = makeCache();
+      const { symbol, inner } = makeSymbol(cache);
+
+      symbol.onReelSpinStart();
+      expect(sprites(symbol)._blurSprite.visible).toBe(true);
+
+      symbol.onReelAnticipationStart();
+      expect(sprites(symbol)._blurSprite.visible).toBe(false);
+      expect(sprites(symbol)._staticSprite.visible).toBe(true);
+      // Still a snapshot. the inner symbol stays asleep during the tease.
+      expect(symbol.isShowingSnapshot).toBe(true);
+      expect(inner.symbolId).toBe('');
+
+      symbol.destroy();
+      cache.destroy();
+    });
+
+    it('keeps mid-tease wraps crisp instead of re-blurring them', () => {
+      const { cache } = makeCache();
+      const { symbol } = makeSymbol(cache);
+
+      symbol.onReelSpinStart();
+      symbol.onReelAnticipationStart();
+
+      // A recycled cell joining the teasing reel: activate + re-notify,
+      // exactly what Reel._replaceSymbol does mid-spin.
+      symbol.activate('lemon');
+      symbol.onReelSpinStart(true);
+      symbol.onReelAnticipationStart();
+
+      expect(sprites(symbol)._blurSprite.visible).toBe(false);
+      expect(sprites(symbol)._staticSprite.visible).toBe(true);
+
+      symbol.destroy();
+      cache.destroy();
+    });
+
+    it('resets: the next spin blurs again after an anticipated one', () => {
+      const { cache } = makeCache();
+      const { symbol } = makeSymbol(cache);
+
+      symbol.onReelSpinStart();
+      symbol.onReelAnticipationStart();
+      symbol.onReelSpinEnd();
+
+      symbol.onReelSpinStart();
+      expect(sprites(symbol)._blurSprite.visible).toBe(true);
+      expect(sprites(symbol)._staticSprite.visible).toBe(false);
+
+      symbol.destroy();
+      cache.destroy();
+    });
+  });
 });

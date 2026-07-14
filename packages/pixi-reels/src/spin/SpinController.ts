@@ -1204,6 +1204,9 @@ export class SpinController implements Disposable {
       // re-deriving which reels are teasing from `spin:stopping`.
       const order = this._anticipationReels.indexOf(reelIndex);
       this._teasingReels.add(reelIndex);
+      // Symbols relax their spin presentation (e.g. StaticSpinSymbol fades
+      // the blur out) so the slowed strip is readable during the tease.
+      reel.notifyAnticipationStart();
       this._events.emit('anticipation:reel', {
         reelIndex,
         order,

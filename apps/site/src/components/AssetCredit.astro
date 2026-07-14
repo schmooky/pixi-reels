@@ -1,0 +1,59 @@
+---
+/**
+ * Theme-aware "assets provided by <studio>" credit.
+ *
+ * A centred figure: the studio logo (inlined and authored fill-less, so
+ * `currentColor` drives it. ink in light, paper in dark), with a small
+ * italic caption beneath, read like the description of the mark above it.
+ * No border, no background. no provenance detail beyond the attribution.
+ *
+ * Usage in MDX: `<AssetCredit studio="Thunderkick" />`
+ */
+import thunderkickSvg from '../../public/credits/thunderkick.svg?raw';
+
+interface Props {
+  studio?: string;
+}
+
+const { studio = 'Thunderkick' } = Astro.props;
+
+const LOGO_BY_STUDIO: Record<string, string> = {
+  Thunderkick: thunderkickSvg,
+};
+const logo = LOGO_BY_STUDIO[studio];
+---
+
+<figure class="asset-credit" aria-label={`Assets provided by ${studio}`}>
+  {logo && <span class="asset-credit__logo" set:html={logo} />}
+  <figcaption class="asset-credit__text">Assets provided by {studio}</figcaption>
+</figure>
+
+<style>
+  .asset-credit {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.7rem;
+    margin: 3rem 0 1rem;
+  }
+
+  /* Fill-less logo paths inherit currentColor. drive it from --foreground so
+     the mark reads as ink on light, paper on dark. */
+  .asset-credit__logo {
+    display: inline-flex;
+    color: hsl(var(--foreground));
+  }
+  .asset-credit__logo :global(svg) {
+    display: block;
+    height: 11rem; /* the square symbol, 4x the wordmark's height */
+    width: auto;
+  }
+
+  .asset-credit__text {
+    margin: 0;
+    font-size: 0.8rem;
+    font-style: italic;
+    color: hsl(var(--muted-foreground));
+    text-align: center;
+  }
+</style>

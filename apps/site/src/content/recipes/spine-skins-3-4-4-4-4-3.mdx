@@ -1,0 +1,90 @@
+---
+title: Multi-skin Spine tiers on a compact grid
+group: symbol-formats
+oneLiner: One skeleton per symbol tier (skins for each id) with static-spin blur, on a gapless 3-4-4-4-4-3 grid.
+description: Production slot art rarely ships one skeleton per symbol. Tiers
+  share a multi-skin skeleton — spineMap's skin maps that pattern straight
+  onto SpineReelSymbol — and the reels spin on cached snapshot textures with
+  auto-baked motion blur. Shown with real Thunderkick game art on a gapless
+  3-4-4-4-4-3 grid at exact authored symbol size.
+order: 63
+steps:
+  - Point several symbolIds at one skeleton, each with its own skin
+  - Size cells exactly to the authored symbol plates, zero gap
+  - Wrap in StaticSpinSymbol — spins run on cached blur-baked textures
+  - On land the skeletons return and autoPlayLanding plays `land`
+apis:
+  - SpineReelSymbol
+  - SpineSymbolSource
+  - StaticSpinSymbol
+  - SpinTextureCache
+  - prewarmSpinTextures
+tags:
+  - spine
+  - skins
+  - static-spin
+  - irregular-layout
+---
+
+<RecipeDemo code="spine-skins-3-4-4-4-4-3" height={460} />
+
+## Why
+
+Symbol art from a real production pipeline usually arrives as one skeleton
+per **tier**, not per symbol: `lowSymbols` is a single skeleton whose skins
+are `low1`..`low5` — every low pay shares the same rig and animations, only
+the attachments change. `spineMap` maps that directly with `skin`:
+
+```ts
+const spineMap = {
+  low1: { skeleton: 'lowSymbols', atlas: 'symbols', skin: 'low1' },
+  low2: { skeleton: 'lowSymbols', atlas: 'symbols', skin: 'low2' },
+  // ...
+  high: { skeleton: 'high', atlas: 'symbols' }, // single-skin: no skin key
+};
+```
+
+`skin` is applied once, when the instance is created — several symbolIds
+share one skeleton *asset* but each id gets its own posed instance, so
+swapping ids stays an O(1) visibility flip.
+
+## Spinning on baked blur
+
+The spin look is the engine's [static-spin feature](/recipes/static-spin-spine):
+wrap the Spine symbol in `StaticSpinSymbol` and every cell swaps to a cached
+snapshot texture — with a motion blur auto-baked from it — for the whole
+SPIN phase. No skeleton ticks while the reels turn, and cells recycling
+mid-spin never instantiate a skeleton at all.
+
+```ts
+const cache = new SpinTextureCache({ renderer: app.renderer });
+const createInner = () =>
+  new SpineReelSymbol({ spineMap, autoPlayLanding: true, landingAnimation: 'land' });
+
+prewarmSpinTextures({ cache, ids, createSymbol: createInner, width: CELL_W, height: CELL_H });
+
+registry.register(id, StaticSpinSymbol, { createInner, cache, blurRampMs: 160 });
+```
+
+On land the skeletons come back and `autoPlayLanding` plays each symbol's
+`land` one-shot over the stop bounce.
+
+## The compact 3-4-4-4-4-3 grid
+
+The symbol plates measure exactly 175×203 (the setup-pose bounds of the
+tier skeletons — scatter and mystery intentionally overflow their tile),
+and the cells match them 1:1 — `symbolSize` is the plate size (scaled),
+`symbolGap` is zero, so the grid sits cell edge to cell edge. The jagged
+shape is just `visibleRowsPerReel` + a center anchor, the same recipe as
+the [pyramid](/recipes/pyramid-shape) shapes:
+
+```ts
+new ReelSetBuilder()
+  .reels(6)
+  .visibleRowsPerReel([3, 4, 4, 4, 4, 3])
+  .reelAnchor('center')
+  .symbolSize(175 * SCALE, 203 * SCALE)
+  .symbolGap(0, 0)
+```
+
+<AssetCredit studio="Thunderkick" />

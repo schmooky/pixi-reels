@@ -209,6 +209,15 @@ export class Reel implements Disposable {
    * wipes per-instance state, so the symbol can't know on its own).
    */
   private _spinPresentationActive = false;
+  private _anticipationActive = false;
+  /**
+   * True only while the reel is fully at rest (build time, and from
+   * `notifyLanded()` until the next `notifySpinStart()`). NOT the inverse
+   * of `_spinPresentationActive`: that flag drops at `notifySpinEnd()`,
+   * just before the bounce, while the strip is still visibly moving and
+   * the stop sequencer is still installing the result symbols.
+   */
+  private _atRest = true;
   private _isNudging = false;
   /**
    * Symbol-id queue consulted by `_onSymbolWrapped` during a nudge. Each
@@ -503,8 +512,54 @@ export class Reel implements Disposable {
    */
   notifySpinStart(): void {
     this._spinPresentationActive = true;
+    this._anticipationActive = false;
+    // Safety net for callers that don't run `beginMotion()` first (skip
+    // path, cascade phases). No-op once already re-masked. idempotent.
+    this.beginMotion();
     for (let i = 0; i < this.symbols.length; i++) {
       this.symbols[i].onReelSpinStart();
+    }
+  }
+
+  /**
+   * Mark the reel as leaving rest and re-mask any lifted unmask symbols.
+   *
+   * Called the INSTANT this reel begins to move (start of the accel ramp),
+   * not at `notifySpinStart` which fires only once the reel reaches full
+   * speed. Unmask is an at-rest presentation: an unmasked symbol left in
+   * `viewport.unmaskedContainer` would float above the mask while the
+   * strip scrolls underneath it for the whole acceleration. Pull every
+   * lifted view back into the masked reel container up front, and clear
+   * `_atRest` so `_replaceSymbol` doesn't re-lift a result symbol mid-spin.
+   *
+   * @internal Called by StartPhase on launch. Idempotent.
+   */
+  beginMotion(): void {
+    if (!this._atRest) return;
+    this._atRest = false;
+    for (let i = 0; i < this.symbols.length; i++) {
+      const view = this.symbols[i].view;
+      if (view.parent === this._viewport.unmaskedContainer) {
+        const reelLocalY = view.y - this.container.y;
+        this.container.addChild(view);
+        this._placeSymbolView(view, reelLocalY, false);
+      }
+    }
+  }
+
+  /**
+   * Notify all strip symbols that this reel entered its anticipation
+   * (tease) phase, and arm mid-anticipation notification: every symbol
+   * installed by `_replaceSymbol` until `notifySpinEnd()` also receives
+   * `onReelAnticipationStart()` so cells wrapping in during the tease
+   * apply the readable (un-blurred) presentation.
+   *
+   * @internal Called by SpinController when the anticipation phase starts.
+   */
+  notifyAnticipationStart(): void {
+    this._anticipationActive = true;
+    for (let i = 0; i < this.symbols.length; i++) {
+      this.symbols[i].onReelAnticipationStart();
     }
   }
 
@@ -516,6 +571,7 @@ export class Reel implements Disposable {
    */
   notifySpinEnd(): void {
     this._spinPresentationActive = false;
+    this._anticipationActive = false;
     for (let i = 0; i < this.symbols.length; i++) {
       this.symbols[i].onReelSpinEnd();
     }
@@ -527,8 +583,17 @@ export class Reel implements Disposable {
    * @internal Called by SpinController on phase transition.
    */
   notifyLanded(): void {
+    this._atRest = true;
     for (let i = this._bufferAbove; i < this._bufferAbove + this._visibleRows; i++) {
-      this.symbols[i].onReelLanded();
+      const symbol = this.symbols[i];
+      // Lift landed unmask symbols above the mask. visible rows only, so
+      // a buffer-row scatter never sits parked outside the grid.
+      if (this._isUnmasked(symbol.symbolId) && symbol.view.parent === this.container) {
+        const reelLocalY = symbol.view.y;
+        this._viewport.unmaskedContainer.addChild(symbol.view);
+        this._placeSymbolView(symbol.view, reelLocalY, true);
+      }
+      symbol.onReelLanded();
     }
   }
 
@@ -540,6 +605,7 @@ export class Reel implements Disposable {
    */
   snapToGrid(): void {
     this.motion.snapToGrid();
+    this._syncUnmaskedViewOffsets();
     this._finalizeFrame();
     this.refreshZIndex();
   }
@@ -854,6 +920,7 @@ export class Reel implements Disposable {
 
     // Re-snap so pre-set symbols sit on the grid before the tween begins.
     this.motion.snapToGrid();
+    this._syncUnmaskedViewOffsets();
     this.refreshZIndex();
 
     this._isNudging = true;
@@ -1007,6 +1074,7 @@ export class Reel implements Disposable {
       this._replaceSymbol(i, targetId);
     }
     this.motion.snapToGrid();
+    this._syncUnmaskedViewOffsets();
     this._finalizeFrame();
     this.refreshZIndex();
   }
@@ -1041,7 +1109,7 @@ export class Reel implements Disposable {
       const id = this._randomProvider.next(true);
       const sym = this._symbolFactory.acquire(id);
       sym.resize(this._symbolWidth, newSymbolHeight);
-      this._placeSymbolView(sym.view, sym.view.y, this._isUnmasked(id));
+      this._placeSymbolView(sym.view, sym.view.y, this._effectiveUnmask(id));
       this._parentForSymbolId(id).addChild(sym.view);
       this.symbols.push(sym);
     }
@@ -1077,6 +1145,7 @@ export class Reel implements Disposable {
     // Update motion: new slot height + bounds.
     this.motion.reshape(newSymbolHeight, this._symbolGapY, bufferAbove, newVisibleRows, bufferBelow);
     this.motion.snapToGrid();
+    this._syncUnmaskedViewOffsets();
     this.refreshZIndex();
   }
 
@@ -1166,13 +1235,27 @@ export class Reel implements Disposable {
   }
 
   /**
+   * Whether the symbol should render above the mask RIGHT NOW. Unmask is
+   * an at-rest presentation: while the reel is in motion (including the
+   * stop approach and bounce, when the result symbols are installed),
+   * every view (unmask ids included) stays in the masked reel container so
+   * nothing scrolls visibly outside the grid or sits parked in a buffer
+   * row. Landed visible-row symbols are lifted by `notifyLanded()`;
+   * `notifySpinStart()` pulls them back down before the strip moves.
+   */
+  private _effectiveUnmask(symbolId: string): boolean {
+    return this._atRest && this._isUnmasked(symbolId);
+  }
+
+  /**
    * Pick the right parent container for a symbol view based on its
-   * `unmask` flag. Unmasked symbols sit in `viewport.unmaskedContainer`
-   * (above the reel mask); everything else lives in this reel's own
-   * container (which is itself inside `viewport.maskedContainer`).
+   * `unmask` flag and the reel's spin state. At-rest unmasked symbols sit
+   * in `viewport.unmaskedContainer` (above the reel mask); everything
+   * else lives in this reel's own container (which is itself inside
+   * `viewport.maskedContainer`).
    */
   private _parentForSymbolId(symbolId: string): Container {
-    return this._isUnmasked(symbolId)
+    return this._effectiveUnmask(symbolId)
       ? this._viewport.unmaskedContainer
       : this.container;
   }
@@ -1208,6 +1291,33 @@ export class Reel implements Disposable {
       : view.y;
   }
 
+  /**
+   * Re-bake the reel's `container.x/y` offset into any currently-lifted
+   * (unmasked) view.
+   *
+   * `ReelMotion.snapToGrid()` writes bare reel-local Y to every symbol
+   * view — it has no notion that some views were re-parented into
+   * `viewport.unmaskedContainer` and need the reel offset added to stay
+   * aligned. Masked reels have `container.y === 0`, so the two spaces
+   * coincide and this is a no-op; on a jagged/pyramid layout (non-zero
+   * `offsetY`) the snap would drop the offset and jump the lifted view.
+   * Call this right after any ABSOLUTE motion snap. `displace()` is
+   * incremental (`+=`) and preserves the offset, so it needs no fixup.
+   *
+   * Lifted views only exist while the reel is at rest, so during a spin
+   * (when the frequent snaps happen) this loop finds nothing.
+   */
+  private _syncUnmaskedViewOffsets(): void {
+    if (this.container.y === 0 && this.container.x === 0) return;
+    for (let i = 0; i < this.symbols.length; i++) {
+      const view = this.symbols[i].view;
+      if (view.parent === this._viewport.unmaskedContainer) {
+        view.x = this.container.x;
+        view.y += this.container.y;
+      }
+    }
+  }
+
   private _setupSymbolPositions(config: ReelConfig): void {
     const slotH = this._spinSymbolHeight + config.symbolGapY;
     // Add the reel container to the viewport's masked area first so
@@ -1218,9 +1328,13 @@ export class Reel implements Disposable {
     for (let i = 0; i < this.symbols.length; i++) {
       const symbol = this.symbols[i];
       const y = (i - config.bufferAbove) * slotH;
-      const unmasked = this._isUnmasked(symbol.symbolId);
+      // Unmask applies to visible rows only. a buffer-row symbol lifted
+      // above the mask would sit visibly parked outside the grid.
+      const inWindow =
+        i >= config.bufferAbove && i < config.bufferAbove + config.visibleRows;
+      const unmasked = inWindow && this._isUnmasked(symbol.symbolId);
       this._placeSymbolView(symbol.view, y, unmasked);
-      this._parentForSymbolId(symbol.symbolId).addChild(symbol.view);
+      (unmasked ? this._viewport.unmaskedContainer : this.container).addChild(symbol.view);
     }
   }
 
@@ -1294,7 +1408,7 @@ export class Reel implements Disposable {
     if (isOldStub) {
       this._releaseOccupiedStub(oldSymbol);
       const newSymbol = this._symbolFactory.acquire(newSymbolId);
-      const newIsUnmasked = this._isUnmasked(newSymbolId);
+      const newIsUnmasked = this._effectiveUnmask(newSymbolId);
       newSymbol.resize(this._symbolWidth, this._symbolHeight);
       this._placeSymbolView(newSymbol.view, reelLocalY, newIsUnmasked);
       newSymbol.view.alpha = 1;
@@ -1303,6 +1417,7 @@ export class Reel implements Disposable {
       this._parentForSymbolId(newSymbolId).addChild(newSymbol.view);
       this.symbols[index] = newSymbol;
       if (this._spinPresentationActive) newSymbol.onReelSpinStart(true);
+      if (this._anticipationActive) newSymbol.onReelAnticipationStart();
       this.events.emit('symbol:created', newSymbolId, index);
       return;
     }
@@ -1322,16 +1437,17 @@ export class Reel implements Disposable {
       const target = this._parentForSymbolId(newSymbolId);
       if (oldSymbol.view.parent !== target) target.addChild(oldSymbol.view);
       // Reset Y in case spotlight or another mutator displaced it.
-      this._placeSymbolView(oldSymbol.view, reelLocalY, this._isUnmasked(newSymbolId));
+      this._placeSymbolView(oldSymbol.view, reelLocalY, this._effectiveUnmask(newSymbolId));
       // The instance was never deactivated, so it usually still carries its
       // spin state. re-notify anyway for uniformity (hooks are idempotent).
       if (this._spinPresentationActive) oldSymbol.onReelSpinStart(true);
+      if (this._anticipationActive) oldSymbol.onReelAnticipationStart();
       return;
     }
 
     this._symbolFactory.release(oldSymbol);
     const newSymbol = this._symbolFactory.acquire(newSymbolId);
-    const newIsUnmasked = this._isUnmasked(newSymbolId);
+    const newIsUnmasked = this._effectiveUnmask(newSymbolId);
     newSymbol.resize(this._symbolWidth, this._symbolHeight);
     this._placeSymbolView(newSymbol.view, reelLocalY, newIsUnmasked);
     newSymbol.view.alpha = 1;
@@ -1342,6 +1458,7 @@ export class Reel implements Disposable {
 
     this.symbols[index] = newSymbol;
     if (this._spinPresentationActive) newSymbol.onReelSpinStart(true);
+    if (this._anticipationActive) newSymbol.onReelAnticipationStart();
     this.events.emit('symbol:created', newSymbolId, index);
   }
 

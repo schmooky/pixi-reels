@@ -1,0 +1,105 @@
+---
+title: Scatter jaw anticipation
+group: tension
+oneLiner: The rig's own near-win clips - the leftmost scatter snaps its jaw, holds the loop, and the rightmost lands the verdict.
+description: Production scatter rigs ship their tease - firstReelScatterNearWin,
+  nearWinStart/nearWinLoop, lastReelScatterNearWin, bonusGameWon. Drive them off
+  spin:reelLanded around the engine's anticipation phase and the near-win show
+  runs itself. Real Thunderkick game art; spins alternate hit and miss.
+order: 52
+steps:
+  - Land scatters on the leftmost and a middle reel; derive the tease with anticipationForScatters
+  - When the arming scatter lands, the leftmost plays `firstReelScatterNearWin` - the jaw
+  - Every landed scatter holds `nearWinLoop` while the remaining reels tease
+  - Rightmost hit -> `lastReelScatterNearWin` + `bonusGameWon`; miss -> back to idle
+apis:
+  - anticipationForScatters
+  - ReelSet.setAnticipation
+  - SpineReelSymbol.playOnTrack
+  - StaticSpinSymbol
+tags:
+  - spine
+  - anticipation
+  - scatter
+  - tension
+---
+
+<RecipeDemo code="spine-scatter-jaw-anticipation" height={460} />
+
+## The rig already knows the choreography
+
+A production scatter skeleton doesn't just have `idle` and `land` — it
+carries the whole near-win act:
+
+| Clip | Moment |
+| --- | --- |
+| `firstReelScatterNearWin` | the LEFTMOST scatter's jaw snap when the tease arms |
+| `nearWinStart` → `nearWinLoop` | held excitement on every landed scatter while reels tease |
+| `lastReelScatterNearWin` | the RIGHTMOST scatter's jaw pose on the deciding land |
+| `bonusGameWon` → `bonusGameWonLoop` | the payoff (with a `landed` spine event at 1.9s) |
+
+The recipe just fires them at the right beats of the engine's spin
+lifecycle — `playOnTrack` for the one-shots, `state.addAnimation` to queue
+the loop behind them:
+
+```ts
+reelSet.events.on('spin:reelLanded', (reelIndex) => {
+  if (reelIndex !== armReel) return;
+  leftmostScatter.playOnTrack(0, 'firstReelScatterNearWin'); // the jaw
+  leftmostScatter.spine.state.addAnimation(0, 'nearWinLoop', true, 0);
+});
+```
+
+## Arming the tease
+
+`anticipationForScatters` reads the result grid and returns the reels that
+should slow down once the trigger count is on screen — here two scatters
+(leftmost + a middle reel) arm a tease across every remaining reel:
+
+```ts
+const tease = anticipationForScatters(columns, {
+  symbol: 'scatter',
+  trigger: 2,
+  mode: 'all-remaining',
+});
+reelSet.setAnticipation(tease, { stagger: 'sequential', slowdown: { from: 0.5, to: 0.12 } });
+```
+
+The scatters keep looping `nearWinLoop` for the whole slowed-down ride —
+that's what sells the moment; the reels and the rig are telling the same
+story.
+
+## Above the mask, above the neighbours
+
+The jaw art overflows its 175×203 tile in every direction, and per-symbol
+`zIndex` only sorts within one reel's container — the reel to the right
+draws on top, and the viewport mask clips at the grid edge. So on landing
+each scatter's view is **promoted** into `viewport.spotlightContainer`,
+the same above-mask layer the win spotlight uses: above every reel,
+outside the mask.
+
+```ts
+const layer = reelSet.viewport.spotlightContainer;
+const globalPos = sym.view.getGlobalPosition();
+promoted.push({ view: sym.view, parent: sym.view.parent, x: sym.view.x, y: sym.view.y });
+layer.addChild(sym.view);
+sym.view.position.copyFrom(layer.toLocal(globalPos));
+```
+
+On the next `spin:start` every promoted view is handed back to its reel at
+its original position — the engine's symbol pool is built to tolerate
+exactly this kind of re-parenting (it's what spotlight promotion does).
+`symbolData`'s `unmask: true` is the declarative version (and works on this
+jagged layout too); promotion is used here so only the scatters actually in
+play are lifted, per-instance, rather than every scatter every spin. See the
+[symbol layering](/recipes/symbol-layering) recipe for the trade-off.
+
+## Hit or miss
+
+The demo alternates. On a hit the third scatter lands on the rightmost
+reel: it strikes `lastReelScatterNearWin` on touchdown and every scatter
+rolls into `bonusGameWon`. On a miss the spin completes empty-handed —
+hold the disappointment for a beat, then `stopAnimation()` returns the
+scatters to idle.
+
+<AssetCredit studio="Thunderkick" />

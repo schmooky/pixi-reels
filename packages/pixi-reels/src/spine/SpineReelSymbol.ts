@@ -12,9 +12,21 @@ export type SymbolAnimOverrides = Record<
   Partial<Record<'idle' | 'landing' | 'win' | 'out' | 'blur', string>>
 >;
 
+/** One spine source: a skeleton/atlas alias pair plus an optional skin. */
+export interface SpineSymbolSource {
+  skeleton: string;
+  atlas: string;
+  /**
+   * Skin applied when the instance is created. Lets several symbolIds share
+   * one multi-skin skeleton (e.g. a `lowSymbols` skeleton with skins
+   * `low1`..`low5`) instead of shipping one skeleton per symbol.
+   */
+  skin?: string;
+}
+
 export interface SpineReelSymbolOptions {
-  /** Map of symbolId -> { skeletonAlias, atlasAlias } */
-  spineMap: Record<string, { skeleton: string; atlas: string }>;
+  /** Map of symbolId -> spine source. */
+  spineMap: Record<string, SpineSymbolSource>;
   /** Default idle animation name. Default: 'idle'. */
   idleAnimation?: string;
   /** Default win animation name. Default: 'win'. */
@@ -66,7 +78,7 @@ export interface SpineReelSymbolOptions {
 export class SpineReelSymbol extends ReelSymbol {
   private _spines = new Map<string, Spine>();
   private _currentSpine: Spine | null = null;
-  private _spineMap: Record<string, { skeleton: string; atlas: string }>;
+  private _spineMap: Record<string, SpineSymbolSource>;
   private _defaultAnims: { idle: string; win: string; landing: string; out: string; blur: string };
   private _overrides: SymbolAnimOverrides;
   private _scale: number;
@@ -119,9 +131,7 @@ export class SpineReelSymbol extends ReelSymbol {
     if (!spine) {
       const cfg = this._spineMap[symbolId];
       if (!cfg) return;
-      spine = Spine.from({ skeleton: cfg.skeleton, atlas: cfg.atlas });
-      spine.scale.set(this._scale);
-      this.view.addChild(spine);
+      spine = this._createSpine(cfg);
       this._spines.set(symbolId, spine);
     }
 
@@ -143,6 +153,18 @@ export class SpineReelSymbol extends ReelSymbol {
     // renders it synchronously after activation. a same-frame first paint,
     // or a SpinTextureCache snapshot capture. would see nothing.
     spine.update(0);
+  }
+
+  /** Instantiate a spine from a source config: scale, optional skin, attach. */
+  private _createSpine(cfg: SpineSymbolSource): Spine {
+    const spine = Spine.from({ skeleton: cfg.skeleton, atlas: cfg.atlas });
+    spine.scale.set(this._scale);
+    if (cfg.skin) {
+      spine.skeleton.setSkinByName(cfg.skin);
+      spine.skeleton.setSlotsToSetupPose();
+    }
+    this.view.addChild(spine);
+    return spine;
   }
 
   protected onDeactivate(): void {

@@ -69,24 +69,31 @@ class MockSpine extends Container {
   skeleton = {
     data: {
       findAnimation: (name: string) =>
-        ['idle', 'win', 'landing', 'disintegration', 'blur'].includes(name)
+        ['idle', 'win', 'landing', 'disintegration', 'blur', 'spin'].includes(name)
           ? { name }
           : null,
     },
     setToSetupPose: vi.fn(),
+    setSkinByName: vi.fn(),
+    setSlotsToSetupPose: vi.fn(),
   };
 }
 
 vi.mock('@esotericsoftware/spine-pixi-v8', () => {
   let lastCreated: MockSpine | null = null;
+  const created: MockSpine[] = [];
   return {
     Spine: {
       from: () => {
         lastCreated = new MockSpine();
+        created.push(lastCreated);
         return lastCreated;
       },
       __getLastCreated(): MockSpine | null {
         return lastCreated;
+      },
+      __getCreated(): MockSpine[] {
+        return created;
       },
     },
   };
@@ -215,5 +222,62 @@ describe('SpineReelSymbol one-shot promise settle', () => {
 
     // After the second one settles, the listener is detached too.
     expect(spine.state.listeners.length).toBe(0);
+  });
+});
+
+describe('SpineReelSymbol multi-skin skeletons', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  function getCreated(): MockSpine[] {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return (MockSpineModule as any).__getCreated() as MockSpine[];
+  }
+
+  it('applies the configured skin when the instance is created', () => {
+    const sym = new SpineReelSymbol({
+      spineMap: { low2: { skeleton: 'lowSymbols', atlas: 'symbols', skin: 'low2' } },
+    });
+    sym.activate('low2');
+    const spine = getLastSpine();
+    expect(spine.skeleton.setSkinByName).toHaveBeenCalledWith('low2');
+    expect(spine.skeleton.setSlotsToSetupPose).toHaveBeenCalled();
+  });
+
+  it('creates one instance per symbolId even when ids share a skeleton', () => {
+    // The mock's created-list is module-global, so count relative to here.
+    const baseline = getCreated().length;
+    const sym = new SpineReelSymbol({
+      spineMap: {
+        low1: { skeleton: 'lowSymbols', atlas: 'symbols', skin: 'low1' },
+        low2: { skeleton: 'lowSymbols', atlas: 'symbols', skin: 'low2' },
+      },
+    });
+    sym.activate('low1');
+    const first = getLastSpine();
+    sym.deactivate();
+    sym.activate('low2');
+    const second = getLastSpine();
+
+    expect(second).not.toBe(first);
+    expect(getCreated().length - baseline).toBe(2);
+    expect(first.skeleton.setSkinByName).toHaveBeenCalledWith('low1');
+    expect(second.skeleton.setSkinByName).toHaveBeenCalledWith('low2');
+
+    // Re-activating a seen id reuses its posed instance.
+    sym.deactivate();
+    sym.activate('low1');
+    expect(getCreated().length - baseline).toBe(2);
+    expect(first.visible).toBe(true);
+  });
+
+  it('does not touch skins when the entry has none', () => {
+    const sym = new SpineReelSymbol({
+      spineMap: { high: { skeleton: 'high', atlas: 'symbols' } },
+    });
+    sym.activate('high');
+    const spine = getLastSpine();
+    expect(spine.skeleton.setSkinByName).not.toHaveBeenCalled();
   });
 });

@@ -168,25 +168,22 @@ export interface SymbolData {
    * animations (expanding wilds, splash frames) that should not be
    * clipped at the cell boundary.
    *
-   * **Coordinate space:** when unmasked, the engine sets the view's X to
-   * `reel.container.x` and adds `reel.container.y` to the view's Y so
-   * the at-rest position matches the reel's grid cell.
+   * **At-rest presentation:** unmask lifts a symbol above the mask ONLY
+   * while its reel is stopped. On `notifyLanded` each visible-row instance
+   * is re-parented into `viewport.unmaskedContainer` (X = `reel.container.x`,
+   * Y = `reel.container.y + reelLocalY` so it lines up with its grid cell);
+   * the instant the reel starts moving again it is pulled back into the
+   * masked reel container. So while spinning, an unmasked id is masked like
+   * everything else. nothing scrolls above the grid, and buffer rows are
+   * never lifted. If you need a symbol to stay above the mask *while the
+   * reel moves*, use a cell pin instead.
    *
-   * **Motion limitation:** `ReelMotion` writes `view.y` in reel-local
-   * coordinates. While the reel is spinning, an unmasked symbol on the
-   * strip will appear shifted vertically by the reel's offset (the
-   * `reel.container.y` translation is only applied on activate, not on
-   * every motion frame). Treat `unmask: true` as a *landed-state* flag.
-   * it is correct at rest and during static frames, but not designed to
-   * stay visually accurate while the reel is spinning. If you need a
-   * mid-spin "stays visible above mask" overlay, use a cell pin instead.
-   *
-   * **Pyramid layouts not supported:** when any reel has a non-zero
-   * `offsetY` (pyramid / trapezoid offsets), `motion.snapToGrid()` and
-   * `motion.displace()` will write reel-local Y to the unmasked view.
-   * shifting the rendered position by `reel.container.y`. The builder
-   * throws at config time if both conditions are present. Use cell pins
-   * for above-mask overlays on pyramid slots.
+   * **Works on jagged/pyramid layouts:** a reel with non-zero `offsetY`
+   * is handled. `Reel._syncUnmaskedViewOffsets()` re-bakes `container.y`
+   * into lifted views after every absolute `motion.snapToGrid()` (which
+   * writes bare reel-local Y); `displace()` is incremental and preserves
+   * the offset. Because lifted views exist only at rest, the frequent
+   * mid-spin snaps never touch them.
    *
    * **Mask-strategy auto-pick:** when any registered symbol sets
    * `unmask: true` and `symbolGap.x > 0`, the builder switches the
