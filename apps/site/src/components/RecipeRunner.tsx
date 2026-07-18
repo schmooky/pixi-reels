@@ -47,6 +47,14 @@ import {
   buildThunderkickSpineMap,
   THUNDERKICK_SYMBOL_IDS,
 } from '../../../../examples/shared/thunderkickSpineLoader.ts';
+import {
+  loadCascadeSpines,
+  buildCascadeSpineMap,
+  CASCADE_SYMBOL_IDS,
+  CASCADE_PLATE_W,
+  CASCADE_PLATE_H,
+  CASCADE_HIGH_SCALE,
+} from '../../../../examples/shared/cascadeSpineLoader.ts';
 import { loadHoldAndWinSprites } from '../../../../examples/shared/holdAndWinSprites.ts';
 import { transform as sucraseTransform } from 'sucrase';
 import { cn } from '@/lib/utils';
@@ -203,6 +211,8 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
           'GoldCoinSymbol', 'coinWaves', 'bezierFly', 'settleMoneyFace', 'freezeAtEnd', 'fitText',
           'SpineReelSymbol', 'Spine', 'loadGeneratedSpines', 'buildSpineMap',
           'loadThunderkickSpines', 'buildThunderkickSpineMap', 'THUNDERKICK_SYMBOL_IDS',
+          'loadCascadeSpines', 'buildCascadeSpineMap', 'CASCADE_SYMBOL_IDS',
+          'CASCADE_PLATE_W', 'CASCADE_PLATE_H', 'CASCADE_HIGH_SCALE',
           'loadHoldAndWinSprites',
           `"use strict"; ${js}`,
         );
@@ -226,6 +236,8 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
           GoldCoinSymbol, coinWaves, bezierFly, settleMoneyFace, freezeAtEnd, fitText,
           SpineReelSymbol, Spine, loadGeneratedSpines, buildSpineMap,
           loadThunderkickSpines, buildThunderkickSpineMap, THUNDERKICK_SYMBOL_IDS,
+          loadCascadeSpines, buildCascadeSpineMap, CASCADE_SYMBOL_IDS,
+          CASCADE_PLATE_W, CASCADE_PLATE_H, CASCADE_HIGH_SCALE,
           loadHoldAndWinSprites,
         )) as RunResult;
       } catch (e) {
