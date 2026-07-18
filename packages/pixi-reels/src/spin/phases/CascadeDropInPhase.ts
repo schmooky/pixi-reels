@@ -246,8 +246,16 @@ export class CascadeDropInPhase extends ReelPhase<CascadeDropInPhaseConfig> {
       this._skipAbort = null;
       // Only stage that lands the reel: 'all' (combined) and 'new' (final
       // stage of two-stage). The gravity stage hands off to the drop-in
-      // stage; that's where `notifyLanded` belongs.
-      if (role !== 'gravity') reel.notifyLanded();
+      // stage; that's where `notifyLanded` belongs. Landing notification
+      // is MOVERS-ONLY (this stage's job rows): untouched survivors must
+      // not replay their landing animation on every cascade stage.
+      // Gravity movers get their reaction the moment they settle. the
+      // reel itself still lands at the final stage.
+      if (role === 'gravity') {
+        for (const job of jobs) job.symbol.onReelLanded();
+      } else {
+        reel.notifyLanded(jobs.map((j) => j.row));
+      }
       this._complete();
     };
 
