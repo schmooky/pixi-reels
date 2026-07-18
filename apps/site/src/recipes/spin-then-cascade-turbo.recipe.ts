@@ -1,0 +1,136 @@
+// @ts-nocheck
+// Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, StaticSpinSymbol,
+//           SpinTextureCache, prewarmSpinTextures, loadCascadeSpines,
+//           buildCascadeSpineMap, CASCADE_SYMBOL_IDS, CASCADE_PLATE_W,
+//           CASCADE_PLATE_H, CASCADE_HIGH_SCALE, PIXI, gsap, app, pickWeighted
+
+// TURBO HYBRID: the same strip-spin opener + 'low1' → 'mid1' chain, but
+// tuned for speed on both systems independently. The strip-spin runs the
+// TURBO profile on cached snapshot textures with auto-baked motion blur
+// (StaticSpinSymbol. no skeleton ticks while the reels turn), and the
+// cascade runs a tightened tumble with a harder explode compression.
+// The two speed knobs never touch each other: SpeedPresets governs the
+// strip phases, .tumble() + timeScale govern the cascade.
+
+await loadCascadeSpines();
+
+const IDS = [...CASCADE_SYMBOL_IDS];
+const REELS = 5, ROWS = 5;
+// Cells sized from the authored 88x101.6 low/mid plate.
+const SCALE = 0.62;
+const CELL_W = CASCADE_PLATE_W * SCALE;
+const CELL_H = CASCADE_PLATE_H * SCALE;
+const HIT_COLS = [0, 1, 2];                     // left three columns
+const HIT_ROW = 1;                              // upper-middle row
+const TRIGGER1 = 'low1';
+const TRIGGER2 = 'mid1';
+
+function randSymbolNotIn(exclude) {
+  let s;
+  do { s = IDS[Math.floor(Math.random() * IDS.length)]; }
+  while (exclude.has(s));
+  return s;
+}
+
+// Harder compression than the normal-speed canvas: turbo rounds want the
+// destruction over in ~0.4 s.
+const EXPLODE_TIME_SCALE = 3.0;
+
+class TimedExplodeSymbol extends SpineReelSymbol {
+  async playOut() {
+    const entry = this.playOnTrack(0, 'explode', false);
+    if (!entry) return;
+    entry.timeScale = EXPLODE_TIME_SCALE;
+    await new Promise((resolve) => { entry.listener = { complete: () => resolve() }; });
+  }
+}
+
+// Static-spin plumbing: scratch symbols bake a static + blurred texture
+// per id; the reels spin on those textures and the skeletons only come
+// back at land. `high` needs its own inner factory (its 124x143.2 plate
+// takes CASCADE_HIGH_SCALE), so the ids are prewarmed in two passes.
+const cache = new SpinTextureCache({ renderer: app.renderer });
+const spineMap = buildCascadeSpineMap();
+const makeInner = (id) => () =>
+  new TimedExplodeSymbol({
+    spineMap,
+    scale: id === 'high' ? SCALE * CASCADE_HIGH_SCALE : SCALE,
+    landingAnimation: 'land',
+    outAnimation: 'explode',
+    autoPlayLanding: true,
+  });
+
+const LOW_MID_IDS = CASCADE_SYMBOL_IDS.filter((id) => id !== 'high');
+prewarmSpinTextures({
+  cache, ids: LOW_MID_IDS, createSymbol: makeInner('low1'),
+  width: CELL_W, height: CELL_H,
+});
+prewarmSpinTextures({
+  cache, ids: ['high'], createSymbol: makeInner('high'),
+  width: CELL_W, height: CELL_H,
+});
+
+const reelSet = new ReelSetBuilder()
+  .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(4, 4)
+  .symbols((r) => {
+    for (const id of CASCADE_SYMBOL_IDS) {
+      r.register(id, StaticSpinSymbol, { createInner: makeInner(id), cache, blurRampMs: 120 });
+    }
+  })
+  .speed('turbo', { ...SpeedPresets.TURBO, stopDelay: 60 })
+  .initialSpeed('turbo')
+  .tumble({
+    fall:   { duration: 0, ease: 'none', rowStagger: 0 },              // not used. refill skips fall
+    dropIn: { duration: 240, ease: 'power3.out', rowStagger: 0, distance: 'perHole' },
+  })
+  .ticker(app.ticker)
+  .build();
+
+return {
+  reelSet,
+  onSpin: async () => {
+    const stage0 = Array.from({ length: REELS }, (_, c) =>
+      Array.from({ length: ROWS }, (_, r) => {
+        if (HIT_COLS.includes(c)) {
+          if (r === 0)        return TRIGGER2;  // 'mid1' on top. future cascade-2 cluster
+          if (r === HIT_ROW)  return TRIGGER1;  // 'low1' in middle. current cluster
+        }
+        return randSymbolNotIn(new Set([TRIGGER1, TRIGGER2]));
+      }),
+    );
+
+    const dropAtHitRow = (col, fillTop) => {
+      const next = [...col];
+      for (let r = HIT_ROW; r > 0; r--) next[r] = next[r - 1];
+      next[0] = fillTop;
+      return next;
+    };
+
+    // Round 1: turbo strip-spin on cached blur textures.
+    const p = reelSet.spin({ mode: 'standard' });
+    await new Promise((r) => setTimeout(r, 80));
+    reelSet.setResult(stage0.map((visible) => ({ visible })));
+    await p;
+    await new Promise((r) => setTimeout(r, 150));
+
+    // Tightened chain: shorter destroy pause, faster drop-in.
+    reelSet.setDropOrder('all');
+    let trigger = TRIGGER1;
+    await reelSet.runCascade({
+      detectWinners: (grid) => HIT_COLS
+        .map((c) => grid[c][HIT_ROW] === trigger ? { reel: c, row: HIT_ROW } : null)
+        .filter(Boolean),
+      nextGrid: (prev, winners) => {
+        const fill = randSymbolNotIn(new Set([TRIGGER1, TRIGGER2]));
+        const out = prev.map((col, c) =>
+          winners.some((w) => w.reel === c)
+            ? dropAtHitRow(col, fill)
+            : [...col],
+        );
+        trigger = trigger === TRIGGER1 ? TRIGGER2 : '__none__';
+        return out;
+      },
+      pauseAfterDestroyMs: 80,
+    });
+  },
+};
