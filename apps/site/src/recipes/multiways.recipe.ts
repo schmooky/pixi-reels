@@ -35,17 +35,46 @@ const IDS = [...MULTIWAYS_SYMBOL_IDS];
 // row count (cellH = reelPixelHeight / rows), so resize() re-skins the
 // skeleton to the matching variant. One uniform SPINE_SCALE fits every
 // skin: each size ladder implies the same authored reel height (~617).
+// The high skeleton ships ALL SIX size variants in its DEFAULT skin (the
+// size skins are empty selectors), so a naive load renders six stacked
+// gold frames/backplates. the production runtime hides inactive sizes in
+// code. Mirror that with a per-frame hook (spine-pixi-v8 runs it after
+// state.apply, before world transforms): null every per-size slot that
+// doesn't match the reel's row count. Slot-name grammar, from the export:
+// high<N>_*, glow_<N>_*, radialGradient_<N>, and the two _<N>-suffixed
+// corner slots. particle_2_* is a particle TYPE, not a size. shared.
+function highSlotSize(name) {
+  let m = name.match(/^high(\d)_/);
+  if (m) return +m[1];
+  m = name.match(/^high_frame_corner_large_(?:btm|top)_(\d)$/);
+  if (m) return +m[1];
+  m = name.match(/^glow_(\d)_/);
+  if (m) return +m[1];
+  m = name.match(/^radialGradient_(\d)$/);
+  if (m) return +m[1];
+  return null;
+}
+
 class MultiwaysSymbol extends SpineReelSymbol {
   resize(width, height) {
     super.resize(width, height);
     const spine = this.spine;
     if (!spine || !height) return;
-    const skinName = multiwaysSkinName(this.symbolId, REEL_PIXEL_HEIGHT / height);
+    const rows = Math.max(2, Math.min(7, Math.round(REEL_PIXEL_HEIGHT / height)));
+    const skinName = multiwaysSkinName(this.symbolId, rows);
     if (spine.skeleton.skin?.name !== skinName) {
       spine.skeleton.setSkinByName(skinName);
       spine.skeleton.setSlotsToSetupPose();
-      spine.update(0);
     }
+    if (this.symbolId === 'high') {
+      spine.beforeUpdateWorldTransforms = (s) => {
+        for (const slot of s.skeleton.slots) {
+          const size = highSlotSize(slot.data.name);
+          if (size !== null && size !== rows) slot.setAttachment(null);
+        }
+      };
+    }
+    spine.update(0); // apply skin + slot gate now, not on the next tick
   }
 }
 
