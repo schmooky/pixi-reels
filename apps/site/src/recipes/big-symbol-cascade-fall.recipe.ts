@@ -5,9 +5,16 @@
 // CASCADE-FALL pattern.
 //
 // A tall 1x3 wild lands with its anchor in bufferAbove. tail visible
-// at row 0. The other reels land a 3-of-a-kind cluster on a row BELOW
-// the wild's tail. The cluster wins, the cells clear, and the cascade
-// refill drops the wild downward into full visibility.
+// at row 0. All three reels land a TWO-ROW cluster below the wild's
+// tail (rows 1 and 2). The cluster wins, six cells clear, and the
+// cascade refill drops the wild TWO rows into full visibility.
+//
+// Physics note (ADR-010): the anchor moves from row -2 to row 0, a
+// two-cell fall. so exactly TWO winner rows must sit below it. With a
+// single cleared row the engine's drop geometry starts the block one
+// cell above its slot while its old view sat two cells up: a visible
+// snap. Two winners below = start position matches the old view's
+// pixel exactly, and the fall is seamless.
 //
 // This is the "big symbol falls when supporting cells are cleared"
 // beat. common in cluster / tumble slots where high-value symbols
@@ -67,19 +74,19 @@ return {
   reelSet,
   onSpin: async () => {
     // ── 1. Initial spin: tall wild on reel 0 with tail at row 0; ─────
-    //      plant a MATCH cluster across all 3 reels at row 1.
+    //      plant a two-row MATCH cluster across all 3 reels (rows 1-2).
     const initialGrid = [
       // Reel 0: anchor at bufferAbove[1] = row -2. Block spans rows
       // -2, -1, 0. Tail at visible[0]. Plant MATCH at row 1; fillers
       // at rows 2, 3.
       {
-        visible: [filler(), MATCH.id, filler(), filler()],
+        visible: [filler(), MATCH.id, MATCH.id, filler()],
         bufferAbove: [undefined, TALL.id],
       },
-      // Reel 1: MATCH at row 1.
-      { visible: [filler(), MATCH.id, filler(), filler()] },
-      // Reel 2: MATCH at row 1.
-      { visible: [filler(), MATCH.id, filler(), filler()] },
+      // Reel 1: MATCH at rows 1-2.
+      { visible: [filler(), MATCH.id, MATCH.id, filler()] },
+      // Reel 2: MATCH at rows 1-2.
+      { visible: [filler(), MATCH.id, MATCH.id, filler()] },
     ];
     const spinDone = reelSet.spin();
     await new Promise((r) => setTimeout(r, 240));
@@ -87,19 +94,20 @@ return {
     await spinDone;
     await new Promise((r) => setTimeout(r, 900));
 
-    // ── 2. Cascade: MATCH row clears, wild falls. ─────────────────────
+    // ── 2. Cascade: both MATCH rows clear, wild falls two cells. ──────
     //
     // `runCascade` runs `detectWinners` → `destroySymbols` → `nextGrid`
     // → refill, repeating until detectWinners returns []. We script a
-    // single round here: row 1 across all 3 reels is the winning
-    // cluster, and nextGrid moves the wild block to visible[0..2].
+    // single round here: rows 1 AND 2 across all 3 reels are the winning
+    // cluster (two winners below the block = two-cell fall), and
+    // nextGrid moves the wild block to visible[0..2].
     let chained = false;
     reelSet.setDropOrder('all');
     await reelSet.runCascade({
       detectWinners: () => {
         if (chained) return [];
         chained = true;
-        return [0, 1, 2].map((reel) => ({ reel, row: 1 }));
+        return [0, 1, 2].flatMap((reel) => [{ reel, row: 1 }, { reel, row: 2 }]);
       },
       nextGrid: () => [
         // Reel 0: block now at rows 0, 1, 2 (fully visible). New top
