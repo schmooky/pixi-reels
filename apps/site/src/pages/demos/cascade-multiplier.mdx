@@ -87,7 +87,7 @@ By default, `destroySymbols` defers to each symbol's `playDestroy()` (sprite imp
 
 - **Per-symbol**. your `SpriteSymbol`/`SpineSymbol` subclass overrides `playDestroy()`. Every cascade uses it.
 - **Per-cascade options**. pass `destroyOptions: { direction, delay, dim }` to `runCascade`.
-- **Replace entirely**. drive the visual yourself inside `onCascade`, then pass `destroyOptions: { zIndex: null }` so the engine's implode is invisible. See [Cascade destroys. fade, explode, present](/recipes/cascade-destroy-and-present/).
+- **Replace entirely**. drive the visual yourself inside `onCascade`, then pass `destroyOptions: { zIndex: null }` so the engine's implode is invisible. See [Cascade wins. present, destroy, refill](/recipes/cascade-destroy-and-present/).
 
 ### 4. Identifying winners
 

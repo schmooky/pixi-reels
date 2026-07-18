@@ -1,19 +1,21 @@
 ---
-title: Cascade destroys. fade, explode, present
+title: Cascade wins. present, destroy, refill
 group: cascade
-oneLiner: Three canvases, one destroy stage. the engine's default implode, an
-  authored spine explosion, and a WinPresenter-driven pop before the pop.
-description: The moment winners leave the board, three ways. The library's
-  zero-asset GSAP implode, the same cascade rerouted through an authored
-  spine explosion with one registration line, and a WinPresenter pass that
-  plays the authored win clip before the destruction. Same runCascade
-  orchestrator on every canvas, on real Thunderkick game art.
+oneLiner: Three canvases in a real round's order. WinPresenter plays the
+  authored win first, then the destroy stage two ways (engine implode vs
+  authored spine explosion), chained by runCascade.
+description: A cascade win resolves in a fixed order. present the win, destroy
+  the winners, refill the holes. The canvases walk that timeline on real
+  Thunderkick game art. a WinPresenter pass playing the authored win clip
+  before the destruction, then the destroy stage isolated two ways. the
+  library's zero-asset GSAP implode and the authored spine explosion rerouted
+  with one registration line. Same runCascade orchestrator on every canvas.
 order: 44
 steps:
   - Detect winning cells on the visible grid
+  - Present first. WinPresenter in runCascade's onCascade plays the win
   - reelSet.destroySymbols(winners) plays each symbol's playDestroy
   - Register outAnimation to reroute the destroy through authored art
-  - Optionally present first. WinPresenter in runCascade's onCascade
 apis:
   - ReelSet.destroySymbols
   - ReelSet.refill
@@ -28,11 +30,47 @@ tags:
   - thunderkick
 ---
 
-The destroy stage is where a cascade slot spends most of its screen time, and it's the stage with the widest quality range between a prototype and a shipped game. The three canvases below run the **same cascade orchestration** — `reelSet.runCascade({ detectWinners, nextGrid })` — and differ only in who animates the winners on their way out.
+A cascade win resolves in a fixed order: **present the win → destroy the winners → refill the holes**. Every canvas below runs the same orchestrator — `reelSet.runCascade({ detectWinners, nextGrid })` — and the page walks the round's timeline: first the presentation pass, then the destroy stage isolated two ways so you can compare the destruction itself.
 
-## 1. The engine default. zero-asset implode
+## 1. Present the win, then destroy
 
-No destruction art registered. `destroySymbols` falls back to the library's GSAP scale-and-fade implode. This is what every cascade gets on day one, and it's deliberately decent: you can build the whole game loop before an artist ships a single destruction clip.
+`WinPresenter` is the same presenter you use for paylines: a "win" is just cells, whether they came from a payline, a cluster, or a cascade pop. In `runCascade`'s `onCascade` the presenter plays the winners' authored `win` clip while losers dim; when it resolves, the library's `destroySymbols` chains the authored `explode`, and the refill follows:
+
+<RecipeDemo code="destroy-winpresenter" />
+
+The minimum wiring:
+
+```ts
+const presenter = new WinPresenter(reelSet, {
+  dimLosers: { alpha: 0.35 },
+  symbolAnim: async (symbol) => symbol.playWin(), // authored win clip
+});
+
+await reelSet.runCascade({
+  detectWinners: (g) => yourDetector(g),
+  nextGrid:      (prev, winners) => yourNextGrid(prev, winners),
+  onCascade: async ({ chain, winners }) => {
+    if (winners.length === 0) return;
+    await presenter.show([{
+      id: chain,
+      cells: winners.map(w => ({ reelIndex: w.reel, rowIndex: w.row })),
+      value: winners.length * 10,
+    }]);
+  },
+});
+```
+
+`runCascade` guarantees the order: `onCascade` resolves **before** `destroySymbols` runs, so `win` → `explode` reads as one continuous sequence.
+
+### UX guardrails
+
+- `presenter.abort()` on `spin:start`. slam-spin mid-cascade cancels cleanly.
+- If your destroy has **no** authored art and the presenter already played the visual, suppress the implode with `destroyOptions: { zIndex: null }`. the destroy still snaps cells to alpha 0, invisibly.
+- With authored art on both stages (this canvas), drop `destroyOptions` entirely and let the two clips chain.
+
+## 2. The destroy stage. engine default
+
+The two canvases below **isolate the destroy stage** — no presenter pass — so the destruction itself is comparable. First, the baseline: no destruction art registered. `destroySymbols` falls back to the library's GSAP scale-and-fade implode. This is what every cascade gets on day one, and it's deliberately decent: you can build the whole game loop before an artist ships a single destruction clip.
 
 <RecipeDemo code="destroy-fade" />
 
@@ -77,9 +115,9 @@ function winnersOfX(grid: string[][]): Cell[] {
 await reelSet.destroySymbols(winnersOfX(reelSet.getVisibleGrid()));
 ```
 
-## 2. The authored explosion. one registration line
+## 3. The destroy stage. authored explosion
 
-Same board, same one-shot cascade. The only change against the canvas above is one line at symbol registration:
+Same board, same one-shot cascade as the canvas above. The only change is one line at symbol registration:
 
 ```ts
 r.register(id, SpineReelSymbol, {
@@ -94,43 +132,9 @@ r.register(id, SpineReelSymbol, {
 
 When the authored clip outruns your cascade rhythm, don't cut it — compress it. `playOnTrack` returns the spine `TrackEntry`, and `entry.timeScale` plays the same art in less time. The tumble-feel pages run this exact explosion between 1.6× and 3.2× depending on each canvas's tempo.
 
-## 3. Present first, destroy second
-
-`WinPresenter` is the same presenter you use for paylines: a "win" is just cells, whether they came from a payline, a cluster, or a cascade pop. In `runCascade`'s `onCascade` the presenter plays the winners' authored `win` clip while losers dim; when it resolves, the library's `destroySymbols` chains the authored `explode`:
-
-<RecipeDemo code="destroy-winpresenter" />
-
-The minimum wiring:
-
-```ts
-const presenter = new WinPresenter(reelSet, {
-  dimLosers: { alpha: 0.35 },
-  symbolAnim: async (symbol) => symbol.playWin(), // authored win clip
-});
-
-await reelSet.runCascade({
-  detectWinners: (g) => yourDetector(g),
-  nextGrid:      (prev, winners) => yourNextGrid(prev, winners),
-  onCascade: async ({ chain, winners }) => {
-    if (winners.length === 0) return;
-    await presenter.show([{
-      id: chain,
-      cells: winners.map(w => ({ reelIndex: w.reel, rowIndex: w.row })),
-      value: winners.length * 10,
-    }]);
-  },
-});
-```
-
-### UX guardrails
-
-- `presenter.abort()` on `spin:start`. slam-spin mid-cascade cancels cleanly.
-- If your destroy has **no** authored art and the presenter already played the visual, suppress the implode with `destroyOptions: { zIndex: null }`. the destroy still snaps cells to alpha 0, invisibly.
-- With authored art on both stages (this canvas), drop `destroyOptions` entirely: the presenter resolves before `destroySymbols` runs, so `win` → `explode` reads as one continuous sequence.
-
 ## Chain it with `runCascade`
 
-For multi-cascade rounds, `reelSet.runCascade({ detectWinners, nextGrid })` is the one-call wrapper. same three beats, looped:
+For multi-cascade rounds, `reelSet.runCascade({ detectWinners, nextGrid })` is the one-call wrapper. same beats, looped:
 
 ```ts
 await reelSet.runCascade({

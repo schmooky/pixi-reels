@@ -8,7 +8,7 @@ Site: https://pixi-reels.schmooky.dev
 Repo: https://github.com/schmooky/pixi-reels
 Package: https://www.npmjs.com/package/pixi-reels
 
-Generated: 2026-07-18T20:20:06.588Z
+Generated: 2026-07-18T20:55:06.372Z
 
 ## Quick start
 
@@ -252,16 +252,16 @@ Steps:
   - Tumble (remove winners, then reelSet.refill({ winners, grid })) and repeat
   - Each tumble increments the win multiplier
 
-### Cascade destroys. fade, explode, present
+### Cascade wins. present, destroy, refill
 URL: https://pixi-reels.schmooky.dev/recipes/cascade-destroy-and-present/
-The moment winners leave the board, three ways. The library's
+A cascade win resolves in a fixed order. present the win, destroy
 Tags: cascade, animation, wins, spine, thunderkick
 APIs: ReelSet.destroySymbols, ReelSet.refill, ReelSet.runCascade, WinPresenter, SpineReelSymbol
 Steps:
   - Detect winning cells on the visible grid
+  - Present first. WinPresenter in runCascade's onCascade plays the win
   - reelSet.destroySymbols(winners) plays each symbol's playDestroy
   - Register outAnimation to reroute the destroy through authored art
-  - Optionally present first. WinPresenter in runCascade's onCascade
 
 ### Cell bounds. overlays, paylines & hit areas
 URL: https://pixi-reels.schmooky.dev/recipes/cell-bounds/
@@ -2166,7 +2166,7 @@ class TimedExplodeSymbol extends SpineReelSymbol {
 }
 
 const reelSet = new ReelSetBuilder()
-  .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(4, 4)
+  .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
   .symbols(r => {
     // outAnimation: 'explode' routes the engine's cascade destroy through
     // the authored explosion. `high` is authored 1.41x bigger than the
@@ -2183,11 +2183,12 @@ const reelSet = new ReelSetBuilder()
       });
     }
   })
-  // The skull overflows its cell (authored premium pop, tamed via the
-  // skeleton's root-bone scale). lift it above every reel and outside
-  // the reel mask so the overflow renders instead of clipping.
+  // The skull's PLATE is tile-sized (pixel-identical to the tier plates
+  // in the atlas); only the head + glow overflow it, as authored. Lift it
+  // above every reel and outside the reel mask so that overflow renders
+  // instead of clipping.
   .symbolData({ high: { zIndex: 10, unmask: true } })
-  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150 })
+  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
     fall:   { duration: 280, ease: 'power3.in',  rowStagger: 60 },
     dropIn: { duration: 450, ease: 'power3.out', rowStagger: 60, distance: 'perHole' },
@@ -2372,7 +2373,7 @@ class TimedExplodeSymbol extends SpineReelSymbol {
 }
 
 const reelSet = new ReelSetBuilder()
-  .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(4, 4)
+  .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
   .symbols((r) => {
     const spineMap = buildCascadeSpineMap();
     for (const id of CASCADE_SYMBOL_IDS) {
@@ -2385,11 +2386,12 @@ const reelSet = new ReelSetBuilder()
       });
     }
   })
-  // The skull overflows its cell (authored premium pop, tamed via the
-  // skeleton's root-bone scale). lift it above every reel and outside
-  // the reel mask so the overflow renders instead of clipping.
+  // The skull's PLATE is tile-sized (pixel-identical to the tier plates
+  // in the atlas); only the head + glow overflow it, as authored. Lift it
+  // above every reel and outside the reel mask so that overflow renders
+  // instead of clipping.
   .symbolData({ high: { zIndex: 10, unmask: true } })
-  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 120 })
+  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 120, bounceDistance: 0, bounceDuration: 0 })
   // The opening reveal IS a tumble here, so `fall` matters. it animates
   // the previous board out before the new one drops in.
   .tumble({
@@ -3154,7 +3156,7 @@ function randSymbolNotIn(exclude) {
 }
 
 const reelSet = new ReelSetBuilder()
-  .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(4, 4)
+  .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
   .symbols(r => {
     const spineMap = buildCascadeSpineMap();
     for (const id of CASCADE_SYMBOL_IDS) {
@@ -3167,14 +3169,15 @@ const reelSet = new ReelSetBuilder()
       });
     }
   })
-  // The skull overflows its cell (authored premium pop, tamed via the
-  // skeleton's root-bone scale). lift it above every reel and outside
-  // the reel mask so the overflow renders instead of clipping.
+  // The skull's PLATE is tile-sized (pixel-identical to the tier plates
+  // in the atlas); only the head + glow overflow it, as authored. Lift it
+  // above every reel and outside the reel mask so that overflow renders
+  // instead of clipping.
   .symbolData({ high: { zIndex: 10, unmask: true } })
-  .speed('normal', SpeedPresets.NORMAL).speed('turbo', SpeedPresets.TURBO)
+  .speed('normal', { ...SpeedPresets.NORMAL, bounceDistance: 0, bounceDuration: 0 }).speed('turbo', { ...SpeedPresets.TURBO, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
     fall:   { duration: 0, ease: 'none', rowStagger: 0 },              // not used. refill skips fall
-    dropIn: { duration: 380, ease: 'back.out(1.6)', rowStagger: 0, distance: 'perHole' },
+    dropIn: { duration: 380, ease: 'power2.out', rowStagger: 0, distance: 'perHole' },
   })
   .ticker(app.ticker).build();
 
@@ -3250,7 +3253,7 @@ function randSymbolNotIn(exclude) {
 }
 
 const reelSet = new ReelSetBuilder()
-  .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(4, 4)
+  .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
   .symbols(r => {
     // No `outAnimation` here. SpineReelSymbol looks for its configured out
     // clip (default name 'disintegration'), finds nothing in the skeleton,
@@ -3265,14 +3268,15 @@ const reelSet = new ReelSetBuilder()
       });
     }
   })
-  // The skull overflows its cell (authored premium pop, tamed via the
-  // skeleton's root-bone scale). lift it above every reel and outside
-  // the reel mask so the overflow renders instead of clipping.
+  // The skull's PLATE is tile-sized (pixel-identical to the tier plates
+  // in the atlas); only the head + glow overflow it, as authored. Lift it
+  // above every reel and outside the reel mask so that overflow renders
+  // instead of clipping.
   .symbolData({ high: { zIndex: 10, unmask: true } })
-  .speed('normal', SpeedPresets.NORMAL).speed('turbo', SpeedPresets.TURBO)
+  .speed('normal', { ...SpeedPresets.NORMAL, bounceDistance: 0, bounceDuration: 0 }).speed('turbo', { ...SpeedPresets.TURBO, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
     fall:   { duration: 0, ease: 'none', rowStagger: 0 },              // not used. refill skips fall
-    dropIn: { duration: 380, ease: 'back.out(1.6)', rowStagger: 0, distance: 'perHole' },
+    dropIn: { duration: 380, ease: 'power2.out', rowStagger: 0, distance: 'perHole' },
   })
   .ticker(app.ticker).build();
 
@@ -3359,7 +3363,7 @@ class TimedExplodeSymbol extends SpineReelSymbol {
 }
 
 const reelSet = new ReelSetBuilder()
-  .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(4, 4)
+  .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
   .symbols(r => {
     const spineMap = buildCascadeSpineMap();
     for (const id of CASCADE_SYMBOL_IDS) {
@@ -3372,11 +3376,12 @@ const reelSet = new ReelSetBuilder()
       });
     }
   })
-  // The skull overflows its cell (authored premium pop, tamed via the
-  // skeleton's root-bone scale). lift it above every reel and outside
-  // the reel mask so the overflow renders instead of clipping.
+  // The skull's PLATE is tile-sized (pixel-identical to the tier plates
+  // in the atlas); only the head + glow overflow it, as authored. Lift it
+  // above every reel and outside the reel mask so that overflow renders
+  // instead of clipping.
   .symbolData({ high: { zIndex: 10, unmask: true } })
-  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150 })
+  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
     fall:   { duration: 280, ease: 'power3.in',  rowStagger: 60 },
     dropIn: { duration: 450, ease: 'power3.out', rowStagger: 60, distance: 'perHole' },
@@ -3655,7 +3660,7 @@ class TimedExplodeSymbol extends SpineReelSymbol {
 }
 
 const reelSet = new ReelSetBuilder()
-  .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(4, 4)
+  .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
   .symbols((r) => {
     // outAnimation: 'explode' routes the engine's cascade destroy through
     // the authored explosion. `high` is authored 1.41x bigger than the
@@ -3672,11 +3677,12 @@ const reelSet = new ReelSetBuilder()
       });
     }
   })
-  // The skull overflows its cell (authored premium pop, tamed via the
-  // skeleton's root-bone scale). lift it above every reel and outside
-  // the reel mask so the overflow renders instead of clipping.
+  // The skull's PLATE is tile-sized (pixel-identical to the tier plates
+  // in the atlas); only the head + glow overflow it, as authored. Lift it
+  // above every reel and outside the reel mask so that overflow renders
+  // instead of clipping.
   .symbolData({ high: { zIndex: 10, unmask: true } })
-  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150 })
+  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
     fall:   { duration: 280, ease: 'sine.in',       rowStagger: 50 },
     dropIn: { duration: 420, ease: 'back.out(1.5)', rowStagger: 0,  distance: 'perHole' },
@@ -3765,7 +3771,7 @@ class TimedExplodeSymbol extends SpineReelSymbol {
 }
 
 const reelSet = new ReelSetBuilder()
-  .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(4, 4)
+  .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
   .symbols((r) => {
     // outAnimation: 'explode' routes the engine's cascade destroy through
     // the authored explosion. `high` is authored 1.41x bigger than the
@@ -3782,11 +3788,12 @@ const reelSet = new ReelSetBuilder()
       });
     }
   })
-  // The skull overflows its cell (authored premium pop, tamed via the
-  // skeleton's root-bone scale). lift it above every reel and outside
-  // the reel mask so the overflow renders instead of clipping.
+  // The skull's PLATE is tile-sized (pixel-identical to the tier plates
+  // in the atlas); only the head + glow overflow it, as authored. Lift it
+  // above every reel and outside the reel mask so that overflow renders
+  // instead of clipping.
   .symbolData({ high: { zIndex: 10, unmask: true } })
-  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150 })
+  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
     fall:   { duration: 280, ease: 'sine.in',       rowStagger: 50 },
     dropIn: { duration: 420, ease: 'back.out(1.5)', rowStagger: 0,  distance: 'perHole' },
@@ -3877,7 +3884,7 @@ class TimedExplodeSymbol extends SpineReelSymbol {
 }
 
 const reelSet = new ReelSetBuilder()
-  .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(4, 4)
+  .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
   .symbols((r) => {
     // outAnimation: 'explode' routes the engine's cascade destroy through
     // the authored explosion. `high` is authored 1.41x bigger than the
@@ -3894,11 +3901,12 @@ const reelSet = new ReelSetBuilder()
       });
     }
   })
-  // The skull overflows its cell (authored premium pop, tamed via the
-  // skeleton's root-bone scale). lift it above every reel and outside
-  // the reel mask so the overflow renders instead of clipping.
+  // The skull's PLATE is tile-sized (pixel-identical to the tier plates
+  // in the atlas); only the head + glow overflow it, as authored. Lift it
+  // above every reel and outside the reel mask so that overflow renders
+  // instead of clipping.
   .symbolData({ high: { zIndex: 10, unmask: true } })
-  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150 })
+  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
     fall:   { duration: 280, ease: 'sine.in',       rowStagger: 50 },
     dropIn: { duration: 420, ease: 'back.out(1.5)', rowStagger: 0,  distance: 'perHole' },
@@ -3987,7 +3995,7 @@ class TimedExplodeSymbol extends SpineReelSymbol {
 }
 
 const reelSet = new ReelSetBuilder()
-  .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(4, 4)
+  .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
   .symbols((r) => {
     // outAnimation: 'explode' routes the engine's cascade destroy through
     // the authored explosion. `high` is authored 1.41x bigger than the
@@ -4004,11 +4012,12 @@ const reelSet = new ReelSetBuilder()
       });
     }
   })
-  // The skull overflows its cell (authored premium pop, tamed via the
-  // skeleton's root-bone scale). lift it above every reel and outside
-  // the reel mask so the overflow renders instead of clipping.
+  // The skull's PLATE is tile-sized (pixel-identical to the tier plates
+  // in the atlas); only the head + glow overflow it, as authored. Lift it
+  // above every reel and outside the reel mask so that overflow renders
+  // instead of clipping.
   .symbolData({ high: { zIndex: 10, unmask: true } })
-  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150 })
+  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
     fall:   { duration: 280, ease: 'sine.in',       rowStagger: 50 },
     dropIn: { duration: 420, ease: 'back.out(1.5)', rowStagger: 0,  distance: 'perHole' },
@@ -9901,7 +9910,7 @@ class TimedExplodeSymbol extends SpineReelSymbol {
 }
 
 const reelSet = new ReelSetBuilder()
-  .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(4, 4)
+  .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
   .symbols((r) => {
     // outAnimation: 'explode' routes the engine's cascade destroy through
     // the authored explosion. `high` is authored 1.41x bigger than the
@@ -9918,11 +9927,12 @@ const reelSet = new ReelSetBuilder()
       });
     }
   })
-  // The skull overflows its cell (authored premium pop, tamed via the
-  // skeleton's root-bone scale). lift it above every reel and outside
-  // the reel mask so the overflow renders instead of clipping.
+  // The skull's PLATE is tile-sized (pixel-identical to the tier plates
+  // in the atlas); only the head + glow overflow it, as authored. Lift it
+  // above every reel and outside the reel mask so that overflow renders
+  // instead of clipping.
   .symbolData({ high: { zIndex: 10, unmask: true } })
-  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150 })
+  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
     fall:   { duration: 240, ease: 'sine.in',       rowStagger: 40 },
     dropIn: {
@@ -10014,7 +10024,7 @@ class TimedExplodeSymbol extends SpineReelSymbol {
 }
 
 const reelSet = new ReelSetBuilder()
-  .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(4, 4)
+  .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
   .symbols((r) => {
     // outAnimation: 'explode' routes the engine's cascade destroy through
     // the authored explosion. `high` is authored 1.41x bigger than the
@@ -10031,11 +10041,12 @@ const reelSet = new ReelSetBuilder()
       });
     }
   })
-  // The skull overflows its cell (authored premium pop, tamed via the
-  // skeleton's root-bone scale). lift it above every reel and outside
-  // the reel mask so the overflow renders instead of clipping.
+  // The skull's PLATE is tile-sized (pixel-identical to the tier plates
+  // in the atlas); only the head + glow overflow it, as authored. Lift it
+  // above every reel and outside the reel mask so that overflow renders
+  // instead of clipping.
   .symbolData({ high: { zIndex: 10, unmask: true } })
-  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150 })
+  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
     fall:   { duration: 240, ease: 'sine.in',       rowStagger: 40 },
     // rowStagger: 0. rows in a reel arrive together; the per-reel
@@ -10123,7 +10134,7 @@ class TimedExplodeSymbol extends SpineReelSymbol {
 }
 
 const reelSet = new ReelSetBuilder()
-  .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(4, 4)
+  .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
   .symbols((r) => {
     // outAnimation: 'explode' routes the engine's cascade destroy through
     // the authored explosion. `high` is authored 1.41x bigger than the
@@ -10140,11 +10151,12 @@ const reelSet = new ReelSetBuilder()
       });
     }
   })
-  // The skull overflows its cell (authored premium pop, tamed via the
-  // skeleton's root-bone scale). lift it above every reel and outside
-  // the reel mask so the overflow renders instead of clipping.
+  // The skull's PLATE is tile-sized (pixel-identical to the tier plates
+  // in the atlas); only the head + glow overflow it, as authored. Lift it
+  // above every reel and outside the reel mask so that overflow renders
+  // instead of clipping.
   .symbolData({ high: { zIndex: 10, unmask: true } })
-  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150 })
+  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
     fall:   { duration: 240, ease: 'sine.in',       rowStagger: 40 },
     // rowStagger: 0. every row in a reel drops together (no in-reel stagger).
@@ -10576,17 +10588,18 @@ prewarmSpinTextures({
 });
 
 const reelSet = new ReelSetBuilder()
-  .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(4, 4)
+  .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
   .symbols((r) => {
     for (const id of CASCADE_SYMBOL_IDS) {
       r.register(id, StaticSpinSymbol, { createInner, cache, blurRampMs: 120 });
     }
   })
-  // The skull overflows its cell (authored premium pop, tamed via the
-  // skeleton's root-bone scale). lift it above every reel and outside
-  // the reel mask so the overflow renders instead of clipping.
+  // The skull's PLATE is tile-sized (pixel-identical to the tier plates
+  // in the atlas); only the head + glow overflow it, as authored. Lift it
+  // above every reel and outside the reel mask so that overflow renders
+  // instead of clipping.
   .symbolData({ high: { zIndex: 10, unmask: true } })
-  .speed('turbo', { ...SpeedPresets.TURBO, stopDelay: 60 })
+  .speed('turbo', { ...SpeedPresets.TURBO, stopDelay: 60, bounceDistance: 0, bounceDuration: 0 })
   .initialSpeed('turbo')
   .tumble({
     fall:   { duration: 0, ease: 'none', rowStagger: 0 },              // not used. refill skips fall
@@ -10701,7 +10714,7 @@ class TimedExplodeSymbol extends SpineReelSymbol {
 }
 
 const reelSet = new ReelSetBuilder()
-  .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(4, 4)
+  .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
   .symbols((r) => {
     // outAnimation: 'explode' routes the engine's cascade destroy through
     // the authored explosion. `high` is authored 1.41x bigger than the
@@ -10718,11 +10731,12 @@ const reelSet = new ReelSetBuilder()
       });
     }
   })
-  // The skull overflows its cell (authored premium pop, tamed via the
-  // skeleton's root-bone scale). lift it above every reel and outside
-  // the reel mask so the overflow renders instead of clipping.
+  // The skull's PLATE is tile-sized (pixel-identical to the tier plates
+  // in the atlas); only the head + glow overflow it, as authored. Lift it
+  // above every reel and outside the reel mask so that overflow renders
+  // instead of clipping.
   .symbolData({ high: { zIndex: 10, unmask: true } })
-  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 120 })
+  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 120, bounceDistance: 0, bounceDuration: 0 })
   // Cascade refills layer on top of a standard strip-spin: leave the
   // builder's default mode as 'standard' for the first spin, and the
   // refill chain below uses `reelSet.refill()` directly (which doesn't
@@ -12323,7 +12337,7 @@ class TimedExplodeSymbol extends SpineReelSymbol {
 }
 
 const reelSet = new ReelSetBuilder()
-  .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(4, 4)
+  .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
   .symbols((r) => {
     // outAnimation: 'explode' routes the engine's cascade destroy through
     // the authored explosion. `high` is authored 1.41x bigger than the
@@ -12340,11 +12354,12 @@ const reelSet = new ReelSetBuilder()
       });
     }
   })
-  // The skull overflows its cell (authored premium pop, tamed via the
-  // skeleton's root-bone scale). lift it above every reel and outside
-  // the reel mask so the overflow renders instead of clipping.
+  // The skull's PLATE is tile-sized (pixel-identical to the tier plates
+  // in the atlas); only the head + glow overflow it, as authored. Lift it
+  // above every reel and outside the reel mask so that overflow renders
+  // instead of clipping.
   .symbolData({ high: { zIndex: 10, unmask: true } })
-  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150 })
+  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
     fall:   { duration: 240, ease: 'sine.in',       rowStagger: 40 },
     // Gravity uses the same `dropIn` config (it's the same phase, just
@@ -12465,7 +12480,7 @@ class TimedExplodeSymbol extends SpineReelSymbol {
 }
 
 const reelSet = new ReelSetBuilder()
-  .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(4, 4)
+  .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
   .symbols((r) => {
     // outAnimation: 'explode' routes the engine's cascade destroy through
     // the authored explosion. `high` is authored 1.41x bigger than the
@@ -12482,11 +12497,12 @@ const reelSet = new ReelSetBuilder()
       });
     }
   })
-  // The skull overflows its cell (authored premium pop, tamed via the
-  // skeleton's root-bone scale). lift it above every reel and outside
-  // the reel mask so the overflow renders instead of clipping.
+  // The skull's PLATE is tile-sized (pixel-identical to the tier plates
+  // in the atlas); only the head + glow overflow it, as authored. Lift it
+  // above every reel and outside the reel mask so that overflow renders
+  // instead of clipping.
   .symbolData({ high: { zIndex: 10, unmask: true } })
-  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150 })
+  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
     fall:   { duration: 240, ease: 'sine.in',       rowStagger: 40 },
     // Gravity uses the same `dropIn` config (it's the same phase, just
@@ -12591,7 +12607,7 @@ class TimedExplodeSymbol extends SpineReelSymbol {
 }
 
 const reelSet = new ReelSetBuilder()
-  .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(4, 4)
+  .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
   .symbols((r) => {
     // outAnimation: 'explode' routes the engine's cascade destroy through
     // the authored explosion. `high` is authored 1.41x bigger than the
@@ -12608,11 +12624,12 @@ const reelSet = new ReelSetBuilder()
       });
     }
   })
-  // The skull overflows its cell (authored premium pop, tamed via the
-  // skeleton's root-bone scale). lift it above every reel and outside
-  // the reel mask so the overflow renders instead of clipping.
+  // The skull's PLATE is tile-sized (pixel-identical to the tier plates
+  // in the atlas); only the head + glow overflow it, as authored. Lift it
+  // above every reel and outside the reel mask so that overflow renders
+  // instead of clipping.
   .symbolData({ high: { zIndex: 10, unmask: true } })
-  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150 })
+  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
     fall:   { duration: 320, ease: 'sine.in',    rowStagger: 60 },
     dropIn: { duration: 700, ease: 'bounce.out', rowStagger: 70, distance: 'perHole' },
@@ -12701,7 +12718,7 @@ class TimedExplodeSymbol extends SpineReelSymbol {
 }
 
 const reelSet = new ReelSetBuilder()
-  .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(4, 4)
+  .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
   .symbols((r) => {
     // outAnimation: 'explode' routes the engine's cascade destroy through
     // the authored explosion. `high` is authored 1.41x bigger than the
@@ -12718,11 +12735,12 @@ const reelSet = new ReelSetBuilder()
       });
     }
   })
-  // The skull overflows its cell (authored premium pop, tamed via the
-  // skeleton's root-bone scale). lift it above every reel and outside
-  // the reel mask so the overflow renders instead of clipping.
+  // The skull's PLATE is tile-sized (pixel-identical to the tier plates
+  // in the atlas); only the head + glow overflow it, as authored. Lift it
+  // above every reel and outside the reel mask so that overflow renders
+  // instead of clipping.
   .symbolData({ high: { zIndex: 10, unmask: true } })
-  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150 })
+  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
     fall:   { duration: 280, ease: 'sine.in',       rowStagger: 40 },
     dropIn: { duration: 480, ease: 'back.out(1.6)', rowStagger: 50, distance: 'perHole' },
@@ -12815,7 +12833,7 @@ class TimedExplodeSymbol extends SpineReelSymbol {
 }
 
 const reelSet = new ReelSetBuilder()
-  .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(4, 4)
+  .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
   .symbols((r) => {
     // outAnimation: 'explode' routes the engine's cascade destroy through
     // the authored explosion. `high` is authored 1.41x bigger than the
@@ -12832,11 +12850,12 @@ const reelSet = new ReelSetBuilder()
       });
     }
   })
-  // The skull overflows its cell (authored premium pop, tamed via the
-  // skeleton's root-bone scale). lift it above every reel and outside
-  // the reel mask so the overflow renders instead of clipping.
+  // The skull's PLATE is tile-sized (pixel-identical to the tier plates
+  // in the atlas); only the head + glow overflow it, as authored. Lift it
+  // above every reel and outside the reel mask so that overflow renders
+  // instead of clipping.
   .symbolData({ high: { zIndex: 10, unmask: true } })
-  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150 })
+  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
     fall:   { duration: 240, ease: 'sine.in', rowStagger: 0 },
     dropIn: { duration: 380, ease: 'sine.in', rowStagger: 0, distance: 'auto' },
@@ -12925,7 +12944,7 @@ class TimedExplodeSymbol extends SpineReelSymbol {
 }
 
 const reelSet = new ReelSetBuilder()
-  .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(4, 4)
+  .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
   .symbols((r) => {
     // outAnimation: 'explode' routes the engine's cascade destroy through
     // the authored explosion. `high` is authored 1.41x bigger than the
@@ -12942,11 +12961,12 @@ const reelSet = new ReelSetBuilder()
       });
     }
   })
-  // The skull overflows its cell (authored premium pop, tamed via the
-  // skeleton's root-bone scale). lift it above every reel and outside
-  // the reel mask so the overflow renders instead of clipping.
+  // The skull's PLATE is tile-sized (pixel-identical to the tier plates
+  // in the atlas); only the head + glow overflow it, as authored. Lift it
+  // above every reel and outside the reel mask so that overflow renders
+  // instead of clipping.
   .symbolData({ high: { zIndex: 10, unmask: true } })
-  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150 })
+  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
     fall:   { duration: 180, ease: 'power4.in', rowStagger: 20 },
     dropIn: { duration: 260, ease: 'expo.out',  rowStagger: 25, distance: 'perHole' },
@@ -13033,7 +13053,7 @@ class TimedExplodeSymbol extends SpineReelSymbol {
 }
 
 const reelSet = new ReelSetBuilder()
-  .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(4, 4)
+  .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
   .symbols((r) => {
     // outAnimation: 'explode' routes the engine's cascade destroy through
     // the authored explosion. `high` is authored 1.41x bigger than the
@@ -13050,11 +13070,12 @@ const reelSet = new ReelSetBuilder()
       });
     }
   })
-  // The skull overflows its cell (authored premium pop, tamed via the
-  // skeleton's root-bone scale). lift it above every reel and outside
-  // the reel mask so the overflow renders instead of clipping.
+  // The skull's PLATE is tile-sized (pixel-identical to the tier plates
+  // in the atlas); only the head + glow overflow it, as authored. Lift it
+  // above every reel and outside the reel mask so that overflow renders
+  // instead of clipping.
   .symbolData({ high: { zIndex: 10, unmask: true } })
-  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150 })
+  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
     fall:   { duration: 180, ease: 'sine.in',       rowStagger: 90 },
     dropIn: { duration: 320, ease: 'back.out(2.0)', rowStagger: 110, distance: 'perHole' },
