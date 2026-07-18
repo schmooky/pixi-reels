@@ -1,5 +1,8 @@
 // @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+// Injected globals: ReelSetBuilder, SpeedPresets, SpineReelSymbol,
+//                   loadMultiwaysSpines, buildMultiwaysSpineMap,
+//                   multiwaysSkinName, MULTIWAYS_SYMBOL_IDS,
+//                   MULTIWAYS_AUTHORED_REEL_H, MULTIWAYS_AUTHORED_CELL_W,
 //                   PIXI, gsap, app, pickWeighted
 //
 // MultiWays. per-spin row variation. Each reel lands on a different
@@ -22,19 +25,53 @@ const REEL_PIXEL_HEIGHT = 360;
 const SYMBOL_SIZE = REEL_PIXEL_HEIGHT / MAX_ROWS;
 const GAP = 0;
 
+await loadMultiwaysSpines();
+
+const SPINE_SCALE = REEL_PIXEL_HEIGHT / MULTIWAYS_AUTHORED_REEL_H;
+const CELL_W = MULTIWAYS_AUTHORED_CELL_W * SPINE_SCALE;
+const IDS = [...MULTIWAYS_SYMBOL_IDS];
+
+// Every symbol is authored once per ROW COUNT (skins `<id>/size<rows>`,
+// rows 2..7). The stretched multiways cell height reveals the reel's
+// row count (cellH = reelPixelHeight / rows), so resize() re-skins the
+// skeleton to the matching variant. One uniform SPINE_SCALE fits every
+// skin: each size ladder implies the same authored reel height (~617).
+class MultiwaysSymbol extends SpineReelSymbol {
+  resize(width, height) {
+    super.resize(width, height);
+    const spine = this.spine;
+    if (!spine || !height) return;
+    const skinName = multiwaysSkinName(this.symbolId, REEL_PIXEL_HEIGHT / height);
+    if (spine.skeleton.skin?.name !== skinName) {
+      spine.skeleton.setSkinByName(skinName);
+      spine.skeleton.setSlotsToSetupPose();
+      spine.update(0);
+    }
+  }
+}
+
 const reelSet = new ReelSetBuilder()
   .reels(REELS)
   .multiways({ minRows: MIN_ROWS, maxRows: MAX_ROWS, reelPixelHeight: REEL_PIXEL_HEIGHT })
   .pinMigrationDuration(300)
   .pinMigrationEase('power2.inOut')
-  .symbolSize(SYMBOL_SIZE, SYMBOL_SIZE)
+  .symbolSize(CELL_W, SYMBOL_SIZE)
   .symbolGap(GAP, GAP)
   .symbols((registry) => {
-    for (const card of CARD_DECK) {
-      registry.register(card.id, CardSymbol, { color: card.color, label: card.label });
+    // Namespaced animation vocabulary: general/* + wins/*.
+    const spineMap = buildMultiwaysSpineMap(MAX_ROWS);
+    for (const id of IDS) {
+      registry.register(id, MultiwaysSymbol, {
+        spineMap,
+        scale: SPINE_SCALE,
+        idleAnimation: 'general/idle',
+        landingAnimation: 'general/land',
+        winAnimation: 'wins/win',
+        autoPlayLanding: true,
+      });
     }
   })
-  .weights(Object.fromEntries(CARD_DECK.map((c, i) => [c.id, 12 - i])))
+  .weights(Object.fromEntries(IDS.map((id, i) => [id, 16 - i])))
   // Big symbols visually overshoot at landing on this layout. set
   // bounceDistance: 0 so each cell snaps flush regardless of which
   // shape was rolled this spin.
@@ -67,7 +104,7 @@ bannerText.y = bannerHeight / 2;
 banner.addChild(bannerText);
 
 function redrawBanner(text) {
-  const width = REELS * (SYMBOL_SIZE + GAP) - GAP;
+  const width = REELS * (CELL_W + GAP) - GAP;
   bannerBg
     .clear()
     .roundRect(0, 0, width, bannerHeight, 8)
@@ -93,7 +130,7 @@ return {
     );
     reelSet.setShape(shape);
     return shape.map((rows) =>
-      Array.from({ length: rows }, () => CARD_DECK[Math.floor(Math.random() * CARD_DECK.length)].id),
+      Array.from({ length: rows }, () => IDS[Math.floor(Math.random() * IDS.length)]),
     );
   },
   cleanup: () => {

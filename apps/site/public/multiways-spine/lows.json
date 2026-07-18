@@ -1,0 +1,2075 @@
+{
+"skeleton": {
+	"hash": "O/oigQQsVzg",
+	"spine": "4.2.43",
+	"x": -54.38,
+	"y": -154,
+	"width": 108.63,
+	"height": 308,
+	"images": "./images/",
+	"audio": "./audio"
+},
+"bones": [
+	{ "name": "root" },
+	{ "name": "symbolSize", "parent": "root", "scaleX": 0.5, "scaleY": 0.5 },
+	{ "name": "low", "parent": "symbolSize" },
+	{ "name": "backplate", "parent": "low" },
+	{ "name": "royal", "parent": "low", "scaleX": 0.9, "scaleY": 0.9 },
+	{ "name": "ornament", "parent": "low" }
+],
+"slots": [
+	{ "name": "backplate", "bone": "backplate", "attachment": "backplate" },
+	{ "name": "low", "bone": "ornament", "color": "faff0030", "attachment": "normal/lowOrnament5" },
+	{ "name": "low2", "bone": "ornament", "color": "faff0030", "attachment": "normal/lowOrnament5" },
+	{ "name": "low9", "bone": "ornament", "color": "00c5ff30", "attachment": "normal/lowOrnament5" },
+	{ "name": "low10", "bone": "ornament", "color": "00c5ff30", "attachment": "normal/lowOrnament5" },
+	{ "name": "low11", "bone": "ornament", "color": "af00ff30", "attachment": "normal/lowOrnament5" },
+	{ "name": "low12", "bone": "ornament", "color": "af00ff30", "attachment": "normal/lowOrnament5" },
+	{ "name": "low3", "bone": "ornament", "color": "ff3e0030", "attachment": "normal/lowOrnament5" },
+	{ "name": "low4", "bone": "ornament", "color": "ff3e0030", "attachment": "normal/lowOrnament5" },
+	{ "name": "low5", "bone": "ornament", "color": "ff00b830", "attachment": "normal/lowOrnament5" },
+	{ "name": "low6", "bone": "ornament", "color": "ff00b830", "attachment": "normal/lowOrnament5" },
+	{ "name": "low7", "bone": "ornament", "color": "00ff0e30", "attachment": "normal/lowOrnament5" },
+	{ "name": "low8", "bone": "ornament", "color": "00ff0e30", "attachment": "normal/lowOrnament5" },
+	{ "name": "royal", "bone": "royal", "attachment": "royal" },
+	{ "name": "frame", "bone": "low", "attachment": "low1Frame" }
+],
+"skins": [
+	{
+		"name": "low1/size2",
+		"attachments": {
+			"backplate": {
+				"backplate": { "name": "normal/lowBg2", "width": 217, "height": 616 }
+			},
+			"frame": {
+				"low1Frame": {
+					"name": "normal/low1Frame",
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0.87461, 0, 0.12641, 0, 0, 1, 0, 1, 0.12641, 1, 0.87461 ],
+					"triangles": [ 3, 4, 5, 3, 5, 6, 2, 3, 6, 2, 6, 7, 1, 2, 7, 1, 7, 0 ],
+					"vertices": [ 108.25, -307.91, -108.75, -307.91, -108.75, -276.82, -108.75, 276.64, -108.75, 307.99, 108.25, 307.99, 108.25, 276.64, 108.25, -276.82 ],
+					"hull": 8,
+					"edges": [ 0, 2, 2, 4, 8, 10, 14, 0, 4, 14, 4, 6, 6, 8, 10, 12, 12, 14, 6, 12 ],
+					"width": 217,
+					"height": 248
+				}
+			},
+			"low": {
+				"normal/lowOrnament5": {
+					"name": "normal/lowOrnament7",
+					"type": "mesh",
+					"path": "normal/lowOrnament5",
+					"uvs": [ 1, 1, 0, 1, 0, 0.61272, 0, 0.38176, 0, 0, 1, 0, 1, 0.38278, 1, 0.61272 ],
+					"triangles": [ 3, 4, 5, 3, 5, 6, 2, 3, 6, 2, 6, 7, 0, 1, 2, 0, 2, 7 ],
+					"vertices": [ -9.34, -290.49, -90.34, -290.49, -90.34, -208, -90.34, 210.14, -90.34, 291.46, -9.34, 291.46, -9.34, 209.93, -9.34, -208 ],
+					"hull": 8,
+					"edges": [ 0, 2, 2, 4, 8, 10, 14, 0, 4, 14, 4, 6, 6, 8, 10, 12, 12, 14, 6, 12 ],
+					"width": 81,
+					"height": 213
+				}
+			},
+			"low2": {
+				"normal/lowOrnament5": {
+					"name": "normal/lowOrnament7",
+					"type": "mesh",
+					"path": "normal/lowOrnament5",
+					"uvs": [ 1, 1, 0, 1, 0, 0.61272, 0, 0.38176, 0, 0, 1, 0, 1, 0.38278, 1, 0.61272 ],
+					"triangles": [ 3, 4, 5, 3, 5, 6, 2, 3, 6, 2, 6, 7, 0, 1, 2, 0, 2, 7 ],
+					"vertices": [ 9.34, -291.46, 90.34, -291.46, 90.34, -208.97, 90.34, 209.18, 90.34, 290.49, 9.34, 290.49, 9.34, 208.96, 9.34, -208.97 ],
+					"hull": 8,
+					"edges": [ 0, 2, 2, 4, 8, 10, 14, 0, 4, 14, 4, 6, 6, 8, 10, 12, 12, 14, 6, 12 ],
+					"width": 81,
+					"height": 213
+				}
+			},
+			"royal": {
+				"royal": { "name": "normal/low1", "width": 217, "height": 176 }
+			}
+		}
+	},
+	{
+		"name": "low1/size3",
+		"attachments": {
+			"backplate": {
+				"backplate": { "name": "normal/lowBg3", "width": 218, "height": 411 }
+			},
+			"frame": {
+				"low1Frame": {
+					"name": "normal/low1Frame",
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0.87461, 0, 0.12641, 0, 0, 1, 0, 1, 0.12641, 1, 0.87461 ],
+					"triangles": [ 3, 4, 5, 3, 5, 6, 2, 3, 6, 2, 6, 7, 1, 2, 7, 1, 7, 0 ],
+					"vertices": [ 108.5, -205.42, -108.5, -205.42, -108.5, -174.33, -108.5, 174.24, -108.5, 205.6, 108.5, 205.6, 108.5, 174.24, 108.5, -174.33 ],
+					"hull": 8,
+					"edges": [ 0, 2, 2, 4, 8, 10, 14, 0, 4, 14, 4, 6, 6, 8, 10, 12, 12, 14, 6, 12 ],
+					"width": 217,
+					"height": 248
+				}
+			},
+			"low": {
+				"normal/lowOrnament5": {
+					"name": "normal/lowOrnament6",
+					"type": "mesh",
+					"path": "normal/lowOrnament5",
+					"uvs": [ 1, 1, 0, 1, 0, 0.61272, 0, 0.38176, 0, 0, 1, 0, 1, 0.38278, 1, 0.61272 ],
+					"triangles": [ 3, 4, 5, 3, 5, 6, 2, 3, 6, 2, 6, 7, 0, 1, 2, 0, 2, 7 ],
+					"vertices": [ -9.34, -188.11, -90.34, -188.11, -90.34, -105.62, -90.34, 107.27, -90.34, 188.58, -9.34, 188.58, -9.34, 107.05, -9.34, -105.62 ],
+					"hull": 8,
+					"edges": [ 0, 2, 2, 4, 8, 10, 14, 0, 4, 14, 4, 6, 6, 8, 10, 12, 12, 14, 6, 12 ],
+					"width": 81,
+					"height": 213
+				}
+			},
+			"low2": {
+				"normal/lowOrnament5": {
+					"name": "normal/lowOrnament6",
+					"type": "mesh",
+					"path": "normal/lowOrnament5",
+					"uvs": [ 1, 1, 0, 1, 0, 0.61272, 0, 0.38176, 0, 0, 1, 0, 1, 0.38278, 1, 0.61272 ],
+					"triangles": [ 3, 4, 5, 3, 5, 6, 2, 3, 6, 2, 6, 7, 0, 1, 2, 0, 2, 7 ],
+					"vertices": [ 9.34, -188.11, 90.34, -188.11, 90.34, -105.62, 90.34, 107.27, 90.34, 188.58, 9.34, 188.58, 9.34, 107.05, 9.34, -105.62 ],
+					"hull": 8,
+					"edges": [ 0, 2, 2, 4, 8, 10, 14, 0, 4, 14, 4, 6, 6, 8, 10, 12, 12, 14, 6, 12 ],
+					"width": 81,
+					"height": 213
+				}
+			},
+			"royal": {
+				"royal": { "name": "normal/low1", "width": 217, "height": 176 }
+			}
+		}
+	},
+	{
+		"name": "low1/size4",
+		"attachments": {
+			"backplate": {
+				"backplate": { "name": "normal/lowBg4", "width": 217, "height": 308 }
+			},
+			"frame": {
+				"low1Frame": {
+					"name": "normal/low1Frame",
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0.87461, 0, 0.12641, 0, 0, 1, 0, 1, 0.12641, 1, 0.87461 ],
+					"triangles": [ 3, 4, 5, 3, 5, 6, 2, 3, 6, 2, 6, 7, 1, 2, 7, 1, 7, 0 ],
+					"vertices": [ 108.5, -154.04, -108.5, -154.04, -108.5, -122.94, -108.5, 122.66, -108.5, 154.01, 108.5, 154.01, 108.5, 122.66, 108.5, -122.94 ],
+					"hull": 8,
+					"edges": [ 0, 2, 2, 4, 8, 10, 14, 0, 4, 14, 4, 6, 6, 8, 10, 12, 12, 14, 6, 12 ],
+					"width": 217,
+					"height": 248
+				}
+			},
+			"low": {
+				"normal/lowOrnament5": {
+					"name": "normal/lowOrnament6",
+					"type": "mesh",
+					"path": "normal/lowOrnament5",
+					"uvs": [ 1, 1, 0, 1, 0, 0.61272, 0, 0.38176, 0, 0, 1, 0, 1, 0.38278, 1, 0.61272 ],
+					"triangles": [ 3, 4, 5, 3, 5, 6, 2, 3, 6, 2, 6, 7, 0, 1, 2, 0, 2, 7 ],
+					"vertices": [ -9.34, -137.9, -90.34, -137.9, -90.34, -55.41, -90.34, 55.09, -90.34, 136.41, -9.34, 136.41, -9.34, 54.87, -9.34, -55.41 ],
+					"hull": 8,
+					"edges": [ 0, 2, 2, 4, 8, 10, 14, 0, 4, 14, 4, 6, 6, 8, 10, 12, 12, 14, 6, 12 ],
+					"width": 81,
+					"height": 213
+				}
+			},
+			"low2": {
+				"normal/lowOrnament5": {
+					"name": "normal/lowOrnament6",
+					"type": "mesh",
+					"path": "normal/lowOrnament5",
+					"uvs": [ 1, 1, 0, 1, 0, 0.61272, 0, 0.38176, 0, 0, 1, 0, 1, 0.38278, 1, 0.61272 ],
+					"triangles": [ 3, 4, 5, 3, 5, 6, 2, 3, 6, 2, 6, 7, 0, 1, 2, 0, 2, 7 ],
+					"vertices": [ 9.34, -137.9, 90.34, -137.9, 90.34, -55.41, 90.34, 55.09, 90.34, 136.41, 9.34, 136.41, 9.34, 54.87, 9.34, -55.41 ],
+					"hull": 8,
+					"edges": [ 0, 2, 2, 4, 8, 10, 14, 0, 4, 14, 4, 6, 6, 8, 10, 12, 12, 14, 6, 12 ],
+					"width": 81,
+					"height": 213
+				}
+			},
+			"royal": {
+				"royal": { "name": "normal/low1", "width": 217, "height": 176 }
+			}
+		}
+	},
+	{
+		"name": "low1/size5",
+		"attachments": {
+			"backplate": {
+				"backplate": { "name": "normal/lowBg5", "width": 216, "height": 248 }
+			},
+			"frame": {
+				"low1Frame": { "name": "normal/low1Frame", "width": 217, "height": 248 }
+			},
+			"low": {
+				"normal/lowOrnament5": { "x": -49.84, "width": 81, "height": 213 }
+			},
+			"low2": {
+				"normal/lowOrnament5": { "x": 49.84, "scaleX": -1, "width": 81, "height": 213 }
+			},
+			"royal": {
+				"royal": { "name": "normal/low1", "width": 217, "height": 176 }
+			}
+		}
+	},
+	{
+		"name": "low1/size6",
+		"attachments": {
+			"backplate": {
+				"backplate": { "name": "normal/lowBg6", "width": 218, "height": 206 }
+			},
+			"frame": {
+				"low1Frame": {
+					"name": "normal/low1Frame",
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0.87461, 0, 0.12641, 0, 0, 1, 0, 1, 0.12641, 1, 0.87461 ],
+					"triangles": [ 3, 4, 5, 3, 5, 6, 2, 3, 6, 2, 6, 7, 1, 2, 7, 1, 7, 0 ],
+					"vertices": [ 108.5, -102.94, -108.5, -102.94, -108.5, -71.84, -108.5, 71.55, -108.5, 102.9, 108.5, 102.9, 108.5, 71.55, 108.5, -71.84 ],
+					"hull": 8,
+					"edges": [ 0, 2, 2, 4, 8, 10, 14, 0, 4, 14, 4, 6, 6, 8, 10, 12, 12, 14, 6, 12 ],
+					"width": 217,
+					"height": 248
+				}
+			},
+			"low": {
+				"normal/lowOrnament5": {
+					"name": "normal/lowOrnament7",
+					"type": "mesh",
+					"path": "normal/lowOrnament5",
+					"uvs": [ 1, 1, 0, 1, 0, 0.61272, 0, 0.38176, 0, 0, 1, 0, 1, 0.38278, 1, 0.61272 ],
+					"triangles": [ 3, 4, 5, 3, 5, 6, 2, 3, 6, 2, 6, 7, 0, 1, 2, 0, 2, 7 ],
+					"vertices": [ -9.34, -84.28, -90.34, -84.28, -90.34, -1.79, -90.34, 4.53, -90.34, 85.84, -9.34, 85.84, -9.34, 4.31, -9.34, -1.79 ],
+					"hull": 8,
+					"edges": [ 0, 2, 2, 4, 8, 10, 14, 0, 4, 14, 4, 6, 6, 8, 10, 12, 12, 14, 6, 12 ],
+					"width": 81,
+					"height": 213
+				}
+			},
+			"low2": {
+				"normal/lowOrnament5": {
+					"name": "normal/lowOrnament7",
+					"type": "mesh",
+					"path": "normal/lowOrnament5",
+					"uvs": [ 1, 1, 0, 1, 0, 0.61272, 0, 0.38176, 0, 0, 1, 0, 1, 0.38278, 1, 0.61272 ],
+					"triangles": [ 3, 4, 5, 3, 5, 6, 2, 3, 6, 2, 6, 7, 0, 1, 2, 0, 2, 7 ],
+					"vertices": [ 9.34, -84.28, 90.34, -84.28, 90.34, -1.79, 90.34, 4.53, 90.34, 85.84, 9.34, 85.84, 9.34, 4.31, 9.34, -1.79 ],
+					"hull": 8,
+					"edges": [ 0, 2, 2, 4, 8, 10, 14, 0, 4, 14, 4, 6, 6, 8, 10, 12, 12, 14, 6, 12 ],
+					"width": 81,
+					"height": 213
+				}
+			},
+			"royal": {
+				"royal": { "name": "normal/low1", "width": 217, "height": 176 }
+			}
+		}
+	},
+	{
+		"name": "low1/size7",
+		"attachments": {
+			"backplate": {
+				"backplate": { "name": "normal/lowBg7", "width": 217, "height": 176 }
+			},
+			"frame": {
+				"low1Frame": {
+					"name": "normal/low1Frame",
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0.87461, 0, 0.12641, 0, 0, 1, 0, 1, 0.12641, 1, 0.87461 ],
+					"triangles": [ 3, 4, 5, 3, 5, 6, 2, 3, 6, 2, 6, 7, 1, 2, 7, 1, 7, 0 ],
+					"vertices": [ 108.5, -87.71, -108.5, -87.71, -108.5, -56.61, -108.5, 56.63, -108.5, 87.98, 108.5, 87.98, 108.5, 56.63, 108.5, -56.61 ],
+					"hull": 8,
+					"edges": [ 0, 2, 2, 4, 8, 10, 14, 0, 4, 14, 4, 6, 6, 8, 10, 12, 12, 14, 6, 12 ],
+					"width": 217,
+					"height": 248
+				}
+			},
+			"low": {
+				"normal/lowOrnament5": {
+					"name": "normal/lowOrnament7",
+					"type": "mesh",
+					"path": "normal/lowOrnament5",
+					"uvs": [ 1, 1, 0, 1, 0, 0.61272, 0, 0.38176, 0, 0, 1, 0, 1, 0.38278, 1, 0.61272 ],
+					"triangles": [ 3, 4, 5, 3, 5, 6, 2, 3, 6, 2, 6, 7, 0, 1, 2, 0, 2, 7 ],
+					"vertices": [ -9.34, -72.18, -90.34, -72.18, -90.34, 0.59, -90.34, 1.21, -90.34, 72.94, -9.34, 72.94, -9.34, 1.01, -9.34, 0.59 ],
+					"hull": 8,
+					"edges": [ 0, 2, 2, 4, 8, 10, 14, 0, 4, 14, 4, 6, 6, 8, 10, 12, 12, 14, 6, 12 ],
+					"width": 81,
+					"height": 213
+				}
+			},
+			"low2": {
+				"normal/lowOrnament5": {
+					"name": "normal/lowOrnament7",
+					"type": "mesh",
+					"path": "normal/lowOrnament5",
+					"uvs": [ 1, 1, 0, 1, 0, 0.61272, 0, 0.38176, 0, 0, 1, 0, 1, 0.38278, 1, 0.61272 ],
+					"triangles": [ 3, 4, 5, 3, 5, 6, 2, 3, 6, 2, 6, 7, 0, 1, 2, 0, 2, 7 ],
+					"vertices": [ 9.34, -72.18, 90.34, -72.18, 90.34, 0.59, 90.34, 1.21, 90.34, 72.94, 9.34, 72.94, 9.34, 1.01, 9.34, 0.59 ],
+					"hull": 8,
+					"edges": [ 0, 2, 2, 4, 8, 10, 14, 0, 4, 14, 4, 6, 6, 8, 10, 12, 12, 14, 6, 12 ],
+					"width": 81,
+					"height": 213
+				}
+			},
+			"royal": {
+				"royal": { "name": "normal/low1", "width": 217, "height": 176 }
+			}
+		}
+	},
+	{
+		"name": "low2/size2",
+		"attachments": {
+			"backplate": {
+				"backplate": { "name": "normal/lowBg2", "width": 217, "height": 616 }
+			},
+			"frame": {
+				"low1Frame": {
+					"name": "normal/low2Frame",
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0.87461, 0, 0.12641, 0, 0, 1, 0, 1, 0.12641, 1, 0.87461 ],
+					"triangles": [ 3, 4, 5, 3, 5, 6, 2, 3, 6, 2, 6, 7, 1, 2, 7, 1, 7, 0 ],
+					"vertices": [ 108.25, -307.91, -108.75, -307.91, -108.75, -276.82, -108.75, 276.64, -108.75, 307.99, 108.25, 307.99, 108.25, 276.64, 108.25, -276.82 ],
+					"hull": 8,
+					"edges": [ 0, 2, 2, 4, 8, 10, 14, 0, 4, 14, 4, 6, 6, 8, 10, 12, 12, 14, 6, 12 ],
+					"width": 217,
+					"height": 248
+				}
+			},
+			"low3": {
+				"normal/lowOrnament5": {
+					"name": "normal/lowOrnament7",
+					"type": "mesh",
+					"path": "normal/lowOrnament5",
+					"uvs": [ 1, 0.36428, 1, 0.62737, 1, 1, 0, 1, 0, 0.62826, 0, 0.36604, 0, 0, 1, 0 ],
+					"triangles": [ 6, 7, 0, 5, 6, 0, 5, 0, 1, 4, 5, 1, 2, 3, 4, 2, 4, 1 ],
+					"vertices": [ 9.34, 212.44, 9.34, -211.88, 9.34, -291.24, 90.34, -291.24, 90.34, -212.06, 90.34, 212.06, 90.34, 290.03, 9.34, 290.03 ],
+					"hull": 8,
+					"edges": [ 4, 6, 12, 14, 6, 8, 4, 2, 8, 2, 8, 10, 10, 12, 2, 0, 0, 14, 10, 0 ],
+					"width": 81,
+					"height": 213
+				}
+			},
+			"low4": {
+				"normal/lowOrnament5": {
+					"name": "normal/lowOrnament7",
+					"type": "mesh",
+					"path": "normal/lowOrnament5",
+					"uvs": [ 1, 0.36428, 1, 0.62737, 1, 1, 0, 1, 0, 0.62826, 0, 0.36604, 0, 0, 1, 0 ],
+					"triangles": [ 6, 7, 0, 5, 6, 0, 5, 0, 1, 4, 5, 1, 2, 3, 4, 2, 4, 1 ],
+					"vertices": [ -9.34, 212.44, -9.34, -211.88, -9.34, -291.24, -90.34, -291.24, -90.34, -212.06, -90.34, 212.06, -90.34, 290.03, -9.34, 290.03 ],
+					"hull": 8,
+					"edges": [ 4, 6, 12, 14, 6, 8, 4, 2, 8, 2, 8, 10, 10, 12, 2, 0, 0, 14, 10, 0 ],
+					"width": 81,
+					"height": 213
+				}
+			},
+			"royal": {
+				"royal": { "name": "normal/low2", "width": 144, "height": 172 }
+			}
+		}
+	},
+	{
+		"name": "low2/size3",
+		"attachments": {
+			"backplate": {
+				"backplate": { "name": "normal/lowBg3", "width": 218, "height": 411 }
+			},
+			"frame": {
+				"low1Frame": {
+					"name": "normal/low2Frame",
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0.87461, 0, 0.12641, 0, 0, 1, 0, 1, 0.12641, 1, 0.87461 ],
+					"triangles": [ 3, 4, 5, 3, 5, 6, 2, 3, 6, 2, 6, 7, 1, 2, 7, 1, 7, 0 ],
+					"vertices": [ 108.5, -205.42, -108.5, -205.42, -108.5, -174.33, -108.5, 174.24, -108.5, 205.6, 108.5, 205.6, 108.5, 174.24, 108.5, -174.33 ],
+					"hull": 8,
+					"edges": [ 0, 2, 2, 4, 8, 10, 14, 0, 4, 14, 4, 6, 6, 8, 10, 12, 12, 14, 6, 12 ],
+					"width": 217,
+					"height": 248
+				}
+			},
+			"low3": {
+				"normal/lowOrnament5": {
+					"name": "normal/lowOrnament6",
+					"type": "mesh",
+					"path": "normal/lowOrnament5",
+					"uvs": [ 1, 0.36428, 1, 0.62737, 1, 1, 0, 1, 0, 0.62826, 0, 0.36604, 0, 0, 1, 0 ],
+					"triangles": [ 6, 7, 0, 5, 6, 0, 5, 0, 1, 4, 5, 1, 2, 3, 4, 2, 4, 1 ],
+					"vertices": [ 9.34, 109.69, 9.34, -107.96, 9.34, -187.33, 90.34, -187.33, 90.34, -108.15, 90.34, 109.31, 90.34, 187.28, 9.34, 187.28 ],
+					"hull": 8,
+					"edges": [ 4, 6, 12, 14, 6, 8, 4, 2, 8, 2, 8, 10, 10, 12, 2, 0, 0, 14, 10, 0 ],
+					"width": 81,
+					"height": 213
+				}
+			},
+			"low4": {
+				"normal/lowOrnament5": {
+					"name": "normal/lowOrnament6",
+					"type": "mesh",
+					"path": "normal/lowOrnament5",
+					"uvs": [ 1, 0.36428, 1, 0.62737, 1, 1, 0, 1, 0, 0.62826, 0, 0.36604, 0, 0, 1, 0 ],
+					"triangles": [ 6, 7, 0, 5, 6, 0, 5, 0, 1, 4, 5, 1, 2, 3, 4, 2, 4, 1 ],
+					"vertices": [ -9.34, 109.69, -9.34, -107.96, -9.34, -187.33, -90.34, -187.33, -90.34, -108.15, -90.34, 109.31, -90.34, 187.28, -9.34, 187.28 ],
+					"hull": 8,
+					"edges": [ 4, 6, 12, 14, 6, 8, 4, 2, 8, 2, 8, 10, 10, 12, 2, 0, 0, 14, 10, 0 ],
+					"width": 81,
+					"height": 213
+				}
+			},
+			"royal": {
+				"royal": { "name": "normal/low2", "width": 144, "height": 172 }
+			}
+		}
+	},
+	{
+		"name": "low2/size4",
+		"attachments": {
+			"backplate": {
+				"backplate": { "name": "normal/lowBg4", "width": 217, "height": 308 }
+			},
+			"frame": {
+				"low1Frame": {
+					"name": "normal/low2Frame",
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0.87461, 0, 0.12641, 0, 0, 1, 0, 1, 0.12641, 1, 0.87461 ],
+					"triangles": [ 3, 4, 5, 3, 5, 6, 2, 3, 6, 2, 6, 7, 1, 2, 7, 1, 7, 0 ],
+					"vertices": [ 108.5, -154.04, -108.5, -154.04, -108.5, -122.94, -108.5, 122.66, -108.5, 154.01, 108.5, 154.01, 108.5, 122.66, 108.5, -122.94 ],
+					"hull": 8,
+					"edges": [ 0, 2, 2, 4, 8, 10, 14, 0, 4, 14, 4, 6, 6, 8, 10, 12, 12, 14, 6, 12 ],
+					"width": 217,
+					"height": 248
+				}
+			},
+			"low3": {
+				"normal/lowOrnament5": {
+					"name": "normal/lowOrnament6",
+					"type": "mesh",
+					"path": "normal/lowOrnament5",
+					"uvs": [ 1, 0.36428, 1, 0.62737, 1, 1, 0, 1, 0, 0.62826, 0, 0.36604, 0, 0, 1, 0 ],
+					"triangles": [ 6, 7, 0, 5, 6, 0, 5, 0, 1, 4, 5, 1, 2, 3, 4, 2, 4, 1 ],
+					"vertices": [ 9.34, 58.02, 9.34, -56.3, 9.34, -135.67, 90.34, -135.67, 90.34, -56.49, 90.34, 57.64, 90.34, 135.61, 9.34, 135.61 ],
+					"hull": 8,
+					"edges": [ 4, 6, 12, 14, 6, 8, 4, 2, 8, 2, 8, 10, 10, 12, 2, 0, 0, 14, 10, 0 ],
+					"width": 81,
+					"height": 213
+				}
+			},
+			"low4": {
+				"normal/lowOrnament5": {
+					"name": "normal/lowOrnament6",
+					"type": "mesh",
+					"path": "normal/lowOrnament5",
+					"uvs": [ 1, 0.36428, 1, 0.62737, 1, 1, 0, 1, 0, 0.62826, 0, 0.36604, 0, 0, 1, 0 ],
+					"triangles": [ 6, 7, 0, 5, 6, 0, 5, 0, 1, 4, 5, 1, 2, 3, 4, 2, 4, 1 ],
+					"vertices": [ -9.34, 58.02, -9.34, -56.3, -9.34, -135.67, -90.34, -135.67, -90.34, -56.49, -90.34, 57.64, -90.34, 135.61, -9.34, 135.61 ],
+					"hull": 8,
+					"edges": [ 4, 6, 12, 14, 6, 8, 4, 2, 8, 2, 8, 10, 10, 12, 2, 0, 0, 14, 10, 0 ],
+					"width": 81,
+					"height": 213
+				}
+			},
+			"royal": {
+				"royal": { "name": "normal/low2", "width": 144, "height": 172 }
+			}
+		}
+	},
+	{
+		"name": "low2/size5",
+		"attachments": {
+			"backplate": {
+				"backplate": { "name": "normal/lowBg5", "width": 216, "height": 248 }
+			},
+			"frame": {
+				"low1Frame": { "name": "normal/low2Frame", "width": 217, "height": 248 }
+			},
+			"low3": {
+				"normal/lowOrnament5": { "name": "normal/lowOrnament6", "path": "normal/lowOrnament5", "x": 49.84, "scaleX": -1, "width": 81, "height": 213 }
+			},
+			"low4": {
+				"normal/lowOrnament5": { "name": "normal/lowOrnament6", "path": "normal/lowOrnament5", "x": -49.84, "width": 81, "height": 213 }
+			},
+			"royal": {
+				"royal": { "name": "normal/low2", "width": 144, "height": 172 }
+			}
+		}
+	},
+	{
+		"name": "low2/size6",
+		"attachments": {
+			"backplate": {
+				"backplate": { "name": "normal/lowBg6", "width": 218, "height": 206 }
+			},
+			"frame": {
+				"low1Frame": {
+					"name": "normal/low2Frame",
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0.87461, 0, 0.12641, 0, 0, 1, 0, 1, 0.12641, 1, 0.87461 ],
+					"triangles": [ 3, 4, 5, 3, 5, 6, 2, 3, 6, 2, 6, 7, 1, 2, 7, 1, 7, 0 ],
+					"vertices": [ 108.5, -102.94, -108.5, -102.94, -108.5, -71.84, -108.5, 71.55, -108.5, 102.9, 108.5, 102.9, 108.5, 71.55, 108.5, -71.84 ],
+					"hull": 8,
+					"edges": [ 0, 2, 2, 4, 8, 10, 14, 0, 4, 14, 4, 6, 6, 8, 10, 12, 12, 14, 6, 12 ],
+					"width": 217,
+					"height": 248
+				}
+			},
+			"low3": {
+				"normal/lowOrnament5": {
+					"name": "normal/lowOrnament8",
+					"type": "mesh",
+					"path": "normal/lowOrnament5",
+					"uvs": [ 1, 0.36428, 1, 0.62737, 1, 1, 0, 1, 0, 0.62826, 0, 0.36604, 0, 0, 1, 0 ],
+					"triangles": [ 6, 7, 0, 5, 6, 0, 5, 0, 1, 4, 5, 1, 2, 3, 4, 2, 4, 1 ],
+					"vertices": [ 9.34, 7.33, 9.34, -4.45, 9.34, -83.82, 90.34, -83.82, 90.34, -4.64, 90.34, 6.95, 90.34, 84.92, 9.34, 84.92 ],
+					"hull": 8,
+					"edges": [ 4, 6, 12, 14, 6, 8, 4, 2, 8, 2, 8, 10, 10, 12, 2, 0, 0, 14, 10, 0 ],
+					"width": 81,
+					"height": 213
+				}
+			},
+			"low4": {
+				"normal/lowOrnament5": {
+					"name": "normal/lowOrnament8",
+					"type": "mesh",
+					"path": "normal/lowOrnament5",
+					"uvs": [ 1, 0.36428, 1, 0.62737, 1, 1, 0, 1, 0, 0.62826, 0, 0.36604, 0, 0, 1, 0 ],
+					"triangles": [ 6, 7, 0, 5, 6, 0, 5, 0, 1, 4, 5, 1, 2, 3, 4, 2, 4, 1 ],
+					"vertices": [ -9.34, 7.33, -9.34, -4.45, -9.34, -83.82, -90.34, -83.82, -90.34, -4.64, -90.34, 6.95, -90.34, 84.92, -9.34, 84.92 ],
+					"hull": 8,
+					"edges": [ 4, 6, 12, 14, 6, 8, 4, 2, 8, 2, 8, 10, 10, 12, 2, 0, 0, 14, 10, 0 ],
+					"width": 81,
+					"height": 213
+				}
+			},
+			"royal": {
+				"royal": { "name": "normal/low2", "width": 144, "height": 172 }
+			}
+		}
+	},
+	{
+		"name": "low2/size7",
+		"attachments": {
+			"backplate": {
+				"backplate": { "name": "normal/lowBg7", "width": 217, "height": 176 }
+			},
+			"frame": {
+				"low1Frame": {
+					"name": "normal/low2Frame",
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0.87461, 0, 0.12641, 0, 0, 1, 0, 1, 0.12641, 1, 0.87461 ],
+					"triangles": [ 3, 4, 5, 3, 5, 6, 2, 3, 6, 2, 6, 7, 1, 2, 7, 1, 7, 0 ],
+					"vertices": [ 108.5, -87.71, -108.5, -87.71, -108.5, -56.61, -108.5, 56.63, -108.5, 87.98, 108.5, 87.98, 108.5, 56.63, 108.5, -56.61 ],
+					"hull": 8,
+					"edges": [ 0, 2, 2, 4, 8, 10, 14, 0, 4, 14, 4, 6, 6, 8, 10, 12, 12, 14, 6, 12 ],
+					"width": 217,
+					"height": 248
+				}
+			},
+			"low3": {
+				"normal/lowOrnament5": {
+					"name": "normal/lowOrnament8",
+					"type": "mesh",
+					"path": "normal/lowOrnament5",
+					"uvs": [ 1, 0.36428, 1, 0.62737, 1, 1, 0, 1, 0, 0.62826, 0, 0.36604, 0, 0, 1, 0 ],
+					"triangles": [ 6, 7, 0, 5, 6, 0, 5, 0, 1, 4, 5, 1, 2, 3, 4, 2, 4, 1 ],
+					"vertices": [ 9.34, 3.31, 9.34, 1.83, 9.34, -68.49, 90.34, -68.49, 90.34, 1.66, 90.34, 2.98, 90.34, 72.05, 9.34, 72.05 ],
+					"hull": 8,
+					"edges": [ 4, 6, 12, 14, 6, 8, 4, 2, 8, 2, 8, 10, 10, 12, 2, 0, 0, 14, 10, 0 ],
+					"width": 81,
+					"height": 213
+				}
+			},
+			"low4": {
+				"normal/lowOrnament5": {
+					"name": "normal/lowOrnament8",
+					"type": "mesh",
+					"path": "normal/lowOrnament5",
+					"uvs": [ 1, 0.36428, 1, 0.62737, 1, 1, 0, 1, 0, 0.62826, 0, 0.36604, 0, 0, 1, 0 ],
+					"triangles": [ 6, 7, 0, 5, 6, 0, 5, 0, 1, 4, 5, 1, 2, 3, 4, 2, 4, 1 ],
+					"vertices": [ -9.34, 3.31, -9.34, 1.83, -9.34, -68.49, -90.34, -68.49, -90.34, 1.66, -90.34, 2.98, -90.34, 72.05, -9.34, 72.05 ],
+					"hull": 8,
+					"edges": [ 4, 6, 12, 14, 6, 8, 4, 2, 8, 2, 8, 10, 10, 12, 2, 0, 0, 14, 10, 0 ],
+					"width": 81,
+					"height": 213
+				}
+			},
+			"royal": {
+				"royal": { "name": "normal/low2", "width": 144, "height": 172 }
+			}
+		}
+	},
+	{
+		"name": "low3/size2",
+		"attachments": {
+			"backplate": {
+				"backplate": { "name": "normal/lowBg2", "width": 217, "height": 616 }
+			},
+			"frame": {
+				"low1Frame": {
+					"name": "normal/low3Frame",
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0.87461, 0, 0.12641, 0, 0, 1, 0, 1, 0.12641, 1, 0.87461 ],
+					"triangles": [ 3, 4, 5, 3, 5, 6, 2, 3, 6, 2, 6, 7, 1, 2, 7, 1, 7, 0 ],
+					"vertices": [ 108.25, -307.91, -108.75, -307.91, -108.75, -276.82, -108.75, 276.64, -108.75, 307.99, 108.25, 307.99, 108.25, 276.64, 108.25, -276.82 ],
+					"hull": 8,
+					"edges": [ 0, 2, 2, 4, 8, 10, 14, 0, 4, 14, 4, 6, 6, 8, 10, 12, 12, 14, 6, 12 ],
+					"width": 217,
+					"height": 248
+				}
+			},
+			"low5": {
+				"normal/lowOrnament5": {
+					"name": "normal/lowOrnament7",
+					"type": "mesh",
+					"path": "normal/lowOrnament5",
+					"uvs": [ 1, 0.36561, 1, 0.61371, 1, 1, 0, 1, 0, 0.61371, 0, 0.36651, 0, 0, 1, 0 ],
+					"triangles": [ 6, 7, 0, 5, 6, 0, 1, 4, 5, 1, 5, 0, 3, 4, 1, 3, 1, 2 ],
+					"vertices": [ 9.34, 212.13, 9.34, -208.77, 9.34, -291.05, 90.34, -291.05, 90.34, -208.77, 90.34, 211.94, 90.34, 290.01, 9.34, 290.01 ],
+					"hull": 8,
+					"edges": [ 4, 6, 12, 14, 6, 8, 4, 2, 8, 2, 8, 10, 10, 12, 2, 0, 0, 14, 10, 0 ],
+					"width": 81,
+					"height": 213
+				}
+			},
+			"low6": {
+				"normal/lowOrnament5": {
+					"name": "normal/lowOrnament7",
+					"type": "mesh",
+					"path": "normal/lowOrnament5",
+					"uvs": [ 1, 0.36561, 1, 0.61371, 1, 1, 0, 1, 0, 0.61371, 0, 0.36651, 0, 0, 1, 0 ],
+					"triangles": [ 6, 7, 0, 5, 6, 0, 1, 4, 5, 1, 5, 0, 3, 4, 1, 3, 1, 2 ],
+					"vertices": [ -9.31, 212.13, -9.31, -208.77, -9.31, -291.05, -90.31, -291.05, -90.31, -208.77, -90.31, 211.94, -90.31, 290.01, -9.31, 290.01 ],
+					"hull": 8,
+					"edges": [ 4, 6, 12, 14, 6, 8, 4, 2, 8, 2, 8, 10, 10, 12, 2, 0, 0, 14, 10, 0 ],
+					"width": 81,
+					"height": 213
+				}
+			},
+			"royal": {
+				"royal": { "name": "normal/low3", "width": 130, "height": 182 }
+			}
+		}
+	},
+	{
+		"name": "low3/size3",
+		"attachments": {
+			"backplate": {
+				"backplate": { "name": "normal/lowBg3", "width": 218, "height": 411 }
+			},
+			"frame": {
+				"low1Frame": {
+					"name": "normal/low3Frame",
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0.87461, 0, 0.12641, 0, 0, 1, 0, 1, 0.12641, 1, 0.87461 ],
+					"triangles": [ 3, 4, 5, 3, 5, 6, 2, 3, 6, 2, 6, 7, 1, 2, 7, 1, 7, 0 ],
+					"vertices": [ 108.5, -205.42, -108.5, -205.42, -108.5, -174.33, -108.5, 174.24, -108.5, 205.6, 108.5, 205.6, 108.5, 174.24, 108.5, -174.33 ],
+					"hull": 8,
+					"edges": [ 0, 2, 2, 4, 8, 10, 14, 0, 4, 14, 4, 6, 6, 8, 10, 12, 12, 14, 6, 12 ],
+					"width": 217,
+					"height": 248
+				}
+			},
+			"low5": {
+				"normal/lowOrnament5": {
+					"name": "normal/lowOrnament6",
+					"type": "mesh",
+					"path": "normal/lowOrnament5",
+					"uvs": [ 1, 0.36561, 1, 0.61371, 1, 1, 0, 1, 0, 0.61371, 0, 0.36651, 0, 0, 1, 0 ],
+					"triangles": [ 6, 7, 0, 5, 6, 0, 1, 4, 5, 1, 5, 0, 3, 4, 1, 3, 1, 2 ],
+					"vertices": [ 9.34, 109.85, 9.34, -104.99, 9.34, -187.27, 90.34, -187.27, 90.34, -104.99, 90.34, 109.66, 90.34, 187.72, 9.34, 187.72 ],
+					"hull": 8,
+					"edges": [ 4, 6, 12, 14, 6, 8, 4, 2, 8, 2, 8, 10, 10, 12, 2, 0, 0, 14, 10, 0 ],
+					"width": 81,
+					"height": 213
+				}
+			},
+			"low6": {
+				"normal/lowOrnament5": {
+					"name": "normal/lowOrnament6",
+					"type": "mesh",
+					"path": "normal/lowOrnament5",
+					"uvs": [ 1, 0.36561, 1, 0.61371, 1, 1, 0, 1, 0, 0.61371, 0, 0.36651, 0, 0, 1, 0 ],
+					"triangles": [ 6, 7, 0, 5, 6, 0, 1, 4, 5, 1, 5, 0, 3, 4, 1, 3, 1, 2 ],
+					"vertices": [ -9.31, 109.85, -9.31, -104.99, -9.31, -187.27, -90.31, -187.27, -90.31, -104.99, -90.31, 109.66, -90.31, 187.72, -9.31, 187.72 ],
+					"hull": 8,
+					"edges": [ 4, 6, 12, 14, 6, 8, 4, 2, 8, 2, 8, 10, 10, 12, 2, 0, 0, 14, 10, 0 ],
+					"width": 81,
+					"height": 213
+				}
+			},
+			"royal": {
+				"royal": { "name": "normal/low3", "width": 130, "height": 182 }
+			}
+		}
+	},
+	{
+		"name": "low3/size4",
+		"attachments": {
+			"backplate": {
+				"backplate": { "name": "normal/lowBg4", "width": 217, "height": 308 }
+			},
+			"frame": {
+				"low1Frame": {
+					"name": "normal/low3Frame",
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0.87461, 0, 0.12641, 0, 0, 1, 0, 1, 0.12641, 1, 0.87461 ],
+					"triangles": [ 3, 4, 5, 3, 5, 6, 2, 3, 6, 2, 6, 7, 1, 2, 7, 1, 7, 0 ],
+					"vertices": [ 108.5, -154.04, -108.5, -154.04, -108.5, -122.94, -108.5, 122.66, -108.5, 154.01, 108.5, 154.01, 108.5, 122.66, 108.5, -122.94 ],
+					"hull": 8,
+					"edges": [ 0, 2, 2, 4, 8, 10, 14, 0, 4, 14, 4, 6, 6, 8, 10, 12, 12, 14, 6, 12 ],
+					"width": 217,
+					"height": 248
+				}
+			},
+			"low5": {
+				"normal/lowOrnament5": {
+					"name": "normal/lowOrnament6",
+					"type": "mesh",
+					"path": "normal/lowOrnament5",
+					"uvs": [ 1, 0.36561, 1, 0.61371, 1, 1, 0, 1, 0, 0.61371, 0, 0.36651, 0, 0, 1, 0 ],
+					"triangles": [ 6, 7, 0, 5, 6, 0, 1, 4, 5, 1, 5, 0, 3, 4, 1, 3, 1, 2 ],
+					"vertices": [ 9.34, 58.37, 9.34, -53.97, 9.34, -136.25, 90.34, -136.25, 90.34, -53.97, 90.34, 58.18, 90.34, 136.25, 9.34, 136.25 ],
+					"hull": 8,
+					"edges": [ 4, 6, 12, 14, 6, 8, 4, 2, 8, 2, 8, 10, 10, 12, 2, 0, 0, 14, 10, 0 ],
+					"width": 81,
+					"height": 213
+				}
+			},
+			"low6": {
+				"normal/lowOrnament5": {
+					"name": "normal/lowOrnament6",
+					"type": "mesh",
+					"path": "normal/lowOrnament5",
+					"uvs": [ 1, 0.36561, 1, 0.61371, 1, 1, 0, 1, 0, 0.61371, 0, 0.36651, 0, 0, 1, 0 ],
+					"triangles": [ 6, 7, 0, 5, 6, 0, 1, 4, 5, 1, 5, 0, 3, 4, 1, 3, 1, 2 ],
+					"vertices": [ -9.31, 58.37, -9.31, -53.97, -9.31, -136.25, -90.31, -136.25, -90.31, -53.97, -90.31, 58.18, -90.31, 136.25, -9.31, 136.25 ],
+					"hull": 8,
+					"edges": [ 4, 6, 12, 14, 6, 8, 4, 2, 8, 2, 8, 10, 10, 12, 2, 0, 0, 14, 10, 0 ],
+					"width": 81,
+					"height": 213
+				}
+			},
+			"royal": {
+				"royal": { "name": "normal/low3", "width": 130, "height": 182 }
+			}
+		}
+	},
+	{
+		"name": "low3/size5",
+		"attachments": {
+			"backplate": {
+				"backplate": { "name": "normal/lowBg5", "width": 216, "height": 248 }
+			},
+			"frame": {
+				"low1Frame": { "name": "normal/low3Frame", "width": 217, "height": 248 }
+			},
+			"low5": {
+				"normal/lowOrnament5": { "name": "normal/lowOrnament6", "path": "normal/lowOrnament5", "x": 49.84, "scaleX": -1, "width": 81, "height": 213 }
+			},
+			"low6": {
+				"normal/lowOrnament5": { "name": "normal/lowOrnament6", "path": "normal/lowOrnament5", "x": -49.81, "width": 81, "height": 213 }
+			},
+			"royal": {
+				"royal": { "name": "normal/low3", "width": 130, "height": 182 }
+			}
+		}
+	},
+	{
+		"name": "low3/size6",
+		"attachments": {
+			"backplate": {
+				"backplate": { "name": "normal/lowBg6", "width": 218, "height": 206 }
+			},
+			"frame": {
+				"low1Frame": {
+					"name": "normal/low3Frame",
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0.87461, 0, 0.12641, 0, 0, 1, 0, 1, 0.12641, 1, 0.87461 ],
+					"triangles": [ 3, 4, 5, 3, 5, 6, 2, 3, 6, 2, 6, 7, 1, 2, 7, 1, 7, 0 ],
+					"vertices": [ 108.5, -102.94, -108.5, -102.94, -108.5, -71.84, -108.5, 71.55, -108.5, 102.9, 108.5, 102.9, 108.5, 71.55, 108.5, -71.84 ],
+					"hull": 8,
+					"edges": [ 0, 2, 2, 4, 8, 10, 14, 0, 4, 14, 4, 6, 6, 8, 10, 12, 12, 14, 6, 12 ],
+					"width": 217,
+					"height": 248
+				}
+			},
+			"low5": {
+				"normal/lowOrnament5": {
+					"name": "normal/lowOrnament8",
+					"type": "mesh",
+					"path": "normal/lowOrnament5",
+					"uvs": [ 1, 0.36561, 1, 0.61371, 1, 1, 0, 1, 0, 0.61371, 0, 0.36651, 0, 0, 1, 0 ],
+					"triangles": [ 6, 7, 0, 5, 6, 0, 1, 4, 5, 1, 5, 0, 3, 4, 1, 3, 1, 2 ],
+					"vertices": [ 9.34, 7.12, 9.34, -2.72, 9.34, -85, 90.34, -85, 90.34, -2.72, 90.34, 6.93, 90.34, 85, 9.34, 85 ],
+					"hull": 8,
+					"edges": [ 4, 6, 12, 14, 6, 8, 4, 2, 8, 2, 8, 10, 10, 12, 2, 0, 0, 14, 10, 0 ],
+					"width": 81,
+					"height": 213
+				}
+			},
+			"low6": {
+				"normal/lowOrnament5": {
+					"name": "normal/lowOrnament8",
+					"type": "mesh",
+					"path": "normal/lowOrnament5",
+					"uvs": [ 1, 0.36561, 1, 0.61371, 1, 1, 0, 1, 0, 0.61371, 0, 0.36651, 0, 0, 1, 0 ],
+					"triangles": [ 6, 7, 0, 5, 6, 0, 1, 4, 5, 1, 5, 0, 3, 4, 1, 3, 1, 2 ],
+					"vertices": [ -9.31, 7.12, -9.31, -2.72, -9.31, -85, -90.31, -85, -90.31, -2.72, -90.31, 6.93, -90.31, 85, -9.31, 85 ],
+					"hull": 8,
+					"edges": [ 4, 6, 12, 14, 6, 8, 4, 2, 8, 2, 8, 10, 10, 12, 2, 0, 0, 14, 10, 0 ],
+					"width": 81,
+					"height": 213
+				}
+			},
+			"royal": {
+				"royal": { "name": "normal/low3", "width": 130, "height": 182 }
+			}
+		}
+	},
+	{
+		"name": "low3/size7",
+		"attachments": {
+			"backplate": {
+				"backplate": { "name": "normal/lowBg7", "width": 217, "height": 176 }
+			},
+			"frame": {
+				"low1Frame": {
+					"name": "normal/low3Frame",
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0.87461, 0, 0.12641, 0, 0, 1, 0, 1, 0.12641, 1, 0.87461 ],
+					"triangles": [ 3, 4, 5, 3, 5, 6, 2, 3, 6, 2, 6, 7, 1, 2, 7, 1, 7, 0 ],
+					"vertices": [ 108.5, -87.71, -108.5, -87.71, -108.5, -56.61, -108.5, 56.63, -108.5, 87.98, 108.5, 87.98, 108.5, 56.63, 108.5, -56.61 ],
+					"hull": 8,
+					"edges": [ 0, 2, 2, 4, 8, 10, 14, 0, 4, 14, 4, 6, 6, 8, 10, 12, 12, 14, 6, 12 ],
+					"width": 217,
+					"height": 248
+				}
+			},
+			"low5": {
+				"normal/lowOrnament5": {
+					"name": "normal/lowOrnament8",
+					"type": "mesh",
+					"path": "normal/lowOrnament5",
+					"uvs": [ 1, 0.36561, 1, 0.61371, 1, 1, 0, 1, 0, 0.61371, 0, 0.36651, 0, 0, 1, 0 ],
+					"triangles": [ 6, 7, 0, 5, 6, 0, 1, 4, 5, 1, 5, 0, 3, 4, 1, 3, 1, 2 ],
+					"vertices": [ 9.34, 3.29, 9.34, 1.94, 9.34, -69.89, 90.34, -69.89, 90.34, 1.94, 90.34, 3.13, 90.34, 71.27, 9.34, 71.27 ],
+					"hull": 8,
+					"edges": [ 4, 6, 12, 14, 6, 8, 4, 2, 8, 2, 8, 10, 10, 12, 2, 0, 0, 14, 10, 0 ],
+					"width": 81,
+					"height": 213
+				}
+			},
+			"low6": {
+				"normal/lowOrnament5": {
+					"name": "normal/lowOrnament8",
+					"type": "mesh",
+					"path": "normal/lowOrnament5",
+					"uvs": [ 1, 0.36561, 1, 0.61371, 1, 1, 0, 1, 0, 0.61371, 0, 0.36651, 0, 0, 1, 0 ],
+					"triangles": [ 6, 7, 0, 5, 6, 0, 1, 4, 5, 1, 5, 0, 3, 4, 1, 3, 1, 2 ],
+					"vertices": [ -9.31, 3.29, -9.31, 1.94, -9.31, -69.89, -90.31, -69.89, -90.31, 1.94, -90.31, 3.13, -90.31, 71.27, -9.31, 71.27 ],
+					"hull": 8,
+					"edges": [ 4, 6, 12, 14, 6, 8, 4, 2, 8, 2, 8, 10, 10, 12, 2, 0, 0, 14, 10, 0 ],
+					"width": 81,
+					"height": 213
+				}
+			},
+			"royal": {
+				"royal": { "name": "normal/low3", "width": 130, "height": 182 }
+			}
+		}
+	},
+	{
+		"name": "low4/size2",
+		"attachments": {
+			"backplate": {
+				"backplate": { "name": "normal/lowBg2", "width": 217, "height": 616 }
+			},
+			"frame": {
+				"low1Frame": {
+					"name": "normal/low4Frame",
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0.87461, 0, 0.12641, 0, 0, 1, 0, 1, 0.12641, 1, 0.87461 ],
+					"triangles": [ 3, 4, 5, 3, 5, 6, 2, 3, 6, 2, 6, 7, 1, 2, 7, 1, 7, 0 ],
+					"vertices": [ 108.25, -307.91, -108.75, -307.91, -108.75, -276.82, -108.75, 276.64, -108.75, 307.99, 108.25, 307.99, 108.25, 276.64, 108.25, -276.82 ],
+					"hull": 8,
+					"edges": [ 0, 2, 2, 4, 8, 10, 14, 0, 4, 14, 4, 6, 6, 8, 10, 12, 12, 14, 6, 12 ],
+					"width": 217,
+					"height": 248
+				}
+			},
+			"low7": {
+				"normal/lowOrnament5": {
+					"name": "normal/lowOrnament7",
+					"type": "mesh",
+					"path": "normal/lowOrnament5",
+					"uvs": [ 1, 0.37483, 1, 0.62521, 1, 1, 0, 1, 0, 0.62337, 0, 0.37483, 0, 0, 1, 0 ],
+					"triangles": [ 5, 6, 7, 5, 7, 0, 4, 5, 0, 4, 0, 1, 3, 4, 1, 3, 1, 2 ],
+					"vertices": [ 9.34, 211.34, 9.34, -210.31, 9.34, -290.14, 90.34, -290.14, 90.34, -209.92, 90.34, 211.34, 90.34, 291.17, 9.34, 291.17 ],
+					"hull": 8,
+					"edges": [ 4, 6, 12, 14, 6, 8, 4, 2, 8, 2, 8, 10, 10, 12, 2, 0, 0, 14, 10, 0 ],
+					"width": 81,
+					"height": 213
+				}
+			},
+			"low8": {
+				"normal/lowOrnament5": {
+					"name": "normal/lowOrnament7",
+					"type": "mesh",
+					"path": "normal/lowOrnament5",
+					"uvs": [ 1, 0.37483, 1, 0.62521, 1, 1, 0, 1, 0, 0.62337, 0, 0.37483, 0, 0, 1, 0 ],
+					"triangles": [ 5, 6, 7, 5, 7, 0, 4, 5, 0, 4, 0, 1, 3, 4, 1, 3, 1, 2 ],
+					"vertices": [ -9.34, 211.34, -9.34, -210.31, -9.34, -290.14, -90.34, -290.14, -90.34, -209.92, -90.34, 211.34, -90.34, 291.17, -9.34, 291.17 ],
+					"hull": 8,
+					"edges": [ 4, 6, 12, 14, 6, 8, 4, 2, 8, 2, 8, 10, 10, 12, 2, 0, 0, 14, 10, 0 ],
+					"width": 81,
+					"height": 213
+				}
+			},
+			"royal": {
+				"royal": { "name": "normal/low4", "width": 110, "height": 178 }
+			}
+		}
+	},
+	{
+		"name": "low4/size3",
+		"attachments": {
+			"backplate": {
+				"backplate": { "name": "normal/lowBg3", "width": 218, "height": 411 }
+			},
+			"frame": {
+				"low1Frame": {
+					"name": "normal/low4Frame",
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0.87461, 0, 0.12641, 0, 0, 1, 0, 1, 0.12641, 1, 0.87461 ],
+					"triangles": [ 3, 4, 5, 3, 5, 6, 2, 3, 6, 2, 6, 7, 1, 2, 7, 1, 7, 0 ],
+					"vertices": [ 108.5, -205.42, -108.5, -205.42, -108.5, -174.33, -108.5, 174.24, -108.5, 205.6, 108.5, 205.6, 108.5, 174.24, 108.5, -174.33 ],
+					"hull": 8,
+					"edges": [ 0, 2, 2, 4, 8, 10, 14, 0, 4, 14, 4, 6, 6, 8, 10, 12, 12, 14, 6, 12 ],
+					"width": 217,
+					"height": 248
+				}
+			},
+			"low7": {
+				"normal/lowOrnament5": {
+					"name": "normal/lowOrnament6",
+					"type": "mesh",
+					"path": "normal/lowOrnament5",
+					"uvs": [ 1, 0.37483, 1, 0.62521, 1, 1, 0, 1, 0, 0.62337, 0, 0.37483, 0, 0, 1, 0 ],
+					"triangles": [ 5, 6, 7, 5, 7, 0, 4, 5, 0, 4, 0, 1, 3, 4, 1, 3, 1, 2 ],
+					"vertices": [ 9.34, 107.66, 9.34, -108.48, 9.34, -188.31, 90.34, -188.31, 90.34, -108.09, 90.34, 107.66, 90.34, 187.5, 9.34, 187.5 ],
+					"hull": 8,
+					"edges": [ 4, 6, 12, 14, 6, 8, 4, 2, 8, 2, 8, 10, 10, 12, 2, 0, 0, 14, 10, 0 ],
+					"width": 81,
+					"height": 213
+				}
+			},
+			"low8": {
+				"normal/lowOrnament5": {
+					"name": "normal/lowOrnament6",
+					"type": "mesh",
+					"path": "normal/lowOrnament5",
+					"uvs": [ 1, 0.37483, 1, 0.62521, 1, 1, 0, 1, 0, 0.62337, 0, 0.37483, 0, 0, 1, 0 ],
+					"triangles": [ 5, 6, 7, 5, 7, 0, 4, 5, 0, 4, 0, 1, 3, 4, 1, 3, 1, 2 ],
+					"vertices": [ -9.34, 107.66, -9.34, -108.48, -9.34, -188.31, -90.34, -188.31, -90.34, -108.09, -90.34, 107.66, -90.34, 187.5, -9.34, 187.5 ],
+					"hull": 8,
+					"edges": [ 4, 6, 12, 14, 6, 8, 4, 2, 8, 2, 8, 10, 10, 12, 2, 0, 0, 14, 10, 0 ],
+					"width": 81,
+					"height": 213
+				}
+			},
+			"royal": {
+				"royal": { "name": "normal/low4", "width": 110, "height": 178 }
+			}
+		}
+	},
+	{
+		"name": "low4/size4",
+		"attachments": {
+			"backplate": {
+				"backplate": { "name": "normal/lowBg4", "width": 217, "height": 308 }
+			},
+			"frame": {
+				"low1Frame": {
+					"name": "normal/low4Frame",
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0.87461, 0, 0.12641, 0, 0, 1, 0, 1, 0.12641, 1, 0.87461 ],
+					"triangles": [ 3, 4, 5, 3, 5, 6, 2, 3, 6, 2, 6, 7, 1, 2, 7, 1, 7, 0 ],
+					"vertices": [ 108.5, -154.04, -108.5, -154.04, -108.5, -122.94, -108.5, 122.66, -108.5, 154.01, 108.5, 154.01, 108.5, 122.66, 108.5, -122.94 ],
+					"hull": 8,
+					"edges": [ 0, 2, 2, 4, 8, 10, 14, 0, 4, 14, 4, 6, 6, 8, 10, 12, 12, 14, 6, 12 ],
+					"width": 217,
+					"height": 248
+				}
+			},
+			"low7": {
+				"normal/lowOrnament5": {
+					"name": "normal/lowOrnament6",
+					"type": "mesh",
+					"path": "normal/lowOrnament5",
+					"uvs": [ 1, 0.37483, 1, 0.62521, 1, 1, 0, 1, 0, 0.62337, 0, 0.37483, 0, 0, 1, 0 ],
+					"triangles": [ 5, 6, 7, 5, 7, 0, 4, 5, 0, 4, 0, 1, 3, 4, 1, 3, 1, 2 ],
+					"vertices": [ 9.34, 55.59, 9.34, -56.94, 9.34, -136.77, 90.34, -136.77, 90.34, -56.54, 90.34, 55.59, 90.34, 135.43, 9.34, 135.43 ],
+					"hull": 8,
+					"edges": [ 4, 6, 12, 14, 6, 8, 4, 2, 8, 2, 8, 10, 10, 12, 2, 0, 0, 14, 10, 0 ],
+					"width": 81,
+					"height": 213
+				}
+			},
+			"low8": {
+				"normal/lowOrnament5": {
+					"name": "normal/lowOrnament6",
+					"type": "mesh",
+					"path": "normal/lowOrnament5",
+					"uvs": [ 1, 0.37483, 1, 0.62521, 1, 1, 0, 1, 0, 0.62337, 0, 0.37483, 0, 0, 1, 0 ],
+					"triangles": [ 5, 6, 7, 5, 7, 0, 4, 5, 0, 4, 0, 1, 3, 4, 1, 3, 1, 2 ],
+					"vertices": [ -9.34, 55.59, -9.34, -56.94, -9.34, -136.77, -90.34, -136.77, -90.34, -56.54, -90.34, 55.59, -90.34, 135.43, -9.34, 135.43 ],
+					"hull": 8,
+					"edges": [ 4, 6, 12, 14, 6, 8, 4, 2, 8, 2, 8, 10, 10, 12, 2, 0, 0, 14, 10, 0 ],
+					"width": 81,
+					"height": 213
+				}
+			},
+			"royal": {
+				"royal": { "name": "normal/low4", "width": 110, "height": 178 }
+			}
+		}
+	},
+	{
+		"name": "low4/size5",
+		"attachments": {
+			"backplate": {
+				"backplate": { "name": "normal/lowBg5", "width": 216, "height": 248 }
+			},
+			"frame": {
+				"low1Frame": { "name": "normal/low4Frame", "width": 217, "height": 248 }
+			},
+			"low7": {
+				"normal/lowOrnament5": { "name": "normal/lowOrnament6", "path": "normal/lowOrnament5", "x": 49.84, "scaleX": -1, "width": 81, "height": 213 }
+			},
+			"low8": {
+				"normal/lowOrnament5": { "name": "normal/lowOrnament6", "path": "normal/lowOrnament5", "x": -49.84, "width": 81, "height": 213 }
+			},
+			"royal": {
+				"royal": { "name": "normal/low4", "width": 110, "height": 178 }
+			}
+		}
+	},
+	{
+		"name": "low4/size6",
+		"attachments": {
+			"backplate": {
+				"backplate": { "name": "normal/lowBg6", "width": 218, "height": 206 }
+			},
+			"frame": {
+				"low1Frame": {
+					"name": "normal/low4Frame",
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0.87461, 0, 0.12641, 0, 0, 1, 0, 1, 0.12641, 1, 0.87461 ],
+					"triangles": [ 3, 4, 5, 3, 5, 6, 2, 3, 6, 2, 6, 7, 1, 2, 7, 1, 7, 0 ],
+					"vertices": [ 108.5, -102.94, -108.5, -102.94, -108.5, -71.84, -108.5, 71.55, -108.5, 102.9, 108.5, 102.9, 108.5, 71.55, 108.5, -71.84 ],
+					"hull": 8,
+					"edges": [ 0, 2, 2, 4, 8, 10, 14, 0, 4, 14, 4, 6, 6, 8, 10, 12, 12, 14, 6, 12 ],
+					"width": 217,
+					"height": 248
+				}
+			},
+			"low7": {
+				"normal/lowOrnament5": {
+					"name": "normal/lowOrnament8",
+					"type": "mesh",
+					"path": "normal/lowOrnament5",
+					"uvs": [ 1, 0.37483, 1, 0.62521, 1, 1, 0, 1, 0, 0.62337, 0, 0.37483, 0, 0, 1, 0 ],
+					"triangles": [ 5, 6, 7, 5, 7, 0, 4, 5, 0, 4, 0, 1, 3, 4, 1, 3, 1, 2 ],
+					"vertices": [ 9.34, 4.79, 9.34, -5.35, 9.34, -85.18, 90.34, -85.18, 90.34, -4.96, 90.34, 4.79, 90.34, 84.63, 9.34, 84.63 ],
+					"hull": 8,
+					"edges": [ 4, 6, 12, 14, 6, 8, 4, 2, 8, 2, 8, 10, 10, 12, 2, 0, 0, 14, 10, 0 ],
+					"width": 81,
+					"height": 213
+				}
+			},
+			"low8": {
+				"normal/lowOrnament5": {
+					"name": "normal/lowOrnament8",
+					"type": "mesh",
+					"path": "normal/lowOrnament5",
+					"uvs": [ 1, 0.37483, 1, 0.62521, 1, 1, 0, 1, 0, 0.62337, 0, 0.37483, 0, 0, 1, 0 ],
+					"triangles": [ 5, 6, 7, 5, 7, 0, 4, 5, 0, 4, 0, 1, 3, 4, 1, 3, 1, 2 ],
+					"vertices": [ -9.34, 4.79, -9.34, -5.35, -9.34, -85.18, -90.34, -85.18, -90.34, -4.96, -90.34, 4.79, -90.34, 84.63, -9.34, 84.63 ],
+					"hull": 8,
+					"edges": [ 4, 6, 12, 14, 6, 8, 4, 2, 8, 2, 8, 10, 10, 12, 2, 0, 0, 14, 10, 0 ],
+					"width": 81,
+					"height": 213
+				}
+			},
+			"royal": {
+				"royal": { "name": "normal/low4", "width": 110, "height": 178 }
+			}
+		}
+	},
+	{
+		"name": "low4/size7",
+		"attachments": {
+			"backplate": {
+				"backplate": { "name": "normal/lowBg7", "width": 217, "height": 176 }
+			},
+			"frame": {
+				"low1Frame": {
+					"name": "normal/low4Frame",
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0.87461, 0, 0.12641, 0, 0, 1, 0, 1, 0.12641, 1, 0.87461 ],
+					"triangles": [ 3, 4, 5, 3, 5, 6, 2, 3, 6, 2, 6, 7, 1, 2, 7, 1, 7, 0 ],
+					"vertices": [ 108.5, -87.71, -108.5, -87.71, -108.5, -56.61, -108.5, 56.63, -108.5, 87.98, 108.5, 87.98, 108.5, 56.63, 108.5, -56.61 ],
+					"hull": 8,
+					"edges": [ 0, 2, 2, 4, 8, 10, 14, 0, 4, 14, 4, 6, 6, 8, 10, 12, 12, 14, 6, 12 ],
+					"width": 217,
+					"height": 248
+				}
+			},
+			"low7": {
+				"normal/lowOrnament5": {
+					"name": "normal/lowOrnament8",
+					"type": "mesh",
+					"path": "normal/lowOrnament5",
+					"uvs": [ 1, 0.37483, 1, 0.62521, 1, 1, 0, 1, 0, 0.62337, 0, 0.37483, 0, 0, 1, 0 ],
+					"triangles": [ 5, 6, 7, 5, 7, 0, 4, 5, 0, 4, 0, 1, 3, 4, 1, 3, 1, 2 ],
+					"vertices": [ 9.34, 0.87, 9.34, -0.26, 9.34, -71.51, 90.34, -71.51, 90.34, 0.09, 90.34, 0.87, 90.34, 72.12, 9.34, 72.12 ],
+					"hull": 8,
+					"edges": [ 4, 6, 12, 14, 6, 8, 4, 2, 8, 2, 8, 10, 10, 12, 2, 0, 0, 14, 10, 0 ],
+					"width": 81,
+					"height": 213
+				}
+			},
+			"low8": {
+				"normal/lowOrnament5": {
+					"name": "normal/lowOrnament8",
+					"type": "mesh",
+					"path": "normal/lowOrnament5",
+					"uvs": [ 1, 0.37483, 1, 0.62521, 1, 1, 0, 1, 0, 0.62337, 0, 0.37483, 0, 0, 1, 0 ],
+					"triangles": [ 5, 6, 7, 5, 7, 0, 4, 5, 0, 4, 0, 1, 3, 4, 1, 3, 1, 2 ],
+					"vertices": [ -9.34, 0.87, -9.34, -0.26, -9.34, -71.51, -90.34, -71.51, -90.34, 0.09, -90.34, 0.87, -90.34, 72.12, -9.34, 72.12 ],
+					"hull": 8,
+					"edges": [ 4, 6, 12, 14, 6, 8, 4, 2, 8, 2, 8, 10, 10, 12, 2, 0, 0, 14, 10, 0 ],
+					"width": 81,
+					"height": 213
+				}
+			},
+			"royal": {
+				"royal": { "name": "normal/low4", "width": 110, "height": 178 }
+			}
+		}
+	},
+	{
+		"name": "low5/size2",
+		"attachments": {
+			"backplate": {
+				"backplate": { "name": "normal/lowBg2", "width": 217, "height": 616 }
+			},
+			"frame": {
+				"low1Frame": {
+					"name": "normal/low5Frame",
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0.87461, 0, 0.12641, 0, 0, 1, 0, 1, 0.12641, 1, 0.87461 ],
+					"triangles": [ 3, 4, 5, 3, 5, 6, 2, 3, 6, 2, 6, 7, 1, 2, 7, 1, 7, 0 ],
+					"vertices": [ 108.25, -307.91, -108.75, -307.91, -108.75, -276.82, -108.75, 276.64, -108.75, 307.99, 108.25, 307.99, 108.25, 276.64, 108.25, -276.82 ],
+					"hull": 8,
+					"edges": [ 0, 2, 2, 4, 8, 10, 14, 0, 4, 14, 4, 6, 6, 8, 10, 12, 12, 14, 6, 12 ],
+					"width": 217,
+					"height": 248
+				}
+			},
+			"low9": {
+				"normal/lowOrnament5": {
+					"name": "normal/lowOrnament7",
+					"type": "mesh",
+					"path": "normal/lowOrnament5",
+					"uvs": [ 1, 0.37296, 1, 0.61235, 1, 1, 0, 1, 0, 0.61419, 0, 0.37113, 0, 0, 1, 0 ],
+					"triangles": [ 5, 6, 7, 5, 7, 0, 4, 5, 0, 1, 4, 0, 2, 3, 4, 2, 4, 1 ],
+					"vertices": [ -9.34, 212.32, -9.34, -207.59, -9.34, -290.16, -90.34, -290.16, -90.34, -207.99, -90.34, 212.71, -90.34, 291.76, -9.34, 291.76 ],
+					"hull": 8,
+					"edges": [ 4, 6, 12, 14, 6, 8, 4, 2, 8, 2, 8, 10, 10, 12, 2, 0, 0, 14, 10, 0 ],
+					"width": 81,
+					"height": 213
+				}
+			},
+			"low10": {
+				"normal/lowOrnament5": {
+					"name": "normal/lowOrnament7",
+					"type": "mesh",
+					"path": "normal/lowOrnament5",
+					"uvs": [ 1, 0.37296, 1, 0.61235, 1, 1, 0, 1, 0, 0.61419, 0, 0.37113, 0, 0, 1, 0 ],
+					"triangles": [ 5, 6, 7, 5, 7, 0, 4, 5, 0, 1, 4, 0, 2, 3, 4, 2, 4, 1 ],
+					"vertices": [ 9.34, 212.32, 9.34, -207.59, 9.34, -290.16, 90.34, -290.16, 90.34, -207.99, 90.34, 212.71, 90.34, 291.76, 9.34, 291.76 ],
+					"hull": 8,
+					"edges": [ 4, 6, 12, 14, 6, 8, 4, 2, 8, 2, 8, 10, 10, 12, 2, 0, 0, 14, 10, 0 ],
+					"width": 81,
+					"height": 213
+				}
+			},
+			"royal": {
+				"royal": { "name": "normal/low5", "width": 168, "height": 160 }
+			}
+		}
+	},
+	{
+		"name": "low5/size3",
+		"attachments": {
+			"backplate": {
+				"backplate": { "name": "normal/lowBg3", "width": 218, "height": 411 }
+			},
+			"frame": {
+				"low1Frame": {
+					"name": "normal/low5Frame",
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0.87461, 0, 0.12641, 0, 0, 1, 0, 1, 0.12641, 1, 0.87461 ],
+					"triangles": [ 3, 4, 5, 3, 5, 6, 2, 3, 6, 2, 6, 7, 1, 2, 7, 1, 7, 0 ],
+					"vertices": [ 108.5, -205.42, -108.5, -205.42, -108.5, -174.33, -108.5, 174.24, -108.5, 205.6, 108.5, 205.6, 108.5, 174.24, 108.5, -174.33 ],
+					"hull": 8,
+					"edges": [ 0, 2, 2, 4, 8, 10, 14, 0, 4, 14, 4, 6, 6, 8, 10, 12, 12, 14, 6, 12 ],
+					"width": 217,
+					"height": 248
+				}
+			},
+			"low9": {
+				"normal/lowOrnament5": {
+					"name": "normal/lowOrnament6",
+					"type": "mesh",
+					"path": "normal/lowOrnament5",
+					"uvs": [ 1, 0.37296, 1, 0.61235, 1, 1, 0, 1, 0, 0.61419, 0, 0.37113, 0, 0, 1, 0 ],
+					"triangles": [ 5, 6, 7, 5, 7, 0, 4, 5, 0, 1, 4, 0, 2, 3, 4, 2, 4, 1 ],
+					"vertices": [ -9.34, 108.85, -9.34, -106.24, -9.34, -188.81, -90.34, -188.81, -90.34, -106.63, -90.34, 109.24, -90.34, 188.29, -9.34, 188.29 ],
+					"hull": 8,
+					"edges": [ 4, 6, 12, 14, 6, 8, 4, 2, 8, 2, 8, 10, 10, 12, 2, 0, 0, 14, 10, 0 ],
+					"width": 81,
+					"height": 213
+				}
+			},
+			"low10": {
+				"normal/lowOrnament5": {
+					"name": "normal/lowOrnament6",
+					"type": "mesh",
+					"path": "normal/lowOrnament5",
+					"uvs": [ 1, 0.37296, 1, 0.61235, 1, 1, 0, 1, 0, 0.61419, 0, 0.37113, 0, 0, 1, 0 ],
+					"triangles": [ 5, 6, 7, 5, 7, 0, 4, 5, 0, 1, 4, 0, 2, 3, 4, 2, 4, 1 ],
+					"vertices": [ 9.34, 108.85, 9.34, -106.24, 9.34, -188.81, 90.34, -188.81, 90.34, -106.63, 90.34, 109.24, 90.34, 188.29, 9.34, 188.29 ],
+					"hull": 8,
+					"edges": [ 4, 6, 12, 14, 6, 8, 4, 2, 8, 2, 8, 10, 10, 12, 2, 0, 0, 14, 10, 0 ],
+					"width": 81,
+					"height": 213
+				}
+			},
+			"royal": {
+				"royal": { "name": "normal/low5", "width": 168, "height": 160 }
+			}
+		}
+	},
+	{
+		"name": "low5/size4",
+		"attachments": {
+			"backplate": {
+				"backplate": { "name": "normal/lowBg4", "width": 217, "height": 308 }
+			},
+			"frame": {
+				"low1Frame": {
+					"name": "normal/low5Frame",
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0.87461, 0, 0.12641, 0, 0, 1, 0, 1, 0.12641, 1, 0.87461 ],
+					"triangles": [ 3, 4, 5, 3, 5, 6, 2, 3, 6, 2, 6, 7, 1, 2, 7, 1, 7, 0 ],
+					"vertices": [ 108.5, -154.04, -108.5, -154.04, -108.5, -122.94, -108.5, 122.66, -108.5, 154.01, 108.5, 154.01, 108.5, 122.66, 108.5, -122.94 ],
+					"hull": 8,
+					"edges": [ 0, 2, 2, 4, 8, 10, 14, 0, 4, 14, 4, 6, 6, 8, 10, 12, 12, 14, 6, 12 ],
+					"width": 217,
+					"height": 248
+				}
+			},
+			"low9": {
+				"normal/lowOrnament5": {
+					"name": "normal/lowOrnament6",
+					"type": "mesh",
+					"path": "normal/lowOrnament5",
+					"uvs": [ 1, 0.37296, 1, 0.61235, 1, 1, 0, 1, 0, 0.61419, 0, 0.37113, 0, 0, 1, 0 ],
+					"triangles": [ 5, 6, 7, 5, 7, 0, 4, 5, 0, 1, 4, 0, 2, 3, 4, 2, 4, 1 ],
+					"vertices": [ -9.34, 58.91, -9.34, -53.52, -9.34, -136.09, -90.34, -136.09, -90.34, -53.91, -90.34, 59.3, -90.34, 138.35, -9.34, 138.35 ],
+					"hull": 8,
+					"edges": [ 4, 6, 12, 14, 6, 8, 4, 2, 8, 2, 8, 10, 10, 12, 2, 0, 0, 14, 10, 0 ],
+					"width": 81,
+					"height": 213
+				}
+			},
+			"low10": {
+				"normal/lowOrnament5": {
+					"name": "normal/lowOrnament6",
+					"type": "mesh",
+					"path": "normal/lowOrnament5",
+					"uvs": [ 1, 0.37296, 1, 0.61235, 1, 1, 0, 1, 0, 0.61419, 0, 0.37113, 0, 0, 1, 0 ],
+					"triangles": [ 5, 6, 7, 5, 7, 0, 4, 5, 0, 1, 4, 0, 2, 3, 4, 2, 4, 1 ],
+					"vertices": [ 9.34, 58.91, 9.34, -53.52, 9.34, -136.09, 90.34, -136.09, 90.34, -53.91, 90.34, 59.3, 90.34, 138.35, 9.34, 138.35 ],
+					"hull": 8,
+					"edges": [ 4, 6, 12, 14, 6, 8, 4, 2, 8, 2, 8, 10, 10, 12, 2, 0, 0, 14, 10, 0 ],
+					"width": 81,
+					"height": 213
+				}
+			},
+			"royal": {
+				"royal": { "name": "normal/low5", "width": 168, "height": 160 }
+			}
+		}
+	},
+	{
+		"name": "low5/size5",
+		"attachments": {
+			"backplate": {
+				"backplate": { "name": "normal/lowBg5", "width": 216, "height": 248 }
+			},
+			"frame": {
+				"low1Frame": { "name": "normal/low5Frame", "width": 217, "height": 248 }
+			},
+			"low9": {
+				"normal/lowOrnament5": { "name": "normal/lowOrnament6", "path": "normal/lowOrnament5", "x": -49.84, "width": 81, "height": 213 }
+			},
+			"low10": {
+				"normal/lowOrnament5": { "name": "normal/lowOrnament6", "path": "normal/lowOrnament5", "x": 49.84, "scaleX": -1, "width": 81, "height": 213 }
+			},
+			"royal": {
+				"royal": { "name": "normal/low5", "width": 168, "height": 160 }
+			}
+		}
+	},
+	{
+		"name": "low5/size6",
+		"attachments": {
+			"backplate": {
+				"backplate": { "name": "normal/lowBg6", "width": 218, "height": 206 }
+			},
+			"frame": {
+				"low1Frame": {
+					"name": "normal/low5Frame",
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0.87461, 0, 0.12641, 0, 0, 1, 0, 1, 0.12641, 1, 0.87461 ],
+					"triangles": [ 3, 4, 5, 3, 5, 6, 2, 3, 6, 2, 6, 7, 1, 2, 7, 1, 7, 0 ],
+					"vertices": [ 108.5, -102.94, -108.5, -102.94, -108.5, -71.84, -108.5, 71.55, -108.5, 102.9, 108.5, 102.9, 108.5, 71.55, 108.5, -71.84 ],
+					"hull": 8,
+					"edges": [ 0, 2, 2, 4, 8, 10, 14, 0, 4, 14, 4, 6, 6, 8, 10, 12, 12, 14, 6, 12 ],
+					"width": 217,
+					"height": 248
+				}
+			},
+			"low9": {
+				"normal/lowOrnament5": {
+					"name": "normal/lowOrnament8",
+					"type": "mesh",
+					"path": "normal/lowOrnament5",
+					"uvs": [ 1, 0.37296, 1, 0.61235, 1, 1, 0, 1, 0, 0.61419, 0, 0.37113, 0, 0, 1, 0 ],
+					"triangles": [ 5, 6, 7, 5, 7, 0, 4, 5, 0, 1, 4, 0, 2, 3, 4, 2, 4, 1 ],
+					"vertices": [ -9.34, 6.55, -9.34, -2.97, -9.34, -85.54, -90.34, -85.54, -90.34, -3.36, -90.34, 6.94, -90.34, 85.99, -9.34, 85.99 ],
+					"hull": 8,
+					"edges": [ 4, 6, 12, 14, 6, 8, 4, 2, 8, 2, 8, 10, 10, 12, 2, 0, 0, 14, 10, 0 ],
+					"width": 81,
+					"height": 213
+				}
+			},
+			"low10": {
+				"normal/lowOrnament5": {
+					"name": "normal/lowOrnament8",
+					"type": "mesh",
+					"path": "normal/lowOrnament5",
+					"uvs": [ 1, 0.37296, 1, 0.61235, 1, 1, 0, 1, 0, 0.61419, 0, 0.37113, 0, 0, 1, 0 ],
+					"triangles": [ 5, 6, 7, 5, 7, 0, 4, 5, 0, 1, 4, 0, 2, 3, 4, 2, 4, 1 ],
+					"vertices": [ 9.34, 6.55, 9.34, -2.97, 9.34, -85.54, 90.34, -85.54, 90.34, -3.36, 90.34, 6.94, 90.34, 85.99, 9.34, 85.99 ],
+					"hull": 8,
+					"edges": [ 4, 6, 12, 14, 6, 8, 4, 2, 8, 2, 8, 10, 10, 12, 2, 0, 0, 14, 10, 0 ],
+					"width": 81,
+					"height": 213
+				}
+			},
+			"royal": {
+				"royal": { "name": "normal/low5", "width": 168, "height": 160 }
+			}
+		}
+	},
+	{
+		"name": "low5/size7",
+		"attachments": {
+			"backplate": {
+				"backplate": { "name": "normal/lowBg7", "width": 217, "height": 176 }
+			},
+			"frame": {
+				"low1Frame": {
+					"name": "normal/low5Frame",
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0.87461, 0, 0.12641, 0, 0, 1, 0, 1, 0.12641, 1, 0.87461 ],
+					"triangles": [ 3, 4, 5, 3, 5, 6, 2, 3, 6, 2, 6, 7, 1, 2, 7, 1, 7, 0 ],
+					"vertices": [ 108.5, -87.71, -108.5, -87.71, -108.5, -56.61, -108.5, 56.63, -108.5, 87.98, 108.5, 87.98, 108.5, 56.63, 108.5, -56.61 ],
+					"hull": 8,
+					"edges": [ 0, 2, 2, 4, 8, 10, 14, 0, 4, 14, 4, 6, 6, 8, 10, 12, 12, 14, 6, 12 ],
+					"width": 217,
+					"height": 248
+				}
+			},
+			"low9": {
+				"normal/lowOrnament5": {
+					"name": "normal/lowOrnament8",
+					"type": "mesh",
+					"path": "normal/lowOrnament5",
+					"uvs": [ 1, 0.37296, 1, 0.61235, 1, 1, 0, 1, 0, 0.61419, 0, 0.37113, 0, 0, 1, 0 ],
+					"triangles": [ 5, 6, 7, 5, 7, 0, 4, 5, 0, 1, 4, 0, 2, 3, 4, 2, 4, 1 ],
+					"vertices": [ -9.34, -0.11, -9.34, -0.04, -9.34, -72.8, -90.34, -72.8, -90.34, -0.38, -90.34, 0.24, -90.34, 69.9, -9.34, 69.9 ],
+					"hull": 8,
+					"edges": [ 4, 6, 12, 14, 6, 8, 4, 2, 8, 2, 8, 10, 10, 12, 2, 0, 0, 14, 10, 0 ],
+					"width": 81,
+					"height": 213
+				}
+			},
+			"low10": {
+				"normal/lowOrnament5": {
+					"name": "normal/lowOrnament8",
+					"type": "mesh",
+					"path": "normal/lowOrnament5",
+					"uvs": [ 1, 0.37296, 1, 0.61235, 1, 1, 0, 1, 0, 0.61419, 0, 0.37113, 0, 0, 1, 0 ],
+					"triangles": [ 5, 6, 7, 5, 7, 0, 4, 5, 0, 1, 4, 0, 2, 3, 4, 2, 4, 1 ],
+					"vertices": [ 9.34, -0.11, 9.34, -0.04, 9.34, -72.8, 90.34, -72.8, 90.34, -0.38, 90.34, 0.24, 90.34, 69.9, 9.34, 69.9 ],
+					"hull": 8,
+					"edges": [ 4, 6, 12, 14, 6, 8, 4, 2, 8, 2, 8, 10, 10, 12, 2, 0, 0, 14, 10, 0 ],
+					"width": 81,
+					"height": 213
+				}
+			},
+			"royal": {
+				"royal": { "name": "normal/low5", "width": 168, "height": 160 }
+			}
+		}
+	},
+	{
+		"name": "low6/size2",
+		"attachments": {
+			"backplate": {
+				"backplate": { "name": "normal/lowBg2", "width": 217, "height": 616 }
+			},
+			"frame": {
+				"low1Frame": {
+					"name": "normal/low6Frame",
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0.87461, 0, 0.12641, 0, 0, 1, 0, 1, 0.12641, 1, 0.87461 ],
+					"triangles": [ 3, 4, 5, 3, 5, 6, 2, 3, 6, 2, 6, 7, 1, 2, 7, 1, 7, 0 ],
+					"vertices": [ 108.25, -307.91, -108.75, -307.91, -108.75, -276.82, -108.75, 276.64, -108.75, 307.99, 108.25, 307.99, 108.25, 276.64, 108.25, -276.82 ],
+					"hull": 8,
+					"edges": [ 0, 2, 2, 4, 8, 10, 14, 0, 4, 14, 4, 6, 6, 8, 10, 12, 12, 14, 6, 12 ],
+					"width": 217,
+					"height": 248
+				}
+			},
+			"low11": {
+				"normal/lowOrnament5": {
+					"name": "normal/lowOrnament7",
+					"type": "mesh",
+					"path": "normal/lowOrnament5",
+					"uvs": [ 1, 0.35354, 1, 0.63222, 1, 1, 0, 1, 0, 0.63222, 0, 0.35126, 0, 0, 1, 0 ],
+					"triangles": [ 5, 6, 7, 5, 7, 0, 4, 5, 0, 4, 0, 1, 3, 4, 1, 3, 1, 2 ],
+					"vertices": [ -9.34, 216.55, -9.34, -212.58, -9.34, -290.92, -90.34, -290.92, -90.34, -212.58, -90.34, 217.03, -90.34, 291.85, -9.34, 291.85 ],
+					"hull": 8,
+					"edges": [ 4, 6, 12, 14, 6, 8, 4, 2, 8, 2, 8, 10, 10, 12, 2, 0, 0, 14, 10, 0 ],
+					"width": 81,
+					"height": 213
+				}
+			},
+			"low12": {
+				"normal/lowOrnament5": {
+					"name": "normal/lowOrnament7",
+					"type": "mesh",
+					"path": "normal/lowOrnament5",
+					"uvs": [ 1, 0.35354, 1, 0.63222, 1, 1, 0, 1, 0, 0.63222, 0, 0.35126, 0, 0, 1, 0 ],
+					"triangles": [ 5, 6, 7, 5, 7, 0, 4, 5, 0, 4, 0, 1, 3, 4, 1, 3, 1, 2 ],
+					"vertices": [ 9.34, 216.55, 9.34, -212.58, 9.34, -290.92, 90.34, -290.92, 90.34, -212.58, 90.34, 217.03, 90.34, 291.85, 9.34, 291.85 ],
+					"hull": 8,
+					"edges": [ 4, 6, 12, 14, 6, 8, 4, 2, 8, 2, 8, 10, 10, 12, 2, 0, 0, 14, 10, 0 ],
+					"width": 81,
+					"height": 213
+				}
+			},
+			"royal": {
+				"royal": { "name": "normal/low6", "width": 114, "height": 157 }
+			}
+		}
+	},
+	{
+		"name": "low6/size3",
+		"attachments": {
+			"backplate": {
+				"backplate": { "name": "normal/lowBg3", "width": 218, "height": 411 }
+			},
+			"frame": {
+				"low1Frame": {
+					"name": "normal/low6Frame",
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0.87461, 0, 0.12641, 0, 0, 1, 0, 1, 0.12641, 1, 0.87461 ],
+					"triangles": [ 3, 4, 5, 3, 5, 6, 2, 3, 6, 2, 6, 7, 1, 2, 7, 1, 7, 0 ],
+					"vertices": [ 108.5, -205.42, -108.5, -205.42, -108.5, -174.33, -108.5, 174.24, -108.5, 205.6, 108.5, 205.6, 108.5, 174.24, 108.5, -174.33 ],
+					"hull": 8,
+					"edges": [ 0, 2, 2, 4, 8, 10, 14, 0, 4, 14, 4, 6, 6, 8, 10, 12, 12, 14, 6, 12 ],
+					"width": 217,
+					"height": 248
+				}
+			},
+			"low11": {
+				"normal/lowOrnament5": {
+					"name": "normal/lowOrnament6",
+					"type": "mesh",
+					"path": "normal/lowOrnament5",
+					"uvs": [ 1, 0.35354, 1, 0.63222, 1, 1, 0, 1, 0, 0.63222, 0, 0.35126, 0, 0, 1, 0 ],
+					"triangles": [ 5, 6, 7, 5, 7, 0, 4, 5, 0, 4, 0, 1, 3, 4, 1, 3, 1, 2 ],
+					"vertices": [ -9.34, 113.76, -9.34, -109.92, -9.34, -188.26, -90.34, -188.26, -90.34, -109.92, -90.34, 114.25, -90.34, 189.07, -9.34, 189.07 ],
+					"hull": 8,
+					"edges": [ 4, 6, 12, 14, 6, 8, 4, 2, 8, 2, 8, 10, 10, 12, 2, 0, 0, 14, 10, 0 ],
+					"width": 81,
+					"height": 213
+				}
+			},
+			"low12": {
+				"normal/lowOrnament5": {
+					"name": "normal/lowOrnament6",
+					"type": "mesh",
+					"path": "normal/lowOrnament5",
+					"uvs": [ 1, 0.35354, 1, 0.63222, 1, 1, 0, 1, 0, 0.63222, 0, 0.35126, 0, 0, 1, 0 ],
+					"triangles": [ 5, 6, 7, 5, 7, 0, 4, 5, 0, 4, 0, 1, 3, 4, 1, 3, 1, 2 ],
+					"vertices": [ 9.34, 113.76, 9.34, -109.92, 9.34, -188.26, 90.34, -188.26, 90.34, -109.92, 90.34, 114.25, 90.34, 189.07, 9.34, 189.07 ],
+					"hull": 8,
+					"edges": [ 4, 6, 12, 14, 6, 8, 4, 2, 8, 2, 8, 10, 10, 12, 2, 0, 0, 14, 10, 0 ],
+					"width": 81,
+					"height": 213
+				}
+			},
+			"royal": {
+				"royal": { "name": "normal/low6", "width": 114, "height": 157 }
+			}
+		}
+	},
+	{
+		"name": "low6/size4",
+		"attachments": {
+			"backplate": {
+				"backplate": { "name": "normal/lowBg4", "width": 217, "height": 308 }
+			},
+			"frame": {
+				"low1Frame": {
+					"name": "normal/low6Frame",
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0.87461, 0, 0.12641, 0, 0, 1, 0, 1, 0.12641, 1, 0.87461 ],
+					"triangles": [ 3, 4, 5, 3, 5, 6, 2, 3, 6, 2, 6, 7, 1, 2, 7, 1, 7, 0 ],
+					"vertices": [ 108.5, -154.04, -108.5, -154.04, -108.5, -122.94, -108.5, 122.66, -108.5, 154.01, 108.5, 154.01, 108.5, 122.66, 108.5, -122.94 ],
+					"hull": 8,
+					"edges": [ 0, 2, 2, 4, 8, 10, 14, 0, 4, 14, 4, 6, 6, 8, 10, 12, 12, 14, 6, 12 ],
+					"width": 217,
+					"height": 248
+				}
+			},
+			"low11": {
+				"normal/lowOrnament5": {
+					"name": "normal/lowOrnament6",
+					"type": "mesh",
+					"path": "normal/lowOrnament5",
+					"uvs": [ 1, 0.35354, 1, 0.63222, 1, 1, 0, 1, 0, 0.63222, 0, 0.35126, 0, 0, 1, 0 ],
+					"triangles": [ 5, 6, 7, 5, 7, 0, 4, 5, 0, 4, 0, 1, 3, 4, 1, 3, 1, 2 ],
+					"vertices": [ -9.34, 60.65, -9.34, -57.27, -9.34, -135.61, -90.34, -135.61, -90.34, -57.27, -90.34, 61.14, -90.34, 135.96, -9.34, 135.96 ],
+					"hull": 8,
+					"edges": [ 4, 6, 12, 14, 6, 8, 4, 2, 8, 2, 8, 10, 10, 12, 2, 0, 0, 14, 10, 0 ],
+					"width": 81,
+					"height": 213
+				}
+			},
+			"low12": {
+				"normal/lowOrnament5": {
+					"name": "normal/lowOrnament6",
+					"type": "mesh",
+					"path": "normal/lowOrnament5",
+					"uvs": [ 1, 0.35354, 1, 0.63222, 1, 1, 0, 1, 0, 0.63222, 0, 0.35126, 0, 0, 1, 0 ],
+					"triangles": [ 5, 6, 7, 5, 7, 0, 4, 5, 0, 4, 0, 1, 3, 4, 1, 3, 1, 2 ],
+					"vertices": [ 9.34, 60.65, 9.34, -57.27, 9.34, -135.61, 90.34, -135.61, 90.34, -57.27, 90.34, 61.14, 90.34, 135.96, 9.34, 135.96 ],
+					"hull": 8,
+					"edges": [ 4, 6, 12, 14, 6, 8, 4, 2, 8, 2, 8, 10, 10, 12, 2, 0, 0, 14, 10, 0 ],
+					"width": 81,
+					"height": 213
+				}
+			},
+			"royal": {
+				"royal": { "name": "normal/low6", "width": 114, "height": 157 }
+			}
+		}
+	},
+	{
+		"name": "low6/size5",
+		"attachments": {
+			"backplate": {
+				"backplate": { "name": "normal/lowBg5", "width": 216, "height": 248 }
+			},
+			"frame": {
+				"low1Frame": { "name": "normal/low6Frame", "width": 217, "height": 248 }
+			},
+			"low11": {
+				"normal/lowOrnament5": { "name": "normal/lowOrnament6", "path": "normal/lowOrnament5", "x": -49.84, "width": 81, "height": 213 }
+			},
+			"low12": {
+				"normal/lowOrnament5": { "name": "normal/lowOrnament6", "path": "normal/lowOrnament5", "x": 49.84, "scaleX": -1, "width": 81, "height": 213 }
+			},
+			"royal": {
+				"royal": { "name": "normal/low6", "width": 114, "height": 157 }
+			}
+		}
+	},
+	{
+		"name": "low6/size6",
+		"attachments": {
+			"backplate": {
+				"backplate": { "name": "normal/lowBg6", "width": 218, "height": 206 }
+			},
+			"frame": {
+				"low1Frame": {
+					"name": "normal/low6Frame",
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0.87461, 0, 0.12641, 0, 0, 1, 0, 1, 0.12641, 1, 0.87461 ],
+					"triangles": [ 3, 4, 5, 3, 5, 6, 2, 3, 6, 2, 6, 7, 1, 2, 7, 1, 7, 0 ],
+					"vertices": [ 108.5, -102.94, -108.5, -102.94, -108.5, -71.84, -108.5, 71.55, -108.5, 102.9, 108.5, 102.9, 108.5, 71.55, 108.5, -71.84 ],
+					"hull": 8,
+					"edges": [ 0, 2, 2, 4, 8, 10, 14, 0, 4, 14, 4, 6, 6, 8, 10, 12, 12, 14, 6, 12 ],
+					"width": 217,
+					"height": 248
+				}
+			},
+			"low11": {
+				"normal/lowOrnament5": {
+					"name": "normal/lowOrnament8",
+					"type": "mesh",
+					"path": "normal/lowOrnament5",
+					"uvs": [ 1, 0.35354, 1, 0.63222, 1, 1, 0, 1, 0, 0.63222, 0, 0.35126, 0, 0, 1, 0 ],
+					"triangles": [ 5, 6, 7, 5, 7, 0, 4, 5, 0, 4, 0, 1, 3, 4, 1, 3, 1, 2 ],
+					"vertices": [ -9.34, 10.15, -9.34, -7.66, -9.34, -86, -90.34, -86, -90.34, -7.66, -90.34, 10.63, -90.34, 85.45, -9.34, 85.45 ],
+					"hull": 8,
+					"edges": [ 4, 6, 12, 14, 6, 8, 4, 2, 8, 2, 8, 10, 10, 12, 2, 0, 0, 14, 10, 0 ],
+					"width": 81,
+					"height": 213
+				}
+			},
+			"low12": {
+				"normal/lowOrnament5": {
+					"name": "normal/lowOrnament8",
+					"type": "mesh",
+					"path": "normal/lowOrnament5",
+					"uvs": [ 1, 0.35354, 1, 0.63222, 1, 1, 0, 1, 0, 0.63222, 0, 0.35126, 0, 0, 1, 0 ],
+					"triangles": [ 5, 6, 7, 5, 7, 0, 4, 5, 0, 4, 0, 1, 3, 4, 1, 3, 1, 2 ],
+					"vertices": [ 9.34, 10.15, 9.34, -7.66, 9.34, -86, 90.34, -86, 90.34, -7.66, 90.34, 10.63, 90.34, 85.45, 9.34, 85.45 ],
+					"hull": 8,
+					"edges": [ 4, 6, 12, 14, 6, 8, 4, 2, 8, 2, 8, 10, 10, 12, 2, 0, 0, 14, 10, 0 ],
+					"width": 81,
+					"height": 213
+				}
+			},
+			"royal": {
+				"royal": { "name": "normal/low6", "width": 114, "height": 157 }
+			}
+		}
+	},
+	{
+		"name": "low6/size7",
+		"attachments": {
+			"backplate": {
+				"backplate": { "name": "normal/lowBg7", "width": 217, "height": 176 }
+			},
+			"frame": {
+				"low1Frame": {
+					"name": "normal/low6Frame",
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0.87461, 0, 0.12641, 0, 0, 1, 0, 1, 0.12641, 1, 0.87461 ],
+					"triangles": [ 3, 4, 5, 3, 5, 6, 2, 3, 6, 2, 6, 7, 1, 2, 7, 1, 7, 0 ],
+					"vertices": [ 108.5, -87.71, -108.5, -87.71, -108.5, -56.61, -108.5, 56.63, -108.5, 87.98, 108.5, 87.98, 108.5, 56.63, 108.5, -56.61 ],
+					"hull": 8,
+					"edges": [ 0, 2, 2, 4, 8, 10, 14, 0, 4, 14, 4, 6, 6, 8, 10, 12, 12, 14, 6, 12 ],
+					"width": 217,
+					"height": 248
+				}
+			},
+			"low11": {
+				"normal/lowOrnament5": {
+					"name": "normal/lowOrnament8",
+					"type": "mesh",
+					"path": "normal/lowOrnament5",
+					"uvs": [ 1, 0.35354, 1, 0.63222, 1, 1, 0, 1, 0, 0.63222, 0, 0.35126, 0, 0, 1, 0 ],
+					"triangles": [ 5, 6, 7, 5, 7, 0, 4, 5, 0, 4, 0, 1, 3, 4, 1, 3, 1, 2 ],
+					"vertices": [ -9.34, 2.43, -9.34, 2.08, -9.34, -70.58, -90.34, -70.58, -90.34, 2.08, -90.34, 2.88, -90.34, 72.26, -9.34, 72.26 ],
+					"hull": 8,
+					"edges": [ 4, 6, 12, 14, 6, 8, 4, 2, 8, 2, 8, 10, 10, 12, 2, 0, 0, 14, 10, 0 ],
+					"width": 81,
+					"height": 213
+				}
+			},
+			"low12": {
+				"normal/lowOrnament5": {
+					"name": "normal/lowOrnament8",
+					"type": "mesh",
+					"path": "normal/lowOrnament5",
+					"uvs": [ 1, 0.35354, 1, 0.63222, 1, 1, 0, 1, 0, 0.63222, 0, 0.35126, 0, 0, 1, 0 ],
+					"triangles": [ 5, 6, 7, 5, 7, 0, 4, 5, 0, 4, 0, 1, 3, 4, 1, 3, 1, 2 ],
+					"vertices": [ 9.34, 2.43, 9.34, 2.08, 9.34, -70.58, 90.34, -70.58, 90.34, 2.08, 90.34, 2.88, 90.34, 72.26, 9.34, 72.26 ],
+					"hull": 8,
+					"edges": [ 4, 6, 12, 14, 6, 8, 4, 2, 8, 2, 8, 10, 10, 12, 2, 0, 0, 14, 10, 0 ],
+					"width": 81,
+					"height": 213
+				}
+			},
+			"royal": {
+				"royal": { "name": "normal/low6", "width": 114, "height": 157 }
+			}
+		}
+	}
+],
+"events": {
+	"shakeTrigger": {}
+},
+"animations": {
+	"general/disable": {
+		"slots": {
+			"backplate": {
+				"rgb": [
+					{ "color": "caa8d5" }
+				],
+				"alpha": [
+					{ "value": 0.65489995 }
+				]
+			},
+			"frame": {
+				"rgb": [
+					{ "color": "caa8d5" }
+				],
+				"alpha": [
+					{ "value": 0.653 }
+				]
+			},
+			"low": {
+				"rgba": [
+					{ "color": "d2d70031" }
+				]
+			},
+			"low2": {
+				"rgba": [
+					{ "color": "d2d70031" }
+				]
+			},
+			"low3": {
+				"rgba": [
+					{ "color": "c02e0031" }
+				]
+			},
+			"low4": {
+				"rgba": [
+					{ "color": "c02e0031" }
+				]
+			},
+			"low5": {
+				"rgba": [
+					{ "color": "b9008631" }
+				]
+			},
+			"low6": {
+				"rgba": [
+					{ "color": "b9008631" }
+				]
+			},
+			"low7": {
+				"rgba": [
+					{ "color": "00b90931" }
+				]
+			},
+			"low8": {
+				"rgba": [
+					{ "color": "00b90931" }
+				]
+			},
+			"low9": {
+				"rgba": [
+					{ "color": "0092bd31" }
+				]
+			},
+			"low10": {
+				"rgba": [
+					{ "color": "0092bd31" }
+				]
+			},
+			"low11": {
+				"rgba": [
+					{ "color": "8e00d031" }
+				]
+			},
+			"low12": {
+				"rgba": [
+					{ "color": "8e00d031" }
+				]
+			},
+			"royal": {
+				"rgb": [
+					{ "color": "caa8d5" }
+				],
+				"alpha": [
+					{ "value": 0.65489995 }
+				]
+			}
+		}
+	},
+	"general/explode": {
+		"slots": {
+			"backplate": {
+				"attachment": [
+					{ "time": 0.5667 }
+				]
+			},
+			"frame": {
+				"attachment": [
+					{ "time": 0.5667 }
+				]
+			},
+			"low": {
+				"attachment": [
+					{ "time": 0.5667 }
+				]
+			},
+			"low2": {
+				"attachment": [
+					{ "time": 0.5667 }
+				]
+			},
+			"low3": {
+				"attachment": [
+					{ "time": 0.5667 }
+				]
+			},
+			"low4": {
+				"attachment": [
+					{ "time": 0.5667 }
+				]
+			},
+			"low5": {
+				"attachment": [
+					{ "time": 0.5667 }
+				]
+			},
+			"low6": {
+				"attachment": [
+					{ "time": 0.5667 }
+				]
+			},
+			"low7": {
+				"attachment": [
+					{ "time": 0.5667 }
+				]
+			},
+			"low8": {
+				"attachment": [
+					{ "time": 0.5667 }
+				]
+			},
+			"low9": {
+				"attachment": [
+					{ "time": 0.5667 }
+				]
+			},
+			"low10": {
+				"attachment": [
+					{ "time": 0.5667 }
+				]
+			},
+			"low11": {
+				"attachment": [
+					{ "time": 0.5667 }
+				]
+			},
+			"low12": {
+				"attachment": [
+					{ "time": 0.5667 }
+				]
+			},
+			"royal": {
+				"attachment": [
+					{ "time": 0.5667 }
+				]
+			}
+		}
+	},
+	"general/idle": {},
+	"general/land": {
+		"bones": {
+			"low": {
+				"translate": [
+					{
+						"curve": [ 0.033, 0, 0.067, 0, 0.033, 0, 0.067, 7 ]
+					},
+					{
+						"time": 0.1,
+						"y": 7,
+						"curve": [ 0.156, 0, 0.211, 0, 0.156, 7, 0.211, 0 ]
+					},
+					{ "time": 0.2667 }
+				]
+			}
+		}
+	},
+	"general/shake": {
+		"bones": {
+			"symbolSize": {
+				"rotate": [
+					{},
+					{ "time": 0.0333, "value": 3 },
+					{ "time": 0.0667, "value": -3 },
+					{ "time": 0.1, "value": 2 },
+					{ "time": 0.1333, "value": -2 },
+					{ "time": 0.1667, "value": 1 },
+					{ "time": 0.2 }
+				]
+			}
+		}
+	},
+	"wins/initialWin": {
+		"bones": {
+			"low": {
+				"scale": [
+					{
+						"curve": [ 0.033, 1, 0.067, 1.05, 0.033, 1, 0.067, 1.05 ]
+					},
+					{
+						"time": 0.1,
+						"x": 1.05,
+						"y": 1.05,
+						"curve": [ 0.178, 1.05, 0.256, 1, 0.178, 1.05, 0.256, 1 ]
+					},
+					{ "time": 0.3333 }
+				]
+			}
+		}
+	},
+	"wins/win": {
+		"slots": {
+			"backplate": {
+				"attachment": [
+					{ "time": 0.6 },
+					{ "time": 1.0667 }
+				]
+			},
+			"frame": {
+				"attachment": [
+					{ "time": 0.6 }
+				]
+			},
+			"low": {
+				"attachment": [
+					{ "time": 0.6 }
+				]
+			},
+			"low2": {
+				"attachment": [
+					{ "time": 0.6 }
+				]
+			},
+			"low3": {
+				"attachment": [
+					{ "time": 0.6 }
+				]
+			},
+			"low4": {
+				"attachment": [
+					{ "time": 0.6 }
+				]
+			},
+			"low5": {
+				"attachment": [
+					{ "time": 0.6 }
+				]
+			},
+			"low6": {
+				"attachment": [
+					{ "time": 0.6 }
+				]
+			},
+			"low7": {
+				"attachment": [
+					{ "time": 0.6 }
+				]
+			},
+			"low8": {
+				"attachment": [
+					{ "time": 0.6 }
+				]
+			},
+			"low9": {
+				"attachment": [
+					{ "time": 0.6 }
+				]
+			},
+			"low10": {
+				"attachment": [
+					{ "time": 0.6 }
+				]
+			},
+			"low11": {
+				"attachment": [
+					{ "time": 0.6 }
+				]
+			},
+			"low12": {
+				"attachment": [
+					{ "time": 0.6 }
+				]
+			},
+			"royal": {
+				"attachment": [
+					{ "time": 0.6 }
+				]
+			}
+		},
+		"bones": {
+			"low": {
+				"rotate": [
+					{
+						"curve": [ 0.022, 0.53, 0.044, 1.04 ]
+					},
+					{
+						"time": 0.0667,
+						"value": 1.04,
+						"curve": [ 0.089, 1.04, 0.111, 0.55 ]
+					},
+					{
+						"time": 0.1333,
+						"value": 0.55,
+						"curve": [ 0.156, 0.55, 0.178, 1.69 ]
+					},
+					{
+						"time": 0.2,
+						"value": 1.69,
+						"curve": [ 0.222, 1.69, 0.244, 0.21 ]
+					},
+					{
+						"time": 0.2667,
+						"value": 0.21,
+						"curve": [ 0.289, 0.21, 0.311, 0.74 ]
+					},
+					{
+						"time": 0.3333,
+						"value": 0.74,
+						"curve": [ 0.356, 0.74, 0.378, -1.23 ]
+					},
+					{
+						"time": 0.4,
+						"value": -1.23,
+						"curve": [ 0.422, -1.23, 0.444, 0.28 ]
+					},
+					{
+						"time": 0.4667,
+						"value": 0.28,
+						"curve": [ 0.489, 0.28, 0.511, -0.97 ]
+					},
+					{
+						"time": 0.5333,
+						"value": -0.97,
+						"curve": [ 0.556, -0.97, 0.578, 1.02 ]
+					},
+					{ "time": 0.6, "value": 3.17 }
+				]
+			}
+		},
+		"events": [
+			{ "time": 0.6, "name": "shakeTrigger" }
+		]
+	}
+}
+}

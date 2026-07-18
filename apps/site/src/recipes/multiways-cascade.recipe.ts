@@ -1,5 +1,8 @@
 // @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+// Injected globals: ReelSetBuilder, SpeedPresets, SpineReelSymbol,
+//                   loadMultiwaysSpines, buildMultiwaysSpineMap,
+//                   multiwaysSkinName, MULTIWAYS_SYMBOL_IDS,
+//                   MULTIWAYS_AUTHORED_REEL_H, MULTIWAYS_AUTHORED_CELL_W,
 //                   PIXI, gsap, app
 
 // MultiWays + cascade tumble. ways-style winner removal.
@@ -24,7 +27,11 @@ const REEL_PIXEL_HEIGHT = 360;
 const SYMBOL_SIZE = REEL_PIXEL_HEIGHT / MAX_ROWS;
 const GAP = 4;
 
-const IDS = ['7', '8', '9', '10', 'J', 'Q'];
+await loadMultiwaysSpines();
+
+const SPINE_SCALE = REEL_PIXEL_HEIGHT / MULTIWAYS_AUTHORED_REEL_H;
+const CELL_W = MULTIWAYS_AUTHORED_CELL_W * SPINE_SCALE;
+const IDS = [...MULTIWAYS_SYMBOL_IDS];
 const MIN_WAYS_REELS = 3;
 const MAX_CASCADES = 4;
 
@@ -111,18 +118,45 @@ function applyCascade(grid, winners) {
   });
 }
 
+// Every symbol is authored once per ROW COUNT (skins `<id>/size<rows>`,
+// rows 2..7). The stretched multiways cell height reveals the reel's
+// row count (cellH = reelPixelHeight / rows), so resize() re-skins the
+// skeleton to the matching variant. One uniform SPINE_SCALE fits every
+// skin: each size ladder implies the same authored reel height (~617).
+class MultiwaysSymbol extends SpineReelSymbol {
+  resize(width, height) {
+    super.resize(width, height);
+    const spine = this.spine;
+    if (!spine || !height) return;
+    const skinName = multiwaysSkinName(this.symbolId, REEL_PIXEL_HEIGHT / height);
+    if (spine.skeleton.skin?.name !== skinName) {
+      spine.skeleton.setSkinByName(skinName);
+      spine.skeleton.setSlotsToSetupPose();
+      spine.update(0);
+    }
+  }
+}
+
 const reelSet = new ReelSetBuilder()
   .reels(REELS)
   .multiways({ minRows: MIN_ROWS, maxRows: MAX_ROWS, reelPixelHeight: REEL_PIXEL_HEIGHT })
-  .symbolSize(SYMBOL_SIZE, SYMBOL_SIZE)
-  .symbolGap(GAP, GAP)
+  .symbolSize(CELL_W, SYMBOL_SIZE)
+  .symbolGap(GAP, 0)
   .symbols((r) => {
-    for (const sym of CARD_DECK) {
-      if (IDS.includes(sym.id)) {
-        r.register(sym.id, CardSymbol, {
-          color: sym.color, label: sym.label, textColor: sym.textColor,
-        });
-      }
+    // Namespaced animation vocabulary: general/* + wins/*. `high` has no
+    // explode clip, so cascade destroys on it fall back to the engine's
+    // GSAP implode automatically.
+    const spineMap = buildMultiwaysSpineMap(MAX_ROWS);
+    for (const id of IDS) {
+      r.register(id, MultiwaysSymbol, {
+        spineMap,
+        scale: SPINE_SCALE,
+        idleAnimation: 'general/idle',
+        landingAnimation: 'general/land',
+        outAnimation: 'general/explode',
+        winAnimation: 'wins/win',
+        autoPlayLanding: true,
+      });
     }
   })
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 120, bounceDistance: 0, bounceDuration: 0 })
