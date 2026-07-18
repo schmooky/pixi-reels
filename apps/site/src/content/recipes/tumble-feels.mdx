@@ -13,6 +13,7 @@ steps:
   - Pick whichever reads right for your art / theme / pace
 apis:
   - ReelSetBuilder.tumble
+  - SpineReelSymbol
   - ReelSet.refill
   - TumbleFallConfig
   - TumbleDropInConfig
@@ -20,10 +21,12 @@ tags:
   - cascade
   - tumble
   - presets
+  - spine
+  - thunderkick
   - recent
 ---
 
-Every canvas below runs the **exact same scripted spin**: 6×4 cards land with a pre-wired 3-cluster of `10` on row 2, those three winners fade out, **the loop pauses for a configured beat**, then the cascade refill drops survivors into the holes and brings a fresh row from above. Two things vary between canvases:
+Every canvas below runs the **exact same scripted spin**: a 6×4 board of real Thunderkick spine symbols lands with a pre-wired 3-cluster of `low1` on row 2, those three winners play their authored `explode` clip (compressed per canvas via `TrackEntry.timeScale` to match each tumble's tempo), **the loop pauses for a configured beat**, then the cascade refill drops survivors into the holes and brings a fresh row from above. Two things vary between canvases:
 
 1. `.tumble({ fall, dropIn })`. the animation feel itself.
 2. `PAUSE_AFTER_REMOVAL_MS`. the breathing room between the win-fade and the refill drop-in. Different feels want different pauses: snappy slams want ~120 ms, bouncy / dramatic feels want ~300-400 ms. Each canvas's value is tuned to match its tumble shape.
@@ -117,4 +120,6 @@ See [the full tumble recipe doc](https://github.com/schmooky/pixi-reels/blob/mai
 
 - [Cascade 6×5 tumble](/recipes/cascade-6x5/). the same recipe with cluster-detection logic and a multiplier counter.
 - [Spin first, cascade after](/recipes/spin-then-cascade/). open with a strip-spin, cascade the respins.
-- [Cascade with WinPresenter](/recipes/cascade-winpresenter/). drive the win-fade through `WinPresenter` instead of plain gsap.
+- [Cascade destroys. fade, explode, present](/recipes/cascade-destroy-and-present/). the destroy stage three ways, including a `WinPresenter`-driven pass.
+
+<AssetCredit studio="Thunderkick" />
