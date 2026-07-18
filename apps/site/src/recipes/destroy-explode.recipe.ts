@@ -3,11 +3,10 @@
 //           buildCascadeSpineMap, CASCADE_SYMBOL_IDS, CASCADE_PLATE_W,
 //           CASCADE_PLATE_H, PIXI, gsap, app, pickWeighted
 
-// AUTHORED destroy: same board, same one-shot cascade as the fade canvas.
-// the only change is `outAnimation: 'explode'` at registration. That one
-// line reroutes `destroySymbols` through the skeleton's authored 1.27 s
-// explosion (a baked 23-frame sequence) instead of the GSAP implode.
-// Played here at full length so you can see the whole clip.
+// Authored destroy: same board and cascade as the fade canvas; the only
+// change is `outAnimation: 'explode'` at registration. destroySymbols
+// then plays the skeleton's 1.27 s explosion instead of the implode.
+// Shown at full length here.
 
 await loadCascadeSpines();
 
@@ -46,10 +45,9 @@ const reelSet = new ReelSetBuilder()
       });
     }
   })
-  // The skull's PLATE is tile-sized (pixel-identical to the tier plates
-  // in the atlas); only the head + glow overflow it, as authored. Lift it
-  // above every reel and outside the reel mask so that overflow renders
-  // instead of clipping.
+  // The high symbol's head overflows its cell (the plate itself is
+  // tile-sized). unmask renders it above the reel mask instead of
+  // clipping it.
   .symbolData({ high: { zIndex: 10, unmask: true } })
   .speed('normal', { ...SpeedPresets.NORMAL, bounceDistance: 0, bounceDuration: 0 }).speed('turbo', { ...SpeedPresets.TURBO, bounceDistance: 0, bounceDuration: 0 })
   .tumble({

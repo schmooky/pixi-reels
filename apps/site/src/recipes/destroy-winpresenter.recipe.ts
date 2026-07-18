@@ -4,12 +4,10 @@
 //           CASCADE_PLATE_W, CASCADE_PLATE_H,
 //           PIXI, gsap, app, pickWeighted
 
-// PRESENTED destroy, full storyboard: the reels STOP, the presenter
-// DIMS the board and shows the first winning combination, then dims
-// and shows the SECOND combination, holds a beat. and only then does
-// the engine EXPLODE every winner and DROP the refill. Two win groups
-// cycled by one `WinPresenter` inside runCascade's `presentWinners`
-// hook; the destruction waits for the whole pass.
+// Win presentation before destruction: reels stop, the presenter dims
+// the board and shows each winning combination in turn, a short pause,
+// then all winners explode and the refill drops. Both combinations go
+// through one WinPresenter call in runCascade's presentWinners hook.
 
 await loadCascadeSpines();
 
@@ -18,12 +16,12 @@ const REELS = 6, ROWS = 4;
 const SCALE = 0.68;
 const CELL_W = CASCADE_PLATE_W * SCALE;
 const CELL_H = CASCADE_PLATE_H * SCALE;
-// Two planted combinations, visually distinct tiers. they share reel 2,
-// so the refill gravity handles a double-winner column too.
+// Two planted combinations. They share reel 2, so the refill has to
+// handle a column with two winners.
 const GROUP_A = { id: 'mid2', cells: [{ reel: 2, row: 1 }, { reel: 3, row: 1 }, { reel: 4, row: 1 }], value: 60 };
 const GROUP_B = { id: 'low1', cells: [{ reel: 0, row: 2 }, { reel: 1, row: 2 }, { reel: 2, row: 2 }], value: 30 };
 const PLANTED = new Set([GROUP_A.id, GROUP_B.id]);
-const HOLD_AFTER_PRESENT_MS = 450; // the "beat" between the pass and the explosion
+const HOLD_AFTER_PRESENT_MS = 450; // pause between presentation and explosion
 
 function randSymbol() {
   let s;
@@ -31,8 +29,7 @@ function randSymbol() {
   return s;
 }
 
-// Presenter already spotlights the win, so the explosion that follows is
-// compressed. it's a chaser, not the headline.
+// Shorter explosion. the presenter already showed the win.
 const EXPLODE_TIME_SCALE = 2.0;
 
 class TimedExplodeSymbol extends SpineReelSymbol {
@@ -58,10 +55,9 @@ const reelSet = new ReelSetBuilder()
       });
     }
   })
-  // The skull's PLATE is tile-sized (pixel-identical to the tier plates
-  // in the atlas); only the head + glow overflow it, as authored. Lift it
-  // above every reel and outside the reel mask so that overflow renders
-  // instead of clipping.
+  // The high symbol's head overflows its cell (the plate itself is
+  // tile-sized). unmask renders it above the reel mask instead of
+  // clipping it.
   .symbolData({ high: { zIndex: 10, unmask: true } })
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
@@ -70,12 +66,10 @@ const reelSet = new ReelSetBuilder()
   })
   .ticker(app.ticker).build();
 
-// The presenter's symbolAnim is simply the skeleton's authored `win`
-// clip. no hand-rolled scale-pop needed once real art is in the map.
+// symbolAnim plays the skeleton's win clip.
 const presenter = new WinPresenter(reelSet, {
   dimLosers: { alpha: 0.35 },
-  // A readable gap between the two combinations: dim + show A, breathe,
-  // dim + show B. One cycle each.
+  // Gap between the two combinations. one cycle each.
   cycleGap: 200,
   cycles: 1,
   symbolAnim: async (symbol) => {
@@ -103,11 +97,9 @@ return {
     await p;
     await new Promise(r => setTimeout(r, 300));
 
-    // Moment B. runCascade owns the loop. `presentWinners` hands BOTH
-    // combinations to the presenter, which cycles them: dim + show A,
-    // dim + show B. Then a held beat, and only when the hook resolves
-    // does the library call `destroySymbols`. every winner explodes at
-    // once. and the refill drops.
+    // Moment B. runCascade owns the loop. presentWinners shows both
+    // combinations and pauses; destroySymbols runs when it resolves,
+    // then the refill.
     reelSet.setDropOrder('all');
     let presented = false;
     await reelSet.runCascade({
@@ -134,14 +126,11 @@ return {
         });
       },
       presentWinners: async () => {
-        // Higher value sorts first: the mid-tier combination presents
-        // before the low-tier one.
+        // Higher value presents first.
         await presenter.show([
           { id: 1, cells: GROUP_A.cells.map(w => ({ reelIndex: w.reel, rowIndex: w.row })), value: GROUP_A.value },
           { id: 2, cells: GROUP_B.cells.map(w => ({ reelIndex: w.reel, rowIndex: w.row })), value: GROUP_B.value },
         ]);
-        // The beat: winners back at full alpha, board settled, a breath
-        // before the explosion.
         await new Promise(r => setTimeout(r, HOLD_AFTER_PRESENT_MS));
       },
       pauseAfterDestroyMs: 80,

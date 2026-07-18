@@ -3,17 +3,15 @@
 //           buildCascadeSpineMap, CASCADE_SYMBOL_IDS, CASCADE_PLATE_W,
 //           CASCADE_PLATE_H, PIXI, gsap, app, pickWeighted
 
-// PURE-DROP opener: the same 'low1' → 'mid1' chain as the strip-spin
-// canvas, but the round OPENS as a cascade too. no strip motion at all.
-// The old board falls out, the new one rains in, then the chain runs.
-// This is the all-tumble school (Gates-of-Olympus-style): one visual
-// language for the whole round.
+// Pure-drop opener: same 'low1' -> 'mid1' chain as the strip-spin
+// canvas, but the round opens as a cascade too. no strip motion. The
+// old board falls out, the new one drops in, then the chain runs.
 
 await loadCascadeSpines();
 
 const IDS = [...CASCADE_SYMBOL_IDS];
 const REELS = 5, ROWS = 5;
-// Cells sized from the authored 88x101.6 low/mid plate.
+// Cells match the authored 88x101.6 symbol plate.
 const SCALE = 0.62;
 const CELL_W = CASCADE_PLATE_W * SCALE;
 const CELL_H = CASCADE_PLATE_H * SCALE;
@@ -29,9 +27,8 @@ function randSymbolNotIn(exclude) {
   return s;
 }
 
-// The authored `explode` clip runs 1.27 s. longer than this demo's
-// cascade rhythm wants. Play it compressed via TrackEntry.timeScale:
-// same art, same spine API, demo-tempo timing.
+// The authored `explode` clip runs 1.27 s, too long for this demo's
+// cascade timing. Play it faster via TrackEntry.timeScale.
 const EXPLODE_TIME_SCALE = 2.2;
 
 class TimedExplodeSymbol extends SpineReelSymbol {
@@ -57,10 +54,9 @@ const reelSet = new ReelSetBuilder()
       });
     }
   })
-  // The skull's PLATE is tile-sized (pixel-identical to the tier plates
-  // in the atlas); only the head + glow overflow it, as authored. Lift it
-  // above every reel and outside the reel mask so that overflow renders
-  // instead of clipping.
+  // The high symbol's head overflows its cell (the plate itself is
+  // tile-sized). unmask renders it above the reel mask instead of
+  // clipping it.
   .symbolData({ high: { zIndex: 10, unmask: true } })
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 120, bounceDistance: 0, bounceDuration: 0 })
   // The opening reveal IS a tumble here, so `fall` matters. it animates
@@ -92,10 +88,9 @@ return {
       return next;
     };
 
-    // Round 1: NO strip-spin. the default cascade mode drops the old
-    // board out and rains stage 0 in, left-to-right. This is the whole
-    // difference against the strip-spin canvas: same spin() call, no
-    // { mode: 'standard' } override.
+    // Round 1: no strip-spin. default cascade mode drops the old board
+    // out and drops stage 0 in. The only difference against the
+    // strip-spin canvas: no { mode: 'standard' } override.
     reelSet.setDropOrder('ltr');
     const p = reelSet.spin();
     await new Promise((r) => setTimeout(r, 200));

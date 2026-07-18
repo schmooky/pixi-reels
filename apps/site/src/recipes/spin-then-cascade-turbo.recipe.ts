@@ -4,19 +4,17 @@
 //           buildCascadeSpineMap, CASCADE_SYMBOL_IDS, CASCADE_PLATE_W,
 //           CASCADE_PLATE_H, PIXI, gsap, app, pickWeighted
 
-// TURBO HYBRID: the same strip-spin opener + 'low1' → 'mid1' chain, but
-// tuned for speed on both systems independently. The strip-spin runs the
-// TURBO profile on cached snapshot textures with auto-baked motion blur
-// (StaticSpinSymbol. no skeleton ticks while the reels turn), and the
-// cascade runs a tightened tumble with a harder explode compression.
-// The two speed knobs never touch each other: SpeedPresets governs the
-// strip phases, .tumble() + timeScale govern the cascade.
+// Turbo hybrid: same strip-spin opener + 'low1' -> 'mid1' chain, tuned
+// for speed. The strip-spin runs the TURBO profile on cached snapshot
+// textures (StaticSpinSymbol. no skeleton ticks while spinning); the
+// cascade runs a shorter dropIn and a faster explode. SpeedPresets
+// controls the strip phases, .tumble() + timeScale the cascade.
 
 await loadCascadeSpines();
 
 const IDS = [...CASCADE_SYMBOL_IDS];
 const REELS = 5, ROWS = 5;
-// Cells sized from the authored 88x101.6 low/mid plate.
+// Cells match the authored 88x101.6 symbol plate.
 const SCALE = 0.62;
 const CELL_W = CASCADE_PLATE_W * SCALE;
 const CELL_H = CASCADE_PLATE_H * SCALE;
@@ -32,8 +30,7 @@ function randSymbolNotIn(exclude) {
   return s;
 }
 
-// Harder compression than the normal-speed canvas: turbo rounds want the
-// destruction over in ~0.4 s.
+// Faster than the normal-speed canvas: destruction done in ~0.4 s.
 const EXPLODE_TIME_SCALE = 3.0;
 
 class TimedExplodeSymbol extends SpineReelSymbol {
@@ -45,10 +42,9 @@ class TimedExplodeSymbol extends SpineReelSymbol {
   }
 }
 
-// Static-spin plumbing: one scratch symbol bakes a static + blurred
+// Static-spin setup: one scratch symbol bakes a static + blurred
 // texture per id; the reels spin on those textures and the skeletons
-// only come back at land. Uniform scale for every tier (`high` overflows
-// its cell by authoring), so a single factory prewarms all ids.
+// come back at land.
 const cache = new SpinTextureCache({ renderer: app.renderer });
 const createInner = () =>
   new TimedExplodeSymbol({
@@ -71,10 +67,9 @@ const reelSet = new ReelSetBuilder()
       r.register(id, StaticSpinSymbol, { createInner, cache, blurRampMs: 120 });
     }
   })
-  // The skull's PLATE is tile-sized (pixel-identical to the tier plates
-  // in the atlas); only the head + glow overflow it, as authored. Lift it
-  // above every reel and outside the reel mask so that overflow renders
-  // instead of clipping.
+  // The high symbol's head overflows its cell (the plate itself is
+  // tile-sized). unmask renders it above the reel mask instead of
+  // clipping it.
   .symbolData({ high: { zIndex: 10, unmask: true } })
   .speed('turbo', { ...SpeedPresets.TURBO, stopDelay: 60, bounceDistance: 0, bounceDuration: 0 })
   .initialSpeed('turbo')

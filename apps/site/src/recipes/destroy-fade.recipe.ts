@@ -3,10 +3,9 @@
 //           buildCascadeSpineMap, CASCADE_SYMBOL_IDS, CASCADE_PLATE_W,
 //           CASCADE_PLATE_H, PIXI, gsap, app, pickWeighted
 
-// ENGINE-DEFAULT destroy: no `out` animation registered, so
-// `destroySymbols` falls back to the library's GSAP scale-and-fade
-// implode. Zero asset requirements. this is what every cascade gets
-// before an artist ships a destruction clip.
+// Engine-default destroy: no `out` animation registered, so
+// `destroySymbols` falls back to the built-in GSAP scale-and-fade
+// implode. Works with no destruction art at all.
 
 await loadCascadeSpines();
 
@@ -34,9 +33,8 @@ function randSymbolNotIn(exclude) {
 const reelSet = new ReelSetBuilder()
   .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
   .symbols(r => {
-    // No `outAnimation` here. SpineReelSymbol looks for its configured out
-    // clip (default name 'disintegration'), finds nothing in the skeleton,
-    // and playDestroy falls through to the base GSAP implode.
+    // No outAnimation: the skeleton has no 'disintegration' clip, so
+    // playDestroy falls back to the base GSAP implode.
     const spineMap = buildCascadeSpineMap();
     for (const id of CASCADE_SYMBOL_IDS) {
       r.register(id, SpineReelSymbol, {
@@ -47,10 +45,9 @@ const reelSet = new ReelSetBuilder()
       });
     }
   })
-  // The skull's PLATE is tile-sized (pixel-identical to the tier plates
-  // in the atlas); only the head + glow overflow it, as authored. Lift it
-  // above every reel and outside the reel mask so that overflow renders
-  // instead of clipping.
+  // The high symbol's head overflows its cell (the plate itself is
+  // tile-sized). unmask renders it above the reel mask instead of
+  // clipping it.
   .symbolData({ high: { zIndex: 10, unmask: true } })
   .speed('normal', { ...SpeedPresets.NORMAL, bounceDistance: 0, bounceDuration: 0 }).speed('turbo', { ...SpeedPresets.TURBO, bounceDistance: 0, bounceDuration: 0 })
   .tumble({

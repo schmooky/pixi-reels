@@ -12,8 +12,7 @@ await loadCascadeSpines();
 
 const IDS = [...CASCADE_SYMBOL_IDS];
 const REELS = 6, ROWS = 4;
-// Cells sized from the authored 88x101.6 low/mid plate, scaled so the
-// 6x4 board keeps roughly its old card-symbol footprint.
+// Cells match the authored 88x101.6 symbol plate.
 const SCALE = 0.62;
 const CELL_W = CASCADE_PLATE_W * SCALE;
 const CELL_H = CASCADE_PLATE_H * SCALE;
@@ -29,9 +28,8 @@ function randSymbol(exclude) {
   return s;
 }
 
-// The authored `explode` clip runs 1.27 s. longer than this demo's
-// cascade rhythm wants. Play it compressed via TrackEntry.timeScale:
-// same art, same spine API, demo-tempo timing.
+// The authored `explode` clip runs 1.27 s, too long for this demo's
+// cascade timing. Play it faster via TrackEntry.timeScale.
 const EXPLODE_TIME_SCALE = 2.2;
 
 class TimedExplodeSymbol extends SpineReelSymbol {
@@ -46,10 +44,8 @@ class TimedExplodeSymbol extends SpineReelSymbol {
 const reelSet = new ReelSetBuilder()
   .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
   .symbols((r) => {
-    // outAnimation: 'explode' routes the engine's cascade destroy through
-    // the authored explosion. `high` is authored 1.41x bigger than the
-    // low/mid plate and overflows its cell on purpose. premium symbols
-    // pop out of the grid in the original game, so it gets the same scale.
+    // outAnimation: 'explode' makes destroySymbols play the skeleton's
+    // explode clip instead of the default implode.
     const spineMap = buildCascadeSpineMap();
     for (const id of CASCADE_SYMBOL_IDS) {
       r.register(id, TimedExplodeSymbol, {
@@ -61,10 +57,9 @@ const reelSet = new ReelSetBuilder()
       });
     }
   })
-  // The skull's PLATE is tile-sized (pixel-identical to the tier plates
-  // in the atlas); only the head + glow overflow it, as authored. Lift it
-  // above every reel and outside the reel mask so that overflow renders
-  // instead of clipping.
+  // The high symbol's head overflows its cell (the plate itself is
+  // tile-sized). unmask renders it above the reel mask instead of
+  // clipping it.
   .symbolData({ high: { zIndex: 10, unmask: true } })
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
