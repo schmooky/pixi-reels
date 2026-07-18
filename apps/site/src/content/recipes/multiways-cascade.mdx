@@ -19,19 +19,14 @@ apis:
   - ReelSetBuilder.tumble
   - ReelSet.setShape
   - ReelSet.runCascade
-  - SpineReelSymbol
 tags:
   - multiways
   - cascade
   - hybrid
-  - spine
-  - thunderkick
   - recent
 ---
 
 <RecipeDemo code="multiways-cascade" />
-
-All three canvases on this page run real Thunderkick MultiWays art. The set is authored the way production multiways art actually ships: **one skin per row count** (`low1/size2` … `low1/size7`), each variant sized so a reel of N rows is exactly filled by N plates. The recipes pick the skin from the stretched cell height in `resize()` (`rows = reelPixelHeight / cellHeight`), so every reshape lands on pixel-exact art. Winners play their authored `general/explode`; the high pay has no explode clip, so its destroys fall back to the engine implode. exactly the mixed-asset reality the fallback exists for.
 
 A slot that varies its shape per spin AND uses cascade-style tumbling on winners. the cascade-Megaways pattern that BTG's *Bonanza* and *Extra Chilli* popularized. The initial landing is a classic strip-spin (so the multiways `AdjustPhase` reshapes the reels between SPIN and STOP); winners then pop, survivors fall, and new symbols drop in from above via `reelSet.runCascade(...)`. The reels never re-spin between tumbles.
 
@@ -77,18 +72,6 @@ document.getElementById('spin')!.addEventListener('click', async () => {
 });
 ```
 
-## Every play a tumble. no strip motion at all
-
-The canvas above opens each play with a classic strip-spin. This one goes all-tumble: the old board **falls out**, a fresh board **rains in** at a freshly rolled shape, then the same ways-win chain explodes and refills. The tumble pipeline and the multiways pipeline compose without special casing. `spin()` in cascade mode runs fall-out → AdjustPhase (committing the `setShape` mid-flight, stretching every reel's cells) → drop-in:
-
-<RecipeDemo code="multiways-tumble" />
-
-## The shape extremes. combs and valleys
-
-The canvas above rolls its per-reel row counts uniformly, which mostly lands mid-range silhouettes. This one scripts the extremes. alternating comb shapes (`7-2-7-2-7-2`, its inverse, and a valley) so you can watch the two systems hold up when neighbouring reels differ by the full `minRows..maxRows` range: a 2-row reel cascades in the same phase as its 7-row neighbour, and the ways evaluation just sees per-reel arrays of different lengths:
-
-<RecipeDemo code="multiways-cascade-extremes" />
-
 ## Why this works on a multiways slot
 
 `reelSet.refill({ winners, grid })` reads each reel's `visibleRows` at call time. A reel that landed at 2 rows and a reel that landed at 5 rows refill independently in the same chain. the engine builds per-reel fall jobs against each reel's live geometry, so jagged multiways shapes aren't a special case.
@@ -113,5 +96,3 @@ Pick the post-landing pattern when you want a classic spin feel with cascade tum
 - [MultiWays](/recipes/multiways/). per-spin row variation without cascade.
 - [Cascade 6×5 tumble](/recipes/cascade-6x5/). cascade drop-in on a fixed-shape grid.
 - [Spin then cascade](/recipes/spin-then-cascade/). the same pattern on a fixed shape (no multiways).
-
-<AssetCredit studio="Thunderkick" />

@@ -55,14 +55,6 @@ import {
   CASCADE_PLATE_H,
   CASCADE_HIGH_SCALE,
 } from '../../../../examples/shared/cascadeSpineLoader.ts';
-import {
-  loadMultiwaysSpines,
-  buildMultiwaysSpineMap,
-  multiwaysSkinName,
-  MULTIWAYS_SYMBOL_IDS,
-  MULTIWAYS_AUTHORED_REEL_H,
-  MULTIWAYS_AUTHORED_CELL_W,
-} from '../../../../examples/shared/multiwaysSpineLoader.ts';
 import { loadHoldAndWinSprites } from '../../../../examples/shared/holdAndWinSprites.ts';
 import { transform as sucraseTransform } from 'sucrase';
 import { cn } from '@/lib/utils';
@@ -221,8 +213,6 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
           'loadThunderkickSpines', 'buildThunderkickSpineMap', 'THUNDERKICK_SYMBOL_IDS',
           'loadCascadeSpines', 'buildCascadeSpineMap', 'CASCADE_SYMBOL_IDS',
           'CASCADE_PLATE_W', 'CASCADE_PLATE_H', 'CASCADE_HIGH_SCALE',
-          'loadMultiwaysSpines', 'buildMultiwaysSpineMap', 'multiwaysSkinName',
-          'MULTIWAYS_SYMBOL_IDS', 'MULTIWAYS_AUTHORED_REEL_H', 'MULTIWAYS_AUTHORED_CELL_W',
           'loadHoldAndWinSprites',
           `"use strict"; ${js}`,
         );
@@ -248,8 +238,6 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
           loadThunderkickSpines, buildThunderkickSpineMap, THUNDERKICK_SYMBOL_IDS,
           loadCascadeSpines, buildCascadeSpineMap, CASCADE_SYMBOL_IDS,
           CASCADE_PLATE_W, CASCADE_PLATE_H, CASCADE_HIGH_SCALE,
-          loadMultiwaysSpines, buildMultiwaysSpineMap, multiwaysSkinName,
-          MULTIWAYS_SYMBOL_IDS, MULTIWAYS_AUTHORED_REEL_H, MULTIWAYS_AUTHORED_CELL_W,
           loadHoldAndWinSprites,
         )) as RunResult;
       } catch (e) {

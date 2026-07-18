@@ -15,19 +15,16 @@ apis:
   - ReelSetBuilder.multiways
   - ReelSet.setShape
   - AdjustPhase
-  - SpineReelSymbol
 tags:
   - multiways
   - shape
   - reshape
   - geometry
-  - spine
-  - thunderkick
 ---
 
 <RecipeDemo code="multiways" />
 
-MultiWays is the engine surface behind any slot where each reel lands on a different number of rows per spin and the total "ways" count is the product of per-reel rows. The setup: a fixed pixel-height per reel column, a configurable `[minRows, maxRows]` range, and `setShape(rowsPerReel)` chosen per spin. The demo above runs **6 reels × 2-7 rows per reel** on real Thunderkick MultiWays art. authored one skin per row count (`<id>/size2`…`size7`), re-skinned live from the stretched cell height so every rolled shape lands on pixel-exact plates. for example a `[3, 4, 3, 7, 7, 3]` landing pays as `3 × 4 × 3 × 7 × 7 × 3 = 5,292 ways`. Cell height is derived live (`reelPixelHeight / visibleRows[i]`), so a 2-row reel renders as two huge cells and a 7-row reel renders as seven small ones. Between SPIN and STOP the engine commits the new geometry per reel (resizes the strip's symbols, reshapes the motion layer) and then runs `AdjustPhase` to tween any pin overlays from their old cell to their new cell. the cell symbols themselves snap because they're still spinning at full speed.
+MultiWays is the engine surface behind any slot where each reel lands on a different number of rows per spin and the total "ways" count is the product of per-reel rows. The setup: a fixed pixel-height per reel column, a configurable `[minRows, maxRows]` range, and `setShape(rowsPerReel)` chosen per spin. The demo above runs **6 reels × 2-7 rows per reel**. for example a `[3, 4, 3, 7, 7, 3]` landing pays as `3 × 4 × 3 × 7 × 7 × 3 = 5,292 ways`. Cell height is derived live (`reelPixelHeight / visibleRows[i]`), so a 2-row reel renders as two huge cells and a 7-row reel renders as seven small ones. Between SPIN and STOP the engine commits the new geometry per reel (resizes the strip's symbols, reshapes the motion layer) and then runs `AdjustPhase` to tween any pin overlays from their old cell to their new cell. the cell symbols themselves snap because they're still spinning at full speed.
 
 The card-suit graphics in the demo are a no-asset prototyping default (`CardSymbol` from `examples/shared/CardSymbol.ts`) so each cell renders crisply at any size. In a real slot you'd ship `SpriteSymbol` / `AnimatedSpriteSymbol` / `SpineSymbol`. see [`card-symbol-debug`](/recipes/card-symbol-debug/) for when (not) to use the debug class.
 
@@ -89,5 +86,3 @@ Pins survive MultiWays reshapes. Each pin has a frozen `originRow` (defaults to 
 - [Per-reel shape (pyramid)](/recipes/pyramid-shape/). non-MultiWays static shape
 - [MxN big symbols](/recipes/big-symbols-mxn/). N×M blocks (mutually exclusive with MultiWays)
 - [Sticky wild on MultiWays](/recipes/sticky-wild-multiways/). pin migration with `originRow`
-
-<AssetCredit studio="Thunderkick" />

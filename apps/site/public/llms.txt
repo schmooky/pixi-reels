@@ -8,7 +8,7 @@ Site: https://pixi-reels.schmooky.dev
 Repo: https://github.com/schmooky/pixi-reels
 Package: https://www.npmjs.com/package/pixi-reels
 
-Generated: 2026-07-18T20:05:34.498Z
+Generated: 2026-07-18T20:11:22.020Z
 
 ## Quick start
 
@@ -632,8 +632,8 @@ Steps:
 ### MultiWays
 URL: https://pixi-reels.schmooky.dev/recipes/multiways/
 Per-spin row variation. Each reel lands on a different row count
-Tags: multiways, shape, reshape, geometry, spine, thunderkick
-APIs: ReelSetBuilder.multiways, ReelSet.setShape, AdjustPhase, SpineReelSymbol
+Tags: multiways, shape, reshape, geometry
+APIs: ReelSetBuilder.multiways, ReelSet.setShape, AdjustPhase
 Steps:
   - Build with .multiways({ minRows, maxRows, reelPixelHeight })
   - Each spin, call reelSet.setShape(rowsPerReel) BEFORE setResult()
@@ -642,8 +642,8 @@ Steps:
 ### MultiWays cascade
 URL: https://pixi-reels.schmooky.dev/recipes/multiways-cascade/
 Per-spin row variation on a strip-spin landing; the cascade tumble
-Tags: multiways, cascade, hybrid, spine, thunderkick, recent
-APIs: ReelSetBuilder.multiways, ReelSetBuilder.tumble, ReelSet.setShape, ReelSet.runCascade, SpineReelSymbol
+Tags: multiways, cascade, hybrid, recent
+APIs: ReelSetBuilder.multiways, ReelSetBuilder.tumble, ReelSet.setShape, ReelSet.runCascade
 Steps:
   - Build with .multiways({minRows, maxRows, reelPixelHeight}) + .tumble({...})
   - Each round, call setShape(rowsPerReel) BEFORE setResult()
@@ -8160,275 +8160,11 @@ return {
 };
 ```
 
-### multiways-cascade-extremes
-URL: https://pixi-reels.schmooky.dev/recipes/multiways-cascade-extremes/
-```ts
-// @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, SpineReelSymbol,
-//                   loadMultiwaysSpines, buildMultiwaysSpineMap,
-//                   multiwaysSkinName, MULTIWAYS_SYMBOL_IDS,
-//                   MULTIWAYS_AUTHORED_REEL_H, MULTIWAYS_AUTHORED_CELL_W,
-//                   PIXI, gsap, app
-
-// MultiWays + cascade at the SHAPE EXTREMES. same ways-style winner
-// removal as the canvas above, but the per-reel row counts are scripted
-// to alternate between comb shapes (7-2-7-2-7-2 and its inverse) instead
-// of rolling uniformly. The point: the ways math and the cascade both
-// keep working when neighbouring reels differ by the full minRows..maxRows
-// range. a 2-row reel cascades in the same phase as its 7-row neighbour,
-// and the win evaluation just sees per-reel arrays of different lengths.
-//
-// Visual flow each round:
-//   1. setShape(rowsPerReel) rolls a per-reel row count in [minRows, maxRows].
-//   2. reelSet.spin({ mode: 'standard' }). classic strip-spin lands the multiways grid.
-//   3. reelSet.runCascade({ detectWinners, nextGrid }) pops every winning cell;
-//      survivors fall, new symbols drop in from above. Loops until no more
-//      ways wins (capped at MAX_CASCADES per round).
-
-const REELS = 6;
-const MIN_ROWS = 2;
-const MAX_ROWS = 7;
-const REEL_PIXEL_HEIGHT = 360;
-const SYMBOL_SIZE = REEL_PIXEL_HEIGHT / MAX_ROWS;
-const GAP = 4;
-
-await loadMultiwaysSpines();
-
-const SPINE_SCALE = REEL_PIXEL_HEIGHT / MULTIWAYS_AUTHORED_REEL_H;
-const CELL_W = MULTIWAYS_AUTHORED_CELL_W * SPINE_SCALE;
-const IDS = [...MULTIWAYS_SYMBOL_IDS];
-const MIN_WAYS_REELS = 3;
-const MAX_CASCADES = 4;
-
-function randSymbol() {
-  return IDS[Math.floor(Math.random() * IDS.length)];
-}
-
-// Scripted extremes instead of a uniform roll: two combs and a valley.
-const SHAPES = [
-  [7, 2, 7, 2, 7, 2],
-  [2, 7, 2, 7, 2, 7],
-  [7, 7, 2, 2, 7, 7],
-];
-let shapeIndex = 0;
-function randomShape() {
-  return [...SHAPES[shapeIndex++ % SHAPES.length]];
-}
-
-function buildGridWithGuaranteedWin(shape) {
-  // Random fill, then plant the same symbol on reels 0, 1, 2. with multiple
-  // copies on reels that have room. so the ways win removes multiple cells
-  // per column, which is the whole point of multiways-style cascading.
-  const grid = shape.map((rows) =>
-    Array.from({ length: rows }, () => randSymbol()),
-  );
-  if (Math.random() < 0.7) {
-    const target = randSymbol();
-    for (let c = 0; c < MIN_WAYS_REELS; c++) {
-      const len = grid[c].length;
-      const positions = new Set([0]);
-      const extraCount = len >= 4 ? 2 : len >= 3 ? 1 : 0;
-      while (positions.size < 1 + extraCount) {
-        positions.add(Math.floor(Math.random() * len));
-      }
-      for (const row of positions) grid[c][row] = target;
-    }
-  }
-  return grid;
-}
-
-function findAllWaysWins(grid) {
-  // Every symbol whose presence spans the first N consecutive reels
-  // (N >= MIN_WAYS_REELS) is a separate ways win. A real multiways game
-  // pays them all in the same evaluation. Q-ways and 10-ways can both
-  // hit simultaneously and both contribute winners to the same cascade.
-  const wins = [];
-  for (const id of IDS) {
-    let reelCount = 0;
-    for (let c = 0; c < grid.length; c++) {
-      if (grid[c].includes(id)) reelCount++;
-      else break;
-    }
-    if (reelCount >= MIN_WAYS_REELS) wins.push({ id, reelCount });
-  }
-  return wins;
-}
-
-function collectAllWinners(grid, wins) {
-  // For every winning symbol, every instance on that symbol's winning
-  // reels is a winner. Cells can't double-count: a cell shows one id,
-  // so it appears in at most one win's winner list.
-  const winners = [];
-  for (const win of wins) {
-    for (let c = 0; c < win.reelCount; c++) {
-      for (let row = 0; row < grid[c].length; row++) {
-        if (grid[c][row] === win.id) winners.push({ reel: c, row });
-      }
-    }
-  }
-  return winners;
-}
-
-function applyCascade(grid, winners) {
-  // Per-reel gravity: drop winning rows, shift survivors down, fill the
-  // cleared top slots with new random symbols. Cell count per reel stays
-  // the same. multiways shape doesn't change mid-cascade.
-  const winnersByReel = new Map();
-  for (const w of winners) {
-    if (!winnersByReel.has(w.reel)) winnersByReel.set(w.reel, new Set());
-    winnersByReel.get(w.reel).add(w.row);
-  }
-  return grid.map((col, c) => {
-    const winRows = winnersByReel.get(c);
-    if (!winRows || winRows.size === 0) return [...col];
-    const survivors = col.filter((_, row) => !winRows.has(row));
-    const newCount = col.length - survivors.length;
-    const newSymbols = Array.from({ length: newCount }, () => randSymbol());
-    return [...newSymbols, ...survivors];
-  });
-}
-
-// Every symbol is authored once per ROW COUNT (skins `<id>/size<rows>`,
-// rows 2..7). The stretched multiways cell height reveals the reel's
-// row count (cellH = reelPixelHeight / rows), so resize() re-skins the
-// skeleton to the matching variant. One uniform SPINE_SCALE fits every
-// skin: each size ladder implies the same authored reel height (~617).
-// The high skeleton ships ALL SIX size variants in its DEFAULT skin (the
-// size skins are empty selectors), so a naive load renders six stacked
-// gold frames/backplates. the production runtime hides inactive sizes in
-// code. Mirror that with a per-frame hook (spine-pixi-v8 runs it after
-// state.apply, before world transforms): null every per-size slot that
-// doesn't match the reel's row count. Slot-name grammar, from the export:
-// high<N>_*, glow_<N>_*, radialGradient_<N>, and the two _<N>-suffixed
-// corner slots. particle_2_* is a particle TYPE, not a size. shared.
-function highSlotSize(name) {
-  let m = name.match(/^high(\d)_/);
-  if (m) return +m[1];
-  m = name.match(/^high_frame_corner_large_(?:btm|top)_(\d)$/);
-  if (m) return +m[1];
-  m = name.match(/^glow_(\d)_/);
-  if (m) return +m[1];
-  m = name.match(/^radialGradient_(\d)$/);
-  if (m) return +m[1];
-  return null;
-}
-
-class MultiwaysSymbol extends SpineReelSymbol {
-  resize(width, height) {
-    super.resize(width, height);
-    const spine = this.spine;
-    if (!spine || !height) return;
-    const rows = Math.max(2, Math.min(7, Math.round(REEL_PIXEL_HEIGHT / height)));
-    const skinName = multiwaysSkinName(this.symbolId, rows);
-    if (spine.skeleton.skin?.name !== skinName) {
-      spine.skeleton.setSkinByName(skinName);
-      spine.skeleton.setSlotsToSetupPose();
-    }
-    if (this.symbolId === 'high') {
-      spine.beforeUpdateWorldTransforms = (s) => {
-        for (const slot of s.skeleton.slots) {
-          const size = highSlotSize(slot.data.name);
-          if (size !== null && size !== rows) slot.setAttachment(null);
-        }
-      };
-    }
-    spine.update(0); // apply skin + slot gate now, not on the next tick
-  }
-}
-
-const reelSet = new ReelSetBuilder()
-  .reels(REELS)
-  .multiways({ minRows: MIN_ROWS, maxRows: MAX_ROWS, reelPixelHeight: REEL_PIXEL_HEIGHT })
-  .symbolSize(CELL_W, SYMBOL_SIZE)
-  .symbolGap(GAP, 0)
-  .symbols((r) => {
-    // Namespaced animation vocabulary: general/* + wins/*. `high` has no
-    // explode clip, so cascade destroys on it fall back to the engine's
-    // GSAP implode automatically.
-    const spineMap = buildMultiwaysSpineMap(MAX_ROWS);
-    for (const id of IDS) {
-      r.register(id, MultiwaysSymbol, {
-        spineMap,
-        scale: SPINE_SCALE,
-        idleAnimation: 'general/idle',
-        landingAnimation: 'general/land',
-        outAnimation: 'general/explode',
-        winAnimation: 'wins/win',
-        autoPlayLanding: true,
-      });
-    }
-  })
-  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 120, bounceDistance: 0, bounceDuration: 0 })
-  .tumble({
-    fall:   { duration: 0, ease: 'none', rowStagger: 0 },              // not used. refill skips fall
-    dropIn: { duration: 280, ease: 'back.out(1.4)', rowStagger: 0, distance: 'perHole' },
-  })
-  .ticker(app.ticker)
-  .build();
-
-// Multiways slots build at `maxRows` until the first `setShape` + spin
-// commits a jagged shape. On page load that looks like a uniform 6x5.
-// not great for a recipe whose whole point is per-reel row variation.
-// Run a silent initial spin+skip with a fresh random shape so the
-// landing grid the user first sees already shows the jagged silhouette.
-const initialShape = randomShape();
-const initialGrid = initialShape.map((rows) =>
-  Array.from({ length: rows }, () => randSymbol()),
-);
-{
-  const p = reelSet.spin({ mode: 'standard' });
-  reelSet.setShape(initialShape);
-  reelSet.setResult(initialGrid.map((visible) => ({ visible })));
-  reelSet.skipSpin();
-  await p;
-}
-
-return {
-  reelSet,
-  onSpin: async () => {
-    const shape = randomShape();
-
-    // Round 1. strip-spin lands the multiways grid (AdjustPhase reshapes
-    // between SPIN and STOP).
-    const stage0 = buildGridWithGuaranteedWin(shape);
-    const p = reelSet.spin({ mode: 'standard' });
-    await new Promise((r) => setTimeout(r, 80));
-    reelSet.setShape(shape);
-    reelSet.setResult(stage0.map((visible) => ({ visible })));
-    await p;
-    await new Promise((r) => setTimeout(r, 120));
-
-    // Cascade chain. `reelSet.runCascade` owns detect → destroy → pause
-    // → refill. We supply the game rules via the two callbacks. The
-    // `detectWinners` callback re-evaluates ways wins on the post-refill
-    // grid each iteration; when no more ways wins exist, the chain ends.
-    let cascadeCount = 0;
-    reelSet.setDropOrder('all');
-    await reelSet.runCascade({
-      detectWinners: (grid) => {
-        if (cascadeCount >= MAX_CASCADES) return [];
-        const wins = findAllWaysWins(grid);
-        if (wins.length === 0) return [];
-        return collectAllWinners(grid, wins);
-      },
-      nextGrid: (prev, winners) => {
-        cascadeCount += 1;
-        return applyCascade(prev, [...winners]);
-      },
-      pauseAfterDestroyMs: 60,
-    });
-  },
-};
-```
-
 ### multiways-cascade
 URL: https://pixi-reels.schmooky.dev/recipes/multiways-cascade/
 ```ts
 // @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, SpineReelSymbol,
-//                   loadMultiwaysSpines, buildMultiwaysSpineMap,
-//                   multiwaysSkinName, MULTIWAYS_SYMBOL_IDS,
-//                   MULTIWAYS_AUTHORED_REEL_H, MULTIWAYS_AUTHORED_CELL_W,
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
 //                   PIXI, gsap, app
 
 // MultiWays + cascade tumble. ways-style winner removal.
@@ -8453,11 +8189,7 @@ const REEL_PIXEL_HEIGHT = 360;
 const SYMBOL_SIZE = REEL_PIXEL_HEIGHT / MAX_ROWS;
 const GAP = 4;
 
-await loadMultiwaysSpines();
-
-const SPINE_SCALE = REEL_PIXEL_HEIGHT / MULTIWAYS_AUTHORED_REEL_H;
-const CELL_W = MULTIWAYS_AUTHORED_CELL_W * SPINE_SCALE;
-const IDS = [...MULTIWAYS_SYMBOL_IDS];
+const IDS = ['7', '8', '9', '10', 'J', 'Q'];
 const MIN_WAYS_REELS = 3;
 const MAX_CASCADES = 4;
 
@@ -8544,74 +8276,18 @@ function applyCascade(grid, winners) {
   });
 }
 
-// Every symbol is authored once per ROW COUNT (skins `<id>/size<rows>`,
-// rows 2..7). The stretched multiways cell height reveals the reel's
-// row count (cellH = reelPixelHeight / rows), so resize() re-skins the
-// skeleton to the matching variant. One uniform SPINE_SCALE fits every
-// skin: each size ladder implies the same authored reel height (~617).
-// The high skeleton ships ALL SIX size variants in its DEFAULT skin (the
-// size skins are empty selectors), so a naive load renders six stacked
-// gold frames/backplates. the production runtime hides inactive sizes in
-// code. Mirror that with a per-frame hook (spine-pixi-v8 runs it after
-// state.apply, before world transforms): null every per-size slot that
-// doesn't match the reel's row count. Slot-name grammar, from the export:
-// high<N>_*, glow_<N>_*, radialGradient_<N>, and the two _<N>-suffixed
-// corner slots. particle_2_* is a particle TYPE, not a size. shared.
-function highSlotSize(name) {
-  let m = name.match(/^high(\d)_/);
-  if (m) return +m[1];
-  m = name.match(/^high_frame_corner_large_(?:btm|top)_(\d)$/);
-  if (m) return +m[1];
-  m = name.match(/^glow_(\d)_/);
-  if (m) return +m[1];
-  m = name.match(/^radialGradient_(\d)$/);
-  if (m) return +m[1];
-  return null;
-}
-
-class MultiwaysSymbol extends SpineReelSymbol {
-  resize(width, height) {
-    super.resize(width, height);
-    const spine = this.spine;
-    if (!spine || !height) return;
-    const rows = Math.max(2, Math.min(7, Math.round(REEL_PIXEL_HEIGHT / height)));
-    const skinName = multiwaysSkinName(this.symbolId, rows);
-    if (spine.skeleton.skin?.name !== skinName) {
-      spine.skeleton.setSkinByName(skinName);
-      spine.skeleton.setSlotsToSetupPose();
-    }
-    if (this.symbolId === 'high') {
-      spine.beforeUpdateWorldTransforms = (s) => {
-        for (const slot of s.skeleton.slots) {
-          const size = highSlotSize(slot.data.name);
-          if (size !== null && size !== rows) slot.setAttachment(null);
-        }
-      };
-    }
-    spine.update(0); // apply skin + slot gate now, not on the next tick
-  }
-}
-
 const reelSet = new ReelSetBuilder()
   .reels(REELS)
   .multiways({ minRows: MIN_ROWS, maxRows: MAX_ROWS, reelPixelHeight: REEL_PIXEL_HEIGHT })
-  .symbolSize(CELL_W, SYMBOL_SIZE)
-  .symbolGap(GAP, 0)
+  .symbolSize(SYMBOL_SIZE, SYMBOL_SIZE)
+  .symbolGap(GAP, GAP)
   .symbols((r) => {
-    // Namespaced animation vocabulary: general/* + wins/*. `high` has no
-    // explode clip, so cascade destroys on it fall back to the engine's
-    // GSAP implode automatically.
-    const spineMap = buildMultiwaysSpineMap(MAX_ROWS);
-    for (const id of IDS) {
-      r.register(id, MultiwaysSymbol, {
-        spineMap,
-        scale: SPINE_SCALE,
-        idleAnimation: 'general/idle',
-        landingAnimation: 'general/land',
-        outAnimation: 'general/explode',
-        winAnimation: 'wins/win',
-        autoPlayLanding: true,
-      });
+    for (const sym of CARD_DECK) {
+      if (IDS.includes(sym.id)) {
+        r.register(sym.id, CardSymbol, {
+          color: sym.color, label: sym.label, textColor: sym.textColor,
+        });
+      }
     }
   })
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 120, bounceDistance: 0, bounceDuration: 0 })
@@ -8677,251 +8353,11 @@ return {
 };
 ```
 
-### multiways-tumble
-URL: https://pixi-reels.schmooky.dev/recipes/multiways-tumble/
-```ts
-// @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, SpineReelSymbol,
-//                   loadMultiwaysSpines, buildMultiwaysSpineMap,
-//                   multiwaysSkinName, MULTIWAYS_SYMBOL_IDS,
-//                   MULTIWAYS_AUTHORED_REEL_H, MULTIWAYS_AUTHORED_CELL_W,
-//                   PIXI, gsap, app
-
-// PURE-TUMBLE MultiWays. no strip motion anywhere. Every play: the old
-// board FALLS OUT, a fresh board (with a fresh per-reel shape) RAINS IN,
-// then ways wins explode and cascade-refill until the chain dies. The
-// all-tumble school on a per-spin-variable board.
-//
-// The tumble pipeline and the multiways pipeline compose without any
-// special casing: `spin()` (default cascade mode. no { mode: 'standard' }
-// override) runs fall-out → AdjustPhase (commits the `setShape` rolled
-// for this play, stretching each reel's cells to reelPixelHeight / rows)
-// → drop-in. The refill chain afterwards is the same
-// `runCascade({ detectWinners, nextGrid })` every cascade recipe uses.
-
-const REELS = 6;
-const MIN_ROWS = 2;
-const MAX_ROWS = 7;
-const REEL_PIXEL_HEIGHT = 360;
-const SYMBOL_SIZE = REEL_PIXEL_HEIGHT / MAX_ROWS;
-const GAP = 4;
-
-await loadMultiwaysSpines();
-
-const SPINE_SCALE = REEL_PIXEL_HEIGHT / MULTIWAYS_AUTHORED_REEL_H;
-const CELL_W = MULTIWAYS_AUTHORED_CELL_W * SPINE_SCALE;
-const IDS = [...MULTIWAYS_SYMBOL_IDS];
-const MIN_WAYS_REELS = 3;
-const MAX_CASCADES = 4;
-
-function randSymbol() {
-  return IDS[Math.floor(Math.random() * IDS.length)];
-}
-
-function randomShape() {
-  return Array.from({ length: REELS }, () =>
-    MIN_ROWS + Math.floor(Math.random() * (MAX_ROWS - MIN_ROWS + 1)),
-  );
-}
-
-function buildGridWithGuaranteedWin(shape) {
-  const grid = shape.map((rows) =>
-    Array.from({ length: rows }, () => randSymbol()),
-  );
-  if (Math.random() < 0.7) {
-    const target = randSymbol();
-    for (let c = 0; c < MIN_WAYS_REELS; c++) {
-      const len = grid[c].length;
-      const positions = new Set([0]);
-      const extraCount = len >= 4 ? 2 : len >= 3 ? 1 : 0;
-      while (positions.size < 1 + extraCount) {
-        positions.add(Math.floor(Math.random() * len));
-      }
-      for (const row of positions) grid[c][row] = target;
-    }
-  }
-  return grid;
-}
-
-function findAllWaysWins(grid) {
-  const wins = [];
-  for (const id of IDS) {
-    let reelCount = 0;
-    for (let c = 0; c < grid.length; c++) {
-      if (grid[c].includes(id)) reelCount++;
-      else break;
-    }
-    if (reelCount >= MIN_WAYS_REELS) wins.push({ id, reelCount });
-  }
-  return wins;
-}
-
-function collectAllWinners(grid, wins) {
-  const winners = [];
-  for (const win of wins) {
-    for (let c = 0; c < win.reelCount; c++) {
-      for (let row = 0; row < grid[c].length; row++) {
-        if (grid[c][row] === win.id) winners.push({ reel: c, row });
-      }
-    }
-  }
-  return winners;
-}
-
-function applyCascade(grid, winners) {
-  const winnersByReel = new Map();
-  for (const w of winners) {
-    if (!winnersByReel.has(w.reel)) winnersByReel.set(w.reel, new Set());
-    winnersByReel.get(w.reel).add(w.row);
-  }
-  return grid.map((col, c) => {
-    const winRows = winnersByReel.get(c);
-    if (!winRows || winRows.size === 0) return [...col];
-    const survivors = col.filter((_, row) => !winRows.has(row));
-    const newCount = col.length - survivors.length;
-    const newSymbols = Array.from({ length: newCount }, () => randSymbol());
-    return [...newSymbols, ...survivors];
-  });
-}
-
-// Every symbol is authored once per ROW COUNT (skins `<id>/size<rows>`,
-// rows 2..7). The stretched multiways cell height reveals the reel's
-// row count (cellH = reelPixelHeight / rows), so resize() re-skins the
-// skeleton to the matching variant. One uniform SPINE_SCALE fits every
-// skin: each size ladder implies the same authored reel height (~617).
-// The high skeleton ships ALL SIX size variants in its DEFAULT skin (the
-// size skins are empty selectors), so a naive load renders six stacked
-// gold frames/backplates. the production runtime hides inactive sizes in
-// code. Mirror that with a per-frame hook (spine-pixi-v8 runs it after
-// state.apply, before world transforms): null every per-size slot that
-// doesn't match the reel's row count. Slot-name grammar, from the export:
-// high<N>_*, glow_<N>_*, radialGradient_<N>, and the two _<N>-suffixed
-// corner slots. particle_2_* is a particle TYPE, not a size. shared.
-function highSlotSize(name) {
-  let m = name.match(/^high(\d)_/);
-  if (m) return +m[1];
-  m = name.match(/^high_frame_corner_large_(?:btm|top)_(\d)$/);
-  if (m) return +m[1];
-  m = name.match(/^glow_(\d)_/);
-  if (m) return +m[1];
-  m = name.match(/^radialGradient_(\d)$/);
-  if (m) return +m[1];
-  return null;
-}
-
-class MultiwaysSymbol extends SpineReelSymbol {
-  resize(width, height) {
-    super.resize(width, height);
-    const spine = this.spine;
-    if (!spine || !height) return;
-    const rows = Math.max(2, Math.min(7, Math.round(REEL_PIXEL_HEIGHT / height)));
-    const skinName = multiwaysSkinName(this.symbolId, rows);
-    if (spine.skeleton.skin?.name !== skinName) {
-      spine.skeleton.setSkinByName(skinName);
-      spine.skeleton.setSlotsToSetupPose();
-    }
-    if (this.symbolId === 'high') {
-      spine.beforeUpdateWorldTransforms = (s) => {
-        for (const slot of s.skeleton.slots) {
-          const size = highSlotSize(slot.data.name);
-          if (size !== null && size !== rows) slot.setAttachment(null);
-        }
-      };
-    }
-    spine.update(0); // apply skin + slot gate now, not on the next tick
-  }
-}
-
-const reelSet = new ReelSetBuilder()
-  .reels(REELS)
-  .multiways({ minRows: MIN_ROWS, maxRows: MAX_ROWS, reelPixelHeight: REEL_PIXEL_HEIGHT })
-  .symbolSize(CELL_W, SYMBOL_SIZE)
-  .symbolGap(GAP, 0)
-  .symbols((r) => {
-    // Namespaced animation vocabulary: general/* + wins/*. `high` has no
-    // explode clip, so cascade destroys on it fall back to the engine's
-    // GSAP implode automatically.
-    const spineMap = buildMultiwaysSpineMap(MAX_ROWS);
-    for (const id of IDS) {
-      r.register(id, MultiwaysSymbol, {
-        spineMap,
-        scale: SPINE_SCALE,
-        idleAnimation: 'general/idle',
-        landingAnimation: 'general/land',
-        outAnimation: 'general/explode',
-        winAnimation: 'wins/win',
-        autoPlayLanding: true,
-      });
-    }
-  })
-  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 120, bounceDistance: 0, bounceDuration: 0 })
-  .tumble({
-    // The opening reveal IS a tumble: `fall` animates the old board out,
-    // `dropIn` rains the new one in. The cascade refills reuse `dropIn`.
-    fall:   { duration: 260, ease: 'sine.in',       rowStagger: 30 },
-    dropIn: { duration: 380, ease: 'back.out(1.3)', rowStagger: 35, distance: 'perHole' },
-  })
-  .ticker(app.ticker)
-  .build();
-
-// Seed a jagged silhouette on load (same trick as the strip-spin canvas).
-const initialShape = randomShape();
-const initialGrid = initialShape.map((rows) =>
-  Array.from({ length: rows }, () => randSymbol()),
-);
-{
-  const p = reelSet.spin({ mode: 'standard' });
-  reelSet.setShape(initialShape);
-  reelSet.setResult(initialGrid.map((visible) => ({ visible })));
-  reelSet.skipSpin();
-  await p;
-}
-
-return {
-  reelSet,
-  onSpin: async () => {
-    const shape = randomShape();
-    const stage0 = buildGridWithGuaranteedWin(shape);
-
-    // Round 1. tumble reveal: old board falls out (fall config), the
-    // AdjustPhase commits the new shape mid-flight, and the new board
-    // rains in left-to-right at the new per-reel cell heights.
-    reelSet.setDropOrder('ltr');
-    const p = reelSet.spin();
-    await new Promise((r) => setTimeout(r, 80));
-    reelSet.setShape(shape);
-    reelSet.setResult(stage0.map((visible) => ({ visible })));
-    await p;
-    await new Promise((r) => setTimeout(r, 150));
-
-    // Ways-win cascade chain. same orchestrator as every cascade recipe.
-    let cascadeCount = 0;
-    reelSet.setDropOrder('all');
-    await reelSet.runCascade({
-      detectWinners: (grid) => {
-        if (cascadeCount >= MAX_CASCADES) return [];
-        const wins = findAllWaysWins(grid);
-        if (wins.length === 0) return [];
-        return collectAllWinners(grid, wins);
-      },
-      nextGrid: (prev, winners) => {
-        cascadeCount += 1;
-        return applyCascade(prev, [...winners]);
-      },
-      pauseAfterDestroyMs: 60,
-    });
-  },
-};
-```
-
 ### multiways
 URL: https://pixi-reels.schmooky.dev/recipes/multiways/
 ```ts
 // @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, SpineReelSymbol,
-//                   loadMultiwaysSpines, buildMultiwaysSpineMap,
-//                   multiwaysSkinName, MULTIWAYS_SYMBOL_IDS,
-//                   MULTIWAYS_AUTHORED_REEL_H, MULTIWAYS_AUTHORED_CELL_W,
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
 //                   PIXI, gsap, app, pickWeighted
 //
 // MultiWays. per-spin row variation. Each reel lands on a different
@@ -8934,7 +8370,8 @@ URL: https://pixi-reels.schmooky.dev/recipes/multiways/
 //
 // 6 reels x [2, 7] rows = up to 117,649 distinct landings (7^6). The
 // "ways" count for any individual spin is the product of visibleRows
-// across reels.
+// across reels. The banner above the grid prints both the per-reel
+// shape and the total ways for each landing.
 
 const REELS = 6;
 const MIN_ROWS = 2;
@@ -8943,82 +8380,19 @@ const REEL_PIXEL_HEIGHT = 360;
 const SYMBOL_SIZE = REEL_PIXEL_HEIGHT / MAX_ROWS;
 const GAP = 0;
 
-await loadMultiwaysSpines();
-
-const SPINE_SCALE = REEL_PIXEL_HEIGHT / MULTIWAYS_AUTHORED_REEL_H;
-const CELL_W = MULTIWAYS_AUTHORED_CELL_W * SPINE_SCALE;
-const IDS = [...MULTIWAYS_SYMBOL_IDS];
-
-// Every symbol is authored once per ROW COUNT (skins `<id>/size<rows>`,
-// rows 2..7). The stretched multiways cell height reveals the reel's
-// row count (cellH = reelPixelHeight / rows), so resize() re-skins the
-// skeleton to the matching variant. One uniform SPINE_SCALE fits every
-// skin: each size ladder implies the same authored reel height (~617).
-// The high skeleton ships ALL SIX size variants in its DEFAULT skin (the
-// size skins are empty selectors), so a naive load renders six stacked
-// gold frames/backplates. the production runtime hides inactive sizes in
-// code. Mirror that with a per-frame hook (spine-pixi-v8 runs it after
-// state.apply, before world transforms): null every per-size slot that
-// doesn't match the reel's row count. Slot-name grammar, from the export:
-// high<N>_*, glow_<N>_*, radialGradient_<N>, and the two _<N>-suffixed
-// corner slots. particle_2_* is a particle TYPE, not a size. shared.
-function highSlotSize(name) {
-  let m = name.match(/^high(\d)_/);
-  if (m) return +m[1];
-  m = name.match(/^high_frame_corner_large_(?:btm|top)_(\d)$/);
-  if (m) return +m[1];
-  m = name.match(/^glow_(\d)_/);
-  if (m) return +m[1];
-  m = name.match(/^radialGradient_(\d)$/);
-  if (m) return +m[1];
-  return null;
-}
-
-class MultiwaysSymbol extends SpineReelSymbol {
-  resize(width, height) {
-    super.resize(width, height);
-    const spine = this.spine;
-    if (!spine || !height) return;
-    const rows = Math.max(2, Math.min(7, Math.round(REEL_PIXEL_HEIGHT / height)));
-    const skinName = multiwaysSkinName(this.symbolId, rows);
-    if (spine.skeleton.skin?.name !== skinName) {
-      spine.skeleton.setSkinByName(skinName);
-      spine.skeleton.setSlotsToSetupPose();
-    }
-    if (this.symbolId === 'high') {
-      spine.beforeUpdateWorldTransforms = (s) => {
-        for (const slot of s.skeleton.slots) {
-          const size = highSlotSize(slot.data.name);
-          if (size !== null && size !== rows) slot.setAttachment(null);
-        }
-      };
-    }
-    spine.update(0); // apply skin + slot gate now, not on the next tick
-  }
-}
-
 const reelSet = new ReelSetBuilder()
   .reels(REELS)
   .multiways({ minRows: MIN_ROWS, maxRows: MAX_ROWS, reelPixelHeight: REEL_PIXEL_HEIGHT })
   .pinMigrationDuration(300)
   .pinMigrationEase('power2.inOut')
-  .symbolSize(CELL_W, SYMBOL_SIZE)
+  .symbolSize(SYMBOL_SIZE, SYMBOL_SIZE)
   .symbolGap(GAP, GAP)
   .symbols((registry) => {
-    // Namespaced animation vocabulary: general/* + wins/*.
-    const spineMap = buildMultiwaysSpineMap(MAX_ROWS);
-    for (const id of IDS) {
-      registry.register(id, MultiwaysSymbol, {
-        spineMap,
-        scale: SPINE_SCALE,
-        idleAnimation: 'general/idle',
-        landingAnimation: 'general/land',
-        winAnimation: 'wins/win',
-        autoPlayLanding: true,
-      });
+    for (const card of CARD_DECK) {
+      registry.register(card.id, CardSymbol, { color: card.color, label: card.label });
     }
   })
-  .weights(Object.fromEntries(IDS.map((id, i) => [id, 16 - i])))
+  .weights(Object.fromEntries(CARD_DECK.map((c, i) => [c.id, 12 - i])))
   // Big symbols visually overshoot at landing on this layout. set
   // bounceDistance: 0 so each cell snaps flush regardless of which
   // shape was rolled this spin.
@@ -9026,6 +8400,48 @@ const reelSet = new ReelSetBuilder()
   .speed('turbo', { ...SpeedPresets.TURBO, bounceDistance: 0, bounceDuration: 0 })
   .ticker(app.ticker)
   .build();
+
+// Banner above the grid: prints the per-reel shape + total ways for
+// the current landing, so the variation is unmistakable on every spin.
+const bannerHeight = 36;
+const banner = new PIXI.Container();
+reelSet.addChild(banner);
+banner.y = -bannerHeight - 8;
+
+const bannerBg = new PIXI.Graphics();
+banner.addChild(bannerBg);
+
+const bannerText = new PIXI.Text({
+  text: 'READY. press spin',
+  style: {
+    fontFamily: '"Roboto Condensed", "Arial Narrow", system-ui, sans-serif',
+    fontSize: 14, fontWeight: '700',
+    fill: 0xffffff,
+    letterSpacing: 1,
+  },
+});
+bannerText.anchor.set(0.5);
+bannerText.y = bannerHeight / 2;
+banner.addChild(bannerText);
+
+function redrawBanner(text) {
+  const width = REELS * (SYMBOL_SIZE + GAP) - GAP;
+  bannerBg
+    .clear()
+    .roundRect(0, 0, width, bannerHeight, 8)
+    .fill({ color: 0x1e293b })
+    .stroke({ width: 2, color: 0xfef08a, alpha: 0.5 });
+  bannerText.text = text;
+  bannerText.x = width / 2;
+}
+redrawBanner('READY. press spin');
+
+reelSet.events.on('spin:allLanded', () => {
+  const visibleRowsPerReel = reelSet.reels.map((r) => r.visibleRows);
+  const ways = visibleRowsPerReel.reduce((a, b) => a * b, 1);
+  redrawBanner(`SHAPE [${visibleRowsPerReel.join(', ')}] = ${ways.toLocaleString()} ways`);
+});
+reelSet.events.on('spin:start', () => redrawBanner('SPINNING…'));
 
 return {
   reelSet,
@@ -9035,8 +8451,11 @@ return {
     );
     reelSet.setShape(shape);
     return shape.map((rows) =>
-      Array.from({ length: rows }, () => IDS[Math.floor(Math.random() * IDS.length)]),
+      Array.from({ length: rows }, () => CARD_DECK[Math.floor(Math.random() * CARD_DECK.length)].id),
     );
+  },
+  cleanup: () => {
+    try { banner.destroy({ children: true }); } catch { /* ignore */ }
   },
 };
 ```
