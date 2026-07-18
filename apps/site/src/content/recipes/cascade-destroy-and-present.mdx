@@ -35,7 +35,7 @@ A cascade win resolves in a fixed order: **present the win → destroy the winne
 
 ## 1. Present the win, then destroy
 
-`WinPresenter` is the same presenter you use for paylines: a "win" is just cells, whether they came from a payline, a cluster, or a cascade pop. In `runCascade`'s **`presentWinners`** hook the presenter plays the winners' authored `win` clip while they are still on the board and losers dim; when it resolves, the library's `destroySymbols` chains the authored `explode`, and the refill follows:
+`WinPresenter` is the same presenter you use for paylines: a "win" is just cells, whether they came from a payline, a cluster, or a cascade pop. The canvas plays a full storyboard: the reels **stop**, the presenter **dims the board and shows the first combination**, then **dims and shows the second**, holds a beat — and only then does the engine **explode every winner** and **drop** the refill. Both combinations go through one `presenter.show([...])` call inside `runCascade`'s **`presentWinners`** hook (higher `value` presents first), and the destruction waits for the whole pass:
 
 <RecipeDemo code="destroy-winpresenter" />
 
@@ -50,13 +50,12 @@ const presenter = new WinPresenter(reelSet, {
 await reelSet.runCascade({
   detectWinners: (g) => yourDetector(g),
   nextGrid:      (prev, winners) => yourNextGrid(prev, winners),
-  presentWinners: async ({ chain, winners }) => {
-    if (winners.length === 0) return;
-    await presenter.show([{
-      id: chain,
-      cells: winners.map(w => ({ reelIndex: w.reel, rowIndex: w.row })),
-      value: winners.length * 10,
-    }]);
+  presentWinners: async () => {
+    await presenter.show([          // cycles: dim + show A, dim + show B
+      { id: 1, cells: comboA, value: 60 },
+      { id: 2, cells: comboB, value: 30 },
+    ]);
+    await wait(450);                // the beat before the explosion
   },
 });
 ```

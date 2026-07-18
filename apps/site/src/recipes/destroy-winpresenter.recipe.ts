@@ -4,11 +4,12 @@
 //           CASCADE_PLATE_W, CASCADE_PLATE_H,
 //           PIXI, gsap, app, pickWeighted
 
-// PRESENTED destroy: `WinPresenter` drives the winners' authored `win`
-// clip (losers dim) in runCascade's `presentWinners` hook. awaited
-// BEFORE the engine's `destroySymbols` plays the authored `explode`.
-// Two authored clips chained in a real round's order: win first,
-// destruction second, refill last. runCascade sequences all three.
+// PRESENTED destroy, full storyboard: the reels STOP, the presenter
+// DIMS the board and shows the first winning combination, then dims
+// and shows the SECOND combination, holds a beat. and only then does
+// the engine EXPLODE every winner and DROP the refill. Two win groups
+// cycled by one `WinPresenter` inside runCascade's `presentWinners`
+// hook; the destruction waits for the whole pass.
 
 await loadCascadeSpines();
 
@@ -17,13 +18,16 @@ const REELS = 6, ROWS = 4;
 const SCALE = 0.68;
 const CELL_W = CASCADE_PLATE_W * SCALE;
 const CELL_H = CASCADE_PLATE_H * SCALE;
-const CLUSTER = 'low1';
-const HIT_ROW = 2;
-const HIT_COLS = [0, 1, 2];
+// Two planted combinations, visually distinct tiers. they share reel 2,
+// so the refill gravity handles a double-winner column too.
+const GROUP_A = { id: 'mid2', cells: [{ reel: 2, row: 1 }, { reel: 3, row: 1 }, { reel: 4, row: 1 }], value: 60 };
+const GROUP_B = { id: 'low1', cells: [{ reel: 0, row: 2 }, { reel: 1, row: 2 }, { reel: 2, row: 2 }], value: 30 };
+const PLANTED = new Set([GROUP_A.id, GROUP_B.id]);
+const HOLD_AFTER_PRESENT_MS = 450; // the "beat" between the pass and the explosion
 
-function randSymbol(exclude) {
+function randSymbol() {
   let s;
-  do { s = IDS[Math.floor(Math.random() * IDS.length)]; } while (s === exclude);
+  do { s = IDS[Math.floor(Math.random() * IDS.length)]; } while (PLANTED.has(s));
   return s;
 }
 
@@ -70,7 +74,9 @@ const reelSet = new ReelSetBuilder()
 // clip. no hand-rolled scale-pop needed once real art is in the map.
 const presenter = new WinPresenter(reelSet, {
   dimLosers: { alpha: 0.35 },
-  cycleGap: 0,
+  // A readable gap between the two combinations: dim + show A, breathe,
+  // dim + show B. One cycle each.
+  cycleGap: 200,
   cycles: 1,
   symbolAnim: async (symbol) => {
     await symbol.playWin();
@@ -83,10 +89,11 @@ return {
   reelSet,
   onSpin: async () => {
     const stage0 = Array.from({ length: REELS }, (_, c) =>
-      Array.from({ length: ROWS }, (_, r) =>
-        r === HIT_ROW && HIT_COLS.includes(c) ? CLUSTER : randSymbol(CLUSTER)
-      )
+      Array.from({ length: ROWS }, () => randSymbol()),
     );
+    for (const g of [GROUP_A, GROUP_B]) {
+      for (const cell of g.cells) stage0[cell.reel][cell.row] = g.id;
+    }
 
     // Moment A. initial drop, left-to-right reveal.
     reelSet.setDropOrder('ltr');
@@ -96,34 +103,46 @@ return {
     await p;
     await new Promise(r => setTimeout(r, 300));
 
-    // Moment B. runCascade owns the loop. `presentWinners` hands the
-    // winners to the presenter (authored `win` + dimmed losers) while
-    // they are still on the board; when it resolves the library calls
-    // `destroySymbols`, which routes through the authored `explode`.
-    // No destroyOptions suppression here: the two clips chain.
+    // Moment B. runCascade owns the loop. `presentWinners` hands BOTH
+    // combinations to the presenter, which cycles them: dim + show A,
+    // dim + show B. Then a held beat, and only when the hook resolves
+    // does the library call `destroySymbols`. every winner explodes at
+    // once. and the refill drops.
     reelSet.setDropOrder('all');
     let presented = false;
     await reelSet.runCascade({
-      detectWinners: (grid) => {
+      detectWinners: () => {
         if (presented) return [];
-        return HIT_COLS.map(c => grid[c][HIT_ROW] === CLUSTER ? { reel: c, row: HIT_ROW } : null).filter(Boolean);
+        return [...GROUP_A.cells, ...GROUP_B.cells];
       },
       nextGrid: (prev, winners) => {
-        const next = prev.map(col => [...col]);
+        // Generic gravity: per column, drop the winner rows, pack the
+        // survivors to the bottom, fresh symbols on top. Handles the
+        // shared reel (two winners in one column) correctly.
+        const byReel = new Map();
         for (const w of winners) {
-          for (let r = w.row; r > 0; r--) next[w.reel][r] = next[w.reel][r - 1];
-          next[w.reel][0] = randSymbol(CLUSTER);
+          if (!byReel.has(w.reel)) byReel.set(w.reel, new Set());
+          byReel.get(w.reel).add(w.row);
         }
         presented = true;
-        return next;
+        return prev.map((col, c) => {
+          const drop = byReel.get(c);
+          if (!drop) return [...col];
+          const survivors = col.filter((_, row) => !drop.has(row));
+          const fillers = Array.from({ length: drop.size }, () => randSymbol());
+          return [...fillers, ...survivors];
+        });
       },
-      presentWinners: async ({ chain, winners }) => {
-        if (winners.length === 0) return;
-        await presenter.show([{
-          id: chain,
-          cells: winners.map(w => ({ reelIndex: w.reel, rowIndex: w.row })),
-          value: winners.length * 10,
-        }]);
+      presentWinners: async () => {
+        // Higher value sorts first: the mid-tier combination presents
+        // before the low-tier one.
+        await presenter.show([
+          { id: 1, cells: GROUP_A.cells.map(w => ({ reelIndex: w.reel, rowIndex: w.row })), value: GROUP_A.value },
+          { id: 2, cells: GROUP_B.cells.map(w => ({ reelIndex: w.reel, rowIndex: w.row })), value: GROUP_B.value },
+        ]);
+        // The beat: winners back at full alpha, board settled, a breath
+        // before the explosion.
+        await new Promise(r => setTimeout(r, HOLD_AFTER_PRESENT_MS));
       },
       pauseAfterDestroyMs: 80,
     });
