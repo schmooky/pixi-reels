@@ -15,13 +15,22 @@ apis:
   - ReelSet.refill
   - ReelSet.setDropOrder
   - ReelSet.setResult
+  - SpineReelSymbol
 tags:
   - starter
   - cascade
   - 6x5
+  - spine
+  - thunderkick
 ---
 
 <RecipeDemo code="cascade-6x5" />
+
+## The same starter, with real art
+
+Everything below applies to both canvases. This one swaps the card-symbol registry for real Thunderkick spine symbols and changes **nothing else**: same spin, same `runCascade`, same callbacks, line for line. The whole diff is the registration block (spine map + per-id scale + `outAnimation: 'explode'` so the destroy plays the authored explosion) and the id constants. Clone the card one to start building today; diff it against this one when your art lands:
+
+<RecipeDemo code="cascade-6x5-spine" />
 
 A cascade/tumble slot on the modern API. `.tumble({ fall, dropIn })` replaces the strip-spin mechanic with a drop-in: existing symbols fall off on `spin()` click, new symbols arrive when `setResult` returns. The cascade loop. destroy winners, pause, refill. is owned by **`reelSet.runCascade(...)`**; you supply two callbacks (`detectWinners`, `nextGrid`) that encode the game rules.
 
@@ -117,5 +126,7 @@ If you outgrow `runCascade` (per-cascade asymmetric pauses, conditional bonus tr
 
 - [Tumble feels](/recipes/tumble-feels/). pick an animation feel side-by-side with the same orchestration
 - [Refill orders](/recipes/refill-orders/). `setDropOrder` patterns for the post-win drop
-- [Cascade with WinPresenter](/recipes/cascade-winpresenter/). drive fades via `WinPresenter` instead of `destroySymbols`
+- [Cascade destroys. fade, explode, present](/recipes/cascade-destroy-and-present/). the destroy stage three ways, including `WinPresenter`-driven fades
 - [Hold & Win](/recipes/hold-and-win/). a different respin pattern for comparison
+
+<AssetCredit studio="Thunderkick" />

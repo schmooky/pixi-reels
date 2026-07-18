@@ -72,6 +72,12 @@ document.getElementById('spin')!.addEventListener('click', async () => {
 });
 ```
 
+## The shape extremes. combs and valleys
+
+The canvas above rolls its per-reel row counts uniformly, which mostly lands mid-range silhouettes. This one scripts the extremes. alternating comb shapes (`5-2-5-2-5-2`, its inverse, and a valley) so you can watch the two systems hold up when neighbouring reels differ by the full `minRows..maxRows` range: a 2-row reel cascades in the same phase as its 5-row neighbour, and the ways evaluation just sees per-reel arrays of different lengths:
+
+<RecipeDemo code="multiways-cascade-extremes" />
+
 ## Why this works on a multiways slot
 
 `reelSet.refill({ winners, grid })` reads each reel's `visibleRows` at call time. A reel that landed at 2 rows and a reel that landed at 5 rows refill independently in the same chain. the engine builds per-reel fall jobs against each reel's live geometry, so jagged multiways shapes aren't a special case.

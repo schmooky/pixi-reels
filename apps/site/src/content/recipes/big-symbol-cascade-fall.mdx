@@ -43,6 +43,12 @@ common in cluster / tumble slots. the high-value symbol reveals
 itself across multiple cascade chains as the cells below it
 disappear.
 
+## The same fall, 2×2
+
+The block above is single-reel (1×3). This canvas runs the identical beat with a **2×2** block: the anchor move in `nextGrid` now spans two reels, and `_coordinateBigSymbols` paints the OCCUPIED stubs across the whole footprint on both reels from the one anchor cell. The two covered reels refill in the same phase, so the block falls as one rigid piece:
+
+<RecipeDemo code="big-symbol-cascade-fall-2x2" />
+
 ## Why this works
 
 `runCascade` doesn't have any opinion about big symbols. It just calls
