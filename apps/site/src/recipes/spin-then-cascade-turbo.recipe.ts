@@ -50,9 +50,7 @@ const createInner = () =>
   new TimedExplodeSymbol({
     spineMap: buildCascadeSpineMap(),
     scale: SCALE,
-    landingAnimation: 'land',
     outAnimation: 'explode',
-    autoPlayLanding: true,
   });
 
 prewarmSpinTextures({

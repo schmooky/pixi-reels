@@ -40,8 +40,6 @@ const reelSet = new ReelSetBuilder()
       r.register(id, SpineReelSymbol, {
         spineMap,
         scale: SCALE,
-        landingAnimation: 'land',
-        autoPlayLanding: true,
       });
     }
   })

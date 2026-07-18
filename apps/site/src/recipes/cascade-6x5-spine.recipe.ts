@@ -48,9 +48,7 @@ const reelSet = new ReelSetBuilder()
       r.register(id, TimedExplodeSymbol, {
         spineMap,
         scale: SCALE,
-        landingAnimation: 'land',
         outAnimation: 'explode',
-        autoPlayLanding: true,
       });
     }
   })

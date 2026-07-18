@@ -39,9 +39,7 @@ const reelSet = new ReelSetBuilder()
       r.register(id, SpineReelSymbol, {
         spineMap,
         scale: SCALE,
-        landingAnimation: 'land',
         outAnimation: 'explode', // the ONE line that swaps the destroy
-        autoPlayLanding: true,
       });
     }
   })
