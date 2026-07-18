@@ -12,8 +12,10 @@ import type { SpineSymbolSource } from 'pixi-reels/spine';
  * 23-frame explosion sequence). ideal as the cascade `out` animation.
  *
  * The authored symbol plates differ per tier: `lowMidSymbols` is 88x101.6,
- * `high` is 124x143.2 (same aspect to three decimals). Register `high`
- * with `scale * CASCADE_HIGH_SCALE` so it fills the same cell as the rest.
+ * `high` is 124x143.2. authored 1.41x bigger ON PURPOSE (its 310x358
+ * plate attachment vs the tiers' 220x254 at the same bone scale), so the
+ * premium symbol overflows its cell and pops out of the grid like in the
+ * original game. Register every id at the same uniform scale.
  *
  * Served from `cascade-spine/` under the active publicDir
  * (`apps/site/public/` for the docs site).
@@ -35,13 +37,6 @@ export type CascadeSymbolId = (typeof CASCADE_SYMBOL_IDS)[number];
 /** Setup-pose plate of the low/mid tier. cells are sized from this. */
 export const CASCADE_PLATE_W = 88;
 export const CASCADE_PLATE_H = 101.6;
-
-/**
- * Extra scale for the `high` skeleton so its 124x143.2 plate lands on the
- * same cell as the 88x101.6 low/mid plate (width and height ratios agree
- * to three decimals).
- */
-export const CASCADE_HIGH_SCALE = CASCADE_PLATE_W / 124;
 
 const skeletonAlias = (name: CascadeSkeleton): string => `cascade-${name}`;
 

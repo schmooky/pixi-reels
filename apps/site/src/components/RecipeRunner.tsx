@@ -53,7 +53,6 @@ import {
   CASCADE_SYMBOL_IDS,
   CASCADE_PLATE_W,
   CASCADE_PLATE_H,
-  CASCADE_HIGH_SCALE,
 } from '../../../../examples/shared/cascadeSpineLoader.ts';
 import { loadHoldAndWinSprites } from '../../../../examples/shared/holdAndWinSprites.ts';
 import { transform as sucraseTransform } from 'sucrase';
@@ -212,7 +211,7 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
           'SpineReelSymbol', 'Spine', 'loadGeneratedSpines', 'buildSpineMap',
           'loadThunderkickSpines', 'buildThunderkickSpineMap', 'THUNDERKICK_SYMBOL_IDS',
           'loadCascadeSpines', 'buildCascadeSpineMap', 'CASCADE_SYMBOL_IDS',
-          'CASCADE_PLATE_W', 'CASCADE_PLATE_H', 'CASCADE_HIGH_SCALE',
+          'CASCADE_PLATE_W', 'CASCADE_PLATE_H',
           'loadHoldAndWinSprites',
           `"use strict"; ${js}`,
         );
@@ -237,7 +236,7 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
           SpineReelSymbol, Spine, loadGeneratedSpines, buildSpineMap,
           loadThunderkickSpines, buildThunderkickSpineMap, THUNDERKICK_SYMBOL_IDS,
           loadCascadeSpines, buildCascadeSpineMap, CASCADE_SYMBOL_IDS,
-          CASCADE_PLATE_W, CASCADE_PLATE_H, CASCADE_HIGH_SCALE,
+          CASCADE_PLATE_W, CASCADE_PLATE_H,
           loadHoldAndWinSprites,
         )) as RunResult;
       } catch (e) {

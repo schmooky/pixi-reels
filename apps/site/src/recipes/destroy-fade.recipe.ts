@@ -1,7 +1,7 @@
 // @ts-nocheck
 // Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, loadCascadeSpines,
 //           buildCascadeSpineMap, CASCADE_SYMBOL_IDS, CASCADE_PLATE_W,
-//           CASCADE_PLATE_H, CASCADE_HIGH_SCALE, PIXI, gsap, app, pickWeighted
+//           CASCADE_PLATE_H, PIXI, gsap, app, pickWeighted
 
 // ENGINE-DEFAULT destroy: no `out` animation registered, so
 // `destroySymbols` falls back to the library's GSAP scale-and-fade
@@ -41,12 +41,16 @@ const reelSet = new ReelSetBuilder()
     for (const id of CASCADE_SYMBOL_IDS) {
       r.register(id, SpineReelSymbol, {
         spineMap,
-        scale: id === 'high' ? SCALE * CASCADE_HIGH_SCALE : SCALE,
+        scale: SCALE,
         landingAnimation: 'land',
         autoPlayLanding: true,
       });
     }
   })
+  // The skull overflows its cell (authored premium pop, tamed via the
+  // skeleton's root-bone scale). lift it above every reel and outside
+  // the reel mask so the overflow renders instead of clipping.
+  .symbolData({ high: { zIndex: 10, unmask: true } })
   .speed('normal', SpeedPresets.NORMAL).speed('turbo', SpeedPresets.TURBO)
   .tumble({
     fall:   { duration: 0, ease: 'none', rowStagger: 0 },              // not used. refill skips fall

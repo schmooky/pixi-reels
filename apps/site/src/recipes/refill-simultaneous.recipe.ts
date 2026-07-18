@@ -1,7 +1,7 @@
 // @ts-nocheck
 // Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, loadCascadeSpines,
 //           buildCascadeSpineMap, CASCADE_SYMBOL_IDS, CASCADE_PLATE_W,
-//           CASCADE_PLATE_H, CASCADE_HIGH_SCALE, PIXI, gsap, app, pickWeighted
+//           CASCADE_PLATE_H, PIXI, gsap, app, pickWeighted
 
 // SIMULTANEOUS REFILL. every cell drops at the same moment. Snappy,
 // no extra pacing, all new symbols arrive in one beat.
@@ -44,19 +44,24 @@ const reelSet = new ReelSetBuilder()
   .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(4, 4)
   .symbols((r) => {
     // outAnimation: 'explode' routes the engine's cascade destroy through
-    // the authored explosion. `high` is authored on a 124x143.2 plate;
-    // CASCADE_HIGH_SCALE shrinks it onto the same cell as the low/mid tier.
+    // the authored explosion. `high` is authored 1.41x bigger than the
+    // low/mid plate and overflows its cell on purpose. premium symbols
+    // pop out of the grid in the original game, so it gets the same scale.
     const spineMap = buildCascadeSpineMap();
     for (const id of CASCADE_SYMBOL_IDS) {
       r.register(id, TimedExplodeSymbol, {
         spineMap,
-        scale: id === 'high' ? SCALE * CASCADE_HIGH_SCALE : SCALE,
+        scale: SCALE,
         landingAnimation: 'land',
         outAnimation: 'explode',
         autoPlayLanding: true,
       });
     }
   })
+  // The skull overflows its cell (authored premium pop, tamed via the
+  // skeleton's root-bone scale). lift it above every reel and outside
+  // the reel mask so the overflow renders instead of clipping.
+  .symbolData({ high: { zIndex: 10, unmask: true } })
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150 })
   .tumble({
     fall:   { duration: 240, ease: 'sine.in',       rowStagger: 40 },

@@ -2,7 +2,7 @@
 // Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, StaticSpinSymbol,
 //           SpinTextureCache, prewarmSpinTextures, loadCascadeSpines,
 //           buildCascadeSpineMap, CASCADE_SYMBOL_IDS, CASCADE_PLATE_W,
-//           CASCADE_PLATE_H, CASCADE_HIGH_SCALE, PIXI, gsap, app, pickWeighted
+//           CASCADE_PLATE_H, PIXI, gsap, app, pickWeighted
 
 // TURBO HYBRID: the same strip-spin opener + 'low1' → 'mid1' chain, but
 // tuned for speed on both systems independently. The strip-spin runs the
@@ -45,28 +45,22 @@ class TimedExplodeSymbol extends SpineReelSymbol {
   }
 }
 
-// Static-spin plumbing: scratch symbols bake a static + blurred texture
-// per id; the reels spin on those textures and the skeletons only come
-// back at land. `high` needs its own inner factory (its 124x143.2 plate
-// takes CASCADE_HIGH_SCALE), so the ids are prewarmed in two passes.
+// Static-spin plumbing: one scratch symbol bakes a static + blurred
+// texture per id; the reels spin on those textures and the skeletons
+// only come back at land. Uniform scale for every tier (`high` overflows
+// its cell by authoring), so a single factory prewarms all ids.
 const cache = new SpinTextureCache({ renderer: app.renderer });
-const spineMap = buildCascadeSpineMap();
-const makeInner = (id) => () =>
+const createInner = () =>
   new TimedExplodeSymbol({
-    spineMap,
-    scale: id === 'high' ? SCALE * CASCADE_HIGH_SCALE : SCALE,
+    spineMap: buildCascadeSpineMap(),
+    scale: SCALE,
     landingAnimation: 'land',
     outAnimation: 'explode',
     autoPlayLanding: true,
   });
 
-const LOW_MID_IDS = CASCADE_SYMBOL_IDS.filter((id) => id !== 'high');
 prewarmSpinTextures({
-  cache, ids: LOW_MID_IDS, createSymbol: makeInner('low1'),
-  width: CELL_W, height: CELL_H,
-});
-prewarmSpinTextures({
-  cache, ids: ['high'], createSymbol: makeInner('high'),
+  cache, ids: [...CASCADE_SYMBOL_IDS], createSymbol: createInner,
   width: CELL_W, height: CELL_H,
 });
 
@@ -74,9 +68,13 @@ const reelSet = new ReelSetBuilder()
   .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(4, 4)
   .symbols((r) => {
     for (const id of CASCADE_SYMBOL_IDS) {
-      r.register(id, StaticSpinSymbol, { createInner: makeInner(id), cache, blurRampMs: 120 });
+      r.register(id, StaticSpinSymbol, { createInner, cache, blurRampMs: 120 });
     }
   })
+  // The skull overflows its cell (authored premium pop, tamed via the
+  // skeleton's root-bone scale). lift it above every reel and outside
+  // the reel mask so the overflow renders instead of clipping.
+  .symbolData({ high: { zIndex: 10, unmask: true } })
   .speed('turbo', { ...SpeedPresets.TURBO, stopDelay: 60 })
   .initialSpeed('turbo')
   .tumble({

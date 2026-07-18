@@ -8,7 +8,7 @@ Site: https://pixi-reels.schmooky.dev
 Repo: https://github.com/schmooky/pixi-reels
 Package: https://www.npmjs.com/package/pixi-reels
 
-Generated: 2026-07-18T20:11:22.020Z
+Generated: 2026-07-18T20:20:06.588Z
 
 ## Quick start
 
@@ -2124,7 +2124,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/cascade-6x5-spine/
 // @ts-nocheck
 // Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, loadCascadeSpines,
 //           buildCascadeSpineMap, CASCADE_SYMBOL_IDS, CASCADE_PLATE_W,
-//           CASCADE_PLATE_H, CASCADE_HIGH_SCALE, PIXI, gsap, app, pickWeighted
+//           CASCADE_PLATE_H, PIXI, gsap, app, pickWeighted
 
 // The SAME starter as the card canvas above, with real art dropped in.
 // Diff against the card version: the symbol registration block (spine
@@ -2169,19 +2169,24 @@ const reelSet = new ReelSetBuilder()
   .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(4, 4)
   .symbols(r => {
     // outAnimation: 'explode' routes the engine's cascade destroy through
-    // the authored explosion. `high` is authored on a 124x143.2 plate;
-    // CASCADE_HIGH_SCALE shrinks it onto the same cell as the low/mid tier.
+    // the authored explosion. `high` is authored 1.41x bigger than the
+    // low/mid plate and overflows its cell on purpose. premium symbols
+    // pop out of the grid in the original game, so it gets the same scale.
     const spineMap = buildCascadeSpineMap();
     for (const id of CASCADE_SYMBOL_IDS) {
       r.register(id, TimedExplodeSymbol, {
         spineMap,
-        scale: id === 'high' ? SCALE * CASCADE_HIGH_SCALE : SCALE,
+        scale: SCALE,
         landingAnimation: 'land',
         outAnimation: 'explode',
         autoPlayLanding: true,
       });
     }
   })
+  // The skull overflows its cell (authored premium pop, tamed via the
+  // skeleton's root-bone scale). lift it above every reel and outside
+  // the reel mask so the overflow renders instead of clipping.
+  .symbolData({ high: { zIndex: 10, unmask: true } })
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150 })
   .tumble({
     fall:   { duration: 280, ease: 'power3.in',  rowStagger: 60 },
@@ -2324,7 +2329,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/cascade-open-drop/
 // @ts-nocheck
 // Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, loadCascadeSpines,
 //           buildCascadeSpineMap, CASCADE_SYMBOL_IDS, CASCADE_PLATE_W,
-//           CASCADE_PLATE_H, CASCADE_HIGH_SCALE, PIXI, gsap, app, pickWeighted
+//           CASCADE_PLATE_H, PIXI, gsap, app, pickWeighted
 
 // PURE-DROP opener: the same 'low1' → 'mid1' chain as the strip-spin
 // canvas, but the round OPENS as a cascade too. no strip motion at all.
@@ -2373,13 +2378,17 @@ const reelSet = new ReelSetBuilder()
     for (const id of CASCADE_SYMBOL_IDS) {
       r.register(id, TimedExplodeSymbol, {
         spineMap,
-        scale: id === 'high' ? SCALE * CASCADE_HIGH_SCALE : SCALE,
+        scale: SCALE,
         landingAnimation: 'land',
         outAnimation: 'explode',
         autoPlayLanding: true,
       });
     }
   })
+  // The skull overflows its cell (authored premium pop, tamed via the
+  // skeleton's root-bone scale). lift it above every reel and outside
+  // the reel mask so the overflow renders instead of clipping.
+  .symbolData({ high: { zIndex: 10, unmask: true } })
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 120 })
   // The opening reveal IS a tumble here, so `fall` matters. it animates
   // the previous board out before the new one drops in.
@@ -3113,7 +3122,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/destroy-explode/
 // @ts-nocheck
 // Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, loadCascadeSpines,
 //           buildCascadeSpineMap, CASCADE_SYMBOL_IDS, CASCADE_PLATE_W,
-//           CASCADE_PLATE_H, CASCADE_HIGH_SCALE, PIXI, gsap, app, pickWeighted
+//           CASCADE_PLATE_H, PIXI, gsap, app, pickWeighted
 
 // AUTHORED destroy: same board, same one-shot cascade as the fade canvas.
 // the only change is `outAnimation: 'explode'` at registration. That one
@@ -3151,13 +3160,17 @@ const reelSet = new ReelSetBuilder()
     for (const id of CASCADE_SYMBOL_IDS) {
       r.register(id, SpineReelSymbol, {
         spineMap,
-        scale: id === 'high' ? SCALE * CASCADE_HIGH_SCALE : SCALE,
+        scale: SCALE,
         landingAnimation: 'land',
         outAnimation: 'explode', // the ONE line that swaps the destroy
         autoPlayLanding: true,
       });
     }
   })
+  // The skull overflows its cell (authored premium pop, tamed via the
+  // skeleton's root-bone scale). lift it above every reel and outside
+  // the reel mask so the overflow renders instead of clipping.
+  .symbolData({ high: { zIndex: 10, unmask: true } })
   .speed('normal', SpeedPresets.NORMAL).speed('turbo', SpeedPresets.TURBO)
   .tumble({
     fall:   { duration: 0, ease: 'none', rowStagger: 0 },              // not used. refill skips fall
@@ -3206,7 +3219,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/destroy-fade/
 // @ts-nocheck
 // Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, loadCascadeSpines,
 //           buildCascadeSpineMap, CASCADE_SYMBOL_IDS, CASCADE_PLATE_W,
-//           CASCADE_PLATE_H, CASCADE_HIGH_SCALE, PIXI, gsap, app, pickWeighted
+//           CASCADE_PLATE_H, PIXI, gsap, app, pickWeighted
 
 // ENGINE-DEFAULT destroy: no `out` animation registered, so
 // `destroySymbols` falls back to the library's GSAP scale-and-fade
@@ -3246,12 +3259,16 @@ const reelSet = new ReelSetBuilder()
     for (const id of CASCADE_SYMBOL_IDS) {
       r.register(id, SpineReelSymbol, {
         spineMap,
-        scale: id === 'high' ? SCALE * CASCADE_HIGH_SCALE : SCALE,
+        scale: SCALE,
         landingAnimation: 'land',
         autoPlayLanding: true,
       });
     }
   })
+  // The skull overflows its cell (authored premium pop, tamed via the
+  // skeleton's root-bone scale). lift it above every reel and outside
+  // the reel mask so the overflow renders instead of clipping.
+  .symbolData({ high: { zIndex: 10, unmask: true } })
   .speed('normal', SpeedPresets.NORMAL).speed('turbo', SpeedPresets.TURBO)
   .tumble({
     fall:   { duration: 0, ease: 'none', rowStagger: 0 },              // not used. refill skips fall
@@ -3303,7 +3320,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/destroy-winpresenter/
 // @ts-nocheck
 // Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, WinPresenter,
 //           loadCascadeSpines, buildCascadeSpineMap, CASCADE_SYMBOL_IDS,
-//           CASCADE_PLATE_W, CASCADE_PLATE_H, CASCADE_HIGH_SCALE,
+//           CASCADE_PLATE_W, CASCADE_PLATE_H,
 //           PIXI, gsap, app, pickWeighted
 
 // PRESENTED destroy: `WinPresenter` drives the winners' authored `win`
@@ -3348,13 +3365,17 @@ const reelSet = new ReelSetBuilder()
     for (const id of CASCADE_SYMBOL_IDS) {
       r.register(id, TimedExplodeSymbol, {
         spineMap,
-        scale: id === 'high' ? SCALE * CASCADE_HIGH_SCALE : SCALE,
+        scale: SCALE,
         landingAnimation: 'land',
         outAnimation: 'explode',
         autoPlayLanding: true,
       });
     }
   })
+  // The skull overflows its cell (authored premium pop, tamed via the
+  // skeleton's root-bone scale). lift it above every reel and outside
+  // the reel mask so the overflow renders instead of clipping.
+  .symbolData({ high: { zIndex: 10, unmask: true } })
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150 })
   .tumble({
     fall:   { duration: 280, ease: 'power3.in',  rowStagger: 60 },
@@ -3593,7 +3614,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/fall-delay-anticipation/
 // @ts-nocheck
 // Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, loadCascadeSpines,
 //           buildCascadeSpineMap, CASCADE_SYMBOL_IDS, CASCADE_PLATE_W,
-//           CASCADE_PLATE_H, CASCADE_HIGH_SCALE, PIXI, gsap, app, pickWeighted
+//           CASCADE_PLATE_H, PIXI, gsap, app, pickWeighted
 
 // ANTICIPATION. 350 ms lead-in. Enough room for a full "spin-up"
 // sound effect to play, a button-press animation to complete, or a
@@ -3637,19 +3658,24 @@ const reelSet = new ReelSetBuilder()
   .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(4, 4)
   .symbols((r) => {
     // outAnimation: 'explode' routes the engine's cascade destroy through
-    // the authored explosion. `high` is authored on a 124x143.2 plate;
-    // CASCADE_HIGH_SCALE shrinks it onto the same cell as the low/mid tier.
+    // the authored explosion. `high` is authored 1.41x bigger than the
+    // low/mid plate and overflows its cell on purpose. premium symbols
+    // pop out of the grid in the original game, so it gets the same scale.
     const spineMap = buildCascadeSpineMap();
     for (const id of CASCADE_SYMBOL_IDS) {
       r.register(id, TimedExplodeSymbol, {
         spineMap,
-        scale: id === 'high' ? SCALE * CASCADE_HIGH_SCALE : SCALE,
+        scale: SCALE,
         landingAnimation: 'land',
         outAnimation: 'explode',
         autoPlayLanding: true,
       });
     }
   })
+  // The skull overflows its cell (authored premium pop, tamed via the
+  // skeleton's root-bone scale). lift it above every reel and outside
+  // the reel mask so the overflow renders instead of clipping.
+  .symbolData({ high: { zIndex: 10, unmask: true } })
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150 })
   .tumble({
     fall:   { duration: 280, ease: 'sine.in',       rowStagger: 50 },
@@ -3697,7 +3723,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/fall-delay-instant/
 // @ts-nocheck
 // Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, loadCascadeSpines,
 //           buildCascadeSpineMap, CASCADE_SYMBOL_IDS, CASCADE_PLATE_W,
-//           CASCADE_PLATE_H, CASCADE_HIGH_SCALE, PIXI, gsap, app, pickWeighted
+//           CASCADE_PLATE_H, PIXI, gsap, app, pickWeighted
 
 // INSTANT. fall starts the moment you click SPIN. No lead-in. The
 // default. Snappiest possible feel; players who tap-spin many rounds
@@ -3742,19 +3768,24 @@ const reelSet = new ReelSetBuilder()
   .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(4, 4)
   .symbols((r) => {
     // outAnimation: 'explode' routes the engine's cascade destroy through
-    // the authored explosion. `high` is authored on a 124x143.2 plate;
-    // CASCADE_HIGH_SCALE shrinks it onto the same cell as the low/mid tier.
+    // the authored explosion. `high` is authored 1.41x bigger than the
+    // low/mid plate and overflows its cell on purpose. premium symbols
+    // pop out of the grid in the original game, so it gets the same scale.
     const spineMap = buildCascadeSpineMap();
     for (const id of CASCADE_SYMBOL_IDS) {
       r.register(id, TimedExplodeSymbol, {
         spineMap,
-        scale: id === 'high' ? SCALE * CASCADE_HIGH_SCALE : SCALE,
+        scale: SCALE,
         landingAnimation: 'land',
         outAnimation: 'explode',
         autoPlayLanding: true,
       });
     }
   })
+  // The skull overflows its cell (authored premium pop, tamed via the
+  // skeleton's root-bone scale). lift it above every reel and outside
+  // the reel mask so the overflow renders instead of clipping.
+  .symbolData({ high: { zIndex: 10, unmask: true } })
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150 })
   .tumble({
     fall:   { duration: 280, ease: 'sine.in',       rowStagger: 50 },
@@ -3804,7 +3835,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/fall-delay-subtle/
 // @ts-nocheck
 // Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, loadCascadeSpines,
 //           buildCascadeSpineMap, CASCADE_SYMBOL_IDS, CASCADE_PLATE_W,
-//           CASCADE_PLATE_H, CASCADE_HIGH_SCALE, PIXI, gsap, app, pickWeighted
+//           CASCADE_PLATE_H, PIXI, gsap, app, pickWeighted
 
 // SUBTLE LEAD-IN. 150 ms before the fall starts. Just enough for the
 // SPIN button click to register and a short "tap" SFX to lead. Below
@@ -3849,19 +3880,24 @@ const reelSet = new ReelSetBuilder()
   .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(4, 4)
   .symbols((r) => {
     // outAnimation: 'explode' routes the engine's cascade destroy through
-    // the authored explosion. `high` is authored on a 124x143.2 plate;
-    // CASCADE_HIGH_SCALE shrinks it onto the same cell as the low/mid tier.
+    // the authored explosion. `high` is authored 1.41x bigger than the
+    // low/mid plate and overflows its cell on purpose. premium symbols
+    // pop out of the grid in the original game, so it gets the same scale.
     const spineMap = buildCascadeSpineMap();
     for (const id of CASCADE_SYMBOL_IDS) {
       r.register(id, TimedExplodeSymbol, {
         spineMap,
-        scale: id === 'high' ? SCALE * CASCADE_HIGH_SCALE : SCALE,
+        scale: SCALE,
         landingAnimation: 'land',
         outAnimation: 'explode',
         autoPlayLanding: true,
       });
     }
   })
+  // The skull overflows its cell (authored premium pop, tamed via the
+  // skeleton's root-bone scale). lift it above every reel and outside
+  // the reel mask so the overflow renders instead of clipping.
+  .symbolData({ high: { zIndex: 10, unmask: true } })
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150 })
   .tumble({
     fall:   { duration: 280, ease: 'sine.in',       rowStagger: 50 },
@@ -3909,7 +3945,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/fall-delay-suspense/
 // @ts-nocheck
 // Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, loadCascadeSpines,
 //           buildCascadeSpineMap, CASCADE_SYMBOL_IDS, CASCADE_PLATE_W,
-//           CASCADE_PLATE_H, CASCADE_HIGH_SCALE, PIXI, gsap, app, pickWeighted
+//           CASCADE_PLATE_H, PIXI, gsap, app, pickWeighted
 
 // SUSPENSE. 700 ms lead-in. Dramatic. The reels stand still while
 // the music swells, a "GO!" stinger fires, or a feature-pick UI flashes.
@@ -3954,19 +3990,24 @@ const reelSet = new ReelSetBuilder()
   .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(4, 4)
   .symbols((r) => {
     // outAnimation: 'explode' routes the engine's cascade destroy through
-    // the authored explosion. `high` is authored on a 124x143.2 plate;
-    // CASCADE_HIGH_SCALE shrinks it onto the same cell as the low/mid tier.
+    // the authored explosion. `high` is authored 1.41x bigger than the
+    // low/mid plate and overflows its cell on purpose. premium symbols
+    // pop out of the grid in the original game, so it gets the same scale.
     const spineMap = buildCascadeSpineMap();
     for (const id of CASCADE_SYMBOL_IDS) {
       r.register(id, TimedExplodeSymbol, {
         spineMap,
-        scale: id === 'high' ? SCALE * CASCADE_HIGH_SCALE : SCALE,
+        scale: SCALE,
         landingAnimation: 'land',
         outAnimation: 'explode',
         autoPlayLanding: true,
       });
     }
   })
+  // The skull overflows its cell (authored premium pop, tamed via the
+  // skeleton's root-bone scale). lift it above every reel and outside
+  // the reel mask so the overflow renders instead of clipping.
+  .symbolData({ high: { zIndex: 10, unmask: true } })
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150 })
   .tumble({
     fall:   { duration: 280, ease: 'sine.in',       rowStagger: 50 },
@@ -9817,7 +9858,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/refill-bottom-up/
 // @ts-nocheck
 // Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, loadCascadeSpines,
 //           buildCascadeSpineMap, CASCADE_SYMBOL_IDS, CASCADE_PLATE_W,
-//           CASCADE_PLATE_H, CASCADE_HIGH_SCALE, PIXI, gsap, app, pickWeighted
+//           CASCADE_PLATE_H, PIXI, gsap, app, pickWeighted
 
 // BOTTOM-UP ROW REFILL. within each reel, the bottom row arrives first
 // and the top row arrives last (rowOrder: 'bottomToTop'). All reels
@@ -9863,19 +9904,24 @@ const reelSet = new ReelSetBuilder()
   .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(4, 4)
   .symbols((r) => {
     // outAnimation: 'explode' routes the engine's cascade destroy through
-    // the authored explosion. `high` is authored on a 124x143.2 plate;
-    // CASCADE_HIGH_SCALE shrinks it onto the same cell as the low/mid tier.
+    // the authored explosion. `high` is authored 1.41x bigger than the
+    // low/mid plate and overflows its cell on purpose. premium symbols
+    // pop out of the grid in the original game, so it gets the same scale.
     const spineMap = buildCascadeSpineMap();
     for (const id of CASCADE_SYMBOL_IDS) {
       r.register(id, TimedExplodeSymbol, {
         spineMap,
-        scale: id === 'high' ? SCALE * CASCADE_HIGH_SCALE : SCALE,
+        scale: SCALE,
         landingAnimation: 'land',
         outAnimation: 'explode',
         autoPlayLanding: true,
       });
     }
   })
+  // The skull overflows its cell (authored premium pop, tamed via the
+  // skeleton's root-bone scale). lift it above every reel and outside
+  // the reel mask so the overflow renders instead of clipping.
+  .symbolData({ high: { zIndex: 10, unmask: true } })
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150 })
   .tumble({
     fall:   { duration: 240, ease: 'sine.in',       rowStagger: 40 },
@@ -9925,7 +9971,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/refill-ltr-wave/
 // @ts-nocheck
 // Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, loadCascadeSpines,
 //           buildCascadeSpineMap, CASCADE_SYMBOL_IDS, CASCADE_PLATE_W,
-//           CASCADE_PLATE_H, CASCADE_HIGH_SCALE, PIXI, gsap, app, pickWeighted
+//           CASCADE_PLATE_H, PIXI, gsap, app, pickWeighted
 
 // LEFT-TO-RIGHT WAVE REFILL. each column lands in sequence from left
 // to right. Each reel's rows arrive together (no in-reel stagger), but
@@ -9971,19 +10017,24 @@ const reelSet = new ReelSetBuilder()
   .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(4, 4)
   .symbols((r) => {
     // outAnimation: 'explode' routes the engine's cascade destroy through
-    // the authored explosion. `high` is authored on a 124x143.2 plate;
-    // CASCADE_HIGH_SCALE shrinks it onto the same cell as the low/mid tier.
+    // the authored explosion. `high` is authored 1.41x bigger than the
+    // low/mid plate and overflows its cell on purpose. premium symbols
+    // pop out of the grid in the original game, so it gets the same scale.
     const spineMap = buildCascadeSpineMap();
     for (const id of CASCADE_SYMBOL_IDS) {
       r.register(id, TimedExplodeSymbol, {
         spineMap,
-        scale: id === 'high' ? SCALE * CASCADE_HIGH_SCALE : SCALE,
+        scale: SCALE,
         landingAnimation: 'land',
         outAnimation: 'explode',
         autoPlayLanding: true,
       });
     }
   })
+  // The skull overflows its cell (authored premium pop, tamed via the
+  // skeleton's root-bone scale). lift it above every reel and outside
+  // the reel mask so the overflow renders instead of clipping.
+  .symbolData({ high: { zIndex: 10, unmask: true } })
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150 })
   .tumble({
     fall:   { duration: 240, ease: 'sine.in',       rowStagger: 40 },
@@ -10032,7 +10083,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/refill-simultaneous/
 // @ts-nocheck
 // Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, loadCascadeSpines,
 //           buildCascadeSpineMap, CASCADE_SYMBOL_IDS, CASCADE_PLATE_W,
-//           CASCADE_PLATE_H, CASCADE_HIGH_SCALE, PIXI, gsap, app, pickWeighted
+//           CASCADE_PLATE_H, PIXI, gsap, app, pickWeighted
 
 // SIMULTANEOUS REFILL. every cell drops at the same moment. Snappy,
 // no extra pacing, all new symbols arrive in one beat.
@@ -10075,19 +10126,24 @@ const reelSet = new ReelSetBuilder()
   .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(4, 4)
   .symbols((r) => {
     // outAnimation: 'explode' routes the engine's cascade destroy through
-    // the authored explosion. `high` is authored on a 124x143.2 plate;
-    // CASCADE_HIGH_SCALE shrinks it onto the same cell as the low/mid tier.
+    // the authored explosion. `high` is authored 1.41x bigger than the
+    // low/mid plate and overflows its cell on purpose. premium symbols
+    // pop out of the grid in the original game, so it gets the same scale.
     const spineMap = buildCascadeSpineMap();
     for (const id of CASCADE_SYMBOL_IDS) {
       r.register(id, TimedExplodeSymbol, {
         spineMap,
-        scale: id === 'high' ? SCALE * CASCADE_HIGH_SCALE : SCALE,
+        scale: SCALE,
         landingAnimation: 'land',
         outAnimation: 'explode',
         autoPlayLanding: true,
       });
     }
   })
+  // The skull overflows its cell (authored premium pop, tamed via the
+  // skeleton's root-bone scale). lift it above every reel and outside
+  // the reel mask so the overflow renders instead of clipping.
+  .symbolData({ high: { zIndex: 10, unmask: true } })
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150 })
   .tumble({
     fall:   { duration: 240, ease: 'sine.in',       rowStagger: 40 },
@@ -10457,7 +10513,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/spin-then-cascade-turbo/
 // Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, StaticSpinSymbol,
 //           SpinTextureCache, prewarmSpinTextures, loadCascadeSpines,
 //           buildCascadeSpineMap, CASCADE_SYMBOL_IDS, CASCADE_PLATE_W,
-//           CASCADE_PLATE_H, CASCADE_HIGH_SCALE, PIXI, gsap, app, pickWeighted
+//           CASCADE_PLATE_H, PIXI, gsap, app, pickWeighted
 
 // TURBO HYBRID: the same strip-spin opener + 'low1' → 'mid1' chain, but
 // tuned for speed on both systems independently. The strip-spin runs the
@@ -10500,28 +10556,22 @@ class TimedExplodeSymbol extends SpineReelSymbol {
   }
 }
 
-// Static-spin plumbing: scratch symbols bake a static + blurred texture
-// per id; the reels spin on those textures and the skeletons only come
-// back at land. `high` needs its own inner factory (its 124x143.2 plate
-// takes CASCADE_HIGH_SCALE), so the ids are prewarmed in two passes.
+// Static-spin plumbing: one scratch symbol bakes a static + blurred
+// texture per id; the reels spin on those textures and the skeletons
+// only come back at land. Uniform scale for every tier (`high` overflows
+// its cell by authoring), so a single factory prewarms all ids.
 const cache = new SpinTextureCache({ renderer: app.renderer });
-const spineMap = buildCascadeSpineMap();
-const makeInner = (id) => () =>
+const createInner = () =>
   new TimedExplodeSymbol({
-    spineMap,
-    scale: id === 'high' ? SCALE * CASCADE_HIGH_SCALE : SCALE,
+    spineMap: buildCascadeSpineMap(),
+    scale: SCALE,
     landingAnimation: 'land',
     outAnimation: 'explode',
     autoPlayLanding: true,
   });
 
-const LOW_MID_IDS = CASCADE_SYMBOL_IDS.filter((id) => id !== 'high');
 prewarmSpinTextures({
-  cache, ids: LOW_MID_IDS, createSymbol: makeInner('low1'),
-  width: CELL_W, height: CELL_H,
-});
-prewarmSpinTextures({
-  cache, ids: ['high'], createSymbol: makeInner('high'),
+  cache, ids: [...CASCADE_SYMBOL_IDS], createSymbol: createInner,
   width: CELL_W, height: CELL_H,
 });
 
@@ -10529,9 +10579,13 @@ const reelSet = new ReelSetBuilder()
   .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(4, 4)
   .symbols((r) => {
     for (const id of CASCADE_SYMBOL_IDS) {
-      r.register(id, StaticSpinSymbol, { createInner: makeInner(id), cache, blurRampMs: 120 });
+      r.register(id, StaticSpinSymbol, { createInner, cache, blurRampMs: 120 });
     }
   })
+  // The skull overflows its cell (authored premium pop, tamed via the
+  // skeleton's root-bone scale). lift it above every reel and outside
+  // the reel mask so the overflow renders instead of clipping.
+  .symbolData({ high: { zIndex: 10, unmask: true } })
   .speed('turbo', { ...SpeedPresets.TURBO, stopDelay: 60 })
   .initialSpeed('turbo')
   .tumble({
@@ -10597,7 +10651,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/spin-then-cascade/
 // @ts-nocheck
 // Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, loadCascadeSpines,
 //           buildCascadeSpineMap, CASCADE_SYMBOL_IDS, CASCADE_PLATE_W,
-//           CASCADE_PLATE_H, CASCADE_HIGH_SCALE, PIXI, gsap, app, pickWeighted
+//           CASCADE_PLATE_H, PIXI, gsap, app, pickWeighted
 
 // Hybrid spin-then-cascade: round 1 spins like a classic strip slot
 // (top-to-bottom motion, START → SPIN → STOP). The landing has a
@@ -10650,19 +10704,24 @@ const reelSet = new ReelSetBuilder()
   .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(4, 4)
   .symbols((r) => {
     // outAnimation: 'explode' routes the engine's cascade destroy through
-    // the authored explosion. `high` is authored on a 124x143.2 plate;
-    // CASCADE_HIGH_SCALE shrinks it onto the same cell as the low/mid tier.
+    // the authored explosion. `high` is authored 1.41x bigger than the
+    // low/mid plate and overflows its cell on purpose. premium symbols
+    // pop out of the grid in the original game, so it gets the same scale.
     const spineMap = buildCascadeSpineMap();
     for (const id of CASCADE_SYMBOL_IDS) {
       r.register(id, TimedExplodeSymbol, {
         spineMap,
-        scale: id === 'high' ? SCALE * CASCADE_HIGH_SCALE : SCALE,
+        scale: SCALE,
         landingAnimation: 'land',
         outAnimation: 'explode',
         autoPlayLanding: true,
       });
     }
   })
+  // The skull overflows its cell (authored premium pop, tamed via the
+  // skeleton's root-bone scale). lift it above every reel and outside
+  // the reel mask so the overflow renders instead of clipping.
+  .symbolData({ high: { zIndex: 10, unmask: true } })
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 120 })
   // Cascade refills layer on top of a standard strip-spin: leave the
   // builder's default mode as 'standard' for the first spin, and the
@@ -12203,7 +12262,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/tumble-anticipation-stagger/
 // @ts-nocheck
 // Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, loadCascadeSpines,
 //           buildCascadeSpineMap, CASCADE_SYMBOL_IDS, CASCADE_PLATE_W,
-//           CASCADE_PLATE_H, CASCADE_HIGH_SCALE, PIXI, gsap, app, pickWeighted
+//           CASCADE_PLATE_H, PIXI, gsap, app, pickWeighted
 
 // STAGGERED-COLUMN ANTICIPATION. same two-stage refill as the global
 // canvas, but the anticipation walks the board: the drop-in columns run
@@ -12267,19 +12326,24 @@ const reelSet = new ReelSetBuilder()
   .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(4, 4)
   .symbols((r) => {
     // outAnimation: 'explode' routes the engine's cascade destroy through
-    // the authored explosion. `high` is authored on a 124x143.2 plate;
-    // CASCADE_HIGH_SCALE shrinks it onto the same cell as the low/mid tier.
+    // the authored explosion. `high` is authored 1.41x bigger than the
+    // low/mid plate and overflows its cell on purpose. premium symbols
+    // pop out of the grid in the original game, so it gets the same scale.
     const spineMap = buildCascadeSpineMap();
     for (const id of CASCADE_SYMBOL_IDS) {
       r.register(id, TimedExplodeSymbol, {
         spineMap,
-        scale: id === 'high' ? SCALE * CASCADE_HIGH_SCALE : SCALE,
+        scale: SCALE,
         landingAnimation: 'land',
         outAnimation: 'explode',
         autoPlayLanding: true,
       });
     }
   })
+  // The skull overflows its cell (authored premium pop, tamed via the
+  // skeleton's root-bone scale). lift it above every reel and outside
+  // the reel mask so the overflow renders instead of clipping.
+  .symbolData({ high: { zIndex: 10, unmask: true } })
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150 })
   .tumble({
     fall:   { duration: 240, ease: 'sine.in',       rowStagger: 40 },
@@ -12342,7 +12406,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/tumble-anticipation/
 // @ts-nocheck
 // Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, loadCascadeSpines,
 //           buildCascadeSpineMap, CASCADE_SYMBOL_IDS, CASCADE_PLATE_W,
-//           CASCADE_PLATE_H, CASCADE_HIGH_SCALE, PIXI, gsap, app, pickWeighted
+//           CASCADE_PLATE_H, PIXI, gsap, app, pickWeighted
 
 // CASCADE ANTICIPATION REFILL. two-stage. Survivors slide down to fill
 // holes FIRST (gravity stage), then a global pause for anticipation
@@ -12404,19 +12468,24 @@ const reelSet = new ReelSetBuilder()
   .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(4, 4)
   .symbols((r) => {
     // outAnimation: 'explode' routes the engine's cascade destroy through
-    // the authored explosion. `high` is authored on a 124x143.2 plate;
-    // CASCADE_HIGH_SCALE shrinks it onto the same cell as the low/mid tier.
+    // the authored explosion. `high` is authored 1.41x bigger than the
+    // low/mid plate and overflows its cell on purpose. premium symbols
+    // pop out of the grid in the original game, so it gets the same scale.
     const spineMap = buildCascadeSpineMap();
     for (const id of CASCADE_SYMBOL_IDS) {
       r.register(id, TimedExplodeSymbol, {
         spineMap,
-        scale: id === 'high' ? SCALE * CASCADE_HIGH_SCALE : SCALE,
+        scale: SCALE,
         landingAnimation: 'land',
         outAnimation: 'explode',
         autoPlayLanding: true,
       });
     }
   })
+  // The skull overflows its cell (authored premium pop, tamed via the
+  // skeleton's root-bone scale). lift it above every reel and outside
+  // the reel mask so the overflow renders instead of clipping.
+  .symbolData({ high: { zIndex: 10, unmask: true } })
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150 })
   .tumble({
     fall:   { duration: 240, ease: 'sine.in',       rowStagger: 40 },
@@ -12479,7 +12548,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/tumble-cartoon-bounce/
 // @ts-nocheck
 // Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, loadCascadeSpines,
 //           buildCascadeSpineMap, CASCADE_SYMBOL_IDS, CASCADE_PLATE_W,
-//           CASCADE_PLATE_H, CASCADE_HIGH_SCALE, PIXI, gsap, app, pickWeighted
+//           CASCADE_PLATE_H, PIXI, gsap, app, pickWeighted
 
 // CARTOON BOUNCE: bounce.out gives a multi-bounce settle. Long stagger
 // spreads the row-by-row arrival in time.
@@ -12525,19 +12594,24 @@ const reelSet = new ReelSetBuilder()
   .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(4, 4)
   .symbols((r) => {
     // outAnimation: 'explode' routes the engine's cascade destroy through
-    // the authored explosion. `high` is authored on a 124x143.2 plate;
-    // CASCADE_HIGH_SCALE shrinks it onto the same cell as the low/mid tier.
+    // the authored explosion. `high` is authored 1.41x bigger than the
+    // low/mid plate and overflows its cell on purpose. premium symbols
+    // pop out of the grid in the original game, so it gets the same scale.
     const spineMap = buildCascadeSpineMap();
     for (const id of CASCADE_SYMBOL_IDS) {
       r.register(id, TimedExplodeSymbol, {
         spineMap,
-        scale: id === 'high' ? SCALE * CASCADE_HIGH_SCALE : SCALE,
+        scale: SCALE,
         landingAnimation: 'land',
         outAnimation: 'explode',
         autoPlayLanding: true,
       });
     }
   })
+  // The skull overflows its cell (authored premium pop, tamed via the
+  // skeleton's root-bone scale). lift it above every reel and outside
+  // the reel mask so the overflow renders instead of clipping.
+  .symbolData({ high: { zIndex: 10, unmask: true } })
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150 })
   .tumble({
     fall:   { duration: 320, ease: 'sine.in',    rowStagger: 60 },
@@ -12582,7 +12656,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/tumble-classic/
 // @ts-nocheck
 // Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, loadCascadeSpines,
 //           buildCascadeSpineMap, CASCADE_SYMBOL_IDS, CASCADE_PLATE_W,
-//           CASCADE_PLATE_H, CASCADE_HIGH_SCALE, PIXI, gsap, app, pickWeighted
+//           CASCADE_PLATE_H, PIXI, gsap, app, pickWeighted
 
 // CLASSIC tumble feel: sine.in fall, soft overshoot dropIn. the
 // all-rounder default. Good baseline before reaching for the more
@@ -12630,19 +12704,24 @@ const reelSet = new ReelSetBuilder()
   .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(4, 4)
   .symbols((r) => {
     // outAnimation: 'explode' routes the engine's cascade destroy through
-    // the authored explosion. `high` is authored on a 124x143.2 plate;
-    // CASCADE_HIGH_SCALE shrinks it onto the same cell as the low/mid tier.
+    // the authored explosion. `high` is authored 1.41x bigger than the
+    // low/mid plate and overflows its cell on purpose. premium symbols
+    // pop out of the grid in the original game, so it gets the same scale.
     const spineMap = buildCascadeSpineMap();
     for (const id of CASCADE_SYMBOL_IDS) {
       r.register(id, TimedExplodeSymbol, {
         spineMap,
-        scale: id === 'high' ? SCALE * CASCADE_HIGH_SCALE : SCALE,
+        scale: SCALE,
         landingAnimation: 'land',
         outAnimation: 'explode',
         autoPlayLanding: true,
       });
     }
   })
+  // The skull overflows its cell (authored premium pop, tamed via the
+  // skeleton's root-bone scale). lift it above every reel and outside
+  // the reel mask so the overflow renders instead of clipping.
+  .symbolData({ high: { zIndex: 10, unmask: true } })
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150 })
   .tumble({
     fall:   { duration: 280, ease: 'sine.in',       rowStagger: 40 },
@@ -12690,7 +12769,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/tumble-rain-column/
 // @ts-nocheck
 // Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, loadCascadeSpines,
 //           buildCascadeSpineMap, CASCADE_SYMBOL_IDS, CASCADE_PLATE_W,
-//           CASCADE_PLATE_H, CASCADE_HIGH_SCALE, PIXI, gsap, app, pickWeighted
+//           CASCADE_PLATE_H, PIXI, gsap, app, pickWeighted
 
 // RAIN COLUMN: the whole column drops as a slab. rowStagger = 0 makes
 // every row start together; distance: 'auto' makes every animated row
@@ -12739,19 +12818,24 @@ const reelSet = new ReelSetBuilder()
   .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(4, 4)
   .symbols((r) => {
     // outAnimation: 'explode' routes the engine's cascade destroy through
-    // the authored explosion. `high` is authored on a 124x143.2 plate;
-    // CASCADE_HIGH_SCALE shrinks it onto the same cell as the low/mid tier.
+    // the authored explosion. `high` is authored 1.41x bigger than the
+    // low/mid plate and overflows its cell on purpose. premium symbols
+    // pop out of the grid in the original game, so it gets the same scale.
     const spineMap = buildCascadeSpineMap();
     for (const id of CASCADE_SYMBOL_IDS) {
       r.register(id, TimedExplodeSymbol, {
         spineMap,
-        scale: id === 'high' ? SCALE * CASCADE_HIGH_SCALE : SCALE,
+        scale: SCALE,
         landingAnimation: 'land',
         outAnimation: 'explode',
         autoPlayLanding: true,
       });
     }
   })
+  // The skull overflows its cell (authored premium pop, tamed via the
+  // skeleton's root-bone scale). lift it above every reel and outside
+  // the reel mask so the overflow renders instead of clipping.
+  .symbolData({ high: { zIndex: 10, unmask: true } })
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150 })
   .tumble({
     fall:   { duration: 240, ease: 'sine.in', rowStagger: 0 },
@@ -12796,7 +12880,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/tumble-slam/
 // @ts-nocheck
 // Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, loadCascadeSpines,
 //           buildCascadeSpineMap, CASCADE_SYMBOL_IDS, CASCADE_PLATE_W,
-//           CASCADE_PLATE_H, CASCADE_HIGH_SCALE, PIXI, gsap, app, pickWeighted
+//           CASCADE_PLATE_H, PIXI, gsap, app, pickWeighted
 
 // SLAM: accelerating fall (power4.in) and a hard, fast land (expo.out).
 // Short durations + small stagger keep the whole tumble under 0.5 s.
@@ -12844,19 +12928,24 @@ const reelSet = new ReelSetBuilder()
   .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(4, 4)
   .symbols((r) => {
     // outAnimation: 'explode' routes the engine's cascade destroy through
-    // the authored explosion. `high` is authored on a 124x143.2 plate;
-    // CASCADE_HIGH_SCALE shrinks it onto the same cell as the low/mid tier.
+    // the authored explosion. `high` is authored 1.41x bigger than the
+    // low/mid plate and overflows its cell on purpose. premium symbols
+    // pop out of the grid in the original game, so it gets the same scale.
     const spineMap = buildCascadeSpineMap();
     for (const id of CASCADE_SYMBOL_IDS) {
       r.register(id, TimedExplodeSymbol, {
         spineMap,
-        scale: id === 'high' ? SCALE * CASCADE_HIGH_SCALE : SCALE,
+        scale: SCALE,
         landingAnimation: 'land',
         outAnimation: 'explode',
         autoPlayLanding: true,
       });
     }
   })
+  // The skull overflows its cell (authored premium pop, tamed via the
+  // skeleton's root-bone scale). lift it above every reel and outside
+  // the reel mask so the overflow renders instead of clipping.
+  .symbolData({ high: { zIndex: 10, unmask: true } })
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150 })
   .tumble({
     fall:   { duration: 180, ease: 'power4.in', rowStagger: 20 },
@@ -12901,7 +12990,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/tumble-wave/
 // @ts-nocheck
 // Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, loadCascadeSpines,
 //           buildCascadeSpineMap, CASCADE_SYMBOL_IDS, CASCADE_PLATE_W,
-//           CASCADE_PLATE_H, CASCADE_HIGH_SCALE, PIXI, gsap, app, pickWeighted
+//           CASCADE_PLATE_H, PIXI, gsap, app, pickWeighted
 
 // WAVE: heavy per-row stagger (110 ms) plus a soft overshoot. Rows
 // arrive in sequence top-to-bottom.
@@ -12947,19 +13036,24 @@ const reelSet = new ReelSetBuilder()
   .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(4, 4)
   .symbols((r) => {
     // outAnimation: 'explode' routes the engine's cascade destroy through
-    // the authored explosion. `high` is authored on a 124x143.2 plate;
-    // CASCADE_HIGH_SCALE shrinks it onto the same cell as the low/mid tier.
+    // the authored explosion. `high` is authored 1.41x bigger than the
+    // low/mid plate and overflows its cell on purpose. premium symbols
+    // pop out of the grid in the original game, so it gets the same scale.
     const spineMap = buildCascadeSpineMap();
     for (const id of CASCADE_SYMBOL_IDS) {
       r.register(id, TimedExplodeSymbol, {
         spineMap,
-        scale: id === 'high' ? SCALE * CASCADE_HIGH_SCALE : SCALE,
+        scale: SCALE,
         landingAnimation: 'land',
         outAnimation: 'explode',
         autoPlayLanding: true,
       });
     }
   })
+  // The skull overflows its cell (authored premium pop, tamed via the
+  // skeleton's root-bone scale). lift it above every reel and outside
+  // the reel mask so the overflow renders instead of clipping.
+  .symbolData({ high: { zIndex: 10, unmask: true } })
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150 })
   .tumble({
     fall:   { duration: 180, ease: 'sine.in',       rowStagger: 90 },

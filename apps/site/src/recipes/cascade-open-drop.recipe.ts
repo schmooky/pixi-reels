@@ -1,7 +1,7 @@
 // @ts-nocheck
 // Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, loadCascadeSpines,
 //           buildCascadeSpineMap, CASCADE_SYMBOL_IDS, CASCADE_PLATE_W,
-//           CASCADE_PLATE_H, CASCADE_HIGH_SCALE, PIXI, gsap, app, pickWeighted
+//           CASCADE_PLATE_H, PIXI, gsap, app, pickWeighted
 
 // PURE-DROP opener: the same 'low1' → 'mid1' chain as the strip-spin
 // canvas, but the round OPENS as a cascade too. no strip motion at all.
@@ -50,13 +50,17 @@ const reelSet = new ReelSetBuilder()
     for (const id of CASCADE_SYMBOL_IDS) {
       r.register(id, TimedExplodeSymbol, {
         spineMap,
-        scale: id === 'high' ? SCALE * CASCADE_HIGH_SCALE : SCALE,
+        scale: SCALE,
         landingAnimation: 'land',
         outAnimation: 'explode',
         autoPlayLanding: true,
       });
     }
   })
+  // The skull overflows its cell (authored premium pop, tamed via the
+  // skeleton's root-bone scale). lift it above every reel and outside
+  // the reel mask so the overflow renders instead of clipping.
+  .symbolData({ high: { zIndex: 10, unmask: true } })
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 120 })
   // The opening reveal IS a tumble here, so `fall` matters. it animates
   // the previous board out before the new one drops in.

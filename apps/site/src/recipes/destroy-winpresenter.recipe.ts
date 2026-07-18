@@ -1,7 +1,7 @@
 // @ts-nocheck
 // Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, WinPresenter,
 //           loadCascadeSpines, buildCascadeSpineMap, CASCADE_SYMBOL_IDS,
-//           CASCADE_PLATE_W, CASCADE_PLATE_H, CASCADE_HIGH_SCALE,
+//           CASCADE_PLATE_W, CASCADE_PLATE_H,
 //           PIXI, gsap, app, pickWeighted
 
 // PRESENTED destroy: `WinPresenter` drives the winners' authored `win`
@@ -46,13 +46,17 @@ const reelSet = new ReelSetBuilder()
     for (const id of CASCADE_SYMBOL_IDS) {
       r.register(id, TimedExplodeSymbol, {
         spineMap,
-        scale: id === 'high' ? SCALE * CASCADE_HIGH_SCALE : SCALE,
+        scale: SCALE,
         landingAnimation: 'land',
         outAnimation: 'explode',
         autoPlayLanding: true,
       });
     }
   })
+  // The skull overflows its cell (authored premium pop, tamed via the
+  // skeleton's root-bone scale). lift it above every reel and outside
+  // the reel mask so the overflow renders instead of clipping.
+  .symbolData({ high: { zIndex: 10, unmask: true } })
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150 })
   .tumble({
     fall:   { duration: 280, ease: 'power3.in',  rowStagger: 60 },
