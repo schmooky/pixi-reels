@@ -89,16 +89,20 @@ const initialGrid = [
 await reelSet.setResult(initialGrid);
 
 // 2. Cascade: both rows win. two winners below = a two-cell fall.
+//    Survivors KEEP their identities. rows outside the winner set are
+//    read from `prev` and packed to the bottom. A fresh random column
+//    here would swap the bottom row's face in place (it has no hole
+//    below it, so it never animates. the change is a visible pop).
 await reelSet.runCascade({
   detectWinners: () =>
     [0, 1, 2].flatMap((reel) => [{ reel, row: 1 }, { reel, row: 2 }]),
-  nextGrid: () => [
+  nextGrid: (prev) => [
     {
-      visible: ['tall', filler(), filler(), filler()],
+      visible: ['tall', filler(), filler(), prev[0][3]],
       bufferAbove: [filler()],
     },
-    { visible: [filler(), filler(), filler(), filler()] },
-    { visible: [filler(), filler(), filler(), filler()] },
+    { visible: [filler(), filler(), prev[1][0], prev[1][3]] },
+    { visible: [filler(), filler(), prev[2][0], prev[2][3]] },
   ],
 });
 ```

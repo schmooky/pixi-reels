@@ -86,17 +86,21 @@ return {
         chained = true;
         return [0, 1, 2, 3].map((reel) => ({ reel, row: 1 }));
       },
-      nextGrid: () => [
-        { visible: [filler(), filler(), filler(), filler()] },
+      // Survivors keep their identities: one fresh symbol on top, old
+      // rows 0/2/3 slide-or-stay with the same faces (rows 2-3 never
+      // animate. a fresh identity there would pop in place).
+      nextGrid: (prev) => [
+        { visible: [filler(), prev[0][0], prev[0][2], prev[0][3]] },
         // Anchor now at visible[0]. block occupies rows 0-1 on reels
         // 1-2, fully visible. The coordinator paints OCCUPIED stubs at
-        // the other three footprint cells.
+        // the other three footprint cells (row 1 was the block's old
+        // tail, so its "survivor" slot stays covered. consistent).
         {
-          visible: [BIG.id, filler(), filler(), filler()],
+          visible: [BIG.id, filler(), prev[1][2], prev[1][3]],
           bufferAbove: [filler()],
         },
-        { visible: [filler(), filler(), filler(), filler()] },
-        { visible: [filler(), filler(), filler(), filler()] },
+        { visible: [filler(), filler(), prev[2][2], prev[2][3]] },
+        { visible: [filler(), prev[3][0], prev[3][2], prev[3][3]] },
       ],
       pauseAfterDestroyMs: 280,
     });

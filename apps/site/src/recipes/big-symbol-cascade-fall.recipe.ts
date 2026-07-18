@@ -109,17 +109,25 @@ return {
         chained = true;
         return [0, 1, 2].flatMap((reel) => [{ reel, row: 1 }, { reel, row: 2 }]);
       },
-      nextGrid: () => [
+      // Survivors KEEP their identities (the "semantic winners" rule from
+      // the destroy recipe): rows not in the winner set are read from
+      // `prev` and packed to the bottom. only the cleared cells get fresh
+      // symbols. Handing every reel a fresh random column would swap the
+      // bottom row's face in place. it has no hole below it, so it never
+      // animates, and the identity swap is a visible pop.
+      nextGrid: (prev) => [
         // Reel 0: block now at rows 0, 1, 2 (fully visible). New top
         // cell in bufferAbove[0]; the coordinator paints OCCUPIED at
-        // visible[1] and [2] so 'tall' here is the anchor only.
+        // visible[1] and [2] so 'tall' here is the anchor only. Row 3
+        // is the untouched survivor. same face as before the cascade.
         {
-          visible: [TALL.id, filler(), filler(), filler()],
+          visible: [TALL.id, filler(), filler(), prev[0][3]],
           bufferAbove: [filler()],
         },
-        // Reels 1, 2: fresh random fillers.
-        { visible: [filler(), filler(), filler(), filler()] },
-        { visible: [filler(), filler(), filler(), filler()] },
+        // Reels 1, 2: two fresh symbols on top, survivors (old rows 0
+        // and 3) packed to the bottom in their original order.
+        { visible: [filler(), filler(), prev[1][0], prev[1][3]] },
+        { visible: [filler(), filler(), prev[2][0], prev[2][3]] },
       ],
       pauseAfterDestroyMs: 280,
     });
