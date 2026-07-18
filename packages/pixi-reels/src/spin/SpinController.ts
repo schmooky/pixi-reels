@@ -287,6 +287,13 @@ export class SpinController implements Disposable {
         "spin({ mode: 'cascade' }) requires .tumble(...) on the builder.",
       );
     }
+    if (mode === 'standard' && this._reels.some((r) => r.bufferBelow === 0)) {
+      throw new Error(
+        "spin({ mode: 'standard' }) requires bufferBelow >= 1: strip scrolling " +
+          'wraps symbols through the below-window buffer. This reel set was ' +
+          'built with bufferSymbols({ below: 0 }) for tumble-only use.',
+      );
+    }
     this._currentSpinMode = mode;
 
     // Round boundary: a new `spin()` ends the previous round. If the

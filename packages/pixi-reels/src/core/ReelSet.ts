@@ -1235,6 +1235,13 @@ export class ReelSet extends Container implements Disposable {
     if (!Number.isInteger(col) || col < 0 || col >= this._reels.length) {
       throw new RangeError(`nudge: col ${col} out of range [0, ${this._reels.length}).`);
     }
+    if (this._reels[col].bufferBelow === 0) {
+      throw new Error(
+        'nudge: requires bufferBelow >= 1. a downward nudge shifts the bottom ' +
+          'visible symbol through the below-window buffer. This reel set was ' +
+          'built with bufferSymbols({ below: 0 }) for tumble-only use.',
+      );
+    }
     // Pin overlap detection lives at the ReelSet layer (Reel can't see pins).
     // Nudges would shift symbols out from under a pinned cell visually but
     // leave the pin record stale: fail loudly instead.

@@ -68,7 +68,8 @@ export class ReelSetBuilder {
   private _symbolWidth?: number;
   private _symbolHeight?: number;
   private _symbolGap = { ...DEFAULTS.symbolGap };
-  private _bufferSymbols = DEFAULTS.bufferSymbols;
+  private _bufferAbove = DEFAULTS.bufferSymbols;
+  private _bufferBelow = DEFAULTS.bufferSymbols;
   private _symbolRegistry = new SymbolRegistry();
   private _weights: Record<string, number> = {};
   private _speeds = new Map<string, SpeedProfile>();
@@ -252,25 +253,45 @@ export class ReelSetBuilder {
    * Buffer rows are off-screen cells the reel keeps around the visible
    * window so symbols can fade/slide in cleanly. The motion layer's wrap
    * detection assumes at least one buffer row above and one below. the
-   * minimum supported value is **1**. Passing `0` (or a negative number)
+   * minimum supported count is **1**. Passing `0` (or a negative number)
    * is clamped to `1` and a single console warning is printed; the
    * builder does not throw, so existing user code keeps running.
+   *
+   * **Tumble-only reel sets** may drop the below-window buffer entirely
+   * with the object form: `bufferSymbols({ above: 1, below: 0 })`. A pure
+   * tumble never scrolls the strip, so nothing ever wraps through the
+   * below-window cells. they exist only to be hidden by the mask. This
+   * requires `.tumble(...)` on the builder (validated at `build()`), and
+   * strip spins (`spin({ mode: 'standard' })`) and `nudge()` throw on
+   * such a set. `above` keeps the minimum of 1 (drop-in movers are
+   * pre-positioned above the window).
    */
-  bufferSymbols(count: number): this {
+  bufferSymbols(count: number | { above: number; below: number }): this {
+    if (typeof count === 'object') {
+      this._bufferAbove = this._clampBufferMin1(count.above, 'bufferSymbols({ above })');
+      this._bufferBelow =
+        Number.isFinite(count.below) && count.below >= 0 ? count.below : 0;
+      return this;
+    }
+    const clamped = this._clampBufferMin1(count, `bufferSymbols(${count})`);
+    this._bufferAbove = clamped;
+    this._bufferBelow = clamped;
+    return this;
+  }
+
+  private _clampBufferMin1(count: number, label: string): number {
     if (!Number.isFinite(count) || count < 1) {
       if (!ReelSetBuilder._bufferWarnedThisProcess) {
         ReelSetBuilder._bufferWarnedThisProcess = true;
         // eslint-disable-next-line no-console
         console.warn(
-          `[pixi-reels] bufferSymbols(${count}) is below the minimum of 1; clamping to 1. ` +
-            `The motion layer needs at least one buffer row above and below the visible window for wrap detection.`,
+          `[pixi-reels] ${label} is below the minimum of 1; clamping to 1. ` +
+            `The motion layer needs at least one buffer row above (and, outside tumble-only sets, below) the visible window for wrap detection.`,
         );
       }
-      this._bufferSymbols = 1;
-      return this;
+      return 1;
     }
-    this._bufferSymbols = count;
-    return this;
+    return count;
   }
   /** One-shot guard so we don't spam consoles when builders are constructed in a loop. */
   private static _bufferWarnedThisProcess = false;
@@ -493,8 +514,15 @@ export class ReelSetBuilder {
     const reelCount = this._reelCount!;
     const symbolWidth = this._symbolWidth!;
     const symbolHeight = this._symbolHeight!;
-    const bufferAbove = this._bufferSymbols;
-    const bufferBelow = this._bufferSymbols;
+    const bufferAbove = this._bufferAbove;
+    const bufferBelow = this._bufferBelow;
+    if (bufferBelow === 0 && this._defaultSpinMode !== 'cascade') {
+      throw new Error(
+        'bufferSymbols({ below: 0 }) is tumble-only: the strip machinery wraps ' +
+          'symbols through the below-window buffer. Add .tumble(...) to the ' +
+          'builder, or keep bufferBelow >= 1.',
+      );
+    }
     const ticker = this._ticker!;
     const isMultiWays = !!this._multiways;
 
@@ -570,7 +598,8 @@ export class ReelSetBuilder {
         symbolWidth,
         symbolHeight,
         symbolGap: { ...this._symbolGap },
-        bufferSymbols: this._bufferSymbols,
+        bufferSymbols: this._bufferAbove,
+        bufferBelow: this._bufferBelow,
         visibleRowsPerReel,
         reelPixelHeights,
         reelAnchor: this._reelAnchor,

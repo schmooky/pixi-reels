@@ -42,6 +42,9 @@ class TimedExplodeSymbol extends SpineReelSymbol {
 
 const reelSet = new ReelSetBuilder()
   .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
+  // Pure tumble: no strip scrolling, so no below-window buffer at all.
+  // nothing can ever peek out under the grid.
+  .bufferSymbols({ above: 1, below: 0 })
   .symbols((r) => {
     // outAnimation: 'explode' makes destroySymbols play the skeleton's
     // explode clip instead of the default implode.
