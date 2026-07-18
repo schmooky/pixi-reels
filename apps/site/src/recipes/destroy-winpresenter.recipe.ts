@@ -5,9 +5,10 @@
 //           PIXI, gsap, app, pickWeighted
 
 // PRESENTED destroy: `WinPresenter` drives the winners' authored `win`
-// clip (losers dim), and only THEN does the engine's `destroySymbols`
-// play the authored `explode`. Two authored clips chained: presenter
-// first, destruction second. runCascade sequences both.
+// clip (losers dim) in runCascade's `presentWinners` hook. awaited
+// BEFORE the engine's `destroySymbols` plays the authored `explode`.
+// Two authored clips chained in a real round's order: win first,
+// destruction second, refill last. runCascade sequences all three.
 
 await loadCascadeSpines();
 
@@ -95,11 +96,11 @@ return {
     await p;
     await new Promise(r => setTimeout(r, 300));
 
-    // Moment B. runCascade owns the loop. `onCascade` hands the winners to
-    // the presenter (authored `win` + dimmed losers). When it resolves the
-    // library calls `destroySymbols`, which routes through the authored
-    // `explode`. No destroyOptions suppression here: the two clips are
-    // designed to chain.
+    // Moment B. runCascade owns the loop. `presentWinners` hands the
+    // winners to the presenter (authored `win` + dimmed losers) while
+    // they are still on the board; when it resolves the library calls
+    // `destroySymbols`, which routes through the authored `explode`.
+    // No destroyOptions suppression here: the two clips chain.
     reelSet.setDropOrder('all');
     let presented = false;
     await reelSet.runCascade({
@@ -116,7 +117,7 @@ return {
         presented = true;
         return next;
       },
-      onCascade: async ({ chain, winners }) => {
+      presentWinners: async ({ chain, winners }) => {
         if (winners.length === 0) return;
         await presenter.show([{
           id: chain,

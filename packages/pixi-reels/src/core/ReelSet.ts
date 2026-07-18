@@ -226,6 +226,23 @@ export interface RunCascadeOptions {
     | Promise<string[][]>
     | Promise<ColumnTarget[]>;
   /**
+   * Win-presentation hook fired AFTER detection (`cascade:chain:start`)
+   * and BEFORE `destroySymbols`. the beat where the winners are still on
+   * the board. This is where a `WinPresenter` pass belongs: play the
+   * authored win clip, dim the losers, await, and only then does the
+   * library destroy the cells. A round's presentation order is
+   * win → destroy → refill; `onCascade` remains the post-destroy hook.
+   *
+   *   - `chain`. same 1-indexed chain stage as `cascade:chain:start`.
+   *   - `winners`. cells about to be destroyed. still visible.
+   *   - `currentGrid`. the grid as it stood at `cascade:chain:start`.
+   */
+  presentWinners?: (info: {
+    chain: number;
+    winners: readonly Cell[];
+    currentGrid: string[][];
+  }) => void | Promise<void>;
+  /**
    * Per-cascade hook fired AFTER `destroySymbols` and BEFORE the refill
    * starts. Use it to bump multipliers, play SFX, run "winners gone"
    * UI animations. Return a promise to delay the refill (e.g. for a
@@ -874,6 +891,13 @@ export class ReelSet extends Container implements Disposable {
           winners,
           currentGrid: current,
         });
+
+        // Win presentation FIRST. the winners are still on the board.
+        // Awaited so the destroy waits for the presenter pass.
+        if (opts.presentWinners) {
+          await opts.presentWinners({ chain: stage, winners, currentGrid: current });
+          if (wasSkipped) break;
+        }
 
         // Forward the round-level abort signal into destroySymbols so a
         // mid-destroy abort kills the in-flight tweens immediately instead
