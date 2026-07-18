@@ -61,9 +61,9 @@ const reelSet = new ReelSetBuilder()
   .symbolData({ high: { zIndex: 10, unmask: true } })
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
-    fall:   { duration: 240, ease: 'sine.in',       rowStagger: 40 },
+    fall:   { duration: 240, ease: 'power2.in',       rowStagger: 40 },
     dropIn: {
-      duration: 380, ease: 'back.out(1.5)', distance: 'perHole',
+      duration: 380, ease: 'power3.out', distance: 'perHole',
       rowStagger: 90,
       rowOrder: 'bottomToTop',
     },

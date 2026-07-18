@@ -3,8 +3,9 @@
 //           buildCascadeSpineMap, CASCADE_SYMBOL_IDS, CASCADE_PLATE_W,
 //           CASCADE_PLATE_H, PIXI, gsap, app, pickWeighted
 
-// CARTOON BOUNCE: bounce.out gives a multi-bounce settle. Long stagger
-// spreads the row-by-row arrival in time.
+// SOFT FLOAT: a long power2.out settle with a heavy stagger. the slow,
+// playful variant. Framed symbol plates rule out bounce/overshoot
+// eases, so the float reads through duration + stagger instead.
 
 await loadCascadeSpines();
 
@@ -18,8 +19,7 @@ const CLUSTER = 'low1';
 const HIT_ROW = 2;
 const HIT_COLS = [0, 1, 2];
 
-// Longer pause so the previous bounce has time to settle before new
-// symbols arrive. the bouncy land needs breathing room.
+// Longer pause to match the slow settle before new symbols arrive.
 const PAUSE_AFTER_REMOVAL_MS = 320;
 
 function randSymbol(exclude) {
@@ -61,8 +61,8 @@ const reelSet = new ReelSetBuilder()
   .symbolData({ high: { zIndex: 10, unmask: true } })
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
-    fall:   { duration: 320, ease: 'sine.in',    rowStagger: 60 },
-    dropIn: { duration: 700, ease: 'bounce.out', rowStagger: 70, distance: 'perHole' },
+    fall:   { duration: 320, ease: 'power2.in',    rowStagger: 60 },
+    dropIn: { duration: 700, ease: 'power2.out', rowStagger: 70, distance: 'perHole' },
   })
   .ticker(app.ticker).build();
 

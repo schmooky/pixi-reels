@@ -60,8 +60,8 @@ const reelSet = new ReelSetBuilder()
   // The opening reveal IS a tumble here, so `fall` matters. it animates
   // the previous board out before the new one drops in.
   .tumble({
-    fall:   { duration: 260, ease: 'sine.in',       rowStagger: 40 },
-    dropIn: { duration: 420, ease: 'back.out(1.5)', rowStagger: 45, distance: 'perHole' },
+    fall:   { duration: 260, ease: 'power2.in',       rowStagger: 40 },
+    dropIn: { duration: 420, ease: 'power3.out', rowStagger: 45, distance: 'perHole' },
   })
   .ticker(app.ticker)
   .build();

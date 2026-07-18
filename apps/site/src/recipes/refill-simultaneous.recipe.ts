@@ -58,9 +58,9 @@ const reelSet = new ReelSetBuilder()
   .symbolData({ high: { zIndex: 10, unmask: true } })
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
-    fall:   { duration: 240, ease: 'sine.in',       rowStagger: 40 },
+    fall:   { duration: 240, ease: 'power2.in',       rowStagger: 40 },
     // rowStagger: 0. every row in a reel drops together (no in-reel stagger).
-    dropIn: { duration: 380, ease: 'back.out(1.4)', rowStagger: 0, distance: 'perHole' },
+    dropIn: { duration: 380, ease: 'power3.out', rowStagger: 0, distance: 'perHole' },
   })
   .ticker(app.ticker).build();
 

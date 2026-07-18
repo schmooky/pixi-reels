@@ -79,11 +79,10 @@ const reelSet = new ReelSetBuilder()
   .symbolData({ high: { zIndex: 10, unmask: true } })
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
-    fall:   { duration: 240, ease: 'sine.in',       rowStagger: 40 },
+    fall:   { duration: 240, ease: 'power2.in',       rowStagger: 40 },
     // Gravity uses the same `dropIn` config (it's the same phase, just
-    // filtered to survivors). 380 ms with a soft back-out reads as
-    // "settled with a tiny bounce". pairs well with the held beat.
-    dropIn: { duration: 380, ease: 'back.out(1.4)', rowStagger: 0, distance: 'perHole' },
+    // filtered to survivors).
+    dropIn: { duration: 380, ease: 'power3.out', rowStagger: 0, distance: 'perHole' },
   })
   .ticker(app.ticker).build();
 

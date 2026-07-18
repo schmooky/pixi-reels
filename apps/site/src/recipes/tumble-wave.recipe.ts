@@ -3,7 +3,7 @@
 //           buildCascadeSpineMap, CASCADE_SYMBOL_IDS, CASCADE_PLATE_W,
 //           CASCADE_PLATE_H, PIXI, gsap, app, pickWeighted
 
-// WAVE: heavy per-row stagger (110 ms) plus a soft overshoot. Rows
+// WAVE: heavy per-row stagger (110 ms). the wave is the stagger. Rows
 // arrive in sequence top-to-bottom.
 
 await loadCascadeSpines();
@@ -61,8 +61,8 @@ const reelSet = new ReelSetBuilder()
   .symbolData({ high: { zIndex: 10, unmask: true } })
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
-    fall:   { duration: 180, ease: 'sine.in',       rowStagger: 90 },
-    dropIn: { duration: 320, ease: 'back.out(2.0)', rowStagger: 110, distance: 'perHole' },
+    fall:   { duration: 180, ease: 'power2.in',       rowStagger: 90 },
+    dropIn: { duration: 320, ease: 'power3.out', rowStagger: 110, distance: 'perHole' },
   })
   .ticker(app.ticker).build();
 

@@ -8,7 +8,7 @@ Site: https://pixi-reels.schmooky.dev
 Repo: https://github.com/schmooky/pixi-reels
 Package: https://www.npmjs.com/package/pixi-reels
 
-Generated: 2026-07-18T20:55:06.372Z
+Generated: 2026-07-18T22:51:06.888Z
 
 ## Quick start
 
@@ -256,10 +256,10 @@ Steps:
 URL: https://pixi-reels.schmooky.dev/recipes/cascade-destroy-and-present/
 A cascade win resolves in a fixed order. present the win, destroy
 Tags: cascade, animation, wins, spine, thunderkick
-APIs: ReelSet.destroySymbols, ReelSet.refill, ReelSet.runCascade, WinPresenter, SpineReelSymbol
+APIs: RunCascadeOptions.presentWinners, ReelSet.destroySymbols, ReelSet.refill, ReelSet.runCascade, WinPresenter, SpineReelSymbol
 Steps:
   - Detect winning cells on the visible grid
-  - Present first. WinPresenter in runCascade's onCascade plays the win
+  - Present first. WinPresenter in runCascade's presentWinners hook
   - reelSet.destroySymbols(winners) plays each symbol's playDestroy
   - Register outAnimation to reroute the destroy through authored art
 
@@ -2126,18 +2126,15 @@ URL: https://pixi-reels.schmooky.dev/recipes/cascade-6x5-spine/
 //           buildCascadeSpineMap, CASCADE_SYMBOL_IDS, CASCADE_PLATE_W,
 //           CASCADE_PLATE_H, PIXI, gsap, app, pickWeighted
 
-// The SAME starter as the card canvas above, with real art dropped in.
-// Diff against the card version: the symbol registration block (spine
-// map + per-id scale + animation routing) and the id constants. The
-// orchestration. spin, setResult, runCascade, both callbacks. is
-// line-for-line identical. That's the point: the cascade contract
-// doesn't change when the art arrives.
+// Same starter as the card canvas above, with spine symbols. Only the
+// registration block and the id constants differ; the orchestration
+// (spin, setResult, runCascade, both callbacks) is identical.
 
 await loadCascadeSpines();
 
 const IDS = [...CASCADE_SYMBOL_IDS];
 const REELS = 6, ROWS = 4;
-// Cells sized from the authored 88x101.6 low/mid plate.
+// Cells match the authored 88x101.6 symbol plate.
 const SCALE = 0.68;
 const CELL_W = CASCADE_PLATE_W * SCALE;
 const CELL_H = CASCADE_PLATE_H * SCALE;
@@ -2151,9 +2148,8 @@ function randSymbol(exclude) {
   return s;
 }
 
-// The authored `explode` clip runs 1.27 s. longer than this demo's
-// cascade rhythm wants. Play it compressed via TrackEntry.timeScale:
-// same art, same spine API, demo-tempo timing.
+// The authored `explode` clip runs 1.27 s, too long for this demo's
+// cascade timing. Play it faster via TrackEntry.timeScale.
 const EXPLODE_TIME_SCALE = 2.2;
 
 class TimedExplodeSymbol extends SpineReelSymbol {
@@ -2168,25 +2164,20 @@ class TimedExplodeSymbol extends SpineReelSymbol {
 const reelSet = new ReelSetBuilder()
   .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
   .symbols(r => {
-    // outAnimation: 'explode' routes the engine's cascade destroy through
-    // the authored explosion. `high` is authored 1.41x bigger than the
-    // low/mid plate and overflows its cell on purpose. premium symbols
-    // pop out of the grid in the original game, so it gets the same scale.
+    // outAnimation: 'explode' makes destroySymbols play the skeleton's
+    // explode clip instead of the default implode.
     const spineMap = buildCascadeSpineMap();
     for (const id of CASCADE_SYMBOL_IDS) {
       r.register(id, TimedExplodeSymbol, {
         spineMap,
         scale: SCALE,
-        landingAnimation: 'land',
         outAnimation: 'explode',
-        autoPlayLanding: true,
       });
     }
   })
-  // The skull's PLATE is tile-sized (pixel-identical to the tier plates
-  // in the atlas); only the head + glow overflow it, as authored. Lift it
-  // above every reel and outside the reel mask so that overflow renders
-  // instead of clipping.
+  // The high symbol's head overflows its cell (the plate itself is
+  // tile-sized). unmask renders it above the reel mask instead of
+  // clipping it.
   .symbolData({ high: { zIndex: 10, unmask: true } })
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
@@ -2332,17 +2323,15 @@ URL: https://pixi-reels.schmooky.dev/recipes/cascade-open-drop/
 //           buildCascadeSpineMap, CASCADE_SYMBOL_IDS, CASCADE_PLATE_W,
 //           CASCADE_PLATE_H, PIXI, gsap, app, pickWeighted
 
-// PURE-DROP opener: the same 'low1' → 'mid1' chain as the strip-spin
-// canvas, but the round OPENS as a cascade too. no strip motion at all.
-// The old board falls out, the new one rains in, then the chain runs.
-// This is the all-tumble school (Gates-of-Olympus-style): one visual
-// language for the whole round.
+// Pure-drop opener: same 'low1' -> 'mid1' chain as the strip-spin
+// canvas, but the round opens as a cascade too. no strip motion. The
+// old board falls out, the new one drops in, then the chain runs.
 
 await loadCascadeSpines();
 
 const IDS = [...CASCADE_SYMBOL_IDS];
 const REELS = 5, ROWS = 5;
-// Cells sized from the authored 88x101.6 low/mid plate.
+// Cells match the authored 88x101.6 symbol plate.
 const SCALE = 0.62;
 const CELL_W = CASCADE_PLATE_W * SCALE;
 const CELL_H = CASCADE_PLATE_H * SCALE;
@@ -2358,9 +2347,8 @@ function randSymbolNotIn(exclude) {
   return s;
 }
 
-// The authored `explode` clip runs 1.27 s. longer than this demo's
-// cascade rhythm wants. Play it compressed via TrackEntry.timeScale:
-// same art, same spine API, demo-tempo timing.
+// The authored `explode` clip runs 1.27 s, too long for this demo's
+// cascade timing. Play it faster via TrackEntry.timeScale.
 const EXPLODE_TIME_SCALE = 2.2;
 
 class TimedExplodeSymbol extends SpineReelSymbol {
@@ -2380,23 +2368,20 @@ const reelSet = new ReelSetBuilder()
       r.register(id, TimedExplodeSymbol, {
         spineMap,
         scale: SCALE,
-        landingAnimation: 'land',
         outAnimation: 'explode',
-        autoPlayLanding: true,
       });
     }
   })
-  // The skull's PLATE is tile-sized (pixel-identical to the tier plates
-  // in the atlas); only the head + glow overflow it, as authored. Lift it
-  // above every reel and outside the reel mask so that overflow renders
-  // instead of clipping.
+  // The high symbol's head overflows its cell (the plate itself is
+  // tile-sized). unmask renders it above the reel mask instead of
+  // clipping it.
   .symbolData({ high: { zIndex: 10, unmask: true } })
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 120, bounceDistance: 0, bounceDuration: 0 })
   // The opening reveal IS a tumble here, so `fall` matters. it animates
   // the previous board out before the new one drops in.
   .tumble({
-    fall:   { duration: 260, ease: 'sine.in',       rowStagger: 40 },
-    dropIn: { duration: 420, ease: 'back.out(1.5)', rowStagger: 45, distance: 'perHole' },
+    fall:   { duration: 260, ease: 'power2.in',       rowStagger: 40 },
+    dropIn: { duration: 420, ease: 'power3.out', rowStagger: 45, distance: 'perHole' },
   })
   .ticker(app.ticker)
   .build();
@@ -2421,10 +2406,9 @@ return {
       return next;
     };
 
-    // Round 1: NO strip-spin. the default cascade mode drops the old
-    // board out and rains stage 0 in, left-to-right. This is the whole
-    // difference against the strip-spin canvas: same spin() call, no
-    // { mode: 'standard' } override.
+    // Round 1: no strip-spin. default cascade mode drops the old board
+    // out and drops stage 0 in. The only difference against the
+    // strip-spin canvas: no { mode: 'standard' } override.
     reelSet.setDropOrder('ltr');
     const p = reelSet.spin();
     await new Promise((r) => setTimeout(r, 200));
@@ -3126,11 +3110,10 @@ URL: https://pixi-reels.schmooky.dev/recipes/destroy-explode/
 //           buildCascadeSpineMap, CASCADE_SYMBOL_IDS, CASCADE_PLATE_W,
 //           CASCADE_PLATE_H, PIXI, gsap, app, pickWeighted
 
-// AUTHORED destroy: same board, same one-shot cascade as the fade canvas.
-// the only change is `outAnimation: 'explode'` at registration. That one
-// line reroutes `destroySymbols` through the skeleton's authored 1.27 s
-// explosion (a baked 23-frame sequence) instead of the GSAP implode.
-// Played here at full length so you can see the whole clip.
+// Authored destroy: same board and cascade as the fade canvas; the only
+// change is `outAnimation: 'explode'` at registration. destroySymbols
+// then plays the skeleton's 1.27 s explosion instead of the implode.
+// Shown at full length here.
 
 await loadCascadeSpines();
 
@@ -3163,16 +3146,13 @@ const reelSet = new ReelSetBuilder()
       r.register(id, SpineReelSymbol, {
         spineMap,
         scale: SCALE,
-        landingAnimation: 'land',
         outAnimation: 'explode', // the ONE line that swaps the destroy
-        autoPlayLanding: true,
       });
     }
   })
-  // The skull's PLATE is tile-sized (pixel-identical to the tier plates
-  // in the atlas); only the head + glow overflow it, as authored. Lift it
-  // above every reel and outside the reel mask so that overflow renders
-  // instead of clipping.
+  // The high symbol's head overflows its cell (the plate itself is
+  // tile-sized). unmask renders it above the reel mask instead of
+  // clipping it.
   .symbolData({ high: { zIndex: 10, unmask: true } })
   .speed('normal', { ...SpeedPresets.NORMAL, bounceDistance: 0, bounceDuration: 0 }).speed('turbo', { ...SpeedPresets.TURBO, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
@@ -3224,10 +3204,9 @@ URL: https://pixi-reels.schmooky.dev/recipes/destroy-fade/
 //           buildCascadeSpineMap, CASCADE_SYMBOL_IDS, CASCADE_PLATE_W,
 //           CASCADE_PLATE_H, PIXI, gsap, app, pickWeighted
 
-// ENGINE-DEFAULT destroy: no `out` animation registered, so
-// `destroySymbols` falls back to the library's GSAP scale-and-fade
-// implode. Zero asset requirements. this is what every cascade gets
-// before an artist ships a destruction clip.
+// Engine-default destroy: no `out` animation registered, so
+// `destroySymbols` falls back to the built-in GSAP scale-and-fade
+// implode. Works with no destruction art at all.
 
 await loadCascadeSpines();
 
@@ -3255,23 +3234,19 @@ function randSymbolNotIn(exclude) {
 const reelSet = new ReelSetBuilder()
   .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
   .symbols(r => {
-    // No `outAnimation` here. SpineReelSymbol looks for its configured out
-    // clip (default name 'disintegration'), finds nothing in the skeleton,
-    // and playDestroy falls through to the base GSAP implode.
+    // No outAnimation: the skeleton has no 'disintegration' clip, so
+    // playDestroy falls back to the base GSAP implode.
     const spineMap = buildCascadeSpineMap();
     for (const id of CASCADE_SYMBOL_IDS) {
       r.register(id, SpineReelSymbol, {
         spineMap,
         scale: SCALE,
-        landingAnimation: 'land',
-        autoPlayLanding: true,
       });
     }
   })
-  // The skull's PLATE is tile-sized (pixel-identical to the tier plates
-  // in the atlas); only the head + glow overflow it, as authored. Lift it
-  // above every reel and outside the reel mask so that overflow renders
-  // instead of clipping.
+  // The high symbol's head overflows its cell (the plate itself is
+  // tile-sized). unmask renders it above the reel mask instead of
+  // clipping it.
   .symbolData({ high: { zIndex: 10, unmask: true } })
   .speed('normal', { ...SpeedPresets.NORMAL, bounceDistance: 0, bounceDuration: 0 }).speed('turbo', { ...SpeedPresets.TURBO, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
@@ -3327,10 +3302,10 @@ URL: https://pixi-reels.schmooky.dev/recipes/destroy-winpresenter/
 //           CASCADE_PLATE_W, CASCADE_PLATE_H,
 //           PIXI, gsap, app, pickWeighted
 
-// PRESENTED destroy: `WinPresenter` drives the winners' authored `win`
-// clip (losers dim), and only THEN does the engine's `destroySymbols`
-// play the authored `explode`. Two authored clips chained: presenter
-// first, destruction second. runCascade sequences both.
+// Win presentation before destruction: reels stop, the presenter dims
+// the board and shows each winning combination in turn, a short pause,
+// then all winners explode and the refill drops. Both combinations go
+// through one WinPresenter call in runCascade's presentWinners hook.
 
 await loadCascadeSpines();
 
@@ -3339,18 +3314,20 @@ const REELS = 6, ROWS = 4;
 const SCALE = 0.68;
 const CELL_W = CASCADE_PLATE_W * SCALE;
 const CELL_H = CASCADE_PLATE_H * SCALE;
-const CLUSTER = 'low1';
-const HIT_ROW = 2;
-const HIT_COLS = [0, 1, 2];
+// Two planted combinations. They share reel 2, so the refill has to
+// handle a column with two winners.
+const GROUP_A = { id: 'mid2', cells: [{ reel: 2, row: 1 }, { reel: 3, row: 1 }, { reel: 4, row: 1 }], value: 60 };
+const GROUP_B = { id: 'low1', cells: [{ reel: 0, row: 2 }, { reel: 1, row: 2 }, { reel: 2, row: 2 }], value: 30 };
+const PLANTED = new Set([GROUP_A.id, GROUP_B.id]);
+const HOLD_AFTER_PRESENT_MS = 450; // pause between presentation and explosion
 
-function randSymbol(exclude) {
+function randSymbol() {
   let s;
-  do { s = IDS[Math.floor(Math.random() * IDS.length)]; } while (s === exclude);
+  do { s = IDS[Math.floor(Math.random() * IDS.length)]; } while (PLANTED.has(s));
   return s;
 }
 
-// Presenter already spotlights the win, so the explosion that follows is
-// compressed. it's a chaser, not the headline.
+// Shorter explosion. the presenter already showed the win.
 const EXPLODE_TIME_SCALE = 2.0;
 
 class TimedExplodeSymbol extends SpineReelSymbol {
@@ -3370,16 +3347,13 @@ const reelSet = new ReelSetBuilder()
       r.register(id, TimedExplodeSymbol, {
         spineMap,
         scale: SCALE,
-        landingAnimation: 'land',
         outAnimation: 'explode',
-        autoPlayLanding: true,
       });
     }
   })
-  // The skull's PLATE is tile-sized (pixel-identical to the tier plates
-  // in the atlas); only the head + glow overflow it, as authored. Lift it
-  // above every reel and outside the reel mask so that overflow renders
-  // instead of clipping.
+  // The high symbol's head overflows its cell (the plate itself is
+  // tile-sized). unmask renders it above the reel mask instead of
+  // clipping it.
   .symbolData({ high: { zIndex: 10, unmask: true } })
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
@@ -3388,11 +3362,11 @@ const reelSet = new ReelSetBuilder()
   })
   .ticker(app.ticker).build();
 
-// The presenter's symbolAnim is simply the skeleton's authored `win`
-// clip. no hand-rolled scale-pop needed once real art is in the map.
+// symbolAnim plays the skeleton's win clip.
 const presenter = new WinPresenter(reelSet, {
   dimLosers: { alpha: 0.35 },
-  cycleGap: 0,
+  // Gap between the two combinations. one cycle each.
+  cycleGap: 200,
   cycles: 1,
   symbolAnim: async (symbol) => {
     await symbol.playWin();
@@ -3405,10 +3379,11 @@ return {
   reelSet,
   onSpin: async () => {
     const stage0 = Array.from({ length: REELS }, (_, c) =>
-      Array.from({ length: ROWS }, (_, r) =>
-        r === HIT_ROW && HIT_COLS.includes(c) ? CLUSTER : randSymbol(CLUSTER)
-      )
+      Array.from({ length: ROWS }, () => randSymbol()),
     );
+    for (const g of [GROUP_A, GROUP_B]) {
+      for (const cell of g.cells) stage0[cell.reel][cell.row] = g.id;
+    }
 
     // Moment A. initial drop, left-to-right reveal.
     reelSet.setDropOrder('ltr');
@@ -3418,34 +3393,41 @@ return {
     await p;
     await new Promise(r => setTimeout(r, 300));
 
-    // Moment B. runCascade owns the loop. `onCascade` hands the winners to
-    // the presenter (authored `win` + dimmed losers). When it resolves the
-    // library calls `destroySymbols`, which routes through the authored
-    // `explode`. No destroyOptions suppression here: the two clips are
-    // designed to chain.
+    // Moment B. runCascade owns the loop. presentWinners shows both
+    // combinations and pauses; destroySymbols runs when it resolves,
+    // then the refill.
     reelSet.setDropOrder('all');
     let presented = false;
     await reelSet.runCascade({
-      detectWinners: (grid) => {
+      detectWinners: () => {
         if (presented) return [];
-        return HIT_COLS.map(c => grid[c][HIT_ROW] === CLUSTER ? { reel: c, row: HIT_ROW } : null).filter(Boolean);
+        return [...GROUP_A.cells, ...GROUP_B.cells];
       },
       nextGrid: (prev, winners) => {
-        const next = prev.map(col => [...col]);
+        // Generic gravity: per column, drop the winner rows, pack the
+        // survivors to the bottom, fresh symbols on top. Handles the
+        // shared reel (two winners in one column) correctly.
+        const byReel = new Map();
         for (const w of winners) {
-          for (let r = w.row; r > 0; r--) next[w.reel][r] = next[w.reel][r - 1];
-          next[w.reel][0] = randSymbol(CLUSTER);
+          if (!byReel.has(w.reel)) byReel.set(w.reel, new Set());
+          byReel.get(w.reel).add(w.row);
         }
         presented = true;
-        return next;
+        return prev.map((col, c) => {
+          const drop = byReel.get(c);
+          if (!drop) return [...col];
+          const survivors = col.filter((_, row) => !drop.has(row));
+          const fillers = Array.from({ length: drop.size }, () => randSymbol());
+          return [...fillers, ...survivors];
+        });
       },
-      onCascade: async ({ chain, winners }) => {
-        if (winners.length === 0) return;
-        await presenter.show([{
-          id: chain,
-          cells: winners.map(w => ({ reelIndex: w.reel, rowIndex: w.row })),
-          value: winners.length * 10,
-        }]);
+      presentWinners: async () => {
+        // Higher value presents first.
+        await presenter.show([
+          { id: 1, cells: GROUP_A.cells.map(w => ({ reelIndex: w.reel, rowIndex: w.row })), value: GROUP_A.value },
+          { id: 2, cells: GROUP_B.cells.map(w => ({ reelIndex: w.reel, rowIndex: w.row })), value: GROUP_B.value },
+        ]);
+        await new Promise(r => setTimeout(r, HOLD_AFTER_PRESENT_MS));
       },
       pauseAfterDestroyMs: 80,
     });
@@ -3629,8 +3611,7 @@ await loadCascadeSpines();
 
 const IDS = [...CASCADE_SYMBOL_IDS];
 const REELS = 6, ROWS = 4;
-// Cells sized from the authored 88x101.6 low/mid plate, scaled so the
-// 6x4 board keeps roughly its old card-symbol footprint.
+// Cells match the authored 88x101.6 symbol plate.
 const SCALE = 0.62;
 const CELL_W = CASCADE_PLATE_W * SCALE;
 const CELL_H = CASCADE_PLATE_H * SCALE;
@@ -3645,9 +3626,8 @@ function randSymbol(exclude) {
   return s;
 }
 
-// The authored `explode` clip runs 1.27 s. longer than this demo's
-// cascade rhythm wants. Play it compressed via TrackEntry.timeScale:
-// same art, same spine API, demo-tempo timing.
+// The authored `explode` clip runs 1.27 s, too long for this demo's
+// cascade timing. Play it faster via TrackEntry.timeScale.
 const EXPLODE_TIME_SCALE = 2.2;
 
 class TimedExplodeSymbol extends SpineReelSymbol {
@@ -3662,30 +3642,25 @@ class TimedExplodeSymbol extends SpineReelSymbol {
 const reelSet = new ReelSetBuilder()
   .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
   .symbols((r) => {
-    // outAnimation: 'explode' routes the engine's cascade destroy through
-    // the authored explosion. `high` is authored 1.41x bigger than the
-    // low/mid plate and overflows its cell on purpose. premium symbols
-    // pop out of the grid in the original game, so it gets the same scale.
+    // outAnimation: 'explode' makes destroySymbols play the skeleton's
+    // explode clip instead of the default implode.
     const spineMap = buildCascadeSpineMap();
     for (const id of CASCADE_SYMBOL_IDS) {
       r.register(id, TimedExplodeSymbol, {
         spineMap,
         scale: SCALE,
-        landingAnimation: 'land',
         outAnimation: 'explode',
-        autoPlayLanding: true,
       });
     }
   })
-  // The skull's PLATE is tile-sized (pixel-identical to the tier plates
-  // in the atlas); only the head + glow overflow it, as authored. Lift it
-  // above every reel and outside the reel mask so that overflow renders
-  // instead of clipping.
+  // The high symbol's head overflows its cell (the plate itself is
+  // tile-sized). unmask renders it above the reel mask instead of
+  // clipping it.
   .symbolData({ high: { zIndex: 10, unmask: true } })
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
-    fall:   { duration: 280, ease: 'sine.in',       rowStagger: 50 },
-    dropIn: { duration: 420, ease: 'back.out(1.5)', rowStagger: 0,  distance: 'perHole' },
+    fall:   { duration: 280, ease: 'power2.in',       rowStagger: 50 },
+    dropIn: { duration: 420, ease: 'power3.out', rowStagger: 0,  distance: 'perHole' },
   })
   .ticker(app.ticker).build();
 
@@ -3740,8 +3715,7 @@ await loadCascadeSpines();
 
 const IDS = [...CASCADE_SYMBOL_IDS];
 const REELS = 6, ROWS = 4;
-// Cells sized from the authored 88x101.6 low/mid plate, scaled so the
-// 6x4 board keeps roughly its old card-symbol footprint.
+// Cells match the authored 88x101.6 symbol plate.
 const SCALE = 0.62;
 const CELL_W = CASCADE_PLATE_W * SCALE;
 const CELL_H = CASCADE_PLATE_H * SCALE;
@@ -3756,9 +3730,8 @@ function randSymbol(exclude) {
   return s;
 }
 
-// The authored `explode` clip runs 1.27 s. longer than this demo's
-// cascade rhythm wants. Play it compressed via TrackEntry.timeScale:
-// same art, same spine API, demo-tempo timing.
+// The authored `explode` clip runs 1.27 s, too long for this demo's
+// cascade timing. Play it faster via TrackEntry.timeScale.
 const EXPLODE_TIME_SCALE = 2.2;
 
 class TimedExplodeSymbol extends SpineReelSymbol {
@@ -3773,30 +3746,25 @@ class TimedExplodeSymbol extends SpineReelSymbol {
 const reelSet = new ReelSetBuilder()
   .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
   .symbols((r) => {
-    // outAnimation: 'explode' routes the engine's cascade destroy through
-    // the authored explosion. `high` is authored 1.41x bigger than the
-    // low/mid plate and overflows its cell on purpose. premium symbols
-    // pop out of the grid in the original game, so it gets the same scale.
+    // outAnimation: 'explode' makes destroySymbols play the skeleton's
+    // explode clip instead of the default implode.
     const spineMap = buildCascadeSpineMap();
     for (const id of CASCADE_SYMBOL_IDS) {
       r.register(id, TimedExplodeSymbol, {
         spineMap,
         scale: SCALE,
-        landingAnimation: 'land',
         outAnimation: 'explode',
-        autoPlayLanding: true,
       });
     }
   })
-  // The skull's PLATE is tile-sized (pixel-identical to the tier plates
-  // in the atlas); only the head + glow overflow it, as authored. Lift it
-  // above every reel and outside the reel mask so that overflow renders
-  // instead of clipping.
+  // The high symbol's head overflows its cell (the plate itself is
+  // tile-sized). unmask renders it above the reel mask instead of
+  // clipping it.
   .symbolData({ high: { zIndex: 10, unmask: true } })
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
-    fall:   { duration: 280, ease: 'sine.in',       rowStagger: 50 },
-    dropIn: { duration: 420, ease: 'back.out(1.5)', rowStagger: 0,  distance: 'perHole' },
+    fall:   { duration: 280, ease: 'power2.in',       rowStagger: 50 },
+    dropIn: { duration: 420, ease: 'power3.out', rowStagger: 0,  distance: 'perHole' },
   })
   .ticker(app.ticker).build();
 
@@ -3853,8 +3821,7 @@ await loadCascadeSpines();
 
 const IDS = [...CASCADE_SYMBOL_IDS];
 const REELS = 6, ROWS = 4;
-// Cells sized from the authored 88x101.6 low/mid plate, scaled so the
-// 6x4 board keeps roughly its old card-symbol footprint.
+// Cells match the authored 88x101.6 symbol plate.
 const SCALE = 0.62;
 const CELL_W = CASCADE_PLATE_W * SCALE;
 const CELL_H = CASCADE_PLATE_H * SCALE;
@@ -3869,9 +3836,8 @@ function randSymbol(exclude) {
   return s;
 }
 
-// The authored `explode` clip runs 1.27 s. longer than this demo's
-// cascade rhythm wants. Play it compressed via TrackEntry.timeScale:
-// same art, same spine API, demo-tempo timing.
+// The authored `explode` clip runs 1.27 s, too long for this demo's
+// cascade timing. Play it faster via TrackEntry.timeScale.
 const EXPLODE_TIME_SCALE = 2.2;
 
 class TimedExplodeSymbol extends SpineReelSymbol {
@@ -3886,30 +3852,25 @@ class TimedExplodeSymbol extends SpineReelSymbol {
 const reelSet = new ReelSetBuilder()
   .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
   .symbols((r) => {
-    // outAnimation: 'explode' routes the engine's cascade destroy through
-    // the authored explosion. `high` is authored 1.41x bigger than the
-    // low/mid plate and overflows its cell on purpose. premium symbols
-    // pop out of the grid in the original game, so it gets the same scale.
+    // outAnimation: 'explode' makes destroySymbols play the skeleton's
+    // explode clip instead of the default implode.
     const spineMap = buildCascadeSpineMap();
     for (const id of CASCADE_SYMBOL_IDS) {
       r.register(id, TimedExplodeSymbol, {
         spineMap,
         scale: SCALE,
-        landingAnimation: 'land',
         outAnimation: 'explode',
-        autoPlayLanding: true,
       });
     }
   })
-  // The skull's PLATE is tile-sized (pixel-identical to the tier plates
-  // in the atlas); only the head + glow overflow it, as authored. Lift it
-  // above every reel and outside the reel mask so that overflow renders
-  // instead of clipping.
+  // The high symbol's head overflows its cell (the plate itself is
+  // tile-sized). unmask renders it above the reel mask instead of
+  // clipping it.
   .symbolData({ high: { zIndex: 10, unmask: true } })
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
-    fall:   { duration: 280, ease: 'sine.in',       rowStagger: 50 },
-    dropIn: { duration: 420, ease: 'back.out(1.5)', rowStagger: 0,  distance: 'perHole' },
+    fall:   { duration: 280, ease: 'power2.in',       rowStagger: 50 },
+    dropIn: { duration: 420, ease: 'power3.out', rowStagger: 0,  distance: 'perHole' },
   })
   .ticker(app.ticker).build();
 
@@ -3964,8 +3925,7 @@ await loadCascadeSpines();
 
 const IDS = [...CASCADE_SYMBOL_IDS];
 const REELS = 6, ROWS = 4;
-// Cells sized from the authored 88x101.6 low/mid plate, scaled so the
-// 6x4 board keeps roughly its old card-symbol footprint.
+// Cells match the authored 88x101.6 symbol plate.
 const SCALE = 0.62;
 const CELL_W = CASCADE_PLATE_W * SCALE;
 const CELL_H = CASCADE_PLATE_H * SCALE;
@@ -3980,9 +3940,8 @@ function randSymbol(exclude) {
   return s;
 }
 
-// The authored `explode` clip runs 1.27 s. longer than this demo's
-// cascade rhythm wants. Play it compressed via TrackEntry.timeScale:
-// same art, same spine API, demo-tempo timing.
+// The authored `explode` clip runs 1.27 s, too long for this demo's
+// cascade timing. Play it faster via TrackEntry.timeScale.
 const EXPLODE_TIME_SCALE = 2.2;
 
 class TimedExplodeSymbol extends SpineReelSymbol {
@@ -3997,30 +3956,25 @@ class TimedExplodeSymbol extends SpineReelSymbol {
 const reelSet = new ReelSetBuilder()
   .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
   .symbols((r) => {
-    // outAnimation: 'explode' routes the engine's cascade destroy through
-    // the authored explosion. `high` is authored 1.41x bigger than the
-    // low/mid plate and overflows its cell on purpose. premium symbols
-    // pop out of the grid in the original game, so it gets the same scale.
+    // outAnimation: 'explode' makes destroySymbols play the skeleton's
+    // explode clip instead of the default implode.
     const spineMap = buildCascadeSpineMap();
     for (const id of CASCADE_SYMBOL_IDS) {
       r.register(id, TimedExplodeSymbol, {
         spineMap,
         scale: SCALE,
-        landingAnimation: 'land',
         outAnimation: 'explode',
-        autoPlayLanding: true,
       });
     }
   })
-  // The skull's PLATE is tile-sized (pixel-identical to the tier plates
-  // in the atlas); only the head + glow overflow it, as authored. Lift it
-  // above every reel and outside the reel mask so that overflow renders
-  // instead of clipping.
+  // The high symbol's head overflows its cell (the plate itself is
+  // tile-sized). unmask renders it above the reel mask instead of
+  // clipping it.
   .symbolData({ high: { zIndex: 10, unmask: true } })
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
-    fall:   { duration: 280, ease: 'sine.in',       rowStagger: 50 },
-    dropIn: { duration: 420, ease: 'back.out(1.5)', rowStagger: 0,  distance: 'perHole' },
+    fall:   { duration: 280, ease: 'power2.in',       rowStagger: 50 },
+    dropIn: { duration: 420, ease: 'power3.out', rowStagger: 0,  distance: 'perHole' },
   })
   .ticker(app.ticker).build();
 
@@ -9879,8 +9833,7 @@ await loadCascadeSpines();
 
 const IDS = [...CASCADE_SYMBOL_IDS];
 const REELS = 6, ROWS = 4;
-// Cells sized from the authored 88x101.6 low/mid plate, scaled so the
-// 6x4 board keeps roughly its old card-symbol footprint.
+// Cells match the authored 88x101.6 symbol plate.
 const SCALE = 0.62;
 const CELL_W = CASCADE_PLATE_W * SCALE;
 const CELL_H = CASCADE_PLATE_H * SCALE;
@@ -9895,9 +9848,8 @@ function randSymbol(exclude) {
   return s;
 }
 
-// The authored `explode` clip runs 1.27 s. longer than this demo's
-// cascade rhythm wants. Play it compressed via TrackEntry.timeScale:
-// same art, same spine API, demo-tempo timing.
+// The authored `explode` clip runs 1.27 s, too long for this demo's
+// cascade timing. Play it faster via TrackEntry.timeScale.
 const EXPLODE_TIME_SCALE = 2.2;
 
 class TimedExplodeSymbol extends SpineReelSymbol {
@@ -9912,31 +9864,26 @@ class TimedExplodeSymbol extends SpineReelSymbol {
 const reelSet = new ReelSetBuilder()
   .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
   .symbols((r) => {
-    // outAnimation: 'explode' routes the engine's cascade destroy through
-    // the authored explosion. `high` is authored 1.41x bigger than the
-    // low/mid plate and overflows its cell on purpose. premium symbols
-    // pop out of the grid in the original game, so it gets the same scale.
+    // outAnimation: 'explode' makes destroySymbols play the skeleton's
+    // explode clip instead of the default implode.
     const spineMap = buildCascadeSpineMap();
     for (const id of CASCADE_SYMBOL_IDS) {
       r.register(id, TimedExplodeSymbol, {
         spineMap,
         scale: SCALE,
-        landingAnimation: 'land',
         outAnimation: 'explode',
-        autoPlayLanding: true,
       });
     }
   })
-  // The skull's PLATE is tile-sized (pixel-identical to the tier plates
-  // in the atlas); only the head + glow overflow it, as authored. Lift it
-  // above every reel and outside the reel mask so that overflow renders
-  // instead of clipping.
+  // The high symbol's head overflows its cell (the plate itself is
+  // tile-sized). unmask renders it above the reel mask instead of
+  // clipping it.
   .symbolData({ high: { zIndex: 10, unmask: true } })
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
-    fall:   { duration: 240, ease: 'sine.in',       rowStagger: 40 },
+    fall:   { duration: 240, ease: 'power2.in',       rowStagger: 40 },
     dropIn: {
-      duration: 380, ease: 'back.out(1.5)', distance: 'perHole',
+      duration: 380, ease: 'power3.out', distance: 'perHole',
       rowStagger: 90,
       rowOrder: 'bottomToTop',
     },
@@ -9992,8 +9939,7 @@ await loadCascadeSpines();
 
 const IDS = [...CASCADE_SYMBOL_IDS];
 const REELS = 6, ROWS = 4;
-// Cells sized from the authored 88x101.6 low/mid plate, scaled so the
-// 6x4 board keeps roughly its old card-symbol footprint.
+// Cells match the authored 88x101.6 symbol plate.
 const SCALE = 0.62;
 const CELL_W = CASCADE_PLATE_W * SCALE;
 const CELL_H = CASCADE_PLATE_H * SCALE;
@@ -10009,9 +9955,8 @@ function randSymbol(exclude) {
   return s;
 }
 
-// The authored `explode` clip runs 1.27 s. longer than this demo's
-// cascade rhythm wants. Play it compressed via TrackEntry.timeScale:
-// same art, same spine API, demo-tempo timing.
+// The authored `explode` clip runs 1.27 s, too long for this demo's
+// cascade timing. Play it faster via TrackEntry.timeScale.
 const EXPLODE_TIME_SCALE = 2.2;
 
 class TimedExplodeSymbol extends SpineReelSymbol {
@@ -10026,32 +9971,27 @@ class TimedExplodeSymbol extends SpineReelSymbol {
 const reelSet = new ReelSetBuilder()
   .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
   .symbols((r) => {
-    // outAnimation: 'explode' routes the engine's cascade destroy through
-    // the authored explosion. `high` is authored 1.41x bigger than the
-    // low/mid plate and overflows its cell on purpose. premium symbols
-    // pop out of the grid in the original game, so it gets the same scale.
+    // outAnimation: 'explode' makes destroySymbols play the skeleton's
+    // explode clip instead of the default implode.
     const spineMap = buildCascadeSpineMap();
     for (const id of CASCADE_SYMBOL_IDS) {
       r.register(id, TimedExplodeSymbol, {
         spineMap,
         scale: SCALE,
-        landingAnimation: 'land',
         outAnimation: 'explode',
-        autoPlayLanding: true,
       });
     }
   })
-  // The skull's PLATE is tile-sized (pixel-identical to the tier plates
-  // in the atlas); only the head + glow overflow it, as authored. Lift it
-  // above every reel and outside the reel mask so that overflow renders
-  // instead of clipping.
+  // The high symbol's head overflows its cell (the plate itself is
+  // tile-sized). unmask renders it above the reel mask instead of
+  // clipping it.
   .symbolData({ high: { zIndex: 10, unmask: true } })
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
-    fall:   { duration: 240, ease: 'sine.in',       rowStagger: 40 },
+    fall:   { duration: 240, ease: 'power2.in',       rowStagger: 40 },
     // rowStagger: 0. rows in a reel arrive together; the per-reel
     // stagger is set via setDropOrder('ltr', step) on the refill below.
-    dropIn: { duration: 380, ease: 'back.out(1.4)', rowStagger: 0, distance: 'perHole' },
+    dropIn: { duration: 380, ease: 'power3.out', rowStagger: 0, distance: 'perHole' },
   })
   .ticker(app.ticker).build();
 
@@ -10103,8 +10043,7 @@ await loadCascadeSpines();
 
 const IDS = [...CASCADE_SYMBOL_IDS];
 const REELS = 6, ROWS = 4;
-// Cells sized from the authored 88x101.6 low/mid plate, scaled so the
-// 6x4 board keeps roughly its old card-symbol footprint.
+// Cells match the authored 88x101.6 symbol plate.
 const SCALE = 0.62;
 const CELL_W = CASCADE_PLATE_W * SCALE;
 const CELL_H = CASCADE_PLATE_H * SCALE;
@@ -10119,9 +10058,8 @@ function randSymbol(exclude) {
   return s;
 }
 
-// The authored `explode` clip runs 1.27 s. longer than this demo's
-// cascade rhythm wants. Play it compressed via TrackEntry.timeScale:
-// same art, same spine API, demo-tempo timing.
+// The authored `explode` clip runs 1.27 s, too long for this demo's
+// cascade timing. Play it faster via TrackEntry.timeScale.
 const EXPLODE_TIME_SCALE = 2.2;
 
 class TimedExplodeSymbol extends SpineReelSymbol {
@@ -10136,31 +10074,26 @@ class TimedExplodeSymbol extends SpineReelSymbol {
 const reelSet = new ReelSetBuilder()
   .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
   .symbols((r) => {
-    // outAnimation: 'explode' routes the engine's cascade destroy through
-    // the authored explosion. `high` is authored 1.41x bigger than the
-    // low/mid plate and overflows its cell on purpose. premium symbols
-    // pop out of the grid in the original game, so it gets the same scale.
+    // outAnimation: 'explode' makes destroySymbols play the skeleton's
+    // explode clip instead of the default implode.
     const spineMap = buildCascadeSpineMap();
     for (const id of CASCADE_SYMBOL_IDS) {
       r.register(id, TimedExplodeSymbol, {
         spineMap,
         scale: SCALE,
-        landingAnimation: 'land',
         outAnimation: 'explode',
-        autoPlayLanding: true,
       });
     }
   })
-  // The skull's PLATE is tile-sized (pixel-identical to the tier plates
-  // in the atlas); only the head + glow overflow it, as authored. Lift it
-  // above every reel and outside the reel mask so that overflow renders
-  // instead of clipping.
+  // The high symbol's head overflows its cell (the plate itself is
+  // tile-sized). unmask renders it above the reel mask instead of
+  // clipping it.
   .symbolData({ high: { zIndex: 10, unmask: true } })
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
-    fall:   { duration: 240, ease: 'sine.in',       rowStagger: 40 },
+    fall:   { duration: 240, ease: 'power2.in',       rowStagger: 40 },
     // rowStagger: 0. every row in a reel drops together (no in-reel stagger).
-    dropIn: { duration: 380, ease: 'back.out(1.4)', rowStagger: 0, distance: 'perHole' },
+    dropIn: { duration: 380, ease: 'power3.out', rowStagger: 0, distance: 'perHole' },
   })
   .ticker(app.ticker).build();
 
@@ -10527,19 +10460,17 @@ URL: https://pixi-reels.schmooky.dev/recipes/spin-then-cascade-turbo/
 //           buildCascadeSpineMap, CASCADE_SYMBOL_IDS, CASCADE_PLATE_W,
 //           CASCADE_PLATE_H, PIXI, gsap, app, pickWeighted
 
-// TURBO HYBRID: the same strip-spin opener + 'low1' → 'mid1' chain, but
-// tuned for speed on both systems independently. The strip-spin runs the
-// TURBO profile on cached snapshot textures with auto-baked motion blur
-// (StaticSpinSymbol. no skeleton ticks while the reels turn), and the
-// cascade runs a tightened tumble with a harder explode compression.
-// The two speed knobs never touch each other: SpeedPresets governs the
-// strip phases, .tumble() + timeScale govern the cascade.
+// Turbo hybrid: same strip-spin opener + 'low1' -> 'mid1' chain, tuned
+// for speed. The strip-spin runs the TURBO profile on cached snapshot
+// textures (StaticSpinSymbol. no skeleton ticks while spinning); the
+// cascade runs a shorter dropIn and a faster explode. SpeedPresets
+// controls the strip phases, .tumble() + timeScale the cascade.
 
 await loadCascadeSpines();
 
 const IDS = [...CASCADE_SYMBOL_IDS];
 const REELS = 5, ROWS = 5;
-// Cells sized from the authored 88x101.6 low/mid plate.
+// Cells match the authored 88x101.6 symbol plate.
 const SCALE = 0.62;
 const CELL_W = CASCADE_PLATE_W * SCALE;
 const CELL_H = CASCADE_PLATE_H * SCALE;
@@ -10555,8 +10486,7 @@ function randSymbolNotIn(exclude) {
   return s;
 }
 
-// Harder compression than the normal-speed canvas: turbo rounds want the
-// destruction over in ~0.4 s.
+// Faster than the normal-speed canvas: destruction done in ~0.4 s.
 const EXPLODE_TIME_SCALE = 3.0;
 
 class TimedExplodeSymbol extends SpineReelSymbol {
@@ -10568,18 +10498,15 @@ class TimedExplodeSymbol extends SpineReelSymbol {
   }
 }
 
-// Static-spin plumbing: one scratch symbol bakes a static + blurred
+// Static-spin setup: one scratch symbol bakes a static + blurred
 // texture per id; the reels spin on those textures and the skeletons
-// only come back at land. Uniform scale for every tier (`high` overflows
-// its cell by authoring), so a single factory prewarms all ids.
+// come back at land.
 const cache = new SpinTextureCache({ renderer: app.renderer });
 const createInner = () =>
   new TimedExplodeSymbol({
     spineMap: buildCascadeSpineMap(),
     scale: SCALE,
-    landingAnimation: 'land',
     outAnimation: 'explode',
-    autoPlayLanding: true,
   });
 
 prewarmSpinTextures({
@@ -10594,10 +10521,9 @@ const reelSet = new ReelSetBuilder()
       r.register(id, StaticSpinSymbol, { createInner, cache, blurRampMs: 120 });
     }
   })
-  // The skull's PLATE is tile-sized (pixel-identical to the tier plates
-  // in the atlas); only the head + glow overflow it, as authored. Lift it
-  // above every reel and outside the reel mask so that overflow renders
-  // instead of clipping.
+  // The high symbol's head overflows its cell (the plate itself is
+  // tile-sized). unmask renders it above the reel mask instead of
+  // clipping it.
   .symbolData({ high: { zIndex: 10, unmask: true } })
   .speed('turbo', { ...SpeedPresets.TURBO, stopDelay: 60, bounceDistance: 0, bounceDuration: 0 })
   .initialSpeed('turbo')
@@ -10683,7 +10609,7 @@ await loadCascadeSpines();
 
 const IDS = [...CASCADE_SYMBOL_IDS];
 const REELS = 5, ROWS = 5;
-// Cells sized from the authored 88x101.6 low/mid plate.
+// Cells match the authored 88x101.6 symbol plate.
 const SCALE = 0.62;
 const CELL_W = CASCADE_PLATE_W * SCALE;
 const CELL_H = CASCADE_PLATE_H * SCALE;
@@ -10699,9 +10625,8 @@ function randSymbolNotIn(exclude) {
   return s;
 }
 
-// The authored `explode` clip runs 1.27 s. longer than this demo's
-// cascade rhythm wants. Play it compressed via TrackEntry.timeScale:
-// same art, same spine API, demo-tempo timing.
+// The authored `explode` clip runs 1.27 s, too long for this demo's
+// cascade timing. Play it faster via TrackEntry.timeScale.
 const EXPLODE_TIME_SCALE = 2.2;
 
 class TimedExplodeSymbol extends SpineReelSymbol {
@@ -10716,25 +10641,20 @@ class TimedExplodeSymbol extends SpineReelSymbol {
 const reelSet = new ReelSetBuilder()
   .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
   .symbols((r) => {
-    // outAnimation: 'explode' routes the engine's cascade destroy through
-    // the authored explosion. `high` is authored 1.41x bigger than the
-    // low/mid plate and overflows its cell on purpose. premium symbols
-    // pop out of the grid in the original game, so it gets the same scale.
+    // outAnimation: 'explode' makes destroySymbols play the skeleton's
+    // explode clip instead of the default implode.
     const spineMap = buildCascadeSpineMap();
     for (const id of CASCADE_SYMBOL_IDS) {
       r.register(id, TimedExplodeSymbol, {
         spineMap,
         scale: SCALE,
-        landingAnimation: 'land',
         outAnimation: 'explode',
-        autoPlayLanding: true,
       });
     }
   })
-  // The skull's PLATE is tile-sized (pixel-identical to the tier plates
-  // in the atlas); only the head + glow overflow it, as authored. Lift it
-  // above every reel and outside the reel mask so that overflow renders
-  // instead of clipping.
+  // The high symbol's head overflows its cell (the plate itself is
+  // tile-sized). unmask renders it above the reel mask instead of
+  // clipping it.
   .symbolData({ high: { zIndex: 10, unmask: true } })
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 120, bounceDistance: 0, bounceDuration: 0 })
   // Cascade refills layer on top of a standard strip-spin: leave the
@@ -10743,7 +10663,7 @@ const reelSet = new ReelSetBuilder()
   // need `.tumble()` for the strip-spin landing itself).
   .tumble({
     fall:   { duration: 0, ease: 'none', rowStagger: 0 },              // not used. refill skips fall
-    dropIn: { duration: 360, ease: 'back.out(1.6)', rowStagger: 0, distance: 'perHole' },
+    dropIn: { duration: 360, ease: 'power3.out', rowStagger: 0, distance: 'perHole' },
   })
   .ticker(app.ticker)
   .build();
@@ -12278,11 +12198,10 @@ URL: https://pixi-reels.schmooky.dev/recipes/tumble-anticipation-stagger/
 //           buildCascadeSpineMap, CASCADE_SYMBOL_IDS, CASCADE_PLATE_W,
 //           CASCADE_PLATE_H, PIXI, gsap, app, pickWeighted
 
-// STAGGERED-COLUMN ANTICIPATION. same two-stage refill as the global
-// canvas, but the anticipation walks the board: the drop-in columns run
-// STRICTLY SEQUENTIALLY (step >= dropIn.duration), so each column is its
-// own held beat. reel 0 fully lands, breath, reel 1, breath, reel 2.
-// The gravity hold is longer too. the walk needs a bigger stage.
+// Staggered-column anticipation. same two-stage refill as the other
+// canvas, but the drop-in columns run strictly sequentially
+// (step >= dropIn.duration): reel 0 fully lands before reel 1 starts.
+// The gravity hold is longer to match.
 //
 // Same scripted win as the refill-orders recipes: a 3-cluster of `10` on
 // row 2 of the leftmost three reels. What changes:
@@ -12305,7 +12224,7 @@ await loadCascadeSpines();
 
 const IDS = [...CASCADE_SYMBOL_IDS];
 const REELS = 6, ROWS = 4;
-// Cells sized from the authored 88x101.6 low/mid plate.
+// Cells match the authored 88x101.6 symbol plate.
 const SCALE = 0.62;
 const CELL_W = CASCADE_PLATE_W * SCALE;
 const CELL_H = CASCADE_PLATE_H * SCALE;
@@ -12313,7 +12232,7 @@ const CLUSTER = 'low1';
 const HIT_ROW = 2;
 const HIT_COLS = [0, 1, 2];
 const PAUSE_AFTER_REMOVAL_MS = 220;
-const GRAVITY_HOLD_MS = 600;        // longer beat. the walk earns it
+const GRAVITY_HOLD_MS = 600;        // longer hold for the sequential drop
 const COLUMN_STEP_MS = 420;         // >= dropIn.duration (380). strictly sequential
 
 function randSymbol(exclude) {
@@ -12322,9 +12241,8 @@ function randSymbol(exclude) {
   return s;
 }
 
-// The authored `explode` clip runs 1.27 s. longer than this demo's
-// cascade rhythm wants. Play it compressed via TrackEntry.timeScale:
-// same art, same spine API, demo-tempo timing.
+// The authored `explode` clip runs 1.27 s, too long for this demo's
+// cascade timing. Play it faster via TrackEntry.timeScale.
 const EXPLODE_TIME_SCALE = 2.2;
 
 class TimedExplodeSymbol extends SpineReelSymbol {
@@ -12339,33 +12257,27 @@ class TimedExplodeSymbol extends SpineReelSymbol {
 const reelSet = new ReelSetBuilder()
   .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
   .symbols((r) => {
-    // outAnimation: 'explode' routes the engine's cascade destroy through
-    // the authored explosion. `high` is authored 1.41x bigger than the
-    // low/mid plate and overflows its cell on purpose. premium symbols
-    // pop out of the grid in the original game, so it gets the same scale.
+    // outAnimation: 'explode' makes destroySymbols play the skeleton's
+    // explode clip instead of the default implode.
     const spineMap = buildCascadeSpineMap();
     for (const id of CASCADE_SYMBOL_IDS) {
       r.register(id, TimedExplodeSymbol, {
         spineMap,
         scale: SCALE,
-        landingAnimation: 'land',
         outAnimation: 'explode',
-        autoPlayLanding: true,
       });
     }
   })
-  // The skull's PLATE is tile-sized (pixel-identical to the tier plates
-  // in the atlas); only the head + glow overflow it, as authored. Lift it
-  // above every reel and outside the reel mask so that overflow renders
-  // instead of clipping.
+  // The high symbol's head overflows its cell (the plate itself is
+  // tile-sized). unmask renders it above the reel mask instead of
+  // clipping it.
   .symbolData({ high: { zIndex: 10, unmask: true } })
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
-    fall:   { duration: 240, ease: 'sine.in',       rowStagger: 40 },
+    fall:   { duration: 240, ease: 'power2.in',       rowStagger: 40 },
     // Gravity uses the same `dropIn` config (it's the same phase, just
-    // filtered to survivors). 380 ms with a soft back-out reads as
-    // "settled with a tiny bounce". pairs well with the held beat.
-    dropIn: { duration: 380, ease: 'back.out(1.4)', rowStagger: 0, distance: 'perHole' },
+    // filtered to survivors).
+    dropIn: { duration: 380, ease: 'power3.out', rowStagger: 0, distance: 'perHole' },
   })
   .ticker(app.ticker).build();
 
@@ -12448,7 +12360,7 @@ await loadCascadeSpines();
 
 const IDS = [...CASCADE_SYMBOL_IDS];
 const REELS = 6, ROWS = 4;
-// Cells sized from the authored 88x101.6 low/mid plate.
+// Cells match the authored 88x101.6 symbol plate.
 const SCALE = 0.62;
 const CELL_W = CASCADE_PLATE_W * SCALE;
 const CELL_H = CASCADE_PLATE_H * SCALE;
@@ -12465,9 +12377,8 @@ function randSymbol(exclude) {
   return s;
 }
 
-// The authored `explode` clip runs 1.27 s. longer than this demo's
-// cascade rhythm wants. Play it compressed via TrackEntry.timeScale:
-// same art, same spine API, demo-tempo timing.
+// The authored `explode` clip runs 1.27 s, too long for this demo's
+// cascade timing. Play it faster via TrackEntry.timeScale.
 const EXPLODE_TIME_SCALE = 2.2;
 
 class TimedExplodeSymbol extends SpineReelSymbol {
@@ -12482,33 +12393,27 @@ class TimedExplodeSymbol extends SpineReelSymbol {
 const reelSet = new ReelSetBuilder()
   .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
   .symbols((r) => {
-    // outAnimation: 'explode' routes the engine's cascade destroy through
-    // the authored explosion. `high` is authored 1.41x bigger than the
-    // low/mid plate and overflows its cell on purpose. premium symbols
-    // pop out of the grid in the original game, so it gets the same scale.
+    // outAnimation: 'explode' makes destroySymbols play the skeleton's
+    // explode clip instead of the default implode.
     const spineMap = buildCascadeSpineMap();
     for (const id of CASCADE_SYMBOL_IDS) {
       r.register(id, TimedExplodeSymbol, {
         spineMap,
         scale: SCALE,
-        landingAnimation: 'land',
         outAnimation: 'explode',
-        autoPlayLanding: true,
       });
     }
   })
-  // The skull's PLATE is tile-sized (pixel-identical to the tier plates
-  // in the atlas); only the head + glow overflow it, as authored. Lift it
-  // above every reel and outside the reel mask so that overflow renders
-  // instead of clipping.
+  // The high symbol's head overflows its cell (the plate itself is
+  // tile-sized). unmask renders it above the reel mask instead of
+  // clipping it.
   .symbolData({ high: { zIndex: 10, unmask: true } })
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
-    fall:   { duration: 240, ease: 'sine.in',       rowStagger: 40 },
+    fall:   { duration: 240, ease: 'power2.in',       rowStagger: 40 },
     // Gravity uses the same `dropIn` config (it's the same phase, just
-    // filtered to survivors). 380 ms with a soft back-out reads as
-    // "settled with a tiny bounce". pairs well with the held beat.
-    dropIn: { duration: 380, ease: 'back.out(1.4)', rowStagger: 0, distance: 'perHole' },
+    // filtered to survivors).
+    dropIn: { duration: 380, ease: 'power3.out', rowStagger: 0, distance: 'perHole' },
   })
   .ticker(app.ticker).build();
 
@@ -12566,15 +12471,15 @@ URL: https://pixi-reels.schmooky.dev/recipes/tumble-cartoon-bounce/
 //           buildCascadeSpineMap, CASCADE_SYMBOL_IDS, CASCADE_PLATE_W,
 //           CASCADE_PLATE_H, PIXI, gsap, app, pickWeighted
 
-// CARTOON BOUNCE: bounce.out gives a multi-bounce settle. Long stagger
-// spreads the row-by-row arrival in time.
+// SOFT FLOAT: a long power2.out settle with a heavy stagger. the slow,
+// playful variant. Framed symbol plates rule out bounce/overshoot
+// eases, so the float reads through duration + stagger instead.
 
 await loadCascadeSpines();
 
 const IDS = [...CASCADE_SYMBOL_IDS];
 const REELS = 6, ROWS = 4;
-// Cells sized from the authored 88x101.6 low/mid plate, scaled so the
-// 6x4 board keeps roughly its old card-symbol footprint.
+// Cells match the authored 88x101.6 symbol plate.
 const SCALE = 0.62;
 const CELL_W = CASCADE_PLATE_W * SCALE;
 const CELL_H = CASCADE_PLATE_H * SCALE;
@@ -12582,8 +12487,7 @@ const CLUSTER = 'low1';
 const HIT_ROW = 2;
 const HIT_COLS = [0, 1, 2];
 
-// Longer pause so the previous bounce has time to settle before new
-// symbols arrive. the bouncy land needs breathing room.
+// Longer pause to match the slow settle before new symbols arrive.
 const PAUSE_AFTER_REMOVAL_MS = 320;
 
 function randSymbol(exclude) {
@@ -12592,9 +12496,8 @@ function randSymbol(exclude) {
   return s;
 }
 
-// The authored `explode` clip runs 1.27 s. longer than this demo's
-// cascade rhythm wants. Play it compressed via TrackEntry.timeScale:
-// same art, same spine API, demo-tempo timing.
+// The authored `explode` clip runs 1.27 s, too long for this demo's
+// cascade timing. Play it faster via TrackEntry.timeScale.
 const EXPLODE_TIME_SCALE = 1.6;
 
 class TimedExplodeSymbol extends SpineReelSymbol {
@@ -12609,30 +12512,25 @@ class TimedExplodeSymbol extends SpineReelSymbol {
 const reelSet = new ReelSetBuilder()
   .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
   .symbols((r) => {
-    // outAnimation: 'explode' routes the engine's cascade destroy through
-    // the authored explosion. `high` is authored 1.41x bigger than the
-    // low/mid plate and overflows its cell on purpose. premium symbols
-    // pop out of the grid in the original game, so it gets the same scale.
+    // outAnimation: 'explode' makes destroySymbols play the skeleton's
+    // explode clip instead of the default implode.
     const spineMap = buildCascadeSpineMap();
     for (const id of CASCADE_SYMBOL_IDS) {
       r.register(id, TimedExplodeSymbol, {
         spineMap,
         scale: SCALE,
-        landingAnimation: 'land',
         outAnimation: 'explode',
-        autoPlayLanding: true,
       });
     }
   })
-  // The skull's PLATE is tile-sized (pixel-identical to the tier plates
-  // in the atlas); only the head + glow overflow it, as authored. Lift it
-  // above every reel and outside the reel mask so that overflow renders
-  // instead of clipping.
+  // The high symbol's head overflows its cell (the plate itself is
+  // tile-sized). unmask renders it above the reel mask instead of
+  // clipping it.
   .symbolData({ high: { zIndex: 10, unmask: true } })
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
-    fall:   { duration: 320, ease: 'sine.in',    rowStagger: 60 },
-    dropIn: { duration: 700, ease: 'bounce.out', rowStagger: 70, distance: 'perHole' },
+    fall:   { duration: 320, ease: 'power2.in',    rowStagger: 60 },
+    dropIn: { duration: 700, ease: 'power2.out', rowStagger: 70, distance: 'perHole' },
   })
   .ticker(app.ticker).build();
 
@@ -12675,16 +12573,16 @@ URL: https://pixi-reels.schmooky.dev/recipes/tumble-classic/
 //           buildCascadeSpineMap, CASCADE_SYMBOL_IDS, CASCADE_PLATE_W,
 //           CASCADE_PLATE_H, PIXI, gsap, app, pickWeighted
 
-// CLASSIC tumble feel: sine.in fall, soft overshoot dropIn. the
+// CLASSIC tumble feel: power2.in fall, power3.out settle. the
 // all-rounder default. Good baseline before reaching for the more
-// stylistic variants.
+// stylistic variants. Framed symbol plates rule out overshoot eases
+// (back/bounce): the rectangles would gap and overlap on landing.
 
 await loadCascadeSpines();
 
 const IDS = [...CASCADE_SYMBOL_IDS];
 const REELS = 6, ROWS = 4;
-// Cells sized from the authored 88x101.6 low/mid plate, scaled so the
-// 6x4 board keeps roughly its old card-symbol footprint.
+// Cells match the authored 88x101.6 symbol plate.
 const SCALE = 0.62;
 const CELL_W = CASCADE_PLATE_W * SCALE;
 const CELL_H = CASCADE_PLATE_H * SCALE;
@@ -12703,9 +12601,8 @@ function randSymbol(exclude) {
   return s;
 }
 
-// The authored `explode` clip runs 1.27 s. longer than this demo's
-// cascade rhythm wants. Play it compressed via TrackEntry.timeScale:
-// same art, same spine API, demo-tempo timing.
+// The authored `explode` clip runs 1.27 s, too long for this demo's
+// cascade timing. Play it faster via TrackEntry.timeScale.
 const EXPLODE_TIME_SCALE = 2.0;
 
 class TimedExplodeSymbol extends SpineReelSymbol {
@@ -12720,30 +12617,25 @@ class TimedExplodeSymbol extends SpineReelSymbol {
 const reelSet = new ReelSetBuilder()
   .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
   .symbols((r) => {
-    // outAnimation: 'explode' routes the engine's cascade destroy through
-    // the authored explosion. `high` is authored 1.41x bigger than the
-    // low/mid plate and overflows its cell on purpose. premium symbols
-    // pop out of the grid in the original game, so it gets the same scale.
+    // outAnimation: 'explode' makes destroySymbols play the skeleton's
+    // explode clip instead of the default implode.
     const spineMap = buildCascadeSpineMap();
     for (const id of CASCADE_SYMBOL_IDS) {
       r.register(id, TimedExplodeSymbol, {
         spineMap,
         scale: SCALE,
-        landingAnimation: 'land',
         outAnimation: 'explode',
-        autoPlayLanding: true,
       });
     }
   })
-  // The skull's PLATE is tile-sized (pixel-identical to the tier plates
-  // in the atlas); only the head + glow overflow it, as authored. Lift it
-  // above every reel and outside the reel mask so that overflow renders
-  // instead of clipping.
+  // The high symbol's head overflows its cell (the plate itself is
+  // tile-sized). unmask renders it above the reel mask instead of
+  // clipping it.
   .symbolData({ high: { zIndex: 10, unmask: true } })
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
-    fall:   { duration: 280, ease: 'sine.in',       rowStagger: 40 },
-    dropIn: { duration: 480, ease: 'back.out(1.6)', rowStagger: 50, distance: 'perHole' },
+    fall:   { duration: 280, ease: 'power2.in',       rowStagger: 40 },
+    dropIn: { duration: 480, ease: 'power3.out', rowStagger: 50, distance: 'perHole' },
   })
   .ticker(app.ticker).build();
 
@@ -12798,8 +12690,7 @@ await loadCascadeSpines();
 
 const IDS = [...CASCADE_SYMBOL_IDS];
 const REELS = 6, ROWS = 4;
-// Cells sized from the authored 88x101.6 low/mid plate, scaled so the
-// 6x4 board keeps roughly its old card-symbol footprint.
+// Cells match the authored 88x101.6 symbol plate.
 const SCALE = 0.62;
 const CELL_W = CASCADE_PLATE_W * SCALE;
 const CELL_H = CASCADE_PLATE_H * SCALE;
@@ -12818,9 +12709,8 @@ function randSymbol(exclude) {
   return s;
 }
 
-// The authored `explode` clip runs 1.27 s. longer than this demo's
-// cascade rhythm wants. Play it compressed via TrackEntry.timeScale:
-// same art, same spine API, demo-tempo timing.
+// The authored `explode` clip runs 1.27 s, too long for this demo's
+// cascade timing. Play it faster via TrackEntry.timeScale.
 const EXPLODE_TIME_SCALE = 1.8;
 
 class TimedExplodeSymbol extends SpineReelSymbol {
@@ -12835,30 +12725,25 @@ class TimedExplodeSymbol extends SpineReelSymbol {
 const reelSet = new ReelSetBuilder()
   .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
   .symbols((r) => {
-    // outAnimation: 'explode' routes the engine's cascade destroy through
-    // the authored explosion. `high` is authored 1.41x bigger than the
-    // low/mid plate and overflows its cell on purpose. premium symbols
-    // pop out of the grid in the original game, so it gets the same scale.
+    // outAnimation: 'explode' makes destroySymbols play the skeleton's
+    // explode clip instead of the default implode.
     const spineMap = buildCascadeSpineMap();
     for (const id of CASCADE_SYMBOL_IDS) {
       r.register(id, TimedExplodeSymbol, {
         spineMap,
         scale: SCALE,
-        landingAnimation: 'land',
         outAnimation: 'explode',
-        autoPlayLanding: true,
       });
     }
   })
-  // The skull's PLATE is tile-sized (pixel-identical to the tier plates
-  // in the atlas); only the head + glow overflow it, as authored. Lift it
-  // above every reel and outside the reel mask so that overflow renders
-  // instead of clipping.
+  // The high symbol's head overflows its cell (the plate itself is
+  // tile-sized). unmask renders it above the reel mask instead of
+  // clipping it.
   .symbolData({ high: { zIndex: 10, unmask: true } })
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
-    fall:   { duration: 240, ease: 'sine.in', rowStagger: 0 },
-    dropIn: { duration: 380, ease: 'sine.in', rowStagger: 0, distance: 'auto' },
+    fall:   { duration: 240, ease: 'power2.in', rowStagger: 0 },
+    dropIn: { duration: 380, ease: 'power2.in', rowStagger: 0, distance: 'auto' },
   })
   .ticker(app.ticker).build();
 
@@ -12901,7 +12786,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/tumble-slam/
 //           buildCascadeSpineMap, CASCADE_SYMBOL_IDS, CASCADE_PLATE_W,
 //           CASCADE_PLATE_H, PIXI, gsap, app, pickWeighted
 
-// SLAM: accelerating fall (power4.in) and a hard, fast land (expo.out).
+// SLAM: accelerating fall (power3.in) and a hard, fast land (expo.out).
 // Short durations + small stagger keep the whole tumble under 0.5 s.
 // A short, hard-landing tumble. Pair with a turbo speed profile when
 // you want the cascade to finish in well under a second.
@@ -12910,8 +12795,7 @@ await loadCascadeSpines();
 
 const IDS = [...CASCADE_SYMBOL_IDS];
 const REELS = 6, ROWS = 4;
-// Cells sized from the authored 88x101.6 low/mid plate, scaled so the
-// 6x4 board keeps roughly its old card-symbol footprint.
+// Cells match the authored 88x101.6 symbol plate.
 const SCALE = 0.62;
 const CELL_W = CASCADE_PLATE_W * SCALE;
 const CELL_H = CASCADE_PLATE_H * SCALE;
@@ -12929,9 +12813,8 @@ function randSymbol(exclude) {
   return s;
 }
 
-// The authored `explode` clip runs 1.27 s. longer than this demo's
-// cascade rhythm wants. Play it compressed via TrackEntry.timeScale:
-// same art, same spine API, demo-tempo timing.
+// The authored `explode` clip runs 1.27 s, too long for this demo's
+// cascade timing. Play it faster via TrackEntry.timeScale.
 const EXPLODE_TIME_SCALE = 3.2;
 
 class TimedExplodeSymbol extends SpineReelSymbol {
@@ -12946,29 +12829,24 @@ class TimedExplodeSymbol extends SpineReelSymbol {
 const reelSet = new ReelSetBuilder()
   .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
   .symbols((r) => {
-    // outAnimation: 'explode' routes the engine's cascade destroy through
-    // the authored explosion. `high` is authored 1.41x bigger than the
-    // low/mid plate and overflows its cell on purpose. premium symbols
-    // pop out of the grid in the original game, so it gets the same scale.
+    // outAnimation: 'explode' makes destroySymbols play the skeleton's
+    // explode clip instead of the default implode.
     const spineMap = buildCascadeSpineMap();
     for (const id of CASCADE_SYMBOL_IDS) {
       r.register(id, TimedExplodeSymbol, {
         spineMap,
         scale: SCALE,
-        landingAnimation: 'land',
         outAnimation: 'explode',
-        autoPlayLanding: true,
       });
     }
   })
-  // The skull's PLATE is tile-sized (pixel-identical to the tier plates
-  // in the atlas); only the head + glow overflow it, as authored. Lift it
-  // above every reel and outside the reel mask so that overflow renders
-  // instead of clipping.
+  // The high symbol's head overflows its cell (the plate itself is
+  // tile-sized). unmask renders it above the reel mask instead of
+  // clipping it.
   .symbolData({ high: { zIndex: 10, unmask: true } })
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
-    fall:   { duration: 180, ease: 'power4.in', rowStagger: 20 },
+    fall:   { duration: 180, ease: 'power3.in', rowStagger: 20 },
     dropIn: { duration: 260, ease: 'expo.out',  rowStagger: 25, distance: 'perHole' },
   })
   .ticker(app.ticker).build();
@@ -13012,15 +12890,14 @@ URL: https://pixi-reels.schmooky.dev/recipes/tumble-wave/
 //           buildCascadeSpineMap, CASCADE_SYMBOL_IDS, CASCADE_PLATE_W,
 //           CASCADE_PLATE_H, PIXI, gsap, app, pickWeighted
 
-// WAVE: heavy per-row stagger (110 ms) plus a soft overshoot. Rows
+// WAVE: heavy per-row stagger (110 ms). the wave is the stagger. Rows
 // arrive in sequence top-to-bottom.
 
 await loadCascadeSpines();
 
 const IDS = [...CASCADE_SYMBOL_IDS];
 const REELS = 6, ROWS = 4;
-// Cells sized from the authored 88x101.6 low/mid plate, scaled so the
-// 6x4 board keeps roughly its old card-symbol footprint.
+// Cells match the authored 88x101.6 symbol plate.
 const SCALE = 0.62;
 const CELL_W = CASCADE_PLATE_W * SCALE;
 const CELL_H = CASCADE_PLATE_H * SCALE;
@@ -13038,9 +12915,8 @@ function randSymbol(exclude) {
   return s;
 }
 
-// The authored `explode` clip runs 1.27 s. longer than this demo's
-// cascade rhythm wants. Play it compressed via TrackEntry.timeScale:
-// same art, same spine API, demo-tempo timing.
+// The authored `explode` clip runs 1.27 s, too long for this demo's
+// cascade timing. Play it faster via TrackEntry.timeScale.
 const EXPLODE_TIME_SCALE = 2.0;
 
 class TimedExplodeSymbol extends SpineReelSymbol {
@@ -13055,30 +12931,25 @@ class TimedExplodeSymbol extends SpineReelSymbol {
 const reelSet = new ReelSetBuilder()
   .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
   .symbols((r) => {
-    // outAnimation: 'explode' routes the engine's cascade destroy through
-    // the authored explosion. `high` is authored 1.41x bigger than the
-    // low/mid plate and overflows its cell on purpose. premium symbols
-    // pop out of the grid in the original game, so it gets the same scale.
+    // outAnimation: 'explode' makes destroySymbols play the skeleton's
+    // explode clip instead of the default implode.
     const spineMap = buildCascadeSpineMap();
     for (const id of CASCADE_SYMBOL_IDS) {
       r.register(id, TimedExplodeSymbol, {
         spineMap,
         scale: SCALE,
-        landingAnimation: 'land',
         outAnimation: 'explode',
-        autoPlayLanding: true,
       });
     }
   })
-  // The skull's PLATE is tile-sized (pixel-identical to the tier plates
-  // in the atlas); only the head + glow overflow it, as authored. Lift it
-  // above every reel and outside the reel mask so that overflow renders
-  // instead of clipping.
+  // The high symbol's head overflows its cell (the plate itself is
+  // tile-sized). unmask renders it above the reel mask instead of
+  // clipping it.
   .symbolData({ high: { zIndex: 10, unmask: true } })
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
-    fall:   { duration: 180, ease: 'sine.in',       rowStagger: 90 },
-    dropIn: { duration: 320, ease: 'back.out(2.0)', rowStagger: 110, distance: 'perHole' },
+    fall:   { duration: 180, ease: 'power2.in',       rowStagger: 90 },
+    dropIn: { duration: 320, ease: 'power3.out', rowStagger: 110, distance: 'perHole' },
   })
   .ticker(app.ticker).build();
 

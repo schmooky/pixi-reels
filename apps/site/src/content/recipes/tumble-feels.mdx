@@ -37,25 +37,25 @@ Every canvas below runs the **exact same scripted spin**: a 6×4 board of real T
 
 ```ts
 .tumble({
-  fall:   { duration: 280, ease: 'sine.in',       rowStagger: 40 },
-  dropIn: { duration: 480, ease: 'back.out(1.6)', rowStagger: 50, distance: 'perHole' },
+  fall:   { duration: 280, ease: 'power2.in',     rowStagger: 40 },
+  dropIn: { duration: 480, ease: 'power3.out', rowStagger: 50, distance: 'perHole' },
 })
 ```
 
-Gentle gravity fall + soft overshoot landing. `back.out(1.6)` overshoots its target by ~60 % and settles. Start here; tweak from here. A reasonable default if you have no other constraints.
+Gentle gravity fall + a clean decelerating settle. Start here; tweak from here. Note the ease family: these symbols have full-size rectangular plates, so overshoot eases (`back`, `bounce`) are out. an overshooting frame gaps from its neighbours and overlaps the row below. Overshoot only reads well on frameless art.
 
-## Cartoon bounce. multi-bounce settle
+## Soft float. slow settle, heavy stagger
 
 <RecipeDemo code="tumble-cartoon-bounce" />
 
 ```ts
 .tumble({
-  fall:   { duration: 320, ease: 'sine.in',    rowStagger: 60 },
-  dropIn: { duration: 700, ease: 'bounce.out', rowStagger: 70, distance: 'perHole' },
+  fall:   { duration: 320, ease: 'power2.in',  rowStagger: 60 },
+  dropIn: { duration: 700, ease: 'power2.out', rowStagger: 70, distance: 'perHole' },
 })
 ```
 
-`bounce.out` does a real multi-bounce settle. Symbols actually bounce on landing. Longer durations (700 ms) let each bounce read. Be careful with this one on dense grids: the bouncing arrival overlaps the next phase visually and can slow the perceived pace.
+The slow, playful variant: a long 700 ms `power2.out` with a heavy stagger, so each row drifts in on its own beat. (On frameless art this slot is where you'd reach for `bounce.out`. framed plates can't bounce without the rectangles colliding.)
 
 ## Slam. hard-landing, sub-half-second tumble
 
@@ -63,12 +63,12 @@ Gentle gravity fall + soft overshoot landing. `back.out(1.6)` overshoots its tar
 
 ```ts
 .tumble({
-  fall:   { duration: 180, ease: 'power4.in', rowStagger: 20 },
+  fall:   { duration: 180, ease: 'power3.in', rowStagger: 20 },
   dropIn: { duration: 260, ease: 'expo.out',  rowStagger: 25, distance: 'perHole' },
 })
 ```
 
-`power4.in` accelerates the fall steeply (heavy, gravity-like). `expo.out` lands hard with no overshoot. The whole tumble plays in under half a second. A reasonable basis for a turbo mode toggle on top of a default-classic build.
+`power3.in` accelerates the fall steeply (heavy, gravity-like). `expo.out` lands hard with no overshoot. The whole tumble plays in under half a second. A reasonable basis for a turbo mode toggle on top of a default-classic build.
 
 ## Rain column. board-falls-as-a-slab
 
@@ -76,8 +76,8 @@ Gentle gravity fall + soft overshoot landing. `back.out(1.6)` overshoots its tar
 
 ```ts
 .tumble({
-  fall:   { duration: 240, ease: 'sine.in', rowStagger: 0 },
-  dropIn: { duration: 380, ease: 'sine.in', rowStagger: 0, distance: 'auto' },
+  fall:   { duration: 240, ease: 'power2.in', rowStagger: 0 },
+  dropIn: { duration: 380, ease: 'power2.in', rowStagger: 0, distance: 'auto' },
 })
 ```
 
@@ -89,19 +89,19 @@ Gentle gravity fall + soft overshoot landing. `back.out(1.6)` overshoots its tar
 
 ```ts
 .tumble({
-  fall:   { duration: 180, ease: 'sine.in',       rowStagger: 90 },
-  dropIn: { duration: 320, ease: 'back.out(2.0)', rowStagger: 110, distance: 'perHole' },
+  fall:   { duration: 180, ease: 'power2.in',     rowStagger: 90 },
+  dropIn: { duration: 320, ease: 'power3.out', rowStagger: 110, distance: 'perHole' },
 })
 ```
 
-Heavy `rowStagger` (110 ms on drop-in) makes each row land in its own beat. `back.out(2.0)` adds a stronger overshoot than Classic. Row 0 lands, then row 1, then row 2. Pair with row-by-row sound cues if you want a per-row audio hit. The more cascades in a chain, the more rows arrive in sequence.
+Heavy `rowStagger` (110 ms on drop-in) makes each row land in its own beat. the wave IS the stagger. Row 0 lands, then row 1, then row 2. Pair with row-by-row sound cues if you want a per-row audio hit. The more cascades in a chain, the more rows arrive in sequence.
 
 ## Picking between them
 
 | Feel | Pause | Pick when | Avoid when |
 |---|---|---|---|
 | Classic | 250 ms | Default if you have no other constraints |. |
-| Cartoon bounce | 320 ms | Soft overshoot, multi-bounce landing | Dense grids where the bounce overlaps the next phase |
+| Soft float | 320 ms | Long, slow settle with heavy stagger | Turbo-first games. the float slows the perceived pace |
 | Slam | 120 ms | Turbo mode, sub-half-second tumbles | You want a longer beat between cascades |
 | Rain column | 380 ms | Match-3 / chess-board / puzzle grids | Reels are visually distinct (the cohesive slab look fights the column gaps) |
 | Wave | 280 ms | Strong per-row stagger, row-by-row arrival | Very dense grids. the stagger makes the whole tumble feel long |
