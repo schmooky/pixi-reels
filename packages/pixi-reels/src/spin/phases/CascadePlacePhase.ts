@@ -75,6 +75,15 @@ export class CascadePlacePhase extends ReelPhase<CascadePlacePhaseConfig> {
     const reel = this._reel;
     const { targetFrame, events } = this._config;
 
+    // Re-mask lifted unmask views before any placement/geometry work.
+    // A pure refill never passes through StartPhase (strip spins) or
+    // notifySpinStart (tumble fall), so without this a lifted symbol
+    // stays in viewport.unmaskedContainer while the drop-in repositions
+    // it above the viewport. rendering its whole approach outside the
+    // mask. Same rule as StartPhase._launch; notifyLanded re-lifts once
+    // the refill settles. Idempotent.
+    reel.beginMotion();
+
     reel.placeSymbols(this._placement(targetFrame));
     // Defensive: CascadeFallPhase displaces views by `fallDistance` and pool
     // reuse can leak the post-fall y onto same-id replacements when

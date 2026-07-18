@@ -97,6 +97,14 @@ export class CascadeDropInPhase extends ReelPhase<CascadeDropInPhaseConfig> {
     const reelIndex = reel.reelIndex;
     const role = config.role ?? 'all';
 
+    // Re-mask lifted unmask views before building drop jobs. Movers are
+    // pre-positioned above the viewport; a lifted view would render that
+    // whole approach outside the mask. CascadePlacePhase already does
+    // this on the standard refill path; this covers direct drop-in
+    // entries (two-stage refills re-enter here after the gravity hold,
+    // during which notifyLanded may have re-lifted). Idempotent.
+    reel.beginMotion();
+
     // Apply speed-profile tumble override. Falls back to the build-time
     // base when the profile doesn't define one.
     this._drop = mergeDropInConfig(this._baseDrop, this._speed.tumble?.dropIn);
