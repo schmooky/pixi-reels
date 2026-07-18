@@ -65,17 +65,18 @@ prewarmSpinTextures({
 });
 
 const reelSet = new ReelSetBuilder()
-  .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(4, 4)
+  .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
   .symbols((r) => {
     for (const id of CASCADE_SYMBOL_IDS) {
       r.register(id, StaticSpinSymbol, { createInner, cache, blurRampMs: 120 });
     }
   })
-  // The skull overflows its cell (authored premium pop, tamed via the
-  // skeleton's root-bone scale). lift it above every reel and outside
-  // the reel mask so the overflow renders instead of clipping.
+  // The skull's PLATE is tile-sized (pixel-identical to the tier plates
+  // in the atlas); only the head + glow overflow it, as authored. Lift it
+  // above every reel and outside the reel mask so that overflow renders
+  // instead of clipping.
   .symbolData({ high: { zIndex: 10, unmask: true } })
-  .speed('turbo', { ...SpeedPresets.TURBO, stopDelay: 60 })
+  .speed('turbo', { ...SpeedPresets.TURBO, stopDelay: 60, bounceDistance: 0, bounceDuration: 0 })
   .initialSpeed('turbo')
   .tumble({
     fall:   { duration: 0, ease: 'none', rowStagger: 0 },              // not used. refill skips fall

@@ -44,7 +44,7 @@ class TimedExplodeSymbol extends SpineReelSymbol {
 }
 
 const reelSet = new ReelSetBuilder()
-  .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(4, 4)
+  .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
   .symbols((r) => {
     const spineMap = buildCascadeSpineMap();
     for (const id of CASCADE_SYMBOL_IDS) {
@@ -57,11 +57,12 @@ const reelSet = new ReelSetBuilder()
       });
     }
   })
-  // The skull overflows its cell (authored premium pop, tamed via the
-  // skeleton's root-bone scale). lift it above every reel and outside
-  // the reel mask so the overflow renders instead of clipping.
+  // The skull's PLATE is tile-sized (pixel-identical to the tier plates
+  // in the atlas); only the head + glow overflow it, as authored. Lift it
+  // above every reel and outside the reel mask so that overflow renders
+  // instead of clipping.
   .symbolData({ high: { zIndex: 10, unmask: true } })
-  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 120 })
+  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 120, bounceDistance: 0, bounceDuration: 0 })
   // The opening reveal IS a tumble here, so `fall` matters. it animates
   // the previous board out before the new one drops in.
   .tumble({

@@ -33,7 +33,7 @@ function randSymbolNotIn(exclude) {
 }
 
 const reelSet = new ReelSetBuilder()
-  .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(4, 4)
+  .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
   .symbols(r => {
     const spineMap = buildCascadeSpineMap();
     for (const id of CASCADE_SYMBOL_IDS) {
@@ -46,14 +46,15 @@ const reelSet = new ReelSetBuilder()
       });
     }
   })
-  // The skull overflows its cell (authored premium pop, tamed via the
-  // skeleton's root-bone scale). lift it above every reel and outside
-  // the reel mask so the overflow renders instead of clipping.
+  // The skull's PLATE is tile-sized (pixel-identical to the tier plates
+  // in the atlas); only the head + glow overflow it, as authored. Lift it
+  // above every reel and outside the reel mask so that overflow renders
+  // instead of clipping.
   .symbolData({ high: { zIndex: 10, unmask: true } })
-  .speed('normal', SpeedPresets.NORMAL).speed('turbo', SpeedPresets.TURBO)
+  .speed('normal', { ...SpeedPresets.NORMAL, bounceDistance: 0, bounceDuration: 0 }).speed('turbo', { ...SpeedPresets.TURBO, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
     fall:   { duration: 0, ease: 'none', rowStagger: 0 },              // not used. refill skips fall
-    dropIn: { duration: 380, ease: 'back.out(1.6)', rowStagger: 0, distance: 'perHole' },
+    dropIn: { duration: 380, ease: 'power2.out', rowStagger: 0, distance: 'perHole' },
   })
   .ticker(app.ticker).build();
 

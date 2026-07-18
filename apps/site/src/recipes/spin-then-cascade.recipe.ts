@@ -51,7 +51,7 @@ class TimedExplodeSymbol extends SpineReelSymbol {
 }
 
 const reelSet = new ReelSetBuilder()
-  .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(4, 4)
+  .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
   .symbols((r) => {
     // outAnimation: 'explode' routes the engine's cascade destroy through
     // the authored explosion. `high` is authored 1.41x bigger than the
@@ -68,11 +68,12 @@ const reelSet = new ReelSetBuilder()
       });
     }
   })
-  // The skull overflows its cell (authored premium pop, tamed via the
-  // skeleton's root-bone scale). lift it above every reel and outside
-  // the reel mask so the overflow renders instead of clipping.
+  // The skull's PLATE is tile-sized (pixel-identical to the tier plates
+  // in the atlas); only the head + glow overflow it, as authored. Lift it
+  // above every reel and outside the reel mask so that overflow renders
+  // instead of clipping.
   .symbolData({ high: { zIndex: 10, unmask: true } })
-  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 120 })
+  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 120, bounceDistance: 0, bounceDuration: 0 })
   // Cascade refills layer on top of a standard strip-spin: leave the
   // builder's default mode as 'standard' for the first spin, and the
   // refill chain below uses `reelSet.refill()` directly (which doesn't
