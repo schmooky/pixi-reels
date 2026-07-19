@@ -365,7 +365,13 @@ export interface ResolvedReelGridConfig {
   symbolWidth: number;
   symbolHeight: number;
   symbolGap: { x: number; y: number };
+  /** Buffer rows above the visible window (also the legacy symmetric count). */
   bufferSymbols: number;
+  /**
+   * Buffer rows below the visible window. Usually equals `bufferSymbols`;
+   * `0` on tumble-only sets built with `bufferSymbols({ above, below: 0 })`.
+   */
+  bufferBelow: number;
   visibleRowsPerReel?: number[];
   reelPixelHeights?: number[];
   reelAnchor: ReelAnchor;

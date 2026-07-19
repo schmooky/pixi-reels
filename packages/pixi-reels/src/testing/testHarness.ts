@@ -29,7 +29,7 @@ export interface TestReelSetOptions {
   symbolSize?: { width: number; height: number };
   symbolGap?: { x: number; y: number };
   /** Number of symbols above + below the visible area. Defaults to the builder default. */
-  bufferSymbols?: number;
+  bufferSymbols?: number | { above: number; below: number };
   /** Initial symbol grid. Same `ColumnTarget[]` form as `ReelSetBuilder.initialFrame`. */
   initialFrame?: ColumnTarget[];
 }

@@ -33,15 +33,29 @@ tags:
 <RecipeDemo code="big-symbol-cascade-fall" />
 
 A tall 1×3 wild lands with most of its body hidden above the visible
-window. only the **tail** shows at row 0. The other reels plant a
-3-of-a-kind MATCH cluster on row 1. The cluster wins, the cells clear,
-and the cascade refill drops the wild's anchor down through the strip
-into full visibility.
+window. only the **tail** shows at row 0. All three reels plant a
+two-row MATCH cluster on rows 1–2. The cluster wins, six cells clear,
+and the cascade refill drops the wild **two rows** down through the
+strip into full visibility.
+
+One physics rule makes the fall seamless (see the
+[cascade-physics ADR](https://github.com/schmooky/pixi-reels/blob/main/docs/adr/010-cascade-physics.md)):
+the anchor's displacement must equal the number of winner rows cleared
+below it. This block falls two rows, so exactly two winner rows sit
+under it. Clear only one and the drop geometry starts the block one
+cell above its slot while its old view sat two cells up. a visible
+snap instead of a fall.
 
 This is the "big symbol falls when supporting cells are cleared" beat
 common in cluster / tumble slots. the high-value symbol reveals
 itself across multiple cascade chains as the cells below it
 disappear.
+
+## The same fall, 2×2
+
+The block above is single-reel (1×3). This canvas runs the identical beat with a **2×2** block: the anchor move in `nextGrid` now spans two reels, and `_coordinateBigSymbols` paints the OCCUPIED stubs across the whole footprint on both reels from the one anchor cell. The two covered reels refill in the same phase, so the block falls as one rigid piece:
+
+<RecipeDemo code="big-symbol-cascade-fall-2x2" />
 
 ## Why this works
 
@@ -63,33 +77,39 @@ coordinator as `setResult`, so:
 ## What this recipe scripts
 
 ```ts
-// 1. Initial spin: tall at bufferAbove[1], MATCH cluster at row 1.
+// 1. Initial spin: tall at bufferAbove[1], MATCH cluster at rows 1-2.
 const initialGrid = [
   {
-    visible: [filler(), 'match', filler(), filler()],
+    visible: [filler(), 'match', 'match', filler()],
     bufferAbove: [undefined, 'tall'], // anchor at row -2
   },
-  { visible: [filler(), 'match', filler(), filler()] },
-  { visible: [filler(), 'match', filler(), filler()] },
+  { visible: [filler(), 'match', 'match', filler()] },
+  { visible: [filler(), 'match', 'match', filler()] },
 ];
 await reelSet.setResult(initialGrid);
 
-// 2. Cascade: row-1 cluster wins, wild falls to visible[0..2].
+// 2. Cascade: both rows win. two winners below = a two-cell fall.
+//    Survivors KEEP their identities. rows outside the winner set are
+//    read from `prev` and packed to the bottom. A fresh random column
+//    here would swap the bottom row's face in place (it has no hole
+//    below it, so it never animates. the change is a visible pop).
 await reelSet.runCascade({
-  detectWinners: () => [0, 1, 2].map((reel) => ({ reel, row: 1 })),
-  nextGrid: () => [
+  detectWinners: () =>
+    [0, 1, 2].flatMap((reel) => [{ reel, row: 1 }, { reel, row: 2 }]),
+  nextGrid: (prev) => [
     {
-      visible: ['tall', filler(), filler(), filler()],
+      visible: ['tall', filler(), filler(), prev[0][3]],
       bufferAbove: [filler()],
     },
-    { visible: [filler(), filler(), filler(), filler()] },
-    { visible: [filler(), filler(), filler(), filler()] },
+    { visible: [filler(), filler(), prev[1][0], prev[1][3]] },
+    { visible: [filler(), filler(), prev[2][0], prev[2][3]] },
   ],
 });
 ```
 
 The `nextGrid` here scripts a one-shot reveal. anchor moves from
-`row -2` to `row 0` in a single cascade step. Real games might stage
+`row -2` to `row 0` in a single cascade step, matched by the two
+cleared rows beneath it. Real games might stage
 this across multiple chains (anchor moves down one row per cascade
 until fully visible), which is just a matter of returning different
 grids on each call.

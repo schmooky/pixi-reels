@@ -21,6 +21,9 @@ export default defineConfig({
   redirects: {
     // Renamed in 1.0.0. the pin primitive is general, not Spine-specific.
     '/guides/spine-pins/': '/guides/pins/',
+    // Merged into one destroy-stage page (fade / explode / present).
+    '/recipes/remove-symbol/': '/recipes/cascade-destroy-and-present/',
+    '/recipes/cascade-winpresenter/': '/recipes/cascade-destroy-and-present/',
   },
   // Prefetch on hover for instant subsequent navigations. Doesn't affect
   // the initial paint, but turns sub-200ms transitions into 0ms ones for

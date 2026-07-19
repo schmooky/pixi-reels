@@ -97,6 +97,14 @@ export class CascadeDropInPhase extends ReelPhase<CascadeDropInPhaseConfig> {
     const reelIndex = reel.reelIndex;
     const role = config.role ?? 'all';
 
+    // Re-mask lifted unmask views before building drop jobs. Movers are
+    // pre-positioned above the viewport; a lifted view would render that
+    // whole approach outside the mask. CascadePlacePhase already does
+    // this on the standard refill path; this covers direct drop-in
+    // entries (two-stage refills re-enter here after the gravity hold,
+    // during which notifyLanded may have re-lifted). Idempotent.
+    reel.beginMotion();
+
     // Apply speed-profile tumble override. Falls back to the build-time
     // base when the profile doesn't define one.
     this._drop = mergeDropInConfig(this._baseDrop, this._speed.tumble?.dropIn);
@@ -238,8 +246,16 @@ export class CascadeDropInPhase extends ReelPhase<CascadeDropInPhaseConfig> {
       this._skipAbort = null;
       // Only stage that lands the reel: 'all' (combined) and 'new' (final
       // stage of two-stage). The gravity stage hands off to the drop-in
-      // stage; that's where `notifyLanded` belongs.
-      if (role !== 'gravity') reel.notifyLanded();
+      // stage; that's where `notifyLanded` belongs. Landing notification
+      // is MOVERS-ONLY (this stage's job rows): untouched survivors must
+      // not replay their landing animation on every cascade stage.
+      // Gravity movers get their reaction the moment they settle. the
+      // reel itself still lands at the final stage.
+      if (role === 'gravity') {
+        for (const job of jobs) job.symbol.onReelLanded();
+      } else {
+        reel.notifyLanded(jobs.map((j) => j.row));
+      }
       this._complete();
     };
 

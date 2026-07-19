@@ -3,21 +3,21 @@
 //           buildCascadeSpineMap, CASCADE_SYMBOL_IDS, CASCADE_PLATE_W,
 //           CASCADE_PLATE_H, PIXI, gsap, app, pickWeighted
 
-// SIMULTANEOUS REFILL. every cell drops at the same moment. Snappy,
-// no extra pacing, all new symbols arrive in one beat.
+// Same starter as the card canvas above, with spine symbols. Only the
+// registration block and the id constants differ; the orchestration
+// (spin, setResult, runCascade, both callbacks) is identical.
 
 await loadCascadeSpines();
 
 const IDS = [...CASCADE_SYMBOL_IDS];
 const REELS = 6, ROWS = 4;
 // Cells match the authored 88x101.6 symbol plate.
-const SCALE = 0.62;
+const SCALE = 0.68;
 const CELL_W = CASCADE_PLATE_W * SCALE;
 const CELL_H = CASCADE_PLATE_H * SCALE;
 const CLUSTER = 'low1';
 const HIT_ROW = 2;
 const HIT_COLS = [0, 1, 2];
-const PAUSE_AFTER_REMOVAL_MS = 217;
 
 function randSymbol(exclude) {
   let s;
@@ -43,7 +43,7 @@ const reelSet = new ReelSetBuilder()
   // Pure tumble: no strip scrolling, so no below-window buffer at all.
   // nothing can ever peek out under the grid.
   .bufferSymbols({ above: 1, below: 0 })
-  .symbols((r) => {
+  .symbols(r => {
     // outAnimation: 'explode' makes destroySymbols play the skeleton's
     // explode clip instead of the default implode.
     const spineMap = buildCascadeSpineMap();
@@ -61,42 +61,51 @@ const reelSet = new ReelSetBuilder()
   .symbolData({ high: { zIndex: 10, unmask: true } })
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
-    fall:   { duration: 233, ease: 'power2.in', rowStagger: 33 },  // 14f, 2f stagger
-    // rowStagger: 0. every row in a reel drops together (no in-reel stagger).
-    dropIn: { duration: 367, ease: 'power2.in', rowStagger: 0, distance: 'perHole' },  // 22f
+    fall:   { duration: 283, ease: 'power3.in', rowStagger: 67 },  // 17f, 4f stagger
+    dropIn: { duration: 450, ease: 'power2.in', rowStagger: 67, distance: 'perHole' },  // 27f, 4f stagger
   })
   .ticker(app.ticker).build();
 
 return {
   reelSet,
   onSpin: async () => {
+    // Stage 0: cluster of CLUSTER on row 2, cols 0–2.
     const stage0 = Array.from({ length: REELS }, (_, c) =>
       Array.from({ length: ROWS }, (_, r) =>
-        r === HIT_ROW && HIT_COLS.includes(c) ? CLUSTER : randSymbol(CLUSTER),
-      ),
+        r === HIT_ROW && HIT_COLS.includes(c) ? CLUSTER : randSymbol(CLUSTER)
+      )
     );
-    const stage1 = stage0.map((col, c) => {
-      if (!HIT_COLS.includes(c)) return [...col];
-      const next = [...col];
-      for (let r = HIT_ROW; r > 0; r--) next[r] = next[r - 1];
-      next[0] = randSymbol(CLUSTER);
-      return next;
-    });
 
-    // Moment A. initial reveal with the canonical left-to-right wave.
+    // Moment A. initial spin lands the stage-0 cluster, left-to-right reveal.
     reelSet.setDropOrder('ltr');
     const spinDone = reelSet.spin();
-    await new Promise((r) => setTimeout(r, 220));
+    await new Promise(r => setTimeout(r, 200));
     reelSet.setResult(stage0.map((visible) => ({ visible })));
     await spinDone;
+    await new Promise(r => setTimeout(r, 300));
 
-    await new Promise((r) => setTimeout(r, 200));
-    const winners = HIT_COLS.map((c) => ({ reel: c, row: HIT_ROW }));
-    await reelSet.destroySymbols(winners);
-    await new Promise((r) => setTimeout(r, PAUSE_AFTER_REMOVAL_MS));
-    // Moment B. every column drops together. setDropOrder('all') = 0 ms
-    // per-reel delay; the in-reel rowStagger is already 0 above.
+    // Moment B. cascade refill driven entirely by runCascade. The
+    // first call to detectWinners returns the planted cluster; the second
+    // returns [] (no more wins on the post-refill grid), ending the chain.
+    // The orchestration (destroy → pause → refill → re-detect) is library-owned.
     reelSet.setDropOrder('all');
-    await reelSet.refill({ winners, grid: stage1.map((visible) => ({ visible })) });
+    let detected = false;
+    await reelSet.runCascade({
+      detectWinners: () => {
+        if (detected) return [];
+        detected = true;
+        return HIT_COLS.map(c => ({ reel: c, row: HIT_ROW }));
+      },
+      nextGrid: (prev, winners) => {
+        // Survivors slide down 1; new symbol at row 0.
+        const next = prev.map(col => [...col]);
+        for (const w of winners) {
+          for (let r = w.row; r > 0; r--) next[w.reel][r] = next[w.reel][r - 1];
+          next[w.reel][0] = randSymbol(CLUSTER);
+        }
+        return next;
+      },
+      pauseAfterDestroyMs: 250,
+    });
   },
 };

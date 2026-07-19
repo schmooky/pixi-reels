@@ -3,8 +3,27 @@
 //           buildCascadeSpineMap, CASCADE_SYMBOL_IDS, CASCADE_PLATE_W,
 //           CASCADE_PLATE_H, PIXI, gsap, app, pickWeighted
 
-// SIMULTANEOUS REFILL. every cell drops at the same moment. Snappy,
-// no extra pacing, all new symbols arrive in one beat.
+// Staggered-column anticipation. same two-stage refill as the other
+// canvas, but the drop-in columns run strictly sequentially
+// (step >= dropIn.duration): reel 0 fully lands before reel 1 starts.
+// The gravity hold is longer to match.
+//
+// Same scripted win as the refill-orders recipes: a 3-cluster of `10` on
+// row 2 of the leftmost three reels. What changes:
+//
+//   1. After destroy, `mode: 'gravity-then-drop'` splits the refill in two.
+//      Stage A: only survivors animate. the row 2 cells slide down from
+//      row 1 to row 2. (In this layout there are no survivors below the
+//      winner because the cluster is on the bottom of the board, but the
+//      `cascade:gravity:start/end` events still fire per reel, marking
+//      where you'd plug anticipation logic in a denser cluster.)
+//   2. The library waits `gravityHoldMs` (250 ms here. bump for more
+//      drama, e.g. 500–800 ms for a mascot pop or multiplier roll).
+//   3. Stage B: new symbols drop in from above. `setDropOrder('ltr', 110)`
+//      gives a left-to-right wave. reel 0 drops first, then 1, then 2…
+//      Set the step ≥ `dropIn.duration` (here 380 ms) to make the columns
+//      strictly sequential (column 1 fully lands before column 2 starts);
+//      a smaller step gives overlap.
 
 await loadCascadeSpines();
 
@@ -18,6 +37,8 @@ const CLUSTER = 'low1';
 const HIT_ROW = 2;
 const HIT_COLS = [0, 1, 2];
 const PAUSE_AFTER_REMOVAL_MS = 217;
+const GRAVITY_HOLD_MS = 600;   // 36 frames. longer hold for the sequential drop
+const COLUMN_STEP_MS = 400;    // 24 frames >= dropIn (367): strictly sequential
 
 function randSymbol(exclude) {
   let s;
@@ -62,7 +83,8 @@ const reelSet = new ReelSetBuilder()
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
     fall:   { duration: 233, ease: 'power2.in', rowStagger: 33 },  // 14f, 2f stagger
-    // rowStagger: 0. every row in a reel drops together (no in-reel stagger).
+    // Gravity uses the same `dropIn` config (it's the same phase, just
+    // filtered to survivors).
     dropIn: { duration: 367, ease: 'power2.in', rowStagger: 0, distance: 'perHole' },  // 22f
   })
   .ticker(app.ticker).build();
@@ -83,7 +105,6 @@ return {
       return next;
     });
 
-    // Moment A. initial reveal with the canonical left-to-right wave.
     reelSet.setDropOrder('ltr');
     const spinDone = reelSet.spin();
     await new Promise((r) => setTimeout(r, 220));
@@ -91,12 +112,24 @@ return {
     await spinDone;
 
     await new Promise((r) => setTimeout(r, 200));
+
     const winners = HIT_COLS.map((c) => ({ reel: c, row: HIT_ROW }));
     await reelSet.destroySymbols(winners);
     await new Promise((r) => setTimeout(r, PAUSE_AFTER_REMOVAL_MS));
-    // Moment B. every column drops together. setDropOrder('all') = 0 ms
-    // per-reel delay; the in-reel rowStagger is already 0 above.
-    reelSet.setDropOrder('all');
-    await reelSet.refill({ winners, grid: stage1.map((visible) => ({ visible })) });
+
+    // Per-column wave for the new-symbol drop-in stage. The step controls
+    // overlap vs sequential:
+    //   - step <  dropIn.duration → reels overlap (cascading wave)
+    //   - step >= dropIn.duration → reels strictly sequential
+    // The gravity stage IGNORES this setting. it always runs all reels
+    // in parallel, since gravity is a global "settling" beat.
+    reelSet.setDropOrder('ltr', COLUMN_STEP_MS);
+
+    await reelSet.refill({
+      winners,
+      grid: stage1.map((visible) => ({ visible })),
+      mode: 'gravity-then-drop',
+      gravityHoldMs: GRAVITY_HOLD_MS,
+    });
   },
 };

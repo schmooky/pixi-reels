@@ -29,8 +29,8 @@ const reelSet = new ReelSetBuilder()
   })
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150 })
   .tumble({
-    fall:   { duration: 280, ease: 'power3.in',  rowStagger: 60 },
-    dropIn: { duration: 450, ease: 'power3.out', rowStagger: 60, distance: 'perHole' },
+    fall:   { duration: 283, ease: 'power3.in', rowStagger: 67 },  // 17f, 4f stagger
+    dropIn: { duration: 450, ease: 'power2.in', rowStagger: 67, distance: 'perHole' },  // 27f, 4f stagger
   })
   .ticker(app.ticker).build();
 

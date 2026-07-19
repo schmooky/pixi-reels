@@ -1,18 +1,25 @@
 // @ts-nocheck
-// Injected: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
-//           PIXI, gsap, app, pickWeighted
+// Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, loadCascadeSpines,
+//           buildCascadeSpineMap, CASCADE_SYMBOL_IDS, CASCADE_PLATE_W,
+//           CASCADE_PLATE_H, PIXI, gsap, app, pickWeighted
 
 // SUSPENSE. 700 ms lead-in. Dramatic. The reels stand still while
 // the music swells, a "GO!" stinger fires, or a feature-pick UI flashes.
 // Use sparingly: fine for bonus / free-spin / jackpot reveals, exhausting
 // on every base-game spin.
 
-const IDS = ['7', '8', '9', '10', 'J', 'Q'];
-const REELS = 6, ROWS = 4, SIZE = 64;
-const CLUSTER = '10';
+await loadCascadeSpines();
+
+const IDS = [...CASCADE_SYMBOL_IDS];
+const REELS = 6, ROWS = 4;
+// Cells match the authored 88x101.6 symbol plate.
+const SCALE = 0.62;
+const CELL_W = CASCADE_PLATE_W * SCALE;
+const CELL_H = CASCADE_PLATE_H * SCALE;
+const CLUSTER = 'low1';
 const HIT_ROW = 2;
 const HIT_COLS = [0, 1, 2];
-const LEAD_IN_MS = 700;
+const LEAD_IN_MS = 700;   // 42 frames
 
 function randSymbol(exclude) {
   let s;
@@ -20,19 +27,44 @@ function randSymbol(exclude) {
   return s;
 }
 
+// The authored `explode` clip runs 1.27 s, too long for this demo's
+// cascade timing. Play it faster via TrackEntry.timeScale.
+const EXPLODE_TIME_SCALE = 2.4; // 1.27 s clip -> ~32 frames
+
+class TimedExplodeSymbol extends SpineReelSymbol {
+  async playOut() {
+    const entry = this.playOnTrack(0, 'explode', false);
+    if (!entry) return;
+    entry.timeScale = EXPLODE_TIME_SCALE;
+    await new Promise((resolve) => { entry.listener = { complete: () => resolve() }; });
+  }
+}
+
 const reelSet = new ReelSetBuilder()
-  .reels(REELS).visibleRows(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
+  .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
+  // Pure tumble: no strip scrolling, so no below-window buffer at all.
+  // nothing can ever peek out under the grid.
+  .bufferSymbols({ above: 1, below: 0 })
   .symbols((r) => {
-    for (const sym of CARD_DECK) {
-      if (IDS.includes(sym.id)) {
-        r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
-      }
+    // outAnimation: 'explode' makes destroySymbols play the skeleton's
+    // explode clip instead of the default implode.
+    const spineMap = buildCascadeSpineMap();
+    for (const id of CASCADE_SYMBOL_IDS) {
+      r.register(id, TimedExplodeSymbol, {
+        spineMap,
+        scale: SCALE,
+        outAnimation: 'explode',
+      });
     }
   })
-  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150 })
+  // The high symbol's head overflows its cell (the plate itself is
+  // tile-sized). unmask renders it above the reel mask instead of
+  // clipping it.
+  .symbolData({ high: { zIndex: 10, unmask: true } })
+  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
-    fall:   { duration: 280, ease: 'sine.in',       rowStagger: 50 },
-    dropIn: { duration: 420, ease: 'back.out(1.5)', rowStagger: 0,  distance: 'perHole' },
+    fall:   { duration: 267, ease: 'power2.in', rowStagger: 50 },  // 16f, 3f stagger
+    dropIn: { duration: 400, ease: 'power2.in', rowStagger: 0, distance: 'perHole' },  // 24f
   })
   .ticker(app.ticker).build();
 

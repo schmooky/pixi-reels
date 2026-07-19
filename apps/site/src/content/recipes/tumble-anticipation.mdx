@@ -15,6 +15,7 @@ steps:
   - New symbols drop in from above, column by column (cascade:dropIn:* events)
 apis:
   - ReelSet.refill
+  - SpineReelSymbol
   - RunCascadeOptions.refillMode
   - RunCascadeOptions.gravityHoldMs
   - RunCascadeOptions.onGravityComplete
@@ -24,6 +25,8 @@ tags:
   - refill
   - two-stage
   - anticipation
+  - spine
+  - thunderkick
   - recent
 ---
 
@@ -44,7 +47,7 @@ That extra beat between gravity and refill is the whole point: it gives anticipa
 await reelSet.destroySymbols(winners);
 await wait(PAUSE_AFTER_REMOVAL_MS);
 
-reelSet.setDropOrder('ltr', 110);   // column wave for stage B
+reelSet.setDropOrder('ltr', 100);  // 6-frame column wave for stage B
 
 await reelSet.refill({
   winners,
@@ -114,8 +117,18 @@ await reelSet.runCascade({
 
 The hook fires once per cascade, after every reel reports `cascade:gravity:end` and before any `cascade:dropIn:start`. Awaiting inside it extends the gap arbitrarily. keep `gravityHoldMs` low (or zero) when you're driving the timing from the hook.
 
+## Walking the beat. strictly sequential columns
+
+Same two-stage refill, one tuning change: `COLUMN_STEP_MS` raised past `dropIn.duration` (400 ms vs 367 ms. 24 vs 22 frames), so each drop-in column fully lands before the next one starts. The anticipation stops being one global beat and starts *walking the board*. reel 0, breath, reel 1, breath, reel 2. Pair it with a longer `gravityHoldMs` (600 ms here):
+
+<RecipeDemo code="tumble-anticipation-stagger" />
+
+The step-vs-duration rule is the whole knob: `step < duration` gives an overlapping wave, `step >= duration` gives this strict sequence.
+
 ## Going further
 
 - [Cascade refill orders](/recipes/refill-orders/). the same scripted win, three different combined-mode refill orderings. Use those if you only need per-column reveal without the gravity/hold split.
 - [Tumble cascade guide](/docs/recipes/tumble-cascade/). full reference for `runCascade` and the cascade event taxonomy, including the two-stage variant.
 - [Cascade 6×5 tumble](/recipes/cascade-6x5/). full cluster-detection + multiplier on top of the cascade-refill loop (combined mode).
+
+<AssetCredit studio="Thunderkick" />

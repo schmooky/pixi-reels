@@ -578,12 +578,21 @@ export class Reel implements Disposable {
   }
 
   /**
-   * Notify all visible symbols that the reel has landed on its target.
+   * Notify visible symbols that the reel has landed on its target.
    *
-   * @internal Called by SpinController on phase transition.
+   * @param landedRows - Optional filter of visible rows (0-indexed) whose
+   *   symbols receive `onReelLanded()`. Omit for a strip-spin landing
+   *   (every visible symbol landed). Cascade refills pass only the rows
+   *   that MOVED: an untouched survivor (offsetRows 0) replaying its
+   *   landing animation on every cascade stage reads as the whole board
+   *   twitching after each pop. The at-rest unmask lift always applies
+   *   to every visible row. it's presentation state, not a landing.
+   *
+   * @internal Called by SpinController / CascadeDropInPhase on phase transition.
    */
-  notifyLanded(): void {
+  notifyLanded(landedRows?: readonly number[]): void {
     this._atRest = true;
+    const only = landedRows ? new Set(landedRows) : null;
     for (let i = this._bufferAbove; i < this._bufferAbove + this._visibleRows; i++) {
       const symbol = this.symbols[i];
       // Lift landed unmask symbols above the mask. visible rows only, so
@@ -593,7 +602,9 @@ export class Reel implements Disposable {
         this._viewport.unmaskedContainer.addChild(symbol.view);
         this._placeSymbolView(symbol.view, reelLocalY, true);
       }
-      symbol.onReelLanded();
+      if (only === null || only.has(i - this._bufferAbove)) {
+        symbol.onReelLanded();
+      }
     }
   }
 

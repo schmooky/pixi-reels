@@ -1,16 +1,21 @@
 // @ts-nocheck
-// Injected: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, WILD_CARD,
-//           PIXI, gsap, app, pickWeighted
+// Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, loadCascadeSpines,
+//           buildCascadeSpineMap, CASCADE_SYMBOL_IDS, CASCADE_PLATE_W,
+//           CASCADE_PLATE_H, PIXI, gsap, app, pickWeighted
 
-// Cascade-style removal of a single symbol id: pop every cell whose symbol
-// matches `X`, gravity-shift survivors, fill cleared top slots with new
-// symbols. The whole flow is one `reelSet.runCascade(...)` call. same
-// orchestrator every cascade recipe uses.
+// Authored destroy: same board and cascade as the fade canvas; the only
+// change is `outAnimation: 'explode'` at registration. destroySymbols
+// then plays the skeleton's 1.27 s explosion instead of the implode.
+// Shown at full length here.
 
-const A = '7', B = '8', C = '9';
-const X = 'wild'; // the winner that vanishes
-const IDS = [A, B, C, X];
-const REELS = 4, ROWS = 3, SIZE = 90;
+await loadCascadeSpines();
+
+const A = 'low1', B = 'low2', C = 'low3';
+const X = 'high'; // the winner that vanishes
+const REELS = 4, ROWS = 3;
+const SCALE = 0.8;
+const CELL_W = CASCADE_PLATE_W * SCALE;
+const CELL_H = CASCADE_PLATE_H * SCALE;
 
 const BEFORE = [
   [X, A, B],
@@ -27,18 +32,25 @@ function randSymbolNotIn(exclude) {
 }
 
 const reelSet = new ReelSetBuilder()
-  .reels(REELS).visibleRows(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
+  .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
   .symbols(r => {
-    for (const sym of [...CARD_DECK, WILD_CARD]) {
-      if (IDS.includes(sym.id)) {
-        r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
-      }
+    const spineMap = buildCascadeSpineMap();
+    for (const id of CASCADE_SYMBOL_IDS) {
+      r.register(id, SpineReelSymbol, {
+        spineMap,
+        scale: SCALE,
+        outAnimation: 'explode', // the ONE line that swaps the destroy
+      });
     }
   })
-  .speed('normal', SpeedPresets.NORMAL).speed('turbo', SpeedPresets.TURBO)
+  // The high symbol's head overflows its cell (the plate itself is
+  // tile-sized). unmask renders it above the reel mask instead of
+  // clipping it.
+  .symbolData({ high: { zIndex: 10, unmask: true } })
+  .speed('normal', { ...SpeedPresets.NORMAL, bounceDistance: 0, bounceDuration: 0 }).speed('turbo', { ...SpeedPresets.TURBO, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
     fall:   { duration: 0, ease: 'none', rowStagger: 0 },              // not used. refill skips fall
-    dropIn: { duration: 380, ease: 'back.out(1.6)', rowStagger: 0, distance: 'perHole' },
+    dropIn: { duration: 367, ease: 'power2.in', rowStagger: 0, distance: 'perHole' },  // 22f
   })
   .ticker(app.ticker).build();
 
@@ -52,9 +64,6 @@ return {
     await p;
     await new Promise(r => setTimeout(r, 300));
 
-    // One-shot cascade: detect every X on the visible grid → destroy →
-    // refill with a gravity-correct nextGrid. After the refill there are
-    // no more Xs, so `detectWinners` returns [] and the chain ends.
     reelSet.setDropOrder('all');
     await reelSet.runCascade({
       detectWinners: (grid) => grid.flatMap((col, reel) =>
@@ -74,7 +83,7 @@ return {
           return [...fillers, ...survivors];
         });
       },
-      pauseAfterDestroyMs: 120,
+      pauseAfterDestroyMs: 117,
     });
   },
 };

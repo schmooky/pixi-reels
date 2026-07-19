@@ -14,18 +14,21 @@ steps:
   - Call reelSet.spin(). the fall begins
 apis:
   - ReelSet.spin
+  - SpineReelSymbol
   - "(user-code: await wait(ms))"
 tags:
   - cascade
   - tumble
   - lead-in
   - pacing
+  - spine
+  - thunderkick
   - recent
 ---
 
 The lead-in is the gap between the player clicking SPIN and the reels visibly starting to fall. It's not a library feature. just an `await new Promise((r) => setTimeout(r, ms))` before `reelSet.spin()` in your handler. But it dramatically changes the slot's perceived pace, and pairing the right lead-in with your spin SFX is the difference between a satisfying click and a button that "doesn't feel like it did anything."
 
-Every canvas below runs the same scripted spin + destruction. Only the `LEAD_IN_MS` constant at the top of each recipe changes.
+Every canvas below runs the same scripted spin + destruction on real Thunderkick spine symbols (winners play their authored `explode` clip). Only the `LEAD_IN_MS` constant at the top of each recipe changes.
 
 ## 0 ms. instant
 
@@ -94,3 +97,5 @@ Worth flagging: the lead-in only applies to the player's `spin()` click. Cascade
 - [Tumble feels](/recipes/tumble-feels/). varies the animation easing & duration; pairs with any lead-in.
 - [Cascade refill orders](/recipes/refill-orders/). varies the post-win drop pattern.
 - [Cascade 6×5 tumble](/recipes/cascade-6x5/). full cluster + multiplier example.
+
+<AssetCredit studio="Thunderkick" />

@@ -1,19 +1,26 @@
 // @ts-nocheck
-// Injected: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
-//           PIXI, gsap, app, pickWeighted
+// Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, loadCascadeSpines,
+//           buildCascadeSpineMap, CASCADE_SYMBOL_IDS, CASCADE_PLATE_W,
+//           CASCADE_PLATE_H, PIXI, gsap, app, pickWeighted
 
-// CARTOON BOUNCE: bounce.out gives a multi-bounce settle. Long stagger
-// spreads the row-by-row arrival in time.
+// SLOW DROP: a long power2.in fall with a heavy stagger. each row
+// hangs, then accelerates into its slot. The slow, dramatic variant;
+// the pacing lives in duration + stagger, never in a settle.
 
-const IDS = ['7', '8', '9', '10', 'J', 'Q'];
-const REELS = 6, ROWS = 4, SIZE = 64;
-const CLUSTER = '10';
+await loadCascadeSpines();
+
+const IDS = [...CASCADE_SYMBOL_IDS];
+const REELS = 6, ROWS = 4;
+// Cells match the authored 88x101.6 symbol plate.
+const SCALE = 0.62;
+const CELL_W = CASCADE_PLATE_W * SCALE;
+const CELL_H = CASCADE_PLATE_H * SCALE;
+const CLUSTER = 'low1';
 const HIT_ROW = 2;
 const HIT_COLS = [0, 1, 2];
 
-// Longer pause so the previous bounce has time to settle before new
-// symbols arrive. the bouncy land needs breathing room.
-const PAUSE_AFTER_REMOVAL_MS = 320;
+// Longer pause to match the slow settle before new symbols arrive.
+const PAUSE_AFTER_REMOVAL_MS = 333;
 
 function randSymbol(exclude) {
   let s;
@@ -21,19 +28,44 @@ function randSymbol(exclude) {
   return s;
 }
 
+// The authored `explode` clip runs 1.27 s, too long for this demo's
+// cascade timing. Play it faster via TrackEntry.timeScale.
+const EXPLODE_TIME_SCALE = 2.0; // 1.27 s clip -> ~38 frames
+
+class TimedExplodeSymbol extends SpineReelSymbol {
+  async playOut() {
+    const entry = this.playOnTrack(0, 'explode', false);
+    if (!entry) return;
+    entry.timeScale = EXPLODE_TIME_SCALE;
+    await new Promise((resolve) => { entry.listener = { complete: () => resolve() }; });
+  }
+}
+
 const reelSet = new ReelSetBuilder()
-  .reels(REELS).visibleRows(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
+  .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
+  // Pure tumble: no strip scrolling, so no below-window buffer at all.
+  // nothing can ever peek out under the grid.
+  .bufferSymbols({ above: 1, below: 0 })
   .symbols((r) => {
-    for (const sym of CARD_DECK) {
-      if (IDS.includes(sym.id)) {
-        r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
-      }
+    // outAnimation: 'explode' makes destroySymbols play the skeleton's
+    // explode clip instead of the default implode.
+    const spineMap = buildCascadeSpineMap();
+    for (const id of CASCADE_SYMBOL_IDS) {
+      r.register(id, TimedExplodeSymbol, {
+        spineMap,
+        scale: SCALE,
+        outAnimation: 'explode',
+      });
     }
   })
-  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150 })
+  // The high symbol's head overflows its cell (the plate itself is
+  // tile-sized). unmask renders it above the reel mask instead of
+  // clipping it.
+  .symbolData({ high: { zIndex: 10, unmask: true } })
+  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
-    fall:   { duration: 320, ease: 'sine.in',    rowStagger: 60 },
-    dropIn: { duration: 700, ease: 'bounce.out', rowStagger: 70, distance: 'perHole' },
+    fall:   { duration: 333, ease: 'power2.in', rowStagger: 67 },  // 20f, 4f stagger
+    dropIn: { duration: 700, ease: 'power2.in', rowStagger: 67, distance: 'perHole' },  // 42f, 4f stagger
   })
   .ticker(app.ticker).build();
 

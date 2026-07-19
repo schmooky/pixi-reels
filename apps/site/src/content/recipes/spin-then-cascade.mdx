@@ -15,10 +15,14 @@ apis:
   - ReelSetBuilder.tumble
   - reelSet.spin
   - SpinOptions.mode
+  - SpineReelSymbol
+  - StaticSpinSymbol
 tags:
   - hybrid
   - cascade
   - spin-mode
+  - spine
+  - thunderkick
   - recent
 ---
 
@@ -26,9 +30,9 @@ tags:
 
 A common request: "the first round of the play should feel like a normal slot, but if there's a hit, the winners should pop and new symbols should drop in from above. like a tumble." That's exactly what the demo above does:
 
-1. **Round 1**. a regular strip-spin lands the grid. The left three columns are deliberately stacked: `J` on top, `10` in the middle, random on the bottom.
-2. **First cascade pop**. the three `10`s on the middle row vanish. The `J`s above each fall down to fill the gap; brand-new symbols drop in at the top. The middle row now reads `J J J _ _`. a second cluster.
-3. **Second cascade pop**. those three `J`s vanish, survivors fall, new symbols drop in. No more wins, the play ends.
+1. **Round 1**. a regular strip-spin lands the grid. The left three columns are deliberately stacked: `mid1` on top, `low1` in the middle, random on the bottom.
+2. **First cascade pop**. the three `low1`s on the middle row explode (the authored spine destruction). The `mid1`s above each fall down to fill the gap; brand-new symbols drop in at the top. The middle row now holds a `mid1` cluster.
+3. **Second cascade pop**. those three `mid1`s explode, survivors fall, new symbols drop in. No more wins, the play ends.
 
 The reels never re-spin between cascades. The landed grid stays landed; only the cells involved in each pop move. The right two columns (4 and 5) are untouched throughout the cascade chain. they landed during the strip-spin and stay frozen.
 
@@ -69,8 +73,22 @@ Both build on the same `.tumble({ fall, dropIn })` config, but they solve differ
 
 This recipe builds with `.tumble({...})` so `refill()` works, then uses `spin({ mode: 'standard' })` so the first spin uses the classic strip-spin landing. For a pure cascade slot. every round is a drop. see [Cascade 6×5 tumble](/recipes/cascade-6x5/).
 
+## Same chain, opened as a pure drop
+
+The table above in one canvas: delete the `{ mode: 'standard' }` override and the SAME recipe opens as a cascade drop instead of a strip-spin. The old board falls out, stage 0 rains in left-to-right, and the identical `low1` → `mid1` chain runs. One visual language for the whole round:
+
+<RecipeDemo code="cascade-open-drop" />
+
+## Turbo hybrid. two speed systems, two knobs
+
+The strip-spin and the cascade are separately tunable speed systems, and this canvas leans on both: the opener runs the TURBO profile **on cached snapshot textures with auto-baked motion blur** (`StaticSpinSymbol`. no skeleton ticks during the spin), while the cascade runs a tightened `dropIn` and a harder-compressed explosion. `SpeedPresets` never touches the tumble; `.tumble()` never touches the strip phases:
+
+<RecipeDemo code="spin-then-cascade-turbo" />
+
 ## Related
 
 - [Cascade 6×5 tumble](/recipes/cascade-6x5/). pure cascade slot using the same `runCascade` orchestrator.
-- [Cascade pops with WinPresenter](/recipes/cascade-winpresenter/). drive the vanish through `WinPresenter` instead of `destroySymbols`.
+- [Cascade wins. present, destroy, refill](/recipes/cascade-destroy-and-present/). the vanish three ways, including `WinPresenter`-driven pops.
 - [Classic 5×3 starter](/recipes/classic-5x3/). the pure strip-spin starter this recipe extends.
+
+<AssetCredit studio="Thunderkick" />
