@@ -84,7 +84,7 @@ const reelSet = new ReelSetBuilder()
     fall:   { duration: 240, ease: 'power2.in',       rowStagger: 40 },
     // Gravity uses the same `dropIn` config (it's the same phase, just
     // filtered to survivors).
-    dropIn: { duration: 380, ease: 'power3.out', rowStagger: 0, distance: 'perHole' },
+    dropIn: { duration: 380, ease: 'power2.in', rowStagger: 0, distance: 'perHole' },
   })
   .ticker(app.ticker).build();
 

@@ -3,7 +3,7 @@
 //           buildCascadeSpineMap, CASCADE_SYMBOL_IDS, CASCADE_PLATE_W,
 //           CASCADE_PLATE_H, PIXI, gsap, app, pickWeighted
 
-// SLAM: accelerating fall (power3.in) and a hard, fast land (expo.out).
+// SLAM: power3.in on both ends. maximum acceleration into a dead stop.
 // Short durations + small stagger keep the whole tumble under 0.5 s.
 // A short, hard-landing tumble. Pair with a turbo speed profile when
 // you want the cascade to finish in well under a second.
@@ -67,7 +67,7 @@ const reelSet = new ReelSetBuilder()
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
     fall:   { duration: 180, ease: 'power3.in', rowStagger: 20 },
-    dropIn: { duration: 260, ease: 'expo.out',  rowStagger: 25, distance: 'perHole' },
+    dropIn: { duration: 260, ease: 'power3.in',  rowStagger: 25, distance: 'perHole' },
   })
   .ticker(app.ticker).build();
 

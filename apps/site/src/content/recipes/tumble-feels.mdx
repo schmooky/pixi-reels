@@ -38,24 +38,24 @@ Every canvas below runs the **exact same scripted spin**: a 6×4 board of real T
 ```ts
 .tumble({
   fall:   { duration: 280, ease: 'power2.in',     rowStagger: 40 },
-  dropIn: { duration: 480, ease: 'power3.out', rowStagger: 50, distance: 'perHole' },
+  dropIn: { duration: 480, ease: 'power2.in', rowStagger: 50, distance: 'perHole' },
 })
 ```
 
-Gentle gravity fall + a clean decelerating settle. Start here; tweak from here. Note the ease family: these symbols have full-size rectangular plates, so overshoot eases (`back`, `bounce`) are out. an overshooting frame gaps from its neighbours and overlaps the row below. Overshoot only reads well on frameless art.
+Gravity on both ends: the board accelerates out, the new symbols accelerate in and stop dead on the grid. no settle animation at all. Two ease families are banned here by the art: overshoot (`back`, `bounce`). an overshooting frame gaps from its neighbours and only reads well on frameless art. and decelerating settles (`*.out`). a framed tile easing gently into place reads mushy; a falling tile hits its slot like the physical object it's drawn as.
 
-## Soft float. slow settle, heavy stagger
+## Slow drop. long hang, heavy stagger
 
 <RecipeDemo code="tumble-cartoon-bounce" />
 
 ```ts
 .tumble({
   fall:   { duration: 320, ease: 'power2.in',  rowStagger: 60 },
-  dropIn: { duration: 700, ease: 'power2.out', rowStagger: 70, distance: 'perHole' },
+  dropIn: { duration: 700, ease: 'power2.in', rowStagger: 70, distance: 'perHole' },
 })
 ```
 
-The slow, playful variant: a long 700 ms `power2.out` with a heavy stagger, so each row drifts in on its own beat. (On frameless art this slot is where you'd reach for `bounce.out`. framed plates can't bounce without the rectangles colliding.)
+The slow, dramatic variant: a long 700 ms `power2.in` with a heavy stagger. each row hangs at the top, then accelerates into its slot. The pacing lives entirely in duration + stagger; the landing itself still hits dead. (On frameless art this slot is where you'd reach for `bounce.out`.)
 
 ## Slam. hard-landing, sub-half-second tumble
 
@@ -64,11 +64,11 @@ The slow, playful variant: a long 700 ms `power2.out` with a heavy stagger, so e
 ```ts
 .tumble({
   fall:   { duration: 180, ease: 'power3.in', rowStagger: 20 },
-  dropIn: { duration: 260, ease: 'expo.out',  rowStagger: 25, distance: 'perHole' },
+  dropIn: { duration: 260, ease: 'power3.in', rowStagger: 25, distance: 'perHole' },
 })
 ```
 
-`power3.in` accelerates the fall steeply (heavy, gravity-like). `expo.out` lands hard with no overshoot. The whole tumble plays in under half a second. A reasonable basis for a turbo mode toggle on top of a default-classic build.
+`power3.in` on both ends. the steepest acceleration into a dead stop. The whole tumble plays in under half a second. A reasonable basis for a turbo mode toggle on top of a default-classic build.
 
 ## Rain column. board-falls-as-a-slab
 
@@ -90,7 +90,7 @@ The slow, playful variant: a long 700 ms `power2.out` with a heavy stagger, so e
 ```ts
 .tumble({
   fall:   { duration: 180, ease: 'power2.in',     rowStagger: 90 },
-  dropIn: { duration: 320, ease: 'power3.out', rowStagger: 110, distance: 'perHole' },
+  dropIn: { duration: 320, ease: 'power2.in', rowStagger: 110, distance: 'perHole' },
 })
 ```
 
@@ -101,7 +101,7 @@ Heavy `rowStagger` (110 ms on drop-in) makes each row land in its own beat. the 
 | Feel | Pause | Pick when | Avoid when |
 |---|---|---|---|
 | Classic | 250 ms | Default if you have no other constraints |. |
-| Soft float | 320 ms | Long, slow settle with heavy stagger | Turbo-first games. the float slows the perceived pace |
+| Slow drop | 320 ms | Long hang, heavy stagger | Turbo-first games. the hang slows the perceived pace |
 | Slam | 120 ms | Turbo mode, sub-half-second tumbles | You want a longer beat between cascades |
 | Rain column | 380 ms | Match-3 / chess-board / puzzle grids | Reels are visually distinct (the cohesive slab look fights the column gaps) |
 | Wave | 280 ms | Strong per-row stagger, row-by-row arrival | Very dense grids. the stagger makes the whole tumble feel long |

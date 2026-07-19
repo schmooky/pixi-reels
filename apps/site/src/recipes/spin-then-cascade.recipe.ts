@@ -74,7 +74,7 @@ const reelSet = new ReelSetBuilder()
   // need `.tumble()` for the strip-spin landing itself).
   .tumble({
     fall:   { duration: 0, ease: 'none', rowStagger: 0 },              // not used. refill skips fall
-    dropIn: { duration: 360, ease: 'power3.out', rowStagger: 0, distance: 'perHole' },
+    dropIn: { duration: 360, ease: 'power2.in', rowStagger: 0, distance: 'perHole' },
   })
   .ticker(app.ticker)
   .build();

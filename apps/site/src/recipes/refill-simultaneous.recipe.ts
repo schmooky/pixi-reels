@@ -63,7 +63,7 @@ const reelSet = new ReelSetBuilder()
   .tumble({
     fall:   { duration: 240, ease: 'power2.in',       rowStagger: 40 },
     // rowStagger: 0. every row in a reel drops together (no in-reel stagger).
-    dropIn: { duration: 380, ease: 'power3.out', rowStagger: 0, distance: 'perHole' },
+    dropIn: { duration: 380, ease: 'power2.in', rowStagger: 0, distance: 'perHole' },
   })
   .ticker(app.ticker).build();
 

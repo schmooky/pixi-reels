@@ -64,7 +64,7 @@ const reelSet = new ReelSetBuilder()
   // the previous board out before the new one drops in.
   .tumble({
     fall:   { duration: 260, ease: 'power2.in',       rowStagger: 40 },
-    dropIn: { duration: 420, ease: 'power3.out', rowStagger: 45, distance: 'perHole' },
+    dropIn: { duration: 420, ease: 'power2.in', rowStagger: 45, distance: 'perHole' },
   })
   .ticker(app.ticker)
   .build();

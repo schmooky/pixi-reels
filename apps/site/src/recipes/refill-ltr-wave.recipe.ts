@@ -67,7 +67,7 @@ const reelSet = new ReelSetBuilder()
     fall:   { duration: 240, ease: 'power2.in',       rowStagger: 40 },
     // rowStagger: 0. rows in a reel arrive together; the per-reel
     // stagger is set via setDropOrder('ltr', step) on the refill below.
-    dropIn: { duration: 380, ease: 'power3.out', rowStagger: 0, distance: 'perHole' },
+    dropIn: { duration: 380, ease: 'power2.in', rowStagger: 0, distance: 'perHole' },
   })
   .ticker(app.ticker).build();
 

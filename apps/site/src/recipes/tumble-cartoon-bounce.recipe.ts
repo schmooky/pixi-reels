@@ -3,9 +3,9 @@
 //           buildCascadeSpineMap, CASCADE_SYMBOL_IDS, CASCADE_PLATE_W,
 //           CASCADE_PLATE_H, PIXI, gsap, app, pickWeighted
 
-// SOFT FLOAT: a long power2.out settle with a heavy stagger. the slow,
-// playful variant. Framed symbol plates rule out bounce/overshoot
-// eases, so the float reads through duration + stagger instead.
+// SLOW DROP: a long power2.in fall with a heavy stagger. each row
+// hangs, then accelerates into its slot. The slow, dramatic variant;
+// the pacing lives in duration + stagger, never in a settle.
 
 await loadCascadeSpines();
 
@@ -65,7 +65,7 @@ const reelSet = new ReelSetBuilder()
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
     fall:   { duration: 320, ease: 'power2.in',    rowStagger: 60 },
-    dropIn: { duration: 700, ease: 'power2.out', rowStagger: 70, distance: 'perHole' },
+    dropIn: { duration: 700, ease: 'power2.in', rowStagger: 70, distance: 'perHole' },
   })
   .ticker(app.ticker).build();
 

@@ -3,8 +3,8 @@
 //           buildCascadeSpineMap, CASCADE_SYMBOL_IDS, CASCADE_PLATE_W,
 //           CASCADE_PLATE_H, PIXI, gsap, app, pickWeighted
 
-// CLASSIC tumble feel: power2.in fall, power3.out settle. the
-// all-rounder default. Good baseline before reaching for the more
+// CLASSIC tumble feel: gravity both ways. power2.in fall out,
+// power2.in drop in, dead stop on the grid. The all-rounder default. Good baseline before reaching for the more
 // stylistic variants. Framed symbol plates rule out overshoot eases
 // (back/bounce): the rectangles would gap and overlap on landing.
 
@@ -68,7 +68,7 @@ const reelSet = new ReelSetBuilder()
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
     fall:   { duration: 280, ease: 'power2.in',       rowStagger: 40 },
-    dropIn: { duration: 480, ease: 'power3.out', rowStagger: 50, distance: 'perHole' },
+    dropIn: { duration: 480, ease: 'power2.in', rowStagger: 50, distance: 'perHole' },
   })
   .ticker(app.ticker).build();
 

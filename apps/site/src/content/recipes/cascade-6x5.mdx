@@ -94,17 +94,18 @@ reelSet.setDropOrder([0, 0, 150, 150, 300, 300]); // custom ms per reel
 
 `.tumble({ fall, dropIn })` is pure animation values; swap them to change the entire feel without touching code.
 
-These symbols have full-size rectangular plates, so every ease is
-overshoot-free (no `back`/`bounce`. an overshooting frame gaps from its
-neighbours; that family only reads well on frameless art):
+These symbols have full-size rectangular plates, so every ease is a
+plain acceleration into a dead stop. no overshoot (`back`/`bounce`
+gaps the frames; frameless-art only) and no decelerating settle (a
+framed tile easing into place reads mushy):
 
 | Feel | fall.ease | dropIn.ease | dropIn.rowStagger | notes |
 |---|---|---|---|---|
-| Classic | `power2.in` | `power3.out` | 50 ms | clean decelerating settle, all-rounder |
-| Soft float | `power2.in` | `power2.out` (700 ms) | 70 ms | slow drift, each row its own beat |
-| Slam stop | `power3.in` | `expo.out` | 25 ms | heavy, hard land |
+| Classic | `power2.in` | `power2.in` | 50 ms | gravity both ways, all-rounder |
+| Slow drop | `power2.in` | `power2.in` (700 ms) | 70 ms | long hang, each row its own beat |
+| Slam stop | `power3.in` | `power3.in` | 25 ms | steepest hit |
 | Rain column | `power2.in` | `power2.in` | 0 ms (+ `distance: 'auto'`) | whole column drops as a slab |
-| Wave | `power2.in` | `power3.out` | 110 ms | rolling top-to-bottom arrival |
+| Wave | `power2.in` | `power2.in` | 110 ms | rolling top-to-bottom arrival |
 
 See [the full tumble recipe doc](https://github.com/schmooky/pixi-reels/blob/main/docs/recipes/tumble-cascade.md) for the recipe vocabulary and the per-symbol event hooks (`cascade:fall:symbol` / `cascade:dropIn:symbol`) you'd use for squish, spine, badge mutations, etc.
 

@@ -8,7 +8,7 @@ Site: https://pixi-reels.schmooky.dev
 Repo: https://github.com/schmooky/pixi-reels
 Package: https://www.npmjs.com/package/pixi-reels
 
-Generated: 2026-07-19T08:15:09.706Z
+Generated: 2026-07-19T08:19:14.620Z
 
 ## Quick start
 
@@ -2185,7 +2185,7 @@ const reelSet = new ReelSetBuilder()
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
     fall:   { duration: 280, ease: 'power3.in',  rowStagger: 60 },
-    dropIn: { duration: 450, ease: 'power3.out', rowStagger: 60, distance: 'perHole' },
+    dropIn: { duration: 450, ease: 'power2.in', rowStagger: 60, distance: 'perHole' },
   })
   .ticker(app.ticker).build();
 
@@ -2387,7 +2387,7 @@ const reelSet = new ReelSetBuilder()
   // the previous board out before the new one drops in.
   .tumble({
     fall:   { duration: 260, ease: 'power2.in',       rowStagger: 40 },
-    dropIn: { duration: 420, ease: 'power3.out', rowStagger: 45, distance: 'perHole' },
+    dropIn: { duration: 420, ease: 'power2.in', rowStagger: 45, distance: 'perHole' },
   })
   .ticker(app.ticker)
   .build();
@@ -3163,7 +3163,7 @@ const reelSet = new ReelSetBuilder()
   .speed('normal', { ...SpeedPresets.NORMAL, bounceDistance: 0, bounceDuration: 0 }).speed('turbo', { ...SpeedPresets.TURBO, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
     fall:   { duration: 0, ease: 'none', rowStagger: 0 },              // not used. refill skips fall
-    dropIn: { duration: 380, ease: 'power2.out', rowStagger: 0, distance: 'perHole' },
+    dropIn: { duration: 380, ease: 'power2.in', rowStagger: 0, distance: 'perHole' },
   })
   .ticker(app.ticker).build();
 
@@ -3257,7 +3257,7 @@ const reelSet = new ReelSetBuilder()
   .speed('normal', { ...SpeedPresets.NORMAL, bounceDistance: 0, bounceDuration: 0 }).speed('turbo', { ...SpeedPresets.TURBO, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
     fall:   { duration: 0, ease: 'none', rowStagger: 0 },              // not used. refill skips fall
-    dropIn: { duration: 380, ease: 'power2.out', rowStagger: 0, distance: 'perHole' },
+    dropIn: { duration: 380, ease: 'power2.in', rowStagger: 0, distance: 'perHole' },
   })
   .ticker(app.ticker).build();
 
@@ -3367,7 +3367,7 @@ const reelSet = new ReelSetBuilder()
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
     fall:   { duration: 280, ease: 'power3.in',  rowStagger: 60 },
-    dropIn: { duration: 450, ease: 'power3.out', rowStagger: 60, distance: 'perHole' },
+    dropIn: { duration: 450, ease: 'power2.in', rowStagger: 60, distance: 'perHole' },
   })
   .ticker(app.ticker).build();
 
@@ -3672,7 +3672,7 @@ const reelSet = new ReelSetBuilder()
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
     fall:   { duration: 280, ease: 'power2.in',       rowStagger: 50 },
-    dropIn: { duration: 420, ease: 'power3.out', rowStagger: 0,  distance: 'perHole' },
+    dropIn: { duration: 420, ease: 'power2.in', rowStagger: 0,  distance: 'perHole' },
   })
   .ticker(app.ticker).build();
 
@@ -3779,7 +3779,7 @@ const reelSet = new ReelSetBuilder()
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
     fall:   { duration: 280, ease: 'power2.in',       rowStagger: 50 },
-    dropIn: { duration: 420, ease: 'power3.out', rowStagger: 0,  distance: 'perHole' },
+    dropIn: { duration: 420, ease: 'power2.in', rowStagger: 0,  distance: 'perHole' },
   })
   .ticker(app.ticker).build();
 
@@ -3888,7 +3888,7 @@ const reelSet = new ReelSetBuilder()
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
     fall:   { duration: 280, ease: 'power2.in',       rowStagger: 50 },
-    dropIn: { duration: 420, ease: 'power3.out', rowStagger: 0,  distance: 'perHole' },
+    dropIn: { duration: 420, ease: 'power2.in', rowStagger: 0,  distance: 'perHole' },
   })
   .ticker(app.ticker).build();
 
@@ -3995,7 +3995,7 @@ const reelSet = new ReelSetBuilder()
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
     fall:   { duration: 280, ease: 'power2.in',       rowStagger: 50 },
-    dropIn: { duration: 420, ease: 'power3.out', rowStagger: 0,  distance: 'perHole' },
+    dropIn: { duration: 420, ease: 'power2.in', rowStagger: 0,  distance: 'perHole' },
   })
   .ticker(app.ticker).build();
 
@@ -9907,7 +9907,7 @@ const reelSet = new ReelSetBuilder()
   .tumble({
     fall:   { duration: 240, ease: 'power2.in',       rowStagger: 40 },
     dropIn: {
-      duration: 380, ease: 'power3.out', distance: 'perHole',
+      duration: 380, ease: 'power2.in', distance: 'perHole',
       rowStagger: 90,
       rowOrder: 'bottomToTop',
     },
@@ -10018,7 +10018,7 @@ const reelSet = new ReelSetBuilder()
     fall:   { duration: 240, ease: 'power2.in',       rowStagger: 40 },
     // rowStagger: 0. rows in a reel arrive together; the per-reel
     // stagger is set via setDropOrder('ltr', step) on the refill below.
-    dropIn: { duration: 380, ease: 'power3.out', rowStagger: 0, distance: 'perHole' },
+    dropIn: { duration: 380, ease: 'power2.in', rowStagger: 0, distance: 'perHole' },
   })
   .ticker(app.ticker).build();
 
@@ -10123,7 +10123,7 @@ const reelSet = new ReelSetBuilder()
   .tumble({
     fall:   { duration: 240, ease: 'power2.in',       rowStagger: 40 },
     // rowStagger: 0. every row in a reel drops together (no in-reel stagger).
-    dropIn: { duration: 380, ease: 'power3.out', rowStagger: 0, distance: 'perHole' },
+    dropIn: { duration: 380, ease: 'power2.in', rowStagger: 0, distance: 'perHole' },
   })
   .ticker(app.ticker).build();
 
@@ -10559,7 +10559,7 @@ const reelSet = new ReelSetBuilder()
   .initialSpeed('turbo')
   .tumble({
     fall:   { duration: 0, ease: 'none', rowStagger: 0 },              // not used. refill skips fall
-    dropIn: { duration: 240, ease: 'power3.out', rowStagger: 0, distance: 'perHole' },
+    dropIn: { duration: 240, ease: 'power2.in', rowStagger: 0, distance: 'perHole' },
   })
   .ticker(app.ticker)
   .build();
@@ -10693,7 +10693,7 @@ const reelSet = new ReelSetBuilder()
   // need `.tumble()` for the strip-spin landing itself).
   .tumble({
     fall:   { duration: 0, ease: 'none', rowStagger: 0 },              // not used. refill skips fall
-    dropIn: { duration: 360, ease: 'power3.out', rowStagger: 0, distance: 'perHole' },
+    dropIn: { duration: 360, ease: 'power2.in', rowStagger: 0, distance: 'perHole' },
   })
   .ticker(app.ticker)
   .build();
@@ -12310,7 +12310,7 @@ const reelSet = new ReelSetBuilder()
     fall:   { duration: 240, ease: 'power2.in',       rowStagger: 40 },
     // Gravity uses the same `dropIn` config (it's the same phase, just
     // filtered to survivors).
-    dropIn: { duration: 380, ease: 'power3.out', rowStagger: 0, distance: 'perHole' },
+    dropIn: { duration: 380, ease: 'power2.in', rowStagger: 0, distance: 'perHole' },
   })
   .ticker(app.ticker).build();
 
@@ -12449,7 +12449,7 @@ const reelSet = new ReelSetBuilder()
     fall:   { duration: 240, ease: 'power2.in',       rowStagger: 40 },
     // Gravity uses the same `dropIn` config (it's the same phase, just
     // filtered to survivors).
-    dropIn: { duration: 380, ease: 'power3.out', rowStagger: 0, distance: 'perHole' },
+    dropIn: { duration: 380, ease: 'power2.in', rowStagger: 0, distance: 'perHole' },
   })
   .ticker(app.ticker).build();
 
@@ -12507,9 +12507,9 @@ URL: https://pixi-reels.schmooky.dev/recipes/tumble-cartoon-bounce/
 //           buildCascadeSpineMap, CASCADE_SYMBOL_IDS, CASCADE_PLATE_W,
 //           CASCADE_PLATE_H, PIXI, gsap, app, pickWeighted
 
-// SOFT FLOAT: a long power2.out settle with a heavy stagger. the slow,
-// playful variant. Framed symbol plates rule out bounce/overshoot
-// eases, so the float reads through duration + stagger instead.
+// SLOW DROP: a long power2.in fall with a heavy stagger. each row
+// hangs, then accelerates into its slot. The slow, dramatic variant;
+// the pacing lives in duration + stagger, never in a settle.
 
 await loadCascadeSpines();
 
@@ -12569,7 +12569,7 @@ const reelSet = new ReelSetBuilder()
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
     fall:   { duration: 320, ease: 'power2.in',    rowStagger: 60 },
-    dropIn: { duration: 700, ease: 'power2.out', rowStagger: 70, distance: 'perHole' },
+    dropIn: { duration: 700, ease: 'power2.in', rowStagger: 70, distance: 'perHole' },
   })
   .ticker(app.ticker).build();
 
@@ -12612,8 +12612,8 @@ URL: https://pixi-reels.schmooky.dev/recipes/tumble-classic/
 //           buildCascadeSpineMap, CASCADE_SYMBOL_IDS, CASCADE_PLATE_W,
 //           CASCADE_PLATE_H, PIXI, gsap, app, pickWeighted
 
-// CLASSIC tumble feel: power2.in fall, power3.out settle. the
-// all-rounder default. Good baseline before reaching for the more
+// CLASSIC tumble feel: gravity both ways. power2.in fall out,
+// power2.in drop in, dead stop on the grid. The all-rounder default. Good baseline before reaching for the more
 // stylistic variants. Framed symbol plates rule out overshoot eases
 // (back/bounce): the rectangles would gap and overlap on landing.
 
@@ -12677,7 +12677,7 @@ const reelSet = new ReelSetBuilder()
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
     fall:   { duration: 280, ease: 'power2.in',       rowStagger: 40 },
-    dropIn: { duration: 480, ease: 'power3.out', rowStagger: 50, distance: 'perHole' },
+    dropIn: { duration: 480, ease: 'power2.in', rowStagger: 50, distance: 'perHole' },
   })
   .ticker(app.ticker).build();
 
@@ -12831,7 +12831,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/tumble-slam/
 //           buildCascadeSpineMap, CASCADE_SYMBOL_IDS, CASCADE_PLATE_W,
 //           CASCADE_PLATE_H, PIXI, gsap, app, pickWeighted
 
-// SLAM: accelerating fall (power3.in) and a hard, fast land (expo.out).
+// SLAM: power3.in on both ends. maximum acceleration into a dead stop.
 // Short durations + small stagger keep the whole tumble under 0.5 s.
 // A short, hard-landing tumble. Pair with a turbo speed profile when
 // you want the cascade to finish in well under a second.
@@ -12895,7 +12895,7 @@ const reelSet = new ReelSetBuilder()
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
     fall:   { duration: 180, ease: 'power3.in', rowStagger: 20 },
-    dropIn: { duration: 260, ease: 'expo.out',  rowStagger: 25, distance: 'perHole' },
+    dropIn: { duration: 260, ease: 'power3.in',  rowStagger: 25, distance: 'perHole' },
   })
   .ticker(app.ticker).build();
 
@@ -13000,7 +13000,7 @@ const reelSet = new ReelSetBuilder()
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
     fall:   { duration: 180, ease: 'power2.in',       rowStagger: 90 },
-    dropIn: { duration: 320, ease: 'power3.out', rowStagger: 110, distance: 'perHole' },
+    dropIn: { duration: 320, ease: 'power2.in', rowStagger: 110, distance: 'perHole' },
   })
   .ticker(app.ticker).build();
 

@@ -66,7 +66,7 @@ const reelSet = new ReelSetBuilder()
   .tumble({
     fall:   { duration: 240, ease: 'power2.in',       rowStagger: 40 },
     dropIn: {
-      duration: 380, ease: 'power3.out', distance: 'perHole',
+      duration: 380, ease: 'power2.in', distance: 'perHole',
       rowStagger: 90,
       rowOrder: 'bottomToTop',
     },
