@@ -1,5 +1,19 @@
 # pixi-reels
 
+## 1.6.0
+
+### Minor Changes
+
+- [#191](https://github.com/schmooky/pixi-reels/pull/191) [`ff7658b`](https://github.com/schmooky/pixi-reels/commit/ff7658b8d7f800239b1a8e9549fd74b1b680f85c) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Add: `bufferSymbols({ above, below })`. asymmetric buffer rows, including `below: 0` for tumble-only reel sets. A pure tumble never scrolls the strip, so the below-window cells exist only to be hidden by the mask; dropping them means nothing can ever peek out under the grid. Requires `.tumble(...)` on the builder (validated at `build()`); strip spins (`spin({ mode: 'standard' })`) and `nudge()` throw on such a set because both move symbols through the below-window buffer. The number form keeps its exact legacy behavior (symmetric count, minimum 1 with a clamp warning).
+
+- [#191](https://github.com/schmooky/pixi-reels/pull/191) [`ff7658b`](https://github.com/schmooky/pixi-reels/commit/ff7658b8d7f800239b1a8e9549fd74b1b680f85c) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Add: `RunCascadeOptions.presentWinners`. a win-presentation hook awaited after detection and BEFORE `destroySymbols`, while the winners are still on the board. This is the natural seat for a `WinPresenter` pass (play the authored win clip, dim losers, then let the library destroy the cells): a round's presentation order is win → destroy → refill. `onCascade` keeps its post-destroy timing unchanged.
+
+### Patch Changes
+
+- [#191](https://github.com/schmooky/pixi-reels/pull/191) [`ff7658b`](https://github.com/schmooky/pixi-reels/commit/ff7658b8d7f800239b1a8e9549fd74b1b680f85c) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Fix: re-mask lifted `unmask` symbols through the cascade refill path. A pure `refill()` never passes through `StartPhase` (strip spins) or `notifySpinStart` (tumble fall), so a symbol with `unmask: true` arriving via drop-in stayed parented in `viewport.unmaskedContainer` and rendered its whole above-viewport approach outside the reel mask. floating over the page before landing. `CascadePlacePhase` and `CascadeDropInPhase` now call `reel.beginMotion()` on entry (idempotent, same rule as `StartPhase._launch`); `notifyLanded` re-lifts once the refill settles.
+
+- [#191](https://github.com/schmooky/pixi-reels/pull/191) [`ff7658b`](https://github.com/schmooky/pixi-reels/commit/ff7658b8d7f800239b1a8e9549fd74b1b680f85c) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Fix: cascade refills notify `onReelLanded()` on MOVERS only. survivors that slid and new arrivals. Untouched survivors (offsetRows 0) no longer replay their landing animation on every cascade stage, which read as the whole board twitching after each pop. `Reel.notifyLanded(landedRows?)` gained an optional visible-row filter (strip-spin landings are unchanged. every visible symbol still lands); the gravity stage of two-stage refills now fires each slid survivor's landing reaction the moment it settles.
+
 ## 1.5.0
 
 ### Minor Changes
