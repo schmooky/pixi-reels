@@ -30,7 +30,7 @@ function randSymbol() {
 }
 
 // Shorter explosion. the presenter already showed the win.
-const EXPLODE_TIME_SCALE = 2.0;
+const EXPLODE_TIME_SCALE = 2.2;
 
 class TimedExplodeSymbol extends SpineReelSymbol {
   async playOut() {

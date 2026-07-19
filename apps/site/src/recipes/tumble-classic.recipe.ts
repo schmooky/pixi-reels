@@ -33,7 +33,7 @@ function randSymbol(exclude) {
 
 // The authored `explode` clip runs 1.27 s, too long for this demo's
 // cascade timing. Play it faster via TrackEntry.timeScale.
-const EXPLODE_TIME_SCALE = 2.0;
+const EXPLODE_TIME_SCALE = 2.2;
 
 class TimedExplodeSymbol extends SpineReelSymbol {
   async playOut() {

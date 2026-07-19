@@ -8,7 +8,7 @@ Site: https://pixi-reels.schmooky.dev
 Repo: https://github.com/schmooky/pixi-reels
 Package: https://www.npmjs.com/package/pixi-reels
 
-Generated: 2026-07-18T22:51:06.888Z
+Generated: 2026-07-19T08:15:09.706Z
 
 ## Quick start
 
@@ -2163,6 +2163,9 @@ class TimedExplodeSymbol extends SpineReelSymbol {
 
 const reelSet = new ReelSetBuilder()
   .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
+  // Pure tumble: no strip scrolling, so no below-window buffer at all.
+  // nothing can ever peek out under the grid.
+  .bufferSymbols({ above: 1, below: 0 })
   .symbols(r => {
     // outAnimation: 'explode' makes destroySymbols play the skeleton's
     // explode clip instead of the default implode.
@@ -2362,6 +2365,9 @@ class TimedExplodeSymbol extends SpineReelSymbol {
 
 const reelSet = new ReelSetBuilder()
   .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
+  // Pure tumble: no strip scrolling, so no below-window buffer at all.
+  // nothing can ever peek out under the grid.
+  .bufferSymbols({ above: 1, below: 0 })
   .symbols((r) => {
     const spineMap = buildCascadeSpineMap();
     for (const id of CASCADE_SYMBOL_IDS) {
@@ -3328,7 +3334,7 @@ function randSymbol() {
 }
 
 // Shorter explosion. the presenter already showed the win.
-const EXPLODE_TIME_SCALE = 2.0;
+const EXPLODE_TIME_SCALE = 2.2;
 
 class TimedExplodeSymbol extends SpineReelSymbol {
   async playOut() {
@@ -3341,6 +3347,9 @@ class TimedExplodeSymbol extends SpineReelSymbol {
 
 const reelSet = new ReelSetBuilder()
   .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
+  // Pure tumble: no strip scrolling, so no below-window buffer at all.
+  // nothing can ever peek out under the grid.
+  .bufferSymbols({ above: 1, below: 0 })
   .symbols(r => {
     const spineMap = buildCascadeSpineMap();
     for (const id of CASCADE_SYMBOL_IDS) {
@@ -3641,6 +3650,9 @@ class TimedExplodeSymbol extends SpineReelSymbol {
 
 const reelSet = new ReelSetBuilder()
   .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
+  // Pure tumble: no strip scrolling, so no below-window buffer at all.
+  // nothing can ever peek out under the grid.
+  .bufferSymbols({ above: 1, below: 0 })
   .symbols((r) => {
     // outAnimation: 'explode' makes destroySymbols play the skeleton's
     // explode clip instead of the default implode.
@@ -3745,6 +3757,9 @@ class TimedExplodeSymbol extends SpineReelSymbol {
 
 const reelSet = new ReelSetBuilder()
   .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
+  // Pure tumble: no strip scrolling, so no below-window buffer at all.
+  // nothing can ever peek out under the grid.
+  .bufferSymbols({ above: 1, below: 0 })
   .symbols((r) => {
     // outAnimation: 'explode' makes destroySymbols play the skeleton's
     // explode clip instead of the default implode.
@@ -3851,6 +3866,9 @@ class TimedExplodeSymbol extends SpineReelSymbol {
 
 const reelSet = new ReelSetBuilder()
   .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
+  // Pure tumble: no strip scrolling, so no below-window buffer at all.
+  // nothing can ever peek out under the grid.
+  .bufferSymbols({ above: 1, below: 0 })
   .symbols((r) => {
     // outAnimation: 'explode' makes destroySymbols play the skeleton's
     // explode clip instead of the default implode.
@@ -3955,6 +3973,9 @@ class TimedExplodeSymbol extends SpineReelSymbol {
 
 const reelSet = new ReelSetBuilder()
   .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
+  // Pure tumble: no strip scrolling, so no below-window buffer at all.
+  // nothing can ever peek out under the grid.
+  .bufferSymbols({ above: 1, below: 0 })
   .symbols((r) => {
     // outAnimation: 'explode' makes destroySymbols play the skeleton's
     // explode clip instead of the default implode.
@@ -9863,6 +9884,9 @@ class TimedExplodeSymbol extends SpineReelSymbol {
 
 const reelSet = new ReelSetBuilder()
   .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
+  // Pure tumble: no strip scrolling, so no below-window buffer at all.
+  // nothing can ever peek out under the grid.
+  .bufferSymbols({ above: 1, below: 0 })
   .symbols((r) => {
     // outAnimation: 'explode' makes destroySymbols play the skeleton's
     // explode clip instead of the default implode.
@@ -9970,6 +9994,9 @@ class TimedExplodeSymbol extends SpineReelSymbol {
 
 const reelSet = new ReelSetBuilder()
   .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
+  // Pure tumble: no strip scrolling, so no below-window buffer at all.
+  // nothing can ever peek out under the grid.
+  .bufferSymbols({ above: 1, below: 0 })
   .symbols((r) => {
     // outAnimation: 'explode' makes destroySymbols play the skeleton's
     // explode clip instead of the default implode.
@@ -10073,6 +10100,9 @@ class TimedExplodeSymbol extends SpineReelSymbol {
 
 const reelSet = new ReelSetBuilder()
   .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
+  // Pure tumble: no strip scrolling, so no below-window buffer at all.
+  // nothing can ever peek out under the grid.
+  .bufferSymbols({ above: 1, below: 0 })
   .symbols((r) => {
     // outAnimation: 'explode' makes destroySymbols play the skeleton's
     // explode clip instead of the default implode.
@@ -12256,6 +12286,9 @@ class TimedExplodeSymbol extends SpineReelSymbol {
 
 const reelSet = new ReelSetBuilder()
   .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
+  // Pure tumble: no strip scrolling, so no below-window buffer at all.
+  // nothing can ever peek out under the grid.
+  .bufferSymbols({ above: 1, below: 0 })
   .symbols((r) => {
     // outAnimation: 'explode' makes destroySymbols play the skeleton's
     // explode clip instead of the default implode.
@@ -12392,6 +12425,9 @@ class TimedExplodeSymbol extends SpineReelSymbol {
 
 const reelSet = new ReelSetBuilder()
   .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
+  // Pure tumble: no strip scrolling, so no below-window buffer at all.
+  // nothing can ever peek out under the grid.
+  .bufferSymbols({ above: 1, below: 0 })
   .symbols((r) => {
     // outAnimation: 'explode' makes destroySymbols play the skeleton's
     // explode clip instead of the default implode.
@@ -12498,7 +12534,7 @@ function randSymbol(exclude) {
 
 // The authored `explode` clip runs 1.27 s, too long for this demo's
 // cascade timing. Play it faster via TrackEntry.timeScale.
-const EXPLODE_TIME_SCALE = 1.6;
+const EXPLODE_TIME_SCALE = 2.0;
 
 class TimedExplodeSymbol extends SpineReelSymbol {
   async playOut() {
@@ -12511,6 +12547,9 @@ class TimedExplodeSymbol extends SpineReelSymbol {
 
 const reelSet = new ReelSetBuilder()
   .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
+  // Pure tumble: no strip scrolling, so no below-window buffer at all.
+  // nothing can ever peek out under the grid.
+  .bufferSymbols({ above: 1, below: 0 })
   .symbols((r) => {
     // outAnimation: 'explode' makes destroySymbols play the skeleton's
     // explode clip instead of the default implode.
@@ -12603,7 +12642,7 @@ function randSymbol(exclude) {
 
 // The authored `explode` clip runs 1.27 s, too long for this demo's
 // cascade timing. Play it faster via TrackEntry.timeScale.
-const EXPLODE_TIME_SCALE = 2.0;
+const EXPLODE_TIME_SCALE = 2.2;
 
 class TimedExplodeSymbol extends SpineReelSymbol {
   async playOut() {
@@ -12616,6 +12655,9 @@ class TimedExplodeSymbol extends SpineReelSymbol {
 
 const reelSet = new ReelSetBuilder()
   .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
+  // Pure tumble: no strip scrolling, so no below-window buffer at all.
+  // nothing can ever peek out under the grid.
+  .bufferSymbols({ above: 1, below: 0 })
   .symbols((r) => {
     // outAnimation: 'explode' makes destroySymbols play the skeleton's
     // explode clip instead of the default implode.
@@ -12711,7 +12753,7 @@ function randSymbol(exclude) {
 
 // The authored `explode` clip runs 1.27 s, too long for this demo's
 // cascade timing. Play it faster via TrackEntry.timeScale.
-const EXPLODE_TIME_SCALE = 1.8;
+const EXPLODE_TIME_SCALE = 2.2;
 
 class TimedExplodeSymbol extends SpineReelSymbol {
   async playOut() {
@@ -12724,6 +12766,9 @@ class TimedExplodeSymbol extends SpineReelSymbol {
 
 const reelSet = new ReelSetBuilder()
   .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
+  // Pure tumble: no strip scrolling, so no below-window buffer at all.
+  // nothing can ever peek out under the grid.
+  .bufferSymbols({ above: 1, below: 0 })
   .symbols((r) => {
     // outAnimation: 'explode' makes destroySymbols play the skeleton's
     // explode clip instead of the default implode.
@@ -12828,6 +12873,9 @@ class TimedExplodeSymbol extends SpineReelSymbol {
 
 const reelSet = new ReelSetBuilder()
   .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
+  // Pure tumble: no strip scrolling, so no below-window buffer at all.
+  // nothing can ever peek out under the grid.
+  .bufferSymbols({ above: 1, below: 0 })
   .symbols((r) => {
     // outAnimation: 'explode' makes destroySymbols play the skeleton's
     // explode clip instead of the default implode.
@@ -12917,7 +12965,7 @@ function randSymbol(exclude) {
 
 // The authored `explode` clip runs 1.27 s, too long for this demo's
 // cascade timing. Play it faster via TrackEntry.timeScale.
-const EXPLODE_TIME_SCALE = 2.0;
+const EXPLODE_TIME_SCALE = 2.2;
 
 class TimedExplodeSymbol extends SpineReelSymbol {
   async playOut() {
@@ -12930,6 +12978,9 @@ class TimedExplodeSymbol extends SpineReelSymbol {
 
 const reelSet = new ReelSetBuilder()
   .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
+  // Pure tumble: no strip scrolling, so no below-window buffer at all.
+  // nothing can ever peek out under the grid.
+  .bufferSymbols({ above: 1, below: 0 })
   .symbols((r) => {
     // outAnimation: 'explode' makes destroySymbols play the skeleton's
     // explode clip instead of the default implode.
