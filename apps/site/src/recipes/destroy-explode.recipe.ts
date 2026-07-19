@@ -10,8 +10,6 @@
 
 await loadCascadeSpines();
 
-const F = (n) => Math.round(n * 1000 / 60); // frames -> ms at 60 fps
-
 const A = 'low1', B = 'low2', C = 'low3';
 const X = 'high'; // the winner that vanishes
 const REELS = 4, ROWS = 3;
@@ -52,7 +50,7 @@ const reelSet = new ReelSetBuilder()
   .speed('normal', { ...SpeedPresets.NORMAL, bounceDistance: 0, bounceDuration: 0 }).speed('turbo', { ...SpeedPresets.TURBO, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
     fall:   { duration: 0, ease: 'none', rowStagger: 0 },              // not used. refill skips fall
-    dropIn: { duration: F(22), ease: 'power2.in', rowStagger: 0, distance: 'perHole' },
+    dropIn: { duration: 367, ease: 'power2.in', rowStagger: 0, distance: 'perHole' },  // 22f
   })
   .ticker(app.ticker).build();
 
@@ -85,7 +83,7 @@ return {
           return [...fillers, ...survivors];
         });
       },
-      pauseAfterDestroyMs: F(7),
+      pauseAfterDestroyMs: 117,
     });
   },
 };

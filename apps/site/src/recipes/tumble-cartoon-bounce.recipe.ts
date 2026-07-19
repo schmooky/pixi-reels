@@ -9,8 +9,6 @@
 
 await loadCascadeSpines();
 
-const F = (n) => Math.round(n * 1000 / 60); // frames -> ms at 60 fps
-
 const IDS = [...CASCADE_SYMBOL_IDS];
 const REELS = 6, ROWS = 4;
 // Cells match the authored 88x101.6 symbol plate.
@@ -22,7 +20,7 @@ const HIT_ROW = 2;
 const HIT_COLS = [0, 1, 2];
 
 // Longer pause to match the slow settle before new symbols arrive.
-const PAUSE_AFTER_REMOVAL_MS = F(20);
+const PAUSE_AFTER_REMOVAL_MS = 333;
 
 function randSymbol(exclude) {
   let s;
@@ -66,8 +64,8 @@ const reelSet = new ReelSetBuilder()
   .symbolData({ high: { zIndex: 10, unmask: true } })
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
-    fall:   { duration: F(20), ease: 'power2.in', rowStagger: F(4) },
-    dropIn: { duration: F(42), ease: 'power2.in', rowStagger: F(4), distance: 'perHole' },
+    fall:   { duration: 333, ease: 'power2.in', rowStagger: 67 },  // 20f, 4f stagger
+    dropIn: { duration: 700, ease: 'power2.in', rowStagger: 67, distance: 'perHole' },  // 42f, 4f stagger
   })
   .ticker(app.ticker).build();
 

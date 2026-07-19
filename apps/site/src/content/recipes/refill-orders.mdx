@@ -55,7 +55,7 @@ No in-reel row stagger (`rowStagger: 0`), no cross-reel delay (`setDropOrder('al
   dropIn: { rowStagger: 0, distance: 'perHole' },
 })
 // ...
-reelSet.setDropOrder('ltr', F(6));  // 6 frames (100 ms) between reels, left to right
+reelSet.setDropOrder('ltr', 100);  // 6 frames (100 ms) between reels, left to right
 await reelSet.refill({ winners, grid: stage1.map((visible) => ({ visible })) });
 ```
 
@@ -70,7 +70,7 @@ Use when the cascade chain is rare (deep features, bonus rounds) or when the col
 ```ts
 .tumble({
   dropIn: {
-    rowStagger: F(6),          // 6 frames (100 ms)
+    rowStagger: 100,          // 6 frames (100 ms)
     rowOrder: 'bottomToTop',
     distance: 'perHole',
   },

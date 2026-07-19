@@ -11,8 +11,6 @@
 
 await loadCascadeSpines();
 
-const F = (n) => Math.round(n * 1000 / 60); // frames -> ms at 60 fps
-
 const IDS = [...CASCADE_SYMBOL_IDS];
 const REELS = 6, ROWS = 4;
 const SCALE = 0.68;
@@ -23,7 +21,7 @@ const CELL_H = CASCADE_PLATE_H * SCALE;
 const GROUP_A = { id: 'mid2', cells: [{ reel: 2, row: 1 }, { reel: 3, row: 1 }, { reel: 4, row: 1 }], value: 60 };
 const GROUP_B = { id: 'low1', cells: [{ reel: 0, row: 2 }, { reel: 1, row: 2 }, { reel: 2, row: 2 }], value: 30 };
 const PLANTED = new Set([GROUP_A.id, GROUP_B.id]);
-const HOLD_AFTER_PRESENT_MS = F(27); // 450 ms // pause between presentation and explosion
+const HOLD_AFTER_PRESENT_MS = 450; // 27 frames // pause between presentation and explosion
 
 function randSymbol() {
   let s;
@@ -64,8 +62,8 @@ const reelSet = new ReelSetBuilder()
   .symbolData({ high: { zIndex: 10, unmask: true } })
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
-    fall:   { duration: F(17), ease: 'power3.in', rowStagger: F(4) },
-    dropIn: { duration: F(27), ease: 'power2.in', rowStagger: F(4), distance: 'perHole' },
+    fall:   { duration: 283, ease: 'power3.in', rowStagger: 67 },  // 17f, 4f stagger
+    dropIn: { duration: 450, ease: 'power2.in', rowStagger: 67, distance: 'perHole' },  // 27f, 4f stagger
   })
   .ticker(app.ticker).build();
 
@@ -136,7 +134,7 @@ return {
         ]);
         await new Promise(r => setTimeout(r, HOLD_AFTER_PRESENT_MS));
       },
-      pauseAfterDestroyMs: F(5),
+      pauseAfterDestroyMs: 83,
     });
   },
   cleanup: () => presenter.destroy(),

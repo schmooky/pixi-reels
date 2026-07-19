@@ -9,8 +9,6 @@
 
 await loadCascadeSpines();
 
-const F = (n) => Math.round(n * 1000 / 60); // frames -> ms at 60 fps
-
 const IDS = [...CASCADE_SYMBOL_IDS];
 const REELS = 5, ROWS = 5;
 // Cells match the authored 88x101.6 symbol plate.
@@ -65,8 +63,8 @@ const reelSet = new ReelSetBuilder()
   // The opening reveal IS a tumble here, so `fall` matters. it animates
   // the previous board out before the new one drops in.
   .tumble({
-    fall:   { duration: F(16), ease: 'power2.in', rowStagger: F(2) },
-    dropIn: { duration: F(24), ease: 'power2.in', rowStagger: F(3), distance: 'perHole' },
+    fall:   { duration: 267, ease: 'power2.in', rowStagger: 33 },  // 16f, 2f stagger
+    dropIn: { duration: 400, ease: 'power2.in', rowStagger: 50, distance: 'perHole' },  // 24f, 3f stagger
   })
   .ticker(app.ticker)
   .build();
@@ -118,7 +116,7 @@ return {
         trigger = trigger === TRIGGER1 ? TRIGGER2 : '__none__';
         return out;
       },
-      pauseAfterDestroyMs: F(10),
+      pauseAfterDestroyMs: 167,
     });
   },
 };

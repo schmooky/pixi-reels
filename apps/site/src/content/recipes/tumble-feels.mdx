@@ -29,18 +29,16 @@ tags:
 Every canvas below runs the **exact same scripted spin**: a 6×4 board of real Thunderkick spine symbols lands with a pre-wired 3-cluster of `low1` on row 2, those three winners play their authored `explode` clip (compressed per canvas via `TrackEntry.timeScale` to match each tumble's tempo), **the loop pauses for a configured beat**, then the cascade refill drops survivors into the holes and brings a fresh row from above. Two things vary between canvases:
 
 1. `.tumble({ fall, dropIn })`. the animation feel itself.
-2. `PAUSE_AFTER_REMOVAL_MS`. the breathing room between the explosion and the refill drop-in. Different feels want different pauses: snappy slams want ~8 frames (133 ms), slow / dramatic feels want 18-24 frames (300-400 ms). Every timing on this page sits on a 60 fps frame grid (`F(n)` = n frames in ms). animations land on whole frames instead of arbitrary milliseconds.
+2. `PAUSE_AFTER_REMOVAL_MS`. the breathing room between the explosion and the refill drop-in. Different feels want different pauses: snappy slams want ~8 frames (133 ms), slow / dramatic feels want 18-24 frames (300-400 ms). Every timing on this page is a whole number of 60 fps frames written in ms (267 = 16 frames, 400 = 24, 50 = 3). animations land on frame boundaries instead of arbitrary milliseconds.
 
 ## Classic. the all-rounder default
 
 <RecipeDemo code="tumble-classic" />
 
 ```ts
-const F = (n) => Math.round(n * 1000 / 60); // frames -> ms at 60 fps
-
 .tumble({
-  fall:   { duration: F(16), ease: 'power2.in', rowStagger: F(2) },
-  dropIn: { duration: F(24), ease: 'power2.in', rowStagger: F(3), distance: 'perHole' },
+  fall:   { duration: 267, ease: 'power2.in', rowStagger: 33 },
+  dropIn: { duration: 400, ease: 'power2.in', rowStagger: 50, distance: 'perHole' },
 })
 ```
 
@@ -52,12 +50,12 @@ Gravity on both ends: the board accelerates out, the new symbols accelerate in a
 
 ```ts
 .tumble({
-  fall:   { duration: F(20), ease: 'power2.in', rowStagger: F(4) },
-  dropIn: { duration: F(42), ease: 'power2.in', rowStagger: F(4), distance: 'perHole' },
+  fall:   { duration: 333, ease: 'power2.in', rowStagger: 67 },
+  dropIn: { duration: 700, ease: 'power2.in', rowStagger: 67, distance: 'perHole' },
 })
 ```
 
-The slow, dramatic variant: a long `F(42)` (700 ms) `power2.in` with a heavy stagger. each row hangs at the top, then accelerates into its slot. The pacing lives entirely in duration + stagger; the landing itself still hits dead. (On frameless art this slot is where you'd reach for `bounce.out`.)
+The slow, dramatic variant: a long 700 ms (42-frame) `power2.in` with a heavy stagger. each row hangs at the top, then accelerates into its slot. The pacing lives entirely in duration + stagger; the landing itself still hits dead. (On frameless art this slot is where you'd reach for `bounce.out`.)
 
 ## Slam. hard-landing, sub-half-second tumble
 
@@ -65,8 +63,8 @@ The slow, dramatic variant: a long `F(42)` (700 ms) `power2.in` with a heavy sta
 
 ```ts
 .tumble({
-  fall:   { duration: F(10), ease: 'power3.in', rowStagger: F(1) },
-  dropIn: { duration: F(15), ease: 'power3.in', rowStagger: F(1), distance: 'perHole' },
+  fall:   { duration: 167, ease: 'power3.in', rowStagger: 17 },
+  dropIn: { duration: 250, ease: 'power3.in', rowStagger: 17, distance: 'perHole' },
 })
 ```
 
@@ -78,8 +76,8 @@ The slow, dramatic variant: a long `F(42)` (700 ms) `power2.in` with a heavy sta
 
 ```ts
 .tumble({
-  fall:   { duration: F(14), ease: 'power2.in', rowStagger: 0 },
-  dropIn: { duration: F(22), ease: 'power2.in', rowStagger: 0, distance: 'auto' },
+  fall:   { duration: 233, ease: 'power2.in', rowStagger: 0 },
+  dropIn: { duration: 367, ease: 'power2.in', rowStagger: 0, distance: 'auto' },
 })
 ```
 
@@ -91,22 +89,22 @@ The slow, dramatic variant: a long `F(42)` (700 ms) `power2.in` with a heavy sta
 
 ```ts
 .tumble({
-  fall:   { duration: F(11), ease: 'power2.in', rowStagger: F(5) },
-  dropIn: { duration: F(20), ease: 'power2.in', rowStagger: F(7), distance: 'perHole' },
+  fall:   { duration: 183, ease: 'power2.in', rowStagger: 83 },
+  dropIn: { duration: 333, ease: 'power2.in', rowStagger: 117, distance: 'perHole' },
 })
 ```
 
-Heavy `rowStagger` (`F(7)` = 117 ms on drop-in) makes each row land in its own beat. the wave IS the stagger. Row 0 lands, then row 1, then row 2. Pair with row-by-row sound cues if you want a per-row audio hit. The more cascades in a chain, the more rows arrive in sequence.
+Heavy `rowStagger` (117 ms = 7 frames on drop-in) makes each row land in its own beat. the wave IS the stagger. Row 0 lands, then row 1, then row 2. Pair with row-by-row sound cues if you want a per-row audio hit. The more cascades in a chain, the more rows arrive in sequence.
 
 ## Picking between them
 
 | Feel | Pause | Pick when | Avoid when |
 |---|---|---|---|
-| Classic | F(15) = 250 ms | Default if you have no other constraints |. |
-| Slow drop | F(20) = 333 ms | Long hang, heavy stagger | Turbo-first games. the hang slows the perceived pace |
-| Slam | F(8) = 133 ms | Turbo mode, sub-half-second tumbles | You want a longer beat between cascades |
-| Rain column | F(24) = 400 ms | Match-3 / chess-board / puzzle grids | Reels are visually distinct (the cohesive slab look fights the column gaps) |
-| Wave | F(18) = 300 ms | Strong per-row stagger, row-by-row arrival | Very dense grids. the stagger makes the whole tumble feel long |
+| Classic | 250 ms (15f) | Default if you have no other constraints |. |
+| Slow drop | 333 ms (20f) | Long hang, heavy stagger | Turbo-first games. the hang slows the perceived pace |
+| Slam | 133 ms (8f) | Turbo mode, sub-half-second tumbles | You want a longer beat between cascades |
+| Rain column | 400 ms (24f) | Match-3 / chess-board / puzzle grids | Reels are visually distinct (the cohesive slab look fights the column gaps) |
+| Wave | 300 ms (18f) | Strong per-row stagger, row-by-row arrival | Very dense grids. the stagger makes the whole tumble feel long |
 
 The **Pause** column is `PAUSE_AFTER_REMOVAL_MS` in each recipe. the gap between the win-fade ending and the refill drop-in starting. It's not a library setting; it's just an `await wait(ms)` in your spin loop. Tuning it per feel is the single biggest lever on cascade pacing after the tumble config itself.
 

@@ -10,8 +10,6 @@
 
 await loadCascadeSpines();
 
-const F = (n) => Math.round(n * 1000 / 60); // frames -> ms at 60 fps
-
 const IDS = [...CASCADE_SYMBOL_IDS];
 const REELS = 6, ROWS = 4;
 // Cells match the authored 88x101.6 symbol plate.
@@ -24,7 +22,7 @@ const HIT_COLS = [0, 1, 2];
 
 // Short pause. slam is snappy by design. 120 ms is just enough for the
 // player to register "the winners are gone" before the next slam arrives.
-const PAUSE_AFTER_REMOVAL_MS = F(8);
+const PAUSE_AFTER_REMOVAL_MS = 133;
 
 function randSymbol(exclude) {
   let s;
@@ -68,8 +66,8 @@ const reelSet = new ReelSetBuilder()
   .symbolData({ high: { zIndex: 10, unmask: true } })
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
-    fall:   { duration: F(10), ease: 'power3.in', rowStagger: F(1) },
-    dropIn: { duration: F(15), ease: 'power3.in', rowStagger: F(1), distance: 'perHole' },
+    fall:   { duration: 167, ease: 'power3.in', rowStagger: 17 },  // 10f, 1f stagger
+    dropIn: { duration: 250, ease: 'power3.in', rowStagger: 17, distance: 'perHole' },  // 15f, 1f stagger
   })
   .ticker(app.ticker).build();
 

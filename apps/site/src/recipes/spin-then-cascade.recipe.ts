@@ -18,8 +18,6 @@
 
 await loadCascadeSpines();
 
-const F = (n) => Math.round(n * 1000 / 60); // frames -> ms at 60 fps
-
 const IDS = [...CASCADE_SYMBOL_IDS];
 const REELS = 5, ROWS = 5;
 // Cells match the authored 88x101.6 symbol plate.
@@ -76,7 +74,7 @@ const reelSet = new ReelSetBuilder()
   // need `.tumble()` for the strip-spin landing itself).
   .tumble({
     fall:   { duration: 0, ease: 'none', rowStagger: 0 },              // not used. refill skips fall
-    dropIn: { duration: F(22), ease: 'power2.in', rowStagger: 0, distance: 'perHole' },
+    dropIn: { duration: 367, ease: 'power2.in', rowStagger: 0, distance: 'perHole' },  // 22f
   })
   .ticker(app.ticker)
   .build();
@@ -142,7 +140,7 @@ return {
         trigger = trigger === TRIGGER1 ? TRIGGER2 : '__none__';
         return out;
       },
-      pauseAfterDestroyMs: F(10),
+      pauseAfterDestroyMs: 167,
     });
   },
 };

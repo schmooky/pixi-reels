@@ -10,8 +10,6 @@
 
 await loadCascadeSpines();
 
-const F = (n) => Math.round(n * 1000 / 60); // frames -> ms at 60 fps
-
 const IDS = [...CASCADE_SYMBOL_IDS];
 const REELS = 6, ROWS = 4;
 // Cells match the authored 88x101.6 symbol plate.
@@ -65,8 +63,8 @@ const reelSet = new ReelSetBuilder()
   .symbolData({ high: { zIndex: 10, unmask: true } })
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
-    fall:   { duration: F(16), ease: 'power2.in', rowStagger: F(3) },
-    dropIn: { duration: F(24), ease: 'power2.in', rowStagger: 0, distance: 'perHole' },
+    fall:   { duration: 267, ease: 'power2.in', rowStagger: 50 },  // 16f, 3f stagger
+    dropIn: { duration: 400, ease: 'power2.in', rowStagger: 0, distance: 'perHole' },  // 24f
   })
   .ticker(app.ticker).build();
 

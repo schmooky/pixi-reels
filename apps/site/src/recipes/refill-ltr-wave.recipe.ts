@@ -10,8 +10,6 @@
 
 await loadCascadeSpines();
 
-const F = (n) => Math.round(n * 1000 / 60); // frames -> ms at 60 fps
-
 const IDS = [...CASCADE_SYMBOL_IDS];
 const REELS = 6, ROWS = 4;
 // Cells match the authored 88x101.6 symbol plate.
@@ -21,8 +19,8 @@ const CELL_H = CASCADE_PLATE_H * SCALE;
 const CLUSTER = 'low1';
 const HIT_ROW = 2;
 const HIT_COLS = [0, 1, 2];
-const PAUSE_AFTER_REMOVAL_MS = F(13);
-const REEL_WAVE_STEP_MS = F(6); // 100 ms
+const PAUSE_AFTER_REMOVAL_MS = 217;
+const REEL_WAVE_STEP_MS = 100; // 6 frames
 
 function randSymbol(exclude) {
   let s;
@@ -66,10 +64,10 @@ const reelSet = new ReelSetBuilder()
   .symbolData({ high: { zIndex: 10, unmask: true } })
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
-    fall:   { duration: F(14), ease: 'power2.in', rowStagger: F(2) },
+    fall:   { duration: 233, ease: 'power2.in', rowStagger: 33 },  // 14f, 2f stagger
     // rowStagger: 0. rows in a reel arrive together; the per-reel
     // stagger is set via setDropOrder('ltr', step) on the refill below.
-    dropIn: { duration: F(22), ease: 'power2.in', rowStagger: 0, distance: 'perHole' },
+    dropIn: { duration: 367, ease: 'power2.in', rowStagger: 0, distance: 'perHole' },  // 22f
   })
   .ticker(app.ticker).build();
 

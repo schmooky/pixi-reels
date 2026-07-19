@@ -47,7 +47,7 @@ That extra beat between gravity and refill is the whole point: it gives anticipa
 await reelSet.destroySymbols(winners);
 await wait(PAUSE_AFTER_REMOVAL_MS);
 
-reelSet.setDropOrder('ltr', F(6));  // 6-frame column wave for stage B
+reelSet.setDropOrder('ltr', 100);  // 6-frame column wave for stage B
 
 await reelSet.refill({
   winners,
@@ -119,7 +119,7 @@ The hook fires once per cascade, after every reel reports `cascade:gravity:end` 
 
 ## Walking the beat. strictly sequential columns
 
-Same two-stage refill, one tuning change: `COLUMN_STEP_MS` raised past `dropIn.duration` (`F(24)` = 400 ms vs `F(22)` = 367 ms), so each drop-in column fully lands before the next one starts. The anticipation stops being one global beat and starts *walking the board*. reel 0, breath, reel 1, breath, reel 2. Pair it with a longer `gravityHoldMs` (`F(36)` = 600 ms here):
+Same two-stage refill, one tuning change: `COLUMN_STEP_MS` raised past `dropIn.duration` (400 ms vs 367 ms. 24 vs 22 frames), so each drop-in column fully lands before the next one starts. The anticipation stops being one global beat and starts *walking the board*. reel 0, breath, reel 1, breath, reel 2. Pair it with a longer `gravityHoldMs` (600 ms here):
 
 <RecipeDemo code="tumble-anticipation-stagger" />
 
