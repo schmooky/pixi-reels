@@ -10,6 +10,8 @@
 
 await loadCascadeSpines();
 
+const F = (n) => Math.round(n * 1000 / 60); // frames -> ms at 60 fps
+
 const IDS = [...CASCADE_SYMBOL_IDS];
 const REELS = 6, ROWS = 4;
 // Cells match the authored 88x101.6 symbol plate.
@@ -23,7 +25,7 @@ const HIT_COLS = [0, 1, 2];
 // Pause between "winners faded out" and "refill drop-in starts". Most
 // commercial slots dial this between 150 and 400 ms. too short feels
 // like a teleport, too long stalls the cascade momentum.
-const PAUSE_AFTER_REMOVAL_MS = 250;
+const PAUSE_AFTER_REMOVAL_MS = F(15);
 
 function randSymbol(exclude) {
   let s;
@@ -33,7 +35,7 @@ function randSymbol(exclude) {
 
 // The authored `explode` clip runs 1.27 s, too long for this demo's
 // cascade timing. Play it faster via TrackEntry.timeScale.
-const EXPLODE_TIME_SCALE = 2.2;
+const EXPLODE_TIME_SCALE = 2.4; // 1.27 s clip -> ~32 frames
 
 class TimedExplodeSymbol extends SpineReelSymbol {
   async playOut() {
@@ -67,8 +69,8 @@ const reelSet = new ReelSetBuilder()
   .symbolData({ high: { zIndex: 10, unmask: true } })
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
-    fall:   { duration: 280, ease: 'power2.in',       rowStagger: 40 },
-    dropIn: { duration: 480, ease: 'power2.in', rowStagger: 50, distance: 'perHole' },
+    fall:   { duration: F(16), ease: 'power2.in', rowStagger: F(2) },
+    dropIn: { duration: F(24), ease: 'power2.in', rowStagger: F(3), distance: 'perHole' },
   })
   .ticker(app.ticker).build();
 

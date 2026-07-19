@@ -8,6 +8,8 @@
 
 await loadCascadeSpines();
 
+const F = (n) => Math.round(n * 1000 / 60); // frames -> ms at 60 fps
+
 const IDS = [...CASCADE_SYMBOL_IDS];
 const REELS = 6, ROWS = 4;
 // Cells match the authored 88x101.6 symbol plate.
@@ -20,7 +22,7 @@ const HIT_COLS = [0, 1, 2];
 
 // Medium pause. wave is already long because of the per-row stagger;
 // the pause sets up the rhythm of the next wave without over-stalling.
-const PAUSE_AFTER_REMOVAL_MS = 280;
+const PAUSE_AFTER_REMOVAL_MS = F(18);
 
 function randSymbol(exclude) {
   let s;
@@ -30,7 +32,7 @@ function randSymbol(exclude) {
 
 // The authored `explode` clip runs 1.27 s, too long for this demo's
 // cascade timing. Play it faster via TrackEntry.timeScale.
-const EXPLODE_TIME_SCALE = 2.2;
+const EXPLODE_TIME_SCALE = 2.4; // 1.27 s clip -> ~32 frames
 
 class TimedExplodeSymbol extends SpineReelSymbol {
   async playOut() {
@@ -64,8 +66,8 @@ const reelSet = new ReelSetBuilder()
   .symbolData({ high: { zIndex: 10, unmask: true } })
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
-    fall:   { duration: 180, ease: 'power2.in',       rowStagger: 90 },
-    dropIn: { duration: 320, ease: 'power2.in', rowStagger: 110, distance: 'perHole' },
+    fall:   { duration: F(11), ease: 'power2.in', rowStagger: F(5) },
+    dropIn: { duration: F(20), ease: 'power2.in', rowStagger: F(7), distance: 'perHole' },
   })
   .ticker(app.ticker).build();
 

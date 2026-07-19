@@ -37,6 +37,8 @@ A cascade/tumble slot on the modern API. `.tumble({ fall, dropIn })` replaces th
 ```ts
 import { ReelSetBuilder, SpriteSymbol, type Cell } from 'pixi-reels';
 
+const F = (n) => Math.round(n * 1000 / 60); // frames -> ms at 60 fps
+
 const reelSet = new ReelSetBuilder()
   .reels(6)
   .visibleRows(5)
@@ -45,8 +47,8 @@ const reelSet = new ReelSetBuilder()
     for (const id of SYMBOLS) r.register(id, SpriteSymbol, { textures });
   })
   .tumble({
-    fall:   { duration: 280, ease: 'power3.in',  rowStagger: 60 },
-    dropIn: { duration: 450, ease: 'power3.out', rowStagger: 60, distance: 'perHole' },
+    fall:   { duration: F(17), ease: 'power3.in', rowStagger: F(4) },
+    dropIn: { duration: F(27), ease: 'power2.in', rowStagger: F(4), distance: 'perHole' },
   })
   .ticker(app.ticker)
   .build();

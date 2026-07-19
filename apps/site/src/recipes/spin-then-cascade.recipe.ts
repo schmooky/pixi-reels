@@ -18,6 +18,8 @@
 
 await loadCascadeSpines();
 
+const F = (n) => Math.round(n * 1000 / 60); // frames -> ms at 60 fps
+
 const IDS = [...CASCADE_SYMBOL_IDS];
 const REELS = 5, ROWS = 5;
 // Cells match the authored 88x101.6 symbol plate.
@@ -38,7 +40,7 @@ function randSymbolNotIn(exclude) {
 
 // The authored `explode` clip runs 1.27 s, too long for this demo's
 // cascade timing. Play it faster via TrackEntry.timeScale.
-const EXPLODE_TIME_SCALE = 2.2;
+const EXPLODE_TIME_SCALE = 2.4; // 1.27 s clip -> ~32 frames
 
 class TimedExplodeSymbol extends SpineReelSymbol {
   async playOut() {
@@ -74,7 +76,7 @@ const reelSet = new ReelSetBuilder()
   // need `.tumble()` for the strip-spin landing itself).
   .tumble({
     fall:   { duration: 0, ease: 'none', rowStagger: 0 },              // not used. refill skips fall
-    dropIn: { duration: 360, ease: 'power2.in', rowStagger: 0, distance: 'perHole' },
+    dropIn: { duration: F(22), ease: 'power2.in', rowStagger: 0, distance: 'perHole' },
   })
   .ticker(app.ticker)
   .build();
@@ -140,7 +142,7 @@ return {
         trigger = trigger === TRIGGER1 ? TRIGGER2 : '__none__';
         return out;
       },
-      pauseAfterDestroyMs: 160,
+      pauseAfterDestroyMs: F(10),
     });
   },
 };

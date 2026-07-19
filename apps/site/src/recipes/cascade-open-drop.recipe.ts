@@ -9,6 +9,8 @@
 
 await loadCascadeSpines();
 
+const F = (n) => Math.round(n * 1000 / 60); // frames -> ms at 60 fps
+
 const IDS = [...CASCADE_SYMBOL_IDS];
 const REELS = 5, ROWS = 5;
 // Cells match the authored 88x101.6 symbol plate.
@@ -29,7 +31,7 @@ function randSymbolNotIn(exclude) {
 
 // The authored `explode` clip runs 1.27 s, too long for this demo's
 // cascade timing. Play it faster via TrackEntry.timeScale.
-const EXPLODE_TIME_SCALE = 2.2;
+const EXPLODE_TIME_SCALE = 2.4; // 1.27 s clip -> ~32 frames
 
 class TimedExplodeSymbol extends SpineReelSymbol {
   async playOut() {
@@ -63,8 +65,8 @@ const reelSet = new ReelSetBuilder()
   // The opening reveal IS a tumble here, so `fall` matters. it animates
   // the previous board out before the new one drops in.
   .tumble({
-    fall:   { duration: 260, ease: 'power2.in',       rowStagger: 40 },
-    dropIn: { duration: 420, ease: 'power2.in', rowStagger: 45, distance: 'perHole' },
+    fall:   { duration: F(16), ease: 'power2.in', rowStagger: F(2) },
+    dropIn: { duration: F(24), ease: 'power2.in', rowStagger: F(3), distance: 'perHole' },
   })
   .ticker(app.ticker)
   .build();
@@ -116,7 +118,7 @@ return {
         trigger = trigger === TRIGGER1 ? TRIGGER2 : '__none__';
         return out;
       },
-      pauseAfterDestroyMs: 160,
+      pauseAfterDestroyMs: F(10),
     });
   },
 };

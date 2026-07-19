@@ -12,6 +12,8 @@
 
 await loadCascadeSpines();
 
+const F = (n) => Math.round(n * 1000 / 60); // frames -> ms at 60 fps
+
 const IDS = [...CASCADE_SYMBOL_IDS];
 const REELS = 5, ROWS = 5;
 // Cells match the authored 88x101.6 symbol plate.
@@ -31,7 +33,7 @@ function randSymbolNotIn(exclude) {
 }
 
 // Faster than the normal-speed canvas: destruction done in ~0.4 s.
-const EXPLODE_TIME_SCALE = 3.0;
+const EXPLODE_TIME_SCALE = 3.2; // 1.27 s clip -> ~24 frames
 
 class TimedExplodeSymbol extends SpineReelSymbol {
   async playOut() {
@@ -73,7 +75,7 @@ const reelSet = new ReelSetBuilder()
   .initialSpeed('turbo')
   .tumble({
     fall:   { duration: 0, ease: 'none', rowStagger: 0 },              // not used. refill skips fall
-    dropIn: { duration: 240, ease: 'power2.in', rowStagger: 0, distance: 'perHole' },
+    dropIn: { duration: F(14), ease: 'power2.in', rowStagger: 0, distance: 'perHole' },
   })
   .ticker(app.ticker)
   .build();
@@ -122,7 +124,7 @@ return {
         trigger = trigger === TRIGGER1 ? TRIGGER2 : '__none__';
         return out;
       },
-      pauseAfterDestroyMs: 80,
+      pauseAfterDestroyMs: F(5),
     });
   },
 };

@@ -11,6 +11,8 @@
 
 await loadCascadeSpines();
 
+const F = (n) => Math.round(n * 1000 / 60); // frames -> ms at 60 fps
+
 const IDS = [...CASCADE_SYMBOL_IDS];
 const REELS = 6, ROWS = 4;
 const SCALE = 0.68;
@@ -21,7 +23,7 @@ const CELL_H = CASCADE_PLATE_H * SCALE;
 const GROUP_A = { id: 'mid2', cells: [{ reel: 2, row: 1 }, { reel: 3, row: 1 }, { reel: 4, row: 1 }], value: 60 };
 const GROUP_B = { id: 'low1', cells: [{ reel: 0, row: 2 }, { reel: 1, row: 2 }, { reel: 2, row: 2 }], value: 30 };
 const PLANTED = new Set([GROUP_A.id, GROUP_B.id]);
-const HOLD_AFTER_PRESENT_MS = 450; // pause between presentation and explosion
+const HOLD_AFTER_PRESENT_MS = F(27); // 450 ms // pause between presentation and explosion
 
 function randSymbol() {
   let s;
@@ -30,7 +32,7 @@ function randSymbol() {
 }
 
 // Shorter explosion. the presenter already showed the win.
-const EXPLODE_TIME_SCALE = 2.2;
+const EXPLODE_TIME_SCALE = 2.4; // 1.27 s clip -> ~32 frames
 
 class TimedExplodeSymbol extends SpineReelSymbol {
   async playOut() {
@@ -62,8 +64,8 @@ const reelSet = new ReelSetBuilder()
   .symbolData({ high: { zIndex: 10, unmask: true } })
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
-    fall:   { duration: 280, ease: 'power3.in',  rowStagger: 60 },
-    dropIn: { duration: 450, ease: 'power2.in', rowStagger: 60, distance: 'perHole' },
+    fall:   { duration: F(17), ease: 'power3.in', rowStagger: F(4) },
+    dropIn: { duration: F(27), ease: 'power2.in', rowStagger: F(4), distance: 'perHole' },
   })
   .ticker(app.ticker).build();
 
@@ -134,7 +136,7 @@ return {
         ]);
         await new Promise(r => setTimeout(r, HOLD_AFTER_PRESENT_MS));
       },
-      pauseAfterDestroyMs: 80,
+      pauseAfterDestroyMs: F(5),
     });
   },
   cleanup: () => presenter.destroy(),

@@ -10,6 +10,8 @@
 
 await loadCascadeSpines();
 
+const F = (n) => Math.round(n * 1000 / 60); // frames -> ms at 60 fps
+
 const IDS = [...CASCADE_SYMBOL_IDS];
 const REELS = 6, ROWS = 4;
 // Cells match the authored 88x101.6 symbol plate.
@@ -23,7 +25,7 @@ const HIT_COLS = [0, 1, 2];
 // Dramatic pause. the empty board is part of the visual story for
 // rain-column feels. 380 ms lets the absence of symbols register before
 // the next slab drops.
-const PAUSE_AFTER_REMOVAL_MS = 380;
+const PAUSE_AFTER_REMOVAL_MS = F(24);
 
 function randSymbol(exclude) {
   let s;
@@ -33,7 +35,7 @@ function randSymbol(exclude) {
 
 // The authored `explode` clip runs 1.27 s, too long for this demo's
 // cascade timing. Play it faster via TrackEntry.timeScale.
-const EXPLODE_TIME_SCALE = 2.2;
+const EXPLODE_TIME_SCALE = 2.4; // 1.27 s clip -> ~32 frames
 
 class TimedExplodeSymbol extends SpineReelSymbol {
   async playOut() {
@@ -67,8 +69,8 @@ const reelSet = new ReelSetBuilder()
   .symbolData({ high: { zIndex: 10, unmask: true } })
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
-    fall:   { duration: 240, ease: 'power2.in', rowStagger: 0 },
-    dropIn: { duration: 380, ease: 'power2.in', rowStagger: 0, distance: 'auto' },
+    fall:   { duration: F(14), ease: 'power2.in', rowStagger: 0 },
+    dropIn: { duration: F(22), ease: 'power2.in', rowStagger: 0, distance: 'auto' },
   })
   .ticker(app.ticker).build();
 

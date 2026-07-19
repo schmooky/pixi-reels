@@ -6,6 +6,8 @@
 // stages. `reelSet.runCascade({ detectWinners, nextGrid })` owns the
 // orchestration; the two callbacks own the game rules.
 
+const F = (n) => Math.round(n * 1000 / 60); // frames -> ms at 60 fps
+
 const IDS = ['7', '8', '9', '10', 'J', 'Q'];
 const REELS = 6, ROWS = 4, SIZE = 72;
 const CLUSTER = '10';
@@ -29,8 +31,8 @@ const reelSet = new ReelSetBuilder()
   })
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150 })
   .tumble({
-    fall:   { duration: 280, ease: 'power3.in',  rowStagger: 60 },
-    dropIn: { duration: 450, ease: 'power3.out', rowStagger: 60, distance: 'perHole' },
+    fall:   { duration: F(17), ease: 'power3.in', rowStagger: F(4) },
+    dropIn: { duration: F(27), ease: 'power2.in', rowStagger: F(4), distance: 'perHole' },
   })
   .ticker(app.ticker).build();
 
@@ -73,7 +75,7 @@ return {
         }
         return next;
       },
-      pauseAfterDestroyMs: 250,
+      pauseAfterDestroyMs: F(15),
     });
   },
 };
