@@ -20,7 +20,7 @@ const CLUSTER = 'low1';
 const HIT_ROW = 2;
 const HIT_COLS = [0, 1, 2];
 
-// Short pause. slam is snappy by design. 120 ms is just enough for the
+// Short pause. slam is snappy by design. 133 ms is just enough for the
 // player to register "the winners are gone" before the next slam arrives.
 const PAUSE_AFTER_REMOVAL_MS = 133;
 

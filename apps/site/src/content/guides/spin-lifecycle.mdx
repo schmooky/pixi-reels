@@ -15,17 +15,17 @@ Wait, that's four! Yeah, kinda.
 
 You *might* enable anticipation explicitly before setting the result, which makes that phase appear. Most games with scatters need it anyway, so the engine ships it ready to use.
 
-**Start** accelerates from rest with a tiny step-back "pull."&#x20;
+**Start** accelerates from rest with a tiny step-back "pull."
 
-**Spin** holds full speed until the server answer arrives.&#x20;
+**Spin** holds full speed until the server answer arrives.
 
-**Anticipation** (optional) slows a specific reel for dramatic tension.&#x20;
+**Anticipation** (optional) slows a specific reel for dramatic tension.
 
 **Stop** decelerates onto the target frame with a bounce.
 
 ## What events will be fired by ReelSet
 
-When you fire off `reelSet.spin()`, you don't have to poll anything to know what's happening.&#x20;
+When you fire off `reelSet.spin()`, you don't have to poll anything to know what's happening.
 
 The reelset emits events at every beat of the lifecycle, and a single `await reelSet.spin()` walks through all of them in order.
 
@@ -51,7 +51,7 @@ if (response.anticipationReels?.length) {
 const result = await promise;
 ```
 
-`setResult()` must be called **while the reels are spinning**.&#x20;
+`setResult()` must be called **while the reels are spinning**.
 
 If you call it too early (before `spin:allStarted`), the engine defers the stop until all
 reels are in the SPIN phase.
@@ -64,9 +64,9 @@ The library exposes three slam verbs with three different intents:
 
 `requestSkip()` is the "slam when ready" one. You can call it before `setResult()` arrives. No boost, no auto-slam. Queues until `setResult()`, then slams once. Use it when the player mashes the slam button before the result arrives.
 
-`slamStop()` is an uncunditional "land it now". No boost, no auto-slam.
+`slamStop()` is an unconditional "land it now". No boost, no auto-slam.
 
-All three force-land on whatever `setResult()` told the engine. `result.wasSkipped === true`.&#x20;
+All three force-land on whatever `setResult()` told the engine. `result.wasSkipped === true`.
 
 The lifecycle hooks (`spin:reelLanded`, `spin:allLanded`, `spin:complete`) all still fire on the slam path. so win presenters and effect chains keep working without a separate code path.
 
@@ -83,9 +83,9 @@ reelSet.setResult(serverGrid);
 await spin;
 ```
 
-Held reels skip the spin entirely and stay on whatever symbols they're currently showing.&#x20;
+Held reels skip the spin entirely and stay on whatever symbols they're currently showing.
 
-They count as already-landed for `spin:allLanded`, so the resolver fires when all *non-held* reels land. No `spin:reelLanded` / `spin:stopping` fires for held reels.&#x20;
+They count as already-landed for `spin:allLanded`, so the resolver fires when all *non-held* reels land. No `spin:reelLanded` / `spin:stopping` fires for held reels.
 
 `setAnticipation([...])` filters held indices silently.
 
@@ -114,7 +114,7 @@ See the [spin-then-cascade recipe](/recipes/spin-then-cascade/).
 ## How to nudge
 
 After a spin lands, you can shift a single reel by N positions to
-reveal caller-supplied symbols via `reelSet.nudge(col, ...)`.&#x20;
+reveal caller-supplied symbols via `reelSet.nudge(col, ...)`.
 
 The spin pipeline is idle during a nudge; the nudge's own tween drives the strip.
 
@@ -128,7 +128,7 @@ Multi-reel beats are `Promise.all([...])` of independent calls.
 Cancel mid-tween via `NudgeOptions.signal` (rejects with `AbortError` +
 `nudge:cancelled`), or fast-forward via `reelSet.skipNudge(col)`(resolves normally).
 
-Read the full contract in the [nudge guide](/guides/nudge/).&#x20;
+Read the full contract in the [nudge guide](/guides/nudge/).
 
 Live recipes: [nudge](/recipes/nudge/), [skip](/recipes/nudge-skip/), [abort](/recipes/nudge-abort/), [stagger](/recipes/nudge-stagger/), [spotlight after a nudge](/recipes/nudge-spotlight/), [big symbols](/recipes/nudge-big-symbol/).
 
