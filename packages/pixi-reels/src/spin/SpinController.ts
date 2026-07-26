@@ -1138,6 +1138,24 @@ export class SpinController implements Disposable {
 
     const reel = this._reels[reelIndex];
     const isTumble = this._currentSpinMode === 'cascade';
+    const canAdjust = this._hooks.isMultiWaysSlot && this._phaseFactory.has('adjust');
+
+    // Cascade (classic-tumble) reshape ordering. In standard mode the reshape
+    // runs between SPIN and STOP (below), where the spin blur hides a reel
+    // changing height. Cascade mode has no such cover: `CascadeFallPhase` drops
+    // the reel's CURRENT visible rows, so if the reshape ran after the fall the
+    // reel would drop its OLD, differently-sized board and then snap to the new
+    // shape. a reel visibly changing height mid-tumble. When the target shape is
+    // already known at spin time (the game called `setShape()` BEFORE
+    // `spin({ mode: 'cascade' })`), commit the reshape HERE, before the fall, so
+    // the fall drops the reel at its target height. If the shape arrives later
+    // (legacy `spin()` then `setShape()`), `peekTargetShape()` is still null and
+    // this is skipped; the reshape falls back to the post-SPIN slot unchanged.
+    const reshapeBeforeFall = isTumble && canAdjust && this._hooks.peekTargetShape() !== null;
+    if (reshapeBeforeFall) {
+      await this._runAdjustForReel(reel, reelIndex, speed, generation);
+      if (generation !== this._spinGeneration) return;
+    }
 
     // START or FALL: chain via phase.run() promises (no busy-polling).
     if (isTumble) {
@@ -1181,8 +1199,9 @@ export class SpinController implements Disposable {
 
     // MultiWays: AdjustPhase commits the new shape and migrates pins between
     // SpinPhase and StopPhase. Inserted only when builder.multiways() was
-    // called. non-MultiWays slots skip this entirely.
-    if (this._hooks.isMultiWaysSlot && this._phaseFactory.has('adjust')) {
+    // called. non-MultiWays slots skip this entirely. Skipped when a cascade
+    // spin already committed the reshape before the fall (see above).
+    if (canAdjust && !reshapeBeforeFall) {
       await this._runAdjustForReel(reel, reelIndex, speed, generation);
       if (generation !== this._spinGeneration) return;
     }
