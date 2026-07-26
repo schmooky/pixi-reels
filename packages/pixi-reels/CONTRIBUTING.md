@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for your interest in pixi-reels. This file covers the mechanics of contributing. For the house style and load-bearing design constraints, read [`AGENTS.md`](./AGENTS.md) first — several of those rules are enforced by lint guards and pre-commit hooks, so they'll block a merge if you break them.
+Thanks for your interest in pixi-reels. This file covers the mechanics of contributing. For the house style and load-bearing design constraints, read [`AGENTS.md`](./AGENTS.md) first - several of those rules are enforced by lint guards and pre-commit hooks, so they'll block a merge if you break them.
 
 ## Quick start
 
@@ -29,7 +29,7 @@ Node 20+ is required. The repo uses pnpm workspaces.
    pnpm changeset
    ```
 
-   Pick the affected packages and the bump kind (`patch` / `minor` / `major`) and commit the resulting `.changeset/*.md` file. Changes to private apps (`@pixi-reels/site`, any `examples/*`) don't need a changeset — those are deployed, not published.
+   Pick the affected packages and the bump kind (`patch` / `minor` / `major`) and commit the resulting `.changeset/*.md` file. Changes to private apps (`@pixi-reels/site`, any `examples/*`) don't need a changeset - those are deployed, not published.
 
 5. **Open a PR.** The template asks for a summary, a test plan, and confirmation that a changeset was added.
 
@@ -39,7 +39,7 @@ Node 20+ is required. The repo uses pnpm workspaces.
 - **Comments explain "why", not "what".** The code already says what it does; comments should capture the non-obvious reason a line exists.
 - **No emoji in source, commit messages, changelog entries, or UI strings.** The fancy-Unicode lint guard enforces this. Use ASCII punctuation.
 - **No default exports.** Always named. Tree-shaking and auto-imports both depend on this.
-- **`.js` extensions in imports.** Even from `.ts` sources — this is required by Node ESM resolution of the published build.
+- **`.js` extensions in imports.** Even from `.ts` sources - this is required by Node ESM resolution of the published build.
 
 ## GitHub Actions are pinned to SHAs
 
@@ -74,7 +74,7 @@ For security issues, follow [`SECURITY.md`](./SECURITY.md) and do not open a pub
 
 ## Crediting contributors
 
-This project follows the [all-contributors](https://allcontributors.org) spec. Anyone who helps — code, docs, design, reviews, bug reports, ideas — gets credited in the README.
+This project follows the [all-contributors](https://allcontributors.org) spec. Anyone who helps - code, docs, design, reviews, bug reports, ideas - gets credited in the README.
 
 To add someone (or yourself), comment on any issue or PR:
 

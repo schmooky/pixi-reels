@@ -1,9 +1,9 @@
 /**
- * M6 — StopPhase.onSkip() must place the FULL target frame (buffers included),
+ * M6 - StopPhase.onSkip() must place the FULL target frame (buffers included),
  * not just the visible window. Slicing to the visible rows dropped
  * buffer-above/below targets (e.g. a big symbol's tail parked above), so a
  * direct skip() landed the wrong frame. The buffer symbols here have weight 0,
- * so they are never random-filled — before the fix they'd be replaced by random
+ * so they are never random-filled - before the fix they'd be replaced by random
  * symbols, after the fix they survive.
  */
 import { describe, it, expect } from 'vitest';
@@ -32,7 +32,7 @@ describe('StopPhase.onSkip', () => {
 
       // Visible window lands correctly...
       expect(reel.symbols.slice(1, 4).map((s) => s.symbolId)).toEqual(['V0', 'V1', 'V2']);
-      // ...and so do the buffers (dropped → random-filled before the fix).
+      // ...and so do the buffers (dropped -> random-filled before the fix).
       expect(reel.symbols[0].symbolId).toBe('ABV');
       expect(reel.symbols[4].symbolId).toBe('BLW');
     } finally {

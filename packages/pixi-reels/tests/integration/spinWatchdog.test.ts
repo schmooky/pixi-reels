@@ -1,5 +1,5 @@
 /**
- * C2 — spin() must never hang forever. An AbortSignal or a timeout watchdog
+ * C2 - spin() must never hang forever. An AbortSignal or a timeout watchdog
  * settles (rejects) the spin promise and force-stops the reels when the server
  * result never arrives, so a failed/cancelled fetch can't wedge the client.
  */
@@ -23,7 +23,7 @@ describe('spin() watchdog / AbortSignal (C2)', () => {
       controller.abort(new Error('fetch failed'));
       await expect(p).rejects.toThrow('fetch failed');
 
-      // The engine recovered to a coherent idle state — a fresh spin works.
+      // The engine recovered to a coherent idle state - a fresh spin works.
       const result = await h.spinAndLand(GRID);
       expect(result.symbols).toHaveLength(3);
     } finally {
@@ -68,7 +68,7 @@ describe('spin() watchdog / AbortSignal (C2)', () => {
       h.reelSet.slamStop();
       const result = await p;
       expect(result.symbols).toHaveLength(3);
-      // Watchdog was cleared on landing — advancing past it must be harmless.
+      // Watchdog was cleared on landing - advancing past it must be harmless.
       await vi.advanceTimersByTimeAsync(10000);
     } finally {
       vi.useRealTimers();

@@ -14,15 +14,15 @@ import type { Ticker } from 'pixi.js';
 /**
  * Read the bounds rect off a PIXI Graphics. PIXI v8 exposes the bounding
  * box via `getBounds()`, which sums every rendered shape. With a single
- * filled rect at (0, 0, w, h), bounds = w × h. With a union of per-reel
- * rects, bounds = the union's bounding box (which equals the totalWidth ×
+ * filled rect at (0, 0, w, h), bounds = w x h. With a union of per-reel
+ * rects, bounds = the union's bounding box (which equals the totalWidth x
  * totalHeight only if rects span the full extent).
  */
 function getBoundsArea(g: { getLocalBounds(): { width: number; height: number } }): {
   width: number;
   height: number;
 } {
-  // Use local bounds — synchronous, no renderer required.
+  // Use local bounds - synchronous, no renderer required.
   const b = g.getLocalBounds();
   return { width: b.width, height: b.height };
 }
@@ -40,7 +40,7 @@ describe('mask strategies', () => {
     expect(g).toBeDefined();
     // Bounds union of the three rects: total width 300, total height 300
     // (the outer two reels span 0..300 vertically; the middle reel sits in
-    // the middle). The union bounding box equals 300 × 300.
+    // the middle). The union bounding box equals 300 x 300.
     const bounds = getBoundsArea(g);
     expect(bounds.width).toBe(300);
     expect(bounds.height).toBe(300);
@@ -50,7 +50,7 @@ describe('mask strategies', () => {
   it('RectMaskStrategy: pyramid layout has gaps in the mask shape', () => {
     // For a pyramid (rects of differing y/height), bounds equals the
     // outer envelope. The middle reel's gap (y=0..100 and y=200..300) is
-    // NOT covered by any rect — verify by checking individual rects:
+    // NOT covered by any rect - verify by checking individual rects:
     // the union of rects is what the mask renders, and pixels outside
     // any rect are clipped.
     const pyramid: ReelMaskRect[] = [
@@ -95,8 +95,8 @@ describe('mask strategies', () => {
     try {
       const rects = reelSet.viewport.maskRects;
       expect(rects).toHaveLength(5);
-      // Outer reels (3 rows × 100 = 300) are centered inside the tallest
-      // reel (5 rows × 100 = 500), so offsetY = 100.
+      // Outer reels (3 rows x 100 = 300) are centered inside the tallest
+      // reel (5 rows x 100 = 500), so offsetY = 100.
       expect(rects[0]).toMatchObject({ y: 100, height: 300 });
       expect(rects[2]).toMatchObject({ y: 0, height: 500 });
       expect(rects[4]).toMatchObject({ y: 100, height: 300 });
@@ -115,11 +115,11 @@ describe('mask strategies', () => {
       .symbols((r) => r.register('a', HeadlessSymbol, {}))
       .build();
     try {
-      // maskRects is still populated — strategy gets the data, just
+      // maskRects is still populated - strategy gets the data, just
       // chooses to ignore it.
       expect(reelSet.viewport.maskRects).toHaveLength(5);
       // The mask itself draws a single bounding rect spanning the full
-      // viewport (500 × 500 for 5 reels of 100 wide × 5 rows of 100 tall).
+      // viewport (500 x 500 for 5 reels of 100 wide x 5 rows of 100 tall).
       const bounds = getBoundsArea(reelSet.viewport.maskGraphics);
       expect(bounds.width).toBe(500);
       expect(bounds.height).toBe(500);
@@ -146,7 +146,7 @@ describe('mask strategies', () => {
         .ticker(new FakeTicker() as unknown as Ticker)
         .build();
       try {
-        // Single bounding rect ⇒ getLocalBounds covers full viewport.
+        // Single bounding rect => getLocalBounds covers full viewport.
         const bounds = reelSet.viewport.maskGraphics.getLocalBounds();
         const totalW = 5 * (80 + 4) - 4; // 416
         expect(bounds.width).toBe(totalW);
@@ -165,7 +165,7 @@ describe('mask strategies', () => {
       .reels(5)
       .visibleRows(4)
       .symbolSize(80, 80)
-      .symbolGap(0, 4) // zero horizontal gap — per-reel rects are contiguous
+      .symbolGap(0, 4) // zero horizontal gap - per-reel rects are contiguous
       .symbols((r) => {
         r.register('a', HeadlessSymbol, {});
         r.register('bonus', HeadlessSymbol, {});
@@ -177,7 +177,7 @@ describe('mask strategies', () => {
       // Default per-reel RectMaskStrategy still in effect.
       const bounds = reelSet.viewport.maskGraphics.getLocalBounds();
       // With 0 horizontal gap, per-reel rects ARE contiguous so bounds
-      // matches single rect — but the strategy is still per-reel. Verify
+      // matches single rect - but the strategy is still per-reel. Verify
       // the rect array is per-reel size 5.
       expect(reelSet.viewport.maskRects).toHaveLength(5);
       expect(bounds.width).toBe(5 * 80);
@@ -204,7 +204,7 @@ describe('mask strategies', () => {
         .ticker(new FakeTicker() as unknown as Ticker)
         .build();
       try {
-        // Single bounding rect ⇒ getLocalBounds covers full viewport.
+        // Single bounding rect => getLocalBounds covers full viewport.
         const bounds = reelSet.viewport.maskGraphics.getLocalBounds();
         const totalW = 5 * (80 + 4) - 4; // 416
         expect(bounds.width).toBe(totalW);
@@ -226,7 +226,7 @@ describe('mask strategies', () => {
       .reels(5)
       .visibleRows(3)
       .symbolSize(80, 80)
-      .symbolGap(0, 4) // zero horizontal gap — per-reel rects are contiguous
+      .symbolGap(0, 4) // zero horizontal gap - per-reel rects are contiguous
       .symbols((r) => {
         r.register('a', HeadlessSymbol, {});
         r.register('wild', HeadlessSymbol, {});

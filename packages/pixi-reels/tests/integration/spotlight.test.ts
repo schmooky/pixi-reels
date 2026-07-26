@@ -1,5 +1,5 @@
 /**
- * SymbolSpotlight integration tests — focused on the parent-restoration
+ * SymbolSpotlight integration tests - focused on the parent-restoration
  * invariant that broke when symbols were pool-recycled across reels mid-
  * spotlight.
  */
@@ -30,7 +30,7 @@ describe('SymbolSpotlight — symbol parent invariant after recycling', () => {
       ]);
 
       // Fire a spotlight on reel 0 row 1. The ReelSet uses a shared symbol
-      // pool — the 'a' instance at reel 0 may end up reused on a different
+      // pool - the 'a' instance at reel 0 may end up reused on a different
       // reel after the next placeSymbols call.
       await h.reelSet.spotlight.show(
         [{ reelIndex: 0, rowIndex: 1 }],
@@ -38,7 +38,7 @@ describe('SymbolSpotlight — symbol parent invariant after recycling', () => {
       );
 
       // Land a different grid. Each reel's placeSymbols releases its old
-      // symbols to the pool and acquires fresh ones — guaranteeing the 'a'
+      // symbols to the pool and acquires fresh ones - guaranteeing the 'a'
       // instance from reel 0 row 1 gets reassigned somewhere else.
       await h.spinAndLand([
         ['c', 'c', 'c'],
@@ -85,7 +85,7 @@ describe('SymbolSpotlight — symbol parent invariant after recycling', () => {
       ]);
 
       // Synchronously call show + immediately recycle by landing a new grid
-      // — the show's promoteAboveMask: true path stashes the promoted view
+      // - the show's promoteAboveMask: true path stashes the promoted view
       // in spotlightContainer, but if a follow-up placeSymbols (or the
       // pool) yanks it back into a reel before hide() runs, hide() must
       // not steal it from the new owner.
@@ -221,7 +221,7 @@ describe('SymbolSpotlight.cycle', () => {
         const done = h.reelSet.spotlight.cycle(lines, {
           displayDuration: 1000,
           gapDuration: 50,
-          cycles: -1, // infinite — must be stoppable
+          cycles: -1, // infinite - must be stoppable
           promoteAboveMask: false,
         });
         await vi.advanceTimersByTimeAsync(10); // inside line 1's display window

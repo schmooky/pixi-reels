@@ -14,7 +14,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Container } from 'pixi.js';
 
-// Minimal mock for `@esotericsoftware/spine-pixi-v8` — covers the
+// Minimal mock for `@esotericsoftware/spine-pixi-v8` - covers the
 // surface the symbol class uses at runtime. Extends Container so the
 // symbol's `view.addChild(spine)` accepts it without complaint.
 interface MockTrackEntry {
@@ -161,7 +161,7 @@ describe('SpineReelSymbol one-shot promise settle', () => {
     const p = sym.playWin();
     sym.playBlur();
 
-    // playBlur replaces the track animation — the prior playWin promise
+    // playBlur replaces the track animation - the prior playWin promise
     // would otherwise dangle because the win entry never completes.
     await expect(p).resolves.toBeUndefined();
   });
@@ -171,7 +171,7 @@ describe('SpineReelSymbol one-shot promise settle', () => {
     sym.activate('test');
 
     const first = sym.playWin();
-    // Second call before the first completes — the prior promise must
+    // Second call before the first completes - the prior promise must
     // settle (its track was hijacked) rather than hang.
     const second = sym.playOut();
 
@@ -199,7 +199,7 @@ describe('SpineReelSymbol one-shot promise settle', () => {
     await Promise.resolve();
     expect(settled).toBe(false);
 
-    // Now fire the actual win entry's complete — promise settles.
+    // Fire the actual win entry's complete - promise settles.
     spine.state.fireComplete(winEntry!);
     await expect(p).resolves.toBeUndefined();
   });
@@ -212,7 +212,7 @@ describe('SpineReelSymbol one-shot promise settle', () => {
     const p1 = sym.playWin();
     expect(spine.state.listeners.length).toBe(1);
 
-    // Start a new one — the prior listener should be removed.
+    // Start a new one - the prior listener should be removed.
     const p2 = sym.playOut();
     expect(spine.state.listeners.length).toBe(1);
 

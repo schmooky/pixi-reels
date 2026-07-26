@@ -98,7 +98,7 @@ describe('assertBufferCountsInRange', () => {
   });
 
   it('counts the highest DEFINED index, not raw length (sparse array passes) [M9]', () => {
-    // length 3 but only index 0 is defined → a single entry materializes.
+    // length 3 but only index 0 is defined -> a single entry materializes.
     const grid: ColumnTarget[] = [
       { visible: ['a', 'b', 'c'], bufferAbove: ['X', undefined, undefined] },
     ];
@@ -106,7 +106,7 @@ describe('assertBufferCountsInRange', () => {
   });
 
   it('still throws when a defined entry sits beyond the buffer range (sparse) [M9]', () => {
-    // ['X', undefined, 'Y'] with bufferSymbols=2 → 'Y' at index 2 would be dropped.
+    // ['X', undefined, 'Y'] with bufferSymbols=2 -> 'Y' at index 2 would be dropped.
     const grid: ColumnTarget[] = [
       { visible: ['a'], bufferAbove: ['X', undefined, 'Y'] },
     ];

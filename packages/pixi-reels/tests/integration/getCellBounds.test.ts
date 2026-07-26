@@ -1,8 +1,8 @@
 /**
- * getCellBounds — coordinate utility tests.
+ * getCellBounds - coordinate utility tests.
  *
  * The method is pure-geometric: it derives bounds from the reel's stored
- * position and ReelMotion.slotHeight. No ticker needed, no spin needed —
+ * position and ReelMotion.slotHeight. No ticker needed, no spin needed -
  * just assert the math.
  */
 import { describe, it, expect } from 'vitest';
@@ -153,7 +153,7 @@ describe('getCellBounds — relationship to payline drawing', () => {
       symbolGap: { x: 4, y: 4 },
     });
     try {
-      // Middle of cell (2, 1) — a common payline anchor.
+      // Middle of cell (2, 1) - a common payline anchor.
       const b = h.reelSet.getCellBounds(2, 1);
       const cx = b.x + b.width / 2;
       const cy = b.y + b.height / 2;

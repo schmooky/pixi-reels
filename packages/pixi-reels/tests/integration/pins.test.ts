@@ -96,17 +96,17 @@ describe('CellPin. turns countdown', () => {
         ['a', 'b', 'c'], ['a', 'b', 'c'],
       ];
 
-      // Spin 1. wild lands, turns: 3 → 2
+      // Spin 1. wild lands, turns: 3 -> 2
       await h.spinAndLand(target);
       expect(h.reelSet.reels[2].getVisibleSymbols()[1]).toBe('wild');
       expect(h.reelSet.getPin(2, 1)?.turns).toBe(2);
 
-      // Spin 2. wild lands, turns: 2 → 1
+      // Spin 2. wild lands, turns: 2 -> 1
       await h.spinAndLand(target);
       expect(h.reelSet.reels[2].getVisibleSymbols()[1]).toBe('wild');
       expect(h.reelSet.getPin(2, 1)?.turns).toBe(1);
 
-      // Spin 3. wild lands, turns: 1 → 0 → expired
+      // Spin 3. wild lands, turns: 1 -> 0 -> expired
       await h.spinAndLand(target);
       expect(h.reelSet.reels[2].getVisibleSymbols()[1]).toBe('wild');
       expect(h.reelSet.getPin(2, 1)).toBeUndefined();

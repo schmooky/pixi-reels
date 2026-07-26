@@ -63,7 +63,7 @@ describe('HorizontalReel symbol spin hooks', () => {
     const reel = build(ticker);
 
     void reel.spin();
-    ticker.tickFor(600); // conveyor shifts — pool recycles symbols mid-spin
+    ticker.tickFor(600); // conveyor shifts - pool recycles symbols mid-spin
 
     const sawMidSpinJoin = allSlots(reel).some((s) => events(s).includes('start:mid'));
     expect(sawMidSpinJoin).toBe(true);
@@ -80,7 +80,7 @@ describe('HorizontalReel symbol spin hooks', () => {
     ticker.tickFor(400);
 
     // Everything on the strip at the moment the stop is triggered gets
-    // spin-end — the visible slow-down happens crisp.
+    // spin-end - the visible slow-down happens crisp.
     reel.setResult([{ visible: ['A', 'K', 'Q', 'J'] }]);
     for (const sym of allSlots(reel)) expect(events(sym)).toContain('end');
 
@@ -91,7 +91,7 @@ describe('HorizontalReel symbol spin hooks', () => {
     for (const sym of allSlots(reel)) {
       const e = events(sym);
       // Landed cells were fed during 'stopping', so they carry no spin
-      // notifications at all (they entered live) — but every one of them
+      // notifications at all (they entered live) - but every one of them
       // got the landing hook, and none was told to blur after the stop.
       expect(e.lastIndexOf('landed')).toBeGreaterThan(-1);
       const lastStart = e.lastIndexOf('start:mid');
@@ -116,7 +116,7 @@ describe('HorizontalReel symbol spin hooks', () => {
     for (const sym of allSlots(reel)) {
       const e = events(sym);
       expect(e).toContain('landed');
-      // Slam feeds happen in 'stopping' — no blur-join after the result is set.
+      // Slam feeds happen in 'stopping' - no blur-join after the result is set.
       const lastEnd = e.lastIndexOf('end');
       const lastStart = e.lastIndexOf('start:mid');
       expect(lastStart).toBeLessThan(lastEnd === -1 ? 0 : lastEnd + 1);

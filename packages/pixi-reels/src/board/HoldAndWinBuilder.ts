@@ -8,7 +8,7 @@ import type { HwCellSizeOptions } from './HwTypes.js';
 /**
  * Fluent builder for {@link HoldAndWinBoard}.
  *
- * A Hold & Win board is a W×H grid of cells that spin **independently** — the
+ * A Hold & Win board is a W×H grid of cells that spin **independently** - the
  * mechanic's atomic unit is the cell, the engine's is the column, so each cell
  * is its own 1×1 ReelSet. This builder wires that grid plus the round
  * choreography; everything value-shaped stays in the game layer (see
@@ -94,7 +94,7 @@ export class HoldAndWinBuilder<TData = unknown> {
 
   /**
    * Extra milliseconds of spin per cell on top of the base minimum spin time.
-   * Default `(col + row) * 70` — the diagonal landing wave. Return 0 for
+   * Default `(col + row) * 70` - the diagonal landing wave. Return 0 for
    * simultaneous landings.
    */
   stagger(fn: (col: number, row: number) => number): this {
@@ -104,7 +104,7 @@ export class HoldAndWinBuilder<TData = unknown> {
 
   /**
    * When the predicate returns true for a wave, **every** spinning cell uses a
-   * drawn-out tension profile — the "one cell left for Grand" moment. Evaluated
+   * drawn-out tension profile - the "one cell left for Grand" moment. Evaluated
    * once per wave for the whole board (not per cell), against the pre-wave state.
    */
   anticipateWhen(

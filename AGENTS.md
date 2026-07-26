@@ -286,7 +286,7 @@ Strong success criteria let you loop independently. Weak criteria require clarif
 
 Every commit on this repo is linted as a Conventional Commit. The commit
 message controls the SEO of the resulting PR and informs the release notes;
-the **changeset** controls the actual npm version bump. They are two
+the **changeset** controls the npm version bump. They are two
 separate signals that tell the same story.
 
 ### Commit message
@@ -355,7 +355,7 @@ A nightly cron also runs at 03:00 UTC against the default branch so the
 ## 13. Agent skills. Karpathy's advice applied to this repo
 
 Andrej Karpathy's heuristics for coding agents translate directly to
-`pixi-reels`. These are not novel. they are the same rules the house
+`pixi-reels`. They are the same rules the house
 style enforces, framed the way an agent reads them.
 
 **1. Work like a pair-programming peer, not an autocomplete.** Before you

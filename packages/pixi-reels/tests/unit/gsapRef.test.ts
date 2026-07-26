@@ -42,7 +42,7 @@ describe('gsapRef', () => {
     // `gsap.timeline(`, `gsap.to(`, or `gsap.delayedCall(` outside the
     // gsapRef shim itself is a regression.
     //
-    // Type-only imports (`import type { gsap } from 'gsap'`) are fine —
+    // Type-only imports (`import type { gsap } from 'gsap'`) are fine -
     // they erase at compile time and never execute. Comments mentioning
     // `gsap.com` (the docs URL) are also fine.
     const fs = await import('node:fs/promises');

@@ -1,7 +1,7 @@
 /**
  * Cascade refill with a buffer-anchored big symbol.
  *
- * A 1×3 wild lands with its anchor in bufferAbove (tail visible at row 0).
+ * A 1x3 wild lands with its anchor in bufferAbove (tail visible at row 0).
  * A win-bearing row below the tail clears, and the `refill()` grid moves
  * the anchor to a fully-visible row. Asserts that `_coordinateBigSymbols`
  * runs on the refill path the same as on `setResult`, and that the moved
@@ -19,7 +19,7 @@ import { OCCUPIED_SENTINEL } from '../../src/core/Reel.js';
 
 // Headless tumble harness with the big-symbol-friendly setup. Builder
 // `initialFrame` doesn't run `_coordinateBigSymbols`, so we land the
-// initial state through a spin → setResult → slamStop pipeline (the
+// initial state through a spin -> setResult -> slamStop pipeline (the
 // same path `createTestReelSet.spinAndLand` uses, just inlined here
 // because the shared harness doesn't expose tumble config).
 function buildTumbleHarnessWithBigSymbol() {

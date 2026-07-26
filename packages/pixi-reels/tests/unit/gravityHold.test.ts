@@ -104,7 +104,7 @@ describe('refill. gravityHold promise', () => {
     await new Promise((r) => setTimeout(r, 60));
 
     // Even though setTimeout has fired, the promise is still pending
-    // → drop-in must not have started.
+    // -> drop-in must not have started.
     expect(order.filter((e) => e === 'gravity:end').length).toBe(3);
     expect(order.filter((e) => e === 'dropIn:start').length).toBe(0);
 
@@ -173,14 +173,14 @@ describe('refill. gravityHold promise', () => {
     });
 
     await new Promise((r) => setTimeout(r, 50));
-    // ms has fired but promise is pending → callback hasn't run, drop-in not started.
+    // ms has fired but promise is pending -> callback hasn't run, drop-in not started.
     expect(order).not.toContain('callback');
     expect(order.filter((e) => e === 'dropIn:start').length).toBe(0);
 
     releaseHold();
     await refilling;
 
-    // Order: every gravity:end → callback → every dropIn:start.
+    // Order: every gravity:end -> callback -> every dropIn:start.
     const callbackIdx = order.indexOf('callback');
     const firstDropIn = order.indexOf('dropIn:start');
     const lastGravity = order.lastIndexOf('gravity:end');
@@ -313,7 +313,7 @@ describe('runCascade. gravityHold per-cascade promise builder', () => {
       },
     });
 
-    // Two refill stages → gravityHold called twice with chain 1 and 2.
+    // Two refill stages -> gravityHold called twice with chain 1 and 2.
     expect(holdsBuilt).toEqual([
       { chain: 1, winnersCount: 3 },
       { chain: 2, winnersCount: 3 },

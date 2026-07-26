@@ -169,7 +169,7 @@ describe('ReelSet.skip. round-aware slam + boost', () => {
     registerAllSpeeds(h.reelSet);
     const grid = [['a', 'a'], ['a', 'a']];
 
-    // Round 1: press skip, boost normal → superTurbo + slam.
+    // Round 1: press skip, boost normal -> superTurbo + slam.
     const first = h.reelSet.spin();
     h.reelSet.setResult(grid.map((visible) => ({ visible })));
     h.reelSet.skipSpin();

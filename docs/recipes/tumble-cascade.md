@@ -329,7 +329,7 @@ reelSet.events.on('cascade:fall:symbol', ({ view, duration, ease }) => {
 });
 ```
 
-The library sets `alpha = 0` at the end of the fall regardless. this just makes the fade visible during the motion instead of being a hard cut at the end.
+The library sets `alpha = 0` at the end of the fall regardless. this makes the fade visible during the motion instead of a hard cut at the end.
 
 ### 4c. Spine state on special symbols
 

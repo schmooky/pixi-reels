@@ -28,7 +28,7 @@ describe('per-reel static shape (pyramid)', () => {
     });
     try {
       const reels = reelSet.reels;
-      // Tallest box = 500. Short reel (3 rows × 100) = 300; centered → 100.
+      // Tallest box = 500. Short reel (3 rows x 100) = 300; centered -> 100.
       expect(reels[0].offsetY).toBeCloseTo(100);
       expect(reels[1].offsetY).toBeCloseTo(0);
       expect(reels[2].offsetY).toBeCloseTo(0);

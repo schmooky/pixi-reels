@@ -90,7 +90,7 @@ describe('StaticSpinSymbol', () => {
     symbol.onReelSpinStart();
 
     expect(symbol.isShowingSnapshot).toBe(true);
-    expect(inner.symbolId).toBe(''); // deactivated — costs nothing while spinning
+    expect(inner.symbolId).toBe(''); // deactivated - costs nothing while spinning
     expect(cache.hasStatic('cherry')).toBe(true);
     expect(cache.hasBlurred('cherry')).toBe(true);
     // static + blurred captures
@@ -129,7 +129,7 @@ describe('StaticSpinSymbol', () => {
     expect(symbol.isShowingSnapshot).toBe(true);
     expect(cache.hasStatic('lemon')).toBe(true);
     // Inner was deactivated again right after the unavoidable pool
-    // activation — it must not stay live during the spin.
+    // activation - it must not stay live during the spin.
     expect(inner.symbolId).toBe('');
 
     symbol.destroy();

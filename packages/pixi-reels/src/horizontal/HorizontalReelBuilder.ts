@@ -8,14 +8,14 @@ import type {
 } from './HorizontalReelTypes.js';
 
 /**
- * Fluent builder for {@link HorizontalReel} — the sideways "these symbols pay
+ * Fluent builder for {@link HorizontalReel} - the sideways "these symbols pay
  * this round" banner reel above the reels.
  *
  * Its API mirrors {@link ReelSetBuilder}: register `.symbols(...)`, give it a
  * `.ticker(...)`, and `.build()`. The reel then follows the engine's spin
  * contract (`spin()` then `setResult(ids)`) plus a `cascade(...)` tumble. Only
  * `.symbols(...)` and `.ticker(...)` are required; everything else defaults
- * (a 4-wide, 72px, right-to-left reel — the `1×4` shape).
+ * (a 4-wide, 72px, right-to-left reel - the `1×4` shape).
  */
 export class HorizontalReelBuilder {
   private _visibleCount = 4;
@@ -79,7 +79,7 @@ export class HorizontalReelBuilder {
   }
 
   /**
-   * Rest frame shown before the first spin — the same `ColumnTarget[]` as
+   * Rest frame shown before the first spin - the same `ColumnTarget[]` as
    * `ReelSetBuilder.initialFrame`. This reel is one column, so pass exactly one
    * entry whose `visible` holds `visibleCount` ids. Defaults to the first
    * `visibleCount` registered ids.
@@ -101,7 +101,7 @@ export class HorizontalReelBuilder {
     return this;
   }
 
-  /** Drives the spin — required. */
+  /** Drives the spin - required. */
   ticker(ticker: Ticker): this {
     this._ticker = ticker;
     return this;

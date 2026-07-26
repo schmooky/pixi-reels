@@ -329,7 +329,7 @@ describe('ReelSet.runCascade', () => {
         if (calls === 1) reelSet.events.emit('skip:requested');
       },
       pauseAfterDestroyMs: 0,
-      // Avoid actual gsap destroy (320ms × N rounds → timeout in headless
+      // Avoid actual gsap destroy (320ms x N rounds -> timeout in headless
       // tests without a driven gsap ticker). We only care that the loop
       // sees the skip and exits.
       destroyOptions: { zIndex: null },
@@ -344,8 +344,7 @@ describe('ReelSet.runCascade', () => {
 describe('cascade:place:end payload', () => {
   it('reports isInitial=true and empty winnerRows on the initial drop', async () => {
     // Test the phase directly so we don't depend on a real gsap ticker
-    // driving the fall-phase delayed-calls. The phase is a pure unit
-    // here. give it a target frame, run it, capture the event payload.
+    // driving the fall-phase delayed-calls. The phase is a pure unit here.
     const { CascadePlacePhase } = await import('../../src/spin/phases/CascadePlacePhase.js');
     const { EventEmitter } = await import('../../src/events/EventEmitter.js');
     const { SpeedPresets } = await import('../../src/config/SpeedPresets.js');

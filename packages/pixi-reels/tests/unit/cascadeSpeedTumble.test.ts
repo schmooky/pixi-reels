@@ -147,7 +147,7 @@ describe('CascadeFallPhase. SpeedProfile.tumble override (snap path)', () => {
     bus.on('cascade:fall:end', (i) => events.push(`end:${i.reelIndex}`));
 
     const reel = h.reelSet.getReel(0);
-    // Base.duration = 0 ⇒ snap path with a vanilla NORMAL profile (no tumble override).
+    // Base.duration = 0 => snap path with a vanilla NORMAL profile (no tumble override).
     const baseFall = resolveTumbleConfig({
       fall: { duration: 0, ease: 'sine.in', rowStagger: 0 },
     }).fall;

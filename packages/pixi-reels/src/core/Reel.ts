@@ -323,7 +323,6 @@ export class Reel implements Disposable {
       (symbol, row, direction) => this._onSymbolWrapped(symbol, row, direction),
     );
 
-    // Position symbols on grid and add to containers
     this._setupSymbolPositions(config);
   }
 

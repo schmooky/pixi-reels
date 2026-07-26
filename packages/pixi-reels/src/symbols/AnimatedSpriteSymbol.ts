@@ -26,7 +26,6 @@ export class AnimatedSpriteSymbol extends ReelSymbol {
     this._animationSpeed = options.animationSpeed ?? 1;
     const anchor = options.anchor ?? { x: 0, y: 0 };
 
-    // Start with the first available frame set
     const firstFrames = Object.values(this._frames)[0] ?? [];
     this._animSprite = new AnimatedSprite(firstFrames.length > 0 ? firstFrames : []);
     this._animSprite.anchor.set(anchor.x, anchor.y);

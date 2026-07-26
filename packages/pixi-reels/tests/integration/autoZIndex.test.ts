@@ -2,7 +2,7 @@
  * Integration tests for the auto-zIndex contract on `_replaceSymbol`.
  *
  * Contract: when a symbol is activated into a row (via any code path that
- * funnels into `_replaceSymbol` — wrap callback, `placeSymbols`, etc.), its
+ * funnels into `_replaceSymbol` - wrap callback, `placeSymbols`, etc.), its
  * view's zIndex is set to the canonical formula
  *   `(symbolData.zIndex ?? 0) * 100 + arrayIndex`
  * automatically. Consumers should not need to call `refreshZIndex()`

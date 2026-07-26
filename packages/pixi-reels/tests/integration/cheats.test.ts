@@ -127,7 +127,7 @@ describe('CheatEngine', () => {
       id: 'h',
       label: 'h',
       enabled: true,
-      cheat: holdAndWinProgress('coin', 1), // chance=1 → always lands
+      cheat: holdAndWinProgress('coin', 1), // chance=1 -> always lands
     });
     engine.setHeld([
       { reel: 0, row: 0, symbolId: 'coin' },
@@ -165,7 +165,7 @@ describe('CheatEngine', () => {
     });
     expect(engine.next().symbols).toEqual(g1);
     expect(engine.next().symbols).toEqual(g2);
-    // exhausted → fallback to random
+    // exhausted -> fallback to random
     const r = engine.next();
     expect(r.symbols.length).toBe(5);
   });
@@ -192,7 +192,7 @@ describe('CheatEngine', () => {
     });
     const { symbols } = engine.next();
     const count = symbols.flat().filter((x) => x === 'scatter').length;
-    // Random grid over 6 symbols → very unlikely to be >= 5 but might be. Just assert the cheat didn't force to 5.
+    // Random grid over 6 symbols -> very unlikely to be >= 5 but might be. Assert the cheat didn't force to 5.
     expect(count).toBeLessThanOrEqual(15);
   });
 
@@ -222,7 +222,7 @@ describe('CheatEngine', () => {
     }
   });
 
-  // ── held-cell persistence (sticky-wild substrate) ─────────────────────
+  // held-cell persistence (sticky-wild substrate)
 
   it('applies held cells on top of any cheat result (sticky wilds)', () => {
     const engine = makeEngine();

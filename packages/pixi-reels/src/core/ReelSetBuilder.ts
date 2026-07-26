@@ -211,8 +211,8 @@ export class ReelSetBuilder {
    * for per-reel control. Default: 200. Pass `0` for an instant snap (no
    * tween).
    *
-   * AdjustPhase plays on top of whatever stop staggering you've configured
-   *. its duration is independent of `stopDelay`.
+   * AdjustPhase plays on top of whatever stop staggering you've configured;
+   * its duration is independent of `stopDelay`.
    */
   pinMigrationDuration(value: number | ((reelIndex: number) => number)): this {
     this._pinMigrationDuration = value;
@@ -310,8 +310,8 @@ export class ReelSetBuilder {
 
   /**
    * Per-symbol metadata overrides (zIndex, unmask, or a custom weight that
-   * replaces the one from `weights()`). Merged into the final symbolsData map
-   *. any field you don't specify falls back to the default.
+   * replaces the one from `weights()`). Merged into the final symbolsData map;
+   * any field you don't specify falls back to the default.
    *
    * `zIndex` sorts within ONE reel's container only. it can never lift a
    * symbol above the reel to its right (reels are separate containers).
@@ -572,12 +572,10 @@ export class ReelSetBuilder {
       ? new Array(reelCount).fill(spinSymbolHeight)
       : perReelSymbolHeight;
 
-    // Apply default speed if none registered
     if (this._speeds.size === 0) {
       this._speeds.set('normal', SpeedPresets.NORMAL);
     }
 
-    // Build symbols data from weights + per-symbol overrides
     const symbolsData: Record<string, SymbolData> = {};
     const symbolIds = this._symbolRegistry.symbolIds;
     for (const id of symbolIds) {
@@ -590,7 +588,6 @@ export class ReelSetBuilder {
       };
     }
 
-    // Build internal config
     const config: ReelSetInternalConfig = {
       grid: {
         reelCount,
@@ -612,7 +609,6 @@ export class ReelSetBuilder {
       ticker,
     };
 
-    // Create subsystems.
     // Pool cap per symbol id. The worst case for a single id is the whole
     // strip (every visible + buffer cell) showing it at once, so size the pool
     // to that to avoid destroy()+recreate churn on large/MultiWays grids. A
@@ -627,7 +623,6 @@ export class ReelSetBuilder {
     const randomProvider = new RandomSymbolProvider(symbolsData, this._rng);
     const frameBuilder = new FrameBuilder(randomProvider);
 
-    // Add custom middlewares
     for (const mw of this._middlewares) {
       frameBuilder.use(mw);
     }
@@ -700,7 +695,6 @@ export class ReelSetBuilder {
     }
     const viewport = new ReelViewport(viewportWidth, viewportHeight, undefined, this._maskStrategy);
 
-    // Create offset calculator (X-axis)
     const totalRowsForOffset = bufferAbove + Math.max(...visibleRowsPerReel) + bufferBelow;
     const offsetCalc = new OffsetCalculator(
       reelCount,
@@ -764,7 +758,6 @@ export class ReelSetBuilder {
     }
     viewport.updateMaskSize(viewportWidth, viewportHeight, maskRects);
 
-    // Build params
     const params: ReelSetParams = {
       config,
       reels,

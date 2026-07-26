@@ -98,7 +98,7 @@ export class CascadePlacePhase extends ReelPhase<CascadePlacePhaseConfig> {
     // immediately at grid Y; MOVERS stay at alpha=0 so they don't flash
     // at grid Y for a frame between PlacePhase and CascadeDropInPhase
     // moving them above the viewport. The DropIn phase reveals movers
-    // AFTER repositioning view.y, which produces a seamless drop-in.
+    // AFTER repositioning view.y, which produces a flash-free drop-in.
     const offsets = computeDropOffsets(
       reel.visibleRows,
       this._config.winnerRows,

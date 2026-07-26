@@ -20,7 +20,7 @@ describe('big symbols', () => {
       // Same-reel resolution at the Reel level.
       const reel2 = reelSet.reels[2];
       expect(reel2.getVisibleSymbols()[0]).toBe('bonus'); // anchor
-      expect(reel2.getVisibleSymbols()[1]).toBe('bonus'); // intra-reel OCCUPIED → anchor
+      expect(reel2.getVisibleSymbols()[1]).toBe('bonus'); // intra-reel OCCUPIED -> anchor
 
       // Cross-reel resolution via the ReelSet API.
       const grid = reelSet.getVisibleGrid();
@@ -55,7 +55,7 @@ describe('big symbols', () => {
       expect(fp2).toEqual({ anchor: { col: 2, row: 0 }, size: { w: 2, h: 2 } });
       const fp3 = reelSet.getSymbolFootprint(2, 1);
       expect(fp3).toEqual({ anchor: { col: 2, row: 0 }, size: { w: 2, h: 2 } });
-      // Normal cell: 1×1 footprint at itself.
+      // Normal cell: 1x1 footprint at itself.
       const fp4 = reelSet.getSymbolFootprint(0, 0);
       expect(fp4).toEqual({ anchor: { col: 0, row: 0 }, size: { w: 1, h: 1 } });
     } finally {
@@ -166,7 +166,7 @@ describe('big symbols', () => {
     ).toThrow(/big symbol .* must have weight 0/);
   });
 
-  // ─── Buffer-row anchors (partial visibility) ────────────────────────
+  // --- Buffer-row anchors (partial visibility) ------------------------
   // A 1xH block can land with its anchor in bufferAbove (tail visible at
   // the top of the window) or with stubs spilling into bufferBelow (head
   // visible at the bottom). The coordinator scans the full strip range,
@@ -570,11 +570,11 @@ describe('big symbols', () => {
       // Strip layout: bufferAbove(1) | visible(3) | bufferBelow(1). 5 cells.
       // The check is `anchor.row + h > visibleRows + bufferBelow`, i.e.
       // `row + 4 > 4`. So legal anchor rows for h=4 are {-1, 0}:
-      //   row=-1 → -1+4 = 3 → 3 > 4 ? no → fits (cells -1..2).
-      //   row= 0 →  0+4 = 4 → 4 > 4 ? no → fits exactly (cells 0..3,
+      //   row=-1 -> -1+4 = 3 -> 3 > 4 ? no -> fits (cells -1..2).
+      //   row= 0 ->  0+4 = 4 -> 4 > 4 ? no -> fits exactly (cells 0..3,
       //                                          last cell in bufferBelow).
-      //   row= 1 →  1+4 = 5 → 5 > 4 ? yes → throws.
-      //   row= 2 →  2+4 = 6 → 6 > 4 ? yes → throws (what this test uses).
+      //   row= 1 ->  1+4 = 5 -> 5 > 4 ? yes -> throws.
+      //   row= 2 ->  2+4 = 6 -> 6 > 4 ? yes -> throws (what this test uses).
       symbolIds: ['a', 'tall'],
       symbolData: { tall: { weight: 0, size: { w: 1, h: 4 } } },
     });
@@ -582,7 +582,7 @@ describe('big symbols', () => {
       const promise = reelSet.spin();
       expect(() => {
         reelSet.setResult([
-          { visible: ['a', 'a', 'tall'] }, // anchor at row 2, h=4 → past strip
+          { visible: ['a', 'a', 'tall'] }, // anchor at row 2, h=4 -> past strip
         ]);
       }).toThrow(/extends past the bottom of the strip/);
       reelSet.slamStop();

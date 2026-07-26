@@ -67,7 +67,7 @@ describe('cascade reshape-before-fall (setShape before spin)', () => {
         rowsAtFallStart[info.reelIndex] = reelSet.reels[info.reelIndex].visibleRows;
       });
 
-      reelSet.setShape(target);              // BEFORE spin — the fix's precondition
+      reelSet.setShape(target);              // BEFORE spin - the fix's precondition
       reelSet.spin({ mode: 'cascade' }).catch(() => {});
       reelSet.setResult(target.map((rows) => ({ visible: Array.from({ length: rows }, () => 'a') })));
 
@@ -94,7 +94,7 @@ describe('cascade reshape-before-fall (setShape before spin)', () => {
         rowsAtFallStart[info.reelIndex] = reelSet.reels[info.reelIndex].visibleRows;
       });
 
-      // Shape arrives AFTER the spin — the fall runs on the old (maxRows) shape.
+      // Shape arrives AFTER the spin - the fall runs on the old (maxRows) shape.
       reelSet.spin({ mode: 'cascade' }).catch(() => {});
       reelSet.setShape(target);
       reelSet.setResult(target.map((rows) => ({ visible: Array.from({ length: rows }, () => 'a') })));

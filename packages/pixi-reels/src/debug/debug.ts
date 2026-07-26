@@ -265,7 +265,7 @@ export function clearFrames(): void {
  * reachable at `__PIXI_REELS_DEBUG_INSTANCES[key]`, and `__PIXI_REELS_DEBUG`
  * always points at the most recently enabled one for convenience.
  *
- * This attaches to `window` and logs — call it only in dev/QA builds, never in
+ * This attaches to `window` and logs - call it only in dev/QA builds, never in
  * a production bundle (the snapshot exposes internal state and is not
  * semver-protected, so do not wire monitoring/telemetry to it).
  */

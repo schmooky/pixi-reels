@@ -292,7 +292,7 @@ export type OffsetConfig = TrapezoidConfig | NoOffsetConfig;
 /** 2D matrix type (reel × row). */
 export type Matrix<T> = T[][];
 
-/** Simple 2D position. */
+/** 2D position. */
 export interface Position {
   x: number;
   y: number;

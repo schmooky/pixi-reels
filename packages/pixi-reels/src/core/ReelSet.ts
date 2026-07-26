@@ -519,13 +519,11 @@ export class ReelSet extends Container implements Disposable {
       get middleware(): ReadonlyArray<FrameMiddleware> { return fb.middleware; },
     };
 
-    // Speed manager
     this._speedManager = new SpeedManager(
       params.config.speeds,
       params.config.initialSpeed,
     );
 
-    // Spin controller
     this._spinController = new SpinController(
       params.reels,
       this._speedManager,
@@ -550,10 +548,8 @@ export class ReelSet extends Container implements Disposable {
       },
     );
 
-    // Spotlight
     this._spotlight = new SymbolSpotlight(params.reels, params.viewport);
 
-    // Add viewport to display
     this.addChild(this._viewport);
 
     // Pin lifecycle: decrement numeric turns when the spin lands; clear 'eval'
@@ -1898,7 +1894,6 @@ export class ReelSet extends Container implements Disposable {
       console.error('[pixi-reels] movePin onFlightCreated hook threw. continuing the flight to avoid leaking the flight symbol:', err);
     }
 
-    // Tween.
     const duration = (opts?.duration ?? 400) / 1000;
     const easing = opts?.easing ?? 'power2.inOut';
     await new Promise<void>((resolve) => {
@@ -1930,7 +1925,6 @@ export class ReelSet extends Container implements Disposable {
     toVisible[to.row] = pin.symbolId;
     toReel.placeSymbols(toVisible);
 
-    // Release the flight symbol.
     this._viewport.unmaskedContainer.removeChild(flight.view);
     this._symbolFactory.release(flight);
 

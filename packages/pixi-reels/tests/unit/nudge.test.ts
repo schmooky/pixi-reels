@@ -804,7 +804,7 @@ describe('nudge', () => {
         await spinAndLand([['a', 'bigW', 'bigW']]);
         // The strip already shows the full block. Nudge DOWN by 1 shifts
         // it to rows 2+3. but row 3 doesn't exist. Block survival check:
-        // anchor at strip[2], h=2, distance=1 down. Survival: 2 + 2 - 1 + 1 = 4 < 5 ✓.
+        // anchor at strip[2], h=2, distance=1 down. Survival: 2 + 2 - 1 + 1 = 4 < 5, ok.
         // After nudge: anchor at strip[3], stub at strip[4] (bufferBelow).
         // visible row 0 = 'a' (incoming), row 1 = 'a' (old top-visible),
         // row 2 = anchor 'bigW' (the top of the 1x2 block).
@@ -849,7 +849,7 @@ describe('nudge', () => {
         // Occupancy correctly references the bufferAbove anchor (negative row).
         // Internal state: visible row 0 has occupancy pointing to anchorRow = -1.
         const reel = reelSet.reels[0];
-        // Reel.getSymbolAt resolves through occupancy → returns the anchor symbol.
+        // Reel.getSymbolAt resolves through occupancy -> returns the anchor symbol.
         expect(reel.getSymbolAt(0).symbolId).toBe('bigW');
       } finally {
         destroy();
@@ -874,16 +874,10 @@ describe('nudge', () => {
         // strip[4]. Pre-fix this overwrote the stub with the caller's
         // incoming symbol, splitting the block.
         await spinAndLand([['a', 'bigW', 'bigW']]);
-        // Snapshot pre-nudge: anchor at visible row 1, stub at row 2.
-        // strip[4] holds the bufferBelow filler (not a stub here. this
-        // setup makes anchor at strip[2]). Set up the actual test state:
-        // need anchor at strip[3] with stub at strip[4]. Nudge once first
-        // to reach that state.
-        // Actually a simpler setup: 1x2 anchored at row 2 already has
-        // stub at bufferBelow. But setResult validates anchor + h <= rows
-        // so we can't directly setResult that.
-        // We'll reach it via a down-nudge: anchor moves from strip[2]
-        // (row 1) to strip[3] (row 2), stub moves to strip[4].
+        // Need anchor at strip[3] with stub at strip[4]. setResult validates
+        // anchor + h <= rows, so we can't set that state directly; reach it
+        // via a down-nudge: anchor strip[2] (row 1) -> strip[3] (row 2),
+        // stub -> strip[4].
         await reelSet.nudge(0, {
           distance: 1,
           direction: 'down',
@@ -1060,7 +1054,7 @@ describe('nudge', () => {
       try {
         // Land block at rows 0+1 (anchor at strip[1], stub at strip[2]).
         await spinAndLand([['bigW', 'bigW', 'a']]);
-        // Nudge down by 2. anchor → strip[3] (row 2), stub → strip[4]
+        // Nudge down by 2. anchor -> strip[3] (row 2), stub -> strip[4]
         // (bufferBelow). Visible row 2 shows top of the block.
         const half = await reelSet.nudge(0, {
           distance: 2,

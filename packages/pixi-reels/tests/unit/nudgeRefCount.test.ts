@@ -1,5 +1,5 @@
 /**
- * M4 — the "nudge in flight" guard that blocks spin/setResult/pin must be
+ * M4 - the "nudge in flight" guard that blocks spin/setResult/pin must be
  * reference-counted, not a single boolean. With two parallel nudges, the first
  * to settle previously cleared the boolean and let spin() race the still-live
  * second nudge.
@@ -61,7 +61,7 @@ describe('nudge in-flight guard (M4)', () => {
       const nB = h.reelSet.nudge(2, { distance: 1, direction: 'down', incoming: ['wild'] });
       expect(deferred.count()).toBe(2);
 
-      // Both in flight → spin() blocked.
+      // Both in flight -> spin() blocked.
       await expect(h.reelSet.spin()).rejects.toThrow(/nudge/);
 
       // Settle the FIRST nudge only.
@@ -75,7 +75,7 @@ describe('nudge in-flight guard (M4)', () => {
       deferred.fire(1);
       await nB;
 
-      // Guard released — a spin runs again.
+      // Guard released - a spin runs again.
       const result = await h.spinAndLand([
         ['a', 'b', 'c'],
         ['a', 'b', 'c'],

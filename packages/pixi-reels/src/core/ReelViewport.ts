@@ -160,28 +160,23 @@ export class ReelViewport extends Container implements Disposable {
     this._maskWidth = width;
     this._maskHeight = height;
 
-    // Create mask graphic
     this._mask = this._maskStrategy.build(this._maskRects, width, height);
 
-    // Masked container. main symbol area
     this.maskedContainer = new Container();
     this.maskedContainer.sortableChildren = true;
     this.maskedContainer.addChild(this._mask);
     this.maskedContainer.mask = this._mask;
     this.addChild(this.maskedContainer);
 
-    // Unmasked container. for symbols with unmask flag
     this.unmaskedContainer = new Container();
     this.unmaskedContainer.sortableChildren = true;
     this.addChild(this.unmaskedContainer);
 
-    // Dim overlay. for win animations
     this.dimOverlay = new Graphics();
     this.dimOverlay.rect(0, 0, width, height).fill({ color: 0x000000, alpha: 0.5 });
     this.dimOverlay.visible = false;
     this.addChild(this.dimOverlay);
 
-    // Spotlight container. promoted symbols render above everything
     this.spotlightContainer = new Container();
     this.spotlightContainer.sortableChildren = true;
     this.addChild(this.spotlightContainer);

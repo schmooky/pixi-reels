@@ -3,7 +3,7 @@
  *
  * Contract: when a registered symbol has `unmask: true`, its view is
  * parented to `viewport.unmaskedContainer` instead of the reel's masked
- * container. This makes the symbol render above the reel mask — useful
+ * container. This makes the symbol render above the reel mask - useful
  * for oversized win animations.
  *
  * The reparenting must apply both at:
@@ -71,7 +71,7 @@ describe('unmask: true reparents the symbol view to viewport.unmaskedContainer',
   it('reparents back to the reel when an unmasked symbol is replaced by a masked one', async () => {
     const h = makeHarness();
     try {
-      // First spin: wild lands in middle row of reel 1 → unmasked.
+      // First spin: wild lands in middle row of reel 1 -> unmasked.
       await h.spinAndLand([
         ['a', 'a', 'a'],
         ['a', 'wild', 'a'],
@@ -80,7 +80,7 @@ describe('unmask: true reparents the symbol view to viewport.unmaskedContainer',
       const reel = h.reelSet.reels[1];
       expect(reel.getSymbolAt(1).view.parent).toBe(h.reelSet.viewport.unmaskedContainer);
 
-      // Second spin: middle row becomes a normal symbol → must end up in reel.container.
+      // Second spin: middle row becomes a normal symbol -> must end up in reel.container.
       await h.spinAndLand([
         ['b', 'b', 'b'],
         ['b', 'b', 'b'],
@@ -152,7 +152,7 @@ describe('unmask on a jagged / pyramid layout (non-zero reel offsetY)', () => {
   it('lands an unmasked wild above the mask with the reel offset baked into Y', async () => {
     const h = makePyramid();
     try {
-      // Reel 0 is a 3-row reel → non-zero offsetY. Land a wild in its top row.
+      // Reel 0 is a 3-row reel -> non-zero offsetY. Land a wild in its top row.
       await h.spinAndLand([
         ['wild', 'a', 'a'],
         ['a', 'a', 'a', 'a'],
@@ -167,7 +167,7 @@ describe('unmask on a jagged / pyramid layout (non-zero reel offsetY)', () => {
       expect(wildView.parent).toBe(h.reelSet.viewport.unmaskedContainer);
       expect(wildView.x).toBe(reel.container.x);
       const slotH = reel.motion.slotHeight;
-      // Top visible row → reel-local 0, so viewport Y is exactly the offset.
+      // Top visible row -> reel-local 0, so viewport Y is exactly the offset.
       expect(wildView.y).toBeCloseTo(reel.container.y + 0 * slotH, 3);
     } finally {
       h.destroy();
@@ -206,7 +206,7 @@ describe('unmask on a jagged / pyramid layout (non-zero reel offsetY)', () => {
   });
 });
 
-// ── Cascade refill path ─────────────────────────────────────────────────
+// Cascade refill path
 //
 // `StartPhase` re-masks lifted views the instant a strip spin launches
 // (and `notifySpinStart` safety-nets the tumble fall path), but a pure
@@ -281,9 +281,9 @@ describe('unmask through the cascade refill path', () => {
       expect(dropInParentWasMasked).toBe(true);
       expect(reel.getVisibleSymbols()[0]).toBe('wild');
       const wildView = reel.getSymbolAt(0).view;
-      // At rest after the refill: lifted above the mask…
+      // At rest after the refill: lifted above the mask...
       expect(wildView.parent).toBe(h.reelSet.viewport.unmaskedContainer);
-      // …and at the top visible row's viewport-local Y (reel-local 0 +
+      // ...and at the top visible row's viewport-local Y (reel-local 0 +
       // the reel container offset). NOT floating above the grid.
       expect(wildView.y).toBeCloseTo(reel.container.y + 0 * reel.motion.slotHeight, 3);
       expect(wildView.x).toBe(reel.container.x);
@@ -306,7 +306,7 @@ describe('unmask through the cascade refill path', () => {
         winners,
         grid: [
           { visible: ['a', 'a', 'a'] },
-          { visible: ['b', 'wild', 'a'] }, // survivor slides 0 → 1
+          { visible: ['b', 'wild', 'a'] }, // survivor slides 0 -> 1
           { visible: ['a', 'a', 'a'] },
         ],
       });

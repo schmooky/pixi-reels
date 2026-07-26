@@ -33,7 +33,7 @@ export interface BoardGridOptions {
   cellSize: number;
   /** Gap between cells. Default 4. */
   gap?: number;
-  /** Id a cell shows when blank — also placed in the off-window buffers. Default `'empty'`. */
+  /** Id a cell shows when blank - also placed in the off-window buffers. Default `'empty'`. */
   emptyId?: string;
   /** Register symbol classes, exactly like `ReelSetBuilder.symbols`. Applied to every cell. */
   symbols: (registry: SymbolRegistry) => void;
@@ -43,7 +43,7 @@ export interface BoardGridOptions {
   symbolData?: Record<string, Partial<SymbolData>>;
   /** Injected RNG for the spin strips (deterministic demos / tests). */
   rng?: () => number;
-  /** Drives every cell's reel — required. */
+  /** Drives every cell's reel - required. */
   ticker: Ticker;
   /** Per-cell background, drawn behind each reel. */
   chrome?: (g: Graphics, size: number) => void;
@@ -60,7 +60,7 @@ const key = (c: BoardCell): string => `${c.col},${c.row}`;
 const DEFAULT_PROFILE = 'default';
 
 /**
- * A grid of cells that each spin **independently** — the generic "board of
+ * A grid of cells that each spin **independently** - the generic "board of
  * reels" primitive. Every cell is its own 1×1 {@link ReelSet}, so it inherits
  * the engine's phases, speed modes and pooling rather than a parallel lighter
  * reel.
@@ -173,7 +173,7 @@ export class BoardGrid implements Disposable {
     return { x: origin.x, y: origin.y, width: this.cellSize, height: this.cellSize };
   }
 
-  /** Board-local center of a cell — flight / trail start and end points. */
+  /** Board-local center of a cell - flight / trail start and end points. */
   cellCenter(cell: BoardCell): { x: number; y: number } {
     const origin = this._origin(cell);
     return { x: origin.x + this.cellSize / 2, y: origin.y + this.cellSize / 2 };
@@ -207,7 +207,7 @@ export class BoardGrid implements Disposable {
   /**
    * Spin each target cell and stop it showing its `id`; `onLanded` fires per
    * cell as it settles, in stagger order. The caller selects which cells spin
-   * and to what — this layer applies no lock/free policy of its own. Set
+   * and to what - this layer applies no lock/free policy of its own. Set
    * profiles via {@link setProfile} first.
    *
    * `onLanded` may be **async**: if it returns a promise, that cell's task
@@ -242,7 +242,7 @@ export class BoardGrid implements Disposable {
         try {
           reelSet.skipSpin();
         } catch {
-          /* result not provided yet — nothing to skip to; ignore */
+          /* result not provided yet - nothing to skip to; ignore */
         }
       }
     }

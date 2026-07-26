@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { HoldAndWinState } from '../../src/board/HoldAndWinState.js';
 import type { HwCell, HwEffect } from '../../src/board/HwTypes.js';
 
-// A 2×2 board → capacity 4. Cell order is irrelevant to the reducer.
+// A 2x2 board -> capacity 4. Cell order is irrelevant to the reducer.
 const CELLS: HwCell[] = [
   { col: 0, row: 0 },
   { col: 1, row: 0 },
@@ -64,7 +64,7 @@ describe('HoldAndWinState', () => {
       expect(() => {
         (coin.cell as { col: number }).col = 5;
       }).toThrow();
-      // data stays mutable — the supported way to carry live value
+      // data stays mutable - the supported way to carry live value
       coin.data!.value = 50;
       expect(s.lockedCoins()[0].data!.value).toBe(50);
     });
@@ -160,7 +160,7 @@ describe('HoldAndWinState', () => {
 
     it('ends the feature on the first respin when enter() already fills the board', () => {
       const s = make(3);
-      // seed all 4 cells — the board is full before any wave
+      // seed all 4 cells - the board is full before any wave
       s.enter([
         { cell: { col: 0, row: 0 }, id: 'coin' },
         { cell: { col: 1, row: 0 }, id: 'coin' },
@@ -246,14 +246,14 @@ describe('HoldAndWinState', () => {
     it('throws on release() while a wave is in flight', () => {
       const s = make();
       s.enter([{ cell: { col: 0, row: 0 }, id: 'coin' }]);
-      s.beginWave([]); // → spinning
+      s.beginWave([]); // -> spinning
       expect(() => s.release([{ col: 0, row: 0 }])).toThrow(/wave is in flight/);
     });
 
     it('throws on swap() while a wave is in flight', () => {
       const s = make();
       s.enter([{ cell: { col: 0, row: 0 }, id: 'coin' }]);
-      s.beginWave([]); // → spinning
+      s.beginWave([]); // -> spinning
       expect(() => s.swap({ col: 0, row: 0 }, 'major', undefined)).toThrow(/wave is in flight/);
     });
   });

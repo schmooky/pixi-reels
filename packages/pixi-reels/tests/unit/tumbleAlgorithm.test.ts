@@ -23,7 +23,7 @@ describe('computeDropOffsets', () => {
     it('stacks origins above the viewport so they form a vertical column', () => {
       const offsets = computeDropOffsets(4, [], { initial: true });
       // Each new symbol's virtual origin sits exactly (winCount - row) cells
-      // above its target — so origins span -4..-1, the new column.
+      // above its target - so origins span -4..-1, the new column.
       const origins = offsets.map((o) => o.originalRow);
       expect(origins).toEqual([-4, -3, -2, -1]);
     });
@@ -39,7 +39,7 @@ describe('computeDropOffsets', () => {
   describe('Moment B (cascade refill — no winners on this reel)', () => {
     it('returns all-zero offsets so the reel does NOT animate', () => {
       // CRITICAL: in a refill where this reel had no winners, NO row
-      // should move — they're all survivors at their existing positions.
+      // should move - they're all survivors at their existing positions.
       const offsets = computeDropOffsets(5, []);
       expect(offsets.map((o) => o.offsetRows)).toEqual([0, 0, 0, 0, 0]);
       expect(offsets.map((o) => o.originalRow)).toEqual([0, 1, 2, 3, 4]);
@@ -88,7 +88,7 @@ describe('computeDropOffsets', () => {
     });
 
     it('handles winners scattered across the column', () => {
-      // Winners at rows 0 and 2 — survivors are rows 1, 3, 4 (in that order).
+      // Winners at rows 0 and 2 - survivors are rows 1, 3, 4 (in that order).
       const offsets = computeDropOffsets(5, [0, 2]);
       expect(offsets[0]).toEqual({ row: 0, originalRow: -2, offsetRows: 2 }); // new
       expect(offsets[1]).toEqual({ row: 1, originalRow: -1, offsetRows: 2 }); // new

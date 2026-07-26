@@ -105,9 +105,7 @@ export abstract class ReelSymbol implements Disposable {
   protected abstract onDeactivate(): void;
 
   /** Subclass hook: additional cleanup on destroy. */
-  protected onDestroy(): void {
-    // Override if needed
-  }
+  protected onDestroy(): void {}
 
   /** Play the win/highlight animation for this symbol. Resolves when complete. */
   abstract playWin(): Promise<void>;
@@ -123,23 +121,18 @@ export abstract class ReelSymbol implements Disposable {
    * consumers (typically via `reelSet.destroySymbols(...)`) to disintegrate
    * a winning cell before the next cascade refill drops fresh symbols in.
    *
-   * Default implementation: brief scale-up "charge" then implode (scale 0
-   * + spin + fade), squishing around the symbol's bounding-box CENTER
-   * regardless of the view's anchor. Total ~320 ms. The view is left at
-   * `alpha: 0` (destroyed); position / pivot are restored so pool reuse
-   * via `_replaceSymbol`'s same-id fast path doesn't inherit a stale
-   * pivot offset.
+   * Override in subclasses for art-appropriate destruction, e.g. a Spine
+   * symbol can play its `disintegration` track here, or a sprite symbol can
+   * swap to a shatter atlas. The promise must resolve when the symbol is no
+   * longer visible.
    *
-   * Override in subclasses for art-appropriate destruction. e.g. a
-   * Spine symbol can play its `disintegration` track here, or a sprite
-   * symbol can swap to a shatter atlas. The promise must resolve when
-   * the symbol is no longer visible.
-   *
-   * Default animation: a snappy "poof". tiny anticipation pop (~60 ms)
-   * then a fast implode to `scale: 0` + `alpha: 0` (~140 ms), centered on
-   * the symbol's bounds. ~200 ms total. No rotation. designed to read
+   * Default: a snappy "poof" centered on the symbol's bounds regardless of
+   * the view's anchor. Tiny anticipation pop (~60 ms) then a fast implode to
+   * `scale: 0` + `alpha: 0` (~140 ms), ~200 ms total, no rotation. Reads
    * cleanly under win-cluster pacing without competing with the win
-   * presenter.
+   * presenter. The view is left at `alpha: 0` (destroyed); position / pivot
+   * are restored so pool reuse via `_replaceSymbol`'s same-id fast path
+   * doesn't inherit a stale pivot offset.
    *
    * `opts.delay`. seconds to wait before the animation starts. Use to
    * stagger a cluster of winners (e.g. `i * 0.015`).

@@ -14,7 +14,7 @@ export interface HwCell {
  * A coin somewhere on the board. `id` selects the registered symbol art;
  * `data` is an opaque game-layer payload the board never interprets.
  *
- * **Ownership contract:** `cell` and `id` belong to the board — treat them as
+ * **Ownership contract:** `cell` and `id` belong to the board - treat them as
  * read-only; the board keys its ledger by cell and mutating them is undefined.
  * `data` is yours: mutate its contents freely (a doubler does `coin.data.value
  * *= 2`), that is the intended way to carry live game state on a locked coin.
@@ -25,7 +25,7 @@ export interface HwCoin<TData = unknown> {
   data?: TData;
 }
 
-/** Why the respin counter changed — disambiguates a `respins:changed` event. */
+/** Why the respin counter changed - disambiguates a `respins:changed` event. */
 export type HwRespinReason = 'seed' | 'hit-reset' | 'miss';
 
 /** Resolution of one {@link HoldAndWinBoard.respin} wave. */
@@ -44,7 +44,7 @@ export type HoldAndWinBoardEvents<TData = unknown> = {
   /** Fires per cell, in landing (stagger) order. `coin` is null on a miss. */
   'cell:landed': [{ cell: HwCell; coin: HwCoin<TData> | null }];
   'coin:locked': [{ coin: HwCoin<TData>; locked: number; capacity: number }];
-  /** Fired by `release()` — the collect / fly-away moment. */
+  /** Fired by `release()` - the collect / fly-away moment. */
   'coin:released': [{ coin: HwCoin<TData>; remaining: number }];
   'respins:changed': [{ value: number; reason: HwRespinReason }];
   'respin:end': [{ round: number; hits: HwCoin<TData>[]; respinsLeft: number }];
@@ -52,7 +52,7 @@ export type HoldAndWinBoardEvents<TData = unknown> = {
   /** Fired by `skip()` so the game layer can cut its own flights / collect short. */
   'feature:skip': [{ inFlight: number }];
   /**
-   * Fired by `reset()` — a hard clear back to idle. Distinct from `coin:released`
+   * Fired by `reset()` - a hard clear back to idle. Distinct from `coin:released`
    * (which means "collect this coin"); listeners that maintain derived state
    * from events (HUD totals, meters) clear it here without triggering collect.
    */
@@ -63,7 +63,7 @@ export type HoldAndWinBoardEvents<TData = unknown> = {
 /**
  * One state-change the reducer ({@link HoldAndWinState}) decided, ready for the
  * driver to emit. A tagged pair of `{ type, payload }` for every board event the
- * reducer owns — the driver replays them onto its emitter and keys visual side
+ * reducer owns - the driver replays them onto its emitter and keys visual side
  * effects (e.g. `playWin()` on `coin:locked`) off the type. `respin:start` and
  * `feature:skip` are driver-owned (they describe in-flight reels, not ledger
  * state) and are not produced here.

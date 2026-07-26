@@ -101,7 +101,7 @@ describe('pin migration (MultiWays)', () => {
       reelSet.pin(1, 4, 'wild', { turns: 'permanent', migration: 'frozen' });
       expect(reelSet.getPin(1, 4)?.migration).toBe('frozen');
 
-      // Spin 1: shape fits → no migration. Pin still at row 4.
+      // Spin 1: shape fits -> no migration. Pin still at row 4.
       let p = reelSet.spin();
       reelSet.setShape([5, 5, 5]);
       reelSet.setResult([
@@ -114,7 +114,7 @@ describe('pin migration (MultiWays)', () => {
       expect(reelSet.getPin(1, 4)?.row).toBe(4);
       expect(reelSet.getPin(1, 4)?.originRow).toBe(4);
 
-      // Spin 2: shape shrinks → clamp to row 2 AND update originRow to 2.
+      // Spin 2: shape shrinks -> clamp to row 2 AND update originRow to 2.
       p = reelSet.spin();
       reelSet.setShape([3, 3, 3]);
       reelSet.setResult([
@@ -156,7 +156,7 @@ describe('pin migration (MultiWays)', () => {
       reelSet.pin(1, 4, 'wild', { turns: 'permanent' });
       const log = captureEvents(reelSet, ['pin:migrated']);
 
-      // Spin 1: shape fits → no migration.
+      // Spin 1: shape fits -> no migration.
       let p = reelSet.spin();
       reelSet.setShape([5, 5, 5]);
       reelSet.setResult([
@@ -169,7 +169,7 @@ describe('pin migration (MultiWays)', () => {
       // Pin still at row 4.
       expect(reelSet.getPin(1, 4)?.row).toBe(4);
 
-      // Spin 2: shape shrinks → clamp to row 2.
+      // Spin 2: shape shrinks -> clamp to row 2.
       p = reelSet.spin();
       reelSet.setShape([3, 3, 3]);
       reelSet.setResult([
@@ -188,7 +188,7 @@ describe('pin migration (MultiWays)', () => {
       );
       expect(clampEvent).toBeDefined();
 
-      // Spin 3: shape grows back to fit originRow → restore to row 4.
+      // Spin 3: shape grows back to fit originRow -> restore to row 4.
       p = reelSet.spin();
       reelSet.setShape([5, 5, 5]);
       reelSet.setResult([

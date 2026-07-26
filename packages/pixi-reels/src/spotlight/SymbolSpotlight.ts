@@ -99,10 +99,8 @@ export class SymbolSpotlight implements Disposable {
 
     this._isActive = true;
 
-    // Show dim overlay
     this._viewport.showDim(dimAmount);
 
-    // Promote symbols
     const winPromises: Promise<void>[] = [];
 
     const seen = new Set<string>();
@@ -177,7 +175,6 @@ export class SymbolSpotlight implements Disposable {
     }
     this._promoted = [];
 
-    // Hide dim overlay
     this._viewport.hideDim();
     this._isActive = false;
   }

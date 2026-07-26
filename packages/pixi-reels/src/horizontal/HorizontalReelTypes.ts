@@ -24,7 +24,7 @@ export interface HorizontalReelConfig {
   /** Pixels per frame while spinning. */
   speed: number;
   cascade: Required<HorizontalCascadeTiming>;
-  /** Rest frame shown before the first spin — one `ColumnTarget` (this reel). */
+  /** Rest frame shown before the first spin - one `ColumnTarget` (this reel). */
   initialFrame: ColumnTarget[];
   configurator: (registry: SymbolRegistry) => void;
   chrome: ((g: Graphics, width: number, height: number) => void) | null;
@@ -32,7 +32,7 @@ export interface HorizontalReelConfig {
   rng: (() => number) | null;
 }
 
-/** Typed events emitted by {@link HorizontalReel} — mirrors the `ReelSet` names + shapes. */
+/** Typed events emitted by {@link HorizontalReel} - mirrors the `ReelSet` names + shapes. */
 export type HorizontalReelEvents = {
   /** The reel started spinning. */
   'spin:start': [];

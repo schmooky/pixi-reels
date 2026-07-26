@@ -1,10 +1,10 @@
 /**
  * Teardown / disposal invariants.
- *   H1 — Reel emits 'destroyed' to attached listeners (was emitted after
+ *   H1 - Reel emits 'destroyed' to attached listeners (was emitted after
  *        removeAllListeners(), so it reached nobody).
- *   H2 — destroy() destroys symbol views instead of releasing live symbols to
+ *   H2 - destroy() destroys symbol views instead of releasing live symbols to
  *        the shared pool and then destroying their views out from under it.
- *   H4 — no leaked ticker callbacks after destroy; double-destroy is idempotent.
+ *   H4 - no leaked ticker callbacks after destroy; double-destroy is idempotent.
  */
 import { describe, it, expect } from 'vitest';
 import { createTestReelSet } from '../../src/testing/index.js';

@@ -3,15 +3,15 @@
  * recipe. The sibling `cascade-bigSymbol-fall.test.ts` asserts only logical
  * strip/occupancy/grid state and lands via slamStop, so it misses both:
  *
- *   Bug 1 — a bufferAbove-anchored block (tail visible at row 0) is DESTROYED
+ *   Bug 1 - a bufferAbove-anchored block (tail visible at row 0) is DESTROYED
  *           by the animated tumble place path: CascadePlacePhase slices off
  *           the buffer cells, so the anchor is overwritten with a random
  *           symbol and the visible OCCUPIED stub renders empty.
  *
- *   Bug 2 — when the block lands fully visible, CascadeDropInPhase builds one
+ *   Bug 2 - when the block lands fully visible, CascadeDropInPhase builds one
  *           drop job per visible row; the occupied rows resolve to the SAME
  *           anchor view, so the anchor's `view.y` ends at the wrong position
- *           (and, with real durations, multiple tweens fight → jitter).
+ *           (and, with real durations, multiple tweens fight -> jitter).
  */
 import { describe, expect, it } from 'vitest';
 import type { Ticker } from 'pixi.js';

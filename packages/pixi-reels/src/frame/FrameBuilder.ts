@@ -40,7 +40,6 @@ export class FrameBuilder {
   private _sorted = false;
 
   constructor(private _randomProvider: RandomSymbolProvider) {
-    // Add built-in middleware
     this.use(new RandomFillMiddleware(_randomProvider));
     this.use(new TargetPlacementMiddleware());
   }

@@ -1,5 +1,5 @@
 /**
- * reelSet.frame — runtime middleware exposure tests.
+ * reelSet.frame - runtime middleware exposure tests.
  *
  * The internal machinery (FrameBuilder.use/remove) has always existed;
  * these tests verify the ReelSet-level API correctly delegates and that
@@ -62,7 +62,7 @@ describe('reelSet.frame — exposure', () => {
 });
 
 // Helper: reach the internal FrameBuilder to exercise the middleware chain.
-// `reelSet.frame` delegates to it — if our delegation is correct, middleware
+// `reelSet.frame` delegates to it - if our delegation is correct, middleware
 // added via the facade should show up here.
 function frameBuilderOf(reelSet: unknown): {
   build(
@@ -91,11 +91,11 @@ describe('reelSet.frame — middleware takes effect on frame build', () => {
       const fb = frameBuilderOf(h.reelSet);
       const targets = ['a', 'b', 'c'];
 
-      // Baseline — middleware NOT added; middle row is 'b' (from targets)
+      // Baseline - middleware NOT added; middle row is 'b' (from targets)
       const baseline = fb.build(0, 3, 1, 1, targets);
       expect(baseline[1 + 1]).toBe('b'); // bufferAbove(1) + row(1) = index 2
 
-      // Add middleware, rebuild — middle row becomes 'wild'
+      // Add middleware, rebuild - middle row becomes 'wild'
       h.reelSet.frame.use(forceMiddleRowMiddleware('wild'));
       const withMiddleware = fb.build(0, 3, 1, 1, targets);
       expect(withMiddleware[1 + 1]).toBe('wild');

@@ -51,7 +51,7 @@ to pick a bump type when you run `pnpm changeset`:
 | any commit with `!` or `BREAKING CHANGE:` footer | `major` |
 
 Your commit message is read by the PR review + release-drafter; the changeset
-file is what actually stamps the version. They do not have to match exactly but
+file is what stamps the version. They do not have to match exactly but
 they should tell the same story.
 
 ## Snapshot releases

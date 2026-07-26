@@ -106,9 +106,9 @@ export { ObjectPool } from './pool/ObjectPool.js';
 export { SymbolSpotlight } from './spotlight/SymbolSpotlight.js';
 export type { SpotlightOptions, WinLine, CycleOptions } from './spotlight/SymbolSpotlight.js';
 
-// Boards — a grid of independently spinning 1×1 cells.
+// Boards - a grid of independently spinning 1×1 cells.
 //   BoardGrid is the generic mechanism (geometry, instances, spin a chosen
-//   set of cells) — build your own feature on it. HoldAndWinBoard is the
+//   set of cells) - build your own feature on it. HoldAndWinBoard is the
 //   opinionated lock / respin / collect layer, built entirely on BoardGrid's
 //   public surface, so you can copy it and change the rules.
 export { BoardGrid } from './board/BoardGrid.js';
@@ -133,7 +133,7 @@ export type {
   HwCellSizeOptions,
 } from './board/HwTypes.js';
 
-// Horizontal reel — a single sideways-scrolling strip (the "these symbols pay
+// Horizontal reel - a single sideways-scrolling strip (the "these symbols pay
 // this round" banner above the reels). Not a matrix, not a spin lifecycle; its
 // own small mechanism on the shared pool / ticker / event primitives.
 export { HorizontalReel } from './horizontal/HorizontalReel.js';

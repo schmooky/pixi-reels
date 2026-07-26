@@ -54,7 +54,7 @@ describe('mid-spin symbol notifications (Reel level)', () => {
 
     reel.notifySpinStart();
     reel.speed = 50;
-    // Two seconds of frames — plenty of wraps, so the pool recycles
+    // Two seconds of frames - plenty of wraps, so the pool recycles
     // symbols through _replaceSymbol while the spin flag is armed.
     for (let i = 0; i < 120; i++) reel.update(16);
     reel.speed = 0;

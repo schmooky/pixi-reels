@@ -121,7 +121,7 @@ describe('CascadeFallPhase. skip event pairing', () => {
     bus.on('cascade:fall:end', (info) => ends.push(info.reelIndex));
 
     const reel = h.reelSet.getReel(0);
-    // Zero-duration fall → onEnter fires :start AND :end synchronously.
+    // Zero-duration fall -> onEnter fires :start AND :end synchronously.
     const phase = new CascadeFallPhase(
       reel,
       SpeedPresets.NORMAL,
@@ -215,7 +215,7 @@ describe('CascadeDropInPhase. skip event pairing', () => {
     bus.on('cascade:dropIn:end', (info) => ends.push(info.reelIndex));
 
     const reel = h.reelSet.getReel(0);
-    // Zero-duration → finish runs synchronously and emits :end once.
+    // Zero-duration -> finish runs synchronously and emits :end once.
     const phase = new CascadeDropInPhase(
       reel,
       SpeedPresets.NORMAL,

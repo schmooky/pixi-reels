@@ -22,7 +22,7 @@ interface CascadeMove {
 }
 
 /**
- * A single horizontal reel — the banner reel that sits **above** the reels
+ * A single horizontal reel - the banner reel that sits **above** the reels
  * announcing which symbols pay this round.
  *
  * It is one row, oriented sideways, and it follows the same contract as
@@ -189,7 +189,7 @@ export class HorizontalReel implements Disposable {
 
   /**
    * Hand the reel the round's paying symbols and trigger the stop. Takes the
-   * same `ColumnTarget[]` as `ReelSet.setResult` — this reel is a single column,
+   * same `ColumnTarget[]` as `ReelSet.setResult` - this reel is a single column,
    * so pass exactly one entry whose `visible` holds `visibleCount` ids,
    * left-to-right. Mirrors `ReelSet.setResult(...)`. Throws if not spinning.
    */
@@ -216,7 +216,7 @@ export class HorizontalReel implements Disposable {
     this._state = 'stopping';
     // The stop DECELERATES visibly (the drain ease in _advanceSpin), unlike
     // the main reels, which hold full speed until the snap. Blur reads
-    // wrong on a slowing strip, so spin-end fires here — the outgoing
+    // wrong on a slowing strip, so spin-end fires here - the outgoing
     // symbols sharpen as the strip slows, and the result window feeds in
     // live (crisp): what lands is never blurred. _repaint stops blur-
     // joining new symbols once we leave 'spinning'.
@@ -239,15 +239,15 @@ export class HorizontalReel implements Disposable {
   }
 
   /**
-   * Tumble the winning cells — a real cascade with removal, the same mechanic
+   * Tumble the winning cells - a real cascade with removal, the same mechanic
    * the main reels run, one row wide:
    *
    *   1. the `winners` symbols are **removed** (destroyed, they poof out);
    *   2. the survivors **collapse** toward the settle edge to close the gaps,
    *      keeping their left-to-right order;
-   *   3. `winners.length` **new symbols slide in from the feed edge** — the same
+   *   3. `winners.length` **new symbols slide in from the feed edge** - the same
    *      side the spin brings symbols from (`rtl` from the right, `ltr` from the
-   *      left) — to fill the freed slots.
+   *      left) - to fill the freed slots.
    *
    * `winners` are visible indices (left-to-right from 0); pass every index for a
    * full "they all drop". `newIds` are the incoming symbols (one per winner, in
@@ -422,7 +422,7 @@ export class HorizontalReel implements Disposable {
     this.container.addChild(next.view);
     // Pool recycling wiped the symbol's state; while free-spinning it must
     // re-join the spin presentation (mirrors Reel._replaceSymbol). During
-    // 'stopping' the feeds ARE the result window — they enter live so the
+    // 'stopping' the feeds ARE the result window - they enter live so the
     // landing symbols are never blurred (see setResult).
     if (this._state === 'spinning') {
       next.onReelSpinStart(true);
@@ -478,7 +478,7 @@ export class HorizontalReel implements Disposable {
     this._cascadeT += deltaMS;
     const fall = this._cfg.cascade.fall;
     const drop = this._cfg.cascade.drop;
-    // Phase 1: winners implode — a brief pop, then collapse to nothing, scaled
+    // Phase 1: winners implode - a brief pop, then collapse to nothing, scaled
     // about the CELL CENTRE (position-compensated so the symbol shrinks in place
     // instead of into its top-left corner) with a fade. Mirrors the feel of the
     // engine's ReelSymbol.playDestroy.

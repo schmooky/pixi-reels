@@ -1,5 +1,5 @@
 /**
- * M5 — StandardMode.computeDeltaY must clamp displacement symmetrically.
+ * M5 - StandardMode.computeDeltaY must clamp displacement symmetrically.
  * Clamping only the positive side let the StartPhase step-back (negative speed)
  * or a large deltaMs move more than one slot in a tick, skipping ReelMotion's
  * single-wrap-per-call invariant and desyncing the symbol array from the view.

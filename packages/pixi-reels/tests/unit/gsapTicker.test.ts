@@ -1,5 +1,5 @@
 /**
- * H6 — driveGsapWithTicker() encapsulates the "pin GSAP to the Pixi ticker"
+ * H6 - driveGsapWithTicker() encapsulates the "pin GSAP to the Pixi ticker"
  * incantation so animations don't freeze in hidden tabs / iframes, and cleanly
  * restores GSAP's own ticker on dispose.
  */

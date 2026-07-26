@@ -2,7 +2,7 @@
  * Integration tests that exercise each mechanic demo's cheat through the real
  * ReelSet + SpinController pipeline, using the headless test harness.
  *
- * These tests are exactly the kind of assurance we advertise in the docs:
+ * These exercise the docs' claim:
  * "you can test a full slot mechanic without a renderer".
  */
 import { describe, it, expect } from 'vitest';

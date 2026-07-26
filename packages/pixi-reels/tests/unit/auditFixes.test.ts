@@ -34,7 +34,7 @@ function buildTumbleHarness(initialFrame: string[][]) {
   };
 }
 
-// ── refill() input validation ────────────────────────────────────────────
+// -- refill() input validation --------------------------------------------
 describe('ReelSet.refill. input validation', () => {
   it('throws RangeError when grid column count mismatches reel count', async () => {
     const { reelSet, destroy } = buildTumbleHarness([
@@ -212,7 +212,7 @@ describe('ReelSet.refill. input validation', () => {
   });
 });
 
-// ── skip() pre-setResult guard ───────────────────────────────────────────
+// -- skip() pre-setResult guard -------------------------------------------
 describe('ReelSet.skip. pre-setResult guard', () => {
   it('throws if called in standard mode before setResult', async () => {
     const h = createTestReelSet({ reels: 2, visibleRows: 2, symbolIds: ['a'] });
@@ -248,7 +248,7 @@ describe('ReelSet.skip. pre-setResult guard', () => {
   });
 });
 
-// ── distance: 'auto' falls back to per-hole for survivors ────────────────
+// -- distance: 'auto' falls back to per-hole for survivors ----------------
 describe('CascadeDropInPhase. distance: auto fallback for survivors', () => {
   it('survivors slide from their old row, not from above the viewport (distance: auto, Moment B)', async () => {
     // The bug: with `distance: 'auto'`, a survivor (originalRow >= 0) was
@@ -283,14 +283,14 @@ describe('CascadeDropInPhase. distance: auto fallback for survivors', () => {
     // Kick off but don't await. we want to read view.y right after the
     // synchronous onEnter runs.
     void phase.run({
-      winnerRows: [2],   // bottom row destroyed → row 0 = new, rows 1,2 = survivors from 0,1
+      winnerRows: [2],   // bottom row destroyed -> row 0 = new, rows 1,2 = survivors from 0,1
       initial: false,
       events: localBus,
     });
 
-    // Survivor row 1 originated from old row 0 → perHole startY = 0
+    // Survivor row 1 originated from old row 0 -> perHole startY = 0
     // (NOT auto's `finalY - 3*cellHeight = -2*cellHeight`).
-    // Survivor row 2 originated from old row 1 → perHole startY = cellHeight
+    // Survivor row 2 originated from old row 1 -> perHole startY = cellHeight
     // (NOT auto's `finalY - 3*cellHeight = -cellHeight`).
     // New row 0 (originalRow < 0) still uses auto: `finalY - 3*cellHeight = -3*cellHeight`.
     expect(reel.getSymbolAt(1).view.y).toBe(0);              // perHole for survivor
@@ -319,13 +319,13 @@ describe('CascadeDropInPhase. distance: auto fallback for survivors', () => {
   });
 });
 
-// ── manual setSpeed clears the boost-restore intent ──────────────────────
+// -- manual setSpeed clears the boost-restore intent ----------------------
 describe('ReelSet.skip. manual setSpeed survives restore', () => {
   it('does NOT restore pre-boost speed when user manually re-set to boosted name', async () => {
     const h = createTestReelSet({ reels: 2, visibleRows: 2, symbolIds: ['a'] });
     h.reelSet.speed.addProfile('superTurbo', SpeedPresets.SUPER_TURBO);
 
-    // Round 1: skip boost from normal → superTurbo.
+    // Round 1: skip boost from normal -> superTurbo.
     const first = h.reelSet.spin();
     h.reelSet.setResult([{ visible: ['a', 'a'] }, { visible: ['a', 'a'] }]);
     h.reelSet.skipSpin();
@@ -368,7 +368,7 @@ describe('ReelSet.skip. manual setSpeed survives restore', () => {
   });
 });
 
-// ── destroySymbols honors AbortSignal ────────────────────────────────────
+// -- destroySymbols honors AbortSignal ------------------------------------
 describe('ReelSet.destroySymbols. AbortSignal', () => {
   it('snaps cells to alpha=0 on pre-aborted signal without running tweens', async () => {
     const { reelSet, destroy } = buildTumbleHarness([
@@ -394,7 +394,7 @@ describe('ReelSet.destroySymbols. AbortSignal', () => {
   });
 });
 
-// ── destroySymbols Promise.allSettled + failed payload ──────────────────
+// -- destroySymbols Promise.allSettled + failed payload ------------------
 describe('ReelSet.destroySymbols. Promise.allSettled', () => {
   it('continues when one cell rejects and surfaces it in cascade:destroy:end', async () => {
     const { reelSet, destroy } = buildTumbleHarness([
@@ -452,7 +452,7 @@ describe('ReelSet.destroySymbols. Promise.allSettled', () => {
   });
 });
 
-// ── _runReelTask recovery from a per-reel rejection ──────────────────────
+// -- _runReelTask recovery from a per-reel rejection ----------------------
 describe('SpinController. per-reel rejection recovery', () => {
   it('a rejected refill phase chain does NOT hang refill(). it slams instead', async () => {
     const { reelSet, destroy } = buildTumbleHarness([

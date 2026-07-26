@@ -25,7 +25,7 @@ const build = (
 const spinTo = async (reel: ReturnType<typeof build>, ticker: FakeTicker, result: string[]) => {
   const p = reel.spin();
   ticker.tickFor(200); // free spin a bit
-  reel.setResult([{ visible: result }]); // one ColumnTarget — this reel
+  reel.setResult([{ visible: result }]); // one ColumnTarget, this reel
   ticker.tickFor(4000); // plenty of time to drain the queue + land
   return p;
 };
@@ -140,7 +140,7 @@ describe('HorizontalReel cascade (real tumble: remove, collapse, refill)', () =>
   it('removes winners, collapses survivors to the settle side, refills from the feed side (rtl)', async () => {
     const { reel, ticker } = landIdle();
     expect([0, 1, 2, 3].map((i) => reel.symbolAt(i).symbolId)).toEqual(['A', 'K', 'Q', 'J']);
-    // cells 0 (A) and 2 (Q) win → removed. Survivors K,J collapse LEFT (rtl
+    // cells 0 (A) and 2 (Q) win -> removed. Survivors K,J collapse LEFT (rtl
     // settle side); new 9,10 refill the RIGHT (feed side), in order.
     const p = reel.cascade([0, 2], ['9', '10']);
     ticker.tickFor(2000);
@@ -155,7 +155,7 @@ describe('HorizontalReel cascade (real tumble: remove, collapse, refill)', () =>
     reel.spin();
     reel.setResult([{ visible: ['A', 'K', 'Q', 'J'] }]);
     ticker.tickFor(4000);
-    // cells 0 (A) and 2 (Q) win → new 9,10 fill the LEFT (feed side), survivors
+    // cells 0 (A) and 2 (Q) win -> new 9,10 fill the LEFT (feed side), survivors
     // K,J collapse RIGHT (settle side).
     const p = reel.cascade([0, 2], ['9', '10']);
     ticker.tickFor(2000);

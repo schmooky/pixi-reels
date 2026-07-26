@@ -104,10 +104,10 @@ export interface CellPinOptions {
 
 /**
  * Reason a pin expired. Fired with `pin:expired`.
- *   - `'turns'`     — its turn counter reached zero.
- *   - `'explicit'`  — removed via `unpin()`.
- *   - `'eval'`      — an eval callback returned false.
- *   - `'collision'` — a reshape clamped it onto a cell another pin already
+ *   - `'turns'`     - its turn counter reached zero.
+ *   - `'explicit'`  - removed via `unpin()`.
+ *   - `'eval'`      - an eval callback returned false.
+ *   - `'collision'` - a reshape clamped it onto a cell another pin already
  *                     holds, so it was dropped deterministically.
  */
 export type PinExpireReason = 'turns' | 'explicit' | 'eval' | 'collision';

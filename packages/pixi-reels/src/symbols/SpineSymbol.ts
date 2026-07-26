@@ -6,7 +6,7 @@ let SpineClass: any = null;
 // Kick off the optional import at module init and keep the promise so callers
 // can wait for it. Without this, constructing a SpineSymbol on a cold start
 // (before the dynamic import resolves) throws the "not installed" error even
-// when Spine IS installed — it just hadn't finished loading yet.
+// when Spine IS installed - it just hadn't finished loading yet.
 const spineReady: Promise<void> = (async () => {
   try {
     const spineModule = await import('@esotericsoftware/spine-pixi-v8');
@@ -92,7 +92,6 @@ export class SpineSymbol extends ReelSymbol {
       this._currentSkeletonKey = symbolId;
     }
 
-    // Set to idle
     if (this._spine.skeleton.data.findSkin(this._defaultSkin)) {
       this._spine.skeleton.setSkinByName(this._defaultSkin);
       this._spine.skeleton.setSlotsToSetupPose();
@@ -140,7 +139,6 @@ export class SpineSymbol extends ReelSymbol {
         complete: (trackEntry: any) => {
           if (trackEntry === entry) {
             this._spine.state.clearListeners();
-            // Return to idle
             if (this._spine.skeleton.data.findAnimation(this._idleAnimation)) {
               this._spine.state.setAnimation(0, this._idleAnimation, true);
             }

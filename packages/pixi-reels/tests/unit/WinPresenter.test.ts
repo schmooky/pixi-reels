@@ -140,7 +140,7 @@ describe('WinPresenter — stagger', () => {
       await h.spinAndLand([['a'], ['a'], ['a'], ['a'], ['a']]);
       await p.show([mkWin([cell(0, 0), cell(1, 0), cell(2, 0), cell(3, 0), cell(4, 0)])]);
       expect(timestamps.length).toBe(5);
-      // All within the same microtask batch — under 5 ms is very safe.
+      // All within the same microtask batch - under 5 ms is very safe.
       const spread = timestamps[timestamps.length - 1] - timestamps[0];
       expect(spread).toBeLessThan(5);
       p.destroy();
@@ -159,7 +159,7 @@ describe('WinPresenter — stagger', () => {
       await p.show([mkWin([cell(0, 0), cell(1, 0), cell(2, 0), cell(3, 0)])]);
       expect(timestamps.length).toBe(4);
       for (let i = 1; i < timestamps.length; i++) {
-        // 40 ms stagger with setTimeout jitter — floor at 30 ms to stay stable on CI.
+        // 40 ms stagger with setTimeout jitter - floor at 30 ms to stay stable on CI.
         expect(timestamps[i] - timestamps[i - 1]).toBeGreaterThanOrEqual(30);
       }
       p.destroy();

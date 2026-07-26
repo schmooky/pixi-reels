@@ -1,5 +1,5 @@
 /**
- * Low finding — enableDebug() attached a single window.__PIXI_REELS_DEBUG, so
+ * Low finding - enableDebug() attached a single window.__PIXI_REELS_DEBUG, so
  * multiple reel sets clobbered each other. It now also registers each instance
  * under a per-instance key.
  */
