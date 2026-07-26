@@ -7,7 +7,7 @@
  * `.recipe.ts` basename; the source is resolved through the recipeCode registry.
  */
 import RecipeFrame from './RecipeFrame.astro';
-import { RecipeRunner } from './RecipeRunner.tsx';
+import { LazyRecipeRunner } from './LazyRecipeRunner.tsx';
 import { getRecipeCode } from '../lib/recipeCode.ts';
 
 interface Props {
@@ -18,5 +18,5 @@ const { code, height = 300 } = Astro.props as Props;
 const source = getRecipeCode(code);
 ---
 <RecipeFrame height={height}>
-  <RecipeRunner code={source} height={height} client:only="react" />
+  <LazyRecipeRunner code={source} height={height} client:only="react" />
 </RecipeFrame>

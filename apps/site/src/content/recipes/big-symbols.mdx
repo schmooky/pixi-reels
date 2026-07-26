@@ -1,0 +1,115 @@
+---
+title: "Big symbols & non-uniform grids"
+group: mechanics
+oneLiner: Big symbols in every shape, MultiWays row variation, static pyramids, and pins that survive per-spin reshapes.
+order: 20
+tags:
+  - big-symbols
+  - multiways
+  - pyramid
+  - spine
+  - geometry
+  - sticky-wild
+apis: []
+steps: []
+---
+
+Everything for N-by-M block symbols and non-uniform reel geometry, one live demo at a time.
+
+<a id="big-symbols-mxn"></a>
+
+## MxN big symbols. every shape
+
+Square 2x2, tall 1x3, giant 3x3, wide 2x4, one focused demo per shape.
+
+<RecipeDemo code="big-symbols-mxn-square" height={300} />
+<RecipeDemo code="big-symbols-mxn-tall" height={300} />
+<RecipeDemo code="big-symbols-mxn-giant" height={300} />
+<RecipeDemo code="big-symbols-mxn-wide" height={300} />
+
+<a id="big-symbol-cascade-fall"></a>
+
+## Big symbol falls into view through a cascade
+
+A tall wild lands with its tail in bufferAbove, wins the cells below, and falls into full view as they clear; the 2x2 canvas runs the same beat across two reels.
+
+**Gotcha:** the anchor's fall distance must equal the number of winner rows cleared below it, or the block snaps instead of falling.
+
+<RecipeDemo code="big-symbol-cascade-fall" height={300} />
+<RecipeDemo code="big-symbol-cascade-fall-2x2" height={300} />
+
+<a id="big-symbol-partial-land"></a>
+
+## Land a big symbol partially in buffer
+
+A tall 1xH block lands with its anchor in bufferAbove, so only the bottom tail shows at row 0; nudge down to drag the rest into view.
+
+<RecipeDemo code="big-symbol-partial-land" height={300} />
+
+<a id="big-symbol-held-respin"></a>
+
+## Nudge a big symbol in, then hold it across a respin
+
+Nudge the tail-visible wild fully into view, then respin the other reels with `holdReels` so the revealed block stays put.
+
+<RecipeDemo code="big-symbol-held-respin" height={300} />
+
+<a id="get-block-bounds"></a>
+
+## getBlockBounds. outline a big symbol
+
+One rectangle that hugs an entire block whichever cell you pass; a 1x1 returns the same rect as `getCellBounds`.
+
+<RecipeDemo code="get-block-bounds" height={300} />
+
+<a id="spine-big-symbols"></a>
+
+## Big symbols with Spine
+
+Same 2x2 anchor mechanic, every cell a Spine skeleton; the bigWild reuses the wild rig scaled to the larger block.
+
+<RecipeDemo code="spine-big-symbols" height={300} />
+
+<a id="multiways"></a>
+
+## MultiWays
+
+Per-spin row variation: each reel lands on a different row count and the total ways is the product of the per-reel rows.
+
+**Gotcha:** call `setShape(rowsPerReel)` BEFORE `setResult()` on every spin.
+
+<RecipeDemo code="multiways" height={300} />
+
+<a id="multiways-cascade"></a>
+
+## MultiWays cascade
+
+Per-spin shape on a strip-spin landing, then cascade tumbling that pops ways winners and drops new symbols in from above.
+
+**Gotcha:** `setShape` before `setResult`, and open with `spin({ mode: 'standard' })` so AdjustPhase reshapes between SPIN and STOP.
+
+<RecipeDemo code="multiways-cascade" height={300} />
+
+<a id="pyramid-shape"></a>
+
+## Per-reel shape (pyramid)
+
+A non-uniform reel set (3-5-5-5-3), static shape declared at build via `visibleRowsPerReel`.
+
+<RecipeDemo code="pyramid-shape" height={300} />
+
+<a id="spine-pyramid-shape"></a>
+
+## Pyramid shape with Spine
+
+The same 3-5-5-5-3 pyramid with every cell a Spine skeleton, crisp at every per-reel cell size.
+
+<RecipeDemo code="spine-pyramid-shape" height={300} />
+
+<a id="sticky-wild-multiways"></a>
+
+## Sticky wild on MultiWays
+
+A pin survives every reshape via a frozen originRow: it clamps when the shape shrinks and restores when it grows back.
+
+<RecipeDemo code="sticky-wild-multiways" height={300} />

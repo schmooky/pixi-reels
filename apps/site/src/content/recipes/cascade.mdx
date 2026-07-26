@@ -1,0 +1,100 @@
+---
+title: "Cascade & tumble"
+group: mechanics
+oneLiner: The tumble toolkit end to end, covering the destroy-and-refill loop, drop orders, lead-in delays, anticipation refills, and spin-then-cascade hybrids.
+order: 30
+tags:
+  - cascade
+  - tumble
+  - refill
+  - anticipation
+  - spine
+  - thunderkick
+apis: []
+steps: []
+---
+
+The full cascade and tumble toolkit, one live demo at a time.
+
+<a id="cascade-6x5"></a>
+
+## Cascade 6×5 tumble
+
+Modern tumble mechanic with an ever-growing multiplier where `runCascade` owns the detect, destroy, refill loop; the second canvas is the identical recipe on real Thunderkick Spine art.
+
+<RecipeDemo code="cascade-6x5" height={300} />
+<RecipeDemo code="cascade-6x5-spine" height={300} />
+
+<a id="cascade-destroy-and-present"></a>
+
+## Cascade wins. present, destroy, refill
+
+The fixed round order (present the win, destroy the winners, refill the holes), then the destroy stage two ways: the engine implode versus an authored Spine explosion.
+
+**Gotcha:** compute winners from your match logic, never by diffing two grids. survivors slide past cleared slots and a diff misreads them.
+
+<RecipeDemo code="destroy-winpresenter" height={300} />
+<RecipeDemo code="destroy-fade" height={300} />
+<RecipeDemo code="destroy-explode" height={300} />
+
+<a id="fall-delays"></a>
+
+## Lead-in delay before the fall
+
+Same spin, only the gap between the SPIN click and the first frame of fall-out changes: 0, 150, 350, and 700 ms.
+
+<RecipeDemo code="fall-delay-instant" height={300} />
+<RecipeDemo code="fall-delay-subtle" height={300} />
+<RecipeDemo code="fall-delay-anticipation" height={300} />
+<RecipeDemo code="fall-delay-suspense" height={300} />
+
+<a id="refill-orders"></a>
+
+## Cascade refill orders
+
+Same destruction, only the post-win refill ordering changes: simultaneous, left-to-right wave, and bottom-up.
+
+<RecipeDemo code="refill-simultaneous" height={300} />
+<RecipeDemo code="refill-ltr-wave" height={300} />
+<RecipeDemo code="refill-bottom-up" height={300} />
+
+<a id="tumble-feels"></a>
+
+## Tumble feels. every preset
+
+Same spin and cascade refill, only `.tumble({ fall, dropIn })` changes: classic, slow drop, slam, rain column, and wave.
+
+<RecipeDemo code="tumble-classic" height={300} />
+<RecipeDemo code="tumble-cartoon-bounce" height={300} />
+<RecipeDemo code="tumble-slam" height={300} />
+<RecipeDemo code="tumble-rain-column" height={300} />
+<RecipeDemo code="tumble-wave" height={300} />
+
+<a id="tumble-anticipation"></a>
+
+## Cascade anticipation refill
+
+Two-stage refill: survivors slide down first, a held anticipation beat for multipliers and mascots, then new symbols drop in column by column.
+
+<RecipeDemo code="tumble-anticipation" height={300} />
+<RecipeDemo code="tumble-anticipation-stagger" height={300} />
+
+<a id="spin-then-cascade"></a>
+
+## Spin first, cascade after
+
+Open every play with a classic strip-spin, then cascade the respins; the per-spin `mode` override flips between strip-spin and pure drop.
+
+<RecipeDemo code="spin-then-cascade" height={300} />
+<RecipeDemo code="cascade-open-drop" height={300} />
+<RecipeDemo code="spin-then-cascade-turbo" height={300} />
+
+<a id="peek-from-above"></a>
+
+## Peek symbol from buffer-above
+
+Pre-fill the buffer-above slot so a teaser symbol sits just out of frame, visible during the next spin's scroll-in.
+
+<RecipeDemo code="peek-from-above" height={300} />
+
+<AssetCredit studio="Thunderkick" />

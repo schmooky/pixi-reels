@@ -1,17 +1,4 @@
-export type RecipeGroup =
-  | 'basics'        // beginner building blocks. the smallest pieces explained
-  | 'starters'
-  | 'pyramid'       // static per-reel shape
-  | 'multiways'     // per-spin row variation
-  | 'big-symbols'   // N×M block symbols
-  | 'wilds'         // sticky/expanding/walking/multiplier wilds
-  | 'features'      // bonus reveals, multipliers, coins, transforms
-  | 'cascade'       // cascade physics + tumbling
-  | 'wins'          // payline & cell-highlight presentation
-  | 'tension'       // anticipation, near-miss, skip, respin
-  | 'cell-coords'   // cell bounds, hit areas, overlays
-  | 'symbol-formats' // texture atlas, animated, AI-generated
-  | 'runtime';      // mode swaps, feature middleware
+export type RecipeGroup = 'starters' | 'mechanics' | 'tension' | 'rendering';
 
 export interface RecipeMeta {
   slug: string;
@@ -34,69 +21,24 @@ export interface RecipeMeta {
 /** Display order + label for each group on the /recipes/ index page. */
 export const RECIPE_GROUPS: Array<{ id: RecipeGroup; label: string; description: string }> = [
   {
-    id: 'basics',
-    label: 'Building blocks (start here)',
-    description: 'The smallest pieces, explained step by step. how a symbol class works, how a coin carries a value.',
-  },
-  {
     id: 'starters',
-    label: 'Starter templates',
-    description: 'Copy-paste foundations to clone for a new slot.',
+    label: 'Start here',
+    description: 'Copy-paste templates to clone for a new slot.',
   },
   {
-    id: 'pyramid',
-    label: 'Per-reel geometry (pyramid layouts)',
-    description: 'Static jagged shapes. non-uniform row counts fixed at build time.',
-  },
-  {
-    id: 'multiways',
-    label: 'MultiWays',
-    description: 'Per-spin row variation. each reel can land on a different row count between minRows and maxRows.',
-  },
-  {
-    id: 'big-symbols',
-    label: 'Big symbols (N×M blocks)',
-    description: 'Single symbol that occupies an N×M block of cells. 2×2 bonuses, 3×3 giants, 1×3 bars.',
-  },
-  {
-    id: 'wilds',
-    label: 'Wilds & sticky cells',
-    description: 'Sticky, expanding, walking, multiplier wilds. all powered by the pin primitive.',
-  },
-  {
-    id: 'features',
-    label: 'Features, bonuses & transforms',
-    description: 'Mystery reveals, value coins, collectors, symbol upgrades.',
-  },
-  {
-    id: 'cascade',
-    label: 'Cascade & tumbling',
-    description: 'Drop physics, anticipation drops, removing winners.',
-  },
-  {
-    id: 'wins',
-    label: 'Wins & paylines',
-    description: 'Highlight winning cells; draw your own paylines from events.',
+    id: 'mechanics',
+    label: 'Core mechanics',
+    description: 'Hold & Win, big symbols and non-uniform grids, cascades, wilds and pins, nudge.',
   },
   {
     id: 'tension',
-    label: 'Anticipation, skip & respin',
-    description: 'Slow a reel, slam-stop, near-miss, single-reel respin.',
+    label: 'Feel & tension',
+    description: 'Anticipation, near-miss, and the slow build before a land.',
   },
   {
-    id: 'cell-coords',
-    label: 'Cell coordinates & hit areas',
-    description: 'Pixel rects per cell; pointer-aligned overlays.',
-  },
-  {
-    id: 'symbol-formats',
-    label: 'Symbol authoring',
-    description: 'Texture atlases, animated sprite sequences, AI-generated art.',
-  },
-  {
-    id: 'runtime',
-    label: 'Runtime & feature modes',
-    description: 'Mid-spin mode swaps, frame middleware.',
+    id: 'rendering',
+    label: 'Symbols & presentation',
+    description: 'Symbol authoring, layering, motion blur, cell coordinates, paylines and banners.',
   },
 ];
 

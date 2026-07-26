@@ -1,0 +1,97 @@
+---
+title: "Cells, bounds, paylines & banners"
+group: rendering
+oneLiner: "Cell geometry, self-drawn paylines and overlays, hit areas, banner reels, and runtime feature-mode swaps."
+order: 80
+tags:
+  - paylines
+  - hit-areas
+  - overlays
+  - horizontal
+  - banner
+  - wins
+apis: []
+steps: []
+---
+
+Address individual cells, render your own paylines and overlays, add banner reels, and swap feature modes at runtime, each shown live below.
+
+<a id="cell-bounds"></a>
+
+## Cell bounds. overlays, paylines & hit areas
+
+getCellBounds(col, row) hands you the pixel rect of any visible cell, for paylines, win outlines, or hit areas that align exactly with symbols.
+
+<RecipeDemo code="cell-bounds" />
+
+<a id="cell-hit-areas"></a>
+
+## Cell hit areas. click to pick, hover to preview
+
+Attach pointer events to individual cells with getCellBounds; hover previews, click toggles a pick, picks survive spins.
+
+**Gotcha:** fill the hit rect with alpha 0, not `visible = false`. an invisible-but-filled rect is still hit-testable; a hidden one is not.
+
+<RecipeDemo code="cell-hit-areas" />
+
+<a id="board-grid-reveal"></a>
+
+## Board primitive: build your own board
+
+A reveal-and-collect prize grid built straight on the generic BoardGrid primitive; the rule is yours, with no locking and no respins.
+
+<RecipeDemo code="board-grid-reveal" height={400} />
+
+<a id="paylines-events-only"></a>
+
+## Draw paylines yourself from win:group
+
+Core never draws lines. subscribe to win:group and plot your own overlay from getCellBounds.
+
+<RecipeDemo code="paylines-events-only" />
+
+<a id="paylines-custom-animation"></a>
+
+## Custom per-symbol animation
+
+Replace playWin() with your own GSAP timeline, styled per win.id.
+
+<RecipeDemo code="paylines-custom-animation" />
+
+<a id="horizontal-reel"></a>
+
+## Horizontal reel (paying-symbol banner)
+
+A single one-row banner reel above the grid that spins, lands, and cascades, on the same spin() / setResult(ColumnTarget[]) / SpinResult contract as ReelSet.
+
+<RecipeDemo code="horizontal-reel" height={260} />
+
+<a id="static-spin-horizontal"></a>
+
+## Horizontal strip motion blur
+
+The same cached-snapshot spin on a HorizontalReel, with the smear following the sideways travel.
+
+**Gotcha:** pass `blur: { axis: 'x' }` to both prewarmSpinTextures and the symbol options, and give the strip its own SpinTextureCache (its cell geometry differs from the main grid).
+
+<RecipeDemo code="static-spin-horizontal" height={260} />
+
+<a id="slam-stop"></a>
+
+## Slam-stop
+
+Let the player smash the button to land the reels now.
+
+**Gotcha:** for player-facing slam use requestSkip(). skipSpin() THROWS if the result has not arrived yet, so it queues instead.
+
+<RecipeDemo code="slam-stop" />
+
+<a id="feature-mode-swap"></a>
+
+## Feature mode swap
+
+Enter and exit a bonus mode at runtime by adding or removing a frame middleware, with no ReelSet rebuild.
+
+**Gotcha:** run custom middleware after target-placement (priority >= 10) so it reacts to the grid the server chose.
+
+<RecipeDemo code="feature-mode-swap" />

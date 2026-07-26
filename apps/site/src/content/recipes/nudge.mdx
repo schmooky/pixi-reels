@@ -1,215 +1,70 @@
 ---
-title: Nudge a reel
-group: tension
-oneLiner: After landing, shift one reel down or up by N positions to reveal
-  caller-supplied symbols.
-description: Shift one reel down or up by N positions after it has landed, with
-  the reveal symbols supplied by the caller.
-order: 54
-steps:
-  - Wait for the spin to land
-  - Call reelSet.nudge(col, { distance, direction, incoming }). incoming is
-    required, top-down order of the new visible positions
-  - Await the promise to read the new visible column for re-running win detection
-  - Wrap several nudge() calls in Promise.all([...]) to move multiple reels in
-    parallel
-apis:
-  - ReelSet.nudge
-  - NudgeOptions
-  - nudge:start
-  - nudge:complete
+title: "Nudge"
+group: mechanics
+oneLiner: Shift a landed reel up or down by N positions to reveal new symbols, sequential, parallel, staggered, skippable or abortable.
+order: 50
 tags:
   - nudge
-  - recent
+  - stagger
+  - spotlight
+  - big-symbols
+  - abort
+  - skip
+apis: []
+steps: []
 ---
 
-<RecipeDemo code="nudge" />
+Shift a landed reel up or down by N positions to reveal caller-supplied symbols. one primitive, with pacing and control variants below.
 
-## The minimum code
+<a id="nudge"></a>
 
-```ts
-await reelSet.spin();
-await reelSet.setResult(grid);
+## Nudge a reel
 
-// Down nudge. `wild` slides in from the top and becomes the new top row.
-await reelSet.nudge(2, {
-  distance: 1,
-  direction: 'down',
-  incoming: ['wild'],
-});
+Shift one reel after it lands; `incoming` is the final visible order, top-down. Below: the base nudge, then the same row of wilds dropped sequentially (three beats) vs in parallel (one beat).
 
-// Up nudge. `wild` slides in from the bottom and becomes the new bottom row.
-await reelSet.nudge(3, {
-  distance: 1,
-  direction: 'up',
-  incoming: ['wild'],
-});
-```
+<RecipeDemo code="nudge" height={300} />
+<RecipeDemo code="nudge-sequential" height={300} />
+<RecipeDemo code="nudge-parallel" height={300} />
 
-## `incoming` is top-down. always
+<a id="nudge-stagger"></a>
 
-The `incoming` array describes the **final visible position** of the new
-symbols, top-to-bottom. not the order they enter the screen. The engine
-handles the wrap mechanics internally so the caller can think in terms of
-"what does the player see after."
+## Staggered nudge. wave reveal
 
-For a 3-row column landed on `['A', 'B', 'C']`:
+`Promise.all` with a per-reel `startDelay` fires every reel's tween concurrently for a wave reveal. validation still throws synchronously.
 
-| Call | New visible (top → bottom) |
-| --- | --- |
-| `nudge(c, { distance: 1, direction: 'down', incoming: ['X'] })` | `['X', 'A', 'B']` |
-| `nudge(c, { distance: 2, direction: 'down', incoming: ['X', 'Y'] })` | `['X', 'Y', 'A']` |
-| `nudge(c, { distance: 1, direction: 'up',   incoming: ['X'] })` | `['B', 'C', 'X']` |
-| `nudge(c, { distance: 2, direction: 'up',   incoming: ['X', 'Y'] })` | `['C', 'X', 'Y']` |
+<RecipeDemo code="nudge-stagger" height={300} />
 
-## Re-detect wins after the nudge
+<a id="nudge-spotlight"></a>
 
-The returned promise resolves with the new visible column, which is the
-right input for a win re-detection pass:
+## Spotlight after a nudge
 
-```ts
-const { symbols: newColumn } = await reelSet.nudge(2, {
-  distance: 1,
-  direction: 'down',
-  incoming: ['wild'],
-});
+Land a near-miss, parallel-nudge three reels to complete a wild line, then run `SymbolSpotlight` on the new winners.
 
-// Either re-detect against the column you just got, or pull the full grid:
-const grid = reelSet.getVisibleGrid();
-const wins = detectWins(grid);
-if (wins.length) winPresenter.show(wins);
-```
+<RecipeDemo code="nudge-spotlight" height={300} />
 
-## Sequential vs parallel
+<a id="nudge-big-symbol"></a>
 
-Nudges are always per-reel. there's no batched API. Multi-reel beats are
-multiple `nudge(...)` calls, and the orchestration is yours:
-`await` them one at a time for a deliberate beat, or `Promise.all([...])`
-them for a single synchronised one. Same engine output, same events fire,
-only the pacing changes.
+## Nudge through a big symbol
 
-Each canvas below lands the same flat board and then nudges reels 1, 2,
-and 3 down by one. The only difference is whether the calls await each
-other.
+A 1xH block on the target reel is nudged through as a unit; the second demo drags a tail-visible block fully into view.
 
-### Sequential. three separate beats
+**Gotcha:** only single-reel (w=1) blocks can be nudged. cross-reel (w>1) blocks throw.
 
-<RecipeDemo code="nudge-sequential" />
+<RecipeDemo code="nudge-big-symbol" height={300} />
+<RecipeDemo code="nudge-tail-reveal" height={300} />
 
-```ts
-for (const col of [1, 2, 3]) {
-  await reelSet.nudge(col, {
-    distance: 1,
-    direction: 'down',
-    incoming: ['wild'],
-    duration: 480,
-  });
-}
-```
+<a id="nudge-abort"></a>
 
-Each `await` parks the loop until that reel's GSAP tween lands. Total
-wall time = `cols.length * duration`. Use this shape when the caller
-wants each reel's resolved promise (and its `nudge:complete` event) to
-fire in order, one after the previous one fully landed.
+## Abort a nudge
 
-### Parallel. one synchronised beat
+Cancel a running nudge via `NudgeOptions.signal`. the strip still snaps to landed, but `nudge()` rejects with `AbortError` and `nudge:cancelled` fires.
 
-<RecipeDemo code="nudge-parallel" />
+<RecipeDemo code="nudge-abort" height={300} />
 
-```ts
-await Promise.all(
-  [1, 2, 3].map((col) =>
-    reelSet.nudge(col, {
-      distance: 1,
-      direction: 'down',
-      incoming: ['wild'],
-      duration: 480,
-    }),
-  ),
-);
-```
+<a id="nudge-skip"></a>
 
-Every `nudge(...)` is invoked synchronously inside `Promise.all`, so the
-GSAP tweens all start on the same frame. The whole row of wilds drops in
-together. Total wall time = `duration` (no matter how many reels).
-Use this shape when the reveal IS the row landing as a unit and you only
-need a single `Promise.all` resolution to drive the next step.
+## Skip an in-flight nudge
 
-Both modes fire their own `nudge:start` / `nudge:complete` pair per reel,
-so per-reel SFX and HUD overlays work cleanly either way. Only the
-clock differs.
+`reelSet.skipNudge(col)` fast-forwards a running nudge to its landed state; `nudge()` resolves normally, so the success path still runs.
 
-### Staggered. sugar for "wave" reveals
-
-Pass `startDelay` per call inside a `Promise.all` for a uniform stagger
-without writing the loop yourself:
-
-```ts
-await Promise.all(
-  [1, 2, 3].map((col, i) =>
-    reelSet.nudge(col, {
-      distance: 1,
-      direction: 'down',
-      incoming: ['wild'],
-      duration: 480,
-      startDelay: i * 80, // reel 1 → 0ms, reel 2 → 80ms, reel 3 → 160ms
-    }),
-  ),
-);
-```
-
-Validation still throws synchronously on the call site (bad arguments
-fail immediately); only the mutation is deferred by `startDelay`.
-For irregular stagger profiles compute per-reel delays in the map.
-
-## Skip / abort a nudge
-
-`reelSet.skipNudge(col)` fast-forwards a single nudge to its landed state
-without rejecting the promise. the consumer's success path runs as if
-the tween had finished naturally. For "tear it down" semantics pass an
-`AbortSignal`:
-
-```ts
-// Skip. resolves normally.
-const p = reelSet.nudge(2, { distance: 1, direction: 'down', incoming: ['wild'], duration: 1500 });
-skipButton.onclick = () => reelSet.skipNudge(2);
-const { symbols } = await p; // success path
-
-// Abort. rejects with AbortError, fires nudge:cancelled.
-const controller = new AbortController();
-abortButton.onclick = () => controller.abort();
-await reelSet.nudge(2, { ...opts, signal: controller.signal })
-  .catch((e) => { if (e.name !== 'AbortError') throw e; });
-```
-
-Either way the strip snaps to its deterministic post-nudge position.
-the landing contract is "`incoming` lands at these positions" regardless
-of how the tween ended.
-
-## Test it
-
-```ts
-import { createTestReelSet, expectGrid } from 'pixi-reels/testing';
-
-const { reelSet, spinAndLand, destroy } = createTestReelSet({
-  reels: 3, visibleRows: 3, symbolIds: ['a', 'b', 'c', 'wild'],
-});
-try {
-  await spinAndLand([
-    ['a', 'b', 'c'],
-    ['a', 'b', 'c'],
-    ['a', 'b', 'c'],
-  ]);
-  await reelSet.nudge(1, { distance: 1, direction: 'down', incoming: ['wild'] });
-  expectGrid(reelSet, [
-    ['a', 'b', 'c'],
-    ['wild', 'a', 'b'],
-    ['a', 'b', 'c'],
-  ]);
-} finally {
-  destroy();
-}
-```
-
-See the [nudge guide](/guides/nudge/) for the full event map and a
-walkthrough of when the engine wraps vs pre-places symbols.
+<RecipeDemo code="nudge-skip" height={300} />

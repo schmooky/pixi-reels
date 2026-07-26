@@ -1,93 +1,220 @@
 ---
-title: Hold & Win respin
-group: starters
-oneLiner: Coins lock on land, respin until the grid fills. the "coin" formula
-  every studio is shipping.
-description: Coins lock on land; every new coin resets the respin counter; fill
-  the grid for the grand jackpot. The "coin" formula every studio is shipping in
-  2024.
-order: 22
-steps:
-  - Build the board once with HoldAndWinBuilder — grid, coin symbols, respin
-    count
-  - enter(seed) with the triggering coins, then await respin(hits) per round
-  - Board events drive the HUD — respins:changed, coin:locked, board:full
-  - board:full fires the GRAND when the grid fills; reset() clears it for the
-    next round
-apis:
-  - HoldAndWinBuilder
-  - HoldAndWinBoard.respin
-  - HoldAndWinBoard.events
-  - HoldAndWinBoard.reset
+title: "Hold & Win"
+group: mechanics
+oneLiner: Every Hold and Win building block on one page, from carrying a value on a coin to production Spine and sprite boards with collectors, multipliers, jackpots, meters, anticipation and skips.
+order: 10
 tags:
-  - starter
   - hold-and-win
+  - coins
+  - collector
   - respin
+  - spine
+apis: []
+steps: []
 ---
+
+Every Hold & Win building block on one page: the respin mechanic, value coins, collectors, jackpots, meters, and the beginner lessons that lead up to them, each a live demo.
+
+<a id="hold-and-win"></a>
+
+## Hold & Win respin
+
+Coins lock on land; the free cells respin until the grid fills. The board owns the mechanic, the value is yours.
 
 <RecipeDemo code="hold-and-win" />
 
-Press Run a few times. every coin that lands stays put on the next respin, and the HUD under the board is driven purely by board events.
+<a id="hold-and-win-base-to-feature"></a>
 
-A Hold & Win board spins per **cell**, not per column — the engine's atomic spin unit is the reel, so each cell is its own 1×1 `ReelSet`. `HoldAndWinBuilder` (a core `pixi-reels` export) builds that grid plus the choreography every H&W game repeats: spin the free cells, lock the hits, reset-or-decrement the counter, detect the full board. The library owns the *mechanic* but nothing about *value* — the board is built entirely on `BoardGrid`, the engine's public board-of-reels primitive.
+## Hold & Win: enter from the base game and back
 
-```ts
-import { HoldAndWinBuilder } from 'pixi-reels';
+A normal 5x3 spin that, on 3 BONUS, drops into the Hold & Win board in the same chain and swaps back on feature:end.
 
-const board = new HoldAndWinBuilder<{ value: number }>()
-  .grid(5, 3)
-  .cellSize(72, { gap: 4 })
-  .symbols(r => r.register('coin', GoldCoinSymbol, { spineMap, scale, settleSize }))
-  .weights({ coin: 1, empty: 3 })   // coins flash past empties on the strip
-  .respins(3)
-  .ticker(app.ticker)
-  .build();
+<RecipeDemo code="hold-and-win-base-to-feature" height={460} />
 
-board.events.on('coin:locked', ({ coin, locked, capacity }) => hud.update(coin, locked, capacity));
+<a id="hold-and-win-collector"></a>
 
-// Feature flow — the server stays the only source of truth:
-board.enter(trigger.coins);                       // seeds land locked, counter fills
-while (true) {
-  const round = await server.respin(board.lockedCoins);
-  const result = await board.respin(round.hits);  // wave lands, hits lock, counter resolves
-  if (result.done) break;                         // anything can animate between rounds
-}
-```
+## Hold & Win: collector + flight choreography
 
-## Who owns what
+A collector orb lands and pulls a value clone out of every coin along bezier arcs, summing tick by tick.
 
-1. **The server** decides which cells hit and what each coin carries. A coin is `{ cell, id, data }` — `id` picks the registered art, `data` is an opaque payload the board never reads.
-2. **The board** owns choreography: independent per-cell spins with a staggered landing wave, lock bookkeeping, the reset-on-hit counter, `board:full`. It interprets nothing.
-3. **The game layer** owns meaning. Adders, doublers, collectors, jackpot tiers are all expressed through the board's three openings — events (every beat fires with the coin payload), `symbolAt(cell)` (the live symbol instance, cast to your own class), and `cellBounds()` / `cellCenter()` (pixel geometry for flights and trails). Collected coins that fly away are removed with `release(cells)`, which frees those cells for future respins — whether anything lands there again is, as always, the server's call.
+<RecipeDemo code="hold-and-win-collector" height={420} />
 
-## Simpler variant: `spin({ holdReels })` on a single ReelSet
+<a id="hold-and-win-collector-particles"></a>
 
-The single-coin / column-respin patterns ("hold reels 0 and 4, reroll the middle three") used to require N independent `ReelSet` instances bundled into a row. With the new `holdReels` option that's one `spin()` call:
+## Hold & Win: collector with particle streams
 
-```ts
-// Hold the outer columns; only middle three reroll.
-const spin = reelSet.spin({ holdReels: [0, 4] });
-reelSet.setResult(serverGrid); // entries at indices 0 and 4 are ignored
-await spin;
-```
+The same collect, each coin's value flying into the orb trailed by a stream of neon particles.
 
-Behaviour:
-- Held reels skip START / SPIN / STOP entirely. they don't move at all.
-- They count as already-landed for `spin:allLanded`, so the resolver fires once the non-held reels land.
-- `setAnticipation([...])` silently filters held indices; `setStopDelays([...])` ignores entries at held indices.
-- `SpinResult.symbols` reports the full visible grid (held rows unchanged, non-held rows landed).
+<RecipeDemo code="hold-and-win-collector-particles" height={420} />
 
-When to pick which:
-- **Per-cell hold-and-win** (this recipe's main pattern, with coins locked one cell at a time): `HoldAndWinBuilder`'s independent grid is the model — each cell is its own `ReelSet` with `visibleRows(1)`.
-- **Single-reel respin / partial reroll** (whole columns held, others spin): use `spin({ holdReels })` on a single `ReelSet`. Spotlight, anticipation, win presenters keep working since everything stays inside one engine.
+<a id="hold-and-win-payer-coin"></a>
 
-## Full playable demo
+## Hold & Win: payer / doubler coin
 
-For the playable version with a cheat panel (force landing, guaranteed jackpot, reset), see the [hold-and-win-respin demo](/demos/hold-and-win-respin/).
+A payer orb lands and pumps its value into every other coin; one line changes it into a doubler.
 
-## Related recipes
+**Gotcha:** the payer orb is server-placed only (weight 0), so it never lands off a random strip.
 
-- [`EmptySymbol`](/recipes/empty-symbol/). the blank-cell symbol class the board auto-registers for miss cells
-- [Near-miss](/recipes/near-miss/). tease a coin just off the board
-- [Anticipate a reel](/recipes/anticipate-a-reel/). slow the final reel when close to a jackpot
-- [Sticky wild (CellPin)](/recipes/sticky-wild-pin/). the engine-blessed sticky-symbol path
+<RecipeDemo code="hold-and-win-payer-coin" height={420} />
+
+<a id="hold-and-win-multiplier"></a>
+
+## Hold & Win: multiplier-strike coin
+
+A multiplier coin lands, the strike FX fires, a ×N badge pops, and every coin's value is multiplied.
+
+<RecipeDemo code="hold-and-win-multiplier" height={420} />
+
+<a id="hold-and-win-mystery-coin"></a>
+
+## Hold & Win: mystery value coin
+
+Coins land blank; on lock a strip of candidate amounts spins inside the coin face and decelerates onto the real value.
+
+<RecipeDemo code="hold-and-win-mystery-coin" height={420} />
+
+<a id="hold-and-win-upgrade-coin"></a>
+
+## Hold & Win: upgrade a coin in place
+
+A held coin climbs the value ladder (5 → 10 → 25 → 50 → 100) with a flip-and-pop: no respin, no cell movement.
+
+<RecipeDemo code="hold-and-win-upgrade-coin" height={420} />
+
+<a id="hold-and-win-tier-swap"></a>
+
+## Hold & Win: swap a symbol in place (coin → MINI → MAJOR)
+
+board.setSymbolAt(cell, id, data) re-places one cell with a different symbol and rewrites its ledger entry, leaving the neighbours where they were.
+
+<RecipeDemo code="hold-and-win-tier-swap" height={420} />
+
+<a id="hold-and-win-countup-coin"></a>
+
+## Hold & Win: count-up coin
+
+Each coin's amount ticks up from 0.00 to its value as it settles, in a reading-order wave.
+
+<RecipeDemo code="hold-and-win-countup-coin" height={420} />
+
+<a id="hold-and-win-sprites"></a>
+
+## Hold & Win: sprite coins (no Spine)
+
+The whole board from TexturePacker sprites: numbers blur as they spin, a 30-frame flip on land, no skeleton runtime.
+
+<RecipeDemo code="hold-and-win-sprites" height={460} />
+
+<a id="hold-and-win-spine"></a>
+
+## Hold & Win: Spine coins + collect
+
+The board with production Spine coins: MINI/MAJOR tiers that reveal on lock, side plaques, and a collect flight into a counter.
+
+**Gotcha:** jackpot (MINI / MAJOR) coins are server-placed only (weight 0).
+
+<RecipeDemo code="hold-and-win-spine" height={520} />
+
+<a id="hold-and-win-meter"></a>
+
+## Hold & Win: fly to a feature meter
+
+On collect, each coin's value flies up into a meter above the reels, ticking the total and filling a bar toward a target.
+
+<RecipeDemo code="hold-and-win-meter" height={460} />
+
+<a id="hold-and-win-row-jackpot"></a>
+
+## Hold & Win: row-complete jackpot
+
+When a coin completes a full row, the row flashes coin by coin, the MINI plaque fires, and the row total flies up into it.
+
+<RecipeDemo code="hold-and-win-row-jackpot" height={440} />
+
+<a id="hold-and-win-bonus-cell"></a>
+
+## Hold & Win: bonus cells
+
+A few cells are marked bonus cells from the start; a coin that lands on one flashes it active and doubles its value.
+
+<RecipeDemo code="hold-and-win-bonus-cell" height={420} />
+
+<a id="hold-and-win-cell-control"></a>
+
+## Hold & Win: drive each cell on its own
+
+board.reelAt(cell) hands you the raw 1x1 ReelSet: start it, slam-stop it, read the symbol inside it, independently of every other cell.
+
+<RecipeDemo code="hold-and-win-cell-control" height={300} />
+
+<a id="hold-and-win-anticipation"></a>
+
+## Hold & Win: last-cell anticipation
+
+One builder knob (anticipateWhen) slows the last still-spinning cell to a tension profile for the "one more for the full board" moment.
+
+<RecipeDemo code="hold-and-win-anticipation" height={440} />
+
+<a id="hold-and-win-skip"></a>
+
+## Hold & Win: skip the whole feature
+
+board.skip() slams every in-flight cell to its landed position and fires feature:skip; feature:end stays the single "feature over" signal.
+
+<RecipeDemo code="hold-and-win-skip" height={420} />
+
+<a id="hold-and-win-sticky-overlay"></a>
+
+## Hold & Win: an overlay that survives swaps and rides flights
+
+A ×100 badge lives in coin.data and rides as a child of the symbol's view, so it survives an in-place swap and travels on a collect flight.
+
+<RecipeDemo code="hold-and-win-sticky-overlay" height={320} />
+
+<a id="hold-and-win-trace"></a>
+
+## Hold & Win: live event trace
+
+A board runs a full feature while every board.events beat prints to a live log: the lifecycle, made visible.
+
+<RecipeDemo code="hold-and-win-trace" height={440} />
+
+<a id="coin-value-symbol"></a>
+
+## Beginner: carry a value on a coin
+
+Build your own ReelSymbol from scratch that draws a coin with a number, and read the value back off the landed symbol.
+
+<RecipeDemo code="coin-value-symbol" height={260} />
+
+<a id="coin-value-data"></a>
+
+## Beginner: carry the value as data
+
+The same coin, but the number lives in data instead of the class; one generic coin carries any value the server sends, painted from coin:locked.
+
+<RecipeDemo code="coin-value-data" height={300} />
+
+<a id="coin-value-overlay"></a>
+
+## Beginner: number on a ready-made coin
+
+Don't draw the coin; use art you already have (a sprite) and add the number on top as a second child.
+
+<RecipeDemo code="coin-value-overlay" height={260} />
+
+<a id="value-coin-pin"></a>
+
+## Value-carrying coin (Hold & Win)
+
+Each coin carries a coefficient (×2 … ×50) in coin.data; the board locks hits and respins only the free cells natively, no pins.
+
+<RecipeDemo code="value-coin-pin" />
+
+<a id="collector-symbol-pin"></a>
+
+## Collector symbol
+
+On the Hold & Win board, the collector orb absorbs its neighbours: walk board.lockedCoins, fly their values in, and release() those cells.
+
+<RecipeDemo code="collector-symbol-pin" />
