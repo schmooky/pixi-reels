@@ -6,7 +6,7 @@ import type { UserConfig } from 'vite';
  * Resolves shared dependencies from the example's own node_modules.
  *
  * Aliases point at the library's `src/` so examples get HMR on library
- * edits and always consume the current branch's source — never the built
+ * edits and always consume the current branch's source - never the built
  * `dist/` or a published npm version.
  */
 export function createExampleConfig(exampleDir: string): UserConfig {
@@ -21,7 +21,7 @@ export function createExampleConfig(exampleDir: string): UserConfig {
         { find: /^pixi-reels$/, replacement: resolve(exampleDir, '../../packages/pixi-reels/src/index.ts') },
         { find: 'pixi.js', replacement: nm('pixi.js') },
         { find: 'gsap', replacement: nm('gsap') },
-        // Optional — only resolved if the example installs spine-pixi-v8.
+        // Optional - only resolved if the example installs spine-pixi-v8.
         { find: '@esotericsoftware/spine-pixi-v8', replacement: nm('@esotericsoftware/spine-pixi-v8') },
       ],
     },

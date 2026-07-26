@@ -4,16 +4,16 @@ eyebrow: Building blocks
 description: The full lifecycle of a spin. phases, events, and how to hook in.
 order: 5
 ---
-So generally unless you've mangled with it, your spin has 3 phases:
+Unless you've changed it, your spin has 3 phases:
 
 * start
 * spin
 * anticipation
 * stop
 
-Wait?! That's four! Yeah… kinda 😮‍💨
+Wait, that's four! Yeah, kinda.
 
-So you *might* enable the anticipation explicitly before setting the result, which will make that phase appear. And in most games where you have scatters you will need that phase anyway so it comes out of the box.
+You *might* enable anticipation explicitly before setting the result, which makes that phase appear. Most games with scatters need it anyway, so the engine ships it ready to use.
 
 **Start** accelerates from rest with a tiny step-back "pull."&#x20;
 
@@ -62,7 +62,7 @@ The library exposes three slam verbs with three different intents:
 
 `skip()` is a round-aware "player tapped the slam button" - first press of the round also boosts speed (standard mode) or auto-slams future refills (cascade mode). Emits `skip:boosted` when boost applies.
 
-`requestSkip()` is the "slam when ready" one. You can call it before `setResult()` arrives. No boost, no auto-slam. Queues until `setResult()`, then slams once. Why? Damn, maybe the guy was slamming spin button like he was crazy, up to you.
+`requestSkip()` is the "slam when ready" one. You can call it before `setResult()` arrives. No boost, no auto-slam. Queues until `setResult()`, then slams once. Use it when the player mashes the slam button before the result arrives.
 
 `slamStop()` is an uncunditional "land it now". No boost, no auto-slam.
 
@@ -70,7 +70,7 @@ All three force-land on whatever `setResult()` told the engine. `result.wasSkipp
 
 The lifecycle hooks (`spin:reelLanded`, `spin:allLanded`, `spin:complete`) all still fire on the slam path. so win presenters and effect chains keep working without a separate code path.
 
-The `skipStage` getter reports the round's stage (`0` before any press, `2` after). You can change visuals of spin button using it.
+The `skipStage` getter reports the round's stage (`0` before any press, `2` after). Use it to change the spin button's visuals.
 
 ## Holding some reels
 
@@ -87,11 +87,11 @@ Held reels skip the spin entirely and stay on whatever symbols they're currently
 
 They count as already-landed for `spin:allLanded`, so the resolver fires when all *non-held* reels land. No `spin:reelLanded` / `spin:stopping` fires for held reels.&#x20;
 
-Note that `setAnticipation([...])` filters held indices silently.
+`setAnticipation([...])` filters held indices silently.
 
 ## Overriding spin mode
 
-Some slots spin the reels yet use cascades after the initial spin. To achieve that you can use `SpinOptions.mode` - it overrides the builder's default phase chain on a per-call basis.
+Some slots spin the reels, then cascade after the initial spin. `SpinOptions.mode` overrides the builder's default phase chain per call.
 
 ```ts
 const reelSet = new ReelSetBuilder()

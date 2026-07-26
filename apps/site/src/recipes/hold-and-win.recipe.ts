@@ -1,7 +1,7 @@
 // @ts-nocheck
 // Injected: HoldAndWinBuilder, GoldCoinSymbol, Spine, PIXI, gsap, app
 //
-// Hold & Win starter — the minimal HoldAndWinBuilder board: grid, coin
+// Hold & Win starter - the minimal HoldAndWinBuilder board: grid, coin
 // symbol, strip weights, respin count. The coin is the production-style
 // Spine gold coin (GoldCoinSymbol), the same one the other H&W recipes use.
 // The board owns the 15 independent 1x1 reels, the lock bookkeeping, the
@@ -34,7 +34,7 @@ probe.destroy();
 const board = new HoldAndWinBuilder()
   .grid(COLS, ROWS)
   .cellSize(CELL, { gap: GAP })
-  // The coin is a Spine symbol now — one registration, no custom class.
+  // The coin is a Spine symbol now - one registration, no custom class.
   .symbols((r) => r.register(COIN, GoldCoinSymbol, {
     spineMap: SPINE_MAP, idleAnimation: 'idle', scale, settleSize: SETTLE_SIZE,
   }))

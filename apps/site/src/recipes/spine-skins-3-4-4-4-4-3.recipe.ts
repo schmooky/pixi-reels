@@ -14,7 +14,7 @@ await loadThunderkickSpines();
 
 // The symbol plates measure exactly 175x203 (setup-pose bounds of the tier
 // skeletons; scatter/mystery intentionally overflow their tile). Cells match
-// the plates 1:1 with no gap — the grid is compact, cell edge to cell edge.
+// the plates 1:1 with no gap - the grid is compact, cell edge to cell edge.
 const SPINE_SCALE = 0.6;
 const CELL_W = 175 * SPINE_SCALE;
 const CELL_H = 203 * SPINE_SCALE;
@@ -63,7 +63,7 @@ const reelSet = new ReelSetBuilder()
     }
   })
   .weights(weights)
-  // Scatter, mystery, and wild art overflow their 175x203 tile — keep them
+  // Scatter, mystery, and wild art overflow their 175x203 tile - keep them
   // painted above neighbouring cells.
   .symbolData({ scatter: { zIndex: 10 }, mystery: { zIndex: 6 }, wild: { zIndex: 5 } })
   .speed('normal', SpeedPresets.NORMAL)

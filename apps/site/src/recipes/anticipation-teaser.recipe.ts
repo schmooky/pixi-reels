@@ -3,7 +3,7 @@
 //                   WILD_CARD, app
 //
 // Anticipation teaser. pair setAnticipation with a buffer-above prefill so
-// a slow reel approaches a known high-value symbol. The user literally sees
+// a slow reel approaches a known high-value symbol. The user sees
 // the bonus coming as the reel decelerates.
 
 const COIN = 'coin';

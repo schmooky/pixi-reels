@@ -4,7 +4,7 @@
 //                   app, textures, blurTextures
 //
 // Bring your own blur art. The round symbols use the hand-authored
-// motion-blur strips from the texture atlas (`setStatic` / `setBlurred` —
+// motion-blur strips from the texture atlas (`setStatic` / `setBlurred` -
 // the cache treats provided textures as authoritative and never bakes or
 // destroys them). The royal symbols have NO blur art in the atlas, so the
 // cache auto-bakes theirs. Both kinds spin through the exact same wrapper.
@@ -24,7 +24,7 @@ for (const id of PROVIDED) {
 
 const createInner = () => new SpriteSymbol({ textures });
 
-// Prewarm everything — provided ids short-circuit (the cache already has
+// Prewarm everything - provided ids short-circuit (the cache already has
 // them), the royals get captured + baked here instead of on the first spin.
 prewarmSpinTextures({
   cache,

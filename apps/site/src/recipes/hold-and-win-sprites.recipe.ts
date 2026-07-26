@@ -6,7 +6,7 @@
 // recipes, but every symbol is a plain TexturePacker sprite (Supercharged
 // Diamonds 3 art): number symbols blur as they spin (BlurSpriteSymbol) and
 // the money coin is a 30-frame flip (AnimatedSpriteSymbol). No skeleton
-// runtime — this is the sprite path a studio ships most often.
+// runtime - this is the sprite path a studio ships most often.
 
 const COLS = 5, ROWS = 4, CELL = 74, GAP = 6;
 const COIN = 'coin';

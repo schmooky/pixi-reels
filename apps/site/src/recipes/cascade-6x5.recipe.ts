@@ -37,7 +37,7 @@ const reelSet = new ReelSetBuilder()
 return {
   reelSet,
   onSpin: async () => {
-    // Stage 0: cluster of CLUSTER on row 2, cols 0–2.
+    // Stage 0: cluster of CLUSTER on row 2, cols 0-2.
     const stage0 = Array.from({ length: REELS }, (_, c) =>
       Array.from({ length: ROWS }, (_, r) =>
         r === HIT_ROW && HIT_COLS.includes(c) ? CLUSTER : randSymbol(CLUSTER)

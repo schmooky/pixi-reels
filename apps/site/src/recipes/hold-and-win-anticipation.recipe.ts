@@ -3,7 +3,7 @@
 //
 // Last-cell anticipation. The board's `anticipateWhen(...)` predicate flips
 // every still-spinning cell to a drawn-out tension profile when only one
-// cell is left to fill — the "one more for the full-board jackpot" moment.
+// cell is left to fill - the "one more for the full-board jackpot" moment.
 // The whole feature is one builder knob; the recipe only listens to events.
 
 const COLS = 4, ROWS = 3, CELL = 76, GAP = 6;
@@ -143,7 +143,7 @@ const FILL = [
   [{ col: 1, row: 0 }, { col: 2, row: 0 }, { col: 3, row: 0 }],
   [{ col: 0, row: 1 }, { col: 1, row: 1 }, { col: 2, row: 1 }, { col: 3, row: 1 }],
   [{ col: 0, row: 2 }, { col: 1, row: 2 }],
-  [{ col: 2, row: 2 }], // the last cell — lands under anticipation
+  [{ col: 2, row: 2 }], // the last cell - lands under anticipation
 ];
 const val = () => [5, 10, 15, 25][Math.floor(Math.random() * 4)];
 

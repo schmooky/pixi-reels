@@ -1,12 +1,12 @@
 /**
- * Static-spin recipe — spin cached snapshot textures instead of live symbols.
+ * Static-spin recipe - spin cached snapshot textures instead of live symbols.
  *
  * `StaticSpinSymbol` wraps a plain `SpriteSymbol`: at rest the live symbol
  * shows; while the reel spins, a cached snapshot is shown instead,
  * crossfading into an auto-baked motion-blur variant (no pre-authored blur
- * atlas needed — compare with the default sandbox recipe, which needs one).
+ * atlas needed - compare with the default sandbox recipe, which needs one).
  * `prewarmSpinTextures` bakes everything up front so the first spin doesn't
- * hitch. The same wiring works with `SpineReelSymbol` as the inner symbol —
+ * hitch. The same wiring works with `SpineReelSymbol` as the inner symbol -
  * that's the "spin static, not Spine" setup.
  *
  * To try it: in sandbox.ts, set `ACTIVE_ROUTE = buildStaticSpin`.
@@ -80,7 +80,7 @@ export function buildStaticSpin({ app, textures }: SandboxContext): SandboxResul
   const width = REELS * (SYMBOL_SIZE + GAP) - GAP;
   const height = ROWS * (SYMBOL_SIZE + GAP) - GAP;
 
-  // Horizontal banner strip above the reels — same wrapper, sideways smear.
+  // Horizontal banner strip above the reels - same wrapper, sideways smear.
   // Its cells are a different size, so it gets its own cache; `axis: 'x'`
   // bakes the blur along the strip's travel direction.
   const STRIP_CELL = 90;

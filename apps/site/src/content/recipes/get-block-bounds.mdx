@@ -90,7 +90,7 @@ If you've pinned the **anchor** of a big symbol, the pin overlay is sized to the
 
 ## Coordinate space
 
-`getBlockBounds` returns ReelSet-**local** coordinates: `(0, 0)` is the top-left of the ReelSet container, not the page. Add the overlay as a child of the ReelSet (`reelSet.addChild(overlay)`) so the math just works. If you want page-space coordinates, transform with `reelSet.toGlobal({ x, y })`.
+`getBlockBounds` returns ReelSet-**local** coordinates: `(0, 0)` is the top-left of the ReelSet container, not the page. Add the overlay as a child of the ReelSet (`reelSet.addChild(overlay)`) so the math works. If you want page-space coordinates, transform with `reelSet.toGlobal({ x, y })`.
 
 ## Related
 

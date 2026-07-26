@@ -8,7 +8,7 @@ description: Two moments, three phases, gravity-correct refills. The mental
 
 A cascade slot. Sweet Bonanza, Gates of Olympus, Sugar Rush. has two visually distinct animations that look like one mechanic. Once you split them in your head, the [`.tumble()`](/docs/api-builder/#tumble) configuration and the [`reelSet.refill(...)`](/docs/api-reelset/#cascade-tumble) verb stop feeling magic.
 
-This page is the explainer. For copy-pasteable code see the [recipes](/recipes/). For the verbs themselves see the [ReelSet reference](/docs/api-reelset/).
+For copy-pasteable code see the [recipes](/recipes/). For the verbs themselves see the [ReelSet reference](/docs/api-reelset/).
 
 ## The two moments
 
@@ -118,7 +118,7 @@ while (true) {
 }
 ```
 
-…or call **`reelSet.runCascade({ detectWinners, nextGrid })`**, which is the same loop with `cascade:chain:start` / `cascade:chain:end` fired per stage and the awaited `RunCascadeResult` carrying the summary. The two callbacks may be `async`. `nextGrid` is the natural place to `await server.cascade(winners)`.
+...or call **`reelSet.runCascade({ detectWinners, nextGrid })`**, which is the same loop with `cascade:chain:start` / `cascade:chain:end` fired per stage and the awaited `RunCascadeResult` carrying the summary. The two callbacks may be `async`. `nextGrid` is the natural place to `await server.cascade(winners)`.
 
 ## Per-cascade options
 
@@ -244,7 +244,7 @@ Override the phase only when 1-3 don't fit. The override path requires implement
 
 ## Recipes by purpose
 
-| If you want… | Look at |
+| If you want... | Look at |
 |---|---|
 | The minimal cascade slot end-to-end | [Cascade 6×5 tumble](/recipes/cascade-6x5/) |
 | Compare animation feels side-by-side | [Tumble feels](/recipes/tumble-feels/) |

@@ -8,7 +8,7 @@
  *
  * If there are no pending `.changeset/*.md` files, an ephemeral one is
  * generated so nightlies (and branch-push snapshots) always publish.
- * The generated file is deleted at the end — nothing is committed.
+ * The generated file is deleted at the end; nothing is committed.
  *
  * Usage:
  *   node scripts/snapshot-release.mjs              # infer tag from branch

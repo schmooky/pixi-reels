@@ -5,7 +5,7 @@
 //
 // Every Hold & Win cell is its own 1×1 ReelSet, so the board hands you the
 // raw reel with `board.reelAt(cell)`: start it, stop it, read the symbol
-// inside it — independently of every other cell. This demo starts three
+// inside it, independently of every other cell. This demo starts three
 // cells with a stagger (each on its own clock), slam-stops the third the
 // instant it starts, and then flashes the landed coins via `symbolAt(cell)`.
 
@@ -54,7 +54,7 @@ return {
     busy = true;
     board.reset();
 
-    // 1) START each cell independently, staggered — three separate clocks
+    // 1) START each cell independently, staggered - three separate clocks
     hud.text = 'starting cell 0…';
     const s0 = spinCell(CELLS[0], LAND[0]);
     await sleep(260);

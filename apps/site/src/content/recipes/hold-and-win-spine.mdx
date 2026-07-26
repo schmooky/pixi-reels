@@ -52,7 +52,7 @@ r.register(id, id === COIN ? GoldCoinSymbol : SpineReelSymbol, {
 });
 ```
 
-The fruit skeletons ship a `win`; the jackpot coin ships its tier one-shots (`coin` / `mini` / `major` / …) instead and has no `idle` / `fall` / `win` of its own — those hooks simply no-op (`SpineReelSymbol` guards every `setAnimation` with `findAnimation`), the landing settles on the money face, and the tier word is the reveal. The Hold & Win choreography never touches Spine directly.
+The fruit skeletons ship a `win`; the jackpot coin ships its tier one-shots (`coin` / `mini` / `major` / …) instead and has no `idle` / `fall` / `win` of its own — those hooks no-op (`SpineReelSymbol` guards every `setAnimation` with `findAnimation`), the landing settles on the money face, and the tier word is the reveal. The Hold & Win choreography never touches Spine directly.
 
 ## Jackpot tiers: word on, spin, money face
 

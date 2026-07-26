@@ -8,7 +8,7 @@
 // land, the same press hides the base reels, reveals the Hold & Win board
 // (every cell now its own 1×1 reel), plays the respin feature, and on
 // `feature:end` swaps back to the base game. The board is a second display
-// object on the same screen — `feature:enter` / `feature:end` are the seam.
+// object on the same screen - `feature:enter` / `feature:end` are the seam.
 
 const COLS = 5, ROWS = 3, CELL = 74, GAP = 6;
 const COIN = 'coin', BONUS = 'bonus';
@@ -108,7 +108,7 @@ async function runFeature(triggerCells) {
   const total = board.lockedCoins.reduce((a, c) => a + (c.data?.value ?? 0), 0);
   hud.text = `feature over · won ${fmt(total)} · back to base game`;
   await sleep(700);
-  // feature:end already fired inside respin — swap the display back
+  // feature:end already fired inside respin - swap the display back
   await new Promise((res) => gsap.to(board.container, { alpha: 0, duration: 0.3, onComplete: res }));
   board.container.visible = false;
   board.container.alpha = 1;

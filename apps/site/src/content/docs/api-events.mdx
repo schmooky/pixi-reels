@@ -11,7 +11,7 @@ Two emitters:
 - `reelSet.events`. typed `EventEmitter<ReelSetEvents>`. Domain-level events for the whole board.
 - `reel.events`. typed `EventEmitter<ReelEvents>`. Per-column phase / symbol / land events.
 
-Both emitters' `on(name, cb)` returns an `off()` function for unsubscription. The library cleans up its own listeners on `destroy()`; a thrown exception inside a listener does not stop other listeners on the same event from running (but it is logged and may pollute your error console. handle your own errors).
+Both emitters' `on(name, cb)` returns an `off()` function to unsubscribe. The library cleans up its own listeners on `destroy()`; a thrown exception inside a listener does not stop other listeners on the same event from running (but it is logged and may pollute your error console. handle your own errors).
 
 ## Quick map
 

@@ -110,7 +110,7 @@ export async function applyStudioConfig(
       const options: SpineReelSymbolOptions = {
         spineMap: { [symbol.id]: { skeleton: skeletonAlias, atlas: atlasAlias } },
         // Apply user-picked names as the engine defaults so every method
-        // (playWin, playBlur, …) targets the right animation without
+        // (playWin, playBlur, ...) targets the right animation without
         // per-symbol-id overrides.
         idleAnimation: overrides.idle,
         winAnimation: overrides.win,

@@ -10,7 +10,6 @@ export function createUI(options: {
     'display:flex;gap:12px;align-items:center;z-index:1000;font-family:sans-serif;' +
     'touch-action:manipulation;user-select:none;';
 
-  // Spin button
   const spinBtn = document.createElement('button');
   spinBtn.textContent = 'SPIN';
   spinBtn.style.cssText =
@@ -25,7 +24,6 @@ export function createUI(options: {
   spinBtn.addEventListener('click', options.onSpin);
   container.appendChild(spinBtn);
 
-  // Speed buttons
   if (options.speeds && options.onSpeedChange) {
     const speedContainer = document.createElement('div');
     speedContainer.style.cssText = 'display:flex;gap:4px;';
@@ -39,7 +37,6 @@ export function createUI(options: {
         'min-height:44px;touch-action:manipulation;';
       btn.addEventListener('click', () => {
         options.onSpeedChange!(speed);
-        // Highlight active
         speedContainer.querySelectorAll('button').forEach((b) => {
           (b as HTMLElement).style.background = '#2c3e50';
         });
@@ -51,7 +48,6 @@ export function createUI(options: {
     container.appendChild(speedContainer);
   }
 
-  // Win display
   const winDisplay = document.createElement('div');
   winDisplay.id = 'win-display';
   winDisplay.style.cssText =

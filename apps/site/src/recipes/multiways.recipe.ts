@@ -35,7 +35,7 @@ const reelSet = new ReelSetBuilder()
     }
   })
   .weights(Object.fromEntries(CARD_DECK.map((c, i) => [c.id, 12 - i])))
-  // Big symbols visually overshoot at landing on this layout. set
+  // Big symbols overshoot at landing on this layout. set
   // bounceDistance: 0 so each cell snaps flush regardless of which
   // shape was rolled this spin.
   .speed('normal', { ...SpeedPresets.NORMAL, bounceDistance: 0, bounceDuration: 0 })

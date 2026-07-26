@@ -18,7 +18,7 @@ const weights = {
   wild: 3,
 };
 
-// One cache for the whole reel set — snapshots are shared across every
+// One cache for the whole reel set; snapshots are shared across every
 // cell and every spin.
 const cache = new SpinTextureCache({ renderer: app.renderer });
 

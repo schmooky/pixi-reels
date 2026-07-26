@@ -4,7 +4,7 @@
 //
 // Bonus cells. A few cells are marked as bonus cells from the start. When a
 // coin lands ON one, the cell flashes active and doubles that coin's value.
-// Positional special cells are pure game state — the board only reports
+// Positional special cells are pure game state - the board only reports
 // where each coin landed (coin:locked + cell), the rest is your rule.
 
 const COLS = 5, ROWS = 3, CELL = 76, GAP = 6;

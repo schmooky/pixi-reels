@@ -20,14 +20,14 @@ import { ReelSymbol } from 'pixi-reels';
  *
  * This class lives in `examples/shared/` because blur-on-spin is a
  * canonical pattern, not library API. Copy it into your game code
- * unchanged — it is 60 lines.
+ * unchanged - it is 60 lines.
  */
 export interface BlurSpriteSymbolOptions {
   /** Map of symbolId -> base Texture. */
   textures: Record<string, Texture>;
   /** Optional map of symbolId -> motion-blur Texture. Missing entries fall through to base. */
   blurTextures?: Record<string, Texture>;
-  /** Anchor on the underlying Sprite. Default: { x: 0.5, y: 0.5 } — centered in the cell. */
+  /** Anchor on the underlying Sprite. Default: { x: 0.5, y: 0.5 } - centered in the cell. */
   anchor?: { x: number; y: number };
   /** Letterbox-fit to the cell instead of stretching (maintains aspect). Default: true. */
   fit?: boolean;

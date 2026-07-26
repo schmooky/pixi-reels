@@ -38,7 +38,7 @@ expectGrid(reelSet, /* same 5×3 grid of 'wild' */);
 destroy();
 ```
 
-`spinAndLand()` calls `spin() → setResult() → skip()` under the hood, which
+`spinAndLand()` calls `spin() → setResult() → skip()`, which
 bypasses all timing and resolves on a microtask. Perfect for CI.
 
 ## 2. Force outcomes with cheats

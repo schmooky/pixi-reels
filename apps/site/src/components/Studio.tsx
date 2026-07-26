@@ -242,7 +242,7 @@ export default function Studio() {
   // after first paint so very fast IDB+atlas loads don't flash a 1-frame
   // skeleton. Mirrors RecipeRunner's pattern.
   const showSkeleton = useMinDisplay(isBooting, 250);
-  // Set when a recipe link (#code=…) arrives and we already have saved work
+  // Set when a recipe link (#code=...) arrives and we already have saved work
   // in IDB. opens the overwrite/preview/cancel modal. While non-null the
   // user hasn't decided yet; the persisted config stays untouched.
   const [pendingHashCode, setPendingHashCode] = useState<string | null>(null);
@@ -283,7 +283,7 @@ export default function Studio() {
       // Three landing states:
       //   1. hash + prior work → load persisted as initial; prompt user to pick
       //      replace / preview-only / cancel before applying the hash code.
-      //   2. hash + no prior work → just use the hash code directly (first
+      //   2. hash + no prior work → use the hash code directly (first
       //      visit), persistence kicks in via the debounced save effect.
       //   3. no hash → normal flow.
       let cfg: StudioConfig;
@@ -474,7 +474,7 @@ export default function Studio() {
 
     const PADDING = 24;
     // Aspect-preserving fit. Upscales freely so the reels look right in a
-    // fullscreen canvas pane (with the previous Math.min(1, …) clamp they
+    // fullscreen canvas pane (with the previous Math.min(1, ...) clamp they
     // looked tiny in the middle). Always re-derives raw dimensions from
     // post-divide-by-scale so successive refits don't compound.
     const fit = () => {
@@ -781,7 +781,7 @@ export default function Studio() {
                   padding: { top: 10, bottom: 10 },
                 }}
                 onMount={(_editor, monaco) => {
-                  // Injected globals (ReelSetBuilder, userSymbols, app, …)
+                  // Injected globals (ReelSetBuilder, userSymbols, app, ...)
                   // aren't declared anywhere Monaco can resolve, so semantic
                   // diagnostics produce a sea of red squiggles. The code is
                   // transpiled at Run via sucrase (types stripped, no

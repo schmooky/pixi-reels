@@ -5,7 +5,7 @@ import { setTimeout as wait } from 'node:timers/promises';
 /**
  * Cascade-tumble rapid-click suite.
  *
- * The example uses a DOM button — Playwright drives it via real clicks.
+ * The example uses a DOM button, driven via real Playwright clicks.
  * This is the realistic "what the player actually does" path: a player
  * sees the SPIN button highlighted, mashes it. The engine and the
  * user-code cascade loop must stay coherent across the mash, and the
@@ -86,14 +86,14 @@ test('rapid double-click triggers slam and round completes cleanly', async ({ pa
   page.on('pageerror', (err) => errors.push(err.message));
 
   // First button in the shared UI is the spin/stop button. Don't filter by
-  // text — its label flips between SPIN and STOP and would break the
+  // text: its label flips between SPIN and STOP and would break the
   // locator mid-test.
   const btn = page.locator('button').first();
 
   // Capture skip events so we can assert that the slam DID route through
   // the engine by the time the round completes. `requestSkip()` defers
   // the slam until `setResult()` arrives (the right behavior for cascade
-  // games with long server waits — slamming pre-`setResult` would land
+  // games with long server waits: slamming pre-`setResult` would land
   // the reels on whatever filler was in the buffer), so we don't probe
   // synchronously right after click 2; we verify the contract at round end.
   await page.evaluate(() => {
@@ -103,8 +103,8 @@ test('rapid double-click triggers slam and round completes cleanly', async ({ pa
     rs.events.on('skip:boosted', () => (window as any).__SKIP_EVENTS.push('boosted'));
   });
 
-  // Click 1 starts the round; click 2 a few ms later — during the lead-in
-  // or the long server wait — queues the slam through `requestSkip()`.
+  // Click 1 starts the round; click 2 a few ms later (during the lead-in
+  // or the long server wait) queues the slam through `requestSkip()`.
   await btn.click();
   await page.waitForTimeout(50);
   await btn.click();
@@ -133,17 +133,17 @@ test('the SPIN button stays clickable after a slammed round', async ({ page }) =
   await page.waitForFunction(() => !!(window as any).__PIXI_REELS_DEBUG?.reelSet);
 
   // First button in the shared UI is the spin/stop button. Don't filter by
-  // text — its label flips between SPIN and STOP and would break the
+  // text: its label flips between SPIN and STOP and would break the
   // locator mid-test.
   const btn = page.locator('button').first();
 
-  // Round 1 — slammed.
+  // Round 1: slammed.
   await btn.click();
   await page.waitForTimeout(80);
   await btn.click();
   await waitForRoundComplete(page);
 
-  // Round 2 — fresh start.
+  // Round 2: fresh start.
   const errors: string[] = [];
   page.on('pageerror', (err) => errors.push(err.message));
   await btn.click();
@@ -174,7 +174,7 @@ test('a tap during a between-refill gap queues and slams the next refill', async
   // Start a round.
   await btn.click();
 
-  // Wait until the round reaches its first between-refill gap — user-code
+  // Wait until the round reaches its first between-refill gap: user-code
   // is mid-cascade-loop (probe.busy=true) but engine isn't running phases
   // (rs.isSpinning=false). That's the "lost-tap" window the queue fixes.
   // If the random server produces no winners, this poll just times out
@@ -213,7 +213,7 @@ test('mashing the button 8 times never throws or stalls the engine', async ({ pa
   page.on('pageerror', (err) => errors.push(err.message));
 
   // First button in the shared UI is the spin/stop button. Don't filter by
-  // text — its label flips between SPIN and STOP and would break the
+  // text: its label flips between SPIN and STOP and would break the
   // locator mid-test.
   const btn = page.locator('button').first();
   for (let i = 0; i < 8; i++) {

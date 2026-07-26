@@ -89,7 +89,7 @@ reelSet.events.on('spin:allLanded', ({ symbols }) => {
 });
 reelSet.events.on('pin:expired', (pin) => { if (pin?.symbolId?.startsWith?.('wild_x')) clearBadge(pin.col, pin.row); });
 
-// Scripted arrivals — one of each multiplier rung across the demo loop.
+// Scripted arrivals - one of each multiplier rung across the demo loop.
 const arrivals = [
   { col: 1, row: 1, mult: 2 },
   { col: 3, row: 0, mult: 3 },

@@ -86,7 +86,7 @@ function clamp(s: string, max: number): string {
   return s.length > max ? s.slice(0, max - 1).trimEnd() + '…' : s;
 }
 
-/** The reel-board icon panel — the same monogram + hue identity as RecipePlaceholder. */
+/** The reel-board icon panel: the same monogram + hue identity as RecipePlaceholder. */
 function iconPanel(monogram: string, hue: number): Node {
   const cols = [0, 1, 2, 3];
   const cells = (c: number) =>

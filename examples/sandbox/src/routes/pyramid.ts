@@ -1,5 +1,5 @@
 /**
- * Pyramid recipe — static 3-5-5-5-3 shape with center anchoring.
+ * Pyramid recipe - static 3-5-5-5-3 shape with center anchoring.
  *
  * To try it: in sandbox.ts, swap the active `buildSandbox` body for
  * `return buildPyramid(ctx)`.

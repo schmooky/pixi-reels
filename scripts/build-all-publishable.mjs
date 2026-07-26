@@ -64,7 +64,7 @@ async function listWorkspacePackages() {
     for (const map of [pkg.dependencies, pkg.devDependencies, pkg.peerDependencies]) {
       if (!map) continue;
       for (const dep of Object.keys(map)) {
-        // Internal deps — adapt the prefix if you ever publish under a scope.
+        // Internal deps. Adapt the prefix if you ever publish under a scope.
         if (dep === 'pixi-reels' || dep.startsWith('@pixi-reels/')) deps.add(dep);
       }
     }

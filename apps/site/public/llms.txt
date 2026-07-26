@@ -8,7 +8,7 @@ Site: https://pixi-reels.schmooky.dev
 Repo: https://github.com/schmooky/pixi-reels
 Package: https://www.npmjs.com/package/pixi-reels
 
-Generated: 2026-07-19T09:05:33.879Z
+Generated: 2026-07-26T13:06:34.894Z
 
 ## Quick start
 
@@ -1132,7 +1132,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/anticipate-a-reel/
 //                   WILD_CARD, app, pickWeighted
 
 const A = '7', B = '8', C = '9';
-const S = 'scatter'; // scatter. registered as a custom card below
+const S = 'scatter'; // registered as a custom card below
 const IDS = [A, B, C, S];
 
 const SCATTER_SYM = { id: S, color: 0xff6b35, label: 'SCAT', textColor: 0xffffff };
@@ -1185,7 +1185,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/anticipation-teaser/
 //                   WILD_CARD, app
 //
 // Anticipation teaser. pair setAnticipation with a buffer-above prefill so
-// a slow reel approaches a known high-value symbol. The user literally sees
+// a slow reel approaches a known high-value symbol. The user sees
 // the bonus coming as the reel decelerates.
 
 const COIN = 'coin';
@@ -1505,8 +1505,6 @@ URL: https://pixi-reels.schmooky.dev/recipes/big-symbol-held-respin/
 //                   PIXI, app
 
 // NUDGE-IN, THEN HOLD a buffer-anchored big symbol across a respin.
-//
-// NUDGE-IN, THEN HOLD a buffer-anchored big symbol across a respin.
 // Reel 3 lands with a tall wild whose anchor sits in bufferAbove (only
 // the tail of the block shows at row 0). The player nudges to drag the
 // wild into full view, then gets a re-spin of the OTHER reels while
@@ -1612,7 +1610,7 @@ return {
     //
     // We hand the held column a placeholder ColumnTarget; the held
     // entry's contents are not validated against the current strip
-    // and are simply dropped during frame building.
+    // and are dropped during frame building.
     const respinGrid = [
       ct(), ct(),
       ct(), // ignored. reel 2 is held
@@ -1781,7 +1779,7 @@ const reelSet = new ReelSetBuilder()
   })
   .weights(Object.fromEntries(CARD_DECK.map((c, i) => [c.id, 12 - i])))
   .symbolData({ [GIANT.id]: { weight: 0, zIndex: 5, size: { w: GIANT.w, h: GIANT.h } } })
-  // Big symbols are visually massive (a 3x3 anchor is ~3x cell size);
+  // A 3x3 anchor spans ~3x a normal cell, so
   // the default 56px landing bounce overshoots into adjacent cells and
   // reads as a broken landing. Zero the bounce so the anchor lands
   // flush on grid.
@@ -1837,7 +1835,7 @@ const reelSet = new ReelSetBuilder()
   })
   .weights(Object.fromEntries(CARD_DECK.map((c, i) => [c.id, 12 - i])))
   .symbolData({ [SQUARE.id]: { weight: 0, zIndex: 5, size: { w: SQUARE.w, h: SQUARE.h } } })
-  // Big symbols are visually massive (a 2x2 anchor is ~2x cell size);
+  // Big symbols are large (a 2x2 anchor is ~2x cell size);
   // the default 56px landing bounce overshoots into adjacent cells and
   // reads as a broken landing. Zero the bounce so the anchor lands
   // flush on grid. Keeps the decelerationEase intact so the brake-in
@@ -1896,7 +1894,7 @@ const reelSet = new ReelSetBuilder()
   })
   .weights(Object.fromEntries(CARD_DECK.map((c, i) => [c.id, 12 - i])))
   .symbolData({ [TALL.id]: { weight: 0, zIndex: 5, size: { w: TALL.w, h: TALL.h } } })
-  // Big symbols are visually massive; the default 56px landing bounce
+  // Big symbols are massive; the default 56px landing bounce
   // overshoots into adjacent cells and reads as a broken landing.
   // Zero the bounce so the anchor lands flush on grid.
   .speed('normal', { ...SpeedPresets.NORMAL, bounceDistance: 0, bounceDuration: 0 })
@@ -1953,7 +1951,7 @@ const reelSet = new ReelSetBuilder()
   })
   .weights(Object.fromEntries(CARD_DECK.map((c, i) => [c.id, 12 - i])))
   .symbolData({ [WIDE.id]: { weight: 0, zIndex: 5, size: { w: WIDE.w, h: WIDE.h } } })
-  // Big symbols are visually massive; the default 56px landing bounce
+  // Big symbols are massive; the default 56px landing bounce
   // overshoots into adjacent cells and reads as a broken landing.
   // Zero the bounce so the anchor lands flush on grid.
   .speed('normal', { ...SpeedPresets.NORMAL, bounceDistance: 0, bounceDuration: 0 })
@@ -1981,12 +1979,12 @@ URL: https://pixi-reels.schmooky.dev/recipes/board-grid-reveal/
 // @ts-nocheck
 // Injected: BoardGrid, BlurSpriteSymbol, SpeedPresets, loadHoldAndWinSprites, PIXI, gsap, app
 //
-// A board built DIRECTLY on the generic BoardGrid primitive — no HoldAndWinBuilder
+// A board built DIRECTLY on the generic BoardGrid primitive - no HoldAndWinBuilder
 // in sight. BoardGrid is the "board of reels" mechanism: a grid of cells that each
 // spin independently. Hold & Win is ONE opinionated feature on top of it; this is a
-// different one — a "reveal & collect" prize grid. Press spin and every cell spins
+// different one - a "reveal & collect" prize grid. Press spin and every cell spins
 // at once to a random prize, then the values tally and the top cell pops. No locking,
-// no respins — those are Hold & Win's rules, and they live in Hold & Win's code, not
+// no respins - those are Hold & Win's rules, and they live in Hold & Win's code, not
 // here. You own the rule; the primitive just spins the cells you tell it to.
 
 const COLS = 5, ROWS = 3, CELL = 72, GAP = 6;
@@ -2008,9 +2006,9 @@ const grid = new BoardGrid({
   gap: GAP,
   symbols: (r) => { for (const id of IDS) r.register(id, BlurCell, { textures: symbols, blurTextures: blur }); },
   weights: Object.fromEntries(IDS.map((id) => [id, 1])),
-  // A per-cell profile is just a function of the cell — here, a diagonal wave.
+  // A per-cell profile is a function of the cell - here, a diagonal wave.
   profiles: { wave: (cell) => ({ ...SpeedPresets.NORMAL, minimumSpinTime: 300 + (cell.col + cell.row) * 55 }) },
-  // A per-cell backing tile — BoardGrid draws it behind each reel. Also gives
+  // A per-cell backing tile - BoardGrid draws it behind each reel. Also gives
   // the grid real bounds while every cell is still empty, so the runner can
   // size it to the canvas before the first reveal.
   chrome: (g, size) => {
@@ -2025,7 +2023,7 @@ grid.container.x = (app.screen.width - boardW) / 2;
 grid.container.y = (app.screen.height - boardH) / 2 - 6;
 app.stage.addChild(grid.container);
 
-// A highlight ring we move onto the top-prize cell — pure game-layer art, drawn
+// A highlight ring we move onto the top-prize cell - pure game-layer art, drawn
 // with geometry the primitive hands out (cellBounds / cellCenter).
 const ring = new PIXI.Graphics();
 grid.container.addChild(ring);
@@ -2047,7 +2045,7 @@ return {
 
     // YOU decide every result; the primitive just spins each cell to its id.
     const targets = grid.cells().map((cell) => ({ cell, id: IDS[Math.floor(Math.random() * IDS.length)] }));
-    await grid.spinCells(targets); // onLanded is optional — omit it and just await
+    await grid.spinCells(targets); // onLanded is optional - omit it and await
 
     // The rule is yours: tally the prizes and find the top cell.
     let total = 0;
@@ -2078,7 +2076,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/card-symbol-debug/
 //                   PIXI, gsap, app, textures, blurTextures, SYMBOL_IDS,
 //                   pickWeighted
 //
-// CardSymbol prototyping demo. a classic 5×3 layout using the importable
+// CardSymbol prototyping demo. a 5×3 layout using the importable
 // debug Graphics symbol from `examples/shared/CardSymbol.ts`. No textures,
 // no atlases, no loaders. Each card is a flat colored rectangle with a
 // centered letter that always renders crisply at any cell size.
@@ -2192,7 +2190,7 @@ const reelSet = new ReelSetBuilder()
 return {
   reelSet,
   onSpin: async () => {
-    // Stage 0: cluster of CLUSTER on row 2, cols 0–2.
+    // Stage 0: cluster of CLUSTER on row 2, cols 0-2.
     const stage0 = Array.from({ length: REELS }, (_, c) =>
       Array.from({ length: ROWS }, (_, r) =>
         r === HIT_ROW && HIT_COLS.includes(c) ? CLUSTER : randSymbol(CLUSTER)
@@ -2276,7 +2274,7 @@ const reelSet = new ReelSetBuilder()
 return {
   reelSet,
   onSpin: async () => {
-    // Stage 0: cluster of CLUSTER on row 2, cols 0–2.
+    // Stage 0: cluster of CLUSTER on row 2, cols 0-2.
     const stage0 = Array.from({ length: REELS }, (_, c) =>
       Array.from({ length: ROWS }, (_, r) =>
         r === HIT_ROW && HIT_COLS.includes(c) ? CLUSTER : randSymbol(CLUSTER)
@@ -2702,7 +2700,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/coin-value-data/
 // @ts-nocheck
 // Injected: HoldAndWinBuilder, ReelSymbol, PIXI, gsap, app
 //
-// BEGINNER LESSON — carry the value as DATA instead of baking it into the
+// BEGINNER LESSON - carry the value as DATA instead of baking it into the
 // symbol class.
 //
 // In the previous lesson each value was its own symbol variant (coin5 always
@@ -2712,7 +2710,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/coin-value-data/
 //
 //     board.respin([{ cell, id: 'coin', data: { value: 25 } }])
 //
-// The board never reads `data` — it just stores it. We paint the number
+// The board never reads `data`; it just stores it. We paint the number
 // ourselves from the `coin:locked` event. Same coin art, any value.
 
 // The value label uses the game's gold digit bitmap font (crisp, centered).
@@ -2798,7 +2796,7 @@ return {
     board.reset();
     board.enter([]);
     for (const cells of ROUNDS) {
-      // each hit carries its own value in `data` — different every coin
+      // each hit carries its own value in `data`, different every coin
       await board.respin(cells.map((cell) => ({ cell, id: COIN, data: { value: randVal() } })));
       await new Promise((r) => setTimeout(r, 650));
     }
@@ -2814,15 +2812,15 @@ URL: https://pixi-reels.schmooky.dev/recipes/coin-value-overlay/
 // @ts-nocheck
 // Injected: ReelSetBuilder, SpeedPresets, ReelSymbol, loadHoldAndWinSprites, PIXI, app
 //
-// BEGINNER LESSON — put a number on a ready-made coin without drawing the
+// BEGINNER LESSON - put a number on a ready-made coin without drawing the
 // coin yourself.
 //
 // Lesson 1 drew the whole coin with PIXI.Graphics. In a real game the coin
 // art already exists (a sprite or a Spine skeleton), and all you add is the
 // number ON TOP. That's "composition": your symbol's `view` holds two
-// children — the artwork and a text label.
+// children - the artwork and a text label.
 //
-// `this.view` is a container, so you just `addChild` both and position them
+// `this.view` is a container, so you `addChild` both and position them
 // in resize().
 
 const { coin } = await loadHoldAndWinSprites(); // the diamond-coin sprite frames
@@ -2883,7 +2881,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/coin-value-symbol/
 // @ts-nocheck
 // Injected: ReelSetBuilder, SpeedPresets, ReelSymbol, PIXI, app
 //
-// BEGINNER LESSON — carry a numeric value on a coin by building your own
+// BEGINNER LESSON - carry a numeric value on a coin by building your own
 // symbol class.
 //
 // In pixi-reels a "symbol" is any subclass of `ReelSymbol`. The engine makes
@@ -3001,7 +2999,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/collector-symbol-pin/
 //
 // Collector coin on a Hold & Win board.
 //
-// Built on `HoldAndWinBuilder` — no pins, no hand-rolled grid. Value coins
+// Built on `HoldAndWinBuilder` - no pins, no hand-rolled grid. Value coins
 // carry their amount in `coin.data`; when the collector orb locks, the game
 // layer walks `board.lockedCoins`, sums the orb's neighbours, flies their
 // values in and `release()`s those cells. The collector's badge shows the
@@ -3086,7 +3084,7 @@ async function absorb(collectorCell) {
     sumText.text = String(sum);
     fitText(sumText, CELL * 0.82, CELL * 0.46);
   }
-  void board.symbolAt(collectorCell).playWin?.(); // once, after absorbing — per-neighbour restarts would never let 'win' finish
+  void board.symbolAt(collectorCell).playWin?.(); // once, after absorbing; per-neighbour restarts would never let 'win' finish
   return sum;
 }
 
@@ -4107,7 +4105,7 @@ function exitFeature() {
   reelSet.frame.remove('feature-wild-injector');
 }
 
-// ── Mode banner. big, obvious, unmissable ──────────────────────────────
+// ── Mode banner ──────────────────────────────
 const bannerHeight = 42;
 const banner = new PIXI.Container();
 reelSet.addChild(banner);
@@ -4190,7 +4188,7 @@ return {
 
     // Server provides a boring, no-wild base result every time. In BASE mode
     // the grid stays boring. In FEATURE mode the wild-injector middleware
-    // rewrites ~40% of cells to WILD. the player instantly sees the payoff
+    // rewrites ~40% of cells to WILD. the player sees the payoff
     // of being in the feature.
     const grid = Array.from({ length: COLS }, () =>
       Array.from({ length: ROWS }, () =>
@@ -4295,7 +4293,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/hold-and-win-anticipation/
 //
 // Last-cell anticipation. The board's `anticipateWhen(...)` predicate flips
 // every still-spinning cell to a drawn-out tension profile when only one
-// cell is left to fill — the "one more for the full-board jackpot" moment.
+// cell is left to fill - the "one more for the full-board jackpot" moment.
 // The whole feature is one builder knob; the recipe only listens to events.
 
 const COLS = 4, ROWS = 3, CELL = 76, GAP = 6;
@@ -4435,7 +4433,7 @@ const FILL = [
   [{ col: 1, row: 0 }, { col: 2, row: 0 }, { col: 3, row: 0 }],
   [{ col: 0, row: 1 }, { col: 1, row: 1 }, { col: 2, row: 1 }, { col: 3, row: 1 }],
   [{ col: 0, row: 2 }, { col: 1, row: 2 }],
-  [{ col: 2, row: 2 }], // the last cell — lands under anticipation
+  [{ col: 2, row: 2 }], // the last cell - lands under anticipation
 ];
 const val = () => [5, 10, 15, 25][Math.floor(Math.random() * 4)];
 
@@ -4480,7 +4478,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/hold-and-win-base-to-feature/
 // land, the same press hides the base reels, reveals the Hold & Win board
 // (every cell now its own 1×1 reel), plays the respin feature, and on
 // `feature:end` swaps back to the base game. The board is a second display
-// object on the same screen — `feature:enter` / `feature:end` are the seam.
+// object on the same screen - `feature:enter` / `feature:end` are the seam.
 
 const COLS = 5, ROWS = 3, CELL = 74, GAP = 6;
 const COIN = 'coin', BONUS = 'bonus';
@@ -4580,7 +4578,7 @@ async function runFeature(triggerCells) {
   const total = board.lockedCoins.reduce((a, c) => a + (c.data?.value ?? 0), 0);
   hud.text = `feature over · won ${fmt(total)} · back to base game`;
   await sleep(700);
-  // feature:end already fired inside respin — swap the display back
+  // feature:end already fired inside respin - swap the display back
   await new Promise((res) => gsap.to(board.container, { alpha: 0, duration: 0.3, onComplete: res }));
   board.container.visible = false;
   board.container.alpha = 1;
@@ -4621,7 +4619,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/hold-and-win-bonus-cell/
 //
 // Bonus cells. A few cells are marked as bonus cells from the start. When a
 // coin lands ON one, the cell flashes active and doubles that coin's value.
-// Positional special cells are pure game state — the board only reports
+// Positional special cells are pure game state - the board only reports
 // where each coin landed (coin:locked + cell), the rest is your rule.
 
 const COLS = 5, ROWS = 3, CELL = 76, GAP = 6;
@@ -4763,7 +4761,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/hold-and-win-cell-control/
 //
 // Every Hold & Win cell is its own 1×1 ReelSet, so the board hands you the
 // raw reel with `board.reelAt(cell)`: start it, stop it, read the symbol
-// inside it — independently of every other cell. This demo starts three
+// inside it, independently of every other cell. This demo starts three
 // cells with a stagger (each on its own clock), slam-stops the third the
 // instant it starts, and then flashes the landed coins via `symbolAt(cell)`.
 
@@ -4812,7 +4810,7 @@ return {
     busy = true;
     board.reset();
 
-    // 1) START each cell independently, staggered — three separate clocks
+    // 1) START each cell independently, staggered - three separate clocks
     hud.text = 'starting cell 0…';
     const s0 = spinCell(CELLS[0], LAND[0]);
     await sleep(260);
@@ -4969,7 +4967,7 @@ async function collect() {
     }));
     await sleep(120);
   }
-  void board.symbolAt(COLLECTOR_CELL).playWin?.(); // react once, after the sweep — restarting it per-arrival never lets the win play through
+  void board.symbolAt(COLLECTOR_CELL).playWin?.(); // react once, after the sweep - restarting it per-arrival never lets the win play through
   await sleep(400);
 }
 
@@ -5193,7 +5191,7 @@ async function collectIntoOrb() {
     }));
     await sleep(90);
   }
-  void board.symbolAt(orbCell).playWin(); // the orb celebrates once the sweep is in — calling it per-arrival restarts 'win' before it can play through
+  void board.symbolAt(orbCell).playWin(); // the orb celebrates once the sweep is in; calling it per-arrival restarts 'win' before it can play through
   await sleep(500);
 }
 
@@ -5413,7 +5411,7 @@ return {
     board.enter(coins);
     hud.text = 'counting up…';
 
-    // each coin counts up as its wave arrives — reading order, one per beat
+    // each coin counts up as its wave arrives - reading order, one per beat
     for (const wave of coinWaves(coins, 'sequence')) {
       await Promise.all(wave.map((coin) => countUp(coin.cell, coin.data.value)));
     }
@@ -5645,7 +5643,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/hold-and-win-multiplier/
 //
 // Multiplier-strike coin. The board fills with value coins; on the strike
 // press a multiplier coin lands, the strike FX (17-frame AnimatedSprite)
-// fires over it, and every coin's value is multiplied by it — labels bump,
+// fires over it, and every coin's value is multiplied by it - labels bump,
 // total jumps. The multiplier lives in coin.data; the board is value-blind.
 
 const COLS = 5, ROWS = 3, CELL = 76, GAP = 6;
@@ -5654,7 +5652,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const fmt = (v) => v.toFixed(2);
 
 const { symbols, blur, coin } = await loadHoldAndWinSprites();
-// the strike FX + the gold value font (GoldDigits — same as the collector recipe)
+// the strike FX + the gold value font (GoldDigits, same as the collector recipe)
 const strikeSheet = await PIXI.Assets.load('/hw-sprites/multiplier-strike.json');
 const strikeFrames = Object.entries(strikeSheet.textures).sort(([a], [b]) => a.localeCompare(b)).map(([, t]) => t);
 await PIXI.Assets.load('/hw-spine/goldfont.fnt'); // face "GoldDigits"
@@ -5788,7 +5786,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/hold-and-win-mystery-coin/
 // @ts-nocheck
 // Injected: HoldAndWinBuilder, GoldCoinSymbol, Spine, coinWaves, PIXI, gsap, app
 //
-// Mystery value coins. Each coin lands as a blank gold disc — its amount is
+// Mystery value coins. Each coin lands as a blank gold disc - its amount is
 // unknown. On lock, a strip of candidate values spins inside the coin face
 // and decelerates onto the real number, then the amount paints in the gold
 // font. The board never reads the value; it lives in `coin.data` and the
@@ -5890,7 +5888,7 @@ const paintLabel = (cell, value) => {
 };
 
 // the candidate amounts that flash past during a reveal (gold font has only
-// digits, comma and dot — every entry is a plain number)
+// digits, comma and dot - every entry is a plain number)
 const POOL = [1, 2, 5, 10, 15, 20, 25, 50, 75, 100, 200];
 
 // -- the reveal: a true looping value reel inside the coin face. A small set
@@ -5918,7 +5916,7 @@ async function revealValue(cell, finalValue) {
   });
   const TOTAL = K * ROW_H;
   // place every row within ±TOTAL/2 of centre, so a row leaving one edge of
-  // the window reappears at the other — an endless strip from K labels
+  // the window reappears at the other - an endless strip from K labels
   const wrap = (v) => { const m = ((v % TOTAL) + TOTAL) % TOTAL; return m > TOTAL / 2 ? m - TOTAL : m; };
   const layout = (offset) => rows.forEach((t, i) => { t.x = p.x; t.y = p.y + wrap(i * ROW_H - offset); });
   layout(0);
@@ -5956,7 +5954,7 @@ board.events.on('coin:released', ({ coin }) => {
   labelAt.delete(k);
 });
 
-// scripted arrivals — in a real game the server sends each round's hits and
+// scripted arrivals - in a real game the server sends each round's hits and
 // the per-coin value; here we roll a random value at land time so the reveal
 // is genuine every run.
 const randVal = () => POOL[Math.floor(Math.random() * POOL.length)];
@@ -6003,7 +6001,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/hold-and-win-payer-coin/
 //
 // Payer coin. The board opens holding four value coins. Spin once and a
 // special payer orb lands; on lock it pumps its value into every other coin
-// on the board — a gold token arcs from the orb to each coin in turn, and on
+// on the board - a gold token arcs from the orb to each coin in turn, and on
 // arrival that coin's amount bumps and flashes. The board stays value-blind:
 // the bump is pure game state walked over `board.lockedCoins`.
 
@@ -6121,7 +6119,7 @@ const flyers = new Set();
 async function payout(payerCell, payValue) {
   const from = abs(payerCell);
   const targets = board.lockedCoins.filter((c) => c.id === COIN);
-  void board.symbolAt(payerCell).playWin?.(); // the orb winds up once — re-firing it per coin restarts 'win' before it can play through
+  void board.symbolAt(payerCell).playWin?.(); // the orb winds up once; re-firing it per coin restarts 'win' before it can play through
   for (const wave of coinWaves(targets, 'sequence')) {
     await Promise.all(wave.map((coin) => {
       const token = fitGold(goldText(fmt(payValue), 26), SETTLE_SIZE * 0.7, SETTLE_SIZE * 0.4);
@@ -6791,7 +6789,7 @@ board.events.on('coin:locked', ({ coin }) => {
     return;
   }
   // Jackpot reveal: spin the tier word off, settle on the money face, then
-  // paint the amount - the source game's exact under-the-hood sequence.
+  // paint the amount - the source game's exact sequence.
   flashPanel(coin.data.kind);
   const spine = board.symbolAt(coin.cell).spine;
   if (spine && spine.skeleton.data.findAnimation(coin.data.kind)) {
@@ -6919,7 +6917,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/hold-and-win-sprites/
 // recipes, but every symbol is a plain TexturePacker sprite (Supercharged
 // Diamonds 3 art): number symbols blur as they spin (BlurSpriteSymbol) and
 // the money coin is a 30-frame flip (AnimatedSpriteSymbol). No skeleton
-// runtime — this is the sprite path a studio ships most often.
+// runtime - this is the sprite path a studio ships most often.
 
 const COLS = 5, ROWS = 4, CELL = 74, GAP = 6;
 const COIN = 'coin';
@@ -7058,7 +7056,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/hold-and-win-sticky-overlay/
 // The overlay (a ×100 badge) lives in `coin.data` and is attached as a CHILD
 // of the symbol's `view`, so it moves with the symbol on screen. The trick:
 //   - on an in-place swap (setSymbolAt makes a NEW symbol instance) the badge
-//     is re-attached from `coin.data` — it never gets lost,
+//     is re-attached from `coin.data` - it never gets lost,
 //   - on a collect flight the badge is rebuilt onto the flying clone from the
 //     same `coin.data`, so it travels with the coin.
 
@@ -7135,7 +7133,7 @@ return {
     if (phase === 'ready') {
       phase = 'swapping';
       // swap the coin's ART in place; the new instance has a fresh view,
-      // so re-attach the badge from the SAME coin.data — it survives.
+      // so re-attach the badge from the SAME coin.data - it survives.
       const sym = board.setSymbolAt(TARGET.cell, COIN_B, TARGET.data);
       attachBadge(TARGET.cell, TARGET.data);
       void sym.playWin?.().catch?.(() => {});
@@ -7144,7 +7142,7 @@ return {
       return;
     }
 
-    // collect: fly a clone built from coin.data — coin + badge together
+    // collect: fly a clone built from coin.data - coin + badge together
     phase = 'flying';
     hud.text = 'flying to the meter — the badge rides along';
     const from = abs(TARGET.cell);
@@ -7172,7 +7170,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/hold-and-win-tier-swap/
 // @ts-nocheck
 // Injected: HoldAndWinBuilder, GoldCoinSymbol, SpineReelSymbol, Spine, settleMoneyFace, PIXI, gsap, app
 //
-// Swap a symbol in place — coin → MINI → MAJOR — without breaking the grid.
+// Swap a symbol in place - coin → MINI → MAJOR - without breaking the grid.
 //
 // `board.setSymbolAt(cell, id, data)` re-places one cell with a different
 // registered symbol (different art / skeleton) and rewrites that cell's
@@ -7276,7 +7274,7 @@ return {
     tier = (tier + 1) % TIERS.length;
     const t = TIERS[tier];
     if (tier === 0) { seedBoard(); hud.text = 'reset · press spin to upgrade the marked coin'; busy = false; return; }
-    // swap the symbol id in place — neighbours untouched, ledger updated
+    // swap the symbol id in place - neighbours untouched, ledger updated
     const sym = board.setSymbolAt(TARGET.cell, t.id, { value: t.value, kind: t.kind });
     void sym.playWin?.().catch?.(() => {});
     paintLabel(TARGET.cell, t.value, t.kind);
@@ -7294,11 +7292,11 @@ URL: https://pixi-reels.schmooky.dev/recipes/hold-and-win-trace/
 //           loadHoldAndWinSprites, PIXI, gsap, app
 //
 // The lifecycle, made visible. A small board runs a full feature while every
-// `board.events` beat prints to a live log on the right — feature:enter, respin:start,
+// `board.events` beat prints to a live log on the right - feature:enter, respin:start,
 // cell:landed, coin:locked, respins:changed, respin:end, board:full / feature:end.
 // This is the companion to the Hold & Win guide: watch the state machine instead
 // of imagining it. The board is a plain HoldAndWinBuilder board; nothing here
-// touches its internals — it only listens.
+// touches its internals - it only listens.
 
 const COLS = 4, ROWS = 3, CELL = 60, GAP = 6;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -7415,9 +7413,9 @@ URL: https://pixi-reels.schmooky.dev/recipes/hold-and-win-upgrade-coin/
 //
 // Value upgrade in place. The board opens holding three 5.00 coins. Each
 // press bumps every held coin up the value ladder (5 → 10 → 25 → 50 → 100)
-// with a flip-and-pop flourish — the coin never re-spins and the cell never
+// with a flip-and-pop flourish - the coin never re-spins and the cell never
 // moves. The new tier lives in `coin.data`; the board is untouched, the
-// label is just repainted from the data.
+// label is repainted from the data.
 
 const COLS = 5, ROWS = 3, CELL = 72, GAP = 6;
 const COIN = 'coin';
@@ -7508,7 +7506,7 @@ const paintLabel = (cell, value) => {
   return t;
 };
 
-// the value ladder — each press promotes a coin to the next rung
+// the value ladder - each press promotes a coin to the next rung
 const LADDER = [5, 10, 25, 50, 100];
 const nextTier = (v) => LADDER[Math.min(LADDER.length - 1, LADDER.indexOf(v) + 1)];
 const totalOf = () => board.lockedCoins.reduce((a, c) => a + (c.data?.value ?? 0), 0);
@@ -7577,7 +7575,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/hold-and-win/
 // @ts-nocheck
 // Injected: HoldAndWinBuilder, GoldCoinSymbol, Spine, PIXI, gsap, app
 //
-// Hold & Win starter — the minimal HoldAndWinBuilder board: grid, coin
+// Hold & Win starter - the minimal HoldAndWinBuilder board: grid, coin
 // symbol, strip weights, respin count. The coin is the production-style
 // Spine gold coin (GoldCoinSymbol), the same one the other H&W recipes use.
 // The board owns the 15 independent 1x1 reels, the lock bookkeeping, the
@@ -7610,7 +7608,7 @@ probe.destroy();
 const board = new HoldAndWinBuilder()
   .grid(COLS, ROWS)
   .cellSize(CELL, { gap: GAP })
-  // The coin is a Spine symbol now — one registration, no custom class.
+  // The coin is a Spine symbol now - one registration, no custom class.
   .symbols((r) => r.register(COIN, GoldCoinSymbol, {
     spineMap: SPINE_MAP, idleAnimation: 'idle', scale, settleSize: SETTLE_SIZE,
   }))
@@ -7693,12 +7691,12 @@ URL: https://pixi-reels.schmooky.dev/recipes/horizontal-reel/
 // @ts-nocheck
 // Injected: HorizontalReelBuilder, CardSymbol, CARD_DECK, PIXI, gsap, app
 //
-// A SINGLE horizontal reel — the banner reel above the reels that tells you
+// A SINGLE horizontal reel - the banner reel above the reels that tells you
 // which symbols pay this round. It follows the SAME contract as ReelSet:
-//   spin()                       — start it, returns a promise
-//   setResult([{ visible: ids }])— one ColumnTarget (this reel is one column)
-//   await spin                   — resolves with the SpinResult on land
-// Then it CASCADES like the main reels — a real tumble: the winning symbols are
+//   spin()                       - start it, returns a promise
+//   setResult([{ visible: ids }]) - one ColumnTarget (this reel is one column)
+//   await spin                   - resolves with the SpinResult on land
+// Then it CASCADES like the main reels - a real tumble: the winning symbols are
 // removed, the survivors collapse to close the gaps, and new symbols slide in
 // from the feed side. Press Spin: it spins, lands, then a winning combo tumbles.
 
@@ -7740,16 +7738,16 @@ return {
     if (busy) return;
     busy = true;
 
-    // 1) Spin and land — the ReelSet flow, one row wide.
+    // 1) Spin and land - the ReelSet flow, one row wide.
     hud.text = 'spinning…';
     const spin = reel.spin();
     const pay = payingRow();                        // the "server" response
     await new Promise((r) => setTimeout(r, 500));   // simulated network delay
-    reel.setResult([{ visible: pay }]);             // one ColumnTarget — this reel
+    reel.setResult([{ visible: pay }]);             // one ColumnTarget - this reel
     const { symbols } = await spin;                 // SpinResult: [[...row]]
     hud.text = `paid: ${symbols[0].join(' ')}`;
 
-    // 2) Cascade — pretend the main reel had a win on a couple of these cells.
+    // 2) Cascade - pretend the main reel had a win on a couple of these cells.
     await new Promise((r) => setTimeout(r, 500));
     const winners = [0, 2, 4].filter(() => Math.random() < 0.7);
     if (winners.length) {
@@ -7771,7 +7769,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/layering-promote-jagged/
 //                   loadThunderkickSpines, buildThunderkickSpineMap,
 //                   app, pickWeighted
 //
-// Jagged layouts can't use `unmask` (the builder throws — the motion layer
+// Jagged layouts can't use `unmask` (the builder throws - the motion layer
 // can't keep unmasked views aligned on offset reels). The pattern instead:
 // PROMOTE each landed scatter's view into viewport.spotlightContainer (the
 // same above-mask layer the win spotlight uses), and hand it back to its
@@ -7899,7 +7897,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/layering-scatter-zindex/
 //                   loadThunderkickSpines, buildThunderkickSpineMap,
 //                   app, pickWeighted
 //
-// symbolData zIndex — layering WITHIN one reel. The scatter (zIndex: 10)
+// symbolData zIndex - layering WITHIN one reel. The scatter (zIndex: 10)
 // always paints above its reel-mates; the mystery bush is deliberately
 // left at the default layer, so the tile below it paints over its leaves
 // (bottom rows draw in front within a layer). Spot the difference each
@@ -7949,7 +7947,7 @@ const reelSet = new ReelSetBuilder()
     }
   })
   .weights(weights)
-  // The lesson: scatter is elevated, mystery is NOT (default layer) —
+  // The lesson: scatter is elevated, mystery is NOT (default layer) -
   // watch the bush get clipped by the tile below it while the jaw never is.
   .symbolData({ scatter: { zIndex: 10 } })
   // Synchronized settle: all reels start and stop together (no stagger),
@@ -7987,13 +7985,13 @@ URL: https://pixi-reels.schmooky.dev/recipes/layering-unmask/
 //                   loadThunderkickSpines, buildThunderkickSpineMap,
 //                   app, pickWeighted
 //
-// symbolData `unmask: true` — the declarative fix, on the SAME jagged
+// symbolData `unmask: true`, the declarative fix, on the SAME jagged
 // 3-4-4-4-4-3 grid as the other demos. On land, unmasked scatters are
 // parented to the viewport-wide unmaskedContainer: above EVERY reel and
 // outside the mask, so the jaw overflows the grid edges and its right-hand
 // neighbours with zero recipe code. The engine bakes each reel's offset
 // into the lifted view, so this works on offset (center-anchored) reels
-// too — no manual promotion needed.
+// too, no manual promotion needed.
 
 await loadThunderkickSpines();
 
@@ -8058,7 +8056,7 @@ return {
       Array.from({ length: rows }, () => pickWeighted(weights)),
     );
     // Scatters on the short outer reels (0 and 5) at their edge rows, so
-    // the jaw pokes past the stepped grid outline AND the neighbour — the
+    // the jaw pokes past the stepped grid outline AND the neighbour - the
     // exact case that needs the reel offset baked into the lifted view.
     grid[0][Math.random() < 0.5 ? 0 : grid[0].length - 1] = 'scatter';
     grid[5][Math.random() < 0.5 ? 0 : grid[5].length - 1] = 'scatter';
@@ -8161,7 +8159,7 @@ reelSet.events.on('spin:allLanded', ({ symbols }) => {
 });
 reelSet.events.on('pin:expired', (pin) => { if (pin?.symbolId?.startsWith?.('wild_x')) clearBadge(pin.col, pin.row); });
 
-// Scripted arrivals — one of each multiplier rung across the demo loop.
+// Scripted arrivals - one of each multiplier rung across the demo loop.
 const arrivals = [
   { col: 1, row: 1, mult: 2 },
   { col: 3, row: 0, mult: 3 },
@@ -8418,7 +8416,7 @@ const reelSet = new ReelSetBuilder()
     }
   })
   .weights(Object.fromEntries(CARD_DECK.map((c, i) => [c.id, 12 - i])))
-  // Big symbols visually overshoot at landing on this layout. set
+  // Big symbols overshoot at landing on this layout. set
   // bounceDistance: 0 so each cell snaps flush regardless of which
   // shape was rolled this spin.
   .speed('normal', { ...SpeedPresets.NORMAL, bounceDistance: 0, bounceDuration: 0 })
@@ -8500,7 +8498,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/mystery-reveal-pin/
 //
 // Visual: filler is rectangular playing cards; mystery is the game's purple
 // plasma orb (a Spine skeleton) with no label. the "what is it?" reads from
-// shape alone — the player only learns the value through the reveal.
+// shape alone - the player only learns the value through the reveal.
 
 const FILLER = ['7', '8', '10', 'Q'];
 const MYSTERY = 'mystery';
@@ -8598,7 +8596,7 @@ async function revealCell(col, row, revealId) {
   oldSym.view.y = oy;
   oldSym.view.scale.set(1);
 
-  // Swap identity via pin. same as before, just wrapped in animation.
+  // Swap identity via pin. same as before, wrapped in animation.
   reelSet.pin(col, row, revealId, { turns: 'eval' });
 
   // The pin call replaced the symbol at this cell; grab the new one
@@ -9509,7 +9507,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/paylines-events-only/
 // Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
 //                   WILD_CARD, WinPresenter, PIXI, gsap, app, pickWeighted
 //
-// This recipe shows the "events + getCellBounds" path: WinPresenter only
+// The "events + getCellBounds" path: WinPresenter only
 // animates symbols; you draw every per-win visual (lines, outlines,
 // numbers) yourself by subscribing to `win:group` / `win:symbol`.
 
@@ -10893,9 +10891,9 @@ URL: https://pixi-reels.schmooky.dev/recipes/spine-mystery-reveal/
 //
 // Mystery reveal: bushes land with their own `land` one-shot, then each
 // plays the rig's `revealWin` on an overlay spine while the cell underneath
-// seamlessly swaps to the round's shared target symbol via `activate()`.
+// swaps to the round's shared target symbol via `activate()`.
 // Every reveal animation fades the bush to fully transparent, so the
-// overlay simply destroys itself on complete.
+// overlay destroys itself on complete.
 
 await loadThunderkickSpines();
 
@@ -10948,7 +10946,7 @@ const reelSet = new ReelSetBuilder()
     }
   })
   .weights(weights)
-  // Mystery bush and wild art overflow their 175x203 tile — keep them
+  // Mystery bush and wild art overflow their 175x203 tile, keep them
   // painted above neighbouring cells.
   .symbolData({ mystery: { zIndex: 6 }, wild: { zIndex: 5 } })
   .speed('normal', SpeedPresets.NORMAL)
@@ -10995,7 +10993,7 @@ reelSet.events.on('spin:complete', async () => {
   );
   if (cells.length === 0) return;
 
-  // One shared outcome per round — every bush hides the same symbol.
+  // One shared outcome per round, every bush hides the same symbol.
   const target = pickWeighted(weights);
 
   // Let the bushes' `land` one-shot (0.33s) finish first.
@@ -11017,7 +11015,7 @@ reelSet.events.on('spin:complete', async () => {
     bush.update(0);
 
     // The bush fully covers the tile until its `explode` event (0.83s), so
-    // swapping the cell now is invisible — by the time the reveal parts the
+    // swapping the cell now is invisible; by the time the reveal parts the
     // leaves, the real symbol is already underneath.
     sym.activate(target);
 
@@ -11174,7 +11172,7 @@ const reelSet = new ReelSetBuilder()
     }
   })
   .weights(weights)
-  // Scatter art (jaw!) and the wild overflow their 175x203 tile — keep them
+  // Scatter art (jaw!) and the wild overflow their 175x203 tile - keep them
   // painted above neighbouring cells.
   .symbolData({ scatter: { zIndex: 10 }, wild: { zIndex: 5 } })
   .speed('normal', { ...SpeedPresets.NORMAL, anticipationDelay: 500 })
@@ -11196,7 +11194,7 @@ let armReel = -1;      // reel whose landing starts the tease (2nd scatter)
 let won = false;
 
 // Per-reel zIndex only sorts within one reel's container, and the reel to
-// the right draws on top — so a landed scatter's jaw overflow gets clipped
+// the right draws on top - so a landed scatter's jaw overflow gets clipped
 // by its right neighbour AND by the reel mask. Promote landed scatters
 // into viewport.spotlightContainer (the same above-mask layer the win
 // spotlight uses): above every reel, outside the mask. Restored on the
@@ -11335,7 +11333,7 @@ await loadThunderkickSpines();
 
 // The symbol plates measure exactly 175x203 (setup-pose bounds of the tier
 // skeletons; scatter/mystery intentionally overflow their tile). Cells match
-// the plates 1:1 with no gap — the grid is compact, cell edge to cell edge.
+// the plates 1:1 with no gap - the grid is compact, cell edge to cell edge.
 const SPINE_SCALE = 0.6;
 const CELL_W = 175 * SPINE_SCALE;
 const CELL_H = 203 * SPINE_SCALE;
@@ -11384,7 +11382,7 @@ const reelSet = new ReelSetBuilder()
     }
   })
   .weights(weights)
-  // Scatter, mystery, and wild art overflow their 175x203 tile — keep them
+  // Scatter, mystery, and wild art overflow their 175x203 tile - keep them
   // painted above neighbouring cells.
   .symbolData({ scatter: { zIndex: 10 }, mystery: { zIndex: 6 }, wild: { zIndex: 5 } })
   .speed('normal', SpeedPresets.NORMAL)
@@ -11511,7 +11509,7 @@ const weights = {
   wild: 3,
 };
 
-// One cache for the whole reel set — snapshots are shared across every
+// One cache for the whole reel set; snapshots are shared across every
 // cell and every spin.
 const cache = new SpinTextureCache({ renderer: app.renderer });
 
@@ -11653,7 +11651,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/static-spin-provided-blur/
 //                   app, textures, blurTextures
 //
 // Bring your own blur art. The round symbols use the hand-authored
-// motion-blur strips from the texture atlas (`setStatic` / `setBlurred` —
+// motion-blur strips from the texture atlas (`setStatic` / `setBlurred` -
 // the cache treats provided textures as authoritative and never bakes or
 // destroys them). The royal symbols have NO blur art in the atlas, so the
 // cache auto-bakes theirs. Both kinds spin through the exact same wrapper.
@@ -11673,7 +11671,7 @@ for (const id of PROVIDED) {
 
 const createInner = () => new SpriteSymbol({ textures });
 
-// Prewarm everything — provided ids short-circuit (the cache already has
+// Prewarm everything - provided ids short-circuit (the cache already has
 // them), the royals get captured + baked here instead of on the first spin.
 prewarmSpinTextures({
   cache,
@@ -11721,14 +11719,14 @@ URL: https://pixi-reels.schmooky.dev/recipes/static-spin-spine/
 //
 // "Spin static, not Spine." At rest every cell is a live Spine skeleton
 // (idle loops, landing animations). The moment the reels spin, each cell
-// swaps to a cached snapshot texture and the skeleton is DEACTIVATED —
+// swaps to a cached snapshot texture and the skeleton is DEACTIVATED -
 // no Spine state ticks while spinning, and cells recycling mid-spin never
 // instantiate a skeleton at all. On land the skeletons come back and play
 // their landing animation.
 
 await loadGeneratedSpines();
 
-const SIZE = 140; // the generated skeletons' authored frame size — render 1:1
+const SIZE = 140; // the generated skeletons' authored frame size - render 1:1
 const SPINE_MAP = {
   '9': 'low_a',
   '10': 'low_k',
@@ -11884,7 +11882,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/sticky-wild-pin/
 // Sticky wild. CellPin edition.
 //
 // Instead of manually tracking "stuck" positions in an array and re-injecting
-// them into the grid before every setResult(), we just call reelSet.pin() when
+// them into the grid before every setResult(), we call reelSet.pin() when
 // a wild lands. The engine's pin map handles persistence; the wild stays put
 // for the configured number of turns, then expires automatically.
 //
@@ -11970,7 +11968,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/sticky-win-respin-pin/
 // counter runs out (or a max-respin cap is reached).
 //
 // CellPin with numeric `turns` provides the lock lifecycle for free.
-// Simple "any 3 in a row" counts as a win for this demo.
+// "any 3 in a row" counts as a win for this demo.
 
 const FILLER = ['7', '8', '10', 'Q'];
 const COLS = 5, ROWS = 3, SIZE = 90;
@@ -12243,9 +12241,9 @@ URL: https://pixi-reels.schmooky.dev/recipes/tumble-anticipation-stagger/
 //      `cascade:gravity:start/end` events still fire per reel, marking
 //      where you'd plug anticipation logic in a denser cluster.)
 //   2. The library waits `gravityHoldMs` (250 ms here. bump for more
-//      drama, e.g. 500–800 ms for a mascot pop or multiplier roll).
+//      drama, e.g. 500-800 ms for a mascot pop or multiplier roll).
 //   3. Stage B: new symbols drop in from above. `setDropOrder('ltr', 110)`
-//      gives a left-to-right wave. reel 0 drops first, then 1, then 2…
+//      gives a left-to-right wave. reel 0 drops first, then 1, then 2...
 //      Set the step ≥ `dropIn.duration` (here 380 ms) to make the columns
 //      strictly sequential (column 1 fully lands before column 2 starts);
 //      a smaller step gives overlap.
@@ -12382,9 +12380,9 @@ URL: https://pixi-reels.schmooky.dev/recipes/tumble-anticipation/
 //      `cascade:gravity:start/end` events still fire per reel, marking
 //      where you'd plug anticipation logic in a denser cluster.)
 //   2. The library waits `gravityHoldMs` (250 ms here. bump for more
-//      drama, e.g. 500–800 ms for a mascot pop or multiplier roll).
+//      drama, e.g. 500-800 ms for a mascot pop or multiplier roll).
 //   3. Stage B: new symbols drop in from above. `setDropOrder('ltr', 110)`
-//      gives a left-to-right wave. reel 0 drops first, then 1, then 2…
+//      gives a left-to-right wave. reel 0 drops first, then 1, then 2...
 //      Set the step ≥ `dropIn.duration` (here 380 ms) to make the columns
 //      strictly sequential (column 1 fully lands before column 2 starts);
 //      a smaller step gives overlap.
@@ -12401,8 +12399,8 @@ const CLUSTER = 'low1';
 const HIT_ROW = 2;
 const HIT_COLS = [0, 1, 2];
 const PAUSE_AFTER_REMOVAL_MS = 217;
-const GRAVITY_HOLD_MS = 350;   // 21 frames. window for anticipation visuals        // window for anticipation visuals
-const COLUMN_STEP_MS = 100;    // 6 frames < dropIn (367): columns overlap         // per-reel start delay on the drop-in wave
+const GRAVITY_HOLD_MS = 350;   // 21 frames. window for anticipation visuals
+const COLUMN_STEP_MS = 100;    // per-reel drop-in start delay; 6 frames < dropIn (367) so columns overlap
 
 function randSymbol(exclude) {
   let s;
@@ -12447,7 +12445,7 @@ const reelSet = new ReelSetBuilder()
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
     fall:   { duration: 233, ease: 'power2.in', rowStagger: 33 },  // 14f, 2f stagger
-    // Gravity uses the same `dropIn` config (it's the same phase, just
+    // Gravity uses the same `dropIn` config (it's the same phase,
     // filtered to survivors).
     dropIn: { duration: 367, ease: 'power2.in', rowStagger: 0, distance: 'perHole' },  // 22f
   })
@@ -12613,7 +12611,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/tumble-classic/
 //           CASCADE_PLATE_H, PIXI, gsap, app, pickWeighted
 
 // CLASSIC tumble feel: gravity both ways. power2.in fall out,
-// power2.in drop in, dead stop on the grid. The all-rounder default. Good baseline before reaching for the more
+// power2.in drop in, dead stop on the grid. The all-rounder default, a good baseline before the more
 // stylistic variants. Framed symbol plates rule out overshoot eases
 // (back/bounce): the rectangles would gap and overlap on landing.
 
@@ -13043,7 +13041,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/turbo-anticipation/
 //
 // TURBO anticipation. SuperTurbo's profile has `anticipationDelay: 0`, so a
 // plain setAnticipation would skip the tease entirely. The per-call `duration`
-// override forces it to play anyway — the big "will I hit the bonus?" moment
+// override forces it to play anyway - the big "will I hit the bonus?" moment
 // survives turbo. No profile juggling.
 
 const IDS = ['9', '10', 'J', 'Q', 'K'];
@@ -13061,7 +13059,7 @@ const reelSet = new ReelSetBuilder()
     }
     r.register(SCAT, CardSymbol, { color: 0xffcc44, label: 'F', textColor: 0x3a2600 });
   })
-  // Only SuperTurbo is registered — its anticipationDelay is 0.
+  // Only SuperTurbo is registered - its anticipationDelay is 0.
   .speed('superTurbo', SpeedPresets.SUPER_TURBO)
   .initialSpeed('superTurbo')
   .ticker(app.ticker)
@@ -13129,13 +13127,13 @@ URL: https://pixi-reels.schmooky.dev/recipes/value-coin-pin/
 //
 // Value-carrying coins on a Hold & Win board.
 //
-// Each coin carries a coefficient (×2 … ×50) in `coin.data`. The board locks
-// every hit and respins only the free cells natively — no pins, no
+// Each coin carries a coefficient (×2 ... ×50) in `coin.data`. The board locks
+// every hit and respins only the free cells natively - no pins, no
 // hand-rolled grid of mini-reels, just `HoldAndWinBuilder`. The ×N badge is
 // painted from the data; the running total is summed from `board.lockedCoins`.
 
 const COIN = 'coin', COLS = 5, ROWS = 3, CELL = 64, GAP = 6;
-// a typical coefficient ladder — ×2 common, ×50 rare; the server picks per hit
+// a typical coefficient ladder - ×2 common, ×50 rare; the server picks per hit
 const LADDER_W = { 2: 12, 5: 6, 10: 4, 20: 2, 50: 1 };
 const pickValue = () => Number(pickWeighted(LADDER_W));
 
@@ -13185,7 +13183,7 @@ const refreshTotal = () => { total.text = `TOTAL: ${board.lockedCoins.reduce((a,
 
 board.events.on('coin:locked', ({ coin }) => { badge(coin.cell, coin.data.value); refreshTotal(); });
 
-// scripted rounds — low → high so the running total climbs; the server would
+// scripted rounds - low → high so the running total climbs; the server would
 // decide each round's hit cells and coefficients in a real game
 const ROUNDS = [
   [{ col: 0, row: 2 }, { col: 2, row: 0 }, { col: 4, row: 1 }],
@@ -13293,7 +13291,7 @@ async function walkPinsLeft() {
 // Overlay event hook. fires whenever an overlay ReelSymbol is created
 // (at spin:start for every active pin). This is the Spine-animation hook:
 // for a SpineSymbol you'd cast and call `overlay.setAnimation('idle', true)`
-// or similar. Here we give every sticky-wild overlay a gentle pulse so it's
+// or similar. Here every sticky-wild overlay gets a gentle pulse so it's
 // distinct from the final cell render on land.
 reelSet.events.on('pin:overlayCreated', (_pin, overlay) => {
   gsap.fromTo(

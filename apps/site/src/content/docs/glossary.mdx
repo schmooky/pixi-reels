@@ -40,7 +40,7 @@ Two groups of terms are mixed here: **slot vocabulary** (concepts every slot use
 
 **Reel**. One vertical column of symbols.
 
-**Reel strip**. The (long, invisible) list of symbols a reel draws from. pixi-reels does not expose this directly. it just asks for a next symbol from a frame middleware chain.
+**Reel strip**. The (long, invisible) list of symbols a reel draws from. pixi-reels does not expose this directly. it asks for a next symbol from a frame middleware chain.
 
 **Respin**. A spin where some reels are held in place and only the others move. A single-reel respin holds every reel except one; a Hold & Win respin holds every "coin" cell.
 
@@ -68,7 +68,7 @@ Two groups of terms are mixed here: **slot vocabulary** (concepts every slot use
 
 ## Library-specific names
 
-**`ReelSet`**. The top-level object. Think of it as "the whole slot board": a PixiJS container that holds the reels, the spin controller, the speed manager, and the spotlight. You build one with `new ReelSetBuilder()...build()` and `addChild` it to your stage.
+**`ReelSet`**. The top-level object, "the whole slot board": a PixiJS container that holds the reels, the spin controller, the speed manager, and the spotlight. You build one with `new ReelSetBuilder()...build()` and `addChild` it to your stage.
 
 **`ReelSetBuilder`**. A fluent builder (chainable methods) that turns a pile of config into a `ReelSet`. Use it so you cannot forget to wire a required piece. every mandatory call is enforced at `.build()` time.
 
@@ -82,7 +82,7 @@ Two groups of terms are mixed here: **slot vocabulary** (concepts every slot use
 
 **`ReelPhase`**. A single stage in a reel's life during a spin. pixi-reels ships built-in phases for wind-up, constant-speed blur, optional anticipation slow-down, and the decelerate-snap-bounce stop. Add your own by extending `ReelPhase` and registering via the `PhaseFactory` callback in `builder.phases(f => f.register('name', MyPhase))`. The built-in phase classes are internal; only the Config TYPES (`StartPhaseConfig`, `SpinPhaseConfig`, etc.) are exported as stable shape descriptions.
 
-**`SpinningMode`**. The big strategy switch that decides what a spin even means. `StandardMode` is the default (each reel runs through the phases independently). `CascadeMode` replaces columns atomically for tumble mechanics. `ImmediateMode` is a no-motion mode for testing.
+**`SpinningMode`**. The strategy switch that decides what a spin means. `StandardMode` is the default (each reel runs through the phases independently). `CascadeMode` replaces columns atomically for tumble mechanics. `ImmediateMode` is a no-motion mode for testing.
 
 **`SpeedManager`**. Holds named `SpeedProfile` objects (timings, easings, bounce distance). Switch profiles at runtime with `reelSet.setSpeed('turbo')`.
 

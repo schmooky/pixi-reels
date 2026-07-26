@@ -1,5 +1,5 @@
 /**
- * Mulberry32 — a tiny, fast, seed-predictable PRNG.
+ * Mulberry32 - a tiny, fast, seed-predictable PRNG.
  *
  * Good enough for slot demos where "random but reproducible" is all that
  * matters. Not cryptographically secure.

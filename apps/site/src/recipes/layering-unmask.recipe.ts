@@ -4,13 +4,13 @@
 //                   loadThunderkickSpines, buildThunderkickSpineMap,
 //                   app, pickWeighted
 //
-// symbolData `unmask: true` — the declarative fix, on the SAME jagged
+// symbolData `unmask: true`, the declarative fix, on the SAME jagged
 // 3-4-4-4-4-3 grid as the other demos. On land, unmasked scatters are
 // parented to the viewport-wide unmaskedContainer: above EVERY reel and
 // outside the mask, so the jaw overflows the grid edges and its right-hand
 // neighbours with zero recipe code. The engine bakes each reel's offset
 // into the lifted view, so this works on offset (center-anchored) reels
-// too — no manual promotion needed.
+// too, no manual promotion needed.
 
 await loadThunderkickSpines();
 
@@ -75,7 +75,7 @@ return {
       Array.from({ length: rows }, () => pickWeighted(weights)),
     );
     // Scatters on the short outer reels (0 and 5) at their edge rows, so
-    // the jaw pokes past the stepped grid outline AND the neighbour — the
+    // the jaw pokes past the stepped grid outline AND the neighbour - the
     // exact case that needs the reel offset baked into the lifted view.
     grid[0][Math.random() < 0.5 ? 0 : grid[0].length - 1] = 'scatter';
     grid[5][Math.random() < 0.5 ? 0 : grid[5].length - 1] = 'scatter';

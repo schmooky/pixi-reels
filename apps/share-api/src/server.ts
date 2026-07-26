@@ -2,11 +2,11 @@
  * pixi-reels Studio share relay.
  *
  * Express 5 over a swap-in storage adapter. The API never serves HTML
- * and never sees plaintext envelopes — modes 1-4 are pre-encrypted
+ * and never sees plaintext envelopes: modes 1-4 are pre-encrypted
  * client-side and stored opaquely; mode 5 ships a plaintext payload
  * and accepts that the bytes match the intent.
  *
- * Viewer lives on the docs site at `/share/<id>` — the API only bakes
+ * Viewer lives on the docs site at `/share/<id>`; the API only bakes
  * that URL into the CreateShareResponse.
  */
 
@@ -100,7 +100,7 @@ const config = loadConfig();
 
 function buildStorage(): ShareStorage {
   if (config.storage === 'memory') return new InMemoryShareStorage();
-  // STORAGE=s3 — require the bucket + credentials. Fail loud at boot
+  // STORAGE=s3: require the bucket + credentials. Fail loud at boot
   // so a misconfigured deploy doesn't silently drop writes.
   if (!config.s3.bucket) throw new Error('STORAGE=s3 requires S3_BUCKET');
   if (!config.s3.accessKeyId || !config.s3.secretAccessKey) {
@@ -159,7 +159,7 @@ function parseBearer(auth: string | undefined): string | null {
 
 /**
  * Hash-style viewer URL so the docs site's static `/share/` page can
- * resolve the id client-side (`location.hash`) — no host rewrites
+ * resolve the id client-side (`location.hash`), no host rewrites
  * required. Path-style support is possible with a `_redirects`
  * (Netlify/CF) or `vercel.json` rewrite; see DEPLOY.md.
  */
@@ -260,7 +260,7 @@ app.put('/api/studios/:id', authedLimiter, async (req, res, next) => {
     if (record.meta.expiresAt <= Date.now()) throw new NotFoundError('share expired');
     if (!record.meta.mode.editable) throw new ForbiddenError('share is not editable');
     if (!record.meta.saveKeyHash) {
-      // Defence-in-depth — editable shares always carry a hash by
+      // Defence-in-depth: editable shares always carry a hash by
       // construction (assertModeConsistency).
       throw new ForbiddenError('share has no save key configured');
     }
@@ -295,7 +295,7 @@ app.delete('/api/studios/:id', authedLimiter, async (req, res, next) => {
   }
 });
 
-// Operator cleanup — bearer-gated; can be cron'd from the host.
+// Operator cleanup: bearer-gated; can be cron'd from the host.
 app.post('/api/cleanup', authedLimiter, async (req, res, next) => {
   try {
     if (!config.cleanupBearer) {

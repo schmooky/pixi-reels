@@ -41,7 +41,7 @@ sym.playWin();                 // the new symbol is live — animate it
 paintLabel(cell, 500);         // repaint from the new data
 ```
 
-Under the hood it places the new id on the cell's reel (so the engine builds the new symbol instance) and, if the cell is locked, rewrites `lockedCoins` to the new `{ id, data }` — so any total you compute from the ledger stays correct. Every other cell is left alone.
+It places the new id on the cell's reel (so the engine builds the new symbol instance) and, if the cell is locked, rewrites `lockedCoins` to the new `{ id, data }` — so any total you compute from the ledger stays correct. Every other cell is left alone.
 
 The three tiers here are the same jackpot skeleton registered under three ids with different tier-word idle loops (`mini_x` / `major_x`); swapping the id swaps which idle the coin wears.
 

@@ -14,10 +14,10 @@ Five share modes collapse onto four boolean flags (`mode.assetsEncrypted`,
 Per share:
 
 ```
-studios/<id>/meta.json      ShareMeta — plaintext, queryable by you
-studios/<id>/public.json    SharePublic — plaintext, code (when exposed)
+studios/<id>/meta.json      ShareMeta - plaintext, queryable by you
+studios/<id>/public.json    SharePublic - plaintext, code (when exposed)
                             + symbol manifest (refs only)
-studios/<id>/envelope.json  ShareEnvelope — opaque ciphertext (omitted
+studios/<id>/envelope.json  ShareEnvelope - opaque ciphertext (omitted
                             on the fully-public mode)
 ```
 
@@ -34,18 +34,18 @@ pnpm --filter @pixi-reels/share-api dev   # tsx watch on :8787
 ```
 
 Studio talks to it at `http://localhost:8787` while the rest of the
-docs site runs on `:4321` — CORS allow-list defaults to that origin.
+docs site runs on `:4321`; CORS allow-list defaults to that origin.
 
 ## Endpoints
 
 | Method | Path | Body |
 |---|---|---|
 | `POST` | `/api/studios` | `{ mode, ttlDays, public, envelope?, saveKeyHash?, analytics }` |
-| `GET` | `/api/studios/:id` | — |
+| `GET` | `/api/studios/:id` | - |
 | `PUT` | `/api/studios/:id` | `{ saveKey, public, envelope }` |
 | `DELETE` | `/api/studios/:id` | (bearer save key in `Authorization`) |
 | `POST` | `/api/cleanup` | (bearer `CLEANUP_BEARER` in `Authorization`) |
-| `GET` | `/health` | — |
+| `GET` | `/health` | - |
 
 TTL options: 3 / 7 / 30 days (server clamps anything else).
 
@@ -57,5 +57,5 @@ TTL options: 3 / 7 / 30 days (server clamps anything else).
 - `POST /api/cleanup` is bearer-gated and disabled by default
   (`CLEANUP_BEARER` empty).
 - Save-key hashing uses PBKDF2-SHA256 at 210,000 iterations, salted
-  per share, format `base64(salt):base64(hash)` — same parameters as
+  per share, format `base64(salt):base64(hash)`, same parameters as
   spine-benchmark for one shared client helper.

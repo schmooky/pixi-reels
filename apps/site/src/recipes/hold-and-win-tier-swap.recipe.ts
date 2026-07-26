@@ -1,7 +1,7 @@
 // @ts-nocheck
 // Injected: HoldAndWinBuilder, GoldCoinSymbol, SpineReelSymbol, Spine, settleMoneyFace, PIXI, gsap, app
 //
-// Swap a symbol in place — coin → MINI → MAJOR — without breaking the grid.
+// Swap a symbol in place - coin → MINI → MAJOR - without breaking the grid.
 //
 // `board.setSymbolAt(cell, id, data)` re-places one cell with a different
 // registered symbol (different art / skeleton) and rewrites that cell's
@@ -105,7 +105,7 @@ return {
     tier = (tier + 1) % TIERS.length;
     const t = TIERS[tier];
     if (tier === 0) { seedBoard(); hud.text = 'reset · press spin to upgrade the marked coin'; busy = false; return; }
-    // swap the symbol id in place — neighbours untouched, ledger updated
+    // swap the symbol id in place - neighbours untouched, ledger updated
     const sym = board.setSymbolAt(TARGET.cell, t.id, { value: t.value, kind: t.kind });
     void sym.playWin?.().catch?.(() => {});
     paintLabel(TARGET.cell, t.value, t.kind);

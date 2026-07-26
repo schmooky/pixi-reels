@@ -9,8 +9,8 @@
  * understand the whole library surface in one request.
  *
  * For recipes specifically, also inlines the parallel `*.recipe.ts` source
- * code from `src/recipes/`. that's the pattern an LLM most needs in
- * order to write working code against the library.
+ * code from `src/recipes/`. that's the pattern an LLM most needs to
+ * write working code against the library.
  *
  * Wired into the docs build via `pnpm llms:gen` (run by predev/prebuild).
  *

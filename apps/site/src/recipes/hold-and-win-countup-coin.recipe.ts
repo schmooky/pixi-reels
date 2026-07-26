@@ -138,7 +138,7 @@ return {
     board.enter(coins);
     hud.text = 'counting up…';
 
-    // each coin counts up as its wave arrives — reading order, one per beat
+    // each coin counts up as its wave arrives - reading order, one per beat
     for (const wave of coinWaves(coins, 'sequence')) {
       await Promise.all(wave.map((coin) => countUp(coin.cell, coin.data.value)));
     }

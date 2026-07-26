@@ -3,7 +3,7 @@
 //
 // Collector coin on a Hold & Win board.
 //
-// Built on `HoldAndWinBuilder` — no pins, no hand-rolled grid. Value coins
+// Built on `HoldAndWinBuilder` - no pins, no hand-rolled grid. Value coins
 // carry their amount in `coin.data`; when the collector orb locks, the game
 // layer walks `board.lockedCoins`, sums the orb's neighbours, flies their
 // values in and `release()`s those cells. The collector's badge shows the
@@ -88,7 +88,7 @@ async function absorb(collectorCell) {
     sumText.text = String(sum);
     fitText(sumText, CELL * 0.82, CELL * 0.46);
   }
-  void board.symbolAt(collectorCell).playWin?.(); // once, after absorbing — per-neighbour restarts would never let 'win' finish
+  void board.symbolAt(collectorCell).playWin?.(); // once, after absorbing; per-neighbour restarts would never let 'win' finish
   return sum;
 }
 

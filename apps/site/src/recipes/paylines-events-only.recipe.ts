@@ -2,7 +2,7 @@
 // Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
 //                   WILD_CARD, WinPresenter, PIXI, gsap, app, pickWeighted
 //
-// This recipe shows the "events + getCellBounds" path: WinPresenter only
+// The "events + getCellBounds" path: WinPresenter only
 // animates symbols; you draw every per-win visual (lines, outlines,
 // numbers) yourself by subscribing to `win:group` / `win:symbol`.
 

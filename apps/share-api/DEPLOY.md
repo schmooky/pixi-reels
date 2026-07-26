@@ -1,7 +1,7 @@
 # Deploying share-api
 
 Stateless Express service, single process. Any host that can run `node`
-with env vars will do — Coolify, Dokploy, Northflank, Railway, fly.io,
+with env vars will do: Coolify, Dokploy, Northflank, Railway, fly.io,
 plain systemd, bare PM2.
 
 ## Build
@@ -17,7 +17,7 @@ pnpm share-api:build
 That produces `apps/share-api/dist/server.js` plus sourcemaps. The
 runtime entry point is `node apps/share-api/dist/server.js`.
 
-> **Gotcha — install/build order.** If your deploy platform
+> **Gotcha: install/build order.** If your deploy platform
 > auto-generates a Dockerfile or build script, double-check it doesn't
 > run `pnpm install` *before* copying the full source. pnpm needs
 > every workspace's `package.json` present at install time to set up
@@ -100,7 +100,7 @@ SHARE_API=https://share.pixi-reels.schmooky.dev bash apps/share-api/scripts/smok
 ### Cleanup
 
 Expired shares are visible to `GET` (they 404 with `share expired`) but
-the S3 objects stay until purged. Run cleanup on a cron — any cadence
+the S3 objects stay until purged. Run cleanup on a cron; any cadence
 slower than the shortest TTL (3 days) is enough:
 
 ```bash

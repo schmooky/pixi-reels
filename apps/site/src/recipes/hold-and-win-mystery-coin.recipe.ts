@@ -1,7 +1,7 @@
 // @ts-nocheck
 // Injected: HoldAndWinBuilder, GoldCoinSymbol, Spine, coinWaves, PIXI, gsap, app
 //
-// Mystery value coins. Each coin lands as a blank gold disc — its amount is
+// Mystery value coins. Each coin lands as a blank gold disc - its amount is
 // unknown. On lock, a strip of candidate values spins inside the coin face
 // and decelerates onto the real number, then the amount paints in the gold
 // font. The board never reads the value; it lives in `coin.data` and the
@@ -103,7 +103,7 @@ const paintLabel = (cell, value) => {
 };
 
 // the candidate amounts that flash past during a reveal (gold font has only
-// digits, comma and dot — every entry is a plain number)
+// digits, comma and dot - every entry is a plain number)
 const POOL = [1, 2, 5, 10, 15, 20, 25, 50, 75, 100, 200];
 
 // -- the reveal: a true looping value reel inside the coin face. A small set
@@ -131,7 +131,7 @@ async function revealValue(cell, finalValue) {
   });
   const TOTAL = K * ROW_H;
   // place every row within ±TOTAL/2 of centre, so a row leaving one edge of
-  // the window reappears at the other — an endless strip from K labels
+  // the window reappears at the other - an endless strip from K labels
   const wrap = (v) => { const m = ((v % TOTAL) + TOTAL) % TOTAL; return m > TOTAL / 2 ? m - TOTAL : m; };
   const layout = (offset) => rows.forEach((t, i) => { t.x = p.x; t.y = p.y + wrap(i * ROW_H - offset); });
   layout(0);
@@ -169,7 +169,7 @@ board.events.on('coin:released', ({ coin }) => {
   labelAt.delete(k);
 });
 
-// scripted arrivals — in a real game the server sends each round's hits and
+// scripted arrivals - in a real game the server sends each round's hits and
 // the per-coin value; here we roll a random value at land time so the reveal
 // is genuine every run.
 const randVal = () => POOL[Math.floor(Math.random() * POOL.length)];

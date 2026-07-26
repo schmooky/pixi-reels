@@ -1,15 +1,15 @@
 // @ts-nocheck
 // Injected: ReelSetBuilder, SpeedPresets, ReelSymbol, loadHoldAndWinSprites, PIXI, app
 //
-// BEGINNER LESSON — put a number on a ready-made coin without drawing the
+// BEGINNER LESSON - put a number on a ready-made coin without drawing the
 // coin yourself.
 //
 // Lesson 1 drew the whole coin with PIXI.Graphics. In a real game the coin
 // art already exists (a sprite or a Spine skeleton), and all you add is the
 // number ON TOP. That's "composition": your symbol's `view` holds two
-// children — the artwork and a text label.
+// children - the artwork and a text label.
 //
-// `this.view` is a container, so you just `addChild` both and position them
+// `this.view` is a container, so you `addChild` both and position them
 // in resize().
 
 const { coin } = await loadHoldAndWinSprites(); // the diamond-coin sprite frames

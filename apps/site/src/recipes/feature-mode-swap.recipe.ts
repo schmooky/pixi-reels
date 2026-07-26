@@ -69,7 +69,7 @@ function exitFeature() {
   reelSet.frame.remove('feature-wild-injector');
 }
 
-// ── Mode banner. big, obvious, unmissable ──────────────────────────────
+// ── Mode banner ──────────────────────────────
 const bannerHeight = 42;
 const banner = new PIXI.Container();
 reelSet.addChild(banner);
@@ -152,7 +152,7 @@ return {
 
     // Server provides a boring, no-wild base result every time. In BASE mode
     // the grid stays boring. In FEATURE mode the wild-injector middleware
-    // rewrites ~40% of cells to WILD. the player instantly sees the payoff
+    // rewrites ~40% of cells to WILD. the player sees the payoff
     // of being in the feature.
     const grid = Array.from({ length: COLS }, () =>
       Array.from({ length: ROWS }, () =>

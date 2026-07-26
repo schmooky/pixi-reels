@@ -8,9 +8,9 @@ const { SkeletonJson, AtlasAttachmentLoader, TextureAtlas } = await import(pathT
 const SRC = '/tmp/res-unpack/res';
 const DST = '/tmp/spine42';
 
-// Fail loud if either side is missing — otherwise the loops below no-op and the
+// Fail loud if either side is missing. Otherwise the loops below no-op and the
 // script prints "OK: 0  FAIL: 0" with exit 0, giving false confidence that
-// conversion validated when nothing was actually checked.
+// conversion validated when nothing was checked.
 for (const [label, dir] of [['SRC', SRC], ['DST', DST]]) {
   if (!fs.existsSync(dir)) {
     console.error(`${label} directory does not exist: ${dir}`);

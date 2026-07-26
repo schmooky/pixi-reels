@@ -10,7 +10,7 @@
 //
 // Visual: filler is rectangular playing cards; mystery is the game's purple
 // plasma orb (a Spine skeleton) with no label. the "what is it?" reads from
-// shape alone — the player only learns the value through the reveal.
+// shape alone - the player only learns the value through the reveal.
 
 const FILLER = ['7', '8', '10', 'Q'];
 const MYSTERY = 'mystery';
@@ -108,7 +108,7 @@ async function revealCell(col, row, revealId) {
   oldSym.view.y = oy;
   oldSym.view.scale.set(1);
 
-  // Swap identity via pin. same as before, just wrapped in animation.
+  // Swap identity via pin. same as before, wrapped in animation.
   reelSet.pin(col, row, revealId, { turns: 'eval' });
 
   // The pin call replaced the symbol at this cell; grab the new one

@@ -1,7 +1,7 @@
 import { anim, frames } from '../lib/dsl';
 
 /**
- * 900ms (54 frames) win. Acts on the icon bone ONLY — the frame/border
+ * 900ms (54 frames) win. Acts on the icon bone ONLY; the frame/border
  * stays perfectly still so multi-cell wins read as "the character lit up",
  * not "the whole tile bounced".
  *
@@ -9,7 +9,7 @@ import { anim, frames } from '../lib/dsl';
  * Five keys per property. Begins AND ends at setup pose so a pool reuse
  * or a back-to-back idle handoff inherits clean values.
  *
- * Root bone is pinned at setup throughout — defends against destroy's
+ * Root bone is pinned at setup throughout; defends against destroy's
  * lingering root.scale=1.55 / root.rotate ever leaking into a fresh win
  * if the pool reuse path is bypassed (rare, but cheap to guard against).
  */

@@ -31,7 +31,7 @@ const loaded = new Map<string, Promise<void>>();
  *
  * Examples expecting `examples/assets/` as `publicDir` pass no argument.
  * The docs site serves the same files from `apps/site/public/generated-symbols/`,
- * which is the same default URL — `'generated-symbols/'` works there too.
+ * which is the same default URL - `'generated-symbols/'` works there too.
  */
 export async function loadGeneratedSpines(basePath: string = DEFAULT_BASE): Promise<void> {
   const cached = loaded.get(basePath);

@@ -3,9 +3,9 @@
 //
 // Value upgrade in place. The board opens holding three 5.00 coins. Each
 // press bumps every held coin up the value ladder (5 → 10 → 25 → 50 → 100)
-// with a flip-and-pop flourish — the coin never re-spins and the cell never
+// with a flip-and-pop flourish - the coin never re-spins and the cell never
 // moves. The new tier lives in `coin.data`; the board is untouched, the
-// label is just repainted from the data.
+// label is repainted from the data.
 
 const COLS = 5, ROWS = 3, CELL = 72, GAP = 6;
 const COIN = 'coin';
@@ -96,7 +96,7 @@ const paintLabel = (cell, value) => {
   return t;
 };
 
-// the value ladder — each press promotes a coin to the next rung
+// the value ladder - each press promotes a coin to the next rung
 const LADDER = [5, 10, 25, 50, 100];
 const nextTier = (v) => LADDER[Math.min(LADDER.length - 1, LADDER.indexOf(v) + 1)];
 const totalOf = () => board.lockedCoins.reduce((a, c) => a + (c.data?.value ?? 0), 0);

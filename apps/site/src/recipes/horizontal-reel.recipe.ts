@@ -1,12 +1,12 @@
 // @ts-nocheck
 // Injected: HorizontalReelBuilder, CardSymbol, CARD_DECK, PIXI, gsap, app
 //
-// A SINGLE horizontal reel — the banner reel above the reels that tells you
+// A SINGLE horizontal reel - the banner reel above the reels that tells you
 // which symbols pay this round. It follows the SAME contract as ReelSet:
-//   spin()                       — start it, returns a promise
-//   setResult([{ visible: ids }])— one ColumnTarget (this reel is one column)
-//   await spin                   — resolves with the SpinResult on land
-// Then it CASCADES like the main reels — a real tumble: the winning symbols are
+//   spin()                       - start it, returns a promise
+//   setResult([{ visible: ids }]) - one ColumnTarget (this reel is one column)
+//   await spin                   - resolves with the SpinResult on land
+// Then it CASCADES like the main reels - a real tumble: the winning symbols are
 // removed, the survivors collapse to close the gaps, and new symbols slide in
 // from the feed side. Press Spin: it spins, lands, then a winning combo tumbles.
 
@@ -48,16 +48,16 @@ return {
     if (busy) return;
     busy = true;
 
-    // 1) Spin and land — the ReelSet flow, one row wide.
+    // 1) Spin and land - the ReelSet flow, one row wide.
     hud.text = 'spinning…';
     const spin = reel.spin();
     const pay = payingRow();                        // the "server" response
     await new Promise((r) => setTimeout(r, 500));   // simulated network delay
-    reel.setResult([{ visible: pay }]);             // one ColumnTarget — this reel
+    reel.setResult([{ visible: pay }]);             // one ColumnTarget - this reel
     const { symbols } = await spin;                 // SpinResult: [[...row]]
     hud.text = `paid: ${symbols[0].join(' ')}`;
 
-    // 2) Cascade — pretend the main reel had a win on a couple of these cells.
+    // 2) Cascade - pretend the main reel had a win on a couple of these cells.
     await new Promise((r) => setTimeout(r, 500));
     const winners = [0, 2, 4].filter(() => Math.random() < 0.7);
     if (winners.length) {

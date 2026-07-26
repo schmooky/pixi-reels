@@ -5,7 +5,7 @@
 // Sticky wild. CellPin edition.
 //
 // Instead of manually tracking "stuck" positions in an array and re-injecting
-// them into the grid before every setResult(), we just call reelSet.pin() when
+// them into the grid before every setResult(), we call reelSet.pin() when
 // a wild lands. The engine's pin map handles persistence; the wild stays put
 // for the configured number of turns, then expires automatically.
 //

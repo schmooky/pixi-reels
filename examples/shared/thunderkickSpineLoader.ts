@@ -5,8 +5,8 @@ import type { SpineSymbolSource } from 'pixi-reels/spine';
  * Loads the Thunderkick symbol spine bundle (Spine 4.2 skeletons migrated
  * from the game's original 4.0 exports, used with permission).
  *
- * One multi-skin skeleton per symbol tier — `lowSymbols` carries skins
- * `low1`..`low5`, `midSymbols` carries `mid1`..`mid4` — plus single-skin
+ * One multi-skin skeleton per symbol tier - `lowSymbols` carries skins
+ * `low1`..`low5`, `midSymbols` carries `mid1`..`mid4` - plus single-skin
  * `high`, `wild`, `scatter`, and `mystery`. Everything shares one
  * two-page atlas.
  *

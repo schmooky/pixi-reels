@@ -1,7 +1,7 @@
 // @ts-nocheck
 // Injected: HoldAndWinBuilder, ReelSymbol, PIXI, gsap, app
 //
-// BEGINNER LESSON — carry the value as DATA instead of baking it into the
+// BEGINNER LESSON - carry the value as DATA instead of baking it into the
 // symbol class.
 //
 // In the previous lesson each value was its own symbol variant (coin5 always
@@ -11,7 +11,7 @@
 //
 //     board.respin([{ cell, id: 'coin', data: { value: 25 } }])
 //
-// The board never reads `data` — it just stores it. We paint the number
+// The board never reads `data`; it just stores it. We paint the number
 // ourselves from the `coin:locked` event. Same coin art, any value.
 
 // The value label uses the game's gold digit bitmap font (crisp, centered).
@@ -97,7 +97,7 @@ return {
     board.reset();
     board.enter([]);
     for (const cells of ROUNDS) {
-      // each hit carries its own value in `data` — different every coin
+      // each hit carries its own value in `data`, different every coin
       await board.respin(cells.map((cell) => ({ cell, id: COIN, data: { value: randVal() } })));
       await new Promise((r) => setTimeout(r, 650));
     }

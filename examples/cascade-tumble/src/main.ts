@@ -13,9 +13,8 @@ import { createUI } from '../../shared/ui.js';
 
 // ─── LAYOUT ─────────────────────────────────────────────────
 //
-// 6 reels × 5 rows, sprite symbols. This is the canonical "Sweet Bonanza
-// / Sugar Rush" cascade footprint. the one most production cascade slots
-// ship with.
+// 6 reels × 5 rows, sprite symbols. Canonical "Sweet Bonanza / Sugar Rush"
+// cascade footprint - the shape most production cascade slots ship with.
 
 const REEL_COUNT = 6;
 const VISIBLE_ROWS = 5;
@@ -23,19 +22,19 @@ const SYMBOL_SIZE = 95;
 const SYMBOL_GAP = 5;
 
 /**
- * Lead-in window between the SPIN click and the moment the engine actually
- * begins the fall-out animation. A short hold-back (~180 ms) makes the
- * click feel "received". the button visibly transitions to STOP before
- * the symbols move. Without it the button-state flip and the fall start
- * land on the same frame and the player can't tell the click registered.
+ * Lead-in window between the SPIN click and the moment the engine begins
+ * the fall-out animation. A short hold-back (~180 ms) makes the click feel
+ * "received": the button visibly transitions to STOP before the symbols
+ * move. Without it the button-state flip and the fall start land on the
+ * same frame and the player can't tell the click registered.
  */
 const LEAD_IN_MS = 180;
 
 /**
  * Breathing room between "winners faded out" and "refill drop-in starts".
  * Production tumble slots dial this between 150 ms (snappy) and 500 ms
- * (dramatic). 280 ms is the sweet spot. long enough for the player to
- * register that the wins are gone, short enough to keep cascade momentum.
+ * (dramatic). 280 ms is long enough for the player to register the wins
+ * are gone, short enough to keep cascade momentum.
  */
 const PAUSE_AFTER_REMOVAL_MS = 280;
 
@@ -54,12 +53,12 @@ const GAME_SYMBOLS = Object.keys(SYMBOL_MAP);
 
 // ─── MOCK SERVER. DELIBERATELY SLOW INITIAL RESPONSE ───────
 //
-// The initial-spin latency is 1.5-4.5 s on purpose: this is what makes
-// the "empty reels + spinner" window visible in the demo. Production
-// servers vary wildly here (200 ms to multiple seconds for bonus
-// rolls), and the engine's job is to stay visually coherent across the
-// whole range. Cascade refills are 100-250 ms because most real backends
-// precompute the cascade chain alongside the initial result.
+// The initial-spin latency is 1.5-4.5 s on purpose: it makes the
+// "empty reels + spinner" window visible in the demo. Production
+// servers vary here (200 ms to multiple seconds for bonus rolls), and
+// the engine's job is to stay visually coherent across the whole range.
+// Cascade refills are 100-250 ms because most real backends precompute
+// the cascade chain alongside the initial result.
 
 function wait(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -144,10 +143,9 @@ function detectWinners(grid: string[][]): Cell[] {
 
 // ─── SPINNER OVERLAY ───────────────────────────────────────
 //
-// A simple rotating arc. Shown during the empty wait between
-// `cascade:fall:end` (all reels finished falling) and `cascade:dropIn:start`
-// (the first reel begins filling). i.e. exactly the indeterminate
-// server-roundtrip window.
+// Rotating arc. Shown during the empty wait between `cascade:fall:end`
+// (all reels finished falling) and `cascade:dropIn:start` (the first reel
+// begins filling): exactly the indeterminate server-roundtrip window.
 
 function makeSpinner(): Container {
   const c = new Container();
@@ -184,7 +182,7 @@ function buildReelSet(app: Application, textures: Record<string, Texture>): Reel
     // `stopDelay`. the in-reel fall/drop tweens would still run at
     // the base 280 ms / 480 ms and the turbo button wouldn't feel any
     // different through the cascade. With it, turbo halves the durations
-    // and superTurbo snaps everything in 60–80 ms.
+    // and superTurbo snaps everything in 60-80 ms.
     .speed('normal', {
       ...SpeedPresets.NORMAL,
       stopDelay: 150,
@@ -298,7 +296,7 @@ async function main(): Promise<void> {
   //
   // The `info.signal` AbortSignal fires when the phase is skipped. We
   // register a one-shot cleanup that kills our tweens and resets scale
-  //. so slam-stop visually matches "snap to grid" instead of "snap to
+  // so slam-stop visually matches "snap to grid" instead of "snap to
   // grid then bounce again."
   reelSet.events.on('cascade:dropIn:symbol', (info) => {
     const { view, duration, signal } = info;
@@ -423,7 +421,7 @@ async function main(): Promise<void> {
 
     // Lead-in: the button visibly transitions to STOP before the symbols
     // move. A tap during this window queues `pendingSkip` and is consumed
-    // by `requestSkip()` once the engine spin actually starts. We do NOT
+    // by `requestSkip()` once the engine spin starts. We do NOT
     // bail on `cascadeAbort.signal.aborted` here. a rapid double-click
     // means "spin then slam," not "cancel before starting." The abort
     // flag flows into runCascade, which will short-circuit the cascade

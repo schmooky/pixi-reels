@@ -25,7 +25,7 @@ tags:
 
 <RecipeDemo code="nudge-stagger" />
 
-`startDelay` is the sugar for a wave-style reveal. Every reel's tween
+`startDelay` is sugar for a wave-style reveal. Every reel's tween
 starts at a different time but runs concurrently. sharper than a
 sequential `await` loop (no reel waits for the previous to fully land),
 more readable than a fully synchronised parallel (the eye can follow
@@ -65,7 +65,7 @@ across the window.
 
 ## Irregular stagger profiles
 
-For ease-style stagger curves (faster start, slower end), just compute
+For ease-style stagger curves (faster start, slower end), compute
 per-reel delays explicitly:
 
 ```ts

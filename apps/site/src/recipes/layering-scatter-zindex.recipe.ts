@@ -4,7 +4,7 @@
 //                   loadThunderkickSpines, buildThunderkickSpineMap,
 //                   app, pickWeighted
 //
-// symbolData zIndex — layering WITHIN one reel. The scatter (zIndex: 10)
+// symbolData zIndex - layering WITHIN one reel. The scatter (zIndex: 10)
 // always paints above its reel-mates; the mystery bush is deliberately
 // left at the default layer, so the tile below it paints over its leaves
 // (bottom rows draw in front within a layer). Spot the difference each
@@ -54,7 +54,7 @@ const reelSet = new ReelSetBuilder()
     }
   })
   .weights(weights)
-  // The lesson: scatter is elevated, mystery is NOT (default layer) —
+  // The lesson: scatter is elevated, mystery is NOT (default layer) -
   // watch the bush get clipped by the tile below it while the jaw never is.
   .symbolData({ scatter: { zIndex: 10 } })
   // Synchronized settle: all reels start and stop together (no stagger),

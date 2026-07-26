@@ -4,7 +4,7 @@
 //
 // Multiplier-strike coin. The board fills with value coins; on the strike
 // press a multiplier coin lands, the strike FX (17-frame AnimatedSprite)
-// fires over it, and every coin's value is multiplied by it — labels bump,
+// fires over it, and every coin's value is multiplied by it - labels bump,
 // total jumps. The multiplier lives in coin.data; the board is value-blind.
 
 const COLS = 5, ROWS = 3, CELL = 76, GAP = 6;
@@ -13,7 +13,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const fmt = (v) => v.toFixed(2);
 
 const { symbols, blur, coin } = await loadHoldAndWinSprites();
-// the strike FX + the gold value font (GoldDigits — same as the collector recipe)
+// the strike FX + the gold value font (GoldDigits, same as the collector recipe)
 const strikeSheet = await PIXI.Assets.load('/hw-sprites/multiplier-strike.json');
 const strikeFrames = Object.entries(strikeSheet.textures).sort(([a], [b]) => a.localeCompare(b)).map(([, t]) => t);
 await PIXI.Assets.load('/hw-spine/goldfont.fnt'); // face "GoldDigits"

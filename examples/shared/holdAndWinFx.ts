@@ -144,7 +144,7 @@ export function bezierFly(
   const arriveScale = opts.arriveScale ?? 1;
 
   // Tween a marker prop ON the display object (not a private proxy) so that
-  // `gsap.killTweensOf(obj)` actually cancels the flight — that's how callers
+  // `gsap.killTweensOf(obj)` actually cancels the flight - that's how callers
   // stop in-flight coins on cleanup / skip. Tweening a detached proxy (the old
   // shape) made every such kill a silent no-op. `onInterrupt` settles the
   // promise so a killed flight resolves its awaiters instead of hanging.
@@ -186,7 +186,7 @@ export function bezierFly(
 
 /**
  * Scale a text object (`PIXI.Text` / `PIXI.BitmapText`) down to fit a max
- * width and height, preserving aspect — so an amount spans the coin face
+ * width and height, preserving aspect - so an amount spans the coin face
  * like the source games (short values stay big, long ones shrink to fit)
  * and never overflows. No-op if it already fits. Returns the object so you
  * can chain: `fitText(goldText(amount), CELL * 0.84, CELL * 0.46)`.

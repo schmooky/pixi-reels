@@ -7,13 +7,13 @@ import { curveToSpine } from './curves';
  * are emitted as omitted curve fields (Spine's default).
  *
  * Curve format note (Spine 4.x): Bezier control points are stored in
- * ABSOLUTE coords — `cx` in seconds, `cy` in the value's coordinate
+ * ABSOLUTE coords: `cx` in seconds, `cy` in the value's coordinate
  * space (not normalized 0..1). For a translate going 0 -> -1.5 over 1.2s
  * with easeInOut, the four numbers are
  *   [time1 + 0.42 * dur, value1 + 0 * dValue,
  *    time1 + 0.58 * dur, value1 + 1 * dValue]
  * not the segment-agnostic [0.42, 0, 0.58, 1]. Two-value timelines
- * (translate, scale, shear) take 8 numbers — 4 per component.
+ * (translate, scale, shear) take 8 numbers, 4 per component.
  */
 export function compile(anim: AnimationIR): Record<string, unknown> {
   const out: Record<string, unknown> = {};
@@ -106,7 +106,7 @@ function compileSlot(ir: SlotIR): Record<string, unknown> {
  * Resolve the Bezier control points for the segment leaving keys[i].
  * Returns null for linear (caller omits the field), the literal string
  * 'stepped', or the four normalized control points [cx1, cy1, cx2, cy2]
- * — caller scales them into absolute (time, value) space per component.
+ * that the caller scales into absolute (time, value) space per component.
  */
 function resolveCurve(c: CurveSpec): null | 'stepped' | [number, number, number, number] {
   const cs = curveToSpine(c);
@@ -137,7 +137,7 @@ function nextCurve1<T extends { time: number; curve: CurveSpec }>(
 ): undefined | 'stepped' | number[] {
   const k1 = keys[i];
   const k2 = keys[i + 1];
-  if (!k2) return undefined;                     // last key — Spine ignores
+  if (!k2) return undefined;                     // last key: Spine ignores
   const c = resolveCurve(k1.curve);
   if (c === null) return undefined;              // linear default
   if (c === 'stepped') return 'stepped';

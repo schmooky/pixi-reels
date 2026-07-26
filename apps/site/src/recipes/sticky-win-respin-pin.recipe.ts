@@ -10,7 +10,7 @@
 // counter runs out (or a max-respin cap is reached).
 //
 // CellPin with numeric `turns` provides the lock lifecycle for free.
-// Simple "any 3 in a row" counts as a win for this demo.
+// "any 3 in a row" counts as a win for this demo.
 
 const FILLER = ['7', '8', '10', 'Q'];
 const COLS = 5, ROWS = 3, SIZE = 90;

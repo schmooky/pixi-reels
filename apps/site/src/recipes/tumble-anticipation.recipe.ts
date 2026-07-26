@@ -17,9 +17,9 @@
 //      `cascade:gravity:start/end` events still fire per reel, marking
 //      where you'd plug anticipation logic in a denser cluster.)
 //   2. The library waits `gravityHoldMs` (250 ms here. bump for more
-//      drama, e.g. 500–800 ms for a mascot pop or multiplier roll).
+//      drama, e.g. 500-800 ms for a mascot pop or multiplier roll).
 //   3. Stage B: new symbols drop in from above. `setDropOrder('ltr', 110)`
-//      gives a left-to-right wave. reel 0 drops first, then 1, then 2…
+//      gives a left-to-right wave. reel 0 drops first, then 1, then 2...
 //      Set the step ≥ `dropIn.duration` (here 380 ms) to make the columns
 //      strictly sequential (column 1 fully lands before column 2 starts);
 //      a smaller step gives overlap.
@@ -36,8 +36,8 @@ const CLUSTER = 'low1';
 const HIT_ROW = 2;
 const HIT_COLS = [0, 1, 2];
 const PAUSE_AFTER_REMOVAL_MS = 217;
-const GRAVITY_HOLD_MS = 350;   // 21 frames. window for anticipation visuals        // window for anticipation visuals
-const COLUMN_STEP_MS = 100;    // 6 frames < dropIn (367): columns overlap         // per-reel start delay on the drop-in wave
+const GRAVITY_HOLD_MS = 350;   // 21 frames. window for anticipation visuals
+const COLUMN_STEP_MS = 100;    // per-reel drop-in start delay; 6 frames < dropIn (367) so columns overlap
 
 function randSymbol(exclude) {
   let s;
@@ -82,7 +82,7 @@ const reelSet = new ReelSetBuilder()
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
     fall:   { duration: 233, ease: 'power2.in', rowStagger: 33 },  // 14f, 2f stagger
-    // Gravity uses the same `dropIn` config (it's the same phase, just
+    // Gravity uses the same `dropIn` config (it's the same phase,
     // filtered to survivors).
     dropIn: { duration: 367, ease: 'power2.in', rowStagger: 0, distance: 'perHole' },  // 22f
   })

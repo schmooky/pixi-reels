@@ -5,14 +5,14 @@
 //
 // "Spin static, not Spine." At rest every cell is a live Spine skeleton
 // (idle loops, landing animations). The moment the reels spin, each cell
-// swaps to a cached snapshot texture and the skeleton is DEACTIVATED —
+// swaps to a cached snapshot texture and the skeleton is DEACTIVATED -
 // no Spine state ticks while spinning, and cells recycling mid-spin never
 // instantiate a skeleton at all. On land the skeletons come back and play
 // their landing animation.
 
 await loadGeneratedSpines();
 
-const SIZE = 140; // the generated skeletons' authored frame size — render 1:1
+const SIZE = 140; // the generated skeletons' authored frame size - render 1:1
 const SPINE_MAP = {
   '9': 'low_a',
   '10': 'low_k',

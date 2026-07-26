@@ -4,7 +4,7 @@
 //                   loadThunderkickSpines, buildThunderkickSpineMap,
 //                   app, pickWeighted
 //
-// Jagged layouts can't use `unmask` (the builder throws — the motion layer
+// Jagged layouts can't use `unmask` (the builder throws - the motion layer
 // can't keep unmasked views aligned on offset reels). The pattern instead:
 // PROMOTE each landed scatter's view into viewport.spotlightContainer (the
 // same above-mask layer the win spotlight uses), and hand it back to its

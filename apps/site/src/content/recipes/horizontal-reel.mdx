@@ -42,7 +42,7 @@ single row above the reels, not the reels themselves.
 ## Same contract as `ReelSet` — it's one reel
 
 A banner reel is still a reel. `HorizontalReel` reuses the engine's own types, so
-there's nothing new to learn and nothing incompatible to trip over:
+there's nothing new to learn:
 
 ```ts
 const reel = new HorizontalReelBuilder()
@@ -89,7 +89,7 @@ await reel.cascade([0, 1, 2, 3, 4]);       // newIds default to random
 The engine's `Reel` wraps symbols on the **Y** axis and bakes that in throughout
 (`ReelMotion`, the stop sequencer, buffer rows). A sideways reel is a different
 axis, so `HorizontalReel` is a focused mechanism on the same shared primitives
-(the symbol pool, `TickerRef`, the typed `EventEmitter`) — it just exposes the
+(the symbol pool, `TickerRef`, the typed `EventEmitter`) — it exposes the
 familiar reel API on top.
 
 ## The surface

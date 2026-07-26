@@ -79,7 +79,7 @@ export async function mountPrototypeReels(
   host.style.position = 'relative';
   host.appendChild(app.canvas);
 
-  // Build the per-id texture + blurTexture submaps for the symbols we actually use.
+  // Build the per-id texture + blurTexture submaps for the symbols we use.
   const used: Record<string, import('pixi.js').Texture> = {};
   const usedBlur: Record<string, import('pixi.js').Texture> = {};
   for (const id of cfg.symbolIds) {

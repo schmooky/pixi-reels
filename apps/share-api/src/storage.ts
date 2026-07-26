@@ -2,8 +2,8 @@
  * Storage adapter interface plus an in-memory implementation for dev.
  *
  * Modes 1-4 carry an opaque encrypted envelope; mode 5 carries a
- * plaintext payload. A share record has exactly one of them, never both
- * — see `assertModeConsistency` in `shares.ts`. Wire shape matches the
+ * plaintext payload. A share record has exactly one of them, never both;
+ * see `assertModeConsistency` in `shares.ts`. Wire shape matches the
  * spine-benchmark S3 layout when an S3 adapter lands later
  * (`studios/<id>/meta.json` + either `envelope.json` or `payload.json`).
  */

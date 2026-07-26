@@ -7,7 +7,7 @@
  *           chore: bump vite to 8.1
  *
  * `!` before the colon (or a `BREAKING CHANGE:` footer) marks a breaking
- * change — changeset needs a `major` bump alongside.
+ * change; changeset needs a `major` bump alongside.
  *
  * Types:
  *   feat       new user-visible feature                  (minor bump)
@@ -27,7 +27,7 @@ module.exports = {
   extends: ['@commitlint/config-conventional'],
   // Skip bot-generated commits. Three matchers, in order of specificity:
   //   1. Co-authored-by trailer points at a [bot]@users.noreply.github.com
-  //      address — the canonical signature of a GitHub-hosted bot
+  //      address, the canonical signature of a GitHub-hosted bot
   //      (CodeQL Autofix, Dependabot, Renovate-on-GitHub, etc).
   //   2. CodeQL Autofix subject prefix, for older bot versions that
   //      omit the trailer.

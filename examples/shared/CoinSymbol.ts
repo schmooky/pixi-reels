@@ -3,15 +3,15 @@ import { gsap } from 'gsap';
 import { ReelSymbol } from 'pixi-reels';
 
 /**
- * **Debug / prototyping symbol — NOT for production.**
+ * **Debug / prototyping symbol - NOT for production.**
  *
  * `CoinSymbol` is a circle-drawn-with-`PIXI.Graphics` `ReelSymbol`. Sibling of
  * `CardSymbol`. card is a flat rectangle, coin is a flat disc. Together they
  * cover the two visual primitives that recipes need to demonstrate slot
  * mechanics without shipping any texture assets.
  *
- * Coins exist as their own primitive because Hold & Win — and most of the
- * collect/multiplier/jackpot/mystery family of mechanics — read as round
+ * Coins exist as their own primitive because Hold & Win - and most of the
+ * collect/multiplier/jackpot/mystery family of mechanics - read as round
  * tokens, not rectangular cards. Rendering them as cards in recipes muddles
  * the reader's mental model.
  *
@@ -31,7 +31,7 @@ import { ReelSymbol } from 'pixi-reels';
  * ```
  */
 export interface CoinSymbolOptions {
-  /** Outer rim color — the coin's primary identity (red GRAND, blue COLLECT, ...). */
+  /** Outer rim color - the coin's primary identity (red GRAND, blue COLLECT, ...). */
   rimColor: number;
   /** Inner disc color. Defaults to a darker shade of `rimColor` so the rim reads as a ring. */
   faceColor?: number;
@@ -58,7 +58,7 @@ export class CoinSymbol extends ReelSymbol {
     this._face = opts.faceColor ?? darken(opts.rimColor, 0.55);
     this._label = opts.label ?? '';
     this._textColor = opts.textColor ?? 0xffffff;
-    // Graphics is drawn at its LOCAL (0, 0) — see resize(). Positioning the
+    // Graphics is drawn at its LOCAL (0, 0) - see resize(). Positioning the
     // Graphics at (width/2, height/2) puts its origin at the cell center,
     // which is what `scale` tweens pivot around. If we drew at (cx, cy)
     // instead, scale would pivot at the top-left corner and the coin would
@@ -213,7 +213,7 @@ export const COIN_FEATURE = {
 /** Mystery coin. purple rim, blank face. reveals to a value/feature on land. */
 export const COIN_MYSTERY: CoinSymbolOptions = {
   rimColor: 0x8e44ad,
-  // No label — that's the point.
+  // No label - that's the point.
 };
 
 /** Hold & Win trigger / bonus coin. gold rim, "BONUS" stamp. */

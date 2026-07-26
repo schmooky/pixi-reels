@@ -65,7 +65,7 @@ import { useMinDisplay } from './useMinDisplay';
 // recipe canvases can be mounted at once, so we keep exactly ONE driver bound
 // to a live app and promote a survivor when that app unmounts. A one-shot
 // module flag (the previous shape) left gsap.updateRoot orphaned on a
-// destroyed ticker the moment the first app went away — freezing every later
+// destroyed ticker the moment the first app went away, freezing every later
 // recipe under client-side nav / React StrictMode / HMR.
 const liveApps = new Set<Application>();
 let gsapDriver: Application | null = null;
@@ -272,14 +272,14 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
         enableDebug(rs);
       } else {
         // Board / custom-stage recipes (HoldAndWinBoard, BoardGrid) add their
-        // own content — the grid, HUD, side panels, flight layer — straight to
+        // own content (the grid, HUD, side panels, flight layer) straight to
         // app.stage at fixed pixel sizes and never scale it, so a composition
         // wider than the canvas clips left/right. Scale + center the whole
         // stage to fit: the board-of-reels equivalent of the reelSet fit above.
         // Bounds come from real measurable children (cell chrome, sprites, HUD,
         // panels), all created synchronously before the recipe returns. Mask
         // graphics don't count (Pixi marks masks measurable:false), which is why
-        // an empty-on-load grid must carry chrome to be sized — board-grid-reveal
+        // an empty-on-load grid must carry chrome to be sized - board-grid-reveal
         // does. Late flights/labels land inside this extent, so a setup-time fit
         // (re-run on resize) holds for the whole run.
         const fitStage = () => {

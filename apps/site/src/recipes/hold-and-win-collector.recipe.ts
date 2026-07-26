@@ -197,7 +197,7 @@ async function collectIntoOrb() {
     }));
     await sleep(90);
   }
-  void board.symbolAt(orbCell).playWin(); // the orb celebrates once the sweep is in — calling it per-arrival restarts 'win' before it can play through
+  void board.symbolAt(orbCell).playWin(); // the orb celebrates once the sweep is in; calling it per-arrival restarts 'win' before it can play through
   await sleep(500);
 }
 

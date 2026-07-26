@@ -16,7 +16,7 @@ import type {
 } from './types.js';
 import { SHARE_SCHEMA_VERSION } from './types.js';
 
-// 12-char alphanumeric ids — same shape as spine-benchmark. A share
+// 12-char alphanumeric ids, same shape as spine-benchmark. A share
 // link `/share/<id>` is short enough to paste and long enough to
 // enumerate-resist (36^12 ~= 4.7e18).
 const nanoid = customAlphabet('0123456789abcdefghijklmnopqrstuvwxyz', 12);
@@ -32,7 +32,7 @@ export function newShareId(): string {
 
 export function clampTtlDays(input: number): 3 | 7 | 30 {
   if (input === 3 || input === 7 || input === 30) return input;
-  // Forgiving rounding — keeps the public API tolerant of clients
+  // Forgiving rounding: keeps the public API tolerant of clients
   // that compute a TTL and pick the nearest allowed value.
   if (input <= 5) return 3;
   if (input <= 18) return 7;

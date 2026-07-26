@@ -4,7 +4,7 @@
 //
 // Payer coin. The board opens holding four value coins. Spin once and a
 // special payer orb lands; on lock it pumps its value into every other coin
-// on the board — a gold token arcs from the orb to each coin in turn, and on
+// on the board - a gold token arcs from the orb to each coin in turn, and on
 // arrival that coin's amount bumps and flashes. The board stays value-blind:
 // the bump is pure game state walked over `board.lockedCoins`.
 
@@ -122,7 +122,7 @@ const flyers = new Set();
 async function payout(payerCell, payValue) {
   const from = abs(payerCell);
   const targets = board.lockedCoins.filter((c) => c.id === COIN);
-  void board.symbolAt(payerCell).playWin?.(); // the orb winds up once — re-firing it per coin restarts 'win' before it can play through
+  void board.symbolAt(payerCell).playWin?.(); // the orb winds up once; re-firing it per coin restarts 'win' before it can play through
   for (const wave of coinWaves(targets, 'sequence')) {
     await Promise.all(wave.map((coin) => {
       const token = fitGold(goldText(fmt(payValue), 26), SETTLE_SIZE * 0.7, SETTLE_SIZE * 0.4);

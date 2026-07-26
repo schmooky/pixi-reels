@@ -2,7 +2,7 @@ import { EventEmitter } from 'pixi-reels';
 
 /**
  * Demo-side event bus for "round" lifecycle events. Lives in the example
- * scaffolding, not the library — the library is engine-only and never
+ * scaffolding, not the library - the library is engine-only and never
  * computes wins or owns a tickup. Demos emit on this bus from their own
  * spin handler; the WinBox widget subscribes.
  *

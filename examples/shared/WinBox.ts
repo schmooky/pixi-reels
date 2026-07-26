@@ -12,7 +12,7 @@ export interface WinBoxOptions {
    * Element to attach the box to. Default: `document.body`.
    *
    * Pass a positioned (`relative`/`absolute`/`fixed`) host element to scope
-   * the box inside it — useful when the demo runs embedded on a website
+   * the box inside it - useful when the demo runs embedded on a website
    * page and a viewport-fixed element would float over unrelated content.
    */
   mountTo?: HTMLElement;

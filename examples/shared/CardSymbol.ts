@@ -3,20 +3,20 @@ import { gsap } from 'gsap';
 import { ReelSymbol } from 'pixi-reels';
 
 /**
- * **Debug / prototyping symbol — NOT for production.**
+ * **Debug / prototyping symbol - NOT for production.**
  *
  * `CardSymbol` is a flat-rectangle-plus-centered-text `ReelSymbol` drawn
  * entirely with `PIXI.Graphics`. It exists to give recipes, demos, and
  * mechanic tests a no-asset, no-loader, infinitely-resizable visual that
- * always renders crisply at any cell size — perfect for showing how the
- * engine treats cell space across MultiWays reshapes, big-symbol blocks,
- * and pyramid layouts.
+ * always renders crisply at any cell size, showing how the engine treats
+ * cell space across MultiWays reshapes, big-symbol blocks, and pyramid
+ * layouts.
  *
  * In a real game, ship one of:
  *
- *   - `SpriteSymbol` — pre-rendered art at one resolution. Cheapest.
- *   - `AnimatedSpriteSymbol` — frame-by-frame win/idle animation.
- *   - `SpineSymbol` (via `pixi-reels/spine`) — vector skeletal animation
+ *   - `SpriteSymbol` - pre-rendered art at one resolution. Cheapest.
+ *   - `AnimatedSpriteSymbol` - frame-by-frame win/idle animation.
+ *   - `SpineSymbol` (via `pixi-reels/spine`) - vector skeletal animation
  *     that scales without quality loss. Best for MultiWays where cells
  *     resize across spins.
  *   - Or a custom `ReelSymbol` subclass for game-specific visuals.
@@ -76,16 +76,16 @@ export class CardSymbol extends ReelSymbol {
   }
 
   protected onActivate(_symbolId: string): void {
-    // No-op — this symbol's visual identity is set at construction.
+    // No-op - this symbol's visual identity is set at construction.
   }
 
   protected onDeactivate(): void {
-    // No-op — leave _gfx/_text in their last state until next activate.
+    // No-op - leave _gfx/_text in their last state until next activate.
   }
 
   async playWin(): Promise<void> {
     return new Promise((resolve) => {
-      // Animate only the glyph — the card body stays put. Useful for big
+      // Animate only the glyph - the card body stays put. Useful for big
       // symbols (the rectangle is the cell footprint) and any setting
       // where movement of the cell border is distracting (cascade refills,
       // MultiWays adjust). The text is anchored at (0.5, 0.5) so its
@@ -106,7 +106,7 @@ export class CardSymbol extends ReelSymbol {
         .to(this._text, { rotation: 0.12, duration: 0.18, ease: 'sine.inOut' }, 0.09)
         .to(this._text, { rotation: 0, duration: 0.09, ease: 'sine.inOut' }, 0.27)
         .to(this._text.scale, { x: 1, y: 1, duration: 0.18, ease: 'power2.out' }, 0.32);
-      // Glyph fill flashes warm gold mid-pulse — `Text.style.fill` isn't
+      // Glyph fill flashes warm gold mid-pulse - `Text.style.fill` isn't
       // a tweenable target on every Pixi version, so we set it discretely.
       gsap.delayedCall(0.06, () => (this._text.style.fill = 0xffe168));
       gsap.delayedCall(0.42, () => (this._text.style.fill = originalFill));
@@ -132,7 +132,7 @@ export class CardSymbol extends ReelSymbol {
     this._text.y = height / 2;
     // Font size constrained by both height (~38%) and label width (so
     // multi-char labels like '10' or 'WILD' don't overflow narrow cells).
-    // Smaller than half-cell to leave breathing room — looks less crowded.
+    // Smaller than half-cell to leave breathing room - looks less crowded.
     const labelLen = Math.max(1, this._label.length);
     const fitH = height * 0.38;
     // Roboto Condensed glyphs are narrower (~0.45 avg ratio) than serif fonts.

@@ -125,7 +125,7 @@ async function collect() {
     }));
     await sleep(120);
   }
-  void board.symbolAt(COLLECTOR_CELL).playWin?.(); // react once, after the sweep — restarting it per-arrival never lets the win play through
+  void board.symbolAt(COLLECTOR_CELL).playWin?.(); // react once, after the sweep - restarting it per-arrival never lets the win play through
   await sleep(400);
 }
 

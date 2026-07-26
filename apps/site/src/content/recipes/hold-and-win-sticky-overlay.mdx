@@ -45,7 +45,7 @@ function attachBadge(cell, data) {
 }
 ```
 
-**Surviving a swap.** `setSymbolAt` builds a brand-new symbol instance with a fresh, empty view — so the badge would vanish. Because the value is in `coin.data`, you just re-attach it:
+**Surviving a swap.** `setSymbolAt` builds a brand-new symbol instance with a fresh, empty view — so the badge would vanish. Because the value is in `coin.data`, you re-attach it:
 
 ```ts
 board.setSymbolAt(cell, 'coin_alt', data);  // new art

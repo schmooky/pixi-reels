@@ -38,7 +38,7 @@ carries the whole near-win act:
 | `lastReelScatterNearWin` | the RIGHTMOST scatter's jaw pose on the deciding land |
 | `bonusGameWon` → `bonusGameWonLoop` | the payoff (with a `landed` spine event at 1.9s) |
 
-The recipe just fires them at the right beats of the engine's spin
+The recipe fires them at the right beats of the engine's spin
 lifecycle — `playOnTrack` for the one-shots, `state.addAnimation` to queue
 the loop behind them:
 

@@ -56,7 +56,7 @@ const reelSet = new ReelSetBuilder()
     }
   })
   .weights(weights)
-  // Scatter art (jaw!) and the wild overflow their 175x203 tile — keep them
+  // Scatter art (jaw!) and the wild overflow their 175x203 tile - keep them
   // painted above neighbouring cells.
   .symbolData({ scatter: { zIndex: 10 }, wild: { zIndex: 5 } })
   .speed('normal', { ...SpeedPresets.NORMAL, anticipationDelay: 500 })
@@ -78,7 +78,7 @@ let armReel = -1;      // reel whose landing starts the tease (2nd scatter)
 let won = false;
 
 // Per-reel zIndex only sorts within one reel's container, and the reel to
-// the right draws on top — so a landed scatter's jaw overflow gets clipped
+// the right draws on top - so a landed scatter's jaw overflow gets clipped
 // by its right neighbour AND by the reel mask. Promote landed scatters
 // into viewport.spotlightContainer (the same above-mask layer the win
 // spotlight uses): above every reel, outside the mask. Restored on the

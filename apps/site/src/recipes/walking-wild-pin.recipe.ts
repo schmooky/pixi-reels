@@ -76,7 +76,7 @@ async function walkPinsLeft() {
 // Overlay event hook. fires whenever an overlay ReelSymbol is created
 // (at spin:start for every active pin). This is the Spine-animation hook:
 // for a SpineSymbol you'd cast and call `overlay.setAnimation('idle', true)`
-// or similar. Here we give every sticky-wild overlay a gentle pulse so it's
+// or similar. Here every sticky-wild overlay gets a gentle pulse so it's
 // distinct from the final cell render on land.
 reelSet.events.on('pin:overlayCreated', (_pin, overlay) => {
   gsap.fromTo(

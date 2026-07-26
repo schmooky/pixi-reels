@@ -1,7 +1,7 @@
 import { anim, frames } from '../lib/dsl';
 
 /**
- * 333ms (20 frames) reel-stop landing — soft, isotropic, no jiggle.
+ * 333ms (20 frames) reel-stop landing: soft, isotropic, no jiggle.
  *
  * Acts on the icon bone ONLY (frame/border stays perfectly still). The
  * old anisotropic squash-and-stretch (1.04 x 0.96 -> 1.18 x 0.78) read

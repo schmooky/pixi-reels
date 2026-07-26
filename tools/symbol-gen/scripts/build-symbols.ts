@@ -17,7 +17,7 @@ const ATLAS_FILE = 'symbols.atlas';
  * Deploy targets relative to this script's location. Both must mirror the
  * generated bundle exactly: examples serve from `examples/assets/` (their
  * shared `publicDir`), the docs site serves from `apps/site/public/`. We
- * copy after build so neither location can drift out of sync — there is
+ * copy after build so neither location can drift out of sync; there is
  * no manual `cp` step left for the next agent to forget.
  */
 const DEPLOY_TARGETS = [

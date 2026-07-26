@@ -4,17 +4,13 @@ eyebrow: Step-by-step
 description: Build, spin, and react to a reel set from scratch.
 order: 1
 ---
-So you want to make the reels in your slot and it's probably your first time seeing this lib/.
-
-In this guide you'll build a minimal slot from nothing.
-
-What slot? Ah! Something simple! 5x3 fruity slot.
+New to the library? This guide builds a minimal 5x3 fruity slot from scratch.
 
 ## 0. Set up
 
-We assume you have some pixi app already setup.
+We assume you already have a pixi app set up.
 
-Use `npm i pixi-reels` to install the lib (or use your desired package manager.
+Install with `npm i pixi-reels` (or your package manager of choice).
 
 ## 1. Create the builder
 
@@ -23,9 +19,7 @@ import { ReelSetBuilder } from 'pixi-reels';
 const builder = new ReelSetBuilder();
 ```
 
-So builder is kinda "core"? Yeah, you could say that.
-
-It is the first thing you construct and then configure.
+The builder is the first thing you construct, then configure.
 
 ## 2. Configure the grid
 
@@ -40,14 +34,12 @@ builder
 
 Nothing visible yet, no errors. Configuration is deferred until `.build()`.
 
-So it's just a config.
-
 ## 3. Register symbols
 
 Every symbol needs an id and a class. Use `SpriteSymbol` for static textures,
 `AnimatedSpriteSymbol` for sprite-sheet animation, `SpineSymbol` for Spine.
 
-We highly suggest that you create your own `Container` that hosts the visuals you need. Extend ReelSymbol and do as you like.
+We suggest creating your own `Container` to host the visuals you need. Extend ReelSymbol and do as you like.
 
 ```ts
 import { SpriteSymbol } from 'pixi-reels';
@@ -76,7 +68,7 @@ app.stage.addChild(reelSet);
 
 Verify that you see a 5-column, 3-row grid of randomly assigned symbols, static (not spinning).
 
-In most slots you want the players to see some initial semi-random frame when they first open your game and for each subsequent one you'd wanna show player "what the last round was".
+Most slots show players an initial semi-random frame when they first open the game, and on later loads show what the last round was.
 
 ```
 builder.initialFrame([
@@ -88,7 +80,7 @@ builder.initialFrame([
   ])
 ```
 
-For that you will just use `initialFrame` - yeah, it's that simple. You can even set the peeking symbols if you need.
+Use `initialFrame` for that. You can also set the peeking symbols if you need.
 
 ## 5. Spin it
 
@@ -96,7 +88,7 @@ For that you will just use `initialFrame` - yeah, it's that simple. You can even
 const result = await reelSet.spin();
 ```
 
-And it's spinning. You would never do it from a simple button click callback, best way is to put it into your fsm state that opens a new round and sends a request to RGS.
+It's spinning. Don't call this from a button-click callback directly. drive it from the FSM state that opens a new round and sends the RGS request.
 
 6. ## Stop it
 
@@ -115,7 +107,7 @@ reelSet.setResult([
 
 You will see the reels stop and show you the result you've set.
 
-Take note that awaiting `reelSet.spin()` before setting result is a common pitfall since it resolves when you set the result 😃
+Awaiting `reelSet.spin()` before setting the result is a common pitfall: it only resolves once you set the result.
 
 ## What next
 

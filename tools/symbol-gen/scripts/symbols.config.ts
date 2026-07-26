@@ -4,8 +4,8 @@ export type SymbolDef = {
   size: number;
   /**
    * Icon texture size (square). Defaults to `size`. Set larger than `size`
-   * to render a glyph that visually overflows the frame — useful for chunky
-   * wild characters that should bleed past the tile border.
+   * to render a glyph that overflows the frame, for chunky wild characters
+   * that should bleed past the tile border.
    */
   iconSize?: number;
   bgColor: string;
@@ -38,8 +38,8 @@ export const SYMBOLS: SymbolDef[] = [
   { name: 'mid_3',   size: 140, bgColor: '#1FA89F', glyph: '♣',       glyphColor: '#FFFFFF', fontFamily: 'SymbolIcon',    fontWeight: 400, fontScale: 0.55 },
   { name: 'high_1',  size: 140, bgColor: '#F2C14E', glyph: '♛',       glyphColor: '#5A2A00', fontFamily: 'SymbolIcon',    fontWeight: 400, fontScale: 0.60 },
   // Wild's frame stays at the standard 140 cell size, but the icon
-  // canvas is 200 — the chunky "W" deliberately bleeds past the frame
-  // border for a stronger premium-symbol read.
+  // canvas is 200 so the chunky "W" bleeds past the frame border for a
+  // stronger premium-symbol read.
   { name: 'wild',    size: 140, iconSize: 200, bgColor: '#F2E14E', glyph: 'W',       glyphColor: '#1A1A1A', fontFamily: 'SymbolDisplay', fontWeight: 900, fontScale: 0.95 },
   { name: 'scatter', size: 140, bgColor: '#9B4DE8', glyph: 'SCATTER', glyphColor: '#FFFFFF', fontFamily: 'SymbolLabel',   fontWeight: 700, fontScale: 0.20 },
 ];

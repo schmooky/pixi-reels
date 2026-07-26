@@ -1,7 +1,7 @@
 // @ts-nocheck
 // Injected: ReelSetBuilder, SpeedPresets, ReelSymbol, PIXI, app
 //
-// BEGINNER LESSON — carry a numeric value on a coin by building your own
+// BEGINNER LESSON - carry a numeric value on a coin by building your own
 // symbol class.
 //
 // In pixi-reels a "symbol" is any subclass of `ReelSymbol`. The engine makes

@@ -44,7 +44,7 @@ reelSet.setAnticipation([2, 3, 4], 'sequential');  // wait for each to LAND
 
 ## Sync tension SFX to the real start
 
-`spin:stopping` now fires when a reel *actually* begins slowing (after its stagger offset), not when the result arrives — so a per-reel tease sound lines up with what the player sees:
+`spin:stopping` fires when a reel *actually* begins slowing (after its stagger offset), not when the result arrives — so a per-reel tease sound lines up with what the player sees:
 
 ```ts
 reelSet.events.on('spin:stopping', (reelIndex) => {

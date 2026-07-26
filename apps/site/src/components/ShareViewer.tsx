@@ -236,7 +236,7 @@ function SharedStudio({ config, assets, codeAccessible }: SharedStudioProps): JS
   const appRef = useRef<Application | null>(null);
   // Prototype-atlas textures + blur variants loaded once at boot, injected
   // into shared code so recipe-style snippets that reference
-  // `BlurSpriteSymbol` / `textures` work out of the box. Mirrors Studio.tsx
+  // `BlurSpriteSymbol` / `textures` work. Mirrors Studio.tsx
   //. anything a recipe injects must be injected here too.
   const builtinsRef = useRef<{ textures: Record<string, Texture>; blurTextures: Record<string, Texture>; SYMBOL_IDS: string[] } | null>(null);
   const reelSetRef = useRef<ReelSet | null>(null);

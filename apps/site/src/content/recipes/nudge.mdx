@@ -83,7 +83,7 @@ if (wins.length) winPresenter.show(wins);
 ## Sequential vs parallel
 
 Nudges are always per-reel. there's no batched API. Multi-reel beats are
-just multiple `nudge(...)` calls, and the orchestration is entirely yours:
+multiple `nudge(...)` calls, and the orchestration is yours:
 `await` them one at a time for a deliberate beat, or `Promise.all([...])`
 them for a single synchronised one. Same engine output, same events fire,
 only the pacing changes.
@@ -159,8 +159,8 @@ await Promise.all(
 ```
 
 Validation still throws synchronously on the call site (bad arguments
-fail immediately); only the actual mutation is deferred by `startDelay`.
-For irregular stagger profiles just compute per-reel delays in the map.
+fail immediately); only the mutation is deferred by `startDelay`.
+For irregular stagger profiles compute per-reel delays in the map.
 
 ## Skip / abort a nudge
 

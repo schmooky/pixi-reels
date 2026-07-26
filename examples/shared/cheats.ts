@@ -14,7 +14,7 @@ export interface CheatContext {
   rng: SeededRng;
   /** What the previous spin landed on, if any. Useful for hold-and-win. */
   lastGrid: string[][] | null;
-  /** Which symbols are currently "held" (reel,row pairs) — set by a demo. */
+  /** Which symbols are currently "held" (reel,row pairs) - set by a demo. */
   held: Array<{ reel: number; row: number; symbolId: string }>;
 }
 
@@ -31,7 +31,7 @@ export interface CheatDefinition {
 }
 
 /**
- * CheatEngine — orchestrates deterministic outcomes for a demo.
+ * CheatEngine - orchestrates deterministic outcomes for a demo.
  *
  * Cheats are tried in registration order. The first one whose `cheat()` returns
  * a non-null `CheatSpinResult` wins. If none match, a default random spin is
@@ -128,7 +128,7 @@ export class CheatEngine {
     return result;
   }
 
-  /** Apply `_held` cells on top of any grid — sticky-wild style persistence. */
+  /** Apply `_held` cells on top of any grid - sticky-wild style persistence. */
   private _applyHeld(grid: string[][]): void {
     for (const h of this._held) {
       if (grid[h.reel] && h.row < grid[h.reel].length) {
@@ -289,7 +289,7 @@ export function cascadeSequence(sequence: string[][][]): Cheat {
 }
 
 /**
- * Returns the full cascade sequence on a single spin — the first stage is
+ * Returns the full cascade sequence on a single spin - the first stage is
  * the landed grid, remaining stages come back in `meta.stages` so the demo
  * can animate the whole chain from one SPIN click.
  *

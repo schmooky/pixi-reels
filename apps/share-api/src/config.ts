@@ -11,7 +11,7 @@ export interface Config {
   /**
    * Base URL of the docs site that hosts the viewer (e.g.
    * `https://pixi-reels.schmooky.dev`). The API itself never serves
-   * HTML — it just bakes the viewer URL into CreateShareResponse.url.
+   * HTML; it just bakes the viewer URL into CreateShareResponse.url.
    */
   viewerBaseUrl: string;
   /** Comma-separated list of allowed CORS origins, or '*' for any. */

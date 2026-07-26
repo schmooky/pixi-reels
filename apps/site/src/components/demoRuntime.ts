@@ -53,7 +53,7 @@ export interface MechanicConfig {
    * Symbol set. Two shapes:
    *   - `kind: 'block'` (default). colored rounded rects with a glyph.
    *   - `kind: 'sprite'`. ids must be frame names from the prototype atlas
-   *     (`royal/royal_1`, `wild/wild_1`, …). Uses `BlurSpriteSymbol` with
+   *     (`royal/royal_1`, `wild/wild_1`, ...). Uses `BlurSpriteSymbol` with
    *     blur-on-spin.
    */
   symbols:
@@ -377,7 +377,6 @@ export async function mountMechanic(
   // Attach debug to window. matches what every guide/demo advertises.
   enableDebug(reelSet);
 
-  // Engine
   const engine = new CheatEngine({
     reelCount: cfg.reelCount,
     visibleRows: cfg.visibleRows,

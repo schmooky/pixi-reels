@@ -4,7 +4,7 @@
 //           CASCADE_PLATE_H, PIXI, gsap, app, pickWeighted
 
 // CLASSIC tumble feel: gravity both ways. power2.in fall out,
-// power2.in drop in, dead stop on the grid. The all-rounder default. Good baseline before reaching for the more
+// power2.in drop in, dead stop on the grid. The all-rounder default, a good baseline before the more
 // stylistic variants. Framed symbol plates rule out overshoot eases
 // (back/bounce): the rectangles would gap and overlap on landing.
 

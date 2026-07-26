@@ -17,7 +17,7 @@ export interface PrototypeTextureSet {
   textures: Record<string, Texture>;
   /** Pre-rendered motion-blur variants, keyed by the BASE name (no `_blur` suffix). */
   blurTextures: Record<string, Texture>;
-  /** The full atlas as `PIXI.Assets` returned it — advanced access. */
+  /** The full atlas as `PIXI.Assets` returned it - advanced access. */
   sheet: Spritesheet;
 }
 

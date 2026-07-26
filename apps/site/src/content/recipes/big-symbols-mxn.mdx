@@ -23,7 +23,7 @@ tags:
   - sizing
 ---
 
-The engine's big-symbol mechanism doesn't hard-code `w === h`. Any positive integer size works. what changes per shape is the *visual intent* and the *grid budget* it consumes. This recipe walks through the four most common shapes one at a time, with the placement logic shown in each block. Each demo always plants its shape so every spin shows the mechanic.
+The engine's big-symbol mechanism doesn't hard-code `w === h`. Any positive integer size works. what changes per shape is the *visual intent* and the *grid budget* it consumes. This recipe covers the four most common shapes, with the placement logic shown in each block. Each demo always plants its shape so every spin shows the mechanic.
 
 > **One thing first.** Every shape uses the same registration API: `symbolData({ id: { weight: 0, size: { w, h } } })`. The differences below are about *when to reach for each shape*, not how to wire it. If you only read one section, scroll to **How the wire format stays unchanged** at the bottom. that's the bit that makes the rest make sense.
 

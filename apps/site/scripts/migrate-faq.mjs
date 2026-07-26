@@ -14,7 +14,7 @@ for (const d of [groupsDir, faqDir]) {
 
 let qCount = 0;
 FAQ.forEach((group, gi) => {
-  // group meta — slug (id) is the filename, omitted from body.
+  // group meta: slug (id) is the filename, omitted from body.
   writeFileSync(
     resolve(groupsDir, `${group.id}.yaml`),
     stringify({ title: group.title.en, blurb: group.blurb.en, order: gi }),

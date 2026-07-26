@@ -7,7 +7,7 @@ import { SPINE_VERSION } from '../symbols.config';
  *   - root bone: parent transform. Destroy animates this so the entire
  *     tile (frame + icon) bursts as one.
  *   - icon bone: child of root. Idle/landing/win animate this so only the
- *     glyph drifts, squashes, or punches — the frame stays perfectly still.
+ *     glyph drifts, squashes, or punches; the frame stays perfectly still.
  *
  *   - frame slot: bound to root, holds the {name}_frame region (border + fill)
  *   - icon slot:  bound to icon, holds the {name}_icon region (glyph only)

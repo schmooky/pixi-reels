@@ -18,9 +18,9 @@
 //      `cascade:gravity:start/end` events still fire per reel, marking
 //      where you'd plug anticipation logic in a denser cluster.)
 //   2. The library waits `gravityHoldMs` (250 ms here. bump for more
-//      drama, e.g. 500–800 ms for a mascot pop or multiplier roll).
+//      drama, e.g. 500-800 ms for a mascot pop or multiplier roll).
 //   3. Stage B: new symbols drop in from above. `setDropOrder('ltr', 110)`
-//      gives a left-to-right wave. reel 0 drops first, then 1, then 2…
+//      gives a left-to-right wave. reel 0 drops first, then 1, then 2...
 //      Set the step ≥ `dropIn.duration` (here 380 ms) to make the columns
 //      strictly sequential (column 1 fully lands before column 2 starts);
 //      a smaller step gives overlap.

@@ -253,7 +253,7 @@ board.events.on('coin:locked', ({ coin }) => {
     return;
   }
   // Jackpot reveal: spin the tier word off, settle on the money face, then
-  // paint the amount - the source game's exact under-the-hood sequence.
+  // paint the amount - the source game's exact sequence.
   flashPanel(coin.data.kind);
   const spine = board.symbolAt(coin.cell).spine;
   if (spine && spine.skeleton.data.findAnimation(coin.data.kind)) {

@@ -3,8 +3,6 @@
 //                   PIXI, app
 
 // NUDGE-IN, THEN HOLD a buffer-anchored big symbol across a respin.
-//
-// NUDGE-IN, THEN HOLD a buffer-anchored big symbol across a respin.
 // Reel 3 lands with a tall wild whose anchor sits in bufferAbove (only
 // the tail of the block shows at row 0). The player nudges to drag the
 // wild into full view, then gets a re-spin of the OTHER reels while
@@ -110,7 +108,7 @@ return {
     //
     // We hand the held column a placeholder ColumnTarget; the held
     // entry's contents are not validated against the current strip
-    // and are simply dropped during frame building.
+    // and are dropped during frame building.
     const respinGrid = [
       ct(), ct(),
       ct(), // ignored. reel 2 is held

@@ -40,14 +40,14 @@ class BoneBuilder {
   // Curve semantics: Spine treats `key.curve` as the curve OUT OF
   // that key into the next key. The DSL author writes
   //   .scaleTo(0.94, frames(5), 'easeOut')
-  // meaning "ease into 0.94 over 5 frames" — i.e. the curve describes
+  // meaning "ease into 0.94 over 5 frames": the curve describes
   // the segment LEADING INTO the destination value. To honour author
   // intent while emitting Spine-correct JSON, every *To() method
   // attaches the requested curve to the PREVIOUS key (the segment
   // source) and places the new key with `linear` (which is the right
   // default for the segment AFTER it, until another *To() overrides).
   // Without this, the first segment of any animation is always linear
-  // regardless of what the author wrote — producing a velocity
+  // regardless of what the author wrote, producing a velocity
   // discontinuity at loop seams (the "snap back" symptom).
   // ─────────────────────────────────────────────────────────────
 
@@ -136,7 +136,7 @@ class SlotBuilder {
   }
 
   rgbaTo(color: string, duration: number, curve: CurveSpec = 'linear'): this {
-    // See bone builder header — curves attach to the segment SOURCE.
+    // See bone builder header: curves attach to the segment SOURCE.
     const prev = this.ir.rgba[this.ir.rgba.length - 1];
     if (prev) prev.curve = curve;
     this.cursors.rgba += duration;

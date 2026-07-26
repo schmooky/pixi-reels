@@ -1,5 +1,5 @@
 /**
- * MultiWays recipe — per-spin row variation. Each spin chooses a random shape
+ * MultiWays recipe - per-spin row variation. Each spin chooses a random shape
  * inside `[minRows, maxRows]`, and `setShape()` is called between `spin()`
  * and `setResult()`. AdjustPhase reshapes the reels before the stop sequence.
  *
@@ -57,7 +57,7 @@ export function buildMultiWays({ app, textures, blurTextures }: SandboxContext):
   const width = REELS * (SYMBOL_SIZE + GAP) - GAP;
   const height = REEL_PIXEL_HEIGHT;
 
-  // Random shape per spin. nextResult is called BEFORE setShape — the caller
+  // Random shape per spin. nextResult is called BEFORE setShape - the caller
   // (main.ts) wires it up: it sets shape, then calls nextResult to get the
   // grid, then calls setResult. We push shape into a closure-shared variable.
   let lastShape: number[] = new Array(REELS).fill(MAX_ROWS);
