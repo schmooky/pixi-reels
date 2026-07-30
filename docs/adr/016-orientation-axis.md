@@ -2,6 +2,9 @@
 
 ## Status: Proposed (v2.0.0, breaking)
 
+Companion: **ADR 017** splits facing from travel (§A) and proposes the `ReelStage` composition layer
+(§B), including three seams that belong inside this ADR's breaking window.
+
 Supersedes the `horizontal/` subtree. Retires `ROADMAP.md:31` (`Horizontal reels [partial] major p2`),
 and picks up two other roadmap rows for free: *Mixed direction per reel (up vs down)* and *Roll-up
 (symbols rise from below)*.
@@ -54,7 +57,7 @@ subsystem with a real axis parameter (`MotionBlurOptions.axis: 'y' | 'x'`), it s
 
 ---
 
-## 2. The three concepts currently conflated
+## 2. The four concepts currently conflated
 
 Everything in this ADR follows from separating these:
 
@@ -68,9 +71,14 @@ Everything in this ADR follows from separating these:
 3. **Gravity** — which way cascade symbols fall.
    Defaults to the reel's direction, independently settable. A reel that spins upward and tumbles
    downward is a legitimate design; today the two are the same `+Y`.
+4. **Facing** — which way is "up" for the symbol art.
+   **ReelSet-level**, identity by default. Split out in ADR 017 §A. The invariant: **changing travel
+   never changes facing** — art stays upright when a reel goes sideways or upward. This is what makes
+   §3.3's "screen-space stays screen-space" a rule rather than a lucky property.
 
-Today all three are fused into "the sign of `deltaY`". Direction is currently encoded three
-incompatible ways at once: the sign of a scalar (`ReelMotion.displace`; `StandardMode`'s symmetric
+Today the first three are fused into "the sign of `deltaY`", and facing is fused into orientation.
+
+Direction alone is currently encoded three incompatible ways at once: the sign of a scalar (`ReelMotion.displace`; `StandardMode`'s symmetric
 clamp vs `CascadeMode`'s one-sided `Math.min`), a string union (`NudgeOptions.direction: 'up'|'down'`;
 `HorizontalReel`'s `'ltr'|'rtl'`), and array-order convention (`StopSequencer.next()` tail-first).
 
@@ -456,7 +464,8 @@ rows T→B); `DebugReelSnapshot.allSymbols[].y` → `.main` (`:28-34, 53-57`).
 `ReelSet`s, `:130-148`) · roll-up · mixed direction per reel · per-spin reversal teases · drop-in mode
 becomes just a `SpinningMode` on any axis.
 
-**Explicitly out of scope:** mixed *orientation* within one `ReelSet` (compose two `ReelSet`s) ·
+**Explicitly out of scope:** mixed *orientation* within one `ReelSet` — compose two `ReelSet`s under a
+shared stage instead (ADR 017 §B) ·
 diagonal or radial motion · cluster grids (ADR-007) · making `SymbolData.size` orientation-relative.
 
 ---
@@ -464,7 +473,8 @@ diagonal or radial motion · cluster grids (ADR-007) · making `SymbolData.size`
 ## 8. Alternatives rejected
 
 **A. Rotate or flip the container.** `rotation = -π/2` (or `scale.y = -1`) on the strip container, with
-each symbol counter-transformed. Tiny internal diff. Rejected: breaks the `SpriteSymbol` `(0,0)` anchor
+each symbol counter-transformed. Tiny internal diff. Rejected as a category error — it changes **facing**
+to fix **travel** (ADR 017 §A). Concretely: breaks the `SpriteSymbol` `(0,0)` anchor
 vs `SpineSymbol` centering contract, inverts filter and blur orientation, breaks the unmask lift into
 `viewport.unmaskedContainer`, and every third-party `ReelSymbol` renders sideways or mirrored. The
 counter-transform bookkeeping exceeds the projection it avoids.
@@ -499,9 +509,9 @@ ship as 1.7.x patches.** The breaking part is a rename commit at the end.
 | 5 | `SpinningMode.computeDelta` | no | also fix `CascadeMode`'s full-slot clamp, §10.6 |
 | 6 | Phases via `axis.mainProp` (Start pull, Stop bounce, Adjust squash) | no | GSAP computed keys |
 | 7 | Cascade phases + `tumbleAlgorithm` on the gravity axis; `parkOutsideWindow` | no | §6.4 |
-| 8 | Builder geometry: cross-axis marching, mask rects, viewport extents, mask auto-pick | no | §6.5 |
-| 9 | `ReelSet` geometry accessors, pin overlays, MultiWays reshape gap axis | no | §6.6 |
-| 10 | **Vocabulary rename + codemod + loud throws; `MaskStrategy` v2; big-symbol/`directionPerReel` decision** | **yes** | the v2.0.0 commit |
+| 8 | Builder geometry: cross-axis marching, mask rects, viewport extents, mask auto-pick; **`ReelSetBuilder.viewport(existing)`** | no | §6.5; ADR 017 §B.4 |
+| 9 | `ReelSet` geometry accessors, pin overlays, MultiWays reshape gap axis; **hoist `_stopDelayFor` into an injectable `StopScheduler`** | no | §6.6; ADR 017 §B.4 |
+| 10 | **Vocabulary rename + codemod + loud throws; `MaskStrategy` v2; big-symbol/`directionPerReel` decision; `SymbolPosition` gains optional `setId`** | **yes** | the v2.0.0 commit. `SymbolPosition` breaks here anyway (`rowIndex → cellIndex`) — adding `setId` now is free, later it is a second break. ADR 017 §B.3 |
 | 11 | **Enable `orientation: 'horizontal'`; port both recipes; delete `src/horizontal/`** | **yes** | 747 lines removed |
 | 12 | Debug transpose, docs, this ADR to Accepted | no | |
 
@@ -553,10 +563,15 @@ transitions are **not** observable as events today (§2) — the mirror test mus
 array's rotation state directly, or PR 3 must promote wraps to a real event. Without one of those, this
 test does not cover §6.1, which is the thing it exists to cover.
 
-**10.5 Playwright visual diffs** on `classic-spin`, `cascade-tumble`, and both horizontal recipes, at
+**10.5 Facing invariant test.** Across all four travel combinations, at every lifecycle stage: assert
+`view.rotation === 0` for every symbol, and that `resize()` was called with screen-space
+`(width, height)`. This is the test that catches someone "fixing" horizontal by rotating the container
+(§8 Alternative A). See ADR 017 §A.
+
+**10.6 Playwright visual diffs** on `classic-spin`, `cascade-tumble`, and both horizontal recipes, at
 each of the four orientation/direction combinations.
 
-**10.6 Two latent bugs this refactor surfaces — fix them separately, with their own tests.**
+**10.7 Two latent bugs this refactor surfaces — fix them separately, with their own tests.**
 `CascadeMode.computeDeltaY` clamps to a **full** `symbolHeight` (`CascadeMode.ts:22`), while
 `ReelMotion` (`:48-52`) and `StandardMode` (`:12-17`) both require **half** a slot to preserve the
 at-most-one-wrap-per-call invariant. Currently harmless only because cascade `speed` is never negative
@@ -564,7 +579,7 @@ and deltas rarely reach the cap. And `_onSymbolWrapped`'s `direction` and `row` 
 (`Reel.ts:1352-1378`) — either wire them or delete them, but don't carry a dead direction parameter into
 a refactor whose entire subject is direction.
 
-**10.7 Migration ergonomics.** Per CLAUDE.md's fail-loud rule: **no silent deprecated aliases.** Ship
+**10.8 Migration ergonomics.** Per CLAUDE.md's fail-loud rule: **no silent deprecated aliases.** Ship
 `npx pixi-reels-codemod v1-to-v2` (a jscodeshift transform over §5), and have `build()` throw a named
 error on any v1 key it still sees — `"visibleRows was renamed to visibleCells in v2; run npx
 pixi-reels-codemod v1-to-v2"`. A quiet alias layer would let a `bufferAbove` that now means something
@@ -590,4 +605,4 @@ one engine.
 becomes a property of configuration. That is the point, but the mental model a contributor needs is one
 level more abstract than "symbols move down." §2 and §3.2 exist to make that model cheap to acquire, and
 should be reproduced in `CLAUDE.md`'s invariants section, replacing "`ReelMotion` wraps via
-`_maxY`/`_minY`."
+`_maxY`/`_minY`" with *travel changes motion; facing changes art; they never change each other.*
