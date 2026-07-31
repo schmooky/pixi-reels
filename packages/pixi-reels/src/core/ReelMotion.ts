@@ -1,132 +1,131 @@
 import type { ReelSymbol } from '../symbols/ReelSymbol.js';
+import type { ReelAxis } from './ReelAxis.js';
+import { VERTICAL_FORWARD } from './ReelAxis.js';
+
+const EPS = 1e-9;
 
 /**
- * The physics of one reel. move symbols down, wrap them around.
+ * The physics of one reel: march symbols along the travel axis and wrap them
+ * around. Projected through a {@link ReelAxis} so the same code runs vertical
+ * or horizontal, forward or reverse; the default axis is vertical/forward,
+ * matching every v1 layout.
  *
- * Every frame, `ReelMotion.update(delta)` adds `delta` to each symbol's
- * Y coordinate. A symbol whose position falls off the bottom wraps back
- * to the top (and vice versa. reels can run upward). Each wrap fires
- * the `_onSymbolWrapped` callback so the owning `Reel` can ask the
- * `FrameBuilder` for the next identity to paint on it.
- *
- * Maintains the invariant that `_symbols[0]` is always the visually
- * topmost symbol and `_symbols[N-1]` is always the bottommost. On each
- * wrap, the wrapping symbol is moved to the front (or back) of the array
- * so the ordering stays consistent with the grid. `snapToGrid` and the
- * visible window selection rely on this.
+ * Positions are DERIVED from array index every frame, never accumulated, and
+ * the rotation count is DERIVED from total travel. Rigidity, ordering and
+ * boundedness are therefore true by construction, and no "at most one wrap per
+ * call" precondition exists - any step size is legal (ADR 016 section 3.2,
+ * ADR 018). `_symbols[0]` is always the symbol nearest the strip's start edge
+ * (top for vertical, left for horizontal); each wrap moves the wrapping symbol
+ * to the array end that matches its travel so the ordering stays consistent
+ * with the grid.
  */
 export class ReelMotion {
-  private _symbolHeight: number;
-  private _symbolGapY: number;
-  private _slotHeight: number;
-  private _minY: number;
-  private _maxY: number;
+  private _pitch: number;
+  private _bufferStart: number;
+  private _axis: ReelAxis;
+  private _travel = 0; // total signed travel since the last snap
+  private _rot = 0; // whole-slot rotations already applied
+  private _off = 0; // sub-slot remainder
 
   constructor(
     private _symbols: ReelSymbol[],
     symbolHeight: number,
     symbolGapY: number,
-    private _bufferAbove: number,
-    visibleRows: number,
-    bufferBelow: number,
+    bufferAbove: number,
+    _visibleRows: number,
+    _bufferBelow: number,
     private _onSymbolWrapped: (symbol: ReelSymbol, arrayIndex: number, direction: 'up' | 'down') => void,
+    axis: ReelAxis = VERTICAL_FORWARD,
   ) {
-    this._symbolHeight = symbolHeight;
-    this._symbolGapY = symbolGapY;
-    this._slotHeight = symbolHeight + symbolGapY;
-    // Wrap thresholds sit one slot beyond the strip on each side. The last
-    // strip cell rests at y = (visibleRows + bufferBelow - 1) * slotH, so
-    // maxY = (visibleRows + bufferBelow) * slotH keeps it strictly below
-    // the wrap boundary at rest. Symmetric with minY's `bufferAbove + 1`.
-    // Pre-fix the formula was `(visibleRows + 1) * slotH`, which collapsed
-    // to maxY === strip[last].y for bufferBelow >= 2 and fired a phantom
-    // wrap on the first nudge displacement (anchor moved one slot too far).
-    this._maxY = (visibleRows + bufferBelow) * this._slotHeight;
-    this._minY = -(this._bufferAbove + 1) * this._slotHeight;
+    this._pitch = symbolHeight + symbolGapY;
+    this._bufferStart = bufferAbove;
+    this._axis = axis;
+    this._render();
   }
 
   /**
-   * Move all symbols by deltaY pixels (positive = downward).
-   * At most one wrap per call (deltaY is capped at half a symbol by the
-   * spinning mode, so a single symbol can cross the boundary per tick).
+   * Move the strip by `delta` screen pixels along the travel axis (positive =
+   * toward the larger coordinate: down for vertical, right for horizontal).
+   * `delta` is relative to the reel's direction via the axis polarity, so
+   * StartPhase's step-back pull (a negative delta) reads as "backwards for this
+   * reel" in either direction. Any magnitude is legal.
    */
-  displace(deltaY: number): void {
-    if (deltaY === 0) return;
-    for (const symbol of this._symbols) {
-      symbol.view.y += deltaY;
+  displace(delta: number): void {
+    if (delta === 0) return;
+    this._travel += this._axis.polarity * delta;
+
+    // Derive the rotation count from total travel rather than mutating it.
+    // Snapping q to a whole number inside EPS lands an exact N-slot travel on
+    // rotation N instead of N-1 when float residue leaves it 1e-14 short.
+    let q = this._travel / this._pitch;
+    const r = Math.round(q);
+    if (Math.abs(q - r) < EPS) q = r;
+    const targetRot = Math.floor(q);
+
+    while (this._rot < targetRot) {
+      this._rot++;
+      this._rotateToStart();
     }
-    if (deltaY > 0) {
-      this._wrapBottomToTop();
-    } else {
-      this._wrapTopToBottom();
+    while (this._rot > targetRot) {
+      this._rot--;
+      this._rotateToEnd();
     }
+
+    this._off = this._travel - targetRot * this._pitch;
+    if (Math.abs(this._off) < EPS) this._off = 0;
+    this._render();
   }
 
-  /** Snap all symbols to their correct grid positions (array index = visual row). */
+  /** Snap all symbols to their grid positions (array index = visual cell). */
   snapToGrid(): void {
-    for (let i = 0; i < this._symbols.length; i++) {
-      const targetY = (i - this._bufferAbove) * this._slotHeight;
-      this._symbols[i].view.y = targetY;
-    }
+    this._travel = 0;
+    this._rot = 0;
+    this._off = 0;
+    this._render();
   }
 
-  /** Position all symbols above the visible area (for cascade mode start). */
-  setToTopPosition(): void {
-    for (let i = 0; i < this._symbols.length; i++) {
-      this._symbols[i].view.y = this._minY - (this._symbols.length - i) * this._slotHeight;
-    }
-  }
-
-  /** Get the correct Y position for a symbol at a given row. */
+  /** The correct main-axis coordinate for a symbol at visual row `row`. */
   getRowY(row: number): number {
-    return (row - this._bufferAbove) * this._slotHeight;
+    return (row - this._bufferStart) * this._pitch;
   }
 
   get slotHeight(): number {
-    return this._slotHeight;
+    return this._pitch;
   }
 
   /**
-   * Reshape the motion layer for a new visible-row count and cell height.
-   * Recomputes wrap bounds and the slot height. Called by `Reel.reshape()`
-   * during AdjustPhase on MultiWays slots. The symbol array is re-bound by
-   * `Reel.reshape()` directly via the same array reference, so this method
-   * doesn't take a new array.
+   * Reshape the motion layer for a new visible-cell count and cell pitch.
+   * Called by `Reel.reshape()` during AdjustPhase on MultiWays slots; the
+   * symbol array is re-bound via the same reference, and `Reel` snaps right
+   * after, so this only refreshes the geometry.
    */
-  reshape(symbolHeight: number, symbolGapY: number, bufferAbove: number, visibleRows: number, bufferBelow: number): void {
-    this._symbolHeight = symbolHeight;
-    this._symbolGapY = symbolGapY;
-    this._slotHeight = symbolHeight + symbolGapY;
-    this._bufferAbove = bufferAbove;
-    this._maxY = (visibleRows + bufferBelow) * this._slotHeight;
-    this._minY = -(this._bufferAbove + 1) * this._slotHeight;
+  reshape(
+    symbolHeight: number,
+    symbolGapY: number,
+    bufferAbove: number,
+    _visibleRows: number,
+    _bufferBelow: number,
+  ): void {
+    this._pitch = symbolHeight + symbolGapY;
+    this._bufferStart = bufferAbove;
   }
 
-  private _wrapBottomToTop(): void {
-    const lastIdx = this._symbols.length - 1;
-    const lastSymbol = this._symbols[lastIdx];
-    if (lastSymbol.view.y < this._maxY) return;
-    const firstSymbol = this._symbols[0];
-    lastSymbol.view.y = firstSymbol.view.y - this._slotHeight;
-    // Maintain array order: last symbol becomes the new first.
-    this._symbols.pop();
-    this._symbols.unshift(lastSymbol);
-    this._onSymbolWrapped(lastSymbol, 0, 'up');
+  private _rotateToStart(): void {
+    const s = this._symbols.pop() as ReelSymbol;
+    this._symbols.unshift(s);
+    this._onSymbolWrapped(s, 0, 'up');
   }
 
-  private _wrapTopToBottom(): void {
-    const firstSymbol = this._symbols[0];
-    // Symmetric with `_wrapBottomToTop`'s `y < maxY` guard: wrap as soon as
-    // the symbol reaches the boundary (`y <= minY`), not strictly past it.
-    // Required for `Reel.nudge()` which lands on exact integer slot offsets;
-    // strict `<` would miss the wrap at exactly minY and the nudge would
-    // visually no-op.
-    if (firstSymbol.view.y > this._minY) return;
-    const lastSymbol = this._symbols[this._symbols.length - 1];
-    firstSymbol.view.y = lastSymbol.view.y + this._slotHeight;
-    // Maintain array order: first symbol becomes the new last.
-    this._symbols.shift();
-    this._symbols.push(firstSymbol);
-    this._onSymbolWrapped(firstSymbol, this._symbols.length - 1, 'down');
+  private _rotateToEnd(): void {
+    const s = this._symbols.shift() as ReelSymbol;
+    this._symbols.push(s);
+    this._onSymbolWrapped(s, this._symbols.length - 1, 'down');
+  }
+
+  private _render(): void {
+    const off = this._off;
+    for (let i = 0; i < this._symbols.length; i++) {
+      this._axis.setMain(this._symbols[i].view, (i - this._bufferStart) * this._pitch + off);
+    }
   }
 }
