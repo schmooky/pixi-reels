@@ -214,6 +214,11 @@ export class ReelViewport extends Container implements Disposable {
     this._maskHeight = height;
     this._maskRects = rects;
     this._maskStrategy.update(this._mask, this._maskRects, width, height);
+    // The dim overlay is sized once at construction; a viewport resize (e.g.
+    // a MultiWays reshape growing the tallest reel) must resize it too, or the
+    // spotlight dims a stale rectangle. Its runtime alpha is set by showDim.
+    this.dimOverlay.clear();
+    this.dimOverlay.rect(0, 0, width, height).fill({ color: 0x000000, alpha: 0.5 });
   }
 
   destroy(): void {
