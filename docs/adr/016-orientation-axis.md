@@ -632,6 +632,11 @@ is ready instead of holding the rename hostage. Cost: 747 dead lines carried one
 
 **Lean: split.** A rename-only 2.0 is far easier to review and to roll back. Not a strong lean.
 
+**Decided: bulk v2.** One `v2` branch, everything breaking lands there, one merge, one release. The
+granularity argument above is answered by keeping the branch thin — the non-breaking two-thirds of the
+work ships on `main` as `1.7.x` and never enters the branch at all. Execution plan in
+[`docs/V2-PLAN.md`](../V2-PLAN.md).
+
 ### 12.2 Needs the window
 
 **Delete the legacy `string[][]` negative-index form.** The highest-value item here, because it makes
