@@ -4,6 +4,8 @@ import { ReelSymbol } from '../symbols/ReelSymbol.js';
 import type { SymbolFactory } from '../symbols/SymbolFactory.js';
 import type { SymbolData } from '../config/types.js';
 import { ReelMotion } from './ReelMotion.js';
+import type { ReelAxis } from './ReelAxis.js';
+import { VERTICAL_FORWARD } from './ReelAxis.js';
 import { StopSequencer } from './StopSequencer.js';
 import { EventEmitter } from '../events/EventEmitter.js';
 import type { ReelEvents } from '../events/ReelEvents.js';
@@ -131,6 +133,8 @@ export interface ReelConfig {
    * Default 0.
    */
   offsetY?: number;
+  /** Travel projection for this reel. Defaults to vertical/forward. */
+  axis?: ReelAxis;
   /**
    * Pixel height of this reel's box. Used for MultiWays cell-height
    * derivation (`reelHeight / visibleRows`). Defaults to
@@ -185,6 +189,7 @@ export class Reel implements Disposable {
 
   public readonly motion: ReelMotion;
   public readonly stopSequencer: StopSequencer;
+  private readonly _axis: ReelAxis;
 
   private _symbolFactory: SymbolFactory;
   private _randomProvider: RandomSymbolProvider;
@@ -293,10 +298,13 @@ export class Reel implements Disposable {
     // per-symbol zIndex (set from symbolData.zIndex + visual row) controls
     // render order. bottom-row symbols render in front, and flagged "big"
     // symbols like wild/bonus can override to render above neighbors.
+    this._axis = config.axis ?? VERTICAL_FORWARD;
     this.container = new Container();
     this.container.sortableChildren = true;
-    this.container.x = config.reelIndex * (config.symbolWidth + config.symbolGapX);
-    this.container.y = this._offsetY;
+    // Cross axis marches the reels; the main axis carries the reel's own
+    // offset. For vertical this is (x = column, y = offsetY), unchanged.
+    this._axis.setCross(this.container, config.reelIndex * (config.symbolWidth + config.symbolGapX));
+    this._axis.setMain(this.container, this._offsetY);
     // Explicit zIndex so the reel's layer in `ReelViewport.maskedContainer`
     // (sortableChildren = true) is deterministic. Rightmost reel draws on
     // top by default. same visual order as insertion, but now set via
@@ -321,6 +329,7 @@ export class Reel implements Disposable {
       config.visibleRows,
       config.bufferBelow,
       (symbol, row, direction) => this._onSymbolWrapped(symbol, row, direction),
+      this._axis,
     );
 
     this._setupSymbolPositions(config);
@@ -539,7 +548,7 @@ export class Reel implements Disposable {
     for (let i = 0; i < this.symbols.length; i++) {
       const view = this.symbols[i].view;
       if (view.parent === this._viewport.unmaskedContainer) {
-        const reelLocalY = view.y - this.container.y;
+        const reelLocalY = this._axis.getMain(view) - this._axis.getMain(this.container);
         this.container.addChild(view);
         this._placeSymbolView(view, reelLocalY, false);
       }
@@ -597,7 +606,7 @@ export class Reel implements Disposable {
       // Lift landed unmask symbols above the mask. visible rows only, so
       // a buffer-row scatter never sits parked outside the grid.
       if (this._isUnmasked(symbol.symbolId) && symbol.view.parent === this.container) {
-        const reelLocalY = symbol.view.y;
+        const reelLocalY = this._axis.getMain(symbol.view);
         this._viewport.unmaskedContainer.addChild(symbol.view);
         this._placeSymbolView(symbol.view, reelLocalY, true);
       }
@@ -1119,7 +1128,7 @@ export class Reel implements Disposable {
       const id = this._randomProvider.next(true);
       const sym = this._symbolFactory.acquire(id);
       sym.resize(this._symbolWidth, newSymbolHeight);
-      this._placeSymbolView(sym.view, sym.view.y, this._effectiveUnmask(id));
+      this._placeSymbolView(sym.view, this._axis.getMain(sym.view), this._effectiveUnmask(id));
       this._parentForSymbolId(id).addChild(sym.view);
       this.symbols.push(sym);
     }
@@ -1279,13 +1288,14 @@ export class Reel implements Disposable {
    * the at-rest cell position aligned with the reel column. Masked views
    * live in `this.container`, so reel-local coords map directly.
    */
-  private _placeSymbolView(view: Container, reelLocalY: number, isUnmasked: boolean): void {
+  private _placeSymbolView(view: Container, reelLocalMain: number, isUnmasked: boolean): void {
     if (isUnmasked) {
-      view.x = this.container.x;
-      view.y = this.container.y + reelLocalY;
+      // Viewport space: bake in the reel container's own offset on both axes.
+      this._axis.setCross(view, this._axis.getCross(this.container));
+      this._axis.setMain(view, this._axis.getMain(this.container) + reelLocalMain);
     } else {
-      view.x = 0;
-      view.y = reelLocalY;
+      this._axis.setCross(view, 0);
+      this._axis.setMain(view, reelLocalMain);
     }
   }
 
@@ -1297,8 +1307,8 @@ export class Reel implements Disposable {
    */
   private _toReelLocalY(view: Container): number {
     return view.parent === this._viewport.unmaskedContainer
-      ? view.y - this.container.y
-      : view.y;
+      ? this._axis.getMain(view) - this._axis.getMain(this.container)
+      : this._axis.getMain(view);
   }
 
   /**
@@ -1318,12 +1328,16 @@ export class Reel implements Disposable {
    * (when the frequent snaps happen) this loop finds nothing.
    */
   private _syncUnmaskedViewOffsets(): void {
-    if (this.container.y === 0 && this.container.x === 0) return;
+    const mainOff = this._axis.getMain(this.container);
+    const crossOff = this._axis.getCross(this.container);
+    if (mainOff === 0 && crossOff === 0) return;
     for (let i = 0; i < this.symbols.length; i++) {
       const view = this.symbols[i].view;
       if (view.parent === this._viewport.unmaskedContainer) {
-        view.x = this.container.x;
-        view.y += this.container.y;
+        // Cross offset is absolute (set once); main offset is incremental
+        // (the view already holds its reel-local main coordinate).
+        this._axis.setCross(view, crossOff);
+        this._axis.addMain(view, mainOff);
       }
     }
   }
@@ -1389,7 +1403,7 @@ export class Reel implements Disposable {
     // have been parented to viewport.unmaskedContainer and need an offset
     // subtraction to be reused as the new symbol's reel-local Y.
     const reelLocalY = isOldStub
-      ? oldSymbol.view.y
+      ? this._axis.getMain(oldSymbol.view)
       : this._toReelLocalY(oldSymbol.view);
 
     // OCCUPIED: install a stub. Stubs are not pooled through SymbolFactory
@@ -1401,8 +1415,8 @@ export class Reel implements Disposable {
       }
       this._symbolFactory.release(oldSymbol);
       const stub = this._acquireOccupiedStub();
-      stub.view.y = reelLocalY;
-      stub.view.x = 0;
+      this._axis.setMain(stub.view, reelLocalY);
+      this._axis.setCross(stub.view, 0);
       stub.view.alpha = 0;
       stub.view.visible = true;
       stub.view.scale.set(1, 1);
