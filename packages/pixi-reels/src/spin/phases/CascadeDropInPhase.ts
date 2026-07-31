@@ -44,8 +44,8 @@ interface DropJob {
   row: number;
   symbol: ReelSymbol;
   view: Container;
-  startY: number;
-  finalY: number;
+  startMain: number;
+  finalMain: number;
   offsetRows: number;
 }
 
@@ -91,6 +91,7 @@ export class CascadeDropInPhase extends ReelPhase<CascadeDropInPhaseConfig> {
 
   protected onEnter(config: CascadeDropInPhaseConfig): void {
     const reel = this._reel;
+    const axis = reel.axis;
     const visible = reel.visibleRows;
     const cellHeight = reel.motion.slotHeight;
     const events = config.events;
@@ -149,8 +150,8 @@ export class CascadeDropInPhase extends ReelPhase<CascadeDropInPhaseConfig> {
     // getSymbolAt) to the SAME anchor view. Animate that view ONCE, driven by
     // the first visible row of the block (top-to-bottom). Without this the
     // anchor gets one job per occupied row, so: multiple GSAP tweens fight
-    // over its `view.y` (the jitter), `finalY = sym.view.y` is re-read after a
-    // sibling job already moved the view to its startY (wrong landing Y), and
+    // over its main position (the jitter), `finalMain` is re-read after a
+    // sibling job already moved the view to its startMain (wrong landing pos), and
     // per-symbol listeners (landing squish/bounce) fire N times on one view.
     const handledAnchors = new Set<number>();
     for (const off of offsets) {
@@ -161,15 +162,19 @@ export class CascadeDropInPhase extends ReelPhase<CascadeDropInPhaseConfig> {
       const sym = reel.getSymbolAt(off.row);
 
       if (off.offsetRows === 0) {
-        // Untouched survivor. placeSymbols left it at finalY visible.
+        // Untouched survivor. placeSymbols left it at its final position, visible.
         sym.view.visible = true;
         sym.view.alpha = 1;
         continue;
       }
 
-      // Compute startY for any mover (gravity-correct origin).
-      const finalY = sym.view.y;
-      let startY: number;
+      // Compute the main-axis start for any mover (gravity-correct origin).
+      // Grid origins (`originalRow * cellHeight`) are absolute main
+      // coordinates and stay direction-agnostic. Fall distances are
+      // directional, so they carry `axis.polarity`: the mover always starts
+      // on the gravity-entry side and travels toward the exit edge.
+      const finalMain = axis.getMain(sym.view);
+      let startMain: number;
       switch (this._drop.distance) {
         case 'auto':
           // `'auto'` = "every mover falls the full visible-rows distance,"
@@ -180,16 +185,16 @@ export class CascadeDropInPhase extends ReelPhase<CascadeDropInPhaseConfig> {
           // visible discontinuity. Fall back to perHole geometry for those
           // movers so the survivor really does slide from its old row.
           if (!config.initial && off.originalRow >= 0) {
-            startY = off.originalRow * cellHeight;
+            startMain = off.originalRow * cellHeight;
           } else {
-            startY = finalY - visible * cellHeight;
+            startMain = finalMain - axis.polarity * visible * cellHeight;
           }
           break;
         case 'perHole':
-          startY = off.originalRow * cellHeight;
+          startMain = off.originalRow * cellHeight;
           break;
         default:
-          startY = finalY - this._drop.distance;
+          startMain = finalMain - axis.polarity * this._drop.distance;
       }
 
       const isNewSymbol = off.originalRow < 0;
@@ -200,16 +205,16 @@ export class CascadeDropInPhase extends ReelPhase<CascadeDropInPhaseConfig> {
       if (skipForRole) {
         if (role === 'gravity' && isNewSymbol) {
           // New symbol awaiting stage 2. invisible (alpha = 0) but parked
-          // at the FINAL grid Y, not at startY. placeSymbols already snapped
-          // view.y to grid Y; we leave it there so stage 2's `finalY =
-          // sym.view.y` read picks up the correct landing position. (Stage 2
-          // will reposition to startY for the actual drop-in tween.)
+          // at the FINAL grid position, not at startMain. placeSymbols already
+          // snapped the view to grid; we leave it there so stage 2's
+          // `finalMain = axis.getMain(view)` read picks up the correct landing
+          // position. (Stage 2 will reposition to startMain for the drop-in tween.)
           sym.view.alpha = 0;
           sym.view.visible = true;
         } else if (role === 'new' && !isNewSymbol) {
           // Survivor already animated by the gravity stage. reveal it
-          // where placeSymbols originally targeted (the final grid Y).
-          sym.view.y = finalY;
+          // where placeSymbols originally targeted (the final grid position).
+          axis.setMain(sym.view, finalMain);
           sym.view.alpha = 1;
           sym.view.visible = true;
         }
@@ -218,15 +223,15 @@ export class CascadeDropInPhase extends ReelPhase<CascadeDropInPhaseConfig> {
 
       // Move FIRST, then reveal. so the symbol never appears at the grid
       // position during the place→drop handover.
-      sym.view.y = startY;
+      axis.setMain(sym.view, startMain);
       sym.view.alpha = 1;
       sym.view.visible = true;
       jobs.push({
         row: off.row,
         symbol: sym,
         view: sym.view,
-        startY,
-        finalY,
+        startMain,
+        finalMain,
         offsetRows: off.offsetRows,
       });
     }
@@ -264,7 +269,7 @@ export class CascadeDropInPhase extends ReelPhase<CascadeDropInPhaseConfig> {
 
     if (jobs.length === 0 || dropSec <= 0) {
       // Nothing to animate, or zero-duration recipe. snap and complete.
-      for (const job of jobs) job.view.y = job.finalY;
+      for (const job of jobs) axis.setMain(job.view, job.finalMain);
       finish();
       return;
     }
@@ -303,7 +308,7 @@ export class CascadeDropInPhase extends ReelPhase<CascadeDropInPhaseConfig> {
       );
 
       tl.to(job.view, {
-        y: job.finalY,
+        [axis.mainProp]: job.finalMain,
         duration: dropSec,
         ease: this._drop.ease,
       }, offset);
@@ -313,13 +318,14 @@ export class CascadeDropInPhase extends ReelPhase<CascadeDropInPhaseConfig> {
   update(_deltaMs: number): void {}
 
   protected onSkip(): void {
+    const axis = this._reel.axis;
     if (this._timeline) {
       this._timeline.kill();
       this._timeline = null;
     }
     // Snap every animating view to its final grid position.
     for (const job of this._jobs) {
-      job.view.y = job.finalY;
+      axis.setMain(job.view, job.finalMain);
       job.view.alpha = 1;
       job.view.visible = true;
     }

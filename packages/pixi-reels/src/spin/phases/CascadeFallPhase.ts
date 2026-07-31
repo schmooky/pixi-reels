@@ -95,26 +95,29 @@ export class CascadeFallPhase extends ReelPhase<CascadeFallPhaseConfig> {
     this._delayedCall = null;
 
     const reel = this._reel;
+    const axis = reel.axis;
     const cellHeight = reel.motion.slotHeight;
     const visibleRows = reel.visibleRows;
     const reelIndex = reel.reelIndex;
 
-    // Distance: just past the bottom buffer so the symbols clear the mask.
+    // Distance: just past the exit-edge buffer so the symbols clear the mask.
+    // A main-axis magnitude; the tween applies `axis.polarity` for travel sign.
     const fallDistance = (visibleRows + reel.bufferBelow + 1) * cellHeight;
 
     const fallSec = this._fall.duration / 1000;
     const staggerSec = this._fall.rowStagger / 1000;
 
-    // Snapshot views and current Ys before any tween starts. Avoids reading
-    // mid-tween Y values if `cascade:fall:symbol` listeners mutate things.
+    // Snapshot views and current main positions before any tween starts.
+    // Avoids reading mid-tween values if `cascade:fall:symbol` listeners
+    // mutate things.
     const symbols: ReelSymbol[] = [];
     const views: Container[] = [];
-    const startYs: number[] = [];
+    const startMains: number[] = [];
     for (let row = 0; row < visibleRows; row++) {
       const sym = reel.getSymbolAt(row);
       symbols.push(sym);
       views.push(sym.view);
-      startYs.push(sym.view.y);
+      startMains.push(axis.getMain(sym.view));
     }
     this._fallingViews = views;
 
@@ -160,7 +163,7 @@ export class CascadeFallPhase extends ReelPhase<CascadeFallPhaseConfig> {
     for (let row = 0; row < visibleRows; row++) {
       const view = views[row];
       const symbol = symbols[row];
-      const startY = startYs[row];
+      const startMain = startMains[row];
       const orderIndex = reverseOrder ? visibleRows - 1 - row : row;
       const offset = orderIndex * staggerSec;
 
@@ -189,7 +192,7 @@ export class CascadeFallPhase extends ReelPhase<CascadeFallPhaseConfig> {
       );
 
       tl.to(view, {
-        y: startY + fallDistance,
+        [axis.mainProp]: startMain + axis.polarity * fallDistance,
         duration: fallSec,
         ease: this._fall.ease,
       }, offset);
