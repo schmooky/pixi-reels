@@ -1,0 +1,10 @@
+{
+  "mode": "pre",
+  "tag": "next",
+  "initialVersions": {
+    "@pixi-reels/share-api": "0.1.0",
+    "pixi-reels": "1.6.1",
+    "pixi-reels-symbol-gen": "0.1.0"
+  },
+  "changesets": []
+}
