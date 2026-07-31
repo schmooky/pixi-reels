@@ -205,6 +205,12 @@ export type {
   RecordedFrame,
   StartRecordingOptions,
 } from './debug/debug.js';
+export { debugOverlay } from './debug/debugOverlay.js';
+export type {
+  DebugOverlayLayer,
+  DebugOverlayOptions,
+  DebugOverlayHandle,
+} from './debug/debugOverlay.js';
 
 // Testing utilities ship at the `pixi-reels/testing` subpath. Importing
 // from there keeps the headless harness out of production bundles even

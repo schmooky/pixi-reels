@@ -1,6 +1,8 @@
 import { Graphics } from 'pixi.js';
 import type { ReelSet } from '../core/ReelSet.js';
 import type { Reel } from '../core/Reel.js';
+import { debugOverlay } from './debugOverlay.js';
+import type { DebugOverlayOptions, DebugOverlayHandle } from './debugOverlay.js';
 
 /**
  * Debug snapshot. plain JSON representation of the entire reel state.
@@ -334,6 +336,13 @@ export function enableDebug(reelSet: ReelSet, key?: string): void {
         maskOverlay = null;
       }
     },
+    /**
+     * Create a layered visual debug overlay on this reel set (mask, cells,
+     * buffers, symbol bounds, big-symbol blocks, pins, hud). Returns a handle;
+     * call `.setLayers(...)` / `.redraw()` / `.destroy()` on it. Unlike
+     * `showMask`, this renders above the viewport (incl. the spotlight).
+     */
+    overlay: (opts?: DebugOverlayOptions): DebugOverlayHandle => debugOverlay(reelSet, opts),
   };
 
   const w = window as unknown as {
