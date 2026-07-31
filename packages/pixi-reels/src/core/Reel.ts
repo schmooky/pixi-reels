@@ -408,7 +408,7 @@ export class Reel implements Disposable {
     // mode caps at a full slot, so an unbounded deltaMs there could still skip.
     const dt = Math.min(deltaMs, MAX_TICK_MS);
 
-    const deltaY = this.spinningMode.computeDeltaY(
+    const deltaY = this.spinningMode.computeDelta(
       this.motion.slotHeight,
       this.speed,
       dt,
@@ -950,7 +950,7 @@ export class Reel implements Disposable {
 
     const totalDelta = direction === 'down' ? distance * slotH : -distance * slotH;
     // Cap per-tick displacement at < half a slot so ReelMotion fires exactly
-    // one wrap per `displace` call (mirrors SpinningMode.computeDeltaY).
+    // one wrap per `displace` call (mirrors SpinningMode.computeDelta).
     const stepLimit = slotH * 0.45;
 
     // Finalize closure. runs at natural completion AND on skip / abort.

@@ -7,7 +7,7 @@ import type { SpinningMode } from './SpinningMode.js';
 export class ImmediateMode implements SpinningMode {
   readonly name = 'immediate';
 
-  computeDeltaY(_symbolHeight: number, _speed: number, _deltaMs: number): number {
+  computeDelta(_slotPitch: number, _speed: number, _deltaMs: number): number {
     // No movement. placement is handled directly by the phase
     return 0;
   }

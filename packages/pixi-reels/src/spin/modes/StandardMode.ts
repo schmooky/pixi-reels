@@ -7,13 +7,13 @@ import type { SpinningMode } from './SpinningMode.js';
 export class StandardMode implements SpinningMode {
   readonly name = 'standard';
 
-  computeDeltaY(symbolHeight: number, speed: number, deltaMs: number): number {
-    const raw = (symbolHeight * speed * deltaMs) / 1000;
-    // Cap displacement to half a symbol in EITHER direction. ReelMotion wraps
-    // at most once per displace() call, so an unclamped step (e.g. the negative
-    // step-back speed in StartPhase, or a large deltaMs spike) would skip a wrap
-    // and desync the symbol array from what's on screen.
-    const cap = symbolHeight / 2;
+  computeDelta(slotPitch: number, speed: number, deltaMs: number): number {
+    const raw = (slotPitch * speed * deltaMs) / 1000;
+    // Cap displacement to half a slot in either direction. ReelMotion no longer
+    // requires this for correctness (it derives rotation from total travel), but
+    // a half-slot cap keeps per-frame motion smooth and bounds pathological
+    // deltaMs spikes; the sign carries StartPhase's step-back pull unchanged.
+    const cap = slotPitch / 2;
     return Math.max(Math.min(raw, cap), -cap);
   }
 }

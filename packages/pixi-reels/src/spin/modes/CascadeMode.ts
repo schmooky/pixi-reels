@@ -17,8 +17,11 @@ export class CascadeMode implements SpinningMode {
     this._gravity = gravity;
   }
 
-  computeDeltaY(symbolHeight: number, speed: number, deltaMs: number): number {
-    const raw = (symbolHeight * speed * this._gravity * deltaMs) / 1000;
-    return Math.min(raw, symbolHeight);
+  computeDelta(slotPitch: number, speed: number, deltaMs: number): number {
+    const raw = (slotPitch * speed * this._gravity * deltaMs) / 1000;
+    // Full-slot cap. The old wrap-skip risk (contract L7) is gone now that
+    // ReelMotion derives rotation from total travel, so this only bounds the
+    // per-frame step; cascade speed is never negative.
+    return Math.min(raw, slotPitch);
   }
 }
