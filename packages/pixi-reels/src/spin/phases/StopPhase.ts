@@ -45,7 +45,7 @@ export class StopPhase extends ReelPhase<StopPhaseConfig> {
   protected onEnter(config: StopPhaseConfig): void {
     this._config = config;
     this._stage = 'delay';
-    this._baseY = this._reel.container.y;
+    this._baseY = this._reel.axis.getMain(this._reel.container);
 
     const delay = (config.delay ?? 0) / 1000;
     if (delay > 0) {
@@ -104,15 +104,19 @@ export class StopPhase extends ReelPhase<StopPhaseConfig> {
     }
 
     const legDuration = (speed.bounceDuration ?? 600) / 2000; // half of total, in seconds
+    // Overshoot in the direction of travel: forward reels overshoot toward the
+    // larger main coordinate, reverse reels toward the smaller. axis.polarity
+    // makes this automatic and keeps vertical/forward at `base + bounceDistance`.
+    const axis = reel.axis;
     this._stage = 'bouncing';
     this._bounceTween = getGsap().timeline();
     this._bounceTween.to(reel.container, {
-      y: this._baseY + bounceDistance,
+      [axis.mainProp]: this._baseY + axis.polarity * bounceDistance,
       duration: legDuration,
       ease: 'power1.out',
     });
     this._bounceTween.to(reel.container, {
-      y: this._baseY,
+      [axis.mainProp]: this._baseY,
       duration: legDuration,
       ease: 'power1.out',
       onComplete: () => {
@@ -144,7 +148,7 @@ export class StopPhase extends ReelPhase<StopPhaseConfig> {
       reel.placeSymbols(placeForm);
     }
     reel.snapToGrid();
-    reel.container.y = this._baseY;
+    reel.axis.setMain(reel.container, this._baseY);
     this._stage = 'done';
   }
 

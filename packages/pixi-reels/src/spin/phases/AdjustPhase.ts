@@ -97,22 +97,23 @@ export class AdjustPhase extends ReelPhase<AdjustPhaseConfig> {
 
     // Pose every overlay at its OLD cell visually so the tween starts
     // from where the player last saw it. The overlay's underlying view is
-    // already at `newCellHeight` after the upstream reshape; we use
-    // scale.y to make it look its old size during the tween.
+    // already at `newCellHeight` after the upstream reshape; we squash the
+    // main-axis scale to make it look its old size during the tween.
+    const axis = this._reel.axis;
     for (const o of overlays) {
       o.symbol.resize(o.cellWidth, o.newCellHeight);
-      o.symbol.view.x = o.x;
-      o.symbol.view.y = o.fromY;
-      o.symbol.view.scale.y =
+      axis.setCross(o.symbol.view, o.x);
+      axis.setMain(o.symbol.view, o.fromY);
+      o.symbol.view.scale[axis.mainProp] =
         o.newCellHeight > 0 ? o.oldCellHeight / o.newCellHeight : 1;
-      o.symbol.view.scale.x = 1;
+      o.symbol.view.scale[axis.crossProp] = 1;
     }
 
     this._settle = () => {
       for (const o of overlays) {
         o.symbol.view.scale.set(1, 1);
-        o.symbol.view.y = o.toY;
-        o.symbol.view.x = o.x;
+        axis.setMain(o.symbol.view, o.toY);
+        axis.setCross(o.symbol.view, o.x);
       }
     };
 
@@ -128,8 +129,8 @@ export class AdjustPhase extends ReelPhase<AdjustPhaseConfig> {
     });
 
     for (const o of overlays) {
-      this._tween.to(o.symbol.view, { y: o.toY, duration: dur, ease }, 0);
-      this._tween.to(o.symbol.view.scale, { y: 1, duration: dur, ease }, 0);
+      this._tween.to(o.symbol.view, { [axis.mainProp]: o.toY, duration: dur, ease }, 0);
+      this._tween.to(o.symbol.view.scale, { [axis.mainProp]: 1, duration: dur, ease }, 0);
     }
   }
 
@@ -150,10 +151,11 @@ export class AdjustPhase extends ReelPhase<AdjustPhaseConfig> {
   }
 
   private _snapPinOverlays(overlays: PinOverlayTween[]): void {
+    const axis = this._reel.axis;
     for (const o of overlays) {
       o.symbol.resize(o.cellWidth, o.newCellHeight);
-      o.symbol.view.x = o.x;
-      o.symbol.view.y = o.toY;
+      axis.setCross(o.symbol.view, o.x);
+      axis.setMain(o.symbol.view, o.toY);
       o.symbol.view.scale.set(1, 1);
     }
   }

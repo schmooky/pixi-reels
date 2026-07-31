@@ -51,7 +51,12 @@ export class StartPhase extends ReelPhase<StartPhaseConfig> {
 
     this._tween = getGsap().timeline();
 
-    // Step-back: brief reverse to give a "pull" before launch.
+    // Step-back: brief reverse to give a "pull" before launch. This tweens
+    // reel.speed, not a position, so it needs no axis routing: the negative
+    // speed is direction-relative and ReelMotion.displace multiplies travel by
+    // axis.polarity, making it read as "backwards for this reel" in any
+    // orientation/direction. Multiplying speed by polarity here would instead
+    // invert the pull on reverse reels.
     if (speed.bounceDistance > 0) {
       this._tween.to(reel, {
         speed: -2,

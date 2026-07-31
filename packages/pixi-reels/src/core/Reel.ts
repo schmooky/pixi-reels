@@ -398,6 +398,11 @@ export class Reel implements Disposable {
     return this._spinSymbolHeight;
   }
 
+  /** This reel's travel projection (orientation + direction). */
+  get axis(): ReelAxis {
+    return this._axis;
+  }
+
   /** Update reel for one frame. Called by SpinController via ticker. */
   update(deltaMs: number): void {
     if (this.speed === 0) return;
