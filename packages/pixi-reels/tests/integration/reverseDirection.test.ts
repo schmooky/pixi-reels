@@ -1,10 +1,10 @@
 /**
- * Per-reel travel direction API (A9). The ReelAxis is threaded through the
- * motion + phase layers, and the builder exposes direction()/directionPerReel()/
- * orientation(). The set-level geometry and the StopSequencer feed edge are not
- * direction/orientation-aware yet (ADR 016 section 6.1), so non-forward-vertical
- * builds fail loud instead of spinning forever. This locks in that contract and
- * proves the axis wiring stays byte-identical for the supported forward path.
+ * Per-reel travel direction (A9 + section 6.1). Reverse vertical reels reuse the
+ * exact vertical geometry and flip the axis polarity; they spin and land through
+ * the same lifecycle as forward reels because the StopSequencer feed edge is now
+ * direction-aware. This exercises the polarity path (ReelMotion derive, Reel
+ * writes, Start/Stop bounce, head-first stop feed) the forward-only suite never
+ * touches. Horizontal still fails loud (its set geometry lands later).
  */
 import { describe, it, expect } from 'vitest';
 import type { Ticker } from 'pixi.js';
@@ -22,13 +22,35 @@ function forwardBuilder() {
     .symbols((r) => r.register('a', HeadlessSymbol, {}));
 }
 
-describe('per-reel direction API (A9)', () => {
-  it('explicit forward + all-forward directionPerReel still spins and lands (axis wiring is a no-op)', async () => {
+describe('reverse + per-reel direction', () => {
+  it('a reverse (roll-up) vertical set spins and lands the requested grid', async () => {
+    const h = createTestReelSet({
+      reels: 3,
+      visibleRows: 3,
+      symbolIds: ['a', 'b', 'c', 'd', 'e'],
+      direction: 'reverse',
+    });
+    try {
+      const grid = [
+        ['a', 'b', 'c'],
+        ['b', 'c', 'd'],
+        ['c', 'd', 'e'],
+      ];
+      await h.spinAndLand(grid);
+      expect(h.reelSet.getVisibleGrid()).toEqual(grid);
+      expect(h.reelSet.reels[0].axis.direction).toBe('reverse');
+      expect(h.reelSet.reels[0].axis.polarity).toBe(-1);
+    } finally {
+      h.destroy();
+    }
+  });
+
+  it('directionPerReel lands correctly with alternating columns', async () => {
     const h = createTestReelSet({
       reels: 3,
       visibleRows: 3,
       symbolIds: ['a', 'b', 'c', 'd'],
-      directionPerReel: ['forward', 'forward', 'forward'],
+      directionPerReel: ['forward', 'reverse', 'forward'],
     });
     try {
       const grid = [
@@ -39,19 +61,11 @@ describe('per-reel direction API (A9)', () => {
       await h.spinAndLand(grid);
       expect(h.reelSet.getVisibleGrid()).toEqual(grid);
       expect(h.reelSet.reels[0].axis.polarity).toBe(1);
+      expect(h.reelSet.reels[1].axis.polarity).toBe(-1);
+      expect(h.reelSet.reels[2].axis.polarity).toBe(1);
     } finally {
       h.destroy();
     }
-  });
-
-  it('reverse direction fails loud (StopSequencer feed edge not yet direction-aware)', () => {
-    expect(() => forwardBuilder().direction('reverse').build()).toThrow(/reverse/);
-  });
-
-  it('directionPerReel containing reverse fails loud', () => {
-    expect(() => forwardBuilder().directionPerReel(['forward', 'reverse', 'forward']).build()).toThrow(
-      /reverse/,
-    );
   });
 
   it('directionPerReel with the wrong length throws at build()', () => {

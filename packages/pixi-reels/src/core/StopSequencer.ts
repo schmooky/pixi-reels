@@ -15,18 +15,36 @@
 export class StopSequencer {
   private _frame: string[] = [];
   private _remaining: number = 0;
+  private _cursor: number = 0;
+  private _step: 1 | -1 = -1;
 
-  /** Load a target frame in top-to-bottom order. */
-  setFrame(frame: string[]): void {
+  /**
+   * Load a target frame in start-to-end order (top-to-bottom for a vertical
+   * reel). `feedEdge` is the strip edge new symbols enter from during the stop:
+   * `'start'` for a forward reel (symbols arrive at the start edge and are
+   * pushed toward the end, so the frame is consumed end-first) and `'end'` for
+   * a reverse reel (symbols arrive at the end edge, so the frame is consumed
+   * head-first). Getting this backwards lands a correct-looking frame reversed.
+   */
+  setFrame(frame: string[], feedEdge: 'start' | 'end' = 'start'): void {
     this._frame = [...frame];
     this._remaining = this._frame.length;
+    if (feedEdge === 'end') {
+      this._cursor = 0;
+      this._step = 1;
+    } else {
+      this._cursor = this._frame.length - 1;
+      this._step = -1;
+    }
   }
 
-  /** Deliver the next symbol (consumed from the end of the frame). */
+  /** Deliver the next symbol, consumed from the feed-appropriate end. */
   next(): string {
     if (this._remaining > 0) {
       this._remaining--;
-      return this._frame[this._remaining];
+      const value = this._frame[this._cursor];
+      this._cursor += this._step;
+      return value;
     }
     return this._frame[0] ?? '';
   }

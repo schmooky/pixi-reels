@@ -430,7 +430,10 @@ export class Reel implements Disposable {
    * @internal Called by SpinController during the stop sequence.
    */
   setStopFrame(frame: string[]): void {
-    this.stopSequencer.setFrame(frame);
+    // Feed the frame from the edge new symbols enter during the stop: forward
+    // reels fill from the start edge (consume end-first), reverse reels fill
+    // from the end edge (consume head-first). See StopSequencer.setFrame.
+    this.stopSequencer.setFrame(frame, this._axis.feedEdge);
   }
 
   /**

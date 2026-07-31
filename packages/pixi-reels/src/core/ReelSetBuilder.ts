@@ -544,26 +544,20 @@ export class ReelSetBuilder {
   build(): ReelSet {
     this._validate();
 
-    // The axis is threaded through the motion + phase layers (ReelMotion, Reel,
-    // Start/Stop/Adjust and cascade phases all project through it). Two pieces
-    // are NOT direction/orientation-aware yet and would land the wrong frame or
-    // spin forever, so fail loud rather than ship a broken spin:
-    //   - horizontal needs the set-level geometry (viewport extents, cross
-    //     marching, mask-rect projection);
-    //   - reverse / mixed direction needs the StopSequencer feed edge to flip
-    //     (ADR 016 section 6.1) so the target frame arrives from the exit edge.
+    // Reverse / mixed direction works on a vertical set: the axis is threaded
+    // through motion, the phases, and the direction-aware StopSequencer feed
+    // edge. Horizontal still needs the set-level geometry (viewport extents,
+    // cross marching, mask-rect projection), so fail loud rather than lay a
+    // horizontal set out vertically.
     if (this._directionPerReel && this._directionPerReel.length !== this._reelCount) {
       throw new Error(
         `directionPerReel() length (${this._directionPerReel.length}) must equal reels() (${this._reelCount}).`,
       );
     }
-    const hasReverse =
-      this._direction === 'reverse' || (this._directionPerReel?.some((d) => d === 'reverse') ?? false);
-    if (this._orientation === 'horizontal' || hasReverse) {
-      const what = this._orientation === 'horizontal' ? "orientation('horizontal')" : 'reverse travel direction';
+    if (this._orientation === 'horizontal') {
       throw new Error(
-        `${what} is not enabled yet in this v2 build (the axis is wired through motion + phases, ` +
-          'but the set geometry / stop-sequencer feed edge still land later). Vertical forward is supported.',
+        "orientation('horizontal') is not enabled yet in this v2 build; its set geometry lands in a " +
+          'later commit. Vertical reels (forward or reverse, incl. directionPerReel) are supported.',
       );
     }
 
