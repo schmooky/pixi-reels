@@ -606,3 +606,80 @@ becomes a property of configuration. That is the point, but the mental model a c
 level more abstract than "symbols move down." §2 and §3.2 exist to make that model cheap to acquire, and
 should be reproduced in `CLAUDE.md`'s invariants section, replacing "`ReelMotion` wraps via
 `_maxY`/`_minY`" with *travel changes motion; facing changes art; they never change each other.*
+
+---
+
+## 12. What else rides in this window
+
+A major version is the only cheap moment to break things. Anything that needs a break and does not ride
+here costs a whole v3. Everything below was found while auditing for this ADR, or is already written
+down in `TODO.md` waiting for exactly this window.
+
+### 12.1 First decide: one release or two
+
+PRs 1–9 are non-breaking. PR 10 (rename) breaks. PR 11 breaks *only because of the deletion* — enabling
+`orientation: 'horizontal'` is additive once the axis exists. So there is a split available:
+
+| | contents |
+|---|---|
+| **2.0.0** | rename + derive-model + §12.2 ride-alongs. Vertical only. `HorizontalReel` deprecated, untouched. |
+| **2.1.0** | `orientation: 'horizontal'` enabled. Purely additive. |
+| **3.0.0** | `HorizontalReel` deleted. |
+
+Consumers absorb one break sooner and with a much smaller diff to review, and horizontal ships when it
+is ready instead of holding the rename hostage. Cost: 747 dead lines carried one major longer, and
+"delete the duplicate" was the stated point.
+
+**Lean: split.** A rename-only 2.0 is far easier to review and to roll back. Not a strong lean.
+
+### 12.2 Needs the window
+
+**Delete the legacy `string[][]` negative-index form.** The highest-value item here, because it makes
+the axis refactor *smaller*. CLAUDE.md already calls it second-class ("does NOT survive
+`structuredClone`/JSON/postMessage. reach for it only for in-process one-liners"), and §6.2 names the
+negative-index encoding as this refactor's second-biggest risk precisely because it surfaces in six
+subsystems that each need re-reading under new semantics. Delete it, pass `ColumnTarget` all the way
+down, and that risk becomes a deletion. Roughly 200 extra lines of change to remove a whole category of
+work. Touches `ColumnTarget.ts:45-60`, `Reel.placeSymbols:1071-1091`, `FrameBuilder:155-163`,
+`StopPhase:138-144`, `CascadePlacePhase:50-69`, `SpinController:1501-1539`, `BoardGrid:199-204`.
+
+**Per-set gsap.** `utils/gsapRef.ts:23` is a process-global whose own docstring admits "the last
+`setGsap` call wins." Harmless with one `ReelSet`; a live footgun under ADR 017's `ReelStage`. Changing
+`.gsap()` from global to per-set is breaking.
+
+**Fold `AdjustPhase` into `SpinController`.** `TODO.md` already asks for this — "closer to a synchronous
+orchestration step than a true phase (no animation, no per-frame update)… deserves its own PR + ADR."
+Removing it from `PhaseFactory` (`ReelSetBuilder.ts:652`) breaks anyone who overrode it. PRs 6 and 9
+touch AdjustPhase anyway.
+
+**`bufferSymbolsPerReel`.** Also `TODO.md` — pyramids overallocate on short reels. Nearly free alongside
+the `bufferSymbols({start, end})` rename. **But it collides directly with §6.7**:
+`SpinController._coordinateBigSymbols` reads buffer counts off `this._reels[0]` (`:1506-1507`) with an
+explicit comment (`:1518-1525`) warning that per-reel variation breaks the validator loop. Decide this
+and the `directionPerReel` question together, or neither.
+
+**Per-reel cross offsets.** `TODO.md`'s v2 backlog: "Per-reel X offsets / irregular column spacing. Same
+`offsetY` pattern applied to X." Under this ADR `offsetY` becomes `mainOffset` and X becomes the cross
+axis, so a per-reel *cross* offset is the exact generalization — and it subsumes `OffsetCalculator`'s
+trapezoid as a special case.
+
+### 12.3 Free ride-alongs (not breaking, but you are already in the file)
+
+- **`spotlight:start` / `spotlight:end` are declared and never emitted** (`ReelEvents.ts:80-81`).
+  `SymbolSpotlight` holds no reference to the event bus, so consumers must poll `spotlight.isActive`.
+  ADR 017 §B needs these for stage-level coordination.
+- **`dimOverlay` is never resized.** Drawn once at ctor size (`ReelViewport.ts:180`); `updateMaskSize`
+  (`:217-222`) updates only the mask.
+- **`movePin` / `_pinOverlayCellY` disagree** about `container.y` on non-zero-`offsetY` layouts (§7).
+  Already PR 0 — must land before golden masters are recorded.
+- **`_onSymbolWrapped`'s `direction` and `row` arguments are dead** (`Reel.ts:1352-1378`). Do not carry
+  a dead direction parameter into a refactor whose subject is direction.
+
+### 12.4 Explicitly not riding
+
+Cluster grid (ADR 007), Infinity Reels, horizontal-expand, big symbols on MultiWays, big symbols during
+spin scroll, stencil/shape masks. Out of scope or additive later.
+
+Worth noting only that this ADR makes **Infinity Reels cheaper afterwards** — dynamic column count is a
+dynamic *cross-axis* count, and the cross axis becomes first-class here. It remains a whole feature with
+its own lifecycle questions, so it does not ride.
