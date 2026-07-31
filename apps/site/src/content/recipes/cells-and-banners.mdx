@@ -95,3 +95,19 @@ Enter and exit a bonus mode at runtime by adding or removing a frame middleware,
 **Gotcha:** run custom middleware after target-placement (priority >= 10) so it reacts to the grid the server chose.
 
 <RecipeDemo code="feature-mode-swap" />
+
+<a id="roll-up"></a>
+
+## Roll-up (reverse direction)
+
+Every reel spins upward: one `.direction('reverse')` call. New in v2 - direction lives on the orientation axis, so the same engine, events and landing bounce just run the other way.
+
+<RecipeDemo code="roll-up" />
+
+<a id="roll-up-alternating"></a>
+
+## Mixed direction per reel
+
+`.directionPerReel([...])` gives each column its own travel direction for a woven, alternating look. Every reel still lands the exact server frame.
+
+<RecipeDemo code="roll-up-alternating" />
