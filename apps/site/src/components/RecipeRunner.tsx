@@ -11,7 +11,6 @@ import {
   RectMaskStrategy, SharedRectMaskStrategy,
   type ReelSet, ReelSymbol,
   EmptySymbol, HoldAndWinBuilder, BoardGrid,
-  HorizontalReel, HorizontalReelBuilder,
   anticipationForScatters,
   SpinTextureCache, StaticSpinSymbol, prewarmSpinTextures,
 } from 'pixi-reels';
@@ -204,7 +203,6 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
           'CoinSymbol', 'COIN_TIER', 'COIN_FEATURE', 'COIN_MYSTERY', 'COIN_TRIGGER',
           'coinValue', 'coinMultiplier', 'drawCoin',
           'HoldAndWinBuilder', 'BoardGrid',
-          'HorizontalReel', 'HorizontalReelBuilder',
           'anticipationForScatters',
           'SpinTextureCache', 'StaticSpinSymbol', 'prewarmSpinTextures',
           'GoldCoinSymbol', 'coinWaves', 'bezierFly', 'settleMoneyFace', 'freezeAtEnd', 'fitText',
@@ -229,7 +227,6 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
           CoinSymbol, COIN_TIER, COIN_FEATURE, COIN_MYSTERY, COIN_TRIGGER,
           coinValue, coinMultiplier, drawCoin,
           HoldAndWinBuilder, BoardGrid,
-          HorizontalReel, HorizontalReelBuilder,
           anticipationForScatters,
           SpinTextureCache, StaticSpinSymbol, prewarmSpinTextures,
           GoldCoinSymbol, coinWaves, bezierFly, settleMoneyFace, freezeAtEnd, fitText,
