@@ -1856,8 +1856,14 @@ export class ReelSet extends Container implements Disposable {
     // matches `maskedContainer` (both sit at (0,0) inside viewport). so
     // `reel.container.x + symbol.view.x/y` gives us the right offset.
     const fromReel = this._reels[from.col];
-    const fromCellY = fromReel.getSymbolAt(from.row).view.y;
-    const toCellY = toReel.getSymbolAt(to.row).view.y;
+    // Viewport-space cell Y from the single source of truth (_pinOverlayCellY),
+    // so the flight symbol - parented to unmaskedContainer, i.e. viewport space -
+    // lands on the right cell for any nonzero container.y and regardless of the
+    // source cell's mask state. getSymbolAt(row).view.y is reel-local for masked
+    // symbols but container.y-baked for unmasked ones, so reading it directly
+    // mis-places the flight by container.y on masked cells.
+    const fromCellY = this._pinOverlayCellY(fromReel, from.row, fromReel.motion.slotHeight);
+    const toCellY = this._pinOverlayCellY(toReel, to.row, toReel.motion.slotHeight);
     const fromX = fromReel.container.x;
     const toX = toReel.container.x;
 

@@ -330,3 +330,34 @@ describe('movePin. flight callbacks', () => {
     }
   });
 });
+
+describe('movePin. flight placement (A1)', () => {
+  it('starts the flight at the viewport cell Y on a reel with nonzero offset', async () => {
+    const h = makeHarness();
+    try {
+      // Simulate an offset layout (e.g. a centered pyramid reel) where the reel
+      // container sits below the viewport top. Pre-fix, movePin read the source
+      // cell's bare reel-local view.y and dropped this offset, so the flight
+      // symbol - parented to the viewport-space unmasked container - started
+      // container.y too high. It must instead agree with _pinOverlayCellY.
+      const reel = h.reelSet.reels[2];
+      const OFFSET = 40;
+      reel.container.y = OFFSET;
+      const slot = reel.motion.slotHeight;
+
+      h.reelSet.pin(2, 1, 'wild');
+      let flightY: number | undefined;
+      await h.reelSet.movePin({ col: 2, row: 1 }, { col: 3, row: 1 }, {
+        duration: 1,
+        backfill: 'filler',
+        onFlightCreated: (flight) => {
+          flightY = (flight as { view: { y: number } }).view.y;
+        },
+      });
+
+      expect(flightY).toBe(OFFSET + slot);
+    } finally {
+      h.destroy();
+    }
+  });
+});
