@@ -63,6 +63,7 @@ Three lanes. **Lane B and Lane C have no dependency on the axis work** and can s
 | **A9** | Builder geometry; mask auto-pick on cross gap; `ReelSetBuilder.viewport(existing)` | A5 |
 | **A10** | `ReelSet` accessors, pin overlays, MultiWays reshape gap axis; injectable `StopScheduler` | A1, A5 |
 | **A11** | Drop the dead `direction`/`row` args from the wrap callback | A4 |
+| **A11b** | **`debugOverlay` — axis layers** (travel arrow, feed edge, wrap thresholds, HUD). See §7 | A5, C3 |
 | **A12** | **The rename pass + codemod + loud throws on v1 keys** | **B1**, A4–A11 |
 | **A13** | `SymbolPosition` gains `setId`; `getSymbolFootprint`'s `size` aligned with `SymbolData.size` | A12 |
 | **A14** | `MaskStrategy` v2 — carries the axis, so a strategy cannot silently transpose | A9, A12 |
@@ -86,6 +87,7 @@ Three lanes. **Lane B and Lane C have no dependency on the axis work** and can s
 |---|---|
 | **C1** | Emit `spotlight:start` / `spotlight:end` (declared at `ReelEvents.ts:80-81`, never fired) |
 | **C2** | Resize `dimOverlay` in `updateMaskSize` |
+| **C3** | **`debugOverlay` — static layers** (mask, cells, buffers, symbol bounds, blocks, pins). Absorbs `showMask`. See §7 |
 
 ### Scheduling notes
 
@@ -94,6 +96,9 @@ Three lanes. **Lane B and Lane C have no dependency on the axis work** and can s
   and it gates A12.
 - **A3 gates verification for A4–A11.** Land it early or those PRs have no gate to pass.
 - **A1 must precede A3**, or the golden master freezes a known bug (ADR 018 §10.1).
+- **Land C3 first if you can.** The overlay is the review tool for every PR after it — a reviewer
+  seeing a travel arrow and a wrap threshold drawn on the canvas will catch axis mistakes that a diff
+  hides. A11b then extends it as soon as `ReelAxis` is wired.
 - A6, A11, B1, B2, C1, C2 are all independently mergeable — good candidates for parallel work or for a
   second contributor.
 
@@ -146,3 +151,72 @@ The cost is granularity — you cannot revert "just the rename" and keep the mot
 everything ships in one release, a targeted revert means cherry-picking the offending PR out of `main`
 after the fact, which is why per-PR commits on `v2` matter beyond review: they stay individually
 revertable after the merge.
+
+---
+
+## 7. `debugOverlay` — the visual debug layer
+
+`enableDebug` already ships `showMask(enabled)` (`debug/debug.ts`), which draws the mask bounding box
+and per-reel rects into `viewport.unmaskedContainer`. It is a boolean, it is the only visual debug in
+the library, and it draws *inside* the viewport so the spotlight container renders over it.
+
+Replace it with a layered overlay. This is not gold-plating for a refactor whose entire subject —
+which way a strip travels — is invisible in a canvas, and whose reviewers include agents that
+`CLAUDE.md` explicitly says cannot see the canvas.
+
+### API
+
+```ts
+const overlay = debugOverlay(reelSet, {
+  layers: ['cells', 'axis', 'bounds'],   // or 'all'
+  live: true,                            // redraw each tick; false = draw once
+});
+
+overlay.setLayers(['cells', 'pins']);
+overlay.redraw();
+overlay.destroy();
+```
+
+Also reachable as `__PIXI_REELS_DEBUG.overlay(...)`, alongside `snapshot()` / `grid()` / `trace()`.
+
+### Layers
+
+| Layer | Draws | Catches |
+|---|---|---|
+| `mask` | Mask bounding box + per-reel rects | Pyramid peek; `SharedRectMaskStrategy` auto-pick on the wrong axis (ADR 016 §6.5) |
+| `cells` | Every visible cell from `getCellBounds`, with cell-index labels | Off-by-one after the row→cell rename |
+| `buffers` | The off-window strip cells, dimmer | Buffer targets and big-symbol tails — currently invisible, and where a lot of the bugs live |
+| `axis` | **One arrow per reel along the travel axis, pointing the way it goes** | The whole point. Reverse polarity and horizontal orientation become obvious instead of inferred |
+| `feed` | A marker on the edge new symbols enter from | Confirms `feedEdge` derives correctly from polarity rather than being set twice |
+| `thresholds` | The `minMain` / `maxMain` wrap lines | Contract L7 — you can watch a symbol reach the line and see whether it wraps |
+| `bounds` | Actual `view.getBounds()` per symbol | Spine overrun. `BoardGrid.ts:135-137` already forces `SharedRectMaskStrategy` per cell because of exactly this |
+| `blocks` | `getBlockBounds` outline for big symbols | 2×2 anchors, and the w/h→width/height transposition in ADR 016 §6.7 |
+| `pins` | Pin cells and pin-overlay positions | The `movePin` / `_pinOverlayCellY` disagreement (A1) — you can see the two disagree |
+| `hud` | Per-reel text: orientation, direction, gravity, phase, speed | Reading state without opening the console |
+
+### Implementation notes
+
+- Draw into a container added to the **`ReelSet` itself**, not `viewport.unmaskedContainer`. `ReelSet`
+  extends `Container`, so that puts the overlay above the viewport — including above
+  `spotlightContainer`, which the current `showMask` renders under.
+- `live: true` drives redraw through **`TickerRef`**, not a raw `ticker.add`. The repo has the
+  primitive; `CLAUDE.md` says do not invent a parallel.
+- Implement `Disposable`. Every layer's `Graphics` is pooled and cleared, not recreated per frame.
+- `mask`, `cells`, `buffers` and `thresholds` are static between reshapes — redraw them on
+  `shape:changed` / `adjust:complete` rather than every tick. Only `bounds`, `pins` and `hud` need the
+  live path.
+- Dev-only, same caveat as `enableDebug`: it reads internals, it is not semver-protected, and it must
+  not reach a production bundle.
+
+### Why it splits across two PRs
+
+**C3** ships `mask`, `cells`, `buffers`, `bounds`, `blocks`, `pins`, `hud`. None of those need
+`ReelAxis`, so it has **no dependencies and can land on day one** — and then every subsequent PR is
+reviewable with it.
+
+**A11b** adds `axis`, `feed` and `thresholds` once `ReelAxis` is wired through `Reel` (A5), and extends
+the `hud` line with orientation/direction/gravity.
+
+Pair it with the Playwright suite in §5: a screenshot with the `axis` layer on, at each of the four
+orientation × direction combinations, is the visual counterpart to contract laws L12 (isomorphism) and
+L13 (mirror). The laws prove the numbers; the screenshots prove the picture.
