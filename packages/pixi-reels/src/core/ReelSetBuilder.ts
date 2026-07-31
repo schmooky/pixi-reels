@@ -544,20 +544,21 @@ export class ReelSetBuilder {
   build(): ReelSet {
     this._validate();
 
-    // Reverse / mixed direction works on a vertical set: the axis is threaded
-    // through motion, the phases, and the direction-aware StopSequencer feed
-    // edge. Horizontal still needs the set-level geometry (viewport extents,
-    // cross marching, mask-rect projection), so fail loud rather than lay a
-    // horizontal set out vertically.
     if (this._directionPerReel && this._directionPerReel.length !== this._reelCount) {
       throw new Error(
         `directionPerReel() length (${this._directionPerReel.length}) must equal reels() (${this._reelCount}).`,
       );
     }
-    if (this._orientation === 'horizontal') {
+    // Horizontal is supported for uniform grids (every reel the same cell
+    // count). Pyramid / MultiWays horizontal needs per-reel main-extent shaping
+    // that the geometry does not project yet, so fail loud rather than mis-lay.
+    if (
+      this._orientation === 'horizontal' &&
+      (this._multiways || this._visibleRowsPerReel || this._reelPixelHeights)
+    ) {
       throw new Error(
-        "orientation('horizontal') is not enabled yet in this v2 build; its set geometry lands in a " +
-          'later commit. Vertical reels (forward or reverse, incl. directionPerReel) are supported.',
+        "orientation('horizontal') supports uniform grids only; pyramid / MultiWays " +
+          'horizontal sets are not enabled yet. Use a uniform visibleRows.',
       );
     }
 
@@ -575,6 +576,17 @@ export class ReelSetBuilder {
     }
     const ticker = this._ticker!;
     const isMultiWays = !!this._multiways;
+
+    // Set-level axis projection. `main` is the strip travel axis (Y vertical,
+    // X horizontal), `cross` is the reel-marching axis. Symbol art always sizes
+    // to screen (symbolWidth, symbolHeight); only the strip/marching geometry
+    // swaps. Identity for vertical.
+    const vertical = this._orientation === 'vertical';
+    const setAxis = reelAxis(this._orientation, 'forward');
+    const mainCellSize = vertical ? symbolHeight : symbolWidth;
+    const crossCellSize = vertical ? symbolWidth : symbolHeight;
+    const mainGap = vertical ? this._symbolGap.y : this._symbolGap.x;
+    const crossGap = vertical ? this._symbolGap.x : this._symbolGap.y;
 
     // Resolve per-reel row counts. MultiWays: every reel starts at maxRows.
     let visibleRowsPerReel: number[];
@@ -600,10 +612,16 @@ export class ReelSetBuilder {
       );
     }
 
-    // Compute per-reel offsetY and target cell height.
+    // Main-axis extent per reel (the strip length). For vertical this is the
+    // pixel-box height; for a uniform horizontal set it is the strip width.
+    const mainExtents = vertical
+      ? reelPixelHeights
+      : visibleRowsPerReel.map((rows) => rows * mainCellSize + (rows - 1) * mainGap);
+
+    // Compute per-reel main offset and target cell height.
     // SPIN-time uniform cell height equals the configured `symbolHeight`.
-    const tallest = Math.max(...reelPixelHeights);
-    const offsetsY = reelPixelHeights.map((h) => {
+    const tallest = Math.max(...mainExtents);
+    const offsetsY = mainExtents.map((h) => {
       switch (this._reelAnchor) {
         case 'top': return 0;
         case 'bottom': return tallest - h;
@@ -701,8 +719,12 @@ export class ReelSetBuilder {
     }
 
     // Create viewport. width covers all reels, height covers tallest box.
-    const viewportWidth = reelCount * (symbolWidth + this._symbolGap.x) - this._symbolGap.x;
-    const viewportHeight = tallest;
+    // Viewport spans the cross axis across all reels and the main axis over the
+    // tallest strip, projected to screen. Vertical: (crossSpan, mainSpan).
+    const crossSpan = reelCount * (crossCellSize + crossGap) - crossGap;
+    const viewportSize = setAxis.toScreen(crossSpan, tallest);
+    const viewportWidth = viewportSize.x;
+    const viewportHeight = viewportSize.y;
 
     // Auto-pick `SharedRectMaskStrategy` when the layout has horizontal
     // gaps AND any registered symbol needs to span across reel boundaries:
@@ -730,7 +752,7 @@ export class ReelSetBuilder {
     if (
       !this._maskStrategyExplicit &&
       (hasBigSymbols || hasUnmaskedSymbols) &&
-      this._symbolGap.x > 0
+      crossGap > 0
     ) {
       this._maskStrategy = new SharedRectMaskStrategy();
       // Heads-up so devs see the auto-pick in their console.
@@ -800,11 +822,15 @@ export class ReelSetBuilder {
 
       const reel = new Reel(reelConfig, symbolFactory, randomProvider, viewport);
       reels.push(reel);
+      // Per-reel mask rect: cross position marches the reels, main position is
+      // the reel's own offset, cross size is one cell, main size is the strip.
+      const rectPos = setAxis.toScreen(reelIndex * (crossCellSize + crossGap), offsetsY[reelIndex]);
+      const rectSize = setAxis.toScreen(crossCellSize, mainExtents[reelIndex]);
       maskRects.push({
-        x: reelIndex * (symbolWidth + this._symbolGap.x),
-        y: offsetsY[reelIndex],
-        width: symbolWidth,
-        height: reelPixelHeights[reelIndex],
+        x: rectPos.x,
+        y: rectPos.y,
+        width: rectSize.x,
+        height: rectSize.y,
       });
     }
     viewport.updateMaskSize(viewportWidth, viewportHeight, maskRects);

@@ -71,8 +71,4 @@ describe('reverse + per-reel direction', () => {
   it('directionPerReel with the wrong length throws at build()', () => {
     expect(() => forwardBuilder().directionPerReel(['forward', 'forward']).build()).toThrow(/length/);
   });
-
-  it("orientation('horizontal') fails loud until its geometry lands", () => {
-    expect(() => forwardBuilder().orientation('horizontal').build()).toThrow(/horizontal/);
-  });
 });

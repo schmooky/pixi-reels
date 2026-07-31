@@ -28,6 +28,8 @@ export interface TestReelSetOptions {
   symbolData?: Record<string, Partial<import('../config/types.js').SymbolData>>;
   symbolSize?: { width: number; height: number };
   symbolGap?: { x: number; y: number };
+  /** Strip orientation. Defaults to 'vertical'. */
+  orientation?: import('../core/ReelAxis.js').Orientation;
   /** Travel direction for every reel. Defaults to 'forward'. */
   direction?: import('../core/ReelAxis.js').Direction;
   /** Per-reel travel direction override (length must equal `reels`). */
@@ -131,6 +133,9 @@ export function createTestReelSet(opts: TestReelSetOptions = {}): TestReelSetHan
     builder.initialFrame(opts.initialFrame);
   }
 
+  if (opts.orientation) {
+    builder.orientation(opts.orientation);
+  }
   if (opts.direction) {
     builder.direction(opts.direction);
   }

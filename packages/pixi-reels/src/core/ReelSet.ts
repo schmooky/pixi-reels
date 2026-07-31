@@ -1658,9 +1658,16 @@ export class ReelSet extends Container implements Disposable {
     if (row < 0 || row >= reel.visibleRows) {
       throw new RangeError(`getCellBounds: row ${row} out of range [0, ${reel.visibleRows})`);
     }
+    // Project the cell's cross (reel marching) + main (row along the strip)
+    // coordinates to screen. For vertical this is (x = column, y = offsetY +
+    // row * pitch), unchanged; for horizontal the axes swap.
+    const axis = reel.axis;
+    const crossPos = axis.getCross(reel.container);
+    const mainPos = axis.getMain(reel.container) + row * reel.motion.slotHeight;
+    const screen = axis.toScreen(crossPos, mainPos);
     return {
-      x: this._viewport.x + reel.container.x,
-      y: this._viewport.y + reel.offsetY + row * reel.motion.slotHeight,
+      x: this._viewport.x + screen.x,
+      y: this._viewport.y + screen.y,
       width: reel.symbolWidth,
       height: reel.symbolHeight,
     };

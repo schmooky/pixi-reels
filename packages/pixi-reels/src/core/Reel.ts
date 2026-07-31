@@ -190,6 +190,8 @@ export class Reel implements Disposable {
   public readonly motion: ReelMotion;
   public readonly stopSequencer: StopSequencer;
   private readonly _axis: ReelAxis;
+  private readonly _mainCell: number;
+  private readonly _mainGap: number;
 
   private _symbolFactory: SymbolFactory;
   private _randomProvider: RandomSymbolProvider;
@@ -299,11 +301,19 @@ export class Reel implements Disposable {
     // render order. bottom-row symbols render in front, and flagged "big"
     // symbols like wild/bonus can override to render above neighbors.
     this._axis = config.axis ?? VERTICAL_FORWARD;
+    // Cell size + gaps projected onto the travel axes. The symbol art still
+    // resizes to screen (symbolWidth, spinSymbolHeight); only the strip pitch
+    // (main) and reel marching (cross) follow the axis. Identity for vertical.
+    const cell = this._axis.toLocal(config.symbolWidth, this._spinSymbolHeight);
+    const gap = this._axis.toLocal(config.symbolGapX, config.symbolGapY);
+    this._mainCell = cell.main;
+    this._mainGap = gap.main;
+    const crossPitch = cell.cross + gap.cross;
     this.container = new Container();
     this.container.sortableChildren = true;
     // Cross axis marches the reels; the main axis carries the reel's own
     // offset. For vertical this is (x = column, y = offsetY), unchanged.
-    this._axis.setCross(this.container, config.reelIndex * (config.symbolWidth + config.symbolGapX));
+    this._axis.setCross(this.container, config.reelIndex * crossPitch);
     this._axis.setMain(this.container, this._offsetY);
     // Explicit zIndex so the reel's layer in `ReelViewport.maskedContainer`
     // (sortableChildren = true) is deterministic. Rightmost reel draws on
@@ -323,8 +333,8 @@ export class Reel implements Disposable {
     // AdjustPhase reshapes motion to the per-reel cell height.
     this.motion = new ReelMotion(
       this.symbols,
-      this._spinSymbolHeight,
-      config.symbolGapY,
+      this._mainCell,
+      this._mainGap,
       config.bufferAbove,
       config.visibleRows,
       config.bufferBelow,
