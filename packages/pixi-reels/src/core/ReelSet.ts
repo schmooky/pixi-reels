@@ -548,7 +548,7 @@ export class ReelSet extends Container implements Disposable {
       },
     );
 
-    this._spotlight = new SymbolSpotlight(params.reels, params.viewport);
+    this._spotlight = new SymbolSpotlight(params.reels, params.viewport, this._events);
 
     this.addChild(this._viewport);
 

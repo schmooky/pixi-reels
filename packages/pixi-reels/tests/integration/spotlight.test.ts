@@ -239,3 +239,35 @@ describe('SymbolSpotlight.cycle', () => {
     }
   });
 });
+
+describe('SymbolSpotlight — lifecycle events (C1)', () => {
+  it('fires spotlight:start with positions, spotlight:end on hide, and not twice', async () => {
+    const h = makeHarness();
+    try {
+      const starts: unknown[] = [];
+      let ends = 0;
+      h.reelSet.events.on('spotlight:start', (positions) => starts.push(positions));
+      h.reelSet.events.on('spotlight:end', () => {
+        ends++;
+      });
+
+      const positions = [{ reelIndex: 0, rowIndex: 1 }];
+      await h.reelSet.spotlight.show(positions, {
+        promoteAboveMask: false,
+        playWinAnimation: false,
+      });
+      expect(starts).toHaveLength(1);
+      expect(starts[0]).toEqual(positions);
+      expect(ends).toBe(0); // show() stays up until hide()
+
+      h.reelSet.spotlight.hide();
+      expect(ends).toBe(1);
+
+      // A second hide with nothing active must not emit a spurious end.
+      h.reelSet.spotlight.hide();
+      expect(ends).toBe(1);
+    } finally {
+      h.destroy();
+    }
+  });
+});

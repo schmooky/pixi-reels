@@ -1,6 +1,7 @@
 import type { Reel } from '../core/Reel.js';
 import type { ReelViewport } from '../core/ReelViewport.js';
-import type { SymbolPosition } from '../events/ReelEvents.js';
+import type { SymbolPosition, ReelSetEvents } from '../events/ReelEvents.js';
+import { EventEmitter } from '../events/EventEmitter.js';
 import type { ReelSymbol } from '../symbols/ReelSymbol.js';
 import type { Disposable } from '../utils/Disposable.js';
 
@@ -63,10 +64,12 @@ export class SymbolSpotlight implements Disposable {
   private _isActive = false;
   private _isDestroyed = false;
   private _cycleAbort: AbortController | null = null;
+  private _events: EventEmitter<ReelSetEvents>;
 
-  constructor(reels: Reel[], viewport: ReelViewport) {
+  constructor(reels: Reel[], viewport: ReelViewport, events: EventEmitter<ReelSetEvents>) {
     this._reels = reels;
     this._viewport = viewport;
+    this._events = events;
   }
 
   get isActive(): boolean {
@@ -98,6 +101,7 @@ export class SymbolSpotlight implements Disposable {
     } = options;
 
     this._isActive = true;
+    this._events.emit('spotlight:start', positions);
 
     this._viewport.showDim(dimAmount);
 
@@ -176,7 +180,12 @@ export class SymbolSpotlight implements Disposable {
     this._promoted = [];
 
     this._viewport.hideDim();
+    // Only fire spotlight:end for a teardown that actually ends an active
+    // presentation. hide() runs teardown eagerly (e.g. show() clears a prior
+    // spotlight first), and those must not emit a spurious end.
+    const wasActive = this._isActive;
     this._isActive = false;
+    if (wasActive) this._events.emit('spotlight:end');
   }
 
   /**
