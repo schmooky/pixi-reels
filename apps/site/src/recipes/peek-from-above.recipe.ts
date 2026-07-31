@@ -21,8 +21,7 @@ function rv() {
 
 // ── initialFrame seeds the FIRST spin's buffer-above ────────────────────
 // Explicit ColumnTarget form. { visible, bufferAbove }. Same shape that
-// setResult accepts; both APIs treat the negative-index legacy form and this
-// one interchangeably.
+// setResult accepts.
 const initialFrame = [
   { visible: ['7', '8', '9'], bufferAbove: [TEASE] },
   { visible: ['7', '8', '9'], bufferAbove: [TEASE] },

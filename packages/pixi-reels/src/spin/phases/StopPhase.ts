@@ -136,16 +136,9 @@ export class StopPhase extends ReelPhase<StopPhaseConfig> {
       // Place the FULL target frame, not just the visible window — slicing to
       // [bufferAbove, bufferAbove+visible] dropped buffer-above/below targets
       // (e.g. a big symbol's tail parked in bufferAbove), so a direct skip()
-      // landed the wrong frame. targetFrame is a flat top-to-bottom strip;
-      // placeSymbols reads buffer-above from NEGATIVE indices and visible +
-      // buffer-below from positive indices, so convert before placing.
-      const bufferAbove = reel.bufferAbove;
-      const frame = this._config.targetFrame;
-      const placeForm = frame.slice(bufferAbove);
-      for (let j = 0; j < bufferAbove; j++) {
-        (placeForm as Record<number, string>)[j - bufferAbove] = frame[j];
-      }
-      reel.placeSymbols(placeForm);
+      // landed the wrong frame. targetFrame is already a flat top-to-bottom
+      // strip, which is exactly what placeStrip consumes.
+      reel.placeStrip(this._config.targetFrame);
     }
     reel.snapToGrid();
     reel.axis.setMain(reel.container, this._baseY);

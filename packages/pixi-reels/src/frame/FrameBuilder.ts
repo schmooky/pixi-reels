@@ -1,4 +1,5 @@
 import type { RandomSymbolProvider } from './RandomSymbolProvider.js';
+import { columnTargetToStrip, type ColumnTarget } from './ColumnTarget.js';
 
 /** Context passed through the middleware pipeline. */
 export interface FrameContext {
@@ -12,8 +13,12 @@ export interface FrameContext {
   readonly bufferBelow: number;
   /** The symbol array being built (buffer + visible + buffer). Mutable by middleware. */
   symbols: string[];
-  /** Target symbols from setResult() (visible rows only), if available. */
-  readonly targetSymbols?: string[];
+  /**
+   * This reel's target column from `setResult()` / `initialFrame()`, if
+   * available. Read it with `getTargetSlot(target, row)` (row `0` is the
+   * first visible cell; negative rows are buffer-above).
+   */
+  readonly target?: ColumnTarget;
   /** Whether the reel is currently spinning. */
   readonly isSpinning: boolean;
   /** Arbitrary metadata middleware can use to communicate. */
@@ -63,7 +68,7 @@ export class FrameBuilder {
     visibleRows: number,
     bufferAbove: number,
     bufferBelow: number,
-    targetSymbols?: string[],
+    target?: ColumnTarget,
     isSpinning: boolean = false,
   ): string[] {
     if (!this._sorted) {
@@ -78,7 +83,7 @@ export class FrameBuilder {
       bufferAbove,
       bufferBelow,
       symbols: new Array<string>(totalSlots).fill(''),
-      targetSymbols,
+      target,
       isSpinning,
       metadata: {},
     };
@@ -102,7 +107,7 @@ export class FrameBuilder {
     visibleRows: number,
     bufferAbove: number,
     bufferBelow: number,
-    targetSymbols?: string[][],
+    targets?: ColumnTarget[],
     isSpinning: boolean = false,
   ): string[][] {
     return Array.from({ length: reelCount }, (_, reelIndex) =>
@@ -111,7 +116,7 @@ export class FrameBuilder {
         visibleRows,
         bufferAbove,
         bufferBelow,
-        targetSymbols?.[reelIndex],
+        targets?.[reelIndex],
         isSpinning,
       ),
     );
@@ -146,18 +151,18 @@ class RandomFillMiddleware implements FrameMiddleware {
   }
 }
 
-/** Places target symbols (from setResult) into the visible area. */
+/** Places the target column (from setResult) onto the strip. */
 class TargetPlacementMiddleware implements FrameMiddleware {
   readonly name = 'target-placement';
   readonly priority = 10;
 
   process(context: FrameContext, next: () => void): void {
-    if (context.targetSymbols) {
-      for (let row = -context.bufferAbove; row < context.targetSymbols.length; row++) {
-        const idx = context.bufferAbove + row;
-        if (context.targetSymbols[row] && idx < context.symbols.length) {
-          context.symbols[idx] = context.targetSymbols[row];
-        }
+    if (context.target) {
+      const strip = columnTargetToStrip(context.target, context.bufferAbove);
+      const count = Math.min(strip.length, context.symbols.length);
+      for (let i = 0; i < count; i++) {
+        const id = strip[i];
+        if (id) context.symbols[i] = id;
       }
     }
     next();

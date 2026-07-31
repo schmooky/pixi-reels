@@ -1,7 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { FrameBuilder, type FrameMiddleware } from '../../src/frame/FrameBuilder.js';
 import { RandomSymbolProvider } from '../../src/frame/RandomSymbolProvider.js';
-import { columnTargetToArray } from '../../src/frame/ColumnTarget.js';
 
 describe('FrameBuilder', () => {
   function createBuilder() {
@@ -28,7 +27,7 @@ describe('FrameBuilder', () => {
 
   it('places target symbols in visible area', () => {
     const builder = createBuilder();
-    const frame = builder.build(0, 3, 1, 1, ['x', 'y', 'z']);
+    const frame = builder.build(0, 3, 1, 1, { visible: ['x', 'y', 'z'] });
     // Buffer above (index 0) is random
     // Visible area: indices 1, 2, 3
     expect(frame[1]).toBe('x');
@@ -76,8 +75,10 @@ describe('FrameBuilder', () => {
 
   it('places target symbol in buffer-above slot 0', () => {
     const builder = createBuilder();
-    const target = columnTargetToArray({ visible: ['x', 'y', 'z'], bufferAbove: ['bufAbove'] });
-    const frame = builder.build(0, 3, 1, 1, target);
+    const frame = builder.build(0, 3, 1, 1, {
+      visible: ['x', 'y', 'z'],
+      bufferAbove: ['bufAbove'],
+    });
     expect(frame[0]).toBe('bufAbove');
     expect(frame[1]).toBe('x');
     expect(frame[2]).toBe('y');
@@ -86,11 +87,10 @@ describe('FrameBuilder', () => {
 
   it('places target symbols in multiple buffer-above slots (bufferAbove = 2)', () => {
     const builder = createBuilder();
-    const target = columnTargetToArray({
+    const frame = builder.build(0, 3, 2, 1, {
       visible: ['x', 'y', 'z'],
       bufferAbove: ['above1', 'above2'],
     });
-    const frame = builder.build(0, 3, 2, 1, target);
     expect(frame[0]).toBe('above2');
     expect(frame[1]).toBe('above1');
     expect(frame[2]).toBe('x');
@@ -98,10 +98,12 @@ describe('FrameBuilder', () => {
     expect(frame[4]).toBe('z');
   });
 
-  it('places target symbol in buffer-below slot via index >= visibleRows', () => {
+  it('places target symbol in the buffer-below slot', () => {
     const builder = createBuilder();
-    const target = ['x', 'y', 'z', 'bufBelow'];
-    const frame = builder.build(0, 3, 1, 1, target);
+    const frame = builder.build(0, 3, 1, 1, {
+      visible: ['x', 'y', 'z'],
+      bufferBelow: ['bufBelow'],
+    });
     expect(frame[4]).toBe('bufBelow'); // buffer below
   });
 

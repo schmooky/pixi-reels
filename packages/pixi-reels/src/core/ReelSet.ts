@@ -26,7 +26,7 @@ import { pinKey } from '../pins/CellPin.js';
 import { getGsap } from '../utils/gsapRef.js';
 import type { FrameMiddleware } from '../frame/FrameBuilder.js';
 import type { ColumnTarget } from '../frame/ColumnTarget.js';
-import { assertBufferCountsInRange, columnTargetToArray } from '../frame/ColumnTarget.js';
+import { assertBufferCountsInRange, cloneColumnTarget } from '../frame/ColumnTarget.js';
 import type { Cell } from '../cascade/tumbleAlgorithm.js';
 
 export interface ReelSetParams {
@@ -634,7 +634,7 @@ export class ReelSet extends Container implements Disposable {
     );
     const withPins = this._applyPinsToGrid(this._cloneTargets(symbols));
     this._resultSetForCurrentSpin = true;
-    this._spinController.setResult(withPins.map(columnTargetToArray));
+    this._spinController.setResult(withPins);
   }
 
   /**
@@ -1881,7 +1881,7 @@ export class ReelSet extends Container implements Disposable {
       opts?.backfill ?? this._frameBuilder.randomProvider.next(false);
     const fromVisible = fromReel.getVisibleSymbols();
     fromVisible[from.row] = backfill;
-    fromReel.placeSymbols(fromVisible);
+    fromReel.placeSymbols({ visible: fromVisible });
 
     // Spawn the flight symbol on the unmasked container so it renders above
     // the reels and can cross column boundaries.
@@ -1936,7 +1936,7 @@ export class ReelSet extends Container implements Disposable {
     // Apply the pin visually at the destination cell.
     const toVisible = toReel.getVisibleSymbols();
     toVisible[to.row] = pin.symbolId;
-    toReel.placeSymbols(toVisible);
+    toReel.placeSymbols({ visible: toVisible });
 
     this._viewport.unmaskedContainer.removeChild(flight.view);
     this._symbolFactory.release(flight);
@@ -2022,11 +2022,7 @@ export class ReelSet extends Container implements Disposable {
    * cells are strings, so further depth is not needed.
    */
   private _cloneTargets(grid: ColumnTarget[]): ColumnTarget[] {
-    return grid.map((c) => ({
-      visible: [...c.visible],
-      bufferAbove: c.bufferAbove ? [...c.bufferAbove] : undefined,
-      bufferBelow: c.bufferBelow ? [...c.bufferBelow] : undefined,
-    }));
+    return grid.map(cloneColumnTarget);
   }
 
   /** Pins on a given reel, in row order. Used by AdjustPhase migration. */
@@ -2162,7 +2158,7 @@ export class ReelSet extends Container implements Disposable {
     const current = reel.getVisibleSymbols();
     if (current[row] === symbolId) return; // already there
     current[row] = symbolId;
-    reel.placeSymbols(current);
+    reel.placeSymbols({ visible: current });
   }
 
   /**

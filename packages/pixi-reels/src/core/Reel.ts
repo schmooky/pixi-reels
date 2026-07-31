@@ -10,6 +10,7 @@ import { StopSequencer } from './StopSequencer.js';
 import { EventEmitter } from '../events/EventEmitter.js';
 import type { ReelEvents } from '../events/ReelEvents.js';
 import type { RandomSymbolProvider } from '../frame/RandomSymbolProvider.js';
+import { columnTargetToStrip, type ColumnTarget } from '../frame/ColumnTarget.js';
 import type { ReelViewport } from './ReelViewport.js';
 import type { SpinningMode } from '../spin/modes/SpinningMode.js';
 import { StandardMode } from '../spin/modes/StandardMode.js';
@@ -1085,29 +1086,29 @@ export class Reel implements Disposable {
   }
 
   /**
-   * Place symbols immediately at target positions (for skip/turbo).
+   * Place a target column immediately (for skip/turbo/cascade landing).
    *
-   * `symbolIds[0..n-1]` is the visible area. `symbolIds[n..]` (if present)
-   * targets buffer-below slots. Buffer-above slots are addressed via
-   * negative-index string properties: `symbolIds[-1]` is the slot closest to
-   * the visible top row, `symbolIds[-bufferAbove]` the furthest above.
-   * Unset slots are filled with random symbols, matching the previous
-   * behaviour when only visible-area entries were provided.
+   * `target.visible[0..n-1]` fills the visible window; `bufferAbove` and
+   * `bufferBelow` fill the off-window slots either side, closest cell first.
+   * Slots the target does not specify are filled with random symbols.
    */
-  placeSymbols(symbolIds: string[]): void {
+  placeSymbols(target: ColumnTarget): void {
+    this.placeStrip(columnTargetToStrip(target, this._bufferAbove));
+  }
+
+  /**
+   * @internal. Engine and custom phases only.
+   *
+   * Place a full strip frame: one entry per strip slot, top to bottom,
+   * index `0` being the furthest buffer-above cell. This is exactly what
+   * `FrameBuilder.build` returns, so a phase holding a built frame can
+   * land it without re-deriving buffer offsets. Missing or `undefined`
+   * entries are filled with random symbols.
+   */
+  placeStrip(frame: ReadonlyArray<string | undefined>): void {
     const totalSlots = this.symbols.length;
-    const bufferAbove = this._bufferAbove;
     for (let i = 0; i < totalSlots; i++) {
-      let targetId: string | undefined;
-      if (i < bufferAbove) {
-        // Buffer above: look up via negative-index string property.
-        // i=0 → -bufferAbove (furthest); i=bufferAbove-1 → -1 (closest).
-        const bufRow = i - bufferAbove;
-        targetId = (symbolIds as Record<number, string | undefined>)[bufRow];
-      } else {
-        targetId = symbolIds[i - bufferAbove];
-      }
-      if (targetId === undefined) targetId = this._randomProvider.next(true);
+      const targetId = frame[i] ?? this._randomProvider.next(true);
       this._replaceSymbol(i, targetId);
     }
     this.motion.snapToGrid();

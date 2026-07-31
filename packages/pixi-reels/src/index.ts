@@ -100,6 +100,12 @@ export { SpeedManager } from './speed/SpeedManager.js';
 export { FrameBuilder } from './frame/FrameBuilder.js';
 export type { FrameContext, FrameMiddleware } from './frame/FrameBuilder.js';
 export type { ColumnTarget } from './frame/ColumnTarget.js';
+export {
+  cloneColumnTarget,
+  columnTargetToStrip,
+  getTargetSlot,
+  setTargetSlot,
+} from './frame/ColumnTarget.js';
 
 // Pool
 export { ObjectPool } from './pool/ObjectPool.js';

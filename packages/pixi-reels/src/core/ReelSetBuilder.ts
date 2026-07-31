@@ -27,7 +27,7 @@ import type { SpinningMode } from '../spin/modes/SpinningMode.js';
 import { StandardMode } from '../spin/modes/StandardMode.js';
 import type { FrameMiddleware } from '../frame/FrameBuilder.js';
 import type { ColumnTarget } from '../frame/ColumnTarget.js';
-import { assertBufferCountsInRange, columnTargetToArray } from '../frame/ColumnTarget.js';
+import { assertBufferCountsInRange } from '../frame/ColumnTarget.js';
 import type { TumbleConfig, ResolvedTumbleConfig } from '../cascade/TumbleConfig.js';
 import { resolveTumbleConfig } from '../cascade/TumbleConfig.js';
 import { CascadeFallPhase } from '../spin/phases/CascadeFallPhase.js';
@@ -775,10 +775,9 @@ export class ReelSetBuilder {
       this._offset,
     );
 
-    // Validate + materialize the initial frame now that buffer counts are
-    // fully resolved. `initialFrame()` stores the raw `ColumnTarget[]` so
-    // the validator runs against the final bufferSymbols config.
-    let materializedInitialFrame: string[][] | undefined;
+    // Validate the initial frame now that buffer counts are fully resolved.
+    // `initialFrame()` stores the raw `ColumnTarget[]` so the validator runs
+    // against the final bufferSymbols config.
     if (this._initialFrame) {
       const bufferAboveArr = new Array(reelCount).fill(bufferAbove);
       const bufferBelowArr = new Array(reelCount).fill(bufferBelow);
@@ -788,7 +787,6 @@ export class ReelSetBuilder {
         bufferBelowArr,
         'initialFrame',
       );
-      materializedInitialFrame = this._initialFrame.map(columnTargetToArray);
     }
 
     // Create reels with per-reel geometry.
@@ -799,9 +797,13 @@ export class ReelSetBuilder {
       const initialCellH = initialSymbolHeight[reelIndex];
 
       // Per-reel initial frame at its own visibleRows count.
-      const initialFrame = materializedInitialFrame
-        ? frameBuilder.build(reelIndex, rows, bufferAbove, bufferBelow, materializedInitialFrame[reelIndex])
-        : frameBuilder.build(reelIndex, rows, bufferAbove, bufferBelow);
+      const initialFrame = frameBuilder.build(
+        reelIndex,
+        rows,
+        bufferAbove,
+        bufferBelow,
+        this._initialFrame?.[reelIndex],
+      );
 
       const reelConfig: ReelConfig = {
         reelIndex,

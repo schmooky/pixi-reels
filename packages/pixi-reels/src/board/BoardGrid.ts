@@ -196,12 +196,13 @@ export class BoardGrid implements Disposable {
 
   /** Place a symbol instantly (no spin), with blank off-window buffers. */
   place(cell: BoardCell, id: string): void {
-    // Negative-index addresses bufferAbove; index 1 the single bufferBelow.
-    // Explicit empties keep the rest state from random-filling past the mask.
-    const ids: string[] & Record<number, string> = [id];
-    ids[-1] = this.emptyId;
-    ids[1] = this.emptyId;
-    this._reel(cell).getReel(0).placeSymbols(ids);
+    // Explicit empties in both buffers keep the rest state from
+    // random-filling past the mask.
+    this._reel(cell).getReel(0).placeSymbols({
+      visible: [id],
+      bufferAbove: [this.emptyId],
+      bufferBelow: [this.emptyId],
+    });
   }
 
   /**

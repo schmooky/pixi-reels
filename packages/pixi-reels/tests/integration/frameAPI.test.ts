@@ -89,7 +89,7 @@ describe('reelSet.frame — middleware takes effect on frame build', () => {
     const h = makeHarness();
     try {
       const fb = frameBuilderOf(h.reelSet);
-      const targets = ['a', 'b', 'c'];
+      const targets = { visible: ['a', 'b', 'c'] };
 
       // Baseline - middleware NOT added; middle row is 'b' (from targets)
       const baseline = fb.build(0, 3, 1, 1, targets);
@@ -108,7 +108,7 @@ describe('reelSet.frame — middleware takes effect on frame build', () => {
     const h = makeHarness();
     try {
       const fb = frameBuilderOf(h.reelSet);
-      const targets = ['a', 'b', 'c'];
+      const targets = { visible: ['a', 'b', 'c'] };
 
       h.reelSet.frame.use(forceMiddleRowMiddleware('wild'));
       expect(fb.build(0, 3, 1, 1, targets)[2]).toBe('wild');

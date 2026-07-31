@@ -361,7 +361,7 @@ reelSet.setResult(grid);
 builder.initialFrame(grid); // same shape works at build time
 ```
 
-The legacy `string[][]` form with negative-index slots (`grid[0][-1] = 'COIN'`) is also accepted and works end-to-end, but does NOT survive `structuredClone`/JSON/postMessage. reach for it only for in-process one-liners.
+`ColumnTarget` is the only accepted form, and it is what the engine carries internally all the way down to `Reel.placeSymbols`. There is no negative-index slot encoding any more. inside the pipeline, read and write a target cell with `getTargetSlot(target, row)` / `setTargetSlot(target, row, id)` (row `0` is the first visible cell, negative rows are buffer-above), or materialize the whole strip with `columnTargetToStrip(target, bufferAbove)`.
 
 ## Known Gotchas
 

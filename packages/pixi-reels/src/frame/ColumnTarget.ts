@@ -37,26 +37,72 @@ export interface ColumnTarget {
 }
 
 /**
- * Materialize a `ColumnTarget` into the internal `string[]` form the
- * engine pipeline runs on. Buffer-above entries map to negative-index
- * string properties (`arr[-1]`, `arr[-2]`, ...); buffer-below entries
- * map to indices `>= visible.length`.
+ * Read one slot of a `ColumnTarget` by **row**, the engine's
+ * visible-relative coordinate: `0` is the first visible cell, negative rows
+ * address `bufferAbove` (`-1` is the slot closest to the visible top row),
+ * and rows `>= visible.length` address `bufferBelow`.
+ *
+ * Returns `undefined` for any row the target does not specify.
  */
-export function columnTargetToArray(target: ColumnTarget): string[] {
-  const arr: string[] = [...target.visible];
-  if (target.bufferBelow) {
-    for (let i = 0; i < target.bufferBelow.length; i++) {
-      const v = target.bufferBelow[i];
-      if (v !== undefined) arr[target.visible.length + i] = v;
-    }
+export function getTargetSlot(target: ColumnTarget, row: number): string | undefined {
+  if (row < 0) return target.bufferAbove?.[-1 - row];
+  if (row < target.visible.length) return target.visible[row];
+  return target.bufferBelow?.[row - target.visible.length];
+}
+
+/**
+ * Write one slot of a `ColumnTarget` by row, using the same coordinate as
+ * {@link getTargetSlot}. Creates and extends `bufferAbove` / `bufferBelow`
+ * as needed, so a caller can address any row on the strip without knowing
+ * whether the target declared a buffer.
+ *
+ * Mutates `target`. Clone first if the caller must not touch the original.
+ */
+export function setTargetSlot(target: ColumnTarget, row: number, id: string): void {
+  if (row < 0) {
+    (target.bufferAbove ??= [])[-1 - row] = id;
+  } else if (row < target.visible.length) {
+    target.visible[row] = id;
+  } else {
+    (target.bufferBelow ??= [])[row - target.visible.length] = id;
   }
-  if (target.bufferAbove) {
-    for (let i = 0; i < target.bufferAbove.length; i++) {
-      const v = target.bufferAbove[i];
-      if (v !== undefined) (arr as Record<number, string>)[-1 - i] = v;
-    }
+}
+
+/**
+ * Materialize a `ColumnTarget` into **strip form**: one entry per strip
+ * slot, top to bottom. Index `0` is the furthest buffer-above cell, index
+ * `bufferAbove` is the first visible cell, and the tail holds buffer-below
+ * cells. This is the same indexing `FrameBuilder.build` returns and
+ * `Reel.placeStrip` consumes.
+ *
+ * Entries the target does not specify come back `undefined`; the caller
+ * decides what to do with them (the engine random-fills).
+ *
+ * `bufferAbove` is the reel's buffer-above *capacity*. Target entries past
+ * it cannot reach the strip and are dropped here. `assertBufferCountsInRange`
+ * rejects them at the public entry points so that drop is never silent.
+ */
+export function columnTargetToStrip(
+  target: ColumnTarget,
+  bufferAbove: number,
+): (string | undefined)[] {
+  const belowLength = target.bufferBelow?.length ?? 0;
+  const strip = new Array<string | undefined>(
+    bufferAbove + target.visible.length + belowLength,
+  );
+  for (let i = 0; i < strip.length; i++) {
+    strip[i] = getTargetSlot(target, i - bufferAbove);
   }
-  return arr;
+  return strip;
+}
+
+/** Deep-clone a `ColumnTarget` one level down, so slots can be rewritten safely. */
+export function cloneColumnTarget(target: ColumnTarget): ColumnTarget {
+  return {
+    visible: [...target.visible],
+    bufferAbove: target.bufferAbove ? [...target.bufferAbove] : undefined,
+    bufferBelow: target.bufferBelow ? [...target.bufferBelow] : undefined,
+  };
 }
 
 /**
@@ -64,13 +110,10 @@ export function columnTargetToArray(target: ColumnTarget): string[] {
  * entries than the engine can consume. Throws a `RangeError` with a
  * column-pointing message if it does; otherwise a no-op.
  *
- * Background: without this check the failure is silent. `columnTargetToArray`
- * materializes `bufferAbove[k]` as `arr[-1-k]` and `bufferBelow[k]` as
- * `arr[visible.length + k]`, but downstream the pipeline only reads the first
- * `bufferAbove` negative-index slots and the first `bufferBelow` post-visible
- * slots. Extra entries land in the array, are dropped at the next clone, and
- * never reach the reel. Failing here at the entry point is cheaper than a
- * "why did not my target land" debugging session.
+ * Background: without this check the failure is silent. `columnTargetToStrip`
+ * only lays down as many buffer slots as the reel actually has, so an entry
+ * past that capacity never reaches the strip. Failing here at the entry point
+ * is cheaper than a "why did not my target land" debugging session.
  *
  * `callerLabel` shows up in the thrown message so the caller knows which
  * public API surfaced the error.

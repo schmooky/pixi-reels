@@ -29,8 +29,12 @@ import type { Disposable } from '../utils/Disposable.js';
 import { TickerRef } from '../utils/TickerRef.js';
 import { OCCUPIED_SENTINEL } from '../core/Reel.js';
 import type { CellPin } from '../pins/CellPin.js';
-import { columnTargetToArray } from '../frame/ColumnTarget.js';
-import type { ColumnTarget } from '../frame/ColumnTarget.js';
+import {
+  cloneColumnTarget,
+  getTargetSlot,
+  setTargetSlot,
+  type ColumnTarget,
+} from '../frame/ColumnTarget.js';
 import type { Cell } from '../cascade/tumbleAlgorithm.js';
 
 /**
@@ -111,7 +115,7 @@ export class SpinController implements Disposable {
 
   private _isSpinning = false;
   private _spinStartTime = 0;
-  private _resultSymbols: string[][] | null = null;
+  private _resultSymbols: ColumnTarget[] | null = null;
   private _anticipationReels: number[] = [];
   /**
    * How the START of each anticipation reel's slow-down is spaced. See
@@ -411,7 +415,7 @@ export class SpinController implements Disposable {
     return out;
   }
 
-  setResult(symbols: string[][]): void {
+  setResult(symbols: ColumnTarget[]): void {
     if (!this._isSpinning) return;
     // Fail-fast: validate big-symbol block fit so setResult throws at the
     // call site rather than later inside skip()/_tryBeginStopSequence().
@@ -492,10 +496,9 @@ export class SpinController implements Disposable {
       throw new Error('refill() requires .tumble(...) on the builder.');
     }
 
-    // Materialize the column targets into the legacy `string[][]` form the
-    // internal pipeline runs on. Per-column length checks read off the
-    // normalized form.
-    const normalizedGrid = opts.grid.map(columnTargetToArray);
+    // The cascade grid describes the visible window; buffer entries, if any,
+    // ride along untouched. Check the visible run per column.
+    const normalizedGrid = opts.grid;
     if (normalizedGrid.length !== this._reels.length) {
       throw new RangeError(
         `refill: grid has ${normalizedGrid.length} column(s) but the reel set has ` +
@@ -504,9 +507,9 @@ export class SpinController implements Disposable {
     }
     for (let i = 0; i < normalizedGrid.length; i++) {
       const expected = this._reels[i].visibleRows;
-      if (normalizedGrid[i].length !== expected) {
+      if (normalizedGrid[i].visible.length !== expected) {
         throw new RangeError(
-          `refill: grid column ${i} has ${normalizedGrid[i].length} row(s) but ` +
+          `refill: grid column ${i} has ${normalizedGrid[i].visible.length} row(s) but ` +
           `reel ${i} has ${expected} visible row(s).`,
         );
       }
@@ -1491,28 +1494,14 @@ export class SpinController implements Disposable {
    *
    * Pure: returns a new grid; does not mutate the input. Zero-overhead for
    * slots with no big symbols (the loop runs but never matches metadata).
-   *
-   * The clone preserves negative-index string properties (`arr[-1]`, ...)
-   * that carry buffer-above targets in the legacy form, so downstream
-   * consumers (FrameBuilder, placeSymbols) still see them on `decorated[col]`.
    */
   private _coordinateBigSymbols(
-    grid: string[][],
+    grid: ColumnTarget[],
     visibleRowsForReel: (i: number) => number,
-  ): string[][] {
-    // Inline clone that preserves negative-index slots so the internal
-    // pipeline (FrameBuilder, placeSymbols) still reads buffer-above
-    // targets on `decorated[col]`.
+  ): ColumnTarget[] {
     const bufferAbove = this._reels[0]?.bufferAbove ?? 0;
     const bufferBelow = this._reels[0]?.bufferBelow ?? 0;
-    const out: string[][] = grid.map((col) => {
-      const colOut = [...col];
-      for (let i = 1; i <= bufferAbove; i++) {
-        const v = (col as Record<number, string | undefined>)[-i];
-        if (v !== undefined) (colOut as Record<number, string>)[-i] = v;
-      }
-      return colOut;
-    });
+    const out = grid.map(cloneColumnTarget);
     const symData = this._hooks.symbolsData;
 
     // Buffer geometry is read from reel[0] and treated as uniform across
@@ -1524,18 +1513,14 @@ export class SpinController implements Disposable {
     // already supports per-reel geometry; only the buffers are still
     // global here.
 
-    // Read a per-reel target slot for any row in `[-bufferAbove, rows + bufferBelow)`.
-    // Negative rows live as string properties (`out[col][-1]`); positive rows
-    // are normal array indices. `ReelSet.setResult` materializes
-    // `ColumnTarget[]` into that mixed numeric/string-key shape via
-    // `columnTargetToArray` before this pipeline runs.
-    const readSlot = (col: number, row: number): string | undefined => {
-      const arr = out[col] as string[] & Record<number, string | undefined>;
-      return arr[row];
-    };
+    // Read/write a per-reel target slot for any row in
+    // `[-bufferAbove, rows + bufferBelow)`. Row is visible-relative: negative
+    // rows address `bufferAbove`, rows past `visible.length` address
+    // `bufferBelow`. See `getTargetSlot` / `setTargetSlot`.
+    const readSlot = (col: number, row: number): string | undefined =>
+      getTargetSlot(out[col], row);
     const writeSlot = (col: number, row: number, value: string): void => {
-      const arr = out[col] as string[] & Record<number, string>;
-      arr[row] = value;
+      setTargetSlot(out[col], row, value);
     };
 
     for (let col = 0; col < out.length; col++) {

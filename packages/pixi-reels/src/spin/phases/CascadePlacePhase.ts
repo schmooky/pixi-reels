@@ -48,24 +48,17 @@ export class CascadePlacePhase extends ReelPhase<CascadePlacePhaseConfig> {
   }
 
   /**
-   * Map the positional `targetFrame` (buffer-above … visible … buffer-below)
-   * into the index shape `Reel.placeSymbols` expects: visible rows at positive
-   * indices `[0..visibleRows)`, buffer-above rows as NEGATIVE-index properties
-   * (`[-1]` closest above … `[-bufferAbove]` furthest). placeSymbols reads
-   * buffer-above strip cells from those negative slots; a plain `slice` of just
-   * the visible window has none, so placeSymbols re-randomizes the buffer. that
-   * destroys a big-symbol anchor living in bufferAbove (a partial-visibility
-   * "tail-visible" block) and leaves its visible OCCUPIED stub uncovered, so
-   * the block's visible cell renders empty. Buffer-below cells are left to
-   * placeSymbols' random fill — they're masked and never carry a visible anchor.
+   * Trim the positional `targetFrame` (buffer-above … visible … buffer-below)
+   * to the head the cascade actually lands: buffer-above plus the visible
+   * window. The buffer-above cells matter — a big-symbol anchor can live
+   * there (a partial-visibility "tail-visible" block), and dropping it leaves
+   * its visible OCCUPIED stub uncovered so the block's visible cell renders
+   * empty. Buffer-below cells are deliberately left off the end for
+   * `placeStrip` to random-fill: they're masked and never carry a visible
+   * anchor.
    */
   private _placement(targetFrame: string[]): string[] {
-    const bufferAbove = this._reel.bufferAbove;
-    const placement = targetFrame.slice(bufferAbove, bufferAbove + this._reel.visibleRows);
-    for (let k = 1; k <= bufferAbove; k++) {
-      (placement as Record<number, string>)[-k] = targetFrame[bufferAbove - k];
-    }
-    return placement;
+    return targetFrame.slice(0, this._reel.bufferAbove + this._reel.visibleRows);
   }
 
   private _doPlace(): void {
@@ -84,7 +77,7 @@ export class CascadePlacePhase extends ReelPhase<CascadePlacePhaseConfig> {
     // the refill settles. Idempotent.
     reel.beginMotion();
 
-    reel.placeSymbols(this._placement(targetFrame));
+    reel.placeStrip(this._placement(targetFrame));
     // Defensive: CascadeFallPhase displaces views by `fallDistance` and pool
     // reuse can leak the post-fall y onto same-id replacements when
     // `_placeSymbolView` runs BEFORE the motion snap inside placeSymbols.
@@ -145,7 +138,7 @@ export class CascadePlacePhase extends ReelPhase<CascadePlacePhaseConfig> {
     // (skip == "show me the final landed state right now").
     if (this._config) {
       const reel = this._reel;
-      reel.placeSymbols(this._placement(this._config.targetFrame));
+      reel.placeStrip(this._placement(this._config.targetFrame));
       for (let row = 0; row < reel.visibleRows; row++) {
         const view = reel.getSymbolAt(row).view;
         view.alpha = 1;
