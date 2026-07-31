@@ -53,8 +53,11 @@ const recipeUmbrellas = {
   ],
   'cells-and-banners': [
     'cell-bounds', 'cell-hit-areas', 'board-grid-reveal', 'paylines-events-only',
-    'paylines-custom-animation', 'horizontal-reel', 'static-spin-horizontal', 'slam-stop', 'feature-mode-swap',
+    'paylines-custom-animation', 'slam-stop', 'feature-mode-swap',
   ],
+  // The old standalone horizontal-reel recipes were replaced by the v2
+  // orientation-axis banner; point their URLs at the new umbrella.
+  'orientation-and-direction': ['horizontal-reel', 'static-spin-horizontal'],
   'starters': ['classic-5x3'],
 };
 const recipeRedirects = Object.fromEntries(

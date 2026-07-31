@@ -58,24 +58,6 @@ Replace playWin() with your own GSAP timeline, styled per win.id.
 
 <RecipeDemo code="paylines-custom-animation" />
 
-<a id="horizontal-reel"></a>
-
-## Horizontal reel (paying-symbol banner)
-
-A single one-row banner reel above the grid that spins, lands, and cascades, on the same spin() / setResult(ColumnTarget[]) / SpinResult contract as ReelSet.
-
-<RecipeDemo code="horizontal-reel" height={260} />
-
-<a id="static-spin-horizontal"></a>
-
-## Horizontal strip motion blur
-
-The same cached-snapshot spin on a HorizontalReel, with the smear following the sideways travel.
-
-**Gotcha:** pass `blur: { axis: 'x' }` to both prewarmSpinTextures and the symbol options, and give the strip its own SpinTextureCache (its cell geometry differs from the main grid).
-
-<RecipeDemo code="static-spin-horizontal" height={260} />
-
 <a id="slam-stop"></a>
 
 ## Slam-stop
@@ -95,19 +77,3 @@ Enter and exit a bonus mode at runtime by adding or removing a frame middleware,
 **Gotcha:** run custom middleware after target-placement (priority >= 10) so it reacts to the grid the server chose.
 
 <RecipeDemo code="feature-mode-swap" />
-
-<a id="roll-up"></a>
-
-## Roll-up (reverse direction)
-
-Every reel spins upward: one `.direction('reverse')` call. New in v2 - direction lives on the orientation axis, so the same engine, events and landing bounce just run the other way.
-
-<RecipeDemo code="roll-up" />
-
-<a id="roll-up-alternating"></a>
-
-## Mixed direction per reel
-
-`.directionPerReel([...])` gives each column its own travel direction for a woven, alternating look. Every reel still lands the exact server frame.
-
-<RecipeDemo code="roll-up-alternating" />
