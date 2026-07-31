@@ -4,6 +4,8 @@ export { ReelSetBuilder } from './core/ReelSetBuilder.js';
 export { Reel } from './core/Reel.js';
 export type { ReelConfig, NudgeOptions } from './core/Reel.js';
 export { ReelViewport } from './core/ReelViewport.js';
+export { reelAxis, VERTICAL_FORWARD } from './core/ReelAxis.js';
+export type { ReelAxis, Orientation, Direction } from './core/ReelAxis.js';
 
 // Config
 export { SpeedPresets } from './config/SpeedPresets.js';
