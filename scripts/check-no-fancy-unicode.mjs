@@ -67,6 +67,8 @@ const ALLOWED_NON_ASCII = new Set([
   '…',                     // ellipsis (sparingly used)
   '×', '≥', '≤', '±', '⇒', // math glyphs in comments
   'Δ', 'δ', 'Σ', 'σ', 'π',  // Greek math letters in docs ("Chebyshev |Δreel|")
+  '§', '°', 'Π', '≡', '⌊', '⌋', // section refs + degrees + product/floor notation in the ADRs and motion contract
+  '₀', '₁', '₂', '₃', '₄', '₅', '₆', '₇', '₈', '₉', // subscript digits in the ADR ways-math (rows₁..₅)
   '◆', '◎', '★',           // UI bullets already adopted on the site
   '✓', '✗',                // check / cross marks for toggle + script status lines
   '♥', '✦', '◉', '◔',      // decorative glyphs on the classic-lines demo symbols
