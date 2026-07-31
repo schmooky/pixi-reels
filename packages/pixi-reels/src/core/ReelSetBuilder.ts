@@ -15,6 +15,7 @@ import { DEFAULTS } from '../config/defaults.js';
 import { SpeedPresets } from '../config/SpeedPresets.js';
 import { ReelSet, type ReelSetParams } from './ReelSet.js';
 import { Reel, type ReelConfig } from './Reel.js';
+import { reelAxis, type Orientation, type Direction } from './ReelAxis.js';
 import { ReelViewport } from './ReelViewport.js';
 import { SymbolRegistry } from '../symbols/SymbolRegistry.js';
 import { SymbolFactory } from '../symbols/SymbolFactory.js';
@@ -89,6 +90,9 @@ export class ReelSetBuilder {
   private _reelPixelHeights?: number[];
   /** Vertical alignment of short reels inside the tallest reel's box. */
   private _reelAnchor: ReelAnchor = 'center';
+  private _orientation: Orientation = 'vertical';
+  private _direction: Direction = 'forward';
+  private _directionPerReel?: Direction[];
   /** MultiWays configuration. Set by `.multiways(...)`. */
   private _multiways?: MultiWaysConfig;
   /** Per-reel AdjustPhase tween duration in ms (MultiWays only). */
@@ -155,6 +159,35 @@ export class ReelSetBuilder {
   /** Vertical alignment of short reels inside the tallest reel's box. Default 'center'. */
   reelAnchor(anchor: ReelAnchor): this {
     this._reelAnchor = anchor;
+    return this;
+  }
+
+  /**
+   * Strip travel axis for the whole set. `'vertical'` (default) runs strips on
+   * Y with reels marched along X. `'horizontal'` lands in a later v2 commit and
+   * throws at `build()` for now.
+   */
+  orientation(orientation: Orientation): this {
+    this._orientation = orientation;
+    return this;
+  }
+
+  /**
+   * Default travel direction for every reel. `'forward'` (default) heads toward
+   * the larger coordinate (down for vertical); `'reverse'` runs the other way
+   * (roll-up on a vertical set).
+   */
+  direction(direction: Direction): this {
+    this._direction = direction;
+    return this;
+  }
+
+  /**
+   * Per-reel travel direction override (length must equal `reels()`), for
+   * alternating-column effects. Reels omitted fall back to `direction()`.
+   */
+  directionPerReel(directions: Direction[]): this {
+    this._directionPerReel = directions;
     return this;
   }
 
@@ -511,6 +544,29 @@ export class ReelSetBuilder {
   build(): ReelSet {
     this._validate();
 
+    // The axis is threaded through the motion + phase layers (ReelMotion, Reel,
+    // Start/Stop/Adjust and cascade phases all project through it). Two pieces
+    // are NOT direction/orientation-aware yet and would land the wrong frame or
+    // spin forever, so fail loud rather than ship a broken spin:
+    //   - horizontal needs the set-level geometry (viewport extents, cross
+    //     marching, mask-rect projection);
+    //   - reverse / mixed direction needs the StopSequencer feed edge to flip
+    //     (ADR 016 section 6.1) so the target frame arrives from the exit edge.
+    if (this._directionPerReel && this._directionPerReel.length !== this._reelCount) {
+      throw new Error(
+        `directionPerReel() length (${this._directionPerReel.length}) must equal reels() (${this._reelCount}).`,
+      );
+    }
+    const hasReverse =
+      this._direction === 'reverse' || (this._directionPerReel?.some((d) => d === 'reverse') ?? false);
+    if (this._orientation === 'horizontal' || hasReverse) {
+      const what = this._orientation === 'horizontal' ? "orientation('horizontal')" : 'reverse travel direction';
+      throw new Error(
+        `${what} is not enabled yet in this v2 build (the axis is wired through motion + phases, ` +
+          'but the set geometry / stop-sequencer feed edge still land later). Vertical forward is supported.',
+      );
+    }
+
     const reelCount = this._reelCount!;
     const symbolWidth = this._symbolWidth!;
     const symbolHeight = this._symbolHeight!;
@@ -745,6 +801,7 @@ export class ReelSetBuilder {
         offsetY: offsetsY[reelIndex],
         reelHeight: reelPixelHeights[reelIndex],
         spinSymbolHeight,
+        axis: reelAxis(this._orientation, this._directionPerReel?.[reelIndex] ?? this._direction),
       };
 
       const reel = new Reel(reelConfig, symbolFactory, randomProvider, viewport);

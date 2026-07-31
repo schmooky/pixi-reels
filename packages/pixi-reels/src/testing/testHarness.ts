@@ -28,6 +28,10 @@ export interface TestReelSetOptions {
   symbolData?: Record<string, Partial<import('../config/types.js').SymbolData>>;
   symbolSize?: { width: number; height: number };
   symbolGap?: { x: number; y: number };
+  /** Travel direction for every reel. Defaults to 'forward'. */
+  direction?: import('../core/ReelAxis.js').Direction;
+  /** Per-reel travel direction override (length must equal `reels`). */
+  directionPerReel?: import('../core/ReelAxis.js').Direction[];
   /** Number of symbols above + below the visible area. Defaults to the builder default. */
   bufferSymbols?: number | { above: number; below: number };
   /** Initial symbol grid. Same `ColumnTarget[]` form as `ReelSetBuilder.initialFrame`. */
@@ -125,6 +129,13 @@ export function createTestReelSet(opts: TestReelSetOptions = {}): TestReelSetHan
 
   if (opts.initialFrame) {
     builder.initialFrame(opts.initialFrame);
+  }
+
+  if (opts.direction) {
+    builder.direction(opts.direction);
+  }
+  if (opts.directionPerReel) {
+    builder.directionPerReel(opts.directionPerReel);
   }
 
   const reelSet = builder.build();
