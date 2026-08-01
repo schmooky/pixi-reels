@@ -35,7 +35,7 @@ export interface TestReelSetOptions {
   /** Per-reel travel direction override (length must equal `reels`). */
   directionPerReel?: import('../core/ReelAxis.js').Direction[];
   /** Number of symbols above + below the visible area. Defaults to the builder default. */
-  bufferSymbols?: number | { above: number; below: number };
+  bufferSymbols?: number | { start: number; end: number };
   /** Initial symbol grid. Same `ColumnTarget[]` form as `ReelSetBuilder.initialFrame`. */
   initialFrame?: ColumnTarget[];
 }

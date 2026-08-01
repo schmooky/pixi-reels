@@ -7,7 +7,7 @@ describe('big symbols', () => {
       reels: 5,
       visibleCells: 3,
       symbolIds: ['a', 'bonus'],
-      symbolData: { bonus: { weight: 0, size: { w: 2, h: 2 } } },
+      symbolData: { bonus: { weight: 0, size: { reels: 2, cells: 2 } } },
     });
     try {
       await spinAndLand([
@@ -39,7 +39,7 @@ describe('big symbols', () => {
       reels: 5,
       visibleCells: 3,
       symbolIds: ['a', 'bonus'],
-      symbolData: { bonus: { weight: 0, size: { w: 2, h: 2 } } },
+      symbolData: { bonus: { weight: 0, size: { reels: 2, cells: 2 } } },
     });
     try {
       await spinAndLand([
@@ -50,14 +50,14 @@ describe('big symbols', () => {
         ['a', 'a', 'a'],
       ]);
       const fp = reelSet.getSymbolFootprint(2, 0);
-      expect(fp).toEqual({ anchor: { reel: 2, cell: 0 }, size: { w: 2, h: 2 } });
+      expect(fp).toEqual({ anchor: { reel: 2, cell: 0 }, size: { reels: 2, cells: 2 } });
       const fp2 = reelSet.getSymbolFootprint(3, 0);
-      expect(fp2).toEqual({ anchor: { reel: 2, cell: 0 }, size: { w: 2, h: 2 } });
+      expect(fp2).toEqual({ anchor: { reel: 2, cell: 0 }, size: { reels: 2, cells: 2 } });
       const fp3 = reelSet.getSymbolFootprint(2, 1);
-      expect(fp3).toEqual({ anchor: { reel: 2, cell: 0 }, size: { w: 2, h: 2 } });
+      expect(fp3).toEqual({ anchor: { reel: 2, cell: 0 }, size: { reels: 2, cells: 2 } });
       // Normal cell: 1x1 footprint at itself.
       const fp4 = reelSet.getSymbolFootprint(0, 0);
-      expect(fp4).toEqual({ anchor: { reel: 0, cell: 0 }, size: { w: 1, h: 1 } });
+      expect(fp4).toEqual({ anchor: { reel: 0, cell: 0 }, size: { reels: 1, cells: 1 } });
     } finally {
       destroy();
     }
@@ -71,7 +71,7 @@ describe('big symbols', () => {
       // 1x6 block at cell 0 needs cells 0..5. last cell (5) is one past
       // the strip end.
       symbolIds: ['a', 'giant'],
-      symbolData: { giant: { weight: 0, size: { w: 1, h: 6 } } },
+      symbolData: { giant: { weight: 0, size: { reels: 1, cells: 6 } } },
     });
     try {
       const promise = reelSet.spin();
@@ -94,7 +94,7 @@ describe('big symbols', () => {
       reels: 3,
       visibleCells: 3,
       symbolIds: ['a', 'wide'],
-      symbolData: { wide: { weight: 0, size: { w: 4, h: 1 } } },
+      symbolData: { wide: { weight: 0, size: { reels: 4, cells: 1 } } },
     });
     try {
       const promise = reelSet.spin();
@@ -118,7 +118,7 @@ describe('big symbols', () => {
         reels: 5,
         multiways: { minCells: 2, maxCells: 7, reelExtent: 600 },
         symbolIds: ['a', 'bonus'],
-        symbolData: { bonus: { weight: 0, size: { w: 2, h: 2 } } },
+        symbolData: { bonus: { weight: 0, size: { reels: 2, cells: 2 } } },
       }),
     ).toThrow(/big symbol .* cannot be registered on a MultiWays slot/);
   });
@@ -128,7 +128,7 @@ describe('big symbols', () => {
       reels: 5,
       visibleCells: 3,
       symbolIds: ['a', 'bonus'],
-      symbolData: { bonus: { weight: 0, size: { w: 2, h: 2 } } },
+      symbolData: { bonus: { weight: 0, size: { reels: 2, cells: 2 } } },
       symbolSize: { width: 100, height: 100 },
     });
     try {
@@ -161,7 +161,7 @@ describe('big symbols', () => {
         reels: 3,
         visibleCells: 3,
         symbolIds: ['a', 'bonus'],
-        symbolData: { bonus: { weight: 5, size: { w: 2, h: 2 } } },
+        symbolData: { bonus: { weight: 5, size: { reels: 2, cells: 2 } } },
       }),
     ).toThrow(/big symbol .* must have weight 0/);
   });
@@ -181,7 +181,7 @@ describe('big symbols', () => {
       visibleCells: 3,
       bufferSymbols: 2,
       symbolIds: ['a', 'b', 'tall'],
-      symbolData: { tall: { weight: 0, size: { w: 1, h: 3 } } },
+      symbolData: { tall: { weight: 0, size: { reels: 1, cells: 3 } } },
     });
     try {
       // ColumnTarget form. Anchor at bufferStart[1] = cell -2. Block
@@ -209,7 +209,7 @@ describe('big symbols', () => {
       visibleCells: 3,
       bufferSymbols: 1,
       symbolIds: ['a', 'tall'],
-      symbolData: { tall: { weight: 0, size: { w: 1, h: 2 } } },
+      symbolData: { tall: { weight: 0, size: { reels: 1, cells: 2 } } },
     });
     try {
       // Anchor at bufferStart[0] = cell -1. Block spans cells -1, 0.
@@ -232,7 +232,7 @@ describe('big symbols', () => {
       visibleCells: 3,
       bufferSymbols: 1,
       symbolIds: ['a', 'tall'],
-      symbolData: { tall: { weight: 0, size: { w: 1, h: 2 } } },
+      symbolData: { tall: { weight: 0, size: { reels: 1, cells: 2 } } },
     });
     try {
       // Anchor at visible cell 2 (last). Block spans cells 2, 3. cell 3
@@ -246,7 +246,7 @@ describe('big symbols', () => {
       // Footprint reports the anchor at its actual visible cell.
       const fp = reelSet.getSymbolFootprint(0, 2);
       expect(fp.anchor.cell).toBe(2);
-      expect(fp.size).toEqual({ w: 1, h: 2 });
+      expect(fp.size).toEqual({ reels: 1, cells: 2 });
     } finally {
       destroy();
     }
@@ -258,7 +258,7 @@ describe('big symbols', () => {
       visibleCells: 3,
       bufferSymbols: 2,
       symbolIds: ['a', 'tall'],
-      symbolData: { tall: { weight: 0, size: { w: 1, h: 3 } } },
+      symbolData: { tall: { weight: 0, size: { reels: 1, cells: 3 } } },
     });
     try {
       // Anchor at bufferStart[1] = cell -2.
@@ -267,7 +267,7 @@ describe('big symbols', () => {
       ]);
       const fp = reelSet.getSymbolFootprint(0, 0);
       expect(fp.anchor.cell).toBe(-2);
-      expect(fp.size).toEqual({ w: 1, h: 3 });
+      expect(fp.size).toEqual({ reels: 1, cells: 3 });
       // getBlockBounds handles the negative cell. returns the full
       // block's pixel rect (the off-screen portion is clipped by mask).
       const r = reelSet.getBlockBounds(0, 0);
@@ -284,7 +284,7 @@ describe('big symbols', () => {
       visibleCells: 3,
       bufferSymbols: 1,
       symbolIds: ['a', 'b', 'tall'],
-      symbolData: { tall: { weight: 0, size: { w: 1, h: 2 } } },
+      symbolData: { tall: { weight: 0, size: { reels: 1, cells: 2 } } },
     });
     try {
       // 1x2 anchor at bufferStart[0]: block spans cells -1 and 0.
@@ -297,7 +297,7 @@ describe('big symbols', () => {
       // moves to cell 1. Block fully visible.
       const result = await reelSet.nudge(0, {
         distance: 1,
-        direction: 'down',
+        direction: 'forward',
         incoming: ['b'],
       });
       expect(result.symbols[0]).toBe('tall');
@@ -314,7 +314,7 @@ describe('big symbols', () => {
       visibleCells: 3,
       bufferSymbols: 1,
       symbolIds: ['a', 'b', 'tall'],
-      symbolData: { tall: { weight: 0, size: { w: 1, h: 2 } } },
+      symbolData: { tall: { weight: 0, size: { reels: 1, cells: 2 } } },
     });
     try {
       // setResult goes through `_coordinateBigSymbols`, so a 1x2 anchor
@@ -329,7 +329,7 @@ describe('big symbols', () => {
       // And the anchor's footprint reports correctly.
       const fp = reelSet.getSymbolFootprint(0, 2);
       expect(fp.anchor).toEqual({ reel: 0, cell: 2 });
-      expect(fp.size).toEqual({ w: 1, h: 2 });
+      expect(fp.size).toEqual({ reels: 1, cells: 2 });
     } finally {
       destroy();
     }
@@ -353,7 +353,7 @@ describe('big symbols', () => {
       visibleCells: 3,
       bufferSymbols: 2, // bufferStart=2 AND bufferEnd=2. total strip = 7.
       symbolIds: ['a', 'tall'],
-      symbolData: { tall: { weight: 0, size: { w: 1, h: 3 } } },
+      symbolData: { tall: { weight: 0, size: { reels: 1, cells: 3 } } },
     });
     try {
       // 1x3 anchor at bufferStart[1] = cell -2: block at cells -2, -1, 0.
@@ -378,7 +378,7 @@ describe('big symbols', () => {
       // bufferEnd and only the top 2/3 of the block stayed visible.
       const result = await reelSet.nudge(0, {
         distance: 2,
-        direction: 'down',
+        direction: 'forward',
         incoming: ['a', 'a'],
       });
       expect(result.symbols).toEqual(['tall', 'tall', 'tall']);
@@ -395,7 +395,7 @@ describe('big symbols', () => {
       // UP by 2 returns to tail-visible.
       const result2 = await reelSet.nudge(0, {
         distance: 2,
-        direction: 'up',
+        direction: 'reverse',
         incoming: ['a', 'a'],
       });
       expect(result2.symbols).toEqual(['tall', 'a', 'a']);
@@ -419,7 +419,7 @@ describe('big symbols', () => {
       visibleCells: 3,
       bufferSymbols: 2,
       symbolIds: ['a', 'tall'],
-      symbolData: { tall: { weight: 0, size: { w: 1, h: 3 } } },
+      symbolData: { tall: { weight: 0, size: { reels: 1, cells: 3 } } },
     });
     try {
       await spinAndLand([
@@ -428,7 +428,7 @@ describe('big symbols', () => {
 
       const result = await reelSet.nudge(0, {
         distance: 2,
-        direction: 'down',
+        direction: 'forward',
         incoming: ['a', 'a'],
       });
 
@@ -471,7 +471,7 @@ describe('big symbols', () => {
       visibleCells: 3,
       bufferSymbols: 2,
       symbolIds: ['a', 'big'],
-      symbolData: { big: { weight: 0, size: { w: 2, h: 2 } } },
+      symbolData: { big: { weight: 0, size: { reels: 2, cells: 2 } } },
     });
     try {
       // Anchor at (reel=0, bufferStart[0]) = (reel=0, cell=-1). Block covers
@@ -496,11 +496,11 @@ describe('big symbols', () => {
       // points back to the same anchor at (0, -1).
       const fpLeft = reelSet.getSymbolFootprint(0, 0);
       expect(fpLeft.anchor).toEqual({ reel: 0, cell: -1 });
-      expect(fpLeft.size).toEqual({ w: 2, h: 2 });
+      expect(fpLeft.size).toEqual({ reels: 2, cells: 2 });
 
       const fpRight = reelSet.getSymbolFootprint(1, 0);
       expect(fpRight.anchor).toEqual({ reel: 0, cell: -1 });
-      expect(fpRight.size).toEqual({ w: 2, h: 2 });
+      expect(fpRight.size).toEqual({ reels: 2, cells: 2 });
 
       // Block bounds span both reels and reach above visible cell 0.
       const r = reelSet.getBlockBounds(1, 0);
@@ -528,7 +528,7 @@ describe('big symbols', () => {
       visibleCells: 3,
       bufferSymbols: 1,
       symbolIds: ['a', 'big'],
-      symbolData: { big: { weight: 0, size: { w: 2, h: 2 } } },
+      symbolData: { big: { weight: 0, size: { reels: 2, cells: 2 } } },
     });
     try {
       // Anchor at (reel=0, cell=2). Block covers (0,2)(anchor), (1,2)(stub),
@@ -556,7 +556,7 @@ describe('big symbols', () => {
       const fpRight = reelSet.getSymbolFootprint(1, 2);
       expect(fpLeft.anchor).toEqual({ reel: 0, cell: 2 });
       expect(fpRight.anchor).toEqual({ reel: 0, cell: 2 });
-      expect(fpLeft.size).toEqual({ w: 2, h: 2 });
+      expect(fpLeft.size).toEqual({ reels: 2, cells: 2 });
     } finally {
       destroy();
     }
@@ -576,7 +576,7 @@ describe('big symbols', () => {
       //   cell= 1 ->  1+4 = 5 -> 5 > 4 ? yes -> throws.
       //   cell= 2 ->  2+4 = 6 -> 6 > 4 ? yes -> throws (what this test uses).
       symbolIds: ['a', 'tall'],
-      symbolData: { tall: { weight: 0, size: { w: 1, h: 4 } } },
+      symbolData: { tall: { weight: 0, size: { reels: 1, cells: 4 } } },
     });
     try {
       const promise = reelSet.spin();

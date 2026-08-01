@@ -8,6 +8,7 @@ import type {
   ReelSetInternalConfig,
   MultiWaysConfig,
   ReelAnchor,
+  Stacking,
 } from '../config/types.js';
 import type { ReelMaskRect, MaskStrategy } from './ReelViewport.js';
 import { RectMaskStrategy, SharedRectMaskStrategy } from './ReelViewport.js';
@@ -90,6 +91,9 @@ export class ReelSetBuilder {
   private _reelExtents?: number[];
   /** Vertical alignment of short reels inside the tallest reel's box. */
   private _reelAnchor: ReelAnchor = 'center';
+  /** Render order of cells inside a reel, and of reels inside the set. */
+  private _cellStacking: Stacking = 'ascending';
+  private _reelStacking: Stacking = 'ascending';
   private _orientation: Orientation = 'vertical';
   private _direction: Direction = 'forward';
   private _directionPerReel?: Direction[];
@@ -159,6 +163,30 @@ export class ReelSetBuilder {
   /** Vertical alignment of short reels inside the tallest reel's box. Default 'center'. */
   reelAnchor(anchor: ReelAnchor): this {
     this._reelAnchor = anchor;
+    return this;
+  }
+
+  /**
+   * Render order of cells inside each reel. Default `'ascending'`. the cell
+   * at the larger main coordinate (bottom for vertical, right for
+   * horizontal) draws in front of its neighbour.
+   *
+   * Geometric on purpose: `direction('reverse')` and per-spin reversal do
+   * NOT flip it, so symbol art lit from above keeps overlapping the way the
+   * artist drew it. Set `'descending'` if your art wants the opposite.
+   */
+  cellStacking(order: Stacking): this {
+    this._cellStacking = order;
+    return this;
+  }
+
+  /**
+   * Render order of reels inside the set. Default `'ascending'`. the last
+   * reel draws in front, which reads as "rightmost on top" for vertical and
+   * "bottom-most on top" for horizontal.
+   */
+  reelStacking(order: Stacking): this {
+    this._reelStacking = order;
     return this;
   }
 
@@ -281,29 +309,35 @@ export class ReelSetBuilder {
   }
 
   /**
-   * Set number of buffer symbols above/below the visible area. Default: 1.
+   * Set number of buffer symbols either side of the visible window.
+   * Default: 1.
+   *
+   * `start` is the edge at the smaller main coordinate (above for
+   * vertical, left for horizontal) and `end` the larger one. Both are
+   * geometric, not travel-relative: flipping a reel's direction never
+   * moves a buffer teaser to the opposite edge.
    *
    * Buffer cells are off-screen cells the reel keeps around the visible
    * window so symbols can fade/slide in cleanly. The motion layer's wrap
-   * detection assumes at least one buffer cell above and one below. the
-   * minimum supported count is **1**. Passing `0` (or a negative number)
-   * is clamped to `1` and a single console warning is printed; the
-   * builder does not throw, so existing user code keeps running.
+   * detection assumes at least one buffer cell each side. the minimum
+   * supported count is **1**. Passing `0` (or a negative number) is
+   * clamped to `1` and a single console warning is printed; the builder
+   * does not throw, so existing user code keeps running.
    *
-   * **Tumble-only reel sets** may drop the below-window buffer entirely
-   * with the object form: `bufferSymbols({ above: 1, below: 0 })`. A pure
+   * **Tumble-only reel sets** may drop the end-window buffer entirely
+   * with the object form: `bufferSymbols({ start: 1, end: 0 })`. A pure
    * tumble never scrolls the strip, so nothing ever wraps through the
-   * below-window cells. they exist only to be hidden by the mask. This
+   * end-window cells. they exist only to be hidden by the mask. This
    * requires `.tumble(...)` on the builder (validated at `build()`), and
    * strip spins (`spin({ mode: 'standard' })`) and `nudge()` throw on
-   * such a set. `above` keeps the minimum of 1 (drop-in movers are
-   * pre-positioned above the window).
+   * such a set. `start` keeps the minimum of 1 (drop-in movers are
+   * pre-positioned outside the start edge).
    */
-  bufferSymbols(count: number | { above: number; below: number }): this {
+  bufferSymbols(count: number | { start: number; end: number }): this {
     if (typeof count === 'object') {
-      this._bufferStart = this._clampBufferMin1(count.above, 'bufferSymbols({ above })');
+      this._bufferStart = this._clampBufferMin1(count.start, 'bufferSymbols({ start })');
       this._bufferEnd =
-        Number.isFinite(count.below) && count.below >= 0 ? count.below : 0;
+        Number.isFinite(count.end) && count.end >= 0 ? count.end : 0;
       return this;
     }
     const clamped = this._clampBufferMin1(count, `bufferSymbols(${count})`);
@@ -569,7 +603,7 @@ export class ReelSetBuilder {
     const bufferEnd = this._bufferEnd;
     if (bufferEnd === 0 && this._defaultSpinMode !== 'cascade') {
       throw new Error(
-        'bufferSymbols({ below: 0 }) is tumble-only: the strip machinery wraps ' +
+        'bufferSymbols({ end: 0 }) is tumble-only: the strip machinery wraps ' +
           'symbols through the below-window buffer. Add .tumble(...) to the ' +
           'builder, or keep bufferEnd >= 1.',
       );
@@ -623,8 +657,8 @@ export class ReelSetBuilder {
     const tallest = Math.max(...mainExtents);
     const mainOffsets = mainExtents.map((h) => {
       switch (this._reelAnchor) {
-        case 'top': return 0;
-        case 'bottom': return tallest - h;
+        case 'start': return 0;
+        case 'end': return tallest - h;
         case 'center':
         default: return (tallest - h) / 2;
       }
@@ -740,7 +774,7 @@ export class ReelSetBuilder {
     //
     // Explicit `.maskStrategy(...)` calls always win.
     const hasBigSymbols = Object.values(symbolsData).some(
-      (d) => d.size && (d.size.w > 1 || d.size.h > 1),
+      (d) => d.size && (d.size.reels > 1 || d.size.cells > 1),
     );
     const hasUnmaskedSymbols = Object.values(symbolsData).some((d) => d.unmask);
 
@@ -820,6 +854,8 @@ export class ReelSetBuilder {
         extent: reelExtents[reelIndex],
         spinCellSize,
         axis: reelAxis(this._orientation, this._directionPerReel?.[reelIndex] ?? this._direction),
+        cellStacking: this._cellStacking,
+        reelStacking: this._reelStacking,
       };
 
       const reel = new Reel(reelConfig, symbolFactory, randomProvider, viewport);
@@ -914,9 +950,9 @@ export class ReelSetBuilder {
       // Big symbols are mutually exclusive with MultiWays.
       for (const id of this._symbolRegistry.symbolIds) {
         const override = this._symbolDataOverrides[id] ?? {};
-        if (override.size && (override.size.w > 1 || override.size.h > 1)) {
+        if (override.size && (override.size.reels > 1 || override.size.cells > 1)) {
           errors.push(
-            `big symbol '${id}' (size ${override.size.w}x${override.size.h}) cannot be ` +
+            `big symbol '${id}' (size ${override.size.reels}x${override.size.cells}) cannot be ` +
             'registered on a MultiWays slot. Drop multiways() or remove the size metadata.',
           );
           break;
@@ -931,14 +967,31 @@ export class ReelSetBuilder {
     for (const id of this._symbolRegistry.symbolIds) {
       const override = this._symbolDataOverrides[id] ?? {};
       const size = override.size;
-      if (!size || (size.w === 1 && size.h === 1)) continue;
+      if (!size || (size.reels === 1 && size.cells === 1)) continue;
       const weight = override.weight ?? this._weights[id];
       if (weight !== undefined && weight > 0) {
         errors.push(
-          `big symbol '${id}' (size ${size.w}x${size.h}) must have weight 0. ` +
+          `big symbol '${id}' (size ${size.reels}x${size.cells}) must have weight 0. ` +
           'big symbols are placed by the server at anchor cells only and never enter ' +
           'random fill in v1. Set weight to 0 (or omit it) and place the symbol via setResult().',
         );
+      }
+      // Cross-reel blocks vs per-reel direction (ADR 016 section 6.7). The
+      // coordinator reads buffer geometry off reel 0 and paints stubs under
+      // one shared "start = above the window" convention. With mixed
+      // directions the reels a block spans can feed from opposite edges, so
+      // a stub would land on the wrong side of the window on some of them.
+      // Fail at build() rather than ship a block that splits at run time.
+      if (size.reels > 1 && this._directionPerReel) {
+        const distinct = new Set(this._directionPerReel);
+        if (distinct.size > 1) {
+          errors.push(
+            `big symbol '${id}' spans ${size.reels} reels, which is not supported ` +
+            'together with mixed directionPerReel([...]). The cross-reel coordinator ' +
+            'assumes one shared feed edge for every reel a block covers. Use a single ' +
+            'direction() for the set, or keep blocks within one reel (size.reels === 1).',
+          );
+        }
       }
     }
 

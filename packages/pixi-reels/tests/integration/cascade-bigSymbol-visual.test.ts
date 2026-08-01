@@ -31,7 +31,7 @@ function buildHarness() {
       for (const id of ['a', 'b', 'tall', 'match']) r.register(id, HeadlessSymbol, {});
     })
     .weights({ a: 1, b: 1, match: 1 })
-    .symbolData({ tall: { weight: 0, size: { w: 1, h: 3 } } })
+    .symbolData({ tall: { weight: 0, size: { reels: 1, cells: 3 } } })
     .tumble({
       fall:   { duration: 0, ease: 'none', cellStagger: 0 },
       dropIn: { duration: 0, ease: 'none', cellStagger: 0, distance: 'perHole' },

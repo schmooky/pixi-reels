@@ -57,8 +57,8 @@ describe('nudge in-flight guard (M4)', () => {
       ]);
 
       // Two parallel nudges across reels 1 and 2; both tweens are deferred.
-      const nA = h.reelSet.nudge(1, { distance: 1, direction: 'down', incoming: ['wild'] });
-      const nB = h.reelSet.nudge(2, { distance: 1, direction: 'down', incoming: ['wild'] });
+      const nA = h.reelSet.nudge(1, { distance: 1, direction: 'forward', incoming: ['wild'] });
+      const nB = h.reelSet.nudge(2, { distance: 1, direction: 'forward', incoming: ['wild'] });
       expect(deferred.count()).toBe(2);
 
       // Both in flight -> spin() blocked.

@@ -28,6 +28,7 @@ export type {
   MaskConfig,
   MultiWaysConfig,
   ReelAnchor,
+  Stacking,
   AnticipationStagger,
   AnticipationSlowdown,
   AnticipationOptions,

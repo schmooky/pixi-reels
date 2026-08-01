@@ -54,7 +54,7 @@ return {
       NUDGE_COLS.map((reel, i) =>
         reelSet.nudge(reel, {
           distance: 1,
-          direction: 'down',
+          direction: 'forward',
           incoming: ['wild'],
           duration: NUDGE_DURATION,
           startDelay: i * STAGGER_MS,

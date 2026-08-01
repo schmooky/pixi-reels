@@ -34,7 +34,7 @@ export class ReelMotion {
     bufferStart: number,
     _visibleCells: number,
     _bufferEnd: number,
-    private _onSymbolWrapped: (symbol: ReelSymbol, arrayIndex: number, direction: 'up' | 'down') => void,
+    private _onSymbolWrapped: (symbol: ReelSymbol) => void,
     axis: ReelAxis = VERTICAL_FORWARD,
   ) {
     this._pitch = symbolHeight + symbolGapY;
@@ -113,13 +113,13 @@ export class ReelMotion {
   private _rotateToStart(): void {
     const s = this._symbols.pop() as ReelSymbol;
     this._symbols.unshift(s);
-    this._onSymbolWrapped(s, 0, 'up');
+    this._onSymbolWrapped(s);
   }
 
   private _rotateToEnd(): void {
     const s = this._symbols.shift() as ReelSymbol;
     this._symbols.push(s);
-    this._onSymbolWrapped(s, this._symbols.length - 1, 'down');
+    this._onSymbolWrapped(s);
   }
 
   private _render(): void {

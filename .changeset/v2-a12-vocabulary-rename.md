@@ -43,3 +43,22 @@ Offsets:
 |---|---|
 | `OffsetXMode` | `CrossOffsetMode` |
 | `TrapezoidConfig.topWidthFactor` / `.bottomWidthFactor` | `.startFactor` / `.endFactor` |
+
+Semantics, not just names:
+
+| v1 | v2 |
+|---|---|
+| `bufferSymbols({ above, below })` | `bufferSymbols({ start, end })` |
+| `reelAnchor: 'top' \| 'center' \| 'bottom'` | `'start' \| 'center' \| 'end'` |
+| `SymbolData.size { w, h }` | `{ reels, cells }` (and `getSymbolFootprint`'s `size`) |
+| `NudgeOptions.direction: 'up' \| 'down'` | `'forward' \| 'reverse'`, relative to the reel's own axis |
+| `'symbol:created': [symbolId, row]` | `[symbolId, stripIndex]` -- it was always the strip index, never a visible row |
+
+`nudge()` is now genuinely direction-relative: which edge feeds the reel is derived from the axis polarity, so a reel built with `direction('reverse')` nudges upward on `'forward'`. A vertical/forward reel behaves exactly as `'down'` did.
+
+New:
+
+- `builder.cellStacking(order)` / `builder.reelStacking(order)` expose render order explicitly (`'ascending'` default = today's behaviour: the cell/reel at the larger coordinate draws in front). Deliberately geometric -- `direction('reverse')` does NOT flip stacking, so art lit from above keeps overlapping the way it was drawn.
+- `SymbolPosition.setId?` for games composing more than one reel set. The engine never reads it.
+- `build()` throws when a cross-reel big symbol (`size.reels > 1`) meets a mixed `directionPerReel([...])`. The coordinator assumes one shared feed edge across the reels a block covers.
+- `ReelMotion`'s wrap callback drops its dead `arrayIndex` / `direction` arguments.

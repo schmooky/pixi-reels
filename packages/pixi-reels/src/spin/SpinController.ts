@@ -295,7 +295,7 @@ export class SpinController implements Disposable {
       throw new Error(
         "spin({ mode: 'standard' }) requires bufferEnd >= 1: strip scrolling " +
           'wraps symbols through the below-window buffer. This reel set was ' +
-          'built with bufferSymbols({ below: 0 }) for tumble-only use.',
+          'built with bufferSymbols({ end: 0 }) for tumble-only use.',
       );
     }
     this._currentSpinMode = mode;
@@ -1488,7 +1488,7 @@ export class SpinController implements Disposable {
 
   /**
    * Big symbols cross-reel coordinator. Walks the result grid, locates big
-   * symbols (those with `SymbolData.size.w * size.h > 1`), validates that
+   * symbols (those with `SymbolData.size.reels * size.cells > 1`), validates that
    * the block fits within reel bounds, and paints OCCUPIED sentinels into
    * the non-anchor cells so per-reel FrameBuilder leaves them alone.
    *
@@ -1536,8 +1536,8 @@ export class SpinController implements Disposable {
         if (id === undefined) continue;
         const meta = symData[id];
         if (!meta?.size) continue;
-        const w = meta.size.w;
-        const h = meta.size.h;
+        const w = meta.size.reels;
+        const h = meta.size.cells;
         if (w === 1 && h === 1) continue;
 
         // Validate block fit on this reel: anchor + h must stay on the

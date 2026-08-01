@@ -360,15 +360,15 @@ export interface ReelSetEvents extends Record<string, unknown[]> {
    * Nudges are always per-reel. multi-reel sync is via `Promise.all([...])`
    * of independent calls, each of which emits its own start/complete pair.
    *
-   *   - `direction: 'down'`. symbols visually move down, new symbols enter
+   *   - `direction: 'forward'`. symbols visually move down, new symbols enter
    *     from the top of the visible window.
-   *   - `direction: 'up'`. opposite: symbols move up, new symbols enter
+   *   - `direction: 'reverse'`. opposite: symbols move up, new symbols enter
    *     from the bottom.
    */
   'nudge:start': [info: {
     reelIndex: number;
     distance: number;
-    direction: 'up' | 'down';
+    direction: 'forward' | 'reverse';
   }];
   /**
    * A reel-at-rest nudge finished. the strip has snapped to its post-nudge
@@ -378,7 +378,7 @@ export interface ReelSetEvents extends Record<string, unknown[]> {
   'nudge:complete': [info: {
     reelIndex: number;
     distance: number;
-    direction: 'up' | 'down';
+    direction: 'forward' | 'reverse';
     symbols: string[];
   }];
   /**
@@ -396,7 +396,7 @@ export interface ReelSetEvents extends Record<string, unknown[]> {
   'nudge:cancelled': [info: {
     reelIndex: number;
     distance: number;
-    direction: 'up' | 'down';
+    direction: 'forward' | 'reverse';
     reason: string;
   }];
   'destroyed': [];
@@ -406,7 +406,7 @@ export interface ReelSetEvents extends Record<string, unknown[]> {
 export interface ReelEvents extends Record<string, unknown[]> {
   'phase:enter': [phaseName: string];
   'phase:exit': [phaseName: string];
-  'symbol:created': [symbolId: string, cell: number];
+  'symbol:created': [symbolId: string, stripIndex: number];
   'landed': [symbols: string[]];
   'destroyed': [];
 }

@@ -131,7 +131,7 @@ describe('setResult with ColumnTarget[]', () => {
       visibleCells: 3,
       symbolIds: [...SYMBOLS, 'big'],
       symbolData: {
-        big: { size: { w: 2, h: 2 } },
+        big: { size: { reels: 2, cells: 2 } },
       },
     });
     try {

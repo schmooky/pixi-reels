@@ -2,7 +2,7 @@ import { Container } from 'pixi.js';
 import type { Disposable } from '../utils/Disposable.js';
 import { ReelSymbol } from '../symbols/ReelSymbol.js';
 import type { SymbolFactory } from '../symbols/SymbolFactory.js';
-import type { SymbolData } from '../config/types.js';
+import type { SymbolData, Stacking } from '../config/types.js';
 import { ReelMotion } from './ReelMotion.js';
 import type { ReelAxis } from './ReelAxis.js';
 import { VERTICAL_FORWARD } from './ReelAxis.js';
@@ -40,29 +40,36 @@ export interface NudgeOptions {
    */
   distance: number;
   /**
-   * Travel direction.
+   * Travel direction, **relative to the reel's own axis**.
    *
-   *   - `'down'`. symbols visually move down the screen; new symbols
-   *     enter from the top.
-   *   - `'up'`. symbols visually move up; new symbols enter from the
-   *     bottom.
+   *   - `'forward'`. the strip travels the way this reel normally spins.
+   *     On a vertical/forward reel that is downward, with new symbols
+   *     entering from the top.
+   *   - `'reverse'`. the strip travels the other way, with new symbols
+   *     entering from the opposite edge.
+   *
+   * Which screen edge feeds the reel is derived from the axis polarity,
+   * so a reel built with `direction('reverse')` nudges upward on
+   * `'forward'` without the caller re-deriving anything.
    */
-  direction: 'up' | 'down';
+  direction: 'forward' | 'reverse';
   /**
-   * Symbol ids in **top-down order of their final on-strip position**.
-   * including any overflow into the off-screen buffer. Length must equal
-   * `distance` exactly.
+   * Symbol ids in **start-to-end order of their final on-strip position**
+   * (top-down for vertical, left-to-right for horizontal), including any
+   * overflow into the off-screen buffer. Length must equal `distance`
+   * exactly.
    *
-   *   - `incoming[0]` ends up at the topmost new position. For `'down'`
-   *     this is the new top visible cell (or, if `distance > bufferStart + visibleCells`,
-   *     spills into bufferEnd tail-first via the trailing entries).
-   *     For `'up'` with `distance > visibleCells`, `incoming[0]` lands in
-   *     bufferStart (still topmost).
-   *   - `incoming[distance-1]` ends up at the bottommost new position.
+   *   - `incoming[0]` ends up at the start-most new position. When the
+   *     reel feeds from its start edge this is the new first visible cell
+   *     (or, if `distance > bufferStart + visibleCells`, spills into
+   *     bufferEnd tail-first via the trailing entries). When it feeds from
+   *     the end edge and `distance > visibleCells`, `incoming[0]` lands in
+   *     bufferStart (still start-most).
+   *   - `incoming[distance-1]` ends up at the end-most new position.
    *     Mirror of the above.
    *
    * For the common case of `distance <= visibleCells`, every entry is a
-   * visible cell top-to-bottom and you can ignore the overflow rules.
+   * visible cell in strip order and you can ignore the overflow rules.
    */
   incoming: string[];
   /** Total animation duration in ms. Defaults to `200 * distance`. */
@@ -148,6 +155,16 @@ export interface ReelConfig {
    * Defaults to `symbolHeight`.
    */
   spinCellSize?: number;
+  /**
+   * Render order of cells within the reel. Default `'ascending'`. the cell
+   * at the larger main coordinate draws in front.
+   */
+  cellStacking?: Stacking;
+  /**
+   * Render order of reels within the set. Default `'ascending'`. the last
+   * reel draws in front.
+   */
+  reelStacking?: Stacking;
 }
 
 /**
@@ -203,6 +220,8 @@ export class Reel implements Disposable {
   private _symbolWidth: number;
   private _symbolHeight: number;
   private _mainOffset: number;
+  private _cellStacking: Stacking;
+  private _reelStacking: Stacking;
   private _extent: number;
   private _spinCellSize: number;
   private _symbolGapY: number;
@@ -292,6 +311,8 @@ export class Reel implements Disposable {
     this._extent = config.extent ?? config.visibleCells * config.symbolHeight;
     this._spinCellSize = config.spinCellSize ?? config.symbolHeight;
     this._symbolGapY = config.symbolGapY;
+    this._cellStacking = config.cellStacking ?? 'ascending';
+    this._reelStacking = config.reelStacking ?? 'ascending';
     this._symbolGapX = config.symbolGapX;
     this._occupancy = new Array(config.visibleCells).fill(null);
     this.events = new EventEmitter<ReelEvents>();
@@ -320,7 +341,10 @@ export class Reel implements Disposable {
     // (sortableChildren = true) is deterministic. Rightmost reel draws on
     // top by default. same visual order as insertion, but now set via
     // zIndex so callers can flip it for bottom-left diagonal overflow.
-    this.container.zIndex = config.reelIndex;
+    this.container.zIndex =
+      this._reelStacking === 'ascending'
+        ? config.reelIndex
+        : -config.reelIndex;
 
     // Create initial symbols. Use spinCellSize so during SPIN every reel
     // uses the same uniform cell height regardless of post-AdjustPhase shape.
@@ -339,7 +363,7 @@ export class Reel implements Disposable {
       config.bufferStart,
       config.visibleCells,
       config.bufferEnd,
-      (symbol, cell, direction) => this._onSymbolWrapped(symbol, cell, direction),
+      (symbol) => this._onSymbolWrapped(symbol),
       this._axis,
     );
 
@@ -704,17 +728,17 @@ export class Reel implements Disposable {
     const arrayIndex = this._bufferStart + visibleCell;
     const oldSym = this.symbols[arrayIndex];
     const oldMeta = this._symbolsData[oldSym.symbolId];
-    if (oldMeta?.size && (oldMeta.size.w > 1 || oldMeta.size.h > 1)) {
+    if (oldMeta?.size && (oldMeta.size.reels > 1 || oldMeta.size.cells > 1)) {
       throw new Error(
         `setSymbolAt: cell ${visibleCell} currently holds the anchor of big symbol ` +
-        `'${oldSym.symbolId}' (${oldMeta.size.w}x${oldMeta.size.h}). Big blocks span multiple ` +
+        `'${oldSym.symbolId}' (${oldMeta.size.reels}x${oldMeta.size.cells}). Big blocks span multiple ` +
         `cells (and possibly reels); use placeSymbols + the OCCUPIED coordinator instead.`,
       );
     }
     const newMeta = this._symbolsData[symbolId];
-    if (newMeta?.size && (newMeta.size.w > 1 || newMeta.size.h > 1)) {
+    if (newMeta?.size && (newMeta.size.reels > 1 || newMeta.size.cells > 1)) {
       throw new Error(
-        `setSymbolAt: '${symbolId}' is a big symbol (${newMeta.size.w}x${newMeta.size.h}). ` +
+        `setSymbolAt: '${symbolId}' is a big symbol (${newMeta.size.reels}x${newMeta.size.cells}). ` +
         `Use placeSymbols + the OCCUPIED coordinator instead.`,
       );
     }
@@ -785,22 +809,31 @@ export class Reel implements Disposable {
         `rotates fully and pre-placed buffer entries would be silently dropped.`,
       );
     }
-    if (direction !== 'up' && direction !== 'down') {
-      throw new Error(`nudge: direction must be 'up' or 'down', got ${String(direction)}.`);
+    if (direction !== 'forward' && direction !== 'reverse') {
+      throw new Error(
+        `nudge: direction must be 'forward' or 'reverse', got ${String(direction)}.`,
+      );
     }
     if (!Array.isArray(incoming) || incoming.length !== distance) {
       throw new Error(
         `nudge: incoming must be an array of exactly ${distance} symbol id(s), got length ${incoming?.length}.`,
       );
     }
+    // `direction` is relative to the reel's own travel, so a signed travel
+    // request is all `motion.advance` needs. it applies the polarity itself.
+    const travelSign = direction === 'forward' ? 1 : -1;
+    // Which array end new symbols arrive at. `advance` rotates toward the
+    // array start when `polarity * delta > 0`, so a reverse-polarity reel
+    // nudging 'forward' feeds from the opposite edge to a forward one.
+    const wrapsIntoStart = travelSign * this._axis.polarity > 0;
     for (const id of incoming) {
       if (!Object.prototype.hasOwnProperty.call(this._symbolsData, id)) {
         throw new Error(`nudge: incoming symbol '${id}' is not registered. Register it via builder.symbols(...).`);
       }
       const meta = this._symbolsData[id];
-      if (meta?.size && (meta.size.w > 1 || meta.size.h > 1)) {
+      if (meta?.size && (meta.size.reels > 1 || meta.size.cells > 1)) {
         throw new Error(
-          `nudge: incoming symbol '${id}' is a big symbol (${meta.size.w}x${meta.size.h}). ` +
+          `nudge: incoming symbol '${id}' is a big symbol (${meta.size.reels}x${meta.size.cells}). ` +
           `Big symbols are not supported as incoming items (they need an anchor + OCCUPIED ` +
           `coordinator). Pre-existing big symbols on the strip CAN be nudged through.`,
         );
@@ -827,7 +860,7 @@ export class Reel implements Disposable {
       if (sym instanceof OccupiedStub) continue;
       const meta = this._symbolsData[sym.symbolId];
       if (!meta?.size) continue;
-      const { w, h } = meta.size;
+      const { reels: w, cells: h } = meta.size;
       if (w === 1 && h === 1) continue;
       if (w > 1) {
         throw new Error(
@@ -837,11 +870,11 @@ export class Reel implements Disposable {
         );
       }
       if (h > 1) {
-        const survives = direction === 'down'
+        const survives = wrapsIntoStart
           ? i + h - 1 + distance < total
           : i - distance >= 0;
         if (!survives) {
-          const failureDetail = direction === 'down'
+          const failureDetail = wrapsIntoStart
             ? `anchor + h + distance < total (${i} + ${h} + ${distance} = ${i + h + distance} vs ${total})`
             : `anchor - distance >= 0 (${i} - ${distance} = ${i - distance})`;
           throw new Error(
@@ -917,9 +950,9 @@ export class Reel implements Disposable {
       const sym = this.symbols[stripIdx];
       if (sym instanceof OccupiedStub) return true;
       const meta = this._symbolsData[sym.symbolId];
-      return !!(meta?.size && (meta.size.w > 1 || meta.size.h > 1));
+      return !!(meta?.size && (meta.size.reels > 1 || meta.size.cells > 1));
     };
-    if (direction === 'down') {
+    if (wrapsIntoStart) {
       const bufferSet = Math.min(distance, bufferStart);
       for (let i = 0; i < bufferSet; i++) {
         const stripIdx = bufferStart - bufferSet + i;
@@ -967,7 +1000,7 @@ export class Reel implements Disposable {
     // state (ReelSet uses this to emit `nudge:start` at the right time).
     onPrepared?.();
 
-    const totalDelta = direction === 'down' ? distance * slotH : -distance * slotH;
+    const totalDelta = travelSign * distance * slotH;
     // Cap per-tick displacement at < half a slot so ReelMotion fires exactly
     // one wrap per `advance` call (mirrors SpinningMode.computeDelta).
     const stepLimit = slotH * 0.45;
@@ -986,7 +1019,7 @@ export class Reel implements Disposable {
         // tween's direction). We're at some intermediate position; just
         // drive to the final position one step at a time so each wrap fires.
         const stepsLeft = remainingQueue;
-        const stepDir = direction === 'down' ? stepLimit : -stepLimit;
+        const stepDir = travelSign * stepLimit;
         // ceil(slotH / stepLimit) substeps per wrap = ceil(1/0.45) = 3
         // per remaining wrap. Conservative. actual wraps fire when the
         // tail symbol crosses the boundary.
@@ -1034,7 +1067,7 @@ export class Reel implements Disposable {
             // is still computed by GSAP; we just don't ride the overshoot
             // into the wrap mechanism.
             const eased = state.p * totalDelta;
-            const target = direction === 'down'
+            const target = totalDelta > 0
               ? Math.min(eased, totalDelta)
               : Math.max(eased, totalDelta);
             let remaining = target - lastDisplaced;
@@ -1196,7 +1229,9 @@ export class Reel implements Disposable {
    */
   private _computeSymbolZIndex(symbolId: string, index: number): number {
     const base = this._symbolsData[symbolId]?.zIndex ?? 0;
-    return base * 100 + index;
+    const within =
+      this._cellStacking === 'ascending' ? index : this.symbols.length - 1 - index;
+    return base * 100 + within;
   }
 
   /**
@@ -1381,7 +1416,7 @@ export class Reel implements Disposable {
     }
   }
 
-  private _onSymbolWrapped(symbol: ReelSymbol, cell: number, direction: 'up' | 'down'): void {
+  private _onSymbolWrapped(symbol: ReelSymbol): void {
     let newSymbolId: string;
     if (this._nudgeQueue && this._nudgeQueue.length > 0) {
       // Nudge queue is exhaustively pre-built by `nudge()` to cover every
@@ -1574,8 +1609,8 @@ export class Reel implements Disposable {
       if (sym instanceof OccupiedStub) continue;
       const meta = this._symbolsData[sym.symbolId];
       if (!meta?.size) continue;
-      const w = meta.size.w;
-      const h = meta.size.h;
+      const w = meta.size.reels;
+      const h = meta.size.cells;
       if (w === 1 && h === 1) continue;
 
       // Size the anchor to span the block PLUS inter-cell gaps. A 2x2
@@ -1601,8 +1636,8 @@ export class Reel implements Disposable {
       if (sym instanceof OccupiedStub) continue;
       const meta = this._symbolsData[sym.symbolId];
       if (!meta?.size) continue;
-      const w = meta.size.w;
-      const h = meta.size.h;
+      const w = meta.size.reels;
+      const h = meta.size.cells;
       if (w === 1 && h === 1) continue;
 
       // Does the block extend into visible? The block spans strip indices

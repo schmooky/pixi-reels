@@ -6,7 +6,7 @@ import { FakeTicker } from '../../src/testing/FakeTicker.js';
 import type { ReelSet } from '../../src/index.js';
 
 /**
- * `bufferSymbols({ above, below: 0 })`. tumble-only reel sets with no
+ * `bufferSymbols({ start, end: 0 })`. tumble-only reel sets with no
  * below-window buffer. A pure tumble never scrolls the strip, so the
  * below cells exist only to be hidden by the mask; dropping them means
  * nothing can ever peek out under the window. Strip spins and nudges
@@ -21,7 +21,7 @@ function buildTumbleBelowZero(initialFrame: string[][]): {
     .reels(initialFrame.length)
     .visibleCells(initialFrame[0].length)
     .symbolSize(50, 50)
-    .bufferSymbols({ above: 1, below: 0 })
+    .bufferSymbols({ start: 1, end: 0 })
     .symbols((r) => {
       for (const id of ['a', 'b', 'x']) r.register(id, HeadlessSymbol, {});
     })
@@ -36,7 +36,7 @@ function buildTumbleBelowZero(initialFrame: string[][]): {
   return { reelSet, destroy: () => { reelSet.destroy(); ticker.destroy(); } };
 }
 
-describe('bufferSymbols({ below: 0 }). tumble-only reel sets', () => {
+describe('bufferSymbols({ end: 0 }). tumble-only reel sets', () => {
   it('builds with no below-window strip cells', () => {
     const h = buildTumbleBelowZero([
       ['a', 'a', 'a'],
@@ -61,7 +61,7 @@ describe('bufferSymbols({ below: 0 }). tumble-only reel sets', () => {
       .reels(3)
       .visibleCells(3)
       .symbolSize(50, 50)
-      .bufferSymbols({ above: 1, below: 0 })
+      .bufferSymbols({ start: 1, end: 0 })
       .symbols((r) => r.register('a', HeadlessSymbol, {}))
       .ticker(ticker as unknown as Ticker);
     try {
@@ -125,7 +125,7 @@ describe('bufferSymbols({ below: 0 }). tumble-only reel sets', () => {
     try {
       await expect(h.reelSet.spin({ mode: 'standard' })).rejects.toThrow(/bufferEnd >= 1/);
       await expect(
-        h.reelSet.nudge(0, { direction: 'down', count: 1 } as never),
+        h.reelSet.nudge(0, { direction: 'forward', count: 1 } as never),
       ).rejects.toThrow(/bufferEnd >= 1/);
     } finally {
       h.destroy();

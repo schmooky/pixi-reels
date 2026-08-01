@@ -15,7 +15,7 @@ export interface ColumnTarget {
    * entries are honored.
    *
    * Big-symbol anchors may sit here. Place a multi-cell symbol id (one whose
-   * `SymbolData.size.h > 1`) at any `bufferStart[i]` and the coordinator
+   * `SymbolData.size.cells > 1`) at any `bufferStart[i]` and the coordinator
    * paints OCCUPIED stubs across the rest of the block, including any cells
    * that fall in visible. The block must fit on the strip end-to-end
    * (`anchor.cell + h <= visibleCells + bufferEnd`); the portion above

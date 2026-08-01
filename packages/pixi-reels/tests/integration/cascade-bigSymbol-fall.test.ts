@@ -33,7 +33,7 @@ function buildTumbleHarnessWithBigSymbol() {
       for (const id of ['a', 'b', 'tall', 'match']) r.register(id, HeadlessSymbol, {});
     })
     .weights({ a: 1, b: 1, match: 1 })
-    .symbolData({ tall: { weight: 0, size: { w: 1, h: 3 } } })
+    .symbolData({ tall: { weight: 0, size: { reels: 1, cells: 3 } } })
     .tumble({
       fall:   { duration: 0, ease: 'none', cellStagger: 0 },
       dropIn: { duration: 0, ease: 'none', cellStagger: 0, distance: 'perHole' },
@@ -82,7 +82,7 @@ describe('cascade refill. buffer-anchored big symbol', () => {
         grid: [
           // Reel 0: anchor now at cell 0 (fully visible). The coordinator
           // paints OCCUPIED at visible[1] and visible[2] from the
-          // size.h = 3 metadata; the 'a' placeholders at those cells are
+          // size.cells = 3 metadata; the 'a' placeholders at those cells are
           // overwritten.
           { visible: ['tall', 'a', 'a', 'a'], bufferStart: ['a'] },
           // Reels 1, 2: fresh fillers.
@@ -111,7 +111,7 @@ describe('cascade refill. buffer-anchored big symbol', () => {
       // Footprint reports the anchor at its new visible cell.
       const fp = reelSet.getSymbolFootprint(0, 0);
       expect(fp.anchor).toEqual({ reel: 0, cell: 0 });
-      expect(fp.size).toEqual({ w: 1, h: 3 });
+      expect(fp.size).toEqual({ reels: 1, cells: 3 });
     } finally {
       destroy();
     }

@@ -131,7 +131,7 @@ describe('nudge', () => {
         ]);
         const result = await reelSet.nudge(1, {
           distance: 1,
-          direction: 'down',
+          direction: 'forward',
           incoming: ['wild'],
         });
         expect(result.symbols).toEqual(['wild', 'a', 'b']);
@@ -156,7 +156,7 @@ describe('nudge', () => {
         await spinAndLand([['a', 'b', 'c']]);
         const result = await reelSet.nudge(0, {
           distance: 2,
-          direction: 'down',
+          direction: 'forward',
           incoming: ['x', 'y'], // x is new top, y is below x
         });
         expect(result.symbols).toEqual(['x', 'y', 'a']);
@@ -175,7 +175,7 @@ describe('nudge', () => {
         await spinAndLand([['a', 'b', 'c']]);
         const result = await reelSet.nudge(0, {
           distance: 3,
-          direction: 'down',
+          direction: 'forward',
           incoming: ['x', 'y', 'z'],
         });
         expect(result.symbols).toEqual(['x', 'y', 'z']);
@@ -197,7 +197,7 @@ describe('nudge', () => {
         await spinAndLand([['a', 'b', 'c']]);
         const result = await reelSet.nudge(0, {
           distance: 1,
-          direction: 'up',
+          direction: 'reverse',
           incoming: ['wild'],
         });
         expect(result.symbols).toEqual(['b', 'c', 'wild']);
@@ -216,7 +216,7 @@ describe('nudge', () => {
         await spinAndLand([['a', 'b', 'c']]);
         const result = await reelSet.nudge(0, {
           distance: 2,
-          direction: 'up',
+          direction: 'reverse',
           incoming: ['x', 'y'], // x just below old c, y is new bottom
         });
         expect(result.symbols).toEqual(['c', 'x', 'y']);
@@ -239,14 +239,14 @@ describe('nudge', () => {
         reelSet.events.on('nudge:start', (info) => events.push({ name: 'nudge:start', info }));
         reelSet.events.on('nudge:complete', (info) => events.push({ name: 'nudge:complete', info }));
 
-        await reelSet.nudge(0, { distance: 1, direction: 'down', incoming: ['wild'] });
+        await reelSet.nudge(0, { distance: 1, direction: 'forward', incoming: ['wild'] });
 
         expect(events.map((e) => e.name)).toEqual(['nudge:start', 'nudge:complete']);
-        expect(events[0].info).toEqual({ reelIndex: 0, distance: 1, direction: 'down' });
+        expect(events[0].info).toEqual({ reelIndex: 0, distance: 1, direction: 'forward' });
         expect(events[1].info).toEqual({
           reelIndex: 0,
           distance: 1,
-          direction: 'down',
+          direction: 'forward',
           symbols: ['wild', 'a', 'b'],
         });
       } finally {
@@ -269,7 +269,7 @@ describe('nudge', () => {
         reelSet.reels[0].events.on('phase:exit', (n) => {
           if (n === 'nudge') phases.push('exit:nudge');
         });
-        await reelSet.nudge(0, { distance: 1, direction: 'down', incoming: ['wild'] });
+        await reelSet.nudge(0, { distance: 1, direction: 'forward', incoming: ['wild'] });
         expect(phases).toEqual(['enter:nudge', 'exit:nudge']);
       } finally {
         destroy();
@@ -291,8 +291,8 @@ describe('nudge', () => {
           ['a', 'b', 'c'],
         ]);
         await Promise.all([
-          reelSet.nudge(0, { distance: 1, direction: 'down', incoming: ['wild'] }),
-          reelSet.nudge(2, { distance: 1, direction: 'up', incoming: ['star'] }),
+          reelSet.nudge(0, { distance: 1, direction: 'forward', incoming: ['wild'] }),
+          reelSet.nudge(2, { distance: 1, direction: 'reverse', incoming: ['star'] }),
         ]);
         expectGrid(reelSet, [
           ['wild', 'a', 'b'],
@@ -315,7 +315,7 @@ describe('nudge', () => {
       try {
         const p = reelSet.spin();
         await expect(
-          reelSet.nudge(0, { distance: 1, direction: 'down', incoming: ['wild'] }),
+          reelSet.nudge(0, { distance: 1, direction: 'forward', incoming: ['wild'] }),
         ).rejects.toThrow(/cannot nudge while a spin/);
         reelSet.setResult([{ visible: ['a', 'b', 'a'] }]);
         reelSet.slamStop();
@@ -337,10 +337,10 @@ describe('nudge', () => {
           ['a', 'a', 'a'],
         ]);
         await expect(
-          reelSet.nudge(5, { distance: 1, direction: 'down', incoming: ['wild'] }),
+          reelSet.nudge(5, { distance: 1, direction: 'forward', incoming: ['wild'] }),
         ).rejects.toThrow(/out of range/);
         await expect(
-          reelSet.nudge(-1, { distance: 1, direction: 'down', incoming: ['wild'] }),
+          reelSet.nudge(-1, { distance: 1, direction: 'forward', incoming: ['wild'] }),
         ).rejects.toThrow(/out of range/);
       } finally {
         destroy();
@@ -356,10 +356,10 @@ describe('nudge', () => {
       try {
         await spinAndLand([['a', 'a', 'a']]);
         await expect(
-          reelSet.nudge(0, { distance: 0, direction: 'down', incoming: [] }),
+          reelSet.nudge(0, { distance: 0, direction: 'forward', incoming: [] }),
         ).rejects.toThrow(/positive integer/);
         await expect(
-          reelSet.nudge(0, { distance: 1.5, direction: 'down', incoming: ['wild'] }),
+          reelSet.nudge(0, { distance: 1.5, direction: 'forward', incoming: ['wild'] }),
         ).rejects.toThrow(/positive integer/);
       } finally {
         destroy();
@@ -375,7 +375,7 @@ describe('nudge', () => {
       try {
         await spinAndLand([['a', 'a', 'a']]);
         await expect(
-          reelSet.nudge(0, { distance: 2, direction: 'down', incoming: ['wild'] }),
+          reelSet.nudge(0, { distance: 2, direction: 'forward', incoming: ['wild'] }),
         ).rejects.toThrow(/exactly 2 symbol id/);
       } finally {
         destroy();
@@ -391,7 +391,7 @@ describe('nudge', () => {
       try {
         await spinAndLand([['a', 'a', 'a']]);
         await expect(
-          reelSet.nudge(0, { distance: 1, direction: 'down', incoming: ['unknown'] }),
+          reelSet.nudge(0, { distance: 1, direction: 'forward', incoming: ['unknown'] }),
         ).rejects.toThrow(/is not registered/);
       } finally {
         destroy();
@@ -408,7 +408,7 @@ describe('nudge', () => {
         await spinAndLand([['a', 'a', 'a']]);
         reelSet.pin(0, 1, 'wild');
         await expect(
-          reelSet.nudge(0, { distance: 1, direction: 'down', incoming: ['wild'] }),
+          reelSet.nudge(0, { distance: 1, direction: 'forward', incoming: ['wild'] }),
         ).rejects.toThrow(/active pin/);
       } finally {
         destroy();
@@ -425,7 +425,7 @@ describe('nudge', () => {
       });
       try {
         await spinAndLand([['a', 'b', 'c']]);
-        await reelSet.nudge(0, { distance: 1, direction: 'down', incoming: ['wild'] });
+        await reelSet.nudge(0, { distance: 1, direction: 'forward', incoming: ['wild'] });
         expect(reelSet.reels[0].isNudging).toBe(false);
         expect(reelSet.reels[0].speed).toBe(0);
 
@@ -447,7 +447,7 @@ describe('nudge', () => {
         await spinAndLand([['a', 'b', 'c']]);
         const landedCalls: string[][] = [];
         reelSet.reels[0].events.on('landed', (symbols: string[]) => landedCalls.push([...symbols]));
-        await reelSet.nudge(0, { distance: 1, direction: 'down', incoming: ['wild'] });
+        await reelSet.nudge(0, { distance: 1, direction: 'forward', incoming: ['wild'] });
         // `landed` is the spin-stop event. A nudge fires `nudge:complete`,
         // never `landed`. counting on it for win re-detection would
         // double-fire.
@@ -474,7 +474,7 @@ describe('nudge', () => {
         await expect(
           reelSet.nudge(0, {
             distance: 5,
-            direction: 'down',
+            direction: 'forward',
             incoming: ['wild', 'wild', 'wild', 'wild', 'wild'],
           }),
         ).rejects.toThrow(/strictly less than total strip capacity/);
@@ -496,7 +496,7 @@ describe('nudge', () => {
         // lands in bufferEnd (the bottommost final position).
         const result = await reelSet.nudge(0, {
           distance: 4,
-          direction: 'down',
+          direction: 'forward',
           incoming: ['x', 'y', 'z', 'w'],
         });
         expect(result.symbols).toEqual(['x', 'y', 'z']);
@@ -521,7 +521,7 @@ describe('nudge', () => {
         await spinAndLand([['a', 'b', 'c']]);
         const result = await reelSet.nudge(0, {
           distance: 1,
-          direction: 'down',
+          direction: 'forward',
           incoming: ['wild'],
           ease: 'back.out(1.5)',
         });
@@ -542,7 +542,7 @@ describe('nudge', () => {
         await spinAndLand([['a', 'b', 'c']]);
         const result = await reelSet.nudge(0, {
           distance: 1,
-          direction: 'up',
+          direction: 'reverse',
           incoming: ['wild'],
           ease: 'back.out(1.5)',
         });
@@ -565,7 +565,7 @@ describe('nudge', () => {
         await spinAndLand([['a', 'b', 'c']]);
         const p = reelSet.nudge(0, {
           distance: 1,
-          direction: 'down',
+          direction: 'forward',
           incoming: ['wild'],
         });
         // Tween is deferred. no completion yet.
@@ -597,8 +597,8 @@ describe('nudge', () => {
         // Use sync gsap so all nudges complete instantly; the skipAll
         // call just confirms no error when nothing is in flight.
         await Promise.all([
-          reelSet.nudge(0, { distance: 1, direction: 'down', incoming: ['wild'] }),
-          reelSet.nudge(2, { distance: 1, direction: 'down', incoming: ['wild'] }),
+          reelSet.nudge(0, { distance: 1, direction: 'forward', incoming: ['wild'] }),
+          reelSet.nudge(2, { distance: 1, direction: 'forward', incoming: ['wild'] }),
         ]);
         // After resolution, skipNudge() should be a clean no-op.
         expect(() => reelSet.skipNudge()).not.toThrow();
@@ -634,7 +634,7 @@ describe('nudge', () => {
         controller.abort();
         const err = await reelSet.nudge(0, {
           distance: 1,
-          direction: 'down',
+          direction: 'forward',
           incoming: ['wild'],
           signal: controller.signal,
         }).catch((e) => e);
@@ -659,7 +659,7 @@ describe('nudge', () => {
         const controller = new AbortController();
         const p = reelSet.nudge(0, {
           distance: 1,
-          direction: 'down',
+          direction: 'forward',
           incoming: ['wild'],
           signal: controller.signal,
         });
@@ -690,7 +690,7 @@ describe('nudge', () => {
         const before = Date.now();
         await reelSet.nudge(0, {
           distance: 1,
-          direction: 'down',
+          direction: 'forward',
           incoming: ['wild'],
           startDelay: 60,
         });
@@ -714,7 +714,7 @@ describe('nudge', () => {
         const controller = new AbortController();
         const p = reelSet.nudge(0, {
           distance: 1,
-          direction: 'down',
+          direction: 'forward',
           incoming: ['wild'],
           startDelay: 200,
           signal: controller.signal,
@@ -740,7 +740,7 @@ describe('nudge', () => {
         await spinAndLand([['a', 'b', 'c']]);
         const p = reelSet.nudge(0, {
           distance: 1,
-          direction: 'down',
+          direction: 'forward',
           incoming: ['wild'],
         });
         // Destroy mid-tween. Should kill the tween + reject the promise.
@@ -776,7 +776,7 @@ describe('nudge', () => {
         });
         await reelSet.nudge(0, {
           distance: 1,
-          direction: 'down',
+          direction: 'forward',
           incoming: ['wild'],
         });
         expect(bufferAboveAtStart).toBe('wild');
@@ -795,7 +795,7 @@ describe('nudge', () => {
         bufferSymbols: 1,
         symbolIds: ['a', 'b', 'c', 'bigW'],
         symbolData: {
-          bigW: { weight: 0, size: { w: 1, h: 2 } },
+          bigW: { weight: 0, size: { reels: 1, cells: 2 } },
         },
       });
       try {
@@ -810,7 +810,7 @@ describe('nudge', () => {
         // cell 2 = anchor 'bigW' (the top of the 1x2 block).
         const result = await reelSet.nudge(0, {
           distance: 1,
-          direction: 'down',
+          direction: 'forward',
           incoming: ['a'],
         });
         expect(result.symbols).toEqual(['a', 'a', 'bigW']);
@@ -827,7 +827,7 @@ describe('nudge', () => {
         bufferSymbols: 1,
         symbolIds: ['a', 'b', 'c', 'bigW'],
         symbolData: {
-          bigW: { weight: 0, size: { w: 1, h: 2 } },
+          bigW: { weight: 0, size: { reels: 1, cells: 2 } },
         },
       });
       try {
@@ -840,7 +840,7 @@ describe('nudge', () => {
         // cell 0 cell resolves to 'bigW' via the negative-anchorCell occupancy.
         const result = await reelSet.nudge(0, {
           distance: 1,
-          direction: 'up',
+          direction: 'reverse',
           incoming: ['a'],
         });
         // Visible cell 0 = 'bigW' (the block's tail via occupancy).
@@ -864,7 +864,7 @@ describe('nudge', () => {
         bufferSymbols: 1,
         symbolIds: ['a', 'b', 'c', 'bigW'],
         symbolData: {
-          bigW: { weight: 0, size: { w: 1, h: 2 } },
+          bigW: { weight: 0, size: { reels: 1, cells: 2 } },
         },
       });
       try {
@@ -880,14 +880,14 @@ describe('nudge', () => {
         // stub -> strip[4].
         await reelSet.nudge(0, {
           distance: 1,
-          direction: 'down',
+          direction: 'forward',
           incoming: ['a'],
         });
         // Now: anchor at strip[3], stub at strip[4]. Up-nudge should
         // bring it back to visible without overwriting the stub.
         const result = await reelSet.nudge(0, {
           distance: 1,
-          direction: 'up',
+          direction: 'reverse',
           incoming: ['b'],
         });
         // Block stays intact; visible cells 1+2 read 'bigW' via the
@@ -907,7 +907,7 @@ describe('nudge', () => {
         bufferSymbols: 1,
         symbolIds: ['a', 'b', 'c', 'bigW'],
         symbolData: {
-          bigW: { weight: 0, size: { w: 1, h: 2 } },
+          bigW: { weight: 0, size: { reels: 1, cells: 2 } },
         },
       });
       try {
@@ -917,7 +917,7 @@ describe('nudge', () => {
         await expect(
           reelSet.nudge(0, {
             distance: 2,
-            direction: 'up',
+            direction: 'reverse',
             incoming: ['a', 'b'],
           }),
         ).rejects.toThrow(/wouldn't survive/);
@@ -934,7 +934,7 @@ describe('nudge', () => {
         bufferSymbols: 1,
         symbolIds: ['a', 'b', 'c', 'bigW'],
         symbolData: {
-          bigW: { weight: 0, size: { w: 1, h: 2 } },
+          bigW: { weight: 0, size: { reels: 1, cells: 2 } },
         },
       });
       try {
@@ -945,7 +945,7 @@ describe('nudge', () => {
         await expect(
           reelSet.nudge(0, {
             distance: 2,
-            direction: 'down',
+            direction: 'forward',
             incoming: ['a', 'b'],
           }),
         ).rejects.toThrow(/wouldn't survive/);
@@ -961,7 +961,7 @@ describe('nudge', () => {
         visibleCells: 3,
         symbolIds: ['a', 'bigW'],
         symbolData: {
-          bigW: { weight: 0, size: { w: 1, h: 2 } },
+          bigW: { weight: 0, size: { reels: 1, cells: 2 } },
         },
       });
       try {
@@ -969,7 +969,7 @@ describe('nudge', () => {
         await expect(
           reelSet.nudge(0, {
             distance: 1,
-            direction: 'down',
+            direction: 'forward',
             incoming: ['bigW'],
           }),
         ).rejects.toThrow(/is a big symbol/);
@@ -986,7 +986,7 @@ describe('nudge', () => {
         bufferSymbols: 1,
         symbolIds: ['a', 'bonus', 'wild'],
         symbolData: {
-          bonus: { weight: 0, size: { w: 2, h: 2 } },
+          bonus: { weight: 0, size: { reels: 2, cells: 2 } },
         },
       });
       try {
@@ -1000,7 +1000,7 @@ describe('nudge', () => {
         await expect(
           reelSet.nudge(0, {
             distance: 1,
-            direction: 'down',
+            direction: 'forward',
             incoming: ['wild'],
           }),
         ).rejects.toThrow(/cross-reel/);
@@ -1017,7 +1017,7 @@ describe('nudge', () => {
         bufferSymbols: 1,
         symbolIds: ['a', 'bonus', 'wild'],
         symbolData: {
-          bonus: { weight: 0, size: { w: 2, h: 2 } },
+          bonus: { weight: 0, size: { reels: 2, cells: 2 } },
         },
       });
       try {
@@ -1031,7 +1031,7 @@ describe('nudge', () => {
         await expect(
           reelSet.nudge(1, {
             distance: 1,
-            direction: 'down',
+            direction: 'forward',
             incoming: ['wild'],
           }),
         ).rejects.toThrow(/cross-reel/);
@@ -1048,7 +1048,7 @@ describe('nudge', () => {
         bufferSymbols: 1,
         symbolIds: ['a', 'b', 'bigW'],
         symbolData: {
-          bigW: { weight: 0, size: { w: 1, h: 2 } },
+          bigW: { weight: 0, size: { reels: 1, cells: 2 } },
         },
       });
       try {
@@ -1058,7 +1058,7 @@ describe('nudge', () => {
         // (bufferEnd). Visible cell 2 shows top of the block.
         const half = await reelSet.nudge(0, {
           distance: 2,
-          direction: 'down',
+          direction: 'forward',
           incoming: ['a', 'b'],
         });
         // Visible: [a, b, bigW]. block's anchor is now visible cell 2.
@@ -1068,7 +1068,7 @@ describe('nudge', () => {
         // Nudge up by 1. block returns to cells 1+2.
         const full = await reelSet.nudge(0, {
           distance: 1,
-          direction: 'up',
+          direction: 'reverse',
           incoming: ['a'],
         });
         expect(full.symbols).toEqual(['b', 'bigW', 'bigW']);
@@ -1100,11 +1100,11 @@ describe('nudge', () => {
 
         // Three parallel nudges; only the middle one is cancellable.
         const promises = [
-          reelSet.nudge(0, { distance: 1, direction: 'down', incoming: ['wild'] }),
+          reelSet.nudge(0, { distance: 1, direction: 'forward', incoming: ['wild'] }),
           reelSet
-            .nudge(1, { distance: 1, direction: 'down', incoming: ['star'], signal: controller.signal })
+            .nudge(1, { distance: 1, direction: 'forward', incoming: ['star'], signal: controller.signal })
             .catch((e: Error) => ({ aborted: e.name === 'AbortError' })),
-          reelSet.nudge(2, { distance: 1, direction: 'down', incoming: ['wild'] }),
+          reelSet.nudge(2, { distance: 1, direction: 'forward', incoming: ['wild'] }),
         ];
 
         // Abort the middle one before driving the deferred tweens.
@@ -1140,9 +1140,9 @@ describe('nudge', () => {
           ['a', 'b', 'c'],
         ]);
         const promises = [
-          reelSet.nudge(0, { distance: 1, direction: 'down', incoming: ['wild'] }),
-          reelSet.nudge(1, { distance: 1, direction: 'down', incoming: ['wild'] }),
-          reelSet.nudge(2, { distance: 1, direction: 'down', incoming: ['wild'] }),
+          reelSet.nudge(0, { distance: 1, direction: 'forward', incoming: ['wild'] }),
+          reelSet.nudge(1, { distance: 1, direction: 'forward', incoming: ['wild'] }),
+          reelSet.nudge(2, { distance: 1, direction: 'forward', incoming: ['wild'] }),
         ];
         // All three are mid-tween (deferred shim doesn't auto-complete).
         expect(reelSet.reels.every((r) => r.isNudging)).toBe(true);

@@ -70,7 +70,7 @@ return {
     //    the block is visible.
     await reelSet.nudge(2, {
       distance: 2,
-      direction: 'down',
+      direction: 'forward',
       incoming: [filler(), filler()],
       duration: 600,
     });
@@ -80,7 +80,7 @@ return {
     //    Survival up: anchorCell (3) >= distance (1) ✓.
     await reelSet.nudge(2, {
       distance: 1,
-      direction: 'up',
+      direction: 'reverse',
       incoming: [filler()],
       duration: 480,
     });

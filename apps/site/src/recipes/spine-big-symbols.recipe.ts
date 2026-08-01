@@ -65,7 +65,7 @@ const reelSet = new ReelSetBuilder()
   // engine's internal big-symbol convention (~500).
   .symbolData({
     wild:    { weight: 3, zIndex: 999 },
-    bigWild: { weight: 0, zIndex: 1000, size: { w: 2, h: 2 } },
+    bigWild: { weight: 0, zIndex: 1000, size: { reels: 2, cells: 2 } },
   })
   // Big symbols make the default 56px landing bounce look broken.
   // the 2x2 wild overshoots into adjacent cells. Zero the bounce so

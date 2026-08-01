@@ -62,7 +62,7 @@ return {
     //    full block height; the mask clips the half above visible.
     await reelSet.nudge(2, {
       distance: 1,
-      direction: 'up',
+      direction: 'reverse',
       incoming: [filler()],
       duration: 540,
     });
@@ -72,7 +72,7 @@ return {
     //    The classic "nudge to reveal the wild" beat.
     await reelSet.nudge(2, {
       distance: 1,
-      direction: 'down',
+      direction: 'forward',
       incoming: [filler()],
       duration: 540,
     });

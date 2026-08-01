@@ -46,7 +46,7 @@ export function buildBigSymbols({ app, textures, blurTextures }: SandboxContext)
     .weights({ low1: 18, low2: 18, med1: 12, high1: 6, bonus: 1 })
     // weight 0. big symbols are placed by the server (or this demo's
     // nextResult) at anchor cells; random fill cannot place blocks in v1.
-    .symbolData({ bonus: { weight: 0, zIndex: 5, size: { w: 2, h: 2 } } })
+    .symbolData({ bonus: { weight: 0, zIndex: 5, size: { reels: 2, cells: 2 } } })
     .speed('normal', SpeedPresets.NORMAL)
     .speed('turbo', SpeedPresets.TURBO)
     .ticker(app.ticker)

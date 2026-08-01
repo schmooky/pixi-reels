@@ -142,7 +142,7 @@ describe('mask strategies', () => {
           r.register('a', HeadlessSymbol, {});
           r.register('bonus', HeadlessSymbol, {});
         })
-        .symbolData({ bonus: { weight: 0, size: { w: 2, h: 2 } } })
+        .symbolData({ bonus: { weight: 0, size: { reels: 2, cells: 2 } } })
         .ticker(new FakeTicker() as unknown as Ticker)
         .build();
       try {
@@ -170,7 +170,7 @@ describe('mask strategies', () => {
         r.register('a', HeadlessSymbol, {});
         r.register('bonus', HeadlessSymbol, {});
       })
-      .symbolData({ bonus: { weight: 0, size: { w: 2, h: 2 } } })
+      .symbolData({ bonus: { weight: 0, size: { reels: 2, cells: 2 } } })
       .ticker(new FakeTicker() as unknown as Ticker)
       .build();
     try {
@@ -253,7 +253,7 @@ describe('mask strategies', () => {
         r.register('a', HeadlessSymbol, {});
         r.register('bonus', HeadlessSymbol, {});
       })
-      .symbolData({ bonus: { weight: 0, size: { w: 2, h: 2 } } })
+      .symbolData({ bonus: { weight: 0, size: { reels: 2, cells: 2 } } })
       .ticker(new FakeTicker() as unknown as Ticker)
       .build();
     try {

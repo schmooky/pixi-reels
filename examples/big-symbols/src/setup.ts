@@ -112,7 +112,7 @@ export async function boot(opts: BootOptions): Promise<() => void> {
       // Wild + bigWild use a 200 px icon attachment that overflows the
       // 140 px frame. zIndex 999/1000 keeps the overflowing W painted
       // ABOVE every neighbouring tile's frame.
-      bigWild: { size: { w: 2, h: 2 }, weight: 0, zIndex: 1000 },
+      bigWild: { size: { reels: 2, cells: 2 }, weight: 0, zIndex: 1000 },
       wild: { zIndex: 999 },
     })
     .speed('normal', SpeedPresets.NORMAL)

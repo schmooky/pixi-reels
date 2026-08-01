@@ -62,7 +62,7 @@ return {
     try {
       await reelSet.nudge(2, {
         distance: 1,
-        direction: 'down',
+        direction: 'forward',
         incoming: ['wild'],
         duration: 2000,
         signal: controller.signal,

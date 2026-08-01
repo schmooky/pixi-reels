@@ -96,7 +96,7 @@ return {
     //    on screen. Pass real ids regardless; the engine ignores unused ones.
     await reelSet.nudge(2, {
       distance: 2,
-      direction: 'down',
+      direction: 'forward',
       incoming: [filler(), filler()],
       duration: 640,
     });
@@ -107,7 +107,7 @@ return {
     //    Block returns to tail-visible state.
     await reelSet.nudge(2, {
       distance: 2,
-      direction: 'up',
+      direction: 'reverse',
       incoming: [filler(), filler()],
       duration: 540,
     });

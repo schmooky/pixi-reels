@@ -28,7 +28,7 @@ describe('nudge reentrancy guards', () => {
     try {
       const nudging = h.reelSet.nudge(0, {
         distance: 1,
-        direction: 'down',
+        direction: 'forward',
         incoming: ['wild'],
       });
       await expect(h.reelSet.spin()).rejects.toThrow(
@@ -46,7 +46,7 @@ describe('nudge reentrancy guards', () => {
     try {
       const nudging = h.reelSet.nudge(0, {
         distance: 1,
-        direction: 'down',
+        direction: 'forward',
         incoming: ['wild'],
       });
       expect(() =>
@@ -68,7 +68,7 @@ describe('nudge reentrancy guards', () => {
     try {
       const nudging = h.reelSet.nudge(0, {
         distance: 1,
-        direction: 'down',
+        direction: 'forward',
         incoming: ['wild'],
       });
       expect(() => h.reelSet.pin(1, 1, 'wild', { turns: 'permanent' })).toThrow(
@@ -86,7 +86,7 @@ describe('nudge reentrancy guards', () => {
     try {
       const nudging = h.reelSet.nudge(0, {
         distance: 1,
-        direction: 'down',
+        direction: 'forward',
         incoming: ['wild'],
       });
       expect(() => h.reelSet.setShape([3, 3, 3])).toThrow(

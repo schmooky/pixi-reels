@@ -88,7 +88,7 @@ return {
     // strip[0..2] to strip[2..4]. Visible[0..2] = ['tall', 'tall', 'tall'].
     await reelSet.nudge(HELD_REEL, {
       distance: 2,
-      direction: 'down',
+      direction: 'forward',
       incoming: [filler(), filler()],
       duration: 620,
     });

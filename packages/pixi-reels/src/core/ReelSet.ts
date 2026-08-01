@@ -1203,12 +1203,12 @@ export class ReelSet extends Container implements Disposable {
    *
    * @example
    * await reelSet.spin(); // landed
-   * await reelSet.nudge(2, { distance: 1, direction: 'down', incoming: ['wild'] });
+   * await reelSet.nudge(2, { distance: 1, direction: 'forward', incoming: ['wild'] });
    *
    * @example Parallel nudges across two reels:
    * await Promise.all([
-   *   reelSet.nudge(2, { distance: 1, direction: 'down', incoming: ['wild'] }),
-   *   reelSet.nudge(3, { distance: 1, direction: 'down', incoming: ['wild'] }),
+   *   reelSet.nudge(2, { distance: 1, direction: 'forward', incoming: ['wild'] }),
+   *   reelSet.nudge(3, { distance: 1, direction: 'forward', incoming: ['wild'] }),
    * ]);
    *
    * @example Staggered parallel via `startDelay`:
@@ -1235,7 +1235,7 @@ export class ReelSet extends Container implements Disposable {
       throw new Error(
         'nudge: requires bufferEnd >= 1. a downward nudge shifts the bottom ' +
           'visible symbol through the below-window buffer. This reel set was ' +
-          'built with bufferSymbols({ below: 0 }) for tumble-only use.',
+          'built with bufferSymbols({ end: 0 }) for tumble-only use.',
       );
     }
     // Pin overlap detection lives at the ReelSet layer (Reel can't see pins).
@@ -1495,7 +1495,7 @@ export class ReelSet extends Container implements Disposable {
   /**
    * Footprint of the symbol at `(reel, cell)`.
    *
-   *   - 1×1 symbols: `{ anchor: { reel, cell }, size: { w: 1, h: 1 } }`.
+   *   - 1×1 symbols: `{ anchor: { reel, cell }, size: { reels: 1, cells: 1 } }`.
    *   - Big symbols: returns the anchor cell and block size.
    *   - OCCUPIED cells: resolves transparently to the anchor.
    *
@@ -1504,7 +1504,7 @@ export class ReelSet extends Container implements Disposable {
   getSymbolFootprint(
     reel: number,
     cell: number,
-  ): { anchor: { reel: number; cell: number }; size: { w: number; h: number } } {
+  ): { anchor: { reel: number; cell: number }; size: { reels: number; cells: number } } {
     if (reel < 0 || reel >= this._reels.length) {
       throw new RangeError(`getSymbolFootprint: reel ${reel} out of range [0, ${this._reels.length})`);
     }
@@ -1514,14 +1514,14 @@ export class ReelSet extends Container implements Disposable {
     }
 
     // Resolve OCCUPIED -> anchor cell on this reel. Cross-reel OCCUPIED
-    // requires walking left to find the anchoring reel with size.w > the
+    // requires walking left to find the anchoring reel with size.reels > the
     // distance back to it.
     const anchorCell = target.getAnchorCell(cell);
     const anchorSym = target.getSymbolAt(cell);
     const meta = this._symbolsData[anchorSym.symbolId];
-    const size = meta?.size && (meta.size.w > 1 || meta.size.h > 1)
+    const size = meta?.size && (meta.size.reels > 1 || meta.size.cells > 1)
       ? meta.size
-      : { w: 1, h: 1 };
+      : { reels: 1, cells: 1 };
 
     // Resolve cross-reel anchor column: if the anchor symbol on THIS reel
     // is itself an OCCUPIED stub painted by a big symbol on a leftward
@@ -1534,7 +1534,7 @@ export class ReelSet extends Container implements Disposable {
       const leftAnchorCell = leftReel.getAnchorCell(anchorCell);
       const leftSym = leftReel.getSymbolAt(anchorCell);
       const leftMeta = this._symbolsData[leftSym.symbolId];
-      if (leftMeta?.size && leftMeta.size.w > reel - c) {
+      if (leftMeta?.size && leftMeta.size.reels > reel - c) {
         anchorReelIndex = c;
         return {
           anchor: { reel: anchorReelIndex, cell: leftAnchorCell },
@@ -1591,8 +1591,8 @@ export class ReelSet extends Container implements Disposable {
     return {
       x: anchorX,
       y: anchorY,
-      width: fp.size.w * cellW + (fp.size.w - 1) * gapX,
-      height: fp.size.h * cellH + (fp.size.h - 1) * gapY,
+      width: fp.size.reels * cellW + (fp.size.reels - 1) * gapX,
+      height: fp.size.cells * cellH + (fp.size.cells - 1) * gapY,
     };
   }
 

@@ -195,16 +195,31 @@ export interface SymbolData {
    */
   unmask?: boolean;
   /**
-   * Footprint in cells. Default `{ w: 1, h: 1 }`. When `w * h > 1` this
+   * Footprint in cells. Default `{ reels: 1, cells: 1 }`. When `w * h > 1` this
    * symbol is a "big symbol". at landing it occupies an `w × h` block of
    * cells anchored at the (reel, cell) where its id appears in the result.
    * Big-symbol registration is rejected on MultiWays slots.
    */
-  size?: { w: number; h: number };
+  size?: { reels: number; cells: number };
 }
 
 /** How to vertically align reels of differing pixel heights. */
-export type ReelAnchor = 'top' | 'center' | 'bottom';
+export type ReelAnchor = 'start' | 'center' | 'end';
+
+/**
+ * Render order along an axis.
+ *
+ *   - `'ascending'` (default). the cell / reel at the LARGER coordinate
+ *     draws on top: the bottom cell in front of the top one, the last reel
+ *     in front of the first.
+ *   - `'descending'`. the reverse.
+ *
+ * Deliberately geometric, not travel-relative: flipping a reel's direction
+ * never changes which symbol overlaps which. Art lit from above keeps
+ * reading correctly on a roll-up reel, and a per-spin reversal tease does
+ * not re-stack the strip mid-game.
+ */
+export type Stacking = 'ascending' | 'descending';
 
 /**
  * MultiWays configuration knobs. Set via `builder.multiways({ ... })`.
@@ -320,6 +335,14 @@ export interface CellBounds {
 export interface SymbolPosition {
   reelIndex: number;
   cellIndex: number;
+  /**
+   * Which reel set the position belongs to, when a game composes more than
+   * one (a banner reel above a main grid, a bonus board beside it). Omitted
+   * means "the only set". The engine never reads it; it exists so a
+   * stage-level presenter can tell two identical `(reelIndex, cellIndex)`
+   * pairs apart without wrapping every position in another object.
+   */
+  setId?: string;
 }
 
 /**
@@ -369,7 +392,7 @@ export interface ResolvedReelGridConfig {
   bufferSymbols: number;
   /**
    * Buffer cells below the visible window. Usually equals `bufferSymbols`;
-   * `0` on tumble-only sets built with `bufferSymbols({ above, below: 0 })`.
+   * `0` on tumble-only sets built with `bufferSymbols({ start, end: 0 })`.
    */
   bufferEnd: number;
   visibleCellsPerReel?: number[];

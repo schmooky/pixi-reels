@@ -53,7 +53,7 @@ return {
     for (const reel of NUDGE_COLS) {
       await reelSet.nudge(reel, {
         distance: 1,
-        direction: 'down',
+        direction: 'forward',
         incoming: ['wild'],
         duration: NUDGE_DURATION,
       });

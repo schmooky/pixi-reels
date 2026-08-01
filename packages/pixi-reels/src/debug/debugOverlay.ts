@@ -362,7 +362,7 @@ class DebugOverlay implements DebugOverlayHandle {
     this._reelSet.reels.forEach((reel: Reel, reelIndex: number) => {
       for (let cell = 0; cell < reel.visibleCells; cell++) {
         const fp = this._reelSet.getSymbolFootprint(reelIndex, cell);
-        if (fp.size.w <= 1 && fp.size.h <= 1) continue;
+        if (fp.size.reels <= 1 && fp.size.cells <= 1) continue;
         if (fp.anchor.reel !== reelIndex || fp.anchor.cell !== cell) continue;
         const rect = this._reelSet.getBlockBounds(reelIndex, cell);
         g.rect(rect.x, rect.y, rect.width, rect.height).stroke({

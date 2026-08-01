@@ -57,7 +57,7 @@ return {
       NUDGE_COLS.map((reel) =>
         reelSet.nudge(reel, {
           distance: 1,
-          direction: 'down',
+          direction: 'forward',
           incoming: ['wild'],
           duration: NUDGE_DURATION,
         }),
