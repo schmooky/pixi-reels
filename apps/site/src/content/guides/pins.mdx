@@ -7,7 +7,11 @@ description: CellPin is the cell-persistence primitive. It survives spins,
   lifecycle, events, movePin, and Spine-specific animation hooks.
 ---
 
-A **pin** locks a cell to a specific symbol id and keeps it visible across spins. Pins are the primitive behind sticky wilds, expanding wilds, walking wilds, multiplier overlays, mystery reveals, and value coins. They are symbol-class-agnostic. `SpriteSymbol`, `AnimatedSpriteSymbol`, `SpineSymbol`, or your own subclass all work the same way.
+A pin nails one cell to one symbol id, and keeps it there across spins.
+
+Sticky wilds, expanding wilds, walking wilds, multiplier overlays, mystery
+reveals, value coins -- all the same primitive. It does not care which
+`ReelSymbol` subclass you use.
 
 ```ts
 // Pin a cell. The id resolves through the SymbolFactory, exactly like normal placement.
@@ -23,15 +27,19 @@ reelSet.unpin(reel, cell);
 ## What a pin guarantees
 
 - The cell visually shows the pinned symbol id for the lifetime of the pin.
-- The pin survives `spin()`, `setResult()`, and `setShape()`. During a spin, an **overlay** symbol is acquired so the pinned cell stays visible while the reel scrolls underneath.
-- On reshape (`setShape`, MultiWays), the pin migrates per its `migration` policy (`'origin'` restores to the row it was first placed at; `'frozen'` clamps to the nearest valid row and rewrites its origin).
-- Concurrent calls (`spin`, `setResult`, `pin`, `setShape`) during an in-flight `nudge()` throw. Pins are not nudge-aware by design.
+- It survives `spin()`, `setResult()` and `setShape()`. During a spin an
+  **overlay** symbol holds the cell while the reel scrolls underneath.
+- On reshape it migrates by its `migration` policy: `'origin'` returns to
+  the cell it started on, `'frozen'` clamps and rewrites that origin.
+- `spin`, `setResult`, `pin` and `setShape` all throw during an in-flight
+  `nudge()`. Pins are not nudge-aware, deliberately.
 
 See the [CellPin reference](/api/interfaces/index.CellPin/) for the full type.
 
 ## The three symbol instances involved
 
-A single pin can be backed by up to three distinct symbol instances at different moments. All three are pooled. All three go through `onActivate(symbolId)`.
+One pin can be three different symbol instances, at three different moments.
+All pooled, all through `onActivate(symbolId)`.
 
 | Instance | When it exists | Where it lives |
 |---|---|---|
@@ -39,7 +47,9 @@ A single pin can be backed by up to three distinct symbol instances at different
 | **Overlay symbol** | During a spin, per active pin | `viewport.unmaskedContainer`, zIndex 10000 |
 | **Flight symbol** | During `movePin` tween | `viewport.unmaskedContainer` |
 
-This split is invisible if you just want a sticky cell. It matters once you want to animate the pinned symbol during motion. each instance is its own object, and animation state does not carry between them.
+Want a sticky cell? Ignore this. Want to animate the pin while the reel
+moves? It matters: they are separate objects, and animation state does not
+travel between them.
 
 ## Lifecycle in full
 

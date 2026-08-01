@@ -6,8 +6,8 @@ description: START, SPIN, ANTICIPATION, STOP. the four lifecycle phases and how
   to extend them.
 ---
 
-A **phase** is one slice of a reel's spin lifecycle. Phases extend
-`ReelPhase<TConfig>` and implement three hooks.
+A phase is one slice of a reel's lifecycle. Extend `ReelPhase<TConfig>`,
+implement three hooks.
 
 ```
 ReelPhase<TConfig>
@@ -20,10 +20,16 @@ ReelPhase<TConfig>
 
 | Phase | Role | Skippable |
 |---|---|---|
-| `StartPhase` | Accelerate from rest, optional step-back | yes |
-| `SpinPhase` | Full speed until stop requested | yes |
-| `AnticipationPhase` | Slow-down hold for tension | yes |
-| `StopPhase` | Decelerate to target frame, bounce | no |
+| `StartPhase` | Accelerate from rest, with a step-back pull | yes |
+| `SpinPhase` | Full speed until the result arrives | **no** |
+| `AnticipationPhase` | Slow hold, for tension | yes |
+| `StopPhase` | Decelerate onto the target frame, bounce | yes |
+
+`SpinPhase` is the one that cannot be skipped: it is not animating toward
+anything, it is waiting for `setResult()`. A slam resolves it instead.
+
+Cascade slots add three more, all skippable: `cascade:fall`, `cascade:place`,
+`cascade:dropIn`. MultiWays adds `AdjustPhase`, also skippable.
 
 ## Register a custom phase
 
