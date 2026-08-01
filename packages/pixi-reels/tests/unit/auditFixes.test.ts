@@ -283,7 +283,7 @@ describe('CascadeDropInPhase. distance: auto fallback for survivors', () => {
     // Kick off but don't await. we want to read view.y right after the
     // synchronous onEnter runs.
     void phase.run({
-      winnerCells: [2],   // bottom row destroyed -> row 0 = new, rows 1,2 = survivors from 0,1
+      winnerCells: [2],   // bottom row destroyed -> row 0 = new, cells 1,2 = survivors from 0,1
       initial: false,
       events: localBus,
     });

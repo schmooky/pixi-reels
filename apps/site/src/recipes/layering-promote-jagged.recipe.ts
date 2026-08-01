@@ -106,8 +106,8 @@ reelSet.events.on('spin:start', () => {
 return {
   reelSet,
   nextResult: () => {
-    const grid = ROWS_PER_REEL.map((rows) =>
-      Array.from({ length: rows }, () => pickWeighted(weights)),
+    const grid = ROWS_PER_REEL.map((cells) =>
+      Array.from({ length: cells }, () => pickWeighted(weights)),
     );
     // Scatters on the short edge reels + one tall middle reel: the promoted
     // jaws overflow the mask at the grid's stepped edges AND the reel to

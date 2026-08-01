@@ -110,7 +110,7 @@ function normalizeSymbolConfig(symbols: MechanicConfig['symbols']): NormalizedSy
 /**
  * 3-in-a-row left-anchored win detection. Walks each visible row; if the
  * first 3+ reels share an id, that horizontal run wins. De-dupes across
- * rows so the same cell isn't destroyed twice.
+ * cells so the same cell isn't destroyed twice.
  */
 function detectWinners(grid: string[][], reelCount: number, visibleCells: number): Cell[] {
   const seen = new Set<number>();

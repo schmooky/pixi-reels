@@ -5,8 +5,8 @@ import { cn } from '@/lib/utils';
 export interface CanvasSkeletonProps {
   /** Number of reel columns to draw in the placeholder. Default 5. */
   cols?: number;
-  /** Number of rows per column. Default 3. */
-  rows?: number;
+  /** Number of cells per column. Default 3. */
+  cells?: number;
   /** Optional caption under the spinner. */
   label?: string;
   /** Forwarded class for the absolute-positioned overlay. */
@@ -21,7 +21,7 @@ export interface CanvasSkeletonProps {
  */
 export function CanvasSkeleton({
   cols = 5,
-  rows = 3,
+  cells = 3,
   label = 'Loading interactive demo…',
   className,
 }: CanvasSkeletonProps) {
@@ -44,14 +44,14 @@ export function CanvasSkeleton({
       >
         {Array.from({ length: cols }, (_, c) => (
           <div key={c} className="flex flex-col gap-2">
-            {Array.from({ length: rows }, (_, r) => (
+            {Array.from({ length: cells }, (_, r) => (
               <div
                 key={r}
                 className="rounded-md bg-muted-foreground/30 animate-pulse"
                 style={{
                   width: 'var(--cell)',
                   height: 'var(--cell)',
-                  animationDelay: `${(c * rows + r) * 70}ms`,
+                  animationDelay: `${(c * cells + r) * 70}ms`,
                 }}
               />
             ))}

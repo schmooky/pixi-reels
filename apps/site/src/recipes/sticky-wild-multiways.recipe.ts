@@ -21,7 +21,7 @@ const STICKY_TURNS = 3;
 
 const reelSet = new ReelSetBuilder()
   .reels(REELS)
-  .multiways({ minRows: MIN_ROWS, maxRows: MAX_ROWS, reelPixelHeight: REEL_PIXEL_HEIGHT })
+  .multiways({ minCells: MIN_ROWS, maxCells: MAX_ROWS, reelExtent: REEL_PIXEL_HEIGHT })
   .pinMigrationDuration(300)
   .pinMigrationEase('power2.inOut')
   .symbolSize(SYMBOL_SIZE, SYMBOL_SIZE)
@@ -71,8 +71,8 @@ return {
   nextResult: () => {
     const shape = SHAPE_CYCLE[spinCount++ % SHAPE_CYCLE.length];
     reelSet.setShape(shape);
-    const grid = shape.map((rows) =>
-      Array.from({ length: rows }, () => CARD_DECK[Math.floor(Math.random() * CARD_DECK.length)].id),
+    const grid = shape.map((cells) =>
+      Array.from({ length: cells }, () => CARD_DECK[Math.floor(Math.random() * CARD_DECK.length)].id),
     );
     // Plant a wild high up on the first spin so the clamp/restore is visible.
     if (!plantedWild) {

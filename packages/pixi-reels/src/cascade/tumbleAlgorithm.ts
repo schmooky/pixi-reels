@@ -6,9 +6,9 @@
  *   - **Moment A (initial drop):** `winnerCells = []`. The entire visible
  *     column is treated as "new". every row falls in from above the
  *     viewport. The vertical distance per row is `visibleCells` cells, so
- *     all rows arrive at their grid positions in the same beat.
+ *     all cells arrive at their grid positions in the same beat.
  *
- *   - **Moment B (cascade refill):** `winnerCells` lists the rows whose
+ *   - **Moment B (cascade refill):** `winnerCells` lists the cells whose
  *     symbols were removed by the most recent win. Survivors slide DOWN
  *     to fill the gaps below them; new symbols enter from above into the
  *     top holes. The new grid follows the server convention that survivors
@@ -46,7 +46,7 @@ export interface DropOffset {
  * didn't move.
  *
  * **Convention** (Moment B): the new grid must place new symbols at the
- * top `winnerCells.length` rows and survivors at the bottom rows in their
+ * top `winnerCells.length` cells and survivors at the bottom cells in their
  * original top-to-bottom order. This matches how server-side gravity
  * simulations emit cascade results.
  *
@@ -65,17 +65,17 @@ export function computeDropOffsets(
 ): DropOffset[] {
   const initial = options.initial ?? false;
   // Initial: every visible row is new (Moment A). The empty-winners case
-  // in refill (Moment B) gives winCount=0 → all rows resolve to survivors
+  // in refill (Moment B) gives winCount=0 → all cells resolve to survivors
   // with originalCell === row → offsetCells === 0 → no animation.
   const winCount = initial ? visibleCells : winnerCells.length;
   const winSet = initial ? new Set<number>() : new Set(winnerCells);
 
-  // Survivor rows in the OLD grid, ascending. Indexed by survivor-position
-  // (0..nonWinnerRows.length-1) so the bottom rows of the new grid can pull
+  // Survivor cells in the OLD grid, ascending. Indexed by survivor-position
+  // (0..nonWinnerCells.length-1) so the bottom cells of the new grid can pull
   // their original row in order.
-  const nonWinnerRows: number[] = [];
+  const nonWinnerCells: number[] = [];
   for (let r = 0; r < visibleCells; r++) {
-    if (!winSet.has(r)) nonWinnerRows.push(r);
+    if (!winSet.has(r)) nonWinnerCells.push(r);
   }
 
   const offsets: DropOffset[] = [];
@@ -87,7 +87,7 @@ export function computeDropOffsets(
       originalCell = row - winCount;
     } else {
       // Survivor. read its OLD row from the precomputed survivor list.
-      originalCell = nonWinnerRows[row - winCount];
+      originalCell = nonWinnerCells[row - winCount];
     }
     offsets.push({ row, originalCell, offsetCells: row - originalCell });
   }

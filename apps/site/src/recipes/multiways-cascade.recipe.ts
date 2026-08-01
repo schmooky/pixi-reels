@@ -11,7 +11,7 @@
 // a Q-ways win pops all five of them.
 //
 // Visual flow each round:
-//   1. setShape(rowsPerReel) rolls a per-reel row count in [minRows, maxRows].
+//   1. setShape(rowsPerReel) rolls a per-reel row count in [minCells, maxCells].
 //   2. reelSet.spin({ mode: 'standard' }). classic strip-spin lands the multiways grid.
 //   3. reelSet.runCascade({ detectWinners, nextGrid }) pops every winning cell;
 //      survivors fall, new symbols drop in from above. Loops until no more
@@ -42,8 +42,8 @@ function buildGridWithGuaranteedWin(shape) {
   // Random fill, then plant the same symbol on reels 0, 1, 2. with multiple
   // copies on reels that have room. so the ways win removes multiple cells
   // per column, which is the whole point of multiways-style cascading.
-  const grid = shape.map((rows) =>
-    Array.from({ length: rows }, () => randSymbol()),
+  const grid = shape.map((cells) =>
+    Array.from({ length: cells }, () => randSymbol()),
   );
   if (Math.random() < 0.7) {
     const target = randSymbol();
@@ -93,7 +93,7 @@ function collectAllWinners(grid, wins) {
 }
 
 function applyCascade(grid, winners) {
-  // Per-reel gravity: drop winning rows, shift survivors down, fill the
+  // Per-reel gravity: drop winning cells, shift survivors down, fill the
   // cleared top slots with new random symbols. Cell count per reel stays
   // the same. multiways shape doesn't change mid-cascade.
   const winnersByReel = new Map();
@@ -113,7 +113,7 @@ function applyCascade(grid, winners) {
 
 const reelSet = new ReelSetBuilder()
   .reels(REELS)
-  .multiways({ minRows: MIN_ROWS, maxRows: MAX_ROWS, reelPixelHeight: REEL_PIXEL_HEIGHT })
+  .multiways({ minCells: MIN_ROWS, maxCells: MAX_ROWS, reelExtent: REEL_PIXEL_HEIGHT })
   .symbolSize(SYMBOL_SIZE, SYMBOL_SIZE)
   .symbolGap(GAP, GAP)
   .symbols((r) => {
@@ -133,14 +133,14 @@ const reelSet = new ReelSetBuilder()
   .ticker(app.ticker)
   .build();
 
-// Multiways slots build at `maxRows` until the first `setShape` + spin
+// Multiways slots build at `maxCells` until the first `setShape` + spin
 // commits a jagged shape. On page load that looks like a uniform 6x5.
 // not great for a recipe whose whole point is per-reel row variation.
 // Run a silent initial spin+skip with a fresh random shape so the
 // landing grid the user first sees already shows the jagged silhouette.
 const initialShape = randomShape();
-const initialGrid = initialShape.map((rows) =>
-  Array.from({ length: rows }, () => randSymbol()),
+const initialGrid = initialShape.map((cells) =>
+  Array.from({ length: cells }, () => randSymbol()),
 );
 {
   const p = reelSet.spin({ mode: 'standard' });

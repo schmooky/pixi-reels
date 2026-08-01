@@ -121,9 +121,9 @@ async function revealValue(cell, finalValue) {
   app.stage.addChild(clip);
   app.stage.addChild(strip);
 
-  // K rows that we recycle; row 0 carries the real value, the rest are decoys
+  // K cells that we recycle; row 0 carries the real value, the rest are decoys
   const K = 8;
-  const rows = Array.from({ length: K }, (_, i) => {
+  const cells = Array.from({ length: K }, (_, i) => {
     const v = i === 0 ? finalValue : POOL[Math.floor(Math.random() * POOL.length)];
     const t = fitGold(goldText(fmt(v), 30), SETTLE_SIZE * 0.84, ROW_H * 0.82);
     strip.addChild(t);
@@ -133,7 +133,7 @@ async function revealValue(cell, finalValue) {
   // place every row within ±TOTAL/2 of centre, so a row leaving one edge of
   // the window reappears at the other - an endless strip from K labels
   const wrap = (v) => { const m = ((v % TOTAL) + TOTAL) % TOTAL; return m > TOTAL / 2 ? m - TOTAL : m; };
-  const layout = (offset) => rows.forEach((t, i) => { t.x = p.x; t.y = p.y + wrap(i * ROW_H - offset); });
+  const layout = (offset) => cells.forEach((t, i) => { t.x = p.x; t.y = p.y + wrap(i * ROW_H - offset); });
   layout(0);
 
   // spin TURNS whole revolutions; row 0 (the real value) is centred whenever

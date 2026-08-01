@@ -38,9 +38,9 @@ export interface ColumnTarget {
 
 /**
  * Read one slot of a `ColumnTarget` by **row**, the engine's
- * visible-relative coordinate: `0` is the first visible cell, negative rows
+ * visible-relative coordinate: `0` is the first visible cell, negative cells
  * address `bufferStart` (`-1` is the slot closest to the visible top row),
- * and rows `>= visible.length` address `bufferEnd`.
+ * and cells `>= visible.length` address `bufferEnd`.
  *
  * Returns `undefined` for any row the target does not specify.
  */

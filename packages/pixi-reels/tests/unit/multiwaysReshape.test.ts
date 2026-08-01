@@ -3,10 +3,10 @@ import { createTestReelSet, captureEvents } from '../../src/testing/index.js';
 import { debugSnapshot } from '../../src/debug/debug.js';
 
 describe('MultiWays reshape', () => {
-  it('builds at maxRows by default and reports isMultiWaysSlot', () => {
+  it('builds at maxCells by default and reports isMultiWaysSlot', () => {
     const { reelSet, destroy } = createTestReelSet({
       reels: 6,
-      multiways: { minRows: 2, maxRows: 7, reelPixelHeight: 600 },
+      multiways: { minCells: 2, maxCells: 7, reelExtent: 600 },
       symbolIds: ['a', 'b'],
     });
     try {
@@ -20,7 +20,7 @@ describe('MultiWays reshape', () => {
   it('setShape() emits shape:changed with a copy of the input', () => {
     const { reelSet, destroy } = createTestReelSet({
       reels: 4,
-      multiways: { minRows: 2, maxRows: 6, reelPixelHeight: 500 },
+      multiways: { minCells: 2, maxCells: 6, reelExtent: 500 },
       symbolIds: ['a'],
     });
     try {
@@ -45,7 +45,7 @@ describe('MultiWays reshape', () => {
   it('setShape() throws when called after setResult() in the same spin', async () => {
     const { reelSet, destroy } = createTestReelSet({
       reels: 3,
-      multiways: { minRows: 2, maxRows: 6, reelPixelHeight: 600 },
+      multiways: { minCells: 2, maxCells: 6, reelExtent: 600 },
       symbolIds: ['a'],
     });
     try {
@@ -69,7 +69,7 @@ describe('MultiWays reshape', () => {
   it('setShape() validates length and bounds', () => {
     const { reelSet, destroy } = createTestReelSet({
       reels: 4,
-      multiways: { minRows: 2, maxRows: 5, reelPixelHeight: 500 },
+      multiways: { minCells: 2, maxCells: 5, reelExtent: 500 },
       symbolIds: ['a'],
     });
     try {
@@ -84,7 +84,7 @@ describe('MultiWays reshape', () => {
   it('reel.reshape applies new visibleCells + cell height', () => {
     const { reelSet, destroy } = createTestReelSet({
       reels: 3,
-      multiways: { minRows: 2, maxRows: 6, reelPixelHeight: 600 },
+      multiways: { minCells: 2, maxCells: 6, reelExtent: 600 },
       symbolIds: ['a', 'b'],
       symbolSize: { width: 100, height: 100 },
     });
@@ -101,7 +101,7 @@ describe('MultiWays reshape', () => {
   it('AdjustPhase adjusts shape between SPIN and STOP', async () => {
     const { reelSet, destroy } = createTestReelSet({
       reels: 3,
-      multiways: { minRows: 2, maxRows: 6, reelPixelHeight: 600 },
+      multiways: { minCells: 2, maxCells: 6, reelExtent: 600 },
       symbolIds: ['a', 'b'],
     });
     try {
@@ -126,7 +126,7 @@ describe('MultiWays reshape', () => {
   it('snapshot.visibleCells is per-reel after MultiWays reshape', () => {
     const { reelSet, destroy } = createTestReelSet({
       reels: 3,
-      multiways: { minRows: 2, maxRows: 6, reelPixelHeight: 600 },
+      multiways: { minCells: 2, maxCells: 6, reelExtent: 600 },
       symbolIds: ['a'],
     });
     try {

@@ -4,7 +4,7 @@
 //           CASCADE_PLATE_H, PIXI, gsap, app, pickWeighted
 
 // LEFT-TO-RIGHT WAVE REFILL. each column lands in sequence from left
-// to right. Each reel's rows arrive together (no in-reel stagger), but
+// to right. Each reel's cells arrive together (no in-reel stagger), but
 // reel 0 lands before reel 1 before reel 2... Reads as a column-by-column
 // "filling up" of the grid.
 
@@ -65,7 +65,7 @@ const reelSet = new ReelSetBuilder()
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
     fall:   { duration: 233, ease: 'power2.in', cellStagger: 33 },  // 14f, 2f stagger
-    // cellStagger: 0. rows in a reel arrive together; the per-reel
+    // cellStagger: 0. cells in a reel arrive together; the per-reel
     // stagger is set via setDropOrder('ltr', step) on the refill below.
     dropIn: { duration: 367, ease: 'power2.in', cellStagger: 0, distance: 'perHole' },  // 22f
   })

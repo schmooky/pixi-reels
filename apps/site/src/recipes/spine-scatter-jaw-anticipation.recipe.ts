@@ -167,8 +167,8 @@ return {
     won = spinCount % 2 === 0;
     spinCount++;
 
-    const grid = ROWS_PER_REEL.map((rows) =>
-      Array.from({ length: rows }, () => pickWeighted(weights)),
+    const grid = ROWS_PER_REEL.map((cells) =>
+      Array.from({ length: cells }, () => pickWeighted(weights)),
     );
     const place = (reel) => {
       const row = Math.floor(Math.random() * grid[reel].length);

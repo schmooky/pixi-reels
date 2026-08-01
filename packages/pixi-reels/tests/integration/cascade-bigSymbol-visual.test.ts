@@ -9,7 +9,7 @@
  *           symbol and the visible OCCUPIED stub renders empty.
  *
  *   Bug 2 - when the block lands fully visible, CascadeDropInPhase builds one
- *           drop job per visible row; the occupied rows resolve to the SAME
+ *           drop job per visible row; the occupied cells resolve to the SAME
  *           anchor view, so the anchor's `view.y` ends at the wrong position
  *           (and, with real durations, multiple tweens fight -> jitter).
  */

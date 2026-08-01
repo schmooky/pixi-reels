@@ -56,7 +56,7 @@ export async function boot(opts: BootOptions): Promise<() => void> {
 
   const reelSet = new ReelSetBuilder()
     .reels(REEL_COUNT)
-    .multiways({ minRows: MIN_ROWS, maxRows: MAX_ROWS, reelPixelHeight: REEL_PIXEL_HEIGHT })
+    .multiways({ minCells: MIN_ROWS, maxCells: MAX_ROWS, reelExtent: REEL_PIXEL_HEIGHT })
     .symbolSize(SYMBOL_WIDTH, SPIN_SYMBOL_HEIGHT)
     .symbolGap(SYMBOL_GAP, SYMBOL_GAP)
     .symbols((r) => {

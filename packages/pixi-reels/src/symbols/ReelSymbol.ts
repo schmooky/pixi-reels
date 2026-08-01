@@ -218,7 +218,7 @@ export abstract class ReelSymbol implements Disposable {
    * Default: no-op. Override (e.g. SpineReelSymbol.autoPlayBlur,
    * StaticSpinSymbol) to swap to a spin presentation automatically.
    *
-   * Fired on every strip symbol (visible AND buffer rows) when the reel
+   * Fired on every strip symbol (visible AND buffer cells) when the reel
    * enters the spin phase, and again with `joinedMidSpin: true` on each
    * symbol freshly installed while the reel is already spinning (pool
    * recycling wipes symbol state, so a wrapped-in symbol can't know the

@@ -113,7 +113,7 @@ describe('unmask: true reparents the symbol view to viewport.unmaskedContainer',
     }
   });
 
-  it('Y on a flat (offsetY=0) reel matches the cell position', async () => {
+  it('Y on a flat (mainOffset=0) reel matches the cell position', async () => {
     const h = makeHarness();
     try {
       await h.spinAndLand([
@@ -134,11 +134,11 @@ describe('unmask: true reparents the symbol view to viewport.unmaskedContainer',
   });
 });
 
-describe('unmask on a jagged / pyramid layout (non-zero reel offsetY)', () => {
+describe('unmask on a jagged / pyramid layout (non-zero reel mainOffset)', () => {
   function makePyramid() {
     return createTestReelSet({
       reels: 5,
-      // Pyramid: the outer 3-row reels are centred, giving non-zero offsetY.
+      // Pyramid: the outer 3-row reels are centred, giving non-zero mainOffset.
       visibleCells: [3, 4, 5, 4, 3],
       symbolIds: SYMBOLS,
       symbolData: { wild: { unmask: true } },
@@ -152,7 +152,7 @@ describe('unmask on a jagged / pyramid layout (non-zero reel offsetY)', () => {
   it('lands an unmasked wild above the mask with the reel offset baked into Y', async () => {
     const h = makePyramid();
     try {
-      // Reel 0 is a 3-row reel -> non-zero offsetY. Land a wild in its top row.
+      // Reel 0 is a 3-row reel -> non-zero mainOffset. Land a wild in its top row.
       await h.spinAndLand([
         ['wild', 'a', 'a'],
         ['a', 'a', 'a', 'a'],

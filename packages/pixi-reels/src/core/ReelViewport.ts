@@ -8,11 +8,11 @@ import type { Disposable } from '../utils/Disposable.js';
 export interface ReelMaskRect {
   /** Left edge of the reel column (= reel.container.x). */
   x: number;
-  /** Top edge of the reel box (= reel.offsetY). */
+  /** Top edge of the reel box (= reel.mainOffset). */
   y: number;
   /** Width of the reel column. equals one symbol cell wide. */
   width: number;
-  /** Height of the reel box. equals reel.reelHeight. */
+  /** Height of the reel box. equals reel.extent. */
   height: number;
 }
 
@@ -23,7 +23,7 @@ export interface ReelMaskRect {
  * etc.). v1 ships two strategies:
  *
  * - {@link RectMaskStrategy}. one rect per reel (default). Good for
- *   pyramid layouts; symbols never leak buffer rows above/below.
+ *   pyramid layouts; symbols never leak buffer cells above/below.
  * - {@link SharedRectMaskStrategy}. single bounding-box rect spanning
  *   every reel's tallest extent. Big symbols spanning multiple reels
  *   render correctly even when reels have horizontal gaps; cross-reel
@@ -39,7 +39,7 @@ export interface MaskStrategy {
 
 /**
  * v1 default: a per-reel rectangular mask. Each reel is clipped to its own
- * `(offsetY, reelHeight)` box so pyramid shapes clip cleanly without
+ * `(mainOffset, extent)` box so pyramid shapes clip cleanly without
  * buffer-row peek above or below short reels.
  *
  * PixiJS masks support multiple shapes inside a single Graphics. the union
@@ -84,7 +84,7 @@ export class RectMaskStrategy implements MaskStrategy {
  * AND a non-zero `symbolGap.x`. Per-reel rects would clip those symbols at
  * the column gaps; a single shared rect keeps them visible.
  *
- * Pyramid layouts using this strategy will show buffer rows above/below
+ * Pyramid layouts using this strategy will show buffer cells above/below
  * short reels (the "pyramid peek". covered by frame art in production).
  *
  * @example
@@ -112,11 +112,11 @@ export class SharedRectMaskStrategy implements MaskStrategy {
  *
  * The viewport is the "looking-glass" of the slot: a rectangle the size
  * of the visible grid with a PixiJS mask so symbols scrolling above or
- * below the visible rows are hidden. It also provides three stacking
+ * below the visible cells are hidden. It also provides three stacking
  * layers so win animations can break out of the mask:
  *
  *   - `maskedContainer`. the normal place for reels. Clipped to the
- *     visible area so buffer rows never leak.
+ *     visible area so buffer cells never leak.
  *   - `unmaskedContainer`. rendered on top of the mask. Use for a symbol
  *     whose celebration animation expands beyond its cell (a big expanding
  *     wild, a splash frame).

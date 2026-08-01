@@ -5,7 +5,7 @@ import { columnTargetToStrip, type ColumnTarget } from './ColumnTarget.js';
 export interface FrameContext {
   /** Reel column index. */
   readonly reelIndex: number;
-  /** Total visible rows. */
+  /** Total visible cells. */
   readonly visibleCells: number;
   /** Buffer symbols above visible area. */
   readonly bufferStart: number;
@@ -16,7 +16,7 @@ export interface FrameContext {
   /**
    * This reel's target column from `setResult()` / `initialFrame()`, if
    * available. Read it with `getTargetSlot(target, row)` (row `0` is the
-   * first visible cell; negative rows are buffer-above).
+   * first visible cell; negative cells are buffer-above).
    */
   readonly target?: ColumnTarget;
   /** Whether the reel is currently spinning. */

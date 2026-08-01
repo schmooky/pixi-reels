@@ -18,7 +18,7 @@ export interface TumbleFallConfig {
   ease?: string;
 
   /**
-   * Delay between successive rows starting their fall, in ms. `0` makes
+   * Delay between successive cells starting their fall, in ms. `0` makes
    * every row fall together. Default 0.
    */
   cellStagger?: number;
@@ -53,7 +53,7 @@ export interface TumbleDropInConfig {
   ease?: string;
 
   /**
-   * Delay between successive rows starting their drop, in ms. Default 60.
+   * Delay between successive cells starting their drop, in ms. Default 60.
    * `0` makes every animated row drop in simultaneously. the most common
    * choice for cascade refills.
    */
@@ -77,7 +77,7 @@ export interface TumbleDropInConfig {
    *   - `'perHole'` (default). gravity-correct. Each symbol falls exactly
    *     as far as its hole demands: new symbols from above, survivors slide
    *     down the count of holes below them, untouched symbols don't move.
-   *   - `'auto'`. every symbol falls the full visible-rows distance. Best
+   *   - `'auto'`. every symbol falls the full visible-cells distance. Best
    *     for Moment A (initial drop, "the entire column drops in unison")
    *     and for refills made up entirely of new symbols. For refills with
    *     SURVIVORS the engine silently falls back to per-hole geometry for

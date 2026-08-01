@@ -5,7 +5,7 @@
 
 // RAIN COLUMN: the whole column drops as a slab. cellStagger = 0 makes
 // every row start together; distance: 'auto' makes every animated row
-// traverse the FULL visible-rows distance. Looks like a piece of a
+// traverse the FULL visible-cells distance. Looks like a piece of a
 // board falling. Good fit for puzzle / match-3 styled boards.
 
 await loadCascadeSpines();

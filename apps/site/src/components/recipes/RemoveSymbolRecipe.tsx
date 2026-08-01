@@ -14,7 +14,7 @@ const IDS = [A, B, C, X];
  * AFTER:  the grid after real cascade gravity. winners cleared,
  * survivors slide DOWN past cleared slots, new symbols enter from
  * above. The contract matches `reelSet.refill({ winners, grid })`:
- * per reel, the top `winners.length` rows are new, the rest are
+ * per reel, the top `winners.length` cells are new, the rest are
  * survivors in their original top-to-bottom order.
  */
 const BEFORE: string[][] = [

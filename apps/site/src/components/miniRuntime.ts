@@ -242,7 +242,7 @@ export async function fadeOutCells(
   for (const c of cells) {
     const reel = reelSet.getReel(c.reel);
     const view = reel.getSymbolAt(c.row).view;
-    // Infer cell size from the reel's grid geometry: two rows' y difference
+    // Infer cell size from the reel's grid geometry: two cells' y difference
     // gives the slot pitch; symbol's own local bounds give the render width.
     const cellH = reel.getSymbolAt(Math.min(1, reel.getVisibleSymbols().length - 1)).view.y
       - reel.getSymbolAt(0).view.y || 0;

@@ -22,7 +22,7 @@
  * reel. Non-MultiWays slots never reshape, so this value is irrelevant
  * there.
  *
- * - **`'origin'`** (default). the pin migrates to `min(originCell, newRows - 1)`
+ * - **`'origin'`** (default). the pin migrates to `min(originCell, newCells - 1)`
  *   on every reshape. Clamps when the shape is too small; **restores to
  *   the origin** when the shape grows back. Prevents wander. a pin at
  *   `originCell=3` clamped to row 2 on a 3-row shape returns to row 3 on

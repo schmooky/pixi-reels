@@ -70,7 +70,7 @@ return {
     // ── 1. Initial spin lands the tail-visible wild on reel 2. ──────
     const initialGrid = [
       ct(), ct(),
-      // Reel 2: anchor at bufferStart[1] = row -2. Block spans rows
+      // Reel 2: anchor at bufferStart[1] = row -2. Block spans cells
       // -2, -1, 0. Only row 0 shows the block's bottom cell.
       { visible: [filler(), filler(), filler()], bufferStart: [undefined, TALL.id] },
       ct(), ct(),

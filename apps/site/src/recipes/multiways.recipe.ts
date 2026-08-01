@@ -3,14 +3,14 @@
 //                   PIXI, gsap, app, pickWeighted
 //
 // MultiWays. per-spin row variation. Each reel lands on a different
-// row count in [minRows, maxRows]. The reel pixel height is fixed;
+// row count in [minCells, maxCells]. The reel pixel height is fixed;
 // cell height per reel is derived live as
-// `reelPixelHeight / visibleCells[i]`, so a 2-row reel has tall cells
+// `reelExtent / visibleCells[i]`, so a 2-row reel has tall cells
 // and a 7-row reel has short ones. `setShape(rowsPerReel)` is called
 // between `spin()` and `setResult()`; AdjustPhase reshapes the reels
 // between SPIN and STOP.
 //
-// 6 reels x [2, 7] rows = up to 117,649 distinct landings (7^6). The
+// 6 reels x [2, 7] cells = up to 117,649 distinct landings (7^6). The
 // "ways" count for any individual spin is the product of visibleCells
 // across reels. The banner above the grid prints both the per-reel
 // shape and the total ways for each landing.
@@ -24,7 +24,7 @@ const GAP = 0;
 
 const reelSet = new ReelSetBuilder()
   .reels(REELS)
-  .multiways({ minRows: MIN_ROWS, maxRows: MAX_ROWS, reelPixelHeight: REEL_PIXEL_HEIGHT })
+  .multiways({ minCells: MIN_ROWS, maxCells: MAX_ROWS, reelExtent: REEL_PIXEL_HEIGHT })
   .pinMigrationDuration(300)
   .pinMigrationEase('power2.inOut')
   .symbolSize(SYMBOL_SIZE, SYMBOL_SIZE)
@@ -92,8 +92,8 @@ return {
       MIN_ROWS + Math.floor(Math.random() * (MAX_ROWS - MIN_ROWS + 1)),
     );
     reelSet.setShape(shape);
-    return shape.map((rows) =>
-      Array.from({ length: rows }, () => CARD_DECK[Math.floor(Math.random() * CARD_DECK.length)].id),
+    return shape.map((cells) =>
+      Array.from({ length: cells }, () => CARD_DECK[Math.floor(Math.random() * CARD_DECK.length)].id),
     );
   },
   cleanup: () => {

@@ -9,7 +9,7 @@ export class OffsetCalculator {
 
   constructor(
     private _reelCount: number,
-    private _totalRows: number,
+    private _totalCells: number,
     private _symbolWidth: number,
     private _config: OffsetConfig,
   ) {
@@ -29,7 +29,7 @@ export class OffsetCalculator {
   private _compute(): void {
     if (this._config.mode === 'none') {
       this._offsets = Array.from({ length: this._reelCount }, () =>
-        new Array(this._totalRows).fill(0),
+        new Array(this._totalCells).fill(0),
       );
       return;
     }
@@ -46,8 +46,8 @@ export class OffsetCalculator {
           : 0;
 
       const reelOffsets: number[] = [];
-      for (let row = 0; row < this._totalRows; row++) {
-        const rowNorm = this._totalRows > 1 ? row / (this._totalRows - 1) : 0.5;
+      for (let row = 0; row < this._totalCells; row++) {
+        const rowNorm = this._totalCells > 1 ? row / (this._totalCells - 1) : 0.5;
         const topOffset = relativePos * config.widthDifference * config.startFactor;
         const bottomOffset = relativePos * config.widthDifference * config.endFactor;
         const offset = topOffset + (bottomOffset - topOffset) * rowNorm;

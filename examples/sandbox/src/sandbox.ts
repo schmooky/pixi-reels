@@ -158,7 +158,7 @@ function pickWeighted(): string {
 //
 // Available routes:
 //   - ./routes/pyramid.js         . static 3-5-5-5-3 pyramid
-//   - ./routes/multiways.js        . per-spin row variation (2..7 rows)
+//   - ./routes/multiways.js        . per-spin row variation (2..7 cells)
 //   - ./routes/expanding-wild.js  . wild expands its full column for one spin
 //   - ./routes/big-symbols.js     . 2×2 bonus block via SymbolData.size
 //   - ./routes/static-spin.js     . spin cached snapshots w/ auto-baked blur
@@ -170,7 +170,7 @@ function pickWeighted(): string {
 // ── Custom speed profile
 //   .speed('chill', { ...SpeedPresets.NORMAL, bounceDistance: 90, bounceDuration: 900 })
 //
-// ── Custom buffer size (e.g. 2 rows above/below the visible area so "big"
+// ── Custom buffer size (e.g. 2 cells above/below the visible area so "big"
 //    symbols can animate partly off-screen)
 //   .bufferSymbols(2)
 //

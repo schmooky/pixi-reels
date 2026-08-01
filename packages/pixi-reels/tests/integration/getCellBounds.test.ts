@@ -38,7 +38,7 @@ describe('getCellBounds — default gap (0)', () => {
     }
   });
 
-  it('stacks rows by symbolHeight with zero gap', () => {
+  it('stacks cells by symbolHeight with zero gap', () => {
     const h = createTestReelSet({
       reels: 5, visibleCells: 3,
       symbolIds: ['a'],
@@ -70,7 +70,7 @@ describe('getCellBounds — non-zero gap', () => {
     }
   });
 
-  it('adds gapY between rows', () => {
+  it('adds gapY between cells', () => {
     const h = createTestReelSet({
       reels: 5, visibleCells: 3,
       symbolIds: ['a'],

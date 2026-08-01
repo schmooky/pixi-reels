@@ -131,10 +131,10 @@ export interface ReelSetEvents extends Record<string, unknown[]> {
    */
   'shape:changed': [rowsPerReel: number[]];
   /**
-   * MultiWays: per-reel AdjustPhase entry. `fromRows` is the row count
-   * before the reshape; `toRows` is the row count after.
+   * MultiWays: per-reel AdjustPhase entry. `fromCells` is the row count
+   * before the reshape; `toCells` is the row count after.
    */
-  'adjust:start': [info: { reelIndex: number; fromRows: number; toRows: number }];
+  'adjust:start': [info: { reelIndex: number; fromCells: number; toCells: number }];
   /** MultiWays: per-reel AdjustPhase exit. */
   'adjust:complete': [info: { reelIndex: number }];
   /**
@@ -183,7 +183,7 @@ export interface ReelSetEvents extends Record<string, unknown[]> {
    *   - `isInitial: true` on Moment A (after a `spin()` click). Every visible
    *     row is "new". `winnerCells` is `[]` because there's no prior grid.
    *   - `isInitial: false` on Moment B (a `refill()`). `winnerCells` lists the
-   *     row indices whose old symbols were cleared by the win; rows in that
+   *     row indices whose old symbols were cleared by the win; cells in that
    *     set are new arrivals, the rest are survivors sliding down to fill
    *     holes. Pair with `computeDropOffsets` (or just walk `winnerCells`
    *     yourself) if you need to decorate only new arrivals.

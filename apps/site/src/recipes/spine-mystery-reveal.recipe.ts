@@ -77,8 +77,8 @@ reelSet.addChild(overlayLayer);
 let lastGrid = null;
 
 function nextResult() {
-  const grid = ROWS_PER_REEL.map((rows) =>
-    Array.from({ length: rows }, () => pickWeighted(weights)),
+  const grid = ROWS_PER_REEL.map((cells) =>
+    Array.from({ length: cells }, () => pickWeighted(weights)),
   );
   // Force 2-4 mysteries per spin so the reveal always shows.
   const count = 2 + Math.floor(Math.random() * 3);

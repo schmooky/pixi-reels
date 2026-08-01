@@ -1,5 +1,5 @@
 /**
- * Integration tests for `Reel.setSymbolAt(visibleRow, id)` - the public
+ * Integration tests for `Reel.setSymbolAt(visibleCell, id)` - the public
  * single-cell swap API.
  *
  * Contract: the row's symbol identity changes immediately, the new
@@ -60,7 +60,7 @@ describe('Reel.setSymbolAt', () => {
     }
   });
 
-  it('leaves other rows untouched', async () => {
+  it('leaves other cells untouched', async () => {
     const h = makeHarness();
     try {
       await h.spinAndLand([

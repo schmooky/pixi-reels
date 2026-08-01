@@ -63,7 +63,7 @@ describe('computeDropOffsets', () => {
       ]);
     });
 
-    it('drops two new symbols stacked above when top two rows were winners', () => {
+    it('drops two new symbols stacked above when top two cells were winners', () => {
       const offsets = computeDropOffsets(5, [0, 1]);
       expect(offsets[0]).toEqual({ row: 0, originalCell: -2, offsetCells: 2 });
       expect(offsets[1]).toEqual({ row: 1, originalCell: -1, offsetCells: 2 });
@@ -75,8 +75,8 @@ describe('computeDropOffsets', () => {
 
   describe('Moment B (cascade refill — mid-column winner)', () => {
     it('slides every survivor above the hole down by one cell', () => {
-      // Winner at row 2: rows 0 and 1 become "survivors" sliding down to fill
-      // rows 1 and 2; row 0 is the new symbol entering from above.
+      // Winner at row 2: cells 0 and 1 become "survivors" sliding down to fill
+      // cells 1 and 2; row 0 is the new symbol entering from above.
       const offsets = computeDropOffsets(5, [2]);
       expect(offsets).toEqual([
         { row: 0, originalCell: -1, offsetCells: 1 }, // new
@@ -88,7 +88,7 @@ describe('computeDropOffsets', () => {
     });
 
     it('handles winners scattered across the column', () => {
-      // Winners at rows 0 and 2 - survivors are rows 1, 3, 4 (in that order).
+      // Winners at cells 0 and 2 - survivors are cells 1, 3, 4 (in that order).
       const offsets = computeDropOffsets(5, [0, 2]);
       expect(offsets[0]).toEqual({ row: 0, originalCell: -2, offsetCells: 2 }); // new
       expect(offsets[1]).toEqual({ row: 1, originalCell: -1, offsetCells: 2 }); // new
@@ -100,7 +100,7 @@ describe('computeDropOffsets', () => {
     it('handles bottom-only winner — only one survivor slides past it', () => {
       // Winner at row 4 (the bottom). The survivor slide pattern is:
       //   new symbol at row 0
-      //   rows 1..4 are survivors of pre-cascade rows 0..3, each sliding down 1
+      //   cells 1..4 are survivors of pre-cascade cells 0..3, each sliding down 1
       const offsets = computeDropOffsets(5, [4]);
       expect(offsets).toEqual([
         { row: 0, originalCell: -1, offsetCells: 1 },

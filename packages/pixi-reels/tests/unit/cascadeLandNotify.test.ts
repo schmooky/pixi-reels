@@ -56,7 +56,7 @@ describe('cascade refill. landing notification is movers-only', () => {
         winners,
         grid: [
           { visible: ['a', 'a', 'a'] },
-          { visible: ['b', 'a', 'b'] }, // new arrival at row 0; rows 1-2 stay
+          { visible: ['b', 'a', 'b'] }, // new arrival at row 0; cells 1-2 stay
           { visible: ['a', 'a', 'a'] },
         ],
       });
@@ -84,14 +84,14 @@ describe('cascade refill. landing notification is movers-only', () => {
       ['a', 'a', 'a'],
     ]);
     try {
-      // Winner at the BOTTOM row: rows 0-1 slide down, plus one new arrival.
+      // Winner at the BOTTOM row: cells 0-1 slide down, plus one new arrival.
       const winners = [{ reel: 1, row: 2 }];
       await h.reelSet.destroySymbols(winners);
       await h.reelSet.refill({
         winners,
         grid: [
           { visible: ['a', 'a', 'a'] },
-          { visible: ['a', 'b', 'a'] }, // new at 0; old rows 0,1 slid to 1,2
+          { visible: ['a', 'b', 'a'] }, // new at 0; old cells 0,1 slid to 1,2
           { visible: ['a', 'a', 'a'] },
         ],
       });

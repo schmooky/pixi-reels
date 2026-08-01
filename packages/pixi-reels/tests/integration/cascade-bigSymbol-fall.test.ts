@@ -55,7 +55,7 @@ describe('cascade refill. buffer-anchored big symbol', () => {
       // _coordinateBigSymbols paints OCCUPIED stubs.
       const spinDone = reelSet.spin();
       reelSet.setResult([
-        // Reel 0: anchor at bufferStart[1] = row -2. Block at rows -2, -1, 0.
+        // Reel 0: anchor at bufferStart[1] = row -2. Block at cells -2, -1, 0.
         // Tail visible at row 0. Plant MATCH at row 1.
         { visible: ['a', 'match', 'a', 'a'], bufferStart: [undefined, 'tall'] },
         { visible: ['b', 'match', 'b', 'b'] },
@@ -82,7 +82,7 @@ describe('cascade refill. buffer-anchored big symbol', () => {
         grid: [
           // Reel 0: anchor now at row 0 (fully visible). The coordinator
           // paints OCCUPIED at visible[1] and visible[2] from the
-          // size.h = 3 metadata; the 'a' placeholders at those rows are
+          // size.h = 3 metadata; the 'a' placeholders at those cells are
           // overwritten.
           { visible: ['tall', 'a', 'a', 'a'], bufferStart: ['a'] },
           // Reels 1, 2: fresh fillers.

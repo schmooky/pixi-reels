@@ -20,7 +20,7 @@
 //     is that id when "no symbol" is the desired visual.
 //
 // What this recipe runs:
-//   - 3 reels, 3 visible rows. Symbol set is `{ coin, empty }`.
+//   - 3 reels, 3 visible cells. Symbol set is `{ coin, empty }`.
 //   - The coin is the production Spine gold coin (GoldCoinSymbol).
 //   - Weights `{ coin: 1, empty: 6 }`. most cells land blank; coins
 //     scatter sparsely (~1 in 7 by weight).

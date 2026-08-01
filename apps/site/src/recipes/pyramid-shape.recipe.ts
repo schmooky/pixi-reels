@@ -33,7 +33,7 @@ const reelSet = new ReelSetBuilder()
 return {
   reelSet,
   nextResult: () =>
-    VISIBLE.map((rows) =>
-      Array.from({ length: rows }, () => CARD_DECK[Math.floor(Math.random() * CARD_DECK.length)].id),
+    VISIBLE.map((cells) =>
+      Array.from({ length: cells }, () => CARD_DECK[Math.floor(Math.random() * CARD_DECK.length)].id),
     ),
 };

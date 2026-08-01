@@ -70,7 +70,7 @@ reelSet.events.on('spin:complete', () => {
 return {
   reelSet,
   nextResult: () =>
-    VISIBLE.map((rows) =>
-      Array.from({ length: rows }, () => IDS[Math.floor(Math.random() * IDS.length)]),
+    VISIBLE.map((cells) =>
+      Array.from({ length: cells }, () => IDS[Math.floor(Math.random() * IDS.length)]),
     ),
 };

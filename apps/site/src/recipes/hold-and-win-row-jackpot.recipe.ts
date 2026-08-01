@@ -6,7 +6,7 @@
 // it just completed a full row. If it did, that row flashes coin by coin, the
 // MINI plaque above the board fires its win, and the row's summed value flies
 // up into the plaque. Row detection is pure game logic over
-// `board.lockedCoins`; the board has no notion of "rows pay".
+// `board.lockedCoins`; the board has no notion of "cells pay".
 
 const COLS = 5, ROWS = 3, CELL = 70, GAP = 6;
 const COIN = 'coin';

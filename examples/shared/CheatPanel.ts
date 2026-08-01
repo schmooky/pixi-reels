@@ -76,11 +76,11 @@ export function mountCheatPanel(
     chev.textContent = open ? '+' : '–';
   });
 
-  const rows: Array<{ def: CheatDefinition; input: HTMLInputElement }> = [];
+  const cells: Array<{ def: CheatDefinition; input: HTMLInputElement }> = [];
 
   function render(): void {
     body.innerHTML = '';
-    rows.length = 0;
+    cells.length = 0;
     for (const def of engine.list()) {
       const label = document.createElement('label');
       Object.assign(label.style, {
@@ -117,7 +117,7 @@ export function mountCheatPanel(
       label.appendChild(text);
       body.appendChild(label);
 
-      rows.push({ def, input });
+      cells.push({ def, input });
     }
 
     // Reset-all footer
@@ -143,7 +143,7 @@ export function mountCheatPanel(
   }
 
   function refresh(): void {
-    for (const row of rows) {
+    for (const row of cells) {
       row.input.checked = row.def.enabled;
     }
   }

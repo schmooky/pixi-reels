@@ -12,11 +12,11 @@ import { mergeDropInConfig } from '../../cascade/TumbleConfig.js';
 import { computeDropOffsets } from '../../cascade/tumbleAlgorithm.js';
 
 export interface CascadeDropInPhaseConfig {
-  /** Visible rows whose old symbols were winners. drives per-row drop
+  /** Visible cells whose old symbols were winners. drives per-row drop
    *  geometry. Empty AND `initial: false` ⇒ no animation on this reel. */
   winnerCells: number[];
   /** `true` for Moment A (initial spin: every row drops from above);
-   *  `false` for Moment B (refill: only winner-displaced rows animate). */
+   *  `false` for Moment B (refill: only winner-displaced cells animate). */
   initial: boolean;
   /**
    * Two-stage refill filter.
@@ -146,7 +146,7 @@ export class CascadeDropInPhase extends ReelPhase<CascadeDropInPhaseConfig> {
     //                  Survivors that slid in stage 1 are already at
     //                  their grid Y; reveal them at alpha = 1.
     const jobs: DropJob[] = [];
-    // Big symbols: every occupied cell of a block resolves (via getAnchorRow /
+    // Big symbols: every occupied cell of a block resolves (via getAnchorCell /
     // getSymbolAt) to the SAME anchor view. Animate that view ONCE, driven by
     // the first visible row of the block (top-to-bottom). Without this the
     // anchor gets one job per occupied row, so: multiple GSAP tweens fight
@@ -155,9 +155,9 @@ export class CascadeDropInPhase extends ReelPhase<CascadeDropInPhaseConfig> {
     // per-symbol listeners (landing squish/bounce) fire N times on one view.
     const handledAnchors = new Set<number>();
     for (const off of offsets) {
-      const anchorRow = reel.getAnchorRow(off.row);
-      if (anchorRow !== off.row && handledAnchors.has(anchorRow)) continue;
-      handledAnchors.add(anchorRow);
+      const anchorCell = reel.getAnchorCell(off.row);
+      if (anchorCell !== off.row && handledAnchors.has(anchorCell)) continue;
+      handledAnchors.add(anchorCell);
 
       const sym = reel.getSymbolAt(off.row);
 
@@ -177,7 +177,7 @@ export class CascadeDropInPhase extends ReelPhase<CascadeDropInPhaseConfig> {
       let startMain: number;
       switch (this._drop.distance) {
         case 'auto':
-          // `'auto'` = "every mover falls the full visible-rows distance,"
+          // `'auto'` = "every mover falls the full visible-cells distance,"
           // which is correct for Moment A (every row is new) and for new
           // arrivals in Moment B (originalCell < 0). For a Moment B SURVIVOR
           // (originalCell >= 0), 'auto' would teleport the symbol from its
@@ -252,7 +252,7 @@ export class CascadeDropInPhase extends ReelPhase<CascadeDropInPhaseConfig> {
       // Only stage that lands the reel: 'all' (combined) and 'new' (final
       // stage of two-stage). The gravity stage hands off to the drop-in
       // stage; that's where `notifyLanded` belongs. Landing notification
-      // is MOVERS-ONLY (this stage's job rows): untouched survivors must
+      // is MOVERS-ONLY (this stage's job cells): untouched survivors must
       // not replay their landing animation on every cascade stage.
       // Gravity movers get their reaction the moment they settle. the
       // reel itself still lands at the final stage.
@@ -336,7 +336,7 @@ export class CascadeDropInPhase extends ReelPhase<CascadeDropInPhaseConfig> {
     // `_jobs`. A skip during the gravity beat must still reveal the final
     // landed state, so force every visible row to its grid Y / alpha 1.
     // Cheap belt-and-braces. for `role === 'all' | 'new'` this is a no-op
-    // because non-job rows are already revealed.
+    // because non-job cells are already revealed.
     const reel = this._reel;
     for (let row = 0; row < reel.visibleCells; row++) {
       const sym = reel.getSymbolAt(row);

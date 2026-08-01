@@ -10,7 +10,7 @@ const C = 'round/round_3';
 const SEVEN = 'royal/royal_1';             // the high-pay row symbol
 const IDS = [A, B, C, SEVEN];
 
-// Three full rows of different symbols = three "paylines" with SEVEN
+// Three full cells of different symbols = three "paylines" with SEVEN
 // on top, B on row 1, C on row 2. The spotlight cycles through each row.
 const GRID: string[][] = [
   [SEVEN, B, C],

@@ -1,6 +1,6 @@
 /**
  * M6 - StopPhase.onSkip() must place the FULL target frame (buffers included),
- * not just the visible window. Slicing to the visible rows dropped
+ * not just the visible window. Slicing to the visible cells dropped
  * buffer-above/below targets (e.g. a big symbol's tail parked above), so a
  * direct skip() landed the wrong frame. The buffer symbols here have weight 0,
  * so they are never random-filled - before the fix they'd be replaced by random

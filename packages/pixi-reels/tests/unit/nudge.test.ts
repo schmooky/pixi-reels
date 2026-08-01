@@ -803,7 +803,7 @@ describe('nudge', () => {
         // SetResult validates anchor + h fits in visibleCells.
         await spinAndLand([['a', 'bigW', 'bigW']]);
         // The strip already shows the full block. Nudge DOWN by 1 shifts
-        // it to rows 2+3. but row 3 doesn't exist. Block survival check:
+        // it to cells 2+3. but row 3 doesn't exist. Block survival check:
         // anchor at strip[2], h=2, distance=1 down. Survival: 2 + 2 - 1 + 1 = 4 < 5, ok.
         // After nudge: anchor at strip[3], stub at strip[4] (bufferEnd).
         // visible row 0 = 'a' (incoming), row 1 = 'a' (old top-visible),
@@ -831,13 +831,13 @@ describe('nudge', () => {
         },
       });
       try {
-        // 1x2 at visible rows 0+1. anchor at strip[1], stub at strip[2].
+        // 1x2 at visible cells 0+1. anchor at strip[1], stub at strip[2].
         await spinAndLand([['bigW', 'bigW', 'a']]);
         // Nudge up by 1. anchor lands at strip[0] (bufferStart), stub at
         // strip[1] (visible row 0). The block is "tail visible": top in
         // buffer, bottom showing. `_finalizeFrame` scans bufferStart now,
         // so the anchor sprite is sized to the full block and the visible
-        // row 0 cell resolves to 'bigW' via the negative-anchorRow occupancy.
+        // row 0 cell resolves to 'bigW' via the negative-anchorCell occupancy.
         const result = await reelSet.nudge(0, {
           distance: 1,
           direction: 'up',
@@ -847,7 +847,7 @@ describe('nudge', () => {
         // Rows 1+2 = the rest of the strip after rotation.
         expect(result.symbols[0]).toBe('bigW');
         // Occupancy correctly references the bufferStart anchor (negative row).
-        // Internal state: visible row 0 has occupancy pointing to anchorRow = -1.
+        // Internal state: visible row 0 has occupancy pointing to anchorCell = -1.
         const reel = reelSet.reels[0];
         // Reel.getSymbolAt resolves through occupancy -> returns the anchor symbol.
         expect(reel.getSymbolAt(0).symbolId).toBe('bigW');
@@ -875,7 +875,7 @@ describe('nudge', () => {
         // incoming symbol, splitting the block.
         await spinAndLand([['a', 'bigW', 'bigW']]);
         // Need anchor at strip[3] with stub at strip[4]. setResult validates
-        // anchor + h <= rows, so we can't set that state directly; reach it
+        // anchor + h <= cells, so we can't set that state directly; reach it
         // via a down-nudge: anchor strip[2] (row 1) -> strip[3] (row 2),
         // stub -> strip[4].
         await reelSet.nudge(0, {
@@ -890,7 +890,7 @@ describe('nudge', () => {
           direction: 'up',
           incoming: ['b'],
         });
-        // Block stays intact; visible rows 1+2 read 'bigW' via the
+        // Block stays intact; visible cells 1+2 read 'bigW' via the
         // anchor's occupancy.
         expect(result.symbols[1]).toBe('bigW');
         expect(result.symbols[2]).toBe('bigW');
@@ -938,7 +938,7 @@ describe('nudge', () => {
         },
       });
       try {
-        // 1x2 at visible rows 1+2. anchor at strip[2], stub at strip[3].
+        // 1x2 at visible cells 1+2. anchor at strip[2], stub at strip[3].
         // total = 5. Survival for down distance=2: 2 + 2 - 1 + 2 = 5, NOT < 5,
         // so the block's bottom would wrap off strip[N-1] mid-rotation.
         await spinAndLand([['a', 'bigW', 'bigW']]);
@@ -1052,7 +1052,7 @@ describe('nudge', () => {
         },
       });
       try {
-        // Land block at rows 0+1 (anchor at strip[1], stub at strip[2]).
+        // Land block at cells 0+1 (anchor at strip[1], stub at strip[2]).
         await spinAndLand([['bigW', 'bigW', 'a']]);
         // Nudge down by 2. anchor -> strip[3] (row 2), stub -> strip[4]
         // (bufferEnd). Visible row 2 shows top of the block.
@@ -1065,7 +1065,7 @@ describe('nudge', () => {
         // The block extends into bufferEnd, so row 2 reads the anchor.
         expect(half.symbols).toEqual(['a', 'b', 'bigW']);
 
-        // Nudge up by 1. block returns to rows 1+2.
+        // Nudge up by 1. block returns to cells 1+2.
         const full = await reelSet.nudge(0, {
           distance: 1,
           direction: 'up',

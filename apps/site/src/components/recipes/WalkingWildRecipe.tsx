@@ -12,8 +12,8 @@ const IDS = [...FILLER, WILD];
 function randomFiller(): string {
   return FILLER[Math.floor(Math.random() * FILLER.length)];
 }
-function fillerGrid(cols: number, rows: number): string[][] {
-  return Array.from({ length: cols }, () => Array.from({ length: rows }, () => randomFiller()));
+function fillerGrid(cols: number, cells: number): string[][] {
+  return Array.from({ length: cols }, () => Array.from({ length: cells }, () => randomFiller()));
 }
 
 /**

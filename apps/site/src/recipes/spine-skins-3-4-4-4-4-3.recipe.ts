@@ -74,7 +74,7 @@ const reelSet = new ReelSetBuilder()
 return {
   reelSet,
   nextResult: () =>
-    ROWS_PER_REEL.map((rows) =>
-      Array.from({ length: rows }, () => pickWeighted(weights)),
+    ROWS_PER_REEL.map((cells) =>
+      Array.from({ length: cells }, () => pickWeighted(weights)),
     ),
 };

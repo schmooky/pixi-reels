@@ -9,7 +9,7 @@ import { computeDropOffsets } from '../../cascade/tumbleAlgorithm.js';
 export interface CascadePlacePhaseConfig {
   /** Full target frame for this reel: buffer-above + visible + buffer-below. */
   targetFrame: string[];
-  /** Visible rows whose old symbols were "winners" cleared since the last
+  /** Visible cells whose old symbols were "winners" cleared since the last
    *  placement. Empty AND `initial: false` ⇒ no movement on this reel. */
   winnerCells: number[];
   /** `true` for Moment A (initial spin); `false` for Moment B (refill). */
@@ -107,9 +107,9 @@ export class CascadePlacePhase extends ReelPhase<CascadePlacePhaseConfig> {
     const placedSymbols: ReelSymbol[] = [];
     const handledAnchors = new Set<number>();
     for (const off of offsets) {
-      const anchorRow = reel.getAnchorRow(off.row);
-      if (anchorRow !== off.row && handledAnchors.has(anchorRow)) continue;
-      handledAnchors.add(anchorRow);
+      const anchorCell = reel.getAnchorCell(off.row);
+      if (anchorCell !== off.row && handledAnchors.has(anchorCell)) continue;
+      handledAnchors.add(anchorCell);
       const sym = reel.getSymbolAt(off.row);
       sym.view.visible = true;
       sym.view.alpha = off.offsetCells === 0 ? 1 : 0;

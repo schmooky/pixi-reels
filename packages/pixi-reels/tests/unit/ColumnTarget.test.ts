@@ -15,22 +15,22 @@ describe('getTargetSlot', () => {
     bufferEnd: ['below1', 'below2'],
   };
 
-  it('reads visible rows at non-negative indices', () => {
+  it('reads visible cells at non-negative indices', () => {
     expect(getTargetSlot(target, 0)).toBe('a');
     expect(getTargetSlot(target, 2)).toBe('c');
   });
 
-  it('reads bufferStart at negative rows, closest cell at -1', () => {
+  it('reads bufferStart at negative cells, closest cell at -1', () => {
     expect(getTargetSlot(target, -1)).toBe('above1');
     expect(getTargetSlot(target, -2)).toBe('above2');
   });
 
-  it('reads bufferEnd at rows past visible.length', () => {
+  it('reads bufferEnd at cells past visible.length', () => {
     expect(getTargetSlot(target, 3)).toBe('below1');
     expect(getTargetSlot(target, 4)).toBe('below2');
   });
 
-  it('returns undefined for rows the target does not specify', () => {
+  it('returns undefined for cells the target does not specify', () => {
     expect(getTargetSlot({ visible: ['a'] }, -1)).toBeUndefined();
     expect(getTargetSlot({ visible: ['a'] }, 1)).toBeUndefined();
     expect(getTargetSlot(target, -3)).toBeUndefined();
@@ -39,20 +39,20 @@ describe('getTargetSlot', () => {
 });
 
 describe('setTargetSlot', () => {
-  it('writes visible rows in place', () => {
+  it('writes visible cells in place', () => {
     const t: ColumnTarget = { visible: ['a', 'b'] };
     setTargetSlot(t, 1, 'X');
     expect(t.visible).toEqual(['a', 'X']);
   });
 
-  it('creates bufferStart on demand for negative rows', () => {
+  it('creates bufferStart on demand for negative cells', () => {
     const t: ColumnTarget = { visible: ['a', 'b'] };
     setTargetSlot(t, -2, 'X');
     expect(getTargetSlot(t, -2)).toBe('X');
     expect(t.bufferStart?.[1]).toBe('X');
   });
 
-  it('creates bufferEnd on demand for rows past the visible window', () => {
+  it('creates bufferEnd on demand for cells past the visible window', () => {
     const t: ColumnTarget = { visible: ['a', 'b'] };
     setTargetSlot(t, 3, 'X');
     expect(getTargetSlot(t, 3)).toBe('X');

@@ -267,12 +267,12 @@ function mockSpin(spinIndex: number): Promise<{ grid: string[][]; wins: WinResul
       const dropBig = spinIndex % 3 === 0 || Math.random() < 0.18;
       if (dropBig) {
         const anchorCol = 1 + Math.floor(Math.random() * 3);
-        const anchorRow = Math.floor(Math.random() * (VISIBLE_ROWS - 1));
-        grid[anchorCol][anchorRow] = 'bigWild';
-        grid[anchorCol][anchorRow + 1] = '_';
+        const anchorCell = Math.floor(Math.random() * (VISIBLE_ROWS - 1));
+        grid[anchorCol][anchorCell] = 'bigWild';
+        grid[anchorCol][anchorCell + 1] = '_';
         if (anchorCol + 1 < REEL_COUNT) {
-          grid[anchorCol + 1][anchorRow] = '_';
-          grid[anchorCol + 1][anchorRow + 1] = '_';
+          grid[anchorCol + 1][anchorCell] = '_';
+          grid[anchorCol + 1][anchorCell + 1] = '_';
         }
       }
 

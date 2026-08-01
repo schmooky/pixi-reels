@@ -7,7 +7,7 @@
 // symbolData zIndex - layering WITHIN one reel. The scatter (zIndex: 10)
 // always paints above its reel-mates; the mystery bush is deliberately
 // left at the default layer, so the tile below it paints over its leaves
-// (bottom rows draw in front within a layer). Spot the difference each
+// (bottom cells draw in front within a layer). Spot the difference each
 // spin: jaw never clipped, bush clipped from below.
 
 await loadThunderkickSpines();
@@ -67,10 +67,10 @@ const reelSet = new ReelSetBuilder()
 return {
   reelSet,
   nextResult: () => {
-    const grid = ROWS_PER_REEL.map((rows) =>
-      Array.from({ length: rows }, () => pickWeighted(weights)),
+    const grid = ROWS_PER_REEL.map((cells) =>
+      Array.from({ length: cells }, () => pickWeighted(weights)),
     );
-    // One scatter and one mystery per spin, in middle rows of the tall
+    // One scatter and one mystery per spin, in middle cells of the tall
     // reels so both always have a neighbour below to fight with.
     const midReels = [1, 2, 3, 4];
     const sReel = midReels[Math.floor(Math.random() * midReels.length)];

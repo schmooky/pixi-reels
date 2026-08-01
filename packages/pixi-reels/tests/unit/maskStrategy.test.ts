@@ -55,14 +55,14 @@ describe('mask strategies', () => {
     // any rect are clipped.
     const pyramid: ReelMaskRect[] = [
       { x: 0,   y: 100, width: 100, height: 100 }, // 1 row, centered
-      { x: 100, y: 0,   width: 100, height: 300 }, // 3 rows, full
+      { x: 100, y: 0,   width: 100, height: 300 }, // 3 cells, full
       { x: 200, y: 100, width: 100, height: 100 }, // 1 row, centered
     ];
     const strat = new RectMaskStrategy();
     const g = strat.build(pyramid, 300, 300);
     const bounds = getBoundsArea(g);
     // Union envelope is (0,0)-(300,300) but the middle reel is the only
-    // one covering rows 0 and 2. Verify the rects array was preserved.
+    // one covering cells 0 and 2. Verify the rects array was preserved.
     expect(bounds.width).toBe(300);
     expect(bounds.height).toBe(300);
   });
@@ -95,8 +95,8 @@ describe('mask strategies', () => {
     try {
       const rects = reelSet.viewport.maskRects;
       expect(rects).toHaveLength(5);
-      // Outer reels (3 rows x 100 = 300) are centered inside the tallest
-      // reel (5 rows x 100 = 500), so offsetY = 100.
+      // Outer reels (3 cells x 100 = 300) are centered inside the tallest
+      // reel (5 cells x 100 = 500), so mainOffset = 100.
       expect(rects[0]).toMatchObject({ y: 100, height: 300 });
       expect(rects[2]).toMatchObject({ y: 0, height: 500 });
       expect(rects[4]).toMatchObject({ y: 100, height: 300 });
@@ -119,7 +119,7 @@ describe('mask strategies', () => {
       // chooses to ignore it.
       expect(reelSet.viewport.maskRects).toHaveLength(5);
       // The mask itself draws a single bounding rect spanning the full
-      // viewport (500 x 500 for 5 reels of 100 wide x 5 rows of 100 tall).
+      // viewport (500 x 500 for 5 reels of 100 wide x 5 cells of 100 tall).
       const bounds = getBoundsArea(reelSet.viewport.maskGraphics);
       expect(bounds.width).toBe(500);
       expect(bounds.height).toBe(500);

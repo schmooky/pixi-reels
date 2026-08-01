@@ -19,7 +19,7 @@
 //     block's body extending into visible. The mask clips the off-screen
 //     portion; the visible portion of the sprite shows through.
 //   - `getVisibleSymbols` resolves visible row 0 to the anchor's id via
-//     a NEGATIVE `anchorRow` in `_occupancy`.
+//     a NEGATIVE `anchorCell` in `_occupancy`.
 
 const TALL = { id: 'tall', color: 0xff8c42, label: 'TALL', textColor: 0x4a1d00, w: 1, h: 3 };
 const REELS = 5;
@@ -60,8 +60,8 @@ return {
   reelSet,
   onSpin: async () => {
     // 1. Land the 1x3 TALL with anchor at `bufferStart[1]` (= row -2).
-    //    Block spans rows -2, -1, 0. Only visible row 0 shows the block's
-    //    bottom cell; rows 1 and 2 are random fillers.
+    //    Block spans cells -2, -1, 0. Only visible row 0 shows the block's
+    //    bottom cell; cells 1 and 2 are random fillers.
     //
     //    The engine paints OCCUPIED at row -1 and row 0 automatically;
     //    we leave `bufferStart[0]` undefined and `visible[0]` as filler
@@ -81,7 +81,7 @@ return {
     await new Promise((r) => setTimeout(r, 700));
 
     // 2. Nudge DOWN by 2. anchor moves from row -2 to row 0; block now
-    //    fills visible rows 0, 1, 2. Fully visible.
+    //    fills visible cells 0, 1, 2. Fully visible.
     //
     //    Survival check (down): anchor strip index + h - 1 + distance < total
     //    (0 + 3 - 1 + 2 = 4 < 7). total = bufferStart(2) + visibleCells(3) +

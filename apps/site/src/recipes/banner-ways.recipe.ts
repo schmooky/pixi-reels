@@ -75,11 +75,11 @@ const onSpin = async () => {
   const winners = [];
   const bannerWinners = [];
   for (let reel = 0; reel < 5; reel++) {
-    const rows = [];
-    for (let r = 0; r < 3; r++) if (g[reel][r] === PAY) rows.push(r);
+    const cells = [];
+    for (let r = 0; r < 3; r++) if (g[reel][r] === PAY) cells.push(r);
     const bannerWild = b[reel] === 'wild';
-    if (rows.length === 0 && !bannerWild) break;
-    for (const r of rows) winners.push({ reelIndex: reel, cellIndex: r });
+    if (cells.length === 0 && !bannerWild) break;
+    for (const r of cells) winners.push({ reelIndex: reel, cellIndex: r });
     if (bannerWild) bannerWinners.push({ reelIndex: 0, cellIndex: reel });
   }
   await Promise.all([

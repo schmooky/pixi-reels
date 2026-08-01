@@ -34,7 +34,7 @@ const reelSet = new ReelSetBuilder()
   .build();
 
 // ── Expand wilds on land, persist for N spins ───────────────────────────
-// For every reel that has a wild somewhere in its visible rows, pin every
+// For every reel that has a wild somewhere in its visible cells, pin every
 // row of that reel with WILD for STICKY_TURNS spins. The engine decrements
 // `turns` after each spin:allLanded and auto-expires pins at zero.
 //

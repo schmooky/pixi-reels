@@ -115,7 +115,7 @@ export class ReelSetBuilder {
   }
 
   /**
-   * Number of visible rows per reel (uniform across all reels).
+   * Number of visible cells per reel (uniform across all reels).
    * Mutually exclusive with `visibleCellsPerReel()`. calling both throws
    * at `build()`.
    *
@@ -134,8 +134,8 @@ export class ReelSetBuilder {
    * @example
    * builder.reels(5).visibleCellsPerReel([3, 5, 5, 5, 3])  // pyramid
    */
-  visibleCellsPerReel(rows: number[]): this {
-    this._visibleCellsPerReel = [...rows];
+  visibleCellsPerReel(cells: number[]): this {
+    this._visibleCellsPerReel = [...cells];
     return this;
   }
 
@@ -146,7 +146,7 @@ export class ReelSetBuilder {
    *     to make all reels the same height with different cell heights per
    *     reel.
    *   - MultiWays: every entry equals the same fixed reel height. Cell
-   *     height per reel is derived as `reelPixelHeight / visibleCells[i]`.
+   *     height per reel is derived as `reelExtent / visibleCells[i]`.
    *
    * Precedence: when both `reelExtents` and `reelAnchor` are set,
    * `reelExtents` wins. anchor is derived from the explicit boxes.
@@ -226,8 +226,8 @@ export class ReelSetBuilder {
   }
 
   /**
-   * Configure this slot as MultiWays: per-spin row variation. Pass minRows,
-   * maxRows, and the fixed reel pixel height. After build, call
+   * Configure this slot as MultiWays: per-spin row variation. Pass minCells,
+   * maxCells, and the fixed reel pixel height. After build, call
    * `reelSet.setShape(rowsPerReel)` mid-spin to set the next stop's shape.
    *
    * Mutually exclusive with big-symbol registration (`SymbolData.size`).
@@ -283,7 +283,7 @@ export class ReelSetBuilder {
   /**
    * Set number of buffer symbols above/below the visible area. Default: 1.
    *
-   * Buffer rows are off-screen cells the reel keeps around the visible
+   * Buffer cells are off-screen cells the reel keeps around the visible
    * window so symbols can fade/slide in cleanly. The motion layer's wrap
    * detection assumes at least one buffer row above and one below. the
    * minimum supported count is **1**. Passing `0` (or a negative number)
@@ -588,10 +588,10 @@ export class ReelSetBuilder {
     const mainGap = vertical ? this._symbolGap.y : this._symbolGap.x;
     const crossGap = vertical ? this._symbolGap.x : this._symbolGap.y;
 
-    // Resolve per-reel row counts. MultiWays: every reel starts at maxRows.
+    // Resolve per-reel row counts. MultiWays: every reel starts at maxCells.
     let visibleCellsPerReel: number[];
     if (isMultiWays) {
-      visibleCellsPerReel = new Array(reelCount).fill(this._multiways!.maxRows);
+      visibleCellsPerReel = new Array(reelCount).fill(this._multiways!.maxCells);
     } else if (this._visibleCellsPerReel) {
       visibleCellsPerReel = this._visibleCellsPerReel;
     } else {
@@ -599,16 +599,16 @@ export class ReelSetBuilder {
       visibleCellsPerReel = new Array(reelCount).fill(v);
     }
 
-    // Resolve per-reel pixel-box heights. MultiWays: uniform reelPixelHeight.
+    // Resolve per-reel pixel-box heights. MultiWays: uniform reelExtent.
     // Pyramid: defaults to visibleCellsPerReel[i] * symbolHeight.
     let reelExtents: number[];
     if (isMultiWays) {
-      reelExtents = new Array(reelCount).fill(this._multiways!.reelPixelHeight);
+      reelExtents = new Array(reelCount).fill(this._multiways!.reelExtent);
     } else if (this._reelExtents) {
       reelExtents = this._reelExtents;
     } else {
       reelExtents = visibleCellsPerReel.map(
-        (rows) => rows * symbolHeight + (rows - 1) * this._symbolGap.y,
+        (cells) => cells * symbolHeight + (cells - 1) * this._symbolGap.y,
       );
     }
 
@@ -616,12 +616,12 @@ export class ReelSetBuilder {
     // pixel-box height; for a uniform horizontal set it is the strip width.
     const mainExtents = vertical
       ? reelExtents
-      : visibleCellsPerReel.map((rows) => rows * mainCellSize + (rows - 1) * mainGap);
+      : visibleCellsPerReel.map((cells) => cells * mainCellSize + (cells - 1) * mainGap);
 
     // Compute per-reel main offset and target cell height.
     // SPIN-time uniform cell height equals the configured `symbolHeight`.
     const tallest = Math.max(...mainExtents);
-    const offsetsY = mainExtents.map((h) => {
+    const mainOffsets = mainExtents.map((h) => {
       switch (this._reelAnchor) {
         case 'top': return 0;
         case 'bottom': return tallest - h;
@@ -629,16 +629,16 @@ export class ReelSetBuilder {
         default: return (tallest - h) / 2;
       }
     });
-    const perReelSymbolHeight: number[] = reelExtents.map((h, i) => {
-      const rows = visibleCellsPerReel[i];
-      return (h - (rows - 1) * this._symbolGap.y) / rows;
+    const perReelCellSize: number[] = reelExtents.map((h, i) => {
+      const cells = visibleCellsPerReel[i];
+      return (h - (cells - 1) * this._symbolGap.y) / cells;
     });
     // MultiWays uses uniform spinCellSize = configured symbolHeight.
     // Pyramid: per-reel cell height. Uniform: same as symbolHeight.
     const spinCellSize = symbolHeight;
-    const initialSymbolHeight = isMultiWays
+    const initialCellSize = isMultiWays
       ? new Array(reelCount).fill(spinCellSize)
-      : perReelSymbolHeight;
+      : perReelCellSize;
 
     if (this._speeds.size === 0) {
       this._speeds.set('normal', SpeedPresets.NORMAL);
@@ -683,7 +683,7 @@ export class ReelSetBuilder {
     // floor of 20 preserves headroom for small grids; an explicit
     // .poolCapacity() overrides the derivation.
     const totalStripCells = visibleCellsPerReel.reduce(
-      (sum, rows) => sum + rows + bufferStart + bufferEnd,
+      (sum, cells) => sum + cells + bufferStart + bufferEnd,
       0,
     );
     const poolCapacity = this._poolCapacity ?? Math.max(20, totalStripCells);
@@ -744,7 +744,7 @@ export class ReelSetBuilder {
     );
     const hasUnmaskedSymbols = Object.values(symbolsData).some((d) => d.unmask);
 
-    // Unmask works on jagged/pyramid layouts (non-zero reel `offsetY`) too:
+    // Unmask works on jagged/pyramid layouts (non-zero reel `mainOffset`) too:
     // unmask is an at-rest presentation, so a lifted view only exists while
     // the reel is stopped, and `Reel._syncUnmaskedViewOffsets()` re-bakes
     // `container.y` after every absolute motion snap. No config-time guard.
@@ -793,13 +793,13 @@ export class ReelSetBuilder {
     const reels: Reel[] = [];
     const maskRects: ReelMaskRect[] = [];
     for (let reelIndex = 0; reelIndex < reelCount; reelIndex++) {
-      const rows = visibleCellsPerReel[reelIndex];
-      const initialCellH = initialSymbolHeight[reelIndex];
+      const cells = visibleCellsPerReel[reelIndex];
+      const initialCellH = initialCellSize[reelIndex];
 
       // Per-reel initial frame at its own visibleCells count.
       const initialFrame = frameBuilder.build(
         reelIndex,
-        rows,
+        cells,
         bufferStart,
         bufferEnd,
         this._initialFrame?.[reelIndex],
@@ -807,7 +807,7 @@ export class ReelSetBuilder {
 
       const reelConfig: ReelConfig = {
         reelIndex,
-        visibleCells: rows,
+        visibleCells: cells,
         bufferStart,
         bufferEnd,
         symbolWidth,
@@ -816,8 +816,8 @@ export class ReelSetBuilder {
         symbolGapY: this._symbolGap.y,
         symbolsData,
         initialSymbols: initialFrame,
-        offsetY: offsetsY[reelIndex],
-        reelHeight: reelExtents[reelIndex],
+        mainOffset: mainOffsets[reelIndex],
+        extent: reelExtents[reelIndex],
         spinCellSize,
         axis: reelAxis(this._orientation, this._directionPerReel?.[reelIndex] ?? this._direction),
       };
@@ -826,7 +826,7 @@ export class ReelSetBuilder {
       reels.push(reel);
       // Per-reel mask rect: cross position marches the reels, main position is
       // the reel's own offset, cross size is one cell, main size is the strip.
-      const rectPos = setAxis.toScreen(reelIndex * (crossCellSize + crossGap), offsetsY[reelIndex]);
+      const rectPos = setAxis.toScreen(reelIndex * (crossCellSize + crossGap), mainOffsets[reelIndex]);
       const rectSize = setAxis.toScreen(crossCellSize, mainExtents[reelIndex]);
       maskRects.push({
         x: rectPos.x,
@@ -893,20 +893,20 @@ export class ReelSetBuilder {
 
     if (hasMega) {
       const m = this._multiways!;
-      if (m.minRows <= 0 || m.maxRows <= 0) {
-        errors.push('multiways({minRows, maxRows}) must both be positive.');
-      } else if (m.minRows > m.maxRows) {
-        errors.push(`multiways: minRows ${m.minRows} cannot exceed maxRows ${m.maxRows}.`);
+      if (m.minCells <= 0 || m.maxCells <= 0) {
+        errors.push('multiways({minCells, maxCells}) must both be positive.');
+      } else if (m.minCells > m.maxCells) {
+        errors.push(`multiways: minCells ${m.minCells} cannot exceed maxCells ${m.maxCells}.`);
       }
-      if (m.reelPixelHeight <= 0) {
-        errors.push('multiways({reelPixelHeight}) must be positive.');
+      if (m.reelExtent <= 0) {
+        errors.push('multiways({reelExtent}) must be positive.');
       }
-      // multiways({reelPixelHeight}) sets a uniform reel-pixel height for
+      // multiways({reelExtent}) sets a uniform reel-pixel height for
       // every reel; reelExtents([...]) sets per-reel heights for
       // pyramid layouts. Setting both is ambiguous. fail loud.
       if (this._reelExtents) {
         errors.push(
-          'cannot combine multiways({reelPixelHeight}) with reelExtents([...]). ' +
+          'cannot combine multiways({reelExtent}) with reelExtents([...]). ' +
           'multiways slots use a uniform reel pixel height. Drop reelExtents() or ' +
           'remove the multiways() configuration.',
         );

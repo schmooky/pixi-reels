@@ -3,10 +3,10 @@
 //                   SharedRectMaskStrategy, PIXI, gsap, app, textures,
 //                   blurTextures, SYMBOL_IDS, pickWeighted
 //
-// WIDE big symbol. 2×4. Two columns wide, four rows tall. a banner-shaped
+// WIDE big symbol. 2×4. Two columns wide, four cells tall. a banner-shaped
 // block. Useful for "feature triggered" splash panels that need to span
 // adjacent reels but don't want to dominate the whole board the way a 3×3
-// giant does. Demands a tall enough grid (rows >= 4).
+// giant does. Demands a tall enough grid (cells >= 4).
 
 const WIDE = { id: 'wide', color: 0xf5b7b1, label: 'WIDE', textColor: 0x641e16, w: 2, h: 4 };
 const REELS = 6;

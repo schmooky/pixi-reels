@@ -32,7 +32,7 @@ function build(ticker: FakeTicker) {
 const events = (sym: unknown) => (sym as TrackingSymbol).events;
 
 describe('mid-spin symbol notifications (Reel level)', () => {
-  it('notifySpinStart / notifySpinEnd reach buffer rows, not just visible ones', () => {
+  it('notifySpinStart / notifySpinEnd reach buffer cells, not just visible ones', () => {
     const ticker = new FakeTicker();
     const reelSet = build(ticker);
     const reel = reelSet.reels[0];

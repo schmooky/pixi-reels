@@ -1,6 +1,6 @@
 /**
  * MultiWays recipe - per-spin row variation. Each spin chooses a random shape
- * inside `[minRows, maxRows]`, and `setShape()` is called between `spin()`
+ * inside `[minCells, maxCells]`, and `setShape()` is called between `spin()`
  * and `setResult()`. AdjustPhase reshapes the reels before the stop sequence.
  *
  * To try it: in sandbox.ts, swap the active `buildSandbox` body for
@@ -34,7 +34,7 @@ export function buildMultiWays({ app, textures, blurTextures }: SandboxContext):
 
   const reelSet = new ReelSetBuilder()
     .reels(REELS)
-    .multiways({ minRows: MIN_ROWS, maxRows: MAX_ROWS, reelPixelHeight: REEL_PIXEL_HEIGHT })
+    .multiways({ minCells: MIN_ROWS, maxCells: MAX_ROWS, reelExtent: REEL_PIXEL_HEIGHT })
     .pinMigrationDuration(220)
     .symbolSize(SYMBOL_SIZE, SYMBOL_SIZE)
     .symbolGap(GAP, GAP)
@@ -68,8 +68,8 @@ export function buildMultiWays({ app, textures, blurTextures }: SandboxContext):
     const shape = pickShape();
     lastShape = shape;
     reelSet.setShape(shape);
-    return shape.map((rows) =>
-      Array.from({ length: rows }, () => SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)]),
+    return shape.map((cells) =>
+      Array.from({ length: cells }, () => SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)]),
     );
   };
   void lastShape;

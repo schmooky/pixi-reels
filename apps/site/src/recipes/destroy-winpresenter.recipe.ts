@@ -109,7 +109,7 @@ return {
         return [...GROUP_A.cells, ...GROUP_B.cells];
       },
       nextGrid: (prev, winners) => {
-        // Generic gravity: per column, drop the winner rows, pack the
+        // Generic gravity: per column, drop the winner cells, pack the
         // survivors to the bottom, fresh symbols on top. Handles the
         // shared reel (two winners in one column) correctly.
         const byReel = new Map();

@@ -95,7 +95,7 @@ export function debugGrid(reelSet: ReelSet): string {
   if (grid.length === 0) return '(empty grid)';
 
   const colWidth = 8;
-  const maxRows = Math.max(...visibleCells);
+  const maxCells = Math.max(...visibleCells);
   const pad = (s: string) => s.slice(0, colWidth).padEnd(colWidth);
   const empty = ' '.repeat(colWidth);
 
@@ -105,7 +105,7 @@ export function debugGrid(reelSet: ReelSet): string {
   const lines: string[] = [];
   lines.push(border('┌', '┬', '┐'));
 
-  for (let row = 0; row < maxRows; row++) {
+  for (let row = 0; row < maxCells; row++) {
     const cells = grid.map((col, i) => (row < visibleCells[i] ? pad(col[row] ?? '?') : empty));
     lines.push('│' + cells.join('│') + '│');
   }

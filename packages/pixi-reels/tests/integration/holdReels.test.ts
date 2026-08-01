@@ -3,8 +3,8 @@
  * and stay on whatever symbols they're currently showing. Covers the
  * core invariants exposed in the public API contract:
  *
- *   - non-held reels animate to their result rows
- *   - held reels keep their pre-spin visible rows
+ *   - non-held reels animate to their result cells
+ *   - held reels keep their pre-spin visible cells
  *   - setAnticipation silently filters held indices
  *   - skip() honours holdReels
  *   - degenerate "all held" still resolves
@@ -36,7 +36,7 @@ async function spinAndLandWithHold(
 }
 
 describe('SpinOptions.holdReels. basic behaviour', () => {
-  it('spins only non-held reels; held reels keep their visible rows', async () => {
+  it('spins only non-held reels; held reels keep their visible cells', async () => {
     const h = makeHarness();
     try {
       // First spin: lands the whole board so we have a known starting grid.
@@ -69,7 +69,7 @@ describe('SpinOptions.holdReels. basic behaviour', () => {
     }
   });
 
-  it('SpinResult.symbols reports the full visible grid (held rows included)', async () => {
+  it('SpinResult.symbols reports the full visible grid (held cells included)', async () => {
     const h = makeHarness();
     try {
       await h.spinAndLand([

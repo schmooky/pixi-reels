@@ -39,7 +39,7 @@ const SYMBOL_SIZE = 140;
 const SYMBOL_GAP = 4;
 
 /** Per-reel row offset to convert local-row to global-row (center anchor). */
-const ROW_OFFSET = ROWS_PER_REEL.map((rows) => Math.floor((MAX_ROWS - rows) / 2));
+const ROW_OFFSET = ROWS_PER_REEL.map((cells) => Math.floor((MAX_ROWS - cells) / 2));
 
 const PAYS: Record<string, number> = { '7': 4, '8': 6, '9': 8, '10': 10, J: 14, Q: 18, K: 24, A: 32 };
 
@@ -243,12 +243,12 @@ export async function boot(opts: BootOptions): Promise<() => void> {
 
 function drawDiamondFrame(g: Graphics): void {
   for (let c = 0; c < REEL_COUNT; c++) {
-    const rows = ROWS_PER_REEL[c];
+    const cells = ROWS_PER_REEL[c];
     const offset = ROW_OFFSET[c];
     const x = c * (SYMBOL_SIZE + SYMBOL_GAP);
     const y = offset * (SYMBOL_SIZE + SYMBOL_GAP);
     const w = SYMBOL_SIZE;
-    const h = rows * SYMBOL_SIZE + (rows - 1) * SYMBOL_GAP;
+    const h = cells * SYMBOL_SIZE + (cells - 1) * SYMBOL_GAP;
     g.roundRect(x - 4, y - 4, w + 8, h + 8, 8);
   }
   g.stroke({ color: 0xffb347, width: 2.5, alpha: 0.85 });
@@ -268,8 +268,8 @@ function randomCard(): string {
 }
 
 function randomGrid(): string[][] {
-  return ROWS_PER_REEL.map((rows) =>
-    Array.from({ length: rows }, randomCard),
+  return ROWS_PER_REEL.map((cells) =>
+    Array.from({ length: cells }, randomCard),
   );
 }
 

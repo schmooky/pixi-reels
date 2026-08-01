@@ -322,7 +322,7 @@ class DebugOverlay implements DebugOverlayHandle {
     this._reelSet.reels.forEach((reel: Reel) => {
       const slotH = reel.motion.slotPitch;
       const x = this._reelSet.viewport.x + reel.container.x;
-      const baseY = this._reelSet.viewport.y + reel.offsetY;
+      const baseY = this._reelSet.viewport.y + reel.mainOffset;
       const w = reel.symbolWidth;
       const h = reel.symbolHeight;
       // bufferStart cells sit at negative row offsets above visible row 0.
@@ -398,9 +398,9 @@ class DebugOverlay implements DebugOverlayHandle {
     let i = 0;
     this._reelSet.reels.forEach((reel: Reel, col: number) => {
       const t = this._text(this._hudTexts, i++, COLORS.hud, 11);
-      t.text = `r${col} spd=${reel.speed.toFixed(1)} ${this._phase[col]} rows=${reel.visibleCells}`;
+      t.text = `r${col} spd=${reel.speed.toFixed(1)} ${this._phase[col]} cells=${reel.visibleCells}`;
       t.x = this._reelSet.viewport.x + reel.container.x + 3;
-      t.y = this._reelSet.viewport.y + reel.offsetY + 3;
+      t.y = this._reelSet.viewport.y + reel.mainOffset + 3;
     });
     this._hideTextsFrom(this._hudTexts, i);
   }

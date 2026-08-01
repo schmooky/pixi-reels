@@ -58,7 +58,7 @@ const reelSet = new ReelSetBuilder()
   .weights(weights)
   // unmask parents the scatter into viewport.unmaskedContainer on land:
   // above every reel AND outside the mask. zIndex still sorts within that
-  // container. The reel's offsetY is baked in, so the short outer reels
+  // container. The reel's mainOffset is baked in, so the short outer reels
   // (which are centre-shifted) line up correctly.
   .symbolData({ scatter: { zIndex: 10, unmask: true } })
   // Synchronized settle: all reels start and stop together (no stagger),
@@ -71,10 +71,10 @@ const reelSet = new ReelSetBuilder()
 return {
   reelSet,
   nextResult: () => {
-    const grid = ROWS_PER_REEL.map((rows) =>
-      Array.from({ length: rows }, () => pickWeighted(weights)),
+    const grid = ROWS_PER_REEL.map((cells) =>
+      Array.from({ length: cells }, () => pickWeighted(weights)),
     );
-    // Scatters on the short outer reels (0 and 5) at their edge rows, so
+    // Scatters on the short outer reels (0 and 5) at their edge cells, so
     // the jaw pokes past the stepped grid outline AND the neighbour - the
     // exact case that needs the reel offset baked into the lifted view.
     grid[0][Math.random() < 0.5 ? 0 : grid[0].length - 1] = 'scatter';

@@ -329,7 +329,7 @@ describe('CellPin. bounds and errors', () => {
 });
 
 describe('CellPin. multiple pins coexist', () => {
-  it('applies many pins across reels and rows simultaneously', async () => {
+  it('applies many pins across reels and cells simultaneously', async () => {
     const h = makeHarness();
     try {
       // Pin a diagonal plus a couple variants. All use `turns: 'permanent'`

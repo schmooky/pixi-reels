@@ -50,7 +50,7 @@ export interface SpinControllerHooks {
   /** Clear pending shape after AdjustPhase runs. */
   clearTargetShape(): void;
   /** Reel pixel-box height for MultiWays cell-height derivation. */
-  multiwaysReelPixelHeight: number;
+  multiwaysReelExtent: number;
   symbolGapY: number;
   /** Reel-scoped pin lookup. Used to build AdjustPhase tween descriptors. */
   getPinsOnReel(reelIndex: number): CellPin[];
@@ -58,7 +58,7 @@ export interface SpinControllerHooks {
    * Migrate pins on a reel to a new visible-row count, returning the
    * resulting moves. Mutates the pin map directly inside ReelSet.
    */
-  migratePinsForReel(reelIndex: number, newRows: number): {
+  migratePinsForReel(reelIndex: number, newCells: number): {
     pin: CellPin;
     fromCell: number;
     toCell: number;
@@ -246,7 +246,7 @@ export class SpinController implements Disposable {
       symbolsData: {},
       peekTargetShape: () => null,
       clearTargetShape: () => {},
-      multiwaysReelPixelHeight: 0,
+      multiwaysReelExtent: 0,
       symbolGapY: 0,
       getPinsOnReel: () => [],
       migratePinsForReel: () => [],
@@ -520,10 +520,10 @@ export class SpinController implements Disposable {
           `refill: winner.reel ${w.reel} out of range [0, ${this._reels.length}).`,
         );
       }
-      const rows = this._reels[w.reel].visibleCells;
-      if (!Number.isInteger(w.row) || w.row < 0 || w.row >= rows) {
+      const cells = this._reels[w.reel].visibleCells;
+      if (!Number.isInteger(w.row) || w.row < 0 || w.row >= cells) {
         throw new RangeError(
-          `refill: winner.row ${w.row} out of range [0, ${rows}) for reel ${w.reel}.`,
+          `refill: winner.row ${w.row} out of range [0, ${cells}) for reel ${w.reel}.`,
         );
       }
     }
@@ -569,7 +569,7 @@ export class SpinController implements Disposable {
     this._cachedFrames = frames;
 
     // Group winners per reel and sort ascending. the gravity algorithm
-    // expects ascending winner rows when it builds nonWinnerRows.
+    // expects ascending winner cells when it builds nonWinnerCells.
     const winnersByReel = new Map<number, number[]>();
     for (const w of opts.winners) {
       let arr = winnersByReel.get(w.reel);
@@ -1096,12 +1096,12 @@ export class SpinController implements Disposable {
 
   /**
    * Compute the target cell height for a reel given a target row count.
-   * MultiWays slots derive cell height from the fixed `multiwaysReelPixelHeight`;
+   * MultiWays slots derive cell height from the fixed `multiwaysReelExtent`;
    * non-MultiWays slots return the reel's current `symbolHeight` unchanged.
    */
-  private _targetCellHeightFor(reel: Reel, targetRows: number): number {
-    if (this._hooks.multiwaysReelPixelHeight <= 0) return reel.symbolHeight;
-    return (this._hooks.multiwaysReelPixelHeight - (targetRows - 1) * this._hooks.symbolGapY) / targetRows;
+  private _targetCellHeightFor(reel: Reel, targetCells: number): number {
+    if (this._hooks.multiwaysReelExtent <= 0) return reel.symbolHeight;
+    return (this._hooks.multiwaysReelExtent - (targetCells - 1) * this._hooks.symbolGapY) / targetCells;
   }
 
   /**
@@ -1118,17 +1118,17 @@ export class SpinController implements Disposable {
    * Pin migration already happened at `setShape()` time, so this method
    * only handles geometry + overlays.
    */
-  private _applyReshape(reelIndex: number, targetRows: number): boolean {
+  private _applyReshape(reelIndex: number, targetCells: number): boolean {
     const reel = this._reels[reelIndex];
-    const targetCellH = this._targetCellHeightFor(reel, targetRows);
-    const fromRows = reel.visibleCells;
+    const targetCellH = this._targetCellHeightFor(reel, targetCells);
+    const fromCells = reel.visibleCells;
 
-    if (targetRows === fromRows && targetCellH === reel.symbolHeight) {
+    if (targetCells === fromCells && targetCellH === reel.symbolHeight) {
       return false;
     }
 
-    this._events.emit('adjust:start', { reelIndex, fromRows, toRows: targetRows });
-    reel.reshape(targetRows, targetCellH, reel.bufferStart, reel.bufferEnd);
+    this._events.emit('adjust:start', { reelIndex, fromCells, toCells: targetCells });
+    reel.reshape(targetCells, targetCellH, reel.bufferStart, reel.bufferEnd);
     this._hooks.refreshPinOverlaysForReel(reelIndex);
     this._events.emit('adjust:complete', { reelIndex });
     return true;
@@ -1146,7 +1146,7 @@ export class SpinController implements Disposable {
     // Cascade (classic-tumble) reshape ordering. In standard mode the reshape
     // runs between SPIN and STOP (below), where the spin blur hides a reel
     // changing height. Cascade mode has no such cover: `CascadeFallPhase` drops
-    // the reel's CURRENT visible rows, so if the reshape ran after the fall the
+    // the reel's CURRENT visible cells, so if the reshape ran after the fall the
     // reel would drop its OLD, differently-sized board and then snap to the new
     // shape. a reel visibly changing height mid-tumble. When the target shape is
     // already known at spin time (the game called `setShape()` BEFORE
@@ -1291,7 +1291,7 @@ export class SpinController implements Disposable {
 
   /**
    * MultiWays AdjustPhase orchestration: pull the pending shape, migrate
-   * pins to their new rows, build pin-overlay tween descriptors, run the
+   * pins to their new cells, build pin-overlay tween descriptors, run the
    * phase. Emits `adjust:start` on entry and `adjust:complete` on exit.
    *
    * **Skips entirely** when there's no shape change AND no pin overlay on
@@ -1306,8 +1306,8 @@ export class SpinController implements Disposable {
     generation: number,
   ): Promise<void> {
     const targetShape = this._hooks.peekTargetShape();
-    const targetRows = targetShape ? targetShape[reelIndex] : reel.visibleCells;
-    const targetCellH = this._targetCellHeightFor(reel, targetRows);
+    const targetCells = targetShape ? targetShape[reelIndex] : reel.visibleCells;
+    const targetCellH = this._targetCellHeightFor(reel, targetCells);
 
     // Build tween descriptors BEFORE the reshape commits. they capture
     // each overlay's current on-screen pose as the tween's `from` state.
@@ -1319,7 +1319,7 @@ export class SpinController implements Disposable {
 
     // Commit the reshape via the shared helper (events + reel.reshape +
     // overlay refresh). Skip if no work and no overlays to tween.
-    const reshapeHappened = this._applyReshape(reelIndex, targetRows);
+    const reshapeHappened = this._applyReshape(reelIndex, targetCells);
     if (!reshapeHappened && pinOverlays.length === 0) {
       return;
     }
@@ -1440,7 +1440,7 @@ export class SpinController implements Disposable {
 
     // For MultiWays, the per-reel target row count is whatever AdjustPhase
     // will reshape to. For frame-building purposes we need to send the
-    // correct number of visible rows per reel. Pull the pending shape; if
+    // correct number of visible cells per reel. Pull the pending shape; if
     // unset, fall back to current reel.visibleCells.
     const pendingShape = this._hooks.peekTargetShape();
     const visibleRowsForReel = (i: number): number =>
@@ -1463,11 +1463,11 @@ export class SpinController implements Disposable {
         continue;
       }
       const reel = this._reels[i];
-      const rows = visibleRowsForReel(i);
+      const cells = visibleRowsForReel(i);
       frames.push(
         this._frameBuilder.build(
           i,
-          rows,
+          cells,
           reel.bufferStart,
           reel.bufferEnd,
           decorated[i],
@@ -1509,13 +1509,13 @@ export class SpinController implements Disposable {
     // is the only buffer-setting API and applies a single global value;
     // there is no per-reel buffer API. If you ever add one (e.g. a
     // `bufferSymbolsPerReel([...])` builder method), propagate per-reel
-    // values into the validator loop below: the `targetRows` lookup
+    // values into the validator loop below: the `targetCells` lookup
     // already supports per-reel geometry; only the buffers are still
     // global here.
 
     // Read/write a per-reel target slot for any row in
-    // `[-bufferStart, rows + bufferEnd)`. Row is visible-relative: negative
-    // rows address `bufferStart`, rows past `visible.length` address
+    // `[-bufferStart, cells + bufferEnd)`. Row is visible-relative: negative
+    // cells address `bufferStart`, cells past `visible.length` address
     // `bufferEnd`. See `getTargetSlot` / `setTargetSlot`.
     const readSlot = (col: number, row: number): string | undefined =>
       getTargetSlot(out[col], row);
@@ -1524,14 +1524,14 @@ export class SpinController implements Disposable {
     };
 
     for (let col = 0; col < out.length; col++) {
-      const rows = visibleRowsForReel(col);
+      const cells = visibleRowsForReel(col);
       // Iterate the FULL strip range, not just visible. A big-symbol anchor
       // may sit in bufferStart (partial-visibility from the top. only the
       // block's tail shows in row 0) or in bufferEnd (the head shows at
       // the last visible row, the rest is clipped below the mask).
       // `_finalizeFrame` sizes anchors anywhere on the strip, so the engine
       // renders both cases correctly.
-      for (let row = -bufferStart; row < rows + bufferEnd; row++) {
+      for (let row = -bufferStart; row < cells + bufferEnd; row++) {
         const id = readSlot(col, row);
         if (id === undefined) continue;
         const meta = symData[id];
@@ -1541,13 +1541,13 @@ export class SpinController implements Disposable {
         if (w === 1 && h === 1) continue;
 
         // Validate block fit on this reel: anchor + h must stay on the
-        // strip. The strip ends at `rows + bufferEnd - 1` (last bufferEnd
+        // strip. The strip ends at `cells + bufferEnd - 1` (last bufferEnd
         // slot) and starts at `-bufferStart` (first bufferStart slot).
-        if (row + h > rows + bufferEnd) {
+        if (row + h > cells + bufferEnd) {
           throw new Error(
             `big symbol '${id}' (${w}x${h}) at (col=${col}, row=${row}) ` +
             `extends past the bottom of the strip on reel ${col} ` +
-            `(anchor row + h = ${row + h} > visibleCells + bufferEnd = ${rows + bufferEnd}).`,
+            `(anchor row + h = ${row + h} > visibleCells + bufferEnd = ${cells + bufferEnd}).`,
           );
         }
         if (col + w > out.length) {
@@ -1558,12 +1558,12 @@ export class SpinController implements Disposable {
         }
         for (let dx = 0; dx < w; dx++) {
           const targetReel = col + dx;
-          const targetRows = visibleRowsForReel(targetReel);
-          if (row + h > targetRows + bufferEnd) {
+          const targetCells = visibleRowsForReel(targetReel);
+          if (row + h > targetCells + bufferEnd) {
             throw new Error(
               `big symbol '${id}' (${w}x${h}) at (col=${col}, row=${row}) ` +
               `extends past the bottom of the strip on reel ${targetReel} ` +
-              `(anchor row + h = ${row + h} > visibleCells + bufferEnd = ${targetRows + bufferEnd}).`,
+              `(anchor row + h = ${row + h} > visibleCells + bufferEnd = ${targetCells + bufferEnd}).`,
             );
           }
         }

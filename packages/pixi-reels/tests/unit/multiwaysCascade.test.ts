@@ -15,18 +15,18 @@ interface Harness {
 
 function buildMultiwaysCascadeHarness(opts: {
   reels?: number;
-  minRows?: number;
-  maxRows?: number;
-  reelPixelHeight?: number;
+  minCells?: number;
+  maxCells?: number;
+  reelExtent?: number;
 } = {}): Harness {
   const ticker = new FakeTicker();
   const created: string[] = [];
   const reelSet = new ReelSetBuilder()
     .reels(opts.reels ?? 3)
     .multiways({
-      minRows: opts.minRows ?? 2,
-      maxRows: opts.maxRows ?? 6,
-      reelPixelHeight: opts.reelPixelHeight ?? 600,
+      minCells: opts.minCells ?? 2,
+      maxCells: opts.maxCells ?? 6,
+      reelExtent: opts.reelExtent ?? 600,
     })
     .symbolSize(100, 100)
     .tumble()
@@ -151,7 +151,7 @@ describe('MultiWays + Cascade (issue #74)', () => {
       ]);
       h.reelSet.slamStop();
       await promise;
-      // Builds at maxRows=6; no setShape -> reshape is a no-op.
+      // Builds at maxCells=6; no setShape -> reshape is a no-op.
       expect(h.reelSet.reels.map((r) => r.visibleCells)).toEqual([6, 6, 6]);
     } finally {
       h.destroy();

@@ -97,8 +97,8 @@ export function mockCascade(
 
   // Detect new wins
   const newWins: WinResult[] = [];
-  const rows = grid[0]?.length ?? 0;
-  for (let row = 0; row < rows; row++) {
+  const cells = grid[0]?.length ?? 0;
+  for (let row = 0; row < cells; row++) {
     const rowSymbols = grid.map((r) => r[row]);
     const counts = new Map<string, number[]>();
     rowSymbols.forEach((s, i) => {

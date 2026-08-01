@@ -62,7 +62,7 @@ describe('horizontal orientation', () => {
       .ticker(new FakeTicker() as unknown as Ticker)
       .symbols((r) => r.register('a', HeadlessSymbol, {}))
       .orientation('horizontal')
-      .multiways({ minRows: 2, maxRows: 5, reelPixelHeight: 400 });
+      .multiways({ minCells: 2, maxCells: 5, reelExtent: 400 });
     expect(() => b.build()).toThrow(/uniform/);
   });
 });

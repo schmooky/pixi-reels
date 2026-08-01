@@ -5,7 +5,7 @@ describe('pin migration (MultiWays)', () => {
   it('originCell defaults to row at pin placement', () => {
     const { reelSet, destroy } = createTestReelSet({
       reels: 4,
-      multiways: { minRows: 2, maxRows: 7, reelPixelHeight: 600 },
+      multiways: { minCells: 2, maxCells: 7, reelExtent: 600 },
       symbolIds: ['a', 'wild'],
     });
     try {
@@ -19,7 +19,7 @@ describe('pin migration (MultiWays)', () => {
   it('pin:placed payload carries originCell (default = row)', () => {
     const { reelSet, destroy } = createTestReelSet({
       reels: 4,
-      multiways: { minRows: 2, maxRows: 7, reelPixelHeight: 600 },
+      multiways: { minCells: 2, maxCells: 7, reelExtent: 600 },
       symbolIds: ['a', 'wild'],
     });
     try {
@@ -39,7 +39,7 @@ describe('pin migration (MultiWays)', () => {
   it('pin:placed payload preserves explicit originCell override', () => {
     const { reelSet, destroy } = createTestReelSet({
       reels: 4,
-      multiways: { minRows: 2, maxRows: 7, reelPixelHeight: 600 },
+      multiways: { minCells: 2, maxCells: 7, reelExtent: 600 },
       symbolIds: ['a', 'wild'],
     });
     try {
@@ -56,7 +56,7 @@ describe('pin migration (MultiWays)', () => {
   it('repositions + resizes the pin overlay after a MultiWays reshape', async () => {
     const { reelSet, destroy } = createTestReelSet({
       reels: 3,
-      multiways: { minRows: 2, maxRows: 7, reelPixelHeight: 700 },
+      multiways: { minCells: 2, maxCells: 7, reelExtent: 700 },
       symbolIds: ['a', 'wild'],
       symbolSize: { width: 100, height: 100 },
     });
@@ -79,7 +79,7 @@ describe('pin migration (MultiWays)', () => {
 
       // Pin migrated 4 -> 2. Overlay should be at the new (col=1, row=2) cell.
       // After reshape, slotPitch = 700/3 ~ 233. Y at row 2 ~ 466.7.
-      // Before, with 7 rows of 100, y at row 4 was 400.
+      // Before, with 7 cells of 100, y at row 4 was 400.
       const overlayAfter = (reelSet as any)._pinOverlays.get('1:2');
       // Overlays are destroyed on spin:allLanded, so we won't have one after. the
       // checks above (yBefore, _pinOverlays presence) prove the in-flight reshape
@@ -94,7 +94,7 @@ describe('pin migration (MultiWays)', () => {
   it('migration: "frozen" stays at current row, never restores after a clamp', async () => {
     const { reelSet, destroy } = createTestReelSet({
       reels: 3,
-      multiways: { minRows: 2, maxRows: 7, reelPixelHeight: 600 },
+      multiways: { minCells: 2, maxCells: 7, reelExtent: 600 },
       symbolIds: ['a', 'wild'],
     });
     try {
@@ -149,7 +149,7 @@ describe('pin migration (MultiWays)', () => {
   it('clamps when shape no longer fits originCell, restores when it fits again', async () => {
     const { reelSet, destroy } = createTestReelSet({
       reels: 3,
-      multiways: { minRows: 2, maxRows: 7, reelPixelHeight: 600 },
+      multiways: { minCells: 2, maxCells: 7, reelExtent: 600 },
       symbolIds: ['a', 'wild'],
     });
     try {
@@ -209,7 +209,7 @@ describe('pin migration (MultiWays)', () => {
   it('expires a pin that collides onto a cell another pin already holds (M8)', async () => {
     const { reelSet, destroy } = createTestReelSet({
       reels: 3,
-      multiways: { minRows: 2, maxRows: 7, reelPixelHeight: 700 },
+      multiways: { minCells: 2, maxCells: 7, reelExtent: 700 },
       symbolIds: ['a', 'wild', 'scatter'],
       symbolSize: { width: 100, height: 100 },
     });
@@ -219,7 +219,7 @@ describe('pin migration (MultiWays)', () => {
       reelSet.pin(1, 3, 'wild', { turns: 'permanent' }); // originCell 3
       reelSet.pin(1, 4, 'scatter', { turns: 'permanent' }); // originCell 4
 
-      // Shrink reel 1 to 2 rows: both pins clamp to the last row (1) and collide.
+      // Shrink reel 1 to 2 cells: both pins clamp to the last row (1) and collide.
       reelSet.setShape([2, 2, 2]);
       reelSet.setResult([
         { visible: ['a', 'a'] },

@@ -47,7 +47,7 @@ describe('bufferSymbols({ below: 0 }). tumble-only reel sets', () => {
       for (const reel of h.reelSet.reels) {
         expect(reel.bufferStart).toBe(1);
         expect(reel.bufferEnd).toBe(0);
-        // strip = bufferStart + visible rows, nothing below.
+        // strip = bufferStart + visible cells, nothing below.
         expect(reel.symbols.length).toBe(1 + 3);
       }
     } finally {

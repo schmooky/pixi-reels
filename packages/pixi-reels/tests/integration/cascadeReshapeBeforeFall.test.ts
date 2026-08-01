@@ -1,7 +1,7 @@
 /**
  * MultiWays reshape ordering in CASCADE (classic-tumble) mode.
  *
- * `CascadeFallPhase` drops a reel's CURRENT visible rows. In standard mode the
+ * `CascadeFallPhase` drops a reel's CURRENT visible cells. In standard mode the
  * reshape runs between SPIN and STOP (spin blur hides it), but cascade mode has
  * no such cover: if the reshape ran after the fall, a reel that changed height
  * would drop its OLD, differently-sized board and then snap to the new shape.
@@ -40,7 +40,7 @@ afterEach(() => {
 function build() {
   return new ReelSetBuilder()
     .reels(5)
-    .multiways({ minRows: 2, maxRows: 5, reelPixelHeight: 500 })
+    .multiways({ minCells: 2, maxCells: 5, reelExtent: 500 })
     .symbolSize(100, 100)
     .symbols((r) => { for (const id of ['a', 'b', 'c']) r.register(id, HeadlessSymbol, {}); })
     .weights({ a: 1, b: 1, c: 1 })
@@ -57,7 +57,7 @@ describe('cascade reshape-before-fall (setShape before spin)', () => {
   it('each reel is already at its target visibleCells by cascade:fall:start', async () => {
     const reelSet = build();
     try {
-      // MultiWays builds at maxRows (5). Commit a NEW, smaller jagged shape
+      // MultiWays builds at maxCells (5). Commit a NEW, smaller jagged shape
       // BEFORE the cascade spin so the reshape is known at spin time.
       const target = [2, 3, 4, 3, 2];
       expect(reelSet.reels.map((r) => r.visibleCells)).toEqual([5, 5, 5, 5, 5]);
@@ -69,7 +69,7 @@ describe('cascade reshape-before-fall (setShape before spin)', () => {
 
       reelSet.setShape(target);              // BEFORE spin - the fix's precondition
       reelSet.spin({ mode: 'cascade' }).catch(() => {});
-      reelSet.setResult(target.map((rows) => ({ visible: Array.from({ length: rows }, () => 'a') })));
+      reelSet.setResult(target.map((cells) => ({ visible: Array.from({ length: cells }, () => 'a') })));
 
       // Tick just far enough for every reel's fall to start.
       for (let f = 0; f < 20 && Object.keys(rowsAtFallStart).length < 5; f++) {
@@ -78,7 +78,7 @@ describe('cascade reshape-before-fall (setShape before spin)', () => {
       }
 
       // The reshape committed before the fall: every reel fell at its target
-      // height, not the old maxRows shape.
+      // height, not the old maxCells shape.
       expect(rowsAtFallStart).toEqual({ 0: 2, 1: 3, 2: 4, 3: 3, 4: 2 });
     } finally {
       reelSet.destroy();
@@ -94,10 +94,10 @@ describe('cascade reshape-before-fall (setShape before spin)', () => {
         rowsAtFallStart[info.reelIndex] = reelSet.reels[info.reelIndex].visibleCells;
       });
 
-      // Shape arrives AFTER the spin - the fall runs on the old (maxRows) shape.
+      // Shape arrives AFTER the spin - the fall runs on the old (maxCells) shape.
       reelSet.spin({ mode: 'cascade' }).catch(() => {});
       reelSet.setShape(target);
-      reelSet.setResult(target.map((rows) => ({ visible: Array.from({ length: rows }, () => 'a') })));
+      reelSet.setResult(target.map((cells) => ({ visible: Array.from({ length: cells }, () => 'a') })));
 
       for (let f = 0; f < 20 && Object.keys(rowsAtFallStart).length < 5; f++) {
         ticker.tick(16);

@@ -11,17 +11,17 @@ export interface TestReelSetOptions {
   reels?: number;
   /**
    * Visible row count.
-   *   - `number` → uniform rows.
+   *   - `number` → uniform cells.
    *   - `number[]` → per-reel static shape (pyramid).
    *
-   * Mutually exclusive with `multiways` (which always starts at `maxRows`).
+   * Mutually exclusive with `multiways` (which always starts at `maxCells`).
    */
   visibleCells?: number | number[];
   /**
    * MultiWays configuration. Mutually exclusive with `visibleCells: number[]`.
-   * The harness sets uniform `reelPixelHeight` and forwards `min/maxRows`.
+   * The harness sets uniform `reelExtent` and forwards `min/maxCells`.
    */
-  multiways?: { minRows: number; maxRows: number; reelPixelHeight: number };
+  multiways?: { minCells: number; maxCells: number; reelExtent: number };
   symbolIds?: string[];
   weights?: Record<string, number>;
   /** Per-symbol overrides. useful for big-symbol size declarations in tests. */

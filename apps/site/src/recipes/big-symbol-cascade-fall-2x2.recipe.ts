@@ -55,14 +55,14 @@ return {
   reelSet,
   onSpin: async () => {
     // ── 1. Initial spin: 2x2 block anchored on reel 1 at bufferStart[0]
-    //      (row -1). it spans rows -1..0 on reels 1-2, so only its
+    //      (row -1). it spans cells -1..0 on reels 1-2, so only its
     //      bottom half peeks into the visible board. Plant a MATCH-row
     //      cluster at row 1 across all four reels.
     const MATCH = 'Q';
     const initialGrid = [
       { visible: [filler(), MATCH, filler(), filler()] },
       // Anchor at bufferStart[0] = row -1. Footprint: reels 1-2,
-      // rows -1..0. The coordinator paints the other three cells.
+      // cells -1..0. The coordinator paints the other three cells.
       {
         visible: [filler(), MATCH, filler(), filler()],
         bufferStart: [BIG.id],
@@ -77,7 +77,7 @@ return {
     await new Promise((r) => setTimeout(r, 900));
 
     // ── 2. Cascade: the MATCH row clears, the block falls one row and
-    //      lands fully visible at rows 0-1 of reels 1-2.
+    //      lands fully visible at cells 0-1 of reels 1-2.
     let chained = false;
     reelSet.setDropOrder('all');
     await reelSet.runCascade({
@@ -87,11 +87,11 @@ return {
         return [0, 1, 2, 3].map((reel) => ({ reel, row: 1 }));
       },
       // Survivors keep their identities: one fresh symbol on top, old
-      // rows 0/2/3 slide-or-stay with the same faces (rows 2-3 never
+      // cells 0/2/3 slide-or-stay with the same faces (cells 2-3 never
       // animate. a fresh identity there would pop in place).
       nextGrid: (prev) => [
         { visible: [filler(), prev[0][0], prev[0][2], prev[0][3]] },
-        // Anchor now at visible[0]. block occupies rows 0-1 on reels
+        // Anchor now at visible[0]. block occupies cells 0-1 on reels
         // 1-2, fully visible. The coordinator paints OCCUPIED stubs at
         // the other three footprint cells (row 1 was the block's old
         // tail, so its "survivor" slot stays covered. consistent).

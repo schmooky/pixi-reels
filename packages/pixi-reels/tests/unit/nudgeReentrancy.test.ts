@@ -17,7 +17,7 @@ function buildHarness() {
 function buildMultiwaysHarness() {
   return createTestReelSet({
     reels: 3,
-    multiways: { minRows: 2, maxRows: 5, reelPixelHeight: 500 },
+    multiways: { minCells: 2, maxCells: 5, reelExtent: 500 },
     symbolIds: ['a', 'b', 'wild'],
   });
 }

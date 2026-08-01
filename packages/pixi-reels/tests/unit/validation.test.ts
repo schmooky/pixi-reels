@@ -25,7 +25,7 @@ describe('builder validation', () => {
       new ReelSetBuilder()
         .reels(3)
         .visibleCellsPerReel([3, 5, 3])
-        .multiways({ minRows: 2, maxRows: 7, reelPixelHeight: 600 })
+        .multiways({ minCells: 2, maxCells: 7, reelExtent: 600 })
         .symbolSize(100, 100)
         .ticker(new FakeTicker() as unknown as Ticker)
         .symbols((r) => r.register('a', HeadlessSymbol, {}))
@@ -36,7 +36,7 @@ describe('builder validation', () => {
   it('accepts multiways() + cascade mode (issue #74)', () => {
     const reelSet = new ReelSetBuilder()
       .reels(3)
-      .multiways({ minRows: 2, maxRows: 7, reelPixelHeight: 600 })
+      .multiways({ minCells: 2, maxCells: 7, reelExtent: 600 })
       .symbolSize(100, 100)
       .spinningMode(new CascadeMode())
       .ticker(new FakeTicker() as unknown as Ticker)
@@ -49,16 +49,16 @@ describe('builder validation', () => {
     }
   });
 
-  it('rejects multiways with minRows > maxRows', () => {
+  it('rejects multiways with minCells > maxCells', () => {
     expect(() =>
       new ReelSetBuilder()
         .reels(3)
-        .multiways({ minRows: 7, maxRows: 2, reelPixelHeight: 600 })
+        .multiways({ minCells: 7, maxCells: 2, reelExtent: 600 })
         .symbolSize(100, 100)
         .ticker(new FakeTicker() as unknown as Ticker)
         .symbols((r) => r.register('a', HeadlessSymbol, {}))
         .build(),
-    ).toThrow(/minRows .* cannot exceed maxRows/);
+    ).toThrow(/minCells .* cannot exceed maxCells/);
   });
 
   it('rejects mismatched visibleCellsPerReel length', () => {
@@ -83,7 +83,7 @@ describe('builder validation', () => {
   it('accepts a complete multiways slot', () => {
     const { reelSet, destroy } = createTestReelSet({
       reels: 6,
-      multiways: { minRows: 2, maxRows: 7, reelPixelHeight: 600 },
+      multiways: { minCells: 2, maxCells: 7, reelExtent: 600 },
     });
     try {
       expect(reelSet.isMultiWaysSlot).toBe(true);
@@ -92,16 +92,16 @@ describe('builder validation', () => {
     }
   });
 
-  it('rejects multiways({reelPixelHeight}) + reelExtents([...]) collision', () => {
+  it('rejects multiways({reelExtent}) + reelExtents([...]) collision', () => {
     expect(() =>
       new ReelSetBuilder()
         .reels(3)
-        .multiways({ minRows: 2, maxRows: 5, reelPixelHeight: 500 })
+        .multiways({ minCells: 2, maxCells: 5, reelExtent: 500 })
         .reelExtents([500, 500, 500])
         .symbolSize(100, 100)
         .ticker(new FakeTicker() as unknown as Ticker)
         .symbols((r) => r.register('a', HeadlessSymbol, {}))
         .build(),
-    ).toThrow(/cannot combine multiways\({reelPixelHeight}\) with reelExtents/);
+    ).toThrow(/cannot combine multiways\({reelExtent}\) with reelExtents/);
   });
 });

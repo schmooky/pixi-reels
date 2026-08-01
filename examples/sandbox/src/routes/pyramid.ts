@@ -55,7 +55,7 @@ export function buildPyramid({ app, textures, blurTextures }: SandboxContext): S
   const height = tallest * (SYMBOL_SIZE + GAP) - GAP;
 
   const nextResult = (): string[][] =>
-    VISIBLE.map((rows) => Array.from({ length: rows }, () => SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)]));
+    VISIBLE.map((cells) => Array.from({ length: cells }, () => SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)]));
 
   return { reelSet, width, height, nextResult };
 }

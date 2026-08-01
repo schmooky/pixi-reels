@@ -6,11 +6,11 @@
 //
 // A tall 1x3 wild lands with its anchor in bufferStart. tail visible
 // at row 0. All three reels land a TWO-ROW cluster below the wild's
-// tail (rows 1 and 2). The cluster wins, six cells clear, and the
-// cascade refill drops the wild TWO rows into full visibility.
+// tail (cells 1 and 2). The cluster wins, six cells clear, and the
+// cascade refill drops the wild TWO cells into full visibility.
 //
 // Physics note (ADR-010): the anchor moves from row -2 to row 0, a
-// two-cell fall. so exactly TWO winner rows must sit below it. With a
+// two-cell fall. so exactly TWO winner cells must sit below it. With a
 // single cleared row the engine's drop geometry starts the block one
 // cell above its slot while its old view sat two cells up: a visible
 // snap. Two winners below = start position matches the old view's
@@ -74,18 +74,18 @@ return {
   reelSet,
   onSpin: async () => {
     // ── 1. Initial spin: tall wild on reel 0 with tail at row 0; ─────
-    //      plant a two-row MATCH cluster across all 3 reels (rows 1-2).
+    //      plant a two-row MATCH cluster across all 3 reels (cells 1-2).
     const initialGrid = [
-      // Reel 0: anchor at bufferStart[1] = row -2. Block spans rows
+      // Reel 0: anchor at bufferStart[1] = row -2. Block spans cells
       // -2, -1, 0. Tail at visible[0]. Plant MATCH at row 1; fillers
-      // at rows 2, 3.
+      // at cells 2, 3.
       {
         visible: [filler(), MATCH.id, MATCH.id, filler()],
         bufferStart: [undefined, TALL.id],
       },
-      // Reel 1: MATCH at rows 1-2.
+      // Reel 1: MATCH at cells 1-2.
       { visible: [filler(), MATCH.id, MATCH.id, filler()] },
-      // Reel 2: MATCH at rows 1-2.
+      // Reel 2: MATCH at cells 1-2.
       { visible: [filler(), MATCH.id, MATCH.id, filler()] },
     ];
     const spinDone = reelSet.spin();
@@ -94,11 +94,11 @@ return {
     await spinDone;
     await new Promise((r) => setTimeout(r, 900));
 
-    // ── 2. Cascade: both MATCH rows clear, wild falls two cells. ──────
+    // ── 2. Cascade: both MATCH cells clear, wild falls two cells. ──────
     //
     // `runCascade` runs `detectWinners` → `destroySymbols` → `nextGrid`
     // → refill, repeating until detectWinners returns []. We script a
-    // single round here: rows 1 AND 2 across all 3 reels are the winning
+    // single round here: cells 1 AND 2 across all 3 reels are the winning
     // cluster (two winners below the block = two-cell fall), and
     // nextGrid moves the wild block to visible[0..2].
     let chained = false;
@@ -110,13 +110,13 @@ return {
         return [0, 1, 2].flatMap((reel) => [{ reel, row: 1 }, { reel, row: 2 }]);
       },
       // Survivors KEEP their identities (the "semantic winners" rule from
-      // the destroy recipe): rows not in the winner set are read from
+      // the destroy recipe): cells not in the winner set are read from
       // `prev` and packed to the bottom. only the cleared cells get fresh
       // symbols. Handing every reel a fresh random column would swap the
       // bottom row's face in place. it has no hole below it, so it never
       // animates, and the identity swap is a visible pop.
       nextGrid: (prev) => [
-        // Reel 0: block now at rows 0, 1, 2 (fully visible). New top
+        // Reel 0: block now at cells 0, 1, 2 (fully visible). New top
         // cell in bufferStart[0]; the coordinator paints OCCUPIED at
         // visible[1] and [2] so 'tall' here is the anchor only. Row 3
         // is the untouched survivor. same face as before the cascade.
@@ -124,7 +124,7 @@ return {
           visible: [TALL.id, filler(), filler(), prev[0][3]],
           bufferStart: [filler()],
         },
-        // Reels 1, 2: two fresh symbols on top, survivors (old rows 0
+        // Reels 1, 2: two fresh symbols on top, survivors (old cells 0
         // and 3) packed to the bottom in their original order.
         { visible: [filler(), filler(), prev[1][0], prev[1][3]] },
         { visible: [filler(), filler(), prev[2][0], prev[2][3]] },

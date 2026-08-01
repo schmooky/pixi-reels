@@ -13,7 +13,7 @@ import { createUI } from '../../shared/ui.js';
 
 // ─── LAYOUT ─────────────────────────────────────────────────
 //
-// 6 reels × 5 rows, sprite symbols. Canonical "Sweet Bonanza / Sugar Rush"
+// 6 reels × 5 cells, sprite symbols. Canonical "Sweet Bonanza / Sugar Rush"
 // cascade footprint - the shape most production cascade slots ship with.
 
 const REEL_COUNT = 6;

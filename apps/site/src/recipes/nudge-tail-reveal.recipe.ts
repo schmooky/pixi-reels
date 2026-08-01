@@ -47,7 +47,7 @@ const col3 = () => [filler(), filler(), filler()];
 return {
   reelSet,
   onSpin: async () => {
-    // 1. Land 1x2 MEGA anchored at column 2, row 0. Block fills rows 0+1.
+    // 1. Land 1x2 MEGA anchored at column 2, row 0. Block fills cells 0+1.
     const grid = [col3(), col3(), [MEGA.id, MEGA.id, filler()], col3(), col3()];
     const p = reelSet.spin();
     await new Promise((r) => setTimeout(r, 220));
@@ -68,7 +68,7 @@ return {
     });
     await new Promise((r) => setTimeout(r, 800));
 
-    // 3. Nudge DOWN by 1 to fully reveal the block at rows 0+1 again.
+    // 3. Nudge DOWN by 1 to fully reveal the block at cells 0+1 again.
     //    The classic "nudge to reveal the wild" beat.
     await reelSet.nudge(2, {
       distance: 1,
