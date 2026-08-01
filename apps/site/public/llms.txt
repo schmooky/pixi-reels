@@ -8,7 +8,7 @@ Site: https://pixi-reels.schmooky.dev
 Repo: https://github.com/schmooky/pixi-reels
 Package: https://www.npmjs.com/package/pixi-reels
 
-Generated: 2026-08-01T23:35:53.820Z
+Generated: 2026-08-01T23:49:16.402Z
 
 ## Quick start
 
@@ -562,7 +562,7 @@ const reelSet = new ReelSetBuilder()
     });
   })
   .weights(Object.fromEntries(CARD_DECK.map((c, i) => [c.id, 12 - i])))
-  .symbolData({ [BIG.id]: { weight: 0, zIndex: 5, size: { w: BIG.w, h: BIG.h } } })
+  .symbolData({ [BIG.id]: { weight: 0, zIndex: 5, size: { reels: BIG.w, cells: BIG.h } } })
   .speed('normal', { ...SpeedPresets.NORMAL, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
     fall:   { duration: 320, ease: 'power3.in',  cellStagger: 60 },
@@ -694,7 +694,7 @@ const reelSet = new ReelSetBuilder()
     });
   })
   .weights(Object.fromEntries(CARD_DECK.map((c, i) => [c.id, 12 - i])))
-  .symbolData({ [TALL.id]: { weight: 0, zIndex: 5, size: { w: TALL.w, h: TALL.h } } })
+  .symbolData({ [TALL.id]: { weight: 0, zIndex: 5, size: { reels: TALL.w, cells: TALL.h } } })
   .speed('normal', { ...SpeedPresets.NORMAL, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
     fall:   { duration: 320, ease: 'power3.in',  cellStagger: 60 },
@@ -831,7 +831,7 @@ const reelSet = new ReelSetBuilder()
     });
   })
   .weights(Object.fromEntries(CARD_DECK.map((c, i) => [c.id, 12 - i])))
-  .symbolData({ [TALL.id]: { weight: 0, zIndex: 5, size: { w: TALL.w, h: TALL.h } } })
+  .symbolData({ [TALL.id]: { weight: 0, zIndex: 5, size: { reels: TALL.w, cells: TALL.h } } })
   .speed('normal', { ...SpeedPresets.NORMAL, bounceDistance: 0, bounceDuration: 0 })
   .ticker(app.ticker)
   .build();
@@ -950,7 +950,7 @@ const reelSet = new ReelSetBuilder()
     });
   })
   .weights(Object.fromEntries(CARD_DECK.map((c, i) => [c.id, 12 - i])))
-  .symbolData({ [TALL.id]: { weight: 0, zIndex: 5, size: { w: TALL.w, h: TALL.h } } })
+  .symbolData({ [TALL.id]: { weight: 0, zIndex: 5, size: { reels: TALL.w, cells: TALL.h } } })
   // Big symbols don't tolerate the default landing bounce. zero it.
   .speed('normal', { ...SpeedPresets.NORMAL, bounceDistance: 0, bounceDuration: 0 })
   .ticker(app.ticker)
@@ -1052,7 +1052,7 @@ const reelSet = new ReelSetBuilder()
     });
   })
   .weights(Object.fromEntries(CARD_DECK.map((c, i) => [c.id, 12 - i])))
-  .symbolData({ [GIANT.id]: { weight: 0, zIndex: 5, size: { w: GIANT.w, h: GIANT.h } } })
+  .symbolData({ [GIANT.id]: { weight: 0, zIndex: 5, size: { reels: GIANT.w, cells: GIANT.h } } })
   // A 3x3 anchor spans ~3x a normal cell, so
   // the default 56px landing bounce overshoots into adjacent cells and
   // reads as a broken landing. Zero the bounce so the anchor lands
@@ -1108,7 +1108,7 @@ const reelSet = new ReelSetBuilder()
     });
   })
   .weights(Object.fromEntries(CARD_DECK.map((c, i) => [c.id, 12 - i])))
-  .symbolData({ [SQUARE.id]: { weight: 0, zIndex: 5, size: { w: SQUARE.w, h: SQUARE.h } } })
+  .symbolData({ [SQUARE.id]: { weight: 0, zIndex: 5, size: { reels: SQUARE.w, cells: SQUARE.h } } })
   // Big symbols are large (a 2x2 anchor is ~2x cell size);
   // the default 56px landing bounce overshoots into adjacent cells and
   // reads as a broken landing. Zero the bounce so the anchor lands
@@ -1167,7 +1167,7 @@ const reelSet = new ReelSetBuilder()
     });
   })
   .weights(Object.fromEntries(CARD_DECK.map((c, i) => [c.id, 12 - i])))
-  .symbolData({ [TALL.id]: { weight: 0, zIndex: 5, size: { w: TALL.w, h: TALL.h } } })
+  .symbolData({ [TALL.id]: { weight: 0, zIndex: 5, size: { reels: TALL.w, cells: TALL.h } } })
   // Big symbols are massive; the default 56px landing bounce
   // overshoots into adjacent cells and reads as a broken landing.
   // Zero the bounce so the anchor lands flush on grid.
@@ -1224,7 +1224,7 @@ const reelSet = new ReelSetBuilder()
     });
   })
   .weights(Object.fromEntries(CARD_DECK.map((c, i) => [c.id, 12 - i])))
-  .symbolData({ [WIDE.id]: { weight: 0, zIndex: 5, size: { w: WIDE.w, h: WIDE.h } } })
+  .symbolData({ [WIDE.id]: { weight: 0, zIndex: 5, size: { reels: WIDE.w, cells: WIDE.h } } })
   // Big symbols are massive; the default 56px landing bounce
   // overshoots into adjacent cells and reads as a broken landing.
   // Zero the bounce so the anchor lands flush on grid.
@@ -3509,7 +3509,7 @@ const reelSet = new ReelSetBuilder()
     }
   })
   .weights(Object.fromEntries(CARD_DECK.map((c, i) => [c.id, 12 - i])))
-  .symbolData(Object.fromEntries(SHAPES.map((s) => [s.id, { weight: 0, zIndex: 5, size: { w: s.w, h: s.h } }])))
+  .symbolData(Object.fromEntries(SHAPES.map((s) => [s.id, { weight: 0, zIndex: 5, size: { reels: s.w, cells: s.h } }])))
   // Big symbols make the default 56px landing bounce look broken.
   // the giant anchor overshoots into adjacent cells. Zero the bounce.
   .speed('normal', { ...SpeedPresets.NORMAL, bounceDistance: 0, bounceDuration: 0 })
@@ -8085,7 +8085,7 @@ const reelSet = new ReelSetBuilder()
   })
   .weights(Object.fromEntries(CARD_DECK.map((c, i) => [c.id, 12 - i])))
   .symbolData({
-    [MEGA.id]: { weight: 0, zIndex: 5, size: { w: MEGA.w, h: MEGA.h } },
+    [MEGA.id]: { weight: 0, zIndex: 5, size: { reels: MEGA.w, cells: MEGA.h } },
   })
   // Big symbols don't tolerate the default 56px landing bounce. zero it
   // so the anchor lands flush on grid.
@@ -8534,7 +8534,7 @@ const reelSet = new ReelSetBuilder()
     });
   })
   .weights(Object.fromEntries(CARD_DECK.map((c, i) => [c.id, 12 - i])))
-  .symbolData({ [MEGA.id]: { weight: 0, zIndex: 5, size: { w: MEGA.w, h: MEGA.h } } })
+  .symbolData({ [MEGA.id]: { weight: 0, zIndex: 5, size: { reels: MEGA.w, cells: MEGA.h } } })
   .speed('normal', { ...SpeedPresets.NORMAL, bounceDistance: 0, bounceDuration: 0 })
   .ticker(app.ticker)
   .build();

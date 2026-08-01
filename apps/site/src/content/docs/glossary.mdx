@@ -82,13 +82,13 @@ Two groups of terms are mixed here: **slot vocabulary** (concepts every slot use
 
 **`ReelPhase`**. A single stage in a reel's life during a spin. pixi-reels ships built-in phases for wind-up, constant-speed blur, optional anticipation slow-down, and the decelerate-snap-bounce stop. Add your own by extending `ReelPhase` and registering via the `PhaseFactory` callback in `builder.phases(f => f.register('name', MyPhase))`. The built-in phase classes are internal; only the Config TYPES (`StartPhaseConfig`, `SpinPhaseConfig`, etc.) are exported as stable shape descriptions.
 
-**`SpinningMode`**. The strategy switch that decides what a spin means. `StandardMode` is the default (each reel runs through the phases independently). `CascadeMode` replaces columns atomically for tumble mechanics. `ImmediateMode` is a no-motion mode for testing.
+**`SpinningMode`**. The per-frame motion strategy: one method, `computeDelta(slotPitch, speed, deltaMs)`, returning how far the strip travels this frame. `StandardMode` is the default. `CascadeMode` multiplies by a gravity factor (1.5) and caps the step at one slot pitch. `ImmediateMode` returns 0, so the phase places symbols directly. Not the same thing as `spin({ mode: 'standard' | 'cascade' })`, which picks the phase chain.
 
 **`SpeedManager`**. Holds named `SpeedProfile` objects (timings, easings, bounce distance). Switch profiles at runtime with `reelSet.setSpeed('turbo')`.
 
 **`SymbolSpotlight`**. The win-animation primitive. Dims non-winners, promotes winners above the mask, runs `playWin()` on each, and can cycle through multiple lines.
 
-**`FrameBuilder` / middleware**. A tiny middleware pipeline that decides what symbol identity goes into each buffer slot when a reel needs another row. Intercept it to implement "no three-in-a-row", "inject a mystery symbol every 7 frames", etc.
+**`FrameBuilder` / middleware**. A tiny middleware pipeline that fills a reel's whole frame -- buffer-start + visible cells + buffer-end -- with symbol identities each time the engine builds one. Intercept it to implement "no three-in-a-row", "inject a mystery symbol every 7 frames", etc.
 
 **`ObjectPool<T>`**. The reuse bucket behind every symbol. Scrolling a 5x3 reel for 5 seconds allocates zero new `ReelSymbol` objects. they come from and return to the pool.
 

@@ -147,7 +147,7 @@ What tumble slots actually tune:
 | `maxChain` | `32` | Safety cap. Bump up only if your game can legitimately exceed 32 cascades. |
 | `onCascade` |. | Per-cascade hook. Bump multipliers, fire SFX, run "winners gone" UI here. Return a Promise to delay the next refill. |
 | `destroyOptions` | `{}` | Forwarded to `destroySymbols(...)`. Use this for direction overrides, per-cell stagger, viewport dim. |
-| `signal` |. | `AbortSignal` for caller-driven cancellation. See [cancelling a chain](#cancelling-a-chain--the-abortsignal-pattern). |
+| `signal` |. | `AbortSignal` for caller-driven cancellation. See [cancelling a chain](#cancelling-a-chain-via-abortsignal). |
 
 ```ts
 await reelSet.runCascade({

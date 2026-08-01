@@ -1063,7 +1063,7 @@ export class ReelSetBuilder {
         errors.push(
           `big symbol '${id}' (size ${size.reels}x${size.cells}) must have weight 0. ` +
           'big symbols are placed by the server at anchor cells only and never enter ' +
-          'random fill in v1. Set weight to 0 (or omit it) and place the symbol via setResult().',
+          'random fill. Set weight to 0 (or omit it) and place the symbol via setResult().',
         );
       }
       // Cross-reel blocks vs per-reel direction (ADR 016 section 6.7). The

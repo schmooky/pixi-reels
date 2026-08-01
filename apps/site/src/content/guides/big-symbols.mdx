@@ -48,7 +48,7 @@ setResult([
 Internally:
 
 1. **Cross-reel coordinator** runs in `SpinController` ahead of per-reel frame building. It reads the result grid, finds big-symbol anchors, validates block fit, and paints `OCCUPIED_SENTINEL` across the rest of the block.
-2. **At land**, the anchor symbol is sized to span the whole `(w*cellW, h*cellH)` block. Non-anchor cells get an invisible `OccupiedStub` (a zero-alpha placeholder). the anchor's view visually covers them.
+2. **At land**, the anchor symbol is sized to span the whole block, gaps included: `(w*cellW + (w-1)*gapX, h*cellH + (h-1)*gapY)`. Non-anchor cells get an invisible `OccupiedStub` (a zero-alpha placeholder). the anchor's view visually covers them.
 3. **Public API** never sees the sentinel. Both `Reel.getVisibleSymbols()` and `ReelSet.getVisibleGrid()` resolve OCCUPIED. same-reel and cross-reel. to the anchor's id. Iterating per reel and the grid surface return identical data.
 
 ## Block lookup
@@ -63,7 +63,7 @@ const fp = reelSet.getSymbolFootprint(reel, cell);
 // -> { anchor: { reel: 2, cell: 1 }, size: { reels: 2, cells: 2 } }
 
 const rect = reelSet.getBlockBounds(reel, cell);
-// → { x, y, width: 2 * cellW, height: 2 * cellH }
+// → { x, y, width: 2*cellW + symbolGap.x, height: 2*cellH + symbolGap.y }
 gfx.rect(rect.x, rect.y, rect.width, rect.height).stroke({ color: 0xff6b35, width: 4 });
 ```
 
@@ -71,16 +71,18 @@ Pass any cell of a block. anchor or non-anchor. both APIs return the same data. 
 
 ## Validation
 
-The engine throws fail-fast at `setResult()` if a block doesn't fit:
+During a spin, the engine throws fail-fast at `setResult()` if a block doesn't fit:
 
 - `"big symbol 'giant' (3x3) at (reel=4, cell=2) exceeds reel count 6."`
-- `"big symbol 'tallBar' (1x3) at (reel=0, cell=3) extends past the end of the strip on reel 0 (anchor cell + cells = 6 > visibleCells + bufferEnd = 4)."`
+- `"big symbol 'tallBar' (1x3) at (reel=0, cell=3) extends past the bottom of the strip on reel 0 (anchor cell + h = 6 > visibleCells + bufferEnd = 4)."`
 
 The vertical check is against the **full strip** (visible + bufferEnd), not just visible. Anchors are allowed to land partially, with the block extending into bufferStart or bufferEnd.
 
-Pinning the **non-anchor** cell of a big symbol throws. pin the anchor instead, which covers the block visually because the anchor's view spans it.
+A `setResult()` with no spin in flight returns early, so it validates nothing.
 
-The **build-time** check refuses big symbols with non-zero weight (`big symbol 'bonus' (2x2) must have weight 0. ...`). Random fill can't place blocks in v1, so non-zero weight would silently never be picked.
+Pinning the **non-anchor** cell of a big symbol is not supported, but it does not throw: the cross-reel coordinator repaints that cell as OCCUPIED at the next `setResult()` and the pin quietly disappears. Pin the anchor instead, which covers the block visually because the anchor's view spans it. (`setSymbolAt()` on a non-anchor cell *does* throw.)
+
+The **build-time** check refuses big symbols with non-zero weight (`big symbol 'bonus' (size 2x2) must have weight 0. ...`). Random fill can't place blocks, so non-zero weight would silently never be picked.
 
 ## Partial landings (anchors in a buffer)
 
@@ -93,7 +95,7 @@ rest spills into `bufferEnd`. Both are legal. Both look deliberate.
 Use the explicit `ColumnTarget` form to target buffer slots:
 
 ```ts
-// 1x3 wild lands with its tail at visible cell 0; anchor + two stubs are
+// 1x3 wild lands with its tail at visible cell 0; anchor + one stub are
 // off-screen in bufferStart. Requires bufferSymbols(2) or more.
 reelSet.setResult([
   { visible: [...], bufferStart: [undefined, 'tallWild'] },
@@ -109,8 +111,8 @@ If `symbolGap.x > 0`, the **default per-reel mask** has horizontal gaps between 
 
 The engine **auto-picks `SharedRectMaskStrategy`** when:
 
-1. At least one big symbol is registered (`SymbolData.size > 1×1`), AND
-2. `symbolGap.x > 0`, AND
+1. At least one big symbol is registered (`SymbolData.size > 1×1`), **or any symbol sets `unmask: true`**, AND
+2. the **cross-axis** gap is above 0 -- `symbolGap.x` on a vertical set, `symbolGap.y` on a horizontal one, AND
 3. No explicit `.maskStrategy(...)` call was made.
 
 It logs a `console.info(...)` so you can see what happened. Pass `.maskStrategy(...)` to override.
@@ -135,7 +137,7 @@ Anchors render at `symbolData.zIndex * 100 + arrayIndex` -- about 500 with
 layer, so cells at the larger coordinate still draw in front of their
 neighbours.
 
-Pin overlays render at zIndex `10000` (an internal `ReelSet` constant. not part of the public API). So a big symbol that's also pinned (`reelSet.pin(anchorCol, anchorRow, id, ...)`) gets its overlay rendered above the cell. the overlay covers the whole block visually because the overlay symbol is sized to the block.
+Pin overlays render at zIndex `10000` (an internal `ReelSet` constant. not part of the public API). So a big symbol that's also pinned (`reelSet.pin(anchorReel, anchorCell, id, ...)`) gets its overlay rendered above the cell. The overlay is sized to a **single cell**, so while the reel spins it does not cover the rest of the block; the block only spans again once the frame commits at land.
 
 | Layer | zIndex | Source |
 |---|---|---|
@@ -147,9 +149,9 @@ Pin overlays render at zIndex `10000` (an internal `ReelSet` constant. not part 
 
 ## Constraints
 
-- **Weight 0 required.** Random fill cannot place blocks in v1; the builder throws on non-zero weight. Server places via `setResult()`.
+- **Weight 0 required.** Random fill cannot place blocks; the builder throws on non-zero weight. Server places via `setResult()`.
 - **Big symbols only at landing.** During the spin, every cell is 1×1; the block layout commits at stop.
-- **No random-fill big symbols** in v1. v2 may add a frame middleware that places big symbols during scroll.
+- **No random-fill big symbols.** Random fill has no footprint awareness; a future frame middleware could place blocks during scroll.
 - **Big symbols + MultiWays** is rejected at build. See the [Per-reel geometry](/guides/per-reel-geometry/) constraint matrix.
 
 ## See also

@@ -103,7 +103,7 @@ app.stage.addChild(board.container);
 
 // React to the round however your game presents — HUD, sounds, flights.
 board.events.on('coin:locked', ({ coin, locked, capacity }) => {
-  hud.total += coin.data.value;     // YOU own the value; the board doesn't
+  hud.total += coin.data?.value ?? 0;     // YOU own the value; the board doesn't
   hud.text = `${locked} / ${capacity}`;
 });
 
@@ -119,7 +119,7 @@ while (true) {
 }
 
 // 3. collect — release the coins and fly them wherever you like
-for (const coin of board.lockedCoins) flyToMeter(board.cellCenter(coin.cell), coin.data.value);
+for (const coin of board.lockedCoins) flyToMeter(board.cellCenter(coin.cell), coin.data?.value ?? 0);
 board.release(board.lockedCoins.map((c) => c.cell));
 ```
 

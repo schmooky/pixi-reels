@@ -32,8 +32,16 @@ describe('public type surface', () => {
     it(`exports ${name}, which a public signature mentions`, () => {
       // Match it as a whole word inside an export clause, so a substring of
       // some other identifier cannot satisfy this.
-      const exported = new RegExp(`export\\s+type\\s*\\{[^}]*\\b${name}\\b[^}]*\\}`).test(index);
-      expect(exported, `${name} is used by an exported symbol but index.ts does not re-export it`).toBe(true);
+      const clause = new RegExp(`export\\s+type\\s*\\{[^}]*\\b${name}\\b[^}]*\\}\\s*from\\s*'([^']+)'`);
+      const m = index.match(clause);
+      expect(m, `${name} is used by an exported symbol but index.ts does not re-export it`).not.toBeNull();
+
+      // Re-exporting is not enough: the defining module has to export it too.
+      // All four of these were declared module-local, so index.ts listed
+      // names that did not resolve -- the re-export alone looked right.
+      const from = `${SRC}/${m![1].replace(/^\.\//, '').replace(/\.js$/, '.ts')}`;
+      const declares = new RegExp(`export\\s+(?:type|interface)\\s+${name}\\b`).test(readFileSync(from, 'utf8'));
+      expect(declares, `${m![1]} declares ${name} but does not export it`).toBe(true);
     });
   }
 });

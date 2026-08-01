@@ -33,18 +33,36 @@ async function walk(dir, exts) {
   return out;
 }
 
-/** A link resolves if the built site has a page (or a real file) for it. */
+/**
+ * Resolve a link to the built file that serves it, or null.
+ * Returns the path so the anchor check can read the same file.
+ */
 async function resolves(path) {
   const clean = path.replace(/\/$/, '');
   for (const candidate of [join(DIST, clean, 'index.html'), join(DIST, clean)]) {
     try {
       const st = await stat(candidate);
-      if (st.isFile()) return true;
+      if (st.isFile()) return candidate;
     } catch {
       /* keep looking */
     }
   }
-  return false;
+  return null;
+}
+
+/**
+ * Every `id` the built page exposes. An anchor that names none of them
+ * silently drops the reader at the top, which reads as "the section this
+ * promised does not exist". Three of those shipped because this script used
+ * to strip the fragment before checking.
+ */
+const idCache = new Map();
+async function idsOf(builtPath) {
+  if (!idCache.has(builtPath)) {
+    const html = await readFile(builtPath, 'utf8');
+    idCache.set(builtPath, new Set([...html.matchAll(/\bid="([^"]+)"/g)].map((m) => m[1])));
+  }
+  return idCache.get(builtPath);
 }
 
 const files = await walk(CONTENT, ['.mdx', '.md']);
@@ -53,12 +71,23 @@ let checked = 0;
 
 for (const file of files) {
   const src = await readFile(file, 'utf8');
-  // Markdown links to an absolute in-site path. Anchors and query strings are
-  // stripped; external URLs and mailto: are not our problem.
-  for (const m of src.matchAll(/\]\((\/[^)\s#?]*)(?:[#?][^)]*)?\)/g)) {
+  const where = file.slice(ROOT.length + 1);
+  // In-site links: an absolute path, a bare `#anchor` on this same page, or
+  // either with a fragment. External URLs and mailto: are not our problem.
+  for (const m of src.matchAll(/\]\((\/[^)\s#?]*)?(?:#([^)\s?]+))?(?:\?[^)]*)?\)/g)) {
+    const [, path, anchor] = m;
+    if (!path && !anchor) continue;
     checked++;
-    if (!(await resolves(m[1]))) {
-      broken.push(`${file.slice(ROOT.length + 1)}  ->  ${m[1]}`);
+
+    // A bare `#anchor` points at the page it is written on.
+    const target = path ?? `/${where.replace(/^apps\/site\/src\/content\//, '').replace(/\.mdx?$/, '')}/`;
+    const built = await resolves(target);
+    if (!built) {
+      broken.push(`${where}  ->  ${path ?? target}`);
+      continue;
+    }
+    if (anchor && !(await idsOf(built)).has(anchor)) {
+      broken.push(`${where}  ->  ${path ?? ''}#${anchor}  (page exists, no such id)`);
     }
   }
 }

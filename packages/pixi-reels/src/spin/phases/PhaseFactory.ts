@@ -6,10 +6,10 @@ import { SpinPhase } from './SpinPhase.js';
 import { StopPhase } from './StopPhase.js';
 import { AnticipationPhase } from './AnticipationPhase.js';
 
-type PhaseConstructor<T extends ReelPhase<any> = ReelPhase<any>> =
+export type PhaseConstructor<T extends ReelPhase<any> = ReelPhase<any>> =
   new (reel: Reel, speed: SpeedProfile) => T;
 
-type PhaseCreatorFn<T extends ReelPhase<any> = ReelPhase<any>> =
+export type PhaseCreatorFn<T extends ReelPhase<any> = ReelPhase<any>> =
   (reel: Reel, speed: SpeedProfile) => T;
 
 /**
