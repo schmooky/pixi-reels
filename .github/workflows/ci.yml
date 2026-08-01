@@ -48,6 +48,14 @@ jobs:
       - name: Test
         run: pnpm --filter pixi-reels test
 
+      - name: Build docs site
+        run: pnpm --filter site build
+
+      - name: Doc links
+        # A doc pointing at a renamed recipe looks authoritative and 404s.
+        # Nothing else catches it: Astro renders a dead link happily.
+        run: pnpm check:doc-links
+
       - name: Build library + examples
         # `pnpm build` (root script) builds pixi-reels and every example app.
         # Catches regressions where the lib's published surface stops resolving

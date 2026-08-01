@@ -8,7 +8,7 @@ Site: https://pixi-reels.schmooky.dev
 Repo: https://github.com/schmooky/pixi-reels
 Package: https://www.npmjs.com/package/pixi-reels
 
-Generated: 2026-08-01T20:58:26.500Z
+Generated: 2026-08-01T23:09:47.576Z
 
 ## Quick start
 
@@ -67,7 +67,7 @@ The Hold & Win lifecycle end to end — the mental model, the state
 
 ### MultiWays
 URL: https://pixi-reels.schmooky.dev/guides/multiways/
-Per-spin row variation. Each reel can land on a different row count
+Every reel can land on a different cell count, every spin. Cell
 
 ### Nudge
 URL: https://pixi-reels.schmooky.dev/guides/nudge/
@@ -79,7 +79,7 @@ One engine, four layouts. How a reel's travel axis works, why start
 
 ### Per-reel geometry
 URL: https://pixi-reels.schmooky.dev/guides/per-reel-geometry/
-Each reel can have its own row count, cell height, and offset.
+Reels do not all need the same cell count. Static pyramids, the
 
 ### Pins
 URL: https://pixi-reels.schmooky.dev/guides/pins/

@@ -43,7 +43,8 @@
     "size:check": "node scripts/size-check.mjs --check",
     "size:update": "node scripts/size-check.mjs --update",
     "prepare": "husky || true",
-    "check:recipe-globals": "node scripts/check-recipe-globals.mjs"
+    "check:recipe-globals": "node scripts/check-recipe-globals.mjs",
+    "check:doc-links": "node scripts/check-doc-links.mjs"
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx,mjs,cjs,md,mdx,astro,yml,yaml,json}": [
