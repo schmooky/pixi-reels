@@ -108,6 +108,16 @@ export {
   setTargetSlot,
 } from './frame/ColumnTarget.js';
 
+// v1 -> v2 rename table. shared by the builder's fail-loud guards and the
+// `pixi-reels-codemod` transform, and useful to anyone writing their own
+// migration tooling.
+export {
+  CODEMOD_HINT,
+  V1_BUILDER_METHODS,
+  V1_OPTION_KEYS,
+  V1_OPTION_VALUES,
+} from './config/v1Renames.js';
+
 // Pool
 export { ObjectPool } from './pool/ObjectPool.js';
 

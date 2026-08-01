@@ -62,3 +62,5 @@ New:
 - `SymbolPosition.setId?` for games composing more than one reel set. The engine never reads it.
 - `build()` throws when a cross-reel big symbol (`size.reels > 1`) meets a mixed `directionPerReel([...])`. The coordinator assumes one shared feed edge across the reels a block covers.
 - `ReelMotion`'s wrap callback drops its dead `arrayIndex` / `direction` arguments.
+
+Fail-loud, no silent aliases: `visibleRows()`, `visibleRowsPerReel()` and `reelPixelHeights()` are gone but still present as throwing stubs, and every renamed option key or string value throws from the builder method that received it (`bufferSymbols({ above })`, `multiways({ minRows })`, `symbolData({ size: { w } })`, `tumble({ fall: { rowStagger } })`, `offsetConfig({ topWidthFactor })`, `reelAnchor('top')`, `initialFrame`/`setResult` columns with `bufferAbove`). Each message names the v2 replacement and the codemod. The table itself is exported as `V1_BUILDER_METHODS` / `V1_OPTION_KEYS` / `V1_OPTION_VALUES`.

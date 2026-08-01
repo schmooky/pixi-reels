@@ -27,6 +27,7 @@ import { getGsap } from '../utils/gsapRef.js';
 import type { FrameMiddleware } from '../frame/FrameBuilder.js';
 import type { ColumnTarget } from '../frame/ColumnTarget.js';
 import { assertBufferCountsInRange, cloneColumnTarget } from '../frame/ColumnTarget.js';
+import { V1_OPTION_KEYS, assertNoV1Keys } from '../config/v1Renames.js';
 import type { Cell } from '../cascade/tumbleAlgorithm.js';
 
 export interface ReelSetParams {
@@ -626,6 +627,10 @@ export class ReelSet extends Container implements Disposable {
    */
   setResult(symbols: ColumnTarget[]): void {
     this._assertNoNudgeInFlight('setResult');
+    const columnKeys = V1_OPTION_KEYS['initialFrame() / setResult() column'];
+    for (let i = 0; i < symbols.length; i++) {
+      assertNoV1Keys(symbols[i], columnKeys, `setResult() column ${i}`);
+    }
     assertBufferCountsInRange(
       symbols,
       this._reels.map((r) => r.bufferStart),

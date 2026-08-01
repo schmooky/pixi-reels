@@ -29,6 +29,14 @@ import { StandardMode } from '../spin/modes/StandardMode.js';
 import type { FrameMiddleware } from '../frame/FrameBuilder.js';
 import type { ColumnTarget } from '../frame/ColumnTarget.js';
 import { assertBufferCountsInRange } from '../frame/ColumnTarget.js';
+import {
+  V1_BUILDER_METHODS,
+  V1_OPTION_KEYS,
+  V1_OPTION_VALUES,
+  assertNoV1Keys,
+  assertNoV1Value,
+  renamedMessage,
+} from '../config/v1Renames.js';
 import type { TumbleConfig, ResolvedTumbleConfig } from '../cascade/TumbleConfig.js';
 import { resolveTumbleConfig } from '../cascade/TumbleConfig.js';
 import { CascadeFallPhase } from '../spin/phases/CascadeFallPhase.js';
@@ -112,6 +120,30 @@ export class ReelSetBuilder {
 
   private _poolCapacity?: number;
 
+  /**
+   * @deprecated Removed in v2 - these throw. TypeScript catches a v1 call at
+   * compile time, but an untyped consumer would otherwise get
+   * "x.visibleRows is not a function", which names neither the replacement
+   * nor the codemod. These stubs do.
+   */
+  visibleRows(_count: number): never {
+    throw new Error(renamedMessage('ReelSetBuilder', 'visibleRows', V1_BUILDER_METHODS.visibleRows));
+  }
+
+  /** @deprecated Removed in v2 - throws. See {@link ReelSetBuilder.visibleRows}. */
+  visibleRowsPerReel(_cells: number[]): never {
+    throw new Error(
+      renamedMessage('ReelSetBuilder', 'visibleRowsPerReel', V1_BUILDER_METHODS.visibleRowsPerReel),
+    );
+  }
+
+  /** @deprecated Removed in v2 - throws. See {@link ReelSetBuilder.visibleRows}. */
+  reelPixelHeights(_heights: number[]): never {
+    throw new Error(
+      renamedMessage('ReelSetBuilder', 'reelPixelHeights', V1_BUILDER_METHODS.reelPixelHeights),
+    );
+  }
+
   /** Set number of reel columns. */
   reels(count: number): this {
     this._reelCount = count;
@@ -162,6 +194,7 @@ export class ReelSetBuilder {
 
   /** Vertical alignment of short reels inside the tallest reel's box. Default 'center'. */
   reelAnchor(anchor: ReelAnchor): this {
+    assertNoV1Value(anchor, V1_OPTION_VALUES['reelAnchor()'], 'reelAnchor()');
     this._reelAnchor = anchor;
     return this;
   }
@@ -262,6 +295,7 @@ export class ReelSetBuilder {
    * Mutually exclusive with cascade mode in v1.
    */
   multiways(config: MultiWaysConfig): this {
+    assertNoV1Keys(config, V1_OPTION_KEYS['multiways()'], 'multiways()');
     this._multiways = { ...config };
     return this;
   }
@@ -334,6 +368,7 @@ export class ReelSetBuilder {
    * pre-positioned outside the start edge).
    */
   bufferSymbols(count: number | { start: number; end: number }): this {
+    assertNoV1Keys(count, V1_OPTION_KEYS['bufferSymbols()'], 'bufferSymbols()');
     if (typeof count === 'object') {
       this._bufferStart = this._clampBufferMin1(count.start, 'bufferSymbols({ start })');
       this._bufferEnd =
@@ -395,6 +430,9 @@ export class ReelSetBuilder {
    * })
    */
   symbolData(overrides: Record<string, Partial<SymbolData>>): this {
+    for (const [id, data] of Object.entries(overrides ?? {})) {
+      assertNoV1Keys(data?.size, V1_OPTION_KEYS['symbolData() size'], `symbolData('${id}').size`);
+    }
     this._symbolDataOverrides = { ...this._symbolDataOverrides, ...overrides };
     return this;
   }
@@ -413,6 +451,7 @@ export class ReelSetBuilder {
 
   /** Set X-axis offset config (e.g., trapezoid perspective). Default: 'none'. */
   offsetConfig(config: OffsetConfig): this {
+    assertNoV1Keys(config, V1_OPTION_KEYS['offset() trapezoid'], 'offsetConfig()');
     this._offset = config;
     return this;
   }
@@ -545,6 +584,19 @@ export class ReelSetBuilder {
    * });
    */
   tumble(config?: TumbleConfig): this {
+    const tumbleKeys = V1_OPTION_KEYS['tumble() fall/dropIn'];
+    assertNoV1Keys(config?.fall, tumbleKeys, 'tumble({ fall })');
+    assertNoV1Keys(config?.dropIn, tumbleKeys, 'tumble({ dropIn })');
+    assertNoV1Value(
+      config?.fall?.cellOrder,
+      V1_OPTION_VALUES['tumble() cellOrder'],
+      'tumble({ fall: { cellOrder } })',
+    );
+    assertNoV1Value(
+      config?.dropIn?.cellOrder,
+      V1_OPTION_VALUES['tumble() cellOrder'],
+      'tumble({ dropIn: { cellOrder } })',
+    );
     this._tumbleConfig = resolveTumbleConfig(config);
     this._defaultSpinMode = 'cascade';
     return this;
@@ -566,6 +618,10 @@ export class ReelSetBuilder {
    * ]);
    */
   initialFrame(frame: ColumnTarget[]): this {
+    const columnKeys = V1_OPTION_KEYS['initialFrame() / setResult() column'];
+    for (let i = 0; i < (frame?.length ?? 0); i++) {
+      assertNoV1Keys(frame[i], columnKeys, `initialFrame() column ${i}`);
+    }
     // Stored un-materialized so `build()` can validate it against the
     // final bufferSymbols config. Builder methods are order-free, so
     // `bufferSymbols()` may not have been called yet when `initialFrame()`
