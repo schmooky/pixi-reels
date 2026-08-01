@@ -91,7 +91,10 @@ export function createTestReelSet(opts: TestReelSetOptions = {}): TestReelSetHan
   const reels = opts.reels ?? 5;
   const symbolIds = opts.symbolIds ?? ['a', 'b', 'c'];
   const weights = opts.weights ?? {};
-  const size = opts.symbolSize ?? { width: 100, height: 100 };
+  // NON-SQUARE on purpose (ADR 018 section 10.2). With a square default a test
+  // cannot tell width from height, so an axis transposition passes every
+  // assertion. 120x100 makes the two observably different.
+  const size = opts.symbolSize ?? { width: 120, height: 100 };
 
   const ticker = new FakeTicker();
 
