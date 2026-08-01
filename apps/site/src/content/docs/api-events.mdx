@@ -40,6 +40,16 @@ Every cascade event uses the same three-part shape: `cascade:<scope>:<step>`. Sc
 | `spin:allLanded` | `(result: SpinResult)` | Last non-held reel landed. |
 | `spin:complete` | `(result: SpinResult)` | Immediately after `spin:allLanded`. |
 
+### Anticipation
+
+Only fires for reels that actually tease: in the anticipation set AND with a
+hold above 0.
+
+| Event | Payload | When |
+|---|---|---|
+| `anticipation:reel` | `{ reelIndex, order, total }` | That reel starts teasing. `order` is 0-based within the tease set, so `order / (total - 1)` drives a pitch ramp without re-deriving anything from `spin:stopping`. |
+| `anticipation:reelEnd` | `{ reelIndex, order, total }` | That reel's tease is over. |
+
 ```ts
 interface SpinResult {
   symbols: string[][];   // final visible grid [reelIndex][cellIndex]
@@ -104,6 +114,7 @@ interface RunCascadeResult {
 | `cascade:gravity:start` | `{ reelIndex: number }` | **Two-stage refill only** (`mode: 'gravity-then-drop'`). a reel's survivor-settle phase begins, before new symbols enter. Not emitted when refill is `'combined'`. |
 | `cascade:gravity:symbol` | `{ symbol: ReelSymbol, view: Container, reelIndex: number, cellIndex: number, duration: number, ease: string, offsetCells: number }` | One survivor's settle tween about to start. Same payload shape as `dropIn:symbol`, scoped to survivors only. |
 | `cascade:gravity:end` | `{ reelIndex: number }` | A reel's survivor settle landed. The library now waits for `gravityHoldMs` + `gravityHold` to resolve (in parallel via `Promise.all`) before the drop-in stage begins. Use this as the asymmetric-anticipation cue. |
+| `cascade:gravity:error` | `{ error: unknown }` | Your `gravityHold` promise rejected, or `onGravityComplete` threw. The cascade still settles -- this event is the only place that reason survives, so forward it to your logger. Typed `unknown` because user code can throw anything. |
 
 ### Destroy-batch-scoped
 
