@@ -54,9 +54,9 @@ describe('mask strategies', () => {
     // the union of rects is what the mask renders, and pixels outside
     // any rect are clipped.
     const pyramid: ReelMaskRect[] = [
-      { x: 0,   y: 100, width: 100, height: 100 }, // 1 row, centered
+      { x: 0,   y: 100, width: 100, height: 100 }, // 1 cell, centered
       { x: 100, y: 0,   width: 100, height: 300 }, // 3 cells, full
-      { x: 200, y: 100, width: 100, height: 100 }, // 1 row, centered
+      { x: 200, y: 100, width: 100, height: 100 }, // 1 cell, centered
     ];
     const strat = new RectMaskStrategy();
     const g = strat.build(pyramid, 300, 300);

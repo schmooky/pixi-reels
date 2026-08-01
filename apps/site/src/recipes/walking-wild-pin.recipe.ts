@@ -39,13 +39,13 @@ const reelSet = new ReelSetBuilder()
 async function walkPinsLeft() {
   const current = [...reelSet.pins.values()];
   for (const pin of current) {
-    if (pin.col <= 0) {
-      reelSet.unpin(pin.col, pin.row);
+    if (pin.reel <= 0) {
+      reelSet.unpin(pin.reel, pin.cell);
       continue;
     }
     await reelSet.movePin(
-      { col: pin.col, row: pin.row },
-      { col: pin.col - 1, row: pin.row },
+      { reel: pin.reel, cell: pin.cell },
+      { reel: pin.reel - 1, cell: pin.cell },
       {
         duration: 350,
         easing: 'power2.inOut',
@@ -103,11 +103,11 @@ reelSet.events.on('spin:allLanded', ({ symbols }) => {
 
 // Script: arrive on reel 4, then walk left on each subsequent spin.
 const arrivals = [
-  { col: 4, row: 1 },
+  { reel: 4, cell: 1 },
   null, // no new wild. existing one walks
   null,
   null,
-  { col: 3, row: 2 }, // a second walker arrives
+  { reel: 3, cell: 2 }, // a second walker arrives
   null,
 ];
 let spinCount = 0;
@@ -127,7 +127,7 @@ return {
         FILLER[Math.floor(Math.random() * FILLER.length)],
       ),
     );
-    if (arrival) grid[arrival.col][arrival.row] = WILD;
+    if (arrival) grid[arrival.reel][arrival.cell] = WILD;
     reelSet.setResult(grid.map((visible) => ({ visible })));
     await promise;
     spinCount++;

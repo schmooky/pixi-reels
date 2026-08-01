@@ -4,10 +4,10 @@ import type { HwCell, HwEffect } from '../../src/board/HwTypes.js';
 
 // A 2x2 board -> capacity 4. Cell order is irrelevant to the reducer.
 const CELLS: HwCell[] = [
-  { col: 0, row: 0 },
-  { col: 1, row: 0 },
-  { col: 0, row: 1 },
-  { col: 1, row: 1 },
+  { reel: 0, cell: 0 },
+  { reel: 1, cell: 0 },
+  { reel: 0, cell: 1 },
+  { reel: 1, cell: 1 },
 ];
 const make = (respins = 3) => new HoldAndWinState<{ value: number }>(CELLS, respins);
 const types = (fx: HwEffect[]) => fx.map((e) => e.type);
@@ -26,14 +26,14 @@ describe('HoldAndWinState', () => {
   describe('enter', () => {
     it('seeds the ledger, arms the counter, goes active', () => {
       const s = make(3);
-      const fx = s.enter([{ cell: { col: 0, row: 0 }, id: 'coin', data: { value: 5 } }]);
+      const fx = s.enter([{ cell: { reel: 0, cell: 0 }, id: 'coin', data: { value: 5 } }]);
       expect(types(fx)).toEqual(['respins:changed', 'feature:enter']);
       expect(fx[0].payload).toMatchObject({ value: 3, reason: 'seed' });
       expect(s.phase).toBe('active');
       expect(s.respinsLeft).toBe(3);
       expect(s.lockedCoins()).toHaveLength(1);
       expect(s.freeCells()).toHaveLength(3);
-      expect(s.isLocked({ col: 0, row: 0 })).toBe(true);
+      expect(s.isLocked({ reel: 0, cell: 0 })).toBe(true);
     });
 
     it('throws when entering while active', () => {
@@ -46,23 +46,23 @@ describe('HoldAndWinState', () => {
       const s = make();
       expect(() =>
         s.enter([
-          { cell: { col: 0, row: 0 }, id: 'coin' },
-          { cell: { col: 0, row: 0 }, id: 'coin' },
+          { cell: { reel: 0, cell: 0 }, id: 'coin' },
+          { cell: { reel: 0, cell: 0 }, id: 'coin' },
         ]),
       ).toThrow(/twice/);
     });
 
     it('throws on an out-of-grid seed', () => {
       const s = make();
-      expect(() => s.enter([{ cell: { col: 9, row: 9 }, id: 'coin' }])).toThrow(/outside the grid/);
+      expect(() => s.enter([{ cell: { reel: 9, cell: 9 }, id: 'coin' }])).toThrow(/outside the grid/);
     });
 
     it('freezes the stored cell so the ledger key can not be corrupted', () => {
       const s = make();
-      s.enter([{ cell: { col: 0, row: 0 }, id: 'coin', data: { value: 5 } }]);
+      s.enter([{ cell: { reel: 0, cell: 0 }, id: 'coin', data: { value: 5 } }]);
       const coin = s.lockedCoins()[0];
       expect(() => {
-        (coin.cell as { col: number }).col = 5;
+        (coin.cell as { reel: number }).reel = 5;
       }).toThrow();
       // data stays mutable - the supported way to carry live value
       coin.data!.value = 50;
@@ -73,8 +73,8 @@ describe('HoldAndWinState', () => {
   describe('respin wave', () => {
     it('begins a wave from active: spins free cells, bumps the round', () => {
       const s = make();
-      s.enter([{ cell: { col: 0, row: 0 }, id: 'coin' }]);
-      const { round, spinning, hitByKey } = s.beginWave([{ cell: { col: 1, row: 0 }, id: 'coin' }]);
+      s.enter([{ cell: { reel: 0, cell: 0 }, id: 'coin' }]);
+      const { round, spinning, hitByKey } = s.beginWave([{ cell: { reel: 1, cell: 0 }, id: 'coin' }]);
       expect(round).toBe(1);
       expect(spinning).toHaveLength(3);
       expect(hitByKey.has('1,0')).toBe(true);
@@ -91,8 +91,8 @@ describe('HoldAndWinState', () => {
 
     it('throws when a hit targets a locked cell', () => {
       const s = make();
-      s.enter([{ cell: { col: 0, row: 0 }, id: 'coin' }]);
-      expect(() => s.beginWave([{ cell: { col: 0, row: 0 }, id: 'coin' }])).toThrow(/locked cell/);
+      s.enter([{ cell: { reel: 0, cell: 0 }, id: 'coin' }]);
+      expect(() => s.beginWave([{ cell: { reel: 0, cell: 0 }, id: 'coin' }])).toThrow(/locked cell/);
     });
 
     it('throws on a duplicate hit to the same cell (no silent drop)', () => {
@@ -100,8 +100,8 @@ describe('HoldAndWinState', () => {
       s.enter([]);
       expect(() =>
         s.beginWave([
-          { cell: { col: 0, row: 0 }, id: 'coin' },
-          { cell: { col: 0, row: 0 }, id: 'coin' },
+          { cell: { reel: 0, cell: 0 }, id: 'coin' },
+          { cell: { reel: 0, cell: 0 }, id: 'coin' },
         ]),
       ).toThrow(/twice/);
     });
@@ -109,11 +109,11 @@ describe('HoldAndWinState', () => {
     it('lands a hit (cell:landed + coin:locked) and a miss (cell:landed only)', () => {
       const s = make();
       s.enter([]);
-      s.beginWave([{ cell: { col: 0, row: 0 }, id: 'coin', data: { value: 5 } }]);
-      const hit = s.land({ col: 0, row: 0 }, { cell: { col: 0, row: 0 }, id: 'coin', data: { value: 5 } });
+      s.beginWave([{ cell: { reel: 0, cell: 0 }, id: 'coin', data: { value: 5 } }]);
+      const hit = s.land({ reel: 0, cell: 0 }, { cell: { reel: 0, cell: 0 }, id: 'coin', data: { value: 5 } });
       expect(types(hit)).toEqual(['cell:landed', 'coin:locked']);
       expect(hit[1].payload).toMatchObject({ locked: 1, capacity: 4 });
-      const miss = s.land({ col: 1, row: 0 }, null);
+      const miss = s.land({ reel: 1, cell: 0 }, null);
       expect(types(miss)).toEqual(['cell:landed']);
       expect(miss[0].payload).toMatchObject({ coin: null });
     });
@@ -121,9 +121,9 @@ describe('HoldAndWinState', () => {
     it('resets the counter when a wave lands a coin', () => {
       const s = make(3);
       s.enter([]);
-      s.beginWave([{ cell: { col: 0, row: 0 }, id: 'coin' }]);
-      s.land({ col: 0, row: 0 }, { cell: { col: 0, row: 0 }, id: 'coin' });
-      s.land({ col: 1, row: 0 }, null);
+      s.beginWave([{ cell: { reel: 0, cell: 0 }, id: 'coin' }]);
+      s.land({ reel: 0, cell: 0 }, { cell: { reel: 0, cell: 0 }, id: 'coin' });
+      s.land({ reel: 1, cell: 0 }, null);
       const { effects } = s.endWave();
       expect(types(effects)).toEqual(['respins:changed', 'respin:end']);
       expect(effects[0].payload).toMatchObject({ value: 3, reason: 'hit-reset' });
@@ -134,7 +134,7 @@ describe('HoldAndWinState', () => {
       const s = make(1);
       s.enter([]);
       s.beginWave([]);
-      s.land({ col: 0, row: 0 }, null);
+      s.land({ reel: 0, cell: 0 }, null);
       const { effects } = s.endWave();
       expect(types(effects)).toEqual(['respins:changed', 'respin:end', 'feature:end']);
       expect(effects[0].payload).toMatchObject({ value: 0, reason: 'miss' });
@@ -145,12 +145,12 @@ describe('HoldAndWinState', () => {
       const s = make(3);
       // seed 3 of 4, then land the 4th
       s.enter([
-        { cell: { col: 0, row: 0 }, id: 'coin' },
-        { cell: { col: 1, row: 0 }, id: 'coin' },
-        { cell: { col: 0, row: 1 }, id: 'coin' },
+        { cell: { reel: 0, cell: 0 }, id: 'coin' },
+        { cell: { reel: 1, cell: 0 }, id: 'coin' },
+        { cell: { reel: 0, cell: 1 }, id: 'coin' },
       ]);
-      s.beginWave([{ cell: { col: 1, row: 1 }, id: 'coin' }]);
-      s.land({ col: 1, row: 1 }, { cell: { col: 1, row: 1 }, id: 'coin' });
+      s.beginWave([{ cell: { reel: 1, cell: 1 }, id: 'coin' }]);
+      s.land({ reel: 1, cell: 1 }, { cell: { reel: 1, cell: 1 }, id: 'coin' });
       const { effects } = s.endWave();
       expect(types(effects)).toEqual(['respins:changed', 'respin:end', 'board:full', 'feature:end']);
       expect(effects[3].payload).toMatchObject({ full: true });
@@ -162,10 +162,10 @@ describe('HoldAndWinState', () => {
       const s = make(3);
       // seed all 4 cells - the board is full before any wave
       s.enter([
-        { cell: { col: 0, row: 0 }, id: 'coin' },
-        { cell: { col: 1, row: 0 }, id: 'coin' },
-        { cell: { col: 0, row: 1 }, id: 'coin' },
-        { cell: { col: 1, row: 1 }, id: 'coin' },
+        { cell: { reel: 0, cell: 0 }, id: 'coin' },
+        { cell: { reel: 1, cell: 0 }, id: 'coin' },
+        { cell: { reel: 0, cell: 1 }, id: 'coin' },
+        { cell: { reel: 1, cell: 1 }, id: 'coin' },
       ]);
       expect(s.phase).toBe('active');
       expect(s.isFull).toBe(true);
@@ -185,20 +185,20 @@ describe('HoldAndWinState', () => {
     it('removes locked coins and reports the remaining count', () => {
       const s = make();
       s.enter([
-        { cell: { col: 0, row: 0 }, id: 'coin' },
-        { cell: { col: 1, row: 0 }, id: 'coin' },
+        { cell: { reel: 0, cell: 0 }, id: 'coin' },
+        { cell: { reel: 1, cell: 0 }, id: 'coin' },
       ]);
-      const { effects, released } = s.release([{ col: 0, row: 0 }]);
+      const { effects, released } = s.release([{ reel: 0, cell: 0 }]);
       expect(released).toHaveLength(1);
       expect(types(effects)).toEqual(['coin:released']);
       expect(effects[0].payload).toMatchObject({ remaining: 1 });
-      expect(s.isLocked({ col: 0, row: 0 })).toBe(false);
+      expect(s.isLocked({ reel: 0, cell: 0 })).toBe(false);
     });
 
     it('ignores a free cell', () => {
       const s = make();
       s.enter([]);
-      const { effects, released } = s.release([{ col: 0, row: 0 }]);
+      const { effects, released } = s.release([{ reel: 0, cell: 0 }]);
       expect(released).toHaveLength(0);
       expect(effects).toHaveLength(0);
     });
@@ -207,22 +207,22 @@ describe('HoldAndWinState', () => {
   describe('setSymbolAt (swap)', () => {
     it('rewrites a locked coin in place', () => {
       const s = make();
-      s.enter([{ cell: { col: 0, row: 0 }, id: 'coin', data: { value: 5 } }]);
-      s.swap({ col: 0, row: 0 }, 'major', { value: 100 });
-      expect(s.coinAt({ col: 0, row: 0 })).toMatchObject({ id: 'major', data: { value: 100 } });
+      s.enter([{ cell: { reel: 0, cell: 0 }, id: 'coin', data: { value: 5 } }]);
+      s.swap({ reel: 0, cell: 0 }, 'major', { value: 100 });
+      expect(s.coinAt({ reel: 0, cell: 0 })).toMatchObject({ id: 'major', data: { value: 100 } });
     });
 
     it('keeps prior data when none is passed', () => {
       const s = make();
-      s.enter([{ cell: { col: 0, row: 0 }, id: 'coin', data: { value: 5 } }]);
-      s.swap({ col: 0, row: 0 }, 'major', undefined);
-      expect(s.coinAt({ col: 0, row: 0 })).toMatchObject({ id: 'major', data: { value: 5 } });
+      s.enter([{ cell: { reel: 0, cell: 0 }, id: 'coin', data: { value: 5 } }]);
+      s.swap({ reel: 0, cell: 0 }, 'major', undefined);
+      expect(s.coinAt({ reel: 0, cell: 0 })).toMatchObject({ id: 'major', data: { value: 5 } });
     });
 
     it('throws on a non-locked cell', () => {
       const s = make();
       s.enter([]);
-      expect(() => s.swap({ col: 0, row: 0 }, 'major', undefined)).toThrow(/non-locked/);
+      expect(() => s.swap({ reel: 0, cell: 0 }, 'major', undefined)).toThrow(/non-locked/);
     });
   });
 
@@ -230,8 +230,8 @@ describe('HoldAndWinState', () => {
     it('clears to idle and fires feature:reset (never coin:released)', () => {
       const s = make(3);
       s.enter([
-        { cell: { col: 0, row: 0 }, id: 'coin' },
-        { cell: { col: 1, row: 0 }, id: 'coin' },
+        { cell: { reel: 0, cell: 0 }, id: 'coin' },
+        { cell: { reel: 1, cell: 0 }, id: 'coin' },
       ]);
       const fx = s.reset();
       expect(types(fx)).toEqual(['feature:reset']);
@@ -245,30 +245,30 @@ describe('HoldAndWinState', () => {
   describe('mid-wave guards', () => {
     it('throws on release() while a wave is in flight', () => {
       const s = make();
-      s.enter([{ cell: { col: 0, row: 0 }, id: 'coin' }]);
+      s.enter([{ cell: { reel: 0, cell: 0 }, id: 'coin' }]);
       s.beginWave([]); // -> spinning
-      expect(() => s.release([{ col: 0, row: 0 }])).toThrow(/wave is in flight/);
+      expect(() => s.release([{ reel: 0, cell: 0 }])).toThrow(/wave is in flight/);
     });
 
     it('throws on swap() while a wave is in flight', () => {
       const s = make();
-      s.enter([{ cell: { col: 0, row: 0 }, id: 'coin' }]);
+      s.enter([{ cell: { reel: 0, cell: 0 }, id: 'coin' }]);
       s.beginWave([]); // -> spinning
-      expect(() => s.swap({ col: 0, row: 0 }, 'major', undefined)).toThrow(/wave is in flight/);
+      expect(() => s.swap({ reel: 0, cell: 0 }, 'major', undefined)).toThrow(/wave is in flight/);
     });
   });
 
   describe('abortWave', () => {
     it('restores phase from spinning to active so the board recovers', () => {
       const s = make();
-      s.enter([{ cell: { col: 1, row: 1 }, id: 'coin' }]);
-      s.beginWave([{ cell: { col: 0, row: 0 }, id: 'coin' }]);
-      s.land({ col: 0, row: 0 }, { cell: { col: 0, row: 0 }, id: 'coin' });
+      s.enter([{ cell: { reel: 1, cell: 1 }, id: 'coin' }]);
+      s.beginWave([{ cell: { reel: 0, cell: 0 }, id: 'coin' }]);
+      s.land({ reel: 0, cell: 0 }, { cell: { reel: 0, cell: 0 }, id: 'coin' });
       expect(s.phase).toBe('spinning');
       s.abortWave();
       expect(s.phase).toBe('active');
       // the cell that already landed stays locked
-      expect(s.isLocked({ col: 0, row: 0 })).toBe(true);
+      expect(s.isLocked({ reel: 0, cell: 0 })).toBe(true);
       // recovery: a fresh wave begins without throwing "wave in flight",
       // and the aborted wave's landing doesn't leak into the new one
       expect(() => s.beginWave([])).not.toThrow();
@@ -289,9 +289,9 @@ describe('HoldAndWinState', () => {
     it('land() is a no-op outside a wave', () => {
       const s = make();
       s.enter([]); // active, not spinning
-      const fx = s.land({ col: 0, row: 0 }, { cell: { col: 0, row: 0 }, id: 'coin' });
+      const fx = s.land({ reel: 0, cell: 0 }, { cell: { reel: 0, cell: 0 }, id: 'coin' });
       expect(fx).toEqual([]);
-      expect(s.isLocked({ col: 0, row: 0 })).toBe(false);
+      expect(s.isLocked({ reel: 0, cell: 0 })).toBe(false);
     });
 
     it('endWave() is a no-op outside a wave and leaves the counter untouched', () => {
@@ -306,13 +306,13 @@ describe('HoldAndWinState', () => {
 
     it('reset() mid-wave is not resurrected by a stray landing or the closing endWave', () => {
       const s = make();
-      s.enter([{ cell: { col: 0, row: 0 }, id: 'coin' }]);
-      s.beginWave([{ cell: { col: 1, row: 0 }, id: 'coin' }]); // spinning
+      s.enter([{ cell: { reel: 0, cell: 0 }, id: 'coin' }]);
+      s.beginWave([{ cell: { reel: 1, cell: 0 }, id: 'coin' }]); // spinning
       s.reset(); // hard clear back to idle, even with a wave in flight
       expect(s.phase).toBe('idle');
       expect(s.lockedCoins()).toHaveLength(0);
       // a cell settling after the reset must not re-lock into the cleared ledger
-      const stray = s.land({ col: 1, row: 0 }, { cell: { col: 1, row: 0 }, id: 'coin' });
+      const stray = s.land({ reel: 1, cell: 0 }, { cell: { reel: 1, cell: 0 }, id: 'coin' });
       expect(stray).toEqual([]);
       expect(s.lockedCoins()).toHaveLength(0);
       // and the original wave's closing endWave must not flip back to active

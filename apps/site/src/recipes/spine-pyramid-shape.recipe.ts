@@ -5,7 +5,7 @@
 //
 // Per-reel static shape (3-5-5-5-3 pyramid) rendered with Spine symbols.
 // Spine skeletons scale cleanly to whatever cell size each reel hands them.
-// the outer 3-row reels get taller cells than the inner 5-row reels, and
+// the outer 3-cell reels get taller cells than the inner 5-cell reels, and
 // the rig stays crisp at both because it's vector, not a baked sprite.
 
 await loadGeneratedSpines();
@@ -57,8 +57,8 @@ const LANDING_MS = 350;
 function syncIdle() {
   for (let r = 0; r < reelSet.reelCount; r++) {
     const reel = reelSet.getReel(r);
-    for (let row = 0; row < reel.visibleCells; row++) {
-      const sym = reel.getSymbolAt(row);
+    for (let cell = 0; cell < reel.visibleCells; cell++) {
+      const sym = reel.getSymbolAt(cell);
       if (sym instanceof SpineReelSymbol) sym.stopAnimation();
     }
   }

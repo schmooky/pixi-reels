@@ -28,9 +28,9 @@ export const DEMOS: DemoMeta[] = [
     slug: 'hold-and-win-respin',
     title: 'Hold & Win respin',
     subtitle: '5×3 · coins lock, respin until jackpot',
-    summary: 'Coins lock in place, respin until the grid fills. or 3 coins on middle row.',
+    summary: 'Coins lock in place, respin until the grid fills. or 3 coins on middle cell.',
     tags: ['hold-and-win', 'respin'],
-    cheatHighlights: ['Guaranteed landing', 'Middle-row progression', 'Force full jackpot'],
+    cheatHighlights: ['Guaranteed landing', 'Middle-cell progression', 'Force full jackpot'],
   },
   {
     slug: 'cascade-multiplier',
@@ -46,7 +46,7 @@ export const DEMOS: DemoMeta[] = [
     subtitle: '5×3 · wilds persist for N spins',
     summary: 'A wild lands and stays for 3 spins. Stacks with more.',
     tags: ['wild', 'sticky'],
-    cheatHighlights: ['Force wild on reel 3', 'Force 3 stickies on row 2'],
+    cheatHighlights: ['Force wild on reel 3', 'Force 3 stickies on cell 2'],
   },
   {
     slug: 'anticipation-slam',
@@ -62,7 +62,7 @@ export const DEMOS: DemoMeta[] = [
     subtitle: '5×3 · TexturePacker atlas · blur-on-spin',
     summary: 'Real sprite art from a single atlas. Motion-blur textures swap in during SPIN, crisp on land.',
     tags: ['sprites', 'atlas', 'blur-on-spin'],
-    cheatHighlights: ['Force royal line', 'Full-grid royal jackpot', 'Wild on reel 3 row 2'],
+    cheatHighlights: ['Force royal line', 'Full-grid royal jackpot', 'Wild on reel 3 cell 2'],
   },
   {
     slug: 'big-symbols',
@@ -76,7 +76,7 @@ export const DEMOS: DemoMeta[] = [
     slug: 'multiways',
     title: 'MultiWays (Megaways)',
     subtitle: '6 reels · setShape() per spin · ways pay',
-    summary: 'Per-spin per-reel row counts (2-7) via the engine\'s MultiWays + AdjustPhase. Ways = product of row counts. Wins are chains of consecutive reels.',
+    summary: 'Per-spin per-reel cell counts (2-7) via the engine\'s MultiWays + AdjustPhase. Ways = product of cell counts. Wins are chains of consecutive reels.',
     tags: ['megaways', 'multiways', 'ways'],
     cheatHighlights: ['Random shape every spin', 'Bias to bigger ways', 'Chain x ways scoring'],
   },

@@ -65,7 +65,7 @@ const labelAt = new Map();
 const abs = (cell) => { const c = board.cellCenter(cell); return { x: board.container.x + c.x, y: board.container.y + c.y }; };
 const fit = (t, w, h) => { if (t.width > 0) t.scale.set(Math.min(w / t.width, h / t.height, 1)); return t; };
 const paintLabel = (cell, value) => {
-  const k = `${cell.col},${cell.row}`; labelAt.get(k)?.destroy();
+  const k = `${cell.reel},${cell.cell}`; labelAt.get(k)?.destroy();
   const p = abs(cell); const t = fit(valueText(fmt(value), 30), CELL * 0.82, CELL * 0.46);
   t.position.set(p.x, p.y); labels.addChild(t); labelAt.set(k, t);
 };
@@ -77,14 +77,14 @@ board.events.on('feature:enter', () => { gsap.fromTo(board.container, { alpha: 0
 const val = () => [5, 10, 25, 50, 100][Math.floor(Math.random() * 5)];
 // scripted base-game results: a near-miss (2 BONUS), then a trigger (3 BONUS)
 const BONUS_SPOTS = [
-  [{ col: 1, row: 1 }, { col: 3, row: 0 }],                         // 2 → no trigger
-  [{ col: 0, row: 1 }, { col: 2, row: 2 }, { col: 4, row: 0 }],     // 3 → TRIGGER
+  [{ reel: 1, cell: 1 }, { reel: 3, cell: 0 }],                         // 2 → no trigger
+  [{ reel: 0, cell: 1 }, { reel: 2, cell: 2 }, { reel: 4, cell: 0 }],     // 3 → TRIGGER
 ];
 let spin = 0;
 
 function baseGrid(bonusCells) {
   const grid = Array.from({ length: COLS }, () => Array.from({ length: ROWS }, () => BASE[Math.floor(Math.random() * BASE.length)]));
-  for (const c of bonusCells) grid[c.col][c.row] = BONUS;
+  for (const c of bonusCells) grid[c.reel][c.cell] = BONUS;
   return grid;
 }
 
@@ -100,7 +100,7 @@ async function runFeature(triggerCells) {
   for (const c of seed) paintLabel(c.cell, c.data.value);
   hud.text = 'HOLD & WIN · each cell spins on its own';
   await sleep(500);
-  for (const cells of [[{ col: 2, row: 0 }], [{ col: 0, row: 2 }, { col: 4, row: 2 }], [], []]) {
+  for (const cells of [[{ reel: 2, cell: 0 }], [{ reel: 0, cell: 2 }, { reel: 4, cell: 2 }], [], []]) {
     const res = await board.respin(cells.map((cell) => ({ cell, id: COIN, data: { value: val() } })));
     await sleep(450);
     if (res.done) break;

@@ -16,7 +16,7 @@ export interface UiOverlayOptions {
 }
 
 /**
- * The button row + status caption shared by every demo. Replaces the older
+ * The button cell + status caption shared by every demo. Replaces the older
  * `createUI` helper for demos that need to mount inside a specific host
  * (the website embed) instead of always on `document.body`.
  *

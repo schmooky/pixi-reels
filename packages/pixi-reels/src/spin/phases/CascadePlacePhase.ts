@@ -98,19 +98,19 @@ export class CascadePlacePhase extends ReelPhase<CascadePlacePhaseConfig> {
       { initial: this._config.initial },
     );
     // Big symbols: every occupied cell of a block resolves to the SAME anchor
-    // view. Reveal it ONCE, keyed on the first visible row of the block
+    // view. Reveal it ONCE, keyed on the first visible cell of the block
     // (top-to-bottom), so the anchor's alpha reflects whether the BLOCK moves
     // (mover ⇒ 0, stays hidden until the drop-in repositions it). Without the
-    // dedup the last occupied row wins, leaving a mover-anchor at alpha 1 at
+    // dedup the last occupied cell wins, leaving a mover-anchor at alpha 1 at
     // its grid Y. it flashes fully-formed there for a frame before the drop-in
     // yanks it back up to fall again ("snap then re-drop").
     const placedSymbols: ReelSymbol[] = [];
     const handledAnchors = new Set<number>();
     for (const off of offsets) {
-      const anchorCell = reel.getAnchorCell(off.row);
-      if (anchorCell !== off.row && handledAnchors.has(anchorCell)) continue;
+      const anchorCell = reel.getAnchorCell(off.cell);
+      if (anchorCell !== off.cell && handledAnchors.has(anchorCell)) continue;
       handledAnchors.add(anchorCell);
-      const sym = reel.getSymbolAt(off.row);
+      const sym = reel.getSymbolAt(off.cell);
       sym.view.visible = true;
       sym.view.alpha = off.offsetCells === 0 ? 1 : 0;
       placedSymbols.push(sym);
@@ -139,8 +139,8 @@ export class CascadePlacePhase extends ReelPhase<CascadePlacePhaseConfig> {
     if (this._config) {
       const reel = this._reel;
       reel.placeStrip(this._placement(this._config.targetFrame));
-      for (let row = 0; row < reel.visibleCells; row++) {
-        const view = reel.getSymbolAt(row).view;
+      for (let cell = 0; cell < reel.visibleCells; cell++) {
+        const view = reel.getSymbolAt(cell).view;
         view.alpha = 1;
         view.visible = true;
       }

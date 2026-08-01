@@ -6,7 +6,7 @@
 //
 // A tall 1x3 wild lands with its ANCHOR in bufferStart. most of the
 // block is hidden above the visible window, only its bottom cell shows
-// at row 0 ("tail visible"). The player nudges DOWN by 2 to drag the
+// at cell 0 ("tail visible"). The player nudges DOWN by 2 to drag the
 // whole block into view, then nudges UP by 2 to push it back into
 // hiding.
 //
@@ -18,7 +18,7 @@
 //   - `_finalizeFrame` sizes anchors that sit in bufferStart with the
 //     block's body extending into visible. The mask clips the off-screen
 //     portion; the visible portion of the sprite shows through.
-//   - `getVisibleSymbols` resolves visible row 0 to the anchor's id via
+//   - `getVisibleSymbols` resolves visible cell 0 to the anchor's id via
 //     a NEGATIVE `anchorCell` in `_occupancy`.
 
 const TALL = { id: 'tall', color: 0xff8c42, label: 'TALL', textColor: 0x4a1d00, w: 1, h: 3 };
@@ -30,8 +30,8 @@ const GAP = 4;
 const reelSet = new ReelSetBuilder()
   .reels(REELS)
   .visibleCells(ROWS)
-  // Need bufferStart >= 2 so the 1x3 block's anchor can sit at row -2
-  // with the block extending through row 0.
+  // Need bufferStart >= 2 so the 1x3 block's anchor can sit at cell -2
+  // with the block extending through cell 0.
   .bufferSymbols(2)
   .symbolSize(SIZE, SIZE)
   .symbolGap(GAP, GAP)
@@ -59,11 +59,11 @@ const ct = () => ({ visible: [filler(), filler(), filler()] });
 return {
   reelSet,
   onSpin: async () => {
-    // 1. Land the 1x3 TALL with anchor at `bufferStart[1]` (= row -2).
-    //    Block spans cells -2, -1, 0. Only visible row 0 shows the block's
+    // 1. Land the 1x3 TALL with anchor at `bufferStart[1]` (= cell -2).
+    //    Block spans cells -2, -1, 0. Only visible cell 0 shows the block's
     //    bottom cell; cells 1 and 2 are random fillers.
     //
-    //    The engine paints OCCUPIED at row -1 and row 0 automatically;
+    //    The engine paints OCCUPIED at cell -1 and cell 0 automatically;
     //    we leave `bufferStart[0]` undefined and `visible[0]` as filler
     //    (both get overwritten by the coordinator).
     //
@@ -80,7 +80,7 @@ return {
     await p;
     await new Promise((r) => setTimeout(r, 700));
 
-    // 2. Nudge DOWN by 2. anchor moves from row -2 to row 0; block now
+    // 2. Nudge DOWN by 2. anchor moves from cell -2 to cell 0; block now
     //    fills visible cells 0, 1, 2. Fully visible.
     //
     //    Survival check (down): anchor strip index + h - 1 + distance < total
@@ -90,7 +90,7 @@ return {
     //    `incoming` is the new visible-area content arriving from the top.
     //    Buffer slots and big-symbol cells (anchor / OCCUPIED stubs) are
     //    protected during pre-placement, so any incoming entries that would
-    //    land on a protected slot are dropped. Here every visible row is
+    //    land on a protected slot are dropped. Here every visible cell is
     //    consumed by the block, so the incoming pair is consumed by the
     //    wrap pipeline (queue → random buffer fill) rather than appearing
     //    on screen. Pass real ids regardless; the engine ignores unused ones.
@@ -102,7 +102,7 @@ return {
     });
     await new Promise((r) => setTimeout(r, 800));
 
-    // 3. Nudge UP by 2. anchor moves back from row 0 to row -2.
+    // 3. Nudge UP by 2. anchor moves back from cell 0 to cell -2.
     //    Survival check (up): anchor strip index - distance >= 0 (2 - 2 = 0).
     //    Block returns to tail-visible state.
     await reelSet.nudge(2, {

@@ -59,7 +59,7 @@ export function anticipationForScatters(
   // Count the trigger symbol per reel. Only visible cells are scanned; buffer
   // symbols are off-screen and must not trigger tension.
   const perReelCount = grid.map(
-    (col) => col.visible.filter((id) => id === opts.symbol).length,
+    (reel) => reel.visible.filter((id) => id === opts.symbol).length,
   );
 
   // Find the reel at which the running total first reaches `trigger`.

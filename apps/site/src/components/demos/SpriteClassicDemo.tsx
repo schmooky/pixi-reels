@@ -30,11 +30,11 @@ export default function SpriteClassicDemo() {
       tags={['5×3', 'sprites', 'atlas', 'blur-on-spin']}
       height={500}
       cheats={[
-        { id: 'line-royal', label: 'Force royal line (middle row)', description: 'Full row of `royal/royal_1` on row 2.', enabled: false, cheat: forceLine(1, 'royal/royal_1') },
-        { id: 'line-round', label: 'Force round line (top row)', description: 'Full row of `round/round_1` on row 0.', enabled: false, cheat: forceLine(0, 'round/round_1') },
+        { id: 'line-royal', label: 'Force royal line (middle cell)', description: 'Full cell of `royal/royal_1` on cell 2.', enabled: false, cheat: forceLine(1, 'royal/royal_1') },
+        { id: 'line-round', label: 'Force round line (top cell)', description: 'Full cell of `round/round_1` on cell 0.', enabled: false, cheat: forceLine(0, 'round/round_1') },
         { id: 'jackpot', label: 'Full-grid royal jackpot', description: '15 royals. Pure theatre.', enabled: false, cheat: forceGrid(JACKPOT) },
         { id: 'scatters-3', label: 'Sprinkle 3 bonuses', description: 'Exactly 3 bonus symbols anywhere.', enabled: false, cheat: forceScatters(3, 'bonus/bonus_1') },
-        { id: 'wild-middle', label: 'Wild on reel 3, row 2', description: 'Always lands a wild at (2, 1).', enabled: false, cheat: forceCell(2, 1, 'wild/wild_1') },
+        { id: 'wild-middle', label: 'Wild on reel 3, cell 2', description: 'Always lands a wild at (2, 1).', enabled: false, cheat: forceCell(2, 1, 'wild/wild_1') },
       ]}
       boot={(host, api, cheats) => {
         return (async () => {
@@ -109,21 +109,21 @@ export default function SpriteClassicDemo() {
               const result = await p;
               api.setStatus(`Landed · ${summarize(result.symbols)}`);
 
-              // Light win reaction: any row of identical symbols plays `playWin` on each cell.
+              // Light win reaction: any cell of identical symbols plays `playWin` on each cell.
               const grid = result.symbols;
-              for (let row = 0; row < grid[0].length; row++) {
-                const id = grid[0][row];
+              for (let cell = 0; cell < grid[0].length; cell++) {
+                const id = grid[0][cell];
                 if (id === 'wild/wild_1') continue;
                 let streak = 1;
                 for (let r = 1; r < grid.length; r++) {
-                  const s = grid[r][row];
+                  const s = grid[r][cell];
                   if (s === id || s === 'wild/wild_1') streak++;
                   else break;
                 }
                 if (streak >= 3) {
                   api.toast(`Line win · ${streak} of ${id.split('/').pop()}`, 'win');
                   for (let r = 0; r < streak; r++) {
-                    handle.reelSet.getReel(r).getSymbolAt(row).playWin();
+                    handle.reelSet.getReel(r).getSymbolAt(cell).playWin();
                   }
                   await new Promise((x) => setTimeout(x, 450));
                 }
@@ -147,5 +147,5 @@ export default function SpriteClassicDemo() {
 }
 
 function summarize(grid: string[][]): string {
-  return grid.map((col) => col.map((s) => s.split('/').pop()).join('/')).join(' · ');
+  return grid.map((reel) => reel.map((s) => s.split('/').pop()).join('/')).join(' · ');
 }

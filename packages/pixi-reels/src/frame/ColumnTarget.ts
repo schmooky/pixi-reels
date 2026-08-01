@@ -11,24 +11,24 @@ export interface ColumnTarget {
   visible: string[];
   /**
    * Buffer-above target symbols. `bufferStart[0]` is the slot closest to the
-   * visible top row; later indices go further above. Up to `bufferSymbols`
+   * visible top cell; later indices go further above. Up to `bufferSymbols`
    * entries are honored.
    *
    * Big-symbol anchors may sit here. Place a multi-cell symbol id (one whose
    * `SymbolData.size.h > 1`) at any `bufferStart[i]` and the coordinator
    * paints OCCUPIED stubs across the rest of the block, including any cells
    * that fall in visible. The block must fit on the strip end-to-end
-   * (`anchor.row + h <= visibleCells + bufferEnd`); the portion above
+   * (`anchor.cell + h <= visibleCells + bufferEnd`); the portion above
    * visible is clipped by the reel mask. This is the "tail-visible"
    * partial-landing pattern.
    */
   bufferStart?: (string | undefined)[];
   /**
    * Buffer-below target symbols. `bufferEnd[0]` is the slot closest to the
-   * visible bottom row; later indices go further below. Up to `bufferSymbols`
+   * visible bottom cell; later indices go further below. Up to `bufferSymbols`
    * entries are honored.
    *
-   * Big-symbol stubs may sit here. A block anchored at the last visible row
+   * Big-symbol stubs may sit here. A block anchored at the last visible cell
    * with `h > 1` will have its non-anchor cells spill into `bufferEnd`
    * automatically. You can also place an anchor here, but the block then
    * lies entirely off-screen (legal but invisible).
@@ -37,34 +37,34 @@ export interface ColumnTarget {
 }
 
 /**
- * Read one slot of a `ColumnTarget` by **row**, the engine's
+ * Read one slot of a `ColumnTarget` by **cell**, the engine's
  * visible-relative coordinate: `0` is the first visible cell, negative cells
- * address `bufferStart` (`-1` is the slot closest to the visible top row),
+ * address `bufferStart` (`-1` is the slot closest to the visible top cell),
  * and cells `>= visible.length` address `bufferEnd`.
  *
- * Returns `undefined` for any row the target does not specify.
+ * Returns `undefined` for any cell the target does not specify.
  */
-export function getTargetSlot(target: ColumnTarget, row: number): string | undefined {
-  if (row < 0) return target.bufferStart?.[-1 - row];
-  if (row < target.visible.length) return target.visible[row];
-  return target.bufferEnd?.[row - target.visible.length];
+export function getTargetSlot(target: ColumnTarget, cell: number): string | undefined {
+  if (cell < 0) return target.bufferStart?.[-1 - cell];
+  if (cell < target.visible.length) return target.visible[cell];
+  return target.bufferEnd?.[cell - target.visible.length];
 }
 
 /**
- * Write one slot of a `ColumnTarget` by row, using the same coordinate as
+ * Write one slot of a `ColumnTarget` by cell, using the same coordinate as
  * {@link getTargetSlot}. Creates and extends `bufferStart` / `bufferEnd`
- * as needed, so a caller can address any row on the strip without knowing
+ * as needed, so a caller can address any cell on the strip without knowing
  * whether the target declared a buffer.
  *
  * Mutates `target`. Clone first if the caller must not touch the original.
  */
-export function setTargetSlot(target: ColumnTarget, row: number, id: string): void {
-  if (row < 0) {
-    (target.bufferStart ??= [])[-1 - row] = id;
-  } else if (row < target.visible.length) {
-    target.visible[row] = id;
+export function setTargetSlot(target: ColumnTarget, cell: number, id: string): void {
+  if (cell < 0) {
+    (target.bufferStart ??= [])[-1 - cell] = id;
+  } else if (cell < target.visible.length) {
+    target.visible[cell] = id;
   } else {
-    (target.bufferEnd ??= [])[row - target.visible.length] = id;
+    (target.bufferEnd ??= [])[cell - target.visible.length] = id;
   }
 }
 

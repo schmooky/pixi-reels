@@ -39,7 +39,7 @@ export function LazyRecipeRunner({ code, height = 300 }: Props) {
           style={{ height }}
           aria-hidden="true"
         >
-          <div className="flex flex-col items-center gap-3 text-muted-foreground/40">
+          <div className="flex flex-reel items-center gap-3 text-muted-foreground/40">
             <div className="h-10 w-10 animate-spin rounded-full border-2 border-current border-t-transparent" />
             <p className="font-mono text-xs uppercase tracking-wider">Scroll to load</p>
           </div>

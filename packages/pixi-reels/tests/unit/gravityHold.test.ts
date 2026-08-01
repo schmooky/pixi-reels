@@ -50,7 +50,7 @@ describe('refill. gravityHold promise', () => {
     reelSet.events.on('cascade:dropIn:start', (info) => order.push(`dropIn:start:${info.reelIndex}`));
 
     const refilling = reelSet.refill({
-      winners: [{ reel: 0, row: 2 }, { reel: 1, row: 2 }, { reel: 2, row: 2 }],
+      winners: [{ reel: 0, cell: 2 }, { reel: 1, cell: 2 }, { reel: 2, cell: 2 }],
       grid: [
         { visible: ['d', 'a', 'a'] },
         { visible: ['d', 'a', 'a'] },
@@ -89,7 +89,7 @@ describe('refill. gravityHold promise', () => {
     reelSet.events.on('cascade:dropIn:start', () => order.push('dropIn:start'));
 
     const refilling = reelSet.refill({
-      winners: [{ reel: 0, row: 2 }, { reel: 1, row: 2 }, { reel: 2, row: 2 }],
+      winners: [{ reel: 0, cell: 2 }, { reel: 1, cell: 2 }, { reel: 2, cell: 2 }],
       grid: [
         { visible: ['d', 'a', 'a'] },
         { visible: ['d', 'a', 'a'] },
@@ -129,7 +129,7 @@ describe('refill. gravityHold promise', () => {
     });
 
     await reelSet.refill({
-      winners: [{ reel: 0, row: 2 }, { reel: 1, row: 2 }, { reel: 2, row: 2 }],
+      winners: [{ reel: 0, cell: 2 }, { reel: 1, cell: 2 }, { reel: 2, cell: 2 }],
       grid: [
         { visible: ['d', 'a', 'a'] },
         { visible: ['d', 'a', 'a'] },
@@ -160,7 +160,7 @@ describe('refill. gravityHold promise', () => {
     reelSet.events.on('cascade:dropIn:start', () => order.push('dropIn:start'));
 
     const refilling = reelSet.refill({
-      winners: [{ reel: 0, row: 2 }, { reel: 1, row: 2 }, { reel: 2, row: 2 }],
+      winners: [{ reel: 0, cell: 2 }, { reel: 1, cell: 2 }, { reel: 2, cell: 2 }],
       grid: [
         { visible: ['d', 'a', 'a'] },
         { visible: ['d', 'a', 'a'] },
@@ -214,7 +214,7 @@ describe('refill. gravityHold rejection surfacing', () => {
       // Refill resolves with wasSkipped=true (engine slams to recover);
       // the original rejection comes through via the event.
       await reelSet.refill({
-        winners: [{ reel: 0, row: 2 }, { reel: 1, row: 2 }, { reel: 2, row: 2 }],
+        winners: [{ reel: 0, cell: 2 }, { reel: 1, cell: 2 }, { reel: 2, cell: 2 }],
         grid: [
           { visible: ['d', 'a', 'a'] },
           { visible: ['d', 'a', 'a'] },
@@ -257,7 +257,7 @@ describe('runCascade. gravityHold per-cascade promise builder', () => {
       detectWinners: () => {
         detects += 1;
         if (detects > 1) return [];
-        return [{ reel: 0, row: 2 }, { reel: 1, row: 2 }, { reel: 2, row: 2 }];
+        return [{ reel: 0, cell: 2 }, { reel: 1, cell: 2 }, { reel: 2, cell: 2 }];
       },
       nextGrid: (grid) => grid.map((c) => ['d', c[0], c[1]]),
       pauseAfterDestroyMs: 0,
@@ -300,7 +300,7 @@ describe('runCascade. gravityHold per-cascade promise builder', () => {
       detectWinners: () => {
         callsDetect += 1;
         if (callsDetect > 2) return [];
-        return [{ reel: 0, row: 2 }, { reel: 1, row: 2 }, { reel: 2, row: 2 }];
+        return [{ reel: 0, cell: 2 }, { reel: 1, cell: 2 }, { reel: 2, cell: 2 }];
       },
       nextGrid: (grid) => grid.map((c) => ['d', c[0], c[1]]),
       pauseAfterDestroyMs: 0,

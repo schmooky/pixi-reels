@@ -10,7 +10,7 @@ import { HeadlessSymbol } from './HeadlessSymbol.js';
 export interface TestReelSetOptions {
   reels?: number;
   /**
-   * Visible row count.
+   * Visible cell count.
    *   - `number` → uniform cells.
    *   - `number[]` → per-reel static shape (pyramid).
    *
@@ -217,14 +217,14 @@ export function expectGrid(reelSet: ReelSet, expected: string[][]): void {
   for (let r = 0; r < expected.length; r++) {
     if (expected[r].length !== actual[r].length) {
       mismatches.push(
-        `  reel ${r} row count: expected ${expected[r].length} got ${actual[r].length}`,
+        `  reel ${r} cell count: expected ${expected[r].length} got ${actual[r].length}`,
       );
       continue;
     }
-    for (let row = 0; row < expected[r].length; row++) {
-      if (expected[r][row] !== actual[r][row]) {
+    for (let cell = 0; cell < expected[r].length; cell++) {
+      if (expected[r][cell] !== actual[r][cell]) {
         mismatches.push(
-          `  reel ${r} row ${row}: expected "${expected[r][row]}" got "${actual[r][row]}"`,
+          `  reel ${r} cell ${cell}: expected "${expected[r][cell]}" got "${actual[r][cell]}"`,
         );
       }
     }
@@ -243,8 +243,8 @@ export function expectGrid(reelSet: ReelSet, expected: string[][]): void {
  */
 export function countSymbol(reelSet: ReelSet, symbolId: string): number {
   let n = 0;
-  for (const col of debugSnapshot(reelSet).grid) {
-    for (const s of col) if (s === symbolId) n++;
+  for (const reel of debugSnapshot(reelSet).grid) {
+    for (const s of reel) if (s === symbolId) n++;
   }
   return n;
 }

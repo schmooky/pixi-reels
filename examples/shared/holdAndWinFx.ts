@@ -21,14 +21,14 @@ import { SpineReelSymbol, type SpineReelSymbolOptions } from 'pixi-reels/spine';
 // Wave ordering - "launch stuff on the coins" in a chosen pattern.
 
 export interface HwWaveCell {
-  cell: { col: number; row: number };
+  cell: { reel: number; cell: number };
 }
 
 export type WaveMode =
   | 'all'
   | 'sequence'
-  | 'by-row'
-  | 'by-col'
+  | 'by-cell'
+  | 'by-reel'
   | { chunk: number }
   | ((item: never, index: number) => number);
 
@@ -37,7 +37,7 @@ export type WaveMode =
  *
  * - `'all'` - one wave, everything together
  * - `'sequence'` - one wave per coin, reading order
- * - `'by-row'` / `'by-col'` - one wave per row / column
+ * - `'by-cell'` / `'by-reel'` - one wave per cell / column
  * - `{ chunk: n }` - reading order in chunks of n (indices 0-4, 5-9, ...)
  * - `(item, index) => waveIndex` - custom assignment
  *
@@ -45,7 +45,7 @@ export type WaveMode =
  */
 export function coinWaves<T extends HwWaveCell>(items: T[], mode: WaveMode): T[][] {
   const ordered = [...items].sort(
-    (a, b) => a.cell.row - b.cell.row || a.cell.col - b.cell.col,
+    (a, b) => a.cell.cell - b.cell.cell || a.cell.reel - b.cell.reel,
   );
   if (mode === 'all') return ordered.length ? [ordered] : [];
   if (mode === 'sequence') return ordered.map((c) => [c]);
@@ -56,8 +56,8 @@ export function coinWaves<T extends HwWaveCell>(items: T[], mode: WaveMode): T[]
     wave.push(item);
     byKey.set(key, wave);
   };
-  if (mode === 'by-row') ordered.forEach((c) => assign(c.cell.row, c));
-  else if (mode === 'by-col') ordered.forEach((c) => assign(c.cell.col, c));
+  if (mode === 'by-cell') ordered.forEach((c) => assign(c.cell.cell, c));
+  else if (mode === 'by-reel') ordered.forEach((c) => assign(c.cell.reel, c));
   else if (typeof mode === 'function') {
     ordered.forEach((c, i) => assign((mode as (item: T, index: number) => number)(c as never, i), c));
   } else {

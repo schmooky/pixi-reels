@@ -258,7 +258,7 @@ export class HoldAndWinState<TData = unknown> {
    * mutable by reference - that is the supported way to carry live value.
    */
   private _freeze(cell: HwCell, id: string, data: TData | undefined): HwCoin<TData> {
-    return { cell: Object.freeze({ col: cell.col, row: cell.row }), id, data };
+    return { cell: Object.freeze({ reel: cell.reel, cell: cell.cell }), id, data };
   }
 
   private _assertInGrid(cell: HwCell, op: string): void {

@@ -71,7 +71,7 @@ describe('unmask: true reparents the symbol view to viewport.unmaskedContainer',
   it('reparents back to the reel when an unmasked symbol is replaced by a masked one', async () => {
     const h = makeHarness();
     try {
-      // First spin: wild lands in middle row of reel 1 -> unmasked.
+      // First spin: wild lands in middle cell of reel 1 -> unmasked.
       await h.spinAndLand([
         ['a', 'a', 'a'],
         ['a', 'wild', 'a'],
@@ -80,7 +80,7 @@ describe('unmask: true reparents the symbol view to viewport.unmaskedContainer',
       const reel = h.reelSet.reels[1];
       expect(reel.getSymbolAt(1).view.parent).toBe(h.reelSet.viewport.unmaskedContainer);
 
-      // Second spin: middle row becomes a normal symbol -> must end up in reel.container.
+      // Second spin: middle cell becomes a normal symbol -> must end up in reel.container.
       await h.spinAndLand([
         ['b', 'b', 'b'],
         ['b', 'b', 'b'],
@@ -123,7 +123,7 @@ describe('unmask: true reparents the symbol view to viewport.unmaskedContainer',
       ]);
       const reel = h.reelSet.reels[1];
       // Flat reel: container.y === 0, so the unmasked view's Y is just
-      // row * slotPitch. This is the path that's correct on flat slots.
+      // cell * slotPitch. This is the path that's correct on flat slots.
       expect(reel.container.y).toBe(0);
       const wildView = reel.getSymbolAt(1).view;
       const slotH = reel.motion.slotPitch;
@@ -138,7 +138,7 @@ describe('unmask on a jagged / pyramid layout (non-zero reel mainOffset)', () =>
   function makePyramid() {
     return createTestReelSet({
       reels: 5,
-      // Pyramid: the outer 3-row reels are centred, giving non-zero mainOffset.
+      // Pyramid: the outer 3-cell reels are centred, giving non-zero mainOffset.
       visibleCells: [3, 4, 5, 4, 3],
       symbolIds: SYMBOLS,
       symbolData: { wild: { unmask: true } },
@@ -152,7 +152,7 @@ describe('unmask on a jagged / pyramid layout (non-zero reel mainOffset)', () =>
   it('lands an unmasked wild above the mask with the reel offset baked into Y', async () => {
     const h = makePyramid();
     try {
-      // Reel 0 is a 3-row reel -> non-zero mainOffset. Land a wild in its top row.
+      // Reel 0 is a 3-cell reel -> non-zero mainOffset. Land a wild in its top cell.
       await h.spinAndLand([
         ['wild', 'a', 'a'],
         ['a', 'a', 'a', 'a'],
@@ -167,7 +167,7 @@ describe('unmask on a jagged / pyramid layout (non-zero reel mainOffset)', () =>
       expect(wildView.parent).toBe(h.reelSet.viewport.unmaskedContainer);
       expect(wildView.x).toBe(reel.container.x);
       const slotH = reel.motion.slotPitch;
-      // Top visible row -> reel-local 0, so viewport Y is exactly the offset.
+      // Top visible cell -> reel-local 0, so viewport Y is exactly the offset.
       expect(wildView.y).toBeCloseTo(reel.container.y + 0 * slotH, 3);
     } finally {
       h.destroy();
@@ -253,7 +253,7 @@ describe('unmask through the cascade refill path', () => {
       ['a', 'a', 'a'],
     ]);
     try {
-      const winners = [{ reel: 1, row: 2 }];
+      const winners = [{ reel: 1, cell: 2 }];
       const reel = h.reelSet.reels[1];
 
       // The moment the drop-in starts, its movers sit pre-positioned
@@ -283,7 +283,7 @@ describe('unmask through the cascade refill path', () => {
       const wildView = reel.getSymbolAt(0).view;
       // At rest after the refill: lifted above the mask...
       expect(wildView.parent).toBe(h.reelSet.viewport.unmaskedContainer);
-      // ...and at the top visible row's viewport-local Y (reel-local 0 +
+      // ...and at the top visible cell's viewport-local Y (reel-local 0 +
       // the reel container offset). NOT floating above the grid.
       expect(wildView.y).toBeCloseTo(reel.container.y + 0 * reel.motion.slotPitch, 3);
       expect(wildView.x).toBe(reel.container.x);
@@ -299,8 +299,8 @@ describe('unmask through the cascade refill path', () => {
       ['a', 'a', 'a'],
     ]);
     try {
-      // wild sits lifted at row 0 (initialFrame is an at-rest landing).
-      const winners = [{ reel: 1, row: 2 }];
+      // wild sits lifted at cell 0 (initialFrame is an at-rest landing).
+      const winners = [{ reel: 1, cell: 2 }];
       await h.reelSet.destroySymbols(winners);
       await h.reelSet.refill({
         winners,

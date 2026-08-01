@@ -69,9 +69,9 @@ export function buildBigSymbols({ app, textures, blurTextures }: SandboxContext)
       }),
     );
     if (Math.random() < 1 / 6) {
-      const col = Math.floor(Math.random() * (REELS - 1));
-      const row = Math.floor(Math.random() * (ROWS - 1));
-      grid[col][row] = 'bonus';
+      const reel = Math.floor(Math.random() * (REELS - 1));
+      const cell = Math.floor(Math.random() * (ROWS - 1));
+      grid[reel][cell] = 'bonus';
     }
     return grid;
   };

@@ -97,19 +97,19 @@ const mockServer = {
     // Server-side gravity: survivors pack to the bottom, new symbols
     // fill the top. The library's algorithm expects this convention
     // (see the cascades guide).
-    const next: string[][] = prevGrid.map((col) => [...col]);
+    const next: string[][] = prevGrid.map((reel) => [...reel]);
     const winnersByReel = new Map<number, Set<number>>();
     for (const w of winners) {
       const set = winnersByReel.get(w.reel) ?? new Set<number>();
-      set.add(w.row);
+      set.add(w.cell);
       winnersByReel.set(w.reel, set);
     }
     for (let reel = 0; reel < REEL_COUNT; reel++) {
       const losers = winnersByReel.get(reel);
       if (!losers || losers.size === 0) continue;
       const survivors: string[] = [];
-      for (let row = 0; row < VISIBLE_ROWS; row++) {
-        if (!losers.has(row)) survivors.push(next[reel][row]);
+      for (let cell = 0; cell < VISIBLE_ROWS; cell++) {
+        if (!losers.has(cell)) survivors.push(next[reel][cell]);
       }
       const fillers = Array.from({ length: losers.size }, pickWeighted);
       next[reel] = [...fillers, ...survivors];
@@ -120,22 +120,22 @@ const mockServer = {
 
 // ─── WIN DETECTION ──────────────────────────────────────────
 //
-// Left-anchored runs of 3+ matching symbols on the same visible row.
-// `wild` matches anything; a row starting on wild is skipped (it's not
+// Left-anchored runs of 3+ matching symbols on the same visible cell.
+// `wild` matches anything; a cell starting on wild is skipped (it's not
 // itself a trigger). This matches the classic Sweet Bonanza convention.
 
 function detectWinners(grid: string[][]): Cell[] {
   const winners: Cell[] = [];
-  for (let row = 0; row < VISIBLE_ROWS; row++) {
-    const head = grid[0][row];
+  for (let cell = 0; cell < VISIBLE_ROWS; cell++) {
+    const head = grid[0][cell];
     if (head === 'wild') continue;
     let run = 1;
     for (let reel = 1; reel < REEL_COUNT; reel++) {
-      if (grid[reel][row] === head || grid[reel][row] === 'wild') run++;
+      if (grid[reel][cell] === head || grid[reel][cell] === 'wild') run++;
       else break;
     }
     if (run >= 3) {
-      for (let reel = 0; reel < run; reel++) winners.push({ reel, row });
+      for (let reel = 0; reel < run; reel++) winners.push({ reel, cell });
     }
   }
   return winners;

@@ -8,7 +8,7 @@ const COIN = 'feature/feature_1';
 
 export default function HoldAndWinDemo() {
   // Module-scoped held state survives across spins in the same mount.
-  const held: Array<{ reel: number; row: number; symbolId: string }> = [];
+  const held: Array<{ reel: number; cell: number; symbolId: string }> = [];
   let middleRowCoins = 0;
 
   return (
@@ -41,13 +41,13 @@ export default function HoldAndWinDemo() {
             // Any new coin on the grid joins held[]
             middleRowCoins = 0;
             for (let r = 0; r < grid.length; r++) {
-              for (let row = 0; row < grid[r].length; row++) {
-                if (grid[r][row] === COIN) {
-                  if (row === 1) middleRowCoins++;
-                  const exists = held.some((h) => h.reel === r && h.row === row);
+              for (let cell = 0; cell < grid[r].length; cell++) {
+                if (grid[r][cell] === COIN) {
+                  if (cell === 1) middleRowCoins++;
+                  const exists = held.some((h) => h.reel === r && h.cell === cell);
                   if (!exists) {
-                    held.push({ reel: r, row, symbolId: COIN });
-                    reelSet.getReel(r).getSymbolAt(row).playWin();
+                    held.push({ reel: r, cell, symbolId: COIN });
+                    reelSet.getReel(r).getSymbolAt(cell).playWin();
                   }
                 }
               }
@@ -57,10 +57,10 @@ export default function HoldAndWinDemo() {
               toast('GRAND JACKPOT · grid filled', 'win');
               api.setStatus(`Full board (${held.length}/${total}). grand jackpot`);
             } else if (middleRowCoins >= 3) {
-              toast(`3 coins middle row · mini jackpot`, 'win');
-              api.setStatus(`Middle row filled · ${held.length}/${total} held`);
+              toast(`3 coins middle cell · mini jackpot`, 'win');
+              api.setStatus(`Middle cell filled · ${held.length}/${total} held`);
             } else {
-              api.setStatus(`Held: ${held.length}/${total} · middle row: ${middleRowCoins}/5`);
+              api.setStatus(`Held: ${held.length}/${total} · middle cell: ${middleRowCoins}/5`);
             }
           },
         })

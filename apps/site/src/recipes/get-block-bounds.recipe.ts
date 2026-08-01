@@ -50,7 +50,7 @@ reelSet.events.on('spin:allLanded', () => {
   if (!plantedAt || !plantedShape) return;
   // Pass the ANCHOR cell. getBlockBounds resolves to the same rect for
   // every cell of the block. anchor or not. so picking any cell works.
-  const rect = reelSet.getBlockBounds(plantedAt.col, plantedAt.row);
+  const rect = reelSet.getBlockBounds(plantedAt.reel, plantedAt.cell);
   overlay
     .roundRect(rect.x - 3, rect.y - 3, rect.width + 6, rect.height + 6, 8)
     .stroke({ color: 0xff6b35, width: 4, alpha: 1 });
@@ -63,10 +63,10 @@ return {
       Array.from({ length: ROWS }, () => CARD_DECK[Math.floor(Math.random() * CARD_DECK.length)].id),
     );
     plantedShape = SHAPES[Math.floor(Math.random() * SHAPES.length)];
-    const col = Math.floor(Math.random() * (REELS - plantedShape.w + 1));
-    const row = Math.floor(Math.random() * (ROWS - plantedShape.h + 1));
-    grid[col][row] = plantedShape.id;
-    plantedAt = { col, row };
+    const reel = Math.floor(Math.random() * (REELS - plantedShape.w + 1));
+    const cell = Math.floor(Math.random() * (ROWS - plantedShape.h + 1));
+    grid[reel][cell] = plantedShape.id;
+    plantedAt = { reel, cell };
     return grid;
   },
 };

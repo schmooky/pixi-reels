@@ -38,7 +38,7 @@ const MAX_ROWS = Math.max(...ROWS_PER_REEL);
 const SYMBOL_SIZE = 140;
 const SYMBOL_GAP = 4;
 
-/** Per-reel row offset to convert local-row to global-row (center anchor). */
+/** Per-reel cell offset to convert local-cell to global-cell (center anchor). */
 const ROW_OFFSET = ROWS_PER_REEL.map((cells) => Math.floor((MAX_ROWS - cells) / 2));
 
 const PAYS: Record<string, number> = { '7': 4, '8': 6, '9': 8, '10': 10, J: 14, Q: 18, K: 24, A: 32 };
@@ -117,8 +117,8 @@ export async function boot(opts: BootOptions): Promise<() => void> {
   function syncIdle(): void {
     for (let r = 0; r < reelSet.reelCount; r++) {
       const reel = reelSet.getReel(r);
-      for (let row = 0; row < reel.visibleCells; row++) {
-        const sym = reel.getSymbolAt(row);
+      for (let cell = 0; cell < reel.visibleCells; cell++) {
+        const sym = reel.getSymbolAt(cell);
         if (sym instanceof SpineReelSymbol) sym.stopAnimation();
       }
     }
@@ -193,10 +193,10 @@ export async function boot(opts: BootOptions): Promise<() => void> {
         lastWinsForUi = wins;
         if (wins.length === 0) return [];
         return dedupeCells(wins.flatMap((w) => w.cells))
-          .map((c) => ({ reel: c.reelIndex, row: c.cellIndex }));
+          .map((c) => ({ reel: c.reelIndex, cell: c.cellIndex }));
       },
       nextGrid: (prev, winners) => {
-        const cells: SymbolPosition[] = winners.map((w) => ({ reelIndex: w.reel, cellIndex: w.row }));
+        const cells: SymbolPosition[] = winners.map((w) => ({ reelIndex: w.reel, cellIndex: w.cell }));
         return computeRefillGrid(prev, cells);
       },
       onCascade: ({ chain }) => {
@@ -275,7 +275,7 @@ function randomGrid(): string[][] {
 
 function evaluateWays(grid: string[][]): WaysWin[] {
   const kinds = new Set<string>();
-  for (const col of grid) for (const s of col) if (s !== 'wild') kinds.add(s);
+  for (const reel of grid) for (const s of reel) if (s !== 'wild') kinds.add(s);
 
   const wins: WaysWin[] = [];
   for (const kind of kinds) {
@@ -319,7 +319,7 @@ function dedupeCells(cells: SymbolPosition[]): SymbolPosition[] {
 }
 
 function computeRefillGrid(currentGrid: string[][], removed: SymbolPosition[]): string[][] {
-  const grid = currentGrid.map((col) => [...col]);
+  const grid = currentGrid.map((reel) => [...reel]);
   const removedByReel = new Map<number, Set<number>>();
   for (const p of removed) {
     if (!removedByReel.has(p.reelIndex)) removedByReel.set(p.reelIndex, new Set());
@@ -328,7 +328,7 @@ function computeRefillGrid(currentGrid: string[][], removed: SymbolPosition[]): 
   for (let c = 0; c < REEL_COUNT; c++) {
     const rem = removedByReel.get(c);
     if (!rem || rem.size === 0) continue;
-    const survivors = grid[c].filter((_, row) => !rem.has(row));
+    const survivors = grid[c].filter((_, cell) => !rem.has(cell));
     const newSyms = Array.from({ length: ROWS_PER_REEL[c] - survivors.length }, randomCard);
     grid[c] = [...newSyms, ...survivors];
   }

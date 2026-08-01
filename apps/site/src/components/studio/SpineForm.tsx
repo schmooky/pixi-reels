@@ -114,7 +114,7 @@ export function SpineForm({ usedIds, onCancel, onSave }: Props): JSX.Element {
       // SpineReelSymbol's default `scale` option. without it, spines
       // render at their setup-pose size (often hundreds of px) and look
       // gigantic in a typical 100-200px cell. Best-effort: if it fails,
-      // we save without the thumbnail / scale and the row falls back
+      // we save without the thumbnail / scale and the cell falls back
       // to the bone icon and natural-size rendering.
       try {
         const result = await generateSpinePreview(symbol);

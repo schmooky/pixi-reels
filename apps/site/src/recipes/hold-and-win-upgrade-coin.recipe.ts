@@ -86,7 +86,7 @@ const fitGold = (t, maxW, maxH) => {
   return t;
 };
 const paintLabel = (cell, value) => {
-  const k = `${cell.col},${cell.row}`;
+  const k = `${cell.reel},${cell.cell}`;
   labelAt.get(k)?.destroy();
   const p = abs(cell);
   const t = fitGold(goldText(fmt(value), 32), SETTLE_SIZE * 0.84, SETTLE_SIZE * 0.46);
@@ -102,9 +102,9 @@ const nextTier = (v) => LADDER[Math.min(LADDER.length - 1, LADDER.indexOf(v) + 1
 const totalOf = () => board.lockedCoins.reduce((a, c) => a + (c.data?.value ?? 0), 0);
 
 const SEED = [
-  { cell: { col: 0, row: 1 }, id: COIN, data: { value: 5 } },
-  { cell: { col: 2, row: 0 }, id: COIN, data: { value: 5 } },
-  { cell: { col: 3, row: 2 }, id: COIN, data: { value: 5 } },
+  { cell: { reel: 0, cell: 1 }, id: COIN, data: { value: 5 } },
+  { cell: { reel: 2, cell: 0 }, id: COIN, data: { value: 5 } },
+  { cell: { reel: 3, cell: 2 }, id: COIN, data: { value: 5 } },
 ];
 const seedBoard = () => {
   SEED.forEach((c) => { c.data.value = 5; });
@@ -122,7 +122,7 @@ async function upgradeCoin(coin) {
   coin.data.value = after;                                  // game state owns the value
   // the skeleton's own one-turn flourish reads as the coin flipping over
   void board.symbolAt(coin.cell).playWin?.().catch?.(() => {});
-  const k = `${coin.cell.col},${coin.cell.row}`;
+  const k = `${coin.cell.reel},${coin.cell.cell}`;
   const old = labelAt.get(k);
   if (old) await new Promise((res) => gsap.to(old.scale, { x: 0, y: 1.2, duration: 0.14, ease: 'power2.in', onComplete: res }));
   const t = paintLabel(coin.cell, after);                   // repaint from data
@@ -148,7 +148,7 @@ return {
     }
     hud.text = 'upgrading…';
     // promote each held coin one rung, left-to-right
-    const ordered = [...board.lockedCoins].sort((a, b) => a.cell.row - b.cell.row || a.cell.col - b.cell.col);
+    const ordered = [...board.lockedCoins].sort((a, b) => a.cell.cell - b.cell.cell || a.cell.reel - b.cell.reel);
     for (const coin of ordered) { await upgradeCoin(coin); await sleep(90); }
     const top = board.lockedCoins.every((c) => c.data.value === LADDER[LADDER.length - 1]);
     hud.text = top

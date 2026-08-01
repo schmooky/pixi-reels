@@ -13,7 +13,7 @@ const CELL = 110;
 const GAP = 6;
 const SLOT = CELL + GAP;
 
-type Sticky = { reel: number; row: number; spinsLeft: number };
+type Sticky = { reel: number; cell: number; spinsLeft: number };
 
 /**
  * Mounts/updates an overlay Container holding sticky-wild sprites. The reel
@@ -43,7 +43,7 @@ async function syncStickyOverlay(
   const alive = new Set<string>();
   for (const s of stickies) {
     if (s.spinsLeft <= 0) continue;
-    const key = `${s.reel},${s.row}`;
+    const key = `${s.reel},${s.cell}`;
     alive.add(key);
     let sprite = state.sprites.get(key);
     if (!sprite) {
@@ -53,7 +53,7 @@ async function syncStickyOverlay(
       const scale = Math.min(CELL / sprite.texture.width, CELL / sprite.texture.height);
       sprite.scale.set(scale);
       sprite.x = s.reel * SLOT + CELL / 2;
-      sprite.y = s.row * SLOT + CELL / 2;
+      sprite.y = s.cell * SLOT + CELL / 2;
       state.container.addChild(sprite);
       state.sprites.set(key, sprite);
     }
@@ -100,7 +100,7 @@ export default function StickyWildsDemo() {
         },
         {
           id: 'wild-r3',
-          label: 'Force wild on reel 3 / row 2',
+          label: 'Force wild on reel 3 / cell 2',
           description: 'Always a wild at (2, 1). Combine with held to stack.',
           enabled: false,
           cheat: forceCell(2, 1, WILD),
@@ -125,7 +125,7 @@ export default function StickyWildsDemo() {
             // so stickies persist automatically in the result grid.
             const held = stickies
               .filter((s) => s.spinsLeft > 0)
-              .map((s) => ({ reel: s.reel, row: s.row, symbolId: WILD }));
+              .map((s) => ({ reel: s.reel, cell: s.cell, symbolId: WILD }));
             engine.setHeld(held);
           },
           onLanded: async ({ grid, reelSet, toast, api }) => {
@@ -134,15 +134,15 @@ export default function StickyWildsDemo() {
             // Track any wilds on the grid. new ones start at 3, existing refresh to 3
             let newThisSpin = 0;
             for (let r = 0; r < grid.length; r++) {
-              for (let row = 0; row < grid[r].length; row++) {
-                if (grid[r][row] === WILD) {
-                  const existing = stickies.find((s) => s.reel === r && s.row === row);
+              for (let cell = 0; cell < grid[r].length; cell++) {
+                if (grid[r][cell] === WILD) {
+                  const existing = stickies.find((s) => s.reel === r && s.cell === cell);
                   if (existing) {
                     existing.spinsLeft = 3; // refresh
                   } else {
-                    stickies.push({ reel: r, row, spinsLeft: 3 });
+                    stickies.push({ reel: r, cell, spinsLeft: 3 });
                     newThisSpin++;
-                    reelSet.getReel(r).getSymbolAt(row).playWin();
+                    reelSet.getReel(r).getSymbolAt(cell).playWin();
                   }
                 }
               }

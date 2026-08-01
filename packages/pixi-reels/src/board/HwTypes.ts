@@ -6,8 +6,8 @@
 
 /** Grid coordinate of a board cell. */
 export interface HwCell {
-  col: number;
-  row: number;
+  reel: number;
+  cell: number;
 }
 
 /**
@@ -79,5 +79,5 @@ export interface HwCellSizeOptions {
   gap?: number;
 }
 
-/** `col,row` string key for the board's cell-indexed maps. */
-export const cellKey = (c: HwCell): string => `${c.col},${c.row}`;
+/** `reel,cell` string key for the board's cell-indexed maps. */
+export const cellKey = (c: HwCell): string => `${c.reel},${c.cell}`;

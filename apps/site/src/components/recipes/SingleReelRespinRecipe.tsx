@@ -75,7 +75,7 @@ export default function SingleReelRespinRecipe() {
         app.stage.addChild(frame);
 
         const columns: ReelSet[] = [];
-        for (let col = 0; col < COLS; col++) {
+        for (let reel = 0; reel < COLS; reel++) {
           const rs = new ReelSetBuilder()
             .reels(1)
             .visibleCells(ROWS)
@@ -95,11 +95,11 @@ export default function SingleReelRespinRecipe() {
             .speed('normal', SpeedPresets.NORMAL)
             // Stagger the stop moment per column so the full-board spin
             // reads left-to-right even though every column spins in parallel.
-            .speed('turbo', { ...SpeedPresets.TURBO, minimumSpinTime: 260 + col * 90 })
+            .speed('turbo', { ...SpeedPresets.TURBO, minimumSpinTime: 260 + reel * 90 })
             .ticker(app.ticker)
             .build();
           rs.setSpeed('turbo');
-          rs.x = frame.x + padX + col * (CELL + GAP);
+          rs.x = frame.x + padX + reel * (CELL + GAP);
           rs.y = frame.y + padY;
           app.stage.addChild(rs);
 

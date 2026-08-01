@@ -46,9 +46,9 @@ describe('CheatEngine', () => {
     const engine = makeEngine();
     const r = engine.next();
     expect(r.symbols.length).toBe(5);
-    for (const col of r.symbols) {
-      expect(col.length).toBe(3);
-      for (const s of col) expect(SYMBOLS).toContain(s);
+    for (const reel of r.symbols) {
+      expect(reel.length).toBe(3);
+      for (const s of reel) expect(SYMBOLS).toContain(s);
     }
   });
 
@@ -82,7 +82,7 @@ describe('CheatEngine', () => {
     }
   });
 
-  it('forceLine fills a full row with the given symbol', () => {
+  it('forceLine fills a full cell with the given symbol', () => {
     const engine = makeEngine();
     engine.register({
       id: 'l',
@@ -130,8 +130,8 @@ describe('CheatEngine', () => {
       cheat: holdAndWinProgress('coin', 1), // chance=1 -> always lands
     });
     engine.setHeld([
-      { reel: 0, row: 0, symbolId: 'coin' },
-      { reel: 1, row: 1, symbolId: 'coin' },
+      { reel: 0, cell: 0, symbolId: 'coin' },
+      { reel: 1, cell: 1, symbolId: 'coin' },
     ]);
     const { symbols } = engine.next();
     expect(symbols[0][0]).toBe('coin');
@@ -229,17 +229,17 @@ describe('CheatEngine', () => {
     engine.register({
       id: 'line', label: 'line', enabled: true, cheat: forceLine(0, 'a'),
     });
-    engine.setHeld([{ reel: 2, row: 1, symbolId: 'wild' }]);
+    engine.setHeld([{ reel: 2, cell: 1, symbolId: 'wild' }]);
     const { symbols } = engine.next();
     expect(symbols[2][1]).toBe('wild');     // held wins
     for (let r = 0; r < 5; r++) {
-      expect(symbols[r][0]).toBe('a');       // line still placed on row 0
+      expect(symbols[r][0]).toBe('a');       // line still placed on cell 0
     }
   });
 
   it('applies held cells even with no cheats enabled', () => {
     const engine = makeEngine();
-    engine.setHeld([{ reel: 0, row: 0, symbolId: 'wild' }]);
+    engine.setHeld([{ reel: 0, cell: 0, symbolId: 'wild' }]);
     const { symbols } = engine.next();
     expect(symbols[0][0]).toBe('wild');
   });
@@ -250,9 +250,9 @@ describe('CheatEngine', () => {
       id: 's', label: 's', enabled: true, cheat: forceScatters(1, 'wild'),
     });
     engine.setHeld([
-      { reel: 0, row: 0, symbolId: 'wild' },
-      { reel: 2, row: 1, symbolId: 'wild' },
-      { reel: 4, row: 2, symbolId: 'wild' },
+      { reel: 0, cell: 0, symbolId: 'wild' },
+      { reel: 2, cell: 1, symbolId: 'wild' },
+      { reel: 4, cell: 2, symbolId: 'wild' },
     ]);
     for (let i = 0; i < 5; i++) {
       const { symbols } = engine.next();

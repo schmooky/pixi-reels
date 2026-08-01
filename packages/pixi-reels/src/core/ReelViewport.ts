@@ -40,7 +40,7 @@ export interface MaskStrategy {
 /**
  * v1 default: a per-reel rectangular mask. Each reel is clipped to its own
  * `(mainOffset, extent)` box so pyramid shapes clip cleanly without
- * buffer-row peek above or below short reels.
+ * buffer-cell peek above or below short reels.
  *
  * PixiJS masks support multiple shapes inside a single Graphics. the union
  * of every filled shape is the visible region. So drawing one rect per reel

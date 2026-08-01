@@ -165,7 +165,7 @@ describe('nudge', () => {
       }
     });
 
-    it('shifts down by 3. every visible row is incoming', async () => {
+    it('shifts down by 3. every visible cell is incoming', async () => {
       const { reelSet, spinAndLand, destroy } = createTestReelSet({
         reels: 1,
         visibleCells: 3,
@@ -325,7 +325,7 @@ describe('nudge', () => {
       }
     });
 
-    it('throws on out-of-range col', async () => {
+    it('throws on out-of-range reel', async () => {
       const { reelSet, spinAndLand, destroy } = createTestReelSet({
         reels: 2,
         visibleCells: 3,
@@ -581,7 +581,7 @@ describe('nudge', () => {
       }
     });
 
-    it('skipNudge() with no col skips every in-flight nudge', async () => {
+    it('skipNudge() with no reel skips every in-flight nudge', async () => {
       installSyncGsap(); // resolve immediately so the multi-reel setup works
       const { reelSet, spinAndLand, destroy } = createTestReelSet({
         reels: 3,
@@ -607,7 +607,7 @@ describe('nudge', () => {
       }
     });
 
-    it('throws on out-of-range col', async () => {
+    it('throws on out-of-range reel', async () => {
       const { reelSet, destroy } = createTestReelSet({
         reels: 2,
         visibleCells: 3,
@@ -787,7 +787,7 @@ describe('nudge', () => {
   });
 
   describe('big symbols on the strip', () => {
-    it('nudges a 1x2 wild down through fully. anchor at visible row 0, stub at row 1', async () => {
+    it('nudges a 1x2 wild down through fully. anchor at visible cell 0, stub at cell 1', async () => {
       installSyncGsap();
       const { reelSet, spinAndLand, destroy } = createTestReelSet({
         reels: 1,
@@ -799,15 +799,15 @@ describe('nudge', () => {
         },
       });
       try {
-        // 1x2 anchor at visible row 1 (so stub fits in visible row 2).
+        // 1x2 anchor at visible cell 1 (so stub fits in visible cell 2).
         // SetResult validates anchor + h fits in visibleCells.
         await spinAndLand([['a', 'bigW', 'bigW']]);
         // The strip already shows the full block. Nudge DOWN by 1 shifts
-        // it to cells 2+3. but row 3 doesn't exist. Block survival check:
+        // it to cells 2+3. but cell 3 doesn't exist. Block survival check:
         // anchor at strip[2], h=2, distance=1 down. Survival: 2 + 2 - 1 + 1 = 4 < 5, ok.
         // After nudge: anchor at strip[3], stub at strip[4] (bufferEnd).
-        // visible row 0 = 'a' (incoming), row 1 = 'a' (old top-visible),
-        // row 2 = anchor 'bigW' (the top of the 1x2 block).
+        // visible cell 0 = 'a' (incoming), cell 1 = 'a' (old top-visible),
+        // cell 2 = anchor 'bigW' (the top of the 1x2 block).
         const result = await reelSet.nudge(0, {
           distance: 1,
           direction: 'down',
@@ -834,20 +834,20 @@ describe('nudge', () => {
         // 1x2 at visible cells 0+1. anchor at strip[1], stub at strip[2].
         await spinAndLand([['bigW', 'bigW', 'a']]);
         // Nudge up by 1. anchor lands at strip[0] (bufferStart), stub at
-        // strip[1] (visible row 0). The block is "tail visible": top in
+        // strip[1] (visible cell 0). The block is "tail visible": top in
         // buffer, bottom showing. `_finalizeFrame` scans bufferStart now,
         // so the anchor sprite is sized to the full block and the visible
-        // row 0 cell resolves to 'bigW' via the negative-anchorCell occupancy.
+        // cell 0 cell resolves to 'bigW' via the negative-anchorCell occupancy.
         const result = await reelSet.nudge(0, {
           distance: 1,
           direction: 'up',
           incoming: ['a'],
         });
-        // Visible row 0 = 'bigW' (the block's tail via occupancy).
+        // Visible cell 0 = 'bigW' (the block's tail via occupancy).
         // Rows 1+2 = the rest of the strip after rotation.
         expect(result.symbols[0]).toBe('bigW');
-        // Occupancy correctly references the bufferStart anchor (negative row).
-        // Internal state: visible row 0 has occupancy pointing to anchorCell = -1.
+        // Occupancy correctly references the bufferStart anchor (negative cell).
+        // Internal state: visible cell 0 has occupancy pointing to anchorCell = -1.
         const reel = reelSet.reels[0];
         // Reel.getSymbolAt resolves through occupancy -> returns the anchor symbol.
         expect(reel.getSymbolAt(0).symbolId).toBe('bigW');
@@ -869,14 +869,14 @@ describe('nudge', () => {
       });
       try {
         // Set up state where the up-nudge's pre-placement TARGET slot
-        // (strip[4] = bufferEnd row 0) holds an OCCUPIED stub of a
-        // surviving block. Anchor at visible row 2 (strip[3]), stub at
+        // (strip[4] = bufferEnd cell 0) holds an OCCUPIED stub of a
+        // surviving block. Anchor at visible cell 2 (strip[3]), stub at
         // strip[4]. Pre-fix this overwrote the stub with the caller's
         // incoming symbol, splitting the block.
         await spinAndLand([['a', 'bigW', 'bigW']]);
         // Need anchor at strip[3] with stub at strip[4]. setResult validates
         // anchor + h <= cells, so we can't set that state directly; reach it
-        // via a down-nudge: anchor strip[2] (row 1) -> strip[3] (row 2),
+        // via a down-nudge: anchor strip[2] (cell 1) -> strip[3] (cell 2),
         // stub -> strip[4].
         await reelSet.nudge(0, {
           distance: 1,
@@ -911,7 +911,7 @@ describe('nudge', () => {
         },
       });
       try {
-        // Anchor at strip index 1 (visible row 0). Up by 2 lands at strip
+        // Anchor at strip index 1 (visible cell 0). Up by 2 lands at strip
         // index -1, which is off-strip. Survival check: 1 - 2 < 0, throw.
         await spinAndLand([['bigW', 'bigW', 'a']]);
         await expect(
@@ -990,13 +990,13 @@ describe('nudge', () => {
         },
       });
       try {
-        // Place a 2x2 bonus anchor at (col 0, row 0). The other-reel
-        // cells become OCCUPIED stubs on col 1.
+        // Place a 2x2 bonus anchor at (reel 0, cell 0). The other-reel
+        // cells become OCCUPIED stubs on reel 1.
         await spinAndLand([
           ['bonus', 'a', 'a'],
           ['a', 'a', 'a'],
         ]);
-        // Nudging col 0 would split the bonus block from its right half.
+        // Nudging reel 0 would split the bonus block from its right half.
         await expect(
           reelSet.nudge(0, {
             distance: 1,
@@ -1009,7 +1009,7 @@ describe('nudge', () => {
       }
     });
 
-    it('cross-reel: nudging the col that holds only OCCUPIED stubs also throws', async () => {
+    it('cross-reel: nudging the reel that holds only OCCUPIED stubs also throws', async () => {
       installSyncGsap();
       const { reelSet, spinAndLand, destroy } = createTestReelSet({
         reels: 2,
@@ -1021,13 +1021,13 @@ describe('nudge', () => {
         },
       });
       try {
-        // 2x2 anchor on col 0 row 0. Col 1 carries the OCCUPIED stubs.
+        // 2x2 anchor on reel 0 cell 0. Col 1 carries the OCCUPIED stubs.
         await spinAndLand([
           ['bonus', 'a', 'a'],
           ['a', 'a', 'a'],
         ]);
-        // Nudging col 1 (the stubs) would drift them away from their
-        // anchor on col 0. Same failure mode, opposite reel.
+        // Nudging reel 1 (the stubs) would drift them away from their
+        // anchor on reel 0. Same failure mode, opposite reel.
         await expect(
           reelSet.nudge(1, {
             distance: 1,
@@ -1054,15 +1054,15 @@ describe('nudge', () => {
       try {
         // Land block at cells 0+1 (anchor at strip[1], stub at strip[2]).
         await spinAndLand([['bigW', 'bigW', 'a']]);
-        // Nudge down by 2. anchor -> strip[3] (row 2), stub -> strip[4]
-        // (bufferEnd). Visible row 2 shows top of the block.
+        // Nudge down by 2. anchor -> strip[3] (cell 2), stub -> strip[4]
+        // (bufferEnd). Visible cell 2 shows top of the block.
         const half = await reelSet.nudge(0, {
           distance: 2,
           direction: 'down',
           incoming: ['a', 'b'],
         });
-        // Visible: [a, b, bigW]. block's anchor is now visible row 2.
-        // The block extends into bufferEnd, so row 2 reads the anchor.
+        // Visible: [a, b, bigW]. block's anchor is now visible cell 2.
+        // The block extends into bufferEnd, so cell 2 reads the anchor.
         expect(half.symbols).toEqual(['a', 'b', 'bigW']);
 
         // Nudge up by 1. block returns to cells 1+2.

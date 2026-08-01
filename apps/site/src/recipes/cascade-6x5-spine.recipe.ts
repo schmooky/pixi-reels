@@ -69,7 +69,7 @@ const reelSet = new ReelSetBuilder()
 return {
   reelSet,
   onSpin: async () => {
-    // Stage 0: cluster of CLUSTER on row 2, cols 0-2.
+    // Stage 0: cluster of CLUSTER on cell 2, cols 0-2.
     const stage0 = Array.from({ length: REELS }, (_, c) =>
       Array.from({ length: ROWS }, (_, r) =>
         r === HIT_ROW && HIT_COLS.includes(c) ? CLUSTER : randSymbol(CLUSTER)
@@ -94,13 +94,13 @@ return {
       detectWinners: () => {
         if (detected) return [];
         detected = true;
-        return HIT_COLS.map(c => ({ reel: c, row: HIT_ROW }));
+        return HIT_COLS.map(c => ({ reel: c, cell: HIT_ROW }));
       },
       nextGrid: (prev, winners) => {
-        // Survivors slide down 1; new symbol at row 0.
-        const next = prev.map(col => [...col]);
+        // Survivors slide down 1; new symbol at cell 0.
+        const next = prev.map(reel => [...reel]);
         for (const w of winners) {
-          for (let r = w.row; r > 0; r--) next[w.reel][r] = next[w.reel][r - 1];
+          for (let r = w.cell; r > 0; r--) next[w.reel][r] = next[w.reel][r - 1];
           next[w.reel][0] = randSymbol(CLUSTER);
         }
         return next;

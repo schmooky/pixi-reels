@@ -69,7 +69,7 @@ const paintValue = (coin) => {
   if (t.width > CELL * 0.8) t.scale.set((CELL * 0.8) / t.width);
   t.position.set(board.container.x + c.x, board.container.y + c.y);
   labels.addChild(t);
-  labelAt.set(`${coin.cell.col},${coin.cell.row}`, t);
+  labelAt.set(`${coin.cell.reel},${coin.cell.cell}`, t);
 };
 
 board.events.on('coin:locked', ({ coin }) => paintValue(coin));
@@ -84,8 +84,8 @@ app.stage.addChild(hud);
 
 const randVal = () => [2, 5, 10, 25, 50, 100][Math.floor(Math.random() * 6)];
 const ROUNDS = [
-  [{ col: 0, row: 0 }, { col: 2, row: 1 }],
-  [{ col: 1, row: 0 }],
+  [{ reel: 0, cell: 0 }, { reel: 2, cell: 1 }],
+  [{ reel: 1, cell: 0 }],
   [],
 ];
 

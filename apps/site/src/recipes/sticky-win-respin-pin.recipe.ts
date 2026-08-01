@@ -10,7 +10,7 @@
 // counter runs out (or a max-respin cap is reached).
 //
 // CellPin with numeric `turns` provides the lock lifecycle for free.
-// "any 3 in a row" counts as a win for this demo.
+// "any 3 in a cell" counts as a win for this demo.
 
 const FILLER = ['7', '8', '10', 'Q'];
 const COLS = 5, ROWS = 3, SIZE = 90;
@@ -47,8 +47,8 @@ function redrawLocks() {
     // Subtle gold border around locked cells
     lockLayer
       .rect(
-        pin.col * (SIZE + 4),
-        pin.row * (SIZE + 4),
+        pin.reel * (SIZE + 4),
+        pin.cell * (SIZE + 4),
         SIZE,
         SIZE,
       )
@@ -59,21 +59,21 @@ function redrawLocks() {
 reelSet.events.on('pin:placed', redrawLocks);
 reelSet.events.on('pin:expired', redrawLocks);
 
-// ── Winner detection: any 3 same symbols in a horizontal row ─────────────
+// ── Winner detection: any 3 same symbols in a horizontal cell ─────────────
 function detectWinners(grid) {
-  const winners = []; // { col, row, symbolId }
-  for (let row = 0; row < ROWS; row++) {
-    // Find runs of same symbol in this row
+  const winners = []; // { reel, cell, symbolId }
+  for (let cell = 0; cell < ROWS; cell++) {
+    // Find runs of same symbol in this cell
     let runStart = 0;
-    for (let col = 1; col <= COLS; col++) {
-      if (col === COLS || grid[col][row] !== grid[runStart][row]) {
-        const runLength = col - runStart;
+    for (let reel = 1; reel <= COLS; reel++) {
+      if (reel === COLS || grid[reel][cell] !== grid[runStart][cell]) {
+        const runLength = reel - runStart;
         if (runLength >= 3) {
-          for (let c = runStart; c < col; c++) {
-            winners.push({ col: c, row, symbolId: grid[c][row] });
+          for (let c = runStart; c < reel; c++) {
+            winners.push({ reel: c, cell, symbolId: grid[c][cell] });
           }
         }
-        runStart = col;
+        runStart = reel;
       }
     }
   }
@@ -87,7 +87,7 @@ reelSet.events.on('spin:allLanded', ({ symbols }) => {
 
   for (const w of winners) {
     // If already pinned, refresh its lifetime; otherwise new pin.
-    reelSet.pin(w.col, w.row, w.symbolId, { turns: RESPIN_WINDOW });
+    reelSet.pin(w.reel, w.cell, w.symbolId, { turns: RESPIN_WINDOW });
   }
 });
 
@@ -99,7 +99,7 @@ const scripts = [
     Array.from({ length: COLS }, () =>
       Array.from({ length: ROWS }, () => FILLER[Math.floor(Math.random() * FILLER.length)]),
     ),
-  // Spin 1: 3-of-a-kind on row 1 across reels 0,1,2
+  // Spin 1: 3-of-a-kind on cell 1 across reels 0,1,2
   () => {
     const g = Array.from({ length: COLS }, () =>
       Array.from({ length: ROWS }, () => FILLER[Math.floor(Math.random() * FILLER.length)]),

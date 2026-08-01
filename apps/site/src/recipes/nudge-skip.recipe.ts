@@ -50,8 +50,8 @@ return {
     // any of them to fast-forward. the loop's `await` resolves
     // immediately at that tween's landed state and the loop continues
     // with the next reel.
-    for (const col of NUDGE_COLS) {
-      await reelSet.nudge(col, {
+    for (const reel of NUDGE_COLS) {
+      await reelSet.nudge(reel, {
         distance: 1,
         direction: 'down',
         incoming: ['wild'],

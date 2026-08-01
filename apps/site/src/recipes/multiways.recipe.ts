@@ -2,11 +2,11 @@
 // Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
 //                   PIXI, gsap, app, pickWeighted
 //
-// MultiWays. per-spin row variation. Each reel lands on a different
-// row count in [minCells, maxCells]. The reel pixel height is fixed;
+// MultiWays. per-spin cell variation. Each reel lands on a different
+// cell count in [minCells, maxCells]. The reel pixel height is fixed;
 // cell height per reel is derived live as
-// `reelExtent / visibleCells[i]`, so a 2-row reel has tall cells
-// and a 7-row reel has short ones. `setShape(rowsPerReel)` is called
+// `reelExtent / visibleCells[i]`, so a 2-cell reel has tall cells
+// and a 7-cell reel has short ones. `setShape(rowsPerReel)` is called
 // between `spin()` and `setResult()`; AdjustPhase reshapes the reels
 // between SPIN and STOP.
 //

@@ -69,19 +69,19 @@ return {
     // no more Xs, so `detectWinners` returns [] and the chain ends.
     reelSet.setDropOrder('all');
     await reelSet.runCascade({
-      detectWinners: (grid) => grid.flatMap((col, reel) =>
-        col.map((sym, row) => sym === X ? { reel, row } : null).filter(Boolean),
+      detectWinners: (grid) => grid.flatMap((reel, reel) =>
+        reel.map((sym, cell) => sym === X ? { reel, cell } : null).filter(Boolean),
       ),
       nextGrid: (prev, winners) => {
         const losers = new Map();
         for (const w of winners) {
           if (!losers.has(w.reel)) losers.set(w.reel, new Set());
-          losers.get(w.reel).add(w.row);
+          losers.get(w.reel).add(w.cell);
         }
-        return prev.map((col, reel) => {
+        return prev.map((reel, reel) => {
           const drop = losers.get(reel);
-          if (!drop || drop.size === 0) return [...col];
-          const survivors = col.filter((_, row) => !drop.has(row));
+          if (!drop || drop.size === 0) return [...reel];
+          const survivors = reel.filter((_, cell) => !drop.has(cell));
           const fillers = Array.from({ length: drop.size }, () => randSymbolNotIn(new Set([X])));
           return [...fillers, ...survivors];
         });

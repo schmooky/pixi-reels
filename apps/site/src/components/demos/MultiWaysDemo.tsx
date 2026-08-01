@@ -10,7 +10,7 @@ export default function MultiWaysDemo() {
       height={640}
       cheats={[]}
       boot={(host, api) => {
-        api.setStatus('Each spin rolls a fresh per-reel shape. Ways = product of row counts.');
+        api.setStatus('Each spin rolls a fresh per-reel shape. Ways = product of cell counts.');
         return boot({ host, fullScreen: false, showSpeeds: false });
       }}
     />

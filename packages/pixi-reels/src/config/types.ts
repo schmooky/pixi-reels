@@ -138,7 +138,7 @@ export interface SpeedProfile {
    * profile defines this, the cascade fall + drop-in phases merge these
    * fields over the base config registered via `.tumble(...)` at build
    * time. `setSpeed('turbo')` can shorten `fall.duration`,
-   * `dropIn.duration`, per-row staggers, and the drop ease without the
+   * `dropIn.duration`, per-cell staggers, and the drop ease without the
    * caller maintaining a parallel `setTumble` API.
    *
    * Fields are deep-merged with `Partial` semantics: omitted fields fall
@@ -169,7 +169,7 @@ export interface SymbolData {
    * clipped at the cell boundary.
    *
    * **At-rest presentation:** unmask lifts a symbol above the mask ONLY
-   * while its reel is stopped. On `notifyLanded` each visible-row instance
+   * while its reel is stopped. On `notifyLanded` each visible-cell instance
    * is re-parented into `viewport.unmaskedContainer` (X = `reel.container.x`,
    * Y = `reel.container.y + reelLocalY` so it lines up with its grid cell);
    * the instant the reel starts moving again it is pulled back into the
@@ -197,7 +197,7 @@ export interface SymbolData {
   /**
    * Footprint in cells. Default `{ w: 1, h: 1 }`. When `w * h > 1` this
    * symbol is a "big symbol". at landing it occupies an `w × h` block of
-   * cells anchored at the (col, row) where its id appears in the result.
+   * cells anchored at the (reel, cell) where its id appears in the result.
    * Big-symbol registration is rejected on MultiWays slots.
    */
   size?: { w: number; h: number };
@@ -232,7 +232,7 @@ export interface ReelGridConfig {
    */
   visibleCells: number;
   /**
-   * Per-reel row counts (static shape). Length MUST equal `reelCount`.
+   * Per-reel cell counts (static shape). Length MUST equal `reelCount`.
    * Example: `[3, 5, 5, 5, 3]` for a pyramid layout. Mutually exclusive
    * with the scalar `visibleCells` field at the builder level.
    */
@@ -289,7 +289,7 @@ export interface NoOffsetConfig {
 
 export type OffsetConfig = TrapezoidConfig | NoOffsetConfig;
 
-/** 2D matrix type (reel × row). */
+/** 2D matrix type (reel × cell). */
 export type Matrix<T> = T[][];
 
 /** 2D position. */
@@ -300,7 +300,7 @@ export interface Position {
 
 /**
  * Axis-aligned bounding box of a single grid cell in ReelSet-local
- * coordinates. Returned by `reelSet.getCellBounds(col, row)`.
+ * coordinates. Returned by `reelSet.getCellBounds(reel, cell)`.
  *
  * Use this to draw paylines, hit areas, debug overlays, or any graphic
  * that needs to align precisely with a visible symbol cell.
@@ -316,7 +316,7 @@ export interface CellBounds {
   height: number;
 }
 
-/** A cell on the visible grid. `reelIndex` is the column; `cellIndex` is the row from the top. */
+/** A cell on the visible grid. `reelIndex` is the column; `cellIndex` is the cell from the top. */
 export interface SymbolPosition {
   reelIndex: number;
   cellIndex: number;
@@ -326,7 +326,7 @@ export interface SymbolPosition {
  * One "win" as the presenter sees it: an ordered set of cells to highlight.
  *
  * Use cases collapse onto this one shape. whether those cells came from a
- * classic payline ("row 1 across all 5 reels"), a cascade pop ("this cluster
+ * classic payline ("cell 1 across all 5 reels"), a cascade pop ("this cluster
  * vanished"), a scatter splash, or a bonus reveal.
  *
  * The presenter's job is to **animate these cells**. Anything beyond that.

@@ -1,5 +1,5 @@
 /**
- * MultiWays recipe - per-spin row variation. Each spin chooses a random shape
+ * MultiWays recipe - per-spin cell variation. Each spin chooses a random shape
  * inside `[minCells, maxCells]`, and `setShape()` is called between `spin()`
  * and `setResult()`. AdjustPhase reshapes the reels before the stop sequence.
  *

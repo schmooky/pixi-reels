@@ -16,7 +16,7 @@ export class OffsetCalculator {
     this._compute();
   }
 
-  /** Get X offset for a specific reel and row. */
+  /** Get X offset for a specific reel and cell. */
   getOffset(reelIndex: number, cellIndex: number): number {
     return this._offsets[reelIndex]?.[cellIndex] ?? 0;
   }
@@ -46,8 +46,8 @@ export class OffsetCalculator {
           : 0;
 
       const reelOffsets: number[] = [];
-      for (let row = 0; row < this._totalCells; row++) {
-        const rowNorm = this._totalCells > 1 ? row / (this._totalCells - 1) : 0.5;
+      for (let cell = 0; cell < this._totalCells; cell++) {
+        const rowNorm = this._totalCells > 1 ? cell / (this._totalCells - 1) : 0.5;
         const topOffset = relativePos * config.widthDifference * config.startFactor;
         const bottomOffset = relativePos * config.widthDifference * config.endFactor;
         const offset = topOffset + (bottomOffset - topOffset) * rowNorm;

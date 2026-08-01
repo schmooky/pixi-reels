@@ -5,7 +5,7 @@ import { CARD_DECK } from '../../../../../examples/shared/CardSymbol.ts';
 
 /**
  * Cascade-multiplier demo. 5×5 grid, card symbols, tumble pipeline. The
- * cascade loop lives inside `mountMechanic` (3-in-a-row left-anchored win
+ * cascade loop lives inside `mountMechanic` (3-in-a-cell left-anchored win
  * detection, gravity refill via the latest `reelSet.refill()` API). no
  * scripted-stage cheats, no shared `runCascade` helper, no custom phases.
  */

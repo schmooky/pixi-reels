@@ -10,7 +10,7 @@ import { TickerRef } from '../utils/TickerRef.js';
  * through `Reel`.
  *
  *   - `mask`    Mask bounding box + per-reel rects.
- *   - `cells`   Every visible cell from `getCellBounds`, with `col,row` labels.
+ *   - `cells`   Every visible cell from `getCellBounds`, with `reel,cell` labels.
  *   - `buffers` The off-window strip cells (bufferStart / bufferEnd), dimmer.
  *   - `bounds`  Actual `view.getBounds()` per visible symbol (spine overrun).
  *   - `blocks`  `getBlockBounds` outline for big symbols.
@@ -304,12 +304,12 @@ class DebugOverlay implements DebugOverlayHandle {
   private _drawCells(): void {
     const g = this._layer('cells');
     let labelIndex = 0;
-    this._reelSet.reels.forEach((reel: Reel, col: number) => {
-      for (let row = 0; row < reel.visibleCells; row++) {
-        const b = this._reelSet.getCellBounds(col, row);
+    this._reelSet.reels.forEach((reel: Reel, reelIndex: number) => {
+      for (let cell = 0; cell < reel.visibleCells; cell++) {
+        const b = this._reelSet.getCellBounds(reelIndex, cell);
         g.rect(b.x, b.y, b.width, b.height).stroke({ color: COLORS.cells, width: 1 });
         const label = this._text(this._cellLabels, labelIndex++, COLORS.cells, 10);
-        label.text = `${col},${row}`;
+        label.text = `${reelIndex},${cell}`;
         label.x = b.x + 3;
         label.y = b.y + 3;
       }
@@ -325,12 +325,12 @@ class DebugOverlay implements DebugOverlayHandle {
       const baseY = this._reelSet.viewport.y + reel.mainOffset;
       const w = reel.symbolWidth;
       const h = reel.symbolHeight;
-      // bufferStart cells sit at negative row offsets above visible row 0.
+      // bufferStart cells sit at negative cell offsets above visible cell 0.
       for (let k = 1; k <= reel.bufferStart; k++) {
         const y = baseY + -k * slotH;
         g.rect(x, y, w, h).stroke({ color: COLORS.buffers, width: 1, alpha: 0.45 });
       }
-      // bufferEnd cells sit below the last visible row.
+      // bufferEnd cells sit below the last visible cell.
       for (let k = 0; k < reel.bufferEnd; k++) {
         const y = baseY + (reel.visibleCells + k) * slotH;
         g.rect(x, y, w, h).stroke({ color: COLORS.buffers, width: 1, alpha: 0.45 });
@@ -341,8 +341,8 @@ class DebugOverlay implements DebugOverlayHandle {
   private _drawBounds(): void {
     const g = this._layer('bounds');
     this._reelSet.reels.forEach((reel: Reel) => {
-      for (let row = 0; row < reel.visibleCells; row++) {
-        const view = reel.getSymbolAt(row).view;
+      for (let cell = 0; cell < reel.visibleCells; cell++) {
+        const view = reel.getSymbolAt(cell).view;
         // getBounds() is world-space; map the AABB corners into overlay-local
         // (ReelSet-local) space so the rect aligns regardless of stage offset.
         const wb = view.getBounds();
@@ -359,12 +359,12 @@ class DebugOverlay implements DebugOverlayHandle {
   private _drawBlocks(): void {
     const g = this._layer('blocks');
     // Only outline each block once, at its anchor cell.
-    this._reelSet.reels.forEach((reel: Reel, col: number) => {
-      for (let row = 0; row < reel.visibleCells; row++) {
-        const fp = this._reelSet.getSymbolFootprint(col, row);
+    this._reelSet.reels.forEach((reel: Reel, reelIndex: number) => {
+      for (let cell = 0; cell < reel.visibleCells; cell++) {
+        const fp = this._reelSet.getSymbolFootprint(reelIndex, cell);
         if (fp.size.w <= 1 && fp.size.h <= 1) continue;
-        if (fp.anchor.col !== col || fp.anchor.row !== row) continue;
-        const rect = this._reelSet.getBlockBounds(col, row);
+        if (fp.anchor.reel !== reelIndex || fp.anchor.cell !== cell) continue;
+        const rect = this._reelSet.getBlockBounds(reelIndex, cell);
         g.rect(rect.x, rect.y, rect.width, rect.height).stroke({
           color: COLORS.blocks,
           width: 3,
@@ -375,11 +375,11 @@ class DebugOverlay implements DebugOverlayHandle {
 
   private _drawPins(): void {
     const g = this._layer('pins');
-    this._reelSet.reels.forEach((reel: Reel, col: number) => {
-      for (let row = 0; row < reel.visibleCells; row++) {
-        const pin = this._reelSet.getPin(col, row);
+    this._reelSet.reels.forEach((reel: Reel, reelIndex: number) => {
+      for (let cell = 0; cell < reel.visibleCells; cell++) {
+        const pin = this._reelSet.getPin(reelIndex, cell);
         if (!pin) continue;
-        const b = this._reelSet.getCellBounds(col, row);
+        const b = this._reelSet.getCellBounds(reelIndex, cell);
         // Pin cell outline.
         g.rect(b.x, b.y, b.width, b.height).stroke({ color: COLORS.pins, width: 3 });
         // A diagonal cross marks the pin-overlay cell, so a movePin /
@@ -396,9 +396,9 @@ class DebugOverlay implements DebugOverlayHandle {
   private _drawHud(): void {
     // hud uses no Graphics layer. one Text per reel.
     let i = 0;
-    this._reelSet.reels.forEach((reel: Reel, col: number) => {
+    this._reelSet.reels.forEach((reel: Reel, reelIndex: number) => {
       const t = this._text(this._hudTexts, i++, COLORS.hud, 11);
-      t.text = `r${col} spd=${reel.speed.toFixed(1)} ${this._phase[col]} cells=${reel.visibleCells}`;
+      t.text = `r${reelIndex} spd=${reel.speed.toFixed(1)} ${this._phase[reelIndex]} cells=${reel.visibleCells}`;
       t.x = this._reelSet.viewport.x + reel.container.x + 3;
       t.y = this._reelSet.viewport.y + reel.mainOffset + 3;
     });

@@ -42,8 +42,8 @@ export default function WalkingWildRecipe() {
         ghost.visible = false;
         app.stage.addChild(ghost);
 
-        const positionGhostOn = (reelIdx: number, row: number) => {
-          const sym = reelSet.getReel(reelIdx).getSymbolAt(row);
+        const positionGhostOn = (reelIdx: number, cell: number) => {
+          const sym = reelSet.getReel(reelIdx).getSymbolAt(cell);
           const { x, y } = sym.view.toGlobal({ x: 36, y: 36 });
           ghost.x = x;
           ghost.y = y;
@@ -58,7 +58,7 @@ export default function WalkingWildRecipe() {
             reelSet.setSpeed('turbo');
             ghost.visible = false;
 
-            // Spin 1. base game. Wild lands on the rightmost reel, row 1.
+            // Spin 1. base game. Wild lands on the rightmost reel, cell 1.
             const walkerRow = 1;
             let walkerCol = 4;
             const spin1 = fillerGrid(5, 3);

@@ -51,8 +51,8 @@ return {
     //   startDelay of last reel + duration = 4*90 + 520 = 880ms.
     // (Versus 5 * 520 = 2600ms for sequential or 520ms for fully parallel.)
     await Promise.all(
-      NUDGE_COLS.map((col, i) =>
-        reelSet.nudge(col, {
+      NUDGE_COLS.map((reel, i) =>
+        reelSet.nudge(reel, {
           distance: 1,
           direction: 'down',
           incoming: ['wild'],

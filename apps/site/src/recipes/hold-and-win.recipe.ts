@@ -67,7 +67,7 @@ const paintLabel = (cell, value) => {
   if (t.width > CELL * 0.8) t.scale.set((CELL * 0.8) / t.width);
   t.position.set(board.container.x + c.x, board.container.y + c.y);
   labels.addChild(t);
-  labelAt.set(`${cell.col},${cell.row}`, t);
+  labelAt.set(`${cell.reel},${cell.cell}`, t);
 };
 
 // The HUD never tracks state itself. board events are the single source.
@@ -91,9 +91,9 @@ board.events.on('feature:end', ({ full }) => { if (!full) hud.text = `over · ${
 // `result.done`.
 const val = () => [5, 10, 15, 25, 50][Math.floor(Math.random() * 5)];
 const rounds = [
-  [{ col: 0, row: 2 }, { col: 2, row: 0 }, { col: 4, row: 1 }],
-  [{ col: 1, row: 0 }],
-  [{ col: 3, row: 2 }],
+  [{ reel: 0, cell: 2 }, { reel: 2, cell: 0 }, { reel: 4, cell: 1 }],
+  [{ reel: 1, cell: 0 }],
+  [{ reel: 3, cell: 2 }],
 ];
 
 return {

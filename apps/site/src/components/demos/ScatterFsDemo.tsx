@@ -106,10 +106,10 @@ export default function ScatterFsDemo() {
             }
 
             // ── Base game: look for a scatter trigger ─────────────────────
-            const scatters: { reel: number; row: number }[] = [];
+            const scatters: { reel: number; cell: number }[] = [];
             for (let r = 0; r < grid.length; r++) {
-              for (let row = 0; row < grid[r].length; row++) {
-                if (grid[r][row] === SCATTER) scatters.push({ reel: r, row });
+              for (let cell = 0; cell < grid[r].length; cell++) {
+                if (grid[r][cell] === SCATTER) scatters.push({ reel: r, cell });
               }
             }
 
@@ -117,7 +117,7 @@ export default function ScatterFsDemo() {
               toast(`${scatters.length} scatters`, 'win');
               // Play win anim on each scatter cell before the overlay drops.
               for (const s of scatters) {
-                reelSet.getReel(s.reel).getSymbolAt(s.row).playWin();
+                reelSet.getReel(s.reel).getSymbolAt(s.cell).playWin();
               }
               await sleep(700);
 

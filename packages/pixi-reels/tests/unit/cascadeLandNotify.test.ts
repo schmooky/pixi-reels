@@ -18,8 +18,8 @@ class CountingSymbol extends HeadlessSymbol {
   }
 }
 
-function landedAt(reelSet: ReelSet, reel: number, row: number): number {
-  return (reelSet.reels[reel].getSymbolAt(row) as CountingSymbol).landedCount;
+function landedAt(reelSet: ReelSet, reel: number, cell: number): number {
+  return (reelSet.reels[reel].getSymbolAt(cell) as CountingSymbol).landedCount;
 }
 
 function buildHarness(initialFrame: string[][]): { reelSet: ReelSet; destroy: () => void } {
@@ -50,13 +50,13 @@ describe('cascade refill. landing notification is movers-only', () => {
       ['a', 'a', 'a'],
     ]);
     try {
-      const winners = [{ reel: 1, row: 0 }];
+      const winners = [{ reel: 1, cell: 0 }];
       await h.reelSet.destroySymbols(winners);
       await h.reelSet.refill({
         winners,
         grid: [
           { visible: ['a', 'a', 'a'] },
-          { visible: ['b', 'a', 'b'] }, // new arrival at row 0; cells 1-2 stay
+          { visible: ['b', 'a', 'b'] }, // new arrival at cell 0; cells 1-2 stay
           { visible: ['a', 'a', 'a'] },
         ],
       });
@@ -68,8 +68,8 @@ describe('cascade refill. landing notification is movers-only', () => {
       expect(landedAt(h.reelSet, 1, 2)).toBe(0);
       // Reels with no winners at all: nothing lands.
       for (const reel of [0, 2]) {
-        for (const row of [0, 1, 2]) {
-          expect(landedAt(h.reelSet, reel, row)).toBe(0);
+        for (const cell of [0, 1, 2]) {
+          expect(landedAt(h.reelSet, reel, cell)).toBe(0);
         }
       }
     } finally {
@@ -84,8 +84,8 @@ describe('cascade refill. landing notification is movers-only', () => {
       ['a', 'a', 'a'],
     ]);
     try {
-      // Winner at the BOTTOM row: cells 0-1 slide down, plus one new arrival.
-      const winners = [{ reel: 1, row: 2 }];
+      // Winner at the BOTTOM cell: cells 0-1 slide down, plus one new arrival.
+      const winners = [{ reel: 1, cell: 2 }];
       await h.reelSet.destroySymbols(winners);
       await h.reelSet.refill({
         winners,
@@ -120,8 +120,8 @@ describe('cascade refill. landing notification is movers-only', () => {
       h.reelSet.skipSpin();
       await p;
       for (let reel = 0; reel < 3; reel++) {
-        for (let row = 0; row < 3; row++) {
-          expect(landedAt(h.reelSet, reel, row)).toBeGreaterThanOrEqual(1);
+        for (let cell = 0; cell < 3; cell++) {
+          expect(landedAt(h.reelSet, reel, cell)).toBeGreaterThanOrEqual(1);
         }
       }
     } finally {

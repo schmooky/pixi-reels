@@ -124,7 +124,7 @@ const paintLabel = (coin) => {
   const t = fitGold(goldText(fmt(coin.data?.value ?? 0), 32), SETTLE_SIZE * 0.84, SETTLE_SIZE * 0.46);
   t.position.set(p.x, p.y);
   labels.addChild(t);
-  labelAt.set(`${coin.cell.col},${coin.cell.row}`, t);
+  labelAt.set(`${coin.cell.reel},${coin.cell.cell}`, t);
   return t;
 };
 
@@ -144,19 +144,19 @@ board.events.on('coin:locked', ({ coin }) => {
   pendingFx.push(sleep(450)); // lock flourish
 });
 board.events.on('coin:released', ({ coin }) => {
-  const k = `${coin.cell.col},${coin.cell.row}`;
+  const k = `${coin.cell.reel},${coin.cell.cell}`;
   labelAt.get(k)?.destroy();
   labelAt.delete(k);
 });
 
 // -- scripted scenario --
 const SEED = [
-  { cell: { col: 0, row: 1 }, id: COIN, data: { value: 5 } },
-  { cell: { col: 2, row: 2 }, id: COIN, data: { value: 5 } },
-  { cell: { col: 4, row: 0 }, id: COIN, data: { value: 5 } },
+  { cell: { reel: 0, cell: 1 }, id: COIN, data: { value: 5 } },
+  { cell: { reel: 2, cell: 2 }, id: COIN, data: { value: 5 } },
+  { cell: { reel: 4, cell: 0 }, id: COIN, data: { value: 5 } },
 ];
-const HIT_TEN = [{ cell: { col: 3, row: 1 }, id: COIN, data: { value: 10 } }];
-const HIT_COLLECTOR = [{ cell: { col: 1, row: 1 }, id: 'collector', data: { collector: true } }];
+const HIT_TEN = [{ cell: { reel: 3, cell: 1 }, id: COIN, data: { value: 10 } }];
+const HIT_COLLECTOR = [{ cell: { reel: 1, cell: 1 }, id: 'collector', data: { collector: true } }];
 
 const seedBoard = () => {
   board.enter(SEED);
@@ -203,10 +203,10 @@ async function collectIntoOrb() {
 
 // -- the slick reset: column-wave sweep out, reseed, pop back in --
 async function slickReset() {
-  const sweep = coinWaves(board.lockedCoins, 'by-col');
+  const sweep = coinWaves(board.lockedCoins, 'by-reel');
   for (const wave of sweep) {
     wave.forEach((coin) => {
-      const k = `${coin.cell.col},${coin.cell.row}`;
+      const k = `${coin.cell.reel},${coin.cell.cell}`;
       const label = labelAt.get(k);
       if (label) gsap.to(label.scale, { x: 0, y: 0, duration: 0.16, ease: 'back.in(2)' });
     });
@@ -225,9 +225,9 @@ async function slickReset() {
   // pop back: board fades in, labels arrive in a column wave
   for (const t of labelAt.values()) t.scale.set(0);
   gsap.to(board.container, { alpha: 1, duration: 0.25, ease: 'power2.out' });
-  for (const wave of coinWaves(SEED, 'by-col')) {
+  for (const wave of coinWaves(SEED, 'by-reel')) {
     wave.forEach((coin) => {
-      const label = labelAt.get(`${coin.cell.col},${coin.cell.row}`);
+      const label = labelAt.get(`${coin.cell.reel},${coin.cell.cell}`);
       if (label) gsap.to(label.scale, { x: 1, y: 1, duration: 0.28, ease: 'back.out(2.5)' });
     });
     await sleep(80);

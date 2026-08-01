@@ -1,7 +1,7 @@
 /**
  * Integration tests for the auto-zIndex contract on `_replaceSymbol`.
  *
- * Contract: when a symbol is activated into a row (via any code path that
+ * Contract: when a symbol is activated into a cell (via any code path that
  * funnels into `_replaceSymbol` - wrap callback, `placeSymbols`, etc.), its
  * view's zIndex is set to the canonical formula
  *   `(symbolData.zIndex ?? 0) * 100 + arrayIndex`
@@ -37,7 +37,7 @@ describe('auto-zIndex on _replaceSymbol', () => {
 
       const reel = h.reelSet.reels[1];
       const bufferStart = reel.bufferStart;
-      const wildArrayIndex = bufferStart + 1; // visible row 1
+      const wildArrayIndex = bufferStart + 1; // visible cell 1
       const wildView = reel.symbols[wildArrayIndex].view;
 
       // Canonical formula: (symbolData.zIndex ?? 0) * 100 + arrayIndex
@@ -66,8 +66,8 @@ describe('auto-zIndex on _replaceSymbol', () => {
       const reel = h.reelSet.reels[0];
       const bufferStart = reel.bufferStart;
 
-      for (let row = 0; row < 3; row++) {
-        const arrayIndex = bufferStart + row;
+      for (let cell = 0; cell < 3; cell++) {
+        const arrayIndex = bufferStart + cell;
         const view = reel.symbols[arrayIndex].view;
         expect(view.zIndex).toBe(1 * 100 + arrayIndex);
       }
@@ -98,7 +98,7 @@ describe('auto-zIndex on _replaceSymbol', () => {
       const wildArrayIndex = bufferStart + 1;
       reel.symbols[wildArrayIndex].view.zIndex = -999;
 
-      // Second spin: wild lands at the same row again (same symbol id swap).
+      // Second spin: wild lands at the same cell again (same symbol id swap).
       await h.spinAndLand([
         ['a', 'a', 'a'],
         ['a', 'wild', 'a'],

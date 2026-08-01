@@ -23,8 +23,8 @@ export default function ClassicLinesDemo() {
       tags={['5×3', 'lines', 'spotlight']}
       height={500}
       cheats={[
-        { id: 'line-mid', label: 'Force middle-row line', description: 'Full row of royals on row 2.', enabled: false, cheat: forceLine(1, HIGH_PAY) },
-        { id: 'line-top', label: 'Force top-row line', description: 'Full row of wilds on row 1.', enabled: false, cheat: forceLine(0, WILD) },
+        { id: 'line-mid', label: 'Force middle-cell line', description: 'Full cell of royals on cell 2.', enabled: false, cheat: forceLine(1, HIGH_PAY) },
+        { id: 'line-top', label: 'Force top-cell line', description: 'Full cell of wilds on cell 1.', enabled: false, cheat: forceLine(0, WILD) },
         { id: 'jackpot', label: 'Full-grid royal jackpot', description: '15 royals. Pure theatre.', enabled: false, cheat: forceGrid(JACKPOT_GRID) },
         { id: 'scatter5', label: 'Sprinkle 5 bonuses', description: '5 scatters, random positions.', enabled: false, cheat: forceScatters(5, SCATTER) },
       ]}
@@ -46,23 +46,23 @@ export default function ClassicLinesDemo() {
           cheats,
           cheatTitle: 'Line-pays cheats',
           onLanded: async ({ grid, reelSet, toast }) => {
-            const wins: { row: number; count: number; symbolId: string }[] = [];
-            for (let row = 0; row < grid[0].length; row++) {
-              const base = grid[0][row];
-              const sym = base === WILD ? findFirstNonWild(grid, row) ?? base : base;
+            const wins: { cell: number; count: number; symbolId: string }[] = [];
+            for (let cell = 0; cell < grid[0].length; cell++) {
+              const base = grid[0][cell];
+              const sym = base === WILD ? findFirstNonWild(grid, cell) ?? base : base;
               let streak = 1;
               for (let r = 1; r < grid.length; r++) {
-                const s = grid[r][row];
+                const s = grid[r][cell];
                 if (s === sym || s === WILD) streak++;
                 else break;
               }
-              if (streak >= 3) wins.push({ row, count: streak, symbolId: sym });
+              if (streak >= 3) wins.push({ cell, count: streak, symbolId: sym });
             }
             if (wins.length === 0) return;
             toast(`${wins.length} line${wins.length > 1 ? 's' : ''}! ×${wins.reduce((a, w) => a + w.count, 0)}`, 'win');
             for (const w of wins) {
               for (let r = 0; r < w.count; r++) {
-                reelSet.getReel(r).getSymbolAt(w.row).playWin();
+                reelSet.getReel(r).getSymbolAt(w.cell).playWin();
               }
             }
             await new Promise((r) => setTimeout(r, 700));
@@ -73,7 +73,7 @@ export default function ClassicLinesDemo() {
   );
 }
 
-function findFirstNonWild(grid: string[][], row: number): string | null {
-  for (const col of grid) if (col[row] !== WILD) return col[row];
+function findFirstNonWild(grid: string[][], cell: number): string | null {
+  for (const reel of grid) if (reel[cell] !== WILD) return reel[cell];
   return null;
 }

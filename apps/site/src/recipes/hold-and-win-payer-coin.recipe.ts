@@ -105,7 +105,7 @@ const fitGold = (t, maxW, maxH) => {
   return t;
 };
 const paintLabel = (cell, value) => {
-  const k = `${cell.col},${cell.row}`;
+  const k = `${cell.reel},${cell.cell}`;
   labelAt.get(k)?.destroy();
   const p = abs(cell);
   const t = fitGold(goldText(fmt(value), 32), SETTLE_SIZE * 0.84, SETTLE_SIZE * 0.46);
@@ -146,12 +146,12 @@ async function payout(payerCell, payValue) {
 }
 
 const SEED = [
-  { cell: { col: 0, row: 0 }, id: COIN, data: { value: 5 } },
-  { cell: { col: 2, row: 0 }, id: COIN, data: { value: 10 } },
-  { cell: { col: 4, row: 1 }, id: COIN, data: { value: 5 } },
-  { cell: { col: 1, row: 2 }, id: COIN, data: { value: 20 } },
+  { cell: { reel: 0, cell: 0 }, id: COIN, data: { value: 5 } },
+  { cell: { reel: 2, cell: 0 }, id: COIN, data: { value: 10 } },
+  { cell: { reel: 4, cell: 1 }, id: COIN, data: { value: 5 } },
+  { cell: { reel: 1, cell: 2 }, id: COIN, data: { value: 20 } },
 ];
-const PAYER_CELL = { col: 3, row: 2 };
+const PAYER_CELL = { reel: 3, cell: 2 };
 const PAY_VALUE = 5;
 
 const seedBoard = () => {

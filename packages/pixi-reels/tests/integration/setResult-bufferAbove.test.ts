@@ -46,7 +46,7 @@ describe('setResult with ColumnTarget[]', () => {
     }
   });
 
-  it('places bufferStart[0] in the slot closest to the visible top row', async () => {
+  it('places bufferStart[0] in the slot closest to the visible top cell', async () => {
     const h = makeHarness();
     try {
       const spin = h.reelSet.spin();
@@ -65,7 +65,7 @@ describe('setResult with ColumnTarget[]', () => {
     }
   });
 
-  it('places bufferEnd[0] in the slot closest to the visible bottom row', async () => {
+  it('places bufferEnd[0] in the slot closest to the visible bottom cell', async () => {
     const h = makeHarness();
     try {
       const spin = h.reelSet.spin();

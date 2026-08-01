@@ -19,18 +19,18 @@ export interface TumbleFallConfig {
 
   /**
    * Delay between successive cells starting their fall, in ms. `0` makes
-   * every row fall together. Default 0.
+   * every cell fall together. Default 0.
    */
   cellStagger?: number;
 
   /**
-   * Which row of each reel begins its fall first.
+   * Which cell of each reel begins its fall first.
    *
-   *   - `'endFirst'` (default). bottom row falls first, top row last.
+   *   - `'endFirst'` (default). bottom cell falls first, top cell last.
    *     Pairs with the per-reel left-to-right stagger from `speed.spinDelay`
    *     to give the canonical "bottom-left falls first, top-right last"
    *     feel of commercial tumble slots.
-   *   - `'startFirst'`. top row falls first. Reads as the column
+   *   - `'startFirst'`. top cell falls first. Reads as the column
    *     "peeling" downward; useful for theme-specific effects.
    */
   cellOrder?: 'endFirst' | 'startFirst';
@@ -54,19 +54,19 @@ export interface TumbleDropInConfig {
 
   /**
    * Delay between successive cells starting their drop, in ms. Default 60.
-   * `0` makes every animated row drop in simultaneously. the most common
+   * `0` makes every animated cell drop in simultaneously. the most common
    * choice for cascade refills.
    */
   cellStagger?: number;
 
   /**
-   * Which row lands first when `cellStagger > 0`.
+   * Which cell lands first when `cellStagger > 0`.
    *
-   *   - `'endFirst'` (default). bottom row arrives first, top row last.
+   *   - `'endFirst'` (default). bottom cell arrives first, top cell last.
    *     Paired with `setDropOrder('ltr')` per-reel stagger this gives the
    *     canonical "bottom-left first, top-right last" reveal that every
    *     commercial tumble slot ships with.
-   *   - `'startFirst'`. top row arrives first. Reads as "new symbols
+   *   - `'startFirst'`. top cell arrives first. Reads as "new symbols
    *     pour from above"; fits gravity-themed or rain-style slots.
    */
   cellOrder?: 'endFirst' | 'startFirst';

@@ -89,7 +89,7 @@ export interface ReelSetEvents extends Record<string, unknown[]> {
    * A single win is now being presented. Fires once per win per cycle.
    * before `win:symbol` fires for its cells. Subscribe to draw per-win
    * visuals (payline polyline, cluster outline, number popup) using
-   * `reelSet.getCellBounds(col, row)`.
+   * `reelSet.getCellBounds(reel, cell)`.
    */
   'win:group': [win: Win, cells: readonly SymbolPosition[]];
   /**
@@ -106,16 +106,16 @@ export interface ReelSetEvents extends Record<string, unknown[]> {
    * A pin was placed at a cell. The pin's `originCell` is captured at
    * placement and frozen for its lifetime; on MultiWays slots it controls
    * how the pin migrates across reshapes (see `pin:migrated`). For
-   * non-MultiWays slots `originCell === pin.row` and never changes. but
+   * non-MultiWays slots `originCell === pin.cell` and never changes. but
    * the field is still on the payload, so trace logs can show the intent.
    */
   'pin:placed': [pin: CellPin];
-  'pin:moved': [pin: CellPin, from: { col: number; row: number }];
+  'pin:moved': [pin: CellPin, from: { reel: number; cell: number }];
   'pin:expired': [pin: CellPin, reason: PinExpireReason];
   /**
    * MultiWays: a pin was relocated by an AdjustPhase reshape because its
    * `originCell` either no longer fits within the new shape (`clamped: true`)
-   * or fits at a row that differs from its current visual position.
+   * or fits at a cell that differs from its current visual position.
    *
    * Always fires from a MultiWays AdjustPhase. non-MultiWays slots never
    * emit this event.
@@ -131,8 +131,8 @@ export interface ReelSetEvents extends Record<string, unknown[]> {
    */
   'shape:changed': [rowsPerReel: number[]];
   /**
-   * MultiWays: per-reel AdjustPhase entry. `fromCells` is the row count
-   * before the reshape; `toCells` is the row count after.
+   * MultiWays: per-reel AdjustPhase entry. `fromCells` is the cell count
+   * before the reshape; `toCells` is the cell count after.
    */
   'adjust:start': [info: { reelIndex: number; fromCells: number; toCells: number }];
   /** MultiWays: per-reel AdjustPhase exit. */
@@ -181,9 +181,9 @@ export interface ReelSetEvents extends Record<string, unknown[]> {
    * no `:start` counterpart. only this `:end`.
    *
    *   - `isInitial: true` on Moment A (after a `spin()` click). Every visible
-   *     row is "new". `winnerCells` is `[]` because there's no prior grid.
+   *     cell is "new". `winnerCells` is `[]` because there's no prior grid.
    *   - `isInitial: false` on Moment B (a `refill()`). `winnerCells` lists the
-   *     row indices whose old symbols were cleared by the win; cells in that
+   *     cell indices whose old symbols were cleared by the win; cells in that
    *     set are new arrivals, the rest are survivors sliding down to fill
    *     holes. Pair with `computeDropOffsets` (or just walk `winnerCells`
    *     yourself) if you need to decorate only new arrivals.
@@ -200,7 +200,7 @@ export interface ReelSetEvents extends Record<string, unknown[]> {
    * Tumble cascade: about to animate one symbol's drop-in. Same contract as
    * `cascade:fall:symbol`. fires right BEFORE the tween, listeners may
    * start parallel tweens. `offsetCells` is the number of cells this symbol
-   * will traverse (1 for top-row refills, more for survivors sliding past
+   * will traverse (1 for top-cell refills, more for survivors sliding past
    * larger holes).
    *
    * `signal` aborts when the drop-in is skipped / slammed. Use it to kill
@@ -288,7 +288,7 @@ export interface ReelSetEvents extends Record<string, unknown[]> {
    */
   'cascade:chain:start': [info: {
     chain: number;
-    winners: readonly { reel: number; row: number }[];
+    winners: readonly { reel: number; cell: number }[];
     currentGrid: string[][];
   }];
   /**
@@ -302,7 +302,7 @@ export interface ReelSetEvents extends Record<string, unknown[]> {
    */
   'cascade:chain:end': [info: {
     chain: number;
-    winners: readonly { reel: number; row: number }[];
+    winners: readonly { reel: number; cell: number }[];
     nextGrid: string[][];
   }];
   /**
@@ -315,7 +315,7 @@ export interface ReelSetEvents extends Record<string, unknown[]> {
    * grid for replay logging. Synchronous; the destroy tweens start right
    * after listeners return.
    */
-  'cascade:destroy:start': [info: { cells: readonly { reel: number; row: number }[] }];
+  'cascade:destroy:start': [info: { cells: readonly { reel: number; cell: number }[] }];
   /**
    * Tumble cascade: `destroySymbols(cells, ...)` just finished. every
    * cell's `playDestroy()` settled and the viewport dim (if any) was
@@ -330,8 +330,8 @@ export interface ReelSetEvents extends Record<string, unknown[]> {
    *     log / replay-mark / alarm on the rejection.
    */
   'cascade:destroy:end': [info: {
-    cells: readonly { reel: number; row: number }[];
-    failed?: readonly { reel: number; row: number }[];
+    cells: readonly { reel: number; cell: number }[];
+    failed?: readonly { reel: number; cell: number }[];
   }];
   /**
    * Fires whenever the engine creates a visual overlay symbol for a pin
@@ -406,7 +406,7 @@ export interface ReelSetEvents extends Record<string, unknown[]> {
 export interface ReelEvents extends Record<string, unknown[]> {
   'phase:enter': [phaseName: string];
   'phase:exit': [phaseName: string];
-  'symbol:created': [symbolId: string, row: number];
+  'symbol:created': [symbolId: string, cell: number];
   'landed': [symbols: string[]];
   'destroyed': [];
 }

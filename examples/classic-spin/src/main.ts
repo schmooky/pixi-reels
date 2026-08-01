@@ -76,8 +76,8 @@ async function main() {
   for (const reel of reelSet.reels) {
     reel.events.on('phase:enter', (name) => {
       const blurred = name === 'spin';
-      for (let row = 0; row < VISIBLE_ROWS; row++) {
-        const sym = reel.getSymbolAt(row);
+      for (let cell = 0; cell < VISIBLE_ROWS; cell++) {
+        const sym = reel.getSymbolAt(cell);
         if (sym instanceof BlurSpriteSymbol) sym.setBlurred(blurred);
       }
     });
@@ -110,33 +110,33 @@ async function main() {
       setTimeout(() => {
         const symbols: string[][] = [];
         for (let r = 0; r < REEL_COUNT; r++) {
-          const col: string[] = [];
-          for (let row = 0; row < VISIBLE_ROWS; row++) {
+          const reel: string[] = [];
+          for (let cell = 0; cell < VISIBLE_ROWS; cell++) {
             const rand = Math.random();
-            if (rand < 0.03) col.push('wild');
-            else if (rand < 0.09) col.push('high1');
-            else if (rand < 0.15) col.push('high2');
-            else if (rand < 0.27) col.push('med1');
-            else if (rand < 0.39) col.push('med2');
-            else if (rand < 0.54) col.push('low1');
-            else if (rand < 0.69) col.push('low2');
-            else if (rand < 0.84) col.push('low3');
-            else col.push('low4');
+            if (rand < 0.03) reel.push('wild');
+            else if (rand < 0.09) reel.push('high1');
+            else if (rand < 0.15) reel.push('high2');
+            else if (rand < 0.27) reel.push('med1');
+            else if (rand < 0.39) reel.push('med2');
+            else if (rand < 0.54) reel.push('low1');
+            else if (rand < 0.69) reel.push('low2');
+            else if (rand < 0.84) reel.push('low3');
+            else reel.push('low4');
           }
-          symbols.push(col);
+          symbols.push(reel);
         }
 
         const wins: { positions: { reelIndex: number; cellIndex: number }[] }[] = [];
-        for (let row = 0; row < VISIBLE_ROWS; row++) {
-          const first = symbols[0][row];
+        for (let cell = 0; cell < VISIBLE_ROWS; cell++) {
+          const first = symbols[0][cell];
           let count = 1;
           for (let r = 1; r < REEL_COUNT; r++) {
-            if (symbols[r][row] === first || symbols[r][row] === 'wild') count++;
+            if (symbols[r][cell] === first || symbols[r][cell] === 'wild') count++;
             else break;
           }
           if (count >= 3) {
             wins.push({
-              positions: Array.from({ length: count }, (_, i) => ({ reelIndex: i, cellIndex: row })),
+              positions: Array.from({ length: count }, (_, i) => ({ reelIndex: i, cellIndex: cell })),
             });
           }
         }

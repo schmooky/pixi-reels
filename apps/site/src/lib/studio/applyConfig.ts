@@ -155,11 +155,11 @@ async function sliceSheet(
   const perRow = Math.max(1, Math.floor(sheet.width / frameW));
   const frames: Texture[] = [];
   for (let i = 0; i < frameCount; i++) {
-    const col = i % perRow;
-    const row = Math.floor(i / perRow);
+    const reel = i % perRow;
+    const cell = Math.floor(i / perRow);
     frames.push(new Texture({
       source: sheet.source,
-      frame: { x: col * frameW, y: row * frameH, width: frameW, height: frameH },
+      frame: { x: reel * frameW, y: cell * frameH, width: frameW, height: frameH },
     }));
   }
   return frames;

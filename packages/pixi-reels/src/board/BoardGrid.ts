@@ -12,8 +12,8 @@ import type { Disposable } from '../utils/Disposable.js';
 
 /** A cell coordinate in the grid. */
 export interface BoardCell {
-  col: number;
-  row: number;
+  reel: number;
+  cell: number;
 }
 
 /** A landing target: spin `cell` and stop it showing `id`. */
@@ -56,7 +56,7 @@ export interface BoardGridOptions {
   profiles?: Record<string, BoardProfile>;
 }
 
-const key = (c: BoardCell): string => `${c.col},${c.row}`;
+const key = (c: BoardCell): string => `${c.reel},${c.cell}`;
 const DEFAULT_PROFILE = 'default';
 
 /**
@@ -116,9 +116,9 @@ export class BoardGrid implements Disposable {
     const profileFor = (p: BoardProfile, cell: BoardCell): SpeedProfile =>
       typeof p === 'function' ? p(cell) : p;
 
-    for (let col = 0; col < opts.cols; col++) {
-      for (let row = 0; row < opts.rows; row++) {
-        const cell: BoardCell = { col, row };
+    for (let reel = 0; reel < opts.cols; reel++) {
+      for (let rowIdx = 0; rowIdx < opts.rows; rowIdx++) {
+        const cell: BoardCell = { reel, cell: rowIdx };
         const origin = this._origin(cell);
         if (opts.chrome) {
           const bg = new Graphics();
@@ -133,7 +133,7 @@ export class BoardGrid implements Disposable {
           .symbolSize(this.cellSize, this.cellSize)
           .symbolGap(0, 0)
           // Spine symbols overrun the default per-reel rect mask; a shared rect
-          // keeps buffer-row art from painting over neighbouring cells.
+          // keeps buffer-cell art from painting over neighbouring cells.
           .maskStrategy(new SharedRectMaskStrategy())
           .symbols((registry) => {
             opts.symbols(registry);
@@ -164,7 +164,7 @@ export class BoardGrid implements Disposable {
 
   /** Every cell coordinate, row-major. */
   cells(): BoardCell[] {
-    return this._cells.map((c) => ({ col: c.col, row: c.row }));
+    return this._cells.map((c) => ({ reel: c.reel, cell: c.cell }));
   }
 
   /** Board-local bounds of a cell. `container.toGlobal` for stage space. */
@@ -265,8 +265,8 @@ export class BoardGrid implements Disposable {
 
   private _origin(cell: BoardCell): { x: number; y: number } {
     return {
-      x: cell.col * (this.cellSize + this.gap),
-      y: cell.row * (this.cellSize + this.gap),
+      x: cell.reel * (this.cellSize + this.gap),
+      y: cell.cell * (this.cellSize + this.gap),
     };
   }
 

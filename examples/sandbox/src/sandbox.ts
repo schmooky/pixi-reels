@@ -110,8 +110,8 @@ export function buildSandbox(ctx: SandboxContext): SandboxResult {
   for (const reel of reelSet.reels) {
     reel.events.on('phase:enter', (name) => {
       const blurred = name === 'spin';
-      for (let row = 0; row < ROWS; row++) {
-        const sym = reel.getSymbolAt(row);
+      for (let cell = 0; cell < ROWS; cell++) {
+        const sym = reel.getSymbolAt(cell);
         if (sym instanceof BlurSpriteSymbol) sym.setBlurred(blurred);
       }
     });
@@ -158,7 +158,7 @@ function pickWeighted(): string {
 //
 // Available routes:
 //   - ./routes/pyramid.js         . static 3-5-5-5-3 pyramid
-//   - ./routes/multiways.js        . per-spin row variation (2..7 cells)
+//   - ./routes/multiways.js        . per-spin cell variation (2..7 cells)
 //   - ./routes/expanding-wild.js  . wild expands its full column for one spin
 //   - ./routes/big-symbols.js     . 2×2 bonus block via SymbolData.size
 //   - ./routes/static-spin.js     . spin cached snapshots w/ auto-baked blur

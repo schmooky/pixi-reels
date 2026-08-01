@@ -1,9 +1,9 @@
 /**
  * Cascade refill with a buffer-anchored big symbol.
  *
- * A 1x3 wild lands with its anchor in bufferStart (tail visible at row 0).
- * A win-bearing row below the tail clears, and the `refill()` grid moves
- * the anchor to a fully-visible row. Asserts that `_coordinateBigSymbols`
+ * A 1x3 wild lands with its anchor in bufferStart (tail visible at cell 0).
+ * A win-bearing cell below the tail clears, and the `refill()` grid moves
+ * the anchor to a fully-visible cell. Asserts that `_coordinateBigSymbols`
  * runs on the refill path the same as on `setResult`, and that the moved
  * block's strip layout is correct post-refill.
  *
@@ -55,8 +55,8 @@ describe('cascade refill. buffer-anchored big symbol', () => {
       // _coordinateBigSymbols paints OCCUPIED stubs.
       const spinDone = reelSet.spin();
       reelSet.setResult([
-        // Reel 0: anchor at bufferStart[1] = row -2. Block at cells -2, -1, 0.
-        // Tail visible at row 0. Plant MATCH at row 1.
+        // Reel 0: anchor at bufferStart[1] = cell -2. Block at cells -2, -1, 0.
+        // Tail visible at cell 0. Plant MATCH at cell 1.
         { visible: ['a', 'match', 'a', 'a'], bufferStart: [undefined, 'tall'] },
         { visible: ['b', 'match', 'b', 'b'] },
         { visible: ['b', 'match', 'b', 'b'] },
@@ -72,15 +72,15 @@ describe('cascade refill. buffer-anchored big symbol', () => {
       expect(reelSet.reels[0].symbols[1].symbolId).toBe(OCCUPIED_SENTINEL);
       expect(reelSet.reels[0].symbols[2].symbolId).toBe(OCCUPIED_SENTINEL);
 
-      // Cascade refill: row-1 cluster wins, wild falls to visible[0..2].
+      // Cascade refill: cell-1 cluster wins, wild falls to visible[0..2].
       await reelSet.refill({
         winners: [
-          { reel: 0, row: 1 },
-          { reel: 1, row: 1 },
-          { reel: 2, row: 1 },
+          { reel: 0, cell: 1 },
+          { reel: 1, cell: 1 },
+          { reel: 2, cell: 1 },
         ],
         grid: [
-          // Reel 0: anchor now at row 0 (fully visible). The coordinator
+          // Reel 0: anchor now at cell 0 (fully visible). The coordinator
           // paints OCCUPIED at visible[1] and visible[2] from the
           // size.h = 3 metadata; the 'a' placeholders at those cells are
           // overwritten.
@@ -108,9 +108,9 @@ describe('cascade refill. buffer-anchored big symbol', () => {
       expect(reel0.symbols[5].symbolId).not.toBe(OCCUPIED_SENTINEL);
       expect(reel0.symbols[5].symbolId).not.toBe('tall');
 
-      // Footprint reports the anchor at its new visible row.
+      // Footprint reports the anchor at its new visible cell.
       const fp = reelSet.getSymbolFootprint(0, 0);
-      expect(fp.anchor).toEqual({ col: 0, row: 0 });
+      expect(fp.anchor).toEqual({ reel: 0, cell: 0 });
       expect(fp.size).toEqual({ w: 1, h: 3 });
     } finally {
       destroy();

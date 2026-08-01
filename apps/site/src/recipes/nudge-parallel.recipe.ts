@@ -3,7 +3,7 @@
 //                   WILD_CARD, app
 
 // PARALLEL nudges. every reel's tween fires at the same frame via
-// `Promise.all([...])`. Reads as one synchronised beat; the whole row
+// `Promise.all([...])`. Reads as one synchronised beat; the whole cell
 // of wilds drops into place together. Total time = duration (regardless
 // of how many reels you're nudging).
 
@@ -54,8 +54,8 @@ return {
     // PARALLEL. every call fires synchronously; `Promise.all` only waits
     // for the slowest one to finish. Total wall time = NUDGE_DURATION.
     await Promise.all(
-      NUDGE_COLS.map((col) =>
-        reelSet.nudge(col, {
+      NUDGE_COLS.map((reel) =>
+        reelSet.nudge(reel, {
           distance: 1,
           direction: 'down',
           incoming: ['wild'],

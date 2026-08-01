@@ -64,7 +64,7 @@ const labelAt = new Map();
 const abs = (cell) => { const c = board.cellCenter(cell); return { x: board.container.x + c.x, y: board.container.y + c.y }; };
 const fit = (t, maxW, maxH) => { if (t.width > 0 && t.height > 0) t.scale.set(Math.min(maxW / t.width, maxH / t.height, 1)); return t; };
 const paintLabel = (cell, value) => {
-  const k = `${cell.col},${cell.row}`;
+  const k = `${cell.reel},${cell.cell}`;
   labelAt.get(k)?.destroy();
   const p = abs(cell);
   const t = fit(valueText(fmt(value), 30), CELL * 0.82, CELL * 0.46);
@@ -103,12 +103,12 @@ function strikeAt(cell, mult) {
 }
 
 const SEED = [
-  { cell: { col: 0, row: 0 }, id: COIN, data: { value: 5 } },
-  { cell: { col: 2, row: 1 }, id: COIN, data: { value: 10 } },
-  { cell: { col: 4, row: 2 }, id: COIN, data: { value: 5 } },
-  { cell: { col: 1, row: 2 }, id: COIN, data: { value: 20 } },
+  { cell: { reel: 0, cell: 0 }, id: COIN, data: { value: 5 } },
+  { cell: { reel: 2, cell: 1 }, id: COIN, data: { value: 10 } },
+  { cell: { reel: 4, cell: 2 }, id: COIN, data: { value: 5 } },
+  { cell: { reel: 1, cell: 2 }, id: COIN, data: { value: 20 } },
 ];
-const MULT_CELL = { col: 3, row: 0 };
+const MULT_CELL = { reel: 3, cell: 0 };
 const MULT = 3;
 const seedBoard = () => { board.enter(SEED); for (const c of SEED) paintLabel(c.cell, c.data.value); hud.text = `held 4 · total ${fmt(totalOf())} · press spin for the multiplier`; };
 const reset = () => { for (const t of labelAt.values()) t.destroy(); labelAt.clear(); SEED.forEach((c, i) => (c.data.value = [5, 10, 5, 20][i])); board.reset(); seedBoard(); };

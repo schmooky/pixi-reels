@@ -363,7 +363,7 @@ describe('cascade:gravity:symbol. AbortSignal', () => {
     }).dropIn;
     const phase = new CascadeDropInPhase(reel, SpeedPresets.NORMAL, drop);
 
-    // winnerCells=[1] on a 3-row reel gives the survivor at row 0 an
+    // winnerCells=[1] on a 3-cell reel gives the survivor at cell 0 an
     // offsetCells=1 slide. a real gravity-stage job the phase will animate.
     const done = phase.run({
       winnerCells: [1],

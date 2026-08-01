@@ -97,7 +97,7 @@ hud.position.set(app.screen.width / 2, reelSet.y + CELL + 16);
 app.stage.addChild(hud);
 
 // You can read the value straight off the landed symbol instance:
-//   reelSet.reels[col].getSymbolAt(row).value
+//   reelSet.reels[reel].getSymbolAt(cell).value
 reelSet.events.on('spin:allLanded', () => {
   const values = reelSet.reels.map((_, c) => reelSet.reels[c].getSymbolAt(0).value);
   const total = values.reduce((a, b) => a + b, 0);

@@ -84,9 +84,9 @@ export class ReelMotion {
     this._render();
   }
 
-  /** The correct main-axis coordinate for a symbol at visual row `row`. */
-  getCellMain(row: number): number {
-    return (row - this._bufferStart) * this._pitch;
+  /** The correct main-axis coordinate for a symbol at visual cell `cell`. */
+  getCellMain(cell: number): number {
+    return (cell - this._bufferStart) * this._pitch;
   }
 
   get slotPitch(): number {

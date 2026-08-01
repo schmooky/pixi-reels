@@ -76,7 +76,7 @@ const fit = (t, maxW, maxH) => {
   return t;
 };
 const paintLabel = (cell, value) => {
-  const k = `${cell.col},${cell.row}`;
+  const k = `${cell.reel},${cell.cell}`;
   labelAt.get(k)?.destroy();
   const p = abs(cell);
   const t = fit(valueText(fmt(value), 30), CELL * 0.82, CELL * 0.4);
@@ -92,19 +92,19 @@ board.events.on('coin:locked', ({ coin }) => {
   hud.text = `held ${board.lockedCoins.length}/${board.capacity} · total ${fmt(totalOf())} · respins ${board.respinsLeft}`;
 });
 board.events.on('coin:released', ({ coin }) => {
-  const k = `${coin.cell.col},${coin.cell.row}`;
+  const k = `${coin.cell.reel},${coin.cell.cell}`;
   labelAt.get(k)?.destroy();
   labelAt.delete(k);
 });
 
 const val = () => [2, 5, 10, 15, 20, 25, 50, 100][Math.floor(Math.random() * 8)];
 const SEED = [
-  { cell: { col: 1, row: 1 }, id: COIN, data: { value: 10 } },
-  { cell: { col: 3, row: 2 }, id: COIN, data: { value: 25 } },
+  { cell: { reel: 1, cell: 1 }, id: COIN, data: { value: 10 } },
+  { cell: { reel: 3, cell: 2 }, id: COIN, data: { value: 25 } },
 ];
 const ROUNDS = [
-  [{ col: 0, row: 0 }, { col: 4, row: 3 }],
-  [{ col: 2, row: 1 }],
+  [{ reel: 0, cell: 0 }, { reel: 4, cell: 3 }],
+  [{ reel: 2, cell: 1 }],
   [], [],
 ];
 

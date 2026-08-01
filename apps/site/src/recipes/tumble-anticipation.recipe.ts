@@ -8,11 +8,11 @@
 // visuals, then new symbols enter from above with a per-column wave.
 //
 // Same scripted win as the refill-orders recipes: a 3-cluster of `10` on
-// row 2 of the leftmost three reels. What changes:
+// cell 2 of the leftmost three reels. What changes:
 //
 //   1. After destroy, `mode: 'gravity-then-drop'` splits the refill in two.
-//      Stage A: only survivors animate. the row 2 cells slide down from
-//      row 1 to row 2. (In this layout there are no survivors below the
+//      Stage A: only survivors animate. the cell 2 cells slide down from
+//      cell 1 to cell 2. (In this layout there are no survivors below the
 //      winner because the cluster is on the bottom of the board, but the
 //      `cascade:gravity:start/end` events still fire per reel, marking
 //      where you'd plug anticipation logic in a denser cluster.)
@@ -96,9 +96,9 @@ return {
         r === HIT_ROW && HIT_COLS.includes(c) ? CLUSTER : randSymbol(CLUSTER),
       ),
     );
-    const stage1 = stage0.map((col, c) => {
-      if (!HIT_COLS.includes(c)) return [...col];
-      const next = [...col];
+    const stage1 = stage0.map((reel, c) => {
+      if (!HIT_COLS.includes(c)) return [...reel];
+      const next = [...reel];
       for (let r = HIT_ROW; r > 0; r--) next[r] = next[r - 1];
       next[0] = randSymbol(CLUSTER);
       return next;
@@ -112,7 +112,7 @@ return {
 
     await new Promise((r) => setTimeout(r, 200));
 
-    const winners = HIT_COLS.map((c) => ({ reel: c, row: HIT_ROW }));
+    const winners = HIT_COLS.map((c) => ({ reel: c, cell: HIT_ROW }));
     await reelSet.destroySymbols(winners);
     await new Promise((r) => setTimeout(r, PAUSE_AFTER_REMOVAL_MS));
 

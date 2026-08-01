@@ -55,7 +55,7 @@ export interface SpinControllerHooks {
   /** Reel-scoped pin lookup. Used to build AdjustPhase tween descriptors. */
   getPinsOnReel(reelIndex: number): CellPin[];
   /**
-   * Migrate pins on a reel to a new visible-row count, returning the
+   * Migrate pins on a reel to a new visible-cell count, returning the
    * resulting moves. Mutates the pin map directly inside ReelSet.
    */
   migratePinsForReel(reelIndex: number, newCells: number): {
@@ -67,7 +67,7 @@ export interface SpinControllerHooks {
   /**
    * Reposition + resize every pin overlay on the given reel. Called after
    * AdjustPhase commits a MultiWays reshape so overlays move to their new
-   * (post-migration) row at the new cell size.
+   * (post-migration) cell at the new cell size.
    */
   refreshPinOverlaysForReel(reelIndex: number): void;
   /**
@@ -509,8 +509,8 @@ export class SpinController implements Disposable {
       const expected = this._reels[i].visibleCells;
       if (normalizedGrid[i].visible.length !== expected) {
         throw new RangeError(
-          `refill: grid column ${i} has ${normalizedGrid[i].visible.length} row(s) but ` +
-          `reel ${i} has ${expected} visible row(s).`,
+          `refill: grid column ${i} has ${normalizedGrid[i].visible.length} cell(s) but ` +
+          `reel ${i} has ${expected} visible cell(s).`,
         );
       }
     }
@@ -521,9 +521,9 @@ export class SpinController implements Disposable {
         );
       }
       const cells = this._reels[w.reel].visibleCells;
-      if (!Number.isInteger(w.row) || w.row < 0 || w.row >= cells) {
+      if (!Number.isInteger(w.cell) || w.cell < 0 || w.cell >= cells) {
         throw new RangeError(
-          `refill: winner.row ${w.row} out of range [0, ${cells}) for reel ${w.reel}.`,
+          `refill: winner.cell ${w.cell} out of range [0, ${cells}) for reel ${w.reel}.`,
         );
       }
     }
@@ -577,7 +577,7 @@ export class SpinController implements Disposable {
         arr = [];
         winnersByReel.set(w.reel, arr);
       }
-      arr.push(w.row);
+      arr.push(w.cell);
     }
     for (const arr of winnersByReel.values()) arr.sort((a, b) => a - b);
 
@@ -1095,7 +1095,7 @@ export class SpinController implements Disposable {
   }
 
   /**
-   * Compute the target cell height for a reel given a target row count.
+   * Compute the target cell height for a reel given a target cell count.
    * MultiWays slots derive cell height from the fixed `multiwaysReelExtent`;
    * non-MultiWays slots return the reel's current `symbolHeight` unchanged.
    */
@@ -1438,7 +1438,7 @@ export class SpinController implements Disposable {
       if (!phase || phase.name !== 'spin') return;
     }
 
-    // For MultiWays, the per-reel target row count is whatever AdjustPhase
+    // For MultiWays, the per-reel target cell count is whatever AdjustPhase
     // will reshape to. For frame-building purposes we need to send the
     // correct number of visible cells per reel. Pull the pending shape; if
     // unset, fall back to current reel.visibleCells.
@@ -1513,26 +1513,26 @@ export class SpinController implements Disposable {
     // already supports per-reel geometry; only the buffers are still
     // global here.
 
-    // Read/write a per-reel target slot for any row in
+    // Read/write a per-reel target slot for any cell in
     // `[-bufferStart, cells + bufferEnd)`. Row is visible-relative: negative
     // cells address `bufferStart`, cells past `visible.length` address
     // `bufferEnd`. See `getTargetSlot` / `setTargetSlot`.
-    const readSlot = (col: number, row: number): string | undefined =>
-      getTargetSlot(out[col], row);
-    const writeSlot = (col: number, row: number, value: string): void => {
-      setTargetSlot(out[col], row, value);
+    const readSlot = (reel: number, cell: number): string | undefined =>
+      getTargetSlot(out[reel], cell);
+    const writeSlot = (reel: number, cell: number, value: string): void => {
+      setTargetSlot(out[reel], cell, value);
     };
 
-    for (let col = 0; col < out.length; col++) {
-      const cells = visibleRowsForReel(col);
+    for (let reel = 0; reel < out.length; reel++) {
+      const cells = visibleRowsForReel(reel);
       // Iterate the FULL strip range, not just visible. A big-symbol anchor
       // may sit in bufferStart (partial-visibility from the top. only the
-      // block's tail shows in row 0) or in bufferEnd (the head shows at
-      // the last visible row, the rest is clipped below the mask).
+      // block's tail shows in cell 0) or in bufferEnd (the head shows at
+      // the last visible cell, the rest is clipped below the mask).
       // `_finalizeFrame` sizes anchors anywhere on the strip, so the engine
       // renders both cases correctly.
-      for (let row = -bufferStart; row < cells + bufferEnd; row++) {
-        const id = readSlot(col, row);
+      for (let cell = -bufferStart; cell < cells + bufferEnd; cell++) {
+        const id = readSlot(reel, cell);
         if (id === undefined) continue;
         const meta = symData[id];
         if (!meta?.size) continue;
@@ -1543,38 +1543,38 @@ export class SpinController implements Disposable {
         // Validate block fit on this reel: anchor + h must stay on the
         // strip. The strip ends at `cells + bufferEnd - 1` (last bufferEnd
         // slot) and starts at `-bufferStart` (first bufferStart slot).
-        if (row + h > cells + bufferEnd) {
+        if (cell + h > cells + bufferEnd) {
           throw new Error(
-            `big symbol '${id}' (${w}x${h}) at (col=${col}, row=${row}) ` +
-            `extends past the bottom of the strip on reel ${col} ` +
-            `(anchor row + h = ${row + h} > visibleCells + bufferEnd = ${cells + bufferEnd}).`,
+            `big symbol '${id}' (${w}x${h}) at (reel=${reel}, cell=${cell}) ` +
+            `extends past the bottom of the strip on reel ${reel} ` +
+            `(anchor cell + h = ${cell + h} > visibleCells + bufferEnd = ${cells + bufferEnd}).`,
           );
         }
-        if (col + w > out.length) {
+        if (reel + w > out.length) {
           throw new Error(
-            `big symbol '${id}' (${w}x${h}) at (col=${col}, row=${row}) ` +
+            `big symbol '${id}' (${w}x${h}) at (reel=${reel}, cell=${cell}) ` +
             `exceeds reel count ${out.length}.`,
           );
         }
         for (let dx = 0; dx < w; dx++) {
-          const targetReel = col + dx;
+          const targetReel = reel + dx;
           const targetCells = visibleRowsForReel(targetReel);
-          if (row + h > targetCells + bufferEnd) {
+          if (cell + h > targetCells + bufferEnd) {
             throw new Error(
-              `big symbol '${id}' (${w}x${h}) at (col=${col}, row=${row}) ` +
+              `big symbol '${id}' (${w}x${h}) at (reel=${reel}, cell=${cell}) ` +
               `extends past the bottom of the strip on reel ${targetReel} ` +
-              `(anchor row + h = ${row + h} > visibleCells + bufferEnd = ${targetCells + bufferEnd}).`,
+              `(anchor cell + h = ${cell + h} > visibleCells + bufferEnd = ${targetCells + bufferEnd}).`,
             );
           }
         }
 
         // Paint OCCUPIED across the block (skip the anchor itself at dx=0,dy=0).
-        // Stub cells may land in bufferStart (negative row), visible, or
-        // bufferEnd (row >= visibleCells). `writeSlot` handles all three.
+        // Stub cells may land in bufferStart (negative cell), visible, or
+        // bufferEnd (cell >= visibleCells). `writeSlot` handles all three.
         for (let dy = 0; dy < h; dy++) {
           for (let dx = 0; dx < w; dx++) {
             if (dx === 0 && dy === 0) continue;
-            writeSlot(col + dx, row + dy, OCCUPIED_SENTINEL);
+            writeSlot(reel + dx, cell + dy, OCCUPIED_SENTINEL);
           }
         }
       }

@@ -22,7 +22,7 @@ function randomSymbol(exclude?: string): string {
 
 /**
  * Build the initial landing: a visible cluster of `CLUSTER_SYM` on
- * row `HIT_ROW`, cols 0..2. Everything else is filler that doesn't
+ * cell `HIT_ROW`, cols 0..2. Everything else is filler that doesn't
  * collide with the cluster id.
  */
 function buildInitialGrid(): string[][] {
@@ -63,9 +63,9 @@ export default function CascadeStarterRecipe() {
 
             // Spotlight the cluster briefly so the viewer sees what's
             // about to pop.
-            const clusterCells = CLUSTER_COLS.map((c) => ({ reel: c, row: HIT_ROW }));
+            const clusterCells = CLUSTER_COLS.map((c) => ({ reel: c, cell: HIT_ROW }));
             await reelSet.spotlight.cycle(
-              [{ positions: clusterCells.map((c) => ({ reelIndex: c.reel, cellIndex: c.row })) }],
+              [{ positions: clusterCells.map((c) => ({ reelIndex: c.reel, cellIndex: c.cell })) }],
               { displayDuration: 500 },
             );
             reelSet.spotlight.hide();
@@ -86,9 +86,9 @@ export default function CascadeStarterRecipe() {
                 // Gravity: in each winning column, the cell at HIT_ROW
                 // is empty, so the survivor above falls down by one and
                 // a fresh symbol fills the top.
-                return prev.map((col, c) => {
-                  if (!winners.some((w) => w.reel === c)) return [...col];
-                  const next = [...col];
+                return prev.map((reel, c) => {
+                  if (!winners.some((w) => w.reel === c)) return [...reel];
+                  const next = [...reel];
                   for (let r = HIT_ROW; r > 0; r--) next[r] = next[r - 1];
                   next[0] = randomSymbol(CLUSTER_SYM);
                   return next;

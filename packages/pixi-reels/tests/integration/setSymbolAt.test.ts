@@ -2,7 +2,7 @@
  * Integration tests for `Reel.setSymbolAt(visibleCell, id)` - the public
  * single-cell swap API.
  *
- * Contract: the row's symbol identity changes immediately, the new
+ * Contract: the cell's symbol identity changes immediately, the new
  * symbol's view is correctly parented and zIndex'd, the rest of the
  * reel is untouched, and a `symbol:created` event fires.
  */
@@ -23,7 +23,7 @@ function makeHarness() {
 }
 
 describe('Reel.setSymbolAt', () => {
-  it('swaps a visible row in-place', async () => {
+  it('swaps a visible cell in-place', async () => {
     const h = makeHarness();
     try {
       await h.spinAndLand([
@@ -82,7 +82,7 @@ describe('Reel.setSymbolAt', () => {
     }
   });
 
-  it('throws on out-of-range row', async () => {
+  it('throws on out-of-range cell', async () => {
     const h = makeHarness();
     try {
       await h.spinAndLand([

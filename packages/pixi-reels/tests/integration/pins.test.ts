@@ -41,7 +41,7 @@ describe('CellPin. no-pin baseline (regression)', () => {
 });
 
 describe('CellPin. overlay onto setResult', () => {
-  it('forces the pinned symbol to land at (col, row)', async () => {
+  it('forces the pinned symbol to land at (reel, cell)', async () => {
     const h = makeHarness();
     try {
       h.reelSet.pin(2, 1, 'wild', { turns: 'permanent' });
@@ -233,8 +233,8 @@ describe('CellPin. events', () => {
       expect(events.length).toBe(1);
       expect(events[0].event).toBe('pin:placed');
       expect(events[0].args[0]).toMatchObject({
-        col: 2,
-        row: 1,
+        reel: 2,
+        cell: 1,
         symbolId: 'wild',
         turns: 3,
       });
@@ -298,7 +298,7 @@ describe('CellPin. events', () => {
 });
 
 describe('CellPin. bounds and errors', () => {
-  it('throws when col is out of range', () => {
+  it('throws when reel is out of range', () => {
     const h = makeHarness();
     try {
       expect(() => h.reelSet.pin(-1, 0, 'wild')).toThrow();
@@ -308,7 +308,7 @@ describe('CellPin. bounds and errors', () => {
     }
   });
 
-  it('throws when row is out of range', () => {
+  it('throws when cell is out of range', () => {
     const h = makeHarness();
     try {
       expect(() => h.reelSet.pin(0, -1, 'wild')).toThrow();
@@ -520,10 +520,10 @@ describe('CellPin. overlay events (pin:overlayCreated / :overlayDestroyed)', () 
       expect(events.length).toBe(1);
 
       const [pin, overlay] = events[0].args as [
-        { col: number; row: number; symbolId: string },
+        { reel: number; cell: number; symbolId: string },
         { symbolId: string; view: unknown },
       ];
-      expect(pin).toMatchObject({ col: 2, row: 1, symbolId: 'wild' });
+      expect(pin).toMatchObject({ reel: 2, cell: 1, symbolId: 'wild' });
       expect(overlay).toBeDefined();
       expect(overlay.symbolId).toBe('wild');
       expect(overlay.view).toBeDefined();
@@ -553,8 +553,8 @@ describe('CellPin. overlay events (pin:overlayCreated / :overlayDestroyed)', () 
       let capturedPinCol = -1;
       let capturedPinRow = -1;
       h.reelSet.events.on('pin:overlayDestroyed', (pin, overlay) => {
-        capturedPinCol = pin.col;
-        capturedPinRow = pin.row;
+        capturedPinCol = pin.reel;
+        capturedPinRow = pin.cell;
         capturedOverlaySymbolId = (overlay as { symbolId: string }).symbolId;
       });
 

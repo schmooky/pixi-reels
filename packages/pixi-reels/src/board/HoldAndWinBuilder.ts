@@ -27,7 +27,7 @@ export class HoldAndWinBuilder<TData = unknown> {
   private _weights: Record<string, number> | null = null;
   private _symbolData: Record<string, Partial<SymbolData>> | null = null;
   private _baseProfile: SpeedProfile = { ...SpeedPresets.NORMAL, minimumSpinTime: 320 };
-  private _stagger: (col: number, row: number) => number = (col, row) => (col + row) * 70;
+  private _stagger: (reel: number, cell: number) => number = (reel, cell) => (reel + cell) * 70;
   private _anticipateWhen:
     | ((state: { locked: number; capacity: number; respinsLeft: number }) => boolean)
     | null = null;
@@ -94,10 +94,10 @@ export class HoldAndWinBuilder<TData = unknown> {
 
   /**
    * Extra milliseconds of spin per cell on top of the base minimum spin time.
-   * Default `(col + row) * 70` - the diagonal landing wave. Return 0 for
+   * Default `(reel + cell) * 70` - the diagonal landing wave. Return 0 for
    * simultaneous landings.
    */
-  stagger(fn: (col: number, row: number) => number): this {
+  stagger(fn: (reel: number, cell: number) => number): this {
     this._stagger = fn;
     return this;
   }

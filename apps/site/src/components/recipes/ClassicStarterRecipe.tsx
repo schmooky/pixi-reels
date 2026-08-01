@@ -35,18 +35,18 @@ export default function ClassicStarterRecipe() {
             await sleep(150);
             reelSet.setResult(grid.map((visible) => ({ visible })));
             const result = await p;
-            // Spotlight any 3+ in a row from left.
+            // Spotlight any 3+ in a cell from left.
             const wins: { positions: { reelIndex: number; cellIndex: number }[] }[] = [];
-            for (let row = 0; row < 3; row++) {
-              const first = result.symbols[0][row];
+            for (let cell = 0; cell < 3; cell++) {
+              const first = result.symbols[0][cell];
               if (!first) continue;
               let count = 1;
               for (let r = 1; r < result.symbols.length; r++) {
-                if (result.symbols[r][row] === first || result.symbols[r][row] === 'wild/wild_1') count++;
+                if (result.symbols[r][cell] === first || result.symbols[r][cell] === 'wild/wild_1') count++;
                 else break;
               }
               if (count >= 3) {
-                wins.push({ positions: Array.from({ length: count }, (_, i) => ({ reelIndex: i, cellIndex: row })) });
+                wins.push({ positions: Array.from({ length: count }, (_, i) => ({ reelIndex: i, cellIndex: cell })) });
               }
             }
             if (wins.length) {

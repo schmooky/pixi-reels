@@ -53,9 +53,9 @@ reelSet.events.on('spin:allLanded', ({ symbols }) => {
 
 // Scripted sequence: cycles through wild arrivals so the demo is predictable.
 const arrivals = [
-  { col: 1, row: 1 },
-  { col: 3, row: 0 },
-  { col: 2, row: 2 },
+  { reel: 1, cell: 1 },
+  { reel: 3, cell: 0 },
+  { reel: 2, cell: 2 },
 ];
 let spinCount = 0;
 
@@ -69,7 +69,7 @@ return {
     // Place a fresh wild each spin. the engine's pin overlay keeps prior
     // sticky wilds in place, so we only ever need to add the NEW one here.
     const next = arrivals[idx];
-    grid[next.col][next.row] = WILD;
+    grid[next.reel][next.cell] = WILD;
     spinCount++;
     return grid;
   },

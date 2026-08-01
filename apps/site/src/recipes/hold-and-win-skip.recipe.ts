@@ -45,7 +45,7 @@ app.stage.addChild(labels);
 const labelAt = new Map();
 const abs = (cell) => { const c = board.cellCenter(cell); return { x: board.container.x + c.x, y: board.container.y + c.y }; };
 const fit = (t, w, h) => { if (t.width > 0) t.scale.set(Math.min(w / t.width, h / t.height, 1)); return t; };
-const paintLabel = (cell, value) => { const k = `${cell.col},${cell.row}`; labelAt.get(k)?.destroy(); const p = abs(cell); const t = fit(valueText(fmt(value), 30), CELL * 0.82, CELL * 0.46); t.position.set(p.x, p.y); labels.addChild(t); labelAt.set(k, t); };
+const paintLabel = (cell, value) => { const k = `${cell.reel},${cell.cell}`; labelAt.get(k)?.destroy(); const p = abs(cell); const t = fit(valueText(fmt(value), 30), CELL * 0.82, CELL * 0.46); t.position.set(p.x, p.y); labels.addChild(t); labelAt.set(k, t); };
 board.events.on('coin:locked', ({ coin }) => paintLabel(coin.cell, coin.data?.value ?? 0));
 
 let skipping = false;
@@ -54,21 +54,21 @@ board.events.on('feature:end', () => { /* the single "feature over" signal */ })
 
 const gate = (ms) => (skipping ? Promise.resolve() : sleep(ms));
 const val = () => [5, 10, 25, 50, 100][Math.floor(Math.random() * 5)];
-const SEED = [{ cell: { col: 1, row: 1 }, id: COIN, data: { value: 10 } }, { cell: { col: 3, row: 2 }, id: COIN, data: { value: 25 } }];
-const ROUNDS = [[{ col: 0, row: 0 }, { col: 4, row: 1 }], [{ col: 2, row: 0 }], [{ col: 1, row: 2 }], []];
+const SEED = [{ cell: { reel: 1, cell: 1 }, id: COIN, data: { value: 10 } }, { cell: { reel: 3, cell: 2 }, id: COIN, data: { value: 25 } }];
+const ROUNDS = [[{ reel: 0, cell: 0 }, { reel: 4, cell: 1 }], [{ reel: 2, cell: 0 }], [{ reel: 1, cell: 2 }], []];
 
 const flyers = new Set();
 let total = 0;
 async function collect() {
-  for (const wave of coinWaves(board.lockedCoins, 'by-col')) {
+  for (const wave of coinWaves(board.lockedCoins, 'by-reel')) {
     for (const c of wave) {
       const add = () => { total += c.data?.value ?? 0; meterText.text = fmt(total); };
-      if (skipping) { board.release([c.cell]); labelAt.get(`${c.cell.col},${c.cell.row}`)?.destroy(); add(); continue; }
+      if (skipping) { board.release([c.cell]); labelAt.get(`${c.cell.reel},${c.cell.cell}`)?.destroy(); add(); continue; }
       const from = abs(c.cell);
       const clone = fit(valueText(fmt(c.data.value), 30), CELL * 0.82, CELL * 0.46);
       clone.position.set(from.x, from.y);
       app.stage.addChild(clone); flyers.add(clone);
-      labelAt.get(`${c.cell.col},${c.cell.row}`)?.destroy();
+      labelAt.get(`${c.cell.reel},${c.cell.cell}`)?.destroy();
       board.release([c.cell]);
       bezierFly(clone, from, meter, { lean: 'up', arriveScale: 0.35, duration: 0.5 }).then(() => { try { clone.destroy(); } catch {} flyers.delete(clone); add(); });
     }

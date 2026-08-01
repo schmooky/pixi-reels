@@ -212,9 +212,9 @@ function rollShape(): number[] {
 function mockSpin(shape: number[]): { grid: string[][]; wins: WaysWin[] } {
   const grid: string[][] = [];
   for (let c = 0; c < REEL_COUNT; c++) {
-    const col: string[] = [];
-    for (let r = 0; r < shape[c]; r++) col.push(randomCard());
-    grid.push(col);
+    const reel: string[] = [];
+    for (let r = 0; r < shape[c]; r++) reel.push(randomCard());
+    grid.push(reel);
   }
   return { grid, wins: evaluateWays(grid) };
 }
@@ -234,7 +234,7 @@ function randomCard(): string {
 
 function evaluateWays(grid: string[][]): WaysWin[] {
   const kinds = new Set<string>();
-  for (const col of grid) for (const s of col) if (s !== 'wild') kinds.add(s);
+  for (const reel of grid) for (const s of reel) if (s !== 'wild') kinds.add(s);
 
   const wins: WaysWin[] = [];
   for (const kind of kinds) {

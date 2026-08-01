@@ -1,7 +1,7 @@
 /**
  * Regression: StopPhase previously passed the full frame (buffers + visible)
  * to Reel.placeSymbols, which expects visible-only. This caused the top
- * visible row to occasionally land on a random buffer symbol instead of the
+ * visible cell to occasionally land on a random buffer symbol instead of the
  * target - not caught by spinAndLand (which uses skip()), but visible in real
  * spins. We can't test the full async GSAP path in Node, but we can assert the
  * two landing entry points directly: `placeSymbols` (visible-relative

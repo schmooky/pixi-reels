@@ -14,8 +14,8 @@ export interface CheatContext {
   rng: SeededRng;
   /** What the previous spin landed on, if any. Useful for hold-and-win. */
   lastGrid: string[][] | null;
-  /** Which symbols are currently "held" (reel,row pairs) - set by a demo. */
-  held: Array<{ reel: number; row: number; symbolId: string }>;
+  /** Which symbols are currently "held" (reel,cell pairs) - set by a demo. */
+  held: Array<{ reel: number; cell: number; symbolId: string }>;
 }
 
 export type Cheat = (ctx: CheatContext) => CheatSpinResult | null;
@@ -44,7 +44,7 @@ export class CheatEngine {
   private _symbolIds: string[];
   private _rng: SeededRng;
   private _lastGrid: string[][] | null = null;
-  private _held: Array<{ reel: number; row: number; symbolId: string }> = [];
+  private _held: Array<{ reel: number; cell: number; symbolId: string }> = [];
 
   constructor(opts: {
     reelCount: number;
@@ -74,11 +74,11 @@ export class CheatEngine {
     return this._lastGrid;
   }
 
-  setHeld(held: Array<{ reel: number; row: number; symbolId: string }>): void {
+  setHeld(held: Array<{ reel: number; cell: number; symbolId: string }>): void {
     this._held = held.slice();
   }
 
-  getHeld(): Array<{ reel: number; row: number; symbolId: string }> {
+  getHeld(): Array<{ reel: number; cell: number; symbolId: string }> {
     return this._held.slice();
   }
 
@@ -131,8 +131,8 @@ export class CheatEngine {
   /** Apply `_held` cells on top of any grid - sticky-wild style persistence. */
   private _applyHeld(grid: string[][]): void {
     for (const h of this._held) {
-      if (grid[h.reel] && h.row < grid[h.reel].length) {
-        grid[h.reel][h.row] = h.symbolId;
+      if (grid[h.reel] && h.cell < grid[h.reel].length) {
+        grid[h.reel][h.cell] = h.symbolId;
       }
     }
   }
@@ -159,8 +159,8 @@ export function forceScatters(count: number, symbolId: string): Cheat {
     const coords = allCoords(ctx.reelCount, ctx.visibleCells);
     shuffle(coords, ctx.rng);
     for (let i = 0; i < Math.min(count, coords.length); i++) {
-      const [r, row] = coords[i];
-      grid[r][row] = symbolId;
+      const [r, cell] = coords[i];
+      grid[r][cell] = symbolId;
     }
     // Trigger anticipation on last 2 reels if a scatter lands there
     const anticipationReels: number[] = [];
@@ -198,13 +198,13 @@ export function forceNearMiss(count: number, symbolId: string, nearReel: number)
     );
     shuffle(candidates, ctx.rng);
     for (let i = 0; i < Math.min(count - 1, candidates.length); i++) {
-      const [r, row] = candidates[i];
-      grid[r][row] = symbolId;
+      const [r, cell] = candidates[i];
+      grid[r][cell] = symbolId;
     }
     // Ensure `nearReel` has NO scatters (the "miss")
-    for (let row = 0; row < ctx.visibleCells; row++) {
-      if (grid[nearReel][row] === symbolId) {
-        grid[nearReel][row] = otherSymbol(symbolId, ctx);
+    for (let cell = 0; cell < ctx.visibleCells; cell++) {
+      if (grid[nearReel][cell] === symbolId) {
+        grid[nearReel][cell] = otherSymbol(symbolId, ctx);
       }
     }
     return {
@@ -239,23 +239,23 @@ export function holdAndWinProgress(coinSymbol: string, landChance = 0.5): Cheat 
     // Fill held cells first
     const heldSet = new Set<string>();
     for (const h of ctx.held) {
-      grid[h.reel][h.row] = h.symbolId;
-      heldSet.add(`${h.reel},${h.row}`);
+      grid[h.reel][h.cell] = h.symbolId;
+      heldSet.add(`${h.reel},${h.cell}`);
     }
 
     // Fill non-held with random non-coin noise
     const noise = ctx.symbolIds.filter((s) => s !== coinSymbol);
     for (let r = 0; r < ctx.reelCount; r++) {
-      for (let row = 0; row < ctx.visibleCells; row++) {
-        if (grid[r][row] === '') {
-          grid[r][row] = noise.length > 0 ? ctx.rng.pick(noise) : ctx.symbolIds[0];
+      for (let cell = 0; cell < ctx.visibleCells; cell++) {
+        if (grid[r][cell] === '') {
+          grid[r][cell] = noise.length > 0 ? ctx.rng.pick(noise) : ctx.symbolIds[0];
         }
       }
     }
 
     // Maybe land a new coin
     const free = allCoords(ctx.reelCount, ctx.visibleCells).filter(
-      ([r, row]) => !heldSet.has(`${r},${row}`),
+      ([r, cell]) => !heldSet.has(`${r},${cell}`),
     );
     const total = ctx.reelCount * ctx.visibleCells;
     const landed = ctx.rng.chance(landChance);
@@ -327,7 +327,7 @@ function randomGrid(ctx: CheatContext): string[][] {
   const out: string[][] = [];
   for (let r = 0; r < ctx.reelCount; r++) {
     const reel: string[] = [];
-    for (let row = 0; row < ctx.visibleCells; row++) {
+    for (let cell = 0; cell < ctx.visibleCells; cell++) {
       reel.push(ctx.rng.pick(ctx.symbolIds));
     }
     out.push(reel);
@@ -338,7 +338,7 @@ function randomGrid(ctx: CheatContext): string[][] {
 function allCoords(reelCount: number, visibleCells: number): Array<[number, number]> {
   const out: Array<[number, number]> = [];
   for (let r = 0; r < reelCount; r++) {
-    for (let row = 0; row < visibleCells; row++) out.push([r, row]);
+    for (let cell = 0; cell < visibleCells; cell++) out.push([r, cell]);
   }
   return out;
 }
@@ -351,7 +351,7 @@ function shuffle<T>(arr: T[], rng: SeededRng): void {
 }
 
 function cloneGrid(grid: string[][]): string[][] {
-  return grid.map((col) => col.slice());
+  return grid.map((reel) => reel.slice());
 }
 
 function otherSymbol(avoid: string, ctx: CheatContext): string {

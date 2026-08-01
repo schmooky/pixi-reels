@@ -3,7 +3,7 @@
  *
  * Contract: passing `0`, a negative number, `NaN`, or `Infinity` is
  * clamped to the minimum of 1 (the motion layer needs at least one
- * buffer row above and below the visible window for wrap detection).
+ * buffer cell above and below the visible window for wrap detection).
  * The builder warns once per process via `console.warn` and does not
  * throw, so existing user code that accidentally passed `0` keeps
  * running rather than crashing at build time.

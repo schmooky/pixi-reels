@@ -84,7 +84,7 @@ export class ReelSetBuilder {
   private _symbolDataOverrides: Record<string, Partial<SymbolData>> = {};
   private _tumbleConfig?: ResolvedTumbleConfig;
   private _defaultSpinMode: 'standard' | 'cascade' = 'standard';
-  /** Per-reel static row counts (jagged shapes like 3-5-5-5-3). */
+  /** Per-reel static cell counts (jagged shapes like 3-5-5-5-3). */
   private _visibleCellsPerReel?: number[];
   /** Per-reel pixel-box heights. used for both pyramids and MultiWays. */
   private _reelExtents?: number[];
@@ -128,7 +128,7 @@ export class ReelSetBuilder {
   }
 
   /**
-   * Per-reel static row counts. Length MUST equal `reels()`. Mutually
+   * Per-reel static cell counts. Length MUST equal `reels()`. Mutually
    * exclusive with `visibleCells()`; calling both throws at `build()`.
    *
    * @example
@@ -226,7 +226,7 @@ export class ReelSetBuilder {
   }
 
   /**
-   * Configure this slot as MultiWays: per-spin row variation. Pass minCells,
+   * Configure this slot as MultiWays: per-spin cell variation. Pass minCells,
    * maxCells, and the fixed reel pixel height. After build, call
    * `reelSet.setShape(rowsPerReel)` mid-spin to set the next stop's shape.
    *
@@ -285,7 +285,7 @@ export class ReelSetBuilder {
    *
    * Buffer cells are off-screen cells the reel keeps around the visible
    * window so symbols can fade/slide in cleanly. The motion layer's wrap
-   * detection assumes at least one buffer row above and one below. the
+   * detection assumes at least one buffer cell above and one below. the
    * minimum supported count is **1**. Passing `0` (or a negative number)
    * is clamped to `1` and a single console warning is printed; the
    * builder does not throw, so existing user code keeps running.
@@ -319,7 +319,7 @@ export class ReelSetBuilder {
         // eslint-disable-next-line no-console
         console.warn(
           `[pixi-reels] ${label} is below the minimum of 1; clamping to 1. ` +
-            `The motion layer needs at least one buffer row above (and, outside tumble-only sets, below) the visible window for wrap detection.`,
+            `The motion layer needs at least one buffer cell above (and, outside tumble-only sets, below) the visible window for wrap detection.`,
         );
       }
       return 1;
@@ -350,7 +350,7 @@ export class ReelSetBuilder {
    * symbol above the reel to its right (reels are separate containers).
    * Cross-reel and out-of-mask layering needs `unmask: true`, which is an
    * **at-rest** presentation: while the reel spins the symbol stays masked
-   * like everything else; on land, visible-row instances are lifted into
+   * like everything else; on land, visible-cell instances are lifted into
    * the viewport-wide `unmaskedContainer` (above every reel and the mask)
    * and pulled back down when the next spin starts.
    *
@@ -588,7 +588,7 @@ export class ReelSetBuilder {
     const mainGap = vertical ? this._symbolGap.y : this._symbolGap.x;
     const crossGap = vertical ? this._symbolGap.x : this._symbolGap.y;
 
-    // Resolve per-reel row counts. MultiWays: every reel starts at maxCells.
+    // Resolve per-reel cell counts. MultiWays: every reel starts at maxCells.
     let visibleCellsPerReel: number[];
     if (isMultiWays) {
       visibleCellsPerReel = new Array(reelCount).fill(this._multiways!.maxCells);

@@ -31,7 +31,7 @@ export interface DebugReelSnapshot {
   index: number;
   speed: number;
   isStopping: boolean;
-  allSymbols: { row: number; symbolId: string; y: number }[];
+  allSymbols: { cell: number; symbolId: string; y: number }[];
   visibleSymbols: string[];
 }
 
@@ -52,8 +52,8 @@ export function debugSnapshot(reelSet: ReelSet): DebugSnapshot {
     index: i,
     speed: reel.speed,
     isStopping: reel.isStopping,
-    allSymbols: reel.symbols.map((s, row) => ({
-      row,
+    allSymbols: reel.symbols.map((s, cell) => ({
+      cell,
       symbolId: s.symbolId,
       y: Math.round(s.view.y),
     })),
@@ -105,8 +105,8 @@ export function debugGrid(reelSet: ReelSet): string {
   const lines: string[] = [];
   lines.push(border('┌', '┬', '┐'));
 
-  for (let row = 0; row < maxCells; row++) {
-    const cells = grid.map((col, i) => (row < visibleCells[i] ? pad(col[row] ?? '?') : empty));
+  for (let cell = 0; cell < maxCells; cell++) {
+    const cells = grid.map((reel, i) => (cell < visibleCells[i] ? pad(reel[cell] ?? '?') : empty));
     lines.push('│' + cells.join('│') + '│');
   }
 

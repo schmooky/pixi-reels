@@ -19,7 +19,7 @@ const SCALE = 0.62;
 const CELL_W = CASCADE_PLATE_W * SCALE;
 const CELL_H = CASCADE_PLATE_H * SCALE;
 const HIT_COLS = [0, 1, 2];                     // left three columns
-const HIT_ROW = 1;                              // upper-middle row
+const HIT_ROW = 1;                              // upper-middle cell
 const TRIGGER1 = 'low1';
 const TRIGGER2 = 'mid1';
 
@@ -91,8 +91,8 @@ return {
       }),
     );
 
-    const dropAtHitRow = (col, fillTop) => {
-      const next = [...col];
+    const dropAtHitRow = (reel, fillTop) => {
+      const next = [...reel];
       for (let r = HIT_ROW; r > 0; r--) next[r] = next[r - 1];
       next[0] = fillTop;
       return next;
@@ -110,14 +110,14 @@ return {
     let trigger = TRIGGER1;
     await reelSet.runCascade({
       detectWinners: (grid) => HIT_COLS
-        .map((c) => grid[c][HIT_ROW] === trigger ? { reel: c, row: HIT_ROW } : null)
+        .map((c) => grid[c][HIT_ROW] === trigger ? { reel: c, cell: HIT_ROW } : null)
         .filter(Boolean),
       nextGrid: (prev, winners) => {
         const fill = randSymbolNotIn(new Set([TRIGGER1, TRIGGER2]));
-        const out = prev.map((col, c) =>
+        const out = prev.map((reel, c) =>
           winners.some((w) => w.reel === c)
-            ? dropAtHitRow(col, fill)
-            : [...col],
+            ? dropAtHitRow(reel, fill)
+            : [...reel],
         );
         trigger = trigger === TRIGGER1 ? TRIGGER2 : '__none__';
         return out;

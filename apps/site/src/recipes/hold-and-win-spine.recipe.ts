@@ -240,7 +240,7 @@ const paintLabel = (coin) => {
   const t = fitGold(goldText(fmt(coin.data?.value ?? 0), 32), SETTLE_SIZE * 0.84, SETTLE_SIZE * 0.46);
   t.position.set(board.container.x + c.x, board.container.y + c.y);
   labels.addChild(t);
-  labelAt.set(`${coin.cell.col},${coin.cell.row}`, t);
+  labelAt.set(`${coin.cell.reel},${coin.cell.cell}`, t);
 };
 // Every land effect registers its promise here; the run loop awaits the
 // batch before the next respin - no new spin while coins still animate.
@@ -261,10 +261,10 @@ board.events.on('coin:locked', ({ coin }) => {
     const entry = spine.state.setAnimation(0, coin.data.kind, false);
     entry.listener = { complete: () => settleMoneyFace(spine, SETTLE_SIZE, coin.data.kind) };
     const delay = ((entry.animation && entry.animation.duration) || 0.6) * 1000 + 80;
-    const k = `${coin.cell.col},${coin.cell.row}`;
+    const k = `${coin.cell.reel},${coin.cell.cell}`;
     pendingFx.push(new Promise((res) => setTimeout(() => {
       // still locked and not replaced by a replay?
-      if (board.lockedCoins.some((c) => `${c.cell.col},${c.cell.row}` === k) && !labelAt.has(k)) {
+      if (board.lockedCoins.some((c) => `${c.cell.reel},${c.cell.cell}` === k) && !labelAt.has(k)) {
         paintLabel(coin);
       }
       res();
@@ -274,7 +274,7 @@ board.events.on('coin:locked', ({ coin }) => {
   }
 });
 board.events.on('coin:released', ({ coin }) => {
-  const key = `${coin.cell.col},${coin.cell.row}`;
+  const key = `${coin.cell.reel},${coin.cell.cell}`;
   labelAt.get(key)?.destroy();
   labelAt.delete(key);
 });
@@ -283,9 +283,9 @@ board.events.on('coin:released', ({ coin }) => {
 const flyers = new Set();
 let total = 0;
 async function collectAll() {
-  // coinWaves picks the choreography: 'by-col' sweeps left to right;
-  // 'sequence', 'by-row', 'all' or { chunk: n } are drop-in alternatives.
-  for (const wave of coinWaves(board.lockedCoins, 'by-col')) {
+  // coinWaves picks the choreography: 'by-reel' sweeps left to right;
+  // 'sequence', 'by-cell', 'all' or { chunk: n } are drop-in alternatives.
+  for (const wave of coinWaves(board.lockedCoins, 'by-reel')) {
     await Promise.all(wave.map((coin, i) => {
       const from = board.cellCenter(coin.cell);
       // every coin flies as the skeleton's own spinning-coin animation
@@ -317,17 +317,17 @@ async function collectAll() {
 // spins to the end. In a real game the server decides every round; the loop
 // runs on result.done.
 const SEED = [
-  { cell: { col: 1, row: 1 }, id: COIN, data: { value: 25 } },
-  { cell: { col: 3, row: 2 }, id: COIN, data: { value: 50 } },
-  { cell: { col: 4, row: 0 }, id: COIN, data: { value: 10 } },
+  { cell: { reel: 1, cell: 1 }, id: COIN, data: { value: 25 } },
+  { cell: { reel: 3, cell: 2 }, id: COIN, data: { value: 50 } },
+  { cell: { reel: 4, cell: 0 }, id: COIN, data: { value: 10 } },
 ];
 const ROUNDS = [
   [
-    { cell: { col: 0, row: 3 }, id: COIN, data: { value: 20 } },
-    { cell: { col: 2, row: 1 }, id: 'jackpot_mini', data: { value: JACKPOTS.mini, kind: 'mini' } },
+    { cell: { reel: 0, cell: 3 }, id: COIN, data: { value: 20 } },
+    { cell: { reel: 2, cell: 1 }, id: 'jackpot_mini', data: { value: JACKPOTS.mini, kind: 'mini' } },
   ],
   [],
-  [{ cell: { col: 4, row: 3 }, id: 'jackpot_major', data: { value: JACKPOTS.major, kind: 'major' } }],
+  [{ cell: { reel: 4, cell: 3 }, id: 'jackpot_major', data: { value: JACKPOTS.major, kind: 'major' } }],
   [], [], [],
 ];
 

@@ -80,9 +80,9 @@ return {
         r === HIT_ROW && HIT_COLS.includes(c) ? CLUSTER : randSymbol(CLUSTER),
       ),
     );
-    const stage1 = stage0.map((col, c) => {
-      if (!HIT_COLS.includes(c)) return [...col];
-      const next = [...col];
+    const stage1 = stage0.map((reel, c) => {
+      if (!HIT_COLS.includes(c)) return [...reel];
+      const next = [...reel];
       for (let r = HIT_ROW; r > 0; r--) next[r] = next[r - 1];
       next[0] = randSymbol(CLUSTER);
       return next;
@@ -98,7 +98,7 @@ return {
     // Moment B: fade winners, then refill. survivors slide, new symbols
     // enter from above into the holes.
     await new Promise((r) => setTimeout(r, 220));
-    const winners = HIT_COLS.map((c) => ({ reel: c, row: HIT_ROW }));
+    const winners = HIT_COLS.map((c) => ({ reel: c, cell: HIT_ROW }));
     await reelSet.destroySymbols(winners);
     await new Promise((r) => setTimeout(r, PAUSE_AFTER_REMOVAL_MS));
     await reelSet.refill({ winners, grid: stage1.map((visible) => ({ visible })) });

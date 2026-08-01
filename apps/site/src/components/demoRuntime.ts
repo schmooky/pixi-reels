@@ -66,7 +66,7 @@ export interface MechanicConfig {
   /**
    * Enable tumble/cascade flow. When set, the builder is configured via
    * `.tumble(config)` and the mechanic's `runSpin` runs an auto-cascade
-   * loop (3-in-a-row left-anchored detection per row, gravity-correct
+   * loop (3-in-a-cell left-anchored detection per cell, gravity-correct
    * refill via the new `reelSet.refill()` API) after every initial spin.
    * Pass `true` for default tumble feel, or a config to customize.
    */
@@ -108,24 +108,24 @@ function normalizeSymbolConfig(symbols: MechanicConfig['symbols']): NormalizedSy
 }
 
 /**
- * 3-in-a-row left-anchored win detection. Walks each visible row; if the
+ * 3-in-a-cell left-anchored win detection. Walks each visible cell; if the
  * first 3+ reels share an id, that horizontal run wins. De-dupes across
  * cells so the same cell isn't destroyed twice.
  */
 function detectWinners(grid: string[][], reelCount: number, visibleCells: number): Cell[] {
   const seen = new Set<number>();
   const out: Cell[] = [];
-  for (let row = 0; row < visibleCells; row++) {
-    const head = grid[0][row];
+  for (let cell = 0; cell < visibleCells; cell++) {
+    const head = grid[0][cell];
     let run = 1;
     for (let r = 1; r < reelCount; r++) {
-      if (grid[r][row] === head) run++;
+      if (grid[r][cell] === head) run++;
       else break;
     }
     if (run >= 3) {
       for (let r = 0; r < run; r++) {
-        const key = r * visibleCells + row;
-        if (!seen.has(key)) { seen.add(key); out.push({ reel: r, row }); }
+        const key = r * visibleCells + cell;
+        if (!seen.has(key)) { seen.add(key); out.push({ reel: r, cell }); }
       }
     }
   }
@@ -146,13 +146,13 @@ function cascadeNextGrid(
   for (const w of winners) {
     let s = byReel.get(w.reel);
     if (!s) { s = new Set(); byReel.set(w.reel, s); }
-    s.add(w.row);
+    s.add(w.cell);
   }
   const next: string[][] = prev.map((c) => [...c]);
   for (let r = 0; r < next.length; r++) {
     const losers = byReel.get(r);
     if (!losers || losers.size === 0) continue;
-    const survivors = next[r].filter((_, row) => !losers.has(row));
+    const survivors = next[r].filter((_, cell) => !losers.has(cell));
     const fillers = Array.from({ length: losers.size }, () => pickWeightedId(symbolIds, weights));
     next[r] = [...fillers, ...survivors];
   }
@@ -292,8 +292,8 @@ export async function mountMechanic(
     const blurring = new Array<boolean>(cfg.reelCount).fill(false);
     const setReelBlur = (reelIdx: number, on: boolean) => {
       const reel = reelSet.getReel(reelIdx);
-      for (let row = 0; row < cfg.visibleCells; row++) {
-        const sym = reel.getSymbolAt(row);
+      for (let cell = 0; cell < cfg.visibleCells; cell++) {
+        const sym = reel.getSymbolAt(cell);
         if (sym instanceof BlurSpriteSymbol) sym.setBlurred(on);
       }
     };
@@ -468,7 +468,7 @@ export async function mountMechanic(
       // Tumble/cascade loop. runs ONLY when the mechanic enabled `.tumble()`.
       // Uses the library's `reelSet.runCascade(...)` orchestrator: it owns
       // the detect → destroy → pause → refill loop and resolves with the
-      // summary. We supply the game rules (3-in-a-row left-anchored winner
+      // summary. We supply the game rules (3-in-a-cell left-anchored winner
       // detection + a gravity-correct nextGrid).
       if (cfg.tumble) {
         reelSet.setDropOrder('all');
@@ -523,5 +523,5 @@ export async function mountMechanic(
 }
 
 function summarize(grid: string[][]): string {
-  return grid.map((col) => col.join('/')).join(' · ');
+  return grid.map((reel) => reel.join('/')).join(' · ');
 }

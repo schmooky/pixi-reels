@@ -59,10 +59,10 @@ function attachBadge(cell, data) {
   sym.view.addChild(badge);                 // <-- child of the symbol's view
 }
 
-const TARGET = { cell: { col: 1, row: 0 }, id: COIN, data: { badge: '100x', value: 100 } };
+const TARGET = { cell: { reel: 1, cell: 0 }, id: COIN, data: { badge: '100x', value: 100 } };
 const SEED = [
-  { cell: { col: 0, row: 0 }, id: COIN, data: { value: 5 } },
-  { cell: { col: 2, row: 0 }, id: COIN, data: { value: 5 } },
+  { cell: { reel: 0, cell: 0 }, id: COIN, data: { value: 5 } },
+  { cell: { reel: 2, cell: 0 }, id: COIN, data: { value: 5 } },
 ];
 const seedBoard = () => {
   board.reset();

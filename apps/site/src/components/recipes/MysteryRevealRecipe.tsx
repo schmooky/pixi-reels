@@ -44,24 +44,24 @@ export default function MysteryRevealRecipe() {
             await sleep(350);
             // Reveal: one shared symbol for all mystery cells.
             const reveal = pickReveal();
-            const cells: { r: number; row: number }[] = [];
+            const cells: { r: number; cell: number }[] = [];
             for (let r = 0; r < 5; r++) {
-              for (let row = 0; row < 3; row++) {
-                if (grid[r][row] === MYSTERY) cells.push({ r, row });
+              for (let cell = 0; cell < 3; cell++) {
+                if (grid[r][cell] === MYSTERY) cells.push({ r, cell });
               }
             }
-            await Promise.all(cells.map(async ({ r, row }) => {
+            await Promise.all(cells.map(async ({ r, cell }) => {
               const reel = reelSet.getReel(r);
-              const sym = reel.getSymbolAt(row);
+              const sym = reel.getSymbolAt(cell);
               // Shake (x offset. origin doesn't matter here).
               await new Promise<void>((resolve) => {
                 gsap.to(sym.view, { x: '+=6', duration: 0.05, yoyo: true, repeat: 5, ease: 'sine.inOut', onComplete: () => { sym.view.x = 0; resolve(); } });
               });
               // Swap + pop in. scale around the cell's visual center.
               const visible = reel.getVisibleSymbols();
-              visible[row] = reveal;
+              visible[cell] = reveal;
               reel.placeSymbols(visible);
-              const next = reel.getSymbolAt(row);
+              const next = reel.getSymbolAt(cell);
               next.view.scale.set(0);
               const restore = bindCenterPivot(next.view, CELL, CELL);
               await new Promise<void>((resolve) => {

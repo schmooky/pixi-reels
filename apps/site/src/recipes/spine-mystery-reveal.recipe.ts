@@ -84,8 +84,8 @@ function nextResult() {
   const count = 2 + Math.floor(Math.random() * 3);
   for (let i = 0; i < count; i++) {
     const reel = Math.floor(Math.random() * grid.length);
-    const row = Math.floor(Math.random() * grid[reel].length);
-    grid[reel][row] = 'mystery';
+    const cell = Math.floor(Math.random() * grid[reel].length);
+    grid[reel][cell] = 'mystery';
   }
   lastGrid = grid;
   return grid;
@@ -101,9 +101,9 @@ reelSet.events.on('spin:start', () => {
 reelSet.events.on('spin:complete', async () => {
   if (!lastGrid) return;
   const cells = [];
-  lastGrid.forEach((col, reel) =>
-    col.forEach((id, row) => {
-      if (id === 'mystery') cells.push({ reel, row });
+  lastGrid.forEach((reel, reel) =>
+    reel.forEach((id, cell) => {
+      if (id === 'mystery') cells.push({ reel, cell });
     }),
   );
   if (cells.length === 0) return;
@@ -115,7 +115,7 @@ reelSet.events.on('spin:complete', async () => {
   await sleep(650);
 
   for (const c of cells) {
-    const sym = reelSet.getReel(c.reel).getSymbolAt(c.row);
+    const sym = reelSet.getReel(c.reel).getSymbolAt(c.cell);
     if (!sym) continue;
 
     const bush = Spine.from({

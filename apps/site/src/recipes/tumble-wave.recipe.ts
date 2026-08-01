@@ -3,7 +3,7 @@
 //           buildCascadeSpineMap, CASCADE_SYMBOL_IDS, CASCADE_PLATE_W,
 //           CASCADE_PLATE_H, PIXI, gsap, app, pickWeighted
 
-// WAVE: heavy per-row stagger (110 ms). the wave is the stagger. Rows
+// WAVE: heavy per-cell stagger (110 ms). the wave is the stagger. Rows
 // arrive in sequence top-to-bottom.
 
 await loadCascadeSpines();
@@ -18,7 +18,7 @@ const CLUSTER = 'low1';
 const HIT_ROW = 2;
 const HIT_COLS = [0, 1, 2];
 
-// Medium pause. wave is already long because of the per-row stagger;
+// Medium pause. wave is already long because of the per-cell stagger;
 // the pause sets up the rhythm of the next wave without over-stalling.
 const PAUSE_AFTER_REMOVAL_MS = 300;
 
@@ -77,9 +77,9 @@ return {
         r === HIT_ROW && HIT_COLS.includes(c) ? CLUSTER : randSymbol(CLUSTER),
       ),
     );
-    const stage1 = stage0.map((col, c) => {
-      if (!HIT_COLS.includes(c)) return [...col];
-      const next = [...col];
+    const stage1 = stage0.map((reel, c) => {
+      if (!HIT_COLS.includes(c)) return [...reel];
+      const next = [...reel];
       for (let r = HIT_ROW; r > 0; r--) next[r] = next[r - 1];
       next[0] = randSymbol(CLUSTER);
       return next;
@@ -92,7 +92,7 @@ return {
     await spinDone;
 
     await new Promise((r) => setTimeout(r, 220));
-    const winners = HIT_COLS.map((c) => ({ reel: c, row: HIT_ROW }));
+    const winners = HIT_COLS.map((c) => ({ reel: c, cell: HIT_ROW }));
     await reelSet.destroySymbols(winners);
     await new Promise((r) => setTimeout(r, PAUSE_AFTER_REMOVAL_MS));
     await reelSet.refill({ winners, grid: stage1.map((visible) => ({ visible })) });

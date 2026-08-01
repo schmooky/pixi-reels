@@ -47,7 +47,7 @@ const col3 = () => [filler(), filler(), filler()];
 return {
   reelSet,
   onSpin: async () => {
-    // 1. Land 1x2 MEGA anchored at column 2, row 0. Block fills cells 0+1.
+    // 1. Land 1x2 MEGA anchored at column 2, cell 0. Block fills cells 0+1.
     const grid = [col3(), col3(), [MEGA.id, MEGA.id, filler()], col3(), col3()];
     const p = reelSet.spin();
     await new Promise((r) => setTimeout(r, 220));
@@ -56,9 +56,9 @@ return {
     await new Promise((r) => setTimeout(r, 500));
 
     // 2. Nudge UP by 1. anchor at strip[1] → strip[0] (bufferStart).
-    //    Stub follows: strip[2] → strip[1] (visible row 0).
+    //    Stub follows: strip[2] → strip[1] (visible cell 0).
     //    Block is now "tail visible": top in bufferStart (clipped), bottom
-    //    showing at row 0. `_finalizeFrame` sizes the anchor sprite to the
+    //    showing at cell 0. `_finalizeFrame` sizes the anchor sprite to the
     //    full block height; the mask clips the half above visible.
     await reelSet.nudge(2, {
       distance: 1,

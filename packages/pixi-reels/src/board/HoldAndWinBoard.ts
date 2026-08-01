@@ -29,7 +29,7 @@ export interface HoldAndWinBoardConfig<TData> {
   weights: Record<string, number> | null;
   symbolData: Record<string, Partial<SymbolData>> | null;
   baseProfile: SpeedProfile;
-  stagger: (col: number, row: number) => number;
+  stagger: (reel: number, cell: number) => number;
   anticipateWhen:
     | ((state: { locked: number; capacity: number; respinsLeft: number }) => boolean)
     | null;
@@ -92,7 +92,7 @@ export class HoldAndWinBoard<TData = unknown> implements Disposable {
     this._anticipateWhen = cfg.anticipateWhen;
 
     const base = (cell: HwCell): number =>
-      (cfg.baseProfile.minimumSpinTime ?? 320) + cfg.stagger(cell.col, cell.row);
+      (cfg.baseProfile.minimumSpinTime ?? 320) + cfg.stagger(cell.reel, cell.cell);
     this._grid = new BoardGrid({
       cols: cfg.cols,
       rows: cfg.rows,

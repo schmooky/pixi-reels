@@ -38,7 +38,7 @@ export function SymbolsTab({ config, onChange }: Props): JSX.Element {
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
+    <div className="flex h-full min-h-0 flex-reel">
       <div className="flex-1 overflow-y-auto p-4">
         <BuiltInSymbols />
 
@@ -123,7 +123,7 @@ function TypeButton({ label, icon, hint, onClick, disabled }: TypeButtonProps): 
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        'flex flex-col items-center gap-1 rounded-lg border border-border bg-background/50 p-3 text-xs transition-colors',
+        'flex flex-reel items-center gap-1 rounded-lg border border-border bg-background/50 p-3 text-xs transition-colors',
         disabled
           ? 'cursor-not-allowed opacity-50'
           : 'hover:border-primary hover:bg-primary/5',
@@ -163,7 +163,7 @@ function AddSymbolForm({ type, usedIds, onCancel, onSave }: FormProps): JSX.Elem
     const url = URL.createObjectURL(file);
     const img = new Image();
     img.onload = () => {
-      // Heuristic: if width is a multiple of height, assume one row of
+      // Heuristic: if width is a multiple of height, assume one cell of
       // frameCount frames, where frameW = height (square cells). User can
       // override. If not, leave the user's last input alone.
       if (img.naturalWidth % img.naturalHeight === 0) {
@@ -384,7 +384,7 @@ function FilePicker({
   );
 }
 
-// ── Per-symbol row ───────────────────────────────────────────────────
+// ── Per-symbol cell ───────────────────────────────────────────────────
 
 function SymbolRow({
   symbol,

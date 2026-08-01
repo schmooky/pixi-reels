@@ -1,7 +1,7 @@
 /**
  * IndexedDB layer for the studio.
  *
- * Two stores: `config` (single row at key='current') and `assets`
+ * Two stores: `config` (single cell at key='current') and `assets`
  * (content-addressed by SHA-256). Wrapping `idb` would be overkill for two
  * stores. the raw IDB API is fine here.
  */

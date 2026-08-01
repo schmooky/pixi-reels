@@ -30,7 +30,7 @@ export interface CascadeFallPhaseConfig {
  * symbol falls off the bottom of the viewport. The reel then sits at speed
  * zero while `SpinPhase` waits for the server result.
  *
- * Animation parameters (duration, ease, row stagger) are baked into the
+ * Animation parameters (duration, ease, cell stagger) are baked into the
  * phase at builder time via the factory closure; the run-time config
  * carries only per-spin context (delay, event bus).
  */
@@ -113,8 +113,8 @@ export class CascadeFallPhase extends ReelPhase<CascadeFallPhaseConfig> {
     const symbols: ReelSymbol[] = [];
     const views: Container[] = [];
     const startMains: number[] = [];
-    for (let row = 0; row < visibleCells; row++) {
-      const sym = reel.getSymbolAt(row);
+    for (let cell = 0; cell < visibleCells; cell++) {
+      const sym = reel.getSymbolAt(cell);
       symbols.push(sym);
       views.push(sym.view);
       startMains.push(axis.getMain(sym.view));
@@ -160,11 +160,11 @@ export class CascadeFallPhase extends ReelPhase<CascadeFallPhaseConfig> {
 
     const reverseOrder = this._fall.cellOrder === 'endFirst';
 
-    for (let row = 0; row < visibleCells; row++) {
-      const view = views[row];
-      const symbol = symbols[row];
-      const startMain = startMains[row];
-      const orderIndex = reverseOrder ? visibleCells - 1 - row : row;
+    for (let cell = 0; cell < visibleCells; cell++) {
+      const view = views[cell];
+      const symbol = symbols[cell];
+      const startMain = startMains[cell];
+      const orderIndex = reverseOrder ? visibleCells - 1 - cell : cell;
       const offset = orderIndex * staggerSec;
 
       // Fire the per-symbol event right before the tween starts so listeners
@@ -180,7 +180,7 @@ export class CascadeFallPhase extends ReelPhase<CascadeFallPhaseConfig> {
             symbol,
             view,
             reelIndex,
-            cellIndex: row,
+            cellIndex: cell,
             duration: this._fall.duration,
             ease: this._fall.ease,
             distance: fallDistance,

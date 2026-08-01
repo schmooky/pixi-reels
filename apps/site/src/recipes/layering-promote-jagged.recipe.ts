@@ -70,8 +70,8 @@ let scatterCells = [];
 const promoted = [];
 let spinGen = 0; // stale-timer guard: bumped on every spin:start
 
-function promoteScatter(reel, row) {
-  const sym = reelSet.getReel(reel).getSymbolAt(row);
+function promoteScatter(reel, cell) {
+  const sym = reelSet.getReel(reel).getSymbolAt(cell);
   if (!sym) return;
   const view = sym.view;
   const layer = reelSet.viewport.spotlightContainer;
@@ -89,7 +89,7 @@ reelSet.events.on('spin:reelLanded', (reelIndex) => {
   // Let the stop bounce settle before lifting the view out of the reel.
   sleep(380).then(() => {
     if (gen !== spinGen) return;
-    for (const c of landed) promoteScatter(c.reel, c.row);
+    for (const c of landed) promoteScatter(c.reel, c.cell);
   });
 });
 
@@ -114,9 +114,9 @@ return {
     // their right.
     scatterCells = [];
     for (const reel of [0, 3, 5]) {
-      const row = Math.floor(Math.random() * grid[reel].length);
-      grid[reel][row] = 'scatter';
-      scatterCells.push({ reel, row });
+      const cell = Math.floor(Math.random() * grid[reel].length);
+      grid[reel][cell] = 'scatter';
+      scatterCells.push({ reel, cell });
     }
     return grid;
   },

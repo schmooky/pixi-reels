@@ -45,9 +45,9 @@ return {
       Array.from({ length: ROWS }, () => CARD_DECK[Math.floor(Math.random() * CARD_DECK.length)].id),
     );
     // Always plant the square so the demo always shows the mechanic.
-    const col = Math.floor(Math.random() * (REELS - SQUARE.w + 1));
-    const row = Math.floor(Math.random() * (ROWS - SQUARE.h + 1));
-    grid[col][row] = SQUARE.id;
+    const reel = Math.floor(Math.random() * (REELS - SQUARE.w + 1));
+    const cell = Math.floor(Math.random() * (ROWS - SQUARE.h + 1));
+    grid[reel][cell] = SQUARE.id;
     return grid;
   },
 };

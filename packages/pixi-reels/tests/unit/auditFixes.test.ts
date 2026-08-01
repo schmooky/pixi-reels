@@ -44,7 +44,7 @@ describe('ReelSet.refill. input validation', () => {
     ]);
     await expect(
       reelSet.refill({
-        winners: [{ reel: 0, row: 0 }],
+        winners: [{ reel: 0, cell: 0 }],
         grid: [
           { visible: ['d', 'a', 'b'] },
           { visible: ['d', 'a', 'b'] },
@@ -56,7 +56,7 @@ describe('ReelSet.refill. input validation', () => {
     destroy();
   });
 
-  it('throws RangeError when a column has wrong row count', async () => {
+  it('throws RangeError when a column has wrong cell count', async () => {
     const { reelSet, destroy } = buildTumbleHarness([
       ['a', 'b', 'c'],
       ['a', 'b', 'c'],
@@ -64,14 +64,14 @@ describe('ReelSet.refill. input validation', () => {
     ]);
     await expect(
       reelSet.refill({
-        winners: [{ reel: 0, row: 0 }],
+        winners: [{ reel: 0, cell: 0 }],
         grid: [
           { visible: ['d', 'a'] },
           { visible: ['d', 'a', 'b'] },
           { visible: ['d', 'a', 'b'] },
         ],
       }),
-    ).rejects.toThrow(/grid column 0 has 2 row.* but reel 0 has 3/);
+    ).rejects.toThrow(/grid column 0 has 2 cell.* but reel 0 has 3/);
     expect(reelSet.isSpinning).toBe(false);
     destroy();
   });
@@ -84,7 +84,7 @@ describe('ReelSet.refill. input validation', () => {
     ]);
     await expect(
       reelSet.refill({
-        winners: [{ reel: 5, row: 0 }],
+        winners: [{ reel: 5, cell: 0 }],
         grid: [
           { visible: ['d', 'a', 'b'] },
           { visible: ['d', 'a', 'b'] },
@@ -96,7 +96,7 @@ describe('ReelSet.refill. input validation', () => {
     destroy();
   });
 
-  it('throws RangeError when winner.row is out of range', async () => {
+  it('throws RangeError when winner.cell is out of range', async () => {
     const { reelSet, destroy } = buildTumbleHarness([
       ['a', 'b', 'c'],
       ['a', 'b', 'c'],
@@ -104,14 +104,14 @@ describe('ReelSet.refill. input validation', () => {
     ]);
     await expect(
       reelSet.refill({
-        winners: [{ reel: 0, row: 99 }],
+        winners: [{ reel: 0, cell: 99 }],
         grid: [
           { visible: ['d', 'a', 'b'] },
           { visible: ['d', 'a', 'b'] },
           { visible: ['d', 'a', 'b'] },
         ],
       }),
-    ).rejects.toThrow(/winner\.row 99 out of range \[0, 3\) for reel 0/);
+    ).rejects.toThrow(/winner\.cell 99 out of range \[0, 3\) for reel 0/);
     expect(reelSet.isSpinning).toBe(false);
     destroy();
   });
@@ -123,7 +123,7 @@ describe('ReelSet.refill. input validation', () => {
       ['a', 'b', 'c'],
     ]);
     const result = await reelSet.refill({
-      winners: [{ reel: 0, row: 0 }],
+      winners: [{ reel: 0, cell: 0 }],
       grid: [
         { visible: ['d', 'b', 'c'] },
         { visible: ['a', 'b', 'c'] },
@@ -164,7 +164,7 @@ describe('ReelSet.refill. input validation', () => {
     queueMicrotask(() => controller.abort());
 
     const result = await reelSet.refill({
-      winners: [{ reel: 0, row: 0 }],
+      winners: [{ reel: 0, cell: 0 }],
       grid: [
         { visible: ['d', 'b', 'c'] },
         { visible: ['a', 'b', 'c'] },
@@ -197,7 +197,7 @@ describe('ReelSet.refill. input validation', () => {
     controller.abort();
 
     const result = await reelSet.refill({
-      winners: [{ reel: 0, row: 0 }],
+      winners: [{ reel: 0, cell: 0 }],
       grid: [
         { visible: ['d', 'b', 'c'] },
         { visible: ['a', 'b', 'c'] },
@@ -250,7 +250,7 @@ describe('ReelSet.skip. pre-setResult guard', () => {
 
 // -- distance: 'auto' falls back to per-hole for survivors ----------------
 describe('CascadeDropInPhase. distance: auto fallback for survivors', () => {
-  it('survivors slide from their old row, not from above the viewport (distance: auto, Moment B)', async () => {
+  it('survivors slide from their old cell, not from above the viewport (distance: auto, Moment B)', async () => {
     // The bug: with `distance: 'auto'`, a survivor (originalCell >= 0) was
     // teleported to `finalY - visibleCells * cellHeight` (above the viewport)
     // before being dropped. visible discontinuity. The fix: fall back to
@@ -283,16 +283,16 @@ describe('CascadeDropInPhase. distance: auto fallback for survivors', () => {
     // Kick off but don't await. we want to read view.y right after the
     // synchronous onEnter runs.
     void phase.run({
-      winnerCells: [2],   // bottom row destroyed -> row 0 = new, cells 1,2 = survivors from 0,1
+      winnerCells: [2],   // bottom cell destroyed -> cell 0 = new, cells 1,2 = survivors from 0,1
       initial: false,
       events: localBus,
     });
 
-    // Survivor row 1 originated from old row 0 -> perHole startY = 0
+    // Survivor cell 1 originated from old cell 0 -> perHole startY = 0
     // (NOT auto's `finalY - 3*cellHeight = -2*cellHeight`).
-    // Survivor row 2 originated from old row 1 -> perHole startY = cellHeight
+    // Survivor cell 2 originated from old cell 1 -> perHole startY = cellHeight
     // (NOT auto's `finalY - 3*cellHeight = -cellHeight`).
-    // New row 0 (originalCell < 0) still uses auto: `finalY - 3*cellHeight = -3*cellHeight`.
+    // New cell 0 (originalCell < 0) still uses auto: `finalY - 3*cellHeight = -3*cellHeight`.
     expect(reel.getSymbolAt(1).view.y).toBe(0);              // perHole for survivor
     expect(reel.getSymbolAt(2).view.y).toBe(cellHeight);     // perHole for survivor
     expect(reel.getSymbolAt(0).view.y).toBe(-3 * cellHeight); // auto for new symbol
@@ -309,9 +309,9 @@ describe('CascadeDropInPhase. distance: auto fallback for survivors', () => {
       ['a', 'b', 'c'],
     ]);
 
-    // The initial path uses 'auto' for every row regardless of originalCell.
+    // The initial path uses 'auto' for every cell regardless of originalCell.
     // We test this indirectly via computeDropOffsets. on initial drop with
-    // empty winners, every row is treated as new (originalCell < 0). The
+    // empty winners, every cell is treated as new (originalCell < 0). The
     // 'auto' branch fires for all of them, not the perHole fallback.
     const offsets = computeDropOffsets(3, [], { initial: true });
     expect(offsets.every((o) => o.originalCell < 0)).toBe(true);
@@ -380,7 +380,7 @@ describe('ReelSet.destroySymbols. AbortSignal', () => {
     const controller = new AbortController();
     controller.abort();
 
-    const cells: Cell[] = [{ reel: 0, row: 0 }, { reel: 1, row: 1 }];
+    const cells: Cell[] = [{ reel: 0, cell: 0 }, { reel: 1, cell: 1 }];
     const t0 = performance.now();
     await reelSet.destroySymbols(cells, { signal: controller.signal, zIndex: null });
     const elapsed = performance.now() - t0;
@@ -413,9 +413,9 @@ describe('ReelSet.destroySymbols. Promise.allSettled', () => {
 
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const cells: Cell[] = [
-      { reel: 0, row: 0 },
-      { reel: 1, row: 1 },
-      { reel: 2, row: 2 },
+      { reel: 0, cell: 0 },
+      { reel: 1, cell: 1 },
+      { reel: 2, cell: 2 },
     ];
     // Should resolve normally even though one tween rejected.
     await expect(reelSet.destroySymbols(cells, { zIndex: null })).resolves.toBeUndefined();
@@ -427,7 +427,7 @@ describe('ReelSet.destroySymbols. Promise.allSettled', () => {
     expect(endPayload!.cells).toHaveLength(3);
     expect(endPayload!.failed).toBeDefined();
     expect(endPayload!.failed).toHaveLength(1);
-    expect(endPayload!.failed![0]).toEqual({ reel: 1, row: 1 });
+    expect(endPayload!.failed![0]).toEqual({ reel: 1, cell: 1 });
     destroy();
   });
 
@@ -444,7 +444,7 @@ describe('ReelSet.destroySymbols. Promise.allSettled', () => {
     const controller = new AbortController();
     controller.abort();  // fast-path: synchronous resolution
     await reelSet.destroySymbols(
-      [{ reel: 0, row: 0 }],
+      [{ reel: 0, cell: 0 }],
       { signal: controller.signal, zIndex: null },
     );
     expect(endPayload!.failed).toBeUndefined();
@@ -480,7 +480,7 @@ describe('SpinController. per-reel rejection recovery', () => {
     // Refill: expect resolve (not hang, not reject) thanks to _runReelTask
     // catching the per-reel rejection and slamming.
     const result = await reelSet.refill({
-      winners: [{ reel: 0, row: 0 }, { reel: 1, row: 0 }, { reel: 2, row: 0 }],
+      winners: [{ reel: 0, cell: 0 }, { reel: 1, cell: 0 }, { reel: 2, cell: 0 }],
       grid: [
         { visible: ['d', 'a', 'b'] },
         { visible: ['d', 'a', 'b'] },

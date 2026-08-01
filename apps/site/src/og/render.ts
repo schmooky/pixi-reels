@@ -251,7 +251,7 @@ function card(t: OgTarget): Node {
       fontFamily: 'Inter',
     },
     [
-      // top brand row
+      // top brand cell
       h('div', { display: 'flex', alignItems: 'center', justifyContent: 'space-between' }, [
         brandMark(),
         h(

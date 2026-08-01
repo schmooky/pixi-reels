@@ -13,13 +13,13 @@ describe('ReelSet.destroySymbols', () => {
   it('runs playDestroy on every cell and leaves them at alpha 0', async () => {
     const { reelSet, destroy } = createTestReelSet({ reels: 3, visibleCells: 3 });
     const cells = [
-      { reel: 0, row: 0 },
-      { reel: 1, row: 1 },
-      { reel: 2, row: 2 },
+      { reel: 0, cell: 0 },
+      { reel: 1, cell: 1 },
+      { reel: 2, cell: 2 },
     ];
     await reelSet.destroySymbols(cells);
     for (const c of cells) {
-      const sym = reelSet.reels[c.reel].getSymbolAt(c.row);
+      const sym = reelSet.reels[c.reel].getSymbolAt(c.cell);
       expect(sym.view.alpha).toBe(0);
     }
     destroy();
@@ -27,7 +27,7 @@ describe('ReelSet.destroySymbols', () => {
 
   it('lifts zIndex to 1000 by default so destroyed cells render above neighbours', async () => {
     const { reelSet, destroy } = createTestReelSet({ reels: 2, visibleCells: 2 });
-    const cell = { reel: 0, row: 0 };
+    const cell = { reel: 0, cell: 0 };
     await reelSet.destroySymbols([cell]);
     expect(reelSet.reels[0].getSymbolAt(0).view.zIndex).toBe(1000);
     destroy();
@@ -35,7 +35,7 @@ describe('ReelSet.destroySymbols', () => {
 
   it('respects an explicit zIndex override', async () => {
     const { reelSet, destroy } = createTestReelSet({ reels: 2, visibleCells: 2 });
-    await reelSet.destroySymbols([{ reel: 0, row: 0 }], { zIndex: 42 });
+    await reelSet.destroySymbols([{ reel: 0, cell: 0 }], { zIndex: 42 });
     expect(reelSet.reels[0].getSymbolAt(0).view.zIndex).toBe(42);
     destroy();
   });
@@ -44,15 +44,15 @@ describe('ReelSet.destroySymbols', () => {
     const { reelSet, destroy } = createTestReelSet({ reels: 2, visibleCells: 2 });
     const sym = reelSet.reels[0].getSymbolAt(0);
     sym.view.zIndex = 7;
-    await reelSet.destroySymbols([{ reel: 0, row: 0 }], { zIndex: null });
+    await reelSet.destroySymbols([{ reel: 0, cell: 0 }], { zIndex: null });
     expect(sym.view.zIndex).toBe(7);
     destroy();
   });
 
   it('throws on out-of-range reel without partially destroying anything', async () => {
     const { reelSet, destroy } = createTestReelSet({ reels: 2, visibleCells: 2 });
-    const okCell = { reel: 0, row: 0 };
-    const badCell = { reel: 99, row: 0 };
+    const okCell = { reel: 0, cell: 0 };
+    const badCell = { reel: 99, cell: 0 };
     const before = reelSet.reels[0].getSymbolAt(0).view.alpha;
     await expect(reelSet.destroySymbols([okCell, badCell])).rejects.toThrow(
       /destroySymbols: cell\.reel 99/,
@@ -61,10 +61,10 @@ describe('ReelSet.destroySymbols', () => {
     destroy();
   });
 
-  it('throws on out-of-range row', async () => {
+  it('throws on out-of-range cell', async () => {
     const { reelSet, destroy } = createTestReelSet({ reels: 2, visibleCells: 2 });
-    await expect(reelSet.destroySymbols([{ reel: 0, row: 5 }])).rejects.toThrow(
-      /destroySymbols: cell\.row 5/,
+    await expect(reelSet.destroySymbols([{ reel: 0, cell: 5 }])).rejects.toThrow(
+      /destroySymbols: cell\.cell 5/,
     );
     destroy();
   });
@@ -78,8 +78,8 @@ describe('ReelSet.destroySymbols', () => {
       events.push(`end:${cells.length}`));
 
     await reelSet.destroySymbols([
-      { reel: 0, row: 0 },
-      { reel: 2, row: 2 },
+      { reel: 0, cell: 0 },
+      { reel: 2, cell: 2 },
     ]);
 
     expect(events).toEqual(['start:2', 'end:2']);
@@ -101,7 +101,7 @@ describe('ReelSet.destroySymbols', () => {
     // pure scale-and-fade poof. assert the public observable: every cell
     // ends at alpha 0 (no exception thrown).
     const { reelSet, destroy } = createTestReelSet({ reels: 4, visibleCells: 1 });
-    const cells = [0, 1, 2, 3].map((reel) => ({ reel, row: 0 }));
+    const cells = [0, 1, 2, 3].map((reel) => ({ reel, cell: 0 }));
     await reelSet.destroySymbols(cells);
     for (const c of cells) {
       expect(reelSet.reels[c.reel].getSymbolAt(0).view.alpha).toBe(0);

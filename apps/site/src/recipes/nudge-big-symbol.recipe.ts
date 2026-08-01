@@ -7,8 +7,8 @@
 // Demonstrates that a 1xH block on the target reel is nudged as a unit
 // when the rotation preserves the block. Sequence:
 //
-//   1. Land with a 1x2 "MEGA" wild at cells 0+1 (anchor at row 0).
-//   2. Nudge DOWN by 2. anchor moves to row 2, stub spills into
+//   1. Land with a 1x2 "MEGA" wild at cells 0+1 (anchor at cell 0).
+//   2. Nudge DOWN by 2. anchor moves to cell 2, stub spills into
 //      bufferEnd. Only the TOP half of the block is visible.
 //   3. Nudge UP by 1. block snaps back into full visibility at cells 1+2.
 //
@@ -57,7 +57,7 @@ return {
   reelSet,
   onSpin: async () => {
     // 1. Land a 1x2 MEGA wild at column 2, cells 0+1. The OCCUPIED stub
-    //    at row 1 is placed by the big-symbol coordinator inside setResult.
+    //    at cell 1 is placed by the big-symbol coordinator inside setResult.
     const grid = [col3(), col3(), [MEGA.id, MEGA.id, filler()], col3(), col3()];
     const p = reelSet.spin();
     await new Promise((r) => setTimeout(r, 220));
@@ -66,7 +66,7 @@ return {
     await new Promise((r) => setTimeout(r, 500));
 
     // 2. Nudge column 2 DOWN by 2. Survival: 1 + 2 - 1 + 2 = 4 < 5 ✓.
-    //    After: anchor at row 2, stub at bufferEnd → only top half of
+    //    After: anchor at cell 2, stub at bufferEnd → only top half of
     //    the block is visible.
     await reelSet.nudge(2, {
       distance: 2,

@@ -11,7 +11,7 @@ const COLS = 5, ROWS = 3, CELL = 76, GAP = 6;
 const COIN = 'coin';
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const fmt = (v) => v.toFixed(2);
-const ck = (c) => `${c.col},${c.row}`;
+const ck = (c) => `${c.reel},${c.cell}`;
 
 const { symbols, blur, coin } = await loadHoldAndWinSprites();
 const valueText = (text, size) => { const t = new PIXI.BitmapText({ text, style: { fontFamily: 'DiamondDigits', fontSize: size } }); t.anchor.set(0.5); return t; };
@@ -62,7 +62,7 @@ const paintLabel = (cell, value) => {
 };
 
 // --- the bonus cells: a glowing marker over each, riding the board ---
-const BONUS = [{ col: 1, row: 0 }, { col: 3, row: 1 }, { col: 2, row: 2 }];
+const BONUS = [{ reel: 1, cell: 0 }, { reel: 3, cell: 1 }, { reel: 2, cell: 2 }];
 const bonusSet = new Set(BONUS.map(ck));
 const markers = new Map();
 const fadingMarkers = new Set(); // markers mid fade-out, tracked so a reset can still kill them
@@ -105,9 +105,9 @@ board.events.on('coin:locked', ({ coin }) => {
 const val = () => [2, 5, 10, 15, 25][Math.floor(Math.random() * 5)];
 // scripted so coins land both on and off the bonus cells
 const ROUNDS = [
-  [{ col: 1, row: 0 }, { col: 0, row: 2 }], // (1,0) is a bonus cell -> doubles
-  [{ col: 3, row: 1 }, { col: 4, row: 0 }], // (3,1) is a bonus cell -> doubles
-  [{ col: 2, row: 2 }],                     // (2,2) is a bonus cell -> doubles
+  [{ reel: 1, cell: 0 }, { reel: 0, cell: 2 }], // (1,0) is a bonus cell -> doubles
+  [{ reel: 3, cell: 1 }, { reel: 4, cell: 0 }], // (3,1) is a bonus cell -> doubles
+  [{ reel: 2, cell: 2 }],                     // (2,2) is a bonus cell -> doubles
   [],
 ];
 

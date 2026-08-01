@@ -63,7 +63,7 @@ interface ResolvedOptions {
  * emits `win:start` / `win:group` / `win:symbol` / `win:end` events so
  * your code can hook anything it wants (polylines, Spine line rigs,
  * popup numbers, sound cues) by subscribing and using
- * `reelSet.getCellBounds(col, row)` to place graphics.
+ * `reelSet.getCellBounds(reel, cell)` to place graphics.
  *
  * Two knobs cover the common presentation modes:
  *
@@ -207,9 +207,9 @@ export class WinPresenter implements Disposable {
     const reels = this._reelSet.reels;
     for (let r = 0; r < reels.length; r++) {
       const reel = reels[r];
-      for (let row = 0; row < reel.visibleCells; row++) {
-        const view = reel.getSymbolAt(row).view;
-        view.alpha = winKeys.has(`${r}:${row}`) ? 1 : alpha;
+      for (let cell = 0; cell < reel.visibleCells; cell++) {
+        const view = reel.getSymbolAt(cell).view;
+        view.alpha = winKeys.has(`${r}:${cell}`) ? 1 : alpha;
       }
     }
   }
@@ -217,8 +217,8 @@ export class WinPresenter implements Disposable {
   private _restoreAlpha(): void {
     const reels = this._reelSet.reels;
     for (const reel of reels) {
-      for (let row = 0; row < reel.visibleCells; row++) {
-        reel.getSymbolAt(row).view.alpha = 1;
+      for (let cell = 0; cell < reel.visibleCells; cell++) {
+        reel.getSymbolAt(cell).view.alpha = 1;
       }
     }
   }

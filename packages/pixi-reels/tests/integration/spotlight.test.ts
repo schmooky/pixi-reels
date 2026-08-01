@@ -29,7 +29,7 @@ describe('SymbolSpotlight — symbol parent invariant after recycling', () => {
         ['a', 'b', 'c'],
       ]);
 
-      // Fire a spotlight on reel 0 row 1. The ReelSet uses a shared symbol
+      // Fire a spotlight on reel 0 cell 1. The ReelSet uses a shared symbol
       // pool - the 'a' instance at reel 0 may end up reused on a different
       // reel after the next placeSymbols call.
       await h.reelSet.spotlight.show(
@@ -39,7 +39,7 @@ describe('SymbolSpotlight — symbol parent invariant after recycling', () => {
 
       // Land a different grid. Each reel's placeSymbols releases its old
       // symbols to the pool and acquires fresh ones - guaranteeing the 'a'
-      // instance from reel 0 row 1 gets reassigned somewhere else.
+      // instance from reel 0 cell 1 gets reassigned somewhere else.
       await h.spinAndLand([
         ['c', 'c', 'c'],
         ['c', 'c', 'c'],

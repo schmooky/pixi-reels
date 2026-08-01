@@ -44,9 +44,9 @@ return {
     const grid = Array.from({ length: REELS }, () =>
       Array.from({ length: ROWS }, () => CARD_DECK[Math.floor(Math.random() * CARD_DECK.length)].id),
     );
-    const col = Math.floor(Math.random() * (REELS - WIDE.w + 1));
-    const row = Math.floor(Math.random() * (ROWS - WIDE.h + 1));
-    grid[col][row] = WIDE.id;
+    const reel = Math.floor(Math.random() * (REELS - WIDE.w + 1));
+    const cell = Math.floor(Math.random() * (ROWS - WIDE.h + 1));
+    grid[reel][cell] = WIDE.id;
     return grid;
   },
 };

@@ -145,8 +145,8 @@ export async function mountMiniReels(
     const blurring = new Array<boolean>(cfg.reelCount).fill(false);
     const setReelBlur = (reelIdx: number, on: boolean) => {
       const reel = reelSet.getReel(reelIdx);
-      for (let row = 0; row < cfg.visibleCells; row++) {
-        const sym = reel.getSymbolAt(row);
+      for (let cell = 0; cell < cfg.visibleCells; cell++) {
+        const sym = reel.getSymbolAt(cell);
         if (sym instanceof BlurSpriteSymbol) sym.setBlurred(on);
       }
     };
@@ -222,7 +222,7 @@ export async function mountMiniReels(
 
 export async function fadeOutCells(
   reelSet: ReelSet,
-  cells: Array<{ reel: number; row: number }>,
+  cells: Array<{ reel: number; cell: number }>,
   durationMs = 320,
 ): Promise<void> {
   if (cells.length === 0) return;
@@ -241,7 +241,7 @@ export async function fadeOutCells(
   const pinned: Pinned[] = [];
   for (const c of cells) {
     const reel = reelSet.getReel(c.reel);
-    const view = reel.getSymbolAt(c.row).view;
+    const view = reel.getSymbolAt(c.cell).view;
     // Infer cell size from the reel's grid geometry: two cells' y difference
     // gives the slot pitch; symbol's own local bounds give the render width.
     const cellH = reel.getSymbolAt(Math.min(1, reel.getVisibleSymbols().length - 1)).view.y

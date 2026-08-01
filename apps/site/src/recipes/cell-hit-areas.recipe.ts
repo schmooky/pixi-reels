@@ -32,16 +32,16 @@ function redraw() {
   overlayGfx.clear();
   // Picked cells. solid orange.
   for (const k of picked) {
-    const [col, row] = parseKey(k);
-    const b = reelSet.getCellBounds(col, row);
+    const [reel, cell] = parseKey(k);
+    const b = reelSet.getCellBounds(reel, cell);
     overlayGfx
       .roundRect(b.x + 3, b.y + 3, b.width - 6, b.height - 6, 10)
       .stroke({ color: 0xff6b35, width: 3, alpha: 1 });
   }
   // Hover cell. soft grey preview (only if not already picked).
   if (hoverKey && !picked.has(hoverKey)) {
-    const [col, row] = parseKey(hoverKey);
-    const b = reelSet.getCellBounds(col, row);
+    const [reel, cell] = parseKey(hoverKey);
+    const b = reelSet.getCellBounds(reel, cell);
     overlayGfx
       .roundRect(b.x + 3, b.y + 3, b.width - 6, b.height - 6, 10)
       .stroke({ color: 0x666666, width: 2, alpha: 0.55 });
@@ -49,8 +49,8 @@ function redraw() {
 }
 
 // Pulse the winning outline when a pick happens.
-function pulse(col, row) {
-  const b = reelSet.getCellBounds(col, row);
+function pulse(reel, cell) {
+  const b = reelSet.getCellBounds(reel, cell);
   const pulseGfx = new PIXI.Graphics();
   pulseGfx
     .roundRect(b.x + 3, b.y + 3, b.width - 6, b.height - 6, 10)
@@ -70,20 +70,20 @@ function pulse(col, row) {
 // the pointer-cursor feel; pointertap toggles the pick, pointerover/out
 // drive the hover preview.
 const hitAreas = [];
-for (let col = 0; col < COLS; col++) {
-  for (let row = 0; row < ROWS; row++) {
-    const b = reelSet.getCellBounds(col, row);
+for (let reel = 0; reel < COLS; reel++) {
+  for (let cell = 0; cell < ROWS; cell++) {
+    const b = reelSet.getCellBounds(reel, cell);
     const hit = new PIXI.Graphics();
     // Filled with alpha 0. invisible but still hit-testable.
     hit.rect(b.x, b.y, b.width, b.height).fill({ color: 0xffffff, alpha: 0 });
     hit.eventMode = 'static';
     hit.cursor = 'pointer';
-    const k = keyOf(col, row);
+    const k = keyOf(reel, cell);
     hit.on('pointerover', () => { hoverKey = k; redraw(); });
     hit.on('pointerout', () => { if (hoverKey === k) hoverKey = null; redraw(); });
     hit.on('pointertap', () => {
       if (picked.has(k)) picked.delete(k);
-      else { picked.add(k); pulse(col, row); }
+      else { picked.add(k); pulse(reel, cell); }
       redraw();
     });
     reelSet.addChild(hit);

@@ -67,13 +67,13 @@ const reelSet = new ReelSetBuilder()
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /** The live SpineReelSymbol behind a landed cell, or null while spinning. */
-function spineAt(reel, row) {
-  const sym = reelSet.getReel(reel).getSymbolAt(row);
+function spineAt(reel, cell) {
+  const sym = reelSet.getReel(reel).getSymbolAt(cell);
   const inner = sym instanceof StaticSpinSymbol ? sym.inner : sym;
   return inner instanceof SpineReelSymbol ? inner : null;
 }
 
-let scatterCells = []; // [{ reel, row }] for the current spin, left to right
+let scatterCells = []; // [{ reel, cell }] for the current spin, left to right
 let armReel = -1;      // reel whose landing starts the tease (2nd scatter)
 let won = false;
 
@@ -85,8 +85,8 @@ let won = false;
 // next spin:start before the reels move again.
 const promoted = [];
 let spinGen = 0; // bumped on spin:start so stale timers can't promote mid-spin
-function promoteScatter(reel, row) {
-  const sym = reelSet.getReel(reel).getSymbolAt(row);
+function promoteScatter(reel, cell) {
+  const sym = reelSet.getReel(reel).getSymbolAt(cell);
   if (!sym) return;
   const view = sym.view;
   const layer = reelSet.viewport.spotlightContainer;
@@ -105,7 +105,7 @@ reelSet.events.on('spin:reelLanded', async (reelIndex) => {
     const gen = spinGen;
     sleep(380).then(() => {
       if (gen !== spinGen) return; // a new spin superseded this land
-      for (const c of landedScatters) promoteScatter(c.reel, c.row);
+      for (const c of landedScatters) promoteScatter(c.reel, c.cell);
     });
   }
 
@@ -116,7 +116,7 @@ reelSet.events.on('spin:reelLanded', async (reelIndex) => {
     await sleep(380);
     for (const [i, c] of scatterCells.entries()) {
       if (c.reel > reelIndex) continue;
-      const spine = spineAt(c.reel, c.row);
+      const spine = spineAt(c.reel, c.cell);
       if (!spine?.spine) continue;
       spine.playOnTrack(0, i === 0 ? 'firstReelScatterNearWin' : 'nearWinStart');
       spine.spine.state.addAnimation(0, 'nearWinLoop', true, 0);
@@ -126,12 +126,12 @@ reelSet.events.on('spin:reelLanded', async (reelIndex) => {
 
   if (reelIndex === LAST && won) {
     const lastCell = scatterCells[scatterCells.length - 1];
-    const lastSpine = spineAt(lastCell.reel, lastCell.row);
+    const lastSpine = spineAt(lastCell.reel, lastCell.cell);
     // The rightmost jaw pose on the deciding land, then the payoff on all.
     lastSpine?.playOnTrack(0, 'lastReelScatterNearWin');
     await sleep(380);
     for (const c of scatterCells) {
-      const spine = spineAt(c.reel, c.row);
+      const spine = spineAt(c.reel, c.cell);
       if (!spine?.spine) continue;
       spine.playOnTrack(0, 'bonusGameWon');
       spine.spine.state.addAnimation(0, 'bonusGameWonLoop', true, 0);
@@ -154,7 +154,7 @@ reelSet.events.on('spin:complete', async () => {
   // Near-win missed: hold the disappointment a beat, then back to idle.
   await sleep(700);
   for (const c of scatterCells) {
-    spineAt(c.reel, c.row)?.stopAnimation();
+    spineAt(c.reel, c.cell)?.stopAnimation();
   }
 });
 
@@ -171,9 +171,9 @@ return {
       Array.from({ length: cells }, () => pickWeighted(weights)),
     );
     const place = (reel) => {
-      const row = Math.floor(Math.random() * grid[reel].length);
-      grid[reel][row] = 'scatter';
-      return { reel, row };
+      const cell = Math.floor(Math.random() * grid[reel].length);
+      grid[reel][cell] = 'scatter';
+      return { reel, cell };
     };
     scatterCells = [place(0), place(2)];
     if (won) scatterCells.push(place(LAST));

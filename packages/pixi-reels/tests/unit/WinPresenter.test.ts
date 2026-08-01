@@ -11,8 +11,8 @@ function mkWin(cells: SymbolPosition[], value?: number, id?: number): Win {
   return { cells, value, id };
 }
 
-function cell(r: number, row: number): SymbolPosition {
-  return { reelIndex: r, cellIndex: row };
+function cell(r: number, cell: number): SymbolPosition {
+  return { reelIndex: r, cellIndex: cell };
 }
 
 describe('sortByValueDesc', () => {
@@ -102,8 +102,8 @@ describe('WinPresenter — dim / restore', () => {
       expect(winnerAlpha).toBe(1);
       expect(loserAlpha).toBeCloseTo(0.2, 5);
       for (let r = 0; r < 5; r++) {
-        for (let row = 0; row < 3; row++) {
-          expect(h.reelSet.getReel(r).getSymbolAt(row).view.alpha).toBe(1);
+        for (let cell = 0; cell < 3; cell++) {
+          expect(h.reelSet.getReel(r).getSymbolAt(cell).view.alpha).toBe(1);
         }
       }
       p.destroy();
@@ -173,18 +173,18 @@ describe('WinPresenter — symbolAnim modes', () => {
   it('custom callback runs per cell with (symbol, cell, win)', async () => {
     const h = createTestReelSet({ reels: 3, visibleCells: 3, symbolIds: ['a'] });
     try {
-      const calls: Array<{ r: number; row: number; id: number | undefined }> = [];
+      const calls: Array<{ r: number; cell: number; id: number | undefined }> = [];
       const p = new WinPresenter(h.reelSet, {
         cycleGap: 0,
         symbolAnim: async (_sym, c, win) => {
-          calls.push({ r: c.reelIndex, row: c.cellIndex, id: win.id });
+          calls.push({ r: c.reelIndex, cell: c.cellIndex, id: win.id });
         },
       });
       await h.spinAndLand([['a', 'a', 'a'], ['a', 'a', 'a'], ['a', 'a', 'a']]);
       await p.show([mkWin([cell(0, 1), cell(2, 1)], 10, 42)]);
       expect(calls).toEqual([
-        { r: 0, row: 1, id: 42 },
-        { r: 2, row: 1, id: 42 },
+        { r: 0, cell: 1, id: 42 },
+        { r: 2, cell: 1, id: 42 },
       ]);
       p.destroy();
     } finally {

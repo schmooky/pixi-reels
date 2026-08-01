@@ -35,7 +35,7 @@ const reelSet = new ReelSetBuilder()
 
 // ── Expand wilds on land, persist for N spins ───────────────────────────
 // For every reel that has a wild somewhere in its visible cells, pin every
-// row of that reel with WILD for STICKY_TURNS spins. The engine decrements
+// cell of that reel with WILD for STICKY_TURNS spins. The engine decrements
 // `turns` after each spin:allLanded and auto-expires pins at zero.
 //
 // Pinning the wild's own cell too means the "original" wild also benefits
@@ -60,12 +60,12 @@ let spinCount = 0;
 return {
   reelSet,
   nextResult: () => {
-    const col = wildColumn[spinCount % wildColumn.length];
+    const reel = wildColumn[spinCount % wildColumn.length];
     const grid = Array.from({ length: COLS }, () =>
       Array.from({ length: ROWS }, () => FILLER[Math.floor(Math.random() * FILLER.length)]),
     );
-    // Place one wild in the middle row of the chosen column
-    grid[col][1] = WILD;
+    // Place one wild in the middle cell of the chosen column
+    grid[reel][1] = WILD;
     spinCount++;
     return grid;
   },

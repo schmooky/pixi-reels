@@ -4,7 +4,7 @@
 
 // NUDGE-IN, THEN HOLD a buffer-anchored big symbol across a respin.
 // Reel 3 lands with a tall wild whose anchor sits in bufferStart (only
-// the tail of the block shows at row 0). The player nudges to drag the
+// the tail of the block shows at cell 0). The player nudges to drag the
 // wild into full view, then gets a re-spin of the OTHER reels while
 // reel 3 is held. The held reel preserves the now-revealed block across
 // the respin because `SpinOptions.holdReels` skips START/SPIN/STOP on
@@ -39,8 +39,8 @@ const GAP = 4;
 const reelSet = new ReelSetBuilder()
   .reels(REELS)
   .visibleCells(ROWS)
-  // bufferStart >= 2 lets the 1x3 anchor sit at row -2 (block extends
-  // through row 0. tail visible).
+  // bufferStart >= 2 lets the 1x3 anchor sit at cell -2 (block extends
+  // through cell 0. tail visible).
   .bufferSymbols(2)
   .symbolSize(SIZE, SIZE)
   .symbolGap(GAP, GAP)
@@ -70,8 +70,8 @@ return {
     // ── 1. Initial spin lands the tail-visible wild on reel 2. ──────
     const initialGrid = [
       ct(), ct(),
-      // Reel 2: anchor at bufferStart[1] = row -2. Block spans cells
-      // -2, -1, 0. Only row 0 shows the block's bottom cell.
+      // Reel 2: anchor at bufferStart[1] = cell -2. Block spans cells
+      // -2, -1, 0. Only cell 0 shows the block's bottom cell.
       { visible: [filler(), filler(), filler()], bufferStart: [undefined, TALL.id] },
       ct(), ct(),
     ];

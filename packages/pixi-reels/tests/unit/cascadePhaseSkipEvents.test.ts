@@ -185,7 +185,7 @@ describe('CascadeDropInPhase. skip event pairing', () => {
     const drop = resolveTumbleConfig({}).dropIn;
     const phase = new CascadeDropInPhase(reel, SpeedPresets.NORMAL, drop);
 
-    // winnerCells=[1] on a 3-row reel gives the survivor at row 0 an
+    // winnerCells=[1] on a 3-cell reel gives the survivor at cell 0 an
     // `offsetCells=1` slide. i.e. a real gravity-stage job that produces
     // a non-trivial gsap timeline. Without this, every winner config we
     // could choose either leaves no work (the phase finishes

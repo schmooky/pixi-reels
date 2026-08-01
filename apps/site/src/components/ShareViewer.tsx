@@ -165,7 +165,7 @@ export default function ShareViewer(): JSX.Element {
   if (phase.kind === 'error') {
     return (
       <CenteredCard>
-        <div className="flex flex-col items-center gap-2 text-center">
+        <div className="flex flex-reel items-center gap-2 text-center">
           <AlertCircle size={32} className="text-destructive" />
           <div className="text-sm font-semibold">Couldn't load this share</div>
           <div className="max-w-sm text-xs text-muted-foreground">{phase.message}</div>
@@ -428,7 +428,7 @@ function SharedStudio({ config, assets, codeAccessible }: SharedStudioProps): JS
 
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_minmax(360px,520px)]">
-      <div className="flex flex-col overflow-hidden rounded-xl border border-border bg-card">
+      <div className="flex flex-reel overflow-hidden rounded-xl border border-border bg-card">
         <div className="relative flex-1 min-h-[480px]">
           <div ref={canvasHostRef} className="h-full w-full bg-background" />
           <button
@@ -471,7 +471,7 @@ function SharedStudio({ config, assets, codeAccessible }: SharedStudioProps): JS
       </div>
 
       {codeAccessible && (
-        <div className="flex flex-col overflow-hidden rounded-xl border border-border bg-card">
+        <div className="flex flex-reel overflow-hidden rounded-xl border border-border bg-card">
           <div className="border-b border-border/60 bg-background/40 px-3 py-2 text-xs font-semibold text-muted-foreground">
             Code (read-only)
           </div>

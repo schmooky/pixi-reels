@@ -6,7 +6,7 @@ import { anticipationForScatters } from '../../src/spin/anticipationRecipes.js';
 import type { ColumnTarget } from '../../src/frame/ColumnTarget.js';
 
 // 5x3 grid helper (ColumnTarget[], same shape setResult takes). `scatterReels`
-// lists which reels get one SCAT (row 1).
+// lists which reels get one SCAT (cell 1).
 function grid(scatterReels: number[]): ColumnTarget[] {
   return Array.from({ length: 5 }, (_, r) => {
     const visible = ['a', 'a', 'a'];

@@ -172,8 +172,8 @@ export async function mountPrototypeReels(
 
 function setReelBlur(reelSet: ReelSet, reelIndex: number, visibleCells: number, blurred: boolean): void {
   const reel = reelSet.getReel(reelIndex);
-  for (let row = 0; row < visibleCells; row++) {
-    const sym = reel.getSymbolAt(row);
+  for (let cell = 0; cell < visibleCells; cell++) {
+    const sym = reel.getSymbolAt(cell);
     if (sym instanceof BlurSpriteSymbol) sym.setBlurred(blurred);
   }
 }

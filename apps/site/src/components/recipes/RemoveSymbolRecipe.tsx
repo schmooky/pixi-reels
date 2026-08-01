@@ -33,8 +33,8 @@ const AFTER: string[][] = [
 function winnersOfX(grid: string[][]): Cell[] {
   const out: Cell[] = [];
   for (let reel = 0; reel < grid.length; reel++) {
-    for (let row = 0; row < grid[reel].length; row++) {
-      if (grid[reel][row] === X) out.push({ reel, row });
+    for (let cell = 0; cell < grid[reel].length; cell++) {
+      if (grid[reel][cell] === X) out.push({ reel, cell });
     }
   }
   return out;

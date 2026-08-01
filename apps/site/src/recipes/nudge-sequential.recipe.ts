@@ -52,8 +52,8 @@ return {
 
     // SEQUENTIAL. each `await` blocks the next iteration until this
     // reel's tween finishes. Total wall time = NUDGE_COLS.length * NUDGE_DURATION.
-    for (const col of NUDGE_COLS) {
-      await reelSet.nudge(col, {
+    for (const reel of NUDGE_COLS) {
+      await reelSet.nudge(reel, {
         distance: 1,
         direction: 'down',
         incoming: ['wild'],

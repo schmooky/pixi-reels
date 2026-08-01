@@ -143,8 +143,8 @@ export function mountCheatPanel(
   }
 
   function refresh(): void {
-    for (const row of cells) {
-      row.input.checked = row.def.enabled;
+    for (const cell of cells) {
+      cell.input.checked = cell.def.enabled;
     }
   }
 

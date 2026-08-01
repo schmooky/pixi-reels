@@ -3,8 +3,8 @@
 //           PIXI, gsap, app
 //
 // Row-complete jackpot. Whenever a coin locks, the game layer checks whether
-// it just completed a full row. If it did, that row flashes coin by coin, the
-// MINI plaque above the board fires its win, and the row's summed value flies
+// it just completed a full cell. If it did, that cell flashes coin by coin, the
+// MINI plaque above the board fires its win, and the cell's summed value flies
 // up into the plaque. Row detection is pure game logic over
 // `board.lockedCoins`; the board has no notion of "cells pay".
 
@@ -65,7 +65,7 @@ board.container.x = (app.screen.width - boardW) / 2;
 board.container.y = 112;
 app.stage.addChild(board.container);
 
-// -- the MINI plaque above the board, fired on a row complete --
+// -- the MINI plaque above the board, fired on a cell complete --
 const plaquePos = { x: app.screen.width / 2, y: 50 };
 const plaque = Spine.from({ skeleton: 'hw-panel-mini', atlas: 'hw-atlas' });
 if (plaque.skeleton.data.findAnimation('idle')) { plaque.state.setAnimation(0, 'idle', true); try { plaque.update(0); } catch {} }
@@ -80,7 +80,7 @@ awardText.position.set(plaquePos.x, plaquePos.y + pb.height * pScale * 0.18);
 app.stage.addChild(awardText);
 
 const hud = new PIXI.Text({
-  text: 'press spin · complete a row for MINI',
+  text: 'press spin · complete a cell for MINI',
   style: { fontFamily: 'system-ui, sans-serif', fontSize: 13, fontWeight: '600', fill: 0x9c8f78 },
 });
 hud.anchor.set(0.5, 0);
@@ -102,7 +102,7 @@ const fitGold = (t, maxW, maxH) => {
   return t;
 };
 const paintLabel = (cell, value) => {
-  const k = `${cell.col},${cell.row}`;
+  const k = `${cell.reel},${cell.cell}`;
   labelAt.get(k)?.destroy();
   const p = abs(cell);
   const t = fitGold(goldText(fmt(value), 30), SETTLE_SIZE * 0.84, SETTLE_SIZE * 0.46);
@@ -112,16 +112,16 @@ const paintLabel = (cell, value) => {
   return t;
 };
 
-// -- the jackpot: flash the row, fire the plaque, fly the row sum up --
+// -- the jackpot: flash the cell, fire the plaque, fly the cell sum up --
 const flyers = new Set();
 const awardedRows = new Set();
 let award = 0;
-const lockedInRow = (row) => board.lockedCoins.filter((c) => c.cell.row === row);
+const lockedInRow = (cell) => board.lockedCoins.filter((c) => c.cell.cell === cell);
 
-async function rowJackpot(row) {
-  awardedRows.add(row);
-  hud.text = `ROW ${row + 1} COMPLETE — MINI!`;
-  const rowCoins = lockedInRow(row).sort((a, b) => a.cell.col - b.cell.col);
+async function rowJackpot(cell) {
+  awardedRows.add(cell);
+  hud.text = `ROW ${cell + 1} COMPLETE — MINI!`;
+  const rowCoins = lockedInRow(cell).sort((a, b) => a.cell.reel - b.cell.reel);
   if (plaque.skeleton.data.findAnimation('win')) {
     plaque.state.setAnimation(0, 'win', false);
     if (plaque.skeleton.data.findAnimation('idle')) plaque.state.addAnimation(0, 'idle', true, 0);
@@ -129,16 +129,16 @@ async function rowJackpot(row) {
   // flash each coin in reading order
   for (const wave of coinWaves(rowCoins, 'sequence')) {
     await Promise.all(wave.map((coin) => {
-      const k = `${coin.cell.col},${coin.cell.row}`;
+      const k = `${coin.cell.reel},${coin.cell.cell}`;
       const lbl = labelAt.get(k);
       if (lbl) gsap.fromTo(lbl.scale, { x: 1.35, y: 1.35 }, { x: 1, y: 1, duration: 0.22, ease: 'back.out(2)' });
       return board.symbolAt(coin.cell).playWin?.().catch?.(() => {}) ?? Promise.resolve();
     }));
     await sleep(70);
   }
-  // fly the row sum up into the plaque
+  // fly the cell sum up into the plaque
   const sum = rowCoins.reduce((a, c) => a + (c.data?.value ?? 0), 0);
-  const mid = abs({ col: (COLS - 1) / 2, row });
+  const mid = abs({ reel: (COLS - 1) / 2, cell });
   const clone = fitGold(goldText(fmt(sum), 30), CELL, CELL * 0.5);
   clone.position.set(mid.x, mid.y);
   app.stage.addChild(clone);
@@ -154,25 +154,25 @@ async function rowJackpot(row) {
 const pendingFx = [];
 board.events.on('coin:locked', ({ coin }) => {
   paintLabel(coin.cell, coin.data?.value ?? 0);
-  const row = coin.cell.row;
-  if (!awardedRows.has(row) && lockedInRow(row).length === COLS) {
-    pendingFx.push(rowJackpot(row));
+  const cell = coin.cell.cell;
+  if (!awardedRows.has(cell) && lockedInRow(cell).length === COLS) {
+    pendingFx.push(rowJackpot(cell));
   }
 });
 
-// Scripted: seed row 1 with four coins, then land the fifth to complete it.
+// Scripted: seed cell 1 with four coins, then land the fifth to complete it.
 const SEED = [
-  { cell: { col: 0, row: 1 }, id: COIN, data: { value: 5 } },
-  { cell: { col: 1, row: 1 }, id: COIN, data: { value: 10 } },
-  { cell: { col: 2, row: 1 }, id: COIN, data: { value: 5 } },
-  { cell: { col: 4, row: 1 }, id: COIN, data: { value: 20 } },
+  { cell: { reel: 0, cell: 1 }, id: COIN, data: { value: 5 } },
+  { cell: { reel: 1, cell: 1 }, id: COIN, data: { value: 10 } },
+  { cell: { reel: 2, cell: 1 }, id: COIN, data: { value: 5 } },
+  { cell: { reel: 4, cell: 1 }, id: COIN, data: { value: 20 } },
 ];
-const COMPLETE = [{ cell: { col: 3, row: 1 }, id: COIN, data: { value: 10 } }];
+const COMPLETE = [{ cell: { reel: 3, cell: 1 }, id: COIN, data: { value: 10 } }];
 
 const seedBoard = () => {
   board.enter(SEED);
   for (const coin of SEED) paintLabel(coin.cell, coin.data.value);
-  hud.text = 'press spin · one coin completes row 2';
+  hud.text = 'press spin · one coin completes cell 2';
 };
 seedBoard();
 

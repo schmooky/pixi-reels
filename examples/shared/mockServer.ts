@@ -36,16 +36,16 @@ export function mockSpin(reelCount: number, visibleCells: number, delay: number 
       const symbols: string[][] = [];
       for (let r = 0; r < reelCount; r++) {
         const reel: string[] = [];
-        for (let row = 0; row < visibleCells; row++) {
+        for (let cell = 0; cell < visibleCells; cell++) {
           reel.push(randomSymbol());
         }
         symbols.push(reel);
       }
 
-      // Detect wins (simple: 3+ of same symbol on a row)
+      // Detect wins (simple: 3+ of same symbol on a cell)
       const wins: WinResult[] = [];
-      for (let row = 0; row < visibleCells; row++) {
-        const rowSymbols = symbols.map((r) => r[row]);
+      for (let cell = 0; cell < visibleCells; cell++) {
+        const rowSymbols = symbols.map((r) => r[cell]);
         const counts = new Map<string, number[]>();
         rowSymbols.forEach((s, i) => {
           if (!counts.has(s)) counts.set(s, []);
@@ -54,7 +54,7 @@ export function mockSpin(reelCount: number, visibleCells: number, delay: number 
         for (const [symbolId, indices] of counts) {
           if (indices.length >= 3) {
             wins.push({
-              positions: indices.map((i) => ({ reelIndex: i, cellIndex: row })),
+              positions: indices.map((i) => ({ reelIndex: i, cellIndex: cell })),
               symbolId,
               amount: symbolId === 'wild' ? 100 : symbolId === 'seven' ? 50 : 10,
             });
@@ -98,8 +98,8 @@ export function mockCascade(
   // Detect new wins
   const newWins: WinResult[] = [];
   const cells = grid[0]?.length ?? 0;
-  for (let row = 0; row < cells; row++) {
-    const rowSymbols = grid.map((r) => r[row]);
+  for (let cell = 0; cell < cells; cell++) {
+    const rowSymbols = grid.map((r) => r[cell]);
     const counts = new Map<string, number[]>();
     rowSymbols.forEach((s, i) => {
       if (!counts.has(s)) counts.set(s, []);
@@ -108,7 +108,7 @@ export function mockCascade(
     for (const [symbolId, indices] of counts) {
       if (indices.length >= 3) {
         newWins.push({
-          positions: indices.map((i) => ({ reelIndex: i, cellIndex: row })),
+          positions: indices.map((i) => ({ reelIndex: i, cellIndex: cell })),
           symbolId,
           amount: symbolId === 'wild' ? 100 : symbolId === 'seven' ? 50 : 10,
         });

@@ -28,7 +28,7 @@ export function CanvasSkeleton({
   return (
     <div
       className={cn(
-        'absolute inset-0 flex flex-col items-center justify-center gap-4',
+        'absolute inset-0 flex flex-reel items-center justify-center gap-4',
         'bg-card/95 backdrop-blur-sm',
         'animate-in fade-in duration-200',
         className,
@@ -43,7 +43,7 @@ export function CanvasSkeleton({
         aria-hidden
       >
         {Array.from({ length: cols }, (_, c) => (
-          <div key={c} className="flex flex-col gap-2">
+          <div key={c} className="flex flex-reel gap-2">
             {Array.from({ length: cells }, (_, r) => (
               <div
                 key={r}

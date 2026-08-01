@@ -49,8 +49,8 @@ return {
     // Pick a random low-pay cell and upgrade it to a high-pay.
     const candidates = [];
     for (let r = 0; r < COLS; r++) {
-      for (let row = 0; row < ROWS; row++) {
-        if (LOW.includes(result.symbols[r][row])) candidates.push({ r, row });
+      for (let cell = 0; cell < ROWS; cell++) {
+        if (LOW.includes(result.symbols[r][cell])) candidates.push({ r, cell });
       }
     }
     if (!candidates.length) return;
@@ -59,7 +59,7 @@ return {
     const reel = reelSet.getReel(pick.r);
 
     // Scale-out old symbol from center.
-    const oldSym = reel.getSymbolAt(pick.row);
+    const oldSym = reel.getSymbolAt(pick.cell);
     const restoreOld = bindCenter(oldSym.view);
     await new Promise(resolve => {
       gsap.to(oldSym.view, { alpha: 0, duration: 0.3, ease: 'power2.in', onComplete: resolve });
@@ -69,11 +69,11 @@ return {
 
     // Swap identity. setSymbolAt is the one-cell rewrite that doesn't
     // touch the rest of the reel. leaves the symbol pool / motion layer
-    // alone and only cycles the single ReelSymbol at this row.
-    reelSet.setSymbolAt(pick.r, pick.row, upgradeId);
+    // alone and only cycles the single ReelSymbol at this cell.
+    reelSet.setSymbolAt(pick.r, pick.cell, upgradeId);
 
     // Scale-in new symbol from center.
-    const next = reel.getSymbolAt(pick.row);
+    const next = reel.getSymbolAt(pick.cell);
     next.view.alpha = 0;
     next.view.scale.set(0.4);
     const restoreNext = bindCenter(next.view);

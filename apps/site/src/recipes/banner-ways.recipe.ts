@@ -53,19 +53,19 @@ const onSpin = async () => {
   main.spotlight.hide();
   banner.spotlight.hide();
 
-  // Script a base 3-reel way (reels 0-2, middle row) plus a banner wild over
+  // Script a base 3-reel way (reels 0-2, middle cell) plus a banner wild over
   // reel 3 that extends it to a 4-reel way.
   const grid = Array.from({ length: 5 }, () => [pickWeighted(W), pickWeighted(W), pickWeighted(W)]);
   grid[0][1] = PAY;
   grid[1][1] = PAY;
   grid[2][1] = PAY;
-  const row = Array.from({ length: 5 }, () => pickWeighted(W));
-  row[3] = 'wild';
+  const cell = Array.from({ length: 5 }, () => pickWeighted(W));
+  cell[3] = 'wild';
 
   const pm = main.spin();
   main.setResult(grid.map((visible) => ({ visible })));
   const pb = banner.spin();
-  banner.setResult([row]);
+  banner.setResult([cell]);
   await Promise.all([pm, pb]);
 
   // Ways pay left-to-right on consecutive reels. A reel contributes if it shows

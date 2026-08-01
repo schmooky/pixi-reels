@@ -49,7 +49,7 @@ export interface BootOptions {
   host: HTMLElement;
   /** When true, canvas resizes to window. Default: false (fits to host). */
   fullScreen?: boolean;
-  /** Speed-button row visible? Default: same as fullScreen. */
+  /** Speed-button cell visible? Default: same as fullScreen. */
   showSpeeds?: boolean;
 }
 
@@ -132,8 +132,8 @@ export async function boot(opts: BootOptions): Promise<() => void> {
   function syncIdle(): void {
     for (let r = 0; r < reelSet.reelCount; r++) {
       const reel = reelSet.getReel(r);
-      for (let row = 0; row < reel.visibleCells; row++) {
-        const sym = reel.getSymbolAt(row);
+      for (let cell = 0; cell < reel.visibleCells; cell++) {
+        const sym = reel.getSymbolAt(cell);
         if (sym instanceof SpineReelSymbol) sym.stopAnimation();
       }
     }
@@ -260,9 +260,9 @@ function mockSpin(spinIndex: number): Promise<{ grid: string[][]; wins: WinResul
     setTimeout(() => {
       const grid: string[][] = [];
       for (let r = 0; r < REEL_COUNT; r++) {
-        const col: string[] = [];
-        for (let row = 0; row < VISIBLE_ROWS; row++) col.push(randomCard());
-        grid.push(col);
+        const reel: string[] = [];
+        for (let cell = 0; cell < VISIBLE_ROWS; cell++) reel.push(randomCard());
+        grid.push(reel);
       }
       const dropBig = spinIndex % 3 === 0 || Math.random() < 0.18;
       if (dropBig) {
@@ -279,14 +279,14 @@ function mockSpin(spinIndex: number): Promise<{ grid: string[][]; wins: WinResul
       // Resolve OCCUPIED stubs to the anchor's id for client-side win
       // evaluation. The engine does its own resolution server-side; we
       // mirror it here only because PAYS needs to see the real id.
-      const resolved: string[][] = grid.map((col) => [...col]);
+      const resolved: string[][] = grid.map((reel) => [...reel]);
       for (let c = 0; c < REEL_COUNT; c++) {
-        for (let row = 0; row < VISIBLE_ROWS; row++) {
-          if (resolved[c][row] === '_') {
-            let aR = row, aC = c;
+        for (let cell = 0; cell < VISIBLE_ROWS; cell++) {
+          if (resolved[c][cell] === '_') {
+            let aR = cell, aC = c;
             while (aR > 0 && resolved[aC][aR] === '_') aR--;
             while (aC > 0 && resolved[aC][aR] === '_') aC--;
-            resolved[c][row] = resolved[aC][aR];
+            resolved[c][cell] = resolved[aC][aR];
           }
         }
       }
@@ -308,22 +308,22 @@ function randomCard(): string {
 
 function evaluateWins(grid: string[][]): WinResult[] {
   const wins: WinResult[] = [];
-  for (let row = 0; row < VISIBLE_ROWS; row++) {
-    const first = grid[0][row];
+  for (let cell = 0; cell < VISIBLE_ROWS; cell++) {
+    const first = grid[0][cell];
     let target = first;
     if (target === 'wild' || target === 'bigWild') {
       for (let c = 1; c < REEL_COUNT; c++) {
-        const s = grid[c][row];
+        const s = grid[c][cell];
         if (s !== 'wild' && s !== 'bigWild') { target = s; break; }
       }
     }
     let count = 0;
     const cells: SymbolPosition[] = [];
     for (let c = 0; c < REEL_COUNT; c++) {
-      const s = grid[c][row];
+      const s = grid[c][cell];
       if (s === target || s === 'wild' || s === 'bigWild') {
         count++;
-        cells.push({ reelIndex: c, cellIndex: row });
+        cells.push({ reelIndex: c, cellIndex: cell });
       } else break;
     }
     if (count >= 3) {

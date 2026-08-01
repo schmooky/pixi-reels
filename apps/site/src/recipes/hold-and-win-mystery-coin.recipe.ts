@@ -98,7 +98,7 @@ const paintLabel = (cell, value) => {
   const t = fitGold(goldText(fmt(value), 32), SETTLE_SIZE * 0.84, SETTLE_SIZE * 0.46);
   t.position.set(p.x, p.y);
   labels.addChild(t);
-  labelAt.set(`${cell.col},${cell.row}`, t);
+  labelAt.set(`${cell.reel},${cell.cell}`, t);
   return t;
 };
 
@@ -108,8 +108,8 @@ const POOL = [1, 2, 5, 10, 15, 20, 25, 50, 75, 100, 200];
 
 // -- the reveal: a true looping value reel inside the coin face. A small set
 // of candidate amounts is recycled with a modulo wrap and scrolled like a
-// 1-row reel; a single eased tween spins it several whole turns and
-// decelerates onto the real value, which is row 0. --
+// 1-cell reel; a single eased tween spins it several whole turns and
+// decelerates onto the real value, which is cell 0. --
 async function revealValue(cell, finalValue) {
   const p = abs(cell);
   const ROW_H = SETTLE_SIZE * 0.52; // one value per window height
@@ -121,7 +121,7 @@ async function revealValue(cell, finalValue) {
   app.stage.addChild(clip);
   app.stage.addChild(strip);
 
-  // K cells that we recycle; row 0 carries the real value, the rest are decoys
+  // K cells that we recycle; cell 0 carries the real value, the rest are decoys
   const K = 8;
   const cells = Array.from({ length: K }, (_, i) => {
     const v = i === 0 ? finalValue : POOL[Math.floor(Math.random() * POOL.length)];
@@ -130,13 +130,13 @@ async function revealValue(cell, finalValue) {
     return t;
   });
   const TOTAL = K * ROW_H;
-  // place every row within ±TOTAL/2 of centre, so a row leaving one edge of
+  // place every cell within ±TOTAL/2 of centre, so a cell leaving one edge of
   // the window reappears at the other - an endless strip from K labels
   const wrap = (v) => { const m = ((v % TOTAL) + TOTAL) % TOTAL; return m > TOTAL / 2 ? m - TOTAL : m; };
   const layout = (offset) => cells.forEach((t, i) => { t.x = p.x; t.y = p.y + wrap(i * ROW_H - offset); });
   layout(0);
 
-  // spin TURNS whole revolutions; row 0 (the real value) is centred whenever
+  // spin TURNS whole revolutions; cell 0 (the real value) is centred whenever
   // offset is a multiple of TOTAL, so the eased tween lands exactly on it
   const TURNS = 5;
   const state = { offset: 0 };
@@ -164,7 +164,7 @@ board.events.on('coin:locked', ({ coin }) => {
   pendingFx.push(revealValue(coin.cell, coin.data.value));
 });
 board.events.on('coin:released', ({ coin }) => {
-  const k = `${coin.cell.col},${coin.cell.row}`;
+  const k = `${coin.cell.reel},${coin.cell.cell}`;
   labelAt.get(k)?.destroy();
   labelAt.delete(k);
 });
@@ -174,9 +174,9 @@ board.events.on('coin:released', ({ coin }) => {
 // is genuine every run.
 const randVal = () => POOL[Math.floor(Math.random() * POOL.length)];
 const ROUNDS = [
-  [{ col: 1, row: 1 }, { col: 3, row: 0 }],
-  [{ col: 0, row: 2 }, { col: 4, row: 2 }],
-  [{ col: 2, row: 1 }],
+  [{ reel: 1, cell: 1 }, { reel: 3, cell: 0 }],
+  [{ reel: 0, cell: 2 }, { reel: 4, cell: 2 }],
+  [{ reel: 2, cell: 1 }],
   [], [],
 ];
 

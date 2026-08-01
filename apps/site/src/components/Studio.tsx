@@ -187,7 +187,7 @@ function pickWeighted(weights: Record<string, number>): string {
  * Symbols-tab UI is the source of truth for these flags. if the user
  * also calls `.symbolData(...)` manually with the same id, the merge
  * order in ReelSetBuilder.symbolData (line 309: spread merge) means
- * our studio data wins. That matches user intent: toggling the row
+ * our studio data wins. That matches user intent: toggling the cell
  * should always reflect on the running reels.
  *
  * Bundling the overrides into a factory-built subclass keeps user code
@@ -601,7 +601,7 @@ export default function Studio() {
   }
 
   return (
-    <div className={cn('flex flex-col gap-3', fullscreen && 'fixed inset-x-0 top-14 bottom-0 z-40 bg-background p-4')}>
+    <div className={cn('flex flex-reel gap-3', fullscreen && 'fixed inset-x-0 top-14 bottom-0 z-40 bg-background p-4')}>
       {isEphemeral && (
         <div className="flex items-center gap-2 rounded-md border border-amber-400/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
           <Eye size={13} className="flex-shrink-0" />
@@ -632,7 +632,7 @@ export default function Studio() {
       >
       {/* ── Canvas pane ─── */}
       <div className={cn(
-        'flex flex-col overflow-hidden rounded-xl border border-border bg-card',
+        'flex flex-reel overflow-hidden rounded-xl border border-border bg-card',
         fullscreen && 'min-h-0',
       )}>
         <div className={cn('relative flex-1', !fullscreen && 'min-h-[480px]')}>
@@ -700,7 +700,7 @@ export default function Studio() {
 
       {/* ── Editor pane ─── */}
       <div className={cn(
-        'flex flex-col overflow-hidden rounded-xl border border-border bg-card',
+        'flex flex-reel overflow-hidden rounded-xl border border-border bg-card',
         fullscreen && 'min-h-0',
       )}>
         {/* Tab strip */}
@@ -865,7 +865,7 @@ function EditorSkeleton(): JSX.Element {
       role="status"
       aria-label="Loading editor"
     >
-      <div className="flex w-10 flex-col gap-2.5 py-3 pr-2" aria-hidden>
+      <div className="flex w-10 flex-reel gap-2.5 py-3 pr-2" aria-hidden>
         {EDITOR_LINE_WIDTHS.map((_, i) => (
           <div
             key={i}
@@ -874,7 +874,7 @@ function EditorSkeleton(): JSX.Element {
           />
         ))}
       </div>
-      <div className="flex flex-1 flex-col gap-2.5 py-3 pl-2 pr-4" aria-hidden>
+      <div className="flex flex-1 flex-reel gap-2.5 py-3 pl-2 pr-4" aria-hidden>
         {EDITOR_LINE_WIDTHS.map((w, i) => (
           <div
             key={i}
@@ -913,7 +913,7 @@ function RecipePrompt({ onCancel, onReplace, onPreview }: RecipePromptProps): JS
             You already have code saved in Studio. Replace it with the recipe, or load
             the recipe as a read-only preview without touching your saved code.
           </p>
-          <div className="flex flex-col gap-2 pt-1">
+          <div className="flex flex-reel gap-2 pt-1">
             <button
               type="button"
               onClick={onReplace}

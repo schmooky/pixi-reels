@@ -5,7 +5,7 @@
 //
 // Sticky wild on a MultiWays slot. Pin a wild on land with `originCell` set;
 // the pin survives every MultiWays reshape. When the next shape is shorter
-// than originCell, the pin clamps to the last visible row (`pin:migrated`
+// than originCell, the pin clamps to the last visible cell (`pin:migrated`
 // fires with clamped:true). When a later, larger shape can fit the
 // originCell again, the pin migrates back. no wander.
 //
@@ -44,8 +44,8 @@ const reelSet = new ReelSetBuilder()
   .build();
 
 // On every landing, pin every wild for STICKY_TURNS spins. Each pin captures
-// its current row as `originCell` automatically. that's what lets the
-// engine restore the pin to its original row when shapes grow back.
+// its current cell as `originCell` automatically. that's what lets the
+// engine restore the pin to its original cell when shapes grow back.
 reelSet.events.on('spin:allLanded', ({ symbols }) => {
   for (let c = 0; c < symbols.length; c++) {
     for (let r = 0; r < symbols[c].length; r++) {
@@ -59,7 +59,7 @@ reelSet.events.on('spin:allLanded', ({ symbols }) => {
 // Cycle shapes so the demo deterministically shows clamp + restore.
 const SHAPE_CYCLE = [
   [5, 5, 5, 5, 5, 5],
-  [3, 3, 3, 3, 3, 3], // shrinks. high-row wilds clamp
+  [3, 3, 3, 3, 3, 3], // shrinks. high-cell wilds clamp
   [7, 7, 7, 7, 7, 7], // grows back. clamped wilds migrate back to originCell
   [4, 4, 4, 4, 4, 4],
 ];

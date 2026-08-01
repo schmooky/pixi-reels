@@ -28,7 +28,7 @@ function makeHarness() {
 }
 
 describe('mechanic: classic-lines (forceLine)', () => {
-  it('lands a full row of the target symbol', async () => {
+  it('lands a full cell of the target symbol', async () => {
     const h = makeHarness();
     try {
       const engine = new CheatEngine({
@@ -77,7 +77,7 @@ describe('mechanic: hold-and-win (holdAndWinProgress)', () => {
         id: 'h', label: 'h', enabled: true,
         cheat: holdAndWinProgress('coin', 1),
       });
-      engine.setHeld([{ reel: 2, row: 1, symbolId: 'coin' }]);
+      engine.setHeld([{ reel: 2, cell: 1, symbolId: 'coin' }]);
       const first = engine.next();
       await h.spinAndLand(first.symbols);
       expect(h.reelSet.reels[2].getVisibleSymbols()[1]).toBe('coin');
@@ -98,8 +98,8 @@ describe('mechanic: hold-and-win (holdAndWinProgress)', () => {
     // Pre-fill held to n*m-1 = 8, next spin should complete
     const held = [];
     for (let r = 0; r < 3; r++) {
-      for (let row = 0; row < 3; row++) {
-        if (!(r === 2 && row === 2)) held.push({ reel: r, row, symbolId: 'coin' });
+      for (let cell = 0; cell < 3; cell++) {
+        if (!(r === 2 && cell === 2)) held.push({ reel: r, cell, symbolId: 'coin' });
       }
     }
     engine.setHeld(held);

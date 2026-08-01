@@ -107,7 +107,7 @@ describe('getCellBounds — non-square symbols', () => {
 });
 
 describe('getCellBounds — errors', () => {
-  it('throws when col is negative', () => {
+  it('throws when reel is negative', () => {
     const h = createTestReelSet({ reels: 5, visibleCells: 3, symbolIds: ['a'] });
     try {
       expect(() => h.reelSet.getCellBounds(-1, 0)).toThrow(RangeError);
@@ -116,16 +116,16 @@ describe('getCellBounds — errors', () => {
     }
   });
 
-  it('throws when col is out of range', () => {
+  it('throws when reel is out of range', () => {
     const h = createTestReelSet({ reels: 5, visibleCells: 3, symbolIds: ['a'] });
     try {
-      expect(() => h.reelSet.getCellBounds(5, 0)).toThrow(/col 5 out of range/);
+      expect(() => h.reelSet.getCellBounds(5, 0)).toThrow(/reel 5 out of range/);
     } finally {
       h.destroy();
     }
   });
 
-  it('throws when row is negative', () => {
+  it('throws when cell is negative', () => {
     const h = createTestReelSet({ reels: 5, visibleCells: 3, symbolIds: ['a'] });
     try {
       expect(() => h.reelSet.getCellBounds(0, -1)).toThrow(RangeError);
@@ -134,10 +134,10 @@ describe('getCellBounds — errors', () => {
     }
   });
 
-  it('throws when row is out of range', () => {
+  it('throws when cell is out of range', () => {
     const h = createTestReelSet({ reels: 5, visibleCells: 3, symbolIds: ['a'] });
     try {
-      expect(() => h.reelSet.getCellBounds(0, 3)).toThrow(/row 3 out of range/);
+      expect(() => h.reelSet.getCellBounds(0, 3)).toThrow(/cell 3 out of range/);
     } finally {
       h.destroy();
     }

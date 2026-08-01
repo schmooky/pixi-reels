@@ -19,10 +19,10 @@ function makeHarness() {
   });
 }
 
-/** A middleware that forces the middle row to be `forcedId` on every reel. */
+/** A middleware that forces the middle cell to be `forcedId` on every reel. */
 function forceMiddleRowMiddleware(forcedId: string): FrameMiddleware {
   return {
-    name: 'force-middle-row',
+    name: 'force-middle-cell',
     priority: 20, // after target-placement (10) so it wins
     process(ctx, next) {
       const middleIdx = ctx.bufferStart + Math.floor(ctx.visibleCells / 2);
@@ -53,7 +53,7 @@ describe('reelSet.frame — exposure', () => {
       const before = h.reelSet.frame.middleware.length;
       h.reelSet.frame.use(mw);
       expect(h.reelSet.frame.middleware.length).toBe(before + 1);
-      h.reelSet.frame.remove('force-middle-row');
+      h.reelSet.frame.remove('force-middle-cell');
       expect(h.reelSet.frame.middleware.length).toBe(before);
     } finally {
       h.destroy();
@@ -91,11 +91,11 @@ describe('reelSet.frame — middleware takes effect on frame build', () => {
       const fb = frameBuilderOf(h.reelSet);
       const targets = { visible: ['a', 'b', 'c'] };
 
-      // Baseline - middleware NOT added; middle row is 'b' (from targets)
+      // Baseline - middleware NOT added; middle cell is 'b' (from targets)
       const baseline = fb.build(0, 3, 1, 1, targets);
-      expect(baseline[1 + 1]).toBe('b'); // bufferStart(1) + row(1) = index 2
+      expect(baseline[1 + 1]).toBe('b'); // bufferStart(1) + cell(1) = index 2
 
-      // Add middleware, rebuild - middle row becomes 'wild'
+      // Add middleware, rebuild - middle cell becomes 'wild'
       h.reelSet.frame.use(forceMiddleRowMiddleware('wild'));
       const withMiddleware = fb.build(0, 3, 1, 1, targets);
       expect(withMiddleware[1 + 1]).toBe('wild');
@@ -113,7 +113,7 @@ describe('reelSet.frame — middleware takes effect on frame build', () => {
       h.reelSet.frame.use(forceMiddleRowMiddleware('wild'));
       expect(fb.build(0, 3, 1, 1, targets)[2]).toBe('wild');
 
-      h.reelSet.frame.remove('force-middle-row');
+      h.reelSet.frame.remove('force-middle-cell');
       expect(fb.build(0, 3, 1, 1, targets)[2]).toBe('b');
     } finally {
       h.destroy();

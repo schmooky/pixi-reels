@@ -15,7 +15,7 @@ export interface FrameContext {
   symbols: string[];
   /**
    * This reel's target column from `setResult()` / `initialFrame()`, if
-   * available. Read it with `getTargetSlot(target, row)` (row `0` is the
+   * available. Read it with `getTargetSlot(target, cell)` (cell `0` is the
    * first visible cell; negative cells are buffer-above).
    */
   readonly target?: ColumnTarget;

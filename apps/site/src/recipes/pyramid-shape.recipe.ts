@@ -4,7 +4,7 @@
 //                   pickWeighted
 //
 // Per-reel static shape. a 3-5-5-5-3 pyramid. Reels can have different
-// row counts at build time. Cell width is uniform across reels; the
+// cell counts at build time. Cell width is uniform across reels; the
 // shorter outer reels are vertically centered by default (`reelAnchor: 'center'`).
 //
 // CARD SYMBOLS BELOW ARE DEBUG/PROTOTYPING ONLY. see /recipes/card-symbol-debug/.

@@ -34,7 +34,7 @@ hud.anchor.set(0.5, 0);
 hud.position.set(app.screen.width / 2, board.container.y + CELL + 16);
 app.stage.addChild(hud);
 
-const CELLS = [{ col: 0, row: 0 }, { col: 1, row: 0 }, { col: 2, row: 0 }];
+const CELLS = [{ reel: 0, cell: 0 }, { reel: 1, cell: 0 }, { reel: 2, cell: 0 }];
 // land coins on the first two cells, leave the third empty
 const LAND = [COIN, COIN, EMPTY];
 

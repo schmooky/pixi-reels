@@ -84,8 +84,8 @@ const LANDING_MS = 350;
 function syncIdle() {
   for (let r = 0; r < reelSet.reelCount; r++) {
     const reel = reelSet.getReel(r);
-    for (let row = 0; row < reel.visibleCells; row++) {
-      const sym = reel.getSymbolAt(row);
+    for (let cell = 0; cell < reel.visibleCells; cell++) {
+      const sym = reel.getSymbolAt(cell);
       if (sym instanceof SpineReelSymbol) sym.stopAnimation();
     }
   }
@@ -103,9 +103,9 @@ return {
     );
     // Drop a 2x2 bigWild every other spin so the demo always shows it.
     if (spinCount++ % 2 === 0) {
-      const col = Math.floor(Math.random() * (REELS - 1));
-      const row = Math.floor(Math.random() * (ROWS - 1));
-      grid[col][row] = 'bigWild';
+      const reel = Math.floor(Math.random() * (REELS - 1));
+      const cell = Math.floor(Math.random() * (ROWS - 1));
+      grid[reel][cell] = 'bigWild';
     }
     return grid;
   },

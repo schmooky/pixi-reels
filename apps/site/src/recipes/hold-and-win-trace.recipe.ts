@@ -66,7 +66,7 @@ function push(evt, detail) {
   lines.forEach((l, i) => { l.y = 24 + i * 17; });
   gsap.fromTo(t, { alpha: 0, x: -6 }, { alpha: 1, x: 0, duration: 0.22 });
 }
-const cc = (c) => `(${c.col},${c.row})`;
+const cc = (c) => `(${c.reel},${c.cell})`;
 
 board.events.on('feature:enter', ({ seed, respins }) => push('feature:enter', `${seed.length} seed · respins ${respins}`));
 board.events.on('respin:start', ({ round, spinning }) => push('respin:start', `round ${round} · ${spinning.length} spinning`));
@@ -103,7 +103,7 @@ return {
     for (const l of lines.splice(0)) { try { gsap.killTweensOf(l); l.destroy(); } catch {} }
     board.reset(); // → feature:reset, the first line of every run
     await sleep(150);
-    board.enter([{ cell: { col: 0, row: 0 }, id: 'coin', data: { value: 5 } }]);
+    board.enter([{ cell: { reel: 0, cell: 0 }, id: 'coin', data: { value: 5 } }]);
     hud.text = 'running the respin loop…';
     while (true) {
       await sleep(440);

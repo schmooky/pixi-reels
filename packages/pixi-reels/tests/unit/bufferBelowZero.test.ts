@@ -102,10 +102,10 @@ describe('bufferSymbols({ below: 0 }). tumble-only reel sets', () => {
         detectWinners: () => {
           if (ran) return [];
           ran = true;
-          return [{ reel: 1, row: 0 }];
+          return [{ reel: 1, cell: 0 }];
         },
-        nextGrid: (prev) => prev.map((col, c) =>
-          c === 1 ? ['b', ...col.slice(1)] : [...col],
+        nextGrid: (prev) => prev.map((reel, c) =>
+          c === 1 ? ['b', ...reel.slice(1)] : [...reel],
         ),
         pauseAfterDestroyMs: 0,
       });

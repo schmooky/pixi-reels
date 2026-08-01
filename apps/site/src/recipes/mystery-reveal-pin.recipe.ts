@@ -67,9 +67,9 @@ const reelSet = new ReelSetBuilder()
 // Without these tweens the reveal would be an instant swap on land.
 // player wouldn't even register that the mystery had to be opened.
 
-async function revealCell(col, row, revealId) {
-  const reel = reelSet.reels[col];
-  const oldSym = reel.getSymbolAt(row);
+async function revealCell(reel, cell, revealId) {
+  const reel = reelSet.reels[reel];
+  const oldSym = reel.getSymbolAt(cell);
   // Pivot to the cell center so the scale-down looks like the symbol
   // collapses on itself instead of pinning to the top-left corner.
   const px = oldSym.view.pivot.x, py = oldSym.view.pivot.y;
@@ -109,12 +109,12 @@ async function revealCell(col, row, revealId) {
   oldSym.view.scale.set(1);
 
   // Swap identity via pin. same as before, wrapped in animation.
-  reelSet.pin(col, row, revealId, { turns: 'eval' });
+  reelSet.pin(reel, cell, revealId, { turns: 'eval' });
 
   // The pin call replaced the symbol at this cell; grab the new one
   // and animate it IN. Same pivot trick so the bounce reads as
   // expanding-from-the-center.
-  const newSym = reel.getSymbolAt(row);
+  const newSym = reel.getSymbolAt(cell);
   newSym.view.pivot.set(SIZE / 2, SIZE / 2);
   newSym.view.x = ox + SIZE / 2;
   newSym.view.y = oy + SIZE / 2;
@@ -136,17 +136,17 @@ reelSet.events.on('spin:allLanded', async ({ symbols }) => {
   const mysteryCells = [];
   for (let c = 0; c < symbols.length; c++) {
     for (let r = 0; r < symbols[c].length; r++) {
-      if (symbols[c][r] === MYSTERY) mysteryCells.push({ col: c, row: r });
+      if (symbols[c][r] === MYSTERY) mysteryCells.push({ reel: c, cell: r });
     }
   }
   if (mysteryCells.length === 0) return;
 
   const reveal = REVEAL_CANDIDATES[Math.floor(Math.random() * REVEAL_CANDIDATES.length)];
-  // Reveal all mystery cells in parallel so the whole row pops together.
-  await Promise.all(mysteryCells.map((cell) => revealCell(cell.col, cell.row, reveal)));
+  // Reveal all mystery cells in parallel so the whole cell pops together.
+  await Promise.all(mysteryCells.map((cell) => revealCell(cell.reel, cell.cell, reveal)));
 });
 
-// Scripted: every third spin, a few mystery cells land in a row.
+// Scripted: every third spin, a few mystery cells land in a cell.
 const scripts = [
   { mysteries: [] },
   { mysteries: [] },

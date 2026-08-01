@@ -55,7 +55,7 @@ const labelAt = new Map();
 const abs = (cell) => { const c = board.cellCenter(cell); return { x: board.container.x + c.x, y: board.container.y + c.y }; };
 const fit = (t, maxW, maxH) => { if (t.width > 0 && t.height > 0) t.scale.set(Math.min(maxW / t.width, maxH / t.height, 1)); return t; };
 const paintLabel = (cell, value) => {
-  const k = `${cell.col},${cell.row}`;
+  const k = `${cell.reel},${cell.cell}`;
   labelAt.get(k)?.destroy();
   const p = abs(cell);
   const t = fit(valueText(fmt(value), 30), CELL * 0.82, CELL * 0.4);
@@ -66,12 +66,12 @@ const paintLabel = (cell, value) => {
 };
 
 const SEED = [
-  { cell: { col: 0, row: 0 }, id: COIN, data: { value: 10 } },
-  { cell: { col: 4, row: 0 }, id: COIN, data: { value: 5 } },
-  { cell: { col: 1, row: 2 }, id: COIN, data: { value: 25 } },
-  { cell: { col: 3, row: 2 }, id: COIN, data: { value: 15 } },
+  { cell: { reel: 0, cell: 0 }, id: COIN, data: { value: 10 } },
+  { cell: { reel: 4, cell: 0 }, id: COIN, data: { value: 5 } },
+  { cell: { reel: 1, cell: 2 }, id: COIN, data: { value: 25 } },
+  { cell: { reel: 3, cell: 2 }, id: COIN, data: { value: 15 } },
 ];
-const COLLECTOR_CELL = { col: 2, row: 1 };
+const COLLECTOR_CELL = { reel: 2, cell: 1 };
 const seedBoard = () => { board.enter(SEED); for (const c of SEED) paintLabel(c.cell, c.data.value); hud.text = 'press spin · the collector lands and sweeps'; };
 seedBoard();
 
@@ -111,8 +111,8 @@ async function collect() {
       clone.position.set(from.x, from.y);
       app.stage.addChild(clone);
       flyers.add(clone);
-      labelAt.get(`${c.cell.col},${c.cell.row}`)?.destroy();
-      labelAt.delete(`${c.cell.col},${c.cell.row}`);
+      labelAt.get(`${c.cell.reel},${c.cell.cell}`)?.destroy();
+      labelAt.delete(`${c.cell.reel},${c.cell.cell}`);
       board.release([c.cell]);
       emitStream(from, target, 8);
       return bezierFly(clone, from, target, { lean: 'up', curvature: 0.35, arriveScale: 0.3, duration: 0.55 }).then(() => {
