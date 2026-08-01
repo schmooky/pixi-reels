@@ -5,8 +5,8 @@ eyebrow: Building blocks
 description: Register and implement reel symbols. sprites, animations, Spine, or custom.
 ---
 
-A **symbol** is a visual cell on a reel. pixi-reels ships three implementations
-and a base class for anything else:
+A **symbol** is what fills one cell. Three ship with the library. The fourth
+is for everything else.
 
 | Class | Use it for |
 |---|---|
@@ -17,8 +17,9 @@ and a base class for anything else:
 
 ## Register
 
-The builder exposes a `symbols()` callback that hands you a `SymbolRegistry`.
-You don't instantiate symbols yourself. the library pools them.
+`symbols()` hands you a registry. You register a class, not an instance.
+
+You never call `new` on a symbol. The engine does, and it pools them.
 
 ```ts
 builder.symbols((r) => {
@@ -29,7 +30,10 @@ builder.symbols((r) => {
 
 ## Custom symbol
 
-Extend `ReelSymbol`. The lifecycle is `activate → [playWin/stopAnimation] → deactivate`.
+Extend `ReelSymbol`. Lifecycle: `activate` -> maybe `playWin` / `stopAnimation` -> `deactivate`.
+
+`resize(width, height)` runs on **every** swap. Put positioning there, not in
+the constructor, or your symbols scatter.
 
 ```ts
 import { ReelSymbol } from 'pixi-reels';
@@ -73,8 +77,8 @@ builder.symbols((r) => {
 
 ## Headless testing
 
-For tests, use the built-in `HeadlessSymbol`. it renders nothing, lets you
-skip textures entirely.
+`HeadlessSymbol` draws nothing. No textures to load, no canvas needed. Use it
+in tests.
 
 ```ts
 import { HeadlessSymbol } from 'pixi-reels/testing';
@@ -89,12 +93,14 @@ See [Cheats & testing](/guides/cheats-and-testing/) for the full recipe.
 
 ## Weights
 
-Symbols registered without a weight default to `10`. Override via
-`builder.weights({ id: n })`.
+No weight given? You get `10`. Change it with `builder.weights({ id: n })`.
 
 ```ts
 builder.weights({ cherry: 40, bar: 20, seven: 4 });
 ```
 
-Higher numbers = more frequent in random fills. Landed (target) grids from
-`setResult()` are *never* affected by weights.
+Bigger number, more often. Weights only touch RANDOM fill -- the strip while
+it spins, and the buffer cells.
+
+A grid from `setResult()` ignores weights completely. The server decides what
+lands. Weights decide what blurs past on the way there.
