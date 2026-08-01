@@ -214,11 +214,13 @@ export type {
   RecordedFrame,
   StartRecordingOptions,
 } from './debug/debug.js';
-export { debugOverlay } from './debug/debugOverlay.js';
+export { debugOverlay, OVERLAY_LABEL } from './debug/debugOverlay.js';
 export type {
   DebugOverlayLayer,
   DebugOverlayOptions,
   DebugOverlayHandle,
+  DebugOverlaySnapshot,
+  DebugOverlayReelInfo,
 } from './debug/debugOverlay.js';
 
 // Testing utilities ship at the `pixi-reels/testing` subpath. Importing
