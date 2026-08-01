@@ -1,6 +1,6 @@
 import { Sprite } from 'pixi.js';
 import type { gsap } from 'gsap';
-import { getGsap } from '../utils/gsapRef.js';
+
 import { ReelSymbol } from '../symbols/ReelSymbol.js';
 import type { MotionBlurOptions, SpinTextureCache } from './SpinTextureCache.js';
 
@@ -169,7 +169,7 @@ export class StaticSpinSymbol extends ReelSymbol {
       this._blurSprite.visible = false;
       return;
     }
-    this._rampTween = getGsap().to(this._blurSprite, {
+    this._rampTween = this.gsap.to(this._blurSprite, {
       alpha: 0,
       duration: this._rampMs / 1000,
       ease: 'power1.out',
@@ -281,7 +281,7 @@ export class StaticSpinSymbol extends ReelSymbol {
     this._staticSprite.alpha = 1;
     this._blurSprite.visible = true;
     this._blurSprite.alpha = 0;
-    this._rampTween = getGsap().to(this._blurSprite, {
+    this._rampTween = this.gsap.to(this._blurSprite, {
       alpha: 1,
       duration: this._rampMs / 1000,
       ease: 'power1.in',

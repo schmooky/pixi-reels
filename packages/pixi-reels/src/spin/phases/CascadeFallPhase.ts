@@ -1,6 +1,5 @@
 import type { gsap } from 'gsap';
 import type { Container } from 'pixi.js';
-import { getGsap } from '../../utils/gsapRef.js';
 import { ReelPhase } from './ReelPhase.js';
 import type { Reel } from '../../core/Reel.js';
 import type { SpeedProfile } from '../../config/types.js';
@@ -85,7 +84,7 @@ export class CascadeFallPhase extends ReelPhase<CascadeFallPhaseConfig> {
 
     const delaySec = (config.delay ?? 0) / 1000;
     if (delaySec > 0) {
-      this._delayedCall = getGsap().delayedCall(delaySec, () => this._beginFall(config.events));
+      this._delayedCall = this._reel.gsap.delayedCall(delaySec, () => this._beginFall(config.events));
     } else {
       this._beginFall(config.events);
     }
@@ -141,7 +140,7 @@ export class CascadeFallPhase extends ReelPhase<CascadeFallPhaseConfig> {
       return;
     }
 
-    const tl = getGsap().timeline({
+    const tl = this._reel.gsap.timeline({
       onComplete: () => {
         this._timeline = null;
         for (const v of views) v.alpha = 0;

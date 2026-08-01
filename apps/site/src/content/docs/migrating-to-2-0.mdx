@@ -271,6 +271,43 @@ If your strategy is orientation-agnostic (it just unions the rects it is
 given), adding the field is the whole migration. If it assumes an axis, use
 `axis.mainProp` or `axis.toLocal(width, height)` to branch.
 
+## gsap is now per reel set
+
+v1 kept one gsap instance in a module global, and its own docstring admitted
+"the last `setGsap` call wins". With a single `ReelSet` that is harmless.
+Build two, and the second `build()` silently moved the first set's tweens
+onto a different timeline.
+
+`builder.gsap(instance)` now binds that set only, at `build()` time. Nothing
+changes for a single-set game that never calls it.
+
+Two consequences:
+
+```ts
+// Before: driveGsapWithTicker looked the instance up from the global.
+const stop = driveGsapWithTicker(app.ticker);
+
+// After: pass the SAME instance you gave the builder.
+const stop = driveGsapWithTicker(app.ticker, myGsap);
+```
+
+Omit the second argument only if you never called `.gsap(...)` either.
+
+And in a custom `ReelSymbol` subclass, animate on `this.gsap` rather than an
+imported `gsap`:
+
+```ts
+class MySymbol extends ReelSymbol {
+  async playWin() {
+    // `this.gsap` is the owning set's instance, bound by SymbolFactory.
+    await this.gsap.to(this.view.scale, { x: 1.2, y: 1.2, duration: 0.2 });
+  }
+}
+```
+
+An imported `gsap` still works when your app and the engine resolve to the
+same module. `this.gsap` is correct in both cases, which is the point.
+
 ## Render order
 
 New, and optional. `cellStacking` and `reelStacking` make render order

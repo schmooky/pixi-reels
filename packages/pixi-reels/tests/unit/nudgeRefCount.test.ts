@@ -6,8 +6,14 @@
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { gsap as defaultGsap } from 'gsap';
+
+/**
+ * The gsap instance the sets in this file are built with. v2 binds gsap PER
+ * SET at build() time, so a shim has to be installed here and handed to the
+ * harness rather than swapped into a module global.
+ */
+let syncGsap: typeof defaultGsap = defaultGsap;
 import { createTestReelSet } from '../../src/testing/index.js';
-import { setGsap } from '../../src/utils/gsapRef.js';
 
 /**
  * gsap.to shim that captures each tween without firing it, and lets the test
@@ -29,7 +35,7 @@ function installDeferredGsap() {
       return { kill: vi.fn(), progress: vi.fn() } as unknown as gsap.core.Tween;
     },
   } as unknown as typeof defaultGsap;
-  setGsap(sync);
+  syncGsap = sync;
   return {
     fire(i: number) {
       const s = slots[i];
@@ -44,11 +50,11 @@ function installDeferredGsap() {
 }
 
 describe('nudge in-flight guard (M4)', () => {
-  afterEach(() => setGsap(defaultGsap));
+  afterEach(() => { syncGsap = defaultGsap; });
 
   it('keeps blocking spin() until the LAST parallel nudge settles', async () => {
     const deferred = installDeferredGsap();
-    const h = createTestReelSet({ reels: 3, visibleCells: 3, symbolIds: ['a', 'b', 'c', 'wild'] });
+    const h = createTestReelSet({ gsap: syncGsap, reels: 3, visibleCells: 3, symbolIds: ['a', 'b', 'c', 'wild'] });
     try {
       await h.spinAndLand([
         ['a', 'b', 'c'],

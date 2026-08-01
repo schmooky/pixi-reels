@@ -5,22 +5,25 @@
  */
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { driveGsapWithTicker } from '../../src/utils/gsapTicker.js';
-import { getGsap, setGsap } from '../../src/utils/gsapRef.js';
+import { DEFAULT_GSAP } from '../../src/utils/gsap.js';
 import { FakeTicker } from '../../src/testing/FakeTicker.js';
 
 describe('driveGsapWithTicker', () => {
-  const realGsap = getGsap();
-  afterEach(() => setGsap(realGsap));
+  const realGsap = DEFAULT_GSAP;
 
   it('moves GSAP onto the supplied ticker and restores it on dispose', () => {
     const updateRoot = vi.fn();
     const tickerAdd = vi.fn();
     const tickerRemove = vi.fn();
     const mockGsap = { updateRoot, ticker: { add: tickerAdd, remove: tickerRemove } };
-    setGsap(mockGsap as unknown as typeof realGsap);
 
     const ticker = new FakeTicker();
-    const dispose = driveGsapWithTicker(ticker as unknown as Parameters<typeof driveGsapWithTicker>[0]);
+    // v2 takes the instance explicitly. gsap is per reel set now, so this
+    // function cannot look up "the engine's" one.
+    const dispose = driveGsapWithTicker(
+      ticker as unknown as Parameters<typeof driveGsapWithTicker>[0],
+      mockGsap as unknown as typeof realGsap,
+    );
 
     // GSAP's own rAF driver detached; a driver attached to our ticker.
     expect(tickerRemove).toHaveBeenCalledWith(updateRoot);

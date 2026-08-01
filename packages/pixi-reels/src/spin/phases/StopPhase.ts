@@ -1,5 +1,4 @@
 import type { gsap } from 'gsap';
-import { getGsap } from '../../utils/gsapRef.js';
 import { ReelPhase } from './ReelPhase.js';
 
 export interface StopPhaseConfig {
@@ -49,7 +48,7 @@ export class StopPhase extends ReelPhase<StopPhaseConfig> {
 
     const delay = (config.delay ?? 0) / 1000;
     if (delay > 0) {
-      this._delayTween = getGsap().delayedCall(delay, () => this._beginSpinOut());
+      this._delayTween = this._reel.gsap.delayedCall(delay, () => this._beginSpinOut());
     } else {
       this._beginSpinOut();
     }
@@ -109,7 +108,7 @@ export class StopPhase extends ReelPhase<StopPhaseConfig> {
     // makes this automatic and keeps vertical/forward at `base + bounceDistance`.
     const axis = reel.axis;
     this._stage = 'bouncing';
-    this._bounceTween = getGsap().timeline();
+    this._bounceTween = this._reel.gsap.timeline();
     this._bounceTween.to(reel.container, {
       [axis.mainProp]: this._baseY + axis.polarity * bounceDistance,
       duration: legDuration,

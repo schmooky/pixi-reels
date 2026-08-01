@@ -1,5 +1,4 @@
 import type { gsap } from 'gsap';
-import { getGsap } from '../../utils/gsapRef.js';
 import { ReelPhase } from './ReelPhase.js';
 
 export interface AnticipationPhaseConfig {
@@ -34,7 +33,7 @@ export class AnticipationPhase extends ReelPhase<AnticipationPhaseConfig> {
       return;
     }
 
-    this._tween = getGsap().timeline();
+    this._tween = this._reel.gsap.timeline();
 
     this._tween.to(reel, {
       speed: targetSpeed,

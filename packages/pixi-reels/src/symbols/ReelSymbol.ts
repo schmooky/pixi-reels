@@ -1,6 +1,6 @@
 import { Container } from 'pixi.js';
 import type { Disposable } from '../utils/Disposable.js';
-import { getGsap } from '../utils/gsapRef.js';
+import { DEFAULT_GSAP, type Gsap } from '../utils/gsap.js';
 
 /**
  * One visible cell on a reel. the thing that actually draws.
@@ -39,8 +39,32 @@ export abstract class ReelSymbol implements Disposable {
   private _symbolId: string = '';
   private _isDestroyed = false;
 
+  private _gsap: Gsap = DEFAULT_GSAP;
+
   constructor() {
     this.view = new Container();
+  }
+
+  /**
+   * The gsap instance this symbol should animate on. Use it instead of
+   * importing `gsap` in a subclass: under a symlinked-workspace module
+   * resolution your import and the engine's can be different instances, and
+   * only this one is on the timeline the reel set actually drives.
+   *
+   * Bound to the owning set by `SymbolFactory`; falls back to the instance
+   * resolved at lib-load time for a symbol built outside a set.
+   */
+  protected get gsap(): Gsap {
+    return this._gsap;
+  }
+
+  /**
+   * @internal. Called by `SymbolFactory` when the symbol is created, so a
+   * pooled symbol animates on its own set's gsap rather than whichever set
+   * happened to build last.
+   */
+  bindGsap(instance: Gsap): void {
+    this._gsap = instance;
   }
 
   get symbolId(): string {
@@ -181,7 +205,7 @@ export abstract class ReelSymbol implements Disposable {
     }
 
     await new Promise<void>((resolve) => {
-      const tl = getGsap()
+      const tl = this.gsap
         .timeline({ onComplete: () => {
           if (signal) signal.removeEventListener('abort', onAbort);
           resolve();

@@ -1,5 +1,4 @@
 import type { gsap } from 'gsap';
-import { getGsap } from '../../utils/gsapRef.js';
 import { ReelPhase } from './ReelPhase.js';
 import type { SpinningMode } from '../modes/SpinningMode.js';
 
@@ -32,7 +31,7 @@ export class StartPhase extends ReelPhase<StartPhaseConfig> {
     reel.speed = 0;
 
     if (delay > 0) {
-      this._delayedCall = getGsap().delayedCall(delay / 1000, () => this._launch());
+      this._delayedCall = this._reel.gsap.delayedCall(delay / 1000, () => this._launch());
     } else {
       this._launch();
     }
@@ -49,7 +48,7 @@ export class StartPhase extends ReelPhase<StartPhaseConfig> {
     const accelDuration = (speed.accelerationDuration ?? 300) / 1000;
     const accelEase = speed.accelerationEase ?? 'power2.in';
 
-    this._tween = getGsap().timeline();
+    this._tween = this._reel.gsap.timeline();
 
     // Step-back: brief reverse to give a "pull" before launch. This tweens
     // reel.speed, not a position, so it needs no axis routing: the negative

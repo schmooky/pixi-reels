@@ -1,5 +1,4 @@
 import type { gsap } from 'gsap';
-import { getGsap } from '../../utils/gsapRef.js';
 import { ReelPhase } from './ReelPhase.js';
 import type { Reel } from '../../core/Reel.js';
 import type { SpeedProfile } from '../../config/types.js';
@@ -120,7 +119,7 @@ export class AdjustPhase extends ReelPhase<AdjustPhaseConfig> {
 
     const dur = this._durationMs / 1000;
     const ease = this._ease;
-    this._tween = getGsap().timeline({
+    this._tween = this._reel.gsap.timeline({
       onComplete: () => {
         this._settle?.();
         this._settle = null;

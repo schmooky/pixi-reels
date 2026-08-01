@@ -1,5 +1,4 @@
 import type { gsap } from 'gsap';
-import { getGsap } from '../../utils/gsapRef.js';
 import { ReelPhase } from './ReelPhase.js';
 import type { ReelSymbol } from '../../symbols/ReelSymbol.js';
 import type { EventEmitter } from '../../events/EventEmitter.js';
@@ -41,7 +40,7 @@ export class CascadePlacePhase extends ReelPhase<CascadePlacePhaseConfig> {
     this._config = config;
     const delaySec = (config.delay ?? 0) / 1000;
     if (delaySec > 0) {
-      this._delayedCall = getGsap().delayedCall(delaySec, () => this._doPlace());
+      this._delayedCall = this._reel.gsap.delayedCall(delaySec, () => this._doPlace());
     } else {
       this._doPlace();
     }

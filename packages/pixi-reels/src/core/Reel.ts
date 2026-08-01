@@ -14,7 +14,7 @@ import { columnTargetToStrip, type ColumnTarget } from '../frame/ColumnTarget.js
 import type { ReelViewport } from './ReelViewport.js';
 import type { SpinningMode } from '../spin/modes/SpinningMode.js';
 import { StandardMode } from '../spin/modes/StandardMode.js';
-import { getGsap } from '../utils/gsapRef.js';
+import { DEFAULT_GSAP, type Gsap } from '../utils/gsap.js';
 
 /**
  * Upper bound (ms) on a single `update()` delta. Matches Pixi's default
@@ -159,6 +159,12 @@ export interface ReelConfig {
    * Render order of cells within the reel. Default `'ascending'`. the cell
    * at the larger main coordinate draws in front.
    */
+  /**
+   * The gsap instance this reel's tweens live on. Defaults to the one
+   * resolved at lib-load time; `ReelSetBuilder.gsap(...)` overrides it PER
+   * SET, so two sets on one stage can use different instances.
+   */
+  gsap?: Gsap;
   cellStacking?: Stacking;
   /**
    * Render order of reels within the set. Default `'ascending'`. the last
@@ -223,6 +229,7 @@ export class Reel implements Disposable {
   private _visibleCells: number;
   private _bufferStart: number;
   private _mainOffset: number;
+  private readonly _gsap: Gsap;
   private _cellStacking: Stacking;
   private _reelStacking: Stacking;
   private _extent: number;
@@ -262,7 +269,7 @@ export class Reel implements Disposable {
    * and `skipNudge()` can `kill()` it cleanly; cleared in `onComplete` and
    * on cancellation. `null` between nudges.
    */
-  private _nudgeTween: ReturnType<ReturnType<typeof getGsap>['to']> | null = null;
+  private _nudgeTween: ReturnType<Gsap['to']> | null = null;
   /**
    * Rejection function for the in-flight nudge's promise. Called by
    * `destroy()` and `signal.abort()` so consumers `await`-ing the nudge
@@ -309,6 +316,7 @@ export class Reel implements Disposable {
     this._visibleCells = config.visibleCells;
     this._bufferStart = config.bufferStart;
     this._mainOffset = config.mainOffset ?? 0;
+    this._gsap = config.gsap ?? DEFAULT_GSAP;
     this._cellStacking = config.cellStacking ?? 'ascending';
     this._reelStacking = config.reelStacking ?? 'ascending';
     this._symbolGapY = config.symbolGapY;
@@ -491,6 +499,11 @@ export class Reel implements Disposable {
    */
   get spinCellSize(): number {
     return this._spinCellSize;
+  }
+
+  /** The gsap instance this reel's tweens live on. Read by every phase. */
+  get gsap(): Gsap {
+    return this._gsap;
   }
 
   /** This reel's travel projection (orientation + direction). */
@@ -1116,7 +1129,7 @@ export class Reel implements Disposable {
 
         const state = { p: 0 };
         let lastDisplaced = 0;
-        this._nudgeTween = getGsap().to(state, {
+        this._nudgeTween = this._gsap.to(state, {
           p: 1,
           duration: duration / 1000,
           ease,

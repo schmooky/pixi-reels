@@ -1,6 +1,5 @@
 import type { gsap } from 'gsap';
 import type { Container } from 'pixi.js';
-import { getGsap } from '../../utils/gsapRef.js';
 import { ReelPhase } from './ReelPhase.js';
 import type { Reel } from '../../core/Reel.js';
 import type { SpeedProfile } from '../../config/types.js';
@@ -274,7 +273,7 @@ export class CascadeDropInPhase extends ReelPhase<CascadeDropInPhaseConfig> {
       return;
     }
 
-    const tl = getGsap().timeline({ onComplete: finish });
+    const tl = this._reel.gsap.timeline({ onComplete: finish });
     this._timeline = tl;
 
     // For 'endFirst' order: walk jobs in reverse so the bottom-cell job

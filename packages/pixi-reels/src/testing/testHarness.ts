@@ -38,6 +38,12 @@ export interface TestReelSetOptions {
   bufferSymbols?: number | { start: number; end: number };
   /** Initial symbol grid. Same `ColumnTarget[]` form as `ReelSetBuilder.initialFrame`. */
   initialFrame?: ColumnTarget[];
+  /**
+   * gsap instance for this set. Pass a synchronous shim to drive tweens
+   * inline instead of waiting on a real clock. Per set, so two harnesses in
+   * one file cannot clobber each other.
+   */
+  gsap?: import('../utils/gsap.js').Gsap;
 }
 
 /**
@@ -136,6 +142,9 @@ export function createTestReelSet(opts: TestReelSetOptions = {}): TestReelSetHan
     builder.initialFrame(opts.initialFrame);
   }
 
+  if (opts.gsap) {
+    builder.gsap(opts.gsap);
+  }
   if (opts.orientation) {
     builder.orientation(opts.orientation);
   }

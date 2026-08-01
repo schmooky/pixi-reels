@@ -1,6 +1,6 @@
 import type { Ticker } from 'pixi.js';
 import type { gsap } from 'gsap';
-import { setGsap } from '../utils/gsapRef.js';
+import { DEFAULT_GSAP, type Gsap } from '../utils/gsap.js';
 import type {
   SpeedProfile,
   SymbolData,
@@ -119,6 +119,8 @@ export class ReelSetBuilder {
   private _maskStrategy: MaskStrategy = new RectMaskStrategy();
   /** True if the user explicitly set a mask strategy (no auto-pick override). */
   private _maskStrategyExplicit = false;
+
+  private _gsap: Gsap = DEFAULT_GSAP;
 
   private _rng: () => number = Math.random;
 
@@ -531,7 +533,7 @@ export class ReelSetBuilder {
    * render but never finish, animations that double-fire, tweens that
    * silently drop on hidden tabs in only one of the two instances.
    *
-   * Calling `.gsap(myGsap)` rebinds every internal phase, motion tween,
+   * Calling `.gsap(myGsap)` binds every phase, motion tween, symbol
    * pin-flight tween, and SpriteSymbol win pulse to the GSAP you pass.
    * guaranteed to be the same instance that drives your own animations.
    *
@@ -540,9 +542,13 @@ export class ReelSetBuilder {
    * same instance (the common case in production bundles with proper
    * `dedupe`), you do NOT need to call this.
    *
-   * Idempotent. calling again with the same instance is a no-op. Calling
-   * with a different instance after `.build()` only affects tweens
-   * started after the swap.
+   * **Per reel set, not process-wide.** v1 stored one instance in a module
+   * global, so the last `.gsap()` call before any `build()` silently won for
+   * every set. Each set now captures the instance at `build()` time, so a
+   * composed stage can drive two sets from different instances. Pass the
+   * same instance to `driveGsapWithTicker(ticker, instance)`.
+   *
+   * Read at `build()`. calling it afterwards does not move an existing set.
    *
    * @example
    * import { gsap } from 'gsap';
@@ -554,7 +560,7 @@ export class ReelSetBuilder {
    *   .build();
    */
   gsap(instance: typeof gsap): this {
-    setGsap(instance);
+    this._gsap = instance;
     return this;
   }
 
@@ -788,7 +794,7 @@ export class ReelSetBuilder {
       0,
     );
     const poolCapacity = this._poolCapacity ?? Math.max(20, totalStripCells);
-    const symbolFactory = new SymbolFactory(this._symbolRegistry, poolCapacity);
+    const symbolFactory = new SymbolFactory(this._symbolRegistry, poolCapacity, this._gsap);
     const randomProvider = new RandomSymbolProvider(symbolsData, this._rng);
     const frameBuilder = new FrameBuilder(randomProvider);
 
@@ -934,6 +940,7 @@ export class ReelSetBuilder {
         axis: reelAxis(this._orientation, this._directionPerReel?.[reelIndex] ?? this._direction),
         cellStacking: this._cellStacking,
         reelStacking: this._reelStacking,
+        gsap: this._gsap,
       };
 
       const reel = new Reel(reelConfig, symbolFactory, randomProvider, viewport);

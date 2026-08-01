@@ -16,7 +16,7 @@ import { ReelSetBuilder } from '../../src/core/ReelSetBuilder.js';
 import { HeadlessSymbol } from '../../src/testing/HeadlessSymbol.js';
 import { FakeTicker } from '../../src/testing/FakeTicker.js';
 import { driveGsapWithTicker } from '../../src/utils/gsapTicker.js';
-import { getGsap } from '../../src/utils/gsapRef.js';
+import { DEFAULT_GSAP } from '../../src/utils/gsap.js';
 import { SpeedPresets } from '../../src/config/SpeedPresets.js';
 import type { Ticker } from 'pixi.js';
 
@@ -31,7 +31,7 @@ afterEach(() => {
   // These tests bail mid-fall and destroy the reel set, leaving in-flight phase
   // timelines that reference now-destroyed views. Kill them BEFORE restoring
   // gsap's own ticker, or a lazy tween init reads a null view's `.y`.
-  getGsap().globalTimeline.clear();
+  DEFAULT_GSAP.globalTimeline.clear();
   stopGsap?.();
   stopGsap = null;
   ticker.destroy();
