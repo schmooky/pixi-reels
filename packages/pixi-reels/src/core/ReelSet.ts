@@ -480,7 +480,6 @@ export class ReelSet extends Container implements Disposable {
   private _symbolsData: Record<string, SymbolData>;
 
   /** Horizontal symbol gap (px). Used by `getBlockBounds` for big symbols. */
-  private _configGapX: number;
 
   constructor(params: ReelSetParams) {
     super();
@@ -490,7 +489,6 @@ export class ReelSet extends Container implements Disposable {
     this._symbolFactory = params.symbolFactory;
     this._frameBuilder = params.frameBuilder;
     this._symbolsData = params.config.symbols;
-    this._configGapX = params.config.grid.symbolGap.x;
     this._isMultiWaysSlot = !!params.config.grid.multiways;
     if (params.config.grid.multiways) {
       this._multiwaysMinCells = params.config.grid.multiways.minCells;
@@ -540,12 +538,11 @@ export class ReelSet extends Container implements Disposable {
         peekTargetShape: () => this.peekTargetShape(),
         clearTargetShape: () => this.clearTargetShape(),
         multiwaysReelExtent: this._multiwaysReelExtent,
-        symbolGapY: params.config.grid.symbolGap.y,
         getPinsOnReel: (reelIndex) => this._pinsOnReel(reelIndex),
         migratePinsForReel: (reelIndex, newCells) => this._migratePinsForReel(reelIndex, newCells),
         refreshPinOverlaysForReel: (reelIndex) => this.refreshPinOverlaysForReel(reelIndex),
-        buildPinOverlayTweens: (reelIndex, targetSymbolHeight, symbolGapY) =>
-          this._buildPinOverlayTweens(reelIndex, targetSymbolHeight, symbolGapY),
+        buildPinOverlayTweens: (reelIndex, targetCellMain) =>
+          this._buildPinOverlayTweens(reelIndex, targetCellMain),
       },
     );
 
@@ -1574,30 +1571,35 @@ export class ReelSet extends Container implements Disposable {
   getBlockBounds(reel: number, cell: number): CellBounds {
     const fp = this.getSymbolFootprint(reel, cell);
     const anchorReel = this._reels[fp.anchor.reel];
-    const gapX = this._configGapX;
-    const slotH = anchorReel.motion.slotPitch;
-    const cellW = anchorReel.symbolWidth;
-    const cellH = anchorReel.symbolHeight;
-    const gapY = slotH - cellH;
+    const axis = anchorReel.axis;
+    const slotPitch = anchorReel.motion.slotPitch;
+    // `size.reels` spans the CROSS axis and `size.cells` the MAIN axis in
+    // every orientation (ADR 016 section 6.7). The screen width and height
+    // they map to therefore INVERT under horizontal, even though this
+    // method's name and return shape do not move.
+    const blockCross =
+      fp.size.reels * anchorReel.cellCross + (fp.size.reels - 1) * anchorReel.crossGap;
+    const blockMain =
+      fp.size.cells * anchorReel.cellMain + (fp.size.cells - 1) * anchorReel.mainGap;
 
-    // For anchors that sit in bufferStart (`fp.anchor.cell < 0`), the
-    // block extends above the visible window. Pixel coordinates of the
-    // anchor cell are derived directly from the cell offset (negative
-    // values land above visible cell 0). The returned rect is the FULL
-    // block's pixel footprint, including the clipped-by-mask portion in
-    // bufferStart. consumers drawing overlays can intersect with the
-    // visible viewport themselves if they need a clipped rect.
-    const anchorRowCount = fp.anchor.cell; // may be negative
-    const anchorX = this._viewport.x + anchorReel.container.x;
-    const anchorY = this._viewport.y + anchorReel.mainOffset + anchorRowCount * slotH;
-    // Block covers w * cellWidth + (w-1) * gapX horizontally. the
-    // (w-1) inter-cell gaps are part of the block's visible footprint.
-    // Same vertically for cellHeight + gapY.
+    // For anchors that sit in bufferStart (`fp.anchor.cell < 0`), the block
+    // extends outside the visible window at the start edge. Coordinates are
+    // derived directly from the cell offset (negative values land before
+    // visible cell 0). The returned rect is the FULL block footprint,
+    // including the clipped-by-mask portion. consumers drawing overlays can
+    // intersect with the visible viewport themselves if they need a clipped
+    // rect.
+    const anchorCellOffset = fp.anchor.cell; // may be negative
+    const origin = axis.toScreen(
+      axis.getCross(anchorReel.container),
+      anchorReel.mainOffset + anchorCellOffset * slotPitch,
+    );
+    const size = axis.toScreen(blockCross, blockMain);
     return {
-      x: anchorX,
-      y: anchorY,
-      width: fp.size.reels * cellW + (fp.size.reels - 1) * gapX,
-      height: fp.size.cells * cellH + (fp.size.cells - 1) * gapY,
+      x: this._viewport.x + origin.x,
+      y: this._viewport.y + origin.y,
+      width: size.x,
+      height: size.y,
     };
   }
 
@@ -1875,8 +1877,8 @@ export class ReelSet extends Container implements Disposable {
     // source cell's mask state. getSymbolAt(cell).view.y is reel-local for masked
     // symbols but container.y-baked for unmasked ones, so reading it directly
     // mis-places the flight by container.y on masked cells.
-    const fromCellY = this._pinOverlayCellY(fromReel, from.cell, fromReel.motion.slotPitch);
-    const toCellY = this._pinOverlayCellY(toReel, to.cell, toReel.motion.slotPitch);
+    const fromCellY = this._pinOverlayCellMain(fromReel, from.cell, fromReel.motion.slotPitch);
+    const toCellY = this._pinOverlayCellMain(toReel, to.cell, toReel.motion.slotPitch);
     const fromX = fromReel.container.x;
     const toX = toReel.container.x;
 
@@ -2150,8 +2152,8 @@ export class ReelSet extends Container implements Disposable {
    * `getSymbolAt(cell).view.y` equals `cell * slotPitch` for a snapped reel
    * (ReelMotion lays symbols at that pitch), so all overlay sites agree.
    */
-  private _pinOverlayCellY(reel: Reel, cell: number, slotPitch: number): number {
-    return reel.container.y + cell * slotPitch;
+  private _pinOverlayCellMain(reel: Reel, cell: number, slotPitch: number): number {
+    return reel.axis.getMain(reel.container) + cell * slotPitch;
   }
 
   /**
@@ -2239,11 +2241,15 @@ export class ReelSet extends Container implements Disposable {
     const overlay = this._symbolFactory.acquire(pin.symbolId);
     overlay.resize(reel.symbolWidth, reel.symbolHeight);
     // Viewport.unmaskedContainer sits at (0,0) inside the viewport. same
-    // local space as maskedContainer. Reel x lives on the reel container;
-    // symbol-view y is reel-local; pyramid layouts add `reel.container.y`
-    // (the per-reel mainOffset) so overlays line up with the actual cell.
-    overlay.view.x = reel.container.x;
-    overlay.view.y = this._pinOverlayCellY(reel, pin.cell, reel.motion.slotPitch);
+    // local space as maskedContainer. The reel's cross coordinate lives on
+    // its container; the symbol view's main coordinate is reel-local, and
+    // jagged layouts add the reel's mainOffset so overlays line up with the
+    // actual cell.
+    reel.axis.setCross(overlay.view, reel.axis.getCross(reel.container));
+    reel.axis.setMain(
+      overlay.view,
+      this._pinOverlayCellMain(reel, pin.cell, reel.motion.slotPitch),
+    );
     overlay.view.zIndex = ReelSet.PIN_OVERLAY_Z_INDEX;
     this._viewport.unmaskedContainer.addChild(overlay.view);
     this._pinOverlays.set(key, { pin, overlay });
@@ -2268,14 +2274,17 @@ export class ReelSet extends Container implements Disposable {
       if (entry.pin.reel !== reelIndex) continue;
       const { pin, overlay } = entry;
       overlay.resize(reel.symbolWidth, reel.symbolHeight);
-      overlay.view.x = reel.container.x;
-      overlay.view.y = this._pinOverlayCellY(reel, pin.cell, reel.motion.slotPitch);
+      reel.axis.setCross(overlay.view, reel.axis.getCross(reel.container));
+      reel.axis.setMain(
+        overlay.view,
+        this._pinOverlayCellMain(reel, pin.cell, reel.motion.slotPitch),
+      );
     }
   }
 
   /**
    * Internal: build AdjustPhase pin-overlay tween descriptors for a reel.
-   * Captures the overlays' CURRENT on-screen Y + size as the tween's
+   * Captures the overlays' CURRENT on-screen main coordinate + size as the tween's
    * `from` state, then computes the post-reshape `to` state from the
    * pin's already-migrated cell + the upcoming cell height. Called BEFORE
    * AdjustPhase commits the reshape, so the snapshot reflects what the
@@ -2283,23 +2292,24 @@ export class ReelSet extends Container implements Disposable {
    */
   private _buildPinOverlayTweens(
     reelIndex: number,
-    targetSymbolHeight: number,
-    symbolGapY: number,
+    targetCellMain: number,
   ): import('../spin/phases/AdjustPhase.js').PinOverlayTween[] {
     const reel = this._reels[reelIndex];
     const out: import('../spin/phases/AdjustPhase.js').PinOverlayTween[] = [];
-    const newSlot = targetSymbolHeight + symbolGapY;
+    // The reel's OWN main gap, not symbolGap.y: under horizontal the strip
+    // is spaced by the X gap (ADR 016 section 6.6).
+    const newSlot = targetCellMain + reel.mainGap;
     for (const [, entry] of this._pinOverlays) {
       if (entry.pin.reel !== reelIndex) continue;
       const { pin, overlay } = entry;
       out.push({
         symbol: overlay,
-        cellWidth: reel.symbolWidth,
-        oldCellHeight: reel.symbolHeight,
-        newCellHeight: targetSymbolHeight,
-        fromY: overlay.view.y,
-        toY: this._pinOverlayCellY(reel, pin.cell, newSlot),
-        x: reel.container.x,
+        cellCross: reel.cellCross,
+        oldCellMain: reel.cellMain,
+        newCellMain: targetCellMain,
+        fromMain: reel.axis.getMain(overlay.view),
+        toMain: this._pinOverlayCellMain(reel, pin.cell, newSlot),
+        cross: reel.axis.getCross(reel.container),
       });
     }
     return out;

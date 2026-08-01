@@ -225,8 +225,14 @@ export class ReelSetBuilder {
 
   /**
    * Strip travel axis for the whole set. `'vertical'` (default) runs strips on
-   * Y with reels marched along X. `'horizontal'` lands in a later v2 commit and
-   * throws at `build()` for now.
+   * Y with reels marched along X; `'horizontal'` runs them on X with reels
+   * marched along Y.
+   *
+   * Everything else is orientation-neutral: uniform grids, pyramids
+   * (`visibleCellsPerReel`), MultiWays, big symbols and cascades all work on
+   * either axis from the same arithmetic. `symbolSize(width, height)` stays
+   * SCREEN-space, so a horizontal set gives the cell its main extent through
+   * `width` where a vertical one uses `height`.
    */
   orientation(orientation: Orientation): this {
     this._orientation = orientation;
@@ -639,19 +645,6 @@ export class ReelSetBuilder {
         `directionPerReel() length (${this._directionPerReel.length}) must equal reels() (${this._reelCount}).`,
       );
     }
-    // Horizontal is supported for uniform grids (every reel the same cell
-    // count). Pyramid / MultiWays horizontal needs per-reel main-extent shaping
-    // that the geometry does not project yet, so fail loud rather than mis-lay.
-    if (
-      this._orientation === 'horizontal' &&
-      (this._multiways || this._visibleCellsPerReel || this._reelExtents)
-    ) {
-      throw new Error(
-        "orientation('horizontal') supports uniform grids only; pyramid / MultiWays " +
-          'horizontal sets are not enabled yet. Use a uniform visibleCells.',
-      );
-    }
-
     const reelCount = this._reelCount!;
     const symbolWidth = this._symbolWidth!;
     const symbolHeight = this._symbolHeight!;
@@ -689,8 +682,11 @@ export class ReelSetBuilder {
       visibleCellsPerReel = new Array(reelCount).fill(v);
     }
 
-    // Resolve per-reel pixel-box heights. MultiWays: uniform reelExtent.
-    // Pyramid: defaults to visibleCellsPerReel[i] * symbolHeight.
+    // Per-reel MAIN-AXIS extent (the strip length): pixel height for a
+    // vertical set, pixel width for a horizontal one. `reelExtents([...])`
+    // and `multiways({ reelExtent })` are both main-axis values, which is
+    // what lets a pyramid or MultiWays set run sideways from exactly the
+    // same arithmetic.
     let reelExtents: number[];
     if (isMultiWays) {
       reelExtents = new Array(reelCount).fill(this._multiways!.reelExtent);
@@ -698,15 +694,10 @@ export class ReelSetBuilder {
       reelExtents = this._reelExtents;
     } else {
       reelExtents = visibleCellsPerReel.map(
-        (cells) => cells * symbolHeight + (cells - 1) * this._symbolGap.y,
+        (cells) => cells * mainCellSize + (cells - 1) * mainGap,
       );
     }
-
-    // Main-axis extent per reel (the strip length). For vertical this is the
-    // pixel-box height; for a uniform horizontal set it is the strip width.
-    const mainExtents = vertical
-      ? reelExtents
-      : visibleCellsPerReel.map((cells) => cells * mainCellSize + (cells - 1) * mainGap);
+    const mainExtents = reelExtents;
 
     // Compute per-reel main offset and target cell height.
     // SPIN-time uniform cell height equals the configured `symbolHeight`.
@@ -719,13 +710,15 @@ export class ReelSetBuilder {
         default: return (tallest - h) / 2;
       }
     });
-    const perReelCellSize: number[] = reelExtents.map((h, i) => {
+    // Per-reel MAIN cell extent, derived by dividing the reel's extent by
+    // its cell count (minus the inter-cell gaps).
+    const perReelCellSize: number[] = reelExtents.map((extent, i) => {
       const cells = visibleCellsPerReel[i];
-      return (h - (cells - 1) * this._symbolGap.y) / cells;
+      return (extent - (cells - 1) * mainGap) / cells;
     });
-    // MultiWays uses uniform spinCellSize = configured symbolHeight.
-    // Pyramid: per-reel cell height. Uniform: same as symbolHeight.
-    const spinCellSize = symbolHeight;
+    // SPIN-time uniform main cell extent. Every reel uses this while the
+    // strip is scrolling, regardless of its post-AdjustPhase shape.
+    const spinCellSize = mainCellSize;
     const initialCellSize = isMultiWays
       ? new Array(reelCount).fill(spinCellSize)
       : perReelCellSize;
@@ -885,7 +878,11 @@ export class ReelSetBuilder {
     const maskRects: ReelMaskRect[] = [];
     for (let reelIndex = 0; reelIndex < reelCount; reelIndex++) {
       const cells = visibleCellsPerReel[reelIndex];
-      const initialCellH = initialCellSize[reelIndex];
+      // Project this reel's (main, cross) cell extents back to the screen
+      // pair `Reel` stores. For vertical that is (symbolWidth, cellMain) as
+      // before; for horizontal the per-reel value lands on WIDTH instead,
+      // which is what makes a sideways pyramid work.
+      const cellScreen = setAxis.toScreen(crossCellSize, initialCellSize[reelIndex]);
 
       // Per-reel initial frame at its own visibleCells count.
       const initialFrame = frameBuilder.build(
@@ -901,8 +898,8 @@ export class ReelSetBuilder {
         visibleCells: cells,
         bufferStart,
         bufferEnd,
-        symbolWidth,
-        symbolHeight: initialCellH,
+        symbolWidth: cellScreen.x,
+        symbolHeight: cellScreen.y,
         symbolGapX: this._symbolGap.x,
         symbolGapY: this._symbolGap.y,
         symbolsData,

@@ -210,6 +210,11 @@ export class Reel implements Disposable {
   private readonly _axis: ReelAxis;
   private readonly _mainCell: number;
   private readonly _mainGap: number;
+  private readonly _crossGap: number;
+  /** This reel's cell extent along the strip. Varies per reel; reshape mutates it. */
+  private _cellMain: number;
+  /** This reel's cell extent across the strip. Uniform across the set. */
+  private readonly _cellCross: number;
 
   private _symbolFactory: SymbolFactory;
   private _randomProvider: RandomSymbolProvider;
@@ -217,8 +222,6 @@ export class Reel implements Disposable {
   private _symbolsData: Record<string, SymbolData>;
   private _visibleCells: number;
   private _bufferStart: number;
-  private _symbolWidth: number;
-  private _symbolHeight: number;
   private _mainOffset: number;
   private _cellStacking: Stacking;
   private _reelStacking: Stacking;
@@ -305,14 +308,10 @@ export class Reel implements Disposable {
     this._symbolsData = config.symbolsData;
     this._visibleCells = config.visibleCells;
     this._bufferStart = config.bufferStart;
-    this._symbolWidth = config.symbolWidth;
-    this._symbolHeight = config.symbolHeight;
     this._mainOffset = config.mainOffset ?? 0;
-    this._extent = config.extent ?? config.visibleCells * config.symbolHeight;
-    this._spinCellSize = config.spinCellSize ?? config.symbolHeight;
-    this._symbolGapY = config.symbolGapY;
     this._cellStacking = config.cellStacking ?? 'ascending';
     this._reelStacking = config.reelStacking ?? 'ascending';
+    this._symbolGapY = config.symbolGapY;
     this._symbolGapX = config.symbolGapX;
     this._occupancy = new Array(config.visibleCells).fill(null);
     this.events = new EventEmitter<ReelEvents>();
@@ -323,13 +322,22 @@ export class Reel implements Disposable {
     // render order. bottom-cell symbols render in front, and flagged "big"
     // symbols like wild/bonus can override to render above neighbors.
     this._axis = config.axis ?? VERTICAL_FORWARD;
-    // Cell size + gaps projected onto the travel axes. The symbol art still
-    // resizes to screen (symbolWidth, spinCellSize); only the strip pitch
-    // (main) and reel marching (cross) follow the axis. Identity for vertical.
-    const cell = this._axis.toLocal(config.symbolWidth, this._spinCellSize);
+    // The reel stores its cell size AXIS-RELATIVE, not as screen width and
+    // height. `cellMain` is the extent along the strip and is the value a
+    // pyramid or MultiWays reshape varies per reel; `cellCross` is the
+    // reel-marching extent and is uniform across the set. Screen dimensions
+    // are projected back out of the pair whenever art has to be resized, so
+    // a jagged horizontal set varies WIDTH where a vertical one varies
+    // height, from the same arithmetic.
+    const cell = this._axis.toLocal(config.symbolWidth, config.symbolHeight);
     const gap = this._axis.toLocal(config.symbolGapX, config.symbolGapY);
-    this._mainCell = cell.main;
+    this._cellMain = cell.main;
+    this._cellCross = cell.cross;
     this._mainGap = gap.main;
+    this._crossGap = gap.cross;
+    this._extent = config.extent ?? config.visibleCells * cell.main;
+    this._spinCellSize = config.spinCellSize ?? cell.main;
+    this._mainCell = this._spinCellSize;
     const crossPitch = cell.cross + gap.cross;
     this.container = new Container();
     this.container.sortableChildren = true;
@@ -350,7 +358,8 @@ export class Reel implements Disposable {
     // uses the same uniform cell height regardless of post-AdjustPhase shape.
     this.symbols = config.initialSymbols.map((symbolId, cell) => {
       const symbol = symbolFactory.acquire(symbolId);
-      symbol.resize(config.symbolWidth, this._spinCellSize);
+      const spinSize = this._screenSize(this._spinCellSize, this._cellCross);
+      symbol.resize(spinSize.width, spinSize.height);
       return symbol;
     });
 
@@ -399,22 +408,73 @@ export class Reel implements Disposable {
     return this._visibleCells;
   }
 
-  /** The symbol cell width (in pixels). Constant for the reel's lifetime. */
+  /**
+   * This reel's cell width in SCREEN pixels - the first argument to
+   * `ReelSymbol.resize`. On a vertical set this is the cross extent and is
+   * constant; on a horizontal set it is the MAIN extent, so a pyramid or
+   * MultiWays reshape moves it.
+   */
   get symbolWidth(): number {
-    return this._symbolWidth;
+    return this._axis.toScreen(this._cellCross, this._cellMain).x;
   }
 
   /**
-   * The symbol cell height (in pixels). Mutates on MultiWays reshape via
-   * `reshape()`. During SPIN this still equals `spinCellSize`; the
-   * per-reel target value comes into effect when AdjustPhase commits the
-   * reshape. For non-MultiWays slots this is constant for the reel's lifetime.
+   * This reel's cell height in SCREEN pixels - the second argument to
+   * `ReelSymbol.resize`. Mirror of {@link Reel.symbolWidth}: on a vertical
+   * set this is the main extent and a MultiWays reshape moves it; on a
+   * horizontal set it is the constant cross extent.
+   *
+   * During SPIN the main extent is still `spinCellSize`; the per-reel target
+   * comes into effect when AdjustPhase commits the reshape.
    */
   get symbolHeight(): number {
-    return this._symbolHeight;
+    return this._axis.toScreen(this._cellCross, this._cellMain).y;
   }
 
-  /** Pixel height of this reel's box. Set by builder, immutable. */
+  /**
+   * Project an axis-relative (main, cross) pair back to the screen
+   * `(width, height)` that `ReelSymbol.resize` takes. The single place the
+   * engine converts back, so a jagged horizontal set varies width from
+   * exactly the arithmetic a vertical one uses to vary height.
+   */
+  private _screenSize(main: number, cross: number): { width: number; height: number } {
+    const s = this._axis.toScreen(cross, main);
+    return { width: s.x, height: s.y };
+  }
+
+  /**
+   * Screen size of an `reels x cells` block, gaps included. `reels` always
+   * spans the cross axis and `cells` the main axis, so the screen width and
+   * height this maps to swap between orientations.
+   */
+  private _blockSize(reels: number, cells: number): { width: number; height: number } {
+    return this._screenSize(
+      cells * this._cellMain + (cells - 1) * this._mainGap,
+      reels * this._cellCross + (reels - 1) * this._crossGap,
+    );
+  }
+
+  /** This reel's cell extent ALONG the strip. A reshape moves it. */
+  get cellMain(): number {
+    return this._cellMain;
+  }
+
+  /** This reel's cell extent ACROSS the strip. Uniform across the set. */
+  get cellCross(): number {
+    return this._cellCross;
+  }
+
+  /** The inter-cell gap along the strip (symbolGap.y vertical, .x horizontal). */
+  get mainGap(): number {
+    return this._mainGap;
+  }
+
+  /** The inter-reel gap across the strip (symbolGap.x vertical, .y horizontal). */
+  get crossGap(): number {
+    return this._crossGap;
+  }
+
+  /** Pixel extent of this reel's box along the strip. Set by builder. */
   get extent(): number {
     return this._extent;
   }
@@ -1173,13 +1233,14 @@ export class Reel implements Disposable {
     bufferEnd: number,
   ): void {
     const newTotal = bufferStart + newVisibleCells + bufferEnd;
+    const newSize = this._screenSize(newCellSize, this._cellCross);
 
     // Grow: append additional symbols at the bottom buffer. New symbols are
     // parented based on `unmask` flag. same rule as `_replaceSymbol`.
     while (this.symbols.length < newTotal) {
       const id = this._randomProvider.next(true);
       const sym = this._symbolFactory.acquire(id);
-      sym.resize(this._symbolWidth, newCellSize);
+      sym.resize(newSize.width, newSize.height);
       this._placeSymbolView(sym.view, this._axis.getMain(sym.view), this._effectiveUnmask(id));
       this._parentForSymbolId(id).addChild(sym.view);
       this.symbols.push(sym);
@@ -1196,25 +1257,26 @@ export class Reel implements Disposable {
     }
 
     this._visibleCells = newVisibleCells;
-    this._symbolHeight = newCellSize;
+    this._cellMain = newCellSize;
     this._bufferStart = bufferStart;
     this._occupancy = new Array(newVisibleCells).fill(null);
-    // Recompute pixel-box height from the new geometry. For MultiWays this
-    // equals the fixed `multiways.reelExtent` by construction (the cell
-    // height is derived from it); for any non-MultiWays caller it matches
-    // what the builder would have set at construction. Keeps `extent`
-    // from going stale across reshape.
+    // Recompute the reel's main-axis extent from the new geometry, using the
+    // MAIN gap rather than symbolGapY (ADR 016 section 6.6 - under horizontal
+    // the strip is spaced by the X gap). For MultiWays this equals the fixed
+    // `multiways.reelExtent` by construction; for any non-MultiWays caller it
+    // matches what the builder set at construction. Keeps `extent` from going
+    // stale across reshape.
     this._extent =
-      newVisibleCells * newCellSize + (newVisibleCells - 1) * this._symbolGapY;
+      newVisibleCells * newCellSize + (newVisibleCells - 1) * this._mainGap;
 
-    // Resize every kept symbol to the new cell height.
+    // Resize every kept symbol to the new cell extent.
     for (const sym of this.symbols) {
       if (sym instanceof OccupiedStub) continue;
-      sym.resize(this._symbolWidth, newCellSize);
+      sym.resize(newSize.width, newSize.height);
     }
 
-    // Update motion: new slot height + bounds.
-    this.motion.reshape(newCellSize, this._symbolGapY, bufferStart, newVisibleCells, bufferEnd);
+    // Update motion: new slot pitch + bounds, on the main axis.
+    this.motion.reshape(newCellSize, this._mainGap, bufferStart, newVisibleCells, bufferEnd);
     this.motion.snapToGrid();
     this._syncUnmaskedViewOffsets();
     this.refreshZIndex();
@@ -1487,7 +1549,7 @@ export class Reel implements Disposable {
       this._releaseOccupiedStub(oldSymbol);
       const newSymbol = this._symbolFactory.acquire(newSymbolId);
       const newIsUnmasked = this._effectiveUnmask(newSymbolId);
-      newSymbol.resize(this._symbolWidth, this._symbolHeight);
+      newSymbol.resize(this.symbolWidth, this.symbolHeight);
       this._placeSymbolView(newSymbol.view, reelLocalY, newIsUnmasked);
       newSymbol.view.alpha = 1;
       newSymbol.view.scale.set(1, 1);
@@ -1526,7 +1588,7 @@ export class Reel implements Disposable {
     this._symbolFactory.release(oldSymbol);
     const newSymbol = this._symbolFactory.acquire(newSymbolId);
     const newIsUnmasked = this._effectiveUnmask(newSymbolId);
-    newSymbol.resize(this._symbolWidth, this._symbolHeight);
+    newSymbol.resize(this.symbolWidth, this.symbolHeight);
     this._placeSymbolView(newSymbol.view, reelLocalY, newIsUnmasked);
     newSymbol.view.alpha = 1;
     newSymbol.view.scale.set(1, 1);
@@ -1614,12 +1676,15 @@ export class Reel implements Disposable {
       if (w === 1 && h === 1) continue;
 
       // Size the anchor to span the block PLUS inter-cell gaps. A 2x2
-      // block on a (cellW=80, cellH=80, gapX=4, gapY=4) layout covers
-      // 2*80 + 1*4 = 164px wide, not 160px. Without the gap, the anchor
-      // leaves a thin uncovered strip at the gap cell/reel.
-      const blockW = w * this._symbolWidth + (w - 1) * this._symbolGapX;
-      const blockH = h * this._symbolHeight + (h - 1) * this._symbolGapY;
-      sym.resize(blockW, blockH);
+      // block on a (cell=80, gap=4) layout covers 2*80 + 1*4 = 164px, not
+      // 160px. Without the gap, the anchor leaves a thin uncovered strip.
+      //
+      // `size.reels` spans the CROSS axis and `size.cells` the MAIN axis in
+      // every orientation (ADR 016 section 6.7), so a 2x2 is 2 reels by 2
+      // cells whichever way the strip runs - which means the screen width
+      // and height it maps to invert under horizontal.
+      const block = this._blockSize(w, h);
+      sym.resize(block.width, block.height);
       for (let dy = 1; dy < h; dy++) {
         const occCell = cell + dy;
         if (occCell < this._visibleCells) {
@@ -1645,9 +1710,8 @@ export class Reel implements Disposable {
       const blockBottomStrip = stripIdx + h - 1;
       if (blockBottomStrip < this._bufferStart) continue;
 
-      const blockW = w * this._symbolWidth + (w - 1) * this._symbolGapX;
-      const blockH = h * this._symbolHeight + (h - 1) * this._symbolGapY;
-      sym.resize(blockW, blockH);
+      const block = this._blockSize(w, h);
+      sym.resize(block.width, block.height);
 
       const anchorCell = stripIdx - this._bufferStart; // negative
       for (let dy = 1; dy < h; dy++) {

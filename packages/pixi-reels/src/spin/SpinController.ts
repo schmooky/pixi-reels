@@ -51,7 +51,6 @@ export interface SpinControllerHooks {
   clearTargetShape(): void;
   /** Reel pixel-box height for MultiWays cell-height derivation. */
   multiwaysReelExtent: number;
-  symbolGapY: number;
   /** Reel-scoped pin lookup. Used to build AdjustPhase tween descriptors. */
   getPinsOnReel(reelIndex: number): CellPin[];
   /**
@@ -78,8 +77,7 @@ export interface SpinControllerHooks {
    */
   buildPinOverlayTweens(
     reelIndex: number,
-    targetSymbolHeight: number,
-    symbolGapY: number,
+    targetCellMain: number,
   ): import('./phases/AdjustPhase.js').PinOverlayTween[];
 }
 
@@ -247,7 +245,6 @@ export class SpinController implements Disposable {
       peekTargetShape: () => null,
       clearTargetShape: () => {},
       multiwaysReelExtent: 0,
-      symbolGapY: 0,
       getPinsOnReel: () => [],
       migratePinsForReel: () => [],
       refreshPinOverlaysForReel: () => {},
@@ -1095,13 +1092,17 @@ export class SpinController implements Disposable {
   }
 
   /**
-   * Compute the target cell height for a reel given a target cell count.
-   * MultiWays slots derive cell height from the fixed `multiwaysReelExtent`;
-   * non-MultiWays slots return the reel's current `symbolHeight` unchanged.
+   * Compute the target MAIN-axis cell extent for a reel given a target cell
+   * count. MultiWays slots divide the fixed `multiwaysReelExtent` by the new
+   * count, minus the inter-cell gaps; non-MultiWays slots return the reel's
+   * current cell extent unchanged.
+   *
+   * The gap comes from the reel's own axis, not `symbolGap.y`. under
+   * horizontal the strip is spaced by the X gap (ADR 016 section 6.6).
    */
-  private _targetCellHeightFor(reel: Reel, targetCells: number): number {
-    if (this._hooks.multiwaysReelExtent <= 0) return reel.symbolHeight;
-    return (this._hooks.multiwaysReelExtent - (targetCells - 1) * this._hooks.symbolGapY) / targetCells;
+  private _targetCellSizeFor(reel: Reel, targetCells: number): number {
+    if (this._hooks.multiwaysReelExtent <= 0) return reel.cellMain;
+    return (this._hooks.multiwaysReelExtent - (targetCells - 1) * reel.mainGap) / targetCells;
   }
 
   /**
@@ -1120,15 +1121,15 @@ export class SpinController implements Disposable {
    */
   private _applyReshape(reelIndex: number, targetCells: number): boolean {
     const reel = this._reels[reelIndex];
-    const targetCellH = this._targetCellHeightFor(reel, targetCells);
+    const targetCellMain = this._targetCellSizeFor(reel, targetCells);
     const fromCells = reel.visibleCells;
 
-    if (targetCells === fromCells && targetCellH === reel.symbolHeight) {
+    if (targetCells === fromCells && targetCellMain === reel.cellMain) {
       return false;
     }
 
     this._events.emit('adjust:start', { reelIndex, fromCells, toCells: targetCells });
-    reel.reshape(targetCells, targetCellH, reel.bufferStart, reel.bufferEnd);
+    reel.reshape(targetCells, targetCellMain, reel.bufferStart, reel.bufferEnd);
     this._hooks.refreshPinOverlaysForReel(reelIndex);
     this._events.emit('adjust:complete', { reelIndex });
     return true;
@@ -1307,15 +1308,11 @@ export class SpinController implements Disposable {
   ): Promise<void> {
     const targetShape = this._hooks.peekTargetShape();
     const targetCells = targetShape ? targetShape[reelIndex] : reel.visibleCells;
-    const targetCellH = this._targetCellHeightFor(reel, targetCells);
+    const targetCellMain = this._targetCellSizeFor(reel, targetCells);
 
     // Build tween descriptors BEFORE the reshape commits. they capture
     // each overlay's current on-screen pose as the tween's `from` state.
-    const pinOverlays = this._hooks.buildPinOverlayTweens(
-      reelIndex,
-      targetCellH,
-      this._hooks.symbolGapY,
-    );
+    const pinOverlays = this._hooks.buildPinOverlayTweens(reelIndex, targetCellMain);
 
     // Commit the reshape via the shared helper (events + reel.reshape +
     // overlay refresh). Skip if no work and no overlays to tween.
