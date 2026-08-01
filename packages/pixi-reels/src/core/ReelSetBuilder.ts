@@ -11,7 +11,11 @@ import type {
   Stacking,
 } from '../config/types.js';
 import type { ReelMaskRect, MaskStrategy } from './ReelViewport.js';
-import { RectMaskStrategy, SharedRectMaskStrategy } from './ReelViewport.js';
+import {
+  MASK_STRATEGY_VERSION,
+  RectMaskStrategy,
+  SharedRectMaskStrategy,
+} from './ReelViewport.js';
 import { DEFAULTS } from '../config/defaults.js';
 import { SpeedPresets } from '../config/SpeedPresets.js';
 import { ReelSet, type ReelSetParams } from './ReelSet.js';
@@ -285,6 +289,20 @@ export class ReelSetBuilder {
       throw new Error(
         'maskStrategy(): expected a MaskStrategy with build(...) and update(...) methods ' +
         '(e.g. new RectMaskStrategy() or new SharedRectMaskStrategy()).',
+      );
+    }
+    // A v1 strategy takes positional (rects, totalWidth, totalHeight) and
+    // knows nothing about the axis. Handed a MaskContext it would read
+    // `rects` as an object, find no `.length`, and quietly draw a full-bleed
+    // rect - a mask that clips nothing, with no error anywhere. Refuse it.
+    if (strategy.version !== MASK_STRATEGY_VERSION) {
+      throw new Error(
+        `maskStrategy(): this strategy declares version ${String(strategy.version)}, ` +
+        `but v2 requires ${MASK_STRATEGY_VERSION}. build(ctx) and update(graphics, ctx) now ` +
+        'take a single MaskContext { rects, width, height, axis } instead of positional ' +
+        'arguments, because a per-reel rect means different things on a vertical and a ' +
+        'horizontal set. Add `readonly version = MASK_STRATEGY_VERSION` and read the ' +
+        'context. See the Migrating to 2.0 guide.',
       );
     }
     this._maskStrategy = strategy;
@@ -849,7 +867,13 @@ export class ReelSetBuilder {
         'Pass .maskStrategy(...) explicitly to override.',
       );
     }
-    const viewport = new ReelViewport(viewportWidth, viewportHeight, undefined, this._maskStrategy);
+    const viewport = new ReelViewport(
+      viewportWidth,
+      viewportHeight,
+      undefined,
+      this._maskStrategy,
+      setAxis,
+    );
 
     const totalRowsForOffset = bufferStart + Math.max(...visibleCellsPerReel) + bufferEnd;
     const offsetCalc = new OffsetCalculator(

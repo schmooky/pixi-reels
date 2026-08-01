@@ -1,11 +1,22 @@
 import { describe, it, expect } from 'vitest';
 import { ReelSetBuilder } from '../../src/core/ReelSetBuilder.js';
 import {
+  MASK_STRATEGY_VERSION,
   RectMaskStrategy,
   SharedRectMaskStrategy,
   type MaskStrategy,
   type ReelMaskRect,
 } from '../../src/core/ReelViewport.js';
+import { Graphics } from 'pixi.js';
+import { VERTICAL_FORWARD } from '../../src/core/ReelAxis.js';
+
+/** Build a MaskContext for the direct-strategy unit tests. */
+const ctx = (rects: ReelMaskRect[], width: number, height: number) => ({
+  rects,
+  width,
+  height,
+  axis: VERTICAL_FORWARD,
+});
 import { createTestReelSet } from '../../src/testing/index.js';
 import { FakeTicker } from '../../src/testing/FakeTicker.js';
 import { HeadlessSymbol } from '../../src/testing/HeadlessSymbol.js';
@@ -36,7 +47,7 @@ describe('mask strategies', () => {
 
   it('RectMaskStrategy draws one shape per reel', () => {
     const strat = new RectMaskStrategy();
-    const g = strat.build(RECTS, 300, 300);
+    const g = strat.build(ctx(RECTS, 300, 300));
     expect(g).toBeDefined();
     // Bounds union of the three rects: total width 300, total height 300
     // (the outer two reels span 0..300 vertically; the middle reel sits in
@@ -44,7 +55,7 @@ describe('mask strategies', () => {
     const bounds = getBoundsArea(g);
     expect(bounds.width).toBe(300);
     expect(bounds.height).toBe(300);
-    strat.update(g, RECTS, 300, 300);
+    strat.update(g, ctx(RECTS, 300, 300));
   });
 
   it('RectMaskStrategy: pyramid layout has gaps in the mask shape', () => {
@@ -59,7 +70,7 @@ describe('mask strategies', () => {
       { x: 200, y: 100, width: 100, height: 100 }, // 1 cell, centered
     ];
     const strat = new RectMaskStrategy();
-    const g = strat.build(pyramid, 300, 300);
+    const g = strat.build(ctx(pyramid, 300, 300));
     const bounds = getBoundsArea(g);
     // Union envelope is (0,0)-(300,300) but the middle reel is the only
     // one covering cells 0 and 2. Verify the rects array was preserved.
@@ -69,7 +80,7 @@ describe('mask strategies', () => {
 
   it('RectMaskStrategy falls back to a single bounding rect when no per-reel rects given', () => {
     const strat = new RectMaskStrategy();
-    const g = strat.build([], 500, 500);
+    const g = strat.build(ctx([], 500, 500));
     const bounds = getBoundsArea(g);
     expect(bounds.width).toBe(500);
     expect(bounds.height).toBe(500);
@@ -77,12 +88,12 @@ describe('mask strategies', () => {
 
   it('SharedRectMaskStrategy ignores per-reel rects and draws a single bounding rect', () => {
     const strat = new SharedRectMaskStrategy();
-    const g = strat.build(RECTS, 300, 300);
+    const g = strat.build(ctx(RECTS, 300, 300));
     expect(g).toBeDefined();
     const bounds = getBoundsArea(g);
     expect(bounds.width).toBe(300);
     expect(bounds.height).toBe(300);
-    strat.update(g, RECTS, 300, 300);
+    strat.update(g, ctx(RECTS, 300, 300));
   });
 
   it('viewport.maskRects exposes per-reel rects for pyramid layouts', () => {
@@ -268,10 +279,13 @@ describe('mask strategies', () => {
 
   it('builder.maskStrategy() accepts a custom strategy', () => {
     let buildCalls = 0;
+    let sawAxis: string | undefined;
     const custom: MaskStrategy = {
-      build: (_rects, w, h) => {
+      version: MASK_STRATEGY_VERSION,
+      build: (ctx) => {
         buildCalls++;
-        return new RectMaskStrategy().build([], w, h);
+        sawAxis = ctx.axis.mainProp;
+        return new RectMaskStrategy().build({ ...ctx, rects: [] });
       },
       update: () => {},
     };
@@ -285,8 +299,56 @@ describe('mask strategies', () => {
       .build();
     try {
       expect(buildCalls).toBe(1);
+      // The context carries the set's axis, so a strategy can branch on it
+      // instead of assuming a rect's height runs along the strip.
+      expect(sawAxis).toBe('y');
     } finally {
       reelSet.destroy();
     }
+  });
+
+  it('a horizontal set hands the strategy a horizontal axis', () => {
+    let sawAxis: string | undefined;
+    const custom: MaskStrategy = {
+      version: MASK_STRATEGY_VERSION,
+      build: (ctx) => {
+        sawAxis = ctx.axis.mainProp;
+        return new RectMaskStrategy().build(ctx);
+      },
+      update: () => {},
+    };
+    const reelSet = new ReelSetBuilder()
+      .reels(3)
+      .visibleCells(3)
+      .symbolSize(120, 80)
+      .orientation('horizontal')
+      .maskStrategy(custom)
+      .ticker(new FakeTicker() as unknown as Ticker)
+      .symbols((r) => r.register('a', HeadlessSymbol, {}))
+      .build();
+    try {
+      expect(sawAxis).toBe('x');
+    } finally {
+      reelSet.destroy();
+    }
+  });
+
+  it('rejects a v1 strategy by name instead of silently un-clipping', () => {
+    // A v1 strategy: positional (rects, totalWidth, totalHeight), no version.
+    // Handed a MaskContext it would read `rects` as an object, find no
+    // `.length`, and draw a full-bleed rect - a mask that clips nothing.
+    const v1 = {
+      build: (rects: unknown[], w: number, h: number) => {
+        void rects; void w; void h;
+        return new Graphics();
+      },
+      update: () => {},
+    };
+    expect(() =>
+      new ReelSetBuilder().maskStrategy(v1 as unknown as MaskStrategy),
+    ).toThrowError(/declares version undefined, but v2 requires 2/);
+    expect(() =>
+      new ReelSetBuilder().maskStrategy(v1 as unknown as MaskStrategy),
+    ).toThrowError(/MaskContext \{ rects, width, height, axis \}/);
   });
 });

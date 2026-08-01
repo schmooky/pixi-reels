@@ -228,6 +228,49 @@ symbol itself.
 `OffsetXMode` is `CrossOffsetMode`, and the trapezoid's
 `topWidthFactor` / `bottomWidthFactor` are `startFactor` / `endFactor`.
 
+## Custom mask strategies
+
+Only relevant if you passed your own `maskStrategy(...)`. The two built-in
+strategies are unchanged to use.
+
+Both methods now take a single `MaskContext` instead of positional
+arguments, and the context carries the axis:
+
+Before:
+
+```ts
+const strategy: MaskStrategy = {
+  build: (rects, totalWidth, totalHeight) => { /* ... */ },
+  update: (g, rects, totalWidth, totalHeight) => { /* ... */ },
+};
+```
+
+After:
+
+```ts
+import { MASK_STRATEGY_VERSION, type MaskStrategy } from 'pixi-reels';
+
+const strategy: MaskStrategy = {
+  version: MASK_STRATEGY_VERSION,
+  build: ({ rects, width, height, axis }) => { /* ... */ },
+  update: (g, { rects, width, height, axis }) => { /* ... */ },
+};
+```
+
+The `version` field is not ceremony. A `ReelMaskRect` is screen-space, so
+which of its four numbers runs *along the strip* depends on the
+orientation: vertical sets put the strip on `y`/`height`, horizontal sets
+on `x`/`width`. A v1 strategy written against "one rect per column, height
+= the visible window" would receive an identically-shaped struct with
+transposed meaning, and there is no compile error to catch it. Worse, a v1
+strategy handed a `MaskContext` reads `rects` as an object, finds no
+`.length`, and quietly draws a full-bleed rect - a mask that clips nothing.
+
+So `maskStrategy()` throws on any strategy that does not declare version 2.
+If your strategy is orientation-agnostic (it just unions the rects it is
+given), adding the field is the whole migration. If it assumes an axis, use
+`axis.mainProp` or `axis.toLocal(width, height)` to branch.
+
 ## Render order
 
 New, and optional. `cellStacking` and `reelStacking` make render order

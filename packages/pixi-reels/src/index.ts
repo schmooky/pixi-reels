@@ -33,8 +33,12 @@ export type {
   AnticipationSlowdown,
   AnticipationOptions,
 } from './config/types.js';
-export type { ReelMaskRect, MaskStrategy } from './core/ReelViewport.js';
-export { RectMaskStrategy, SharedRectMaskStrategy } from './core/ReelViewport.js';
+export type { ReelMaskRect, MaskStrategy, MaskContext } from './core/ReelViewport.js';
+export {
+  MASK_STRATEGY_VERSION,
+  RectMaskStrategy,
+  SharedRectMaskStrategy,
+} from './core/ReelViewport.js';
 
 // Symbols
 export { ReelSymbol } from './symbols/ReelSymbol.js';
