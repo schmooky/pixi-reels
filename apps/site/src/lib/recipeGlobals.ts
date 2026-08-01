@@ -35,8 +35,6 @@ import {
   anticipationForScatters,
   prewarmSpinTextures,
 } from 'pixi-reels';
-import { SpineReelSymbol } from 'pixi-reels/spine';
-import { Spine } from '@esotericsoftware/spine-pixi-v8';
 import { BlurSpriteSymbol } from '../../../../examples/shared/BlurSpriteSymbol.ts';
 import { CardSymbol, CARD_DECK, WILD_CARD } from '../../../../examples/shared/CardSymbol.ts';
 import {
@@ -49,36 +47,80 @@ import {
   coinMultiplier,
   drawCoin,
 } from '../../../../examples/shared/CoinSymbol.ts';
-import {
-  GoldCoinSymbol,
-  coinWaves,
-  bezierFly,
-  settleMoneyFace,
-  freezeAtEnd,
-  fitText,
-} from '../../../../examples/shared/holdAndWinFx.ts';
-import { loadHoldAndWinSprites } from '../../../../examples/shared/holdAndWinSprites.ts';
-import {
-  loadGeneratedSpines,
-  buildSpineMap,
-} from '../../../../examples/shared/generatedSpineLoader.ts';
-import {
-  loadThunderkickSpines,
-  buildThunderkickSpineMap,
-  THUNDERKICK_SYMBOL_IDS,
-} from '../../../../examples/shared/thunderkickSpineLoader.ts';
-import {
-  loadCascadeSpines,
-  buildCascadeSpineMap,
-  CASCADE_SYMBOL_IDS,
-  CASCADE_PLATE_W,
-  CASCADE_PLATE_H,
-} from '../../../../examples/shared/cascadeSpineLoader.ts';
-import {
-  SPINE_SETS,
-  SPINE_SET_IDS,
-  loadSpineSet,
-} from '../../../../examples/shared/spineSets.ts';
+
+/**
+ * The Spine half of the surface, loaded ON DEMAND.
+ *
+ * The Spine runtime plus the three bundled loaders is a ~180 KB chunk. Every
+ * recipe page used to download it because the runtimes imported it
+ * statically - including pages whose demos are all `CardSymbol`, which is
+ * most of them. A dynamic import keeps it off those pages entirely.
+ */
+async function loadSpineGlobals(): Promise<Record<string, unknown>> {
+  const [spine, spineRuntime, generated, thunderkick, cascade, sets] = await Promise.all([
+    import('pixi-reels/spine'),
+    import('@esotericsoftware/spine-pixi-v8'),
+    import('../../../../examples/shared/generatedSpineLoader.ts'),
+    import('../../../../examples/shared/thunderkickSpineLoader.ts'),
+    import('../../../../examples/shared/cascadeSpineLoader.ts'),
+    import('../../../../examples/shared/spineSets.ts'),
+  ]);
+  return {
+    SpineReelSymbol: spine.SpineReelSymbol,
+    Spine: spineRuntime.Spine,
+    SPINE_SETS: sets.SPINE_SETS,
+    SPINE_SET_IDS: sets.SPINE_SET_IDS,
+    loadSpineSet: sets.loadSpineSet,
+    loadGeneratedSpines: generated.loadGeneratedSpines,
+    buildSpineMap: generated.buildSpineMap,
+    loadThunderkickSpines: thunderkick.loadThunderkickSpines,
+    buildThunderkickSpineMap: thunderkick.buildThunderkickSpineMap,
+    THUNDERKICK_SYMBOL_IDS: thunderkick.THUNDERKICK_SYMBOL_IDS,
+    loadCascadeSpines: cascade.loadCascadeSpines,
+    buildCascadeSpineMap: cascade.buildCascadeSpineMap,
+    CASCADE_SYMBOL_IDS: cascade.CASCADE_SYMBOL_IDS,
+    CASCADE_PLATE_W: cascade.CASCADE_PLATE_W,
+    CASCADE_PLATE_H: cascade.CASCADE_PLATE_H,
+  };
+}
+
+/**
+ * The hold-and-win FX kit, loaded ON DEMAND.
+ *
+ * `GoldCoinSymbol extends SpineReelSymbol`, so importing this kit statically
+ * pulls the whole Spine runtime in behind it - which is why making the spine
+ * globals lazy on their own changed nothing. Both groups have to be dynamic
+ * for a card-symbol page to stay light.
+ */
+async function loadHoldAndWinGlobals(): Promise<Record<string, unknown>> {
+  const [fx, sprites] = await Promise.all([
+    import('../../../../examples/shared/holdAndWinFx.ts'),
+    import('../../../../examples/shared/holdAndWinSprites.ts'),
+  ]);
+  return {
+    GoldCoinSymbol: fx.GoldCoinSymbol,
+    coinWaves: fx.coinWaves,
+    bezierFly: fx.bezierFly,
+    settleMoneyFace: fx.settleMoneyFace,
+    freezeAtEnd: fx.freezeAtEnd,
+    fitText: fx.fitText,
+    loadHoldAndWinSprites: sprites.loadHoldAndWinSprites,
+  };
+}
+
+/**
+ * Heavy groups a recipe only pays for if it mentions them. Each test is
+ * deliberately generous: a false positive costs one unnecessary chunk fetch,
+ * a false negative is `Can't find variable` at run time.
+ */
+const LAZY_GROUPS: Array<{ test: RegExp; load: () => Promise<Record<string, unknown>> }> = [
+  // Every Spine global's name contains "pine".
+  { test: /[Ss]pine|SPINE/, load: loadSpineGlobals },
+  {
+    test: /GoldCoinSymbol|coinWaves|bezierFly|settleMoneyFace|freezeAtEnd|fitText|loadHoldAndWinSprites/,
+    load: loadHoldAndWinGlobals,
+  },
+];
 
 /** Per-runtime values. Everything else is the same in all three. */
 export interface RecipeGlobalsEnv {
@@ -103,7 +145,10 @@ export interface RecipeGlobalsEnv {
  * Call it, then spread `Object.keys(...)` into the function signature and
  * `Object.values(...)` into the call. Never hand-write either list.
  */
-export function buildRecipeGlobals(env: RecipeGlobalsEnv): Record<string, unknown> {
+export function buildRecipeGlobals(
+  env: RecipeGlobalsEnv,
+  lazy: Record<string, unknown> = {},
+): Record<string, unknown> {
   return {
     // Engine surface
     ReelSetBuilder: env.ReelSetBuilder,
@@ -144,31 +189,11 @@ export function buildRecipeGlobals(env: RecipeGlobalsEnv): Record<string, unknow
     coinValue,
     coinMultiplier,
     drawCoin,
-    GoldCoinSymbol,
-    coinWaves,
-    bezierFly,
-    settleMoneyFace,
-    freezeAtEnd,
-    fitText,
-    loadHoldAndWinSprites,
 
-    // Spine: the registry is the way to reach a bundled set. The individual
-    // loaders stay exposed because existing recipes call them directly.
-    SpineReelSymbol,
-    Spine,
-    SPINE_SETS,
-    SPINE_SET_IDS,
-    loadSpineSet,
-    loadGeneratedSpines,
-    buildSpineMap,
-    loadThunderkickSpines,
-    buildThunderkickSpineMap,
-    THUNDERKICK_SYMBOL_IDS,
-    loadCascadeSpines,
-    buildCascadeSpineMap,
-    CASCADE_SYMBOL_IDS,
-    CASCADE_PLATE_W,
-    CASCADE_PLATE_H,
+    // Heavy optional groups (Spine, hold-and-win FX) are merged in only for
+    // recipes that mention them, so a card-symbol page never downloads the
+    // Spine runtime. See LAZY_GROUPS.
+    ...lazy,
 
     // Studio-only. Present (empty) everywhere so a shared studio snippet
     // that touches them runs in the docs runner too.
@@ -189,7 +214,10 @@ export async function runRecipeSource<T>(
   env: RecipeGlobalsEnv,
   trailer = '',
 ): Promise<T> {
-  const globals = buildRecipeGlobals(env);
+  const loaded = await Promise.all(
+    LAZY_GROUPS.filter((g) => g.test.test(compiledJs)).map((g) => g.load()),
+  );
+  const globals = buildRecipeGlobals(env, Object.assign({}, ...loaded));
   const names = Object.keys(globals);
   const AsyncFunction = Object.getPrototypeOf(async function () {})
     .constructor as FunctionConstructor;
