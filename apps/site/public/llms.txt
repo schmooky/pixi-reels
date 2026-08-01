@@ -8,7 +8,7 @@ Site: https://pixi-reels.schmooky.dev
 Repo: https://github.com/schmooky/pixi-reels
 Package: https://www.npmjs.com/package/pixi-reels
 
-Generated: 2026-08-01T07:01:56.952Z
+Generated: 2026-08-01T07:10:41.557Z
 
 ## Quick start
 
@@ -412,7 +412,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/banner-ways/
 ```ts
 // @ts-nocheck
 // Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
-//                   WILD_CARD, app, pickWeighted
+//                   WILD_CARD, app, pickWeighted, PIXI
 
 // A horizontal banner above a 5x3 WAYS set, participating in the win. The banner
 // is a "6th reel": a wild in the banner cell above a column makes that column
@@ -431,8 +431,10 @@ const registerAll = (r) => {
 
 const CELL = 78;
 const GAP = 6;
+// Vertical space between the banner strip and the top of the grid.
+const BANNER_GAP = GAP * 3;
 
-// The main 5x3 ways set (the runner adds this to the stage).
+// The main 5x3 ways set.
 const main = new ReelSetBuilder()
   .reels(5)
   .visibleCells(3)
@@ -444,7 +446,8 @@ const main = new ReelSetBuilder()
   .ticker(app.ticker)
   .build();
 
-// The horizontal banner (1 reel x 5 cells) sits above the main set.
+// The horizontal banner: ONE reel whose strip runs sideways, with one cell
+// per main reel, so banner cell i sits directly above main reel i.
 const banner = new ReelSetBuilder()
   .orientation('horizontal')
   .reels(1)
@@ -456,8 +459,16 @@ const banner = new ReelSetBuilder()
   .speed('normal', SpeedPresets.NORMAL)
   .ticker(app.ticker)
   .build();
-banner.y = -(CELL + GAP * 3);
-app.stage.addChild(banner);
+// Both sets live in ONE container laid out from its own top-left, and the
+// recipe returns it as `stage`. The runner scales and centres that container,
+// so the banner travels with the grid. Adding the banner to `app.stage`
+// directly instead leaves it at unscaled stage coordinates while the runner
+// fits only the returned reelSet - the banner then renders at the wrong size,
+// in the wrong place, and stops looking like a 6th reel at all.
+const stage = new PIXI.Container();
+banner.y = 0;
+main.y = CELL + BANNER_GAP;
+stage.addChild(banner, main);
 
 const PAY = 'A';
 
@@ -500,7 +511,7 @@ const onSpin = async () => {
   ]);
 };
 
-return { reelSet: main, onSpin, cleanup: () => banner.destroy() };
+return { reelSet: main, stage, onSpin, cleanup: () => banner.destroy() };
 ```
 
 ### big-symbol-cascade-fall-2x2

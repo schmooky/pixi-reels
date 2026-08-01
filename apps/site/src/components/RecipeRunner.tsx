@@ -112,6 +112,18 @@ function pickWeighted(weights: Record<string, number>): string {
 
 interface RunResult {
   reelSet?: ReelSet;
+  /**
+   * A container holding a MULTI-SET composition (e.g. a horizontal banner
+   * above a vertical grid). When present the runner scales and centres THIS,
+   * not `reelSet`, so every set moves together.
+   *
+   * Without it a recipe that builds a second set has to `app.stage.addChild`
+   * it itself, and the runner's fit then scales and centres only `reelSet` -
+   * leaving the other set at unscaled stage coordinates, nowhere near where
+   * the recipe put it. Lay the composition out from its own origin (top-left
+   * at 0,0) so the fit's bounds math holds.
+   */
+  stage?: PIXI.Container;
   nextResult?: () => string[][];
   onSpin?: () => Promise<void>;
   /**
@@ -218,16 +230,19 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
 
       if (result.reelSet) {
         const rs = result.reelSet;
+        // Fit the composition root when there is one, so a banner set moves,
+        // scales and centres with the grid it sits above.
+        const fitted = result.stage ?? rs;
         const fit = () => {
-          const rawW = rs.width / (rs.scale.x || 1);
-          const rawH = rs.height / (rs.scale.y || 1);
+          const rawW = fitted.width / (fitted.scale.x || 1);
+          const rawH = fitted.height / (fitted.scale.y || 1);
           const pad = 16;
           const scale = Math.min(1, (app.screen.width - pad * 2) / rawW, (app.screen.height - pad * 2) / rawH);
-          rs.scale.set(scale);
-          rs.x = (app.screen.width - rawW * scale) / 2;
-          rs.y = (app.screen.height - rawH * scale) / 2;
+          fitted.scale.set(scale);
+          fitted.x = (app.screen.width - rawW * scale) / 2;
+          fitted.y = (app.screen.height - rawH * scale) / 2;
         };
-        app.stage.addChild(rs);
+        app.stage.addChild(fitted);
         fit();
         app.renderer.on('resize', fit);
         enableDebug(rs);

@@ -31,7 +31,7 @@ export default function CheatPanelReact({ engine, title = 'Demo cheats', collaps
 
   return (
     <Card className="absolute right-3 top-3 z-10 w-[300px] glass shadow-xl shadow-primary/10">
-      <CardHeader className="flex-cell items-center justify-between space-y-0 p-4 pb-3">
+      <CardHeader className="flex-row items-center justify-between space-y-0 p-4 pb-3">
         <CardTitle className="flex items-center gap-2 text-sm">
           <Sparkles size={14} strokeWidth={2} className="text-primary" />
           {title}

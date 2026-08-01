@@ -459,18 +459,21 @@ export default function Studio() {
     // fullscreen canvas pane (with the previous Math.min(1, ...) clamp they
     // looked tiny in the middle). Always re-derives raw dimensions from
     // post-divide-by-scale so successive refits don't compound.
+    // Fit the composition root when the code returns one (a banner set above
+    // a grid), so every set scales and centres together. Matches RecipeRunner.
+    const fitted = built.stage ?? reelSet;
     const fit = () => {
-      const rawW = reelSet.width / (reelSet.scale.x || 1);
-      const rawH = reelSet.height / (reelSet.scale.y || 1);
+      const rawW = fitted.width / (fitted.scale.x || 1);
+      const rawH = fitted.height / (fitted.scale.y || 1);
       const availW = Math.max(40, env.app.screen.width - PADDING * 2);
       const availH = Math.max(40, env.app.screen.height - PADDING * 2);
       const scale = Math.min(availW / rawW, availH / rawH);
-      reelSet.scale.set(scale);
-      reelSet.x = (env.app.screen.width - rawW * scale) / 2;
-      reelSet.y = (env.app.screen.height - rawH * scale) / 2;
+      fitted.scale.set(scale);
+      fitted.x = (env.app.screen.width - rawW * scale) / 2;
+      fitted.y = (env.app.screen.height - rawH * scale) / 2;
     };
     env.app.stage.removeChildren();
-    env.app.stage.addChild(reelSet);
+    env.app.stage.addChild(fitted);
     fit();
     // The boot useEffect's ResizeObserver calls through this ref on every
     // host-size change. single fit path for window resize, fullscreen
@@ -583,7 +586,7 @@ export default function Studio() {
   }
 
   return (
-    <div className={cn('flex flex-reel gap-3', fullscreen && 'fixed inset-x-0 top-14 bottom-0 z-40 bg-background p-4')}>
+    <div className={cn('flex flex-col gap-3', fullscreen && 'fixed inset-x-0 top-14 bottom-0 z-40 bg-background p-4')}>
       {isEphemeral && (
         <div className="flex items-center gap-2 rounded-md border border-amber-400/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
           <Eye size={13} className="flex-shrink-0" />
@@ -614,7 +617,7 @@ export default function Studio() {
       >
       {/* ── Canvas pane ─── */}
       <div className={cn(
-        'flex flex-reel overflow-hidden rounded-xl border border-border bg-card',
+        'flex flex-col overflow-hidden rounded-xl border border-border bg-card',
         fullscreen && 'min-h-0',
       )}>
         <div className={cn('relative flex-1', !fullscreen && 'min-h-[480px]')}>
@@ -682,7 +685,7 @@ export default function Studio() {
 
       {/* ── Editor pane ─── */}
       <div className={cn(
-        'flex flex-reel overflow-hidden rounded-xl border border-border bg-card',
+        'flex flex-col overflow-hidden rounded-xl border border-border bg-card',
         fullscreen && 'min-h-0',
       )}>
         {/* Tab strip */}
@@ -847,7 +850,7 @@ function EditorSkeleton(): JSX.Element {
       role="status"
       aria-label="Loading editor"
     >
-      <div className="flex w-10 flex-reel gap-2.5 py-3 pr-2" aria-hidden>
+      <div className="flex w-10 flex-col gap-2.5 py-3 pr-2" aria-hidden>
         {EDITOR_LINE_WIDTHS.map((_, i) => (
           <div
             key={i}
@@ -856,7 +859,7 @@ function EditorSkeleton(): JSX.Element {
           />
         ))}
       </div>
-      <div className="flex flex-1 flex-reel gap-2.5 py-3 pl-2 pr-4" aria-hidden>
+      <div className="flex flex-1 flex-col gap-2.5 py-3 pl-2 pr-4" aria-hidden>
         {EDITOR_LINE_WIDTHS.map((w, i) => (
           <div
             key={i}
@@ -895,7 +898,7 @@ function RecipePrompt({ onCancel, onReplace, onPreview }: RecipePromptProps): JS
             You already have code saved in Studio. Replace it with the recipe, or load
             the recipe as a read-only preview without touching your saved code.
           </p>
-          <div className="flex flex-reel gap-2 pt-1">
+          <div className="flex flex-col gap-2 pt-1">
             <button
               type="button"
               onClick={onReplace}
