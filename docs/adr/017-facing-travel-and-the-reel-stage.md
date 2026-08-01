@@ -1,6 +1,23 @@
 # ADR 017: Facing vs travel, and a composition layer over ReelSets
 
-## Status: Proposed (companion to ADR 016)
+## Status: Partially accepted, shipped in 2.0.0
+
+**Section A (facing / travel split) is accepted and enforced.** The invariant -
+travel changes motion, facing changes art, they never change each other - is
+in `CLAUDE.md`'s stability rules and is machine-checked: the contract suite
+asserts `view.rotation === 0` and unit scale for every symbol at rest, mid
+spin and landed, across all four orientation x direction combinations. No
+`facing` KNOB shipped, because nothing needed one; the invariant was the
+valuable half.
+
+**Section B (`ReelStage`) is NOT shipped.** Two of its seams did land -
+`spotlight:start` / `spotlight:end` are emitted (C1), and gsap is per reel
+set rather than a process-global (B2), which section B named as a live footgun
+under a stage. Composition itself stays user-land: the `banner-ways` recipe
+builds a banner above a grid with a plain `Container`, and the recipe runtimes
+accept that container so it scales and centres as one. That is the whole of
+what `ReelStage` would have provided so far, so the abstraction has not earned
+its place yet.
 
 Two related refinements:
 

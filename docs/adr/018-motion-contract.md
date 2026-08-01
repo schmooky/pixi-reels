@@ -1,6 +1,25 @@
 # ADR 018: The motion contract
 
-## Status: Proposed (gates ADR 016)
+## Status: Accepted, shipped in 2.0.0
+
+The fourteen laws run in CI against the SHIPPING `ReelMotion`, in all four
+orientation x direction combinations, plus golden-master position traces and
+the `ReelSet`-level isomorphism / mirror / facing checks. See
+`packages/pixi-reels/tests/contract/`.
+
+Two laws changed shape. L10 and L14 read the wrap callback's `arrayIndex` and
+`direction` arguments, which A11 deleted as dead; they now observe where the
+wrapped symbol actually IS in the strip array, which is stronger - a callback
+cannot lie about it.
+
+The suite is mutation-verified rather than merely green; the table in
+`tests/contract/README.md` lists which mutation breaks which laws. One result
+is worth carrying forward: a purely RELATIVE law (horizontal equals vertical
+transposed) passes against a transposition applied inside the shared
+projection, because both sides break identically. Relative laws need one
+absolute anchor, and the same blind spot recurred twice more - in the
+`getBlockBounds` block test and in the debug overlay's travel arrow, where a
+mirrored arrow has identical bounds.
 
 ADR 016 says *what* to build. This says *what makes it correct*, in a form CI can check.
 

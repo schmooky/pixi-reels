@@ -1,6 +1,30 @@
 # ADR 016: Orientation axis and travel direction
 
-## Status: Proposed (v2.0.0, breaking)
+## Status: Accepted, shipped in 2.0.0
+
+Implemented on the `v2` branch. Three decisions moved during implementation;
+each is argued in its commit and repeated here so this document matches the
+code rather than the plan:
+
+1. **`Reel.symbolHeight` was NOT renamed to `cellPitchSize`** (section 5). It is
+   the screen-space pair fed to `ReelSymbol.resize(width, height)`, which
+   section 3.3 freezes as screen-space. Renaming only the height half yields
+   `resize(reel.symbolWidth, reel.cellPitchSize)` - a mismatched pair that
+   invites exactly the transposition this ADR exists to prevent. `Reel` stores
+   its size axis-relative as `cellMain` / `cellCross` and derives the screen
+   pair; `ReelMotion.slotPitch` keeps the gap-inclusive "pitch" meaning.
+2. **`BoardGrid` / `HoldAndWinBoard` keep `cols` and `rows`** as board
+   dimensions. Only their `BoardCell` / `HwCell` coordinate fields moved to
+   `{ reel, cell }`, as section 5 specifies. A board is a real 2-D grid, not a
+   reel strip, and `rows` -> `cells` collided with `BoardGrid.cells()`.
+3. **z-stacking (section 6.3) is geometric, not polarity-derived.** The art
+   call came back "keep v1 behaviour": `cellStacking` / `reelStacking` default
+   to `'ascending'` and `direction('reverse')` does NOT flip them, so art lit
+   from above keeps overlapping the way it was drawn and a per-spin reversal
+   tease does not re-layer the board. Both are exposed as explicit overrides.
+
+Section 6.4's `parkOutsideWindow` never materialised: A4's derive-from-index
+model removed the accumulated `_minY`/`_maxY` the flip was needed for.
 
 Companion: **ADR 017** splits facing from travel (§A) and proposes the `ReelStage` composition layer
 (§B), including three seams that belong inside this ADR's breaking window.

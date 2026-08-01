@@ -130,14 +130,35 @@ Plus, from A5 onward: the no-raw-position lint rule (ADR 018 §5.4).
 
 ## 5. Merge checklist — `v2` → `main`
 
-- [ ] Contract green on all four combos
-- [ ] Golden masters green under §4's tolerance, with every boundary diff enumerated
-- [ ] Playwright visual green on `classic-spin`, `cascade-tumble`, both horizontal recipes
-- [ ] Codemod run against `examples/` and `apps/site/` with zero manual fixups
-- [ ] At least one external consumer has upgraded from a `2.0.0-next.N` build
-- [ ] Migration guide lists every rename and every intentional behaviour change
+- [x] Contract green on all four combos - `tests/contract/motion.contract.test.ts`,
+      and mutation-verified (see that directory's README)
+- [x] Golden masters green - `tests/contract/goldenTrace.contract.test.ts`. No
+      boundary diffs to enumerate: the traces were recorded after the derive
+      -from-index model landed, so there was no v1 baseline to move off
+- [ ] **Playwright visual green** on `classic-spin`, `cascade-tumble`, both
+      horizontal recipes. Only `cascade-tumble-rapid-click.spec.ts` exists; no
+      visual diffing is set up
+- [x] Codemod run against `examples/` and `apps/site/` with zero manual fixups -
+      verified against the 112 site recipes at their pre-rename revision
+      (`5a9d059`); output carries zero v1 API names in code
+- [ ] **At least one external consumer has upgraded from a `2.0.0-next.N`
+      build.** Nothing published yet. This is the only remaining item that can
+      still surface a design mistake while it is cheap to fix
+- [x] Migration guide lists every rename and every intentional behaviour change -
+      `apps/site/src/content/docs/migrating-to-2-0.mdx`
 - [ ] `pnpm changeset pre exit`
 - [ ] `main` merged into `v2` and CI green **after** that merge, not before
+
+### Also done, beyond the original checklist
+
+- [x] ADRs 016 / 017 / 018 moved off Proposed, each recording where the
+      implementation diverged from the plan
+- [x] `ROADMAP.md` and `TODO.md` reconciled: horizontal reels, mixed direction
+      and roll-up all close
+- [x] `CLAUDE.md`'s invariant replaced (`ReelMotion` wraps via `_maxY`/`_minY`
+      is no longer true) with *travel changes motion; facing changes art; they
+      never change each other*
+- [x] `pnpm build` green for the library and all six examples
 
 ---
 

@@ -23,13 +23,13 @@ self-contained (usually a recipe + MDX page).
 | Cascade / tumble (CascadeMode) | [done] | - | - | Core + CascadeMode + example. |
 | Immediate mode (no motion) | [done] | - | - | `ImmediateMode`. |
 | Anticipation phase | [done] | - | - | `AnticipationPhase`. |
-| Mixed direction per reel (up vs down) | [todo] | minor | p3 | Per-reel direction flag. |
+| Mixed direction per reel (up vs down) | [done] | minor | p3 | Shipped in 2.0.0 via `.directionPerReel([...])` (ADR 016). Fell out of the orientation-axis work for free. |
 | Drop-in (symbols fall from above, no scroll strip) | [todo] | minor | p2 | New `SpinningMode`. |
-| Roll-up (symbols rise from below) | [todo] | minor | p3 | New `SpinningMode`. |
+| Roll-up (symbols rise from below) | [done] | minor | p3 | Shipped in 2.0.0 as `.direction('reverse')` (ADR 016). Not a `SpinningMode` after all. direction is a property of the reel's axis, so every mode gets it. |
 | Expanding reels at runtime (add rows) | [todo] | minor | p3 | Reel must support live resize. |
 | Split symbols (two symbols per cell) | [todo] | minor | p2 | Cell-fraction occupancy. |
-| Horizontal reels | [partial] | **major** | p2 | `HorizontalReel` ships a standalone 1-row banner reel (minor, additive) that mirrors the `ReelSet` spin/`setResult`/`cascade` API. Real fix = generalize `Reel`/`ReelMotion`/`ReelViewport` with an **orientation axis** so ONE reel does vertical or horizontal and `HorizontalReel` retires (a 1-reel horizontal `ReelSet`), reusing anticipation/tumble/spotlight/debug for real instead of a mirror. **Deferred**: core-motion refactor, high regression risk to the vertical path. |
-| MultiWays (variable `visibleRows` per reel) | [done] | **major** | p1 | Shipped via `.multiways()` + AdjustPhase (ADR 012). |
+| Horizontal reels | [done] | **major** | p2 | Shipped in 2.0.0 as `.orientation('horizontal')` on the ordinary builder (ADR 016). The standalone `HorizontalReel` subtree is deleted: one engine now runs vertical or horizontal, forward or reverse, and horizontal gets anticipation, tumble, spotlight, pins, big symbols, pyramids and MultiWays for real rather than by mirror. The "high regression risk to the vertical path" was answered by the ADR 018 motion contract, which runs all four orientation x direction combinations in CI. |
+| MultiWays (variable `visibleCells` per reel) | [done] | **major** | p1 | Shipped via `.multiways()` + AdjustPhase (ADR 012). |
 | Cluster grid (WxH, no reel concept) | [todo] | **major** | p1 | New non-reel mode + viewport. Out of scope (ADR 007). |
 | Colossal / big symbols (2x2, 3x3 overlay) | [done] | **major** | p1 | Shipped via registration + OCCUPIED coordinator (ADR 013). |
 | Infinity Reels (dynamic column count) | [todo] | **major** | p3 | Columns added on each win. |
