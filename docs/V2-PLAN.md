@@ -135,9 +135,13 @@ Plus, from A5 onward: the no-raw-position lint rule (ADR 018 §5.4).
 - [x] Golden masters green - `tests/contract/goldenTrace.contract.test.ts`. No
       boundary diffs to enumerate: the traces were recorded after the derive
       -from-index model landed, so there was no v1 baseline to move off
-- [ ] **Playwright visual green** on `classic-spin`, `cascade-tumble`, both
-      horizontal recipes. Only `cascade-tumble-rapid-click.spec.ts` exists; no
-      visual diffing is set up
+- [x] **Browser coverage of all four combos** - `tests/e2e/orientation-matrix.spec.ts`
+      against the new `examples/orientation-matrix`, wired into CI as its own
+      job. Mutation-verified: breaking the `feedEdge` derivation fails 3 of 4.
+      Deliberately NOT pixel diffing - a WebGL screenshot baseline is GPU- and
+      platform-dependent, so one recorded on a dev machine fails on CI's ubuntu
+      runner for reasons unrelated to the engine. These assert engine state via
+      the debug snapshot, which is why that snapshot exists
 - [x] Codemod run against `examples/` and `apps/site/` with zero manual fixups -
       verified against the 112 site recipes at their pre-rename revision
       (`5a9d059`); output carries zero v1 API names in code

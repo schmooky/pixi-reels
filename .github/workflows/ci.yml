@@ -55,6 +55,41 @@ jobs:
         # static analysis path. Examples don't ship; this is purely a gate.
         run: pnpm build
 
+  e2e:
+    # Browser coverage for the one thing unit tests structurally cannot reach:
+    # the real stack. WebGL, rAF, GSAP on the Pixi ticker, and the async spin
+    # lifecycle, across all four orientation x direction combinations.
+    #
+    # Deliberately NOT pixel diffing. A WebGL screenshot baseline is GPU- and
+    # platform-dependent, so one recorded on a dev machine fails here for
+    # reasons unrelated to the engine. These specs assert engine STATE through
+    # the debug snapshot instead.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - uses: pnpm/action-setup@b307475762933b98ed359c036b0e51f26b63b74b # v5.0.0
+
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: e2e
+        run: pnpm test:e2e
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: failure()
+        with:
+          name: playwright-traces
+          path: test-results/
+          retention-days: 7
+
   changeset-gate:
     # Fails the PR when library source changed but no changeset file was added.
     # Escape hatches:

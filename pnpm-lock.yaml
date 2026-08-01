@@ -279,6 +279,28 @@ importers:
         specifier: ^8.0.9
         version: 8.0.9(@types/node@24.12.4)(esbuild@0.28.0)(jiti@2.6.1)(tsx@4.22.3)(yaml@2.9.0)
 
+  examples/orientation-matrix:
+    dependencies:
+      '@esotericsoftware/spine-pixi-v8':
+        specifier: ~4.2.110
+        version: 4.2.110(pixi.js@8.18.1)
+      gsap:
+        specifier: ^3.15.0
+        version: 3.15.0
+      pixi-reels:
+        specifier: workspace:*
+        version: link:../../packages/pixi-reels
+      pixi.js:
+        specifier: ^8.18.1
+        version: 8.18.1
+    devDependencies:
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+      vite:
+        specifier: ^8.0.9
+        version: 8.0.9(@types/node@24.12.4)(esbuild@0.28.0)(jiti@2.6.1)(tsx@4.22.3)(yaml@2.9.0)
+
   examples/pyramid-cascade:
     dependencies:
       '@esotericsoftware/spine-pixi-v8':

@@ -136,6 +136,7 @@ If you've tried three approaches and none work, do not try a fourth random appro
 - `examples/classic-spin/`. Standard 5x3 slot demo (sprite symbols)
 - `examples/cascade-tumble/`. 6x5 cascade/tumble demo (sprite symbols)
 - `examples/sandbox/`. Live-editable playground (sprite symbols + HMR)
+- `examples/orientation-matrix/`. All four travel combinations (vertical/horizontal x forward/reverse) on one page. The e2e target for browser coverage
 - `examples/shared/`. Shared example utilities (mock server, UI, BlurSpriteSymbol, atlas loader)
 - `examples/assets/prototype-symbols/`. Open-licensed sprite atlas used by every example
 
