@@ -13,7 +13,6 @@
  */
 import type { Texture } from 'pixi.js';
 import {
-  HorizontalReelBuilder,
   ReelSetBuilder,
   SpeedPresets,
   SpinTextureCache,
@@ -95,9 +94,15 @@ export function buildStaticSpin({ app, textures }: SandboxContext): SandboxResul
     height: STRIP_CELL,
     blur: stripBlur,
   });
-  const strip = new HorizontalReelBuilder()
-    .visibleCount(REELS)
-    .cellSize(STRIP_CELL, STRIP_CELL, { gap: GAP })
+  // v2: a banner is a one-reel set whose strip runs sideways. The old
+  // HorizontalReelBuilder is gone (ADR 016 supersedes it) - orientation and
+  // direction are now properties of the ordinary builder.
+  const strip = new ReelSetBuilder()
+    .orientation('horizontal')
+    .reels(1)
+    .visibleCells(REELS)
+    .symbolSize(STRIP_CELL, STRIP_CELL)
+    .symbolGap(GAP, 0)
     .symbols((registry) => {
       for (const id of SYMBOLS) {
         registry.register(id, StaticSpinSymbol, {
@@ -110,9 +115,9 @@ export function buildStaticSpin({ app, textures }: SandboxContext): SandboxResul
     })
     .ticker(app.ticker)
     .build();
-  strip.container.x = (width - (REELS * (STRIP_CELL + GAP) - GAP)) / 2;
-  strip.container.y = -STRIP_CELL - GAP * 3;
-  reelSet.addChild(strip.container);
+  strip.x = (width - (REELS * (STRIP_CELL + GAP) - GAP)) / 2;
+  strip.y = -STRIP_CELL - GAP * 3;
+  reelSet.addChild(strip);
   // Spin the strip alongside the main reels; land it on random ids.
   reelSet.events.on('spin:start', () => {
     const spinP = strip.spin();
