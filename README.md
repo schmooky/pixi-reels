@@ -50,6 +50,34 @@ reelSet.setResult(result.map((visible) => ({ visible })));
 await spin;
 ```
 
+## Any orientation, any direction
+
+One engine runs four layouts. Anticipation, cascades, spotlight, pins, big
+symbols, pyramids and MultiWays all work in every one of them.
+
+```ts
+new ReelSetBuilder()
+  .orientation('horizontal')   // strip travels on X, reels march down Y
+  .direction('reverse')        // ...and travels right-to-left
+  .directionPerReel(['forward', 'reverse', 'forward'])  // or mix per reel
+```
+
+|  | `direction('forward')` | `direction('reverse')` |
+|---|---|---|
+| `orientation('vertical')` | symbols fall (the default) | a roll-up |
+| `orientation('horizontal')` | a sideways banner | ...running the other way |
+
+Screen-space inputs stay screen-space: `symbolSize(width, height)`,
+`ReelSymbol.resize(width, height)` and `getCellBounds` never change meaning,
+so a horizontal set is the vertical one transposed and your own symbol
+classes need no changes. Grid indices do not move either -- cell
+`(reel, cell)` means the same thing whichever way the strip runs.
+
+Travel changes motion; facing changes art; they never change each other. A
+reel spinning sideways still renders every symbol upright.
+
+See [the guide](https://pixi-reels.schmooky.dev/guides/orientation-and-direction/).
+
 ## Core API at a glance
 
 ```ts
@@ -66,7 +94,13 @@ reelSet.events.on('spin:reelLanded', (i, s) => {/* ... */})
 reelSet.destroy()                               // Full teardown
 ```
 
-See [/api/](https://pixi-reels.schmooky.dev/api/) for the full TypeDoc reference and [docs/migrating-to-1-0/](https://pixi-reels.schmooky.dev/docs/migrating-to-1-0/) for the breaking-change list.
+See [/api/](https://pixi-reels.schmooky.dev/api/) for the full TypeDoc reference.
+Upgrading? [Migrating to 2.0](https://pixi-reels.schmooky.dev/docs/migrating-to-2-0/)
+lists every breaking change and starts with the codemod:
+
+```bash
+npx pixi-reels-codemod v1-to-v2 src
+```
 
 ## Spine symbols (optional subpath)
 
@@ -106,6 +140,7 @@ Runnable apps in [`examples/`](examples/):
 | `classic-spin`   | 5x3 line-pay slot with sprite symbols and speed toggle     | `pnpm --filter classic-spin dev`       |
 | `cascade-tumble` | 6x5 tumble mechanic with win spotlight between stages      | `pnpm --filter cascade-tumble dev`     |
 | `sandbox`        | Single editable TS file, HMR rebuild                       | `pnpm --filter sandbox dev`            |
+| `orientation-matrix` | All four travel combinations side by side, landing one shared grid | `pnpm --filter orientation-matrix dev` |
 
 ## Peer dependencies
 
