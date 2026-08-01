@@ -1,7 +1,7 @@
 // @ts-nocheck
 // Injected globals: ReelSetBuilder, SpeedPresets, SpineReelSymbol,
 //                   StaticSpinSymbol, SpinTextureCache, prewarmSpinTextures,
-//                   loadThunderkickSpines, buildThunderkickSpineMap,
+//                   loadSpineSet,
 //                   app, pickWeighted
 //
 // Jagged layouts can't use `unmask` (the builder throws - the motion layer
@@ -11,13 +11,13 @@
 // reel on the next spin:start. Above every reel, outside the mask, and the
 // symbol pool is built to tolerate exactly this re-parenting.
 
-await loadThunderkickSpines();
+const thunderkick = await loadSpineSet("thunderkick");
 
 const SPINE_SCALE = 0.6;
 const CELL_W = 175 * SPINE_SCALE;
 const CELL_H = 203 * SPINE_SCALE;
 
-const spineMap = buildThunderkickSpineMap();
+const spineMap = thunderkick.spineMap;
 
 const weights = {
   low1: 16, low2: 16, low3: 14, low4: 14, low5: 12,

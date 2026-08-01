@@ -1,20 +1,19 @@
 // @ts-nocheck
-// Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, loadCascadeSpines,
-//           buildCascadeSpineMap, CASCADE_SYMBOL_IDS, CASCADE_PLATE_W,
-//           CASCADE_PLATE_H, PIXI, gsap, app, pickWeighted
+// Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, loadSpineSet,
+//           PIXI, gsap, app, pickWeighted
 
 // Engine-default destroy: no `out` animation registered, so
 // `destroySymbols` falls back to the built-in GSAP scale-and-fade
 // implode. Works with no destruction art at all.
 
-await loadCascadeSpines();
+const cascade = await loadSpineSet("cascade");
 
 const A = 'low1', B = 'low2', C = 'low3';
 const X = 'high'; // the winner that vanishes
 const REELS = 4, ROWS = 3;
 const SCALE = 0.8;
-const CELL_W = CASCADE_PLATE_W * SCALE;
-const CELL_H = CASCADE_PLATE_H * SCALE;
+const CELL_W = cascade.set.cellSize.width * SCALE;
+const CELL_H = cascade.set.cellSize.height * SCALE;
 
 const BEFORE = [
   [X, A, B],
@@ -35,8 +34,8 @@ const reelSet = new ReelSetBuilder()
   .symbols(r => {
     // No outAnimation: the skeleton has no 'disintegration' clip, so
     // playDestroy falls back to the base GSAP implode.
-    const spineMap = buildCascadeSpineMap();
-    for (const id of CASCADE_SYMBOL_IDS) {
+    const spineMap = cascade.spineMap;
+    for (const id of cascade.symbolIds) {
       r.register(id, SpineReelSymbol, {
         spineMap,
         scale: SCALE,

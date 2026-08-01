@@ -1,8 +1,8 @@
 // @ts-nocheck
 // Injected globals: ReelSetBuilder, SpeedPresets, SpineReelSymbol,
 //                   StaticSpinSymbol, SpinTextureCache, prewarmSpinTextures,
-//                   anticipationForScatters, loadThunderkickSpines,
-//                   buildThunderkickSpineMap, app, pickWeighted
+//                   anticipationForScatters, loadSpineSet,
+//                   app, pickWeighted
 //
 // Scatter near-win with the rig's own tease clips. The scatter skeleton
 // ships `firstReelScatterNearWin` (the jaw snap for the LEFTMOST scatter),
@@ -10,13 +10,13 @@
 // `lastReelScatterNearWin` (the RIGHTMOST jaw pose on the deciding land)
 // and `bonusGameWon` for the payoff. Spins alternate hit / miss.
 
-await loadThunderkickSpines();
+const thunderkick = await loadSpineSet("thunderkick");
 
 const SPINE_SCALE = 0.6;
 const CELL_W = 175 * SPINE_SCALE;
 const CELL_H = 203 * SPINE_SCALE;
 
-const spineMap = buildThunderkickSpineMap();
+const spineMap = thunderkick.spineMap;
 
 const weights = {
   low1: 16, low2: 16, low3: 14, low4: 14, low5: 12,

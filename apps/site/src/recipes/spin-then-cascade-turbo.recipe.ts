@@ -1,8 +1,7 @@
 // @ts-nocheck
 // Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, StaticSpinSymbol,
-//           SpinTextureCache, prewarmSpinTextures, loadCascadeSpines,
-//           buildCascadeSpineMap, CASCADE_SYMBOL_IDS, CASCADE_PLATE_W,
-//           CASCADE_PLATE_H, PIXI, gsap, app, pickWeighted
+//           SpinTextureCache, prewarmSpinTextures, loadSpineSet,
+//           PIXI, gsap, app, pickWeighted
 
 // Turbo hybrid: same strip-spin opener + 'low1' -> 'mid1' chain, tuned
 // for speed. The strip-spin runs the TURBO profile on cached snapshot
@@ -10,14 +9,14 @@
 // cascade runs a shorter dropIn and a faster explode. SpeedPresets
 // controls the strip phases, .tumble() + timeScale the cascade.
 
-await loadCascadeSpines();
+const cascade = await loadSpineSet("cascade");
 
-const IDS = [...CASCADE_SYMBOL_IDS];
+const IDS = [...cascade.symbolIds];
 const REELS = 5, ROWS = 5;
 // Cells match the authored 88x101.6 symbol plate.
 const SCALE = 0.62;
-const CELL_W = CASCADE_PLATE_W * SCALE;
-const CELL_H = CASCADE_PLATE_H * SCALE;
+const CELL_W = cascade.set.cellSize.width * SCALE;
+const CELL_H = cascade.set.cellSize.height * SCALE;
 const HIT_COLS = [0, 1, 2];                     // left three columns
 const HIT_ROW = 1;                              // upper-middle cell
 const TRIGGER1 = 'low1';
@@ -48,20 +47,20 @@ class TimedExplodeSymbol extends SpineReelSymbol {
 const cache = new SpinTextureCache({ renderer: app.renderer });
 const createInner = () =>
   new TimedExplodeSymbol({
-    spineMap: buildCascadeSpineMap(),
+    spineMap: cascade.spineMap,
     scale: SCALE,
     outAnimation: 'explode',
   });
 
 prewarmSpinTextures({
-  cache, ids: [...CASCADE_SYMBOL_IDS], createSymbol: createInner,
+  cache, ids: [...cascade.symbolIds], createSymbol: createInner,
   width: CELL_W, height: CELL_H,
 });
 
 const reelSet = new ReelSetBuilder()
   .reels(REELS).visibleCells(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
   .symbols((r) => {
-    for (const id of CASCADE_SYMBOL_IDS) {
+    for (const id of cascade.symbolIds) {
       r.register(id, StaticSpinSymbol, { createInner, cache, blurRampMs: 120 });
     }
   })

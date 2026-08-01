@@ -1,8 +1,8 @@
 // @ts-nocheck
 // Injected globals: ReelSetBuilder, SpeedPresets, SpineReelSymbol,
 //                   StaticSpinSymbol, SpinTextureCache, prewarmSpinTextures,
-//                   loadThunderkickSpines, buildThunderkickSpineMap,
-//                   THUNDERKICK_SYMBOL_IDS, app, pickWeighted, Spine, PIXI
+//                   loadSpineSet,
+//                   app, pickWeighted, Spine, PIXI
 //
 // Mystery reveal: bushes land with their own `land` one-shot, then each
 // plays the rig's `revealWin` on an overlay spine while the cell underneath
@@ -10,13 +10,13 @@
 // Every reveal animation fades the bush to fully transparent, so the
 // overlay destroys itself on complete.
 
-await loadThunderkickSpines();
+const thunderkick = await loadSpineSet("thunderkick");
 
 const SPINE_SCALE = 0.6;
 const CELL_W = 175 * SPINE_SCALE;
 const CELL_H = 203 * SPINE_SCALE;
 
-const spineMap = buildThunderkickSpineMap();
+const spineMap = thunderkick.spineMap;
 
 // Base fill and reveal targets: paying symbols only. Mysteries are forced
 // into the grid below so every spin demonstrates the reveal.

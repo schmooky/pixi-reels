@@ -8,7 +8,7 @@ Site: https://pixi-reels.schmooky.dev
 Repo: https://github.com/schmooky/pixi-reels
 Package: https://www.npmjs.com/package/pixi-reels
 
-Generated: 2026-08-01T06:46:33.439Z
+Generated: 2026-08-01T07:01:56.952Z
 
 ## Quick start
 
@@ -1379,22 +1379,21 @@ return {
 URL: https://pixi-reels.schmooky.dev/recipes/cascade-6x5-spine/
 ```ts
 // @ts-nocheck
-// Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, loadCascadeSpines,
-//           buildCascadeSpineMap, CASCADE_SYMBOL_IDS, CASCADE_PLATE_W,
-//           CASCADE_PLATE_H, PIXI, gsap, app, pickWeighted
+// Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, loadSpineSet,
+//           PIXI, gsap, app, pickWeighted
 
 // Same starter as the card canvas above, with spine symbols. Only the
 // registration block and the id constants differ; the orchestration
 // (spin, setResult, runCascade, both callbacks) is identical.
 
-await loadCascadeSpines();
+const cascade = await loadSpineSet("cascade");
 
-const IDS = [...CASCADE_SYMBOL_IDS];
+const IDS = [...cascade.symbolIds];
 const REELS = 6, ROWS = 4;
 // Cells match the authored 88x101.6 symbol plate.
 const SCALE = 0.68;
-const CELL_W = CASCADE_PLATE_W * SCALE;
-const CELL_H = CASCADE_PLATE_H * SCALE;
+const CELL_W = cascade.set.cellSize.width * SCALE;
+const CELL_H = cascade.set.cellSize.height * SCALE;
 const CLUSTER = 'low1';
 const HIT_ROW = 2;
 const HIT_COLS = [0, 1, 2];
@@ -1426,8 +1425,8 @@ const reelSet = new ReelSetBuilder()
   .symbols(r => {
     // outAnimation: 'explode' makes destroySymbols play the skeleton's
     // explode clip instead of the default implode.
-    const spineMap = buildCascadeSpineMap();
-    for (const id of CASCADE_SYMBOL_IDS) {
+    const spineMap = cascade.spineMap;
+    for (const id of cascade.symbolIds) {
       r.register(id, TimedExplodeSymbol, {
         spineMap,
         scale: SCALE,
@@ -1579,22 +1578,21 @@ return {
 URL: https://pixi-reels.schmooky.dev/recipes/cascade-open-drop/
 ```ts
 // @ts-nocheck
-// Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, loadCascadeSpines,
-//           buildCascadeSpineMap, CASCADE_SYMBOL_IDS, CASCADE_PLATE_W,
-//           CASCADE_PLATE_H, PIXI, gsap, app, pickWeighted
+// Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, loadSpineSet,
+//           PIXI, gsap, app, pickWeighted
 
 // Pure-drop opener: same 'low1' -> 'mid1' chain as the strip-spin
 // canvas, but the round opens as a cascade too. no strip motion. The
 // old board falls out, the new one drops in, then the chain runs.
 
-await loadCascadeSpines();
+const cascade = await loadSpineSet("cascade");
 
-const IDS = [...CASCADE_SYMBOL_IDS];
+const IDS = [...cascade.symbolIds];
 const REELS = 5, ROWS = 5;
 // Cells match the authored 88x101.6 symbol plate.
 const SCALE = 0.62;
-const CELL_W = CASCADE_PLATE_W * SCALE;
-const CELL_H = CASCADE_PLATE_H * SCALE;
+const CELL_W = cascade.set.cellSize.width * SCALE;
+const CELL_H = cascade.set.cellSize.height * SCALE;
 const HIT_COLS = [0, 1, 2];                     // left three columns
 const HIT_ROW = 1;                              // upper-middle cell
 const TRIGGER1 = 'low1';
@@ -1626,8 +1624,8 @@ const reelSet = new ReelSetBuilder()
   // nothing can ever peek out under the grid.
   .bufferSymbols({ start: 1, end: 0 })
   .symbols((r) => {
-    const spineMap = buildCascadeSpineMap();
-    for (const id of CASCADE_SYMBOL_IDS) {
+    const spineMap = cascade.spineMap;
+    for (const id of cascade.symbolIds) {
       r.register(id, TimedExplodeSymbol, {
         spineMap,
         scale: SCALE,
@@ -2369,23 +2367,22 @@ return {
 URL: https://pixi-reels.schmooky.dev/recipes/destroy-explode/
 ```ts
 // @ts-nocheck
-// Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, loadCascadeSpines,
-//           buildCascadeSpineMap, CASCADE_SYMBOL_IDS, CASCADE_PLATE_W,
-//           CASCADE_PLATE_H, PIXI, gsap, app, pickWeighted
+// Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, loadSpineSet,
+//           PIXI, gsap, app, pickWeighted
 
 // Authored destroy: same board and cascade as the fade canvas; the only
 // change is `outAnimation: 'explode'` at registration. destroySymbols
 // then plays the skeleton's 1.27 s explosion instead of the implode.
 // Shown at full length here.
 
-await loadCascadeSpines();
+const cascade = await loadSpineSet("cascade");
 
 const A = 'low1', B = 'low2', C = 'low3';
 const X = 'high'; // the winner that vanishes
 const REELS = 4, ROWS = 3;
 const SCALE = 0.8;
-const CELL_W = CASCADE_PLATE_W * SCALE;
-const CELL_H = CASCADE_PLATE_H * SCALE;
+const CELL_W = cascade.set.cellSize.width * SCALE;
+const CELL_H = cascade.set.cellSize.height * SCALE;
 
 const BEFORE = [
   [X, A, B],
@@ -2404,8 +2401,8 @@ function randSymbolNotIn(exclude) {
 const reelSet = new ReelSetBuilder()
   .reels(REELS).visibleCells(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
   .symbols(r => {
-    const spineMap = buildCascadeSpineMap();
-    for (const id of CASCADE_SYMBOL_IDS) {
+    const spineMap = cascade.spineMap;
+    for (const id of cascade.symbolIds) {
       r.register(id, SpineReelSymbol, {
         spineMap,
         scale: SCALE,
@@ -2463,22 +2460,21 @@ return {
 URL: https://pixi-reels.schmooky.dev/recipes/destroy-fade/
 ```ts
 // @ts-nocheck
-// Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, loadCascadeSpines,
-//           buildCascadeSpineMap, CASCADE_SYMBOL_IDS, CASCADE_PLATE_W,
-//           CASCADE_PLATE_H, PIXI, gsap, app, pickWeighted
+// Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, loadSpineSet,
+//           PIXI, gsap, app, pickWeighted
 
 // Engine-default destroy: no `out` animation registered, so
 // `destroySymbols` falls back to the built-in GSAP scale-and-fade
 // implode. Works with no destruction art at all.
 
-await loadCascadeSpines();
+const cascade = await loadSpineSet("cascade");
 
 const A = 'low1', B = 'low2', C = 'low3';
 const X = 'high'; // the winner that vanishes
 const REELS = 4, ROWS = 3;
 const SCALE = 0.8;
-const CELL_W = CASCADE_PLATE_W * SCALE;
-const CELL_H = CASCADE_PLATE_H * SCALE;
+const CELL_W = cascade.set.cellSize.width * SCALE;
+const CELL_H = cascade.set.cellSize.height * SCALE;
 
 const BEFORE = [
   [X, A, B],
@@ -2499,8 +2495,8 @@ const reelSet = new ReelSetBuilder()
   .symbols(r => {
     // No outAnimation: the skeleton has no 'disintegration' clip, so
     // playDestroy falls back to the base GSAP implode.
-    const spineMap = buildCascadeSpineMap();
-    for (const id of CASCADE_SYMBOL_IDS) {
+    const spineMap = cascade.spineMap;
+    for (const id of cascade.symbolIds) {
       r.register(id, SpineReelSymbol, {
         spineMap,
         scale: SCALE,
@@ -2561,8 +2557,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/destroy-winpresenter/
 ```ts
 // @ts-nocheck
 // Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, WinPresenter,
-//           loadCascadeSpines, buildCascadeSpineMap, CASCADE_SYMBOL_IDS,
-//           CASCADE_PLATE_W, CASCADE_PLATE_H,
+//           loadSpineSet,
 //           PIXI, gsap, app, pickWeighted
 
 // Win presentation before destruction: reels stop, the presenter dims
@@ -2570,13 +2565,13 @@ URL: https://pixi-reels.schmooky.dev/recipes/destroy-winpresenter/
 // then all winners explode and the refill drops. Both combinations go
 // through one WinPresenter call in runCascade's presentWinners hook.
 
-await loadCascadeSpines();
+const cascade = await loadSpineSet("cascade");
 
-const IDS = [...CASCADE_SYMBOL_IDS];
+const IDS = [...cascade.symbolIds];
 const REELS = 6, ROWS = 4;
 const SCALE = 0.68;
-const CELL_W = CASCADE_PLATE_W * SCALE;
-const CELL_H = CASCADE_PLATE_H * SCALE;
+const CELL_W = cascade.set.cellSize.width * SCALE;
+const CELL_H = cascade.set.cellSize.height * SCALE;
 // Two planted combinations. They share reel 2, so the refill has to
 // handle a column with two winners.
 const GROUP_A = { id: 'mid2', cells: [{ reel: 2, cell: 1 }, { reel: 3, cell: 1 }, { reel: 4, cell: 1 }], value: 60 };
@@ -2608,8 +2603,8 @@ const reelSet = new ReelSetBuilder()
   // nothing can ever peek out under the grid.
   .bufferSymbols({ start: 1, end: 0 })
   .symbols(r => {
-    const spineMap = buildCascadeSpineMap();
-    for (const id of CASCADE_SYMBOL_IDS) {
+    const spineMap = cascade.spineMap;
+    for (const id of cascade.symbolIds) {
       r.register(id, TimedExplodeSymbol, {
         spineMap,
         scale: SCALE,
@@ -2865,22 +2860,21 @@ return {
 URL: https://pixi-reels.schmooky.dev/recipes/fall-delay-anticipation/
 ```ts
 // @ts-nocheck
-// Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, loadCascadeSpines,
-//           buildCascadeSpineMap, CASCADE_SYMBOL_IDS, CASCADE_PLATE_W,
-//           CASCADE_PLATE_H, PIXI, gsap, app, pickWeighted
+// Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, loadSpineSet,
+//           PIXI, gsap, app, pickWeighted
 
 // ANTICIPATION. 350 ms lead-in. Enough room for a full "spin-up"
 // sound effect to play, a button-press animation to complete, or a
 // "READY" tone to fire before the strip starts moving.
 
-await loadCascadeSpines();
+const cascade = await loadSpineSet("cascade");
 
-const IDS = [...CASCADE_SYMBOL_IDS];
+const IDS = [...cascade.symbolIds];
 const REELS = 6, ROWS = 4;
 // Cells match the authored 88x101.6 symbol plate.
 const SCALE = 0.62;
-const CELL_W = CASCADE_PLATE_W * SCALE;
-const CELL_H = CASCADE_PLATE_H * SCALE;
+const CELL_W = cascade.set.cellSize.width * SCALE;
+const CELL_H = cascade.set.cellSize.height * SCALE;
 const CLUSTER = 'low1';
 const HIT_ROW = 2;
 const HIT_COLS = [0, 1, 2];
@@ -2913,8 +2907,8 @@ const reelSet = new ReelSetBuilder()
   .symbols((r) => {
     // outAnimation: 'explode' makes destroySymbols play the skeleton's
     // explode clip instead of the default implode.
-    const spineMap = buildCascadeSpineMap();
-    for (const id of CASCADE_SYMBOL_IDS) {
+    const spineMap = cascade.spineMap;
+    for (const id of cascade.symbolIds) {
       r.register(id, TimedExplodeSymbol, {
         spineMap,
         scale: SCALE,
@@ -2971,23 +2965,22 @@ return {
 URL: https://pixi-reels.schmooky.dev/recipes/fall-delay-instant/
 ```ts
 // @ts-nocheck
-// Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, loadCascadeSpines,
-//           buildCascadeSpineMap, CASCADE_SYMBOL_IDS, CASCADE_PLATE_W,
-//           CASCADE_PLATE_H, PIXI, gsap, app, pickWeighted
+// Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, loadSpineSet,
+//           PIXI, gsap, app, pickWeighted
 
 // INSTANT. fall starts the moment you click SPIN. No lead-in. The
 // default. Snappiest possible feel; players who tap-spin many rounds
 // per minute appreciate it. Pair with no sound lead-in or a sound that
 // triggers WITH the fall, not before.
 
-await loadCascadeSpines();
+const cascade = await loadSpineSet("cascade");
 
-const IDS = [...CASCADE_SYMBOL_IDS];
+const IDS = [...cascade.symbolIds];
 const REELS = 6, ROWS = 4;
 // Cells match the authored 88x101.6 symbol plate.
 const SCALE = 0.62;
-const CELL_W = CASCADE_PLATE_W * SCALE;
-const CELL_H = CASCADE_PLATE_H * SCALE;
+const CELL_W = cascade.set.cellSize.width * SCALE;
+const CELL_H = cascade.set.cellSize.height * SCALE;
 const CLUSTER = 'low1';
 const HIT_ROW = 2;
 const HIT_COLS = [0, 1, 2];
@@ -3020,8 +3013,8 @@ const reelSet = new ReelSetBuilder()
   .symbols((r) => {
     // outAnimation: 'explode' makes destroySymbols play the skeleton's
     // explode clip instead of the default implode.
-    const spineMap = buildCascadeSpineMap();
-    for (const id of CASCADE_SYMBOL_IDS) {
+    const spineMap = cascade.spineMap;
+    for (const id of cascade.symbolIds) {
       r.register(id, TimedExplodeSymbol, {
         spineMap,
         scale: SCALE,
@@ -3080,23 +3073,22 @@ return {
 URL: https://pixi-reels.schmooky.dev/recipes/fall-delay-subtle/
 ```ts
 // @ts-nocheck
-// Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, loadCascadeSpines,
-//           buildCascadeSpineMap, CASCADE_SYMBOL_IDS, CASCADE_PLATE_W,
-//           CASCADE_PLATE_H, PIXI, gsap, app, pickWeighted
+// Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, loadSpineSet,
+//           PIXI, gsap, app, pickWeighted
 
 // SUBTLE LEAD-IN. 150 ms before the fall starts. Just enough for the
 // SPIN button click to register and a short "tap" SFX to lead. Below
 // the threshold where the player thinks "why isn't anything happening?"
 //. still feels responsive.
 
-await loadCascadeSpines();
+const cascade = await loadSpineSet("cascade");
 
-const IDS = [...CASCADE_SYMBOL_IDS];
+const IDS = [...cascade.symbolIds];
 const REELS = 6, ROWS = 4;
 // Cells match the authored 88x101.6 symbol plate.
 const SCALE = 0.62;
-const CELL_W = CASCADE_PLATE_W * SCALE;
-const CELL_H = CASCADE_PLATE_H * SCALE;
+const CELL_W = cascade.set.cellSize.width * SCALE;
+const CELL_H = cascade.set.cellSize.height * SCALE;
 const CLUSTER = 'low1';
 const HIT_ROW = 2;
 const HIT_COLS = [0, 1, 2];
@@ -3129,8 +3121,8 @@ const reelSet = new ReelSetBuilder()
   .symbols((r) => {
     // outAnimation: 'explode' makes destroySymbols play the skeleton's
     // explode clip instead of the default implode.
-    const spineMap = buildCascadeSpineMap();
-    for (const id of CASCADE_SYMBOL_IDS) {
+    const spineMap = cascade.spineMap;
+    for (const id of cascade.symbolIds) {
       r.register(id, TimedExplodeSymbol, {
         spineMap,
         scale: SCALE,
@@ -3187,23 +3179,22 @@ return {
 URL: https://pixi-reels.schmooky.dev/recipes/fall-delay-suspense/
 ```ts
 // @ts-nocheck
-// Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, loadCascadeSpines,
-//           buildCascadeSpineMap, CASCADE_SYMBOL_IDS, CASCADE_PLATE_W,
-//           CASCADE_PLATE_H, PIXI, gsap, app, pickWeighted
+// Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, loadSpineSet,
+//           PIXI, gsap, app, pickWeighted
 
 // SUSPENSE. 700 ms lead-in. Dramatic. The reels stand still while
 // the music swells, a "GO!" stinger fires, or a feature-pick UI flashes.
 // Use sparingly: fine for bonus / free-spin / jackpot reveals, exhausting
 // on every base-game spin.
 
-await loadCascadeSpines();
+const cascade = await loadSpineSet("cascade");
 
-const IDS = [...CASCADE_SYMBOL_IDS];
+const IDS = [...cascade.symbolIds];
 const REELS = 6, ROWS = 4;
 // Cells match the authored 88x101.6 symbol plate.
 const SCALE = 0.62;
-const CELL_W = CASCADE_PLATE_W * SCALE;
-const CELL_H = CASCADE_PLATE_H * SCALE;
+const CELL_W = cascade.set.cellSize.width * SCALE;
+const CELL_H = cascade.set.cellSize.height * SCALE;
 const CLUSTER = 'low1';
 const HIT_ROW = 2;
 const HIT_COLS = [0, 1, 2];
@@ -3236,8 +3227,8 @@ const reelSet = new ReelSetBuilder()
   .symbols((r) => {
     // outAnimation: 'explode' makes destroySymbols play the skeleton's
     // explode clip instead of the default implode.
-    const spineMap = buildCascadeSpineMap();
-    for (const id of CASCADE_SYMBOL_IDS) {
+    const spineMap = cascade.spineMap;
+    for (const id of cascade.symbolIds) {
       r.register(id, TimedExplodeSymbol, {
         spineMap,
         scale: SCALE,
@@ -6997,7 +6988,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/layering-promote-jagged/
 // @ts-nocheck
 // Injected globals: ReelSetBuilder, SpeedPresets, SpineReelSymbol,
 //                   StaticSpinSymbol, SpinTextureCache, prewarmSpinTextures,
-//                   loadThunderkickSpines, buildThunderkickSpineMap,
+//                   loadSpineSet,
 //                   app, pickWeighted
 //
 // Jagged layouts can't use `unmask` (the builder throws - the motion layer
@@ -7007,13 +6998,13 @@ URL: https://pixi-reels.schmooky.dev/recipes/layering-promote-jagged/
 // reel on the next spin:start. Above every reel, outside the mask, and the
 // symbol pool is built to tolerate exactly this re-parenting.
 
-await loadThunderkickSpines();
+const thunderkick = await loadSpineSet("thunderkick");
 
 const SPINE_SCALE = 0.6;
 const CELL_W = 175 * SPINE_SCALE;
 const CELL_H = 203 * SPINE_SCALE;
 
-const spineMap = buildThunderkickSpineMap();
+const spineMap = thunderkick.spineMap;
 
 const weights = {
   low1: 16, low2: 16, low3: 14, low4: 14, low5: 12,
@@ -7125,7 +7116,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/layering-scatter-zindex/
 // @ts-nocheck
 // Injected globals: ReelSetBuilder, SpeedPresets, SpineReelSymbol,
 //                   StaticSpinSymbol, SpinTextureCache, prewarmSpinTextures,
-//                   loadThunderkickSpines, buildThunderkickSpineMap,
+//                   loadSpineSet,
 //                   app, pickWeighted
 //
 // symbolData zIndex - layering WITHIN one reel. The scatter (zIndex: 10)
@@ -7134,13 +7125,13 @@ URL: https://pixi-reels.schmooky.dev/recipes/layering-scatter-zindex/
 // (bottom cells draw in front within a layer). Spot the difference each
 // spin: jaw never clipped, bush clipped from below.
 
-await loadThunderkickSpines();
+const thunderkick = await loadSpineSet("thunderkick");
 
 const SPINE_SCALE = 0.6;
 const CELL_W = 175 * SPINE_SCALE;
 const CELL_H = 203 * SPINE_SCALE;
 
-const spineMap = buildThunderkickSpineMap();
+const spineMap = thunderkick.spineMap;
 
 const weights = {
   low1: 16, low2: 16, low3: 14, low4: 14, low5: 12,
@@ -7213,7 +7204,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/layering-unmask/
 // @ts-nocheck
 // Injected globals: ReelSetBuilder, SpeedPresets, SpineReelSymbol,
 //                   StaticSpinSymbol, SpinTextureCache, prewarmSpinTextures,
-//                   loadThunderkickSpines, buildThunderkickSpineMap,
+//                   loadSpineSet,
 //                   app, pickWeighted
 //
 // symbolData `unmask: true`, the declarative fix, on the SAME jagged
@@ -7224,13 +7215,13 @@ URL: https://pixi-reels.schmooky.dev/recipes/layering-unmask/
 // into the lifted view, so this works on offset (center-anchored) reels
 // too, no manual promotion needed.
 
-await loadThunderkickSpines();
+const thunderkick = await loadSpineSet("thunderkick");
 
 const SPINE_SCALE = 0.6;
 const CELL_W = 175 * SPINE_SCALE;
 const CELL_H = 203 * SPINE_SCALE;
 
-const spineMap = buildThunderkickSpineMap();
+const spineMap = thunderkick.spineMap;
 
 const weights = {
   low1: 16, low2: 16, low3: 14, low4: 14, low5: 12,
@@ -9068,9 +9059,8 @@ return {
 URL: https://pixi-reels.schmooky.dev/recipes/refill-bottom-up/
 ```ts
 // @ts-nocheck
-// Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, loadCascadeSpines,
-//           buildCascadeSpineMap, CASCADE_SYMBOL_IDS, CASCADE_PLATE_W,
-//           CASCADE_PLATE_H, PIXI, gsap, app, pickWeighted
+// Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, loadSpineSet,
+//           PIXI, gsap, app, pickWeighted
 
 // BOTTOM-UP ROW REFILL. within each reel, the bottom cell arrives first
 // and the top cell arrives last (cellOrder: 'endFirst'). All reels
@@ -9078,14 +9068,14 @@ URL: https://pixi-reels.schmooky.dev/recipes/refill-bottom-up/
 // motion. fits puzzle / match-3 / chess-board themes where the board
 // builds itself from below.
 
-await loadCascadeSpines();
+const cascade = await loadSpineSet("cascade");
 
-const IDS = [...CASCADE_SYMBOL_IDS];
+const IDS = [...cascade.symbolIds];
 const REELS = 6, ROWS = 4;
 // Cells match the authored 88x101.6 symbol plate.
 const SCALE = 0.62;
-const CELL_W = CASCADE_PLATE_W * SCALE;
-const CELL_H = CASCADE_PLATE_H * SCALE;
+const CELL_W = cascade.set.cellSize.width * SCALE;
+const CELL_H = cascade.set.cellSize.height * SCALE;
 const CLUSTER = 'low1';
 const HIT_ROW = 2;
 const HIT_COLS = [0, 1, 2];
@@ -9118,8 +9108,8 @@ const reelSet = new ReelSetBuilder()
   .symbols((r) => {
     // outAnimation: 'explode' makes destroySymbols play the skeleton's
     // explode clip instead of the default implode.
-    const spineMap = buildCascadeSpineMap();
-    for (const id of CASCADE_SYMBOL_IDS) {
+    const spineMap = cascade.spineMap;
+    for (const id of cascade.symbolIds) {
       r.register(id, TimedExplodeSymbol, {
         spineMap,
         scale: SCALE,
@@ -9178,23 +9168,22 @@ return {
 URL: https://pixi-reels.schmooky.dev/recipes/refill-ltr-wave/
 ```ts
 // @ts-nocheck
-// Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, loadCascadeSpines,
-//           buildCascadeSpineMap, CASCADE_SYMBOL_IDS, CASCADE_PLATE_W,
-//           CASCADE_PLATE_H, PIXI, gsap, app, pickWeighted
+// Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, loadSpineSet,
+//           PIXI, gsap, app, pickWeighted
 
 // LEFT-TO-RIGHT WAVE REFILL. each column lands in sequence from left
 // to right. Each reel's cells arrive together (no in-reel stagger), but
 // reel 0 lands before reel 1 before reel 2... Reads as a column-by-column
 // "filling up" of the grid.
 
-await loadCascadeSpines();
+const cascade = await loadSpineSet("cascade");
 
-const IDS = [...CASCADE_SYMBOL_IDS];
+const IDS = [...cascade.symbolIds];
 const REELS = 6, ROWS = 4;
 // Cells match the authored 88x101.6 symbol plate.
 const SCALE = 0.62;
-const CELL_W = CASCADE_PLATE_W * SCALE;
-const CELL_H = CASCADE_PLATE_H * SCALE;
+const CELL_W = cascade.set.cellSize.width * SCALE;
+const CELL_H = cascade.set.cellSize.height * SCALE;
 const CLUSTER = 'low1';
 const HIT_ROW = 2;
 const HIT_COLS = [0, 1, 2];
@@ -9228,8 +9217,8 @@ const reelSet = new ReelSetBuilder()
   .symbols((r) => {
     // outAnimation: 'explode' makes destroySymbols play the skeleton's
     // explode clip instead of the default implode.
-    const spineMap = buildCascadeSpineMap();
-    for (const id of CASCADE_SYMBOL_IDS) {
+    const spineMap = cascade.spineMap;
+    for (const id of cascade.symbolIds) {
       r.register(id, TimedExplodeSymbol, {
         spineMap,
         scale: SCALE,
@@ -9287,21 +9276,20 @@ return {
 URL: https://pixi-reels.schmooky.dev/recipes/refill-simultaneous/
 ```ts
 // @ts-nocheck
-// Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, loadCascadeSpines,
-//           buildCascadeSpineMap, CASCADE_SYMBOL_IDS, CASCADE_PLATE_W,
-//           CASCADE_PLATE_H, PIXI, gsap, app, pickWeighted
+// Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, loadSpineSet,
+//           PIXI, gsap, app, pickWeighted
 
 // SIMULTANEOUS REFILL. every cell drops at the same moment. Snappy,
 // no extra pacing, all new symbols arrive in one beat.
 
-await loadCascadeSpines();
+const cascade = await loadSpineSet("cascade");
 
-const IDS = [...CASCADE_SYMBOL_IDS];
+const IDS = [...cascade.symbolIds];
 const REELS = 6, ROWS = 4;
 // Cells match the authored 88x101.6 symbol plate.
 const SCALE = 0.62;
-const CELL_W = CASCADE_PLATE_W * SCALE;
-const CELL_H = CASCADE_PLATE_H * SCALE;
+const CELL_W = cascade.set.cellSize.width * SCALE;
+const CELL_H = cascade.set.cellSize.height * SCALE;
 const CLUSTER = 'low1';
 const HIT_ROW = 2;
 const HIT_COLS = [0, 1, 2];
@@ -9334,8 +9322,8 @@ const reelSet = new ReelSetBuilder()
   .symbols((r) => {
     // outAnimation: 'explode' makes destroySymbols play the skeleton's
     // explode clip instead of the default implode.
-    const spineMap = buildCascadeSpineMap();
-    for (const id of CASCADE_SYMBOL_IDS) {
+    const spineMap = cascade.spineMap;
+    for (const id of cascade.symbolIds) {
       r.register(id, TimedExplodeSymbol, {
         spineMap,
         scale: SCALE,
@@ -9816,9 +9804,8 @@ URL: https://pixi-reels.schmooky.dev/recipes/spin-then-cascade-turbo/
 ```ts
 // @ts-nocheck
 // Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, StaticSpinSymbol,
-//           SpinTextureCache, prewarmSpinTextures, loadCascadeSpines,
-//           buildCascadeSpineMap, CASCADE_SYMBOL_IDS, CASCADE_PLATE_W,
-//           CASCADE_PLATE_H, PIXI, gsap, app, pickWeighted
+//           SpinTextureCache, prewarmSpinTextures, loadSpineSet,
+//           PIXI, gsap, app, pickWeighted
 
 // Turbo hybrid: same strip-spin opener + 'low1' -> 'mid1' chain, tuned
 // for speed. The strip-spin runs the TURBO profile on cached snapshot
@@ -9826,14 +9813,14 @@ URL: https://pixi-reels.schmooky.dev/recipes/spin-then-cascade-turbo/
 // cascade runs a shorter dropIn and a faster explode. SpeedPresets
 // controls the strip phases, .tumble() + timeScale the cascade.
 
-await loadCascadeSpines();
+const cascade = await loadSpineSet("cascade");
 
-const IDS = [...CASCADE_SYMBOL_IDS];
+const IDS = [...cascade.symbolIds];
 const REELS = 5, ROWS = 5;
 // Cells match the authored 88x101.6 symbol plate.
 const SCALE = 0.62;
-const CELL_W = CASCADE_PLATE_W * SCALE;
-const CELL_H = CASCADE_PLATE_H * SCALE;
+const CELL_W = cascade.set.cellSize.width * SCALE;
+const CELL_H = cascade.set.cellSize.height * SCALE;
 const HIT_COLS = [0, 1, 2];                     // left three columns
 const HIT_ROW = 1;                              // upper-middle cell
 const TRIGGER1 = 'low1';
@@ -9864,20 +9851,20 @@ class TimedExplodeSymbol extends SpineReelSymbol {
 const cache = new SpinTextureCache({ renderer: app.renderer });
 const createInner = () =>
   new TimedExplodeSymbol({
-    spineMap: buildCascadeSpineMap(),
+    spineMap: cascade.spineMap,
     scale: SCALE,
     outAnimation: 'explode',
   });
 
 prewarmSpinTextures({
-  cache, ids: [...CASCADE_SYMBOL_IDS], createSymbol: createInner,
+  cache, ids: [...cascade.symbolIds], createSymbol: createInner,
   width: CELL_W, height: CELL_H,
 });
 
 const reelSet = new ReelSetBuilder()
   .reels(REELS).visibleCells(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
   .symbols((r) => {
-    for (const id of CASCADE_SYMBOL_IDS) {
+    for (const id of cascade.symbolIds) {
       r.register(id, StaticSpinSymbol, { createInner, cache, blurRampMs: 120 });
     }
   })
@@ -9948,9 +9935,8 @@ return {
 URL: https://pixi-reels.schmooky.dev/recipes/spin-then-cascade/
 ```ts
 // @ts-nocheck
-// Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, loadCascadeSpines,
-//           buildCascadeSpineMap, CASCADE_SYMBOL_IDS, CASCADE_PLATE_W,
-//           CASCADE_PLATE_H, PIXI, gsap, app, pickWeighted
+// Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, loadSpineSet,
+//           PIXI, gsap, app, pickWeighted
 
 // Hybrid spin-then-cascade: round 1 spins like a classic strip slot
 // (top-to-bottom motion, START → SPIN → STOP). The landing has a
@@ -9965,14 +9951,14 @@ URL: https://pixi-reels.schmooky.dev/recipes/spin-then-cascade/
 // winning cells animate. Real games typically chain across overlapping
 // clusters; here we keep the demo's affected area visually contiguous.
 
-await loadCascadeSpines();
+const cascade = await loadSpineSet("cascade");
 
-const IDS = [...CASCADE_SYMBOL_IDS];
+const IDS = [...cascade.symbolIds];
 const REELS = 5, ROWS = 5;
 // Cells match the authored 88x101.6 symbol plate.
 const SCALE = 0.62;
-const CELL_W = CASCADE_PLATE_W * SCALE;
-const CELL_H = CASCADE_PLATE_H * SCALE;
+const CELL_W = cascade.set.cellSize.width * SCALE;
+const CELL_H = cascade.set.cellSize.height * SCALE;
 const HIT_COLS = [0, 1, 2];                     // left three columns
 const HIT_ROW = 1;                              // upper-middle cell
 const TRIGGER1 = 'low1';
@@ -10003,8 +9989,8 @@ const reelSet = new ReelSetBuilder()
   .symbols((r) => {
     // outAnimation: 'explode' makes destroySymbols play the skeleton's
     // explode clip instead of the default implode.
-    const spineMap = buildCascadeSpineMap();
-    for (const id of CASCADE_SYMBOL_IDS) {
+    const spineMap = cascade.spineMap;
+    for (const id of cascade.symbolIds) {
       r.register(id, TimedExplodeSymbol, {
         spineMap,
         scale: SCALE,
@@ -10100,7 +10086,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/spine-big-symbols/
 ```ts
 // @ts-nocheck
 // Injected globals: ReelSetBuilder, SpeedPresets, SpineReelSymbol,
-//                   loadGeneratedSpines, buildSpineMap, SharedRectMaskStrategy,
+//                   loadSpineSet, buildSpineMap, SharedRectMaskStrategy,
 //                   PIXI, gsap, app, textures, blurTextures, SYMBOL_IDS,
 //                   pickWeighted
 //
@@ -10112,7 +10098,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/spine-big-symbols/
 // Reuses the wild skeleton for the 2x2 BIGWILD. Spine scales the whole
 // rig to whatever cell box the engine hands it without losing crispness.
 
-await loadGeneratedSpines();
+await loadSpineSet("generated");
 
 const REELS = 5;
 const ROWS = 4;
@@ -10218,8 +10204,8 @@ URL: https://pixi-reels.schmooky.dev/recipes/spine-mystery-reveal/
 // @ts-nocheck
 // Injected globals: ReelSetBuilder, SpeedPresets, SpineReelSymbol,
 //                   StaticSpinSymbol, SpinTextureCache, prewarmSpinTextures,
-//                   loadThunderkickSpines, buildThunderkickSpineMap,
-//                   THUNDERKICK_SYMBOL_IDS, app, pickWeighted, Spine, PIXI
+//                   loadSpineSet,
+//                   app, pickWeighted, Spine, PIXI
 //
 // Mystery reveal: bushes land with their own `land` one-shot, then each
 // plays the rig's `revealWin` on an overlay spine while the cell underneath
@@ -10227,13 +10213,13 @@ URL: https://pixi-reels.schmooky.dev/recipes/spine-mystery-reveal/
 // Every reveal animation fades the bush to fully transparent, so the
 // overlay destroys itself on complete.
 
-await loadThunderkickSpines();
+const thunderkick = await loadSpineSet("thunderkick");
 
 const SPINE_SCALE = 0.6;
 const CELL_W = 175 * SPINE_SCALE;
 const CELL_H = 203 * SPINE_SCALE;
 
-const spineMap = buildThunderkickSpineMap();
+const spineMap = thunderkick.spineMap;
 
 // Base fill and reveal targets: paying symbols only. Mysteries are forced
 // into the grid below so every spin demonstrates the reveal.
@@ -10367,7 +10353,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/spine-pyramid-shape/
 ```ts
 // @ts-nocheck
 // Injected globals: ReelSetBuilder, SpeedPresets, SpineReelSymbol,
-//                   loadGeneratedSpines, buildSpineMap, PIXI, gsap, app,
+//                   loadSpineSet, buildSpineMap, PIXI, gsap, app,
 //                   textures, blurTextures, SYMBOL_IDS, pickWeighted
 //
 // Per-reel static shape (3-5-5-5-3 pyramid) rendered with Spine symbols.
@@ -10375,7 +10361,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/spine-pyramid-shape/
 // the outer 3-cell reels get taller cells than the inner 5-cell reels, and
 // the rig stays crisp at both because it's vector, not a baked sprite.
 
-await loadGeneratedSpines();
+await loadSpineSet("generated");
 
 const VISIBLE = [3, 5, 5, 5, 3];
 // 140 = the spines' authored frame size. render 1:1 to keep frame strokes
@@ -10449,8 +10435,8 @@ URL: https://pixi-reels.schmooky.dev/recipes/spine-scatter-jaw-anticipation/
 // @ts-nocheck
 // Injected globals: ReelSetBuilder, SpeedPresets, SpineReelSymbol,
 //                   StaticSpinSymbol, SpinTextureCache, prewarmSpinTextures,
-//                   anticipationForScatters, loadThunderkickSpines,
-//                   buildThunderkickSpineMap, app, pickWeighted
+//                   anticipationForScatters, loadSpineSet,
+//                   app, pickWeighted
 //
 // Scatter near-win with the rig's own tease clips. The scatter skeleton
 // ships `firstReelScatterNearWin` (the jaw snap for the LEFTMOST scatter),
@@ -10458,13 +10444,13 @@ URL: https://pixi-reels.schmooky.dev/recipes/spine-scatter-jaw-anticipation/
 // `lastReelScatterNearWin` (the RIGHTMOST jaw pose on the deciding land)
 // and `bonusGameWon` for the payoff. Spins alternate hit / miss.
 
-await loadThunderkickSpines();
+const thunderkick = await loadSpineSet("thunderkick");
 
 const SPINE_SCALE = 0.6;
 const CELL_W = 175 * SPINE_SCALE;
 const CELL_H = 203 * SPINE_SCALE;
 
-const spineMap = buildThunderkickSpineMap();
+const spineMap = thunderkick.spineMap;
 
 const weights = {
   low1: 16, low2: 16, low3: 14, low4: 14, low5: 12,
@@ -10652,8 +10638,8 @@ URL: https://pixi-reels.schmooky.dev/recipes/spine-skins-3-4-4-4-4-3/
 // @ts-nocheck
 // Injected globals: ReelSetBuilder, SpeedPresets, SpineReelSymbol,
 //                   StaticSpinSymbol, SpinTextureCache, prewarmSpinTextures,
-//                   loadThunderkickSpines, buildThunderkickSpineMap,
-//                   THUNDERKICK_SYMBOL_IDS, app, pickWeighted
+//                   loadSpineSet,
+//                   app, pickWeighted
 //
 // Real production art on a compact 3-4-4-4-4-3 grid. Each symbol tier is
 // ONE multi-skin skeleton (lowSymbols carries low1..low5 as skins), mapped
@@ -10661,7 +10647,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/spine-skins-3-4-4-4-4-3/
 // every cell swaps to a cached snapshot texture with auto-baked motion
 // blur, so no skeleton ticks while the reels turn.
 
-await loadThunderkickSpines();
+const thunderkick = await loadSpineSet("thunderkick");
 
 // The symbol plates measure exactly 175x203 (setup-pose bounds of the tier
 // skeletons; scatter/mystery intentionally overflow their tile). Cells match
@@ -10670,7 +10656,7 @@ const SPINE_SCALE = 0.6;
 const CELL_W = 175 * SPINE_SCALE;
 const CELL_H = 203 * SPINE_SCALE;
 
-const spineMap = buildThunderkickSpineMap();
+const spineMap = thunderkick.spineMap;
 
 const weights = {
   low1: 16, low2: 16, low3: 14, low4: 14, low5: 12,
@@ -10692,7 +10678,7 @@ const createInner = () =>
 // One scratch symbol bakes the static + blurred texture for every id.
 prewarmSpinTextures({
   cache,
-  ids: THUNDERKICK_SYMBOL_IDS,
+  ids: thunderkick.symbolIds,
   createSymbol: createInner,
   width: CELL_W,
   height: CELL_H,
@@ -10705,7 +10691,7 @@ const reelSet = new ReelSetBuilder()
   .symbolSize(CELL_W, CELL_H)
   .symbolGap(0, 0)
   .symbols((r) => {
-    for (const id of THUNDERKICK_SYMBOL_IDS) {
+    for (const id of thunderkick.symbolIds) {
       r.register(id, StaticSpinSymbol, {
         createInner,
         cache,
@@ -10962,7 +10948,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/static-spin-spine/
 // @ts-nocheck
 // Injected globals: ReelSetBuilder, SpeedPresets, SpineReelSymbol,
 //                   StaticSpinSymbol, SpinTextureCache, prewarmSpinTextures,
-//                   loadGeneratedSpines, buildSpineMap, app, pickWeighted
+//                   loadSpineSet, buildSpineMap, app, pickWeighted
 //
 // "Spin static, not Spine." At rest every cell is a live Spine skeleton
 // (idle loops, landing animations). The moment the reels spin, each cell
@@ -10971,7 +10957,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/static-spin-spine/
 // instantiate a skeleton at all. On land the skeletons come back and play
 // their landing animation.
 
-await loadGeneratedSpines();
+await loadSpineSet("generated");
 
 const SIZE = 140; // the generated skeletons' authored frame size - render 1:1
 const SPINE_MAP = {
@@ -11469,9 +11455,8 @@ return {
 URL: https://pixi-reels.schmooky.dev/recipes/tumble-anticipation-stagger/
 ```ts
 // @ts-nocheck
-// Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, loadCascadeSpines,
-//           buildCascadeSpineMap, CASCADE_SYMBOL_IDS, CASCADE_PLATE_W,
-//           CASCADE_PLATE_H, PIXI, gsap, app, pickWeighted
+// Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, loadSpineSet,
+//           PIXI, gsap, app, pickWeighted
 
 // Staggered-column anticipation. same two-stage refill as the other
 // canvas, but the drop-in columns run strictly sequentially
@@ -11495,14 +11480,14 @@ URL: https://pixi-reels.schmooky.dev/recipes/tumble-anticipation-stagger/
 //      strictly sequential (column 1 fully lands before column 2 starts);
 //      a smaller step gives overlap.
 
-await loadCascadeSpines();
+const cascade = await loadSpineSet("cascade");
 
-const IDS = [...CASCADE_SYMBOL_IDS];
+const IDS = [...cascade.symbolIds];
 const REELS = 6, ROWS = 4;
 // Cells match the authored 88x101.6 symbol plate.
 const SCALE = 0.62;
-const CELL_W = CASCADE_PLATE_W * SCALE;
-const CELL_H = CASCADE_PLATE_H * SCALE;
+const CELL_W = cascade.set.cellSize.width * SCALE;
+const CELL_H = cascade.set.cellSize.height * SCALE;
 const CLUSTER = 'low1';
 const HIT_ROW = 2;
 const HIT_COLS = [0, 1, 2];
@@ -11537,8 +11522,8 @@ const reelSet = new ReelSetBuilder()
   .symbols((r) => {
     // outAnimation: 'explode' makes destroySymbols play the skeleton's
     // explode clip instead of the default implode.
-    const spineMap = buildCascadeSpineMap();
-    for (const id of CASCADE_SYMBOL_IDS) {
+    const spineMap = cascade.spineMap;
+    for (const id of cascade.symbolIds) {
       r.register(id, TimedExplodeSymbol, {
         spineMap,
         scale: SCALE,
@@ -11609,9 +11594,8 @@ return {
 URL: https://pixi-reels.schmooky.dev/recipes/tumble-anticipation/
 ```ts
 // @ts-nocheck
-// Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, loadCascadeSpines,
-//           buildCascadeSpineMap, CASCADE_SYMBOL_IDS, CASCADE_PLATE_W,
-//           CASCADE_PLATE_H, PIXI, gsap, app, pickWeighted
+// Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, loadSpineSet,
+//           PIXI, gsap, app, pickWeighted
 
 // CASCADE ANTICIPATION REFILL. two-stage. Survivors slide down to fill
 // holes FIRST (gravity stage), then a global pause for anticipation
@@ -11634,14 +11618,14 @@ URL: https://pixi-reels.schmooky.dev/recipes/tumble-anticipation/
 //      strictly sequential (column 1 fully lands before column 2 starts);
 //      a smaller step gives overlap.
 
-await loadCascadeSpines();
+const cascade = await loadSpineSet("cascade");
 
-const IDS = [...CASCADE_SYMBOL_IDS];
+const IDS = [...cascade.symbolIds];
 const REELS = 6, ROWS = 4;
 // Cells match the authored 88x101.6 symbol plate.
 const SCALE = 0.62;
-const CELL_W = CASCADE_PLATE_W * SCALE;
-const CELL_H = CASCADE_PLATE_H * SCALE;
+const CELL_W = cascade.set.cellSize.width * SCALE;
+const CELL_H = cascade.set.cellSize.height * SCALE;
 const CLUSTER = 'low1';
 const HIT_ROW = 2;
 const HIT_COLS = [0, 1, 2];
@@ -11676,8 +11660,8 @@ const reelSet = new ReelSetBuilder()
   .symbols((r) => {
     // outAnimation: 'explode' makes destroySymbols play the skeleton's
     // explode clip instead of the default implode.
-    const spineMap = buildCascadeSpineMap();
-    for (const id of CASCADE_SYMBOL_IDS) {
+    const spineMap = cascade.spineMap;
+    for (const id of cascade.symbolIds) {
       r.register(id, TimedExplodeSymbol, {
         spineMap,
         scale: SCALE,
@@ -11748,22 +11732,21 @@ return {
 URL: https://pixi-reels.schmooky.dev/recipes/tumble-cartoon-bounce/
 ```ts
 // @ts-nocheck
-// Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, loadCascadeSpines,
-//           buildCascadeSpineMap, CASCADE_SYMBOL_IDS, CASCADE_PLATE_W,
-//           CASCADE_PLATE_H, PIXI, gsap, app, pickWeighted
+// Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, loadSpineSet,
+//           PIXI, gsap, app, pickWeighted
 
 // SLOW DROP: a long power2.in fall with a heavy stagger. each cell
 // hangs, then accelerates into its slot. The slow, dramatic variant;
 // the pacing lives in duration + stagger, never in a settle.
 
-await loadCascadeSpines();
+const cascade = await loadSpineSet("cascade");
 
-const IDS = [...CASCADE_SYMBOL_IDS];
+const IDS = [...cascade.symbolIds];
 const REELS = 6, ROWS = 4;
 // Cells match the authored 88x101.6 symbol plate.
 const SCALE = 0.62;
-const CELL_W = CASCADE_PLATE_W * SCALE;
-const CELL_H = CASCADE_PLATE_H * SCALE;
+const CELL_W = cascade.set.cellSize.width * SCALE;
+const CELL_H = cascade.set.cellSize.height * SCALE;
 const CLUSTER = 'low1';
 const HIT_ROW = 2;
 const HIT_COLS = [0, 1, 2];
@@ -11798,8 +11781,8 @@ const reelSet = new ReelSetBuilder()
   .symbols((r) => {
     // outAnimation: 'explode' makes destroySymbols play the skeleton's
     // explode clip instead of the default implode.
-    const spineMap = buildCascadeSpineMap();
-    for (const id of CASCADE_SYMBOL_IDS) {
+    const spineMap = cascade.spineMap;
+    for (const id of cascade.symbolIds) {
       r.register(id, TimedExplodeSymbol, {
         spineMap,
         scale: SCALE,
@@ -11853,23 +11836,22 @@ return {
 URL: https://pixi-reels.schmooky.dev/recipes/tumble-classic/
 ```ts
 // @ts-nocheck
-// Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, loadCascadeSpines,
-//           buildCascadeSpineMap, CASCADE_SYMBOL_IDS, CASCADE_PLATE_W,
-//           CASCADE_PLATE_H, PIXI, gsap, app, pickWeighted
+// Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, loadSpineSet,
+//           PIXI, gsap, app, pickWeighted
 
 // CLASSIC tumble feel: gravity both ways. power2.in fall out,
 // power2.in drop in, dead stop on the grid. The all-rounder default, a good baseline before the more
 // stylistic variants. Framed symbol plates rule out overshoot eases
 // (back/bounce): the rectangles would gap and overlap on landing.
 
-await loadCascadeSpines();
+const cascade = await loadSpineSet("cascade");
 
-const IDS = [...CASCADE_SYMBOL_IDS];
+const IDS = [...cascade.symbolIds];
 const REELS = 6, ROWS = 4;
 // Cells match the authored 88x101.6 symbol plate.
 const SCALE = 0.62;
-const CELL_W = CASCADE_PLATE_W * SCALE;
-const CELL_H = CASCADE_PLATE_H * SCALE;
+const CELL_W = cascade.set.cellSize.width * SCALE;
+const CELL_H = cascade.set.cellSize.height * SCALE;
 const CLUSTER = 'low1';
 const HIT_ROW = 2;
 const HIT_COLS = [0, 1, 2];
@@ -11906,8 +11888,8 @@ const reelSet = new ReelSetBuilder()
   .symbols((r) => {
     // outAnimation: 'explode' makes destroySymbols play the skeleton's
     // explode clip instead of the default implode.
-    const spineMap = buildCascadeSpineMap();
-    for (const id of CASCADE_SYMBOL_IDS) {
+    const spineMap = cascade.spineMap;
+    for (const id of cascade.symbolIds) {
       r.register(id, TimedExplodeSymbol, {
         spineMap,
         scale: SCALE,
@@ -11964,23 +11946,22 @@ return {
 URL: https://pixi-reels.schmooky.dev/recipes/tumble-rain-column/
 ```ts
 // @ts-nocheck
-// Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, loadCascadeSpines,
-//           buildCascadeSpineMap, CASCADE_SYMBOL_IDS, CASCADE_PLATE_W,
-//           CASCADE_PLATE_H, PIXI, gsap, app, pickWeighted
+// Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, loadSpineSet,
+//           PIXI, gsap, app, pickWeighted
 
 // RAIN COLUMN: the whole column drops as a slab. cellStagger = 0 makes
 // every cell start together; distance: 'auto' makes every animated cell
 // traverse the FULL visible-cells distance. Looks like a piece of a
 // board falling. Good fit for puzzle / match-3 styled boards.
 
-await loadCascadeSpines();
+const cascade = await loadSpineSet("cascade");
 
-const IDS = [...CASCADE_SYMBOL_IDS];
+const IDS = [...cascade.symbolIds];
 const REELS = 6, ROWS = 4;
 // Cells match the authored 88x101.6 symbol plate.
 const SCALE = 0.62;
-const CELL_W = CASCADE_PLATE_W * SCALE;
-const CELL_H = CASCADE_PLATE_H * SCALE;
+const CELL_W = cascade.set.cellSize.width * SCALE;
+const CELL_H = cascade.set.cellSize.height * SCALE;
 const CLUSTER = 'low1';
 const HIT_ROW = 2;
 const HIT_COLS = [0, 1, 2];
@@ -12017,8 +11998,8 @@ const reelSet = new ReelSetBuilder()
   .symbols((r) => {
     // outAnimation: 'explode' makes destroySymbols play the skeleton's
     // explode clip instead of the default implode.
-    const spineMap = buildCascadeSpineMap();
-    for (const id of CASCADE_SYMBOL_IDS) {
+    const spineMap = cascade.spineMap;
+    for (const id of cascade.symbolIds) {
       r.register(id, TimedExplodeSymbol, {
         spineMap,
         scale: SCALE,
@@ -12072,23 +12053,22 @@ return {
 URL: https://pixi-reels.schmooky.dev/recipes/tumble-slam/
 ```ts
 // @ts-nocheck
-// Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, loadCascadeSpines,
-//           buildCascadeSpineMap, CASCADE_SYMBOL_IDS, CASCADE_PLATE_W,
-//           CASCADE_PLATE_H, PIXI, gsap, app, pickWeighted
+// Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, loadSpineSet,
+//           PIXI, gsap, app, pickWeighted
 
 // SLAM: power3.in on both ends. maximum acceleration into a dead stop.
 // Short durations + small stagger keep the whole tumble under 0.5 s.
 // A short, hard-landing tumble. Pair with a turbo speed profile when
 // you want the cascade to finish in well under a second.
 
-await loadCascadeSpines();
+const cascade = await loadSpineSet("cascade");
 
-const IDS = [...CASCADE_SYMBOL_IDS];
+const IDS = [...cascade.symbolIds];
 const REELS = 6, ROWS = 4;
 // Cells match the authored 88x101.6 symbol plate.
 const SCALE = 0.62;
-const CELL_W = CASCADE_PLATE_W * SCALE;
-const CELL_H = CASCADE_PLATE_H * SCALE;
+const CELL_W = cascade.set.cellSize.width * SCALE;
+const CELL_H = cascade.set.cellSize.height * SCALE;
 const CLUSTER = 'low1';
 const HIT_ROW = 2;
 const HIT_COLS = [0, 1, 2];
@@ -12124,8 +12104,8 @@ const reelSet = new ReelSetBuilder()
   .symbols((r) => {
     // outAnimation: 'explode' makes destroySymbols play the skeleton's
     // explode clip instead of the default implode.
-    const spineMap = buildCascadeSpineMap();
-    for (const id of CASCADE_SYMBOL_IDS) {
+    const spineMap = cascade.spineMap;
+    for (const id of cascade.symbolIds) {
       r.register(id, TimedExplodeSymbol, {
         spineMap,
         scale: SCALE,
@@ -12179,21 +12159,20 @@ return {
 URL: https://pixi-reels.schmooky.dev/recipes/tumble-wave/
 ```ts
 // @ts-nocheck
-// Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, loadCascadeSpines,
-//           buildCascadeSpineMap, CASCADE_SYMBOL_IDS, CASCADE_PLATE_W,
-//           CASCADE_PLATE_H, PIXI, gsap, app, pickWeighted
+// Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, loadSpineSet,
+//           PIXI, gsap, app, pickWeighted
 
 // WAVE: heavy per-cell stagger (110 ms). the wave is the stagger. Rows
 // arrive in sequence top-to-bottom.
 
-await loadCascadeSpines();
+const cascade = await loadSpineSet("cascade");
 
-const IDS = [...CASCADE_SYMBOL_IDS];
+const IDS = [...cascade.symbolIds];
 const REELS = 6, ROWS = 4;
 // Cells match the authored 88x101.6 symbol plate.
 const SCALE = 0.62;
-const CELL_W = CASCADE_PLATE_W * SCALE;
-const CELL_H = CASCADE_PLATE_H * SCALE;
+const CELL_W = cascade.set.cellSize.width * SCALE;
+const CELL_H = cascade.set.cellSize.height * SCALE;
 const CLUSTER = 'low1';
 const HIT_ROW = 2;
 const HIT_COLS = [0, 1, 2];
@@ -12229,8 +12208,8 @@ const reelSet = new ReelSetBuilder()
   .symbols((r) => {
     // outAnimation: 'explode' makes destroySymbols play the skeleton's
     // explode clip instead of the default implode.
-    const spineMap = buildCascadeSpineMap();
-    for (const id of CASCADE_SYMBOL_IDS) {
+    const spineMap = cascade.spineMap;
+    for (const id of cascade.symbolIds) {
       r.register(id, TimedExplodeSymbol, {
         spineMap,
         scale: SCALE,

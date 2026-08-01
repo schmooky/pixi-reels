@@ -1,7 +1,6 @@
 // @ts-nocheck
 // Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, WinPresenter,
-//           loadCascadeSpines, buildCascadeSpineMap, CASCADE_SYMBOL_IDS,
-//           CASCADE_PLATE_W, CASCADE_PLATE_H,
+//           loadSpineSet,
 //           PIXI, gsap, app, pickWeighted
 
 // Win presentation before destruction: reels stop, the presenter dims
@@ -9,13 +8,13 @@
 // then all winners explode and the refill drops. Both combinations go
 // through one WinPresenter call in runCascade's presentWinners hook.
 
-await loadCascadeSpines();
+const cascade = await loadSpineSet("cascade");
 
-const IDS = [...CASCADE_SYMBOL_IDS];
+const IDS = [...cascade.symbolIds];
 const REELS = 6, ROWS = 4;
 const SCALE = 0.68;
-const CELL_W = CASCADE_PLATE_W * SCALE;
-const CELL_H = CASCADE_PLATE_H * SCALE;
+const CELL_W = cascade.set.cellSize.width * SCALE;
+const CELL_H = cascade.set.cellSize.height * SCALE;
 // Two planted combinations. They share reel 2, so the refill has to
 // handle a column with two winners.
 const GROUP_A = { id: 'mid2', cells: [{ reel: 2, cell: 1 }, { reel: 3, cell: 1 }, { reel: 4, cell: 1 }], value: 60 };
@@ -47,8 +46,8 @@ const reelSet = new ReelSetBuilder()
   // nothing can ever peek out under the grid.
   .bufferSymbols({ start: 1, end: 0 })
   .symbols(r => {
-    const spineMap = buildCascadeSpineMap();
-    for (const id of CASCADE_SYMBOL_IDS) {
+    const spineMap = cascade.spineMap;
+    for (const id of cascade.symbolIds) {
       r.register(id, TimedExplodeSymbol, {
         spineMap,
         scale: SCALE,

@@ -1,6 +1,6 @@
 // @ts-nocheck
 // Injected globals: ReelSetBuilder, SpeedPresets, SpineReelSymbol,
-//                   loadGeneratedSpines, buildSpineMap, SharedRectMaskStrategy,
+//                   loadSpineSet, buildSpineMap, SharedRectMaskStrategy,
 //                   PIXI, gsap, app, textures, blurTextures, SYMBOL_IDS,
 //                   pickWeighted
 //
@@ -12,7 +12,7 @@
 // Reuses the wild skeleton for the 2x2 BIGWILD. Spine scales the whole
 // rig to whatever cell box the engine hands it without losing crispness.
 
-await loadGeneratedSpines();
+await loadSpineSet("generated");
 
 const REELS = 5;
 const ROWS = 4;

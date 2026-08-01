@@ -1,6 +1,6 @@
 // @ts-nocheck
 // Injected globals: ReelSetBuilder, SpeedPresets, SpineReelSymbol,
-//                   loadGeneratedSpines, buildSpineMap, PIXI, gsap, app,
+//                   loadSpineSet, buildSpineMap, PIXI, gsap, app,
 //                   textures, blurTextures, SYMBOL_IDS, pickWeighted
 //
 // Per-reel static shape (3-5-5-5-3 pyramid) rendered with Spine symbols.
@@ -8,7 +8,7 @@
 // the outer 3-cell reels get taller cells than the inner 5-cell reels, and
 // the rig stays crisp at both because it's vector, not a baked sprite.
 
-await loadGeneratedSpines();
+await loadSpineSet("generated");
 
 const VISIBLE = [3, 5, 5, 5, 3];
 // 140 = the spines' authored frame size. render 1:1 to keep frame strokes

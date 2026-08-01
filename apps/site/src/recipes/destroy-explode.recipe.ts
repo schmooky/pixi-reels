@@ -1,21 +1,20 @@
 // @ts-nocheck
-// Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, loadCascadeSpines,
-//           buildCascadeSpineMap, CASCADE_SYMBOL_IDS, CASCADE_PLATE_W,
-//           CASCADE_PLATE_H, PIXI, gsap, app, pickWeighted
+// Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, loadSpineSet,
+//           PIXI, gsap, app, pickWeighted
 
 // Authored destroy: same board and cascade as the fade canvas; the only
 // change is `outAnimation: 'explode'` at registration. destroySymbols
 // then plays the skeleton's 1.27 s explosion instead of the implode.
 // Shown at full length here.
 
-await loadCascadeSpines();
+const cascade = await loadSpineSet("cascade");
 
 const A = 'low1', B = 'low2', C = 'low3';
 const X = 'high'; // the winner that vanishes
 const REELS = 4, ROWS = 3;
 const SCALE = 0.8;
-const CELL_W = CASCADE_PLATE_W * SCALE;
-const CELL_H = CASCADE_PLATE_H * SCALE;
+const CELL_W = cascade.set.cellSize.width * SCALE;
+const CELL_H = cascade.set.cellSize.height * SCALE;
 
 const BEFORE = [
   [X, A, B],
@@ -34,8 +33,8 @@ function randSymbolNotIn(exclude) {
 const reelSet = new ReelSetBuilder()
   .reels(REELS).visibleCells(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
   .symbols(r => {
-    const spineMap = buildCascadeSpineMap();
-    for (const id of CASCADE_SYMBOL_IDS) {
+    const spineMap = cascade.spineMap;
+    for (const id of cascade.symbolIds) {
       r.register(id, SpineReelSymbol, {
         spineMap,
         scale: SCALE,
