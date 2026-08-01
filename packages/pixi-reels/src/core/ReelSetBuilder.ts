@@ -794,7 +794,12 @@ export class ReelSetBuilder {
       0,
     );
     const poolCapacity = this._poolCapacity ?? Math.max(20, totalStripCells);
-    const symbolFactory = new SymbolFactory(this._symbolRegistry, poolCapacity, this._gsap);
+    const symbolFactory = new SymbolFactory(
+      this._symbolRegistry,
+      poolCapacity,
+      this._gsap,
+      setAxis.mainProp,
+    );
     const randomProvider = new RandomSymbolProvider(symbolsData, this._rng);
     const frameBuilder = new FrameBuilder(randomProvider);
 

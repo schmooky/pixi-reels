@@ -18,9 +18,10 @@ export interface SnapshotRenderer {
 /** Tuning for the baked motion-blur variant of a snapshot. */
 export interface MotionBlurOptions {
   /**
-   * Smear axis — the reel's travel direction. `'y'` (default) for normal
-   * vertical reels; `'x'` for a `HorizontalReel` strip. The other axis is
-   * never blurred.
+   * Smear axis — the reel's travel direction. `StaticSpinSymbol` defaults
+   * this to the owning set's orientation (`'y'` vertical, `'x'` horizontal),
+   * so it is only worth setting to override that, or when calling the cache
+   * directly. The other axis is never blurred.
    */
   axis?: 'y' | 'x';
   /**
@@ -153,7 +154,8 @@ export class SpinTextureCache implements Disposable {
    * Bake a motion-blurred variant of the static snapshot for `symbolId`
    * (which must exist. call `captureStatic` or `setStatic` first) and
    * cache it. The smear runs along `blur.axis` — the reel's travel
-   * direction (`'y'` default; `'x'` for a `HorizontalReel`) — and the
+   * direction (`'y'` default when called directly; `StaticSpinSymbol`
+   * derives it from the set's orientation) — and the
    * result is `2 * padding` larger than the cell on that axis only. Draw
    * it center-anchored at the cell center and the smear extends evenly
    * past the cell on both sides.

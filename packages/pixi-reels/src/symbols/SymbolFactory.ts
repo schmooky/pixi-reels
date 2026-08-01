@@ -18,6 +18,7 @@ export class SymbolFactory {
     private _registry: SymbolRegistry,
     maxPoolPerKey: number = 20,
     gsap: Gsap = DEFAULT_GSAP,
+    mainAxis: 'x' | 'y' = 'y',
   ) {
     this._capacityPerKey = maxPoolPerKey;
     this._pool = new ObjectPool<ReelSymbol>(
@@ -26,6 +27,7 @@ export class SymbolFactory {
       (key: string) => {
         const symbol = this._registry.create(key);
         symbol.bindGsap(gsap);
+        symbol.bindMainAxis(mainAxis);
         return symbol;
       },
       (item: ReelSymbol) => item.reset(),

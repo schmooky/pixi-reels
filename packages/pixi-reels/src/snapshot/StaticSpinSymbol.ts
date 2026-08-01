@@ -27,8 +27,9 @@ export interface StaticSpinSymbolOptions {
    */
   blurRampMs?: number;
   /**
-   * Motion-blur tuning forwarded to `cache.captureBlurred`. On a
-   * `HorizontalReel` pass `{ axis: 'x' }` so the smear follows the strip's
+   * Motion-blur tuning forwarded to `cache.captureBlurred`. `axis` defaults
+   * to the owning set's travel axis, so a horizontal set smears sideways
+   * without being told; pass it explicitly only to override that. The
    * sideways travel (and snapshots fit the cell by height instead of width).
    */
   blur?: MotionBlurOptions;
@@ -49,8 +50,8 @@ export interface StaticSpinSymbolOptions {
  *
  * With `spinTexture: 'blurred'` the sprite crossfades from the crisp
  * snapshot to a pre-baked motion-blur variant over `blurRampMs`, then
- * spins the blurred texture. The smear follows the reel's travel axis
- * (`blur.axis` — vertical by default, `'x'` for a `HorizontalReel`). No
+ * spins the blurred texture. The smear follows the reel's travel axis,
+ * derived from the set's orientation (override with `blur.axis`). No
  * filter runs during the spin; the blur is baked once per symbolId and
  * cached.
  *
@@ -246,7 +247,7 @@ export class StaticSpinSymbol extends ReelSymbol {
         symbolId,
         this._cellW,
         this._cellH,
-        this._blurOpts,
+        this._resolvedBlur(),
       );
     }
     this._fitSprites();
@@ -322,18 +323,31 @@ export class StaticSpinSymbol extends ReelSymbol {
   /**
    * Uniformly fit both sprites to the cell along the axis the blur does
    * NOT pad (keeps aspect; the padded axis then centers out evenly past
-   * the cell). Vertical reels fit by width; horizontal (`blur.axis: 'x'`)
-   * strips fit by height.
+   * the cell). Vertical reels fit by width; horizontal strips fit by
+   * height.
    */
   private _fitSprites(): void {
     if (this._cellW <= 0 || this._cellH <= 0) return;
-    const fitByHeight = this._blurOpts?.axis === 'x';
+    const fitByHeight = this._resolvedBlur().axis === 'x';
     for (const sprite of [this._staticSprite, this._blurSprite]) {
       const tw = sprite.texture.width;
       const th = sprite.texture.height;
       if (tw <= 0 || th <= 0) continue;
       sprite.scale.set(fitByHeight ? this._cellH / th : this._cellW / tw);
     }
+  }
+
+  /**
+   * Blur options with the smear axis resolved.
+   *
+   * The smear must follow the strip, so the default comes from the owning
+   * set's orientation rather than being hardcoded to `'y'`. Before this,
+   * a horizontal set using `StaticSpinSymbol` smeared vertically - across
+   * the direction of travel - and nothing said so. An explicit
+   * `blur.axis` still wins, for art that wants a deliberate cross-smear.
+   */
+  private _resolvedBlur(): MotionBlurOptions {
+    return { ...this._blurOpts, axis: this._blurOpts?.axis ?? this.mainAxis };
   }
 
   private _killRamp(): void {

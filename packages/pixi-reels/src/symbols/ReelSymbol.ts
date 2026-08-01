@@ -40,6 +40,7 @@ export abstract class ReelSymbol implements Disposable {
   private _isDestroyed = false;
 
   private _gsap: Gsap = DEFAULT_GSAP;
+  private _mainAxis: 'x' | 'y' = 'y';
 
   constructor() {
     this.view = new Container();
@@ -65,6 +66,23 @@ export abstract class ReelSymbol implements Disposable {
    */
   bindGsap(instance: Gsap): void {
     this._gsap = instance;
+  }
+
+  /**
+   * The screen axis the owning set's strips travel along: `'y'` for a
+   * vertical set, `'x'` for a horizontal one.
+   *
+   * Symbols are otherwise orientation-agnostic - `resize(width, height)` is
+   * screen-space and always will be. This exists for the few effects that
+   * genuinely follow travel, motion blur being the one in the box.
+   */
+  protected get mainAxis(): 'x' | 'y' {
+    return this._mainAxis;
+  }
+
+  /** @internal. Bound by `SymbolFactory` from the set's orientation. */
+  bindMainAxis(prop: 'x' | 'y'): void {
+    this._mainAxis = prop;
   }
 
   get symbolId(): string {
