@@ -852,7 +852,8 @@ export class ReelSetBuilder {
       // eslint-disable-next-line no-console
       console.info(
         `[pixi-reels] auto-selected SharedRectMaskStrategy because ${reason} ` +
-        'and symbolGap.x > 0. Pass .maskStrategy(...) explicitly to override.',
+        `and the cross-axis gap (symbolGap.${vertical ? 'x' : 'y'}) is > 0. ` +
+        'Pass .maskStrategy(...) explicitly to override.',
       );
     }
     const viewport = new ReelViewport(viewportWidth, viewportHeight, undefined, this._maskStrategy);
