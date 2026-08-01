@@ -1,7 +1,7 @@
 id: cascade-005
 group: cascade
 question: How do I control the fall delay between columns?
-answer: "`.tumble({ fall: { rowStagger } })` plus the refill order set the
+answer: "`.tumble({ fall: { cellStagger } })` plus the refill order set the
   per-column timing."
 links:
   - label: "Recipe: Refill orders"
