@@ -55,6 +55,7 @@ import {
 } from '../../../../examples/shared/cascadeSpineLoader.ts';
 import { loadHoldAndWinSprites } from '../../../../examples/shared/holdAndWinSprites.ts';
 import { transform as sucraseTransform } from 'sucrase';
+import { runRecipeSource } from '@/lib/recipeGlobals';
 import { cn } from '@/lib/utils';
 import { CanvasSkeleton } from './CanvasSkeleton';
 import { useMinDisplay } from './useMinDisplay';
@@ -193,49 +194,12 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
 
       let result: RunResult;
       try {
-        const factory = new AsyncFunction(
-          'ReelSetBuilder', 'SpeedPresets', 'BlurSpriteSymbol', 'SpriteSymbol', 'AnimatedSpriteSymbol',
-          'WinPresenter',
-          'app', 'textures', 'blurTextures', 'SYMBOL_IDS', 'pickWeighted', 'gsap', 'PIXI',
-          'EmptySymbol', 'ReelSymbol',
-          'RectMaskStrategy', 'SharedRectMaskStrategy',
-          'CardSymbol', 'CARD_DECK', 'WILD_CARD',
-          'CoinSymbol', 'COIN_TIER', 'COIN_FEATURE', 'COIN_MYSTERY', 'COIN_TRIGGER',
-          'coinValue', 'coinMultiplier', 'drawCoin',
-          'HoldAndWinBuilder', 'BoardGrid',
-          'anticipationForScatters',
-          'SpinTextureCache', 'StaticSpinSymbol', 'prewarmSpinTextures',
-          'GoldCoinSymbol', 'coinWaves', 'bezierFly', 'settleMoneyFace', 'freezeAtEnd', 'fitText',
-          'SpineReelSymbol', 'Spine', 'loadGeneratedSpines', 'buildSpineMap',
-          'loadThunderkickSpines', 'buildThunderkickSpineMap', 'THUNDERKICK_SYMBOL_IDS',
-          'loadCascadeSpines', 'buildCascadeSpineMap', 'CASCADE_SYMBOL_IDS',
-          'CASCADE_PLATE_W', 'CASCADE_PLATE_H',
-          'loadHoldAndWinSprites',
-          `"use strict"; ${js}`,
-        );
-        // AsyncFunction so recipes that need async setup (e.g. dynamic
-        // texture loaders added by future recipes) can `return await`
-        // the built RunResult. Sync recipes that return a plain object
-        // are unaffected. `await x` on a non-Promise resolves to x.
-        result = (await factory(
-          ReelSetBuilder, SpeedPresets, BlurSpriteSymbol, SpriteSymbol, AnimatedSpriteSymbol,
-          WinPresenter,
-          app, textures, blurTextures, SYMBOL_IDS, pickWeighted, gsap, PIXI,
-          EmptySymbol, ReelSymbol,
-          RectMaskStrategy, SharedRectMaskStrategy,
-          CardSymbol, CARD_DECK, WILD_CARD,
-          CoinSymbol, COIN_TIER, COIN_FEATURE, COIN_MYSTERY, COIN_TRIGGER,
-          coinValue, coinMultiplier, drawCoin,
-          HoldAndWinBuilder, BoardGrid,
-          anticipationForScatters,
-          SpinTextureCache, StaticSpinSymbol, prewarmSpinTextures,
-          GoldCoinSymbol, coinWaves, bezierFly, settleMoneyFace, freezeAtEnd, fitText,
-          SpineReelSymbol, Spine, loadGeneratedSpines, buildSpineMap,
-          loadThunderkickSpines, buildThunderkickSpineMap, THUNDERKICK_SYMBOL_IDS,
-          loadCascadeSpines, buildCascadeSpineMap, CASCADE_SYMBOL_IDS,
-          CASCADE_PLATE_W, CASCADE_PLATE_H,
-          loadHoldAndWinSprites,
-        )) as RunResult;
+        // One shared global surface for all three recipe runtimes. See
+        // lib/recipeGlobals.ts for why the hand-written parameter lists went.
+        result = await runRecipeSource<RunResult>(js, {
+          app, textures, blurTextures, SYMBOL_IDS, pickWeighted,
+          ReelSetBuilder,
+        });
       } catch (e) {
         setError(`Runtime error: ${(e as Error).message}`);
         return;

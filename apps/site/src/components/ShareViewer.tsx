@@ -39,6 +39,7 @@ import {
   buildSpineMap,
 } from '../../../../examples/shared/generatedSpineLoader.ts';
 import { transform as sucraseTransform } from 'sucrase';
+import { runRecipeSource } from '@/lib/recipeGlobals';
 
 import { getShare, ShareApiError } from '@/lib/studio/share/api.js';
 import { openEnvelope } from '@/lib/studio/share/crypto.js';
@@ -325,45 +326,26 @@ function SharedStudio({ config, assets, codeAccessible }: SharedStudioProps): JS
       return;
     }
 
-    const factorySource = `"use strict"; ${js} ; return buildReels();`;
     let built: { reelSet?: ReelSet; nextResult?: () => string[][]; onSpin?: () => Promise<void>; cleanup?: () => void };
     try {
-      const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor as FunctionConstructor;
-      // Lock-stepped with Studio.tsx and RecipeRunner.tsx. recipe-style
-      // shared studios must resolve the same globals here as they did at
-      // authoring time.
       const builtins = builtinsRef.current;
       if (!builtins) {
         setError('Prototype atlas not loaded yet.');
         return;
       }
-      const factory = new AsyncFunction(
-        'ReelSetBuilder', 'SpeedPresets', 'BlurSpriteSymbol', 'SpriteSymbol', 'AnimatedSpriteSymbol',
-        'WinPresenter',
-        'app', 'textures', 'blurTextures', 'SYMBOL_IDS', 'pickWeighted', 'gsap', 'PIXI',
-        'EmptySymbol', 'ReelSymbol',
-        'RectMaskStrategy', 'SharedRectMaskStrategy',
-        'CardSymbol', 'CARD_DECK', 'WILD_CARD',
-        'CoinSymbol', 'COIN_TIER', 'COIN_FEATURE', 'COIN_MYSTERY', 'COIN_TRIGGER',
-        'coinValue', 'coinMultiplier', 'drawCoin',
-        'SpineReelSymbol', 'loadGeneratedSpines', 'buildSpineMap',
-        'userSymbols', 'userSymbolData',
-        factorySource,
-      );
       const mergedTextures = { ...builtins.textures, ...injectables.textures };
-      built = (await factory(
-        makeStudioReelSetBuilder(injectables.userSymbolData),
-        SpeedPresets, BlurSpriteSymbol, SpriteSymbol, AnimatedSpriteSymbol,
-        WinPresenter,
-        app, mergedTextures, builtins.blurTextures, builtins.SYMBOL_IDS, pickWeighted, gsap, PIXI,
-        EmptySymbol, ReelSymbol,
-        RectMaskStrategy, SharedRectMaskStrategy,
-        CardSymbol, CARD_DECK, WILD_CARD,
-        CoinSymbol, COIN_TIER, COIN_FEATURE, COIN_MYSTERY, COIN_TRIGGER,
-        coinValue, coinMultiplier, drawCoin,
-        SpineReelSymbol, loadGeneratedSpines, buildSpineMap,
-        injectables.userSymbols, injectables.userSymbolData,
-      )) as typeof built;
+      // Shared with Studio.tsx and RecipeRunner.tsx by construction now, not
+      // by a comment asking for lock-step. See lib/recipeGlobals.ts.
+      built = await runRecipeSource<typeof built>(js, {
+        app,
+        textures: mergedTextures,
+        blurTextures: builtins.blurTextures,
+        SYMBOL_IDS: builtins.SYMBOL_IDS,
+        pickWeighted,
+        ReelSetBuilder: makeStudioReelSetBuilder(injectables.userSymbolData),
+        userSymbols: injectables.userSymbols,
+        userSymbolData: injectables.userSymbolData,
+      }, ' ; return buildReels();');
     } catch (e) {
       setError(`Runtime error: ${(e as Error).message}`);
       return;

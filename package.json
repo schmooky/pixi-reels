@@ -2,7 +2,7 @@
   "name": "pixi-reels-workspace",
   "private": true,
   "version": "0.1.0",
-  "description": "pixi-reels monorepo — open-source slot machine reel engine for PixiJS v8.",
+  "description": "pixi-reels monorepo \u2014 open-source slot machine reel engine for PixiJS v8.",
   "engines": {
     "node": ">=22.12"
   },
@@ -17,7 +17,7 @@
     "lint": "pnpm --filter pixi-reels lint",
     "check:no-fancy-unicode": "node scripts/check-no-fancy-unicode.mjs",
     "check:imports": "biome lint packages/pixi-reels/src",
-    "check:lint": "pnpm check:no-fancy-unicode && pnpm check:imports",
+    "check:lint": "pnpm check:no-fancy-unicode && pnpm check:imports && pnpm check:recipe-globals",
     "commitlint": "commitlint --edit",
     "examples:dev:classic": "pnpm --filter classic-spin dev",
     "examples:dev:cascade": "pnpm --filter cascade-tumble dev",
@@ -42,7 +42,8 @@
     "size": "node scripts/size-check.mjs",
     "size:check": "node scripts/size-check.mjs --check",
     "size:update": "node scripts/size-check.mjs --update",
-    "prepare": "husky || true"
+    "prepare": "husky || true",
+    "check:recipe-globals": "node scripts/check-recipe-globals.mjs"
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx,mjs,cjs,md,mdx,astro,yml,yaml,json}": [

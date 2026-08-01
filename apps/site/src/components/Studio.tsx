@@ -59,6 +59,7 @@ import {
   buildSpineMap,
 } from '../../../../examples/shared/generatedSpineLoader.ts';
 import { transform as sucraseTransform } from 'sucrase';
+import { runRecipeSource } from '@/lib/recipeGlobals';
 import {
   loadConfig,
   saveConfig,
@@ -413,44 +414,25 @@ export default function Studio() {
       return;
     }
 
-    const factorySource = `"use strict"; ${js} ; return buildReels();`;
     let built: BuildResult;
     try {
-      const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor as FunctionConstructor;
-      // Keep this param list in lock-step with RecipeRunner.tsx and
-      // ShareViewer.tsx. anything a recipe references must be injected
-      // identically across all three runtimes, otherwise "Open in Studio"
-      // (and shared studios using recipe-style code) produce
-      // "Can't find variable: X" at run time.
-      const factory = new AsyncFunction(
-        'ReelSetBuilder', 'SpeedPresets', 'BlurSpriteSymbol', 'SpriteSymbol', 'AnimatedSpriteSymbol',
-        'WinPresenter',
-        'app', 'textures', 'blurTextures', 'SYMBOL_IDS', 'pickWeighted', 'gsap', 'PIXI',
-        'EmptySymbol', 'ReelSymbol',
-        'RectMaskStrategy', 'SharedRectMaskStrategy',
-        'CardSymbol', 'CARD_DECK', 'WILD_CARD',
-        'CoinSymbol', 'COIN_TIER', 'COIN_FEATURE', 'COIN_MYSTERY', 'COIN_TRIGGER',
-        'coinValue', 'coinMultiplier', 'drawCoin',
-        'SpineReelSymbol', 'loadGeneratedSpines', 'buildSpineMap',
-        'userSymbols', 'userSymbolData',
-        factorySource,
-      );
       // User uploads merge into `textures` so recipe-style `textures[id]`
-      // lookups also pick them up; ids collide → studio uploads win.
+      // lookups also pick them up; ids collide -> studio uploads win.
       const mergedTextures = { ...env.textures, ...injectables.textures };
-      built = (await factory(
-        makeStudioReelSetBuilder(injectables.userSymbolData),
-        SpeedPresets, BlurSpriteSymbol, SpriteSymbol, AnimatedSpriteSymbol,
-        WinPresenter,
-        env.app, mergedTextures, env.blurTextures, env.SYMBOL_IDS, pickWeighted, gsap, PIXI,
-        EmptySymbol, ReelSymbol,
-        RectMaskStrategy, SharedRectMaskStrategy,
-        CardSymbol, CARD_DECK, WILD_CARD,
-        CoinSymbol, COIN_TIER, COIN_FEATURE, COIN_MYSTERY, COIN_TRIGGER,
-        coinValue, coinMultiplier, drawCoin,
-        SpineReelSymbol, loadGeneratedSpines, buildSpineMap,
-        injectables.userSymbols, injectables.userSymbolData,
-      )) as BuildResult;
+      // The global surface is shared with RecipeRunner and ShareViewer, so a
+      // recipe opened in Studio sees exactly the variables it saw in the
+      // docs. Hand-maintained parameter lists drifted by 26 names before
+      // this; see lib/recipeGlobals.ts.
+      built = await runRecipeSource<BuildResult>(js, {
+        app: env.app,
+        textures: mergedTextures,
+        blurTextures: env.blurTextures,
+        SYMBOL_IDS: env.SYMBOL_IDS,
+        pickWeighted,
+        ReelSetBuilder: makeStudioReelSetBuilder(injectables.userSymbolData),
+        userSymbols: injectables.userSymbols,
+        userSymbolData: injectables.userSymbolData,
+      }, ' ; return buildReels();');
     } catch (e) {
       setStatus({ kind: 'err', msg: `Runtime error: ${(e as Error).message}` });
       return;
