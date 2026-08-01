@@ -30,7 +30,7 @@ await app.init({ width: 900, height: 540, background: '#0a0d14' });
 document.body.appendChild(app.canvas);
 
 const reelSet = new ReelSetBuilder()
-  .reels(5).visibleRows(3).symbolSize(140, 140)
+  .reels(5).visibleCells(3).symbolSize(140, 140)
   .symbols((r) => {
     r.register('cherry', SpriteSymbol, { textures: { cherry: cherryTex } });
     r.register('seven',  SpriteSymbol, { textures: { seven:  sevenTex } });

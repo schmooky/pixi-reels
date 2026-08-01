@@ -18,28 +18,28 @@ Most slots use `bufferSymbols(1)` or `bufferSymbols(2)`. Numbers above `2` are u
 
 ```text
 ColumnTarget
-├─ visible       : string[]                    # length = visibleRows
-├─ bufferAbove?  : (string | undefined)[]      # [0] closest to visible, max = bufferSymbols
-└─ bufferBelow?  : (string | undefined)[]      # [0] closest to visible, max = bufferSymbols
+├─ visible       : string[]                    # length = visibleCells
+├─ bufferStart?  : (string | undefined)[]      # [0] closest to visible, max = bufferSymbols
+└─ bufferEnd?  : (string | undefined)[]      # [0] closest to visible, max = bufferSymbols
 ```
 
 One object per reel. Pass an array of these to `ReelSet.setResult` or `ReelSetBuilder.initialFrame`. Both accept the same shape.
 
 ## Index-to-cell map
 
-For one column on a reel with `bufferSymbols(2)`, `visibleRows(3)` (total strip length: 7 cells):
+For one column on a reel with `bufferSymbols(2)`, `visibleCells(3)` (total strip length: 7 cells):
 
 ```text
 ┌──────────────────────┬──────────────────┬─────────────────────────────┐
 │ ColumnTarget field   │ Cell             │ Visible to player at rest?  │
 ├──────────────────────┼──────────────────┼─────────────────────────────┤
-│ bufferAbove[1]       │ buffer-above 1   │ no, furthest above the mask │
-│ bufferAbove[0]       │ buffer-above 0   │ no, closest above the mask  │
+│ bufferStart[1]       │ buffer-above 1   │ no, furthest above the mask │
+│ bufferStart[0]       │ buffer-above 0   │ no, closest above the mask  │
 │ visible[0]           │ visible row 0    │ yes, top                    │
 │ visible[1]           │ visible row 1    │ yes, middle                 │
 │ visible[2]           │ visible row 2    │ yes, bottom                 │
-│ bufferBelow[0]       │ buffer-below 0   │ no, closest below the mask  │
-│ bufferBelow[1]       │ buffer-below 1   │ no, furthest below the mask │
+│ bufferEnd[0]       │ buffer-below 0   │ no, closest below the mask  │
+│ bufferEnd[1]       │ buffer-below 1   │ no, furthest below the mask │
 └──────────────────────┴──────────────────┴─────────────────────────────┘
 ```
 
@@ -51,8 +51,8 @@ Buffer cells are hidden behind the viewport mask at rest. They become visible br
 import type { ColumnTarget } from 'pixi-reels';
 
 const grid: ColumnTarget[] = [
-  { visible: ['A', 'B', 'C'], bufferAbove: ['COIN', 'WILD'] },
-  { visible: ['A', 'B', 'C'], bufferBelow: ['SCATTER'] },
+  { visible: ['A', 'B', 'C'], bufferStart: ['COIN', 'WILD'] },
+  { visible: ['A', 'B', 'C'], bufferEnd: ['SCATTER'] },
 ];
 
 reelSet.setResult(grid);
@@ -60,7 +60,7 @@ reelSet.setResult(grid);
 builder.initialFrame(grid);
 ```
 
-`bufferAbove[0]` is the slot closest to the visible top row. `bufferAbove[1]` is one above that. Entries past `bufferSymbols` are ignored. The same convention applies to `bufferBelow`, in the downward direction.
+`bufferStart[0]` is the slot closest to the visible top row. `bufferStart[1]` is one above that. Entries past `bufferSymbols` are ignored. The same convention applies to `bufferEnd`, in the downward direction.
 
 ## Random fill
 
@@ -68,11 +68,11 @@ Any cell you do not set is filled by the random symbol provider. Buffer cells ge
 
 ## Buffer rows and big symbols
 
-A big-symbol anchor (`SymbolData.size.h > 1`) can sit in `bufferAbove[i]` or at a visible row whose stubs spill into `bufferBelow`. The coordinator paints `OCCUPIED` across the rest of the block automatically. Passing the anchor alone is enough. The validation rule is `anchorRow + h <= visibleRows + bufferBelow`: the block must fit on the strip end-to-end, not necessarily inside the visible window.
+A big-symbol anchor (`SymbolData.size.cells > 1`) can sit in `bufferStart[i]` or at a visible row whose stubs spill into `bufferEnd`. The coordinator paints `OCCUPIED` across the rest of the block automatically. Passing the anchor alone is enough. The validation rule is `anchorRow + h <= visibleCells + bufferEnd`: the block must fit on the strip end-to-end, not necessarily inside the visible window.
 
 ## See also
 
 - [Peek symbol from buffer-above](/recipes/peek-from-above/) for the minimum runnable demo.
 - [Anticipation teaser](/recipes/anticipation-teaser/) for pairing buffer-above with `setAnticipation`.
-- [Land a big symbol partially in buffer](/recipes/big-symbol-partial-land/) for a tail-visible 1xH wild via `bufferAbove`.
+- [Land a big symbol partially in buffer](/recipes/big-symbol-partial-land/) for a tail-visible 1xH wild via `bufferStart`.
 - [API: ReelSet](/docs/api-reelset/) for the full `setResult` signature.

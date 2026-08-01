@@ -31,7 +31,7 @@ Square 2x2, tall 1x3, giant 3x3, wide 2x4, one focused demo per shape.
 
 ## Big symbol falls into view through a cascade
 
-A tall wild lands with its tail in bufferAbove, wins the cells below, and falls into full view as they clear; the 2x2 canvas runs the same beat across two reels.
+A tall wild lands with its tail in bufferStart, wins the cells below, and falls into full view as they clear; the 2x2 canvas runs the same beat across two reels.
 
 **Gotcha:** the anchor's fall distance must equal the number of winner rows cleared below it, or the block snaps instead of falling.
 
@@ -42,7 +42,7 @@ A tall wild lands with its tail in bufferAbove, wins the cells below, and falls 
 
 ## Land a big symbol partially in buffer
 
-A tall 1xH block lands with its anchor in bufferAbove, so only the bottom tail shows at row 0; nudge down to drag the rest into view.
+A tall 1xH block lands with its anchor in bufferStart, so only the bottom tail shows at row 0; nudge down to drag the rest into view.
 
 <RecipeDemo code="big-symbol-partial-land" height={300} />
 
@@ -94,7 +94,7 @@ Per-spin shape on a strip-spin landing, then cascade tumbling that pops ways win
 
 ## Per-reel shape (pyramid)
 
-A non-uniform reel set (3-5-5-5-3), static shape declared at build via `visibleRowsPerReel`.
+A non-uniform reel set (3-5-5-5-3), static shape declared at build via `visibleCellsPerReel`.
 
 <RecipeDemo code="pyramid-shape" height={300} />
 
@@ -110,6 +110,6 @@ The same 3-5-5-5-3 pyramid with every cell a Spine skeleton, crisp at every per-
 
 ## Sticky wild on MultiWays
 
-A pin survives every reshape via a frozen originRow: it clamps when the shape shrinks and restores when it grows back.
+A pin survives every reshape via a frozen originCell: it clamps when the shape shrinks and restores when it grows back.
 
 <RecipeDemo code="sticky-wild-multiways" height={300} />

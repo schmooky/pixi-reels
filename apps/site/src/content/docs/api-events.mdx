@@ -42,7 +42,7 @@ Every cascade event uses the same three-part shape: `cascade:<scope>:<step>`. Sc
 
 ```ts
 interface SpinResult {
-  symbols: string[][];   // final visible grid [reelIndex][rowIndex]
+  symbols: string[][];   // final visible grid [reelIndex][cellIndex]
   wasSkipped: boolean;   // true if skip() / requestSkip() / slamStop() ended the spin
   duration: number;      // ms from spin:start to spin:complete
 }
@@ -95,14 +95,14 @@ interface RunCascadeResult {
 | Event | Payload | When |
 |---|---|---|
 | `cascade:fall:start` | `{ reelIndex: number }` | A reel's fall-out begins (Moment A only. refill skips fall). |
-| `cascade:fall:symbol` | `{ symbol: ReelSymbol, view: Container, reelIndex: number, rowIndex: number, duration: number, ease: string, distance: number }` | One symbol's fall tween is about to start. Read `symbol` / `view` to attach a parallel tween. |
+| `cascade:fall:symbol` | `{ symbol: ReelSymbol, view: Container, reelIndex: number, cellIndex: number, duration: number, ease: string, distance: number }` | One symbol's fall tween is about to start. Read `symbol` / `view` to attach a parallel tween. |
 | `cascade:fall:end` | `{ reelIndex: number }` | A reel's last fall tween settled. |
-| `cascade:place:end` | `{ reelIndex: number, placedSymbols: readonly ReelSymbol[], isInitial: boolean, winnerRows: readonly number[] }` | New identities placed AND snapped to grid, **before** drop-in starts. Canonical decoration hook. `isInitial: true` on Moment A; `isInitial: false` + populated `winnerRows` on refills. Place has no `:start` because it's a synchronous swap. |
+| `cascade:place:end` | `{ reelIndex: number, placedSymbols: readonly ReelSymbol[], isInitial: boolean, winnerCells: readonly number[] }` | New identities placed AND snapped to grid, **before** drop-in starts. Canonical decoration hook. `isInitial: true` on Moment A; `isInitial: false` + populated `winnerCells` on refills. Place has no `:start` because it's a synchronous swap. |
 | `cascade:dropIn:start` | `{ reelIndex: number }` | A reel's drop-in begins. |
-| `cascade:dropIn:symbol` | `{ symbol: ReelSymbol, view: Container, reelIndex: number, rowIndex: number, duration: number, ease: string, offsetRows: number }` | One symbol's drop-in tween is about to start. `offsetRows` is the number of cells this symbol traverses (1 for top-row refills, more for survivors sliding past larger holes). |
+| `cascade:dropIn:symbol` | `{ symbol: ReelSymbol, view: Container, reelIndex: number, cellIndex: number, duration: number, ease: string, offsetCells: number }` | One symbol's drop-in tween is about to start. `offsetCells` is the number of cells this symbol traverses (1 for top-row refills, more for survivors sliding past larger holes). |
 | `cascade:dropIn:end` | `{ reelIndex: number }` | A reel's last drop-in tween settled. |
 | `cascade:gravity:start` | `{ reelIndex: number }` | **Two-stage refill only** (`mode: 'gravity-then-drop'`). a reel's survivor-settle phase begins, before new symbols enter. Not emitted when refill is `'combined'`. |
-| `cascade:gravity:symbol` | `{ symbol: ReelSymbol, view: Container, reelIndex: number, rowIndex: number, duration: number, ease: string, offsetRows: number }` | One survivor's settle tween about to start. Same payload shape as `dropIn:symbol`, scoped to survivors only. |
+| `cascade:gravity:symbol` | `{ symbol: ReelSymbol, view: Container, reelIndex: number, cellIndex: number, duration: number, ease: string, offsetCells: number }` | One survivor's settle tween about to start. Same payload shape as `dropIn:symbol`, scoped to survivors only. |
 | `cascade:gravity:end` | `{ reelIndex: number }` | A reel's survivor settle landed. The library now waits for `gravityHoldMs` + `gravityHold` to resolve (in parallel via `Promise.all`) before the drop-in stage begins. Use this as the asymmetric-anticipation cue. |
 
 ### Destroy-batch-scoped
@@ -162,8 +162,8 @@ reelSet.events.on('cascade:chain:start', ({ chain }) => sfx.play(`chain_${Math.m
 reelSet.events.on('cascade:destroy:start', ({ cells }) => sfx.play('shatter', cells.length));
 
 // Decorate ONLY new arrivals (skip survivors).
-reelSet.events.on('cascade:place:end', ({ placedSymbols, isInitial, winnerRows }) => {
-  const newRowSet = new Set(isInitial ? placedSymbols.map((_, i) => i) : winnerRows);
+reelSet.events.on('cascade:place:end', ({ placedSymbols, isInitial, winnerCells }) => {
+  const newRowSet = new Set(isInitial ? placedSymbols.map((_, i) => i) : winnerCells);
   for (const [row, sym] of placedSymbols.entries()) {
     if (newRowSet.has(row)) addMultiplierBadge(sym);
   }
@@ -201,7 +201,7 @@ Emitted by `WinPresenter` only. listeners are dead weight if you don't use it.
 | `pin:placed` | `(pin: CellPin)` | `reelSet.pin(...)` succeeded. Replacing an existing pin does NOT fire `pin:expired` for the old one. only this event fires (silent replace). |
 | `pin:moved` | `(pin: CellPin, from: { col: number; row: number })` | `reelSet.movePin(...)` resolved. The pin's `col`/`row` are already at the destination; `from` carries the origin. |
 | `pin:expired` | `(pin: CellPin, reason: PinExpireReason)` | Pin removed. `'explicit'` (via `unpin`), `'turns'` (numeric counter hit zero), or `'eval'` (round-scoped pin reset on the next spin). |
-| `pin:migrated` | `(pin: CellPin, info: { fromRow: number; toRow: number; clamped: boolean; reelIndex: number })` | MultiWays reshape moved a pin to a new row inside the same reel. `clamped: true` when the origin row no longer fits the new shape. Never emitted on non-MultiWays slots. |
+| `pin:migrated` | `(pin: CellPin, info: { fromCell: number; toCell: number; clamped: boolean; reelIndex: number })` | MultiWays reshape moved a pin to a new row inside the same reel. `clamped: true` when the origin row no longer fits the new shape. Never emitted on non-MultiWays slots. |
 | `pin:overlayCreated` | `(pin: CellPin, overlay: unknown)` | Mid-spin overlay symbol mounted. Cast `overlay` to your concrete symbol class (typed as `unknown` to keep this module free of symbol-layer imports). |
 | `pin:overlayDestroyed` | `(pin: CellPin, overlay: unknown)` | Mid-spin overlay torn down on land / unpin / replacement. Fires BEFORE the symbol returns to the pool, so you can stop animations on a still-valid instance. |
 

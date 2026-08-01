@@ -114,7 +114,7 @@ Break any of these and the build, the tests, or real consumers break. They are e
 ```ts
 // Compose, don't subclass.
 const reelSet = new ReelSetBuilder()
-  .reels(5).visibleRows(3).symbolSize(140, 140)
+  .reels(5).visibleCells(3).symbolSize(140, 140)
   .symbols((r) => r.register('cherry', SpriteSymbol, { textures: { cherry } }))
   .ticker(app.ticker)
   .build();
@@ -134,7 +134,7 @@ import { SpineReelSymbol } from 'pixi-reels/spine';
 
 ```ts
 // Test mechanics with the headless harness.
-const h = createTestReelSet({ reels: 5, visibleRows: 3, symbolIds: ['a', 'b', 'c'] });
+const h = createTestReelSet({ reels: 5, visibleCells: 3, symbolIds: ['a', 'b', 'c'] });
 await h.spinAndLand(grid);
 expectGrid(h.reelSet, grid);
 h.destroy();

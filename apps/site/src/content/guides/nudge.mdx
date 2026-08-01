@@ -33,7 +33,7 @@ visible window, and `'wild'` slides in at the new top.
 interface NudgeOptions {
   /**
    * Number of full positions to shift. Positive integer, strictly less than
-   * the reel's total strip capacity (bufferAbove + visibleRows + bufferBelow).
+   * the reel's total strip capacity (bufferStart + visibleCells + bufferEnd).
    */
   distance: number;
   /**
@@ -78,11 +78,11 @@ For a 3-row column landed on `['A', 'B', 'C']` (top, middle, bottom):
 | `nudge(c, { distance: 2, direction: 'up',   incoming: ['X', 'Y'] })` | `['C', 'X', 'Y']` |
 
 `incoming[0]` is always the topmost final position; `incoming[distance-1]`
-is always the bottommost. When `distance` exceeds `visibleRows`, the
+is always the bottommost. When `distance` exceeds `visibleCells`, the
 overflow lands in the off-screen buffer on the matching side:
 
-- `direction: 'down'`. trailing `incoming` entries spill into **bufferBelow**.
-- `direction: 'up'`. leading `incoming` entries spill into **bufferAbove**.
+- `direction: 'down'`. trailing `incoming` entries spill into **bufferEnd**.
+- `direction: 'up'`. leading `incoming` entries spill into **bufferStart**.
 
 Either way, every entry stays on the strip. available to a follow-up
 nudge or carried into the next spin's start frame. The engine refuses
@@ -154,22 +154,22 @@ its post-rotation position keeps the whole block on the strip:
 | `'down'` | `anchorStripIdx + h - 1 + distance < total` |
 | `'up'`   | `anchorStripIdx - distance >= 0` |
 
-Where `total = bufferAbove + visibleRows + bufferBelow` and
+Where `total = bufferStart + visibleCells + bufferEnd` and
 `anchorStripIdx` is the anchor's index on the full strip (0 = topmost
-bufferAbove cell, `bufferAbove` = visible row 0).
+bufferStart cell, `bufferStart` = visible row 0).
 
 The block can land **partially** in either buffer and still render
-correctly. `_finalizeFrame` scans both bufferAbove and visible-row
+correctly. `_finalizeFrame` scans both bufferStart and visible-row
 anchors, sizing the sprite to span the whole block whichever side the
 anchor lives on. The mask clips the off-screen portion, the visible
 portion shows the block's tail or head. The classic use case: a 1xH
-wild lands with its anchor in bufferAbove (tail visible at row 0);
+wild lands with its anchor in bufferStart (tail visible at row 0);
 nudge down to reveal the full block. Cross-reel blocks (w > 1) always
 throw. splitting an anchor from its right-side cells on another reel
 isn't safe.
 
 ```ts
-// 1x2 wild lives in visible row 1 + bufferBelow. Nudge up by 1 reveals
+// 1x2 wild lives in visible row 1 + bufferEnd. Nudge up by 1 reveals
 // the full block at visible rows 0 + 1.
 await reelSet.nudge(2, { distance: 1, direction: 'up', incoming: ['filler'] });
 ```
@@ -257,7 +257,7 @@ unrelated reels, and other reels' symbols all carry through.
   survival math + tail-reveal canvas.
 - [Land a big symbol partially in buffer](/recipes/big-symbol-partial-land/).
   the dual entry point: land in tail-visible state via `setResult`'s
-  `bufferAbove`, nudge to reveal.
+  `bufferStart`, nudge to reveal.
 - [Nudge a big symbol in, then hold it across a respin](/recipes/big-symbol-held-respin/).
   reveal a buffer-anchored wild, then hold the reel through a respin
   of the others.

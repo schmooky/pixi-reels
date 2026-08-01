@@ -28,7 +28,7 @@ The most important thing: **the board is value-blind.** A
 coin is an opaque record:
 
 ```ts
-{ cell: { col, row }, id: 'coin', data: /* anything you want */ }
+{ cell: { reel, cell }, id: 'coin', data: /* anything you want */ }
 ```
 
 `id` picks the registered symbol art; `data` is *yours*: values, jackpot tiers,

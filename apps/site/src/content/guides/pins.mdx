@@ -14,7 +14,7 @@ A **pin** locks a cell to a specific symbol id and keeps it visible across spins
 const pin = reelSet.pin(col, row, 'sticky-wild', { turns: 'permanent' });
 
 // Move it elsewhere with an animated tween.
-await reelSet.movePin({ col, row }, { col: col - 1, row }, { duration: 600 });
+await reelSet.movePin({ reel, cell }, { col: col - 1, row }, { duration: 600 });
 
 // Release it.
 reelSet.unpin(col, row);
@@ -79,7 +79,7 @@ unpin(col, row)  (or pin auto-expires after `turns: N`)
 import { ReelSetBuilder, SpriteSymbol } from 'pixi-reels';
 
 const reelSet = new ReelSetBuilder()
-  .reels(5).visibleRows(3).symbolSize(140, 140)
+  .reels(5).visibleCells(3).symbolSize(140, 140)
   .symbols((r) => {
     r.register('wild', SpriteSymbol, { textures: { wild: wildTex } });
     // ...
@@ -134,8 +134,8 @@ reelSet.events.on('pin:overlayCreated', (_pin, overlay) => {
 // Flight: run animation during movePin
 async function walkLeft(pin: CellPin) {
   await reelSet.movePin(
-    { col: pin.col, row: pin.row },
-    { col: pin.col - 1, row: pin.row },
+    { col: pin.reel, row: pin.cell },
+    { col: pin.reel - 1, row: pin.cell },
     {
       duration: 600,
       onFlightCreated: (flight) => {
@@ -166,7 +166,7 @@ If you want the landed cell to keep a sticky animation, also set it on the reel 
 ```ts
 reelSet.events.on('pin:placed', (pin) => {
   if (reelSet.isSpinning) return; // overlay will handle it
-  const sym = reelSet.getReel(pin.col).getSymbolAt(pin.row);
+  const sym = reelSet.getReel(pin.reel).getSymbolAt(pin.cell);
   (sym as WalkingSpineSymbol).setAnimation?.('idle-sticky', true);
 });
 ```

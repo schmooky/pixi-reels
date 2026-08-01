@@ -17,7 +17,7 @@ reelSet.events.on('spin:complete', async (result) => {
   if (wins.length === 0) return;
 
   await reelSet.spotlight.showLine({
-    positions: wins[0].positions,                // [{reelIndex, rowIndex}, ...]
+    positions: wins[0].positions,                // [{reelIndex, cellIndex}, ...]
     duration: 1200,
   });
 });

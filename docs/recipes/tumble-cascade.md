@@ -36,8 +36,8 @@ const reelSet = new ReelSetBuilder()
   .symbols((r) => r.register('A', SpriteSymbol, { textures }))
   .weights({ A: 10 })
   .tumble({
-    fall:   { duration: 280, ease: 'sine.in',       rowStagger: 40 },
-    dropIn: { duration: 480, ease: 'back.out(1.6)', rowStagger: 50, distance: 'perHole' },
+    fall:   { duration: 280, ease: 'sine.in',       cellStagger: 40 },
+    dropIn: { duration: 480, ease: 'back.out(1.6)', cellStagger: 50, distance: 'perHole' },
   })
   .ticker(app.ticker)
   .build();
@@ -113,8 +113,8 @@ Gentle gravity fall, soft overshoot landing. The all-rounder.
 
 ```ts
 .tumble({
-  fall:   { duration: 280, ease: 'sine.in',       rowStagger: 40 },
-  dropIn: { duration: 480, ease: 'back.out(1.6)', rowStagger: 50, distance: 'perHole' },
+  fall:   { duration: 280, ease: 'sine.in',       cellStagger: 40 },
+  dropIn: { duration: 480, ease: 'back.out(1.6)', cellStagger: 50, distance: 'perHole' },
 })
 ```
 
@@ -124,8 +124,8 @@ Loud landing with a couple of bounces.
 
 ```ts
 .tumble({
-  fall:   { duration: 320, ease: 'sine.in',   rowStagger: 60 },
-  dropIn: { duration: 700, ease: 'bounce.out', rowStagger: 70, distance: 'perHole' },
+  fall:   { duration: 320, ease: 'sine.in',   cellStagger: 60 },
+  dropIn: { duration: 700, ease: 'bounce.out', cellStagger: 70, distance: 'perHole' },
 })
 ```
 
@@ -135,8 +135,8 @@ Heavy accelerating fall, hard land. Sub-half-second tumble.
 
 ```ts
 .tumble({
-  fall:   { duration: 180, ease: 'power4.in', rowStagger: 20 },
-  dropIn: { duration: 260, ease: 'expo.out',  rowStagger: 25, distance: 'perHole' },
+  fall:   { duration: 180, ease: 'power4.in', cellStagger: 20 },
+  dropIn: { duration: 260, ease: 'expo.out',  cellStagger: 25, distance: 'perHole' },
 })
 ```
 
@@ -146,8 +146,8 @@ Whole column drops as one slab from far above. Looks like a piece-of-board falli
 
 ```ts
 .tumble({
-  fall:   { duration: 240, ease: 'sine.in', rowStagger: 0 },
-  dropIn: { duration: 380, ease: 'sine.in', rowStagger: 0, distance: 'auto' },
+  fall:   { duration: 240, ease: 'sine.in', cellStagger: 0 },
+  dropIn: { duration: 380, ease: 'sine.in', cellStagger: 0, distance: 'auto' },
 })
 ```
 
@@ -157,8 +157,8 @@ Strong per-row stagger so symbols arrive one-after-another. Reads as a rolling w
 
 ```ts
 .tumble({
-  fall:   { duration: 180, ease: 'sine.in',       rowStagger: 90 },
-  dropIn: { duration: 320, ease: 'back.out(2.0)', rowStagger: 110, distance: 'perHole' },
+  fall:   { duration: 180, ease: 'sine.in',       cellStagger: 90 },
+  dropIn: { duration: 320, ease: 'back.out(2.0)', cellStagger: 110, distance: 'perHole' },
 })
 ```
 
@@ -168,8 +168,8 @@ Zero-duration tweens. symbols snap to their new positions. Useful for turbo mode
 
 ```ts
 .tumble({
-  fall:   { duration: 0, ease: 'none', rowStagger: 0 },
-  dropIn: { duration: 0, ease: 'none', rowStagger: 0, distance: 'perHole' },
+  fall:   { duration: 0, ease: 'none', cellStagger: 0 },
+  dropIn: { duration: 0, ease: 'none', cellStagger: 0, distance: 'perHole' },
 })
 ```
 
@@ -273,7 +273,7 @@ async function play() {
 
     // Bump by the number of distinct ROWS that had a winner this cascade,
     // capped per spin so the math doesn't get out of hand.
-    const wonRows = new Set(winners.map((w) => w.row));
+    const wonRows = new Set(winners.map((w) => w.cell));
     const add = Math.min(wonRows.size, MAX_BUMPS_PER_SPIN - bumps);
     if (add > 0) {
       bumps += add;
@@ -373,14 +373,14 @@ This is distinct from Recipe 3 (which animates a global UI element). Use Recipe 
 
 ### 4e. Per-symbol delay (skip the library's stagger for one row)
 
-Pause the per-symbol effect by `rowIndex` to spread tween starts even further than the library's `rowStagger`.
+Pause the per-symbol effect by `cellIndex` to spread tween starts even further than the library's `cellStagger`.
 
 ```ts
-reelSet.events.on('cascade:dropIn:symbol', ({ view, duration, rowIndex }) => {
+reelSet.events.on('cascade:dropIn:symbol', ({ view, duration, cellIndex }) => {
   gsap.from(view, {
     alpha: 0,
     duration: duration / 1000,
-    delay: rowIndex * 0.06,  // extra 60 ms per row on top of rowStagger
+    delay: cellIndex * 0.06,  // extra 60 ms per row on top of cellStagger
     overwrite: 'auto',
   });
 });
@@ -436,7 +436,7 @@ Quick low-cost squares in the empty cells while the server thinks.
 ```ts
 const placeholders: Container[] = [];
 reelSet.events.on('cascade:fall:end', ({ reelIndex }) => {
-  for (let row = 0; row < reelSet.visibleRows; row++) {
+  for (let row = 0; row < reelSet.visibleCells; row++) {
     const ph = makeSkeletonSquare();
     ph.x = reelIndex * cellW;
     ph.y = row * cellH;
@@ -460,8 +460,8 @@ Make fall fast and brief so the empty moment is shorter; rely on the drop-in to 
 
 ```ts
 .tumble({
-  fall:   { duration: 140, ease: 'expo.in',       rowStagger: 0  },
-  dropIn: { duration: 560, ease: 'back.out(1.8)', rowStagger: 80, distance: 'perHole' },
+  fall:   { duration: 140, ease: 'expo.in',       cellStagger: 0  },
+  dropIn: { duration: 560, ease: 'back.out(1.8)', cellStagger: 80, distance: 'perHole' },
 })
 ```
 
@@ -659,14 +659,14 @@ In combined mode `cascade:gravity:*` does not fire. survivors and new symbols sh
 | `cascade:chain:start` | A single chain stage opens. `detectWinners` returned a non-empty list, destroy is about to run. `chain` is 1-indexed. | `{ chain, winners, currentGrid }` |
 | `cascade:chain:end` | A single chain stage closes. both destroy AND refill drop-in finished. About to loop back to `detectWinners`. | `{ chain, winners, nextGrid }` |
 | `cascade:fall:start` | A reel's fall-out begins (Moment A only. refills skip fall). | `{ reelIndex }` |
-| `cascade:fall:symbol` | Each symbol's fall-out tween is about to start. | `{ symbol, view, reelIndex, rowIndex, duration, ease, distance }` |
+| `cascade:fall:symbol` | Each symbol's fall-out tween is about to start. | `{ symbol, view, reelIndex, cellIndex, duration, ease, distance }` |
 | `cascade:fall:end` | A reel's last fall tween settled. | `{ reelIndex }` |
-| `cascade:place:end` | New identities placed AND snapped to grid, **before** drop-in starts. Canonical spot for badge / decoration application. Place has no `:start` because it's a synchronous swap. `isInitial: true` on Moment A; on Moment B `winnerRows` lists the row indices whose old symbols were cleared (so listeners can skip survivors). | `{ reelIndex, placedSymbols, isInitial, winnerRows }` |
+| `cascade:place:end` | New identities placed AND snapped to grid, **before** drop-in starts. Canonical spot for badge / decoration application. Place has no `:start` because it's a synchronous swap. `isInitial: true` on Moment A; on Moment B `winnerCells` lists the row indices whose old symbols were cleared (so listeners can skip survivors). | `{ reelIndex, placedSymbols, isInitial, winnerCells }` |
 | `cascade:dropIn:start` | A reel's drop-in begins. In two-stage mode this fires for stage B only (after `gravityHoldMs`). | `{ reelIndex }` |
-| `cascade:dropIn:symbol` | Each symbol's drop-in tween is about to start. `offsetRows` is the number of cells this symbol traverses (1 for top-row refills, more for survivors sliding past larger holes). | `{ symbol, view, reelIndex, rowIndex, duration, ease, offsetRows }` |
+| `cascade:dropIn:symbol` | Each symbol's drop-in tween is about to start. `offsetCells` is the number of cells this symbol traverses (1 for top-row refills, more for survivors sliding past larger holes). | `{ symbol, view, reelIndex, cellIndex, duration, ease, offsetCells }` |
 | `cascade:dropIn:end` | A reel's last drop-in tween settled. | `{ reelIndex }` |
 | `cascade:gravity:start` | A reel's gravity stage begins (two-stage refill only). Survivors are about to slide; new symbols are parked off-viewport at alpha 0. Does not fire in combined mode. | `{ reelIndex }` |
-| `cascade:gravity:symbol` | A survivor's slide tween is about to start (two-stage refill only). Same shape as `cascade:dropIn:symbol`, scoped to survivors. | `{ symbol, view, reelIndex, rowIndex, duration, ease, offsetRows }` |
+| `cascade:gravity:symbol` | A survivor's slide tween is about to start (two-stage refill only). Same shape as `cascade:dropIn:symbol`, scoped to survivors. | `{ symbol, view, reelIndex, cellIndex, duration, ease, offsetCells }` |
 | `cascade:gravity:end` | A reel's gravity stage settled (two-stage refill only). The global `gravityHoldMs` window begins after the slowest reel reports this. | `{ reelIndex }` |
 | `cascade:destroy:start` | `destroySymbols(cells)` is about to start. Fires from every call. both direct and inside `runCascade`. Empty-batch calls do not emit. | `{ cells }` |
 | `cascade:destroy:end` | `destroySymbols(cells)` finished. every `playDestroy()` resolved and the viewport dim (if any) was restored. | `{ cells }` |

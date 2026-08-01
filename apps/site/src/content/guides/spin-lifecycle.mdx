@@ -97,8 +97,8 @@ Some slots spin the reels, then cascade after the initial spin. `SpinOptions.mod
 const reelSet = new ReelSetBuilder()
   // ...
   .tumble({
-    fall:   { duration: 280, ease: 'power3.in',  rowStagger: 60 },
-    dropIn: { duration: 450, ease: 'power3.out', rowStagger: 60, distance: 'perHole' },
+    fall:   { duration: 280, ease: 'power3.in',  cellStagger: 60 },
+    dropIn: { duration: 450, ease: 'power3.out', cellStagger: 60, distance: 'perHole' },
   })
   .ticker(app.ticker)
   .build();

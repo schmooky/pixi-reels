@@ -1,0 +1,258 @@
+---
+title: Migrating to 2.0.0
+order: 5
+description: Every breaking change in 2.0.0, with a before and after. Rows became
+  cells, above/below became start/end, and one codemod does most of it.
+---
+
+Run the codemod first:
+
+```bash
+npx pixi-reels-codemod v1-to-v2 src
+```
+
+Commit before you run it. it edits in place. Then read this page for the
+handful of things a codemod cannot do for you.
+
+## Why any of this
+
+v2 has one engine for four layouts: vertical or horizontal, forward or
+reverse. Once a reel's strip can run sideways, "row" stops describing
+anything -- so a reel's strip is made of **cells**, and the off-window slots
+either side are **start** and **end**.
+
+Start and end are **geometric**: start is the smaller screen coordinate
+(above for vertical, left for horizontal), whichever way the reel travels.
+They are deliberately not travel-relative, because a buffer symbol is a
+presentation feature -- the coin peeking above the top row -- and flipping a
+reel's direction must not teleport it to the opposite edge.
+
+There are no deprecated aliases. A v1 name either fails to compile or throws
+with a message naming its replacement. That is on purpose: a quiet alias
+would let a `bufferAbove` that now means something subtly different reach
+production.
+
+## Geometry
+
+Before:
+
+```ts
+new ReelSetBuilder()
+  .reels(5)
+  .visibleRows(3)
+  .visibleRowsPerReel([3, 5, 5, 5, 3])
+  .reelPixelHeights([300, 500, 500, 500, 300])
+  .reelAnchor('bottom')
+  .bufferSymbols({ above: 1, below: 0 });
+```
+
+After:
+
+```ts
+new ReelSetBuilder()
+  .reels(5)
+  .visibleCells(3)
+  .visibleCellsPerReel([3, 5, 5, 5, 3])
+  .reelExtents([300, 500, 500, 500, 300])
+  .reelAnchor('end')
+  .bufferSymbols({ start: 1, end: 0 });
+```
+
+On `Reel`: `reelHeight` is `extent`, `offsetY` is `mainOffset`,
+`spinSymbolHeight` is `spinCellSize`, `bufferAbove` / `bufferBelow` are
+`bufferStart` / `bufferEnd`.
+
+`Reel.symbolWidth` and `Reel.symbolHeight` are **unchanged**. They are the
+screen-space pair you hand to `ReelSymbol.resize(width, height)`, and
+screen-space inputs stay screen-space in v2.
+
+## Result grids
+
+Before:
+
+```ts
+reelSet.setResult([
+  { visible: ['A', 'B', 'C'], bufferAbove: ['COIN'], bufferBelow: ['X'] },
+]);
+```
+
+After:
+
+```ts
+reelSet.setResult([
+  { visible: ['A', 'B', 'C'], bufferStart: ['COIN'], bufferEnd: ['X'] },
+]);
+```
+
+`ColumnTarget` is now carried unchanged all the way down to the reel. The
+internal negative-index encoding (`arr[-1]` for a buffer-above slot) is
+gone. If you wrote a custom frame middleware, `FrameContext.targetSymbols:
+string[]` is now `FrameContext.target: ColumnTarget`; read it with
+`getTargetSlot(target, cell)` or materialize it with
+`columnTargetToStrip(target, bufferStart)`.
+
+`Reel.placeSymbols` takes a `ColumnTarget` instead of a `string[]`. If you
+had a full strip frame (buffers included), use the new `Reel.placeStrip`.
+
+## Coordinates
+
+Every `(col, row)` pair is now `(reel, cell)`:
+
+Before:
+
+```ts
+reelSet.pin(2, 1, 'wild');
+const p = reelSet.getPin(2, 1);
+console.log(p.col, p.row, p.originRow);
+
+reelSet.on('cascade:chain:end', (e) => e.winners.forEach((w) => w.row));
+reelSet.on('pin:migrated', (m) => console.log(m.fromRow, m.toRow));
+```
+
+After:
+
+```ts
+reelSet.pin(2, 1, 'wild');
+const p = reelSet.getPin(2, 1);
+console.log(p.reel, p.cell, p.originCell);
+
+reelSet.on('cascade:chain:end', (e) => e.winners.forEach((w) => w.cell));
+reelSet.on('pin:migrated', (m) => console.log(m.fromCell, m.toCell));
+```
+
+The positional arguments did not move, only the names. `SymbolPosition.rowIndex`
+is `cellIndex`, and it gains an optional `setId` for games composing more
+than one reel set.
+
+`BoardGrid` and `HoldAndWinBoard` keep `cols` and `rows` as board
+dimensions -- a board is a real 2-D grid, not a reel strip. Only their cell
+coordinates changed: `BoardCell` and `HwCell` are `{ reel, cell }`.
+
+## Big symbols
+
+`SymbolData.size` was `{ w, h }`, which was ambiguous the moment a reel
+could run sideways. It is now `{ reels, cells }` -- `reels` spans columns,
+`cells` spans the strip, in every orientation:
+
+Before:
+
+```ts
+builder.symbolData({ bonus: { weight: 0, size: { w: 2, h: 2 } } });
+const fp = reelSet.getSymbolFootprint(2, 1);
+console.log(fp.anchor.col, fp.size.w);
+```
+
+After:
+
+```ts
+builder.symbolData({ bonus: { weight: 0, size: { reels: 2, cells: 2 } } });
+const fp = reelSet.getSymbolFootprint(2, 1);
+console.log(fp.anchor.reel, fp.size.reels);
+```
+
+`getBlockBounds` still returns screen-space `{ x, y, width, height }`.
+
+**New restriction:** a cross-reel block (`size.reels > 1`) cannot be combined
+with a mixed `directionPerReel([...])`. The coordinator assumes one shared
+feed edge across the reels a block covers, so `build()` throws rather than
+shipping a block that splits at run time. Use a single `direction()`, or
+keep blocks within one reel.
+
+## Cascades
+
+Before:
+
+```ts
+builder.tumble({
+  fall: { rowStagger: 40, rowOrder: 'bottomToTop' },
+  dropIn: { rowStagger: 30, rowOrder: 'topToBottom' },
+});
+reelSet.on('cascade:place:end', (e) => console.log(e.winnerRows));
+```
+
+After:
+
+```ts
+builder.tumble({
+  fall: { cellStagger: 40, cellOrder: 'endFirst' },
+  dropIn: { cellStagger: 30, cellOrder: 'startFirst' },
+});
+reelSet.on('cascade:place:end', (e) => console.log(e.winnerCells));
+```
+
+`'endFirst'` is what `'bottomToTop'` meant: the cell at the gravity-exit
+edge moves first. `DropOffset.originalRow` / `.offsetRows` are
+`.originalCell` / `.offsetCells`.
+
+## Nudge
+
+`direction` is now relative to the reel's own axis, not to the screen:
+
+Before:
+
+```ts
+await reelSet.nudge(2, { distance: 1, direction: 'down', incoming: ['wild'] });
+```
+
+After:
+
+```ts
+await reelSet.nudge(2, { distance: 1, direction: 'forward', incoming: ['wild'] });
+```
+
+On a vertical/forward reel these are the same motion. On a reel built with
+`direction('reverse')`, `'forward'` now travels the way that reel spins and
+feeds from the correct edge -- in v1 it always fed from the top.
+
+## Motion internals
+
+If you wrote a custom `SpinningMode` or phase:
+
+| v1 | v2 |
+|---|---|
+| `ReelMotion.displace(deltaY)` | `.advance(travelDelta)` -- signed **travel**, not screen pixels |
+| `ReelMotion.slotHeight` | `.slotPitch` |
+| `ReelMotion.getRowY(row)` | `.getCellMain(cell)` |
+| `SpinningMode.computeDeltaY(symbolHeight, ...)` | `.computeDelta(slotPitch, ...)` |
+
+A positive `travelDelta` means "forward for this reel", which the axis turns
+into a screen direction. That is the whole point: your mode stops caring
+which way the reel points.
+
+`ReelMotion`'s wrap callback lost its `arrayIndex` and `direction`
+arguments. Both were dead -- the consumer re-derived position from the
+symbol itself.
+
+## Offsets
+
+`OffsetXMode` is `CrossOffsetMode`, and the trapezoid's
+`topWidthFactor` / `bottomWidthFactor` are `startFactor` / `endFactor`.
+
+## Render order
+
+New, and optional. `cellStacking` and `reelStacking` make render order
+explicit:
+
+```ts
+builder.cellStacking('ascending').reelStacking('ascending');  // the defaults
+```
+
+`'ascending'` is v1 behaviour: the cell or reel at the larger coordinate
+draws in front. It is geometric on purpose -- `direction('reverse')` does
+**not** flip it, so art lit from above keeps overlapping the way it was
+drawn, and a per-spin reversal tease does not visibly re-layer the board.
+Pass `'descending'` if your art wants the opposite.
+
+## What the codemod will not do
+
+It is an AST transform, so it leaves two things for you:
+
+- **your own local variables.** `row`, `col`, `w` and `h` are ordinary
+  words; a codemod that renamed them would rewrite `for (const row of table)`.
+  Code like `reelSet.getCellBounds(col, row)` keeps working -- those are
+  your values passed positionally.
+- **your comments.** Grep them afterwards.
+
+Anything it missed on the API surface is a type error. And anything that
+reaches the engine with a v1 key throws at the call site, naming the
+replacement.

@@ -15,7 +15,7 @@ Every method on this page is non-async unless its return type is `Promise`. Prom
 | Method | Signature | Notes |
 |---|---|---|
 | `spin` | `(options?: SpinOptions) => Promise<SpinResult>` | Start a spin. Resolves on `spin:complete`. Pass `{ holdReels: [...] }` to freeze columns, `{ mode: 'cascade' }` to override the builder default for one call. |
-| `setResult` | `(symbols: ColumnTarget[]) => void` | Set the target grid. Triggers the stop sequence. One `ColumnTarget` per reel: `{ visible, bufferAbove?, bufferBelow? }`. |
+| `setResult` | `(symbols: ColumnTarget[]) => void` | Set the target grid. Triggers the stop sequence. One `ColumnTarget` per reel: `{ visible, bufferStart?, bufferEnd? }`. |
 | `setAnticipation` | `(reelIndices: number[]) => void` | Mark reels that should enter `ANTICIPATION` before stopping. Held indices are filtered silently. |
 | `setStopDelays` | `(delays: number[]) => void` | One ms-delay per reel, overriding `reelIndex * speed.stopDelay` for the current spin. Persists across `refill()` calls in the same round. |
 | `setDropOrder` | `(order: 'ltr' \| 'rtl' \| 'all' \| number[], step?: number) => void` | Wraps `setStopDelays`. Common patterns: `'ltr'` (initial cascade reveal), `'all'` (canonical refill), `[0,0,200,200,400]` (V-shape). |
@@ -157,7 +157,7 @@ The library ships [`WinPresenter`](/docs/api-events/) as a higher-level events-d
 | `getVisibleGrid` | `() => string[][]` | One id per visible cell. Cross-reel OCCUPIED stubs resolve to the big symbol's anchor id. |
 | `getCellBounds` | `(col, row) => CellBounds` | ReelSet-local rectangle for a 1×1 cell. Use for paylines / hit areas / debug overlays. |
 | `getBlockBounds` | `(col, row) => CellBounds` | Pixel rect covering a big symbol's whole `N×M` block. Returns the cell bounds for 1×1. |
-| `getSymbolFootprint` | `(col, row) => { anchor: { col, row }; size: { w, h } }` | Resolves OCCUPIED stubs to the anchor cell and reports the block size. |
+| `getSymbolFootprint` | `(col, row) => { anchor: { reel, cell }; size: { w, h } }` | Resolves OCCUPIED stubs to the anchor cell and reports the block size. |
 
 ## Frame middleware (runtime-mutable)
 
@@ -201,11 +201,11 @@ off(); // unsubscribe
 import { ReelSetBuilder, SpriteSymbol } from 'pixi-reels';
 
 const reelSet = new ReelSetBuilder()
-  .reels(6).visibleRows(5).symbolSize(95, 95).symbolGap(5, 5)
+  .reels(6).visibleCells(5).symbolSize(95, 95).symbolGap(5, 5)
   .symbols((r) => { /* register your sprites */ })
   .tumble({
-    fall:   { duration: 280, ease: 'sine.in',       rowStagger: 40 },
-    dropIn: { duration: 480, ease: 'back.out(1.6)', rowStagger: 50 },
+    fall:   { duration: 280, ease: 'sine.in',       cellStagger: 40 },
+    dropIn: { duration: 480, ease: 'back.out(1.6)', cellStagger: 50 },
   })
   .ticker(app.ticker)
   .build();

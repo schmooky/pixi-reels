@@ -100,7 +100,7 @@ await reelSet.destroySymbols(winners);
 //    grid is ColumnTarget[]. for the common per-reel visible case, wrap
 //    your server's string[][] with .map(visible => ({ visible })). For
 //    big-symbol anchors that land into the buffer, use the full
-//    ColumnTarget shape with bufferAbove / bufferBelow.
+//    ColumnTarget shape with bufferStart / bufferEnd.
 const next: string[][] = await server.cascade(winners);
 await reelSet.refill({ winners, grid: next.map((visible) => ({ visible })) });
 ```
@@ -236,7 +236,7 @@ This is `pauseAfterDestroyMs` in `runCascade()`, or a `await wait(ms)` in your h
 The decision tree:
 
 1. **Want to run something WITH the library's tween (squish, badge mutation, spine state)?** Subscribe to `cascade:fall:symbol` / `cascade:dropIn:symbol` and start a parallel tween. The library fires the event before its own tween so they lock-step.
-2. **Want to decorate new symbols after they land (multiplier badges)?** Subscribe to `cascade:place:end`. Use `isInitial` / `winnerRows` in the payload to skip survivors.
+2. **Want to decorate new symbols after they land (multiplier badges)?** Subscribe to `cascade:place:end`. Use `isInitial` / `winnerCells` in the payload to skip survivors.
 3. **Want to slot a held beat between fall and drop-in (feature trigger reveal)?** Subscribe to `cascade:fall:end`, run your animation, then... you can't gate the next phase from a listener. Override `cascade:place` to add the held beat in its own `onEnter`.
 4. **Want symbols to fly OFF the screen sideways instead of falling?** Override `cascade:fall` entirely.
 

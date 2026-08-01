@@ -22,7 +22,7 @@ import { createTestReelSet, expectGrid } from 'pixi-reels/testing';
 
 const { reelSet, spinAndLand, destroy } = createTestReelSet({
   reels: 5,
-  visibleRows: 3,
+  visibleCells: 3,
   symbolIds: ['cherry', 'seven', 'wild', 'scatter'],
 });
 
@@ -49,7 +49,7 @@ Cheats are pure functions that take a context and return a grid.
 import { CheatEngine, forceScatters, forceLine, holdAndWinProgress } from '../../../../examples/shared/cheats';
 
 const engine = new CheatEngine({
-  reelCount: 5, visibleRows: 3,
+  reelCount: 5, visibleCells: 3,
   symbolIds: ['a', 'b', 'scatter', 'coin'],
   seed: 42,
 });

@@ -3,12 +3,12 @@ title: MultiWays
 order: 8
 eyebrow: Building blocks
 description: Per-spin row variation. Each reel can land on a different row count
-  between minRows and maxRows, with cell height derived from a fixed reel pixel
+  between minCells and maxCells, with cell height derived from a fixed reel pixel
   height. The engine reshapes each reel between SPIN and STOP and AdjustPhase
-  tweens any pin overlays; pins migrate via originRow.
+  tweens any pin overlays; pins migrate via originCell.
 ---
 
-MultiWays is the open-source name for the "ways"-style mechanic where each reel can land on a different row count *every spin*. Reel **pixel height is fixed** for the whole slot; cell height per reel is derived as `reelPixelHeight / visibleRows[i]`. So a 2-row reel has tall cells; a 7-row reel has short ones.
+MultiWays is the open-source name for the "ways"-style mechanic where each reel can land on a different row count *every spin*. Reel **pixel height is fixed** for the whole slot; cell height per reel is derived as `reelExtent / visibleCells[i]`. So a 2-row reel has tall cells; a 7-row reel has short ones.
 
 For the broader picture (pyramid layouts, big symbols, mutual exclusivity rules), start at the [Per-reel geometry](/guides/per-reel-geometry/) overview.
 
@@ -17,7 +17,7 @@ For the broader picture (pyramid layouts, big symbols, mutual exclusivity rules)
 ```ts
 const reelSet = new ReelSetBuilder()
   .reels(6)
-  .multiways({ minRows: 2, maxRows: 7, reelPixelHeight: 480 })
+  .multiways({ minCells: 2, maxCells: 7, reelExtent: 480 })
   .pinMigrationDuration(300)         // ms; pin-overlay tween. 0 = instant snap.
   .pinMigrationEase('power2.inOut')  // any GSAP ease string
   .symbolSize(68, 68)                // SPIN-time uniform cell size
@@ -44,13 +44,13 @@ The engine handles cell-height derivation, AdjustPhase reshape, mask sizing, and
 
 ## Pin migration (sticky wilds, walking wilds)
 
-A pin's `originRow` is captured at placement. On every reshape it migrates per its `migration` policy. Each migration fires `pin:migrated` with `{ fromRow, toRow, clamped, reelIndex }`.
+A pin's `originCell` is captured at placement. On every reshape it migrates per its `migration` policy. Each migration fires `pin:migrated` with `{ fromCell, toCell, clamped, reelIndex }`.
 
 ### `migration: 'origin'` (default. clamp + restore)
 
 Prevents wander. A pin clamped down on a shrink returns to its origin row when a later shape grows back. Right for sticky wilds.
 
-| Spin | Shape (col 2) | originRow | Migrated row | Clamped? |
+| Spin | Shape (col 2) | originCell | Migrated row | Clamped? |
 |------|---------------|-----------|--------------|----------|
 | 1 | 5 | 4 | 4 | no |
 | 2 | 3 | 4 | 2 | yes |
@@ -59,9 +59,9 @@ Prevents wander. A pin clamped down on a shrink returns to its origin row when a
 
 ### `migration: 'frozen'` (clamp without restoring)
 
-The pin never restores after a clamp. `originRow` is updated on every clamp, so future grows see the new origin. Right for walking wilds, descending wilds, or anything where "current row" is the source of truth and a higher row is unreachable history.
+The pin never restores after a clamp. `originCell` is updated on every clamp, so future grows see the new origin. Right for walking wilds, descending wilds, or anything where "current row" is the source of truth and a higher row is unreachable history.
 
-| Spin | Shape (col 2) | originRow before | Migrated row | originRow after |
+| Spin | Shape (col 2) | originCell before | Migrated row | originCell after |
 |------|---------------|------------------|--------------|-----------------|
 | 1 | 5 | 4 | 4 | 4 |
 | 2 | 3 | 4 | 2 (clamped) | **2** (updated) |
@@ -95,7 +95,7 @@ These events ONLY fire on slots built with `.multiways(...)`. Non-MultiWays slot
 
 - **Big symbols + MultiWays** is rejected at build. A 2×2 on a 2-row reel can't fit; the engine fails fast rather than picking arbitrarily.
 - **Cascade + MultiWays** is rejected at build. Niche combination, deferred to v2.
-- The reel pixel height is fixed per the `multiways({ reelPixelHeight })` value. To change it, rebuild.
+- The reel pixel height is fixed per the `multiways({ reelExtent })` value. To change it, rebuild.
 - `setShape` must be called between `spin()` and `setResult()`. Calling after `setResult` corrupts cached frames; the engine throws.
 
 ## See also
@@ -104,4 +104,4 @@ These events ONLY fire on slots built with `.multiways(...)`. Non-MultiWays slot
 - [Guide: Big symbols](/guides/big-symbols/). N×M blocks (mutually exclusive with MultiWays)
 - [`multiways`](/recipes/multiways/) recipe. basic per-spin reshape
 - [`multiways-card-symbols`](/recipes/multiways-card-symbols/) recipe. same demo, focuses on cell-resize visuals
-- [`sticky-wild-multiways`](/recipes/sticky-wild-multiways/) recipe. pin migration in action with `originRow`
+- [`sticky-wild-multiways`](/recipes/sticky-wild-multiways/) recipe. pin migration in action with `originCell`

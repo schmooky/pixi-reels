@@ -26,14 +26,14 @@ If you're building a 1×1 symbol for a fixed-shape slot, only sections "Skeleton
 | `intro` | one-shot | First visible entry into the reel window | Played by the consumer via a custom symbol subclass; the lib does not trigger by default. |
 | `win_end` | one-shot | Called by `stopAnimation()` | If absent, the lib hard-cuts the `win` track to `idle`. Recommend a 100–200 ms transition. |
 | `expand` | one-shot | Expanding wild (`1×1` → `1×N`) | Visual tween only; the size change is lib-driven via `resize()`. |
-| `big_idle` | loop | Big-symbol variant | The lib selects this instead of `idle` when `SymbolData.size.w * size.h > 1`, if your subclass dispatches on size. |
+| `big_idle` | loop | Big-symbol variant | The lib selects this instead of `idle` when `SymbolData.size.reels * size.cells > 1`, if your subclass dispatches on size. |
 
 ## Texture and atlas
 
 - Use a single `.atlas` + `.webp` page per symbol, OR a shared atlas across all symbols (preferred for drawcall reduction). The vite config already serves textures from `examples/assets/`.
 - Author at the **largest** size the symbol will render at:
   - Non-MultiWays 1×1: ~300 px tall.
-  - MultiWays with `minRows=2, reelPixelHeight=600`: ~300 px tall (same as the maxRows case at 7 rows).
+  - MultiWays with `minCells=2, reelExtent=600`: ~300 px tall (same as the maxCells case at 7 rows).
   - Big symbol 2×2: ~600 px tall.
 - Down-scaling looks fine. Up-scaling past authoring size looks bad.
 

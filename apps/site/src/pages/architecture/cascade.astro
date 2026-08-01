@@ -82,7 +82,7 @@ flowchart LR
 
   <p>
     For a column with visible rows indexed <code>0..V-1</code> and winner
-    rows <code>winnerRows</code> (sorted ascending), let
+    rows <code>winnerCells</code> (sorted ascending), let
     <code>nonWinnerRows</code> be the surviving row indices in order. For
     each final row <code>R</code>:
   </p>
@@ -98,21 +98,21 @@ flowchart LR
       </thead>
       <tbody>
         <tr class="border-t border-border/60">
-          <td class="px-4 py-2.5"><code>R &lt; winnerRows.length</code></td>
+          <td class="px-4 py-2.5"><code>R &lt; winnerCells.length</code></td>
           <td class="px-4 py-2.5 text-xs text-foreground/80">yes. falls from above the viewport</td>
           <td class="px-4 py-2.5 font-mono text-xs text-primary">R + 1</td>
         </tr>
         <tr class="border-t border-border/60">
-          <td class="px-4 py-2.5"><code>R ≥ winnerRows.length</code></td>
+          <td class="px-4 py-2.5"><code>R ≥ winnerCells.length</code></td>
           <td class="px-4 py-2.5 text-xs text-foreground/80">no. survivor from <code>nonWinnerRows[R - winCount]</code></td>
-          <td class="px-4 py-2.5 font-mono text-xs text-accent">R - originalRow <span class="text-muted-foreground">(0 means: don't touch it)</span></td>
+          <td class="px-4 py-2.5 font-mono text-xs text-accent">R - originalCell <span class="text-muted-foreground">(0 means: don't touch it)</span></td>
         </tr>
       </tbody>
     </table>
   </div>
 
   <p>
-    Crucially: when <code>offsetRows === 0</code>, the code returns early
+    Crucially: when <code>offsetCells === 0</code>, the code returns early
     and never creates an animation job for that cell. Its <code>view.y</code>
     is already correct from <code>placeSymbols</code>, and tweening it would
     be visually wrong.
@@ -143,9 +143,9 @@ flowchart LR
 
   <ul>
     <li><code>reelSet.destroySymbols(winners, opts?)</code>. the "pop" primitive. Defers to each symbol's own <code>playDestroy()</code> so subclasses (Spine, particles) get art-appropriate disintegration (the default is a brief scale/fade implode). Lifts zIndex so destroys aren't clipped.</li>
-    <li><code>{`reelSet.refill({ winners, grid })`}</code>. the "place + drop" primitive. Reads each reel's <code>visibleRows</code>, computes per-cell fall distances from <code>winners</code>, animates only the cells that actually move. Untouched survivors stay perfectly still.</li>
+    <li><code>{`reelSet.refill({ winners, grid })`}</code>. the "place + drop" primitive. Reads each reel's <code>visibleCells</code>, computes per-cell fall distances from <code>winners</code>, animates only the cells that actually move. Untouched survivors stay perfectly still.</li>
     <li><code>{`reelSet.runCascade({ detectWinners, nextGrid })`}</code>. the chain orchestrator. Loops detect → destroy → pause → refill until <code>detectWinners</code> returns <code>[]</code>. Per-stage progress fires via <code>cascade:chain:start</code> / <code>cascade:chain:end</code>; the awaited <code>RunCascadeResult</code> carries the summary. Pass <code>signal: AbortSignal</code> for caller-driven cancellation.</li>
-    <li><code>computeDropOffsets(visibleRows, winnerRows)</code>. the algorithm the engine itself uses, exported so you can validate server-side gravity sims offline.</li>
+    <li><code>computeDropOffsets(visibleCells, winnerCells)</code>. the algorithm the engine itself uses, exported so you can validate server-side gravity sims offline.</li>
   </ul>
 
   <h2>Why winners must be *semantic*, not diffed</h2>

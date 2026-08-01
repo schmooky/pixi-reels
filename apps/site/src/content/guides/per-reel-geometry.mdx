@@ -24,7 +24,7 @@ These four are independent in concept but **two pairs are mutually exclusive** a
 |  | Pyramid | MultiWays | Big symbols |
 |---|---|---|---|
 | **Pyramid** + Pyramid | uniform 5×3 is the trivial case |. |. |
-| **MultiWays** + Pyramid | **rejected** at build (`cannot combine multiways() with visibleRowsPerReel()`) |. |. |
+| **MultiWays** + Pyramid | **rejected** at build (`cannot combine multiways() with visibleCellsPerReel()`) |. |. |
 | **Big symbols** + Pyramid | **allowed** |. |. |
 | **Big symbols** + MultiWays | **rejected** at build (`big symbol '...' cannot be registered on a MultiWays slot`) |. |. |
 | **Cascade mode** + MultiWays | **rejected** at build (`multiways() is not supported with cascade mode in v1`) |. |. |
@@ -33,7 +33,7 @@ Why these reject each other:
 
 - **MultiWays + big symbols**: a 2×2 bonus on a 2-row reel can't fit. Defining "what happens" (silently truncate? scale down? skip?) hides game-design intent. Better to fail at build so the developer picks a resolution explicitly.
 - **MultiWays + cascade**: cascade physics drop survivors into vacant cells from above; MultiWays reshape changes the cell count between spins. A cascade survivor at row 6 may not have a row 6 to land on next spin. Niche; deferred to v2.
-- **MultiWays + pyramid**: `visibleRowsPerReel` declares a *static* shape; `multiways({...})` declares a *dynamic* shape. They contradict each other. both say "reel `i` has N rows."
+- **MultiWays + pyramid**: `visibleCellsPerReel` declares a *static* shape; `multiways({...})` declares a *dynamic* shape. They contradict each other. both say "reel `i` has N rows."
 
 ## Static pyramid (per-reel shape)
 
@@ -42,16 +42,16 @@ A static pyramid sets each reel's row count once at build time. No per-spin resh
 ```ts
 new ReelSetBuilder()
   .reels(5)
-  .visibleRowsPerReel([3, 5, 5, 5, 3])   // jagged shape
+  .visibleCellsPerReel([3, 5, 5, 5, 3])   // jagged shape
   .reelAnchor('center')                   // 'top' | 'center' | 'bottom'
   .symbolSize(120, 120)
   // ...
   .build();
 ```
 
-The engine computes a per-reel `offsetY` so shorter reels are positioned according to `reelAnchor`. The default mask draws one clip rect per reel. short reels never leak buffer rows above or below their visible area.
+The engine computes a per-reel `mainOffset` so shorter reels are positioned according to `reelAnchor`. The default mask draws one clip rect per reel. short reels never leak buffer rows above or below their visible area.
 
-`getCellBounds(col, row)` accounts for `offsetY` automatically; `debugSnapshot.visibleRows` is `number[]` (one per reel) so jagged shapes are visible to debug tooling.
+`getCellBounds(col, row)` accounts for `mainOffset` automatically; `debugSnapshot.visibleCells` is `number[]` (one per reel) so jagged shapes are visible to debug tooling.
 
 → Recipe: [Per-reel shape (pyramid)](/recipes/pyramid-shape/)
 

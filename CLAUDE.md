@@ -116,7 +116,7 @@ This repo already has `ObjectPool`, `TickerRef`, `Disposable`, `EventEmitter`, `
 
 - `ReelSymbol.resize()` is called on **every** symbol swap. Anything positional lives there, not in the constructor.
 - SpriteSymbols anchor at `(0, 0)`; SpineSymbols center via `resize()`. Don't mix models inside one class.
-- `ReelMotion` wraps via `_maxY` / `_minY`; never mutate symbol Y outside the motion layer.
+- Travel changes motion; facing changes art; they never change each other. never mutate a symbol's main coordinate outside the motion layer.
 - GSAP must be driven off `app.ticker` in examples (the example scaffolding already does this. don't add a second driver).
 
 Violating these produces bugs that only appear on hidden tabs, long sessions, or specific aspect ratios. exactly the ones humans will only notice after a release.
@@ -238,13 +238,13 @@ Example `debugSnapshot()` fields:
   "currentSpeed": "normal",
   "spotlightActive": false,
   "reelCount": 5,
-  "visibleRows": [3, 3, 3, 3, 3],
+  "visibleCells": [3, 3, 3, 3, 3],
   "grid": [["cherry","plum","orange"], ...],
   "reels": [{ "index": 0, "speed": 0, "isStopping": false, "visibleSymbols": [...] }, ...]
 }
 ```
 
-`visibleRows` is `number[]` (one entry per reel) so jagged shapes (pyramids, MultiWays) are representable. For uniform slots every entry is the same value.
+`visibleCells` is `number[]` (one entry per reel) so jagged shapes (pyramids, MultiWays) are representable. For uniform slots every entry is the same value.
 
 **When debugging reel issues as an AI agent:**
 1. Call `__PIXI_REELS_DEBUG.log()` via eval to understand current state
@@ -347,21 +347,21 @@ Tests are in `packages/pixi-reels/tests/` using Vitest. Run with `pnpm test`.
 3. `_positionSpine()` sets `spine.x = cellWidth/2, spine.y = cellHeight/2`
 4. Every new spine created in `onActivate` gets positioned via stored `_cellWidth/_cellHeight`
 
-### Place a buffer-above or buffer-below target symbol
-Both `initialFrame` (build-time seed) and `setResult` (per-spin land) accept the explicit `ColumnTarget` form. prefer this one. `bufferAbove[0]` is the slot closest to the visible top row; later indices go further above. Same for `bufferBelow[0]` and the visible bottom row.
+### Place a buffer-start or buffer-end target symbol
+Both `initialFrame` (build-time seed) and `setResult` (per-spin land) accept the explicit `ColumnTarget` form. prefer this one. `bufferStart[0]` is the slot just outside the visible window at the smaller main coordinate (above for vertical, left for horizontal); later indices go further out. Same for `bufferEnd[0]` at the larger coordinate.
 
 ```ts
 import type { ColumnTarget } from 'pixi-reels';
 
 const grid: ColumnTarget[] = [
-  { visible: ['A','B','C'], bufferAbove: ['COIN'] },
-  { visible: ['A','B','C'], bufferBelow: ['SCATTER'] },
+  { visible: ['A','B','C'], bufferStart: ['COIN'] },
+  { visible: ['A','B','C'], bufferEnd: ['SCATTER'] },
 ];
 reelSet.setResult(grid);
 builder.initialFrame(grid); // same shape works at build time
 ```
 
-`ColumnTarget` is the only accepted form, and it is what the engine carries internally all the way down to `Reel.placeSymbols`. There is no negative-index slot encoding any more. inside the pipeline, read and write a target cell with `getTargetSlot(target, row)` / `setTargetSlot(target, row, id)` (row `0` is the first visible cell, negative rows are buffer-above), or materialize the whole strip with `columnTargetToStrip(target, bufferAbove)`.
+`ColumnTarget` is the only accepted form, and it is what the engine carries internally all the way down to `Reel.placeSymbols`. There is no negative-index slot encoding any more. inside the pipeline, read and write a target cell with `getTargetSlot(target, row)` / `setTargetSlot(target, row, id)` (row `0` is the first visible cell, negative rows are buffer-start), or materialize the whole strip with `columnTargetToStrip(target, bufferStart)`.
 
 ## Known Gotchas
 
@@ -369,4 +369,5 @@ builder.initialFrame(grid); // same shape works at build time
 - **Spine atlas requires texture pages**. `.webp` files must be served from the same directory as `.atlas`
 - **Symbol resize is critical**. `Reel._replaceSymbol()` calls `resize()` on every swap; without it symbols scatter
 - **Preview browser can't decode images**. the Claude Code preview environment has no image codecs; test Spine rendering in a real browser
-- **ReelMotion wrapping**. symbols wrap when crossing `_maxY`/`_minY` boundaries; the callback triggers symbol identity swap via `_onSymbolWrapped`
+- **Travel vs facing**. travel changes motion; facing changes art; they never change each other. A reel that spins sideways or upward still renders every symbol upright, and `ReelSymbol.resize(width, height)` stays screen-space (ADR 016 sections 2-3, ADR 017)
+- **ReelMotion wrapping**. positions are DERIVED from array index every frame, never accumulated; a wrap rotates the symbol array and the callback triggers the identity swap via `_onSymbolWrapped`. never mutate a symbol's main coordinate outside the motion layer

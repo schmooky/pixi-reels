@@ -37,7 +37,7 @@ __PIXI_REELS_DEBUG.trace();  // logs every domain event from now on
 import { debugSnapshot, debugGrid } from 'pixi-reels';
 
 const snap = debugSnapshot(reelSet);
-// snap: { isSpinning, currentSpeed, spotlightActive, reelCount, visibleRows, reels: [...], grid: [[...], ...] }
+// snap: { isSpinning, currentSpeed, spotlightActive, reelCount, visibleCells, reels: [...], grid: [[...], ...] }
 
 console.log(debugGrid(reelSet));   // ASCII table
 ```

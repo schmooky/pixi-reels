@@ -75,12 +75,12 @@ import { CheatEngine, forceScatters } from '@/shared/cheats';
 
 it('3 scatters triggers the bonus handler', async () => {
   const h = createTestReelSet({
-    reels: 5, visibleRows: 3,
+    reels: 5, visibleCells: 3,
     symbolIds: ['a', 'b', 'c', 'scatter'],
   });
   try {
     const engine = new CheatEngine({
-      reelCount: 5, visibleRows: 3,
+      reelCount: 5, visibleCells: 3,
       symbolIds: ['a', 'b', 'c', 'scatter'],
       seed: 1,
     });

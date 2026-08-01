@@ -112,7 +112,7 @@ flowchart TB
 
 it('hold-and-win persists across spins', async () => {
   const h = createTestReelSet({
-    reels: 5, visibleRows: 3,
+    reels: 5, visibleCells: 3,
     symbolIds: ['a', 'b', 'coin'],
   });
   try {

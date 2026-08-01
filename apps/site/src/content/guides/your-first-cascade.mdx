@@ -44,7 +44,7 @@ const SYMBOLS = ['A', 'B', 'C', 'D', 'wild'];
 
 const reelSet = new ReelSetBuilder()
   .reels(6)
-  .visibleRows(5)
+  .visibleCells(5)
   .symbolSize(95, 95)
   .symbolGap(5, 5)
   .symbols((r) => {
@@ -55,8 +55,8 @@ const reelSet = new ReelSetBuilder()
   .weights({ A: 18, B: 14, C: 10, D: 6, wild: 2 })
   .speed('normal', SpeedPresets.NORMAL)
   .tumble({
-    fall:   { duration: 280, ease: 'sine.in',       rowStagger: 40 },
-    dropIn: { duration: 480, ease: 'back.out(1.6)', rowStagger: 50, distance: 'perHole' },
+    fall:   { duration: 280, ease: 'sine.in',       cellStagger: 40 },
+    dropIn: { duration: 480, ease: 'back.out(1.6)', cellStagger: 50, distance: 'perHole' },
   })
   .ticker(app.ticker)
   .build();
@@ -93,11 +93,11 @@ const server = {
     const winnersByReel = new Map<number, Set<number>>();
     for (const w of winners) {
       if (!winnersByReel.has(w.reel)) winnersByReel.set(w.reel, new Set());
-      winnersByReel.get(w.reel)!.add(w.row);
+      winnersByReel.get(w.reel)!.add(w.cell);
     }
     return prev.map((col, reel) => {
       const losers = winnersByReel.get(reel);
-      if (!losers || losers.size === 0) return [...col];
+      if (!losers || losers.size === 0) return [...reel];
       const survivors = col.filter((_, row) => !losers.has(row));
       const fillers = Array.from({ length: losers.size }, randSymbol);
       // Convention: top winners.length rows = new, rest = survivors in original order.
