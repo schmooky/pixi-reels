@@ -206,17 +206,13 @@ When the signal aborts, `runCascade`:
 That is the slam pattern for cascades. `skipSpin()` is still right while the
 engine is moving. They work together.
 
-## Choosing between `refill()` and `runCascade()`
+## `refill()` or `runCascade()`?
 
-| Use `refill()` directly | Use `runCascade()` |
-|---|---|
-| You have unusual per-cascade logic (different SFX per level, asymmetric pauses, conditional bonus triggers `runCascade` can't express) | Standard detect-destroy-pause-refill loop |
-| You're integrating with an existing game loop that owns the cascade chain | First time building a cascade slot |
-| You want explicit control over each await | You want the slam path to "just work" |
-| Tests / one-off automation | Production code |
-
-`runCascade` is a one-screen wrapper around `refill`. Outgrow it and you will
-lift the same five lines into your own handler. No magic to lose.
+Start with `runCascade`. It is a one-screen wrapper around `refill`, and it
+gets the slam path right for free. Drop to bare `refill` when your chain needs
+something the options cannot say -- asymmetric pauses, per-level branching, a
+game loop that already owns the chain. You will lift the same five lines into
+your own handler. There is no magic to lose.
 
 ## Composing with the rest of the library
 
@@ -228,28 +224,21 @@ Cascades are not a separate mode. Everything else still works:
 - **`pin(...)`** persists a cell across cascades. A pinned wild stays put through every refill in the round.
 - **`reelSet.viewport.showDim(alpha)`** dims the whole board. pair with `destroySymbols(..., { dim: true })` for a focus-pull on the winners.
 
-## The empty wait. what to do during the server roundtrip
+## The empty wait
 
 Between `cascade:fall:end` and `cascade:dropIn:start` the board is empty and
-the server has not answered. Fill it however you like:
-
-1. **Spinner overlay** -- show on fall end, hide on first drop-in. Cheap.
-2. **Pulsing frame** -- nothing occludes the empty grid.
-3. **Skeleton cells** -- placeholder squares.
-4. **Nothing** -- under 100ms server time, nobody notices.
-5. **Short fall** -- shrink `fall.duration` and let `dropIn` carry the energy.
+the server has not answered. Show a spinner on fall end and hide it on the
+first drop-in, or show nothing -- under 100ms of server time nobody notices.
+If the gap bothers you, shrink `fall.duration` and let `dropIn` carry the
+energy.
 
 ## The pause matters
 
-Put a beat between winners fading out and the refill starting.
-
-Without it the refill begins on the frame the winners hit alpha 0, and the
-player reads it as a teleport. Give it 150-500ms and the brain sees two
-events: wins cleared, then new symbols arrived.
-
-- Snappy slam: ~120ms
-- Classic: ~250ms
-- Bouncy: ~300-400ms
+Put a beat between winners fading out and the refill starting. Without it the
+refill begins on the frame the winners hit alpha 0, and the player reads it as
+a teleport. 150-500ms and the brain sees two events instead: wins cleared,
+then new symbols arrived. 250ms is the default for a reason; ~120ms for a
+snappy slam, ~350ms for bouncy.
 
 `pauseAfterDestroyMs` in `runCascade()`, or `await wait(ms)` in your own loop.
 

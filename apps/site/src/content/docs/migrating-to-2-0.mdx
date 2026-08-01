@@ -105,8 +105,8 @@ reelSet.pin(2, 1, 'wild');
 const p = reelSet.getPin(2, 1);
 console.log(p.col, p.row, p.originRow);
 
-reelSet.on('cascade:chain:end', (e) => e.winners.forEach((w) => w.row));
-reelSet.on('pin:migrated', (m) => console.log(m.fromRow, m.toRow));
+reelSet.events.on('cascade:chain:end', (e) => e.winners.forEach((w) => w.row));
+reelSet.events.on('pin:migrated', (m) => console.log(m.fromRow, m.toRow));
 ```
 
 After:
@@ -116,8 +116,8 @@ reelSet.pin(2, 1, 'wild');
 const p = reelSet.getPin(2, 1);
 console.log(p.reel, p.cell, p.originCell);
 
-reelSet.on('cascade:chain:end', (e) => e.winners.forEach((w) => w.cell));
-reelSet.on('pin:migrated', (m) => console.log(m.fromCell, m.toCell));
+reelSet.events.on('cascade:chain:end', (e) => e.winners.forEach((w) => w.cell));
+reelSet.events.on('pin:migrated', (m) => console.log(m.fromCell, m.toCell));
 ```
 
 The positional arguments did not move, only the names. `SymbolPosition.rowIndex`
@@ -167,7 +167,7 @@ builder.tumble({
   fall: { rowStagger: 40, rowOrder: 'bottomToTop' },
   dropIn: { rowStagger: 30, rowOrder: 'topToBottom' },
 });
-reelSet.on('cascade:place:end', (e) => console.log(e.winnerRows));
+reelSet.events.on('cascade:place:end', (e) => console.log(e.winnerRows));
 ```
 
 After:
@@ -177,7 +177,7 @@ builder.tumble({
   fall: { cellStagger: 40, cellOrder: 'endFirst' },
   dropIn: { cellStagger: 30, cellOrder: 'startFirst' },
 });
-reelSet.on('cascade:place:end', (e) => console.log(e.winnerCells));
+reelSet.events.on('cascade:place:end', (e) => console.log(e.winnerCells));
 ```
 
 `'endFirst'` is what `'bottomToTop'` meant: the cell at the gravity-exit
