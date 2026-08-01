@@ -22,7 +22,7 @@ const SYMBOLS = ['a', 'wild', 'b'];
 function makeHarness() {
   return createTestReelSet({
     reels: 3,
-    visibleRows: 3,
+    visibleCells: 3,
     symbolIds: SYMBOLS,
     symbolData: {
       wild: { unmask: true },
@@ -123,10 +123,10 @@ describe('unmask: true reparents the symbol view to viewport.unmaskedContainer',
       ]);
       const reel = h.reelSet.reels[1];
       // Flat reel: container.y === 0, so the unmasked view's Y is just
-      // row * slotHeight. This is the path that's correct on flat slots.
+      // row * slotPitch. This is the path that's correct on flat slots.
       expect(reel.container.y).toBe(0);
       const wildView = reel.getSymbolAt(1).view;
-      const slotH = reel.motion.slotHeight;
+      const slotH = reel.motion.slotPitch;
       expect(wildView.y).toBe(reel.container.y + 1 * slotH);
     } finally {
       h.destroy();
@@ -139,7 +139,7 @@ describe('unmask on a jagged / pyramid layout (non-zero reel offsetY)', () => {
     return createTestReelSet({
       reels: 5,
       // Pyramid: the outer 3-row reels are centred, giving non-zero offsetY.
-      visibleRows: [3, 4, 5, 4, 3],
+      visibleCells: [3, 4, 5, 4, 3],
       symbolIds: SYMBOLS,
       symbolData: { wild: { unmask: true } },
     });
@@ -166,7 +166,7 @@ describe('unmask on a jagged / pyramid layout (non-zero reel offsetY)', () => {
       const wildView = reel.getSymbolAt(0).view;
       expect(wildView.parent).toBe(h.reelSet.viewport.unmaskedContainer);
       expect(wildView.x).toBe(reel.container.x);
-      const slotH = reel.motion.slotHeight;
+      const slotH = reel.motion.slotPitch;
       // Top visible row -> reel-local 0, so viewport Y is exactly the offset.
       expect(wildView.y).toBeCloseTo(reel.container.y + 0 * slotH, 3);
     } finally {
@@ -198,7 +198,7 @@ describe('unmask on a jagged / pyramid layout (non-zero reel offsetY)', () => {
       const reel = h.reelSet.reels[0];
       const wildView = reel.getSymbolAt(1).view;
       expect(wildView.parent).toBe(h.reelSet.viewport.unmaskedContainer);
-      const slotH = reel.motion.slotHeight;
+      const slotH = reel.motion.slotPitch;
       expect(wildView.y).toBeCloseTo(reel.container.y + 1 * slotH, 3);
     } finally {
       h.destroy();
@@ -225,7 +225,7 @@ function makeTumbleHarness(initialFrame: string[][]) {
   const ticker = new FakeTicker();
   const reelSet = new ReelSetBuilder()
     .reels(initialFrame.length)
-    .visibleRows(initialFrame[0].length)
+    .visibleCells(initialFrame[0].length)
     .symbolSize(50, 50)
     .symbols((r) => {
       for (const id of ['a', 'b', 'wild']) r.register(id, HeadlessSymbol, {});
@@ -233,8 +233,8 @@ function makeTumbleHarness(initialFrame: string[][]) {
     .weights({ a: 1, b: 1 })
     .symbolData({ wild: { unmask: true } })
     .tumble({
-      fall:   { duration: 0, ease: 'none', rowStagger: 0 },
-      dropIn: { duration: 0, ease: 'none', rowStagger: 0, distance: 'perHole' },
+      fall:   { duration: 0, ease: 'none', cellStagger: 0 },
+      dropIn: { duration: 0, ease: 'none', cellStagger: 0, distance: 'perHole' },
     })
     .initialFrame(initialFrame.map((visible) => ({ visible })))
     .ticker(ticker as unknown as Ticker)
@@ -285,7 +285,7 @@ describe('unmask through the cascade refill path', () => {
       expect(wildView.parent).toBe(h.reelSet.viewport.unmaskedContainer);
       // ...and at the top visible row's viewport-local Y (reel-local 0 +
       // the reel container offset). NOT floating above the grid.
-      expect(wildView.y).toBeCloseTo(reel.container.y + 0 * reel.motion.slotHeight, 3);
+      expect(wildView.y).toBeCloseTo(reel.container.y + 0 * reel.motion.slotPitch, 3);
       expect(wildView.x).toBe(reel.container.x);
     } finally {
       h.destroy();
@@ -315,7 +315,7 @@ describe('unmask through the cascade refill path', () => {
       expect(reel.getVisibleSymbols()[1]).toBe('wild');
       const wildView = reel.getSymbolAt(1).view;
       expect(wildView.parent).toBe(h.reelSet.viewport.unmaskedContainer);
-      expect(wildView.y).toBeCloseTo(reel.container.y + 1 * reel.motion.slotHeight, 3);
+      expect(wildView.y).toBeCloseTo(reel.container.y + 1 * reel.motion.slotPitch, 3);
     } finally {
       h.destroy();
     }

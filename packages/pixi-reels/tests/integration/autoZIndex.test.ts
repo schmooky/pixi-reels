@@ -22,7 +22,7 @@ describe('auto-zIndex on _replaceSymbol', () => {
   it('a newly-placed symbol gets the canonical zIndex without an explicit refresh', async () => {
     const h = createTestReelSet({
       reels: 3,
-      visibleRows: 3,
+      visibleCells: 3,
       symbolIds: SYMBOLS,
       symbolData: {
         wild: { zIndex: 5 },
@@ -36,8 +36,8 @@ describe('auto-zIndex on _replaceSymbol', () => {
       ]);
 
       const reel = h.reelSet.reels[1];
-      const bufferAbove = reel.bufferAbove;
-      const wildArrayIndex = bufferAbove + 1; // visible row 1
+      const bufferStart = reel.bufferStart;
+      const wildArrayIndex = bufferStart + 1; // visible row 1
       const wildView = reel.symbols[wildArrayIndex].view;
 
       // Canonical formula: (symbolData.zIndex ?? 0) * 100 + arrayIndex
@@ -53,7 +53,7 @@ describe('auto-zIndex on _replaceSymbol', () => {
     // that default, not silently land symbols on layer 0.
     const h = createTestReelSet({
       reels: 3,
-      visibleRows: 3,
+      visibleCells: 3,
       symbolIds: SYMBOLS,
     });
     try {
@@ -64,10 +64,10 @@ describe('auto-zIndex on _replaceSymbol', () => {
       ]);
 
       const reel = h.reelSet.reels[0];
-      const bufferAbove = reel.bufferAbove;
+      const bufferStart = reel.bufferStart;
 
       for (let row = 0; row < 3; row++) {
-        const arrayIndex = bufferAbove + row;
+        const arrayIndex = bufferStart + row;
         const view = reel.symbols[arrayIndex].view;
         expect(view.zIndex).toBe(1 * 100 + arrayIndex);
       }
@@ -79,7 +79,7 @@ describe('auto-zIndex on _replaceSymbol', () => {
   it('zIndex is reapplied even when the same symbol id replaces itself', async () => {
     const h = createTestReelSet({
       reels: 3,
-      visibleRows: 3,
+      visibleCells: 3,
       symbolIds: SYMBOLS,
       symbolData: {
         wild: { zIndex: 7 },
@@ -94,8 +94,8 @@ describe('auto-zIndex on _replaceSymbol', () => {
       ]);
       // Manually corrupt the zIndex so we can verify the swap re-applies it.
       const reel = h.reelSet.reels[1];
-      const bufferAbove = reel.bufferAbove;
-      const wildArrayIndex = bufferAbove + 1;
+      const bufferStart = reel.bufferStart;
+      const wildArrayIndex = bufferStart + 1;
       reel.symbols[wildArrayIndex].view.zIndex = -999;
 
       // Second spin: wild lands at the same row again (same symbol id swap).

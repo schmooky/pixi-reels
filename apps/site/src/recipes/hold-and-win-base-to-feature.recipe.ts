@@ -30,7 +30,7 @@ const oy = (app.screen.height - boardH) / 2 - 6;
 // -- the base game: a normal reel set (number symbols + a BONUS trigger) --
 const BASE = ['1', '2', '3', '4', '5', '6', '7', '8', 'wild'];
 const base = new ReelSetBuilder()
-  .reels(COLS).visibleRows(ROWS)
+  .reels(COLS).visibleCells(ROWS)
   .symbolSize(CELL, CELL).symbolGap(GAP, GAP)
   .symbols((r) => { for (const id of [...BASE, BONUS]) r.register(id, BlurCell, { textures: symbols, blurTextures: blur }); })
   .weights({ ...Object.fromEntries(BASE.map((id) => [id, 3])), [BONUS]: 1 })

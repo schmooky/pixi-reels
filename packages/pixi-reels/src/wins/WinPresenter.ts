@@ -175,7 +175,7 @@ export class WinPresenter implements Disposable {
       const cell = cells[i];
       const reel = this._reelSet.getReel(cell.reelIndex);
       if (!reel) continue;
-      const symbol = reel.getSymbolAt(cell.rowIndex);
+      const symbol = reel.getSymbolAt(cell.cellIndex);
       if (!symbol) continue;
       this._reelSet.events.emit('win:symbol', symbol, cell, win);
       animPromises.push(this._playAnim(symbol, cell, win));
@@ -202,12 +202,12 @@ export class WinPresenter implements Disposable {
     if (alpha === null) return;
 
     const winKeys = new Set<string>();
-    for (const c of winCells) winKeys.add(`${c.reelIndex}:${c.rowIndex}`);
+    for (const c of winCells) winKeys.add(`${c.reelIndex}:${c.cellIndex}`);
 
     const reels = this._reelSet.reels;
     for (let r = 0; r < reels.length; r++) {
       const reel = reels[r];
-      for (let row = 0; row < reel.visibleRows; row++) {
+      for (let row = 0; row < reel.visibleCells; row++) {
         const view = reel.getSymbolAt(row).view;
         view.alpha = winKeys.has(`${r}:${row}`) ? 1 : alpha;
       }
@@ -217,7 +217,7 @@ export class WinPresenter implements Disposable {
   private _restoreAlpha(): void {
     const reels = this._reelSet.reels;
     for (const reel of reels) {
-      for (let row = 0; row < reel.visibleRows; row++) {
+      for (let row = 0; row < reel.visibleCells; row++) {
         reel.getSymbolAt(row).view.alpha = 1;
       }
     }

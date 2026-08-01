@@ -181,7 +181,7 @@ export interface SymbolData {
    * **Works on jagged/pyramid layouts:** a reel with non-zero `offsetY`
    * is handled. `Reel._syncUnmaskedViewOffsets()` re-bakes `container.y`
    * into lifted views after every absolute `motion.snapToGrid()` (which
-   * writes bare reel-local Y); `displace()` is incremental and preserves
+   * writes bare reel-local Y); `advance()` is incremental and preserves
    * the offset. Because lifted views exist only at rest, the frequent
    * mid-spin snaps never touch them.
    *
@@ -217,7 +217,7 @@ export interface MultiWaysConfig {
   maxRows: number;
   /**
    * Pixel height of every reel box. Cell height per reel becomes
-   * `reelPixelHeight / visibleRows[i]` after each reshape.
+   * `reelPixelHeight / visibleCells[i]` after each reshape.
    */
   reelPixelHeight: number;
 }
@@ -228,15 +228,15 @@ export interface ReelGridConfig {
   reelCount: number;
   /**
    * Default visible rows when all reels are uniform. Ignored if
-   * `visibleRowsPerReel` is set.
+   * `visibleCellsPerReel` is set.
    */
-  visibleRows: number;
+  visibleCells: number;
   /**
    * Per-reel row counts (static shape). Length MUST equal `reelCount`.
    * Example: `[3, 5, 5, 5, 3]` for a pyramid layout. Mutually exclusive
-   * with the scalar `visibleRows` field at the builder level.
+   * with the scalar `visibleCells` field at the builder level.
    */
-  visibleRowsPerReel?: number[];
+  visibleCellsPerReel?: number[];
   /** Symbol width in pixels. */
   symbolWidth: number;
   /** Symbol height in pixels. Used as the SPIN-time uniform cell height. */
@@ -244,9 +244,9 @@ export interface ReelGridConfig {
   /**
    * Per-reel pixel-box heights. Length MUST equal `reelCount` when set.
    * For MultiWays: every entry is the same fixed reel height. For static
-   * pyramids: defaults to `visibleRowsPerReel[i] * symbolHeight`.
+   * pyramids: defaults to `visibleCellsPerReel[i] * symbolHeight`.
    */
-  reelPixelHeights?: number[];
+  reelExtents?: number[];
   /**
    * How short reels align vertically inside the tallest reel's height.
    * Default: 'center'.
@@ -272,14 +272,14 @@ export interface ReelExtraSymbols {
 }
 
 /** Offset modes for X-axis symbol positioning. */
-export type OffsetXMode = 'none' | 'trapezoid';
+export type CrossOffsetMode = 'none' | 'trapezoid';
 
 /** Trapezoid perspective configuration. */
 export interface TrapezoidConfig {
   mode: 'trapezoid';
   widthDifference: number;
-  topWidthFactor: number;
-  bottomWidthFactor: number;
+  startFactor: number;
+  endFactor: number;
 }
 
 /** No offset configuration. */
@@ -316,10 +316,10 @@ export interface CellBounds {
   height: number;
 }
 
-/** A cell on the visible grid. `reelIndex` is the column; `rowIndex` is the row from the top. */
+/** A cell on the visible grid. `reelIndex` is the column; `cellIndex` is the row from the top. */
 export interface SymbolPosition {
   reelIndex: number;
-  rowIndex: number;
+  cellIndex: number;
 }
 
 /**
@@ -361,7 +361,7 @@ export interface MaskConfig {
  */
 export interface ResolvedReelGridConfig {
   reelCount: number;
-  visibleRows: number;
+  visibleCells: number;
   symbolWidth: number;
   symbolHeight: number;
   symbolGap: { x: number; y: number };
@@ -371,9 +371,9 @@ export interface ResolvedReelGridConfig {
    * Buffer rows below the visible window. Usually equals `bufferSymbols`;
    * `0` on tumble-only sets built with `bufferSymbols({ above, below: 0 })`.
    */
-  bufferBelow: number;
-  visibleRowsPerReel?: number[];
-  reelPixelHeights?: number[];
+  bufferEnd: number;
+  visibleCellsPerReel?: number[];
+  reelExtents?: number[];
   reelAnchor: ReelAnchor;
   multiways?: MultiWaysConfig;
 }

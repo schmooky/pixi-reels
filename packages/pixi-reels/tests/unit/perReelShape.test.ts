@@ -6,15 +6,15 @@ describe('per-reel static shape (pyramid)', () => {
   it('builds a 3-5-5-5-3 pyramid', () => {
     const { reelSet, destroy } = createTestReelSet({
       reels: 5,
-      visibleRows: [3, 5, 5, 5, 3],
+      visibleCells: [3, 5, 5, 5, 3],
       symbolIds: ['a', 'b'],
     });
     try {
       const reels = reelSet.reels;
-      expect(reels.map((r) => r.visibleRows)).toEqual([3, 5, 5, 5, 3]);
+      expect(reels.map((r) => r.visibleCells)).toEqual([3, 5, 5, 5, 3]);
       // Snapshot reflects per-reel rows.
       const snap = debugSnapshot(reelSet);
-      expect(snap.visibleRows).toEqual([3, 5, 5, 5, 3]);
+      expect(snap.visibleCells).toEqual([3, 5, 5, 5, 3]);
     } finally {
       destroy();
     }
@@ -23,7 +23,7 @@ describe('per-reel static shape (pyramid)', () => {
   it('default reelAnchor=center positions short reels with offset', () => {
     const { reelSet, destroy } = createTestReelSet({
       reels: 5,
-      visibleRows: [3, 5, 5, 5, 3],
+      visibleCells: [3, 5, 5, 5, 3],
       symbolSize: { width: 100, height: 100 },
     });
     try {
@@ -41,7 +41,7 @@ describe('per-reel static shape (pyramid)', () => {
   it('getCellBounds accounts for offsetY on short reels', () => {
     const { reelSet, destroy } = createTestReelSet({
       reels: 3,
-      visibleRows: [3, 5, 3],
+      visibleCells: [3, 5, 3],
       symbolSize: { width: 100, height: 100 },
     });
     try {
@@ -59,7 +59,7 @@ describe('per-reel static shape (pyramid)', () => {
   it('lands per-reel symbols correctly on a pyramid grid', async () => {
     const { reelSet, spinAndLand, destroy } = createTestReelSet({
       reels: 5,
-      visibleRows: [3, 5, 5, 5, 3],
+      visibleCells: [3, 5, 5, 5, 3],
       symbolIds: ['a', 'b'],
     });
     try {
@@ -77,9 +77,9 @@ describe('per-reel static shape (pyramid)', () => {
     }
   });
 
-  it('throws when visibleRowsPerReel length mismatches reelCount', () => {
+  it('throws when visibleCellsPerReel length mismatches reelCount', () => {
     expect(() =>
-      createTestReelSet({ reels: 5, visibleRows: [3, 5, 5] }),
-    ).toThrow(/visibleRowsPerReel length 3 must equal reels\(5\)/);
+      createTestReelSet({ reels: 5, visibleCells: [3, 5, 5] }),
+    ).toThrow(/visibleCellsPerReel length 3 must equal reels\(5\)/);
   });
 });

@@ -9,12 +9,12 @@
 //
 //   1. Land with a 1x2 "MEGA" wild at rows 0+1 (anchor at row 0).
 //   2. Nudge DOWN by 2. anchor moves to row 2, stub spills into
-//      bufferBelow. Only the TOP half of the block is visible.
+//      bufferEnd. Only the TOP half of the block is visible.
 //   3. Nudge UP by 1. block snaps back into full visibility at rows 1+2.
 //
 // Survival check (down direction): anchorRow + h - 1 + distance < total.
-// For the down-by-2 step: 1 + 2 - 1 + 2 = 4 < 5 (with bufferAbove=1,
-// visibleRows=3, bufferBelow=1, total=5). block fits.
+// For the down-by-2 step: 1 + 2 - 1 + 2 = 4 < 5 (with bufferStart=1,
+// visibleCells=3, bufferEnd=1, total=5). block fits.
 //
 // Cross-reel blocks (w > 1) throw; that case is intentionally excluded.
 
@@ -26,7 +26,7 @@ const GAP = 4;
 
 const reelSet = new ReelSetBuilder()
   .reels(REELS)
-  .visibleRows(ROWS)
+  .visibleCells(ROWS)
   .symbolSize(SIZE, SIZE)
   .symbolGap(GAP, GAP)
   .symbols((registry) => {
@@ -66,7 +66,7 @@ return {
     await new Promise((r) => setTimeout(r, 500));
 
     // 2. Nudge column 2 DOWN by 2. Survival: 1 + 2 - 1 + 2 = 4 < 5 ✓.
-    //    After: anchor at row 2, stub at bufferBelow → only top half of
+    //    After: anchor at row 2, stub at bufferEnd → only top half of
     //    the block is visible.
     await reelSet.nudge(2, {
       distance: 2,

@@ -16,9 +16,9 @@ export interface TestReelSetOptions {
    *
    * Mutually exclusive with `multiways` (which always starts at `maxRows`).
    */
-  visibleRows?: number | number[];
+  visibleCells?: number | number[];
   /**
-   * MultiWays configuration. Mutually exclusive with `visibleRows: number[]`.
+   * MultiWays configuration. Mutually exclusive with `visibleCells: number[]`.
    * The harness sets uniform `reelPixelHeight` and forwards `min/maxRows`.
    */
   multiways?: { minRows: number; maxRows: number; reelPixelHeight: number };
@@ -74,7 +74,7 @@ export interface TestReelSetHandle {
  *
  * ```ts
  * const { reelSet, spinAndLand } = createTestReelSet({
- *   reels: 5, visibleRows: 3,
+ *   reels: 5, visibleCells: 3,
  *   symbolIds: ['cherry', 'seven', 'wild'],
  * });
  *
@@ -107,10 +107,10 @@ export function createTestReelSet(opts: TestReelSetOptions = {}): TestReelSetHan
 
   if (opts.multiways) {
     builder.multiways(opts.multiways);
-  } else if (Array.isArray(opts.visibleRows)) {
-    builder.visibleRowsPerReel(opts.visibleRows);
+  } else if (Array.isArray(opts.visibleCells)) {
+    builder.visibleCellsPerReel(opts.visibleCells);
   } else {
-    builder.visibleRows(opts.visibleRows ?? 3);
+    builder.visibleCells(opts.visibleCells ?? 3);
   }
 
   if (opts.symbolGap) {

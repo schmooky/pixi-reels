@@ -29,7 +29,7 @@ const IDS = Object.keys(SPINE_MAP);
 
 const reelSet = new ReelSetBuilder()
   .reels(VISIBLE.length)
-  .visibleRowsPerReel(VISIBLE)
+  .visibleCellsPerReel(VISIBLE)
   .reelAnchor('center')
   .symbolSize(SIZE, SIZE)
   .symbolGap(GAP, GAP)
@@ -57,7 +57,7 @@ const LANDING_MS = 350;
 function syncIdle() {
   for (let r = 0; r < reelSet.reelCount; r++) {
     const reel = reelSet.getReel(r);
-    for (let row = 0; row < reel.visibleRows; row++) {
+    for (let row = 0; row < reel.visibleCells; row++) {
       const sym = reel.getSymbolAt(row);
       if (sym instanceof SpineReelSymbol) sym.stopAnimation();
     }

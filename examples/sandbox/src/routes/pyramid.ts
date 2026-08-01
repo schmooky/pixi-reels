@@ -30,7 +30,7 @@ export function buildPyramid({ app, textures, blurTextures }: SandboxContext): S
 
   const reelSet = new ReelSetBuilder()
     .reels(VISIBLE.length)
-    .visibleRowsPerReel(VISIBLE)
+    .visibleCellsPerReel(VISIBLE)
     .reelAnchor('center')
     .symbolSize(SYMBOL_SIZE, SYMBOL_SIZE)
     .symbolGap(GAP, GAP)

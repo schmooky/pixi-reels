@@ -4,7 +4,7 @@
 //           CASCADE_PLATE_H, PIXI, gsap, app, pickWeighted
 
 // BOTTOM-UP ROW REFILL. within each reel, the bottom row arrives first
-// and the top row arrives last (rowOrder: 'bottomToTop'). All reels
+// and the top row arrives last (cellOrder: 'endFirst'). All reels
 // drop simultaneously (setDropOrder('all')). Reads as a "stacking up"
 // motion. fits puzzle / match-3 / chess-board themes where the board
 // builds itself from below.
@@ -42,7 +42,7 @@ class TimedExplodeSymbol extends SpineReelSymbol {
 }
 
 const reelSet = new ReelSetBuilder()
-  .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
+  .reels(REELS).visibleCells(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
   // Pure tumble: no strip scrolling, so no below-window buffer at all.
   // nothing can ever peek out under the grid.
   .bufferSymbols({ above: 1, below: 0 })
@@ -64,11 +64,11 @@ const reelSet = new ReelSetBuilder()
   .symbolData({ high: { zIndex: 10, unmask: true } })
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
-    fall:   { duration: 233, ease: 'power2.in', rowStagger: 33 },  // 14f, 2f stagger
+    fall:   { duration: 233, ease: 'power2.in', cellStagger: 33 },  // 14f, 2f stagger
     dropIn: {
       duration: 367, ease: 'power2.in', distance: 'perHole',
-      rowStagger: 100,
-      rowOrder: 'bottomToTop',
+      cellStagger: 100,
+      cellOrder: 'endFirst',
     },
   })
   .ticker(app.ticker).build();

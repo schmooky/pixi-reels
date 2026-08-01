@@ -42,7 +42,7 @@ const LAND = [COIN, COIN, EMPTY];
 function spinCell(cell, id) {
   const reel = board.reelAt(cell);          // <-- the cell's own ReelSet
   const settle = reel.spin();
-  reel.setResult([{ visible: [id], bufferAbove: [EMPTY], bufferBelow: [EMPTY] }]);
+  reel.setResult([{ visible: [id], bufferStart: [EMPTY], bufferEnd: [EMPTY] }]);
   return settle;
 }
 

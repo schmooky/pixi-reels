@@ -5,13 +5,13 @@
 // MultiWays. per-spin row variation. Each reel lands on a different
 // row count in [minRows, maxRows]. The reel pixel height is fixed;
 // cell height per reel is derived live as
-// `reelPixelHeight / visibleRows[i]`, so a 2-row reel has tall cells
+// `reelPixelHeight / visibleCells[i]`, so a 2-row reel has tall cells
 // and a 7-row reel has short ones. `setShape(rowsPerReel)` is called
 // between `spin()` and `setResult()`; AdjustPhase reshapes the reels
 // between SPIN and STOP.
 //
 // 6 reels x [2, 7] rows = up to 117,649 distinct landings (7^6). The
-// "ways" count for any individual spin is the product of visibleRows
+// "ways" count for any individual spin is the product of visibleCells
 // across reels. The banner above the grid prints both the per-reel
 // shape and the total ways for each landing.
 
@@ -79,9 +79,9 @@ function redrawBanner(text) {
 redrawBanner('READY. press spin');
 
 reelSet.events.on('spin:allLanded', () => {
-  const visibleRowsPerReel = reelSet.reels.map((r) => r.visibleRows);
-  const ways = visibleRowsPerReel.reduce((a, b) => a * b, 1);
-  redrawBanner(`SHAPE [${visibleRowsPerReel.join(', ')}] = ${ways.toLocaleString()} ways`);
+  const visibleCellsPerReel = reelSet.reels.map((r) => r.visibleCells);
+  const ways = visibleCellsPerReel.reduce((a, b) => a * b, 1);
+  redrawBanner(`SHAPE [${visibleCellsPerReel.join(', ')}] = ${ways.toLocaleString()} ways`);
 });
 reelSet.events.on('spin:start', () => redrawBanner('SPINNING…'));
 

@@ -3,11 +3,11 @@
 //                   WILD_CARD, PIXI, gsap, app, textures, blurTextures,
 //                   SYMBOL_IDS, pickWeighted
 //
-// Sticky wild on a MultiWays slot. Pin a wild on land with `originRow` set;
+// Sticky wild on a MultiWays slot. Pin a wild on land with `originCell` set;
 // the pin survives every MultiWays reshape. When the next shape is shorter
-// than originRow, the pin clamps to the last visible row (`pin:migrated`
+// than originCell, the pin clamps to the last visible row (`pin:migrated`
 // fires with clamped:true). When a later, larger shape can fit the
-// originRow again, the pin migrates back. no wander.
+// originCell again, the pin migrates back. no wander.
 //
 // CARD SYMBOLS BELOW ARE DEBUG/PROTOTYPING ONLY. see /recipes/card-symbol-debug/.
 
@@ -44,7 +44,7 @@ const reelSet = new ReelSetBuilder()
   .build();
 
 // On every landing, pin every wild for STICKY_TURNS spins. Each pin captures
-// its current row as `originRow` automatically. that's what lets the
+// its current row as `originCell` automatically. that's what lets the
 // engine restore the pin to its original row when shapes grow back.
 reelSet.events.on('spin:allLanded', ({ symbols }) => {
   for (let c = 0; c < symbols.length; c++) {
@@ -60,7 +60,7 @@ reelSet.events.on('spin:allLanded', ({ symbols }) => {
 const SHAPE_CYCLE = [
   [5, 5, 5, 5, 5, 5],
   [3, 3, 3, 3, 3, 3], // shrinks. high-row wilds clamp
-  [7, 7, 7, 7, 7, 7], // grows back. clamped wilds migrate back to originRow
+  [7, 7, 7, 7, 7, 7], // grows back. clamped wilds migrate back to originCell
   [4, 4, 4, 4, 4, 4],
 ];
 let spinCount = 0;

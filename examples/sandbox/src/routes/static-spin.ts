@@ -56,7 +56,7 @@ export function buildStaticSpin({ app, textures }: SandboxContext): SandboxResul
 
   const reelSet = new ReelSetBuilder()
     .reels(REELS)
-    .visibleRows(ROWS)
+    .visibleCells(ROWS)
     .symbolSize(SYMBOL_SIZE, SYMBOL_SIZE)
     .symbolGap(GAP, GAP)
     .symbols((registry) => {

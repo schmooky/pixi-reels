@@ -9,7 +9,7 @@ import { createTestReelSet } from '../../src/testing/index.js';
 function buildHarness() {
   return createTestReelSet({
     reels: 3,
-    visibleRows: 3,
+    visibleCells: 3,
     symbolIds: ['a', 'b', 'c', 'wild'],
   });
 }

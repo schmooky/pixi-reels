@@ -88,7 +88,7 @@ describe('mask strategies', () => {
   it('viewport.maskRects exposes per-reel rects for pyramid layouts', () => {
     const { reelSet, destroy } = createTestReelSet({
       reels: 5,
-      visibleRows: [3, 5, 5, 5, 3],
+      visibleCells: [3, 5, 5, 5, 3],
       symbolSize: { width: 100, height: 100 },
       symbolIds: ['a'],
     });
@@ -108,7 +108,7 @@ describe('mask strategies', () => {
   it('SharedRectMaskStrategy still receives maskRects but ignores them', () => {
     const reelSet = new ReelSetBuilder()
       .reels(5)
-      .visibleRowsPerReel([3, 5, 5, 5, 3])
+      .visibleCellsPerReel([3, 5, 5, 5, 3])
       .symbolSize(100, 100)
       .maskStrategy(new SharedRectMaskStrategy())
       .ticker(new FakeTicker() as unknown as Ticker)
@@ -135,7 +135,7 @@ describe('mask strategies', () => {
     try {
       const reelSet = new ReelSetBuilder()
         .reels(5)
-        .visibleRows(4)
+        .visibleCells(4)
         .symbolSize(80, 80)
         .symbolGap(4, 4)
         .symbols((r) => {
@@ -163,7 +163,7 @@ describe('mask strategies', () => {
   it('does NOT auto-pick SharedRectMaskStrategy when big symbols are registered but symbolGap.x === 0', () => {
     const reelSet = new ReelSetBuilder()
       .reels(5)
-      .visibleRows(4)
+      .visibleCells(4)
       .symbolSize(80, 80)
       .symbolGap(0, 4) // zero horizontal gap - per-reel rects are contiguous
       .symbols((r) => {
@@ -193,7 +193,7 @@ describe('mask strategies', () => {
     try {
       const reelSet = new ReelSetBuilder()
         .reels(5)
-        .visibleRows(3)
+        .visibleCells(3)
         .symbolSize(80, 80)
         .symbolGap(4, 4)
         .symbols((r) => {
@@ -224,7 +224,7 @@ describe('mask strategies', () => {
   it('does NOT auto-pick SharedRectMaskStrategy on unmask if symbolGap.x === 0', () => {
     const reelSet = new ReelSetBuilder()
       .reels(5)
-      .visibleRows(3)
+      .visibleCells(3)
       .symbolSize(80, 80)
       .symbolGap(0, 4) // zero horizontal gap - per-reel rects are contiguous
       .symbols((r) => {
@@ -245,7 +245,7 @@ describe('mask strategies', () => {
   it('explicit .maskStrategy() always wins over the auto-pick', () => {
     const reelSet = new ReelSetBuilder()
       .reels(5)
-      .visibleRows(4)
+      .visibleCells(4)
       .symbolSize(80, 80)
       .symbolGap(4, 4) // would normally trigger auto-pick
       .maskStrategy(new RectMaskStrategy()) // explicit override
@@ -277,7 +277,7 @@ describe('mask strategies', () => {
     };
     const reelSet = new ReelSetBuilder()
       .reels(3)
-      .visibleRows(3)
+      .visibleCells(3)
       .symbolSize(100, 100)
       .maskStrategy(custom)
       .ticker(new FakeTicker() as unknown as Ticker)

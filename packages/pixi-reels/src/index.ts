@@ -19,7 +19,7 @@ export type {
   TrapezoidConfig,
   NoOffsetConfig,
   OffsetConfig,
-  OffsetXMode,
+  CrossOffsetMode,
   Matrix,
   Position,
   CellBounds,

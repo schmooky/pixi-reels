@@ -15,14 +15,14 @@ describe('StopPhase.onSkip', () => {
   it('places buffer-above and buffer-below targets on a direct skip', async () => {
     const h = createTestReelSet({
       reels: 3,
-      visibleRows: 3,
+      visibleCells: 3,
       symbolIds: ['V0', 'V1', 'V2', 'ABV', 'BLW'],
       weights: { V0: 10, V1: 10, V2: 10, ABV: 0, BLW: 0 },
       bufferSymbols: 1,
     });
     try {
       const reel = h.reelSet.reels[0];
-      // Flat top-to-bottom strip: [bufferAbove, v0, v1, v2, bufferBelow].
+      // Flat top-to-bottom strip: [bufferStart, v0, v1, v2, bufferEnd].
       const targetFrame = ['ABV', 'V0', 'V1', 'V2', 'BLW'];
 
       const phase = new StopPhase(reel, SpeedPresets.NORMAL);

@@ -47,13 +47,13 @@ export default function RemoveSymbolRecipe() {
       label="Replay"
       setup={async (host) => {
         const { reelSet, destroy } = await mountMiniReels(host, {
-          reelCount: 4, visibleRows: 3,
+          reelCount: 4, visibleCells: 3,
           symbolSize: { width: 80, height: 80 },
           symbols: { kind: 'sprite', ids: IDS },
           weights: { [A]: 25, [B]: 25, [C]: 25, [X]: 25 },
           tumble: {
-            fall:   { duration: 0, ease: 'none', rowStagger: 0 },
-            dropIn: { duration: 440, ease: 'back.out(1.6)', rowStagger: 0, distance: 'perHole' },
+            fall:   { duration: 0, ease: 'none', cellStagger: 0 },
+            dropIn: { duration: 440, ease: 'back.out(1.6)', cellStagger: 0, distance: 'perHole' },
           },
         });
         return {

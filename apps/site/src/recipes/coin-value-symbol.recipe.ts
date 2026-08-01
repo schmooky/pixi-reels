@@ -77,7 +77,7 @@ const idFor = (v) => `coin${v}`;
 const REELS = 3, CELL = 96, GAP = 8;
 
 const reelSet = new ReelSetBuilder()
-  .reels(REELS).visibleRows(1)
+  .reels(REELS).visibleCells(1)
   .symbolSize(CELL, CELL).symbolGap(GAP, GAP)
   .symbols((r) => { for (const v of VALUES) r.register(idFor(v), ValueCoin, { value: v }); })
   .weights(Object.fromEntries(VALUES.map((v) => [idFor(v), 1])))

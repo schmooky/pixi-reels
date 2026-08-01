@@ -41,7 +41,7 @@ class TimedExplodeSymbol extends SpineReelSymbol {
 }
 
 const reelSet = new ReelSetBuilder()
-  .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
+  .reels(REELS).visibleCells(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
   // Pure tumble: no strip scrolling, so no below-window buffer at all.
   // nothing can ever peek out under the grid.
   .bufferSymbols({ above: 1, below: 0 })
@@ -63,8 +63,8 @@ const reelSet = new ReelSetBuilder()
   // The opening reveal IS a tumble here, so `fall` matters. it animates
   // the previous board out before the new one drops in.
   .tumble({
-    fall:   { duration: 267, ease: 'power2.in', rowStagger: 33 },  // 16f, 2f stagger
-    dropIn: { duration: 400, ease: 'power2.in', rowStagger: 50, distance: 'perHole' },  // 24f, 3f stagger
+    fall:   { duration: 267, ease: 'power2.in', cellStagger: 33 },  // 16f, 2f stagger
+    dropIn: { duration: 400, ease: 'power2.in', cellStagger: 50, distance: 'perHole' },  // 24f, 3f stagger
   })
   .ticker(app.ticker)
   .build();

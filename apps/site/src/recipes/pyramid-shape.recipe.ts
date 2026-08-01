@@ -15,7 +15,7 @@ const GAP = 4;
 
 const reelSet = new ReelSetBuilder()
   .reels(VISIBLE.length)
-  .visibleRowsPerReel(VISIBLE)
+  .visibleCellsPerReel(VISIBLE)
   .reelAnchor('center')
   .symbolSize(SIZE, SIZE)
   .symbolGap(GAP, GAP)

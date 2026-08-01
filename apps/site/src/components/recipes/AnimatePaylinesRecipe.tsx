@@ -64,13 +64,13 @@ function scaleFromCenter(view: import('pixi.js').Container, target: number, dura
 
 async function cyclePaylinesManually(reelSet: ReelSet, lines: Cell[][]): Promise<void> {
   const reelCount = reelSet.reels.length;
-  const visibleRows = reelSet.getReel(0).getVisibleSymbols().length;
+  const visibleCells = reelSet.getReel(0).getVisibleSymbols().length;
 
   for (const line of lines) {
     const winnerKeys = new Set(line.map((c) => `${c.reel},${c.row}`));
     // Dim everything that's not on the current payline.
     for (let r = 0; r < reelCount; r++) {
-      for (let row = 0; row < visibleRows; row++) {
+      for (let row = 0; row < visibleCells; row++) {
         const view = reelSet.getReel(r).getSymbolAt(row).view;
         const isWinner = winnerKeys.has(`${r},${row}`);
         gsap.to(view, { alpha: isWinner ? 1 : 0.25, duration: 0.2 });
@@ -88,7 +88,7 @@ async function cyclePaylinesManually(reelSet: ReelSet, lines: Cell[][]): Promise
 
   // Restore every cell.
   for (let r = 0; r < reelCount; r++) {
-    for (let row = 0; row < visibleRows; row++) {
+    for (let row = 0; row < visibleCells; row++) {
       const view = reelSet.getReel(r).getSymbolAt(row).view;
       gsap.to(view, { alpha: 1, duration: 0.2 });
     }
@@ -101,7 +101,7 @@ export default function AnimatePaylinesRecipe() {
       height={300}
       setup={async (host) => {
         const { reelSet, destroy } = await mountMiniReels(host, {
-          reelCount: 5, visibleRows: 3,
+          reelCount: 5, visibleCells: 3,
           symbolSize: { width: 78, height: 78 },
           symbols: { kind: 'sprite', ids: IDS },
         });

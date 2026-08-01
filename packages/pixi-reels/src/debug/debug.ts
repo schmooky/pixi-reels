@@ -10,7 +10,7 @@ import type { DebugOverlayOptions, DebugOverlayHandle } from './debugOverlay.js'
  * Designed for AI agents that cannot see the canvas.
  * Returns no PixiJS display objects, only serializable data.
  *
- * **Breaking note (since v0.3):** `visibleRows` is now `number[]` (one entry
+ * **Breaking note (since v0.3):** `visibleCells` is now `number[]` (one entry
  * per reel) so jagged shapes (pyramids, MultiWays) are representable. For
  * uniform slots every entry is the same value. Adapt downstream code that
  * deep-reads the snapshot.
@@ -22,7 +22,7 @@ export interface DebugSnapshot {
   availableSpeeds: string[];
   spotlightActive: boolean;
   reelCount: number;
-  visibleRows: number[];
+  visibleCells: number[];
   reels: DebugReelSnapshot[];
   grid: string[][];
 }
@@ -72,7 +72,7 @@ export function debugSnapshot(reelSet: ReelSet): DebugSnapshot {
     availableSpeeds: reelSet.speed.profileNames,
     spotlightActive: reelSet.spotlight.isActive,
     reelCount: reels.length,
-    visibleRows: reels.map((r) => r.visibleRows),
+    visibleCells: reels.map((r) => r.visibleCells),
     reels: reelSnapshots,
     grid,
   };
@@ -91,11 +91,11 @@ export function debugSnapshot(reelSet: ReelSet): DebugSnapshot {
  */
 export function debugGrid(reelSet: ReelSet): string {
   const snap = debugSnapshot(reelSet);
-  const { grid, visibleRows } = snap;
+  const { grid, visibleCells } = snap;
   if (grid.length === 0) return '(empty grid)';
 
   const colWidth = 8;
-  const maxRows = Math.max(...visibleRows);
+  const maxRows = Math.max(...visibleCells);
   const pad = (s: string) => s.slice(0, colWidth).padEnd(colWidth);
   const empty = ' '.repeat(colWidth);
 
@@ -106,7 +106,7 @@ export function debugGrid(reelSet: ReelSet): string {
   lines.push(border('┌', '┬', '┐'));
 
   for (let row = 0; row < maxRows; row++) {
-    const cells = grid.map((col, i) => (row < visibleRows[i] ? pad(col[row] ?? '?') : empty));
+    const cells = grid.map((col, i) => (row < visibleCells[i] ? pad(col[row] ?? '?') : empty));
     lines.push('│' + cells.join('│') + '│');
   }
 

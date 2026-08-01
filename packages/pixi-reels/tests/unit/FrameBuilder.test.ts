@@ -77,7 +77,7 @@ describe('FrameBuilder', () => {
     const builder = createBuilder();
     const frame = builder.build(0, 3, 1, 1, {
       visible: ['x', 'y', 'z'],
-      bufferAbove: ['bufAbove'],
+      bufferStart: ['bufAbove'],
     });
     expect(frame[0]).toBe('bufAbove');
     expect(frame[1]).toBe('x');
@@ -85,11 +85,11 @@ describe('FrameBuilder', () => {
     expect(frame[3]).toBe('z');
   });
 
-  it('places target symbols in multiple buffer-above slots (bufferAbove = 2)', () => {
+  it('places target symbols in multiple buffer-above slots (bufferStart = 2)', () => {
     const builder = createBuilder();
     const frame = builder.build(0, 3, 2, 1, {
       visible: ['x', 'y', 'z'],
-      bufferAbove: ['above1', 'above2'],
+      bufferStart: ['above1', 'above2'],
     });
     expect(frame[0]).toBe('above2');
     expect(frame[1]).toBe('above1');
@@ -102,7 +102,7 @@ describe('FrameBuilder', () => {
     const builder = createBuilder();
     const frame = builder.build(0, 3, 1, 1, {
       visible: ['x', 'y', 'z'],
-      bufferBelow: ['bufBelow'],
+      bufferEnd: ['bufBelow'],
     });
     expect(frame[4]).toBe('bufBelow'); // buffer below
   });

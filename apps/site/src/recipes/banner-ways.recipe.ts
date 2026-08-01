@@ -23,7 +23,7 @@ const GAP = 6;
 // The main 5x3 ways set (the runner adds this to the stage).
 const main = new ReelSetBuilder()
   .reels(5)
-  .visibleRows(3)
+  .visibleCells(3)
   .symbolSize(CELL, CELL)
   .symbolGap(GAP, GAP)
   .symbols(registerAll)
@@ -36,7 +36,7 @@ const main = new ReelSetBuilder()
 const banner = new ReelSetBuilder()
   .orientation('horizontal')
   .reels(1)
-  .visibleRows(5)
+  .visibleCells(5)
   .symbolSize(CELL, CELL)
   .symbolGap(GAP, 0)
   .symbols(registerAll)
@@ -79,8 +79,8 @@ const onSpin = async () => {
     for (let r = 0; r < 3; r++) if (g[reel][r] === PAY) rows.push(r);
     const bannerWild = b[reel] === 'wild';
     if (rows.length === 0 && !bannerWild) break;
-    for (const r of rows) winners.push({ reelIndex: reel, rowIndex: r });
-    if (bannerWild) bannerWinners.push({ reelIndex: 0, rowIndex: reel });
+    for (const r of rows) winners.push({ reelIndex: reel, cellIndex: r });
+    if (bannerWild) bannerWinners.push({ reelIndex: 0, cellIndex: reel });
   }
   await Promise.all([
     winners.length ? main.spotlight.show(winners, { playWinAnimation: true }) : Promise.resolve(),

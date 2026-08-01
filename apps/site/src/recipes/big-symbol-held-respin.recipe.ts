@@ -3,7 +3,7 @@
 //                   PIXI, app
 
 // NUDGE-IN, THEN HOLD a buffer-anchored big symbol across a respin.
-// Reel 3 lands with a tall wild whose anchor sits in bufferAbove (only
+// Reel 3 lands with a tall wild whose anchor sits in bufferStart (only
 // the tail of the block shows at row 0). The player nudges to drag the
 // wild into full view, then gets a re-spin of the OTHER reels while
 // reel 3 is held. The held reel preserves the now-revealed block across
@@ -18,7 +18,7 @@
 //      (now-revealed block intact, fully visible).
 //
 // What this proves:
-//   - `setResult` accepts a big-symbol anchor in `bufferAbove`; the
+//   - `setResult` accepts a big-symbol anchor in `bufferStart`; the
 //     coordinator paints OCCUPIED stubs across the strip.
 //   - `nudge()` slides the block as a unit from its buffer-anchored
 //     landing into fully-visible state (strip rotates by `distance`).
@@ -38,8 +38,8 @@ const GAP = 4;
 
 const reelSet = new ReelSetBuilder()
   .reels(REELS)
-  .visibleRows(ROWS)
-  // bufferAbove >= 2 lets the 1x3 anchor sit at row -2 (block extends
+  .visibleCells(ROWS)
+  // bufferStart >= 2 lets the 1x3 anchor sit at row -2 (block extends
   // through row 0. tail visible).
   .bufferSymbols(2)
   .symbolSize(SIZE, SIZE)
@@ -70,9 +70,9 @@ return {
     // ── 1. Initial spin lands the tail-visible wild on reel 2. ──────
     const initialGrid = [
       ct(), ct(),
-      // Reel 2: anchor at bufferAbove[1] = row -2. Block spans rows
+      // Reel 2: anchor at bufferStart[1] = row -2. Block spans rows
       // -2, -1, 0. Only row 0 shows the block's bottom cell.
-      { visible: [filler(), filler(), filler()], bufferAbove: [undefined, TALL.id] },
+      { visible: [filler(), filler(), filler()], bufferStart: [undefined, TALL.id] },
       ct(), ct(),
     ];
     const spin1 = reelSet.spin();

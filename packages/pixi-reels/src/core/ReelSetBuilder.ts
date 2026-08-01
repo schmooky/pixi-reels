@@ -44,7 +44,7 @@ import { AdjustPhase } from '../spin/phases/AdjustPhase.js';
  * `.build()` step validates that every required piece is present (throws
  * at construction, not at first spin).
  *
- * Required calls (in any order): `.reels(n)`, `.visibleRows(n)`,
+ * Required calls (in any order): `.reels(n)`, `.visibleCells(n)`,
  * `.symbolSize(w, h)`, `.symbols((registry) => ...)`, `.ticker(app.ticker)`.
  * Optional: `.symbolGap()`, `.weights()`, `.symbolData()`, `.speed()`,
  * `.bufferSymbols()`, `.offset()`, `.frameMiddleware()`, `.phases()`,
@@ -53,7 +53,7 @@ import { AdjustPhase } from '../spin/phases/AdjustPhase.js';
  * ```ts
  * const reelSet = new ReelSetBuilder()
  *   .reels(5)
- *   .visibleRows(3)
+ *   .visibleCells(3)
  *   .symbolSize(200, 200)
  *   .symbols((r) => {
  *     r.register('cherry', SpriteSymbol, { textures: { cherry: tex } });
@@ -65,12 +65,12 @@ import { AdjustPhase } from '../spin/phases/AdjustPhase.js';
  */
 export class ReelSetBuilder {
   private _reelCount?: number;
-  private _visibleRows?: number;
+  private _visibleCells?: number;
   private _symbolWidth?: number;
   private _symbolHeight?: number;
   private _symbolGap = { ...DEFAULTS.symbolGap };
-  private _bufferAbove = DEFAULTS.bufferSymbols;
-  private _bufferBelow = DEFAULTS.bufferSymbols;
+  private _bufferStart = DEFAULTS.bufferSymbols;
+  private _bufferEnd = DEFAULTS.bufferSymbols;
   private _symbolRegistry = new SymbolRegistry();
   private _weights: Record<string, number> = {};
   private _speeds = new Map<string, SpeedProfile>();
@@ -85,9 +85,9 @@ export class ReelSetBuilder {
   private _tumbleConfig?: ResolvedTumbleConfig;
   private _defaultSpinMode: 'standard' | 'cascade' = 'standard';
   /** Per-reel static row counts (jagged shapes like 3-5-5-5-3). */
-  private _visibleRowsPerReel?: number[];
+  private _visibleCellsPerReel?: number[];
   /** Per-reel pixel-box heights. used for both pyramids and MultiWays. */
-  private _reelPixelHeights?: number[];
+  private _reelExtents?: number[];
   /** Vertical alignment of short reels inside the tallest reel's box. */
   private _reelAnchor: ReelAnchor = 'center';
   private _orientation: Orientation = 'vertical';
@@ -116,43 +116,43 @@ export class ReelSetBuilder {
 
   /**
    * Number of visible rows per reel (uniform across all reels).
-   * Mutually exclusive with `visibleRowsPerReel()`. calling both throws
+   * Mutually exclusive with `visibleCellsPerReel()`. calling both throws
    * at `build()`.
    *
    * @example
-   * builder.reels(5).visibleRows(3)  // classic 5x3
+   * builder.reels(5).visibleCells(3)  // classic 5x3
    */
-  visibleRows(count: number): this {
-    this._visibleRows = count;
+  visibleCells(count: number): this {
+    this._visibleCells = count;
     return this;
   }
 
   /**
    * Per-reel static row counts. Length MUST equal `reels()`. Mutually
-   * exclusive with `visibleRows()`; calling both throws at `build()`.
+   * exclusive with `visibleCells()`; calling both throws at `build()`.
    *
    * @example
-   * builder.reels(5).visibleRowsPerReel([3, 5, 5, 5, 3])  // pyramid
+   * builder.reels(5).visibleCellsPerReel([3, 5, 5, 5, 3])  // pyramid
    */
-  visibleRowsPerReel(rows: number[]): this {
-    this._visibleRowsPerReel = [...rows];
+  visibleCellsPerReel(rows: number[]): this {
+    this._visibleCellsPerReel = [...rows];
     return this;
   }
 
   /**
    * Per-reel pixel-box heights. Length MUST equal `reels()`.
    *
-   *   - Pyramid: defaults to `visibleRowsPerReel[i] * symbolHeight`. Override
+   *   - Pyramid: defaults to `visibleCellsPerReel[i] * symbolHeight`. Override
    *     to make all reels the same height with different cell heights per
    *     reel.
    *   - MultiWays: every entry equals the same fixed reel height. Cell
-   *     height per reel is derived as `reelPixelHeight / visibleRows[i]`.
+   *     height per reel is derived as `reelPixelHeight / visibleCells[i]`.
    *
-   * Precedence: when both `reelPixelHeights` and `reelAnchor` are set,
-   * `reelPixelHeights` wins. anchor is derived from the explicit boxes.
+   * Precedence: when both `reelExtents` and `reelAnchor` are set,
+   * `reelExtents` wins. anchor is derived from the explicit boxes.
    */
-  reelPixelHeights(heights: number[]): this {
-    this._reelPixelHeights = [...heights];
+  reelExtents(heights: number[]): this {
+    this._reelExtents = [...heights];
     return this;
   }
 
@@ -301,14 +301,14 @@ export class ReelSetBuilder {
    */
   bufferSymbols(count: number | { above: number; below: number }): this {
     if (typeof count === 'object') {
-      this._bufferAbove = this._clampBufferMin1(count.above, 'bufferSymbols({ above })');
-      this._bufferBelow =
+      this._bufferStart = this._clampBufferMin1(count.above, 'bufferSymbols({ above })');
+      this._bufferEnd =
         Number.isFinite(count.below) && count.below >= 0 ? count.below : 0;
       return this;
     }
     const clamped = this._clampBufferMin1(count, `bufferSymbols(${count})`);
-    this._bufferAbove = clamped;
-    this._bufferBelow = clamped;
+    this._bufferStart = clamped;
+    this._bufferEnd = clamped;
     return this;
   }
 
@@ -403,7 +403,7 @@ export class ReelSetBuilder {
    * @example
    * import { ReelSetBuilder } from 'pixi-reels';
    * const seeded = mulberry32(serverSeed); // your audited PRNG
-   * const reelSet = new ReelSetBuilder().reels(5).visibleRows(3)
+   * const reelSet = new ReelSetBuilder().reels(5).visibleCells(3)
    *   .symbols(...).ticker(app.ticker).rng(seeded).build();
    */
   rng(fn: () => number): this {
@@ -450,7 +450,7 @@ export class ReelSetBuilder {
    * @example
    * import { gsap } from 'gsap';
    * const reelSet = new ReelSetBuilder()
-   *   .reels(5).visibleRows(3).symbolSize(200, 200)
+   *   .reels(5).visibleCells(3).symbolSize(200, 200)
    *   .symbols(...)
    *   .ticker(app.ticker)
    *   .gsap(gsap)              // ensure engine and app share one instance
@@ -506,8 +506,8 @@ export class ReelSetBuilder {
    *
    * @example
    * builder.tumble({
-   *   fall:   { duration: 300, ease: 'sine.in',    rowStagger: 60 },
-   *   dropIn: { duration: 600, ease: 'power2.out', rowStagger: 60, distance: 'perHole' },
+   *   fall:   { duration: 300, ease: 'sine.in',    cellStagger: 60 },
+   *   dropIn: { duration: 600, ease: 'power2.out', cellStagger: 60, distance: 'perHole' },
    * });
    */
   tumble(config?: TumbleConfig): this {
@@ -520,15 +520,15 @@ export class ReelSetBuilder {
    * Set the initial symbol grid the reels show before the first spin.
    *
    * One `ColumnTarget` per reel. `visible` lists the symbols in the visible
-   * window; optional `bufferAbove` / `bufferBelow` prefill cells outside it
+   * window; optional `bufferStart` / `bufferEnd` prefill cells outside it
    * (`[0]` is the slot closest to the visible window, later indices go
    * further out).
    *
    * @example
    * builder.initialFrame([
    *   { visible: ['A','B','C'] },
-   *   { visible: ['A','B','C'], bufferAbove: ['COIN'] },
-   *   { visible: ['A','B','C'], bufferBelow: ['SCATTER'] },
+   *   { visible: ['A','B','C'], bufferStart: ['COIN'] },
+   *   { visible: ['A','B','C'], bufferEnd: ['SCATTER'] },
    * ]);
    */
   initialFrame(frame: ColumnTarget[]): this {
@@ -554,24 +554,24 @@ export class ReelSetBuilder {
     // that the geometry does not project yet, so fail loud rather than mis-lay.
     if (
       this._orientation === 'horizontal' &&
-      (this._multiways || this._visibleRowsPerReel || this._reelPixelHeights)
+      (this._multiways || this._visibleCellsPerReel || this._reelExtents)
     ) {
       throw new Error(
         "orientation('horizontal') supports uniform grids only; pyramid / MultiWays " +
-          'horizontal sets are not enabled yet. Use a uniform visibleRows.',
+          'horizontal sets are not enabled yet. Use a uniform visibleCells.',
       );
     }
 
     const reelCount = this._reelCount!;
     const symbolWidth = this._symbolWidth!;
     const symbolHeight = this._symbolHeight!;
-    const bufferAbove = this._bufferAbove;
-    const bufferBelow = this._bufferBelow;
-    if (bufferBelow === 0 && this._defaultSpinMode !== 'cascade') {
+    const bufferStart = this._bufferStart;
+    const bufferEnd = this._bufferEnd;
+    if (bufferEnd === 0 && this._defaultSpinMode !== 'cascade') {
       throw new Error(
         'bufferSymbols({ below: 0 }) is tumble-only: the strip machinery wraps ' +
           'symbols through the below-window buffer. Add .tumble(...) to the ' +
-          'builder, or keep bufferBelow >= 1.',
+          'builder, or keep bufferEnd >= 1.',
       );
     }
     const ticker = this._ticker!;
@@ -589,25 +589,25 @@ export class ReelSetBuilder {
     const crossGap = vertical ? this._symbolGap.x : this._symbolGap.y;
 
     // Resolve per-reel row counts. MultiWays: every reel starts at maxRows.
-    let visibleRowsPerReel: number[];
+    let visibleCellsPerReel: number[];
     if (isMultiWays) {
-      visibleRowsPerReel = new Array(reelCount).fill(this._multiways!.maxRows);
-    } else if (this._visibleRowsPerReel) {
-      visibleRowsPerReel = this._visibleRowsPerReel;
+      visibleCellsPerReel = new Array(reelCount).fill(this._multiways!.maxRows);
+    } else if (this._visibleCellsPerReel) {
+      visibleCellsPerReel = this._visibleCellsPerReel;
     } else {
-      const v = this._visibleRows!;
-      visibleRowsPerReel = new Array(reelCount).fill(v);
+      const v = this._visibleCells!;
+      visibleCellsPerReel = new Array(reelCount).fill(v);
     }
 
     // Resolve per-reel pixel-box heights. MultiWays: uniform reelPixelHeight.
-    // Pyramid: defaults to visibleRowsPerReel[i] * symbolHeight.
-    let reelPixelHeights: number[];
+    // Pyramid: defaults to visibleCellsPerReel[i] * symbolHeight.
+    let reelExtents: number[];
     if (isMultiWays) {
-      reelPixelHeights = new Array(reelCount).fill(this._multiways!.reelPixelHeight);
-    } else if (this._reelPixelHeights) {
-      reelPixelHeights = this._reelPixelHeights;
+      reelExtents = new Array(reelCount).fill(this._multiways!.reelPixelHeight);
+    } else if (this._reelExtents) {
+      reelExtents = this._reelExtents;
     } else {
-      reelPixelHeights = visibleRowsPerReel.map(
+      reelExtents = visibleCellsPerReel.map(
         (rows) => rows * symbolHeight + (rows - 1) * this._symbolGap.y,
       );
     }
@@ -615,8 +615,8 @@ export class ReelSetBuilder {
     // Main-axis extent per reel (the strip length). For vertical this is the
     // pixel-box height; for a uniform horizontal set it is the strip width.
     const mainExtents = vertical
-      ? reelPixelHeights
-      : visibleRowsPerReel.map((rows) => rows * mainCellSize + (rows - 1) * mainGap);
+      ? reelExtents
+      : visibleCellsPerReel.map((rows) => rows * mainCellSize + (rows - 1) * mainGap);
 
     // Compute per-reel main offset and target cell height.
     // SPIN-time uniform cell height equals the configured `symbolHeight`.
@@ -629,15 +629,15 @@ export class ReelSetBuilder {
         default: return (tallest - h) / 2;
       }
     });
-    const perReelSymbolHeight: number[] = reelPixelHeights.map((h, i) => {
-      const rows = visibleRowsPerReel[i];
+    const perReelSymbolHeight: number[] = reelExtents.map((h, i) => {
+      const rows = visibleCellsPerReel[i];
       return (h - (rows - 1) * this._symbolGap.y) / rows;
     });
-    // MultiWays uses uniform spinSymbolHeight = configured symbolHeight.
+    // MultiWays uses uniform spinCellSize = configured symbolHeight.
     // Pyramid: per-reel cell height. Uniform: same as symbolHeight.
-    const spinSymbolHeight = symbolHeight;
+    const spinCellSize = symbolHeight;
     const initialSymbolHeight = isMultiWays
-      ? new Array(reelCount).fill(spinSymbolHeight)
+      ? new Array(reelCount).fill(spinCellSize)
       : perReelSymbolHeight;
 
     if (this._speeds.size === 0) {
@@ -659,14 +659,14 @@ export class ReelSetBuilder {
     const config: ReelSetInternalConfig = {
       grid: {
         reelCount,
-        visibleRows: this._visibleRows ?? visibleRowsPerReel[0],
+        visibleCells: this._visibleCells ?? visibleCellsPerReel[0],
         symbolWidth,
         symbolHeight,
         symbolGap: { ...this._symbolGap },
-        bufferSymbols: this._bufferAbove,
-        bufferBelow: this._bufferBelow,
-        visibleRowsPerReel,
-        reelPixelHeights,
+        bufferSymbols: this._bufferStart,
+        bufferEnd: this._bufferEnd,
+        visibleCellsPerReel,
+        reelExtents,
         reelAnchor: this._reelAnchor,
         multiways: this._multiways,
       },
@@ -682,8 +682,8 @@ export class ReelSetBuilder {
     // to that to avoid destroy()+recreate churn on large/MultiWays grids. A
     // floor of 20 preserves headroom for small grids; an explicit
     // .poolCapacity() overrides the derivation.
-    const totalStripCells = visibleRowsPerReel.reduce(
-      (sum, rows) => sum + rows + bufferAbove + bufferBelow,
+    const totalStripCells = visibleCellsPerReel.reduce(
+      (sum, rows) => sum + rows + bufferStart + bufferEnd,
       0,
     );
     const poolCapacity = this._poolCapacity ?? Math.max(20, totalStripCells);
@@ -767,7 +767,7 @@ export class ReelSetBuilder {
     }
     const viewport = new ReelViewport(viewportWidth, viewportHeight, undefined, this._maskStrategy);
 
-    const totalRowsForOffset = bufferAbove + Math.max(...visibleRowsPerReel) + bufferBelow;
+    const totalRowsForOffset = bufferStart + Math.max(...visibleCellsPerReel) + bufferEnd;
     const offsetCalc = new OffsetCalculator(
       reelCount,
       totalRowsForOffset,
@@ -779,8 +779,8 @@ export class ReelSetBuilder {
     // `initialFrame()` stores the raw `ColumnTarget[]` so the validator runs
     // against the final bufferSymbols config.
     if (this._initialFrame) {
-      const bufferAboveArr = new Array(reelCount).fill(bufferAbove);
-      const bufferBelowArr = new Array(reelCount).fill(bufferBelow);
+      const bufferAboveArr = new Array(reelCount).fill(bufferStart);
+      const bufferBelowArr = new Array(reelCount).fill(bufferEnd);
       assertBufferCountsInRange(
         this._initialFrame,
         bufferAboveArr,
@@ -793,23 +793,23 @@ export class ReelSetBuilder {
     const reels: Reel[] = [];
     const maskRects: ReelMaskRect[] = [];
     for (let reelIndex = 0; reelIndex < reelCount; reelIndex++) {
-      const rows = visibleRowsPerReel[reelIndex];
+      const rows = visibleCellsPerReel[reelIndex];
       const initialCellH = initialSymbolHeight[reelIndex];
 
-      // Per-reel initial frame at its own visibleRows count.
+      // Per-reel initial frame at its own visibleCells count.
       const initialFrame = frameBuilder.build(
         reelIndex,
         rows,
-        bufferAbove,
-        bufferBelow,
+        bufferStart,
+        bufferEnd,
         this._initialFrame?.[reelIndex],
       );
 
       const reelConfig: ReelConfig = {
         reelIndex,
-        visibleRows: rows,
-        bufferAbove,
-        bufferBelow,
+        visibleCells: rows,
+        bufferStart,
+        bufferEnd,
         symbolWidth,
         symbolHeight: initialCellH,
         symbolGapX: this._symbolGap.x,
@@ -817,8 +817,8 @@ export class ReelSetBuilder {
         symbolsData,
         initialSymbols: initialFrame,
         offsetY: offsetsY[reelIndex],
-        reelHeight: reelPixelHeights[reelIndex],
-        spinSymbolHeight,
+        reelHeight: reelExtents[reelIndex],
+        spinCellSize,
         axis: reelAxis(this._orientation, this._directionPerReel?.[reelIndex] ?? this._direction),
       };
 
@@ -858,36 +858,36 @@ export class ReelSetBuilder {
       errors.push('reels() must be called with a positive number.');
     }
 
-    const hasShape = !!this._visibleRowsPerReel;
-    const hasUniform = this._visibleRows !== undefined;
+    const hasShape = !!this._visibleCellsPerReel;
+    const hasUniform = this._visibleCells !== undefined;
     const hasMega = !!this._multiways;
 
     if (!hasMega && !hasUniform && !hasShape) {
-      errors.push('one of visibleRows(n) or visibleRowsPerReel([...]) or multiways({...}) must be called.');
+      errors.push('one of visibleCells(n) or visibleCellsPerReel([...]) or multiways({...}) must be called.');
     }
     if (hasUniform && hasShape) {
-      errors.push('cannot call both visibleRows() and visibleRowsPerReel(). pick one.');
+      errors.push('cannot call both visibleCells() and visibleCellsPerReel(). pick one.');
     }
     if (hasMega && hasShape) {
-      errors.push('cannot combine multiways() with visibleRowsPerReel(). MultiWays shapes are server-driven.');
+      errors.push('cannot combine multiways() with visibleCellsPerReel(). MultiWays shapes are server-driven.');
     }
 
-    if (this._reelCount && hasShape && this._visibleRowsPerReel!.length !== this._reelCount) {
+    if (this._reelCount && hasShape && this._visibleCellsPerReel!.length !== this._reelCount) {
       errors.push(
-        `visibleRowsPerReel length ${this._visibleRowsPerReel!.length} must equal reels(${this._reelCount}).`,
+        `visibleCellsPerReel length ${this._visibleCellsPerReel!.length} must equal reels(${this._reelCount}).`,
       );
     }
     if (hasShape) {
-      for (let i = 0; i < this._visibleRowsPerReel!.length; i++) {
-        if (this._visibleRowsPerReel![i] <= 0) {
-          errors.push(`visibleRowsPerReel[${i}] = ${this._visibleRowsPerReel![i]} must be positive.`);
+      for (let i = 0; i < this._visibleCellsPerReel!.length; i++) {
+        if (this._visibleCellsPerReel![i] <= 0) {
+          errors.push(`visibleCellsPerReel[${i}] = ${this._visibleCellsPerReel![i]} must be positive.`);
           break;
         }
       }
     }
-    if (this._reelCount && this._reelPixelHeights && this._reelPixelHeights.length !== this._reelCount) {
+    if (this._reelCount && this._reelExtents && this._reelExtents.length !== this._reelCount) {
       errors.push(
-        `reelPixelHeights length ${this._reelPixelHeights.length} must equal reels(${this._reelCount}).`,
+        `reelExtents length ${this._reelExtents.length} must equal reels(${this._reelCount}).`,
       );
     }
 
@@ -902,12 +902,12 @@ export class ReelSetBuilder {
         errors.push('multiways({reelPixelHeight}) must be positive.');
       }
       // multiways({reelPixelHeight}) sets a uniform reel-pixel height for
-      // every reel; reelPixelHeights([...]) sets per-reel heights for
+      // every reel; reelExtents([...]) sets per-reel heights for
       // pyramid layouts. Setting both is ambiguous. fail loud.
-      if (this._reelPixelHeights) {
+      if (this._reelExtents) {
         errors.push(
-          'cannot combine multiways({reelPixelHeight}) with reelPixelHeights([...]). ' +
-          'multiways slots use a uniform reel pixel height. Drop reelPixelHeights() or ' +
+          'cannot combine multiways({reelPixelHeight}) with reelExtents([...]). ' +
+          'multiways slots use a uniform reel pixel height. Drop reelExtents() or ' +
           'remove the multiways() configuration.',
         );
       }
@@ -942,8 +942,8 @@ export class ReelSetBuilder {
       }
     }
 
-    if (this._visibleRows !== undefined && this._visibleRows <= 0) {
-      errors.push('visibleRows() must be called with a positive number.');
+    if (this._visibleCells !== undefined && this._visibleCells <= 0) {
+      errors.push('visibleCells() must be called with a positive number.');
     }
     if (this._symbolWidth === undefined || this._symbolHeight === undefined) {
       errors.push('symbolSize() must be called with width and height.');

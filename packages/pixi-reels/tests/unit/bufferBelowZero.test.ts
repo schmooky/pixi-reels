@@ -19,7 +19,7 @@ function buildTumbleBelowZero(initialFrame: string[][]): {
   const ticker = new FakeTicker();
   const reelSet = new ReelSetBuilder()
     .reels(initialFrame.length)
-    .visibleRows(initialFrame[0].length)
+    .visibleCells(initialFrame[0].length)
     .symbolSize(50, 50)
     .bufferSymbols({ above: 1, below: 0 })
     .symbols((r) => {
@@ -27,8 +27,8 @@ function buildTumbleBelowZero(initialFrame: string[][]): {
     })
     .weights({ a: 1, b: 1 })
     .tumble({
-      fall:   { duration: 0, ease: 'none', rowStagger: 0 },
-      dropIn: { duration: 0, ease: 'none', rowStagger: 0, distance: 'perHole' },
+      fall:   { duration: 0, ease: 'none', cellStagger: 0 },
+      dropIn: { duration: 0, ease: 'none', cellStagger: 0, distance: 'perHole' },
     })
     .initialFrame(initialFrame.map((visible) => ({ visible })))
     .ticker(ticker as unknown as Ticker)
@@ -45,9 +45,9 @@ describe('bufferSymbols({ below: 0 }). tumble-only reel sets', () => {
     ]);
     try {
       for (const reel of h.reelSet.reels) {
-        expect(reel.bufferAbove).toBe(1);
-        expect(reel.bufferBelow).toBe(0);
-        // strip = bufferAbove + visible rows, nothing below.
+        expect(reel.bufferStart).toBe(1);
+        expect(reel.bufferEnd).toBe(0);
+        // strip = bufferStart + visible rows, nothing below.
         expect(reel.symbols.length).toBe(1 + 3);
       }
     } finally {
@@ -59,7 +59,7 @@ describe('bufferSymbols({ below: 0 }). tumble-only reel sets', () => {
     const ticker = new FakeTicker();
     const builder = new ReelSetBuilder()
       .reels(3)
-      .visibleRows(3)
+      .visibleCells(3)
       .symbolSize(50, 50)
       .bufferSymbols({ above: 1, below: 0 })
       .symbols((r) => r.register('a', HeadlessSymbol, {}))
@@ -75,15 +75,15 @@ describe('bufferSymbols({ below: 0 }). tumble-only reel sets', () => {
     const ticker = new FakeTicker();
     const reelSet = new ReelSetBuilder()
       .reels(2)
-      .visibleRows(3)
+      .visibleCells(3)
       .symbolSize(50, 50)
       .bufferSymbols(0)
       .symbols((r) => r.register('a', HeadlessSymbol, {}))
       .ticker(ticker as unknown as Ticker)
       .build();
     try {
-      expect(reelSet.reels[0].bufferAbove).toBe(1);
-      expect(reelSet.reels[0].bufferBelow).toBe(1);
+      expect(reelSet.reels[0].bufferStart).toBe(1);
+      expect(reelSet.reels[0].bufferEnd).toBe(1);
     } finally {
       reelSet.destroy();
       ticker.destroy();
@@ -123,10 +123,10 @@ describe('bufferSymbols({ below: 0 }). tumble-only reel sets', () => {
       ['a', 'a', 'a'],
     ]);
     try {
-      await expect(h.reelSet.spin({ mode: 'standard' })).rejects.toThrow(/bufferBelow >= 1/);
+      await expect(h.reelSet.spin({ mode: 'standard' })).rejects.toThrow(/bufferEnd >= 1/);
       await expect(
         h.reelSet.nudge(0, { direction: 'down', count: 1 } as never),
-      ).rejects.toThrow(/bufferBelow >= 1/);
+      ).rejects.toThrow(/bufferEnd >= 1/);
     } finally {
       h.destroy();
     }

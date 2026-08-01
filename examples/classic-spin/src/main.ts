@@ -49,7 +49,7 @@ async function main() {
 
   const reelSet = new ReelSetBuilder()
     .reels(REEL_COUNT)
-    .visibleRows(VISIBLE_ROWS)
+    .visibleCells(VISIBLE_ROWS)
     .symbolSize(SYMBOL_SIZE, SYMBOL_SIZE)
     .symbolGap(SYMBOL_GAP, SYMBOL_GAP)
     .symbols((registry) => {
@@ -105,7 +105,7 @@ async function main() {
   frame.stroke({ color: 0x3498db, width: 3, alpha: 0.8 });
   reelSet.addChildAt(frame, 0);
 
-  function mockSpin(): Promise<{ symbols: string[][]; wins: { positions: { reelIndex: number; rowIndex: number }[] }[] }> {
+  function mockSpin(): Promise<{ symbols: string[][]; wins: { positions: { reelIndex: number; cellIndex: number }[] }[] }> {
     return new Promise((resolve) => {
       setTimeout(() => {
         const symbols: string[][] = [];
@@ -126,7 +126,7 @@ async function main() {
           symbols.push(col);
         }
 
-        const wins: { positions: { reelIndex: number; rowIndex: number }[] }[] = [];
+        const wins: { positions: { reelIndex: number; cellIndex: number }[] }[] = [];
         for (let row = 0; row < VISIBLE_ROWS; row++) {
           const first = symbols[0][row];
           let count = 1;
@@ -136,7 +136,7 @@ async function main() {
           }
           if (count >= 3) {
             wins.push({
-              positions: Array.from({ length: count }, (_, i) => ({ reelIndex: i, rowIndex: row })),
+              positions: Array.from({ length: count }, (_, i) => ({ reelIndex: i, cellIndex: row })),
             });
           }
         }

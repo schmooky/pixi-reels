@@ -19,7 +19,7 @@ const SYMBOLS = ['a', 'b', 'c', 'd', 'e', 'wild'];
 function makeHarness() {
   return createTestReelSet({
     reels: 5,
-    visibleRows: 3,
+    visibleCells: 3,
     symbolIds: SYMBOLS,
   });
 }

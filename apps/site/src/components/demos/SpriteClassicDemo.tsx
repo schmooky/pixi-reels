@@ -45,7 +45,7 @@ export default function SpriteClassicDemo() {
 
           const handle = await mountPrototypeReels(host, {
             reelCount: 5,
-            visibleRows: 3,
+            visibleCells: 3,
             symbolSize: { width: 128, height: 128 },
             symbolIds: SYMBOL_IDS,
             weights: WEIGHTS,
@@ -55,7 +55,7 @@ export default function SpriteClassicDemo() {
           const { CheatEngine } = await import('../../../../../examples/shared/cheats.ts');
           const engine = new CheatEngine({
             reelCount: 5,
-            visibleRows: 3,
+            visibleCells: 3,
             symbolIds: SYMBOL_IDS,
             seed: 42,
           });

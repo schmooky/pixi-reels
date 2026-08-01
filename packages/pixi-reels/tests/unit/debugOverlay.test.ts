@@ -12,7 +12,7 @@ const OVERLAY_LABEL = 'pixi-reels:debugOverlay';
 
 describe('debugOverlay', () => {
   it('adds a child container to the reel set and removes it on destroy', () => {
-    const harness = createTestReelSet({ reels: 3, visibleRows: 3, symbolIds: ['a', 'b', 'c'] });
+    const harness = createTestReelSet({ reels: 3, visibleCells: 3, symbolIds: ['a', 'b', 'c'] });
     const { reelSet } = harness;
     try {
       const before = reelSet.children.length;
@@ -35,7 +35,7 @@ describe('debugOverlay', () => {
   });
 
   it('redraws through the ticker when live, and stops after destroy', () => {
-    const harness = createTestReelSet({ reels: 4, visibleRows: 3, symbolIds: ['a', 'b', 'c'] });
+    const harness = createTestReelSet({ reels: 4, visibleCells: 3, symbolIds: ['a', 'b', 'c'] });
     const { reelSet, ticker } = harness;
     try {
       const overlay = debugOverlay(reelSet, {
@@ -62,7 +62,7 @@ describe('debugOverlay', () => {
   });
 
   it('is idempotent on double destroy', () => {
-    const harness = createTestReelSet({ reels: 2, visibleRows: 2, symbolIds: ['a', 'b'] });
+    const harness = createTestReelSet({ reels: 2, visibleCells: 2, symbolIds: ['a', 'b'] });
     try {
       const overlay = debugOverlay(harness.reelSet, { layers: 'all' });
       overlay.destroy();

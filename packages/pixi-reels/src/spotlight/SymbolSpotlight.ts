@@ -112,12 +112,12 @@ export class SymbolSpotlight implements Disposable {
       const reel = this._reels[pos.reelIndex];
       if (!reel) continue;
 
-      const symbol = reel.getSymbolAt(pos.rowIndex);
+      const symbol = reel.getSymbolAt(pos.cellIndex);
       if (!symbol) continue;
 
       // Avoid promoting the same physical symbol twice (e.g. a 2×2 big
       // symbol's anchor cell + its OCCUPIED cells all resolve to one symbol).
-      const key = `${pos.reelIndex}:${reel.getAnchorRow(pos.rowIndex)}`;
+      const key = `${pos.reelIndex}:${reel.getAnchorRow(pos.cellIndex)}`;
       if (seen.has(key)) continue;
       seen.add(key);
 

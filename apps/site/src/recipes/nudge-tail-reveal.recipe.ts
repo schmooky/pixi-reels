@@ -4,14 +4,14 @@
 // TAIL-REVEAL pattern.
 //
 // Big symbol lands fully visible. We nudge it UP by 1 so the anchor
-// crosses into bufferAbove. only the bottom cell of the block
+// crosses into bufferStart. only the bottom cell of the block
 // remains in the visible window ("tail visible"). The engine's
 // `_finalizeFrame` sizes the anchor to span the whole block even
 // though it lives above visible, so the visible portion renders as
 // the bottom of the sprite, masked at the top edge.
 //
 // A beat later we nudge DOWN by 1 to bring the full block back into
-// view. Tail in bufferAbove. nudge to reveal.
+// view. Tail in bufferStart. nudge to reveal.
 
 const MEGA = { id: 'mega', color: 0xff8c42, label: 'MEGA', textColor: 0x4a1d00, w: 1, h: 2 };
 const REELS = 5;
@@ -21,7 +21,7 @@ const GAP = 4;
 
 const reelSet = new ReelSetBuilder()
   .reels(REELS)
-  .visibleRows(ROWS)
+  .visibleCells(ROWS)
   .symbolSize(SIZE, SIZE)
   .symbolGap(GAP, GAP)
   .symbols((registry) => {
@@ -55,9 +55,9 @@ return {
     await p;
     await new Promise((r) => setTimeout(r, 500));
 
-    // 2. Nudge UP by 1. anchor at strip[1] → strip[0] (bufferAbove).
+    // 2. Nudge UP by 1. anchor at strip[1] → strip[0] (bufferStart).
     //    Stub follows: strip[2] → strip[1] (visible row 0).
-    //    Block is now "tail visible": top in bufferAbove (clipped), bottom
+    //    Block is now "tail visible": top in bufferStart (clipped), bottom
     //    showing at row 0. `_finalizeFrame` sizes the anchor sprite to the
     //    full block height; the mask clips the half above visible.
     await reelSet.nudge(2, {

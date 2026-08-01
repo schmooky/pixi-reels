@@ -134,8 +134,8 @@ export class StopPhase extends ReelPhase<StopPhaseConfig> {
 
     if (this._stage !== 'done' && this._config) {
       // Place the FULL target frame, not just the visible window — slicing to
-      // [bufferAbove, bufferAbove+visible] dropped buffer-above/below targets
-      // (e.g. a big symbol's tail parked in bufferAbove), so a direct skip()
+      // [bufferStart, bufferStart+visible] dropped buffer-above/below targets
+      // (e.g. a big symbol's tail parked in bufferStart), so a direct skip()
       // landed the wrong frame. targetFrame is already a flat top-to-bottom
       // strip, which is exactly what placeStrip consumes.
       reel.placeStrip(this._config.targetFrame);

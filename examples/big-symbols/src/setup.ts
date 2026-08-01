@@ -85,7 +85,7 @@ export async function boot(opts: BootOptions): Promise<() => void> {
 
   const reelSet = new ReelSetBuilder()
     .reels(REEL_COUNT)
-    .visibleRows(VISIBLE_ROWS)
+    .visibleCells(VISIBLE_ROWS)
     .symbolSize(SYMBOL_SIZE, SYMBOL_SIZE)
     .symbolGap(SYMBOL_GAP, SYMBOL_GAP)
     .symbols((r) => {
@@ -132,7 +132,7 @@ export async function boot(opts: BootOptions): Promise<() => void> {
   function syncIdle(): void {
     for (let r = 0; r < reelSet.reelCount; r++) {
       const reel = reelSet.getReel(r);
-      for (let row = 0; row < reel.visibleRows; row++) {
+      for (let row = 0; row < reel.visibleCells; row++) {
         const sym = reel.getSymbolAt(row);
         if (sym instanceof SpineReelSymbol) sym.stopAnimation();
       }
@@ -323,7 +323,7 @@ function evaluateWins(grid: string[][]): WinResult[] {
       const s = grid[c][row];
       if (s === target || s === 'wild' || s === 'bigWild') {
         count++;
-        cells.push({ reelIndex: c, rowIndex: row });
+        cells.push({ reelIndex: c, cellIndex: row });
       } else break;
     }
     if (count >= 3) {

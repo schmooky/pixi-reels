@@ -3,7 +3,7 @@
 //           buildCascadeSpineMap, CASCADE_SYMBOL_IDS, CASCADE_PLATE_W,
 //           CASCADE_PLATE_H, PIXI, gsap, app, pickWeighted
 
-// RAIN COLUMN: the whole column drops as a slab. rowStagger = 0 makes
+// RAIN COLUMN: the whole column drops as a slab. cellStagger = 0 makes
 // every row start together; distance: 'auto' makes every animated row
 // traverse the FULL visible-rows distance. Looks like a piece of a
 // board falling. Good fit for puzzle / match-3 styled boards.
@@ -45,7 +45,7 @@ class TimedExplodeSymbol extends SpineReelSymbol {
 }
 
 const reelSet = new ReelSetBuilder()
-  .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
+  .reels(REELS).visibleCells(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
   // Pure tumble: no strip scrolling, so no below-window buffer at all.
   // nothing can ever peek out under the grid.
   .bufferSymbols({ above: 1, below: 0 })
@@ -67,8 +67,8 @@ const reelSet = new ReelSetBuilder()
   .symbolData({ high: { zIndex: 10, unmask: true } })
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
-    fall:   { duration: 233, ease: 'power2.in', rowStagger: 0 },  // 14f
-    dropIn: { duration: 367, ease: 'power2.in', rowStagger: 0, distance: 'auto' },  // 22f
+    fall:   { duration: 233, ease: 'power2.in', cellStagger: 0 },  // 14f
+    dropIn: { duration: 367, ease: 'power2.in', cellStagger: 0, distance: 'auto' },  // 22f
   })
   .ticker(app.ticker).build();
 

@@ -48,10 +48,10 @@ describe('anticipationForScatters', () => {
   });
 
   it('does not count buffer cells (ColumnTarget form)', () => {
-    // A SCAT parked in bufferBelow is off-screen and must not trigger tension.
+    // A SCAT parked in bufferEnd is off-screen and must not trigger tension.
     const targets: ColumnTarget[] = [
       { visible: ['a', 'SCAT', 'a'] },
-      { visible: ['a', 'a', 'a'], bufferBelow: ['SCAT'] }, // off-screen, ignored
+      { visible: ['a', 'a', 'a'], bufferEnd: ['SCAT'] }, // off-screen, ignored
       { visible: ['a', 'a', 'a'] },
       { visible: ['a', 'a', 'a'] },
       { visible: ['a', 'a', 'a'] },

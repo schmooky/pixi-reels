@@ -16,7 +16,7 @@ import { FakeTicker } from '../../src/testing/FakeTicker.js';
 function forwardBuilder() {
   return new ReelSetBuilder()
     .reels(3)
-    .visibleRows(3)
+    .visibleCells(3)
     .symbolSize(100, 100)
     .ticker(new FakeTicker() as unknown as Ticker)
     .symbols((r) => r.register('a', HeadlessSymbol, {}));
@@ -26,7 +26,7 @@ describe('reverse + per-reel direction', () => {
   it('a reverse (roll-up) vertical set spins and lands the requested grid', async () => {
     const h = createTestReelSet({
       reels: 3,
-      visibleRows: 3,
+      visibleCells: 3,
       symbolIds: ['a', 'b', 'c', 'd', 'e'],
       direction: 'reverse',
     });
@@ -48,7 +48,7 @@ describe('reverse + per-reel direction', () => {
   it('directionPerReel lands correctly with alternating columns', async () => {
     const h = createTestReelSet({
       reels: 3,
-      visibleRows: 3,
+      visibleCells: 3,
       symbolIds: ['a', 'b', 'c', 'd'],
       directionPerReel: ['forward', 'reverse', 'forward'],
     });

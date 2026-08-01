@@ -33,7 +33,7 @@ function buildHarness(initialFrame: string[][]): Harness {
   const ticker = new FakeTicker();
   const reelSet = new ReelSetBuilder()
     .reels(initialFrame.length)
-    .visibleRows(initialFrame[0].length)
+    .visibleCells(initialFrame[0].length)
     .symbolSize(50, 50)
     .symbols((r) => {
       for (const id of ['a', 'b', 'c', 'd']) {
@@ -43,8 +43,8 @@ function buildHarness(initialFrame: string[][]): Harness {
     .weights({ a: 1, b: 1, c: 1, d: 1 })
     .tumble({
       // Non-zero so the timeline doesn't auto-complete before the skip.
-      fall:   { duration: 200, ease: 'none', rowStagger: 0 },
-      dropIn: { duration: 200, ease: 'none', rowStagger: 0, distance: 'perHole' },
+      fall:   { duration: 200, ease: 'none', cellStagger: 0 },
+      dropIn: { duration: 200, ease: 'none', cellStagger: 0, distance: 'perHole' },
     })
     .initialFrame(initialFrame.map((visible) => ({ visible })))
     .ticker(ticker as unknown as Ticker)
@@ -125,7 +125,7 @@ describe('CascadeFallPhase. skip event pairing', () => {
     const phase = new CascadeFallPhase(
       reel,
       SpeedPresets.NORMAL,
-      { duration: 0, ease: 'none', rowStagger: 0, rowOrder: 'bottomToTop' },
+      { duration: 0, ease: 'none', cellStagger: 0, cellOrder: 'endFirst' },
     );
     await phase.run({
       spinningMode: new StandardMode(),
@@ -158,7 +158,7 @@ describe('CascadeDropInPhase. skip event pairing', () => {
     const phase = new CascadeDropInPhase(reel, SpeedPresets.NORMAL, drop);
 
     const done = phase.run({
-      winnerRows: [],
+      winnerCells: [],
       initial: true,
       events: bus,
     });
@@ -185,8 +185,8 @@ describe('CascadeDropInPhase. skip event pairing', () => {
     const drop = resolveTumbleConfig({}).dropIn;
     const phase = new CascadeDropInPhase(reel, SpeedPresets.NORMAL, drop);
 
-    // winnerRows=[1] on a 3-row reel gives the survivor at row 0 an
-    // `offsetRows=1` slide. i.e. a real gravity-stage job that produces
+    // winnerCells=[1] on a 3-row reel gives the survivor at row 0 an
+    // `offsetCells=1` slide. i.e. a real gravity-stage job that produces
     // a non-trivial gsap timeline. Without this, every winner config we
     // could choose either leaves no work (the phase finishes
     // synchronously in onEnter before forceComplete runs) or animates
@@ -194,7 +194,7 @@ describe('CascadeDropInPhase. skip event pairing', () => {
     // path needs both: a running timeline AND a job that role='gravity'
     // actually animates.
     const done = phase.run({
-      winnerRows: [1],
+      winnerCells: [1],
       initial: false,
       role: 'gravity',
       events: bus,
@@ -219,10 +219,10 @@ describe('CascadeDropInPhase. skip event pairing', () => {
     const phase = new CascadeDropInPhase(
       reel,
       SpeedPresets.NORMAL,
-      { duration: 0, ease: 'none', rowStagger: 0, rowOrder: 'bottomToTop', distance: 'perHole' },
+      { duration: 0, ease: 'none', cellStagger: 0, cellOrder: 'endFirst', distance: 'perHole' },
     );
     await phase.run({
-      winnerRows: [],
+      winnerCells: [],
       initial: true,
       events: bus,
     });

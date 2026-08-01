@@ -23,8 +23,8 @@ const GAP = 4;
 
 const reelSet = new ReelSetBuilder()
   .reels(REELS)
-  .visibleRows(ROWS)
-  // Anchor starts at bufferAbove[0] (row -1) so half the block peeks in.
+  .visibleCells(ROWS)
+  // Anchor starts at bufferStart[0] (row -1) so half the block peeks in.
   .bufferSymbols(2)
   .symbolSize(SIZE, SIZE)
   .symbolGap(GAP, GAP)
@@ -42,8 +42,8 @@ const reelSet = new ReelSetBuilder()
   .symbolData({ [BIG.id]: { weight: 0, zIndex: 5, size: { w: BIG.w, h: BIG.h } } })
   .speed('normal', { ...SpeedPresets.NORMAL, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
-    fall:   { duration: 320, ease: 'power3.in',  rowStagger: 60 },
-    dropIn: { duration: 480, ease: 'power3.out', rowStagger: 60, distance: 'perHole' },
+    fall:   { duration: 320, ease: 'power3.in',  cellStagger: 60 },
+    dropIn: { duration: 480, ease: 'power3.out', cellStagger: 60, distance: 'perHole' },
   })
   .ticker(app.ticker)
   .build();
@@ -54,18 +54,18 @@ const filler = () => FILLER_IDS[Math.floor(Math.random() * FILLER_IDS.length)];
 return {
   reelSet,
   onSpin: async () => {
-    // ── 1. Initial spin: 2x2 block anchored on reel 1 at bufferAbove[0]
+    // ── 1. Initial spin: 2x2 block anchored on reel 1 at bufferStart[0]
     //      (row -1). it spans rows -1..0 on reels 1-2, so only its
     //      bottom half peeks into the visible board. Plant a MATCH-row
     //      cluster at row 1 across all four reels.
     const MATCH = 'Q';
     const initialGrid = [
       { visible: [filler(), MATCH, filler(), filler()] },
-      // Anchor at bufferAbove[0] = row -1. Footprint: reels 1-2,
+      // Anchor at bufferStart[0] = row -1. Footprint: reels 1-2,
       // rows -1..0. The coordinator paints the other three cells.
       {
         visible: [filler(), MATCH, filler(), filler()],
-        bufferAbove: [BIG.id],
+        bufferStart: [BIG.id],
       },
       { visible: [filler(), MATCH, filler(), filler()] },
       { visible: [filler(), MATCH, filler(), filler()] },
@@ -97,7 +97,7 @@ return {
         // tail, so its "survivor" slot stays covered. consistent).
         {
           visible: [BIG.id, filler(), prev[1][2], prev[1][3]],
-          bufferAbove: [filler()],
+          bufferStart: [filler()],
         },
         { visible: [filler(), filler(), prev[2][2], prev[2][3]] },
         { visible: [filler(), prev[3][0], prev[3][2], prev[3][3]] },

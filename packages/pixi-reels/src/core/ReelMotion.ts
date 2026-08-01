@@ -31,14 +31,14 @@ export class ReelMotion {
     private _symbols: ReelSymbol[],
     symbolHeight: number,
     symbolGapY: number,
-    bufferAbove: number,
-    _visibleRows: number,
-    _bufferBelow: number,
+    bufferStart: number,
+    _visibleCells: number,
+    _bufferEnd: number,
     private _onSymbolWrapped: (symbol: ReelSymbol, arrayIndex: number, direction: 'up' | 'down') => void,
     axis: ReelAxis = VERTICAL_FORWARD,
   ) {
     this._pitch = symbolHeight + symbolGapY;
-    this._bufferStart = bufferAbove;
+    this._bufferStart = bufferStart;
     this._axis = axis;
     this._render();
   }
@@ -50,7 +50,7 @@ export class ReelMotion {
    * StartPhase's step-back pull (a negative delta) reads as "backwards for this
    * reel" in either direction. Any magnitude is legal.
    */
-  displace(delta: number): void {
+  advance(delta: number): void {
     if (delta === 0) return;
     this._travel += this._axis.polarity * delta;
 
@@ -85,11 +85,11 @@ export class ReelMotion {
   }
 
   /** The correct main-axis coordinate for a symbol at visual row `row`. */
-  getRowY(row: number): number {
+  getCellMain(row: number): number {
     return (row - this._bufferStart) * this._pitch;
   }
 
-  get slotHeight(): number {
+  get slotPitch(): number {
     return this._pitch;
   }
 
@@ -102,12 +102,12 @@ export class ReelMotion {
   reshape(
     symbolHeight: number,
     symbolGapY: number,
-    bufferAbove: number,
-    _visibleRows: number,
-    _bufferBelow: number,
+    bufferStart: number,
+    _visibleCells: number,
+    _bufferEnd: number,
   ): void {
     this._pitch = symbolHeight + symbolGapY;
-    this._bufferStart = bufferAbove;
+    this._bufferStart = bufferStart;
   }
 
   private _rotateToStart(): void {

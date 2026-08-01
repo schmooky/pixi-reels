@@ -21,19 +21,19 @@ export interface TumbleFallConfig {
    * Delay between successive rows starting their fall, in ms. `0` makes
    * every row fall together. Default 0.
    */
-  rowStagger?: number;
+  cellStagger?: number;
 
   /**
    * Which row of each reel begins its fall first.
    *
-   *   - `'bottomToTop'` (default). bottom row falls first, top row last.
+   *   - `'endFirst'` (default). bottom row falls first, top row last.
    *     Pairs with the per-reel left-to-right stagger from `speed.spinDelay`
    *     to give the canonical "bottom-left falls first, top-right last"
    *     feel of commercial tumble slots.
-   *   - `'topToBottom'`. top row falls first. Reads as the column
+   *   - `'startFirst'`. top row falls first. Reads as the column
    *     "peeling" downward; useful for theme-specific effects.
    */
-  rowOrder?: 'bottomToTop' | 'topToBottom';
+  cellOrder?: 'endFirst' | 'startFirst';
 }
 
 export interface TumbleDropInConfig {
@@ -57,19 +57,19 @@ export interface TumbleDropInConfig {
    * `0` makes every animated row drop in simultaneously. the most common
    * choice for cascade refills.
    */
-  rowStagger?: number;
+  cellStagger?: number;
 
   /**
-   * Which row lands first when `rowStagger > 0`.
+   * Which row lands first when `cellStagger > 0`.
    *
-   *   - `'bottomToTop'` (default). bottom row arrives first, top row last.
+   *   - `'endFirst'` (default). bottom row arrives first, top row last.
    *     Paired with `setDropOrder('ltr')` per-reel stagger this gives the
    *     canonical "bottom-left first, top-right last" reveal that every
    *     commercial tumble slot ships with.
-   *   - `'topToBottom'`. top row arrives first. Reads as "new symbols
+   *   - `'startFirst'`. top row arrives first. Reads as "new symbols
    *     pour from above"; fits gravity-themed or rain-style slots.
    */
-  rowOrder?: 'bottomToTop' | 'topToBottom';
+  cellOrder?: 'endFirst' | 'startFirst';
 
   /**
    * How far symbols fall, in cells.
@@ -107,8 +107,8 @@ export function resolveTumbleConfig(config: TumbleConfig | undefined): ResolvedT
     fall: {
       duration: config?.fall?.duration ?? 300,
       ease: config?.fall?.ease ?? 'sine.in',
-      rowStagger: config?.fall?.rowStagger ?? 0,
-      rowOrder: config?.fall?.rowOrder ?? 'bottomToTop',
+      cellStagger: config?.fall?.cellStagger ?? 0,
+      cellOrder: config?.fall?.cellOrder ?? 'endFirst',
     },
     dropIn: {
       duration: config?.dropIn?.duration ?? 600,
@@ -118,8 +118,8 @@ export function resolveTumbleConfig(config: TumbleConfig | undefined): ResolvedT
       // ease that lands without an overshoot bounce. Recipes that want
       // the springy feel can opt into `back.out(...)` explicitly.
       ease: config?.dropIn?.ease ?? 'power2.out',
-      rowStagger: config?.dropIn?.rowStagger ?? 60,
-      rowOrder: config?.dropIn?.rowOrder ?? 'bottomToTop',
+      cellStagger: config?.dropIn?.cellStagger ?? 60,
+      cellOrder: config?.dropIn?.cellOrder ?? 'endFirst',
       distance: config?.dropIn?.distance ?? 'perHole',
     },
   };
@@ -139,8 +139,8 @@ export function mergeFallConfig(
   return {
     duration: override.duration ?? base.duration,
     ease: override.ease ?? base.ease,
-    rowStagger: override.rowStagger ?? base.rowStagger,
-    rowOrder: override.rowOrder ?? base.rowOrder,
+    cellStagger: override.cellStagger ?? base.cellStagger,
+    cellOrder: override.cellOrder ?? base.cellOrder,
   };
 }
 
@@ -158,8 +158,8 @@ export function mergeDropInConfig(
   return {
     duration: override.duration ?? base.duration,
     ease: override.ease ?? base.ease,
-    rowStagger: override.rowStagger ?? base.rowStagger,
-    rowOrder: override.rowOrder ?? base.rowOrder,
+    cellStagger: override.cellStagger ?? base.cellStagger,
+    cellOrder: override.cellOrder ?? base.cellOrder,
     distance: override.distance ?? base.distance,
   };
 }

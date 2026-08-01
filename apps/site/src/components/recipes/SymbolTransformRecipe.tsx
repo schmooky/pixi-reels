@@ -16,7 +16,7 @@ export default function SymbolTransformRecipe() {
       height={280}
       setup={async (host) => {
         const { reelSet, destroy } = await mountMiniReels(host, {
-          reelCount: 5, visibleRows: 3,
+          reelCount: 5, visibleCells: 3,
           symbolSize: { width: CELL, height: CELL },
           symbols: { kind: 'sprite', ids: IDS },
           weights: { 'round/round_1': 22, 'round/round_2': 22, 'round/round_3': 22, 'royal/royal_1': 10, 'royal/royal_2': 10 },

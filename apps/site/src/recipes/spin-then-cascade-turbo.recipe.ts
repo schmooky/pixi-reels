@@ -59,7 +59,7 @@ prewarmSpinTextures({
 });
 
 const reelSet = new ReelSetBuilder()
-  .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
+  .reels(REELS).visibleCells(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
   .symbols((r) => {
     for (const id of CASCADE_SYMBOL_IDS) {
       r.register(id, StaticSpinSymbol, { createInner, cache, blurRampMs: 120 });
@@ -72,8 +72,8 @@ const reelSet = new ReelSetBuilder()
   .speed('turbo', { ...SpeedPresets.TURBO, stopDelay: 60, bounceDistance: 0, bounceDuration: 0 })
   .initialSpeed('turbo')
   .tumble({
-    fall:   { duration: 0, ease: 'none', rowStagger: 0 },              // not used. refill skips fall
-    dropIn: { duration: 233, ease: 'power2.in', rowStagger: 0, distance: 'perHole' },  // 14f
+    fall:   { duration: 0, ease: 'none', cellStagger: 0 },              // not used. refill skips fall
+    dropIn: { duration: 233, ease: 'power2.in', cellStagger: 0, distance: 'perHole' },  // 14f
   })
   .ticker(app.ticker)
   .build();

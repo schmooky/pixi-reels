@@ -96,16 +96,16 @@ export class CascadeFallPhase extends ReelPhase<CascadeFallPhaseConfig> {
 
     const reel = this._reel;
     const axis = reel.axis;
-    const cellHeight = reel.motion.slotHeight;
-    const visibleRows = reel.visibleRows;
+    const cellHeight = reel.motion.slotPitch;
+    const visibleCells = reel.visibleCells;
     const reelIndex = reel.reelIndex;
 
     // Distance: just past the exit-edge buffer so the symbols clear the mask.
     // A main-axis magnitude; the tween applies `axis.polarity` for travel sign.
-    const fallDistance = (visibleRows + reel.bufferBelow + 1) * cellHeight;
+    const fallDistance = (visibleCells + reel.bufferEnd + 1) * cellHeight;
 
     const fallSec = this._fall.duration / 1000;
-    const staggerSec = this._fall.rowStagger / 1000;
+    const staggerSec = this._fall.cellStagger / 1000;
 
     // Snapshot views and current main positions before any tween starts.
     // Avoids reading mid-tween values if `cascade:fall:symbol` listeners
@@ -113,7 +113,7 @@ export class CascadeFallPhase extends ReelPhase<CascadeFallPhaseConfig> {
     const symbols: ReelSymbol[] = [];
     const views: Container[] = [];
     const startMains: number[] = [];
-    for (let row = 0; row < visibleRows; row++) {
+    for (let row = 0; row < visibleCells; row++) {
       const sym = reel.getSymbolAt(row);
       symbols.push(sym);
       views.push(sym.view);
@@ -158,13 +158,13 @@ export class CascadeFallPhase extends ReelPhase<CascadeFallPhaseConfig> {
     });
     this._timeline = tl;
 
-    const reverseOrder = this._fall.rowOrder === 'bottomToTop';
+    const reverseOrder = this._fall.cellOrder === 'endFirst';
 
-    for (let row = 0; row < visibleRows; row++) {
+    for (let row = 0; row < visibleCells; row++) {
       const view = views[row];
       const symbol = symbols[row];
       const startMain = startMains[row];
-      const orderIndex = reverseOrder ? visibleRows - 1 - row : row;
+      const orderIndex = reverseOrder ? visibleCells - 1 - row : row;
       const offset = orderIndex * staggerSec;
 
       // Fire the per-symbol event right before the tween starts so listeners
@@ -180,7 +180,7 @@ export class CascadeFallPhase extends ReelPhase<CascadeFallPhaseConfig> {
             symbol,
             view,
             reelIndex,
-            rowIndex: row,
+            cellIndex: row,
             duration: this._fall.duration,
             ease: this._fall.ease,
             distance: fallDistance,

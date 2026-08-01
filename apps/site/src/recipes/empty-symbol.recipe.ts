@@ -44,7 +44,7 @@ probe.destroy();
 
 const reelSet = new ReelSetBuilder()
   .reels(REELS)
-  .visibleRows(ROWS)
+  .visibleCells(ROWS)
   .symbolSize(CELL, CELL)
   .symbolGap(GAP, GAP)
   // Spine content ignores the per-reel rect mask; the shared strategy plus
@@ -55,7 +55,7 @@ const reelSet = new ReelSetBuilder()
     registry.register(EMPTY, EmptySymbol, {});
   })
   .weights({ [COIN]: 1, [EMPTY]: 6 })
-  .initialFrame(Array.from({ length: REELS }, () => ({ visible: [EMPTY, EMPTY, EMPTY], bufferAbove: [EMPTY], bufferBelow: [EMPTY] })))
+  .initialFrame(Array.from({ length: REELS }, () => ({ visible: [EMPTY, EMPTY, EMPTY], bufferStart: [EMPTY], bufferEnd: [EMPTY] })))
   .speed('normal', SpeedPresets.NORMAL)
   .ticker(app.ticker)
   .build();
@@ -68,8 +68,8 @@ return {
     // Coins scatter sparsely; buffers are forced empty so nothing spills.
     const grid = Array.from({ length: REELS }, () => ({
       visible: Array.from({ length: ROWS }, () => pickWeighted({ [COIN]: 1, [EMPTY]: 6 })),
-      bufferAbove: [EMPTY],
-      bufferBelow: [EMPTY],
+      bufferStart: [EMPTY],
+      bufferEnd: [EMPTY],
     }));
     reelSet.setResult(grid);
     await spin;

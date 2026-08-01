@@ -13,7 +13,7 @@ export type { SymbolPosition };
 
 /** Result returned when a spin completes. */
 export interface SpinResult {
-  /** Final symbol grid [reelIndex][rowIndex]. */
+  /** Final symbol grid [reelIndex][cellIndex]. */
   symbols: string[][];
   /** Whether the spin was skipped/slam-stopped. */
   wasSkipped: boolean;
@@ -103,10 +103,10 @@ export interface ReelSetEvents extends Record<string, unknown[]> {
   /** WinPresenter finished. either naturally (`complete`) or via abort. */
   'win:end': [reason: 'complete' | 'aborted'];
   /**
-   * A pin was placed at a cell. The pin's `originRow` is captured at
+   * A pin was placed at a cell. The pin's `originCell` is captured at
    * placement and frozen for its lifetime; on MultiWays slots it controls
    * how the pin migrates across reshapes (see `pin:migrated`). For
-   * non-MultiWays slots `originRow === pin.row` and never changes. but
+   * non-MultiWays slots `originCell === pin.row` and never changes. but
    * the field is still on the payload, so trace logs can show the intent.
    */
   'pin:placed': [pin: CellPin];
@@ -114,7 +114,7 @@ export interface ReelSetEvents extends Record<string, unknown[]> {
   'pin:expired': [pin: CellPin, reason: PinExpireReason];
   /**
    * MultiWays: a pin was relocated by an AdjustPhase reshape because its
-   * `originRow` either no longer fits within the new shape (`clamped: true`)
+   * `originCell` either no longer fits within the new shape (`clamped: true`)
    * or fits at a row that differs from its current visual position.
    *
    * Always fires from a MultiWays AdjustPhase. non-MultiWays slots never
@@ -122,7 +122,7 @@ export interface ReelSetEvents extends Record<string, unknown[]> {
    */
   'pin:migrated': [
     pin: CellPin,
-    info: { fromRow: number; toRow: number; clamped: boolean; reelIndex: number },
+    info: { fromCell: number; toCell: number; clamped: boolean; reelIndex: number },
   ];
   /**
    * MultiWays: `setShape(rowsPerReel)` recorded a new target shape for the
@@ -163,7 +163,7 @@ export interface ReelSetEvents extends Record<string, unknown[]> {
     symbol: ReelSymbol;
     view: Container;
     reelIndex: number;
-    rowIndex: number;
+    cellIndex: number;
     duration: number;
     ease: string;
     distance: number;
@@ -181,25 +181,25 @@ export interface ReelSetEvents extends Record<string, unknown[]> {
    * no `:start` counterpart. only this `:end`.
    *
    *   - `isInitial: true` on Moment A (after a `spin()` click). Every visible
-   *     row is "new". `winnerRows` is `[]` because there's no prior grid.
-   *   - `isInitial: false` on Moment B (a `refill()`). `winnerRows` lists the
+   *     row is "new". `winnerCells` is `[]` because there's no prior grid.
+   *   - `isInitial: false` on Moment B (a `refill()`). `winnerCells` lists the
    *     row indices whose old symbols were cleared by the win; rows in that
    *     set are new arrivals, the rest are survivors sliding down to fill
-   *     holes. Pair with `computeDropOffsets` (or just walk `winnerRows`
+   *     holes. Pair with `computeDropOffsets` (or just walk `winnerCells`
    *     yourself) if you need to decorate only new arrivals.
    */
   'cascade:place:end': [info: {
     reelIndex: number;
     placedSymbols: readonly ReelSymbol[];
     isInitial: boolean;
-    winnerRows: readonly number[];
+    winnerCells: readonly number[];
   }];
   /** Tumble cascade: this reel's drop-in animation just started. */
   'cascade:dropIn:start': [info: { reelIndex: number }];
   /**
    * Tumble cascade: about to animate one symbol's drop-in. Same contract as
    * `cascade:fall:symbol`. fires right BEFORE the tween, listeners may
-   * start parallel tweens. `offsetRows` is the number of cells this symbol
+   * start parallel tweens. `offsetCells` is the number of cells this symbol
    * will traverse (1 for top-row refills, more for survivors sliding past
    * larger holes).
    *
@@ -212,10 +212,10 @@ export interface ReelSetEvents extends Record<string, unknown[]> {
     symbol: ReelSymbol;
     view: Container;
     reelIndex: number;
-    rowIndex: number;
+    cellIndex: number;
     duration: number;
     ease: string;
-    offsetRows: number;
+    offsetCells: number;
     signal: AbortSignal;
   }];
   /** Tumble cascade: this reel's drop-in animation finished. */
@@ -235,7 +235,7 @@ export interface ReelSetEvents extends Record<string, unknown[]> {
   /**
    * Tumble cascade. two-stage refill only: about to animate one survivor
    * sliding down. Same contract as `cascade:dropIn:symbol` but scoped to
-   * survivors (no new symbols). `offsetRows` is how many cells this
+   * survivors (no new symbols). `offsetCells` is how many cells this
    * survivor will slide down.
    *
    * Reels where no survivor moves (e.g. all winners landed at the top of
@@ -246,10 +246,10 @@ export interface ReelSetEvents extends Record<string, unknown[]> {
     symbol: ReelSymbol;
     view: Container;
     reelIndex: number;
-    rowIndex: number;
+    cellIndex: number;
     duration: number;
     ease: string;
-    offsetRows: number;
+    offsetCells: number;
     signal: AbortSignal;
   }];
   /**

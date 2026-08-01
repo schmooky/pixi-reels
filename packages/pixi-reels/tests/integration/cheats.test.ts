@@ -17,7 +17,7 @@ const SYMBOLS = ['a', 'b', 'c', 'scatter', 'wild', 'coin'];
 function makeEngine(seed = 1) {
   return new CheatEngine({
     reelCount: 5,
-    visibleRows: 3,
+    visibleCells: 3,
     symbolIds: SYMBOLS,
     seed,
   });

@@ -26,7 +26,7 @@ const SYMBOLS = ['a', 'b', 'c'];
 function makeHarness() {
   return createTestReelSet({
     reels: 3,
-    visibleRows: 3,
+    visibleCells: 3,
     symbolIds: SYMBOLS,
   });
 }

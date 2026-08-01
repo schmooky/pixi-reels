@@ -167,7 +167,7 @@ function buildReelSet(app: Application, textures: Record<string, Texture>): Reel
   }
   return new ReelSetBuilder()
     .reels(REEL_COUNT)
-    .visibleRows(VISIBLE_ROWS)
+    .visibleCells(VISIBLE_ROWS)
     .symbolSize(SYMBOL_SIZE, SYMBOL_SIZE)
     .symbolGap(SYMBOL_GAP, SYMBOL_GAP)
     .symbols((r) => {
@@ -191,27 +191,27 @@ function buildReelSet(app: Application, textures: Record<string, Texture>): Reel
       ...SpeedPresets.TURBO,
       stopDelay: 80,
       tumble: {
-        fall:   { duration: 140, rowStagger: 20 },
-        dropIn: { duration: 220, rowStagger: 20 },
+        fall:   { duration: 140, cellStagger: 20 },
+        dropIn: { duration: 220, cellStagger: 20 },
       },
     })
     .speed('superTurbo', {
       ...SpeedPresets.SUPER_TURBO,
       stopDelay: 0,
       tumble: {
-        fall:   { duration: 60, rowStagger: 0 },
-        dropIn: { duration: 80, rowStagger: 0 },
+        fall:   { duration: 60, cellStagger: 0 },
+        dropIn: { duration: 80, cellStagger: 0 },
       },
     })
     .tumble({
       // Fall: per-reel left-to-right stagger from speed.spinDelay, plus
-      // in-reel bottom-to-top from rowOrder default. gives the canonical
+      // in-reel bottom-to-top from cellOrder default. gives the canonical
       // "bottom-left falls first, top-right last" cascading exit.
-      fall:   { duration: 280, ease: 'sine.in', rowStagger: 50 },
+      fall:   { duration: 280, ease: 'sine.in', cellStagger: 50 },
       // Drop-in: 'perHole' gravity is the production default. Each
       // symbol falls exactly the distance its hole demands; survivors
       // that didn't move skip the tween entirely.
-      dropIn: { duration: 480, ease: 'back.out(1.6)', rowStagger: 50, distance: 'perHole' },
+      dropIn: { duration: 480, ease: 'back.out(1.6)', cellStagger: 50, distance: 'perHole' },
     })
     .ticker(app.ticker)
     .build();
@@ -431,7 +431,7 @@ async function main(): Promise<void> {
     // ─── MOMENT A: fall, wait, drop in ─────────────────────
     //
     // Initial drop reveals left-to-right (per-reel stagger). Combined
-    // with the per-reel bottom-to-top from rowOrder default, this
+    // with the per-reel bottom-to-top from cellOrder default, this
     // gives the canonical "bottom-left first, top-right last" reveal.
     reelSet.setDropOrder('ltr');
     const spinDone = reelSet.spin();

@@ -14,15 +14,15 @@ function buildTumbleHarness(initialFrame: string[][]) {
   const ticker = new FakeTicker();
   const reelSet = new ReelSetBuilder()
     .reels(initialFrame.length)
-    .visibleRows(initialFrame[0].length)
+    .visibleCells(initialFrame[0].length)
     .symbolSize(50, 50)
     .symbols((r) => {
       for (const id of ['a', 'b', 'c', 'd']) r.register(id, HeadlessSymbol, {});
     })
     .weights({ a: 1, b: 1, c: 1, d: 1 })
     .tumble({
-      fall:   { duration: 0, ease: 'none', rowStagger: 0 },
-      dropIn: { duration: 0, ease: 'none', rowStagger: 0, distance: 'perHole' },
+      fall:   { duration: 0, ease: 'none', cellStagger: 0 },
+      dropIn: { duration: 0, ease: 'none', cellStagger: 0, distance: 'perHole' },
     })
     .initialFrame(initialFrame.map((visible) => ({ visible })))
     .ticker(ticker as unknown as Ticker)
@@ -215,7 +215,7 @@ describe('ReelSet.refill. input validation', () => {
 // -- skip() pre-setResult guard -------------------------------------------
 describe('ReelSet.skip. pre-setResult guard', () => {
   it('throws if called in standard mode before setResult', async () => {
-    const h = createTestReelSet({ reels: 2, visibleRows: 2, symbolIds: ['a'] });
+    const h = createTestReelSet({ reels: 2, visibleCells: 2, symbolIds: ['a'] });
     const promise = h.reelSet.spin();
     expect(() => h.reelSet.skipSpin()).toThrow(/skip\(\) called before setResult/);
     // Recovery: result + slamStop ends the spin cleanly.
@@ -239,7 +239,7 @@ describe('ReelSet.skip. pre-setResult guard', () => {
   });
 
   it('still works the moment setResult arrives', async () => {
-    const h = createTestReelSet({ reels: 2, visibleRows: 2, symbolIds: ['a'] });
+    const h = createTestReelSet({ reels: 2, visibleCells: 2, symbolIds: ['a'] });
     const promise = h.reelSet.spin();
     h.reelSet.setResult([{ visible: ['a', 'a'] }, { visible: ['a', 'a'] }]);
     expect(() => h.reelSet.skipSpin()).not.toThrow();
@@ -251,8 +251,8 @@ describe('ReelSet.skip. pre-setResult guard', () => {
 // -- distance: 'auto' falls back to per-hole for survivors ----------------
 describe('CascadeDropInPhase. distance: auto fallback for survivors', () => {
   it('survivors slide from their old row, not from above the viewport (distance: auto, Moment B)', async () => {
-    // The bug: with `distance: 'auto'`, a survivor (originalRow >= 0) was
-    // teleported to `finalY - visibleRows * cellHeight` (above the viewport)
+    // The bug: with `distance: 'auto'`, a survivor (originalCell >= 0) was
+    // teleported to `finalY - visibleCells * cellHeight` (above the viewport)
     // before being dropped. visible discontinuity. The fix: fall back to
     // perHole geometry for survivors in non-initial mode.
     //
@@ -270,20 +270,20 @@ describe('CascadeDropInPhase. distance: auto fallback for survivors', () => {
     const localBus = new EventEmitter<import('../../src/events/ReelEvents.js').ReelSetEvents>();
 
     const reel = reelSet.getReel(0);
-    const cellHeight = reel.motion.slotHeight;
+    const cellHeight = reel.motion.slotPitch;
 
     const phase = new CascadeDropInPhase(reel, SpeedPresets.NORMAL, {
       duration: 1000,        // non-zero so the snap-and-finish early-return doesn't kick in
       ease: 'none',
-      rowStagger: 0,
-      rowOrder: 'topToBottom',
+      cellStagger: 0,
+      cellOrder: 'startFirst',
       distance: 'auto',
     });
 
     // Kick off but don't await. we want to read view.y right after the
     // synchronous onEnter runs.
     void phase.run({
-      winnerRows: [2],   // bottom row destroyed -> row 0 = new, rows 1,2 = survivors from 0,1
+      winnerCells: [2],   // bottom row destroyed -> row 0 = new, rows 1,2 = survivors from 0,1
       initial: false,
       events: localBus,
     });
@@ -292,7 +292,7 @@ describe('CascadeDropInPhase. distance: auto fallback for survivors', () => {
     // (NOT auto's `finalY - 3*cellHeight = -2*cellHeight`).
     // Survivor row 2 originated from old row 1 -> perHole startY = cellHeight
     // (NOT auto's `finalY - 3*cellHeight = -cellHeight`).
-    // New row 0 (originalRow < 0) still uses auto: `finalY - 3*cellHeight = -3*cellHeight`.
+    // New row 0 (originalCell < 0) still uses auto: `finalY - 3*cellHeight = -3*cellHeight`.
     expect(reel.getSymbolAt(1).view.y).toBe(0);              // perHole for survivor
     expect(reel.getSymbolAt(2).view.y).toBe(cellHeight);     // perHole for survivor
     expect(reel.getSymbolAt(0).view.y).toBe(-3 * cellHeight); // auto for new symbol
@@ -309,12 +309,12 @@ describe('CascadeDropInPhase. distance: auto fallback for survivors', () => {
       ['a', 'b', 'c'],
     ]);
 
-    // The initial path uses 'auto' for every row regardless of originalRow.
+    // The initial path uses 'auto' for every row regardless of originalCell.
     // We test this indirectly via computeDropOffsets. on initial drop with
-    // empty winners, every row is treated as new (originalRow < 0). The
+    // empty winners, every row is treated as new (originalCell < 0). The
     // 'auto' branch fires for all of them, not the perHole fallback.
     const offsets = computeDropOffsets(3, [], { initial: true });
-    expect(offsets.every((o) => o.originalRow < 0)).toBe(true);
+    expect(offsets.every((o) => o.originalCell < 0)).toBe(true);
     destroy();
   });
 });
@@ -322,7 +322,7 @@ describe('CascadeDropInPhase. distance: auto fallback for survivors', () => {
 // -- manual setSpeed clears the boost-restore intent ----------------------
 describe('ReelSet.skip. manual setSpeed survives restore', () => {
   it('does NOT restore pre-boost speed when user manually re-set to boosted name', async () => {
-    const h = createTestReelSet({ reels: 2, visibleRows: 2, symbolIds: ['a'] });
+    const h = createTestReelSet({ reels: 2, visibleCells: 2, symbolIds: ['a'] });
     h.reelSet.speed.addProfile('superTurbo', SpeedPresets.SUPER_TURBO);
 
     // Round 1: skip boost from normal -> superTurbo.
@@ -349,7 +349,7 @@ describe('ReelSet.skip. manual setSpeed survives restore', () => {
   });
 
   it('still restores when the user did NOT touch setSpeed between rounds', async () => {
-    const h = createTestReelSet({ reels: 2, visibleRows: 2, symbolIds: ['a'] });
+    const h = createTestReelSet({ reels: 2, visibleCells: 2, symbolIds: ['a'] });
     h.reelSet.speed.addProfile('superTurbo', SpeedPresets.SUPER_TURBO);
 
     const first = h.reelSet.spin();

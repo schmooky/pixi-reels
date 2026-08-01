@@ -14,7 +14,7 @@ const SYMBOLS = ['a', 'b', 'wild'];
 function makeHarness() {
   return createTestReelSet({
     reels: 3,
-    visibleRows: 3,
+    visibleCells: 3,
     symbolIds: SYMBOLS,
     symbolData: {
       wild: { zIndex: 5 },
@@ -54,7 +54,7 @@ describe('Reel.setSymbolAt', () => {
 
       reel.setSymbolAt(0, 'wild');
 
-      expect(fn).toHaveBeenCalledWith('wild', reel.bufferAbove + 0);
+      expect(fn).toHaveBeenCalledWith('wild', reel.bufferStart + 0);
     } finally {
       h.destroy();
     }

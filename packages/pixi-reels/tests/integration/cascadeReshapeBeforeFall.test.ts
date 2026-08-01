@@ -9,7 +9,7 @@
  * Fix: when the target shape is known at spin time (`setShape()` called BEFORE
  * `spin({ mode: 'cascade' })`), the reshape commits BEFORE the fall, so the fall
  * drops the reel at its target height. This test asserts the reel is already at
- * its target `visibleRows` by `cascade:fall:start`.
+ * its target `visibleCells` by `cascade:fall:start`.
  */
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { ReelSetBuilder } from '../../src/core/ReelSetBuilder.js';
@@ -46,25 +46,25 @@ function build() {
     .weights({ a: 1, b: 1, c: 1 })
     .speed('normal', { ...SpeedPresets.NORMAL, spinDelay: 0, accelerationDuration: 0 })
     .tumble({
-      fall: { duration: 200, ease: 'power2.in', rowStagger: 0 },
-      dropIn: { duration: 200, ease: 'power2.in', rowStagger: 0, distance: 'auto' },
+      fall: { duration: 200, ease: 'power2.in', cellStagger: 0 },
+      dropIn: { duration: 200, ease: 'power2.in', cellStagger: 0, distance: 'auto' },
     })
     .ticker(ticker as unknown as Ticker)
     .build();
 }
 
 describe('cascade reshape-before-fall (setShape before spin)', () => {
-  it('each reel is already at its target visibleRows by cascade:fall:start', async () => {
+  it('each reel is already at its target visibleCells by cascade:fall:start', async () => {
     const reelSet = build();
     try {
       // MultiWays builds at maxRows (5). Commit a NEW, smaller jagged shape
       // BEFORE the cascade spin so the reshape is known at spin time.
       const target = [2, 3, 4, 3, 2];
-      expect(reelSet.reels.map((r) => r.visibleRows)).toEqual([5, 5, 5, 5, 5]);
+      expect(reelSet.reels.map((r) => r.visibleCells)).toEqual([5, 5, 5, 5, 5]);
 
       const rowsAtFallStart: Record<number, number> = {};
       reelSet.events.on('cascade:fall:start', (info: any) => {
-        rowsAtFallStart[info.reelIndex] = reelSet.reels[info.reelIndex].visibleRows;
+        rowsAtFallStart[info.reelIndex] = reelSet.reels[info.reelIndex].visibleCells;
       });
 
       reelSet.setShape(target);              // BEFORE spin - the fix's precondition
@@ -91,7 +91,7 @@ describe('cascade reshape-before-fall (setShape before spin)', () => {
       const target = [2, 3, 4, 3, 2];
       const rowsAtFallStart: Record<number, number> = {};
       reelSet.events.on('cascade:fall:start', (info: any) => {
-        rowsAtFallStart[info.reelIndex] = reelSet.reels[info.reelIndex].visibleRows;
+        rowsAtFallStart[info.reelIndex] = reelSet.reels[info.reelIndex].visibleCells;
       });
 
       // Shape arrives AFTER the spin - the fall runs on the old (maxRows) shape.

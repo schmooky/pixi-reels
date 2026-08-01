@@ -11,8 +11,8 @@ import {
 describe('getTargetSlot', () => {
   const target: ColumnTarget = {
     visible: ['a', 'b', 'c'],
-    bufferAbove: ['above1', 'above2'],
-    bufferBelow: ['below1', 'below2'],
+    bufferStart: ['above1', 'above2'],
+    bufferEnd: ['below1', 'below2'],
   };
 
   it('reads visible rows at non-negative indices', () => {
@@ -20,12 +20,12 @@ describe('getTargetSlot', () => {
     expect(getTargetSlot(target, 2)).toBe('c');
   });
 
-  it('reads bufferAbove at negative rows, closest cell at -1', () => {
+  it('reads bufferStart at negative rows, closest cell at -1', () => {
     expect(getTargetSlot(target, -1)).toBe('above1');
     expect(getTargetSlot(target, -2)).toBe('above2');
   });
 
-  it('reads bufferBelow at rows past visible.length', () => {
+  it('reads bufferEnd at rows past visible.length', () => {
     expect(getTargetSlot(target, 3)).toBe('below1');
     expect(getTargetSlot(target, 4)).toBe('below2');
   });
@@ -45,18 +45,18 @@ describe('setTargetSlot', () => {
     expect(t.visible).toEqual(['a', 'X']);
   });
 
-  it('creates bufferAbove on demand for negative rows', () => {
+  it('creates bufferStart on demand for negative rows', () => {
     const t: ColumnTarget = { visible: ['a', 'b'] };
     setTargetSlot(t, -2, 'X');
     expect(getTargetSlot(t, -2)).toBe('X');
-    expect(t.bufferAbove?.[1]).toBe('X');
+    expect(t.bufferStart?.[1]).toBe('X');
   });
 
-  it('creates bufferBelow on demand for rows past the visible window', () => {
+  it('creates bufferEnd on demand for rows past the visible window', () => {
     const t: ColumnTarget = { visible: ['a', 'b'] };
     setTargetSlot(t, 3, 'X');
     expect(getTargetSlot(t, 3)).toBe('X');
-    expect(t.bufferBelow?.[1]).toBe('X');
+    expect(t.bufferEnd?.[1]).toBe('X');
   });
 });
 
@@ -66,25 +66,25 @@ describe('columnTargetToStrip', () => {
     expect(strip).toEqual([undefined, 'a', 'b', 'c']);
   });
 
-  it('orders bufferAbove furthest-cell-first', () => {
+  it('orders bufferStart furthest-cell-first', () => {
     const strip = columnTargetToStrip(
-      { visible: ['a', 'b', 'c'], bufferAbove: ['above1', 'above2'] },
+      { visible: ['a', 'b', 'c'], bufferStart: ['above1', 'above2'] },
       2,
     );
     expect(strip).toEqual(['above2', 'above1', 'a', 'b', 'c']);
   });
 
-  it('appends bufferBelow after the visible window', () => {
+  it('appends bufferEnd after the visible window', () => {
     const strip = columnTargetToStrip(
-      { visible: ['a', 'b'], bufferBelow: ['below1'] },
+      { visible: ['a', 'b'], bufferEnd: ['below1'] },
       1,
     );
     expect(strip).toEqual([undefined, 'a', 'b', 'below1']);
   });
 
-  it('drops bufferAbove entries past the reel capacity', () => {
+  it('drops bufferStart entries past the reel capacity', () => {
     const strip = columnTargetToStrip(
-      { visible: ['a'], bufferAbove: ['above1', 'above2'] },
+      { visible: ['a'], bufferStart: ['above1', 'above2'] },
       1,
     );
     expect(strip).toEqual(['above1', 'a']);
@@ -92,7 +92,7 @@ describe('columnTargetToStrip', () => {
 
   it('preserves holes so the caller can random-fill them', () => {
     const strip = columnTargetToStrip(
-      { visible: ['a', 'b'], bufferBelow: [undefined, 'below2'] },
+      { visible: ['a', 'b'], bufferEnd: [undefined, 'below2'] },
       0,
     );
     expect(strip).toEqual(['a', 'b', undefined, 'below2']);
@@ -103,22 +103,22 @@ describe('cloneColumnTarget', () => {
   it('copies buffers so slot writes do not reach the original', () => {
     const original: ColumnTarget = {
       visible: ['a'],
-      bufferAbove: ['above1'],
-      bufferBelow: ['below1'],
+      bufferStart: ['above1'],
+      bufferEnd: ['below1'],
     };
     const copy = cloneColumnTarget(original);
     setTargetSlot(copy, 0, 'X');
     setTargetSlot(copy, -1, 'Y');
     setTargetSlot(copy, 1, 'Z');
     expect(original.visible).toEqual(['a']);
-    expect(original.bufferAbove).toEqual(['above1']);
-    expect(original.bufferBelow).toEqual(['below1']);
+    expect(original.bufferStart).toEqual(['above1']);
+    expect(original.bufferEnd).toEqual(['below1']);
   });
 
   it('leaves absent buffers absent', () => {
     const copy = cloneColumnTarget({ visible: ['a'] });
-    expect(copy.bufferAbove).toBeUndefined();
-    expect(copy.bufferBelow).toBeUndefined();
+    expect(copy.bufferStart).toBeUndefined();
+    expect(copy.bufferEnd).toBeUndefined();
   });
 });
 
@@ -129,51 +129,51 @@ describe('assertBufferCountsInRange', () => {
   it('passes when all columns are within bounds', () => {
     const grid: ColumnTarget[] = [
       { visible: ['a', 'b', 'c'] },
-      { visible: ['a', 'b', 'c'], bufferAbove: ['X'] },
-      { visible: ['a', 'b', 'c'], bufferBelow: ['Y'] },
+      { visible: ['a', 'b', 'c'], bufferStart: ['X'] },
+      { visible: ['a', 'b', 'c'], bufferEnd: ['Y'] },
     ];
     expect(() =>
       assertBufferCountsInRange(grid, aboveOne, belowOne, 'setResult'),
     ).not.toThrow();
   });
 
-  it('throws when bufferAbove length exceeds engine count', () => {
+  it('throws when bufferStart length exceeds engine count', () => {
     const grid: ColumnTarget[] = [
       { visible: ['a', 'b', 'c'] },
-      { visible: ['a', 'b', 'c'], bufferAbove: ['X', 'Y'] },
+      { visible: ['a', 'b', 'c'], bufferStart: ['X', 'Y'] },
       { visible: ['a', 'b', 'c'] },
     ];
     expect(() =>
       assertBufferCountsInRange(grid, aboveOne, belowOne, 'setResult'),
-    ).toThrowError(/setResult column 1: bufferAbove has a symbol at index 1, beyond engine bufferSymbols=1/);
+    ).toThrowError(/setResult column 1: bufferStart has a symbol at index 1, beyond engine bufferSymbols=1/);
   });
 
-  it('throws when bufferBelow length exceeds engine count', () => {
+  it('throws when bufferEnd length exceeds engine count', () => {
     const grid: ColumnTarget[] = [
       { visible: ['a', 'b', 'c'] },
-      { visible: ['a', 'b', 'c'], bufferBelow: ['X', 'Y'] },
+      { visible: ['a', 'b', 'c'], bufferEnd: ['X', 'Y'] },
       { visible: ['a', 'b', 'c'] },
     ];
     expect(() =>
       assertBufferCountsInRange(grid, aboveOne, belowOne, 'setResult'),
-    ).toThrowError(/setResult column 1: bufferBelow has a symbol at index 1, beyond engine bufferSymbols=1/);
+    ).toThrowError(/setResult column 1: bufferEnd has a symbol at index 1, beyond engine bufferSymbols=1/);
   });
 
   it('uses the supplied callerLabel in the message', () => {
-    const grid: ColumnTarget[] = [{ visible: ['a'], bufferAbove: ['X', 'Y'] }];
+    const grid: ColumnTarget[] = [{ visible: ['a'], bufferStart: ['X', 'Y'] }];
     expect(() =>
       assertBufferCountsInRange(grid, [1], [1], 'initialFrame'),
-    ).toThrowError(/^initialFrame column 0: bufferAbove/);
+    ).toThrowError(/^initialFrame column 0: bufferStart/);
   });
 
   it('handles per-reel buffer counts that vary by index', () => {
     const grid: ColumnTarget[] = [
-      { visible: ['a', 'b', 'c'], bufferAbove: ['X', 'Y'] },
-      { visible: ['a', 'b', 'c'], bufferAbove: ['X', 'Y'] },
+      { visible: ['a', 'b', 'c'], bufferStart: ['X', 'Y'] },
+      { visible: ['a', 'b', 'c'], bufferStart: ['X', 'Y'] },
     ];
     expect(() =>
       assertBufferCountsInRange(grid, [2, 1], [1, 1], 'setResult'),
-    ).toThrowError(/setResult column 1: bufferAbove has a symbol at index 1, beyond engine bufferSymbols=1/);
+    ).toThrowError(/setResult column 1: bufferStart has a symbol at index 1, beyond engine bufferSymbols=1/);
   });
 
   it('no-op for empty grid', () => {
@@ -183,7 +183,7 @@ describe('assertBufferCountsInRange', () => {
   it('counts the highest DEFINED index, not raw length (sparse array passes) [M9]', () => {
     // length 3 but only index 0 is defined -> a single entry materializes.
     const grid: ColumnTarget[] = [
-      { visible: ['a', 'b', 'c'], bufferAbove: ['X', undefined, undefined] },
+      { visible: ['a', 'b', 'c'], bufferStart: ['X', undefined, undefined] },
     ];
     expect(() => assertBufferCountsInRange(grid, [1], [1], 'setResult')).not.toThrow();
   });
@@ -191,10 +191,10 @@ describe('assertBufferCountsInRange', () => {
   it('still throws when a defined entry sits beyond the buffer range (sparse) [M9]', () => {
     // ['X', undefined, 'Y'] with bufferSymbols=2 -> 'Y' at index 2 would be dropped.
     const grid: ColumnTarget[] = [
-      { visible: ['a'], bufferAbove: ['X', undefined, 'Y'] },
+      { visible: ['a'], bufferStart: ['X', undefined, 'Y'] },
     ];
     expect(() =>
       assertBufferCountsInRange(grid, [2], [2], 'setResult'),
-    ).toThrowError(/bufferAbove has a symbol at index 2, beyond engine bufferSymbols=2/);
+    ).toThrowError(/bufferStart has a symbol at index 2, beyond engine bufferSymbols=2/);
   });
 });

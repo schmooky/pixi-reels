@@ -11,7 +11,7 @@ export interface CascadePlacePhaseConfig {
   targetFrame: string[];
   /** Visible rows whose old symbols were "winners" cleared since the last
    *  placement. Empty AND `initial: false` ⇒ no movement on this reel. */
-  winnerRows: number[];
+  winnerCells: number[];
   /** `true` for Moment A (initial spin); `false` for Moment B (refill). */
   initial: boolean;
   /** Per-reel delay before placement, in ms. */
@@ -58,7 +58,7 @@ export class CascadePlacePhase extends ReelPhase<CascadePlacePhaseConfig> {
    * anchor.
    */
   private _placement(targetFrame: string[]): string[] {
-    return targetFrame.slice(0, this._reel.bufferAbove + this._reel.visibleRows);
+    return targetFrame.slice(0, this._reel.bufferStart + this._reel.visibleCells);
   }
 
   private _doPlace(): void {
@@ -87,14 +87,14 @@ export class CascadePlacePhase extends ReelPhase<CascadePlacePhaseConfig> {
     reel.snapToGrid();
     reel.notifySpinEnd();
 
-    // Visibility split: SURVIVORS (offsetRows === 0) become visible
+    // Visibility split: SURVIVORS (offsetCells === 0) become visible
     // immediately at grid Y; MOVERS stay at alpha=0 so they don't flash
     // at grid Y for a frame between PlacePhase and CascadeDropInPhase
     // moving them above the viewport. The DropIn phase reveals movers
     // AFTER repositioning view.y, which produces a flash-free drop-in.
     const offsets = computeDropOffsets(
-      reel.visibleRows,
-      this._config.winnerRows,
+      reel.visibleCells,
+      this._config.winnerCells,
       { initial: this._config.initial },
     );
     // Big symbols: every occupied cell of a block resolves to the SAME anchor
@@ -112,7 +112,7 @@ export class CascadePlacePhase extends ReelPhase<CascadePlacePhaseConfig> {
       handledAnchors.add(anchorRow);
       const sym = reel.getSymbolAt(off.row);
       sym.view.visible = true;
-      sym.view.alpha = off.offsetRows === 0 ? 1 : 0;
+      sym.view.alpha = off.offsetCells === 0 ? 1 : 0;
       placedSymbols.push(sym);
     }
 
@@ -120,7 +120,7 @@ export class CascadePlacePhase extends ReelPhase<CascadePlacePhaseConfig> {
       reelIndex: reel.reelIndex,
       placedSymbols,
       isInitial: this._config.initial,
-      winnerRows: this._config.winnerRows,
+      winnerCells: this._config.winnerCells,
     });
 
     this._complete();
@@ -139,7 +139,7 @@ export class CascadePlacePhase extends ReelPhase<CascadePlacePhaseConfig> {
     if (this._config) {
       const reel = this._reel;
       reel.placeStrip(this._placement(this._config.targetFrame));
-      for (let row = 0; row < reel.visibleRows; row++) {
+      for (let row = 0; row < reel.visibleCells; row++) {
         const view = reel.getSymbolAt(row).view;
         view.alpha = 1;
         view.visible = true;

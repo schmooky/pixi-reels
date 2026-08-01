@@ -15,7 +15,7 @@ const GRID = [
 
 describe('spin() watchdog / AbortSignal (C2)', () => {
   it('rejects with the caller error when the signal aborts before setResult', async () => {
-    const h = createTestReelSet({ reels: 3, visibleRows: 3, symbolIds: SYMBOLS });
+    const h = createTestReelSet({ reels: 3, visibleCells: 3, symbolIds: SYMBOLS });
     try {
       const controller = new AbortController();
       const p = h.reelSet.spin({ signal: controller.signal });
@@ -32,7 +32,7 @@ describe('spin() watchdog / AbortSignal (C2)', () => {
   });
 
   it('rejects immediately when the signal is already aborted', async () => {
-    const h = createTestReelSet({ reels: 3, visibleRows: 3, symbolIds: SYMBOLS });
+    const h = createTestReelSet({ reels: 3, visibleCells: 3, symbolIds: SYMBOLS });
     try {
       const controller = new AbortController();
       controller.abort();
@@ -47,7 +47,7 @@ describe('spin() watchdog / AbortSignal (C2)', () => {
 
   it('rejects when the timeout watchdog fires without a result', async () => {
     vi.useFakeTimers();
-    const h = createTestReelSet({ reels: 3, visibleRows: 3, symbolIds: SYMBOLS });
+    const h = createTestReelSet({ reels: 3, visibleCells: 3, symbolIds: SYMBOLS });
     try {
       const p = h.reelSet.spin({ timeoutMs: 5000 });
       const settled = expect(p).rejects.toThrow(/watchdog/);
@@ -61,7 +61,7 @@ describe('spin() watchdog / AbortSignal (C2)', () => {
 
   it('clears the watchdog when the spin lands before the timeout', async () => {
     vi.useFakeTimers();
-    const h = createTestReelSet({ reels: 3, visibleRows: 3, symbolIds: SYMBOLS });
+    const h = createTestReelSet({ reels: 3, visibleCells: 3, symbolIds: SYMBOLS });
     try {
       const p = h.reelSet.spin({ timeoutMs: 5000 });
       h.reelSet.setResult(GRID.map((visible) => ({ visible })));

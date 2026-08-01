@@ -2,7 +2,7 @@
  * getCellBounds - coordinate utility tests.
  *
  * The method is pure-geometric: it derives bounds from the reel's stored
- * position and ReelMotion.slotHeight. No ticker needed, no spin needed -
+ * position and ReelMotion.slotPitch. No ticker needed, no spin needed -
  * just assert the math.
  */
 import { describe, it, expect } from 'vitest';
@@ -11,7 +11,7 @@ import { createTestReelSet } from '../../src/testing/index.js';
 describe('getCellBounds — default gap (0)', () => {
   it('returns the top-left cell at origin', () => {
     const h = createTestReelSet({
-      reels: 5, visibleRows: 3,
+      reels: 5, visibleCells: 3,
       symbolIds: ['a'],
       symbolSize: { width: 100, height: 100 },
     });
@@ -26,7 +26,7 @@ describe('getCellBounds — default gap (0)', () => {
 
   it('spaces columns by symbolWidth with zero gap', () => {
     const h = createTestReelSet({
-      reels: 5, visibleRows: 3,
+      reels: 5, visibleCells: 3,
       symbolIds: ['a'],
       symbolSize: { width: 120, height: 80 },
     });
@@ -40,7 +40,7 @@ describe('getCellBounds — default gap (0)', () => {
 
   it('stacks rows by symbolHeight with zero gap', () => {
     const h = createTestReelSet({
-      reels: 5, visibleRows: 3,
+      reels: 5, visibleCells: 3,
       symbolIds: ['a'],
       symbolSize: { width: 100, height: 100 },
     });
@@ -56,7 +56,7 @@ describe('getCellBounds — default gap (0)', () => {
 describe('getCellBounds — non-zero gap', () => {
   it('adds gapX between columns', () => {
     const h = createTestReelSet({
-      reels: 5, visibleRows: 3,
+      reels: 5, visibleCells: 3,
       symbolIds: ['a'],
       symbolSize: { width: 100, height: 100 },
       symbolGap: { x: 10, y: 0 },
@@ -72,7 +72,7 @@ describe('getCellBounds — non-zero gap', () => {
 
   it('adds gapY between rows', () => {
     const h = createTestReelSet({
-      reels: 5, visibleRows: 3,
+      reels: 5, visibleCells: 3,
       symbolIds: ['a'],
       symbolSize: { width: 100, height: 100 },
       symbolGap: { x: 0, y: 8 },
@@ -90,7 +90,7 @@ describe('getCellBounds — non-zero gap', () => {
 describe('getCellBounds — non-square symbols', () => {
   it('returns the correct width/height for rectangular cells', () => {
     const h = createTestReelSet({
-      reels: 4, visibleRows: 2,
+      reels: 4, visibleCells: 2,
       symbolIds: ['a'],
       symbolSize: { width: 160, height: 90 },
     });
@@ -108,7 +108,7 @@ describe('getCellBounds — non-square symbols', () => {
 
 describe('getCellBounds — errors', () => {
   it('throws when col is negative', () => {
-    const h = createTestReelSet({ reels: 5, visibleRows: 3, symbolIds: ['a'] });
+    const h = createTestReelSet({ reels: 5, visibleCells: 3, symbolIds: ['a'] });
     try {
       expect(() => h.reelSet.getCellBounds(-1, 0)).toThrow(RangeError);
     } finally {
@@ -117,7 +117,7 @@ describe('getCellBounds — errors', () => {
   });
 
   it('throws when col is out of range', () => {
-    const h = createTestReelSet({ reels: 5, visibleRows: 3, symbolIds: ['a'] });
+    const h = createTestReelSet({ reels: 5, visibleCells: 3, symbolIds: ['a'] });
     try {
       expect(() => h.reelSet.getCellBounds(5, 0)).toThrow(/col 5 out of range/);
     } finally {
@@ -126,7 +126,7 @@ describe('getCellBounds — errors', () => {
   });
 
   it('throws when row is negative', () => {
-    const h = createTestReelSet({ reels: 5, visibleRows: 3, symbolIds: ['a'] });
+    const h = createTestReelSet({ reels: 5, visibleCells: 3, symbolIds: ['a'] });
     try {
       expect(() => h.reelSet.getCellBounds(0, -1)).toThrow(RangeError);
     } finally {
@@ -135,7 +135,7 @@ describe('getCellBounds — errors', () => {
   });
 
   it('throws when row is out of range', () => {
-    const h = createTestReelSet({ reels: 5, visibleRows: 3, symbolIds: ['a'] });
+    const h = createTestReelSet({ reels: 5, visibleCells: 3, symbolIds: ['a'] });
     try {
       expect(() => h.reelSet.getCellBounds(0, 3)).toThrow(/row 3 out of range/);
     } finally {
@@ -147,7 +147,7 @@ describe('getCellBounds — errors', () => {
 describe('getCellBounds — relationship to payline drawing', () => {
   it('centre of a cell equals x + width/2, y + height/2', () => {
     const h = createTestReelSet({
-      reels: 5, visibleRows: 3,
+      reels: 5, visibleCells: 3,
       symbolIds: ['a'],
       symbolSize: { width: 90, height: 90 },
       symbolGap: { x: 4, y: 4 },
@@ -167,7 +167,7 @@ describe('getCellBounds — relationship to payline drawing', () => {
   });
 
   it('returns fresh objects (safe to mutate)', () => {
-    const h = createTestReelSet({ reels: 5, visibleRows: 3, symbolIds: ['a'] });
+    const h = createTestReelSet({ reels: 5, visibleCells: 3, symbolIds: ['a'] });
     try {
       const a = h.reelSet.getCellBounds(2, 1);
       const b = h.reelSet.getCellBounds(2, 1);

@@ -17,11 +17,11 @@ export class OffsetCalculator {
   }
 
   /** Get X offset for a specific reel and row. */
-  getOffset(reelIndex: number, rowIndex: number): number {
-    return this._offsets[reelIndex]?.[rowIndex] ?? 0;
+  getOffset(reelIndex: number, cellIndex: number): number {
+    return this._offsets[reelIndex]?.[cellIndex] ?? 0;
   }
 
-  /** Get all offsets as a 2D array [reelIndex][rowIndex]. */
+  /** Get all offsets as a 2D array [reelIndex][cellIndex]. */
   get offsets(): readonly (readonly number[])[] {
     return this._offsets;
   }
@@ -48,8 +48,8 @@ export class OffsetCalculator {
       const reelOffsets: number[] = [];
       for (let row = 0; row < this._totalRows; row++) {
         const rowNorm = this._totalRows > 1 ? row / (this._totalRows - 1) : 0.5;
-        const topOffset = relativePos * config.widthDifference * config.topWidthFactor;
-        const bottomOffset = relativePos * config.widthDifference * config.bottomWidthFactor;
+        const topOffset = relativePos * config.widthDifference * config.startFactor;
+        const bottomOffset = relativePos * config.widthDifference * config.endFactor;
         const offset = topOffset + (bottomOffset - topOffset) * rowNorm;
         reelOffsets.push(offset);
       }

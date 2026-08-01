@@ -8,15 +8,15 @@ import { createTestReelSet } from '../../src/testing/index.js';
 const SYMBOLS = ['a', 'b', 'c', 'coin'];
 
 describe('initialFrame buffer placement', () => {
-  it('bufferAbove[0] populates buffer-above slot 0', () => {
+  it('bufferStart[0] populates buffer-above slot 0', () => {
     const h = createTestReelSet({
       reels: 3,
-      visibleRows: 3,
+      visibleCells: 3,
       symbolIds: SYMBOLS,
       bufferSymbols: 1,
       initialFrame: [
         { visible: ['a', 'b', 'c'] },
-        { visible: ['a', 'b', 'c'], bufferAbove: ['coin'] },
+        { visible: ['a', 'b', 'c'], bufferStart: ['coin'] },
         { visible: ['a', 'b', 'c'] },
       ],
     });
@@ -31,7 +31,7 @@ describe('initialFrame buffer placement', () => {
 
   it('survives structuredClone', () => {
     const seed = [
-      { visible: ['a', 'b', 'c'], bufferAbove: ['coin'] },
+      { visible: ['a', 'b', 'c'], bufferStart: ['coin'] },
       { visible: ['a', 'b', 'c'] },
       { visible: ['a', 'b', 'c'] },
     ];
@@ -39,7 +39,7 @@ describe('initialFrame buffer placement', () => {
 
     const h = createTestReelSet({
       reels: 3,
-      visibleRows: 3,
+      visibleCells: 3,
       symbolIds: SYMBOLS,
       bufferSymbols: 1,
       initialFrame: cloned,
@@ -51,15 +51,15 @@ describe('initialFrame buffer placement', () => {
     }
   });
 
-  it('bufferBelow[0] populates the slot just below the visible area', () => {
+  it('bufferEnd[0] populates the slot just below the visible area', () => {
     const h = createTestReelSet({
       reels: 3,
-      visibleRows: 3,
+      visibleCells: 3,
       symbolIds: SYMBOLS,
       bufferSymbols: 1,
       initialFrame: [
         { visible: ['a', 'b', 'c'] },
-        { visible: ['a', 'b', 'c'], bufferBelow: ['coin'] },
+        { visible: ['a', 'b', 'c'], bufferEnd: ['coin'] },
         { visible: ['a', 'b', 'c'] },
       ],
     });

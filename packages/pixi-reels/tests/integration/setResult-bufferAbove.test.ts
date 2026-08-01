@@ -12,7 +12,7 @@ const SYMBOLS = ['a', 'b', 'c', 'wild', 'coin'];
 function makeHarness() {
   return createTestReelSet({
     reels: 3,
-    visibleRows: 3,
+    visibleCells: 3,
     symbolIds: SYMBOLS,
   });
 }
@@ -46,13 +46,13 @@ describe('setResult with ColumnTarget[]', () => {
     }
   });
 
-  it('places bufferAbove[0] in the slot closest to the visible top row', async () => {
+  it('places bufferStart[0] in the slot closest to the visible top row', async () => {
     const h = makeHarness();
     try {
       const spin = h.reelSet.spin();
       h.reelSet.setResult([
         { visible: ['a', 'b', 'c'] },
-        { visible: ['a', 'b', 'c'], bufferAbove: ['coin'] },
+        { visible: ['a', 'b', 'c'], bufferStart: ['coin'] },
         { visible: ['a', 'b', 'c'] },
       ]);
       h.reelSet.slamStop();
@@ -65,13 +65,13 @@ describe('setResult with ColumnTarget[]', () => {
     }
   });
 
-  it('places bufferBelow[0] in the slot closest to the visible bottom row', async () => {
+  it('places bufferEnd[0] in the slot closest to the visible bottom row', async () => {
     const h = makeHarness();
     try {
       const spin = h.reelSet.spin();
       h.reelSet.setResult([
         { visible: ['a', 'b', 'c'] },
-        { visible: ['a', 'b', 'c'], bufferBelow: ['wild'] },
+        { visible: ['a', 'b', 'c'], bufferEnd: ['wild'] },
         { visible: ['a', 'b', 'c'] },
       ]);
       h.reelSet.slamStop();
@@ -88,7 +88,7 @@ describe('setResult with ColumnTarget[]', () => {
     try {
       const target = [
         { visible: ['a', 'b', 'c'] },
-        { visible: ['a', 'b', 'c'], bufferAbove: ['coin'] },
+        { visible: ['a', 'b', 'c'], bufferStart: ['coin'] },
         { visible: ['a', 'b', 'c'] },
       ];
       const cloned = structuredClone(target);
@@ -104,7 +104,7 @@ describe('setResult with ColumnTarget[]', () => {
     }
   });
 
-  it('preserves bufferAbove through the pin-overlay clone path', async () => {
+  it('preserves bufferStart through the pin-overlay clone path', async () => {
     const h = makeHarness();
     try {
       h.reelSet.pin(0, 0, 'wild', { turns: 'permanent' });
@@ -113,7 +113,7 @@ describe('setResult with ColumnTarget[]', () => {
       h.reelSet.setResult([
         { visible: ['a', 'b', 'c'] },
         { visible: ['a', 'b', 'c'] },
-        { visible: ['a', 'b', 'c'], bufferAbove: ['coin'] },
+        { visible: ['a', 'b', 'c'], bufferStart: ['coin'] },
       ]);
       h.reelSet.slamStop();
       await spin;
@@ -125,10 +125,10 @@ describe('setResult with ColumnTarget[]', () => {
     }
   });
 
-  it('preserves bufferAbove through the big-symbol coordinator clone path', async () => {
+  it('preserves bufferStart through the big-symbol coordinator clone path', async () => {
     const h = createTestReelSet({
       reels: 3,
-      visibleRows: 3,
+      visibleCells: 3,
       symbolIds: [...SYMBOLS, 'big'],
       symbolData: {
         big: { size: { w: 2, h: 2 } },
@@ -139,7 +139,7 @@ describe('setResult with ColumnTarget[]', () => {
       h.reelSet.setResult([
         { visible: ['big', 'b', 'c'] },
         { visible: ['a', 'b', 'c'] },
-        { visible: ['a', 'b', 'c'], bufferAbove: ['coin'] },
+        { visible: ['a', 'b', 'c'], bufferStart: ['coin'] },
       ]);
       h.reelSet.slamStop();
       await spin;

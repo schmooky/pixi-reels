@@ -14,7 +14,7 @@ function rv() { return CARD_IDS[Math.floor(Math.random() * CARD_IDS.length)]; }
 
 const reelSet = new ReelSetBuilder()
   .reels(5)
-  .visibleRows(3)
+  .visibleCells(3)
   .symbolSize(80, 80)
   .symbolGap(4, 4)
   .bufferSymbols(1)
@@ -37,25 +37,25 @@ return {
   reelSet,
   onSpin: async () => {
     // Land result. reels 3 and 4 will anticipate.
-    // Explicit ColumnTarget form: bufferAbove on reels 3 and 4 holds the BIG
+    // Explicit ColumnTarget form: bufferStart on reels 3 and 4 holds the BIG
     // coin, so when those reels decelerate for the anticipation phase it is
     // visible at the top edge, "approaching" the visible area.
     const result = [
       { visible: [rv(), rv(), rv()] },
       { visible: [rv(), rv(), rv()] },
       { visible: [rv(), rv(), rv()] },
-      { visible: [rv(), rv(), rv()], bufferAbove: [COIN] },
-      { visible: [rv(), rv(), rv()], bufferAbove: [COIN] },
+      { visible: [rv(), rv(), rv()], bufferStart: [COIN] },
+      { visible: [rv(), rv(), rv()], bufferStart: [COIN] },
     ];
 
     const p = reelSet.spin();
     await new Promise((r) => setTimeout(r, 220));
     reelSet.setAnticipation([3, 4]);
-    // `result` is already ColumnTarget[] (it carries bufferAbove on reels
+    // `result` is already ColumnTarget[] (it carries bufferStart on reels
     // 3 and 4). Do NOT re-wrap. previous code wrote
     // `setResult(result.map((visible) => ({ visible })))` which nested each
     // ColumnTarget inside another visible-only wrapper, silently discarding
-    // bufferAbove and breaking the COIN teaser.
+    // bufferStart and breaking the COIN teaser.
     reelSet.setResult(result);
     await p;
   },

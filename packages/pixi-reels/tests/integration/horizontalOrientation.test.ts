@@ -17,7 +17,7 @@ describe('horizontal orientation', () => {
   it('a single horizontal reel (banner) spins and lands, cells along X', async () => {
     const h = createTestReelSet({
       reels: 1,
-      visibleRows: 5,
+      visibleCells: 5,
       symbolIds: ['a', 'b', 'c', 'd', 'e', 'f'],
       orientation: 'horizontal',
       symbolSize: SIZE,
@@ -44,7 +44,7 @@ describe('horizontal orientation', () => {
   });
 
   it('a vertical control with the same non-square cells marches along Y', () => {
-    const h = createTestReelSet({ reels: 1, visibleRows: 3, symbolIds: ['a', 'b'], symbolSize: SIZE });
+    const h = createTestReelSet({ reels: 1, visibleCells: 3, symbolIds: ['a', 'b'], symbolSize: SIZE });
     try {
       const c0 = h.reelSet.getCellBounds(0, 0);
       const c1 = h.reelSet.getCellBounds(0, 1);

@@ -75,7 +75,7 @@ export function buildSandbox(ctx: SandboxContext): SandboxResult {
 
   const reelSet = new ReelSetBuilder()
     .reels(REELS)
-    .visibleRows(ROWS)
+    .visibleCells(ROWS)
     .symbolSize(SYMBOL_SIZE, SYMBOL_SIZE)
     .symbolGap(GAP, GAP)
     .symbols((registry) => {
@@ -183,7 +183,7 @@ function pickWeighted(): string {
 //   });
 //
 // ── Spotlight winning symbols
-//   reelSet.spotlight.show([{ reelIndex: 0, rowIndex: 1 }, { reelIndex: 1, rowIndex: 1 }]);
+//   reelSet.spotlight.show([{ reelIndex: 0, cellIndex: 1 }, { reelIndex: 1, cellIndex: 1 }]);
 //   reelSet.spotlight.hide();
 //
 // ── Spine symbols (optional. requires @esotericsoftware/spine-pixi-v8)

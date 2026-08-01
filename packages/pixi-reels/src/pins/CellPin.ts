@@ -22,16 +22,16 @@
  * reel. Non-MultiWays slots never reshape, so this value is irrelevant
  * there.
  *
- * - **`'origin'`** (default). the pin migrates to `min(originRow, newRows - 1)`
+ * - **`'origin'`** (default). the pin migrates to `min(originCell, newRows - 1)`
  *   on every reshape. Clamps when the shape is too small; **restores to
  *   the origin** when the shape grows back. Prevents wander. a pin at
- *   `originRow=3` clamped to row 2 on a 3-row shape returns to row 3 on
+ *   `originCell=3` clamped to row 2 on a 3-row shape returns to row 3 on
  *   a later 5-row shape. The right default for sticky wilds, trailing
  *   wilds, and any "this position has meaning" mechanic.
  *
  * - **`'frozen'`**. the pin stays at its current row if the new shape
  *   fits, otherwise clamps to the last visible row AND **updates
- *   `originRow` to the clamped position** so it never restores. Use when
+ *   `originCell` to the clamped position** so it never restores. Use when
  *   the pin's row should be locked to wherever it is now, regardless of
  *   future shape changes (e.g. a walking-wild on MultiWays where the
  *   wild's "current row" IS the source of truth. restoring to a
@@ -54,7 +54,7 @@ export interface CellPin {
    *
    * Non-MultiWays: equals `row` and never changes.
    */
-  readonly originRow: number;
+  readonly originCell: number;
   /**
    * Migration policy across MultiWays reshapes. Default `'origin'`.
    * see {@link PinMigration} for semantics.
@@ -76,9 +76,9 @@ export interface CellPin {
  *
  * **Calling `pin()` mid-reshape** (from a `shape:changed`, `pin:migrated`, or
  * `adjust:start` event handler) is allowed and well-defined: the new pin is
- * placed at the cell you pass, and `originRow` defaults to the **post-reshape**
+ * placed at the cell you pass, and `originCell` defaults to the **post-reshape**
  * row (i.e. whatever `row` is *now*, on the new shape). If you want the pin
- * to remember a different origin, pass `originRow` explicitly. The pin
+ * to remember a different origin, pass `originCell` explicitly. The pin
  * participates in the next migration cycle like any other pin.
  */
 export interface CellPinOptions {
@@ -93,7 +93,7 @@ export interface CellPinOptions {
    * it; with `migration === 'frozen'` this gets overwritten on every
    * clamp so the pin doesn't restore.
    */
-  originRow?: number;
+  originCell?: number;
   /**
    * MultiWays migration policy. Default `'origin'`. clamp + restore.
    * Set to `'frozen'` for "lock at current row, never restore" semantics.

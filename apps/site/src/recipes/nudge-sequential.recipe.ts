@@ -16,7 +16,7 @@ const NUDGE_DURATION = 480;
 
 const reelSet = new ReelSetBuilder()
   .reels(5)
-  .visibleRows(3)
+  .visibleCells(3)
   .symbolSize(72, 72)
   .symbolGap(4, 4)
   .symbols((r) => {

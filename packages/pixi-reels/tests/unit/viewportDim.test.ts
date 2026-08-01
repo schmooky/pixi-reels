@@ -9,7 +9,7 @@ import { createTestReelSet } from '../../src/testing/index.js';
 
 describe('ReelViewport dim ref-counting', () => {
   it('keeps the dim up until the last overlapping consumer releases it', () => {
-    const h = createTestReelSet({ reels: 3, visibleRows: 3, symbolIds: ['a', 'b', 'c'] });
+    const h = createTestReelSet({ reels: 3, visibleCells: 3, symbolIds: ['a', 'b', 'c'] });
     try {
       const vp = h.reelSet.viewport;
       expect(vp.dimOverlay.visible).toBe(false);
@@ -29,7 +29,7 @@ describe('ReelViewport dim ref-counting', () => {
   });
 
   it('floors the count at zero on an unbalanced hideDim', () => {
-    const h = createTestReelSet({ reels: 3, visibleRows: 3, symbolIds: ['a', 'b', 'c'] });
+    const h = createTestReelSet({ reels: 3, visibleCells: 3, symbolIds: ['a', 'b', 'c'] });
     try {
       const vp = h.reelSet.viewport;
       vp.hideDim(); // stray hide - must not push the count negative

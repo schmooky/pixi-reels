@@ -6,11 +6,11 @@ export interface FrameContext {
   /** Reel column index. */
   readonly reelIndex: number;
   /** Total visible rows. */
-  readonly visibleRows: number;
+  readonly visibleCells: number;
   /** Buffer symbols above visible area. */
-  readonly bufferAbove: number;
+  readonly bufferStart: number;
   /** Buffer symbols below visible area. */
-  readonly bufferBelow: number;
+  readonly bufferEnd: number;
   /** The symbol array being built (buffer + visible + buffer). Mutable by middleware. */
   symbols: string[];
   /**
@@ -65,9 +65,9 @@ export class FrameBuilder {
   /** Build a frame for a single reel. */
   build(
     reelIndex: number,
-    visibleRows: number,
-    bufferAbove: number,
-    bufferBelow: number,
+    visibleCells: number,
+    bufferStart: number,
+    bufferEnd: number,
     target?: ColumnTarget,
     isSpinning: boolean = false,
   ): string[] {
@@ -76,12 +76,12 @@ export class FrameBuilder {
       this._sorted = true;
     }
 
-    const totalSlots = bufferAbove + visibleRows + bufferBelow;
+    const totalSlots = bufferStart + visibleCells + bufferEnd;
     const context: FrameContext = {
       reelIndex,
-      visibleRows,
-      bufferAbove,
-      bufferBelow,
+      visibleCells,
+      bufferStart,
+      bufferEnd,
       symbols: new Array<string>(totalSlots).fill(''),
       target,
       isSpinning,
@@ -104,18 +104,18 @@ export class FrameBuilder {
   /** Build frames for all reels. */
   buildAll(
     reelCount: number,
-    visibleRows: number,
-    bufferAbove: number,
-    bufferBelow: number,
+    visibleCells: number,
+    bufferStart: number,
+    bufferEnd: number,
     targets?: ColumnTarget[],
     isSpinning: boolean = false,
   ): string[][] {
     return Array.from({ length: reelCount }, (_, reelIndex) =>
       this.build(
         reelIndex,
-        visibleRows,
-        bufferAbove,
-        bufferBelow,
+        visibleCells,
+        bufferStart,
+        bufferEnd,
         targets?.[reelIndex],
         isSpinning,
       ),
@@ -142,8 +142,8 @@ class RandomFillMiddleware implements FrameMiddleware {
     for (let i = 0; i < context.symbols.length; i++) {
       if (!context.symbols[i]) {
         const isBuffer =
-          i < context.bufferAbove ||
-          i >= context.bufferAbove + context.visibleRows;
+          i < context.bufferStart ||
+          i >= context.bufferStart + context.visibleCells;
         context.symbols[i] = this._provider.next(isBuffer);
       }
     }
@@ -158,7 +158,7 @@ class TargetPlacementMiddleware implements FrameMiddleware {
 
   process(context: FrameContext, next: () => void): void {
     if (context.target) {
-      const strip = columnTargetToStrip(context.target, context.bufferAbove);
+      const strip = columnTargetToStrip(context.target, context.bufferStart);
       const count = Math.min(strip.length, context.symbols.length);
       for (let i = 0; i < count; i++) {
         const id = strip[i];

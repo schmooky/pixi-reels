@@ -8,7 +8,7 @@ import type { ReelSet } from '../../src/index.js';
 /**
  * Cascade refills must only notify landing on symbols that actually
  * MOVED (survivors that slid, new arrivals). An untouched survivor
- * (offsetRows 0) replaying its landing animation on every cascade
+ * (offsetCells 0) replaying its landing animation on every cascade
  * stage reads as the whole board twitching after each pop.
  */
 class CountingSymbol extends HeadlessSymbol {
@@ -26,15 +26,15 @@ function buildHarness(initialFrame: string[][]): { reelSet: ReelSet; destroy: ()
   const ticker = new FakeTicker();
   const reelSet = new ReelSetBuilder()
     .reels(initialFrame.length)
-    .visibleRows(initialFrame[0].length)
+    .visibleCells(initialFrame[0].length)
     .symbolSize(50, 50)
     .symbols((r) => {
       for (const id of ['a', 'b', 'x']) r.register(id, CountingSymbol, {});
     })
     .weights({ a: 1, b: 1 })
     .tumble({
-      fall:   { duration: 0, ease: 'none', rowStagger: 0 },
-      dropIn: { duration: 0, ease: 'none', rowStagger: 0, distance: 'perHole' },
+      fall:   { duration: 0, ease: 'none', cellStagger: 0 },
+      dropIn: { duration: 0, ease: 'none', cellStagger: 0, distance: 'perHole' },
     })
     .initialFrame(initialFrame.map((visible) => ({ visible })))
     .ticker(ticker as unknown as Ticker)

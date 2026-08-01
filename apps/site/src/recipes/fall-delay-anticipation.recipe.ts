@@ -40,7 +40,7 @@ class TimedExplodeSymbol extends SpineReelSymbol {
 }
 
 const reelSet = new ReelSetBuilder()
-  .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
+  .reels(REELS).visibleCells(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
   // Pure tumble: no strip scrolling, so no below-window buffer at all.
   // nothing can ever peek out under the grid.
   .bufferSymbols({ above: 1, below: 0 })
@@ -62,8 +62,8 @@ const reelSet = new ReelSetBuilder()
   .symbolData({ high: { zIndex: 10, unmask: true } })
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
-    fall:   { duration: 267, ease: 'power2.in', rowStagger: 50 },  // 16f, 3f stagger
-    dropIn: { duration: 400, ease: 'power2.in', rowStagger: 0, distance: 'perHole' },  // 24f
+    fall:   { duration: 267, ease: 'power2.in', cellStagger: 50 },  // 16f, 3f stagger
+    dropIn: { duration: 400, ease: 'power2.in', cellStagger: 0, distance: 'perHole' },  // 24f
   })
   .ticker(app.ticker).build();
 

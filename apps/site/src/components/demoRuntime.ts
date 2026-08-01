@@ -47,7 +47,7 @@ function syncGsap(app: Application): void {
 
 export interface MechanicConfig {
   reelCount: number;
-  visibleRows: number;
+  visibleCells: number;
   symbolSize: { width: number; height: number };
   /**
    * Symbol set. Two shapes:
@@ -112,10 +112,10 @@ function normalizeSymbolConfig(symbols: MechanicConfig['symbols']): NormalizedSy
  * first 3+ reels share an id, that horizontal run wins. De-dupes across
  * rows so the same cell isn't destroyed twice.
  */
-function detectWinners(grid: string[][], reelCount: number, visibleRows: number): Cell[] {
+function detectWinners(grid: string[][], reelCount: number, visibleCells: number): Cell[] {
   const seen = new Set<number>();
   const out: Cell[] = [];
-  for (let row = 0; row < visibleRows; row++) {
+  for (let row = 0; row < visibleCells; row++) {
     const head = grid[0][row];
     let run = 1;
     for (let r = 1; r < reelCount; r++) {
@@ -124,7 +124,7 @@ function detectWinners(grid: string[][], reelCount: number, visibleRows: number)
     }
     if (run >= 3) {
       for (let r = 0; r < run; r++) {
-        const key = r * visibleRows + row;
+        const key = r * visibleCells + row;
         if (!seen.has(key)) { seen.add(key); out.push({ reel: r, row }); }
       }
     }
@@ -200,7 +200,7 @@ export async function mountMechanic(
     cfg.reelCount * (cfg.symbolSize.width + 6) + 80 + BUTTON_COL_WIDTH,
   );
   let width = computeWidth();
-  const height = cfg.visibleRows * (cfg.symbolSize.height + 6) + 80;
+  const height = cfg.visibleCells * (cfg.symbolSize.height + 6) + 80;
 
   const app = new Application();
   await app.init({
@@ -247,7 +247,7 @@ export async function mountMechanic(
 
   const builder = new ReelSetBuilder()
     .reels(cfg.reelCount)
-    .visibleRows(cfg.visibleRows)
+    .visibleCells(cfg.visibleCells)
     .symbolSize(cfg.symbolSize.width, cfg.symbolSize.height)
     .symbolGap(6, 6)
     .symbols((r) => {
@@ -292,7 +292,7 @@ export async function mountMechanic(
     const blurring = new Array<boolean>(cfg.reelCount).fill(false);
     const setReelBlur = (reelIdx: number, on: boolean) => {
       const reel = reelSet.getReel(reelIdx);
-      for (let row = 0; row < cfg.visibleRows; row++) {
+      for (let row = 0; row < cfg.visibleCells; row++) {
         const sym = reel.getSymbolAt(row);
         if (sym instanceof BlurSpriteSymbol) sym.setBlurred(on);
       }
@@ -324,7 +324,7 @@ export async function mountMechanic(
   const padX = 10;
   const padY = 10;
   const totalW = cfg.reelCount * (cfg.symbolSize.width + 6) - 6 + padX * 2;
-  const totalH = cfg.visibleRows * (cfg.symbolSize.height + 6) - 6 + padY * 2;
+  const totalH = cfg.visibleCells * (cfg.symbolSize.height + 6) - 6 + padY * 2;
   // Neutral white well with a subtle warm border. matches the site's light palette.
   frame.roundRect(0, 0, totalW, totalH, 18)
     .fill({ color: 0xffffff, alpha: 1 })
@@ -379,7 +379,7 @@ export async function mountMechanic(
 
   const engine = new CheatEngine({
     reelCount: cfg.reelCount,
-    visibleRows: cfg.visibleRows,
+    visibleCells: cfg.visibleCells,
     symbolIds: allSymbolIds,
     seed: 12345,
   });
@@ -473,7 +473,7 @@ export async function mountMechanic(
       if (cfg.tumble) {
         reelSet.setDropOrder('all');
         const { chainLength } = await reelSet.runCascade({
-          detectWinners: (grid) => detectWinners(grid, cfg.reelCount, cfg.visibleRows),
+          detectWinners: (grid) => detectWinners(grid, cfg.reelCount, cfg.visibleCells),
           nextGrid: (prev, winners) =>
             cascadeNextGrid(prev, [...winners], allSymbolIds, cfg.weights ?? {}),
           onCascade: ({ chain }) => {

@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { createTestReelSet, captureEvents } from '../../src/testing/index.js';
 
 describe('pin migration (MultiWays)', () => {
-  it('originRow defaults to row at pin placement', () => {
+  it('originCell defaults to row at pin placement', () => {
     const { reelSet, destroy } = createTestReelSet({
       reels: 4,
       multiways: { minRows: 2, maxRows: 7, reelPixelHeight: 600 },
@@ -10,13 +10,13 @@ describe('pin migration (MultiWays)', () => {
     });
     try {
       const pin = reelSet.pin(2, 3, 'wild', { turns: 'permanent' });
-      expect(pin.originRow).toBe(3);
+      expect(pin.originCell).toBe(3);
     } finally {
       destroy();
     }
   });
 
-  it('pin:placed payload carries originRow (default = row)', () => {
+  it('pin:placed payload carries originCell (default = row)', () => {
     const { reelSet, destroy } = createTestReelSet({
       reels: 4,
       multiways: { minRows: 2, maxRows: 7, reelPixelHeight: 600 },
@@ -27,16 +27,16 @@ describe('pin migration (MultiWays)', () => {
       reelSet.pin(2, 3, 'wild', { turns: 'permanent' });
       expect(captured).toHaveLength(1);
       expect(captured[0].event).toBe('pin:placed');
-      const pin = captured[0].args[0] as { originRow: number; row: number; col: number };
+      const pin = captured[0].args[0] as { originCell: number; row: number; col: number };
       expect(pin.row).toBe(3);
       expect(pin.col).toBe(2);
-      expect(pin.originRow).toBe(3);
+      expect(pin.originCell).toBe(3);
     } finally {
       destroy();
     }
   });
 
-  it('pin:placed payload preserves explicit originRow override', () => {
+  it('pin:placed payload preserves explicit originCell override', () => {
     const { reelSet, destroy } = createTestReelSet({
       reels: 4,
       multiways: { minRows: 2, maxRows: 7, reelPixelHeight: 600 },
@@ -44,10 +44,10 @@ describe('pin migration (MultiWays)', () => {
     });
     try {
       const captured = captureEvents(reelSet, ['pin:placed']);
-      reelSet.pin(1, 2, 'wild', { turns: 'permanent', originRow: 5 });
-      const pin = captured[0].args[0] as { originRow: number; row: number };
+      reelSet.pin(1, 2, 'wild', { turns: 'permanent', originCell: 5 });
+      const pin = captured[0].args[0] as { originCell: number; row: number };
       expect(pin.row).toBe(2);
-      expect(pin.originRow).toBe(5);
+      expect(pin.originCell).toBe(5);
     } finally {
       destroy();
     }
@@ -78,7 +78,7 @@ describe('pin migration (MultiWays)', () => {
       await promise;
 
       // Pin migrated 4 -> 2. Overlay should be at the new (col=1, row=2) cell.
-      // After reshape, slotHeight = 700/3 ~ 233. Y at row 2 ~ 466.7.
+      // After reshape, slotPitch = 700/3 ~ 233. Y at row 2 ~ 466.7.
       // Before, with 7 rows of 100, y at row 4 was 400.
       const overlayAfter = (reelSet as any)._pinOverlays.get('1:2');
       // Overlays are destroyed on spin:allLanded, so we won't have one after. the
@@ -112,9 +112,9 @@ describe('pin migration (MultiWays)', () => {
       reelSet.slamStop();
       await p;
       expect(reelSet.getPin(1, 4)?.row).toBe(4);
-      expect(reelSet.getPin(1, 4)?.originRow).toBe(4);
+      expect(reelSet.getPin(1, 4)?.originCell).toBe(4);
 
-      // Spin 2: shape shrinks -> clamp to row 2 AND update originRow to 2.
+      // Spin 2: shape shrinks -> clamp to row 2 AND update originCell to 2.
       p = reelSet.spin();
       reelSet.setShape([3, 3, 3]);
       reelSet.setResult([
@@ -125,7 +125,7 @@ describe('pin migration (MultiWays)', () => {
       reelSet.slamStop();
       await p;
       expect(reelSet.getPin(1, 2)?.row).toBe(2);
-      expect(reelSet.getPin(1, 2)?.originRow).toBe(2); // FROZEN. origin updated
+      expect(reelSet.getPin(1, 2)?.originCell).toBe(2); // FROZEN. origin updated
 
       // Spin 3: shape grows back. With 'frozen', pin STAYS at row 2 (not restored to 4).
       p = reelSet.spin();
@@ -140,13 +140,13 @@ describe('pin migration (MultiWays)', () => {
       // Confirm NOT restored to row 4 (which 'origin' would do).
       expect(reelSet.getPin(1, 4)).toBeUndefined();
       expect(reelSet.getPin(1, 2)?.row).toBe(2);
-      expect(reelSet.getPin(1, 2)?.originRow).toBe(2);
+      expect(reelSet.getPin(1, 2)?.originCell).toBe(2);
     } finally {
       destroy();
     }
   });
 
-  it('clamps when shape no longer fits originRow, restores when it fits again', async () => {
+  it('clamps when shape no longer fits originCell, restores when it fits again', async () => {
     const { reelSet, destroy } = createTestReelSet({
       reels: 3,
       multiways: { minRows: 2, maxRows: 7, reelPixelHeight: 600 },
@@ -181,14 +181,14 @@ describe('pin migration (MultiWays)', () => {
       await p;
       const clampedPin = reelSet.getPin(1, 2);
       expect(clampedPin).toBeDefined();
-      expect(clampedPin?.originRow).toBe(4);
+      expect(clampedPin?.originCell).toBe(4);
       const clampEvent = log.find(
         (e) => e.event === 'pin:migrated' &&
                (e.args[1] as any).clamped === true,
       );
       expect(clampEvent).toBeDefined();
 
-      // Spin 3: shape grows back to fit originRow -> restore to row 4.
+      // Spin 3: shape grows back to fit originCell -> restore to row 4.
       p = reelSet.spin();
       reelSet.setShape([5, 5, 5]);
       reelSet.setResult([
@@ -200,7 +200,7 @@ describe('pin migration (MultiWays)', () => {
       await p;
       const restoredPin = reelSet.getPin(1, 4);
       expect(restoredPin).toBeDefined();
-      expect(restoredPin?.originRow).toBe(4);
+      expect(restoredPin?.originCell).toBe(4);
     } finally {
       destroy();
     }
@@ -216,8 +216,8 @@ describe('pin migration (MultiWays)', () => {
     try {
       const expired = captureEvents(reelSet, ['pin:expired']);
       const p = reelSet.spin();
-      reelSet.pin(1, 3, 'wild', { turns: 'permanent' }); // originRow 3
-      reelSet.pin(1, 4, 'scatter', { turns: 'permanent' }); // originRow 4
+      reelSet.pin(1, 3, 'wild', { turns: 'permanent' }); // originCell 3
+      reelSet.pin(1, 4, 'scatter', { turns: 'permanent' }); // originCell 4
 
       // Shrink reel 1 to 2 rows: both pins clamp to the last row (1) and collide.
       reelSet.setShape([2, 2, 2]);

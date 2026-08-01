@@ -4,7 +4,7 @@
 
 // PARTIAL-LAND pattern.
 //
-// A tall 1x3 wild lands with its ANCHOR in bufferAbove. most of the
+// A tall 1x3 wild lands with its ANCHOR in bufferStart. most of the
 // block is hidden above the visible window, only its bottom cell shows
 // at row 0 ("tail visible"). The player nudges DOWN by 2 to drag the
 // whole block into view, then nudges UP by 2 to push it back into
@@ -12,10 +12,10 @@
 //
 // This is enabled by:
 //   - `_coordinateBigSymbols` scans the full strip range (including
-//     bufferAbove and bufferBelow) for big-symbol anchors. The user
-//     supplies the anchor at `bufferAbove[1]`; the engine paints
-//     OCCUPIED at `bufferAbove[0]` and `visible[0]` automatically.
-//   - `_finalizeFrame` sizes anchors that sit in bufferAbove with the
+//     bufferStart and bufferEnd) for big-symbol anchors. The user
+//     supplies the anchor at `bufferStart[1]`; the engine paints
+//     OCCUPIED at `bufferStart[0]` and `visible[0]` automatically.
+//   - `_finalizeFrame` sizes anchors that sit in bufferStart with the
 //     block's body extending into visible. The mask clips the off-screen
 //     portion; the visible portion of the sprite shows through.
 //   - `getVisibleSymbols` resolves visible row 0 to the anchor's id via
@@ -29,8 +29,8 @@ const GAP = 4;
 
 const reelSet = new ReelSetBuilder()
   .reels(REELS)
-  .visibleRows(ROWS)
-  // Need bufferAbove >= 2 so the 1x3 block's anchor can sit at row -2
+  .visibleCells(ROWS)
+  // Need bufferStart >= 2 so the 1x3 block's anchor can sit at row -2
   // with the block extending through row 0.
   .bufferSymbols(2)
   .symbolSize(SIZE, SIZE)
@@ -59,19 +59,19 @@ const ct = () => ({ visible: [filler(), filler(), filler()] });
 return {
   reelSet,
   onSpin: async () => {
-    // 1. Land the 1x3 TALL with anchor at `bufferAbove[1]` (= row -2).
+    // 1. Land the 1x3 TALL with anchor at `bufferStart[1]` (= row -2).
     //    Block spans rows -2, -1, 0. Only visible row 0 shows the block's
     //    bottom cell; rows 1 and 2 are random fillers.
     //
     //    The engine paints OCCUPIED at row -1 and row 0 automatically;
-    //    we leave `bufferAbove[0]` undefined and `visible[0]` as filler
+    //    we leave `bufferStart[0]` undefined and `visible[0]` as filler
     //    (both get overwritten by the coordinator).
     //
     //    Every column is a ColumnTarget; reels that do not need buffer
     //    entries pass `{ visible: [...] }` alone.
     const grid = [
       ct(), ct(),
-      { visible: [filler(), filler(), filler()], bufferAbove: [undefined, TALL.id] },
+      { visible: [filler(), filler(), filler()], bufferStart: [undefined, TALL.id] },
       ct(), ct(),
     ];
     const p = reelSet.spin();
@@ -84,8 +84,8 @@ return {
     //    fills visible rows 0, 1, 2. Fully visible.
     //
     //    Survival check (down): anchor strip index + h - 1 + distance < total
-    //    (0 + 3 - 1 + 2 = 4 < 7). total = bufferAbove(2) + visibleRows(3) +
-    //    bufferBelow(2). The block stays on the strip end-to-end.
+    //    (0 + 3 - 1 + 2 = 4 < 7). total = bufferStart(2) + visibleCells(3) +
+    //    bufferEnd(2). The block stays on the strip end-to-end.
     //
     //    `incoming` is the new visible-area content arriving from the top.
     //    Buffer slots and big-symbol cells (anchor / OCCUPIED stubs) are

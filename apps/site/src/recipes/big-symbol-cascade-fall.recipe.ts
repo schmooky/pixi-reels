@@ -4,7 +4,7 @@
 
 // CASCADE-FALL pattern.
 //
-// A tall 1x3 wild lands with its anchor in bufferAbove. tail visible
+// A tall 1x3 wild lands with its anchor in bufferStart. tail visible
 // at row 0. All three reels land a TWO-ROW cluster below the wild's
 // tail (rows 1 and 2). The cluster wins, six cells clear, and the
 // cascade refill drops the wild TWO rows into full visibility.
@@ -22,7 +22,7 @@
 //
 // What this proves:
 //   - `runCascade`'s `nextGrid` callback can return a grid that
-//     repositions a big-symbol anchor. moving it from bufferAbove[1]
+//     repositions a big-symbol anchor. moving it from bufferStart[1]
 //     (row -2) to visible[0] (row 0) in one cascade step.
 //   - `_coordinateBigSymbols` runs on the refill grid the same as on
 //     a setResult grid. buffer-row anchors are accepted, OCCUPIED
@@ -39,8 +39,8 @@ const GAP = 4;
 
 const reelSet = new ReelSetBuilder()
   .reels(REELS)
-  .visibleRows(ROWS)
-  // Anchor at bufferAbove[1] (row -2) needs bufferAbove >= 2.
+  .visibleCells(ROWS)
+  // Anchor at bufferStart[1] (row -2) needs bufferStart >= 2.
   .bufferSymbols(2)
   .symbolSize(SIZE, SIZE)
   .symbolGap(GAP, GAP)
@@ -61,8 +61,8 @@ const reelSet = new ReelSetBuilder()
   .symbolData({ [TALL.id]: { weight: 0, zIndex: 5, size: { w: TALL.w, h: TALL.h } } })
   .speed('normal', { ...SpeedPresets.NORMAL, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
-    fall:   { duration: 320, ease: 'power3.in',  rowStagger: 60 },
-    dropIn: { duration: 480, ease: 'power3.out', rowStagger: 60, distance: 'perHole' },
+    fall:   { duration: 320, ease: 'power3.in',  cellStagger: 60 },
+    dropIn: { duration: 480, ease: 'power3.out', cellStagger: 60, distance: 'perHole' },
   })
   .ticker(app.ticker)
   .build();
@@ -76,12 +76,12 @@ return {
     // ── 1. Initial spin: tall wild on reel 0 with tail at row 0; ─────
     //      plant a two-row MATCH cluster across all 3 reels (rows 1-2).
     const initialGrid = [
-      // Reel 0: anchor at bufferAbove[1] = row -2. Block spans rows
+      // Reel 0: anchor at bufferStart[1] = row -2. Block spans rows
       // -2, -1, 0. Tail at visible[0]. Plant MATCH at row 1; fillers
       // at rows 2, 3.
       {
         visible: [filler(), MATCH.id, MATCH.id, filler()],
-        bufferAbove: [undefined, TALL.id],
+        bufferStart: [undefined, TALL.id],
       },
       // Reel 1: MATCH at rows 1-2.
       { visible: [filler(), MATCH.id, MATCH.id, filler()] },
@@ -117,12 +117,12 @@ return {
       // animates, and the identity swap is a visible pop.
       nextGrid: (prev) => [
         // Reel 0: block now at rows 0, 1, 2 (fully visible). New top
-        // cell in bufferAbove[0]; the coordinator paints OCCUPIED at
+        // cell in bufferStart[0]; the coordinator paints OCCUPIED at
         // visible[1] and [2] so 'tall' here is the anchor only. Row 3
         // is the untouched survivor. same face as before the cascade.
         {
           visible: [TALL.id, filler(), filler(), prev[0][3]],
-          bufferAbove: [filler()],
+          bufferStart: [filler()],
         },
         // Reels 1, 2: two fresh symbols on top, survivors (old rows 0
         // and 3) packed to the bottom in their original order.

@@ -8,7 +8,7 @@ import {
 
 describe('createTestReelSet', () => {
   it('builds a reel set with configured dimensions', () => {
-    const h = createTestReelSet({ reels: 5, visibleRows: 3, symbolIds: ['a', 'b', 'c'] });
+    const h = createTestReelSet({ reels: 5, visibleCells: 3, symbolIds: ['a', 'b', 'c'] });
     try {
       expect(h.reelSet.reels.length).toBe(5);
       expect(h.reelSet.reels[0].getVisibleSymbols().length).toBe(3);
@@ -18,7 +18,7 @@ describe('createTestReelSet', () => {
   });
 
   it('spinAndLand deterministically lands the target grid', async () => {
-    const h = createTestReelSet({ reels: 3, visibleRows: 3, symbolIds: ['a', 'b', 'c'] });
+    const h = createTestReelSet({ reels: 3, visibleCells: 3, symbolIds: ['a', 'b', 'c'] });
     try {
       const grid: string[][] = [
         ['a', 'a', 'a'],
@@ -34,7 +34,7 @@ describe('createTestReelSet', () => {
   });
 
   it('emits the full spin event sequence', async () => {
-    const h = createTestReelSet({ reels: 3, visibleRows: 3, symbolIds: ['a', 'b', 'c'] });
+    const h = createTestReelSet({ reels: 3, visibleCells: 3, symbolIds: ['a', 'b', 'c'] });
     try {
       const log = captureEvents(h.reelSet, [
         'spin:start',
@@ -60,7 +60,7 @@ describe('createTestReelSet', () => {
   });
 
   it('countSymbol returns the correct visible count', async () => {
-    const h = createTestReelSet({ reels: 5, visibleRows: 3, symbolIds: ['x', 'y'] });
+    const h = createTestReelSet({ reels: 5, visibleCells: 3, symbolIds: ['x', 'y'] });
     try {
       await h.spinAndLand([
         ['x', 'x', 'x'],
@@ -77,7 +77,7 @@ describe('createTestReelSet', () => {
   });
 
   it('expectGrid throws a readable error on mismatch', async () => {
-    const h = createTestReelSet({ reels: 2, visibleRows: 2, symbolIds: ['a', 'b'] });
+    const h = createTestReelSet({ reels: 2, visibleCells: 2, symbolIds: ['a', 'b'] });
     try {
       await h.spinAndLand([
         ['a', 'a'],
@@ -95,7 +95,7 @@ describe('createTestReelSet', () => {
   });
 
   it('advance() fires ticker callbacks', () => {
-    const h = createTestReelSet({ reels: 2, visibleRows: 2, symbolIds: ['a'] });
+    const h = createTestReelSet({ reels: 2, visibleCells: 2, symbolIds: ['a'] });
     try {
       const before = h.ticker.elapsedMS;
       h.advance(80);

@@ -12,7 +12,7 @@ import { createTestReelSet, expectGrid } from '../../src/testing/index.js';
 
 describe('reel landing entry points', () => {
   it('placeSymbols fills every visible cell from the column target', () => {
-    const h = createTestReelSet({ reels: 3, visibleRows: 3, symbolIds: ['a', 'b', 'c'] });
+    const h = createTestReelSet({ reels: 3, visibleCells: 3, symbolIds: ['a', 'b', 'c'] });
     try {
       const grid = [
         ['a', 'a', 'a'],
@@ -29,7 +29,7 @@ describe('reel landing entry points', () => {
   });
 
   it('placeStrip lands a full strip frame at the right visible offset', () => {
-    const h = createTestReelSet({ reels: 1, visibleRows: 3, symbolIds: ['a', 'b', 'c', 'buf'] });
+    const h = createTestReelSet({ reels: 1, visibleCells: 3, symbolIds: ['a', 'b', 'c', 'buf'] });
     try {
       const reel = h.reelSet.reels[0];
       const fullFrame = ['buf', 'a', 'b', 'c', 'buf'];
@@ -42,13 +42,13 @@ describe('reel landing entry points', () => {
   });
 
   it('placeSymbols lands buffer targets either side of the visible window', () => {
-    const h = createTestReelSet({ reels: 1, visibleRows: 3, symbolIds: ['a', 'b', 'c', 'buf'] });
+    const h = createTestReelSet({ reels: 1, visibleCells: 3, symbolIds: ['a', 'b', 'c', 'buf'] });
     try {
       const reel = h.reelSet.reels[0];
       reel.placeSymbols({
         visible: ['a', 'b', 'c'],
-        bufferAbove: ['buf'],
-        bufferBelow: ['buf'],
+        bufferStart: ['buf'],
+        bufferEnd: ['buf'],
       });
       expect(reel.getVisibleSymbols()).toEqual(['a', 'b', 'c']);
       expect(reel.symbols[0].symbolId).toBe('buf');

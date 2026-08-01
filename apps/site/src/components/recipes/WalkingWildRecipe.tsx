@@ -28,7 +28,7 @@ export default function WalkingWildRecipe() {
       height={280}
       setup={async (host) => {
         const { reelSet, app, destroy } = await mountMiniReels(host, {
-          reelCount: 5, visibleRows: 3,
+          reelCount: 5, visibleCells: 3,
           symbolSize: { width: 72, height: 72 },
           symbols: { kind: 'sprite', ids: IDS },
           weights: { 'round/round_1': 22, 'round/round_2': 22, 'royal/royal_1': 18, 'square/square_1': 18 },

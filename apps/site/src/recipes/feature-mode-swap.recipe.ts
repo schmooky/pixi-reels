@@ -19,7 +19,7 @@ const COLS = 5, ROWS = 3, SIZE = 90;
 
 const reelSet = new ReelSetBuilder()
   .reels(COLS)
-  .visibleRows(ROWS)
+  .visibleCells(ROWS)
   .symbolSize(SIZE, SIZE)
   .symbolGap(4, 4)
   .symbols((r) => {
@@ -46,7 +46,7 @@ const featureWildInjector = {
   name: 'feature-wild-injector',
   priority: 20,
   process(ctx, next) {
-    for (let i = ctx.bufferAbove; i < ctx.bufferAbove + ctx.visibleRows; i++) {
+    for (let i = ctx.bufferStart; i < ctx.bufferStart + ctx.visibleCells; i++) {
       if (ctx.symbols[i] !== WILD && Math.random() < 0.4) {
         ctx.symbols[i] = WILD;
       }

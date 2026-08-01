@@ -24,19 +24,19 @@ export interface SpinResponse {
 }
 
 export interface WinResult {
-  positions: { reelIndex: number; rowIndex: number }[];
+  positions: { reelIndex: number; cellIndex: number }[];
   symbolId: string;
   amount: number;
 }
 
 /** Simulate a server spin response with random results. */
-export function mockSpin(reelCount: number, visibleRows: number, delay: number = 300): Promise<SpinResponse> {
+export function mockSpin(reelCount: number, visibleCells: number, delay: number = 300): Promise<SpinResponse> {
   return new Promise((resolve) => {
     setTimeout(() => {
       const symbols: string[][] = [];
       for (let r = 0; r < reelCount; r++) {
         const reel: string[] = [];
-        for (let row = 0; row < visibleRows; row++) {
+        for (let row = 0; row < visibleCells; row++) {
           reel.push(randomSymbol());
         }
         symbols.push(reel);
@@ -44,7 +44,7 @@ export function mockSpin(reelCount: number, visibleRows: number, delay: number =
 
       // Detect wins (simple: 3+ of same symbol on a row)
       const wins: WinResult[] = [];
-      for (let row = 0; row < visibleRows; row++) {
+      for (let row = 0; row < visibleCells; row++) {
         const rowSymbols = symbols.map((r) => r[row]);
         const counts = new Map<string, number[]>();
         rowSymbols.forEach((s, i) => {
@@ -54,7 +54,7 @@ export function mockSpin(reelCount: number, visibleRows: number, delay: number =
         for (const [symbolId, indices] of counts) {
           if (indices.length >= 3) {
             wins.push({
-              positions: indices.map((i) => ({ reelIndex: i, rowIndex: row })),
+              positions: indices.map((i) => ({ reelIndex: i, cellIndex: row })),
               symbolId,
               amount: symbolId === 'wild' ? 100 : symbolId === 'seven' ? 50 : 10,
             });
@@ -84,7 +84,7 @@ export function mockCascade(
   // Remove winning positions
   for (const win of wins) {
     for (const pos of win.positions) {
-      grid[pos.reelIndex][pos.rowIndex] = '';
+      grid[pos.reelIndex][pos.cellIndex] = '';
     }
   }
 
@@ -108,7 +108,7 @@ export function mockCascade(
     for (const [symbolId, indices] of counts) {
       if (indices.length >= 3) {
         newWins.push({
-          positions: indices.map((i) => ({ reelIndex: i, rowIndex: row })),
+          positions: indices.map((i) => ({ reelIndex: i, cellIndex: row })),
           symbolId,
           amount: symbolId === 'wild' ? 100 : symbolId === 'seven' ? 50 : 10,
         });

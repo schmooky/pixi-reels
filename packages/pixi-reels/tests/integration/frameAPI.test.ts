@@ -14,7 +14,7 @@ const SYMBOLS = ['a', 'b', 'c', 'wild'];
 function makeHarness() {
   return createTestReelSet({
     reels: 3,
-    visibleRows: 3,
+    visibleCells: 3,
     symbolIds: SYMBOLS,
   });
 }
@@ -25,7 +25,7 @@ function forceMiddleRowMiddleware(forcedId: string): FrameMiddleware {
     name: 'force-middle-row',
     priority: 20, // after target-placement (10) so it wins
     process(ctx, next) {
-      const middleIdx = ctx.bufferAbove + Math.floor(ctx.visibleRows / 2);
+      const middleIdx = ctx.bufferStart + Math.floor(ctx.visibleCells / 2);
       if (middleIdx < ctx.symbols.length) {
         ctx.symbols[middleIdx] = forcedId;
       }
@@ -67,9 +67,9 @@ describe('reelSet.frame — exposure', () => {
 function frameBuilderOf(reelSet: unknown): {
   build(
     reelIndex: number,
-    visibleRows: number,
-    bufferAbove: number,
-    bufferBelow: number,
+    visibleCells: number,
+    bufferStart: number,
+    bufferEnd: number,
     targetSymbols?: string[],
   ): string[];
 } {
@@ -93,7 +93,7 @@ describe('reelSet.frame — middleware takes effect on frame build', () => {
 
       // Baseline - middleware NOT added; middle row is 'b' (from targets)
       const baseline = fb.build(0, 3, 1, 1, targets);
-      expect(baseline[1 + 1]).toBe('b'); // bufferAbove(1) + row(1) = index 2
+      expect(baseline[1 + 1]).toBe('b'); // bufferStart(1) + row(1) = index 2
 
       // Add middleware, rebuild - middle row becomes 'wild'
       h.reelSet.frame.use(forceMiddleRowMiddleware('wild'));

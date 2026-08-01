@@ -73,7 +73,7 @@ export default function ScatterFsDemo() {
 
         return mountMechanic(host, api, {
           reelCount: 5,
-          visibleRows: 3,
+          visibleCells: 3,
           symbolSize: { width: 110, height: 110 },
           symbols: { kind: 'sprite', ids: IDS },
           weights: { 'round/round_1': 40, 'round/round_2': 40, 'round/round_3': 40, [SCATTER]: 2 },

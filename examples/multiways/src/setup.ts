@@ -244,7 +244,7 @@ function evaluateWays(grid: string[][]): WaysWin[] {
       const matches: SymbolPosition[] = [];
       for (let r = 0; r < grid[c].length; r++) {
         const s = grid[c][r];
-        if (s === kind || s === 'wild') matches.push({ reelIndex: c, rowIndex: r });
+        if (s === kind || s === 'wild') matches.push({ reelIndex: c, cellIndex: r });
       }
       if (matches.length === 0) break;
       cellsByReel.push(matches);

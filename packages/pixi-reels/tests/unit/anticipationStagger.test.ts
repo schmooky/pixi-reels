@@ -55,7 +55,7 @@ const GRID: ColumnTarget[] = Array.from({ length: 5 }, () => ({
 }));
 
 function makeHarness(profile: SpeedProfile) {
-  const h = createTestReelSet({ reels: 5, visibleRows: 3, symbolIds: ['a', 'b', 'c'] });
+  const h = createTestReelSet({ reels: 5, visibleCells: 3, symbolIds: ['a', 'b', 'c'] });
   h.reelSet.speed.addProfile(profile.name, profile);
   h.reelSet.setSpeed(profile.name);
   // Pump the reel-set ticker in real time so reel.update / _onTick run.

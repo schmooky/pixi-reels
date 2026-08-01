@@ -19,7 +19,7 @@ const weights = {
 const reelSet = new ReelSetBuilder()
   .orientation('horizontal')
   .reels(1)
-  .visibleRows(5) // 5 cells along the strip
+  .visibleCells(5) // 5 cells along the strip
   .symbolSize(90, 90)
   .symbolGap(6, 0)
   .symbols((r) => {

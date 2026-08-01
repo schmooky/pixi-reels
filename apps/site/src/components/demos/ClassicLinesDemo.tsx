@@ -31,7 +31,7 @@ export default function ClassicLinesDemo() {
       boot={(host, api, cheats) =>
         mountMechanic(host, api, {
           reelCount: 5,
-          visibleRows: 3,
+          visibleCells: 3,
           symbolSize: { width: 110, height: 110 },
           symbols: { kind: 'sprite', ids: IDS },
           weights: {

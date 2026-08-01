@@ -5,7 +5,7 @@ describe('expanding wild (pin-based, 1×N)', () => {
   it('pins fill a column for one spin via pin overlay (eval pin)', async () => {
     const { reelSet, spinAndLand, destroy } = createTestReelSet({
       reels: 3,
-      visibleRows: 3,
+      visibleCells: 3,
       symbolIds: ['a', 'wild'],
     });
     try {

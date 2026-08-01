@@ -77,7 +77,7 @@ export async function boot(opts: BootOptions): Promise<() => void> {
 
   const reelSet = new ReelSetBuilder()
     .reels(REEL_COUNT)
-    .visibleRowsPerReel(ROWS_PER_REEL)
+    .visibleCellsPerReel(ROWS_PER_REEL)
     .reelAnchor('center')
     .symbolSize(SYMBOL_SIZE, SYMBOL_SIZE)
     .symbolGap(SYMBOL_GAP, SYMBOL_GAP)
@@ -100,8 +100,8 @@ export async function boot(opts: BootOptions): Promise<() => void> {
     // Stiff drop. no bounce on land. The bouncy default fights the win
     // animation when it arrives a frame later.
     .tumble({
-      fall:   { duration: 280, ease: 'power3.in',  rowStagger: 60 },
-      dropIn: { duration: 450, ease: 'power3.out', rowStagger: 60, distance: 'perHole' },
+      fall:   { duration: 280, ease: 'power3.in',  cellStagger: 60 },
+      dropIn: { duration: 450, ease: 'power3.out', cellStagger: 60, distance: 'perHole' },
     })
     .ticker(app.ticker)
     .build();
@@ -117,7 +117,7 @@ export async function boot(opts: BootOptions): Promise<() => void> {
   function syncIdle(): void {
     for (let r = 0; r < reelSet.reelCount; r++) {
       const reel = reelSet.getReel(r);
-      for (let row = 0; row < reel.visibleRows; row++) {
+      for (let row = 0; row < reel.visibleCells; row++) {
         const sym = reel.getSymbolAt(row);
         if (sym instanceof SpineReelSymbol) sym.stopAnimation();
       }
@@ -193,10 +193,10 @@ export async function boot(opts: BootOptions): Promise<() => void> {
         lastWinsForUi = wins;
         if (wins.length === 0) return [];
         return dedupeCells(wins.flatMap((w) => w.cells))
-          .map((c) => ({ reel: c.reelIndex, row: c.rowIndex }));
+          .map((c) => ({ reel: c.reelIndex, row: c.cellIndex }));
       },
       nextGrid: (prev, winners) => {
-        const cells: SymbolPosition[] = winners.map((w) => ({ reelIndex: w.reel, rowIndex: w.row }));
+        const cells: SymbolPosition[] = winners.map((w) => ({ reelIndex: w.reel, cellIndex: w.row }));
         return computeRefillGrid(prev, cells);
       },
       onCascade: ({ chain }) => {
@@ -285,7 +285,7 @@ function evaluateWays(grid: string[][]): WaysWin[] {
       const matches: SymbolPosition[] = [];
       for (let r = 0; r < grid[c].length; r++) {
         const s = grid[c][r];
-        if (s === kind || s === 'wild') matches.push({ reelIndex: c, rowIndex: r });
+        if (s === kind || s === 'wild') matches.push({ reelIndex: c, cellIndex: r });
       }
       if (matches.length === 0) break;
       cellsByReel.push(matches);
@@ -310,7 +310,7 @@ function dedupeCells(cells: SymbolPosition[]): SymbolPosition[] {
   const seen = new Set<string>();
   const out: SymbolPosition[] = [];
   for (const c of cells) {
-    const k = `${c.reelIndex}:${c.rowIndex}`;
+    const k = `${c.reelIndex}:${c.cellIndex}`;
     if (seen.has(k)) continue;
     seen.add(k);
     out.push(c);
@@ -323,7 +323,7 @@ function computeRefillGrid(currentGrid: string[][], removed: SymbolPosition[]): 
   const removedByReel = new Map<number, Set<number>>();
   for (const p of removed) {
     if (!removedByReel.has(p.reelIndex)) removedByReel.set(p.reelIndex, new Set());
-    removedByReel.get(p.reelIndex)!.add(p.rowIndex);
+    removedByReel.get(p.reelIndex)!.add(p.cellIndex);
   }
   for (let c = 0; c < REEL_COUNT; c++) {
     const rem = removedByReel.get(c);

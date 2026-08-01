@@ -18,7 +18,7 @@ const RESPIN_WINDOW = 2; // symbol stays pinned for 2 additional respins
 
 const reelSet = new ReelSetBuilder()
   .reels(COLS)
-  .visibleRows(ROWS)
+  .visibleCells(ROWS)
   .symbolSize(SIZE, SIZE)
   .symbolGap(4, 4)
   .symbols((r) => {

@@ -129,7 +129,7 @@ export class BoardGrid implements Disposable {
 
         const builder = new ReelSetBuilder()
           .reels(1)
-          .visibleRows(1)
+          .visibleCells(1)
           .symbolSize(this.cellSize, this.cellSize)
           .symbolGap(0, 0)
           // Spine symbols overrun the default per-reel rect mask; a shared rect
@@ -140,7 +140,7 @@ export class BoardGrid implements Disposable {
             if (!registry.has(this.emptyId)) registry.register(this.emptyId, EmptySymbol, {});
           })
           .initialFrame([
-            { visible: [this.emptyId], bufferAbove: [this.emptyId], bufferBelow: [this.emptyId] },
+            { visible: [this.emptyId], bufferStart: [this.emptyId], bufferEnd: [this.emptyId] },
           ])
           .ticker(opts.ticker)
           // The active profile defaults to the engine's 'normal'; point it at
@@ -200,8 +200,8 @@ export class BoardGrid implements Disposable {
     // random-filling past the mask.
     this._reel(cell).getReel(0).placeSymbols({
       visible: [id],
-      bufferAbove: [this.emptyId],
-      bufferBelow: [this.emptyId],
+      bufferStart: [this.emptyId],
+      bufferEnd: [this.emptyId],
     });
   }
 
@@ -226,7 +226,7 @@ export class BoardGrid implements Disposable {
         const settle = reelSet.spin();
         // Buffers land empty too: off-window art can paint over neighbours.
         reelSet.setResult([
-          { visible: [id], bufferAbove: [this.emptyId], bufferBelow: [this.emptyId] },
+          { visible: [id], bufferStart: [this.emptyId], bufferEnd: [this.emptyId] },
         ]);
         await settle;
         await onLanded(cell, id);

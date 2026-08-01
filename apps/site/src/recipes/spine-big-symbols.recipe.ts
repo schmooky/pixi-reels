@@ -36,7 +36,7 @@ const CARDS = IDS.filter((id) => id !== 'wild' && id !== 'bigWild');
 
 const reelSet = new ReelSetBuilder()
   .reels(REELS)
-  .visibleRows(ROWS)
+  .visibleCells(ROWS)
   .symbolSize(SIZE, SIZE)
   .symbolGap(GAP, GAP)
   .maskStrategy(new SharedRectMaskStrategy())
@@ -84,7 +84,7 @@ const LANDING_MS = 350;
 function syncIdle() {
   for (let r = 0; r < reelSet.reelCount; r++) {
     const reel = reelSet.getReel(r);
-    for (let row = 0; row < reel.visibleRows; row++) {
+    for (let row = 0; row < reel.visibleCells; row++) {
       const sym = reel.getSymbolAt(row);
       if (sym instanceof SpineReelSymbol) sym.stopAnimation();
     }

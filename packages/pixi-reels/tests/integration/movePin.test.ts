@@ -14,7 +14,7 @@ const SYMBOLS = ['a', 'b', 'c', 'wild', 'filler'];
 function makeHarness() {
   return createTestReelSet({
     reels: 5,
-    visibleRows: 3,
+    visibleCells: 3,
     symbolIds: SYMBOLS,
   });
 }
@@ -343,7 +343,7 @@ describe('movePin. flight placement (A1)', () => {
       const reel = h.reelSet.reels[2];
       const OFFSET = 40;
       reel.container.y = OFFSET;
-      const slot = reel.motion.slotHeight;
+      const slot = reel.motion.slotPitch;
 
       h.reelSet.pin(2, 1, 'wild');
       let flightY: number | undefined;

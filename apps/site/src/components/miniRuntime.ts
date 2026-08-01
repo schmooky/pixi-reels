@@ -16,7 +16,7 @@ function syncGsap(app: Application): void {
 
 export interface MiniConfig {
   reelCount: number;
-  visibleRows: number;
+  visibleCells: number;
   symbolSize?: { width: number; height: number };
   /**
    * Two shapes:
@@ -63,7 +63,7 @@ export async function mountMiniReels(
   const intrinsicWidth = cfg.reelCount * (size.width + gap) - gap + padX * 2 + 40;
   const computeWidth = (): number => Math.min(host.clientWidth || intrinsicWidth, intrinsicWidth);
   let width = computeWidth();
-  const height = cfg.visibleRows * (size.height + gap) - gap + padY * 2 + 40;
+  const height = cfg.visibleCells * (size.height + gap) - gap + padY * 2 + 40;
 
   const app = new Application();
   await app.init({
@@ -110,7 +110,7 @@ export async function mountMiniReels(
 
   const builder = new ReelSetBuilder()
     .reels(cfg.reelCount)
-    .visibleRows(cfg.visibleRows)
+    .visibleCells(cfg.visibleCells)
     .symbolSize(size.width, size.height)
     .symbolGap(gap, gap)
     .symbols((r) => {
@@ -145,7 +145,7 @@ export async function mountMiniReels(
     const blurring = new Array<boolean>(cfg.reelCount).fill(false);
     const setReelBlur = (reelIdx: number, on: boolean) => {
       const reel = reelSet.getReel(reelIdx);
-      for (let row = 0; row < cfg.visibleRows; row++) {
+      for (let row = 0; row < cfg.visibleCells; row++) {
         const sym = reel.getSymbolAt(row);
         if (sym instanceof BlurSpriteSymbol) sym.setBlurred(on);
       }
@@ -173,7 +173,7 @@ export async function mountMiniReels(
 
   const frame = new Graphics();
   const totalW = cfg.reelCount * (size.width + gap) - gap + padX * 2;
-  const totalH = cfg.visibleRows * (size.height + gap) - gap + padY * 2;
+  const totalH = cfg.visibleCells * (size.height + gap) - gap + padY * 2;
   frame.roundRect(0, 0, totalW, totalH, 14)
     .fill({ color: 0xffffff, alpha: 1 })
     .roundRect(0, 0, totalW, totalH, 14)

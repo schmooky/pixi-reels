@@ -39,12 +39,12 @@ export default function CascadeStarterRecipe() {
       height={340}
       setup={async (host) => {
         const { reelSet, destroy } = await mountMiniReels(host, {
-          reelCount: REELS, visibleRows: ROWS,
+          reelCount: REELS, visibleCells: ROWS,
           symbolSize: { width: 54, height: 54 },
           symbols: { kind: 'sprite', ids: IDS },
           tumble: {
-            fall:   { duration: 280, ease: 'sine.in',       rowStagger: 40 },
-            dropIn: { duration: 420, ease: 'back.out(1.6)', rowStagger: 40, distance: 'perHole' },
+            fall:   { duration: 280, ease: 'sine.in',       cellStagger: 40 },
+            dropIn: { duration: 420, ease: 'back.out(1.6)', cellStagger: 40, distance: 'perHole' },
           },
         });
         return {
@@ -65,7 +65,7 @@ export default function CascadeStarterRecipe() {
             // about to pop.
             const clusterCells = CLUSTER_COLS.map((c) => ({ reel: c, row: HIT_ROW }));
             await reelSet.spotlight.cycle(
-              [{ positions: clusterCells.map((c) => ({ reelIndex: c.reel, rowIndex: c.row })) }],
+              [{ positions: clusterCells.map((c) => ({ reelIndex: c.reel, cellIndex: c.row })) }],
               { displayDuration: 500 },
             );
             reelSet.spotlight.hide();

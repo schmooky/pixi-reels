@@ -22,7 +22,7 @@ export default function MysteryRevealRecipe() {
       height={280}
       setup={async (host) => {
         const { reelSet, destroy } = await mountMiniReels(host, {
-          reelCount: 5, visibleRows: 3,
+          reelCount: 5, visibleCells: 3,
           symbolSize: { width: CELL, height: CELL },
           symbols: { kind: 'sprite', ids: IDS },
         });

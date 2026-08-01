@@ -7,30 +7,30 @@ import { HeadlessSymbol } from '../../src/testing/HeadlessSymbol.js';
 import type { Ticker } from 'pixi.js';
 
 describe('builder validation', () => {
-  it('rejects both visibleRows() and visibleRowsPerReel()', () => {
+  it('rejects both visibleCells() and visibleCellsPerReel()', () => {
     expect(() =>
       new ReelSetBuilder()
         .reels(3)
-        .visibleRows(3)
-        .visibleRowsPerReel([3, 5, 3])
+        .visibleCells(3)
+        .visibleCellsPerReel([3, 5, 3])
         .symbolSize(100, 100)
         .ticker(new FakeTicker() as unknown as Ticker)
         .symbols((r) => r.register('a', HeadlessSymbol, {}))
         .build(),
-    ).toThrow(/cannot call both visibleRows\(\) and visibleRowsPerReel\(\)/);
+    ).toThrow(/cannot call both visibleCells\(\) and visibleCellsPerReel\(\)/);
   });
 
-  it('rejects multiways() + visibleRowsPerReel()', () => {
+  it('rejects multiways() + visibleCellsPerReel()', () => {
     expect(() =>
       new ReelSetBuilder()
         .reels(3)
-        .visibleRowsPerReel([3, 5, 3])
+        .visibleCellsPerReel([3, 5, 3])
         .multiways({ minRows: 2, maxRows: 7, reelPixelHeight: 600 })
         .symbolSize(100, 100)
         .ticker(new FakeTicker() as unknown as Ticker)
         .symbols((r) => r.register('a', HeadlessSymbol, {}))
         .build(),
-    ).toThrow(/cannot combine multiways\(\) with visibleRowsPerReel\(\)/);
+    ).toThrow(/cannot combine multiways\(\) with visibleCellsPerReel\(\)/);
   });
 
   it('accepts multiways() + cascade mode (issue #74)', () => {
@@ -61,23 +61,23 @@ describe('builder validation', () => {
     ).toThrow(/minRows .* cannot exceed maxRows/);
   });
 
-  it('rejects mismatched visibleRowsPerReel length', () => {
+  it('rejects mismatched visibleCellsPerReel length', () => {
     expect(() =>
-      createTestReelSet({ reels: 5, visibleRows: [3, 5, 5] }),
+      createTestReelSet({ reels: 5, visibleCells: [3, 5, 5] }),
     ).toThrow(/length 3 must equal reels\(5\)/);
   });
 
-  it('rejects mismatched reelPixelHeights length', () => {
+  it('rejects mismatched reelExtents length', () => {
     expect(() =>
       new ReelSetBuilder()
         .reels(5)
-        .visibleRows(3)
+        .visibleCells(3)
         .symbolSize(100, 100)
-        .reelPixelHeights([300, 300])
+        .reelExtents([300, 300])
         .ticker(new FakeTicker() as unknown as Ticker)
         .symbols((r) => r.register('a', HeadlessSymbol, {}))
         .build(),
-    ).toThrow(/reelPixelHeights length 2 must equal reels\(5\)/);
+    ).toThrow(/reelExtents length 2 must equal reels\(5\)/);
   });
 
   it('accepts a complete multiways slot', () => {
@@ -92,16 +92,16 @@ describe('builder validation', () => {
     }
   });
 
-  it('rejects multiways({reelPixelHeight}) + reelPixelHeights([...]) collision', () => {
+  it('rejects multiways({reelPixelHeight}) + reelExtents([...]) collision', () => {
     expect(() =>
       new ReelSetBuilder()
         .reels(3)
         .multiways({ minRows: 2, maxRows: 5, reelPixelHeight: 500 })
-        .reelPixelHeights([500, 500, 500])
+        .reelExtents([500, 500, 500])
         .symbolSize(100, 100)
         .ticker(new FakeTicker() as unknown as Ticker)
         .symbols((r) => r.register('a', HeadlessSymbol, {}))
         .build(),
-    ).toThrow(/cannot combine multiways\({reelPixelHeight}\) with reelPixelHeights/);
+    ).toThrow(/cannot combine multiways\({reelPixelHeight}\) with reelExtents/);
   });
 });

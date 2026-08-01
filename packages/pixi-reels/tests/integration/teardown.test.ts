@@ -18,7 +18,7 @@ const GRID = [
 
 describe('ReelSet teardown invariants', () => {
   it('fires each reel\'s "destroyed" event to attached listeners (H1)', () => {
-    const h = createTestReelSet({ reels: 3, visibleRows: 3, symbolIds: SYMBOLS });
+    const h = createTestReelSet({ reels: 3, visibleCells: 3, symbolIds: SYMBOLS });
     const fired: number[] = [];
     h.reelSet.reels.forEach((reel, i) => {
       reel.events.on('destroyed', () => fired.push(i));
@@ -29,7 +29,7 @@ describe('ReelSet teardown invariants', () => {
   });
 
   it('destroys symbol views instead of leaving them pooled-but-alive (H2)', async () => {
-    const h = createTestReelSet({ reels: 3, visibleRows: 3, symbolIds: SYMBOLS });
+    const h = createTestReelSet({ reels: 3, visibleCells: 3, symbolIds: SYMBOLS });
     await h.spinAndLand(GRID);
     // Capture every live symbol view before teardown clears reel.symbols.
     const views = h.reelSet.reels.flatMap((r) => r.symbols.map((s) => s.view));
@@ -43,7 +43,7 @@ describe('ReelSet teardown invariants', () => {
   });
 
   it('leaves no ticker callbacks after destroy (H4)', async () => {
-    const h = createTestReelSet({ reels: 3, visibleRows: 3, symbolIds: SYMBOLS });
+    const h = createTestReelSet({ reels: 3, visibleCells: 3, symbolIds: SYMBOLS });
     await h.spinAndLand(GRID);
     expect(h.ticker.listenerCount).toBeGreaterThan(0);
 
@@ -53,7 +53,7 @@ describe('ReelSet teardown invariants', () => {
   });
 
   it('is idempotent under double-destroy (H4)', async () => {
-    const h = createTestReelSet({ reels: 3, visibleRows: 3, symbolIds: SYMBOLS });
+    const h = createTestReelSet({ reels: 3, visibleCells: 3, symbolIds: SYMBOLS });
     await h.spinAndLand(GRID);
     h.reelSet.destroy();
     expect(() => h.reelSet.destroy()).not.toThrow();

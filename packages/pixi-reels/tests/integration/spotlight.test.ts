@@ -11,7 +11,7 @@ const SYMBOLS = ['a', 'b', 'c', 'wild'];
 function makeHarness() {
   return createTestReelSet({
     reels: 5,
-    visibleRows: 3,
+    visibleCells: 3,
     symbolIds: SYMBOLS,
   });
 }
@@ -33,7 +33,7 @@ describe('SymbolSpotlight — symbol parent invariant after recycling', () => {
       // pool - the 'a' instance at reel 0 may end up reused on a different
       // reel after the next placeSymbols call.
       await h.reelSet.spotlight.show(
-        [{ reelIndex: 0, rowIndex: 1 }],
+        [{ reelIndex: 0, cellIndex: 1 }],
         { promoteAboveMask: false },
       );
 
@@ -53,7 +53,7 @@ describe('SymbolSpotlight — symbol parent invariant after recycling', () => {
       // reel 0's container, leaving a hole on whichever reel now owns it
       // and a stranger inside reel 0's container.
       await h.reelSet.spotlight.show(
-        [{ reelIndex: 4, rowIndex: 0 }],
+        [{ reelIndex: 4, cellIndex: 0 }],
         { promoteAboveMask: false },
       );
       h.reelSet.spotlight.hide();
@@ -90,7 +90,7 @@ describe('SymbolSpotlight — symbol parent invariant after recycling', () => {
       // pool) yanks it back into a reel before hide() runs, hide() must
       // not steal it from the new owner.
       h.reelSet.spotlight.show(
-        [{ reelIndex: 0, rowIndex: 1 }],
+        [{ reelIndex: 0, cellIndex: 1 }],
         { promoteAboveMask: true, playWinAnimation: false },
       );
       // Land a different grid that will exercise placeSymbols on every reel.
@@ -132,7 +132,7 @@ describe('SymbolSpotlight — symbol parent invariant after recycling', () => {
       const beforeParent = beforeSym.view.parent;
 
       await h.reelSet.spotlight.show(
-        [{ reelIndex: 0, rowIndex: 1 }],
+        [{ reelIndex: 0, cellIndex: 1 }],
         { promoteAboveMask: true },
       );
 
@@ -151,7 +151,7 @@ describe('SymbolSpotlight — symbol parent invariant after recycling', () => {
 
 describe('SymbolSpotlight.cycle', () => {
   it('shows every win line for the configured duration (not just the first)', async () => {
-    const h = createTestReelSet({ reels: 5, visibleRows: 3, symbolIds: SYMBOLS });
+    const h = createTestReelSet({ reels: 5, visibleCells: 3, symbolIds: SYMBOLS });
     try {
       await h.spinAndLand([
         ['a', 'a', 'a'],
@@ -167,8 +167,8 @@ describe('SymbolSpotlight.cycle', () => {
       const spyTwo = vi.spyOn(lineTwoSym, 'playWin');
 
       const lines = [
-        { positions: [{ reelIndex: 0, rowIndex: 0 }] },
-        { positions: [{ reelIndex: 1, rowIndex: 0 }] },
+        { positions: [{ reelIndex: 0, cellIndex: 0 }] },
+        { positions: [{ reelIndex: 1, cellIndex: 0 }] },
       ];
 
       vi.useFakeTimers();
@@ -198,7 +198,7 @@ describe('SymbolSpotlight.cycle', () => {
   });
 
   it('hide() interrupts a running cycle promptly', async () => {
-    const h = createTestReelSet({ reels: 5, visibleRows: 3, symbolIds: SYMBOLS });
+    const h = createTestReelSet({ reels: 5, visibleCells: 3, symbolIds: SYMBOLS });
     try {
       await h.spinAndLand([
         ['a', 'a', 'a'],
@@ -212,8 +212,8 @@ describe('SymbolSpotlight.cycle', () => {
       const spyTwo = vi.spyOn(lineTwoSym, 'playWin');
 
       const lines = [
-        { positions: [{ reelIndex: 0, rowIndex: 0 }] },
-        { positions: [{ reelIndex: 1, rowIndex: 0 }] },
+        { positions: [{ reelIndex: 0, cellIndex: 0 }] },
+        { positions: [{ reelIndex: 1, cellIndex: 0 }] },
       ];
 
       vi.useFakeTimers();
@@ -251,7 +251,7 @@ describe('SymbolSpotlight — lifecycle events (C1)', () => {
         ends++;
       });
 
-      const positions = [{ reelIndex: 0, rowIndex: 1 }];
+      const positions = [{ reelIndex: 0, cellIndex: 1 }];
       await h.reelSet.spotlight.show(positions, {
         promoteAboveMask: false,
         playWinAnimation: false,

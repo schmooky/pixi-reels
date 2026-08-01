@@ -22,7 +22,7 @@ const SYMBOLS = ['a', 'b', 'c', 'scatter', 'wild', 'coin'];
 function makeHarness() {
   return createTestReelSet({
     reels: 5,
-    visibleRows: 3,
+    visibleCells: 3,
     symbolIds: SYMBOLS,
   });
 }
@@ -32,7 +32,7 @@ describe('mechanic: classic-lines (forceLine)', () => {
     const h = makeHarness();
     try {
       const engine = new CheatEngine({
-        reelCount: 5, visibleRows: 3, symbolIds: SYMBOLS, seed: 1,
+        reelCount: 5, visibleCells: 3, symbolIds: SYMBOLS, seed: 1,
       });
       engine.register({ id: 'line', label: 'line', enabled: true, cheat: forceLine(1, 'a') });
       const { symbols } = engine.next();
@@ -51,7 +51,7 @@ describe('mechanic: scatter-triggers-fs (forceScatters)', () => {
     const h = makeHarness();
     try {
       const engine = new CheatEngine({
-        reelCount: 5, visibleRows: 3, symbolIds: SYMBOLS, seed: 2,
+        reelCount: 5, visibleCells: 3, symbolIds: SYMBOLS, seed: 2,
       });
       engine.register({
         id: 's', label: 's', enabled: true,
@@ -71,7 +71,7 @@ describe('mechanic: hold-and-win (holdAndWinProgress)', () => {
     const h = makeHarness();
     try {
       const engine = new CheatEngine({
-        reelCount: 5, visibleRows: 3, symbolIds: SYMBOLS, seed: 3,
+        reelCount: 5, visibleCells: 3, symbolIds: SYMBOLS, seed: 3,
       });
       engine.register({
         id: 'h', label: 'h', enabled: true,
@@ -89,7 +89,7 @@ describe('mechanic: hold-and-win (holdAndWinProgress)', () => {
 
   it('reaches jackpot when the grid fills with coins', () => {
     const engine = new CheatEngine({
-      reelCount: 3, visibleRows: 3, symbolIds: SYMBOLS, seed: 4,
+      reelCount: 3, visibleCells: 3, symbolIds: SYMBOLS, seed: 4,
     });
     engine.register({
       id: 'h', label: 'h', enabled: true,
@@ -111,7 +111,7 @@ describe('mechanic: hold-and-win (holdAndWinProgress)', () => {
 describe('mechanic: cascade-multiplier (cascadeSequence)', () => {
   it('drives successive grids through the same reel set', async () => {
     const h = createTestReelSet({
-      reels: 3, visibleRows: 3, symbolIds: SYMBOLS,
+      reels: 3, visibleCells: 3, symbolIds: SYMBOLS,
     });
     try {
       const g1: string[][] = [
@@ -125,7 +125,7 @@ describe('mechanic: cascade-multiplier (cascadeSequence)', () => {
         ['b', 'b', 'b'],
       ];
       const engine = new CheatEngine({
-        reelCount: 3, visibleRows: 3, symbolIds: SYMBOLS, seed: 5,
+        reelCount: 3, visibleCells: 3, symbolIds: SYMBOLS, seed: 5,
       });
       engine.register({
         id: 'c', label: 'c', enabled: true,
@@ -148,7 +148,7 @@ describe('mechanic: sticky-wilds (forceCell)', () => {
     const h = makeHarness();
     try {
       const engine = new CheatEngine({
-        reelCount: 5, visibleRows: 3, symbolIds: SYMBOLS, seed: 6,
+        reelCount: 5, visibleCells: 3, symbolIds: SYMBOLS, seed: 6,
       });
       engine.register({
         id: 'w', label: 'w', enabled: true,
@@ -167,7 +167,7 @@ describe('mechanic: sticky-wilds (forceCell)', () => {
 describe('mechanic: anticipation-slam (forceAnticipation)', () => {
   it('reports anticipation reels in the cheat output', () => {
     const engine = new CheatEngine({
-      reelCount: 5, visibleRows: 3, symbolIds: SYMBOLS, seed: 7,
+      reelCount: 5, visibleCells: 3, symbolIds: SYMBOLS, seed: 7,
     });
     engine.register({
       id: 'a', label: 'a', enabled: true,

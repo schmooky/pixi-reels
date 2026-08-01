@@ -20,17 +20,17 @@ function rv() {
 }
 
 // ── initialFrame seeds the FIRST spin's buffer-above ────────────────────
-// Explicit ColumnTarget form. { visible, bufferAbove }. Same shape that
+// Explicit ColumnTarget form. { visible, bufferStart }. Same shape that
 // setResult accepts.
 const initialFrame = [
-  { visible: ['7', '8', '9'], bufferAbove: [TEASE] },
-  { visible: ['7', '8', '9'], bufferAbove: [TEASE] },
-  { visible: ['7', '8', '9'], bufferAbove: [TEASE] },
+  { visible: ['7', '8', '9'], bufferStart: [TEASE] },
+  { visible: ['7', '8', '9'], bufferStart: [TEASE] },
+  { visible: ['7', '8', '9'], bufferStart: [TEASE] },
 ];
 
 const reelSet = new ReelSetBuilder()
   .reels(3)
-  .visibleRows(3)
+  .visibleCells(3)
   .symbolSize(90, 90)
   .symbolGap(4, 4)
   .bufferSymbols(1)
@@ -51,16 +51,16 @@ return {
     // next spin shows the peek again. Same explicit ColumnTarget shape used
     // for the initial frame above.
     const result = [
-      { visible: [rv(), rv(), rv()], bufferAbove: [TEASE] },
-      { visible: [rv(), rv(), rv()], bufferAbove: [TEASE] },
-      { visible: [rv(), rv(), rv()], bufferAbove: [TEASE] },
+      { visible: [rv(), rv(), rv()], bufferStart: [TEASE] },
+      { visible: [rv(), rv(), rv()], bufferStart: [TEASE] },
+      { visible: [rv(), rv(), rv()], bufferStart: [TEASE] },
     ];
 
     const p = reelSet.spin();
     await new Promise((r) => setTimeout(r, 250));
-    // `result` is already ColumnTarget[] ({ visible, bufferAbove }); pass it
+    // `result` is already ColumnTarget[] ({ visible, bufferStart }); pass it
     // straight through. Wrapping it in `.map((visible) => ({ visible }))` would
-    // nest each object and drop the bufferAbove TEASE that re-seeds the peek.
+    // nest each object and drop the bufferStart TEASE that re-seeds the peek.
     reelSet.setResult(result);
     await p;
   },

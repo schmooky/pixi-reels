@@ -17,8 +17,8 @@ describe('enableDebug per-instance registry', () => {
 
   it('keeps multiple reel sets reachable instead of clobbering', () => {
     g.window = g.window ?? {};
-    const a = createTestReelSet({ reels: 3, visibleRows: 3, symbolIds: ['a', 'b', 'c'] });
-    const b = createTestReelSet({ reels: 3, visibleRows: 3, symbolIds: ['a', 'b', 'c'] });
+    const a = createTestReelSet({ reels: 3, visibleCells: 3, symbolIds: ['a', 'b', 'c'] });
+    const b = createTestReelSet({ reels: 3, visibleCells: 3, symbolIds: ['a', 'b', 'c'] });
     try {
       enableDebug(a.reelSet, 'a');
       enableDebug(b.reelSet, 'b');

@@ -48,7 +48,7 @@ describe('nudge in-flight guard (M4)', () => {
 
   it('keeps blocking spin() until the LAST parallel nudge settles', async () => {
     const deferred = installDeferredGsap();
-    const h = createTestReelSet({ reels: 3, visibleRows: 3, symbolIds: ['a', 'b', 'c', 'wild'] });
+    const h = createTestReelSet({ reels: 3, visibleCells: 3, symbolIds: ['a', 'b', 'c', 'wild'] });
     try {
       await h.spinAndLand([
         ['a', 'b', 'c'],

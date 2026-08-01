@@ -13,12 +13,12 @@ const GRID = [
 
 const WINS = [0, 1, 2].map((row) => ({
   id: row,
-  cells: Array.from({ length: COLS }, (_, reelIndex) => ({ reelIndex, rowIndex: row })),
+  cells: Array.from({ length: COLS }, (_, reelIndex) => ({ reelIndex, cellIndex: row })),
   value: [300, 100, 60][row],
 }));
 
 const reelSet = new ReelSetBuilder()
-  .reels(COLS).visibleRows(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
+  .reels(COLS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
   .symbols(r => {
     for (const sym of [...CARD_DECK, WILD_CARD]) {
       r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });

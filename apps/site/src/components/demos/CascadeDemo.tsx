@@ -19,7 +19,7 @@ export default function CascadeDemo() {
       boot={(host, api, cheats) =>
         mountMechanic(host, api, {
           reelCount: 5,
-          visibleRows: 5,
+          visibleCells: 5,
           symbolSize: { width: 80, height: 80 },
           symbols: { kind: 'card' },
           weights: Object.fromEntries(CARD_DECK.map((c) => [c.id, 1])),

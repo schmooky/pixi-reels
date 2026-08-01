@@ -17,14 +17,14 @@ const GRID = [
 
 const WINS = [0, 1, 2].map((row) => ({
   id: row,
-  cells: Array.from({ length: COLS }, (_, reelIndex) => ({ reelIndex, rowIndex: row })),
+  cells: Array.from({ length: COLS }, (_, reelIndex) => ({ reelIndex, cellIndex: row })),
   value: [300, 100, 60][row],
 }));
 
 const LINE_COLORS = [0xffe04a, 0x33d1ff, 0xff7aa2];
 
 const reelSet = new ReelSetBuilder()
-  .reels(COLS).visibleRows(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
+  .reels(COLS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
   .symbols(r => {
     for (const sym of [...CARD_DECK, WILD_CARD]) {
       r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
@@ -44,7 +44,7 @@ reelSet.events.on('win:group', (win, cells) => {
   gfx.zIndex = win.id ?? 0;
   const color = LINE_COLORS[(win.id ?? 0) % LINE_COLORS.length];
   const pts = cells.map(c => {
-    const b = reelSet.getCellBounds(c.reelIndex, c.rowIndex);
+    const b = reelSet.getCellBounds(c.reelIndex, c.cellIndex);
     return { x: b.x + b.width / 2, y: b.y + b.height / 2 };
   });
   gfx.moveTo(pts[0].x, pts[0].y);

@@ -53,7 +53,7 @@ export class StartPhase extends ReelPhase<StartPhaseConfig> {
 
     // Step-back: brief reverse to give a "pull" before launch. This tweens
     // reel.speed, not a position, so it needs no axis routing: the negative
-    // speed is direction-relative and ReelMotion.displace multiplies travel by
+    // speed is direction-relative and ReelMotion.advance multiplies travel by
     // axis.polarity, making it read as "backwards for this reel" in any
     // orientation/direction. Multiplying speed by polarity here would instead
     // invert the pull on reverse reels.
