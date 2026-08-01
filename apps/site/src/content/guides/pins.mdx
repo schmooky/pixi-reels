@@ -11,13 +11,13 @@ A **pin** locks a cell to a specific symbol id and keeps it visible across spins
 
 ```ts
 // Pin a cell. The id resolves through the SymbolFactory, exactly like normal placement.
-const pin = reelSet.pin(col, row, 'sticky-wild', { turns: 'permanent' });
+const pin = reelSet.pin(reel, cell, 'sticky-wild', { turns: 'permanent' });
 
 // Move it elsewhere with an animated tween.
-await reelSet.movePin({ reel, cell }, { col: col - 1, row }, { duration: 600 });
+await reelSet.movePin({ reel, cell }, { reel: reel - 1, cell }, { duration: 600 });
 
 // Release it.
-reelSet.unpin(col, row);
+reelSet.unpin(reel, cell);
 ```
 
 ## What a pin guarantees
@@ -44,7 +44,7 @@ This split is invisible if you just want a sticky cell. It matters once you want
 ## Lifecycle in full
 
 ```
-pin(col, row, 'wild', { turns: 'permanent' })
+pin(reel, cell, 'wild', { turns: 'permanent' })
   Reel cell gets a fresh symbol via SymbolFactory; onActivate runs.
   fires pin:placed(pin)
 
@@ -69,7 +69,7 @@ movePin(from, to, opts)
   Reel cell at destination updated, flight released.
   fires pin:moved(newPin, oldCoord)
 
-unpin(col, row)  (or pin auto-expires after `turns: N`)
+unpin(reel, cell)  (or pin auto-expires after `turns: N`)
   fires pin:expired(pin, reason)
 ```
 
@@ -134,8 +134,8 @@ reelSet.events.on('pin:overlayCreated', (_pin, overlay) => {
 // Flight: run animation during movePin
 async function walkLeft(pin: CellPin) {
   await reelSet.movePin(
-    { col: pin.reel, row: pin.cell },
-    { col: pin.reel - 1, row: pin.cell },
+    { reel: pin.reel, cell: pin.cell },
+    { reel: pin.reel - 1, cell: pin.cell },
     {
       duration: 600,
       onFlightCreated: (flight) => {

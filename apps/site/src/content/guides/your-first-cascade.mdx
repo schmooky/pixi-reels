@@ -95,10 +95,10 @@ const server = {
       if (!winnersByReel.has(w.reel)) winnersByReel.set(w.reel, new Set());
       winnersByReel.get(w.reel)!.add(w.cell);
     }
-    return prev.map((col, reel) => {
+    return prev.map((column, reel) => {
       const losers = winnersByReel.get(reel);
       if (!losers || losers.size === 0) return [...reel];
-      const survivors = col.filter((_, row) => !losers.has(row));
+      const survivors = column.filter((_, cell) => !losers.has(cell));
       const fillers = Array.from({ length: losers.size }, randSymbol);
       // Convention: top winners.length rows = new, rest = survivors in original order.
       return [...fillers, ...survivors];

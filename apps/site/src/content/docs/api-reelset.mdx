@@ -22,7 +22,7 @@ Every method on this page is non-async unless its return type is `Promise`. Prom
 | `skipSpin` | `() => void` | Round-aware slam. First press boosts speed (standard mode) or flags refills to auto-slam (cascade mode); subsequent presses also slam. |
 | `requestSkip` | `() => void` | Safe pre-`setResult` slam. Queues until the result arrives, then slams. Bypasses the round-side-effect machine. |
 | `slamStop` | `() => void` | Unconditional slam. No boost, no auto-slam flag. For tests / anti-cheat / programmatic land-now intent. |
-| `skipNudge` | `(col?: number) => void` | Fast-forward an in-flight `nudge()` to its landed state. Distinct from `skipSpin` and `slamStop`: those land a spin; this lands a nudge. |
+| `skipNudge` | `(reel?: number) => void` | Fast-forward an in-flight `nudge()` to its landed state. Distinct from `skipSpin` and `slamStop`: those land a spin; this lands a nudge. |
 | `skipStage` | `readonly 0 \| 1 \| 2` | `0` until the first `skipSpin()` press of the round, `2` after. Drive UI labels from this. |
 | `isSpinning` | `readonly boolean` | `true` between `spin:start` and `spin:complete`. Oscillates per refill in a cascade round. see [cascades guide](/guides/cascades/). |
 
@@ -143,21 +143,21 @@ The library ships [`WinPresenter`](/docs/api-events/) as a higher-level events-d
 
 | Method | Signature | Notes |
 |---|---|---|
-| `pin` | `(col, row, symbolId, opts?: CellPinOptions) => CellPin` | Place a sticky/expanding/turn-bound pin. Applies immediately if idle, otherwise at the next `setResult()`. |
-| `unpin` | `(col, row) => void` | Remove a pin. No-op if none. Fires `pin:expired` with reason `'explicit'`. |
-| `getPin` | `(col, row) => CellPin \| undefined` | Convenience map lookup. |
-| `pins` | `readonly ReadonlyMap<string, CellPin>` | Keyed by `"col:row"`. Reads are safe at any time. |
+| `pin` | `(reel, cell, symbolId, opts?: CellPinOptions) => CellPin` | Place a sticky/expanding/turn-bound pin. Applies immediately if idle, otherwise at the next `setResult()`. |
+| `unpin` | `(reel, cell) => void` | Remove a pin. No-op if none. Fires `pin:expired` with reason `'explicit'`. |
+| `getPin` | `(reel, cell) => CellPin \| undefined` | Convenience map lookup. |
+| `pins` | `readonly ReadonlyMap<string, CellPin>` | Keyed by `"reel:cell"`. Reads are safe at any time. |
 | `movePin` | `(from, to, opts?: MovePinOptions) => Promise<void>` | Animate a pin to a new cell at rest. Engine-native walking-wild primitive. |
-| `setSymbolAt` | `(col, row, symbolId) => void` | Swap a single cell in place, at rest. Throws on pinned cells. `unpin()` first if intentional. |
+| `setSymbolAt` | `(reel, cell, symbolId) => void` | Swap a single cell in place, at rest. Throws on pinned cells. `unpin()` first if intentional. |
 
 ## Cell / footprint queries
 
 | Method | Signature | Notes |
 |---|---|---|
 | `getVisibleGrid` | `() => string[][]` | One id per visible cell. Cross-reel OCCUPIED stubs resolve to the big symbol's anchor id. |
-| `getCellBounds` | `(col, row) => CellBounds` | ReelSet-local rectangle for a 1×1 cell. Use for paylines / hit areas / debug overlays. |
-| `getBlockBounds` | `(col, row) => CellBounds` | Pixel rect covering a big symbol's whole `N×M` block. Returns the cell bounds for 1×1. |
-| `getSymbolFootprint` | `(col, row) => { anchor: { reel, cell }; size: { w, h } }` | Resolves OCCUPIED stubs to the anchor cell and reports the block size. |
+| `getCellBounds` | `(reel, cell) => CellBounds` | ReelSet-local rectangle for a 1×1 cell. Use for paylines / hit areas / debug overlays. |
+| `getBlockBounds` | `(reel, cell) => CellBounds` | Pixel rect covering a big symbol's whole `N×M` block. Returns the cell bounds for 1×1. |
+| `getSymbolFootprint` | `(reel, cell) => { anchor: { reel, cell }; size: { reels, cells } }` | Resolves OCCUPIED stubs to the anchor cell and reports the block size. |
 
 ## Frame middleware (runtime-mutable)
 

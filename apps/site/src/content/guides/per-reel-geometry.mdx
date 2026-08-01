@@ -51,7 +51,7 @@ new ReelSetBuilder()
 
 The engine computes a per-reel `mainOffset` so shorter reels are positioned according to `reelAnchor`. The default mask draws one clip rect per reel. short reels never leak buffer rows above or below their visible area.
 
-`getCellBounds(col, row)` accounts for `mainOffset` automatically; `debugSnapshot.visibleCells` is `number[]` (one per reel) so jagged shapes are visible to debug tooling.
+`getCellBounds(reel, cell)` folds in `mainOffset` for you; `debugSnapshot.visibleCells` is `number[]` (one per reel) so jagged shapes are visible to debug tooling.
 
 → Recipe: [Per-reel shape (pyramid)](/recipes/pyramid-shape/)
 

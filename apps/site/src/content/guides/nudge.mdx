@@ -16,12 +16,12 @@ await reelSet.spin();
 
 await reelSet.nudge(2, {
   distance: 1,
-  direction: 'down',
+  direction: 'forward',
   incoming: ['wild'],
 });
 ```
 
-That call shifts reel `2` down by one row. The old top row drops to the
+That call shifts reel `2` forward by one cell. The old first cell drops to the
 middle, the old middle drops to the bottom, the old bottom symbol leaves the
 visible window, and `'wild'` slides in at the new top.
 
@@ -37,10 +37,14 @@ interface NudgeOptions {
    */
   distance: number;
   /**
-   *  - 'down'. symbols move down; new symbols enter from the top.
-   *  - 'up'  . symbols move up;   new symbols enter from the bottom.
+   *  - 'forward'. the way this reel travels; new symbols enter at its
+   *    feed edge.
+   *  - 'reverse'. the other way; new symbols enter at the opposite edge.
+   *
+   * Relative to the REEL, not the screen. On a reel built with
+   * direction('reverse'), 'forward' nudges upward.
    */
-  direction: 'up' | 'down';
+  direction: 'forward' | 'reverse';
   /**
    * Symbol ids in **top-down order of their FINAL on-strip position**.
    * including any overflow into the off-screen buffer. Length must equal
@@ -57,8 +61,8 @@ interface NudgeOptions {
   signal?: AbortSignal;
 }
 
-reelSet.nudge(col: number, options: NudgeOptions): Promise<{ symbols: string[] }>;
-reelSet.skipNudge(col?: number): void;
+reelSet.nudge(reel: number, options: NudgeOptions): Promise<{ symbols: string[] }>;
+reelSet.skipNudge(reel?: number): void;
 ```
 
 The promise resolves with the new visible column top-to-bottom, ready to
@@ -68,21 +72,21 @@ mid-tween.
 
 ## How `incoming` lays out
 
-For a 3-row column landed on `['A', 'B', 'C']` (top, middle, bottom):
+For a 3-cell reel landed on `['A', 'B', 'C']` (first, middle, last):
 
 | Call | New visible (top → bottom) |
 | --- | --- |
-| `nudge(c, { distance: 1, direction: 'down', incoming: ['X'] })` | `['X', 'A', 'B']` |
-| `nudge(c, { distance: 2, direction: 'down', incoming: ['X', 'Y'] })` | `['X', 'Y', 'A']` |
-| `nudge(c, { distance: 1, direction: 'up',   incoming: ['X'] })` | `['B', 'C', 'X']` |
-| `nudge(c, { distance: 2, direction: 'up',   incoming: ['X', 'Y'] })` | `['C', 'X', 'Y']` |
+| `nudge(r, { distance: 1, direction: 'forward', incoming: ['X'] })` | `['X', 'A', 'B']` |
+| `nudge(r, { distance: 2, direction: 'forward', incoming: ['X', 'Y'] })` | `['X', 'Y', 'A']` |
+| `nudge(r, { distance: 1, direction: 'reverse', incoming: ['X'] })` | `['B', 'C', 'X']` |
+| `nudge(r, { distance: 2, direction: 'reverse', incoming: ['X', 'Y'] })` | `['C', 'X', 'Y']` |
 
 `incoming[0]` is always the topmost final position; `incoming[distance-1]`
 is always the bottommost. When `distance` exceeds `visibleCells`, the
 overflow lands in the off-screen buffer on the matching side:
 
-- `direction: 'down'`. trailing `incoming` entries spill into **bufferEnd**.
-- `direction: 'up'`. leading `incoming` entries spill into **bufferStart**.
+- `direction: 'forward'` -- trailing `incoming` entries spill into the **exit-edge** buffer.
+- `direction: 'reverse'` -- leading `incoming` entries spill into the other one.
 
 Either way, every entry stays on the strip. available to a follow-up
 nudge or carried into the next spin's start frame. The engine refuses
@@ -101,8 +105,8 @@ output, same events fire, only the pacing changes.
 <RecipeDemo code="nudge-sequential" />
 
 ```ts
-for (const col of [1, 2, 3]) {
-  await reelSet.nudge(col, { distance: 1, direction: 'down', incoming: ['wild'], duration: 480 });
+for (const reel of [1, 2, 3]) {
+  await reelSet.nudge(reel, { distance: 1, direction: 'forward', incoming: ['wild'], duration: 480 });
 }
 ```
 
@@ -116,8 +120,8 @@ register reel 1's wild before reel 2 even starts. Total wall time =
 
 ```ts
 await Promise.all(
-  [1, 2, 3].map((col) =>
-    reelSet.nudge(col, { distance: 1, direction: 'down', incoming: ['wild'], duration: 480 }),
+  [1, 2, 3].map((reel) =>
+    reelSet.nudge(reel, { distance: 1, direction: 'forward', incoming: ['wild'], duration: 480 }),
   ),
 );
 ```
@@ -133,8 +137,8 @@ loop:
 
 ```ts
 await Promise.all(
-  [1, 2, 3].map((col, i) =>
-    reelSet.nudge(col, { ...opts, startDelay: i * 80 }),
+  [1, 2, 3].map((reel, i) =>
+    reelSet.nudge(reel, { ...opts, startDelay: i * 80 }),
   ),
 );
 ```
@@ -151,8 +155,8 @@ its post-rotation position keeps the whole block on the strip:
 
 | Direction | Survival condition |
 | --- | --- |
-| `'down'` | `anchorStripIdx + h - 1 + distance < total` |
-| `'up'`   | `anchorStripIdx - distance >= 0` |
+| `'forward'` | `anchorStripIdx + h - 1 + distance < total` |
+| `'reverse'`   | `anchorStripIdx - distance >= 0` |
 
 Where `total = bufferStart + visibleCells + bufferEnd` and
 `anchorStripIdx` is the anchor's index on the full strip (0 = topmost
@@ -171,7 +175,7 @@ isn't safe.
 ```ts
 // 1x2 wild lives in visible row 1 + bufferEnd. Nudge up by 1 reveals
 // the full block at visible rows 0 + 1.
-await reelSet.nudge(2, { distance: 1, direction: 'up', incoming: ['filler'] });
+await reelSet.nudge(2, { distance: 1, direction: 'reverse', incoming: ['filler'] });
 ```
 
 ## Aborting / skipping
@@ -231,10 +235,10 @@ during the tween or AbortSignal cancellation.
 **Throws synchronously:**
 
 - The reel set is currently spinning, refilling, or in a cascade.
-- `col` is out of `[0, reelCount)`.
-- The target reel has an active pin (call `unpin(col, row)` first).
+- `reel` is out of `[0, reelCount)`.
+- The target reel has an active pin (call `unpin(reel, cell)` first).
 - `distance < 1`, not an integer, or `>= total strip capacity`.
-- `direction` is neither `'up'` nor `'down'`.
+- `direction` is neither `'reverse'` nor `'forward'`.
 - `incoming.length !== distance`.
 - An `incoming` id is not registered, or is a big symbol.
 - A block on the target reel wouldn't survive the rotation (split detection).

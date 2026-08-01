@@ -4,42 +4,45 @@ eyebrow: Building blocks
 description: The full lifecycle of a spin. phases, events, and how to hook in.
 order: 5
 ---
-Unless you've changed it, your spin has 3 phases:
+A spin has three phases. Sometimes four.
 
-* start
-* spin
-* anticipation
-* stop
+**Start** -- pulls back a little, then accelerates. Like a lever.
 
-Wait, that's four! Yeah, kinda.
+**Spin** -- full speed. Waits for the server.
 
-You *might* enable anticipation explicitly before setting the result, which makes that phase appear. Most games with scatters need it anyway, so the engine ships it ready to use.
+**Anticipation** -- optional. Slows one reel to build tension. Only appears if
+you asked for it with `setAnticipation()` before the result. Most scatter
+games want it, so it ships ready.
 
-**Start** accelerates from rest with a tiny step-back "pull."
-
-**Spin** holds full speed until the server answer arrives.
-
-**Anticipation** (optional) slows a specific reel for dramatic tension.
-
-**Stop** decelerates onto the target frame with a bounce.
+**Stop** -- brakes onto the target frame, overshoots, settles.
 
 ## What events will be fired by ReelSet
 
-When you fire off `reelSet.spin()`, you don't have to poll anything to know what's happening.
+You never poll. The set tells you.
 
-The reelset emits events at every beat of the lifecycle, and a single `await reelSet.spin()` walks through all of them in order.
+One `await reelSet.spin()` walks the whole chain, in order:
 
-It opens with `spin:start`, which tells you that  reels are starting to spin. Any `reelSet.spin()`call fires it, no matter how it ends.
+`spin:start` -- reels are moving. Fires on every `spin()`, however it ends.
 
-Then `spin:allStarted` fires once every reel (minus any you've held) is up to full speed and in the SPIN phase. This is the moment that matters for timing the result: it's safe to call `setResult()` before this, **but the engine** **will sit on it until this event passes**.
+`spin:allStarted` -- every reel (except held ones) is at full speed. This is
+the beat that matters for timing. You CAN call `setResult()` earlier; the
+engine just sits on it until this passes.
 
-As reels begin braking you get `spin:stopping`, one per reel, carrying the reel index. **Held reels never fire it.** Right after a reel settles, `spin:reelLanded` follows with that reel's index and the symbols it landed on, so you can kick off per-reel effects (a scatter ping, a column glow) the instant each one stops rather than waiting for the whole grid.
+`spin:stopping` -- one per reel, carrying its index, as it starts braking.
+Held reels never fire it.
 
-Once the last non-held reel lands, `spin:allLanded` fires with the full result, the final grid in hand. And immediately after, `spin:complete` closes it out, carrying the same result plus the total duration. That's your cue to run win presentation.
+`spin:reelLanded` -- that reel settled. Carries its index and its symbols.
+Use it for per-reel beats: a scatter ping, a column glow. You do not have to
+wait for the whole grid.
+
+`spin:allLanded` -- last non-held reel is down. Full result attached.
+
+`spin:complete` -- fires right after, same result plus total duration. This
+is where win presentation starts.
 
 ## Pattern: fetch result mid-spin
 
-Slots call the server while the reels are spinning. pixi-reels is built for exactly this.
+Real slots call the server while the reels spin. That is the design.
 
 ```ts
 const promise = reelSet.spin();                 
@@ -51,30 +54,36 @@ if (response.anticipationReels?.length) {
 const result = await promise;
 ```
 
-`setResult()` must be called **while the reels are spinning**.
-
-If you call it too early (before `spin:allStarted`), the engine defers the stop until all
-reels are in the SPIN phase.
+Call `setResult()` **while the reels are spinning**. Too early is fine -- the
+engine holds the stop until every reel is in SPIN. Never calling it is not
+fine: the promise waits forever.
 
 ## Player slam-stop
 
-The library exposes three slam verbs with three different intents:
+Three verbs. Three intents. Pick by what the player did.
 
-`skip()` is a round-aware "player tapped the slam button" - first press of the round also boosts speed (standard mode) or auto-slams future refills (cascade mode). Emits `skip:boosted` when boost applies.
+`skip()` -- "player tapped slam". Round-aware. The first press also boosts
+speed (standard mode) or auto-slams later refills (cascade mode). Fires
+`skip:boosted` when it boosts.
 
-`requestSkip()` is the "slam when ready" one. You can call it before `setResult()` arrives. No boost, no auto-slam. Queues until `setResult()`, then slams once. Use it when the player mashes the slam button before the result arrives.
+`requestSkip()` -- "slam as soon as you can". Safe before `setResult()`
+arrives; it queues and fires once. No boost. This is the one for a player
+mashing the button before the server answers.
 
-`slamStop()` is an unconditional "land it now". No boost, no auto-slam.
+`slamStop()` -- "land it. now." No boost, no queueing, no opinions.
 
-All three force-land on whatever `setResult()` told the engine. `result.wasSkipped === true`.
+All three land on whatever `setResult()` gave the engine, and set
+`result.wasSkipped === true`.
 
-The lifecycle hooks (`spin:reelLanded`, `spin:allLanded`, `spin:complete`) all still fire on the slam path. so win presenters and effect chains keep working without a separate code path.
+Every lifecycle event still fires on the slam path. Your win presenter needs
+no second code path.
 
-The `skipStage` getter reports the round's stage (`0` before any press, `2` after). Use it to change the spin button's visuals.
+`skipStage` tells you where the round is: `0` before any press, `2` after.
+Drive the button's look from it.
 
 ## Holding some reels
 
-An expanded wild from something like Starburst or respin of single reel would require holding one or more reels in their current results.
+Expanding wilds and single-reel respins need some reels to stay put.
 
 ```ts
 
@@ -83,15 +92,17 @@ reelSet.setResult(serverGrid);
 await spin;
 ```
 
-Held reels skip the spin entirely and stay on whatever symbols they're currently showing.
+A held reel does not spin. It keeps what it is showing.
 
-They count as already-landed for `spin:allLanded`, so the resolver fires when all *non-held* reels land. No `spin:reelLanded` / `spin:stopping` fires for held reels.
+It counts as already landed, so `spin:allLanded` waits only on the others. It
+fires no `spin:stopping` and no `spin:reelLanded`.
 
-`setAnticipation([...])` filters held indices silently.
+`setAnticipation([...])` drops held indices without complaining.
 
 ## Overriding spin mode
 
-Some slots spin the reels, then cascade after the initial spin. `SpinOptions.mode` overrides the builder's default phase chain per call.
+Some slots spin first, then cascade. `SpinOptions.mode` swaps the phase chain
+for one call.
 
 ```ts
 const reelSet = new ReelSetBuilder()
@@ -107,26 +118,31 @@ await reelSet.spin();                  // round 1. strip-spin (default mode)
 await reelSet.spin({ mode: 'cascade' }); // respin. cascade drop-in
 ```
 
-The engine throws if you pick `'cascade'` without `.tumble(...)` on the builder. the error names the missing method.
+Pick `'cascade'` without `.tumble(...)` and the engine throws. The error names
+the method you forgot.
 
 See the [spin-then-cascade recipe](/recipes/spin-then-cascade/).
 
 ## How to nudge
 
-After a spin lands, you can shift a single reel by N positions to
-reveal caller-supplied symbols via `reelSet.nudge(col, ...)`.
+After a spin lands, shove one reel a few cells to reveal symbols you choose:
+`reelSet.nudge(reel, ...)`.
 
-The spin pipeline is idle during a nudge; the nudge's own tween drives the strip.
+The spin pipeline is idle while this runs. The nudge drives the strip itself.
 
 ```ts
 await reelSet.spin();
-await reelSet.nudge(2, { distance: 1, direction: 'down', incoming: ['wild'] });
+await reelSet.nudge(2, { distance: 1, direction: 'forward', incoming: ['wild'] });
 ```
 
-Multi-reel beats are `Promise.all([...])` of independent calls.
+`direction` is relative to the reel's own travel, not to the screen. See
+[Orientation & direction](/guides/orientation-and-direction/).
 
-Cancel mid-tween via `NudgeOptions.signal` (rejects with `AbortError` +
-`nudge:cancelled`), or fast-forward via `reelSet.skipNudge(col)`(resolves normally).
+Several reels at once? `Promise.all([...])` of independent calls.
+
+Cancel mid-tween with `NudgeOptions.signal` -- rejects `AbortError`, fires
+`nudge:cancelled`. Or fast-forward with `reelSet.skipNudge(reel)`, which
+resolves normally.
 
 Read the full contract in the [nudge guide](/guides/nudge/).
 
@@ -151,11 +167,11 @@ Live recipes: [nudge](/recipes/nudge/), [skip](/recipes/nudge-skip/), [abort](/r
 | `pin:placed`           | `(pin)`                                         | `reelSet.pin(...)` succeeded                                                                                                                                             |
 | `pin:expired`          | `(pin, reason)`                                 | Pin removed by `unpin`, `turns` exhausted, or `'eval'` reset                                                                                                             |
 | `pin:moved`            | `(pin, from)`                                   | `reelSet.movePin(...)` resolved                                                                                                                                          |
-| `pin:migrated`         | `(pin, info)`                                   | MultiWays reshape moved a pin to a new row                                                                                                                               |
+| `pin:migrated`         | `(pin, info)`                                   | MultiWays reshape moved a pin to a new cell                                                                                                                              |
 | `pin:overlayCreated`   | `(pin, symbol)`                                 | Mid-spin overlay symbol mounted for a pin                                                                                                                                |
 | `pin:overlayDestroyed` | `(pin, symbol)`                                 | Mid-spin overlay torn down on land                                                                                                                                       |
-| `shape:changed`        | `(rowsPerReel)`                                 | MultiWays `setShape(...)` accepted                                                                                                                                       |
-| `adjust:start`         | `({ reelIndex, fromRows, toRows })`             | AdjustPhase entered for a reel                                                                                                                                           |
+| `shape:changed`        | `(cellsPerReel)`                                | MultiWays `setShape(...)` accepted                                                                                                                                       |
+| `adjust:start`         | `({ reelIndex, fromCells, toCells })`           | AdjustPhase entered for a reel                                                                                                                                           |
 | `adjust:complete`      | `({ reelIndex })`                               | AdjustPhase finished                                                                                                                                                     |
 | `nudge:start`          | `({ reelIndex, distance, direction })`          | `reelSet.nudge(...)` pre-placement done; tween about to begin                                                                                                            |
 | `nudge:complete`       | `({ reelIndex, distance, direction, symbols })` | Nudged reel has snapped to its new grid position                                                                                                                         |

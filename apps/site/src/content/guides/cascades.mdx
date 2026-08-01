@@ -16,7 +16,9 @@ For copy-pasteable code see the [recipes](/recipes/). For the verbs themselves s
 Every visible symbol falls off the bottom of the viewport. The reels sit empty (or show a spinner) while the server thinks. New symbols then drop in from above and land on the result the server returned.
 
 **Moment B. a cascade refill.**
-After a win, your code clears the winning cells. Survivors above a hole slide down to fill it; new symbols enter from above into the top `winners.length` rows of each reel. The reels never re-spin.
+You clear the winning cells. Survivors above a hole slide down into it. New
+symbols drop in from off-window to fill the gap at the top -- `winners.length`
+of them per reel. The reels never re-spin.
 
 Both moments use the same animation engine. The split matters because:
 
@@ -39,7 +41,7 @@ Internally the engine wires three `ReelPhase` subclasses:
 |---|---|---|
 | `cascade:fall` | Moment A. `spin()` click | Tweens every visible symbol off the bottom of the viewport, then waits at speed 0. |
 | `cascade:place` | Both moments | Swaps the symbol **identities** for the new grid and snaps every view to its grid position. Survivors are made visible immediately; new arrivals stay at alpha 0 until `cascade:dropIn` repositions them above the viewport. |
-| `cascade:dropIn` | Both moments | Tweens each "moving" view from its origin (above the viewport for new symbols, its old grid row for survivors) down to its current grid position. Survivors that didn't move skip the tween entirely. |
+| `cascade:dropIn` | Both moments | Tweens each "moving" view from its origin (above the viewport for new symbols, its old grid cell for survivors) down to its current grid position. Survivors that didn't move skip the tween entirely. |
 
 Each phase fires before/after events on `reelSet.events`. The per-symbol events (`cascade:fall:symbol`, `cascade:dropIn:symbol`) fire **before** the library's tween starts so listeners can stage parallel tweens that finish in lockstep.
 
@@ -71,11 +73,11 @@ Worked example, reel = `['A','B','C','D','E']`, winners = rows `1` and `3`:
 
 ```text
 Pre-refill:        Post-refill:        Why:
-  row 0: A           row 0: ?(new)     ── new symbol enters from above
-  row 1: B   ←       row 1: ?(new)     ── new symbol enters from above
-  row 2: C           row 2: A          ── survivor row 0 slid down 2
-  row 3: D   ←       row 3: C          ── survivor row 2 slid down 1
-  row 4: E           row 4: E          ── survivor row 4, no movement
+  cell 0: A           cell 0: ?(new)     ── new symbol enters from above
+  cell 1: B   ←       cell 1: ?(new)     ── new symbol enters from above
+  cell 2: C           cell 2: A          ── survivor cell 0 slid down 2
+  cell 3: D   ←       cell 3: C          ── survivor cell 2 slid down 1
+  cell 4: E           cell 4: E          ── survivor cell 4, no movement
 ```
 
 If your server sim already follows this convention, you pass its output to `refill({ winners, grid })` directly. If it doesn't, you do the same shape transform in client code before calling refill.

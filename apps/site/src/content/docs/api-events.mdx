@@ -199,7 +199,7 @@ Emitted by `WinPresenter` only. listeners are dead weight if you don't use it.
 | Event | Payload | When |
 |---|---|---|
 | `pin:placed` | `(pin: CellPin)` | `reelSet.pin(...)` succeeded. Replacing an existing pin does NOT fire `pin:expired` for the old one. only this event fires (silent replace). |
-| `pin:moved` | `(pin: CellPin, from: { col: number; row: number })` | `reelSet.movePin(...)` resolved. The pin's `col`/`row` are already at the destination; `from` carries the origin. |
+| `pin:moved` | `(pin: CellPin, from: { reel: number; cell: number })` | `reelSet.movePin(...)` resolved. The pin's `reel`/`cell` are already at the destination; `from` carries the origin. |
 | `pin:expired` | `(pin: CellPin, reason: PinExpireReason)` | Pin removed. `'explicit'` (via `unpin`), `'turns'` (numeric counter hit zero), or `'eval'` (round-scoped pin reset on the next spin). |
 | `pin:migrated` | `(pin: CellPin, info: { fromCell: number; toCell: number; clamped: boolean; reelIndex: number })` | MultiWays reshape moved a pin to a new row inside the same reel. `clamped: true` when the origin row no longer fits the new shape. Never emitted on non-MultiWays slots. |
 | `pin:overlayCreated` | `(pin: CellPin, overlay: unknown)` | Mid-spin overlay symbol mounted. Cast `overlay` to your concrete symbol class (typed as `unknown` to keep this module free of symbol-layer imports). |

@@ -14,7 +14,7 @@ For the broader picture (pyramid layouts, MultiWays, mutual exclusivity rules), 
 
 ## Declaration
 
-Register the symbol like any other; add a `size: { w, h }` to its metadata:
+Register it like any other symbol. Add a `size: { reels, cells }` to its metadata:
 
 ```ts
 .symbols((registry) => {
@@ -35,7 +35,7 @@ Register the symbol like any other; add a `size: { w, h }` to its metadata:
 The server places the symbol id at the **anchor cell** of the block only; every other cell of the block can hold any string, since the engine overwrites it with `OCCUPIED_SENTINEL`.
 
 ```ts
-// 5x4 grid, 2x2 bonus anchored at (col=2, row=1):
+// 5x4 grid, 2x2 bonus anchored at (reel=2, cell=1):
 setResult([
   { visible: ['low1', 'low2', 'low1', 'low2'] },
   { visible: ['low1', 'low2', 'low1', 'low2'] },
@@ -55,14 +55,14 @@ Internally:
 
 Two related APIs:
 
-- **`reelSet.getSymbolFootprint(col, row)`**. logical info: `{ anchor, size }`. Use for evaluation / event payloads.
-- **`reelSet.getBlockBounds(col, row)`**. pixel rect covering the whole block. Use for overlays.
+- **`reelSet.getSymbolFootprint(reel, cell)`** -- logical info: `{ anchor, size }`. For evaluation and event payloads.
+- **`reelSet.getBlockBounds(reel, cell)`** -- pixel rect covering the whole block. For overlays.
 
 ```ts
-const fp = reelSet.getSymbolFootprint(col, row);
-// → { anchor: { col: 2, row: 1 }, size: { reels: 2, cells: 2 } }
+const fp = reelSet.getSymbolFootprint(reel, cell);
+// -> { anchor: { reel: 2, cell: 1 }, size: { reels: 2, cells: 2 } }
 
-const rect = reelSet.getBlockBounds(col, row);
+const rect = reelSet.getBlockBounds(reel, cell);
 // → { x, y, width: 2 * cellW, height: 2 * cellH }
 gfx.rect(rect.x, rect.y, rect.width, rect.height).stroke({ color: 0xff6b35, width: 4 });
 ```
@@ -73,8 +73,8 @@ Pass any cell of a block. anchor or non-anchor. both APIs return the same data. 
 
 The engine throws fail-fast at `setResult()` if a block doesn't fit:
 
-- `"big symbol 'giant' (3x3) at (col=4, row=2) exceeds reel count 6."`
-- `"big symbol 'tallBar' (1x3) at (col=0, row=3) extends past the bottom of the strip on reel 0 (anchor row + h = 6 > visibleCells + bufferEnd = 4)."`
+- `"big symbol 'giant' (3x3) at (reel=4, cell=2) exceeds reel count 6."`
+- `"big symbol 'tallBar' (1x3) at (reel=0, cell=3) extends past the end of the strip on reel 0 (anchor cell + cells = 6 > visibleCells + bufferEnd = 4)."`
 
 The vertical check is against the **full strip** (visible + bufferEnd), not just visible. Anchors are allowed to land partially, with the block extending into bufferStart or bufferEnd.
 
@@ -82,14 +82,18 @@ Pinning the **non-anchor** cell of a big symbol throws. pin the anchor instead, 
 
 The **build-time** check refuses big symbols with non-zero weight (`big symbol 'bonus' (2x2) must have weight 0. ...`). Random fill can't place blocks in v1, so non-zero weight would silently never be picked.
 
-## Partial-visibility landings (buffer-row anchors)
+## Partial landings (anchors in a buffer)
 
-Big-symbol anchors are NOT restricted to visible rows. A 1xH block can land with its anchor in `bufferStart` so only the bottom of the block ("the tail") shows at the top of the visible window. Equivalently, a block can anchor at the last visible row with its lower cells spilling into `bufferEnd` ("head visible").
+An anchor does not have to be in a visible cell.
+
+Put a tall block's anchor in `bufferStart` and only its tail shows, at the top
+of the window. Anchor it at the last visible cell and its head shows while the
+rest spills into `bufferEnd`. Both are legal. Both look deliberate.
 
 Use the explicit `ColumnTarget` form to target buffer slots:
 
 ```ts
-// 1x3 wild lands with its tail at visible row 0; anchor + two stubs are
+// 1x3 wild lands with its tail at visible cell 0; anchor + two stubs are
 // off-screen in bufferStart. Requires bufferSymbols(2) or more.
 reelSet.setResult([
   { visible: [...], bufferStart: [undefined, 'tallWild'] },
@@ -97,7 +101,7 @@ reelSet.setResult([
 ]);
 ```
 
-`ReelSet.getSymbolFootprint(col, 0)` for the visible cell returns `anchor.cell = -2` (negative). `ReelSet.getBlockBounds(col, 0)` returns the full block's pixel rect including the off-screen portion (the mask clips the rendered output to the visible window). See [Land a big symbol partially in buffer](/recipes/big-symbol-partial-land/) for the runnable demo.
+`getSymbolFootprint(reel, 0)` returns `anchor.cell = -2`. Negative, because the anchor sits before the window. `getBlockBounds(reel, 0)` gives you the WHOLE block's rect, off-screen part included -- the mask does the clipping, not the maths. See [Land a big symbol partially in buffer](/recipes/big-symbol-partial-land/) for the runnable demo.
 
 ## Mask interaction (`SharedRectMaskStrategy`)
 
@@ -120,11 +124,16 @@ builder
   // ...
 ```
 
-`SharedRectMaskStrategy` draws a single bounding rect covering every reel's tallest extent. For pyramid + big-symbol slots, this means buffer rows above/below short reels become visible (the "pyramid peek"). handled in production by frame art covering the slot.
+`SharedRectMaskStrategy` draws one rect over the whole set. On a pyramid that
+means buffer cells past the ends of short reels become visible -- the "pyramid
+peek". Production slots cover it with frame art.
 
 ## zIndex layering
 
-Big-symbol anchors render at `symbolData.zIndex * 100 + arrayIndex` (typically ~500 with `zIndex: 5`). The 100× multiplier reserves room for per-row stacking inside a layer (bottom rows render above top rows on the same layer).
+Anchors render at `symbolData.zIndex * 100 + arrayIndex` -- about 500 with
+`zIndex: 5`. The 100x multiplier leaves room for per-cell stacking inside one
+layer, so cells at the larger coordinate still draw in front of their
+neighbours.
 
 Pin overlays render at zIndex `10000` (an internal `ReelSet` constant. not part of the public API). So a big symbol that's also pinned (`reelSet.pin(anchorCol, anchorRow, id, ...)`) gets its overlay rendered above the cell. the overlay covers the whole block visually because the overlay symbol is sized to the block.
 

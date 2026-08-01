@@ -50,7 +50,7 @@ A pin's `originCell` is captured at placement. On every reshape it migrates per 
 
 Prevents wander. A pin clamped down on a shrink returns to its origin row when a later shape grows back. Right for sticky wilds.
 
-| Spin | Shape (col 2) | originCell | Migrated row | Clamped? |
+| Spin | Shape (reel 2) | originCell | Migrated cell | Clamped? |
 |------|---------------|-----------|--------------|----------|
 | 1 | 5 | 4 | 4 | no |
 | 2 | 3 | 4 | 2 | yes |
@@ -61,7 +61,7 @@ Prevents wander. A pin clamped down on a shrink returns to its origin row when a
 
 The pin never restores after a clamp. `originCell` is updated on every clamp, so future grows see the new origin. Right for walking wilds, descending wilds, or anything where "current row" is the source of truth and a higher row is unreachable history.
 
-| Spin | Shape (col 2) | originCell before | Migrated row | originCell after |
+| Spin | Shape (reel 2) | originCell before | Migrated cell | originCell after |
 |------|---------------|------------------|--------------|-----------------|
 | 1 | 5 | 4 | 4 | 4 |
 | 2 | 3 | 4 | 2 (clamped) | **2** (updated) |
@@ -71,7 +71,7 @@ The pin never restores after a clamp. `originCell` is updated on every clamp, so
 Pass via `pin()` options:
 
 ```ts
-reelSet.pin(col, row, id, { migration: 'frozen' });
+reelSet.pin(reel, cell, id, { migration: 'frozen' });
 ```
 
 ## Animation scope

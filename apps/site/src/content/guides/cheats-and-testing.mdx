@@ -70,10 +70,10 @@ await spinAndLand(symbols);
 | Cheat | Effect |
 |---|---|
 | `forceGrid(grid)` | Every spin returns this exact grid. |
-| `forceLine(row, id)` | Fills a horizontal row with `id`. |
+| `forceLine(cellIndex, id)` | Fills one cell index across every reel with `id`. |
 | `forceScatters(n, id)` | Sprinkles exactly `n` of `id` at random cells. |
 | `forceNearMiss(n, id, nearReel)` | `n-1` scatters, none on `nearReel`. Triggers anticipation there. |
-| `forceCell(r, row, id)` | Places `id` at `[r, row]`. |
+| `forceCell(reel, cell, id)` | Places `id` at `[reel, cell]`. |
 | `holdAndWinProgress(coinId, p)` | Keeps held coins, adds one new coin with probability `p`. |
 | `cascadeSequence([g1, g2, ...])` | Emits grids in order. |
 | `forceAnticipation(reels)` | Sets anticipation reels without constraining symbols. |
