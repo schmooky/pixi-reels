@@ -1,0 +1,191 @@
+---
+title: Orientation & direction
+order: 4
+description: One engine, four layouts. How a reel's travel axis works, why start
+  and end are geometric rather than travel-relative, and what stays screen-space.
+---
+
+A reel set has two independent knobs:
+
+```ts
+new ReelSetBuilder()
+  .orientation('horizontal')   // which screen axis the strip travels along
+  .direction('reverse')        // which way along it symbols move
+```
+
+Four combinations, one engine. Anticipation, cascades, spotlight, pins, big
+symbols, pyramids and MultiWays all work in every one of them, because they
+are written against the axis rather than against `y`.
+
+| | `direction('forward')` | `direction('reverse')` |
+|---|---|---|
+| `orientation('vertical')` | symbols fall (the default) | symbols rise. a roll-up |
+| `orientation('horizontal')` | symbols move right | symbols move left. a sideways banner |
+
+## The four concepts, kept apart
+
+Most reel engines fuse these into "the sign of `deltaY`". Keeping them
+separate is what makes one engine enough:
+
+- **Orientation** — which screen axis the strip runs on. Set-level, fixed at
+  `build()`.
+- **Direction** — which way along that axis symbols travel. Per reel.
+- **Gravity** — which way cascade symbols fall. Defaults to the reel's
+  direction, settable on its own.
+- **Facing** — which way is "up" for the art. Never touched by the other
+  three.
+
+That last one is a hard invariant, not a convention: **changing travel never
+changes facing.** A reel that spins sideways or upward still renders every
+symbol upright. The engine never rotates or mirrors a container to fake an
+axis, and there is a test asserting `rotation === 0` and unit scale on every
+symbol, in all four combinations, at rest, mid-spin and landed.
+
+## Main and cross
+
+Two words worth learning, because the whole engine is written in them:
+
+- The **main** axis is the one the strip travels along. `y` when vertical,
+  `x` when horizontal.
+- The **cross** axis is the one reels march along. The other one.
+
+So a vertical set marches its reels across `x` and scrolls cells down `y`; a
+horizontal set does exactly the opposite. `Reel` exposes both
+(`cellMain`, `cellCross`, `mainGap`, `crossGap`, `extent`, `mainOffset`)
+for code that needs to be orientation-neutral.
+
+## What stays screen-space
+
+This is the scope limiter that keeps the feature small, and the reason your
+own `ReelSymbol` subclasses need no changes at all:
+
+**Unchanged, always screen-space:** `symbolSize(width, height)` ·
+`symbolGap({ x, y })` · `ReelSymbol.resize(width, height)` ·
+`CellBounds { x, y, width, height }` · `getCellBounds` · `getBlockBounds` ·
+positioning the `ReelSet` itself.
+
+So a horizontal set is the vertical one **transposed**: build it with the
+width and height swapped and you get the same board on its side.
+
+```ts
+// A 5x3 vertical board.
+.symbolSize(120, 100).symbolGap(8, 6)
+
+// The same board, sideways.
+.orientation('horizontal').symbolSize(100, 120).symbolGap(6, 8)
+```
+
+Grid indices do not move either. `setResult()` takes the same
+`ColumnTarget[]`, `getVisibleGrid()` returns the same shape, and cell
+`(reel, cell)` means the same thing whichever way the strip runs.
+
+## Start and end are geometric
+
+Buffers are named `start` and `end`, not `above`/`below` and not
+`lead`/`trail`:
+
+```ts
+.bufferSymbols({ start: 1, end: 1 })
+reelSet.setResult([{ visible: ['A','B','C'], bufferStart: ['COIN'] }]);
+```
+
+**Start is always the smaller screen coordinate** — above for vertical, left
+for horizontal — *regardless of travel direction*.
+
+That is deliberate. A buffer symbol is a presentation feature: the coin
+peeking above the top row, a big symbol's tail parked off-window. Its
+contract is "the slot just outside the visible edge". If buffers were
+travel-relative, flipping a reel's direction would silently teleport every
+teaser to the opposite edge. Motion is directional; buffers are geometric.
+
+The **feed edge** — which side new symbols arrive from — *is* travel-relative,
+and it is derived from direction rather than configured. Read it off the axis
+if you need it: `reel.axis.feedEdge`.
+
+## Per-reel direction
+
+```ts
+.direction('forward')                                        // every reel
+.directionPerReel(['forward','reverse','forward','reverse','forward'])
+```
+
+Alternating columns, a single reversed reel, whatever the design wants.
+One restriction: a **cross-reel big symbol** (`size.reels > 1`) cannot be
+combined with mixed directions, and `build()` throws if you try. The
+coordinator that paints a block's cells assumes one shared feed edge across
+the reels it covers; with mixed directions the block would split at run time.
+Keep blocks within one reel, or give the set a single `direction()`.
+
+## Render order
+
+`direction` does **not** change which symbol overlaps which:
+
+```ts
+.cellStacking('ascending')   // default: the cell at the larger coordinate draws in front
+.reelStacking('ascending')   // default: the last reel draws in front
+```
+
+Stacking is geometric on purpose. Art is lit from above; if a roll-up reel
+re-stacked itself, that lighting would start reading backwards, and a
+per-spin reversal tease would visibly re-layer the board mid-game. Pass
+`'descending'` if your art wants the opposite.
+
+## Nudge is relative
+
+```ts
+await reelSet.nudge(2, { distance: 1, direction: 'forward', incoming: ['wild'] });
+```
+
+`'forward'` means "the way this reel travels", not "down". On a reel built
+with `direction('reverse')` it nudges upward and feeds from the correct edge,
+with no branching on your side.
+
+## Composing two sets
+
+A banner above a grid is two reel sets in one container — the engine does not
+model it, and does not need to:
+
+```ts
+const main = new ReelSetBuilder().reels(5).visibleCells(3)./* ... */.build();
+
+const banner = new ReelSetBuilder()
+  .orientation('horizontal')
+  .reels(1)            // one reel...
+  .visibleCells(5)     // ...of five cells, one above each main reel
+  ./* ... */.build();
+
+const stage = new PIXI.Container();
+banner.y = 0;
+main.y = CELL + GAP * 3;
+stage.addChild(banner, main);
+```
+
+Lay the composition out from its own top-left and scale the container, not
+the individual sets. See the [banner-ways
+recipe](/recipes/orientation-and-direction/#banner-ways) for the full version,
+including a banner wild that extends a way.
+
+## Seeing it
+
+`orientation` and `direction` are invisible in a static canvas, so the debug
+overlay draws them:
+
+```ts
+const overlay = debugOverlay(reelSet, { layers: ['axis', 'feed', 'thresholds', 'hud'] });
+```
+
+- `axis` — one arrow per reel, pointing the way it actually travels
+- `feed` — the edge new symbols arrive at
+- `thresholds` — the wrap lines; no symbol should ever be drawn past one
+- `hud` — `r0 VF feed=start spd=... cells=3`
+
+And `overlay.describe()` returns the same information as plain JSON, for
+tests and for anything that cannot look at a canvas. See
+[Debugging](/guides/debugging/).
+
+## Recipes
+
+- [Roll-up](/recipes/orientation-and-direction/#roll-up) — a whole set reversed
+- [Alternating columns](/recipes/orientation-and-direction/#roll-up-alternating) — `directionPerReel`
+- [Horizontal banner](/recipes/orientation-and-direction/#horizontal-banner) — a one-reel sideways strip
+- [Banner ways](/recipes/orientation-and-direction/#banner-ways) — a banner above a 5x3 that joins the win
