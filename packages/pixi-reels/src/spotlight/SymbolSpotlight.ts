@@ -55,7 +55,7 @@ interface PromotedSymbol {
  *
  * Win detection is NOT part of this. pixi-reels never computes wins.
  * your server / game code decides which cells are winners and passes
- * them here. See [ADR 007](../../docs/adr/007-scope.md).
+ * them here. See [ADR 007](https://github.com/schmooky/pixi-reels/blob/main/docs/adr/007-scope.md).
  */
 export class SymbolSpotlight implements Disposable {
   private _reels: Reel[];

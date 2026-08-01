@@ -17,7 +17,7 @@
     "lint": "pnpm --filter pixi-reels lint",
     "check:no-fancy-unicode": "node scripts/check-no-fancy-unicode.mjs",
     "check:imports": "biome lint packages/pixi-reels/src",
-    "check:lint": "pnpm check:no-fancy-unicode && pnpm check:imports && pnpm check:recipe-globals",
+    "check:lint": "pnpm check:no-fancy-unicode && pnpm check:imports && pnpm check:recipe-globals && pnpm check:v1-keys",
     "commitlint": "commitlint --edit",
     "examples:dev:classic": "pnpm --filter classic-spin dev",
     "examples:dev:cascade": "pnpm --filter cascade-tumble dev",
@@ -44,7 +44,8 @@
     "size:update": "node scripts/size-check.mjs --update",
     "prepare": "husky || true",
     "check:recipe-globals": "node scripts/check-recipe-globals.mjs",
-    "check:doc-links": "node scripts/check-doc-links.mjs"
+    "check:doc-links": "node scripts/check-doc-links.mjs",
+    "check:v1-keys": "node scripts/check-v1-keys.mjs"
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx,mjs,cjs,md,mdx,astro,yml,yaml,json}": [

@@ -270,7 +270,7 @@ export abstract class ReelSymbol implements Disposable {
    * @param joinedMidSpin true when this symbol was installed into a reel
    * already at speed (skip start-of-spin transitions like blur ramps).
    */
-  onReelSpinStart(_joinedMidSpin?: boolean): void {}
+  onReelSpinStart(joinedMidSpin?: boolean): void {}
 
   /**
    * Lifecycle hook: the owning reel is about to stop (just before bounce).

@@ -39,7 +39,7 @@ const reelSet = new ReelSetBuilder()
     });
   })
   .weights(Object.fromEntries(CARD_DECK.map((c, i) => [c.id, 12 - i])))
-  .symbolData({ [BIG.id]: { weight: 0, zIndex: 5, size: { w: BIG.w, h: BIG.h } } })
+  .symbolData({ [BIG.id]: { weight: 0, zIndex: 5, size: { reels: BIG.w, cells: BIG.h } } })
   .speed('normal', { ...SpeedPresets.NORMAL, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
     fall:   { duration: 320, ease: 'power3.in',  cellStagger: 60 },

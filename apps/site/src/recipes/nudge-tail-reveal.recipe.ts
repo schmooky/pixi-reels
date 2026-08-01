@@ -35,7 +35,7 @@ const reelSet = new ReelSetBuilder()
     });
   })
   .weights(Object.fromEntries(CARD_DECK.map((c, i) => [c.id, 12 - i])))
-  .symbolData({ [MEGA.id]: { weight: 0, zIndex: 5, size: { w: MEGA.w, h: MEGA.h } } })
+  .symbolData({ [MEGA.id]: { weight: 0, zIndex: 5, size: { reels: MEGA.w, cells: MEGA.h } } })
   .speed('normal', { ...SpeedPresets.NORMAL, bounceDistance: 0, bounceDuration: 0 })
   .ticker(app.ticker)
   .build();

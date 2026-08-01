@@ -74,11 +74,14 @@ export type { StaticSpinSymbolOptions } from './snapshot/StaticSpinSymbol.js';
 // stable shape descriptions for documentation.
 export { ReelPhase } from './spin/phases/ReelPhase.js';
 export { PhaseFactory } from './spin/phases/PhaseFactory.js';
+// The two shapes `PhaseFactory.register` / `.registerFactory` accept. Needed
+// to type a helper that registers phases on your behalf.
+export type { PhaseConstructor, PhaseCreatorFn } from './spin/phases/PhaseFactory.js';
 export type { StartPhaseConfig } from './spin/phases/StartPhase.js';
 export type { SpinPhaseConfig } from './spin/phases/SpinPhase.js';
 export type { StopPhaseConfig } from './spin/phases/StopPhase.js';
 export type { AnticipationPhaseConfig } from './spin/phases/AnticipationPhase.js';
-export type { AdjustPhaseConfig } from './spin/phases/AdjustPhase.js';
+export type { AdjustPhaseConfig, PinOverlayTween } from './spin/phases/AdjustPhase.js';
 
 // Anticipation recipes
 export { anticipationForScatters } from './spin/anticipationRecipes.js';
@@ -196,6 +199,7 @@ export type {
 // Utils
 export type { Disposable } from './utils/Disposable.js';
 export { TickerRef } from './utils/TickerRef.js';
+export type { TickerCallback } from './utils/TickerRef.js';
 export { driveGsapWithTicker } from './utils/gsapTicker.js';
 
 // Debug

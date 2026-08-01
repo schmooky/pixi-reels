@@ -28,7 +28,7 @@ const reelSet = new ReelSetBuilder()
     });
   })
   .weights(Object.fromEntries(CARD_DECK.map((c, i) => [c.id, 12 - i])))
-  .symbolData({ [GIANT.id]: { weight: 0, zIndex: 5, size: { w: GIANT.w, h: GIANT.h } } })
+  .symbolData({ [GIANT.id]: { weight: 0, zIndex: 5, size: { reels: GIANT.w, cells: GIANT.h } } })
   // A 3x3 anchor spans ~3x a normal cell, so
   // the default 56px landing bounce overshoots into adjacent cells and
   // reads as a broken landing. Zero the bounce so the anchor lands
