@@ -48,6 +48,8 @@ Missing any of these throws at `.build()` with a human-readable list of problems
 | `.maskStrategy(strategy)` | Per-reel `RectMaskStrategy`. Auto-switches to `SharedRectMaskStrategy` when big or unmasked symbols are registered and the CROSS-axis gap is > 0. A custom strategy takes one `MaskContext` and must declare `version = MASK_STRATEGY_VERSION`. |
 | `.gsap(instance)` | The package's own `gsap` import. Use this when your app and the engine resolve to different `gsap` instances (symlinked workspaces, npm link, misconfigured `dedupe`). Bound PER SET at `build()`; pass the same instance to `driveGsapWithTicker(ticker, instance)`. |
 | `.initialFrame(ColumnTarget[])` | Random per `weights()`. One `ColumnTarget` per reel: `{ visible, bufferStart?, bufferEnd? }`. |
+| `.rng(fn)` | `Math.random`. Source for every symbol the engine picks itself -- the strip you watch scroll, and any buffer padding. Must return `[0, 1)`. Server-authoritative outcomes do **not** make that visible sequence reproducible; pass a seeded, audited PRNG if you need to replay a spin from its seed. |
+| `.poolCapacity(n)` | The whole strip (visible + buffer), per symbol id, so a grid that briefly goes all-one-symbol still recycles. Lower it to cap memory on very large grids; raise it for unusually heavy simultaneous swaps. |
 
 ## .build()
 
