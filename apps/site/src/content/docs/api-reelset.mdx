@@ -8,7 +8,7 @@ description: The main orchestrator. Created via ReelSetBuilder, drives every
 
 `ReelSet` extends `PIXI.Container`. Construct via [`ReelSetBuilder`](/docs/api-builder/), add it to your stage, then drive it with the verbs below.
 
-Every method on this page is non-async unless its return type is `Promise`. Promises always resolve. the engine doesn't reject on user error; it throws synchronously at the call site instead, so errors land in the same stack frame you wrote.
+Every method on this page is non-async unless its return type is `Promise`. Most errors throw synchronously at the call site, in the same stack frame you wrote. The exceptions are cancellation: `spin()` rejects on its watchdog or `SpinOptions.signal`, and `nudge()` rejects with an `AbortError`.
 
 ## Spin
 
@@ -18,7 +18,7 @@ Every method on this page is non-async unless its return type is `Promise`. Prom
 | `setResult` | `(symbols: ColumnTarget[]) => void` | Set the target grid. Triggers the stop sequence. One `ColumnTarget` per reel: `{ visible, bufferStart?, bufferEnd? }`. |
 | `setAnticipation` | `(reelIndices: number[]) => void` | Mark reels that should enter `ANTICIPATION` before stopping. Held indices are filtered silently. |
 | `setStopDelays` | `(delays: number[]) => void` | One ms-delay per reel, overriding `reelIndex * speed.stopDelay` for the current spin. Persists across `refill()` calls in the same round. |
-| `setDropOrder` | `(order: 'ltr' \| 'rtl' \| 'all' \| number[], step?: number) => void` | Wraps `setStopDelays`. Common patterns: `'ltr'` (initial cascade reveal), `'all'` (canonical refill), `[0,0,200,200,400]` (V-shape). |
+| `setDropOrder` | `(order: 'ltr' \| 'rtl' \| 'all' \| number[] \| null, stepMs?: number) => void` | Wraps `setStopDelays`. Common patterns: `'ltr'` (initial cascade reveal), `'all'` (canonical refill), `[0,0,200,200,400]` (V-shape). |
 | `skipSpin` | `() => void` | Round-aware slam. First press boosts speed (standard mode) or flags refills to auto-slam (cascade mode); subsequent presses also slam. |
 | `requestSkip` | `() => void` | Safe pre-`setResult` slam. Queues until the result arrives, then slams. Bypasses the round-side-effect machine. |
 | `slamStop` | `() => void` | Unconditional slam. No boost, no auto-slam flag. For tests / anti-cheat / programmatic land-now intent. |
@@ -63,9 +63,9 @@ console.log(summary.chainLength, summary.totalWinners, summary.wasSkipped);
 
 | Type | Shape | Notes |
 |---|---|---|
-| `Cell` | `{ reel: number; row: number }` | A grid cell. `reel` is column, `row` is the visible row. Used by `destroySymbols`, `runCascade`'s `detectWinners`, and `refill({ winners })`. |
+| `Cell` | `{ reel: number; cell: number }` | A grid cell. `reel` is the column, `cell` is the visible cell index. Used by `destroySymbols`, `runCascade`'s `detectWinners`, and `refill({ winners })`. |
 | `DestroySymbolsOptions` | `{ delay?, zIndex?, dim?, signal? }` | Defaults: zero delay, zIndex `1000`, no viewport dim. `delay` accepts either a number OR a `(cell, index) => number` function for per-cell stagger. Pass `zIndex: null` to suppress the bump (useful when another presenter already drove the visual). `signal` aborts mid-destroy and snaps cells to their destroyed pose. |
-| `RunCascadeOptions` | `{ detectWinners, nextGrid, onCascade?, pauseAfterDestroyMs?, maxChain?, destroyOptions?, signal?, refillMode?, gravityHoldMs?, gravityHold?, onGravityComplete? }` | `detectWinners` and `nextGrid` carry the game rules; everything else is timing / cancellation / gravity flavor. Both callbacks may be `async`. Defaults: `pauseAfterDestroyMs: 250`, `maxChain: 32`, `refillMode: 'combined'`, `gravityHoldMs: 250`. `onCascade` payload is `{ chain, winners, currentGrid }`. same grid that `cascade:chain:start` reported. `gravityHold` is a **builder** here: `(info: { chain, winners }) => Promise<void>`. called once per chain stage; the returned promise gates that stage's drop-in. `onGravityComplete` is `(info) => void \| Promise<void>` and fires after both hold sources resolve, before drop-in starts. |
+| `RunCascadeOptions` | `{ detectWinners, nextGrid, presentWinners?, onCascade?, pauseAfterDestroyMs?, maxChain?, destroyOptions?, signal?, refillMode?, gravityHoldMs?, gravityHold?, onGravityComplete? }` | `detectWinners` and `nextGrid` carry the game rules; everything else is timing / cancellation / gravity flavor. Both callbacks may be `async`. Defaults: `pauseAfterDestroyMs: 250`, `maxChain: 32`, `refillMode: 'combined'`, `gravityHoldMs: 250`. `onCascade` payload is `{ chain, winners, currentGrid }`. same grid that `cascade:chain:start` reported. `gravityHold` is a **builder** here: `(info: { chain, winners }) => Promise<void>`. called once per chain stage; the returned promise gates that stage's drop-in. `onGravityComplete` is `(info) => void \| Promise<void>` and fires after both hold sources resolve, before drop-in starts. |
 | `RunCascadeResult` | `{ chainLength, totalWinners, finalGrid, wasSkipped }` | Returned by `runCascade`. `chainLength === 0` means no wins on the initial grid (no refill ran). |
 
 ```ts
@@ -112,7 +112,7 @@ await reelSet.runCascade({
 
 The events `cascade:gravity:start` / `cascade:gravity:symbol` / `cascade:gravity:end` fire only in this mode. see the [events reference](/docs/api-events/#cascade-tumble).
 
-> **Heads-up.** If your `gravityHold` promise never resolves, the engine will wait forever. the cascade hangs. There's no built-in timeout. If your animation source can stall (animation library error, missed user input, hung XHR), wrap it in your own `Promise.race([yourPromise, timeoutReject])` before passing it in, or rely on `gravityHoldMs` alone. A rejection in `gravityHold` propagates through `Promise.all` and rejects the `refill()` / `runCascade()` call. handle it in your own `try` block.
+> **Heads-up.** If your `gravityHold` promise never resolves, the engine will wait forever. the cascade hangs. There's no built-in timeout. If your animation source can stall (animation library error, missed user input, hung XHR), wrap it in your own `Promise.race([yourPromise, timeoutReject])` before passing it in, or rely on `gravityHoldMs` alone. A rejection in `gravityHold` (or a throw from `onGravityComplete`) does **not** reject the `refill()` / `runCascade()` call -- the engine catches it, emits `cascade:gravity:error`, logs it, and slams to recover, so the awaited promise still resolves. A `try` block will never see it; subscribe to `cascade:gravity:error`.
 
 ## MultiWays
 
@@ -184,8 +184,8 @@ reelSet.frame.remove('feature-wilds');
 
 ```ts
 reelSet.events.on('spin:complete', (r) => console.log(r.symbols));
-const off = reelSet.events.on('cascade:dropIn:symbol', squishOnLand);
-off(); // unsubscribe
+reelSet.events.on('cascade:dropIn:symbol', squishOnLand);
+reelSet.events.off('cascade:dropIn:symbol', squishOnLand); // unsubscribe
 ```
 
 ## Lifecycle

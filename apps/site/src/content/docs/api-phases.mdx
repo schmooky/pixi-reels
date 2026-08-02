@@ -40,6 +40,7 @@ class FlashPhase extends ReelPhase<{ duration: number }> {
   readonly name = 'flash';
   readonly skippable = true;
   private _elapsed = 0;
+  private _duration = 0;
 
   protected onEnter(cfg: { duration: number }): void {
     this._elapsed = 0;
