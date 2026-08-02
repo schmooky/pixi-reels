@@ -21,9 +21,15 @@ export function LazyRecipeRunner({ code, height = 300 }: Props) {
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
+    // Preload margin, scaled to the viewport. A flat 500px is half a phone
+    // screen, so arriving on a demo-dense page booted three pixi Applications
+    // at once -- three WebGL contexts and three tickers competing before
+    // anything was on screen. On a desktop 500px is a small fraction of the
+    // page and the smoothness is worth it.
+    const margin = Math.round(Math.min(500, window.innerHeight * 0.35));
     const io = new IntersectionObserver(
       (entries) => setActive(entries[0]?.isIntersecting ?? false),
-      { rootMargin: '500px 0px 500px 0px' },
+      { rootMargin: `${margin}px 0px ${margin}px 0px` },
     );
     io.observe(el);
     return () => io.disconnect();
@@ -34,17 +40,23 @@ export function LazyRecipeRunner({ code, height = 300 }: Props) {
       {active ? (
         <RecipeRunner code={code} height={height} />
       ) : (
-        <div
-          className="flex w-full items-center justify-center bg-background"
-          style={{ height }}
-          aria-hidden="true"
-        >
-          <div className="flex flex-col items-center gap-3 text-muted-foreground/40">
-            <div className="h-10 w-10 animate-spin rounded-full border-2 border-current border-t-transparent" />
-            <p className="font-mono text-xs uppercase tracking-wider">Scroll to load</p>
-          </div>
-        </div>
+        <Placeholder height={height} label="Scroll to load" />
       )}
+    </div>
+  );
+}
+
+function Placeholder({ height, label }: { height: number; label: string }) {
+  return (
+    <div
+      className="flex w-full items-center justify-center bg-background"
+      style={{ height }}
+      aria-hidden="true"
+    >
+      <div className="flex flex-col items-center gap-3 text-muted-foreground/40">
+        <div className="h-10 w-10 animate-spin rounded-full border-2 border-current border-t-transparent" />
+        <p className="font-mono text-xs uppercase tracking-wider">{label}</p>
+      </div>
     </div>
   );
 }

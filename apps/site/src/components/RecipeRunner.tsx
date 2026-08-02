@@ -5,6 +5,21 @@ import { Application } from 'pixi.js';
 import type { Texture, Ticker } from 'pixi.js';
 import * as PIXI from 'pixi.js';
 import { gsap } from 'gsap';
+// DO NOT DELETE THESE TWO. Neither identifier is referenced in this file, so
+// they read as dead imports -- but they are load-bearing. They force the spine
+// runtime to be initialised eagerly, as one instance, before any recipe runs.
+// Remove them and spine arrives only through the dynamic LAZY_GROUPS path in
+// recipeGlobals, which races: /recipes/{cascade,hold-and-win,starters,symbols,
+// wilds-and-pins}/ then die on mount with "Cannot read properties of undefined
+// (reading 'validateRenderable')". Verified by bisect -- these two lines are
+// the difference between 21/21 and 16/21 on recipes-mount.spec.ts.
+//
+// They cost ~176KB on pages that use no spine at all. Reclaiming that means
+// fixing the ordering in the lazy path first, not deleting these.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import { SpineReelSymbol } from 'pixi-reels/spine';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import { Spine } from '@esotericsoftware/spine-pixi-v8';
 import {
   ReelSetBuilder, SpeedPresets, SpriteSymbol, AnimatedSpriteSymbol,
   enableDebug, WinPresenter,
@@ -14,8 +29,6 @@ import {
   anticipationForScatters,
   SpinTextureCache, StaticSpinSymbol, prewarmSpinTextures,
 } from 'pixi-reels';
-import { SpineReelSymbol } from 'pixi-reels/spine';
-import { Spine } from '@esotericsoftware/spine-pixi-v8';
 import { BlurSpriteSymbol } from '../../../../examples/shared/BlurSpriteSymbol.ts';
 import { CardSymbol, CARD_DECK, WILD_CARD } from '../../../../examples/shared/CardSymbol.ts';
 import {
