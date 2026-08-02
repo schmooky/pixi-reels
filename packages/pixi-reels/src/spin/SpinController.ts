@@ -1086,6 +1086,28 @@ export class SpinController implements Disposable {
   destroy(): void {
     if (this._isDestroyed) return;
     this._clearSpinWatchdog();
+
+    // Invalidate the in-flight phase chains BEFORE force-completing them, so
+    // the `generation !== this._spinGeneration` guard that follows every
+    // `await phase.run(...)` bails instead of starting the next phase -- and
+    // its tweens -- on a set that is being torn down.
+    this._spinGeneration++;
+
+    // Every phase owns a gsap timeline writing reel speed and symbol view
+    // positions, and `onSkip()` (reached via `forceComplete`) is the only
+    // thing that kills them. Dropping the map without this left those
+    // timelines on the gsap root timeline, still writing to display objects
+    // that `ReelSet.destroy()` frees moments later. Consumers who drive gsap
+    // from a PixiJS ticker feel it worst: the tweens do not stop when the
+    // set's own app goes away, because any other live ticker keeps advancing
+    // the shared root timeline.
+    //
+    // Safe to run the skip poses here: ReelSet.destroy() calls us before
+    // reel.destroy(), so the views these tweens touch are still alive.
+    for (const phase of this._activePhases.values()) {
+      phase.forceComplete();
+    }
+
     this._tickerRef.destroy();
     this._activePhases.clear();
     this._isDestroyed = true;
