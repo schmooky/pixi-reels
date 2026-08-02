@@ -23,6 +23,34 @@ const PKG = join(ROOT, 'packages/pixi-reels');
 /** Files a consumer or a licence audit would notice missing. */
 const REQUIRED = ['README.md', 'LICENSE', 'CHANGELOG.md', 'package.json'];
 
+const pkg = JSON.parse(await readFile(join(PKG, 'package.json'), 'utf8'));
+
+/**
+ * Every file the `exports` map promises, derived from the map itself.
+ *
+ * Hardcoding `dist/index.*` left the `./spine` and `./testing` subpaths --
+ * six files -- unguarded: drop them from the vite build and this script still
+ * said OK, while `import 'pixi-reels/testing'` threw ERR_MODULE_NOT_FOUND for
+ * every consumer. Reading the map means a new subpath is covered the moment
+ * somebody adds it, with nothing here to remember to update.
+ */
+function exportedFiles(node, out = new Set()) {
+  if (typeof node === 'string') {
+    // Only relative file targets. `null` (a deliberately blocked subpath) and
+    // bare package names are not files this tarball owes anyone.
+    if (node.startsWith('./')) out.add(node.slice(2));
+    return out;
+  }
+  if (node && typeof node === 'object') for (const v of Object.values(node)) exportedFiles(v, out);
+  return out;
+}
+
+const entries = [...exportedFiles(pkg.exports ?? {})].sort();
+if (entries.length === 0) {
+  console.error('check-publish-contents: package.json declares no `exports` targets to verify.');
+  process.exit(1);
+}
+
 let stdout;
 try {
   ({ stdout } = await run('npm', ['pack', '--dry-run', '--json'], { cwd: PKG, maxBuffer: 32 * 1024 * 1024 }));
@@ -42,7 +70,6 @@ try {
 
 const missing = REQUIRED.filter((f) => !packed.includes(f));
 // An entry point nobody can import is the other half of the same failure.
-const entries = ['dist/index.js', 'dist/index.cjs', 'dist/index.d.ts'];
 missing.push(...entries.filter((f) => !packed.includes(f)));
 
 if (missing.length > 0) {
@@ -55,7 +82,6 @@ if (missing.length > 0) {
 // The README is the npm landing page, so a stale peer-dependency range there
 // is advice a consumer follows and then hits a peer conflict. All three were
 // wrong at once, and one advertised a WIDER range than the package accepts.
-const pkg = JSON.parse(await readFile(join(PKG, 'package.json'), 'utf8'));
 const readme = await readFile(join(ROOT, 'README.md'), 'utf8');
 const wrong = [];
 for (const [name, range] of Object.entries(pkg.peerDependencies ?? {})) {
@@ -69,4 +95,6 @@ if (wrong.length > 0) {
   process.exit(1);
 }
 
-console.log(`check-publish-contents: ${packed.length} files, all required present, peer ranges match.`);
+console.log(
+  `check-publish-contents: ${packed.length} files, ${entries.length} exports-map targets present, peer ranges match.`,
+);

@@ -11,6 +11,9 @@ on:
   pull_request:
     branches:
       - main
+      # Long-lived integration branch. Without it every PR that targets v2
+      # skipped CodeQL entirely.
+      - v2
   schedule:
     # Mondays 07:00 UTC - same slot as dependabot, so "weekly review" is
     # one pass across deps + SAST.

@@ -56,6 +56,18 @@ jobs:
       - name: Build docs site
         run: pnpm --filter site build
 
+      - name: Build library + examples
+        # `pnpm build` (root script) builds pixi-reels and every example app.
+        # Catches regressions where the lib's published surface stops resolving
+        # in a downstream consumer. e.g. a peer dep dropping out of a bundler's
+        # static analysis path. Examples don't ship; this is purely a gate.
+        #
+        # MUST run before `Publish contents`: that step packs the package, and
+        # on a fresh checkout packages/pixi-reels/dist/ does not exist yet, so
+        # every dist entry point reads as missing and the job dies before the
+        # remaining gates ever run.
+        run: pnpm build
+
       - name: Publish contents
         # npm drops a `files` entry that matches nothing, silently. README
         # and LICENSE were both listed and both absent from the tarball.
@@ -65,13 +77,6 @@ jobs:
         # A doc pointing at a renamed recipe looks authoritative and 404s.
         # Nothing else catches it: Astro renders a dead link happily.
         run: pnpm check:doc-links
-
-      - name: Build library + examples
-        # `pnpm build` (root script) builds pixi-reels and every example app.
-        # Catches regressions where the lib's published surface stops resolving
-        # in a downstream consumer. e.g. a peer dep dropping out of a bundler's
-        # static analysis path. Examples don't ship; this is purely a gate.
-        run: pnpm build
 
   e2e:
     # Browser coverage for the one thing unit tests structurally cannot reach:
