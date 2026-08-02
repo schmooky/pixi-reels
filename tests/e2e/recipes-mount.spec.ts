@@ -76,10 +76,8 @@ for (const path of PAGES) {
     page.on('pageerror', (err) => errors.push(String(err)));
 
     // Tall viewport so several demos fall inside the runner's 500px
-    // intersection margin and mount together. Deliberately NOT scrolling:
-    // scrolling past a demo unmounts it, and teardown has its own separate
-    // race (a destroyed app's gsap tweens outliving it) that would show up
-    // here as noise. This test is about mounting.
+    // intersection margin and mount together. This test is about mounting
+    // only; `recipes survive scrolling` below covers unmount/teardown.
     await page.setViewportSize({ width: 1280, height: 3000 });
     await page.goto(`${BASE}${path}`, { waitUntil: 'networkidle' });
     await page.waitForTimeout(3000);
@@ -97,5 +95,56 @@ for (const path of PAGES) {
     expect(failures, `${path} has recipe(s) that threw on mount`).toEqual([]);
 
     expect(errors, `${path} logged console errors while mounting`).toEqual([]);
+  });
+}
+
+/**
+ * Pages that stack enough demos for scrolling to actually unmount one while
+ * others stay live. That overlap is the whole point: teardown bugs that only
+ * corrupt OTHER apps are invisible on a single-demo page.
+ */
+const SCROLL_PAGES = [
+  '/recipes/big-symbols/',
+  '/recipes/nudge/',
+  '/recipes/cascade-6x5/',
+  '/recipes/hold-and-win/',
+  '/recipes/multiways/',
+];
+
+for (const path of SCROLL_PAGES) {
+  test(`recipes survive scrolling: ${path}`, async ({ page }) => {
+    const errors: string[] = [];
+    page.on('console', (msg) => {
+      if (msg.type() === 'error') errors.push(msg.text());
+    });
+    page.on('pageerror', (err) => errors.push(String(err)));
+
+    // Normal-height viewport, unlike the mount test: demos must leave the
+    // runner's 500px intersection margin for LazyRecipeRunner to unmount
+    // them, and a 3000px viewport keeps the whole page mounted.
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto(`${BASE}${path}`, { waitUntil: 'networkidle' });
+    await page.waitForTimeout(3000);
+
+    // Walk the page in viewport-ish steps so demos mount and unmount while
+    // their neighbours keep rendering. Each app teardown used to release
+    // PixiJS's PROCESS-global pools (BigPool, batchPool, ...), freeing pooled
+    // objects still referenced by the surviving apps' instruction sets. The
+    // survivors then threw from inside their own render loop, one frame
+    // later -- "Cannot read properties of null (reading 'geometry')".
+    const height = await page.evaluate(() => document.body.scrollHeight);
+    for (let y = 0; y < height; y += 700) {
+      await page.evaluate((to) => window.scrollTo(0, to), y);
+      await page.waitForTimeout(700);
+    }
+    // Let the last batch of unmounts land, plus a few frames of the
+    // survivors rendering afterwards -- that is when the corruption showed.
+    await page.waitForTimeout(2000);
+
+    const shown = await page.locator('.text-destructive').allInnerTexts();
+    const failures = shown.map((t) => t.trim()).filter(Boolean);
+    expect(failures, `${path} has recipe(s) that threw while scrolling`).toEqual([]);
+
+    expect(errors, `${path} logged console errors across mount + unmount`).toEqual([]);
   });
 }

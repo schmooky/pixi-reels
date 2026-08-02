@@ -258,7 +258,18 @@ export async function generateSpinePreview(
   } finally {
     // Tear down regardless of success. leaving an offscreen Application
     // around per save would balloon GPU contexts.
-    app.destroy(true, { children: true, texture: false });
+    //
+    // `{ removeView: true }`, NOT the bare `true` that reads as "destroy it
+    // all": in PixiJS v8 `true` also means `releaseGlobalResources`, and
+    // AbstractRenderer.destroy then calls GlobalResourceRegistry.release(),
+    // clearing PROCESS-global pools (BigPool, TexturePool, CanvasPool, the
+    // batcher's batchPool) and destroying every pooled object in them. This
+    // preview Application is offscreen and short-lived, but the Studio's own
+    // Application is live and rendering on the same page the whole time, and
+    // its built instruction sets still hold those pooled objects -- so the
+    // bare `true` crashed the Studio canvas one frame later with
+    // "Cannot read properties of null (reading 'geometry')".
+    app.destroy({ removeView: true }, { children: true, texture: false });
     for (const url of blobUrls) {
       try { URL.revokeObjectURL(url); } catch { /* ignore */ }
     }

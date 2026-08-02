@@ -73,6 +73,31 @@ import { cn } from '@/lib/utils';
 import { CanvasSkeleton } from './CanvasSkeleton';
 import { useMinDisplay } from './useMinDisplay';
 
+// Renderer teardown options for `app.destroy(...)`.
+//
+// MUST NOT be the bare `true` that reads so naturally here. In PixiJS v8
+// `RendererDestroyOptions` is `TypeOrBool<ViewSystemDestroyOptions &
+// { releaseGlobalResources?: boolean }>`, so `true` means removeView AND
+// releaseGlobalResources -- and the resources it releases are PROCESS-global,
+// not per-app: `AbstractRenderer.destroy` calls `GlobalResourceRegistry
+// .release()`, which clears BigPool, TexturePool, CanvasPool and the batcher's
+// module-level `batchPool`, calling `destroy()` on every pooled object.
+//
+// A recipe page mounts several Application instances at once (see
+// LazyRecipeRunner). Pooled `Batch` / `BatchableSprite` objects handed out to
+// the OTHER live apps are still referenced by their built instruction sets, so
+// nuking the shared pools when one demo scrolls out of view left the survivors
+// rendering freed objects on their very next frame:
+//   TypeError: Cannot read properties of null (reading 'geometry')  // batch.batcher
+//   TypeError: Cannot read properties of null (reading 'clear')     // batch.textures
+// with a stack that is entirely Pixi internals (Ticker._tick -> ... ->
+// BatcherPipe.execute), which is what makes it read like a render-loop bug
+// rather than a teardown one.
+//
+// `{ removeView: true }` is the same view teardown minus the global-pool
+// release: ViewSystem.destroy only ever reads `removeView`.
+const DESTROY_RENDERER = { removeView: true } as const;
+
 // GSAP is driven off a live PIXI app.ticker so tweens honor hidden-tab
 // throttling (the documented "GSAP freezes in hidden tabs" gotcha). Several
 // recipe canvases can be mounted at once, so we keep exactly ONE driver bound
@@ -192,7 +217,7 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
         resolution: Math.min(window.devicePixelRatio, 2),
         autoDensity: true,
       });
-      if (cancelled) { app.destroy(true, { children: true }); return; }
+      if (cancelled) { app.destroy(DESTROY_RENDERER, { children: true }); return; }
 
       host.innerHTML = '';
       host.appendChild(app.canvas);
@@ -302,7 +327,7 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
       const app = envRef.current?.app;
       if (app) {
         releaseGsapApp(app); // hand off the gsap driver before the ticker dies
-        try { app.destroy(true, { children: true }); } catch { /* ignore */ }
+        try { app.destroy(DESTROY_RENDERER, { children: true }); } catch { /* ignore */ }
       }
       reelSetRef.current = null;
       onSpinRef.current = null;
