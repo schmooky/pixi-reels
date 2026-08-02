@@ -114,8 +114,8 @@ Three lanes. **Lane B and Lane C have no dependency on the axis work** and can s
 
 ```
 pnpm --filter pixi-reels typecheck
-pnpm --filter pixi-reels test
-pnpm --filter pixi-reels test:contract      # all four orientation x direction combos
+pnpm --filter pixi-reels test                # includes tests/contract/*.contract.test.ts,
+                                             # all four orientation x direction combos
 pnpm check:lint
 .changeset/*.md present
 ```

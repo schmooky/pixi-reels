@@ -175,9 +175,10 @@ ReelSet (Container) ── events: EventEmitter<ReelSetEvents>
     ├── SpeedManager ── Normal / Turbo / SuperTurbo profiles
     ├── SymbolSpotlight ── win animations (dim + promote)
     ├── ReelViewport ── masked + unmasked + spotlight containers
-    └── Reel[] ── one per column
+    └── Reel[] ── one per reel (a column when vertical, a row when horizontal)
+        ├── ReelAxis ── orientation + direction; maps travel/cross onto screen x/y
         ├── ReelSymbol[] ── SpriteSymbol / AnimatedSpriteSymbol / SpineSymbol
-        ├── ReelMotion ── Y displacement + wrapping
+        ├── ReelMotion ── travel-axis advance + wrapping; positions derived from array index
         └── StopSequencer ── target frame management
 ```
 

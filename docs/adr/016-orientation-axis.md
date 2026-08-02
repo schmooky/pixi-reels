@@ -266,6 +266,12 @@ generalizes to "clear the mask using the buffer on the *gravity exit* edge." `tu
 "survivors pack toward the bottom, new symbols enter from above" (`:61-95`) becomes "pack toward the
 gravity-exit edge, feed from the gravity-entry edge" — identical arithmetic, renamed.
 
+**Recorded delta.** `gravity` shipped with `'auto'` as the default, so a cascade follows the reel's own
+direction unless the tumble config overrides it. The section 6.4 helper `parkOutsideWindow` did not ship
+under that name (see the note under Status): the "clear the mask using the buffer on the gravity-exit
+edge" distance is computed inline in `CascadeFallPhase`, from the reel's own buffer counts and
+`motion.slotPitch`.
+
 ---
 
 ## 4. Public API sketch (v2.0.0)

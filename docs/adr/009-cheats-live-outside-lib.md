@@ -15,7 +15,7 @@ Separately, sticky wilds, hold-and-win, and any "persisted cell across spins" me
 The cheats library exposes:
 
 - **`CheatEngine`** — owns a seeded RNG (Mulberry32), a `held` cell list, and an ordered list of cheat definitions. `engine.next()` produces the next outcome, trying each enabled cheat in order; the first one that returns a non-null result wins.
-- **Built-in cheats** — `forceGrid`, `forceLine(row, id)`, `forceScatters(n, id)` (exact count — see note below), `forceNearMiss(n, id, nearReel)`, `forceCell(reel, row, id)`, `holdAndWinProgress(coinId, chance)`, `cascadeSequence(stages)`, `cascadingStages(stages)`, `forceAnticipation(reelIndices)`.
+- **Built-in cheats** — `forceGrid`, `forceLine(cell, id)`, `forceScatters(n, id)` (exact count — see note below), `forceNearMiss(n, id, nearReel)`, `forceCell(reel, cell, id)`, `holdAndWinProgress(coinId, chance)`, `cascadeSequence(stages)`, `cascadingStages(stages)`, `forceAnticipation(reelIndices)`.
 - **`CheatDefinition`** — `{ id, label, description?, enabled, cheat }`. Demos render these as a toggle panel (`CheatPanelReact`).
 
 ### Held-cell persistence is a CheatEngine feature, not a per-cheat feature
@@ -55,15 +55,15 @@ It fills the random grid using the non-scatter pool only, then writes exactly `n
 import { CheatEngine, forceLine } from '@/shared/cheats';
 
 const engine = new CheatEngine({
-  reelCount: 5, visibleRows: 3,
+  reelCount: 5, visibleCells: 3,
   symbolIds: ['a', 'b', 'c', 'wild'], seed: 1,
 });
 engine.register({ id: 'ln', label: 'line', enabled: true, cheat: forceLine(1, 'a') });
-engine.setHeld([{ reel: 2, row: 1, symbolId: 'wild' }]);
+engine.setHeld([{ reel: 2, cell: 1, symbolId: 'wild' }]);
 
 const { symbols } = engine.next();
-// Held cell (2, 1) is 'wild' even though the cheat wanted 'a' on row 1.
+// Held cell (2, 1) is 'wild' even though the cheat wanted 'a' on cell 1.
 expect(symbols[2][1]).toBe('wild');
-// The other four row-1 cells are 'a' as the cheat intended.
+// The other four cell-1 entries are 'a' as the cheat intended.
 for (const r of [0, 1, 3, 4]) expect(symbols[r][1]).toBe('a');
 ```
