@@ -21,15 +21,14 @@ export function LazyRecipeRunner({ code, height = 300 }: Props) {
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    // Preload margin, scaled to the viewport. A flat 500px is half a phone
-    // screen, so arriving on a demo-dense page booted three pixi Applications
-    // at once -- three WebGL contexts and three tickers competing before
-    // anything was on screen. On a desktop 500px is a small fraction of the
-    // page and the smoothness is worth it.
-    const margin = Math.round(Math.min(500, window.innerHeight * 0.35));
+    // A generous margin on purpose: mounting is cheap next to what an
+    // unmount currently costs. Tearing a demo down races pixi's renderer
+    // (see the teardown bug), so a demo that scrolls out and back can come
+    // back blank. Shrinking this to boot fewer contexts on phones made that
+    // far more likely and was reverted. Revisit once teardown is safe.
     const io = new IntersectionObserver(
       (entries) => setActive(entries[0]?.isIntersecting ?? false),
-      { rootMargin: `${margin}px 0px ${margin}px 0px` },
+      { rootMargin: '500px 0px 500px 0px' },
     );
     io.observe(el);
     return () => io.disconnect();
