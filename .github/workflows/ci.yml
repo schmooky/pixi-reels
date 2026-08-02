@@ -45,6 +45,13 @@ jobs:
       - name: Typecheck
         run: pnpm --filter pixi-reels typecheck
 
+      - name: Typecheck examples
+        # `vite build` is transpile-only, so an example could use an API that
+        # no longer exists and still "build". Two of them were doing exactly
+        # that: passing string[][] to runCascade's nextGrid, which throws at
+        # runtime on the first cascade.
+        run: pnpm typecheck:examples
+
       - name: Test
         run: pnpm --filter pixi-reels test
 

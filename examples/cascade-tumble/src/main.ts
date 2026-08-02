@@ -466,7 +466,11 @@ async function main(): Promise<void> {
     let totalWin = 0;
     const { chainLength } = await reelSet.runCascade({
       detectWinners: (g) => detectWinners(g),
-      nextGrid: (prev, winners) => mockServer.cascade(prev, [...winners]),
+      // `nextGrid` returns ColumnTarget[]; the mock server still speaks the
+      // plain visible-cells shape, so wrap it. There is no string[][] form
+      // anywhere in the v2 API.
+      nextGrid: async (prev, winners) =>
+        (await mockServer.cascade(prev, [...winners])).map((visible) => ({ visible })),
       pauseAfterDestroyMs: PAUSE_AFTER_REMOVAL_MS,
       destroyOptions: { dim: 0.35 },
       signal: cascadeAbort.signal,

@@ -1,10 +1,9 @@
 {
-  "name": "orientation-matrix",
+  "name": "@pixi-reels/examples-shared",
   "private": true,
   "type": "module",
+  "description": "Shared helpers for the example apps. Not published; exists as a workspace package so its own imports resolve for typecheck.",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -15,6 +14,7 @@
   },
   "devDependencies": {
     "typescript": "^6.0.3",
+    "@types/node": "^22.10.2",
     "vite": "^8.0.9"
   }
 }

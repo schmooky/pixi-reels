@@ -32,7 +32,7 @@ You don't need to add changeset entries for the cascaded patches yourself — ch
 
 ## Apps are ignored
 
-`@pixi-reels/site` (the docs site) and the example apps under `examples/*` (`classic-spin`, `cascade-tumble`, `hold-and-win`) are listed under `ignore` in `config.json`. They are deployed or private, not published to npm. Don't write changesets for them.
+`@pixi-reels/site` (the docs site) and the example apps under `examples/*` are private, so changesets never versions or publishes them. Some are also listed under `ignore` in `config.json`. They are deployed or private, not published to npm. Don't write changesets for them.
 
 ## Mapping commits → changesets
 

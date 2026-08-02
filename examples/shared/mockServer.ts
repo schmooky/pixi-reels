@@ -90,7 +90,7 @@ export function mockCascade(
 
   // Cascade: shift non-empty down, fill top with random
   for (let r = 0; r < grid.length; r++) {
-    const nonEmpty = grid[r].filter((s) => s !== '');
+    const nonEmpty = grid[r].filter((s): s is SymbolId => s !== '');
     const fillCount = grid[r].length - nonEmpty.length;
     grid[r] = Array.from({ length: fillCount }, () => randomSymbol()).concat(nonEmpty);
   }

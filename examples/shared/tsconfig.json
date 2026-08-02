@@ -3,8 +3,5 @@
   "compilerOptions": {
     "noEmit": true
   },
-  "include": [
-    "src/**/*.ts",
-    "../shared/**/*.ts"
-  ]
+  "include": ["**/*.ts"]
 }

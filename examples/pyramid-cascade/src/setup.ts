@@ -115,7 +115,7 @@ export async function boot(opts: BootOptions): Promise<() => void> {
   // loops are time-aligned across the whole grid.
   const LANDING_MS = 350;
   function syncIdle(): void {
-    for (let r = 0; r < reelSet.reelCount; r++) {
+    for (let r = 0; r < reelSet.reels.length; r++) {
       const reel = reelSet.getReel(r);
       for (let cell = 0; cell < reel.visibleCells; cell++) {
         const sym = reel.getSymbolAt(cell);
@@ -197,7 +197,9 @@ export async function boot(opts: BootOptions): Promise<() => void> {
       },
       nextGrid: (prev, winners) => {
         const cells: SymbolPosition[] = winners.map((w) => ({ reelIndex: w.reel, cellIndex: w.cell }));
-        return computeRefillGrid(prev, cells);
+        // ColumnTarget[] is the only accepted shape; computeRefillGrid still
+        // returns plain visible cells, so wrap each column.
+        return computeRefillGrid(prev, cells).map((visible) => ({ visible }));
       },
       onCascade: ({ chain }) => {
         cascadeLevel = chain;
