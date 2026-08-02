@@ -16,9 +16,15 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join, resolve } from 'node:path';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const PKG = join(ROOT, 'packages/pixi-reels');
-const FILES = ['README.md', 'LICENSE'];
 const clean = process.argv.includes('--clean');
+
+// `--pkg <dir>` selects the package; `--files a,b` narrows what to stage.
+// The codemod ships its OWN README (the root one documents the library, not
+// the transform), so it stages LICENSE only.
+const pkgArg = process.argv.indexOf('--pkg');
+const PKG = join(ROOT, pkgArg === -1 ? 'packages/pixi-reels' : process.argv[pkgArg + 1]);
+const filesArg = process.argv.indexOf('--files');
+const FILES = filesArg === -1 ? ['README.md', 'LICENSE'] : process.argv[filesArg + 1].split(',');
 
 for (const name of FILES) {
   const dest = join(PKG, name);
