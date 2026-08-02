@@ -127,23 +127,24 @@ export class ReelSetBuilder {
   private _poolCapacity?: number;
 
   /**
-   * @deprecated Removed in v2 - these throw. TypeScript catches a v1 call at
-   * compile time, but an untyped consumer would otherwise get
-   * "x.visibleRows is not a function", which names neither the replacement
-   * nor the codemod. These stubs do.
+   * @deprecated Removed in v2 - throws. Use {@link ReelSetBuilder.visibleCells}.
+   *
+   * TypeScript catches a v1 call at compile time, but an untyped consumer
+   * would otherwise get "x.visibleRows is not a function", which names
+   * neither the replacement nor the codemod. These stubs do.
    */
   visibleRows(_count: number): never {
     throw new Error(renamedMessage('ReelSetBuilder', 'visibleRows', V1_BUILDER_METHODS.visibleRows));
   }
 
-  /** @deprecated Removed in v2 - throws. See {@link ReelSetBuilder.visibleRows}. */
+  /** @deprecated Removed in v2 - throws. Use {@link ReelSetBuilder.visibleCellsPerReel}. */
   visibleRowsPerReel(_cells: number[]): never {
     throw new Error(
       renamedMessage('ReelSetBuilder', 'visibleRowsPerReel', V1_BUILDER_METHODS.visibleRowsPerReel),
     );
   }
 
-  /** @deprecated Removed in v2 - throws. See {@link ReelSetBuilder.visibleRows}. */
+  /** @deprecated Removed in v2 - throws. Use {@link ReelSetBuilder.reelExtents}. */
   reelPixelHeights(_heights: number[]): never {
     throw new Error(
       renamedMessage('ReelSetBuilder', 'reelPixelHeights', V1_BUILDER_METHODS.reelPixelHeights),
