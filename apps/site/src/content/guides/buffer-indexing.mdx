@@ -78,8 +78,10 @@ than dropping it silently, so you find out at the call, not three spins later.
 
 Anything you leave unset gets a random symbol.
 
-Buffer cells draw from a separate pass, so you can weight what appears
-off-window differently from what lands in view.
+Buffer cells are filled in the same pass, from the same weight table -- there
+is no separate buffer weighting. To make off-window fill differ from what
+lands in view, register your own `FrameMiddleware` at a priority above
+`random-fill`.
 
 ## Big symbols in buffers
 

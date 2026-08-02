@@ -37,7 +37,7 @@ wait for the whole grid.
 
 `spin:allLanded` -- last non-held reel is down. Full result attached.
 
-`spin:complete` -- fires right after, same result plus total duration. This
+`spin:complete` -- fires immediately after, with the identical `SpinResult` (which already carries `duration`). This
 is where win presentation starts.
 
 ## Pattern: fetch result mid-spin
@@ -62,7 +62,7 @@ fine: the promise waits forever.
 
 Three verbs. Three intents. Pick by what the player did.
 
-`skip()` -- "player tapped slam". Round-aware. The first press also boosts
+`skipSpin()` -- "player tapped slam". Round-aware. **Throws** if the result has not arrived yet; use `requestSkip()` in that window. The first press also boosts
 speed (standard mode) or auto-slams later refills (cascade mode). Fires
 `skip:boosted` when it boosts.
 
@@ -158,14 +158,14 @@ Live recipes: [nudge](/recipes/nudge/), [skip](/recipes/nudge-skip/), [abort](/r
 | `spin:reelLanded`      | `(reelIndex, symbols)`                          | Individual reel landed (held reels never fire)                                                                                                                           |
 | `spin:allLanded`       | `(result)`                                      | Last non-held reel landed                                                                                                                                                |
 | `spin:complete`        | `(result)`                                      | Just after `spin:allLanded`                                                                                                                                              |
-| `skip:requested`       | .                                               | A slam fired. from `skip()`, `requestSkip()` (after `setResult`), or `slamStop()`                                                                                        |
+| `skip:requested`       | .                                               | A slam fired. from `skipSpin()`, `requestSkip()` (after `setResult`), or `slamStop()`                                                                                        |
 | `skip:completed`       | .                                               | All non-held reels force-landed                                                                                                                                          |
-| `skip:boosted`         | `({ previous, current })`                       | First `skip()` press of a standard-mode round; engine bumped speed to the fastest registered profile for the rest of the round. Cascade mode auto-slams refills instead. |
+| `skip:boosted`         | `({ previous, current })`                       | First `skipSpin()` press of a standard-mode round; engine bumped speed to the fastest registered profile for the rest of the round. Cascade mode auto-slams refills instead. |
 | `speed:changed`        | `(profile, previous)`                           | `setSpeed()` called                                                                                                                                                      |
 | `spotlight:start`      | `(positions)`                                   | `spotlight.cycle(...)` began                                                                                                                                             |
 | `spotlight:end`        | .                                               | Spotlight finished                                                                                                                                                       |
 | `pin:placed`           | `(pin)`                                         | `reelSet.pin(...)` succeeded                                                                                                                                             |
-| `pin:expired`          | `(pin, reason)`                                 | Pin removed by `unpin`, `turns` exhausted, or `'eval'` reset                                                                                                             |
+| `pin:expired`          | `(pin, reason)`                                 | Pin removed by `unpin`, `turns` exhausted, an `'eval'` reset, or a `'collision'` (a reshape clamped it onto an occupied cell)                                                                                                             |
 | `pin:moved`            | `(pin, from)`                                   | `reelSet.movePin(...)` resolved                                                                                                                                          |
 | `pin:migrated`         | `(pin, info)`                                   | MultiWays reshape moved a pin to a new cell                                                                                                                              |
 | `pin:overlayCreated`   | `(pin, symbol)`                                 | Mid-spin overlay symbol mounted for a pin                                                                                                                                |

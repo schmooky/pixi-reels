@@ -25,17 +25,17 @@ const reelSet = new ReelSetBuilder()
 
 const promise = reelSet.spin();
 reelSet.setShape([3, 5, 7, 4, 6, 2]);  // BEFORE setResult
-reelSet.setResult(serverGrid);          // serverGrid[i].length === shape[i]
+reelSet.setResult(serverGrid);          // serverGrid[i].visible.length === shape[i]
 await promise;
 ```
 
 ## Order matters
 
 1. `spin()` -- reels scroll at the previous shape's cell size.
-2. `setShape(cellsPerReel)` -- records the target, migrates pins, emits
-   `shape:changed`. **Before `setResult`.** After it, the engine throws:
+2. `setShape(cellsPerReel)` -- records the target, emits `shape:changed`, then
+   migrates pins (`pin:migrated`). **Before `setResult`.** After it, the engine throws:
    frames are already cached by then.
-3. `setResult(grid)` -- `grid[i].length` must equal `shape[i]`.
+3. `setResult(grid)` -- `grid[i].visible.length` must equal `shape[i]`.
 4. Reshape, between SPIN and STOP. Per reel: `adjust:start`, commit the
    geometry, refresh pin overlays, `adjust:complete`.
 5. `StopPhase` lands at the new shape.

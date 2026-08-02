@@ -24,7 +24,7 @@ You never call `new` on a symbol. The engine does, and it pools them.
 ```ts
 builder.symbols((r) => {
   r.register('cherry', SpriteSymbol, { textures: { cherry: cherryTex } });
-  r.register('bar',    AnimatedSpriteSymbol, { frames: barFrames, fps: 18 });
+  r.register('bar',    AnimatedSpriteSymbol, { frames: barFrames, animationSpeed: 1.5 });
 });
 ```
 

@@ -61,7 +61,7 @@ Nothing happened? One of these:
 |---|---|
 | Blank canvas | Set `reelSet.x` and `reelSet.y`. It sits at (0,0). |
 | `ticker() must be called` | You forgot `.ticker(app.ticker)`. |
-| Symbols invisible | You weighted an id you never registered. |
+| Symbols invisible | The texture never loaded, or `symbolSize()` does not match your art. `resize()` runs on every swap. |
 
 ## Where next
 

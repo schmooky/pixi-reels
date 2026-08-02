@@ -36,8 +36,10 @@ Keep them apart and you only need one:
 - **Orientation** -- which screen axis the strip runs on. Set-level, fixed at
   `build()`.
 - **Direction** -- which way along that axis symbols travel. Per reel.
-- **Gravity** -- which way cascade symbols fall. Defaults to the reel's
-  direction, settable on its own.
+- **Gravity** -- which way cascade symbols fall. Derived from the reel's
+  direction. There is no separate knob: the `tumble({ gravity })` option
+  sketched in ADR 016 was never implemented, and a `gravity` key on
+  `.tumble(...)` is ignored.
 - **Facing** -- which way is "up" for the art. Never touched by the other
   three.
 
@@ -69,7 +71,7 @@ the exact opposite.
 Your own `ReelSymbol` subclasses need zero changes. Here is why.
 
 **Unchanged, always screen-space:** `symbolSize(width, height)` ·
-`symbolGap({ x, y })` · `ReelSymbol.resize(width, height)` ·
+`symbolGap(x, y)` · `ReelSymbol.resize(width, height)` ·
 `CellBounds { x, y, width, height }` · `getCellBounds` · `getBlockBounds` ·
 positioning the `ReelSet` itself.
 
@@ -123,7 +125,9 @@ You do not set it. It is derived. Read it if you need it:
 Alternating columns. One reversed reel. Whatever the design wants.
 
 One rule: a big symbol spanning **more than one reel** (`size.reels > 1`)
-cannot mix with per-reel directions. `build()` throws.
+cannot mix with **mixed** per-reel directions. `build()` throws only when
+`directionPerReel([...])` holds more than one distinct value -- a uniform
+array is fine, since the block still travels one way.
 
 The block coordinator assumes every reel a block covers feeds from the same
 edge. Mixed directions break that, and the block splits mid-spin. Better to
