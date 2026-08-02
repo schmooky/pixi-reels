@@ -1,7 +1,7 @@
 id: debug-005
 group: debug
 question: How do I force a guaranteed jackpot for a screenshot?
-answer: The example `CheatEngine` (in `examples/shared/cheats`) +
+answer: The example `CheatEngine` (in the private `@pixi-reels/cheats` package) +
   `holdAndWinProgress(coin, 1)` guarantees a coin every spin for a screenshot.
 links:
   - label: "Guide: Cheats & testing"

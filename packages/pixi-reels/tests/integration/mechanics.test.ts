@@ -15,7 +15,7 @@ import {
   holdAndWinProgress,
   cascadeSequence,
   forceAnticipation,
-} from '../../../../examples/shared/cheats.js';
+} from '@pixi-reels/cheats';
 
 const SYMBOLS = ['a', 'b', 'c', 'scatter', 'wild', 'coin'];
 

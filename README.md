@@ -133,14 +133,13 @@ __PIXI_REELS_DEBUG.trace()     // Log spin, skip, speed, spotlight, shape, pin e
 
 ## Examples
 
-Runnable apps in [`examples/`](https://github.com/schmooky/pixi-reels/tree/main/examples):
+Runnable demos live on the docs site under [`/recipes`](https://pixi-reels.pages.dev/recipes/) -- about 130 of them, each with its full source next to it, covering line pays, cascades, hold and win, big symbols, nudge, anticipation and every mechanic that used to have its own example app. They run in the page, so there is nothing to clone or start.
 
-| Example          | What it shows                                              | Run                                    |
-|------------------|------------------------------------------------------------|----------------------------------------|
-| `classic-spin`   | 5x3 line-pay slot with sprite symbols and speed toggle     | `pnpm --filter classic-spin dev`       |
-| `cascade-tumble` | 6x5 tumble mechanic with win spotlight between stages      | `pnpm --filter cascade-tumble dev`     |
-| `sandbox`        | Single editable TS file, HMR rebuild                       | `pnpm --filter sandbox dev`            |
-| `orientation-matrix` | All four travel combinations side by side, landing one shared grid | `pnpm --filter orientation-matrix dev` |
+```bash
+pnpm site:dev     # the whole recipe set, locally
+```
+
+The standalone `examples/` apps moved to their own repo in 2.0. Keeping two parallel demo surfaces in one repo meant every API change had to be made twice, and the example half kept losing.
 
 ## Peer dependencies
 

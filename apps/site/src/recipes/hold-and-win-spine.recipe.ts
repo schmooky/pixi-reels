@@ -80,7 +80,7 @@ const TIER_OVERRIDES = {
 };
 
 // freezeAtEnd / settleMoneyFace / GoldCoinSymbol come from the shared
-// holdAndWinFx kit (injected) - see examples/shared/holdAndWinFx.ts.
+// holdAndWinFx kit (injected) - see apps/site/src/runtime/holdAndWinFx.ts.
 const SETTLE_SIZE = CELL - 10;
 
 // Skeletons are authored at wildly different sizes - measure each once and

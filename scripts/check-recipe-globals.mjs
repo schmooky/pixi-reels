@@ -55,7 +55,7 @@ for (const rel of RUNTIMES) {
 
 // Every bundled spine loader must be reachable through the registry, or a
 // surface that iterates SPINE_SETS silently offers fewer sets than exist.
-const registry = await readFile(resolve(ROOT, 'examples/shared/spineSets.ts'), 'utf8');
+const registry = await readFile(resolve(ROOT, 'apps/site/src/runtime/spineSets.ts'), 'utf8');
 const LOADERS = {
   'generatedSpineLoader.ts': 'loadGeneratedSpines',
   'thunderkickSpineLoader.ts': 'loadThunderkickSpines',
@@ -64,7 +64,7 @@ const LOADERS = {
 for (const [file, loader] of Object.entries(LOADERS)) {
   if (!registry.includes(loader)) {
     problems.push(
-      `examples/shared/spineSets.ts: does not register ${loader} from ${file}. ` +
+      `apps/site/src/runtime/spineSets.ts: does not register ${loader} from ${file}. ` +
       `Every bundled spine set belongs in SPINE_SETS so all surfaces get it.`,
     );
   }

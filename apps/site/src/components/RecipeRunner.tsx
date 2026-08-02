@@ -29,7 +29,7 @@ import {
   anticipationForScatters,
   SpinTextureCache, StaticSpinSymbol, prewarmSpinTextures,
 } from 'pixi-reels';
-import { BlurSpriteSymbol } from '../../../../examples/shared/BlurSpriteSymbol.ts';
+import { BlurSpriteSymbol } from '../runtime/BlurSpriteSymbol.ts';
 import { CardSymbol, CARD_DECK, WILD_CARD } from 'pixi-reels';
 import {
   CoinSymbol,
@@ -40,7 +40,7 @@ import {
   coinValue,
   coinMultiplier,
   drawCoin,
-} from '../../../../examples/shared/CoinSymbol.ts';
+} from '../runtime/CoinSymbol.ts';
 import {
   GoldCoinSymbol,
   coinWaves,
@@ -48,25 +48,25 @@ import {
   settleMoneyFace,
   freezeAtEnd,
   fitText,
-} from '../../../../examples/shared/holdAndWinFx.ts';
-import { loadPrototypeSymbols } from '../../../../examples/shared/prototypeSpriteLoader.ts';
+} from '../runtime/holdAndWinFx.ts';
+import { loadPrototypeSymbols } from '../runtime/prototypeSpriteLoader.ts';
 import {
   loadGeneratedSpines,
   buildSpineMap,
-} from '../../../../examples/shared/generatedSpineLoader.ts';
+} from '../runtime/generatedSpineLoader.ts';
 import {
   loadThunderkickSpines,
   buildThunderkickSpineMap,
   THUNDERKICK_SYMBOL_IDS,
-} from '../../../../examples/shared/thunderkickSpineLoader.ts';
+} from '../runtime/thunderkickSpineLoader.ts';
 import {
   loadCascadeSpines,
   buildCascadeSpineMap,
   CASCADE_SYMBOL_IDS,
   CASCADE_PLATE_W,
   CASCADE_PLATE_H,
-} from '../../../../examples/shared/cascadeSpineLoader.ts';
-import { loadHoldAndWinSprites } from '../../../../examples/shared/holdAndWinSprites.ts';
+} from '../runtime/cascadeSpineLoader.ts';
+import { loadHoldAndWinSprites } from '../runtime/holdAndWinSprites.ts';
 import { transform as sucraseTransform } from 'sucrase';
 import { runRecipeSource } from '@/lib/recipeGlobals';
 import { cn } from '@/lib/utils';

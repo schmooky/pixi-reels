@@ -127,16 +127,29 @@ flowchart TB
       </ul>
     </div>
     <div class="rounded-xl border border-border bg-card p-4">
-      <div class="text-[11px] font-mono uppercase tracking-wider text-primary mb-1">examples/shared/</div>
+      <div class="text-[11px] font-mono uppercase tracking-wider text-primary mb-1">apps/site/src/runtime/</div>
+      <ul class="text-sm space-y-1 text-foreground/80">
+        <li><code>BlurSpriteSymbol.ts</code>. sprite symbol with motion-blur swap</li>
+        <li><code>CoinSymbol.ts</code>. Graphics-drawn coin symbol</li>
+        <li><code>holdAndWinFx.ts</code>. coin waves + bezier collect flights</li>
+        <li><code>prototypeSpriteLoader.ts</code>. prototype-symbols atlas loader</li>
+        <li><code>spineSets.ts</code>. the bundled Spine sets behind one interface</li>
+      </ul>
+    </div>
+    <div class="rounded-xl border border-border bg-card p-4">
+      <div class="text-[11px] font-mono uppercase tracking-wider text-primary mb-1">packages/cheats/src/</div>
       <ul class="text-sm space-y-1 text-foreground/80">
         <li><code>cheats.ts</code>. CheatEngine + built-in cheats</li>
-        <li><code>BlurSpriteSymbol.ts</code>. sprite symbol with motion-blur swap</li>
-        <li><code>prototypeSpriteLoader.ts</code>. prototype-symbols atlas loader</li>
-        <li><code>mockServer.ts</code>. fake spin responses</li>
         <li><code>seededRng.ts</code>. Mulberry32 PRNG</li>
       </ul>
     </div>
   </div>
+
+  <p>
+    Neither of those last two is library API. the recipe runtime and the
+    cheats package are reference code you copy, which is why they sit
+    outside <code>packages/pixi-reels/</code>.
+  </p>
 
   <p>
     Read the next page for the class composition tree in detail, or skip

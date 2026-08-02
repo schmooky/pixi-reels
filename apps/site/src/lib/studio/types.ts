@@ -13,7 +13,9 @@ export type SymbolType = 'sprite' | 'animatedSprite' | 'spine';
 
 /**
  * Lifecycle events a Spine symbol class can drive. Names match what
- * `SpineReelSymbol` consumes. see `examples/shared/SpineReelSymbol.ts`.
+ * `SpineReelSymbol` consumes. see
+ * `packages/pixi-reels/src/spine/SpineReelSymbol.ts`, exported as
+ * `pixi-reels/spine`.
  * The studio UI lets users pick one animation per event from the
  * skeleton's available animations.
  */

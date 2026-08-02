@@ -35,7 +35,7 @@ import {
   anticipationForScatters,
   prewarmSpinTextures,
 } from 'pixi-reels';
-import { BlurSpriteSymbol } from '../../../../examples/shared/BlurSpriteSymbol.ts';
+import { BlurSpriteSymbol } from '../runtime/BlurSpriteSymbol.ts';
 import { CardSymbol, CARD_DECK, WILD_CARD } from 'pixi-reels';
 import {
   CoinSymbol,
@@ -46,7 +46,7 @@ import {
   coinValue,
   coinMultiplier,
   drawCoin,
-} from '../../../../examples/shared/CoinSymbol.ts';
+} from '../runtime/CoinSymbol.ts';
 
 /**
  * The Spine half of the surface, loaded ON DEMAND.
@@ -60,10 +60,10 @@ async function loadSpineGlobals(): Promise<Record<string, unknown>> {
   const [spine, spineRuntime, generated, thunderkick, cascade, sets] = await Promise.all([
     import('pixi-reels/spine'),
     import('@esotericsoftware/spine-pixi-v8'),
-    import('../../../../examples/shared/generatedSpineLoader.ts'),
-    import('../../../../examples/shared/thunderkickSpineLoader.ts'),
-    import('../../../../examples/shared/cascadeSpineLoader.ts'),
-    import('../../../../examples/shared/spineSets.ts'),
+    import('../runtime/generatedSpineLoader.ts'),
+    import('../runtime/thunderkickSpineLoader.ts'),
+    import('../runtime/cascadeSpineLoader.ts'),
+    import('../runtime/spineSets.ts'),
   ]);
   return {
     SpineReelSymbol: spine.SpineReelSymbol,
@@ -94,8 +94,8 @@ async function loadSpineGlobals(): Promise<Record<string, unknown>> {
  */
 async function loadHoldAndWinGlobals(): Promise<Record<string, unknown>> {
   const [fx, sprites] = await Promise.all([
-    import('../../../../examples/shared/holdAndWinFx.ts'),
-    import('../../../../examples/shared/holdAndWinSprites.ts'),
+    import('../runtime/holdAndWinFx.ts'),
+    import('../runtime/holdAndWinSprites.ts'),
   ]);
   return {
     GoldCoinSymbol: fx.GoldCoinSymbol,

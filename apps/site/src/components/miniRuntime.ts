@@ -3,8 +3,8 @@ import { ReelSetBuilder, SpeedPresets, enableDebug } from 'pixi-reels';
 import type { ReelSet, TumbleConfig } from 'pixi-reels';
 import { gsap } from 'gsap';
 import { BlockSymbol } from './BlockSymbol.ts';
-import { BlurSpriteSymbol } from '../../../../examples/shared/BlurSpriteSymbol.ts';
-import { loadPrototypeSymbols } from '../../../../examples/shared/prototypeSpriteLoader.ts';
+import { BlurSpriteSymbol } from '../runtime/BlurSpriteSymbol.ts';
+import { loadPrototypeSymbols } from '../runtime/prototypeSpriteLoader.ts';
 
 let gsapSynced = false;
 function syncGsap(app: Application): void {

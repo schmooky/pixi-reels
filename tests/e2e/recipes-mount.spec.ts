@@ -25,19 +25,19 @@ const PORT = 5182;
 const BASE = `http://localhost:${PORT}`;
 
 /**
- * Every recipe page and every demo page. Both runtimes are covered because
- * they fail differently: recipes are evaluated from source at runtime, demo
- * pages mount compiled React components.
+ * Every recipe umbrella page. Recipes are evaluated from source at runtime,
+ * so a page that builds can still throw on mount; only a real browser
+ * catches that.
+ *
+ * The `/demos` route used to be covered here too. It was deleted in 2.0 when
+ * the standalone example apps moved to their own repo -- `/recipes` is the
+ * only live-demo surface now.
  */
 const PAGES = [
   ...['anticipation', 'big-symbols', 'cascade', 'cells-and-banners', 'hold-and-win',
       'nudge', 'orientation-and-direction', 'starters', 'symbols', 'wilds-and-pins',
      ].map((s) => `/recipes/${s}/`),
-  ...['anticipation-slam', 'big-symbols', 'cascade-multiplier', 'classic-lines',
-      'hold-and-win-respin', 'multiways', 'pyramid-cascade', 'scatter-triggers-fs',
-      'sprite-classic', 'sticky-wilds',
-     ].map((s) => `/demos/${s}/`),
-  // The only guide that embeds demos. Kept explicit rather than globbed so
+  // The only guide that embeds recipes. Kept explicit rather than globbed so
   // adding <RecipeDemo> to another guide is a deliberate act, not a silent
   // gap in coverage.
   '/guides/nudge/',

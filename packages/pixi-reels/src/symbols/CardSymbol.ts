@@ -20,12 +20,11 @@ import { ReelSymbol } from './ReelSymbol.js';
  *     resize across spins.
  *   - Or a custom `ReelSymbol` subclass for game-specific visuals.
  *
- * The reason this is in `examples/shared/` and not the library proper:
- * it's debug scaffolding, not library API. Copy it into your codebase if
- * you want to keep using it; remove it from your final bundle.
+ * Ships from the package so a prototype runs with no art at all. It is
+ * deliberately plain `Graphics`: swap it for real art before you ship.
  *
  * ```ts
- * import { CardSymbol, CARD_DECK } from '../../shared/CardSymbol';
+ * import { CardSymbol, CARD_DECK } from 'pixi-reels';
  *
  * builder.symbols((registry) => {
  *   for (const card of CARD_DECK) {

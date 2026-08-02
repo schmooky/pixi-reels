@@ -8,11 +8,11 @@ import {
 import { gsap } from 'gsap';
 import {
   BlurSpriteSymbol,
-} from '../../../../examples/shared/BlurSpriteSymbol.ts';
+} from '../runtime/BlurSpriteSymbol.ts';
 import {
   loadPrototypeSymbols,
   type PrototypeTextureSet,
-} from '../../../../examples/shared/prototypeSpriteLoader.ts';
+} from '../runtime/prototypeSpriteLoader.ts';
 
 let gsapSynced = false;
 function syncGsap(app: Application): void {

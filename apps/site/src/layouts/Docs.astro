@@ -7,12 +7,12 @@ import { articleLd, breadcrumbLd, SITE } from '../lib/seo.ts';
 interface Props {
   title?: string;
   description?: string;
-  section?: 'guides' | 'wiki' | 'demos' | 'api' | 'docs';
+  section?: 'guides' | 'wiki' | 'api' | 'docs';
   eyebrow?: string;
   frontmatter?: {
     title?: string;
     description?: string;
-    section?: 'guides' | 'wiki' | 'demos' | 'api' | 'docs';
+    section?: 'guides' | 'wiki' | 'api' | 'docs';
     eyebrow?: string;
   };
 }
@@ -24,7 +24,7 @@ const description =
   props.description ??
   fm.description ??
   `${title}. pixi-reels, open-source slot machine reel engine for PixiJS v8.`;
-const section = (props.section ?? fm.section ?? 'guides') as 'guides' | 'wiki' | 'demos' | 'api' | 'docs';
+const section = (props.section ?? fm.section ?? 'guides') as 'guides' | 'wiki' | 'api' | 'docs';
 const eyebrow = props.eyebrow ?? fm.eyebrow;
 const pathname = Astro.url.pathname;
 
@@ -41,7 +41,6 @@ const navMap: Record<string, NavSection[]> = {
   wiki: WIKI_NAV,
   docs: WIKI_NAV,
   api: WIKI_NAV,
-  demos: [],
 };
 const nav = navMap[resolvedSection] ?? [];
 
@@ -50,7 +49,6 @@ const sectionLabel: Record<string, string> = {
   wiki: 'Docs',
   docs: 'Docs',
   api: 'API reference',
-  demos: 'Demos',
 };
 
 const jsonLd = [

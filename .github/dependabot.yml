@@ -1,10 +1,10 @@
 # Dependabot keeps npm + GitHub Actions dependencies fresh. For a workspace
 # monorepo the npm ecosystem at the root covers every apps/*, packages/*,
-# and examples/* subfolder - Dependabot walks pnpm workspaces automatically.
+# and every workspace subfolder - Dependabot walks pnpm workspaces automatically.
 
 version: 2
 updates:
-  # All workspace npm dependencies (apps/*, packages/*, examples/*)
+  # All workspace npm dependencies (apps/*, packages/*, tools/*, tests/e2e/fixtures/*)
   - package-ecosystem: npm
     directory: /
     schedule:

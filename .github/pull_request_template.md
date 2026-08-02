@@ -29,7 +29,7 @@ Thanks for contributing! A few things that keep the review loop fast:
 <!-- Delete the line that doesn't apply. -->
 
 - [ ] This PR ships user-visible changes in a publishable package and a `.changeset/*.md` file is included.
-- [ ] This PR only touches private apps (`@pixi-reels/site`, `examples/*`) or tooling, so no changeset is needed.
+- [ ] This PR only touches private packages (`@pixi-reels/site`, `@pixi-reels/cheats`, e2e fixtures) or tooling, so no changeset is needed.
 
 ## Related issues
 

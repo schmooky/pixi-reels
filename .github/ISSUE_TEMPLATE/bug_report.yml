@@ -19,7 +19,7 @@ body:
         - Cascade / tumble
         - Cheats / testing utilities
         - Docs site (apps/site, pixi-reels.schmooky.dev)
-        - One of the example apps (examples/*)
+        - One of the example apps (separate repo)
         - Build, CI, or release tooling
         - Unsure / other
     validations:

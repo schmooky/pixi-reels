@@ -30,7 +30,7 @@ If you're building a 1×1 symbol for a fixed-shape slot, only sections "Skeleton
 
 ## Texture and atlas
 
-- Use a single `.atlas` + `.webp` page per symbol, OR a shared atlas across all symbols (preferred for drawcall reduction). The vite config already serves textures from `examples/assets/`.
+- Use a single `.atlas` + `.webp` page per symbol, OR a shared atlas across all symbols (preferred for drawcall reduction). Textures are served from `apps/site/public/`.
 - Author at the **largest** size the symbol will render at:
   - Non-MultiWays 1×1: ~300 px tall.
   - MultiWays with `minCells=2, reelExtent=600`: ~300 px tall (`reelExtent / minCells`) -- the LARGEST cell the symbol ever occupies. At `maxCells: 7` the same reel gives it only ~86 px.

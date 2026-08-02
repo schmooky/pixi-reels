@@ -117,7 +117,7 @@ This repo already has `ObjectPool`, `TickerRef`, `Disposable`, `EventEmitter`, `
 - `ReelSymbol.resize()` is called on **every** symbol swap. Anything positional lives there, not in the constructor.
 - SpriteSymbols anchor at `(0, 0)`; SpineSymbols center via `resize()`. Don't mix models inside one class.
 - Travel changes motion; facing changes art; they never change each other. never mutate a symbol's main coordinate outside the motion layer.
-- GSAP must be driven off `app.ticker` in examples (the example scaffolding already does this. don't add a second driver).
+- GSAP must be driven off `app.ticker` (the recipe runner already does this. don't add a second driver).
 
 Violating these produces bugs that only appear on hidden tabs, long sessions, or specific aspect ratios. exactly the ones humans will only notice after a release.
 
@@ -133,12 +133,13 @@ If you've tried three approaches and none work, do not try a fourth random appro
 
 **Monorepo layout:**
 - `packages/pixi-reels/`. The npm-publishable library
-- `examples/classic-spin/`. Standard 5x3 slot demo (sprite symbols)
-- `examples/cascade-tumble/`. 6x5 cascade/tumble demo (sprite symbols)
-- `examples/sandbox/`. Live-editable playground (sprite symbols + HMR)
-- `examples/orientation-matrix/`. All four travel combinations (vertical/horizontal x forward/reverse) on one page. The e2e target for browser coverage
-- `examples/shared/`. Shared example utilities (mock server, UI, BlurSpriteSymbol, atlas loader)
-- `examples/assets/prototype-symbols/`. Open-licensed sprite atlas used by every example
+- `apps/site/`. The docs site. Its `/recipes` route is where live, runnable demos live now: ~130 of them, each an `apps/site/src/recipes/<slug>.recipe.ts` driven by an umbrella page under `src/content/recipes/`
+- `apps/site/src/runtime/`. Symbol classes and asset loaders the recipes run on (BlurSpriteSymbol, CoinSymbol, Spine loaders, atlas loader)
+- `apps/site/public/prototype-symbols/`. Open-licensed sprite atlas the recipes draw with
+- `packages/cheats/`. `CheatEngine` + `SeededRng`. Deliberately outside the library (ADR 009); used by the docs site and by the library's own integration tests
+- `tests/e2e/fixtures/orientation-matrix/`. All four travel combinations on one page. The Playwright target for browser coverage of the axis
+
+**The standalone example apps moved to a separate repo in 2.0.** Anything that used to live under `examples/` is either in the list above or is gone from this repo.
 
 ## Quick Commands
 
@@ -155,12 +156,11 @@ pnpm test
 # Type check
 pnpm --filter pixi-reels typecheck
 
-# Run an example
-pnpm --filter classic-spin dev       # port 5173
-pnpm --filter cascade-tumble dev     # port 5174
+# Run the docs site (every recipe is a live demo)
+pnpm site:dev
 
-# Build all examples as static sites
-pnpm examples:build
+# Typecheck the e2e fixture + cheats package
+pnpm typecheck:fixtures
 ```
 
 ## Architecture Overview
@@ -274,7 +274,7 @@ Example `debugSnapshot()` fields:
 | `utils/` | Disposable (interface), TickerRef (safe ticker wrapper) |
 | `debug/` | debugSnapshot, debugGrid, enableDebug |
 
-### Examples (`examples/`)
+### Recipe runtime (`apps/site/src/runtime/`)
 | Directory | Purpose |
 |-----------|---------|
 | `shared/prototypeSpriteLoader.ts` | Loads the `prototype-symbols` TexturePacker atlas |
@@ -307,8 +307,8 @@ pool/ → symbols/ → frame/
 - **TickerRef**. never use `ticker.add()` directly; wrap in TickerRef for auto-cleanup
 - **Anchor (0,0)**. SpriteSymbol uses top-left anchor; SpineSymbol centers via `resize()`
 - **Events use colon namespacing**. `spin:start`, `speed:changed`, etc.
-- **GSAP must sync with PixiJS**. examples call `gsap.ticker.remove(gsap.updateRoot)` and drive GSAP from `app.ticker` to work in hidden tabs/iframes
-- **Spine assets**. atlas references `.webp` textures; `publicDir` in vite.config serves them from `examples/assets/`
+- **GSAP must sync with PixiJS**. the recipe runner calls `gsap.ticker.remove(gsap.updateRoot)` and drives GSAP from `app.ticker` to work in hidden tabs/iframes
+- **Spine assets**. atlas references `.webp` textures; they are served from `apps/site/public/`
 
 ## Testing
 
@@ -344,7 +344,7 @@ Tests are in `packages/pixi-reels/tests/` using Vitest. Run with `pnpm test`.
 2. Register: `builder.frameMiddleware(new MyMiddleware())`
 
 ### Modify Spine symbol behavior
-1. Edit `examples/shared/SpineReelSymbol.ts`
+1. Edit `packages/pixi-reels/src/spine/SpineReelSymbol.ts`
 2. Key method: `onActivate()` creates/shows spine, `resize()` centers it in cell
 3. `_positionSpine()` sets `spine.x = cellWidth/2, spine.y = cellHeight/2`
 4. Every new spine created in `onActivate` gets positioned via stored `_cellWidth/_cellHeight`
@@ -367,7 +367,7 @@ builder.initialFrame(grid); // same shape works at build time
 
 ## Known Gotchas
 
-- **GSAP freezes in hidden tabs**. always sync GSAP ticker with PixiJS ticker in examples
+- **GSAP freezes in hidden tabs**. always sync GSAP ticker with PixiJS ticker
 - **Spine atlas requires texture pages**. `.webp` files must be served from the same directory as `.atlas`
 - **Symbol resize is critical**. `Reel._replaceSymbol()` calls `resize()` on every swap; without it symbols scatter
 - **Preview browser can't decode images**. the Claude Code preview environment has no image codecs; test Spine rendering in a real browser

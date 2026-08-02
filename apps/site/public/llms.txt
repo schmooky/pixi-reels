@@ -8,7 +8,7 @@ Site: https://pixi-reels.schmooky.dev
 Repo: https://github.com/schmooky/pixi-reels
 Package: https://www.npmjs.com/package/pixi-reels
 
-Generated: 2026-08-02T15:38:53.175Z
+Generated: 2026-08-02T17:09:56.061Z
 
 ## Quick start
 
@@ -234,58 +234,6 @@ Tags: wild, sticky, multiplier, mystery, respin, cell-pin, horizontal, reverse, 
 APIs: 
 Steps:
   - 
-
-## Mechanic demos
-
-### Anticipation & slam-stop
-URL: https://pixi-reels.schmooky.dev/demos/anticipation-slam/
-Two tension tools. anticipation (slow a reel to tease a trigger) and skip (player smashes the button to slam-land now).
-Tags: anticipation, skip
-
-### Big symbols (2x2 BIG WILD)
-URL: https://pixi-reels.schmooky.dev/demos/big-symbols/
-Server places a single anchor cell, the engine paints the rest of the block with OCCUPIED stubs that resolve back to the anchor's id at evaluation. Glyph-only win animation keeps the cell border still while the character pulses.
-Tags: big-symbols, wild, lines
-
-### Cascade + multiplier
-URL: https://pixi-reels.schmooky.dev/demos/cascade-multiplier/
-A tumble slot. wins vanish, the next stage lands. Built around reelSet.runCascade(), which loops detect → destroy → refill until no more winners are found.
-Tags: cascade, tumble, multiplier
-
-### Classic line pays
-URL: https://pixi-reels.schmooky.dev/demos/classic-lines/
-The foundation of most slots. Detect 3+ matching symbols left-to-right, then spotlight each winning line.
-Tags: basics, lines, spotlight
-
-### Hold & Win respin
-URL: https://pixi-reels.schmooky.dev/demos/hold-and-win-respin/
-Every "coin" symbol locks. Respin until no new coins land or the grid fills. Plus a mini-jackpot at 3 coins on middle row.
-Tags: hold-and-win, respin, jackpot
-
-### MultiWays (Megaways)
-URL: https://pixi-reels.schmooky.dev/demos/multiways/
-Every spin rolls a fresh per-reel shape (2-7 rows each). The engine's AdjustPhase tweens cell heights between SPIN and STOP so the reels reshape mid-flight. Ways evaluation - chain of consecutive reels containing the kind, multiplied by per-reel match count.
-Tags: megaways, multiways, multiways-ways
-
-### Pyramid cascade (3-5-5-5-3)
-URL: https://pixi-reels.schmooky.dev/demos/pyramid-cascade/
-A diamond-shaped 3-5-5-5-3 reel set built with visibleCellsPerReel + center anchor. Cascade refills are real gravity - survivors fall only as far as the cleared slots beneath them, symbols with no cleared slots below them don't move at all.
-Tags: pyramid, cascade, ways, gravity
-
-### Scatter triggers Free Spins
-URL: https://pixi-reels.schmooky.dev/demos/scatter-triggers-fs/
-Land three scatters anywhere on the grid, play their win animation, transition to Free Spins. Plus a near-miss cheat for tension.
-Tags: scatter, free-spins, anticipation
-
-### Classic lines with sprite symbols
-URL: https://pixi-reels.schmooky.dev/demos/sprite-classic/
-Real sprite art on a classic 5×3 reel set. Symbols load from a single TexturePacker atlas (WebP + JSON), swap to pre-rendered motion-blur variants during the SPIN phase, and pulse on win.
-Tags: sprites, atlas, blur-on-spin, classic-lines
-
-### Sticky wilds
-URL: https://pixi-reels.schmooky.dev/demos/sticky-wilds/
-A wild lands and stays for the next 3 spins. New wilds reset the timer on that cell.
-Tags: wild, sticky
 
 ## Recipe source code
 
@@ -6992,7 +6940,7 @@ const TIER_OVERRIDES = {
 };
 
 // freezeAtEnd / settleMoneyFace / GoldCoinSymbol come from the shared
-// holdAndWinFx kit (injected) - see examples/shared/holdAndWinFx.ts.
+// holdAndWinFx kit (injected) - see apps/site/src/runtime/holdAndWinFx.ts.
 const SETTLE_SIZE = CELL - 10;
 
 // Skeletons are authored at wildly different sizes - measure each once and

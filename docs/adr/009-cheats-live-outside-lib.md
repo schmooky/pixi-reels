@@ -10,7 +10,12 @@ Separately, sticky wilds, hold-and-win, and any "persisted cell across spins" me
 
 ## Decision
 
-**Cheats live in `examples/shared/cheats.ts`. They are never published as library API.**
+**Cheats live outside the library. They are never published as library API.**
+
+> **Recorded delta (2.0.0):** they lived in `examples/shared/cheats.ts` until
+> `examples/` moved to its own repo. They are now the private
+> `@pixi-reels/cheats` workspace package. The decision is unchanged -- outside
+> the library, never published -- only the address moved.
 
 The cheats library exposes:
 
@@ -39,13 +44,13 @@ It fills the random grid using the non-scatter pool only, then writes exactly `n
 
 ### Negative
 
-- Tests for the cheats live in the library's test tree (`tests/integration/cheats.test.ts`), which reaches across the `examples/shared/` boundary. That's a concession for having a single source of truth; the alternative (a third test package) is worse.
-- Cheats are documented on the site (`/guides/cheats-and-testing/`), which may confuse adopters into thinking they're shipped. The guide is explicit they live in `examples/shared/`.
+- Tests for the cheats live in the library's test tree (`tests/integration/cheats.test.ts`), which imports the private `@pixi-reels/cheats` package. That's a concession for having a single source of truth; the alternative (a third test package) is worse.
+- Cheats are documented on the site (`/guides/cheats-and-testing/`), which may confuse adopters into thinking they're shipped. The guide is explicit that they are not published.
 
 ## Rules
 
 - **No cheat code may ever reach `packages/pixi-reels/src/`.**
-- If a user opens a discussion asking for "a cheat panel in the library" — decline, point at `examples/shared/cheats.ts`.
+- If a user opens a discussion asking for "a cheat panel in the library" — decline, point at `packages/cheats/`.
 - If a new demo needs a cheat, extend `cheats.ts`. Don't define ad-hoc cheats inline in the demo.
 - Cheat output must be deterministic given the same seed. New cheats that depend on `Math.random()` are rejected.
 

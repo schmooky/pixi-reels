@@ -8,24 +8,17 @@
   },
   "packageManager": "pnpm@10.32.1",
   "scripts": {
-    "build": "pnpm --filter pixi-reels build && pnpm --filter classic-spin build && pnpm --filter cascade-tumble build && pnpm --filter big-symbols build && pnpm --filter multiways build && pnpm --filter pyramid-cascade build && pnpm --filter orientation-matrix build && pnpm --filter sandbox build",
+    "build": "pnpm --filter pixi-reels build",
     "build:all": "node scripts/build-all-publishable.mjs",
     "test": "pnpm check:lint && pnpm --filter pixi-reels test && pnpm --filter pixi-reels-codemod test",
     "test:e2e": "playwright test",
     "test:e2e:install": "playwright install chromium",
-    "typecheck": "pnpm --filter pixi-reels typecheck && pnpm typecheck:examples",
+    "typecheck": "pnpm --filter pixi-reels typecheck && pnpm typecheck:fixtures",
     "lint": "pnpm --filter pixi-reels lint",
     "check:no-fancy-unicode": "node scripts/check-no-fancy-unicode.mjs",
     "check:imports": "biome lint packages/pixi-reels/src",
     "check:lint": "pnpm check:no-fancy-unicode && pnpm check:imports && pnpm check:recipe-globals && pnpm check:v1-keys && pnpm check:recipe-syntax && pnpm check:codemod-parity && pnpm check:migration-coverage",
     "commitlint": "commitlint --edit",
-    "examples:dev:classic": "pnpm --filter classic-spin dev",
-    "examples:dev:cascade": "pnpm --filter cascade-tumble dev",
-    "examples:dev:bigsymbols": "pnpm --filter big-symbols dev",
-    "examples:dev:multiways": "pnpm --filter multiways dev",
-    "examples:dev:pyramid": "pnpm --filter pyramid-cascade dev",
-    "examples:dev:sandbox": "pnpm --filter sandbox dev",
-    "examples:build": "pnpm --filter './examples/*' build",
     "site:dev": "pnpm --filter @pixi-reels/site dev",
     "site:build": "pnpm --filter @pixi-reels/site build",
     "site:preview": "pnpm --filter @pixi-reels/site preview",
@@ -50,7 +43,7 @@
     "check:codemod-parity": "node scripts/check-codemod-parity.mjs",
     "check:publish-contents": "node scripts/check-publish-contents.mjs",
     "check:migration-coverage": "node scripts/check-migration-coverage.mjs",
-    "typecheck:examples": "pnpm --filter './examples/*' typecheck"
+    "typecheck:fixtures": "pnpm --filter @pixi-reels/cheats typecheck && pnpm --filter orientation-matrix typecheck"
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx,mjs,cjs,md,mdx,astro,yml,yaml,json}": [

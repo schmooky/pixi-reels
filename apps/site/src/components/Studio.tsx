@@ -41,7 +41,7 @@ import {
   EmptySymbol,
 } from 'pixi-reels';
 import { SpineReelSymbol } from 'pixi-reels/spine';
-import { BlurSpriteSymbol } from '../../../../examples/shared/BlurSpriteSymbol.ts';
+import { BlurSpriteSymbol } from '../runtime/BlurSpriteSymbol.ts';
 import { CardSymbol, CARD_DECK, WILD_CARD } from 'pixi-reels';
 import {
   CoinSymbol,
@@ -52,12 +52,12 @@ import {
   coinValue,
   coinMultiplier,
   drawCoin,
-} from '../../../../examples/shared/CoinSymbol.ts';
-import { loadPrototypeSymbols } from '../../../../examples/shared/prototypeSpriteLoader.ts';
+} from '../runtime/CoinSymbol.ts';
+import { loadPrototypeSymbols } from '../runtime/prototypeSpriteLoader.ts';
 import {
   loadGeneratedSpines,
   buildSpineMap,
-} from '../../../../examples/shared/generatedSpineLoader.ts';
+} from '../runtime/generatedSpineLoader.ts';
 import { transform as sucraseTransform } from 'sucrase';
 import { runRecipeSource } from '@/lib/recipeGlobals';
 import {

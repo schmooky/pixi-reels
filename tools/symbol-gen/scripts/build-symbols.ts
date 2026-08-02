@@ -14,14 +14,15 @@ const PAGE_FILE = 'symbols.png';
 const ATLAS_FILE = 'symbols.atlas';
 
 /**
- * Deploy targets relative to this script's location. Both must mirror the
- * generated bundle exactly: examples serve from `examples/assets/` (their
- * shared `publicDir`), the docs site serves from `apps/site/public/`. We
- * copy after build so neither location can drift out of sync; there is
- * no manual `cp` step left for the next agent to forget.
+ * Deploy target relative to this script's location. The docs site serves the
+ * generated bundle from `apps/site/public/`. We copy after build so the
+ * served copy cannot drift from the generated one; there is no manual `cp`
+ * step left for the next agent to forget.
+ *
+ * The example apps used to be a second target. They now live in their own
+ * repo and carry their own copy.
  */
 const DEPLOY_TARGETS = [
-  '../../examples/assets/generated-symbols',
   '../../apps/site/public/generated-symbols',
 ] as const;
 

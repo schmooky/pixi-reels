@@ -31,12 +31,6 @@ const repoRoot = path.resolve(here, '..');
 const DEFAULT_GLOBS = [
   'packages',
   'apps',
-  'examples/shared',
-  'examples/classic-spin/src',
-  'examples/cascade-tumble/src',
-  'examples/big-symbols/src',
-  'examples/multiways/src',
-  'examples/pyramid-cascade/src',
   'docs',
   'scripts',
   '.github',
@@ -51,7 +45,6 @@ const DEFAULT_GLOBS = [
 
 const SKIP_DIRS = new Set([
   'node_modules', 'dist', '.astro', '.vite', 'coverage',
-  'assets',         // examples/assets/* binary atlas / texture metadata, not ours
   '.git',
 ]);
 

@@ -29,7 +29,7 @@ Node 20+ is required. The repo uses pnpm workspaces.
    pnpm changeset
    ```
 
-   Pick the affected packages and the bump kind (`patch` / `minor` / `major`) and commit the resulting `.changeset/*.md` file. Changes to private apps (`@pixi-reels/site`, any `examples/*`) don't need a changeset — those are deployed, not published.
+   Pick the affected packages and the bump kind (`patch` / `minor` / `major`) and commit the resulting `.changeset/*.md` file. Changes to private packages (`@pixi-reels/site`, `@pixi-reels/cheats`, e2e fixtures) don't need a changeset — those are deployed, not published.
 
 5. **Open a PR.** The template asks for a summary, a test plan, and confirmation that a changeset was added.
 

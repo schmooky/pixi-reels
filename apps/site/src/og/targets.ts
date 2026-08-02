@@ -3,7 +3,7 @@
  * `pages/og/[...path].png.ts` renders one PNG per entry; `lib/seo.ts`'s
  * `ogUrlForPath` maps a request path to the matching `/og/<id>.png` by the same
  * convention, so the two never drift. Content routes are globbed from their
- * source (recipes/guides/demos/docs frontmatter, RECIPES groups, answered FAQ)
+ * source (recipes/guides/docs frontmatter, RECIPES groups, answered FAQ)
  * so adding a page mints its card automatically.
  */
 import type { OgTarget } from './render.ts';
@@ -29,11 +29,10 @@ const recipeGroupLabel = new Map(RECIPE_GROUPS.map((g) => [g.id, g.label.replace
 const recipeBySlug = new Map(RECIPES.map((r) => [r.slug, r]));
 
 // ── content globs (frontmatter read eagerly; Vite-only, runs in the build) ──
-// Recipes/guides/docs now live in Keystatic content collections; demos are
-// still plain route MDX. Frontmatter is read eagerly (Vite-only, build time).
+// Recipes/guides/docs live in Keystatic content collections. Frontmatter is
+// read eagerly (Vite-only, runs in the build).
 const recipeMods = import.meta.glob<FmModule>('/src/content/recipes/*.mdx', { eager: true });
 const guideMods = import.meta.glob<FmModule>('/src/content/guides/*.mdx', { eager: true });
-const demoMods = import.meta.glob<FmModule>('/src/pages/demos/*.mdx', { eager: true });
 const docMods = import.meta.glob<FmModule>('/src/content/docs/*.mdx', { eager: true });
 
 function recipeTargets(): OgTarget[] {
@@ -107,7 +106,6 @@ const SECTIONS: Array<{ id: string; eyebrow: string; title: string; subtitle: st
   { id: 'recipes', eyebrow: 'Browse', title: 'Recipes', subtitle: 'Runnable, copy-paste slot mechanics — lines, cascades, hold & win, wilds, big symbols, and more.' },
   { id: 'guides', eyebrow: 'Learn', title: 'Guides', subtitle: 'Mental models and step-by-step walkthroughs for building slots with pixi-reels.' },
   { id: 'faq', eyebrow: 'Answers', title: 'Frequently asked questions', subtitle: 'Practical how-tos for building reels, symbols, wins, and features.' },
-  { id: 'demos', eyebrow: 'Showcase', title: 'Live demos', subtitle: 'Full slot mechanics running in the browser, built on pixi-reels.' },
   { id: 'api', eyebrow: 'Reference', title: 'API reference', subtitle: 'Every class, interface, and function in the pixi-reels public surface.' },
   { id: 'docs', eyebrow: 'Reference', title: 'Documentation', subtitle: 'Builder, ReelSet, events, and phases — the pixi-reels API in prose.' },
   { id: 'architecture', eyebrow: 'Internals', title: 'Architecture', subtitle: 'How the engine is wired: spin lifecycle, phases, events, cascade.' },
@@ -130,7 +128,6 @@ export const OG_TARGETS: OgTarget[] = [
   ...sectionTargets(),
   ...recipeTargets(),
   ...fmTargets(guideMods, 'guides', 'Guide'),
-  ...fmTargets(demoMods, 'demos', 'Demo'),
   ...fmTargets(docMods, 'docs', 'Docs'),
   ...faqTargets(),
   ...archTargets(),

@@ -11,14 +11,15 @@ Instructions for AI agents (Claude, Codex, Cursor, etc.) and human contributors 
 ```
 packages/pixi-reels/   <- the published library (npm: pixi-reels)
 apps/site/             <- the docs site (pixi-reels.schmooky.dev, not published)
-examples/              <- three example apps + shared reference code (not published)
+                          /recipes holds the live runnable demos
+packages/cheats/       <- CheatEngine + SeededRng (private, outside the library by ADR 009)
 ```
 
 The library builds to two entry points:
 - `pixi-reels`. core (reel set, phases, symbols, events, testing, debug).
 - `pixi-reels/spine`. Spine 2D symbols with the Bonbon animation vocabulary.
 
-Everything else. cheats, cascade loop, seeded RNG, mock server, Spine loaders. lives in `examples/shared/`. It is reference code, copy-pasteable, **not library API**.
+Everything else. cheats and seeded RNG live in `packages/cheats/`; Spine loaders and symbol classes live in `apps/site/src/runtime/`. Both are reference code, copy-pasteable, **not library API**.
 
 ---
 
@@ -31,7 +32,7 @@ Read [ADR 007. Scope](./docs/adr/007-scope.md) for the full list. The short vers
 | Win detection (lines, clusters, scatters) | Game-specific rules | Consumer code / server |
 | Paytable math | Regulated money math | Server |
 | Multiplier / RTP math | Same | Server |
-| RNG / outcome selection | `setResult(grid)` is the inbound interface | Server, or `CheatEngine` in examples |
+| RNG / outcome selection | `setResult(grid)` is the inbound interface | Server, or `CheatEngine` in `packages/cheats` |
 | Audio | Every exit path emits events; wire audio to those | Consumer audio layer |
 | Bonus state machines (FS, Hold & Win) | The library provides the primitives; the state machine is game code | Consumer code; see `ScatterFsDemo.tsx` for a primitive shape |
 | UI / HUD | The library is a `PIXI.Container`. You place it. | Consumer UI |
@@ -61,12 +62,12 @@ pixi-reels/
 │   │   ├── debug/                 debugSnapshot, debugGrid, enableDebug
 │   │   └── index.ts               the only public barrel
 │   └── tests/                     vitest (unit + integration)
-├── examples/
-│   ├── shared/                    cheats, cascade loop, seeded RNG, spine loaders, mock server
-│   ├── classic-spin/              5x3 line pays
-│   ├── cascade-tumble/            6x5 cascade
-│   └── assets/                    prototype-symbols sprite atlas
 ├── apps/site/                     Astro + shadcn docs site
+│   ├── src/recipes/               ~130 live runnable demos (the /recipes route)
+│   ├── src/runtime/               symbol classes + asset loaders the recipes run on
+│   └── public/                    prototype atlas + spine sets
+├── packages/cheats/               CheatEngine + SeededRng (private, ADR 009)
+├── tests/e2e/                     Playwright specs + the orientation-matrix fixture
 ├── docs/
 │   ├── adr/                       architecture decision records
 │   └── BEST_PRACTICES.md          developer guide
@@ -170,7 +171,7 @@ class SpinManager { /* ... */ }     // wrong; you already have ReelSet
 
 ```ts
 // No cheat code in the library.
-// packages/pixi-reels/src/cheats/CheatEngine.ts     wrong; lives in examples/shared/
+// packages/pixi-reels/src/cheats/CheatEngine.ts     wrong; lives in packages/cheats/
 ```
 
 ---
@@ -206,13 +207,13 @@ class SpinManager { /* ... */ }     // wrong; you already have ReelSet
 ### Add a new recipe or demo to the site
 
 1. **Never** add it to the library. Recipes and demos live in `apps/site/src/components/`.
-2. Reuse `examples/shared/cheats.ts`. Extend it if you need a new cheat. don't define one inline in the demo.
+2. Reuse `packages/cheats`. Extend it if you need a new cheat. don't define one inline in the demo.
 3. Write the MDX in `apps/site/src/pages/recipes/` or `apps/site/src/pages/demos/` with frontmatter (title, subtitle, tags, steps).
 4. Update `apps/site/src/content/*.ts` metadata if adding to a gallery.
 
 ### Add or modify a cheat
 
-1. Edit `examples/shared/cheats.ts`.
+1. Edit `packages/cheats/src/cheats.ts`.
 2. Cheat output must be deterministic given the same seed. No `Math.random()`.
 3. Add a test in `tests/integration/cheats.test.ts`.
 

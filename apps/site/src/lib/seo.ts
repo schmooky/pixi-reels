@@ -33,13 +33,11 @@ export function ogUrlForPath(pathname: string | undefined): string {
     item('recipes', /^\/recipes\/([^/]+)$/) ??
     item('guides', /^\/guides\/([^/]+)$/) ??
     item('faq', /^\/faq\/([^/]+)$/) ??
-    item('demos', /^\/demos\/([^/]+)$/) ??
     item('docs', /^\/docs\/([^/]+)$/) ??
     item('architecture', /^\/architecture\/([^/]+)$/) ??
     (p === '/recipes' ? '/og/section/recipes.png' : null) ??
     (p === '/guides' ? '/og/section/guides.png' : null) ??
     (p === '/faq' ? '/og/section/faq.png' : null) ??
-    (p === '/demos' ? '/og/section/demos.png' : null) ??
     (p === '/docs' ? '/og/section/docs.png' : null) ??
     (p === '/architecture' ? '/og/section/architecture.png' : null) ??
     (p === '/changelog' ? '/og/section/changelog.png' : null) ??
@@ -55,7 +53,7 @@ export interface PageSeo {
   path?: string;
   /** image absolute or root-relative path, auto-prefixed with site URL */
   image?: string;
-  /** "website" for landing, "article" for docs/demos */
+  /** "website" for landing, "article" for docs */
   type?: 'website' | 'article';
   /** If provided, article metadata is emitted */
   article?: {

@@ -448,6 +448,28 @@ your own migration tooling against these, copy the pairs you need out of
 `Gsap` is now exported, so you can name the type you pass to
 `driveGsapWithTicker(ticker, gsap)` and `ReelConfig.gsap`.
 
+## The example apps left the repo
+
+`examples/` is gone. The standalone demo apps live in their own repo now, and
+the runnable demos you actually want are on this site under
+[`/recipes`](/recipes/) -- about 130 of them, each with its source alongside.
+
+Nothing in the published package changed; `examples/` was never in the
+tarball. This only matters if you were importing reference code out of the
+repo, which the old README encouraged. Where it went:
+
+| Was | Now |
+|---|---|
+| `examples/shared/BlurSpriteSymbol.ts`, `CoinSymbol.ts`, the Spine loaders, `prototypeSpriteLoader.ts` | `apps/site/src/runtime/` (same filenames) |
+| `examples/shared/cheats.ts`, `seededRng.ts` | the private `@pixi-reels/cheats` package -- still outside the library, per ADR 009 |
+| `examples/assets/prototype-symbols/` | `apps/site/public/prototype-symbols/` |
+| `examples/orientation-matrix/` | `tests/e2e/fixtures/orientation-matrix/` |
+| `examples/shared/mockServer.ts`, `ui.ts`, `CheatPanel.ts`, `WinBox.ts`, `roundBus.ts` | moved out with the demo apps |
+
+None of these were ever library API, so none of them are a `pixi-reels`
+import you need to change. `CheatEngine` and `SeededRng` in particular were
+always reference code you copy, not something the package exported.
+
 ## What the codemod will not do
 
 It is an AST transform, so it leaves two things for you:

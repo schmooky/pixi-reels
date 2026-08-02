@@ -2,7 +2,7 @@ id: coins-011
 group: coins
 question: How do I fly a value clone from each coin into the collector over an arc?
 answer: >-
-  Spawn a clone at `board.cellCenter(coin.cell)` and `bezierFly(clone, from, to, { lean: 'up' })` into the collector. Those helpers are example code in `examples/shared/`, not exports of the `pixi-reels` package -- copy them into your project.
+  Spawn a clone at `board.cellCenter(coin.cell)` and `bezierFly(clone, from, to, { lean: 'up' })` into the collector. Those helpers are demo code in `apps/site/src/runtime/holdAndWinFx.ts`, not exports of the `pixi-reels` package -- copy them into your project.
 links:
   - label: "Recipe: Hold & Win — collector"
     href: /recipes/hold-and-win-collector/

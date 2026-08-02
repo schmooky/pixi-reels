@@ -136,7 +136,7 @@ Plus, from A5 onward: the no-raw-position lint rule (ADR 018 §5.4).
       boundary diffs to enumerate: the traces were recorded after the derive
       -from-index model landed, so there was no v1 baseline to move off
 - [x] **Browser coverage of all four combos** - `tests/e2e/orientation-matrix.spec.ts`
-      against the new `examples/orientation-matrix`, wired into CI as its own
+      against `tests/e2e/fixtures/orientation-matrix`, wired into CI as its own
       job. Mutation-verified: breaking the `feedEdge` derivation fails 3 of 4.
       Deliberately NOT pixel diffing - a WebGL screenshot baseline is GPU- and
       platform-dependent, so one recorded on a dev machine fails on CI's ubuntu
@@ -162,7 +162,7 @@ Plus, from A5 onward: the no-raw-position lint rule (ADR 018 §5.4).
 - [x] `CLAUDE.md`'s invariant replaced (`ReelMotion` wraps via `_maxY`/`_minY`
       is no longer true) with *travel changes motion; facing changes art; they
       never change each other*
-- [x] `pnpm build` green for the library and all six examples
+- [x] `pnpm build` green for the library (the example apps moved to their own repo)
 
 ---
 

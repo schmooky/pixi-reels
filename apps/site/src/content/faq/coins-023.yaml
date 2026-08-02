@@ -2,7 +2,7 @@ id: coins-023
 group: coins
 question: How do I aim collect flights at a specific feature meter with a custom path?
 answer: >-
-  Pass an explicit `control` point to `bezierFly` (computed per coin index) to aim the flight at a specific feature meter. Those helpers are example code in `examples/shared/`, not exports of the `pixi-reels` package -- copy them into your project.
+  Pass an explicit `control` point to `bezierFly` (computed per coin index) to aim the flight at a specific feature meter. Those helpers are demo code in `apps/site/src/runtime/holdAndWinFx.ts`, not exports of the `pixi-reels` package -- copy them into your project.
 links:
   - label: "Recipe: Hold & Win — collector"
     href: /recipes/hold-and-win-collector/

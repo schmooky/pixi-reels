@@ -9,8 +9,8 @@ import {
   holdAndWinProgress,
   cascadeSequence,
   forceAnticipation,
-} from '../../../../examples/shared/cheats.js';
-import { SeededRng } from '../../../../examples/shared/seededRng.js';
+} from '@pixi-reels/cheats';
+import { SeededRng } from '@pixi-reels/cheats/seededRng';
 
 const SYMBOLS = ['a', 'b', 'c', 'scatter', 'wild', 'coin'];
 

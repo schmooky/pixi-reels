@@ -101,7 +101,7 @@ export default defineConfig({
         { find: /^pixi-reels\/testing$/, replacement: resolve(repoRoot, 'packages/pixi-reels/src/testing/index.ts') },
         { find: /^pixi-reels$/, replacement: resolve(repoRoot, 'packages/pixi-reels/src/index.ts') },
         { find: '@', replacement: resolve(here, 'src') },
-        // gsap is a peer dep pulled in by examples/shared (BlurSpriteSymbol);
+        // gsap is a peer dep pulled in by src/runtime (BlurSpriteSymbol);
         // point it at the site's hoisted copy.
         { find: /^gsap$/, replacement: resolve(here, 'node_modules/gsap/index.js') },
       ],

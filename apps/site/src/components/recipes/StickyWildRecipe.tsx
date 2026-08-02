@@ -1,7 +1,7 @@
 /** @jsxImportSource react */
 import RecipeBoard from '../RecipeBoard.tsx';
 import { mountMiniReels, sleep } from '../miniRuntime.ts';
-import { loadPrototypeSymbols } from '../../../../../examples/shared/prototypeSpriteLoader.ts';
+import { loadPrototypeSymbols } from '../../runtime/prototypeSpriteLoader.ts';
 import { Sprite } from 'pixi.js';
 import { gsap } from 'gsap';
 

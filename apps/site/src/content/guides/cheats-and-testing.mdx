@@ -10,7 +10,7 @@ pixi-reels is built so you can test **mechanics**, not canvases. Two tools
 make that possible:
 
 - **`createTestReelSet`**. a headless reel set wired to a `FakeTicker`. No renderer, no DOM.
-- **`CheatEngine`** (in `examples/shared/cheats`). a pluggable outcome source that forces grids, scatters, lines, cascades on demand.
+- **`CheatEngine`** (in the private `@pixi-reels/cheats` package). a pluggable outcome source that forces grids, scatters, lines, cascades on demand.
 
 Together they let you write assertions like *"this mechanic produces exactly
 3 scatters, triggers anticipation on reel 5, and emits `spin:complete`."*
@@ -48,7 +48,7 @@ two-stage `skipSpin()` boost.)
 Cheats are pure functions that take a context and return a grid.
 
 ```ts
-import { CheatEngine, forceScatters, forceLine, holdAndWinProgress } from '../../../../examples/shared/cheats';
+import { CheatEngine, forceScatters, forceLine, holdAndWinProgress } from '@pixi-reels/cheats';
 
 const engine = new CheatEngine({
   reelCount: 5, visibleCells: 3,
@@ -104,11 +104,9 @@ await spinAndLand(grid);   // grid is ColumnTarget[]
 expect(log.map((e) => e.event)).toEqual(['spin:start', 'spin:complete']);
 ```
 
-## 4. Drive a live demo page
+## 4. See a mechanic running
 
-The [Sprite classic](/demos/sprite-classic/) demo mounts a `CheatPanel`
-that toggles these cheats at runtime: check a cheat → spin → watch the
-advertised outcome land every time. The other demos declare cheats but do
-not mount the panel.
-
-See the [Demos catalog](/demos/) for copy-pasteable examples.
+The standalone demo apps left this repo in 2.0 and live in a separate one.
+The live, replayable mechanics are the [recipes](/recipes/) on this site.
+each page runs the exact source it shows, so you can read the wiring and
+watch it land.
