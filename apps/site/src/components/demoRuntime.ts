@@ -66,7 +66,7 @@ export interface MechanicConfig {
   /**
    * Enable tumble/cascade flow. When set, the builder is configured via
    * `.tumble(config)` and the mechanic's `runSpin` runs an auto-cascade
-   * loop (3-in-a-cell left-anchored detection per cell, gravity-correct
+   * loop (3-in-a-row left-anchored detection per cell, gravity-correct
    * refill via the new `reelSet.refill()` API) after every initial spin.
    * Pass `true` for default tumble feel, or a config to customize.
    */
@@ -108,7 +108,7 @@ function normalizeSymbolConfig(symbols: MechanicConfig['symbols']): NormalizedSy
 }
 
 /**
- * 3-in-a-cell left-anchored win detection. Walks each visible cell; if the
+ * 3-in-a-row left-anchored win detection. Walks each visible cell; if the
  * first 3+ reels share an id, that horizontal run wins. De-dupes across
  * cells so the same cell isn't destroyed twice.
  */
@@ -468,7 +468,7 @@ export async function mountMechanic(
       // Tumble/cascade loop. runs ONLY when the mechanic enabled `.tumble()`.
       // Uses the library's `reelSet.runCascade(...)` orchestrator: it owns
       // the detect → destroy → pause → refill loop and resolves with the
-      // summary. We supply the game rules (3-in-a-cell left-anchored winner
+      // summary. We supply the game rules (3-in-a-row left-anchored winner
       // detection + a gravity-correct nextGrid).
       if (cfg.tumble) {
         reelSet.setDropOrder('all');

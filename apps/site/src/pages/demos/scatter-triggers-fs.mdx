@@ -54,9 +54,9 @@ The `forceScatters(3, 'scatter')` cheat makes this deterministic:
 
 ```ts
 const { reelSet, spinAndLand } = createTestReelSet({
-  reels: 5, visibleRows: 3, symbolIds: ['a','b','c','scatter'],
+  reels: 5, visibleCells: 3, symbolIds: ['a','b','c','scatter'],
 });
-const engine = new CheatEngine({ reelCount: 5, visibleRows: 3, symbolIds: ['a','b','c','scatter'], seed: 1 });
+const engine = new CheatEngine({ reelCount: 5, visibleCells: 3, symbolIds: ['a','b','c','scatter'], seed: 1 });
 engine.register({ id: 's', label: 's', enabled: true, cheat: forceScatters(3, 'scatter') });
 
 await spinAndLand(engine.next().symbols);

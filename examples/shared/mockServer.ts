@@ -42,7 +42,7 @@ export function mockSpin(reelCount: number, visibleCells: number, delay: number 
         symbols.push(reel);
       }
 
-      // Detect wins (simple: 3+ of same symbol on a cell)
+      // Detect wins (simple: 3+ of same symbol on a row)
       const wins: WinResult[] = [];
       for (let cell = 0; cell < visibleCells; cell++) {
         const rowSymbols = symbols.map((r) => r[cell]);

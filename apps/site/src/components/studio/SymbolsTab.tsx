@@ -163,7 +163,7 @@ function AddSymbolForm({ type, usedIds, onCancel, onSave }: FormProps): JSX.Elem
     const url = URL.createObjectURL(file);
     const img = new Image();
     img.onload = () => {
-      // Heuristic: if width is a multiple of height, assume one cell of
+      // Heuristic: if width is a multiple of height, assume one row of
       // frameCount frames, where frameW = height (square cells). User can
       // override. If not, leave the user's last input alone.
       if (img.naturalWidth % img.naturalHeight === 0) {
@@ -384,7 +384,7 @@ function FilePicker({
   );
 }
 
-// ── Per-symbol cell ───────────────────────────────────────────────────
+// ── Per-symbol row ───────────────────────────────────────────────────
 
 function SymbolRow({
   symbol,

@@ -23,8 +23,8 @@ export default function ClassicLinesDemo() {
       tags={['5×3', 'lines', 'spotlight']}
       height={500}
       cheats={[
-        { id: 'line-mid', label: 'Force middle-cell line', description: 'Full cell of royals on cell 2.', enabled: false, cheat: forceLine(1, HIGH_PAY) },
-        { id: 'line-top', label: 'Force top-cell line', description: 'Full cell of wilds on cell 1.', enabled: false, cheat: forceLine(0, WILD) },
+        { id: 'line-mid', label: 'Force middle-row line', description: 'Full row of royals on cell 1.', enabled: false, cheat: forceLine(1, HIGH_PAY) },
+        { id: 'line-top', label: 'Force top-row line', description: 'Full row of wilds on cell 0.', enabled: false, cheat: forceLine(0, WILD) },
         { id: 'jackpot', label: 'Full-grid royal jackpot', description: '15 royals. Pure theatre.', enabled: false, cheat: forceGrid(JACKPOT_GRID) },
         { id: 'scatter5', label: 'Sprinkle 5 bonuses', description: '5 scatters, random positions.', enabled: false, cheat: forceScatters(5, SCATTER) },
       ]}

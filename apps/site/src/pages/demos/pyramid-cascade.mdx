@@ -3,7 +3,7 @@ layout: ../../layouts/Demo.astro
 title: Pyramid cascade (3-5-5-5-3)
 subtitle: Jagged pyramid - ways pay - gravity refill (survivors stay, only gaps drop)
 tags: [pyramid, cascade, ways, gravity]
-description: A diamond-shaped 3-5-5-5-3 reel set built with visibleRowsPerReel + center anchor. Cascade refills are real gravity - survivors fall only as far as the cleared slots beneath them, symbols with no cleared slots below them don't move at all.
+description: A diamond-shaped 3-5-5-5-3 reel set built with visibleCellsPerReel + center anchor. Cascade refills are real gravity - survivors fall only as far as the cleared slots beneath them, symbols with no cleared slots below them don't move at all.
 ---
 
 import PyramidCascadeDemo from '../../components/demos/PyramidCascadeDemo.tsx';
@@ -46,7 +46,7 @@ Per column the engine computes per-cell offsets:
 - Survivor at final row R, originally at row N -> falls (R - N) slots.
 - A symbol whose `R === N` doesn't move at all.
 
-So a 5-row reel with a single winner at row 0 only animates one symbol. the new top. Everything below stays put. Jagged shapes work the same way; each reel's `visibleRows` is read at refill time.
+So a 5-cell reel with a single winner at cell 0 only animates one symbol. the new top. Everything below stays put. Jagged shapes work the same way; each reel's `visibleCells` is read at refill time.
 
 ## Ways evaluation on a jagged grid
 

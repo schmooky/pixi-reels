@@ -78,9 +78,9 @@ import { createTestReelSet } from 'pixi-reels/testing';
 import { CheatEngine, forceLine } from '@/shared/cheats';
 
 const { reelSet, spinAndLand, destroy } = createTestReelSet({
-  reels: 5, visibleRows: 3, symbolIds: ['cherry','seven','wild'],
+  reels: 5, visibleCells: 3, symbolIds: ['cherry','seven','wild'],
 });
-const engine = new CheatEngine({ reelCount: 5, visibleRows: 3, symbolIds: ['cherry','seven','wild'], seed: 1 });
+const engine = new CheatEngine({ reelCount: 5, visibleCells: 3, symbolIds: ['cherry','seven','wild'], seed: 1 });
 engine.register({ id: 'ln', label: 'line', enabled: true, cheat: forceLine(1, 'seven') });
 
 await spinAndLand(engine.next().symbols);

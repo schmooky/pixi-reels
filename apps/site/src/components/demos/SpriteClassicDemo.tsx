@@ -30,8 +30,8 @@ export default function SpriteClassicDemo() {
       tags={['5×3', 'sprites', 'atlas', 'blur-on-spin']}
       height={500}
       cheats={[
-        { id: 'line-royal', label: 'Force royal line (middle cell)', description: 'Full cell of `royal/royal_1` on cell 2.', enabled: false, cheat: forceLine(1, 'royal/royal_1') },
-        { id: 'line-round', label: 'Force round line (top cell)', description: 'Full cell of `round/round_1` on cell 0.', enabled: false, cheat: forceLine(0, 'round/round_1') },
+        { id: 'line-royal', label: 'Force royal line (middle row)', description: 'Full row of `royal/royal_1` on cell 1.', enabled: false, cheat: forceLine(1, 'royal/royal_1') },
+        { id: 'line-round', label: 'Force round line (top row)', description: 'Full row of `round/round_1` on cell 0.', enabled: false, cheat: forceLine(0, 'round/round_1') },
         { id: 'jackpot', label: 'Full-grid royal jackpot', description: '15 royals. Pure theatre.', enabled: false, cheat: forceGrid(JACKPOT) },
         { id: 'scatters-3', label: 'Sprinkle 3 bonuses', description: 'Exactly 3 bonus symbols anywhere.', enabled: false, cheat: forceScatters(3, 'bonus/bonus_1') },
         { id: 'wild-middle', label: 'Wild on reel 3, cell 2', description: 'Always lands a wild at (2, 1).', enabled: false, cheat: forceCell(2, 1, 'wild/wild_1') },

@@ -24,8 +24,8 @@ await spinPromise;
 ```
 
 The engine's `AdjustPhase` runs between SPIN and STOP and tweens each
-reel's cell height to `reelPixelHeight / rowsPerReel[i]` while pinned
-overlays migrate to their new rows. Cell border stays still during the
+reel's cell height to `reelExtent / cellsPerReel[i]` while pinned
+overlays migrate to their new cells. Cell border stays still during the
 win animation thanks to the glyph-only `playWin` on `CardSymbol`.
 
 ## Ways evaluation

@@ -188,7 +188,7 @@ function pickWeighted(weights: Record<string, number>): string {
  * Symbols-tab UI is the source of truth for these flags. if the user
  * also calls `.symbolData(...)` manually with the same id, the merge
  * order in ReelSetBuilder.symbolData (line 309: spread merge) means
- * our studio data wins. That matches user intent: toggling the cell
+ * our studio data wins. That matches user intent: toggling the row
  * should always reflect on the running reels.
  *
  * Bundling the overrides into a factory-built subclass keeps user code

@@ -30,7 +30,7 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const RENAMES = join(ROOT, 'packages/pixi-reels/src/config/v1Renames.ts');
 const SCAN = ['apps/site/src/recipes', 'apps/site/src/components', 'apps/site/src/pages', 'apps/site/src/content', 'examples'];
 const SKIP = new Set(['node_modules', 'dist', '.astro']);
-const EXTS = ['.ts', '.tsx', '.mdx', '.md'];
+const EXTS = ['.ts', '.tsx', '.mdx', '.md', '.yaml'];
 
 /**
  * Files whose whole job is showing v1 names next to their v2 replacements.

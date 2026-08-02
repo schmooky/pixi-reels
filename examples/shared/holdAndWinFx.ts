@@ -37,7 +37,7 @@ export type WaveMode =
  *
  * - `'all'` - one wave, everything together
  * - `'sequence'` - one wave per coin, reading order
- * - `'by-cell'` / `'by-reel'` - one wave per cell / column
+ * - `'by-cell'` / `'by-reel'` - one wave per cell / reel
  * - `{ chunk: n }` - reading order in chunks of n (indices 0-4, 5-9, ...)
  * - `(item, index) => waveIndex` - custom assignment
  *

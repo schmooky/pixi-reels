@@ -8,7 +8,7 @@ Site: https://pixi-reels.schmooky.dev
 Repo: https://github.com/schmooky/pixi-reels
 Package: https://www.npmjs.com/package/pixi-reels
 
-Generated: 2026-08-02T00:11:37.957Z
+Generated: 2026-08-02T00:27:49.703Z
 
 ## Quick start
 
@@ -269,7 +269,7 @@ Tags: megaways, multiways, multiways-ways
 
 ### Pyramid cascade (3-5-5-5-3)
 URL: https://pixi-reels.schmooky.dev/demos/pyramid-cascade/
-A diamond-shaped 3-5-5-5-3 reel set built with visibleRowsPerReel + center anchor. Cascade refills are real gravity - survivors fall only as far as the cleared slots beneath them, symbols with no cleared slots below them don't move at all.
+A diamond-shaped 3-5-5-5-3 reel set built with visibleCellsPerReel + center anchor. Cascade refills are real gravity - survivors fall only as far as the cleared slots beneath them, symbols with no cleared slots below them don't move at all.
 Tags: pyramid, cascade, ways, gravity
 
 ### Scatter triggers Free Spins

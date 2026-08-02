@@ -49,7 +49,7 @@ export interface BootOptions {
   host: HTMLElement;
   /** When true, canvas resizes to window. Default: false (fits to host). */
   fullScreen?: boolean;
-  /** Speed-button cell visible? Default: same as fullScreen. */
+  /** Speed-button row visible? Default: same as fullScreen. */
   showSpeeds?: boolean;
 }
 

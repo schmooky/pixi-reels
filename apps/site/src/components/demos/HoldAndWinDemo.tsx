@@ -57,10 +57,10 @@ export default function HoldAndWinDemo() {
               toast('GRAND JACKPOT · grid filled', 'win');
               api.setStatus(`Full board (${held.length}/${total}). grand jackpot`);
             } else if (middleRowCoins >= 3) {
-              toast(`3 coins middle cell · mini jackpot`, 'win');
-              api.setStatus(`Middle cell filled · ${held.length}/${total} held`);
+              toast(`3 coins middle row · mini jackpot`, 'win');
+              api.setStatus(`Middle row filled · ${held.length}/${total} held`);
             } else {
-              api.setStatus(`Held: ${held.length}/${total} · middle cell: ${middleRowCoins}/5`);
+              api.setStatus(`Held: ${held.length}/${total} · middle row: ${middleRowCoins}/5`);
             }
           },
         })
