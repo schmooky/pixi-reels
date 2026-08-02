@@ -5,11 +5,11 @@
 [![Bundle size](https://img.shields.io/bundlephobia/minzip/pixi-reels?label=gzip)](https://bundlephobia.com/package/pixi-reels)
 [![CI](https://github.com/schmooky/pixi-reels/actions/workflows/ci.yml/badge.svg)](https://github.com/schmooky/pixi-reels/actions/workflows/ci.yml)
 [![Release](https://github.com/schmooky/pixi-reels/actions/workflows/npm-publish.yml/badge.svg)](https://github.com/schmooky/pixi-reels/actions/workflows/npm-publish.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](./LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://github.com/schmooky/pixi-reels/blob/main/LICENSE)
 [![PixiJS v8](https://img.shields.io/badge/PixiJS-v8-e91e63)](https://pixijs.com/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 
-`pixi-reels` 1.0.0 is a reel engine for [PixiJS v8](https://pixijs.com/). It ships reel-only primitives: spin lifecycle, symbols, speed profiles, pins, cascades, win presenter. Win math, paytable math, RNG, and audio live in consumer code.
+`pixi-reels` is a reel engine for [PixiJS v8](https://pixijs.com/). It ships reel-only primitives: spin lifecycle, symbols, speed profiles, pins, cascades, win presenter. Win math, paytable math, RNG, and audio live in consumer code.
 
 Install:
 
@@ -17,7 +17,7 @@ Install:
 pnpm add pixi-reels pixi.js gsap
 ```
 
-Docs and recipes at [pixi-reels.schmooky.dev](https://pixi-reels.schmooky.dev). Agent-facing instructions are in [AGENTS.md](./AGENTS.md).
+Docs and recipes at [pixi-reels.schmooky.dev](https://pixi-reels.schmooky.dev). Agent-facing instructions are in [AGENTS.md](https://github.com/schmooky/pixi-reels/blob/main/AGENTS.md).
 
 ## Quick start
 
@@ -128,12 +128,12 @@ In the browser console (or via Playwright / agent eval):
 ```
 __PIXI_REELS_DEBUG.log()       // ASCII grid + state snapshot
 __PIXI_REELS_DEBUG.snapshot()  // Full JSON state
-__PIXI_REELS_DEBUG.trace()     // Log every domain event as it fires
+__PIXI_REELS_DEBUG.trace()     // Log spin, skip, speed, spotlight, shape, pin events
 ```
 
 ## Examples
 
-Runnable apps in [`examples/`](examples/):
+Runnable apps in [`examples/`](https://github.com/schmooky/pixi-reels/tree/main/examples):
 
 | Example          | What it shows                                              | Run                                    |
 |------------------|------------------------------------------------------------|----------------------------------------|
@@ -144,9 +144,9 @@ Runnable apps in [`examples/`](examples/):
 
 ## Peer dependencies
 
-- `pixi.js` ^8.17.0
-- `gsap` ^3.14.0
-- `@esotericsoftware/spine-pixi-v8` ^4.2.108 (optional, only if you use `SpineReelSymbol`)
+- `pixi.js` ^8.18.1
+- `gsap` ^3.15.0
+- `@esotericsoftware/spine-pixi-v8` ~4.2.110 (optional, only if you use `SpineReelSymbol`)
 
 ## Contributing
 

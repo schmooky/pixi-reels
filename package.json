@@ -17,7 +17,7 @@
     "lint": "pnpm --filter pixi-reels lint",
     "check:no-fancy-unicode": "node scripts/check-no-fancy-unicode.mjs",
     "check:imports": "biome lint packages/pixi-reels/src",
-    "check:lint": "pnpm check:no-fancy-unicode && pnpm check:imports && pnpm check:recipe-globals && pnpm check:v1-keys && pnpm check:recipe-syntax && pnpm check:codemod-parity",
+    "check:lint": "pnpm check:no-fancy-unicode && pnpm check:imports && pnpm check:recipe-globals && pnpm check:v1-keys && pnpm check:recipe-syntax && pnpm check:codemod-parity && pnpm check:migration-coverage",
     "commitlint": "commitlint --edit",
     "examples:dev:classic": "pnpm --filter classic-spin dev",
     "examples:dev:cascade": "pnpm --filter cascade-tumble dev",
@@ -48,7 +48,8 @@
     "check:v1-keys": "node scripts/check-v1-keys.mjs",
     "check:recipe-syntax": "node scripts/check-recipe-syntax.mjs",
     "check:codemod-parity": "node scripts/check-codemod-parity.mjs",
-    "check:publish-contents": "node scripts/check-publish-contents.mjs"
+    "check:publish-contents": "node scripts/check-publish-contents.mjs",
+    "check:migration-coverage": "node scripts/check-migration-coverage.mjs"
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx,mjs,cjs,md,mdx,astro,yml,yaml,json}": [

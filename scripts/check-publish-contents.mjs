@@ -11,6 +11,7 @@
  * rather than trusting the manifest.
  */
 import { execFile } from 'node:child_process';
+import { readFile } from 'node:fs/promises';
 import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, resolve } from 'node:path';
@@ -51,4 +52,21 @@ if (missing.length > 0) {
   process.exit(1);
 }
 
-console.log(`check-publish-contents: ${packed.length} files, all required ones present.`);
+// The README is the npm landing page, so a stale peer-dependency range there
+// is advice a consumer follows and then hits a peer conflict. All three were
+// wrong at once, and one advertised a WIDER range than the package accepts.
+const pkg = JSON.parse(await readFile(join(PKG, 'package.json'), 'utf8'));
+const readme = await readFile(join(ROOT, 'README.md'), 'utf8');
+const wrong = [];
+for (const [name, range] of Object.entries(pkg.peerDependencies ?? {})) {
+  const m = readme.match(new RegExp(`\`${name.replace(/[/\-]/g, '\\$&')}\`\\s*([^\\s(]+)`));
+  if (!m) wrong.push(`${name}: README never lists it (package.json says ${range})`);
+  else if (m[1] !== range) wrong.push(`${name}: README says ${m[1]}, package.json says ${range}`);
+}
+if (wrong.length > 0) {
+  console.error('check-publish-contents: README peer-dependency ranges disagree with package.json:\n');
+  for (const w of wrong) console.error(`  ${w}`);
+  process.exit(1);
+}
+
+console.log(`check-publish-contents: ${packed.length} files, all required present, peer ranges match.`);

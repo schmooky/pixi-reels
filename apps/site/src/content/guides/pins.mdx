@@ -98,9 +98,9 @@ const reelSet = new ReelSetBuilder()
   .build();
 
 // Spin once, land, then pin a permanent wild at (2, 1).
-await reelSet.spin();
-reelSet.setResult([/* ... */]);
-await /* the spin promise */;
+const spin = reelSet.spin();      // do NOT await here: spin() does not
+reelSet.setResult([/* ... */]);   // resolve until the result arrives
+await spin;
 reelSet.pin(2, 1, 'wild', { turns: 'permanent' });
 
 // Next spin scrolls underneath the pinned wild.

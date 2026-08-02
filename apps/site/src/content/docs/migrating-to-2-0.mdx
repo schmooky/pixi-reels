@@ -244,6 +244,51 @@ symbol itself.
 `OffsetXMode` is `CrossOffsetMode`, and the trapezoid's
 `topWidthFactor` / `bottomWidthFactor` are `startFactor` / `endFactor`.
 
+## The horizontal reel classes are gone
+
+`HorizontalReel`, `HorizontalReelBuilder`, `HorizontalReelConfig`,
+`HorizontalDirection` and `HorizontalReelEvents` were deleted. A sideways
+banner is not a separate class any more -- it is a `ReelSet` whose strip
+travels along X.
+
+```ts
+// Before
+const banner = new HorizontalReelBuilder()
+  .visibleCount(5)
+  .symbols((r) => { /* ... */ })
+  .ticker(app.ticker)
+  .build();
+
+// After
+const banner = new ReelSetBuilder()
+  .orientation('horizontal')
+  .reels(1)              // one strip
+  .visibleCells(5)       // 5 symbols along it
+  .symbols((r) => { /* ... */ })
+  .ticker(app.ticker)
+  .build();
+```
+
+Everything else carries over unchanged: `spin()` returns the same promise,
+`setResult([{ visible: ids }])` takes the same `ColumnTarget[]`, and the
+cascade verbs (`refill`, `runCascade`, `destroySymbols`) work on it exactly
+as on the main board. Add the built set to the stage yourself; there is no
+composition layer.
+
+The codemod does not rewrite this one -- the shapes are too different. It is
+the one migration you do by hand.
+
+## Motion blur follows travel now
+
+`MotionBlurOptions.axis` used to default to `'y'`, and its docs told you to
+pass `{ axis: 'x' }` for a `HorizontalReel` -- the class above, which no
+longer exists. So a horizontal set using `StaticSpinSymbol` smeared across
+its direction of travel, silently.
+
+The axis now defaults to the owning set's orientation. If you passed
+`{ axis: 'x' }` explicitly to work around the old default, delete it; if you
+want a deliberate cross-smear, keep it, since an explicit value still wins.
+
 ## Custom mask strategies
 
 Only relevant if you passed your own `maskStrategy(...)`. The two built-in
