@@ -125,11 +125,11 @@ export interface ReelSetEvents extends Record<string, unknown[]> {
     info: { fromCell: number; toCell: number; clamped: boolean; reelIndex: number },
   ];
   /**
-   * MultiWays: `setShape(rowsPerReel)` recorded a new target shape for the
+   * MultiWays: `setShape(cellsPerReel)` recorded a new target shape for the
    * upcoming AdjustPhase. Fires before any geometry change. No-op for
    * non-MultiWays slots. they never see this event.
    */
-  'shape:changed': [rowsPerReel: number[]];
+  'shape:changed': [cellsPerReel: number[]];
   /**
    * MultiWays: per-reel AdjustPhase entry. `fromCells` is the cell count
    * before the reshape; `toCells` is the cell count after.

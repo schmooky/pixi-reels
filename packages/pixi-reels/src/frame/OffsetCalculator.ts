@@ -47,10 +47,10 @@ export class OffsetCalculator {
 
       const reelOffsets: number[] = [];
       for (let cell = 0; cell < this._totalCells; cell++) {
-        const rowNorm = this._totalCells > 1 ? cell / (this._totalCells - 1) : 0.5;
+        const cellNorm = this._totalCells > 1 ? cell / (this._totalCells - 1) : 0.5;
         const topOffset = relativePos * config.widthDifference * config.startFactor;
         const bottomOffset = relativePos * config.widthDifference * config.endFactor;
-        const offset = topOffset + (bottomOffset - topOffset) * rowNorm;
+        const offset = topOffset + (bottomOffset - topOffset) * cellNorm;
         reelOffsets.push(offset);
       }
       this._offsets.push(reelOffsets);

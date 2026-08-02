@@ -1412,10 +1412,10 @@ export class ReelSet extends Container implements Disposable {
    *
    * Throws if:
    *  - this slot was not built with `.multiways(...)`
-   *  - `rowsPerReel.length !== reelCount`
+   *  - `cellsPerReel.length !== reelCount`
    *  - any entry falls outside `[multiways.minCells, multiways.maxCells]`
    */
-  setShape(rowsPerReel: number[]): void {
+  setShape(cellsPerReel: number[]): void {
     this._assertNoNudgeInFlight('setShape');
     if (!this._isMultiWaysSlot) {
       throw new Error('setShape(): slot was not built with .multiways(...). call ReelSetBuilder.multiways() first.');
@@ -1427,16 +1427,16 @@ export class ReelSet extends Container implements Disposable {
         'overlaid at their pre-migration cells). Reorder: spin() → setShape() → setResult().',
       );
     }
-    if (rowsPerReel.length !== this._reels.length) {
+    if (cellsPerReel.length !== this._reels.length) {
       throw new Error(
-        `setShape(): rowsPerReel length ${rowsPerReel.length} must equal reelCount ${this._reels.length}.`,
+        `setShape(): cellsPerReel length ${cellsPerReel.length} must equal reelCount ${this._reels.length}.`,
       );
     }
-    for (let i = 0; i < rowsPerReel.length; i++) {
-      const r = rowsPerReel[i];
+    for (let i = 0; i < cellsPerReel.length; i++) {
+      const r = cellsPerReel[i];
       if (r < this._multiwaysMinCells || r > this._multiwaysMaxCells) {
         throw new Error(
-          `setShape(): rowsPerReel[${i}] = ${r} out of range [${this._multiwaysMinCells}, ${this._multiwaysMaxCells}].`,
+          `setShape(): cellsPerReel[${i}] = ${r} out of range [${this._multiwaysMinCells}, ${this._multiwaysMaxCells}].`,
         );
       }
     }
@@ -1446,7 +1446,7 @@ export class ReelSet extends Container implements Disposable {
     // `setShape` per spin even when the shape didn't actually change.
     let isUnchanged = true;
     for (let i = 0; i < this._reels.length; i++) {
-      if (this._reels[i].visibleCells !== rowsPerReel[i]) {
+      if (this._reels[i].visibleCells !== cellsPerReel[i]) {
         isUnchanged = false;
         break;
       }
@@ -1455,8 +1455,8 @@ export class ReelSet extends Container implements Disposable {
       return;
     }
 
-    this._targetShape = [...rowsPerReel];
-    this._events.emit('shape:changed', [...rowsPerReel]);
+    this._targetShape = [...cellsPerReel];
+    this._events.emit('shape:changed', [...cellsPerReel]);
 
     // Migrate pins to their post-reshape cells EAGERLY. before any
     // `setResult` overlay or frame build runs. Otherwise a pin at cell=4
@@ -1467,7 +1467,7 @@ export class ReelSet extends Container implements Disposable {
     // the post-migration cells by then, so AdjustPhase only needs to
     // refresh overlays + tween (when implemented).
     for (let i = 0; i < this._reels.length; i++) {
-      this._migratePinsForReel(i, rowsPerReel[i]);
+      this._migratePinsForReel(i, cellsPerReel[i]);
     }
   }
 
@@ -1871,16 +1871,25 @@ export class ReelSet extends Container implements Disposable {
     // matches `maskedContainer` (both sit at (0,0) inside viewport). so
     // `reel.container.x + symbol.view.x/y` gives us the right offset.
     const fromReel = this._reels[from.reel];
-    // Viewport-space cell Y from the single source of truth (_pinOverlayCellY),
-    // so the flight symbol - parented to unmaskedContainer, i.e. viewport space -
-    // lands on the right cell for any nonzero container.y and regardless of the
-    // source cell's mask state. getSymbolAt(cell).view.y is reel-local for masked
-    // symbols but container.y-baked for unmasked ones, so reading it directly
-    // mis-places the flight by container.y on masked cells.
-    const fromCellY = this._pinOverlayCellMain(fromReel, from.cell, fromReel.motion.slotPitch);
-    const toCellY = this._pinOverlayCellMain(toReel, to.cell, toReel.motion.slotPitch);
-    const fromX = fromReel.container.x;
-    const toX = toReel.container.x;
+    // Viewport-space cell position from the single source of truth
+    // (`_pinOverlayCellMain`), so the flight symbol - parented to
+    // unmaskedContainer, i.e. viewport space - lands on the right cell for any
+    // nonzero container offset and regardless of the source cell's mask state.
+    // Reading `getSymbolAt(cell).view` directly would mis-place it: that is
+    // reel-local for masked symbols but container-baked for unmasked ones.
+    //
+    // Both ends go through the axis. `_pinOverlayCellMain` returns a TRAVEL-axis
+    // coordinate, which is `x` on a horizontal set, so assigning it to `.y`
+    // (and the reel's main offset to `.x`) sent the flight diagonally to a
+    // meaningless spot. Silent: both are numbers.
+    const fromPoint = fromReel.axis.toScreen(
+      fromReel.axis.getCross(fromReel.container),
+      this._pinOverlayCellMain(fromReel, from.cell, fromReel.motion.slotPitch),
+    );
+    const toPoint = toReel.axis.toScreen(
+      toReel.axis.getCross(toReel.container),
+      this._pinOverlayCellMain(toReel, to.cell, toReel.motion.slotPitch),
+    );
 
     // Backfill the vacated cell with a filler. Takes effect immediately.
     // the vacated cell visually swaps to the backfill while the flight
@@ -1895,8 +1904,8 @@ export class ReelSet extends Container implements Disposable {
     // the reels and can cross column boundaries.
     const flight = this._symbolFactory.acquire(pin.symbolId);
     flight.resize(fromReel.symbolWidth, fromReel.symbolHeight);
-    flight.view.x = fromX;
-    flight.view.y = fromCellY;
+    flight.view.x = fromPoint.x;
+    flight.view.y = fromPoint.y;
     this._viewport.unmaskedContainer.addChild(flight.view);
 
     // onFlightCreated hook. fires after the flight symbol is in place but
@@ -1919,8 +1928,8 @@ export class ReelSet extends Container implements Disposable {
     const easing = opts?.easing ?? 'power2.inOut';
     await new Promise<void>((resolve) => {
       this._reels[0].gsap.to(flight.view, {
-        x: toX,
-        y: toCellY,
+        x: toPoint.x,
+        y: toPoint.y,
         duration,
         ease: easing,
         onComplete: () => resolve(),
@@ -2147,9 +2156,12 @@ export class ReelSet extends Container implements Disposable {
   }
 
   /**
-   * The on-screen Y of a pin overlay sitting on cell `cell` of `reel`, given the
-   * cell pitch `slotPitch`. Single source of truth for overlay placement;
-   * `getSymbolAt(cell).view.y` equals `cell * slotPitch` for a snapped reel
+   * The MAIN-axis (travel-axis) coordinate of a pin overlay sitting on cell
+   * `cell` of `reel`, given the cell pitch `slotPitch`. This is `y` on a
+   * vertical set and `x` on a horizontal one -- callers must route it through
+   * `axis.setMain` / `axis.toScreen`, never assign it to `.y` directly.
+   * Single source of truth for overlay placement;
+   * `axis.getMain(getSymbolAt(cell).view)` equals `cell * slotPitch` for a snapped reel
    * (ReelMotion lays symbols at that pitch), so all overlay sites agree.
    */
   private _pinOverlayCellMain(reel: Reel, cell: number, slotPitch: number): number {

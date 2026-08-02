@@ -195,8 +195,8 @@ export interface SymbolData {
    */
   unmask?: boolean;
   /**
-   * Footprint in cells. Default `{ reels: 1, cells: 1 }`. When `w * h > 1` this
-   * symbol is a "big symbol". at landing it occupies an `w × h` block of
+   * Footprint in cells. Default `{ reels: 1, cells: 1 }`. When `reels * cells > 1` this
+   * symbol is a "big symbol". at landing it occupies a `reels × cells` block of
    * cells anchored at the (reel, cell) where its id appears in the result.
    * Big-symbol registration is rejected on MultiWays slots.
    */
@@ -273,7 +273,7 @@ export interface ReelGridConfig {
   bufferSymbols?: number;
   /**
    * MultiWays configuration. Set by `builder.multiways(...)`. When present:
-   *   - `setShape(rowsPerReel)` becomes callable mid-spin
+   *   - `setShape(cellsPerReel)` becomes callable mid-spin
    *   - AdjustPhase is inserted between SPIN and STOP
    *   - big-symbol registration throws at build time
    */

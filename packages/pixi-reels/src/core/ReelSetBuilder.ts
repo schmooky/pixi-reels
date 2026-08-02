@@ -315,7 +315,7 @@ export class ReelSetBuilder {
   /**
    * Configure this slot as MultiWays: per-spin cell variation. Pass minCells,
    * maxCells, and the fixed reel pixel height. After build, call
-   * `reelSet.setShape(rowsPerReel)` mid-spin to set the next stop's shape.
+   * `reelSet.setShape(cellsPerReel)` mid-spin to set the next stop's shape.
    *
    * Mutually exclusive with big-symbol registration (`SymbolData.size`).
    * Mutually exclusive with cascade mode in v1.

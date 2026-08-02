@@ -416,11 +416,11 @@ export class SpinController implements Disposable {
     if (!this._isSpinning) return;
     // Fail-fast: validate big-symbol block fit so setResult throws at the
     // call site rather than later inside skip()/_tryBeginStopSequence().
-    const visibleRowsForReel = (i: number): number => {
+    const visibleCellsForReel = (i: number): number => {
       const pendingShape = this._hooks.peekTargetShape();
       return pendingShape ? pendingShape[i] : this._reels[i].visibleCells;
     };
-    this._coordinateBigSymbols(symbols, visibleRowsForReel);
+    this._coordinateBigSymbols(symbols, visibleCellsForReel);
     this._resultSymbols = symbols;
     this._tryBeginStopSequence();
     if (this._skipPending) {
@@ -1002,9 +1002,9 @@ export class SpinController implements Disposable {
       // MultiWays skip: apply pending shape and big-symbol coordinator before
       // placement so reels land at the new shape with OCCUPIED sentinels.
       const pendingShape = this._hooks.peekTargetShape();
-      const visibleRowsForReel = (i: number): number =>
+      const visibleCellsForReel = (i: number): number =>
         pendingShape ? pendingShape[i] : this._reels[i].visibleCells;
-      const decorated = this._coordinateBigSymbols(this._resultSymbols, visibleRowsForReel);
+      const decorated = this._coordinateBigSymbols(this._resultSymbols, visibleCellsForReel);
 
       for (let i = 0; i < this._reels.length; i++) {
         if (this._landedReels.has(i)) continue;
@@ -1440,14 +1440,14 @@ export class SpinController implements Disposable {
     // correct number of visible cells per reel. Pull the pending shape; if
     // unset, fall back to current reel.visibleCells.
     const pendingShape = this._hooks.peekTargetShape();
-    const visibleRowsForReel = (i: number): number =>
+    const visibleCellsForReel = (i: number): number =>
       pendingShape ? pendingShape[i] : this._reels[i].visibleCells;
 
     // Big symbols: paint cross-reel OCCUPIED sentinels into the result grid
     // BEFORE per-reel frame building. The coordinator validates block fit
     // and rewrites cells; per-reel FrameBuilder then sees the sentinels and
     // RandomFillMiddleware skips them. Non-big-symbol slots are zero-cost.
-    const decorated = this._coordinateBigSymbols(this._resultSymbols, visibleRowsForReel);
+    const decorated = this._coordinateBigSymbols(this._resultSymbols, visibleCellsForReel);
 
     // Build and cache frames using each reel's actual buffer/visible config.
     // Reels may differ in buffer size; build each independently. Held reels
@@ -1460,7 +1460,7 @@ export class SpinController implements Disposable {
         continue;
       }
       const reel = this._reels[i];
-      const cells = visibleRowsForReel(i);
+      const cells = visibleCellsForReel(i);
       frames.push(
         this._frameBuilder.build(
           i,
@@ -1494,7 +1494,7 @@ export class SpinController implements Disposable {
    */
   private _coordinateBigSymbols(
     grid: ColumnTarget[],
-    visibleRowsForReel: (i: number) => number,
+    visibleCellsForReel: (i: number) => number,
   ): ColumnTarget[] {
     const bufferStart = this._reels[0]?.bufferStart ?? 0;
     const bufferEnd = this._reels[0]?.bufferEnd ?? 0;
@@ -1521,7 +1521,7 @@ export class SpinController implements Disposable {
     };
 
     for (let reel = 0; reel < out.length; reel++) {
-      const cells = visibleRowsForReel(reel);
+      const cells = visibleCellsForReel(reel);
       // Iterate the FULL strip range, not just visible. A big-symbol anchor
       // may sit in bufferStart (partial-visibility from the top. only the
       // block's tail shows in cell 0) or in bufferEnd (the head shows at
@@ -1555,7 +1555,7 @@ export class SpinController implements Disposable {
         }
         for (let dx = 0; dx < w; dx++) {
           const targetReel = reel + dx;
-          const targetCells = visibleRowsForReel(targetReel);
+          const targetCells = visibleCellsForReel(targetReel);
           if (cell + h > targetCells + bufferEnd) {
             throw new Error(
               `big symbol '${id}' (${w}x${h}) at (reel=${reel}, cell=${cell}) ` +

@@ -41,7 +41,7 @@ export interface DropOffset {
 /**
  * Compute per-cell drop offsets for one reel given its winner set.
  *
- * Returns one entry per visible cell, top-to-bottom. Rows with
+ * Returns one entry per visible cell, top-to-bottom. Cells with
  * `offsetCells === 0` should NOT be animated. they're survivors that
  * didn't move.
  *

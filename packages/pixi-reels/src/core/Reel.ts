@@ -90,7 +90,7 @@ export interface NudgeOptions {
    *
    * ```ts
    * await Promise.all(
-   *   cols.map((reel, i) =>
+   *   reels.map((reel, i) =>
    *     reelSet.nudge(reel, { ..., startDelay: i * 80 }),
    *   ),
    * );
@@ -297,7 +297,7 @@ export class Reel implements Disposable {
   /**
    * Optional resolver for cross-reel OCCUPIED cells. Set by `ReelSet` so
    * `getVisibleSymbols()` returns the anchor's id even when the anchor
-   * lives on a different reel (a 2×2 bonus straddles cols c, c+1).
+   * lives on a different reel (a 2x2 bonus straddles reels c, c+1).
    * Without it, cross-reel OCCUPIED cells return the OCCUPIED sentinel.
    */
   private _crossReelResolver: ((reel: number, cell: number) => string) | null = null;
@@ -578,7 +578,7 @@ export class Reel implements Disposable {
   /**
    * Internal: register a callback used to resolve cross-reel OCCUPIED
    * cells to the originating big-symbol's id. Wired by `ReelSet` so this
-   * reel can answer "what id is at (myCol, cell)?" even when the anchor is
+   * reel can answer "what id is at (myReel, cell)?" even when the anchor is
    * on a different reel.
    *
    * @internal
@@ -948,7 +948,7 @@ export class Reel implements Disposable {
           : i - distance >= 0;
         if (!survives) {
           const failureDetail = wrapsIntoStart
-            ? `anchor + h + distance < total (${i} + ${h} + ${distance} = ${i + h + distance} vs ${total})`
+            ? `anchor + h - 1 + distance < total (${i} + ${h} - 1 + ${distance} = ${i + h - 1 + distance} vs ${total})`
             : `anchor - distance >= 0 (${i} - ${distance} = ${i - distance})`;
           throw new Error(
             `nudge: block '${sym.symbolId}' (${w}x${h}) at strip[${i}] wouldn't survive a ` +

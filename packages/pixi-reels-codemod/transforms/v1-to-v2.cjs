@@ -10,10 +10,15 @@
  *   - method names in call expressions, e.g. `.visibleRows(3)`
  *   - string arguments to the specific methods that renamed their values
  *
- * It never renames a bare local variable, an import binding, or a property
- * on something it has no reason to believe is a reel set. That means the
- * output may still need a read-through on heavily destructured code -- which
- * is the right trade against silently rewriting `for (const row of table)`.
+ * It never renames a bare local variable or an import binding. Most property
+ * renames ARE applied to any receiver, because the v1 names (`bufferAbove`,
+ * `reelPixelHeight`, `spinSymbolHeight`) are distinctive enough that a false
+ * positive is unlikely. The exceptions are names that collide with something
+ * ubiquitous: `size.w` / `size.h` need the `size` key, and `offsetY` needs a
+ * receiver that looks like a reel, because `e.offsetY` is on every mouse
+ * event. So the output may still need a read-through on heavily destructured
+ * code -- the right trade against silently rewriting `for (const row of
+ * table)` or a consumer's input handler.
  *
  * The `{ w, h }` pair is only rewritten under a `size:` key, since `w`/`h`
  * are far too common to touch anywhere else.
@@ -29,7 +34,7 @@ const SAFE = {
   bufferAbove: 'bufferStart',
   bufferBelow: 'bufferEnd',
   reelHeight: 'extent',
-  offsetY: 'mainOffset',
+  // NOTE: `offsetY` is deliberately NOT here. See DOM_COLLIDING below.
   spinSymbolHeight: 'spinCellSize',
   minRows: 'minCells',
   maxRows: 'maxCells',
@@ -72,6 +77,29 @@ module.exports = function transform(file, api) {
   const root = j(file.source);
   let changed = false;
 
+  /**
+   * Renames that collide with something ubiquitous outside this library.
+   * `offsetY` is a property of every MouseEvent and PointerEvent, so a slot
+   * game is full of `e.offsetY` that has nothing to do with a reel. Renaming
+   * those to `mainOffset` breaks input handling silently, which is far worse
+   * than leaving one `reel.offsetY` for a human to catch.
+   *
+   * These are only rewritten when the receiver looks like a reel.
+   */
+  const DOM_COLLIDING = { offsetY: 'mainOffset' };
+
+  /** Does this member expression's object look like a Reel? */
+  const receiverLooksLikeReel = (obj) => {
+    if (!obj) return false;
+    if (obj.type === 'Identifier') return /reel/i.test(obj.name);
+    if (obj.type === 'MemberExpression' && !obj.computed && obj.property.type === 'Identifier')
+      return /reel/i.test(obj.property.name);
+    // `reelSet.reels[0].offsetY`
+    if (obj.type === 'MemberExpression' && obj.computed) return receiverLooksLikeReel(obj.object);
+    if (obj.type === 'ThisExpression') return false;
+    return false;
+  };
+
   const rename = (node, map) => {
     const to = map[node.name];
     if (to === undefined) return false;
@@ -96,6 +124,14 @@ module.exports = function transform(file, api) {
     ) {
       prop.name = prop.name === 'w' ? 'reels' : 'cells';
       changed = true;
+      return;
+    }
+    // Only rewrite a DOM-colliding name when the receiver looks like a reel.
+    if (DOM_COLLIDING[prop.name] !== undefined) {
+      if (receiverLooksLikeReel(obj)) {
+        prop.name = DOM_COLLIDING[prop.name];
+        changed = true;
+      }
       return;
     }
     if (!rename(prop, SAFE)) rename(prop, COORD);

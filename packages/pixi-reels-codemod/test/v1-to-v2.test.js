@@ -71,3 +71,17 @@ test('returns null for a file with nothing to change', () => {
   const source = 'const a = 1;\n';
   assert.equal(transform({ path: 't.ts', source }, api), null);
 });
+
+test('leaves a DOM event offsetY alone', () => {
+  // `offsetY` is on every MouseEvent. Renaming it to `mainOffset` silently
+  // breaks a consumer's input handling, which is worse than missing one.
+  const out = run('canvas.addEventListener("pointermove", (e) => { track(e.offsetY, e.offsetX); });');
+  assert.match(out, /e\.offsetY/);
+  assert.doesNotMatch(out, /mainOffset/);
+});
+
+test('still renames offsetY on a reel', () => {
+  assert.match(run('const y = reel.offsetY;'), /reel\.mainOffset/);
+  assert.match(run('const y = this._reel.offsetY;'), /_reel\.mainOffset/);
+  assert.match(run('const y = reelSet.reels[0].offsetY;'), /\.mainOffset/);
+});

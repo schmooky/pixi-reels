@@ -162,7 +162,7 @@ export class BoardGrid implements Disposable {
     }
   }
 
-  /** Every cell coordinate, row-major. */
+  /** Every cell coordinate, reel-major: (0,0), (0,1), ... then (1,0). */
   cells(): BoardCell[] {
     return this._cells.map((c) => ({ reel: c.reel, cell: c.cell }));
   }
