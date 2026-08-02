@@ -47,7 +47,8 @@
     "check:doc-links": "node scripts/check-doc-links.mjs",
     "check:v1-keys": "node scripts/check-v1-keys.mjs",
     "check:recipe-syntax": "node scripts/check-recipe-syntax.mjs",
-    "check:codemod-parity": "node scripts/check-codemod-parity.mjs"
+    "check:codemod-parity": "node scripts/check-codemod-parity.mjs",
+    "check:publish-contents": "node scripts/check-publish-contents.mjs"
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx,mjs,cjs,md,mdx,astro,yml,yaml,json}": [
