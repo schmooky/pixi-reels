@@ -55,7 +55,15 @@ const reelSet = new ReelSetBuilder()
     registry.register(EMPTY, EmptySymbol, {});
   })
   .weights({ [COIN]: 1, [EMPTY]: 6 })
-  .initialFrame(Array.from({ length: REELS }, () => ({ visible: [EMPTY, EMPTY, EMPTY], bufferStart: [EMPTY], bufferEnd: [EMPTY] })))
+  // Seed two coins. A board of pure EMPTY is what this recipe is ABOUT,
+  // but an all-blank canvas on arrival is indistinguishable from a demo
+  // that failed to load, so the opening frame shows the contrast the
+  // recipe is teaching: blank cells with a coin sitting in them.
+  .initialFrame([
+    { visible: [EMPTY, COIN, EMPTY], bufferStart: [EMPTY], bufferEnd: [EMPTY] },
+    { visible: [EMPTY, EMPTY, EMPTY], bufferStart: [EMPTY], bufferEnd: [EMPTY] },
+    { visible: [COIN, EMPTY, EMPTY], bufferStart: [EMPTY], bufferEnd: [EMPTY] },
+  ])
   .speed('normal', SpeedPresets.NORMAL)
   .ticker(app.ticker)
   .build();
@@ -71,6 +79,13 @@ return {
       bufferStart: [EMPTY],
       bufferEnd: [EMPTY],
     }));
+    // At 1:6 odds across 9 cells, roughly a quarter of spins land no coin
+    // at all -- correct for the weighting, but it makes the demo look
+    // broken rather than sparse. Force one so every spin shows a coin
+    // against blank cells. A real game would let the weights stand.
+    if (!grid.some((col) => col.visible.includes(COIN))) {
+      grid[Math.floor(Math.random() * REELS)].visible[Math.floor(Math.random() * ROWS)] = COIN;
+    }
     reelSet.setResult(grid);
     await spin;
   },
