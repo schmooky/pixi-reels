@@ -1,24 +1,26 @@
 // @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, CoinSymbol, coinValue,
-//                   EmptySymbol, PIXI, app, pickWeighted
-
+// Injected: HoldAndWinBuilder, SpeedPresets, CoinSymbol, coinValue,
+//           PIXI, app, pickWeighted
+//
 // A Hold & Win round whose free cells roll UPWARD.
 //
-// `.direction('reverse')` is the only line that makes this a roll-up; the lock
-// itself is the same CellPin claim as any other Hold & Win, because pins are
-// index space and travel direction never enters into them.
+// `.axis('vertical', 'reverse')` is the only line that makes this a roll-up.
+// The axis is per-cell travel, never layout: each cell is its own 1x1 ReelSet,
+// so reversing the direction flips which edge a coin enters from and touches
+// nothing else - `cols` x `rows`, the lock and the counter are unchanged.
 //
-// It also picks up the one spin option that pairs naturally with a lock:
-// `spin({ holdReels })`. A reel whose every cell is already locked has nothing
-// to reroll, so it is held out of the wave entirely - it never starts, never
-// stops, and contributes its current cells to the result. Held indices are
-// reel indices, so this is axis-neutral too.
+// The hold is the other half of the mechanic, and it needs no option at all.
+// `respin()` spins `board.freeCells` and only those: a locked cell never
+// starts, never stops, and keeps its coin. `respin:start` reports exactly
+// which cells are in flight, which is what the SPINNING readout counts.
+//
+// Gotcha: the ReelSet-level equivalent is `spin({ holdReels })`, and it holds
+// a whole REEL. Hold & Win holds single cells, so a board has no `holdReels`
+// - it holds at cell granularity instead, and that is the point.
 
-const REELS = 5, CELLS = 3, SIZE = 68, GAP = 6;
-const BLANK = 'blank';
-const CAPACITY = REELS * CELLS;
-const START_RESPINS = 3;
+const COLS = 5, ROWS = 3, CELL = 66, GAP = 6;
 const MAX_WAVES = 8;
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 const COINS = [
   { id: 'coin5', value: 5 },
@@ -29,156 +31,110 @@ const COINS = [
 const COIN_WEIGHTS = { coin5: 10, coin10: 6, coin25: 3, coin50: 1 };
 const valueOf = (id) => COINS.find((c) => c.id === id).value;
 
-const reelSet = new ReelSetBuilder()
-  .reels(REELS)
-  .visibleCells(CELLS)
-  .symbolSize(SIZE, SIZE)
-  .symbolGap(GAP, GAP)
-  .direction('reverse') // free cells roll up between waves
+const board = new HoldAndWinBuilder()
+  .grid(COLS, ROWS)
+  .cellSize(CELL, { gap: GAP })
+  .axis('vertical', 'reverse') // <- free cells roll up between waves
   .symbols((r) => {
-    r.register(BLANK, EmptySymbol, {});
     for (const coin of COINS) r.register(coin.id, CoinSymbol, coinValue(coin.value));
   })
-  .weights({ [BLANK]: 8, ...COIN_WEIGHTS })
-  .initialFrame(
-    Array.from({ length: REELS }, () => ({ visible: Array.from({ length: CELLS }, () => BLANK) })),
-  )
-  .speed('normal', { ...SpeedPresets.NORMAL, minimumSpinTime: 460, stopDelay: 90 })
+  .weights({ empty: 8, ...COIN_WEIGHTS })
+  .respins(3)
+  .speedProfile({ ...SpeedPresets.NORMAL, minimumSpinTime: 620 })
+  .stagger((reel, cell) => (reel + cell) * 90)
+  .cellChrome((g, size) => {
+    g.roundRect(0, 0, size, size, 8)
+      .fill({ color: 0x140f2e, alpha: 0.55 })
+      .stroke({ color: 0x6a5acd, width: 1, alpha: 0.6 });
+  })
   .ticker(app.ticker)
   .build();
 
-// Chrome behind the cells + a gold frame on every locked one.
-const chrome = new PIXI.Graphics();
-for (let reel = 0; reel < REELS; reel++) {
-  for (let cell = 0; cell < CELLS; cell++) {
-    const b = reelSet.getCellBounds(reel, cell);
-    chrome.roundRect(b.x, b.y, b.width, b.height, 8)
-      .fill({ color: 0x140f2e, alpha: 0.55 })
-      .stroke({ color: 0x6a5acd, width: 1, alpha: 0.6 });
-  }
-}
-reelSet.addChildAt(chrome, 0);
+const boardW = COLS * CELL + (COLS - 1) * GAP;
+const boardH = ROWS * CELL + (ROWS - 1) * GAP;
+board.container.x = (app.screen.width - boardW) / 2;
+board.container.y = (app.screen.height - boardH) / 2 - 14;
+app.stage.addChild(board.container);
 
+// A gold frame on every locked cell, painted from `cellBounds` - board-local
+// coordinates, so it rides along inside the board container.
 const locks = new PIXI.Graphics();
-reelSet.addChild(locks);
+board.container.addChild(locks);
 const redrawLocks = () => {
   locks.clear();
-  for (const pin of reelSet.pins.values()) {
-    const b = reelSet.getCellBounds(pin.reel, pin.cell);
+  for (const c of board.lockedCoins) {
+    const b = board.cellBounds(c.cell);
     locks.roundRect(b.x + 1, b.y + 1, b.width - 2, b.height - 2, 8)
       .stroke({ width: 3, color: 0xffd43b, alpha: 0.9 });
   }
 };
-reelSet.events.on('pin:placed', redrawLocks);
-reelSet.events.on('pin:expired', redrawLocks);
+board.events.on('coin:locked', redrawLocks);
+board.events.on('feature:enter', redrawLocks);
+board.events.on('feature:reset', redrawLocks);
 
-const stage = new PIXI.Container();
-stage.addChild(reelSet);
 const hud = new PIXI.Text({
-  text: '',
+  text: 'press spin',
   style: { fontFamily: 'system-ui, sans-serif', fontSize: 15, fontWeight: '700', fill: 0xf5d066 },
 });
-hud.position.set(0, CELLS * SIZE + (CELLS - 1) * GAP + 12);
-stage.addChild(hud);
+hud.anchor.set(0.5, 0);
+hud.position.set(app.screen.width / 2, board.container.y + boardH + 14);
+app.stage.addChild(hud);
 
-const total = () =>
-  [...reelSet.pins.values()].reduce((sum, pin) => sum + (pin.payload?.value ?? 0), 0);
-const paint = (respins, held) => {
+const total = () => board.lockedCoins.reduce((sum, c) => sum + (c.data?.value ?? 0), 0);
+let spinning = 0;
+const paint = () => {
   hud.text =
-    `RESPINS ${respins}   LOCKED ${reelSet.pins.size}/${CAPACITY}   TOTAL ${total()}` +
-    (held.length > 0 ? `   HELD REELS ${held.join(',')}` : '');
+    `RESPINS ${board.respinsLeft}   LOCKED ${board.lockedCoins.length}/${board.capacity}` +
+    `   TOTAL ${total()}   SPINNING ${spinning}`;
 };
+// The wave's in-flight set, straight off the board - locked cells are absent.
+board.events.on('respin:start', (e) => { spinning = e.spinning.length; paint(); });
+board.events.on('respins:changed', paint);
+board.events.on('coin:locked', paint);
 
-// Reels with every cell locked. Nothing to reroll, so they sit the wave out.
-const fullReels = () => {
-  const out = [];
-  for (let reel = 0; reel < REELS; reel++) {
-    let full = true;
-    for (let cell = 0; cell < CELLS; cell++) if (!reelSet.getPin(reel, cell)) full = false;
-    if (full) out.push(reel);
-  }
-  return out;
+// The server decides the trigger and each wave's hits; this stands in for it.
+const coin = (cell) => {
+  const id = pickWeighted(COIN_WEIGHTS);
+  return { cell, id, data: { value: valueOf(id) } };
 };
-
-const freeCells = () => {
-  const out = [];
-  for (let reel = 0; reel < REELS; reel++) {
-    for (let cell = 0; cell < CELLS; cell++) {
-      if (!reelSet.getPin(reel, cell)) out.push({ reel, cell });
-    }
-  }
-  return out;
+// A full column of coins on the trigger, so several cells are held out of
+// every wave that follows.
+const TRIGGER_CELLS = [
+  { reel: 1, cell: 0 },
+  { reel: 1, cell: 1 },
+  { reel: 1, cell: 2 },
+  { reel: 3, cell: 1 },
+];
+const rollHits = () => {
+  const free = board.freeCells;
+  if (free.length === 0 || Math.random() >= 0.55) return [];
+  return [coin(free[Math.floor(Math.random() * free.length)])];
 };
-
-function rollHits(count) {
-  const free = freeCells();
-  const hits = [];
-  for (let i = 0; i < count && free.length > 0; i++) {
-    const pick = free.splice(Math.floor(Math.random() * free.length), 1)[0];
-    hits.push({ ...pick, id: pickWeighted(COIN_WEIGHTS) });
-  }
-  return hits;
-}
-
-async function wave(hits) {
-  const held = fullReels();
-  const grid = Array.from({ length: REELS }, () => Array.from({ length: CELLS }, () => BLANK));
-  for (const hit of hits) grid[hit.reel][hit.cell] = hit.id;
-  const p = reelSet.spin({ holdReels: held });
-  await new Promise((r) => setTimeout(r, 200));
-  // Full-width grid even with reels held: the engine ignores held columns.
-  reelSet.setResult(grid.map((visible) => ({ visible })));
-  await p;
-  for (const hit of hits) {
-    reelSet.pin(hit.reel, hit.cell, hit.id, {
-      turns: 'permanent',
-      payload: { value: valueOf(hit.id) },
-    });
-  }
-  return held;
-}
 
 let busy = false;
 return {
-  reelSet,
-  stage,
+  cleanup: () => {
+    try { hud.destroy(); } catch {}
+    try { locks.destroy(); } catch {}
+    board.destroy();
+  },
   onSpin: async () => {
     if (busy) return;
     busy = true;
     try {
-      for (const pin of [...reelSet.pins.values()]) reelSet.unpin(pin.reel, pin.cell);
-      redrawLocks();
-      for (let reel = 0; reel < REELS; reel++) {
-        for (let cell = 0; cell < CELLS; cell++) reelSet.setSymbolAt(reel, cell, BLANK);
+      board.reset();
+      spinning = 0;
+      board.enter(TRIGGER_CELLS.map(coin));
+      paint();
+      for (let wave = 0; wave < MAX_WAVES; wave++) {
+        const result = await board.respin(rollHits());
+        if (result.done) break;
+        await sleep(320);
       }
-
-      let respins = START_RESPINS;
-      paint(respins, []);
-      // Trigger wave: a column's worth of coins lands and locks, which is
-      // what puts a reel in the held set for the waves that follow.
-      await wave([
-        { reel: 1, cell: 0, id: pickWeighted(COIN_WEIGHTS) },
-        { reel: 1, cell: 1, id: pickWeighted(COIN_WEIGHTS) },
-        { reel: 1, cell: 2, id: pickWeighted(COIN_WEIGHTS) },
-        { reel: 3, cell: 1, id: pickWeighted(COIN_WEIGHTS) },
-      ]);
-      paint(respins, fullReels());
-
-      for (let w = 0; w < MAX_WAVES && respins > 0 && reelSet.pins.size < CAPACITY; w++) {
-        await new Promise((r) => setTimeout(r, 350));
-        const hits = rollHits(Math.random() < 0.55 ? 1 : 0);
-        const held = await wave(hits);
-        respins = hits.length > 0 ? START_RESPINS : respins - 1;
-        paint(respins, held);
-      }
-      hud.text = `ROUND OVER   LOCKED ${reelSet.pins.size}/${CAPACITY}   TOTAL ${total()}`;
+      hud.text =
+        `ROUND OVER   LOCKED ${board.lockedCoins.length}/${board.capacity}   TOTAL ${total()}`;
     } finally {
       busy = false;
     }
-  },
-  cleanup: () => {
-    try { hud.destroy(); } catch {}
-    try { locks.destroy(); } catch {}
-    try { chrome.destroy(); } catch {}
   },
 };

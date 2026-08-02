@@ -59,7 +59,14 @@ return {
     const reel = reelSet.getReel(pick.r);
 
     // Scale-out old symbol from center.
+    //
+    // Guard the post-await reads: the runner unmounts a demo that scrolls
+    // out of view, and `Reel.destroy()` empties `symbols`, so a
+    // `getSymbolAt` after any `await` can come back undefined. Without
+    // this the recipe throws "Cannot read properties of undefined
+    // (reading 'view')" whenever the player scrolls away mid-upgrade.
     const oldSym = reel.getSymbolAt(pick.cell);
+    if (!oldSym) return;
     const restoreOld = bindCenter(oldSym.view);
     await new Promise(resolve => {
       gsap.to(oldSym.view, { alpha: 0, duration: 0.3, ease: 'power2.in', onComplete: resolve });
@@ -74,6 +81,7 @@ return {
 
     // Scale-in new symbol from center.
     const next = reel.getSymbolAt(pick.cell);
+    if (!next) return;
     next.view.alpha = 0;
     next.view.scale.set(0.4);
     const restoreNext = bindCenter(next.view);

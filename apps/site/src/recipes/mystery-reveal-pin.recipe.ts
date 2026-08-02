@@ -70,6 +70,10 @@ const reelSet = new ReelSetBuilder()
 async function revealCell(reel, cell, revealId) {
   const targetReel = reelSet.reels[reel];
   const oldSym = targetReel.getSymbolAt(cell);
+  // The runner unmounts a demo that scrolls out of view, and
+  // `Reel.destroy()` empties `symbols`, so a `getSymbolAt` around an
+  // `await` can come back undefined. Bail instead of throwing.
+  if (!oldSym) return;
   // Pivot to the cell center so the scale-down looks like the symbol
   // collapses on itself instead of pinning to the top-left corner.
   const px = oldSym.view.pivot.x, py = oldSym.view.pivot.y;
@@ -115,6 +119,7 @@ async function revealCell(reel, cell, revealId) {
   // and animate it IN. Same pivot trick so the bounce reads as
   // expanding-from-the-center.
   const newSym = targetReel.getSymbolAt(cell);
+  if (!newSym) return;
   newSym.view.pivot.set(SIZE / 2, SIZE / 2);
   newSym.view.x = ox + SIZE / 2;
   newSym.view.y = oy + SIZE / 2;

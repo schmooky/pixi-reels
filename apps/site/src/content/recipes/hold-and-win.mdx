@@ -186,9 +186,9 @@ A board runs a full feature while every board.events beat prints to a live log: 
 
 ## Hold & Win: cells that spin sideways
 
-The whole lock-and-respin round on `.orientation('horizontal')`, built straight on a ReelSet with CellPin: a pin claims a cell, the strip cannot overwrite it, and the engine holds the coin on screen while the row scrolls past behind it.
+The whole lock-and-respin round on `.axis('horizontal')`. Every cell is its own 1x1 ReelSet, so the axis only picks which edge a coin scrolls in from. the board still lays out cols x rows and the lock still claims one cell.
 
-**Gotcha:** `HoldAndWinBuilder` and `BoardGrid` build every cell as a vertical 1x1 ReelSet and expose no axis knob, so a board on another axis is a ReelSet plus pins.
+**Gotcha:** don't build this on a plain ReelSet with `.orientation('horizontal')`. there a reel IS a whole row, so the row travels as one ribbon straight across the cell gaps and past the cells that are supposed to be locked.
 
 <RecipeDemo code="hold-and-win-horizontal-lock" height={340} />
 
@@ -196,9 +196,9 @@ The whole lock-and-respin round on `.orientation('horizontal')`, built straight 
 
 ## Hold & Win: free cells roll upward
 
-The same lock on a `.direction('reverse')` set, plus the spin option that pairs with it: a reel whose every cell is already locked goes into `spin({ holdReels })` and sits the wave out entirely.
+The same round on `.axis('vertical', 'reverse')`, plus the hold that pairs with it: `respin()` spins `board.freeCells` and only those, and `respin:start` reports exactly which cells are in flight.
 
-**Gotcha:** `setResult` still wants a full reel-count grid. entries at held indices are ignored, not omitted.
+**Gotcha:** the ReelSet-level equivalent, `spin({ holdReels })`, holds a whole reel. a board has no `holdReels` because Hold & Win holds single cells.
 
 <RecipeDemo code="hold-and-win-reverse-respin" height={340} />
 
