@@ -66,6 +66,19 @@ On `Reel`: `reelHeight` is `extent`, `offsetY` is `mainOffset`,
 screen-space pair you hand to `ReelSymbol.resize(width, height)`, and
 screen-space inputs stay screen-space in v2.
 
+### MultiWays
+
+All three keys were renamed, and the builder throws on the old ones:
+
+```ts
+// Before
+builder.multiways({ minRows: 2, maxRows: 7, reelPixelHeight: 700 });
+// After
+builder.multiways({ minCells: 2, maxCells: 7, reelExtent: 700 });
+```
+
+`setShape()` takes the same array; it is cells per reel, not rows.
+
 ## Result grids
 
 Before:
@@ -199,6 +212,9 @@ After:
 ```ts
 await reelSet.nudge(2, { distance: 1, direction: 'forward', incoming: ['wild'] });
 ```
+
+`'up'` became `'reverse'` on the same rule -- `NudgeOptions.direction` is
+`'forward' | 'reverse'`, with no screen-relative values left.
 
 On a vertical/forward reel these are the same motion. On a reel built with
 `direction('reverse')`, `'forward'` now travels the way that reel spins and

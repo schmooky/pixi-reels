@@ -37,7 +37,8 @@ __PIXI_REELS_DEBUG.trace();  // logs every domain event from now on
 import { debugSnapshot, debugGrid } from 'pixi-reels';
 
 const snap = debugSnapshot(reelSet);
-// snap: { isSpinning, currentSpeed, spotlightActive, reelCount, visibleCells, reels: [...], grid: [[...], ...] }
+// snap: { timestamp, isSpinning, currentSpeed, availableSpeeds, spotlightActive,
+//         reelCount, visibleCells, reels: [...], grid: [[...], ...] }
 
 console.log(debugGrid(reelSet));   // ASCII table
 ```
@@ -63,24 +64,38 @@ The snapshot shapes are typed as `DebugSnapshot` and `DebugReelSnapshot`. they'r
 
 ## Recording sessions
 
-When a bug only reproduces over many frames, recording the engine's per-frame state lets you replay it offline. `startRecording` wires a recorder into the ticker; `stopRecording` releases it. `getFrames` returns the array of `RecordedFrame` entries between the two; `clearFrames` resets the buffer for the next take.
+When a bug only reproduces across a whole spin, record it and read the
+sequence back offline.
+
+Recording is **event-driven, not per-frame**: `startRecording` listens for
+`spin:start`, `spin:reelLanded`, `spin:allLanded`, `spin:complete` and
+`destroyed`, and captures a snapshot at each. A spin yields a handful of
+frames, not one per render tick.
 
 ```ts
-import { startRecording, stopRecording, getFrames, clearFrames, type StartRecordingOptions } from 'pixi-reels';
+import { startRecording, stopRecording, getFrames, clearFrames } from 'pixi-reels';
 
-const opts: StartRecordingOptions = { reelSet, sampleEveryNFrames: 1 };
-startRecording(opts);
+startRecording(reelSet, 'spin-1');   // (reelSet, tag?, { maxFrames? })
 await reelSet.spin();
 reelSet.setResult([/* ... */]);
 await /* the spin */;
-stopRecording();
+stopRecording(reelSet);
 
-const frames = getFrames(); // RecordedFrame[]
+const frames = getFrames('spin-1');  // RecordedFrame[]
 console.log(`captured ${frames.length} frames`);
-clearFrames(); // ready for the next round
+clearFrames();
 ```
 
-Each `RecordedFrame` carries a `DebugSnapshot`, the timestamp, and the elapsed ms since the first frame. Pipe it into a tracing UI or feed it to a comparison test.
+Each `RecordedFrame` is `{ tag, trigger, snapshot }` -- the tag you passed,
+the event name that triggered the capture, and the `DebugSnapshot`. The
+timestamp lives inside `snapshot`.
+
+Two things to know about the buffer:
+
+- It is **process-wide and not cleared between sessions**, so bare
+  `getFrames()` returns every take since the page loaded. Pass the tag.
+- It is a rolling window, 1000 frames by default (`maxFrames`). A long
+  session silently drops the oldest.
 
 ## The visual overlay
 
@@ -149,4 +164,4 @@ cannot see it.
 - `debugGrid` returns plain text. safe to log, assert against, or paste anywhere.
 - `enableDebug` is a no-op in Node (it checks `typeof window`).
 - Snapshots contain no PixiJS objects, so `JSON.stringify()` will always work.
-- The `DEFAULTS` constant (exported from `pixi-reels`) holds every default value the builder applies. read it when you want to set a value relative to the engine's default (e.g. `builder.bufferSymbols(DEFAULTS.bufferSymbols + 2)`).
+- The `DEFAULTS` constant (exported from `pixi-reels`) holds five of the engine's defaults: `bufferSymbols`, `symbolGap`, `initialSpeed`, `maxPoolPerKey`, `zIndexStep`. Read it when you want to set a value relative to one of those (e.g. `builder.bufferSymbols(DEFAULTS.bufferSymbols + 2)`). Other defaults live with the feature that owns them -- tumble's in `TumbleConfig`, stacking and pin migration on the builder.

@@ -88,6 +88,12 @@ jobs:
       - name: Install Playwright chromium
         run: pnpm exec playwright install --with-deps chromium
 
+      - name: Build docs site
+        # recipes-mount.spec.ts serves apps/site/dist via `astro preview`.
+        # It checks what actually ships, so a dev server would hide a
+        # bundling failure behind on-demand compilation.
+        run: pnpm --filter site build
+
       - name: e2e
         run: pnpm test:e2e
 

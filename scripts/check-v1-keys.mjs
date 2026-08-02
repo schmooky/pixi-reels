@@ -28,8 +28,16 @@ import { dirname, extname, join, resolve } from 'node:path';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const RENAMES = join(ROOT, 'packages/pixi-reels/src/config/v1Renames.ts');
-const SCAN = ['apps/site/src/recipes', 'examples'];
+const SCAN = ['apps/site/src/recipes', 'apps/site/src/components', 'apps/site/src/pages', 'apps/site/src/content', 'examples'];
 const SKIP = new Set(['node_modules', 'dist', '.astro']);
+const EXTS = ['.ts', '.tsx', '.mdx', '.md'];
+
+/**
+ * Files whose whole job is showing v1 names next to their v2 replacements.
+ * Everything else that names a v1 key is either broken code or prose that
+ * will send a reader into a throw.
+ */
+const ALLOWED = [/migrating-to-\d/];
 
 /**
  * Where a grouped section's names may be looked for. Each regex must capture
@@ -85,7 +93,7 @@ async function walk(dir) {
     if (SKIP.has(entry.name)) continue;
     const full = join(dir, entry.name);
     if (entry.isDirectory()) out.push(...(await walk(full)));
-    else if (['.ts', '.tsx'].includes(extname(entry.name))) out.push(full);
+    else if (EXTS.includes(extname(entry.name))) out.push(full);
   }
   return out;
 }
@@ -124,7 +132,9 @@ for (const { kind, sections } of tables) {
   }
 }
 
-const files = (await Promise.all(SCAN.map((d) => walk(join(ROOT, d))))).flat();
+const files = (await Promise.all(SCAN.map((d) => walk(join(ROOT, d)))))
+  .flat()
+  .filter((f) => !ALLOWED.some((re) => re.test(f)));
 const hits = [];
 let watched = 0;
 

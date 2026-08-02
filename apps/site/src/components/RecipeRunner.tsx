@@ -284,9 +284,20 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
 
     return () => {
       cancelled = true;
+      const app = envRef.current?.app;
+
+      // Stop the ticker BEFORE anything is destroyed. Tearing down the reel
+      // set frees geometry that the renderer's render group still points at,
+      // and if the ticker fires once more in that window Pixi renders the
+      // freed node: "Cannot read properties of null (reading 'geometry')".
+      // A reader scrolling past a demo unmounts it, so this fired on every
+      // animated recipe page.
+      if (app) {
+        try { app.ticker.stop(); } catch { /* already gone */ }
+      }
+
       try { cleanupRef.current?.(); } catch { /* ignore */ }
       try { reelSetRef.current?.destroy(); } catch { /* ignore */ }
-      const app = envRef.current?.app;
       if (app) {
         releaseGsapApp(app); // hand off the gsap driver before the ticker dies
         try { app.destroy(true, { children: true }); } catch { /* ignore */ }

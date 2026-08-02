@@ -15,11 +15,11 @@ import PyramidCascadeDemo from '../../components/demos/PyramidCascadeDemo.tsx';
 ```ts
 new ReelSetBuilder()
   .reels(5)
-  .visibleRowsPerReel([3, 5, 5, 5, 3])
+  .visibleCellsPerReel([3, 5, 5, 5, 3])
   .reelAnchor('center')   // diamond shape
   .tumble({
-    fall:   { duration: 280, ease: 'power3.in',  rowStagger: 60 },
-    dropIn: { duration: 450, ease: 'power3.out', rowStagger: 60, distance: 'perHole' },
+    fall:   { duration: 280, ease: 'power3.in',  cellStagger: 60 },
+    dropIn: { duration: 450, ease: 'power3.out', cellStagger: 60, distance: 'perHole' },
   })
 ```
 

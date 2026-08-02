@@ -12,8 +12,8 @@ import MultiWaysDemo from '../../components/demos/MultiWaysDemo.tsx';
 
 ## The mechanic
 
-`builder.multiways({ minRows, maxRows, reelPixelHeight })` switches the
-reel set to MultiWays mode. Every spin must call `setShape(rowsPerReel)`
+`builder.multiways({ minCells, maxCells, reelExtent })` switches the
+reel set to MultiWays mode. Every spin must call `setShape(cellsPerReel)`
 **before** `setResult(grid)`:
 
 ```ts

@@ -38,8 +38,10 @@ expectGrid(reelSet, /* same 5×3 grid of 'wild' */);
 destroy();
 ```
 
-`spinAndLand()` calls `spin() → setResult() → skip()`, which
+`spinAndLand()` calls `spin() → setResult() → slamStop()`, which
 bypasses all timing and resolves on a microtask. Perfect for CI.
+(`slamStop()` lands every reel outright; it does not go through the
+two-stage `skipSpin()` boost.)
 
 ## 2. Force outcomes with cheats
 
@@ -104,8 +106,9 @@ expect(log.map((e) => e.event)).toEqual(['spin:start', 'spin:complete']);
 
 ## 4. Drive a live demo page
 
-Every mechanic demo on this site mounts a `CheatPanel` that toggles these
-cheats at runtime. Open any demo → check a cheat → spin → watch the
-advertised outcome land every time.
+The [Sprite classic](/demos/sprite-classic/) demo mounts a `CheatPanel`
+that toggles these cheats at runtime: check a cheat → spin → watch the
+advertised outcome land every time. The other demos declare cheats but do
+not mount the panel.
 
 See the [Demos catalog](/demos/) for copy-pasteable examples.
