@@ -1,7 +1,15 @@
 {
   "extends": "../../../../tsconfig.json",
   "compilerOptions": {
-    "noEmit": true
+    "noEmit": true,
+    "paths": {
+      "pixi-reels/spine": [
+        "../../../../packages/pixi-reels/src/spine/index.ts"
+      ],
+      "pixi-reels": [
+        "../../../../packages/pixi-reels/src/index.ts"
+      ]
+    }
   },
   "include": [
     "src/**/*.ts",

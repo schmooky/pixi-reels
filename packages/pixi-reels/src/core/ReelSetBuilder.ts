@@ -26,7 +26,6 @@ import { SymbolRegistry } from '../symbols/SymbolRegistry.js';
 import { SymbolFactory } from '../symbols/SymbolFactory.js';
 import { RandomSymbolProvider } from '../frame/RandomSymbolProvider.js';
 import { FrameBuilder } from '../frame/FrameBuilder.js';
-import { OffsetCalculator } from '../frame/OffsetCalculator.js';
 import { PhaseFactory } from '../spin/phases/PhaseFactory.js';
 import type { SpinningMode } from '../spin/modes/SpinningMode.js';
 import { StandardMode } from '../spin/modes/StandardMode.js';
@@ -890,14 +889,6 @@ export class ReelSetBuilder {
       undefined,
       this._maskStrategy,
       setAxis,
-    );
-
-    const totalRowsForOffset = bufferStart + Math.max(...visibleCellsPerReel) + bufferEnd;
-    const offsetCalc = new OffsetCalculator(
-      reelCount,
-      totalRowsForOffset,
-      symbolWidth,
-      this._offset,
     );
 
     // Validate the initial frame now that buffer counts are fully resolved.

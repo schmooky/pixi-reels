@@ -24,7 +24,6 @@ export class StartPhase extends ReelPhase<StartPhaseConfig> {
 
   protected onEnter(config: StartPhaseConfig): void {
     const reel = this._reel;
-    const speed = this._speed;
     const delay = config.delay ?? 0;
 
     reel.spinningMode = config.spinningMode;
