@@ -44,11 +44,39 @@ const PAGES = [
 ];
 
 test.beforeAll(async () => {
+  // Refuse to run against a server this spec did not start.
+  //
+  // `astro preview` serves a STATIC apps/site/dist, so a leftover from an
+  // earlier run keeps serving the bundle it booted with, and the fresh spawn
+  // below just loses the port bind without complaining. Every result after
+  // that describes a build nobody asked about. This has already produced both
+  // a false failure (stale no-fix dist failing a fixed tree) and false passes
+  // in the other direction, so bail loudly instead of attaching.
+  let occupied = false;
+  try {
+    occupied = (await fetch(`${BASE}/`)).ok;
+  } catch {
+    /* nothing listening, which is what we want */
+  }
+  if (occupied) {
+    throw new Error(
+      `${BASE} is already being served by a process this spec did not start -- ` +
+      `almost certainly an orphaned \`astro preview\` still serving a stale ` +
+      `apps/site/dist. Kill it and re-run:\n` +
+      `  pkill -f "astro preview --port ${PORT}"`,
+    );
+  }
+
   // Serve the built site: `astro build` is what actually ships, and a dev
   // server would hide a bundling failure behind on-demand compilation.
+  //
+  // `detached` so afterAll can signal the whole process group. SIGTERM to the
+  // pnpm wrapper alone leaves the astro child alive and holding the port,
+  // which is how the orphans above got there in the first place.
   server = spawn('pnpm', ['--filter', 'site', 'exec', 'astro', 'preview', '--port', String(PORT)], {
     stdio: 'pipe',
     cwd: process.cwd(),
+    detached: true,
   });
   for (let i = 0; i < 90; i++) {
     try {
@@ -63,7 +91,11 @@ test.beforeAll(async () => {
 });
 
 test.afterAll(() => {
-  server?.kill('SIGTERM');
+  // Negative pid = the process group, so the astro child dies with the pnpm
+  // wrapper rather than surviving to poison the next run.
+  if (server?.pid) {
+    try { process.kill(-server.pid, 'SIGTERM'); } catch { /* already gone */ }
+  }
   server = null;
 });
 
