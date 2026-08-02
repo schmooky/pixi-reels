@@ -624,17 +624,7 @@ export class ReelSet extends Container implements Disposable {
     this._assertNoNudgeInFlight('setResult');
     // Before anything else: a `string[][]` here used to blow up deep in the
     // frame pipeline, AFTER the reels were moving, so the spin never settled.
-    assertColumnTargets(symbols, 'setResult()');
-    const columnKeys = V1_OPTION_KEYS['initialFrame() / setResult() column'];
-    for (let i = 0; i < symbols.length; i++) {
-      assertNoV1Keys(symbols[i], columnKeys, `setResult() column ${i}`);
-    }
-    assertBufferCountsInRange(
-      symbols,
-      this._reels.map((r) => r.bufferStart),
-      this._reels.map((r) => r.bufferEnd),
-      'setResult',
-    );
+    this._assertGrid(symbols, 'setResult()');
     const withPins = this._applyPinsToGrid(this._cloneTargets(symbols));
     this._resultSetForCurrentSpin = true;
     this._spinController.setResult(withPins);
@@ -679,6 +669,11 @@ export class ReelSet extends Container implements Disposable {
    * });
    */
   async refill(opts: RefillOptions): Promise<RefillResult> {
+    // Same gate as `setResult`. A cascade grid arrives straight off a server
+    // response, so it is the LEAST type-checked input the engine takes: a
+    // stale `bufferAbove` used to sail through here and get silently
+    // random-filled on every stage of the chain.
+    this._assertGrid(opts.grid, 'refill(): grid');
     const startTime = performance.now();
     let wasSkipped = false;
 
@@ -944,9 +939,10 @@ export class ReelSet extends Container implements Disposable {
         // that the player should see synchronized with the gravity-end
         // beat. Without the wrapping the bump would fire ~the duration
         // of the gravity stage too early.
-        // One accepted shape, checked here so a bad `nextGrid` names itself
-        // rather than failing later inside the frame pipeline.
-        assertColumnTargets(next, 'runCascade(): nextGrid');
+        // Checked here so a bad `nextGrid` names ITSELF rather than surfacing
+        // as a `refill()` error two frames later. `nextGrid` is the callback
+        // that returns a raw server response, so it is where v1 keys arrive.
+        this._assertGrid(next, 'runCascade(): nextGrid');
         await this.refill({
           winners: [...winners],
           grid: next,
@@ -1286,6 +1282,30 @@ export class ReelSet extends Container implements Disposable {
     } finally {
       this._nudgesInFlight--;
     }
+  }
+
+  /**
+   * The one gate every caller-supplied grid goes through: shape, v1 option
+   * keys, and buffer counts that fit the reels. `context` names the entry
+   * point so the throw points at the call the consumer actually made.
+   *
+   * Shared by `setResult()`, `refill()` and `runCascade()`'s `nextGrid`.
+   * Those last two used to skip it entirely, which let a v1 `bufferAbove`
+   * reach `columnTargetToStrip`, come back `undefined`, and get silently
+   * random-filled on every stage of a cascade.
+   */
+  private _assertGrid(grid: ColumnTarget[], context: string): void {
+    assertColumnTargets(grid, context);
+    const columnKeys = V1_OPTION_KEYS['initialFrame() / setResult() column'];
+    for (let i = 0; i < grid.length; i++) {
+      assertNoV1Keys(grid[i], columnKeys, `${context} column ${i}`);
+    }
+    assertBufferCountsInRange(
+      grid,
+      this._reels.map((r) => r.bufferStart),
+      this._reels.map((r) => r.bufferEnd),
+      context,
+    );
   }
 
   private _assertNoNudgeInFlight(method: string): void {

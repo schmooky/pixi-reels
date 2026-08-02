@@ -816,9 +816,13 @@ export class ReelSetBuilder {
     if (this._tumbleConfig) {
       const fall = this._tumbleConfig.fall;
       const drop = this._tumbleConfig.dropIn;
-      this._phaseFactory.registerFactory('cascade:fall', (reel, speed) => new CascadeFallPhase(reel, speed, fall));
-      this._phaseFactory.register('cascade:place', CascadePlacePhase);
-      this._phaseFactory.registerFactory('cascade:dropIn', (reel, speed) => new CascadeDropInPhase(reel, speed, drop));
+      // Gravity stays UNRESOLVED here: `'auto'` has to be read against each
+      // reel's own axis, and `directionPerReel` lets those differ inside one
+      // set. The phases resolve it per reel at run time.
+      const gravity = this._tumbleConfig.gravity;
+      this._phaseFactory.registerFactory('cascade:fall', (reel, speed) => new CascadeFallPhase(reel, speed, fall, gravity));
+      this._phaseFactory.registerFactory('cascade:place', (reel, speed) => new CascadePlacePhase(reel, speed, gravity));
+      this._phaseFactory.registerFactory('cascade:dropIn', (reel, speed) => new CascadeDropInPhase(reel, speed, drop, gravity));
     }
 
     // MultiWays: wire AdjustPhase. Stay out of non-MultiWays chains entirely

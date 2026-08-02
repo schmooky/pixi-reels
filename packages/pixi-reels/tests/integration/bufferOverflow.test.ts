@@ -28,7 +28,7 @@ describe('setResult buffer overflow throws', () => {
           { visible: ['a', 'b', 'c'], bufferStart: ['X', 'Y'] },
           { visible: ['a', 'b', 'c'] },
         ]),
-      ).toThrowError(/setResult column 1: bufferStart has a symbol at index 1, beyond engine bufferSymbols=1/);
+      ).toThrowError(/setResult\(\) column 1: bufferStart has a symbol at index 1, beyond engine bufferSymbols=1/);
     } finally {
       h.destroy();
     }
@@ -43,7 +43,7 @@ describe('setResult buffer overflow throws', () => {
           { visible: ['a', 'b', 'c'], bufferEnd: ['X', 'Y'] },
           { visible: ['a', 'b', 'c'] },
         ]),
-      ).toThrowError(/setResult column 1: bufferEnd has a symbol at index 1, beyond engine bufferSymbols=1/);
+      ).toThrowError(/setResult\(\) column 1: bufferEnd has a symbol at index 1, beyond engine bufferSymbols=1/);
     } finally {
       h.destroy();
     }

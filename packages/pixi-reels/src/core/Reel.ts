@@ -1200,6 +1200,12 @@ export class Reel implements Disposable {
             if (remaining !== 0) {
               this.motion.advance(remaining);
             }
+            // `advance()` re-derives every main coordinate from the array
+            // index, so it OVERWRITES the reel offset baked into any lifted
+            // view. A nudge runs while the reel is at rest, which is exactly
+            // when lifted views exist, so the fixup belongs on every tick
+            // here - not just after an absolute snap.
+            this._syncUnmaskedViewOffsets();
             lastDisplaced = target;
           },
           onComplete: () => {
@@ -1498,11 +1504,15 @@ export class Reel implements Disposable {
    * aligned. Masked reels have `container.y === 0`, so the two spaces
    * coincide and this is a no-op; on a jagged/pyramid layout (non-zero
    * `mainOffset`) the snap would drop the offset and jump the lifted view.
-   * Call this right after any ABSOLUTE motion snap. `advance()` is
-   * incremental (`+=`) and preserves the offset, so it needs no fixup.
    *
-   * Lifted views only exist while the reel is at rest, so during a spin
-   * (when the frequent snaps happen) this loop finds nothing.
+   * Call this after ANY motion write. `advance()` derives positions from the
+   * array index and writes them absolutely (it was `+=` in v1, which is why
+   * this used to be snap-only), so it drops the offset just as `snapToGrid`
+   * does.
+   *
+   * During a spin the loop finds nothing: `beginMotion()` pulls every lifted
+   * view back down before the strip moves. A nudge is the case that matters,
+   * because it runs at rest with views still lifted.
    */
   private _syncUnmaskedViewOffsets(): void {
     const mainOff = this._axis.getMain(this.container);

@@ -1,6 +1,7 @@
 import { Graphics } from 'pixi.js';
 import type { ReelSet } from '../core/ReelSet.js';
 import type { Reel } from '../core/Reel.js';
+import type { Direction, Orientation } from '../core/ReelAxis.js';
 import { debugOverlay } from './debugOverlay.js';
 import type { DebugOverlayOptions, DebugOverlayHandle } from './debugOverlay.js';
 
@@ -31,7 +32,20 @@ export interface DebugReelSnapshot {
   index: number;
   speed: number;
   isStopping: boolean;
-  allSymbols: { cell: number; symbolId: string; y: number }[];
+  /** This reel's travel projection, so a reader can interpret `main`. */
+  orientation: Orientation;
+  direction: Direction;
+  allSymbols: {
+    cell: number;
+    symbolId: string;
+    /**
+     * Position along the reel's TRAVEL axis (screen `y` when vertical,
+     * `x` when horizontal). This used to be a hard-coded `y`, which meant
+     * every symbol on a horizontal set reported a constant 0 - the one
+     * orientation where the field mattered most.
+     */
+    main: number;
+  }[];
   visibleSymbols: string[];
 }
 
@@ -52,10 +66,12 @@ export function debugSnapshot(reelSet: ReelSet): DebugSnapshot {
     index: i,
     speed: reel.speed,
     isStopping: reel.isStopping,
+    orientation: reel.axis.orientation,
+    direction: reel.axis.direction,
     allSymbols: reel.symbols.map((s, cell) => ({
       cell,
       symbolId: s.symbolId,
-      y: Math.round(s.view.y),
+      main: Math.round(reel.axis.getMain(s.view)),
     })),
     visibleSymbols: reel.getVisibleSymbols(),
   }));

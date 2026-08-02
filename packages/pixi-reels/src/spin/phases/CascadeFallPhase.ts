@@ -8,7 +8,8 @@ import type { ReelSymbol } from '../../symbols/ReelSymbol.js';
 import type { EventEmitter } from '../../events/EventEmitter.js';
 import type { ReelSetEvents } from '../../events/ReelEvents.js';
 import type { TumbleFallConfig } from '../../cascade/TumbleConfig.js';
-import { mergeFallConfig } from '../../cascade/TumbleConfig.js';
+import { gravitySign, mergeFallConfig, resolveGravity } from '../../cascade/TumbleConfig.js';
+import type { Direction } from '../../core/ReelAxis.js';
 
 export interface CascadeFallPhaseConfig {
   /** Required by the start-phase contract. set on the reel even though
@@ -62,10 +63,19 @@ export class CascadeFallPhase extends ReelPhase<CascadeFallPhaseConfig> {
    *  skips trigger it. */
   private _skipAbort: AbortController | null = null;
 
-  constructor(reel: Reel, speed: SpeedProfile, fall: Required<TumbleFallConfig>) {
+  /** Build-time gravity setting; `'auto'` resolves per reel at `onEnter`. */
+  private readonly _gravity: 'auto' | Direction;
+
+  constructor(
+    reel: Reel,
+    speed: SpeedProfile,
+    fall: Required<TumbleFallConfig>,
+    gravity: 'auto' | Direction = 'auto',
+  ) {
     super(reel, speed);
     this._baseFall = fall;
     this._fall = fall;
+    this._gravity = gravity;
   }
 
   protected onEnter(config: CascadeFallPhaseConfig): void {
@@ -98,10 +108,19 @@ export class CascadeFallPhase extends ReelPhase<CascadeFallPhaseConfig> {
     const cellHeight = reel.motion.slotPitch;
     const visibleCells = reel.visibleCells;
     const reelIndex = reel.reelIndex;
+    // Symbols fall along GRAVITY, not along travel. The two coincide under
+    // the default `gravity: 'auto'`, but a reel can spin one way and drop
+    // the other (ADR 016 section 3.6).
+    const gravity = resolveGravity(this._gravity, axis.direction);
+    const sign = gravitySign(gravity);
 
     // Distance: just past the exit-edge buffer so the symbols clear the mask.
-    // A main-axis magnitude; the tween applies `axis.polarity` for travel sign.
-    const fallDistance = (visibleCells + reel.bufferEnd + 1) * cellHeight;
+    // The exit edge is the one gravity points AT, so a reverse-gravity reel
+    // clears through `bufferStart`. Reading the wrong buffer here still
+    // happened to clear the mask, but only because the old value was
+    // over-generous - it is a real bug the moment this is tightened.
+    const exitBuffer = sign > 0 ? reel.bufferEnd : reel.bufferStart;
+    const fallDistance = (visibleCells + exitBuffer + 1) * cellHeight;
 
     const fallSec = this._fall.duration / 1000;
     const staggerSec = this._fall.cellStagger / 1000;
@@ -191,7 +210,7 @@ export class CascadeFallPhase extends ReelPhase<CascadeFallPhaseConfig> {
       );
 
       tl.to(view, {
-        [axis.mainProp]: startMain + axis.polarity * fallDistance,
+        [axis.mainProp]: startMain + sign * fallDistance,
         duration: fallSec,
         ease: this._fall.ease,
       }, offset);

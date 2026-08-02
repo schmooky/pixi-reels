@@ -15,6 +15,7 @@
  * offset so the at-rest cell position is correct in viewport coords.
  */
 import { describe, it, expect } from 'vitest';
+import { gsap as defaultGsap } from 'gsap';
 import { createTestReelSet } from '../../src/testing/index.js';
 
 const SYMBOLS = ['a', 'wild', 'b'];
@@ -139,6 +140,55 @@ describe('unmask on a jagged / pyramid layout (non-zero reel mainOffset)', () =>
       const slotH = reel.motion.slotPitch;
       // Top visible cell -> reel-local 0, so viewport Y is exactly the offset.
       expect(wildView.y).toBeCloseTo(reel.container.y + 0 * slotH, 3);
+    } finally {
+      h.destroy();
+    }
+  });
+
+  it('keeps the reel offset baked in MID-NUDGE, not just at rest', async () => {
+    // A nudge is the one path that runs `motion.advance()` while the reel is
+    // at rest, so lifted views still exist. `advance()` re-derives every
+    // position from the array index and writes it absolutely, which drops the
+    // reel offset unless the sync runs on each tick. Before the fix the wild
+    // jumped a full cell out of its column for the whole tween and snapped
+    // back at the end.
+    let onUpdate: (() => void) | null = null;
+    const pausedGsap = {
+      ...defaultGsap,
+      to: (target: { p: number }, vars: { onUpdate?: () => void }) => {
+        target.p = 0.4;
+        onUpdate = vars.onUpdate ?? null;
+        vars.onUpdate?.();
+        return { kill: () => {}, progress: () => {} } as unknown as gsap.core.Tween;
+      },
+    } as unknown as typeof defaultGsap;
+
+    const h = createTestReelSet({
+      reels: 5,
+      visibleCells: [3, 4, 5, 4, 3],
+      symbolIds: SYMBOLS,
+      symbolData: { wild: { unmask: true } },
+      gsap: pausedGsap,
+    });
+    try {
+      await h.spinAndLand([ { visible: ['wild', 'a', 'a'] }, { visible: ['a', 'a', 'a', 'a'] }, { visible: ['a', 'a', 'a', 'a', 'a'] }, { visible: ['a', 'a', 'a', 'a'] }, { visible: ['a', 'a', 'a'] } ]);
+
+      const reel = h.reelSet.reels[0];
+      const offset = reel.container.y;
+      expect(offset).not.toBe(0);
+      const wildView = reel.getSymbolAt(0).view;
+      expect(wildView.parent).toBe(h.reelSet.viewport.unmaskedContainer);
+
+      // Never settles (the shim leaves the tween paused); `destroy()` rejects
+      // it, so swallow that rather than leaking an unhandled rejection.
+      h.reelSet.nudge(0, { distance: 1, direction: 'forward', incoming: ['b'] }).catch(() => {});
+      expect(onUpdate, 'the nudge tween ran').not.toBeNull();
+
+      // Mid-tween the lifted view must sit one partial cell below its at-rest
+      // position, still carrying the reel offset - never at bare reel-local.
+      const pitch = reel.motion.slotPitch;
+      expect(wildView.y).toBeGreaterThan(offset - 1e-6);
+      expect(wildView.y).toBeLessThan(offset + pitch + 1e-6);
     } finally {
       h.destroy();
     }

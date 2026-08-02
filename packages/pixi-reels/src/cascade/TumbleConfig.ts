@@ -4,6 +4,7 @@
  * build time. Pure animation values. every callback you want is an event
  * (`reelSet.events.on('cascade:...', ...)`), never a config field.
  */
+import type { Direction } from '../core/ReelAxis.js';
 
 export interface TumbleFallConfig {
   /**
@@ -94,16 +95,54 @@ export interface TumbleConfig {
   fall?: TumbleFallConfig;
   /** Drop-in animation (new symbols arriving after `setResult` or in `refill`). */
   dropIn?: TumbleDropInConfig;
+  /**
+   * Which way symbols settle along the strip. Default `'auto'`.
+   *
+   *   - `'auto'` (default). follow each reel's own travel direction, so a
+   *     reel built with `.direction('reverse')` cascades upward (or leftward,
+   *     on a horizontal set) without any further configuration. This is what
+   *     you want almost always.
+   *   - `'forward'`. always settle toward the larger main coordinate (down /
+   *     right), whichever way the reel spins.
+   *   - `'reverse'`. always settle toward the smaller main coordinate (up /
+   *     left).
+   *
+   * Gravity is independent of direction so a reel can spin one way and drop
+   * the other, but the default ties them together because that is the
+   * physically coherent case. Orientation never enters into it: gravity picks
+   * an END of the strip, and the axis decides which screen edge that is.
+   *
+   * Whichever edge gravity exits by is also the edge the server must pack
+   * survivors against in the grids it sends -- the engine animates the
+   * result, it does not reorder it.
+   */
+  gravity?: 'auto' | Direction;
 }
 
 /** Resolved config with defaults applied. Internal type. */
 export interface ResolvedTumbleConfig {
   fall: Required<TumbleFallConfig>;
   dropIn: Required<TumbleDropInConfig>;
+  gravity: 'auto' | Direction;
+}
+
+/**
+ * Resolve `'auto'` against a reel's own travel direction. Phases call this
+ * rather than reading `axis.polarity`, because gravity and travel are
+ * separable (ADR 016 section 3.6) and only coincide under the default.
+ */
+export function resolveGravity(gravity: 'auto' | Direction, direction: Direction): Direction {
+  return gravity === 'auto' ? direction : gravity;
+}
+
+/** `+1` when gravity settles toward the larger main coordinate, `-1` otherwise. */
+export function gravitySign(gravity: Direction): 1 | -1 {
+  return gravity === 'forward' ? 1 : -1;
 }
 
 export function resolveTumbleConfig(config: TumbleConfig | undefined): ResolvedTumbleConfig {
   return {
+    gravity: config?.gravity ?? 'auto',
     fall: {
       duration: config?.fall?.duration ?? 300,
       ease: config?.fall?.ease ?? 'sine.in',

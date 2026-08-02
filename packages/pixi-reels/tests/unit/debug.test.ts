@@ -5,7 +5,7 @@
  */
 import { describe, it, expect, afterEach } from 'vitest';
 import { createTestReelSet } from '../../src/testing/index.js';
-import { enableDebug } from '../../src/debug/debug.js';
+import { enableDebug, debugSnapshot } from '../../src/debug/debug.js';
 
 describe('enableDebug per-instance registry', () => {
   const g = globalThis as unknown as { window?: Record<string, unknown> };
@@ -31,6 +31,26 @@ describe('enableDebug per-instance registry', () => {
     } finally {
       a.destroy();
       b.destroy();
+    }
+  });
+});
+
+describe('debugSnapshot reports the travel axis', () => {
+  // `allSymbols[].y` was hard-coded, so on a horizontal set - the one
+  // orientation v2 exists to add - every symbol reported a constant 0 and the
+  // snapshot carried no positional information at all.
+  it('varies `main` along the strip in both orientations', () => {
+    for (const orientation of ['vertical', 'horizontal'] as const) {
+      const h = createTestReelSet({ orientation, reels: 2, visibleCells: 3 });
+      try {
+        const snap = debugSnapshot(h.reelSet);
+        const mains = snap.reels[0].allSymbols.map((s) => s.main);
+        expect(new Set(mains).size, `${orientation} main varies`).toBe(mains.length);
+        expect(snap.reels[0].orientation).toBe(orientation);
+        expect(snap.reels[0].direction).toBe('forward');
+      } finally {
+        h.destroy();
+      }
     }
   });
 });

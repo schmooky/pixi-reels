@@ -42,7 +42,7 @@ new ReelSetBuilder()
   .visibleRows(3)
   .visibleRowsPerReel([3, 5, 5, 5, 3])
   .reelPixelHeights([300, 500, 500, 500, 300])
-  .reelAnchor('bottom')
+  .reelAnchor('bottom')   // or 'top'
   .bufferSymbols({ above: 1, below: 0 });
 ```
 
@@ -54,7 +54,7 @@ new ReelSetBuilder()
   .visibleCells(3)
   .visibleCellsPerReel([3, 5, 5, 5, 3])
   .reelExtents([300, 500, 500, 500, 300])
-  .reelAnchor('end')
+  .reelAnchor('end')      // or 'start'
   .bufferSymbols({ start: 1, end: 0 });
 ```
 
@@ -196,6 +196,27 @@ reelSet.events.on('cascade:place:end', (e) => console.log(e.winnerCells));
 `'endFirst'` is what `'bottomToTop'` meant: the cell at the gravity-exit
 edge moves first. `DropOffset.originalRow` / `.offsetRows` are
 `.originalCell` / `.offsetCells`.
+
+`DropOffset` also gains `isNew`. If you branched on `originalCell < 0` to
+tell an arriving symbol from a surviving one, switch to `isNew` -- the sign
+test only holds under forward gravity.
+
+### Cascades on a reverse or horizontal set
+
+`tumble()` takes a `gravity`, defaulting to `'auto'`, which follows each
+reel's own direction. A reverse or horizontal cascade needs nothing extra:
+
+```ts
+builder.direction('reverse').tumble({});        // drains up, refills from below
+builder.orientation('horizontal').tumble({});   // drains right, refills from the left
+builder.tumble({ gravity: 'reverse' });         // spin one way, drop the other
+```
+
+**Gotcha:** whichever edge gravity exits by is the edge your server must
+pack survivors against in the grids it returns. The engine animates the
+result, it does not reorder it. On a `'reverse'` cascade that means
+survivors first and new symbols at the END of each column, the mirror of
+the v1 convention.
 
 ## Nudge
 
@@ -384,6 +405,49 @@ draws in front. It is geometric on purpose -- `direction('reverse')` does
 drawn, and a per-spin reversal tease does not visibly re-layer the board.
 Pass `'descending'` if your art wants the opposite.
 
+## Cascade grids are validated now
+
+`refill()` and `runCascade()`'s `nextGrid` run the same checks `setResult()`
+always did: shape, v1 option keys, and buffer counts that fit the reels.
+
+They previously checked nothing. A grid still carrying `bufferAbove` was
+read for `bufferStart`, came back `undefined`, and got **silently
+random-filled** -- on every stage of the chain. If a cascade of yours has
+been quietly dropping a peeking symbol, this is why, and it now throws
+instead. Errors name their own entry point, so a bad `nextGrid` says
+`runCascade(): nextGrid`, not `refill()`.
+
+## The debug snapshot follows the travel axis
+
+`debugSnapshot()`'s `reels[].allSymbols[].y` is now `.main`, the coordinate
+along that reel's travel axis, and each reel reports its `orientation` and
+`direction`:
+
+```ts
+// Before
+snap.reels[0].allSymbols[0].y
+// After
+snap.reels[0].allSymbols[0].main
+snap.reels[0].orientation  // 'vertical' | 'horizontal'
+```
+
+The old field was hard-coded to `view.y`, so on a horizontal set every
+symbol reported a constant `0`.
+
+## The v1 rename tables are no longer exported
+
+`CODEMOD_HINT`, `V1_BUILDER_METHODS`, `V1_OPTION_KEYS` and
+`V1_OPTION_VALUES` were public in the pre-release. They are 1.x migration
+scaffolding, and exporting them would have pinned it into all of 2.x.
+
+Nothing you write needs them: the guards still read the table internally,
+and every throw already names the replacement and the codemod. If you built
+your own migration tooling against these, copy the pairs you need out of
+[the tables above](#geometry) -- they are frozen, not evolving.
+
+`Gsap` is now exported, so you can name the type you pass to
+`driveGsapWithTicker(ticker, gsap)` and `ReelConfig.gsap`.
+
 ## What the codemod will not do
 
 It is an AST transform, so it leaves two things for you:
@@ -394,6 +458,15 @@ It is an AST transform, so it leaves two things for you:
   your values passed positionally.
 - **your comments.** Grep them afterwards.
 
-Anything it missed on the API surface is a type error. And anything that
-reaches the engine with a v1 key throws at the call site, naming the
-replacement.
+Most of what it misses on the API surface is a type error, and a v1 key
+that reaches the engine throws at the call site naming the replacement.
+
+Two caveats worth a grep rather than trust:
+
+- **Review the codemod's diff before you keep it.** It rewrites the names
+  it knows wherever it can prove the receiver is a reel set or builder;
+  anything it cannot prove, it leaves alone and reports.
+- **`nudge({ direction })` values.** `'down'` / `'up'` became
+  `'forward'` / `'reverse'`. Passing the old value throws, but only the
+  literal form inside a `nudge(...)` call gets rewritten -- a direction
+  hoisted into a config object is yours to fix.

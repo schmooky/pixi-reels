@@ -5,6 +5,7 @@
  * `as never`), which is the one TypeScript cannot catch.
  */
 import { describe, it, expect } from 'vitest';
+import { createTestReelSet } from '../../src/testing/index.js';
 import { ReelSetBuilder } from '../../src/core/ReelSetBuilder.js';
 
 const CODEMOD = /npx pixi-reels-codemod v1-to-v2/;
@@ -95,5 +96,69 @@ describe('v2 shapes are accepted', () => {
         .tumble({ fall: { cellStagger: 40, cellOrder: 'endFirst' } })
         .initialFrame([{ visible: ['a'], bufferStart: ['b'] }]),
     ).not.toThrow();
+  });
+});
+
+describe('cascade grids go through the same gate as setResult', () => {
+  // `refill()` and `runCascade`'s `nextGrid` used to skip validation
+  // entirely, so a stale `bufferAbove` reached `columnTargetToStrip`, came
+  // back `undefined`, and got silently random-filled on every cascade stage.
+  const makeCascadeSet = () =>
+    createTestReelSet({
+      reels: 2,
+      visibleCells: 3,
+      symbolIds: ['a', 'b'],
+      tumble: { fall: { duration: 0 }, dropIn: { duration: 0 } },
+      initialFrame: [{ visible: ['a', 'a', 'a'] }, { visible: ['a', 'a', 'a'] }],
+    });
+
+  it('refill() rejects a v1 bufferAbove key', async () => {
+    const h = makeCascadeSet();
+    try {
+      await expect(
+        h.reelSet.refill({
+          winners: [{ reel: 0, cell: 0 }],
+          grid: [
+            { visible: ['b', 'a', 'a'], bufferAbove: ['b'] },
+            { visible: ['a', 'a', 'a'] },
+          ] as never,
+        }),
+      ).rejects.toThrowError(/refill\(\): grid column 0: 'bufferAbove' was renamed to 'bufferStart'/);
+    } finally {
+      h.destroy();
+    }
+  });
+
+  it('refill() rejects the removed string[][] form', async () => {
+    const h = makeCascadeSet();
+    try {
+      await expect(
+        h.reelSet.refill({
+          winners: [{ reel: 0, cell: 0 }],
+          grid: [['b', 'a', 'a'], ['a', 'a', 'a']] as never,
+        }),
+      ).rejects.toThrowError(/refill\(\): grid/);
+    } finally {
+      h.destroy();
+    }
+  });
+
+  it("runCascade()'s nextGrid names itself, not refill()", async () => {
+    const h = makeCascadeSet();
+    try {
+      await expect(
+        h.reelSet.runCascade({
+          detectWinners: (grid) => (grid[0][0] === 'a' ? [{ reel: 0, cell: 0 }] : []),
+          nextGrid: () =>
+            [
+              { visible: ['b', 'a', 'a'], bufferBelow: ['b'] },
+              { visible: ['a', 'a', 'a'] },
+            ] as never,
+          pauseAfterDestroyMs: 0,
+        }),
+      ).rejects.toThrowError(/runCascade\(\): nextGrid column 0: 'bufferBelow' was renamed to 'bufferEnd'/);
+    } finally {
+      h.destroy();
+    }
   });
 });

@@ -1,9 +1,13 @@
 import type { gsap } from 'gsap';
 import { ReelPhase } from './ReelPhase.js';
+import type { Reel } from '../../core/Reel.js';
+import type { SpeedProfile } from '../../config/types.js';
 import type { ReelSymbol } from '../../symbols/ReelSymbol.js';
 import type { EventEmitter } from '../../events/EventEmitter.js';
 import type { ReelSetEvents } from '../../events/ReelEvents.js';
 import { computeDropOffsets } from '../../cascade/tumbleAlgorithm.js';
+import { resolveGravity } from '../../cascade/TumbleConfig.js';
+import type { Direction } from '../../core/ReelAxis.js';
 
 export interface CascadePlacePhaseConfig {
   /** Full target frame for this reel: buffer-above + visible + buffer-below. */
@@ -35,6 +39,13 @@ export class CascadePlacePhase extends ReelPhase<CascadePlacePhaseConfig> {
 
   private _config: CascadePlacePhaseConfig | null = null;
   private _delayedCall: gsap.core.Tween | null = null;
+  /** Build-time gravity setting; `'auto'` resolves per reel at place time. */
+  private readonly _gravity: 'auto' | Direction;
+
+  constructor(reel: Reel, speed: SpeedProfile, gravity: 'auto' | Direction = 'auto') {
+    super(reel, speed);
+    this._gravity = gravity;
+  }
 
   protected onEnter(config: CascadePlacePhaseConfig): void {
     this._config = config;
@@ -94,7 +105,12 @@ export class CascadePlacePhase extends ReelPhase<CascadePlacePhaseConfig> {
     const offsets = computeDropOffsets(
       reel.visibleCells,
       this._config.winnerCells,
-      { initial: this._config.initial },
+      {
+        initial: this._config.initial,
+        // Must match the gravity CascadeDropInPhase will animate under, or
+        // the mover/survivor split computed here reveals the wrong cells.
+        gravity: resolveGravity(this._gravity, reel.axis.direction),
+      },
     );
     // Big symbols: every occupied cell of a block resolves to the SAME anchor
     // view. Reveal it ONCE, keyed on the first visible cell of the block

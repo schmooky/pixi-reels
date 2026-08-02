@@ -120,15 +120,11 @@ export {
   setTargetSlot,
 } from './frame/ColumnTarget.js';
 
-// v1 -> v2 rename table. shared by the builder's fail-loud guards and the
-// `pixi-reels-codemod` transform, and useful to anyone writing their own
-// migration tooling.
-export {
-  CODEMOD_HINT,
-  V1_BUILDER_METHODS,
-  V1_OPTION_KEYS,
-  V1_OPTION_VALUES,
-} from './config/v1Renames.js';
+// The v1 -> v2 rename table is deliberately NOT exported. It is 1.x
+// migration scaffolding: the builder's fail-loud guards read it internally
+// and every throw already names the replacement, so nothing a consumer
+// writes needs the table itself. Exporting it would semver-lock migration
+// state into all of 2.x. The guards go in 3.0; see ADR 016 section 6.2.
 
 // Pool
 export { ObjectPool } from './pool/ObjectPool.js';
@@ -206,6 +202,10 @@ export type { Disposable } from './utils/Disposable.js';
 export { TickerRef } from './utils/TickerRef.js';
 export type { TickerCallback } from './utils/TickerRef.js';
 export { driveGsapWithTicker } from './utils/gsapTicker.js';
+// The gsap instance type. Public because it is the 2nd parameter of
+// `driveGsapWithTicker`, the type of `ReelConfig.gsap`, and the return of
+// the `Reel.gsap` accessor.
+export type { Gsap } from './utils/gsap.js';
 
 // Debug
 export {

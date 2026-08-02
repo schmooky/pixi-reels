@@ -34,6 +34,14 @@ export interface TestReelSetOptions {
   direction?: import('../core/ReelAxis.js').Direction;
   /** Per-reel travel direction override (length must equal `reels`). */
   directionPerReel?: import('../core/ReelAxis.js').Direction[];
+  /**
+   * Cascade/tumble config, same shape as `ReelSetBuilder.tumble(...)`. Pass
+   * `{}` for the defaults. Without this the set spins strips instead of
+   * cascading, so a cascade test that also wants a non-default
+   * `orientation` / `direction` has to hand-roll a builder - which is
+   * exactly why the cascade suite had no axis coverage.
+   */
+  tumble?: import('../cascade/TumbleConfig.js').TumbleConfig;
   /** Number of symbols above + below the visible area. Defaults to the builder default. */
   bufferSymbols?: number | { start: number; end: number };
   /** Initial symbol grid. Same `ColumnTarget[]` form as `ReelSetBuilder.initialFrame`. */
@@ -74,11 +82,11 @@ export interface TestReelSetHandle {
  * });
  *
  * await spinAndLand([
- *   ['cherry','cherry','cherry'],
- *   ['seven','seven','seven'],
- *   ['wild','wild','wild'],
- *   ['cherry','cherry','cherry'],
- *   ['seven','seven','seven'],
+ *   { visible: ['cherry','cherry','cherry'] },
+ *   { visible: ['seven','seven','seven'] },
+ *   { visible: ['wild','wild','wild'] },
+ *   { visible: ['cherry','cherry','cherry'] },
+ *   { visible: ['seven','seven','seven'] },
  * ]);
  * ```
  */
@@ -143,6 +151,9 @@ export function createTestReelSet(opts: TestReelSetOptions = {}): TestReelSetHan
   if (opts.directionPerReel) {
     builder.directionPerReel(opts.directionPerReel);
   }
+  if (opts.tumble) {
+    builder.tumble(opts.tumble);
+  }
 
   const reelSet = builder.build();
 
@@ -170,9 +181,8 @@ export function createTestReelSet(opts: TestReelSetOptions = {}): TestReelSetHan
  * two-stage `skipSpin()` boost machine), so the returned promise resolves on
  * a microtask.
  *
- * Accepts plain visible-cells `string[][]` (each inner array becomes the
- * `visible` field of a fresh `ColumnTarget`) or the explicit `ColumnTarget[]`
- * shape. `ColumnTarget[]` only, the same as `setResult`.
+ * Takes `ColumnTarget[]`, the same as `setResult`. There is no `string[][]`
+ * convenience form anywhere in v2.
  */
 export async function spinAndLand(reelSet: ReelSet, grid: ColumnTarget[]): Promise<SpinResult> {
   const promise = reelSet.spin();
