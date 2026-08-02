@@ -9,6 +9,8 @@ tags:
   - scatter
   - near-miss
   - spine
+  - horizontal
+  - reverse
 apis: []
 steps: []
 ---
@@ -31,6 +33,16 @@ Pair setAnticipation with a `bufferStart` prefill so a chosen symbol sits at the
 
 <RecipeDemo code="anticipation-teaser" />
 
+<a id="anticipation-reverse-teaser"></a>
+
+## Teaser on a reel that spins up
+
+The same teaser on a `direction('reverse')` set. Buffers are geometric, so `bufferStart` is still the slot above the window - which on a reverse reel is the side symbols have already left.
+
+**Gotcha:** park the teaser on the feed edge, not on `bufferStart` out of habit. `reel.axis.feedEdge` reports `'start'` on a forward reel and `'end'` on a reverse one, so one branch covers both.
+
+<RecipeDemo code="anticipation-reverse-teaser" />
+
 <a id="scatter-anticipation"></a>
 
 ## Scatter-driven anticipation
@@ -38,6 +50,16 @@ Pair setAnticipation with a `bufferStart` prefill so a chosen symbol sits at the
 Pick the tease reels straight from the result grid with anticipationForScatters.
 
 <RecipeDemo code="scatter-anticipation" />
+
+<a id="anticipation-horizontal-scatter"></a>
+
+## Tension on a horizontal set
+
+Scatter-driven anticipation with the strips running sideways. `anticipationForScatters` scans reels 0, 1, 2, 3 and `setAnticipation` holds the trailing ones, exactly as on a vertical set - reel index is orientation-neutral, so no tension code branches.
+
+**Gotcha:** what changes is where those reels sit. On a horizontal set reels march down the screen, so "the last two reels tease" plays as the bottom two rows crawling sideways, not as the rightmost columns.
+
+<RecipeDemo code="anticipation-horizontal-scatter" height={340} />
 
 <a id="staggered-anticipation"></a>
 

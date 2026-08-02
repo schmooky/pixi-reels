@@ -10,6 +10,9 @@ tags:
   - mystery
   - respin
   - cell-pin
+  - horizontal
+  - reverse
+  - orientation
 apis: []
 steps: []
 ---
@@ -75,6 +78,24 @@ Mystery bushes land and burst; an overlay Spine plays the reveal while `activate
 <RecipeDemo code="spine-mystery-reveal" height={460} />
 
 <AssetCredit studio="Thunderkick" />
+
+<a id="wilds-horizontal-expanding"></a>
+
+## Expanding wild on a horizontal set
+
+The same expand-the-whole-reel pin on `.orientation('horizontal')`. Pins are index space, so the code is unchanged; the expansion just paints a screen row instead of a column.
+
+<RecipeDemo code="wilds-horizontal-expanding" height={300} />
+
+<a id="wilds-reverse-sticky-respin"></a>
+
+## Sticky wilds on a roll-up respin
+
+A `.direction('reverse')` set: the reels travel upward through three respins while pinned wilds hold their cells, and new wilds picked up on the way stick too.
+
+**Gotcha:** pin coordinates stay geometric. cell 0 is the top cell whichever edge the strip feeds from.
+
+<RecipeDemo code="wilds-reverse-sticky-respin" height={300} />
 
 <a id="sticky-win-respin-pin"></a>
 

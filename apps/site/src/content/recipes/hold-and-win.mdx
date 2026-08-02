@@ -9,6 +9,9 @@ tags:
   - collector
   - respin
   - spine
+  - horizontal
+  - reverse
+  - orientation
 apis: []
 steps: []
 ---
@@ -178,6 +181,26 @@ A ×100 badge lives in coin.data and rides as a child of the symbol's view, so i
 A board runs a full feature while every board.events beat prints to a live log: the lifecycle, made visible.
 
 <RecipeDemo code="hold-and-win-trace" height={440} />
+
+<a id="hold-and-win-horizontal-lock"></a>
+
+## Hold & Win: cells that spin sideways
+
+The whole lock-and-respin round on `.orientation('horizontal')`, built straight on a ReelSet with CellPin: a pin claims a cell, the strip cannot overwrite it, and the engine holds the coin on screen while the row scrolls past behind it.
+
+**Gotcha:** `HoldAndWinBuilder` and `BoardGrid` build every cell as a vertical 1x1 ReelSet and expose no axis knob, so a board on another axis is a ReelSet plus pins.
+
+<RecipeDemo code="hold-and-win-horizontal-lock" height={340} />
+
+<a id="hold-and-win-reverse-respin"></a>
+
+## Hold & Win: free cells roll upward
+
+The same lock on a `.direction('reverse')` set, plus the spin option that pairs with it: a reel whose every cell is already locked goes into `spin({ holdReels })` and sits the wave out entirely.
+
+**Gotcha:** `setResult` still wants a full reel-count grid. entries at held indices are ignored, not omitted.
+
+<RecipeDemo code="hold-and-win-reverse-respin" height={340} />
 
 <a id="coin-value-symbol"></a>
 

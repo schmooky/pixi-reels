@@ -1,15 +1,17 @@
 ---
 title: "Orientation & direction"
 group: mechanics
-oneLiner: "Reels that travel sideways, upward, or per-reel - horizontal banners, roll-up, mixed direction, and a banner that joins a ways win."
+oneLiner: "Reels that travel sideways, upward, or per-reel - horizontal banners, roll-up, mixed direction, reading reel.axis, and a banner that joins a ways win."
 order: 55
 tags:
   - horizontal
   - orientation
   - direction
+  - reverse
   - roll-up
   - banner
   - ways
+  - axis
 apis: []
 steps: []
 ---
@@ -50,3 +52,23 @@ Every reel spins upward: one `.direction('reverse')` call. The same engine, even
 `.directionPerReel([...])` gives each reel its own travel direction for a woven, alternating look. Every reel still lands the exact server frame.
 
 <RecipeDemo code="roll-up-alternating" />
+
+<a id="orientation-horizontal-per-reel"></a>
+
+## Both knobs at once
+
+Orientation is set-level and fixed at `build()`; direction is per reel. They compose, so a horizontal set can still alternate: here the strips run sideways and rows 0 and 2 scroll right while rows 1 and 3 scroll left.
+
+**Gotcha:** a big symbol spanning more than one reel (`size.reels > 1`) cannot mix with mixed per-reel directions. The block coordinator assumes every reel a block covers feeds from the same edge, so `build()` throws rather than shipping a symbol that tears in half mid-spin. A uniform `directionPerReel` array is fine.
+
+<RecipeDemo code="orientation-horizontal-per-reel" height={340} />
+
+<a id="orientation-axis-readout"></a>
+
+## Read the axis instead of remembering it
+
+Every reel exposes `reel.axis`: `orientation`, `direction`, `polarity`, `mainProp`, `crossProp`, and `feedEdge`. Projecting one step of travel back to screen space with `axis.toScreen(0, axis.polarity)` draws the arrows below with no orientation branch anywhere - the same three lines point down on a vertical forward reel and left on a horizontal reverse one.
+
+**Gotcha:** `feedEdge` is derived from `polarity` and is never set twice. Read it (`'start'` forward, `'end'` reverse) when you need to know which side new symbols arrive from; do not track it yourself alongside `direction`.
+
+<RecipeDemo code="orientation-axis-readout" />

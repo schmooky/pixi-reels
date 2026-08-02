@@ -10,6 +10,9 @@ tags:
   - spine
   - geometry
   - sticky-wild
+  - horizontal
+  - reverse
+  - orientation
 apis: []
 steps: []
 ---
@@ -53,6 +56,26 @@ A tall 1xH block lands with its anchor in bufferStart, so only the bottom tail s
 Nudge the tail-visible wild fully into view, then respin the other reels with `holdReels` so the revealed block stays put.
 
 <RecipeDemo code="big-symbol-held-respin" height={300} />
+
+<a id="big-symbols-horizontal-block"></a>
+
+## Big symbol on a horizontal set
+
+A 2x3 block on `.orientation('horizontal')`, outlined on land with `getBlockBounds`. `size: { reels, cells }` is index space and does not rotate: `reels` always spans the reel-marching axis, `cells` always spans the strip.
+
+**Gotcha:** the screen mapping inverts. `{ reels: 2, cells: 3 }` is 2 wide and 3 tall on a vertical set, 2 tall and 3 wide here, and `getBlockBounds` (screen space) inverts with it.
+
+<RecipeDemo code="big-symbols-horizontal-block" height={300} />
+
+<a id="big-symbols-reverse-tail"></a>
+
+## Tail-visible block on a roll-up reel
+
+The partial-land tease on a `.direction('reverse')` reel: the block is anchored at the last visible cell with its body hanging into `bufferEnd`, then a `'forward'` nudge (upward, on this reel) drags it into full view.
+
+**Gotcha:** buffers are geometric, not travel-relative. `bufferStart` is above and `bufferEnd` below in both directions, so a reel that feeds from the bottom teases out of `bufferEnd`.
+
+<RecipeDemo code="big-symbols-reverse-tail" height={300} />
 
 <a id="get-block-bounds"></a>
 

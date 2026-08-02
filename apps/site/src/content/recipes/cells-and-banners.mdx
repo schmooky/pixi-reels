@@ -8,6 +8,8 @@ tags:
   - hit-areas
   - overlays
   - wins
+  - horizontal
+  - orientation
 apis: []
 steps: []
 ---
@@ -31,6 +33,24 @@ Attach pointer events to individual cells with getCellBounds; hover previews, cl
 **Gotcha:** fill the hit rect with alpha 0, not `visible = false`. an invisible-but-filled rect is still hit-testable; a hidden one is not.
 
 <RecipeDemo code="cell-hit-areas" />
+
+<a id="cells-horizontal-bounds"></a>
+
+## Cell bounds on a horizontal set
+
+`getCellBounds(reel, cell)` takes the same arguments on either axis, and (0, 0) is still the first cell of the first reel. The rect it returns transposes: on a horizontal set the reel index walks down the screen and the cell index walks across it, so the same cell index on every reel stacks vertically.
+
+**Gotcha:** the payline drawn through those centres therefore runs vertically, where identical code draws a horizontal line on a vertical set. Read the rects; do not infer them from the indices.
+
+<RecipeDemo code="cells-horizontal-bounds" />
+
+<a id="cells-horizontal-hit-areas"></a>
+
+## Hit areas on a horizontal set
+
+The same `for reel, for cell` loop, with no orientation branch: the bounds are already screen-space, so the hit boxes land on the symbols either way. Hover previews, click toggles a pick, picks survive spins.
+
+<RecipeDemo code="cells-horizontal-hit-areas" />
 
 <a id="board-grid-reveal"></a>
 

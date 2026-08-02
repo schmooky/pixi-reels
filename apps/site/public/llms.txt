@@ -8,7 +8,7 @@ Site: https://pixi-reels.schmooky.dev
 Repo: https://github.com/schmooky/pixi-reels
 Package: https://www.npmjs.com/package/pixi-reels
 
-Generated: 2026-08-02T11:58:01.448Z
+Generated: 2026-08-02T15:38:53.175Z
 
 ## Quick start
 
@@ -167,70 +167,70 @@ URL: https://pixi-reels.schmooky.dev/architecture/testing/
 
 ### Anticipation & near-miss
 URL: https://pixi-reels.schmooky.dev/recipes/anticipation/
-Tags: anticipation, tension, scatter, near-miss, spine
+Tags: anticipation, tension, scatter, near-miss, spine, horizontal, reverse
 APIs: 
 Steps:
   - 
 
 ### Big symbols & non-uniform grids
 URL: https://pixi-reels.schmooky.dev/recipes/big-symbols/
-Tags: big-symbols, multiways, pyramid, spine, geometry, sticky-wild
+Tags: big-symbols, multiways, pyramid, spine, geometry, sticky-wild, horizontal, reverse, orientation
 APIs: 
 Steps:
   - 
 
 ### Cascade & tumble
 URL: https://pixi-reels.schmooky.dev/recipes/cascade/
-Tags: cascade, tumble, refill, anticipation, spine, thunderkick
+Tags: cascade, tumble, refill, anticipation, spine, thunderkick, horizontal, reverse, orientation, gravity
 APIs: 
 Steps:
   - 
 
 ### Cells, bounds, paylines & overlays
 URL: https://pixi-reels.schmooky.dev/recipes/cells-and-banners/
-Tags: paylines, hit-areas, overlays, wins
+Tags: paylines, hit-areas, overlays, wins, horizontal, orientation
 APIs: 
 Steps:
   - 
 
 ### Hold & Win
 URL: https://pixi-reels.schmooky.dev/recipes/hold-and-win/
-Tags: hold-and-win, coins, collector, respin, spine
+Tags: hold-and-win, coins, collector, respin, spine, horizontal, reverse, orientation
 APIs: 
 Steps:
   - 
 
 ### Nudge
 URL: https://pixi-reels.schmooky.dev/recipes/nudge/
-Tags: nudge, stagger, spotlight, big-symbols, abort, skip
+Tags: nudge, stagger, spotlight, big-symbols, abort, skip, horizontal, reverse, orientation
 APIs: 
 Steps:
   - 
 
 ### Orientation & direction
 URL: https://pixi-reels.schmooky.dev/recipes/orientation-and-direction/
-Tags: horizontal, orientation, direction, roll-up, banner, ways
+Tags: horizontal, orientation, direction, reverse, roll-up, banner, ways, axis
 APIs: 
 Steps:
   - 
 
 ### Starters
 URL: https://pixi-reels.schmooky.dev/recipes/starters/
-Tags: starter, 5x3, cascade, multiways, hold-and-win
+Tags: starter, 5x3, cascade, multiways, hold-and-win, horizontal, reverse, orientation
 APIs: 
 Steps:
   - 
 
 ### Symbols, layering & motion blur
 URL: https://pixi-reels.schmooky.dev/recipes/symbols/
-Tags: symbols, layering, static-spin, motion-blur, spine
+Tags: symbols, layering, static-spin, motion-blur, spine, horizontal, orientation
 APIs: 
 Steps:
   - 
 
 ### Wilds, multipliers & mystery (CellPin)
 URL: https://pixi-reels.schmooky.dev/recipes/wilds-and-pins/
-Tags: wild, sticky, multiplier, mystery, respin, cell-pin
+Tags: wild, sticky, multiplier, mystery, respin, cell-pin, horizontal, reverse, orientation
 APIs: 
 Steps:
   - 
@@ -339,6 +339,147 @@ return {
     await new Promise(r => setTimeout(r, 220));
     reelSet.setAnticipation([3, 4]);
     reelSet.setResult(GRID.map((visible) => ({ visible })));
+    await p;
+  },
+};
+```
+
+### anticipation-horizontal-scatter
+URL: https://pixi-reels.schmooky.dev/recipes/anticipation-horizontal-scatter/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//                   WILD_CARD, anticipationForScatters, app, pickWeighted
+
+// Anticipation on a horizontal set. The tease is written exactly as it is on a
+// vertical one - `anticipationForScatters` scans reel 0, 1, 2, 3 and hands the
+// trailing reels to `setAnticipation` - because reel INDEX is orientation
+// -neutral. What moves is where those reels sit on screen.
+//
+// On a horizontal set reels march down Y, so "the last two reels tease" reads
+// as the bottom two rows crawling sideways while the top two have already
+// landed. Nothing in the tension code branches on orientation.
+
+const A = '7', B = '8', C = '9';
+const S = 'scatter';
+const SCATTER_SYM = { id: S, color: 0xff6b35, label: 'SCAT', textColor: 0xffffff };
+
+const REELS = 4; // strips, stacked down the screen
+const CELLS = 5; // cells along each strip
+
+// Two scatters land on reels 0 and 1 (the top two rows), so the trigger is met
+// there and reels 2 and 3 - the bottom two rows - are the tease set.
+const GRID = [
+  [A, B, S, C, A],
+  [B, S, A, C, B],
+  [C, A, B, A, C],
+  [A, C, C, B, A],
+];
+
+const reelSet = new ReelSetBuilder()
+  .orientation('horizontal')
+  .reels(REELS)
+  .visibleCells(CELLS)
+  .symbolSize(84, 64) // screen space: the strip advances by the 84px width
+  .symbolGap(6, 6)
+  .symbols((r) => {
+    for (const sym of [...CARD_DECK, WILD_CARD, SCATTER_SYM]) {
+      r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
+    }
+  })
+  .weights({ [A]: 10, [B]: 10, [C]: 10, [S]: 2 })
+  .speed('normal', SpeedPresets.NORMAL)
+  .ticker(app.ticker)
+  .build();
+
+// A long hold so the sideways crawl on the bottom rows is easy to watch.
+reelSet.speed.addProfile('demo', { ...SpeedPresets.NORMAL, anticipationDelay: 1600 });
+reelSet.setSpeed('demo');
+
+return {
+  reelSet,
+  onSpin: async () => {
+    const grid = GRID.map((visible) => ({ visible }));
+    // Same call, same argument order, same result on either axis.
+    const tease = anticipationForScatters(grid, { symbol: S, trigger: 2 });
+
+    const p = reelSet.spin();
+    await new Promise((r) => setTimeout(r, 220));
+    reelSet.setAnticipation(tease, { stagger: 'sequential', slowdown: { from: 0.35, to: 0.12 } });
+    reelSet.setResult(grid);
+    await p;
+  },
+};
+```
+
+### anticipation-reverse-teaser
+URL: https://pixi-reels.schmooky.dev/recipes/anticipation-reverse-teaser/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//                   WILD_CARD, app
+
+// The buffer teaser, on a reel that spins UP.
+//
+// Buffers are geometric: `bufferStart` is always the slot at the smaller main
+// coordinate (above for vertical, left for horizontal) and `bufferEnd` the
+// larger one. Direction never renames them. So the vertical teaser recipe's
+// `bufferStart` - which parks the coin above the window on a forward reel -
+// parks it on the side symbols have ALREADY left once the reel runs in reverse.
+//
+// The slot a reverse reel feeds through is the bottom one, so the approaching
+// symbol goes in `bufferEnd`. You do not have to work that out per set: the
+// engine derives it, and `reel.axis.feedEdge` reports 'start' on a forward reel
+// and 'end' on a reverse one.
+
+const COIN = 'coin';
+const COIN_CARD = { id: COIN, color: 0xfacc15, label: 'BIG', textColor: 0x6b5400 };
+
+const CARD_IDS = CARD_DECK.map((c) => c.id);
+function rv() { return CARD_IDS[Math.floor(Math.random() * CARD_IDS.length)]; }
+
+const reelSet = new ReelSetBuilder()
+  .reels(5)
+  .visibleCells(3)
+  .symbolSize(80, 80)
+  .symbolGap(4, 4)
+  .direction('reverse')
+  .bufferSymbols(1)
+  .symbols((r) => {
+    for (const sym of [...CARD_DECK, WILD_CARD, COIN_CARD]) {
+      r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
+    }
+  })
+  .speed('normal', SpeedPresets.NORMAL)
+  .ticker(app.ticker)
+  .build();
+
+// feedEdge is derived from the axis polarity, never set twice. Reads 'end' here.
+const FEED = reelSet.getReel(0).axis.feedEdge;
+
+reelSet.speed.addProfile('demo', { ...SpeedPresets.NORMAL, anticipationDelay: 1800 });
+reelSet.setSpeed('demo');
+
+return {
+  reelSet,
+  onSpin: async () => {
+    // Park the coin on whichever side this set feeds from, so the same code
+    // teases correctly on a forward set too.
+    const teaser = FEED === 'start' ? { bufferStart: [COIN] } : { bufferEnd: [COIN] };
+    const result = [
+      { visible: [rv(), rv(), rv()] },
+      { visible: [rv(), rv(), rv()] },
+      { visible: [rv(), rv(), rv()] },
+      { visible: [rv(), rv(), rv()], ...teaser },
+      { visible: [rv(), rv(), rv()], ...teaser },
+    ];
+
+    const p = reelSet.spin();
+    await new Promise((r) => setTimeout(r, 220));
+    reelSet.setAnticipation([3, 4]);
+    // Already ColumnTarget[]. do NOT re-wrap in { visible }, that drops the
+    // buffer entry and the teaser silently disappears.
+    reelSet.setResult(result);
     await p;
   },
 };
@@ -1020,6 +1161,90 @@ return {
 };
 ```
 
+### big-symbols-horizontal-block
+URL: https://pixi-reels.schmooky.dev/recipes/big-symbols-horizontal-block/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//                   SharedRectMaskStrategy, PIXI, app
+
+// A big symbol on a set that runs sideways.
+//
+// `size: { reels, cells }` is index space, not screen space, and it does not
+// move with the axis: `reels` always spans the reel-marching direction and
+// `cells` always spans the strip. On this horizontal set that means the block
+// below is 2 reels TALL (2 rows down the screen) and 3 cells WIDE - the same
+// declaration would be 2 wide and 3 tall on a vertical set.
+//
+// `getBlockBounds()` inverts with it. it returns screen space, so the rect it
+// hands back for a `{ reels: 2, cells: 3 }` block is wide and short here. The
+// outline drawn on land is the proof.
+
+const BLOCK = { id: 'block', color: 0xa3e4d7, label: 'WILD', textColor: 0x0e5345, reels: 2, cells: 3 };
+const REELS = 4;   // 4 rows down the screen
+const CELLS = 5;   // 5 cells along each row
+const SIZE = 64;
+const GAP = 4;
+const FILLER = ['7', '8', '9', '10', 'J', 'Q'];
+
+const reelSet = new ReelSetBuilder()
+  .orientation('horizontal')
+  .reels(REELS)
+  .visibleCells(CELLS)
+  .symbolSize(SIZE, SIZE)
+  .symbolGap(GAP, GAP)
+  // One shared rect instead of a per-reel mask: a block spanning two reels
+  // is clipped by its anchor reel's mask otherwise.
+  .maskStrategy(new SharedRectMaskStrategy())
+  .symbols((registry) => {
+    for (const card of CARD_DECK) {
+      registry.register(card.id, CardSymbol, { color: card.color, label: card.label });
+    }
+    registry.register(BLOCK.id, CardSymbol, {
+      color: BLOCK.color, label: BLOCK.label, textColor: BLOCK.textColor,
+    });
+  })
+  .weights(Object.fromEntries(FILLER.map((id) => [id, 1])))
+  .symbolData({
+    [BLOCK.id]: { weight: 0, zIndex: 5, size: { reels: BLOCK.reels, cells: BLOCK.cells } },
+  })
+  // The landing bounce overshoots along the travel axis - sideways here - and
+  // a block that wide reads as broken when it does. Zero it.
+  .speed('normal', { ...SpeedPresets.NORMAL, bounceDistance: 0, bounceDuration: 0 })
+  .ticker(app.ticker)
+  .build();
+
+const outline = new PIXI.Graphics();
+reelSet.addChild(outline);
+
+let planted = null;
+reelSet.events.on('spin:allLanded', () => {
+  outline.clear();
+  if (!planted) return;
+  const rect = reelSet.getBlockBounds(planted.reel, planted.cell);
+  outline
+    .roundRect(rect.x - 3, rect.y - 3, rect.width + 6, rect.height + 6, 8)
+    .stroke({ color: 0xff6b35, width: 4, alpha: 1 });
+});
+
+return {
+  reelSet,
+  nextResult: () => {
+    const grid = Array.from({ length: REELS }, () =>
+      Array.from({ length: CELLS }, () => FILLER[Math.floor(Math.random() * FILLER.length)]),
+    );
+    // The anchor is the smallest (reel, cell) corner in index space, which on
+    // screen is the block's top-left corner in both orientations.
+    const reel = Math.floor(Math.random() * (REELS - BLOCK.reels + 1));
+    const cell = Math.floor(Math.random() * (CELLS - BLOCK.cells + 1));
+    grid[reel][cell] = BLOCK.id;
+    planted = { reel, cell };
+    return grid;
+  },
+  cleanup: () => { try { outline.destroy(); } catch {} },
+};
+```
+
 ### big-symbols-mxn-giant
 URL: https://pixi-reels.schmooky.dev/recipes/big-symbols-mxn-giant/
 ```ts
@@ -1244,6 +1469,101 @@ return {
     const cell = Math.floor(Math.random() * (ROWS - WIDE.h + 1));
     grid[reel][cell] = WIDE.id;
     return grid;
+  },
+};
+```
+
+### big-symbols-reverse-tail
+URL: https://pixi-reels.schmooky.dev/recipes/big-symbols-reverse-tail/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, app
+
+// A tall block teased from the edge a ROLL-UP reel feeds from.
+//
+// Buffers are geometric, never travel-relative: `bufferStart` is always the
+// slot above the visible window and `bufferEnd` always the slot below it, in
+// both directions of travel. A `.direction('reverse')` reel feeds from the
+// BOTTOM, so the half-landed tease lives in bufferEnd - the mirror of the
+// vertical/forward "anchor in bufferStart" pattern.
+//
+// The block is anchored at the last visible cell with its body extending into
+// bufferEnd, so only its head shows. Nudging 'forward' then drags it fully
+// into view: nudge direction is relative to the reel's own axis, so on a
+// reverse reel 'forward' travels UP.
+
+const TALL = { id: 'tall', color: 0xff8c42, label: 'TALL', textColor: 0x4a1d00, reels: 1, cells: 3 };
+const REELS = 5;
+const CELLS = 3;
+const SIZE = 78;
+const GAP = 4;
+const TARGET = 2; // the reel that gets the block
+const FILLER_IDS = ['7', '8', '9', '10', 'J'];
+const filler = () => FILLER_IDS[Math.floor(Math.random() * FILLER_IDS.length)];
+const ct = () => ({ visible: [filler(), filler(), filler()] });
+
+const reelSet = new ReelSetBuilder()
+  .reels(REELS)
+  .visibleCells(CELLS)
+  // bufferEnd >= 2 so the 1x3 block can hang two cells below the window.
+  .bufferSymbols(2)
+  .symbolSize(SIZE, SIZE)
+  .symbolGap(GAP, GAP)
+  .direction('reverse') // symbols rise from below and land at the top
+  .symbols((registry) => {
+    for (const card of CARD_DECK) {
+      registry.register(card.id, CardSymbol, {
+        color: card.color, label: card.label, textColor: card.textColor,
+      });
+    }
+    registry.register(TALL.id, CardSymbol, {
+      color: TALL.color, label: TALL.label, textColor: TALL.textColor,
+    });
+  })
+  .weights(Object.fromEntries(FILLER_IDS.map((id) => [id, 1])))
+  .symbolData({
+    [TALL.id]: { weight: 0, zIndex: 5, size: { reels: TALL.reels, cells: TALL.cells } },
+  })
+  .speed('normal', { ...SpeedPresets.NORMAL, bounceDistance: 0, bounceDuration: 0 })
+  .ticker(app.ticker)
+  .build();
+
+return {
+  reelSet,
+  onSpin: async () => {
+    // 1. Land the block with its anchor on the LAST visible cell. The engine
+    //    paints OCCUPIED into bufferEnd[0] and bufferEnd[1] itself, so only
+    //    the block's head shows, at the edge the reel feeds from.
+    const grid = [ct(), ct(), { visible: [filler(), filler(), TALL.id] }, ct(), ct()];
+    const p = reelSet.spin();
+    await new Promise((r) => setTimeout(r, 220));
+    reelSet.setResult(grid);
+    await p;
+    await new Promise((r) => setTimeout(r, 700));
+
+    // 2. Nudge 'forward' by 2: on a reverse reel that travels UP, so the
+    //    anchor climbs from cell 2 to cell 0 and the block fills the window.
+    //    Survival check (this reel feeds from the end edge): anchor strip
+    //    index - distance >= 0, i.e. (bufferStart 2 + cell 2) - 2 = 2.
+    //    `incoming` is always start-to-end (top-down) order; here every
+    //    visible cell ends up owned by the block, so the pair is consumed by
+    //    the wrap pipeline rather than shown. Pass real ids regardless.
+    await reelSet.nudge(TARGET, {
+      distance: 2,
+      direction: 'forward',
+      incoming: [filler(), filler()],
+      duration: 640,
+    });
+    await new Promise((r) => setTimeout(r, 800));
+
+    // 3. Nudge 'reverse' by 2 to push it back out of frame - downward, since
+    //    it is this reel's against-travel direction.
+    await reelSet.nudge(TARGET, {
+      distance: 2,
+      direction: 'reverse',
+      incoming: [filler(), filler()],
+      duration: 540,
+    });
   },
 };
 ```
@@ -1590,6 +1910,135 @@ return {
 };
 ```
 
+### cascade-horizontal-tumble
+URL: https://pixi-reels.schmooky.dev/recipes/cascade-horizontal-tumble/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, app
+
+// A full tumble cascade running SIDEWAYS.
+//
+// `.orientation('horizontal')` makes every reel a screen ROW whose strip
+// travels along X; the reels themselves march down the Y axis. Nothing in the
+// cascade setup changes: `tumble({ gravity })` defaults to `'auto'`, so each
+// reel drains toward the edge it travels toward - right, here - and the refill
+// enters from the left.
+//
+// The server contract travels with gravity: whichever edge gravity exits by is
+// the edge SURVIVORS must be packed against in the grid you return. The engine
+// animates the grid it is given, it never reorders it. Forward gravity packs
+// survivors at the END of each reel's cells, so `nextGrid` returns
+// `[...fresh, ...survivors]`.
+
+const IDS = ['7', '8', '9', '10', 'J'];
+const REELS = 4;   // 4 rows down the screen
+const CELLS = 6;   // 6 cells along each row
+const SIZE = 62;
+const RUN = 3;     // 3 in a row pays
+const HIT_REEL = 1, HIT_ID = '10', HIT_START = 2;
+
+const rand = () => IDS[Math.floor(Math.random() * IDS.length)];
+
+// Filler that never accidentally seeds a run, so the demo only pays where
+// the script says it pays.
+function fillerReel() {
+  const out = [];
+  for (let c = 0; c < CELLS; c++) {
+    let s;
+    do { s = rand(); } while (c >= 2 && out[c - 1] === s && out[c - 2] === s);
+    out.push(s);
+  }
+  return out;
+}
+
+// Runs of 3+ identical symbols inside one reel. A reel is a row on screen, so
+// this is the sideways twin of "3 in a column" - the rule is written in cell
+// indices and never mentions the axis.
+function runsIn(grid) {
+  const winners = [];
+  for (let reel = 0; reel < grid.length; reel++) {
+    let start = 0;
+    for (let cell = 1; cell <= CELLS; cell++) {
+      if (cell === CELLS || grid[reel][cell] !== grid[reel][start]) {
+        if (cell - start >= RUN) {
+          for (let k = start; k < cell; k++) winners.push({ reel, cell: k });
+        }
+        start = cell;
+      }
+    }
+  }
+  return winners;
+}
+
+const reelSet = new ReelSetBuilder()
+  .orientation('horizontal')
+  .reels(REELS)
+  .visibleCells(CELLS)
+  // Screen-space, always: the strip advances by the symbol WIDTH here, and
+  // symbolGap.x is the along-strip gap while symbolGap.y separates the rows.
+  .symbolSize(SIZE, SIZE)
+  .symbolGap(4, 4)
+  .symbols((r) => {
+    for (const sym of CARD_DECK) {
+      if (IDS.includes(sym.id)) {
+        r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
+      }
+    }
+  })
+  .weights(Object.fromEntries(IDS.map((id) => [id, 1])))
+  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 120 })
+  .tumble({
+    fall:   { duration: 280, ease: 'power3.in', cellStagger: 60 },
+    dropIn: { duration: 430, ease: 'power2.in', cellStagger: 60, distance: 'perHole' },
+    // gravity: 'auto' is the default and what you want here. Spelling it
+    // 'forward' would be identical, since these reels travel forward.
+  })
+  .ticker(app.ticker)
+  .build();
+
+return {
+  reelSet,
+  onSpin: async () => {
+    const grid = Array.from({ length: REELS }, () => fillerReel());
+    for (let k = 0; k < RUN; k++) grid[HIT_REEL][HIT_START + k] = HIT_ID;
+
+    // 'ltr' is reel order, not screen order: reel 0 lands first, which reads
+    // top row down on a horizontal set.
+    reelSet.setDropOrder('ltr');
+    const spinDone = reelSet.spin();
+    await new Promise((r) => setTimeout(r, 220));
+    reelSet.setResult(grid.map((visible) => ({ visible })));
+    await spinDone;
+    await new Promise((r) => setTimeout(r, 300));
+
+    reelSet.setDropOrder('all');
+    await reelSet.runCascade({
+      // Stop the chain after three stages so the demo always ends.
+      detectWinners: (g, chain) => (chain >= 3 ? [] : runsIn(g)),
+      nextGrid: (prev, winners) => {
+        const winsByReel = new Map();
+        for (const w of winners) {
+          const arr = winsByReel.get(w.reel) ?? [];
+          arr.push(w.cell);
+          winsByReel.set(w.reel, arr);
+        }
+        return prev.map((cells, reel) => {
+          const wins = winsByReel.get(reel);
+          if (!wins) return { visible: [...cells] };
+          const survivors = cells.filter((_, cell) => !wins.includes(cell));
+          const fresh = wins.map(() => rand());
+          // Forward gravity: survivors keep their order and pack against the
+          // exit edge (the last cells, i.e. screen right); the fresh symbols
+          // stack behind them at the entry edge.
+          return { visible: [...fresh, ...survivors] };
+        });
+      },
+      pauseAfterDestroyMs: 220,
+    });
+  },
+};
+```
+
 ### cascade-open-drop
 URL: https://pixi-reels.schmooky.dev/recipes/cascade-open-drop/
 ```ts
@@ -1711,6 +2160,120 @@ return {
         return out;
       },
       pauseAfterDestroyMs: 167,
+    });
+  },
+};
+```
+
+### cascade-reverse-gravity
+URL: https://pixi-reels.schmooky.dev/recipes/cascade-reverse-gravity/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, app
+
+// Spin one way, drop the other.
+//
+// These reels roll UP (`.direction('reverse')`), but the tumble is told to
+// settle DOWN (`tumble({ gravity: 'forward' })`). Gravity is separable from
+// travel precisely so a set can do this; the default `'auto'` ties them
+// together, which is what you want for everything else.
+//
+// Two consequences, and they are the whole recipe:
+//   - The opening drop and every refill enter from the TOP and land downward,
+//     even though the strip-spin phase travels upward.
+//   - Because gravity exits through the bottom edge, the server must pack
+//     survivors against the LAST cells: `[...fresh, ...survivors]`. Leave
+//     gravity at 'auto' on a reverse reel and the whole contract flips -
+//     survivors pack against cell 0 and `nextGrid` returns
+//     `[...survivors, ...fresh]` instead.
+
+const IDS = ['7', '8', '9', '10', 'J', 'Q'];
+const REELS = 5, CELLS = 4, SIZE = 68;
+const RUN = 3;
+const HIT_CELL = 1, HIT_ID = 'Q';
+
+const rand = () => IDS[Math.floor(Math.random() * IDS.length)];
+const randExcept = (id) => {
+  let s;
+  do { s = rand(); } while (s === id);
+  return s;
+};
+
+// Any 3+ adjacent reels showing the same symbol on the same cell pays.
+function linesIn(grid) {
+  const winners = [];
+  for (let cell = 0; cell < CELLS; cell++) {
+    let start = 0;
+    for (let reel = 1; reel <= REELS; reel++) {
+      if (reel === REELS || grid[reel][cell] !== grid[start][cell]) {
+        if (reel - start >= RUN) {
+          for (let k = start; k < reel; k++) winners.push({ reel: k, cell });
+        }
+        start = reel;
+      }
+    }
+  }
+  return winners;
+}
+
+const reelSet = new ReelSetBuilder()
+  .reels(REELS)
+  .visibleCells(CELLS)
+  .symbolSize(SIZE, SIZE)
+  .symbolGap(4, 4)
+  .direction('reverse') // roll-up: the strip travels toward the top edge
+  .symbols((r) => {
+    for (const sym of CARD_DECK) {
+      if (IDS.includes(sym.id)) {
+        r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
+      }
+    }
+  })
+  .weights(Object.fromEntries(IDS.map((id) => [id, 1])))
+  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 110 })
+  .tumble({
+    fall:   { duration: 280, ease: 'power3.in', cellStagger: 60 },
+    dropIn: { duration: 440, ease: 'power2.in', cellStagger: 60, distance: 'perHole' },
+    gravity: 'forward', // <- drop down while the reels spin up
+  })
+  .ticker(app.ticker)
+  .build();
+
+return {
+  reelSet,
+  onSpin: async () => {
+    const grid = Array.from({ length: REELS }, () =>
+      Array.from({ length: CELLS }, () => randExcept(HIT_ID)),
+    );
+    for (let reel = 0; reel < RUN; reel++) grid[reel][HIT_CELL] = HIT_ID;
+
+    reelSet.setDropOrder('ltr');
+    const spinDone = reelSet.spin();
+    await new Promise((r) => setTimeout(r, 220));
+    reelSet.setResult(grid.map((visible) => ({ visible })));
+    await spinDone;
+    await new Promise((r) => setTimeout(r, 300));
+
+    reelSet.setDropOrder('all');
+    await reelSet.runCascade({
+      detectWinners: (g, chain) => (chain >= 3 ? [] : linesIn(g)),
+      nextGrid: (prev, winners) => {
+        const winsByReel = new Map();
+        for (const w of winners) {
+          const arr = winsByReel.get(w.reel) ?? [];
+          arr.push(w.cell);
+          winsByReel.set(w.reel, arr);
+        }
+        return prev.map((cells, reel) => {
+          const wins = winsByReel.get(reel);
+          if (!wins) return { visible: [...cells] };
+          const survivors = cells.filter((_, cell) => !wins.includes(cell));
+          const fresh = wins.map(() => rand());
+          // gravity: 'forward' -> survivors pack against the bottom.
+          return { visible: [...fresh, ...survivors] };
+        });
+      },
+      pauseAfterDestroyMs: 220,
     });
   },
 };
@@ -1911,6 +2474,203 @@ return {
     reelSet.setResult(grid.map((visible) => ({ visible })));
     await p;
   },
+  cleanup: () => {
+    for (const h of hitAreas) h.destroy();
+    overlayGfx.destroy();
+  },
+};
+```
+
+### cells-horizontal-bounds
+URL: https://pixi-reels.schmooky.dev/recipes/cells-horizontal-bounds/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//                   WILD_CARD, PIXI, app
+
+// `getCellBounds(reel, cell)` on a set that spins sideways.
+//
+// The call does not change and neither does index space: reel is still reel,
+// cell is still cell, and (0, 0) is still the first cell of the first reel. The
+// RECT transposes, because a CellBounds is screen space - on a horizontal set
+// the reel index walks DOWN the screen and the cell index walks ACROSS it.
+//
+// The visible consequence: a line drawn through the same cell index on every
+// reel runs vertically here, where the identical code draws a horizontal
+// payline on a vertical set. Read the rects, do not assume them.
+
+const A = '7', B = '8', C = '9';
+const PAY = 'A';
+
+const REELS = 3;  // strips, marching down the screen
+const CELLS = 5;  // cells along each strip
+const WIN_CELL = 2;
+
+const reelSet = new ReelSetBuilder()
+  .orientation('horizontal')
+  .reels(REELS)
+  .visibleCells(CELLS)
+  .symbolSize(96, 72)
+  .symbolGap(6, 6)
+  .symbols((r) => {
+    for (const sym of [...CARD_DECK, WILD_CARD]) {
+      r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
+    }
+  })
+  .weights({ [A]: 10, [B]: 10, [C]: 10, [PAY]: 3 })
+  .speed('normal', SpeedPresets.NORMAL)
+  .ticker(app.ticker)
+  .build();
+
+// Static (reel, cell) tag in the corner of every cell, placed straight from
+// getCellBounds. Reel goes down, cell goes right.
+const tags = [];
+for (let reel = 0; reel < REELS; reel++) {
+  for (let cell = 0; cell < CELLS; cell++) {
+    const b = reelSet.getCellBounds(reel, cell);
+    const tag = new PIXI.Text({
+      text: `${reel},${cell}`,
+      style: { fontFamily: 'monospace', fontSize: 11, fill: 0xffffff, stroke: { color: 0x000000, width: 3 } },
+    });
+    tag.position.set(b.x + 5, b.y + 4);
+    tag.alpha = 0.85;
+    reelSet.addChild(tag);
+    tags.push(tag);
+  }
+}
+
+const overlayGfx = new PIXI.Graphics();
+reelSet.addChild(overlayGfx);
+
+// Cell WIN_CELL of every reel pays. On this axis those three rects stack
+// vertically, so the connecting line is vertical.
+const GRID = [
+  [A, B, PAY, C, A],
+  [B, C, PAY, A, B],
+  [C, A, PAY, B, C],
+];
+
+return {
+  reelSet,
+  onSpin: async () => {
+    overlayGfx.clear();
+
+    const p = reelSet.spin();
+    await new Promise((r) => setTimeout(r, 150));
+    reelSet.setResult(GRID.map((visible) => ({ visible })));
+    await p;
+    await new Promise((r) => setTimeout(r, 280));
+
+    const pts = [];
+    for (let reel = 0; reel < REELS; reel++) {
+      const b = reelSet.getCellBounds(reel, WIN_CELL);
+      overlayGfx
+        .roundRect(b.x + 3, b.y + 3, b.width - 6, b.height - 6, 8)
+        .stroke({ color: 0xff6b35, width: 3 });
+      pts.push({ x: b.x + b.width / 2, y: b.y + b.height / 2 });
+    }
+    overlayGfx.moveTo(pts[0].x, pts[0].y);
+    for (let i = 1; i < pts.length; i++) overlayGfx.lineTo(pts[i].x, pts[i].y);
+    overlayGfx.stroke({ color: 0xff6b35, width: 3, alpha: 0.85 });
+  },
+  cleanup: () => {
+    for (const t of tags) t.destroy();
+    overlayGfx.destroy();
+  },
+};
+```
+
+### cells-horizontal-hit-areas
+URL: https://pixi-reels.schmooky.dev/recipes/cells-horizontal-hit-areas/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//                   WILD_CARD, PIXI, app, pickWeighted
+
+// Pointer picks on a horizontal set. Hover to preview, click to toggle, picks
+// survive spins.
+//
+// The build loop is the same one the vertical recipe uses - `for reel, for
+// cell, getCellBounds(reel, cell)` - and it needs no orientation branch,
+// because the rect it hands back is already screen space. The hit boxes land
+// where the symbols are on either axis.
+//
+// **Gotcha (unchanged by the axis):** fill the hit rect with alpha 0, not
+// `visible = false`. An invisible-but-filled rect is still hit-testable; a
+// hidden one is not.
+
+const REELS = 3;
+const CELLS = 5;
+const weights = { '7': 20, '8': 18, '9': 16, '10': 12, J: 10, Q: 8, K: 6, A: 5, wild: 3 };
+
+const reelSet = new ReelSetBuilder()
+  .orientation('horizontal')
+  .reels(REELS)
+  .visibleCells(CELLS)
+  .symbolSize(96, 72)
+  .symbolGap(6, 6)
+  .symbols((r) => {
+    for (const sym of [...CARD_DECK, WILD_CARD]) {
+      r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
+    }
+  })
+  .weights(weights)
+  .speed('normal', SpeedPresets.NORMAL)
+  .ticker(app.ticker)
+  .build();
+
+const overlayGfx = new PIXI.Graphics();
+reelSet.addChild(overlayGfx);
+
+const picked = new Set();
+let hoverKey = null;
+const keyOf = (reel, cell) => reel + ',' + cell;
+
+function outline(key, color, width, alpha) {
+  const [reel, cell] = key.split(',').map(Number);
+  const b = reelSet.getCellBounds(reel, cell);
+  overlayGfx
+    .roundRect(b.x + 3, b.y + 3, b.width - 6, b.height - 6, 8)
+    .stroke({ color, width, alpha });
+}
+
+function redraw() {
+  overlayGfx.clear();
+  for (const k of picked) outline(k, 0xff6b35, 3, 1);
+  if (hoverKey && !picked.has(hoverKey)) outline(hoverKey, 0x666666, 2, 0.55);
+}
+
+const hitAreas = [];
+for (let reel = 0; reel < REELS; reel++) {
+  for (let cell = 0; cell < CELLS; cell++) {
+    const b = reelSet.getCellBounds(reel, cell);
+    const hit = new PIXI.Graphics();
+    hit.rect(b.x, b.y, b.width, b.height).fill({ color: 0xffffff, alpha: 0 });
+    hit.eventMode = 'static';
+    hit.cursor = 'pointer';
+    const k = keyOf(reel, cell);
+    hit.on('pointerover', () => { hoverKey = k; redraw(); });
+    hit.on('pointerout', () => { if (hoverKey === k) hoverKey = null; redraw(); });
+    hit.on('pointertap', () => {
+      if (picked.has(k)) picked.delete(k);
+      else picked.add(k);
+      redraw();
+    });
+    reelSet.addChild(hit);
+    hitAreas.push(hit);
+  }
+}
+
+overlayGfx.zIndex = 9998;
+for (const h of hitAreas) h.zIndex = 9999;
+reelSet.sortableChildren = true;
+
+return {
+  reelSet,
+  nextResult: () =>
+    Array.from({ length: REELS }, () =>
+      Array.from({ length: CELLS }, () => pickWeighted(weights)),
+    ),
   cleanup: () => {
     for (const h of hitAreas) h.destroy();
     overlayGfx.destroy();
@@ -4688,6 +5448,167 @@ return {
 };
 ```
 
+### hold-and-win-horizontal-lock
+URL: https://pixi-reels.schmooky.dev/recipes/hold-and-win-horizontal-lock/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, CoinSymbol, coinValue,
+//                   EmptySymbol, PIXI, app, pickWeighted
+
+// A Hold & Win round whose cells spin SIDEWAYS.
+//
+// `HoldAndWinBuilder` and `BoardGrid` build every cell as a vertical 1x1
+// ReelSet and expose no axis knob, so a board that runs on another axis is
+// built straight on a ReelSet: `.orientation('horizontal')` gives three rows
+// whose strips travel along X, and CellPin supplies the lock.
+//
+// A pin claims a cell: the strip can't overwrite it, `setResult` overlays it,
+// and while the row scrolls the engine draws the coin as an overlay that holds
+// its place. That is the whole hold mechanic, and none of it mentions the
+// axis - `pin(reel, cell, ...)` is index space, and the axis decides where
+// that lands on screen.
+
+const REELS = 3;   // 3 rows
+const CELLS = 5;   // 5 cells along each row
+const SIZE = 66, GAP = 6;
+const BLANK = 'blank';
+const CAPACITY = REELS * CELLS;
+const START_RESPINS = 3;
+const MAX_WAVES = 8;
+
+const COINS = [
+  { id: 'coin5', value: 5 },
+  { id: 'coin10', value: 10 },
+  { id: 'coin25', value: 25 },
+  { id: 'coin50', value: 50 },
+];
+const COIN_WEIGHTS = { coin5: 10, coin10: 6, coin25: 3, coin50: 1 };
+const valueOf = (id) => COINS.find((c) => c.id === id).value;
+
+const reelSet = new ReelSetBuilder()
+  .orientation('horizontal')
+  .reels(REELS)
+  .visibleCells(CELLS)
+  .symbolSize(SIZE, SIZE)
+  .symbolGap(GAP, GAP)
+  .symbols((r) => {
+    r.register(BLANK, EmptySymbol, {});
+    for (const coin of COINS) r.register(coin.id, CoinSymbol, coinValue(coin.value));
+  })
+  // Coins flash past blanks while a row spins.
+  .weights({ [BLANK]: 8, ...COIN_WEIGHTS })
+  .initialFrame(
+    Array.from({ length: REELS }, () => ({ visible: Array.from({ length: CELLS }, () => BLANK) })),
+  )
+  .speed('normal', { ...SpeedPresets.NORMAL, minimumSpinTime: 480, stopDelay: 90 })
+  .ticker(app.ticker)
+  .build();
+
+// Cell chrome, drawn behind the reels. `getCellBounds` is screen space in
+// every orientation, so this arithmetic is the same on a vertical board.
+const chrome = new PIXI.Graphics();
+for (let reel = 0; reel < REELS; reel++) {
+  for (let cell = 0; cell < CELLS; cell++) {
+    const b = reelSet.getCellBounds(reel, cell);
+    chrome.roundRect(b.x, b.y, b.width, b.height, 8)
+      .fill({ color: 0x140f2e, alpha: 0.55 })
+      .stroke({ color: 0x6a5acd, width: 1, alpha: 0.6 });
+  }
+}
+reelSet.addChildAt(chrome, 0);
+
+const stage = new PIXI.Container();
+stage.addChild(reelSet);
+const boardH = REELS * SIZE + (REELS - 1) * GAP;
+const hud = new PIXI.Text({
+  text: '',
+  style: { fontFamily: 'system-ui, sans-serif', fontSize: 15, fontWeight: '700', fill: 0xf5d066 },
+});
+hud.position.set(0, boardH + 12);
+stage.addChild(hud);
+
+const total = () =>
+  [...reelSet.pins.values()].reduce((sum, pin) => sum + (pin.payload?.value ?? 0), 0);
+const paint = (respins) => {
+  hud.text = `RESPINS ${respins}   LOCKED ${reelSet.pins.size}/${CAPACITY}   TOTAL ${total()}`;
+};
+paint(START_RESPINS);
+
+const freeCells = () => {
+  const out = [];
+  for (let reel = 0; reel < REELS; reel++) {
+    for (let cell = 0; cell < CELLS; cell++) {
+      if (!reelSet.getPin(reel, cell)) out.push({ reel, cell });
+    }
+  }
+  return out;
+};
+
+// The server decides the hits; this stands in for it.
+function rollHits(count) {
+  const free = freeCells();
+  const hits = [];
+  for (let i = 0; i < count && free.length > 0; i++) {
+    const pick = free.splice(Math.floor(Math.random() * free.length), 1)[0];
+    hits.push({ ...pick, id: pickWeighted(COIN_WEIGHTS) });
+  }
+  return hits;
+}
+
+async function wave(hits) {
+  const grid = Array.from({ length: REELS }, () => Array.from({ length: CELLS }, () => BLANK));
+  for (const hit of hits) grid[hit.reel][hit.cell] = hit.id;
+  const p = reelSet.spin();
+  await new Promise((r) => setTimeout(r, 200));
+  reelSet.setResult(grid.map((visible) => ({ visible })));
+  await p;
+  // Lock what landed. Permanent is the default; the round clears them itself.
+  for (const hit of hits) {
+    reelSet.pin(hit.reel, hit.cell, hit.id, {
+      turns: 'permanent',
+      payload: { value: valueOf(hit.id) },
+    });
+  }
+}
+
+let busy = false;
+return {
+  reelSet,
+  stage,
+  onSpin: async () => {
+    if (busy) return;
+    busy = true;
+    try {
+      for (const pin of [...reelSet.pins.values()]) reelSet.unpin(pin.reel, pin.cell);
+      for (let reel = 0; reel < REELS; reel++) {
+        for (let cell = 0; cell < CELLS; cell++) reelSet.setSymbolAt(reel, cell, BLANK);
+      }
+
+      let respins = START_RESPINS;
+      paint(respins);
+      // Trigger wave: three coins land and lock.
+      await wave(rollHits(3));
+      paint(respins);
+
+      for (let w = 0; w < MAX_WAVES && respins > 0 && reelSet.pins.size < CAPACITY; w++) {
+        await new Promise((r) => setTimeout(r, 350));
+        const hits = rollHits(Math.random() < 0.55 ? 1 : 0);
+        await wave(hits);
+        respins = hits.length > 0 ? START_RESPINS : respins - 1;
+        paint(respins);
+      }
+      hud.text = `ROUND OVER   LOCKED ${reelSet.pins.size}/${CAPACITY}   TOTAL ${total()}`;
+    } finally {
+      busy = false;
+    }
+  },
+  cleanup: () => {
+    try { hud.destroy(); } catch {}
+    try { chrome.destroy(); } catch {}
+  },
+};
+```
+
 ### hold-and-win-meter
 URL: https://pixi-reels.schmooky.dev/recipes/hold-and-win-meter/
 ```ts
@@ -5463,6 +6384,195 @@ return {
     await payout(PAYER_CELL, PAY_VALUE);
     phase = 'done';
     hud.text = `paid · total ${fmt(totalOf())} · press spin to reset`;
+  },
+};
+```
+
+### hold-and-win-reverse-respin
+URL: https://pixi-reels.schmooky.dev/recipes/hold-and-win-reverse-respin/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, CoinSymbol, coinValue,
+//                   EmptySymbol, PIXI, app, pickWeighted
+
+// A Hold & Win round whose free cells roll UPWARD.
+//
+// `.direction('reverse')` is the only line that makes this a roll-up; the lock
+// itself is the same CellPin claim as any other Hold & Win, because pins are
+// index space and travel direction never enters into them.
+//
+// It also picks up the one spin option that pairs naturally with a lock:
+// `spin({ holdReels })`. A reel whose every cell is already locked has nothing
+// to reroll, so it is held out of the wave entirely - it never starts, never
+// stops, and contributes its current cells to the result. Held indices are
+// reel indices, so this is axis-neutral too.
+
+const REELS = 5, CELLS = 3, SIZE = 68, GAP = 6;
+const BLANK = 'blank';
+const CAPACITY = REELS * CELLS;
+const START_RESPINS = 3;
+const MAX_WAVES = 8;
+
+const COINS = [
+  { id: 'coin5', value: 5 },
+  { id: 'coin10', value: 10 },
+  { id: 'coin25', value: 25 },
+  { id: 'coin50', value: 50 },
+];
+const COIN_WEIGHTS = { coin5: 10, coin10: 6, coin25: 3, coin50: 1 };
+const valueOf = (id) => COINS.find((c) => c.id === id).value;
+
+const reelSet = new ReelSetBuilder()
+  .reels(REELS)
+  .visibleCells(CELLS)
+  .symbolSize(SIZE, SIZE)
+  .symbolGap(GAP, GAP)
+  .direction('reverse') // free cells roll up between waves
+  .symbols((r) => {
+    r.register(BLANK, EmptySymbol, {});
+    for (const coin of COINS) r.register(coin.id, CoinSymbol, coinValue(coin.value));
+  })
+  .weights({ [BLANK]: 8, ...COIN_WEIGHTS })
+  .initialFrame(
+    Array.from({ length: REELS }, () => ({ visible: Array.from({ length: CELLS }, () => BLANK) })),
+  )
+  .speed('normal', { ...SpeedPresets.NORMAL, minimumSpinTime: 460, stopDelay: 90 })
+  .ticker(app.ticker)
+  .build();
+
+// Chrome behind the cells + a gold frame on every locked one.
+const chrome = new PIXI.Graphics();
+for (let reel = 0; reel < REELS; reel++) {
+  for (let cell = 0; cell < CELLS; cell++) {
+    const b = reelSet.getCellBounds(reel, cell);
+    chrome.roundRect(b.x, b.y, b.width, b.height, 8)
+      .fill({ color: 0x140f2e, alpha: 0.55 })
+      .stroke({ color: 0x6a5acd, width: 1, alpha: 0.6 });
+  }
+}
+reelSet.addChildAt(chrome, 0);
+
+const locks = new PIXI.Graphics();
+reelSet.addChild(locks);
+const redrawLocks = () => {
+  locks.clear();
+  for (const pin of reelSet.pins.values()) {
+    const b = reelSet.getCellBounds(pin.reel, pin.cell);
+    locks.roundRect(b.x + 1, b.y + 1, b.width - 2, b.height - 2, 8)
+      .stroke({ width: 3, color: 0xffd43b, alpha: 0.9 });
+  }
+};
+reelSet.events.on('pin:placed', redrawLocks);
+reelSet.events.on('pin:expired', redrawLocks);
+
+const stage = new PIXI.Container();
+stage.addChild(reelSet);
+const hud = new PIXI.Text({
+  text: '',
+  style: { fontFamily: 'system-ui, sans-serif', fontSize: 15, fontWeight: '700', fill: 0xf5d066 },
+});
+hud.position.set(0, CELLS * SIZE + (CELLS - 1) * GAP + 12);
+stage.addChild(hud);
+
+const total = () =>
+  [...reelSet.pins.values()].reduce((sum, pin) => sum + (pin.payload?.value ?? 0), 0);
+const paint = (respins, held) => {
+  hud.text =
+    `RESPINS ${respins}   LOCKED ${reelSet.pins.size}/${CAPACITY}   TOTAL ${total()}` +
+    (held.length > 0 ? `   HELD REELS ${held.join(',')}` : '');
+};
+
+// Reels with every cell locked. Nothing to reroll, so they sit the wave out.
+const fullReels = () => {
+  const out = [];
+  for (let reel = 0; reel < REELS; reel++) {
+    let full = true;
+    for (let cell = 0; cell < CELLS; cell++) if (!reelSet.getPin(reel, cell)) full = false;
+    if (full) out.push(reel);
+  }
+  return out;
+};
+
+const freeCells = () => {
+  const out = [];
+  for (let reel = 0; reel < REELS; reel++) {
+    for (let cell = 0; cell < CELLS; cell++) {
+      if (!reelSet.getPin(reel, cell)) out.push({ reel, cell });
+    }
+  }
+  return out;
+};
+
+function rollHits(count) {
+  const free = freeCells();
+  const hits = [];
+  for (let i = 0; i < count && free.length > 0; i++) {
+    const pick = free.splice(Math.floor(Math.random() * free.length), 1)[0];
+    hits.push({ ...pick, id: pickWeighted(COIN_WEIGHTS) });
+  }
+  return hits;
+}
+
+async function wave(hits) {
+  const held = fullReels();
+  const grid = Array.from({ length: REELS }, () => Array.from({ length: CELLS }, () => BLANK));
+  for (const hit of hits) grid[hit.reel][hit.cell] = hit.id;
+  const p = reelSet.spin({ holdReels: held });
+  await new Promise((r) => setTimeout(r, 200));
+  // Full-width grid even with reels held: the engine ignores held columns.
+  reelSet.setResult(grid.map((visible) => ({ visible })));
+  await p;
+  for (const hit of hits) {
+    reelSet.pin(hit.reel, hit.cell, hit.id, {
+      turns: 'permanent',
+      payload: { value: valueOf(hit.id) },
+    });
+  }
+  return held;
+}
+
+let busy = false;
+return {
+  reelSet,
+  stage,
+  onSpin: async () => {
+    if (busy) return;
+    busy = true;
+    try {
+      for (const pin of [...reelSet.pins.values()]) reelSet.unpin(pin.reel, pin.cell);
+      redrawLocks();
+      for (let reel = 0; reel < REELS; reel++) {
+        for (let cell = 0; cell < CELLS; cell++) reelSet.setSymbolAt(reel, cell, BLANK);
+      }
+
+      let respins = START_RESPINS;
+      paint(respins, []);
+      // Trigger wave: a column's worth of coins lands and locks, which is
+      // what puts a reel in the held set for the waves that follow.
+      await wave([
+        { reel: 1, cell: 0, id: pickWeighted(COIN_WEIGHTS) },
+        { reel: 1, cell: 1, id: pickWeighted(COIN_WEIGHTS) },
+        { reel: 1, cell: 2, id: pickWeighted(COIN_WEIGHTS) },
+        { reel: 3, cell: 1, id: pickWeighted(COIN_WEIGHTS) },
+      ]);
+      paint(respins, fullReels());
+
+      for (let w = 0; w < MAX_WAVES && respins > 0 && reelSet.pins.size < CAPACITY; w++) {
+        await new Promise((r) => setTimeout(r, 350));
+        const hits = rollHits(Math.random() < 0.55 ? 1 : 0);
+        const held = await wave(hits);
+        respins = hits.length > 0 ? START_RESPINS : respins - 1;
+        paint(respins, held);
+      }
+      hud.text = `ROUND OVER   LOCKED ${reelSet.pins.size}/${CAPACITY}   TOTAL ${total()}`;
+    } finally {
+      busy = false;
+    }
+  },
+  cleanup: () => {
+    try { hud.destroy(); } catch {}
+    try { locks.destroy(); } catch {}
+    try { chrome.destroy(); } catch {}
   },
 };
 ```
@@ -8135,6 +9245,89 @@ return {
 };
 ```
 
+### nudge-horizontal
+URL: https://pixi-reels.schmooky.dev/recipes/nudge-horizontal/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//                   WILD_CARD, app
+
+// Nudging a set that runs sideways.
+//
+// A reel is a screen ROW here, and its cells run left to right, so a nudge
+// shifts a row sideways instead of a column vertically. Nothing about the call
+// changes: `direction` is relative to the reel's own axis ('forward' is
+// whichever way it normally spins, rightward on this set) and `incoming` is
+// still listed in start-to-end order, which reads left-to-right rather than
+// top-down.
+//
+// One press shows both feed edges:
+//   1. Reel 0 forward by 1  - the strip travels right, a wild enters at the
+//      LEFT edge.
+//   2. Reel 2 reverse by 1  - the strip travels left, a wild enters at the
+//      RIGHT edge.
+
+const SYMBOLS = [...CARD_DECK, WILD_CARD];
+const REELS = 3;  // 3 rows
+const CELLS = 5;  // 5 cells along each row
+const SIZE = 76;
+
+const FILLER = ['7', '8', '9', '10', 'J'];
+const filler = () => FILLER[Math.floor(Math.random() * FILLER.length)];
+const row = () => Array.from({ length: CELLS }, filler);
+
+const reelSet = new ReelSetBuilder()
+  .orientation('horizontal')
+  .reels(REELS)
+  .visibleCells(CELLS)
+  .symbolSize(SIZE, SIZE)
+  .symbolGap(4, 4)
+  .symbols((r) => {
+    for (const sym of SYMBOLS) {
+      r.register(sym.id, CardSymbol, {
+        color: sym.color,
+        label: sym.label,
+        textColor: sym.textColor,
+      });
+    }
+  })
+  .weights(Object.fromEntries(FILLER.map((id) => [id, 1])))
+  .speed('normal', SpeedPresets.NORMAL)
+  .speed('turbo', SpeedPresets.TURBO)
+  .ticker(app.ticker)
+  .build();
+
+return {
+  reelSet,
+  onSpin: async () => {
+    // Land flat: no wilds anywhere.
+    const p = reelSet.spin();
+    await new Promise((resolve) => setTimeout(resolve, 220));
+    reelSet.setResult(Array.from({ length: REELS }, () => ({ visible: row() })));
+    await p;
+    await new Promise((resolve) => setTimeout(resolve, 500));
+
+    // Travel-direction nudge: content slides toward the end edge (right),
+    // so the new cell arrives at cell 0 - the left of the screen.
+    await reelSet.nudge(0, {
+      distance: 1,
+      direction: 'forward',
+      incoming: ['wild'],
+      duration: 420,
+    });
+
+    // Against-travel nudge on another row: the new cell arrives at the last
+    // cell instead, on the right.
+    await reelSet.nudge(2, {
+      distance: 1,
+      direction: 'reverse',
+      incoming: ['wild'],
+      duration: 420,
+    });
+  },
+};
+```
+
 ### nudge-parallel
 URL: https://pixi-reels.schmooky.dev/recipes/nudge-parallel/
 ```ts
@@ -8202,6 +9395,92 @@ return {
           duration: NUDGE_DURATION,
         }),
       ),
+    );
+  },
+};
+```
+
+### nudge-reverse-rollup
+URL: https://pixi-reels.schmooky.dev/recipes/nudge-reverse-rollup/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//                   WILD_CARD, app
+
+// Nudge on a roll-up set, used to complete a line.
+//
+// `NudgeOptions.direction` is relative to the reel's OWN axis, not to the
+// screen. These reels are built `.direction('reverse')`, so 'forward' shifts
+// the strip UP and new symbols arrive at the BOTTOM. `incoming` is still
+// listed start-to-end (top-down), which means the single id below lands at
+// the LAST visible cell, not the first.
+//
+// The mechanic: two wilds land on the middle line and the third stops one
+// cell short, just below it. One 'forward' nudge rolls that reel up by one
+// and the wild arrives on the line, which then spotlights.
+
+const SYMBOLS = [...CARD_DECK, WILD_CARD];
+const REELS = 5, CELLS = 3, SIZE = 84;
+const LINE = 1;          // the middle line
+const TARGET = 2;        // the reel that stops one cell short
+const WILD = WILD_CARD.id;
+
+const FILLER = ['7', '8', '9', '10', 'J'];
+const filler = () => FILLER[Math.floor(Math.random() * FILLER.length)];
+const col = () => Array.from({ length: CELLS }, filler);
+
+const reelSet = new ReelSetBuilder()
+  .reels(REELS)
+  .visibleCells(CELLS)
+  .symbolSize(SIZE, SIZE)
+  .symbolGap(4, 4)
+  .direction('reverse') // roll-up: symbols rise from below
+  .symbols((r) => {
+    for (const sym of SYMBOLS) {
+      r.register(sym.id, CardSymbol, {
+        color: sym.color,
+        label: sym.label,
+        textColor: sym.textColor,
+      });
+    }
+  })
+  .weights(Object.fromEntries(FILLER.map((id) => [id, 1])))
+  .speed('normal', SpeedPresets.NORMAL)
+  .speed('turbo', SpeedPresets.TURBO)
+  .ticker(app.ticker)
+  .build();
+
+return {
+  reelSet,
+  onSpin: async () => {
+    reelSet.spotlight.hide();
+
+    const grid = Array.from({ length: REELS }, () => col());
+    grid[0][LINE] = WILD;
+    grid[1][LINE] = WILD;
+    // The near miss: the third wild lands one cell BELOW the line, which is
+    // the direction this reel travels from.
+    grid[TARGET][LINE + 1] = WILD;
+
+    const p = reelSet.spin();
+    await new Promise((resolve) => setTimeout(resolve, 220));
+    reelSet.setResult(grid.map((visible) => ({ visible })));
+    await p;
+    await new Promise((resolve) => setTimeout(resolve, 550));
+
+    // One cell 'forward' = one cell up on a reverse reel. Every cell shifts
+    // toward cell 0, so the wild moves from cell 2 onto the line, and the
+    // incoming filler fills the vacated bottom cell.
+    await reelSet.nudge(TARGET, {
+      distance: 1,
+      direction: 'forward',
+      incoming: [filler()],
+      duration: 420,
+    });
+
+    await reelSet.spotlight.show(
+      [0, 1, TARGET].map((reelIndex) => ({ reelIndex, cellIndex: LINE })),
+      { playWinAnimation: true },
     );
   },
 };
@@ -8656,6 +9935,171 @@ return {
       duration: 420,
     });
   },
+};
+```
+
+### orientation-axis-readout
+URL: https://pixi-reels.schmooky.dev/recipes/orientation-axis-readout/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//                   WILD_CARD, PIXI, app, pickWeighted
+
+// Ask the reel which way it goes instead of remembering.
+//
+// `reel.axis` is the projection between screen space and the reel's own
+// travel/cross axes:
+//
+//   orientation  'vertical' | 'horizontal'   (set-level)
+//   direction    'forward' | 'reverse'       (this reel)
+//   polarity     +1 forward, -1 reverse
+//   mainProp     'x' | 'y'  - the property the strip travels on
+//   crossProp    'x' | 'y'  - the property reels march on
+//   feedEdge     'start' | 'end' - DERIVED from polarity, never set twice
+//
+// The arrows below are drawn with zero branches: `axis.toScreen(0, polarity)`
+// projects one step of travel back into a screen vector, so the same three
+// lines draw a downward arrow on a vertical forward reel and a leftward one on
+// this set's reverse rows.
+
+const SYMBOLS = [...CARD_DECK, WILD_CARD];
+const weights = { '7': 20, '8': 18, '9': 16, '10': 12, J: 10, Q: 8, K: 6, A: 5, wild: 3 };
+
+const REELS = 3;
+const CELLS = 4;
+
+const reelSet = new ReelSetBuilder()
+  .orientation('horizontal')
+  .reels(REELS)
+  .visibleCells(CELLS)
+  .symbolSize(88, 66)
+  .symbolGap(6, 6)
+  .directionPerReel(['forward', 'reverse', 'forward'])
+  .symbols((r) => {
+    for (const sym of SYMBOLS) {
+      r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
+    }
+  })
+  .weights(weights)
+  .speed('normal', SpeedPresets.NORMAL)
+  .ticker(app.ticker)
+  .build();
+
+const gfx = new PIXI.Graphics();
+reelSet.addChild(gfx);
+
+const labels = [];
+const ARM = 16;   // arrow half-length
+const HEAD = 6;
+
+for (let i = 0; i < REELS; i++) {
+  const axis = reelSet.getReel(i).axis;
+  // Unit step of travel, projected back to screen. No orientation branch.
+  const step = axis.toScreen(0, axis.polarity);
+
+  const last = reelSet.getCellBounds(i, CELLS - 1);
+  const cx = last.x + last.width + 24;
+  const cy = last.y + last.height / 2;
+
+  gfx.moveTo(cx - step.x * ARM, cy - step.y * ARM)
+    .lineTo(cx + step.x * ARM, cy + step.y * ARM)
+    .stroke({ color: 0xff6b35, width: 3 });
+  // Head: step rotated a quarter turn each way, so it follows any axis.
+  gfx.moveTo(cx + step.x * (ARM - HEAD) - step.y * HEAD, cy + step.y * (ARM - HEAD) + step.x * HEAD)
+    .lineTo(cx + step.x * ARM, cy + step.y * ARM)
+    .lineTo(cx + step.x * (ARM - HEAD) + step.y * HEAD, cy + step.y * (ARM - HEAD) - step.x * HEAD)
+    .stroke({ color: 0xff6b35, width: 3 });
+
+  const text = new PIXI.Text({
+    text:
+      `r${i} ${axis.orientation} / ${axis.direction}\n` +
+      `main=${axis.mainProp} cross=${axis.crossProp} feed=${axis.feedEdge}`,
+    style: {
+      fontFamily: 'monospace',
+      fontSize: 12,
+      lineHeight: 17,
+      fill: 0xff6b35,
+    },
+  });
+  text.anchor.set(0, 0.5);
+  text.position.set(cx + ARM + 12, cy);
+  reelSet.addChild(text);
+  labels.push(text);
+}
+
+return {
+  reelSet,
+  nextResult: () =>
+    Array.from({ length: REELS }, () =>
+      Array.from({ length: CELLS }, () => pickWeighted(weights)),
+    ),
+  cleanup: () => {
+    for (const t of labels) t.destroy();
+    gfx.destroy();
+  },
+};
+```
+
+### orientation-horizontal-per-reel
+URL: https://pixi-reels.schmooky.dev/recipes/orientation-horizontal-per-reel/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//                   WILD_CARD, app, pickWeighted
+
+// The two knobs compose. Orientation is set-level and fixed at build();
+// direction is per reel and can differ on every one of them.
+//
+// Here the strips run sideways and alternate: rows 0 and 2 scroll right, rows
+// 1 and 3 scroll left, so the board weaves. No branch anywhere - each reel gets
+// its own axis, and every phase (start, spin, stop, bounce) is written against
+// that axis rather than against a sign.
+//
+// One build-time rule: a big symbol spanning more than one reel cannot mix with
+// mixed per-reel directions, because the block coordinator assumes every reel
+// it covers feeds from the same edge. `build()` throws rather than shipping a
+// symbol that tears in half mid-spin.
+
+const SYMBOLS = [...CARD_DECK, WILD_CARD];
+
+const weights = {
+  '7': 20, '8': 20, '9': 20,
+  '10': 14, J: 14,
+  Q: 10, K: 6, A: 5,
+  wild: 3,
+};
+
+const REELS = 4;
+const CELLS = 5;
+
+const reelSet = new ReelSetBuilder()
+  .orientation('horizontal')
+  .reels(REELS)
+  .visibleCells(CELLS)
+  .symbolSize(84, 64)
+  .symbolGap(6, 6)
+  .directionPerReel(['forward', 'reverse', 'forward', 'reverse'])
+  .symbols((r) => {
+    for (const sym of SYMBOLS) {
+      r.register(sym.id, CardSymbol, {
+        color: sym.color,
+        label: sym.label,
+        textColor: sym.textColor,
+      });
+    }
+  })
+  .weights(weights)
+  .speed('normal', SpeedPresets.NORMAL)
+  .speed('turbo', SpeedPresets.TURBO)
+  .ticker(app.ticker)
+  .build();
+
+return {
+  reelSet,
+  nextResult: () =>
+    Array.from({ length: REELS }, () =>
+      Array.from({ length: CELLS }, () => pickWeighted(weights)),
+    ),
 };
 ```
 
@@ -10822,6 +12266,132 @@ return {
 };
 ```
 
+### starter-horizontal-5x3
+URL: https://pixi-reels.schmooky.dev/recipes/starter-horizontal-5x3/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//                   WILD_CARD, app, pickWeighted
+
+// A sideways slot: three strips stacked down the screen, each scrolling along
+// X. Clone this when the board should read left-to-right instead of top-down.
+//
+// Two things change from the classic 5x3 starter, and only two:
+//   1. `.orientation('horizontal')` - the strip travels on X, and reels march
+//      down Y instead of across X.
+//   2. The numbers you hand `symbolSize` / `symbolGap`, because both stay
+//      SCREEN space in every orientation. Here the strip advances by the
+//      symbol WIDTH (96), and reels are pitched apart by the HEIGHT (72).
+//
+// Everything else is untouched. `reels(3).visibleCells(5)` means the same
+// thing either way - three strips of five cells - and the ColumnTarget[] you
+// feed `setResult()` is unchanged, because index space is orientation-neutral.
+// Nothing rotates: every card still renders upright.
+
+const SYMBOLS = [...CARD_DECK, WILD_CARD];
+
+const weights = {
+  '7': 20, '8': 20, '9': 20,
+  '10': 14, J: 14,
+  Q: 10, K: 6, A: 5,
+  wild: 3,
+};
+
+const REELS = 3;  // strips, marching down the screen
+const CELLS = 5;  // cells along each strip, running across the screen
+
+const reelSet = new ReelSetBuilder()
+  .orientation('horizontal')
+  .reels(REELS)
+  .visibleCells(CELLS)
+  .symbolSize(96, 72) // screen width x height. travel eats the width
+  .symbolGap(6, 6)    // x separates cells along a strip, y separates strips
+  .symbols((r) => {
+    for (const sym of SYMBOLS) {
+      r.register(sym.id, CardSymbol, {
+        color: sym.color,
+        label: sym.label,
+        textColor: sym.textColor,
+      });
+    }
+  })
+  .weights(weights)
+  .speed('normal', SpeedPresets.NORMAL)
+  .speed('turbo', SpeedPresets.TURBO)
+  .ticker(app.ticker)
+  .build();
+
+return {
+  reelSet,
+  nextResult: () =>
+    Array.from({ length: REELS }, () =>
+      Array.from({ length: CELLS }, () => pickWeighted(weights)),
+    ),
+};
+```
+
+### starter-reverse-5x3
+URL: https://pixi-reels.schmooky.dev/recipes/starter-reverse-5x3/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//                   WILD_CARD, app, pickWeighted
+
+// The classic 5x3 starter with the travel flipped: symbols rise, and the reel
+// lands from below. The whole diff is `.direction('reverse')`.
+//
+// What that does NOT change:
+//   - index space. cell 0 is still the top visible cell, `setResult()` still
+//     takes the same ColumnTarget[], `getCellBounds(reel, 0)` still returns
+//     the top rect.
+//   - buffer naming. `bufferStart` is still the slot ABOVE the window, because
+//     start/end are geometric, not travel-relative. On a reverse reel the slot
+//     symbols arrive through is the one BELOW, so a "next up" teaser goes in
+//     `bufferEnd` here. The engine derives that edge itself:
+//     `reelSet.getReel(0).axis.feedEdge` reads `'end'` on this set.
+//
+// For a sideways board see the horizontal starter above; the two knobs compose,
+// so `.orientation('horizontal').direction('reverse')` is a right-to-left slot.
+
+const SYMBOLS = [...CARD_DECK, WILD_CARD];
+
+const weights = {
+  '7': 20, '8': 20, '9': 20,
+  '10': 14, J: 14,
+  Q: 10, K: 6, A: 5,
+  wild: 3,
+};
+
+const reelSet = new ReelSetBuilder()
+  .reels(5)
+  .visibleCells(3)
+  .symbolSize(90, 90)
+  .symbolGap(4, 4)
+  .direction('reverse') // the only line that differs from classic-5x3
+  .symbols((r) => {
+    for (const sym of SYMBOLS) {
+      r.register(sym.id, CardSymbol, {
+        color: sym.color,
+        label: sym.label,
+        textColor: sym.textColor,
+      });
+    }
+  })
+  .weights(weights)
+  .speed('normal', SpeedPresets.NORMAL)
+  .speed('turbo', SpeedPresets.TURBO)
+  .ticker(app.ticker)
+  .build();
+
+return {
+  reelSet,
+  nextResult: () =>
+    Array.from({ length: 5 }, () =>
+      Array.from({ length: 3 }, () => pickWeighted(weights)),
+    ),
+};
+```
+
 ### static-spin-blur
 URL: https://pixi-reels.schmooky.dev/recipes/static-spin-blur/
 ```ts
@@ -11430,6 +13000,223 @@ return {
     });
     restoreNext();
   },
+};
+```
+
+### symbols-horizontal-resize
+URL: https://pixi-reels.schmooky.dev/recipes/symbols-horizontal-resize/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, ReelSymbol, PIXI, app,
+//                   pickWeighted
+
+// Authoring a symbol for a set that spins sideways. The answer is: author it
+// exactly as you would for a vertical set.
+//
+// `resize(width, height)` is SCREEN space in every orientation. `width` is
+// pixels across the screen and `height` is pixels down it, whichever way the
+// strip travels. The engine never rotates a symbol container to fake an axis -
+// travel changes motion, facing changes art, and neither one changes the other.
+// The plate below draws an upright "TOP" bar and an upright glyph, and both
+// stay upright while the strip scrolls along X.
+//
+// The one orientation fact a symbol gets is `this.mainAxis`: 'y' on a vertical
+// set, 'x' on a horizontal one. It exists for effects that genuinely follow
+// travel (motion blur is the one in the box), not for layout. The chevron below
+// uses it to point along travel without knowing the set's orientation.
+
+class PlateSymbol extends ReelSymbol {
+  constructor(options) {
+    super();
+    this._color = options.color;
+    this._label = options.label;
+    this._w = 0;
+    this._h = 0;
+  }
+
+  onActivate() { this._draw(); }
+  onDeactivate() {}
+  async playWin() {}
+  stopAnimation() {}
+
+  // Runs on every symbol swap, with the cell's pixel size. Screen-space, both
+  // orientations: here 110 wide by 70 tall.
+  resize(width, height) {
+    this._w = width;
+    this._h = height;
+    this._draw();
+  }
+
+  _draw() {
+    if (this._w === 0) return;
+    this.view.removeChildren();
+
+    const plate = new PIXI.Graphics()
+      .roundRect(2, 2, this._w - 4, this._h - 4, 8)
+      .fill(this._color)
+      .stroke({ color: 0x000000, width: 2, alpha: 0.35 });
+    // An upright marker along the TOP screen edge. It stays at the top on a
+    // horizontal set, because screen space is screen space.
+    plate.rect(10, 6, this._w - 20, 4).fill({ color: 0xffffff, alpha: 0.7 });
+    this.view.addChild(plate);
+
+    const text = new PIXI.Text({
+      text: this._label,
+      style: { fontFamily: 'system-ui, sans-serif', fontSize: 20, fontWeight: '700', fill: 0xffffff },
+    });
+    text.anchor.set(0.5);
+    text.position.set(this._w / 2, this._h / 2 - 4);
+    this.view.addChild(text);
+
+    const size = new PIXI.Text({
+      text: `${Math.round(this._w)}x${Math.round(this._h)}`,
+      style: { fontFamily: 'monospace', fontSize: 10, fill: 0xffffff },
+    });
+    size.anchor.set(0.5, 1);
+    size.alpha = 0.75;
+    size.position.set(this._w / 2, this._h - 5);
+    this.view.addChild(size);
+
+    // Travel-aware decoration: a chevron on the axis this set spins along.
+    // `mainAxis` is bound by the engine when the symbol is created.
+    const chevron = new PIXI.Graphics();
+    if (this.mainAxis === 'x') {
+      chevron.moveTo(8, this._h / 2 - 6).lineTo(14, this._h / 2).lineTo(8, this._h / 2 + 6);
+    } else {
+      chevron.moveTo(this._w / 2 - 6, 12).lineTo(this._w / 2, 18).lineTo(this._w / 2 + 6, 12);
+    }
+    chevron.stroke({ color: 0xffffff, width: 2, alpha: 0.8 });
+    this.view.addChild(chevron);
+  }
+}
+
+const PLATES = [
+  { id: 'ruby', color: 0xc0392b, label: 'R' },
+  { id: 'amber', color: 0xe67e22, label: 'A' },
+  { id: 'jade', color: 0x16a085, label: 'J' },
+  { id: 'ocean', color: 0x2980b9, label: 'O' },
+  { id: 'plum', color: 0x8e44ad, label: 'P' },
+];
+
+const REELS = 3;
+const CELLS = 4;
+const weights = Object.fromEntries(PLATES.map((p) => [p.id, 10]));
+
+const reelSet = new ReelSetBuilder()
+  .orientation('horizontal')
+  .reels(REELS)
+  .visibleCells(CELLS)
+  .symbolSize(110, 70) // wide cells. the strip advances by the 110px width
+  .symbolGap(6, 6)
+  .symbols((r) => {
+    for (const p of PLATES) r.register(p.id, PlateSymbol, { color: p.color, label: p.label });
+  })
+  .weights(weights)
+  .speed('normal', SpeedPresets.NORMAL)
+  .ticker(app.ticker)
+  .build();
+
+return {
+  reelSet,
+  nextResult: () =>
+    Array.from({ length: REELS }, () =>
+      Array.from({ length: CELLS }, () => pickWeighted(weights)),
+    ),
+};
+```
+
+### symbols-transposed-pair
+URL: https://pixi-reels.schmooky.dev/recipes/symbols-transposed-pair/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//                   WILD_CARD, PIXI, app, pickWeighted
+
+// The same board twice: four reels of three cells, vertical on the left and
+// horizontal on the right, landing the SAME grid on every spin.
+//
+// One symbol registration serves both. `CardSymbol` knows nothing about the
+// axis, and neither should yours - the only thing that differs between the two
+// builds is that `symbolSize` swaps its two numbers, because it is screen space
+// and a horizontal board is the vertical one transposed.
+//
+//   vertical:   .symbolSize(CELL_W, CELL_H)
+//   horizontal: .symbolSize(CELL_H, CELL_W)
+//
+// The cards land in the same index order in both, and every glyph stays
+// upright in both. Facing is not derived from travel.
+
+const SYMBOLS = [...CARD_DECK, WILD_CARD];
+const weights = { '7': 20, '8': 18, '9': 16, '10': 12, J: 10, Q: 8, K: 6, A: 5, wild: 3 };
+const registerAll = (r) => {
+  for (const s of SYMBOLS) {
+    r.register(s.id, CardSymbol, { color: s.color, label: s.label, textColor: s.textColor });
+  }
+};
+
+const REELS = 4;
+const CELLS = 3;
+const CELL_W = 72;
+const CELL_H = 54;
+const GAP = 6;
+
+const common = (b) =>
+  b
+    .reels(REELS)
+    .visibleCells(CELLS)
+    .symbolGap(GAP, GAP)
+    .symbols(registerAll)
+    .weights(weights)
+    .speed('normal', SpeedPresets.NORMAL)
+    .ticker(app.ticker);
+
+const vertical = common(new ReelSetBuilder().symbolSize(CELL_W, CELL_H)).build();
+const horizontal = common(
+  new ReelSetBuilder().orientation('horizontal').symbolSize(CELL_H, CELL_W),
+).build();
+
+// Both sets in ONE container, laid out from its own top-left, returned as
+// `stage` so the runner scales and centres the pair together.
+const V_W = REELS * CELL_W + (REELS - 1) * GAP;
+const V_H = CELLS * CELL_H + (CELLS - 1) * GAP;
+const H_H = REELS * CELL_W + (REELS - 1) * GAP;
+const LABEL_H = 20;
+
+const stage = new PIXI.Container();
+const label = (text, x) => {
+  const t = new PIXI.Text({
+    text,
+    style: { fontFamily: 'monospace', fontSize: 12, fill: 0xff6b35 },
+  });
+  t.position.set(x, 0);
+  return t;
+};
+vertical.position.set(0, LABEL_H + (H_H - V_H) / 2);
+horizontal.position.set(V_W + 40, LABEL_H);
+stage.addChild(
+  label('vertical', 0),
+  label('horizontal', V_W + 40),
+  vertical,
+  horizontal,
+);
+
+return {
+  reelSet: vertical,
+  stage,
+  onSpin: async () => {
+    const grid = Array.from({ length: REELS }, () =>
+      Array.from({ length: CELLS }, () => pickWeighted(weights)),
+    ).map((visible) => ({ visible }));
+
+    const pv = vertical.spin();
+    const ph = horizontal.spin();
+    await new Promise((r) => setTimeout(r, 150));
+    // Identical ColumnTarget[] into both. Index space is orientation-neutral.
+    vertical.setResult(grid);
+    horizontal.setResult(grid);
+    await Promise.all([pv, ph]);
+  },
+  cleanup: () => horizontal.destroy(),
 };
 ```
 
@@ -12590,6 +14377,178 @@ return {
     reelSet.setResult(grid.map((visible) => ({ visible })));
     await promise;
     spinCount++;
+  },
+};
+```
+
+### wilds-horizontal-expanding
+URL: https://pixi-reels.schmooky.dev/recipes/wilds-horizontal-expanding/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//                   WILD_CARD, app
+
+// An expanding wild on a set that runs sideways.
+//
+// Pins are pure index space - `pin(reel, cell, id)` names a reel and a cell,
+// and the engine maps that onto the screen through the axis. So "the wild
+// expands over its whole reel" is the same code on both orientations; it just
+// paints a screen ROW here instead of a column, because a horizontal reel
+// marches down the Y axis and its cells run along X.
+//
+// The pin lifecycle is unchanged too: `turns: 3` keeps the expansion alive for
+// three more spins, and the engine expires it at zero.
+
+const REELS = 3;  // 3 rows
+const CELLS = 5;  // 5 cells along each row
+const SIZE = 76;
+const WILD = WILD_CARD.id;
+const STICKY_TURNS = 3;
+const FILLER = ['7', '8', '10', 'Q'];
+
+const reelSet = new ReelSetBuilder()
+  .orientation('horizontal')
+  .reels(REELS)
+  .visibleCells(CELLS)
+  .symbolSize(SIZE, SIZE)
+  .symbolGap(4, 4)
+  .symbols((r) => {
+    for (const sym of [...CARD_DECK, WILD_CARD]) {
+      r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
+    }
+  })
+  .weights(Object.fromEntries(FILLER.map((id) => [id, 1])))
+  .speed('normal', SpeedPresets.NORMAL)
+  .speed('turbo', SpeedPresets.TURBO)
+  .ticker(app.ticker)
+  .build();
+
+// Any reel showing a wild turns wild end to end, for STICKY_TURNS spins. The
+// engine counts the turns down on every `spin:allLanded` and expires the pins
+// itself.
+reelSet.events.on('spin:allLanded', ({ symbols }) => {
+  for (let reel = 0; reel < symbols.length; reel++) {
+    if (!symbols[reel].includes(WILD)) continue;
+    for (let cell = 0; cell < symbols[reel].length; cell++) {
+      if (!reelSet.getPin(reel, cell)) {
+        reelSet.pin(reel, cell, WILD, { turns: STICKY_TURNS });
+      }
+    }
+  }
+});
+
+// Scripted: the wild alternates between the top row and the bottom one.
+const wildReels = [0, 2];
+let spinCount = 0;
+
+return {
+  reelSet,
+  nextResult: () => {
+    const reel = wildReels[spinCount % wildReels.length];
+    const grid = Array.from({ length: REELS }, () =>
+      Array.from({ length: CELLS }, () => FILLER[Math.floor(Math.random() * FILLER.length)]),
+    );
+    grid[reel][2] = WILD; // middle cell of the chosen row
+    spinCount++;
+    return grid;
+  },
+};
+```
+
+### wilds-reverse-sticky-respin
+URL: https://pixi-reels.schmooky.dev/recipes/wilds-reverse-sticky-respin/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//                   WILD_CARD, app
+
+// A sticky-wild respin round on a ROLL-UP set.
+//
+// The reels travel upward (`.direction('reverse')`), the wilds do not move at
+// all. Pin coordinates are geometric: cell 0 is the TOP cell whichever edge
+// the strip feeds from, so nothing about the pin calls changes when the
+// direction flips. While the round runs, each pinned cell is drawn by an
+// overlay that holds its position as the strip rolls past behind it.
+//
+// The round: any wild that lands is pinned for the rest of the round, three
+// respins follow, wilds picked up on the way stick too, and the pins are
+// released when the round ends.
+
+const REELS = 5, CELLS = 3, SIZE = 84;
+const WILD = WILD_CARD.id;
+const RESPINS = 3;
+const FILLER = ['7', '8', '9', '10', 'J'];
+const filler = () => FILLER[Math.floor(Math.random() * FILLER.length)];
+const col = () => Array.from({ length: CELLS }, filler);
+
+const reelSet = new ReelSetBuilder()
+  .reels(REELS)
+  .visibleCells(CELLS)
+  .symbolSize(SIZE, SIZE)
+  .symbolGap(4, 4)
+  .direction('reverse')
+  .symbols((r) => {
+    for (const sym of [...CARD_DECK, WILD_CARD]) {
+      r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
+    }
+  })
+  .weights(Object.fromEntries(FILLER.map((id) => [id, 1])))
+  .speed('normal', SpeedPresets.NORMAL)
+  .ticker(app.ticker)
+  .build();
+
+// Grid with wilds planted at the given cells.
+function gridWith(cells) {
+  const grid = Array.from({ length: REELS }, () => col());
+  for (const { reel, cell } of cells) grid[reel][cell] = WILD;
+  return grid.map((visible) => ({ visible }));
+}
+
+// Pin every wild the landing shows. `turns: 'permanent'` is the default; the
+// round releases them itself at the end.
+function pinLandedWilds() {
+  const grid = reelSet.getVisibleGrid();
+  for (let reel = 0; reel < REELS; reel++) {
+    for (let cell = 0; cell < CELLS; cell++) {
+      if (grid[reel][cell] === WILD && !reelSet.getPin(reel, cell)) {
+        reelSet.pin(reel, cell, WILD, { turns: 'permanent' });
+      }
+    }
+  }
+}
+
+async function land(cells) {
+  const p = reelSet.spin();
+  await new Promise((r) => setTimeout(r, 220));
+  reelSet.setResult(gridWith(cells));
+  await p;
+  pinLandedWilds();
+}
+
+// Scripted round: two wilds trigger, one more arrives on the second respin.
+const TRIGGER = [{ reel: 1, cell: 0 }, { reel: 3, cell: 2 }];
+const RESPIN_HITS = [[], [{ reel: 2, cell: 1 }], []];
+
+let busy = false;
+return {
+  reelSet,
+  onSpin: async () => {
+    if (busy) return;
+    busy = true;
+    try {
+      // Release last round's pins. Copy the map first: unpin mutates it.
+      for (const pin of [...reelSet.pins.values()]) reelSet.unpin(pin.reel, pin.cell);
+
+      await land(TRIGGER);
+      await new Promise((r) => setTimeout(r, 500));
+
+      for (let i = 0; i < RESPINS; i++) {
+        await land(RESPIN_HITS[i] ?? []);
+        await new Promise((r) => setTimeout(r, 400));
+      }
+    } finally {
+      busy = false;
+    }
   },
 };
 ```

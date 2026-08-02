@@ -10,6 +10,10 @@ tags:
   - anticipation
   - spine
   - thunderkick
+  - horizontal
+  - reverse
+  - orientation
+  - gravity
 apis: []
 steps: []
 ---
@@ -88,6 +92,24 @@ Open every play with a classic strip-spin, then cascade the respins; the per-spi
 <RecipeDemo code="spin-then-cascade" height={300} />
 <RecipeDemo code="cascade-open-drop" height={300} />
 <RecipeDemo code="spin-then-cascade-turbo" height={300} />
+
+<a id="cascade-horizontal-tumble"></a>
+
+## Cascade sideways
+
+The same tumble on `.orientation('horizontal')`: reels are screen rows, the strip travels along X, and `tumble({ gravity })` stays on its default `'auto'`, so each reel drains toward the edge it travels toward and refills from the other one.
+
+**Gotcha:** gravity decides the server contract. survivors must be packed against the edge gravity exits by (`[...fresh, ...survivors]` under forward gravity). The engine animates the grid you send, it never reorders it.
+
+<RecipeDemo code="cascade-horizontal-tumble" height={300} />
+
+<a id="cascade-reverse-gravity"></a>
+
+## Spin up, drop down (explicit gravity)
+
+Reels built `.direction('reverse')` roll upward, but `tumble({ gravity: 'forward' })` makes the tumble settle downward anyway. `gravity` is only worth setting when you want travel and settling to disagree; leave it at `'auto'` and a reverse reel drains upward with no further config.
+
+<RecipeDemo code="cascade-reverse-gravity" height={300} />
 
 <a id="peek-from-above"></a>
 

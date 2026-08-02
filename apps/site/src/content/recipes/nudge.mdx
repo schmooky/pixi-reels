@@ -10,6 +10,9 @@ tags:
   - big-symbols
   - abort
   - skip
+  - horizontal
+  - reverse
+  - orientation
 apis: []
 steps: []
 ---
@@ -52,6 +55,26 @@ A 1xH block on the target reel is nudged through as a unit; the second demo drag
 
 <RecipeDemo code="nudge-big-symbol" height={300} />
 <RecipeDemo code="nudge-tail-reveal" height={300} />
+
+<a id="nudge-horizontal"></a>
+
+## Nudge a horizontal set
+
+On `.orientation('horizontal')` a reel is a screen row, so a nudge shifts it sideways. One press nudges row 0 `'forward'` (a wild enters at the left edge) and row 2 `'reverse'` (a wild enters at the right).
+
+**Gotcha:** `incoming` is start-to-end order, which reads left-to-right here, not top-down.
+
+<RecipeDemo code="nudge-horizontal" height={300} />
+
+<a id="nudge-reverse-rollup"></a>
+
+## Nudge on a roll-up set
+
+Two wilds land on the middle line and the third stops one cell below it; a `'forward'` nudge on a `.direction('reverse')` reel travels upward and rolls it onto the line, which then spotlights.
+
+**Gotcha:** `direction` is relative to the reel's own axis, so `'forward'` is up here and the incoming symbol arrives at the bottom cell.
+
+<RecipeDemo code="nudge-reverse-rollup" height={300} />
 
 <a id="nudge-abort"></a>
 
