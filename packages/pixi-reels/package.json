@@ -40,7 +40,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint src/",
+    "lint": "biome lint src/",
     "prepack": "node ../../scripts/stage-package-files.mjs",
     "postpack": "node ../../scripts/stage-package-files.mjs --clean"
   },
