@@ -48,6 +48,11 @@ jobs:
       - name: Test
         run: pnpm --filter pixi-reels test
 
+      - name: Test codemod
+        # The migration tool the docs tell users to run. Its 10 tests existed
+        # but nothing executed them, so it could rot unnoticed.
+        run: pnpm --filter pixi-reels-codemod test
+
       - name: Build docs site
         run: pnpm --filter site build
 

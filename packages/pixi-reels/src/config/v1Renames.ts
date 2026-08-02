@@ -1,9 +1,11 @@
 /**
  * The v1 -> v2 rename table (ADR 016 section 5), in one place.
  *
- * Two consumers read it: the builder's fail-loud guards below, and the
- * `pixi-reels-codemod` transform. Keeping one table is the only way the
- * codemod and the error messages cannot drift apart.
+ * Two consumers depend on it: the builder's fail-loud guards below, and the
+ * `pixi-reels-codemod` transform. The codemod is a `.cjs` in another
+ * package and cannot import this file, so it carries its own copy --
+ * `scripts/check-codemod-parity.mjs` fails the build if the two ever
+ * disagree about a name or its replacement.
  *
  * Per CLAUDE.md's fail-loud rule there are **no deprecated aliases**. A v1
  * name either fails to compile or throws with the line below; it never

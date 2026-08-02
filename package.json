@@ -10,14 +10,14 @@
   "scripts": {
     "build": "pnpm --filter pixi-reels build && pnpm --filter classic-spin build && pnpm --filter cascade-tumble build && pnpm --filter big-symbols build && pnpm --filter multiways build && pnpm --filter pyramid-cascade build && pnpm --filter orientation-matrix build",
     "build:all": "node scripts/build-all-publishable.mjs",
-    "test": "pnpm check:lint && pnpm --filter pixi-reels test",
+    "test": "pnpm check:lint && pnpm --filter pixi-reels test && pnpm --filter pixi-reels-codemod test",
     "test:e2e": "playwright test",
     "test:e2e:install": "playwright install chromium",
     "typecheck": "pnpm --filter pixi-reels typecheck",
     "lint": "pnpm --filter pixi-reels lint",
     "check:no-fancy-unicode": "node scripts/check-no-fancy-unicode.mjs",
     "check:imports": "biome lint packages/pixi-reels/src",
-    "check:lint": "pnpm check:no-fancy-unicode && pnpm check:imports && pnpm check:recipe-globals && pnpm check:v1-keys && pnpm check:recipe-syntax",
+    "check:lint": "pnpm check:no-fancy-unicode && pnpm check:imports && pnpm check:recipe-globals && pnpm check:v1-keys && pnpm check:recipe-syntax && pnpm check:codemod-parity",
     "commitlint": "commitlint --edit",
     "examples:dev:classic": "pnpm --filter classic-spin dev",
     "examples:dev:cascade": "pnpm --filter cascade-tumble dev",
@@ -46,7 +46,8 @@
     "check:recipe-globals": "node scripts/check-recipe-globals.mjs",
     "check:doc-links": "node scripts/check-doc-links.mjs",
     "check:v1-keys": "node scripts/check-v1-keys.mjs",
-    "check:recipe-syntax": "node scripts/check-recipe-syntax.mjs"
+    "check:recipe-syntax": "node scripts/check-recipe-syntax.mjs",
+    "check:codemod-parity": "node scripts/check-codemod-parity.mjs"
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx,mjs,cjs,md,mdx,astro,yml,yaml,json}": [

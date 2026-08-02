@@ -25,16 +25,22 @@ const PORT = 5182;
 const BASE = `http://localhost:${PORT}`;
 
 /**
- * The recipe pages carrying the demos that were broken, plus a couple of
- * heavily-linked ones. Not every page: the suite runs on every push and a
- * full crawl would dominate its runtime for little extra signal.
+ * Every recipe page and every demo page. Both runtimes are covered because
+ * they fail differently: recipes are evaluated from source at runtime, demo
+ * pages mount compiled React components.
  */
 const PAGES = [
-  '/recipes/big-symbols/',
-  '/recipes/nudge/',
-  '/recipes/cascade-6x5/',
-  '/recipes/hold-and-win/',
-  '/recipes/multiways/',
+  ...['anticipation', 'big-symbols', 'cascade', 'cells-and-banners', 'hold-and-win',
+      'nudge', 'orientation-and-direction', 'starters', 'symbols', 'wilds-and-pins',
+     ].map((s) => `/recipes/${s}/`),
+  ...['anticipation-slam', 'big-symbols', 'cascade-multiplier', 'classic-lines',
+      'hold-and-win-respin', 'multiways', 'pyramid-cascade', 'scatter-triggers-fs',
+      'sprite-classic', 'sticky-wilds',
+     ].map((s) => `/demos/${s}/`),
+  // The only guide that embeds demos. Kept explicit rather than globbed so
+  // adding <RecipeDemo> to another guide is a deliberate act, not a silent
+  // gap in coverage.
+  '/guides/nudge/',
 ];
 
 test.beforeAll(async () => {
