@@ -1,6 +1,5 @@
 import { Graphics, Text } from 'pixi.js';
-import { gsap } from 'gsap';
-import { ReelSymbol } from 'pixi-reels';
+import { ReelSymbol } from './ReelSymbol.js';
 
 /**
  * **Debug / prototyping symbol - NOT for production.**
@@ -90,10 +89,10 @@ export class CardSymbol extends ReelSymbol {
       // where movement of the cell border is distracting (cascade refills,
       // MultiWays adjust). The text is anchored at (0.5, 0.5) so its
       // scale tween pivots about the centre.
-      gsap.killTweensOf(this._text);
-      gsap.killTweensOf(this._text.scale);
+      this.gsap.killTweensOf(this._text);
+      this.gsap.killTweensOf(this._text.scale);
       const originalFill = this._textColor;
-      const tl = gsap.timeline({
+      const tl = this.gsap.timeline({
         onComplete: () => {
           this._text.scale.set(1, 1);
           this._text.rotation = 0;
@@ -108,14 +107,14 @@ export class CardSymbol extends ReelSymbol {
         .to(this._text.scale, { x: 1, y: 1, duration: 0.18, ease: 'power2.out' }, 0.32);
       // Glyph fill flashes warm gold mid-pulse - `Text.style.fill` isn't
       // a tweenable target on every Pixi version, so we set it discretely.
-      gsap.delayedCall(0.06, () => (this._text.style.fill = 0xffe168));
-      gsap.delayedCall(0.42, () => (this._text.style.fill = originalFill));
+      this.gsap.delayedCall(0.06, () => (this._text.style.fill = 0xffe168));
+      this.gsap.delayedCall(0.42, () => (this._text.style.fill = originalFill));
     });
   }
 
   stopAnimation(): void {
-    gsap.killTweensOf(this._text);
-    gsap.killTweensOf(this._text.scale);
+    this.gsap.killTweensOf(this._text);
+    this.gsap.killTweensOf(this._text.scale);
     this._text.scale.set(1, 1);
     this._text.rotation = 0;
     this._text.style.fill = this._textColor;

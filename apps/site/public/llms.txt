@@ -8,7 +8,7 @@ Site: https://pixi-reels.schmooky.dev
 Repo: https://github.com/schmooky/pixi-reels
 Package: https://www.npmjs.com/package/pixi-reels
 
-Generated: 2026-08-02T10:50:42.644Z
+Generated: 2026-08-02T11:58:01.448Z
 
 ## Quick start
 
@@ -1352,7 +1352,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/card-symbol-debug/
 //                   pickWeighted
 //
 // CardSymbol prototyping demo. a 5×3 layout using the importable
-// debug Graphics symbol from `examples/shared/CardSymbol.ts`. No textures,
+// debug Graphics symbol `CardSymbol`, exported from `pixi-reels`. No textures,
 // no atlases, no loaders. Each card is a flat colored rectangle with a
 // centered letter that always renders crisply at any cell size.
 //

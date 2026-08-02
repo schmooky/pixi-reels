@@ -1472,7 +1472,12 @@ export class Reel implements Disposable {
   }
 
   private _setupSymbolPositions(config: ReelConfig): void {
-    const slotH = this._spinCellSize + config.symbolGapY;
+    // MAIN-axis pitch, not `symbolGapY`. The two coincide on a vertical set,
+    // which is why this survived the axis refactor: a horizontal set laid its
+    // initial strip out at `cellMain` with no gap at all, and only looked
+    // right after the first spin, when ReelMotion (which does use `_mainGap`)
+    // took over the positions.
+    const slotH = this._spinCellSize + this._mainGap;
     // Add the reel container to the viewport's masked area first so
     // `this.container.x/y` are in viewport coords if any initial symbol
     // has `unmask: true` and needs parent-translation.
@@ -1480,13 +1485,13 @@ export class Reel implements Disposable {
 
     for (let i = 0; i < this.symbols.length; i++) {
       const symbol = this.symbols[i];
-      const y = (i - config.bufferStart) * slotH;
+      const main = (i - config.bufferStart) * slotH;
       // Unmask applies to visible cells only. a buffer-cell symbol lifted
       // above the mask would sit visibly parked outside the grid.
       const inWindow =
         i >= config.bufferStart && i < config.bufferStart + config.visibleCells;
       const unmasked = inWindow && this._isUnmasked(symbol.symbolId);
-      this._placeSymbolView(symbol.view, y, unmasked);
+      this._placeSymbolView(symbol.view, main, unmasked);
       (unmasked ? this._viewport.unmaskedContainer : this.container).addChild(symbol.view);
     }
   }

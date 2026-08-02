@@ -7,7 +7,7 @@ import {
   enableDebug,
 } from 'pixi-reels';
 import type { Win, SymbolPosition } from 'pixi-reels';
-import { CardSymbol, CARD_DECK, WILD_CARD } from '../../shared/CardSymbol.js';
+import { CardSymbol, CARD_DECK, WILD_CARD } from 'pixi-reels';
 import { WinBox } from '../../shared/WinBox.js';
 import { roundBus } from '../../shared/roundBus.js';
 import { mountUiOverlay, type UiOverlay } from '../../shared/uiOverlay.js';

@@ -1,7 +1,7 @@
 /** @jsxImportSource react */
 import DemoSandbox from '../DemoSandbox.tsx';
 import { mountMechanic } from '../demoRuntime.ts';
-import { CARD_DECK } from '../../../../../examples/shared/CardSymbol.ts';
+import { CARD_DECK } from 'pixi-reels';
 
 /**
  * Cascade-multiplier demo. 5×5 grid, card symbols, tumble pipeline. The

@@ -6,7 +6,7 @@ import type { Cell } from 'pixi-reels';
 import { gsap } from 'gsap';
 import { BlockSymbol } from './BlockSymbol.ts';
 import { BlurSpriteSymbol } from '../../../../examples/shared/BlurSpriteSymbol.ts';
-import { CardSymbol, CARD_DECK } from '../../../../examples/shared/CardSymbol.ts';
+import { CardSymbol, CARD_DECK } from 'pixi-reels';
 import { loadPrototypeSymbols } from '../../../../examples/shared/prototypeSpriteLoader.ts';
 import {
   CheatEngine,

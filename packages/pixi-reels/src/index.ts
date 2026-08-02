@@ -60,6 +60,11 @@ export type {
   PrewarmSpinTexturesOptions,
 } from './snapshot/SpinTextureCache.js';
 export { StaticSpinSymbol } from './snapshot/StaticSpinSymbol.js';
+
+// A ready-made playing-card symbol: coloured tile, fitted glyph, glyph-only
+// win pulse. Ships with the package so a prototype needs no art at all.
+export { CardSymbol, CARD_DECK, WILD_CARD } from './symbols/CardSymbol.js';
+export type { CardSymbolOptions } from './symbols/CardSymbol.js';
 export type { StaticSpinSymbolOptions } from './snapshot/StaticSpinSymbol.js';
 
 // Spin
