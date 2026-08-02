@@ -113,7 +113,7 @@ return {
             : [...reel],
         );
         trigger = trigger === TRIGGER1 ? TRIGGER2 : '__none__';
-        return out;
+        return out.map((visible) => ({ visible }));
       },
       pauseAfterDestroyMs: 167,
     });

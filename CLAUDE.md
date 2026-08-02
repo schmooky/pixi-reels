@@ -89,7 +89,7 @@ These are habits, not gates. Sections 1-5 above are hard rules; this section is 
 A passing typecheck is not "done." A compiled bundle is not "done." Done means you watched the thing behave correctly.
 
 - After every lib change, in order: `pnpm --filter pixi-reels typecheck` → `pnpm --filter pixi-reels test` → `pnpm check:lint`. Don't skip steps.
-- If your change is observable in a running reel, run the relevant example (`pnpm --filter sandbox dev` for the fastest iteration) and drive it. Use `__PIXI_REELS_DEBUG.log()` and `.trace()`. they exist because the canvas is opaque to you.
+- If your change is observable in a running reel, run the matching recipe on the docs site (`pnpm site:dev`) and drive it. Use `__PIXI_REELS_DEBUG.log()` and `.trace()`. they exist because the canvas is opaque to you.
 - If you cannot verify a behavior end-to-end (no browser, no real server, no spine asset), **say so explicitly** in the PR description. "Typecheck passes but I could not confirm the spotlight renders" is honest; "shipped" is not.
 
 ### Read state, don't remember it

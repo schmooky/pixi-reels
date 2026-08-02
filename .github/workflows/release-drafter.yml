@@ -6,7 +6,7 @@ name: Release Drafter
 #
 # Changesets still owns per-package versioning and per-package changelogs.
 # Release Drafter fills in the "what changed at the repo level" gap,
-# including changes to apps/site and examples/ that never get a changeset.
+# including changes to apps/site and tooling that never get a changeset.
 
 on:
   push:

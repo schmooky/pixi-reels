@@ -167,14 +167,20 @@ export function assertBufferCountsInRange(
     // (only slots 0..max-1 are consumed), so that index is the real ceiling.
     const aboveMax = highestDefinedIndex(item.bufferStart);
     const belowMax = highestDefinedIndex(item.bufferEnd);
-    if (aboveMax >= maxAbove) {
+    // `highestDefinedIndex` returns -1 for "no entries at all", so a bare
+    // `max >= capacity` test fires on an EMPTY buffer whenever capacity is
+    // negative -- which a reel reports transiently mid-cascade, when its
+    // strip is shorter than bufferStart + visibleCells. A column that
+    // specifies nothing can never have an entry dropped, so it is always
+    // in range.
+    if (aboveMax >= 0 && aboveMax >= maxAbove) {
       throw new RangeError(
         `${callerLabel} column ${c}: bufferStart has a symbol at index ${aboveMax}, ` +
         `beyond engine bufferSymbols=${maxAbove}; it would be silently dropped. ` +
         `Increase bufferSymbols(...) on the builder or remove the extra entry.`,
       );
     }
-    if (belowMax >= maxBelow) {
+    if (belowMax >= 0 && belowMax >= maxBelow) {
       throw new RangeError(
         `${callerLabel} column ${c}: bufferEnd has a symbol at index ${belowMax}, ` +
         `beyond engine bufferSymbols=${maxBelow}; it would be silently dropped. ` +

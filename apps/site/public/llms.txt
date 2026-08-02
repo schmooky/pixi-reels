@@ -8,7 +8,7 @@ Site: https://pixi-reels.schmooky.dev
 Repo: https://github.com/schmooky/pixi-reels
 Package: https://www.npmjs.com/package/pixi-reels
 
-Generated: 2026-08-02T17:09:56.061Z
+Generated: 2026-08-02T20:18:53.054Z
 
 ## Quick start
 
@@ -2105,7 +2105,7 @@ return {
             : [...reel],
         );
         trigger = trigger === TRIGGER1 ? TRIGGER2 : '__none__';
-        return out;
+        return out.map((visible) => ({ visible }));
       },
       pauseAfterDestroyMs: 167,
     });
@@ -3166,13 +3166,14 @@ return {
           if (!losers.has(w.reel)) losers.set(w.reel, new Set());
           losers.get(w.reel).add(w.cell);
         }
-        return prev.map((column, reel) => {
+        const next = prev.map((column, reel) => {
           const drop = losers.get(reel);
           if (!drop || drop.size === 0) return [...column];
           const survivors = column.filter((_, cell) => !drop.has(cell));
           const fillers = Array.from({ length: drop.size }, () => randSymbolNotIn(new Set([X])));
           return [...fillers, ...survivors];
         });
+        return next.map((visible) => ({ visible }));
       },
       pauseAfterDestroyMs: 117,
     });
@@ -3262,13 +3263,14 @@ return {
           if (!losers.has(w.reel)) losers.set(w.reel, new Set());
           losers.get(w.reel).add(w.cell);
         }
-        return prev.map((column, reel) => {
+        const next = prev.map((column, reel) => {
           const drop = losers.get(reel);
           if (!drop || drop.size === 0) return [...column];
           const survivors = column.filter((_, cell) => !drop.has(cell));
           const fillers = Array.from({ length: drop.size }, () => randSymbolNotIn(new Set([X])));
           return [...fillers, ...survivors];
         });
+        return next.map((visible) => ({ visible }));
       },
       pauseAfterDestroyMs: 117,
     });
@@ -3398,13 +3400,14 @@ return {
           byReel.get(w.reel).add(w.cell);
         }
         presented = true;
-        return prev.map((reel, c) => {
+        const next = prev.map((reel, c) => {
           const drop = byReel.get(c);
           if (!drop) return [...reel];
           const survivors = reel.filter((_, cell) => !drop.has(cell));
           const fillers = Array.from({ length: drop.size }, () => randSymbol());
           return [...fillers, ...survivors];
         });
+        return next.map((visible) => ({ visible }));
       },
       presentWinners: async () => {
         // Higher value presents first.
@@ -8666,7 +8669,7 @@ return {
       },
       nextGrid: (prev, winners) => {
         cascadeCount += 1;
-        return applyCascade(prev, [...winners]);
+        return applyCascade(prev, [...winners]).map((visible) => ({ visible }));
       },
       pauseAfterDestroyMs: 60,
     });
@@ -11333,7 +11336,7 @@ return {
             : [...reel],
         );
         trigger = trigger === TRIGGER1 ? TRIGGER2 : '__none__';
-        return out;
+        return out.map((visible) => ({ visible }));
       },
       pauseAfterDestroyMs: 83,
     });
@@ -11483,7 +11486,7 @@ return {
         // post-refill grid via `detectWinners` again. we hard-step it
         // so the demo is unmistakable.
         trigger = trigger === TRIGGER1 ? TRIGGER2 : '__none__';
-        return out;
+        return out.map((visible) => ({ visible }));
       },
       pauseAfterDestroyMs: 167,
     });

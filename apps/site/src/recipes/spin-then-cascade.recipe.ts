@@ -137,7 +137,7 @@ return {
         // post-refill grid via `detectWinners` again. we hard-step it
         // so the demo is unmistakable.
         trigger = trigger === TRIGGER1 ? TRIGGER2 : '__none__';
-        return out;
+        return out.map((visible) => ({ visible }));
       },
       pauseAfterDestroyMs: 167,
     });

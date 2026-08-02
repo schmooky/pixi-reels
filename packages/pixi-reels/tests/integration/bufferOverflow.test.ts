@@ -15,6 +15,7 @@ import { ReelSetBuilder } from '../../src/core/ReelSetBuilder.js';
 import { FakeTicker } from '../../src/testing/FakeTicker.js';
 import { HeadlessSymbol } from '../../src/testing/HeadlessSymbol.js';
 import type { Ticker } from 'pixi.js';
+import { assertBufferCountsInRange } from '../../src/frame/ColumnTarget.js';
 
 const SYMBOLS = ['a', 'b', 'c', 'X', 'Y'];
 
@@ -156,5 +157,26 @@ describe('initialFrame buffer overflow throws', () => {
     } finally {
       reelSet.destroy();
     }
+  });
+});
+
+describe('empty buffers are always in range', () => {
+  // `highestDefinedIndex` returns -1 for "no entries", so the pre-fix test
+  // `-1 >= capacity` fired whenever capacity was NEGATIVE -- which a reel
+  // reports transiently mid-cascade, when its strip is shorter than
+  // bufferStart + visibleCells. Adding this assertion to refill()/runCascade
+  // turned that into an intermittent RangeError on the docs site:
+  //   "bufferEnd has a symbol at index -1, beyond engine bufferSymbols=-4"
+  // A column specifying no buffer entries can never have one dropped.
+  it('does not throw on a negative reported capacity when no entries exist', () => {
+    const grid = [{ visible: ['a', 'b', 'c'] }, { visible: ['a', 'b', 'c'] }];
+    expect(() => assertBufferCountsInRange(grid, [-4, -4], [-4, -4], 'probe')).not.toThrow();
+  });
+
+  it('still throws when an entry really would be dropped', () => {
+    const grid = [{ visible: ['a'], bufferEnd: ['X'] }];
+    expect(() => assertBufferCountsInRange(grid, [1], [0], 'probe')).toThrowError(
+      /probe column 0: bufferEnd has a symbol at index 0/,
+    );
   });
 });

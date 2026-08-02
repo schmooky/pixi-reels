@@ -180,7 +180,7 @@ return {
       },
       nextGrid: (prev, winners) => {
         cascadeCount += 1;
-        return applyCascade(prev, [...winners]);
+        return applyCascade(prev, [...winners]).map((visible) => ({ visible }));
       },
       pauseAfterDestroyMs: 60,
     });

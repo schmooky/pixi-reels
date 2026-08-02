@@ -117,13 +117,14 @@ return {
           byReel.get(w.reel).add(w.cell);
         }
         presented = true;
-        return prev.map((reel, c) => {
+        const next = prev.map((reel, c) => {
           const drop = byReel.get(c);
           if (!drop) return [...reel];
           const survivors = reel.filter((_, cell) => !drop.has(cell));
           const fillers = Array.from({ length: drop.size }, () => randSymbol());
           return [...fillers, ...survivors];
         });
+        return next.map((visible) => ({ visible }));
       },
       presentWinners: async () => {
         // Higher value presents first.

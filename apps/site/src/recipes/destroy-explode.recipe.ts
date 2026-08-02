@@ -74,13 +74,14 @@ return {
           if (!losers.has(w.reel)) losers.set(w.reel, new Set());
           losers.get(w.reel).add(w.cell);
         }
-        return prev.map((column, reel) => {
+        const next = prev.map((column, reel) => {
           const drop = losers.get(reel);
           if (!drop || drop.size === 0) return [...column];
           const survivors = column.filter((_, cell) => !drop.has(cell));
           const fillers = Array.from({ length: drop.size }, () => randSymbolNotIn(new Set([X])));
           return [...fillers, ...survivors];
         });
+        return next.map((visible) => ({ visible }));
       },
       pauseAfterDestroyMs: 117,
     });

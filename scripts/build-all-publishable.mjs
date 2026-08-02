@@ -36,10 +36,11 @@ async function syncRootFiles(pkgDir) {
   }
 }
 
+// Private workspace packages that must never be built for a release.
+// The example apps used to be listed here; they moved to their own repo.
 const SKIP_NAMES = new Set([
   '@pixi-reels/site',
-  'classic-spin',
-  'cascade-tumble',
+  '@pixi-reels/cheats',
 ]);
 
 async function readJson(path) {

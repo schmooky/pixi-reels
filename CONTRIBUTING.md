@@ -10,7 +10,6 @@ cd pixi-reels
 pnpm install
 pnpm --filter pixi-reels test     # vitest + typecheck
 pnpm site:dev                     # docs site at http://localhost:4321
-pnpm --filter classic-spin dev    # classic 5×3 example
 ```
 
 Node 20+ is required. The repo uses pnpm workspaces.
