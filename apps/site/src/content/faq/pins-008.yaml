@@ -1,8 +1,12 @@
 id: pins-008
 group: pins
 question: How do I make a pin migrate back to its origin row when there is room?
-answer: "Pin with `{ migration: 'origin', originRow }` so it restores toward its
-  origin row when the shape grows back."
+answer: >-
+  `reelSet.pin(reel, cell, id, { migration: 'origin', originCell })`. `'origin'`
+  is already the default, so you only need `originCell` when the origin differs
+  from the cell you are pinning. The pin clamps when the shape shrinks and climbs
+  back toward `originCell` when it grows again. Use `migration: 'frozen'` for
+  lock-and-never-restore.
 links:
   - label: "Recipe: Sticky wild + MultiWays"
     href: /recipes/sticky-wild-multiways/

@@ -1,8 +1,11 @@
 id: result-007
 group: result
 question: How do I use a seeded RNG so a spin is exactly reproducible?
-answer: Inject a deterministic generator with `.rng(fn)` on the builder — the
-  shared `SeededRng` works.
+answer: >-
+  Inject a deterministic generator with `.rng(fn)` on the builder. The engine
+  takes any `() => number` in `[0, 1)`, so bring your own PRNG -- the repo's
+  `SeededRng` is example code (`examples/shared/seededRng.ts`), not part of the
+  published package, so copy it in rather than importing it from `pixi-reels`.
 links:
   - label: "Guide: Cheats & testing"
     href: /guides/cheats-and-testing/

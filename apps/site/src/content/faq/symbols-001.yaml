@@ -1,8 +1,11 @@
 id: symbols-001
 group: symbols
 question: How do I add a brand-new symbol type to the game?
-answer: Subclass `ReelSymbol`, implement `onActivate` / `resize` / `playWin` /
-  `stopAnimation`, then register it with `r.register(id, MySymbol, opts)`.
+answer: >-
+  Subclass `ReelSymbol` and implement all five abstract members -- `onActivate`,
+  `onDeactivate`, `resize`, `playWin`, `stopAnimation` -- then register it with
+  `r.register(id, MySymbol, opts)`. `resize()` runs on every symbol swap, so
+  anything positional belongs there rather than in the constructor.
 links:
   - label: "Guide: Symbols"
     href: /guides/symbols/

@@ -1,8 +1,11 @@
 id: coins-021
 group: coins
 question: How do I order the collect flights by row, by column, or all at once?
-answer: "`coinWaves(board.lockedCoins, 'by-col')` (also `'by-row'` /
-  `'sequence'` / `'all'` / `{ chunk }`) groups the flights into waves."
+answer: >-
+  The shared `coinWaves(board.lockedCoins, 'by-reel')` helper -- also
+  `'by-cell'`, `'sequence'`, `'all'`, `{ chunk }`, or a custom
+  `(item, index) => waveIndex` -- groups the flights into waves. It lives in
+  `examples/shared/holdAndWinFx.ts`, not the package.
 links:
   - label: "Recipe: Hold & Win — collector"
     href: /recipes/hold-and-win-collector/

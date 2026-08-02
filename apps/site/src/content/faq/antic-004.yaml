@@ -1,6 +1,9 @@
 id: antic-004
 group: antic
 question: How do I play a teaser sound/glow on the anticipating reel?
-answer: Listen for `spin:stopping` (or your own anticipation-start hook) and
-  play the glow/sound; `setAnticipation` already slowed the reel.
+answer: >-
+  Listen for `anticipation:reel` -- it carries `{ reelIndex, order, total }` and
+  fires only for reels that actually tease, at the moment they start slowing --
+  and stop the glow or sound on `anticipation:reelEnd`. `spin:stopping` fires for
+  every reel, teasing or not, so it is the wrong hook for this.
 links: []

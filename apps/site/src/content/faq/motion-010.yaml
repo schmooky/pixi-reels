@@ -1,6 +1,9 @@
 id: motion-010
 group: motion
 question: How do I make reels horizontal instead of vertical?
-answer: Orientation is vertical-only in the engine today; a horizontal board is
-  a custom layout, not a builder flag.
+answer: >-
+  `.orientation('horizontal')` on the builder runs the strip along X, with reels
+  marched along Y. Everything else is orientation-neutral -- pyramids, MultiWays,
+  big symbols and cascades all work on either axis. `symbolSize(width, height)`
+  stays screen-space, so a horizontal set takes its travel pitch from `width`.
 links: []

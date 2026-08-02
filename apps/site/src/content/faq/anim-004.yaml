@@ -1,7 +1,9 @@
 id: anim-004
 group: anim
 question: A symbol gets destroyed by an object — how do I play its destroy animation?
-answer: Override `playDestroy(opts)` on your `ReelSymbol`. The default is a ~320
-  ms scale / spin / fade implode; for Spine, play a `disintegration` or shatter
-  track. Honour `opts.signal` so a slam can abort it mid-tween.
+answer: >-
+  Override `playDestroy(opts)` on your `ReelSymbol`. The default is a ~200 ms
+  scale-and-fade implode: a ~60 ms anticipation pop, then a ~140 ms collapse to
+  `scale: 0` / `alpha: 0`, with no rotation. For Spine, play a `disintegration`
+  or shatter track. Honour `opts.signal` so a slam can abort it mid-tween.
 links: []

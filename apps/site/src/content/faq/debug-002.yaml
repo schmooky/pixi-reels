@@ -1,8 +1,10 @@
 id: debug-002
 group: debug
 question: How do I print an ASCII grid of the visible symbols?
-answer: "`__PIXI_REELS_DEBUG.grid()` (or `debugGrid()`) prints an ASCII table of
-  the visible symbols."
+answer: >-
+  `__PIXI_REELS_DEBUG.grid()` RETURNS an ASCII table of the visible symbols as a
+  string (`debugGrid(reelSet)` is the direct import). Use
+  `__PIXI_REELS_DEBUG.log()` if you want it printed.
 links:
   - label: "Guide: Debugging"
     href: /guides/debugging/

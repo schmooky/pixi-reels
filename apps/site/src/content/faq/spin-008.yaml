@@ -1,7 +1,10 @@
 id: spin-008
 group: spin
 question: How do I boost only the current spin without changing the speed profile?
-answer: The first `skipSpin()` boosts the in-flight spin's speed (it emits
-  `skip:boosted`) without changing your selected profile; the next round
-  restores it.
+answer: >-
+  There is no boost-only call. `skipSpin()` slams the current drop, and as a
+  round-scoped side effect switches the active profile to the fastest registered
+  one and emits `skip:boosted`. That speed change only affects subsequent spins
+  -- mid-spin speed switching is not supported -- and the next `spin()` restores
+  your original profile. For a slam with no speed side effect, use `slamStop()`.
 links: []
