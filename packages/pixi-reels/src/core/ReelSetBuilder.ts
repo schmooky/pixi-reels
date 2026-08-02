@@ -32,7 +32,7 @@ import type { SpinningMode } from '../spin/modes/SpinningMode.js';
 import { StandardMode } from '../spin/modes/StandardMode.js';
 import type { FrameMiddleware } from '../frame/FrameBuilder.js';
 import type { ColumnTarget } from '../frame/ColumnTarget.js';
-import { assertBufferCountsInRange } from '../frame/ColumnTarget.js';
+import { assertBufferCountsInRange, assertColumnTargets } from '../frame/ColumnTarget.js';
 import {
   V1_BUILDER_METHODS,
   V1_OPTION_KEYS,
@@ -649,6 +649,7 @@ export class ReelSetBuilder {
    * ]);
    */
   initialFrame(frame: ColumnTarget[]): this {
+    assertColumnTargets(frame, 'initialFrame()');
     const columnKeys = V1_OPTION_KEYS['initialFrame() / setResult() column'];
     for (let i = 0; i < (frame?.length ?? 0); i++) {
       assertNoV1Keys(frame[i], columnKeys, `initialFrame() column ${i}`);

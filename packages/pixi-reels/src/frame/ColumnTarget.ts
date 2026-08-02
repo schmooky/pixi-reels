@@ -118,6 +118,38 @@ export function cloneColumnTarget(target: ColumnTarget): ColumnTarget {
  * `callerLabel` shows up in the thrown message so the caller knows which
  * public API surfaced the error.
  */
+/**
+ * Throw a readable error when a caller hands `setResult` / `initialFrame`
+ * the pre-v2 `string[][]` instead of `ColumnTarget[]`.
+ *
+ * Without this the first thing to touch the value is a spread of
+ * `target.visible`, so the caller gets `TypeError: target.visible is not
+ * iterable` from deep inside the frame pipeline -- and, worse, the spin
+ * promise never settles, because the throw happens after the reels are
+ * already moving. The symptom is a reel that spins forever with no clue
+ * why. A recipe on the docs site shipped exactly that.
+ */
+export function assertColumnTargets(grid: unknown, callerLabel: string): asserts grid is ColumnTarget[] {
+  if (!Array.isArray(grid)) {
+    throw new TypeError(`${callerLabel}: expected ColumnTarget[], got ${typeof grid}.`);
+  }
+  for (let c = 0; c < grid.length; c++) {
+    const item = grid[c];
+    if (Array.isArray(item)) {
+      throw new TypeError(
+        `${callerLabel}: column ${c} is a plain string[]. ${callerLabel} takes ColumnTarget[] ` +
+        `- wrap each column: grid.map((visible) => ({ visible })).`,
+      );
+    }
+    if (item === null || typeof item !== 'object' || !Array.isArray((item as ColumnTarget).visible)) {
+      throw new TypeError(
+        `${callerLabel}: column ${c} has no 'visible' array. Each column is ` +
+        `{ visible: string[], bufferStart?: string[], bufferEnd?: string[] }.`,
+      );
+    }
+  }
+}
+
 export function assertBufferCountsInRange(
   grid: ColumnTarget[],
   bufferStartPerReel: ReadonlyArray<number>,

@@ -6,8 +6,9 @@
 // is a "6th reel": a wild in the banner cell above a column makes that column
 // count as a matching column, extending the way. pixi-reels never computes wins
 // (ADR 007) - the recipe scripts the ways math and spotlights the cells; the
-// engine spins and lands BOTH sets through the same lifecycle. This is the
-// ReelStage composition (ADR 017): two ReelSets sharing one presentation.
+// engine spins and lands BOTH sets through the same lifecycle. Two ReelSets share one
+// container; there is no ReelStage composition layer (ADR 017 section B was
+// never shipped).
 
 const SYMBOLS = [...CARD_DECK, WILD_CARD];
 const W = { '7': 20, '8': 18, '9': 16, '10': 12, J: 10, Q: 8, K: 6, A: 5, wild: 0 };
@@ -76,7 +77,7 @@ const onSpin = async () => {
   const pm = main.spin();
   main.setResult(grid.map((visible) => ({ visible })));
   const pb = banner.spin();
-  banner.setResult([cell]);
+  banner.setResult([{ visible: cell }]);   // ColumnTarget[], not string[][]
   await Promise.all([pm, pb]);
 
   // Ways pay left-to-right on consecutive reels. A reel contributes if it shows
