@@ -259,7 +259,7 @@ describe('runCascade. gravityHold per-cascade promise builder', () => {
         if (detects > 1) return [];
         return [{ reel: 0, cell: 2 }, { reel: 1, cell: 2 }, { reel: 2, cell: 2 }];
       },
-      nextGrid: (grid) => grid.map((c) => ['d', c[0], c[1]]),
+      nextGrid: (grid) => grid.map((c) => ({ visible: ['d', c[0], c[1]] })),
       pauseAfterDestroyMs: 0,
       refillMode: 'gravity-then-drop',
       gravityHoldMs: 0,
@@ -302,7 +302,7 @@ describe('runCascade. gravityHold per-cascade promise builder', () => {
         if (callsDetect > 2) return [];
         return [{ reel: 0, cell: 2 }, { reel: 1, cell: 2 }, { reel: 2, cell: 2 }];
       },
-      nextGrid: (grid) => grid.map((c) => ['d', c[0], c[1]]),
+      nextGrid: (grid) => grid.map((c) => ({ visible: ['d', c[0], c[1]] })),
       pauseAfterDestroyMs: 0,
       refillMode: 'gravity-then-drop',
       gravityHoldMs: 0,

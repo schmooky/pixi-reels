@@ -34,11 +34,7 @@ describe('unmask: true reparents the symbol view to viewport.unmaskedContainer',
   it('a wild that lands in a cell sits in the unmasked container', async () => {
     const h = makeHarness();
     try {
-      await h.spinAndLand([
-        ['a', 'a', 'a'],
-        ['a', 'wild', 'a'],
-        ['a', 'a', 'a'],
-      ]);
+      await h.spinAndLand([ { visible: ['a', 'a', 'a'] }, { visible: ['a', 'wild', 'a'] }, { visible: ['a', 'a', 'a'] } ]);
 
       const reel = h.reelSet.reels[1];
       const visible = reel.getVisibleSymbols();
@@ -54,11 +50,7 @@ describe('unmask: true reparents the symbol view to viewport.unmaskedContainer',
   it('a normal symbol still sits in the reel container (the masked layer)', async () => {
     const h = makeHarness();
     try {
-      await h.spinAndLand([
-        ['a', 'a', 'a'],
-        ['a', 'a', 'a'],
-        ['a', 'a', 'a'],
-      ]);
+      await h.spinAndLand([ { visible: ['a', 'a', 'a'] }, { visible: ['a', 'a', 'a'] }, { visible: ['a', 'a', 'a'] } ]);
 
       const reel = h.reelSet.reels[0];
       const view = reel.getSymbolAt(0).view;
@@ -72,20 +64,12 @@ describe('unmask: true reparents the symbol view to viewport.unmaskedContainer',
     const h = makeHarness();
     try {
       // First spin: wild lands in middle cell of reel 1 -> unmasked.
-      await h.spinAndLand([
-        ['a', 'a', 'a'],
-        ['a', 'wild', 'a'],
-        ['a', 'a', 'a'],
-      ]);
+      await h.spinAndLand([ { visible: ['a', 'a', 'a'] }, { visible: ['a', 'wild', 'a'] }, { visible: ['a', 'a', 'a'] } ]);
       const reel = h.reelSet.reels[1];
       expect(reel.getSymbolAt(1).view.parent).toBe(h.reelSet.viewport.unmaskedContainer);
 
       // Second spin: middle cell becomes a normal symbol -> must end up in reel.container.
-      await h.spinAndLand([
-        ['b', 'b', 'b'],
-        ['b', 'b', 'b'],
-        ['b', 'b', 'b'],
-      ]);
+      await h.spinAndLand([ { visible: ['b', 'b', 'b'] }, { visible: ['b', 'b', 'b'] }, { visible: ['b', 'b', 'b'] } ]);
 
       expect(reel.getSymbolAt(1).view.parent).toBe(reel.container);
     } finally {
@@ -96,11 +80,7 @@ describe('unmask: true reparents the symbol view to viewport.unmaskedContainer',
   it('aligns unmasked X with the reel column so it visually overlaps the right cell', async () => {
     const h = makeHarness();
     try {
-      await h.spinAndLand([
-        ['a', 'a', 'a'],
-        ['a', 'a', 'a'],
-        ['a', 'a', 'wild'],
-      ]);
+      await h.spinAndLand([ { visible: ['a', 'a', 'a'] }, { visible: ['a', 'a', 'a'] }, { visible: ['a', 'a', 'wild'] } ]);
 
       const reel = h.reelSet.reels[2];
       const wildView = reel.getSymbolAt(2).view;
@@ -116,11 +96,7 @@ describe('unmask: true reparents the symbol view to viewport.unmaskedContainer',
   it('Y on a flat (mainOffset=0) reel matches the cell position', async () => {
     const h = makeHarness();
     try {
-      await h.spinAndLand([
-        ['a', 'a', 'a'],
-        ['a', 'wild', 'a'],
-        ['a', 'a', 'a'],
-      ]);
+      await h.spinAndLand([ { visible: ['a', 'a', 'a'] }, { visible: ['a', 'wild', 'a'] }, { visible: ['a', 'a', 'a'] } ]);
       const reel = h.reelSet.reels[1];
       // Flat reel: container.y === 0, so the unmasked view's Y is just
       // cell * slotPitch. This is the path that's correct on flat slots.
@@ -153,13 +129,7 @@ describe('unmask on a jagged / pyramid layout (non-zero reel mainOffset)', () =>
     const h = makePyramid();
     try {
       // Reel 0 is a 3-cell reel -> non-zero mainOffset. Land a wild in its top cell.
-      await h.spinAndLand([
-        ['wild', 'a', 'a'],
-        ['a', 'a', 'a', 'a'],
-        ['a', 'a', 'a', 'a', 'a'],
-        ['a', 'a', 'a', 'a'],
-        ['a', 'a', 'a'],
-      ]);
+      await h.spinAndLand([ { visible: ['wild', 'a', 'a'] }, { visible: ['a', 'a', 'a', 'a'] }, { visible: ['a', 'a', 'a', 'a', 'a'] }, { visible: ['a', 'a', 'a', 'a'] }, { visible: ['a', 'a', 'a'] } ]);
 
       const reel = h.reelSet.reels[0];
       expect(reel.container.y).not.toBe(0); // it really is an offset reel
@@ -177,23 +147,11 @@ describe('unmask on a jagged / pyramid layout (non-zero reel mainOffset)', () =>
   it('stays offset-correct after a second spin re-snaps the strip', async () => {
     const h = makePyramid();
     try {
-      await h.spinAndLand([
-        ['wild', 'a', 'a'],
-        ['a', 'a', 'a', 'a'],
-        ['a', 'a', 'a', 'a', 'a'],
-        ['a', 'a', 'a', 'a'],
-        ['a', 'a', 'a'],
-      ]);
+      await h.spinAndLand([ { visible: ['wild', 'a', 'a'] }, { visible: ['a', 'a', 'a', 'a'] }, { visible: ['a', 'a', 'a', 'a', 'a'] }, { visible: ['a', 'a', 'a', 'a'] }, { visible: ['a', 'a', 'a'] } ]);
       // Land another wild on the same offset reel. the motion layer's
       // absolute snap runs between spins; _syncUnmaskedViewOffsets must
       // re-bake container.y so the lifted view isn't jumped by the offset.
-      await h.spinAndLand([
-        ['a', 'wild', 'a'],
-        ['a', 'a', 'a', 'a'],
-        ['a', 'a', 'a', 'a', 'a'],
-        ['a', 'a', 'a', 'a'],
-        ['a', 'a', 'a'],
-      ]);
+      await h.spinAndLand([ { visible: ['a', 'wild', 'a'] }, { visible: ['a', 'a', 'a', 'a'] }, { visible: ['a', 'a', 'a', 'a', 'a'] }, { visible: ['a', 'a', 'a', 'a'] }, { visible: ['a', 'a', 'a'] } ]);
 
       const reel = h.reelSet.reels[0];
       const wildView = reel.getSymbolAt(1).view;

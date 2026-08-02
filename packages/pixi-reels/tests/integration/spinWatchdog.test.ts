@@ -24,7 +24,7 @@ describe('spin() watchdog / AbortSignal (C2)', () => {
       await expect(p).rejects.toThrow('fetch failed');
 
       // The engine recovered to a coherent idle state - a fresh spin works.
-      const result = await h.spinAndLand(GRID);
+      const result = await h.spinAndLand(GRID.map((visible) => ({ visible })));
       expect(result.symbols).toHaveLength(3);
     } finally {
       h.destroy();
@@ -38,7 +38,7 @@ describe('spin() watchdog / AbortSignal (C2)', () => {
       controller.abort();
       await expect(h.reelSet.spin({ signal: controller.signal })).rejects.toThrow(/abort/i);
       // Never started spinning, so a normal spin still works.
-      const result = await h.spinAndLand(GRID);
+      const result = await h.spinAndLand(GRID.map((visible) => ({ visible })));
       expect(result.symbols).toHaveLength(3);
     } finally {
       h.destroy();

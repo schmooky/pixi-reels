@@ -117,11 +117,11 @@ it('hold-and-win persists across spins', async () => {
   });
   try {
     await h.spinAndLand([
-      ['coin','a','b'],
-      ['b','coin','a'],
-      ['a','b','coin'],
-      ['coin','a','b'],
-      ['b','coin','a'],
+      { visible: ['coin','a','b'] },
+      { visible: ['b','coin','a'] },
+      { visible: ['a','b','coin'] },
+      { visible: ['coin','a','b'] },
+      { visible: ['b','coin','a'] },
     ]);
     const log = captureEvents(h.reelSet, ['spin:complete']);
     await h.spinAndLand(/* next stage */);

@@ -214,18 +214,16 @@ export interface RunCascadeOptions {
    * reel are new symbols; the rest are survivors in original top-to-
    * bottom order. Same contract as `refill({ grid })`.
    *
-   * May return `string[][]` (visible cells only) or `ColumnTarget[]`
-   * (when the next grid places anchors in `bufferStart` / `bufferEnd`).
+   * Returns `ColumnTarget[]` -- one entry per reel, `{ visible }` plus any
+   * `bufferStart` / `bufferEnd` anchors. A plain `string[][]` is not
+   * accepted anywhere in the API; wrap it with
+   * `grid.map((visible) => ({ visible }))`.
    */
   nextGrid: (
     grid: string[][],
     winners: readonly Cell[],
     chainLevel: number,
-  ) =>
-    | string[][]
-    | ColumnTarget[]
-    | Promise<string[][]>
-    | Promise<ColumnTarget[]>;
+  ) => ColumnTarget[] | Promise<ColumnTarget[]>;
   /**
    * Win-presentation hook fired AFTER detection (`cascade:chain:start`)
    * and BEFORE `destroySymbols`. the beat where the winners are still on
@@ -946,17 +944,12 @@ export class ReelSet extends Container implements Disposable {
         // that the player should see synchronized with the gravity-end
         // beat. Without the wrapping the bump would fire ~the duration
         // of the gravity stage too early.
-        // `nextGrid` may return `string[][]` (visible cells) or `ColumnTarget[]`
-        // (when the next grid places anchors in buffer cells). Detect the
-        // shape and forward as `ColumnTarget[]` to `refill`.
-        const nextTargets: ColumnTarget[] = next.length === 0
-          ? []
-          : Array.isArray(next[0])
-            ? (next as string[][]).map((visible) => ({ visible }))
-            : (next as ColumnTarget[]);
+        // One accepted shape, checked here so a bad `nextGrid` names itself
+        // rather than failing later inside the frame pipeline.
+        assertColumnTargets(next, 'runCascade(): nextGrid');
         await this.refill({
           winners: [...winners],
-          grid: nextTargets,
+          grid: next,
           mode: refillMode,
           gravityHoldMs: opts.gravityHoldMs,
           gravityHold: opts.gravityHold

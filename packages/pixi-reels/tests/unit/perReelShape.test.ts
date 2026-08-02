@@ -70,7 +70,7 @@ describe('per-reel static shape (pyramid)', () => {
         ['b', 'b', 'b', 'b', 'b'],
         ['a', 'a', 'a'],
       ];
-      await spinAndLand(target);
+      await spinAndLand(target.map((visible) => ({ visible })));
       expectGrid(reelSet, target);
     } finally {
       destroy();

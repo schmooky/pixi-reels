@@ -26,11 +26,7 @@ describe('Reel.setSymbolAt', () => {
   it('swaps a visible cell in-place', async () => {
     const h = makeHarness();
     try {
-      await h.spinAndLand([
-        ['a', 'a', 'a'],
-        ['a', 'a', 'a'],
-        ['a', 'a', 'a'],
-      ]);
+      await h.spinAndLand([ { visible: ['a', 'a', 'a'] }, { visible: ['a', 'a', 'a'] }, { visible: ['a', 'a', 'a'] } ]);
 
       h.reelSet.reels[1].setSymbolAt(1, 'wild');
 
@@ -43,11 +39,7 @@ describe('Reel.setSymbolAt', () => {
   it('emits symbol:created on the per-reel event bus', async () => {
     const h = makeHarness();
     try {
-      await h.spinAndLand([
-        ['a', 'a', 'a'],
-        ['a', 'a', 'a'],
-        ['a', 'a', 'a'],
-      ]);
+      await h.spinAndLand([ { visible: ['a', 'a', 'a'] }, { visible: ['a', 'a', 'a'] }, { visible: ['a', 'a', 'a'] } ]);
       const reel = h.reelSet.reels[2];
       const fn = vi.fn();
       reel.events.on('symbol:created', fn);
@@ -63,11 +55,7 @@ describe('Reel.setSymbolAt', () => {
   it('leaves other cells untouched', async () => {
     const h = makeHarness();
     try {
-      await h.spinAndLand([
-        ['a', 'a', 'a'],
-        ['a', 'a', 'a'],
-        ['a', 'a', 'a'],
-      ]);
+      await h.spinAndLand([ { visible: ['a', 'a', 'a'] }, { visible: ['a', 'a', 'a'] }, { visible: ['a', 'a', 'a'] } ]);
       const reel = h.reelSet.reels[0];
       const before = reel.getVisibleSymbols();
 
@@ -85,11 +73,7 @@ describe('Reel.setSymbolAt', () => {
   it('throws on out-of-range cell', async () => {
     const h = makeHarness();
     try {
-      await h.spinAndLand([
-        ['a', 'a', 'a'],
-        ['a', 'a', 'a'],
-        ['a', 'a', 'a'],
-      ]);
+      await h.spinAndLand([ { visible: ['a', 'a', 'a'] }, { visible: ['a', 'a', 'a'] }, { visible: ['a', 'a', 'a'] } ]);
       const reel = h.reelSet.reels[0];
 
       expect(() => reel.setSymbolAt(-1, 'a')).toThrow(/out of range/);
@@ -103,11 +87,7 @@ describe('Reel.setSymbolAt', () => {
   it('throws on unregistered symbol id', async () => {
     const h = makeHarness();
     try {
-      await h.spinAndLand([
-        ['a', 'a', 'a'],
-        ['a', 'a', 'a'],
-        ['a', 'a', 'a'],
-      ]);
+      await h.spinAndLand([ { visible: ['a', 'a', 'a'] }, { visible: ['a', 'a', 'a'] }, { visible: ['a', 'a', 'a'] } ]);
       const reel = h.reelSet.reels[0];
 
       expect(() => reel.setSymbolAt(1, 'nonexistent')).toThrow(/not registered/);
@@ -119,11 +99,7 @@ describe('Reel.setSymbolAt', () => {
   it('throws when called while reel is moving', async () => {
     const h = makeHarness();
     try {
-      await h.spinAndLand([
-        ['a', 'a', 'a'],
-        ['a', 'a', 'a'],
-        ['a', 'a', 'a'],
-      ]);
+      await h.spinAndLand([ { visible: ['a', 'a', 'a'] }, { visible: ['a', 'a', 'a'] }, { visible: ['a', 'a', 'a'] } ]);
       const reel = h.reelSet.reels[0];
       // The reel exposes `speed` and `isStopping` as the in-motion
       // markers; setSymbolAt's guard checks both. Toggle each in turn
@@ -149,11 +125,7 @@ describe('ReelSet.setSymbolAt', () => {
   it('delegates to the reel and swaps the cell', async () => {
     const h = makeHarness();
     try {
-      await h.spinAndLand([
-        ['a', 'a', 'a'],
-        ['a', 'a', 'a'],
-        ['a', 'a', 'a'],
-      ]);
+      await h.spinAndLand([ { visible: ['a', 'a', 'a'] }, { visible: ['a', 'a', 'a'] }, { visible: ['a', 'a', 'a'] } ]);
       h.reelSet.setSymbolAt(1, 1, 'wild');
       expect(h.reelSet.getVisibleGrid()[1][1]).toBe('wild');
     } finally {
@@ -164,11 +136,7 @@ describe('ReelSet.setSymbolAt', () => {
   it('throws on out-of-range column', async () => {
     const h = makeHarness();
     try {
-      await h.spinAndLand([
-        ['a', 'a', 'a'],
-        ['a', 'a', 'a'],
-        ['a', 'a', 'a'],
-      ]);
+      await h.spinAndLand([ { visible: ['a', 'a', 'a'] }, { visible: ['a', 'a', 'a'] }, { visible: ['a', 'a', 'a'] } ]);
       expect(() => h.reelSet.setSymbolAt(-1, 0, 'a')).toThrow(/out of range/);
       expect(() => h.reelSet.setSymbolAt(99, 0, 'a')).toThrow(/out of range/);
     } finally {
@@ -179,11 +147,7 @@ describe('ReelSet.setSymbolAt', () => {
   it('refuses to overwrite a pinned cell', async () => {
     const h = makeHarness();
     try {
-      await h.spinAndLand([
-        ['a', 'a', 'a'],
-        ['a', 'a', 'a'],
-        ['a', 'a', 'a'],
-      ]);
+      await h.spinAndLand([ { visible: ['a', 'a', 'a'] }, { visible: ['a', 'a', 'a'] }, { visible: ['a', 'a', 'a'] } ]);
       h.reelSet.pin(1, 1, 'wild');
       expect(() => h.reelSet.setSymbolAt(1, 1, 'b')).toThrow(/has an active pin/);
       // After unpin, the same call should succeed.

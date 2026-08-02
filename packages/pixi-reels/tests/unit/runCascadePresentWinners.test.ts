@@ -51,9 +51,9 @@ describe('runCascade. presentWinners pre-destroy hook', () => {
           ran = true;
           return [{ reel: 0, cell: 0 }];
         },
-        nextGrid: (prev) => prev.map((reel, c) =>
-          c === 0 ? ['b', ...reel.slice(1)] : [...reel],
-        ),
+        nextGrid: (prev) => prev.map((reel, c) => ({
+          visible: c === 0 ? ['b', ...reel.slice(1)] : [...reel],
+        })),
         presentWinners: async ({ winners }) => {
           order.push('present');
           expect(winners).toEqual([{ reel: 0, cell: 0 }]);
@@ -91,9 +91,9 @@ describe('runCascade. presentWinners pre-destroy hook', () => {
           stagesLeft -= 1;
           return [{ reel: 0, cell: 0 }];
         },
-        nextGrid: (prev) => prev.map((reel, c) =>
-          c === 0 ? ['x', ...reel.slice(1)] : [...reel],
-        ),
+        nextGrid: (prev) => prev.map((reel, c) => ({
+          visible: c === 0 ? ['x', ...reel.slice(1)] : [...reel],
+        })),
         presentWinners: ({ chain }) => { order.push(`present:${chain}`); },
         onCascade: ({ chain }) => { order.push(`after:${chain}`); },
         pauseAfterDestroyMs: 0,

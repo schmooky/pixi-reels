@@ -21,13 +21,7 @@ describe('SymbolSpotlight — symbol parent invariant after recycling', () => {
     const h = makeHarness();
     try {
       // Land a grid where reel 0 has a winner.
-      await h.spinAndLand([
-        ['a', 'a', 'a'],
-        ['b', 'b', 'b'],
-        ['c', 'c', 'c'],
-        ['wild', 'wild', 'wild'],
-        ['a', 'b', 'c'],
-      ]);
+      await h.spinAndLand([ { visible: ['a', 'a', 'a'] }, { visible: ['b', 'b', 'b'] }, { visible: ['c', 'c', 'c'] }, { visible: ['wild', 'wild', 'wild'] }, { visible: ['a', 'b', 'c'] } ]);
 
       // Fire a spotlight on reel 0 cell 1. The ReelSet uses a shared symbol
       // pool - the 'a' instance at reel 0 may end up reused on a different
@@ -40,13 +34,7 @@ describe('SymbolSpotlight — symbol parent invariant after recycling', () => {
       // Land a different grid. Each reel's placeSymbols releases its old
       // symbols to the pool and acquires fresh ones - guaranteeing the 'a'
       // instance from reel 0 cell 1 gets reassigned somewhere else.
-      await h.spinAndLand([
-        ['c', 'c', 'c'],
-        ['c', 'c', 'c'],
-        ['a', 'a', 'a'],
-        ['b', 'b', 'b'],
-        ['wild', 'wild', 'wild'],
-      ]);
+      await h.spinAndLand([ { visible: ['c', 'c', 'c'] }, { visible: ['c', 'c', 'c'] }, { visible: ['a', 'a', 'a'] }, { visible: ['b', 'b', 'b'] }, { visible: ['wild', 'wild', 'wild'] } ]);
 
       // Calling show() (or hide() directly) re-runs spotlight cleanup.
       // Before the fix, this reparented the recycled 'a' instance back to
@@ -76,13 +64,7 @@ describe('SymbolSpotlight — symbol parent invariant after recycling', () => {
   it('does not yank recycled symbols back to a stale parent (promoteAboveMask: true)', async () => {
     const h = makeHarness();
     try {
-      await h.spinAndLand([
-        ['a', 'a', 'a'],
-        ['b', 'b', 'b'],
-        ['c', 'c', 'c'],
-        ['wild', 'wild', 'wild'],
-        ['a', 'b', 'c'],
-      ]);
+      await h.spinAndLand([ { visible: ['a', 'a', 'a'] }, { visible: ['b', 'b', 'b'] }, { visible: ['c', 'c', 'c'] }, { visible: ['wild', 'wild', 'wild'] }, { visible: ['a', 'b', 'c'] } ]);
 
       // Synchronously call show + immediately recycle by landing a new grid
       // - the show's promoteAboveMask: true path stashes the promoted view
@@ -94,13 +76,7 @@ describe('SymbolSpotlight — symbol parent invariant after recycling', () => {
         { promoteAboveMask: true, playWinAnimation: false },
       );
       // Land a different grid that will exercise placeSymbols on every reel.
-      await h.spinAndLand([
-        ['c', 'c', 'c'],
-        ['c', 'c', 'c'],
-        ['a', 'a', 'a'],
-        ['b', 'b', 'b'],
-        ['wild', 'wild', 'wild'],
-      ]);
+      await h.spinAndLand([ { visible: ['c', 'c', 'c'] }, { visible: ['c', 'c', 'c'] }, { visible: ['a', 'a', 'a'] }, { visible: ['b', 'b', 'b'] }, { visible: ['wild', 'wild', 'wild'] } ]);
       h.reelSet.spotlight.hide();
 
       for (let r = 0; r < 5; r++) {
@@ -119,13 +95,7 @@ describe('SymbolSpotlight — symbol parent invariant after recycling', () => {
   it('still restores promoted symbols when promoteAboveMask: true (regression)', async () => {
     const h = makeHarness();
     try {
-      await h.spinAndLand([
-        ['a', 'a', 'a'],
-        ['b', 'b', 'b'],
-        ['c', 'c', 'c'],
-        ['wild', 'wild', 'wild'],
-        ['a', 'b', 'c'],
-      ]);
+      await h.spinAndLand([ { visible: ['a', 'a', 'a'] }, { visible: ['b', 'b', 'b'] }, { visible: ['c', 'c', 'c'] }, { visible: ['wild', 'wild', 'wild'] }, { visible: ['a', 'b', 'c'] } ]);
 
       const reel0 = h.reelSet.reels[0];
       const beforeSym = reel0.getSymbolAt(1);
@@ -153,13 +123,7 @@ describe('SymbolSpotlight.cycle', () => {
   it('shows every win line for the configured duration (not just the first)', async () => {
     const h = createTestReelSet({ reels: 5, visibleCells: 3, symbolIds: SYMBOLS });
     try {
-      await h.spinAndLand([
-        ['a', 'a', 'a'],
-        ['b', 'b', 'b'],
-        ['c', 'c', 'c'],
-        ['wild', 'wild', 'wild'],
-        ['a', 'b', 'c'],
-      ]);
+      await h.spinAndLand([ { visible: ['a', 'a', 'a'] }, { visible: ['b', 'b', 'b'] }, { visible: ['c', 'c', 'c'] }, { visible: ['wild', 'wild', 'wild'] }, { visible: ['a', 'b', 'c'] } ]);
 
       const lineOneSym = h.reelSet.reels[0].getSymbolAt(0);
       const lineTwoSym = h.reelSet.reels[1].getSymbolAt(0);
@@ -200,13 +164,7 @@ describe('SymbolSpotlight.cycle', () => {
   it('hide() interrupts a running cycle promptly', async () => {
     const h = createTestReelSet({ reels: 5, visibleCells: 3, symbolIds: SYMBOLS });
     try {
-      await h.spinAndLand([
-        ['a', 'a', 'a'],
-        ['b', 'b', 'b'],
-        ['c', 'c', 'c'],
-        ['wild', 'wild', 'wild'],
-        ['a', 'b', 'c'],
-      ]);
+      await h.spinAndLand([ { visible: ['a', 'a', 'a'] }, { visible: ['b', 'b', 'b'] }, { visible: ['c', 'c', 'c'] }, { visible: ['wild', 'wild', 'wild'] }, { visible: ['a', 'b', 'c'] } ]);
 
       const lineTwoSym = h.reelSet.reels[1].getSymbolAt(0);
       const spyTwo = vi.spyOn(lineTwoSym, 'playWin');

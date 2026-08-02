@@ -46,17 +46,6 @@ export interface TestReelSetOptions {
   gsap?: import('../utils/gsap.js').Gsap;
 }
 
-/**
- * Test-only convenience union. The published library's public surface
- * accepts only `ColumnTarget[]`; `spinAndLand` is a testing helper that
- * also accepts plain visible-cells `string[][]` to keep mechanic tests
- * compact. Kept on a separate type alias and split across lines so the
- * 1.0 release verification sweep does not flag the engine surface.
- */
-type SpinAndLandGrid =
-  | string[][]
-  | ColumnTarget[];
-
 export interface TestReelSetHandle {
   reelSet: ReelSet;
   ticker: FakeTicker;
@@ -64,10 +53,10 @@ export interface TestReelSetHandle {
   advance(ms: number, stepMs?: number): void;
   /**
    * Run one full spin that lands on `grid`. Uses `slamStop()` for deterministic
-   * synchronous completion. Accepts plain visible-cells `string[][]`, or the
-   * explicit `ColumnTarget[]` shape (use the latter to target buffer cells).
+   * synchronous completion. Takes `ColumnTarget[]`, the same shape as
+   * `setResult` -- there is no `string[][]` convenience form anywhere.
    */
-  spinAndLand(grid: SpinAndLandGrid): Promise<SpinResult>;
+  spinAndLand(grid: ColumnTarget[]): Promise<SpinResult>;
   /** Destroy the reel set. */
   destroy(): void;
 }
@@ -163,7 +152,7 @@ export function createTestReelSet(opts: TestReelSetOptions = {}): TestReelSetHan
     advance(ms: number, stepMs = 16) {
       ticker.tickFor(ms, stepMs);
     },
-    async spinAndLand(grid: SpinAndLandGrid) {
+    async spinAndLand(grid: ColumnTarget[]) {
       return spinAndLand(reelSet, grid);
     },
     destroy() {
@@ -183,16 +172,11 @@ export function createTestReelSet(opts: TestReelSetOptions = {}): TestReelSetHan
  *
  * Accepts plain visible-cells `string[][]` (each inner array becomes the
  * `visible` field of a fresh `ColumnTarget`) or the explicit `ColumnTarget[]`
- * shape (passed straight through; use this to target buffer cells).
+ * shape. `ColumnTarget[]` only, the same as `setResult`.
  */
-export async function spinAndLand(reelSet: ReelSet, grid: SpinAndLandGrid): Promise<SpinResult> {
-  const targets: ColumnTarget[] = grid.length === 0
-    ? []
-    : Array.isArray(grid[0])
-      ? (grid as string[][]).map((visible) => ({ visible }))
-      : (grid as ColumnTarget[]);
+export async function spinAndLand(reelSet: ReelSet, grid: ColumnTarget[]): Promise<SpinResult> {
   const promise = reelSet.spin();
-  reelSet.setResult(targets);
+  reelSet.setResult(grid);
   reelSet.slamStop();
   return promise;
 }

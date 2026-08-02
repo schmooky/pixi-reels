@@ -102,7 +102,7 @@ return {
           for (let r = w.cell; r > 0; r--) next[w.reel][r] = next[w.reel][r - 1];
           next[w.reel][0] = randSymbol(CLUSTER);
         }
-        return next;
+        return next.map((visible) => ({ visible }));
       },
       pauseAfterDestroyMs: 250,
     });

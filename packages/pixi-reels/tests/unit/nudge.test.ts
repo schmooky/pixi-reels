@@ -130,11 +130,7 @@ describe('nudge', () => {
         symbolIds: ['a', 'b', 'c', 'wild'],
       });
       try {
-        await spinAndLand([
-          ['a', 'b', 'c'],
-          ['a', 'b', 'c'],
-          ['a', 'b', 'c'],
-        ]);
+        await spinAndLand([ { visible: ['a', 'b', 'c'] }, { visible: ['a', 'b', 'c'] }, { visible: ['a', 'b', 'c'] } ]);
         const result = await reelSet.nudge(1, {
           distance: 1,
           direction: 'forward',
@@ -159,7 +155,7 @@ describe('nudge', () => {
         symbolIds: ['a', 'b', 'c', 'x', 'y'],
       });
       try {
-        await spinAndLand([['a', 'b', 'c']]);
+        await spinAndLand([ { visible: ['a', 'b', 'c'] } ]);
         const result = await reelSet.nudge(0, {
           distance: 2,
           direction: 'forward',
@@ -178,7 +174,7 @@ describe('nudge', () => {
         symbolIds: ['a', 'b', 'c', 'x', 'y', 'z'],
       });
       try {
-        await spinAndLand([['a', 'b', 'c']]);
+        await spinAndLand([ { visible: ['a', 'b', 'c'] } ]);
         const result = await reelSet.nudge(0, {
           distance: 3,
           direction: 'forward',
@@ -200,7 +196,7 @@ describe('nudge', () => {
         symbolIds: ['a', 'b', 'c', 'wild'],
       });
       try {
-        await spinAndLand([['a', 'b', 'c']]);
+        await spinAndLand([ { visible: ['a', 'b', 'c'] } ]);
         const result = await reelSet.nudge(0, {
           distance: 1,
           direction: 'reverse',
@@ -219,7 +215,7 @@ describe('nudge', () => {
         symbolIds: ['a', 'b', 'c', 'x', 'y'],
       });
       try {
-        await spinAndLand([['a', 'b', 'c']]);
+        await spinAndLand([ { visible: ['a', 'b', 'c'] } ]);
         const result = await reelSet.nudge(0, {
           distance: 2,
           direction: 'reverse',
@@ -240,7 +236,7 @@ describe('nudge', () => {
         symbolIds: ['a', 'b', 'c', 'wild'],
       });
       try {
-        await spinAndLand([['a', 'b', 'c']]);
+        await spinAndLand([ { visible: ['a', 'b', 'c'] } ]);
         const events: Array<{ name: string; info: unknown }> = [];
         reelSet.events.on('nudge:start', (info) => events.push({ name: 'nudge:start', info }));
         reelSet.events.on('nudge:complete', (info) => events.push({ name: 'nudge:complete', info }));
@@ -267,7 +263,7 @@ describe('nudge', () => {
         symbolIds: ['a', 'b', 'c', 'wild'],
       });
       try {
-        await spinAndLand([['a', 'b', 'c']]);
+        await spinAndLand([ { visible: ['a', 'b', 'c'] } ]);
         const phases: string[] = [];
         reelSet.reels[0].events.on('phase:enter', (n) => {
           if (n === 'nudge') phases.push('enter:nudge');
@@ -291,11 +287,7 @@ describe('nudge', () => {
         symbolIds: ['a', 'b', 'c', 'wild', 'star'],
       });
       try {
-        await spinAndLand([
-          ['a', 'b', 'c'],
-          ['a', 'b', 'c'],
-          ['a', 'b', 'c'],
-        ]);
+        await spinAndLand([ { visible: ['a', 'b', 'c'] }, { visible: ['a', 'b', 'c'] }, { visible: ['a', 'b', 'c'] } ]);
         await Promise.all([
           reelSet.nudge(0, { distance: 1, direction: 'forward', incoming: ['wild'] }),
           reelSet.nudge(2, { distance: 1, direction: 'reverse', incoming: ['star'] }),
@@ -338,10 +330,7 @@ describe('nudge', () => {
         symbolIds: ['a', 'wild'],
       });
       try {
-        await spinAndLand([
-          ['a', 'a', 'a'],
-          ['a', 'a', 'a'],
-        ]);
+        await spinAndLand([ { visible: ['a', 'a', 'a'] }, { visible: ['a', 'a', 'a'] } ]);
         await expect(
           reelSet.nudge(5, { distance: 1, direction: 'forward', incoming: ['wild'] }),
         ).rejects.toThrow(/out of range/);
@@ -360,7 +349,7 @@ describe('nudge', () => {
         symbolIds: ['a', 'wild'],
       });
       try {
-        await spinAndLand([['a', 'a', 'a']]);
+        await spinAndLand([ { visible: ['a', 'a', 'a'] } ]);
         await expect(
           reelSet.nudge(0, { distance: 0, direction: 'forward', incoming: [] }),
         ).rejects.toThrow(/positive integer/);
@@ -379,7 +368,7 @@ describe('nudge', () => {
         symbolIds: ['a', 'wild'],
       });
       try {
-        await spinAndLand([['a', 'a', 'a']]);
+        await spinAndLand([ { visible: ['a', 'a', 'a'] } ]);
         await expect(
           reelSet.nudge(0, { distance: 2, direction: 'forward', incoming: ['wild'] }),
         ).rejects.toThrow(/exactly 2 symbol id/);
@@ -395,7 +384,7 @@ describe('nudge', () => {
         symbolIds: ['a', 'wild'],
       });
       try {
-        await spinAndLand([['a', 'a', 'a']]);
+        await spinAndLand([ { visible: ['a', 'a', 'a'] } ]);
         await expect(
           reelSet.nudge(0, { distance: 1, direction: 'forward', incoming: ['unknown'] }),
         ).rejects.toThrow(/is not registered/);
@@ -411,7 +400,7 @@ describe('nudge', () => {
         symbolIds: ['a', 'wild'],
       });
       try {
-        await spinAndLand([['a', 'a', 'a']]);
+        await spinAndLand([ { visible: ['a', 'a', 'a'] } ]);
         reelSet.pin(0, 1, 'wild');
         await expect(
           reelSet.nudge(0, { distance: 1, direction: 'forward', incoming: ['wild'] }),
@@ -430,13 +419,13 @@ describe('nudge', () => {
         symbolIds: ['a', 'b', 'c', 'wild'],
       });
       try {
-        await spinAndLand([['a', 'b', 'c']]);
+        await spinAndLand([ { visible: ['a', 'b', 'c'] } ]);
         await reelSet.nudge(0, { distance: 1, direction: 'forward', incoming: ['wild'] });
         expect(reelSet.reels[0].isNudging).toBe(false);
         expect(reelSet.reels[0].speed).toBe(0);
 
         // Now a fresh spin works.
-        await spinAndLand([['a', 'a', 'a']]);
+        await spinAndLand([ { visible: ['a', 'a', 'a'] } ]);
         expectGrid(reelSet, [['a', 'a', 'a']]);
       } finally {
         destroy();
@@ -450,7 +439,7 @@ describe('nudge', () => {
         symbolIds: ['a', 'b', 'c', 'wild'],
       });
       try {
-        await spinAndLand([['a', 'b', 'c']]);
+        await spinAndLand([ { visible: ['a', 'b', 'c'] } ]);
         const landedCalls: string[][] = [];
         reelSet.reels[0].events.on('landed', (symbols: string[]) => landedCalls.push([...symbols]));
         await reelSet.nudge(0, { distance: 1, direction: 'forward', incoming: ['wild'] });
@@ -473,7 +462,7 @@ describe('nudge', () => {
         symbolIds: ['a', 'wild'],
       });
       try {
-        await spinAndLand([['a', 'a', 'a']]);
+        await spinAndLand([ { visible: ['a', 'a', 'a'] } ]);
         // total = bufferStart(1) + visible(3) + bufferEnd(1) = 5.
         // distance=5 would fully rotate the strip and drop the pre-placed
         // bufferStart entry. we refuse instead of silently losing it.
@@ -497,7 +486,7 @@ describe('nudge', () => {
         symbolIds: ['a', 'b', 'c', 'x', 'y', 'z', 'w'],
       });
       try {
-        await spinAndLand([['a', 'b', 'c']]);
+        await spinAndLand([ { visible: ['a', 'b', 'c'] } ]);
         // total = 5. distance = 4 is the largest allowed; incoming[3]
         // lands in bufferEnd (the bottommost final position).
         const result = await reelSet.nudge(0, {
@@ -524,7 +513,7 @@ describe('nudge', () => {
         symbolIds: ['a', 'b', 'c', 'wild'],
       });
       try {
-        await spinAndLand([['a', 'b', 'c']]);
+        await spinAndLand([ { visible: ['a', 'b', 'c'] } ]);
         const result = await reelSet.nudge(0, {
           distance: 1,
           direction: 'forward',
@@ -545,7 +534,7 @@ describe('nudge', () => {
         symbolIds: ['a', 'b', 'c', 'wild'],
       });
       try {
-        await spinAndLand([['a', 'b', 'c']]);
+        await spinAndLand([ { visible: ['a', 'b', 'c'] } ]);
         const result = await reelSet.nudge(0, {
           distance: 1,
           direction: 'reverse',
@@ -568,7 +557,7 @@ describe('nudge', () => {
         symbolIds: ['a', 'b', 'c', 'wild'],
       });
       try {
-        await spinAndLand([['a', 'b', 'c']]);
+        await spinAndLand([ { visible: ['a', 'b', 'c'] } ]);
         const p = reelSet.nudge(0, {
           distance: 1,
           direction: 'forward',
@@ -595,11 +584,7 @@ describe('nudge', () => {
         symbolIds: ['a', 'b', 'c', 'wild'],
       });
       try {
-        await spinAndLand([
-          ['a', 'b', 'c'],
-          ['a', 'b', 'c'],
-          ['a', 'b', 'c'],
-        ]);
+        await spinAndLand([ { visible: ['a', 'b', 'c'] }, { visible: ['a', 'b', 'c'] }, { visible: ['a', 'b', 'c'] } ]);
         // Use sync gsap so all nudges complete instantly; the skipAll
         // call just confirms no error when nothing is in flight.
         await Promise.all([
@@ -635,7 +620,7 @@ describe('nudge', () => {
         symbolIds: ['a', 'wild'],
       });
       try {
-        await spinAndLand([['a', 'a', 'a']]);
+        await spinAndLand([ { visible: ['a', 'a', 'a'] } ]);
         const controller = new AbortController();
         controller.abort();
         const err = await reelSet.nudge(0, {
@@ -659,7 +644,7 @@ describe('nudge', () => {
         symbolIds: ['a', 'b', 'c', 'wild'],
       });
       try {
-        await spinAndLand([['a', 'b', 'c']]);
+        await spinAndLand([ { visible: ['a', 'b', 'c'] } ]);
         const cancelled: unknown[] = [];
         reelSet.events.on('nudge:cancelled', (info) => cancelled.push(info));
         const controller = new AbortController();
@@ -692,7 +677,7 @@ describe('nudge', () => {
         symbolIds: ['a', 'b', 'c', 'wild'],
       });
       try {
-        await spinAndLand([['a', 'b', 'c']]);
+        await spinAndLand([ { visible: ['a', 'b', 'c'] } ]);
         const before = Date.now();
         await reelSet.nudge(0, {
           distance: 1,
@@ -716,7 +701,7 @@ describe('nudge', () => {
         symbolIds: ['a', 'wild'],
       });
       try {
-        await spinAndLand([['a', 'a', 'a']]);
+        await spinAndLand([ { visible: ['a', 'a', 'a'] } ]);
         const controller = new AbortController();
         const p = reelSet.nudge(0, {
           distance: 1,
@@ -743,7 +728,7 @@ describe('nudge', () => {
         symbolIds: ['a', 'b', 'c', 'wild'],
       });
       try {
-        await spinAndLand([['a', 'b', 'c']]);
+        await spinAndLand([ { visible: ['a', 'b', 'c'] } ]);
         const p = reelSet.nudge(0, {
           distance: 1,
           direction: 'forward',
@@ -772,7 +757,7 @@ describe('nudge', () => {
         symbolIds: ['a', 'b', 'c', 'wild'],
       });
       try {
-        await spinAndLand([['a', 'b', 'c']]);
+        await spinAndLand([ { visible: ['a', 'b', 'c'] } ]);
         let bufferAboveAtStart: string | null = null;
         reelSet.events.on('nudge:start', () => {
           // bufferStart cell holds incoming[0] (pre-placed) right when
@@ -807,7 +792,7 @@ describe('nudge', () => {
       try {
         // 1x2 anchor at visible cell 1 (so stub fits in visible cell 2).
         // SetResult validates anchor + h fits in visibleCells.
-        await spinAndLand([['a', 'bigW', 'bigW']]);
+        await spinAndLand([ { visible: ['a', 'bigW', 'bigW'] } ]);
         // The strip already shows the full block. Nudge DOWN by 1 shifts
         // it to cells 2+3. but cell 3 doesn't exist. Block survival check:
         // anchor at strip[2], h=2, distance=1 down. Survival: 2 + 2 - 1 + 1 = 4 < 5, ok.
@@ -838,7 +823,7 @@ describe('nudge', () => {
       });
       try {
         // 1x2 at visible cells 0+1. anchor at strip[1], stub at strip[2].
-        await spinAndLand([['bigW', 'bigW', 'a']]);
+        await spinAndLand([ { visible: ['bigW', 'bigW', 'a'] } ]);
         // Nudge up by 1. anchor lands at strip[0] (bufferStart), stub at
         // strip[1] (visible cell 0). The block is "tail visible": top in
         // buffer, bottom showing. `_finalizeFrame` scans bufferStart now,
@@ -879,7 +864,7 @@ describe('nudge', () => {
         // surviving block. Anchor at visible cell 2 (strip[3]), stub at
         // strip[4]. Pre-fix this overwrote the stub with the caller's
         // incoming symbol, splitting the block.
-        await spinAndLand([['a', 'bigW', 'bigW']]);
+        await spinAndLand([ { visible: ['a', 'bigW', 'bigW'] } ]);
         // Need anchor at strip[3] with stub at strip[4]. setResult validates
         // anchor + h <= cells, so we can't set that state directly; reach it
         // via a down-nudge: anchor strip[2] (cell 1) -> strip[3] (cell 2),
@@ -919,7 +904,7 @@ describe('nudge', () => {
       try {
         // Anchor at strip index 1 (visible cell 0). Up by 2 lands at strip
         // index -1, which is off-strip. Survival check: 1 - 2 < 0, throw.
-        await spinAndLand([['bigW', 'bigW', 'a']]);
+        await spinAndLand([ { visible: ['bigW', 'bigW', 'a'] } ]);
         await expect(
           reelSet.nudge(0, {
             distance: 2,
@@ -947,7 +932,7 @@ describe('nudge', () => {
         // 1x2 at visible cells 1+2. anchor at strip[2], stub at strip[3].
         // total = 5. Survival for down distance=2: 2 + 2 - 1 + 2 = 5, NOT < 5,
         // so the block's bottom would wrap off strip[N-1] mid-rotation.
-        await spinAndLand([['a', 'bigW', 'bigW']]);
+        await spinAndLand([ { visible: ['a', 'bigW', 'bigW'] } ]);
         await expect(
           reelSet.nudge(0, {
             distance: 2,
@@ -971,7 +956,7 @@ describe('nudge', () => {
         },
       });
       try {
-        await spinAndLand([['a', 'a', 'a']]);
+        await spinAndLand([ { visible: ['a', 'a', 'a'] } ]);
         await expect(
           reelSet.nudge(0, {
             distance: 1,
@@ -998,10 +983,7 @@ describe('nudge', () => {
       try {
         // Place a 2x2 bonus anchor at (reel 0, cell 0). The other-reel
         // cells become OCCUPIED stubs on reel 1.
-        await spinAndLand([
-          ['bonus', 'a', 'a'],
-          ['a', 'a', 'a'],
-        ]);
+        await spinAndLand([ { visible: ['bonus', 'a', 'a'] }, { visible: ['a', 'a', 'a'] } ]);
         // Nudging reel 0 would split the bonus block from its right half.
         await expect(
           reelSet.nudge(0, {
@@ -1028,10 +1010,7 @@ describe('nudge', () => {
       });
       try {
         // 2x2 anchor on reel 0 cell 0. Col 1 carries the OCCUPIED stubs.
-        await spinAndLand([
-          ['bonus', 'a', 'a'],
-          ['a', 'a', 'a'],
-        ]);
+        await spinAndLand([ { visible: ['bonus', 'a', 'a'] }, { visible: ['a', 'a', 'a'] } ]);
         // Nudging reel 1 (the stubs) would drift them away from their
         // anchor on reel 0. Same failure mode, opposite reel.
         await expect(
@@ -1059,7 +1038,7 @@ describe('nudge', () => {
       });
       try {
         // Land block at cells 0+1 (anchor at strip[1], stub at strip[2]).
-        await spinAndLand([['bigW', 'bigW', 'a']]);
+        await spinAndLand([ { visible: ['bigW', 'bigW', 'a'] } ]);
         // Nudge down by 2. anchor -> strip[3] (cell 2), stub -> strip[4]
         // (bufferEnd). Visible cell 2 shows top of the block.
         const half = await reelSet.nudge(0, {
@@ -1093,11 +1072,7 @@ describe('nudge', () => {
         symbolIds: ['a', 'b', 'c', 'wild', 'star'],
       });
       try {
-        await spinAndLand([
-          ['a', 'b', 'c'],
-          ['a', 'b', 'c'],
-          ['a', 'b', 'c'],
-        ]);
+        await spinAndLand([ { visible: ['a', 'b', 'c'] }, { visible: ['a', 'b', 'c'] }, { visible: ['a', 'b', 'c'] } ]);
         const controller = new AbortController();
         const cancelled: number[] = [];
         const completed: number[] = [];
@@ -1140,11 +1115,7 @@ describe('nudge', () => {
         symbolIds: ['a', 'b', 'c', 'wild'],
       });
       try {
-        await spinAndLand([
-          ['a', 'b', 'c'],
-          ['a', 'b', 'c'],
-          ['a', 'b', 'c'],
-        ]);
+        await spinAndLand([ { visible: ['a', 'b', 'c'] }, { visible: ['a', 'b', 'c'] }, { visible: ['a', 'b', 'c'] } ]);
         const promises = [
           reelSet.nudge(0, { distance: 1, direction: 'forward', incoming: ['wild'] }),
           reelSet.nudge(1, { distance: 1, direction: 'forward', incoming: ['wild'] }),

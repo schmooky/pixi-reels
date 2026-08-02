@@ -29,11 +29,7 @@ describe('auto-zIndex on _replaceSymbol', () => {
       },
     });
     try {
-      await h.spinAndLand([
-        ['a', 'a', 'a'],
-        ['a', 'wild', 'a'],
-        ['a', 'a', 'a'],
-      ]);
+      await h.spinAndLand([ { visible: ['a', 'a', 'a'] }, { visible: ['a', 'wild', 'a'] }, { visible: ['a', 'a', 'a'] } ]);
 
       const reel = h.reelSet.reels[1];
       const bufferStart = reel.bufferStart;
@@ -57,11 +53,7 @@ describe('auto-zIndex on _replaceSymbol', () => {
       symbolIds: SYMBOLS,
     });
     try {
-      await h.spinAndLand([
-        ['a', 'a', 'a'],
-        ['a', 'a', 'a'],
-        ['a', 'a', 'a'],
-      ]);
+      await h.spinAndLand([ { visible: ['a', 'a', 'a'] }, { visible: ['a', 'a', 'a'] }, { visible: ['a', 'a', 'a'] } ]);
 
       const reel = h.reelSet.reels[0];
       const bufferStart = reel.bufferStart;
@@ -87,11 +79,7 @@ describe('auto-zIndex on _replaceSymbol', () => {
     });
     try {
       // First spin: wild lands.
-      await h.spinAndLand([
-        ['a', 'a', 'a'],
-        ['a', 'wild', 'a'],
-        ['a', 'a', 'a'],
-      ]);
+      await h.spinAndLand([ { visible: ['a', 'a', 'a'] }, { visible: ['a', 'wild', 'a'] }, { visible: ['a', 'a', 'a'] } ]);
       // Manually corrupt the zIndex so we can verify the swap re-applies it.
       const reel = h.reelSet.reels[1];
       const bufferStart = reel.bufferStart;
@@ -99,11 +87,7 @@ describe('auto-zIndex on _replaceSymbol', () => {
       reel.symbols[wildArrayIndex].view.zIndex = -999;
 
       // Second spin: wild lands at the same cell again (same symbol id swap).
-      await h.spinAndLand([
-        ['a', 'a', 'a'],
-        ['a', 'wild', 'a'],
-        ['a', 'a', 'a'],
-      ]);
+      await h.spinAndLand([ { visible: ['a', 'a', 'a'] }, { visible: ['a', 'wild', 'a'] }, { visible: ['a', 'a', 'a'] } ]);
 
       const wildView = reel.symbols[wildArrayIndex].view;
       expect(wildView.zIndex).toBe(7 * 100 + wildArrayIndex);

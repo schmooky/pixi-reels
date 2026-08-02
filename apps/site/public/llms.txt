@@ -8,7 +8,7 @@ Site: https://pixi-reels.schmooky.dev
 Repo: https://github.com/schmooky/pixi-reels
 Package: https://www.npmjs.com/package/pixi-reels
 
-Generated: 2026-08-02T09:55:25.852Z
+Generated: 2026-08-02T10:50:42.644Z
 
 ## Quick start
 
@@ -1498,7 +1498,7 @@ return {
           for (let r = w.cell; r > 0; r--) next[w.reel][r] = next[w.reel][r - 1];
           next[w.reel][0] = randSymbol(CLUSTER);
         }
-        return next;
+        return next.map((visible) => ({ visible }));
       },
       pauseAfterDestroyMs: 250,
     });
@@ -1582,7 +1582,7 @@ return {
           for (let r = w.cell; r > 0; r--) next[w.reel][r] = next[w.reel][r - 1];
           next[w.reel][0] = randSymbol(CLUSTER);
         }
-        return next;
+        return next.map((visible) => ({ visible }));
       },
       pauseAfterDestroyMs: 250,
     });

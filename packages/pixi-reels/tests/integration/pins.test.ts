@@ -29,7 +29,7 @@ describe('CellPin. no-pin baseline (regression)', () => {
         ['a', 'b', 'c'],
         ['a', 'b', 'c'],
       ];
-      await h.spinAndLand(target);
+      await h.spinAndLand(target.map((visible) => ({ visible })));
       for (let r = 0; r < 5; r++) {
         expect(h.reelSet.reels[r].getVisibleSymbols()).toEqual(['a', 'b', 'c']);
       }
@@ -54,7 +54,7 @@ describe('CellPin. overlay onto setResult', () => {
         ['a', 'b', 'c'],
         ['a', 'b', 'c'],
       ];
-      await h.spinAndLand(target);
+      await h.spinAndLand(target.map((visible) => ({ visible })));
 
       expect(h.reelSet.reels[2].getVisibleSymbols()[1]).toBe('wild');
       // Other cells on that reel are unchanged
@@ -77,7 +77,7 @@ describe('CellPin. overlay onto setResult', () => {
         ['a', 'b', 'c'],
       ];
       const snapshot = JSON.parse(JSON.stringify(target));
-      await h.spinAndLand(target);
+      await h.spinAndLand(target.map((visible) => ({ visible })));
       expect(target).toEqual(snapshot); // caller's array untouched
     } finally {
       h.destroy();
@@ -97,22 +97,22 @@ describe('CellPin. turns countdown', () => {
       ];
 
       // Spin 1. wild lands, turns: 3 -> 2
-      await h.spinAndLand(target);
+      await h.spinAndLand(target.map((visible) => ({ visible })));
       expect(h.reelSet.reels[2].getVisibleSymbols()[1]).toBe('wild');
       expect(h.reelSet.getPin(2, 1)?.turns).toBe(2);
 
       // Spin 2. wild lands, turns: 2 -> 1
-      await h.spinAndLand(target);
+      await h.spinAndLand(target.map((visible) => ({ visible })));
       expect(h.reelSet.reels[2].getVisibleSymbols()[1]).toBe('wild');
       expect(h.reelSet.getPin(2, 1)?.turns).toBe(1);
 
       // Spin 3. wild lands, turns: 1 -> 0 -> expired
-      await h.spinAndLand(target);
+      await h.spinAndLand(target.map((visible) => ({ visible })));
       expect(h.reelSet.reels[2].getVisibleSymbols()[1]).toBe('wild');
       expect(h.reelSet.getPin(2, 1)).toBeUndefined();
 
       // Spin 4. no pin, server's 'b' lands
-      await h.spinAndLand(target);
+      await h.spinAndLand(target.map((visible) => ({ visible })));
       expect(h.reelSet.reels[2].getVisibleSymbols()[1]).toBe('b');
     } finally {
       h.destroy();
@@ -130,7 +130,7 @@ describe("CellPin. 'eval' lifetime", () => {
       ];
 
       // Spin 1. normal landing
-      await h.spinAndLand(target);
+      await h.spinAndLand(target.map((visible) => ({ visible })));
       expect(h.reelSet.reels[0].getVisibleSymbols()[0]).toBe('a');
 
       // Place eval pin AFTER the spin (simulates expanding wild reveal)
@@ -139,7 +139,7 @@ describe("CellPin. 'eval' lifetime", () => {
       expect(h.reelSet.pins.size).toBe(1);
 
       // Spin 2. eval pin is cleared on spin:start
-      await h.spinAndLand(target);
+      await h.spinAndLand(target.map((visible) => ({ visible })));
       expect(h.reelSet.pins.size).toBe(0);
       expect(h.reelSet.reels[0].getVisibleSymbols()[0]).toBe('a');
     } finally {
@@ -163,7 +163,7 @@ describe('CellPin. permanent lifetime', () => {
       ];
 
       for (let i = 0; i < 5; i++) {
-        await h.spinAndLand(target);
+        await h.spinAndLand(target.map((visible) => ({ visible })));
         expect(h.reelSet.reels[3].getVisibleSymbols()[2]).toBe('coin');
       }
 
@@ -173,7 +173,7 @@ describe('CellPin. permanent lifetime', () => {
       h.reelSet.unpin(3, 2);
       expect(h.reelSet.getPin(3, 2)).toBeUndefined();
 
-      await h.spinAndLand(target);
+      await h.spinAndLand(target.map((visible) => ({ visible })));
       expect(h.reelSet.reels[3].getVisibleSymbols()[2]).toBe('c');
     } finally {
       h.destroy();
@@ -195,7 +195,7 @@ describe('CellPin. payload', () => {
         ['a', 'b', 'c'], ['a', 'b', 'c'],
       ];
 
-      await h.spinAndLand(target);
+      await h.spinAndLand(target.map((visible) => ({ visible })));
       const pin = h.reelSet.getPin(1, 0);
       expect(pin?.payload).toEqual({ multiplier: 3, tier: 'gold' });
     } finally {
@@ -253,7 +253,7 @@ describe('CellPin. events', () => {
         ['a', 'b', 'c'], ['a', 'b', 'c'], ['a', 'b', 'c'],
         ['a', 'b', 'c'], ['a', 'b', 'c'],
       ];
-      await h.spinAndLand(target);
+      await h.spinAndLand(target.map((visible) => ({ visible })));
 
       expect(events.length).toBe(1);
       expect(events[0].args[1]).toBe('turns');
@@ -285,7 +285,7 @@ describe('CellPin. events', () => {
         ['a', 'b', 'c'], ['a', 'b', 'c'], ['a', 'b', 'c'],
         ['a', 'b', 'c'], ['a', 'b', 'c'],
       ];
-      await h.spinAndLand(target);
+      await h.spinAndLand(target.map((visible) => ({ visible })));
 
       // On spin:start, eval pin was cleared
       expect(events.length).toBeGreaterThanOrEqual(1);
@@ -345,7 +345,7 @@ describe('CellPin. multiple pins coexist', () => {
         ['a', 'b', 'c'], ['a', 'b', 'c'], ['a', 'b', 'c'],
         ['a', 'b', 'c'], ['a', 'b', 'c'],
       ];
-      await h.spinAndLand(target);
+      await h.spinAndLand(target.map((visible) => ({ visible })));
 
       expect(h.reelSet.reels[0].getVisibleSymbols()[0]).toBe('wild');
       expect(h.reelSet.reels[1].getVisibleSymbols()[1]).toBe('wild');

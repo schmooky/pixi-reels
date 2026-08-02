@@ -104,9 +104,9 @@ describe('bufferSymbols({ end: 0 }). tumble-only reel sets', () => {
           ran = true;
           return [{ reel: 1, cell: 0 }];
         },
-        nextGrid: (prev) => prev.map((reel, c) =>
-          c === 1 ? ['b', ...reel.slice(1)] : [...reel],
-        ),
+        nextGrid: (prev) => prev.map((reel, c) => ({
+          visible: c === 1 ? ['b', ...reel.slice(1)] : [...reel],
+        })),
         pauseAfterDestroyMs: 0,
       });
       expect(result.chainLength).toBe(1);

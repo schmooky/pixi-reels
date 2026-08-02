@@ -27,11 +27,11 @@ const { reelSet, spinAndLand, destroy } = createTestReelSet({
 });
 
 await spinAndLand([
-  ['wild','wild','wild'],
-  ['wild','wild','wild'],
-  ['wild','wild','wild'],
-  ['wild','wild','wild'],
-  ['wild','wild','wild'],
+  { visible: ['wild','wild','wild'] },
+  { visible: ['wild','wild','wild'] },
+  { visible: ['wild','wild','wild'] },
+  { visible: ['wild','wild','wild'] },
+  { visible: ['wild','wild','wild'] },
 ]);
 
 expectGrid(reelSet, /* same 5×3 grid of 'wild' */);
@@ -64,7 +64,7 @@ engine.register({
 });
 
 const { symbols, anticipationReels } = engine.next();
-await spinAndLand(symbols);
+await spinAndLand(symbols.map((visible) => ({ visible })));
 ```
 
 ### Built-in cheats
@@ -100,7 +100,7 @@ const forcePairWild: Cheat = (ctx) => {
 import { captureEvents } from 'pixi-reels/testing';
 
 const log = captureEvents(reelSet, ['spin:start', 'spin:complete']);
-await spinAndLand(grid);
+await spinAndLand(grid);   // grid is ColumnTarget[]
 expect(log.map((e) => e.event)).toEqual(['spin:start', 'spin:complete']);
 ```
 

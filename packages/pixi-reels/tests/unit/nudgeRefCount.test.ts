@@ -56,11 +56,7 @@ describe('nudge in-flight guard (M4)', () => {
     const deferred = installDeferredGsap();
     const h = createTestReelSet({ gsap: syncGsap, reels: 3, visibleCells: 3, symbolIds: ['a', 'b', 'c', 'wild'] });
     try {
-      await h.spinAndLand([
-        ['a', 'b', 'c'],
-        ['a', 'b', 'c'],
-        ['a', 'b', 'c'],
-      ]);
+      await h.spinAndLand([ { visible: ['a', 'b', 'c'] }, { visible: ['a', 'b', 'c'] }, { visible: ['a', 'b', 'c'] } ]);
 
       // Two parallel nudges across reels 1 and 2; both tweens are deferred.
       const nA = h.reelSet.nudge(1, { distance: 1, direction: 'forward', incoming: ['wild'] });
@@ -82,11 +78,7 @@ describe('nudge in-flight guard (M4)', () => {
       await nB;
 
       // Guard released - a spin runs again.
-      const result = await h.spinAndLand([
-        ['a', 'b', 'c'],
-        ['a', 'b', 'c'],
-        ['a', 'b', 'c'],
-      ]);
+      const result = await h.spinAndLand([ { visible: ['a', 'b', 'c'] }, { visible: ['a', 'b', 'c'] }, { visible: ['a', 'b', 'c'] } ]);
       expect(result.symbols).toHaveLength(3);
     } finally {
       h.destroy();

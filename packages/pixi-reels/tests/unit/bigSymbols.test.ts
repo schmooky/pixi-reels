@@ -11,11 +11,11 @@ describe('big symbols', () => {
     });
     try {
       await spinAndLand([
-        ['a', 'a', 'a'],
-        ['a', 'a', 'a'],
-        ['bonus', 'X', 'a'], // server places anchor; engine paints OCCUPIED
-        ['Y', 'Z', 'a'],     // ignored. engine paints OCCUPIED
-        ['a', 'a', 'a'],
+        { visible: ['a', 'a', 'a'] },
+        { visible: ['a', 'a', 'a'] },
+        { visible: ['bonus', 'X', 'a'] }, // server places anchor; engine paints OCCUPIED
+        { visible: ['Y', 'Z', 'a'] },     // ignored. engine paints OCCUPIED
+        { visible: ['a', 'a', 'a'] },
       ]);
       // Same-reel resolution at the Reel level.
       const reel2 = reelSet.reels[2];
@@ -42,13 +42,7 @@ describe('big symbols', () => {
       symbolData: { bonus: { weight: 0, size: { reels: 2, cells: 2 } } },
     });
     try {
-      await spinAndLand([
-        ['a', 'a', 'a'],
-        ['a', 'a', 'a'],
-        ['bonus', 'a', 'a'],
-        ['a', 'a', 'a'],
-        ['a', 'a', 'a'],
-      ]);
+      await spinAndLand([ { visible: ['a', 'a', 'a'] }, { visible: ['a', 'a', 'a'] }, { visible: ['bonus', 'a', 'a'] }, { visible: ['a', 'a', 'a'] }, { visible: ['a', 'a', 'a'] } ]);
       const fp = reelSet.getSymbolFootprint(2, 0);
       expect(fp).toEqual({ anchor: { reel: 2, cell: 0 }, size: { reels: 2, cells: 2 } });
       const fp2 = reelSet.getSymbolFootprint(3, 0);
@@ -132,13 +126,7 @@ describe('big symbols', () => {
       symbolSize: { width: 100, height: 100 },
     });
     try {
-      await spinAndLand([
-        ['a', 'a', 'a'],
-        ['a', 'a', 'a'],
-        ['bonus', 'a', 'a'],
-        ['a', 'a', 'a'],
-        ['a', 'a', 'a'],
-      ]);
+      await spinAndLand([ { visible: ['a', 'a', 'a'] }, { visible: ['a', 'a', 'a'] }, { visible: ['bonus', 'a', 'a'] }, { visible: ['a', 'a', 'a'] }, { visible: ['a', 'a', 'a'] } ]);
       // From the anchor cell.
       const r1 = reelSet.getBlockBounds(2, 0);
       expect(r1.width).toBe(200);
@@ -319,11 +307,7 @@ describe('big symbols', () => {
     try {
       // setResult goes through `_coordinateBigSymbols`, so a 1x2 anchor
       // at cell 2 (stub spilling into bufferEnd) should be legal.
-      await spinAndLand([
-        ['a', 'a', 'tall'],
-        ['a', 'a', 'a'],
-        ['a', 'a', 'a'],
-      ]);
+      await spinAndLand([ { visible: ['a', 'a', 'tall'] }, { visible: ['a', 'a', 'a'] }, { visible: ['a', 'a', 'a'] } ]);
       const grid = reelSet.getVisibleGrid();
       expect(grid[0]).toEqual(['a', 'a', 'tall']);
       // And the anchor's footprint reports correctly.

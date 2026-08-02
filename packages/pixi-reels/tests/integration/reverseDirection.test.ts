@@ -36,7 +36,7 @@ describe('reverse + per-reel direction', () => {
         ['b', 'c', 'd'],
         ['c', 'd', 'e'],
       ];
-      await h.spinAndLand(grid);
+      await h.spinAndLand(grid.map((visible) => ({ visible })));
       expect(h.reelSet.getVisibleGrid()).toEqual(grid);
       expect(h.reelSet.reels[0].axis.direction).toBe('reverse');
       expect(h.reelSet.reels[0].axis.polarity).toBe(-1);
@@ -58,7 +58,7 @@ describe('reverse + per-reel direction', () => {
         ['b', 'c', 'd'],
         ['c', 'd', 'a'],
       ];
-      await h.spinAndLand(grid);
+      await h.spinAndLand(grid.map((visible) => ({ visible })));
       expect(h.reelSet.getVisibleGrid()).toEqual(grid);
       expect(h.reelSet.reels[0].axis.polarity).toBe(1);
       expect(h.reelSet.reels[1].axis.polarity).toBe(-1);

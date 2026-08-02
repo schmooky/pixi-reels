@@ -48,7 +48,7 @@ describe('ReelSet.runCascade', () => {
 
     const summary = await reelSet.runCascade({
       detectWinners: () => [],
-      nextGrid: (grid) => grid,
+      nextGrid: (grid) => grid.map((visible) => ({ visible })),
       pauseAfterDestroyMs: 0,
     });
 
@@ -85,7 +85,7 @@ describe('ReelSet.runCascade', () => {
       },
       nextGrid: (grid, winners) => {
         // Survivors slide down 1; new symbol at cell 0 = 'd'.
-        return grid.map((reel) => ['d', reel[0], reel[1]]);
+        return grid.map((reel) => ({ visible: ['d', reel[0], reel[1]] }));
       },
       pauseAfterDestroyMs: 0,
     });
@@ -106,7 +106,7 @@ describe('ReelSet.runCascade', () => {
     // Detect always returns a winner. without maxChain this would loop forever.
     const summary = await reelSet.runCascade({
       detectWinners: () => [{ reel: 0, cell: 0 }],
-      nextGrid: (grid) => grid.map((reel) => ['b', reel[0], reel[1]]),
+      nextGrid: (grid) => grid.map((reel) => ({ visible: ['b', reel[0], reel[1]] })),
       maxChain: 5,
       pauseAfterDestroyMs: 0,
     });
@@ -132,7 +132,7 @@ describe('ReelSet.runCascade', () => {
         calls += 1;
         return [{ reel: 0, cell: 0 }];
       },
-      nextGrid: (grid) => grid.map((reel) => ['d', reel[0], reel[1]]),
+      nextGrid: (grid) => grid.map((reel) => ({ visible: ['d', reel[0], reel[1]] })),
       onCascade: ({ chain, winners }) => {
         observed.push({ chain, winnersCount: winners.length });
       },
@@ -160,7 +160,7 @@ describe('ReelSet.runCascade', () => {
         calls += 1;
         return [{ reel: 0, cell: 0 }];
       },
-      nextGrid: (grid) => grid.map((reel) => ['b', reel[0], reel[1]]),
+      nextGrid: (grid) => grid.map((reel) => ({ visible: ['b', reel[0], reel[1]] })),
       onCascade: () => {
         if (calls === 1) controller.abort();
       },
@@ -190,7 +190,7 @@ describe('ReelSet.runCascade', () => {
         detectCalls += 1;
         return [{ reel: 0, cell: 0 }];
       },
-      nextGrid: (grid) => grid,
+      nextGrid: (grid) => grid.map((visible) => ({ visible })),
       pauseAfterDestroyMs: 0,
       signal: controller.signal,
       destroyOptions: { zIndex: null },
@@ -222,7 +222,7 @@ describe('ReelSet.runCascade', () => {
         if (calls > 2) return [];
         return [{ reel: 0, cell: 0 }];
       },
-      nextGrid: (grid) => grid.map((reel) => ['d', reel[0], reel[1]]),
+      nextGrid: (grid) => grid.map((reel) => ({ visible: ['d', reel[0], reel[1]] })),
       pauseAfterDestroyMs: 0,
       destroyOptions: { zIndex: null },
     });
@@ -258,7 +258,7 @@ describe('ReelSet.runCascade', () => {
         if (calls > 1) return [];
         return [{ reel: 0, cell: 0 }, { reel: 1, cell: 0 }];
       },
-      nextGrid: (grid) => grid.map((reel) => ['d', reel[0], reel[1]]),
+      nextGrid: (grid) => grid.map((reel) => ({ visible: ['d', reel[0], reel[1]] })),
       pauseAfterDestroyMs: 0,
       destroyOptions: { zIndex: null },
     });
@@ -286,7 +286,7 @@ describe('ReelSet.runCascade', () => {
         detects += 1;
         return [{ reel: 0, cell: 0 }];
       },
-      nextGrid: (grid) => grid.map((reel) => ['b', reel[0], reel[1]]),
+      nextGrid: (grid) => grid.map((reel) => ({ visible: ['b', reel[0], reel[1]] })),
       onCascade: () => {
         // Abort right at the start of the pause window so the test
         // measures only the pause itself, not surrounding awaits.
@@ -318,7 +318,7 @@ describe('ReelSet.runCascade', () => {
         calls += 1;
         return [{ reel: 0, cell: 0 }];
       },
-      nextGrid: (grid) => grid.map((reel) => ['b', reel[0], reel[1]]),
+      nextGrid: (grid) => grid.map((reel) => ({ visible: ['b', reel[0], reel[1]] })),
       onCascade: () => {
         // Simulate the engine firing `skip:requested` mid-chain (as it
         // would when reelSet.skipSpin() lands during an in-flight refill).

@@ -29,11 +29,7 @@ describe('expanding wild (pin-based, 1×N)', () => {
         ['a', 'a', 'a'],
       ]);
       // 'eval' pins cleared at the next spin start. Spin again to confirm.
-      await spinAndLand([
-        ['a', 'a', 'a'],
-        ['a', 'a', 'a'],
-        ['a', 'a', 'a'],
-      ]);
+      await spinAndLand([ { visible: ['a', 'a', 'a'] }, { visible: ['a', 'a', 'a'] }, { visible: ['a', 'a', 'a'] } ]);
       expectGrid(reelSet, [
         ['a', 'a', 'a'],
         ['a', 'a', 'a'],

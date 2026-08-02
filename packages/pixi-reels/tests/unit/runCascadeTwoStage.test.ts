@@ -62,7 +62,7 @@ describe('ReelSet.runCascade. two-stage (gravity-then-drop)', () => {
         if (calls > 1) return [];
         return [{ reel: 0, cell: 2 }, { reel: 1, cell: 2 }, { reel: 2, cell: 2 }];
       },
-      nextGrid: (grid) => grid.map((reel) => ['d', reel[0], reel[1]]),
+      nextGrid: (grid) => grid.map((reel) => ({ visible: ['d', reel[0], reel[1]] })),
       pauseAfterDestroyMs: 0,
       refillMode: 'gravity-then-drop',
       gravityHoldMs: 0,
@@ -102,7 +102,7 @@ describe('ReelSet.runCascade. two-stage (gravity-then-drop)', () => {
         if (calls > 2) return [];
         return [{ reel: 0, cell: 2 }, { reel: 1, cell: 2 }, { reel: 2, cell: 2 }];
       },
-      nextGrid: (grid) => grid.map((reel) => ['d', reel[0], reel[1]]),
+      nextGrid: (grid) => grid.map((reel) => ({ visible: ['d', reel[0], reel[1]] })),
       pauseAfterDestroyMs: 0,
       refillMode: 'gravity-then-drop',
       gravityHoldMs: 0,
@@ -144,7 +144,7 @@ describe('ReelSet.runCascade. two-stage (gravity-then-drop)', () => {
         if (calls > 1) return [];
         return [{ reel: 0, cell: 2 }, { reel: 1, cell: 2 }, { reel: 2, cell: 2 }];
       },
-      nextGrid: (grid) => grid.map((reel) => ['d', reel[0], reel[1]]),
+      nextGrid: (grid) => grid.map((reel) => ({ visible: ['d', reel[0], reel[1]] })),
       pauseAfterDestroyMs: 0,
       // refillMode omitted -> defaults to 'combined'
     });
@@ -169,7 +169,7 @@ describe('ReelSet.runCascade. two-stage (gravity-then-drop)', () => {
         if (calls > 1) return [];
         return [{ reel: 0, cell: 2 }, { reel: 1, cell: 2 }, { reel: 2, cell: 2 }];
       },
-      nextGrid: (grid) => grid.map((reel) => ['d', reel[0], reel[1]]),
+      nextGrid: (grid) => grid.map((reel) => ({ visible: ['d', reel[0], reel[1]] })),
       pauseAfterDestroyMs: 0,
       refillMode: 'combined',
     });
@@ -184,7 +184,7 @@ describe('ReelSet.runCascade. two-stage (gravity-then-drop)', () => {
         if (calls > 1) return [];
         return [{ reel: 0, cell: 2 }, { reel: 1, cell: 2 }, { reel: 2, cell: 2 }];
       },
-      nextGrid: (grid) => grid.map((reel) => ['d', reel[0], reel[1]]),
+      nextGrid: (grid) => grid.map((reel) => ({ visible: ['d', reel[0], reel[1]] })),
       pauseAfterDestroyMs: 0,
       refillMode: 'gravity-then-drop',
       gravityHoldMs: 0,

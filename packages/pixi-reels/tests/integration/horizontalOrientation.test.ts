@@ -24,7 +24,7 @@ describe('horizontal orientation', () => {
     });
     try {
       const grid = [['a', 'b', 'c', 'd', 'e']];
-      await h.spinAndLand(grid);
+      await h.spinAndLand(grid.map((visible) => ({ visible })));
       expect(h.reelSet.getVisibleGrid()).toEqual(grid);
 
       const reel = h.reelSet.reels[0];
@@ -168,7 +168,7 @@ describe('horizontal pyramid (per-reel cell counts)', () => {
     });
     try {
       const grid = [['a', 'b'], ['c', 'a', 'b', 'c'], ['b', 'a']];
-      await h.spinAndLand(grid);
+      await h.spinAndLand(grid.map((visible) => ({ visible })));
       expect(h.reelSet.getVisibleGrid()).toEqual(grid);
     } finally {
       h.destroy();

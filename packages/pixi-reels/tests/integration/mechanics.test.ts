@@ -36,7 +36,7 @@ describe('mechanic: classic-lines (forceLine)', () => {
       });
       engine.register({ id: 'line', label: 'line', enabled: true, cheat: forceLine(1, 'a') });
       const { symbols } = engine.next();
-      await h.spinAndLand(symbols);
+      await h.spinAndLand(symbols.map((visible) => ({ visible })));
       for (let r = 0; r < 5; r++) {
         expect(h.reelSet.reels[r].getVisibleSymbols()[1]).toBe('a');
       }
@@ -58,7 +58,7 @@ describe('mechanic: scatter-triggers-fs (forceScatters)', () => {
         cheat: forceScatters(3, 'scatter'),
       });
       const { symbols } = engine.next();
-      await h.spinAndLand(symbols);
+      await h.spinAndLand(symbols.map((visible) => ({ visible })));
       expect(countSymbol(h.reelSet, 'scatter')).toBe(3);
     } finally {
       h.destroy();
@@ -79,7 +79,7 @@ describe('mechanic: hold-and-win (holdAndWinProgress)', () => {
       });
       engine.setHeld([{ reel: 2, cell: 1, symbolId: 'coin' }]);
       const first = engine.next();
-      await h.spinAndLand(first.symbols);
+      await h.spinAndLand(first.symbols.map((visible) => ({ visible })));
       expect(h.reelSet.reels[2].getVisibleSymbols()[1]).toBe('coin');
       expect(countSymbol(h.reelSet, 'coin')).toBeGreaterThanOrEqual(2);
     } finally {
@@ -132,10 +132,10 @@ describe('mechanic: cascade-multiplier (cascadeSequence)', () => {
         cheat: cascadeSequence([g1, g2]),
       });
 
-      await h.spinAndLand(engine.next().symbols);
+      await h.spinAndLand(engine.next().symbols.map((visible) => ({ visible })));
       expectGrid(h.reelSet, g1);
 
-      await h.spinAndLand(engine.next().symbols);
+      await h.spinAndLand(engine.next().symbols.map((visible) => ({ visible })));
       expectGrid(h.reelSet, g2);
     } finally {
       h.destroy();
@@ -154,9 +154,9 @@ describe('mechanic: sticky-wilds (forceCell)', () => {
         id: 'w', label: 'w', enabled: true,
         cheat: forceCell(2, 1, 'wild'),
       });
-      await h.spinAndLand(engine.next().symbols);
+      await h.spinAndLand(engine.next().symbols.map((visible) => ({ visible })));
       expect(h.reelSet.reels[2].getVisibleSymbols()[1]).toBe('wild');
-      await h.spinAndLand(engine.next().symbols);
+      await h.spinAndLand(engine.next().symbols.map((visible) => ({ visible })));
       expect(h.reelSet.reels[2].getVisibleSymbols()[1]).toBe('wild');
     } finally {
       h.destroy();

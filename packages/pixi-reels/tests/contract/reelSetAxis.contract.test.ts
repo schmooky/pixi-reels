@@ -92,8 +92,8 @@ describe('L12 ISOMORPHISM - a horizontal ReelSet is a vertical one transposed', 
     const v = vertical();
     const h = horizontal();
     try {
-      await v.spinAndLand(GRID);
-      await h.spinAndLand(GRID);
+      await v.spinAndLand(GRID.map((visible) => ({ visible })));
+      await h.spinAndLand(GRID.map((visible) => ({ visible })));
       expect(h.reelSet.getVisibleGrid()).toEqual(v.reelSet.getVisibleGrid());
       expect(h.reelSet.getVisibleGrid()).toEqual(GRID);
     } finally {
@@ -156,8 +156,8 @@ describe('L13 MIRROR - direction changes travel, never the board', () => {
     const f = build('forward');
     const r = build('reverse');
     try {
-      await f.spinAndLand(GRID);
-      await r.spinAndLand(GRID);
+      await f.spinAndLand(GRID.map((visible) => ({ visible })));
+      await r.spinAndLand(GRID.map((visible) => ({ visible })));
       expect(r.reelSet.getVisibleGrid()).toEqual(f.reelSet.getVisibleGrid());
       expect(r.reelSet.getVisibleGrid()).toEqual(GRID);
     } finally {
@@ -176,7 +176,7 @@ describe('L13 MIRROR - direction changes travel, never the board', () => {
       directionPerReel: ['forward', 'reverse', 'forward', 'reverse'],
     });
     try {
-      await mixed.spinAndLand(GRID);
+      await mixed.spinAndLand(GRID.map((visible) => ({ visible })));
       expect(mixed.reelSet.getVisibleGrid()).toEqual(GRID);
     } finally {
       mixed.destroy();

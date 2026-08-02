@@ -40,13 +40,7 @@ describe('SpinOptions.holdReels. basic behaviour', () => {
     const h = makeHarness();
     try {
       // First spin: lands the whole board so we have a known starting grid.
-      await h.spinAndLand([
-        ['a', 'a', 'a'],
-        ['b', 'b', 'b'],
-        ['c', 'c', 'c'],
-        ['d', 'd', 'd'],
-        ['e', 'e', 'e'],
-      ]);
+      await h.spinAndLand([ { visible: ['a', 'a', 'a'] }, { visible: ['b', 'b', 'b'] }, { visible: ['c', 'c', 'c'] }, { visible: ['d', 'd', 'd'] }, { visible: ['e', 'e', 'e'] } ]);
 
       const before = h.reelSet.reels.map((r) => r.getVisibleSymbols());
 
@@ -72,13 +66,7 @@ describe('SpinOptions.holdReels. basic behaviour', () => {
   it('SpinResult.symbols reports the full visible grid (held cells included)', async () => {
     const h = makeHarness();
     try {
-      await h.spinAndLand([
-        ['a', 'a', 'a'],
-        ['b', 'b', 'b'],
-        ['c', 'c', 'c'],
-        ['d', 'd', 'd'],
-        ['e', 'e', 'e'],
-      ]);
+      await h.spinAndLand([ { visible: ['a', 'a', 'a'] }, { visible: ['b', 'b', 'b'] }, { visible: ['c', 'c', 'c'] }, { visible: ['d', 'd', 'd'] }, { visible: ['e', 'e', 'e'] } ]);
 
       const result = await spinAndLandWithHold(
         h,
@@ -104,13 +92,7 @@ describe('SpinOptions.holdReels. events', () => {
   it('does not emit spin:reelLanded for held reels', async () => {
     const h = makeHarness();
     try {
-      await h.spinAndLand([
-        ['a', 'a', 'a'],
-        ['b', 'b', 'b'],
-        ['c', 'c', 'c'],
-        ['d', 'd', 'd'],
-        ['e', 'e', 'e'],
-      ]);
+      await h.spinAndLand([ { visible: ['a', 'a', 'a'] }, { visible: ['b', 'b', 'b'] }, { visible: ['c', 'c', 'c'] }, { visible: ['d', 'd', 'd'] }, { visible: ['e', 'e', 'e'] } ]);
 
       // Note: we drive the spin via `skip()` so no `spin:stopping` fires
       // for any reel (existing slam-stop semantics). The point of this
@@ -136,13 +118,7 @@ describe('SpinOptions.holdReels. events', () => {
   it('still emits spin:allLanded when only non-held reels land', async () => {
     const h = makeHarness();
     try {
-      await h.spinAndLand([
-        ['a', 'a', 'a'],
-        ['b', 'b', 'b'],
-        ['c', 'c', 'c'],
-        ['d', 'd', 'd'],
-        ['e', 'e', 'e'],
-      ]);
+      await h.spinAndLand([ { visible: ['a', 'a', 'a'] }, { visible: ['b', 'b', 'b'] }, { visible: ['c', 'c', 'c'] }, { visible: ['d', 'd', 'd'] }, { visible: ['e', 'e', 'e'] } ]);
 
       const log = captureEvents(h.reelSet, ['spin:allLanded', 'spin:complete']);
       await spinAndLandWithHold(
@@ -168,13 +144,7 @@ describe('SpinOptions.holdReels. degenerate cases', () => {
   it('all reels held: resolves with the current visible grid, no events for reels', async () => {
     const h = makeHarness();
     try {
-      await h.spinAndLand([
-        ['a', 'a', 'a'],
-        ['b', 'b', 'b'],
-        ['c', 'c', 'c'],
-        ['d', 'd', 'd'],
-        ['e', 'e', 'e'],
-      ]);
+      await h.spinAndLand([ { visible: ['a', 'a', 'a'] }, { visible: ['b', 'b', 'b'] }, { visible: ['c', 'c', 'c'] }, { visible: ['d', 'd', 'd'] }, { visible: ['e', 'e', 'e'] } ]);
       const before = h.reelSet.reels.map((r) => r.getVisibleSymbols());
 
       const log = captureEvents(h.reelSet, [
@@ -194,13 +164,7 @@ describe('SpinOptions.holdReels. degenerate cases', () => {
   it('out-of-range and duplicate hold indices are filtered', async () => {
     const h = makeHarness();
     try {
-      await h.spinAndLand([
-        ['a', 'a', 'a'],
-        ['b', 'b', 'b'],
-        ['c', 'c', 'c'],
-        ['d', 'd', 'd'],
-        ['e', 'e', 'e'],
-      ]);
+      await h.spinAndLand([ { visible: ['a', 'a', 'a'] }, { visible: ['b', 'b', 'b'] }, { visible: ['c', 'c', 'c'] }, { visible: ['d', 'd', 'd'] }, { visible: ['e', 'e', 'e'] } ]);
 
       const target: string[][] = [
         ['wild', 'wild', 'wild'],
@@ -229,13 +193,7 @@ describe('SpinOptions.holdReels. interaction with setAnticipation', () => {
   it('filters held indices out of the anticipation list silently', async () => {
     const h = makeHarness();
     try {
-      await h.spinAndLand([
-        ['a', 'a', 'a'],
-        ['b', 'b', 'b'],
-        ['c', 'c', 'c'],
-        ['d', 'd', 'd'],
-        ['e', 'e', 'e'],
-      ]);
+      await h.spinAndLand([ { visible: ['a', 'a', 'a'] }, { visible: ['b', 'b', 'b'] }, { visible: ['c', 'c', 'c'] }, { visible: ['d', 'd', 'd'] }, { visible: ['e', 'e', 'e'] } ]);
 
       const promise = h.reelSet.spin({ holdReels: [3] });
       // Set anticipation including the held reel. implementation must drop it.

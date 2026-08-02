@@ -40,11 +40,7 @@ describe('debug frame recorder', () => {
     const h = makeHarness();
     try {
       startRecording(h.reelSet, 'spin1');
-      await h.spinAndLand([
-        ['a', 'a', 'a'],
-        ['b', 'b', 'b'],
-        ['c', 'c', 'c'],
-      ]);
+      await h.spinAndLand([ { visible: ['a', 'a', 'a'] }, { visible: ['b', 'b', 'b'] }, { visible: ['c', 'c', 'c'] } ]);
       stopRecording(h.reelSet);
 
       const frames = getFrames('spin1');
@@ -62,11 +58,11 @@ describe('debug frame recorder', () => {
     const h = makeHarness();
     try {
       startRecording(h.reelSet, 'one');
-      await h.spinAndLand([['a', 'a', 'a'], ['a', 'a', 'a'], ['a', 'a', 'a']]);
+      await h.spinAndLand([ { visible: ['a', 'a', 'a'] }, { visible: ['a', 'a', 'a'] }, { visible: ['a', 'a', 'a'] } ]);
       stopRecording(h.reelSet);
 
       startRecording(h.reelSet, 'two');
-      await h.spinAndLand([['b', 'b', 'b'], ['b', 'b', 'b'], ['b', 'b', 'b']]);
+      await h.spinAndLand([ { visible: ['b', 'b', 'b'] }, { visible: ['b', 'b', 'b'] }, { visible: ['b', 'b', 'b'] } ]);
       stopRecording(h.reelSet);
 
       const all = getFrames();
@@ -86,7 +82,7 @@ describe('debug frame recorder', () => {
     try {
       startRecording(h.reelSet, 'guard');
       stopRecording(h.reelSet);
-      await h.spinAndLand([['a', 'a', 'a'], ['a', 'a', 'a'], ['a', 'a', 'a']]);
+      await h.spinAndLand([ { visible: ['a', 'a', 'a'] }, { visible: ['a', 'a', 'a'] }, { visible: ['a', 'a', 'a'] } ]);
 
       expect(getFrames('guard').length).toBe(0);
     } finally {
@@ -99,7 +95,7 @@ describe('debug frame recorder', () => {
     try {
       startRecording(h.reelSet, 'first');
       startRecording(h.reelSet, 'second');
-      await h.spinAndLand([['a', 'a', 'a'], ['a', 'a', 'a'], ['a', 'a', 'a']]);
+      await h.spinAndLand([ { visible: ['a', 'a', 'a'] }, { visible: ['a', 'a', 'a'] }, { visible: ['a', 'a', 'a'] } ]);
       stopRecording(h.reelSet);
 
       expect(getFrames('first').length).toBe(0);
@@ -113,7 +109,7 @@ describe('debug frame recorder', () => {
     const h = makeHarness();
     try {
       startRecording(h.reelSet, 'wipe');
-      await h.spinAndLand([['a', 'a', 'a'], ['a', 'a', 'a'], ['a', 'a', 'a']]);
+      await h.spinAndLand([ { visible: ['a', 'a', 'a'] }, { visible: ['a', 'a', 'a'] }, { visible: ['a', 'a', 'a'] } ]);
       stopRecording(h.reelSet);
       expect(getFrames().length).toBeGreaterThan(0);
 
@@ -128,11 +124,7 @@ describe('debug frame recorder', () => {
     const h = makeHarness();
     try {
       startRecording(h.reelSet, 'grid');
-      await h.spinAndLand([
-        ['a', 'a', 'a'],
-        ['b', 'b', 'b'],
-        ['c', 'c', 'c'],
-      ]);
+      await h.spinAndLand([ { visible: ['a', 'a', 'a'] }, { visible: ['b', 'b', 'b'] }, { visible: ['c', 'c', 'c'] } ]);
       stopRecording(h.reelSet);
 
       const frames = getFrames('grid');
@@ -150,11 +142,7 @@ describe('debug frame recorder', () => {
     const h = makeHarness();
     try {
       startRecording(h.reelSet, 'order');
-      await h.spinAndLand([
-        ['a', 'a', 'a'],
-        ['b', 'b', 'b'],
-        ['c', 'c', 'c'],
-      ]);
+      await h.spinAndLand([ { visible: ['a', 'a', 'a'] }, { visible: ['b', 'b', 'b'] }, { visible: ['c', 'c', 'c'] } ]);
       stopRecording(h.reelSet);
 
       const frames = getFrames('order');
@@ -179,11 +167,7 @@ describe('debug frame recorder', () => {
     try {
       // Cap at 2 - a single spin emits >> 2 events, oldest get evicted.
       startRecording(h.reelSet, 'cap', { maxFrames: 2 });
-      await h.spinAndLand([
-        ['a', 'a', 'a'],
-        ['b', 'b', 'b'],
-        ['c', 'c', 'c'],
-      ]);
+      await h.spinAndLand([ { visible: ['a', 'a', 'a'] }, { visible: ['b', 'b', 'b'] }, { visible: ['c', 'c', 'c'] } ]);
       stopRecording(h.reelSet);
 
       const frames = getFrames();
