@@ -576,6 +576,54 @@ export class Reel implements Disposable {
   }
 
   /**
+   * This reel's full strip as a `ColumnTarget` -- buffers included, anchors
+   * at their true positions.
+   *
+   * `getVisibleSymbols()` reports the visible window only, so it cannot be
+   * handed back: a block anchored in `bufferStart` with just its tail
+   * showing reads as that id at visible cell 0, and feeding it to
+   * `setResult` re-anchors the block there. This keeps the anchor where it
+   * is, so `setResult(reelSet.getTargets())` reproduces the board.
+   */
+  getTarget(): ColumnTarget {
+    const idAt = (stripIndex: number): string => {
+      const id = this.symbols[stripIndex]?.symbolId ?? '';
+      if (id !== OCCUPIED_SENTINEL) return id;
+      // Never leak the sentinel. Walk back along the strip to the anchor that
+      // owns this slot. Deliberately NOT the occupancy map or the cross-reel
+      // resolver: both are keyed on VISIBLE cells, and a block anchored in
+      // bufferStart has occupied slots at negative cells, where the resolver
+      // throws "cell -1 out of range".
+      for (let i = stripIndex - 1; i >= 0; i--) {
+        const prev = this.symbols[i]?.symbolId;
+        if (prev && prev !== OCCUPIED_SENTINEL) return prev;
+      }
+      // Cross-reel block whose anchor lives on another reel: any id is safe
+      // here, since that anchor repaints this slot on replay.
+      const cell = stripIndex - this._bufferStart;
+      if (cell >= 0 && this._crossReelResolver) return this._crossReelResolver(this.reelIndex, cell);
+      return this.symbols[this._bufferStart]?.symbolId ?? '';
+    };
+
+    const visible: string[] = [];
+    for (let cell = 0; cell < this._visibleCells; cell++) visible.push(idAt(this._bufferStart + cell));
+
+    const target: ColumnTarget = { visible };
+    // `bufferStart[0]` is the slot nearest the window; later indices go further out.
+    if (this._bufferStart > 0) {
+      const start: string[] = [];
+      for (let k = 0; k < this._bufferStart; k++) start.push(idAt(this._bufferStart - 1 - k));
+      target.bufferStart = start;
+    }
+    if (this.bufferEnd > 0) {
+      const end: string[] = [];
+      for (let k = 0; k < this.bufferEnd; k++) end.push(idAt(this._bufferStart + this._visibleCells + k));
+      target.bufferEnd = end;
+    }
+    return target;
+  }
+
+  /**
    * Internal: register a callback used to resolve cross-reel OCCUPIED
    * cells to the originating big-symbol's id. Wired by `ReelSet` so this
    * reel can answer "what id is at (myReel, cell)?" even when the anchor is

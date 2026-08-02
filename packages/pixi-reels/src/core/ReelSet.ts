@@ -1491,6 +1491,22 @@ export class ReelSet extends Container implements Disposable {
   }
 
   /**
+   * The whole board as `ColumnTarget[]` -- buffers included, big-symbol
+   * anchors at their true positions, so it can be handed straight back:
+   * `reelSet.setResult(reelSet.getTargets())` reproduces what is on screen.
+   *
+   * `getVisibleGrid()` cannot do that, and its `string[][]` type says so. It
+   * reports the visible window only, so a block anchored in `bufferStart`
+   * with just its tail showing reads as that id at visible cell 0; replaying
+   * that re-anchors the block there and it expands over the cells below.
+   * Use `getVisibleGrid()` to read the board for win logic, and this to
+   * capture and replay one.
+   */
+  getTargets(): ColumnTarget[] {
+    return this._reels.map((r) => r.getTarget());
+  }
+
+  /**
    * Footprint of the symbol at `(reel, cell)`.
    *
    *   - 1×1 symbols: `{ anchor: { reel, cell }, size: { reels: 1, cells: 1 } }`.
