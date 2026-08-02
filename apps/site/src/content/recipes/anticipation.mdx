@@ -19,7 +19,7 @@ Every way to hold the player at the reel stop, from a single slowed reel to a fu
 
 ## Anticipate a reel
 
-Slow a specific reel to build tension before it lands.
+Slow the closing reels (3 and 4) to build tension before they land.
 
 <RecipeDemo code="anticipate-a-reel" />
 
@@ -27,7 +27,7 @@ Slow a specific reel to build tension before it lands.
 
 ## Anticipation teaser
 
-Pair setAnticipation with a buffer-above prefill so a chosen symbol slides into view as the slow reel decelerates.
+Pair setAnticipation with a `bufferStart` prefill so a chosen symbol sits at the top edge, approaching but never landing, while the slow reels decelerate.
 
 <RecipeDemo code="anticipation-teaser" />
 

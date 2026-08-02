@@ -1,26 +1,24 @@
 ---
-title: "Cells, bounds, paylines & banners"
+title: "Cells, bounds, paylines & overlays"
 group: rendering
-oneLiner: "Cell geometry, self-drawn paylines and overlays, hit areas, banner reels, and runtime feature-mode swaps."
+oneLiner: "Cell geometry, self-drawn paylines and overlays, hit areas, and runtime feature-mode swaps."
 order: 80
 tags:
   - paylines
   - hit-areas
   - overlays
-  - horizontal
-  - banner
   - wins
 apis: []
 steps: []
 ---
 
-Address individual cells, render your own paylines and overlays, add banner reels, and swap feature modes at runtime, each shown live below.
+Address individual cells, render your own paylines and overlays, and swap feature modes at runtime, each shown live below. For banner reels above the grid, see [orientation and direction](/recipes/orientation-and-direction/#horizontal-banner).
 
 <a id="cell-bounds"></a>
 
 ## Cell bounds. overlays, paylines & hit areas
 
-getCellBounds(col, row) hands you the pixel rect of any visible cell, for paylines, win outlines, or hit areas that align exactly with symbols.
+getCellBounds(reel, cell) hands you the pixel rect of any visible cell, for paylines, win outlines, or hit areas that align exactly with symbols.
 
 <RecipeDemo code="cell-bounds" />
 
@@ -64,7 +62,7 @@ Replace playWin() with your own GSAP timeline, styled per win.id.
 
 Let the player smash the button to land the reels now.
 
-**Gotcha:** for player-facing slam use requestSkip(). skipSpin() THROWS if the result has not arrived yet, so it queues instead.
+**Gotcha:** for player-facing slam use requestSkip(). skipSpin() THROWS if the result has not arrived yet; requestSkip() queues until it does.
 
 <RecipeDemo code="slam-stop" />
 
@@ -74,6 +72,6 @@ Let the player smash the button to land the reels now.
 
 Enter and exit a bonus mode at runtime by adding or removing a frame middleware, with no ReelSet rebuild.
 
-**Gotcha:** run custom middleware after target-placement (priority >= 10) so it reacts to the grid the server chose.
+**Gotcha:** run custom middleware after target-placement (priority > 10; target-placement is 10, and the recipe uses 20) so it reacts to the grid the server chose.
 
 <RecipeDemo code="feature-mode-swap" />

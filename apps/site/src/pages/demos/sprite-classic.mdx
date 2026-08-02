@@ -33,7 +33,7 @@ const sheet = await Assets.load('/prototype-symbols/prototype.json');
 Or use the pre-baked loader in `examples/shared/prototypeSpriteLoader.ts`:
 
 ```ts
-import { loadPrototypeSymbols } from '@/shared/prototypeSpriteLoader';
+import { loadPrototypeSymbols } from 'examples/shared/prototypeSpriteLoader';
 
 const { textures, blurTextures } = await loadPrototypeSymbols();
 // textures['royal/royal_1']        -> base
@@ -45,7 +45,7 @@ const { textures, blurTextures } = await loadPrototypeSymbols();
 The library ships `SpriteSymbol` (crisp texture, pulse win). For blur-on-spin, use `BlurSpriteSymbol` from `examples/shared/`:
 
 ```ts
-import { BlurSpriteSymbol } from '@/shared/BlurSpriteSymbol';
+import { BlurSpriteSymbol } from 'examples/shared/BlurSpriteSymbol';
 
 builder.symbols((r) => {
   for (const id of symbolIds) {

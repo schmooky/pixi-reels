@@ -21,7 +21,7 @@ import StickyWildsDemo from '../../components/demos/StickyWildsDemo.tsx';
 ### 1. Track stickies
 
 ```ts
-type Sticky = { reel: number; row: number; spinsLeft: number };
+type Sticky = { reel: number; cell: number; spinsLeft: number };
 const stickies: Sticky[] = [];
 ```
 
@@ -33,11 +33,11 @@ Use the library's `setHeld()` + `holdAndWinProgress` pattern, or feed your own g
 reelSet.events.on('spin:complete', ({ symbols }) => {
   for (const s of stickies) s.spinsLeft--;
   for (let r = 0; r < symbols.length; r++) {
-    for (let row = 0; row < symbols[r].length; row++) {
-      if (symbols[r][row] === 'wild') {
-        const existing = stickies.find((x) => x.reel === r && x.row === row);
+    for (let cell = 0; cell < symbols[r].length; cell++) {
+      if (symbols[r][cell] === 'wild') {
+        const existing = stickies.find((x) => x.reel === r && x.cell === cell);
         if (existing) existing.spinsLeft = 3;
-        else stickies.push({ reel: r, row, spinsLeft: 3 });
+        else stickies.push({ reel: r, cell, spinsLeft: 3 });
       }
     }
   }
@@ -49,11 +49,11 @@ reelSet.events.on('spin:complete', ({ symbols }) => {
 
 ```ts
 engine.setHeld(
-  stickies.filter((s) => s.spinsLeft > 0).map((s) => ({ reel: s.reel, row: s.row, symbolId: 'wild' })),
+  stickies.filter((s) => s.spinsLeft > 0).map((s) => ({ reel: s.reel, cell: s.cell, symbolId: 'wild' })),
 );
 ```
 
 ### 4. Cheat: guaranteed sticky
 
-`forceCell(reelIndex, rowIndex, 'wild')` lands a fresh wild in the same spot
+`forceCell(reelIndex, cellIndex, 'wild')` lands a fresh wild in the same spot
 every spin. perfect for reviewing the sticky animation on loop.

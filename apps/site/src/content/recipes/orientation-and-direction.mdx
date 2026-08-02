@@ -1,7 +1,7 @@
 ---
 title: "Orientation & direction"
 group: mechanics
-oneLiner: "Reels that travel sideways, upward, or per-column - horizontal banners, roll-up, mixed direction, and a banner that joins a ways win."
+oneLiner: "Reels that travel sideways, upward, or per-reel - horizontal banners, roll-up, mixed direction, and a banner that joins a ways win."
 order: 55
 tags:
   - horizontal
@@ -17,6 +17,9 @@ steps: []
 New in v2: travel is a property of the orientation axis, not the sign of a delta. One engine spins vertical or horizontal, forward or reverse, per reel - and the standalone HorizontalReel is retired.
 
 <a id="horizontal-banner"></a>
+{/* The v1 standalone recipes redirect here; keep their fragments alive. */}
+<a id="horizontal-reel"></a>
+<a id="static-spin-horizontal"></a>
 
 ## Horizontal banner
 
@@ -28,7 +31,7 @@ A one-reel sideways strip - the "paying symbols this round" banner. Just `.orien
 
 ## Banner that joins a ways win
 
-A horizontal banner above a 5x3 ways set. The banner is a sixth reel: a wild in the cell above a column makes that column count, extending the way. Two ReelSets, one presentation (the ReelStage composition); the engine spins and lands both, the game scripts the ways math and spotlights the cells.
+A horizontal banner above a 5x3 ways set. The banner is a sixth reel: a wild in the cell above a reel makes that reel count, extending the way. Two ReelSets in one container; the engine spins and lands both, the game scripts the ways math and spotlights the cells.
 
 **Gotcha:** pixi-reels never computes wins - the recipe owns the ways evaluation and spotlight; the library only spins and lands.
 
@@ -46,6 +49,6 @@ Every reel spins upward: one `.direction('reverse')` call. The same engine, even
 
 ## Mixed direction per reel
 
-`.directionPerReel([...])` gives each column its own travel direction for a woven, alternating look. Every reel still lands the exact server frame.
+`.directionPerReel([...])` gives each reel its own travel direction for a woven, alternating look. Every reel still lands the exact server frame.
 
 <RecipeDemo code="roll-up-alternating" />

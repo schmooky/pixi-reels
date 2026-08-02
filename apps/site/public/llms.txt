@@ -8,7 +8,7 @@ Site: https://pixi-reels.schmooky.dev
 Repo: https://github.com/schmooky/pixi-reels
 Package: https://www.npmjs.com/package/pixi-reels
 
-Generated: 2026-08-02T00:27:49.703Z
+Generated: 2026-08-02T00:39:23.452Z
 
 ## Quick start
 
@@ -186,9 +186,9 @@ APIs:
 Steps:
   - 
 
-### Cells, bounds, paylines & banners
+### Cells, bounds, paylines & overlays
 URL: https://pixi-reels.schmooky.dev/recipes/cells-and-banners/
-Tags: paylines, hit-areas, overlays, horizontal, banner, wins
+Tags: paylines, hit-areas, overlays, wins
 APIs: 
 Steps:
   - 
@@ -351,7 +351,7 @@ URL: https://pixi-reels.schmooky.dev/recipes/anticipation-teaser/
 // Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
 //                   WILD_CARD, app
 //
-// Anticipation teaser. pair setAnticipation with a buffer-above prefill so
+// Anticipation teaser. pair setAnticipation with a bufferStart prefill so
 // a slow reel approaches a known high-value symbol. The user sees
 // the bonus coming as the reel decelerates.
 
@@ -7006,8 +7006,10 @@ URL: https://pixi-reels.schmooky.dev/recipes/layering-promote-jagged/
 //                   loadSpineSet,
 //                   app, pickWeighted
 //
-// Jagged layouts can't use `unmask` (the builder throws - the motion layer
-// can't keep unmasked views aligned on offset reels). The pattern instead:
+// `unmask` DOES work on jagged layouts (it is an at-rest presentation, and
+// the reel re-bakes its offset after every motion snap). This recipe shows
+// the per-instance alternative for when you want ONE landed cell above
+// everything without making the id unmasked globally:
 // PROMOTE each landed scatter's view into viewport.spotlightContainer (the
 // same above-mask layer the win spotlight uses), and hand it back to its
 // reel on the next spin:start. Above every reel, outside the mask, and the

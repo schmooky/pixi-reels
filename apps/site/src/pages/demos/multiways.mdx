@@ -19,7 +19,7 @@ reel set to MultiWays mode. Every spin must call `setShape(cellsPerReel)`
 ```ts
 const spinPromise = reelSet.spin();
 reelSet.setShape([7, 4, 6, 7, 6, 3]);  // any per-reel count in [min, max]
-reelSet.setResult(serverGrid);          // grid[c].length === shape[c]
+reelSet.setResult(serverGrid.map((visible) => ({ visible })));  // visible.length === shape[c]
 await spinPromise;
 ```
 
@@ -40,8 +40,8 @@ for (let i = 0; i < chain; i++) ways *= cellsByReel[i].length;
 const amount = PAYS[kind] * chain * ways;
 ```
 
-The displayed `WAYS` headline above the canvas is the **product of every
-reel's row count**, not the chain - that's the slot's bandwidth this
+The `WAYS` readout at the bottom of the stage is the **product of every
+reel's cell count**, not the chain - that's the slot's bandwidth this
 spin, regardless of whether anyone won.
 
 ## Round flow

@@ -1,7 +1,7 @@
 ---
 layout: ../../layouts/Demo.astro
 title: Anticipation & slam-stop
-subtitle: 5×3 · slow the last reels, or let the player skip() them
+subtitle: 5x3 · slow the last reels, or let the player slam-stop them
 tags: [anticipation, skip]
 description: Two tension tools. anticipation (slow a reel to tease a trigger) and skip (player smashes the button to slam-land now).
 ---
@@ -20,18 +20,24 @@ const promise = reelSet.spin();
 setTimeout(() => {
   const scatters = countScattersSoFar(response.symbols.slice(0, 3));
   if (scatters === 2) reelSet.setAnticipation([3, 4]);
-  reelSet.setResult(response.symbols);
+  reelSet.setResult(response.symbols.map((visible) => ({ visible })));
 }, 200);
 ```
 
 ## Slam-stop (skip)
 
-`ReelSet.skipSpin()` force-lands every reel immediately, using the target from
-`setResult()` if one was set. The returned `SpinResult` has `wasSkipped: true`.
+`ReelSet.skipSpin()` force-lands every reel onto the target from
+`setResult()`. The returned `SpinResult` has `wasSkipped: true`.
+
+It **throws** if the result has not arrived yet -- there is nothing to land
+on. For a spin/skip button, use `requestSkip()`, which slams now or queues
+the intent until `setResult()` lands. That is what this demo does: it waits
+240 ms for its mock server, and a second click inside that window would
+throw.
 
 ```ts
 spinButton.addEventListener('click', () => {
-  if (reelSet.isSpinning) reelSet.skipSpin();
+  if (reelSet.isSpinning) reelSet.requestSkip();
   else reelSet.spin();
 });
 ```

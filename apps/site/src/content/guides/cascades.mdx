@@ -146,7 +146,7 @@ What tumble slots actually tune:
 | `pauseAfterDestroyMs` | `250` | Tighten to `150` for snappy turbo modes; lengthen to `500` for cinematic feels. |
 | `maxChain` | `32` | Safety cap. Bump up only if your game can legitimately exceed 32 cascades. |
 | `onCascade` |. | Per-cascade hook. Bump multipliers, fire SFX, run "winners gone" UI here. Return a Promise to delay the next refill. |
-| `destroyOptions` | `{}` | Forwarded to `destroySymbols(...)`. Use this for direction overrides, per-cell stagger, viewport dim. |
+| `destroyOptions` | `{}` | Forwarded to `destroySymbols(...)`. Per-cell stagger, lift z-index, viewport dim. |
 | `signal` |. | `AbortSignal` for caller-driven cancellation. See [cancelling a chain](#cancelling-a-chain-via-abortsignal). |
 
 ```ts
@@ -165,14 +165,13 @@ await reelSet.runCascade({
 });
 ```
 
-Every `destroyOptions` key also takes a function of the cell:
+`DestroySymbolsOptions` is `delay`, `zIndex`, `dim` and `signal`. `delay` takes a function of the cell:
 
 ```ts
 destroyOptions: {
-  direction: (cell) => cell.reel % 2 === 0 ? 1 : -1,  // alternate by column (the default)
-  delay:     (cell, i) => i * 0.02,                    // first-to-last stagger
-  zIndex:    1500,                                     // lift even higher than the default 1000
-  dim:       0.5,                                      // custom viewport dim alpha
+  delay:  (cell, i) => i * 0.02,   // first-to-last stagger
+  zIndex: 1500,                    // lift above the default 1000
+  dim:    0.5,                     // custom viewport dim alpha
 }
 ```
 

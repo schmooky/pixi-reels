@@ -4,8 +4,10 @@
 //                   loadSpineSet,
 //                   app, pickWeighted
 //
-// Jagged layouts can't use `unmask` (the builder throws - the motion layer
-// can't keep unmasked views aligned on offset reels). The pattern instead:
+// `unmask` DOES work on jagged layouts (it is an at-rest presentation, and
+// the reel re-bakes its offset after every motion snap). This recipe shows
+// the per-instance alternative for when you want ONE landed cell above
+// everything without making the id unmasked globally:
 // PROMOTE each landed scatter's view into viewport.spotlightContainer (the
 // same above-mask layer the win spotlight uses), and hand it back to its
 // reel on the next spin:start. Above every reel, outside the mask, and the

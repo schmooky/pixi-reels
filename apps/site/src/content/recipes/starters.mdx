@@ -25,9 +25,9 @@ The copy-paste starting point for a left-to-right line-pay slot, the foundation 
 
 <a id="cascade-6x5"></a>
 
-## Cascade 6×5 tumble
+## Cascade 6x4 tumble
 
-Modern tumble/cascade slot on runCascade with an ever-growing multiplier; card symbols first, then the identical build with real Spine art.
+Modern tumble/cascade slot on runCascade; card symbols first, then the identical build with real Spine art.
 
 <RecipeDemo code="cascade-6x5" />
 <RecipeDemo code="cascade-6x5-spine" />
@@ -36,7 +36,7 @@ Modern tumble/cascade slot on runCascade with an ever-growing multiplier; card s
 
 ## MultiWays
 
-Per-spin row variation: each reel lands on a different row count between minCells and maxCells, and total ways is the product of per-reel rows.
+Per-spin cell variation: each reel lands on a different cell count between minCells and maxCells, and total ways is the product of the per-reel cell counts.
 
 **Gotcha:** call reelSet.setShape(rowsPerReel) BEFORE setResult(), with serverGrid[i].length === rowsPerReel[i].
 

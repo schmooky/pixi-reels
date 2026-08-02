@@ -48,7 +48,7 @@ Land a near-miss, parallel-nudge three reels to complete a wild line, then run `
 
 A 1xH block on the target reel is nudged through as a unit; the second demo drags a tail-visible block fully into view.
 
-**Gotcha:** only single-reel (w=1) blocks can be nudged. cross-reel (w>1) blocks throw.
+**Gotcha:** only single-reel (`size.reels === 1`) blocks can be nudged. cross-reel blocks throw.
 
 <RecipeDemo code="nudge-big-symbol" height={300} />
 <RecipeDemo code="nudge-tail-reveal" height={300} />
@@ -65,6 +65,6 @@ Cancel a running nudge via `NudgeOptions.signal`. the strip still snaps to lande
 
 ## Skip an in-flight nudge
 
-`reelSet.skipNudge(col)` fast-forwards a running nudge to its landed state; `nudge()` resolves normally, so the success path still runs.
+`reelSet.skipNudge(reel)` fast-forwards a running nudge to its landed state; `nudge()` resolves normally, so the success path still runs.
 
 <RecipeDemo code="nudge-skip" height={300} />

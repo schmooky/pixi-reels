@@ -18,9 +18,9 @@ The full cascade and tumble toolkit, one live demo at a time.
 
 <a id="cascade-6x5"></a>
 
-## Cascade 6×5 tumble
+## Cascade 6x4 tumble
 
-Modern tumble mechanic with an ever-growing multiplier where `runCascade` owns the detect, destroy, refill loop; the second canvas is the identical recipe on real Thunderkick Spine art.
+Modern tumble mechanic where `runCascade` owns the detect, destroy, refill loop; the second canvas is the identical recipe on real Thunderkick Spine art.
 
 <RecipeDemo code="cascade-6x5" height={300} />
 <RecipeDemo code="cascade-6x5-spine" height={300} />
@@ -74,7 +74,7 @@ Same spin and cascade refill, only `.tumble({ fall, dropIn })` changes: classic,
 
 ## Cascade anticipation refill
 
-Two-stage refill: survivors slide down first, a held anticipation beat for multipliers and mascots, then new symbols drop in column by column.
+Two-stage refill: survivors slide down first, a held anticipation beat for multipliers and mascots, then new symbols drop in reel by reel.
 
 <RecipeDemo code="tumble-anticipation" height={300} />
 <RecipeDemo code="tumble-anticipation-stagger" height={300} />
@@ -91,9 +91,9 @@ Open every play with a classic strip-spin, then cascade the respins; the per-spi
 
 <a id="peek-from-above"></a>
 
-## Peek symbol from buffer-above
+## Peek symbol from buffer-start
 
-Pre-fill the buffer-above slot so a teaser symbol sits just out of frame, visible during the next spin's scroll-in.
+Pre-fill the `bufferStart` slot so a teaser symbol sits just out of frame, visible during the next spin's scroll-in.
 
 <RecipeDemo code="peek-from-above" height={300} />
 

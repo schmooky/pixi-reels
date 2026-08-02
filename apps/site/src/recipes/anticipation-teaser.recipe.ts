@@ -2,7 +2,7 @@
 // Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
 //                   WILD_CARD, app
 //
-// Anticipation teaser. pair setAnticipation with a buffer-above prefill so
+// Anticipation teaser. pair setAnticipation with a bufferStart prefill so
 // a slow reel approaches a known high-value symbol. The user sees
 // the bonus coming as the reel decelerates.
 

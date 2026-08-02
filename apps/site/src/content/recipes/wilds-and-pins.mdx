@@ -20,7 +20,7 @@ Wild and mystery mechanics built on the engine CellPin primitive: pin once, the 
 
 ## Expanding wild
 
-Wild lands and the whole column turns wild for N spins, then auto-expires when the turn counter hits zero.
+Wild lands and the whole reel turns wild for N spins, then auto-expires when the turn counter hits zero.
 
 <RecipeDemo code="expanding-wild-pin" height={300} />
 
@@ -36,7 +36,7 @@ A sticky wild on the primitive: pin on land with `turns: N`, the engine overlays
 
 ## Walking wild (movePin)
 
-A wild migrates one column left each spin via `reelSet.movePin()`, with flight hooks for Spine run animations.
+A wild migrates one reel left each spin via `reelSet.movePin()`, with flight hooks for Spine run animations.
 
 **Gotcha:** walk pins sequentially with `await`, never `Promise.all`. two pins moving to the same cell throws.
 

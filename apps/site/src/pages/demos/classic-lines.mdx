@@ -75,7 +75,7 @@ reelSet.events.on('spin:complete', async (result) => {
 
 ```ts
 import { createTestReelSet } from 'pixi-reels/testing';
-import { CheatEngine, forceLine } from '@/shared/cheats';
+import { CheatEngine, forceLine } from 'examples/shared/cheats';
 
 const { reelSet, spinAndLand, destroy } = createTestReelSet({
   reels: 5, visibleCells: 3, symbolIds: ['cherry','seven','wild'],
