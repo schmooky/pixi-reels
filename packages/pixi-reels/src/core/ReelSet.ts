@@ -114,10 +114,12 @@ export interface RefillOptions {
   /** Winners that were just destroyed. Their cells will be refilled per gravity. */
   winners: ReadonlyArray<Cell>;
   /**
-   * Target grid after refill. Convention: the top `winners.length` cells
-   * per reel are new symbols falling in from above; the rest are
-   * survivors in their original top-to-bottom order. Same contract as
-   * the `nextGrid` callback in `runCascade`.
+   * Target grid after refill. Convention: per reel, `winners.length` new
+   * symbols sit at the gravity-ENTRY end and the survivors pack against the
+   * gravity-EXIT end in their original order. Under the default
+   * `gravity: 'auto'` that means the first cells are new for a forward reel
+   * and the LAST cells are new for a reverse one. Same contract as the
+   * `nextGrid` callback in `runCascade`.
    */
   grid: ColumnTarget[];
   /**
@@ -210,9 +212,11 @@ export interface RunCascadeOptions {
    * land on. This is your server-side gravity simulation (or the
    * fallback `cascadeNextGrid` from your client). Sync or async.
    *
-   * Must follow the gravity convention: top `winners.length` cells per
-   * reel are new symbols; the rest are survivors in original top-to-
-   * bottom order. Same contract as `refill({ grid })`.
+   * Must follow the gravity convention: per reel, `winners.length` new
+   * symbols at the gravity-entry end, survivors packed against the
+   * gravity-exit end in their original order. `tumble({ gravity })` picks
+   * which end is which; the engine animates your grid, it does not reorder
+   * it. Same contract as `refill({ grid })`.
    *
    * Returns `ColumnTarget[]` -- one entry per reel, `{ visible }` plus any
    * `bufferStart` / `bufferEnd` anchors. A plain `string[][]` is not
@@ -636,14 +640,16 @@ export class ReelSet extends Container implements Disposable {
    * and the next grid the server returned.
    *
    *   - Untouched survivors don't animate.
-   *   - Survivors above a hole slide down to fill it.
-   *   - New symbols enter from above into the top `winners.length` cells
-   *     of each reel.
+   *   - Survivors behind a hole slide toward the gravity-exit edge to fill it.
+   *   - New symbols enter from the gravity-entry edge into the
+   *     `winners.length` cells left at that end.
    *
-   * The new grid must follow the gravity convention: per reel, the top
-   * `winnerCells.length` cells are the new symbols, the remaining cells are
-   * survivors in their original top-to-bottom order. This matches what
-   * server-side gravity simulations emit.
+   * The new grid must follow the gravity convention: per reel, the
+   * `winnerCells.length` cells nearest the gravity-ENTRY edge are the new
+   * symbols and the rest are survivors in their original order. On the
+   * default vertical/forward reel that is the familiar "top N are new";
+   * on a reverse reel it is the last N. This matches what server-side
+   * gravity simulations emit.
    *
    * Resolves with a {@link RefillResult} (mirror of {@link RunCascadeResult}.
    * one stage's worth). Requires the builder to have been configured with

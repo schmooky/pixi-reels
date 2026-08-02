@@ -1,6 +1,7 @@
 import { Container, Graphics } from 'pixi.js';
 import type { Ticker } from 'pixi.js';
 import { ReelSetBuilder } from '../core/ReelSetBuilder.js';
+import type { Direction, Orientation } from '../core/ReelAxis.js';
 import type { ReelSet } from '../core/ReelSet.js';
 import { SharedRectMaskStrategy } from '../core/ReelViewport.js';
 import type { ReelSymbol } from '../symbols/ReelSymbol.js';
@@ -47,6 +48,15 @@ export interface BoardGridOptions {
   ticker: Ticker;
   /** Per-cell background, drawn behind each reel. */
   chrome?: (g: Graphics, size: number) => void;
+  /**
+   * Which way each cell's own strip travels while it spins. Every cell is a
+   * 1x1 reel set, so this changes the direction a symbol scrolls in from, not
+   * the board layout - `cols` and `rows` stay board dimensions either way.
+   * Defaults to the engine default (vertical / forward), i.e. symbols drop in
+   * from above.
+   */
+  orientation?: Orientation;
+  direction?: Direction;
   /**
    * Named speed profiles, each registered on every cell and selected by name
    * via {@link BoardGrid.setProfile}. A value may be a flat profile or a
@@ -143,6 +153,8 @@ export class BoardGrid implements Disposable {
             { visible: [this.emptyId], bufferStart: [this.emptyId], bufferEnd: [this.emptyId] },
           ])
           .ticker(opts.ticker)
+          .orientation(opts.orientation ?? 'vertical')
+          .direction(opts.direction ?? 'forward')
           // The active profile defaults to the engine's 'normal'; point it at
           // the first registered name so any profile vocabulary works.
           .initialSpeed(profileNames[0]);

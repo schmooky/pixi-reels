@@ -3,6 +3,7 @@ import { SpeedPresets } from '../config/SpeedPresets.js';
 import type { SpeedProfile, SymbolData } from '../config/types.js';
 import type { SymbolRegistry } from '../symbols/SymbolRegistry.js';
 import { HoldAndWinBoard } from './HoldAndWinBoard.js';
+import type { Direction, Orientation } from '../core/ReelAxis.js';
 import type { HwCellSizeOptions } from './HwTypes.js';
 
 /**
@@ -32,6 +33,8 @@ export class HoldAndWinBuilder<TData = unknown> {
     | ((state: { locked: number; capacity: number; respinsLeft: number }) => boolean)
     | null = null;
   private _chrome: ((g: Graphics, size: number) => void) | null = null;
+  private _orientation: Orientation = 'vertical';
+  private _direction: Direction = 'forward';
   private _ticker: Ticker | null = null;
   private _rng: (() => number) | null = null;
 
@@ -120,6 +123,17 @@ export class HoldAndWinBuilder<TData = unknown> {
     return this;
   }
 
+  /**
+   * Which way each cell's strip travels while it spins. Cells are 1x1 reel
+   * sets, so this picks the edge a coin scrolls in from; the board's own
+   * `cols` x `rows` layout is unaffected. Defaults to vertical / forward.
+   */
+  axis(orientation: Orientation, direction: Direction = 'forward'): this {
+    this._orientation = orientation;
+    this._direction = direction;
+    return this;
+  }
+
   ticker(ticker: Ticker): this {
     this._ticker = ticker;
     return this;
@@ -152,6 +166,8 @@ export class HoldAndWinBuilder<TData = unknown> {
       stagger: this._stagger,
       anticipateWhen: this._anticipateWhen,
       chrome: this._chrome,
+      orientation: this._orientation,
+      direction: this._direction,
       ticker: this._ticker,
       rng: this._rng,
     });
