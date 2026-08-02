@@ -65,17 +65,45 @@ async function idsOf(builtPath) {
   return idCache.get(builtPath);
 }
 
-const files = await walk(CONTENT, ['.mdx', '.md']);
+/**
+ * Astro emits a stub page for each configured redirect. Checking the anchor
+ * against the STUB always passes -- it has no headings, and no ids at all --
+ * so a redirect aimed at a fragment that does not exist on the destination
+ * sails through. Two of them did. Follow the stub to the real page, and
+ * prefer the fragment the redirect itself carries over the one in the link.
+ */
+async function follow(builtPath, anchor, depth = 0) {
+  if (depth > 5) return { builtPath, anchor }; // redirect loop; report as-is
+  const html = await readFile(builtPath, 'utf8');
+  const m = html.match(/http-equiv="refresh"[^>]*url=([^"']+)["']/i);
+  if (!m) return { builtPath, anchor };
+  const [path, frag] = m[1].split('#');
+  const next = await resolves(path);
+  if (!next) return { builtPath, anchor };
+  return follow(next, frag ?? anchor, depth + 1);
+}
+
+const files = await walk(CONTENT, ['.mdx', '.md', '.yaml']);
 const broken = [];
 let checked = 0;
+
+/**
+ * Every in-site link in one file: markdown `](/path#frag)` plus the FAQ's
+ * YAML `href: /path#frag`. The 234 FAQ links were invisible here until now,
+ * which is how an answer came to point at a redirect whose fragment did not
+ * exist on the destination.
+ */
+function* linksIn(src) {
+  for (const m of src.matchAll(/\]\((\/[^)\s#?]*)?(?:#([^)\s?]+))?(?:\?[^)]*)?\)/g))
+    yield [m[1], m[2]];
+  for (const m of src.matchAll(/^\s*href:\s*["']?(\/[^"'\s#?]*)?(?:#([^"'\s?]+))?["']?\s*$/gm))
+    yield [m[1], m[2]];
+}
 
 for (const file of files) {
   const src = await readFile(file, 'utf8');
   const where = file.slice(ROOT.length + 1);
-  // In-site links: an absolute path, a bare `#anchor` on this same page, or
-  // either with a fragment. External URLs and mailto: are not our problem.
-  for (const m of src.matchAll(/\]\((\/[^)\s#?]*)?(?:#([^)\s?]+))?(?:\?[^)]*)?\)/g)) {
-    const [, path, anchor] = m;
+  for (const [path, anchor] of linksIn(src)) {
     if (!path && !anchor) continue;
     checked++;
 
@@ -86,8 +114,12 @@ for (const file of files) {
       broken.push(`${where}  ->  ${path ?? target}`);
       continue;
     }
-    if (anchor && !(await idsOf(built)).has(anchor)) {
-      broken.push(`${where}  ->  ${path ?? ''}#${anchor}  (page exists, no such id)`);
+    // A redirect stub has no ids, so resolve to the page that actually
+    // renders before asking whether the fragment exists.
+    const final = await follow(built, anchor);
+    if (final.anchor && !(await idsOf(final.builtPath)).has(final.anchor)) {
+      const via = final.builtPath === built ? '' : ' (via redirect)';
+      broken.push(`${where}  ->  ${path ?? ''}#${final.anchor}${via}  (page exists, no such id)`);
     }
   }
 }
