@@ -10,7 +10,7 @@ The library handles both via three named phases. `cascade:fall`, `cascade:place`
 - **`reelSet.spin()` + `setResult(grid)`**. Moment A. Returns a promise that resolves on `spin:complete`.
 - **`reelSet.destroySymbols(cells)`**. deferred to each symbol's `playDestroy()`. Sprite implode by default; Spine subclasses can override to play a disintegration animation.
 - **`reelSet.refill({ winners, grid })`**. Moment B for one cascade level.
-- **`reelSet.runCascade({ detectWinners, nextGrid })`**. the canonical detect → destroy → pause → refill loop, with `cascade:round:start` fired on entry and `cascade:round:end` (carrying the summary) when the chain ends. Use this in 95% of cases.
+- **`reelSet.runCascade({ detectWinners, nextGrid })`**. the canonical detect → destroy → pause → refill loop. Fires `cascade:chain:start` / `cascade:chain:end` per stage and resolves with a `RunCascadeResult` summary. Use this in 95% of cases.
 
 Animation timings are config; every other behaviour (badges, multipliers, SFX) is user code via `cascade:*` events.
 
@@ -32,7 +32,7 @@ import {
 } from 'pixi-reels';
 
 const reelSet = new ReelSetBuilder()
-  .reels(6).visibleSymbols(5).symbolSize(95, 95).symbolGap(5, 5)
+  .reels(6).visibleCells(5).symbolSize(95, 95).symbolGap(5, 5)
   .symbols((r) => r.register('A', SpriteSymbol, { textures }))
   .weights({ A: 10 })
   .tumble({
@@ -62,7 +62,7 @@ async function play() {
   await spinDone;
 
   // Moment B. runCascade owns the detect → destroy → pause → refill
-  // loop and fires `cascade:round:end` when the chain ends.
+  // loop and resolves with a RunCascadeResult when the chain ends.
   await reelSet.runCascade({
     detectWinners: (grid) => detectWinners(grid),
     nextGrid:      (_, winners) => server.cascade(winners),
@@ -339,13 +339,13 @@ Trigger a Spine animation track when a special symbol leaves or arrives. keeps t
 reelSet.events.on('cascade:fall:symbol', ({ symbol }) => {
   if (!(symbol instanceof SpineReelSymbol)) return;
   if (symbol.symbolId !== 'scatter') return;
-  symbol.playSpineTrack('fly_out');
+  symbol.playOnTrack(1, 'fly_out');
 });
 
 reelSet.events.on('cascade:dropIn:symbol', ({ symbol }) => {
   if (!(symbol instanceof SpineReelSymbol)) return;
   if (symbol.symbolId !== 'scatter') return;
-  symbol.playSpineTrack('drop_in');
+  symbol.playOnTrack(1, 'drop_in');
 });
 ```
 
@@ -436,7 +436,7 @@ Quick low-cost squares in the empty cells while the server thinks.
 ```ts
 const placeholders: Container[] = [];
 reelSet.events.on('cascade:fall:end', ({ reelIndex }) => {
-  for (let row = 0; row < reelSet.visibleCells; row++) {
+  for (let row = 0; row < reelSet.getReel(reelIndex).visibleCells; row++) {
     const ph = makeSkeletonSquare();
     ph.x = reelIndex * cellW;
     ph.y = row * cellH;
@@ -654,8 +654,6 @@ In combined mode `cascade:gravity:*` does not fire. survivors and new symbols sh
 
 | Event | When | Payload |
 |---|---|---|
-| `cascade:round:start` | Fired once at the top of `runCascade(...)`, before the first `detectWinners` call. **Not** emitted when you compose the loop yourself with bare `refill()` calls. | `{ initialGrid }` |
-| `cascade:round:end` | Mirror of `cascade:round:start`. Fired once after the detect → destroy → refill loop exits. Carries the same shape as `RunCascadeResult`. | `{ chainLength, totalWinners, finalGrid, wasSkipped }` |
 | `cascade:chain:start` | A single chain stage opens. `detectWinners` returned a non-empty list, destroy is about to run. `chain` is 1-indexed. | `{ chain, winners, currentGrid }` |
 | `cascade:chain:end` | A single chain stage closes. both destroy AND refill drop-in finished. About to loop back to `detectWinners`. | `{ chain, winners, nextGrid }` |
 | `cascade:fall:start` | A reel's fall-out begins (Moment A only. refills skip fall). | `{ reelIndex }` |

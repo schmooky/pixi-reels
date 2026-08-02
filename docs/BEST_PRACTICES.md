@@ -33,10 +33,10 @@ async function spin() {
 
   const wins = detectWins(landing.symbols);      // YOUR match logic
   if (wins.length > 0) {
-    await reelSet.spotlight.cycle({
-      lines: wins.map((w) => ({ positions: w.positions })),
-      perLine: 1000,
-    });
+    await reelSet.spotlight.cycle(
+      wins.map((w) => ({ positions: w.positions })),
+      { displayDuration: 1000 },
+    );
   }
 }
 ```
@@ -56,7 +56,7 @@ reelSet.events.on('spin:reelLanded',  () => audio.play('reel_stop'));
 reelSet.events.on('spin:complete',    () => audio.stop('spin_loop'));
 reelSet.events.on('spotlight:start',  () => audio.play('big_win_cue'));
 
-// DO NOT. couples your audio to the library's method calls and misses paths like skip().
+// DO NOT. couples your audio to the library's method calls and misses paths like skipSpin() and slamStop().
 function onSpinButtonPress() {
   audio.play('spin_loop');
   reelSet.spin();
@@ -101,7 +101,7 @@ it('3 scatters triggers the bonus handler', async () => {
 });
 ```
 
-The same pattern scales up: cascade sequences (use `runCascade` with a semantic `winners` callback), hold-and-win persistence (`setHeld` + `holdAndWinProgress` cheat), anticipation + skip mid-flight.
+The same pattern scales up: cascade sequences (use `runCascade` with a semantic `detectWinners` callback), hold-and-win persistence (`setHeld` + `holdAndWinProgress` cheat), anticipation + skip mid-flight.
 
 ## Spine symbols
 
@@ -163,7 +163,7 @@ reelSet.events.on('spin:start', () => presenter.abort());
 
 ```ts
 interface Win {
-  cells: SymbolPosition[];  // order matters when stagger > 0
+  cells: ReadonlyArray<SymbolPosition>;  // order matters when stagger > 0
   value?: number;           // used for default value-desc sort
   kind?: string;            // optional tag for routing
   id?: number;              // optional stable id
@@ -193,11 +193,11 @@ popup, a sound cue. is your code reacting to events:
 | `win:end` | once per `show()` | `'complete'` or `'aborted'` |
 
 Plot graphics with `reelSet.getCellBounds(col, row)`. see the
-[paylines-events-only](/recipes/paylines-events-only/) recipe.
+[paylines](/recipes/cells-and-banners/) recipe.
 
 ### Cascades reuse the same API
 
-In `runCascade`'s `onWinnersVanish` hook, call `presenter.show([{ cells: winners }])`.
+In `runCascade`'s `presentWinners` hook, call `presenter.show([{ cells: winners }])`.
 Cluster pops and payline hits are the same shape to the presenter. no
 new type, no new method.
 
