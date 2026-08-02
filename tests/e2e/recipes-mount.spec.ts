@@ -69,25 +69,27 @@ for (const path of PAGES) {
     });
     page.on('pageerror', (err) => errors.push(String(err)));
 
+    // Tall viewport so several demos fall inside the runner's 500px
+    // intersection margin and mount together. Deliberately NOT scrolling:
+    // scrolling past a demo unmounts it, and teardown has its own separate
+    // race (a destroyed app's gsap tweens outliving it) that would show up
+    // here as noise. This test is about mounting.
+    await page.setViewportSize({ width: 1280, height: 3000 });
     await page.goto(`${BASE}${path}`, { waitUntil: 'networkidle' });
+    await page.waitForTimeout(3000);
 
-    // Demos mount lazily on intersection, so walk the page to trigger them.
-    await page.evaluate(async () => {
-      for (let y = 0; y < document.body.scrollHeight; y += 400) {
-        window.scrollTo(0, y);
-        await new Promise((r) => setTimeout(r, 120));
-      }
-    });
-    await page.waitForTimeout(2500);
-
-    // A recipe that threw in its builder leaves its slot canvas-less.
     const canvases = await page.locator('canvas').count();
     expect(canvases, `${path} rendered no canvas, so no recipe on it mounted`).toBeGreaterThan(0);
 
-    // The v1-key failure surfaced exactly here: a builder throw, logged and
-    // swallowed by the runner's error boundary.
-    const builderErrors = errors.filter((e) => /renamed to|was renamed|pixi-reels-codemod/i.test(e));
-    expect(builderErrors, `${path} logged a v1-rename throw`).toEqual([]);
-    expect(errors, `${path} logged console errors`).toEqual([]);
+    // THE assertion. A recipe that throws is caught by the runner and
+    // rendered as "Runtime error: ..." text over its slot -- it never
+    // reaches the console, which is why an earlier version of this test
+    // watched console output and sailed straight past a reintroduced
+    // `size: { w, h }`. Read the rendered message instead.
+    const shown = await page.locator('.text-destructive').allInnerTexts();
+    const failures = shown.map((t) => t.trim()).filter(Boolean);
+    expect(failures, `${path} has recipe(s) that threw on mount`).toEqual([]);
+
+    expect(errors, `${path} logged console errors while mounting`).toEqual([]);
   });
 }

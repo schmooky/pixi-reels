@@ -68,8 +68,8 @@ const reelSet = new ReelSetBuilder()
 // player wouldn't even register that the mystery had to be opened.
 
 async function revealCell(reel, cell, revealId) {
-  const reel = reelSet.reels[reel];
-  const oldSym = reel.getSymbolAt(cell);
+  const targetReel = reelSet.reels[reel];
+  const oldSym = targetReel.getSymbolAt(cell);
   // Pivot to the cell center so the scale-down looks like the symbol
   // collapses on itself instead of pinning to the top-left corner.
   const px = oldSym.view.pivot.x, py = oldSym.view.pivot.y;
@@ -114,7 +114,7 @@ async function revealCell(reel, cell, revealId) {
   // The pin call replaced the symbol at this cell; grab the new one
   // and animate it IN. Same pivot trick so the bounce reads as
   // expanding-from-the-center.
-  const newSym = reel.getSymbolAt(cell);
+  const newSym = targetReel.getSymbolAt(cell);
   newSym.view.pivot.set(SIZE / 2, SIZE / 2);
   newSym.view.x = ox + SIZE / 2;
   newSym.view.y = oy + SIZE / 2;

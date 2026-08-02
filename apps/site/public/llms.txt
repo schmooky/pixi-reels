@@ -8,7 +8,7 @@ Site: https://pixi-reels.schmooky.dev
 Repo: https://github.com/schmooky/pixi-reels
 Package: https://www.npmjs.com/package/pixi-reels
 
-Generated: 2026-08-01T23:59:29.265Z
+Generated: 2026-08-02T00:11:37.957Z
 
 ## Quick start
 
@@ -2448,8 +2448,8 @@ return {
 
     reelSet.setDropOrder('all');
     await reelSet.runCascade({
-      detectWinners: (grid) => grid.flatMap((reel, reel) =>
-        reel.map((sym, cell) => sym === X ? { reel, cell } : null).filter(Boolean),
+      detectWinners: (grid) => grid.flatMap((column, reel) =>
+        column.map((sym, cell) => sym === X ? { reel, cell } : null).filter(Boolean),
       ),
       nextGrid: (prev, winners) => {
         const losers = new Map();
@@ -2457,10 +2457,10 @@ return {
           if (!losers.has(w.reel)) losers.set(w.reel, new Set());
           losers.get(w.reel).add(w.cell);
         }
-        return prev.map((reel, reel) => {
+        return prev.map((column, reel) => {
           const drop = losers.get(reel);
-          if (!drop || drop.size === 0) return [...reel];
-          const survivors = reel.filter((_, cell) => !drop.has(cell));
+          if (!drop || drop.size === 0) return [...column];
+          const survivors = column.filter((_, cell) => !drop.has(cell));
           const fillers = Array.from({ length: drop.size }, () => randSymbolNotIn(new Set([X])));
           return [...fillers, ...survivors];
         });
@@ -2544,8 +2544,8 @@ return {
     // no more Xs, so `detectWinners` returns [] and the chain ends.
     reelSet.setDropOrder('all');
     await reelSet.runCascade({
-      detectWinners: (grid) => grid.flatMap((reel, reel) =>
-        reel.map((sym, cell) => sym === X ? { reel, cell } : null).filter(Boolean),
+      detectWinners: (grid) => grid.flatMap((column, reel) =>
+        column.map((sym, cell) => sym === X ? { reel, cell } : null).filter(Boolean),
       ),
       nextGrid: (prev, winners) => {
         const losers = new Map();
@@ -2553,10 +2553,10 @@ return {
           if (!losers.has(w.reel)) losers.set(w.reel, new Set());
           losers.get(w.reel).add(w.cell);
         }
-        return prev.map((reel, reel) => {
+        return prev.map((column, reel) => {
           const drop = losers.get(reel);
-          if (!drop || drop.size === 0) return [...reel];
-          const survivors = reel.filter((_, cell) => !drop.has(cell));
+          if (!drop || drop.size === 0) return [...column];
+          const survivors = column.filter((_, cell) => !drop.has(cell));
           const fillers = Array.from({ length: drop.size }, () => randSymbolNotIn(new Set([X])));
           return [...fillers, ...survivors];
         });
@@ -7793,8 +7793,8 @@ const reelSet = new ReelSetBuilder()
 // player wouldn't even register that the mystery had to be opened.
 
 async function revealCell(reel, cell, revealId) {
-  const reel = reelSet.reels[reel];
-  const oldSym = reel.getSymbolAt(cell);
+  const targetReel = reelSet.reels[reel];
+  const oldSym = targetReel.getSymbolAt(cell);
   // Pivot to the cell center so the scale-down looks like the symbol
   // collapses on itself instead of pinning to the top-left corner.
   const px = oldSym.view.pivot.x, py = oldSym.view.pivot.y;
@@ -7839,7 +7839,7 @@ async function revealCell(reel, cell, revealId) {
   // The pin call replaced the symbol at this cell; grab the new one
   // and animate it IN. Same pivot trick so the bounce reads as
   // expanding-from-the-center.
-  const newSym = reel.getSymbolAt(cell);
+  const newSym = targetReel.getSymbolAt(cell);
   newSym.view.pivot.set(SIZE / 2, SIZE / 2);
   newSym.view.x = ox + SIZE / 2;
   newSym.view.y = oy + SIZE / 2;
@@ -10319,7 +10319,7 @@ reelSet.events.on('spin:start', () => {
 reelSet.events.on('spin:complete', async () => {
   if (!lastGrid) return;
   const cells = [];
-  lastGrid.forEach((reel, reel) =>
+  lastGrid.forEach((column, reel) =>
     reel.forEach((id, cell) => {
       if (id === 'mystery') cells.push({ reel, cell });
     }),

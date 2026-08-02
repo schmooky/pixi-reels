@@ -65,8 +65,8 @@ return {
 
     reelSet.setDropOrder('all');
     await reelSet.runCascade({
-      detectWinners: (grid) => grid.flatMap((reel, reel) =>
-        reel.map((sym, cell) => sym === X ? { reel, cell } : null).filter(Boolean),
+      detectWinners: (grid) => grid.flatMap((column, reel) =>
+        column.map((sym, cell) => sym === X ? { reel, cell } : null).filter(Boolean),
       ),
       nextGrid: (prev, winners) => {
         const losers = new Map();
@@ -74,10 +74,10 @@ return {
           if (!losers.has(w.reel)) losers.set(w.reel, new Set());
           losers.get(w.reel).add(w.cell);
         }
-        return prev.map((reel, reel) => {
+        return prev.map((column, reel) => {
           const drop = losers.get(reel);
-          if (!drop || drop.size === 0) return [...reel];
-          const survivors = reel.filter((_, cell) => !drop.has(cell));
+          if (!drop || drop.size === 0) return [...column];
+          const survivors = column.filter((_, cell) => !drop.has(cell));
           const fillers = Array.from({ length: drop.size }, () => randSymbolNotIn(new Set([X])));
           return [...fillers, ...survivors];
         });
