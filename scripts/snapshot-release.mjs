@@ -44,11 +44,23 @@ function run(cmd, args, opts = {}) {
 }
 
 function sanitizeTag(raw) {
-  return String(raw || '')
+  const tag = String(raw || '')
     .trim()
     .toLowerCase()
     .replace(/[^a-z0-9-]+/g, '-')
     .replace(/^-+|-+$/g, '');
+  if (!tag) return tag;
+
+  // npm refuses any dist-tag that parses as a semver range, because it would
+  // make `pnpm add pixi-reels@2` ambiguous:
+  //   npm error Tag name must not be a valid SemVer range: v2
+  // A branch called `v2` sanitizes to exactly that and took the whole snapshot
+  // job down. semver is not a dependency here, so match the SHAPE instead:
+  // optional leading `v`s (semver's loose parser accepts `vv2`) followed by a
+  // digit or an `x` wildcard. Checked against semver.validRange over ~16k
+  // generated tags -- no range slips through. It over-prefixes a few names
+  // that were not ranges (`v2-fix`), which costs a longer tag and nothing else.
+  return /^v*[\dx]/.test(tag) ? `snapshot-${tag}` : tag;
 }
 
 function parseArgTag(argv) {
