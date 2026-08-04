@@ -250,6 +250,45 @@ describe('hud layer', () => {
     expect([...seen].sort()).toEqual(['HF', 'HR', 'VF', 'VR']);
   });
 
+  it('stacks its lines in one column instead of one per reel corner', () => {
+    // The lines were anchored at each reel's own top-left, so they shared a y
+    // and marched along x -- and since a line is ~230px against a ~100px cell,
+    // every one overprinted its neighbours. Six reels is where it was worst.
+    const harness = createTestReelSet({
+      reels: 6,
+      visibleCells: 3,
+      symbolIds: ['a'],
+      symbolSize: { width: W, height: H },
+    });
+    try {
+      debugOverlay(harness.reelSet, { layers: ['hud'] });
+      const texts = overlayRoot(harness.reelSet)
+        .children.filter((c): c is Text => c instanceof Text && c.visible)
+        .filter((t) => t.text.startsWith('r'));
+      expect(texts).toHaveLength(6);
+
+      // One column: every line shares an x, and y strictly increases.
+      const xs = new Set(texts.map((t) => t.x));
+      expect(xs.size).toBe(1);
+      for (let i = 1; i < texts.length; i++) {
+        expect(texts[i].y).toBeGreaterThan(texts[i - 1].y);
+      }
+
+      // Inside the mask box, so a host that framed its camera on the reel set
+      // still has the whole column on screen. Off-camera is worse than busy.
+      const vp = harness.reelSet.viewport;
+      expect(texts[0].x).toBeGreaterThanOrEqual(vp.x);
+      expect(texts[0].y).toBeGreaterThanOrEqual(vp.y);
+      // Line height read off the lines themselves rather than imported: the
+      // metric is internal, and the property under test is the layout.
+      const lineHeight = texts[1].y - texts[0].y;
+      const lastBottom = texts[texts.length - 1].y + lineHeight;
+      expect(lastBottom).toBeLessThanOrEqual(vp.y + vp.maskHeight);
+    } finally {
+      harness.destroy();
+    }
+  });
+
   it('reports mixed per-reel directions independently', () => {
     const harness = createTestReelSet({
       reels: 3,

@@ -72,6 +72,23 @@ const MASK_RECT_COLOR = 0x34c759;
 /** Pin-overlay marker color (green), separate from the purple pin cell. */
 const PIN_OVERLAY_COLOR = 0x34c759;
 
+/** hud line metrics. One line per reel, stacked inside the mask's top-left. */
+const HUD_FONT_SIZE = 10;
+const HUD_LINE_HEIGHT = 11;
+/** Inset from the mask's top-left corner to the first hud line. */
+const HUD_PAD = 4;
+/** Backing plate behind the hud lines, so white text survives bright art. */
+const HUD_BACKING_COLOR = 0x000000;
+const HUD_BACKING_ALPHA = 0.7;
+/**
+ * Advance per character, as a fraction of the font size. The plate is sized
+ * from the longest line's LENGTH rather than from `Text.width`, because
+ * measuring needs a canvas to rasterize against and throws in a headless
+ * test. The font is monospace, so a character count is exact up to this
+ * ratio, and the plate only has to be roughly right.
+ */
+const HUD_CHAR_ADVANCE = 0.62;
+
 export interface DebugOverlayOptions {
   /**
    * Which layers to draw. An explicit list, or `'all'` for every C3 layer.
@@ -600,22 +617,59 @@ class DebugOverlay implements DebugOverlayHandle {
   }
 
   private _drawHud(): void {
-    // hud uses no Graphics layer. one Text per reel.
+    // One Text per reel, stacked as a single left-aligned column.
+    //
+    // Each line used to be anchored at its own reel's top-left corner, which
+    // assumed a line fits inside a reel. It does not: ~40 characters at 11px
+    // monospace is ~230px against a cell that is typically ~100px wide, so on
+    // any set past two reels every line overprinted its neighbours into an
+    // unreadable smear -- worse the more reels you had, which is exactly when
+    // you want the hud. A column reads at any reel count and in either
+    // orientation; the `r<n>` prefix still ties a line to its reel, and the
+    // `cells` layer labels each cell `reel,cell` on the canvas.
+    //
+    // Anchored INSIDE the mask's top-left, not outside it. Stacking below the
+    // mask would keep the reels clear, but a host that sized its camera to the
+    // reel set before the overlay existed then renders the whole block
+    // off-screen, and an invisible hud is worse than a cluttered one. A debug
+    // layer you opted into may cover art; drop `hud` if it is in the way.
+    const g = this._layer('hud');
+    const vp = this._reelSet.viewport;
+    const left = vp.x + HUD_PAD;
+    const top = vp.y + HUD_PAD;
     let i = 0;
+    let widest = 0;
     this._reelSet.reels.forEach((reel: Reel, reelIndex: number) => {
-      const t = this._text(this._hudTexts, i++, COLORS.hud, 11);
+      const t = this._text(this._hudTexts, i, COLORS.hud, HUD_FONT_SIZE);
+      // Render at 1x rather than devicePixelRatio: at 10px the glyphs come out
+      // blocky and aliased instead of grey-smeared, which is both the pixel
+      // look and the more legible one over busy art. Guarded because assigning
+      // resolution dirties the texture and would re-rasterize every live tick.
+      if (t.resolution !== 1) t.resolution = 1;
       const axis = reel.axis;
-      // Single letters keep the line readable at 11px on a 5-reel set:
-      // V/H orientation, F/R direction, then the runtime state.
+      // Single letters keep the line short: V/H orientation, F/R direction,
+      // then the runtime state.
       const o = axis.orientation === 'vertical' ? 'V' : 'H';
       const d = axis.direction === 'forward' ? 'F' : 'R';
       t.text =
         `r${reelIndex} ${o}${d} feed=${axis.feedEdge} ` +
         `spd=${reel.speed.toFixed(1)} ${this._phase[reelIndex]} cells=${reel.visibleCells}`;
-      const at = this._reelPoint(reel, 3, 3);
-      t.x = at.x;
-      t.y = at.y;
+      t.x = left;
+      t.y = top + i * HUD_LINE_HEIGHT;
+      widest = Math.max(widest, t.text.length);
+      i++;
     });
     this._hideTextsFrom(this._hudTexts, i);
+    // Backing plate, so white text survives bright art. `_layer` added this
+    // Graphics before the pool's Texts, so child order already puts it under
+    // them.
+    if (i > 0) {
+      g.rect(
+        left - HUD_PAD,
+        top - HUD_PAD,
+        widest * HUD_FONT_SIZE * HUD_CHAR_ADVANCE + HUD_PAD * 2,
+        i * HUD_LINE_HEIGHT + HUD_PAD * 2,
+      ).fill({ color: HUD_BACKING_COLOR, alpha: HUD_BACKING_ALPHA });
+    }
   }
 }
