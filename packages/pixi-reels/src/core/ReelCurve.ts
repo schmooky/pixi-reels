@@ -334,28 +334,32 @@ export class ReelCurve {
    * Project one flat reel-local main coordinate: where it lands, and how much
    * the perspective divide shrinks whatever is there.
    *
-   * Inside the window this is the real thing - a point wrapped on the cylinder
-   * at arc length `t`, pushed through the perspective divide. Outside it (the
-   * buffer cells) the projection continues as a straight line at the edge
-   * slope, holding the edge's perspective factor, because carrying `sin` past
-   * its peak would fold the buffer back on itself and march wrapping symbols
-   * the wrong way.
+   * Inside the window this is the real thing: a point wrapped on the cylinder,
+   * pushed through the perspective divide.
+   *
+   * POSITION continues as a straight line past the window, because carrying
+   * `sin` beyond its peak folds the buffer back over itself and marches
+   * wrapping symbols the wrong way. SCALE does not - it keeps following the
+   * real perspective, because `1 - cos(phi)` is still climbing there and
+   * nothing folds. Pinning it to the edge value (as this did) handed every
+   * buffer cell two equal-width edges, i.e. a flat rectangle with no keystone
+   * at all - glaringly obvious on the cell peeking in above the window, right
+   * next to a hard-curved neighbour.
    */
   private _project(main: number): { main: number; scale: number } {
     if (this.isFlat || this._halfExtent <= 0) return { main, scale: 1 };
     const h = this._halfExtent;
     const phi = (main - h) / this._radius;
-    // Past the window the projection continues as a straight line at the edge
-    // slope, holding the edge's perspective factor. Carrying `sin` beyond its
-    // peak would fold the buffer back over itself and march wrapping symbols
-    // the wrong way.
+    // Clamp only the ANGLE, and only at half a turn, where `cos` would turn
+    // back on itself. Buffers never reach it at any sane arc; this is just so
+    // a pathological strip length cannot un-shrink a cell.
+    const scale = this._perspectiveAt(Math.min(Math.abs(phi), Math.PI));
     if (phi > this._arc) {
-      return { main: 2 * h + (main - 2 * h) * this._edgeSlope, scale: this._edgeScale };
+      return { main: 2 * h + (main - 2 * h) * this._edgeSlope, scale };
     }
     if (phi < -this._arc) {
-      return { main: main * this._edgeSlope, scale: this._edgeScale };
+      return { main: main * this._edgeSlope, scale };
     }
-    const scale = this._perspectiveAt(phi);
     return { main: h + (h * Math.sin(phi) * scale) / this._norm, scale };
   }
 

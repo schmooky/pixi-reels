@@ -17,96 +17,96 @@ steps: []
 
 ## One number
 
-A physical slot reel is a drum, and the cells you see are wrapped around it. The one in the middle of the window faces you square-on; the ones near the top and bottom have rotated away, so they sit further from your eye and their far edge is further still. Under a real camera that does not turn a cell into a smaller rectangle - it turns it into a **trapezoid**, narrower on the edge that has rotated away.
+A slot reel is a drum. The middle cell faces you; the top and bottom ones have rotated away, so their far edge sits further from your eye. A camera turns those into **trapezoids**, not smaller rectangles.
 
-`.curve(amount)` does that. `0` is dead flat (the default, and the only thing that costs nothing), `1` is a hard barrel. Most boards want somewhere around `0.3`&ndash;`0.5`.
+`.curve(amount)`. `0` flat (default, free), `1` hard barrel. Most boards want `0.3`&ndash;`0.5`.
 
-The tiles below carry a grid on purpose: it is the quickest way to see a projection, because parallel lines stop being parallel. On the top and bottom rows the grid lines converge toward the edge that has turned away. On the middle row they stay parallel.
+Grid lines on the tiles are the tell: they converge on the outer rows, stay parallel on the middle one.
 
 <RecipeDemo code="curved-reels" height={420} />
 
-`depth` is how strong the perspective is - how much smaller a cell at the window edge is than the one facing you. `0` gives an orthographic drum: cells still bunch up toward the edges, but nothing recedes and nothing keystones. It defaults to `amount * 0.5`, so you only reach for the object form when you want to push it:
+`depth` is perspective strength - how much smaller an edge cell is than the middle one. `0` = orthographic: cells still bunch, nothing recedes, nothing keystones. Defaults to `amount * 0.5`.
 
 ```ts
-builder.curve(0.45);                          // depth defaults to 0.225
-builder.curve({ amount: 0.45, depth: 0.35 }); // stronger perspective
+builder.curve(0.45);                          // depth 0.225
+builder.curve({ amount: 0.45, depth: 0.35 }); // stronger
 ```
 
-`depth` is capped just below `cos(arc)`. Past that the projection stops being monotonic and cells at the window edge fold back over each other, so a very deep curve saturates rather than turning inside out.
+Capped just under `cos(arc)`. Past that the projection stops being monotonic and edge cells fold back over each other, so a deep curve saturates instead of turning inside out.
 
 <a id="curved-reels-focus"></a>
 
 ## Where the camera stands
 
-By default there is one camera dead ahead of every reel, so each is its own little drum and they all look identical. `.curveFocus('set')` puts a **single** camera in front of the middle of the board instead: cells that rotate away also lean IN toward the centre, and the grid reads as one wide cylinder.
+Default: one camera per reel, so every reel is its own drum. `.curveFocus('set')`: one camera on the middle of the board, so receding cells also lean IN and the grid reads as one wide cylinder.
 
 ```ts
 builder.curve(0.5).curveFocus('reel');     // default - five separate drums
 builder.curve(0.5).curveFocus('set-lean'); // halfway
-builder.curve(0.5).curveFocus('set');      // one camera for the whole board
+builder.curve(0.5).curveFocus('set');      // one camera, whole board
 ```
 
-Watch the outer reels below: their top and bottom rows no longer just narrow in place, they tilt toward the middle. The centre reel, which the camera points straight at, barely moves. `'set-lean'` is halfway and is usually the sweet spot on a 5-wide board with real art in it - enough of the one-big-drum read to sell the cabinet, not so much that the outer reels visibly tilt into their neighbours.
+Watch the outer reels tilt toward the middle while the centre one barely moves. `'set-lean'` is usually the sweet spot on a 5-wide board.
 
 <RecipeDemo code="curved-reels-focus" height={420} />
 
-**Gotcha:** leaning cells cross their own reel column, and the default per-reel `RectMaskStrategy` would slice the overhang off at the boundary. Anything other than `'reel'` therefore auto-selects `SharedRectMaskStrategy`; passing `.maskStrategy(...)` explicitly always wins.
+**Gotcha:** leaning cells cross their own column, and the per-reel `RectMaskStrategy` would slice the overhang off. Anything but `'reel'` auto-selects `SharedRectMaskStrategy`. An explicit `.maskStrategy(...)` still wins.
 
 <a id="curved-reels-per-reel"></a>
 
 ## One drum, not five
 
-`.curvePerReel([...])` gives each reel its own camera. Bending the middle reels hardest and easing off toward the outside makes the board read as a single wide cylinder instead of five identical columns. The array length must equal `reels()`, and each entry takes the same shorthand or object form as `.curve()`.
+`.curvePerReel([...])` - a camera each. Bend the middle reels hardest, ease off outward, and the board reads as one cylinder. Length must equal `reels()`; entries take the same shorthand or object form as `.curve()`.
 
 <RecipeDemo code="curved-reels-per-reel" height={420} />
 
 ## Tuning it live
 
-`reelSet.setCurve()` re-projects at runtime, taking the same value or a per-reel array. It exists so you can dial the numbers against your real art instead of rebuilding the set on every guess:
+`reelSet.setCurve()` re-projects at runtime - same value or a per-reel array. Dial it against your art instead of rebuilding:
 
 ```ts
 reelSet.setCurve(0.4);
 reelSet.setCurve([0.2, 0.35, 0.5, 0.35, 0.2]);
-reelSet.setCurve(0); // back to flat
+reelSet.setCurve(0); // flat
 ```
 
-## What actually draws the trapezoid
+## What draws the trapezoid
 
-A `Container` transform is affine. It can scale a cell, skew it, rotate it - but it can never turn a rectangle into a trapezoid, so anything built on `scale` alone gives you a smaller rectangle and calls it perspective.
+A `Container` transform is affine. It scales, skews, rotates - it can never make a rectangle a trapezoid. Anything built on `scale` alone gives you a smaller rectangle and calls it perspective.
 
-So the engine hands each symbol a **projected quad** and lets the symbol decide how to fill it, through `ReelSymbol.applyCellQuad()`:
+So the engine hands each symbol a **projected quad** via `ReelSymbol.applyCellQuad()`:
 
-- **`SpriteSymbol` and `AnimatedSpriteSymbol` draw the real thing** when their texture owns its whole source - a generated texture, a render texture, a single loaded image. They map it onto the quad with a PixiJS `PerspectiveMesh`, which interpolates across a vertex grid and gives a true keystone, at **no extra render pass**. The mesh is only allocated once a reel is actually curved.
-- **Everything else gets the closest affine fit**: a *uniform* scale about the quad's centre, sized to fit INSIDE the projected footprint so no cell ever overlaps its neighbour. Uniform on purpose. Slot art is usually a shape the player recognises, and squashing one axis turns a `7` into a squashed `7` rather than a `7` seen at an angle. Spine symbols and composite containers land here, because projecting an arbitrary subtree would mean rendering it to a texture every frame.
+- **`SpriteSymbol` / `AnimatedSpriteSymbol`** map it onto a PixiJS `PerspectiveMesh` - true keystone, **no extra render pass**, mesh allocated only once a reel is curved. Requires a texture that owns its whole source.
+- **Everything else** gets a *uniform* scale about the quad's centre, sized to fit INSIDE it so no cell overlaps its neighbour. Uniform on purpose: squashing one axis turns a `7` into a squashed `7`, not a `7` at an angle. Spine and composite subtrees land here - projecting them would mean a render texture every frame.
 
-Write `applyCellQuad()` on your own symbol if its content is a single texture and you want the real projection - `PerspectiveCell` is exported and does the mesh plumbing for you.
+Own symbol, single texture? Write `applyCellQuad()`. `PerspectiveCell` is exported and does the mesh plumbing.
 
-**Known limitation:** a texture that is a *sub-frame of an atlas* does not take the mesh path yet. The mesh addresses its source with plain 0..1 UVs, and remapping them onto the frame has not yet produced a correct draw here, so `canProjectTexture()` refuses those and the symbol falls back to the affine fit. That covers most production art today - it looks right, it just does not keystone. Textures that own their whole source are unaffected.
+**Known limitation:** an *atlas sub-frame* does not take the mesh path yet. The mesh addresses its source with 0..1 UVs and remapping them onto the frame has not produced a correct draw here, so `canProjectTexture()` refuses those and the symbol falls back to the affine fit - right, but not keystoned. That is most production art today. Whole-source textures are unaffected.
 
 <a id="curved-reels-gems"></a>
 
 ## On real art
 
-The grid tiles above are a measuring instrument. This is the same curve on shipped symbols - Playson's Supercharged Diamonds 3 gem set, the sheet the sprite Hold &amp; Win recipes use - at `curveFocus('set-lean')`.
+Grid tiles are a measuring instrument. This is the same curve on shipped symbols - Playson's Supercharged Diamonds 3, the sheet the sprite Hold &amp; Win recipes use - at `curveFocus('set-lean')`.
 
-These are atlas sub-frames, so per the limitation above they take the affine fit rather than the mesh: the cells recede and lean correctly, and the gems are never distorted, but they do not keystone. Note also that they are letterboxed into a square cell and heavily trimmed, so `BlurSpriteSymbol` reports where its art really sits through `cellInset` - without that the drum would project the empty cell instead of the gem in the middle of it.
+Atlas sub-frames, so per above: affine fit, no keystone. Cells recede and lean, gems never distort. They are also letterboxed and heavily trimmed, so `BlurSpriteSymbol` reports where its art really sits via `cellInset` - without it the drum would project the empty cell instead of the gem.
 
-Blur-on-spin still works exactly as it does flat: the symbols swap to their motion-blur frames on `onReelSpinStart` and back on landing.
+Blur-on-spin is unaffected: motion-blur frames on `onReelSpinStart`, back on landing.
 
 <RecipeDemo code="curved-reels-gems" height={420} />
 
 ## Art that does not fill its cell
 
-Most slot art does not. A trimmed atlas frame is typically a small shape floating in a much larger transparent box, and projecting the whole cell would both inflate the symbol and hand it the cell's keystone instead of the milder one its own position earns.
+Most does not - a trimmed frame is a small shape in a big transparent box. Project the whole cell and you inflate the symbol and hand it the cell's keystone instead of its own.
 
-Symbols report the rectangle their art is really in through `ReelSymbol.cellInset`, and the drum projects that. The sprite symbols derive it from the texture's trim automatically, so an atlas built by TexturePacker needs no help. Override `cellInset` if your symbol positions its art some other way.
+Symbols report their real rect via `ReelSymbol.cellInset`. Sprite symbols derive it from the texture's trim, so a TexturePacker atlas needs no help. Override it if your symbol places art some other way.
 
-## The rest of the engine does not notice
+## The engine does not notice
 
-Underneath, the strip still marches on flat coordinates. The projection is handed over as a view-local quad and never touches a view's `position`, which is why `setResult()`, wrapping, cascades, big symbols and MultiWays reshapes behave exactly as they do on a flat set.
+The strip still marches on flat coordinates. The projection is a view-local quad and never touches a view's `position`, so `setResult()`, wrapping, cascades, big symbols and MultiWays reshapes behave exactly as flat.
 
-`getCellBounds()` returns the projected cell's **bounding box** - the smallest axis-aligned rect that still contains the trapezoid - so a payline drawn through its centre follows the curve. An outline drawn on it is a hair loose on the narrow edge, which is the price of the cell no longer being a rectangle.
+`getCellBounds()` returns the projected cell's **bounding box**; `getCellQuad()` returns the four corners it is actually drawn on. Outline with the quad, hit-test with the box.
 
-**Gotcha:** the affine fallback owns `view.scale`. A win animation that tweens `symbol.view.scale` to an absolute value overwrites the cell's projection for as long as it runs. The sprite symbols avoid this by pulsing the mesh instead (it is pivoted on the quad's centre, so it swells in place); if you write your own, animate a child of `view` rather than `view` itself.
+**Gotcha:** the affine fallback owns `view.scale`. A win animation tweening `symbol.view.scale` to an absolute value overwrites the projection while it runs. Sprite symbols dodge this by pulsing the mesh instead; in your own, animate a child of `view`.
 
-**Gotcha:** curvature is presentation only. It never changes which symbol lands where, what `getVisibleGrid()` returns, or any event payload.
+**Gotcha:** curvature is presentation only. It never changes what lands where, what `getVisibleGrid()` returns, or any event payload.

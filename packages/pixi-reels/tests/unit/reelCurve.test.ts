@@ -89,8 +89,9 @@ describe('ReelCurve projection', () => {
     expect(curve.scaleAt(centre)).toBeCloseTo(1, 6);
     expect(curve.scaleAt(0)).toBeCloseTo(1 / 1.3, 6);
     expect(curve.scaleAt(CELLS * CELL)).toBeCloseTo(1 / 1.3, 6);
-    // Beyond the window it holds at the edge value rather than collapsing.
-    expect(curve.scaleAt(-3 * CELL)).toBeCloseTo(1 / 1.3, 6);
+    // Beyond the window it keeps receding. Holding it at the edge value gave
+    // every buffer cell two equal edges, i.e. no keystone at all.
+    expect(curve.scaleAt(-3 * CELL)).toBeLessThan(curve.scaleAt(0));
   });
 
   it('stays strictly increasing across the buffers, so cells can never fold over', () => {
@@ -164,6 +165,32 @@ describe('ReelCurve.quadFor', () => {
       expect(flatStart(i) + above.y3).toBeCloseTo(flatStart(i + 1) + below.y0, 9);
       expect(farWidth(above)).toBeCloseTo(nearWidth(below), 9);
     }
+  });
+
+  it('keystones buffer cells too, instead of flattening them to rectangles', () => {
+    const curve = build(0.7, 0.35);
+    // One cell above the window: the cell that peeks in over the top edge.
+    const peeking = curve.quadFor(-CELL);
+    if (!peeking) throw new Error('expected a projected quad');
+    // Its top edge has rotated FURTHER away than its bottom, so it must still
+    // be the narrower of the two. Pinning the scale outside the window made
+    // these equal, i.e. a flat rectangle beside a hard-curved neighbour.
+    expect(nearWidth(peeking)).toBeLessThan(farWidth(peeking) - 0.5);
+    // And it is narrower than the visible cell below it, not wider.
+    expect(farWidth(peeking)).toBeLessThanOrEqual(nearWidth(quad(curve, 0)) + 1e-6);
+
+    const trailing = curve.quadFor(CELLS * CELL);
+    if (!trailing) throw new Error('expected a projected quad');
+    expect(farWidth(trailing)).toBeLessThan(nearWidth(trailing) - 0.5);
+  });
+
+  it('keeps shrinking past the window rather than holding at the edge', () => {
+    const curve = build(0.7, 0.35);
+    const edge = curve.scaleAt(0);
+    const oneOut = curve.scaleAt(-CELL);
+    const twoOut = curve.scaleAt(-2 * CELL);
+    expect(oneOut).toBeLessThan(edge);
+    expect(twoOut).toBeLessThan(oneOut);
   });
 
   it('centres every cell on the reel centreline', () => {
