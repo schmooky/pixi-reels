@@ -717,6 +717,47 @@ describe('nudge', () => {
         destroy();
       }
     });
+
+    it('removes its abort listener when the delay elapses normally', async () => {
+      installSyncGsap();
+      const { reelSet, spinAndLand, destroy } = createTestReelSet({ gsap: syncGsap,
+        reels: 1,
+        visibleCells: 3,
+        symbolIds: ['a', 'b', 'c', 'wild'],
+      });
+      try {
+        await spinAndLand([ { visible: ['a', 'b', 'c'] } ]);
+        // One long-lived controller reused across nudges is the documented
+        // stagger pattern, so a listener left behind on the normal path
+        // accumulates for as long as the controller lives.
+        const controller = new AbortController();
+        const { signal } = controller;
+        let live = 0;
+        const add = signal.addEventListener.bind(signal);
+        const remove = signal.removeEventListener.bind(signal);
+        vi.spyOn(signal, 'addEventListener').mockImplementation((...args: Parameters<typeof add>) => {
+          live++;
+          return add(...args);
+        });
+        vi.spyOn(signal, 'removeEventListener').mockImplementation((...args: Parameters<typeof remove>) => {
+          live--;
+          return remove(...args);
+        });
+
+        for (let i = 0; i < 3; i++) {
+          await reelSet.nudge(0, {
+            distance: 1,
+            direction: 'forward',
+            incoming: ['wild'],
+            startDelay: 5,
+            signal,
+          });
+        }
+        expect(live).toBe(0);
+      } finally {
+        destroy();
+      }
+    });
   });
 
   describe('destroy mid-nudge', () => {

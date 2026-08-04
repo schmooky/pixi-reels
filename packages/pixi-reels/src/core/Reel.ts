@@ -1031,18 +1031,27 @@ export class Reel implements Disposable {
     // error throws for invalid input.
     const startDelay = options.startDelay ?? 0;
     if (startDelay > 0) {
-      await new Promise<void>((resolve, reject) => {
-        const tId = setTimeout(resolve, startDelay);
-        if (signal) {
-          const onAbort = () => {
-            clearTimeout(tId);
-            const err = new Error('nudge: aborted during startDelay.');
-            err.name = 'AbortError';
-            reject(err);
-          };
-          signal.addEventListener('abort', onAbort, { once: true });
-        }
-      });
+      // The abort listener must come back off on the NORMAL path too. `{ once:
+      // true }` only self-removes when the event actually fires, so a signal
+      // reused across the documented staggered-`Promise.all` pattern accrued
+      // one dead listener per delayed nudge for the life of the controller.
+      let onAbort: (() => void) | undefined;
+      try {
+        await new Promise<void>((resolve, reject) => {
+          const tId = setTimeout(resolve, startDelay);
+          if (signal) {
+            onAbort = () => {
+              clearTimeout(tId);
+              const err = new Error('nudge: aborted during startDelay.');
+              err.name = 'AbortError';
+              reject(err);
+            };
+            signal.addEventListener('abort', onAbort, { once: true });
+          }
+        });
+      } finally {
+        if (onAbort) signal?.removeEventListener('abort', onAbort);
+      }
       // Re-check destroy / motion after the async gap.
       if (this._isDestroyed) {
         const err = new Error('nudge: reel destroyed during startDelay.');
