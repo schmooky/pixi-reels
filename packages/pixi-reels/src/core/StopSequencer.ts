@@ -38,15 +38,26 @@ export class StopSequencer {
     }
   }
 
-  /** Deliver the next symbol, consumed from the feed-appropriate end. */
+  /**
+   * Deliver the next symbol, consumed from the feed-appropriate end.
+   *
+   * Throws when the frame is exhausted. Every caller is expected to gate on
+   * {@link hasRemaining} first (the library's only one, `Reel._replaceSymbol`,
+   * does). The old behaviour returned `_frame[0]`, or `''` after a `reset()` —
+   * a symbol id that resolves to nothing, so an over-consuming caller landed a
+   * silently wrong frame instead of failing where the bug was.
+   */
   next(): string {
-    if (this._remaining > 0) {
-      this._remaining--;
-      const value = this._frame[this._cursor];
-      this._cursor += this._step;
-      return value;
+    if (this._remaining === 0) {
+      throw new Error(
+        'StopSequencer.next(): frame exhausted. Gate on `hasRemaining` before ' +
+        'calling, or reload a frame with `setFrame()`.',
+      );
     }
-    return this._frame[0] ?? '';
+    this._remaining--;
+    const value = this._frame[this._cursor];
+    this._cursor += this._step;
+    return value;
   }
 
   get hasRemaining(): boolean {
@@ -57,8 +68,11 @@ export class StopSequencer {
     return this._remaining;
   }
 
+  /** Drop the loaded frame and return to the just-constructed state. */
   reset(): void {
     this._frame = [];
     this._remaining = 0;
+    this._cursor = 0;
+    this._step = -1;
   }
 }
