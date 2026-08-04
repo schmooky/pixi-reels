@@ -214,6 +214,66 @@ describe('unmask on a jagged / pyramid layout (non-zero reel mainOffset)', () =>
   });
 });
 
+/**
+ * `StopPhase` lifts landed unmask views in `notifyLanded()` and only THEN tweens
+ * `reel.container` through the two-leg bounce. A lifted view sits in
+ * `viewport.unmaskedContainer` with the reel offset baked into its own
+ * coordinate, so it does not inherit that container motion and used to hang
+ * still for the whole ~600 ms overshoot.
+ *
+ * Same clock trick as `reverseNaturalStop.test.ts`: GSAP is NOT wired to the
+ * FakeTicker here, so the strip advances on ticker pumps while the bounce
+ * advances on real wall time. Pumping both together runs a real bounce, which
+ * is the only way to reach this code -- `spinAndLand`/`slamStop()` skip it.
+ */
+describe('unmask through the stop bounce', () => {
+  it('a lifted unmask view tracks the reel for every frame of the bounce', async () => {
+    const h = createTestReelSet({
+      reels: 1,
+      visibleCells: 3,
+      symbolIds: SYMBOLS,
+      weights: { a: 1, b: 1 },
+      symbolData: { wild: { unmask: true } },
+    });
+    try {
+      const reel = h.reelSet.reels[0];
+      const spin = h.reelSet.spin();
+      h.advance(200);
+      h.reelSet.setResult([{ visible: ['a', 'wild', 'a'] }]);
+
+      // Sample the lifted view against the reel on every pumped frame.
+      let worstDrift = 0;
+      let sawBounce = false;
+      let liftedFrames = 0;
+      let settled = false;
+      const tracked = spin.finally(() => { settled = true; });
+      const started = Date.now();
+      while (!settled && Date.now() - started < 8000) {
+        h.advance(16);
+        const wild = reel.getSymbolAt(1);
+        const view = wild.view;
+        if (wild.symbolId === 'wild' && view.parent === h.reelSet.viewport.unmaskedContainer) {
+          liftedFrames++;
+          // The reel is off its rest position only while the bounce runs.
+          if (Math.abs(reel.container.y) > 1) sawBounce = true;
+          const expected = reel.container.y + 1 * reel.motion.slotPitch;
+          worstDrift = Math.max(worstDrift, Math.abs(view.y - expected));
+        }
+        await new Promise((r) => setTimeout(r, 4));
+      }
+      await tracked;
+
+      // Guard the guard: without these the drift assertion passes vacuously
+      // on a run that never lifted anything or never left the rest position.
+      expect(liftedFrames, 'sampled the wild while it was lifted').toBeGreaterThan(0);
+      expect(sawBounce, 'sampled a frame with the reel mid-bounce').toBe(true);
+      expect(worstDrift).toBeLessThan(0.001);
+    } finally {
+      h.destroy();
+    }
+  }, 20000);
+});
+
 // Cascade refill path
 //
 // `StartPhase` re-masks lifted views the instant a strip spin launches

@@ -108,17 +108,35 @@ export class StopPhase extends ReelPhase<StopPhaseConfig> {
     // makes this automatic and keeps vertical/forward at `base + bounceDistance`.
     const axis = reel.axis;
     this._stage = 'bouncing';
+
+    // `notifyLanded()` just lifted every at-rest unmask symbol into
+    // `viewport.unmaskedContainer`, where the reel offset is baked into the
+    // view's own coordinate instead of inherited from `reel.container`. The
+    // bounce moves the container, so without this the lifted views hang
+    // motionless for the whole overshoot while the reel travels under them.
+    let followedMain = this._baseY;
+    const followLifted = (): void => {
+      const main = axis.getMain(reel.container);
+      reel.offsetLiftedViews(main - followedMain);
+      followedMain = main;
+    };
+
     this._bounceTween = this._reel.gsap.timeline();
     this._bounceTween.to(reel.container, {
       [axis.mainProp]: this._baseY + axis.polarity * bounceDistance,
       duration: legDuration,
       ease: 'power1.out',
+      onUpdate: followLifted,
     });
     this._bounceTween.to(reel.container, {
       [axis.mainProp]: this._baseY,
       duration: legDuration,
       ease: 'power1.out',
+      onUpdate: followLifted,
       onComplete: () => {
+        // The last onUpdate can land a hair short of the end value; settle the
+        // lifted views on the exact resting position rather than that epsilon.
+        followLifted();
         this._stage = 'done';
         this._complete();
       },
@@ -139,8 +157,12 @@ export class StopPhase extends ReelPhase<StopPhaseConfig> {
       // strip, which is exactly what placeStrip consumes.
       reel.placeStrip(this._config.targetFrame);
     }
-    reel.snapToGrid();
+    // Rest the container BEFORE snapping. `snapToGrid` re-bakes the container's
+    // current main coordinate into any lifted unmask view, so skipping mid-bounce
+    // used to bake the overshoot position and then move the container out from
+    // under it, leaving the view off by however far the bounce had travelled.
     reel.axis.setMain(reel.container, this._baseY);
+    reel.snapToGrid();
     this._stage = 'done';
   }
 

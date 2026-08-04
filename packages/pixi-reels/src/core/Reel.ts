@@ -1538,6 +1538,33 @@ export class Reel implements Disposable {
     }
   }
 
+  /**
+   * Shift every currently-lifted (unmask) view by `delta` on the main axis.
+   *
+   * Lifted views sit in `viewport.unmaskedContainer`, so the reel container's
+   * offset is *baked into their own coordinate* rather than inherited from a
+   * parent. Anything that moves `this.container` while views are lifted leaves
+   * them behind — today that is the stop bounce, which lifts in `notifyLanded()`
+   * and then tweens the container for the whole ~600 ms overshoot, so an
+   * unmasked scatter hung motionless while the reel bounced underneath it.
+   *
+   * A delta rather than an absolute re-anchor: the caller owns the tween and
+   * already knows where the container was, and `_syncUnmaskedViewOffsets` is
+   * incremental for the same reason (the view holds reel-local main plus the
+   * baked offset, and the two are not separable after the fact).
+   *
+   * @internal `StopPhase`'s bounce only.
+   */
+  offsetLiftedViews(delta: number): void {
+    if (delta === 0) return;
+    for (let i = 0; i < this.symbols.length; i++) {
+      const view = this.symbols[i].view;
+      if (view.parent === this._viewport.unmaskedContainer) {
+        this._axis.addMain(view, delta);
+      }
+    }
+  }
+
   private _setupSymbolPositions(config: ReelConfig): void {
     // MAIN-axis pitch, not `symbolGapY`. The two coincide on a vertical set,
     // which is why this survived the axis refactor: a horizontal set laid its
