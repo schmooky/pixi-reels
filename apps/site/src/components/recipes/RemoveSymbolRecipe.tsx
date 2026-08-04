@@ -14,7 +14,7 @@ const IDS = [A, B, C, X];
  * AFTER:  the grid after real cascade gravity. winners cleared,
  * survivors slide DOWN past cleared slots, new symbols enter from
  * above. The contract matches `reelSet.refill({ winners, grid })`:
- * per reel, the top `winners.length` rows are new, the rest are
+ * per reel, the top `winners.length` cells are new, the rest are
  * survivors in their original top-to-bottom order.
  */
 const BEFORE: string[][] = [
@@ -33,8 +33,8 @@ const AFTER: string[][] = [
 function winnersOfX(grid: string[][]): Cell[] {
   const out: Cell[] = [];
   for (let reel = 0; reel < grid.length; reel++) {
-    for (let row = 0; row < grid[reel].length; row++) {
-      if (grid[reel][row] === X) out.push({ reel, row });
+    for (let cell = 0; cell < grid[reel].length; cell++) {
+      if (grid[reel][cell] === X) out.push({ reel, cell });
     }
   }
   return out;
@@ -47,13 +47,13 @@ export default function RemoveSymbolRecipe() {
       label="Replay"
       setup={async (host) => {
         const { reelSet, destroy } = await mountMiniReels(host, {
-          reelCount: 4, visibleRows: 3,
+          reelCount: 4, visibleCells: 3,
           symbolSize: { width: 80, height: 80 },
           symbols: { kind: 'sprite', ids: IDS },
           weights: { [A]: 25, [B]: 25, [C]: 25, [X]: 25 },
           tumble: {
-            fall:   { duration: 0, ease: 'none', rowStagger: 0 },
-            dropIn: { duration: 440, ease: 'back.out(1.6)', rowStagger: 0, distance: 'perHole' },
+            fall:   { duration: 0, ease: 'none', cellStagger: 0 },
+            dropIn: { duration: 440, ease: 'back.out(1.6)', cellStagger: 0, distance: 'perHole' },
           },
         });
         return {

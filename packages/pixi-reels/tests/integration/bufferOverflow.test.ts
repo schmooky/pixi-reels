@@ -3,7 +3,7 @@
  * accept `ColumnTarget[]` grids: `ReelSet.setResult` and
  * `ReelSetBuilder.initialFrame`.
  *
- * The bug being defended against: extra `bufferAbove` / `bufferBelow`
+ * The bug being defended against: extra `bufferStart` / `bufferEnd`
  * entries (more than the engine's configured `bufferSymbols`) used to be
  * written into the materialized array but silently dropped by the next
  * clone. No error, no warning, target never lands. The assertion is now
@@ -15,48 +15,49 @@ import { ReelSetBuilder } from '../../src/core/ReelSetBuilder.js';
 import { FakeTicker } from '../../src/testing/FakeTicker.js';
 import { HeadlessSymbol } from '../../src/testing/HeadlessSymbol.js';
 import type { Ticker } from 'pixi.js';
+import { assertBufferCountsInRange } from '../../src/frame/ColumnTarget.js';
 
 const SYMBOLS = ['a', 'b', 'c', 'X', 'Y'];
 
 describe('setResult buffer overflow throws', () => {
-  it('throws when ColumnTarget.bufferAbove has more entries than bufferSymbols', () => {
-    const h = createTestReelSet({ reels: 3, visibleRows: 3, symbolIds: SYMBOLS, bufferSymbols: 1 });
+  it('throws when ColumnTarget.bufferStart has more entries than bufferSymbols', () => {
+    const h = createTestReelSet({ reels: 3, visibleCells: 3, symbolIds: SYMBOLS, bufferSymbols: 1 });
     try {
       expect(() =>
         h.reelSet.setResult([
           { visible: ['a', 'b', 'c'] },
-          { visible: ['a', 'b', 'c'], bufferAbove: ['X', 'Y'] },
+          { visible: ['a', 'b', 'c'], bufferStart: ['X', 'Y'] },
           { visible: ['a', 'b', 'c'] },
         ]),
-      ).toThrowError(/setResult column 1: bufferAbove has a symbol at index 1, beyond engine bufferSymbols=1/);
+      ).toThrowError(/setResult\(\) column 1: bufferStart has a symbol at index 1, beyond engine bufferSymbols=1/);
     } finally {
       h.destroy();
     }
   });
 
-  it('throws when ColumnTarget.bufferBelow has more entries than bufferSymbols', () => {
-    const h = createTestReelSet({ reels: 3, visibleRows: 3, symbolIds: SYMBOLS, bufferSymbols: 1 });
+  it('throws when ColumnTarget.bufferEnd has more entries than bufferSymbols', () => {
+    const h = createTestReelSet({ reels: 3, visibleCells: 3, symbolIds: SYMBOLS, bufferSymbols: 1 });
     try {
       expect(() =>
         h.reelSet.setResult([
           { visible: ['a', 'b', 'c'] },
-          { visible: ['a', 'b', 'c'], bufferBelow: ['X', 'Y'] },
+          { visible: ['a', 'b', 'c'], bufferEnd: ['X', 'Y'] },
           { visible: ['a', 'b', 'c'] },
         ]),
-      ).toThrowError(/setResult column 1: bufferBelow has a symbol at index 1, beyond engine bufferSymbols=1/);
+      ).toThrowError(/setResult\(\) column 1: bufferEnd has a symbol at index 1, beyond engine bufferSymbols=1/);
     } finally {
       h.destroy();
     }
   });
 
   it('accepts ColumnTarget within bounds (regression: the assertion is non-disruptive)', async () => {
-    const h = createTestReelSet({ reels: 3, visibleRows: 3, symbolIds: SYMBOLS, bufferSymbols: 1 });
+    const h = createTestReelSet({ reels: 3, visibleCells: 3, symbolIds: SYMBOLS, bufferSymbols: 1 });
     try {
       const spin = h.reelSet.spin();
       h.reelSet.setResult([
         { visible: ['a', 'b', 'c'] },
-        { visible: ['a', 'b', 'c'], bufferAbove: ['X'] },
-        { visible: ['a', 'b', 'c'], bufferBelow: ['Y'] },
+        { visible: ['a', 'b', 'c'], bufferStart: ['X'] },
+        { visible: ['a', 'b', 'c'], bufferEnd: ['Y'] },
       ]);
       h.reelSet.slamStop();
       await spin;
@@ -70,18 +71,18 @@ describe('setResult buffer overflow throws', () => {
   });
 
   it('accepts bufferSymbols(2) when the caller supplies two entries', async () => {
-    const h = createTestReelSet({ reels: 3, visibleRows: 3, symbolIds: SYMBOLS, bufferSymbols: 2 });
+    const h = createTestReelSet({ reels: 3, visibleCells: 3, symbolIds: SYMBOLS, bufferSymbols: 2 });
     try {
       const spin = h.reelSet.spin();
       h.reelSet.setResult([
         { visible: ['a', 'b', 'c'] },
-        { visible: ['a', 'b', 'c'], bufferAbove: ['X', 'Y'] },
+        { visible: ['a', 'b', 'c'], bufferStart: ['X', 'Y'] },
         { visible: ['a', 'b', 'c'] },
       ]);
       h.reelSet.slamStop();
       await spin;
-      // bufferAbove=2: bufferAbove[0]='X' closest to visible -> reel.symbols[1];
-      // bufferAbove[1]='Y' furthest above -> reel.symbols[0].
+      // bufferStart=2: bufferStart[0]='X' closest to visible -> reel.symbols[1];
+      // bufferStart[1]='Y' furthest above -> reel.symbols[0].
       expect(h.reelSet.reels[1].symbols[0].symbolId).toBe('Y');
       expect(h.reelSet.reels[1].symbols[1].symbolId).toBe('X');
     } finally {
@@ -94,7 +95,7 @@ describe('initialFrame buffer overflow throws', () => {
   function makeBuilder() {
     return new ReelSetBuilder()
       .reels(3)
-      .visibleRows(3)
+      .visibleCells(3)
       .symbolSize(100, 100)
       .ticker(new FakeTicker() as unknown as Ticker)
       .symbols((r) => {
@@ -102,29 +103,29 @@ describe('initialFrame buffer overflow throws', () => {
       });
   }
 
-  it('throws on build() when ColumnTarget.bufferAbove exceeds bufferSymbols', () => {
+  it('throws on build() when ColumnTarget.bufferStart exceeds bufferSymbols', () => {
     const builder = makeBuilder()
       .bufferSymbols(1)
       .initialFrame([
         { visible: ['a', 'b', 'c'] },
-        { visible: ['a', 'b', 'c'], bufferAbove: ['X', 'Y'] },
+        { visible: ['a', 'b', 'c'], bufferStart: ['X', 'Y'] },
         { visible: ['a', 'b', 'c'] },
       ]);
     expect(() => builder.build()).toThrowError(
-      /initialFrame column 1: bufferAbove has a symbol at index 1, beyond engine bufferSymbols=1/,
+      /initialFrame column 1: bufferStart has a symbol at index 1, beyond engine bufferSymbols=1/,
     );
   });
 
-  it('throws on build() when ColumnTarget.bufferBelow exceeds bufferSymbols', () => {
+  it('throws on build() when ColumnTarget.bufferEnd exceeds bufferSymbols', () => {
     const builder = makeBuilder()
       .bufferSymbols(1)
       .initialFrame([
         { visible: ['a', 'b', 'c'] },
-        { visible: ['a', 'b', 'c'], bufferBelow: ['X', 'Y'] },
+        { visible: ['a', 'b', 'c'], bufferEnd: ['X', 'Y'] },
         { visible: ['a', 'b', 'c'] },
       ]);
     expect(() => builder.build()).toThrowError(
-      /initialFrame column 1: bufferBelow has a symbol at index 1, beyond engine bufferSymbols=1/,
+      /initialFrame column 1: bufferEnd has a symbol at index 1, beyond engine bufferSymbols=1/,
     );
   });
 
@@ -134,11 +135,11 @@ describe('initialFrame buffer overflow throws', () => {
     const builder = makeBuilder()
       .initialFrame([
         { visible: ['a', 'b', 'c'] },
-        { visible: ['a', 'b', 'c'], bufferAbove: ['X', 'Y'] },
+        { visible: ['a', 'b', 'c'], bufferStart: ['X', 'Y'] },
         { visible: ['a', 'b', 'c'] },
       ])
       .bufferSymbols(1);
-    expect(() => builder.build()).toThrowError(/bufferAbove has a symbol at index 1/);
+    expect(() => builder.build()).toThrowError(/bufferStart has a symbol at index 1/);
   });
 
   it('accepts initialFrame within bounds (regression)', () => {
@@ -146,8 +147,8 @@ describe('initialFrame buffer overflow throws', () => {
       .bufferSymbols(1)
       .initialFrame([
         { visible: ['a', 'b', 'c'] },
-        { visible: ['a', 'b', 'c'], bufferAbove: ['X'] },
-        { visible: ['a', 'b', 'c'], bufferBelow: ['Y'] },
+        { visible: ['a', 'b', 'c'], bufferStart: ['X'] },
+        { visible: ['a', 'b', 'c'], bufferEnd: ['Y'] },
       ]);
     const reelSet = builder.build();
     try {
@@ -156,5 +157,26 @@ describe('initialFrame buffer overflow throws', () => {
     } finally {
       reelSet.destroy();
     }
+  });
+});
+
+describe('empty buffers are always in range', () => {
+  // `highestDefinedIndex` returns -1 for "no entries", so the pre-fix test
+  // `-1 >= capacity` fired whenever capacity was NEGATIVE -- which a reel
+  // reports transiently mid-cascade, when its strip is shorter than
+  // bufferStart + visibleCells. Adding this assertion to refill()/runCascade
+  // turned that into an intermittent RangeError on the docs site:
+  //   "bufferEnd has a symbol at index -1, beyond engine bufferSymbols=-4"
+  // A column specifying no buffer entries can never have one dropped.
+  it('does not throw on a negative reported capacity when no entries exist', () => {
+    const grid = [{ visible: ['a', 'b', 'c'] }, { visible: ['a', 'b', 'c'] }];
+    expect(() => assertBufferCountsInRange(grid, [-4, -4], [-4, -4], 'probe')).not.toThrow();
+  });
+
+  it('still throws when an entry really would be dropped', () => {
+    const grid = [{ visible: ['a'], bufferEnd: ['X'] }];
+    expect(() => assertBufferCountsInRange(grid, [1], [0], 'probe')).toThrowError(
+      /probe column 0: bufferEnd has a symbol at index 0/,
+    );
   });
 });

@@ -1,7 +1,7 @@
 // @ts-nocheck
 // Injected: HoldAndWinBuilder, ReelSymbol, PIXI, gsap, app
 //
-// BEGINNER LESSON — carry the value as DATA instead of baking it into the
+// BEGINNER LESSON - carry the value as DATA instead of baking it into the
 // symbol class.
 //
 // In the previous lesson each value was its own symbol variant (coin5 always
@@ -11,7 +11,7 @@
 //
 //     board.respin([{ cell, id: 'coin', data: { value: 25 } }])
 //
-// The board never reads `data` — it just stores it. We paint the number
+// The board never reads `data`; it just stores it. We paint the number
 // ourselves from the `coin:locked` event. Same coin art, any value.
 
 // The value label uses the game's gold digit bitmap font (crisp, centered).
@@ -69,7 +69,7 @@ const paintValue = (coin) => {
   if (t.width > CELL * 0.8) t.scale.set((CELL * 0.8) / t.width);
   t.position.set(board.container.x + c.x, board.container.y + c.y);
   labels.addChild(t);
-  labelAt.set(`${coin.cell.col},${coin.cell.row}`, t);
+  labelAt.set(`${coin.cell.reel},${coin.cell.cell}`, t);
 };
 
 board.events.on('coin:locked', ({ coin }) => paintValue(coin));
@@ -84,8 +84,8 @@ app.stage.addChild(hud);
 
 const randVal = () => [2, 5, 10, 25, 50, 100][Math.floor(Math.random() * 6)];
 const ROUNDS = [
-  [{ col: 0, row: 0 }, { col: 2, row: 1 }],
-  [{ col: 1, row: 0 }],
+  [{ reel: 0, cell: 0 }, { reel: 2, cell: 1 }],
+  [{ reel: 1, cell: 0 }],
   [],
 ];
 
@@ -97,7 +97,7 @@ return {
     board.reset();
     board.enter([]);
     for (const cells of ROUNDS) {
-      // each hit carries its own value in `data` — different every coin
+      // each hit carries its own value in `data`, different every coin
       await board.respin(cells.map((cell) => ({ cell, id: COIN, data: { value: randVal() } })));
       await new Promise((r) => setTimeout(r, 650));
     }

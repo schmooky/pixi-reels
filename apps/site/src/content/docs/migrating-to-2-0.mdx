@@ -1,0 +1,498 @@
+---
+title: Migrating to 2.0.0
+order: 5
+description: Every breaking change in 2.0.0, with a before and after. Rows became
+  cells, above/below became start/end, and one codemod does most of it.
+---
+
+Run the codemod first. It is not published to npm yet, so run it from a clone
+of this repo:
+
+```bash
+git clone https://github.com/schmooky/pixi-reels
+cd pixi-reels && pnpm install
+node packages/pixi-reels-codemod/bin/cli.js v1-to-v2 /path/to/your/src
+```
+
+Add `--dry --print` to see the rewrite without touching anything. Commit before
+you run it for real. it edits in place. Then read this page for the handful of
+things a codemod cannot do for you.
+
+## Why any of this
+
+v2 has one engine for four layouts: vertical or horizontal, forward or
+reverse. Once a reel's strip can run sideways, "row" stops describing
+anything -- so a reel's strip is made of **cells**, and the off-window slots
+either side are **start** and **end**.
+
+Start and end are **geometric**: start is the smaller screen coordinate
+(above for vertical, left for horizontal), whichever way the reel travels.
+They are deliberately not travel-relative, because a buffer symbol is a
+presentation feature -- the coin peeking above the top row -- and flipping a
+reel's direction must not teleport it to the opposite edge.
+
+There are no deprecated aliases. A v1 name either fails to compile or throws
+with a message naming its replacement. That is on purpose: a quiet alias
+would let a `bufferAbove` that now means something subtly different reach
+production.
+
+## Geometry
+
+Before:
+
+```ts
+new ReelSetBuilder()
+  .reels(5)
+  .visibleRows(3)
+  .visibleRowsPerReel([3, 5, 5, 5, 3])
+  .reelPixelHeights([300, 500, 500, 500, 300])
+  .reelAnchor('bottom')   // or 'top'
+  .bufferSymbols({ above: 1, below: 0 });
+```
+
+After:
+
+```ts
+new ReelSetBuilder()
+  .reels(5)
+  .visibleCells(3)
+  .visibleCellsPerReel([3, 5, 5, 5, 3])
+  .reelExtents([300, 500, 500, 500, 300])
+  .reelAnchor('end')      // or 'start'
+  .bufferSymbols({ start: 1, end: 0 });
+```
+
+On `Reel`: `reelHeight` is `extent`, `offsetY` is `mainOffset`,
+`spinSymbolHeight` is `spinCellSize`, `bufferAbove` / `bufferBelow` are
+`bufferStart` / `bufferEnd`.
+
+`Reel.symbolWidth` and `Reel.symbolHeight` are **unchanged**. They are the
+screen-space pair you hand to `ReelSymbol.resize(width, height)`, and
+screen-space inputs stay screen-space in v2.
+
+### MultiWays
+
+All three keys were renamed, and the builder throws on the old ones:
+
+```ts
+// Before
+builder.multiways({ minRows: 2, maxRows: 7, reelPixelHeight: 700 });
+// After
+builder.multiways({ minCells: 2, maxCells: 7, reelExtent: 700 });
+```
+
+`setShape()` takes the same array; it is cells per reel, not rows.
+
+## Result grids
+
+Before:
+
+```ts
+reelSet.setResult([
+  { visible: ['A', 'B', 'C'], bufferAbove: ['COIN'], bufferBelow: ['X'] },
+]);
+```
+
+After:
+
+```ts
+reelSet.setResult([
+  { visible: ['A', 'B', 'C'], bufferStart: ['COIN'], bufferEnd: ['X'] },
+]);
+```
+
+`ColumnTarget` is now carried unchanged all the way down to the reel. The
+internal negative-index encoding (`arr[-1]` for a buffer-above slot) is
+gone. If you wrote a custom frame middleware, `FrameContext.targetSymbols:
+string[]` is now `FrameContext.target: ColumnTarget`; read it with
+`getTargetSlot(target, cell)` or materialize it with
+`columnTargetToStrip(target, bufferStart)`.
+
+`Reel.placeSymbols` takes a `ColumnTarget` instead of a `string[]`. If you
+had a full strip frame (buffers included), use the new `Reel.placeStrip`.
+
+## Coordinates
+
+Every `(col, row)` pair is now `(reel, cell)`:
+
+Before:
+
+```ts
+reelSet.pin(2, 1, 'wild');
+const p = reelSet.getPin(2, 1);
+console.log(p.col, p.row, p.originRow);
+
+reelSet.events.on('cascade:chain:end', (e) => e.winners.forEach((w) => w.row));
+reelSet.events.on('pin:migrated', (m) => console.log(m.fromRow, m.toRow));
+```
+
+After:
+
+```ts
+reelSet.pin(2, 1, 'wild');
+const p = reelSet.getPin(2, 1);
+console.log(p.reel, p.cell, p.originCell);
+
+reelSet.events.on('cascade:chain:end', (e) => e.winners.forEach((w) => w.cell));
+reelSet.events.on('pin:migrated', (m) => console.log(m.fromCell, m.toCell));
+```
+
+The positional arguments did not move, only the names. `SymbolPosition.rowIndex`
+is `cellIndex`, and it gains an optional `setId` for games composing more
+than one reel set.
+
+`BoardGrid` and `HoldAndWinBoard` keep `cols` and `rows` as board
+dimensions -- a board is a real 2-D grid, not a reel strip. Only their cell
+coordinates changed: `BoardCell` and `HwCell` are `{ reel, cell }`.
+
+## Big symbols
+
+`SymbolData.size` was `{ w, h }`, which was ambiguous the moment a reel
+could run sideways. It is now `{ reels, cells }` -- `reels` spans columns,
+`cells` spans the strip, in every orientation:
+
+Before:
+
+```ts
+builder.symbolData({ bonus: { weight: 0, size: { w: 2, h: 2 } } });
+const fp = reelSet.getSymbolFootprint(2, 1);
+console.log(fp.anchor.col, fp.size.w);
+```
+
+After:
+
+```ts
+builder.symbolData({ bonus: { weight: 0, size: { reels: 2, cells: 2 } } });
+const fp = reelSet.getSymbolFootprint(2, 1);
+console.log(fp.anchor.reel, fp.size.reels);
+```
+
+`getBlockBounds` still returns screen-space `{ x, y, width, height }`.
+
+**New restriction:** a cross-reel block (`size.reels > 1`) cannot be combined
+with a mixed `directionPerReel([...])`. The coordinator assumes one shared
+feed edge across the reels a block covers, so `build()` throws rather than
+shipping a block that splits at run time. Use a single `direction()`, or
+keep blocks within one reel.
+
+## Cascades
+
+Before:
+
+```ts
+builder.tumble({
+  fall: { rowStagger: 40, rowOrder: 'bottomToTop' },
+  dropIn: { rowStagger: 30, rowOrder: 'topToBottom' },
+});
+reelSet.events.on('cascade:place:end', (e) => console.log(e.winnerRows));
+```
+
+After:
+
+```ts
+builder.tumble({
+  fall: { cellStagger: 40, cellOrder: 'endFirst' },
+  dropIn: { cellStagger: 30, cellOrder: 'startFirst' },
+});
+reelSet.events.on('cascade:place:end', (e) => console.log(e.winnerCells));
+```
+
+`'endFirst'` is what `'bottomToTop'` meant: the cell at the gravity-exit
+edge moves first. `DropOffset.originalRow` / `.offsetRows` are
+`.originalCell` / `.offsetCells`.
+
+`DropOffset` also gains `isNew`. If you branched on `originalCell < 0` to
+tell an arriving symbol from a surviving one, switch to `isNew` -- the sign
+test only holds under forward gravity.
+
+### Cascades on a reverse or horizontal set
+
+`tumble()` takes a `gravity`, defaulting to `'auto'`, which follows each
+reel's own direction. A reverse or horizontal cascade needs nothing extra:
+
+```ts
+builder.direction('reverse').tumble({});        // drains up, refills from below
+builder.orientation('horizontal').tumble({});   // drains right, refills from the left
+builder.tumble({ gravity: 'reverse' });         // spin one way, drop the other
+```
+
+**Gotcha:** whichever edge gravity exits by is the edge your server must
+pack survivors against in the grids it returns. The engine animates the
+result, it does not reorder it. On a `'reverse'` cascade that means
+survivors first and new symbols at the END of each column, the mirror of
+the v1 convention.
+
+## Nudge
+
+`direction` is now relative to the reel's own axis, not to the screen:
+
+Before:
+
+```ts
+await reelSet.nudge(2, { distance: 1, direction: 'down', incoming: ['wild'] });
+```
+
+After:
+
+```ts
+await reelSet.nudge(2, { distance: 1, direction: 'forward', incoming: ['wild'] });
+```
+
+`'up'` became `'reverse'` on the same rule -- `NudgeOptions.direction` is
+`'forward' | 'reverse'`, with no screen-relative values left.
+
+On a vertical/forward reel these are the same motion. On a reel built with
+`direction('reverse')`, `'forward'` now travels the way that reel spins and
+feeds from the correct edge -- in v1 it always fed from the top.
+
+## Motion internals
+
+If you wrote a custom `SpinningMode` or phase:
+
+| v1 | v2 |
+|---|---|
+| `ReelMotion.displace(deltaY)` | `.advance(travelDelta)` -- signed **travel**, not screen pixels |
+| `ReelMotion.slotHeight` | `.slotPitch` |
+| `ReelMotion.getRowY(row)` | `.getCellMain(cell)` |
+| `SpinningMode.computeDeltaY(symbolHeight, ...)` | `.computeDelta(slotPitch, ...)` |
+
+A positive `travelDelta` means "forward for this reel", which the axis turns
+into a screen direction. That is the whole point: your mode stops caring
+which way the reel points.
+
+`ReelMotion`'s wrap callback lost its `arrayIndex` and `direction`
+arguments. Both were dead -- the consumer re-derived position from the
+symbol itself.
+
+## Offsets
+
+`OffsetXMode` is `CrossOffsetMode`, and the trapezoid's
+`topWidthFactor` / `bottomWidthFactor` are `startFactor` / `endFactor`.
+
+## The horizontal reel classes are gone
+
+`HorizontalReel`, `HorizontalReelBuilder`, `HorizontalReelConfig`,
+`HorizontalDirection` and `HorizontalReelEvents` were deleted. A sideways
+banner is not a separate class any more -- it is a `ReelSet` whose strip
+travels along X.
+
+```ts
+// Before
+const banner = new HorizontalReelBuilder()
+  .visibleCount(5)
+  .symbols((r) => { /* ... */ })
+  .ticker(app.ticker)
+  .build();
+
+// After
+const banner = new ReelSetBuilder()
+  .orientation('horizontal')
+  .reels(1)              // one strip
+  .visibleCells(5)       // 5 symbols along it
+  .symbols((r) => { /* ... */ })
+  .ticker(app.ticker)
+  .build();
+```
+
+Everything else carries over unchanged: `spin()` returns the same promise,
+`setResult([{ visible: ids }])` takes the same `ColumnTarget[]`, and the
+cascade verbs (`refill`, `runCascade`, `destroySymbols`) work on it exactly
+as on the main board. Add the built set to the stage yourself; there is no
+composition layer.
+
+The codemod does not rewrite this one -- the shapes are too different. It is
+the one migration you do by hand.
+
+## Motion blur follows travel now
+
+`MotionBlurOptions.axis` used to default to `'y'`, and its docs told you to
+pass `{ axis: 'x' }` for a `HorizontalReel` -- the class above, which no
+longer exists. So a horizontal set using `StaticSpinSymbol` smeared across
+its direction of travel, silently.
+
+The axis now defaults to the owning set's orientation. If you passed
+`{ axis: 'x' }` explicitly to work around the old default, delete it; if you
+want a deliberate cross-smear, keep it, since an explicit value still wins.
+
+## Custom mask strategies
+
+Only relevant if you passed your own `maskStrategy(...)`. The two built-in
+strategies are unchanged to use.
+
+Both methods now take a single `MaskContext` instead of positional
+arguments, and the context carries the axis:
+
+Before:
+
+```ts
+const strategy: MaskStrategy = {
+  build: (rects, totalWidth, totalHeight) => { /* ... */ },
+  update: (g, rects, totalWidth, totalHeight) => { /* ... */ },
+};
+```
+
+After:
+
+```ts
+import { MASK_STRATEGY_VERSION, type MaskStrategy } from 'pixi-reels';
+
+const strategy: MaskStrategy = {
+  version: MASK_STRATEGY_VERSION,
+  build: ({ rects, width, height, axis }) => { /* ... */ },
+  update: (g, { rects, width, height, axis }) => { /* ... */ },
+};
+```
+
+The `version` field is not ceremony. A `ReelMaskRect` is screen-space, so
+which of its four numbers runs *along the strip* depends on the
+orientation: vertical sets put the strip on `y`/`height`, horizontal sets
+on `x`/`width`. A v1 strategy written against "one rect per column, height
+= the visible window" would receive an identically-shaped struct with
+transposed meaning, and there is no compile error to catch it. Worse, a v1
+strategy handed a `MaskContext` reads `rects` as an object, finds no
+`.length`, and quietly draws a full-bleed rect - a mask that clips nothing.
+
+So `maskStrategy()` throws on any strategy that does not declare version 2.
+If your strategy is orientation-agnostic (it just unions the rects it is
+given), adding the field is the whole migration. If it assumes an axis, use
+`axis.mainProp` or `axis.toLocal(width, height)` to branch.
+
+## gsap is now per reel set
+
+v1 kept one gsap instance in a module global, and its own docstring admitted
+"the last `setGsap` call wins". With a single `ReelSet` that is harmless.
+Build two, and the second `build()` silently moved the first set's tweens
+onto a different timeline.
+
+`builder.gsap(instance)` now binds that set only, at `build()` time. Nothing
+changes for a single-set game that never calls it.
+
+Two consequences:
+
+```ts
+// Before: driveGsapWithTicker looked the instance up from the global.
+const stop = driveGsapWithTicker(app.ticker);
+
+// After: pass the SAME instance you gave the builder.
+const stop = driveGsapWithTicker(app.ticker, myGsap);
+```
+
+Omit the second argument only if you never called `.gsap(...)` either.
+
+And in a custom `ReelSymbol` subclass, animate on `this.gsap` rather than an
+imported `gsap`:
+
+```ts
+class MySymbol extends ReelSymbol {
+  async playWin() {
+    // `this.gsap` is the owning set's instance, bound by SymbolFactory.
+    await this.gsap.to(this.view.scale, { x: 1.2, y: 1.2, duration: 0.2 });
+  }
+}
+```
+
+An imported `gsap` still works when your app and the engine resolve to the
+same module. `this.gsap` is correct in both cases, which is the point.
+
+## Render order
+
+New, and optional. `cellStacking` and `reelStacking` make render order
+explicit:
+
+```ts
+builder.cellStacking('ascending').reelStacking('ascending');  // the defaults
+```
+
+`'ascending'` is v1 behaviour: the cell or reel at the larger coordinate
+draws in front. It is geometric on purpose -- `direction('reverse')` does
+**not** flip it, so art lit from above keeps overlapping the way it was
+drawn, and a per-spin reversal tease does not visibly re-layer the board.
+Pass `'descending'` if your art wants the opposite.
+
+## Cascade grids are validated now
+
+`refill()` and `runCascade()`'s `nextGrid` run the same checks `setResult()`
+always did: shape, v1 option keys, and buffer counts that fit the reels.
+
+They previously checked nothing. A grid still carrying `bufferAbove` was
+read for `bufferStart`, came back `undefined`, and got **silently
+random-filled** -- on every stage of the chain. If a cascade of yours has
+been quietly dropping a peeking symbol, this is why, and it now throws
+instead. Errors name their own entry point, so a bad `nextGrid` says
+`runCascade(): nextGrid`, not `refill()`.
+
+## The debug snapshot follows the travel axis
+
+`debugSnapshot()`'s `reels[].allSymbols[].y` is now `.main`, the coordinate
+along that reel's travel axis, and each reel reports its `orientation` and
+`direction`:
+
+```ts
+// Before
+snap.reels[0].allSymbols[0].y
+// After
+snap.reels[0].allSymbols[0].main
+snap.reels[0].orientation  // 'vertical' | 'horizontal'
+```
+
+The old field was hard-coded to `view.y`, so on a horizontal set every
+symbol reported a constant `0`.
+
+## The v1 rename tables are no longer exported
+
+`CODEMOD_HINT`, `V1_BUILDER_METHODS`, `V1_OPTION_KEYS` and
+`V1_OPTION_VALUES` were public in the pre-release. They are 1.x migration
+scaffolding, and exporting them would have pinned it into all of 2.x.
+
+Nothing you write needs them: the guards still read the table internally,
+and every throw already names the replacement and the codemod. If you built
+your own migration tooling against these, copy the pairs you need out of
+[the tables above](#geometry) -- they are frozen, not evolving.
+
+`Gsap` is now exported, so you can name the type you pass to
+`driveGsapWithTicker(ticker, gsap)` and `ReelConfig.gsap`.
+
+## The example apps left the repo
+
+`examples/` is gone. The standalone demo apps live in their own repo now, and
+the runnable demos you actually want are on this site under
+[`/recipes`](/recipes/) -- about 130 of them, each with its source alongside.
+
+Nothing in the published package changed; `examples/` was never in the
+tarball. This only matters if you were importing reference code out of the
+repo, which the old README encouraged. Where it went:
+
+| Was | Now |
+|---|---|
+| `examples/shared/BlurSpriteSymbol.ts`, `CoinSymbol.ts`, the Spine loaders, `prototypeSpriteLoader.ts` | `apps/site/src/runtime/` (same filenames) |
+| `examples/shared/cheats.ts`, `seededRng.ts` | the private `@pixi-reels/cheats` package -- still outside the library, per ADR 009 |
+| `examples/assets/prototype-symbols/` | `apps/site/public/prototype-symbols/` |
+| `examples/orientation-matrix/` | `tests/e2e/fixtures/orientation-matrix/` |
+| `examples/shared/mockServer.ts`, `ui.ts`, `CheatPanel.ts`, `WinBox.ts`, `roundBus.ts` | moved out with the demo apps |
+
+None of these were ever library API, so none of them are a `pixi-reels`
+import you need to change. `CheatEngine` and `SeededRng` in particular were
+always reference code you copy, not something the package exported.
+
+## What the codemod will not do
+
+It is an AST transform, so it leaves two things for you:
+
+- **your own local variables.** `row`, `col`, `w` and `h` are ordinary
+  words; a codemod that renamed them would rewrite `for (const row of table)`.
+  Code like `reelSet.getCellBounds(col, row)` keeps working -- those are
+  your values passed positionally.
+- **your comments.** Grep them afterwards.
+
+Most of what it misses on the API surface is a type error, and a v1 key
+that reaches the engine throws at the call site naming the replacement.
+
+Two caveats worth a grep rather than trust:
+
+- **Review the codemod's diff before you keep it.** It rewrites the names
+  it knows wherever it can prove the receiver is a reel set or builder;
+  anything it cannot prove, it leaves alone and reports.
+- **`nudge({ direction })` values.** `'down'` / `'up'` became
+  `'forward'` / `'reverse'`. Passing the old value throws, but only the
+  literal form inside a `nudge(...)` call gets rewritten -- a direction
+  hoisted into a config object is yours to fix.

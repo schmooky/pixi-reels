@@ -1,8 +1,7 @@
 import type { CurveSpec } from './types';
 
 /**
- * Standard cubic-bezier presets in CSS-style coords (cx1, cy1, cx2, cy2).
- * These match common easing curves used in motion design.
+ * Standard cubic-bezier easing presets in CSS-style coords (cx1, cy1, cx2, cy2).
  */
 const PRESETS: Record<Exclude<CurveSpec, 'linear' | 'stepped' | readonly number[] | number[]>, [number, number, number, number]> = {
   easeIn:    [0.42, 0.0, 1.0, 1.0],

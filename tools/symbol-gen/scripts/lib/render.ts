@@ -43,7 +43,7 @@ function renderFrame(def: SymbolDef): Buffer {
 }
 
 function renderIcon(def: SymbolDef): Buffer {
-  // Icon canvas can be larger than the frame — `iconSize` defaults to
+  // Icon canvas can be larger than the frame. `iconSize` defaults to
   // `size`, but a wild that wants its glyph to bleed past the frame
   // border sets a larger iconSize and the spine attachment matches.
   const iconSize = def.iconSize ?? def.size;

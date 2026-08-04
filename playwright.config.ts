@@ -9,7 +9,7 @@ import { defineConfig, devices } from '@playwright/test';
  * drives the canvas through real pointer events, and asserts the engine
  * reaches a clean post-spin state.
  *
- * Run all: `pnpm test:e2e`. One spec: `pnpm exec playwright test cascade-tumble`.
+ * Run all: `pnpm test:e2e`. One spec: `pnpm exec playwright test cascade-rounds`.
  */
 export default defineConfig({
   testDir: './tests/e2e',

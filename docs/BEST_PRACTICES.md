@@ -33,10 +33,10 @@ async function spin() {
 
   const wins = detectWins(landing.symbols);      // YOUR match logic
   if (wins.length > 0) {
-    await reelSet.spotlight.cycle({
-      lines: wins.map((w) => ({ positions: w.positions })),
-      perLine: 1000,
-    });
+    await reelSet.spotlight.cycle(
+      wins.map((w) => ({ positions: w.positions })),
+      { displayDuration: 1000 },
+    );
   }
 }
 ```
@@ -56,7 +56,7 @@ reelSet.events.on('spin:reelLanded',  () => audio.play('reel_stop'));
 reelSet.events.on('spin:complete',    () => audio.stop('spin_loop'));
 reelSet.events.on('spotlight:start',  () => audio.play('big_win_cue'));
 
-// DO NOT. couples your audio to the library's method calls and misses paths like skip().
+// DO NOT. couples your audio to the library's method calls and misses paths like skipSpin() and slamStop().
 function onSpinButtonPress() {
   audio.play('spin_loop');
   reelSet.spin();
@@ -75,12 +75,12 @@ import { CheatEngine, forceScatters } from '@/shared/cheats';
 
 it('3 scatters triggers the bonus handler', async () => {
   const h = createTestReelSet({
-    reels: 5, visibleRows: 3,
+    reels: 5, visibleCells: 3,
     symbolIds: ['a', 'b', 'c', 'scatter'],
   });
   try {
     const engine = new CheatEngine({
-      reelCount: 5, visibleRows: 3,
+      reelCount: 5, visibleCells: 3,
       symbolIds: ['a', 'b', 'c', 'scatter'],
       seed: 1,
     });
@@ -101,7 +101,7 @@ it('3 scatters triggers the bonus handler', async () => {
 });
 ```
 
-The same pattern scales up: cascade sequences (use `runCascade` with a semantic `winners` callback), hold-and-win persistence (`setHeld` + `holdAndWinProgress` cheat), anticipation + skip mid-flight.
+The same pattern scales up: cascade sequences (use `runCascade` with a semantic `detectWinners` callback), hold-and-win persistence (`setHeld` + `holdAndWinProgress` cheat), anticipation + skip mid-flight.
 
 ## Spine symbols
 
@@ -163,7 +163,7 @@ reelSet.events.on('spin:start', () => presenter.abort());
 
 ```ts
 interface Win {
-  cells: SymbolPosition[];  // order matters when stagger > 0
+  cells: ReadonlyArray<SymbolPosition>;  // order matters when stagger > 0
   value?: number;           // used for default value-desc sort
   kind?: string;            // optional tag for routing
   id?: number;              // optional stable id
@@ -193,11 +193,11 @@ popup, a sound cue. is your code reacting to events:
 | `win:end` | once per `show()` | `'complete'` or `'aborted'` |
 
 Plot graphics with `reelSet.getCellBounds(col, row)`. see the
-[paylines-events-only](/recipes/paylines-events-only/) recipe.
+[paylines](/recipes/cells-and-banners/) recipe.
 
 ### Cascades reuse the same API
 
-In `runCascade`'s `onWinnersVanish` hook, call `presenter.show([{ cells: winners }])`.
+In `runCascade`'s `presentWinners` hook, call `presenter.show([{ cells: winners }])`.
 Cluster pops and payline hits are the same shape to the presenter. no
 new type, no new method.
 
@@ -253,7 +253,7 @@ If a class you're writing holds resources, implement `Disposable` and hook into 
 | Calling `setResult()` before all reels are in SPIN | Reels stop early on the *previous* spin's frame | The library already waits; don't call `setResult` inside `spin:start`. Wait for `spin:allStarted` (or just call it when your server response arrives. the library buffers). |
 | Forgetting `ticker(app.ticker)` on the builder | `Error: ticker() must be called …` at `build()` | Required call. Builder validates at `.build()` time. |
 | Computing winners from a grid diff | Survivors animate as "new" symbols dropping from above | Compute winners from your match rules inside `detectWinners`. The library's API takes `Cell[]` of match winners, not a diff. See [ADR 010](./adr/010-cascade-physics.md). |
-| Putting cheat code in game bundle | Bundle bloat + players find cheats | Cheats are `examples/shared/` only. [ADR 009](./adr/009-cheats-live-outside-lib.md). |
+| Putting cheat code in game bundle | Bundle bloat + players find cheats | Cheats are the private `@pixi-reels/cheats` package only. [ADR 009](./adr/009-cheats-live-outside-lib.md). |
 | Importing `SpineReelSymbol` from the main barrel | Your bundle includes the Spine runtime even if you only use sprites | Import from `pixi-reels/spine`. [ADR 011](./adr/011-spine-subpath-and-vocabulary.md). |
 | Running `gsap` from its default ticker | Animations freeze in hidden tabs or iframes | Sync GSAP with the PixiJS ticker: `gsap.ticker.remove(gsap.updateRoot); app.ticker.add(t => gsap.updateRoot(t.lastTime / 1000))`. |
 | Symbol class doesn't implement `resize()` | Symbols scatter after any swap | `Reel._replaceSymbol` calls `resize()` on every swap. Store the dimensions; reposition every child you own. |

@@ -11,14 +11,14 @@ const GRID = [
   [SEVEN, B, C], [SEVEN, B, C], [SEVEN, B, C], [SEVEN, B, C], [SEVEN, B, C],
 ];
 
-const WINS = [0, 1, 2].map((row) => ({
-  id: row,
-  cells: Array.from({ length: COLS }, (_, reelIndex) => ({ reelIndex, rowIndex: row })),
-  value: [300, 100, 60][row],
+const WINS = [0, 1, 2].map((cell) => ({
+  id: cell,
+  cells: Array.from({ length: COLS }, (_, reelIndex) => ({ reelIndex, cellIndex: cell })),
+  value: [300, 100, 60][cell],
 }));
 
 const reelSet = new ReelSetBuilder()
-  .reels(COLS).visibleRows(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
+  .reels(COLS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
   .symbols(r => {
     for (const sym of [...CARD_DECK, WILD_CARD]) {
       r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });

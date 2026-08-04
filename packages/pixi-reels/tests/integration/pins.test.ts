@@ -13,7 +13,7 @@ const SYMBOLS = ['a', 'b', 'c', 'wild', 'coin', 'mystery'];
 function makeHarness() {
   return createTestReelSet({
     reels: 5,
-    visibleRows: 3,
+    visibleCells: 3,
     symbolIds: SYMBOLS,
   });
 }
@@ -29,7 +29,7 @@ describe('CellPin. no-pin baseline (regression)', () => {
         ['a', 'b', 'c'],
         ['a', 'b', 'c'],
       ];
-      await h.spinAndLand(target);
+      await h.spinAndLand(target.map((visible) => ({ visible })));
       for (let r = 0; r < 5; r++) {
         expect(h.reelSet.reels[r].getVisibleSymbols()).toEqual(['a', 'b', 'c']);
       }
@@ -41,7 +41,7 @@ describe('CellPin. no-pin baseline (regression)', () => {
 });
 
 describe('CellPin. overlay onto setResult', () => {
-  it('forces the pinned symbol to land at (col, row)', async () => {
+  it('forces the pinned symbol to land at (reel, cell)', async () => {
     const h = makeHarness();
     try {
       h.reelSet.pin(2, 1, 'wild', { turns: 'permanent' });
@@ -54,7 +54,7 @@ describe('CellPin. overlay onto setResult', () => {
         ['a', 'b', 'c'],
         ['a', 'b', 'c'],
       ];
-      await h.spinAndLand(target);
+      await h.spinAndLand(target.map((visible) => ({ visible })));
 
       expect(h.reelSet.reels[2].getVisibleSymbols()[1]).toBe('wild');
       // Other cells on that reel are unchanged
@@ -77,7 +77,7 @@ describe('CellPin. overlay onto setResult', () => {
         ['a', 'b', 'c'],
       ];
       const snapshot = JSON.parse(JSON.stringify(target));
-      await h.spinAndLand(target);
+      await h.spinAndLand(target.map((visible) => ({ visible })));
       expect(target).toEqual(snapshot); // caller's array untouched
     } finally {
       h.destroy();
@@ -96,23 +96,23 @@ describe('CellPin. turns countdown', () => {
         ['a', 'b', 'c'], ['a', 'b', 'c'],
       ];
 
-      // Spin 1. wild lands, turns: 3 → 2
-      await h.spinAndLand(target);
+      // Spin 1. wild lands, turns: 3 -> 2
+      await h.spinAndLand(target.map((visible) => ({ visible })));
       expect(h.reelSet.reels[2].getVisibleSymbols()[1]).toBe('wild');
       expect(h.reelSet.getPin(2, 1)?.turns).toBe(2);
 
-      // Spin 2. wild lands, turns: 2 → 1
-      await h.spinAndLand(target);
+      // Spin 2. wild lands, turns: 2 -> 1
+      await h.spinAndLand(target.map((visible) => ({ visible })));
       expect(h.reelSet.reels[2].getVisibleSymbols()[1]).toBe('wild');
       expect(h.reelSet.getPin(2, 1)?.turns).toBe(1);
 
-      // Spin 3. wild lands, turns: 1 → 0 → expired
-      await h.spinAndLand(target);
+      // Spin 3. wild lands, turns: 1 -> 0 -> expired
+      await h.spinAndLand(target.map((visible) => ({ visible })));
       expect(h.reelSet.reels[2].getVisibleSymbols()[1]).toBe('wild');
       expect(h.reelSet.getPin(2, 1)).toBeUndefined();
 
       // Spin 4. no pin, server's 'b' lands
-      await h.spinAndLand(target);
+      await h.spinAndLand(target.map((visible) => ({ visible })));
       expect(h.reelSet.reels[2].getVisibleSymbols()[1]).toBe('b');
     } finally {
       h.destroy();
@@ -130,7 +130,7 @@ describe("CellPin. 'eval' lifetime", () => {
       ];
 
       // Spin 1. normal landing
-      await h.spinAndLand(target);
+      await h.spinAndLand(target.map((visible) => ({ visible })));
       expect(h.reelSet.reels[0].getVisibleSymbols()[0]).toBe('a');
 
       // Place eval pin AFTER the spin (simulates expanding wild reveal)
@@ -139,7 +139,7 @@ describe("CellPin. 'eval' lifetime", () => {
       expect(h.reelSet.pins.size).toBe(1);
 
       // Spin 2. eval pin is cleared on spin:start
-      await h.spinAndLand(target);
+      await h.spinAndLand(target.map((visible) => ({ visible })));
       expect(h.reelSet.pins.size).toBe(0);
       expect(h.reelSet.reels[0].getVisibleSymbols()[0]).toBe('a');
     } finally {
@@ -163,7 +163,7 @@ describe('CellPin. permanent lifetime', () => {
       ];
 
       for (let i = 0; i < 5; i++) {
-        await h.spinAndLand(target);
+        await h.spinAndLand(target.map((visible) => ({ visible })));
         expect(h.reelSet.reels[3].getVisibleSymbols()[2]).toBe('coin');
       }
 
@@ -173,7 +173,7 @@ describe('CellPin. permanent lifetime', () => {
       h.reelSet.unpin(3, 2);
       expect(h.reelSet.getPin(3, 2)).toBeUndefined();
 
-      await h.spinAndLand(target);
+      await h.spinAndLand(target.map((visible) => ({ visible })));
       expect(h.reelSet.reels[3].getVisibleSymbols()[2]).toBe('c');
     } finally {
       h.destroy();
@@ -195,7 +195,7 @@ describe('CellPin. payload', () => {
         ['a', 'b', 'c'], ['a', 'b', 'c'],
       ];
 
-      await h.spinAndLand(target);
+      await h.spinAndLand(target.map((visible) => ({ visible })));
       const pin = h.reelSet.getPin(1, 0);
       expect(pin?.payload).toEqual({ multiplier: 3, tier: 'gold' });
     } finally {
@@ -233,8 +233,8 @@ describe('CellPin. events', () => {
       expect(events.length).toBe(1);
       expect(events[0].event).toBe('pin:placed');
       expect(events[0].args[0]).toMatchObject({
-        col: 2,
-        row: 1,
+        reel: 2,
+        cell: 1,
         symbolId: 'wild',
         turns: 3,
       });
@@ -253,7 +253,7 @@ describe('CellPin. events', () => {
         ['a', 'b', 'c'], ['a', 'b', 'c'], ['a', 'b', 'c'],
         ['a', 'b', 'c'], ['a', 'b', 'c'],
       ];
-      await h.spinAndLand(target);
+      await h.spinAndLand(target.map((visible) => ({ visible })));
 
       expect(events.length).toBe(1);
       expect(events[0].args[1]).toBe('turns');
@@ -285,7 +285,7 @@ describe('CellPin. events', () => {
         ['a', 'b', 'c'], ['a', 'b', 'c'], ['a', 'b', 'c'],
         ['a', 'b', 'c'], ['a', 'b', 'c'],
       ];
-      await h.spinAndLand(target);
+      await h.spinAndLand(target.map((visible) => ({ visible })));
 
       // On spin:start, eval pin was cleared
       expect(events.length).toBeGreaterThanOrEqual(1);
@@ -298,7 +298,7 @@ describe('CellPin. events', () => {
 });
 
 describe('CellPin. bounds and errors', () => {
-  it('throws when col is out of range', () => {
+  it('throws when reel is out of range', () => {
     const h = makeHarness();
     try {
       expect(() => h.reelSet.pin(-1, 0, 'wild')).toThrow();
@@ -308,7 +308,7 @@ describe('CellPin. bounds and errors', () => {
     }
   });
 
-  it('throws when row is out of range', () => {
+  it('throws when cell is out of range', () => {
     const h = makeHarness();
     try {
       expect(() => h.reelSet.pin(0, -1, 'wild')).toThrow();
@@ -329,7 +329,7 @@ describe('CellPin. bounds and errors', () => {
 });
 
 describe('CellPin. multiple pins coexist', () => {
-  it('applies many pins across reels and rows simultaneously', async () => {
+  it('applies many pins across reels and cells simultaneously', async () => {
     const h = makeHarness();
     try {
       // Pin a diagonal plus a couple variants. All use `turns: 'permanent'`
@@ -345,7 +345,7 @@ describe('CellPin. multiple pins coexist', () => {
         ['a', 'b', 'c'], ['a', 'b', 'c'], ['a', 'b', 'c'],
         ['a', 'b', 'c'], ['a', 'b', 'c'],
       ];
-      await h.spinAndLand(target);
+      await h.spinAndLand(target.map((visible) => ({ visible })));
 
       expect(h.reelSet.reels[0].getVisibleSymbols()[0]).toBe('wild');
       expect(h.reelSet.reels[1].getVisibleSymbols()[1]).toBe('wild');
@@ -520,10 +520,10 @@ describe('CellPin. overlay events (pin:overlayCreated / :overlayDestroyed)', () 
       expect(events.length).toBe(1);
 
       const [pin, overlay] = events[0].args as [
-        { col: number; row: number; symbolId: string },
+        { reel: number; cell: number; symbolId: string },
         { symbolId: string; view: unknown },
       ];
-      expect(pin).toMatchObject({ col: 2, row: 1, symbolId: 'wild' });
+      expect(pin).toMatchObject({ reel: 2, cell: 1, symbolId: 'wild' });
       expect(overlay).toBeDefined();
       expect(overlay.symbolId).toBe('wild');
       expect(overlay.view).toBeDefined();
@@ -553,8 +553,8 @@ describe('CellPin. overlay events (pin:overlayCreated / :overlayDestroyed)', () 
       let capturedPinCol = -1;
       let capturedPinRow = -1;
       h.reelSet.events.on('pin:overlayDestroyed', (pin, overlay) => {
-        capturedPinCol = pin.col;
-        capturedPinRow = pin.row;
+        capturedPinCol = pin.reel;
+        capturedPinRow = pin.cell;
         capturedOverlaySymbolId = (overlay as { symbolId: string }).symbolId;
       });
 

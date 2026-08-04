@@ -1,7 +1,7 @@
 {
   "name": "pixi-reels",
   "version": "1.6.1",
-  "description": "A batteries-included slot machine reel engine for PixiJS v8 — fluent builder, typed events, spin phases, speed modes, win spotlight, and a headless testing harness.",
+  "description": "A batteries-included slot machine reel engine for PixiJS v8 \u2014 fluent builder, typed events, spin phases, speed modes, win spotlight, and a headless testing harness.",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -40,7 +40,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint src/"
+    "lint": "biome lint src/",
+    "prepack": "node ../../scripts/stage-package-files.mjs",
+    "postpack": "node ../../scripts/stage-package-files.mjs --clean"
   },
   "peerDependencies": {
     "@esotericsoftware/spine-pixi-v8": "~4.2.110",
@@ -54,12 +56,14 @@
   },
   "devDependencies": {
     "@esotericsoftware/spine-pixi-v8": "~4.2.110",
+    "fast-check": "^4.9.0",
     "gsap": "^3.15.0",
     "pixi.js": "^8.18.1",
     "typescript": "^6.0.3",
     "vite": "^8.0.9",
     "vite-plugin-dts": "^4.5.4",
-    "vitest": "^4.1.7"
+    "vitest": "^4.1.7",
+    "@pixi-reels/cheats": "workspace:*"
   },
   "license": "MIT",
   "author": "schmooky",

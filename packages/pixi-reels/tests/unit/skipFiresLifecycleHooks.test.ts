@@ -16,11 +16,11 @@ class CountingSymbol extends HeadlessSymbol {
 }
 
 describe('SpinController.skip. symbol lifecycle hooks', () => {
-  it('fires onReelSpinEnd and onReelLanded once per visible-row symbol on slam-stop', async () => {
+  it('fires onReelSpinEnd and onReelLanded once per visible-cell symbol on slam-stop', async () => {
     const ticker = new FakeTicker();
     const reelSet = new ReelSetBuilder()
       .reels(3)
-      .visibleRows(3)
+      .visibleCells(3)
       .symbolSize(100, 100)
       .ticker(ticker as unknown as Ticker)
       .symbols((r) => {
@@ -39,7 +39,7 @@ describe('SpinController.skip. symbol lifecycle hooks', () => {
     await promise;
 
     for (const reel of reelSet.reels) {
-      const visible = reel.symbols.slice(reel.bufferAbove, reel.bufferAbove + reel.visibleRows);
+      const visible = reel.symbols.slice(reel.bufferStart, reel.bufferStart + reel.visibleCells);
       for (const sym of visible) {
         expect(sym).toBeInstanceOf(CountingSymbol);
         expect((sym as CountingSymbol).spinEndCount).toBe(1);

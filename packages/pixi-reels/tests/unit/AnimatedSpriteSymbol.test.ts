@@ -72,9 +72,9 @@ describe('AnimatedSpriteSymbol.playWin — returns to frame 0 on completion', ()
       };
     })._animSprite;
 
-    // Stub gotoAndPlay (starts the PIXI shared ticker → needs RAF in node)
-    // and capture gotoAndStop calls. We're testing the completion-time
-    // behaviour, not the PIXI playback loop.
+    // Stub gotoAndPlay (starts the PIXI shared ticker -> needs RAF in node)
+    // and capture gotoAndStop calls. Testing completion-time behaviour,
+    // not the PIXI playback loop.
     const stopCalls: number[] = [];
     spr.gotoAndPlay = () => {};
     spr.gotoAndStop = (i: number) => stopCalls.push(i);

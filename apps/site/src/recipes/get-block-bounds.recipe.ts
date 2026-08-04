@@ -18,7 +18,7 @@ const GAP = 4;
 
 const reelSet = new ReelSetBuilder()
   .reels(REELS)
-  .visibleRows(ROWS)
+  .visibleCells(ROWS)
   .symbolSize(SIZE, SIZE)
   .symbolGap(GAP, GAP)
   .maskStrategy(new SharedRectMaskStrategy())
@@ -31,7 +31,7 @@ const reelSet = new ReelSetBuilder()
     }
   })
   .weights(Object.fromEntries(CARD_DECK.map((c, i) => [c.id, 12 - i])))
-  .symbolData(Object.fromEntries(SHAPES.map((s) => [s.id, { weight: 0, zIndex: 5, size: { w: s.w, h: s.h } }])))
+  .symbolData(Object.fromEntries(SHAPES.map((s) => [s.id, { weight: 0, zIndex: 5, size: { reels: s.w, cells: s.h } }])))
   // Big symbols make the default 56px landing bounce look broken.
   // the giant anchor overshoots into adjacent cells. Zero the bounce.
   .speed('normal', { ...SpeedPresets.NORMAL, bounceDistance: 0, bounceDuration: 0 })
@@ -50,7 +50,7 @@ reelSet.events.on('spin:allLanded', () => {
   if (!plantedAt || !plantedShape) return;
   // Pass the ANCHOR cell. getBlockBounds resolves to the same rect for
   // every cell of the block. anchor or not. so picking any cell works.
-  const rect = reelSet.getBlockBounds(plantedAt.col, plantedAt.row);
+  const rect = reelSet.getBlockBounds(plantedAt.reel, plantedAt.cell);
   overlay
     .roundRect(rect.x - 3, rect.y - 3, rect.width + 6, rect.height + 6, 8)
     .stroke({ color: 0xff6b35, width: 4, alpha: 1 });
@@ -63,10 +63,10 @@ return {
       Array.from({ length: ROWS }, () => CARD_DECK[Math.floor(Math.random() * CARD_DECK.length)].id),
     );
     plantedShape = SHAPES[Math.floor(Math.random() * SHAPES.length)];
-    const col = Math.floor(Math.random() * (REELS - plantedShape.w + 1));
-    const row = Math.floor(Math.random() * (ROWS - plantedShape.h + 1));
-    grid[col][row] = plantedShape.id;
-    plantedAt = { col, row };
+    const reel = Math.floor(Math.random() * (REELS - plantedShape.w + 1));
+    const cell = Math.floor(Math.random() * (ROWS - plantedShape.h + 1));
+    grid[reel][cell] = plantedShape.id;
+    plantedAt = { reel, cell };
     return grid;
   },
 };

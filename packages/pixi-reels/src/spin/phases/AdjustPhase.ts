@@ -1,5 +1,4 @@
 import type { gsap } from 'gsap';
-import { getGsap } from '../../utils/gsapRef.js';
 import { ReelPhase } from './ReelPhase.js';
 import type { Reel } from '../../core/Reel.js';
 import type { SpeedProfile } from '../../config/types.js';
@@ -9,8 +8,8 @@ export interface AdjustPhaseConfig {
   /**
    * Pin overlays on this reel that need to tween from their pre-reshape
    * cell to the post-reshape cell. Populated by `SpinController` BEFORE
-   * the reshape commits. `fromY` captures each overlay's on-screen Y at
-   * the moment the snapshot was taken, `toY` is computed from the new
+   * the reshape commits. `fromMain` captures each overlay's on-screen main
+   * coordinate at the moment the snapshot was taken, `toMain` is computed from the new
    * geometry.
    *
    * AdjustPhase no longer commits geometry. `SpinController._applyReshape`
@@ -29,18 +28,18 @@ export interface AdjustPhaseConfig {
 export interface PinOverlayTween {
   /** The pin overlay symbol. its view is what we animate. */
   symbol: ReelSymbol;
-  /** Width to resize to after the tween (cell width. usually unchanged). */
-  cellWidth: number;
-  /** Cell height before reshape (the overlay's current size). */
-  oldCellHeight: number;
-  /** Cell height after reshape. */
-  newCellHeight: number;
-  /** Pre-tween Y in viewport-local coords. */
-  fromY: number;
-  /** Post-tween target Y in viewport-local coords. */
-  toY: number;
-  /** Reel container X (unchanged across reshape). */
-  x: number;
+  /** Cross-axis cell extent. unchanged by a reshape. */
+  cellCross: number;
+  /** Main-axis cell extent before the reshape (the overlay's current size). */
+  oldCellMain: number;
+  /** Main-axis cell extent after the reshape. */
+  newCellMain: number;
+  /** Pre-tween main coordinate, viewport-local. */
+  fromMain: number;
+  /** Post-tween target main coordinate, viewport-local. */
+  toMain: number;
+  /** Reel container cross coordinate (unchanged across reshape). */
+  cross: number;
 }
 
 /**
@@ -97,28 +96,30 @@ export class AdjustPhase extends ReelPhase<AdjustPhaseConfig> {
 
     // Pose every overlay at its OLD cell visually so the tween starts
     // from where the player last saw it. The overlay's underlying view is
-    // already at `newCellHeight` after the upstream reshape; we use
-    // scale.y to make it look its old size during the tween.
+    // already at `newCellMain` after the upstream reshape; we squash the
+    // main-axis scale to make it look its old size during the tween.
+    const axis = this._reel.axis;
     for (const o of overlays) {
-      o.symbol.resize(o.cellWidth, o.newCellHeight);
-      o.symbol.view.x = o.x;
-      o.symbol.view.y = o.fromY;
-      o.symbol.view.scale.y =
-        o.newCellHeight > 0 ? o.oldCellHeight / o.newCellHeight : 1;
-      o.symbol.view.scale.x = 1;
+      const size = axis.toScreen(o.cellCross, o.newCellMain);
+      o.symbol.resize(size.x, size.y);
+      axis.setCross(o.symbol.view, o.cross);
+      axis.setMain(o.symbol.view, o.fromMain);
+      o.symbol.view.scale[axis.mainProp] =
+        o.newCellMain > 0 ? o.oldCellMain / o.newCellMain : 1;
+      o.symbol.view.scale[axis.crossProp] = 1;
     }
 
     this._settle = () => {
       for (const o of overlays) {
         o.symbol.view.scale.set(1, 1);
-        o.symbol.view.y = o.toY;
-        o.symbol.view.x = o.x;
+        axis.setMain(o.symbol.view, o.toMain);
+        axis.setCross(o.symbol.view, o.cross);
       }
     };
 
     const dur = this._durationMs / 1000;
     const ease = this._ease;
-    this._tween = getGsap().timeline({
+    this._tween = this._reel.gsap.timeline({
       onComplete: () => {
         this._settle?.();
         this._settle = null;
@@ -128,8 +129,8 @@ export class AdjustPhase extends ReelPhase<AdjustPhaseConfig> {
     });
 
     for (const o of overlays) {
-      this._tween.to(o.symbol.view, { y: o.toY, duration: dur, ease }, 0);
-      this._tween.to(o.symbol.view.scale, { y: 1, duration: dur, ease }, 0);
+      this._tween.to(o.symbol.view, { [axis.mainProp]: o.toMain, duration: dur, ease }, 0);
+      this._tween.to(o.symbol.view.scale, { [axis.mainProp]: 1, duration: dur, ease }, 0);
     }
   }
 
@@ -150,10 +151,12 @@ export class AdjustPhase extends ReelPhase<AdjustPhaseConfig> {
   }
 
   private _snapPinOverlays(overlays: PinOverlayTween[]): void {
+    const axis = this._reel.axis;
     for (const o of overlays) {
-      o.symbol.resize(o.cellWidth, o.newCellHeight);
-      o.symbol.view.x = o.x;
-      o.symbol.view.y = o.toY;
+      const size = axis.toScreen(o.cellCross, o.newCellMain);
+      o.symbol.resize(size.x, size.y);
+      axis.setCross(o.symbol.view, o.cross);
+      axis.setMain(o.symbol.view, o.toMain);
       o.symbol.view.scale.set(1, 1);
     }
   }

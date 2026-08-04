@@ -1,14 +1,14 @@
 // @ts-nocheck
 // Injected globals: ReelSetBuilder, SpeedPresets, SpineReelSymbol,
-//                   loadGeneratedSpines, buildSpineMap, PIXI, gsap, app,
+//                   loadSpineSet, buildSpineMap, PIXI, gsap, app,
 //                   textures, blurTextures, SYMBOL_IDS, pickWeighted
 //
 // Per-reel static shape (3-5-5-5-3 pyramid) rendered with Spine symbols.
 // Spine skeletons scale cleanly to whatever cell size each reel hands them.
-// the outer 3-row reels get taller cells than the inner 5-row reels, and
+// the outer 3-cell reels get taller cells than the inner 5-cell reels, and
 // the rig stays crisp at both because it's vector, not a baked sprite.
 
-await loadGeneratedSpines();
+await loadSpineSet("generated");
 
 const VISIBLE = [3, 5, 5, 5, 3];
 // 140 = the spines' authored frame size. render 1:1 to keep frame strokes
@@ -29,7 +29,7 @@ const IDS = Object.keys(SPINE_MAP);
 
 const reelSet = new ReelSetBuilder()
   .reels(VISIBLE.length)
-  .visibleRowsPerReel(VISIBLE)
+  .visibleCellsPerReel(VISIBLE)
   .reelAnchor('center')
   .symbolSize(SIZE, SIZE)
   .symbolGap(GAP, GAP)
@@ -57,8 +57,8 @@ const LANDING_MS = 350;
 function syncIdle() {
   for (let r = 0; r < reelSet.reelCount; r++) {
     const reel = reelSet.getReel(r);
-    for (let row = 0; row < reel.visibleRows; row++) {
-      const sym = reel.getSymbolAt(row);
+    for (let cell = 0; cell < reel.visibleCells; cell++) {
+      const sym = reel.getSymbolAt(cell);
       if (sym instanceof SpineReelSymbol) sym.stopAnimation();
     }
   }
@@ -70,7 +70,7 @@ reelSet.events.on('spin:complete', () => {
 return {
   reelSet,
   nextResult: () =>
-    VISIBLE.map((rows) =>
-      Array.from({ length: rows }, () => IDS[Math.floor(Math.random() * IDS.length)]),
+    VISIBLE.map((cells) =>
+      Array.from({ length: cells }, () => IDS[Math.floor(Math.random() * IDS.length)]),
     ),
 };

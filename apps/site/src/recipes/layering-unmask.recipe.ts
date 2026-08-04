@@ -1,24 +1,24 @@
 // @ts-nocheck
 // Injected globals: ReelSetBuilder, SpeedPresets, SpineReelSymbol,
 //                   StaticSpinSymbol, SpinTextureCache, prewarmSpinTextures,
-//                   loadThunderkickSpines, buildThunderkickSpineMap,
+//                   loadSpineSet,
 //                   app, pickWeighted
 //
-// symbolData `unmask: true` — the declarative fix, on the SAME jagged
+// symbolData `unmask: true`, the declarative fix, on the SAME jagged
 // 3-4-4-4-4-3 grid as the other demos. On land, unmasked scatters are
 // parented to the viewport-wide unmaskedContainer: above EVERY reel and
 // outside the mask, so the jaw overflows the grid edges and its right-hand
 // neighbours with zero recipe code. The engine bakes each reel's offset
 // into the lifted view, so this works on offset (center-anchored) reels
-// too — no manual promotion needed.
+// too, no manual promotion needed.
 
-await loadThunderkickSpines();
+const thunderkick = await loadSpineSet("thunderkick");
 
 const SPINE_SCALE = 0.6;
 const CELL_W = 175 * SPINE_SCALE;
 const CELL_H = 203 * SPINE_SCALE;
 
-const spineMap = buildThunderkickSpineMap();
+const spineMap = thunderkick.spineMap;
 
 const weights = {
   low1: 16, low2: 16, low3: 14, low4: 14, low5: 12,
@@ -46,7 +46,7 @@ prewarmSpinTextures({
 
 const reelSet = new ReelSetBuilder()
   .reels(6)
-  .visibleRowsPerReel(ROWS_PER_REEL)
+  .visibleCellsPerReel(ROWS_PER_REEL)
   .reelAnchor('center')
   .symbolSize(CELL_W, CELL_H)
   .symbolGap(0, 0)
@@ -58,7 +58,7 @@ const reelSet = new ReelSetBuilder()
   .weights(weights)
   // unmask parents the scatter into viewport.unmaskedContainer on land:
   // above every reel AND outside the mask. zIndex still sorts within that
-  // container. The reel's offsetY is baked in, so the short outer reels
+  // container. The reel's mainOffset is baked in, so the short outer reels
   // (which are centre-shifted) line up correctly.
   .symbolData({ scatter: { zIndex: 10, unmask: true } })
   // Synchronized settle: all reels start and stop together (no stagger),
@@ -71,11 +71,11 @@ const reelSet = new ReelSetBuilder()
 return {
   reelSet,
   nextResult: () => {
-    const grid = ROWS_PER_REEL.map((rows) =>
-      Array.from({ length: rows }, () => pickWeighted(weights)),
+    const grid = ROWS_PER_REEL.map((cells) =>
+      Array.from({ length: cells }, () => pickWeighted(weights)),
     );
-    // Scatters on the short outer reels (0 and 5) at their edge rows, so
-    // the jaw pokes past the stepped grid outline AND the neighbour — the
+    // Scatters on the short outer reels (0 and 5) at their edge cells, so
+    // the jaw pokes past the stepped grid outline AND the neighbour - the
     // exact case that needs the reel offset baked into the lifted view.
     grid[0][Math.random() < 0.5 ? 0 : grid[0].length - 1] = 'scatter';
     grid[5][Math.random() < 0.5 ? 0 : grid[5].length - 1] = 'scatter';

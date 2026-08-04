@@ -110,7 +110,7 @@ export async function applyStudioConfig(
       const options: SpineReelSymbolOptions = {
         spineMap: { [symbol.id]: { skeleton: skeletonAlias, atlas: atlasAlias } },
         // Apply user-picked names as the engine defaults so every method
-        // (playWin, playBlur, …) targets the right animation without
+        // (playWin, playBlur, ...) targets the right animation without
         // per-symbol-id overrides.
         idleAnimation: overrides.idle,
         winAnimation: overrides.win,
@@ -155,11 +155,11 @@ async function sliceSheet(
   const perRow = Math.max(1, Math.floor(sheet.width / frameW));
   const frames: Texture[] = [];
   for (let i = 0; i < frameCount; i++) {
-    const col = i % perRow;
-    const row = Math.floor(i / perRow);
+    const reel = i % perRow;
+    const cell = Math.floor(i / perRow);
     frames.push(new Texture({
       source: sheet.source,
-      frame: { x: col * frameW, y: row * frameH, width: frameW, height: frameH },
+      frame: { x: reel * frameW, y: cell * frameH, width: frameW, height: frameH },
     }));
   }
   return frames;

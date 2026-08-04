@@ -1,12 +1,12 @@
 // @ts-nocheck
 // Injected: BoardGrid, BlurSpriteSymbol, SpeedPresets, loadHoldAndWinSprites, PIXI, gsap, app
 //
-// A board built DIRECTLY on the generic BoardGrid primitive — no HoldAndWinBuilder
+// A board built DIRECTLY on the generic BoardGrid primitive - no HoldAndWinBuilder
 // in sight. BoardGrid is the "board of reels" mechanism: a grid of cells that each
 // spin independently. Hold & Win is ONE opinionated feature on top of it; this is a
-// different one — a "reveal & collect" prize grid. Press spin and every cell spins
+// different one - a "reveal & collect" prize grid. Press spin and every cell spins
 // at once to a random prize, then the values tally and the top cell pops. No locking,
-// no respins — those are Hold & Win's rules, and they live in Hold & Win's code, not
+// no respins - those are Hold & Win's rules, and they live in Hold & Win's code, not
 // here. You own the rule; the primitive just spins the cells you tell it to.
 
 const COLS = 5, ROWS = 3, CELL = 72, GAP = 6;
@@ -28,9 +28,9 @@ const grid = new BoardGrid({
   gap: GAP,
   symbols: (r) => { for (const id of IDS) r.register(id, BlurCell, { textures: symbols, blurTextures: blur }); },
   weights: Object.fromEntries(IDS.map((id) => [id, 1])),
-  // A per-cell profile is just a function of the cell — here, a diagonal wave.
-  profiles: { wave: (cell) => ({ ...SpeedPresets.NORMAL, minimumSpinTime: 300 + (cell.col + cell.row) * 55 }) },
-  // A per-cell backing tile — BoardGrid draws it behind each reel. Also gives
+  // A per-cell profile is a function of the cell - here, a diagonal wave.
+  profiles: { wave: (cell) => ({ ...SpeedPresets.NORMAL, minimumSpinTime: 300 + (cell.reel + cell.cell) * 55 }) },
+  // A per-cell backing tile - BoardGrid draws it behind each reel. Also gives
   // the grid real bounds while every cell is still empty, so the runner can
   // size it to the canvas before the first reveal.
   chrome: (g, size) => {
@@ -45,7 +45,7 @@ grid.container.x = (app.screen.width - boardW) / 2;
 grid.container.y = (app.screen.height - boardH) / 2 - 6;
 app.stage.addChild(grid.container);
 
-// A highlight ring we move onto the top-prize cell — pure game-layer art, drawn
+// A highlight ring we move onto the top-prize cell - pure game-layer art, drawn
 // with geometry the primitive hands out (cellBounds / cellCenter).
 const ring = new PIXI.Graphics();
 grid.container.addChild(ring);
@@ -67,7 +67,7 @@ return {
 
     // YOU decide every result; the primitive just spins each cell to its id.
     const targets = grid.cells().map((cell) => ({ cell, id: IDS[Math.floor(Math.random() * IDS.length)] }));
-    await grid.spinCells(targets); // onLanded is optional — omit it and just await
+    await grid.spinCells(targets); // onLanded is optional - omit it and await
 
     // The rule is yours: tally the prizes and find the top cell.
     let total = 0;

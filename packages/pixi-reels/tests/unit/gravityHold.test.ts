@@ -8,15 +8,15 @@ function buildTumbleHarness(initialFrame: string[][]) {
   const ticker = new FakeTicker();
   const reelSet = new ReelSetBuilder()
     .reels(initialFrame.length)
-    .visibleRows(initialFrame[0].length)
+    .visibleCells(initialFrame[0].length)
     .symbolSize(50, 50)
     .symbols((r) => {
       for (const id of ['a', 'b', 'c', 'd']) r.register(id, HeadlessSymbol, {});
     })
     .weights({ a: 1, b: 1, c: 1, d: 1 })
     .tumble({
-      fall:   { duration: 0, ease: 'none', rowStagger: 0 },
-      dropIn: { duration: 0, ease: 'none', rowStagger: 0, distance: 'perHole' },
+      fall:   { duration: 0, ease: 'none', cellStagger: 0 },
+      dropIn: { duration: 0, ease: 'none', cellStagger: 0, distance: 'perHole' },
     })
     .initialFrame(initialFrame.map((visible) => ({ visible })))
     .ticker(ticker as unknown as Ticker)
@@ -50,7 +50,7 @@ describe('refill. gravityHold promise', () => {
     reelSet.events.on('cascade:dropIn:start', (info) => order.push(`dropIn:start:${info.reelIndex}`));
 
     const refilling = reelSet.refill({
-      winners: [{ reel: 0, row: 2 }, { reel: 1, row: 2 }, { reel: 2, row: 2 }],
+      winners: [{ reel: 0, cell: 2 }, { reel: 1, cell: 2 }, { reel: 2, cell: 2 }],
       grid: [
         { visible: ['d', 'a', 'a'] },
         { visible: ['d', 'a', 'a'] },
@@ -89,7 +89,7 @@ describe('refill. gravityHold promise', () => {
     reelSet.events.on('cascade:dropIn:start', () => order.push('dropIn:start'));
 
     const refilling = reelSet.refill({
-      winners: [{ reel: 0, row: 2 }, { reel: 1, row: 2 }, { reel: 2, row: 2 }],
+      winners: [{ reel: 0, cell: 2 }, { reel: 1, cell: 2 }, { reel: 2, cell: 2 }],
       grid: [
         { visible: ['d', 'a', 'a'] },
         { visible: ['d', 'a', 'a'] },
@@ -104,7 +104,7 @@ describe('refill. gravityHold promise', () => {
     await new Promise((r) => setTimeout(r, 60));
 
     // Even though setTimeout has fired, the promise is still pending
-    // → drop-in must not have started.
+    // -> drop-in must not have started.
     expect(order.filter((e) => e === 'gravity:end').length).toBe(3);
     expect(order.filter((e) => e === 'dropIn:start').length).toBe(0);
 
@@ -129,7 +129,7 @@ describe('refill. gravityHold promise', () => {
     });
 
     await reelSet.refill({
-      winners: [{ reel: 0, row: 2 }, { reel: 1, row: 2 }, { reel: 2, row: 2 }],
+      winners: [{ reel: 0, cell: 2 }, { reel: 1, cell: 2 }, { reel: 2, cell: 2 }],
       grid: [
         { visible: ['d', 'a', 'a'] },
         { visible: ['d', 'a', 'a'] },
@@ -160,7 +160,7 @@ describe('refill. gravityHold promise', () => {
     reelSet.events.on('cascade:dropIn:start', () => order.push('dropIn:start'));
 
     const refilling = reelSet.refill({
-      winners: [{ reel: 0, row: 2 }, { reel: 1, row: 2 }, { reel: 2, row: 2 }],
+      winners: [{ reel: 0, cell: 2 }, { reel: 1, cell: 2 }, { reel: 2, cell: 2 }],
       grid: [
         { visible: ['d', 'a', 'a'] },
         { visible: ['d', 'a', 'a'] },
@@ -173,14 +173,14 @@ describe('refill. gravityHold promise', () => {
     });
 
     await new Promise((r) => setTimeout(r, 50));
-    // ms has fired but promise is pending → callback hasn't run, drop-in not started.
+    // ms has fired but promise is pending -> callback hasn't run, drop-in not started.
     expect(order).not.toContain('callback');
     expect(order.filter((e) => e === 'dropIn:start').length).toBe(0);
 
     releaseHold();
     await refilling;
 
-    // Order: every gravity:end → callback → every dropIn:start.
+    // Order: every gravity:end -> callback -> every dropIn:start.
     const callbackIdx = order.indexOf('callback');
     const firstDropIn = order.indexOf('dropIn:start');
     const lastGravity = order.lastIndexOf('gravity:end');
@@ -214,7 +214,7 @@ describe('refill. gravityHold rejection surfacing', () => {
       // Refill resolves with wasSkipped=true (engine slams to recover);
       // the original rejection comes through via the event.
       await reelSet.refill({
-        winners: [{ reel: 0, row: 2 }, { reel: 1, row: 2 }, { reel: 2, row: 2 }],
+        winners: [{ reel: 0, cell: 2 }, { reel: 1, cell: 2 }, { reel: 2, cell: 2 }],
         grid: [
           { visible: ['d', 'a', 'a'] },
           { visible: ['d', 'a', 'a'] },
@@ -257,9 +257,9 @@ describe('runCascade. gravityHold per-cascade promise builder', () => {
       detectWinners: () => {
         detects += 1;
         if (detects > 1) return [];
-        return [{ reel: 0, row: 2 }, { reel: 1, row: 2 }, { reel: 2, row: 2 }];
+        return [{ reel: 0, cell: 2 }, { reel: 1, cell: 2 }, { reel: 2, cell: 2 }];
       },
-      nextGrid: (grid) => grid.map((c) => ['d', c[0], c[1]]),
+      nextGrid: (grid) => grid.map((c) => ({ visible: ['d', c[0], c[1]] })),
       pauseAfterDestroyMs: 0,
       refillMode: 'gravity-then-drop',
       gravityHoldMs: 0,
@@ -300,9 +300,9 @@ describe('runCascade. gravityHold per-cascade promise builder', () => {
       detectWinners: () => {
         callsDetect += 1;
         if (callsDetect > 2) return [];
-        return [{ reel: 0, row: 2 }, { reel: 1, row: 2 }, { reel: 2, row: 2 }];
+        return [{ reel: 0, cell: 2 }, { reel: 1, cell: 2 }, { reel: 2, cell: 2 }];
       },
-      nextGrid: (grid) => grid.map((c) => ['d', c[0], c[1]]),
+      nextGrid: (grid) => grid.map((c) => ({ visible: ['d', c[0], c[1]] })),
       pauseAfterDestroyMs: 0,
       refillMode: 'gravity-then-drop',
       gravityHoldMs: 0,
@@ -313,7 +313,7 @@ describe('runCascade. gravityHold per-cascade promise builder', () => {
       },
     });
 
-    // Two refill stages → gravityHold called twice with chain 1 and 2.
+    // Two refill stages -> gravityHold called twice with chain 1 and 2.
     expect(holdsBuilt).toEqual([
       { chain: 1, winnersCount: 3 },
       { chain: 2, winnersCount: 3 },

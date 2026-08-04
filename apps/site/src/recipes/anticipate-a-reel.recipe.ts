@@ -3,7 +3,7 @@
 //                   WILD_CARD, app, pickWeighted
 
 const A = '7', B = '8', C = '9';
-const S = 'scatter'; // scatter. registered as a custom card below
+const S = 'scatter'; // registered as a custom card below
 const IDS = [A, B, C, S];
 
 const SCATTER_SYM = { id: S, color: 0xff6b35, label: 'SCAT', textColor: 0xffffff };
@@ -19,7 +19,7 @@ const GRID = [
 
 const reelSet = new ReelSetBuilder()
   .reels(5)
-  .visibleRows(3)
+  .visibleCells(3)
   .symbolSize(90, 90)
   .symbolGap(4, 4)
   .symbols(r => {

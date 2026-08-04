@@ -1,7 +1,7 @@
 /** @jsxImportSource react */
 import RecipeBoard from '../RecipeBoard.tsx';
 import { mountMiniReels, sleep } from '../miniRuntime.ts';
-import { loadPrototypeSymbols } from '../../../../../examples/shared/prototypeSpriteLoader.ts';
+import { loadPrototypeSymbols } from '../../runtime/prototypeSpriteLoader.ts';
 import { Sprite } from 'pixi.js';
 import { gsap } from 'gsap';
 
@@ -12,8 +12,8 @@ const IDS = [...FILLER, WILD];
 function randomFiller(): string {
   return FILLER[Math.floor(Math.random() * FILLER.length)];
 }
-function fillerGrid(cols: number, rows: number): string[][] {
-  return Array.from({ length: cols }, () => Array.from({ length: rows }, () => randomFiller()));
+function fillerGrid(cols: number, cells: number): string[][] {
+  return Array.from({ length: cols }, () => Array.from({ length: cells }, () => randomFiller()));
 }
 
 /**
@@ -27,7 +27,7 @@ export default function StickyWildRecipe() {
       height={280}
       setup={async (host) => {
         const { reelSet, app, destroy } = await mountMiniReels(host, {
-          reelCount: 5, visibleRows: 3,
+          reelCount: 5, visibleCells: 3,
           symbolSize: { width: 72, height: 72 },
           symbols: { kind: 'sprite', ids: IDS },
           weights: { 'round/round_1': 22, 'round/round_2': 22, 'royal/royal_1': 18, 'square/square_1': 18 },
@@ -36,8 +36,8 @@ export default function StickyWildRecipe() {
         const wildTex = atlas.textures[WILD];
         const ghosts: Sprite[] = [];
 
-        const addGhost = (reelIdx: number, row: number) => {
-          const sym = reelSet.getReel(reelIdx).getSymbolAt(row);
+        const addGhost = (reelIdx: number, cell: number) => {
+          const sym = reelSet.getReel(reelIdx).getSymbolAt(cell);
           const { x, y } = sym.view.toGlobal({ x: 36, y: 36 });
           const ghost = new Sprite(wildTex);
           ghost.anchor.set(0.5);
@@ -64,23 +64,23 @@ export default function StickyWildRecipe() {
           run: async () => {
             reelSet.setSpeed('turbo');
             clearGhosts();
-            const stuck: Array<{ reel: number; row: number }> = [];
+            const stuck: Array<{ reel: number; cell: number }> = [];
             // Scripted wild arrivals. one new wild per respin.
-            const arrivals: Array<{ reel: number; row: number }> = [
-              { reel: 1, row: 1 },
-              { reel: 3, row: 0 },
-              { reel: 2, row: 2 },
+            const arrivals: Array<{ reel: number; cell: number }> = [
+              { reel: 1, cell: 1 },
+              { reel: 3, cell: 0 },
+              { reel: 2, cell: 2 },
             ];
             for (const arrival of arrivals) {
               const grid = fillerGrid(5, 3);
-              for (const s of stuck) grid[s.reel][s.row] = WILD;
-              grid[arrival.reel][arrival.row] = WILD;
+              for (const s of stuck) grid[s.reel][s.cell] = WILD;
+              grid[arrival.reel][arrival.cell] = WILD;
               const p = reelSet.spin();
               await sleep(120);
               reelSet.setResult(grid.map((visible) => ({ visible })));
               await p;
               stuck.push(arrival);
-              addGhost(arrival.reel, arrival.row);
+              addGhost(arrival.reel, arrival.cell);
               await sleep(700);
             }
             await sleep(800);

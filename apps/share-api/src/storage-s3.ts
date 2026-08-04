@@ -9,7 +9,7 @@
  *   studios/<id>/payload.json   SharePayload (mode 5 only)
  *
  * Works against any S3-compatible store (AWS, MinIO, Selectel, Twin
- * Cloud, …). Constructor accepts the credentials directly; env-var
+ * Cloud, ...). Constructor accepts the credentials directly; env-var
  * loading lives in `config.ts`.
  */
 
@@ -101,7 +101,7 @@ export class S3ShareStorage implements ShareStorage {
     let continuationToken: string | undefined;
     // Walk the `studios/` prefix. Each `studios/<id>/` has at most three
     // objects; we only need meta.json to decide expiry. Listing returns
-    // all keys flat — filter to meta.json and parse each.
+    // all keys flat; filter to meta.json and parse each.
     // eslint-disable-next-line no-constant-condition
     while (true) {
       const res = await this.client.send(
@@ -147,7 +147,7 @@ export class S3ShareStorage implements ShareStorage {
       return JSON.parse(body) as T;
     } catch (e) {
       if (e instanceof NoSuchKey) return null;
-      // Other S3 errors propagate — let the route handler 500.
+      // Other S3 errors propagate; let the route handler 500.
       throw e;
     }
   }

@@ -15,8 +15,9 @@
 # The published library.
 /packages/pixi-reels/               @schmooky
 
-# Examples + shared test harness code.
-/examples/                          @schmooky
+# e2e fixtures + the cheats package.
+/tests/e2e/fixtures/                @schmooky
+/packages/cheats/                   @schmooky
 
 # The docs site.
 /apps/site/                         @schmooky

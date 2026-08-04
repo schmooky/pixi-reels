@@ -26,13 +26,13 @@ export interface SpinOptions {
    * Notes:
    *   - `setResult(grid)` still expects a full `reelCount`-length grid;
    *     entries at held indices are ignored. Pass anything (including
-   *     the held reels' current visible rows). the engine doesn't read
+   *     the held reels' current visible cells). the engine doesn't read
    *     held columns.
    *   - `setAnticipation([...])` silently filters held indices.
    *   - `setStopDelays([...])` entries at held indices are ignored.
    *   - The resolved `SpinResult.symbols` is the full visible grid AFTER
-   *     the spin lands. held reels contribute their unchanged rows,
-   *     non-held reels contribute their landed rows.
+   *     the spin lands. held reels contribute their unchanged cells,
+   *     non-held reels contribute their landed cells.
    *   - No `spin:reelLanded` / `spin:stopping` event fires for held reels.
    *   - Big-symbol blocks crossing held into non-held reels are not
    *     supported. the engine doesn't reposition or reshape held reels
@@ -138,7 +138,7 @@ export interface SpeedProfile {
    * profile defines this, the cascade fall + drop-in phases merge these
    * fields over the base config registered via `.tumble(...)` at build
    * time. `setSpeed('turbo')` can shorten `fall.duration`,
-   * `dropIn.duration`, per-row staggers, and the drop ease without the
+   * `dropIn.duration`, per-cell staggers, and the drop ease without the
    * caller maintaining a parallel `setTumble` API.
    *
    * Fields are deep-merged with `Partial` semantics: omitted fields fall
@@ -169,19 +169,19 @@ export interface SymbolData {
    * clipped at the cell boundary.
    *
    * **At-rest presentation:** unmask lifts a symbol above the mask ONLY
-   * while its reel is stopped. On `notifyLanded` each visible-row instance
+   * while its reel is stopped. On `notifyLanded` each visible-cell instance
    * is re-parented into `viewport.unmaskedContainer` (X = `reel.container.x`,
    * Y = `reel.container.y + reelLocalY` so it lines up with its grid cell);
    * the instant the reel starts moving again it is pulled back into the
    * masked reel container. So while spinning, an unmasked id is masked like
-   * everything else. nothing scrolls above the grid, and buffer rows are
+   * everything else. nothing scrolls above the grid, and buffer cells are
    * never lifted. If you need a symbol to stay above the mask *while the
    * reel moves*, use a cell pin instead.
    *
-   * **Works on jagged/pyramid layouts:** a reel with non-zero `offsetY`
+   * **Works on jagged/pyramid layouts:** a reel with non-zero `mainOffset`
    * is handled. `Reel._syncUnmaskedViewOffsets()` re-bakes `container.y`
    * into lifted views after every absolute `motion.snapToGrid()` (which
-   * writes bare reel-local Y); `displace()` is incremental and preserves
+   * writes bare reel-local Y); `advance()` is incremental and preserves
    * the offset. Because lifted views exist only at rest, the frequent
    * mid-spin snaps never touch them.
    *
@@ -195,31 +195,46 @@ export interface SymbolData {
    */
   unmask?: boolean;
   /**
-   * Footprint in cells. Default `{ w: 1, h: 1 }`. When `w * h > 1` this
-   * symbol is a "big symbol". at landing it occupies an `w × h` block of
-   * cells anchored at the (col, row) where its id appears in the result.
+   * Footprint in cells. Default `{ reels: 1, cells: 1 }`. When `reels * cells > 1` this
+   * symbol is a "big symbol". at landing it occupies a `reels × cells` block of
+   * cells anchored at the (reel, cell) where its id appears in the result.
    * Big-symbol registration is rejected on MultiWays slots.
    */
-  size?: { w: number; h: number };
+  size?: { reels: number; cells: number };
 }
 
 /** How to vertically align reels of differing pixel heights. */
-export type ReelAnchor = 'top' | 'center' | 'bottom';
+export type ReelAnchor = 'start' | 'center' | 'end';
+
+/**
+ * Render order along an axis.
+ *
+ *   - `'ascending'` (default). the cell / reel at the LARGER coordinate
+ *     draws on top: the bottom cell in front of the top one, the last reel
+ *     in front of the first.
+ *   - `'descending'`. the reverse.
+ *
+ * Deliberately geometric, not travel-relative: flipping a reel's direction
+ * never changes which symbol overlaps which. Art lit from above keeps
+ * reading correctly on a roll-up reel, and a per-spin reversal tease does
+ * not re-stack the strip mid-game.
+ */
+export type Stacking = 'ascending' | 'descending';
 
 /**
  * MultiWays configuration knobs. Set via `builder.multiways({ ... })`.
  * mutually exclusive with big-symbol registration.
  */
 export interface MultiWaysConfig {
-  /** Minimum visible rows the server can request. Inclusive. */
-  minRows: number;
-  /** Maximum visible rows the server can request. Inclusive. */
-  maxRows: number;
+  /** Minimum visible cells the server can request. Inclusive. */
+  minCells: number;
+  /** Maximum visible cells the server can request. Inclusive. */
+  maxCells: number;
   /**
    * Pixel height of every reel box. Cell height per reel becomes
-   * `reelPixelHeight / visibleRows[i]` after each reshape.
+   * `reelExtent / visibleCells[i]` after each reshape.
    */
-  reelPixelHeight: number;
+  reelExtent: number;
 }
 
 /** Configuration for the reel grid layout. */
@@ -227,16 +242,16 @@ export interface ReelGridConfig {
   /** Number of reel columns. */
   reelCount: number;
   /**
-   * Default visible rows when all reels are uniform. Ignored if
-   * `visibleRowsPerReel` is set.
+   * Default visible cells when all reels are uniform. Ignored if
+   * `visibleCellsPerReel` is set.
    */
-  visibleRows: number;
+  visibleCells: number;
   /**
-   * Per-reel row counts (static shape). Length MUST equal `reelCount`.
+   * Per-reel cell counts (static shape). Length MUST equal `reelCount`.
    * Example: `[3, 5, 5, 5, 3]` for a pyramid layout. Mutually exclusive
-   * with the scalar `visibleRows` field at the builder level.
+   * with the scalar `visibleCells` field at the builder level.
    */
-  visibleRowsPerReel?: number[];
+  visibleCellsPerReel?: number[];
   /** Symbol width in pixels. */
   symbolWidth: number;
   /** Symbol height in pixels. Used as the SPIN-time uniform cell height. */
@@ -244,9 +259,9 @@ export interface ReelGridConfig {
   /**
    * Per-reel pixel-box heights. Length MUST equal `reelCount` when set.
    * For MultiWays: every entry is the same fixed reel height. For static
-   * pyramids: defaults to `visibleRowsPerReel[i] * symbolHeight`.
+   * pyramids: defaults to `visibleCellsPerReel[i] * symbolHeight`.
    */
-  reelPixelHeights?: number[];
+  reelExtents?: number[];
   /**
    * How short reels align vertically inside the tallest reel's height.
    * Default: 'center'.
@@ -258,7 +273,7 @@ export interface ReelGridConfig {
   bufferSymbols?: number;
   /**
    * MultiWays configuration. Set by `builder.multiways(...)`. When present:
-   *   - `setShape(rowsPerReel)` becomes callable mid-spin
+   *   - `setShape(cellsPerReel)` becomes callable mid-spin
    *   - AdjustPhase is inserted between SPIN and STOP
    *   - big-symbol registration throws at build time
    */
@@ -272,14 +287,14 @@ export interface ReelExtraSymbols {
 }
 
 /** Offset modes for X-axis symbol positioning. */
-export type OffsetXMode = 'none' | 'trapezoid';
+export type CrossOffsetMode = 'none' | 'trapezoid';
 
 /** Trapezoid perspective configuration. */
 export interface TrapezoidConfig {
   mode: 'trapezoid';
   widthDifference: number;
-  topWidthFactor: number;
-  bottomWidthFactor: number;
+  startFactor: number;
+  endFactor: number;
 }
 
 /** No offset configuration. */
@@ -289,10 +304,10 @@ export interface NoOffsetConfig {
 
 export type OffsetConfig = TrapezoidConfig | NoOffsetConfig;
 
-/** 2D matrix type (reel × row). */
+/** 2D matrix type (reel × cell). */
 export type Matrix<T> = T[][];
 
-/** Simple 2D position. */
+/** 2D position. */
 export interface Position {
   x: number;
   y: number;
@@ -300,7 +315,7 @@ export interface Position {
 
 /**
  * Axis-aligned bounding box of a single grid cell in ReelSet-local
- * coordinates. Returned by `reelSet.getCellBounds(col, row)`.
+ * coordinates. Returned by `reelSet.getCellBounds(reel, cell)`.
  *
  * Use this to draw paylines, hit areas, debug overlays, or any graphic
  * that needs to align precisely with a visible symbol cell.
@@ -316,17 +331,25 @@ export interface CellBounds {
   height: number;
 }
 
-/** A cell on the visible grid. `reelIndex` is the column; `rowIndex` is the row from the top. */
+/** A cell on the visible grid. `reelIndex` is the column; `cellIndex` is the cell from the top. */
 export interface SymbolPosition {
   reelIndex: number;
-  rowIndex: number;
+  cellIndex: number;
+  /**
+   * Which reel set the position belongs to, when a game composes more than
+   * one (a banner reel above a main grid, a bonus board beside it). Omitted
+   * means "the only set". The engine never reads it; it exists so a
+   * stage-level presenter can tell two identical `(reelIndex, cellIndex)`
+   * pairs apart without wrapping every position in another object.
+   */
+  setId?: string;
 }
 
 /**
  * One "win" as the presenter sees it: an ordered set of cells to highlight.
  *
  * Use cases collapse onto this one shape. whether those cells came from a
- * classic payline ("row 1 across all 5 reels"), a cascade pop ("this cluster
+ * classic payline ("cell 1 across all 5 reels"), a cascade pop ("this cluster
  * vanished"), a scatter splash, or a bonus reveal.
  *
  * The presenter's job is to **animate these cells**. Anything beyond that.
@@ -361,19 +384,19 @@ export interface MaskConfig {
  */
 export interface ResolvedReelGridConfig {
   reelCount: number;
-  visibleRows: number;
+  visibleCells: number;
   symbolWidth: number;
   symbolHeight: number;
   symbolGap: { x: number; y: number };
-  /** Buffer rows above the visible window (also the legacy symmetric count). */
+  /** Buffer cells above the visible window (also the legacy symmetric count). */
   bufferSymbols: number;
   /**
-   * Buffer rows below the visible window. Usually equals `bufferSymbols`;
-   * `0` on tumble-only sets built with `bufferSymbols({ above, below: 0 })`.
+   * Buffer cells below the visible window. Usually equals `bufferSymbols`;
+   * `0` on tumble-only sets built with `bufferSymbols({ start, end: 0 })`.
    */
-  bufferBelow: number;
-  visibleRowsPerReel?: number[];
-  reelPixelHeights?: number[];
+  bufferEnd: number;
+  visibleCellsPerReel?: number[];
+  reelExtents?: number[];
   reelAnchor: ReelAnchor;
   multiways?: MultiWaysConfig;
 }

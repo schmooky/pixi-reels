@@ -17,7 +17,7 @@ const weights = {
 
 const reelSet = new ReelSetBuilder()
   .reels(5)
-  .visibleRows(3)
+  .visibleCells(3)
   .symbolSize(90, 90)
   .symbolGap(4, 4)
   .symbols((r) => {

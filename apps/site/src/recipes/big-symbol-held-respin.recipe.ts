@@ -3,10 +3,8 @@
 //                   PIXI, app
 
 // NUDGE-IN, THEN HOLD a buffer-anchored big symbol across a respin.
-//
-// NUDGE-IN, THEN HOLD a buffer-anchored big symbol across a respin.
-// Reel 3 lands with a tall wild whose anchor sits in bufferAbove (only
-// the tail of the block shows at row 0). The player nudges to drag the
+// Reel 3 lands with a tall wild whose anchor sits in bufferStart (only
+// the tail of the block shows at cell 0). The player nudges to drag the
 // wild into full view, then gets a re-spin of the OTHER reels while
 // reel 3 is held. The held reel preserves the now-revealed block across
 // the respin because `SpinOptions.holdReels` skips START/SPIN/STOP on
@@ -20,7 +18,7 @@
 //      (now-revealed block intact, fully visible).
 //
 // What this proves:
-//   - `setResult` accepts a big-symbol anchor in `bufferAbove`; the
+//   - `setResult` accepts a big-symbol anchor in `bufferStart`; the
 //     coordinator paints OCCUPIED stubs across the strip.
 //   - `nudge()` slides the block as a unit from its buffer-anchored
 //     landing into fully-visible state (strip rotates by `distance`).
@@ -40,9 +38,9 @@ const GAP = 4;
 
 const reelSet = new ReelSetBuilder()
   .reels(REELS)
-  .visibleRows(ROWS)
-  // bufferAbove >= 2 lets the 1x3 anchor sit at row -2 (block extends
-  // through row 0. tail visible).
+  .visibleCells(ROWS)
+  // bufferStart >= 2 lets the 1x3 anchor sit at cell -2 (block extends
+  // through cell 0. tail visible).
   .bufferSymbols(2)
   .symbolSize(SIZE, SIZE)
   .symbolGap(GAP, GAP)
@@ -57,7 +55,7 @@ const reelSet = new ReelSetBuilder()
     });
   })
   .weights(Object.fromEntries(CARD_DECK.map((c, i) => [c.id, 12 - i])))
-  .symbolData({ [TALL.id]: { weight: 0, zIndex: 5, size: { w: TALL.w, h: TALL.h } } })
+  .symbolData({ [TALL.id]: { weight: 0, zIndex: 5, size: { reels: TALL.w, cells: TALL.h } } })
   .speed('normal', { ...SpeedPresets.NORMAL, bounceDistance: 0, bounceDuration: 0 })
   .ticker(app.ticker)
   .build();
@@ -72,9 +70,9 @@ return {
     // ── 1. Initial spin lands the tail-visible wild on reel 2. ──────
     const initialGrid = [
       ct(), ct(),
-      // Reel 2: anchor at bufferAbove[1] = row -2. Block spans rows
-      // -2, -1, 0. Only row 0 shows the block's bottom cell.
-      { visible: [filler(), filler(), filler()], bufferAbove: [undefined, TALL.id] },
+      // Reel 2: anchor at bufferStart[1] = cell -2. Block spans cells
+      // -2, -1, 0. Only cell 0 shows the block's bottom cell.
+      { visible: [filler(), filler(), filler()], bufferStart: [undefined, TALL.id] },
       ct(), ct(),
     ];
     const spin1 = reelSet.spin();
@@ -90,7 +88,7 @@ return {
     // strip[0..2] to strip[2..4]. Visible[0..2] = ['tall', 'tall', 'tall'].
     await reelSet.nudge(HELD_REEL, {
       distance: 2,
-      direction: 'down',
+      direction: 'forward',
       incoming: [filler(), filler()],
       duration: 620,
     });
@@ -110,7 +108,7 @@ return {
     //
     // We hand the held column a placeholder ColumnTarget; the held
     // entry's contents are not validated against the current strip
-    // and are simply dropped during frame building.
+    // and are dropped during frame building.
     const respinGrid = [
       ct(), ct(),
       ct(), // ignored. reel 2 is held

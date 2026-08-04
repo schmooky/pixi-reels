@@ -1,8 +1,8 @@
 // @ts-nocheck
 // Injected globals: ReelSetBuilder, SpeedPresets, SpineReelSymbol,
 //                   StaticSpinSymbol, SpinTextureCache, prewarmSpinTextures,
-//                   loadThunderkickSpines, buildThunderkickSpineMap,
-//                   THUNDERKICK_SYMBOL_IDS, app, pickWeighted
+//                   loadSpineSet,
+//                   app, pickWeighted
 //
 // Real production art on a compact 3-4-4-4-4-3 grid. Each symbol tier is
 // ONE multi-skin skeleton (lowSymbols carries low1..low5 as skins), mapped
@@ -10,16 +10,16 @@
 // every cell swaps to a cached snapshot texture with auto-baked motion
 // blur, so no skeleton ticks while the reels turn.
 
-await loadThunderkickSpines();
+const thunderkick = await loadSpineSet("thunderkick");
 
 // The symbol plates measure exactly 175x203 (setup-pose bounds of the tier
 // skeletons; scatter/mystery intentionally overflow their tile). Cells match
-// the plates 1:1 with no gap — the grid is compact, cell edge to cell edge.
+// the plates 1:1 with no gap - the grid is compact, cell edge to cell edge.
 const SPINE_SCALE = 0.6;
 const CELL_W = 175 * SPINE_SCALE;
 const CELL_H = 203 * SPINE_SCALE;
 
-const spineMap = buildThunderkickSpineMap();
+const spineMap = thunderkick.spineMap;
 
 const weights = {
   low1: 16, low2: 16, low3: 14, low4: 14, low5: 12,
@@ -41,7 +41,7 @@ const createInner = () =>
 // One scratch symbol bakes the static + blurred texture for every id.
 prewarmSpinTextures({
   cache,
-  ids: THUNDERKICK_SYMBOL_IDS,
+  ids: thunderkick.symbolIds,
   createSymbol: createInner,
   width: CELL_W,
   height: CELL_H,
@@ -49,12 +49,12 @@ prewarmSpinTextures({
 
 const reelSet = new ReelSetBuilder()
   .reels(6)
-  .visibleRowsPerReel(ROWS_PER_REEL)
+  .visibleCellsPerReel(ROWS_PER_REEL)
   .reelAnchor('center')
   .symbolSize(CELL_W, CELL_H)
   .symbolGap(0, 0)
   .symbols((r) => {
-    for (const id of THUNDERKICK_SYMBOL_IDS) {
+    for (const id of thunderkick.symbolIds) {
       r.register(id, StaticSpinSymbol, {
         createInner,
         cache,
@@ -63,7 +63,7 @@ const reelSet = new ReelSetBuilder()
     }
   })
   .weights(weights)
-  // Scatter, mystery, and wild art overflow their 175x203 tile — keep them
+  // Scatter, mystery, and wild art overflow their 175x203 tile - keep them
   // painted above neighbouring cells.
   .symbolData({ scatter: { zIndex: 10 }, mystery: { zIndex: 6 }, wild: { zIndex: 5 } })
   .speed('normal', SpeedPresets.NORMAL)
@@ -74,7 +74,7 @@ const reelSet = new ReelSetBuilder()
 return {
   reelSet,
   nextResult: () =>
-    ROWS_PER_REEL.map((rows) =>
-      Array.from({ length: rows }, () => pickWeighted(weights)),
+    ROWS_PER_REEL.map((cells) =>
+      Array.from({ length: cells }, () => pickWeighted(weights)),
     ),
 };

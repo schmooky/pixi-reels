@@ -1,19 +1,24 @@
 import type { RandomSymbolProvider } from './RandomSymbolProvider.js';
+import { columnTargetToStrip, type ColumnTarget } from './ColumnTarget.js';
 
 /** Context passed through the middleware pipeline. */
 export interface FrameContext {
   /** Reel column index. */
   readonly reelIndex: number;
-  /** Total visible rows. */
-  readonly visibleRows: number;
+  /** Total visible cells. */
+  readonly visibleCells: number;
   /** Buffer symbols above visible area. */
-  readonly bufferAbove: number;
+  readonly bufferStart: number;
   /** Buffer symbols below visible area. */
-  readonly bufferBelow: number;
+  readonly bufferEnd: number;
   /** The symbol array being built (buffer + visible + buffer). Mutable by middleware. */
   symbols: string[];
-  /** Target symbols from setResult() (visible rows only), if available. */
-  readonly targetSymbols?: string[];
+  /**
+   * This reel's target column from `setResult()` / `initialFrame()`, if
+   * available. Read it with `getTargetSlot(target, cell)` (cell `0` is the
+   * first visible cell; negative cells are buffer-above).
+   */
+  readonly target?: ColumnTarget;
   /** Whether the reel is currently spinning. */
   readonly isSpinning: boolean;
   /** Arbitrary metadata middleware can use to communicate. */
@@ -40,7 +45,6 @@ export class FrameBuilder {
   private _sorted = false;
 
   constructor(private _randomProvider: RandomSymbolProvider) {
-    // Add built-in middleware
     this.use(new RandomFillMiddleware(_randomProvider));
     this.use(new TargetPlacementMiddleware());
   }
@@ -61,10 +65,10 @@ export class FrameBuilder {
   /** Build a frame for a single reel. */
   build(
     reelIndex: number,
-    visibleRows: number,
-    bufferAbove: number,
-    bufferBelow: number,
-    targetSymbols?: string[],
+    visibleCells: number,
+    bufferStart: number,
+    bufferEnd: number,
+    target?: ColumnTarget,
     isSpinning: boolean = false,
   ): string[] {
     if (!this._sorted) {
@@ -72,14 +76,14 @@ export class FrameBuilder {
       this._sorted = true;
     }
 
-    const totalSlots = bufferAbove + visibleRows + bufferBelow;
+    const totalSlots = bufferStart + visibleCells + bufferEnd;
     const context: FrameContext = {
       reelIndex,
-      visibleRows,
-      bufferAbove,
-      bufferBelow,
+      visibleCells,
+      bufferStart,
+      bufferEnd,
       symbols: new Array<string>(totalSlots).fill(''),
-      targetSymbols,
+      target,
       isSpinning,
       metadata: {},
     };
@@ -100,24 +104,31 @@ export class FrameBuilder {
   /** Build frames for all reels. */
   buildAll(
     reelCount: number,
-    visibleRows: number,
-    bufferAbove: number,
-    bufferBelow: number,
-    targetSymbols?: string[][],
+    visibleCells: number,
+    bufferStart: number,
+    bufferEnd: number,
+    targets?: ColumnTarget[],
     isSpinning: boolean = false,
   ): string[][] {
     return Array.from({ length: reelCount }, (_, reelIndex) =>
       this.build(
         reelIndex,
-        visibleRows,
-        bufferAbove,
-        bufferBelow,
-        targetSymbols?.[reelIndex],
+        visibleCells,
+        bufferStart,
+        bufferEnd,
+        targets?.[reelIndex],
         isSpinning,
       ),
     );
   }
 
+  /**
+   * @internal `RandomSymbolProvider` was hidden from the package entry in
+   * 1.0.0 (PR #140); this getter re-exposed the type. Middleware that needs a
+   * random symbol should read it from the `FrameContext.symbols` slot it is
+   * filling, or carry its own provider - weights are configured through
+   * `builder.weights({...})`.
+   */
   get randomProvider(): RandomSymbolProvider {
     return this._randomProvider;
   }
@@ -138,8 +149,8 @@ class RandomFillMiddleware implements FrameMiddleware {
     for (let i = 0; i < context.symbols.length; i++) {
       if (!context.symbols[i]) {
         const isBuffer =
-          i < context.bufferAbove ||
-          i >= context.bufferAbove + context.visibleRows;
+          i < context.bufferStart ||
+          i >= context.bufferStart + context.visibleCells;
         context.symbols[i] = this._provider.next(isBuffer);
       }
     }
@@ -147,18 +158,18 @@ class RandomFillMiddleware implements FrameMiddleware {
   }
 }
 
-/** Places target symbols (from setResult) into the visible area. */
+/** Places the target column (from setResult) onto the strip. */
 class TargetPlacementMiddleware implements FrameMiddleware {
   readonly name = 'target-placement';
   readonly priority = 10;
 
   process(context: FrameContext, next: () => void): void {
-    if (context.targetSymbols) {
-      for (let row = -context.bufferAbove; row < context.targetSymbols.length; row++) {
-        const idx = context.bufferAbove + row;
-        if (context.targetSymbols[row] && idx < context.symbols.length) {
-          context.symbols[idx] = context.targetSymbols[row];
-        }
+    if (context.target) {
+      const strip = columnTargetToStrip(context.target, context.bufferStart);
+      const count = Math.min(strip.length, context.symbols.length);
+      for (let i = 0; i < count; i++) {
+        const id = strip[i];
+        if (id) context.symbols[i] = id;
       }
     }
     next();

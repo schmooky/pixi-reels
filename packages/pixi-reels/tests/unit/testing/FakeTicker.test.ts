@@ -41,7 +41,7 @@ describe('FakeTicker', () => {
     const fn = vi.fn();
     ticker.add(fn);
     ticker.tickFor(100, 16);
-    // 100 / 16 = 6.25 → 7 calls (6 * 16 + 1 * 4)
+    // 100 / 16 = 6.25 -> 7 calls (6 * 16 + 1 * 4)
     expect(fn).toHaveBeenCalledTimes(7);
   });
 

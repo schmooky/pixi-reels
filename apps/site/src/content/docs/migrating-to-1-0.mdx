@@ -5,11 +5,17 @@ description: Mechanical changes to move from 0.x to 1.0.0. Every breaking change
   with a before and after.
 ---
 
+> **On v2?** This page covers the 0.x to 1.0.0 step. Its `After` snippets are
+> written in v2 form so they still run today, but several names changed again
+> in 2.0.0. Do this page's rewrites first, then
+> [Migrating to 2.0](/docs/migrating-to-2-0/), which starts with a codemod that
+> handles the mechanical half.
+
 A list of every breaking change in 1.0.0 with a before and after snippet. Each section is mechanical: find the pattern, apply the rewrite. The page is intentionally greppable. every pre-1.0 pattern appears verbatim in a `Before` code block so a `git grep skip()` or `git grep visibleSymbols` in your repo lands on the matching rewrite here.
 
 ## visibleSymbols is gone
 
-The deprecated `visibleSymbols` builder setter (an alias of `visibleRows`) is removed. Replace every call:
+The deprecated `visibleSymbols` builder setter is removed. It aliased `visibleRows`, which 2.0.0 renamed again to `visibleCells`. Replace every call:
 
 Before:
 
@@ -23,7 +29,7 @@ builder
 After:
 
 ```ts
-builder.reels(5).visibleRows(3);
+builder.reels(5).visibleCells(3);
 ```
 
 ## setResult and initialFrame accept only ColumnTarget[]
@@ -48,7 +54,7 @@ After:
 ```ts
 reelSet.setResult([
   { visible: ['A', 'B', 'C'] },
-  { visible: ['A', 'B', 'C'], bufferAbove: ['COIN'] },
+  { visible: ['A', 'B', 'C'], bufferStart: ['COIN'] },
 ]);
 ```
 
@@ -113,7 +119,7 @@ Three methods on `Reel` and `ReelSet` were called across files via the underscor
 
 | Before | After |
 |---|---|
-| `Reel._getAnchorRow(visibleRow)` | `Reel.getAnchorRow(visibleRow)` |
+| `Reel._getAnchorCell(visibleRow)` | `Reel.getAnchorCell(visibleCell)` |
 | `ReelSet._peekTargetShape()` | `ReelSet.peekTargetShape()` |
 | `ReelSet._clearTargetShape()` | `ReelSet.clearTargetShape()` |
 
@@ -125,7 +131,7 @@ Consumers should not call these directly. They are marked `@internal` and stripp
 
 Affected methods on `Reel`:
 
-- `setStopFrame`, `setCrossReelResolver`, `getAnchorRow`, `notifySpinStart`, `notifySpinEnd`, `notifyLanded`, `snapToGrid`, `reshape`.
+- `setStopFrame`, `setCrossReelResolver`, `getAnchorCell`, `notifySpinStart`, `notifySpinEnd`, `notifyLanded`, `snapToGrid`, `reshape`.
 
 If your code typechecked against `Reel.reshape(...)` or any of the above, switch to the public alternative:
 
@@ -182,7 +188,7 @@ const result: RefillResult = await reelSet.refill({
 console.log(result.finalGrid, result.winnersRefilled, result.wasSkipped);
 ```
 
-The new fields (`winnersRefilled`, `finalGrid`, `wasSkipped`, `duration`) match `RunCascadeResult`. one stage's worth.
+It shares `finalGrid` and `wasSkipped` with `RunCascadeResult`; `winnersRefilled` and `duration` are refill-specific. one stage's worth.
 
 ## Testing utilities moved to pixi-reels/testing
 
@@ -226,14 +232,14 @@ The types (`TestReelSetOptions`, `TestReelSetHandle`) move with them. The Spine 
 Before (undefined behavior, no error):
 
 ```ts
-const nudging = reelSet.nudge(2, { distance: 1, direction: 'down', incoming: ['wild'] });
+const nudging = reelSet.nudge(2, { distance: 1, direction: 'forward', incoming: ['wild'] });
 // reelSet.spin() here used to race the nudge tween silently.
 ```
 
 After (the engine throws "ReelSet.spin: cannot be called while nudge() is in flight."):
 
 ```ts
-const nudging = reelSet.nudge(2, { distance: 1, direction: 'down', incoming: ['wild'] });
+const nudging = reelSet.nudge(2, { distance: 1, direction: 'forward', incoming: ['wild'] });
 await nudging;
 await reelSet.spin();
 ```

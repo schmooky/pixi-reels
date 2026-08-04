@@ -43,7 +43,7 @@ function buildHarness(initialFrame: string[][]): Harness {
   const ticker = new FakeTicker();
   const reelSet = new ReelSetBuilder()
     .reels(initialFrame.length)
-    .visibleRows(initialFrame[0].length)
+    .visibleCells(initialFrame[0].length)
     .symbolSize(50, 50)
     .symbols((r) => {
       for (const id of ['a', 'b', 'c', 'd']) {
@@ -52,8 +52,8 @@ function buildHarness(initialFrame: string[][]): Harness {
     })
     .weights({ a: 1, b: 1, c: 1, d: 1 })
     .tumble({
-      fall:   { duration: 300, ease: 'sine.in',    rowStagger: 0 },
-      dropIn: { duration: 600, ease: 'power2.out', rowStagger: 60, distance: 'perHole' },
+      fall:   { duration: 300, ease: 'sine.in',    cellStagger: 0 },
+      dropIn: { duration: 600, ease: 'power2.out', cellStagger: 60, distance: 'perHole' },
     })
     .initialFrame(initialFrame.map((visible) => ({ visible })))
     .ticker(ticker as unknown as Ticker)
@@ -71,8 +71,8 @@ const yieldToGsap = (ms = 50): Promise<void> =>
 
 describe('mergeFallConfig / mergeDropInConfig', () => {
   const base = resolveTumbleConfig({
-    fall:   { duration: 300, ease: 'sine.in', rowStagger: 0 },
-    dropIn: { duration: 600, ease: 'power2.out', rowStagger: 60, distance: 'perHole' },
+    fall:   { duration: 300, ease: 'sine.in', cellStagger: 0 },
+    dropIn: { duration: 600, ease: 'power2.out', cellStagger: 60, distance: 'perHole' },
   });
 
   it('mergeFallConfig returns the base when override is undefined', () => {
@@ -85,8 +85,8 @@ describe('mergeFallConfig / mergeDropInConfig', () => {
     expect(merged).toEqual({
       duration: 80,
       ease: 'sine.in',
-      rowStagger: 0,
-      rowOrder: 'bottomToTop',
+      cellStagger: 0,
+      cellOrder: 'auto',
     });
   });
 
@@ -103,15 +103,15 @@ describe('mergeFallConfig / mergeDropInConfig', () => {
     expect(merged).toEqual({
       duration: 220,
       ease: 'expo.out',
-      rowStagger: 60,
-      rowOrder: 'bottomToTop',
+      cellStagger: 60,
+      cellOrder: 'auto',
       distance: 'perHole',
     });
   });
 
   it('does not mutate the base config', () => {
     const original = { ...base.fall };
-    mergeFallConfig(base.fall, { duration: 1, ease: 'none', rowStagger: 1, rowOrder: 'topToBottom' });
+    mergeFallConfig(base.fall, { duration: 1, ease: 'none', cellStagger: 1, cellOrder: 'startFirst' });
     expect(base.fall).toEqual(original);
   });
 });
@@ -122,12 +122,12 @@ describe('CascadeFallPhase. SpeedProfile.tumble override (snap path)', () => {
     const bus = new EventEmitter<ReelSetEvents>();
     const events: string[] = [];
     bus.on('cascade:fall:start',  (i) => events.push(`start:${i.reelIndex}`));
-    bus.on('cascade:fall:symbol', (i) => events.push(`sym:${i.reelIndex}:${i.rowIndex}`));
+    bus.on('cascade:fall:symbol', (i) => events.push(`sym:${i.reelIndex}:${i.cellIndex}`));
     bus.on('cascade:fall:end',    (i) => events.push(`end:${i.reelIndex}`));
 
     const reel = h.reelSet.getReel(0);
     const baseFall = resolveTumbleConfig({
-      fall: { duration: 300, ease: 'sine.in', rowStagger: 0 },
+      fall: { duration: 300, ease: 'sine.in', cellStagger: 0 },
     }).fall;
     const snap: SpeedProfile = {
       ...SpeedPresets.TURBO,
@@ -147,9 +147,9 @@ describe('CascadeFallPhase. SpeedProfile.tumble override (snap path)', () => {
     bus.on('cascade:fall:end', (i) => events.push(`end:${i.reelIndex}`));
 
     const reel = h.reelSet.getReel(0);
-    // Base.duration = 0 ⇒ snap path with a vanilla NORMAL profile (no tumble override).
+    // Base.duration = 0 => snap path with a vanilla NORMAL profile (no tumble override).
     const baseFall = resolveTumbleConfig({
-      fall: { duration: 0, ease: 'sine.in', rowStagger: 0 },
+      fall: { duration: 0, ease: 'sine.in', cellStagger: 0 },
     }).fall;
     const phase = new CascadeFallPhase(reel, SpeedPresets.NORMAL, baseFall);
 
@@ -165,7 +165,7 @@ describe('CascadeDropInPhase. SpeedProfile.tumble override (snap path)', () => {
     const bus = new EventEmitter<ReelSetEvents>();
     const events: string[] = [];
     bus.on('cascade:dropIn:start',  (i) => events.push(`start:${i.reelIndex}`));
-    bus.on('cascade:dropIn:symbol', (i) => events.push(`sym:${i.reelIndex}:${i.rowIndex}`));
+    bus.on('cascade:dropIn:symbol', (i) => events.push(`sym:${i.reelIndex}:${i.cellIndex}`));
     bus.on('cascade:dropIn:end',    (i) => events.push(`end:${i.reelIndex}`));
 
     const reel = h.reelSet.getReel(0);
@@ -176,7 +176,7 @@ describe('CascadeDropInPhase. SpeedProfile.tumble override (snap path)', () => {
     };
     const phase = new CascadeDropInPhase(reel, snap, baseDrop);
 
-    await phase.run({ winnerRows: [], initial: true, events: bus });
+    await phase.run({ winnerCells: [], initial: true, events: bus });
     expect(events).toEqual(['start:0', 'end:0']);
     h.destroy();
   });
@@ -193,7 +193,7 @@ describe('CascadeFallPhase. SpeedProfile.tumble override (timeline path)', () =>
 
     const reel = h.reelSet.getReel(0);
     const baseFall = resolveTumbleConfig({
-      fall: { duration: 300, ease: 'sine.in', rowStagger: 0 },
+      fall: { duration: 300, ease: 'sine.in', cellStagger: 0 },
     }).fall;
     const turbo: SpeedProfile = {
       ...SpeedPresets.TURBO,
@@ -225,7 +225,7 @@ describe('CascadeFallPhase. SpeedProfile.tumble override (timeline path)', () =>
 
     const reel = h.reelSet.getReel(0);
     const baseFall = resolveTumbleConfig({
-      fall: { duration: 300, ease: 'sine.in', rowStagger: 0 },
+      fall: { duration: 300, ease: 'sine.in', cellStagger: 0 },
     }).fall;
     const phase = new CascadeFallPhase(reel, SpeedPresets.NORMAL, baseFall);
 
@@ -254,15 +254,15 @@ describe('CascadeDropInPhase. SpeedProfile.tumble override (timeline path)', () 
 
     const reel = h.reelSet.getReel(0);
     const baseDrop = resolveTumbleConfig({
-      dropIn: { duration: 600, ease: 'power2.out', rowStagger: 60, distance: 'perHole' },
+      dropIn: { duration: 600, ease: 'power2.out', cellStagger: 60, distance: 'perHole' },
     }).dropIn;
     const turbo: SpeedProfile = {
       ...SpeedPresets.TURBO,
-      tumble: { dropIn: { duration: 240, ease: 'expo.out', rowStagger: 0 } },
+      tumble: { dropIn: { duration: 240, ease: 'expo.out', cellStagger: 0 } },
     };
     const phase = new CascadeDropInPhase(reel, turbo, baseDrop);
 
-    const done = phase.run({ winnerRows: [], initial: true, events: bus });
+    const done = phase.run({ winnerCells: [], initial: true, events: bus });
     await yieldToGsap();
     phase.forceComplete();
     await done;
@@ -284,7 +284,7 @@ describe('cascade:fall:symbol. AbortSignal', () => {
     bus.on('cascade:fall:symbol', (info) => { signals.push(info.signal); });
 
     const reel = h.reelSet.getReel(0);
-    const fall = resolveTumbleConfig({ fall: { duration: 300, rowStagger: 0 } }).fall;
+    const fall = resolveTumbleConfig({ fall: { duration: 300, cellStagger: 0 } }).fall;
     const phase = new CascadeFallPhase(reel, SpeedPresets.NORMAL, fall);
 
     const done = phase.run({ spinningMode: new StandardMode(), delay: 0, events: bus });
@@ -303,11 +303,11 @@ describe('cascade:fall:symbol. AbortSignal', () => {
     const bus = new EventEmitter<ReelSetEvents>();
     const aborted: number[] = [];
     bus.on('cascade:fall:symbol', (info) => {
-      info.signal.addEventListener('abort', () => aborted.push(info.rowIndex), { once: true });
+      info.signal.addEventListener('abort', () => aborted.push(info.cellIndex), { once: true });
     });
 
     const reel = h.reelSet.getReel(0);
-    const fall = resolveTumbleConfig({ fall: { duration: 300, rowStagger: 0 } }).fall;
+    const fall = resolveTumbleConfig({ fall: { duration: 300, cellStagger: 0 } }).fall;
     const phase = new CascadeFallPhase(reel, SpeedPresets.NORMAL, fall);
 
     const done = phase.run({ spinningMode: new StandardMode(), delay: 0, events: bus });
@@ -327,16 +327,16 @@ describe('cascade:dropIn:symbol. AbortSignal', () => {
     const bus = new EventEmitter<ReelSetEvents>();
     const aborted: number[] = [];
     bus.on('cascade:dropIn:symbol', (info) => {
-      info.signal.addEventListener('abort', () => aborted.push(info.rowIndex), { once: true });
+      info.signal.addEventListener('abort', () => aborted.push(info.cellIndex), { once: true });
     });
 
     const reel = h.reelSet.getReel(0);
     const drop = resolveTumbleConfig({
-      dropIn: { duration: 300, rowStagger: 0, distance: 'perHole' },
+      dropIn: { duration: 300, cellStagger: 0, distance: 'perHole' },
     }).dropIn;
     const phase = new CascadeDropInPhase(reel, SpeedPresets.NORMAL, drop);
 
-    const done = phase.run({ winnerRows: [], initial: true, events: bus });
+    const done = phase.run({ winnerCells: [], initial: true, events: bus });
     await yieldToGsap();
     expect(aborted).toEqual([]);
 
@@ -354,19 +354,19 @@ describe('cascade:gravity:symbol. AbortSignal', () => {
     const bus = new EventEmitter<ReelSetEvents>();
     const aborted: number[] = [];
     bus.on('cascade:gravity:symbol', (info) => {
-      info.signal.addEventListener('abort', () => aborted.push(info.rowIndex), { once: true });
+      info.signal.addEventListener('abort', () => aborted.push(info.cellIndex), { once: true });
     });
 
     const reel = h.reelSet.getReel(0);
     const drop = resolveTumbleConfig({
-      dropIn: { duration: 300, rowStagger: 0, distance: 'perHole' },
+      dropIn: { duration: 300, cellStagger: 0, distance: 'perHole' },
     }).dropIn;
     const phase = new CascadeDropInPhase(reel, SpeedPresets.NORMAL, drop);
 
-    // winnerRows=[1] on a 3-row reel gives the survivor at row 0 an
-    // offsetRows=1 slide. a real gravity-stage job the phase will animate.
+    // winnerCells=[1] on a 3-cell reel gives the survivor at cell 0 an
+    // offsetCells=1 slide. a real gravity-stage job the phase will animate.
     const done = phase.run({
-      winnerRows: [1],
+      winnerCells: [1],
       initial: false,
       role: 'gravity',
       events: bus,

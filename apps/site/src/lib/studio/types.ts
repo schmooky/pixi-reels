@@ -13,7 +13,9 @@ export type SymbolType = 'sprite' | 'animatedSprite' | 'spine';
 
 /**
  * Lifecycle events a Spine symbol class can drive. Names match what
- * `SpineReelSymbol` consumes. see `examples/shared/SpineReelSymbol.ts`.
+ * `SpineReelSymbol` consumes. see
+ * `packages/pixi-reels/src/spine/SpineReelSymbol.ts`, exported as
+ * `pixi-reels/spine`.
  * The studio UI lets users pick one animation per event from the
  * skeleton's available animations.
  */
@@ -69,7 +71,7 @@ export interface SpineSymbolConfig {
   /**
    * PNG data URL of the symbol rendered offscreen at setup pose (or one
    * frame of `idle`, when available). Generated at save time so the
-   * Symbols-tab row shows a real thumbnail and not just a bone icon.
+   * Symbols-tab cell shows a real thumbnail and not just a bone icon.
    * Optional. preview generation is best-effort and may fail on
    * malformed bundles.
    */

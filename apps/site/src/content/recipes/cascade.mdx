@@ -1,0 +1,134 @@
+---
+title: "Cascade & tumble"
+group: mechanics
+oneLiner: The tumble toolkit end to end, covering the destroy-and-refill loop, drop orders, lead-in delays, anticipation refills, and spin-then-cascade hybrids.
+order: 30
+tags:
+  - cascade
+  - tumble
+  - refill
+  - anticipation
+  - spine
+  - thunderkick
+  - horizontal
+  - reverse
+  - orientation
+  - gravity
+apis: []
+steps: []
+---
+
+The full cascade and tumble toolkit, one live demo at a time.
+
+<a id="cascade-6x5"></a>
+
+## Cascade 6x4 tumble
+
+Modern tumble mechanic where `runCascade` owns the detect, destroy, refill loop; the second canvas is the identical recipe on real Thunderkick Spine art.
+
+<RecipeDemo code="cascade-6x5" height={300} />
+<RecipeDemo code="cascade-6x5-spine" height={300} />
+
+<a id="cascade-destroy-and-present"></a>
+
+## Cascade wins. present, destroy, refill
+
+The fixed round order (present the win, destroy the winners, refill the holes), then the destroy stage two ways: the engine implode versus an authored Spine explosion.
+
+**Gotcha:** compute winners from your match logic, never by diffing two grids. survivors slide past cleared slots and a diff misreads them.
+
+<RecipeDemo code="destroy-winpresenter" height={300} />
+<RecipeDemo code="destroy-fade" height={300} />
+<RecipeDemo code="destroy-explode" height={300} />
+
+<a id="fall-delays"></a>
+
+## Lead-in delay before the fall
+
+Same spin, only the gap between the SPIN click and the first frame of fall-out changes: 0, 150, 350, and 700 ms.
+
+<RecipeDemo code="fall-delay-instant" height={300} />
+<RecipeDemo code="fall-delay-subtle" height={300} />
+<RecipeDemo code="fall-delay-anticipation" height={300} />
+<RecipeDemo code="fall-delay-suspense" height={300} />
+
+<a id="refill-orders"></a>
+
+## Cascade refill orders
+
+Same destruction, only the post-win refill ordering changes: simultaneous, left-to-right wave, and bottom-up.
+
+<RecipeDemo code="refill-simultaneous" height={300} />
+<RecipeDemo code="refill-ltr-wave" height={300} />
+<RecipeDemo code="refill-bottom-up" height={300} />
+
+<a id="tumble-feels"></a>
+
+## Tumble feels. every preset
+
+Same spin and cascade refill, only `.tumble({ fall, dropIn })` changes: classic, slow drop, slam, rain column, and wave.
+
+<RecipeDemo code="tumble-classic" height={300} />
+<RecipeDemo code="tumble-cartoon-bounce" height={300} />
+<RecipeDemo code="tumble-slam" height={300} />
+<RecipeDemo code="tumble-rain-column" height={300} />
+<RecipeDemo code="tumble-wave" height={300} />
+
+<a id="tumble-anticipation"></a>
+
+## Cascade anticipation refill
+
+Two-stage refill: survivors slide down first, a held anticipation beat for multipliers and mascots, then new symbols drop in reel by reel.
+
+<RecipeDemo code="tumble-anticipation" height={300} />
+<RecipeDemo code="tumble-anticipation-stagger" height={300} />
+
+<a id="spin-then-cascade"></a>
+
+## Spin first, cascade after
+
+Open every play with a classic strip-spin, then cascade the respins; the per-spin `mode` override flips between strip-spin and pure drop.
+
+<RecipeDemo code="spin-then-cascade" height={300} />
+<RecipeDemo code="cascade-open-drop" height={300} />
+<RecipeDemo code="spin-then-cascade-turbo" height={300} />
+
+<a id="cascade-horizontal-tumble"></a>
+
+## Cascade sideways
+
+The same tumble on `.orientation('horizontal')`: reels are screen rows, the strip travels along X, and `tumble({ gravity })` stays on its default `'auto'`, so each reel drains toward the edge it travels toward and refills from the other one.
+
+**Gotcha:** gravity decides the server contract. survivors must be packed against the edge gravity exits by (`[...fresh, ...survivors]` under forward gravity). The engine animates the grid you send, it never reorders it.
+
+<RecipeDemo code="cascade-horizontal-tumble" height={300} />
+
+<a id="cascade-reverse-gravity"></a>
+
+## Spin up, drop down (explicit gravity)
+
+Reels built `.direction('reverse')` roll upward, but `tumble({ gravity: 'forward' })` makes the tumble settle downward anyway. `gravity` is only worth setting when you want travel and settling to disagree; leave it at `'auto'` and a reverse reel drains upward with no further config.
+
+That includes the cell stagger. `cellOrder` defaults to `'auto'`, which starts at the gravity-exit end. the edge symbols are leaving by. Under the explicit forward gravity here the bottom cell still goes first; drop the override and the top cell leads instead, because that is the edge the column now drains through. Pass `'endFirst'` or `'startFirst'` to pin a geometric end regardless of gravity.
+
+<RecipeDemo code="cascade-reverse-gravity" height={300} />
+
+<a id="cascade-drain-upward"></a>
+
+## Drain upward (gravity follows travel)
+
+The default case, for comparison: `.direction('reverse')` with no `gravity` key at all. Everything flips together. the top cell falls first and lands first, and the column peels upward behind it.
+
+**Gotcha:** the server contract flips with it. Survivors pack against the edge gravity exits by, which is now the top, so `nextGrid` returns `[...survivors, ...fresh]`. Flipping the reel without flipping the grid is what makes an upward board look scrambled.
+
+<RecipeDemo code="cascade-drain-upward" height={300} />
+
+<a id="peek-from-above"></a>
+
+## Peek symbol from buffer-start
+
+Pre-fill the `bufferStart` slot so a teaser symbol sits just out of frame, visible during the next spin's scroll-in.
+
+<RecipeDemo code="peek-from-above" height={300} />
+
+<AssetCredit studio="Thunderkick" />

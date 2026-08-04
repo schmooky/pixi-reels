@@ -24,7 +24,7 @@ Two groups of terms are mixed here: **slot vocabulary** (concepts every slot use
 
 **Free spins (FS)**. Bonus round where the player gets a fixed number of spins at no cost. Often includes sticky wilds, multipliers, or expanding wilds.
 
-**Grid**. The two-dimensional snapshot of visible symbols, indexed `grid[reelIndex][rowIndex]`. A 5x3 slot has a 5x3 grid.
+**Grid**. The two-dimensional snapshot of visible symbols, indexed `grid[reelIndex][cellIndex]`. A 5x3 slot has a 5x3 grid.
 
 **Hold & Win (Link & Win, Respin)**. Bonus round where special "coin" symbols lock in place when they land, and you keep respinning until no new ones land. or the whole grid fills and pays a jackpot.
 
@@ -40,7 +40,7 @@ Two groups of terms are mixed here: **slot vocabulary** (concepts every slot use
 
 **Reel**. One vertical column of symbols.
 
-**Reel strip**. The (long, invisible) list of symbols a reel draws from. pixi-reels does not expose this directly. it just asks for a next symbol from a frame middleware chain.
+**Reel strip**. The (long, invisible) list of symbols a reel draws from. pixi-reels does not expose this directly. it asks for a next symbol from a frame middleware chain.
 
 **Respin**. A spin where some reels are held in place and only the others move. A single-reel respin holds every reel except one; a Hold & Win respin holds every "coin" cell.
 
@@ -68,7 +68,7 @@ Two groups of terms are mixed here: **slot vocabulary** (concepts every slot use
 
 ## Library-specific names
 
-**`ReelSet`**. The top-level object. Think of it as "the whole slot board": a PixiJS container that holds the reels, the spin controller, the speed manager, and the spotlight. You build one with `new ReelSetBuilder()...build()` and `addChild` it to your stage.
+**`ReelSet`**. The top-level object, "the whole slot board": a PixiJS container that holds the reels, the spin controller, the speed manager, and the spotlight. You build one with `new ReelSetBuilder()...build()` and `addChild` it to your stage.
 
 **`ReelSetBuilder`**. A fluent builder (chainable methods) that turns a pile of config into a `ReelSet`. Use it so you cannot forget to wire a required piece. every mandatory call is enforced at `.build()` time.
 
@@ -82,13 +82,13 @@ Two groups of terms are mixed here: **slot vocabulary** (concepts every slot use
 
 **`ReelPhase`**. A single stage in a reel's life during a spin. pixi-reels ships built-in phases for wind-up, constant-speed blur, optional anticipation slow-down, and the decelerate-snap-bounce stop. Add your own by extending `ReelPhase` and registering via the `PhaseFactory` callback in `builder.phases(f => f.register('name', MyPhase))`. The built-in phase classes are internal; only the Config TYPES (`StartPhaseConfig`, `SpinPhaseConfig`, etc.) are exported as stable shape descriptions.
 
-**`SpinningMode`**. The big strategy switch that decides what a spin even means. `StandardMode` is the default (each reel runs through the phases independently). `CascadeMode` replaces columns atomically for tumble mechanics. `ImmediateMode` is a no-motion mode for testing.
+**`SpinningMode`**. The per-frame motion strategy: one method, `computeDelta(slotPitch, speed, deltaMs)`, returning how far the strip travels this frame. `StandardMode` is the default. `CascadeMode` multiplies by a gravity factor (1.5) and caps the step at one slot pitch. `ImmediateMode` returns 0, so the phase places symbols directly. Not the same thing as `spin({ mode: 'standard' | 'cascade' })`, which picks the phase chain.
 
 **`SpeedManager`**. Holds named `SpeedProfile` objects (timings, easings, bounce distance). Switch profiles at runtime with `reelSet.setSpeed('turbo')`.
 
 **`SymbolSpotlight`**. The win-animation primitive. Dims non-winners, promotes winners above the mask, runs `playWin()` on each, and can cycle through multiple lines.
 
-**`FrameBuilder` / middleware**. A tiny middleware pipeline that decides what symbol identity goes into each buffer slot when a reel needs another row. Intercept it to implement "no three-in-a-row", "inject a mystery symbol every 7 frames", etc.
+**`FrameBuilder` / middleware**. A tiny middleware pipeline that fills a reel's whole frame -- buffer-start + visible cells + buffer-end -- with symbol identities each time the engine builds one. Intercept it to implement "no three-in-a-row", "inject a mystery symbol every 7 frames", etc.
 
 **`ObjectPool<T>`**. The reuse bucket behind every symbol. Scrolling a 5x3 reel for 5 seconds allocates zero new `ReelSymbol` objects. they come from and return to the pool.
 
@@ -100,7 +100,7 @@ Two groups of terms are mixed here: **slot vocabulary** (concepts every slot use
 
 **`enableDebug(reelSet)`**. Attaches `window.__PIXI_REELS_DEBUG` with `.log()`, `.snapshot()`, `.grid()`, `.trace()`. the only way to inspect reel state through a `canvas` (including from an AI agent).
 
-**`CellPin`**. The cell-persistence primitive. Lock a symbol id to a cell with `reelSet.pin(col, row, id)`; the engine acquires an overlay during spin, migrates the cell on reshape, and supports an animated `movePin(from, to)` tween. Works with any `ReelSymbol` subclass. The pin primitive is general, not Spine-specific.
+**`CellPin`**. The cell-persistence primitive. Lock a symbol id to a cell with `reelSet.pin(reel, cell, id)`; the engine acquires an overlay during spin, migrates the cell on reshape, and supports an animated `movePin(from, to)` tween. Works with any `ReelSymbol` subclass. The pin primitive is general, not Spine-specific.
 
 **`RefillOptions` / `RefillResult`**. The typed pair around `reelSet.refill(opts)`. Pass `{ winners, grid, mode?, signal? }`; receive `{ winnersRefilled, finalGrid, wasSkipped, duration }`. Mirrors the shape of `RunCascadeOptions` / `RunCascadeResult` so the cascade-loop primitives compose cleanly.
 
@@ -108,7 +108,7 @@ Two groups of terms are mixed here: **slot vocabulary** (concepts every slot use
 
 **`createTestReelSet`**. The headless harness. Builds a `ReelSet` with a `FakeTicker` + `HeadlessSymbol` so you can run a full spin lifecycle in Node, with no DOM or canvas, and assert on the final grid. In 1.0 it ships at the `pixi-reels/testing` subpath so the harness drops out of production bundles.
 
-**`CheatEngine` (examples)**. Deterministic outcome generator used by demos and tests. Lives in `examples/shared/`, not in the library. ADR 009 covers why.
+**`CheatEngine` (outside the library)**. Deterministic outcome generator used by the recipes and by the library's own integration tests. Lives in the private `@pixi-reels/cheats` workspace package, not in the library. ADR 009 covers why.
 
 **Changeset**. A small markdown file under `.changeset/` describing a release-worthy change and which package(s) to bump. Generated by `pnpm changeset`; consumed by the release workflow to version and publish.
 

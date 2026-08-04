@@ -2,25 +2,25 @@ import { describe, it, expect } from 'vitest';
 import { createTestReelSet } from '../../src/testing/index.js';
 
 describe('big symbols', () => {
-  it('lands a 2x2 block, anchor row reports anchor id, OCCUPIED rows do too', async () => {
+  it('lands a 2x2 block, anchor cell reports anchor id, OCCUPIED cells do too', async () => {
     const { reelSet, spinAndLand, destroy } = createTestReelSet({
       reels: 5,
-      visibleRows: 3,
+      visibleCells: 3,
       symbolIds: ['a', 'bonus'],
-      symbolData: { bonus: { weight: 0, size: { w: 2, h: 2 } } },
+      symbolData: { bonus: { weight: 0, size: { reels: 2, cells: 2 } } },
     });
     try {
       await spinAndLand([
-        ['a', 'a', 'a'],
-        ['a', 'a', 'a'],
-        ['bonus', 'X', 'a'], // server places anchor; engine paints OCCUPIED
-        ['Y', 'Z', 'a'],     // ignored. engine paints OCCUPIED
-        ['a', 'a', 'a'],
+        { visible: ['a', 'a', 'a'] },
+        { visible: ['a', 'a', 'a'] },
+        { visible: ['bonus', 'X', 'a'] }, // server places anchor; engine paints OCCUPIED
+        { visible: ['Y', 'Z', 'a'] },     // ignored. engine paints OCCUPIED
+        { visible: ['a', 'a', 'a'] },
       ]);
       // Same-reel resolution at the Reel level.
       const reel2 = reelSet.reels[2];
       expect(reel2.getVisibleSymbols()[0]).toBe('bonus'); // anchor
-      expect(reel2.getVisibleSymbols()[1]).toBe('bonus'); // intra-reel OCCUPIED → anchor
+      expect(reel2.getVisibleSymbols()[1]).toBe('bonus'); // intra-reel OCCUPIED -> anchor
 
       // Cross-reel resolution via the ReelSet API.
       const grid = reelSet.getVisibleGrid();
@@ -37,27 +37,21 @@ describe('big symbols', () => {
   it('getSymbolFootprint reports anchor + size for cells inside a 2x2 block', async () => {
     const { reelSet, spinAndLand, destroy } = createTestReelSet({
       reels: 5,
-      visibleRows: 3,
+      visibleCells: 3,
       symbolIds: ['a', 'bonus'],
-      symbolData: { bonus: { weight: 0, size: { w: 2, h: 2 } } },
+      symbolData: { bonus: { weight: 0, size: { reels: 2, cells: 2 } } },
     });
     try {
-      await spinAndLand([
-        ['a', 'a', 'a'],
-        ['a', 'a', 'a'],
-        ['bonus', 'a', 'a'],
-        ['a', 'a', 'a'],
-        ['a', 'a', 'a'],
-      ]);
+      await spinAndLand([ { visible: ['a', 'a', 'a'] }, { visible: ['a', 'a', 'a'] }, { visible: ['bonus', 'a', 'a'] }, { visible: ['a', 'a', 'a'] }, { visible: ['a', 'a', 'a'] } ]);
       const fp = reelSet.getSymbolFootprint(2, 0);
-      expect(fp).toEqual({ anchor: { col: 2, row: 0 }, size: { w: 2, h: 2 } });
+      expect(fp).toEqual({ anchor: { reel: 2, cell: 0 }, size: { reels: 2, cells: 2 } });
       const fp2 = reelSet.getSymbolFootprint(3, 0);
-      expect(fp2).toEqual({ anchor: { col: 2, row: 0 }, size: { w: 2, h: 2 } });
+      expect(fp2).toEqual({ anchor: { reel: 2, cell: 0 }, size: { reels: 2, cells: 2 } });
       const fp3 = reelSet.getSymbolFootprint(2, 1);
-      expect(fp3).toEqual({ anchor: { col: 2, row: 0 }, size: { w: 2, h: 2 } });
-      // Normal cell: 1×1 footprint at itself.
+      expect(fp3).toEqual({ anchor: { reel: 2, cell: 0 }, size: { reels: 2, cells: 2 } });
+      // Normal cell: 1x1 footprint at itself.
       const fp4 = reelSet.getSymbolFootprint(0, 0);
-      expect(fp4).toEqual({ anchor: { col: 0, row: 0 }, size: { w: 1, h: 1 } });
+      expect(fp4).toEqual({ anchor: { reel: 0, cell: 0 }, size: { reels: 1, cells: 1 } });
     } finally {
       destroy();
     }
@@ -66,12 +60,12 @@ describe('big symbols', () => {
   it('throws when block extends past the bottom of the strip', async () => {
     const { reelSet, destroy } = createTestReelSet({
       reels: 3,
-      visibleRows: 3,
-      // total strip = bufferAbove(1) + visibleRows(3) + bufferBelow(1) = 5.
-      // 1x6 block at row 0 needs rows 0..5. last row (5) is one past
+      visibleCells: 3,
+      // total strip = bufferStart(1) + visibleCells(3) + bufferEnd(1) = 5.
+      // 1x6 block at cell 0 needs cells 0..5. last cell (5) is one past
       // the strip end.
       symbolIds: ['a', 'giant'],
-      symbolData: { giant: { weight: 0, size: { w: 1, h: 6 } } },
+      symbolData: { giant: { weight: 0, size: { reels: 1, cells: 6 } } },
     });
     try {
       const promise = reelSet.spin();
@@ -92,9 +86,9 @@ describe('big symbols', () => {
   it('throws when block extends past last column', async () => {
     const { reelSet, destroy } = createTestReelSet({
       reels: 3,
-      visibleRows: 3,
+      visibleCells: 3,
       symbolIds: ['a', 'wide'],
-      symbolData: { wide: { weight: 0, size: { w: 4, h: 1 } } },
+      symbolData: { wide: { weight: 0, size: { reels: 4, cells: 1 } } },
     });
     try {
       const promise = reelSet.spin();
@@ -116,9 +110,9 @@ describe('big symbols', () => {
     expect(() =>
       createTestReelSet({
         reels: 5,
-        multiways: { minRows: 2, maxRows: 7, reelPixelHeight: 600 },
+        multiways: { minCells: 2, maxCells: 7, reelExtent: 600 },
         symbolIds: ['a', 'bonus'],
-        symbolData: { bonus: { weight: 0, size: { w: 2, h: 2 } } },
+        symbolData: { bonus: { weight: 0, size: { reels: 2, cells: 2 } } },
       }),
     ).toThrow(/big symbol .* cannot be registered on a MultiWays slot/);
   });
@@ -126,19 +120,13 @@ describe('big symbols', () => {
   it('getBlockBounds returns the pixel rect for a 2x2 block from any cell', async () => {
     const { reelSet, spinAndLand, destroy } = createTestReelSet({
       reels: 5,
-      visibleRows: 3,
+      visibleCells: 3,
       symbolIds: ['a', 'bonus'],
-      symbolData: { bonus: { weight: 0, size: { w: 2, h: 2 } } },
+      symbolData: { bonus: { weight: 0, size: { reels: 2, cells: 2 } } },
       symbolSize: { width: 100, height: 100 },
     });
     try {
-      await spinAndLand([
-        ['a', 'a', 'a'],
-        ['a', 'a', 'a'],
-        ['bonus', 'a', 'a'],
-        ['a', 'a', 'a'],
-        ['a', 'a', 'a'],
-      ]);
+      await spinAndLand([ { visible: ['a', 'a', 'a'] }, { visible: ['a', 'a', 'a'] }, { visible: ['bonus', 'a', 'a'] }, { visible: ['a', 'a', 'a'] }, { visible: ['a', 'a', 'a'] } ]);
       // From the anchor cell.
       const r1 = reelSet.getBlockBounds(2, 0);
       expect(r1.width).toBe(200);
@@ -159,41 +147,41 @@ describe('big symbols', () => {
     expect(() =>
       createTestReelSet({
         reels: 3,
-        visibleRows: 3,
+        visibleCells: 3,
         symbolIds: ['a', 'bonus'],
-        symbolData: { bonus: { weight: 5, size: { w: 2, h: 2 } } },
+        symbolData: { bonus: { weight: 5, size: { reels: 2, cells: 2 } } },
       }),
     ).toThrow(/big symbol .* must have weight 0/);
   });
 
-  // ─── Buffer-row anchors (partial visibility) ────────────────────────
-  // A 1xH block can land with its anchor in bufferAbove (tail visible at
-  // the top of the window) or with stubs spilling into bufferBelow (head
+  // --- Buffer-cell anchors (partial visibility) ------------------------
+  // A 1xH block can land with its anchor in bufferStart (tail visible at
+  // the top of the window) or with stubs spilling into bufferEnd (head
   // visible at the bottom). The coordinator scans the full strip range,
   // `_finalizeFrame` sizes anchors anywhere on the strip, and
   // `getVisibleSymbols` / `getSymbolFootprint` / `getBlockBounds` all
-  // resolve consistently. including via a negative `anchor.row` for
+  // resolve consistently. including via a negative `anchor.cell` for
   // buffer-above anchors.
 
-  it('lands a 1x3 with anchor in bufferAbove. visible row 0 reads the anchor id', async () => {
+  it('lands a 1x3 with anchor in bufferStart. visible cell 0 reads the anchor id', async () => {
     const { reelSet, spinAndLand, destroy } = createTestReelSet({
       reels: 1,
-      visibleRows: 3,
+      visibleCells: 3,
       bufferSymbols: 2,
       symbolIds: ['a', 'b', 'tall'],
-      symbolData: { tall: { weight: 0, size: { w: 1, h: 3 } } },
+      symbolData: { tall: { weight: 0, size: { reels: 1, cells: 3 } } },
     });
     try {
-      // ColumnTarget form. Anchor at bufferAbove[1] = row -2. Block
-      // spans rows -2, -1, 0. only the bottom cell shows in visible
-      // row 0. The coordinator paints OCCUPIED at row -1 and row 0
+      // ColumnTarget form. Anchor at bufferStart[1] = cell -2. Block
+      // spans cells -2, -1, 0. only the bottom cell shows in visible
+      // cell 0. The coordinator paints OCCUPIED at cell -1 and cell 0
       // automatically; the user's `visible[0]` is overwritten.
       await spinAndLand([
-        { visible: ['a', 'a', 'a'], bufferAbove: [undefined, 'tall'] },
+        { visible: ['a', 'a', 'a'], bufferStart: [undefined, 'tall'] },
       ]);
 
-      // Visible row 0 resolves to the anchor via the negative-row
-      // occupancy added by `_finalizeFrame`'s bufferAbove scan.
+      // Visible cell 0 resolves to the anchor via the negative-cell
+      // occupancy added by `_finalizeFrame`'s bufferStart scan.
       const grid = reelSet.getVisibleGrid();
       expect(grid[0][0]).toBe('tall');
       expect(grid[0][1]).toBe('a');
@@ -203,19 +191,19 @@ describe('big symbols', () => {
     }
   });
 
-  it('lands a 1x2 with anchor in bufferAbove[0]. top two rows of the block are off-screen, bottom shows at row 0+1', async () => {
+  it('lands a 1x2 with anchor in bufferStart[0]. top two cells of the block are off-screen, bottom shows at cell 0+1', async () => {
     const { reelSet, spinAndLand, destroy } = createTestReelSet({
       reels: 1,
-      visibleRows: 3,
+      visibleCells: 3,
       bufferSymbols: 1,
       symbolIds: ['a', 'tall'],
-      symbolData: { tall: { weight: 0, size: { w: 1, h: 2 } } },
+      symbolData: { tall: { weight: 0, size: { reels: 1, cells: 2 } } },
     });
     try {
-      // Anchor at bufferAbove[0] = row -1. Block spans rows -1, 0.
-      // Only row 0 is visible; row 1 and row 2 are the user's `a` fillers.
+      // Anchor at bufferStart[0] = cell -1. Block spans cells -1, 0.
+      // Only cell 0 is visible; cell 1 and cell 2 are the user's `a` fillers.
       await spinAndLand([
-        { visible: ['x', 'a', 'a'], bufferAbove: ['tall'] },
+        { visible: ['x', 'a', 'a'], bufferStart: ['tall'] },
       ]);
       const grid = reelSet.getVisibleGrid();
       expect(grid[0][0]).toBe('tall');
@@ -226,49 +214,49 @@ describe('big symbols', () => {
     }
   });
 
-  it('lands a 1x2 with anchor at last visible row. stub spills into bufferBelow', async () => {
+  it('lands a 1x2 with anchor at last visible cell. stub spills into bufferEnd', async () => {
     const { reelSet, spinAndLand, destroy } = createTestReelSet({
       reels: 1,
-      visibleRows: 3,
+      visibleCells: 3,
       bufferSymbols: 1,
       symbolIds: ['a', 'tall'],
-      symbolData: { tall: { weight: 0, size: { w: 1, h: 2 } } },
+      symbolData: { tall: { weight: 0, size: { reels: 1, cells: 2 } } },
     });
     try {
-      // Anchor at visible row 2 (last). Block spans rows 2, 3. row 3
-      // is bufferBelow[0]. Pre-feature this threw (`row + h > rows`);
+      // Anchor at visible cell 2 (last). Block spans cells 2, 3. cell 3
+      // is bufferEnd[0]. Pre-feature this threw (`cell + h > cells`);
       // now it's a legal partial-visibility placement.
       await spinAndLand([
         { visible: ['a', 'a', 'tall'] },
       ]);
       const grid = reelSet.getVisibleGrid();
       expect(grid[0]).toEqual(['a', 'a', 'tall']);
-      // Footprint reports the anchor at its actual visible row.
+      // Footprint reports the anchor at its actual visible cell.
       const fp = reelSet.getSymbolFootprint(0, 2);
-      expect(fp.anchor.row).toBe(2);
-      expect(fp.size).toEqual({ w: 1, h: 2 });
+      expect(fp.anchor.cell).toBe(2);
+      expect(fp.size).toEqual({ reels: 1, cells: 2 });
     } finally {
       destroy();
     }
   });
 
-  it('getSymbolFootprint returns a NEGATIVE anchor.row for blocks anchored in bufferAbove', async () => {
+  it('getSymbolFootprint returns a NEGATIVE anchor.cell for blocks anchored in bufferStart', async () => {
     const { reelSet, spinAndLand, destroy } = createTestReelSet({
       reels: 1,
-      visibleRows: 3,
+      visibleCells: 3,
       bufferSymbols: 2,
       symbolIds: ['a', 'tall'],
-      symbolData: { tall: { weight: 0, size: { w: 1, h: 3 } } },
+      symbolData: { tall: { weight: 0, size: { reels: 1, cells: 3 } } },
     });
     try {
-      // Anchor at bufferAbove[1] = row -2.
+      // Anchor at bufferStart[1] = cell -2.
       await spinAndLand([
-        { visible: ['a', 'a', 'a'], bufferAbove: [undefined, 'tall'] },
+        { visible: ['a', 'a', 'a'], bufferStart: [undefined, 'tall'] },
       ]);
       const fp = reelSet.getSymbolFootprint(0, 0);
-      expect(fp.anchor.row).toBe(-2);
-      expect(fp.size).toEqual({ w: 1, h: 3 });
-      // getBlockBounds handles the negative row. returns the full
+      expect(fp.anchor.cell).toBe(-2);
+      expect(fp.size).toEqual({ reels: 1, cells: 3 });
+      // getBlockBounds handles the negative cell. returns the full
       // block's pixel rect (the off-screen portion is clipped by mask).
       const r = reelSet.getBlockBounds(0, 0);
       expect(r.height).toBeGreaterThan(0);
@@ -281,23 +269,23 @@ describe('big symbols', () => {
   it('partial-visibility block + nudge = fully reveals the block', async () => {
     const { reelSet, spinAndLand, destroy } = createTestReelSet({
       reels: 1,
-      visibleRows: 3,
+      visibleCells: 3,
       bufferSymbols: 1,
       symbolIds: ['a', 'b', 'tall'],
-      symbolData: { tall: { weight: 0, size: { w: 1, h: 2 } } },
+      symbolData: { tall: { weight: 0, size: { reels: 1, cells: 2 } } },
     });
     try {
-      // 1x2 anchor at bufferAbove[0]: block spans rows -1 and 0.
+      // 1x2 anchor at bufferStart[0]: block spans cells -1 and 0.
       // Visible reads ['tall' (via occupancy), 'a', 'a'].
       await spinAndLand([
-        { visible: ['x', 'a', 'a'], bufferAbove: ['tall'] },
+        { visible: ['x', 'a', 'a'], bufferStart: ['tall'] },
       ]);
       expect(reelSet.getVisibleGrid()[0]).toEqual(['tall', 'a', 'a']);
-      // Nudge down by 1. the anchor slides into visible row 0, stub
-      // moves to row 1. Block fully visible.
+      // Nudge down by 1. the anchor slides into visible cell 0, stub
+      // moves to cell 1. Block fully visible.
       const result = await reelSet.nudge(0, {
         distance: 1,
-        direction: 'down',
+        direction: 'forward',
         incoming: ['b'],
       });
       expect(result.symbols[0]).toBe('tall');
@@ -308,58 +296,54 @@ describe('big symbols', () => {
     }
   });
 
-  it('strip-spin landing: 1x2 block at last visible row + stub in bufferBelow lands cleanly', async () => {
+  it('strip-spin landing: 1x2 block at last visible cell + stub in bufferEnd lands cleanly', async () => {
     const { reelSet, spinAndLand, destroy } = createTestReelSet({
       reels: 3,
-      visibleRows: 3,
+      visibleCells: 3,
       bufferSymbols: 1,
       symbolIds: ['a', 'b', 'tall'],
-      symbolData: { tall: { weight: 0, size: { w: 1, h: 2 } } },
+      symbolData: { tall: { weight: 0, size: { reels: 1, cells: 2 } } },
     });
     try {
       // setResult goes through `_coordinateBigSymbols`, so a 1x2 anchor
-      // at row 2 (stub spilling into bufferBelow) should be legal.
-      await spinAndLand([
-        ['a', 'a', 'tall'],
-        ['a', 'a', 'a'],
-        ['a', 'a', 'a'],
-      ]);
+      // at cell 2 (stub spilling into bufferEnd) should be legal.
+      await spinAndLand([ { visible: ['a', 'a', 'tall'] }, { visible: ['a', 'a', 'a'] }, { visible: ['a', 'a', 'a'] } ]);
       const grid = reelSet.getVisibleGrid();
       expect(grid[0]).toEqual(['a', 'a', 'tall']);
       // And the anchor's footprint reports correctly.
       const fp = reelSet.getSymbolFootprint(0, 2);
-      expect(fp.anchor).toEqual({ col: 0, row: 2 });
-      expect(fp.size).toEqual({ w: 1, h: 2 });
+      expect(fp.anchor).toEqual({ reel: 0, cell: 2 });
+      expect(fp.size).toEqual({ reels: 1, cells: 2 });
     } finally {
       destroy();
     }
   });
 
-  // ReelMotion wrap thresholds depended on the assumption bufferBelow === 1
-  //. `_maxY` was hard-coded to `(visibleRows + 1) * slotH`, which collapses
-  // to `strip[last].y` exactly for bufferBelow=2 and triggers a phantom wrap
-  // on the first displace tick. With the fix, maxY scales with bufferBelow
+  // ReelMotion wrap thresholds depended on the assumption bufferEnd === 1
+  //. `_maxY` was hard-coded to `(visibleCells + 1) * slotH`, which collapses
+  // to `strip[last].y` exactly for bufferEnd=2 and triggers a phantom wrap
+  // on the first advance tick. With the fix, maxY scales with bufferEnd
   // and nudge counts wraps exactly `distance` times.
   //
   // We assert the EXACT strip layout (anchor at strip[2], stubs at strip[3..4])
   // and not just visibleSymbols. Pre-fix the visible symbols read
   // `['?', 'tall', 'tall']` because the block landed at strip[3..5] with the
-  // tail spilling into bufferBelow. exactly the "tail in lower buffer"
+  // tail spilling into bufferEnd. exactly the "tail in lower buffer"
   // regression. Asserting strip-by-index catches that even if a future bug
   // happens to also produce the right `visibleSymbols` accidentally.
-  it('nudge DOWN preserves block position when bufferBelow >= 2 (pre-fix: off-by-one)', async () => {
+  it('nudge DOWN preserves block position when bufferEnd >= 2 (pre-fix: off-by-one)', async () => {
     const { reelSet, spinAndLand, destroy } = createTestReelSet({
       reels: 1,
-      visibleRows: 3,
-      bufferSymbols: 2, // bufferAbove=2 AND bufferBelow=2. total strip = 7.
+      visibleCells: 3,
+      bufferSymbols: 2, // bufferStart=2 AND bufferEnd=2. total strip = 7.
       symbolIds: ['a', 'tall'],
-      symbolData: { tall: { weight: 0, size: { w: 1, h: 3 } } },
+      symbolData: { tall: { weight: 0, size: { reels: 1, cells: 3 } } },
     });
     try {
-      // 1x3 anchor at bufferAbove[1] = row -2: block at rows -2, -1, 0.
+      // 1x3 anchor at bufferStart[1] = cell -2: block at cells -2, -1, 0.
       // Tail visible: visible[0] = stub mapped to 'tall', visible[1..2] = 'a'.
       await spinAndLand([
-        { visible: ['a', 'a', 'a'], bufferAbove: [undefined, 'tall'] },
+        { visible: ['a', 'a', 'a'], bufferStart: [undefined, 'tall'] },
       ]);
       expect(reelSet.getVisibleGrid()[0]).toEqual(['tall', 'a', 'a']);
 
@@ -372,30 +356,30 @@ describe('big symbols', () => {
       expect(preStrip[1]).toBe(OCC);
       expect(preStrip[2]).toBe(OCC);
 
-      // DOWN by 2: anchor moves from strip[0] (row -2) to strip[2] (row 0).
-      // Block fills all three visible rows. Pre-fix this landed at strip[3]
+      // DOWN by 2: anchor moves from strip[0] (cell -2) to strip[2] (cell 0).
+      // Block fills all three visible cells. Pre-fix this landed at strip[3]
       // because the wrap fired one tick too early. the tail slipped into
-      // bufferBelow and only the top 2/3 of the block stayed visible.
+      // bufferEnd and only the top 2/3 of the block stayed visible.
       const result = await reelSet.nudge(0, {
         distance: 2,
-        direction: 'down',
+        direction: 'forward',
         incoming: ['a', 'a'],
       });
       expect(result.symbols).toEqual(['tall', 'tall', 'tall']);
 
       const postStrip = reel.symbols.map((s) => s.symbolId);
-      expect(postStrip[2]).toBe('tall'); // anchor at row 0
+      expect(postStrip[2]).toBe('tall'); // anchor at cell 0
       expect(postStrip[3]).toBe(OCC);
       expect(postStrip[4]).toBe(OCC);
       // Bufferbelow must NOT carry any block cell. that was the
-      // regression: tail ended up at strip[5] (= bufferBelow[0]).
+      // regression: tail ended up at strip[5] (= bufferEnd[0]).
       expect(postStrip[5]).not.toBe(OCC);
       expect(postStrip[5]).not.toBe('tall');
 
       // UP by 2 returns to tail-visible.
       const result2 = await reelSet.nudge(0, {
         distance: 2,
-        direction: 'up',
+        direction: 'reverse',
         incoming: ['a', 'a'],
       });
       expect(result2.symbols).toEqual(['tall', 'a', 'a']);
@@ -411,36 +395,36 @@ describe('big symbols', () => {
 
   // The user-reported regression: when the recipe runs DOWN only (no UP),
   // pre-fix the block ended in a head-visible state with the tail in
-  // bufferBelow. Post-fix the block ends in fully-visible state (anchor at
-  // row 0). This test mirrors that exact scenario verbatim.
+  // bufferEnd. Post-fix the block ends in fully-visible state (anchor at
+  // cell 0). This test mirrors that exact scenario verbatim.
   it('DOWN-only nudge from tail-visible lands the block fully visible, not head-visible', async () => {
     const { reelSet, spinAndLand, destroy } = createTestReelSet({
       reels: 1,
-      visibleRows: 3,
+      visibleCells: 3,
       bufferSymbols: 2,
       symbolIds: ['a', 'tall'],
-      symbolData: { tall: { weight: 0, size: { w: 1, h: 3 } } },
+      symbolData: { tall: { weight: 0, size: { reels: 1, cells: 3 } } },
     });
     try {
       await spinAndLand([
-        { visible: ['a', 'a', 'a'], bufferAbove: [undefined, 'tall'] },
+        { visible: ['a', 'a', 'a'], bufferStart: [undefined, 'tall'] },
       ]);
 
       const result = await reelSet.nudge(0, {
         distance: 2,
-        direction: 'down',
+        direction: 'forward',
         incoming: ['a', 'a'],
       });
 
-      // All three visible rows show the block.
+      // All three visible cells show the block.
       expect(result.symbols).toEqual(['tall', 'tall', 'tall']);
 
       // And specifically the block did NOT land in head-visible with the
-      // tail spilling into bufferBelow. Strip layout:
-      //   bufferAbove(2) | visible(3) | bufferBelow(2)
+      // tail spilling into bufferEnd. Strip layout:
+      //   bufferStart(2) | visible(3) | bufferEnd(2)
       //   [0..1]         | [2..4]     | [5..6]
       // Correct: anchor strip[2], stubs strip[3..4].
-      // Regression: anchor strip[3], stubs strip[4..5] (stub at bufferBelow[0]).
+      // Regression: anchor strip[3], stubs strip[4..5] (stub at bufferEnd[0]).
       const OCC = '__pixi_reels_occupied__';
       const ids = reelSet.reels[0].symbols.map((s) => s.symbolId);
       expect(ids[2]).toBe('tall');
@@ -451,58 +435,58 @@ describe('big symbols', () => {
   });
 
   // Cross-reel buffer-above anchor: a 2x2 block whose anchor sits at
-  // bufferAbove[0] on the left reel. The block covers col 0 rows -1, 0 and
-  // col 1 rows -1, 0. On col 1, the visible[0] OccupiedStub must resolve
-  // back to the anchor on col 0 via the cross-reel resolver, even though
-  // the anchor lives at a NEGATIVE row.
+  // bufferStart[0] on the left reel. The block covers reel 0 cells -1, 0 and
+  // reel 1 cells -1, 0. On reel 1, the visible[0] OccupiedStub must resolve
+  // back to the anchor on reel 0 via the cross-reel resolver, even though
+  // the anchor lives at a NEGATIVE cell.
   //
   // This exercises three branches together that no other test hits:
-  //   - `_coordinateBigSymbols` painting OCCUPIED at `(col=1, row=-1)`
-  //     AND `(col=1, row=0)` for a w>1 block anchored above visible.
-  //   - The cross-reel resolver's `symbols[bufferAbove + anchor.row]`
-  //     read with a negative `anchor.row`.
+  //   - `_coordinateBigSymbols` painting OCCUPIED at `(reel=1, cell=-1)`
+  //     AND `(reel=1, cell=0)` for a w>1 block anchored above visible.
+  //   - The cross-reel resolver's `symbols[bufferStart + anchor.cell]`
+  //     read with a negative `anchor.cell`.
   //   - `getSymbolFootprint` walking left from a cross-reel OCCUPIED cell
-  //     whose own `_getAnchorRow` returns the visible row (no per-reel
-  //     occupancy on col 1 because Scan 2 only sees its own anchor) and
+  //     whose own `_getAnchorRow` returns the visible cell (no per-reel
+  //     occupancy on reel 1 because Scan 2 only sees its own anchor) and
   //     finding the leftward big-symbol owner that covers it.
-  it('cross-reel 2x2 with anchor in bufferAbove. resolves visible cells and footprint correctly', async () => {
+  it('cross-reel 2x2 with anchor in bufferStart. resolves visible cells and footprint correctly', async () => {
     const { reelSet, spinAndLand, destroy } = createTestReelSet({
       reels: 2,
-      visibleRows: 3,
+      visibleCells: 3,
       bufferSymbols: 2,
       symbolIds: ['a', 'big'],
-      symbolData: { big: { weight: 0, size: { w: 2, h: 2 } } },
+      symbolData: { big: { weight: 0, size: { reels: 2, cells: 2 } } },
     });
     try {
-      // Anchor at (col=0, bufferAbove[0]) = (col=0, row=-1). Block covers
+      // Anchor at (reel=0, bufferStart[0]) = (reel=0, cell=-1). Block covers
       // (0,-1)(anchor), (1,-1)(stub), (0,0)(stub), (1,0)(stub).
-      // Visible: row 0 across both cols shows the bottom of the block;
-      // rows 1, 2 are random fillers.
+      // Visible: cell 0 across both cols shows the bottom of the block;
+      // cells 1, 2 are random fillers.
       await spinAndLand([
-        { visible: ['a', 'a', 'a'], bufferAbove: ['big'] },
+        { visible: ['a', 'a', 'a'], bufferStart: ['big'] },
         { visible: ['a', 'a', 'a'] },
       ]);
 
-      // Visible row 0 on BOTH columns resolves to 'big':
-      //   - col 0: via local `_occupancy[0].anchorRow = -1` (Scan 2)
-      //   - col 1: via the cross-reel resolver walking left to col 0
+      // Visible cell 0 on BOTH columns resolves to 'big':
+      //   - reel 0: via local `_occupancy[0].anchorCell = -1` (Scan 2)
+      //   - reel 1: via the cross-reel resolver walking left to reel 0
       const grid = reelSet.getVisibleGrid();
       expect(grid[0][0]).toBe('big');
       expect(grid[1][0]).toBe('big');
       expect(grid[0][1]).toBe('a');
       expect(grid[1][1]).toBe('a');
 
-      // Footprint from EITHER cell of the visible bottom row of the block
+      // Footprint from EITHER cell of the visible bottom cell of the block
       // points back to the same anchor at (0, -1).
       const fpLeft = reelSet.getSymbolFootprint(0, 0);
-      expect(fpLeft.anchor).toEqual({ col: 0, row: -1 });
-      expect(fpLeft.size).toEqual({ w: 2, h: 2 });
+      expect(fpLeft.anchor).toEqual({ reel: 0, cell: -1 });
+      expect(fpLeft.size).toEqual({ reels: 2, cells: 2 });
 
       const fpRight = reelSet.getSymbolFootprint(1, 0);
-      expect(fpRight.anchor).toEqual({ col: 0, row: -1 });
-      expect(fpRight.size).toEqual({ w: 2, h: 2 });
+      expect(fpRight.anchor).toEqual({ reel: 0, cell: -1 });
+      expect(fpRight.size).toEqual({ reels: 2, cells: 2 });
 
-      // Block bounds span both reels and reach above visible row 0.
+      // Block bounds span both reels and reach above visible cell 0.
       const r = reelSet.getBlockBounds(1, 0);
       expect(r.width).toBeGreaterThan(0);
       expect(r.height).toBeGreaterThan(0);
@@ -515,24 +499,24 @@ describe('big symbols', () => {
     }
   });
 
-  // Cross-reel block at the LAST visible row with stubs spilling into
-  // bufferBelow on both columns. Mirror of the cross-reel buffer-above
+  // Cross-reel block at the LAST visible cell with stubs spilling into
+  // bufferEnd on both columns. Mirror of the cross-reel buffer-above
   // test above, but for the bottom of the strip. Exercises
-  // `_coordinateBigSymbols` painting OCCUPIED into bufferBelow positions
-  // (`row >= visibleRows`) across multiple reels, and the per-Reel
+  // `_coordinateBigSymbols` painting OCCUPIED into bufferEnd positions
+  // (`cell >= visibleCells`) across multiple reels, and the per-Reel
   // `placeSymbols` path consuming those positions during the slamStop
   // skip-path landing.
-  it('cross-reel 2x2 anchored at last visible row. stubs spill into bufferBelow on both columns', async () => {
+  it('cross-reel 2x2 anchored at last visible cell. stubs spill into bufferEnd on both columns', async () => {
     const { reelSet, spinAndLand, destroy } = createTestReelSet({
       reels: 2,
-      visibleRows: 3,
+      visibleCells: 3,
       bufferSymbols: 1,
       symbolIds: ['a', 'big'],
-      symbolData: { big: { weight: 0, size: { w: 2, h: 2 } } },
+      symbolData: { big: { weight: 0, size: { reels: 2, cells: 2 } } },
     });
     try {
-      // Anchor at (col=0, row=2). Block covers (0,2)(anchor), (1,2)(stub),
-      // (0,3)(stub in bufferBelow[0]), (1,3)(stub in bufferBelow[0]).
+      // Anchor at (reel=0, cell=2). Block covers (0,2)(anchor), (1,2)(stub),
+      // (0,3)(stub in bufferEnd[0]), (1,3)(stub in bufferEnd[0]).
       await spinAndLand([
         { visible: ['a', 'a', 'big'] },
         { visible: ['a', 'a', 'a'] },
@@ -543,20 +527,20 @@ describe('big symbols', () => {
       expect(grid[1][2]).toBe('big'); // cross-reel resolver
 
       const OCC = '__pixi_reels_occupied__';
-      // bufferBelow[0] lives at strip index `bufferAbove + visibleRows` = 1+3 = 4.
+      // bufferEnd[0] lives at strip index `bufferStart + visibleCells` = 1+3 = 4.
       const reel0BufferBelow = reelSet.reels[0].symbols[4].symbolId;
       const reel1BufferBelow = reelSet.reels[1].symbols[4].symbolId;
-      // Both bufferBelow slots got painted OCCUPIED by the coordinator
+      // Both bufferEnd slots got painted OCCUPIED by the coordinator
       // and survived the skip-path placeSymbols.
       expect(reel0BufferBelow).toBe(OCC);
       expect(reel1BufferBelow).toBe(OCC);
 
-      // Footprint from either visible-row cell points to the same anchor.
+      // Footprint from either visible-cell cell points to the same anchor.
       const fpLeft = reelSet.getSymbolFootprint(0, 2);
       const fpRight = reelSet.getSymbolFootprint(1, 2);
-      expect(fpLeft.anchor).toEqual({ col: 0, row: 2 });
-      expect(fpRight.anchor).toEqual({ col: 0, row: 2 });
-      expect(fpLeft.size).toEqual({ w: 2, h: 2 });
+      expect(fpLeft.anchor).toEqual({ reel: 0, cell: 2 });
+      expect(fpRight.anchor).toEqual({ reel: 0, cell: 2 });
+      expect(fpLeft.size).toEqual({ reels: 2, cells: 2 });
     } finally {
       destroy();
     }
@@ -565,24 +549,24 @@ describe('big symbols', () => {
   it('throws if the buffer-anchored block extends past the bottom of the strip', async () => {
     const { reelSet, destroy } = createTestReelSet({
       reels: 1,
-      visibleRows: 3,
+      visibleCells: 3,
       bufferSymbols: 1,
-      // Strip layout: bufferAbove(1) | visible(3) | bufferBelow(1). 5 cells.
-      // The check is `anchor.row + h > visibleRows + bufferBelow`, i.e.
-      // `row + 4 > 4`. So legal anchor rows for h=4 are {-1, 0}:
-      //   row=-1 → -1+4 = 3 → 3 > 4 ? no → fits (cells -1..2).
-      //   row= 0 →  0+4 = 4 → 4 > 4 ? no → fits exactly (cells 0..3,
-      //                                          last cell in bufferBelow).
-      //   row= 1 →  1+4 = 5 → 5 > 4 ? yes → throws.
-      //   row= 2 →  2+4 = 6 → 6 > 4 ? yes → throws (what this test uses).
+      // Strip layout: bufferStart(1) | visible(3) | bufferEnd(1). 5 cells.
+      // The check is `anchor.cell + h > visibleCells + bufferEnd`, i.e.
+      // `cell + 4 > 4`. So legal anchor cells for h=4 are {-1, 0}:
+      //   cell=-1 -> -1+4 = 3 -> 3 > 4 ? no -> fits (cells -1..2).
+      //   cell= 0 ->  0+4 = 4 -> 4 > 4 ? no -> fits exactly (cells 0..3,
+      //                                          last cell in bufferEnd).
+      //   cell= 1 ->  1+4 = 5 -> 5 > 4 ? yes -> throws.
+      //   cell= 2 ->  2+4 = 6 -> 6 > 4 ? yes -> throws (what this test uses).
       symbolIds: ['a', 'tall'],
-      symbolData: { tall: { weight: 0, size: { w: 1, h: 4 } } },
+      symbolData: { tall: { weight: 0, size: { reels: 1, cells: 4 } } },
     });
     try {
       const promise = reelSet.spin();
       expect(() => {
         reelSet.setResult([
-          { visible: ['a', 'a', 'tall'] }, // anchor at row 2, h=4 → past strip
+          { visible: ['a', 'a', 'tall'] }, // anchor at cell 2, h=4 -> past strip
         ]);
       }).toThrow(/extends past the bottom of the strip/);
       reelSet.slamStop();

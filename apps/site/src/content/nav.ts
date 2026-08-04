@@ -24,6 +24,7 @@ export const GUIDES_NAV: NavSection[] = [
       { label: 'Pins', href: '/guides/pins/' },
       { label: 'Spin lifecycle', href: '/guides/spin-lifecycle/' },
       { label: 'Cascades', href: '/guides/cascades/' },
+      { label: 'Orientation & direction', href: '/guides/orientation-and-direction/' },
       { label: 'Per-reel geometry', href: '/guides/per-reel-geometry/' },
       { label: 'MultiWays', href: '/guides/multiways/' },
       { label: 'Big symbols', href: '/guides/big-symbols/' },
@@ -58,6 +59,7 @@ export const WIKI_NAV: NavSection[] = [
     title: 'Full reference',
     items: [
       { label: 'API index (TypeDoc)', href: '/api/' },
+      { label: 'Migrating to 2.0', href: '/docs/migrating-to-2-0/' },
       { label: 'Migrating to 1.0', href: '/docs/migrating-to-1-0/' },
       { label: 'Glossary', href: '/docs/glossary/' },
       { label: 'Changelog', href: '/changelog/' },

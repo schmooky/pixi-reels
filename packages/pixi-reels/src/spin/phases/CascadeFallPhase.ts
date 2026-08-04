@@ -1,6 +1,5 @@
 import type { gsap } from 'gsap';
 import type { Container } from 'pixi.js';
-import { getGsap } from '../../utils/gsapRef.js';
 import { ReelPhase } from './ReelPhase.js';
 import type { Reel } from '../../core/Reel.js';
 import type { SpeedProfile } from '../../config/types.js';
@@ -9,7 +8,13 @@ import type { ReelSymbol } from '../../symbols/ReelSymbol.js';
 import type { EventEmitter } from '../../events/EventEmitter.js';
 import type { ReelSetEvents } from '../../events/ReelEvents.js';
 import type { TumbleFallConfig } from '../../cascade/TumbleConfig.js';
-import { mergeFallConfig } from '../../cascade/TumbleConfig.js';
+import {
+  gravitySign,
+  mergeFallConfig,
+  resolveCellOrder,
+  resolveGravity,
+} from '../../cascade/TumbleConfig.js';
+import type { Direction } from '../../core/ReelAxis.js';
 
 export interface CascadeFallPhaseConfig {
   /** Required by the start-phase contract. set on the reel even though
@@ -30,7 +35,7 @@ export interface CascadeFallPhaseConfig {
  * symbol falls off the bottom of the viewport. The reel then sits at speed
  * zero while `SpinPhase` waits for the server result.
  *
- * Animation parameters (duration, ease, row stagger) are baked into the
+ * Animation parameters (duration, ease, cell stagger) are baked into the
  * phase at builder time via the factory closure; the run-time config
  * carries only per-spin context (delay, event bus).
  */
@@ -63,10 +68,19 @@ export class CascadeFallPhase extends ReelPhase<CascadeFallPhaseConfig> {
    *  skips trigger it. */
   private _skipAbort: AbortController | null = null;
 
-  constructor(reel: Reel, speed: SpeedProfile, fall: Required<TumbleFallConfig>) {
+  /** Build-time gravity setting; `'auto'` resolves per reel at `onEnter`. */
+  private readonly _gravity: 'auto' | Direction;
+
+  constructor(
+    reel: Reel,
+    speed: SpeedProfile,
+    fall: Required<TumbleFallConfig>,
+    gravity: 'auto' | Direction = 'auto',
+  ) {
     super(reel, speed);
     this._baseFall = fall;
     this._fall = fall;
+    this._gravity = gravity;
   }
 
   protected onEnter(config: CascadeFallPhaseConfig): void {
@@ -85,7 +99,7 @@ export class CascadeFallPhase extends ReelPhase<CascadeFallPhaseConfig> {
 
     const delaySec = (config.delay ?? 0) / 1000;
     if (delaySec > 0) {
-      this._delayedCall = getGsap().delayedCall(delaySec, () => this._beginFall(config.events));
+      this._delayedCall = this._reel.gsap.delayedCall(delaySec, () => this._beginFall(config.events));
     } else {
       this._beginFall(config.events);
     }
@@ -95,26 +109,38 @@ export class CascadeFallPhase extends ReelPhase<CascadeFallPhaseConfig> {
     this._delayedCall = null;
 
     const reel = this._reel;
-    const cellHeight = reel.motion.slotHeight;
-    const visibleRows = reel.visibleRows;
+    const axis = reel.axis;
+    const cellHeight = reel.motion.slotPitch;
+    const visibleCells = reel.visibleCells;
     const reelIndex = reel.reelIndex;
+    // Symbols fall along GRAVITY, not along travel. The two coincide under
+    // the default `gravity: 'auto'`, but a reel can spin one way and drop
+    // the other (ADR 016 section 3.6).
+    const gravity = resolveGravity(this._gravity, axis.direction);
+    const sign = gravitySign(gravity);
 
-    // Distance: just past the bottom buffer so the symbols clear the mask.
-    const fallDistance = (visibleRows + reel.bufferBelow + 1) * cellHeight;
+    // Distance: just past the exit-edge buffer so the symbols clear the mask.
+    // The exit edge is the one gravity points AT, so a reverse-gravity reel
+    // clears through `bufferStart`. Reading the wrong buffer here still
+    // happened to clear the mask, but only because the old value was
+    // over-generous - it is a real bug the moment this is tightened.
+    const exitBuffer = sign > 0 ? reel.bufferEnd : reel.bufferStart;
+    const fallDistance = (visibleCells + exitBuffer + 1) * cellHeight;
 
     const fallSec = this._fall.duration / 1000;
-    const staggerSec = this._fall.rowStagger / 1000;
+    const staggerSec = this._fall.cellStagger / 1000;
 
-    // Snapshot views and current Ys before any tween starts. Avoids reading
-    // mid-tween Y values if `cascade:fall:symbol` listeners mutate things.
+    // Snapshot views and current main positions before any tween starts.
+    // Avoids reading mid-tween values if `cascade:fall:symbol` listeners
+    // mutate things.
     const symbols: ReelSymbol[] = [];
     const views: Container[] = [];
-    const startYs: number[] = [];
-    for (let row = 0; row < visibleRows; row++) {
-      const sym = reel.getSymbolAt(row);
+    const startMains: number[] = [];
+    for (let cell = 0; cell < visibleCells; cell++) {
+      const sym = reel.getSymbolAt(cell);
       symbols.push(sym);
       views.push(sym.view);
-      startYs.push(sym.view.y);
+      startMains.push(axis.getMain(sym.view));
     }
     this._fallingViews = views;
 
@@ -138,7 +164,7 @@ export class CascadeFallPhase extends ReelPhase<CascadeFallPhaseConfig> {
       return;
     }
 
-    const tl = getGsap().timeline({
+    const tl = this._reel.gsap.timeline({
       onComplete: () => {
         this._timeline = null;
         for (const v of views) v.alpha = 0;
@@ -155,13 +181,17 @@ export class CascadeFallPhase extends ReelPhase<CascadeFallPhaseConfig> {
     });
     this._timeline = tl;
 
-    const reverseOrder = this._fall.rowOrder === 'bottomToTop';
+    // Stagger order follows GRAVITY under the default `'auto'`: the cell at
+    // the exit end peels off first, so the column drains from the edge it is
+    // leaving by. Explicit 'endFirst'/'startFirst' name a geometric end and
+    // ignore gravity.
+    const reverseOrder = resolveCellOrder(this._fall.cellOrder, gravity) === 'endFirst';
 
-    for (let row = 0; row < visibleRows; row++) {
-      const view = views[row];
-      const symbol = symbols[row];
-      const startY = startYs[row];
-      const orderIndex = reverseOrder ? visibleRows - 1 - row : row;
+    for (let cell = 0; cell < visibleCells; cell++) {
+      const view = views[cell];
+      const symbol = symbols[cell];
+      const startMain = startMains[cell];
+      const orderIndex = reverseOrder ? visibleCells - 1 - cell : cell;
       const offset = orderIndex * staggerSec;
 
       // Fire the per-symbol event right before the tween starts so listeners
@@ -177,7 +207,7 @@ export class CascadeFallPhase extends ReelPhase<CascadeFallPhaseConfig> {
             symbol,
             view,
             reelIndex,
-            rowIndex: row,
+            cellIndex: cell,
             duration: this._fall.duration,
             ease: this._fall.ease,
             distance: fallDistance,
@@ -189,7 +219,7 @@ export class CascadeFallPhase extends ReelPhase<CascadeFallPhaseConfig> {
       );
 
       tl.to(view, {
-        y: startY + fallDistance,
+        [axis.mainProp]: startMain + sign * fallDistance,
         duration: fallSec,
         ease: this._fall.ease,
       }, offset);

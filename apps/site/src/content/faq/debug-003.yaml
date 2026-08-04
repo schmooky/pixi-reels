@@ -1,7 +1,11 @@
 id: debug-003
 group: debug
 question: How do I log every domain event as it fires?
-answer: "`__PIXI_REELS_DEBUG.trace()` logs every domain event as it fires."
+answer: >-
+  `__PIXI_REELS_DEBUG.trace()` logs the spin, skip, speed, spotlight,
+  shape/adjust, pin and destroy events as they fire. It does not cover the
+  cascade, win, nudge, phase or anticipation buses -- attach
+  `reelSet.events.on(...)` directly for those.
 links:
   - label: "Guide: Debugging"
     href: /guides/debugging/

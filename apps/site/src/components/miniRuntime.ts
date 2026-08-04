@@ -3,8 +3,8 @@ import { ReelSetBuilder, SpeedPresets, enableDebug } from 'pixi-reels';
 import type { ReelSet, TumbleConfig } from 'pixi-reels';
 import { gsap } from 'gsap';
 import { BlockSymbol } from './BlockSymbol.ts';
-import { BlurSpriteSymbol } from '../../../../examples/shared/BlurSpriteSymbol.ts';
-import { loadPrototypeSymbols } from '../../../../examples/shared/prototypeSpriteLoader.ts';
+import { BlurSpriteSymbol } from '../runtime/BlurSpriteSymbol.ts';
+import { loadPrototypeSymbols } from '../runtime/prototypeSpriteLoader.ts';
 
 let gsapSynced = false;
 function syncGsap(app: Application): void {
@@ -16,7 +16,7 @@ function syncGsap(app: Application): void {
 
 export interface MiniConfig {
   reelCount: number;
-  visibleRows: number;
+  visibleCells: number;
   symbolSize?: { width: number; height: number };
   /**
    * Two shapes:
@@ -63,7 +63,7 @@ export async function mountMiniReels(
   const intrinsicWidth = cfg.reelCount * (size.width + gap) - gap + padX * 2 + 40;
   const computeWidth = (): number => Math.min(host.clientWidth || intrinsicWidth, intrinsicWidth);
   let width = computeWidth();
-  const height = cfg.visibleRows * (size.height + gap) - gap + padY * 2 + 40;
+  const height = cfg.visibleCells * (size.height + gap) - gap + padY * 2 + 40;
 
   const app = new Application();
   await app.init({
@@ -110,7 +110,7 @@ export async function mountMiniReels(
 
   const builder = new ReelSetBuilder()
     .reels(cfg.reelCount)
-    .visibleRows(cfg.visibleRows)
+    .visibleCells(cfg.visibleCells)
     .symbolSize(size.width, size.height)
     .symbolGap(gap, gap)
     .symbols((r) => {
@@ -145,8 +145,8 @@ export async function mountMiniReels(
     const blurring = new Array<boolean>(cfg.reelCount).fill(false);
     const setReelBlur = (reelIdx: number, on: boolean) => {
       const reel = reelSet.getReel(reelIdx);
-      for (let row = 0; row < cfg.visibleRows; row++) {
-        const sym = reel.getSymbolAt(row);
+      for (let cell = 0; cell < cfg.visibleCells; cell++) {
+        const sym = reel.getSymbolAt(cell);
         if (sym instanceof BlurSpriteSymbol) sym.setBlurred(on);
       }
     };
@@ -173,7 +173,7 @@ export async function mountMiniReels(
 
   const frame = new Graphics();
   const totalW = cfg.reelCount * (size.width + gap) - gap + padX * 2;
-  const totalH = cfg.visibleRows * (size.height + gap) - gap + padY * 2;
+  const totalH = cfg.visibleCells * (size.height + gap) - gap + padY * 2;
   frame.roundRect(0, 0, totalW, totalH, 14)
     .fill({ color: 0xffffff, alpha: 1 })
     .roundRect(0, 0, totalW, totalH, 14)
@@ -222,7 +222,7 @@ export async function mountMiniReels(
 
 export async function fadeOutCells(
   reelSet: ReelSet,
-  cells: Array<{ reel: number; row: number }>,
+  cells: Array<{ reel: number; cell: number }>,
   durationMs = 320,
 ): Promise<void> {
   if (cells.length === 0) return;
@@ -241,8 +241,8 @@ export async function fadeOutCells(
   const pinned: Pinned[] = [];
   for (const c of cells) {
     const reel = reelSet.getReel(c.reel);
-    const view = reel.getSymbolAt(c.row).view;
-    // Infer cell size from the reel's grid geometry: two rows' y difference
+    const view = reel.getSymbolAt(c.cell).view;
+    // Infer cell size from the reel's grid geometry: two cells' y difference
     // gives the slot pitch; symbol's own local bounds give the render width.
     const cellH = reel.getSymbolAt(Math.min(1, reel.getVisibleSymbols().length - 1)).view.y
       - reel.getSymbolAt(0).view.y || 0;

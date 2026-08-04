@@ -21,7 +21,7 @@ const STAGGER_MS = 90;
 
 const reelSet = new ReelSetBuilder()
   .reels(5)
-  .visibleRows(3)
+  .visibleCells(3)
   .symbolSize(72, 72)
   .symbolGap(4, 4)
   .symbols((r) => {
@@ -51,10 +51,10 @@ return {
     //   startDelay of last reel + duration = 4*90 + 520 = 880ms.
     // (Versus 5 * 520 = 2600ms for sequential or 520ms for fully parallel.)
     await Promise.all(
-      NUDGE_COLS.map((col, i) =>
-        reelSet.nudge(col, {
+      NUDGE_COLS.map((reel, i) =>
+        reelSet.nudge(reel, {
           distance: 1,
-          direction: 'down',
+          direction: 'forward',
           incoming: ['wild'],
           duration: NUDGE_DURATION,
           startDelay: i * STAGGER_MS,

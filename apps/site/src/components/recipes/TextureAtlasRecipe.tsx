@@ -16,7 +16,7 @@ export default function TextureAtlasRecipe() {
       height={280}
       setup={async (host) => {
         const { reelSet, destroy } = await mountMiniReels(host, {
-          reelCount: 5, visibleRows: 3,
+          reelCount: 5, visibleCells: 3,
           symbolSize: { width: 72, height: 72 },
           symbols: { kind: 'sprite', ids: IDS, blurOnSpin: true },
         });

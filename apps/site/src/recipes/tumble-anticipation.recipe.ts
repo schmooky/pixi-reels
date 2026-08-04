@@ -1,43 +1,42 @@
 // @ts-nocheck
-// Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, loadCascadeSpines,
-//           buildCascadeSpineMap, CASCADE_SYMBOL_IDS, CASCADE_PLATE_W,
-//           CASCADE_PLATE_H, PIXI, gsap, app, pickWeighted
+// Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, loadSpineSet,
+//           PIXI, gsap, app, pickWeighted
 
 // CASCADE ANTICIPATION REFILL. two-stage. Survivors slide down to fill
 // holes FIRST (gravity stage), then a global pause for anticipation
 // visuals, then new symbols enter from above with a per-column wave.
 //
 // Same scripted win as the refill-orders recipes: a 3-cluster of `10` on
-// row 2 of the leftmost three reels. What changes:
+// cell 2 of the leftmost three reels. What changes:
 //
 //   1. After destroy, `mode: 'gravity-then-drop'` splits the refill in two.
-//      Stage A: only survivors animate. the row 2 cells slide down from
-//      row 1 to row 2. (In this layout there are no survivors below the
+//      Stage A: only survivors animate. the cell 2 cells slide down from
+//      cell 1 to cell 2. (In this layout there are no survivors below the
 //      winner because the cluster is on the bottom of the board, but the
 //      `cascade:gravity:start/end` events still fire per reel, marking
 //      where you'd plug anticipation logic in a denser cluster.)
 //   2. The library waits `gravityHoldMs` (250 ms here. bump for more
-//      drama, e.g. 500–800 ms for a mascot pop or multiplier roll).
+//      drama, e.g. 500-800 ms for a mascot pop or multiplier roll).
 //   3. Stage B: new symbols drop in from above. `setDropOrder('ltr', 110)`
-//      gives a left-to-right wave. reel 0 drops first, then 1, then 2…
+//      gives a left-to-right wave. reel 0 drops first, then 1, then 2...
 //      Set the step ≥ `dropIn.duration` (here 380 ms) to make the columns
 //      strictly sequential (column 1 fully lands before column 2 starts);
 //      a smaller step gives overlap.
 
-await loadCascadeSpines();
+const cascade = await loadSpineSet("cascade");
 
-const IDS = [...CASCADE_SYMBOL_IDS];
+const IDS = [...cascade.symbolIds];
 const REELS = 6, ROWS = 4;
 // Cells match the authored 88x101.6 symbol plate.
 const SCALE = 0.62;
-const CELL_W = CASCADE_PLATE_W * SCALE;
-const CELL_H = CASCADE_PLATE_H * SCALE;
+const CELL_W = cascade.set.cellSize.width * SCALE;
+const CELL_H = cascade.set.cellSize.height * SCALE;
 const CLUSTER = 'low1';
 const HIT_ROW = 2;
 const HIT_COLS = [0, 1, 2];
 const PAUSE_AFTER_REMOVAL_MS = 217;
-const GRAVITY_HOLD_MS = 350;   // 21 frames. window for anticipation visuals        // window for anticipation visuals
-const COLUMN_STEP_MS = 100;    // 6 frames < dropIn (367): columns overlap         // per-reel start delay on the drop-in wave
+const GRAVITY_HOLD_MS = 350;   // 21 frames. window for anticipation visuals
+const COLUMN_STEP_MS = 100;    // per-reel drop-in start delay; 6 frames < dropIn (367) so columns overlap
 
 function randSymbol(exclude) {
   let s;
@@ -59,15 +58,15 @@ class TimedExplodeSymbol extends SpineReelSymbol {
 }
 
 const reelSet = new ReelSetBuilder()
-  .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
+  .reels(REELS).visibleCells(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
   // Pure tumble: no strip scrolling, so no below-window buffer at all.
   // nothing can ever peek out under the grid.
-  .bufferSymbols({ above: 1, below: 0 })
+  .bufferSymbols({ start: 1, end: 0 })
   .symbols((r) => {
     // outAnimation: 'explode' makes destroySymbols play the skeleton's
     // explode clip instead of the default implode.
-    const spineMap = buildCascadeSpineMap();
-    for (const id of CASCADE_SYMBOL_IDS) {
+    const spineMap = cascade.spineMap;
+    for (const id of cascade.symbolIds) {
       r.register(id, TimedExplodeSymbol, {
         spineMap,
         scale: SCALE,
@@ -81,10 +80,10 @@ const reelSet = new ReelSetBuilder()
   .symbolData({ high: { zIndex: 10, unmask: true } })
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
-    fall:   { duration: 233, ease: 'power2.in', rowStagger: 33 },  // 14f, 2f stagger
-    // Gravity uses the same `dropIn` config (it's the same phase, just
+    fall:   { duration: 233, ease: 'power2.in', cellStagger: 33 },  // 14f, 2f stagger
+    // Gravity uses the same `dropIn` config (it's the same phase,
     // filtered to survivors).
-    dropIn: { duration: 367, ease: 'power2.in', rowStagger: 0, distance: 'perHole' },  // 22f
+    dropIn: { duration: 367, ease: 'power2.in', cellStagger: 0, distance: 'perHole' },  // 22f
   })
   .ticker(app.ticker).build();
 
@@ -96,9 +95,9 @@ return {
         r === HIT_ROW && HIT_COLS.includes(c) ? CLUSTER : randSymbol(CLUSTER),
       ),
     );
-    const stage1 = stage0.map((col, c) => {
-      if (!HIT_COLS.includes(c)) return [...col];
-      const next = [...col];
+    const stage1 = stage0.map((reel, c) => {
+      if (!HIT_COLS.includes(c)) return [...reel];
+      const next = [...reel];
       for (let r = HIT_ROW; r > 0; r--) next[r] = next[r - 1];
       next[0] = randSymbol(CLUSTER);
       return next;
@@ -112,7 +111,7 @@ return {
 
     await new Promise((r) => setTimeout(r, 200));
 
-    const winners = HIT_COLS.map((c) => ({ reel: c, row: HIT_ROW }));
+    const winners = HIT_COLS.map((c) => ({ reel: c, cell: HIT_ROW }));
     await reelSet.destroySymbols(winners);
     await new Promise((r) => setTimeout(r, PAUSE_AFTER_REMOVAL_MS));
 

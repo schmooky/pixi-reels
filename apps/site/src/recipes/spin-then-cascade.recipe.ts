@@ -1,7 +1,6 @@
 // @ts-nocheck
-// Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, loadCascadeSpines,
-//           buildCascadeSpineMap, CASCADE_SYMBOL_IDS, CASCADE_PLATE_W,
-//           CASCADE_PLATE_H, PIXI, gsap, app, pickWeighted
+// Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, loadSpineSet,
+//           PIXI, gsap, app, pickWeighted
 
 // Hybrid spin-then-cascade: round 1 spins like a classic strip slot
 // (top-to-bottom motion, START → SPIN → STOP). The landing has a
@@ -16,16 +15,16 @@
 // winning cells animate. Real games typically chain across overlapping
 // clusters; here we keep the demo's affected area visually contiguous.
 
-await loadCascadeSpines();
+const cascade = await loadSpineSet("cascade");
 
-const IDS = [...CASCADE_SYMBOL_IDS];
+const IDS = [...cascade.symbolIds];
 const REELS = 5, ROWS = 5;
 // Cells match the authored 88x101.6 symbol plate.
 const SCALE = 0.62;
-const CELL_W = CASCADE_PLATE_W * SCALE;
-const CELL_H = CASCADE_PLATE_H * SCALE;
+const CELL_W = cascade.set.cellSize.width * SCALE;
+const CELL_H = cascade.set.cellSize.height * SCALE;
 const HIT_COLS = [0, 1, 2];                     // left three columns
-const HIT_ROW = 1;                              // upper-middle row
+const HIT_ROW = 1;                              // upper-middle cell
 const TRIGGER1 = 'low1';
 const TRIGGER2 = 'mid1';
 
@@ -50,12 +49,12 @@ class TimedExplodeSymbol extends SpineReelSymbol {
 }
 
 const reelSet = new ReelSetBuilder()
-  .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
+  .reels(REELS).visibleCells(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
   .symbols((r) => {
     // outAnimation: 'explode' makes destroySymbols play the skeleton's
     // explode clip instead of the default implode.
-    const spineMap = buildCascadeSpineMap();
-    for (const id of CASCADE_SYMBOL_IDS) {
+    const spineMap = cascade.spineMap;
+    for (const id of cascade.symbolIds) {
       r.register(id, TimedExplodeSymbol, {
         spineMap,
         scale: SCALE,
@@ -73,8 +72,8 @@ const reelSet = new ReelSetBuilder()
   // refill chain below uses `reelSet.refill()` directly (which doesn't
   // need `.tumble()` for the strip-spin landing itself).
   .tumble({
-    fall:   { duration: 0, ease: 'none', rowStagger: 0 },              // not used. refill skips fall
-    dropIn: { duration: 367, ease: 'power2.in', rowStagger: 0, distance: 'perHole' },  // 22f
+    fall:   { duration: 0, ease: 'none', cellStagger: 0 },              // not used. refill skips fall
+    dropIn: { duration: 367, ease: 'power2.in', cellStagger: 0, distance: 'perHole' },  // 22f
   })
   .ticker(app.ticker)
   .build();
@@ -83,9 +82,9 @@ return {
   reelSet,
   onSpin: async () => {
     // Stage 0. strip-spin lands here. Force the left-three columns to
-    // stack: TRIGGER2 ('mid1') at row 0, TRIGGER1 ('low1') at row 1, random
-    // elsewhere. The mid1s at row 0 are pre-positioned so that AFTER the
-    // first cascade pops the low1s, the mid1s fall into row 1. creating
+    // stack: TRIGGER2 ('mid1') at cell 0, TRIGGER1 ('low1') at cell 1, random
+    // elsewhere. The mid1s at cell 0 are pre-positioned so that AFTER the
+    // first cascade pops the low1s, the mid1s fall into cell 1. creating
     // a NEW cluster of three mid1s without any extra authoring.
     const stage0 = Array.from({ length: REELS }, (_, c) =>
       Array.from({ length: ROWS }, (_, r) => {
@@ -98,10 +97,10 @@ return {
     );
 
     // Cascade gravity helper: when the cell at HIT_ROW vanishes, every
-    // cell above it falls down by one row, and a brand-new symbol fills
+    // cell above it falls down by one cell, and a brand-new symbol fills
     // the top slot. Cells BELOW HIT_ROW stay put.
-    const dropAtHitRow = (col, fillTop) => {
-      const next = [...col];
+    const dropAtHitRow = (reel, fillTop) => {
+      const next = [...reel];
       for (let r = HIT_ROW; r > 0; r--) next[r] = next[r - 1];
       next[0] = fillTop;
       return next;
@@ -124,21 +123,21 @@ return {
     let trigger = TRIGGER1;
     await reelSet.runCascade({
       detectWinners: (grid) => HIT_COLS
-        .map((c) => grid[c][HIT_ROW] === trigger ? { reel: c, row: HIT_ROW } : null)
+        .map((c) => grid[c][HIT_ROW] === trigger ? { reel: c, cell: HIT_ROW } : null)
         .filter(Boolean),
       nextGrid: (prev, winners) => {
         const fill = randSymbolNotIn(new Set([TRIGGER1, TRIGGER2]));
-        const out = prev.map((col, c) =>
+        const out = prev.map((reel, c) =>
           winners.some((w) => w.reel === c)
-            ? dropAtHitRow(col, fill)
-            : [...col],
+            ? dropAtHitRow(reel, fill)
+            : [...reel],
         );
         // After popping the low1s, the next trigger is the mid1 that just
         // fell into HIT_ROW. Real games would compute this from the
         // post-refill grid via `detectWinners` again. we hard-step it
         // so the demo is unmistakable.
         trigger = trigger === TRIGGER1 ? TRIGGER2 : '__none__';
-        return out;
+        return out.map((visible) => ({ visible }));
       },
       pauseAfterDestroyMs: 167,
     });

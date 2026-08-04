@@ -11,8 +11,8 @@ function mkWin(cells: SymbolPosition[], value?: number, id?: number): Win {
   return { cells, value, id };
 }
 
-function cell(r: number, row: number): SymbolPosition {
-  return { reelIndex: r, rowIndex: row };
+function cell(r: number, cell: number): SymbolPosition {
+  return { reelIndex: r, cellIndex: cell };
 }
 
 describe('sortByValueDesc', () => {
@@ -30,7 +30,7 @@ describe('sortByValueDesc', () => {
 
 describe('WinPresenter — basic sequencing', () => {
   function setup() {
-    return createTestReelSet({ reels: 5, visibleRows: 3, symbolIds: ['a', 'b'] });
+    return createTestReelSet({ reels: 5, visibleCells: 3, symbolIds: ['a', 'b'] });
   }
 
   it('fires win:start, win:group, win:symbol, win:end in order', async () => {
@@ -39,13 +39,11 @@ describe('WinPresenter — basic sequencing', () => {
       const log: string[] = [];
       h.reelSet.events.on('win:start', (wins) => log.push(`start:${wins.length}`));
       h.reelSet.events.on('win:group', (w) => log.push(`group:${w.id}`));
-      h.reelSet.events.on('win:symbol', (_s, c) => log.push(`sym:${c.reelIndex},${c.rowIndex}`));
+      h.reelSet.events.on('win:symbol', (_s, c) => log.push(`sym:${c.reelIndex},${c.cellIndex}`));
       h.reelSet.events.on('win:end', (r) => log.push(`end:${r}`));
 
       const p = new WinPresenter(h.reelSet, { cycleGap: 0 });
-      await h.spinAndLand([
-        ['a', 'a', 'a'], ['a', 'a', 'a'], ['a', 'a', 'a'], ['a', 'a', 'a'], ['a', 'a', 'a'],
-      ]);
+      await h.spinAndLand([ { visible: ['a', 'a', 'a'] }, { visible: ['a', 'a', 'a'] }, { visible: ['a', 'a', 'a'] }, { visible: ['a', 'a', 'a'] }, { visible: ['a', 'a', 'a'] } ]);
       await p.show([mkWin([cell(0, 0), cell(1, 0), cell(2, 0)], 10, 7)]);
 
       expect(log).toEqual([
@@ -68,9 +66,7 @@ describe('WinPresenter — basic sequencing', () => {
       const groupOrder: Array<number | undefined> = [];
       h.reelSet.events.on('win:group', (w) => groupOrder.push(w.id));
       const p = new WinPresenter(h.reelSet, { cycleGap: 0 });
-      await h.spinAndLand([
-        ['a', 'a', 'a'], ['a', 'a', 'a'], ['a', 'a', 'a'], ['a', 'a', 'a'], ['a', 'a', 'a'],
-      ]);
+      await h.spinAndLand([ { visible: ['a', 'a', 'a'] }, { visible: ['a', 'a', 'a'] }, { visible: ['a', 'a', 'a'] }, { visible: ['a', 'a', 'a'] }, { visible: ['a', 'a', 'a'] } ]);
       await p.show([
         mkWin([cell(0, 0)], 10, 1),
         mkWin([cell(0, 1)], 50, 2),
@@ -86,12 +82,10 @@ describe('WinPresenter — basic sequencing', () => {
 
 describe('WinPresenter — dim / restore', () => {
   it('dims non-winning cells during a group, restores on win:end', async () => {
-    const h = createTestReelSet({ reels: 5, visibleRows: 3, symbolIds: ['a'] });
+    const h = createTestReelSet({ reels: 5, visibleCells: 3, symbolIds: ['a'] });
     try {
       const p = new WinPresenter(h.reelSet, { dimLosers: { alpha: 0.2 }, cycleGap: 0 });
-      await h.spinAndLand([
-        ['a', 'a', 'a'], ['a', 'a', 'a'], ['a', 'a', 'a'], ['a', 'a', 'a'], ['a', 'a', 'a'],
-      ]);
+      await h.spinAndLand([ { visible: ['a', 'a', 'a'] }, { visible: ['a', 'a', 'a'] }, { visible: ['a', 'a', 'a'] }, { visible: ['a', 'a', 'a'] }, { visible: ['a', 'a', 'a'] } ]);
       let winnerAlpha = -1;
       let loserAlpha = -1;
       h.reelSet.events.on('win:group', () => {
@@ -102,8 +96,8 @@ describe('WinPresenter — dim / restore', () => {
       expect(winnerAlpha).toBe(1);
       expect(loserAlpha).toBeCloseTo(0.2, 5);
       for (let r = 0; r < 5; r++) {
-        for (let row = 0; row < 3; row++) {
-          expect(h.reelSet.getReel(r).getSymbolAt(row).view.alpha).toBe(1);
+        for (let cell = 0; cell < 3; cell++) {
+          expect(h.reelSet.getReel(r).getSymbolAt(cell).view.alpha).toBe(1);
         }
       }
       p.destroy();
@@ -113,10 +107,10 @@ describe('WinPresenter — dim / restore', () => {
   });
 
   it('dimLosers: false leaves alphas at 1', async () => {
-    const h = createTestReelSet({ reels: 3, visibleRows: 3, symbolIds: ['a'] });
+    const h = createTestReelSet({ reels: 3, visibleCells: 3, symbolIds: ['a'] });
     try {
       const p = new WinPresenter(h.reelSet, { dimLosers: false, cycleGap: 0 });
-      await h.spinAndLand([['a', 'a', 'a'], ['a', 'a', 'a'], ['a', 'a', 'a']]);
+      await h.spinAndLand([ { visible: ['a', 'a', 'a'] }, { visible: ['a', 'a', 'a'] }, { visible: ['a', 'a', 'a'] } ]);
       let loserAlpha = -1;
       h.reelSet.events.on('win:group', () => {
         loserAlpha = h.reelSet.getReel(0).getSymbolAt(0).view.alpha;
@@ -132,15 +126,15 @@ describe('WinPresenter — dim / restore', () => {
 
 describe('WinPresenter — stagger', () => {
   it('stagger = 0: all win:symbol events fire synchronously inside one tick', async () => {
-    const h = createTestReelSet({ reels: 5, visibleRows: 1, symbolIds: ['a'] });
+    const h = createTestReelSet({ reels: 5, visibleCells: 1, symbolIds: ['a'] });
     try {
       const timestamps: number[] = [];
       h.reelSet.events.on('win:symbol', () => timestamps.push(performance.now()));
       const p = new WinPresenter(h.reelSet, { stagger: 0, cycleGap: 0 });
-      await h.spinAndLand([['a'], ['a'], ['a'], ['a'], ['a']]);
+      await h.spinAndLand([ { visible: ['a'] }, { visible: ['a'] }, { visible: ['a'] }, { visible: ['a'] }, { visible: ['a'] } ]);
       await p.show([mkWin([cell(0, 0), cell(1, 0), cell(2, 0), cell(3, 0), cell(4, 0)])]);
       expect(timestamps.length).toBe(5);
-      // All within the same microtask batch — under 5 ms is very safe.
+      // All within the same microtask batch - under 5 ms is very safe.
       const spread = timestamps[timestamps.length - 1] - timestamps[0];
       expect(spread).toBeLessThan(5);
       p.destroy();
@@ -150,16 +144,16 @@ describe('WinPresenter — stagger', () => {
   });
 
   it('stagger > 0: successive win:symbol events are spaced by at least `stagger` ms', async () => {
-    const h = createTestReelSet({ reels: 4, visibleRows: 1, symbolIds: ['a'] });
+    const h = createTestReelSet({ reels: 4, visibleCells: 1, symbolIds: ['a'] });
     try {
       const timestamps: number[] = [];
       h.reelSet.events.on('win:symbol', () => timestamps.push(performance.now()));
       const p = new WinPresenter(h.reelSet, { stagger: 40, cycleGap: 0 });
-      await h.spinAndLand([['a'], ['a'], ['a'], ['a']]);
+      await h.spinAndLand([ { visible: ['a'] }, { visible: ['a'] }, { visible: ['a'] }, { visible: ['a'] } ]);
       await p.show([mkWin([cell(0, 0), cell(1, 0), cell(2, 0), cell(3, 0)])]);
       expect(timestamps.length).toBe(4);
       for (let i = 1; i < timestamps.length; i++) {
-        // 40 ms stagger with setTimeout jitter — floor at 30 ms to stay stable on CI.
+        // 40 ms stagger with setTimeout jitter - floor at 30 ms to stay stable on CI.
         expect(timestamps[i] - timestamps[i - 1]).toBeGreaterThanOrEqual(30);
       }
       p.destroy();
@@ -171,20 +165,20 @@ describe('WinPresenter — stagger', () => {
 
 describe('WinPresenter — symbolAnim modes', () => {
   it('custom callback runs per cell with (symbol, cell, win)', async () => {
-    const h = createTestReelSet({ reels: 3, visibleRows: 3, symbolIds: ['a'] });
+    const h = createTestReelSet({ reels: 3, visibleCells: 3, symbolIds: ['a'] });
     try {
-      const calls: Array<{ r: number; row: number; id: number | undefined }> = [];
+      const calls: Array<{ r: number; cell: number; id: number | undefined }> = [];
       const p = new WinPresenter(h.reelSet, {
         cycleGap: 0,
         symbolAnim: async (_sym, c, win) => {
-          calls.push({ r: c.reelIndex, row: c.rowIndex, id: win.id });
+          calls.push({ r: c.reelIndex, cell: c.cellIndex, id: win.id });
         },
       });
-      await h.spinAndLand([['a', 'a', 'a'], ['a', 'a', 'a'], ['a', 'a', 'a']]);
+      await h.spinAndLand([ { visible: ['a', 'a', 'a'] }, { visible: ['a', 'a', 'a'] }, { visible: ['a', 'a', 'a'] } ]);
       await p.show([mkWin([cell(0, 1), cell(2, 1)], 10, 42)]);
       expect(calls).toEqual([
-        { r: 0, row: 1, id: 42 },
-        { r: 2, row: 1, id: 42 },
+        { r: 0, cell: 1, id: 42 },
+        { r: 2, cell: 1, id: 42 },
       ]);
       p.destroy();
     } finally {
@@ -195,12 +189,12 @@ describe('WinPresenter — symbolAnim modes', () => {
 
 describe('WinPresenter — cancellation', () => {
   it('abort() resolves show() with reason "aborted"', async () => {
-    const h = createTestReelSet({ reels: 3, visibleRows: 3, symbolIds: ['a'] });
+    const h = createTestReelSet({ reels: 3, visibleCells: 3, symbolIds: ['a'] });
     try {
       const reasons: string[] = [];
       h.reelSet.events.on('win:end', (r) => reasons.push(r));
       const p = new WinPresenter(h.reelSet, { cycleGap: 0, cycles: -1 });
-      await h.spinAndLand([['a', 'a', 'a'], ['a', 'a', 'a'], ['a', 'a', 'a']]);
+      await h.spinAndLand([ { visible: ['a', 'a', 'a'] }, { visible: ['a', 'a', 'a'] }, { visible: ['a', 'a', 'a'] } ]);
 
       const running = p.show([mkWin([cell(0, 0)], 10)]);
       await Promise.resolve();
@@ -215,7 +209,7 @@ describe('WinPresenter — cancellation', () => {
   });
 
   it('show([]) is a no-op and does not fire events', async () => {
-    const h = createTestReelSet({ reels: 3, visibleRows: 3, symbolIds: ['a'] });
+    const h = createTestReelSet({ reels: 3, visibleCells: 3, symbolIds: ['a'] });
     try {
       const spy = vi.fn();
       h.reelSet.events.on('win:start', spy);

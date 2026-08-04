@@ -1,24 +1,37 @@
 /** @jsxImportSource react */
 import { useEffect, useRef, useState } from 'react';
-import { RefreshCw, ExternalLink, SkipForward } from 'lucide-react';
+import { RefreshCw, ExternalLink, SkipForward, Bug } from 'lucide-react';
 import { Application } from 'pixi.js';
 import type { Texture, Ticker } from 'pixi.js';
 import * as PIXI from 'pixi.js';
 import { gsap } from 'gsap';
+// DO NOT DELETE THESE TWO. Neither identifier is referenced in this file, so
+// they read as dead imports -- but they are load-bearing. They force the spine
+// runtime to be initialised eagerly, as one instance, before any recipe runs.
+// Remove them and spine arrives only through the dynamic LAZY_GROUPS path in
+// recipeGlobals, which races: /recipes/{cascade,hold-and-win,starters,symbols,
+// wilds-and-pins}/ then die on mount with "Cannot read properties of undefined
+// (reading 'validateRenderable')". Verified by bisect -- these two lines are
+// the difference between 21/21 and 16/21 on recipes-mount.spec.ts.
+//
+// They cost ~176KB on pages that use no spine at all. Reclaiming that means
+// fixing the ordering in the lazy path first, not deleting these.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import { SpineReelSymbol } from 'pixi-reels/spine';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import { Spine } from '@esotericsoftware/spine-pixi-v8';
 import {
   ReelSetBuilder, SpeedPresets, SpriteSymbol, AnimatedSpriteSymbol,
   enableDebug, WinPresenter,
   RectMaskStrategy, SharedRectMaskStrategy,
-  type ReelSet, ReelSymbol,
+  ReelSet, ReelSymbol,
   EmptySymbol, HoldAndWinBuilder, BoardGrid,
-  HorizontalReel, HorizontalReelBuilder,
   anticipationForScatters,
   SpinTextureCache, StaticSpinSymbol, prewarmSpinTextures,
+  debugOverlay, type DebugOverlayHandle,
 } from 'pixi-reels';
-import { SpineReelSymbol } from 'pixi-reels/spine';
-import { Spine } from '@esotericsoftware/spine-pixi-v8';
-import { BlurSpriteSymbol } from '../../../../examples/shared/BlurSpriteSymbol.ts';
-import { CardSymbol, CARD_DECK, WILD_CARD } from '../../../../examples/shared/CardSymbol.ts';
+import { BlurSpriteSymbol } from '../runtime/BlurSpriteSymbol.ts';
+import { CardSymbol, CARD_DECK, WILD_CARD } from 'pixi-reels';
 import {
   CoinSymbol,
   COIN_TIER,
@@ -28,7 +41,7 @@ import {
   coinValue,
   coinMultiplier,
   drawCoin,
-} from '../../../../examples/shared/CoinSymbol.ts';
+} from '../runtime/CoinSymbol.ts';
 import {
   GoldCoinSymbol,
   coinWaves,
@@ -36,36 +49,62 @@ import {
   settleMoneyFace,
   freezeAtEnd,
   fitText,
-} from '../../../../examples/shared/holdAndWinFx.ts';
-import { loadPrototypeSymbols } from '../../../../examples/shared/prototypeSpriteLoader.ts';
+} from '../runtime/holdAndWinFx.ts';
+import { loadPrototypeSymbols } from '../runtime/prototypeSpriteLoader.ts';
 import {
   loadGeneratedSpines,
   buildSpineMap,
-} from '../../../../examples/shared/generatedSpineLoader.ts';
+} from '../runtime/generatedSpineLoader.ts';
 import {
   loadThunderkickSpines,
   buildThunderkickSpineMap,
   THUNDERKICK_SYMBOL_IDS,
-} from '../../../../examples/shared/thunderkickSpineLoader.ts';
+} from '../runtime/thunderkickSpineLoader.ts';
 import {
   loadCascadeSpines,
   buildCascadeSpineMap,
   CASCADE_SYMBOL_IDS,
   CASCADE_PLATE_W,
   CASCADE_PLATE_H,
-} from '../../../../examples/shared/cascadeSpineLoader.ts';
-import { loadHoldAndWinSprites } from '../../../../examples/shared/holdAndWinSprites.ts';
+} from '../runtime/cascadeSpineLoader.ts';
+import { loadHoldAndWinSprites } from '../runtime/holdAndWinSprites.ts';
 import { transform as sucraseTransform } from 'sucrase';
+import { runRecipeSource } from '@/lib/recipeGlobals';
 import { cn } from '@/lib/utils';
 import { CanvasSkeleton } from './CanvasSkeleton';
 import { useMinDisplay } from './useMinDisplay';
+
+// Renderer teardown options for `app.destroy(...)`.
+//
+// MUST NOT be the bare `true` that reads so naturally here. In PixiJS v8
+// `RendererDestroyOptions` is `TypeOrBool<ViewSystemDestroyOptions &
+// { releaseGlobalResources?: boolean }>`, so `true` means removeView AND
+// releaseGlobalResources -- and the resources it releases are PROCESS-global,
+// not per-app: `AbstractRenderer.destroy` calls `GlobalResourceRegistry
+// .release()`, which clears BigPool, TexturePool, CanvasPool and the batcher's
+// module-level `batchPool`, calling `destroy()` on every pooled object.
+//
+// A recipe page mounts several Application instances at once (see
+// LazyRecipeRunner). Pooled `Batch` / `BatchableSprite` objects handed out to
+// the OTHER live apps are still referenced by their built instruction sets, so
+// nuking the shared pools when one demo scrolls out of view left the survivors
+// rendering freed objects on their very next frame:
+//   TypeError: Cannot read properties of null (reading 'geometry')  // batch.batcher
+//   TypeError: Cannot read properties of null (reading 'clear')     // batch.textures
+// with a stack that is entirely Pixi internals (Ticker._tick -> ... ->
+// BatcherPipe.execute), which is what makes it read like a render-loop bug
+// rather than a teardown one.
+//
+// `{ removeView: true }` is the same view teardown minus the global-pool
+// release: ViewSystem.destroy only ever reads `removeView`.
+const DESTROY_RENDERER = { removeView: true } as const;
 
 // GSAP is driven off a live PIXI app.ticker so tweens honor hidden-tab
 // throttling (the documented "GSAP freezes in hidden tabs" gotcha). Several
 // recipe canvases can be mounted at once, so we keep exactly ONE driver bound
 // to a live app and promote a survivor when that app unmounts. A one-shot
 // module flag (the previous shape) left gsap.updateRoot orphaned on a
-// destroyed ticker the moment the first app went away — freezing every later
+// destroyed ticker the moment the first app went away, freezing every later
 // recipe under client-side nav / React StrictMode / HMR.
 const liveApps = new Set<Application>();
 let gsapDriver: Application | null = null;
@@ -110,8 +149,45 @@ function pickWeighted(weights: Record<string, number>): string {
   return Object.keys(weights)[0];
 }
 
+/**
+ * Every `ReelSet` currently on the stage, `primary` first.
+ *
+ * A recipe returns at most ONE set (the rest it parents itself, usually under
+ * a `stage` composition root), so a debug toggle driven off the returned one
+ * left the banner strip in `banner-ways` and the second grid in
+ * `symbols-transposed-pair` with no overlay at all. Walking the display tree
+ * finds them whatever the recipe did with them, and needs no per-recipe
+ * bookkeeping.
+ */
+function collectReelSets(stage: PIXI.Container, primary: ReelSet): ReelSet[] {
+  const found: ReelSet[] = [primary];
+  const walk = (node: PIXI.Container): void => {
+    if (node instanceof ReelSet) {
+      if (!found.includes(node)) found.push(node);
+      // Don't descend: a set's own children are reels and viewports, and a
+      // ReelSet is never nested inside another one.
+      return;
+    }
+    for (const child of node.children) walk(child as PIXI.Container);
+  };
+  walk(stage);
+  return found;
+}
+
 interface RunResult {
   reelSet?: ReelSet;
+  /**
+   * A container holding a MULTI-SET composition (e.g. a horizontal banner
+   * above a vertical grid). When present the runner scales and centres THIS,
+   * not `reelSet`, so every set moves together.
+   *
+   * Without it a recipe that builds a second set has to `app.stage.addChild`
+   * it itself, and the runner's fit then scales and centres only `reelSet` -
+   * leaving the other set at unscaled stage coordinates, nowhere near where
+   * the recipe put it. Lay the composition out from its own origin (top-left
+   * at 0,0) so the fit's bounds math holds.
+   */
+  stage?: PIXI.Container;
   nextResult?: () => string[][];
   onSpin?: () => Promise<void>;
   /**
@@ -145,9 +221,17 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
   const onSpinRef = useRef<(() => Promise<void>) | null>(null);
   const onSkipRef = useRef<(() => void) | null>(null);
   const cleanupRef = useRef<(() => void) | null>(null);
+  // One handle per reel set on the stage, not per recipe: a recipe is free to
+  // build several (a banner strip above the grid, a transposed pair), and an
+  // overlay on only the one it happened to return explains half the picture.
+  const overlayRef = useRef<DebugOverlayHandle[]>([]);
   const [spinning, setSpinning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
+  const [debugOn, setDebugOn] = useState(false);
+  // The overlay draws into a container on the ReelSet, so a recipe that
+  // returns only `onSpin` (HoldAndWinBoard, BoardGrid) has nothing to draw on.
+  const [canDebug, setCanDebug] = useState(false);
   // Hold the skeleton for at least 250ms so it doesn't flash for one
   // frame on fast loads.
   const showSkeleton = useMinDisplay(!ready, 250);
@@ -167,7 +251,7 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
         resolution: Math.min(window.devicePixelRatio, 2),
         autoDensity: true,
       });
-      if (cancelled) { app.destroy(true, { children: true }); return; }
+      if (cancelled) { app.destroy(DESTROY_RENDERER, { children: true }); return; }
 
       host.innerHTML = '';
       host.appendChild(app.canvas);
@@ -194,51 +278,12 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
 
       let result: RunResult;
       try {
-        const factory = new AsyncFunction(
-          'ReelSetBuilder', 'SpeedPresets', 'BlurSpriteSymbol', 'SpriteSymbol', 'AnimatedSpriteSymbol',
-          'WinPresenter',
-          'app', 'textures', 'blurTextures', 'SYMBOL_IDS', 'pickWeighted', 'gsap', 'PIXI',
-          'EmptySymbol', 'ReelSymbol',
-          'RectMaskStrategy', 'SharedRectMaskStrategy',
-          'CardSymbol', 'CARD_DECK', 'WILD_CARD',
-          'CoinSymbol', 'COIN_TIER', 'COIN_FEATURE', 'COIN_MYSTERY', 'COIN_TRIGGER',
-          'coinValue', 'coinMultiplier', 'drawCoin',
-          'HoldAndWinBuilder', 'BoardGrid',
-          'HorizontalReel', 'HorizontalReelBuilder',
-          'anticipationForScatters',
-          'SpinTextureCache', 'StaticSpinSymbol', 'prewarmSpinTextures',
-          'GoldCoinSymbol', 'coinWaves', 'bezierFly', 'settleMoneyFace', 'freezeAtEnd', 'fitText',
-          'SpineReelSymbol', 'Spine', 'loadGeneratedSpines', 'buildSpineMap',
-          'loadThunderkickSpines', 'buildThunderkickSpineMap', 'THUNDERKICK_SYMBOL_IDS',
-          'loadCascadeSpines', 'buildCascadeSpineMap', 'CASCADE_SYMBOL_IDS',
-          'CASCADE_PLATE_W', 'CASCADE_PLATE_H',
-          'loadHoldAndWinSprites',
-          `"use strict"; ${js}`,
-        );
-        // AsyncFunction so recipes that need async setup (e.g. dynamic
-        // texture loaders added by future recipes) can `return await`
-        // the built RunResult. Sync recipes that return a plain object
-        // are unaffected. `await x` on a non-Promise resolves to x.
-        result = (await factory(
-          ReelSetBuilder, SpeedPresets, BlurSpriteSymbol, SpriteSymbol, AnimatedSpriteSymbol,
-          WinPresenter,
-          app, textures, blurTextures, SYMBOL_IDS, pickWeighted, gsap, PIXI,
-          EmptySymbol, ReelSymbol,
-          RectMaskStrategy, SharedRectMaskStrategy,
-          CardSymbol, CARD_DECK, WILD_CARD,
-          CoinSymbol, COIN_TIER, COIN_FEATURE, COIN_MYSTERY, COIN_TRIGGER,
-          coinValue, coinMultiplier, drawCoin,
-          HoldAndWinBuilder, BoardGrid,
-          HorizontalReel, HorizontalReelBuilder,
-          anticipationForScatters,
-          SpinTextureCache, StaticSpinSymbol, prewarmSpinTextures,
-          GoldCoinSymbol, coinWaves, bezierFly, settleMoneyFace, freezeAtEnd, fitText,
-          SpineReelSymbol, Spine, loadGeneratedSpines, buildSpineMap,
-          loadThunderkickSpines, buildThunderkickSpineMap, THUNDERKICK_SYMBOL_IDS,
-          loadCascadeSpines, buildCascadeSpineMap, CASCADE_SYMBOL_IDS,
-          CASCADE_PLATE_W, CASCADE_PLATE_H,
-          loadHoldAndWinSprites,
-        )) as RunResult;
+        // One shared global surface for all three recipe runtimes. See
+        // lib/recipeGlobals.ts for why the hand-written parameter lists went.
+        result = await runRecipeSource<RunResult>(js, {
+          app, textures, blurTextures, SYMBOL_IDS, pickWeighted,
+          ReelSetBuilder,
+        });
       } catch (e) {
         setError(`Runtime error: ${(e as Error).message}`);
         return;
@@ -257,29 +302,33 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
 
       if (result.reelSet) {
         const rs = result.reelSet;
+        // Fit the composition root when there is one, so a banner set moves,
+        // scales and centres with the grid it sits above.
+        const fitted = result.stage ?? rs;
         const fit = () => {
-          const rawW = rs.width / (rs.scale.x || 1);
-          const rawH = rs.height / (rs.scale.y || 1);
+          const rawW = fitted.width / (fitted.scale.x || 1);
+          const rawH = fitted.height / (fitted.scale.y || 1);
           const pad = 16;
           const scale = Math.min(1, (app.screen.width - pad * 2) / rawW, (app.screen.height - pad * 2) / rawH);
-          rs.scale.set(scale);
-          rs.x = (app.screen.width - rawW * scale) / 2;
-          rs.y = (app.screen.height - rawH * scale) / 2;
+          fitted.scale.set(scale);
+          fitted.x = (app.screen.width - rawW * scale) / 2;
+          fitted.y = (app.screen.height - rawH * scale) / 2;
         };
-        app.stage.addChild(rs);
+        app.stage.addChild(fitted);
         fit();
         app.renderer.on('resize', fit);
         enableDebug(rs);
+        setCanDebug(true);
       } else {
         // Board / custom-stage recipes (HoldAndWinBoard, BoardGrid) add their
-        // own content — the grid, HUD, side panels, flight layer — straight to
+        // own content (the grid, HUD, side panels, flight layer) straight to
         // app.stage at fixed pixel sizes and never scale it, so a composition
         // wider than the canvas clips left/right. Scale + center the whole
         // stage to fit: the board-of-reels equivalent of the reelSet fit above.
         // Bounds come from real measurable children (cell chrome, sprites, HUD,
         // panels), all created synchronously before the recipe returns. Mask
         // graphics don't count (Pixi marks masks measurable:false), which is why
-        // an empty-on-load grid must carry chrome to be sized — board-grid-reveal
+        // an empty-on-load grid must carry chrome to be sized - board-grid-reveal
         // does. Late flights/labels land inside this extent, so a setup-time fit
         // (re-run on resize) holds for the whole run.
         const fitStage = () => {
@@ -309,11 +358,17 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
     return () => {
       cancelled = true;
       try { cleanupRef.current?.(); } catch { /* ignore */ }
+      // Before the set and the app: the overlay is a child of the ReelSet and
+      // holds a TickerRef on app.ticker.
+      for (const o of overlayRef.current) {
+        try { o.destroy(); } catch { /* ignore */ }
+      }
+      overlayRef.current = [];
       try { reelSetRef.current?.destroy(); } catch { /* ignore */ }
       const app = envRef.current?.app;
       if (app) {
         releaseGsapApp(app); // hand off the gsap driver before the ticker dies
-        try { app.destroy(true, { children: true }); } catch { /* ignore */ }
+        try { app.destroy(DESTROY_RENDERER, { children: true }); } catch { /* ignore */ }
       }
       reelSetRef.current = null;
       onSpinRef.current = null;
@@ -371,6 +426,27 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
     }
   }
 
+  function toggleDebug() {
+    const reelSet = reelSetRef.current;
+    const app = envRef.current?.app;
+    if (!reelSet || !app) return;
+    if (overlayRef.current.length > 0) {
+      for (const o of overlayRef.current) o.destroy();
+      overlayRef.current = [];
+      setDebugOn(false);
+      return;
+    }
+    // Built on first press, not at mount: a umbrella page mounts several
+    // recipes at once and none of them should pay for an overlay nobody asked
+    // to see. `live` drives the bounds / blocks / pins / hud layers off the
+    // recipe's own app.ticker, so they track a spin instead of freezing on the
+    // frame the overlay happened to be built in.
+    overlayRef.current = collectReelSets(app.stage, reelSet).map((rs) =>
+      debugOverlay(rs, { layers: 'all', live: true, ticker: app.ticker }),
+    );
+    setDebugOn(true);
+  }
+
   function openInStudio() {
     window.location.href = `/studio/#code=${btoa(unescape(encodeURIComponent(code)))}`;
   }
@@ -414,6 +490,27 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
             ? <SkipForward size={22} strokeWidth={2.25} />
             : <RefreshCw size={22} strokeWidth={2.25} />}
         </button>
+        {canDebug && (
+          <button
+            type="button"
+            onClick={toggleDebug}
+            disabled={!!error || !ready}
+            title={debugOn ? 'Hide debug overlay' : 'Show debug overlay'}
+            aria-label={debugOn ? 'Hide debug overlay' : 'Show debug overlay'}
+            aria-pressed={debugOn}
+            className={cn(
+              'absolute left-2 top-2 inline-flex items-center gap-1 rounded-md border px-2 py-1',
+              'text-[10px] backdrop-blur transition-colors',
+              debugOn
+                ? 'border-primary bg-primary/90 text-primary-foreground'
+                : 'border-border/40 bg-background/70 text-muted-foreground hover:text-foreground',
+              'disabled:cursor-not-allowed disabled:opacity-50',
+            )}
+          >
+            <Bug size={10} />
+            Debug
+          </button>
+        )}
         <button
           type="button"
           onClick={openInStudio}

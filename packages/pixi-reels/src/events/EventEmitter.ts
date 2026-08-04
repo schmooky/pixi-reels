@@ -7,7 +7,7 @@ interface ListenerEntry {
 }
 
 /**
- * Lightweight typed event emitter with zero dependencies.
+ * Typed event emitter with zero dependencies.
  *
  * Usage:
  * ```ts

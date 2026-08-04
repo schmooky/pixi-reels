@@ -1,5 +1,5 @@
 /**
- * Issue #181 — sequential / staggered anticipation.
+ * Issue #181 - sequential / staggered anticipation.
  *
  * Before this change every anticipation reel began its slow-down at the same
  * instant (only the final landing was staggered, by the tiny `stopDelay`), so
@@ -11,7 +11,7 @@
  *     stagger offset), so it is the timestamp of the tease start.
  *   - With `stagger: 0` the first-and-every anticipation reel takes the
  *     synchronous path (no `setTimeout`), so all their `spin:stopping` events
- *     fire in the same microtask — sub-millisecond apart.
+ *     fire in the same microtask - sub-millisecond apart.
  *   - With a numeric stagger the reel at tease-order `k>0` waits
  *     `k * stagger` ms via a real `setTimeout`, producing measurable gaps.
  *   - GSAP self-ticks in node, so the anticipation + stop phases complete on
@@ -55,7 +55,7 @@ const GRID: ColumnTarget[] = Array.from({ length: 5 }, () => ({
 }));
 
 function makeHarness(profile: SpeedProfile) {
-  const h = createTestReelSet({ reels: 5, visibleRows: 3, symbolIds: ['a', 'b', 'c'] });
+  const h = createTestReelSet({ reels: 5, visibleCells: 3, symbolIds: ['a', 'b', 'c'] });
   h.reelSet.speed.addProfile(profile.name, profile);
   h.reelSet.setSpeed(profile.name);
   // Pump the reel-set ticker in real time so reel.update / _onTick run.
@@ -124,7 +124,7 @@ describe('anticipation stagger (issue #181)', () => {
 
     const stamps = [2, 3, 4].map((i) => teaseAt.get(i)!);
     const spread = Math.max(...stamps) - Math.min(...stamps);
-    // No setTimeout on the stagger-0 path → all fire in the same microtask.
+    // No setTimeout on the stagger-0 path -> all fire in the same microtask.
     expect(spread).toBeLessThan(10);
   });
 
@@ -159,7 +159,7 @@ describe('anticipation stagger (issue #181)', () => {
     h.reelSet.setAnticipation([2, 3, 4], 'sequential');
     await p;
 
-    // Spin 2: anticipation set again but WITHOUT a stagger arg → must be parallel.
+    // Spin 2: anticipation set again but WITHOUT a stagger arg -> must be parallel.
     const teaseAt = new Map<number, number>();
     h.reelSet.events.on('spin:stopping', (i) => {
       if (!teaseAt.has(i)) teaseAt.set(i, performance.now());
@@ -200,7 +200,7 @@ describe('anticipation stagger (issue #181)', () => {
     // Progressive slow-down: reel 2 fastest, reel 4 slowest.
     expect(s2).toBeGreaterThan(s3);
     expect(s3).toBeGreaterThan(s4);
-    // reel 2 ~ 0.6*spinSpeed(30)=18, reel 4 ~ 0.1*30=3 → a clear spread.
+    // reel 2 ~ 0.6*spinSpeed(30)=18, reel 4 ~ 0.1*30=3 -> a clear spread.
     expect(s2 - s4).toBeGreaterThan(6);
   });
 
@@ -212,7 +212,7 @@ describe('anticipation stagger (issue #181)', () => {
     const reel = h.reelSet.reels[3];
 
     // Only start watching once the tease has begun (spin:stopping), so the
-    // start-up ramp (0→30, which also passes through the slow band) doesn't
+    // start-up ramp (0->30, which also passes through the slow band) doesn't
     // count.
     let teasing = false;
     h.reelSet.events.on('spin:stopping', (i) => {
@@ -231,7 +231,7 @@ describe('anticipation stagger (issue #181)', () => {
 
     const p = h.reelSet.spin();
     h.reelSet.setResult(GRID);
-    h.reelSet.setAnticipation([3]); // default slowdown → ~0.3*30 = 9 px/frame
+    h.reelSet.setAnticipation([3]); // default slowdown -> ~0.3*30 = 9 px/frame
     await p;
     clearInterval(sampler);
 
@@ -272,7 +272,7 @@ describe('anticipation stagger (issue #181)', () => {
 
     const p = h.reelSet.spin();
     h.reelSet.setResult(GRID);
-    // No setAnticipation call → no teases at all.
+    // No setAnticipation call -> no teases at all.
     await p;
 
     expect(starts).toEqual([]);
@@ -302,13 +302,13 @@ describe('anticipation stagger (issue #181)', () => {
     h.reelSet.setAnticipation([2, 3, 4], 40); // stagger only, no duration
     await p;
 
-    expect(starts).toEqual([]); // anticipationDelay 0 + no override → no tease
+    expect(starts).toEqual([]); // anticipationDelay 0 + no override -> no tease
   });
 
   it('setStopDelays(null) restores the default i*stopDelay stagger', async () => {
     const h = (harness = makeHarness(FAST_STAGGERED_STOP));
 
-    // Measure the reel0→reel4 landing gap for one round. A fresh per-round map
+    // Measure the reel0->reel4 landing gap for one round. A fresh per-round map
     // records the first landing timestamp of each reel.
     const measureRound = async (): Promise<number> => {
       const landAt = new Map<number, number>();
@@ -328,7 +328,7 @@ describe('anticipation stagger (issue #181)', () => {
     const overrideGap = await measureRound();
     expect(overrideGap).toBeGreaterThan(200);
 
-    // Round 2: clear the override → reverts to default i*30 = 120ms for reel 4,
+    // Round 2: clear the override -> reverts to default i*30 = 120ms for reel 4,
     // much tighter than the 300ms override (proves it did not stay sticky and
     // did not zero-out either).
     h.reelSet.setStopDelays(null);

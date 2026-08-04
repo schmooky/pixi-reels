@@ -3,7 +3,7 @@
  *
  * Contract: passing `0`, a negative number, `NaN`, or `Infinity` is
  * clamped to the minimum of 1 (the motion layer needs at least one
- * buffer row above and below the visible window for wrap detection).
+ * buffer cell above and below the visible window for wrap detection).
  * The builder warns once per process via `console.warn` and does not
  * throw, so existing user code that accidentally passed `0` keeps
  * running rather than crashing at build time.
@@ -29,8 +29,8 @@ describe('ReelSetBuilder.bufferSymbols clamp', () => {
     const b = new ReelSetBuilder();
     b.bufferSymbols(3);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    expect((b as any)._bufferAbove).toBe(3);
-    expect((b as any)._bufferBelow).toBe(3);
+    expect((b as any)._bufferStart).toBe(3);
+    expect((b as any)._bufferEnd).toBe(3);
     expect(warnSpy).not.toHaveBeenCalled();
   });
 
@@ -39,8 +39,8 @@ describe('ReelSetBuilder.bufferSymbols clamp', () => {
     const b = new ReelSetBuilder();
     b.bufferSymbols(0);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    expect((b as any)._bufferAbove).toBe(1);
-    expect((b as any)._bufferBelow).toBe(1);
+    expect((b as any)._bufferStart).toBe(1);
+    expect((b as any)._bufferEnd).toBe(1);
     expect(warnSpy).toHaveBeenCalledTimes(1);
     expect(warnSpy.mock.calls[0][0]).toMatch(/clamping to 1/);
   });
@@ -50,8 +50,8 @@ describe('ReelSetBuilder.bufferSymbols clamp', () => {
     const b = new ReelSetBuilder();
     b.bufferSymbols(-2);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    expect((b as any)._bufferAbove).toBe(1);
-    expect((b as any)._bufferBelow).toBe(1);
+    expect((b as any)._bufferStart).toBe(1);
+    expect((b as any)._bufferEnd).toBe(1);
     expect(warnSpy).toHaveBeenCalledTimes(1);
   });
 
@@ -60,8 +60,8 @@ describe('ReelSetBuilder.bufferSymbols clamp', () => {
     const b = new ReelSetBuilder();
     b.bufferSymbols(Number.NaN);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    expect((b as any)._bufferAbove).toBe(1);
-    expect((b as any)._bufferBelow).toBe(1);
+    expect((b as any)._bufferStart).toBe(1);
+    expect((b as any)._bufferEnd).toBe(1);
   });
 
   it('warns only once per process across multiple builders', async () => {

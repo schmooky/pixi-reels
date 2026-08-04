@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>pixi-reels - Orientation x Direction matrix</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #12121f; overflow: hidden; font-family: system-ui, sans-serif; }
+    canvas { display: block; }
+    #ui { position: fixed; left: 12px; bottom: 12px; display: flex; gap: 8px; }
+    button {
+      padding: 8px 14px; border: 0; border-radius: 6px; cursor: pointer;
+      background: #6c5ce7; color: #fff; font: 600 13px system-ui, sans-serif;
+    }
+    button:disabled { opacity: .5; cursor: default; }
+  </style>
+</head>
+<body>
+  <div id="ui"><button id="spin">Spin all four</button></div>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>

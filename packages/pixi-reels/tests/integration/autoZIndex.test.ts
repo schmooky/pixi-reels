@@ -1,8 +1,8 @@
 /**
  * Integration tests for the auto-zIndex contract on `_replaceSymbol`.
  *
- * Contract: when a symbol is activated into a row (via any code path that
- * funnels into `_replaceSymbol` — wrap callback, `placeSymbols`, etc.), its
+ * Contract: when a symbol is activated into a cell (via any code path that
+ * funnels into `_replaceSymbol` - wrap callback, `placeSymbols`, etc.), its
  * view's zIndex is set to the canonical formula
  *   `(symbolData.zIndex ?? 0) * 100 + arrayIndex`
  * automatically. Consumers should not need to call `refreshZIndex()`
@@ -22,22 +22,18 @@ describe('auto-zIndex on _replaceSymbol', () => {
   it('a newly-placed symbol gets the canonical zIndex without an explicit refresh', async () => {
     const h = createTestReelSet({
       reels: 3,
-      visibleRows: 3,
+      visibleCells: 3,
       symbolIds: SYMBOLS,
       symbolData: {
         wild: { zIndex: 5 },
       },
     });
     try {
-      await h.spinAndLand([
-        ['a', 'a', 'a'],
-        ['a', 'wild', 'a'],
-        ['a', 'a', 'a'],
-      ]);
+      await h.spinAndLand([ { visible: ['a', 'a', 'a'] }, { visible: ['a', 'wild', 'a'] }, { visible: ['a', 'a', 'a'] } ]);
 
       const reel = h.reelSet.reels[1];
-      const bufferAbove = reel.bufferAbove;
-      const wildArrayIndex = bufferAbove + 1; // visible row 1
+      const bufferStart = reel.bufferStart;
+      const wildArrayIndex = bufferStart + 1; // visible cell 1
       const wildView = reel.symbols[wildArrayIndex].view;
 
       // Canonical formula: (symbolData.zIndex ?? 0) * 100 + arrayIndex
@@ -53,21 +49,17 @@ describe('auto-zIndex on _replaceSymbol', () => {
     // that default, not silently land symbols on layer 0.
     const h = createTestReelSet({
       reels: 3,
-      visibleRows: 3,
+      visibleCells: 3,
       symbolIds: SYMBOLS,
     });
     try {
-      await h.spinAndLand([
-        ['a', 'a', 'a'],
-        ['a', 'a', 'a'],
-        ['a', 'a', 'a'],
-      ]);
+      await h.spinAndLand([ { visible: ['a', 'a', 'a'] }, { visible: ['a', 'a', 'a'] }, { visible: ['a', 'a', 'a'] } ]);
 
       const reel = h.reelSet.reels[0];
-      const bufferAbove = reel.bufferAbove;
+      const bufferStart = reel.bufferStart;
 
-      for (let row = 0; row < 3; row++) {
-        const arrayIndex = bufferAbove + row;
+      for (let cell = 0; cell < 3; cell++) {
+        const arrayIndex = bufferStart + cell;
         const view = reel.symbols[arrayIndex].view;
         expect(view.zIndex).toBe(1 * 100 + arrayIndex);
       }
@@ -79,7 +71,7 @@ describe('auto-zIndex on _replaceSymbol', () => {
   it('zIndex is reapplied even when the same symbol id replaces itself', async () => {
     const h = createTestReelSet({
       reels: 3,
-      visibleRows: 3,
+      visibleCells: 3,
       symbolIds: SYMBOLS,
       symbolData: {
         wild: { zIndex: 7 },
@@ -87,23 +79,15 @@ describe('auto-zIndex on _replaceSymbol', () => {
     });
     try {
       // First spin: wild lands.
-      await h.spinAndLand([
-        ['a', 'a', 'a'],
-        ['a', 'wild', 'a'],
-        ['a', 'a', 'a'],
-      ]);
+      await h.spinAndLand([ { visible: ['a', 'a', 'a'] }, { visible: ['a', 'wild', 'a'] }, { visible: ['a', 'a', 'a'] } ]);
       // Manually corrupt the zIndex so we can verify the swap re-applies it.
       const reel = h.reelSet.reels[1];
-      const bufferAbove = reel.bufferAbove;
-      const wildArrayIndex = bufferAbove + 1;
+      const bufferStart = reel.bufferStart;
+      const wildArrayIndex = bufferStart + 1;
       reel.symbols[wildArrayIndex].view.zIndex = -999;
 
-      // Second spin: wild lands at the same row again (same symbol id swap).
-      await h.spinAndLand([
-        ['a', 'a', 'a'],
-        ['a', 'wild', 'a'],
-        ['a', 'a', 'a'],
-      ]);
+      // Second spin: wild lands at the same cell again (same symbol id swap).
+      await h.spinAndLand([ { visible: ['a', 'a', 'a'] }, { visible: ['a', 'wild', 'a'] }, { visible: ['a', 'a', 'a'] } ]);
 
       const wildView = reel.symbols[wildArrayIndex].view;
       expect(wildView.zIndex).toBe(7 * 100 + wildArrayIndex);

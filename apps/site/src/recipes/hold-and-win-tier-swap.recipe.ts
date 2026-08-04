@@ -1,7 +1,7 @@
 // @ts-nocheck
 // Injected: HoldAndWinBuilder, GoldCoinSymbol, SpineReelSymbol, Spine, settleMoneyFace, PIXI, gsap, app
 //
-// Swap a symbol in place — coin → MINI → MAJOR — without breaking the grid.
+// Swap a symbol in place - coin → MINI → MAJOR - without breaking the grid.
 //
 // `board.setSymbolAt(cell, id, data)` re-places one cell with a different
 // registered symbol (different art / skeleton) and rewrites that cell's
@@ -65,7 +65,7 @@ const labelAt = new Map();
 const abs = (cell) => { const c = board.cellCenter(cell); return { x: board.container.x + c.x, y: board.container.y + c.y }; };
 const fit = (t, w, h) => { if (t.width > 0) t.scale.set(Math.min(w / t.width, h / t.height, 1)); return t; };
 const paintLabel = (cell, value, kind) => {
-  const k = `${cell.col},${cell.row}`; labelAt.get(k)?.destroy();
+  const k = `${cell.reel},${cell.cell}`; labelAt.get(k)?.destroy();
   const p = abs(cell);
   const t = fit(goldText(fmt(value), kind ? 18 : 30), CELL * 0.82, CELL * 0.42);
   t.position.set(p.x, p.y + (kind ? CELL * 0.18 : 0)); // tier coins show the word up top, value low
@@ -75,11 +75,11 @@ const paintLabel = (cell, value, kind) => {
 
 // three neighbours that must NOT move, plus the one we upgrade
 const SEED = [
-  { cell: { col: 0, row: 0 }, id: COIN, data: { value: 5 } },
-  { cell: { col: 4, row: 2 }, id: COIN, data: { value: 10 } },
-  { cell: { col: 3, row: 0 }, id: COIN, data: { value: 25 } },
+  { cell: { reel: 0, cell: 0 }, id: COIN, data: { value: 5 } },
+  { cell: { reel: 4, cell: 2 }, id: COIN, data: { value: 10 } },
+  { cell: { reel: 3, cell: 0 }, id: COIN, data: { value: 25 } },
 ];
-const TARGET = { cell: { col: 2, row: 1 }, id: COIN, data: { value: 50 } };
+const TARGET = { cell: { reel: 2, cell: 1 }, id: COIN, data: { value: 50 } };
 const TIERS = [
   { id: COIN, value: 50, label: 'coin 50.00', kind: null },
   { id: MINI, value: 100, label: 'MINI 100.00', kind: 'mini' },
@@ -105,7 +105,7 @@ return {
     tier = (tier + 1) % TIERS.length;
     const t = TIERS[tier];
     if (tier === 0) { seedBoard(); hud.text = 'reset · press spin to upgrade the marked coin'; busy = false; return; }
-    // swap the symbol id in place — neighbours untouched, ledger updated
+    // swap the symbol id in place - neighbours untouched, ledger updated
     const sym = board.setSymbolAt(TARGET.cell, t.id, { value: t.value, kind: t.kind });
     void sym.playWin?.().catch?.(() => {});
     paintLabel(TARGET.cell, t.value, t.kind);

@@ -1,5 +1,5 @@
 /**
- * Low finding — SpineSymbol's optional import is fire-and-forget, so a cold-load
+ * Low finding - SpineSymbol's optional import is fire-and-forget, so a cold-load
  * construction could throw a misleading "not installed" error. whenSpineReady()
  * lets callers await the import settling. It must always resolve (never reject),
  * whether or not the optional peer dep is installed.

@@ -1,7 +1,7 @@
 // @ts-nocheck
 // Injected: ReelSetBuilder, SpeedPresets, ReelSymbol, PIXI, app
 //
-// BEGINNER LESSON — carry a numeric value on a coin by building your own
+// BEGINNER LESSON - carry a numeric value on a coin by building your own
 // symbol class.
 //
 // In pixi-reels a "symbol" is any subclass of `ReelSymbol`. The engine makes
@@ -77,7 +77,7 @@ const idFor = (v) => `coin${v}`;
 const REELS = 3, CELL = 96, GAP = 8;
 
 const reelSet = new ReelSetBuilder()
-  .reels(REELS).visibleRows(1)
+  .reels(REELS).visibleCells(1)
   .symbolSize(CELL, CELL).symbolGap(GAP, GAP)
   .symbols((r) => { for (const v of VALUES) r.register(idFor(v), ValueCoin, { value: v }); })
   .weights(Object.fromEntries(VALUES.map((v) => [idFor(v), 1])))
@@ -97,7 +97,7 @@ hud.position.set(app.screen.width / 2, reelSet.y + CELL + 16);
 app.stage.addChild(hud);
 
 // You can read the value straight off the landed symbol instance:
-//   reelSet.reels[col].getSymbolAt(row).value
+//   reelSet.reels[reel].getSymbolAt(cell).value
 reelSet.events.on('spin:allLanded', () => {
   const values = reelSet.reels.map((_, c) => reelSet.reels[c].getSymbolAt(0).value);
   const total = values.reduce((a, b) => a + b, 0);

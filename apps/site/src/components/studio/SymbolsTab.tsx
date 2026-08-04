@@ -8,7 +8,7 @@ import type {
   SymbolConfig,
   SymbolType,
 } from '@/lib/studio/types.js';
-import { CARD_DECK, WILD_CARD } from '../../../../../examples/shared/CardSymbol.ts';
+import { CARD_DECK, WILD_CARD } from 'pixi-reels';
 import { SpineForm } from './SpineForm.tsx';
 
 interface Props {

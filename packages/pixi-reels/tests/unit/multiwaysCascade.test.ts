@@ -15,18 +15,18 @@ interface Harness {
 
 function buildMultiwaysCascadeHarness(opts: {
   reels?: number;
-  minRows?: number;
-  maxRows?: number;
-  reelPixelHeight?: number;
+  minCells?: number;
+  maxCells?: number;
+  reelExtent?: number;
 } = {}): Harness {
   const ticker = new FakeTicker();
   const created: string[] = [];
   const reelSet = new ReelSetBuilder()
     .reels(opts.reels ?? 3)
     .multiways({
-      minRows: opts.minRows ?? 2,
-      maxRows: opts.maxRows ?? 6,
-      reelPixelHeight: opts.reelPixelHeight ?? 600,
+      minCells: opts.minCells ?? 2,
+      maxCells: opts.maxCells ?? 6,
+      reelExtent: opts.reelExtent ?? 600,
     })
     .symbolSize(100, 100)
     .tumble()
@@ -58,7 +58,7 @@ describe('MultiWays + Cascade (issue #74)', () => {
     try {
       expect(h.reelSet.isMultiWaysSlot).toBe(true);
       // Default mode falls back to cascade because .tumble() was called.
-      expect(h.reelSet.reels.map((r) => r.visibleRows)).toEqual([6, 6, 6]);
+      expect(h.reelSet.reels.map((r) => r.visibleCells)).toEqual([6, 6, 6]);
     } finally {
       h.destroy();
     }
@@ -83,7 +83,7 @@ describe('MultiWays + Cascade (issue #74)', () => {
       expect(h.created.some((n) => n.startsWith('cascade:fall:'))).toBe(true);
       // Standard StartPhase must NOT be created. tumble mode replaced it.
       expect(h.created.some((n) => n.startsWith('start:'))).toBe(false);
-      expect(h.reelSet.reels.map((r) => r.visibleRows)).toEqual([3, 4, 2]);
+      expect(h.reelSet.reels.map((r) => r.visibleCells)).toEqual([3, 4, 2]);
     } finally {
       h.destroy();
     }
@@ -112,7 +112,7 @@ describe('MultiWays + Cascade (issue #74)', () => {
   it('handles two cascade spins in succession with different shapes', async () => {
     const h = buildMultiwaysCascadeHarness();
     try {
-      // Spin 1 → shape [3,4,2].
+      // Spin 1 -> shape [3,4,2].
       let promise = h.reelSet.spin({ mode: 'cascade' });
       h.reelSet.setShape([3, 4, 2]);
       h.reelSet.setResult([
@@ -122,9 +122,9 @@ describe('MultiWays + Cascade (issue #74)', () => {
       ]);
       h.reelSet.slamStop();
       await promise;
-      expect(h.reelSet.reels.map((r) => r.visibleRows)).toEqual([3, 4, 2]);
+      expect(h.reelSet.reels.map((r) => r.visibleCells)).toEqual([3, 4, 2]);
 
-      // Spin 2 → shape [5,2,6]. AdjustPhase must reshape on each spin.
+      // Spin 2 -> shape [5,2,6]. AdjustPhase must reshape on each spin.
       promise = h.reelSet.spin({ mode: 'cascade' });
       h.reelSet.setShape([5, 2, 6]);
       h.reelSet.setResult([
@@ -134,7 +134,7 @@ describe('MultiWays + Cascade (issue #74)', () => {
       ]);
       h.reelSet.slamStop();
       await promise;
-      expect(h.reelSet.reels.map((r) => r.visibleRows)).toEqual([5, 2, 6]);
+      expect(h.reelSet.reels.map((r) => r.visibleCells)).toEqual([5, 2, 6]);
     } finally {
       h.destroy();
     }
@@ -151,8 +151,8 @@ describe('MultiWays + Cascade (issue #74)', () => {
       ]);
       h.reelSet.slamStop();
       await promise;
-      // Builds at maxRows=6; no setShape → reshape is a no-op.
-      expect(h.reelSet.reels.map((r) => r.visibleRows)).toEqual([6, 6, 6]);
+      // Builds at maxCells=6; no setShape -> reshape is a no-op.
+      expect(h.reelSet.reels.map((r) => r.visibleCells)).toEqual([6, 6, 6]);
     } finally {
       h.destroy();
     }

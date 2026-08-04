@@ -8,7 +8,7 @@ import {
 
 describe('createTestReelSet', () => {
   it('builds a reel set with configured dimensions', () => {
-    const h = createTestReelSet({ reels: 5, visibleRows: 3, symbolIds: ['a', 'b', 'c'] });
+    const h = createTestReelSet({ reels: 5, visibleCells: 3, symbolIds: ['a', 'b', 'c'] });
     try {
       expect(h.reelSet.reels.length).toBe(5);
       expect(h.reelSet.reels[0].getVisibleSymbols().length).toBe(3);
@@ -18,14 +18,14 @@ describe('createTestReelSet', () => {
   });
 
   it('spinAndLand deterministically lands the target grid', async () => {
-    const h = createTestReelSet({ reels: 3, visibleRows: 3, symbolIds: ['a', 'b', 'c'] });
+    const h = createTestReelSet({ reels: 3, visibleCells: 3, symbolIds: ['a', 'b', 'c'] });
     try {
       const grid: string[][] = [
         ['a', 'a', 'a'],
         ['b', 'b', 'b'],
         ['c', 'c', 'c'],
       ];
-      const result = await h.spinAndLand(grid);
+      const result = await h.spinAndLand(grid.map((visible) => ({ visible })));
       expect(result.wasSkipped).toBe(true);
       expectGrid(h.reelSet, grid);
     } finally {
@@ -34,7 +34,7 @@ describe('createTestReelSet', () => {
   });
 
   it('emits the full spin event sequence', async () => {
-    const h = createTestReelSet({ reels: 3, visibleRows: 3, symbolIds: ['a', 'b', 'c'] });
+    const h = createTestReelSet({ reels: 3, visibleCells: 3, symbolIds: ['a', 'b', 'c'] });
     try {
       const log = captureEvents(h.reelSet, [
         'spin:start',
@@ -42,11 +42,7 @@ describe('createTestReelSet', () => {
         'skip:completed',
         'spin:complete',
       ]);
-      await h.spinAndLand([
-        ['a', 'b', 'c'],
-        ['a', 'b', 'c'],
-        ['a', 'b', 'c'],
-      ]);
+      await h.spinAndLand([ { visible: ['a', 'b', 'c'] }, { visible: ['a', 'b', 'c'] }, { visible: ['a', 'b', 'c'] } ]);
       const names = log.map((e) => e.event);
       expect(names).toEqual([
         'spin:start',
@@ -60,15 +56,9 @@ describe('createTestReelSet', () => {
   });
 
   it('countSymbol returns the correct visible count', async () => {
-    const h = createTestReelSet({ reels: 5, visibleRows: 3, symbolIds: ['x', 'y'] });
+    const h = createTestReelSet({ reels: 5, visibleCells: 3, symbolIds: ['x', 'y'] });
     try {
-      await h.spinAndLand([
-        ['x', 'x', 'x'],
-        ['y', 'y', 'y'],
-        ['x', 'y', 'x'],
-        ['y', 'y', 'y'],
-        ['x', 'x', 'x'],
-      ]);
+      await h.spinAndLand([ { visible: ['x', 'x', 'x'] }, { visible: ['y', 'y', 'y'] }, { visible: ['x', 'y', 'x'] }, { visible: ['y', 'y', 'y'] }, { visible: ['x', 'x', 'x'] } ]);
       expect(countSymbol(h.reelSet, 'x')).toBe(8);
       expect(countSymbol(h.reelSet, 'y')).toBe(7);
     } finally {
@@ -77,12 +67,9 @@ describe('createTestReelSet', () => {
   });
 
   it('expectGrid throws a readable error on mismatch', async () => {
-    const h = createTestReelSet({ reels: 2, visibleRows: 2, symbolIds: ['a', 'b'] });
+    const h = createTestReelSet({ reels: 2, visibleCells: 2, symbolIds: ['a', 'b'] });
     try {
-      await h.spinAndLand([
-        ['a', 'a'],
-        ['b', 'b'],
-      ]);
+      await h.spinAndLand([ { visible: ['a', 'a'] }, { visible: ['b', 'b'] } ]);
       expect(() =>
         expectGrid(h.reelSet, [
           ['a', 'b'],
@@ -95,7 +82,7 @@ describe('createTestReelSet', () => {
   });
 
   it('advance() fires ticker callbacks', () => {
-    const h = createTestReelSet({ reels: 2, visibleRows: 2, symbolIds: ['a'] });
+    const h = createTestReelSet({ reels: 2, visibleCells: 2, symbolIds: ['a'] });
     try {
       const before = h.ticker.elapsedMS;
       h.advance(80);

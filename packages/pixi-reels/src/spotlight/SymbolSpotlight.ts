@@ -1,6 +1,7 @@
 import type { Reel } from '../core/Reel.js';
 import type { ReelViewport } from '../core/ReelViewport.js';
-import type { SymbolPosition } from '../events/ReelEvents.js';
+import type { SymbolPosition, ReelSetEvents } from '../events/ReelEvents.js';
+import { EventEmitter } from '../events/EventEmitter.js';
 import type { ReelSymbol } from '../symbols/ReelSymbol.js';
 import type { Disposable } from '../utils/Disposable.js';
 
@@ -54,7 +55,7 @@ interface PromotedSymbol {
  *
  * Win detection is NOT part of this. pixi-reels never computes wins.
  * your server / game code decides which cells are winners and passes
- * them here. See [ADR 007](../../docs/adr/007-scope.md).
+ * them here. See [ADR 007](https://github.com/schmooky/pixi-reels/blob/main/docs/adr/007-scope.md).
  */
 export class SymbolSpotlight implements Disposable {
   private _reels: Reel[];
@@ -63,10 +64,12 @@ export class SymbolSpotlight implements Disposable {
   private _isActive = false;
   private _isDestroyed = false;
   private _cycleAbort: AbortController | null = null;
+  private _events: EventEmitter<ReelSetEvents>;
 
-  constructor(reels: Reel[], viewport: ReelViewport) {
+  constructor(reels: Reel[], viewport: ReelViewport, events: EventEmitter<ReelSetEvents>) {
     this._reels = reels;
     this._viewport = viewport;
+    this._events = events;
   }
 
   get isActive(): boolean {
@@ -98,11 +101,10 @@ export class SymbolSpotlight implements Disposable {
     } = options;
 
     this._isActive = true;
+    this._events.emit('spotlight:start', positions);
 
-    // Show dim overlay
     this._viewport.showDim(dimAmount);
 
-    // Promote symbols
     const winPromises: Promise<void>[] = [];
 
     const seen = new Set<string>();
@@ -110,12 +112,12 @@ export class SymbolSpotlight implements Disposable {
       const reel = this._reels[pos.reelIndex];
       if (!reel) continue;
 
-      const symbol = reel.getSymbolAt(pos.rowIndex);
+      const symbol = reel.getSymbolAt(pos.cellIndex);
       if (!symbol) continue;
 
       // Avoid promoting the same physical symbol twice (e.g. a 2×2 big
       // symbol's anchor cell + its OCCUPIED cells all resolve to one symbol).
-      const key = `${pos.reelIndex}:${reel.getAnchorRow(pos.rowIndex)}`;
+      const key = `${pos.reelIndex}:${reel.getAnchorCell(pos.cellIndex)}`;
       if (seen.has(key)) continue;
       seen.add(key);
 
@@ -177,9 +179,13 @@ export class SymbolSpotlight implements Disposable {
     }
     this._promoted = [];
 
-    // Hide dim overlay
     this._viewport.hideDim();
+    // Only fire spotlight:end for a teardown that actually ends an active
+    // presentation. hide() runs teardown eagerly (e.g. show() clears a prior
+    // spotlight first), and those must not emit a spurious end.
+    const wasActive = this._isActive;
     this._isActive = false;
+    if (wasActive) this._events.emit('spotlight:end');
   }
 
   /**

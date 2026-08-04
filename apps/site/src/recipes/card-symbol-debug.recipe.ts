@@ -3,8 +3,8 @@
 //                   PIXI, gsap, app, textures, blurTextures, SYMBOL_IDS,
 //                   pickWeighted
 //
-// CardSymbol prototyping demo. a classic 5×3 layout using the importable
-// debug Graphics symbol from `examples/shared/CardSymbol.ts`. No textures,
+// CardSymbol prototyping demo. a 5×3 layout using the importable
+// debug Graphics symbol `CardSymbol`, exported from `pixi-reels`. No textures,
 // no atlases, no loaders. Each card is a flat colored rectangle with a
 // centered letter that always renders crisply at any cell size.
 //
@@ -19,7 +19,7 @@ const GAP = 6;
 
 const reelSet = new ReelSetBuilder()
   .reels(REELS)
-  .visibleRows(ROWS)
+  .visibleCells(ROWS)
   .symbolSize(SIZE, SIZE)
   .symbolGap(GAP, GAP)
   .symbols((registry) => {

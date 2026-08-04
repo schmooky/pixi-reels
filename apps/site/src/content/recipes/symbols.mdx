@@ -1,0 +1,126 @@
+---
+title: "Symbols, layering & motion blur"
+group: rendering
+oneLiner: Symbol classes, three-tier layering (zIndex, unmask, promote), multi-skin Spine tiers, and static-spin motion blur.
+order: 70
+tags:
+  - symbols
+  - layering
+  - static-spin
+  - motion-blur
+  - spine
+  - horizontal
+  - orientation
+apis: []
+steps: []
+---
+
+Symbol building blocks and how they are drawn: the classes you register, the three ways to layer overflowing art, and spinning on cached blur textures.
+
+<a id="card-symbol-debug"></a>
+
+## CardSymbol. debug / prototyping helper
+
+No-asset PIXI.Graphics symbol for recipes, mechanic tests, and prototypes; crisp at any cell size.
+Exported from the package, so a prototype needs no art at all:
+`import { CardSymbol, CARD_DECK, WILD_CARD } from 'pixi-reels'`.
+
+**Gotcha:** debug scaffolding, not production art - ship SpriteSymbol / AnimatedSpriteSymbol / SpineSymbol instead.
+
+<RecipeDemo code="card-symbol-debug" />
+
+<a id="empty-symbol"></a>
+
+## EmptySymbol: render nothing for a registered id
+
+Register EmptySymbol against an id to reserve a grid slot that occupies a strip slot but draws zero pixels - the canonical blank field for hold-and-win boards.
+
+<RecipeDemo code="empty-symbol" />
+
+## Texture atlas symbols
+
+Load sprite symbols from a TexturePacker atlas: one atlas file, 80+ frames, one GPU upload.
+
+<RecipeDemo code="texture-atlas-symbols" />
+
+<a id="symbols-horizontal-resize"></a>
+
+## Authoring a symbol for a sideways set
+
+A hand-written `ReelSymbol` on a horizontal set, with wide non-square cells. Nothing in the class knows about the axis: `resize(width, height)` hands it screen pixels across and screen pixels down whichever way the strip travels, and the plate's upright marker and glyph stay upright while the strip scrolls along X.
+
+Travel changes motion; facing changes art; they never change each other. The engine never rotates a symbol container to fake an axis, so third-party symbol classes need no changes at all.
+
+**Gotcha:** the one orientation fact a symbol gets is `this.mainAxis` (`'y'` vertical, `'x'` horizontal), and it is there for effects that genuinely follow travel, motion blur being the one in the box. Do not lay out with it.
+
+<RecipeDemo code="symbols-horizontal-resize" />
+
+<a id="symbols-transposed-pair"></a>
+
+## The same symbols on both axes
+
+Four reels of three cells, built twice and landed with the identical grid. One symbol registration serves both sets; the only difference between the two builds is that `symbolSize` swaps its two numbers, because a horizontal board is the vertical one transposed.
+
+<RecipeDemo code="symbols-transposed-pair" height={380} />
+
+## Symbol transform
+
+A symbol morphs into a different (usually higher) one mid-round via setSymbolAt.
+
+**Gotcha:** transform only after landing (spin:complete / spin:reelLanded); setSymbolAt throws mid-spin and on big-symbol anchors.
+
+<RecipeDemo code="symbol-transform" />
+
+<a id="symbol-layering"></a>
+
+## Symbol layering - zIndex, unmask, promote
+
+Three tiers of "draw my symbol on top": within one reel, above every reel and the mask, and per-instance via the spotlight layer.
+
+**Within a reel (symbolData zIndex):**
+
+<RecipeDemo code="layering-scatter-zindex" height={420} />
+
+**Cross-reel and out-of-mask (unmask, at rest):**
+
+<RecipeDemo code="layering-unmask" height={420} />
+
+**Per-instance (promote the landed view into spotlightContainer):**
+
+<RecipeDemo code="layering-promote-jagged" height={420} />
+
+<AssetCredit studio="Thunderkick" />
+
+<a id="spine-skins-3-4-4-4-4-3"></a>
+
+## Multi-skin Spine tiers on a compact grid
+
+One skeleton per symbol tier (a skin per id) with static-spin blur, on a gapless 3-4-4-4-4-3 grid.
+
+<RecipeDemo code="spine-skins-3-4-4-4-4-3" height={460} />
+
+<AssetCredit studio="Thunderkick" />
+
+<a id="static-spin-blur"></a>
+
+## Auto-baked motion blur (static spin)
+
+Spin cached snapshot textures with a baked blur - no blur art, no runtime filters.
+
+<RecipeDemo code="static-spin-blur" />
+
+<a id="static-spin-provided-blur"></a>
+
+## Bring your own blur textures
+
+Hand-authored blur strips where you have them; auto-baked blur where you don't - both spin through the same StaticSpinSymbol.
+
+<RecipeDemo code="static-spin-provided-blur" />
+
+<a id="static-spin-spine"></a>
+
+## Spin static, not Spine
+
+Live Spine skeletons at rest; cached snapshot textures while the reels spin, so no skeleton ticks mid-spin.
+
+<RecipeDemo code="static-spin-spine" height={340} />

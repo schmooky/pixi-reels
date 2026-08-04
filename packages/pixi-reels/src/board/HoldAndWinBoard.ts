@@ -6,6 +6,7 @@ import type { SymbolRegistry } from '../symbols/SymbolRegistry.js';
 import type { SpeedProfile, SymbolData } from '../config/types.js';
 import type { Disposable } from '../utils/Disposable.js';
 import { BoardGrid } from './BoardGrid.js';
+import type { Direction, Orientation } from '../core/ReelAxis.js';
 import { HoldAndWinState } from './HoldAndWinState.js';
 import type { HwPhase } from './HoldAndWinState.js';
 import { cellKey } from './HwTypes.js';
@@ -29,11 +30,14 @@ export interface HoldAndWinBoardConfig<TData> {
   weights: Record<string, number> | null;
   symbolData: Record<string, Partial<SymbolData>> | null;
   baseProfile: SpeedProfile;
-  stagger: (col: number, row: number) => number;
+  stagger: (reel: number, cell: number) => number;
   anticipateWhen:
     | ((state: { locked: number; capacity: number; respinsLeft: number }) => boolean)
     | null;
   chrome: ((g: Graphics, size: number) => void) | null;
+  /** Travel axis for each cell's own strip. See `HoldAndWinBuilder.axis`. */
+  orientation?: Orientation;
+  direction?: Direction;
   ticker: Ticker;
   rng: (() => number) | null;
 }
@@ -43,17 +47,17 @@ const TENSION_EXTRA_MS = 1100;
 
 /**
  * A Hold & Win board: a grid of independently spinning cells plus the round
- * choreography every H&W game repeats — spin the free cells, lock the hits,
+ * choreography every H&W game repeats - spin the free cells, lock the hits,
  * reset-or-decrement the respin counter, detect the full board.
  *
  * It composes two collaborators: a `BoardGrid` (the generic "board of reels"
- * mechanism — geometry, instances, spinning) and a `HoldAndWinState` (the pure
- * single-source reducer — ledger, counter, phase). The board is the
+ * mechanism - geometry, instances, spinning) and a `HoldAndWinState` (the pure
+ * single-source reducer - ledger, counter, phase). The board is the
  * mediator: it drives the reels, reports each landing to the reducer, and
  * replays the reducer's decided effects onto {@link events}.
  *
  * It deliberately owns nothing about *value*. Coins are opaque `{ cell, id, data }`
- * — `id` picks the registered art, `data` is the game layer's to read and mutate.
+ * - `id` picks the registered art, `data` is the game layer's to read and mutate.
  * Adders, doublers, collectors and flights are game design, expressed through
  * three openings rather than board features: {@link events}, {@link symbolAt}
  * (the live `ReelSymbol` instance) and {@link cellBounds}/{@link cellCenter}
@@ -92,7 +96,7 @@ export class HoldAndWinBoard<TData = unknown> implements Disposable {
     this._anticipateWhen = cfg.anticipateWhen;
 
     const base = (cell: HwCell): number =>
-      (cfg.baseProfile.minimumSpinTime ?? 320) + cfg.stagger(cell.col, cell.row);
+      (cfg.baseProfile.minimumSpinTime ?? 320) + cfg.stagger(cell.reel, cell.cell);
     this._grid = new BoardGrid({
       cols: cfg.cols,
       rows: cfg.rows,
@@ -103,6 +107,8 @@ export class HoldAndWinBoard<TData = unknown> implements Disposable {
       weights: cfg.weights ?? undefined,
       symbolData: cfg.symbolData ?? undefined,
       chrome: cfg.chrome ?? undefined,
+      orientation: cfg.orientation,
+      direction: cfg.direction,
       ticker: cfg.ticker,
       rng: cfg.rng ?? undefined,
       profiles: {
@@ -156,12 +162,12 @@ export class HoldAndWinBoard<TData = unknown> implements Disposable {
   }
 
   /**
-   * Rewrite a **locked** cell's coin in place — coin → jackpot, mini → major,
-   * raise a tier — without disturbing any other cell. The ledger entry is
+   * Rewrite a **locked** cell's coin in place - coin → jackpot, mini → major,
+   * raise a tier - without disturbing any other cell. The ledger entry is
    * rewritten so `lockedCoins` and totals stay correct. Throws on a free cell.
    * Returns the new live symbol instance.
    *
-   * Throws if called while a wave is in flight — `await respin()` first. To
+   * Throws if called while a wave is in flight - `await respin()` first. To
    * upgrade a coin in reaction to its own `coin:locked`, defer the swap until
    * the awaited `respin()` resolves rather than swapping inside the listener.
    */
@@ -210,9 +216,9 @@ export class HoldAndWinBoard<TData = unknown> implements Disposable {
         done: this._state.phase === 'idle',
       };
     } catch (err) {
-      // A synchronous throw between beginWave and endWave — most plausibly a
+      // A synchronous throw between beginWave and endWave - most plausibly a
       // game-layer event listener (respin:start / cell:landed / coin:locked)
-      // throwing — must not strand the board. (An unregistered symbol id does
+      // throwing - must not strand the board. (An unregistered symbol id does
       // NOT land here: the engine logs and slams the reel internally, so the
       // spin resolves rather than rejecting.) abortWave() restores the reducer
       // phase, else every later respin() throws "wave in flight"; skipSpinning()
@@ -226,7 +232,7 @@ export class HoldAndWinBoard<TData = unknown> implements Disposable {
   }
 
   /**
-   * Remove locked coins — the collect moment. Clears the cells (they become
+   * Remove locked coins - the collect moment. Clears the cells (they become
    * free again) and returns the released coins; the flight itself is game-layer
    * animation, started from `cellCenter()` or the `coin:released` event.
    */
@@ -278,7 +284,7 @@ export class HoldAndWinBoard<TData = unknown> implements Disposable {
       (this.events.emit as (type: string, payload: unknown) => void)(fx.type, fx.payload);
       if (fx.type === 'coin:locked') {
         // playWin is presentation; a hiccup must not break the feature flow, but
-        // it must not vanish silently either — log it like the rest of the engine.
+        // it must not vanish silently either - log it like the rest of the engine.
         void this.symbolAt(fx.payload.coin.cell)
           .playWin()
           .catch((err) => console.warn('HoldAndWinBoard: coin win animation failed.', err));

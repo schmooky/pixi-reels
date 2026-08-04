@@ -2,7 +2,7 @@
 // Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
 //                   WILD_CARD, WinPresenter, PIXI, gsap, app, pickWeighted
 //
-// This recipe shows the "events + getCellBounds" path: WinPresenter only
+// The "events + getCellBounds" path: WinPresenter only
 // animates symbols; you draw every per-win visual (lines, outlines,
 // numbers) yourself by subscribing to `win:group` / `win:symbol`.
 
@@ -15,16 +15,16 @@ const GRID = [
   [SEVEN, B, C], [SEVEN, B, C], [SEVEN, B, C], [SEVEN, B, C], [SEVEN, B, C],
 ];
 
-const WINS = [0, 1, 2].map((row) => ({
-  id: row,
-  cells: Array.from({ length: COLS }, (_, reelIndex) => ({ reelIndex, rowIndex: row })),
-  value: [300, 100, 60][row],
+const WINS = [0, 1, 2].map((cell) => ({
+  id: cell,
+  cells: Array.from({ length: COLS }, (_, reelIndex) => ({ reelIndex, cellIndex: cell })),
+  value: [300, 100, 60][cell],
 }));
 
 const LINE_COLORS = [0xffe04a, 0x33d1ff, 0xff7aa2];
 
 const reelSet = new ReelSetBuilder()
-  .reels(COLS).visibleRows(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
+  .reels(COLS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
   .symbols(r => {
     for (const sym of [...CARD_DECK, WILD_CARD]) {
       r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
@@ -44,7 +44,7 @@ reelSet.events.on('win:group', (win, cells) => {
   gfx.zIndex = win.id ?? 0;
   const color = LINE_COLORS[(win.id ?? 0) % LINE_COLORS.length];
   const pts = cells.map(c => {
-    const b = reelSet.getCellBounds(c.reelIndex, c.rowIndex);
+    const b = reelSet.getCellBounds(c.reelIndex, c.cellIndex);
     return { x: b.x + b.width / 2, y: b.y + b.height / 2 };
   });
   gfx.moveTo(pts[0].x, pts[0].y);

@@ -37,7 +37,8 @@ __PIXI_REELS_DEBUG.trace();  // logs every domain event from now on
 import { debugSnapshot, debugGrid } from 'pixi-reels';
 
 const snap = debugSnapshot(reelSet);
-// snap: { isSpinning, currentSpeed, spotlightActive, reelCount, visibleRows, reels: [...], grid: [[...], ...] }
+// snap: { timestamp, isSpinning, currentSpeed, availableSpeeds, spotlightActive,
+//         reelCount, visibleCells, reels: [...], grid: [[...], ...] }
 
 console.log(debugGrid(reelSet));   // ASCII table
 ```
@@ -49,7 +50,7 @@ when `expectGrid()` fails:
 
 ```
 Grid mismatch:
-  reel 0 row 1: expected "seven" got "cherry"
+  reel 0 cell 1: expected "seven" got "cherry"
 
 Current grid:
 ┌────────┬────────┬────────┬────────┬────────┐
@@ -63,28 +64,104 @@ The snapshot shapes are typed as `DebugSnapshot` and `DebugReelSnapshot`. they'r
 
 ## Recording sessions
 
-When a bug only reproduces over many frames, recording the engine's per-frame state lets you replay it offline. `startRecording` wires a recorder into the ticker; `stopRecording` releases it. `getFrames` returns the array of `RecordedFrame` entries between the two; `clearFrames` resets the buffer for the next take.
+When a bug only reproduces across a whole spin, record it and read the
+sequence back offline.
+
+Recording is **event-driven, not per-frame**: `startRecording` listens for
+`spin:start`, `spin:reelLanded`, `spin:allLanded`, `spin:complete` and
+`destroyed`, and captures a snapshot at each. A spin yields a handful of
+frames, not one per render tick.
 
 ```ts
-import { startRecording, stopRecording, getFrames, clearFrames, type StartRecordingOptions } from 'pixi-reels';
+import { startRecording, stopRecording, getFrames, clearFrames } from 'pixi-reels';
 
-const opts: StartRecordingOptions = { reelSet, sampleEveryNFrames: 1 };
-startRecording(opts);
+startRecording(reelSet, 'spin-1');   // (reelSet, tag?, { maxFrames? })
 await reelSet.spin();
 reelSet.setResult([/* ... */]);
 await /* the spin */;
-stopRecording();
+stopRecording(reelSet);
 
-const frames = getFrames(); // RecordedFrame[]
+const frames = getFrames('spin-1');  // RecordedFrame[]
 console.log(`captured ${frames.length} frames`);
-clearFrames(); // ready for the next round
+clearFrames();
 ```
 
-Each `RecordedFrame` carries a `DebugSnapshot`, the timestamp, and the elapsed ms since the first frame. Pipe it into a tracing UI or feed it to a comparison test.
+Each `RecordedFrame` is `{ tag, trigger, snapshot }` -- the tag you passed,
+the event name that triggered the capture, and the `DebugSnapshot`. The
+timestamp lives inside `snapshot`.
+
+Two things to know about the buffer:
+
+- It is **process-wide and not cleared between sessions**, so bare
+  `getFrames()` returns every take since the page loaded. Pass the tag.
+- It is a rolling window, 1000 frames by default (`maxFrames`). A long
+  session silently drops the oldest.
+
+## The visual overlay
+
+`debugSnapshot` tells you what the engine thinks; `debugOverlay` draws it on
+top of the canvas, so you can see whether the picture agrees.
+
+```ts
+import { debugOverlay } from 'pixi-reels';
+
+const overlay = debugOverlay(reelSet, {
+  layers: ['cells', 'axis', 'bounds'],   // or 'all'
+  live: true,                            // redraw each tick; false = draw once
+  ticker: app.ticker,                    // drive the live redraw off your ticker
+});
+
+overlay.setLayers(['cells', 'pins']);
+overlay.redraw();
+overlay.destroy();
+```
+
+| Layer | Draws | Catches |
+|---|---|---|
+| `mask` | Mask box + per-reel rects | Pyramid peek; a mask strategy clipping on the wrong axis |
+| `cells` | Every visible cell, with `reel,cell` labels | Off-by-one in cell indexing |
+| `buffers` | The off-window strip cells, dimmer | Buffer targets and big-symbol tails, which are otherwise invisible |
+| `axis` | One arrow per reel, pointing the way it travels | Reverse polarity and horizontal orientation become obvious instead of inferred |
+| `feed` | The edge new symbols arrive at | Confirms `feedEdge` derives from direction rather than being set twice |
+| `thresholds` | The wrap lines | No symbol should ever be drawn past one |
+| `bounds` | Real `view.getBounds()` per symbol | Spine overrun past its cell |
+| `blocks` | `getBlockBounds` outline for big symbols | 2x2 anchors, and block/screen transposition |
+| `pins` | Pin cells and pin-overlay positions | A pin overlay drifting off its cell |
+| `hud` | Per-reel `r0 VF feed=start spd=0.0 idle cells=3` | Reading state without opening the console |
+
+The overlay draws into the `ReelSet` itself, so it renders above the viewport
+*and* above the spotlight container. It is dev-only: it reads internals, it is
+not semver-protected, and it must not reach a production bundle.
+
+### describe() - the overlay as data
+
+A canvas is opaque to CI and to AI agents, and some of what the overlay draws
+cannot be recovered from a screenshot anyway: a travel arrow pointing up has
+exactly the same bounding box as one pointing down. So the overlay also hands
+back plain JSON:
+
+```ts
+const info = debugOverlay(reelSet, { layers: 'all' }).describe();
+
+info.reels[0];
+// {
+//   reel: 0,
+//   orientation: 'vertical', direction: 'reverse', feedEdge: 'end',
+//   axisArrow: { fromMain: 249.6, toMain: 62.4 },   // signed: to - from is the direction
+//   feedMain: 187.2,
+//   thresholds: { start: -124.8, end: 249.6 },
+//   visibleCells: 3,
+//   phase: 'idle',
+// }
+```
+
+`axisArrow`'s signed span is the assertion worth making: it is the one thing
+that distinguishes a reverse reel from a forward one, and a bounding box
+cannot see it.
 
 ## Gotchas
 
 - `debugGrid` returns plain text. safe to log, assert against, or paste anywhere.
 - `enableDebug` is a no-op in Node (it checks `typeof window`).
 - Snapshots contain no PixiJS objects, so `JSON.stringify()` will always work.
-- The `DEFAULTS` constant (exported from `pixi-reels`) holds every default value the builder applies. read it when you want to set a value relative to the engine's default (e.g. `builder.bufferSymbols(DEFAULTS.bufferSymbols + 2)`).
+- The `DEFAULTS` constant (exported from `pixi-reels`) holds five of the engine's defaults: `bufferSymbols`, `symbolGap`, `initialSpeed`, `maxPoolPerKey`, `zIndexStep`. Read it when you want to set a value relative to one of those (e.g. `builder.bufferSymbols(DEFAULTS.bufferSymbols + 2)`). Other defaults live with the feature that owns them -- tumble's in `TumbleConfig`, stacking and pin migration on the builder.

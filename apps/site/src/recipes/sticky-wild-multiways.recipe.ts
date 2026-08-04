@@ -3,11 +3,11 @@
 //                   WILD_CARD, PIXI, gsap, app, textures, blurTextures,
 //                   SYMBOL_IDS, pickWeighted
 //
-// Sticky wild on a MultiWays slot. Pin a wild on land with `originRow` set;
+// Sticky wild on a MultiWays slot. Pin a wild on land with `originCell` set;
 // the pin survives every MultiWays reshape. When the next shape is shorter
-// than originRow, the pin clamps to the last visible row (`pin:migrated`
+// than originCell, the pin clamps to the last visible cell (`pin:migrated`
 // fires with clamped:true). When a later, larger shape can fit the
-// originRow again, the pin migrates back. no wander.
+// originCell again, the pin migrates back. no wander.
 //
 // CARD SYMBOLS BELOW ARE DEBUG/PROTOTYPING ONLY. see /recipes/card-symbol-debug/.
 
@@ -21,7 +21,7 @@ const STICKY_TURNS = 3;
 
 const reelSet = new ReelSetBuilder()
   .reels(REELS)
-  .multiways({ minRows: MIN_ROWS, maxRows: MAX_ROWS, reelPixelHeight: REEL_PIXEL_HEIGHT })
+  .multiways({ minCells: MIN_ROWS, maxCells: MAX_ROWS, reelExtent: REEL_PIXEL_HEIGHT })
   .pinMigrationDuration(300)
   .pinMigrationEase('power2.inOut')
   .symbolSize(SYMBOL_SIZE, SYMBOL_SIZE)
@@ -44,8 +44,8 @@ const reelSet = new ReelSetBuilder()
   .build();
 
 // On every landing, pin every wild for STICKY_TURNS spins. Each pin captures
-// its current row as `originRow` automatically. that's what lets the
-// engine restore the pin to its original row when shapes grow back.
+// its current cell as `originCell` automatically. that's what lets the
+// engine restore the pin to its original cell when shapes grow back.
 reelSet.events.on('spin:allLanded', ({ symbols }) => {
   for (let c = 0; c < symbols.length; c++) {
     for (let r = 0; r < symbols[c].length; r++) {
@@ -59,8 +59,8 @@ reelSet.events.on('spin:allLanded', ({ symbols }) => {
 // Cycle shapes so the demo deterministically shows clamp + restore.
 const SHAPE_CYCLE = [
   [5, 5, 5, 5, 5, 5],
-  [3, 3, 3, 3, 3, 3], // shrinks. high-row wilds clamp
-  [7, 7, 7, 7, 7, 7], // grows back. clamped wilds migrate back to originRow
+  [3, 3, 3, 3, 3, 3], // shrinks. high-cell wilds clamp
+  [7, 7, 7, 7, 7, 7], // grows back. clamped wilds migrate back to originCell
   [4, 4, 4, 4, 4, 4],
 ];
 let spinCount = 0;
@@ -71,8 +71,8 @@ return {
   nextResult: () => {
     const shape = SHAPE_CYCLE[spinCount++ % SHAPE_CYCLE.length];
     reelSet.setShape(shape);
-    const grid = shape.map((rows) =>
-      Array.from({ length: rows }, () => CARD_DECK[Math.floor(Math.random() * CARD_DECK.length)].id),
+    const grid = shape.map((cells) =>
+      Array.from({ length: cells }, () => CARD_DECK[Math.floor(Math.random() * CARD_DECK.length)].id),
     );
     // Plant a wild high up on the first spin so the clamp/restore is visible.
     if (!plantedWild) {

@@ -89,7 +89,7 @@ These are habits, not gates. Sections 1-5 above are hard rules; this section is 
 A passing typecheck is not "done." A compiled bundle is not "done." Done means you watched the thing behave correctly.
 
 - After every lib change, in order: `pnpm --filter pixi-reels typecheck` → `pnpm --filter pixi-reels test` → `pnpm check:lint`. Don't skip steps.
-- If your change is observable in a running reel, run the relevant example (`pnpm --filter sandbox dev` for the fastest iteration) and drive it. Use `__PIXI_REELS_DEBUG.log()` and `.trace()`. they exist because the canvas is opaque to you.
+- If your change is observable in a running reel, run the matching recipe on the docs site (`pnpm site:dev`) and drive it. Use `__PIXI_REELS_DEBUG.log()` and `.trace()`. they exist because the canvas is opaque to you.
 - If you cannot verify a behavior end-to-end (no browser, no real server, no spine asset), **say so explicitly** in the PR description. "Typecheck passes but I could not confirm the spotlight renders" is honest; "shipped" is not.
 
 ### Read state, don't remember it
@@ -116,8 +116,8 @@ This repo already has `ObjectPool`, `TickerRef`, `Disposable`, `EventEmitter`, `
 
 - `ReelSymbol.resize()` is called on **every** symbol swap. Anything positional lives there, not in the constructor.
 - SpriteSymbols anchor at `(0, 0)`; SpineSymbols center via `resize()`. Don't mix models inside one class.
-- `ReelMotion` wraps via `_maxY` / `_minY`; never mutate symbol Y outside the motion layer.
-- GSAP must be driven off `app.ticker` in examples (the example scaffolding already does this. don't add a second driver).
+- Travel changes motion; facing changes art; they never change each other. never mutate a symbol's main coordinate outside the motion layer.
+- GSAP must be driven off `app.ticker` (the recipe runner already does this. don't add a second driver).
 
 Violating these produces bugs that only appear on hidden tabs, long sessions, or specific aspect ratios. exactly the ones humans will only notice after a release.
 
@@ -133,11 +133,13 @@ If you've tried three approaches and none work, do not try a fourth random appro
 
 **Monorepo layout:**
 - `packages/pixi-reels/`. The npm-publishable library
-- `examples/classic-spin/`. Standard 5x3 slot demo (sprite symbols)
-- `examples/cascade-tumble/`. 6x5 cascade/tumble demo (sprite symbols)
-- `examples/sandbox/`. Live-editable playground (sprite symbols + HMR)
-- `examples/shared/`. Shared example utilities (mock server, UI, BlurSpriteSymbol, atlas loader)
-- `examples/assets/prototype-symbols/`. Open-licensed sprite atlas used by every example
+- `apps/site/`. The docs site. Its `/recipes` route is where live, runnable demos live now: ~130 of them, each an `apps/site/src/recipes/<slug>.recipe.ts` driven by an umbrella page under `src/content/recipes/`
+- `apps/site/src/runtime/`. Symbol classes and asset loaders the recipes run on (BlurSpriteSymbol, CoinSymbol, Spine loaders, atlas loader)
+- `apps/site/public/prototype-symbols/`. Open-licensed sprite atlas the recipes draw with
+- `packages/cheats/`. `CheatEngine` + `SeededRng`. Deliberately outside the library (ADR 009); used by the docs site and by the library's own integration tests
+- `tests/e2e/fixtures/orientation-matrix/`. All four travel combinations on one page. The Playwright target for browser coverage of the axis
+
+**The standalone example apps moved to a separate repo in 2.0.** Anything that used to live under `examples/` is either in the list above or is gone from this repo.
 
 ## Quick Commands
 
@@ -154,12 +156,11 @@ pnpm test
 # Type check
 pnpm --filter pixi-reels typecheck
 
-# Run an example
-pnpm --filter classic-spin dev       # port 5173
-pnpm --filter cascade-tumble dev     # port 5174
+# Run the docs site (every recipe is a live demo)
+pnpm site:dev
 
-# Build all examples as static sites
-pnpm examples:build
+# Typecheck the e2e fixture + cheats package
+pnpm typecheck:fixtures
 ```
 
 ## Architecture Overview
@@ -174,9 +175,10 @@ ReelSet (Container) ── events: EventEmitter<ReelSetEvents>
     ├── SpeedManager ── Normal / Turbo / SuperTurbo profiles
     ├── SymbolSpotlight ── win animations (dim + promote)
     ├── ReelViewport ── masked + unmasked + spotlight containers
-    └── Reel[] ── one per column
+    └── Reel[] ── one per reel (a column when vertical, a row when horizontal)
+        ├── ReelAxis ── orientation + direction; maps travel/cross onto screen x/y
         ├── ReelSymbol[] ── SpriteSymbol / AnimatedSpriteSymbol / SpineSymbol
-        ├── ReelMotion ── Y displacement + wrapping
+        ├── ReelMotion ── travel-axis advance + wrapping; positions derived from array index
         └── StopSequencer ── target frame management
 ```
 
@@ -238,13 +240,13 @@ Example `debugSnapshot()` fields:
   "currentSpeed": "normal",
   "spotlightActive": false,
   "reelCount": 5,
-  "visibleRows": [3, 3, 3, 3, 3],
+  "visibleCells": [3, 3, 3, 3, 3],
   "grid": [["cherry","plum","orange"], ...],
   "reels": [{ "index": 0, "speed": 0, "isStopping": false, "visibleSymbols": [...] }, ...]
 }
 ```
 
-`visibleRows` is `number[]` (one entry per reel) so jagged shapes (pyramids, MultiWays) are representable. For uniform slots every entry is the same value.
+`visibleCells` is `number[]` (one entry per reel) so jagged shapes (pyramids, MultiWays) are representable. For uniform slots every entry is the same value.
 
 **When debugging reel issues as an AI agent:**
 1. Call `__PIXI_REELS_DEBUG.log()` via eval to understand current state
@@ -272,7 +274,7 @@ Example `debugSnapshot()` fields:
 | `utils/` | Disposable (interface), TickerRef (safe ticker wrapper) |
 | `debug/` | debugSnapshot, debugGrid, enableDebug |
 
-### Examples (`examples/`)
+### Recipe runtime (`apps/site/src/runtime/`)
 | Directory | Purpose |
 |-----------|---------|
 | `shared/prototypeSpriteLoader.ts` | Loads the `prototype-symbols` TexturePacker atlas |
@@ -305,8 +307,8 @@ pool/ → symbols/ → frame/
 - **TickerRef**. never use `ticker.add()` directly; wrap in TickerRef for auto-cleanup
 - **Anchor (0,0)**. SpriteSymbol uses top-left anchor; SpineSymbol centers via `resize()`
 - **Events use colon namespacing**. `spin:start`, `speed:changed`, etc.
-- **GSAP must sync with PixiJS**. examples call `gsap.ticker.remove(gsap.updateRoot)` and drive GSAP from `app.ticker` to work in hidden tabs/iframes
-- **Spine assets**. atlas references `.webp` textures; `publicDir` in vite.config serves them from `examples/assets/`
+- **GSAP must sync with PixiJS**. the recipe runner calls `gsap.ticker.remove(gsap.updateRoot)` and drives GSAP from `app.ticker` to work in hidden tabs/iframes
+- **Spine assets**. atlas references `.webp` textures; they are served from `apps/site/public/`
 
 ## Testing
 
@@ -342,31 +344,32 @@ Tests are in `packages/pixi-reels/tests/` using Vitest. Run with `pnpm test`.
 2. Register: `builder.frameMiddleware(new MyMiddleware())`
 
 ### Modify Spine symbol behavior
-1. Edit `examples/shared/SpineReelSymbol.ts`
+1. Edit `packages/pixi-reels/src/spine/SpineReelSymbol.ts`
 2. Key method: `onActivate()` creates/shows spine, `resize()` centers it in cell
 3. `_positionSpine()` sets `spine.x = cellWidth/2, spine.y = cellHeight/2`
 4. Every new spine created in `onActivate` gets positioned via stored `_cellWidth/_cellHeight`
 
-### Place a buffer-above or buffer-below target symbol
-Both `initialFrame` (build-time seed) and `setResult` (per-spin land) accept the explicit `ColumnTarget` form. prefer this one. `bufferAbove[0]` is the slot closest to the visible top row; later indices go further above. Same for `bufferBelow[0]` and the visible bottom row.
+### Place a buffer-start or buffer-end target symbol
+Both `initialFrame` (build-time seed) and `setResult` (per-spin land) accept the explicit `ColumnTarget` form. prefer this one. `bufferStart[0]` is the slot just outside the visible window at the smaller main coordinate (above for vertical, left for horizontal); later indices go further out. Same for `bufferEnd[0]` at the larger coordinate.
 
 ```ts
 import type { ColumnTarget } from 'pixi-reels';
 
 const grid: ColumnTarget[] = [
-  { visible: ['A','B','C'], bufferAbove: ['COIN'] },
-  { visible: ['A','B','C'], bufferBelow: ['SCATTER'] },
+  { visible: ['A','B','C'], bufferStart: ['COIN'] },
+  { visible: ['A','B','C'], bufferEnd: ['SCATTER'] },
 ];
 reelSet.setResult(grid);
 builder.initialFrame(grid); // same shape works at build time
 ```
 
-The legacy `string[][]` form with negative-index slots (`grid[0][-1] = 'COIN'`) is also accepted and works end-to-end, but does NOT survive `structuredClone`/JSON/postMessage. reach for it only for in-process one-liners.
+`ColumnTarget` is the only accepted form, and it is what the engine carries internally all the way down to `Reel.placeSymbols`. There is no negative-index slot encoding any more. inside the pipeline, read and write a target cell with `getTargetSlot(target, row)` / `setTargetSlot(target, row, id)` (row `0` is the first visible cell, negative rows are buffer-start), or materialize the whole strip with `columnTargetToStrip(target, bufferStart)`.
 
 ## Known Gotchas
 
-- **GSAP freezes in hidden tabs**. always sync GSAP ticker with PixiJS ticker in examples
+- **GSAP freezes in hidden tabs**. always sync GSAP ticker with PixiJS ticker
 - **Spine atlas requires texture pages**. `.webp` files must be served from the same directory as `.atlas`
 - **Symbol resize is critical**. `Reel._replaceSymbol()` calls `resize()` on every swap; without it symbols scatter
 - **Preview browser can't decode images**. the Claude Code preview environment has no image codecs; test Spine rendering in a real browser
-- **ReelMotion wrapping**. symbols wrap when crossing `_maxY`/`_minY` boundaries; the callback triggers symbol identity swap via `_onSymbolWrapped`
+- **Travel vs facing**. travel changes motion; facing changes art; they never change each other. A reel that spins sideways or upward still renders every symbol upright, and `ReelSymbol.resize(width, height)` stays screen-space (ADR 016 sections 2-3, ADR 017)
+- **ReelMotion wrapping**. positions are DERIVED from array index every frame, never accumulated; a wrap rotates the symbol array and the callback triggers the identity swap via `_onSymbolWrapped`. never mutate a symbol's main coordinate outside the motion layer

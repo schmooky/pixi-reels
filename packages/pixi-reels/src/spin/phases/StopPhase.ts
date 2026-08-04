@@ -1,5 +1,4 @@
 import type { gsap } from 'gsap';
-import { getGsap } from '../../utils/gsapRef.js';
 import { ReelPhase } from './ReelPhase.js';
 
 export interface StopPhaseConfig {
@@ -45,11 +44,11 @@ export class StopPhase extends ReelPhase<StopPhaseConfig> {
   protected onEnter(config: StopPhaseConfig): void {
     this._config = config;
     this._stage = 'delay';
-    this._baseY = this._reel.container.y;
+    this._baseY = this._reel.axis.getMain(this._reel.container);
 
     const delay = (config.delay ?? 0) / 1000;
     if (delay > 0) {
-      this._delayTween = getGsap().delayedCall(delay, () => this._beginSpinOut());
+      this._delayTween = this._reel.gsap.delayedCall(delay, () => this._beginSpinOut());
     } else {
       this._beginSpinOut();
     }
@@ -104,18 +103,40 @@ export class StopPhase extends ReelPhase<StopPhaseConfig> {
     }
 
     const legDuration = (speed.bounceDuration ?? 600) / 2000; // half of total, in seconds
+    // Overshoot in the direction of travel: forward reels overshoot toward the
+    // larger main coordinate, reverse reels toward the smaller. axis.polarity
+    // makes this automatic and keeps vertical/forward at `base + bounceDistance`.
+    const axis = reel.axis;
     this._stage = 'bouncing';
-    this._bounceTween = getGsap().timeline();
+
+    // `notifyLanded()` just lifted every at-rest unmask symbol into
+    // `viewport.unmaskedContainer`, where the reel offset is baked into the
+    // view's own coordinate instead of inherited from `reel.container`. The
+    // bounce moves the container, so without this the lifted views hang
+    // motionless for the whole overshoot while the reel travels under them.
+    let followedMain = this._baseY;
+    const followLifted = (): void => {
+      const main = axis.getMain(reel.container);
+      reel.offsetLiftedViews(main - followedMain);
+      followedMain = main;
+    };
+
+    this._bounceTween = this._reel.gsap.timeline();
     this._bounceTween.to(reel.container, {
-      y: this._baseY + bounceDistance,
+      [axis.mainProp]: this._baseY + axis.polarity * bounceDistance,
       duration: legDuration,
       ease: 'power1.out',
+      onUpdate: followLifted,
     });
     this._bounceTween.to(reel.container, {
-      y: this._baseY,
+      [axis.mainProp]: this._baseY,
       duration: legDuration,
       ease: 'power1.out',
+      onUpdate: followLifted,
       onComplete: () => {
+        // The last onUpdate can land a hair short of the end value; settle the
+        // lifted views on the exact resting position rather than that epsilon.
+        followLifted();
         this._stage = 'done';
         this._complete();
       },
@@ -130,21 +151,18 @@ export class StopPhase extends ReelPhase<StopPhaseConfig> {
 
     if (this._stage !== 'done' && this._config) {
       // Place the FULL target frame, not just the visible window — slicing to
-      // [bufferAbove, bufferAbove+visible] dropped buffer-above/below targets
-      // (e.g. a big symbol's tail parked in bufferAbove), so a direct skip()
-      // landed the wrong frame. targetFrame is a flat top-to-bottom strip;
-      // placeSymbols reads buffer-above from NEGATIVE indices and visible +
-      // buffer-below from positive indices, so convert before placing.
-      const bufferAbove = reel.bufferAbove;
-      const frame = this._config.targetFrame;
-      const placeForm = frame.slice(bufferAbove);
-      for (let j = 0; j < bufferAbove; j++) {
-        (placeForm as Record<number, string>)[j - bufferAbove] = frame[j];
-      }
-      reel.placeSymbols(placeForm);
+      // [bufferStart, bufferStart+visible] dropped buffer-above/below targets
+      // (e.g. a big symbol's tail parked in bufferStart), so a direct skip()
+      // landed the wrong frame. targetFrame is already a flat top-to-bottom
+      // strip, which is exactly what placeStrip consumes.
+      reel.placeStrip(this._config.targetFrame);
     }
+    // Rest the container BEFORE snapping. `snapToGrid` re-bakes the container's
+    // current main coordinate into any lifted unmask view, so skipping mid-bounce
+    // used to bake the overshoot position and then move the container out from
+    // under it, leaving the view off by however far the bounce had travelled.
+    reel.axis.setMain(reel.container, this._baseY);
     reel.snapToGrid();
-    reel.container.y = this._baseY;
     this._stage = 'done';
   }
 

@@ -9,7 +9,7 @@ import { createTestReelSet } from '../../src/testing/index.js';
 function buildHarness() {
   return createTestReelSet({
     reels: 3,
-    visibleRows: 3,
+    visibleCells: 3,
     symbolIds: ['a', 'b', 'c', 'wild'],
   });
 }
@@ -17,7 +17,7 @@ function buildHarness() {
 function buildMultiwaysHarness() {
   return createTestReelSet({
     reels: 3,
-    multiways: { minRows: 2, maxRows: 5, reelPixelHeight: 500 },
+    multiways: { minCells: 2, maxCells: 5, reelExtent: 500 },
     symbolIds: ['a', 'b', 'wild'],
   });
 }
@@ -28,7 +28,7 @@ describe('nudge reentrancy guards', () => {
     try {
       const nudging = h.reelSet.nudge(0, {
         distance: 1,
-        direction: 'down',
+        direction: 'forward',
         incoming: ['wild'],
       });
       await expect(h.reelSet.spin()).rejects.toThrow(
@@ -46,7 +46,7 @@ describe('nudge reentrancy guards', () => {
     try {
       const nudging = h.reelSet.nudge(0, {
         distance: 1,
-        direction: 'down',
+        direction: 'forward',
         incoming: ['wild'],
       });
       expect(() =>
@@ -68,7 +68,7 @@ describe('nudge reentrancy guards', () => {
     try {
       const nudging = h.reelSet.nudge(0, {
         distance: 1,
-        direction: 'down',
+        direction: 'forward',
         incoming: ['wild'],
       });
       expect(() => h.reelSet.pin(1, 1, 'wild', { turns: 'permanent' })).toThrow(
@@ -86,7 +86,7 @@ describe('nudge reentrancy guards', () => {
     try {
       const nudging = h.reelSet.nudge(0, {
         distance: 1,
-        direction: 'down',
+        direction: 'forward',
         incoming: ['wild'],
       });
       expect(() => h.reelSet.setShape([3, 3, 3])).toThrow(

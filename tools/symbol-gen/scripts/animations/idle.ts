@@ -1,7 +1,7 @@
 import { anim, frames } from '../lib/dsl';
 
 /**
- * 2400ms idle — slow, subtle breathing on the icon. Frame and border
+ * 2400ms idle: slow, subtle breathing on the icon. Frame and border
  * stay PERFECTLY stationary. Single slow cycle (no rotation, no second
  * harmonic) so it reads as "alive" without ever feeling jiggly.
  *
@@ -19,7 +19,7 @@ export const idle = anim('idle', { loop: true })
   )
   .bone('icon', (b) => b
     // Slow vertical float: -1.5 px lift then settle. ONE cycle over the
-    // full loop — no second harmonic, no jiggle.
+    // full loop, no second harmonic, no jiggle.
     .translate(0, 0)
     .translateTo(0, -1.5, frames(72), 'easeInOut')
     .translateTo(0,  0,   frames(72), 'easeInOut')
@@ -31,7 +31,7 @@ export const idle = anim('idle', { loop: true })
     .scaleTo(1.0,   frames(72), 'easeInOut')
 
     // Reset rotation baseline (destroy ends at icon.rotate 18deg). No
-    // active rotation in idle — that's where the jiggle was coming from.
+    // active rotation in idle; that's where the jiggle was coming from.
     .rotate(0)
     .rotateTo(0, frames(144))
   )

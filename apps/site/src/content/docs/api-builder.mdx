@@ -13,7 +13,7 @@ Every method returns `this` so you can chain. `build()` validates and returns a 
 | Method | |
 |---|---|
 | `.reels(n)` | Number of columns. |
-| `.visibleRows(n)` or `.visibleRowsPerReel([n,...])` or `.multiways({...})` | One of these picks the row layout. |
+| `.visibleCells(n)` or `.visibleCellsPerReel([n,...])` or `.multiways({...})` | One of these picks the row layout. |
 | `.symbolSize(w, h)` | Per-symbol dimensions in px. |
 | `.symbols((r) => { r.register(...) })` | At least one symbol id. |
 | `.ticker(pixiTicker)` | Drives frame updates. |
@@ -25,11 +25,11 @@ Missing any of these throws at `.build()` with a human-readable list of problems
 | Method | Default |
 |---|---|
 | `.symbolGap(x, y)` | `{ x: 0, y: 0 }` |
-| `.bufferSymbols(n)` | `1` (clamped to ≥ 1. the motion layer needs one buffer row above and below for wrap detection) |
+| `.bufferSymbols(n)` or `.bufferSymbols({ start, end })` | `1` (clamped to ≥ 1. the motion layer needs one buffer cell each side for wrap detection). `start` is the smaller main coordinate (above for vertical, left for horizontal), whichever way the reel travels. |
 | `.weights({ id: n })` | `10` for each registered symbol |
-| `.symbolData({ id: { zIndex, unmask, size, weight } })` | Per-symbol metadata. Auto-routes `unmask`; `size > 1x1` declares a big symbol. |
-| `.reelPixelHeights([h,...])` | Per-reel pixel-box heights for pyramid layouts. Derived from `visibleRowsPerReel × symbolHeight` if unset. |
-| `.reelAnchor('top' \| 'center' \| 'bottom')` | `'center'`. vertical alignment of short reels inside the tallest reel's box. |
+| `.symbolData({ id: { zIndex, unmask, size, weight } })` | Per-symbol metadata. Auto-routes `unmask`; `size: { reels, cells }` beyond 1x1 declares a big symbol. `reels` spans the cross axis, `cells` the main axis, in every orientation. |
+| `.reelExtents([n,...])` | Per-reel MAIN-axis extents for pyramid layouts (pixel height when vertical, width when horizontal). Derived from the cell count if unset. |
+| `.reelAnchor('start' \| 'center' \| 'end')` | `'center'`. alignment of short reels along the MAIN axis, inside the longest reel's extent. |
 | `.speed(name, profile)` | `SpeedPresets.NORMAL` under `'normal'` |
 | `.initialSpeed(name)` | `'normal'` |
 | `.offsetConfig(config)` | `{ mode: 'none' }` |
@@ -37,12 +37,19 @@ Missing any of these throws at `.build()` with a human-readable list of problems
 | `.frameMiddleware(mw)` | *(none)*. add as many as you want; sorted by priority. |
 | `.phases((f) => { f.register(...) })` | Built-in `START`/`SPIN`/`STOP`/`ANTICIPATION` (+ cascade phases when `.tumble()` is used). |
 | `.tumble({ fall, dropIn })` | *(unset; required for `spin({ mode: 'cascade' })` and `reelSet.refill(...)`)*. see [the Tumble section](#tumble) below. |
-| `.multiways({ minRows, maxRows, reelPixelHeight })` | *(unset; required for `setShape(...)`)* |
+| `.multiways({ minCells, maxCells, reelExtent })` | *(unset; required for `setShape(...)`)*. `reelExtent` is a MAIN-axis extent. |
+| `.orientation('vertical' \| 'horizontal')` | `'vertical'`. which screen axis the strip travels along. See [Orientation & direction](/guides/orientation-and-direction/). |
+| `.direction('forward' \| 'reverse')` | `'forward'`. which way along that axis symbols move. `'reverse'` on a vertical set is a roll-up. |
+| `.directionPerReel([d,...])` | *(unset)*. per-reel override; length must equal `reels()`. Cannot be combined with cross-reel big symbols. |
+| `.cellStacking('ascending' \| 'descending')` | `'ascending'`. which cell draws in front. Geometric: `direction('reverse')` does NOT flip it. |
+| `.reelStacking('ascending' \| 'descending')` | `'ascending'`. which reel draws in front. |
 | `.pinMigrationDuration(ms \| fn)` | `200` (MultiWays only) |
 | `.pinMigrationEase(ease)` | `'power2.out'` (MultiWays only) |
-| `.maskStrategy(strategy)` | Per-reel `RectMaskStrategy`. Auto-switches to `SharedRectMaskStrategy` when big or unmasked symbols are registered with `symbolGap.x > 0`. |
-| `.gsap(instance)` | Bound from the package's own `gsap` import. Use this when your app and the engine resolve to different `gsap` instances (symlinked workspaces, npm link, misconfigured `dedupe`). |
-| `.initialFrame(ColumnTarget[])` | Random per `weights()`. One `ColumnTarget` per reel: `{ visible, bufferAbove?, bufferBelow? }`. |
+| `.maskStrategy(strategy)` | Per-reel `RectMaskStrategy`. Auto-switches to `SharedRectMaskStrategy` when big or unmasked symbols are registered and the CROSS-axis gap is > 0. A custom strategy takes one `MaskContext` and must declare `version = MASK_STRATEGY_VERSION`. |
+| `.gsap(instance)` | The package's own `gsap` import. Use this when your app and the engine resolve to different `gsap` instances (symlinked workspaces, npm link, misconfigured `dedupe`). Bound PER SET at `build()`; pass the same instance to `driveGsapWithTicker(ticker, instance)`. |
+| `.initialFrame(ColumnTarget[])` | Random per `weights()`. One `ColumnTarget` per reel: `{ visible, bufferStart?, bufferEnd? }`. |
+| `.rng(fn)` | `Math.random`. Source for every symbol the engine picks itself -- the strip you watch scroll, and any buffer padding. Must return `[0, 1)`. Server-authoritative outcomes do **not** make that visible sequence reproducible; pass a seeded, audited PRNG if you need to replay a spin from its seed. |
+| `.poolCapacity(n)` | The whole strip (visible + buffer), per symbol id, so a grid that briefly goes all-one-symbol still recycles. Lower it to cap memory on very large grids; raise it for unusually heavy simultaneous swaps. |
 
 ## .build()
 
@@ -55,7 +62,7 @@ import { ReelSetBuilder, SpriteSymbol, SpeedPresets } from 'pixi-reels';
 
 const reelSet = new ReelSetBuilder()
   .reels(5)
-  .visibleRows(3)
+  .visibleCells(3)
   .symbolSize(140, 140)
   .symbolGap(4, 4)
   .symbols((r) => {
@@ -73,8 +80,8 @@ const reelSet = new ReelSetBuilder()
 
 ```ts
 .tumble({
-  fall:   { duration: 280, ease: 'sine.in',       rowStagger: 40 },
-  dropIn: { duration: 480, ease: 'back.out(1.6)', rowStagger: 50, distance: 'perHole' },
+  fall:   { duration: 280, ease: 'sine.in',       cellStagger: 40 },
+  dropIn: { duration: 480, ease: 'back.out(1.6)', cellStagger: 50, distance: 'perHole' },
 })
 ```
 
@@ -84,8 +91,8 @@ const reelSet = new ReelSetBuilder()
 |---|---|---|---|
 | `duration` | `number` (ms) | `300` | Each symbol's fall-out tween length. |
 | `ease` | GSAP easing string | `'sine.in'` | Gravity feel. Any [GSAP easing](https://gsap.com/docs/v3/Eases) works. |
-| `rowStagger` | `number` (ms) | `0` | Delay between successive rows starting their fall. `0` = every row falls together. |
-| `rowOrder` | `'bottomToTop' \| 'topToBottom'` | `'bottomToTop'` | Which row begins first. The default pairs with `setDropOrder('ltr')` for the canonical "bottom-left first, top-right last" feel. |
+| `cellStagger` | `number` (ms) | `0` | Delay between successive rows starting their fall. `0` = every row falls together. |
+| `cellOrder` | `'auto' \| 'endFirst' \| 'startFirst'` | `'auto'` | Which row begins first. `'auto'` starts at the gravity-exit end, so the default pairs with `setDropOrder('ltr')` for the canonical "bottom-left first, top-right last" feel, and inverts by itself when gravity does. `'endFirst'`/`'startFirst'` pin a geometric end. |
 
 ### TumbleDropInConfig
 
@@ -93,15 +100,15 @@ const reelSet = new ReelSetBuilder()
 |---|---|---|---|
 | `duration` | `number` (ms) | `600` | Each symbol's drop-in tween length. |
 | `ease` | GSAP easing string | `'power2.out'` | Clean deceleration with **no overshoot**. matches commercial slots that play a landing spine animation after the drop. Use `'back.out(1.5)'` for soft overshoot, `'bounce.out'` for cartoon bounce, `'expo.out'` for slam. |
-| `rowStagger` | `number` (ms) | `60` | Delay between successive rows starting their drop. `0` = simultaneous (the canonical refill choice). |
-| `rowOrder` | `'bottomToTop' \| 'topToBottom'` | `'bottomToTop'` | Which row arrives first when `rowStagger > 0`. |
+| `cellStagger` | `number` (ms) | `60` | Delay between successive rows starting their drop. `0` = simultaneous (the canonical refill choice). |
+| `cellOrder` | `'auto' \| 'endFirst' \| 'startFirst'` | `'auto'` | Which row arrives first when `cellStagger > 0`. `'auto'` fills from the gravity-exit end, the way a stack settles from its floor up. |
 | `distance` | `'perHole' \| 'auto' \| number` | `'perHole'` | `'perHole'` is gravity-correct (each symbol falls exactly its own offset). `'auto'` makes every symbol traverse the full column in unison ("rain column" feel). A number forces a uniform pixel distance. |
 
 ### Picking a feel
 
 Five preset recipes you can copy verbatim. see the [tumble feels recipe](/recipes/tumble-feels/) for side-by-side canvases.
 
-| Feel | fall.ease | dropIn.ease | dropIn.rowStagger | When to use |
+| Feel | fall.ease | dropIn.ease | dropIn.cellStagger | When to use |
 |---|---|---|---|---|
 | Classic | `sine.in` | `back.out(1.6)` | 50 ms | Default. Start here. |
 | Cartoon bounce | `sine.in` | `bounce.out` | 70 ms | Multi-bounce landing. |

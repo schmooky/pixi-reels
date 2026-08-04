@@ -5,8 +5,8 @@ import RecipeThumb from '../../components/RecipeThumb.astro';
 import { ArrowRight } from 'lucide-react';
 import { breadcrumbLd, articleLd, SITE } from '../../lib/seo.ts';
 
-const title = 'Recipes. mini pixi-reels how-tos';
-const description = 'Focused, single-idea recipes for slot mechanics built with pixi-reels: how to remove a symbol in a cascade, anticipate a reel, expand a wild, animate paylines, slam-stop, and fake a near-miss.';
+const title = 'Recipes. pixi-reels mechanics, grouped and live';
+const description = 'Slot mechanics built with pixi-reels, grouped into pages of live, replayable demos: Hold & Win, big symbols, cascades, wilds and pins, nudge, anticipation, symbol authoring, cells and banners.';
 
 // Group recipes by their `group` field; preserve declaration order within each group.
 const recipesByGroup = new Map<string, typeof RECIPES>();
@@ -34,31 +34,14 @@ for (const recipe of RECIPES) {
         Cookbook
       </div>
       <h1 class="mt-4 text-4xl font-semibold tracking-tight sm:text-5xl">
-        Small recipes, <span class="gradient-text">one mechanic each.</span>
+        Slot mechanics, <span class="gradient-text">grouped and live.</span>
       </h1>
       <p class="mx-auto mt-5 max-w-xl text-muted-foreground">
-        Each page is a focused how-to: the minimum code to make a single
-        mechanic work, plus a live mini-demo you can replay.
+        Each page collects a family of mechanics as live, replayable demos,
+        with the minimum code that makes each one work.
       </p>
     </div>
   </section>
-
-  <nav aria-label="Recipe groups" class="sticky top-0 z-30 border-b border-border/60 bg-background/85 backdrop-blur">
-    <div class="container flex flex-wrap items-center gap-2 py-3">
-      {RECIPE_GROUPS.map((g) => {
-        const groupRecipes = recipesByGroup.get(g.id) ?? [];
-        if (groupRecipes.length === 0) return null;
-        return (
-          <a
-            href={`#${g.id}`}
-            class="inline-flex items-center rounded-full border border-border/70 bg-card/60 px-3 py-1 text-xs font-medium text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground"
-          >
-            {g.label}
-          </a>
-        );
-      })}
-    </div>
-  </nav>
 
   <section class="py-14">
     <div class="container space-y-14">

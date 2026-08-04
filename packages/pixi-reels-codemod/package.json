@@ -1,0 +1,25 @@
+{
+  "name": "pixi-reels-codemod",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Rewrite pixi-reels v1 API names to v2. npx pixi-reels-codemod v1-to-v2 <paths...>",
+  "type": "module",
+  "bin": {
+    "pixi-reels-codemod": "./bin/cli.js"
+  },
+  "files": [
+    "bin",
+    "transforms",
+    "README.md",
+    "LICENSE"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "jscodeshift": "^17.1.2"
+  },
+  "scripts": {
+    "test": "node --test \"test/*.test.js\"",
+    "prepack": "node ../../scripts/stage-package-files.mjs --pkg packages/pixi-reels-codemod --files LICENSE",
+    "postpack": "node ../../scripts/stage-package-files.mjs --pkg packages/pixi-reels-codemod --files LICENSE --clean"
+  }
+}

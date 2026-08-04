@@ -1,8 +1,9 @@
 id: coins-008
 group: coins
 question: How do I flash the matching jackpot plaque when its coin locks?
-answer: In the `coin:locked` handler, read `coin.data.kind` and play that
-  plaque's win animation.
+answer: >-
+  In the `coin:locked` handler read `coin.data?.kind` (`data` is optional) and
+  play that plaque's win animation.
 links:
   - label: "Recipe: Hold & Win — Spine coins"
     href: /recipes/hold-and-win-spine/

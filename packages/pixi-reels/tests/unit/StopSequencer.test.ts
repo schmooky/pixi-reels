@@ -32,12 +32,16 @@ describe('StopSequencer', () => {
     expect(seq.hasRemaining).toBe(false);
   });
 
-  it('returns first symbol as fallback when exhausted', () => {
+  it('throws when consumed past the end of the frame', () => {
     const seq = new StopSequencer();
     seq.setFrame(['a', 'b']);
     seq.next();
     seq.next();
-    expect(seq.next()).toBe('a');
+    expect(() => seq.next()).toThrow(/frame exhausted/);
+  });
+
+  it('throws on next() before any frame is loaded', () => {
+    expect(() => new StopSequencer().next()).toThrow(/frame exhausted/);
   });
 
   it('reset clears state', () => {
@@ -48,4 +52,10 @@ describe('StopSequencer', () => {
     expect(seq.remaining).toBe(0);
     expect(seq.hasRemaining).toBe(false);
   });
+
+  // NOTE: `reset()` also restores `_cursor`/`_step`, but that half is state
+  // hygiene with no reachable behaviour: `setFrame()` writes both fields
+  // unconditionally, and `next()` throws while `_remaining` is 0. There is no
+  // public-surface assertion that can fail without it, so none is written here
+  // rather than a test that passes either way.
 });

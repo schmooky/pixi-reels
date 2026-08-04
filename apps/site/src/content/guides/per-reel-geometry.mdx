@@ -2,89 +2,85 @@
 title: Per-reel geometry
 order: 7
 eyebrow: Building blocks
-description: Each reel can have its own row count, cell height, and offset.
-  Covers static pyramid layouts, the mask strategy that clips them cleanly, and
-  how this interacts with MultiWays and big symbols (which have their own
-  guides).
+description: Reels do not all need the same cell count. Static pyramids, the
+  mask that clips them, and what cannot be combined.
 ---
 
-The engine's "reel" used to mean "every column has the same row count and the same cell height." That's still the most common shape (5×3, 5×4 starters), but real-world slot mechanics need three more layouts. Each is documented in its own guide; this page is the overview and the place to learn about static pyramids and the mask strategy.
+Most slots are uniform: every reel, the same number of cells. You do not need
+this page for those.
 
-| Mechanic | When the shape changes | Where to read |
+Three other shapes exist:
+
+| Shape | Changes when | Guide |
 |---|---|---|
-| **Uniform** (e.g. 5×3) | Never | nothing special. the default |
-| **Static pyramid** (e.g. `3-5-5-5-3`) | Never. fixed at build time | this page (below) |
-| **MultiWays** | Every spin | [`/guides/multiways/`](/guides/multiways/) |
-| **Big symbols** (`N×M` blocks) | Never. but a single symbol covers multiple cells | [`/guides/big-symbols/`](/guides/big-symbols/) |
+| **Static pyramid** (`3-5-5-5-3`) | Never. Fixed at build. | below |
+| **MultiWays** | Every spin | [MultiWays](/guides/multiways/) |
+| **Big symbols** (`N x M` blocks) | Never. One symbol covers many cells. | [Big symbols](/guides/big-symbols/) |
 
-These four are independent in concept but **two pairs are mutually exclusive** at build time. The constraint matrix below is the one source of truth.
+## What cannot combine
 
-## Constraint matrix
+Two pairs throw at `build()`:
 
-|  | Pyramid | MultiWays | Big symbols |
-|---|---|---|---|
-| **Pyramid** + Pyramid | uniform 5×3 is the trivial case |. |. |
-| **MultiWays** + Pyramid | **rejected** at build (`cannot combine multiways() with visibleRowsPerReel()`) |. |. |
-| **Big symbols** + Pyramid | **allowed** |. |. |
-| **Big symbols** + MultiWays | **rejected** at build (`big symbol '...' cannot be registered on a MultiWays slot`) |. |. |
-| **Cascade mode** + MultiWays | **rejected** at build (`multiways() is not supported with cascade mode in v1`) |. |. |
+- **MultiWays + pyramid.** `visibleCellsPerReel()` declares a fixed shape.
+  `multiways()` declares a server-driven one. Both claim to own the cell
+  count. Pick one.
+- **MultiWays + big symbols.** A 2x2 block cannot fit a reel that just
+  reshaped to 2 cells. Truncate it? Skip it? Shrink it? That is a game-design
+  call, so the engine refuses to guess.
 
-Why these reject each other:
+Big symbols and pyramids DO work together. So do MultiWays and cascades
+(ADR 015).
 
-- **MultiWays + big symbols**: a 2×2 bonus on a 2-row reel can't fit. Defining "what happens" (silently truncate? scale down? skip?) hides game-design intent. Better to fail at build so the developer picks a resolution explicitly.
-- **MultiWays + cascade**: cascade physics drop survivors into vacant cells from above; MultiWays reshape changes the cell count between spins. A cascade survivor at row 6 may not have a row 6 to land on next spin. Niche; deferred to v2.
-- **MultiWays + pyramid**: `visibleRowsPerReel` declares a *static* shape; `multiways({...})` declares a *dynamic* shape. They contradict each other. both say "reel `i` has N rows."
-
-## Static pyramid (per-reel shape)
-
-A static pyramid sets each reel's row count once at build time. No per-spin reshape, no AdjustPhase, no surprise events.
+## Static pyramid
 
 ```ts
 new ReelSetBuilder()
   .reels(5)
-  .visibleRowsPerReel([3, 5, 5, 5, 3])   // jagged shape
-  .reelAnchor('center')                   // 'top' | 'center' | 'bottom'
+  .visibleCellsPerReel([3, 5, 5, 5, 3])
+  .reelAnchor('center')                   // 'start' | 'center' | 'end'
   .symbolSize(120, 120)
-  // ...
   .build();
 ```
 
-The engine computes a per-reel `offsetY` so shorter reels are positioned according to `reelAnchor`. The default mask draws one clip rect per reel. short reels never leak buffer rows above or below their visible area.
+Short reels get a `mainOffset` so they sit where `reelAnchor` says. The
+default mask clips each reel to its own box, so a short reel never leaks its
+buffer cells.
 
-`getCellBounds(col, row)` accounts for `offsetY` automatically; `debugSnapshot.visibleRows` is `number[]` (one per reel) so jagged shapes are visible to debug tooling.
+`getCellBounds(reel, cell)` folds the offset in for you.
 
-→ Recipe: [Per-reel shape (pyramid)](/recipes/pyramid-shape/)
+-> Recipe: [Per-reel shape](/recipes/pyramid-shape/)
 
-## Mask strategy
+## Masks
 
-The viewport's clip mask is built by a `MaskStrategy`. a public interface so consumers can pass in any custom shape. v1 ships two implementations:
+The clip mask comes from a `MaskStrategy`. Two ship:
 
-| Strategy | Default? | Use when | Caveat |
-|---|---|---|---|
-| `RectMaskStrategy` | yes | Pyramid layouts, uniform layouts, any slot with **no big symbols** OR `symbolGap.x === 0` | If `symbolGap.x > 0` AND big symbols span reels, the gap clips them between columns |
-| `SharedRectMaskStrategy` | no (auto-picked when needed) | **Any big-symbol slot with `symbolGap.x > 0`.** Also: any case where you want cross-reel symbol overlap | Pyramid layouts will show buffer rows above/below short reels (the "pyramid peek") |
+| Strategy | Clips | Costs you |
+|---|---|---|
+| `RectMaskStrategy` (default) | One rect per reel | A symbol spanning two reels gets cut at the gap between them |
+| `SharedRectMaskStrategy` | One rect over everything | On a pyramid, buffer cells past short reels show. The "pyramid peek" |
 
-**Practical rule:** the engine **auto-picks `SharedRectMaskStrategy`** when big symbols are registered AND `symbolGap.x > 0`, so most slots don't need to think about this. Override with `.maskStrategy(...)` if you want explicit control.
+The engine picks `SharedRectMaskStrategy` for you when big or unmasked
+symbols are registered AND the cross-axis gap is non-zero -- the case where
+per-reel rects would visibly slice a block. Override with `.maskStrategy()`.
 
 ```ts
 import { SharedRectMaskStrategy } from 'pixi-reels';
 builder.maskStrategy(new SharedRectMaskStrategy());
 ```
 
-For non-rectangular masks (rounded frames, hexagonal grids), implement the `MaskStrategy` interface directly. pass a `Graphics` filled with whatever shape PixiJS supports.
+Want a rounded frame or a hex grid? Implement `MaskStrategy` yourself. It
+takes one `MaskContext` and returns a `Graphics` filled with any shape Pixi
+can draw. Set `version = MASK_STRATEGY_VERSION` on it.
 
-To see exactly what's clipped, enable the debug overlay:
+To see what is actually clipped:
 
 ```ts
-__PIXI_REELS_DEBUG.showMask(true);
+debugOverlay(reelSet, { layers: ['mask', 'cells', 'buffers'] });
 ```
-
-Paints the active clip area semi-transparent red and outlines each per-reel rect in green.
 
 ## See also
 
-- [Guide: MultiWays](/guides/multiways/). per-spin row variation, AdjustPhase, pin migration
-- [Guide: Big symbols](/guides/big-symbols/). `N×M` blocks, OCCUPIED, block lookup
-- [`pyramid-shape`](/recipes/pyramid-shape/) recipe. static jagged layout demo
-- [`card-symbol-debug`](/recipes/card-symbol-debug/) recipe. the debug `CardSymbol` used in these recipes
-- [`cell-bounds`](/recipes/cell-bounds/) recipe. overlays aligned to cells (works on jagged shapes too)
+- [MultiWays](/guides/multiways/) -- per-spin shape, AdjustPhase, pin migration
+- [Big symbols](/guides/big-symbols/) -- `N x M` blocks
+- [`pyramid-shape`](/recipes/pyramid-shape/) -- runnable jagged layout
+- [`cell-bounds`](/recipes/cell-bounds/) -- overlays aligned to cells

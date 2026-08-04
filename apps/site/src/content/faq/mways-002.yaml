@@ -1,7 +1,7 @@
 id: mways-002
 group: mways
 question: How do I set a min and max row count per reel?
-answer: "`.multiways({ minRows, maxRows, reelPixelHeight })`."
+answer: "`.multiways({ minCells, maxCells, reelExtent })`."
 links:
   - label: "Guide: MultiWays"
     href: /guides/multiways/

@@ -1,0 +1,104 @@
+---
+title: "Wilds, multipliers & mystery (CellPin)"
+group: mechanics
+oneLiner: Sticky, expanding, walking and multiplier wilds plus mystery reveals, all built on the CellPin primitive.
+order: 40
+tags:
+  - wild
+  - sticky
+  - multiplier
+  - mystery
+  - respin
+  - cell-pin
+  - horizontal
+  - reverse
+  - orientation
+apis: []
+steps: []
+---
+
+Wild and mystery mechanics built on the engine CellPin primitive: pin once, the engine handles the overlay, countdown and cleanup.
+
+<a id="expanding-wild-pin"></a>
+
+## Expanding wild
+
+Wild lands and the whole reel turns wild for N spins, then auto-expires when the turn counter hits zero.
+
+<RecipeDemo code="expanding-wild-pin" height={300} />
+
+<a id="sticky-wild-pin"></a>
+
+## Sticky wild (CellPin)
+
+A sticky wild on the primitive: pin on land with `turns: N`, the engine overlays it and counts down. no ghost sprites, no manual grid injection.
+
+<RecipeDemo code="sticky-wild-pin" height={300} />
+
+<a id="walking-wild-pin"></a>
+
+## Walking wild (movePin)
+
+A wild migrates one reel left each spin via `reelSet.movePin()`, with flight hooks for Spine run animations.
+
+**Gotcha:** walk pins sequentially with `await`, never `Promise.all`. two pins moving to the same cell throws.
+
+<RecipeDemo code="walking-wild-pin" height={300} />
+
+<a id="multiplier-wild-pin"></a>
+
+## Multiplier wild
+
+Each wild carries a per-instance multiplier in its pin payload; an xN badge overlays the cell and win eval reads `pin.payload.multiplier`.
+
+<RecipeDemo code="multiplier-wild-pin" height={300} />
+
+<a id="positional-multiplier-pin"></a>
+
+## Positional multiplier cells
+
+Specific cells carry a multiplier; any symbol that lands there boosts the win passing through.
+
+<RecipeDemo code="positional-multiplier-pin" height={300} />
+
+<a id="mystery-reveal-pin"></a>
+
+## Mystery reveal (CellPin)
+
+Mystery symbols land, then all reveal to the same random class via `'eval'` pins that auto-clear on the next spin.
+
+<RecipeDemo code="mystery-reveal-pin" height={300} />
+
+## Spine mystery reveal
+
+Mystery bushes land and burst; an overlay Spine plays the reveal while `activate()` swaps the cell underneath, so the hand-off is seamless.
+
+<RecipeDemo code="spine-mystery-reveal" height={460} />
+
+<AssetCredit studio="Thunderkick" />
+
+<a id="wilds-horizontal-expanding"></a>
+
+## Expanding wild on a horizontal set
+
+The same expand-the-whole-reel pin on `.orientation('horizontal')`. Pins are index space, so the code is unchanged; the expansion just paints a screen row instead of a column.
+
+<RecipeDemo code="wilds-horizontal-expanding" height={300} />
+
+<a id="wilds-reverse-sticky-respin"></a>
+
+## Sticky wilds on a roll-up respin
+
+A `.direction('reverse')` set: the reels travel upward through three respins while pinned wilds hold their cells, and new wilds picked up on the way stick too.
+
+**Gotcha:** pin coordinates stay geometric. cell 0 is the top cell whichever edge the strip feeds from.
+
+<RecipeDemo code="wilds-reverse-sticky-respin" height={300} />
+
+<a id="sticky-win-respin-pin"></a>
+
+## Sticky-win respin
+
+Winners lock for N respins while the rest of the grid spins; re-pinning a winning cell refreshes its counter, so a new win resets the window.
+
+<RecipeDemo code="sticky-win-respin-pin" height={300} />

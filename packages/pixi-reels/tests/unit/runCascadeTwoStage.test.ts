@@ -15,7 +15,7 @@ function buildTumbleHarness(initialFrame: string[][]): Harness {
   const ticker = new FakeTicker();
   const reelSet = new ReelSetBuilder()
     .reels(initialFrame.length)
-    .visibleRows(initialFrame[0].length)
+    .visibleCells(initialFrame[0].length)
     .symbolSize(50, 50)
     .symbols((r) => {
       for (const id of ['a', 'b', 'c', 'd']) {
@@ -24,8 +24,8 @@ function buildTumbleHarness(initialFrame: string[][]): Harness {
     })
     .weights({ a: 1, b: 1, c: 1, d: 1 })
     .tumble({
-      fall:   { duration: 0, ease: 'none', rowStagger: 0 },
-      dropIn: { duration: 0, ease: 'none', rowStagger: 0, distance: 'perHole' },
+      fall:   { duration: 0, ease: 'none', cellStagger: 0 },
+      dropIn: { duration: 0, ease: 'none', cellStagger: 0, distance: 'perHole' },
     })
     .initialFrame(initialFrame.map((visible) => ({ visible })))
     .ticker(ticker as unknown as Ticker)
@@ -39,10 +39,10 @@ function buildTumbleHarness(initialFrame: string[][]): Harness {
 
 describe('ReelSet.runCascade. two-stage (gravity-then-drop)', () => {
   it('emits cascade:gravity:* and cascade:dropIn:* in the right order for a refill that has both survivors and new symbols', async () => {
-    // 3 reels × 3 rows. Clear the BOTTOM row (row 2) of every reel. that
-    // gives both a slide (rows 0,1 fall to fill row 1,2) and a new symbol
-    // (top row, row 0). Two-stage will animate the gravity slide first,
-    // then drop the new top-row symbol.
+    // 3 reels x 3 cells. Clear the BOTTOM cell (cell 2) of every reel. that
+    // gives both a slide (cells 0,1 fall to fill cell 1,2) and a new symbol
+    // (top cell, cell 0). Two-stage will animate the gravity slide first,
+    // then drop the new top-cell symbol.
     const { reelSet, destroy } = buildTumbleHarness([
       ['a', 'a', 'a'],
       ['a', 'a', 'a'],
@@ -60,9 +60,9 @@ describe('ReelSet.runCascade. two-stage (gravity-then-drop)', () => {
       detectWinners: () => {
         calls += 1;
         if (calls > 1) return [];
-        return [{ reel: 0, row: 2 }, { reel: 1, row: 2 }, { reel: 2, row: 2 }];
+        return [{ reel: 0, cell: 2 }, { reel: 1, cell: 2 }, { reel: 2, cell: 2 }];
       },
-      nextGrid: (grid) => grid.map((col) => ['d', col[0], col[1]]),
+      nextGrid: (grid) => grid.map((reel) => ({ visible: ['d', reel[0], reel[1]] })),
       pauseAfterDestroyMs: 0,
       refillMode: 'gravity-then-drop',
       gravityHoldMs: 0,
@@ -100,9 +100,9 @@ describe('ReelSet.runCascade. two-stage (gravity-then-drop)', () => {
       detectWinners: () => {
         calls += 1;
         if (calls > 2) return [];
-        return [{ reel: 0, row: 2 }, { reel: 1, row: 2 }, { reel: 2, row: 2 }];
+        return [{ reel: 0, cell: 2 }, { reel: 1, cell: 2 }, { reel: 2, cell: 2 }];
       },
-      nextGrid: (grid) => grid.map((col) => ['d', col[0], col[1]]),
+      nextGrid: (grid) => grid.map((reel) => ({ visible: ['d', reel[0], reel[1]] })),
       pauseAfterDestroyMs: 0,
       refillMode: 'gravity-then-drop',
       gravityHoldMs: 0,
@@ -142,11 +142,11 @@ describe('ReelSet.runCascade. two-stage (gravity-then-drop)', () => {
       detectWinners: () => {
         calls += 1;
         if (calls > 1) return [];
-        return [{ reel: 0, row: 2 }, { reel: 1, row: 2 }, { reel: 2, row: 2 }];
+        return [{ reel: 0, cell: 2 }, { reel: 1, cell: 2 }, { reel: 2, cell: 2 }];
       },
-      nextGrid: (grid) => grid.map((col) => ['d', col[0], col[1]]),
+      nextGrid: (grid) => grid.map((reel) => ({ visible: ['d', reel[0], reel[1]] })),
       pauseAfterDestroyMs: 0,
-      // refillMode omitted → defaults to 'combined'
+      // refillMode omitted -> defaults to 'combined'
     });
 
     expect(gravityEvents).toBe(0);
@@ -154,7 +154,7 @@ describe('ReelSet.runCascade. two-stage (gravity-then-drop)', () => {
   });
 
   it('lands the same final grid as combined mode', async () => {
-    // Same input + same nextGrid, just different mode → same final grid.
+    // Same input + same nextGrid, just different mode -> same final grid.
     const initial: string[][] = [
       ['a', 'a', 'a'],
       ['a', 'a', 'a'],
@@ -167,9 +167,9 @@ describe('ReelSet.runCascade. two-stage (gravity-then-drop)', () => {
       detectWinners: () => {
         calls += 1;
         if (calls > 1) return [];
-        return [{ reel: 0, row: 2 }, { reel: 1, row: 2 }, { reel: 2, row: 2 }];
+        return [{ reel: 0, cell: 2 }, { reel: 1, cell: 2 }, { reel: 2, cell: 2 }];
       },
-      nextGrid: (grid) => grid.map((col) => ['d', col[0], col[1]]),
+      nextGrid: (grid) => grid.map((reel) => ({ visible: ['d', reel[0], reel[1]] })),
       pauseAfterDestroyMs: 0,
       refillMode: 'combined',
     });
@@ -182,9 +182,9 @@ describe('ReelSet.runCascade. two-stage (gravity-then-drop)', () => {
       detectWinners: () => {
         calls += 1;
         if (calls > 1) return [];
-        return [{ reel: 0, row: 2 }, { reel: 1, row: 2 }, { reel: 2, row: 2 }];
+        return [{ reel: 0, cell: 2 }, { reel: 1, cell: 2 }, { reel: 2, cell: 2 }];
       },
-      nextGrid: (grid) => grid.map((col) => ['d', col[0], col[1]]),
+      nextGrid: (grid) => grid.map((reel) => ({ visible: ['d', reel[0], reel[1]] })),
       pauseAfterDestroyMs: 0,
       refillMode: 'gravity-then-drop',
       gravityHoldMs: 0,
@@ -207,7 +207,7 @@ describe('ReelSet.runCascade. two-stage (gravity-then-drop)', () => {
     reelSet.events.on('cascade:gravity:start', () => { gravityStarts += 1; });
     reelSet.events.on('cascade:dropIn:start',  () => { dropInStarts += 1; });
 
-    const winners = [{ reel: 0, row: 2 }, { reel: 1, row: 2 }, { reel: 2, row: 2 }];
+    const winners = [{ reel: 0, cell: 2 }, { reel: 1, cell: 2 }, { reel: 2, cell: 2 }];
     await reelSet.destroySymbols(winners, { zIndex: null });
     await reelSet.refill({
       winners,

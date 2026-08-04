@@ -1,6 +1,6 @@
 import { Container } from 'pixi.js';
 import type { Disposable } from '../utils/Disposable.js';
-import { getGsap } from '../utils/gsapRef.js';
+import { DEFAULT_GSAP, type Gsap } from '../utils/gsap.js';
 
 /**
  * One visible cell on a reel. the thing that actually draws.
@@ -39,8 +39,50 @@ export abstract class ReelSymbol implements Disposable {
   private _symbolId: string = '';
   private _isDestroyed = false;
 
+  private _gsap: Gsap = DEFAULT_GSAP;
+  private _mainAxis: 'x' | 'y' = 'y';
+
   constructor() {
     this.view = new Container();
+  }
+
+  /**
+   * The gsap instance this symbol should animate on. Use it instead of
+   * importing `gsap` in a subclass: under a symlinked-workspace module
+   * resolution your import and the engine's can be different instances, and
+   * only this one is on the timeline the reel set actually drives.
+   *
+   * Bound to the owning set by `SymbolFactory`; falls back to the instance
+   * resolved at lib-load time for a symbol built outside a set.
+   */
+  protected get gsap(): Gsap {
+    return this._gsap;
+  }
+
+  /**
+   * @internal. Called by `SymbolFactory` when the symbol is created, so a
+   * pooled symbol animates on its own set's gsap rather than whichever set
+   * happened to build last.
+   */
+  bindGsap(instance: Gsap): void {
+    this._gsap = instance;
+  }
+
+  /**
+   * The screen axis the owning set's strips travel along: `'y'` for a
+   * vertical set, `'x'` for a horizontal one.
+   *
+   * Symbols are otherwise orientation-agnostic - `resize(width, height)` is
+   * screen-space and always will be. This exists for the few effects that
+   * genuinely follow travel, motion blur being the one in the box.
+   */
+  protected get mainAxis(): 'x' | 'y' {
+    return this._mainAxis;
+  }
+
+  /** @internal. Bound by `SymbolFactory` from the set's orientation. */
+  bindMainAxis(prop: 'x' | 'y'): void {
+    this._mainAxis = prop;
   }
 
   get symbolId(): string {
@@ -105,9 +147,7 @@ export abstract class ReelSymbol implements Disposable {
   protected abstract onDeactivate(): void;
 
   /** Subclass hook: additional cleanup on destroy. */
-  protected onDestroy(): void {
-    // Override if needed
-  }
+  protected onDestroy(): void {}
 
   /** Play the win/highlight animation for this symbol. Resolves when complete. */
   abstract playWin(): Promise<void>;
@@ -123,23 +163,18 @@ export abstract class ReelSymbol implements Disposable {
    * consumers (typically via `reelSet.destroySymbols(...)`) to disintegrate
    * a winning cell before the next cascade refill drops fresh symbols in.
    *
-   * Default implementation: brief scale-up "charge" then implode (scale 0
-   * + spin + fade), squishing around the symbol's bounding-box CENTER
-   * regardless of the view's anchor. Total ~320 ms. The view is left at
-   * `alpha: 0` (destroyed); position / pivot are restored so pool reuse
-   * via `_replaceSymbol`'s same-id fast path doesn't inherit a stale
-   * pivot offset.
+   * Override in subclasses for art-appropriate destruction, e.g. a Spine
+   * symbol can play its `disintegration` track here, or a sprite symbol can
+   * swap to a shatter atlas. The promise must resolve when the symbol is no
+   * longer visible.
    *
-   * Override in subclasses for art-appropriate destruction. e.g. a
-   * Spine symbol can play its `disintegration` track here, or a sprite
-   * symbol can swap to a shatter atlas. The promise must resolve when
-   * the symbol is no longer visible.
-   *
-   * Default animation: a snappy "poof". tiny anticipation pop (~60 ms)
-   * then a fast implode to `scale: 0` + `alpha: 0` (~140 ms), centered on
-   * the symbol's bounds. ~200 ms total. No rotation. designed to read
+   * Default: a snappy "poof" centered on the symbol's bounds regardless of
+   * the view's anchor. Tiny anticipation pop (~60 ms) then a fast implode to
+   * `scale: 0` + `alpha: 0` (~140 ms), ~200 ms total, no rotation. Reads
    * cleanly under win-cluster pacing without competing with the win
-   * presenter.
+   * presenter. The view is left at `alpha: 0` (destroyed); position / pivot
+   * are restored so pool reuse via `_replaceSymbol`'s same-id fast path
+   * doesn't inherit a stale pivot offset.
    *
    * `opts.delay`. seconds to wait before the animation starts. Use to
    * stagger a cluster of winners (e.g. `i * 0.015`).
@@ -188,7 +223,7 @@ export abstract class ReelSymbol implements Disposable {
     }
 
     await new Promise<void>((resolve) => {
-      const tl = getGsap()
+      const tl = this.gsap
         .timeline({ onComplete: () => {
           if (signal) signal.removeEventListener('abort', onAbort);
           resolve();
@@ -225,7 +260,7 @@ export abstract class ReelSymbol implements Disposable {
    * Default: no-op. Override (e.g. SpineReelSymbol.autoPlayBlur,
    * StaticSpinSymbol) to swap to a spin presentation automatically.
    *
-   * Fired on every strip symbol (visible AND buffer rows) when the reel
+   * Fired on every strip symbol (visible AND buffer cells) when the reel
    * enters the spin phase, and again with `joinedMidSpin: true` on each
    * symbol freshly installed while the reel is already spinning (pool
    * recycling wipes symbol state, so a wrapped-in symbol can't know the
@@ -235,7 +270,7 @@ export abstract class ReelSymbol implements Disposable {
    * @param joinedMidSpin true when this symbol was installed into a reel
    * already at speed (skip start-of-spin transitions like blur ramps).
    */
-  onReelSpinStart(_joinedMidSpin?: boolean): void {}
+  onReelSpinStart(joinedMidSpin?: boolean): void {}
 
   /**
    * Lifecycle hook: the owning reel is about to stop (just before bounce).

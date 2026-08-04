@@ -14,7 +14,7 @@ const SYMBOLS = ['a', 'b', 'c', 'wild', 'filler'];
 function makeHarness() {
   return createTestReelSet({
     reels: 5,
-    visibleRows: 3,
+    visibleCells: 3,
     symbolIds: SYMBOLS,
   });
 }
@@ -27,7 +27,7 @@ describe('movePin. state', () => {
       expect(h.reelSet.getPin(2, 1)).toBeDefined();
       expect(h.reelSet.getPin(1, 1)).toBeUndefined();
 
-      await h.reelSet.movePin({ col: 2, row: 1 }, { col: 1, row: 1 }, {
+      await h.reelSet.movePin({ reel: 2, cell: 1 }, { reel: 1, cell: 1 }, {
         duration: 1,
         backfill: 'filler',
       });
@@ -37,8 +37,8 @@ describe('movePin. state', () => {
       expect(moved).toBeDefined();
       expect(moved?.symbolId).toBe('wild');
       expect(moved?.turns).toBe(3);
-      expect(moved?.col).toBe(1);
-      expect(moved?.row).toBe(1);
+      expect(moved?.reel).toBe(1);
+      expect(moved?.cell).toBe(1);
     } finally {
       h.destroy();
     }
@@ -51,7 +51,7 @@ describe('movePin. state', () => {
         turns: 'permanent',
         payload: { multiplier: 3, tier: 'gold' },
       });
-      await h.reelSet.movePin({ col: 2, row: 1 }, { col: 3, row: 2 }, {
+      await h.reelSet.movePin({ reel: 2, cell: 1 }, { reel: 3, cell: 2 }, {
         duration: 1,
         backfill: 'filler',
       });
@@ -69,7 +69,7 @@ describe('movePin. state', () => {
       h.reelSet.pin(2, 1, 'wild');
       expect(h.reelSet.reels[2].getVisibleSymbols()[1]).toBe('wild');
 
-      await h.reelSet.movePin({ col: 2, row: 1 }, { col: 1, row: 1 }, {
+      await h.reelSet.movePin({ reel: 2, cell: 1 }, { reel: 1, cell: 1 }, {
         duration: 1,
         backfill: 'filler',
       });
@@ -84,7 +84,7 @@ describe('movePin. state', () => {
     const h = makeHarness();
     try {
       h.reelSet.pin(2, 1, 'wild');
-      await h.reelSet.movePin({ col: 2, row: 1 }, { col: 1, row: 0 }, {
+      await h.reelSet.movePin({ reel: 2, cell: 1 }, { reel: 1, cell: 0 }, {
         duration: 1,
         backfill: 'filler',
       });
@@ -103,7 +103,7 @@ describe('movePin. errors', () => {
       const spinPromise = h.reelSet.spin();
 
       await expect(
-        h.reelSet.movePin({ col: 2, row: 1 }, { col: 1, row: 1 }, { duration: 1 }),
+        h.reelSet.movePin({ reel: 2, cell: 1 }, { reel: 1, cell: 1 }, { duration: 1 }),
       ).rejects.toThrow(/cannot move pin while spinning/);
 
       h.reelSet.setResult([
@@ -124,31 +124,31 @@ describe('movePin. errors', () => {
     const h = makeHarness();
     try {
       await expect(
-        h.reelSet.movePin({ col: 0, row: 0 }, { col: 1, row: 0 }, { duration: 1 }),
+        h.reelSet.movePin({ reel: 0, cell: 0 }, { reel: 1, cell: 0 }, { duration: 1 }),
       ).rejects.toThrow(/no pin/);
     } finally {
       h.destroy();
     }
   });
 
-  it('throws when destination col is out of range', async () => {
+  it('throws when destination reel is out of range', async () => {
     const h = makeHarness();
     try {
       h.reelSet.pin(0, 0, 'wild');
       await expect(
-        h.reelSet.movePin({ col: 0, row: 0 }, { col: 5, row: 0 }, { duration: 1 }),
+        h.reelSet.movePin({ reel: 0, cell: 0 }, { reel: 5, cell: 0 }, { duration: 1 }),
       ).rejects.toThrow(/out of range/);
     } finally {
       h.destroy();
     }
   });
 
-  it('throws when destination row is out of range', async () => {
+  it('throws when destination cell is out of range', async () => {
     const h = makeHarness();
     try {
       h.reelSet.pin(0, 0, 'wild');
       await expect(
-        h.reelSet.movePin({ col: 0, row: 0 }, { col: 0, row: 3 }, { duration: 1 }),
+        h.reelSet.movePin({ reel: 0, cell: 0 }, { reel: 0, cell: 3 }, { duration: 1 }),
       ).rejects.toThrow(/out of range/);
     } finally {
       h.destroy();
@@ -161,7 +161,7 @@ describe('movePin. errors', () => {
       h.reelSet.pin(0, 0, 'wild');
       h.reelSet.pin(1, 0, 'wild');
       await expect(
-        h.reelSet.movePin({ col: 0, row: 0 }, { col: 1, row: 0 }, { duration: 1 }),
+        h.reelSet.movePin({ reel: 0, cell: 0 }, { reel: 1, cell: 0 }, { duration: 1 }),
       ).rejects.toThrow(/already exists/);
     } finally {
       h.destroy();
@@ -176,7 +176,7 @@ describe('movePin. self-move', () => {
       h.reelSet.pin(2, 1, 'wild', { turns: 2 });
       const events = captureEvents(h.reelSet, ['pin:moved', 'pin:expired']);
 
-      await h.reelSet.movePin({ col: 2, row: 1 }, { col: 2, row: 1 }, { duration: 1 });
+      await h.reelSet.movePin({ reel: 2, cell: 1 }, { reel: 2, cell: 1 }, { duration: 1 });
 
       // Pin is still there, turns unchanged
       expect(h.reelSet.getPin(2, 1)?.turns).toBe(2);
@@ -198,7 +198,7 @@ describe('movePin. events', () => {
       h.reelSet.pin(2, 1, 'wild', { turns: 3 });
       const events = captureEvents(h.reelSet, ['pin:moved']);
 
-      await h.reelSet.movePin({ col: 2, row: 1 }, { col: 1, row: 1 }, {
+      await h.reelSet.movePin({ reel: 2, cell: 1 }, { reel: 1, cell: 1 }, {
         duration: 1,
         backfill: 'filler',
       });
@@ -206,12 +206,12 @@ describe('movePin. events', () => {
       expect(events.length).toBe(1);
       const [pin, from] = events[0].args as [unknown, unknown];
       expect(pin).toMatchObject({
-        col: 1,
-        row: 1,
+        reel: 1,
+        cell: 1,
         symbolId: 'wild',
         turns: 3,
       });
-      expect(from).toEqual({ col: 2, row: 1 });
+      expect(from).toEqual({ reel: 2, cell: 1 });
     } finally {
       h.destroy();
     }
@@ -225,15 +225,15 @@ describe('movePin. chained moves', () => {
       h.reelSet.pin(4, 1, 'wild', { turns: 'permanent' });
 
       // Walk left
-      await h.reelSet.movePin({ col: 4, row: 1 }, { col: 3, row: 1 }, {
+      await h.reelSet.movePin({ reel: 4, cell: 1 }, { reel: 3, cell: 1 }, {
         duration: 1,
         backfill: 'filler',
       });
-      await h.reelSet.movePin({ col: 3, row: 1 }, { col: 2, row: 1 }, {
+      await h.reelSet.movePin({ reel: 3, cell: 1 }, { reel: 2, cell: 1 }, {
         duration: 1,
         backfill: 'filler',
       });
-      await h.reelSet.movePin({ col: 2, row: 1 }, { col: 1, row: 1 }, {
+      await h.reelSet.movePin({ reel: 2, cell: 1 }, { reel: 1, cell: 1 }, {
         duration: 1,
         backfill: 'filler',
       });
@@ -264,7 +264,7 @@ describe('movePin. flight callbacks', () => {
       // the outer assertion runs.
       let capturedSymbolId: string | null = null;
       let capturedHasView = false;
-      await h.reelSet.movePin({ col: 2, row: 1 }, { col: 1, row: 1 }, {
+      await h.reelSet.movePin({ reel: 2, cell: 1 }, { reel: 1, cell: 1 }, {
         duration: 1,
         backfill: 'filler',
         onFlightCreated: (flight) => {
@@ -288,7 +288,7 @@ describe('movePin. flight callbacks', () => {
       const order: string[] = [];
       let flightRef: unknown = null;
 
-      await h.reelSet.movePin({ col: 2, row: 1 }, { col: 1, row: 1 }, {
+      await h.reelSet.movePin({ reel: 2, cell: 1 }, { reel: 1, cell: 1 }, {
         duration: 1,
         backfill: 'filler',
         onFlightCreated: (flight) => {
@@ -312,7 +312,7 @@ describe('movePin. flight callbacks', () => {
     try {
       h.reelSet.pin(2, 1, 'wild');
 
-      await h.reelSet.movePin({ col: 2, row: 1 }, { col: 1, row: 1 }, {
+      await h.reelSet.movePin({ reel: 2, cell: 1 }, { reel: 1, cell: 1 }, {
         duration: 1,
         backfill: 'filler',
         onFlightCreated: () => {
@@ -325,6 +325,37 @@ describe('movePin. flight callbacks', () => {
 
       expect(h.reelSet.getPin(2, 1)).toBeUndefined();
       expect(h.reelSet.getPin(1, 1)).toBeDefined();
+    } finally {
+      h.destroy();
+    }
+  });
+});
+
+describe('movePin. flight placement (A1)', () => {
+  it('starts the flight at the viewport cell Y on a reel with nonzero offset', async () => {
+    const h = makeHarness();
+    try {
+      // Simulate an offset layout (e.g. a centered pyramid reel) where the reel
+      // container sits below the viewport top. Pre-fix, movePin read the source
+      // cell's bare reel-local view.y and dropped this offset, so the flight
+      // symbol - parented to the viewport-space unmasked container - started
+      // container.y too high. It must instead agree with _pinOverlayCellY.
+      const reel = h.reelSet.reels[2];
+      const OFFSET = 40;
+      reel.container.y = OFFSET;
+      const slot = reel.motion.slotPitch;
+
+      h.reelSet.pin(2, 1, 'wild');
+      let flightY: number | undefined;
+      await h.reelSet.movePin({ reel: 2, cell: 1 }, { reel: 3, cell: 1 }, {
+        duration: 1,
+        backfill: 'filler',
+        onFlightCreated: (flight) => {
+          flightY = (flight as { view: { y: number } }).view.y;
+        },
+      });
+
+      expect(flightY).toBe(OFFSET + slot);
     } finally {
       h.destroy();
     }

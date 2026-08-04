@@ -3,14 +3,14 @@
 //
 // Collector coin on a Hold & Win board.
 //
-// Built on `HoldAndWinBuilder` — no pins, no hand-rolled grid. Value coins
+// Built on `HoldAndWinBuilder` - no pins, no hand-rolled grid. Value coins
 // carry their amount in `coin.data`; when the collector orb locks, the game
 // layer walks `board.lockedCoins`, sums the orb's neighbours, flies their
 // values in and `release()`s those cells. The collector's badge shows the
 // absorbed total.
 
 const COIN = 'coin', COLLECTOR = 'collector', COLS = 5, ROWS = 3, CELL = 64, GAP = 6;
-const ck = (c) => `${c.col},${c.row}`;
+const ck = (c) => `${c.reel},${c.cell}`;
 
 const ASSETS = { 'hw-atlas': '/hw-spine/skeletons.atlas', 'hw-goldfont': '/hw-spine/goldfont.fnt', 'hw-jackpot': '/hw-spine/jackpot.json', 'hw-collector': '/hw-spine/collector.json' };
 for (const [alias, src] of Object.entries(ASSETS)) { if (!PIXI.Assets.cache.has(alias)) { try { PIXI.Assets.add({ alias, src }); } catch {} } }
@@ -58,12 +58,12 @@ hud.anchor.set(0.5, 0); hud.position.set(app.screen.width / 2, board.container.y
 app.stage.addChild(hud);
 
 const SEED = [
-  { cell: { col: 1, row: 1 }, id: COIN, data: { value: 5 } },
-  { cell: { col: 3, row: 1 }, id: COIN, data: { value: 20 } },
-  { cell: { col: 2, row: 0 }, id: COIN, data: { value: 10 } },
-  { cell: { col: 2, row: 2 }, id: COIN, data: { value: 50 } },
+  { cell: { reel: 1, cell: 1 }, id: COIN, data: { value: 5 } },
+  { cell: { reel: 3, cell: 1 }, id: COIN, data: { value: 20 } },
+  { cell: { reel: 2, cell: 0 }, id: COIN, data: { value: 10 } },
+  { cell: { reel: 2, cell: 2 }, id: COIN, data: { value: 50 } },
 ];
-const COLLECTOR_CELL = { col: 2, row: 1 }; // orthogonally adjacent to all four seeds
+const COLLECTOR_CELL = { reel: 2, cell: 1 }; // orthogonally adjacent to all four seeds
 const seedBoard = () => { board.enter(SEED); for (const c of SEED) paintValue(c.cell, c.data.value); hud.text = 'press spin · the collector sweeps its neighbours'; };
 seedBoard();
 
@@ -71,7 +71,7 @@ const flyers = new Set();
 async function absorb(collectorCell) {
   const target = abs(collectorCell);
   const sumText = paintValue(collectorCell, 0); // the orb's running total
-  const neighbours = [{ col: collectorCell.col - 1, row: collectorCell.row }, { col: collectorCell.col + 1, row: collectorCell.row }, { col: collectorCell.col, row: collectorCell.row - 1 }, { col: collectorCell.col, row: collectorCell.row + 1 }];
+  const neighbours = [{ reel: collectorCell.reel - 1, cell: collectorCell.cell }, { reel: collectorCell.reel + 1, cell: collectorCell.cell }, { reel: collectorCell.reel, cell: collectorCell.cell - 1 }, { reel: collectorCell.reel, cell: collectorCell.cell + 1 }];
   let sum = 0;
   for (const n of neighbours) {
     const coin = board.lockedCoins.find((c) => c.id === COIN && ck(c.cell) === ck(n));
@@ -88,7 +88,7 @@ async function absorb(collectorCell) {
     sumText.text = String(sum);
     fitText(sumText, CELL * 0.82, CELL * 0.46);
   }
-  void board.symbolAt(collectorCell).playWin?.(); // once, after absorbing — per-neighbour restarts would never let 'win' finish
+  void board.symbolAt(collectorCell).playWin?.(); // once, after absorbing; per-neighbour restarts would never let 'win' finish
   return sum;
 }
 

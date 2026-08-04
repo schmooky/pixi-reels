@@ -8,11 +8,12 @@ export interface SpinningMode {
   readonly name: string;
 
   /**
-   * Compute the Y displacement for this frame.
-   * @param symbolHeight - Height of one symbol in pixels.
+   * Compute the travel displacement for this frame, in screen pixels along the
+   * reel's travel axis (sign is relative to the reel's direction).
+   * @param slotPitch - One cell's pitch in pixels (symbol size + gap).
    * @param speed - Current spin speed (pixels per frame).
    * @param deltaMs - Time since last frame in milliseconds.
-   * @returns Y displacement in pixels.
+   * @returns travel displacement in pixels.
    */
-  computeDeltaY(symbolHeight: number, speed: number, deltaMs: number): number;
+  computeDelta(slotPitch: number, speed: number, deltaMs: number): number;
 }

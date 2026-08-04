@@ -7,11 +7,11 @@ import { mountMiniReels, spinToGrid, sleep } from '../miniRuntime.ts';
 const A = 'round/round_1';
 const B = 'round/round_2';
 const C = 'round/round_3';
-const SEVEN = 'royal/royal_1';             // the high-pay row symbol
+const SEVEN = 'royal/royal_1';             // the high-pay cell symbol
 const IDS = [A, B, C, SEVEN];
 
-// Three full rows of different symbols = three "paylines" with SEVEN
-// on top, B on row 1, C on row 2. The spotlight cycles through each row.
+// Three full cells of different symbols = three "paylines" with SEVEN
+// on top, B on cell 1, C on cell 2. The spotlight cycles through each cell.
 const GRID: string[][] = [
   [SEVEN, B, C],
   [SEVEN, B, C],
@@ -20,7 +20,7 @@ const GRID: string[][] = [
   [SEVEN, B, C],
 ];
 
-type Cell = { reel: number; row: number };
+type Cell = { reel: number; cell: number };
 
 /**
  * Scale a symbol's view from its visual center. Containers are anchored at
@@ -64,21 +64,21 @@ function scaleFromCenter(view: import('pixi.js').Container, target: number, dura
 
 async function cyclePaylinesManually(reelSet: ReelSet, lines: Cell[][]): Promise<void> {
   const reelCount = reelSet.reels.length;
-  const visibleRows = reelSet.getReel(0).getVisibleSymbols().length;
+  const visibleCells = reelSet.getReel(0).getVisibleSymbols().length;
 
   for (const line of lines) {
-    const winnerKeys = new Set(line.map((c) => `${c.reel},${c.row}`));
+    const winnerKeys = new Set(line.map((c) => `${c.reel},${c.cell}`));
     // Dim everything that's not on the current payline.
     for (let r = 0; r < reelCount; r++) {
-      for (let row = 0; row < visibleRows; row++) {
-        const view = reelSet.getReel(r).getSymbolAt(row).view;
-        const isWinner = winnerKeys.has(`${r},${row}`);
+      for (let cell = 0; cell < visibleCells; cell++) {
+        const view = reelSet.getReel(r).getSymbolAt(cell).view;
+        const isWinner = winnerKeys.has(`${r},${cell}`);
         gsap.to(view, { alpha: isWinner ? 1 : 0.25, duration: 0.2 });
       }
     }
     // Zoom each winner sequentially for a more readable payline sweep.
     for (const c of line) {
-      const view = reelSet.getReel(c.reel).getSymbolAt(c.row).view;
+      const view = reelSet.getReel(c.reel).getSymbolAt(c.cell).view;
       // Don't await each. let them overlap slightly so the sweep feels live.
       void scaleFromCenter(view, 1.22, 0.18);
       await sleep(90);
@@ -88,8 +88,8 @@ async function cyclePaylinesManually(reelSet: ReelSet, lines: Cell[][]): Promise
 
   // Restore every cell.
   for (let r = 0; r < reelCount; r++) {
-    for (let row = 0; row < visibleRows; row++) {
-      const view = reelSet.getReel(r).getSymbolAt(row).view;
+    for (let cell = 0; cell < visibleCells; cell++) {
+      const view = reelSet.getReel(r).getSymbolAt(cell).view;
       gsap.to(view, { alpha: 1, duration: 0.2 });
     }
   }
@@ -101,7 +101,7 @@ export default function AnimatePaylinesRecipe() {
       height={300}
       setup={async (host) => {
         const { reelSet, destroy } = await mountMiniReels(host, {
-          reelCount: 5, visibleRows: 3,
+          reelCount: 5, visibleCells: 3,
           symbolSize: { width: 78, height: 78 },
           symbols: { kind: 'sprite', ids: IDS },
         });
@@ -110,8 +110,8 @@ export default function AnimatePaylinesRecipe() {
           run: async () => {
             await spinToGrid(reelSet, GRID);
             await sleep(240);
-            const mkLine = (row: number): Cell[] =>
-              Array.from({ length: 5 }, (_, reel) => ({ reel, row }));
+            const mkLine = (cell: number): Cell[] =>
+              Array.from({ length: 5 }, (_, reel) => ({ reel, cell }));
             await cyclePaylinesManually(reelSet, [mkLine(0), mkLine(1), mkLine(2)]);
           },
         };

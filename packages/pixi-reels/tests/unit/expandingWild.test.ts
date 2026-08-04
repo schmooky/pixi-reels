@@ -5,7 +5,7 @@ describe('expanding wild (pin-based, 1×N)', () => {
   it('pins fill a column for one spin via pin overlay (eval pin)', async () => {
     const { reelSet, spinAndLand, destroy } = createTestReelSet({
       reels: 3,
-      visibleRows: 3,
+      visibleCells: 3,
       symbolIds: ['a', 'wild'],
     });
     try {
@@ -29,11 +29,7 @@ describe('expanding wild (pin-based, 1×N)', () => {
         ['a', 'a', 'a'],
       ]);
       // 'eval' pins cleared at the next spin start. Spin again to confirm.
-      await spinAndLand([
-        ['a', 'a', 'a'],
-        ['a', 'a', 'a'],
-        ['a', 'a', 'a'],
-      ]);
+      await spinAndLand([ { visible: ['a', 'a', 'a'] }, { visible: ['a', 'a', 'a'] }, { visible: ['a', 'a', 'a'] } ]);
       expectGrid(reelSet, [
         ['a', 'a', 'a'],
         ['a', 'a', 'a'],

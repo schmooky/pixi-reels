@@ -10,7 +10,7 @@ pixi-reels is built so you can test **mechanics**, not canvases. Two tools
 make that possible:
 
 - **`createTestReelSet`**. a headless reel set wired to a `FakeTicker`. No renderer, no DOM.
-- **`CheatEngine`** (in `examples/shared/cheats`). a pluggable outcome source that forces grids, scatters, lines, cascades on demand.
+- **`CheatEngine`** (in the private `@pixi-reels/cheats` package). a pluggable outcome source that forces grids, scatters, lines, cascades on demand.
 
 Together they let you write assertions like *"this mechanic produces exactly
 3 scatters, triggers anticipation on reel 5, and emits `spin:complete`."*
@@ -22,34 +22,36 @@ import { createTestReelSet, expectGrid } from 'pixi-reels/testing';
 
 const { reelSet, spinAndLand, destroy } = createTestReelSet({
   reels: 5,
-  visibleRows: 3,
+  visibleCells: 3,
   symbolIds: ['cherry', 'seven', 'wild', 'scatter'],
 });
 
 await spinAndLand([
-  ['wild','wild','wild'],
-  ['wild','wild','wild'],
-  ['wild','wild','wild'],
-  ['wild','wild','wild'],
-  ['wild','wild','wild'],
+  { visible: ['wild','wild','wild'] },
+  { visible: ['wild','wild','wild'] },
+  { visible: ['wild','wild','wild'] },
+  { visible: ['wild','wild','wild'] },
+  { visible: ['wild','wild','wild'] },
 ]);
 
 expectGrid(reelSet, /* same 5×3 grid of 'wild' */);
 destroy();
 ```
 
-`spinAndLand()` calls `spin() → setResult() → skip()` under the hood, which
+`spinAndLand()` calls `spin() → setResult() → slamStop()`, which
 bypasses all timing and resolves on a microtask. Perfect for CI.
+(`slamStop()` lands every reel outright; it does not go through the
+two-stage `skipSpin()` boost.)
 
 ## 2. Force outcomes with cheats
 
 Cheats are pure functions that take a context and return a grid.
 
 ```ts
-import { CheatEngine, forceScatters, forceLine, holdAndWinProgress } from '../../../../examples/shared/cheats';
+import { CheatEngine, forceScatters, forceLine, holdAndWinProgress } from '@pixi-reels/cheats';
 
 const engine = new CheatEngine({
-  reelCount: 5, visibleRows: 3,
+  reelCount: 5, visibleCells: 3,
   symbolIds: ['a', 'b', 'scatter', 'coin'],
   seed: 42,
 });
@@ -62,7 +64,7 @@ engine.register({
 });
 
 const { symbols, anticipationReels } = engine.next();
-await spinAndLand(symbols);
+await spinAndLand(symbols.map((visible) => ({ visible })));
 ```
 
 ### Built-in cheats
@@ -70,10 +72,10 @@ await spinAndLand(symbols);
 | Cheat | Effect |
 |---|---|
 | `forceGrid(grid)` | Every spin returns this exact grid. |
-| `forceLine(row, id)` | Fills a horizontal row with `id`. |
+| `forceLine(cellIndex, id)` | Fills one cell index across every reel with `id`. |
 | `forceScatters(n, id)` | Sprinkles exactly `n` of `id` at random cells. |
 | `forceNearMiss(n, id, nearReel)` | `n-1` scatters, none on `nearReel`. Triggers anticipation there. |
-| `forceCell(r, row, id)` | Places `id` at `[r, row]`. |
+| `forceCell(reel, cell, id)` | Places `id` at `[reel, cell]`. |
 | `holdAndWinProgress(coinId, p)` | Keeps held coins, adds one new coin with probability `p`. |
 | `cascadeSequence([g1, g2, ...])` | Emits grids in order. |
 | `forceAnticipation(reels)` | Sets anticipation reels without constraining symbols. |
@@ -98,14 +100,13 @@ const forcePairWild: Cheat = (ctx) => {
 import { captureEvents } from 'pixi-reels/testing';
 
 const log = captureEvents(reelSet, ['spin:start', 'spin:complete']);
-await spinAndLand(grid);
+await spinAndLand(grid);   // grid is ColumnTarget[]
 expect(log.map((e) => e.event)).toEqual(['spin:start', 'spin:complete']);
 ```
 
-## 4. Drive a live demo page
+## 4. See a mechanic running
 
-Every mechanic demo on this site mounts a `CheatPanel` that toggles these
-cheats at runtime. Open any demo → check a cheat → spin → watch the
-advertised outcome land every time.
-
-See the [Demos catalog](/demos/) for copy-pasteable examples.
+The standalone demo apps left this repo in 2.0 and live in a separate one.
+The live, replayable mechanics are the [recipes](/recipes/) on this site.
+each page runs the exact source it shows, so you can read the wiring and
+watch it land.

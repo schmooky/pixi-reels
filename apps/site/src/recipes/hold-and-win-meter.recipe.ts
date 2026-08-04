@@ -120,7 +120,7 @@ const fitGold = (t, maxW, maxH) => {
   return t;
 };
 const paintLabel = (cell, value) => {
-  const k = `${cell.col},${cell.row}`;
+  const k = `${cell.reel},${cell.cell}`;
   labelAt.get(k)?.destroy();
   const p = abs(cell);
   const t = fitGold(goldText(fmt(value), 30), SETTLE_SIZE * 0.84, SETTLE_SIZE * 0.46);
@@ -131,11 +131,11 @@ const paintLabel = (cell, value) => {
 };
 
 const SEED = [
-  { cell: { col: 0, row: 0 }, id: COIN, data: { value: 10 } },
-  { cell: { col: 2, row: 0 }, id: COIN, data: { value: 5 } },
-  { cell: { col: 4, row: 0 }, id: COIN, data: { value: 25 } },
-  { cell: { col: 1, row: 1 }, id: COIN, data: { value: 10 } },
-  { cell: { col: 3, row: 2 }, id: COIN, data: { value: 15 } },
+  { cell: { reel: 0, cell: 0 }, id: COIN, data: { value: 10 } },
+  { cell: { reel: 2, cell: 0 }, id: COIN, data: { value: 5 } },
+  { cell: { reel: 4, cell: 0 }, id: COIN, data: { value: 25 } },
+  { cell: { reel: 1, cell: 1 }, id: COIN, data: { value: 10 } },
+  { cell: { reel: 3, cell: 2 }, id: COIN, data: { value: 15 } },
 ];
 const seedBoard = () => {
   board.enter(SEED);
@@ -148,14 +148,14 @@ seedBoard();
 const flyers = new Set();
 let total = 0;
 async function collectToMeter() {
-  for (const wave of coinWaves(board.lockedCoins, 'by-row')) {
+  for (const wave of coinWaves(board.lockedCoins, 'by-cell')) {
     await Promise.all(wave.map((coin) => {
       const from = abs(coin.cell);
       const clone = fitGold(goldText(fmt(coin.data.value), 30), SETTLE_SIZE * 0.84, SETTLE_SIZE * 0.46);
       clone.position.set(from.x, from.y);
       app.stage.addChild(clone);
       flyers.add(clone);
-      const k = `${coin.cell.col},${coin.cell.row}`;
+      const k = `${coin.cell.reel},${coin.cell.cell}`;
       labelAt.get(k)?.destroy();
       labelAt.delete(k);
       board.release([coin.cell]);

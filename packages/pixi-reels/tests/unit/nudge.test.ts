@@ -1,7 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { gsap as defaultGsap } from 'gsap';
+
+/**
+ * The gsap instance the sets in this file are built with. v2 binds gsap PER
+ * SET at build() time, so a shim has to be installed here and handed to the
+ * harness rather than swapped into a module global.
+ */
+let syncGsap: typeof defaultGsap = defaultGsap;
 import { createTestReelSet, expectGrid } from '../../src/testing/index.js';
-import { setGsap } from '../../src/utils/gsapRef.js';
 
 /**
  * Replace gsap.to with a synchronous shim that drives the tween straight to
@@ -20,7 +26,7 @@ function installSyncGsap(): void {
       return { kill: vi.fn(), progress: vi.fn() } as unknown as gsap.core.Tween;
     },
   } as unknown as typeof defaultGsap;
-  setGsap(sync);
+  syncGsap = sync;
 }
 
 /**
@@ -42,7 +48,7 @@ function installSequenceGsap(progressSequence: number[]): void {
       return { kill: vi.fn(), progress: vi.fn() } as unknown as gsap.core.Tween;
     },
   } as unknown as typeof defaultGsap;
-  setGsap(sync);
+  syncGsap = sync;
 }
 
 /**
@@ -91,7 +97,7 @@ function installDeferredGsap(): {
       } as unknown as gsap.core.Tween;
     },
   } as unknown as typeof defaultGsap;
-  setGsap(sync);
+  syncGsap = sync;
   const fireAll = () => {
     for (const slot of slots) {
       if (slot.killed || slot.completed) continue;
@@ -113,25 +119,21 @@ describe('nudge', () => {
     installSyncGsap();
   });
   afterEach(() => {
-    setGsap(defaultGsap);
+    syncGsap = defaultGsap;
   });
 
   describe('down nudge', () => {
     it('shifts the visible window down by 1. incoming becomes the new top', async () => {
-      const { reelSet, spinAndLand, destroy } = createTestReelSet({
+      const { reelSet, spinAndLand, destroy } = createTestReelSet({ gsap: syncGsap,
         reels: 3,
-        visibleRows: 3,
+        visibleCells: 3,
         symbolIds: ['a', 'b', 'c', 'wild'],
       });
       try {
-        await spinAndLand([
-          ['a', 'b', 'c'],
-          ['a', 'b', 'c'],
-          ['a', 'b', 'c'],
-        ]);
+        await spinAndLand([ { visible: ['a', 'b', 'c'] }, { visible: ['a', 'b', 'c'] }, { visible: ['a', 'b', 'c'] } ]);
         const result = await reelSet.nudge(1, {
           distance: 1,
-          direction: 'down',
+          direction: 'forward',
           incoming: ['wild'],
         });
         expect(result.symbols).toEqual(['wild', 'a', 'b']);
@@ -147,16 +149,16 @@ describe('nudge', () => {
     });
 
     it('shifts down by 2 with default buffer=1. exercises the wrap queue', async () => {
-      const { reelSet, spinAndLand, destroy } = createTestReelSet({
+      const { reelSet, spinAndLand, destroy } = createTestReelSet({ gsap: syncGsap,
         reels: 1,
-        visibleRows: 3,
+        visibleCells: 3,
         symbolIds: ['a', 'b', 'c', 'x', 'y'],
       });
       try {
-        await spinAndLand([['a', 'b', 'c']]);
+        await spinAndLand([ { visible: ['a', 'b', 'c'] } ]);
         const result = await reelSet.nudge(0, {
           distance: 2,
-          direction: 'down',
+          direction: 'forward',
           incoming: ['x', 'y'], // x is new top, y is below x
         });
         expect(result.symbols).toEqual(['x', 'y', 'a']);
@@ -165,17 +167,17 @@ describe('nudge', () => {
       }
     });
 
-    it('shifts down by 3. every visible row is incoming', async () => {
-      const { reelSet, spinAndLand, destroy } = createTestReelSet({
+    it('shifts down by 3. every visible cell is incoming', async () => {
+      const { reelSet, spinAndLand, destroy } = createTestReelSet({ gsap: syncGsap,
         reels: 1,
-        visibleRows: 3,
+        visibleCells: 3,
         symbolIds: ['a', 'b', 'c', 'x', 'y', 'z'],
       });
       try {
-        await spinAndLand([['a', 'b', 'c']]);
+        await spinAndLand([ { visible: ['a', 'b', 'c'] } ]);
         const result = await reelSet.nudge(0, {
           distance: 3,
-          direction: 'down',
+          direction: 'forward',
           incoming: ['x', 'y', 'z'],
         });
         expect(result.symbols).toEqual(['x', 'y', 'z']);
@@ -188,16 +190,16 @@ describe('nudge', () => {
 
   describe('up nudge', () => {
     it('shifts the visible window up by 1. incoming becomes the new bottom', async () => {
-      const { reelSet, spinAndLand, destroy } = createTestReelSet({
+      const { reelSet, spinAndLand, destroy } = createTestReelSet({ gsap: syncGsap,
         reels: 1,
-        visibleRows: 3,
+        visibleCells: 3,
         symbolIds: ['a', 'b', 'c', 'wild'],
       });
       try {
-        await spinAndLand([['a', 'b', 'c']]);
+        await spinAndLand([ { visible: ['a', 'b', 'c'] } ]);
         const result = await reelSet.nudge(0, {
           distance: 1,
-          direction: 'up',
+          direction: 'reverse',
           incoming: ['wild'],
         });
         expect(result.symbols).toEqual(['b', 'c', 'wild']);
@@ -207,16 +209,16 @@ describe('nudge', () => {
     });
 
     it('shifts up by 2 with default buffer=1', async () => {
-      const { reelSet, spinAndLand, destroy } = createTestReelSet({
+      const { reelSet, spinAndLand, destroy } = createTestReelSet({ gsap: syncGsap,
         reels: 1,
-        visibleRows: 3,
+        visibleCells: 3,
         symbolIds: ['a', 'b', 'c', 'x', 'y'],
       });
       try {
-        await spinAndLand([['a', 'b', 'c']]);
+        await spinAndLand([ { visible: ['a', 'b', 'c'] } ]);
         const result = await reelSet.nudge(0, {
           distance: 2,
-          direction: 'up',
+          direction: 'reverse',
           incoming: ['x', 'y'], // x just below old c, y is new bottom
         });
         expect(result.symbols).toEqual(['c', 'x', 'y']);
@@ -228,25 +230,25 @@ describe('nudge', () => {
 
   describe('events', () => {
     it('emits nudge:start and nudge:complete on the reel-set bus', async () => {
-      const { reelSet, spinAndLand, destroy } = createTestReelSet({
+      const { reelSet, spinAndLand, destroy } = createTestReelSet({ gsap: syncGsap,
         reels: 1,
-        visibleRows: 3,
+        visibleCells: 3,
         symbolIds: ['a', 'b', 'c', 'wild'],
       });
       try {
-        await spinAndLand([['a', 'b', 'c']]);
+        await spinAndLand([ { visible: ['a', 'b', 'c'] } ]);
         const events: Array<{ name: string; info: unknown }> = [];
         reelSet.events.on('nudge:start', (info) => events.push({ name: 'nudge:start', info }));
         reelSet.events.on('nudge:complete', (info) => events.push({ name: 'nudge:complete', info }));
 
-        await reelSet.nudge(0, { distance: 1, direction: 'down', incoming: ['wild'] });
+        await reelSet.nudge(0, { distance: 1, direction: 'forward', incoming: ['wild'] });
 
         expect(events.map((e) => e.name)).toEqual(['nudge:start', 'nudge:complete']);
-        expect(events[0].info).toEqual({ reelIndex: 0, distance: 1, direction: 'down' });
+        expect(events[0].info).toEqual({ reelIndex: 0, distance: 1, direction: 'forward' });
         expect(events[1].info).toEqual({
           reelIndex: 0,
           distance: 1,
-          direction: 'down',
+          direction: 'forward',
           symbols: ['wild', 'a', 'b'],
         });
       } finally {
@@ -255,13 +257,13 @@ describe('nudge', () => {
     });
 
     it('emits phase:enter / phase:exit("nudge") on the per-reel bus', async () => {
-      const { reelSet, spinAndLand, destroy } = createTestReelSet({
+      const { reelSet, spinAndLand, destroy } = createTestReelSet({ gsap: syncGsap,
         reels: 1,
-        visibleRows: 3,
+        visibleCells: 3,
         symbolIds: ['a', 'b', 'c', 'wild'],
       });
       try {
-        await spinAndLand([['a', 'b', 'c']]);
+        await spinAndLand([ { visible: ['a', 'b', 'c'] } ]);
         const phases: string[] = [];
         reelSet.reels[0].events.on('phase:enter', (n) => {
           if (n === 'nudge') phases.push('enter:nudge');
@@ -269,7 +271,7 @@ describe('nudge', () => {
         reelSet.reels[0].events.on('phase:exit', (n) => {
           if (n === 'nudge') phases.push('exit:nudge');
         });
-        await reelSet.nudge(0, { distance: 1, direction: 'down', incoming: ['wild'] });
+        await reelSet.nudge(0, { distance: 1, direction: 'forward', incoming: ['wild'] });
         expect(phases).toEqual(['enter:nudge', 'exit:nudge']);
       } finally {
         destroy();
@@ -279,20 +281,16 @@ describe('nudge', () => {
 
   describe('parallel nudges', () => {
     it('Promise.all across two reels lands independently', async () => {
-      const { reelSet, spinAndLand, destroy } = createTestReelSet({
+      const { reelSet, spinAndLand, destroy } = createTestReelSet({ gsap: syncGsap,
         reels: 3,
-        visibleRows: 3,
+        visibleCells: 3,
         symbolIds: ['a', 'b', 'c', 'wild', 'star'],
       });
       try {
-        await spinAndLand([
-          ['a', 'b', 'c'],
-          ['a', 'b', 'c'],
-          ['a', 'b', 'c'],
-        ]);
+        await spinAndLand([ { visible: ['a', 'b', 'c'] }, { visible: ['a', 'b', 'c'] }, { visible: ['a', 'b', 'c'] } ]);
         await Promise.all([
-          reelSet.nudge(0, { distance: 1, direction: 'down', incoming: ['wild'] }),
-          reelSet.nudge(2, { distance: 1, direction: 'up', incoming: ['star'] }),
+          reelSet.nudge(0, { distance: 1, direction: 'forward', incoming: ['wild'] }),
+          reelSet.nudge(2, { distance: 1, direction: 'reverse', incoming: ['star'] }),
         ]);
         expectGrid(reelSet, [
           ['wild', 'a', 'b'],
@@ -307,15 +305,15 @@ describe('nudge', () => {
 
   describe('validation', () => {
     it('throws when reel set is currently spinning', async () => {
-      const { reelSet, destroy } = createTestReelSet({
+      const { reelSet, destroy } = createTestReelSet({ gsap: syncGsap,
         reels: 1,
-        visibleRows: 3,
+        visibleCells: 3,
         symbolIds: ['a', 'b', 'wild'],
       });
       try {
         const p = reelSet.spin();
         await expect(
-          reelSet.nudge(0, { distance: 1, direction: 'down', incoming: ['wild'] }),
+          reelSet.nudge(0, { distance: 1, direction: 'forward', incoming: ['wild'] }),
         ).rejects.toThrow(/cannot nudge while a spin/);
         reelSet.setResult([{ visible: ['a', 'b', 'a'] }]);
         reelSet.slamStop();
@@ -325,22 +323,19 @@ describe('nudge', () => {
       }
     });
 
-    it('throws on out-of-range col', async () => {
-      const { reelSet, spinAndLand, destroy } = createTestReelSet({
+    it('throws on out-of-range reel', async () => {
+      const { reelSet, spinAndLand, destroy } = createTestReelSet({ gsap: syncGsap,
         reels: 2,
-        visibleRows: 3,
+        visibleCells: 3,
         symbolIds: ['a', 'wild'],
       });
       try {
-        await spinAndLand([
-          ['a', 'a', 'a'],
-          ['a', 'a', 'a'],
-        ]);
+        await spinAndLand([ { visible: ['a', 'a', 'a'] }, { visible: ['a', 'a', 'a'] } ]);
         await expect(
-          reelSet.nudge(5, { distance: 1, direction: 'down', incoming: ['wild'] }),
+          reelSet.nudge(5, { distance: 1, direction: 'forward', incoming: ['wild'] }),
         ).rejects.toThrow(/out of range/);
         await expect(
-          reelSet.nudge(-1, { distance: 1, direction: 'down', incoming: ['wild'] }),
+          reelSet.nudge(-1, { distance: 1, direction: 'forward', incoming: ['wild'] }),
         ).rejects.toThrow(/out of range/);
       } finally {
         destroy();
@@ -348,18 +343,18 @@ describe('nudge', () => {
     });
 
     it('throws on bad distance', async () => {
-      const { reelSet, spinAndLand, destroy } = createTestReelSet({
+      const { reelSet, spinAndLand, destroy } = createTestReelSet({ gsap: syncGsap,
         reels: 1,
-        visibleRows: 3,
+        visibleCells: 3,
         symbolIds: ['a', 'wild'],
       });
       try {
-        await spinAndLand([['a', 'a', 'a']]);
+        await spinAndLand([ { visible: ['a', 'a', 'a'] } ]);
         await expect(
-          reelSet.nudge(0, { distance: 0, direction: 'down', incoming: [] }),
+          reelSet.nudge(0, { distance: 0, direction: 'forward', incoming: [] }),
         ).rejects.toThrow(/positive integer/);
         await expect(
-          reelSet.nudge(0, { distance: 1.5, direction: 'down', incoming: ['wild'] }),
+          reelSet.nudge(0, { distance: 1.5, direction: 'forward', incoming: ['wild'] }),
         ).rejects.toThrow(/positive integer/);
       } finally {
         destroy();
@@ -367,15 +362,15 @@ describe('nudge', () => {
     });
 
     it('throws when incoming length mismatches distance', async () => {
-      const { reelSet, spinAndLand, destroy } = createTestReelSet({
+      const { reelSet, spinAndLand, destroy } = createTestReelSet({ gsap: syncGsap,
         reels: 1,
-        visibleRows: 3,
+        visibleCells: 3,
         symbolIds: ['a', 'wild'],
       });
       try {
-        await spinAndLand([['a', 'a', 'a']]);
+        await spinAndLand([ { visible: ['a', 'a', 'a'] } ]);
         await expect(
-          reelSet.nudge(0, { distance: 2, direction: 'down', incoming: ['wild'] }),
+          reelSet.nudge(0, { distance: 2, direction: 'forward', incoming: ['wild'] }),
         ).rejects.toThrow(/exactly 2 symbol id/);
       } finally {
         destroy();
@@ -383,15 +378,15 @@ describe('nudge', () => {
     });
 
     it('throws when incoming contains an unregistered symbol', async () => {
-      const { reelSet, spinAndLand, destroy } = createTestReelSet({
+      const { reelSet, spinAndLand, destroy } = createTestReelSet({ gsap: syncGsap,
         reels: 1,
-        visibleRows: 3,
+        visibleCells: 3,
         symbolIds: ['a', 'wild'],
       });
       try {
-        await spinAndLand([['a', 'a', 'a']]);
+        await spinAndLand([ { visible: ['a', 'a', 'a'] } ]);
         await expect(
-          reelSet.nudge(0, { distance: 1, direction: 'down', incoming: ['unknown'] }),
+          reelSet.nudge(0, { distance: 1, direction: 'forward', incoming: ['unknown'] }),
         ).rejects.toThrow(/is not registered/);
       } finally {
         destroy();
@@ -399,16 +394,16 @@ describe('nudge', () => {
     });
 
     it('throws when the target reel has an active pin', async () => {
-      const { reelSet, spinAndLand, destroy } = createTestReelSet({
+      const { reelSet, spinAndLand, destroy } = createTestReelSet({ gsap: syncGsap,
         reels: 1,
-        visibleRows: 3,
+        visibleCells: 3,
         symbolIds: ['a', 'wild'],
       });
       try {
-        await spinAndLand([['a', 'a', 'a']]);
+        await spinAndLand([ { visible: ['a', 'a', 'a'] } ]);
         reelSet.pin(0, 1, 'wild');
         await expect(
-          reelSet.nudge(0, { distance: 1, direction: 'down', incoming: ['wild'] }),
+          reelSet.nudge(0, { distance: 1, direction: 'forward', incoming: ['wild'] }),
         ).rejects.toThrow(/active pin/);
       } finally {
         destroy();
@@ -418,19 +413,19 @@ describe('nudge', () => {
 
   describe('post-nudge state', () => {
     it('leaves the reel ready for a normal spin afterward', async () => {
-      const { reelSet, spinAndLand, destroy } = createTestReelSet({
+      const { reelSet, spinAndLand, destroy } = createTestReelSet({ gsap: syncGsap,
         reels: 1,
-        visibleRows: 3,
+        visibleCells: 3,
         symbolIds: ['a', 'b', 'c', 'wild'],
       });
       try {
-        await spinAndLand([['a', 'b', 'c']]);
-        await reelSet.nudge(0, { distance: 1, direction: 'down', incoming: ['wild'] });
+        await spinAndLand([ { visible: ['a', 'b', 'c'] } ]);
+        await reelSet.nudge(0, { distance: 1, direction: 'forward', incoming: ['wild'] });
         expect(reelSet.reels[0].isNudging).toBe(false);
         expect(reelSet.reels[0].speed).toBe(0);
 
         // Now a fresh spin works.
-        await spinAndLand([['a', 'a', 'a']]);
+        await spinAndLand([ { visible: ['a', 'a', 'a'] } ]);
         expectGrid(reelSet, [['a', 'a', 'a']]);
       } finally {
         destroy();
@@ -438,16 +433,16 @@ describe('nudge', () => {
     });
 
     it('does NOT re-emit `landed` after a nudge (nudge:complete is the right surface)', async () => {
-      const { reelSet, spinAndLand, destroy } = createTestReelSet({
+      const { reelSet, spinAndLand, destroy } = createTestReelSet({ gsap: syncGsap,
         reels: 1,
-        visibleRows: 3,
+        visibleCells: 3,
         symbolIds: ['a', 'b', 'c', 'wild'],
       });
       try {
-        await spinAndLand([['a', 'b', 'c']]);
+        await spinAndLand([ { visible: ['a', 'b', 'c'] } ]);
         const landedCalls: string[][] = [];
         reelSet.reels[0].events.on('landed', (symbols: string[]) => landedCalls.push([...symbols]));
-        await reelSet.nudge(0, { distance: 1, direction: 'down', incoming: ['wild'] });
+        await reelSet.nudge(0, { distance: 1, direction: 'forward', incoming: ['wild'] });
         // `landed` is the spin-stop event. A nudge fires `nudge:complete`,
         // never `landed`. counting on it for win re-detection would
         // double-fire.
@@ -460,21 +455,21 @@ describe('nudge', () => {
 
   describe('distance bounds', () => {
     it('throws when distance equals the total strip capacity', async () => {
-      const { reelSet, spinAndLand, destroy } = createTestReelSet({
+      const { reelSet, spinAndLand, destroy } = createTestReelSet({ gsap: syncGsap,
         reels: 1,
-        visibleRows: 3,
+        visibleCells: 3,
         bufferSymbols: 1,
         symbolIds: ['a', 'wild'],
       });
       try {
-        await spinAndLand([['a', 'a', 'a']]);
-        // total = bufferAbove(1) + visible(3) + bufferBelow(1) = 5.
+        await spinAndLand([ { visible: ['a', 'a', 'a'] } ]);
+        // total = bufferStart(1) + visible(3) + bufferEnd(1) = 5.
         // distance=5 would fully rotate the strip and drop the pre-placed
-        // bufferAbove entry. we refuse instead of silently losing it.
+        // bufferStart entry. we refuse instead of silently losing it.
         await expect(
           reelSet.nudge(0, {
             distance: 5,
-            direction: 'down',
+            direction: 'forward',
             incoming: ['wild', 'wild', 'wild', 'wild', 'wild'],
           }),
         ).rejects.toThrow(/strictly less than total strip capacity/);
@@ -484,19 +479,19 @@ describe('nudge', () => {
     });
 
     it('accepts distance = total - 1 (the largest preserving rotation)', async () => {
-      const { reelSet, spinAndLand, destroy } = createTestReelSet({
+      const { reelSet, spinAndLand, destroy } = createTestReelSet({ gsap: syncGsap,
         reels: 1,
-        visibleRows: 3,
+        visibleCells: 3,
         bufferSymbols: 1,
         symbolIds: ['a', 'b', 'c', 'x', 'y', 'z', 'w'],
       });
       try {
-        await spinAndLand([['a', 'b', 'c']]);
+        await spinAndLand([ { visible: ['a', 'b', 'c'] } ]);
         // total = 5. distance = 4 is the largest allowed; incoming[3]
-        // lands in bufferBelow (the bottommost final position).
+        // lands in bufferEnd (the bottommost final position).
         const result = await reelSet.nudge(0, {
           distance: 4,
-          direction: 'down',
+          direction: 'forward',
           incoming: ['x', 'y', 'z', 'w'],
         });
         expect(result.symbols).toEqual(['x', 'y', 'z']);
@@ -512,16 +507,16 @@ describe('nudge', () => {
       // then settles back to 1. Pre-clamp this would have fired a
       // spurious wrap and corrupted the final frame.
       installSequenceGsap([0.5, 0.95, 1.15, 1.05, 1.0]);
-      const { reelSet, spinAndLand, destroy } = createTestReelSet({
+      const { reelSet, spinAndLand, destroy } = createTestReelSet({ gsap: syncGsap,
         reels: 1,
-        visibleRows: 3,
+        visibleCells: 3,
         symbolIds: ['a', 'b', 'c', 'wild'],
       });
       try {
-        await spinAndLand([['a', 'b', 'c']]);
+        await spinAndLand([ { visible: ['a', 'b', 'c'] } ]);
         const result = await reelSet.nudge(0, {
           distance: 1,
-          direction: 'down',
+          direction: 'forward',
           incoming: ['wild'],
           ease: 'back.out(1.5)',
         });
@@ -533,16 +528,16 @@ describe('nudge', () => {
 
     it('overshooting ease on an up-nudge clamps the upward travel', async () => {
       installSequenceGsap([0.5, 1.15, 1.0]);
-      const { reelSet, spinAndLand, destroy } = createTestReelSet({
+      const { reelSet, spinAndLand, destroy } = createTestReelSet({ gsap: syncGsap,
         reels: 1,
-        visibleRows: 3,
+        visibleCells: 3,
         symbolIds: ['a', 'b', 'c', 'wild'],
       });
       try {
-        await spinAndLand([['a', 'b', 'c']]);
+        await spinAndLand([ { visible: ['a', 'b', 'c'] } ]);
         const result = await reelSet.nudge(0, {
           distance: 1,
-          direction: 'up',
+          direction: 'reverse',
           incoming: ['wild'],
           ease: 'back.out(1.5)',
         });
@@ -556,16 +551,16 @@ describe('nudge', () => {
   describe('skipNudge', () => {
     it('fast-forwards an in-flight nudge to its landed state', async () => {
       const deferred = installDeferredGsap();
-      const { reelSet, spinAndLand, destroy } = createTestReelSet({
+      const { reelSet, spinAndLand, destroy } = createTestReelSet({ gsap: syncGsap,
         reels: 1,
-        visibleRows: 3,
+        visibleCells: 3,
         symbolIds: ['a', 'b', 'c', 'wild'],
       });
       try {
-        await spinAndLand([['a', 'b', 'c']]);
+        await spinAndLand([ { visible: ['a', 'b', 'c'] } ]);
         const p = reelSet.nudge(0, {
           distance: 1,
-          direction: 'down',
+          direction: 'forward',
           incoming: ['wild'],
         });
         // Tween is deferred. no completion yet.
@@ -581,24 +576,20 @@ describe('nudge', () => {
       }
     });
 
-    it('skipNudge() with no col skips every in-flight nudge', async () => {
+    it('skipNudge() with no reel skips every in-flight nudge', async () => {
       installSyncGsap(); // resolve immediately so the multi-reel setup works
-      const { reelSet, spinAndLand, destroy } = createTestReelSet({
+      const { reelSet, spinAndLand, destroy } = createTestReelSet({ gsap: syncGsap,
         reels: 3,
-        visibleRows: 3,
+        visibleCells: 3,
         symbolIds: ['a', 'b', 'c', 'wild'],
       });
       try {
-        await spinAndLand([
-          ['a', 'b', 'c'],
-          ['a', 'b', 'c'],
-          ['a', 'b', 'c'],
-        ]);
+        await spinAndLand([ { visible: ['a', 'b', 'c'] }, { visible: ['a', 'b', 'c'] }, { visible: ['a', 'b', 'c'] } ]);
         // Use sync gsap so all nudges complete instantly; the skipAll
         // call just confirms no error when nothing is in flight.
         await Promise.all([
-          reelSet.nudge(0, { distance: 1, direction: 'down', incoming: ['wild'] }),
-          reelSet.nudge(2, { distance: 1, direction: 'down', incoming: ['wild'] }),
+          reelSet.nudge(0, { distance: 1, direction: 'forward', incoming: ['wild'] }),
+          reelSet.nudge(2, { distance: 1, direction: 'forward', incoming: ['wild'] }),
         ]);
         // After resolution, skipNudge() should be a clean no-op.
         expect(() => reelSet.skipNudge()).not.toThrow();
@@ -607,10 +598,10 @@ describe('nudge', () => {
       }
     });
 
-    it('throws on out-of-range col', async () => {
-      const { reelSet, destroy } = createTestReelSet({
+    it('throws on out-of-range reel', async () => {
+      const { reelSet, destroy } = createTestReelSet({ gsap: syncGsap,
         reels: 2,
-        visibleRows: 3,
+        visibleCells: 3,
         symbolIds: ['a'],
       });
       try {
@@ -623,18 +614,18 @@ describe('nudge', () => {
 
   describe('AbortSignal', () => {
     it('rejects with AbortError if signal is already aborted on entry', async () => {
-      const { reelSet, spinAndLand, destroy } = createTestReelSet({
+      const { reelSet, spinAndLand, destroy } = createTestReelSet({ gsap: syncGsap,
         reels: 1,
-        visibleRows: 3,
+        visibleCells: 3,
         symbolIds: ['a', 'wild'],
       });
       try {
-        await spinAndLand([['a', 'a', 'a']]);
+        await spinAndLand([ { visible: ['a', 'a', 'a'] } ]);
         const controller = new AbortController();
         controller.abort();
         const err = await reelSet.nudge(0, {
           distance: 1,
-          direction: 'down',
+          direction: 'forward',
           incoming: ['wild'],
           signal: controller.signal,
         }).catch((e) => e);
@@ -647,19 +638,19 @@ describe('nudge', () => {
 
     it('rejects with AbortError if signal aborts mid-tween, fires nudge:cancelled, lands deterministically', async () => {
       const deferred = installDeferredGsap();
-      const { reelSet, spinAndLand, destroy } = createTestReelSet({
+      const { reelSet, spinAndLand, destroy } = createTestReelSet({ gsap: syncGsap,
         reels: 1,
-        visibleRows: 3,
+        visibleCells: 3,
         symbolIds: ['a', 'b', 'c', 'wild'],
       });
       try {
-        await spinAndLand([['a', 'b', 'c']]);
+        await spinAndLand([ { visible: ['a', 'b', 'c'] } ]);
         const cancelled: unknown[] = [];
         reelSet.events.on('nudge:cancelled', (info) => cancelled.push(info));
         const controller = new AbortController();
         const p = reelSet.nudge(0, {
           distance: 1,
-          direction: 'down',
+          direction: 'forward',
           incoming: ['wild'],
           signal: controller.signal,
         });
@@ -680,17 +671,17 @@ describe('nudge', () => {
   describe('startDelay (stagger sugar)', () => {
     it('honors startDelay before mutating the strip', async () => {
       installSyncGsap();
-      const { reelSet, spinAndLand, destroy } = createTestReelSet({
+      const { reelSet, spinAndLand, destroy } = createTestReelSet({ gsap: syncGsap,
         reels: 1,
-        visibleRows: 3,
+        visibleCells: 3,
         symbolIds: ['a', 'b', 'c', 'wild'],
       });
       try {
-        await spinAndLand([['a', 'b', 'c']]);
+        await spinAndLand([ { visible: ['a', 'b', 'c'] } ]);
         const before = Date.now();
         await reelSet.nudge(0, {
           distance: 1,
-          direction: 'down',
+          direction: 'forward',
           incoming: ['wild'],
           startDelay: 60,
         });
@@ -704,17 +695,17 @@ describe('nudge', () => {
 
     it('aborting during startDelay rejects with AbortError', async () => {
       installSyncGsap();
-      const { reelSet, spinAndLand, destroy } = createTestReelSet({
+      const { reelSet, spinAndLand, destroy } = createTestReelSet({ gsap: syncGsap,
         reels: 1,
-        visibleRows: 3,
+        visibleCells: 3,
         symbolIds: ['a', 'wild'],
       });
       try {
-        await spinAndLand([['a', 'a', 'a']]);
+        await spinAndLand([ { visible: ['a', 'a', 'a'] } ]);
         const controller = new AbortController();
         const p = reelSet.nudge(0, {
           distance: 1,
-          direction: 'down',
+          direction: 'forward',
           incoming: ['wild'],
           startDelay: 200,
           signal: controller.signal,
@@ -726,21 +717,62 @@ describe('nudge', () => {
         destroy();
       }
     });
+
+    it('removes its abort listener when the delay elapses normally', async () => {
+      installSyncGsap();
+      const { reelSet, spinAndLand, destroy } = createTestReelSet({ gsap: syncGsap,
+        reels: 1,
+        visibleCells: 3,
+        symbolIds: ['a', 'b', 'c', 'wild'],
+      });
+      try {
+        await spinAndLand([ { visible: ['a', 'b', 'c'] } ]);
+        // One long-lived controller reused across nudges is the documented
+        // stagger pattern, so a listener left behind on the normal path
+        // accumulates for as long as the controller lives.
+        const controller = new AbortController();
+        const { signal } = controller;
+        let live = 0;
+        const add = signal.addEventListener.bind(signal);
+        const remove = signal.removeEventListener.bind(signal);
+        vi.spyOn(signal, 'addEventListener').mockImplementation((...args: Parameters<typeof add>) => {
+          live++;
+          return add(...args);
+        });
+        vi.spyOn(signal, 'removeEventListener').mockImplementation((...args: Parameters<typeof remove>) => {
+          live--;
+          return remove(...args);
+        });
+
+        for (let i = 0; i < 3; i++) {
+          await reelSet.nudge(0, {
+            distance: 1,
+            direction: 'forward',
+            incoming: ['wild'],
+            startDelay: 5,
+            signal,
+          });
+        }
+        expect(live).toBe(0);
+      } finally {
+        destroy();
+      }
+    });
   });
 
   describe('destroy mid-nudge', () => {
     it('destroying mid-tween rejects the nudge promise with AbortError, no crash', async () => {
       const deferred = installDeferredGsap();
-      const { reelSet, spinAndLand, destroy } = createTestReelSet({
+      const { reelSet, spinAndLand, destroy } = createTestReelSet({ gsap: syncGsap,
         reels: 1,
-        visibleRows: 3,
+        visibleCells: 3,
         symbolIds: ['a', 'b', 'c', 'wild'],
       });
       try {
-        await spinAndLand([['a', 'b', 'c']]);
+        await spinAndLand([ { visible: ['a', 'b', 'c'] } ]);
         const p = reelSet.nudge(0, {
           distance: 1,
-          direction: 'down',
+          direction: 'forward',
           incoming: ['wild'],
         });
         // Destroy mid-tween. Should kill the tween + reject the promise.
@@ -759,24 +791,24 @@ describe('nudge', () => {
   describe('nudge:start fires after pre-placement', () => {
     it('the strip already reflects pre-placement when nudge:start fires', async () => {
       installSyncGsap();
-      const { reelSet, spinAndLand, destroy } = createTestReelSet({
+      const { reelSet, spinAndLand, destroy } = createTestReelSet({ gsap: syncGsap,
         reels: 1,
-        visibleRows: 3,
+        visibleCells: 3,
         bufferSymbols: 1,
         symbolIds: ['a', 'b', 'c', 'wild'],
       });
       try {
-        await spinAndLand([['a', 'b', 'c']]);
+        await spinAndLand([ { visible: ['a', 'b', 'c'] } ]);
         let bufferAboveAtStart: string | null = null;
         reelSet.events.on('nudge:start', () => {
-          // bufferAbove cell holds incoming[0] (pre-placed) right when
+          // bufferStart cell holds incoming[0] (pre-placed) right when
           // nudge:start fires. Pre-fix this fired before mutation, so
           // the buffer still held the previous-spin random.
           bufferAboveAtStart = reelSet.reels[0].symbols[0].symbolId;
         });
         await reelSet.nudge(0, {
           distance: 1,
-          direction: 'down',
+          direction: 'forward',
           incoming: ['wild'],
         });
         expect(bufferAboveAtStart).toBe('wild');
@@ -787,30 +819,30 @@ describe('nudge', () => {
   });
 
   describe('big symbols on the strip', () => {
-    it('nudges a 1x2 wild down through fully. anchor at visible row 0, stub at row 1', async () => {
+    it('nudges a 1x2 wild down through fully. anchor at visible cell 0, stub at cell 1', async () => {
       installSyncGsap();
-      const { reelSet, spinAndLand, destroy } = createTestReelSet({
+      const { reelSet, spinAndLand, destroy } = createTestReelSet({ gsap: syncGsap,
         reels: 1,
-        visibleRows: 3,
+        visibleCells: 3,
         bufferSymbols: 1,
         symbolIds: ['a', 'b', 'c', 'bigW'],
         symbolData: {
-          bigW: { weight: 0, size: { w: 1, h: 2 } },
+          bigW: { weight: 0, size: { reels: 1, cells: 2 } },
         },
       });
       try {
-        // 1x2 anchor at visible row 1 (so stub fits in visible row 2).
-        // SetResult validates anchor + h fits in visibleRows.
-        await spinAndLand([['a', 'bigW', 'bigW']]);
+        // 1x2 anchor at visible cell 1 (so stub fits in visible cell 2).
+        // SetResult validates anchor + h fits in visibleCells.
+        await spinAndLand([ { visible: ['a', 'bigW', 'bigW'] } ]);
         // The strip already shows the full block. Nudge DOWN by 1 shifts
-        // it to rows 2+3. but row 3 doesn't exist. Block survival check:
-        // anchor at strip[2], h=2, distance=1 down. Survival: 2 + 2 - 1 + 1 = 4 < 5 ✓.
-        // After nudge: anchor at strip[3], stub at strip[4] (bufferBelow).
-        // visible row 0 = 'a' (incoming), row 1 = 'a' (old top-visible),
-        // row 2 = anchor 'bigW' (the top of the 1x2 block).
+        // it to cells 2+3. but cell 3 doesn't exist. Block survival check:
+        // anchor at strip[2], h=2, distance=1 down. Survival: 2 + 2 - 1 + 1 = 4 < 5, ok.
+        // After nudge: anchor at strip[3], stub at strip[4] (bufferEnd).
+        // visible cell 0 = 'a' (incoming), cell 1 = 'a' (old top-visible),
+        // cell 2 = anchor 'bigW' (the top of the 1x2 block).
         const result = await reelSet.nudge(0, {
           distance: 1,
-          direction: 'down',
+          direction: 'forward',
           incoming: ['a'],
         });
         expect(result.symbols).toEqual(['a', 'a', 'bigW']);
@@ -819,37 +851,37 @@ describe('nudge', () => {
       }
     });
 
-    it('1x2 up-nudge lands anchor in bufferAbove with tail visible. block renders correctly', async () => {
+    it('1x2 up-nudge lands anchor in bufferStart with tail visible. block renders correctly', async () => {
       installSyncGsap();
-      const { reelSet, spinAndLand, destroy } = createTestReelSet({
+      const { reelSet, spinAndLand, destroy } = createTestReelSet({ gsap: syncGsap,
         reels: 1,
-        visibleRows: 3,
+        visibleCells: 3,
         bufferSymbols: 1,
         symbolIds: ['a', 'b', 'c', 'bigW'],
         symbolData: {
-          bigW: { weight: 0, size: { w: 1, h: 2 } },
+          bigW: { weight: 0, size: { reels: 1, cells: 2 } },
         },
       });
       try {
-        // 1x2 at visible rows 0+1. anchor at strip[1], stub at strip[2].
-        await spinAndLand([['bigW', 'bigW', 'a']]);
-        // Nudge up by 1. anchor lands at strip[0] (bufferAbove), stub at
-        // strip[1] (visible row 0). The block is "tail visible": top in
-        // buffer, bottom showing. `_finalizeFrame` scans bufferAbove now,
+        // 1x2 at visible cells 0+1. anchor at strip[1], stub at strip[2].
+        await spinAndLand([ { visible: ['bigW', 'bigW', 'a'] } ]);
+        // Nudge up by 1. anchor lands at strip[0] (bufferStart), stub at
+        // strip[1] (visible cell 0). The block is "tail visible": top in
+        // buffer, bottom showing. `_finalizeFrame` scans bufferStart now,
         // so the anchor sprite is sized to the full block and the visible
-        // row 0 cell resolves to 'bigW' via the negative-anchorRow occupancy.
+        // cell 0 cell resolves to 'bigW' via the negative-anchorCell occupancy.
         const result = await reelSet.nudge(0, {
           distance: 1,
-          direction: 'up',
+          direction: 'reverse',
           incoming: ['a'],
         });
-        // Visible row 0 = 'bigW' (the block's tail via occupancy).
+        // Visible cell 0 = 'bigW' (the block's tail via occupancy).
         // Rows 1+2 = the rest of the strip after rotation.
         expect(result.symbols[0]).toBe('bigW');
-        // Occupancy correctly references the bufferAbove anchor (negative row).
-        // Internal state: visible row 0 has occupancy pointing to anchorRow = -1.
+        // Occupancy correctly references the bufferStart anchor (negative cell).
+        // Internal state: visible cell 0 has occupancy pointing to anchorCell = -1.
         const reel = reelSet.reels[0];
-        // Reel.getSymbolAt resolves through occupancy → returns the anchor symbol.
+        // Reel.getSymbolAt resolves through occupancy -> returns the anchor symbol.
         expect(reel.getSymbolAt(0).symbolId).toBe('bigW');
       } finally {
         destroy();
@@ -858,45 +890,39 @@ describe('nudge', () => {
 
     it('regression: pre-placement does NOT overwrite an OCCUPIED stub of a surviving block', async () => {
       installSyncGsap();
-      const { reelSet, spinAndLand, destroy } = createTestReelSet({
+      const { reelSet, spinAndLand, destroy } = createTestReelSet({ gsap: syncGsap,
         reels: 1,
-        visibleRows: 3,
+        visibleCells: 3,
         bufferSymbols: 1,
         symbolIds: ['a', 'b', 'c', 'bigW'],
         symbolData: {
-          bigW: { weight: 0, size: { w: 1, h: 2 } },
+          bigW: { weight: 0, size: { reels: 1, cells: 2 } },
         },
       });
       try {
         // Set up state where the up-nudge's pre-placement TARGET slot
-        // (strip[4] = bufferBelow row 0) holds an OCCUPIED stub of a
-        // surviving block. Anchor at visible row 2 (strip[3]), stub at
+        // (strip[4] = bufferEnd cell 0) holds an OCCUPIED stub of a
+        // surviving block. Anchor at visible cell 2 (strip[3]), stub at
         // strip[4]. Pre-fix this overwrote the stub with the caller's
         // incoming symbol, splitting the block.
-        await spinAndLand([['a', 'bigW', 'bigW']]);
-        // Snapshot pre-nudge: anchor at visible row 1, stub at row 2.
-        // strip[4] holds the bufferBelow filler (not a stub here. this
-        // setup makes anchor at strip[2]). Set up the actual test state:
-        // need anchor at strip[3] with stub at strip[4]. Nudge once first
-        // to reach that state.
-        // Actually a simpler setup: 1x2 anchored at row 2 already has
-        // stub at bufferBelow. But setResult validates anchor + h <= rows
-        // so we can't directly setResult that.
-        // We'll reach it via a down-nudge: anchor moves from strip[2]
-        // (row 1) to strip[3] (row 2), stub moves to strip[4].
+        await spinAndLand([ { visible: ['a', 'bigW', 'bigW'] } ]);
+        // Need anchor at strip[3] with stub at strip[4]. setResult validates
+        // anchor + h <= cells, so we can't set that state directly; reach it
+        // via a down-nudge: anchor strip[2] (cell 1) -> strip[3] (cell 2),
+        // stub -> strip[4].
         await reelSet.nudge(0, {
           distance: 1,
-          direction: 'down',
+          direction: 'forward',
           incoming: ['a'],
         });
         // Now: anchor at strip[3], stub at strip[4]. Up-nudge should
         // bring it back to visible without overwriting the stub.
         const result = await reelSet.nudge(0, {
           distance: 1,
-          direction: 'up',
+          direction: 'reverse',
           incoming: ['b'],
         });
-        // Block stays intact; visible rows 1+2 read 'bigW' via the
+        // Block stays intact; visible cells 1+2 read 'bigW' via the
         // anchor's occupancy.
         expect(result.symbols[1]).toBe('bigW');
         expect(result.symbols[2]).toBe('bigW');
@@ -907,23 +933,23 @@ describe('nudge', () => {
 
     it('throws when up-nudge would push anchor off the top of the strip', async () => {
       installSyncGsap();
-      const { reelSet, spinAndLand, destroy } = createTestReelSet({
+      const { reelSet, spinAndLand, destroy } = createTestReelSet({ gsap: syncGsap,
         reels: 1,
-        visibleRows: 3,
+        visibleCells: 3,
         bufferSymbols: 1,
         symbolIds: ['a', 'b', 'c', 'bigW'],
         symbolData: {
-          bigW: { weight: 0, size: { w: 1, h: 2 } },
+          bigW: { weight: 0, size: { reels: 1, cells: 2 } },
         },
       });
       try {
-        // Anchor at strip index 1 (visible row 0). Up by 2 lands at strip
+        // Anchor at strip index 1 (visible cell 0). Up by 2 lands at strip
         // index -1, which is off-strip. Survival check: 1 - 2 < 0, throw.
-        await spinAndLand([['bigW', 'bigW', 'a']]);
+        await spinAndLand([ { visible: ['bigW', 'bigW', 'a'] } ]);
         await expect(
           reelSet.nudge(0, {
             distance: 2,
-            direction: 'up',
+            direction: 'reverse',
             incoming: ['a', 'b'],
           }),
         ).rejects.toThrow(/wouldn't survive/);
@@ -934,24 +960,24 @@ describe('nudge', () => {
 
     it('throws when a 1xH block would split. anchor too close to the wrap boundary', async () => {
       installSyncGsap();
-      const { reelSet, spinAndLand, destroy } = createTestReelSet({
+      const { reelSet, spinAndLand, destroy } = createTestReelSet({ gsap: syncGsap,
         reels: 1,
-        visibleRows: 3,
+        visibleCells: 3,
         bufferSymbols: 1,
         symbolIds: ['a', 'b', 'c', 'bigW'],
         symbolData: {
-          bigW: { weight: 0, size: { w: 1, h: 2 } },
+          bigW: { weight: 0, size: { reels: 1, cells: 2 } },
         },
       });
       try {
-        // 1x2 at visible rows 1+2. anchor at strip[2], stub at strip[3].
+        // 1x2 at visible cells 1+2. anchor at strip[2], stub at strip[3].
         // total = 5. Survival for down distance=2: 2 + 2 - 1 + 2 = 5, NOT < 5,
         // so the block's bottom would wrap off strip[N-1] mid-rotation.
-        await spinAndLand([['a', 'bigW', 'bigW']]);
+        await spinAndLand([ { visible: ['a', 'bigW', 'bigW'] } ]);
         await expect(
           reelSet.nudge(0, {
             distance: 2,
-            direction: 'down',
+            direction: 'forward',
             incoming: ['a', 'b'],
           }),
         ).rejects.toThrow(/wouldn't survive/);
@@ -962,20 +988,20 @@ describe('nudge', () => {
 
     it('throws when incoming includes a big symbol', async () => {
       installSyncGsap();
-      const { reelSet, spinAndLand, destroy } = createTestReelSet({
+      const { reelSet, spinAndLand, destroy } = createTestReelSet({ gsap: syncGsap,
         reels: 1,
-        visibleRows: 3,
+        visibleCells: 3,
         symbolIds: ['a', 'bigW'],
         symbolData: {
-          bigW: { weight: 0, size: { w: 1, h: 2 } },
+          bigW: { weight: 0, size: { reels: 1, cells: 2 } },
         },
       });
       try {
-        await spinAndLand([['a', 'a', 'a']]);
+        await spinAndLand([ { visible: ['a', 'a', 'a'] } ]);
         await expect(
           reelSet.nudge(0, {
             distance: 1,
-            direction: 'down',
+            direction: 'forward',
             incoming: ['bigW'],
           }),
         ).rejects.toThrow(/is a big symbol/);
@@ -986,27 +1012,24 @@ describe('nudge', () => {
 
     it('throws on cross-reel (w > 1) blocks involving this reel', async () => {
       installSyncGsap();
-      const { reelSet, spinAndLand, destroy } = createTestReelSet({
+      const { reelSet, spinAndLand, destroy } = createTestReelSet({ gsap: syncGsap,
         reels: 2,
-        visibleRows: 3,
+        visibleCells: 3,
         bufferSymbols: 1,
         symbolIds: ['a', 'bonus', 'wild'],
         symbolData: {
-          bonus: { weight: 0, size: { w: 2, h: 2 } },
+          bonus: { weight: 0, size: { reels: 2, cells: 2 } },
         },
       });
       try {
-        // Place a 2x2 bonus anchor at (col 0, row 0). The other-reel
-        // cells become OCCUPIED stubs on col 1.
-        await spinAndLand([
-          ['bonus', 'a', 'a'],
-          ['a', 'a', 'a'],
-        ]);
-        // Nudging col 0 would split the bonus block from its right half.
+        // Place a 2x2 bonus anchor at (reel 0, cell 0). The other-reel
+        // cells become OCCUPIED stubs on reel 1.
+        await spinAndLand([ { visible: ['bonus', 'a', 'a'] }, { visible: ['a', 'a', 'a'] } ]);
+        // Nudging reel 0 would split the bonus block from its right half.
         await expect(
           reelSet.nudge(0, {
             distance: 1,
-            direction: 'down',
+            direction: 'forward',
             incoming: ['wild'],
           }),
         ).rejects.toThrow(/cross-reel/);
@@ -1015,29 +1038,26 @@ describe('nudge', () => {
       }
     });
 
-    it('cross-reel: nudging the col that holds only OCCUPIED stubs also throws', async () => {
+    it('cross-reel: nudging the reel that holds only OCCUPIED stubs also throws', async () => {
       installSyncGsap();
-      const { reelSet, spinAndLand, destroy } = createTestReelSet({
+      const { reelSet, spinAndLand, destroy } = createTestReelSet({ gsap: syncGsap,
         reels: 2,
-        visibleRows: 3,
+        visibleCells: 3,
         bufferSymbols: 1,
         symbolIds: ['a', 'bonus', 'wild'],
         symbolData: {
-          bonus: { weight: 0, size: { w: 2, h: 2 } },
+          bonus: { weight: 0, size: { reels: 2, cells: 2 } },
         },
       });
       try {
-        // 2x2 anchor on col 0 row 0. Col 1 carries the OCCUPIED stubs.
-        await spinAndLand([
-          ['bonus', 'a', 'a'],
-          ['a', 'a', 'a'],
-        ]);
-        // Nudging col 1 (the stubs) would drift them away from their
-        // anchor on col 0. Same failure mode, opposite reel.
+        // 2x2 anchor on reel 0 cell 0. Col 1 carries the OCCUPIED stubs.
+        await spinAndLand([ { visible: ['bonus', 'a', 'a'] }, { visible: ['a', 'a', 'a'] } ]);
+        // Nudging reel 1 (the stubs) would drift them away from their
+        // anchor on reel 0. Same failure mode, opposite reel.
         await expect(
           reelSet.nudge(1, {
             distance: 1,
-            direction: 'down',
+            direction: 'forward',
             incoming: ['wild'],
           }),
         ).rejects.toThrow(/cross-reel/);
@@ -1048,33 +1068,33 @@ describe('nudge', () => {
 
     it('1x2 nudges down to half-visible, then up to fully visible again', async () => {
       installSyncGsap();
-      const { reelSet, spinAndLand, destroy } = createTestReelSet({
+      const { reelSet, spinAndLand, destroy } = createTestReelSet({ gsap: syncGsap,
         reels: 1,
-        visibleRows: 3,
+        visibleCells: 3,
         bufferSymbols: 1,
         symbolIds: ['a', 'b', 'bigW'],
         symbolData: {
-          bigW: { weight: 0, size: { w: 1, h: 2 } },
+          bigW: { weight: 0, size: { reels: 1, cells: 2 } },
         },
       });
       try {
-        // Land block at rows 0+1 (anchor at strip[1], stub at strip[2]).
-        await spinAndLand([['bigW', 'bigW', 'a']]);
-        // Nudge down by 2. anchor → strip[3] (row 2), stub → strip[4]
-        // (bufferBelow). Visible row 2 shows top of the block.
+        // Land block at cells 0+1 (anchor at strip[1], stub at strip[2]).
+        await spinAndLand([ { visible: ['bigW', 'bigW', 'a'] } ]);
+        // Nudge down by 2. anchor -> strip[3] (cell 2), stub -> strip[4]
+        // (bufferEnd). Visible cell 2 shows top of the block.
         const half = await reelSet.nudge(0, {
           distance: 2,
-          direction: 'down',
+          direction: 'forward',
           incoming: ['a', 'b'],
         });
-        // Visible: [a, b, bigW]. block's anchor is now visible row 2.
-        // The block extends into bufferBelow, so row 2 reads the anchor.
+        // Visible: [a, b, bigW]. block's anchor is now visible cell 2.
+        // The block extends into bufferEnd, so cell 2 reads the anchor.
         expect(half.symbols).toEqual(['a', 'b', 'bigW']);
 
-        // Nudge up by 1. block returns to rows 1+2.
+        // Nudge up by 1. block returns to cells 1+2.
         const full = await reelSet.nudge(0, {
           distance: 1,
-          direction: 'up',
+          direction: 'reverse',
           incoming: ['a'],
         });
         expect(full.symbols).toEqual(['b', 'bigW', 'bigW']);
@@ -1087,17 +1107,13 @@ describe('nudge', () => {
   describe('multi-reel parallel + cancellation', () => {
     it('Promise.all with one aborted call: others land normally', async () => {
       const deferred = installDeferredGsap();
-      const { reelSet, spinAndLand, destroy } = createTestReelSet({
+      const { reelSet, spinAndLand, destroy } = createTestReelSet({ gsap: syncGsap,
         reels: 3,
-        visibleRows: 3,
+        visibleCells: 3,
         symbolIds: ['a', 'b', 'c', 'wild', 'star'],
       });
       try {
-        await spinAndLand([
-          ['a', 'b', 'c'],
-          ['a', 'b', 'c'],
-          ['a', 'b', 'c'],
-        ]);
+        await spinAndLand([ { visible: ['a', 'b', 'c'] }, { visible: ['a', 'b', 'c'] }, { visible: ['a', 'b', 'c'] } ]);
         const controller = new AbortController();
         const cancelled: number[] = [];
         const completed: number[] = [];
@@ -1106,11 +1122,11 @@ describe('nudge', () => {
 
         // Three parallel nudges; only the middle one is cancellable.
         const promises = [
-          reelSet.nudge(0, { distance: 1, direction: 'down', incoming: ['wild'] }),
+          reelSet.nudge(0, { distance: 1, direction: 'forward', incoming: ['wild'] }),
           reelSet
-            .nudge(1, { distance: 1, direction: 'down', incoming: ['star'], signal: controller.signal })
+            .nudge(1, { distance: 1, direction: 'forward', incoming: ['star'], signal: controller.signal })
             .catch((e: Error) => ({ aborted: e.name === 'AbortError' })),
-          reelSet.nudge(2, { distance: 1, direction: 'down', incoming: ['wild'] }),
+          reelSet.nudge(2, { distance: 1, direction: 'forward', incoming: ['wild'] }),
         ];
 
         // Abort the middle one before driving the deferred tweens.
@@ -1134,21 +1150,17 @@ describe('nudge', () => {
 
     it('skipNudge() with no arg skips multiple in-flight nudges', async () => {
       const deferred = installDeferredGsap();
-      const { reelSet, spinAndLand, destroy } = createTestReelSet({
+      const { reelSet, spinAndLand, destroy } = createTestReelSet({ gsap: syncGsap,
         reels: 3,
-        visibleRows: 3,
+        visibleCells: 3,
         symbolIds: ['a', 'b', 'c', 'wild'],
       });
       try {
-        await spinAndLand([
-          ['a', 'b', 'c'],
-          ['a', 'b', 'c'],
-          ['a', 'b', 'c'],
-        ]);
+        await spinAndLand([ { visible: ['a', 'b', 'c'] }, { visible: ['a', 'b', 'c'] }, { visible: ['a', 'b', 'c'] } ]);
         const promises = [
-          reelSet.nudge(0, { distance: 1, direction: 'down', incoming: ['wild'] }),
-          reelSet.nudge(1, { distance: 1, direction: 'down', incoming: ['wild'] }),
-          reelSet.nudge(2, { distance: 1, direction: 'down', incoming: ['wild'] }),
+          reelSet.nudge(0, { distance: 1, direction: 'forward', incoming: ['wild'] }),
+          reelSet.nudge(1, { distance: 1, direction: 'forward', incoming: ['wild'] }),
+          reelSet.nudge(2, { distance: 1, direction: 'forward', incoming: ['wild'] }),
         ];
         // All three are mid-tween (deferred shim doesn't auto-complete).
         expect(reelSet.reels.every((r) => r.isNudging)).toBe(true);

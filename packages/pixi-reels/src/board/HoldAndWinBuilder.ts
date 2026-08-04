@@ -3,12 +3,13 @@ import { SpeedPresets } from '../config/SpeedPresets.js';
 import type { SpeedProfile, SymbolData } from '../config/types.js';
 import type { SymbolRegistry } from '../symbols/SymbolRegistry.js';
 import { HoldAndWinBoard } from './HoldAndWinBoard.js';
+import type { Direction, Orientation } from '../core/ReelAxis.js';
 import type { HwCellSizeOptions } from './HwTypes.js';
 
 /**
  * Fluent builder for {@link HoldAndWinBoard}.
  *
- * A Hold & Win board is a W×H grid of cells that spin **independently** — the
+ * A Hold & Win board is a W×H grid of cells that spin **independently** - the
  * mechanic's atomic unit is the cell, the engine's is the column, so each cell
  * is its own 1×1 ReelSet. This builder wires that grid plus the round
  * choreography; everything value-shaped stays in the game layer (see
@@ -27,11 +28,13 @@ export class HoldAndWinBuilder<TData = unknown> {
   private _weights: Record<string, number> | null = null;
   private _symbolData: Record<string, Partial<SymbolData>> | null = null;
   private _baseProfile: SpeedProfile = { ...SpeedPresets.NORMAL, minimumSpinTime: 320 };
-  private _stagger: (col: number, row: number) => number = (col, row) => (col + row) * 70;
+  private _stagger: (reel: number, cell: number) => number = (reel, cell) => (reel + cell) * 70;
   private _anticipateWhen:
     | ((state: { locked: number; capacity: number; respinsLeft: number }) => boolean)
     | null = null;
   private _chrome: ((g: Graphics, size: number) => void) | null = null;
+  private _orientation: Orientation = 'vertical';
+  private _direction: Direction = 'forward';
   private _ticker: Ticker | null = null;
   private _rng: (() => number) | null = null;
 
@@ -94,17 +97,17 @@ export class HoldAndWinBuilder<TData = unknown> {
 
   /**
    * Extra milliseconds of spin per cell on top of the base minimum spin time.
-   * Default `(col + row) * 70` — the diagonal landing wave. Return 0 for
+   * Default `(reel + cell) * 70` - the diagonal landing wave. Return 0 for
    * simultaneous landings.
    */
-  stagger(fn: (col: number, row: number) => number): this {
+  stagger(fn: (reel: number, cell: number) => number): this {
     this._stagger = fn;
     return this;
   }
 
   /**
    * When the predicate returns true for a wave, **every** spinning cell uses a
-   * drawn-out tension profile — the "one cell left for Grand" moment. Evaluated
+   * drawn-out tension profile - the "one cell left for Grand" moment. Evaluated
    * once per wave for the whole board (not per cell), against the pre-wave state.
    */
   anticipateWhen(
@@ -117,6 +120,17 @@ export class HoldAndWinBuilder<TData = unknown> {
   /** Per-cell background, drawn behind each mini reel. */
   cellChrome(draw: (g: Graphics, size: number) => void): this {
     this._chrome = draw;
+    return this;
+  }
+
+  /**
+   * Which way each cell's strip travels while it spins. Cells are 1x1 reel
+   * sets, so this picks the edge a coin scrolls in from; the board's own
+   * `cols` x `rows` layout is unaffected. Defaults to vertical / forward.
+   */
+  axis(orientation: Orientation, direction: Direction = 'forward'): this {
+    this._orientation = orientation;
+    this._direction = direction;
     return this;
   }
 
@@ -152,6 +166,8 @@ export class HoldAndWinBuilder<TData = unknown> {
       stagger: this._stagger,
       anticipateWhen: this._anticipateWhen,
       chrome: this._chrome,
+      orientation: this._orientation,
+      direction: this._direction,
       ticker: this._ticker,
       rng: this._rng,
     });

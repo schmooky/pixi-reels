@@ -32,7 +32,7 @@ describe('RandomSymbolProvider', () => {
     }
 
     const ratio = commonCount / total;
-    // Should be roughly 90% ± 5%
+    // Should be roughly 90% +/- 5%
     expect(ratio).toBeGreaterThan(0.8);
     expect(ratio).toBeLessThan(0.95);
   });
@@ -70,7 +70,7 @@ describe('RandomSymbolProvider', () => {
       { a: { weight: 10 }, b: { weight: 10 }, c: { weight: 10 } },
       rng,
     );
-    // cumulative weights [10,20,30]; rand = u*30 → 0→a, 15→b, 29.7→c
+    // cumulative weights [10,20,30]; rand = u*30 -> 0->a, 15->b, 29.7->c
     expect(provider.next()).toBe('a');
     expect(provider.next()).toBe('b');
     expect(provider.next()).toBe('c');

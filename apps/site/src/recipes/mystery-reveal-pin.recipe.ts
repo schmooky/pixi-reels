@@ -10,7 +10,7 @@
 //
 // Visual: filler is rectangular playing cards; mystery is the game's purple
 // plasma orb (a Spine skeleton) with no label. the "what is it?" reads from
-// shape alone — the player only learns the value through the reveal.
+// shape alone - the player only learns the value through the reveal.
 
 const FILLER = ['7', '8', '10', 'Q'];
 const MYSTERY = 'mystery';
@@ -33,7 +33,7 @@ probe.destroy();
 
 const reelSet = new ReelSetBuilder()
   .reels(COLS)
-  .visibleRows(ROWS)
+  .visibleCells(ROWS)
   .symbolSize(SIZE, SIZE)
   .symbolGap(4, 4)
   .symbols((r) => {
@@ -67,9 +67,13 @@ const reelSet = new ReelSetBuilder()
 // Without these tweens the reveal would be an instant swap on land.
 // player wouldn't even register that the mystery had to be opened.
 
-async function revealCell(col, row, revealId) {
-  const reel = reelSet.reels[col];
-  const oldSym = reel.getSymbolAt(row);
+async function revealCell(reel, cell, revealId) {
+  const targetReel = reelSet.reels[reel];
+  const oldSym = targetReel.getSymbolAt(cell);
+  // The runner unmounts a demo that scrolls out of view, and
+  // `Reel.destroy()` empties `symbols`, so a `getSymbolAt` around an
+  // `await` can come back undefined. Bail instead of throwing.
+  if (!oldSym) return;
   // Pivot to the cell center so the scale-down looks like the symbol
   // collapses on itself instead of pinning to the top-left corner.
   const px = oldSym.view.pivot.x, py = oldSym.view.pivot.y;
@@ -108,13 +112,14 @@ async function revealCell(col, row, revealId) {
   oldSym.view.y = oy;
   oldSym.view.scale.set(1);
 
-  // Swap identity via pin. same as before, just wrapped in animation.
-  reelSet.pin(col, row, revealId, { turns: 'eval' });
+  // Swap identity via pin. same as before, wrapped in animation.
+  reelSet.pin(reel, cell, revealId, { turns: 'eval' });
 
   // The pin call replaced the symbol at this cell; grab the new one
   // and animate it IN. Same pivot trick so the bounce reads as
   // expanding-from-the-center.
-  const newSym = reel.getSymbolAt(row);
+  const newSym = targetReel.getSymbolAt(cell);
+  if (!newSym) return;
   newSym.view.pivot.set(SIZE / 2, SIZE / 2);
   newSym.view.x = ox + SIZE / 2;
   newSym.view.y = oy + SIZE / 2;
@@ -136,17 +141,17 @@ reelSet.events.on('spin:allLanded', async ({ symbols }) => {
   const mysteryCells = [];
   for (let c = 0; c < symbols.length; c++) {
     for (let r = 0; r < symbols[c].length; r++) {
-      if (symbols[c][r] === MYSTERY) mysteryCells.push({ col: c, row: r });
+      if (symbols[c][r] === MYSTERY) mysteryCells.push({ reel: c, cell: r });
     }
   }
   if (mysteryCells.length === 0) return;
 
   const reveal = REVEAL_CANDIDATES[Math.floor(Math.random() * REVEAL_CANDIDATES.length)];
-  // Reveal all mystery cells in parallel so the whole row pops together.
-  await Promise.all(mysteryCells.map((cell) => revealCell(cell.col, cell.row, reveal)));
+  // Reveal all mystery cells in parallel so the whole cell pops together.
+  await Promise.all(mysteryCells.map((cell) => revealCell(cell.reel, cell.cell, reveal)));
 });
 
-// Scripted: every third spin, a few mystery cells land in a row.
+// Scripted: every third spin, a few mystery cells land in a cell.
 const scripts = [
   { mysteries: [] },
   { mysteries: [] },

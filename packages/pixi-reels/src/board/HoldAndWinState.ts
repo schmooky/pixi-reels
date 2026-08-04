@@ -4,7 +4,7 @@ import { cellKey } from './HwTypes.js';
 export type HwPhase = 'idle' | 'active' | 'spinning';
 
 /**
- * The pure Hold & Win state machine — the single source of truth for board
+ * The pure Hold & Win state machine - the single source of truth for board
  * state, with **zero** PixiJS. It owns the locked-coin ledger, the respin
  * counter, the round number and the feature {@link HwPhase}; every derived
  * value (`freeCells`, `isFull`) is computed from the one ledger, never stored
@@ -131,7 +131,7 @@ export class HoldAndWinState<TData = unknown> {
 
   /** Record one cell's landing. `coin` is null on a miss. */
   land(cell: HwCell, coin: HwCoin<TData> | null): HwEffect<TData>[] {
-    // Outside a wave this is a stray landing — a sibling reel settling after
+    // Outside a wave this is a stray landing - a sibling reel settling after
     // the wave was aborted on error, or a cell landing after reset(). Drop it
     // so it can't re-lock a coin into a cleared ledger or resurrect a feature.
     if (this._phase !== 'spinning') return [];
@@ -196,7 +196,7 @@ export class HoldAndWinState<TData = unknown> {
     this._waveLanded = [];
   }
 
-  /** Remove locked coins — the collect moment. */
+  /** Remove locked coins - the collect moment. */
   release(cells: HwCell[]): { effects: HwEffect<TData>[]; released: HwCoin<TData>[] } {
     if (this._phase === 'spinning') {
       throw new Error('HoldAndWinBoard: release() while a wave is in flight — await respin() first.');
@@ -216,7 +216,7 @@ export class HoldAndWinState<TData = unknown> {
 
   /**
    * Rewrite a **locked** cell's coin identity in place (coin → jackpot, mini →
-   * major). Throws on a free cell — placing a brand-new tracked coin out of a
+   * major). Throws on a free cell - placing a brand-new tracked coin out of a
    * spin is `enter`/`respin`'s job; for purely decorative art on a free cell use
    * the cell's reel directly.
    */
@@ -255,10 +255,10 @@ export class HoldAndWinState<TData = unknown> {
   /**
    * Store a coin with a board-owned, frozen `cell` so the ledger key can never
    * be corrupted by a game mutating the coin it was handed. `data` is left
-   * mutable by reference — that is the supported way to carry live value.
+   * mutable by reference - that is the supported way to carry live value.
    */
   private _freeze(cell: HwCell, id: string, data: TData | undefined): HwCoin<TData> {
-    return { cell: Object.freeze({ col: cell.col, row: cell.row }), id, data };
+    return { cell: Object.freeze({ reel: cell.reel, cell: cell.cell }), id, data };
   }
 
   private _assertInGrid(cell: HwCell, op: string): void {

@@ -1,13 +1,19 @@
 /**
- * M4 — the "nudge in flight" guard that blocks spin/setResult/pin must be
+ * M4 - the "nudge in flight" guard that blocks spin/setResult/pin must be
  * reference-counted, not a single boolean. With two parallel nudges, the first
  * to settle previously cleared the boolean and let spin() race the still-live
  * second nudge.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { gsap as defaultGsap } from 'gsap';
+
+/**
+ * The gsap instance the sets in this file are built with. v2 binds gsap PER
+ * SET at build() time, so a shim has to be installed here and handed to the
+ * harness rather than swapped into a module global.
+ */
+let syncGsap: typeof defaultGsap = defaultGsap;
 import { createTestReelSet } from '../../src/testing/index.js';
-import { setGsap } from '../../src/utils/gsapRef.js';
 
 /**
  * gsap.to shim that captures each tween without firing it, and lets the test
@@ -29,7 +35,7 @@ function installDeferredGsap() {
       return { kill: vi.fn(), progress: vi.fn() } as unknown as gsap.core.Tween;
     },
   } as unknown as typeof defaultGsap;
-  setGsap(sync);
+  syncGsap = sync;
   return {
     fire(i: number) {
       const s = slots[i];
@@ -44,24 +50,20 @@ function installDeferredGsap() {
 }
 
 describe('nudge in-flight guard (M4)', () => {
-  afterEach(() => setGsap(defaultGsap));
+  afterEach(() => { syncGsap = defaultGsap; });
 
   it('keeps blocking spin() until the LAST parallel nudge settles', async () => {
     const deferred = installDeferredGsap();
-    const h = createTestReelSet({ reels: 3, visibleRows: 3, symbolIds: ['a', 'b', 'c', 'wild'] });
+    const h = createTestReelSet({ gsap: syncGsap, reels: 3, visibleCells: 3, symbolIds: ['a', 'b', 'c', 'wild'] });
     try {
-      await h.spinAndLand([
-        ['a', 'b', 'c'],
-        ['a', 'b', 'c'],
-        ['a', 'b', 'c'],
-      ]);
+      await h.spinAndLand([ { visible: ['a', 'b', 'c'] }, { visible: ['a', 'b', 'c'] }, { visible: ['a', 'b', 'c'] } ]);
 
       // Two parallel nudges across reels 1 and 2; both tweens are deferred.
-      const nA = h.reelSet.nudge(1, { distance: 1, direction: 'down', incoming: ['wild'] });
-      const nB = h.reelSet.nudge(2, { distance: 1, direction: 'down', incoming: ['wild'] });
+      const nA = h.reelSet.nudge(1, { distance: 1, direction: 'forward', incoming: ['wild'] });
+      const nB = h.reelSet.nudge(2, { distance: 1, direction: 'forward', incoming: ['wild'] });
       expect(deferred.count()).toBe(2);
 
-      // Both in flight → spin() blocked.
+      // Both in flight -> spin() blocked.
       await expect(h.reelSet.spin()).rejects.toThrow(/nudge/);
 
       // Settle the FIRST nudge only.
@@ -75,12 +77,8 @@ describe('nudge in-flight guard (M4)', () => {
       deferred.fire(1);
       await nB;
 
-      // Guard released — a spin runs again.
-      const result = await h.spinAndLand([
-        ['a', 'b', 'c'],
-        ['a', 'b', 'c'],
-        ['a', 'b', 'c'],
-      ]);
+      // Guard released - a spin runs again.
+      const result = await h.spinAndLand([ { visible: ['a', 'b', 'c'] }, { visible: ['a', 'b', 'c'] }, { visible: ['a', 'b', 'c'] } ]);
       expect(result.symbols).toHaveLength(3);
     } finally {
       h.destroy();

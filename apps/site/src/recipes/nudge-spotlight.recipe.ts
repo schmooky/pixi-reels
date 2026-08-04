@@ -5,7 +5,7 @@
 // NUDGE → SPOTLIGHT pattern.
 //
 // The handler lands a flat near-miss, nudges three reels down by one so
-// the centre row turns into WILD-WILD-WILD, then runs SymbolSpotlight on
+// the centre cell turns into WILD-WILD-WILD, then runs SymbolSpotlight on
 // the new winning line. Demonstrates the canonical "rescue spin via
 // nudge, then celebrate" beat.
 
@@ -16,11 +16,11 @@ const col3 = () => [filler(), filler(), filler()];
 
 const NUDGE_COLS = [1, 2, 3];
 const NUDGE_DURATION = 380;
-const WIN_ROW = 0; // After down-nudge, incoming[0] lands at visible row 0.
+const WIN_ROW = 0; // After down-nudge, incoming[0] lands at visible cell 0.
 
 const reelSet = new ReelSetBuilder()
   .reels(5)
-  .visibleRows(3)
+  .visibleCells(3)
   .symbolSize(72, 72)
   .symbolGap(4, 4)
   .symbols((r) => {
@@ -47,13 +47,13 @@ return {
     await new Promise((resolve) => setTimeout(resolve, 320));
 
     // 2. Parallel nudge of the middle three reels. `wild` lands at the
-    //    top of each nudged column. After this, visible row 0 reads
+    //    top of each nudged column. After this, visible cell 0 reads
     //    [..., wild, wild, wild, ...].
     await Promise.all(
-      NUDGE_COLS.map((col) =>
-        reelSet.nudge(col, {
+      NUDGE_COLS.map((reel) =>
+        reelSet.nudge(reel, {
           distance: 1,
-          direction: 'down',
+          direction: 'forward',
           incoming: ['wild'],
           duration: NUDGE_DURATION,
         }),
@@ -65,7 +65,7 @@ return {
     //    viewport, and runs each symbol's `playWin()` animation. Resolves
     //    once the animation chain completes. at which point `hide()`
     //    returns the symbols to their reels.
-    const winners = NUDGE_COLS.map((col) => ({ reelIndex: col, row: WIN_ROW }));
+    const winners = NUDGE_COLS.map((reel) => ({ reelIndex: reel, cell: WIN_ROW }));
     await reelSet.spotlight.show(winners, {
       dimAmount: 0.6,
       playWinAnimation: true,

@@ -1,0 +1,20 @@
+{
+  "name": "@pixi-reels/cheats",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Deterministic result-forcing helpers for demos and tests. Deliberately outside the library (ADR 009); consumed by the docs site and by pixi-reels' own integration tests.",
+  "exports": {
+    ".": "./src/cheats.ts",
+    "./seededRng": "./src/seededRng.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "pixi-reels": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.3"
+  }
+}

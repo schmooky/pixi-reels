@@ -2,7 +2,9 @@
   "$schema": "https://unpkg.com/@changesets/config@3.0.0/schema.json",
   "changelog": [
     "@changesets/changelog-github",
-    { "repo": "schmooky/pixi-reels" }
+    {
+      "repo": "schmooky/pixi-reels"
+    }
   ],
   "commit": false,
   "fixed": [],
@@ -11,8 +13,6 @@
   "baseBranch": "main",
   "updateInternalDependencies": "patch",
   "ignore": [
-    "@pixi-reels/site",
-    "classic-spin",
-    "cascade-tumble"
+    "@pixi-reels/site"
   ]
 }

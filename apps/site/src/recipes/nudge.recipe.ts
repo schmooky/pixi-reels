@@ -15,7 +15,7 @@ const col3 = () => [filler(), filler(), filler()];
 
 const reelSet = new ReelSetBuilder()
   .reels(5)
-  .visibleRows(3)
+  .visibleCells(3)
   .symbolSize(90, 90)
   .symbolGap(4, 4)
   .symbols((r) => {
@@ -56,7 +56,7 @@ return {
     // 1. Nudge reel 1 DOWN by 1. `wild` enters from the top.
     await reelSet.nudge(1, {
       distance: 1,
-      direction: 'down',
+      direction: 'forward',
       incoming: ['wild'],
       duration: 420,
     });
@@ -64,7 +64,7 @@ return {
     // 2. Nudge reel 3 UP by 1. `wild` enters from the bottom.
     await reelSet.nudge(3, {
       distance: 1,
-      direction: 'up',
+      direction: 'reverse',
       incoming: ['wild'],
       duration: 420,
     });

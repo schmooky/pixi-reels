@@ -19,7 +19,7 @@ class TrackingSymbol extends HeadlessSymbol {
 function build(ticker: FakeTicker) {
   return new ReelSetBuilder()
     .reels(3)
-    .visibleRows(3)
+    .visibleCells(3)
     .symbolSize(100, 100)
     .ticker(ticker as unknown as Ticker)
     .symbols((r) => {
@@ -32,7 +32,7 @@ function build(ticker: FakeTicker) {
 const events = (sym: unknown) => (sym as TrackingSymbol).events;
 
 describe('mid-spin symbol notifications (Reel level)', () => {
-  it('notifySpinStart / notifySpinEnd reach buffer rows, not just visible ones', () => {
+  it('notifySpinStart / notifySpinEnd reach buffer cells, not just visible ones', () => {
     const ticker = new FakeTicker();
     const reelSet = build(ticker);
     const reel = reelSet.reels[0];
@@ -54,7 +54,7 @@ describe('mid-spin symbol notifications (Reel level)', () => {
 
     reel.notifySpinStart();
     reel.speed = 50;
-    // Two seconds of frames — plenty of wraps, so the pool recycles
+    // Two seconds of frames - plenty of wraps, so the pool recycles
     // symbols through _replaceSymbol while the spin flag is armed.
     for (let i = 0; i < 120; i++) reel.update(16);
     reel.speed = 0;
@@ -82,7 +82,7 @@ describe('mid-spin symbol notifications (Reel level)', () => {
     const reelSet = build(ticker);
 
     reelSet.setSymbolAt(0, 1, 'b');
-    const swapped = reelSet.reels[0].symbols[reelSet.reels[0].bufferAbove + 1];
+    const swapped = reelSet.reels[0].symbols[reelSet.reels[0].bufferStart + 1];
     expect(events(swapped)).toEqual([]);
 
     reelSet.destroy();
@@ -103,7 +103,7 @@ describe('mid-spin symbol notifications (Reel level)', () => {
     await promise;
 
     for (const reel of reelSet.reels) {
-      const visible = reel.symbols.slice(reel.bufferAbove, reel.bufferAbove + reel.visibleRows);
+      const visible = reel.symbols.slice(reel.bufferStart, reel.bufferStart + reel.visibleCells);
       for (const sym of visible) {
         const e = events(sym);
         const lastEnd = e.lastIndexOf('end');

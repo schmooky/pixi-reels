@@ -1,8 +1,12 @@
 id: antic-008
 group: antic
 question: How do I chain anticipation across multiple reels (rolling tension)?
-answer: Call `setAnticipation` with several reel indices; each slows in turn for
-  rolling tension.
+answer: >-
+  Pass several reel indices plus a stagger: `setAnticipation([2, 3, 4], 450)`.
+  With the default stagger of `0` every anticipation reel starts slowing at the
+  same moment. A number staggers the tease starts by `k * value` ms, a `number[]`
+  sets them explicitly, and `'sequential'` makes each reel wait until the
+  previous one has fully landed.
 links:
   - label: "Recipe: Near-miss"
     href: /recipes/near-miss/

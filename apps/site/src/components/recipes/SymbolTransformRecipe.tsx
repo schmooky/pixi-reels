@@ -16,7 +16,7 @@ export default function SymbolTransformRecipe() {
       height={280}
       setup={async (host) => {
         const { reelSet, destroy } = await mountMiniReels(host, {
-          reelCount: 5, visibleRows: 3,
+          reelCount: 5, visibleCells: 3,
           symbolSize: { width: CELL, height: CELL },
           symbols: { kind: 'sprite', ids: IDS },
           weights: { 'round/round_1': 22, 'round/round_2': 22, 'round/round_3': 22, 'royal/royal_1': 10, 'royal/royal_2': 10 },
@@ -38,18 +38,18 @@ export default function SymbolTransformRecipe() {
             const result = await p;
             await sleep(250);
             // Pick a random low-pay cell and upgrade it to a high-pay.
-            const candidates: { reel: number; row: number; id: string }[] = [];
+            const candidates: { reel: number; cell: number; id: string }[] = [];
             for (let r = 0; r < 5; r++) {
-              for (let row = 0; row < 3; row++) {
-                const id = result.symbols[r][row];
-                if (LOW.includes(id)) candidates.push({ reel: r, row, id });
+              for (let cell = 0; cell < 3; cell++) {
+                const id = result.symbols[r][cell];
+                if (LOW.includes(id)) candidates.push({ reel: r, cell, id });
               }
             }
             if (candidates.length === 0) return;
             const pick = candidates[Math.floor(Math.random() * candidates.length)];
             const upgradeId = HIGH[Math.floor(Math.random() * HIGH.length)];
             const reel = reelSet.getReel(pick.reel);
-            const oldSym = reel.getSymbolAt(pick.row);
+            const oldSym = reel.getSymbolAt(pick.cell);
             // Scale-out around the cell's visual center, not the top-left.
             const restoreOld = bindCenterPivot(oldSym.view, CELL, CELL);
             await new Promise<void>((resolve) => {
@@ -58,9 +58,9 @@ export default function SymbolTransformRecipe() {
             });
             restoreOld();
             const visible = reel.getVisibleSymbols();
-            visible[pick.row] = upgradeId;
+            visible[pick.cell] = upgradeId;
             reel.placeSymbols(visible);
-            const next = reel.getSymbolAt(pick.row);
+            const next = reel.getSymbolAt(pick.cell);
             next.view.alpha = 0;
             next.view.scale.set(0.4);
             const restoreNext = bindCenterPivot(next.view, CELL, CELL);

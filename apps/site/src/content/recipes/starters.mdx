@@ -1,0 +1,72 @@
+---
+title: "Starters"
+group: starters
+oneLiner: "Copy-paste starting templates: classic lines, cascade tumble, MultiWays, Hold and Win, plus the horizontal and reverse variants."
+order: 0
+tags:
+  - starter
+  - 5x3
+  - cascade
+  - multiways
+  - hold-and-win
+  - horizontal
+  - reverse
+  - orientation
+apis: []
+steps: []
+---
+
+Canonical starting templates. copy one, swap in your art and math, and ship.
+
+<a id="classic-5x3"></a>
+
+## Classic 5×3 starter
+
+The copy-paste starting point for a left-to-right line-pay slot, the foundation of most slot games.
+
+<RecipeDemo code="classic-5x3" />
+
+<a id="cascade-6x5"></a>
+
+## Cascade 6x4 tumble
+
+Modern tumble/cascade slot on runCascade; card symbols first, then the identical build with real Spine art.
+
+<RecipeDemo code="cascade-6x5" />
+<RecipeDemo code="cascade-6x5-spine" />
+
+## MultiWays
+
+Per-spin cell variation: each reel lands on a different cell count between minCells and maxCells, and total ways is the product of the per-reel cell counts.
+
+**Gotcha:** call reelSet.setShape(rowsPerReel) BEFORE setResult(), with serverGrid[i].length === rowsPerReel[i].
+
+<RecipeDemo code="multiways" />
+
+<a id="hold-and-win"></a>
+
+## Hold & Win respin
+
+Coins lock on land and respin until the grid fills; board events drive the HUD.
+
+<RecipeDemo code="hold-and-win" />
+
+<a id="starter-horizontal-5x3"></a>
+
+## Horizontal starter
+
+The same template with the strips turned sideways: three reels stacked down the screen, each scrolling along X. One call, `.orientation('horizontal')`, plus the cell size you want on screen.
+
+**Gotcha:** `symbolSize(w, h)` and `symbolGap(x, y)` stay screen-space here, so on a horizontal set the strip advances by the symbol WIDTH and `x` is the gap between cells while `y` is the gap between reels. Index space does not move: `reels(3).visibleCells(5)` and the `ColumnTarget[]` you pass `setResult()` are unchanged.
+
+<RecipeDemo code="starter-horizontal-5x3" />
+
+<a id="starter-reverse-5x3"></a>
+
+## Reverse starter
+
+Classic 5x3, travelling the other way: symbols rise and each reel lands from below. The whole diff against the classic starter is `.direction('reverse')`.
+
+**Gotcha:** buffers stay geometric. `bufferStart` is still the slot above the window, so on a reverse reel the "next up" slot is `bufferEnd`. Read `reel.axis.feedEdge` rather than assuming. See [orientation and direction](/recipes/orientation-and-direction/#roll-up) for the per-reel and mixed-axis variants.
+
+<RecipeDemo code="starter-reverse-5x3" />

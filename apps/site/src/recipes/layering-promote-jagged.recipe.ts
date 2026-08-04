@@ -1,23 +1,25 @@
 // @ts-nocheck
 // Injected globals: ReelSetBuilder, SpeedPresets, SpineReelSymbol,
 //                   StaticSpinSymbol, SpinTextureCache, prewarmSpinTextures,
-//                   loadThunderkickSpines, buildThunderkickSpineMap,
+//                   loadSpineSet,
 //                   app, pickWeighted
 //
-// Jagged layouts can't use `unmask` (the builder throws — the motion layer
-// can't keep unmasked views aligned on offset reels). The pattern instead:
+// `unmask` DOES work on jagged layouts (it is an at-rest presentation, and
+// the reel re-bakes its offset after every motion snap). This recipe shows
+// the per-instance alternative for when you want ONE landed cell above
+// everything without making the id unmasked globally:
 // PROMOTE each landed scatter's view into viewport.spotlightContainer (the
 // same above-mask layer the win spotlight uses), and hand it back to its
 // reel on the next spin:start. Above every reel, outside the mask, and the
 // symbol pool is built to tolerate exactly this re-parenting.
 
-await loadThunderkickSpines();
+const thunderkick = await loadSpineSet("thunderkick");
 
 const SPINE_SCALE = 0.6;
 const CELL_W = 175 * SPINE_SCALE;
 const CELL_H = 203 * SPINE_SCALE;
 
-const spineMap = buildThunderkickSpineMap();
+const spineMap = thunderkick.spineMap;
 
 const weights = {
   low1: 16, low2: 16, low3: 14, low4: 14, low5: 12,
@@ -45,7 +47,7 @@ prewarmSpinTextures({
 
 const reelSet = new ReelSetBuilder()
   .reels(6)
-  .visibleRowsPerReel(ROWS_PER_REEL)
+  .visibleCellsPerReel(ROWS_PER_REEL)
   .reelAnchor('center')
   .symbolSize(CELL_W, CELL_H)
   .symbolGap(0, 0)
@@ -70,8 +72,8 @@ let scatterCells = [];
 const promoted = [];
 let spinGen = 0; // stale-timer guard: bumped on every spin:start
 
-function promoteScatter(reel, row) {
-  const sym = reelSet.getReel(reel).getSymbolAt(row);
+function promoteScatter(reel, cell) {
+  const sym = reelSet.getReel(reel).getSymbolAt(cell);
   if (!sym) return;
   const view = sym.view;
   const layer = reelSet.viewport.spotlightContainer;
@@ -89,7 +91,7 @@ reelSet.events.on('spin:reelLanded', (reelIndex) => {
   // Let the stop bounce settle before lifting the view out of the reel.
   sleep(380).then(() => {
     if (gen !== spinGen) return;
-    for (const c of landed) promoteScatter(c.reel, c.row);
+    for (const c of landed) promoteScatter(c.reel, c.cell);
   });
 });
 
@@ -106,17 +108,17 @@ reelSet.events.on('spin:start', () => {
 return {
   reelSet,
   nextResult: () => {
-    const grid = ROWS_PER_REEL.map((rows) =>
-      Array.from({ length: rows }, () => pickWeighted(weights)),
+    const grid = ROWS_PER_REEL.map((cells) =>
+      Array.from({ length: cells }, () => pickWeighted(weights)),
     );
     // Scatters on the short edge reels + one tall middle reel: the promoted
     // jaws overflow the mask at the grid's stepped edges AND the reel to
     // their right.
     scatterCells = [];
     for (const reel of [0, 3, 5]) {
-      const row = Math.floor(Math.random() * grid[reel].length);
-      grid[reel][row] = 'scatter';
-      scatterCells.push({ reel, row });
+      const cell = Math.floor(Math.random() * grid[reel].length);
+      grid[reel][cell] = 'scatter';
+      scatterCells.push({ reel, cell });
     }
     return grid;
   },

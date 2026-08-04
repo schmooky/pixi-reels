@@ -15,7 +15,7 @@ const GAP = 3;
 
 const reelSet = new ReelSetBuilder()
   .reels(REELS)
-  .visibleRows(ROWS)
+  .visibleCells(ROWS)
   .symbolSize(SIZE, SIZE)
   .symbolGap(GAP, GAP)
   .maskStrategy(new SharedRectMaskStrategy())
@@ -28,8 +28,8 @@ const reelSet = new ReelSetBuilder()
     });
   })
   .weights(Object.fromEntries(CARD_DECK.map((c, i) => [c.id, 12 - i])))
-  .symbolData({ [GIANT.id]: { weight: 0, zIndex: 5, size: { w: GIANT.w, h: GIANT.h } } })
-  // Big symbols are visually massive (a 3x3 anchor is ~3x cell size);
+  .symbolData({ [GIANT.id]: { weight: 0, zIndex: 5, size: { reels: GIANT.w, cells: GIANT.h } } })
+  // A 3x3 anchor spans ~3x a normal cell, so
   // the default 56px landing bounce overshoots into adjacent cells and
   // reads as a broken landing. Zero the bounce so the anchor lands
   // flush on grid.
@@ -44,9 +44,9 @@ return {
     const grid = Array.from({ length: REELS }, () =>
       Array.from({ length: ROWS }, () => CARD_DECK[Math.floor(Math.random() * CARD_DECK.length)].id),
     );
-    const col = Math.floor(Math.random() * (REELS - GIANT.w + 1));
-    const row = Math.floor(Math.random() * (ROWS - GIANT.h + 1));
-    grid[col][row] = GIANT.id;
+    const reel = Math.floor(Math.random() * (REELS - GIANT.w + 1));
+    const cell = Math.floor(Math.random() * (ROWS - GIANT.h + 1));
+    grid[reel][cell] = GIANT.id;
     return grid;
   },
 };

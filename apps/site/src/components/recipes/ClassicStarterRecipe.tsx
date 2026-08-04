@@ -14,7 +14,7 @@ export default function ClassicStarterRecipe() {
       height={280}
       setup={async (host) => {
         const { reelSet, destroy } = await mountMiniReels(host, {
-          reelCount: 5, visibleRows: 3,
+          reelCount: 5, visibleCells: 3,
           symbolSize: { width: 72, height: 72 },
           symbols: { kind: 'sprite', ids: IDS },
           weights: { 'round/round_1': 20, 'round/round_2': 20, 'round/round_3': 20, 'royal/royal_1': 14, 'royal/royal_2': 14, 'square/square_1': 10, 'wild/wild_1': 3 },
@@ -35,18 +35,18 @@ export default function ClassicStarterRecipe() {
             await sleep(150);
             reelSet.setResult(grid.map((visible) => ({ visible })));
             const result = await p;
-            // Spotlight any 3+ in a row from left.
-            const wins: { positions: { reelIndex: number; rowIndex: number }[] }[] = [];
-            for (let row = 0; row < 3; row++) {
-              const first = result.symbols[0][row];
+            // Spotlight any 3+ in a cell from left.
+            const wins: { positions: { reelIndex: number; cellIndex: number }[] }[] = [];
+            for (let cell = 0; cell < 3; cell++) {
+              const first = result.symbols[0][cell];
               if (!first) continue;
               let count = 1;
               for (let r = 1; r < result.symbols.length; r++) {
-                if (result.symbols[r][row] === first || result.symbols[r][row] === 'wild/wild_1') count++;
+                if (result.symbols[r][cell] === first || result.symbols[r][cell] === 'wild/wild_1') count++;
                 else break;
               }
               if (count >= 3) {
-                wins.push({ positions: Array.from({ length: count }, (_, i) => ({ reelIndex: i, rowIndex: row })) });
+                wins.push({ positions: Array.from({ length: count }, (_, i) => ({ reelIndex: i, cellIndex: cell })) });
               }
             }
             if (wins.length) {

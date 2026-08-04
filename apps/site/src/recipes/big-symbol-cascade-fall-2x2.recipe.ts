@@ -23,8 +23,8 @@ const GAP = 4;
 
 const reelSet = new ReelSetBuilder()
   .reels(REELS)
-  .visibleRows(ROWS)
-  // Anchor starts at bufferAbove[0] (row -1) so half the block peeks in.
+  .visibleCells(ROWS)
+  // Anchor starts at bufferStart[0] (cell -1) so half the block peeks in.
   .bufferSymbols(2)
   .symbolSize(SIZE, SIZE)
   .symbolGap(GAP, GAP)
@@ -39,11 +39,11 @@ const reelSet = new ReelSetBuilder()
     });
   })
   .weights(Object.fromEntries(CARD_DECK.map((c, i) => [c.id, 12 - i])))
-  .symbolData({ [BIG.id]: { weight: 0, zIndex: 5, size: { w: BIG.w, h: BIG.h } } })
+  .symbolData({ [BIG.id]: { weight: 0, zIndex: 5, size: { reels: BIG.w, cells: BIG.h } } })
   .speed('normal', { ...SpeedPresets.NORMAL, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
-    fall:   { duration: 320, ease: 'power3.in',  rowStagger: 60 },
-    dropIn: { duration: 480, ease: 'power3.out', rowStagger: 60, distance: 'perHole' },
+    fall:   { duration: 320, ease: 'power3.in',  cellStagger: 60 },
+    dropIn: { duration: 480, ease: 'power3.out', cellStagger: 60, distance: 'perHole' },
   })
   .ticker(app.ticker)
   .build();
@@ -54,18 +54,18 @@ const filler = () => FILLER_IDS[Math.floor(Math.random() * FILLER_IDS.length)];
 return {
   reelSet,
   onSpin: async () => {
-    // ── 1. Initial spin: 2x2 block anchored on reel 1 at bufferAbove[0]
-    //      (row -1). it spans rows -1..0 on reels 1-2, so only its
-    //      bottom half peeks into the visible board. Plant a MATCH-row
-    //      cluster at row 1 across all four reels.
+    // ── 1. Initial spin: 2x2 block anchored on reel 1 at bufferStart[0]
+    //      (cell -1). it spans cells -1..0 on reels 1-2, so only its
+    //      bottom half peeks into the visible board. Plant a MATCH-cell
+    //      cluster at cell 1 across all four reels.
     const MATCH = 'Q';
     const initialGrid = [
       { visible: [filler(), MATCH, filler(), filler()] },
-      // Anchor at bufferAbove[0] = row -1. Footprint: reels 1-2,
-      // rows -1..0. The coordinator paints the other three cells.
+      // Anchor at bufferStart[0] = cell -1. Footprint: reels 1-2,
+      // cells -1..0. The coordinator paints the other three cells.
       {
         visible: [filler(), MATCH, filler(), filler()],
-        bufferAbove: [BIG.id],
+        bufferStart: [BIG.id],
       },
       { visible: [filler(), MATCH, filler(), filler()] },
       { visible: [filler(), MATCH, filler(), filler()] },
@@ -76,28 +76,28 @@ return {
     await spinDone;
     await new Promise((r) => setTimeout(r, 900));
 
-    // ── 2. Cascade: the MATCH row clears, the block falls one row and
-    //      lands fully visible at rows 0-1 of reels 1-2.
+    // ── 2. Cascade: the MATCH cell clears, the block falls one cell and
+    //      lands fully visible at cells 0-1 of reels 1-2.
     let chained = false;
     reelSet.setDropOrder('all');
     await reelSet.runCascade({
       detectWinners: () => {
         if (chained) return [];
         chained = true;
-        return [0, 1, 2, 3].map((reel) => ({ reel, row: 1 }));
+        return [0, 1, 2, 3].map((reel) => ({ reel, cell: 1 }));
       },
       // Survivors keep their identities: one fresh symbol on top, old
-      // rows 0/2/3 slide-or-stay with the same faces (rows 2-3 never
+      // cells 0/2/3 slide-or-stay with the same faces (cells 2-3 never
       // animate. a fresh identity there would pop in place).
       nextGrid: (prev) => [
         { visible: [filler(), prev[0][0], prev[0][2], prev[0][3]] },
-        // Anchor now at visible[0]. block occupies rows 0-1 on reels
+        // Anchor now at visible[0]. block occupies cells 0-1 on reels
         // 1-2, fully visible. The coordinator paints OCCUPIED stubs at
-        // the other three footprint cells (row 1 was the block's old
+        // the other three footprint cells (cell 1 was the block's old
         // tail, so its "survivor" slot stays covered. consistent).
         {
           visible: [BIG.id, filler(), prev[1][2], prev[1][3]],
-          bufferAbove: [filler()],
+          bufferStart: [filler()],
         },
         { visible: [filler(), filler(), prev[2][2], prev[2][3]] },
         { visible: [filler(), prev[3][0], prev[3][2], prev[3][3]] },

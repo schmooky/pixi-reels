@@ -1,9 +1,11 @@
 id: result-012
 group: result
 question: How do I replay the exact same spin again for a bug report?
-answer: Re-inject the same seeded `.rng(fn)` and the same `setResult` grid; the
-  debug recorder (`startRecording()` / `getFrames()`) captures a spin frame by
-  frame.
+answer: >-
+  Re-inject the same seeded `.rng(fn)` and the same `setResult` grid.
+  `startRecording(reelSet, 'bug-123')` then `getFrames('bug-123')` captures a
+  grid snapshot at each key spin event for the report; call
+  `stopRecording(reelSet)` when you are done.
 links:
   - label: "Guide: Debugging"
     href: /guides/debugging/

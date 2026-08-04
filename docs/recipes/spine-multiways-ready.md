@@ -8,7 +8,7 @@ If you're building a 1×1 symbol for a fixed-shape slot, only sections "Skeleton
 
 - **Root bone at origin `(0, 0)`**, representing the **center of the cell**. The library positions `spine.position` to `(cellW/2, cellH/2)` and applies a uniform scale around that origin.
 - Art is positioned around root such that the natural bounding box is centered. Off-center authoring is allowed; the lib will scale uniformly around the skeleton origin and any offset bakes in.
-- **Uniform scale only.** The lib calls `skeleton.scale.set(s)` with a single number. Non-uniform scale applied internally by the skeleton (e.g. squash-and-stretch animations) is fine; non-uniform scale applied externally is not.
+- **Know which class you use.** `SpineReelSymbol` applies the constructor-time `scale` option uniformly (`spine.scale.set(s)`) and only repositions on resize; `SpineSymbol.resize()` stretches non-uniformly to fill the cell (`spine.scale.set(w/bw, h/bh)`). The `Math.min` pattern below is for your own subclass. Non-uniform scale applied internally by the skeleton (e.g. squash-and-stretch animations) is fine; non-uniform scale applied externally is not.
 - **Root bone MUST NOT move during `idle`.** Motion belongs to child bones. Root drift breaks cell alignment.
 
 ## Required animations
@@ -22,18 +22,18 @@ If you're building a 1×1 symbol for a fixed-shape slot, only sections "Skeleton
 
 | Name | Type | Trigger | Notes |
 |---|---|---|---|
-| `land` | one-shot | After AdjustPhase + StopPhase bounce | Keep under ~400 ms. End at the idle baseline or `idle` will snap. |
+| `landing` | one-shot | After AdjustPhase + StopPhase bounce. Auto-fires only with `autoPlayLanding: true`; otherwise call `playLanding()` | Keep under ~400 ms. End at the idle baseline or `idle` will snap. |
 | `intro` | one-shot | First visible entry into the reel window | Played by the consumer via a custom symbol subclass; the lib does not trigger by default. |
-| `win_end` | one-shot | Called by `stopAnimation()` | If absent, the lib hard-cuts the `win` track to `idle`. Recommend a 100–200 ms transition. |
+| _(no `win_end` hook)_ | -- | -- | `stopAnimation()` always hard-cuts to `idle`. There is no transition slot; author one inside your own subclass if you need it. |
 | `expand` | one-shot | Expanding wild (`1×1` → `1×N`) | Visual tween only; the size change is lib-driven via `resize()`. |
-| `big_idle` | loop | Big-symbol variant | The lib selects this instead of `idle` when `SymbolData.size.w * size.h > 1`, if your subclass dispatches on size. |
+| `big_idle` | loop | Big-symbol variant | Purely a naming convention. The library never selects it -- read `size.reels * size.cells > 1` and dispatch yourself. |
 
 ## Texture and atlas
 
-- Use a single `.atlas` + `.webp` page per symbol, OR a shared atlas across all symbols (preferred for drawcall reduction). The vite config already serves textures from `examples/assets/`.
+- Use a single `.atlas` + `.webp` page per symbol, OR a shared atlas across all symbols (preferred for drawcall reduction). Textures are served from `apps/site/public/`.
 - Author at the **largest** size the symbol will render at:
   - Non-MultiWays 1×1: ~300 px tall.
-  - MultiWays with `minRows=2, reelPixelHeight=600`: ~300 px tall (same as the maxRows case at 7 rows).
+  - MultiWays with `minCells=2, reelExtent=600`: ~300 px tall (`reelExtent / minCells`) -- the LARGEST cell the symbol ever occupies. At `maxCells: 7` the same reel gives it only ~86 px.
   - Big symbol 2×2: ~600 px tall.
 - Down-scaling looks fine. Up-scaling past authoring size looks bad.
 
@@ -56,12 +56,12 @@ resize(w: number, h: number): void {
 
 ## Update driver
 
-- The pixi-spine `Spine` instance is updated by `app.ticker` via `TickerRef`. Don't install a second update loop. Don't call `skeleton.updateWorldTransform` manually inside animations.
+- The `Spine` instance self-updates through spine-pixi's own `autoUpdate`; the library installs no ticker for it. Do not add a second update loop. Don't install a second update loop. Don't call `skeleton.updateWorldTransform` manually inside animations.
 - Examples already do `gsap.ticker.remove(gsap.updateRoot)` and drive GSAP from `app.ticker` so animations don't freeze in hidden tabs. Don't add a second GSAP driver.
 
 ## Skins
 
-Use Spine skins for palette/variant swaps. The lib does not set skins by default. set in a custom `SpineSymbol` subclass via `skeleton.setSkin(name)` inside `onActivate`.
+Use Spine skins for palette/variant swaps. Pass `skin` per symbol in `spineMap` (`{ wild: { skeleton, atlas, skin: 'gold' } }`), or `defaultSkin` on `SpineSymbol`. No subclass needed. (The string form of the raw API is `setSkinByName`; `setSkin` takes a `Skin` object.)
 
 ## Failure modes (how to spot a broken skeleton)
 
@@ -71,12 +71,12 @@ Use Spine skins for palette/variant swaps. The lib does not set skins by default
 | Distortion at small MultiWays sizes | Non-uniform scale inside the skeleton, OR aspect mismatch with the cell. |
 | Blurry at 2×2 / 2-row MultiWays | Texture authored too small. Re-export atlas at 2×. |
 | Flicker on reshape | `resize()` not idempotent, or constructor-only positioning not re-applied in `resize()`. |
-| Win animation cut off | `win` length exceeds the WinPresenter dim duration. Shorten `win` or lengthen dim. |
+| Win animation never ends | `playWin()`'s promise never settles -- usually a non-looping clip whose `complete` event was consumed elsewhere. Check `stopAnimation()` and track collisions. |
 | Double-update feel (too fast) | A second ticker is installed somewhere. Remove it. |
 
 ## Anti-patterns (definite breakage)
 
-- Animating root position in `idle` or `win_end`.
+- Animating root position in `idle`.
 - Non-uniform external scale (different X/Y).
 - Hardcoded pixel offsets in animations (offsets should be relative to the skeleton's natural size).
 - Multiple skeletons per symbol. composite via slots/skins, or build a custom `ReelSymbol` subclass.

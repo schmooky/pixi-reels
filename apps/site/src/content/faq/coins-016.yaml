@@ -1,9 +1,13 @@
 id: coins-016
 group: coins
 question: How do I upgrade a coin's value tier in place (5 → 10 → 25)?
-answer: Swap the coin's id/data in place with `board.symbolAt(cell)` (or
-  `reelSet.setSymbolAt`) and repaint the label, without disturbing the rest of
-  the grid.
+answer: >-
+  Swap the coin's id and data in place with `board.setSymbolAt(cell, id, data)`.
+  It rewrites the ledger entry and returns the new live symbol, so `lockedCoins`
+  stays correct; repaint the label from the new `data`. It throws on a free cell,
+  and while a wave is in flight -- `await respin()` first. On a plain `ReelSet`
+  the equivalent is `reelSet.setSymbolAt(reel, cell, symbolId)`, which carries no
+  payload.
 links:
   - label: "Recipe: Hold & Win — upgrade a coin in place"
     href: /recipes/hold-and-win-upgrade-coin/

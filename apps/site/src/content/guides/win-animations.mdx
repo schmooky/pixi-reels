@@ -5,9 +5,8 @@ eyebrow: Building blocks
 description: Highlight winning symbols, cycle through lines, and dim the losers.
 ---
 
-When the reels land, you want the win to feel earned. pixi-reels ships a
-`SymbolSpotlight` that dims non-winners, promotes winners, and cycles through
-multiple lines automatically.
+`SymbolSpotlight` dims the losers, lifts the winners above the mask, and
+cycles through lines for you.
 
 ## One win, one line
 
@@ -16,9 +15,10 @@ reelSet.events.on('spin:complete', async (result) => {
   const wins = detectWins(result.symbols);      // your logic
   if (wins.length === 0) return;
 
-  await reelSet.spotlight.showLine({
-    positions: wins[0].positions,                // [{reelIndex, rowIndex}, ...]
-    duration: 1200,
+  // positions: [{ reelIndex, cellIndex }, ...]
+  await reelSet.spotlight.show(wins[0].positions, {
+    dimAmount: 0.3,
+    playWinAnimation: true,
   });
 });
 ```
@@ -26,27 +26,31 @@ reelSet.events.on('spin:complete', async (result) => {
 ## Multiple lines, cycled
 
 ```ts
-await reelSet.spotlight.cycle({
-  lines: wins.map((w) => ({ positions: w.positions })),
-  perLine: 1000,
-  dim: 0.3,        // non-winners fade to 30% alpha
-  repeat: 1,
-});
+await reelSet.spotlight.cycle(
+  wins.map((w) => ({ positions: w.positions })),   // WinLine[]
+  {
+    displayDuration: 1000,   // ms per line. Default 2000
+    gapDuration: 300,        // ms between lines
+    cycles: 1,
+    dimAmount: 0.3,          // losers fade to 30%
+  },
+);
 ```
 
 ## Play per-symbol animations
 
-If your symbol class implements `playWin()` (Spine and AnimatedSprite do by
-default), pixi-reels calls it on each highlighted cell.
+Set `playWinAnimation: true` and the spotlight calls `playWin()` on each
+highlighted symbol. `SpriteSymbol`, `AnimatedSpriteSymbol` and `SpineSymbol`
+all implement it.
 
 ```ts
-await reelSet.spotlight.showLine({
-  positions: wins[0].positions,
-  playWin: true,   // invoke symbol.playWin() on each
-});
+await reelSet.spotlight.show(wins[0].positions, { playWinAnimation: true });
 ```
+
+`show()` resolves when the animation is done, so `await` it to gate whatever
+comes next.
 
 ## Events
 
-Listen to `spotlight:start` and `spotlight:end` to gate the UI (disable the
-spin button while a win is being celebrated).
+`spotlight:start` and `spotlight:end` bracket a `cycle()`. Use them to disable
+the spin button while a win plays.

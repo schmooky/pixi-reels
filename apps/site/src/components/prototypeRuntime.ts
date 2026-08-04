@@ -8,11 +8,11 @@ import {
 import { gsap } from 'gsap';
 import {
   BlurSpriteSymbol,
-} from '../../../../examples/shared/BlurSpriteSymbol.ts';
+} from '../runtime/BlurSpriteSymbol.ts';
 import {
   loadPrototypeSymbols,
   type PrototypeTextureSet,
-} from '../../../../examples/shared/prototypeSpriteLoader.ts';
+} from '../runtime/prototypeSpriteLoader.ts';
 
 let gsapSynced = false;
 function syncGsap(app: Application): void {
@@ -24,7 +24,7 @@ function syncGsap(app: Application): void {
 
 export interface PrototypeMountConfig {
   reelCount: number;
-  visibleRows: number;
+  visibleCells: number;
   symbolSize: { width: number; height: number };
   /** Atlas frame names to use as symbol ids (`family/name`). */
   symbolIds: string[];
@@ -62,7 +62,7 @@ export async function mountPrototypeReels(
   const size = cfg.symbolSize;
   const padX = 10, padY = 10, gap = 6;
   const width = cfg.reelCount * (size.width + gap) - gap + padX * 2 + 40;
-  const height = cfg.visibleRows * (size.height + gap) - gap + padY * 2 + 40;
+  const height = cfg.visibleCells * (size.height + gap) - gap + padY * 2 + 40;
 
   const app = new Application();
   await app.init({
@@ -79,7 +79,7 @@ export async function mountPrototypeReels(
   host.style.position = 'relative';
   host.appendChild(app.canvas);
 
-  // Build the per-id texture + blurTexture submaps for the symbols we actually use.
+  // Build the per-id texture + blurTexture submaps for the symbols we use.
   const used: Record<string, import('pixi.js').Texture> = {};
   const usedBlur: Record<string, import('pixi.js').Texture> = {};
   for (const id of cfg.symbolIds) {
@@ -92,7 +92,7 @@ export async function mountPrototypeReels(
 
   const reelSet = new ReelSetBuilder()
     .reels(cfg.reelCount)
-    .visibleRows(cfg.visibleRows)
+    .visibleCells(cfg.visibleCells)
     .symbolSize(size.width, size.height)
     .symbolGap(gap, gap)
     .symbols((r) => {
@@ -114,7 +114,7 @@ export async function mountPrototypeReels(
   // Warm well frame (matches `--code-bg` token the rest of the site uses).
   const frame = new Graphics();
   const totalW = cfg.reelCount * (size.width + gap) - gap + padX * 2;
-  const totalH = cfg.visibleRows * (size.height + gap) - gap + padY * 2;
+  const totalH = cfg.visibleCells * (size.height + gap) - gap + padY * 2;
   frame.roundRect(0, 0, totalW, totalH, 16)
     .fill({ color: 0xffffff, alpha: 1 })
     .roundRect(0, 0, totalW, totalH, 16)
@@ -141,20 +141,20 @@ export async function mountPrototypeReels(
       reel.events.on('phase:enter', (phaseName) => {
         if (phaseName === 'spin') {
           blurring[r] = true;
-          setReelBlur(reelSet, r, cfg.visibleRows, true);
+          setReelBlur(reelSet, r, cfg.visibleCells, true);
         } else if (phaseName === 'stop') {
           blurring[r] = false;
-          setReelBlur(reelSet, r, cfg.visibleRows, false);
+          setReelBlur(reelSet, r, cfg.visibleCells, false);
         }
       });
       reel.events.on('symbol:created', () => {
-        if (blurring[r]) setReelBlur(reelSet, r, cfg.visibleRows, true);
+        if (blurring[r]) setReelBlur(reelSet, r, cfg.visibleCells, true);
       });
     }
     reelSet.events.on('skip:requested', () => {
       for (let r = 0; r < cfg.reelCount; r++) {
         blurring[r] = false;
-        setReelBlur(reelSet, r, cfg.visibleRows, false);
+        setReelBlur(reelSet, r, cfg.visibleCells, false);
       }
     });
   }
@@ -170,10 +170,10 @@ export async function mountPrototypeReels(
   };
 }
 
-function setReelBlur(reelSet: ReelSet, reelIndex: number, visibleRows: number, blurred: boolean): void {
+function setReelBlur(reelSet: ReelSet, reelIndex: number, visibleCells: number, blurred: boolean): void {
   const reel = reelSet.getReel(reelIndex);
-  for (let row = 0; row < visibleRows; row++) {
-    const sym = reel.getSymbolAt(row);
+  for (let cell = 0; cell < visibleCells; cell++) {
+    const sym = reel.getSymbolAt(cell);
     if (sym instanceof BlurSpriteSymbol) sym.setBlurred(blurred);
   }
 }

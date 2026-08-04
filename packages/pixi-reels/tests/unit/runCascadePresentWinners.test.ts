@@ -12,15 +12,15 @@ function buildTumbleHarness(initialFrame: string[][]): {
   const ticker = new FakeTicker();
   const reelSet = new ReelSetBuilder()
     .reels(initialFrame.length)
-    .visibleRows(initialFrame[0].length)
+    .visibleCells(initialFrame[0].length)
     .symbolSize(50, 50)
     .symbols((r) => {
       for (const id of ['a', 'b', 'x']) r.register(id, HeadlessSymbol, {});
     })
     .weights({ a: 1, b: 1 })
     .tumble({
-      fall:   { duration: 0, ease: 'none', rowStagger: 0 },
-      dropIn: { duration: 0, ease: 'none', rowStagger: 0, distance: 'perHole' },
+      fall:   { duration: 0, ease: 'none', cellStagger: 0 },
+      dropIn: { duration: 0, ease: 'none', cellStagger: 0, distance: 'perHole' },
     })
     .initialFrame(initialFrame.map((visible) => ({ visible })))
     .ticker(ticker as unknown as Ticker)
@@ -49,14 +49,14 @@ describe('runCascade. presentWinners pre-destroy hook', () => {
         detectWinners: () => {
           if (ran) return [];
           ran = true;
-          return [{ reel: 0, row: 0 }];
+          return [{ reel: 0, cell: 0 }];
         },
-        nextGrid: (prev) => prev.map((col, c) =>
-          c === 0 ? ['b', ...col.slice(1)] : [...col],
-        ),
+        nextGrid: (prev) => prev.map((reel, c) => ({
+          visible: c === 0 ? ['b', ...reel.slice(1)] : [...reel],
+        })),
         presentWinners: async ({ winners }) => {
           order.push('present');
-          expect(winners).toEqual([{ reel: 0, row: 0 }]);
+          expect(winners).toEqual([{ reel: 0, cell: 0 }]);
           // The winner must still be ON the board during presentation.
           alphaDuringPresent = winnerView().alpha;
         },
@@ -89,11 +89,11 @@ describe('runCascade. presentWinners pre-destroy hook', () => {
         detectWinners: () => {
           if (stagesLeft === 0) return [];
           stagesLeft -= 1;
-          return [{ reel: 0, row: 0 }];
+          return [{ reel: 0, cell: 0 }];
         },
-        nextGrid: (prev) => prev.map((col, c) =>
-          c === 0 ? ['x', ...col.slice(1)] : [...col],
-        ),
+        nextGrid: (prev) => prev.map((reel, c) => ({
+          visible: c === 0 ? ['x', ...reel.slice(1)] : [...reel],
+        })),
         presentWinners: ({ chain }) => { order.push(`present:${chain}`); },
         onCascade: ({ chain }) => { order.push(`after:${chain}`); },
         pauseAfterDestroyMs: 0,

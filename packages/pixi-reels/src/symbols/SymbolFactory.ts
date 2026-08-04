@@ -1,6 +1,7 @@
 import type { ReelSymbol } from './ReelSymbol.js';
 import type { SymbolRegistry } from './SymbolRegistry.js';
 import { ObjectPool } from '../pool/ObjectPool.js';
+import { DEFAULT_GSAP, type Gsap } from '../utils/gsap.js';
 
 /**
  * Creates and pools ReelSymbol instances.
@@ -16,10 +17,19 @@ export class SymbolFactory {
   constructor(
     private _registry: SymbolRegistry,
     maxPoolPerKey: number = 20,
+    gsap: Gsap = DEFAULT_GSAP,
+    mainAxis: 'x' | 'y' = 'y',
   ) {
     this._capacityPerKey = maxPoolPerKey;
     this._pool = new ObjectPool<ReelSymbol>(
-      (key: string) => this._registry.create(key),
+      // Bind at CREATE, not acquire: the factory belongs to one reel set for
+      // its whole life, and a pooled symbol never crosses sets.
+      (key: string) => {
+        const symbol = this._registry.create(key);
+        symbol.bindGsap(gsap);
+        symbol.bindMainAxis(mainAxis);
+        return symbol;
+      },
       (item: ReelSymbol) => item.reset(),
       (item: ReelSymbol) => item.destroy(),
       maxPoolPerKey,

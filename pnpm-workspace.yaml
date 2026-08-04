@@ -1,6 +1,6 @@
 packages:
   - 'packages/*'
-  - 'examples/*'
+  - 'tests/e2e/fixtures/*'
   - 'apps/*'
   - 'tools/*'
 # Native postinstall scripts allowed to run. skia-canvas downloads its

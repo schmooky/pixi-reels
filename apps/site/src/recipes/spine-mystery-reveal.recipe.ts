@@ -1,22 +1,22 @@
 // @ts-nocheck
 // Injected globals: ReelSetBuilder, SpeedPresets, SpineReelSymbol,
 //                   StaticSpinSymbol, SpinTextureCache, prewarmSpinTextures,
-//                   loadThunderkickSpines, buildThunderkickSpineMap,
-//                   THUNDERKICK_SYMBOL_IDS, app, pickWeighted, Spine, PIXI
+//                   loadSpineSet,
+//                   app, pickWeighted, Spine, PIXI
 //
 // Mystery reveal: bushes land with their own `land` one-shot, then each
 // plays the rig's `revealWin` on an overlay spine while the cell underneath
-// seamlessly swaps to the round's shared target symbol via `activate()`.
+// swaps to the round's shared target symbol via `activate()`.
 // Every reveal animation fades the bush to fully transparent, so the
-// overlay simply destroys itself on complete.
+// overlay destroys itself on complete.
 
-await loadThunderkickSpines();
+const thunderkick = await loadSpineSet("thunderkick");
 
 const SPINE_SCALE = 0.6;
 const CELL_W = 175 * SPINE_SCALE;
 const CELL_H = 203 * SPINE_SCALE;
 
-const spineMap = buildThunderkickSpineMap();
+const spineMap = thunderkick.spineMap;
 
 // Base fill and reveal targets: paying symbols only. Mysteries are forced
 // into the grid below so every spin demonstrates the reveal.
@@ -47,7 +47,7 @@ prewarmSpinTextures({
 
 const reelSet = new ReelSetBuilder()
   .reels(6)
-  .visibleRowsPerReel(ROWS_PER_REEL)
+  .visibleCellsPerReel(ROWS_PER_REEL)
   .reelAnchor('center')
   .symbolSize(CELL_W, CELL_H)
   .symbolGap(0, 0)
@@ -61,7 +61,7 @@ const reelSet = new ReelSetBuilder()
     }
   })
   .weights(weights)
-  // Mystery bush and wild art overflow their 175x203 tile — keep them
+  // Mystery bush and wild art overflow their 175x203 tile, keep them
   // painted above neighbouring cells.
   .symbolData({ mystery: { zIndex: 6 }, wild: { zIndex: 5 } })
   .speed('normal', SpeedPresets.NORMAL)
@@ -77,15 +77,15 @@ reelSet.addChild(overlayLayer);
 let lastGrid = null;
 
 function nextResult() {
-  const grid = ROWS_PER_REEL.map((rows) =>
-    Array.from({ length: rows }, () => pickWeighted(weights)),
+  const grid = ROWS_PER_REEL.map((cells) =>
+    Array.from({ length: cells }, () => pickWeighted(weights)),
   );
   // Force 2-4 mysteries per spin so the reveal always shows.
   const count = 2 + Math.floor(Math.random() * 3);
   for (let i = 0; i < count; i++) {
     const reel = Math.floor(Math.random() * grid.length);
-    const row = Math.floor(Math.random() * grid[reel].length);
-    grid[reel][row] = 'mystery';
+    const cell = Math.floor(Math.random() * grid[reel].length);
+    grid[reel][cell] = 'mystery';
   }
   lastGrid = grid;
   return grid;
@@ -101,21 +101,21 @@ reelSet.events.on('spin:start', () => {
 reelSet.events.on('spin:complete', async () => {
   if (!lastGrid) return;
   const cells = [];
-  lastGrid.forEach((col, reel) =>
-    col.forEach((id, row) => {
-      if (id === 'mystery') cells.push({ reel, row });
+  lastGrid.forEach((column, reel) =>
+    column.forEach((id, cell) => {
+      if (id === 'mystery') cells.push({ reel, cell });
     }),
   );
   if (cells.length === 0) return;
 
-  // One shared outcome per round — every bush hides the same symbol.
+  // One shared outcome per round, every bush hides the same symbol.
   const target = pickWeighted(weights);
 
   // Let the bushes' `land` one-shot (0.33s) finish first.
   await sleep(650);
 
   for (const c of cells) {
-    const sym = reelSet.getReel(c.reel).getSymbolAt(c.row);
+    const sym = reelSet.getReel(c.reel).getSymbolAt(c.cell);
     if (!sym) continue;
 
     const bush = Spine.from({
@@ -130,7 +130,7 @@ reelSet.events.on('spin:complete', async () => {
     bush.update(0);
 
     // The bush fully covers the tile until its `explode` event (0.83s), so
-    // swapping the cell now is invisible — by the time the reveal parts the
+    // swapping the cell now is invisible; by the time the reveal parts the
     // leaves, the real symbol is already underneath.
     sym.activate(target);
 

@@ -36,7 +36,7 @@ import { SpineReelSymbol, SpineSymbol } from 'pixi-reels/spine';
 | Fast-spin frame | `blur` | yes | `sym.playBlur()`, optional |
 | Neighbour cue | `reactions/react_{u,d,l,r,ul,ur,dl,dr}` | no | raw via `sym.spine.state.setAnimation(...)` |
 
-Missing animations are silent no-ops — a skeleton that lacks `landing` will simply skip the call. **The library never throws on a missing animation.**
+Missing animations are silent no-ops — a skeleton that lacks `landing` will skip the call. **The library never throws on a missing animation.**
 
 ### Per-symbol overrides patch asset typos
 

@@ -1,6 +1,9 @@
 import { Graphics } from 'pixi.js';
 import type { ReelSet } from '../core/ReelSet.js';
 import type { Reel } from '../core/Reel.js';
+import type { Direction, Orientation } from '../core/ReelAxis.js';
+import { debugOverlay } from './debugOverlay.js';
+import type { DebugOverlayOptions, DebugOverlayHandle } from './debugOverlay.js';
 
 /**
  * Debug snapshot. plain JSON representation of the entire reel state.
@@ -8,7 +11,7 @@ import type { Reel } from '../core/Reel.js';
  * Designed for AI agents that cannot see the canvas.
  * Returns no PixiJS display objects, only serializable data.
  *
- * **Breaking note (since v0.3):** `visibleRows` is now `number[]` (one entry
+ * **Breaking note (since v0.3):** `visibleCells` is now `number[]` (one entry
  * per reel) so jagged shapes (pyramids, MultiWays) are representable. For
  * uniform slots every entry is the same value. Adapt downstream code that
  * deep-reads the snapshot.
@@ -20,7 +23,7 @@ export interface DebugSnapshot {
   availableSpeeds: string[];
   spotlightActive: boolean;
   reelCount: number;
-  visibleRows: number[];
+  visibleCells: number[];
   reels: DebugReelSnapshot[];
   grid: string[][];
 }
@@ -29,7 +32,20 @@ export interface DebugReelSnapshot {
   index: number;
   speed: number;
   isStopping: boolean;
-  allSymbols: { row: number; symbolId: string; y: number }[];
+  /** This reel's travel projection, so a reader can interpret `main`. */
+  orientation: Orientation;
+  direction: Direction;
+  allSymbols: {
+    cell: number;
+    symbolId: string;
+    /**
+     * Position along the reel's TRAVEL axis (screen `y` when vertical,
+     * `x` when horizontal). This used to be a hard-coded `y`, which meant
+     * every symbol on a horizontal set reported a constant 0 - the one
+     * orientation where the field mattered most.
+     */
+    main: number;
+  }[];
   visibleSymbols: string[];
 }
 
@@ -50,10 +66,12 @@ export function debugSnapshot(reelSet: ReelSet): DebugSnapshot {
     index: i,
     speed: reel.speed,
     isStopping: reel.isStopping,
-    allSymbols: reel.symbols.map((s, row) => ({
-      row,
+    orientation: reel.axis.orientation,
+    direction: reel.axis.direction,
+    allSymbols: reel.symbols.map((s, cell) => ({
+      cell,
       symbolId: s.symbolId,
-      y: Math.round(s.view.y),
+      main: Math.round(reel.axis.getMain(s.view)),
     })),
     visibleSymbols: reel.getVisibleSymbols(),
   }));
@@ -70,7 +88,7 @@ export function debugSnapshot(reelSet: ReelSet): DebugSnapshot {
     availableSpeeds: reelSet.speed.profileNames,
     spotlightActive: reelSet.spotlight.isActive,
     reelCount: reels.length,
-    visibleRows: reels.map((r) => r.visibleRows),
+    visibleCells: reels.map((r) => r.visibleCells),
     reels: reelSnapshots,
     grid,
   };
@@ -89,11 +107,11 @@ export function debugSnapshot(reelSet: ReelSet): DebugSnapshot {
  */
 export function debugGrid(reelSet: ReelSet): string {
   const snap = debugSnapshot(reelSet);
-  const { grid, visibleRows } = snap;
+  const { grid, visibleCells } = snap;
   if (grid.length === 0) return '(empty grid)';
 
   const colWidth = 8;
-  const maxRows = Math.max(...visibleRows);
+  const maxCells = Math.max(...visibleCells);
   const pad = (s: string) => s.slice(0, colWidth).padEnd(colWidth);
   const empty = ' '.repeat(colWidth);
 
@@ -103,8 +121,8 @@ export function debugGrid(reelSet: ReelSet): string {
   const lines: string[] = [];
   lines.push(border('┌', '┬', '┐'));
 
-  for (let row = 0; row < maxRows; row++) {
-    const cells = grid.map((col, i) => (row < visibleRows[i] ? pad(col[row] ?? '?') : empty));
+  for (let cell = 0; cell < maxCells; cell++) {
+    const cells = grid.map((reel, i) => (cell < visibleCells[i] ? pad(reel[cell] ?? '?') : empty));
     lines.push('│' + cells.join('│') + '│');
   }
 
@@ -265,7 +283,7 @@ export function clearFrames(): void {
  * reachable at `__PIXI_REELS_DEBUG_INSTANCES[key]`, and `__PIXI_REELS_DEBUG`
  * always points at the most recently enabled one for convenience.
  *
- * This attaches to `window` and logs — call it only in dev/QA builds, never in
+ * This attaches to `window` and logs - call it only in dev/QA builds, never in
  * a production bundle (the snapshot exposes internal state and is not
  * semver-protected, so do not wire monitoring/telemetry to it).
  */
@@ -334,6 +352,13 @@ export function enableDebug(reelSet: ReelSet, key?: string): void {
         maskOverlay = null;
       }
     },
+    /**
+     * Create a layered visual debug overlay on this reel set (mask, cells,
+     * buffers, symbol bounds, big-symbol blocks, pins, hud). Returns a handle;
+     * call `.setLayers(...)` / `.redraw()` / `.destroy()` on it. Unlike
+     * `showMask`, this renders above the viewport (incl. the spotlight).
+     */
+    overlay: (opts?: DebugOverlayOptions): DebugOverlayHandle => debugOverlay(reelSet, opts),
   };
 
   const w = window as unknown as {

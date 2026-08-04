@@ -1,8 +1,11 @@
 id: cascade-013
 group: cascade
 question: How do I order the refills (which column fills first)?
-answer: "`.tumble(...)` plus `setDropOrder` choose which column refills first —
-  simultaneous, LTR wave, bottom-up, or top-down."
+answer: >-
+  `setDropOrder('all' | 'ltr' | 'rtl' | [perReelDelaysMs])` chooses which reel
+  refills first -- simultaneous, a left-to-right wave, right-to-left, or explicit
+  per-reel delays. Which cell inside a reel lands first is a separate knob:
+  `.tumble({ dropIn: { cellOrder: 'endFirst' | 'startFirst' } })`.
 links:
   - label: "Recipe: Refill orders"
     href: /recipes/refill-orders/

@@ -5,7 +5,7 @@
 // Sticky wild. CellPin edition.
 //
 // Instead of manually tracking "stuck" positions in an array and re-injecting
-// them into the grid before every setResult(), we just call reelSet.pin() when
+// them into the grid before every setResult(), we call reelSet.pin() when
 // a wild lands. The engine's pin map handles persistence; the wild stays put
 // for the configured number of turns, then expires automatically.
 //
@@ -18,7 +18,7 @@ const STICKY_TURNS = 3;
 
 const reelSet = new ReelSetBuilder()
   .reels(COLS)
-  .visibleRows(ROWS)
+  .visibleCells(ROWS)
   .symbolSize(SIZE, SIZE)
   .symbolGap(4, 4)
   .symbols((r) => {
@@ -53,9 +53,9 @@ reelSet.events.on('spin:allLanded', ({ symbols }) => {
 
 // Scripted sequence: cycles through wild arrivals so the demo is predictable.
 const arrivals = [
-  { col: 1, row: 1 },
-  { col: 3, row: 0 },
-  { col: 2, row: 2 },
+  { reel: 1, cell: 1 },
+  { reel: 3, cell: 0 },
+  { reel: 2, cell: 2 },
 ];
 let spinCount = 0;
 
@@ -69,7 +69,7 @@ return {
     // Place a fresh wild each spin. the engine's pin overlay keeps prior
     // sticky wilds in place, so we only ever need to add the NEW one here.
     const next = arrivals[idx];
-    grid[next.col][next.row] = WILD;
+    grid[next.reel][next.cell] = WILD;
     spinCount++;
     return grid;
   },

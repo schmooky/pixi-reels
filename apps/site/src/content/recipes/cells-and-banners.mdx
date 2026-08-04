@@ -1,0 +1,93 @@
+---
+title: "Cells, bounds, paylines & overlays"
+group: rendering
+oneLiner: "Cell geometry, self-drawn paylines and overlays, hit areas, and runtime feature-mode swaps."
+order: 80
+tags:
+  - paylines
+  - hit-areas
+  - overlays
+  - wins
+  - horizontal
+  - orientation
+apis: []
+steps: []
+---
+
+Address individual cells, render your own paylines and overlays, and swap feature modes at runtime, each shown live below. For banner reels above the grid, see [orientation and direction](/recipes/orientation-and-direction/#horizontal-banner).
+
+<a id="cell-bounds"></a>
+
+## Cell bounds. overlays, paylines & hit areas
+
+getCellBounds(reel, cell) hands you the pixel rect of any visible cell, for paylines, win outlines, or hit areas that align exactly with symbols.
+
+<RecipeDemo code="cell-bounds" />
+
+<a id="cell-hit-areas"></a>
+
+## Cell hit areas. click to pick, hover to preview
+
+Attach pointer events to individual cells with getCellBounds; hover previews, click toggles a pick, picks survive spins.
+
+**Gotcha:** fill the hit rect with alpha 0, not `visible = false`. an invisible-but-filled rect is still hit-testable; a hidden one is not.
+
+<RecipeDemo code="cell-hit-areas" />
+
+<a id="cells-horizontal-bounds"></a>
+
+## Cell bounds on a horizontal set
+
+`getCellBounds(reel, cell)` takes the same arguments on either axis, and (0, 0) is still the first cell of the first reel. The rect it returns transposes: on a horizontal set the reel index walks down the screen and the cell index walks across it, so the same cell index on every reel stacks vertically.
+
+**Gotcha:** the payline drawn through those centres therefore runs vertically, where identical code draws a horizontal line on a vertical set. Read the rects; do not infer them from the indices.
+
+<RecipeDemo code="cells-horizontal-bounds" />
+
+<a id="cells-horizontal-hit-areas"></a>
+
+## Hit areas on a horizontal set
+
+The same `for reel, for cell` loop, with no orientation branch: the bounds are already screen-space, so the hit boxes land on the symbols either way. Hover previews, click toggles a pick, picks survive spins.
+
+<RecipeDemo code="cells-horizontal-hit-areas" />
+
+<a id="board-grid-reveal"></a>
+
+## Board primitive: build your own board
+
+A reveal-and-collect prize grid built straight on the generic BoardGrid primitive; the rule is yours, with no locking and no respins.
+
+<RecipeDemo code="board-grid-reveal" height={400} />
+
+<a id="paylines-events-only"></a>
+
+## Draw paylines yourself from win:group
+
+Core never draws lines. subscribe to win:group and plot your own overlay from getCellBounds.
+
+<RecipeDemo code="paylines-events-only" />
+
+<a id="paylines-custom-animation"></a>
+
+## Custom per-symbol animation
+
+Replace playWin() with your own GSAP timeline, styled per win.id.
+
+<RecipeDemo code="paylines-custom-animation" />
+
+## Slam-stop
+
+Let the player smash the button to land the reels now.
+
+**Gotcha:** for player-facing slam use requestSkip(). skipSpin() THROWS if the result has not arrived yet; requestSkip() queues until it does.
+
+<RecipeDemo code="slam-stop" />
+
+## Feature mode swap
+
+Enter and exit a bonus mode at runtime by adding or removing a frame middleware, with no ReelSet rebuild.
+
+**Gotcha:** run custom middleware after target-placement (priority > 10; target-placement is 10, and the recipe uses 20) so it reacts to the grid the server chose.
+
+<RecipeDemo code="feature-mode-swap" />

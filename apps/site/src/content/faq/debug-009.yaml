@@ -1,8 +1,12 @@
 id: debug-009
 group: debug
 question: How do I record and replay a spin frame by frame?
-answer: "`startRecording()` / `getFrames()` capture a spin's frames; replay them
-  to reproduce a bug."
+answer: >-
+  `startRecording(reelSet, tag)` snapshots the board at `spin:start`, each
+  `spin:reelLanded`, `spin:allLanded` and `spin:complete`; `getFrames(tag)`
+  returns them in capture order and `stopRecording(reelSet)` detaches. It is an
+  event-level trace, not a per-animation-frame capture -- replay the same seed
+  and the same `setResult` grid to reproduce.
 links:
   - label: "Guide: Debugging"
     href: /guides/debugging/

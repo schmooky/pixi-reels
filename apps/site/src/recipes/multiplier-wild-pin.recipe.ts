@@ -33,7 +33,7 @@ probe.destroy();
 
 const reelSet = new ReelSetBuilder()
   .reels(COLS)
-  .visibleRows(ROWS)
+  .visibleCells(ROWS)
   .symbolSize(SIZE, SIZE)
   .symbolGap(4, 4)
   .symbols((r) => {
@@ -61,10 +61,10 @@ const reelSet = new ReelSetBuilder()
 const badges = new PIXI.Container();
 reelSet.addChild(badges);
 const badgeAt = new Map();
-const drawBadge = (col, row, mult) => {
-  const key = `${col},${row}`;
+const drawBadge = (reel, cell, mult) => {
+  const key = `${reel},${cell}`;
   badgeAt.get(key)?.destroy();
-  const b = reelSet.getCellBounds(col, row);
+  const b = reelSet.getCellBounds(reel, cell);
   const t = new PIXI.BitmapText({ text: `${mult}x`, style: { fontFamily: 'DiamondMult', fontSize: 56 } });
   t.anchor.set(0.5);
   if (t.width > 0) t.scale.set(Math.min((SIZE * 0.7) / t.width, (SIZE * 0.45) / t.height, 1));
@@ -72,7 +72,7 @@ const drawBadge = (col, row, mult) => {
   badges.addChild(t);
   badgeAt.set(key, t);
 };
-const clearBadge = (col, row) => { const k = `${col},${row}`; badgeAt.get(k)?.destroy(); badgeAt.delete(k); };
+const clearBadge = (reel, cell) => { const k = `${reel},${cell}`; badgeAt.get(k)?.destroy(); badgeAt.delete(k); };
 
 // ── Pin wilds with their multiplier on land ───────────────────────────────
 reelSet.events.on('spin:allLanded', ({ symbols }) => {
@@ -87,13 +87,13 @@ reelSet.events.on('spin:allLanded', ({ symbols }) => {
     }
   }
 });
-reelSet.events.on('pin:expired', (pin) => { if (pin?.symbolId?.startsWith?.('wild_x')) clearBadge(pin.col, pin.row); });
+reelSet.events.on('pin:expired', (pin) => { if (pin?.symbolId?.startsWith?.('wild_x')) clearBadge(pin.reel, pin.cell); });
 
-// Scripted arrivals — one of each multiplier rung across the demo loop.
+// Scripted arrivals - one of each multiplier rung across the demo loop.
 const arrivals = [
-  { col: 1, row: 1, mult: 2 },
-  { col: 3, row: 0, mult: 3 },
-  { col: 2, row: 2, mult: 5 },
+  { reel: 1, cell: 1, mult: 2 },
+  { reel: 3, cell: 0, mult: 3 },
+  { reel: 2, cell: 2, mult: 5 },
 ];
 let spinCount = 0;
 
@@ -106,7 +106,7 @@ return {
       Array.from({ length: ROWS }, () => FILLER[Math.floor(Math.random() * FILLER.length)]),
     );
     const next = arrivals[idx];
-    grid[next.col][next.row] = wildId(next.mult);
+    grid[next.reel][next.cell] = wildId(next.mult);
     spinCount++;
     return grid;
   },

@@ -18,9 +18,9 @@
 - name: area/site
   color: 1d76db
   description: The docs site under apps/site
-- name: area/examples
+- name: area/fixtures
   color: c2e0c6
-  description: examples/* apps and shared runtime helpers
+  description: e2e fixtures, the cheats package, and the docs-site runtime helpers
 - name: area/spine
   color: b60205
   description: SpineReelSymbol, spine loader, Spine demos

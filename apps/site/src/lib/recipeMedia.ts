@@ -85,7 +85,7 @@ export function cardHintPath(slug: string): string {
 }
 
 // ─────────────────────────────────────────────────────────────────────────
-// Placeholder generation — deterministic from the title so each recipe
+// Placeholder generation: deterministic from the title so each recipe
 // gets a stable, distinct tint, and the art reads as a slot board.
 
 /** Stable hue in [0, 360). */

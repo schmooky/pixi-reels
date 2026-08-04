@@ -6,7 +6,7 @@ import { FakeTicker } from '../../src/testing/FakeTicker.js';
 import type { ReelSet } from '../../src/index.js';
 
 /**
- * `bufferSymbols({ above, below: 0 })`. tumble-only reel sets with no
+ * `bufferSymbols({ start, end: 0 })`. tumble-only reel sets with no
  * below-window buffer. A pure tumble never scrolls the strip, so the
  * below cells exist only to be hidden by the mask; dropping them means
  * nothing can ever peek out under the window. Strip spins and nudges
@@ -19,16 +19,16 @@ function buildTumbleBelowZero(initialFrame: string[][]): {
   const ticker = new FakeTicker();
   const reelSet = new ReelSetBuilder()
     .reels(initialFrame.length)
-    .visibleRows(initialFrame[0].length)
+    .visibleCells(initialFrame[0].length)
     .symbolSize(50, 50)
-    .bufferSymbols({ above: 1, below: 0 })
+    .bufferSymbols({ start: 1, end: 0 })
     .symbols((r) => {
       for (const id of ['a', 'b', 'x']) r.register(id, HeadlessSymbol, {});
     })
     .weights({ a: 1, b: 1 })
     .tumble({
-      fall:   { duration: 0, ease: 'none', rowStagger: 0 },
-      dropIn: { duration: 0, ease: 'none', rowStagger: 0, distance: 'perHole' },
+      fall:   { duration: 0, ease: 'none', cellStagger: 0 },
+      dropIn: { duration: 0, ease: 'none', cellStagger: 0, distance: 'perHole' },
     })
     .initialFrame(initialFrame.map((visible) => ({ visible })))
     .ticker(ticker as unknown as Ticker)
@@ -36,7 +36,7 @@ function buildTumbleBelowZero(initialFrame: string[][]): {
   return { reelSet, destroy: () => { reelSet.destroy(); ticker.destroy(); } };
 }
 
-describe('bufferSymbols({ below: 0 }). tumble-only reel sets', () => {
+describe('bufferSymbols({ end: 0 }). tumble-only reel sets', () => {
   it('builds with no below-window strip cells', () => {
     const h = buildTumbleBelowZero([
       ['a', 'a', 'a'],
@@ -45,9 +45,9 @@ describe('bufferSymbols({ below: 0 }). tumble-only reel sets', () => {
     ]);
     try {
       for (const reel of h.reelSet.reels) {
-        expect(reel.bufferAbove).toBe(1);
-        expect(reel.bufferBelow).toBe(0);
-        // strip = bufferAbove + visible rows, nothing below.
+        expect(reel.bufferStart).toBe(1);
+        expect(reel.bufferEnd).toBe(0);
+        // strip = bufferStart + visible cells, nothing below.
         expect(reel.symbols.length).toBe(1 + 3);
       }
     } finally {
@@ -59,9 +59,9 @@ describe('bufferSymbols({ below: 0 }). tumble-only reel sets', () => {
     const ticker = new FakeTicker();
     const builder = new ReelSetBuilder()
       .reels(3)
-      .visibleRows(3)
+      .visibleCells(3)
       .symbolSize(50, 50)
-      .bufferSymbols({ above: 1, below: 0 })
+      .bufferSymbols({ start: 1, end: 0 })
       .symbols((r) => r.register('a', HeadlessSymbol, {}))
       .ticker(ticker as unknown as Ticker);
     try {
@@ -75,15 +75,15 @@ describe('bufferSymbols({ below: 0 }). tumble-only reel sets', () => {
     const ticker = new FakeTicker();
     const reelSet = new ReelSetBuilder()
       .reels(2)
-      .visibleRows(3)
+      .visibleCells(3)
       .symbolSize(50, 50)
       .bufferSymbols(0)
       .symbols((r) => r.register('a', HeadlessSymbol, {}))
       .ticker(ticker as unknown as Ticker)
       .build();
     try {
-      expect(reelSet.reels[0].bufferAbove).toBe(1);
-      expect(reelSet.reels[0].bufferBelow).toBe(1);
+      expect(reelSet.reels[0].bufferStart).toBe(1);
+      expect(reelSet.reels[0].bufferEnd).toBe(1);
     } finally {
       reelSet.destroy();
       ticker.destroy();
@@ -102,11 +102,11 @@ describe('bufferSymbols({ below: 0 }). tumble-only reel sets', () => {
         detectWinners: () => {
           if (ran) return [];
           ran = true;
-          return [{ reel: 1, row: 0 }];
+          return [{ reel: 1, cell: 0 }];
         },
-        nextGrid: (prev) => prev.map((col, c) =>
-          c === 1 ? ['b', ...col.slice(1)] : [...col],
-        ),
+        nextGrid: (prev) => prev.map((reel, c) => ({
+          visible: c === 1 ? ['b', ...reel.slice(1)] : [...reel],
+        })),
         pauseAfterDestroyMs: 0,
       });
       expect(result.chainLength).toBe(1);
@@ -123,10 +123,10 @@ describe('bufferSymbols({ below: 0 }). tumble-only reel sets', () => {
       ['a', 'a', 'a'],
     ]);
     try {
-      await expect(h.reelSet.spin({ mode: 'standard' })).rejects.toThrow(/bufferBelow >= 1/);
+      await expect(h.reelSet.spin({ mode: 'standard' })).rejects.toThrow(/bufferEnd >= 1/);
       await expect(
-        h.reelSet.nudge(0, { direction: 'down', count: 1 } as never),
-      ).rejects.toThrow(/bufferBelow >= 1/);
+        h.reelSet.nudge(0, { direction: 'forward', count: 1 } as never),
+      ).rejects.toThrow(/bufferEnd >= 1/);
     } finally {
       h.destroy();
     }

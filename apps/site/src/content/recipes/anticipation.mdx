@@ -1,0 +1,108 @@
+---
+title: "Anticipation & near-miss"
+group: tension
+oneLiner: Reel-stop tension - anticipation teases, scatter-driven and staggered slows, turbo and skippable variants, Spine jaw near-wins, and fake near-misses.
+order: 60
+tags:
+  - anticipation
+  - tension
+  - scatter
+  - near-miss
+  - spine
+  - horizontal
+  - reverse
+apis: []
+steps: []
+---
+
+Every way to hold the player at the reel stop, from a single slowed reel to a full Spine near-win act.
+
+## Anticipate a reel
+
+Slow the closing reels (3 and 4) to build tension before they land.
+
+<RecipeDemo code="anticipate-a-reel" />
+
+## Anticipation teaser
+
+Pair setAnticipation with a `bufferStart` prefill so a chosen symbol sits at the top edge, approaching but never landing, while the slow reels decelerate.
+
+<RecipeDemo code="anticipation-teaser" />
+
+<a id="anticipation-reverse-teaser"></a>
+
+## Teaser on a reel that spins up
+
+The same teaser on a `direction('reverse')` set. Buffers are geometric, so `bufferStart` is still the slot above the window - which on a reverse reel is the side symbols have already left.
+
+**Gotcha:** park the teaser on the feed edge, not on `bufferStart` out of habit. `reel.axis.feedEdge` reports `'start'` on a forward reel and `'end'` on a reverse one, so one branch covers both.
+
+<RecipeDemo code="anticipation-reverse-teaser" />
+
+<a id="scatter-anticipation"></a>
+
+## Scatter-driven anticipation
+
+Pick the tease reels straight from the result grid with anticipationForScatters.
+
+<RecipeDemo code="scatter-anticipation" />
+
+<a id="anticipation-horizontal-scatter"></a>
+
+## Tension on a horizontal set
+
+Scatter-driven anticipation with the strips running sideways. `anticipationForScatters` scans reels 0, 1, 2, 3 and `setAnticipation` holds the trailing ones, exactly as on a vertical set - reel index is orientation-neutral, so no tension code branches.
+
+**Gotcha:** what changes is where those reels sit. On a horizontal set reels march down the screen, so "the last two reels tease" plays as the bottom two rows crawling sideways, not as the rightmost columns.
+
+<RecipeDemo code="anticipation-horizontal-scatter" height={340} />
+
+<a id="staggered-anticipation"></a>
+
+## Staggered / sequential anticipation
+
+Tease reels one after another instead of all slowing at once.
+
+<RecipeDemo code="staggered-anticipation" />
+
+## Slowing anticipation
+
+Each teasing reel crawls slower than the last, then stops exactly there.
+
+<RecipeDemo code="slowing-anticipation" />
+
+<a id="turbo-anticipation"></a>
+
+## Anticipation in turbo
+
+Keep the tease playing in Turbo / SuperTurbo with a duration override (the SuperTurbo profile sets anticipationDelay to 0, so a plain call skips the tease).
+
+<RecipeDemo code="turbo-anticipation" />
+
+<a id="skip-anticipation"></a>
+
+## Skip the tease
+
+Let the player slam through a long anticipation at any point.
+
+<RecipeDemo code="skip-anticipation" />
+
+<a id="spine-scatter-jaw-anticipation"></a>
+
+## Scatter jaw anticipation
+
+The rig's own near-win clips - the leftmost scatter snaps its jaw, holds the loop, and the rightmost lands the verdict.
+
+<RecipeDemo code="spine-scatter-jaw-anticipation" height={460} />
+
+<AssetCredit studio="Thunderkick" />
+
+<a id="near-miss"></a>
+
+## Fake a near-miss
+
+Place N-1 scatters plus anticipation on the reel that "almost" landed one.
+
+**Gotcha:** the grid always resolves to a loss; deliberately engineered near-misses are restricted in some jurisdictions, so confirm with compliance before shipping.
+
+<RecipeDemo code="near-miss" />

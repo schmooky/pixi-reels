@@ -3,7 +3,7 @@
 //
 // Last-cell anticipation. The board's `anticipateWhen(...)` predicate flips
 // every still-spinning cell to a drawn-out tension profile when only one
-// cell is left to fill — the "one more for the full-board jackpot" moment.
+// cell is left to fill - the "one more for the full-board jackpot" moment.
 // The whole feature is one builder knob; the recipe only listens to events.
 
 const COLS = 4, ROWS = 3, CELL = 76, GAP = 6;
@@ -94,7 +94,7 @@ const fitGold = (t, maxW, maxH) => {
   return t;
 };
 const paintLabel = (cell, value) => {
-  const k = `${cell.col},${cell.row}`;
+  const k = `${cell.reel},${cell.cell}`;
   labelAt.get(k)?.destroy();
   const p = abs(cell);
   const t = fitGold(goldText(fmt(value), 32), SETTLE_SIZE * 0.84, SETTLE_SIZE * 0.46);
@@ -136,14 +136,14 @@ board.events.on('cell:landed', () => { stopPulse(); });
 // Scripted fill: seed two, then land coins until a single empty cell remains,
 // then land into it under anticipation. A real server decides each round.
 const SEED = [
-  { cell: { col: 0, row: 0 }, id: COIN, data: { value: 5 } },
-  { cell: { col: 3, row: 2 }, id: COIN, data: { value: 10 } },
+  { cell: { reel: 0, cell: 0 }, id: COIN, data: { value: 5 } },
+  { cell: { reel: 3, cell: 2 }, id: COIN, data: { value: 10 } },
 ];
 const FILL = [
-  [{ col: 1, row: 0 }, { col: 2, row: 0 }, { col: 3, row: 0 }],
-  [{ col: 0, row: 1 }, { col: 1, row: 1 }, { col: 2, row: 1 }, { col: 3, row: 1 }],
-  [{ col: 0, row: 2 }, { col: 1, row: 2 }],
-  [{ col: 2, row: 2 }], // the last cell — lands under anticipation
+  [{ reel: 1, cell: 0 }, { reel: 2, cell: 0 }, { reel: 3, cell: 0 }],
+  [{ reel: 0, cell: 1 }, { reel: 1, cell: 1 }, { reel: 2, cell: 1 }, { reel: 3, cell: 1 }],
+  [{ reel: 0, cell: 2 }, { reel: 1, cell: 2 }],
+  [{ reel: 2, cell: 2 }], // the last cell - lands under anticipation
 ];
 const val = () => [5, 10, 15, 25][Math.floor(Math.random() * 4)];
 

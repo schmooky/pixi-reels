@@ -9,7 +9,7 @@ const description =
   'A searchable knowledge base of slot-development questions answered with pixi-reels: how to spin, respin, set symbols, run Hold & Win, lock coins, reveal a mystery value, fly coins into a collector, play a destroy animation, and hundreds more.';
 
 const stripCode = (s: string) => s.replace(/`/g, '');
-// FAQPage rich-result data is built from the ANSWERED questions only —
+// FAQPage rich-result data is built from the ANSWERED questions only.
 // Google needs a real answer per Q. Open questions are still listed and
 // on-page searchable, just not in the structured data yet.
 const faqEntries = FAQ_ANSWERED.map((q) => ({

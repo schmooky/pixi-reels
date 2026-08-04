@@ -3,7 +3,6 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { SITE } from '../lib/seo.ts';
-import { DEMOS } from '../content/demos.ts';
 import { RECIPES } from '../content/recipes.ts';
 import { ARCH_PAGES } from '../content/architectureNav.ts';
 import { GUIDES_NAV, WIKI_NAV } from '../content/nav.ts';
@@ -51,7 +50,6 @@ export const GET: APIRoute = async () => {
   entries.push({ loc: url('/'), priority: '1.0', changefreq: 'weekly' });
   entries.push({ loc: url('/guides/'), priority: '0.9', changefreq: 'weekly' });
   entries.push({ loc: url('/docs/'), priority: '0.9', changefreq: 'weekly' });
-  entries.push({ loc: url('/demos/'), priority: '0.9', changefreq: 'weekly' });
   entries.push({ loc: url('/studio/'), priority: '0.9', changefreq: 'weekly' });
   entries.push({ loc: url('/recipes/'), priority: '0.9', changefreq: 'weekly' });
   entries.push({ loc: url('/faq/'), priority: '0.9', changefreq: 'weekly' });
@@ -74,9 +72,6 @@ export const GET: APIRoute = async () => {
     for (const item of section.items) {
       entries.push({ loc: url(item.href), priority: '0.8', changefreq: 'monthly' });
     }
-  }
-  for (const d of DEMOS) {
-    entries.push({ loc: url(`/demos/${d.slug}/`), priority: '0.85', changefreq: 'monthly' });
   }
   // Only ANSWERED questions have their own page; open ones live on /faq/.
   for (const q of FAQ_ANSWERED) {

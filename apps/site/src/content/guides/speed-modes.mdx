@@ -5,8 +5,8 @@ eyebrow: Building blocks
 description: Normal, turbo, super-turbo. and adding your own.
 ---
 
-Speed profiles bundle all the numbers that decide how a spin feels:
-acceleration, spin speed, stop delays, bounce distance.
+A speed profile is every number that decides how a spin feels. Acceleration,
+speed, stop stagger, bounce.
 
 ## The three defaults
 
@@ -18,8 +18,7 @@ import { SpeedPresets } from 'pixi-reels';
 // SpeedPresets.SUPER_TURBO . almost-instant
 ```
 
-Every `ReelSetBuilder` includes `NORMAL` by default unless you call `.speed()`
-yourself.
+Call no `.speed()` at all and you get `NORMAL` under the name `'normal'`.
 
 ## Switch at runtime
 

@@ -3,15 +3,15 @@ import { createTestReelSet, captureEvents } from '../../src/testing/index.js';
 import { debugSnapshot } from '../../src/debug/debug.js';
 
 describe('MultiWays reshape', () => {
-  it('builds at maxRows by default and reports isMultiWaysSlot', () => {
+  it('builds at maxCells by default and reports isMultiWaysSlot', () => {
     const { reelSet, destroy } = createTestReelSet({
       reels: 6,
-      multiways: { minRows: 2, maxRows: 7, reelPixelHeight: 600 },
+      multiways: { minCells: 2, maxCells: 7, reelExtent: 600 },
       symbolIds: ['a', 'b'],
     });
     try {
       expect(reelSet.isMultiWaysSlot).toBe(true);
-      expect(reelSet.reels.map((r) => r.visibleRows)).toEqual([7, 7, 7, 7, 7, 7]);
+      expect(reelSet.reels.map((r) => r.visibleCells)).toEqual([7, 7, 7, 7, 7, 7]);
     } finally {
       destroy();
     }
@@ -20,7 +20,7 @@ describe('MultiWays reshape', () => {
   it('setShape() emits shape:changed with a copy of the input', () => {
     const { reelSet, destroy } = createTestReelSet({
       reels: 4,
-      multiways: { minRows: 2, maxRows: 6, reelPixelHeight: 500 },
+      multiways: { minCells: 2, maxCells: 6, reelExtent: 500 },
       symbolIds: ['a'],
     });
     try {
@@ -34,7 +34,7 @@ describe('MultiWays reshape', () => {
   });
 
   it('setShape() throws on non-MultiWays slot', () => {
-    const { reelSet, destroy } = createTestReelSet({ reels: 5, visibleRows: 3 });
+    const { reelSet, destroy } = createTestReelSet({ reels: 5, visibleCells: 3 });
     try {
       expect(() => reelSet.setShape([3, 3, 3, 3, 3])).toThrow(/multiways/);
     } finally {
@@ -45,7 +45,7 @@ describe('MultiWays reshape', () => {
   it('setShape() throws when called after setResult() in the same spin', async () => {
     const { reelSet, destroy } = createTestReelSet({
       reels: 3,
-      multiways: { minRows: 2, maxRows: 6, reelPixelHeight: 600 },
+      multiways: { minCells: 2, maxCells: 6, reelExtent: 600 },
       symbolIds: ['a'],
     });
     try {
@@ -69,7 +69,7 @@ describe('MultiWays reshape', () => {
   it('setShape() validates length and bounds', () => {
     const { reelSet, destroy } = createTestReelSet({
       reels: 4,
-      multiways: { minRows: 2, maxRows: 5, reelPixelHeight: 500 },
+      multiways: { minCells: 2, maxCells: 5, reelExtent: 500 },
       symbolIds: ['a'],
     });
     try {
@@ -81,17 +81,17 @@ describe('MultiWays reshape', () => {
     }
   });
 
-  it('reel.reshape applies new visibleRows + cell height', () => {
+  it('reel.reshape applies new visibleCells + cell height', () => {
     const { reelSet, destroy } = createTestReelSet({
       reels: 3,
-      multiways: { minRows: 2, maxRows: 6, reelPixelHeight: 600 },
+      multiways: { minCells: 2, maxCells: 6, reelExtent: 600 },
       symbolIds: ['a', 'b'],
       symbolSize: { width: 100, height: 100 },
     });
     try {
       const reel = reelSet.reels[0];
-      reel.reshape(3, 200, reel.bufferAbove, reel.bufferBelow);
-      expect(reel.visibleRows).toBe(3);
+      reel.reshape(3, 200, reel.bufferStart, reel.bufferEnd);
+      expect(reel.visibleCells).toBe(3);
       expect(reel.symbolHeight).toBe(200);
     } finally {
       destroy();
@@ -101,7 +101,7 @@ describe('MultiWays reshape', () => {
   it('AdjustPhase adjusts shape between SPIN and STOP', async () => {
     const { reelSet, destroy } = createTestReelSet({
       reels: 3,
-      multiways: { minRows: 2, maxRows: 6, reelPixelHeight: 600 },
+      multiways: { minCells: 2, maxCells: 6, reelExtent: 600 },
       symbolIds: ['a', 'b'],
     });
     try {
@@ -115,7 +115,7 @@ describe('MultiWays reshape', () => {
       ]);
       reelSet.slamStop();
       await promise;
-      expect(reelSet.reels.map((r) => r.visibleRows)).toEqual([3, 4, 2]);
+      expect(reelSet.reels.map((r) => r.visibleCells)).toEqual([3, 4, 2]);
       // Each reel emitted adjust:start and adjust:complete (skip path force-completes).
       expect(log.filter((e) => e.event === 'adjust:start').length).toBeGreaterThanOrEqual(0);
     } finally {
@@ -123,17 +123,17 @@ describe('MultiWays reshape', () => {
     }
   });
 
-  it('snapshot.visibleRows is per-reel after MultiWays reshape', () => {
+  it('snapshot.visibleCells is per-reel after MultiWays reshape', () => {
     const { reelSet, destroy } = createTestReelSet({
       reels: 3,
-      multiways: { minRows: 2, maxRows: 6, reelPixelHeight: 600 },
+      multiways: { minCells: 2, maxCells: 6, reelExtent: 600 },
       symbolIds: ['a'],
     });
     try {
-      reelSet.reels[0].reshape(2, 300, reelSet.reels[0].bufferAbove, reelSet.reels[0].bufferBelow);
-      reelSet.reels[2].reshape(4, 150, reelSet.reels[2].bufferAbove, reelSet.reels[2].bufferBelow);
+      reelSet.reels[0].reshape(2, 300, reelSet.reels[0].bufferStart, reelSet.reels[0].bufferEnd);
+      reelSet.reels[2].reshape(4, 150, reelSet.reels[2].bufferStart, reelSet.reels[2].bufferEnd);
       const snap = debugSnapshot(reelSet);
-      expect(snap.visibleRows).toEqual([2, 6, 4]);
+      expect(snap.visibleCells).toEqual([2, 6, 4]);
     } finally {
       destroy();
     }

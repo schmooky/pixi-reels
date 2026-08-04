@@ -5,7 +5,7 @@
 //
 // Every Hold & Win cell is its own 1×1 ReelSet, so the board hands you the
 // raw reel with `board.reelAt(cell)`: start it, stop it, read the symbol
-// inside it — independently of every other cell. This demo starts three
+// inside it, independently of every other cell. This demo starts three
 // cells with a stagger (each on its own clock), slam-stops the third the
 // instant it starts, and then flashes the landed coins via `symbolAt(cell)`.
 
@@ -34,7 +34,7 @@ hud.anchor.set(0.5, 0);
 hud.position.set(app.screen.width / 2, board.container.y + CELL + 16);
 app.stage.addChild(hud);
 
-const CELLS = [{ col: 0, row: 0 }, { col: 1, row: 0 }, { col: 2, row: 0 }];
+const CELLS = [{ reel: 0, cell: 0 }, { reel: 1, cell: 0 }, { reel: 2, cell: 0 }];
 // land coins on the first two cells, leave the third empty
 const LAND = [COIN, COIN, EMPTY];
 
@@ -42,7 +42,7 @@ const LAND = [COIN, COIN, EMPTY];
 function spinCell(cell, id) {
   const reel = board.reelAt(cell);          // <-- the cell's own ReelSet
   const settle = reel.spin();
-  reel.setResult([{ visible: [id], bufferAbove: [EMPTY], bufferBelow: [EMPTY] }]);
+  reel.setResult([{ visible: [id], bufferStart: [EMPTY], bufferEnd: [EMPTY] }]);
   return settle;
 }
 
@@ -54,7 +54,7 @@ return {
     busy = true;
     board.reset();
 
-    // 1) START each cell independently, staggered — three separate clocks
+    // 1) START each cell independently, staggered - three separate clocks
     hud.text = 'starting cell 0…';
     const s0 = spinCell(CELLS[0], LAND[0]);
     await sleep(260);

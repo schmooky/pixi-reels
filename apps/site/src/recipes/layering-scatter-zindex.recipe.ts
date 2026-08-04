@@ -1,22 +1,22 @@
 // @ts-nocheck
 // Injected globals: ReelSetBuilder, SpeedPresets, SpineReelSymbol,
 //                   StaticSpinSymbol, SpinTextureCache, prewarmSpinTextures,
-//                   loadThunderkickSpines, buildThunderkickSpineMap,
+//                   loadSpineSet,
 //                   app, pickWeighted
 //
-// symbolData zIndex — layering WITHIN one reel. The scatter (zIndex: 10)
+// symbolData zIndex - layering WITHIN one reel. The scatter (zIndex: 10)
 // always paints above its reel-mates; the mystery bush is deliberately
 // left at the default layer, so the tile below it paints over its leaves
-// (bottom rows draw in front within a layer). Spot the difference each
+// (bottom cells draw in front within a layer). Spot the difference each
 // spin: jaw never clipped, bush clipped from below.
 
-await loadThunderkickSpines();
+const thunderkick = await loadSpineSet("thunderkick");
 
 const SPINE_SCALE = 0.6;
 const CELL_W = 175 * SPINE_SCALE;
 const CELL_H = 203 * SPINE_SCALE;
 
-const spineMap = buildThunderkickSpineMap();
+const spineMap = thunderkick.spineMap;
 
 const weights = {
   low1: 16, low2: 16, low3: 14, low4: 14, low5: 12,
@@ -44,7 +44,7 @@ prewarmSpinTextures({
 
 const reelSet = new ReelSetBuilder()
   .reels(6)
-  .visibleRowsPerReel(ROWS_PER_REEL)
+  .visibleCellsPerReel(ROWS_PER_REEL)
   .reelAnchor('center')
   .symbolSize(CELL_W, CELL_H)
   .symbolGap(0, 0)
@@ -54,7 +54,7 @@ const reelSet = new ReelSetBuilder()
     }
   })
   .weights(weights)
-  // The lesson: scatter is elevated, mystery is NOT (default layer) —
+  // The lesson: scatter is elevated, mystery is NOT (default layer) -
   // watch the bush get clipped by the tile below it while the jaw never is.
   .symbolData({ scatter: { zIndex: 10 } })
   // Synchronized settle: all reels start and stop together (no stagger),
@@ -67,10 +67,10 @@ const reelSet = new ReelSetBuilder()
 return {
   reelSet,
   nextResult: () => {
-    const grid = ROWS_PER_REEL.map((rows) =>
-      Array.from({ length: rows }, () => pickWeighted(weights)),
+    const grid = ROWS_PER_REEL.map((cells) =>
+      Array.from({ length: cells }, () => pickWeighted(weights)),
     );
-    // One scatter and one mystery per spin, in middle rows of the tall
+    // One scatter and one mystery per spin, in middle cells of the tall
     // reels so both always have a neighbour below to fight with.
     const midReels = [1, 2, 3, 4];
     const sReel = midReels[Math.floor(Math.random() * midReels.length)];

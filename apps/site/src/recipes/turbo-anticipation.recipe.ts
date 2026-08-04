@@ -3,7 +3,7 @@
 //
 // TURBO anticipation. SuperTurbo's profile has `anticipationDelay: 0`, so a
 // plain setAnticipation would skip the tease entirely. The per-call `duration`
-// override forces it to play anyway — the big "will I hit the bonus?" moment
+// override forces it to play anyway - the big "will I hit the bonus?" moment
 // survives turbo. No profile juggling.
 
 const IDS = ['9', '10', 'J', 'Q', 'K'];
@@ -14,14 +14,14 @@ const CARDS = CARD_DECK.filter((c) => IDS.includes(c.id));
 function rv() { return IDS[Math.floor(Math.random() * IDS.length)]; }
 
 const reelSet = new ReelSetBuilder()
-  .reels(REELS).visibleRows(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
+  .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
   .symbols((r) => {
     for (const c of CARDS) {
       r.register(c.id, CardSymbol, { color: c.color, label: c.label, textColor: c.textColor });
     }
     r.register(SCAT, CardSymbol, { color: 0xffcc44, label: 'F', textColor: 0x3a2600 });
   })
-  // Only SuperTurbo is registered — its anticipationDelay is 0.
+  // Only SuperTurbo is registered - its anticipationDelay is 0.
   .speed('superTurbo', SpeedPresets.SUPER_TURBO)
   .initialSpeed('superTurbo')
   .ticker(app.ticker)

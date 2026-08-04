@@ -45,15 +45,86 @@ jobs:
       - name: Typecheck
         run: pnpm --filter pixi-reels typecheck
 
+      - name: Typecheck fixtures
+        # `vite build` is transpile-only, so a fixture could use an API that
+        # no longer exists and still "build". The demo apps were doing exactly
+        # that before they moved out: passing string[][] to runCascade's
+        # nextGrid, which throws at runtime on the first cascade.
+        run: pnpm typecheck:fixtures
+
       - name: Test
         run: pnpm --filter pixi-reels test
+
+      - name: Test codemod
+        # The migration tool the docs tell users to run. Its 10 tests existed
+        # but nothing executed them, so it could rot unnoticed.
+        run: pnpm --filter pixi-reels-codemod test
+
+      - name: Build docs site
+        run: pnpm --filter site build
 
       - name: Build library + examples
         # `pnpm build` (root script) builds pixi-reels and every example app.
         # Catches regressions where the lib's published surface stops resolving
         # in a downstream consumer. e.g. a peer dep dropping out of a bundler's
         # static analysis path. Examples don't ship; this is purely a gate.
+        #
+        # MUST run before `Publish contents`: that step packs the package, and
+        # on a fresh checkout packages/pixi-reels/dist/ does not exist yet, so
+        # every dist entry point reads as missing and the job dies before the
+        # remaining gates ever run.
         run: pnpm build
+
+      - name: Publish contents
+        # npm drops a `files` entry that matches nothing, silently. README
+        # and LICENSE were both listed and both absent from the tarball.
+        run: pnpm check:publish-contents
+
+      - name: Doc links
+        # A doc pointing at a renamed recipe looks authoritative and 404s.
+        # Nothing else catches it: Astro renders a dead link happily.
+        run: pnpm check:doc-links
+
+  e2e:
+    # Browser coverage for the one thing unit tests structurally cannot reach:
+    # the real stack. WebGL, rAF, GSAP on the Pixi ticker, and the async spin
+    # lifecycle, across all four orientation x direction combinations.
+    #
+    # Deliberately NOT pixel diffing. A WebGL screenshot baseline is GPU- and
+    # platform-dependent, so one recorded on a dev machine fails here for
+    # reasons unrelated to the engine. These specs assert engine STATE through
+    # the debug snapshot instead.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - uses: pnpm/action-setup@b307475762933b98ed359c036b0e51f26b63b74b # v5.0.0
+
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Build docs site
+        # recipes-mount.spec.ts serves apps/site/dist via `astro preview`.
+        # It checks what actually ships, so a dev server would hide a
+        # bundling failure behind on-demand compilation.
+        run: pnpm --filter site build
+
+      - name: e2e
+        run: pnpm test:e2e
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: failure()
+        with:
+          name: playwright-traces
+          path: test-results/
+          retention-days: 7
 
   changeset-gate:
     # Fails the PR when library source changed but no changeset file was added.

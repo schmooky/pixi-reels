@@ -5,24 +5,23 @@ eyebrow: Start here
 description: Install pixi-reels and run your first reel set in under 2 minutes.
 ---
 
-pixi-reels is a reel engine you drop into any PixiJS v8 app. This page gets
-you from a fresh repo to a spinning reel set.
+pixi-reels is a reel engine. You drop it into a PixiJS v8 app.
 
-## Requirements
+## You need
 
-- Node 20+ and pnpm (or npm/yarn)
-- A PixiJS v8 app. the engine plugs into `app.ticker`
-- If you want `SpineSymbol`, also install `@esotericsoftware/spine-pixi-v8`
+- Node 20+, and pnpm or npm or yarn
+- A PixiJS v8 app. The engine runs off `app.ticker`
+- Spine symbols? Also install `@esotericsoftware/spine-pixi-v8`
 
 ## Install
 
 ```bash
 pnpm add pixi-reels pixi.js gsap
-# optional. for Spine symbols
+# only if you want Spine symbols
 pnpm add @esotericsoftware/spine-pixi-v8
 ```
 
-## Boot PixiJS, then build a ReelSet
+## Boot Pixi, build a ReelSet
 
 ```ts
 import { Application } from 'pixi.js';
@@ -35,7 +34,7 @@ document.body.appendChild(app.canvas);
 
 const reelSet = new ReelSetBuilder()
   .reels(5)
-  .visibleRows(3)
+  .visibleCells(3)
   .symbolSize(140, 140)
   .symbols((r) => {
     r.register('cherry', SpriteSymbol, { textures: { cherry: cherryTex } });
@@ -52,20 +51,21 @@ const result = await reelSet.spin();
 console.log(result.symbols);
 ```
 
-## Verify it works
+## Did it work
 
-You should see the reels spin briefly, then land on three random rows of
-symbols. If you see nothing:
+Reels spin. Reels stop. Three rows of random symbols.
 
-| Symptom | Fix |
+Nothing happened? One of these:
+
+| You see | Do this |
 |---|---|
-| Blank canvas | Call `reelSet.x = …; reelSet.y = …;`. it's anchored at (0,0). |
-| `ticker() must be called` | Forgot `.ticker(app.ticker)`. |
-| Symbols invisible | Forgot to call `.register(...)` for a weighted symbol id. |
+| Blank canvas | Set `reelSet.x` and `reelSet.y`. It sits at (0,0). |
+| `ticker() must be called` | You forgot `.ticker(app.ticker)`. |
+| Symbols invisible | The texture never loaded, or `symbolSize()` does not match your art. `resize()` runs on every swap. |
 
-## Next: pick your path
+## Where next
 
-- **Build your first real slot** → [Your first reelset](/guides/your-first-reelset/)
-- **Learn the spin API** → [Spin lifecycle](/guides/spin-lifecycle/)
-- **Write tests for a mechanic** → [Cheats & testing](/guides/cheats-and-testing/)
-- **See what's possible** → [Demos catalog](/demos/)
+- **Build a real slot** -> [Your first reelset](/guides/your-first-reelset/)
+- **Learn the spin API** -> [Spin lifecycle](/guides/spin-lifecycle/)
+- **Test a mechanic** -> [Cheats & testing](/guides/cheats-and-testing/)
+- **See what is possible** -> [Recipes](/recipes/)

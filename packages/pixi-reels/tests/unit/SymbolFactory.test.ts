@@ -1,5 +1,5 @@
 /**
- * M2 — the symbol recycle pool is sized to the grid so large / MultiWays grids
+ * M2 - the symbol recycle pool is sized to the grid so large / MultiWays grids
  * don't churn through destroy()+recreate. SymbolFactory honors the per-key
  * capacity it is handed (which the builder derives from the strip size).
  */
@@ -30,7 +30,7 @@ describe('SymbolFactory pool capacity', () => {
     const c = factory.acquire('a');
     factory.release(a);
     factory.release(b);
-    factory.release(c); // exceeds capacity 2 → destroyed
+    factory.release(c); // exceeds capacity 2 -> destroyed
     expect(c.isDestroyed).toBe(true);
     expect(a.isDestroyed).toBe(false);
     expect(b.isDestroyed).toBe(false);

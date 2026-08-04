@@ -16,7 +16,7 @@ const COLS = 5, ROWS = 3, SIZE = 90;
 
 const reelSet = new ReelSetBuilder()
   .reels(COLS)
-  .visibleRows(ROWS)
+  .visibleCells(ROWS)
   .symbolSize(SIZE, SIZE)
   .symbolGap(4, 4)
   .symbols((r) => {
@@ -39,13 +39,13 @@ const reelSet = new ReelSetBuilder()
 async function walkPinsLeft() {
   const current = [...reelSet.pins.values()];
   for (const pin of current) {
-    if (pin.col <= 0) {
-      reelSet.unpin(pin.col, pin.row);
+    if (pin.reel <= 0) {
+      reelSet.unpin(pin.reel, pin.cell);
       continue;
     }
     await reelSet.movePin(
-      { col: pin.col, row: pin.row },
-      { col: pin.col - 1, row: pin.row },
+      { reel: pin.reel, cell: pin.cell },
+      { reel: pin.reel - 1, cell: pin.cell },
       {
         duration: 350,
         easing: 'power2.inOut',
@@ -76,7 +76,7 @@ async function walkPinsLeft() {
 // Overlay event hook. fires whenever an overlay ReelSymbol is created
 // (at spin:start for every active pin). This is the Spine-animation hook:
 // for a SpineSymbol you'd cast and call `overlay.setAnimation('idle', true)`
-// or similar. Here we give every sticky-wild overlay a gentle pulse so it's
+// or similar. Here every sticky-wild overlay gets a gentle pulse so it's
 // distinct from the final cell render on land.
 reelSet.events.on('pin:overlayCreated', (_pin, overlay) => {
   gsap.fromTo(
@@ -103,11 +103,11 @@ reelSet.events.on('spin:allLanded', ({ symbols }) => {
 
 // Script: arrive on reel 4, then walk left on each subsequent spin.
 const arrivals = [
-  { col: 4, row: 1 },
+  { reel: 4, cell: 1 },
   null, // no new wild. existing one walks
   null,
   null,
-  { col: 3, row: 2 }, // a second walker arrives
+  { reel: 3, cell: 2 }, // a second walker arrives
   null,
 ];
 let spinCount = 0;
@@ -127,7 +127,7 @@ return {
         FILLER[Math.floor(Math.random() * FILLER.length)],
       ),
     );
-    if (arrival) grid[arrival.col][arrival.row] = WILD;
+    if (arrival) grid[arrival.reel][arrival.cell] = WILD;
     reelSet.setResult(grid.map((visible) => ({ visible })));
     await promise;
     spinCount++;

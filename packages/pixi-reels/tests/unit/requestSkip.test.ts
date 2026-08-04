@@ -3,7 +3,7 @@ import { createTestReelSet, expectGrid } from '../../src/testing/index.js';
 
 describe('ReelSet.requestSkip. pre-result-safe slam-stop', () => {
   it('queues until setResult and lands on the target grid (not buffer)', async () => {
-    const h = createTestReelSet({ reels: 3, visibleRows: 3, symbolIds: ['a', 'b', 'c'] });
+    const h = createTestReelSet({ reels: 3, visibleCells: 3, symbolIds: ['a', 'b', 'c'] });
 
     const grid = [
       ['a', 'b', 'c'],
@@ -26,7 +26,7 @@ describe('ReelSet.requestSkip. pre-result-safe slam-stop', () => {
   });
 
   it('falls through to skip() when result is already set', async () => {
-    const h = createTestReelSet({ reels: 3, visibleRows: 3, symbolIds: ['a', 'b'] });
+    const h = createTestReelSet({ reels: 3, visibleCells: 3, symbolIds: ['a', 'b'] });
 
     const grid = [
       ['a', 'a', 'a'],
@@ -44,7 +44,7 @@ describe('ReelSet.requestSkip. pre-result-safe slam-stop', () => {
   });
 
   it('is a no-op when not spinning', () => {
-    const h = createTestReelSet({ reels: 2, visibleRows: 2, symbolIds: ['a'] });
+    const h = createTestReelSet({ reels: 2, visibleCells: 2, symbolIds: ['a'] });
     expect(() => h.reelSet.requestSkip()).not.toThrow();
     expect(h.reelSet.isSpinning).toBe(false);
     h.destroy();

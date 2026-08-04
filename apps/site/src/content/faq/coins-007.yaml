@@ -1,8 +1,11 @@
 id: coins-007
 group: coins
 question: How do I show MINI/MINOR/MAJOR/GRAND jackpot plaques above the reels?
-answer: The plaques are game-layer UI — render them above the board and flash
-  them on `coin:locked` by `coin.data.kind`.
+answer: >-
+  The plaques are game-layer UI. Render them above the board and flash them on
+  `coin:locked` by `coin.data?.kind` -- type the board as
+  `HoldAndWinBuilder<{ kind: string }>` so the payload is typed, since `data` is
+  optional.
 links:
   - label: "Recipe: Hold & Win — Spine coins"
     href: /recipes/hold-and-win-spine/

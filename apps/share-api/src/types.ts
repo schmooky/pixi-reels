@@ -2,7 +2,7 @@
  * Wire-format types shared between share-api and the studio client.
  *
  * The studio in `apps/site` duplicates these (see
- * `apps/site/src/lib/studio/share/types.ts`) — the two stay in sync by
+ * `apps/site/src/lib/studio/share/types.ts`); the two stay in sync by
  * convention because the share-api's tsconfig doesn't reach into the
  * site app. JSON shape is intentionally simple so drift is obvious.
  */
@@ -20,7 +20,7 @@ export const SHARE_SCHEMA_VERSION = 1 as const;
  *   5. public                            assetsEncrypted=false, codeAccessible=true, editable=false
  *
  * `codeAccessible` is a *display* flag (whether the viewer shows the
- * Code tab after decrypt), not a storage flag — server stores the code
+ * Code tab after decrypt), not a storage flag; server stores the code
  * inside the encrypted envelope regardless. Only mode 5 stores the code
  * in plaintext (in `SharePayload`).
  */
@@ -38,7 +38,7 @@ export interface ShareMode {
 
 /**
  * Plaintext metadata, returned on every GET. The save-key hash and the
- * analytics block stay server-side — viewers never see them.
+ * analytics block stay server-side; viewers never see them.
  */
 export interface ShareMeta {
   v: typeof SHARE_SCHEMA_VERSION;
@@ -52,7 +52,7 @@ export interface ShareMeta {
    */
   saveKeyHash?: string;
   /**
-   * Operator analytics — counts and sizes the operator can aggregate
+   * Operator analytics: counts and sizes the operator can aggregate
    * without decrypting anything. Stripped from GET responses.
    */
   analytics: ShareAnalytics;
@@ -88,7 +88,7 @@ export interface ShareEnvelope {
 /**
  * Plaintext payload for mode 5 (public), or the *decrypted* contents
  * of the envelope for modes 1-4. The two paths converge here in the
- * client — once you have a `SharePayload`, you have the studio config.
+ * client: once you have a `SharePayload`, you have the studio config.
  */
 export interface SharePayload {
   v: typeof SHARE_SCHEMA_VERSION;
@@ -97,7 +97,7 @@ export interface SharePayload {
   /**
    * Asset blobs keyed by content hash (sha256 hex, same convention as
    * the studio's IndexedDB). Each value is base64 of the raw bytes.
-   * Bundled into a single object for transport simplicity — at the v1
+   * Bundled into a single object for transport simplicity: at the v1
    * scale (a few spine bundles per share) this is well under any
    * useful cap. Refactor to per-asset S3 objects when shares routinely
    * exceed ~20 MB.
@@ -129,13 +129,13 @@ export interface CreateShareRequest {
 
 export interface CreateShareResponse {
   id: string;
-  /** Viewer URL — points at the docs site, not the share-api host. */
+  /** Viewer URL: points at the docs site, not the share-api host. */
   url: string;
   expiresAt: number;
 }
 
 export interface UpdateShareRequest {
-  /** Required — server verifies via PBKDF2 + constant-time compare. */
+  /** Required. Server verifies via PBKDF2 + constant-time compare. */
   saveKey: string;
   envelope: Omit<ShareEnvelope, 'v'>;
 }

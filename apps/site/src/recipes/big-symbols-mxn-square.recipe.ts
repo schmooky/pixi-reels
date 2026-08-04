@@ -14,7 +14,7 @@ const GAP = 3;
 
 const reelSet = new ReelSetBuilder()
   .reels(REELS)
-  .visibleRows(ROWS)
+  .visibleCells(ROWS)
   .symbolSize(SIZE, SIZE)
   .symbolGap(GAP, GAP)
   .maskStrategy(new SharedRectMaskStrategy())
@@ -27,8 +27,8 @@ const reelSet = new ReelSetBuilder()
     });
   })
   .weights(Object.fromEntries(CARD_DECK.map((c, i) => [c.id, 12 - i])))
-  .symbolData({ [SQUARE.id]: { weight: 0, zIndex: 5, size: { w: SQUARE.w, h: SQUARE.h } } })
-  // Big symbols are visually massive (a 2x2 anchor is ~2x cell size);
+  .symbolData({ [SQUARE.id]: { weight: 0, zIndex: 5, size: { reels: SQUARE.w, cells: SQUARE.h } } })
+  // Big symbols are large (a 2x2 anchor is ~2x cell size);
   // the default 56px landing bounce overshoots into adjacent cells and
   // reads as a broken landing. Zero the bounce so the anchor lands
   // flush on grid. Keeps the decelerationEase intact so the brake-in
@@ -45,9 +45,9 @@ return {
       Array.from({ length: ROWS }, () => CARD_DECK[Math.floor(Math.random() * CARD_DECK.length)].id),
     );
     // Always plant the square so the demo always shows the mechanic.
-    const col = Math.floor(Math.random() * (REELS - SQUARE.w + 1));
-    const row = Math.floor(Math.random() * (ROWS - SQUARE.h + 1));
-    grid[col][row] = SQUARE.id;
+    const reel = Math.floor(Math.random() * (REELS - SQUARE.w + 1));
+    const cell = Math.floor(Math.random() * (ROWS - SQUARE.h + 1));
+    grid[reel][cell] = SQUARE.id;
     return grid;
   },
 };

@@ -23,7 +23,7 @@ const col3 = () => [filler(), filler(), filler()];
 
 const reelSet = new ReelSetBuilder()
   .reels(5)
-  .visibleRows(3)
+  .visibleCells(3)
   .symbolSize(72, 72)
   .symbolGap(4, 4)
   .symbols((r) => {
@@ -62,7 +62,7 @@ return {
     try {
       await reelSet.nudge(2, {
         distance: 1,
-        direction: 'down',
+        direction: 'forward',
         incoming: ['wild'],
         duration: 2000,
         signal: controller.signal,

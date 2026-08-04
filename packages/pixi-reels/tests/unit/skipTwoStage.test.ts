@@ -15,7 +15,7 @@ function registerAllSpeeds(reelSet: ReelSet): void {
 
 describe('ReelSet.skip. round-aware slam + boost', () => {
   it('first press slams the current spin AND boosts speed for the rest of the round', async () => {
-    const h = createTestReelSet({ reels: 3, visibleRows: 3, symbolIds: ['a', 'b'] });
+    const h = createTestReelSet({ reels: 3, visibleCells: 3, symbolIds: ['a', 'b'] });
     registerAllSpeeds(h.reelSet);
     const boosted: Array<{ previous: SpeedProfile; current: SpeedProfile }> = [];
     h.reelSet.events.on('skip:boosted', (info) => boosted.push(info));
@@ -44,7 +44,7 @@ describe('ReelSet.skip. round-aware slam + boost', () => {
   });
 
   it('subsequent presses in the same round also slam (no duplicate boost)', async () => {
-    const h = createTestReelSet({ reels: 3, visibleRows: 2, symbolIds: ['a', 'b'] });
+    const h = createTestReelSet({ reels: 3, visibleCells: 2, symbolIds: ['a', 'b'] });
     registerAllSpeeds(h.reelSet);
     const boosted: unknown[] = [];
     h.reelSet.events.on('skip:boosted', (info) => boosted.push(info));
@@ -67,7 +67,7 @@ describe('ReelSet.skip. round-aware slam + boost', () => {
   });
 
   it('restores the previous speed profile on the next spin', async () => {
-    const h = createTestReelSet({ reels: 2, visibleRows: 2, symbolIds: ['a'] });
+    const h = createTestReelSet({ reels: 2, visibleCells: 2, symbolIds: ['a'] });
     registerAllSpeeds(h.reelSet);
     const grid = [['a', 'a'], ['a', 'a']];
 
@@ -93,7 +93,7 @@ describe('ReelSet.skip. round-aware slam + boost', () => {
   });
 
   it('falls through to slam on first press when already on the fastest profile', async () => {
-    const h = createTestReelSet({ reels: 2, visibleRows: 2, symbolIds: ['a'] });
+    const h = createTestReelSet({ reels: 2, visibleCells: 2, symbolIds: ['a'] });
     registerAllSpeeds(h.reelSet);
     h.reelSet.setSpeed('superTurbo');
     const grid = [['a', 'a'], ['a', 'a']];
@@ -112,7 +112,7 @@ describe('ReelSet.skip. round-aware slam + boost', () => {
   });
 
   it('falls through to slam on first press when only one speed profile is registered', async () => {
-    const h = createTestReelSet({ reels: 2, visibleRows: 2, symbolIds: ['a'] });
+    const h = createTestReelSet({ reels: 2, visibleCells: 2, symbolIds: ['a'] });
     // Default test builder registers only 'normal'. no boost target available.
     const grid = [['a', 'a'], ['a', 'a']];
     const boosted: unknown[] = [];
@@ -129,7 +129,7 @@ describe('ReelSet.skip. round-aware slam + boost', () => {
   });
 
   it('slamStop() bypasses the boost and lands on a single call', async () => {
-    const h = createTestReelSet({ reels: 2, visibleRows: 2, symbolIds: ['a'] });
+    const h = createTestReelSet({ reels: 2, visibleCells: 2, symbolIds: ['a'] });
     registerAllSpeeds(h.reelSet);
     const grid = [['a', 'a'], ['a', 'a']];
     const boosted: unknown[] = [];
@@ -147,7 +147,7 @@ describe('ReelSet.skip. round-aware slam + boost', () => {
   });
 
   it('requestSkip() bypasses the boost when deferred until setResult', async () => {
-    const h = createTestReelSet({ reels: 2, visibleRows: 2, symbolIds: ['a'] });
+    const h = createTestReelSet({ reels: 2, visibleCells: 2, symbolIds: ['a'] });
     registerAllSpeeds(h.reelSet);
     const grid = [['a', 'a'], ['a', 'a']];
     const boosted: unknown[] = [];
@@ -165,11 +165,11 @@ describe('ReelSet.skip. round-aware slam + boost', () => {
   });
 
   it('does not clobber a manual speed change between rounds', async () => {
-    const h = createTestReelSet({ reels: 2, visibleRows: 2, symbolIds: ['a'] });
+    const h = createTestReelSet({ reels: 2, visibleCells: 2, symbolIds: ['a'] });
     registerAllSpeeds(h.reelSet);
     const grid = [['a', 'a'], ['a', 'a']];
 
-    // Round 1: press skip, boost normal → superTurbo + slam.
+    // Round 1: press skip, boost normal -> superTurbo + slam.
     const first = h.reelSet.spin();
     h.reelSet.setResult(grid.map((visible) => ({ visible })));
     h.reelSet.skipSpin();

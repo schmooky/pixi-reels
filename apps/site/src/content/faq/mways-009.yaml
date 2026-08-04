@@ -1,8 +1,10 @@
 id: mways-009
 group: mways
 question: How do I anticipate on a tall reel that is about to grow?
-answer: Use `setAnticipation` on the reel about to grow; the AdjustPhase plays
-  after it lands.
+answer: >-
+  Call `setAnticipation([reelIndex], options)` for the reel about to grow. The
+  reshape runs between SPIN and STOP -- before the tease and before the reel
+  lands -- so the reel is already at its new size while it teases.
 links:
   - label: "Guide: MultiWays"
     href: /guides/multiways/

@@ -3,47 +3,57 @@ title: Buffer indexing
 order: 10
 eyebrow: Building blocks
 description: How ColumnTarget indices map to cells in initialFrame and
-  setResult. Visible rows, buffer-above, buffer-below.
+  setResult. Visible cells, buffer start, buffer end.
 ---
 
-After reading this you will know how the indices of a `ColumnTarget` map onto the cells of one reel: the visible window and the buffer cells above and below it.
+A reel is longer than what you see. `ColumnTarget` addresses the whole thing.
 
 ## Why buffers exist
 
-Each reel keeps a few hidden cells above the visible window and a few below it. They scroll into view briefly during spins, hold the next symbol that will wrap onto the strip, and let win animations pan upward or downward without revealing empty strip. The count is set globally on the builder via `.bufferSymbols(n)`.
+Every reel keeps a few hidden cells past each end of the visible window.
 
-Most slots use `bufferSymbols(1)` or `bufferSymbols(2)`. Numbers above `2` are unusual.
+They earn their keep three ways. They hold the next symbol about to wrap onto
+the strip. They scroll through view during a spin, so motion looks continuous.
+And they let a win animation pan past the edge without showing bare strip.
+
+Set the count with `.bufferSymbols(n)`. Most slots use 1 or 2. Above 2 is
+unusual.
 
 ## ColumnTarget
 
 ```text
 ColumnTarget
-├─ visible       : string[]                    # length = visibleRows
-├─ bufferAbove?  : (string | undefined)[]      # [0] closest to visible, max = bufferSymbols
-└─ bufferBelow?  : (string | undefined)[]      # [0] closest to visible, max = bufferSymbols
+├─ visible       : string[]                    # length = visibleCells
+├─ bufferStart?  : (string | undefined)[]      # [0] closest to visible
+└─ bufferEnd?    : (string | undefined)[]      # [0] closest to visible
 ```
 
-One object per reel. Pass an array of these to `ReelSet.setResult` or `ReelSetBuilder.initialFrame`. Both accept the same shape.
+One object per reel. Hand an array of them to `ReelSet.setResult` or
+`ReelSetBuilder.initialFrame`. Same shape, both places.
 
-## Index-to-cell map
+**Start is the smaller screen coordinate.** Above on a vertical set, left on a
+horizontal one. It does NOT follow travel direction. See
+[Orientation & direction](/guides/orientation-and-direction/).
 
-For one column on a reel with `bufferSymbols(2)`, `visibleRows(3)` (total strip length: 7 cells):
+## Which index is which cell
+
+One reel. `bufferSymbols(2)`, `visibleCells(3)`. Seven cells total:
 
 ```text
-┌──────────────────────┬──────────────────┬─────────────────────────────┐
-│ ColumnTarget field   │ Cell             │ Visible to player at rest?  │
-├──────────────────────┼──────────────────┼─────────────────────────────┤
-│ bufferAbove[1]       │ buffer-above 1   │ no, furthest above the mask │
-│ bufferAbove[0]       │ buffer-above 0   │ no, closest above the mask  │
-│ visible[0]           │ visible row 0    │ yes, top                    │
-│ visible[1]           │ visible row 1    │ yes, middle                 │
-│ visible[2]           │ visible row 2    │ yes, bottom                 │
-│ bufferBelow[0]       │ buffer-below 0   │ no, closest below the mask  │
-│ bufferBelow[1]       │ buffer-below 1   │ no, furthest below the mask │
-└──────────────────────┴──────────────────┴─────────────────────────────┘
+┌────────────────────┬──────────────────┬────────────────────────────┐
+│ ColumnTarget field │ Cell             │ Player sees it at rest?    │
+├────────────────────┼──────────────────┼────────────────────────────┤
+│ bufferStart[1]     │ buffer start 1   │ no, furthest past the edge │
+│ bufferStart[0]     │ buffer start 0   │ no, just past the edge     │
+│ visible[0]         │ visible cell 0   │ yes, first                 │
+│ visible[1]         │ visible cell 1   │ yes, middle                │
+│ visible[2]         │ visible cell 2   │ yes, last                  │
+│ bufferEnd[0]       │ buffer end 0     │ no, just past the edge     │
+│ bufferEnd[1]       │ buffer end 1     │ no, furthest past the edge │
+└────────────────────┴──────────────────┴────────────────────────────┘
 ```
 
-Buffer cells are hidden behind the viewport mask at rest. They become visible briefly during a spin when the strip scrolls them past.
+Buffers hide behind the mask at rest. They flash through during a spin.
 
 ## Example
 
@@ -51,28 +61,41 @@ Buffer cells are hidden behind the viewport mask at rest. They become visible br
 import type { ColumnTarget } from 'pixi-reels';
 
 const grid: ColumnTarget[] = [
-  { visible: ['A', 'B', 'C'], bufferAbove: ['COIN', 'WILD'] },
-  { visible: ['A', 'B', 'C'], bufferBelow: ['SCATTER'] },
+  { visible: ['A', 'B', 'C'], bufferStart: ['COIN', 'WILD'] },
+  { visible: ['A', 'B', 'C'], bufferEnd: ['SCATTER'] },
 ];
 
 reelSet.setResult(grid);
-// Same shape works at build time:
+// Same shape at build time:
 builder.initialFrame(grid);
 ```
 
-`bufferAbove[0]` is the slot closest to the visible top row. `bufferAbove[1]` is one above that. Entries past `bufferSymbols` are ignored. The same convention applies to `bufferBelow`, in the downward direction.
+`bufferStart[0]` is the slot nearest the visible window. `[1]` is one further
+out. Anything past `bufferSymbols` is dropped -- and the engine throws rather
+than dropping it silently, so you find out at the call, not three spins later.
 
-## Random fill
+## Cells you skip
 
-Any cell you do not set is filled by the random symbol provider. Buffer cells get a separate "buffer" pass from the provider, so buffer-only symbol weights are configurable separately from visible-area draws.
+Anything you leave unset gets a random symbol.
 
-## Buffer rows and big symbols
+Buffer cells are filled in the same pass, from the same weight table -- there
+is no separate buffer weighting. To make off-window fill differ from what
+lands in view, register your own `FrameMiddleware` at a priority above
+`random-fill`.
 
-A big-symbol anchor (`SymbolData.size.h > 1`) can sit in `bufferAbove[i]` or at a visible row whose stubs spill into `bufferBelow`. The coordinator paints `OCCUPIED` across the rest of the block automatically. Passing the anchor alone is enough. The validation rule is `anchorRow + h <= visibleRows + bufferBelow`: the block must fit on the strip end-to-end, not necessarily inside the visible window.
+## Big symbols in buffers
+
+A big-symbol anchor (`size.cells > 1`) can sit in `bufferStart[i]`, or in a
+visible cell whose block spills into `bufferEnd`. Pass the anchor. The
+coordinator paints `OCCUPIED` across the rest of the block for you.
+
+The rule: the block must fit on the STRIP, not inside the visible window.
+`anchor + cells <= visibleCells + bufferEnd`. That is what makes a
+tail-visible block possible -- most of it hidden, one cell peeking in.
 
 ## See also
 
-- [Peek symbol from buffer-above](/recipes/peek-from-above/) for the minimum runnable demo.
-- [Anticipation teaser](/recipes/anticipation-teaser/) for pairing buffer-above with `setAnticipation`.
-- [Land a big symbol partially in buffer](/recipes/big-symbol-partial-land/) for a tail-visible 1xH wild via `bufferAbove`.
-- [API: ReelSet](/docs/api-reelset/) for the full `setResult` signature.
+- [Peek symbol from the buffer](/recipes/peek-from-above/) -- smallest runnable version
+- [Anticipation teaser](/recipes/anticipation-teaser/) -- buffer plus `setAnticipation`
+- [Land a big symbol partially in buffer](/recipes/big-symbol-partial-land/) -- tail-visible wild
+- [API: ReelSet](/docs/api-reelset/) -- the full `setResult` signature

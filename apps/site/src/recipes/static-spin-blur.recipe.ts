@@ -18,7 +18,7 @@ const weights = {
   wild: 3,
 };
 
-// One cache for the whole reel set — snapshots are shared across every
+// One cache for the whole reel set; snapshots are shared across every
 // cell and every spin.
 const cache = new SpinTextureCache({ renderer: app.renderer });
 
@@ -38,7 +38,7 @@ for (const sym of SYMBOLS) {
 
 const reelSet = new ReelSetBuilder()
   .reels(5)
-  .visibleRows(3)
+  .visibleCells(3)
   .symbolSize(SIZE, SIZE)
   .symbolGap(4, 4)
   .symbols((r) => {

@@ -9,7 +9,7 @@ function buildCascadeHarness() {
   const ticker = new FakeTicker();
   const reelSet = new ReelSetBuilder()
     .reels(3)
-    .visibleRows(3)
+    .visibleCells(3)
     .symbolSize(100, 100)
     .ticker(ticker as unknown as Ticker)
     .speed('normal', SpeedPresets.NORMAL)
@@ -58,7 +58,7 @@ describe('ReelSet.skip. cascade auto-slam', () => {
     // Moment B. a refill in the same round. Auto-slam flag set means
     // the phase chain is bypassed and the round ends synchronously.
     const refilled = h.reelSet.refill({
-      winners: [{ reel: 0, row: 0 }, { reel: 1, row: 0 }, { reel: 2, row: 0 }],
+      winners: [{ reel: 0, cell: 0 }, { reel: 1, cell: 0 }, { reel: 2, cell: 0 }],
       grid: [
         { visible: ['b', 'a', 'b'] },
         { visible: ['a', 'b', 'a'] },

@@ -5,11 +5,11 @@
 [![Bundle size](https://img.shields.io/bundlephobia/minzip/pixi-reels?label=gzip)](https://bundlephobia.com/package/pixi-reels)
 [![CI](https://github.com/schmooky/pixi-reels/actions/workflows/ci.yml/badge.svg)](https://github.com/schmooky/pixi-reels/actions/workflows/ci.yml)
 [![Release](https://github.com/schmooky/pixi-reels/actions/workflows/npm-publish.yml/badge.svg)](https://github.com/schmooky/pixi-reels/actions/workflows/npm-publish.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](./LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://github.com/schmooky/pixi-reels/blob/main/LICENSE)
 [![PixiJS v8](https://img.shields.io/badge/PixiJS-v8-e91e63)](https://pixijs.com/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 
-`pixi-reels` 1.0.0 is a reel engine for [PixiJS v8](https://pixijs.com/). It ships reel-only primitives: spin lifecycle, symbols, speed profiles, pins, cascades, win presenter. Win math, paytable math, RNG, and audio live in consumer code.
+`pixi-reels` is a reel engine for [PixiJS v8](https://pixijs.com/). It ships reel-only primitives: spin lifecycle, symbols, speed profiles, pins, cascades, win presenter. Win math, paytable math, RNG, and audio live in consumer code.
 
 Install:
 
@@ -17,7 +17,7 @@ Install:
 pnpm add pixi-reels pixi.js gsap
 ```
 
-Docs and recipes at [pixi-reels.schmooky.dev](https://pixi-reels.schmooky.dev). Agent-facing instructions are in [AGENTS.md](./AGENTS.md).
+Docs and recipes at [pixi-reels.schmooky.dev](https://pixi-reels.schmooky.dev). Agent-facing instructions are in [AGENTS.md](https://github.com/schmooky/pixi-reels/blob/main/AGENTS.md).
 
 ## Quick start
 
@@ -30,7 +30,7 @@ await app.init({ width: 900, height: 540, background: '#0a0d14' });
 document.body.appendChild(app.canvas);
 
 const reelSet = new ReelSetBuilder()
-  .reels(5).visibleRows(3).symbolSize(140, 140)
+  .reels(5).visibleCells(3).symbolSize(140, 140)
   .symbols((r) => {
     r.register('cherry', SpriteSymbol, { textures: { cherry: cherryTex } });
     r.register('seven',  SpriteSymbol, { textures: { seven:  sevenTex } });
@@ -50,6 +50,34 @@ reelSet.setResult(result.map((visible) => ({ visible })));
 await spin;
 ```
 
+## Any orientation, any direction
+
+One engine runs four layouts. Anticipation, cascades, spotlight, pins, big
+symbols, pyramids and MultiWays all work in every one of them.
+
+```ts
+new ReelSetBuilder()
+  .orientation('horizontal')   // strip travels on X, reels march down Y
+  .direction('reverse')        // ...and travels right-to-left
+  .directionPerReel(['forward', 'reverse', 'forward'])  // or mix per reel
+```
+
+|  | `direction('forward')` | `direction('reverse')` |
+|---|---|---|
+| `orientation('vertical')` | symbols fall (the default) | a roll-up |
+| `orientation('horizontal')` | a sideways banner | ...running the other way |
+
+Screen-space inputs stay screen-space: `symbolSize(width, height)`,
+`ReelSymbol.resize(width, height)` and `getCellBounds` never change meaning,
+so a horizontal set is the vertical one transposed and your own symbol
+classes need no changes. Grid indices do not move either -- cell
+`(reel, cell)` means the same thing whichever way the strip runs.
+
+Travel changes motion; facing changes art; they never change each other. A
+reel spinning sideways still renders every symbol upright.
+
+See [the guide](https://pixi-reels.schmooky.dev/guides/orientation-and-direction/).
+
 ## Core API at a glance
 
 ```ts
@@ -66,7 +94,17 @@ reelSet.events.on('spin:reelLanded', (i, s) => {/* ... */})
 reelSet.destroy()                               // Full teardown
 ```
 
-See [/api/](https://pixi-reels.schmooky.dev/api/) for the full TypeDoc reference and [docs/migrating-to-1-0/](https://pixi-reels.schmooky.dev/docs/migrating-to-1-0/) for the breaking-change list.
+See [/api/](https://pixi-reels.schmooky.dev/api/) for the full TypeDoc reference.
+Upgrading? [Migrating to 2.0](https://pixi-reels.schmooky.dev/docs/migrating-to-2-0/)
+lists every breaking change and starts with the codemod.
+
+The codemod is not on npm yet, so run it from a clone:
+
+```bash
+git clone https://github.com/schmooky/pixi-reels
+cd pixi-reels && pnpm install
+node packages/pixi-reels-codemod/bin/cli.js v1-to-v2 /path/to/your/src
+```
 
 ## Spine symbols (optional subpath)
 
@@ -94,24 +132,24 @@ In the browser console (or via Playwright / agent eval):
 ```
 __PIXI_REELS_DEBUG.log()       // ASCII grid + state snapshot
 __PIXI_REELS_DEBUG.snapshot()  // Full JSON state
-__PIXI_REELS_DEBUG.trace()     // Log every domain event as it fires
+__PIXI_REELS_DEBUG.trace()     // Log spin, skip, speed, spotlight, shape, pin events
 ```
 
 ## Examples
 
-Runnable apps in [`examples/`](examples/):
+Runnable demos live on the docs site under [`/recipes`](https://pixi-reels.pages.dev/recipes/) -- about 130 of them, each with its full source next to it, covering line pays, cascades, hold and win, big symbols, nudge, anticipation and every mechanic that used to have its own example app. They run in the page, so there is nothing to clone or start.
 
-| Example          | What it shows                                              | Run                                    |
-|------------------|------------------------------------------------------------|----------------------------------------|
-| `classic-spin`   | 5x3 line-pay slot with sprite symbols and speed toggle     | `pnpm --filter classic-spin dev`       |
-| `cascade-tumble` | 6x5 tumble mechanic with win spotlight between stages      | `pnpm --filter cascade-tumble dev`     |
-| `sandbox`        | Single editable TS file, HMR rebuild                       | `pnpm --filter sandbox dev`            |
+```bash
+pnpm site:dev     # the whole recipe set, locally
+```
+
+The standalone `examples/` apps moved to their own repo in 2.0. Keeping two parallel demo surfaces in one repo meant every API change had to be made twice, and the example half kept losing.
 
 ## Peer dependencies
 
-- `pixi.js` ^8.17.0
-- `gsap` ^3.14.0
-- `@esotericsoftware/spine-pixi-v8` ^4.2.108 (optional, only if you use `SpineReelSymbol`)
+- `pixi.js` ^8.18.1
+- `gsap` ^3.15.0
+- `@esotericsoftware/spine-pixi-v8` ~4.2.110 (optional, only if you use `SpineReelSymbol`)
 
 ## Contributing
 

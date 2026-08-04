@@ -1,6 +1,6 @@
 // @ts-nocheck
 // Injected globals: ReelSetBuilder, SpeedPresets, SpineReelSymbol,
-//                   loadGeneratedSpines, buildSpineMap, SharedRectMaskStrategy,
+//                   loadSpineSet, buildSpineMap, SharedRectMaskStrategy,
 //                   PIXI, gsap, app, textures, blurTextures, SYMBOL_IDS,
 //                   pickWeighted
 //
@@ -12,7 +12,7 @@
 // Reuses the wild skeleton for the 2x2 BIGWILD. Spine scales the whole
 // rig to whatever cell box the engine hands it without losing crispness.
 
-await loadGeneratedSpines();
+await loadSpineSet("generated");
 
 const REELS = 5;
 const ROWS = 4;
@@ -36,7 +36,7 @@ const CARDS = IDS.filter((id) => id !== 'wild' && id !== 'bigWild');
 
 const reelSet = new ReelSetBuilder()
   .reels(REELS)
-  .visibleRows(ROWS)
+  .visibleCells(ROWS)
   .symbolSize(SIZE, SIZE)
   .symbolGap(GAP, GAP)
   .maskStrategy(new SharedRectMaskStrategy())
@@ -65,7 +65,7 @@ const reelSet = new ReelSetBuilder()
   // engine's internal big-symbol convention (~500).
   .symbolData({
     wild:    { weight: 3, zIndex: 999 },
-    bigWild: { weight: 0, zIndex: 1000, size: { w: 2, h: 2 } },
+    bigWild: { weight: 0, zIndex: 1000, size: { reels: 2, cells: 2 } },
   })
   // Big symbols make the default 56px landing bounce look broken.
   // the 2x2 wild overshoots into adjacent cells. Zero the bounce so
@@ -84,8 +84,8 @@ const LANDING_MS = 350;
 function syncIdle() {
   for (let r = 0; r < reelSet.reelCount; r++) {
     const reel = reelSet.getReel(r);
-    for (let row = 0; row < reel.visibleRows; row++) {
-      const sym = reel.getSymbolAt(row);
+    for (let cell = 0; cell < reel.visibleCells; cell++) {
+      const sym = reel.getSymbolAt(cell);
       if (sym instanceof SpineReelSymbol) sym.stopAnimation();
     }
   }
@@ -103,9 +103,9 @@ return {
     );
     // Drop a 2x2 bigWild every other spin so the demo always shows it.
     if (spinCount++ % 2 === 0) {
-      const col = Math.floor(Math.random() * (REELS - 1));
-      const row = Math.floor(Math.random() * (ROWS - 1));
-      grid[col][row] = 'bigWild';
+      const reel = Math.floor(Math.random() * (REELS - 1));
+      const cell = Math.floor(Math.random() * (ROWS - 1));
+      grid[reel][cell] = 'bigWild';
     }
     return grid;
   },

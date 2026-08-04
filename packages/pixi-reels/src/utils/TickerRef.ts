@@ -1,7 +1,7 @@
 import type { Ticker } from 'pixi.js';
 import type { Disposable } from './Disposable.js';
 
-type TickerCallback = (ticker: Ticker) => void;
+export type TickerCallback = (ticker: Ticker) => void;
 
 /**
  * Safe wrapper around PixiJS Ticker subscriptions.

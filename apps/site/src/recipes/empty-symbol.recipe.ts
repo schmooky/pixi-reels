@@ -20,7 +20,7 @@
 //     is that id when "no symbol" is the desired visual.
 //
 // What this recipe runs:
-//   - 3 reels, 3 visible rows. Symbol set is `{ coin, empty }`.
+//   - 3 reels, 3 visible cells. Symbol set is `{ coin, empty }`.
 //   - The coin is the production Spine gold coin (GoldCoinSymbol).
 //   - Weights `{ coin: 1, empty: 6 }`. most cells land blank; coins
 //     scatter sparsely (~1 in 7 by weight).
@@ -44,7 +44,7 @@ probe.destroy();
 
 const reelSet = new ReelSetBuilder()
   .reels(REELS)
-  .visibleRows(ROWS)
+  .visibleCells(ROWS)
   .symbolSize(CELL, CELL)
   .symbolGap(GAP, GAP)
   // Spine content ignores the per-reel rect mask; the shared strategy plus
@@ -55,7 +55,15 @@ const reelSet = new ReelSetBuilder()
     registry.register(EMPTY, EmptySymbol, {});
   })
   .weights({ [COIN]: 1, [EMPTY]: 6 })
-  .initialFrame(Array.from({ length: REELS }, () => ({ visible: [EMPTY, EMPTY, EMPTY], bufferAbove: [EMPTY], bufferBelow: [EMPTY] })))
+  // Seed two coins. A board of pure EMPTY is what this recipe is ABOUT,
+  // but an all-blank canvas on arrival is indistinguishable from a demo
+  // that failed to load, so the opening frame shows the contrast the
+  // recipe is teaching: blank cells with a coin sitting in them.
+  .initialFrame([
+    { visible: [EMPTY, COIN, EMPTY], bufferStart: [EMPTY], bufferEnd: [EMPTY] },
+    { visible: [EMPTY, EMPTY, EMPTY], bufferStart: [EMPTY], bufferEnd: [EMPTY] },
+    { visible: [COIN, EMPTY, EMPTY], bufferStart: [EMPTY], bufferEnd: [EMPTY] },
+  ])
   .speed('normal', SpeedPresets.NORMAL)
   .ticker(app.ticker)
   .build();
@@ -68,9 +76,16 @@ return {
     // Coins scatter sparsely; buffers are forced empty so nothing spills.
     const grid = Array.from({ length: REELS }, () => ({
       visible: Array.from({ length: ROWS }, () => pickWeighted({ [COIN]: 1, [EMPTY]: 6 })),
-      bufferAbove: [EMPTY],
-      bufferBelow: [EMPTY],
+      bufferStart: [EMPTY],
+      bufferEnd: [EMPTY],
     }));
+    // At 1:6 odds across 9 cells, roughly a quarter of spins land no coin
+    // at all -- correct for the weighting, but it makes the demo look
+    // broken rather than sparse. Force one so every spin shows a coin
+    // against blank cells. A real game would let the weights stand.
+    if (!grid.some((col) => col.visible.includes(COIN))) {
+      grid[Math.floor(Math.random() * REELS)].visible[Math.floor(Math.random() * ROWS)] = COIN;
+    }
     reelSet.setResult(grid);
     await spin;
   },

@@ -41,8 +41,8 @@ import {
   EmptySymbol,
 } from 'pixi-reels';
 import { SpineReelSymbol } from 'pixi-reels/spine';
-import { BlurSpriteSymbol } from '../../../../examples/shared/BlurSpriteSymbol.ts';
-import { CardSymbol, CARD_DECK, WILD_CARD } from '../../../../examples/shared/CardSymbol.ts';
+import { BlurSpriteSymbol } from '../runtime/BlurSpriteSymbol.ts';
+import { CardSymbol, CARD_DECK, WILD_CARD } from 'pixi-reels';
 import {
   CoinSymbol,
   COIN_TIER,
@@ -52,13 +52,14 @@ import {
   coinValue,
   coinMultiplier,
   drawCoin,
-} from '../../../../examples/shared/CoinSymbol.ts';
-import { loadPrototypeSymbols } from '../../../../examples/shared/prototypeSpriteLoader.ts';
+} from '../runtime/CoinSymbol.ts';
+import { loadPrototypeSymbols } from '../runtime/prototypeSpriteLoader.ts';
 import {
   loadGeneratedSpines,
   buildSpineMap,
-} from '../../../../examples/shared/generatedSpineLoader.ts';
+} from '../runtime/generatedSpineLoader.ts';
 import { transform as sucraseTransform } from 'sucrase';
+import { runRecipeSource } from '@/lib/recipeGlobals';
 import {
   loadConfig,
   saveConfig,
@@ -106,7 +107,7 @@ function buildReels() {
 
   const reelSet = new ReelSetBuilder()
     .reels(5)
-    .visibleRows(3)
+    .visibleCells(3)
     .symbolSize(90, 90)
     .symbolGap(4, 4)
     .symbols((r) => {
@@ -242,7 +243,7 @@ export default function Studio() {
   // after first paint so very fast IDB+atlas loads don't flash a 1-frame
   // skeleton. Mirrors RecipeRunner's pattern.
   const showSkeleton = useMinDisplay(isBooting, 250);
-  // Set when a recipe link (#code=…) arrives and we already have saved work
+  // Set when a recipe link (#code=...) arrives and we already have saved work
   // in IDB. opens the overwrite/preview/cancel modal. While non-null the
   // user hasn't decided yet; the persisted config stays untouched.
   const [pendingHashCode, setPendingHashCode] = useState<string | null>(null);
@@ -283,7 +284,7 @@ export default function Studio() {
       // Three landing states:
       //   1. hash + prior work → load persisted as initial; prompt user to pick
       //      replace / preview-only / cancel before applying the hash code.
-      //   2. hash + no prior work → just use the hash code directly (first
+      //   2. hash + no prior work → use the hash code directly (first
       //      visit), persistence kicks in via the debounced save effect.
       //   3. no hash → normal flow.
       let cfg: StudioConfig;
@@ -413,44 +414,25 @@ export default function Studio() {
       return;
     }
 
-    const factorySource = `"use strict"; ${js} ; return buildReels();`;
     let built: BuildResult;
     try {
-      const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor as FunctionConstructor;
-      // Keep this param list in lock-step with RecipeRunner.tsx and
-      // ShareViewer.tsx. anything a recipe references must be injected
-      // identically across all three runtimes, otherwise "Open in Studio"
-      // (and shared studios using recipe-style code) produce
-      // "Can't find variable: X" at run time.
-      const factory = new AsyncFunction(
-        'ReelSetBuilder', 'SpeedPresets', 'BlurSpriteSymbol', 'SpriteSymbol', 'AnimatedSpriteSymbol',
-        'WinPresenter',
-        'app', 'textures', 'blurTextures', 'SYMBOL_IDS', 'pickWeighted', 'gsap', 'PIXI',
-        'EmptySymbol', 'ReelSymbol',
-        'RectMaskStrategy', 'SharedRectMaskStrategy',
-        'CardSymbol', 'CARD_DECK', 'WILD_CARD',
-        'CoinSymbol', 'COIN_TIER', 'COIN_FEATURE', 'COIN_MYSTERY', 'COIN_TRIGGER',
-        'coinValue', 'coinMultiplier', 'drawCoin',
-        'SpineReelSymbol', 'loadGeneratedSpines', 'buildSpineMap',
-        'userSymbols', 'userSymbolData',
-        factorySource,
-      );
       // User uploads merge into `textures` so recipe-style `textures[id]`
-      // lookups also pick them up; ids collide → studio uploads win.
+      // lookups also pick them up; ids collide -> studio uploads win.
       const mergedTextures = { ...env.textures, ...injectables.textures };
-      built = (await factory(
-        makeStudioReelSetBuilder(injectables.userSymbolData),
-        SpeedPresets, BlurSpriteSymbol, SpriteSymbol, AnimatedSpriteSymbol,
-        WinPresenter,
-        env.app, mergedTextures, env.blurTextures, env.SYMBOL_IDS, pickWeighted, gsap, PIXI,
-        EmptySymbol, ReelSymbol,
-        RectMaskStrategy, SharedRectMaskStrategy,
-        CardSymbol, CARD_DECK, WILD_CARD,
-        CoinSymbol, COIN_TIER, COIN_FEATURE, COIN_MYSTERY, COIN_TRIGGER,
-        coinValue, coinMultiplier, drawCoin,
-        SpineReelSymbol, loadGeneratedSpines, buildSpineMap,
-        injectables.userSymbols, injectables.userSymbolData,
-      )) as BuildResult;
+      // The global surface is shared with RecipeRunner and ShareViewer, so a
+      // recipe opened in Studio sees exactly the variables it saw in the
+      // docs. Hand-maintained parameter lists drifted by 26 names before
+      // this; see lib/recipeGlobals.ts.
+      built = await runRecipeSource<BuildResult>(js, {
+        app: env.app,
+        textures: mergedTextures,
+        blurTextures: env.blurTextures,
+        SYMBOL_IDS: env.SYMBOL_IDS,
+        pickWeighted,
+        ReelSetBuilder: makeStudioReelSetBuilder(injectables.userSymbolData),
+        userSymbols: injectables.userSymbols,
+        userSymbolData: injectables.userSymbolData,
+      }, ' ; return buildReels();');
     } catch (e) {
       setStatus({ kind: 'err', msg: `Runtime error: ${(e as Error).message}` });
       return;
@@ -474,21 +456,24 @@ export default function Studio() {
 
     const PADDING = 24;
     // Aspect-preserving fit. Upscales freely so the reels look right in a
-    // fullscreen canvas pane (with the previous Math.min(1, …) clamp they
+    // fullscreen canvas pane (with the previous Math.min(1, ...) clamp they
     // looked tiny in the middle). Always re-derives raw dimensions from
     // post-divide-by-scale so successive refits don't compound.
+    // Fit the composition root when the code returns one (a banner set above
+    // a grid), so every set scales and centres together. Matches RecipeRunner.
+    const fitted = built.stage ?? reelSet;
     const fit = () => {
-      const rawW = reelSet.width / (reelSet.scale.x || 1);
-      const rawH = reelSet.height / (reelSet.scale.y || 1);
+      const rawW = fitted.width / (fitted.scale.x || 1);
+      const rawH = fitted.height / (fitted.scale.y || 1);
       const availW = Math.max(40, env.app.screen.width - PADDING * 2);
       const availH = Math.max(40, env.app.screen.height - PADDING * 2);
       const scale = Math.min(availW / rawW, availH / rawH);
-      reelSet.scale.set(scale);
-      reelSet.x = (env.app.screen.width - rawW * scale) / 2;
-      reelSet.y = (env.app.screen.height - rawH * scale) / 2;
+      fitted.scale.set(scale);
+      fitted.x = (env.app.screen.width - rawW * scale) / 2;
+      fitted.y = (env.app.screen.height - rawH * scale) / 2;
     };
     env.app.stage.removeChildren();
-    env.app.stage.addChild(reelSet);
+    env.app.stage.addChild(fitted);
     fit();
     // The boot useEffect's ResizeObserver calls through this ref on every
     // host-size change. single fit path for window resize, fullscreen
@@ -781,7 +766,7 @@ export default function Studio() {
                   padding: { top: 10, bottom: 10 },
                 }}
                 onMount={(_editor, monaco) => {
-                  // Injected globals (ReelSetBuilder, userSymbols, app, …)
+                  // Injected globals (ReelSetBuilder, userSymbols, app, ...)
                   // aren't declared anywhere Monaco can resolve, so semantic
                   // diagnostics produce a sea of red squiggles. The code is
                   // transpiled at Run via sucrase (types stripped, no

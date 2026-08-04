@@ -1,6 +1,7 @@
 import { Container, Graphics } from 'pixi.js';
 import type { Ticker } from 'pixi.js';
 import { ReelSetBuilder } from '../core/ReelSetBuilder.js';
+import type { Direction, Orientation } from '../core/ReelAxis.js';
 import type { ReelSet } from '../core/ReelSet.js';
 import { SharedRectMaskStrategy } from '../core/ReelViewport.js';
 import type { ReelSymbol } from '../symbols/ReelSymbol.js';
@@ -12,8 +13,8 @@ import type { Disposable } from '../utils/Disposable.js';
 
 /** A cell coordinate in the grid. */
 export interface BoardCell {
-  col: number;
-  row: number;
+  reel: number;
+  cell: number;
 }
 
 /** A landing target: spin `cell` and stop it showing `id`. */
@@ -33,7 +34,7 @@ export interface BoardGridOptions {
   cellSize: number;
   /** Gap between cells. Default 4. */
   gap?: number;
-  /** Id a cell shows when blank — also placed in the off-window buffers. Default `'empty'`. */
+  /** Id a cell shows when blank - also placed in the off-window buffers. Default `'empty'`. */
   emptyId?: string;
   /** Register symbol classes, exactly like `ReelSetBuilder.symbols`. Applied to every cell. */
   symbols: (registry: SymbolRegistry) => void;
@@ -43,10 +44,19 @@ export interface BoardGridOptions {
   symbolData?: Record<string, Partial<SymbolData>>;
   /** Injected RNG for the spin strips (deterministic demos / tests). */
   rng?: () => number;
-  /** Drives every cell's reel — required. */
+  /** Drives every cell's reel - required. */
   ticker: Ticker;
   /** Per-cell background, drawn behind each reel. */
   chrome?: (g: Graphics, size: number) => void;
+  /**
+   * Which way each cell's own strip travels while it spins. Every cell is a
+   * 1x1 reel set, so this changes the direction a symbol scrolls in from, not
+   * the board layout - `cols` and `rows` stay board dimensions either way.
+   * Defaults to the engine default (vertical / forward), i.e. symbols drop in
+   * from above.
+   */
+  orientation?: Orientation;
+  direction?: Direction;
   /**
    * Named speed profiles, each registered on every cell and selected by name
    * via {@link BoardGrid.setProfile}. A value may be a flat profile or a
@@ -56,11 +66,11 @@ export interface BoardGridOptions {
   profiles?: Record<string, BoardProfile>;
 }
 
-const key = (c: BoardCell): string => `${c.col},${c.row}`;
+const key = (c: BoardCell): string => `${c.reel},${c.cell}`;
 const DEFAULT_PROFILE = 'default';
 
 /**
- * A grid of cells that each spin **independently** — the generic "board of
+ * A grid of cells that each spin **independently** - the generic "board of
  * reels" primitive. Every cell is its own 1×1 {@link ReelSet}, so it inherits
  * the engine's phases, speed modes and pooling rather than a parallel lighter
  * reel.
@@ -116,9 +126,9 @@ export class BoardGrid implements Disposable {
     const profileFor = (p: BoardProfile, cell: BoardCell): SpeedProfile =>
       typeof p === 'function' ? p(cell) : p;
 
-    for (let col = 0; col < opts.cols; col++) {
-      for (let row = 0; row < opts.rows; row++) {
-        const cell: BoardCell = { col, row };
+    for (let reel = 0; reel < opts.cols; reel++) {
+      for (let rowIdx = 0; rowIdx < opts.rows; rowIdx++) {
+        const cell: BoardCell = { reel, cell: rowIdx };
         const origin = this._origin(cell);
         if (opts.chrome) {
           const bg = new Graphics();
@@ -129,20 +139,22 @@ export class BoardGrid implements Disposable {
 
         const builder = new ReelSetBuilder()
           .reels(1)
-          .visibleRows(1)
+          .visibleCells(1)
           .symbolSize(this.cellSize, this.cellSize)
           .symbolGap(0, 0)
           // Spine symbols overrun the default per-reel rect mask; a shared rect
-          // keeps buffer-row art from painting over neighbouring cells.
+          // keeps buffer-cell art from painting over neighbouring cells.
           .maskStrategy(new SharedRectMaskStrategy())
           .symbols((registry) => {
             opts.symbols(registry);
             if (!registry.has(this.emptyId)) registry.register(this.emptyId, EmptySymbol, {});
           })
           .initialFrame([
-            { visible: [this.emptyId], bufferAbove: [this.emptyId], bufferBelow: [this.emptyId] },
+            { visible: [this.emptyId], bufferStart: [this.emptyId], bufferEnd: [this.emptyId] },
           ])
           .ticker(opts.ticker)
+          .orientation(opts.orientation ?? 'vertical')
+          .direction(opts.direction ?? 'forward')
           // The active profile defaults to the engine's 'normal'; point it at
           // the first registered name so any profile vocabulary works.
           .initialSpeed(profileNames[0]);
@@ -162,9 +174,9 @@ export class BoardGrid implements Disposable {
     }
   }
 
-  /** Every cell coordinate, row-major. */
+  /** Every cell coordinate, reel-major: (0,0), (0,1), ... then (1,0). */
   cells(): BoardCell[] {
-    return this._cells.map((c) => ({ col: c.col, row: c.row }));
+    return this._cells.map((c) => ({ reel: c.reel, cell: c.cell }));
   }
 
   /** Board-local bounds of a cell. `container.toGlobal` for stage space. */
@@ -173,7 +185,7 @@ export class BoardGrid implements Disposable {
     return { x: origin.x, y: origin.y, width: this.cellSize, height: this.cellSize };
   }
 
-  /** Board-local center of a cell — flight / trail start and end points. */
+  /** Board-local center of a cell - flight / trail start and end points. */
   cellCenter(cell: BoardCell): { x: number; y: number } {
     const origin = this._origin(cell);
     return { x: origin.x + this.cellSize / 2, y: origin.y + this.cellSize / 2 };
@@ -196,18 +208,19 @@ export class BoardGrid implements Disposable {
 
   /** Place a symbol instantly (no spin), with blank off-window buffers. */
   place(cell: BoardCell, id: string): void {
-    // Negative-index addresses bufferAbove; index 1 the single bufferBelow.
-    // Explicit empties keep the rest state from random-filling past the mask.
-    const ids: string[] & Record<number, string> = [id];
-    ids[-1] = this.emptyId;
-    ids[1] = this.emptyId;
-    this._reel(cell).getReel(0).placeSymbols(ids);
+    // Explicit empties in both buffers keep the rest state from
+    // random-filling past the mask.
+    this._reel(cell).getReel(0).placeSymbols({
+      visible: [id],
+      bufferStart: [this.emptyId],
+      bufferEnd: [this.emptyId],
+    });
   }
 
   /**
    * Spin each target cell and stop it showing its `id`; `onLanded` fires per
    * cell as it settles, in stagger order. The caller selects which cells spin
-   * and to what — this layer applies no lock/free policy of its own. Set
+   * and to what - this layer applies no lock/free policy of its own. Set
    * profiles via {@link setProfile} first.
    *
    * `onLanded` may be **async**: if it returns a promise, that cell's task
@@ -225,7 +238,7 @@ export class BoardGrid implements Disposable {
         const settle = reelSet.spin();
         // Buffers land empty too: off-window art can paint over neighbours.
         reelSet.setResult([
-          { visible: [id], bufferAbove: [this.emptyId], bufferBelow: [this.emptyId] },
+          { visible: [id], bufferStart: [this.emptyId], bufferEnd: [this.emptyId] },
         ]);
         await settle;
         await onLanded(cell, id);
@@ -242,7 +255,7 @@ export class BoardGrid implements Disposable {
         try {
           reelSet.skipSpin();
         } catch {
-          /* result not provided yet — nothing to skip to; ignore */
+          /* result not provided yet - nothing to skip to; ignore */
         }
       }
     }
@@ -264,8 +277,8 @@ export class BoardGrid implements Disposable {
 
   private _origin(cell: BoardCell): { x: number; y: number } {
     return {
-      x: cell.col * (this.cellSize + this.gap),
-      y: cell.row * (this.cellSize + this.gap),
+      x: cell.reel * (this.cellSize + this.gap),
+      y: cell.cell * (this.cellSize + this.gap),
     };
   }
 

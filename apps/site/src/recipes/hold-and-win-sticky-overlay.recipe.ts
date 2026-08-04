@@ -6,7 +6,7 @@
 // The overlay (a ×100 badge) lives in `coin.data` and is attached as a CHILD
 // of the symbol's `view`, so it moves with the symbol on screen. The trick:
 //   - on an in-place swap (setSymbolAt makes a NEW symbol instance) the badge
-//     is re-attached from `coin.data` — it never gets lost,
+//     is re-attached from `coin.data` - it never gets lost,
 //   - on a collect flight the badge is rebuilt onto the flying clone from the
 //     same `coin.data`, so it travels with the coin.
 
@@ -59,10 +59,10 @@ function attachBadge(cell, data) {
   sym.view.addChild(badge);                 // <-- child of the symbol's view
 }
 
-const TARGET = { cell: { col: 1, row: 0 }, id: COIN, data: { badge: '100x', value: 100 } };
+const TARGET = { cell: { reel: 1, cell: 0 }, id: COIN, data: { badge: '100x', value: 100 } };
 const SEED = [
-  { cell: { col: 0, row: 0 }, id: COIN, data: { value: 5 } },
-  { cell: { col: 2, row: 0 }, id: COIN, data: { value: 5 } },
+  { cell: { reel: 0, cell: 0 }, id: COIN, data: { value: 5 } },
+  { cell: { reel: 2, cell: 0 }, id: COIN, data: { value: 5 } },
 ];
 const seedBoard = () => {
   board.reset();
@@ -83,7 +83,7 @@ return {
     if (phase === 'ready') {
       phase = 'swapping';
       // swap the coin's ART in place; the new instance has a fresh view,
-      // so re-attach the badge from the SAME coin.data — it survives.
+      // so re-attach the badge from the SAME coin.data - it survives.
       const sym = board.setSymbolAt(TARGET.cell, COIN_B, TARGET.data);
       attachBadge(TARGET.cell, TARGET.data);
       void sym.playWin?.().catch?.(() => {});
@@ -92,7 +92,7 @@ return {
       return;
     }
 
-    // collect: fly a clone built from coin.data — coin + badge together
+    // collect: fly a clone built from coin.data - coin + badge together
     phase = 'flying';
     hud.text = 'flying to the meter — the badge rides along';
     const from = abs(TARGET.cell);

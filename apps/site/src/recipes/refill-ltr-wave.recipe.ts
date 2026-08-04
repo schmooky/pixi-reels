@@ -1,21 +1,20 @@
 // @ts-nocheck
-// Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, loadCascadeSpines,
-//           buildCascadeSpineMap, CASCADE_SYMBOL_IDS, CASCADE_PLATE_W,
-//           CASCADE_PLATE_H, PIXI, gsap, app, pickWeighted
+// Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, loadSpineSet,
+//           PIXI, gsap, app, pickWeighted
 
 // LEFT-TO-RIGHT WAVE REFILL. each column lands in sequence from left
-// to right. Each reel's rows arrive together (no in-reel stagger), but
+// to right. Each reel's cells arrive together (no in-reel stagger), but
 // reel 0 lands before reel 1 before reel 2... Reads as a column-by-column
 // "filling up" of the grid.
 
-await loadCascadeSpines();
+const cascade = await loadSpineSet("cascade");
 
-const IDS = [...CASCADE_SYMBOL_IDS];
+const IDS = [...cascade.symbolIds];
 const REELS = 6, ROWS = 4;
 // Cells match the authored 88x101.6 symbol plate.
 const SCALE = 0.62;
-const CELL_W = CASCADE_PLATE_W * SCALE;
-const CELL_H = CASCADE_PLATE_H * SCALE;
+const CELL_W = cascade.set.cellSize.width * SCALE;
+const CELL_H = cascade.set.cellSize.height * SCALE;
 const CLUSTER = 'low1';
 const HIT_ROW = 2;
 const HIT_COLS = [0, 1, 2];
@@ -42,15 +41,15 @@ class TimedExplodeSymbol extends SpineReelSymbol {
 }
 
 const reelSet = new ReelSetBuilder()
-  .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
+  .reels(REELS).visibleCells(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
   // Pure tumble: no strip scrolling, so no below-window buffer at all.
   // nothing can ever peek out under the grid.
-  .bufferSymbols({ above: 1, below: 0 })
+  .bufferSymbols({ start: 1, end: 0 })
   .symbols((r) => {
     // outAnimation: 'explode' makes destroySymbols play the skeleton's
     // explode clip instead of the default implode.
-    const spineMap = buildCascadeSpineMap();
-    for (const id of CASCADE_SYMBOL_IDS) {
+    const spineMap = cascade.spineMap;
+    for (const id of cascade.symbolIds) {
       r.register(id, TimedExplodeSymbol, {
         spineMap,
         scale: SCALE,
@@ -64,10 +63,10 @@ const reelSet = new ReelSetBuilder()
   .symbolData({ high: { zIndex: 10, unmask: true } })
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
-    fall:   { duration: 233, ease: 'power2.in', rowStagger: 33 },  // 14f, 2f stagger
-    // rowStagger: 0. rows in a reel arrive together; the per-reel
+    fall:   { duration: 233, ease: 'power2.in', cellStagger: 33 },  // 14f, 2f stagger
+    // cellStagger: 0. cells in a reel arrive together; the per-reel
     // stagger is set via setDropOrder('ltr', step) on the refill below.
-    dropIn: { duration: 367, ease: 'power2.in', rowStagger: 0, distance: 'perHole' },  // 22f
+    dropIn: { duration: 367, ease: 'power2.in', cellStagger: 0, distance: 'perHole' },  // 22f
   })
   .ticker(app.ticker).build();
 
@@ -79,9 +78,9 @@ return {
         r === HIT_ROW && HIT_COLS.includes(c) ? CLUSTER : randSymbol(CLUSTER),
       ),
     );
-    const stage1 = stage0.map((col, c) => {
-      if (!HIT_COLS.includes(c)) return [...col];
-      const next = [...col];
+    const stage1 = stage0.map((reel, c) => {
+      if (!HIT_COLS.includes(c)) return [...reel];
+      const next = [...reel];
       for (let r = HIT_ROW; r > 0; r--) next[r] = next[r - 1];
       next[0] = randSymbol(CLUSTER);
       return next;
@@ -94,7 +93,7 @@ return {
     await spinDone;
 
     await new Promise((r) => setTimeout(r, 200));
-    const winners = HIT_COLS.map((c) => ({ reel: c, row: HIT_ROW }));
+    const winners = HIT_COLS.map((c) => ({ reel: c, cell: HIT_ROW }));
     await reelSet.destroySymbols(winners);
     await new Promise((r) => setTimeout(r, PAUSE_AFTER_REMOVAL_MS));
     // Refill: each reel delayed by REEL_WAVE_STEP_MS. left-to-right wave.

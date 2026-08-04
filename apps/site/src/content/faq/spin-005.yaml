@@ -1,6 +1,11 @@
 id: spin-005
 group: spin
 question: How do I make the reels stop left to right?
-answer: "`reelSet.setDropOrder('ltr')` (also `'rtl'` / `'all'` / a delays array)
-  sets stop order; the profile's `stopDelay` is the gap."
+answer: >-
+  `reelSet.setDropOrder('ltr')` -- also `'rtl'`, `'all'`, a per-reel delay array,
+  or `null` to clear -- sets the stop order. The gap defaults to
+  `max(profile.stopDelay, 150)` ms, so on Turbo it is 150 rather than the
+  profile's own value; pass a second argument, `setDropOrder('ltr', 90)`, to
+  override. The setting is sticky across `spin()` and `refill()` until you change
+  it.
 links: []

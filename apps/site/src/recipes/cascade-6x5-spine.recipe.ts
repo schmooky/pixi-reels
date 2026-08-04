@@ -1,20 +1,19 @@
 // @ts-nocheck
-// Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, loadCascadeSpines,
-//           buildCascadeSpineMap, CASCADE_SYMBOL_IDS, CASCADE_PLATE_W,
-//           CASCADE_PLATE_H, PIXI, gsap, app, pickWeighted
+// Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, loadSpineSet,
+//           PIXI, gsap, app, pickWeighted
 
 // Same starter as the card canvas above, with spine symbols. Only the
 // registration block and the id constants differ; the orchestration
 // (spin, setResult, runCascade, both callbacks) is identical.
 
-await loadCascadeSpines();
+const cascade = await loadSpineSet("cascade");
 
-const IDS = [...CASCADE_SYMBOL_IDS];
+const IDS = [...cascade.symbolIds];
 const REELS = 6, ROWS = 4;
 // Cells match the authored 88x101.6 symbol plate.
 const SCALE = 0.68;
-const CELL_W = CASCADE_PLATE_W * SCALE;
-const CELL_H = CASCADE_PLATE_H * SCALE;
+const CELL_W = cascade.set.cellSize.width * SCALE;
+const CELL_H = cascade.set.cellSize.height * SCALE;
 const CLUSTER = 'low1';
 const HIT_ROW = 2;
 const HIT_COLS = [0, 1, 2];
@@ -39,15 +38,15 @@ class TimedExplodeSymbol extends SpineReelSymbol {
 }
 
 const reelSet = new ReelSetBuilder()
-  .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
+  .reels(REELS).visibleCells(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
   // Pure tumble: no strip scrolling, so no below-window buffer at all.
   // nothing can ever peek out under the grid.
-  .bufferSymbols({ above: 1, below: 0 })
+  .bufferSymbols({ start: 1, end: 0 })
   .symbols(r => {
     // outAnimation: 'explode' makes destroySymbols play the skeleton's
     // explode clip instead of the default implode.
-    const spineMap = buildCascadeSpineMap();
-    for (const id of CASCADE_SYMBOL_IDS) {
+    const spineMap = cascade.spineMap;
+    for (const id of cascade.symbolIds) {
       r.register(id, TimedExplodeSymbol, {
         spineMap,
         scale: SCALE,
@@ -61,15 +60,15 @@ const reelSet = new ReelSetBuilder()
   .symbolData({ high: { zIndex: 10, unmask: true } })
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
-    fall:   { duration: 283, ease: 'power3.in', rowStagger: 67 },  // 17f, 4f stagger
-    dropIn: { duration: 450, ease: 'power2.in', rowStagger: 67, distance: 'perHole' },  // 27f, 4f stagger
+    fall:   { duration: 283, ease: 'power3.in', cellStagger: 67 },  // 17f, 4f stagger
+    dropIn: { duration: 450, ease: 'power2.in', cellStagger: 67, distance: 'perHole' },  // 27f, 4f stagger
   })
   .ticker(app.ticker).build();
 
 return {
   reelSet,
   onSpin: async () => {
-    // Stage 0: cluster of CLUSTER on row 2, cols 0–2.
+    // Stage 0: cluster of CLUSTER on cell 2, cols 0-2.
     const stage0 = Array.from({ length: REELS }, (_, c) =>
       Array.from({ length: ROWS }, (_, r) =>
         r === HIT_ROW && HIT_COLS.includes(c) ? CLUSTER : randSymbol(CLUSTER)
@@ -94,16 +93,16 @@ return {
       detectWinners: () => {
         if (detected) return [];
         detected = true;
-        return HIT_COLS.map(c => ({ reel: c, row: HIT_ROW }));
+        return HIT_COLS.map(c => ({ reel: c, cell: HIT_ROW }));
       },
       nextGrid: (prev, winners) => {
-        // Survivors slide down 1; new symbol at row 0.
-        const next = prev.map(col => [...col]);
+        // Survivors slide down 1; new symbol at cell 0.
+        const next = prev.map(reel => [...reel]);
         for (const w of winners) {
-          for (let r = w.row; r > 0; r--) next[w.reel][r] = next[w.reel][r - 1];
+          for (let r = w.cell; r > 0; r--) next[w.reel][r] = next[w.reel][r - 1];
           next[w.reel][0] = randSymbol(CLUSTER);
         }
-        return next;
+        return next.map((visible) => ({ visible }));
       },
       pauseAfterDestroyMs: 250,
     });

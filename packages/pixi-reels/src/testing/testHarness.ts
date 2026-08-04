@@ -10,40 +10,49 @@ import { HeadlessSymbol } from './HeadlessSymbol.js';
 export interface TestReelSetOptions {
   reels?: number;
   /**
-   * Visible row count.
-   *   - `number` → uniform rows.
+   * Visible cell count.
+   *   - `number` → uniform cells.
    *   - `number[]` → per-reel static shape (pyramid).
    *
-   * Mutually exclusive with `multiways` (which always starts at `maxRows`).
+   * Mutually exclusive with `multiways` (which always starts at `maxCells`).
    */
-  visibleRows?: number | number[];
+  visibleCells?: number | number[];
   /**
-   * MultiWays configuration. Mutually exclusive with `visibleRows: number[]`.
-   * The harness sets uniform `reelPixelHeight` and forwards `min/maxRows`.
+   * MultiWays configuration. Mutually exclusive with `visibleCells: number[]`.
+   * The harness sets uniform `reelExtent` and forwards `min/maxCells`.
    */
-  multiways?: { minRows: number; maxRows: number; reelPixelHeight: number };
+  multiways?: { minCells: number; maxCells: number; reelExtent: number };
   symbolIds?: string[];
   weights?: Record<string, number>;
   /** Per-symbol overrides. useful for big-symbol size declarations in tests. */
   symbolData?: Record<string, Partial<import('../config/types.js').SymbolData>>;
   symbolSize?: { width: number; height: number };
   symbolGap?: { x: number; y: number };
+  /** Strip orientation. Defaults to 'vertical'. */
+  orientation?: import('../core/ReelAxis.js').Orientation;
+  /** Travel direction for every reel. Defaults to 'forward'. */
+  direction?: import('../core/ReelAxis.js').Direction;
+  /** Per-reel travel direction override (length must equal `reels`). */
+  directionPerReel?: import('../core/ReelAxis.js').Direction[];
+  /**
+   * Cascade/tumble config, same shape as `ReelSetBuilder.tumble(...)`. Pass
+   * `{}` for the defaults. Without this the set spins strips instead of
+   * cascading, so a cascade test that also wants a non-default
+   * `orientation` / `direction` has to hand-roll a builder - which is
+   * exactly why the cascade suite had no axis coverage.
+   */
+  tumble?: import('../cascade/TumbleConfig.js').TumbleConfig;
   /** Number of symbols above + below the visible area. Defaults to the builder default. */
-  bufferSymbols?: number | { above: number; below: number };
+  bufferSymbols?: number | { start: number; end: number };
   /** Initial symbol grid. Same `ColumnTarget[]` form as `ReelSetBuilder.initialFrame`. */
   initialFrame?: ColumnTarget[];
+  /**
+   * gsap instance for this set. Pass a synchronous shim to drive tweens
+   * inline instead of waiting on a real clock. Per set, so two harnesses in
+   * one file cannot clobber each other.
+   */
+  gsap?: import('../utils/gsap.js').Gsap;
 }
-
-/**
- * Test-only convenience union. The published library's public surface
- * accepts only `ColumnTarget[]`; `spinAndLand` is a testing helper that
- * also accepts plain visible-cells `string[][]` to keep mechanic tests
- * compact. Kept on a separate type alias and split across lines so the
- * 1.0 release verification sweep does not flag the engine surface.
- */
-type SpinAndLandGrid =
-  | string[][]
-  | ColumnTarget[];
 
 export interface TestReelSetHandle {
   reelSet: ReelSet;
@@ -52,10 +61,10 @@ export interface TestReelSetHandle {
   advance(ms: number, stepMs?: number): void;
   /**
    * Run one full spin that lands on `grid`. Uses `slamStop()` for deterministic
-   * synchronous completion. Accepts plain visible-cells `string[][]`, or the
-   * explicit `ColumnTarget[]` shape (use the latter to target buffer cells).
+   * synchronous completion. Takes `ColumnTarget[]`, the same shape as
+   * `setResult` -- there is no `string[][]` convenience form anywhere.
    */
-  spinAndLand(grid: SpinAndLandGrid): Promise<SpinResult>;
+  spinAndLand(grid: ColumnTarget[]): Promise<SpinResult>;
   /** Destroy the reel set. */
   destroy(): void;
 }
@@ -68,16 +77,16 @@ export interface TestReelSetHandle {
  *
  * ```ts
  * const { reelSet, spinAndLand } = createTestReelSet({
- *   reels: 5, visibleRows: 3,
+ *   reels: 5, visibleCells: 3,
  *   symbolIds: ['cherry', 'seven', 'wild'],
  * });
  *
  * await spinAndLand([
- *   ['cherry','cherry','cherry'],
- *   ['seven','seven','seven'],
- *   ['wild','wild','wild'],
- *   ['cherry','cherry','cherry'],
- *   ['seven','seven','seven'],
+ *   { visible: ['cherry','cherry','cherry'] },
+ *   { visible: ['seven','seven','seven'] },
+ *   { visible: ['wild','wild','wild'] },
+ *   { visible: ['cherry','cherry','cherry'] },
+ *   { visible: ['seven','seven','seven'] },
  * ]);
  * ```
  */
@@ -85,7 +94,10 @@ export function createTestReelSet(opts: TestReelSetOptions = {}): TestReelSetHan
   const reels = opts.reels ?? 5;
   const symbolIds = opts.symbolIds ?? ['a', 'b', 'c'];
   const weights = opts.weights ?? {};
-  const size = opts.symbolSize ?? { width: 100, height: 100 };
+  // NON-SQUARE on purpose (ADR 018 section 10.2). With a square default a test
+  // cannot tell width from height, so an axis transposition passes every
+  // assertion. 120x100 makes the two observably different.
+  const size = opts.symbolSize ?? { width: 120, height: 100 };
 
   const ticker = new FakeTicker();
 
@@ -101,10 +113,10 @@ export function createTestReelSet(opts: TestReelSetOptions = {}): TestReelSetHan
 
   if (opts.multiways) {
     builder.multiways(opts.multiways);
-  } else if (Array.isArray(opts.visibleRows)) {
-    builder.visibleRowsPerReel(opts.visibleRows);
+  } else if (Array.isArray(opts.visibleCells)) {
+    builder.visibleCellsPerReel(opts.visibleCells);
   } else {
-    builder.visibleRows(opts.visibleRows ?? 3);
+    builder.visibleCells(opts.visibleCells ?? 3);
   }
 
   if (opts.symbolGap) {
@@ -127,6 +139,22 @@ export function createTestReelSet(opts: TestReelSetOptions = {}): TestReelSetHan
     builder.initialFrame(opts.initialFrame);
   }
 
+  if (opts.gsap) {
+    builder.gsap(opts.gsap);
+  }
+  if (opts.orientation) {
+    builder.orientation(opts.orientation);
+  }
+  if (opts.direction) {
+    builder.direction(opts.direction);
+  }
+  if (opts.directionPerReel) {
+    builder.directionPerReel(opts.directionPerReel);
+  }
+  if (opts.tumble) {
+    builder.tumble(opts.tumble);
+  }
+
   const reelSet = builder.build();
 
   return {
@@ -135,7 +163,7 @@ export function createTestReelSet(opts: TestReelSetOptions = {}): TestReelSetHan
     advance(ms: number, stepMs = 16) {
       ticker.tickFor(ms, stepMs);
     },
-    async spinAndLand(grid: SpinAndLandGrid) {
+    async spinAndLand(grid: ColumnTarget[]) {
       return spinAndLand(reelSet, grid);
     },
     destroy() {
@@ -153,18 +181,12 @@ export function createTestReelSet(opts: TestReelSetOptions = {}): TestReelSetHan
  * two-stage `skipSpin()` boost machine), so the returned promise resolves on
  * a microtask.
  *
- * Accepts plain visible-cells `string[][]` (each inner array becomes the
- * `visible` field of a fresh `ColumnTarget`) or the explicit `ColumnTarget[]`
- * shape (passed straight through; use this to target buffer cells).
+ * Takes `ColumnTarget[]`, the same as `setResult`. There is no `string[][]`
+ * convenience form anywhere in v2.
  */
-export async function spinAndLand(reelSet: ReelSet, grid: SpinAndLandGrid): Promise<SpinResult> {
-  const targets: ColumnTarget[] = grid.length === 0
-    ? []
-    : Array.isArray(grid[0])
-      ? (grid as string[][]).map((visible) => ({ visible }))
-      : (grid as ColumnTarget[]);
+export async function spinAndLand(reelSet: ReelSet, grid: ColumnTarget[]): Promise<SpinResult> {
   const promise = reelSet.spin();
-  reelSet.setResult(targets);
+  reelSet.setResult(grid);
   reelSet.slamStop();
   return promise;
 }
@@ -201,14 +223,14 @@ export function expectGrid(reelSet: ReelSet, expected: string[][]): void {
   for (let r = 0; r < expected.length; r++) {
     if (expected[r].length !== actual[r].length) {
       mismatches.push(
-        `  reel ${r} row count: expected ${expected[r].length} got ${actual[r].length}`,
+        `  reel ${r} cell count: expected ${expected[r].length} got ${actual[r].length}`,
       );
       continue;
     }
-    for (let row = 0; row < expected[r].length; row++) {
-      if (expected[r][row] !== actual[r][row]) {
+    for (let cell = 0; cell < expected[r].length; cell++) {
+      if (expected[r][cell] !== actual[r][cell]) {
         mismatches.push(
-          `  reel ${r} row ${row}: expected "${expected[r][row]}" got "${actual[r][row]}"`,
+          `  reel ${r} cell ${cell}: expected "${expected[r][cell]}" got "${actual[r][cell]}"`,
         );
       }
     }
@@ -227,8 +249,8 @@ export function expectGrid(reelSet: ReelSet, expected: string[][]): void {
  */
 export function countSymbol(reelSet: ReelSet, symbolId: string): number {
   let n = 0;
-  for (const col of debugSnapshot(reelSet).grid) {
-    for (const s of col) if (s === symbolId) n++;
+  for (const reel of debugSnapshot(reelSet).grid) {
+    for (const s of reel) if (s === symbolId) n++;
   }
   return n;
 }

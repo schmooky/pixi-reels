@@ -8,7 +8,7 @@ const IDS = [A, B, C, SEVEN];
 const COLS = 5, ROWS = 3, SIZE = 90;
 
 const reelSet = new ReelSetBuilder()
-  .reels(COLS).visibleRows(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
+  .reels(COLS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
   .symbols(r => {
     for (const sym of [...CARD_DECK, WILD_CARD]) {
       r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
@@ -23,17 +23,17 @@ const reelSet = new ReelSetBuilder()
 const overlayGfx = new PIXI.Graphics();
 reelSet.addChild(overlayGfx);
 
-function drawCellOutline(col, row, color) {
-  const b = reelSet.getCellBounds(col, row);
+function drawCellOutline(reel, cell, color) {
+  const b = reelSet.getCellBounds(reel, cell);
   overlayGfx
     .roundRect(b.x + 3, b.y + 3, b.width - 6, b.height - 6, 10)
     .stroke({ color, width: 3, alpha: 1 });
 }
 
-function drawPayline(cols, row, color) {
+function drawPayline(cols, cell, color) {
   if (cols.length < 2) return;
-  const pts = cols.map(col => {
-    const b = reelSet.getCellBounds(col, row);
+  const pts = cols.map(reel => {
+    const b = reelSet.getCellBounds(reel, cell);
     return { x: b.x + b.width / 2, y: b.y + b.height / 2 };
   });
   overlayGfx.moveTo(pts[0].x, pts[0].y);
@@ -41,7 +41,7 @@ function drawPayline(cols, row, color) {
   overlayGfx.stroke({ color, width: 3, alpha: 0.85 });
 }
 
-// Fixed result: middle row is all SEVEN. a full-row payline win.
+// Fixed result: middle cell is all SEVEN. a full-cell payline win.
 const WIN_ROW = 1;
 const GRID = [
   [A,     SEVEN, C],
@@ -67,12 +67,12 @@ return {
 
     // Find SEVEN on WIN_ROW. typically all 5 here.
     const winCols = [];
-    for (let col = 0; col < COLS; col++) {
-      if (reelSet.getReel(col).getVisibleSymbols()[WIN_ROW] === SEVEN) winCols.push(col);
+    for (let reel = 0; reel < COLS; reel++) {
+      if (reelSet.getReel(reel).getVisibleSymbols()[WIN_ROW] === SEVEN) winCols.push(reel);
     }
 
     // Outline each winning cell + draw a payline through their centres.
-    for (const col of winCols) drawCellOutline(col, WIN_ROW, 0xff6b35);
+    for (const reel of winCols) drawCellOutline(reel, WIN_ROW, 0xff6b35);
     drawPayline(winCols, WIN_ROW, 0xff6b35);
   },
 };

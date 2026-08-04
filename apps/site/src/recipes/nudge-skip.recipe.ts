@@ -21,7 +21,7 @@ const NUDGE_DURATION = 1500;
 
 const reelSet = new ReelSetBuilder()
   .reels(5)
-  .visibleRows(3)
+  .visibleCells(3)
   .symbolSize(72, 72)
   .symbolGap(4, 4)
   .symbols((r) => {
@@ -50,10 +50,10 @@ return {
     // any of them to fast-forward. the loop's `await` resolves
     // immediately at that tween's landed state and the loop continues
     // with the next reel.
-    for (const col of NUDGE_COLS) {
-      await reelSet.nudge(col, {
+    for (const reel of NUDGE_COLS) {
+      await reelSet.nudge(reel, {
         distance: 1,
-        direction: 'down',
+        direction: 'forward',
         incoming: ['wild'],
         duration: NUDGE_DURATION,
       });

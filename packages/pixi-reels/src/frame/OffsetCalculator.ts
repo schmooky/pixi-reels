@@ -9,19 +9,19 @@ export class OffsetCalculator {
 
   constructor(
     private _reelCount: number,
-    private _totalRows: number,
+    private _totalCells: number,
     private _symbolWidth: number,
     private _config: OffsetConfig,
   ) {
     this._compute();
   }
 
-  /** Get X offset for a specific reel and row. */
-  getOffset(reelIndex: number, rowIndex: number): number {
-    return this._offsets[reelIndex]?.[rowIndex] ?? 0;
+  /** Get X offset for a specific reel and cell. */
+  getOffset(reelIndex: number, cellIndex: number): number {
+    return this._offsets[reelIndex]?.[cellIndex] ?? 0;
   }
 
-  /** Get all offsets as a 2D array [reelIndex][rowIndex]. */
+  /** Get all offsets as a 2D array [reelIndex][cellIndex]. */
   get offsets(): readonly (readonly number[])[] {
     return this._offsets;
   }
@@ -29,7 +29,7 @@ export class OffsetCalculator {
   private _compute(): void {
     if (this._config.mode === 'none') {
       this._offsets = Array.from({ length: this._reelCount }, () =>
-        new Array(this._totalRows).fill(0),
+        new Array(this._totalCells).fill(0),
       );
       return;
     }
@@ -46,11 +46,11 @@ export class OffsetCalculator {
           : 0;
 
       const reelOffsets: number[] = [];
-      for (let row = 0; row < this._totalRows; row++) {
-        const rowNorm = this._totalRows > 1 ? row / (this._totalRows - 1) : 0.5;
-        const topOffset = relativePos * config.widthDifference * config.topWidthFactor;
-        const bottomOffset = relativePos * config.widthDifference * config.bottomWidthFactor;
-        const offset = topOffset + (bottomOffset - topOffset) * rowNorm;
+      for (let cell = 0; cell < this._totalCells; cell++) {
+        const cellNorm = this._totalCells > 1 ? cell / (this._totalCells - 1) : 0.5;
+        const topOffset = relativePos * config.widthDifference * config.startFactor;
+        const bottomOffset = relativePos * config.widthDifference * config.endFactor;
+        const offset = topOffset + (bottomOffset - topOffset) * cellNorm;
         reelOffsets.push(offset);
       }
       this._offsets.push(reelOffsets);

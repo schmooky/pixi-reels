@@ -51,10 +51,29 @@ Deferred follow-ups from the per-reel-geometry / MultiWays / big-symbols PR (#60
 - [x] ~~**No `getBlockBounds` recipe.**~~ Resolved — added [`/recipes/get-block-bounds/`](apps/site/src/pages/recipes/get-block-bounds.mdx) with an interactive demo that plants a 2×2 or 1×3 every spin and outlines the block on land.
 - [x] ~~**Recipe `expanding-wild-pin` predates this PR.**~~ Resolved — added cross-links from `expanding-wild-pin` to both `/guides/per-reel-geometry/` and `/recipes/sticky-wild-multiways/`.
 
+## Shipped in 2.0.0
+
+The orientation-axis release (ADRs 016 / 017 / 018) closed several of these
+outright. Kept here rather than deleted, because the reasoning is what makes
+the remaining rows readable.
+
+- [x] ~~**Horizontal reels.**~~ `.orientation('horizontal')` on the ordinary
+  builder; the parallel `HorizontalReel` subtree is deleted. Pyramids,
+  MultiWays and big symbols all work on either axis.
+- [x] ~~**Mixed direction per reel.**~~ `.directionPerReel([...])`.
+- [x] ~~**Roll-up.**~~ `.direction('reverse')` - a property of the reel's
+  axis rather than a `SpinningMode`, so every mode inherits it.
+- [x] ~~**Delete the legacy `string[][]` negative-index result form.**~~
+  `ColumnTarget` is threaded end to end; `Reel.placeStrip` is the strip-form
+  entry point.
+- [x] ~~**Per-set gsap.**~~ `.gsap()` binds one set, captured at `build()`;
+  the `gsapRef` process-global is gone.
+- [x] ~~**`SymbolPosition` gains `setId`.**~~ Free in the breaking window.
+
 ## Future v2 backlog (already noted in design doc but worth tracking)
 
-- [ ] **Stencil/shape mask** for non-rectangular layouts (curved frames, hex grids). Interface is in place; just needs a strategy implementation.
-- [ ] **Per-reel X offsets** / irregular column spacing. Same `offsetY` pattern applied to X.
+- [ ] **Stencil/shape mask** for non-rectangular layouts (curved frames, hex grids). Interface is in place; just needs a strategy implementation. 2.0.0's `MaskStrategy` hands the strategy a `MaskContext` carrying the axis, so one implementation can serve both orientations.
+- [ ] **Per-reel cross offsets** / irregular reel spacing. 2.0.0 renamed `offsetY` to `Reel.mainOffset` and made the cross axis first-class, so this is now "the same pattern applied to the cross axis" and subsumes `OffsetCalculator`'s trapezoid as a special case (ADR 016 section 12.2).
 - [ ] **Animated cell-resize tween on MultiWays reshape.** Current scope: pin overlays only. The cell tween was attempted in this PR but reverted because it fights the spinning motion layer.
 - [ ] **Big symbols on MultiWays.** Game-design guardrail today; a v2 might expose explicit truncation/skip strategies.
 - [x] ~~**Cascade + MultiWays.** Niche combination; build-time throw today.~~ Shipped via the per-chain shape rule (ADR 015, issue #74); see `multiwaysCascade` tests.

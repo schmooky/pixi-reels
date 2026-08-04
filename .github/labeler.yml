@@ -32,10 +32,10 @@ area/site:
       - any-glob-to-any-file:
           - 'apps/site/**'
 
-area/examples:
+area/fixtures:
   - changed-files:
       - any-glob-to-any-file:
-          - 'examples/**'
+          - 'tests/e2e/fixtures/**'
 
 area/spine:
   - changed-files:
@@ -46,15 +46,13 @@ area/spine:
 area/cascade:
   - changed-files:
       - any-glob-to-any-file:
-          - 'examples/shared/cascadeLoop.ts'
+          - 'apps/site/src/runtime/**'
           - 'packages/pixi-reels/src/spin/modes/CascadeMode.ts'
 
 area/cheats:
   - changed-files:
       - any-glob-to-any-file:
-          - 'examples/shared/cheats.ts'
-          - 'examples/shared/CheatPanel.ts'
-          - 'examples/shared/seededRng.ts'
+          - 'packages/cheats/**'
 
 area/testing:
   - changed-files:

@@ -1,21 +1,20 @@
 // @ts-nocheck
-// Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, loadCascadeSpines,
-//           buildCascadeSpineMap, CASCADE_SYMBOL_IDS, CASCADE_PLATE_W,
-//           CASCADE_PLATE_H, PIXI, gsap, app, pickWeighted
+// Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, loadSpineSet,
+//           PIXI, gsap, app, pickWeighted
 
 // Authored destroy: same board and cascade as the fade canvas; the only
 // change is `outAnimation: 'explode'` at registration. destroySymbols
 // then plays the skeleton's 1.27 s explosion instead of the implode.
 // Shown at full length here.
 
-await loadCascadeSpines();
+const cascade = await loadSpineSet("cascade");
 
 const A = 'low1', B = 'low2', C = 'low3';
 const X = 'high'; // the winner that vanishes
 const REELS = 4, ROWS = 3;
 const SCALE = 0.8;
-const CELL_W = CASCADE_PLATE_W * SCALE;
-const CELL_H = CASCADE_PLATE_H * SCALE;
+const CELL_W = cascade.set.cellSize.width * SCALE;
+const CELL_H = cascade.set.cellSize.height * SCALE;
 
 const BEFORE = [
   [X, A, B],
@@ -32,10 +31,10 @@ function randSymbolNotIn(exclude) {
 }
 
 const reelSet = new ReelSetBuilder()
-  .reels(REELS).visibleRows(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
+  .reels(REELS).visibleCells(ROWS).symbolSize(CELL_W, CELL_H).symbolGap(0, 0)
   .symbols(r => {
-    const spineMap = buildCascadeSpineMap();
-    for (const id of CASCADE_SYMBOL_IDS) {
+    const spineMap = cascade.spineMap;
+    for (const id of cascade.symbolIds) {
       r.register(id, SpineReelSymbol, {
         spineMap,
         scale: SCALE,
@@ -49,8 +48,8 @@ const reelSet = new ReelSetBuilder()
   .symbolData({ high: { zIndex: 10, unmask: true } })
   .speed('normal', { ...SpeedPresets.NORMAL, bounceDistance: 0, bounceDuration: 0 }).speed('turbo', { ...SpeedPresets.TURBO, bounceDistance: 0, bounceDuration: 0 })
   .tumble({
-    fall:   { duration: 0, ease: 'none', rowStagger: 0 },              // not used. refill skips fall
-    dropIn: { duration: 367, ease: 'power2.in', rowStagger: 0, distance: 'perHole' },  // 22f
+    fall:   { duration: 0, ease: 'none', cellStagger: 0 },              // not used. refill skips fall
+    dropIn: { duration: 367, ease: 'power2.in', cellStagger: 0, distance: 'perHole' },  // 22f
   })
   .ticker(app.ticker).build();
 
@@ -66,22 +65,23 @@ return {
 
     reelSet.setDropOrder('all');
     await reelSet.runCascade({
-      detectWinners: (grid) => grid.flatMap((col, reel) =>
-        col.map((sym, row) => sym === X ? { reel, row } : null).filter(Boolean),
+      detectWinners: (grid) => grid.flatMap((column, reel) =>
+        column.map((sym, cell) => sym === X ? { reel, cell } : null).filter(Boolean),
       ),
       nextGrid: (prev, winners) => {
         const losers = new Map();
         for (const w of winners) {
           if (!losers.has(w.reel)) losers.set(w.reel, new Set());
-          losers.get(w.reel).add(w.row);
+          losers.get(w.reel).add(w.cell);
         }
-        return prev.map((col, reel) => {
+        const next = prev.map((column, reel) => {
           const drop = losers.get(reel);
-          if (!drop || drop.size === 0) return [...col];
-          const survivors = col.filter((_, row) => !drop.has(row));
+          if (!drop || drop.size === 0) return [...column];
+          const survivors = column.filter((_, cell) => !drop.has(cell));
           const fillers = Array.from({ length: drop.size }, () => randSymbolNotIn(new Set([X])));
           return [...fillers, ...survivors];
         });
+        return next.map((visible) => ({ visible }));
       },
       pauseAfterDestroyMs: 117,
     });

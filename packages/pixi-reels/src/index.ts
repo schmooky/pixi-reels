@@ -4,6 +4,8 @@ export { ReelSetBuilder } from './core/ReelSetBuilder.js';
 export { Reel } from './core/Reel.js';
 export type { ReelConfig, NudgeOptions } from './core/Reel.js';
 export { ReelViewport } from './core/ReelViewport.js';
+export { reelAxis, VERTICAL_FORWARD } from './core/ReelAxis.js';
+export type { ReelAxis, Orientation, Direction } from './core/ReelAxis.js';
 
 // Config
 export { SpeedPresets } from './config/SpeedPresets.js';
@@ -17,7 +19,7 @@ export type {
   TrapezoidConfig,
   NoOffsetConfig,
   OffsetConfig,
-  OffsetXMode,
+  CrossOffsetMode,
   Matrix,
   Position,
   CellBounds,
@@ -26,12 +28,17 @@ export type {
   MaskConfig,
   MultiWaysConfig,
   ReelAnchor,
+  Stacking,
   AnticipationStagger,
   AnticipationSlowdown,
   AnticipationOptions,
 } from './config/types.js';
-export type { ReelMaskRect, MaskStrategy } from './core/ReelViewport.js';
-export { RectMaskStrategy, SharedRectMaskStrategy } from './core/ReelViewport.js';
+export type { ReelMaskRect, MaskStrategy, MaskContext } from './core/ReelViewport.js';
+export {
+  MASK_STRATEGY_VERSION,
+  RectMaskStrategy,
+  SharedRectMaskStrategy,
+} from './core/ReelViewport.js';
 
 // Symbols
 export { ReelSymbol } from './symbols/ReelSymbol.js';
@@ -53,6 +60,11 @@ export type {
   PrewarmSpinTexturesOptions,
 } from './snapshot/SpinTextureCache.js';
 export { StaticSpinSymbol } from './snapshot/StaticSpinSymbol.js';
+
+// A ready-made playing-card symbol: coloured tile, fitted glyph, glyph-only
+// win pulse. Ships with the package so a prototype needs no art at all.
+export { CardSymbol, CARD_DECK, WILD_CARD } from './symbols/CardSymbol.js';
+export type { CardSymbolOptions } from './symbols/CardSymbol.js';
 export type { StaticSpinSymbolOptions } from './snapshot/StaticSpinSymbol.js';
 
 // Spin
@@ -67,11 +79,14 @@ export type { StaticSpinSymbolOptions } from './snapshot/StaticSpinSymbol.js';
 // stable shape descriptions for documentation.
 export { ReelPhase } from './spin/phases/ReelPhase.js';
 export { PhaseFactory } from './spin/phases/PhaseFactory.js';
+// The two shapes `PhaseFactory.register` / `.registerFactory` accept. Needed
+// to type a helper that registers phases on your behalf.
+export type { PhaseConstructor, PhaseCreatorFn } from './spin/phases/PhaseFactory.js';
 export type { StartPhaseConfig } from './spin/phases/StartPhase.js';
 export type { SpinPhaseConfig } from './spin/phases/SpinPhase.js';
 export type { StopPhaseConfig } from './spin/phases/StopPhase.js';
 export type { AnticipationPhaseConfig } from './spin/phases/AnticipationPhase.js';
-export type { AdjustPhaseConfig } from './spin/phases/AdjustPhase.js';
+export type { AdjustPhaseConfig, PinOverlayTween } from './spin/phases/AdjustPhase.js';
 
 // Anticipation recipes
 export { anticipationForScatters } from './spin/anticipationRecipes.js';
@@ -98,6 +113,18 @@ export { SpeedManager } from './speed/SpeedManager.js';
 export { FrameBuilder } from './frame/FrameBuilder.js';
 export type { FrameContext, FrameMiddleware } from './frame/FrameBuilder.js';
 export type { ColumnTarget } from './frame/ColumnTarget.js';
+export {
+  cloneColumnTarget,
+  columnTargetToStrip,
+  getTargetSlot,
+  setTargetSlot,
+} from './frame/ColumnTarget.js';
+
+// The v1 -> v2 rename table is deliberately NOT exported. It is 1.x
+// migration scaffolding: the builder's fail-loud guards read it internally
+// and every throw already names the replacement, so nothing a consumer
+// writes needs the table itself. Exporting it would semver-lock migration
+// state into all of 2.x. The guards go in 3.0; see ADR 016 section 6.2.
 
 // Pool
 export { ObjectPool } from './pool/ObjectPool.js';
@@ -106,15 +133,20 @@ export { ObjectPool } from './pool/ObjectPool.js';
 export { SymbolSpotlight } from './spotlight/SymbolSpotlight.js';
 export type { SpotlightOptions, WinLine, CycleOptions } from './spotlight/SymbolSpotlight.js';
 
-// Boards — a grid of independently spinning 1×1 cells.
+// Boards - a grid of independently spinning 1×1 cells.
 //   BoardGrid is the generic mechanism (geometry, instances, spin a chosen
-//   set of cells) — build your own feature on it. HoldAndWinBoard is the
+//   set of cells) - build your own feature on it. HoldAndWinBoard is the
 //   opinionated lock / respin / collect layer, built entirely on BoardGrid's
 //   public surface, so you can copy it and change the rules.
 export { BoardGrid } from './board/BoardGrid.js';
 export type { BoardCell, BoardSpinTarget, BoardProfile, BoardGridOptions } from './board/BoardGrid.js';
 export { HoldAndWinBuilder } from './board/HoldAndWinBuilder.js';
 export { HoldAndWinBoard } from './board/HoldAndWinBoard.js';
+// The board's own constructor parameter. `HoldAndWinBuilder.build()` returns a
+// board, so most consumers never name this - but the fork story below promises
+// that everything a copied HoldAndWinBoard reaches for is public, and its
+// constructor signature is the first thing a fork has to restate.
+export type { HoldAndWinBoardConfig } from './board/HoldAndWinBoard.js';
 // The pure reducer is public too: a fork copies HoldAndWinBoard + HoldAndWinState
 // and repoints both imports at `pixi-reels` (see the comment below).
 export { HoldAndWinState } from './board/HoldAndWinState.js';
@@ -132,18 +164,6 @@ export type {
   HwEffect,
   HwCellSizeOptions,
 } from './board/HwTypes.js';
-
-// Horizontal reel — a single sideways-scrolling strip (the "these symbols pay
-// this round" banner above the reels). Not a matrix, not a spin lifecycle; its
-// own small mechanism on the shared pool / ticker / event primitives.
-export { HorizontalReel } from './horizontal/HorizontalReel.js';
-export { HorizontalReelBuilder } from './horizontal/HorizontalReelBuilder.js';
-export type {
-  HorizontalDirection,
-  HorizontalCascadeTiming,
-  HorizontalReelConfig,
-  HorizontalReelEvents,
-} from './horizontal/HorizontalReelTypes.js';
 
 // Wins (symbol-highlight presenter. no line drawing, events-driven)
 export { WinPresenter } from './wins/WinPresenter.js';
@@ -185,7 +205,12 @@ export type {
 // Utils
 export type { Disposable } from './utils/Disposable.js';
 export { TickerRef } from './utils/TickerRef.js';
+export type { TickerCallback } from './utils/TickerRef.js';
 export { driveGsapWithTicker } from './utils/gsapTicker.js';
+// The gsap instance type. Public because it is the 2nd parameter of
+// `driveGsapWithTicker`, the type of `ReelConfig.gsap`, and the return of
+// the `Reel.gsap` accessor.
+export type { Gsap } from './utils/gsap.js';
 
 // Debug
 export {
@@ -203,6 +228,14 @@ export type {
   RecordedFrame,
   StartRecordingOptions,
 } from './debug/debug.js';
+export { debugOverlay, OVERLAY_LABEL } from './debug/debugOverlay.js';
+export type {
+  DebugOverlayLayer,
+  DebugOverlayOptions,
+  DebugOverlayHandle,
+  DebugOverlaySnapshot,
+  DebugOverlayReelInfo,
+} from './debug/debugOverlay.js';
 
 // Testing utilities ship at the `pixi-reels/testing` subpath. Importing
 // from there keeps the headless harness out of production bundles even

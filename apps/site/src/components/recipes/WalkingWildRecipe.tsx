@@ -1,7 +1,7 @@
 /** @jsxImportSource react */
 import RecipeBoard from '../RecipeBoard.tsx';
 import { mountMiniReels, sleep } from '../miniRuntime.ts';
-import { loadPrototypeSymbols } from '../../../../../examples/shared/prototypeSpriteLoader.ts';
+import { loadPrototypeSymbols } from '../../runtime/prototypeSpriteLoader.ts';
 import { Sprite } from 'pixi.js';
 import { gsap } from 'gsap';
 
@@ -12,8 +12,8 @@ const IDS = [...FILLER, WILD];
 function randomFiller(): string {
   return FILLER[Math.floor(Math.random() * FILLER.length)];
 }
-function fillerGrid(cols: number, rows: number): string[][] {
-  return Array.from({ length: cols }, () => Array.from({ length: rows }, () => randomFiller()));
+function fillerGrid(cols: number, cells: number): string[][] {
+  return Array.from({ length: cols }, () => Array.from({ length: cells }, () => randomFiller()));
 }
 
 /**
@@ -28,7 +28,7 @@ export default function WalkingWildRecipe() {
       height={280}
       setup={async (host) => {
         const { reelSet, app, destroy } = await mountMiniReels(host, {
-          reelCount: 5, visibleRows: 3,
+          reelCount: 5, visibleCells: 3,
           symbolSize: { width: 72, height: 72 },
           symbols: { kind: 'sprite', ids: IDS },
           weights: { 'round/round_1': 22, 'round/round_2': 22, 'royal/royal_1': 18, 'square/square_1': 18 },
@@ -42,8 +42,8 @@ export default function WalkingWildRecipe() {
         ghost.visible = false;
         app.stage.addChild(ghost);
 
-        const positionGhostOn = (reelIdx: number, row: number) => {
-          const sym = reelSet.getReel(reelIdx).getSymbolAt(row);
+        const positionGhostOn = (reelIdx: number, cell: number) => {
+          const sym = reelSet.getReel(reelIdx).getSymbolAt(cell);
           const { x, y } = sym.view.toGlobal({ x: 36, y: 36 });
           ghost.x = x;
           ghost.y = y;
@@ -58,7 +58,7 @@ export default function WalkingWildRecipe() {
             reelSet.setSpeed('turbo');
             ghost.visible = false;
 
-            // Spin 1. base game. Wild lands on the rightmost reel, row 1.
+            // Spin 1. base game. Wild lands on the rightmost reel, cell 1.
             const walkerRow = 1;
             let walkerCol = 4;
             const spin1 = fillerGrid(5, 3);

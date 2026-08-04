@@ -9,7 +9,7 @@ export const OG = {
   width: 1200,
   height: 630,
 
-  // zinc-950 / 50 / 400 / 500 / 800 — the dark `--background`/`--foreground`/
+  // zinc-950 / 50 / 400 / 500 / 800: the dark `--background`/`--foreground`/
   // `--muted-foreground`/`--border` triples, plus one lifted surface.
   bg: '#09090b',
   surface: '#111114',

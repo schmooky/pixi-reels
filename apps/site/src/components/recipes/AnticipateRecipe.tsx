@@ -24,7 +24,7 @@ export default function AnticipateRecipe() {
       height={300}
       setup={async (host) => {
         const { reelSet, destroy } = await mountMiniReels(host, {
-          reelCount: 5, visibleRows: 3,
+          reelCount: 5, visibleCells: 3,
           symbolSize: { width: 78, height: 78 },
           symbols: { kind: 'sprite', ids: IDS },
         });

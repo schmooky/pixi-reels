@@ -1,6 +1,9 @@
 id: motion-005
 group: motion
 question: How do I spin one reel up and another down (mixed directions)?
-answer: Per-reel spin direction is not a built-in flag today; mix it by driving
-  specific reels with a custom `SpinningMode` or your own motion on those reels.
+answer: >-
+  `.directionPerReel(['forward', 'reverse', 'forward', ...])` on the builder,
+  one entry per reel (length must equal `.reels(n)`). Reels you omit fall back
+  to `.direction()`. A big symbol spanning reels (`size.reels > 1`) throws at
+  `build()` when the directions it straddles are mixed.
 links: []

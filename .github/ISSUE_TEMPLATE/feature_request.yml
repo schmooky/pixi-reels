@@ -43,7 +43,6 @@ body:
         - Cascade / tumble
         - Cheats / testing utilities
         - Docs site (new page, new recipe, new demo)
-        - Example app (classic-spin, cascade-tumble, hold-and-win)
         - Build / CI / release tooling
         - Unsure / cross-cutting
     validations:

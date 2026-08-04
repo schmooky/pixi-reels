@@ -34,14 +34,14 @@ await PIXI.Assets.load('/hw-sprites/hwfont-mult.fnt'); // the game's ×N multipl
 // Define fixed multiplier positions for this demo. In a real game, these
 // could come from the server with each spin.
 const MULTIPLIER_CELLS = [
-  { col: 1, row: 1, mult: 2 },
-  { col: 3, row: 0, mult: 3 },
-  { col: 2, row: 2, mult: 5 },
+  { reel: 1, cell: 1, mult: 2 },
+  { reel: 3, cell: 0, mult: 3 },
+  { reel: 2, cell: 2, mult: 5 },
 ];
 
 const reelSet = new ReelSetBuilder()
   .reels(COLS)
-  .visibleRows(ROWS)
+  .visibleCells(ROWS)
   .symbolSize(SIZE, SIZE)
   .symbolGap(4, 4)
   .symbols((r) => {
@@ -67,8 +67,8 @@ reelSet.addChild(badgeLayer);
 const spineChips = [];
 for (const cell of MULTIPLIER_CELLS) {
   // Anchored to the top-right corner of the cell with a small inset.
-  const cx = cell.col * (SIZE + 4) + SIZE - CHIP / 2 - 6;
-  const cy = cell.row * (SIZE + 4) + CHIP / 2 + 6;
+  const cx = cell.reel * (SIZE + 4) + SIZE - CHIP / 2 - 6;
+  const cy = cell.cell * (SIZE + 4) + CHIP / 2 + 6;
 
   const coin = Spine.from({ skeleton: 'hw-jackpot', atlas: 'hw-atlas' });
   settleMoneyFace(coin, CHIP, 'mini'); // pose + scale onto the gold money face
@@ -93,8 +93,8 @@ for (const cell of MULTIPLIER_CELLS) {
 // only for this spin's evaluation, and clears at next spin:start.
 reelSet.events.on('spin:allLanded', ({ symbols }) => {
   for (const cell of MULTIPLIER_CELLS) {
-    const rolled = symbols[cell.col][cell.row];
-    reelSet.pin(cell.col, cell.row, rolled, {
+    const rolled = symbols[cell.reel][cell.cell];
+    reelSet.pin(cell.reel, cell.cell, rolled, {
       turns: 'eval',
       payload: { multiplier: cell.mult, positionMultiplier: true },
     });

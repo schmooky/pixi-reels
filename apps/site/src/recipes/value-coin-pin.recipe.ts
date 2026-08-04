@@ -3,13 +3,13 @@
 //
 // Value-carrying coins on a Hold & Win board.
 //
-// Each coin carries a coefficient (×2 … ×50) in `coin.data`. The board locks
-// every hit and respins only the free cells natively — no pins, no
+// Each coin carries a coefficient (×2 ... ×50) in `coin.data`. The board locks
+// every hit and respins only the free cells natively - no pins, no
 // hand-rolled grid of mini-reels, just `HoldAndWinBuilder`. The ×N badge is
 // painted from the data; the running total is summed from `board.lockedCoins`.
 
 const COIN = 'coin', COLS = 5, ROWS = 3, CELL = 64, GAP = 6;
-// a typical coefficient ladder — ×2 common, ×50 rare; the server picks per hit
+// a typical coefficient ladder - ×2 common, ×50 rare; the server picks per hit
 const LADDER_W = { 2: 12, 5: 6, 10: 4, 20: 2, 50: 1 };
 const pickValue = () => Number(pickWeighted(LADDER_W));
 
@@ -46,7 +46,7 @@ app.stage.addChild(labels);
 const labelAt = new Map();
 const abs = (cell) => { const c = board.cellCenter(cell); return { x: board.container.x + c.x, y: board.container.y + c.y }; };
 const badge = (cell, value) => {
-  const k = `${cell.col},${cell.row}`; labelAt.get(k)?.destroy();
+  const k = `${cell.reel},${cell.cell}`; labelAt.get(k)?.destroy();
   const p = abs(cell);
   const t = fitText(new PIXI.BitmapText({ text: `${value}x`, style: { fontFamily: 'DiamondMult', fontSize: 48 } }), CELL * 0.8, CELL * 0.5);
   t.anchor.set(0.5); t.position.set(p.x, p.y);
@@ -59,12 +59,12 @@ const refreshTotal = () => { total.text = `TOTAL: ${board.lockedCoins.reduce((a,
 
 board.events.on('coin:locked', ({ coin }) => { badge(coin.cell, coin.data.value); refreshTotal(); });
 
-// scripted rounds — low → high so the running total climbs; the server would
+// scripted rounds - low → high so the running total climbs; the server would
 // decide each round's hit cells and coefficients in a real game
 const ROUNDS = [
-  [{ col: 0, row: 2 }, { col: 2, row: 0 }, { col: 4, row: 1 }],
-  [{ col: 1, row: 0 }],
-  [{ col: 3, row: 2 }],
+  [{ reel: 0, cell: 2 }, { reel: 2, cell: 0 }, { reel: 4, cell: 1 }],
+  [{ reel: 1, cell: 0 }],
+  [{ reel: 3, cell: 2 }],
   [],
 ];
 

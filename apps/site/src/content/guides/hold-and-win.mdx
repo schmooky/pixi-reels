@@ -8,14 +8,14 @@ description: The Hold & Win lifecycle end to end — the mental model, the state
 
 Hold & Win (a.k.a. Lock & Respin, Hold & Spin) is a feature where coins land,
 **stick**, and refill a respin counter until the board fills or the respins run
-out. `pixi-reels` ships it as a first-class board:
+out. `pixi-reels` ships it as a built-in board:
 
 ```ts
 import { HoldAndWinBuilder } from 'pixi-reels';
 ```
 
-This guide is the map. The [recipes](/recipes/) show individual tricks; here is
-how the whole thing fits together and how you drive it from a real game client.
+The [recipes](/recipes/) show individual tricks; this guide shows how the whole
+thing fits together and how you drive it from a real game client.
 
 ## The mental model
 
@@ -24,26 +24,26 @@ atomic spin unit is the column (a `ReelSet`); the mechanic's atomic unit is the
 *cell*. So each cell is its own 1×1 `ReelSet`, and `HoldAndWinBuilder` wires the
 whole grid plus the round choreography.
 
-The single most important thing to internalise: **the board is value-blind.** A
-coin is an opaque record —
+The most important thing: **the board is value-blind.** A
+coin is an opaque record:
 
 ```ts
-{ cell: { col, row }, id: 'coin', data: /* anything you want */ }
+{ cell: { reel, cell }, id: 'coin', data: /* anything you want */ }
 ```
 
-`id` picks the registered symbol art; `data` is *yours* — values, jackpot tiers,
+`id` picks the registered symbol art; `data` is *yours*: values, jackpot tiers,
 multipliers, collector flags. The board never reads `data`. Adders, doublers,
-collectors, flights to a meter — none of that is a board feature, all of it is
+collectors, flights to a meter - none of that is a board feature, all of it is
 game logic you run on top of three openings:
 
 | Opening | What it gives you |
 |---|---|
 | `board.events` | every beat of the round, with the coin payload |
-| `board.symbolAt(cell)` | the live `ReelSymbol` instance — call your own symbol's methods |
+| `board.symbolAt(cell)` | the live `ReelSymbol` instance - call your own symbol's methods |
 | `board.cellCenter(cell)` / `board.cellBounds(cell)` | exact pixel geometry for flights & trails |
 
 Keep that split and any Hold & Win variant you can think of is a small amount of
-game code — the board never changes.
+game code - the board never changes.
 
 ## The lifecycle
 
@@ -58,9 +58,9 @@ moment (`'idle' | 'active' | 'spinning'`).
  spinning ──board fills  OR  respins hit 0──▶  feature:end  ──▶  idle
 ```
 
-1. **`enter(seed)`** — the trigger coins seed the board. They lock instantly (no
+1. **`enter(seed)`** - the trigger coins seed the board. They lock instantly (no
    spin) and the respin counter arms. `idle → active`.
-2. **`respin(hits)`** — spins every free cell. The cells named in `hits` land
+2. **`respin(hits)`** - spins every free cell. The cells named in `hits` land
    their coins; everything else lands blank. `active → spinning → active`.
    - A coin landed this wave → counter **resets** to full.
    - Nothing landed → counter **decrements**.
@@ -86,7 +86,7 @@ respin(hits)
 ## Wiring it to your game client
 
 The board owns the *choreography*; **you own the loop and the result source.**
-A respin's results come from wherever your real results come from — an RGS, a
+A respin's results come from wherever your real results come from: an RGS, a
 mock server, an RNG. The canonical driver is deliberately short and visible:
 
 ```ts
@@ -103,7 +103,7 @@ app.stage.addChild(board.container);
 
 // React to the round however your game presents — HUD, sounds, flights.
 board.events.on('coin:locked', ({ coin, locked, capacity }) => {
-  hud.total += coin.data.value;     // YOU own the value; the board doesn't
+  hud.total += coin.data?.value ?? 0;     // YOU own the value; the board doesn't
   hud.text = `${locked} / ${capacity}`;
 });
 
@@ -119,14 +119,14 @@ while (true) {
 }
 
 // 3. collect — release the coins and fly them wherever you like
-for (const coin of board.lockedCoins) flyToMeter(board.cellCenter(coin.cell), coin.data.value);
+for (const coin of board.lockedCoins) flyToMeter(board.cellCenter(coin.cell), coin.data?.value ?? 0);
 board.release(board.lockedCoins.map((c) => c.cell));
 ```
 
 `respin()` resolves only after the whole wave has landed *and* the counter has
 resolved, so the loop reads top-to-bottom. Want a [single skip button](/recipes/hold-and-win-skip/)?
 Call `board.skip()` to slam every in-flight cell; the landing → `coin:locked` →
-`feature:end` flow still resolves, you just stop waiting.
+`feature:end` flow still resolves, you stop waiting.
 
 ## Events reference
 
@@ -150,50 +150,50 @@ Two deliberate distinctions:
 
 - **`coin:released` vs `feature:reset`.** `release()` means "collect this coin"
   and fires `coin:released` per coin. `reset()` is a hard clear back to idle and
-  fires a single `feature:reset` — so a HUD that decrements on collect doesn't
+  fires a single `feature:reset`, so a HUD that decrements on collect doesn't
   mistakenly tick on a reset.
 - **`setSymbolAt(cell, id, data)` rewrites a *locked* coin in place** (coin →
-  MINI → MAJOR), keeping the ledger correct. It throws on a free cell — placing a
+  MINI → MAJOR), keeping the ledger correct. It throws on a free cell; placing a
   brand-new tracked coin is `enter`/`respin`'s job.
 
 ## Own the board
 
 `pixi-reels` ships boards as two layers, on purpose:
 
-- **`BoardGrid`** — the primitive. A grid of cells that each spin independently.
+- **`BoardGrid`** - the primitive. A grid of cells that each spin independently.
   It knows geometry, instances and spinning, and **nothing** about coins, locks,
   respins or value.
-- **`HoldAndWinBoard`** — one opinionated board built *entirely on `BoardGrid`'s
+- **`HoldAndWinBoard`** - one opinionated board built *entirely on `BoardGrid`'s
   public API*. It adds the lock / respin / collect rules.
 
 That split is the whole point: the engine never decides your game for you. When
 the built-in board doesn't fit, you have three escape hatches, in order of effort:
 
-1. **Configure it.** Stagger, respins, weights, anticipation, cell chrome — all
+1. **Configure it.** Stagger, respins, weights, anticipation, cell chrome - all
    builder options. Most games never go past here.
-2. **Build on the primitive.** If your feature isn't lock-and-respin at all —
-   pick-and-reveal, cluster-collect, scratch-card — skip `HoldAndWinBuilder` and
+2. **Build on the primitive.** If your feature isn't lock-and-respin at all
+   (pick-and-reveal, cluster-collect, scratch-card), skip `HoldAndWinBuilder` and
    use `BoardGrid` directly. [Here's a non-Hold & Win board on the primitive](/recipes/board-grid-reveal/).
 3. **Fork the board.** Want lock-and-respin but with *different* rules? Copy
    `HoldAndWinBoard` + `HoldAndWinState` into your project and repoint their
-   imports at `pixi-reels` — everything they reach for (`BoardGrid`,
+   imports at `pixi-reels` - everything they reach for (`BoardGrid`,
    `EventEmitter`, the `Hw*` types, `cellKey`, `HwEffect`) is public API, so the
-   copy stays on supported ground — then rewrite the reducer. The
+   copy stays on supported ground - then rewrite the reducer. The
    respin-reset-on-hit rule and board-full-ends-the-feature rule live in
    `HoldAndWinState`, yours to change.
 
 The one thing the board will **never** do is read your `data` or encode a
-paytable. Meaning stays yours; the board only moves reels. That line — mechanism
-on our side, domain on yours — is the contract that keeps it out of your way.
+paytable. Meaning stays yours; the board only moves reels. That line - mechanism
+on our side, domain on yours - is the contract that keeps it out of your way.
 
 ## Where to go next
 
-- **See the lifecycle live** — the [event-trace board](/recipes/hold-and-win-trace/)
+- **See the lifecycle live** - the [event-trace board](/recipes/hold-and-win-trace/)
   prints every event as it fires.
-- **Starter** — [Hold & Win respin](/recipes/hold-and-win/), the minimal board.
-- **Carry a value** — [on the coin's data](/recipes/coin-value-data/) ·
+- **Starter** - [Hold & Win respin](/recipes/hold-and-win/), the minimal board.
+- **Carry a value** - [on the coin's data](/recipes/coin-value-data/) ·
   [baked into a symbol class](/recipes/coin-value-symbol/).
-- **Flights & collect** — [collector + bezier choreography](/recipes/hold-and-win-collector/) ·
+- **Flights & collect** - [collector + bezier choreography](/recipes/hold-and-win-collector/) ·
   [fly to a meter](/recipes/hold-and-win-meter/).
-- **Tension** — [per-board anticipation](/recipes/hold-and-win-anticipation/).
-- **Base game → feature** — [transition in one chain](/recipes/hold-and-win-base-to-feature/).
+- **Tension** - [per-board anticipation](/recipes/hold-and-win-anticipation/).
+- **Base game → feature** - [transition in one chain](/recipes/hold-and-win-base-to-feature/).

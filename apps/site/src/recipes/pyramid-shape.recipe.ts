@@ -4,7 +4,7 @@
 //                   pickWeighted
 //
 // Per-reel static shape. a 3-5-5-5-3 pyramid. Reels can have different
-// row counts at build time. Cell width is uniform across reels; the
+// cell counts at build time. Cell width is uniform across reels; the
 // shorter outer reels are vertically centered by default (`reelAnchor: 'center'`).
 //
 // CARD SYMBOLS BELOW ARE DEBUG/PROTOTYPING ONLY. see /recipes/card-symbol-debug/.
@@ -15,7 +15,7 @@ const GAP = 4;
 
 const reelSet = new ReelSetBuilder()
   .reels(VISIBLE.length)
-  .visibleRowsPerReel(VISIBLE)
+  .visibleCellsPerReel(VISIBLE)
   .reelAnchor('center')
   .symbolSize(SIZE, SIZE)
   .symbolGap(GAP, GAP)
@@ -33,7 +33,7 @@ const reelSet = new ReelSetBuilder()
 return {
   reelSet,
   nextResult: () =>
-    VISIBLE.map((rows) =>
-      Array.from({ length: rows }, () => CARD_DECK[Math.floor(Math.random() * CARD_DECK.length)].id),
+    VISIBLE.map((cells) =>
+      Array.from({ length: cells }, () => CARD_DECK[Math.floor(Math.random() * CARD_DECK.length)].id),
     ),
 };

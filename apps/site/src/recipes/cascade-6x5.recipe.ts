@@ -19,7 +19,7 @@ function randSymbol(exclude) {
 }
 
 const reelSet = new ReelSetBuilder()
-  .reels(REELS).visibleRows(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
+  .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(4, 4)
   .symbols(r => {
     for (const sym of CARD_DECK) {
       if (IDS.includes(sym.id)) {
@@ -29,15 +29,15 @@ const reelSet = new ReelSetBuilder()
   })
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150 })
   .tumble({
-    fall:   { duration: 283, ease: 'power3.in', rowStagger: 67 },  // 17f, 4f stagger
-    dropIn: { duration: 450, ease: 'power2.in', rowStagger: 67, distance: 'perHole' },  // 27f, 4f stagger
+    fall:   { duration: 283, ease: 'power3.in', cellStagger: 67 },  // 17f, 4f stagger
+    dropIn: { duration: 450, ease: 'power2.in', cellStagger: 67, distance: 'perHole' },  // 27f, 4f stagger
   })
   .ticker(app.ticker).build();
 
 return {
   reelSet,
   onSpin: async () => {
-    // Stage 0: cluster of CLUSTER on row 2, cols 0–2.
+    // Stage 0: cluster of CLUSTER on cell 2, cols 0-2.
     const stage0 = Array.from({ length: REELS }, (_, c) =>
       Array.from({ length: ROWS }, (_, r) =>
         r === HIT_ROW && HIT_COLS.includes(c) ? CLUSTER : randSymbol(CLUSTER)
@@ -62,16 +62,16 @@ return {
       detectWinners: () => {
         if (detected) return [];
         detected = true;
-        return HIT_COLS.map(c => ({ reel: c, row: HIT_ROW }));
+        return HIT_COLS.map(c => ({ reel: c, cell: HIT_ROW }));
       },
       nextGrid: (prev, winners) => {
-        // Survivors slide down 1; new symbol at row 0.
-        const next = prev.map(col => [...col]);
+        // Survivors slide down 1; new symbol at cell 0.
+        const next = prev.map(reel => [...reel]);
         for (const w of winners) {
-          for (let r = w.row; r > 0; r--) next[w.reel][r] = next[w.reel][r - 1];
+          for (let r = w.cell; r > 0; r--) next[w.reel][r] = next[w.reel][r - 1];
           next[w.reel][0] = randSymbol(CLUSTER);
         }
-        return next;
+        return next.map((visible) => ({ visible }));
       },
       pauseAfterDestroyMs: 250,
     });

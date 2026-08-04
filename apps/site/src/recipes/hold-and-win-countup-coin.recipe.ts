@@ -89,7 +89,7 @@ const fitGold = (t, maxW, maxH) => {
 // tick a fresh label up from 0 to the coin's value, then settle it to a
 // width-fitted final amount
 function countUp(cell, value) {
-  const k = `${cell.col},${cell.row}`;
+  const k = `${cell.reel},${cell.cell}`;
   labelAt.get(k)?.destroy();
   const p = abs(cell);
   const t = goldText('0.00', 22);
@@ -132,13 +132,13 @@ return {
 
     // a fresh board of coins, values rolled per run
     const coins = [
-      { col: 0, row: 0 }, { col: 2, row: 0 }, { col: 4, row: 0 },
-      { col: 1, row: 1 }, { col: 3, row: 2 },
+      { reel: 0, cell: 0 }, { reel: 2, cell: 0 }, { reel: 4, cell: 0 },
+      { reel: 1, cell: 1 }, { reel: 3, cell: 2 },
     ].map((cell) => ({ cell, id: COIN, data: { value: randVal() } }));
     board.enter(coins);
     hud.text = 'counting up…';
 
-    // each coin counts up as its wave arrives — reading order, one per beat
+    // each coin counts up as its wave arrives - reading order, one per beat
     for (const wave of coinWaves(coins, 'sequence')) {
       await Promise.all(wave.map((coin) => countUp(coin.cell, coin.data.value)));
     }
