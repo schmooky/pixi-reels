@@ -63,12 +63,17 @@ describe('ReelAxis', () => {
     }
   });
 
-  it('withDirection returns a sibling axis and is identity for the same direction', () => {
+  it('builds a sibling axis for the other direction', () => {
+    // `withDirection` used to live on the interface for a per-spin direction
+    // override that never shipped (ADR 016 section 3.1, decision 4). Building
+    // the sibling through the factory is all the engine ever needed.
     const fwd = reelAxis('vertical', 'forward');
-    const rev = fwd.withDirection('reverse');
+    const rev = reelAxis('vertical', 'reverse');
     expect(rev.direction).toBe('reverse');
     expect(rev.orientation).toBe('vertical');
     expect(rev.polarity).toBe(-1);
-    expect(fwd.withDirection('forward')).toBe(fwd);
+    expect(rev.feedEdge).toBe('end');
+    expect(fwd.polarity).toBe(1);
+    expect(fwd.feedEdge).toBe('start');
   });
 });

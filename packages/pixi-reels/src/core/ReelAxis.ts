@@ -47,8 +47,6 @@ export interface ReelAxis {
   toLocal(width: number, height: number): { cross: number; main: number };
   /** (cross, main) to screen-space (x, y). */
   toScreen(cross: number, main: number): { x: number; y: number };
-  /** A sibling axis with the same orientation and a new travel direction. */
-  withDirection(d: Direction): ReelAxis;
 }
 
 class Axis implements ReelAxis {
@@ -90,10 +88,6 @@ class Axis implements ReelAxis {
   }
   toScreen(cross: number, main: number): { x: number; y: number } {
     return this._vertical ? { x: cross, y: main } : { x: main, y: cross };
-  }
-
-  withDirection(d: Direction): ReelAxis {
-    return d === this.direction ? this : new Axis(this.orientation, d);
   }
 }
 

@@ -2,7 +2,7 @@
 
 ## Status: Accepted, shipped in 2.0.0
 
-Implemented on the `v2` branch. Three decisions moved during implementation;
+Implemented on the `v2` branch. Four decisions moved during implementation;
 each is argued in its commit and repeated here so this document matches the
 code rather than the plan:
 
@@ -22,6 +22,26 @@ code rather than the plan:
    to `'ascending'` and `direction('reverse')` does NOT flip them, so art lit
    from above keeps overlapping the way it was drawn and a per-spin reversal
    tease does not re-layer the board. Both are exposed as explicit overrides.
+4. **Per-spin direction override (section 3.5) did NOT ship, and
+   `ReelAxis.withDirection` is gone with it.** Direction is fixed at `build()`:
+   `.direction(d)` and `.directionPerReel([...])` only. `spin({ direction })` and
+   `spin({ directionPerReel })` are not implemented and are absent from
+   `SpinOptions`.
+
+   `withDirection(d)` was on the published interface purely to serve that
+   override and had **zero call sites in `src`** — the axis is constructed once
+   per reel by the builder via `reelAxis(orientation, direction)`, and nothing
+   ever needed a sibling. Shipping it would have frozen a method into 2.x whose
+   only justification was an unbuilt feature.
+
+   Implementing the override is not a small change and should not ride a freeze:
+   `Reel._axis` is `readonly` and is handed to `ReelMotion`, `ReelViewport`, and
+   every phase at construction, so a per-spin flip means a re-injection path
+   through all of them, plus the mid-spin-throw guard, plus the section 3.4
+   "both buffers >= 1" validation that only per-spin overrides force. It is a
+   feature PR after 2.0, and re-adding a method to `ReelAxis` at that point is
+   additive for consumers (they receive axes, they do not implement the
+   interface).
 
 Section 6.4's `parkOutsideWindow` never materialised: A4's derive-from-index
 model removed the accumulated `_minY`/`_maxY` the flip was needed for.
@@ -91,7 +111,8 @@ Everything in this ADR follows from separating these:
    one shared cross axis.
 2. **Direction (polarity)** — which way along that axis symbols travel.
    `'forward'` (toward larger coordinate: down / right) or `'reverse'` (up / left).
-   **Per-Reel**, overridable **per spin**.
+   **Per-Reel**, fixed at `build()` (the per-spin override was deferred — see
+   decision 4 under Status).
 3. **Gravity** — which way cascade symbols fall.
    Defaults to the reel's direction, independently settable. A reel that spins upward and tumbles
    downward is a legitimate design; today the two are the same `+Y`.
@@ -143,7 +164,6 @@ export interface ReelAxis {
   toLocal(width: number, height: number): { cross: number; main: number };
   /** (cross, main) → screen-space (x, y). */
   toScreen(cross: number, main: number): { x: number; y: number };
-  withDirection(d: Direction): ReelAxis;
 }
 ```
 
@@ -244,6 +264,10 @@ reelSet.spin({ direction: 'reverse' });               // all reels, this spin on
 reelSet.spin({ directionPerReel: [/* ... */] });
 ```
 
+**Not implemented — see decision 4 under Status.** The per-spin half of this
+section was deferred out of 2.0.0; only the two builder calls above shipped.
+The rest of this section is the design as proposed, kept for whoever picks it up.
+
 Applied in `StartPhase.onEnter`, **only from rest**. At rest the strip is symmetric, so flipping
 polarity changes exactly one thing that is not already derived: **z-stacking**, if it is polarity-derived
 (§6.3). The `StopSequencer` feed edge needs no re-arming at start — its only caller is
@@ -302,7 +326,7 @@ hold-and-win, nudge, weighted RNG, speed profiles, `runCascade` chains, the watc
 ```ts
 new ReelSetBuilder().orientation('vertical').direction('reverse')   // roll-up
 .directionPerReel(['forward','reverse','forward','reverse','forward'])  // alternating columns
-await reels.spin({ direction: 'reverse' });                         // one reversed spin
+// await reels.spin({ direction: 'reverse' });   // NOT in 2.0.0 - see decision 4 under Status
 ```
 
 ---
