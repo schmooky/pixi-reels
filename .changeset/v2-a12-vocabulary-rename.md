@@ -4,7 +4,7 @@
 
 Rename: the row/column vocabulary becomes orientation-neutral. A reel's strip is made of **cells**, and the off-window slots either side are **start** and **end** (start = the smaller main coordinate: above for vertical, left for horizontal), independent of which way the reel travels.
 
-Run `npx pixi-reels-codemod v1-to-v2` over your sources. `build()` throws a named error if it still sees a v1 key.
+Run the `v1-to-v2` codemod over your sources. `build()` throws a named error if it still sees a v1 key. The codemod is not on npm yet -- the migration guide has the from-a-clone invocation.
 
 Core geometry:
 
@@ -65,6 +65,6 @@ New:
 
 Fail-loud, no silent aliases: `visibleRows()`, `visibleRowsPerReel()` and `reelPixelHeights()` are gone but still present as throwing stubs, and every renamed option key or string value throws from the builder method that received it (`bufferSymbols({ above })`, `multiways({ minRows })`, `symbolData({ size: { w } })`, `tumble({ fall: { rowStagger } })`, `offsetConfig({ topWidthFactor })`, `reelAnchor('top')`, `initialFrame`/`setResult` columns with `bufferAbove`). Each message names the v2 replacement and the codemod. The table itself stays internal: it is 1.x migration scaffolding, and exporting it would semver-lock it into all of 2.x.
 
-Codemod: `npx pixi-reels-codemod v1-to-v2 src` rewrites the API surface (AST-based, so it never touches your own `row` / `col` locals or your comments). Verified end-to-end against this repo's 112 site recipes at their pre-rename revision: zero v1 API names left in code.
+Codemod: the `v1-to-v2` transform rewrites the API surface (AST-based, so it never touches your own `row` / `col` locals or your comments). Verified end-to-end against this repo's 112 site recipes at their pre-rename revision: zero v1 API names left in code. It ships in the repo rather than on npm for now; see the migration guide for how to run it from a clone.
 
 Docs: a new "Migrating to 2.0" guide covers every rename with a before/after, including the three things the codemod deliberately leaves alone. ADRs, CHANGELOGs and the 1.0 migration guide keep their v1 vocabulary. they are records of what was true then.

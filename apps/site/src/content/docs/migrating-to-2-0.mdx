@@ -5,14 +5,18 @@ description: Every breaking change in 2.0.0, with a before and after. Rows becam
   cells, above/below became start/end, and one codemod does most of it.
 ---
 
-Run the codemod first:
+Run the codemod first. It is not published to npm yet, so run it from a clone
+of this repo:
 
 ```bash
-npx pixi-reels-codemod v1-to-v2 src
+git clone https://github.com/schmooky/pixi-reels
+cd pixi-reels && pnpm install
+node packages/pixi-reels-codemod/bin/cli.js v1-to-v2 /path/to/your/src
 ```
 
-Commit before you run it. it edits in place. Then read this page for the
-handful of things a codemod cannot do for you.
+Add `--dry --print` to see the rewrite without touching anything. Commit before
+you run it for real. it edits in place. Then read this page for the handful of
+things a codemod cannot do for you.
 
 ## Why any of this
 

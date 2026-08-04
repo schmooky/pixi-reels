@@ -2,14 +2,17 @@
 
 Rewrites [`pixi-reels`](https://github.com/schmooky/pixi-reels) v1 API names to v2.
 
+Not published to npm yet, so run it from a clone of this repo:
+
 ```bash
-npx pixi-reels-codemod v1-to-v2 src
+pnpm install
+node packages/pixi-reels-codemod/bin/cli.js v1-to-v2 /path/to/your/src
 ```
 
 Preview without writing:
 
 ```bash
-npx pixi-reels-codemod v1-to-v2 src --dry --print
+node packages/pixi-reels-codemod/bin/cli.js v1-to-v2 /path/to/your/src --dry --print
 ```
 
 Commit first. It edits in place.

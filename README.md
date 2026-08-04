@@ -96,10 +96,14 @@ reelSet.destroy()                               // Full teardown
 
 See [/api/](https://pixi-reels.schmooky.dev/api/) for the full TypeDoc reference.
 Upgrading? [Migrating to 2.0](https://pixi-reels.schmooky.dev/docs/migrating-to-2-0/)
-lists every breaking change and starts with the codemod:
+lists every breaking change and starts with the codemod.
+
+The codemod is not on npm yet, so run it from a clone:
 
 ```bash
-npx pixi-reels-codemod v1-to-v2 src
+git clone https://github.com/schmooky/pixi-reels
+cd pixi-reels && pnpm install
+node packages/pixi-reels-codemod/bin/cli.js v1-to-v2 /path/to/your/src
 ```
 
 ## Spine symbols (optional subpath)
