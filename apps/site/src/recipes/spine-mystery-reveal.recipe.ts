@@ -102,7 +102,7 @@ reelSet.events.on('spin:complete', async () => {
   if (!lastGrid) return;
   const cells = [];
   lastGrid.forEach((column, reel) =>
-    reel.forEach((id, cell) => {
+    column.forEach((id, cell) => {
       if (id === 'mystery') cells.push({ reel, cell });
     }),
   );
