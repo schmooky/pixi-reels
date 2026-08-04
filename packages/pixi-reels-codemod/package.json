@@ -1,6 +1,6 @@
 {
   "name": "pixi-reels-codemod",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "Rewrite pixi-reels v1 API names to v2. npx pixi-reels-codemod v1-to-v2 <paths...>",
   "type": "module",
