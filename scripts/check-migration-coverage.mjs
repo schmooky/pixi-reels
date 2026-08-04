@@ -162,8 +162,15 @@ for (const file of files) {
   // names without dragging in ordinary capitalised prose. The underscore is
   // required on the SCREAMING branch: changesets shout for emphasis ("cell
   // WIDTH", "the CROSS gap") and those are words, not identifiers.
+  // The CamelCase hump is `[A-Z][a-z0-9]*`, NOT `[A-Z][A-Za-z0-9]*`. Letting a
+  // hump swallow further capitals makes the `+` ambiguous -- a run of capitals
+  // can be cut into humps 2^(n-1) ways, and the engine tries them all before
+  // giving up, which is exponential backtracking on input like `Aa` + `AAAA...`.
+  // Barring uppercase from the hump body makes each capital start exactly one
+  // hump, so there is a single parse. The two match the same set of strings:
+  // any capital-initial alphanumeric run decomposes uniquely that way.
   const mentioned = new Set(
-    [...body.matchAll(/\b([A-Z][a-z0-9]+(?:[A-Z][A-Za-z0-9]*)+|[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+)\b/g)]
+    [...body.matchAll(/\b([A-Z][a-z0-9]+(?:[A-Z][a-z0-9]*)+|[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+)\b/g)]
       .map((m) => m[1])
       .filter((n) => !NOISE.has(n)),
   );

@@ -83,9 +83,19 @@ if (missing.length > 0) {
 // is advice a consumer follows and then hits a peer conflict. All three were
 // wrong at once, and one advertised a WIDER range than the package accepts.
 const readme = await readFile(join(ROOT, 'README.md'), 'utf8');
+
+// A package name is DATA here, so every regex metacharacter in it has to be
+// escaped, not the `/` and `-` pair this used to handle. Those two are the
+// only ones that never needed it -- `/` is special in a literal, not in a
+// RegExp built from a string, and `-` only inside a character class -- while
+// backslash and `.` were both live. `pixi.js` happened to still match because
+// `.` matches a literal dot, which is exactly the kind of accident that holds
+// until the first peer dependency with a `+` or a `(` in its name.
+const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
 const wrong = [];
 for (const [name, range] of Object.entries(pkg.peerDependencies ?? {})) {
-  const m = readme.match(new RegExp(`\`${name.replace(/[/\-]/g, '\\$&')}\`\\s*([^\\s(]+)`));
+  const m = readme.match(new RegExp(`\`${escapeRe(name)}\`\\s*([^\\s(]+)`));
   if (!m) wrong.push(`${name}: README never lists it (package.json says ${range})`);
   else if (m[1] !== range) wrong.push(`${name}: README says ${m[1]}, package.json says ${range}`);
 }
