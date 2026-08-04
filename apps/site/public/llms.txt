@@ -8,7 +8,7 @@ Site: https://pixi-reels.schmooky.dev
 Repo: https://github.com/schmooky/pixi-reels
 Package: https://www.npmjs.com/package/pixi-reels
 
-Generated: 2026-08-04T08:49:22.147Z
+Generated: 2026-08-04T12:23:39.552Z
 
 ## Quick start
 
@@ -2126,9 +2126,13 @@ URL: https://pixi-reels.schmooky.dev/recipes/cascade-reverse-gravity/
 // travel precisely so a set can do this; the default `'auto'` ties them
 // together, which is what you want for everything else.
 //
-// Two consequences, and they are the whole recipe:
+// Three consequences, and they are the whole recipe:
 //   - The opening drop and every refill enter from the TOP and land downward,
 //     even though the strip-spin phase travels upward.
+//   - The default `cellOrder: 'auto'` staggers from the gravity-EXIT end, so
+//     these cells still fall and land bottom-first. Leave gravity at 'auto'
+//     here and the stagger inverts with it: the top cell goes first, because
+//     that is the edge the column now drains by.
 //   - Because gravity exits through the bottom edge, the server must pack
 //     survivors against the LAST cells: `[...fresh, ...survivors]`. Leave
 //     gravity at 'auto' on a reverse reel and the whole contract flips -
@@ -11612,7 +11616,7 @@ reelSet.events.on('spin:complete', async () => {
   if (!lastGrid) return;
   const cells = [];
   lastGrid.forEach((column, reel) =>
-    reel.forEach((id, cell) => {
+    column.forEach((id, cell) => {
       if (id === 'mystery') cells.push({ reel, cell });
     }),
   );
