@@ -37,8 +37,6 @@ Register EmptySymbol against an id to reserve a grid slot that occupies a strip 
 
 <RecipeDemo code="empty-symbol" />
 
-<a id="texture-atlas-symbols"></a>
-
 ## Texture atlas symbols
 
 Load sprite symbols from a TexturePacker atlas: one atlas file, 80+ frames, one GPU upload.
@@ -64,8 +62,6 @@ Travel changes motion; facing changes art; they never change each other. The eng
 Four reels of three cells, built twice and landed with the identical grid. One symbol registration serves both sets; the only difference between the two builds is that `symbolSize` swaps its two numbers, because a horizontal board is the vertical one transposed.
 
 <RecipeDemo code="symbols-transposed-pair" height={380} />
-
-<a id="symbol-transform"></a>
 
 ## Symbol transform
 
