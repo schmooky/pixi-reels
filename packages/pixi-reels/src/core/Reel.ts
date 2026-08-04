@@ -1,4 +1,4 @@
-import { Container } from 'pixi.js';
+import { Container, type Renderer, type Ticker } from 'pixi.js';
 import type { Disposable } from '../utils/Disposable.js';
 import { ReelSymbol } from '../symbols/ReelSymbol.js';
 import type { SymbolFactory } from '../symbols/SymbolFactory.js';
@@ -7,6 +7,7 @@ import { ReelMotion } from './ReelMotion.js';
 import type { ReelAxis } from './ReelAxis.js';
 import { VERTICAL_FORWARD } from './ReelAxis.js';
 import { ReelCurve, resolveCurveConfig, type ReelCurveInput } from './ReelCurve.js';
+import { ReelWarp } from './ReelWarp.js';
 import { StopSequencer } from './StopSequencer.js';
 import { EventEmitter } from '../events/EventEmitter.js';
 import type { ReelEvents } from '../events/ReelEvents.js';
@@ -182,6 +183,15 @@ export interface ReelConfig {
    * the builder from `curveFocus(...)`; omitted means the reel's own centre.
    */
   curveFocus?: number;
+  /**
+   * Renderer to draw the reel's warp texture with. Present only when the set
+   * was built with `curveMode('warp')` and a `renderer(...)`; its presence is
+   * what switches this reel from the per-symbol projection to the whole-reel
+   * vertex warp.
+   */
+  curveRenderer?: Renderer;
+  /** Ticker driving the warp's per-frame texture refresh. Warp mode only. */
+  curveTicker?: Ticker;
 }
 
 /**
@@ -244,6 +254,13 @@ export class Reel implements Disposable {
   private _curve?: ReelCurve;
   /** Reel-local cross coordinate the curve converges on. `null` = own centre. */
   private readonly _curveFocus: number | null;
+  /**
+   * Whole-reel vertex warp, when the set is in `curveMode('warp')`. Present
+   * means the reel container is rendered to a texture and drawn through a
+   * displaced mesh instead of being drawn directly, and symbols are left
+   * completely alone - the warp bends all of them at once.
+   */
+  private _warp?: ReelWarp;
   private readonly _mainCell: number;
   private readonly _mainGap: number;
   private readonly _crossGap: number;
@@ -405,6 +422,9 @@ export class Reel implements Disposable {
     // the bend follows a MultiWays reshape without a second source of truth.
     this._curveFocus = config.curveFocus ?? null;
     this._curve = this._buildCurve(config.curve, this._mainCell, config.visibleCells);
+    // In warp mode the whole reel is bent at once, so the motion layer must NOT
+    // also hand each symbol a quad - that would curve the strip twice.
+    const warping = config.curveRenderer !== undefined && this._curve !== undefined;
 
     // Create motion handler. SPIN-time slot height is `spinCellSize`;
     // AdjustPhase reshapes motion to the per-reel cell height.
@@ -417,10 +437,31 @@ export class Reel implements Disposable {
       config.bufferEnd,
       (symbol) => this._onSymbolWrapped(symbol),
       this._axis,
-      this._curve,
+      warping ? undefined : this._curve,
     );
 
     this._setupSymbolPositions(config);
+
+    if (warping && config.curveRenderer && config.curveTicker && this._curve) {
+      // Swap the reel out of the scene for its warp. The container keeps its
+      // position and offsets - everything from `getCellBounds` to the unmasked
+      // lift still reads them - it is simply drawn off-screen from now on.
+      const box = this._screenSize(this._extent, this._cellCross);
+      this._warp = new ReelWarp(
+        this.container,
+        config.curveRenderer,
+        this._curve,
+        this._axis,
+        box.width,
+        box.height,
+        config.curveTicker,
+      );
+      this._warp.zIndex = this.container.zIndex;
+      this._axis.setCross(this._warp, this._axis.getCross(this.container));
+      this._axis.setMain(this._warp, this._axis.getMain(this.container));
+      this._viewport.maskedContainer.removeChild(this.container);
+      this._viewport.maskedContainer.addChild(this._warp);
+    }
   }
 
   get isDestroyed(): boolean {
@@ -1506,6 +1547,7 @@ export class Reel implements Disposable {
     }
     this._occupiedStubs = [];
     this.symbols = [];
+    this._warp?.destroy();
     this.container.destroy({ children: true });
     this._isDestroyed = true;
     // Emit 'destroyed' while listeners are still attached, THEN remove them —
@@ -1574,8 +1616,11 @@ export class Reel implements Disposable {
     }
     // The projection is defined in reel-local main and handed over as a
     // VIEW-LOCAL quad, so the same call is correct whichever of the two spaces
-    // above the view was just placed in.
-    if (this._curve) symbol.applyCellQuad(this._curve.quadFor(reelLocalMain, symbol.cellInset));
+    // above the view was just placed in. In warp mode the whole reel is bent
+    // downstream instead, and symbols are left completely alone.
+    if (this._curve && !this._warp) {
+      symbol.applyCellQuad(this._curve.quadFor(reelLocalMain, symbol.cellInset));
+    }
   }
 
   /**

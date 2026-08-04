@@ -1,4 +1,4 @@
-import type { Ticker } from 'pixi.js';
+import type { Renderer, Ticker } from 'pixi.js';
 import type { gsap } from 'gsap';
 import { DEFAULT_GSAP, type Gsap } from '../utils/gsap.js';
 import type {
@@ -21,7 +21,7 @@ import { SpeedPresets } from '../config/SpeedPresets.js';
 import { ReelSet, type ReelSetParams } from './ReelSet.js';
 import { Reel, type ReelConfig } from './Reel.js';
 import { reelAxis, type Orientation, type Direction } from './ReelAxis.js';
-import type { ReelCurveConfig, ReelCurveInput, CurveFocus } from './ReelCurve.js';
+import type { ReelCurveConfig, ReelCurveInput, CurveFocus, CurveMode } from './ReelCurve.js';
 import { CURVE_FOCUS_WEIGHT } from './ReelCurve.js';
 import { ReelViewport } from './ReelViewport.js';
 import { SymbolRegistry } from '../symbols/SymbolRegistry.js';
@@ -113,6 +113,8 @@ export class ReelSetBuilder {
   private _curve?: ReelCurveInput;
   private _curvePerReel?: ReelCurveInput[];
   private _curveFocus: CurveFocus = 'reel';
+  private _curveMode: CurveMode = 'symbol';
+  private _renderer?: Renderer;
   /** MultiWays configuration. Set by `.multiways(...)`. */
   private _multiways?: MultiWaysConfig;
   /** Per-reel AdjustPhase tween duration in ms (MultiWays only). */
@@ -327,6 +329,45 @@ export class ReelSetBuilder {
    * @example
    * builder.curve(0.4).curveFocus('set-lean');
    */
+  /**
+   * How the curve is drawn.
+   *
+   * `'symbol'` (default) projects each cell on its own: crisp, free, and a real
+   * keystone - but only for symbols whose content IS a texture. A `Container`
+   * transform is affine, so a Spine skeleton, a `Graphics`, or a composite
+   * subtree can only be displaced and scaled by it, never bent.
+   *
+   * `'warp'` renders each reel to a texture and draws it through a mesh whose
+   * VERTICES are displaced by the projection. Everything inside the reel bends
+   * identically - skeletons, atlas sprites, text, effects - and no symbol has
+   * to cooperate. It costs one extra render pass per reel per frame and
+   * resamples the reel once, so hairline art is marginally softer.
+   *
+   * `'warp'` requires {@link ReelSetBuilder.renderer}.
+   *
+   * @example
+   * builder.curve(0.5).curveMode('warp').renderer(app.renderer);
+   */
+  curveMode(mode: CurveMode): this {
+    if (mode !== 'symbol' && mode !== 'warp') {
+      throw new Error(`curveMode(): expected 'symbol' or 'warp', got "${mode}".`);
+    }
+    this._curveMode = mode;
+    return this;
+  }
+
+  /**
+   * The renderer `curveMode('warp')` draws each reel's texture with. Required
+   * for warp mode and unused otherwise.
+   *
+   * @example
+   * builder.renderer(app.renderer)
+   */
+  renderer(renderer: Renderer): this {
+    this._renderer = renderer;
+    return this;
+  }
+
   curveFocus(focus: CurveFocus): this {
     if (!(focus in CURVE_FOCUS_WEIGHT)) {
       throw new Error(
@@ -743,6 +784,13 @@ export class ReelSetBuilder {
         `directionPerReel() length (${this._directionPerReel.length}) must equal reels() (${this._reelCount}).`,
       );
     }
+    if (this._curveMode === 'warp' && !this._renderer) {
+      throw new Error(
+        "curveMode('warp') renders each reel to a texture, so it needs a renderer: " +
+          'add .renderer(app.renderer). Use the default curveMode(\'symbol\') if you ' +
+          'do not have one.',
+      );
+    }
     if (this._curvePerReel && this._curvePerReel.length !== this._reelCount) {
       throw new Error(
         `curvePerReel() length (${this._curvePerReel.length}) must equal reels() (${this._reelCount}).`,
@@ -1042,6 +1090,8 @@ export class ReelSetBuilder {
         spinCellSize,
         axis: reelAxis(this._orientation, this._directionPerReel?.[reelIndex] ?? this._direction),
         curve: this._curvePerReel?.[reelIndex] ?? this._curve,
+        curveRenderer: this._curveMode === 'warp' ? this._renderer : undefined,
+        curveTicker: this._curveMode === 'warp' ? ticker : undefined,
         curveFocus:
           curveFocusWeight === 0
             ? undefined

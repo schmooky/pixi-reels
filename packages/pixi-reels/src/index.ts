@@ -7,7 +7,8 @@ export { ReelViewport } from './core/ReelViewport.js';
 export { reelAxis, VERTICAL_FORWARD } from './core/ReelAxis.js';
 export type { ReelAxis, Orientation, Direction } from './core/ReelAxis.js';
 export { ReelCurve, resolveCurveConfig } from './core/ReelCurve.js';
-export type { ReelCurveConfig, ReelCurveInput, CurveFocus } from './core/ReelCurve.js';
+export { ReelWarp } from './core/ReelWarp.js';
+export type { ReelCurveConfig, ReelCurveInput, CurveFocus, CurveMode } from './core/ReelCurve.js';
 export { CURVE_FOCUS_WEIGHT } from './core/ReelCurve.js';
 
 // Config

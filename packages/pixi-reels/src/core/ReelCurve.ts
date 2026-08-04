@@ -67,6 +67,20 @@ export type ReelCurveInput = number | ReelCurveConfig;
  */
 export type CurveFocus = 'reel' | 'set-lean' | 'set';
 
+/**
+ * How the curve is drawn.
+ *
+ *   - `'symbol'` (default). project each cell on its own. Crisp, free, and a
+ *     real keystone - but only for symbols whose content IS a texture, because
+ *     a `Container` transform is affine and can displace a Spine skeleton or a
+ *     composite subtree without ever bending it.
+ *   - `'warp'`. render each reel to a texture and draw it through a mesh whose
+ *     VERTICES are displaced by the projection. Everything inside bends
+ *     identically and no symbol has to cooperate, at the cost of one render
+ *     pass per reel per frame and one resample.
+ */
+export type CurveMode = 'symbol' | 'warp';
+
 /** How far each focus mode leans from the reel's centreline toward the set's. */
 export const CURVE_FOCUS_WEIGHT: Record<CurveFocus, number> = {
   reel: 0,
