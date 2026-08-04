@@ -122,6 +122,13 @@ export class FrameBuilder {
     );
   }
 
+  /**
+   * @internal `RandomSymbolProvider` was hidden from the package entry in
+   * 1.0.0 (PR #140); this getter re-exposed the type. Middleware that needs a
+   * random symbol should read it from the `FrameContext.symbols` slot it is
+   * filling, or carry its own provider - weights are configured through
+   * `builder.weights({...})`.
+   */
   get randomProvider(): RandomSymbolProvider {
     return this._randomProvider;
   }

@@ -785,7 +785,22 @@ export class ReelSet extends Container implements Disposable {
       // left it in (typically still visible). the next `refill()` resets
       // it via `_replaceSymbol` regardless.
       const results = await Promise.allSettled(cells.map((cell, i) => {
-        const sym = this._reels[cell.reel].getSymbolAt(cell.cell);
+        const reel = this._reels[cell.reel];
+        const sym = reel.getSymbolAt(cell.cell);
+        // The range check above proves `cell.cell` is a legal visible cell, so
+        // a miss here means the strip itself is short or holed - a torn-down
+        // reel still being driven, not a bad coordinate from the caller.
+        // Without this it surfaced as `Cannot read properties of undefined
+        // (reading 'view')` from inside an Array.map, naming neither the cell
+        // nor the reel.
+        if (!sym) {
+          throw new Error(
+            `destroySymbols: reel ${cell.reel} has no symbol at visible cell ` +
+            `${cell.cell} (strip length ${reel.symbols.length}, bufferStart ` +
+            `${reel.bufferStart}, visibleCells ${reel.visibleCells}). The reel ` +
+            'was torn down or reshaped while a cascade was in flight.',
+          );
+        }
         if (z !== null) sym.view.zIndex = z;
         return sym.playDestroy({
           delay: resolveDelay(cell, i),

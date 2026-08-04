@@ -142,6 +142,11 @@ export { BoardGrid } from './board/BoardGrid.js';
 export type { BoardCell, BoardSpinTarget, BoardProfile, BoardGridOptions } from './board/BoardGrid.js';
 export { HoldAndWinBuilder } from './board/HoldAndWinBuilder.js';
 export { HoldAndWinBoard } from './board/HoldAndWinBoard.js';
+// The board's own constructor parameter. `HoldAndWinBuilder.build()` returns a
+// board, so most consumers never name this - but the fork story below promises
+// that everything a copied HoldAndWinBoard reaches for is public, and its
+// constructor signature is the first thing a fork has to restate.
+export type { HoldAndWinBoardConfig } from './board/HoldAndWinBoard.js';
 // The pure reducer is public too: a fork copies HoldAndWinBoard + HoldAndWinState
 // and repoints both imports at `pixi-reels` (see the comment below).
 export { HoldAndWinState } from './board/HoldAndWinState.js';

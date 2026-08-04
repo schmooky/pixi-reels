@@ -211,7 +211,22 @@ export class Reel implements Disposable {
   /** Current spinning mode. */
   public spinningMode: SpinningMode = new StandardMode();
 
+  /**
+   * The reel's motion layer.
+   *
+   * @internal `ReelMotion` was hidden from the package entry in 1.0.0 (PR #140)
+   * along with `StopSequencer` and `RandomSymbolProvider`. This field being
+   * public re-exposed the type through `dist/core/Reel.d.ts` and semver-locked
+   * it into 2.x anyway. Public geometry lives on `ReelSet.getCellBounds()` /
+   * `getBlockBounds()` and `Reel.cellMain` / `.extent` / `.mainOffset`.
+   */
   public readonly motion: ReelMotion;
+  /**
+   * The reel's target-frame queue for the current stop.
+   *
+   * @internal Same as `motion`: hidden as a type in 1.0.0, re-exposed by this
+   * field. Consumers drive landing through `setResult()` / `slamStop()`.
+   */
   public readonly stopSequencer: StopSequencer;
   private readonly _axis: ReelAxis;
   private readonly _mainCell: number;

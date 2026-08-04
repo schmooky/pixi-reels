@@ -17,7 +17,7 @@
     "lint": "pnpm --filter pixi-reels lint",
     "check:no-fancy-unicode": "node scripts/check-no-fancy-unicode.mjs",
     "check:imports": "biome lint packages/pixi-reels/src",
-    "check:lint": "pnpm check:no-fancy-unicode && pnpm check:imports && pnpm check:recipe-globals && pnpm check:v1-keys && pnpm check:recipe-syntax && pnpm check:codemod-parity && pnpm check:migration-coverage",
+    "check:lint": "pnpm check:no-fancy-unicode && pnpm check:imports && pnpm check:recipe-globals && pnpm check:v1-keys && pnpm check:recipe-syntax && pnpm check:codemod-parity && pnpm check:migration-coverage && pnpm check:api-surface",
     "commitlint": "commitlint --edit",
     "site:dev": "pnpm --filter @pixi-reels/site dev",
     "site:build": "pnpm --filter @pixi-reels/site build",
@@ -43,6 +43,7 @@
     "check:codemod-parity": "node scripts/check-codemod-parity.mjs",
     "check:publish-contents": "node scripts/check-publish-contents.mjs",
     "check:migration-coverage": "node scripts/check-migration-coverage.mjs",
+    "check:api-surface": "node scripts/check-api-surface.mjs",
     "typecheck:fixtures": "pnpm --filter @pixi-reels/cheats typecheck && pnpm --filter orientation-matrix typecheck"
   },
   "lint-staged": {
