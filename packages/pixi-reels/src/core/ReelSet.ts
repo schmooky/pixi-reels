@@ -1799,6 +1799,48 @@ export class ReelSet extends Container implements Disposable {
     };
   }
 
+  /**
+   * The four corners of a visible cell as the drum actually draws it, in
+   * ReelSet-local pixels, clockwise from top-left. `null` when the reel is
+   * flat, in which case {@link ReelSet.getCellBounds} already describes it
+   * exactly.
+   *
+   * `getCellBounds` has to return a rectangle, so on a curved reel it widens
+   * to the trapezoid's bounding box. Use this instead to draw anything that
+   * should sit ON the curve rather than around it - a cell outline, a payline
+   * that follows the bend, a debug overlay.
+   *
+   * @example
+   * const q = reelSet.getCellQuad(2, 0);
+   * if (q) gfx.poly(q).stroke({ color: 0xff6b35 });
+   */
+  getCellQuad(reel: number, cell: number): { x: number; y: number }[] | null {
+    if (reel < 0 || reel >= this._reels.length) {
+      throw new RangeError(`getCellQuad: reel ${reel} out of range [0, ${this._reels.length})`);
+    }
+    const target = this._reels[reel];
+    if (cell < 0 || cell >= target.visibleCells) {
+      throw new RangeError(`getCellQuad: cell ${cell} out of range [0, ${target.visibleCells})`);
+    }
+    const flatMain = cell * target.motion.slotPitch;
+    const quad = target.curve?.quadFor(flatMain);
+    if (!quad) return null;
+    const axis = target.axis;
+    const origin = axis.toScreen(
+      axis.getCross(target.container),
+      axis.getMain(target.container) + flatMain,
+    );
+    // Quad corners are view-local; lift them into ReelSet space.
+    const ox = this._viewport.x + origin.x;
+    const oy = this._viewport.y + origin.y;
+    return [
+      { x: ox + quad.x0, y: oy + quad.y0 },
+      { x: ox + quad.x1, y: oy + quad.y1 },
+      { x: ox + quad.x2, y: oy + quad.y2 },
+      { x: ox + quad.x3, y: oy + quad.y3 },
+    ];
+  }
+
   /** Get the viewport. */
   get viewport(): ReelViewport {
     return this._viewport;

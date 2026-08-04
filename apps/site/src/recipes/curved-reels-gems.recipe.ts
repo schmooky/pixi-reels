@@ -46,7 +46,7 @@ const reelSet = new ReelSetBuilder()
   .visibleCells(CELLS)
   .symbolSize(96, 96)
   .symbolGap(6, 6)
-  .curve(0.45)
+  .curve({ amount: 0.6, depth: 0.55 })
   .curveFocus('set-lean')
   .symbols((r) => {
     for (const id of IDS) {

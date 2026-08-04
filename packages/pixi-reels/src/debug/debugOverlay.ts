@@ -409,11 +409,22 @@ class DebugOverlay implements DebugOverlayHandle {
     this._reelSet.reels.forEach((reel: Reel, reelIndex: number) => {
       for (let cell = 0; cell < reel.visibleCells; cell++) {
         const b = this._reelSet.getCellBounds(reelIndex, cell);
-        g.rect(b.x, b.y, b.width, b.height).stroke({ color: COLORS.cells, width: 1 });
+        // On a curved reel outline the TRAPEZOID the drum actually draws, not
+        // the bounding box `getCellBounds` has to widen to. The overlay is how
+        // you check the projection landed where you think it did, so it has to
+        // show the bend rather than a rectangle around it.
+        const quad = this._reelSet.getCellQuad(reelIndex, cell);
+        if (quad) {
+          g.poly(quad).stroke({ color: COLORS.cells, width: 1 });
+        } else {
+          g.rect(b.x, b.y, b.width, b.height).stroke({ color: COLORS.cells, width: 1 });
+        }
         const label = this._text(this._cellLabels, labelIndex++, COLORS.cells, 10);
         label.text = `${reelIndex},${cell}`;
-        label.x = b.x + 3;
-        label.y = b.y + 3;
+        // Anchor the label on the quad's own leading corner so it tracks the
+        // bend instead of floating off in the bounding box's dead space.
+        label.x = (quad ? quad[0].x : b.x) + 3;
+        label.y = (quad ? quad[0].y : b.y) + 3;
       }
     });
     this._hideTextsFrom(this._cellLabels, labelIndex);

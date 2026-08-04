@@ -222,6 +222,35 @@ describe('reel curvature', () => {
     }
   });
 
+  it('getCellQuad exposes the drawn trapezoid, and null when flat', () => {
+    const flatSet = createTestReelSet({
+      reels: 3, visibleCells: 3, symbolIds: ['a'], symbolSize: CELL,
+    });
+    const curved = createTestReelSet({
+      reels: 3, visibleCells: 3, symbolIds: ['a'], symbolSize: CELL, curve: 0.6,
+    });
+    try {
+      expect(flatSet.reelSet.getCellQuad(1, 0)).toBeNull();
+      const q = curved.reelSet.getCellQuad(1, 0);
+      if (!q) throw new Error('expected a quad');
+      expect(q).toHaveLength(4);
+      // Same cell, so the quad must sit inside the bounding box the rect API
+      // reports - that is what makes the two safe to mix in one overlay.
+      const b = curved.reelSet.getCellBounds(1, 0);
+      for (const p of q) {
+        expect(p.x).toBeGreaterThanOrEqual(b.x - 1e-6);
+        expect(p.x).toBeLessThanOrEqual(b.x + b.width + 1e-6);
+        expect(p.y).toBeGreaterThanOrEqual(b.y - 1e-6);
+        expect(p.y).toBeLessThanOrEqual(b.y + b.height + 1e-6);
+      }
+      // And it is a real trapezoid: the top edge is narrower than the bottom.
+      expect(q[1].x - q[0].x).toBeLessThan(q[2].x - q[3].x);
+    } finally {
+      flatSet.destroy();
+      curved.destroy();
+    }
+  });
+
   it('setCurve re-projects at runtime and flattens back cleanly', () => {
     const h = createTestReelSet({
       reels: 3, visibleCells: 3, symbolIds: ['a'], symbolSize: CELL,
