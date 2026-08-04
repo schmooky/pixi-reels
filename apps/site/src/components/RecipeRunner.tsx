@@ -24,7 +24,7 @@ import {
   ReelSetBuilder, SpeedPresets, SpriteSymbol, AnimatedSpriteSymbol,
   enableDebug, WinPresenter,
   RectMaskStrategy, SharedRectMaskStrategy,
-  type ReelSet, ReelSymbol,
+  ReelSet, ReelSymbol,
   EmptySymbol, HoldAndWinBuilder, BoardGrid,
   anticipationForScatters,
   SpinTextureCache, StaticSpinSymbol, prewarmSpinTextures,
@@ -149,6 +149,31 @@ function pickWeighted(weights: Record<string, number>): string {
   return Object.keys(weights)[0];
 }
 
+/**
+ * Every `ReelSet` currently on the stage, `primary` first.
+ *
+ * A recipe returns at most ONE set (the rest it parents itself, usually under
+ * a `stage` composition root), so a debug toggle driven off the returned one
+ * left the banner strip in `banner-ways` and the second grid in
+ * `symbols-transposed-pair` with no overlay at all. Walking the display tree
+ * finds them whatever the recipe did with them, and needs no per-recipe
+ * bookkeeping.
+ */
+function collectReelSets(stage: PIXI.Container, primary: ReelSet): ReelSet[] {
+  const found: ReelSet[] = [primary];
+  const walk = (node: PIXI.Container): void => {
+    if (node instanceof ReelSet) {
+      if (!found.includes(node)) found.push(node);
+      // Don't descend: a set's own children are reels and viewports, and a
+      // ReelSet is never nested inside another one.
+      return;
+    }
+    for (const child of node.children) walk(child as PIXI.Container);
+  };
+  walk(stage);
+  return found;
+}
+
 interface RunResult {
   reelSet?: ReelSet;
   /**
@@ -196,7 +221,10 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
   const onSpinRef = useRef<(() => Promise<void>) | null>(null);
   const onSkipRef = useRef<(() => void) | null>(null);
   const cleanupRef = useRef<(() => void) | null>(null);
-  const overlayRef = useRef<DebugOverlayHandle | null>(null);
+  // One handle per reel set on the stage, not per recipe: a recipe is free to
+  // build several (a banner strip above the grid, a transposed pair), and an
+  // overlay on only the one it happened to return explains half the picture.
+  const overlayRef = useRef<DebugOverlayHandle[]>([]);
   const [spinning, setSpinning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
@@ -332,8 +360,10 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
       try { cleanupRef.current?.(); } catch { /* ignore */ }
       // Before the set and the app: the overlay is a child of the ReelSet and
       // holds a TickerRef on app.ticker.
-      try { overlayRef.current?.destroy(); } catch { /* ignore */ }
-      overlayRef.current = null;
+      for (const o of overlayRef.current) {
+        try { o.destroy(); } catch { /* ignore */ }
+      }
+      overlayRef.current = [];
       try { reelSetRef.current?.destroy(); } catch { /* ignore */ }
       const app = envRef.current?.app;
       if (app) {
@@ -400,9 +430,9 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
     const reelSet = reelSetRef.current;
     const app = envRef.current?.app;
     if (!reelSet || !app) return;
-    if (overlayRef.current) {
-      overlayRef.current.destroy();
-      overlayRef.current = null;
+    if (overlayRef.current.length > 0) {
+      for (const o of overlayRef.current) o.destroy();
+      overlayRef.current = [];
       setDebugOn(false);
       return;
     }
@@ -411,11 +441,9 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
     // to see. `live` drives the bounds / blocks / pins / hud layers off the
     // recipe's own app.ticker, so they track a spin instead of freezing on the
     // frame the overlay happened to be built in.
-    overlayRef.current = debugOverlay(reelSet, {
-      layers: 'all',
-      live: true,
-      ticker: app.ticker,
-    });
+    overlayRef.current = collectReelSets(app.stage, reelSet).map((rs) =>
+      debugOverlay(rs, { layers: 'all', live: true, ticker: app.ticker }),
+    );
     setDebugOn(true);
   }
 
