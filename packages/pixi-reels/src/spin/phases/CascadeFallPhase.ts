@@ -8,7 +8,12 @@ import type { ReelSymbol } from '../../symbols/ReelSymbol.js';
 import type { EventEmitter } from '../../events/EventEmitter.js';
 import type { ReelSetEvents } from '../../events/ReelEvents.js';
 import type { TumbleFallConfig } from '../../cascade/TumbleConfig.js';
-import { gravitySign, mergeFallConfig, resolveGravity } from '../../cascade/TumbleConfig.js';
+import {
+  gravitySign,
+  mergeFallConfig,
+  resolveCellOrder,
+  resolveGravity,
+} from '../../cascade/TumbleConfig.js';
 import type { Direction } from '../../core/ReelAxis.js';
 
 export interface CascadeFallPhaseConfig {
@@ -176,7 +181,11 @@ export class CascadeFallPhase extends ReelPhase<CascadeFallPhaseConfig> {
     });
     this._timeline = tl;
 
-    const reverseOrder = this._fall.cellOrder === 'endFirst';
+    // Stagger order follows GRAVITY under the default `'auto'`: the cell at
+    // the exit end peels off first, so the column drains from the edge it is
+    // leaving by. Explicit 'endFirst'/'startFirst' name a geometric end and
+    // ignore gravity.
+    const reverseOrder = resolveCellOrder(this._fall.cellOrder, gravity) === 'endFirst';
 
     for (let cell = 0; cell < visibleCells; cell++) {
       const view = views[cell];

@@ -86,7 +86,7 @@ describe('mergeFallConfig / mergeDropInConfig', () => {
       duration: 80,
       ease: 'sine.in',
       cellStagger: 0,
-      cellOrder: 'endFirst',
+      cellOrder: 'auto',
     });
   });
 
@@ -104,7 +104,7 @@ describe('mergeFallConfig / mergeDropInConfig', () => {
       duration: 220,
       ease: 'expo.out',
       cellStagger: 60,
-      cellOrder: 'endFirst',
+      cellOrder: 'auto',
       distance: 'perHole',
     });
   });

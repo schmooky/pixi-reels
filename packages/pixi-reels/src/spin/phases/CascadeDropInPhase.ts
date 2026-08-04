@@ -7,7 +7,12 @@ import type { ReelSymbol } from '../../symbols/ReelSymbol.js';
 import type { EventEmitter } from '../../events/EventEmitter.js';
 import type { ReelSetEvents } from '../../events/ReelEvents.js';
 import type { TumbleDropInConfig } from '../../cascade/TumbleConfig.js';
-import { gravitySign, mergeDropInConfig, resolveGravity } from '../../cascade/TumbleConfig.js';
+import {
+  gravitySign,
+  mergeDropInConfig,
+  resolveCellOrder,
+  resolveGravity,
+} from '../../cascade/TumbleConfig.js';
 import type { Direction } from '../../core/ReelAxis.js';
 import { computeDropOffsets } from '../../cascade/tumbleAlgorithm.js';
 
@@ -298,7 +303,10 @@ export class CascadeDropInPhase extends ReelPhase<CascadeDropInPhaseConfig> {
     // gets staggerIndex 0 (fires first), the next one up gets 1, etc.
     // Note: `jobs` is already in cell order (top-to-bottom) because offsets
     // are built in that order, so reversing the iteration is correct.
-    const reverseOrder = this._drop.cellOrder === 'endFirst';
+    //
+    // The default `'auto'` resolves against gravity, so the stack fills from
+    // the gravity-exit end - its "floor" - whichever screen edge that is.
+    const reverseOrder = resolveCellOrder(this._drop.cellOrder, gravity) === 'endFirst';
 
     for (let i = 0; i < jobs.length; i++) {
       const job = jobs[i];

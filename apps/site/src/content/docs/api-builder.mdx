@@ -92,7 +92,7 @@ const reelSet = new ReelSetBuilder()
 | `duration` | `number` (ms) | `300` | Each symbol's fall-out tween length. |
 | `ease` | GSAP easing string | `'sine.in'` | Gravity feel. Any [GSAP easing](https://gsap.com/docs/v3/Eases) works. |
 | `cellStagger` | `number` (ms) | `0` | Delay between successive rows starting their fall. `0` = every row falls together. |
-| `cellOrder` | `'endFirst' \| 'startFirst'` | `'endFirst'` | Which row begins first. The default pairs with `setDropOrder('ltr')` for the canonical "bottom-left first, top-right last" feel. |
+| `cellOrder` | `'auto' \| 'endFirst' \| 'startFirst'` | `'auto'` | Which row begins first. `'auto'` starts at the gravity-exit end, so the default pairs with `setDropOrder('ltr')` for the canonical "bottom-left first, top-right last" feel, and inverts by itself when gravity does. `'endFirst'`/`'startFirst'` pin a geometric end. |
 
 ### TumbleDropInConfig
 
@@ -101,7 +101,7 @@ const reelSet = new ReelSetBuilder()
 | `duration` | `number` (ms) | `600` | Each symbol's drop-in tween length. |
 | `ease` | GSAP easing string | `'power2.out'` | Clean deceleration with **no overshoot**. matches commercial slots that play a landing spine animation after the drop. Use `'back.out(1.5)'` for soft overshoot, `'bounce.out'` for cartoon bounce, `'expo.out'` for slam. |
 | `cellStagger` | `number` (ms) | `60` | Delay between successive rows starting their drop. `0` = simultaneous (the canonical refill choice). |
-| `cellOrder` | `'endFirst' \| 'startFirst'` | `'endFirst'` | Which row arrives first when `cellStagger > 0`. |
+| `cellOrder` | `'auto' \| 'endFirst' \| 'startFirst'` | `'auto'` | Which row arrives first when `cellStagger > 0`. `'auto'` fills from the gravity-exit end, the way a stack settles from its floor up. |
 | `distance` | `'perHole' \| 'auto' \| number` | `'perHole'` | `'perHole'` is gravity-correct (each symbol falls exactly its own offset). `'auto'` makes every symbol traverse the full column in unison ("rain column" feel). A number forces a uniform pixel distance. |
 
 ### Picking a feel

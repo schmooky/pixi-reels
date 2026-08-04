@@ -27,14 +27,22 @@ export interface TumbleFallConfig {
   /**
    * Which cell of each reel begins its fall first.
    *
-   *   - `'endFirst'` (default). bottom cell falls first, top cell last.
-   *     Pairs with the per-reel left-to-right stagger from `speed.spinDelay`
-   *     to give the canonical "bottom-left falls first, top-right last"
-   *     feel of commercial tumble slots.
-   *   - `'startFirst'`. top cell falls first. Reads as the column
-   *     "peeling" downward; useful for theme-specific effects.
+   *   - `'auto'` (default). the cell at the gravity-EXIT end goes first, so
+   *     the column drains from the edge symbols are leaving by. Under the
+   *     usual downward gravity that is the bottom cell, which pairs with the
+   *     per-reel left-to-right stagger from `speed.spinDelay` to give the
+   *     canonical "bottom-left falls first, top-right last" feel of
+   *     commercial tumble slots. Flip gravity and the stagger flips with it.
+   *   - `'endFirst'`. always the cell at the larger main coordinate (bottom /
+   *     right) first, whichever way gravity points.
+   *   - `'startFirst'`. always the cell at the smaller main coordinate (top /
+   *     left) first. Reads as the column "peeling" away from that edge.
+   *
+   * `'endFirst'` and `'startFirst'` are geometric, like the buffers: they name
+   * an end of the strip, not a direction of travel. Only `'auto'` follows
+   * gravity.
    */
-  cellOrder?: 'endFirst' | 'startFirst';
+  cellOrder?: 'auto' | 'endFirst' | 'startFirst';
 }
 
 export interface TumbleDropInConfig {
@@ -63,14 +71,23 @@ export interface TumbleDropInConfig {
   /**
    * Which cell lands first when `cellStagger > 0`.
    *
-   *   - `'endFirst'` (default). bottom cell arrives first, top cell last.
-   *     Paired with `setDropOrder('ltr')` per-reel stagger this gives the
-   *     canonical "bottom-left first, top-right last" reveal that every
-   *     commercial tumble slot ships with.
-   *   - `'startFirst'`. top cell arrives first. Reads as "new symbols
-   *     pour from above"; fits gravity-themed or rain-style slots.
+   *   - `'auto'` (default). the cell at the gravity-EXIT end arrives first,
+   *     the way a settling stack fills from the floor up. Under the usual
+   *     downward gravity that is the bottom cell, which paired with
+   *     `setDropOrder('ltr')` gives the canonical "bottom-left first,
+   *     top-right last" reveal every commercial tumble slot ships with. A
+   *     reel that drains upward fills from the top instead, with no further
+   *     config.
+   *   - `'endFirst'`. always the cell at the larger main coordinate (bottom /
+   *     right) first, whichever way gravity points.
+   *   - `'startFirst'`. always the cell at the smaller main coordinate (top /
+   *     left) first.
+   *
+   * `'endFirst'` and `'startFirst'` are geometric, like the buffers: they name
+   * an end of the strip, not a direction of travel. Only `'auto'` follows
+   * gravity.
    */
-  cellOrder?: 'endFirst' | 'startFirst';
+  cellOrder?: 'auto' | 'endFirst' | 'startFirst';
 
   /**
    * How far symbols fall, in cells.
@@ -140,6 +157,24 @@ export function gravitySign(gravity: Direction): 1 | -1 {
   return gravity === 'forward' ? 1 : -1;
 }
 
+/**
+ * Resolve `'auto'` cell order against the reel's resolved gravity. `'auto'`
+ * means "the gravity-EXIT end goes first": the column drains from, and
+ * refills toward, the edge symbols are settling against. Explicit
+ * `'endFirst'` / `'startFirst'` stay geometric and pass through untouched.
+ *
+ * Without this, a reel draining upward still staggered from the bottom cell
+ * - the one FURTHEST from the exit edge - so the cell nearest the drain
+ * waited for the whole column to leave ahead of it.
+ */
+export function resolveCellOrder(
+  cellOrder: 'auto' | 'endFirst' | 'startFirst',
+  gravity: Direction,
+): 'endFirst' | 'startFirst' {
+  if (cellOrder !== 'auto') return cellOrder;
+  return gravity === 'forward' ? 'endFirst' : 'startFirst';
+}
+
 export function resolveTumbleConfig(config: TumbleConfig | undefined): ResolvedTumbleConfig {
   return {
     gravity: config?.gravity ?? 'auto',
@@ -147,7 +182,7 @@ export function resolveTumbleConfig(config: TumbleConfig | undefined): ResolvedT
       duration: config?.fall?.duration ?? 300,
       ease: config?.fall?.ease ?? 'sine.in',
       cellStagger: config?.fall?.cellStagger ?? 0,
-      cellOrder: config?.fall?.cellOrder ?? 'endFirst',
+      cellOrder: config?.fall?.cellOrder ?? 'auto',
     },
     dropIn: {
       duration: config?.dropIn?.duration ?? 600,
@@ -158,7 +193,7 @@ export function resolveTumbleConfig(config: TumbleConfig | undefined): ResolvedT
       // the springy feel can opt into `back.out(...)` explicitly.
       ease: config?.dropIn?.ease ?? 'power2.out',
       cellStagger: config?.dropIn?.cellStagger ?? 60,
-      cellOrder: config?.dropIn?.cellOrder ?? 'endFirst',
+      cellOrder: config?.dropIn?.cellOrder ?? 'auto',
       distance: config?.dropIn?.distance ?? 'perHole',
     },
   };

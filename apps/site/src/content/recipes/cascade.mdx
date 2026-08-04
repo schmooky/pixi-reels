@@ -109,6 +109,8 @@ The same tumble on `.orientation('horizontal')`: reels are screen rows, the stri
 
 Reels built `.direction('reverse')` roll upward, but `tumble({ gravity: 'forward' })` makes the tumble settle downward anyway. `gravity` is only worth setting when you want travel and settling to disagree; leave it at `'auto'` and a reverse reel drains upward with no further config.
 
+That includes the cell stagger. `cellOrder` defaults to `'auto'`, which starts at the gravity-exit end. the edge symbols are leaving by. Under the explicit forward gravity here the bottom cell still goes first; drop the override and the top cell leads instead, because that is the edge the column now drains through. Pass `'endFirst'` or `'startFirst'` to pin a geometric end regardless of gravity.
+
 <RecipeDemo code="cascade-reverse-gravity" height={300} />
 
 <a id="peek-from-above"></a>

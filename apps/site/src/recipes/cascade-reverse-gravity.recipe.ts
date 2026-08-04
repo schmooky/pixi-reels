@@ -8,9 +8,13 @@
 // travel precisely so a set can do this; the default `'auto'` ties them
 // together, which is what you want for everything else.
 //
-// Two consequences, and they are the whole recipe:
+// Three consequences, and they are the whole recipe:
 //   - The opening drop and every refill enter from the TOP and land downward,
 //     even though the strip-spin phase travels upward.
+//   - The default `cellOrder: 'auto'` staggers from the gravity-EXIT end, so
+//     these cells still fall and land bottom-first. Leave gravity at 'auto'
+//     here and the stagger inverts with it: the top cell goes first, because
+//     that is the edge the column now drains by.
 //   - Because gravity exits through the bottom edge, the server must pack
 //     survivors against the LAST cells: `[...fresh, ...survivors]`. Leave
 //     gravity at 'auto' on a reverse reel and the whole contract flips -
