@@ -25,6 +25,31 @@ export function textureCellInset(texture: Texture): ReelCellInset | null {
 }
 
 /**
+ * Whether a texture can be drawn through the perspective mesh at all.
+ *
+ * Only textures that own their whole source qualify today. An atlas SUB-frame
+ * does not: the mesh addresses its source with plain 0..1 UVs, and remapping
+ * them onto the frame - via `texture.uvs`, via `textureMatrix`, or by leaving
+ * PixiJS to it - has not yet produced a correct draw here. Left unmapped the
+ * cell shows the entire sheet; mapped by hand it shows a magnified crop of the
+ * right frame, which says the mapping is being applied somewhere else as well.
+ * Rather than ship either, a sub-frame texture falls back to the affine fit in
+ * `ReelSymbol.applyCellQuad()`, which is correct - just not keystoned.
+ *
+ * Generated textures, `Assets.load`ed single images and render textures all
+ * pass. Atlas frames (the common production case) do not, yet.
+ */
+export function canProjectTexture(texture: Texture): boolean {
+  const source = texture.source;
+  if (!source) return false;
+  if (texture.rotate !== 0) return false;
+  const { frame, orig } = texture;
+  if (frame.x !== 0 || frame.y !== 0) return false;
+  if (frame.width !== source.width || frame.height !== source.height) return false;
+  return orig.width === frame.width && orig.height === frame.height;
+}
+
+/**
  * Tessellation of the projected quad. PixiJS builds the perspective by
  * interpolating UVs across a grid, so this is the quality knob: too few and a
  * keystoned cell reads as a plain stretch, too many and every symbol on the
@@ -89,13 +114,13 @@ export class PerspectiveCell {
    * @param texture what to draw. re-read on every call so an animated symbol
    *   can swap frames without telling us
    */
-  apply(quad: ReelCellQuad | null, texture: Texture): void {
-    if (quad === null) {
-      if (!this._active) return;
+  apply(quad: ReelCellQuad | null, texture: Texture): boolean {
+    if (quad === null || !canProjectTexture(texture)) {
+      if (!this._active) return false;
       this._active = false;
       this._flat.visible = true;
       if (this._mesh) this._mesh.visible = false;
-      return;
+      return false;
     }
 
     const mesh = this._ensureMesh(texture);
@@ -115,6 +140,7 @@ export class PerspectiveCell {
       this._flat.visible = false;
       mesh.visible = true;
     }
+    return true;
   }
 
   /** Reset the mesh's own transform. Call from `stopAnimation` / `onDeactivate`. */

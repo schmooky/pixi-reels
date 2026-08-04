@@ -309,19 +309,25 @@ export abstract class ReelSymbol implements Disposable {
       view.pivot.set(0, 0);
       return;
     }
-    // Average the two projected edge widths: the trapezoid's own idea of how
-    // big it is, without favouring either end.
+    // Measure the trapezoid: the mean of its two parallel edges, and the
+    // distance between their midpoints.
     const nearWidth = Math.hypot(quad.x1 - quad.x0, quad.y1 - quad.y0);
     const farWidth = Math.hypot(quad.x2 - quad.x3, quad.y2 - quad.y3);
-    const flat = Math.hypot(quad.width, quad.height);
-    const projected = Math.hypot(
-      (nearWidth + farWidth) / 2,
-      Math.hypot(
-        (quad.x3 + quad.x2) / 2 - (quad.x0 + quad.x1) / 2,
-        (quad.y3 + quad.y2) / 2 - (quad.y0 + quad.y1) / 2,
-      ),
+    const across = (nearWidth + farWidth) / 2;
+    const along = Math.hypot(
+      (quad.x3 + quad.x2) / 2 - (quad.x0 + quad.x1) / 2,
+      (quad.y3 + quad.y2) / 2 - (quad.y0 + quad.y1) / 2,
     );
-    const scale = flat > 0 ? projected / flat : 1;
+    // CONTAIN, not cover. A quad in the middle of the window is TALLER than
+    // the flat cell (that is the drum magnifying what faces you), so a scale
+    // picked to fill it would also make the symbol wider than its column and
+    // overlap its neighbours - very visible on art that fills its cell
+    // edge-to-edge. Taking the smaller ratio keeps every symbol inside its own
+    // projected footprint at the cost of a little slack on one axis.
+    const scale =
+      quad.width > 0 && quad.height > 0
+        ? Math.min(across / quad.width, along / quad.height)
+        : 1;
 
     const cx = (quad.x0 + quad.x1 + quad.x2 + quad.x3) / 4;
     const cy = (quad.y0 + quad.y1 + quad.y2 + quad.y3) / 4;

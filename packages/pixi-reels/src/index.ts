@@ -53,7 +53,7 @@ export { AnimatedSpriteSymbol } from './symbols/AnimatedSpriteSymbol.js';
 export type { AnimatedSpriteSymbolOptions } from './symbols/AnimatedSpriteSymbol.js';
 export { SpineSymbol, whenSpineReady } from './symbols/SpineSymbol.js';
 export type { SpineSymbolOptions } from './symbols/SpineSymbol.js';
-export { PerspectiveCell, textureCellInset } from './symbols/PerspectiveCell.js';
+export { PerspectiveCell, textureCellInset, canProjectTexture } from './symbols/PerspectiveCell.js';
 export { SymbolRegistry } from './symbols/SymbolRegistry.js';
 export { EmptySymbol } from './symbols/EmptySymbol.js';
 

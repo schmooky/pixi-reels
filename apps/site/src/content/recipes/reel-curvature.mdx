@@ -76,10 +76,24 @@ A `Container` transform is affine. It can scale a cell, skew it, rotate it - but
 
 So the engine hands each symbol a **projected quad** and lets the symbol decide how to fill it, through `ReelSymbol.applyCellQuad()`:
 
-- **`SpriteSymbol` and `AnimatedSpriteSymbol` draw the real thing.** They map their texture onto the quad with a PixiJS `PerspectiveMesh`, which interpolates UVs across a vertex grid and gives a true keystone. It costs **no extra render pass** - the content is already a texture - and the mesh is only allocated once a reel is actually curved.
-- **Everything else gets the closest affine fit**: a *uniform* scale about the quad's centre. Uniform on purpose. Slot art is usually a shape the player recognises, and squashing one axis turns a `7` into a squashed `7` rather than a `7` seen at an angle. Spine symbols and composite containers land here, because projecting an arbitrary subtree would mean rendering it to a texture every frame.
+- **`SpriteSymbol` and `AnimatedSpriteSymbol` draw the real thing** when their texture owns its whole source - a generated texture, a render texture, a single loaded image. They map it onto the quad with a PixiJS `PerspectiveMesh`, which interpolates across a vertex grid and gives a true keystone, at **no extra render pass**. The mesh is only allocated once a reel is actually curved.
+- **Everything else gets the closest affine fit**: a *uniform* scale about the quad's centre, sized to fit INSIDE the projected footprint so no cell ever overlaps its neighbour. Uniform on purpose. Slot art is usually a shape the player recognises, and squashing one axis turns a `7` into a squashed `7` rather than a `7` seen at an angle. Spine symbols and composite containers land here, because projecting an arbitrary subtree would mean rendering it to a texture every frame.
 
 Write `applyCellQuad()` on your own symbol if its content is a single texture and you want the real projection - `PerspectiveCell` is exported and does the mesh plumbing for you.
+
+**Known limitation:** a texture that is a *sub-frame of an atlas* does not take the mesh path yet. The mesh addresses its source with plain 0..1 UVs, and remapping them onto the frame has not yet produced a correct draw here, so `canProjectTexture()` refuses those and the symbol falls back to the affine fit. That covers most production art today - it looks right, it just does not keystone. Textures that own their whole source are unaffected.
+
+<a id="curved-reels-gems"></a>
+
+## On real art
+
+The grid tiles above are a measuring instrument. This is the same curve on shipped symbols - Playson's Supercharged Diamonds 3 gem set, the sheet the sprite Hold &amp; Win recipes use - at `curveFocus('set-lean')`.
+
+These are atlas sub-frames, so per the limitation above they take the affine fit rather than the mesh: the cells recede and lean correctly, and the gems are never distorted, but they do not keystone. Note also that they are letterboxed into a square cell and heavily trimmed, so `BlurSpriteSymbol` reports where its art really sits through `cellInset` - without that the drum would project the empty cell instead of the gem in the middle of it.
+
+Blur-on-spin still works exactly as it does flat: the symbols swap to their motion-blur frames on `onReelSpinStart` and back on landing.
+
+<RecipeDemo code="curved-reels-gems" height={420} />
 
 ## Art that does not fill its cell
 

@@ -48,11 +48,16 @@ export class AnimatedSpriteSymbol extends ReelSymbol {
   }
 
   override applyCellQuad(quad: ReelCellQuad | null): void {
-    this._perspective.apply(quad, this._animSprite.texture);
-    // The mesh's own corners carry the whole projection, so the view must stay
-    // at identity. Anything else would apply the curve twice.
-    this.view.scale.set(1, 1);
-    this.view.pivot.set(0, 0);
+    if (this._perspective.apply(quad, this._animSprite.texture)) {
+      // The mesh's own corners carry the whole projection, so the view must
+      // stay at identity. Anything else would apply the curve twice.
+      this.view.scale.set(1, 1);
+      this.view.pivot.set(0, 0);
+      return;
+    }
+    // The mesh declined this texture (today: any atlas sub-frame). Take the
+    // base class's uniform-scale fit so the cell is still on the drum.
+    super.applyCellQuad(quad);
   }
 
   protected onActivate(symbolId: string): void {
