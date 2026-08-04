@@ -113,6 +113,16 @@ That includes the cell stagger. `cellOrder` defaults to `'auto'`, which starts a
 
 <RecipeDemo code="cascade-reverse-gravity" height={300} />
 
+<a id="cascade-drain-upward"></a>
+
+## Drain upward (gravity follows travel)
+
+The default case, for comparison: `.direction('reverse')` with no `gravity` key at all. Everything flips together. the top cell falls first and lands first, and the column peels upward behind it.
+
+**Gotcha:** the server contract flips with it. Survivors pack against the edge gravity exits by, which is now the top, so `nextGrid` returns `[...survivors, ...fresh]`. Flipping the reel without flipping the grid is what makes an upward board look scrambled.
+
+<RecipeDemo code="cascade-drain-upward" height={300} />
+
 <a id="peek-from-above"></a>
 
 ## Peek symbol from buffer-start
