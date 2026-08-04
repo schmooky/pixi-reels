@@ -1,7 +1,7 @@
 ---
 title: "Reel curvature"
 group: rendering
-oneLiner: "Project the reels onto a drum with one number - per set or per reel - so cells keystone into real trapezoids instead of flat rectangles."
+oneLiner: "Bend the reels onto a drum with one number - per set or per reel - so cells keystone into real trapezoids instead of flat rectangles."
 order: 65
 tags:
   - curve
@@ -33,6 +33,37 @@ builder.curve({ amount: 0.45, depth: 0.35 }); // stronger
 ```
 
 Capped just under `cos(arc)`. Past that the projection stops being monotonic and edge cells fold back over each other, so a deep curve saturates instead of turning inside out.
+
+<a id="curved-reels-warp"></a>
+
+## Two ways to draw it
+
+Every demo on this page uses `.curveMode('warp')`. It is the one you want.
+
+```ts
+builder.curve(0.45).curveMode('warp').renderer(app.renderer);
+```
+
+**`'warp'`** renders each reel to a texture and draws it through a mesh whose **vertices** are displaced by the projection. The container bends, so everything inside it bends - Spine skeletons, atlas sprites, text, effects - and no symbol cooperates or even knows the reel is curved.
+
+It also bends **motion**. The curve is on the rendered reel, not baked into each cell, so anything moving the strip rides it: the spin, the stop bounce, cascade falls.
+
+**`'symbol'`** (default) projects each cell on its own. Crisper - no resample - and free, but a `Container` transform is affine, so it can only bend content that IS a texture. Spine, `Graphics`, composite subtrees and *atlas sub-frames* fall back to a uniform scale: displaced and shrunk, never keystoned. And the stop bounce translates the reel container flat, so the board slides straight up and down instead of travelling round the drum.
+
+| | `'symbol'` | `'warp'` |
+|---|---|---|
+| Spine / composites bend | no | **yes** |
+| Atlas art keystones | no | **yes** |
+| Motion follows the curve | no | **yes** |
+| Cost | free | 1 render pass per reel per frame |
+| Sharpness | native | one resample |
+| Needs `renderer()` | no | **yes** - `build()` throws without it |
+
+Under `'warp'`, symbols stop being real display objects to the renderer, so use `getCellQuad()` rather than screen-space hit testing.
+
+The demo below is Spine skeletons - content `'symbol'` cannot bend at all.
+
+<RecipeDemo code="curved-reels-warp" height={420} />
 
 <a id="curved-reels-focus"></a>
 
@@ -70,63 +101,35 @@ reelSet.setCurve([0.2, 0.35, 0.5, 0.35, 0.2]);
 reelSet.setCurve(0); // flat
 ```
 
-## What draws the trapezoid
-
-A `Container` transform is affine. It scales, skews, rotates - it can never make a rectangle a trapezoid. Anything built on `scale` alone gives you a smaller rectangle and calls it perspective.
-
-So the engine hands each symbol a **projected quad** via `ReelSymbol.applyCellQuad()`:
-
-- **`SpriteSymbol` / `AnimatedSpriteSymbol`** map it onto a PixiJS `PerspectiveMesh` - true keystone, **no extra render pass**, mesh allocated only once a reel is curved. Requires a texture that owns its whole source.
-- **Everything else** gets a *uniform* scale about the quad's centre, sized to fit INSIDE it so no cell overlaps its neighbour. Uniform on purpose: squashing one axis turns a `7` into a squashed `7`, not a `7` at an angle. Spine and composite subtrees land here - projecting them would mean a render texture every frame.
-
-Own symbol, single texture? Write `applyCellQuad()`. `PerspectiveCell` is exported and does the mesh plumbing.
-
-**Known limitation:** an *atlas sub-frame* does not take the mesh path. The mesh addresses its source with 0..1 UVs and remapping them onto the frame has not produced a correct draw here, so `canProjectTexture()` refuses those and the symbol falls back to the affine fit - right, but not keystoned. That is most production art. Whole-source textures are unaffected.
-
-`curveMode('warp')` below has none of these limits.
-
-<a id="curved-reels-warp"></a>
-
-## Bend the container instead
-
-`.curveMode('warp')` renders each reel to a texture and draws it through a mesh whose **vertices** are displaced by the projection. Everything inside bends - Spine, atlas sprites, text, effects - and no symbol cooperates or even knows.
-
-```ts
-builder.curve(0.45).curveMode('warp').renderer(app.renderer);
-```
-
-The demo is Spine skeletons, which the per-symbol path cannot bend at all.
-
-<RecipeDemo code="curved-reels-warp" height={420} />
-
-The other thing it buys is **motion**. The bend is on the rendered reel, not baked into each cell, so anything that moves the strip rides the curve for free: the spin, the stop bounce, cascade falls. Per-symbol, the bounce is a flat translation of the reel container - the board slides straight up and down instead of travelling round the drum.
-
-Costs: one render pass per reel per frame, one resample (hairline art marginally softer), and `.renderer(app.renderer)` is required - `build()` throws without it. Symbols stop being real display objects to the renderer, so reach for `getCellQuad()` rather than screen-space hit testing.
-
 <a id="curved-reels-gems"></a>
 
 ## On real art
 
 Grid tiles are a measuring instrument. This is the same curve on shipped symbols - Playson's Supercharged Diamonds 3, the sheet the sprite Hold &amp; Win recipes use - at `curveFocus('set-lean')`.
 
-Atlas sub-frames, so per above: affine fit, no keystone. Cells recede and lean, gems never distort. They are also letterboxed and heavily trimmed, so `BlurSpriteSymbol` reports where its art really sits via `cellInset` - without it the drum would project the empty cell instead of the gem.
+These are trimmed atlas frames. Under `'symbol'` they could not keystone at all; under `'warp'` they bend like everything else.
 
 Blur-on-spin is unaffected: motion-blur frames on `onReelSpinStart`, back on landing.
 
 <RecipeDemo code="curved-reels-gems" height={420} />
 
-## Art that does not fill its cell
+## Extending `'symbol'` mode
 
-Most does not - a trimmed frame is a small shape in a big transparent box. Project the whole cell and you inflate the symbol and hand it the cell's keystone instead of its own.
+Only relevant if you skip the warp. The engine hands each symbol a **projected quad** via `ReelSymbol.applyCellQuad()`:
 
-Symbols report their real rect via `ReelSymbol.cellInset`. Sprite symbols derive it from the texture's trim, so a TexturePacker atlas needs no help. Override it if your symbol places art some other way.
+- **`SpriteSymbol` / `AnimatedSpriteSymbol`** map it onto a PixiJS `PerspectiveMesh` - true keystone, no extra render pass - when the texture owns its whole source. `canProjectTexture()` refuses atlas sub-frames; the mesh addresses its source with 0..1 UVs and remapping them onto the frame has not produced a correct draw here.
+- **Everything else** gets a *uniform* scale about the quad's centre, sized to fit INSIDE it so no cell overlaps its neighbour. Uniform on purpose: squashing one axis turns a `7` into a squashed `7`, not a `7` at an angle.
+
+Own symbol, single texture? Write `applyCellQuad()`. `PerspectiveCell` is exported and does the mesh plumbing.
+
+**Art that does not fill its cell** - most does not - reports its real rect via `ReelSymbol.cellInset`. Sprite symbols derive it from the texture's trim, so a TexturePacker atlas needs no help. Without it the drum projects the empty cell instead of the gem inside it.
+
+**Gotcha:** the affine fallback owns `view.scale`. A win animation tweening `symbol.view.scale` to an absolute value overwrites the projection while it runs. Animate a child of `view` instead. Not an issue under `'warp'`.
 
 ## The engine does not notice
 
-The strip still marches on flat coordinates. The projection is a view-local quad and never touches a view's `position`, so `setResult()`, wrapping, cascades, big symbols and MultiWays reshapes behave exactly as flat.
+The strip still marches on flat coordinates. The projection never touches a view's `position`, so `setResult()`, wrapping, cascades, big symbols and MultiWays reshapes behave exactly as flat.
 
 `getCellBounds()` returns the projected cell's **bounding box**; `getCellQuad()` returns the four corners it is actually drawn on. Outline with the quad, hit-test with the box.
-
-**Gotcha:** the affine fallback owns `view.scale`. A win animation tweening `symbol.view.scale` to an absolute value overwrites the projection while it runs. Sprite symbols dodge this by pulsing the mesh instead; in your own, animate a child of `view`.
 
 **Gotcha:** curvature is presentation only. It never changes what lands where, what `getVisibleGrid()` returns, or any event payload.

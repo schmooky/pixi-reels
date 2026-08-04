@@ -48,6 +48,8 @@ const reelSet = new ReelSetBuilder()
   .symbolGap(6, 6)
   .curve({ amount: 0.6, depth: 0.55 })
   .curveFocus('set-lean')
+  .curveMode('warp') // bend the container: motion rides the curve too
+  .renderer(app.renderer)
   .symbols((r) => {
     for (const id of IDS) {
       r.register(id, BlurCell, { textures: symbols, blurTextures: blur });

@@ -52,6 +52,8 @@ const reelSet = new ReelSetBuilder()
   .symbolSize(96, 96)
   .symbolGap(6, 6)
   .curve(0.5) // <- the whole thing
+  .curveMode('warp') // bend the container: motion rides the curve too
+  .renderer(app.renderer)
   .symbols((r) => {
     for (const id of IDS) r.register(id, SpriteSymbol, { textures: art });
   })

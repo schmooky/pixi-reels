@@ -57,6 +57,8 @@ const reelSet = new ReelSetBuilder()
   .symbolGap(6, 6)
   .curve(0.5)
   .curveFocus('set') // <- one camera for the whole board
+  .curveMode('warp') // bend the container: motion rides the curve too
+  .renderer(app.renderer)
   .symbols((r) => {
     for (const id of IDS) r.register(id, SpriteSymbol, { textures: art });
   })
