@@ -261,6 +261,8 @@ export class Reel implements Disposable {
    * completely alone - the warp bends all of them at once.
    */
   private _warp?: ReelWarp;
+  /** True when this reel is drawn through a whole-reel warp. */
+  private readonly _warping: boolean;
   private readonly _mainCell: number;
   private readonly _mainGap: number;
   private readonly _crossGap: number;
@@ -421,10 +423,16 @@ export class Reel implements Disposable {
     // Curvature is bound to the same geometry the motion layer marches on, so
     // the bend follows a MultiWays reshape without a second source of truth.
     this._curveFocus = config.curveFocus ?? null;
-    this._curve = this._buildCurve(config.curve, this._mainCell, config.visibleCells);
     // In warp mode the whole reel is bent at once, so the motion layer must NOT
-    // also hand each symbol a quad - that would curve the strip twice.
-    const warping = config.curveRenderer !== undefined && this._curve !== undefined;
+    // also hand each symbol a quad - that would curve the strip twice - and the
+    // projection is left un-normalized so it magnifies both axes equally.
+    // Recorded BEFORE the initial placement. `_warp` itself cannot be built
+    // until the symbols exist, and keying off it meant `_setupSymbolPositions`
+    // still handed every symbol a per-symbol quad, which the warp then bent a
+    // second time - the strip came out shrunk into the middle of its texture.
+    this._warping = config.curveRenderer !== undefined && config.curve !== undefined;
+    this._curve = this._buildCurve(config.curve, this._mainCell, config.visibleCells);
+    const warping = this._warping;
 
     // Create motion handler. SPIN-time slot height is `spinCellSize`;
     // AdjustPhase reshapes motion to the per-reel cell height.
@@ -455,6 +463,7 @@ export class Reel implements Disposable {
         box.width,
         box.height,
         config.curveTicker,
+        this.motion.slotPitch,
       );
       this._warp.zIndex = this.container.zIndex;
       this._axis.setCross(this._warp, this._axis.getCross(this.container));
@@ -1618,7 +1627,7 @@ export class Reel implements Disposable {
     // VIEW-LOCAL quad, so the same call is correct whichever of the two spaces
     // above the view was just placed in. In warp mode the whole reel is bent
     // downstream instead, and symbols are left completely alone.
-    if (this._curve && !this._warp) {
+    if (this._curve && !this._warping) {
       symbol.applyCellQuad(this._curve.quadFor(reelLocalMain, symbol.cellInset));
     }
   }

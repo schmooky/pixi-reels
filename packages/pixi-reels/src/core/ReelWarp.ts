@@ -1,4 +1,4 @@
-import { Container, Matrix, MeshPlane, RenderTexture, type Renderer, type Ticker } from 'pixi.js';
+import { Container, MeshPlane, RenderTexture, type Renderer, type Ticker } from 'pixi.js';
 import type { Disposable } from '../utils/Disposable.js';
 import { TickerRef } from '../utils/TickerRef.js';
 import type { ReelAxis } from './ReelAxis.js';
@@ -40,8 +40,6 @@ export class ReelWarp extends Container implements Disposable {
   private _isDestroyed = false;
   private _width: number;
   private _height: number;
-  /** Reused translation that cancels the reel's own offset for the RT draw. */
-  private readonly _offset = new Matrix();
   private readonly _tickerRef: TickerRef;
 
   /**
@@ -61,10 +59,17 @@ export class ReelWarp extends Container implements Disposable {
     width: number,
     height: number,
     ticker: Ticker,
+    private readonly _margin = 0,
   ) {
     super();
-    this._width = Math.max(1, Math.ceil(width));
-    this._height = Math.max(1, Math.ceil(height));
+    // The texture covers the visible window PLUS a slot of buffer at each end.
+    // Un-normalized, the projection sits inset from the window - the drum's
+    // ends curve away from you - and it is the buffer cells that fill that
+    // space, exactly as on a real machine where you can see a sliver of the
+    // next symbol above and below.
+    const grown = this._axis.toScreen(0, _margin * 2);
+    this._width = Math.max(1, Math.ceil(width + Math.abs(grown.x)));
+    this._height = Math.max(1, Math.ceil(height + Math.abs(grown.y)));
     this._texture = RenderTexture.create({
       width: this._width,
       height: this._height,
@@ -97,24 +102,37 @@ export class ReelWarp extends Container implements Disposable {
    */
   update(): void {
     if (this._isDestroyed) return;
-    // The reel container still carries the reel's own cross / main offset,
-    // because everything from `getCellBounds` to the unmasked lift reads it.
-    // Cancel it for the off-screen draw so the strip lands at the texture's
-    // origin instead of its position within the viewport.
-    this._offset.tx = -this._source.x;
-    this._offset.ty = -this._source.y;
+    // The reel container carries the reel's own cross / main offset - reel 3
+    // sits 300px along - because everything from `getCellBounds` to the
+    // unmasked lift reads it. For the off-screen draw the strip has to land at
+    // the texture's origin instead, or every reel but the first renders
+    // entirely outside its own texture and comes out blank.
+    //
+    // Done by moving the container rather than through `render`'s `transform`
+    // option: that transform does not replace the container's own, so the
+    // offset survived it. Restored in the same synchronous block, so nothing
+    // else can observe the container displaced.
+    const { x, y } = this._source.position;
+    // Park it AT the shift, not offset by it. Buffer cells sit at negative
+    // main, so the margin brings them inside the texture and gives the ends of
+    // the drum something to draw.
+    const shift = this._axis.toScreen(0, this._margin);
+    this._source.position.set(shift.x, shift.y);
     this._renderer.render({
       container: this._source,
       target: this._texture,
-      transform: this._offset,
       clear: true,
     });
+    this._source.position.set(x, y);
   }
 
   /** Re-measure after a reshape, and re-displace the grid. */
   resize(width: number, height: number): void {
-    const w = Math.max(1, Math.ceil(width));
-    const h = Math.max(1, Math.ceil(height));
+    // Same margin the constructor added, or a reshape would silently drop the
+    // buffer slack and clip the ends of the drum.
+    const grown = this._axis.toScreen(0, this._margin * 2);
+    const w = Math.max(1, Math.ceil(width + Math.abs(grown.x)));
+    const h = Math.max(1, Math.ceil(height + Math.abs(grown.y)));
     if (w === this._width && h === this._height) return;
     this._width = w;
     this._height = h;
@@ -148,11 +166,15 @@ export class ReelWarp extends Container implements Disposable {
       const gx = (i % GRID) / span;
       const gy = Math.floor(i / GRID) / span;
       // Screen grid -> axis-relative, so one loop serves both orientations.
-      const local = this._axis.toLocal(gx * this._width, gy * this._height);
-      const projected = this._curve.mapMain(local.main);
-      const scale = this._curve.scaleAt(local.main);
-      const cross = focus + (local.cross - focus) * scale;
-      const screen = this._axis.toScreen(cross, projected);
+      const texel = this._axis.toLocal(gx * this._width, gy * this._height);
+      // Texture space starts a margin BEFORE the window, so undo that to get
+      // the reel-local coordinate the projection is defined against.
+      const main = texel.main - this._margin;
+      const scale = this._curve.scaleAt(main);
+      const screen = this._axis.toScreen(
+        focus + (texel.cross - focus) * scale,
+        this._curve.mapMain(main),
+      );
       positions[i * 2] = screen.x;
       positions[i * 2 + 1] = screen.y;
     }
