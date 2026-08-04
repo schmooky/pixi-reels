@@ -1,5 +1,336 @@
 # pixi-reels
 
+## 2.0.0
+
+### Major Changes
+
+- [#197](https://github.com/schmooky/pixi-reels/pull/197) [`847d9cd`](https://github.com/schmooky/pixi-reels/commit/847d9cde6c3757fc6f83360c49764c55a0f98dcc) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Fix: three public members no longer re-expose classes the package deliberately hides, and `HoldAndWinBoardConfig` is now exported.
+
+  `RandomSymbolProvider`, `StopSequencer` and `ReelMotion` were hidden from the package entry in 1.0.0 (PR [#140](https://github.com/schmooky/pixi-reels/issues/140)). Three public members were still typed with them -- `Reel.motion`, `Reel.stopSequencer`, `FrameBuilder.randomProvider` -- which put those classes back into `dist/core/Reel.d.ts` and would have semver-locked them into all of 2.x. All three are now `@internal`, so `stripInternal` keeps them out of the published types. Nothing is lost: reel geometry is on `ReelSet.getCellBounds()` / `getBlockBounds()` and `Reel.cellMain` / `.extent` / `.mainOffset`, landing is driven by `setResult()` / `slamStop()`, and symbol weights are configured via `builder.weights({...})`.
+
+  `HoldAndWinBoardConfig` is now exported. The board's own export block promises that a fork can "copy HoldAndWinBoard + HoldAndWinState, repoint their imports at `pixi-reels`, and everything they reach for is public" -- but the config the constructor takes was not, so the first line of a forked board could not be typed.
+
+  A new `check:api-surface` guard fails the build on any public member typed with a `src/` type no entry point exports, so this cannot silently regress. Constructor parameters are reported separately and waived by name: tagging a constructor `@internal` strips the whole signature and leaves consumers an implicit zero-arg `new Reel()` that typechecks and then throws, which is worse than the leak.
+
+  Fix: `destroySymbols()` now names the reel and cell when a visible cell has no symbol. The coordinate range check already passed at that point, so a miss means the strip is short or holed -- a reel torn down or reshaped while a cascade was in flight. It previously surfaced as `Cannot read properties of undefined (reading 'view')` from inside an `Array.map`, naming neither the cell nor the reel.
+
+- [#197](https://github.com/schmooky/pixi-reels/pull/197) [`847d9cd`](https://github.com/schmooky/pixi-reels/commit/847d9cde6c3757fc6f83360c49764c55a0f98dcc) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Fix: cascade grids are validated, the debug snapshot follows the travel axis, and `Gsap` is exportable.
+
+  **`refill()` and `runCascade()`'s `nextGrid` now validate their grid**, the same way `setResult()` always has: shape, v1 option keys, and buffer counts that fit the reels. They previously validated nothing, so a cascade grid still carrying a v1 `bufferAbove` reached `columnTargetToStrip`, came back `undefined`, and was silently random-filled on every stage of the chain -- the exact silent divergence the fail-loud guards exist to prevent. A `string[][]` grid threw a bare `TypeError` deep in the pipeline instead of naming the call. Errors name their own entry point, so a bad `nextGrid` says `runCascade(): nextGrid` rather than surfacing as a `refill()` failure two frames later.
+
+  The buffer-overflow message now reads `setResult()` rather than `setResult`, matching every other message from that call.
+
+  **`DebugReelSnapshot.allSymbols[].y` is now `.main`**, the coordinate along that reel's travel axis, and each reel reports its `orientation` and `direction`. The old field was hard-coded to `view.y`, so on a horizontal set every symbol reported a constant `0` -- no positional information at all, in the one orientation 2.0 exists to add. This is the surface agents are pointed at precisely because the canvas is opaque to them.
+
+  **`Gsap` is exported.** It is the second parameter of `driveGsapWithTicker`, the type of `ReelConfig.gsap`, and the return type of the `Reel.gsap` accessor, but it could not be named by a consumer.
+
+  **The v1 rename tables are no longer exported.** `CODEMOD_HINT`, `V1_BUILDER_METHODS`, `V1_OPTION_KEYS` and `V1_OPTION_VALUES` were public, which would have semver-locked 1.x migration scaffolding into all of 2.x. The guards still read them internally and every throw still names the replacement; nothing a consumer writes needs the table.
+
+  Fix: a `nudge()` on a jagged layout no longer displaces symbols that render above the mask. `ReelMotion.advance()` derives positions from the array index and writes them absolutely (it accumulated with `+=` in 1.x), which dropped the reel offset baked into any view lifted into `viewport.unmaskedContainer`. A nudge is the one path that moves the strip while the reel is at rest, so an `unmask: true` symbol on a pyramid reel jumped a full cell out of its column for the whole tween and snapped back at the end.
+
+- [#197](https://github.com/schmooky/pixi-reels/pull/197) [`847d9cd`](https://github.com/schmooky/pixi-reels/commit/847d9cde6c3757fc6f83360c49764c55a0f98dcc) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Remove: the `examples/` directory. The standalone demo apps now live in a separate repo.
+
+  Nothing in the published package changes -- `examples/` was never part of the tarball. This matters only if you cloned the repo to run a demo. Runnable demos live on the docs site under `/recipes`, about 130 of them, each with its source alongside; `pnpm site:dev` serves the whole set.
+
+  Keeping two parallel demo surfaces in one repo meant every API change had to be made twice, and the example half kept losing: two of the six apps were still passing `string[][]` to `runCascade`'s `nextGrid`, which throws on the first cascade, and nothing caught it because `vite build` only transpiles.
+
+  What survived the move, for anyone following a path from an older doc:
+
+  - `examples/shared/` symbol classes and asset loaders are now `apps/site/src/runtime/`
+  - `CheatEngine` and `SeededRng` are the private `@pixi-reels/cheats` package (still outside the library, per ADR 009)
+  - the prototype sprite atlas is `apps/site/public/prototype-symbols/`
+  - `examples/orientation-matrix` is `tests/e2e/fixtures/orientation-matrix`, unchanged in what it proves: browser coverage of all four orientation x direction combinations
+
+- [#197](https://github.com/schmooky/pixi-reels/pull/197) [`847d9cd`](https://github.com/schmooky/pixi-reels/commit/847d9cde6c3757fc6f83360c49764c55a0f98dcc) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Remove: `ReelAxis.withDirection()`, and with it the last trace of a per-spin direction override that never shipped.
+
+  The method had **zero call sites in `src`**. It existed only to serve ADR 016 section 3.5's `spin({ direction })` / `spin({ directionPerReel })`, which is not implemented and is absent from `SpinOptions`. Shipping it would have frozen a method into all of 2.x whose only justification was an unbuilt feature -- the same trap as exporting the v1 rename tables.
+
+  Direction is fixed at `build()`: `.direction(d)` and `.directionPerReel([...])`. Nothing else changes. The engine constructs one axis per reel via `reelAxis(orientation, direction)` and has never needed a sibling; if you were calling `withDirection` yourself, call `reelAxis(axis.orientation, d)` instead.
+
+  Implementing the per-spin override is a feature PR after 2.0, not a freeze rider: `Reel._axis` is `readonly` and is handed to `ReelMotion`, `ReelViewport`, and every phase at construction, so a per-spin flip needs a re-injection path through all of them, plus the mid-spin-throw guard and the section 3.4 "both buffers >= 1" validation that only per-spin overrides force. Re-adding the method then is additive -- consumers receive axes, they do not implement the interface. ADR 016 records this as decision 4 under Status, so it does not get re-proposed from the design doc.
+
+- [#197](https://github.com/schmooky/pixi-reels/pull/197) [`847d9cd`](https://github.com/schmooky/pixi-reels/commit/847d9cde6c3757fc6f83360c49764c55a0f98dcc) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Change: `string[][]` is no longer accepted anywhere as a grid input. `runCascade`'s `nextGrid` must return `ColumnTarget[]`, and the `pixi-reels/testing` helper `spinAndLand` takes `ColumnTarget[]` too -- its `string[][]` convenience form is gone. Wrap with `grid.map((visible) => ({ visible }))`.
+
+  One accepted shape means a grid read out of the engine can be handed back to it without a conversion step, and a wrong shape now names itself at the call site instead of failing later inside the frame pipeline.
+
+- [#197](https://github.com/schmooky/pixi-reels/pull/197) [`847d9cd`](https://github.com/schmooky/pixi-reels/commit/847d9cde6c3757fc6f83360c49764c55a0f98dcc) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Fix: an `unmask: true` symbol now travels with the reel through the stop bounce instead of hanging still for it.
+
+  `StopPhase` lifts landed unmask views into `viewport.unmaskedContainer` in `notifyLanded()` and only then tweens `reel.container` through the two-leg overshoot. A lifted view carries the reel offset in its own coordinate rather than inheriting it from a parent, so it did not follow that tween: on the default profile a landed scatter or wild sat motionless for the full 600 ms while the rest of the reel bounced underneath it. The bounce now keeps lifted views pinned to the reel for every frame, and settles them on the exact resting position rather than the last tween sample.
+
+  Skipping mid-bounce had the same fault from the other side. `onSkip()` snapped to grid _before_ resting the container, so `snapToGrid` baked the current overshoot position into every lifted view and the container then moved out from under it -- leaving the view off by however far the bounce had travelled. The container is rested first now.
+
+  Fix: `nudge({ startDelay })` no longer leaks an `abort` listener per call. The listener was registered with `{ once: true }`, which only self-removes when the event actually fires, so every nudge that completed normally left one behind. The documented staggered pattern -- one long-lived `AbortController` across `Promise.all(reels.map(...))` -- accumulated them for the life of the controller. It is now removed on both paths.
+
+  Fix: `StopSequencer.next()` throws when the frame is exhausted instead of returning `_frame[0]`, or `''` after a `reset()`. Both fallbacks handed back a symbol id that resolves to nothing, so an over-consuming caller landed a silently wrong frame rather than failing where the bug was. Every caller already gates on `hasRemaining`. `reset()` also restores the feed cursor and step, not just the frame and count.
+
+- [#197](https://github.com/schmooky/pixi-reels/pull/197) [`847d9cd`](https://github.com/schmooky/pixi-reels/commit/847d9cde6c3757fc6f83360c49764c55a0f98dcc) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Rename: the row/column vocabulary becomes orientation-neutral. A reel's strip is made of **cells**, and the off-window slots either side are **start** and **end** (start = the smaller main coordinate: above for vertical, left for horizontal), independent of which way the reel travels.
+
+  Run the `v1-to-v2` codemod over your sources. `build()` throws a named error if it still sees a v1 key. The codemod is not on npm yet -- the migration guide has the from-a-clone invocation.
+
+  Core geometry:
+
+  | v1                                          | v2                                    |
+  | ------------------------------------------- | ------------------------------------- |
+  | `visibleRows`, `visibleRowsPerReel`         | `visibleCells`, `visibleCellsPerReel` |
+  | `bufferSymbols({ above, below })`           | `bufferSymbols({ start, end })`       |
+  | `ColumnTarget.bufferAbove` / `.bufferBelow` | `.bufferStart` / `.bufferEnd`         |
+  | `Reel.bufferAbove` / `.bufferBelow`         | `.bufferStart` / `.bufferEnd`         |
+  | `reelPixelHeights`                          | `reelExtents`                         |
+  | `Reel.spinSymbolHeight`                     | `Reel.spinCellSize`                   |
+
+  Motion:
+
+  | v1                            | v2                      |
+  | ----------------------------- | ----------------------- |
+  | `ReelMotion.displace(deltaY)` | `.advance(travelDelta)` |
+  | `ReelMotion.slotHeight`       | `.slotPitch`            |
+  | `ReelMotion.getRowY(row)`     | `.getCellMain(cell)`    |
+
+  Grid coordinates and payloads:
+
+  | v1                                         | v2                                      |
+  | ------------------------------------------ | --------------------------------------- |
+  | `SymbolPosition.rowIndex`                  | `.cellIndex`                            |
+  | `cascade:*` `winnerRows`, `offsetRows`     | `winnerCells`, `offsetCells`            |
+  | `DropOffset.originalRow`                   | `.originalCell`                         |
+  | `TumbleConfig.rowStagger` / `.rowOrder`    | `.cellStagger` / `.cellOrder`           |
+  | `rowOrder: 'bottomToTop' \| 'topToBottom'` | `cellOrder: 'endFirst' \| 'startFirst'` |
+  | `pin:migrated { fromRow, toRow }`          | `{ fromCell, toCell }`                  |
+  | `CellPin.originRow`                        | `.originCell`                           |
+
+  Offsets:
+
+  | v1                                                      | v2                            |
+  | ------------------------------------------------------- | ----------------------------- |
+  | `OffsetXMode`                                           | `CrossOffsetMode`             |
+  | `TrapezoidConfig.topWidthFactor` / `.bottomWidthFactor` | `.startFactor` / `.endFactor` |
+
+  Semantics, not just names:
+
+  | v1                                          | v2                                                                             |
+  | ------------------------------------------- | ------------------------------------------------------------------------------ |
+  | `bufferSymbols({ above, below })`           | `bufferSymbols({ start, end })`                                                |
+  | `reelAnchor: 'top' \| 'center' \| 'bottom'` | `'start' \| 'center' \| 'end'`                                                 |
+  | `SymbolData.size { w, h }`                  | `{ reels, cells }` (and `getSymbolFootprint`'s `size`)                         |
+  | `NudgeOptions.direction: 'up' \| 'down'`    | `'forward' \| 'reverse'`, relative to the reel's own axis                      |
+  | `'symbol:created': [symbolId, row]`         | `[symbolId, stripIndex]` -- it was always the strip index, never a visible row |
+
+  `nudge()` is now genuinely direction-relative: which edge feeds the reel is derived from the axis polarity, so a reel built with `direction('reverse')` nudges upward on `'forward'`. A vertical/forward reel behaves exactly as `'down'` did.
+
+  New:
+
+  - `builder.cellStacking(order)` / `builder.reelStacking(order)` expose render order explicitly (`'ascending'` default = today's behaviour: the cell/reel at the larger coordinate draws in front). Deliberately geometric -- `direction('reverse')` does NOT flip stacking, so art lit from above keeps overlapping the way it was drawn.
+  - `SymbolPosition.setId?` for games composing more than one reel set. The engine never reads it.
+  - `build()` throws when a cross-reel big symbol (`size.reels > 1`) meets a mixed `directionPerReel([...])`. The coordinator assumes one shared feed edge across the reels a block covers.
+  - `ReelMotion`'s wrap callback drops its dead `arrayIndex` / `direction` arguments.
+
+  Fail-loud, no silent aliases: `visibleRows()`, `visibleRowsPerReel()` and `reelPixelHeights()` are gone but still present as throwing stubs, and every renamed option key or string value throws from the builder method that received it (`bufferSymbols({ above })`, `multiways({ minRows })`, `symbolData({ size: { w } })`, `tumble({ fall: { rowStagger } })`, `offsetConfig({ topWidthFactor })`, `reelAnchor('top')`, `initialFrame`/`setResult` columns with `bufferAbove`). Each message names the v2 replacement and the codemod. The table itself stays internal: it is 1.x migration scaffolding, and exporting it would semver-lock it into all of 2.x.
+
+  Codemod: the `v1-to-v2` transform rewrites the API surface (AST-based, so it never touches your own `row` / `col` locals or your comments). Verified end-to-end against this repo's 112 site recipes at their pre-rename revision: zero v1 API names left in code. It ships in the repo rather than on npm for now; see the migration guide for how to run it from a clone.
+
+  Docs: a new "Migrating to 2.0" guide covers every rename with a before/after, including the three things the codemod deliberately leaves alone. ADRs, CHANGELOGs and the 1.0 migration guide keep their v1 vocabulary. they are records of what was true then.
+
+- [#197](https://github.com/schmooky/pixi-reels/pull/197) [`847d9cd`](https://github.com/schmooky/pixi-reels/commit/847d9cde6c3757fc6f83360c49764c55a0f98dcc) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Remove: the standalone HorizontalReel / HorizontalReelBuilder subtree - use orientation('horizontal') on ReelSetBuilder instead.
+
+- [#197](https://github.com/schmooky/pixi-reels/pull/197) [`847d9cd`](https://github.com/schmooky/pixi-reels/commit/847d9cde6c3757fc6f83360c49764c55a0f98dcc) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Internal: the motion contract (ADR 018) now runs in CI against the shipping engine, in all four orientation x direction combinations, and the `createTestReelSet` default symbol size is non-square (120x100) so a test can tell width from height.
+
+  No engine API change, but `createTestReelSet`'s default geometry is a breaking change to anyone writing tests against `pixi-reels/testing`: pass `symbolSize` explicitly if you were relying on 100x100. Filed as major so it lands under Breaking Changes in the changelog, where a reader whose geometry assertions just started failing will actually look.
+
+- [#197](https://github.com/schmooky/pixi-reels/pull/197) [`847d9cd`](https://github.com/schmooky/pixi-reels/commit/847d9cde6c3757fc6f83360c49764c55a0f98dcc) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Remove: the internal negative-index buffer encoding. `ColumnTarget` is now carried unchanged from `setResult()` / `initialFrame()` all the way down to the reel, so no stage of the pipeline materializes `arr[-1]` string properties on an array any more.
+
+  What this changes for consumers:
+
+  - `Reel.placeSymbols(target)` takes a `ColumnTarget` instead of a `string[]`. Wrap a visible-only array as `{ visible: ids }`.
+  - `Reel.placeStrip(frame)` is new: it lands a full strip frame (index `0` = furthest buffer-above cell), which is the shape `FrameBuilder.build` returns. Custom stop/cascade phases should use this.
+  - `FrameContext.targetSymbols?: string[]` becomes `FrameContext.target?: ColumnTarget`. Middleware reads it with the new `getTargetSlot(target, cell)` helper, or materializes it with `columnTargetToStrip(target, bufferStart)`.
+  - `FrameBuilder.build` / `.buildAll` take `ColumnTarget` / `ColumnTarget[]` in the target position.
+  - `columnTargetToArray` is gone. `getTargetSlot`, `setTargetSlot`, `columnTargetToStrip` and `cloneColumnTarget` are exported in its place.
+  - `refill()` now validates a column against `visible.length` rather than the materialized array length, so a refill grid may carry `bufferStart` / `bufferEnd` entries. Previously a buffer-end entry made the column look too long and threw.
+
+- [#197](https://github.com/schmooky/pixi-reels/pull/197) [`847d9cd`](https://github.com/schmooky/pixi-reels/commit/847d9cde6c3757fc6f83360c49764c55a0f98dcc) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Change: gsap is held per reel set instead of in a module global.
+
+  v1's `utils/gsapRef.ts` stored one instance process-wide, and its own docstring admitted "the last `setGsap` call wins" - so building a second `ReelSet` silently moved the first one's tweens onto a different timeline. Harmless for a single-set game; a real footgun for a composed stage. `builder.gsap(instance)` now binds that set only, captured at `build()`.
+
+  - `driveGsapWithTicker(ticker)` takes the instance as a second argument: `driveGsapWithTicker(ticker, myGsap)`. Pass the same one you gave the builder; omit it only if you never called `.gsap(...)`.
+  - Custom `ReelSymbol` subclasses should animate on the new protected `this.gsap`, which `SymbolFactory` binds to the owning set. An imported `gsap` still works when your app and the engine resolve to the same module; `this.gsap` is correct either way.
+  - `Reel.gsap` is exposed for custom phases (`this._reel.gsap`).
+  - The internal `setGsap` / `getGsap` helpers are gone, replaced by `DEFAULT_GSAP` and the `Gsap` type.
+
+  Nothing changes for a single-set game that never calls `.gsap(...)`.
+
+- [#197](https://github.com/schmooky/pixi-reels/pull/197) [`847d9cd`](https://github.com/schmooky/pixi-reels/commit/847d9cde6c3757fc6f83360c49764c55a0f98dcc) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Fix: `StaticSpinSymbol`'s motion blur now smears along the strip on a horizontal set.
+
+  `MotionBlurOptions.axis` defaulted to `'y'` and its docs told you to pass `{ axis: 'x' }` "for a `HorizontalReel`" - a class 2.0.0 deletes. So a horizontal set using `StaticSpinSymbol` smeared vertically, across the direction of travel, with no type error and no throw. The axis now defaults to the owning set's orientation (ADR 016 section 5); an explicit `blur.axis` still wins, for art that wants a deliberate cross-smear.
+
+  `ReelSymbol` gains a protected `this.mainAxis` (`'x'` or `'y'`), bound by `SymbolFactory` at create time, for the few effects that genuinely follow travel. `resize(width, height)` stays screen-space.
+
+- [#197](https://github.com/schmooky/pixi-reels/pull/197) [`847d9cd`](https://github.com/schmooky/pixi-reels/commit/847d9cde6c3757fc6f83360c49764c55a0f98dcc) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Add: `orientation('horizontal')` now supports pyramids, MultiWays, and big symbols. The uniform-only guard at `build()` is gone, so every layout the engine offers works on either axis.
+
+  `Reel` stores its cell size axis-relative (`cellMain` along the strip, `cellCross` across it) and projects back to screen `(width, height)` whenever art is resized. A jagged horizontal set therefore varies cell WIDTH where a vertical one varies height, from the same arithmetic. New accessors: `Reel.cellMain`, `.cellCross`, `.mainGap`, `.crossGap`.
+
+  Breaking, beyond the v2 rename already listed:
+
+  - `reelExtents([...])` and `multiways({ reelExtent })` are MAIN-axis extents (pixel height for vertical, pixel width for horizontal). They were always the vertical reading; the name now means the same thing on both axes.
+  - `getBlockBounds` projects through the axis. `size.reels` spans the cross axis and `size.cells` the main axis in every orientation, so the screen width and height a block maps to invert under horizontal. The method name and return shape do not move.
+  - `PinOverlayTween` (part of `AdjustPhaseConfig`) is axis-relative: `cellWidth`/`oldCellHeight`/`newCellHeight`/`fromY`/`toY`/`x` become `cellCross`/`oldCellMain`/`newCellMain`/`fromMain`/`toMain`/`cross`.
+
+  Fixed along the way: MultiWays reshape derived its new cell size and its pin-overlay slot pitch from `symbolGap.y` unconditionally. On a horizontal set that is the CROSS gap, so reshaped reels came out the wrong length. Both now read the reel's own main gap (ADR 016 section 6.6).
+
+- [#197](https://github.com/schmooky/pixi-reels/pull/197) [`847d9cd`](https://github.com/schmooky/pixi-reels/commit/847d9cde6c3757fc6f83360c49764c55a0f98dcc) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Change: `MaskStrategy.build` / `.update` take a single `MaskContext` (`{ rects, width, height, axis }`) instead of positional arguments, and every strategy must declare `readonly version = MASK_STRATEGY_VERSION`.
+
+  Only affects custom strategies; `RectMaskStrategy` and `SharedRectMaskStrategy` are unchanged to use.
+
+  A `ReelMaskRect` is screen-space, so which of its four numbers runs along the strip depends on the orientation: a vertical set puts the strip on `y`/`height`, a horizontal one on `x`/`width`. A strategy written for v1 receives an identically-shaped struct with transposed meaning and no compile error - and handed a `MaskContext` it would read `rects` as an object, find no `.length`, and quietly draw a full-bleed rect that clips nothing. `maskStrategy()` now throws by name on any strategy that does not declare version 2. `MaskContext` and `MASK_STRATEGY_VERSION` are exported.
+
+### Minor Changes
+
+- [#197](https://github.com/schmooky/pixi-reels/pull/197) [`847d9cd`](https://github.com/schmooky/pixi-reels/commit/847d9cde6c3757fc6f83360c49764c55a0f98dcc) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Add: `BoardGrid` and `HoldAndWinBuilder` take a travel axis, so a board's cells can fill sideways or upward.
+
+  ADR 016 section 7 listed sideways Hold & Win cells as unlocked by the axis work, but `BoardGrid` built every cell with a bare `ReelSetBuilder` and neither it nor `HoldAndWinBuilder` exposed an orientation, so a coin always scrolled in from above.
+
+  ```ts
+  new HoldAndWinBuilder().grid(5, 3).axis("horizontal", "reverse");
+  ```
+
+  Cells are 1x1 reel sets, so this picks the edge a symbol scrolls in from. It does not touch the board layout: `cols` and `rows` stay board dimensions, and `BoardGrid`/`HoldAndWinBoard` keep that vocabulary deliberately. Defaults to vertical / forward, unchanged.
+
+- [#197](https://github.com/schmooky/pixi-reels/pull/197) [`847d9cd`](https://github.com/schmooky/pixi-reels/commit/847d9cde6c3757fc6f83360c49764c55a0f98dcc) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Add: `CardSymbol`, `CARD_DECK` and `WILD_CARD` ship from the package. A playing-card tile drawn with `Graphics` -- coloured body, glyph fitted to the cell, glyph-only win pulse -- so a prototype runs with no art at all: `import { CardSymbol, CARD_DECK, WILD_CARD } from 'pixi-reels'`. It previously lived in `examples/shared` and could only be copy-pasted.
+
+  It uses the reel set's own gsap instance rather than importing gsap, so it is safe under a symlinked workspace.
+
+- [#197](https://github.com/schmooky/pixi-reels/pull/197) [`847d9cd`](https://github.com/schmooky/pixi-reels/commit/847d9cde6c3757fc6f83360c49764c55a0f98dcc) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Fix: the tumble cell stagger now follows gravity, so a reel that drains upward peels and refills from the top instead of the bottom.
+
+  `tumble({ fall, dropIn })`'s `cellOrder` resolved against the raw cell index and nothing else. Under the usual downward gravity that reads correctly -- the bottom cell, the one at the exit edge, goes first -- but on a reel draining the other way it staggered from the cell FURTHEST from the drain, so the cell about to leave first waited for the whole column to clear ahead of it. The geometry was already gravity-correct (symbols travelled and entered through the right edges); only the timing read backwards, which is why nothing caught it. `.direction('reverse')` with the default `gravity: 'auto'` was the visible case.
+
+  `cellOrder` now accepts `'auto'` and defaults to it. `'auto'` starts at the gravity-EXIT end -- the edge symbols are settling against -- so the canonical "bottom-left first, top-right last" feel is unchanged for every downward-gravity reel, and inverts by itself when gravity does. Nothing changes for a set that does not override gravity or direction.
+
+  `'endFirst'` and `'startFirst'` keep their meaning and are now explicitly geometric, like the buffers (ADR 016 section 3.4): they name an end of the strip and ignore gravity. Pass one to pin a screen edge regardless of which way the board drains.
+
+- [#197](https://github.com/schmooky/pixi-reels/pull/197) [`847d9cd`](https://github.com/schmooky/pixi-reels/commit/847d9cde6c3757fc6f83360c49764c55a0f98dcc) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Add: `tumble({ gravity })` so cascades work on reverse and horizontal reels (ADR 016 section 3.6).
+
+  Cascade refills used to be hard-coded to settle toward the larger cell index. On a reel built with `.direction('reverse')` that meant the board drained one way and refilled through the edge it had just emptied, with survivors sliding against the reel's own travel. The two halves disagreed internally too: `distance: 'auto'` applied the reel polarity while the default `'perHole'` did not, so changing one animation-tuning field flipped which edge symbols entered from.
+
+  `gravity` defaults to `'auto'`, which follows each reel's own direction, so a reverse or horizontal set now cascades correctly with no extra configuration:
+
+  ```ts
+  builder.direction("reverse").tumble({}); // drains upward, refills from below
+  builder.orientation("horizontal").tumble({}); // drains right, refills from the left
+  builder.tumble({ gravity: "reverse" }); // spin one way, drop the other
+  ```
+
+  Whichever edge gravity exits by is the edge your server must pack survivors against in the grids it sends -- the engine animates the result, it does not reorder it.
+
+  `DropOffset` gains an `isNew` field. Branch on that rather than `originalCell < 0`, which only discriminates under forward gravity. `computeDropOffsets` takes an optional `gravity` and still defaults to `'forward'`.
+
+  `createTestReelSet` gains a `tumble` option so a cascade test can pick an orientation and direction without hand-rolling a builder.
+
+- [#197](https://github.com/schmooky/pixi-reels/pull/197) [`847d9cd`](https://github.com/schmooky/pixi-reels/commit/847d9cde6c3757fc6f83360c49764c55a0f98dcc) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Add: `PhaseConstructor`, `PhaseCreatorFn`, `PinOverlayTween` and `TickerCallback` are now exported as types. Each appears in the signature of something already exported (`PhaseFactory.register`, `AdjustPhaseConfig.pinOverlays`, `TickerRef.add`), so a consumer could hold the value but never name it.
+
+  Fix: `ReelSymbol.onReelSpinStart`'s documented parameter name matches the signature again, and the `SymbolSpotlight` ADR link no longer points at a path that does not exist.
+
+- [#197](https://github.com/schmooky/pixi-reels/pull/197) [`847d9cd`](https://github.com/schmooky/pixi-reels/commit/847d9cde6c3757fc6f83360c49764c55a0f98dcc) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Add: `ReelSet.getTargets(): ColumnTarget[]` and `Reel.getTarget()`. The whole board as the same shape `setResult` takes -- buffers included, big-symbol anchors at their true positions -- so `reelSet.setResult(reelSet.getTargets())` reproduces what is on screen.
+
+  `getVisibleGrid()` is unchanged and still returns `string[][]`. It reports the visible window only, so it cannot be replayed: a block anchored in `bufferStart` with just its tail showing reads as that id at visible cell 0, and feeding that back re-anchors the block there. Use `getVisibleGrid()` to read the board for win logic, and `getTargets()` to capture and replay one.
+
+- [#197](https://github.com/schmooky/pixi-reels/pull/197) [`847d9cd`](https://github.com/schmooky/pixi-reels/commit/847d9cde6c3757fc6f83360c49764c55a0f98dcc) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Add: `debugOverlay` gains the axis-aware layers.
+
+  - `axis` draws one arrow per reel along the travel axis, pointing the way it goes.
+  - `feed` marks the strip edge new symbols arrive at.
+  - `thresholds` draws the two wrap lines, so contract laws L7 and L9 are watchable: drive a spin and no symbol should ever be drawn past one.
+  - `hud` now reports orientation, direction and feed edge per reel (`r0 VF feed=start spd=... cells=...`).
+
+  Add: `overlay.describe()` returns a plain-JSON summary of what those layers represent, per reel - orientation, direction, feed edge, the arrow's signed main-axis span, the feed marker and both thresholds. PixiJS renders to a canvas that CI and AI agents cannot see; this is the same information in a form `expect` can read. A mirrored arrow has identical bounds, so the signed span is the only thing that can tell a reverse reel from a forward one.
+
+  Fixed: the `buffers` and `hud` layers positioned themselves off `container.x` / `mainOffset` directly, so they drew in the wrong place on a horizontal set. Both now project through the reel's axis, as does every new layer. Each layer's `Graphics` carries a `label` (`pixi-reels:debugOverlay:<layer>`) for the Pixi devtools and for tests.
+
+- [#197](https://github.com/schmooky/pixi-reels/pull/197) [`847d9cd`](https://github.com/schmooky/pixi-reels/commit/847d9cde6c3757fc6f83360c49764c55a0f98dcc) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Add: reverse and mixed per-reel travel direction now spin and land correctly on a vertical set. `StopSequencer` feeds the target frame from the direction-appropriate edge (head-first for reverse reels, tail-first for forward), so `direction('reverse')` (roll-up) and `directionPerReel([...])` (alternating columns) land the exact requested grid. Forward reels are unchanged. Horizontal orientation still fails loud until its set geometry lands.
+
+- [#197](https://github.com/schmooky/pixi-reels/pull/197) [`847d9cd`](https://github.com/schmooky/pixi-reels/commit/847d9cde6c3757fc6f83360c49764c55a0f98dcc) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Add: `orientation('horizontal')` for uniform grids. A single horizontal reel is the banner - cells march along X, the strip travels on X, and it spins and lands through the same lifecycle as a vertical set. The builder projects viewport extents, cross-marching pitch and mask rects through the set axis, `Reel` derives its motion cell size / cross pitch from the axis (symbol art still sizes to screen width x height), and `ReelSet.getCellBounds` projects to screen. Pyramid / MultiWays horizontal fail loud for now.
+
+- [#197](https://github.com/schmooky/pixi-reels/pull/197) [`847d9cd`](https://github.com/schmooky/pixi-reels/commit/847d9cde6c3757fc6f83360c49764c55a0f98dcc) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Add: `ReelSetBuilder.orientation()` / `direction()` / `directionPerReel()` and per-reel `ReelAxis` threading (plus a `reel.axis` accessor). The axis is wired through the motion + phase layers. Vertical forward is fully supported. `orientation('horizontal')` and any reverse direction fail loud at `build()` for now - their set-level geometry and the StopSequencer feed edge (ADR 016 section 6.1) land in a later commit, so failing loud beats a mis-laid or non-landing spin.
+
+- [#197](https://github.com/schmooky/pixi-reels/pull/197) [`847d9cd`](https://github.com/schmooky/pixi-reels/commit/847d9cde6c3757fc6f83360c49764c55a0f98dcc) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Add: fire the declared-but-unfired `spotlight:start` (with the highlighted positions) and `spotlight:end` events. `SymbolSpotlight` now receives the ReelSet emitter and brackets each spotlight presentation; a teardown with nothing active stays silent.
+
+- [#197](https://github.com/schmooky/pixi-reels/pull/197) [`847d9cd`](https://github.com/schmooky/pixi-reels/commit/847d9cde6c3757fc6f83360c49764c55a0f98dcc) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Add: `debugOverlay(reelSet, { layers, live, ticker })` - a layered visual debug overlay for the static / at-rest layers (`mask`, `cells`, `buffers`, `bounds`, `blocks`, `pins`, `hud`). It draws into a `Container` added to the `ReelSet` itself, so it renders above the viewport (including the spotlight container) rather than under it like `showMask`. The handle exposes `setLayers(...)`, `redraw()` and `destroy()`, implements `Disposable`, pools its `Graphics`/`Text` (never recreated per frame), and when `live: true` drives per-frame redraw of the live layers through `TickerRef` (default `Ticker.shared`, override via `ticker`). Static layers only redraw on `shape:changed` / `adjust:complete`. Also reachable as `__PIXI_REELS_DEBUG.overlay(...)`. Dev-only, same caveat as `enableDebug`: it reads internals, is not semver-protected, and must not reach a production bundle. The axis / feed / thresholds layers arrive with A11b once `ReelAxis` is wired through `Reel`.
+
+- [#197](https://github.com/schmooky/pixi-reels/pull/197) [`847d9cd`](https://github.com/schmooky/pixi-reels/commit/847d9cde6c3757fc6f83360c49764c55a0f98dcc) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Add: `ReelAxis` projection value object (`reelAxis()`, `VERTICAL_FORWARD`) plus `Orientation`/`Direction` types. Unused for now - the foundation for orientation-generalized motion (ADR 016). No behavior change.
+
+### Patch Changes
+
+- [#197](https://github.com/schmooky/pixi-reels/pull/197) [`847d9cd`](https://github.com/schmooky/pixi-reels/commit/847d9cde6c3757fc6f83360c49764c55a0f98dcc) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Docs: document `anticipation:reel`, `anticipation:reelEnd` and `cascade:gravity:error`, which the engine emitted but no page mentioned.
+
+- [#197](https://github.com/schmooky/pixi-reels/pull/197) [`847d9cd`](https://github.com/schmooky/pixi-reels/commit/847d9cde6c3757fc6f83360c49764c55a0f98dcc) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Perf: `build()` no longer constructs and discards an `OffsetCalculator`.
+
+  The instance was never read, but its constructor runs `_compute()`, so every
+  `ReelSetBuilder.build()` was laying out a full per-reel/per-cell offset table
+  and throwing it away. Confirmed it contains no `throw`, so it was not doubling
+  as a validator. Also drops an unused local in `StartPhase`. No behaviour change.
+
+- [#197](https://github.com/schmooky/pixi-reels/pull/197) [`847d9cd`](https://github.com/schmooky/pixi-reels/commit/847d9cde6c3757fc6f83360c49764c55a0f98dcc) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Fix: the big-symbol weight error said random fill "never enters random fill in v1", which reads as a v1-only restriction on a v2 build. It is not version-scoped.
+
+- [#197](https://github.com/schmooky/pixi-reels/pull/197) [`847d9cd`](https://github.com/schmooky/pixi-reels/commit/847d9cde6c3757fc6f83360c49764c55a0f98dcc) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Fix: an empty `bufferStart` / `bufferEnd` no longer trips the buffer-range check.
+
+  `assertBufferCountsInRange` compared `highestDefinedIndex(entries) >= capacity`, and that helper returns `-1` for "no entries at all". When a reel reports a NEGATIVE capacity -- which happens transiently during a cascade, where the strip is briefly shorter than `bufferStart + visibleCells` -- the test became `-1 >= -4` and threw on a column that specified no buffer entries at all:
+
+  ```
+  runCascade(): nextGrid column 0: bufferEnd has a symbol at index -1,
+  beyond engine bufferSymbols=-4
+  ```
+
+  The check only ever ran on `setResult`, where reels are settled and capacity is never negative, so it stayed latent until `refill()` and `runCascade()` began validating their grids in this release. A column that specifies nothing can never have an entry dropped, so it is always in range.
+
+- [#197](https://github.com/schmooky/pixi-reels/pull/197) [`847d9cd`](https://github.com/schmooky/pixi-reels/commit/847d9cde6c3757fc6f83360c49764c55a0f98dcc) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Fix: a horizontal reel set laid out its initial strip with no gap between cells. `Reel._setupSymbolPositions` stepped by `spinCellSize + symbolGapY` -- the screen VERTICAL gap -- instead of the travel-axis gap. On a vertical set the two are the same value, so this was invisible; on a horizontal one the main gap is `symbolGapX`, so symbols touched until the first spin handed positions to `ReelMotion` (which projects correctly) and they silently snapped apart.
+
+- [#197](https://github.com/schmooky/pixi-reels/pull/197) [`847d9cd`](https://github.com/schmooky/pixi-reels/commit/847d9cde6c3757fc6f83360c49764c55a0f98dcc) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Docs: the 2.0 migration guide subscribed with `reelSet.on(...)`, which does not exist. Corrected to `reelSet.events.on(...)`.
+
+- [#197](https://github.com/schmooky/pixi-reels/pull/197) [`847d9cd`](https://github.com/schmooky/pixi-reels/commit/847d9cde6c3757fc6f83360c49764c55a0f98dcc) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Fix: `movePin()` flew the symbol to the wrong place on a horizontal reel set. It read `_pinOverlayCellMain` (a travel-axis coordinate, which is `x` when `orientation('horizontal')`) straight into `.y`, and the reel's main offset into `.x`. Both are numbers, so nothing threw. Now routed through `axis.toScreen`, like every other pin-overlay site.
+
+  Fix: `setShape()`'s parameter and the `shape:changed` payload label are `cellsPerReel`, not the v1 `rowsPerReel`. The old name shipped in the `.d.ts` and in two runtime error messages.
+
+  Fix: the big-symbol split error printed `anchor + h + distance` while the predicate tested `anchor + h - 1 + distance`, so the number in the message was one off from the one that failed.
+
+- [#197](https://github.com/schmooky/pixi-reels/pull/197) [`847d9cd`](https://github.com/schmooky/pixi-reels/commit/847d9cde6c3757fc6f83360c49764c55a0f98dcc) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Fix: `debugOverlay`'s `hud` layer is readable. It stacks its lines instead of overprinting them, and sits on a backing plate.
+
+  Each line was anchored at its own reel's top-left corner, which assumes a line fits inside a reel. It does not: roughly 40 characters at 11px monospace is ~230px against a cell that is typically ~100px wide. On any set past two reels every line ran across its neighbours into an unreadable smear, and it got worse the more reels you had -- which is exactly when the hud is worth reading.
+
+  The lines are now one left-aligned column anchored inside the mask's top-left, one per reel, so they read at any reel count and in either orientation. Stacking them _outside_ the mask would keep the reels clear, but a host that framed its camera on the reel set before the overlay existed then renders the whole block off-screen, and an invisible hud is worse than a cluttered one. Drop `hud` from `layers` if it covers art you need to see.
+
+  Also: 10px on an 11px leading rather than 11/13, a translucent black plate behind the column so white text survives bright symbols, and `resolution = 1` on the lines so small glyphs rasterize blocky instead of grey-smeared.
+
+  The `r<n>` prefix still ties a line to its reel, and the `cells` layer still labels each cell `reel,cell`. Nothing about the reported fields changed.
+
+- [#197](https://github.com/schmooky/pixi-reels/pull/197) [`847d9cd`](https://github.com/schmooky/pixi-reels/commit/847d9cde6c3757fc6f83360c49764c55a0f98dcc) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Fix: `reelSet.destroy()` left every in-flight spin-phase tween running. `SpinController.destroy()` dropped its active-phase map without skipping the phases first, and `onSkip()` is the only thing that kills the gsap timelines they own (start ramp, anticipation, stop bounce, cascade fall/drop-in). Those timelines outlived the set and kept writing reel speed and symbol view positions to display objects `destroy()` had already freed. It bites hardest in the setup the docs recommend — gsap driven off a PixiJS ticker — because the orphaned tweens do not stop when the set's own app goes away: any other live ticker keeps advancing the shared root timeline. Destroying a reel set mid-spin now force-completes its active phases first, and bumps the spin generation so no already-awaiting phase chain starts a fresh phase on the way down.
+
+- [#197](https://github.com/schmooky/pixi-reels/pull/197) [`847d9cd`](https://github.com/schmooky/pixi-reels/commit/847d9cde6c3757fc6f83360c49764c55a0f98dcc) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Fix: the auto-picked mask strategy's console notice names the gap it actually keyed on. The auto-pick has read the CROSS-axis gap since `orientation()` landed, but the message still said `symbolGap.x > 0` verbatim -- so on a horizontal set it pointed at the main-axis knob, and turning that one did nothing to the behaviour being explained. It now reads `symbolGap.x` on a vertical set and `symbolGap.y` on a horizontal one.
+
+- [#197](https://github.com/schmooky/pixi-reels/pull/197) [`847d9cd`](https://github.com/schmooky/pixi-reels/commit/847d9cde6c3757fc6f83360c49764c55a0f98dcc) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Fix: `setResult()` and `initialFrame()` now reject a plain `string[][]` with a message that names the fix. Previously the value reached a spread of `target.visible` deep in the frame pipeline and threw `TypeError: target.visible is not iterable` -- after the reels were already moving, so the spin promise never settled and the reel spun forever with no usable clue.
+
+- [#197](https://github.com/schmooky/pixi-reels/pull/197) [`847d9cd`](https://github.com/schmooky/pixi-reels/commit/847d9cde6c3757fc6f83360c49764c55a0f98dcc) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Fix: the published tarball now actually contains `README.md` and `LICENSE`. Both were listed in `package.json`'s `files` but neither existed inside the package, and npm drops a `files` entry that matches nothing without warning -- so the npm page would have been blank and an MIT-licensed package would have shipped no licence text.
+
+- [#197](https://github.com/schmooky/pixi-reels/pull/197) [`847d9cd`](https://github.com/schmooky/pixi-reels/commit/847d9cde6c3757fc6f83360c49764c55a0f98dcc) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Internal (docs site): recipes can return a `stage` container so a multi-set composition scales and centres as one. No library change.
+
+- [#197](https://github.com/schmooky/pixi-reels/pull/197) [`847d9cd`](https://github.com/schmooky/pixi-reels/commit/847d9cde6c3757fc6f83360c49764c55a0f98dcc) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Fix: `movePin` placed the flight symbol at the source cell's bare reel-local Y, dropping the reel's container offset and mixing the masked (reel-local) vs unmasked (viewport-space) coordinate conventions. Route flight placement through `_pinOverlayCellY` so it agrees with pin overlays on any layout with a nonzero reel offset. No API change.
+
+- [#197](https://github.com/schmooky/pixi-reels/pull/197) [`847d9cd`](https://github.com/schmooky/pixi-reels/commit/847d9cde6c3757fc6f83360c49764c55a0f98dcc) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Docs: ADRs 016 / 017 / 018 move off Proposed and record where the implementation diverged from the plan; `ROADMAP.md` and `TODO.md` are reconciled (horizontal reels, mixed direction per reel and roll-up all close in 2.0.0). No code change.
+
+- [#197](https://github.com/schmooky/pixi-reels/pull/197) [`847d9cd`](https://github.com/schmooky/pixi-reels/commit/847d9cde6c3757fc6f83360c49764c55a0f98dcc) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Refactor: `ReelMotion` now projects through a `ReelAxis` and derives symbol positions from array index (and rotation count from total travel) instead of accumulating deltas. Behavior is unchanged for the default vertical/forward axis; the derive model also fixes a latent float-residue wrap-skip at exact N-slot travel (motion contract L7). Internal - the axis defaults to vertical/forward, so callers are unaffected.
+
+- [#197](https://github.com/schmooky/pixi-reels/pull/197) [`847d9cd`](https://github.com/schmooky/pixi-reels/commit/847d9cde6c3757fc6f83360c49764c55a0f98dcc) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Refactor: `Reel` routes its own position writes through the injected `ReelAxis` - container placement (cross marches reels, main carries the offset), `_placeSymbolView`, the unmasked re-sync (absolute cross, incremental main), and every reel-local conversion. Behavior is unchanged for the default vertical/forward axis. Internal; `ReelConfig` gains an optional `axis`.
+
+- [#197](https://github.com/schmooky/pixi-reels/pull/197) [`847d9cd`](https://github.com/schmooky/pixi-reels/commit/847d9cde6c3757fc6f83360c49764c55a0f98dcc) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Refactor: rename `SpinningMode.computeDeltaY(symbolHeight, ...)` to `computeDelta(slotPitch, ...)`. The parameter was always the slot pitch (the caller passes `motion.slotHeight`); the name now matches. Returns signed travel along the reel's axis. The full-slot wrap-skip risk the old cap guarded (contract L7) is gone with the derive-from-index motion, so the cap is now only smoothing.
+
+- [#197](https://github.com/schmooky/pixi-reels/pull/197) [`847d9cd`](https://github.com/schmooky/pixi-reels/commit/847d9cde6c3757fc6f83360c49764c55a0f98dcc) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Refactor: route the non-cascade spin phases' GSAP position tweens through `reel.axis` instead of a hardcoded `.y`. StopPhase's landing bounce now overshoots in the direction of travel via `base + axis.polarity * bounceDistance` on `axis.mainProp`, and reads/restores the reel container's base position through `axis.getMain`/`setMain`. AdjustPhase's MultiWays pin-overlay squash and slide now write `scale[axis.mainProp]` and position via `axis.setMain`/`setCross`. StartPhase's step-back is a speed tween (already direction-relative through the motion layer) and is unchanged. Vertical/forward is byte-identical.
+
+- [#197](https://github.com/schmooky/pixi-reels/pull/197) [`847d9cd`](https://github.com/schmooky/pixi-reels/commit/847d9cde6c3757fc6f83360c49764c55a0f98dcc) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Refactor: the tumble cascade phases position symbols through the injected `ReelAxis`. `CascadeFallPhase` and `CascadeDropInPhase` read start positions via `axis.getMain`, write via `axis.setMain`, and build their GSAP tweens with a computed `axis.mainProp` key; fall/drop distances now carry `axis.polarity` so gravity follows the reel's travel axis. Grid origins (`originalRow * cellHeight`) stay direction-agnostic. Behavior is unchanged for the default vertical/forward axis (`mainProp: 'y'`, `polarity: 1`). `CascadePlacePhase` and `tumbleAlgorithm` were unaffected (visibility/identity swap and cell-index math, no position writes). Internal only.
+
+- [#197](https://github.com/schmooky/pixi-reels/pull/197) [`847d9cd`](https://github.com/schmooky/pixi-reels/commit/847d9cde6c3757fc6f83360c49764c55a0f98dcc) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Fix: `ReelViewport.updateMaskSize` now resizes the dim overlay. A viewport resize (e.g. a MultiWays reshape growing the tallest reel) no longer leaves the spotlight dimming a stale rectangle.
+
+- [#197](https://github.com/schmooky/pixi-reels/pull/197) [`847d9cd`](https://github.com/schmooky/pixi-reels/commit/847d9cde6c3757fc6f83360c49764c55a0f98dcc) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Docs: a guide for orientation and direction (the headline of 2.0.0), the new builder methods in the API reference, and the debug overlay's axis layers plus `describe()` in the debugging guide. No code change.
+
+- [#197](https://github.com/schmooky/pixi-reels/pull/197) [`847d9cd`](https://github.com/schmooky/pixi-reels/commit/847d9cde6c3757fc6f83360c49764c55a0f98dcc) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Internal: browser coverage for all four orientation x direction combinations, via a new `tests/e2e/fixtures/orientation-matrix` fixture and a Playwright spec wired into CI. No library change.
+
+- [#197](https://github.com/schmooky/pixi-reels/pull/197) [`847d9cd`](https://github.com/schmooky/pixi-reels/commit/847d9cde6c3757fc6f83360c49764c55a0f98dcc) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Internal: cover the natural (non-slam) stop on reverse and mixed-direction reels. No API change - this closes a test gap, it does not change behaviour.
+
 ## 1.6.1
 
 ### Patch Changes
