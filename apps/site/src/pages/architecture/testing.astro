@@ -37,7 +37,7 @@ flowchart TB
     Reels["Reel[] × N<br/><i>HeadlessSymbol × V+buffers</i>"]
     Events["EventEmitter<br/><i>real typed events</i>"]
     FrameBuilder["FrameBuilder<br/><i>real middleware pipeline</i>"]
-    Flow["reelSet.spin() → setResult() → skipSpin() ⇒ synchronous landing (microtask)<br/><i>no ticker frames needed. skipSpin() force-completes every phase</i>"]
+    Flow["reelSet.spin() → setResult() → slamStop() ⇒ synchronous landing (microtask)<br/><i>no ticker frames needed. slamStop() force-completes every phase</i>"]
   end
 
   TestingModule -->|constructs| RealReelSet
@@ -87,7 +87,7 @@ flowchart TB
 
   <ul>
     <li><code>advance(ms, stepMs?)</code>. run the FakeTicker for that many ms.</li>
-    <li><code>spinAndLand(grid)</code>. <code>spin() → setResult(grid) → skipSpin()</code>. Resolves synchronously because <code>skipSpin()</code> force-lands without any animation frames. This is how every mechanic test asserts outcomes in milliseconds.</li>
+    <li><code>spinAndLand(grid)</code>. <code>spin() → setResult(grid) → slamStop()</code>. Resolves synchronously because <code>slamStop()</code> force-lands without any animation frames, and unlike <code>skipSpin()</code> it carries no speed-boost side effect. This is how every mechanic test asserts outcomes in milliseconds.</li>
   </ul>
 
   <h2>Why this composition is testable</h2>

@@ -155,6 +155,7 @@ The library ships [`WinPresenter`](/docs/api-events/) as a higher-level events-d
 | Method | Signature | Notes |
 |---|---|---|
 | `getVisibleGrid` | `() => string[][]` | One id per visible cell. Cross-reel OCCUPIED stubs resolve to the big symbol's anchor id. |
+| `getTargets` | `() => ColumnTarget[]` | The whole board in the shape `setResult` takes -- buffers included, big-symbol anchors at their true positions -- so `setResult(reelSet.getTargets())` reproduces it. `getVisibleGrid()` cannot: it reports the visible window only, so a block anchored in `bufferStart` with just its tail showing replays as an anchor at cell 0 and expands. Read with `getVisibleGrid`, replay with `getTargets`. |
 | `getCellBounds` | `(reel, cell) => CellBounds` | ReelSet-local rectangle for a 1×1 cell. Use for paylines / hit areas / debug overlays. |
 | `getBlockBounds` | `(reel, cell) => CellBounds` | Pixel rect covering a big symbol's whole `N×M` block. Returns the cell bounds for 1×1. |
 | `getSymbolFootprint` | `(reel, cell) => { anchor: { reel, cell }; size: { reels, cells } }` | Resolves OCCUPIED stubs to the anchor cell and reports the block size. |
