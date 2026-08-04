@@ -1,6 +1,6 @@
 /** @jsxImportSource react */
 import { useEffect, useRef, useState } from 'react';
-import { RefreshCw, ExternalLink, SkipForward } from 'lucide-react';
+import { RefreshCw, ExternalLink, SkipForward, Bug } from 'lucide-react';
 import { Application } from 'pixi.js';
 import type { Texture, Ticker } from 'pixi.js';
 import * as PIXI from 'pixi.js';
@@ -28,6 +28,7 @@ import {
   EmptySymbol, HoldAndWinBuilder, BoardGrid,
   anticipationForScatters,
   SpinTextureCache, StaticSpinSymbol, prewarmSpinTextures,
+  debugOverlay, type DebugOverlayHandle,
 } from 'pixi-reels';
 import { BlurSpriteSymbol } from '../runtime/BlurSpriteSymbol.ts';
 import { CardSymbol, CARD_DECK, WILD_CARD } from 'pixi-reels';
@@ -195,9 +196,14 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
   const onSpinRef = useRef<(() => Promise<void>) | null>(null);
   const onSkipRef = useRef<(() => void) | null>(null);
   const cleanupRef = useRef<(() => void) | null>(null);
+  const overlayRef = useRef<DebugOverlayHandle | null>(null);
   const [spinning, setSpinning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
+  const [debugOn, setDebugOn] = useState(false);
+  // The overlay draws into a container on the ReelSet, so a recipe that
+  // returns only `onSpin` (HoldAndWinBoard, BoardGrid) has nothing to draw on.
+  const [canDebug, setCanDebug] = useState(false);
   // Hold the skeleton for at least 250ms so it doesn't flash for one
   // frame on fast loads.
   const showSkeleton = useMinDisplay(!ready, 250);
@@ -284,6 +290,7 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
         fit();
         app.renderer.on('resize', fit);
         enableDebug(rs);
+        setCanDebug(true);
       } else {
         // Board / custom-stage recipes (HoldAndWinBoard, BoardGrid) add their
         // own content (the grid, HUD, side panels, flight layer) straight to
@@ -323,6 +330,10 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
     return () => {
       cancelled = true;
       try { cleanupRef.current?.(); } catch { /* ignore */ }
+      // Before the set and the app: the overlay is a child of the ReelSet and
+      // holds a TickerRef on app.ticker.
+      try { overlayRef.current?.destroy(); } catch { /* ignore */ }
+      overlayRef.current = null;
       try { reelSetRef.current?.destroy(); } catch { /* ignore */ }
       const app = envRef.current?.app;
       if (app) {
@@ -385,6 +396,29 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
     }
   }
 
+  function toggleDebug() {
+    const reelSet = reelSetRef.current;
+    const app = envRef.current?.app;
+    if (!reelSet || !app) return;
+    if (overlayRef.current) {
+      overlayRef.current.destroy();
+      overlayRef.current = null;
+      setDebugOn(false);
+      return;
+    }
+    // Built on first press, not at mount: a umbrella page mounts several
+    // recipes at once and none of them should pay for an overlay nobody asked
+    // to see. `live` drives the bounds / blocks / pins / hud layers off the
+    // recipe's own app.ticker, so they track a spin instead of freezing on the
+    // frame the overlay happened to be built in.
+    overlayRef.current = debugOverlay(reelSet, {
+      layers: 'all',
+      live: true,
+      ticker: app.ticker,
+    });
+    setDebugOn(true);
+  }
+
   function openInStudio() {
     window.location.href = `/studio/#code=${btoa(unescape(encodeURIComponent(code)))}`;
   }
@@ -428,6 +462,27 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
             ? <SkipForward size={22} strokeWidth={2.25} />
             : <RefreshCw size={22} strokeWidth={2.25} />}
         </button>
+        {canDebug && (
+          <button
+            type="button"
+            onClick={toggleDebug}
+            disabled={!!error || !ready}
+            title={debugOn ? 'Hide debug overlay' : 'Show debug overlay'}
+            aria-label={debugOn ? 'Hide debug overlay' : 'Show debug overlay'}
+            aria-pressed={debugOn}
+            className={cn(
+              'absolute left-2 top-2 inline-flex items-center gap-1 rounded-md border px-2 py-1',
+              'text-[10px] backdrop-blur transition-colors',
+              debugOn
+                ? 'border-primary bg-primary/90 text-primary-foreground'
+                : 'border-border/40 bg-background/70 text-muted-foreground hover:text-foreground',
+              'disabled:cursor-not-allowed disabled:opacity-50',
+            )}
+          >
+            <Bug size={10} />
+            Debug
+          </button>
+        )}
         <button
           type="button"
           onClick={openInStudio}
