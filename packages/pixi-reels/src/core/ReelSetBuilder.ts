@@ -21,6 +21,8 @@ import { SpeedPresets } from '../config/SpeedPresets.js';
 import { ReelSet, type ReelSetParams } from './ReelSet.js';
 import { Reel, type ReelConfig } from './Reel.js';
 import { reelAxis, type Orientation, type Direction } from './ReelAxis.js';
+import type { ReelCurveConfig, ReelCurveInput, CurveFocus } from './ReelCurve.js';
+import { CURVE_FOCUS_WEIGHT } from './ReelCurve.js';
 import { ReelViewport } from './ReelViewport.js';
 import { SymbolRegistry } from '../symbols/SymbolRegistry.js';
 import { SymbolFactory } from '../symbols/SymbolFactory.js';
@@ -108,6 +110,9 @@ export class ReelSetBuilder {
   private _orientation: Orientation = 'vertical';
   private _direction: Direction = 'forward';
   private _directionPerReel?: Direction[];
+  private _curve?: ReelCurveInput;
+  private _curvePerReel?: ReelCurveInput[];
+  private _curveFocus: CurveFocus = 'reel';
   /** MultiWays configuration. Set by `.multiways(...)`. */
   private _multiways?: MultiWaysConfig;
   /** Per-reel AdjustPhase tween duration in ms (MultiWays only). */
@@ -261,6 +266,74 @@ export class ReelSetBuilder {
    */
   directionPerReel(directions: Direction[]): this {
     this._directionPerReel = directions;
+    return this;
+  }
+
+  /**
+   * Fake the curvature of the reel cylinder on every reel in the set.
+   *
+   * Cells bunch up and squash toward the window edges the way they would on a
+   * real drum, while the middle of the window magnifies slightly because it is
+   * the part facing you. It is a per-cell transform, so the art stays crisp,
+   * there is no render texture or shader, and a flat set (the default) pays
+   * nothing at all.
+   *
+   * @param curve `0` = flat, `1` = a hard barrel. Pass
+   *   {@link ReelCurveConfig} to also tune `depth`, the cross-axis narrowing
+   *   that keeps it reading as a drum rather than a squeezed flat strip.
+   *
+   * @example
+   * builder.curve(0.35);
+   * builder.curve({ amount: 0.5, depth: 0.3 });
+   */
+  curve(curve: ReelCurveInput): this {
+    this._curve = curve;
+    return this;
+  }
+
+  /**
+   * Per-reel curvature override (length must equal `reels()`). Reels omitted
+   * fall back to `curve()`.
+   *
+   * Use it when the reels are not all the same size, or for the common trick
+   * of bending the middle reels harder than the outer ones so the board reads
+   * as one wide drum rather than five identical ones.
+   *
+   * @example
+   * builder.curvePerReel([0.2, 0.35, 0.5, 0.35, 0.2]);
+   */
+  curvePerReel(curves: ReelCurveInput[]): this {
+    this._curvePerReel = curves;
+    return this;
+  }
+
+  /**
+   * Where the camera looking at the drum sits, across the strip.
+   *
+   * `'reel'` (default) puts one dead ahead of every reel, so each is its own
+   * little drum. `'set'` puts a single camera in front of the middle of the
+   * board: cells that rotate away also lean IN toward the centre, and the grid
+   * reads as one wide cylinder instead of five identical ones. `'set-lean'` is
+   * halfway, which is usually the sweet spot on a 5-wide board.
+   *
+   * Only has an effect alongside `curve(...)` / `curvePerReel(...)`.
+   *
+   * **Mask-strategy auto-pick:** leaning cells cross their own column, and the
+   * default per-reel {@link RectMaskStrategy} would clip them at the boundary.
+   * Anything other than `'reel'` therefore switches the default to
+   * {@link SharedRectMaskStrategy}. Passing `.maskStrategy(...)` explicitly
+   * always wins.
+   *
+   * @example
+   * builder.curve(0.4).curveFocus('set-lean');
+   */
+  curveFocus(focus: CurveFocus): this {
+    if (!(focus in CURVE_FOCUS_WEIGHT)) {
+      throw new Error(
+        `curveFocus(): unknown focus "${focus}". Expected one of ${Object.keys(CURVE_FOCUS_WEIGHT).join(', ')}.`,
+      );
+    }
+    this._curveFocus = focus;
     return this;
   }
 
@@ -670,6 +743,11 @@ export class ReelSetBuilder {
         `directionPerReel() length (${this._directionPerReel.length}) must equal reels() (${this._reelCount}).`,
       );
     }
+    if (this._curvePerReel && this._curvePerReel.length !== this._reelCount) {
+      throw new Error(
+        `curvePerReel() length (${this._curvePerReel.length}) must equal reels() (${this._reelCount}).`,
+      );
+    }
     const reelCount = this._reelCount!;
     const symbolWidth = this._symbolWidth!;
     const symbolHeight = this._symbolHeight!;
@@ -883,6 +961,29 @@ export class ReelSetBuilder {
         'Pass .maskStrategy(...) explicitly to override.',
       );
     }
+
+    // A set-focused curve makes receding cells LEAN toward the middle of the
+    // board, which walks them out of their own column. The per-reel mask would
+    // slice that overhang off at the boundary, so share one mask. Unlike the
+    // cases above this does not need a cross gap - the lean crosses the column
+    // edge whether or not there is a gap there.
+    const curveLeans =
+      this._curveFocus !== 'reel' && (this._curve !== undefined || this._curvePerReel !== undefined);
+    if (!this._maskStrategyExplicit && curveLeans) {
+      this._maskStrategy = new SharedRectMaskStrategy();
+      // eslint-disable-next-line no-console
+      console.info(
+        `[pixi-reels] auto-selected SharedRectMaskStrategy because curveFocus('${this._curveFocus}') ` +
+        'leans cells across their own reel column. Pass .maskStrategy(...) explicitly to override.',
+      );
+    }
+
+    // Reel-local cross coordinate each reel's perspective converges on. At
+    // weight 0 that is the reel's own centreline; at 1 it is the middle of the
+    // whole board, expressed in that reel's coordinates.
+    const curveFocusWeight = CURVE_FOCUS_WEIGHT[this._curveFocus];
+    const setCentreCross = crossSpan / 2;
+
     const viewport = new ReelViewport(
       viewportWidth,
       viewportHeight,
@@ -940,6 +1041,13 @@ export class ReelSetBuilder {
         extent: reelExtents[reelIndex],
         spinCellSize,
         axis: reelAxis(this._orientation, this._directionPerReel?.[reelIndex] ?? this._direction),
+        curve: this._curvePerReel?.[reelIndex] ?? this._curve,
+        curveFocus:
+          curveFocusWeight === 0
+            ? undefined
+            : crossCellSize / 2 +
+              curveFocusWeight *
+                (setCentreCross - reelIndex * (crossCellSize + crossGap) - crossCellSize / 2),
         cellStacking: this._cellStacking,
         reelStacking: this._reelStacking,
         gsap: this._gsap,

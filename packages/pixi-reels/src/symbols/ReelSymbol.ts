@@ -1,5 +1,6 @@
 import { Container } from 'pixi.js';
 import type { Disposable } from '../utils/Disposable.js';
+import type { ReelCellInset, ReelCellQuad } from '../config/types.js';
 import { DEFAULT_GSAP, type Gsap } from '../utils/gsap.js';
 
 /**
@@ -199,9 +200,13 @@ export abstract class ReelSymbol implements Disposable {
     const bounds = view.getLocalBounds();
     const cx = bounds.x + bounds.width / 2;
     const cy = bounds.y + bounds.height / 2;
+    // Moving the pivot moves the view by `delta * scale`, not by `delta`: a
+    // container renders a local point at `position + (point - pivot) * scale`.
+    // Scale is 1 on a plain reel, which is why dropping it went unnoticed, but
+    // a curved reel scales every cell and the symbol would jump on destroy.
     view.pivot.set(cx, cy);
-    view.x = originalX + (cx - originalPivotX);
-    view.y = originalY + (cy - originalPivotY);
+    view.x = originalX + (cx - originalPivotX) * view.scale.x;
+    view.y = originalY + (cy - originalPivotY) * view.scale.y;
 
     const delay = opts?.delay ?? 0;
     const signal = opts?.signal;
@@ -253,6 +258,81 @@ export abstract class ReelSymbol implements Disposable {
     view.x = originalX;
     view.y = originalY;
     view.scale.set(1, 1);
+  }
+
+  /**
+   * The owning reel is curved: render into this projected quad instead of the
+   * flat cell rectangle. `null` means the reel is flat again.
+   *
+   * The quad's corners are SCREEN-space and local to this view's own origin,
+   * clockwise from top-left, and `width` / `height` give the flat cell box the
+   * quad replaces. Called on every frame of motion and on every placement, so
+   * it must be cheap and idempotent.
+   *
+   * **The default is an approximation.** A `Container` transform is affine, so
+   * it cannot express a trapezoid; the base class fits the quad as closely as
+   * an affine transform can - a UNIFORM scale about the quad's centre. Uniform
+   * on purpose: symbol art is usually smaller than its cell and has a shape a
+   * player recognises, and squashing one axis turns a `7` into a squashed `7`
+   * rather than a `7` seen at an angle.
+   *
+   * Override this to render the real perspective. {@link SpriteSymbol} and
+   * {@link AnimatedSpriteSymbol} do, by drawing their texture through a
+   * `PerspectiveMesh`, which costs no extra render pass because the content is
+   * already a texture. A symbol whose content is an arbitrary subtree (Spine, a
+   * composite of sprites and text) cannot do that without rendering itself to a
+   * texture every frame, so it keeps the affine fit.
+   *
+   * Whatever you do here, do NOT move `view.position`: the reel reads that
+   * coordinate back to work out which slot this symbol is in.
+   */
+  /**
+   * The part of its cell this symbol's art actually covers, or `null` (the
+   * default) for "all of it".
+   *
+   * Slot art is usually smaller than its cell - a trimmed atlas frame is a
+   * shape floating in a much bigger transparent box - and the reel needs to
+   * know that to project the rectangle the art is really in. Overriding this
+   * is what stops a small symbol being inflated to the cell's edges and given
+   * the cell's keystone instead of its own, milder one.
+   *
+   * Read once per projection, so it may change with the symbol's identity.
+   */
+  get cellInset(): ReelCellInset | null {
+    return null;
+  }
+
+  applyCellQuad(quad: ReelCellQuad | null): void {
+    const view = this.view;
+    if (quad === null) {
+      view.scale.set(1, 1);
+      view.pivot.set(0, 0);
+      return;
+    }
+    // Average the two projected edge widths: the trapezoid's own idea of how
+    // big it is, without favouring either end.
+    const nearWidth = Math.hypot(quad.x1 - quad.x0, quad.y1 - quad.y0);
+    const farWidth = Math.hypot(quad.x2 - quad.x3, quad.y2 - quad.y3);
+    const flat = Math.hypot(quad.width, quad.height);
+    const projected = Math.hypot(
+      (nearWidth + farWidth) / 2,
+      Math.hypot(
+        (quad.x3 + quad.x2) / 2 - (quad.x0 + quad.x1) / 2,
+        (quad.y3 + quad.y2) / 2 - (quad.y0 + quad.y1) / 2,
+      ),
+    );
+    const scale = flat > 0 ? projected / flat : 1;
+
+    const cx = (quad.x0 + quad.x1 + quad.x2 + quad.x3) / 4;
+    const cy = (quad.y0 + quad.y1 + quad.y2 + quad.y3) / 4;
+    view.scale.set(scale, scale);
+    // A container renders a local point at `position + (point - pivot) * scale`
+    // and `position` must not move, so putting the flat box's centre on the
+    // quad's centre has to be paid for entirely out of the pivot.
+    view.pivot.set(
+      quad.x + quad.width / 2 - cx / scale,
+      quad.y + quad.height / 2 - cy / scale,
+    );
   }
 
   /**

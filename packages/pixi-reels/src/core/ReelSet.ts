@@ -12,6 +12,7 @@ import { EventEmitter } from '../events/EventEmitter.js';
 import type { ReelSetEvents, SpinResult, RunCascadeResult as RunCascadeResultBase } from '../events/ReelEvents.js';
 import { Reel, } from './Reel.js';
 import type { NudgeOptions } from './Reel.js';
+import type { ReelCurveInput } from './ReelCurve.js';
 import { ReelViewport } from './ReelViewport.js';
 import { SpinController } from '../spin/SpinController.js';
 import { SpeedManager } from '../speed/SpeedManager.js';
@@ -1643,11 +1644,22 @@ export class ReelSet extends Container implements Disposable {
     // intersect with the visible viewport themselves if they need a clipped
     // rect.
     const anchorCellOffset = fp.anchor.cell; // may be negative
+    // Same treatment as `getCellBounds`, over the block's full main extent:
+    // project its two main-axis edges and take the bounding box. `scaleAt` on
+    // the near edge sets the cross extent, which is the widest the block gets.
+    // a block spanning several cells tapers, and one rect cannot say "taper".
+    const curve = anchorReel.curve;
+    const flatMain = anchorCellOffset * slotPitch;
+    const curvedMain = curve ? curve.mapMain(flatMain) : flatMain;
+    const curvedBlockMain = curve
+      ? curve.mapMain(flatMain + blockMain) - curvedMain
+      : blockMain;
+    const crossScale = curve ? curve.scaleAt(flatMain) : 1;
     const origin = axis.toScreen(
-      axis.getCross(anchorReel.container),
-      anchorReel.mainOffset + anchorCellOffset * slotPitch,
+      axis.getCross(anchorReel.container) + (blockCross * (1 - crossScale)) / 2,
+      anchorReel.mainOffset + curvedMain,
     );
-    const size = axis.toScreen(blockCross, blockMain);
+    const size = axis.toScreen(blockCross * crossScale, curvedBlockMain);
     return {
       x: this._viewport.x + origin.x,
       y: this._viewport.y + origin.y,
@@ -1678,6 +1690,34 @@ export class ReelSet extends Container implements Disposable {
 
   get spotlight(): SymbolSpotlight {
     return this._spotlight;
+  }
+
+  // ─── Curve API ────────────────────────────────────────────
+
+  /**
+   * Re-curve the whole set at runtime, the same way `builder.curve(...)` does
+   * at build time. Takes effect immediately on reels at rest and on the next
+   * frame for reels in motion.
+   *
+   * Mostly a tuning affordance: dial the curvature live against the real art
+   * instead of rebuilding the set on every guess. Pass `0` to flatten.
+   *
+   * @param curve one value for every reel, or one entry per reel (length must
+   *   equal the reel count).
+   *
+   * @example
+   * reelSet.setCurve(0.4);
+   * reelSet.setCurve([0.2, 0.35, 0.5, 0.35, 0.2]);
+   */
+  setCurve(curve: ReelCurveInput | ReelCurveInput[]): void {
+    if (Array.isArray(curve) && curve.length !== this._reels.length) {
+      throw new Error(
+        `setCurve(): per-reel array length (${curve.length}) must equal the reel count (${this._reels.length}).`,
+      );
+    }
+    for (let i = 0; i < this._reels.length; i++) {
+      this._reels[i].setCurve(Array.isArray(curve) ? curve[i] : curve);
+    }
   }
 
   // ─── Reel access ──────────────────────────────────────────
@@ -1723,14 +1763,39 @@ export class ReelSet extends Container implements Disposable {
     // coordinates to screen. For vertical this is (x = column, y = mainOffset +
     // cell * pitch), unchanged; for horizontal the axes swap.
     const axis = target.axis;
-    const crossPos = axis.getCross(target.container);
-    const mainPos = axis.getMain(target.container) + cell * target.motion.slotPitch;
-    const screen = axis.toScreen(crossPos, mainPos);
+    // A curved reel bends the cell away from where the flat arithmetic puts
+    // it and resizes it, so paylines and overlays have to be measured through
+    // the same map the symbols were placed with. Flat reels take the `?:`
+    // fallbacks and come out at exactly the pre-curve numbers.
+    const flatMain = cell * target.motion.slotPitch;
+    const origin = axis.toScreen(
+      axis.getCross(target.container),
+      axis.getMain(target.container) + flatMain,
+    );
+    const flat = axis.toScreen(target.cellCross, target.cellMain);
+    // A projected cell is a TRAPEZOID and `CellBounds` is a rectangle, so the
+    // honest answer is the quad's bounding box: the smallest axis-aligned rect
+    // that still contains the whole cell. A payline drawn through its centre
+    // tracks the curve; an outline drawn on it is a hair loose on the narrow
+    // edge, which is the price of the shape not being a rectangle any more.
+    const quad = target.curve?.quadFor(flatMain);
+    if (!quad) {
+      return {
+        x: this._viewport.x + origin.x,
+        y: this._viewport.y + origin.y,
+        width: flat.x,
+        height: flat.y,
+      };
+    }
+    const minX = Math.min(quad.x0, quad.x1, quad.x2, quad.x3);
+    const maxX = Math.max(quad.x0, quad.x1, quad.x2, quad.x3);
+    const minY = Math.min(quad.y0, quad.y1, quad.y2, quad.y3);
+    const maxY = Math.max(quad.y0, quad.y1, quad.y2, quad.y3);
     return {
-      x: this._viewport.x + screen.x,
-      y: this._viewport.y + screen.y,
-      width: target.symbolWidth,
-      height: target.symbolHeight,
+      x: this._viewport.x + origin.x + minX,
+      y: this._viewport.y + origin.y + minY,
+      width: maxX - minX,
+      height: maxY - minY,
     };
   }
 

@@ -1,0 +1,98 @@
+---
+title: "Reel curvature"
+group: rendering
+oneLiner: "Project the reels onto a drum with one number - per set or per reel - so cells keystone into real trapezoids instead of flat rectangles."
+order: 65
+tags:
+  - curve
+  - curvature
+  - perspective
+  - projection
+  - cylinder
+  - drum
+  - 3d
+apis: []
+steps: []
+---
+
+## One number
+
+A physical slot reel is a drum, and the cells you see are wrapped around it. The one in the middle of the window faces you square-on; the ones near the top and bottom have rotated away, so they sit further from your eye and their far edge is further still. Under a real camera that does not turn a cell into a smaller rectangle - it turns it into a **trapezoid**, narrower on the edge that has rotated away.
+
+`.curve(amount)` does that. `0` is dead flat (the default, and the only thing that costs nothing), `1` is a hard barrel. Most boards want somewhere around `0.3`&ndash;`0.5`.
+
+The tiles below carry a grid on purpose: it is the quickest way to see a projection, because parallel lines stop being parallel. On the top and bottom rows the grid lines converge toward the edge that has turned away. On the middle row they stay parallel.
+
+<RecipeDemo code="curved-reels" height={420} />
+
+`depth` is how strong the perspective is - how much smaller a cell at the window edge is than the one facing you. `0` gives an orthographic drum: cells still bunch up toward the edges, but nothing recedes and nothing keystones. It defaults to `amount * 0.5`, so you only reach for the object form when you want to push it:
+
+```ts
+builder.curve(0.45);                          // depth defaults to 0.225
+builder.curve({ amount: 0.45, depth: 0.35 }); // stronger perspective
+```
+
+`depth` is capped just below `cos(arc)`. Past that the projection stops being monotonic and cells at the window edge fold back over each other, so a very deep curve saturates rather than turning inside out.
+
+<a id="curved-reels-focus"></a>
+
+## Where the camera stands
+
+By default there is one camera dead ahead of every reel, so each is its own little drum and they all look identical. `.curveFocus('set')` puts a **single** camera in front of the middle of the board instead: cells that rotate away also lean IN toward the centre, and the grid reads as one wide cylinder.
+
+```ts
+builder.curve(0.5).curveFocus('reel');     // default - five separate drums
+builder.curve(0.5).curveFocus('set-lean'); // halfway
+builder.curve(0.5).curveFocus('set');      // one camera for the whole board
+```
+
+Watch the outer reels below: their top and bottom rows no longer just narrow in place, they tilt toward the middle. The centre reel, which the camera points straight at, barely moves. `'set-lean'` is halfway and is usually the sweet spot on a 5-wide board with real art in it - enough of the one-big-drum read to sell the cabinet, not so much that the outer reels visibly tilt into their neighbours.
+
+<RecipeDemo code="curved-reels-focus" height={420} />
+
+**Gotcha:** leaning cells cross their own reel column, and the default per-reel `RectMaskStrategy` would slice the overhang off at the boundary. Anything other than `'reel'` therefore auto-selects `SharedRectMaskStrategy`; passing `.maskStrategy(...)` explicitly always wins.
+
+<a id="curved-reels-per-reel"></a>
+
+## One drum, not five
+
+`.curvePerReel([...])` gives each reel its own camera. Bending the middle reels hardest and easing off toward the outside makes the board read as a single wide cylinder instead of five identical columns. The array length must equal `reels()`, and each entry takes the same shorthand or object form as `.curve()`.
+
+<RecipeDemo code="curved-reels-per-reel" height={420} />
+
+## Tuning it live
+
+`reelSet.setCurve()` re-projects at runtime, taking the same value or a per-reel array. It exists so you can dial the numbers against your real art instead of rebuilding the set on every guess:
+
+```ts
+reelSet.setCurve(0.4);
+reelSet.setCurve([0.2, 0.35, 0.5, 0.35, 0.2]);
+reelSet.setCurve(0); // back to flat
+```
+
+## What actually draws the trapezoid
+
+A `Container` transform is affine. It can scale a cell, skew it, rotate it - but it can never turn a rectangle into a trapezoid, so anything built on `scale` alone gives you a smaller rectangle and calls it perspective.
+
+So the engine hands each symbol a **projected quad** and lets the symbol decide how to fill it, through `ReelSymbol.applyCellQuad()`:
+
+- **`SpriteSymbol` and `AnimatedSpriteSymbol` draw the real thing.** They map their texture onto the quad with a PixiJS `PerspectiveMesh`, which interpolates UVs across a vertex grid and gives a true keystone. It costs **no extra render pass** - the content is already a texture - and the mesh is only allocated once a reel is actually curved.
+- **Everything else gets the closest affine fit**: a *uniform* scale about the quad's centre. Uniform on purpose. Slot art is usually a shape the player recognises, and squashing one axis turns a `7` into a squashed `7` rather than a `7` seen at an angle. Spine symbols and composite containers land here, because projecting an arbitrary subtree would mean rendering it to a texture every frame.
+
+Write `applyCellQuad()` on your own symbol if its content is a single texture and you want the real projection - `PerspectiveCell` is exported and does the mesh plumbing for you.
+
+## Art that does not fill its cell
+
+Most slot art does not. A trimmed atlas frame is typically a small shape floating in a much larger transparent box, and projecting the whole cell would both inflate the symbol and hand it the cell's keystone instead of the milder one its own position earns.
+
+Symbols report the rectangle their art is really in through `ReelSymbol.cellInset`, and the drum projects that. The sprite symbols derive it from the texture's trim automatically, so an atlas built by TexturePacker needs no help. Override `cellInset` if your symbol positions its art some other way.
+
+## The rest of the engine does not notice
+
+Underneath, the strip still marches on flat coordinates. The projection is handed over as a view-local quad and never touches a view's `position`, which is why `setResult()`, wrapping, cascades, big symbols and MultiWays reshapes behave exactly as they do on a flat set.
+
+`getCellBounds()` returns the projected cell's **bounding box** - the smallest axis-aligned rect that still contains the trapezoid - so a payline drawn through its centre follows the curve. An outline drawn on it is a hair loose on the narrow edge, which is the price of the cell no longer being a rectangle.
+
+**Gotcha:** the affine fallback owns `view.scale`. A win animation that tweens `symbol.view.scale` to an absolute value overwrites the cell's projection for as long as it runs. The sprite symbols avoid this by pulsing the mesh instead (it is pivoted on the quad's centre, so it swells in place); if you write your own, animate a child of `view` rather than `view` itself.
+
+**Gotcha:** curvature is presentation only. It never changes which symbol lands where, what `getVisibleGrid()` returns, or any event payload.

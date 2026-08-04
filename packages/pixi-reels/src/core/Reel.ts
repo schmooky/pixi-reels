@@ -6,6 +6,7 @@ import type { SymbolData, Stacking } from '../config/types.js';
 import { ReelMotion } from './ReelMotion.js';
 import type { ReelAxis } from './ReelAxis.js';
 import { VERTICAL_FORWARD } from './ReelAxis.js';
+import { ReelCurve, resolveCurveConfig, type ReelCurveInput } from './ReelCurve.js';
 import { StopSequencer } from './StopSequencer.js';
 import { EventEmitter } from '../events/EventEmitter.js';
 import type { ReelEvents } from '../events/ReelEvents.js';
@@ -171,6 +172,16 @@ export interface ReelConfig {
    * reel draws in front.
    */
   reelStacking?: Stacking;
+  /**
+   * Cylinder curvature for this reel. Omitted or `0` leaves it dead flat and
+   * costs nothing. See {@link ReelCurveConfig}.
+   */
+  curve?: ReelCurveInput;
+  /**
+   * Reel-local cross coordinate the curve's perspective converges on. Set by
+   * the builder from `curveFocus(...)`; omitted means the reel's own centre.
+   */
+  curveFocus?: number;
 }
 
 /**
@@ -229,6 +240,10 @@ export class Reel implements Disposable {
    */
   public readonly stopSequencer: StopSequencer;
   private readonly _axis: ReelAxis;
+  /** Cylinder curvature, or `undefined` when this reel is flat. */
+  private _curve?: ReelCurve;
+  /** Reel-local cross coordinate the curve converges on. `null` = own centre. */
+  private readonly _curveFocus: number | null;
   private readonly _mainCell: number;
   private readonly _mainGap: number;
   private readonly _crossGap: number;
@@ -386,6 +401,11 @@ export class Reel implements Disposable {
       return symbol;
     });
 
+    // Curvature is bound to the same geometry the motion layer marches on, so
+    // the bend follows a MultiWays reshape without a second source of truth.
+    this._curveFocus = config.curveFocus ?? null;
+    this._curve = this._buildCurve(config.curve, this._mainCell, config.visibleCells);
+
     // Create motion handler. SPIN-time slot height is `spinCellSize`;
     // AdjustPhase reshapes motion to the per-reel cell height.
     this.motion = new ReelMotion(
@@ -397,6 +417,7 @@ export class Reel implements Disposable {
       config.bufferEnd,
       (symbol) => this._onSymbolWrapped(symbol),
       this._axis,
+      this._curve,
     );
 
     this._setupSymbolPositions(config);
@@ -524,6 +545,36 @@ export class Reel implements Disposable {
   /** This reel's travel projection (orientation + direction). */
   get axis(): ReelAxis {
     return this._axis;
+  }
+
+  /**
+   * This reel's cylinder curvature, or `undefined` when it renders flat.
+   * Read it to map your own overlays onto the bent grid.
+   */
+  get curve(): ReelCurve | undefined {
+    return this._curve;
+  }
+
+  /**
+   * Re-curve this reel. Takes effect on the next frame of motion, and
+   * immediately for a reel already at rest. Pass `0` (or `undefined`) to go
+   * back to flat.
+   *
+   * @internal Drive this through `ReelSet.setCurve()` so a whole set stays
+   * consistent; it is public so a game tuning one reel does not have to
+   * rebuild the set.
+   */
+  setCurve(input: ReelCurveInput | undefined): void {
+    // Derive the cell extent from the motion layer rather than `_cellMain`:
+    // during SPIN a MultiWays reel marches on `spinCellSize`, and the curve
+    // has to measure the window the strip is actually laid out on.
+    const cellMain = this.motion.slotPitch - this._mainGap;
+    this._curve = this._buildCurve(input, cellMain, this._visibleCells);
+    this.motion.setCurve(this._curve);
+    // `setCurve` -> `motion.setCurve` re-renders from the motion layer's own
+    // positions, which is right for masked views but writes bare reel-local
+    // main over any view the at-rest unmask lift moved into viewport space.
+    this._syncUnmaskedViewOffsets();
   }
 
   /** Update reel for one frame. Called by SpinController via ticker. */
@@ -725,11 +776,12 @@ export class Reel implements Disposable {
     if (!this._atRest) return;
     this._atRest = false;
     for (let i = 0; i < this.symbols.length; i++) {
-      const view = this.symbols[i].view;
+      const symbol = this.symbols[i];
+      const view = symbol.view;
       if (view.parent === this._viewport.unmaskedContainer) {
         const reelLocalY = this._axis.getMain(view) - this._axis.getMain(this.container);
         this.container.addChild(view);
-        this._placeSymbolView(view, reelLocalY, false);
+        this._placeSymbolView(symbol, reelLocalY, false);
       }
     }
   }
@@ -787,7 +839,7 @@ export class Reel implements Disposable {
       if (this._isUnmasked(symbol.symbolId) && symbol.view.parent === this.container) {
         const reelLocalY = this._axis.getMain(symbol.view);
         this._viewport.unmaskedContainer.addChild(symbol.view);
-        this._placeSymbolView(symbol.view, reelLocalY, true);
+        this._placeSymbolView(symbol, reelLocalY, true);
       }
       if (only === null || only.has(i - this._bufferStart)) {
         symbol.onReelLanded();
@@ -1332,7 +1384,7 @@ export class Reel implements Disposable {
       const id = this._randomProvider.next(true);
       const sym = this._symbolFactory.acquire(id);
       sym.resize(newSize.width, newSize.height);
-      this._placeSymbolView(sym.view, this._axis.getMain(sym.view), this._effectiveUnmask(id));
+      this._placeSymbolView(sym, this._axis.getMain(sym.view), this._effectiveUnmask(id));
       this._parentForSymbolId(id).addChild(sym.view);
       this.symbols.push(sym);
     }
@@ -1365,6 +1417,17 @@ export class Reel implements Disposable {
       if (sym instanceof OccupiedStub) continue;
       sym.resize(newSize.width, newSize.height);
     }
+
+    // Re-bind curvature to the reshaped window before the snap re-renders:
+    // both the cell extent and the number of cells the window holds changed,
+    // and a curve still measuring the old window would bend the new cells
+    // against the wrong centre.
+    this._curve?.setGeometry(
+      newCellSize,
+      this._cellCross,
+      newCellSize + this._mainGap,
+      newVisibleCells,
+    );
 
     // Update motion: new slot pitch + bounds, on the main axis.
     this.motion.reshape(newCellSize, this._mainGap, bufferStart, newVisibleCells, bufferEnd);
@@ -1495,7 +1558,12 @@ export class Reel implements Disposable {
    * the at-rest cell position aligned with the reel column. Masked views
    * live in `this.container`, so reel-local coords map directly.
    */
-  private _placeSymbolView(view: Container, reelLocalMain: number, isUnmasked: boolean): void {
+  private _placeSymbolView(
+    symbol: ReelSymbol,
+    reelLocalMain: number,
+    isUnmasked: boolean,
+  ): void {
+    const view = symbol.view;
     if (isUnmasked) {
       // Viewport space: bake in the reel container's own offset on both axes.
       this._axis.setCross(view, this._axis.getCross(this.container));
@@ -1504,6 +1572,28 @@ export class Reel implements Disposable {
       this._axis.setCross(view, 0);
       this._axis.setMain(view, reelLocalMain);
     }
+    // The projection is defined in reel-local main and handed over as a
+    // VIEW-LOCAL quad, so the same call is correct whichever of the two spaces
+    // above the view was just placed in.
+    if (this._curve) symbol.applyCellQuad(this._curve.quadFor(reelLocalMain, symbol.cellInset));
+  }
+
+  /**
+   * Build the curvature for this reel, or `undefined` when it would be flat.
+   * A flat set must not carry a curve object at all: that keeps the render
+   * loop and every placement byte-identical to an uncurved build.
+   */
+  private _buildCurve(
+    input: ReelCurveInput | undefined,
+    cellMain: number,
+    visibleCells: number,
+  ): ReelCurve | undefined {
+    if (input === undefined) return undefined;
+    const curve = new ReelCurve(resolveCurveConfig(input), this._axis);
+    if (curve.isFlat) return undefined;
+    curve.setGeometry(cellMain, this._cellCross, cellMain + this._mainGap, visibleCells);
+    curve.setFocus(this._curveFocus);
+    return curve;
   }
 
   /**
@@ -1600,7 +1690,7 @@ export class Reel implements Disposable {
       const inWindow =
         i >= config.bufferStart && i < config.bufferStart + config.visibleCells;
       const unmasked = inWindow && this._isUnmasked(symbol.symbolId);
-      this._placeSymbolView(symbol.view, main, unmasked);
+      this._placeSymbolView(symbol, main, unmasked);
       (unmasked ? this._viewport.unmaskedContainer : this.container).addChild(symbol.view);
     }
   }
@@ -1677,9 +1767,12 @@ export class Reel implements Disposable {
       const newSymbol = this._symbolFactory.acquire(newSymbolId);
       const newIsUnmasked = this._effectiveUnmask(newSymbolId);
       newSymbol.resize(this.symbolWidth, this.symbolHeight);
-      this._placeSymbolView(newSymbol.view, reelLocalY, newIsUnmasked);
       newSymbol.view.alpha = 1;
+      // Reset BEFORE placing: on a curved reel the placement is what writes
+      // the cell's scale, and a reset after it would flatten the symbol back
+      // out until the next frame of motion re-bent it.
       newSymbol.view.scale.set(1, 1);
+      this._placeSymbolView(newSymbol, reelLocalY, newIsUnmasked);
       newSymbol.view.zIndex = this._computeSymbolZIndex(newSymbolId, index);
       this._parentForSymbolId(newSymbolId).addChild(newSymbol.view);
       this.symbols[index] = newSymbol;
@@ -1704,7 +1797,7 @@ export class Reel implements Disposable {
       const target = this._parentForSymbolId(newSymbolId);
       if (oldSymbol.view.parent !== target) target.addChild(oldSymbol.view);
       // Reset Y in case spotlight or another mutator displaced it.
-      this._placeSymbolView(oldSymbol.view, reelLocalY, this._effectiveUnmask(newSymbolId));
+      this._placeSymbolView(oldSymbol, reelLocalY, this._effectiveUnmask(newSymbolId));
       // The instance was never deactivated, so it usually still carries its
       // spin state. re-notify anyway for uniformity (hooks are idempotent).
       if (this._spinPresentationActive) oldSymbol.onReelSpinStart(true);
@@ -1716,9 +1809,10 @@ export class Reel implements Disposable {
     const newSymbol = this._symbolFactory.acquire(newSymbolId);
     const newIsUnmasked = this._effectiveUnmask(newSymbolId);
     newSymbol.resize(this.symbolWidth, this.symbolHeight);
-    this._placeSymbolView(newSymbol.view, reelLocalY, newIsUnmasked);
     newSymbol.view.alpha = 1;
+    // Reset before placing. see the stub-replacement path above.
     newSymbol.view.scale.set(1, 1);
+    this._placeSymbolView(newSymbol, reelLocalY, newIsUnmasked);
     newSymbol.view.zIndex = this._computeSymbolZIndex(newSymbolId, index);
 
     this._parentForSymbolId(newSymbolId).addChild(newSymbol.view);

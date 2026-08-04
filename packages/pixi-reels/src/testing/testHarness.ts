@@ -34,6 +34,12 @@ export interface TestReelSetOptions {
   direction?: import('../core/ReelAxis.js').Direction;
   /** Per-reel travel direction override (length must equal `reels`). */
   directionPerReel?: import('../core/ReelAxis.js').Direction[];
+  /** Cylinder curvature for every reel. Omit for a flat set. */
+  curve?: import('../core/ReelCurve.js').ReelCurveInput;
+  /** Per-reel curvature override (length must equal `reels`). */
+  curvePerReel?: import('../core/ReelCurve.js').ReelCurveInput[];
+  /** Where the curve's camera sits across the strip. Defaults to `'reel'`. */
+  curveFocus?: import('../core/ReelCurve.js').CurveFocus;
   /**
    * Cascade/tumble config, same shape as `ReelSetBuilder.tumble(...)`. Pass
    * `{}` for the defaults. Without this the set spins strips instead of
@@ -150,6 +156,15 @@ export function createTestReelSet(opts: TestReelSetOptions = {}): TestReelSetHan
   }
   if (opts.directionPerReel) {
     builder.directionPerReel(opts.directionPerReel);
+  }
+  if (opts.curve !== undefined) {
+    builder.curve(opts.curve);
+  }
+  if (opts.curvePerReel) {
+    builder.curvePerReel(opts.curvePerReel);
+  }
+  if (opts.curveFocus) {
+    builder.curveFocus(opts.curveFocus);
   }
   if (opts.tumble) {
     builder.tumble(opts.tumble);

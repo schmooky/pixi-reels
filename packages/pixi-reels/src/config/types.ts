@@ -304,6 +304,63 @@ export interface NoOffsetConfig {
 
 export type OffsetConfig = TrapezoidConfig | NoOffsetConfig;
 
+/**
+ * One cell's projected footprint on a curved reel: the four corners of the
+ * quad the symbol should render into, replacing its flat rectangle.
+ *
+ * Corners are SCREEN-space and LOCAL to the symbol view's own origin, in the
+ * order PixiJS `PerspectiveMesh` wants them - clockwise from top-left - in
+ * every orientation, because symbol art stays upright however the strip
+ * travels. `width` / `height` describe the flat cell box the quad replaces, so
+ * a symbol can work out its own scale without having to remember what
+ * `resize()` said.
+ *
+ * Built by `ReelCurve.quadFor()`, consumed by `ReelSymbol.applyCellQuad()`.
+ * It lives here rather than next to `ReelCurve` so `symbols/` can name it
+ * without importing `core/` and inverting the dependency flow.
+ */
+export interface ReelCellQuad {
+  /** Flat box's left edge, view-local. Non-zero when the symbol set an inset. */
+  x: number;
+  /** Flat box's top edge, view-local. */
+  y: number;
+  /** Flat box width in screen pixels. */
+  width: number;
+  /** Flat box height in screen pixels. */
+  height: number;
+  /** Top-left. */
+  x0: number;
+  y0: number;
+  /** Top-right. */
+  x1: number;
+  y1: number;
+  /** Bottom-right. */
+  x2: number;
+  y2: number;
+  /** Bottom-left. */
+  x3: number;
+  y3: number;
+}
+
+/**
+ * The part of its cell a symbol's art actually covers, as fractions of the flat
+ * cell box in SCREEN space (`0,0` top-left to `1,1` bottom-right).
+ *
+ * Most slot art does not fill its cell: a trimmed atlas frame is typically a
+ * small shape floating in a much larger transparent box. Projecting the whole
+ * cell and stretching that art across it would blow the symbol up to the cell's
+ * edges and give it the cell's keystone instead of its own. Reporting the inset
+ * instead means the drum projects the rectangle the art is really in.
+ *
+ * Returned by `ReelSymbol.cellInset`; `null` means "my art fills the cell".
+ */
+export interface ReelCellInset {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+}
+
 /** 2D matrix type (reel × cell). */
 export type Matrix<T> = T[][];
 
