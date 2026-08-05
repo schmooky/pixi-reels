@@ -31,14 +31,21 @@ const IDS = [...symbolIds];
 
 const REELS = 5;
 const CELLS = 3;
-const CELL = 132;
-const GAP = 14;
+// Rex the Hunt art is authored for a 175x203 PORTRAIT cell, edge to edge.
+// Forcing it into a square overflows it vertically and the creatures collide
+// with their neighbours - horns and jaws poking into the cell above.
+const CELL_W = 140;
+const CELL_H = 162;
+// Gap on the CROSS axis only. It separates the drums, which is the point;
+// a main-axis gap would punch black bands through each strip's background,
+// because every symbol here carries its own full-bleed backdrop.
+const GAP = 16;
 
 const reelSet = new ReelSetBuilder()
   .reels(REELS)
   .visibleCells(CELLS)
-  .symbolSize(CELL, CELL)
-  .symbolGap(GAP, GAP) // gaps read as separate drums rather than one sheet
+  .symbolSize(CELL_W, CELL_H)
+  .symbolGap(GAP, 0) // separates the drums without slicing the strips
   .bufferSymbols(2) // more to draw in the band the bezel covers
   .curve(0.45)
   .curveFocus('set-lean')
@@ -56,8 +63,8 @@ const reelSet = new ReelSetBuilder()
 
 // --- bezel -------------------------------------------------------------
 // Drawn OVER the set, in the set's own coordinates, so it travels with it.
-const boardW = REELS * CELL + (REELS - 1) * GAP;
-const boardH = CELLS * CELL + (CELLS - 1) * GAP;
+const boardW = REELS * CELL_W + (REELS - 1) * GAP;
+const boardH = CELLS * CELL_H;
 // The drum's ends fall short of the window by `halfExtent * (1 - edgeMapped)`,
 // about 45px at this size and curve. The bezel has to cover at least that or
 // the curl shows under it.
