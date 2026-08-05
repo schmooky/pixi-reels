@@ -113,6 +113,18 @@ Blur-on-spin is unaffected: motion-blur frames on `onReelSpinStart`, back on lan
 
 <RecipeDemo code="curved-reels-gems" height={420} />
 
+<a id="curved-value-reel"></a>
+
+## Numbers, not art
+
+One reel, three cells, money amounts spinning past - the pattern behind every prize picker, jackpot ladder and bonus readout. The symbols are drawn at runtime, and the symbol id IS the amount, so `setResult([['100.00', ...]])` lands the value you name.
+
+Each cell is a `Graphics` plate with a `PIXI.Text` on it - a composite, not a texture - so `'symbol'` mode could only displace and scale it. Under the warp the plate and the digits bend together.
+
+Text is authored at a large size and scaled down to fit, so `$1000.00` and `$5.00` sit at the same optical weight without reflowing the font.
+
+<RecipeDemo code="curved-value-reel" height={360} />
+
 ## Extending `'symbol'` mode
 
 Only relevant if you skip the warp. The engine hands each symbol a **projected quad** via `ReelSymbol.applyCellQuad()`:
