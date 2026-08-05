@@ -143,8 +143,10 @@ export class ReelCurve {
   private readonly _k: number;
   /** Perspective factor at the window edge. */
   private readonly _edgeScale: number;
-  /** Divisor that pins the window edges. See the note in the constructor. */
+  /** Normalization divisor. See the note in the constructor. */
   private readonly _norm: number;
+  /** Where the window edge lands, as a fraction of the half-extent. */
+  private readonly _edgeMapped: number;
   /** Slope of the projection past the window edge, in flat-coordinate units. */
   private readonly _edgeSlope: number;
 
@@ -171,13 +173,27 @@ export class ReelCurve {
     const versine = 1 - cosArc;
     this._k = versine > 0 ? _config.depth / versine : 0;
     this._edgeScale = this._perspectiveAt(this._arc);
-    // Raw perspective pulls the ends of the strip INWARD, which would leave a
-    // three-row window showing three shrunken rows plus a sliver of buffer at
-    // each end. `visibleCells: 3` has to keep meaning three rows filling the
-    // window, so normalize the projection to land exactly on the window edges.
-    // Only a positive constant, so it cannot affect monotonicity - it rescales
-    // the drum rather than changing its shape.
-    this._norm = this._arc > 0 ? sinArc * this._edgeScale : 1;
+    // Normalize so the MIDDLE of the window is drawn at 1:1.
+    //
+    // `d/dm` of the projection at the centre works out to `arc / norm`, so
+    // `norm = arc` makes the cell facing the camera come out at exactly its
+    // authored size, in both axes, with no keystone - it is the one cell that
+    // is not turned away from you, so it should look untouched.
+    //
+    // Normalizing to `sin(arc) * s(arc)` instead would pin the projection to
+    // the window edges, which sounds tidier but magnifies the main axis at the
+    // centre while leaving the cross axis alone: the middle row comes out
+    // visibly STRETCHED. The ends of the drum now fall short of the window
+    // instead, and the buffer cells - which the strip already carries - fill
+    // that space, exactly as a real drum shows a sliver of the next symbol.
+    //
+    // A positive constant either way, so monotonicity is unaffected.
+    this._norm = this._arc > 0 ? this._arc : 1;
+    // How far up the window the drum's edge actually reaches, as a fraction of
+    // the half-extent. `1` would mean it touches the window edge; normalized to
+    // 1:1 at the centre it comes up short, and the difference is the band the
+    // buffer cells (and your frame art) live in.
+    this._edgeMapped = (sinArc * this._edgeScale) / this._norm;
     // d/dphi of `sin(phi) * s(phi)` reduces to `(cos phi (1 + k) - k) * s^2`;
     // normalized, then converted from radians to flat-coordinate units.
     this._edgeSlope =
@@ -354,11 +370,16 @@ export class ReelCurve {
     // back on itself. Buffers never reach it at any sane arc; this is just so
     // a pathological strip length cannot un-shrink a cell.
     const scale = this._perspectiveAt(Math.min(Math.abs(phi), Math.PI));
+    // Continue from where the window edge ACTUALLY lands, which is no longer
+    // the window edge itself now that the centre is normalized to 1:1. Reusing
+    // the old `2h` / `0` anchors left a jump there, and the buffer cells came
+    // away from the strip with a visible gap between them.
+    const edge = h * this._edgeMapped;
     if (phi > this._arc) {
-      return { main: 2 * h + (main - 2 * h) * this._edgeSlope, scale };
+      return { main: h + edge + (main - 2 * h) * this._edgeSlope, scale };
     }
     if (phi < -this._arc) {
-      return { main: main * this._edgeSlope, scale };
+      return { main: h - edge + main * this._edgeSlope, scale };
     }
     return { main: h + (h * Math.sin(phi) * scale) / this._norm, scale };
   }

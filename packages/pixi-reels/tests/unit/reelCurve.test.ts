@@ -66,12 +66,27 @@ describe('ReelCurve projection', () => {
     expect(curve.scaleAt(150)).toBe(1);
   });
 
-  it('pins the window edges so N visible cells still fill the window exactly', () => {
+  it('draws the middle of the window at 1:1, whatever the amount', () => {
+    // The cell facing the camera is the one NOT turned away, so it has to come
+    // out untouched. Measured as the local magnification either side of the
+    // window centre.
     for (const amount of [0.2, 0.5, 0.8, 1]) {
       const curve = build(amount);
-      expect(curve.mapMain(0)).toBeCloseTo(0, 6);
-      expect(curve.mapMain(CELLS * CELL)).toBeCloseTo(CELLS * CELL, 6);
+      const centre = (CELLS * CELL) / 2;
+      const d = 0.25;
+      const magnification = (curve.mapMain(centre + d) - curve.mapMain(centre - d)) / (2 * d);
+      expect(magnification).toBeCloseTo(1, 4);
     }
+  });
+
+  it('lets the ends fall short of the window, symmetrically, for the buffers to fill', () => {
+    const curve = build(0.6);
+    const span = CELLS * CELL;
+    // Pinning these to the window instead would magnify the main axis at the
+    // centre while leaving the cross axis alone - a stretched middle row.
+    expect(curve.mapMain(0)).toBeGreaterThan(0);
+    expect(curve.mapMain(span)).toBeLessThan(span);
+    expect(curve.mapMain(0)).toBeCloseTo(span - curve.mapMain(span), 6);
   });
 
   it('leaves the window centre fixed and is symmetric about it', () => {
@@ -108,10 +123,10 @@ describe('ReelCurve projection', () => {
 
   it('measures the window from the art, not the pitch, when there is a gap', () => {
     const gapped = build(0.6, 0.2, 20);
-    // Window = 3 cells of art + 2 gaps = 340, so its centre is at 170.
+    // Window = 3 cells of art + 2 gaps = 340, so its centre is at 170. Getting
+    // this wrong would put the drum's axis off-centre and tilt the whole reel.
     expect(gapped.mapMain(170)).toBeCloseTo(170, 6);
-    expect(gapped.mapMain(0)).toBeCloseTo(0, 6);
-    expect(gapped.mapMain(340)).toBeCloseTo(340, 6);
+    expect(gapped.mapMain(0)).toBeCloseTo(340 - gapped.mapMain(340), 6);
   });
 });
 
@@ -148,11 +163,20 @@ describe('ReelCurve.quadFor', () => {
     expect(Math.abs(nearWidth(top) - farWidth(top))).toBeGreaterThan(1);
   });
 
-  it('magnifies the cell facing you and shortens the ones turning away', () => {
+  it('leaves the cell facing you at its authored size and shortens the rest', () => {
     const curve = build(0.6, 0.3);
     const height = (i: number) => quad(curve, i).y3 - quad(curve, i).y0;
-    expect(height(1)).toBeGreaterThan(CELL);
-    expect(height(0)).toBeLessThan(CELL);
+    const width = (i: number) => nearWidth(quad(curve, i));
+    // The middle cell must not be stretched OR magnified - within a couple of
+    // percent of authored, and never larger than it.
+    expect(height(1)).toBeLessThanOrEqual(CELL + 1e-6);
+    expect(height(1)).toBeGreaterThan(CELL * 0.94);
+    expect(width(1)).toBeLessThanOrEqual(CELL + 1e-6);
+    expect(width(1)).toBeGreaterThan(CELL * 0.94);
+    // ...and its aspect is preserved, which is what "undeformed" means.
+    expect(height(1) / width(1)).toBeCloseTo(1, 1);
+    // The cells turning away are visibly shorter, and symmetric with it.
+    expect(height(0)).toBeLessThan(height(1) * 0.8);
     expect(height(0)).toBeCloseTo(height(2), 6);
   });
 
@@ -234,8 +258,10 @@ describe('ReelCurve.quadFor', () => {
   it('re-binds to a reshaped window', () => {
     const curve = build(0.6);
     curve.setGeometry(60, 60, 60, 5);
-    expect(curve.mapMain((5 * 60) / 2)).toBeCloseTo((5 * 60) / 2, 6);
-    expect(curve.mapMain(5 * 60)).toBeCloseTo(5 * 60, 6);
+    const centre = (5 * 60) / 2;
+    expect(curve.mapMain(centre)).toBeCloseTo(centre, 6);
+    // Still 1:1 at the new centre, not just centred on it.
+    expect((curve.mapMain(centre + 0.25) - curve.mapMain(centre - 0.25)) / 0.5).toBeCloseTo(1, 4);
     expect(quad(curve, 0).width).toBe(60);
   });
 });

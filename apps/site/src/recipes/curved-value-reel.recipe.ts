@@ -5,13 +5,14 @@
 //
 // The pattern behind every prize picker, jackpot ladder and bonus-wheel
 // readout: the symbols are not art at all, they are NUMBERS, drawn at runtime.
-// Here each cell is a rounded plate with a `PIXI.Text` on it, and the symbol id
-// IS the amount - `setResult([['100.00', ...]])` lands the value you name.
+// Here each cell is nothing but a `PIXI.Text`, and the symbol id IS the amount -
+// `setResult([['100.00', ...]])` lands the value you name. No plate, no border,
+// no background: just numbers turning on a drum.
 //
-// It is also the case only `curveMode('warp')` can bend. A cell here is a
-// composite - Graphics plus Text - not a single texture, so the per-symbol
-// projection can do nothing but displace and scale it. The warp renders the
-// whole reel to a texture first, so the plate and the digits curve together.
+// It is also the case only `curveMode('warp')` can bend. A `Text` is not a
+// texture the engine can hand to a mesh, so the per-symbol projection can do
+// nothing but displace and scale it. The warp renders the whole reel to a
+// texture first, so the digits themselves curve.
 //
 // Text is authored big and scaled down to fit, which keeps `1000.00` and
 // `5.00` on the same optical size without reflowing the font.
@@ -28,10 +29,8 @@ const CELL_W = 260;
 const CELL_H = 88;
 
 class ValueSymbol extends ReelSymbol {
-  constructor(options) {
+  constructor() {
     super();
-    this._accent = options?.accent ?? 0xffd764;
-    this._plate = new PIXI.Graphics();
     this._text = new PIXI.Text({
       text: '',
       style: {
@@ -45,7 +44,7 @@ class ValueSymbol extends ReelSymbol {
       },
     });
     this._text.anchor.set(0.5);
-    this.view.addChild(this._plate, this._text);
+    this.view.addChild(this._text);
     this._w = 0;
     this._h = 0;
     this._fitScale = 1;
@@ -54,10 +53,10 @@ class ValueSymbol extends ReelSymbol {
 
   onActivate(symbolId) {
     this._text.text = `$${symbolId}`;
-    // Bigger prizes glow warmer, so the reel reads as a ladder at a glance.
+    // Bigger prizes read warmer, so the reel is a ladder at a glance.
     const rank = VALUES.indexOf(symbolId) / (VALUES.length - 1);
-    this._accent = rank > 0.7 ? 0xffcf4d : rank > 0.35 ? 0xd8a657 : 0x8d7a55;
-    this._draw();
+    this._text.style.fill = rank > 0.7 ? 0xffcf4d : rank > 0.35 ? 0xf0e2bd : 0xa79b83;
+    this._fit();
   }
 
   onDeactivate() {
@@ -86,16 +85,6 @@ class ValueSymbol extends ReelSymbol {
     this._h = height;
     this._text.x = width / 2;
     this._text.y = height / 2;
-    this._draw();
-  }
-
-  _draw() {
-    if (this._w <= 0 || this._h <= 0) return;
-    this._plate
-      .clear()
-      .roundRect(2, 2, this._w - 4, this._h - 4, 12)
-      .fill({ color: 0x14121f })
-      .stroke({ color: this._accent, width: 2, alpha: 0.9 });
     this._fit();
   }
 
@@ -103,7 +92,7 @@ class ValueSymbol extends ReelSymbol {
     if (this._w <= 0 || !this._text.text) return;
     // Reset before measuring, or each fit compounds on the last one's scale.
     this._text.scale.set(1);
-    const room = Math.min((this._w - 34) / this._text.width, (this._h - 26) / this._text.height);
+    const room = Math.min((this._w - 24) / this._text.width, (this._h - 16) / this._text.height);
     this._fitScale = Math.min(room, 1);
     this._text.scale.set(this._fitScale);
   }
@@ -122,14 +111,26 @@ const reelSet = new ReelSetBuilder()
   .symbolSize(CELL_W, CELL_H)
   .symbolGap(0, 6)
   .curve(0.5)
-  .curveMode('warp') // a Graphics+Text cell has no texture of its own to bend
+  .curveMode('warp') // a Text cell has no texture of its own to bend
   .renderer(app.renderer)
   .symbols((r) => {
     for (const v of VALUES) r.register(v, ValueSymbol, {});
   })
   .weights(WEIGHTS)
-  .speed('normal', SpeedPresets.NORMAL)
-  .speed('turbo', SpeedPresets.TURBO)
+  // Slow on purpose. A prize reel is read, not raced: the player is following
+  // the amounts as they pass, so the strip crawls and takes its time settling.
+  .speed('normal', {
+    ...SpeedPresets.NORMAL,
+    spinSpeed: SpeedPresets.NORMAL.spinSpeed * 0.28,
+    accelerationDuration: 700,
+    minimumSpinTime: 1200,
+    bounceDuration: 700,
+  })
+  .speed('turbo', {
+    ...SpeedPresets.NORMAL,
+    spinSpeed: SpeedPresets.NORMAL.spinSpeed * 0.6,
+    minimumSpinTime: 600,
+  })
   .ticker(app.ticker)
   .build();
 

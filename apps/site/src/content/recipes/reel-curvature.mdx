@@ -34,6 +34,16 @@ builder.curve({ amount: 0.45, depth: 0.35 }); // stronger
 
 Capped just under `cos(arc)`. Past that the projection stops being monotonic and edge cells fold back over each other, so a deep curve saturates instead of turning inside out.
 
+## The middle cell is never deformed
+
+The cell facing the camera is the one *not* turned away, so it is drawn at exactly its authored size - both axes, no keystone, 1:1. Everything else bends around it.
+
+That has a consequence worth knowing: a drum whose middle is 1:1 **cannot** also fill a window sized for N flat cells. Its ends fall short, and what shows in that band is the buffer cells, compressed hard as they curve away.
+
+That band is a feature, not a leak - it is the sliver of the next symbol you see on a real cabinet, and on a real cabinet the bezel covers it. Do the same: mask or frame the top and bottom of the reel window. `bufferSymbols(2)` gives the band more to draw if your curve is deep.
+
+The alternative - stretching the projection to touch the window edges - magnifies the main axis at the centre while leaving the cross axis alone, so the middle row comes out visibly taller than it was authored. Not worth it.
+
 <a id="curved-reels-warp"></a>
 
 ## Two ways to draw it

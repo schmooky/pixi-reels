@@ -105,15 +105,20 @@ describe('reel curvature', () => {
     }
   });
 
-  it('keeps the visible cells filling the window, so visibleCells still means 3 rows', () => {
+  it('leaves the cell facing the camera undeformed, at 1:1', () => {
     const h = createTestReelSet({
       reels: 3, visibleCells: 3, symbolIds: ['a'], symbolSize: CELL, curve: 0.9,
     });
     try {
       const curve = h.reelSet.reels[0].curve;
-      expect(curve?.mapMain(0)).toBeCloseTo(0, 6);
-      expect(curve?.mapMain(3 * CELL.height)).toBeCloseTo(3 * CELL.height, 6);
-      // The middle cell still sits dead centre.
+      const centre = (3 * CELL.height) / 2;
+      // Dead centre, and 1:1 through it - the cell that is not turned away
+      // must look untouched however hard the rest of the drum is bent.
+      expect(curve?.mapMain(centre)).toBeCloseTo(centre, 6);
+      const mag =
+        ((curve?.mapMain(centre + 0.25) ?? 0) - (curve?.mapMain(centre - 0.25) ?? 0)) / 0.5;
+      expect(mag).toBeCloseTo(1, 4);
+      // The middle symbol still sits dead centre.
       const buffer = h.reelSet.reels[0].bufferStart;
       expect(renderedCentre(h.reelSet, 0, buffer + 1).y).toBeCloseTo(1.5 * CELL.height, 6);
     } finally {
@@ -203,10 +208,11 @@ describe('reel curvature', () => {
       const top = curved.reelSet.getCellBounds(1, 0);
       const middle = curved.reelSet.getCellBounds(1, 1);
       // A trapezoid's bounding box: shorter than a flat cell at the window
-      // edge, taller in the middle where the drum faces the camera.
-      expect(top.y).toBeCloseTo(0, 6);
-      expect(top.height).toBeLessThan(100);
-      expect(middle.height).toBeGreaterThan(100);
+      // edge, and essentially the flat cell in the middle, which faces the
+      // camera and is drawn at 1:1.
+      expect(top.height).toBeLessThan(middle.height * 0.85);
+      expect(middle.height).toBeLessThanOrEqual(100 + 1e-6);
+      expect(middle.height).toBeGreaterThan(94);
       // The rect tracks the symbol it is meant to outline.
       const buffer = curved.reelSet.reels[1].bufferStart;
       expect(top.y + top.height / 2).toBeCloseTo(renderedCentre(curved.reelSet, 1, buffer).y, 6);
