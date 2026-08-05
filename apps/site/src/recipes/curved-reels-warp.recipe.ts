@@ -31,11 +31,14 @@ const IDS = [...symbolIds];
 
 const REELS = 5;
 const CELLS = 3;
-// Rex the Hunt art is authored for a 175x203 PORTRAIT cell, edge to edge.
-// Forcing it into a square overflows it vertically and the creatures collide
-// with their neighbours - horns and jaws poking into the cell above.
-const CELL_W = 140;
-const CELL_H = 162;
+// Rex the Hunt plates measure exactly 175x203 in the setup pose, and the
+// skeleton draws at that size unless you tell it otherwise. Derive the cell
+// from one scale factor and hand the SAME factor to the symbol - pick the cell
+// without it and every skeleton overflows, cropping at the cell edge and
+// spilling into its neighbours.
+const SPINE_SCALE = 0.8;
+const CELL_W = 175 * SPINE_SCALE;
+const CELL_H = 203 * SPINE_SCALE;
 // Gap on the CROSS axis only. It separates the drums, which is the point;
 // a main-axis gap would punch black bands through each strip's background,
 // because every symbol here carries its own full-bleed backdrop.
@@ -53,7 +56,11 @@ const reelSet = new ReelSetBuilder()
   .renderer(app.renderer)
   .symbols((r) => {
     for (const id of IDS) {
-      r.register(id, SpineReelSymbol, { spineMap, autoPlayLanding: true });
+      r.register(id, SpineReelSymbol, {
+        spineMap,
+        scale: SPINE_SCALE,
+        autoPlayLanding: true,
+      });
     }
   })
   .speed('normal', SpeedPresets.NORMAL)
