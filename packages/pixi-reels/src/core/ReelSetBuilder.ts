@@ -1067,6 +1067,7 @@ export class ReelSetBuilder {
       undefined,
       this._maskStrategy,
       setAxis,
+      this._curveMode === 'warp' ? this._curveBleed : 0,
     );
 
     // Validate the initial frame now that buffer counts are fully resolved.
