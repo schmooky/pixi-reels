@@ -71,6 +71,24 @@ It also bends **motion**. The curve is on the rendered reel, not baked into each
 
 Under `'warp'`, symbols stop being real display objects to the renderer, so use `getCellQuad()` rather than screen-space hit testing.
 
+### Symbols that hang over their cell
+
+Two knobs, and they compose.
+
+`SymbolData.zIndex` stacks symbols **within** a reel. It is folded in as `zIndex * 100 + cellIndex`, so any raised value beats every cell index and that symbol draws over its neighbours whichever row it lands on. Reapplied on every wrap, so it holds mid-spin.
+
+`.curveBleed(px)` gives the warp texture room across the strip. The warp renders each reel into a texture the size of the reel, so art wider than its cell is sliced off at the boundary; bleed captures the overhang, warps it with everything else, and lets it stick out.
+
+```ts
+builder
+  .symbolData({ mystery: { zIndex: 2 } }) // draws over its neighbours
+  .curveBleed(46);                        // and is allowed to hang over them
+```
+
+Pair bleed with `SharedRectMaskStrategy` - a `curveFocus` other than `'reel'` already selects it - or the per-reel mask clips the overhang straight back off. It costs texture area, so keep it to what the art needs.
+
+The demo below uses both: the mystery plate's leaves spill past their tile and over the symbol beside them.
+
 The demo below is Spine skeletons - content `'symbol'` cannot bend at all.
 
 <RecipeDemo code="curved-reels-warp" height={420} />

@@ -53,7 +53,28 @@ const reelSet = new ReelSetBuilder()
   .curve(0.45)
   .curveFocus('set-lean')
   .curveMode('warp') // <- bend the container, not the cells
+  // Room across the strip for art wider than its cell. The mystery plate's
+  // leaves overflow their tile; without this the warp texture slices them off
+  // at the reel edge. `curveFocus` other than 'reel' has already selected
+  // SharedRectMaskStrategy, so the overhang is not clipped again by the mask.
+  .curveBleed(46)
   .renderer(app.renderer)
+  // Per-symbol stacking INSIDE a reel. `zIndex` is folded in as
+  // `zIndex * 100 + cellIndex`, so any raised value beats every cell index and
+  // the symbol draws over its neighbours whatever row it lands on. The mystery
+  // and scatter plates deliberately overflow their tile, so this is what lets
+  // the leaves spill over the symbol below instead of being covered by it.
+  // Re-applied on every wrap, so it holds mid-spin too.
+  .symbolData({
+    mystery: { zIndex: 2 },
+    scatter: { zIndex: 1 },
+  })
+  // Weighted up from a real paytable so the demo actually shows them.
+  .weights({
+    ...Object.fromEntries(IDS.map((id) => [id, 6])),
+    mystery: 14,
+    scatter: 10,
+  })
   .symbols((r) => {
     for (const id of IDS) {
       r.register(id, SpineReelSymbol, {

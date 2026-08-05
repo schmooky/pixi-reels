@@ -192,6 +192,11 @@ export interface ReelConfig {
   curveRenderer?: Renderer;
   /** Ticker driving the warp's per-frame texture refresh. Warp mode only. */
   curveTicker?: Ticker;
+  /**
+   * Cross-axis room, in pixels per side, for art that is wider than its cell.
+   * Warp mode only; set by `ReelSetBuilder.curveBleed()`.
+   */
+  curveBleed?: number;
 }
 
 /**
@@ -464,6 +469,7 @@ export class Reel implements Disposable {
         box.height,
         config.curveTicker,
         this.motion.slotPitch,
+        config.curveBleed ?? 0,
       );
       this._warp.zIndex = this.container.zIndex;
       this._axis.setCross(this._warp, this._axis.getCross(this.container));

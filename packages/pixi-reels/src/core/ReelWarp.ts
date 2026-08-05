@@ -60,14 +60,19 @@ export class ReelWarp extends Container implements Disposable {
     height: number,
     ticker: Ticker,
     private readonly _margin = 0,
+    private readonly _bleed = 0,
   ) {
     super();
-    // The texture covers the visible window PLUS a slot of buffer at each end.
-    // Un-normalized, the projection sits inset from the window - the drum's
-    // ends curve away from you - and it is the buffer cells that fill that
-    // space, exactly as on a real machine where you can see a sliver of the
-    // next symbol above and below.
-    const grown = this._axis.toScreen(0, _margin * 2);
+    // The texture covers the visible window PLUS a slot of buffer at each end
+    // of the strip, because the drum's ends curve away from the window edges
+    // and it is the buffer cells that fill that space - the sliver of the next
+    // symbol a real machine shows.
+    //
+    // `_bleed` does the same across the strip. Art that is wider than its cell
+    // - an overflowing mystery plate, leaves spilling past the tile - would
+    // otherwise be sliced off at the texture edge. Give the texture room and
+    // the overflow is captured, warped with everything else, and sticks out.
+    const grown = this._axis.toScreen(_bleed * 2, _margin * 2);
     this._width = Math.max(1, Math.ceil(width + Math.abs(grown.x)));
     this._height = Math.max(1, Math.ceil(height + Math.abs(grown.y)));
     this._texture = RenderTexture.create({
@@ -116,7 +121,7 @@ export class ReelWarp extends Container implements Disposable {
     // Park it AT the shift, not offset by it. Buffer cells sit at negative
     // main, so the margin brings them inside the texture and gives the ends of
     // the drum something to draw.
-    const shift = this._axis.toScreen(0, this._margin);
+    const shift = this._axis.toScreen(this._bleed, this._margin);
     this._source.position.set(shift.x, shift.y);
     this._renderer.render({
       container: this._source,
@@ -130,7 +135,7 @@ export class ReelWarp extends Container implements Disposable {
   resize(width: number, height: number): void {
     // Same margin the constructor added, or a reshape would silently drop the
     // buffer slack and clip the ends of the drum.
-    const grown = this._axis.toScreen(0, this._margin * 2);
+    const grown = this._axis.toScreen(this._bleed * 2, this._margin * 2);
     const w = Math.max(1, Math.ceil(width + Math.abs(grown.x)));
     const h = Math.max(1, Math.ceil(height + Math.abs(grown.y)));
     if (w === this._width && h === this._height) return;
@@ -167,12 +172,14 @@ export class ReelWarp extends Container implements Disposable {
       const gy = Math.floor(i / GRID) / span;
       // Screen grid -> axis-relative, so one loop serves both orientations.
       const texel = this._axis.toLocal(gx * this._width, gy * this._height);
-      // Texture space starts a margin BEFORE the window, so undo that to get
-      // the reel-local coordinate the projection is defined against.
+      // Texture space starts a margin BEFORE the window on the strip axis and
+      // a bleed before it across, so undo both to get the reel-local
+      // coordinate the projection is defined against.
       const main = texel.main - this._margin;
+      const cross = texel.cross - this._bleed;
       const scale = this._curve.scaleAt(main);
       const screen = this._axis.toScreen(
-        focus + (texel.cross - focus) * scale,
+        focus + (cross - focus) * scale,
         this._curve.mapMain(main),
       );
       positions[i * 2] = screen.x;

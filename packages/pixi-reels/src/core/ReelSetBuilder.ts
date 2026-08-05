@@ -114,6 +114,7 @@ export class ReelSetBuilder {
   private _curvePerReel?: ReelCurveInput[];
   private _curveFocus: CurveFocus = 'reel';
   private _curveMode: CurveMode = 'symbol';
+  private _curveBleed = 0;
   private _renderer?: Renderer;
   /** MultiWays configuration. Set by `.multiways(...)`. */
   private _multiways?: MultiWaysConfig;
@@ -365,6 +366,34 @@ export class ReelSetBuilder {
    */
   renderer(renderer: Renderer): this {
     this._renderer = renderer;
+    return this;
+  }
+
+  /**
+   * Cross-axis room, in pixels per side, for symbols whose art is WIDER than
+   * their cell - an overflowing mystery plate, leaves spilling past the tile.
+   *
+   * `curveMode('warp')` renders each reel into a texture the size of the reel,
+   * so anything hanging over the edge is sliced off at the texture boundary.
+   * This gives the texture room, and the overflow is captured, warped with
+   * everything else, and sticks out over its neighbours.
+   *
+   * Costs texture area, so keep it to what the art actually needs. Warp mode
+   * only; ignored under `curveMode('symbol')`, where symbols are real display
+   * objects and overflow already draws.
+   *
+   * Pair it with {@link SharedRectMaskStrategy} (or a `curveFocus` other than
+   * `'reel'`, which selects it for you) or the per-reel mask clips the
+   * overhang straight back off.
+   *
+   * @example
+   * builder.curve(0.45).curveMode('warp').curveBleed(40).renderer(app.renderer);
+   */
+  curveBleed(pixels: number): this {
+    if (!Number.isFinite(pixels) || pixels < 0) {
+      throw new Error(`curveBleed(): expected a non-negative number, got ${pixels}.`);
+    }
+    this._curveBleed = pixels;
     return this;
   }
 
@@ -1092,6 +1121,7 @@ export class ReelSetBuilder {
         curve: this._curvePerReel?.[reelIndex] ?? this._curve,
         curveRenderer: this._curveMode === 'warp' ? this._renderer : undefined,
         curveTicker: this._curveMode === 'warp' ? ticker : undefined,
+        curveBleed: this._curveBleed,
         curveFocus:
           curveFocusWeight === 0
             ? undefined
