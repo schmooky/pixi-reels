@@ -66,8 +66,11 @@ const reelSet = new ReelSetBuilder()
   // the leaves spill over the symbol below instead of being covered by it.
   // Re-applied on every wrap, so it holds mid-spin too.
   .symbolData({
+    // Both overflow their tile, so both need to win against their neighbours.
+    // Same tier rather than a pecking order: on a tie the cell index decides,
+    // which keeps the lower cell in front and reads correctly either way.
     mystery: { zIndex: 2 },
-    scatter: { zIndex: 1 },
+    scatter: { zIndex: 2 },
   })
   // Weighted up from a real paytable so the demo actually shows them.
   .weights({
