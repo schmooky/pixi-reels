@@ -435,7 +435,14 @@ class DebugOverlay implements DebugOverlayHandle {
     for (const reel of this._reelSet.reels) {
       const pitch = reel.motion.slotPitch;
       const draw = (main: number): void => {
-        const r = this._reelRect(reel, 0, main, reel.cellCross, reel.cellMain);
+        // Follow the drum. A buffer box left on the flat grid sits nowhere
+        // near the symbol it is labelling once the reel is curved, and the
+        // buffers are exactly the cells the curve moves furthest.
+        const curve = reel.curve;
+        const from = curve ? curve.mapMain(main) : main;
+        const to = curve ? curve.mapMain(main + reel.cellMain) : main + reel.cellMain;
+        const cross = curve ? reel.cellCross * curve.scaleAt(main + reel.cellMain / 2) : reel.cellCross;
+        const r = this._reelRect(reel, (reel.cellCross - cross) / 2, from, cross, to - from);
         g.rect(r.x, r.y, r.width, r.height).stroke({
           color: COLORS.buffers,
           width: 1,

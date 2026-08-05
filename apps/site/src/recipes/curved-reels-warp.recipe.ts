@@ -1,6 +1,6 @@
 // @ts-nocheck
 // Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, loadSpineSet,
-//           buildSpineMap, app
+//           PIXI, app
 
 // Bend the whole reel, not each symbol.
 //
@@ -9,9 +9,10 @@
 // - Spine skeletons, atlas sprites, text, effects - and no symbol has to
 // cooperate or even know the reel is curved.
 //
-// These are Spine skeletons, which the per-symbol path cannot bend at all: a
-// `Container` transform is affine, so it can only displace and scale a live
-// skeleton. Here they curve like everything else.
+// These are Thunderkick's Rex the Hunt skeletons, which the per-symbol path
+// cannot bend at all: a `Container` transform is affine, so it can only
+// displace and scale a live skeleton. Here they curve like everything else,
+// and they keep animating while they do.
 //
 // The other thing the warp buys you is MOTION. Because the bend is applied to
 // the rendered reel rather than baked into each cell, anything that moves the
@@ -20,35 +21,30 @@
 // container, so the whole board slides straight up and down instead of riding
 // the drum.
 //
-// Costs: one render pass per reel per frame, and the reel is resampled once,
-// so hairline art is marginally softer. Needs `.renderer(app.renderer)`.
+// A bezel covers the top and bottom of the window. A drum whose middle cell is
+// drawn 1:1 cannot also reach the window edges, so the buffer cells show there,
+// compressed as they curve away - exactly the sliver of the next symbol a real
+// cabinet shows, and exactly what a real cabinet's frame hides.
 
-await loadSpineSet('generated');
-
-const SPINE_MAP = {
-  '9': 'low_a',
-  '10': 'low_k',
-  J: 'low_q',
-  Q: 'low_j',
-  K: 'mid_1',
-  A: 'high_1',
-};
-const IDS = Object.keys(SPINE_MAP);
+const { spineMap, symbolIds } = await loadSpineSet('thunderkick');
+const IDS = [...symbolIds];
 
 const REELS = 5;
 const CELLS = 3;
+const CELL = 132;
+const GAP = 14;
 
 const reelSet = new ReelSetBuilder()
   .reels(REELS)
   .visibleCells(CELLS)
-  .symbolSize(96, 96)
-  .symbolGap(6, 6)
+  .symbolSize(CELL, CELL)
+  .symbolGap(GAP, GAP) // gaps read as separate drums rather than one sheet
+  .bufferSymbols(2) // more to draw in the band the bezel covers
   .curve(0.45)
   .curveFocus('set-lean')
   .curveMode('warp') // <- bend the container, not the cells
   .renderer(app.renderer)
   .symbols((r) => {
-    const spineMap = buildSpineMap(SPINE_MAP);
     for (const id of IDS) {
       r.register(id, SpineReelSymbol, { spineMap, autoPlayLanding: true });
     }
@@ -57,6 +53,31 @@ const reelSet = new ReelSetBuilder()
   .speed('turbo', SpeedPresets.TURBO)
   .ticker(app.ticker)
   .build();
+
+// --- bezel -------------------------------------------------------------
+// Drawn OVER the set, in the set's own coordinates, so it travels with it.
+const boardW = REELS * CELL + (REELS - 1) * GAP;
+const boardH = CELLS * CELL + (CELLS - 1) * GAP;
+// The drum's ends fall short of the window by `halfExtent * (1 - edgeMapped)`,
+// about 45px at this size and curve. The bezel has to cover at least that or
+// the curl shows under it.
+const LIP = 50;
+
+// Kept strictly INSIDE the board rect. A bezel drawn outside it grows the
+// set's bounds, and the recipe runner centres on those - the board slides off
+// centre and the frame stops lining up with the window.
+const bezel = new PIXI.Graphics();
+bezel
+  .rect(0, 0, boardW, LIP)
+  .rect(0, boardH - LIP, boardW, LIP)
+  .fill({ color: 0x0b0a12 });
+bezel
+  .moveTo(0, LIP)
+  .lineTo(boardW, LIP)
+  .moveTo(0, boardH - LIP)
+  .lineTo(boardW, boardH - LIP)
+  .stroke({ color: 0x2c2740, width: 2 });
+reelSet.addChild(bezel);
 
 return {
   reelSet,

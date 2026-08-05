@@ -72,6 +72,27 @@ const reelSet = new ReelSetBuilder()
   .ticker(app.ticker)
   .build();
 
+// --- bezel -------------------------------------------------------------
+// A drum whose middle cell is drawn 1:1 cannot also reach the window edges;
+// the buffer cells show in that band, compressed as they curve away. Real
+// cabinets put a frame over it. `curve.mapMain(0)` is exactly where the drum's
+// top edge lands, so the frame is measured, not guessed.
+//
+// Kept strictly INSIDE the window rect: a bezel drawn outside it grows the
+// set's bounds and the recipe runner centres on those.
+const bw = reelSet.viewport.maskWidth;
+const bh = reelSet.viewport.maskHeight;
+const lip = Math.ceil(Math.max(...reelSet.reels.map((r) => (r.curve ? r.curve.mapMain(0) : 0)))) + 2;
+const bezel = new PIXI.Graphics();
+bezel.rect(0, 0, bw, lip).rect(0, bh - lip, bw, lip).fill({ color: 0x0b0a12 });
+bezel
+  .moveTo(0, lip)
+  .lineTo(bw, lip)
+  .moveTo(0, bh - lip)
+  .lineTo(bw, bh - lip)
+  .stroke({ color: 0x2c2740, width: 2 });
+reelSet.addChild(bezel);
+
 return {
   reelSet,
   nextResult: () =>
