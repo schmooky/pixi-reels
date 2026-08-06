@@ -78,10 +78,24 @@ than dropping it silently, so you find out at the call, not three spins later.
 
 Anything you leave unset gets a random symbol.
 
-Buffer cells are filled in the same pass, from the same weight table -- there
-is no separate buffer weighting. To make off-window fill differ from what
-lands in view, register your own `FrameMiddleware` at a priority above
-`random-fill`.
+Buffer cells are filled in the same pass. By default they draw from the same
+weight table as the strip, but they do not have to. A pool with
+`slots: 'buffer'` narrows the off-window cells only:
+
+```ts
+// A coin may blur past mid-spin, but must never park half-visible
+// above or below the grid.
+reelSet.randomSymbols.set({ exclude: ['COIN'] }, { slots: 'buffer' });
+
+// Same thing at build time, so even the initial strip obeys it.
+builder.randomSymbols({ exclude: ['COIN'] }, { slots: 'buffer' });
+```
+
+Add `{ reel: n }` to the scope for one reel only. Weights work the same way as
+exclusions -- `{ weights: { COIN: 0 } }` bans it just as surely. Buffer pools
+stack on top of the spinning ones: what the strip may not show, the buffer may
+not show either. An explicit `bufferStart` / `bufferEnd` target is the game
+speaking and always wins over a pool.
 
 ## Big symbols in buffers
 

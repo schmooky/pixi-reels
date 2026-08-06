@@ -26,6 +26,7 @@ import { pinKey } from '../pins/CellPin.js';
 
 import type { FrameMiddleware } from '../frame/FrameBuilder.js';
 import type { ColumnTarget } from '../frame/ColumnTarget.js';
+import type { RandomSymbolControl } from '../frame/SymbolPool.js';
 import { assertBufferCountsInRange, assertColumnTargets, cloneColumnTarget } from '../frame/ColumnTarget.js';
 import { V1_OPTION_KEYS, assertNoV1Keys } from '../config/v1Renames.js';
 import type { Cell } from '../cascade/tumbleAlgorithm.js';
@@ -1680,6 +1681,25 @@ export class ReelSet extends Container implements Disposable {
     return this._spotlight;
   }
 
+  // ─── Random symbol pools ──────────────────────────────────
+
+  /**
+   * Control over what the engine may draw when it fills a cell the game
+   * did not name: the strip streaming past during a spin, and the buffer
+   * cells parked either side of the visible window.
+   *
+   * ```ts
+   * reelSet.randomSymbols.set({ exclude: ['EMPTY'] });
+   * reelSet.randomSymbols.set({ weights: { WILD: 40 } }, { reel: 2 });
+   * reelSet.randomSymbols.set({ exclude: ['COIN'] }, { slots: 'buffer' });
+   * ```
+   *
+   * Build-time equivalent: `builder.randomSymbols(pool, scope)`.
+   */
+  get randomSymbols(): RandomSymbolControl {
+    return this._frameBuilder.randomProvider;
+  }
+
   // ─── Reel access ──────────────────────────────────────────
 
   /** Get all reels. */
@@ -1948,7 +1968,7 @@ export class ReelSet extends Container implements Disposable {
     // the vacated cell visually swaps to the backfill while the flight
     // symbol is still in motion.
     const backfill =
-      opts?.backfill ?? this._frameBuilder.randomProvider.next(false);
+      opts?.backfill ?? this._frameBuilder.randomProvider.next(false, from.reel);
     const fromVisible = fromReel.getVisibleSymbols();
     fromVisible[from.cell] = backfill;
     fromReel.placeSymbols({ visible: fromVisible });

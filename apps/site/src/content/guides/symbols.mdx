@@ -104,3 +104,16 @@ it spins, and the buffer cells.
 
 A grid from `setResult()` ignores weights completely. The server decides what
 lands. Weights decide what blurs past on the way there.
+
+`weights()` is one table for the whole set. To vary it -- ban a symbol from
+the buffer cells, or make one reel draw differently -- layer a pool on top:
+
+```ts
+builder.randomSymbols({ exclude: ['EMPTY'] });                     // every reel
+builder.randomSymbols({ exclude: ['COIN'] }, { slots: 'buffer' }); // buffers only
+builder.randomSymbols({ weights: { WILD: 40 } }, { reel: 2 });     // reel 2 only
+```
+
+The same pools are reachable at run time as `reelSet.randomSymbols.set(...)`,
+which is where a game-mode switch belongs. See
+[Buffer indexing](/guides/buffer-indexing/).

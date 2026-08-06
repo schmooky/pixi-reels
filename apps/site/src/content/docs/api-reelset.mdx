@@ -160,6 +160,27 @@ The library ships [`WinPresenter`](/docs/api-events/) as a higher-level events-d
 | `getBlockBounds` | `(reel, cell) => CellBounds` | Pixel rect covering a big symbol's whole `N×M` block. Returns the cell bounds for 1×1. |
 | `getSymbolFootprint` | `(reel, cell) => { anchor: { reel, cell }; size: { reels, cells } }` | Resolves OCCUPIED stubs to the anchor cell and reports the block size. |
 
+## Random symbol pools
+
+| Accessor | Description |
+|---|---|
+| `randomSymbols` | `RandomSymbolControl`. `{ set(pool, scope?), clear(), weights(scope?) }`. Narrows what the engine may draw for cells you did not name -- globally or per reel, for the whole strip or for the buffer cells alone. |
+
+```ts
+// Nothing collectible may sit half-visible above or below the grid.
+reelSet.randomSymbols.set({ exclude: ['COIN'] }, { slots: 'buffer' });
+
+// Reel 2 runs hot on wilds for the feature, then back to normal.
+reelSet.randomSymbols.set({ weights: { WILD: 40 } }, { reel: 2 });
+reelSet.randomSymbols.set(null, { reel: 2 });
+```
+
+A pool governs the RANDOM draw only. an explicit `setResult` target always
+wins. Layers resolve base weights -> global spinning -> per-reel spinning ->
+global buffer -> per-reel buffer; weights override per id, exclusions
+accumulate, and a narrower layer can never re-admit what a wider one banned.
+Build-time equivalent: `builder.randomSymbols(pool, scope)`.
+
 ## Frame middleware (runtime-mutable)
 
 | Accessor | Description |

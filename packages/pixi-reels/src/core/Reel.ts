@@ -1134,7 +1134,7 @@ export class Reel implements Disposable {
         if (k <= wrapsToVisible) {
           queue.push(incoming[wrapsToVisible - k]);
         } else {
-          queue.push(this._randomProvider.next(true));
+          queue.push(this._randomProvider.next(true, this.reelIndex));
         }
       }
       this._nudgeQueue = queue;
@@ -1151,7 +1151,7 @@ export class Reel implements Disposable {
         if (k <= wrapsToVisible) {
           queue.push(incoming[bufferEnd + k - 1]);
         } else {
-          queue.push(this._randomProvider.next(true));
+          queue.push(this._randomProvider.next(true, this.reelIndex));
         }
       }
       this._nudgeQueue = queue;
@@ -1315,7 +1315,11 @@ export class Reel implements Disposable {
   placeStrip(frame: ReadonlyArray<string | undefined>): void {
     const totalSlots = this.symbols.length;
     for (let i = 0; i < totalSlots; i++) {
-      const targetId = frame[i] ?? this._randomProvider.next(true);
+      // Buffer pools apply to the buffer slots only. a visible cell the
+      // frame left blank is a spinning-pool draw, same rule FrameBuilder
+      // uses when it random-fills a frame.
+      const targetId =
+        frame[i] ?? this._randomProvider.next(this._isBufferSlot(i), this.reelIndex);
       this._replaceSymbol(i, targetId);
     }
     this.motion.snapToGrid();
@@ -1352,7 +1356,7 @@ export class Reel implements Disposable {
     // Grow: append additional symbols at the bottom buffer. New symbols are
     // parented based on `unmask` flag. same rule as `_replaceSymbol`.
     while (this.symbols.length < newTotal) {
-      const id = this._randomProvider.next(true);
+      const id = this._randomProvider.next(true, this.reelIndex);
       const sym = this._symbolFactory.acquire(id);
       const slot = this.symbols.length;
       sym.resize(newSize.width, newSize.height);
@@ -1652,7 +1656,7 @@ export class Reel implements Disposable {
     } else if (this._isStopping && this.stopSequencer.hasRemaining) {
       newSymbolId = this.stopSequencer.next();
     } else {
-      newSymbolId = this._randomProvider.next();
+      newSymbolId = this._randomProvider.next(false, this.reelIndex);
     }
 
     this._replaceSymbol(this.symbols.indexOf(symbol), newSymbolId);

@@ -113,6 +113,11 @@ export { SpeedManager } from './speed/SpeedManager.js';
 export { FrameBuilder } from './frame/FrameBuilder.js';
 export type { FrameContext, FrameMiddleware } from './frame/FrameBuilder.js';
 export type { ColumnTarget } from './frame/ColumnTarget.js';
+export type {
+  RandomSymbolControl,
+  SymbolPool,
+  SymbolPoolScope,
+} from './frame/SymbolPool.js';
 export {
   cloneColumnTarget,
   columnTargetToStrip,

@@ -151,7 +151,7 @@ class RandomFillMiddleware implements FrameMiddleware {
         const isBuffer =
           i < context.bufferStart ||
           i >= context.bufferStart + context.visibleCells;
-        context.symbols[i] = this._provider.next(isBuffer);
+        context.symbols[i] = this._provider.next(isBuffer, context.reelIndex);
       }
     }
     next();
