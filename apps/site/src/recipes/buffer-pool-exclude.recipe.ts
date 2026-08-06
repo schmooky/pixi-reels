@@ -68,7 +68,7 @@ function applyPool() {
 // Everything lives in one composition root with room above the grid for the
 // banner, returned as `stage` so the runner scales and centres the whole
 // thing rather than clipping the parts that sit above the reels.
-const PAD_TOP = 76;
+const PAD_TOP = 94;
 const stage = new PIXI.Container();
 reelSet.y = PAD_TOP;
 stage.addChild(reelSet);
@@ -99,10 +99,19 @@ hint.text = 'the labels above and below each reel ARE its hidden cells';
 stage.addChild(hint);
 
 // One label per hidden cell, sitting where that cell sits: above the grid
-// for bufferStart, below it for bufferEnd.
+// for bufferStart, below it for bufferEnd. Each column also carries its own
+// index, because reel indices are 0-based: `{ reel: 1 }` is the SECOND reel.
 const startLabels = [];
 const endLabels = [];
 for (let i = 0; i < COLS; i++) {
+  const index = text(10, '500');
+  index.style.fill = 0x94a3b8;
+  index.anchor.set(0.5, 1);
+  index.x = i * (SIZE + GAP) + SIZE / 2;
+  index.y = PAD_TOP - 22;
+  index.text = `reel ${i}`;
+  stage.addChild(index);
+
   const top = text(11, '700');
   top.anchor.set(0.5, 1);
   top.x = i * (SIZE + GAP) + SIZE / 2;
@@ -139,7 +148,7 @@ function refreshLabels() {
     state === 'off'
       ? 'COIN parks in every hidden cell'
       : state === 'reel 1 only'
-        ? 'only the middle reel stays clean'
+        ? 'only reel 1 stays clean -- indices are 0-based, so that is the SECOND reel'
         : 'no COIN parks off-window on any reel';
   banner.style.fill = state === 'off' ? 0xd97706 : 0x16a34a;
   meaning.style.fill = state === 'off' ? 0xd97706 : 0x16a34a;

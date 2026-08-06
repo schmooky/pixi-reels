@@ -64,6 +64,17 @@ stage.addChild(title);
 
 for (let i = 0; i < COLS; i++) {
   const scoped = CAPTIONS[i] !== 'base table';
+  // The index goes on the demo, not just in the source: reel indices are
+  // 0-based, so `{ reel: 2 }` is the THIRD reel, not the second.
+  const index = new PIXI.Text({
+    text: `reel ${i}`,
+    style: { fontFamily: 'ui-monospace, monospace', fontSize: 10, fontWeight: '700', fill: 0x94a3b8 },
+  });
+  index.anchor.set(0.5, 0);
+  index.x = i * (SIZE + GAP) + SIZE / 2;
+  index.y = gridBottom + 8;
+  stage.addChild(index);
+
   const caption = new PIXI.Text({
     text: CAPTIONS[i],
     style: {
@@ -74,8 +85,8 @@ for (let i = 0; i < COLS; i++) {
     },
   });
   caption.anchor.set(0.5, 0);
-  caption.x = i * (SIZE + GAP) + SIZE / 2;
-  caption.y = gridBottom + 8;
+  caption.x = index.x;
+  caption.y = gridBottom + 22;
   stage.addChild(caption);
 }
 
