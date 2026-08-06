@@ -27,7 +27,7 @@ Missing any of these throws at `.build()` with a human-readable list of problems
 | `.symbolGap(x, y)` | `{ x: 0, y: 0 }` |
 | `.bufferSymbols(n)` or `.bufferSymbols({ start, end })` | `1` (clamped to ≥ 1. the motion layer needs one buffer cell each side for wrap detection). `start` is the smaller main coordinate (above for vertical, left for horizontal), whichever way the reel travels. |
 | `.weights({ id: n })` | `10` for each registered symbol |
-| `.randomSymbols(pool, scope?)` | No pools. Narrows the RANDOM draw on top of `weights()`. `pool` is `{ weights?, exclude? }`; `scope` is `{ reel?, slots?: 'spinning' \| 'buffer' }` (default: every reel, every random cell). Buffer pools stack on the spinning ones. Same pools at run time: `reelSet.randomSymbols`. |
+| `.randomSymbols(pool, scope?)` | No pools. Narrows the RANDOM draw on top of `weights()`. `pool` is `{ weights?, exclude? }`; `scope` is `{ reel?, slots?: 'spinning' \| 'buffer' \| 'bufferStart' \| 'bufferEnd' }` (default: every reel, every random cell). Each layer stacks on the wider ones, so a side pool narrows what `'buffer'` already allows. Same pools at run time: `reelSet.randomSymbols`. |
 | `.symbolData({ id: { zIndex, unmask, size, weight } })` | Per-symbol metadata. Auto-routes `unmask`; `size: { reels, cells }` beyond 1x1 declares a big symbol. `reels` spans the cross axis, `cells` the main axis, in every orientation. |
 | `.reelExtents([n,...])` | Per-reel MAIN-axis extents for pyramid layouts (pixel height when vertical, width when horizontal). Derived from the cell count if unset. |
 | `.reelAnchor('start' \| 'center' \| 'end')` | `'center'`. alignment of short reels along the MAIN axis, inside the longest reel's extent. |

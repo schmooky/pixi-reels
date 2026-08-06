@@ -32,12 +32,9 @@ function makeHarness() {
   });
 }
 
-const bufferIds = (reel: Reel): string[] => {
-  const strip = reel.symbols.map((s) => s.symbolId);
-  const start = strip.slice(0, 2);
-  const end = strip.slice(strip.length - 2);
-  return [...start, ...end];
-};
+const bufferIds = (reel: Reel): string[] => [...startIds(reel), ...endIds(reel)];
+const startIds = (reel: Reel): string[] => reel.symbols.slice(0, 2).map((s) => s.symbolId);
+const endIds = (reel: Reel): string[] => reel.symbols.slice(-2).map((s) => s.symbolId);
 
 describe('buffer pools decide what may sit above and below the window', () => {
   it('keeps an excluded symbol out of the buffers while leaving the strip alone', async () => {
@@ -112,6 +109,113 @@ describe('buffer pools decide what may sit above and below the window', () => {
         expect(bufferIds(reel)).not.toContain('coin');
         expect(reel.getVisibleSymbols()).toEqual(['coin', 'coin', 'coin']);
       }
+    } finally {
+      set.destroy();
+    }
+  });
+});
+
+describe('the two buffer ends can be controlled separately', () => {
+  it('keeps a symbol out of the cells above the window only', async () => {
+    const h = makeHarness();
+    try {
+      h.reelSet.randomSymbols.set({ exclude: ['coin'] }, { slots: 'bufferStart' });
+      await h.spinAndLand([
+        { visible: ['a', 'a', 'a'] },
+        { visible: ['a', 'a', 'a'] },
+        { visible: ['a', 'a', 'a'] },
+      ]);
+
+      for (const reel of h.reelSet.reels) {
+        expect(startIds(reel), `reel ${reel.reelIndex} start`).not.toContain('coin');
+      }
+      // The other end is untouched: on a coin-heavy table it still fills.
+      expect(h.reelSet.reels.flatMap((r) => endIds(r))).toContain('coin');
+    } finally {
+      h.destroy();
+    }
+  });
+
+  it('keeps a symbol out of the cells below the window only', async () => {
+    const h = makeHarness();
+    try {
+      h.reelSet.randomSymbols.set({ exclude: ['coin'] }, { slots: 'bufferEnd' });
+      await h.spinAndLand([
+        { visible: ['a', 'a', 'a'] },
+        { visible: ['a', 'a', 'a'] },
+        { visible: ['a', 'a', 'a'] },
+      ]);
+
+      for (const reel of h.reelSet.reels) {
+        expect(endIds(reel), `reel ${reel.reelIndex} end`).not.toContain('coin');
+      }
+      expect(h.reelSet.reels.flatMap((r) => startIds(r))).toContain('coin');
+    } finally {
+      h.destroy();
+    }
+  });
+
+  it('scopes one end of one reel', async () => {
+    const h = makeHarness();
+    try {
+      h.reelSet.randomSymbols.set({ exclude: ['coin'] }, { reel: 2, slots: 'bufferEnd' });
+      await h.spinAndLand([
+        { visible: ['a', 'a', 'a'] },
+        { visible: ['a', 'a', 'a'] },
+        { visible: ['a', 'a', 'a'] },
+      ]);
+
+      expect(endIds(h.reelSet.reels[2])).not.toContain('coin');
+      expect(startIds(h.reelSet.reels[2])).toContain('coin');
+      expect(endIds(h.reelSet.reels[0])).toContain('coin');
+    } finally {
+      h.destroy();
+    }
+  });
+
+  it('applies the entering end when a nudge wraps symbols in', async () => {
+    const h = makeHarness();
+    try {
+      // On a vertical forward set, a 'forward' nudge feeds new cells in at
+      // the buffer-start end (`travelSign * polarity > 0`), so the padding
+      // the queue draws for the off-window slots is a bufferStart draw.
+      h.reelSet.randomSymbols.set({ exclude: ['coin'] }, { slots: 'bufferStart' });
+      await h.reelSet.nudge(0, { distance: 2, direction: 'forward', incoming: ['a', 'a'] });
+      expect(startIds(h.reelSet.reels[0])).not.toContain('coin');
+    } finally {
+      h.destroy();
+    }
+  });
+
+  it('applies the other end when the nudge feeds from there', async () => {
+    const h = makeHarness();
+    try {
+      h.reelSet.randomSymbols.set({ exclude: ['coin'] }, { slots: 'bufferEnd' });
+      await h.reelSet.nudge(0, { distance: 2, direction: 'reverse', incoming: ['a', 'a'] });
+      expect(endIds(h.reelSet.reels[0])).not.toContain('coin');
+    } finally {
+      h.destroy();
+    }
+  });
+
+  it('build-time form takes a side too', () => {
+    const set = new ReelSetBuilder()
+      .reels(2)
+      .visibleCells(3)
+      .symbolSize(120, 100)
+      .bufferSymbols(2)
+      .ticker(new FakeTicker() as unknown as Ticker)
+      .symbols((r) => {
+        for (const id of SYMBOLS) r.register(id, HeadlessSymbol, {});
+      })
+      .weights(WEIGHTS)
+      .randomSymbols({ exclude: ['coin'] }, { slots: 'bufferStart' })
+      .build();
+    try {
+      for (const reel of set.reels) {
+        expect(startIds(reel)).not.toContain('coin');
+      }
+      expect(set.reels.flatMap((r) => endIds(r))).toContain('coin');
     } finally {
       set.destroy();
     }

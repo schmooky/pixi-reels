@@ -148,10 +148,15 @@ class RandomFillMiddleware implements FrameMiddleware {
   process(context: FrameContext, next: () => void): void {
     for (let i = 0; i < context.symbols.length; i++) {
       if (!context.symbols[i]) {
-        const isBuffer =
-          i < context.bufferStart ||
-          i >= context.bufferStart + context.visibleCells;
-        context.symbols[i] = this._provider.next(isBuffer, context.reelIndex);
+        // Each slot names the pool it belongs to: the visible window, or
+        // whichever side of the buffer it sits on.
+        const slot =
+          i < context.bufferStart
+            ? 'bufferStart'
+            : i >= context.bufferStart + context.visibleCells
+              ? 'bufferEnd'
+              : 'spinning';
+        context.symbols[i] = this._provider.next(slot, context.reelIndex);
       }
     }
     next();

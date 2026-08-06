@@ -12,8 +12,11 @@
 //
 // `randomSymbols.set(pool, scope)` narrows that draw and nothing else. The
 // scope takes both fields at once, so `{ reel: 1, slots: 'buffer' }` is the
-// buffers of ONE reel. This demo cycles the three states on each spin and
-// prints what every hidden cell actually holds, so you can watch it work.
+// buffers of ONE reel, and the two ends have their own names:
+// `'bufferStart'` is the side at the smaller main coordinate (above here,
+// left on a horizontal set) and `'bufferEnd'` the other. This demo cycles
+// the four states one per spin and prints what every hidden cell actually
+// holds, so you can watch it work.
 
 const COIN = 'coin';
 const COIN_CARD = { id: COIN, color: 0xf6c945, label: 'COIN', textColor: 0x3b2f00 };
@@ -50,18 +53,20 @@ const reelSet = new ReelSetBuilder()
 // scope is its own layer: clearing the per-reel one does not touch the
 // global one. Everything else about the set is unchanged either way -- COIN
 // keeps its weight of 80 on the spinning strip in all three states.
-const MODES = ['off', 'reel 1 only', 'every reel'];
+const MODES = ['off', 'reel 1 only', 'above only', 'every reel'];
 let mode = 0;
 
 function applyPool() {
   const banned = { exclude: [COIN] };
-  // Reel 1's own buffer layer.
-  reelSet.randomSymbols.set(MODES[mode] === 'reel 1 only' ? banned : null, {
+  const state = MODES[mode];
+  // Three separate layers. setting one never disturbs the others, and
+  // passing `null` removes just that one.
+  reelSet.randomSymbols.set(state === 'reel 1 only' ? banned : null, {
     reel: 1,
     slots: 'buffer',
   });
-  // The set-wide buffer layer.
-  reelSet.randomSymbols.set(MODES[mode] === 'every reel' ? banned : null, { slots: 'buffer' });
+  reelSet.randomSymbols.set(state === 'above only' ? banned : null, { slots: 'bufferStart' });
+  reelSet.randomSymbols.set(state === 'every reel' ? banned : null, { slots: 'buffer' });
 }
 
 // --- Readouts: what is actually in the hidden cells --------------------
@@ -138,18 +143,20 @@ function refreshLabels() {
     endLabels[i].style.fill = last === COIN ? 0xd97706 : 0x16a34a;
   }
   const state = MODES[mode];
-  banner.text =
-    state === 'off'
-      ? 'no buffer pool'
-      : state === 'reel 1 only'
-        ? "set({ exclude: ['COIN'] }, { reel: 1, slots: 'buffer' })"
-        : "set({ exclude: ['COIN'] }, { slots: 'buffer' })";
-  meaning.text =
-    state === 'off'
-      ? 'COIN parks in every hidden cell'
-      : state === 'reel 1 only'
-        ? 'only reel 1 stays clean -- indices are 0-based, so that is the SECOND reel'
-        : 'no COIN parks off-window on any reel';
+  const CALLS = {
+    off: 'no buffer pool',
+    'reel 1 only': "set({ exclude: ['COIN'] }, { reel: 1, slots: 'buffer' })",
+    'above only': "set({ exclude: ['COIN'] }, { slots: 'bufferStart' })",
+    'every reel': "set({ exclude: ['COIN'] }, { slots: 'buffer' })",
+  };
+  const MEANINGS = {
+    off: 'COIN parks in every hidden cell',
+    'reel 1 only': 'only reel 1 stays clean -- indices are 0-based, so that is the SECOND reel',
+    'above only': 'the cells ABOVE the grid are clean, the ones below are untouched',
+    'every reel': 'no COIN parks off-window on any reel, either end',
+  };
+  banner.text = CALLS[state];
+  meaning.text = MEANINGS[state];
   banner.style.fill = state === 'off' ? 0xd97706 : 0x16a34a;
   meaning.style.fill = state === 'off' ? 0xd97706 : 0x16a34a;
 }

@@ -91,10 +91,19 @@ reelSet.randomSymbols.set({ exclude: ['COIN'] }, { slots: 'buffer' });
 builder.randomSymbols({ exclude: ['COIN'] }, { slots: 'buffer' });
 ```
 
-Add `{ reel: n }` to the scope for one reel only. Weights work the same way as
-exclusions -- `{ weights: { COIN: 0 } }` bans it just as surely. Buffer pools
-stack on top of the spinning ones: what the strip may not show, the buffer may
-not show either. An explicit `bufferStart` / `bufferEnd` target is the game
+The two ends take their own pools, under the names this page already uses:
+
+```ts
+// Nothing peeks in from above; the cell below the grid is left alone.
+reelSet.randomSymbols.set({ exclude: ['COIN'] }, { slots: 'bufferStart' });
+```
+
+Add `{ reel: n }` to any of them for one reel only -- `{ reel: 2, slots:
+'bufferEnd' }` is one end of one reel. Weights work the same way as
+exclusions: `{ weights: { COIN: 0 } }` bans it just as surely. Each layer
+stacks on the wider ones: what the strip may not show, no buffer cell may
+show either, and what a `'buffer'` pool bans is banned at both ends whatever
+the side pools say. An explicit `bufferStart` / `bufferEnd` target is the game
 speaking and always wins over a pool.
 
 ## Big symbols in buffers

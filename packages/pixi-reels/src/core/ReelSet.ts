@@ -1968,7 +1968,7 @@ export class ReelSet extends Container implements Disposable {
     // the vacated cell visually swaps to the backfill while the flight
     // symbol is still in motion.
     const backfill =
-      opts?.backfill ?? this._frameBuilder.randomProvider.next(false, from.reel);
+      opts?.backfill ?? this._frameBuilder.randomProvider.next('spinning', from.reel);
     const fromVisible = fromReel.getVisibleSymbols();
     fromVisible[from.cell] = backfill;
     fromReel.placeSymbols({ visible: fromVisible });

@@ -3,7 +3,14 @@ import type {
   RandomSymbolControl,
   SymbolPool,
   SymbolPoolScope,
+  SymbolPoolSlots,
 } from './SymbolPool.js';
+
+/**
+ * Which slot the engine is filling. `'buffer'` is a LAYER, never a slot: a
+ * real cell is always on one side or the other.
+ */
+export type DrawSlot = 'spinning' | 'bufferStart' | 'bufferEnd';
 
 /** A compiled draw table: ids with weight > 0 plus their cumulative weights. */
 interface DrawTable {
@@ -18,9 +25,10 @@ const ALL_REELS = '*';
 /**
  * Weighted random symbol selector using binary search on cumulative weights.
  *
- * On top of the registered weights it carries up to four layers of
- * `SymbolPool` overrides. global and per-reel, for the spinning strip and
- * for the buffer cells. See `SymbolPoolScope` for how they resolve.
+ * On top of the registered weights it carries layers of `SymbolPool`
+ * overrides. global and per-reel, for the spinning strip, for both buffer
+ * ends at once, and for either end on its own. See `SymbolPoolScope` for
+ * how they resolve.
  */
 export class RandomSymbolProvider implements RandomSymbolControl {
   private _symbols: string[];
@@ -47,13 +55,13 @@ export class RandomSymbolProvider implements RandomSymbolControl {
   /**
    * Get a random symbol for one slot.
    *
-   * @param useBufferExclusion - True for a slot outside the visible window,
-   *   so the buffer pools apply on top of the spinning ones.
+   * @param slot - Which slot is being filled. A buffer slot names its side,
+   *   so the pools for that side apply on top of the wider ones.
    * @param reelIndex - Reel the slot belongs to. Omit for a draw that
    *   belongs to no particular reel; per-reel pools then don't apply.
    */
-  next(useBufferExclusion: boolean = false, reelIndex?: number): string {
-    const table = this._table(useBufferExclusion, reelIndex);
+  next(slot: DrawSlot = 'spinning', reelIndex?: number): string {
+    const table = this._table(slot, reelIndex);
     const rand = this._rng() * table.total;
     let lo = 0;
     let hi = table.cumulative.length - 1;
@@ -70,7 +78,7 @@ export class RandomSymbolProvider implements RandomSymbolControl {
 
   /** @inheritdoc */
   set(pool: SymbolPool | null, scope: SymbolPoolScope = {}): void {
-    const key = this._key(scope.slots === 'buffer', scope.reel);
+    const key = this._key(scope.slots ?? 'spinning', scope.reel);
     const previous = this._pools.get(key);
     if (pool === null) {
       this._pools.delete(key);
@@ -101,7 +109,7 @@ export class RandomSymbolProvider implements RandomSymbolControl {
 
   /** @inheritdoc */
   weights(scope: SymbolPoolScope = {}): Record<string, number> {
-    const resolved = this._resolve(scope.slots === 'buffer', scope.reel);
+    const resolved = this._resolve(scope.slots ?? 'spinning', scope.reel);
     const out: Record<string, number> = {};
     for (const id of this._symbols) out[id] = resolved[id];
     return out;
@@ -114,7 +122,7 @@ export class RandomSymbolProvider implements RandomSymbolControl {
    * weight overrides on the global spinning pool alone.
    */
   setExcludeSpinning(symbolIds: string[]): void {
-    this._setExclude(false, symbolIds);
+    this._setExclude('spinning', symbolIds);
   }
 
   /**
@@ -124,7 +132,7 @@ export class RandomSymbolProvider implements RandomSymbolControl {
    * weight overrides on the global buffer pool alone.
    */
   setExcludeBuffer(symbolIds: string[]): void {
-    this._setExclude(true, symbolIds);
+    this._setExclude('buffer', symbolIds);
   }
 
   /** Update weights at runtime (e.g., for different game modes). */
@@ -149,16 +157,13 @@ export class RandomSymbolProvider implements RandomSymbolControl {
     this._assertDrawable();
   }
 
-  private _setExclude(isBuffer: boolean, symbolIds: string[]): void {
-    const current = this._pools.get(this._key(isBuffer, undefined));
-    this.set(
-      { weights: current?.weights, exclude: symbolIds },
-      { slots: isBuffer ? 'buffer' : 'spinning' },
-    );
+  private _setExclude(slots: SymbolPoolSlots, symbolIds: string[]): void {
+    const current = this._pools.get(this._key(slots, undefined));
+    this.set({ weights: current?.weights, exclude: symbolIds }, { slots });
   }
 
-  private _key(isBuffer: boolean, reel: number | undefined): string {
-    return `${isBuffer ? 'buffer' : 'spinning'}:${reel ?? ALL_REELS}`;
+  private _key(slots: SymbolPoolSlots, reel: number | undefined): string {
+    return `${slots}:${reel ?? ALL_REELS}`;
   }
 
   private _readBaseWeights(symbolsData: Record<string, SymbolData>): void {
@@ -169,19 +174,37 @@ export class RandomSymbolProvider implements RandomSymbolControl {
   }
 
   /**
-   * Effective weight per symbol id for one draw, excluded ids flattened to
-   * `0`. Layers apply base → global spinning → reel spinning → global
-   * buffer → reel buffer, so a buffer pool always narrows what the
-   * spinning pools already allow.
+   * The layer keys that apply to one draw, widest first.
+   *
+   * A `'bufferStart'` cell reads the spinning layers, then the both-sides
+   * buffer layers, then its own side's - so every layer only ever narrows
+   * the one before it. Asking for `'buffer'` stops before the side layers:
+   * that is what both sides inherit, and what `weights()` reports for it.
    */
-  private _resolve(isBuffer: boolean, reelIndex: number | undefined): Record<string, number> {
+  private _layerKeys(slots: SymbolPoolSlots, reelIndex: number | undefined): string[] {
+    const perReel = (key: SymbolPoolSlots): string[] =>
+      reelIndex === undefined
+        ? [this._key(key, undefined)]
+        : [this._key(key, undefined), this._key(key, reelIndex)];
+
+    const keys = perReel('spinning');
+    if (slots === 'spinning') return keys;
+    keys.push(...perReel('buffer'));
+    if (slots === 'buffer') return keys;
+    keys.push(...perReel(slots));
+    return keys;
+  }
+
+  /**
+   * Effective weight per symbol id for one draw, excluded ids flattened to
+   * `0`. See `_layerKeys` for the order.
+   */
+  private _resolve(
+    slots: SymbolPoolSlots,
+    reelIndex: number | undefined,
+  ): Record<string, number> {
     const weights = { ...this._baseWeights };
-    const layers = [this._key(false, undefined)];
-    if (reelIndex !== undefined) layers.push(this._key(false, reelIndex));
-    if (isBuffer) {
-      layers.push(this._key(true, undefined));
-      if (reelIndex !== undefined) layers.push(this._key(true, reelIndex));
-    }
+    const layers = this._layerKeys(slots, reelIndex);
     const excluded = new Set<string>();
     for (const key of layers) {
       const pool = this._pools.get(key);
@@ -201,20 +224,20 @@ export class RandomSymbolProvider implements RandomSymbolControl {
     return weights;
   }
 
-  private _table(isBuffer: boolean, reelIndex: number | undefined): DrawTable {
-    const key = this._key(isBuffer, reelIndex);
+  private _table(slots: SymbolPoolSlots, reelIndex: number | undefined): DrawTable {
+    const key = this._key(slots, reelIndex);
     const cached = this._tables.get(key);
     if (cached) return cached;
-    const table = this._compile(isBuffer, reelIndex);
+    const table = this._compile(slots, reelIndex);
     if (table.total <= 0) {
-      throw new Error(this._emptyPoolMessage(isBuffer, reelIndex));
+      throw new Error(this._emptyPoolMessage(slots, reelIndex));
     }
     this._tables.set(key, table);
     return table;
   }
 
-  private _compile(isBuffer: boolean, reelIndex: number | undefined): DrawTable {
-    const weights = this._resolve(isBuffer, reelIndex);
+  private _compile(slots: SymbolPoolSlots, reelIndex: number | undefined): DrawTable {
+    const weights = this._resolve(slots, reelIndex);
     const table: DrawTable = { ids: [], cumulative: [], total: 0 };
     for (const id of this._symbols) {
       const weight = weights[id];
@@ -233,7 +256,7 @@ export class RandomSymbolProvider implements RandomSymbolControl {
     for (const id of ids) {
       if (this._baseWeights[id] === undefined) {
         throw new Error(
-          `SymbolPool ${this._scopeName(scope.slots === 'buffer', scope.reel)} names symbol '${id}', ` +
+          `SymbolPool ${this._scopeName(scope.slots ?? 'spinning', scope.reel)} names symbol '${id}', ` +
             `which is not registered. Registered ids: ${this._symbols.join(', ')}.`,
         );
       }
@@ -251,29 +274,35 @@ export class RandomSymbolProvider implements RandomSymbolControl {
       const reel = key.slice(key.indexOf(':') + 1);
       if (reel !== ALL_REELS) reels.add(Number(reel));
     }
-    const scopes: [boolean, number | undefined][] = [
-      [false, undefined],
-      [true, undefined],
-    ];
+    // Widest scope first, so the message names the layer that actually
+    // emptied things: a pool that clears `'buffer'` empties both sides, and
+    // "buffer cells" is a better answer than "buffer-start cells".
+    const drawn: SymbolPoolSlots[] = ['spinning', 'buffer', 'bufferStart', 'bufferEnd'];
+    const scopes: [SymbolPoolSlots, number | undefined][] = drawn.map((slot) => [slot, undefined]);
     for (const reel of reels) {
-      scopes.push([false, reel], [true, reel]);
+      for (const slot of drawn) scopes.push([slot, reel]);
     }
-    for (const [isBuffer, reel] of scopes) {
-      if (this._compile(isBuffer, reel).total <= 0) {
-        throw new Error(this._emptyPoolMessage(isBuffer, reel));
+    for (const [slot, reel] of scopes) {
+      if (this._compile(slot, reel).total <= 0) {
+        throw new Error(this._emptyPoolMessage(slot, reel));
       }
     }
   }
 
-  private _emptyPoolMessage(isBuffer: boolean, reelIndex: number | undefined): string {
+  private _emptyPoolMessage(slots: SymbolPoolSlots, reelIndex: number | undefined): string {
     return (
-      `No symbol left to draw ${this._scopeName(isBuffer, reelIndex)}: every registered symbol is ` +
+      `No symbol left to draw ${this._scopeName(slots, reelIndex)}: every registered symbol is ` +
       'excluded or weighted 0, so the strip cannot be filled. Leave at least one symbol drawable.'
     );
   }
 
-  private _scopeName(isBuffer: boolean, reelIndex: number | undefined): string {
-    const where = isBuffer ? 'buffer cells' : 'spinning cells';
+  private _scopeName(slots: SymbolPoolSlots, reelIndex: number | undefined): string {
+    const where = {
+      spinning: 'spinning cells',
+      buffer: 'buffer cells',
+      bufferStart: 'buffer-start cells',
+      bufferEnd: 'buffer-end cells',
+    }[slots];
     return reelIndex === undefined ? `for ${where} on every reel` : `for ${where} on reel ${reelIndex}`;
   }
 

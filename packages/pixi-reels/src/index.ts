@@ -117,6 +117,7 @@ export type {
   RandomSymbolControl,
   SymbolPool,
   SymbolPoolScope,
+  SymbolPoolSlots,
 } from './frame/SymbolPool.js';
 export {
   cloneColumnTarget,

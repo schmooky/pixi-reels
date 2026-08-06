@@ -9,7 +9,7 @@ import { VERTICAL_FORWARD } from './ReelAxis.js';
 import { StopSequencer } from './StopSequencer.js';
 import { EventEmitter } from '../events/EventEmitter.js';
 import type { ReelEvents } from '../events/ReelEvents.js';
-import type { RandomSymbolProvider } from '../frame/RandomSymbolProvider.js';
+import type { DrawSlot, RandomSymbolProvider } from '../frame/RandomSymbolProvider.js';
 import { columnTargetToStrip, type ColumnTarget } from '../frame/ColumnTarget.js';
 import type { ReelViewport } from './ReelViewport.js';
 import type { SpinningMode } from '../spin/modes/SpinningMode.js';
@@ -1134,7 +1134,8 @@ export class Reel implements Disposable {
         if (k <= wrapsToVisible) {
           queue.push(incoming[wrapsToVisible - k]);
         } else {
-          queue.push(this._randomProvider.next(true, this.reelIndex));
+          // These wraps enter at the buffer-start end, so that side's pools apply.
+          queue.push(this._randomProvider.next('bufferStart', this.reelIndex));
         }
       }
       this._nudgeQueue = queue;
@@ -1151,7 +1152,8 @@ export class Reel implements Disposable {
         if (k <= wrapsToVisible) {
           queue.push(incoming[bufferEnd + k - 1]);
         } else {
-          queue.push(this._randomProvider.next(true, this.reelIndex));
+          // Mirror of the branch above: these enter at the buffer-end side.
+          queue.push(this._randomProvider.next('bufferEnd', this.reelIndex));
         }
       }
       this._nudgeQueue = queue;
@@ -1315,11 +1317,10 @@ export class Reel implements Disposable {
   placeStrip(frame: ReadonlyArray<string | undefined>): void {
     const totalSlots = this.symbols.length;
     for (let i = 0; i < totalSlots; i++) {
-      // Buffer pools apply to the buffer slots only. a visible cell the
-      // frame left blank is a spinning-pool draw, same rule FrameBuilder
-      // uses when it random-fills a frame.
-      const targetId =
-        frame[i] ?? this._randomProvider.next(this._isBufferSlot(i), this.reelIndex);
+      // Buffer pools apply to the buffer slots only, and each side has its
+      // own: a visible cell the frame left blank is a spinning-pool draw,
+      // same rule FrameBuilder uses when it random-fills a frame.
+      const targetId = frame[i] ?? this._randomProvider.next(this._slotKind(i), this.reelIndex);
       this._replaceSymbol(i, targetId);
     }
     this.motion.snapToGrid();
@@ -1356,7 +1357,8 @@ export class Reel implements Disposable {
     // Grow: append additional symbols at the bottom buffer. New symbols are
     // parented based on `unmask` flag. same rule as `_replaceSymbol`.
     while (this.symbols.length < newTotal) {
-      const id = this._randomProvider.next(true, this.reelIndex);
+      // The appended slot is always the new tail, i.e. the buffer-end side.
+      const id = this._randomProvider.next('bufferEnd', this.reelIndex);
       const sym = this._symbolFactory.acquire(id);
       const slot = this.symbols.length;
       sym.resize(newSize.width, newSize.height);
@@ -1491,6 +1493,16 @@ export class Reel implements Disposable {
   /** Whether strip slot `index` sits outside the visible window. */
   private _isBufferSlot(index: number): boolean {
     return index < this._bufferStart || index >= this._bufferStart + this._visibleCells;
+  }
+
+  /**
+   * Which pool slot `index` draws from: the visible window is `'spinning'`,
+   * and a buffer cell names its side so that side's pools apply.
+   */
+  private _slotKind(index: number): DrawSlot {
+    if (index < this._bufferStart) return 'bufferStart';
+    if (index >= this._bufferStart + this._visibleCells) return 'bufferEnd';
+    return 'spinning';
   }
 
   /**
@@ -1656,7 +1668,7 @@ export class Reel implements Disposable {
     } else if (this._isStopping && this.stopSequencer.hasRemaining) {
       newSymbolId = this.stopSequencer.next();
     } else {
-      newSymbolId = this._randomProvider.next(false, this.reelIndex);
+      newSymbolId = this._randomProvider.next('spinning', this.reelIndex);
     }
 
     this._replaceSymbol(this.symbols.indexOf(symbol), newSymbolId);

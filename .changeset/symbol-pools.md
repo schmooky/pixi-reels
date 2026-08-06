@@ -16,7 +16,16 @@ reelSet.randomSymbols.set({ weights: { WILD: 40 } }, { reel: 2 });
 reelSet.randomSymbols.set(null, { reel: 2 });
 ```
 
-Layers resolve base weights -> global spinning -> per-reel spinning -> global buffer -> per-reel buffer. Weights override per symbol id, exclusions accumulate, and a narrower layer can never re-admit what a wider one banned. A weight of `0` bans a symbol as surely as `exclude` does, in a pool and in `weights()` alike. Pools govern the RANDOM draw only. an explicit `setResult` / `initialFrame` target is the game speaking and always wins. `weights(scope?)` reports the effective table, so a game can assert its own configuration in a test.
+The two ends of the strip can be governed separately: `slots` takes `'bufferStart'` and `'bufferEnd'` as well as `'buffer'` (both) and `'spinning'` (everything). `bufferStart` is the side at the smaller main coordinate - above on a vertical set, left on a horizontal one - the same end `ColumnTarget.bufferStart` addresses, whichever way the reel travels.
+
+```ts
+// Nothing peeks in from above; the cell below the grid is left alone.
+reelSet.randomSymbols.set({ exclude: ['COIN'] }, { slots: 'bufferStart' });
+// ...on one reel only.
+reelSet.randomSymbols.set({ exclude: ['COIN'] }, { reel: 2, slots: 'bufferEnd' });
+```
+
+Layers resolve base weights -> global spinning -> per-reel spinning -> global buffer -> per-reel buffer -> global side -> per-reel side. Weights override per symbol id, exclusions accumulate, and a narrower layer can never re-admit what a wider one banned. A weight of `0` bans a symbol as surely as `exclude` does, in a pool and in `weights()` alike. Pools govern the RANDOM draw only. an explicit `setResult` / `initialFrame` target is the game speaking and always wins. `weights(scope?)` reports the effective table, so a game can assert its own configuration in a test; ask for `'buffer'` to see what both sides inherit, or for a side to see exactly what it draws from.
 
 Two failure modes now fail loud instead of quietly doing nothing: naming an unregistered symbol id in a pool throws (with the registered ids listed), and a pool that leaves some reachable scope with nothing to draw throws at the call that caused it, naming the scope, rather than mid-spin on whichever reel wraps first. The rejected pool is not installed. `setExcludeSpinning` / `setExcludeBuffer` keep working as sugar over the global spinning / buffer pools.
 

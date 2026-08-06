@@ -19,22 +19,37 @@ export interface SymbolPool {
 }
 
 /**
+ * Which slots a pool applies to.
+ *
+ *   - `'spinning'` covers every random draw on the reel.
+ *   - `'buffer'` narrows the cells outside the visible window, both sides.
+ *   - `'bufferStart'` / `'bufferEnd'` narrow ONE side of the window.
+ *
+ * `bufferStart` is the side at the smaller main coordinate (above on a
+ * vertical set, left on a horizontal one) and `bufferEnd` the larger,
+ * whichever way the reel travels. Same ends `ColumnTarget.bufferStart` /
+ * `bufferEnd` address.
+ */
+export type SymbolPoolSlots = 'spinning' | 'buffer' | 'bufferStart' | 'bufferEnd';
+
+/**
  * Which draws a pool applies to.
  *
  * Layers resolve base -> global spinning -> per-reel spinning -> global
- * buffer -> per-reel buffer. Weights override per symbol id, exclusions
- * accumulate. So a `'buffer'` pool is always ON TOP of the spinning rules
- * for that reel: what the strip may not show while it scrolls, the buffer
- * may not show either.
+ * buffer -> per-reel buffer -> global side -> per-reel side, where "side" is
+ * whichever of `bufferStart` / `bufferEnd` the slot belongs to. Weights
+ * override per symbol id, exclusions accumulate.
+ *
+ * So each layer is always ON TOP of the wider ones: what the strip may not
+ * show while it scrolls, no buffer cell may show either, and what a
+ * `'buffer'` pool bans is banned on both sides regardless of what the
+ * side pools say.
  */
 export interface SymbolPoolScope {
   /** Restrict to one reel index. Omit to apply to every reel. */
   reel?: number;
-  /**
-   * `'spinning'` (default) covers every random draw on the reel.
-   * `'buffer'` narrows only the cells outside the visible window.
-   */
-  slots?: 'spinning' | 'buffer';
+  /** Which slots this pool governs. Defaults to `'spinning'`. */
+  slots?: SymbolPoolSlots;
 }
 
 /**
@@ -50,6 +65,10 @@ export interface SymbolPoolScope {
  *
  * // Nothing collectible may sit half-visible above or below the grid.
  * reelSet.randomSymbols.set({ exclude: ['COIN'] }, { slots: 'buffer' });
+ *
+ * // Or one side of the window only: nothing peeks in from above, while
+ * // the cell below the grid is left alone.
+ * reelSet.randomSymbols.set({ exclude: ['COIN'] }, { slots: 'bufferStart' });
  *
  * // Drop one layer, or all of them.
  * reelSet.randomSymbols.set(null, { reel: 2 });
@@ -76,6 +95,10 @@ export interface RandomSymbolControl {
   /**
    * The weights the engine will actually draw from for a scope, excluded
    * ids reported as `0`. For tests, debug overlays, and sanity checks.
+   *
+   * `slots: 'buffer'` reports what BOTH sides inherit, before either side's
+   * own pool; ask for `'bufferStart'` / `'bufferEnd'` for the exact table a
+   * side draws from.
    */
   weights(scope?: SymbolPoolScope): Record<string, number>;
 }
