@@ -389,3 +389,105 @@ describe('unmask through the cascade refill path', () => {
     }
   });
 });
+
+/**
+ * Regression: an `unmask` symbol that lands in a BUFFER slot must stay under
+ * the mask.
+ *
+ * `unmask` lifts a view out of the reel's masked container so it can render
+ * above the mask. That is a presentation for a symbol the player is looking
+ * at, i.e. a visible cell. The lift was decided from the symbol id alone, so
+ * any at-rest write to a buffer slot lifted it too - and a buffer slot is
+ * parked outside the window precisely because the mask should hide it. The
+ * result was a symbol hanging above or below the grid until the next spin
+ * pulled it back down.
+ *
+ * `StopPhase.onSkip` is the path that made it visible in a real game: the
+ * skip lands the full strip (buffers included) through `placeStrip`, and if
+ * the bounce has already started the reel is back at rest, so every buffered
+ * unmask symbol lifted.
+ */
+describe('unmask never lifts a buffer cell', () => {
+  const makeBufferHarness = () =>
+    createTestReelSet({
+      reels: 1,
+      visibleCells: 3,
+      symbolIds: SYMBOLS,
+      bufferSymbols: 2,
+      symbolData: { wild: { unmask: true } },
+    });
+
+  it('keeps a buffer-start / buffer-end wild masked when the strip is placed at rest', () => {
+    const h = makeBufferHarness();
+    try {
+      const reel = h.reelSet.reels[0];
+      reel.placeSymbols({
+        visible: ['a', 'a', 'a'],
+        bufferStart: ['wild'],
+        bufferEnd: ['wild'],
+      });
+
+      expect(reel.symbols[1].symbolId).toBe('wild');
+      expect(reel.symbols[1].view.parent).toBe(reel.container);
+      const last = reel.symbols.length - 1;
+      expect(reel.symbols[last - 1].symbolId).toBe('wild');
+      expect(reel.symbols[last - 1].view.parent).toBe(reel.container);
+    } finally {
+      h.destroy();
+    }
+  });
+
+  it('still lifts the visible cells of that same at-rest placement', () => {
+    const h = makeBufferHarness();
+    try {
+      const reel = h.reelSet.reels[0];
+      reel.placeSymbols({ visible: ['a', 'wild', 'a'], bufferStart: ['wild'] });
+
+      expect(reel.getSymbolAt(1).view.parent).toBe(h.reelSet.viewport.unmaskedContainer);
+      expect(reel.symbols[1].view.parent).toBe(reel.container);
+    } finally {
+      h.destroy();
+    }
+  });
+
+  it('lands a skip during the bounce with the buffered wilds still masked', async () => {
+    const h = makeBufferHarness();
+    try {
+      // Land once so the reel is at rest with a lifted wild, exactly the
+      // state `onSkip` finds when the bounce has already begun.
+      await h.spinAndLand([{ visible: ['a', 'wild', 'a'] }]);
+      const reel = h.reelSet.reels[0];
+      expect(reel.getSymbolAt(1).view.parent).toBe(h.reelSet.viewport.unmaskedContainer);
+
+      // The skip path lands the FULL strip, buffers included.
+      reel.placeStrip(['wild', 'a', 'a', 'a', 'a', 'wild', 'wild']);
+
+      // Slots 0-1 and 5-6 are buffer; 2-4 are the window.
+      for (const i of [0, 1, 5, 6]) {
+        expect(reel.symbols[i].view.parent, `buffer slot ${i}`).toBe(reel.container);
+      }
+    } finally {
+      h.destroy();
+    }
+  });
+
+  it('re-masks a lifted wild that a nudge carried out of the window', async () => {
+    const h = makeBufferHarness();
+    try {
+      await h.spinAndLand([{ visible: ['wild', 'a', 'a'] }]);
+      const reel = h.reelSet.reels[0];
+      const wild = reel.getSymbolAt(0);
+      expect(wild.view.parent).toBe(h.reelSet.viewport.unmaskedContainer);
+
+      // Nudge backward by one: the lifted wild rotates from visible cell 0
+      // into the buffer above. Nothing replaces it, so only the settle can
+      // put it back under the mask.
+      await h.reelSet.nudge(0, { distance: 1, direction: 'reverse', incoming: ['b'] });
+
+      expect(reel.symbols[1].symbolId).toBe('wild');
+      expect(reel.symbols[1].view.parent).toBe(reel.container);
+    } finally {
+      h.destroy();
+    }
+  });
+});

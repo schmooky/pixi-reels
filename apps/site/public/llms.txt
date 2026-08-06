@@ -8,7 +8,7 @@ Site: https://pixi-reels.schmooky.dev
 Repo: https://github.com/schmooky/pixi-reels
 Package: https://www.npmjs.com/package/pixi-reels
 
-Generated: 2026-08-04T15:37:51.130Z
+Generated: 2026-08-06T11:31:32.949Z
 
 ## Quick start
 
@@ -223,7 +223,7 @@ Steps:
 
 ### Symbols, layering & motion blur
 URL: https://pixi-reels.schmooky.dev/recipes/symbols/
-Tags: symbols, layering, static-spin, motion-blur, spine, horizontal, orientation
+Tags: symbols, pools, buffers, weights, layering, static-spin, motion-blur, spine, horizontal, orientation
 APIs: 
 Steps:
   - 
@@ -1607,6 +1607,202 @@ return {
 
     hud.text = `revealed · total ${total} · top ${PRIZE[top.id]} (${top.id})`;
     busy = false;
+  },
+};
+```
+
+### buffer-pool-exclude
+URL: https://pixi-reels.schmooky.dev/recipes/buffer-pool-exclude/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//                   PIXI, app
+//
+// Keep a symbol out of the buffer cells -- everywhere, or on one reel.
+//
+// The buffer cells are the hidden slots just outside the visible window.
+// They are filled at random like the rest of the strip, so a symbol you
+// only ever want the player to see INSIDE the grid can quietly park there:
+// half-visible under a short mask, lifted above it by `unmask: true`, or
+// scrolling into view on the next spin.
+//
+// `randomSymbols.set(pool, scope)` narrows that draw and nothing else. The
+// scope takes both fields at once, so `{ reel: 1, slots: 'buffer' }` is the
+// buffers of ONE reel, and the two ends have their own names:
+// `'bufferStart'` is the side at the smaller main coordinate (above here,
+// left on a horizontal set) and `'bufferEnd'` the other. This demo cycles
+// the four states one per spin and prints what every hidden cell actually
+// holds, so you can watch it work.
+
+const COIN = 'coin';
+const COIN_CARD = { id: COIN, color: 0xf6c945, label: 'COIN', textColor: 0x3b2f00 };
+const FILLER = ['7', '8', '9', '10'];
+
+const COLS = 3, ROWS = 3, SIZE = 90, GAP = 4;
+
+const reelSet = new ReelSetBuilder()
+  .reels(COLS)
+  .visibleCells(ROWS)
+  .symbolSize(SIZE, SIZE)
+  .symbolGap(GAP, GAP)
+  // One hidden cell each side. Both are read out below.
+  .bufferSymbols(1)
+  .symbols((r) => {
+    for (const sym of [...CARD_DECK, COIN_CARD]) {
+      r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
+    }
+  })
+  // Coin-heavy on purpose: with no pool, nearly every random cell is a COIN,
+  // so the buffers fill with them and the readouts light up. Every registered
+  // id is listed - an id left out of `weights()` keeps the default of 10,
+  // which would quietly water this down.
+  .weights({ '7': 2, '8': 2, '9': 2, '10': 2, J: 2, Q: 2, K: 2, A: 2, [COIN]: 300 })
+  .speed('normal', { ...SpeedPresets.NORMAL, minimumSpinTime: 900 })
+  // Visible cells start as ordinary cards, so the only COINs on screen are
+  // the ones the pool is about.
+  .initialFrame(Array.from({ length: 3 }, () => ({ visible: ['7', '8', '9'] })))
+  .ticker(app.ticker)
+  .build();
+
+// --- The calls this recipe is about -----------------------------------
+// Three states, cycled one per spin. `null` removes a pool again, and each
+// scope is its own layer: clearing the per-reel one does not touch the
+// global one. Everything else about the set is unchanged either way -- COIN
+// keeps its weight of 80 on the spinning strip in all three states.
+const MODES = ['off', 'reel 1 only', 'above only', 'every reel'];
+let mode = 0;
+
+function applyPool() {
+  const banned = { exclude: [COIN] };
+  const state = MODES[mode];
+  // Three separate layers. setting one never disturbs the others, and
+  // passing `null` removes just that one.
+  reelSet.randomSymbols.set(state === 'reel 1 only' ? banned : null, {
+    reel: 1,
+    slots: 'buffer',
+  });
+  reelSet.randomSymbols.set(state === 'above only' ? banned : null, { slots: 'bufferStart' });
+  reelSet.randomSymbols.set(state === 'every reel' ? banned : null, { slots: 'buffer' });
+}
+
+// --- Readouts: what is actually in the hidden cells --------------------
+// Everything lives in one composition root with room above the grid for the
+// banner, returned as `stage` so the runner scales and centres the whole
+// thing rather than clipping the parts that sit above the reels.
+const PAD_TOP = 94;
+const stage = new PIXI.Container();
+reelSet.y = PAD_TOP;
+stage.addChild(reelSet);
+
+const text = (size, weight) =>
+  new PIXI.Text({
+    text: '',
+    style: {
+      fontFamily: 'ui-monospace, monospace',
+      fontSize: size,
+      fontWeight: weight,
+      fill: 0x475569,
+    },
+  });
+
+const banner = text(14, '700');
+banner.y = 0;
+stage.addChild(banner);
+
+const meaning = text(11, '600');
+meaning.y = 20;
+stage.addChild(meaning);
+
+const hint = text(10, '500');
+hint.style.fill = 0x94a3b8;
+hint.y = 40;
+hint.text = 'the labels above and below each reel ARE its hidden cells';
+stage.addChild(hint);
+
+// One label per hidden cell, sitting where that cell sits: above the grid
+// for bufferStart, below it for bufferEnd. Each column also carries its own
+// index, because reel indices are 0-based: `{ reel: 1 }` is the SECOND reel.
+const startLabels = [];
+const endLabels = [];
+for (let i = 0; i < COLS; i++) {
+  const index = text(10, '500');
+  index.style.fill = 0x94a3b8;
+  index.anchor.set(0.5, 1);
+  index.x = i * (SIZE + GAP) + SIZE / 2;
+  index.y = PAD_TOP - 22;
+  index.text = `reel ${i}`;
+  stage.addChild(index);
+
+  const top = text(11, '700');
+  top.anchor.set(0.5, 1);
+  top.x = i * (SIZE + GAP) + SIZE / 2;
+  top.y = PAD_TOP - 4;
+  stage.addChild(top);
+  startLabels.push(top);
+
+  const bottom = text(11, '700');
+  bottom.anchor.set(0.5, 0);
+  bottom.x = top.x;
+  bottom.y = PAD_TOP + ROWS * (SIZE + GAP) - GAP + 6;
+  stage.addChild(bottom);
+  endLabels.push(bottom);
+}
+
+function refreshLabels() {
+  for (let i = 0; i < COLS; i++) {
+    const strip = reelSet.reels[i].symbols;
+    const first = strip[0].symbolId;
+    const last = strip[strip.length - 1].symbolId;
+    startLabels[i].text = first;
+    startLabels[i].style.fill = first === COIN ? 0xd97706 : 0x16a34a;
+    endLabels[i].text = last;
+    endLabels[i].style.fill = last === COIN ? 0xd97706 : 0x16a34a;
+  }
+  const state = MODES[mode];
+  const CALLS = {
+    off: 'no buffer pool',
+    'reel 1 only': "set({ exclude: ['COIN'] }, { reel: 1, slots: 'buffer' })",
+    'above only': "set({ exclude: ['COIN'] }, { slots: 'bufferStart' })",
+    'every reel': "set({ exclude: ['COIN'] }, { slots: 'buffer' })",
+  };
+  const MEANINGS = {
+    off: 'COIN parks in every hidden cell',
+    'reel 1 only': 'only reel 1 stays clean -- indices are 0-based, so that is the SECOND reel',
+    'above only': 'the cells ABOVE the grid are clean, the ones below are untouched',
+    'every reel': 'no COIN parks off-window on any reel, either end',
+  };
+  banner.text = CALLS[state];
+  meaning.text = MEANINGS[state];
+  banner.style.fill = state === 'off' ? 0xd97706 : 0x16a34a;
+  meaning.style.fill = state === 'off' ? 0xd97706 : 0x16a34a;
+}
+
+const tick = () => refreshLabels();
+app.ticker.add(tick);
+applyPool();
+refreshLabels();
+
+return {
+  reelSet,
+  stage,
+  onSpin: async () => {
+    // Step to the next state so consecutive spins show all three.
+    mode = (mode + 1) % MODES.length;
+    applyPool();
+
+    const p = reelSet.spin();
+    await new Promise((r) => setTimeout(r, 200));
+    // Visible cells come from the server, as always. Only the cells nobody
+    // named -- here, the buffers -- are drawn from the pools.
+    reelSet.setResult(
+      Array.from({ length: COLS }, () => ({
+        visible: Array.from({ length: ROWS }, () => FILLER[Math.floor(Math.random() * FILLER.length)]),
+      })),
+    );
+    await p;
+  },
+  cleanup: () => {
+    app.ticker.remove(tick);
   },
 };
 ```
@@ -10320,6 +10516,119 @@ return {
 };
 ```
 
+### per-reel-symbol-pool
+URL: https://pixi-reels.schmooky.dev/recipes/per-reel-symbol-pool/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//                   WILD_CARD, PIXI, app
+//
+// Give one reel its own draw table.
+//
+// `builder.weights({...})` is one table for the whole set. A pool scoped to
+// `{ reel: n }` layers on top of it for that reel alone, so the strip
+// streaming past reel 2 can be nothing but wilds while its neighbours keep
+// the base mix -- no middleware, no second ReelSet.
+//
+// Watch the spin, not the landing: pools decide what SCROLLS past. What
+// stops on screen is whatever `setResult` says, exactly as before.
+
+const WILD = WILD_CARD.id;
+const LOW = ['7', '8'];
+const HIGH = ['J', 'Q', 'K', 'A'];
+
+const COLS = 5, ROWS = 3, SIZE = 84, GAP = 4;
+
+const reelSet = new ReelSetBuilder()
+  .reels(COLS)
+  .visibleCells(ROWS)
+  .symbolSize(SIZE, SIZE)
+  .symbolGap(GAP, GAP)
+  .symbols((r) => {
+    for (const sym of [...CARD_DECK, WILD_CARD]) {
+      r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
+    }
+  })
+  // The base table every reel starts from: low cards common, wild rare.
+  .weights({ '7': 20, '8': 20, '9': 14, '10': 14, J: 8, Q: 8, K: 6, A: 6, [WILD]: 2 })
+  // --- The three pools this recipe is about ---------------------------
+  // Build-time form. `reelSet.randomSymbols.set(pool, scope)` takes the same
+  // pool and scope at run time, which is where a feature-mode swap belongs.
+  //
+  // Reel 0: low cards only. Weight 0 bans a symbol as surely as `exclude`.
+  .randomSymbols({ weights: { '9': 0, '10': 0, J: 0, Q: 0, K: 0, A: 0, [WILD]: 0 } }, { reel: 0 })
+  // Reel 2: a wild reel while it spins.
+  .randomSymbols({ weights: { [WILD]: 400 } }, { reel: 2 })
+  // Reel 4: never teases a wild at all.
+  .randomSymbols({ exclude: [WILD] }, { reel: 4 })
+  .speed('normal', { ...SpeedPresets.NORMAL, minimumSpinTime: 1400, stopDelay: 220 })
+  .ticker(app.ticker)
+  .build();
+
+// --- Captions, so the rule under each reel is readable -----------------
+// One composition root with headroom for the title, returned as `stage`: the
+// runner scales and centres that instead of clipping what sits above y = 0.
+const CAPTIONS = ['low cards only', 'base table', 'WILD x400', 'base table', 'no WILD'];
+const PAD_TOP = 30;
+const gridBottom = PAD_TOP + ROWS * (SIZE + GAP) - GAP;
+
+const stage = new PIXI.Container();
+reelSet.y = PAD_TOP;
+stage.addChild(reelSet);
+
+const title = new PIXI.Text({
+  text: 'one weights() table, three per-reel pools on top',
+  style: { fontFamily: 'ui-monospace, monospace', fontSize: 13, fontWeight: '700', fill: 0x475569 },
+});
+title.y = 0;
+stage.addChild(title);
+
+for (let i = 0; i < COLS; i++) {
+  const scoped = CAPTIONS[i] !== 'base table';
+  // The index goes on the demo, not just in the source: reel indices are
+  // 0-based, so `{ reel: 2 }` is the THIRD reel, not the second.
+  const index = new PIXI.Text({
+    text: `reel ${i}`,
+    style: { fontFamily: 'ui-monospace, monospace', fontSize: 10, fontWeight: '700', fill: 0x94a3b8 },
+  });
+  index.anchor.set(0.5, 0);
+  index.x = i * (SIZE + GAP) + SIZE / 2;
+  index.y = gridBottom + 8;
+  stage.addChild(index);
+
+  const caption = new PIXI.Text({
+    text: CAPTIONS[i],
+    style: {
+      fontFamily: 'ui-monospace, monospace',
+      fontSize: 10,
+      fontWeight: scoped ? '700' : '500',
+      fill: scoped ? 0x16a34a : 0x94a3b8,
+    },
+  });
+  caption.anchor.set(0.5, 0);
+  caption.x = index.x;
+  caption.y = gridBottom + 22;
+  stage.addChild(caption);
+}
+
+// The engine only reports what it will draw; assert your own config with it.
+// eslint-disable-next-line no-console -- the point of the line is to be read
+console.log('reel 2 draw table:', reelSet.randomSymbols.weights({ reel: 2 }));
+
+return {
+  reelSet,
+  stage,
+  nextResult: () =>
+    // A perfectly ordinary server result. The pools never touch it.
+    Array.from({ length: COLS }, () =>
+      Array.from({ length: ROWS }, () => {
+        const pool = Math.random() < 0.5 ? LOW : HIGH;
+        return pool[Math.floor(Math.random() * pool.length)];
+      }),
+    ),
+};
+```
+
 ### positional-multiplier-pin
 URL: https://pixi-reels.schmooky.dev/recipes/positional-multiplier-pin/
 ```ts
@@ -14118,6 +14427,151 @@ return {
       stagger: 240,
       slowdown: { from: 0.5, to: 0.12 },
     });
+    await p;
+  },
+};
+```
+
+### unmask-stays-in-the-grid
+URL: https://pixi-reels.schmooky.dev/recipes/unmask-stays-in-the-grid/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//                   ReelSymbol, PIXI, app
+//
+// `unmask: true` lifts VISIBLE cells only.
+//
+// An unmasked symbol is parented to the viewport-wide unmasked container on
+// land, so art wider than its cell can overflow the grid instead of being
+// clipped. That is a presentation for a cell the player is looking at: the
+// same id sitting in a BUFFER cell stays under the mask, because a buffer
+// cell is parked outside the window precisely so nobody sees it.
+//
+// Both cases are on screen at once below. Same symbol, one cell apart.
+
+const PLATE = 'plate';
+const FILLER = ['7', '8', '9', '10'];
+
+const COLS = 4, ROWS = 3, SIZE = 88, GAP = 6;
+const GRID_W = COLS * (SIZE + GAP) - GAP;
+const GRID_H = ROWS * (SIZE + GAP) - GAP;
+
+// A deliberately oversized symbol: 1.7x its cell in both directions, so a
+// lifted one overflows the grid edge and its neighbours, and a masked one
+// would be impossible to miss if it ever leaked.
+class PlateSymbol extends ReelSymbol {
+  onActivate() {
+    this._draw();
+  }
+  onDeactivate() {}
+  async playWin() {}
+  stopAnimation() {}
+  resize(width, height) {
+    this._w = width;
+    this._h = height;
+    this._draw();
+  }
+  _draw() {
+    if (!this._w) return;
+    this.view.removeChildren();
+    const w = this._w * 1.7;
+    const h = this._h * 1.7;
+    const x = (this._w - w) / 2;
+    const y = (this._h - h) / 2;
+    this.view.addChild(
+      new PIXI.Graphics()
+        .roundRect(x, y, w, h, 14)
+        .fill({ color: 0x7c3aed })
+        .stroke({ color: 0xfef08a, width: 4 }),
+    );
+    const label = new PIXI.Text({
+      text: 'JACKPOT',
+      style: { fontFamily: 'ui-monospace, monospace', fontSize: 15, fontWeight: '900', fill: 0xfef08a },
+    });
+    label.anchor.set(0.5);
+    label.x = this._w / 2;
+    label.y = this._h / 2;
+    this.view.addChild(label);
+  }
+}
+
+const spare = () => FILLER[Math.floor(Math.random() * FILLER.length)];
+const result = () => [
+  { visible: [spare(), spare(), spare()] },
+  // Visible cell 0 -> lifted above the mask on land.
+  { visible: [PLATE, spare(), spare()] },
+  { visible: [spare(), spare(), spare()] },
+  // Buffer cell above the window -> masked, invisible, and it must stay that
+  // way through a skip as well: hit SPIN then SKIP and nothing pops out.
+  { visible: [spare(), spare(), spare()], bufferStart: [PLATE] },
+];
+
+const reelSet = new ReelSetBuilder()
+  .reels(COLS)
+  .visibleCells(ROWS)
+  .symbolSize(SIZE, SIZE)
+  .symbolGap(GAP, GAP)
+  .bufferSymbols(1)
+  .symbols((r) => {
+    for (const sym of CARD_DECK) {
+      r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
+    }
+    r.register(PLATE, PlateSymbol, {});
+  })
+  // The plate is never drawn at random: it only ever lands where the result
+  // puts it. A pool is the tidy way to say so.
+  .randomSymbols({ exclude: [PLATE] })
+  .symbolData({ [PLATE]: { unmask: true, zIndex: 10 } })
+  .speed('normal', { ...SpeedPresets.NORMAL, minimumSpinTime: 900 })
+  .initialFrame(result())
+  .ticker(app.ticker)
+  .build();
+
+// --- Captions ----------------------------------------------------------
+// The lifted plate overflows ABOVE the grid, and the buffer cell it is
+// compared against sits above it too, so the composition needs real headroom.
+// One root with the reels pushed down, returned as `stage`.
+const PAD_TOP = 118;
+const stage = new PIXI.Container();
+reelSet.y = PAD_TOP;
+stage.addChild(reelSet);
+
+const caption = (text, color, x, y, anchorX) => {
+  const t = new PIXI.Text({
+    text,
+    style: { fontFamily: 'ui-monospace, monospace', fontSize: 11, fontWeight: '700', fill: color },
+  });
+  t.anchor.set(anchorX, 0);
+  t.x = x;
+  t.y = y;
+  stage.addChild(t);
+  return t;
+};
+
+caption('same symbol, one cell apart', 0x475569, 0, 0, 0);
+caption('reel 1, top VISIBLE cell: lifted, overflows the grid', 0x7c3aed, 0, 16, 0);
+caption('reel 3, BUFFER cell above: clipped by the mask at the grid edge', 0x94a3b8, 0, 32, 0);
+
+// Mark where the buffered plate actually is, since the point of it is what
+// you canNOT see. The dashes sit one cell above the grid, over reel 3.
+const ghost = new PIXI.Graphics();
+const gx = 3 * (SIZE + GAP);
+const ghostY = PAD_TOP - SIZE - GAP + SIZE / 2;
+for (let i = 0; i < 6; i++) {
+  ghost.rect(gx + i * (SIZE / 6) + 3, ghostY, SIZE / 12, 2);
+}
+ghost.fill({ color: 0x94a3b8 });
+const ghostLabel = caption('plate is parked here', 0x94a3b8, gx + SIZE / 2, ghostY + 6, 0.5);
+ghostLabel.style.fontSize = 9;
+stage.addChild(ghost);
+
+return {
+  reelSet,
+  stage,
+  onSpin: async () => {
+    const p = reelSet.spin();
+    await new Promise((r) => setTimeout(r, 200));
+    reelSet.setResult(result());
     await p;
   },
 };
