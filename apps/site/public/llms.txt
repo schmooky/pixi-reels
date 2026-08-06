@@ -8,7 +8,7 @@ Site: https://pixi-reels.schmooky.dev
 Repo: https://github.com/schmooky/pixi-reels
 Package: https://www.npmjs.com/package/pixi-reels
 
-Generated: 2026-08-04T15:37:51.130Z
+Generated: 2026-08-06T09:39:03.478Z
 
 ## Quick start
 
@@ -210,6 +210,13 @@ Steps:
 ### Orientation & direction
 URL: https://pixi-reels.schmooky.dev/recipes/orientation-and-direction/
 Tags: horizontal, orientation, direction, reverse, roll-up, banner, ways, axis
+APIs: 
+Steps:
+  - 
+
+### Reel curvature
+URL: https://pixi-reels.schmooky.dev/recipes/reel-curvature/
+Tags: curve, curvature, perspective, projection, cylinder, drum, 3d
 APIs: 
 Steps:
   - 
@@ -3204,6 +3211,695 @@ return {
     hud.text = `collector absorbed ${sum} · press spin to reset`;
     phase = 'done';
   },
+};
+```
+
+### curved-reels-focus
+URL: https://pixi-reels.schmooky.dev/recipes/curved-reels-focus/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, SpriteSymbol, PIXI, app
+
+// Where the camera stands.
+//
+// `.curve(...)` alone puts one camera dead ahead of every reel, so each is its
+// own little drum and they all look identical. `.curveFocus('set')` puts a
+// SINGLE camera in front of the middle of the board instead: cells that rotate
+// away also lean IN toward the centre, and the whole grid reads as one wide
+// cylinder rather than five separate ones.
+//
+// Watch the outer reels. Their top and bottom rows no longer just narrow in
+// place, they tilt toward the middle of the board - and the centre reel, which
+// the camera is pointed straight at, barely moves at all.
+//
+// `'set-lean'` is halfway between, and is usually the sweet spot on a 5-wide
+// board with real art: enough of the one-big-drum read to sell the cabinet,
+// not so much that the outer reels visibly tilt into their neighbours.
+//
+// Leaning cells cross their own column, so the builder auto-selects
+// `SharedRectMaskStrategy`; the default per-reel mask would slice the overhang
+// off at the boundary. Pass `.maskStrategy(...)` yourself to override.
+
+const COLORS = [0xe8563f, 0xf2a03d, 0x3fa9e8, 0x5ac26a, 0x9b6bd6, 0xe0c341];
+const SIZE = 128;
+
+function tile(color) {
+  const g = new PIXI.Graphics();
+  g.roundRect(3, 3, SIZE - 6, SIZE - 6, 14).fill({ color });
+  for (let i = 1; i < 4; i++) {
+    const at = (SIZE / 4) * i;
+    g.moveTo(at, 6).lineTo(at, SIZE - 6);
+    g.moveTo(6, at).lineTo(SIZE - 6, at);
+  }
+  g.stroke({ color: 0xffffff, width: 2, alpha: 0.55 });
+  g.roundRect(3, 3, SIZE - 6, SIZE - 6, 14).stroke({ color: 0xffffff, width: 4 });
+  const texture = app.renderer.generateTexture({ target: g, resolution: 2 });
+  g.destroy();
+  return texture;
+}
+
+// NOT `textures`: that name is already an injected recipe global, and
+// redeclaring it is a SyntaxError that shows up as a silently blank demo.
+const art = {};
+COLORS.forEach((color, i) => {
+  art[`tile_${i}`] = tile(color);
+});
+const IDS = Object.keys(art);
+
+const REELS = 5;
+const CELLS = 3;
+
+const reelSet = new ReelSetBuilder()
+  .reels(REELS)
+  .visibleCells(CELLS)
+  .symbolSize(96, 96)
+  .symbolGap(6, 6)
+  .curve(0.5)
+  .curveFocus('set') // <- one camera for the whole board
+  .curveMode('warp') // bend the container: motion rides the curve too
+  .renderer(app.renderer)
+  .symbols((r) => {
+    for (const id of IDS) r.register(id, SpriteSymbol, { textures: art });
+  })
+  .speed('normal', SpeedPresets.NORMAL)
+  .speed('turbo', SpeedPresets.TURBO)
+  .ticker(app.ticker)
+  .build();
+
+// --- bezel -------------------------------------------------------------
+// A drum whose middle cell is drawn 1:1 cannot also reach the window edges;
+// the buffer cells show in that band, compressed as they curve away. Real
+// cabinets put a frame over it. `curve.mapMain(0)` is exactly where the drum's
+// top edge lands, so the frame is measured, not guessed.
+//
+// Kept strictly INSIDE the window rect: a bezel drawn outside it grows the
+// set's bounds and the recipe runner centres on those.
+const bw = reelSet.viewport.maskWidth;
+const bh = reelSet.viewport.maskHeight;
+const lip = Math.ceil(Math.max(...reelSet.reels.map((r) => (r.curve ? r.curve.mapMain(0) : 0)))) + 2;
+const bezel = new PIXI.Graphics();
+bezel.rect(0, 0, bw, lip).rect(0, bh - lip, bw, lip).fill({ color: 0x0b0a12 });
+bezel
+  .moveTo(0, lip)
+  .lineTo(bw, lip)
+  .moveTo(0, bh - lip)
+  .lineTo(bw, bh - lip)
+  .stroke({ color: 0x2c2740, width: 2 });
+reelSet.addChild(bezel);
+
+return {
+  reelSet,
+  nextResult: () =>
+    Array.from({ length: REELS }, () =>
+      Array.from({ length: CELLS }, () => IDS[Math.floor(Math.random() * IDS.length)]),
+    ),
+};
+```
+
+### curved-reels-gems
+URL: https://pixi-reels.schmooky.dev/recipes/curved-reels-gems/
+```ts
+// @ts-nocheck
+// Injected: ReelSetBuilder, SpeedPresets, BlurSpriteSymbol,
+//           loadHoldAndWinSprites, PIXI, app
+
+// Real art on the drum.
+//
+// The grid tiles in the other recipes are a measuring instrument - they make
+// the projection obvious. This is what it looks like on shipped symbols:
+// Playson's Supercharged Diamonds 3 gem set, the same sheet the sprite Hold &
+// Win recipes use.
+//
+// Two things matter here that the grid tiles hide.
+//
+// 1. These gems do NOT fill their cells. They are trimmed atlas frames,
+//    letterboxed into a square cell, so the actual art is a shape floating in
+//    a much bigger transparent box. `BlurSpriteSymbol` reports where its art
+//    really sits via `cellInset`, so the drum projects THE GEM rather than the
+//    empty cell around it - otherwise every symbol would be inflated to the
+//    cell edges and handed the cell's keystone instead of its own.
+//
+// 2. `BlurSpriteSymbol` is a docs-site class, not a library one, and it opts
+//    into the real projection in about ten lines by handing the quad to the
+//    exported `PerspectiveCell`. That is the whole extension story: if your
+//    symbol's content is a single texture, you get true keystoning; if it is a
+//    Spine skeleton or a composite subtree, the base class falls back to a
+//    uniform scale and nothing is distorted.
+//
+// Blur-on-spin still works: the mesh is handed each new texture as the symbol
+// swaps to its motion-blur variant.
+
+const { symbols, blur } = await loadHoldAndWinSprites();
+
+const IDS = ['1', '2', '3', '4', '5', '6', '7', '8', 'wild'];
+
+class BlurCell extends BlurSpriteSymbol {
+  onReelSpinStart() { this.setBlurred(true); }
+  onReelSpinEnd() { this.setBlurred(false); }
+  onReelLanded() { this.setBlurred(false); }
+}
+
+const REELS = 5;
+const CELLS = 3;
+
+const reelSet = new ReelSetBuilder()
+  .reels(REELS)
+  .visibleCells(CELLS)
+  .symbolSize(96, 96)
+  .symbolGap(6, 6)
+  .curve({ amount: 0.42, depth: 0.26 })
+  .curveFocus('set-lean')
+  .curveMode('warp') // bend the container: motion rides the curve too
+  .renderer(app.renderer)
+  .symbols((r) => {
+    for (const id of IDS) {
+      r.register(id, BlurCell, { textures: symbols, blurTextures: blur });
+    }
+  })
+  .speed('normal', SpeedPresets.NORMAL)
+  .speed('turbo', SpeedPresets.TURBO)
+  .ticker(app.ticker)
+  .build();
+
+// --- bezel -------------------------------------------------------------
+// A drum whose middle cell is drawn 1:1 cannot also reach the window edges;
+// the buffer cells show in that band, compressed as they curve away. Real
+// cabinets put a frame over it. `curve.mapMain(0)` is exactly where the drum's
+// top edge lands, so the frame is measured, not guessed.
+//
+// Kept strictly INSIDE the window rect: a bezel drawn outside it grows the
+// set's bounds and the recipe runner centres on those.
+const bw = reelSet.viewport.maskWidth;
+const bh = reelSet.viewport.maskHeight;
+const lip = Math.ceil(Math.max(...reelSet.reels.map((r) => (r.curve ? r.curve.mapMain(0) : 0)))) + 2;
+const bezel = new PIXI.Graphics();
+bezel.rect(0, 0, bw, lip).rect(0, bh - lip, bw, lip).fill({ color: 0x0b0a12 });
+bezel
+  .moveTo(0, lip)
+  .lineTo(bw, lip)
+  .moveTo(0, bh - lip)
+  .lineTo(bw, bh - lip)
+  .stroke({ color: 0x2c2740, width: 2 });
+reelSet.addChild(bezel);
+
+return {
+  reelSet,
+  nextResult: () =>
+    Array.from({ length: REELS }, () =>
+      Array.from({ length: CELLS }, () => IDS[Math.floor(Math.random() * IDS.length)]),
+    ),
+};
+```
+
+### curved-reels-per-reel
+URL: https://pixi-reels.schmooky.dev/recipes/curved-reels-per-reel/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, SpriteSymbol, PIXI, app
+
+// One wide drum instead of five identical ones.
+//
+// `.curvePerReel([...])` gives each reel its own camera. Bending the middle
+// reels hardest and easing off toward the outside makes the board read as a
+// single cylinder lying across the screen rather than five columns that each
+// happen to be curved the same way. It is the cheapest trick in the file for
+// making a 5x3 look like a cabinet.
+//
+// The array is one entry per reel and must match `reels()`. Each entry takes
+// the same shorthand or object form `.curve()` does, so the outer reels here
+// are nearly flat while the centre one runs deep - watch the grid lines
+// converge harder as you look toward the middle of the board.
+//
+// `depth` is spelled out rather than left to default because the centre reel
+// wants a stronger perspective than `amount * 0.5` would give it. It is capped
+// below `cos(arc)` - past that the projection would fold cells back over each
+// other - so a very deep curve quietly saturates instead of turning inside out.
+
+const COLORS = [0xe8563f, 0xf2a03d, 0x3fa9e8, 0x5ac26a, 0x9b6bd6, 0xe0c341];
+const SIZE = 128;
+
+// Same generated grid tile as the single-curve recipe: a grid is the quickest
+// way to SEE a projection, because parallel lines stop being parallel.
+function tile(color) {
+  const g = new PIXI.Graphics();
+  g.roundRect(3, 3, SIZE - 6, SIZE - 6, 14).fill({ color });
+  for (let i = 1; i < 4; i++) {
+    const at = (SIZE / 4) * i;
+    g.moveTo(at, 6).lineTo(at, SIZE - 6);
+    g.moveTo(6, at).lineTo(SIZE - 6, at);
+  }
+  g.stroke({ color: 0xffffff, width: 2, alpha: 0.55 });
+  g.roundRect(3, 3, SIZE - 6, SIZE - 6, 14).stroke({ color: 0xffffff, width: 4 });
+  const texture = app.renderer.generateTexture({ target: g, resolution: 2 });
+  g.destroy();
+  return texture;
+}
+
+// NOT `textures`: that name is already an injected recipe global, and
+// redeclaring it is a SyntaxError that shows up as a silently blank demo.
+const art = {};
+COLORS.forEach((color, i) => {
+  art[`tile_${i}`] = tile(color);
+});
+const IDS = Object.keys(art);
+
+const REELS = 5;
+const CELLS = 3;
+
+const reelSet = new ReelSetBuilder()
+  .reels(REELS)
+  .visibleCells(CELLS)
+  .symbolSize(96, 96)
+  .symbolGap(6, 6)
+  .curvePerReel([
+    { amount: 0.2, depth: 0.1 },
+    { amount: 0.45, depth: 0.22 },
+    { amount: 0.7, depth: 0.34 }, // centre reel faces you most
+    { amount: 0.45, depth: 0.22 },
+    { amount: 0.2, depth: 0.1 },
+  ])
+  .curveMode('warp') // bend the container: motion rides the curve too
+  .renderer(app.renderer)
+  .symbols((r) => {
+    for (const id of IDS) r.register(id, SpriteSymbol, { textures: art });
+  })
+  .speed('normal', SpeedPresets.NORMAL)
+  .speed('turbo', SpeedPresets.TURBO)
+  .ticker(app.ticker)
+  .build();
+
+// --- bezel -------------------------------------------------------------
+// A drum whose middle cell is drawn 1:1 cannot also reach the window edges;
+// the buffer cells show in that band, compressed as they curve away. Real
+// cabinets put a frame over it. `curve.mapMain(0)` is exactly where the drum's
+// top edge lands, so the frame is measured, not guessed.
+//
+// Kept strictly INSIDE the window rect: a bezel drawn outside it grows the
+// set's bounds and the recipe runner centres on those.
+const bw = reelSet.viewport.maskWidth;
+const bh = reelSet.viewport.maskHeight;
+const lip = Math.ceil(Math.max(...reelSet.reels.map((r) => (r.curve ? r.curve.mapMain(0) : 0)))) + 2;
+const bezel = new PIXI.Graphics();
+bezel.rect(0, 0, bw, lip).rect(0, bh - lip, bw, lip).fill({ color: 0x0b0a12 });
+bezel
+  .moveTo(0, lip)
+  .lineTo(bw, lip)
+  .moveTo(0, bh - lip)
+  .lineTo(bw, bh - lip)
+  .stroke({ color: 0x2c2740, width: 2 });
+reelSet.addChild(bezel);
+
+return {
+  reelSet,
+  nextResult: () =>
+    Array.from({ length: REELS }, () =>
+      Array.from({ length: CELLS }, () => IDS[Math.floor(Math.random() * IDS.length)]),
+    ),
+};
+```
+
+### curved-reels-warp
+URL: https://pixi-reels.schmooky.dev/recipes/curved-reels-warp/
+```ts
+// @ts-nocheck
+// Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, loadSpineSet,
+//           PIXI, app
+
+// Bend the whole reel, not each symbol.
+//
+// `.curveMode('warp')` renders each reel to a texture and draws it through a
+// mesh whose VERTICES are displaced by the projection. Everything inside bends
+// - Spine skeletons, atlas sprites, text, effects - and no symbol has to
+// cooperate or even know the reel is curved.
+//
+// These are Thunderkick's Rex the Hunt skeletons, which the per-symbol path
+// cannot bend at all: a `Container` transform is affine, so it can only
+// displace and scale a live skeleton. Here they curve like everything else,
+// and they keep animating while they do.
+//
+// The other thing the warp buys you is MOTION. Because the bend is applied to
+// the rendered reel rather than baked into each cell, anything that moves the
+// strip travels along the curve for free - the spin, the stop bounce, cascade
+// falls. On the per-symbol path the bounce is a flat translation of the reel
+// container, so the whole board slides straight up and down instead of riding
+// the drum.
+//
+// A bezel covers the top and bottom of the window. A drum whose middle cell is
+// drawn 1:1 cannot also reach the window edges, so the buffer cells show there,
+// compressed as they curve away - exactly the sliver of the next symbol a real
+// cabinet shows, and exactly what a real cabinet's frame hides.
+
+const { spineMap, symbolIds } = await loadSpineSet('thunderkick');
+const IDS = [...symbolIds];
+
+const REELS = 5;
+const CELLS = 3;
+// Rex the Hunt plates measure exactly 175x203 in the setup pose, and the
+// skeleton draws at that size unless you tell it otherwise. Derive the cell
+// from one scale factor and hand the SAME factor to the symbol - pick the cell
+// without it and every skeleton overflows, cropping at the cell edge and
+// spilling into its neighbours.
+const SPINE_SCALE = 0.8;
+const CELL_W = 175 * SPINE_SCALE;
+const CELL_H = 203 * SPINE_SCALE;
+// Gap on the CROSS axis only. It separates the drums, which is the point;
+// a main-axis gap would punch black bands through each strip's background,
+// because every symbol here carries its own full-bleed backdrop.
+const GAP = 16;
+
+const reelSet = new ReelSetBuilder()
+  .reels(REELS)
+  .visibleCells(CELLS)
+  .symbolSize(CELL_W, CELL_H)
+  .symbolGap(GAP, 0) // separates the drums without slicing the strips
+  .bufferSymbols(2) // more to draw in the band the bezel covers
+  .curve(0.45)
+  .curveFocus('set-lean')
+  .curveMode('warp') // <- bend the container, not the cells
+  // Room across the strip for art wider than its cell. The mystery plate's
+  // leaves overflow their tile; without this the warp texture slices them off
+  // at the reel edge. `curveFocus` other than 'reel' has already selected
+  // SharedRectMaskStrategy, so the overhang is not clipped again by the mask.
+  .curveBleed(46)
+  .renderer(app.renderer)
+  // Per-symbol stacking INSIDE a reel. `zIndex` is folded in as
+  // `zIndex * 100 + cellIndex`, so any raised value beats every cell index and
+  // the symbol draws over its neighbours whatever row it lands on. The mystery
+  // and scatter plates deliberately overflow their tile, so this is what lets
+  // the leaves spill over the symbol below instead of being covered by it.
+  // Re-applied on every wrap, so it holds mid-spin too.
+  .symbolData({
+    // Both overflow their tile, so both need to win against their neighbours.
+    // Same tier rather than a pecking order: on a tie the cell index decides,
+    // which keeps the lower cell in front and reads correctly either way.
+    mystery: { zIndex: 2 },
+    scatter: { zIndex: 2 },
+  })
+  // Weighted up from a real paytable so the demo actually shows them.
+  .weights({
+    ...Object.fromEntries(IDS.map((id) => [id, 6])),
+    mystery: 14,
+    scatter: 10,
+  })
+  .symbols((r) => {
+    for (const id of IDS) {
+      r.register(id, SpineReelSymbol, {
+        spineMap,
+        scale: SPINE_SCALE,
+        autoPlayLanding: true,
+      });
+    }
+  })
+  .speed('normal', SpeedPresets.NORMAL)
+  .speed('turbo', SpeedPresets.TURBO)
+  .ticker(app.ticker)
+  .build();
+
+// --- bezel -------------------------------------------------------------
+// Drawn OVER the set, in the set's own coordinates, so it travels with it.
+const boardW = REELS * CELL_W + (REELS - 1) * GAP;
+const boardH = CELLS * CELL_H;
+// The drum's ends fall short of the window by `halfExtent * (1 - edgeMapped)`,
+// about 45px at this size and curve. The bezel has to cover at least that or
+// the curl shows under it.
+const LIP = 50;
+
+// Kept strictly INSIDE the board rect. A bezel drawn outside it grows the
+// set's bounds, and the recipe runner centres on those - the board slides off
+// centre and the frame stops lining up with the window.
+const bezel = new PIXI.Graphics();
+bezel
+  .rect(0, 0, boardW, LIP)
+  .rect(0, boardH - LIP, boardW, LIP)
+  .fill({ color: 0x0b0a12 });
+bezel
+  .moveTo(0, LIP)
+  .lineTo(boardW, LIP)
+  .moveTo(0, boardH - LIP)
+  .lineTo(boardW, boardH - LIP)
+  .stroke({ color: 0x2c2740, width: 2 });
+reelSet.addChild(bezel);
+
+return {
+  reelSet,
+  nextResult: () =>
+    Array.from({ length: REELS }, () =>
+      Array.from({ length: CELLS }, () => IDS[Math.floor(Math.random() * IDS.length)]),
+    ),
+};
+```
+
+### curved-reels
+URL: https://pixi-reels.schmooky.dev/recipes/curved-reels/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, SpriteSymbol, PIXI, app
+
+// The whole board on one drum. `.curve(0.5)` is the entire feature.
+//
+// `SpriteSymbol` draws its texture through a `PerspectiveMesh` as soon as the
+// reel is curved, so every cell is a genuine projected TRAPEZOID: the edge that
+// has rotated further round the drum is narrower than the one facing you. A
+// scale can only ever hand you a smaller rectangle. This bends the art itself.
+//
+// The tiles are drawn with a grid on purpose - it is the quickest way to SEE a
+// projection. On the top and bottom rows the grid lines converge toward the
+// edge that has turned away; on the middle row, which faces the camera
+// square-on, they stay parallel.
+//
+// It costs no render pass: the symbol already owns a texture, so the mesh maps
+// that texture straight onto the projected quad. A set with no `.curve()` never
+// allocates a mesh at all and runs exactly the code it ran before.
+
+const COLORS = [0xe8563f, 0xf2a03d, 0x3fa9e8, 0x5ac26a, 0x9b6bd6, 0xe0c341];
+const SIZE = 128;
+
+// A flat tile with a border and an internal grid. Generated rather than loaded
+// so the demo has no art dependency and the texture is exactly cell-shaped.
+function tile(color) {
+  const g = new PIXI.Graphics();
+  g.roundRect(3, 3, SIZE - 6, SIZE - 6, 14).fill({ color });
+  for (let i = 1; i < 4; i++) {
+    const at = (SIZE / 4) * i;
+    g.moveTo(at, 6).lineTo(at, SIZE - 6);
+    g.moveTo(6, at).lineTo(SIZE - 6, at);
+  }
+  g.stroke({ color: 0xffffff, width: 2, alpha: 0.55 });
+  g.roundRect(3, 3, SIZE - 6, SIZE - 6, 14).stroke({ color: 0xffffff, width: 4 });
+  const texture = app.renderer.generateTexture({ target: g, resolution: 2 });
+  g.destroy();
+  return texture;
+}
+
+const art = {};
+COLORS.forEach((color, i) => {
+  art[`tile_${i}`] = tile(color);
+});
+const IDS = Object.keys(art);
+
+const REELS = 5;
+const CELLS = 3;
+
+const reelSet = new ReelSetBuilder()
+  .reels(REELS)
+  .visibleCells(CELLS)
+  .symbolSize(96, 96)
+  .symbolGap(6, 6)
+  .curve(0.5) // <- the whole thing
+  .curveMode('warp') // bend the container: motion rides the curve too
+  .renderer(app.renderer)
+  .symbols((r) => {
+    for (const id of IDS) r.register(id, SpriteSymbol, { textures: art });
+  })
+  .speed('normal', SpeedPresets.NORMAL)
+  .speed('turbo', SpeedPresets.TURBO)
+  .ticker(app.ticker)
+  .build();
+
+// --- bezel -------------------------------------------------------------
+// A drum whose middle cell is drawn 1:1 cannot also reach the window edges;
+// the buffer cells show in that band, compressed as they curve away. Real
+// cabinets put a frame over it. `curve.mapMain(0)` is exactly where the drum's
+// top edge lands, so the frame is measured, not guessed.
+//
+// Kept strictly INSIDE the window rect: a bezel drawn outside it grows the
+// set's bounds and the recipe runner centres on those.
+const bw = reelSet.viewport.maskWidth;
+const bh = reelSet.viewport.maskHeight;
+const lip = Math.ceil(Math.max(...reelSet.reels.map((r) => (r.curve ? r.curve.mapMain(0) : 0)))) + 2;
+const bezel = new PIXI.Graphics();
+bezel.rect(0, 0, bw, lip).rect(0, bh - lip, bw, lip).fill({ color: 0x0b0a12 });
+bezel
+  .moveTo(0, lip)
+  .lineTo(bw, lip)
+  .moveTo(0, bh - lip)
+  .lineTo(bw, bh - lip)
+  .stroke({ color: 0x2c2740, width: 2 });
+reelSet.addChild(bezel);
+
+return {
+  reelSet,
+  nextResult: () =>
+    Array.from({ length: REELS }, () =>
+      Array.from({ length: CELLS }, () => IDS[Math.floor(Math.random() * IDS.length)]),
+    ),
+};
+```
+
+### curved-value-reel
+URL: https://pixi-reels.schmooky.dev/recipes/curved-value-reel/
+```ts
+// @ts-nocheck
+// Injected: ReelSetBuilder, SpeedPresets, ReelSymbol, PIXI, app
+
+// A single value reel: 1 reel, 3 cells, money amounts spinning past.
+//
+// The pattern behind every prize picker, jackpot ladder and bonus-wheel
+// readout: the symbols are not art at all, they are NUMBERS, drawn at runtime.
+// Here each cell is nothing but a `PIXI.Text`, and the symbol id IS the amount -
+// `setResult([['100.00', ...]])` lands the value you name. No plate, no border,
+// no background: just numbers turning on a drum.
+//
+// It is also the case only `curveMode('warp')` can bend. A `Text` is not a
+// texture the engine can hand to a mesh, so the per-symbol projection can do
+// nothing but displace and scale it. The warp renders the whole reel to a
+// texture first, so the digits themselves curve.
+//
+// Text is authored big and scaled down to fit, which keeps `1000.00` and
+// `5.00` on the same optical size without reflowing the font.
+
+const VALUES = ['5.00', '10.00', '25.00', '50.00', '100.00', '250.00', '1000.00'];
+
+// Rarer as they get bigger, like a real prize ladder.
+const WEIGHTS = {
+  '5.00': 30, '10.00': 24, '25.00': 18, '50.00': 12,
+  '100.00': 8, '250.00': 5, '1000.00': 2,
+};
+
+const CELL_W = 260;
+const CELL_H = 88;
+
+class ValueSymbol extends ReelSymbol {
+  constructor() {
+    super();
+    this._text = new PIXI.Text({
+      text: '',
+      style: {
+        // Authored large, scaled down in `_fit`. Rasterising once at a big
+        // size and shrinking beats re-rasterising per value.
+        fontSize: 64,
+        fontWeight: '700',
+        fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+        fill: 0xfff6d5,
+        letterSpacing: 1,
+      },
+    });
+    this._text.anchor.set(0.5);
+    this.view.addChild(this._text);
+    this._w = 0;
+    this._h = 0;
+    this._fitScale = 1;
+    this._winTween = null;
+  }
+
+  onActivate(symbolId) {
+    this._text.text = `$${symbolId}`;
+    // Bigger prizes read warmer, so the reel is a ladder at a glance.
+    const rank = VALUES.indexOf(symbolId) / (VALUES.length - 1);
+    this._text.style.fill = rank > 0.7 ? 0xffcf4d : rank > 0.35 ? 0xf0e2bd : 0xa79b83;
+    this._fit();
+  }
+
+  onDeactivate() {
+    this._killWin();
+    this._text.scale.set(this._fitScale);
+  }
+
+  async playWin() {
+    this._killWin();
+    const to = this._fitScale * 1.16;
+    return new Promise((resolve) => {
+      this._winTween = this.gsap.to(this._text.scale, {
+        x: to, y: to, duration: 0.16, yoyo: true, repeat: 1,
+        ease: 'power2.inOut', onComplete: resolve,
+      });
+    });
+  }
+
+  stopAnimation() {
+    this._killWin();
+    this._text.scale.set(this._fitScale);
+  }
+
+  resize(width, height) {
+    this._w = width;
+    this._h = height;
+    this._text.x = width / 2;
+    this._text.y = height / 2;
+    this._fit();
+  }
+
+  _fit() {
+    if (this._w <= 0 || !this._text.text) return;
+    // Reset before measuring, or each fit compounds on the last one's scale.
+    this._text.scale.set(1);
+    const room = Math.min((this._w - 24) / this._text.width, (this._h - 16) / this._text.height);
+    this._fitScale = Math.min(room, 1);
+    this._text.scale.set(this._fitScale);
+  }
+
+  _killWin() {
+    if (this._winTween) {
+      this._winTween.kill();
+      this._winTween = null;
+    }
+  }
+}
+
+const reelSet = new ReelSetBuilder()
+  .reels(1)
+  .visibleCells(3)
+  .symbolSize(CELL_W, CELL_H)
+  .symbolGap(0, 6)
+  .curve(0.5)
+  .curveMode('warp') // a Text cell has no texture of its own to bend
+  .renderer(app.renderer)
+  .symbols((r) => {
+    for (const v of VALUES) r.register(v, ValueSymbol, {});
+  })
+  .weights(WEIGHTS)
+  // Slow on purpose. A prize reel is read, not raced: the player is following
+  // the amounts as they pass, so the strip crawls and takes its time settling.
+  .speed('normal', {
+    ...SpeedPresets.NORMAL,
+    spinSpeed: SpeedPresets.NORMAL.spinSpeed * 0.28,
+    accelerationDuration: 700,
+    minimumSpinTime: 1200,
+    bounceDuration: 700,
+  })
+  .speed('turbo', {
+    ...SpeedPresets.NORMAL,
+    spinSpeed: SpeedPresets.NORMAL.spinSpeed * 0.6,
+    minimumSpinTime: 600,
+  })
+  .ticker(app.ticker)
+  .build();
+
+const pick = () => {
+  const total = Object.values(WEIGHTS).reduce((a, b) => a + b, 0);
+  let r = Math.random() * total;
+  for (const [v, w] of Object.entries(WEIGHTS)) {
+    r -= w;
+    if (r <= 0) return v;
+  }
+  return VALUES[0];
+};
+
+return {
+  reelSet,
+  // One reel, three cells: the middle one is the prize, the neighbours are
+  // just the ladder either side of it.
+  nextResult: () => [[pick(), pick(), pick()]],
 };
 ```
 
