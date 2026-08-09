@@ -8,7 +8,7 @@ Site: https://pixi-reels.schmooky.dev
 Repo: https://github.com/schmooky/pixi-reels
 Package: https://www.npmjs.com/package/pixi-reels
 
-Generated: 2026-08-06T09:39:03.478Z
+Generated: 2026-08-06T11:31:32.949Z
 
 ## Quick start
 
@@ -214,13 +214,6 @@ APIs:
 Steps:
   - 
 
-### Reel curvature
-URL: https://pixi-reels.schmooky.dev/recipes/reel-curvature/
-Tags: curve, curvature, perspective, projection, cylinder, drum, 3d
-APIs: 
-Steps:
-  - 
-
 ### Starters
 URL: https://pixi-reels.schmooky.dev/recipes/starters/
 Tags: starter, 5x3, cascade, multiways, hold-and-win, horizontal, reverse, orientation
@@ -230,7 +223,7 @@ Steps:
 
 ### Symbols, layering & motion blur
 URL: https://pixi-reels.schmooky.dev/recipes/symbols/
-Tags: symbols, layering, static-spin, motion-blur, spine, horizontal, orientation
+Tags: symbols, pools, buffers, weights, layering, static-spin, motion-blur, spine, horizontal, orientation
 APIs: 
 Steps:
   - 
@@ -1614,6 +1607,202 @@ return {
 
     hud.text = `revealed · total ${total} · top ${PRIZE[top.id]} (${top.id})`;
     busy = false;
+  },
+};
+```
+
+### buffer-pool-exclude
+URL: https://pixi-reels.schmooky.dev/recipes/buffer-pool-exclude/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//                   PIXI, app
+//
+// Keep a symbol out of the buffer cells -- everywhere, or on one reel.
+//
+// The buffer cells are the hidden slots just outside the visible window.
+// They are filled at random like the rest of the strip, so a symbol you
+// only ever want the player to see INSIDE the grid can quietly park there:
+// half-visible under a short mask, lifted above it by `unmask: true`, or
+// scrolling into view on the next spin.
+//
+// `randomSymbols.set(pool, scope)` narrows that draw and nothing else. The
+// scope takes both fields at once, so `{ reel: 1, slots: 'buffer' }` is the
+// buffers of ONE reel, and the two ends have their own names:
+// `'bufferStart'` is the side at the smaller main coordinate (above here,
+// left on a horizontal set) and `'bufferEnd'` the other. This demo cycles
+// the four states one per spin and prints what every hidden cell actually
+// holds, so you can watch it work.
+
+const COIN = 'coin';
+const COIN_CARD = { id: COIN, color: 0xf6c945, label: 'COIN', textColor: 0x3b2f00 };
+const FILLER = ['7', '8', '9', '10'];
+
+const COLS = 3, ROWS = 3, SIZE = 90, GAP = 4;
+
+const reelSet = new ReelSetBuilder()
+  .reels(COLS)
+  .visibleCells(ROWS)
+  .symbolSize(SIZE, SIZE)
+  .symbolGap(GAP, GAP)
+  // One hidden cell each side. Both are read out below.
+  .bufferSymbols(1)
+  .symbols((r) => {
+    for (const sym of [...CARD_DECK, COIN_CARD]) {
+      r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
+    }
+  })
+  // Coin-heavy on purpose: with no pool, nearly every random cell is a COIN,
+  // so the buffers fill with them and the readouts light up. Every registered
+  // id is listed - an id left out of `weights()` keeps the default of 10,
+  // which would quietly water this down.
+  .weights({ '7': 2, '8': 2, '9': 2, '10': 2, J: 2, Q: 2, K: 2, A: 2, [COIN]: 300 })
+  .speed('normal', { ...SpeedPresets.NORMAL, minimumSpinTime: 900 })
+  // Visible cells start as ordinary cards, so the only COINs on screen are
+  // the ones the pool is about.
+  .initialFrame(Array.from({ length: 3 }, () => ({ visible: ['7', '8', '9'] })))
+  .ticker(app.ticker)
+  .build();
+
+// --- The calls this recipe is about -----------------------------------
+// Three states, cycled one per spin. `null` removes a pool again, and each
+// scope is its own layer: clearing the per-reel one does not touch the
+// global one. Everything else about the set is unchanged either way -- COIN
+// keeps its weight of 80 on the spinning strip in all three states.
+const MODES = ['off', 'reel 1 only', 'above only', 'every reel'];
+let mode = 0;
+
+function applyPool() {
+  const banned = { exclude: [COIN] };
+  const state = MODES[mode];
+  // Three separate layers. setting one never disturbs the others, and
+  // passing `null` removes just that one.
+  reelSet.randomSymbols.set(state === 'reel 1 only' ? banned : null, {
+    reel: 1,
+    slots: 'buffer',
+  });
+  reelSet.randomSymbols.set(state === 'above only' ? banned : null, { slots: 'bufferStart' });
+  reelSet.randomSymbols.set(state === 'every reel' ? banned : null, { slots: 'buffer' });
+}
+
+// --- Readouts: what is actually in the hidden cells --------------------
+// Everything lives in one composition root with room above the grid for the
+// banner, returned as `stage` so the runner scales and centres the whole
+// thing rather than clipping the parts that sit above the reels.
+const PAD_TOP = 94;
+const stage = new PIXI.Container();
+reelSet.y = PAD_TOP;
+stage.addChild(reelSet);
+
+const text = (size, weight) =>
+  new PIXI.Text({
+    text: '',
+    style: {
+      fontFamily: 'ui-monospace, monospace',
+      fontSize: size,
+      fontWeight: weight,
+      fill: 0x475569,
+    },
+  });
+
+const banner = text(14, '700');
+banner.y = 0;
+stage.addChild(banner);
+
+const meaning = text(11, '600');
+meaning.y = 20;
+stage.addChild(meaning);
+
+const hint = text(10, '500');
+hint.style.fill = 0x94a3b8;
+hint.y = 40;
+hint.text = 'the labels above and below each reel ARE its hidden cells';
+stage.addChild(hint);
+
+// One label per hidden cell, sitting where that cell sits: above the grid
+// for bufferStart, below it for bufferEnd. Each column also carries its own
+// index, because reel indices are 0-based: `{ reel: 1 }` is the SECOND reel.
+const startLabels = [];
+const endLabels = [];
+for (let i = 0; i < COLS; i++) {
+  const index = text(10, '500');
+  index.style.fill = 0x94a3b8;
+  index.anchor.set(0.5, 1);
+  index.x = i * (SIZE + GAP) + SIZE / 2;
+  index.y = PAD_TOP - 22;
+  index.text = `reel ${i}`;
+  stage.addChild(index);
+
+  const top = text(11, '700');
+  top.anchor.set(0.5, 1);
+  top.x = i * (SIZE + GAP) + SIZE / 2;
+  top.y = PAD_TOP - 4;
+  stage.addChild(top);
+  startLabels.push(top);
+
+  const bottom = text(11, '700');
+  bottom.anchor.set(0.5, 0);
+  bottom.x = top.x;
+  bottom.y = PAD_TOP + ROWS * (SIZE + GAP) - GAP + 6;
+  stage.addChild(bottom);
+  endLabels.push(bottom);
+}
+
+function refreshLabels() {
+  for (let i = 0; i < COLS; i++) {
+    const strip = reelSet.reels[i].symbols;
+    const first = strip[0].symbolId;
+    const last = strip[strip.length - 1].symbolId;
+    startLabels[i].text = first;
+    startLabels[i].style.fill = first === COIN ? 0xd97706 : 0x16a34a;
+    endLabels[i].text = last;
+    endLabels[i].style.fill = last === COIN ? 0xd97706 : 0x16a34a;
+  }
+  const state = MODES[mode];
+  const CALLS = {
+    off: 'no buffer pool',
+    'reel 1 only': "set({ exclude: ['COIN'] }, { reel: 1, slots: 'buffer' })",
+    'above only': "set({ exclude: ['COIN'] }, { slots: 'bufferStart' })",
+    'every reel': "set({ exclude: ['COIN'] }, { slots: 'buffer' })",
+  };
+  const MEANINGS = {
+    off: 'COIN parks in every hidden cell',
+    'reel 1 only': 'only reel 1 stays clean -- indices are 0-based, so that is the SECOND reel',
+    'above only': 'the cells ABOVE the grid are clean, the ones below are untouched',
+    'every reel': 'no COIN parks off-window on any reel, either end',
+  };
+  banner.text = CALLS[state];
+  meaning.text = MEANINGS[state];
+  banner.style.fill = state === 'off' ? 0xd97706 : 0x16a34a;
+  meaning.style.fill = state === 'off' ? 0xd97706 : 0x16a34a;
+}
+
+const tick = () => refreshLabels();
+app.ticker.add(tick);
+applyPool();
+refreshLabels();
+
+return {
+  reelSet,
+  stage,
+  onSpin: async () => {
+    // Step to the next state so consecutive spins show all three.
+    mode = (mode + 1) % MODES.length;
+    applyPool();
+
+    const p = reelSet.spin();
+    await new Promise((r) => setTimeout(r, 200));
+    // Visible cells come from the server, as always. Only the cells nobody
+    // named -- here, the buffers -- are drawn from the pools.
+    reelSet.setResult(
+      Array.from({ length: COLS }, () => ({
+        visible: Array.from({ length: ROWS }, () => FILLER[Math.floor(Math.random() * FILLER.length)]),
+      })),
+    );
+    await p;
+  },
+  cleanup: () => {
+    app.ticker.remove(tick);
   },
 };
 ```
@@ -3211,695 +3400,6 @@ return {
     hud.text = `collector absorbed ${sum} · press spin to reset`;
     phase = 'done';
   },
-};
-```
-
-### curved-reels-focus
-URL: https://pixi-reels.schmooky.dev/recipes/curved-reels-focus/
-```ts
-// @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, SpriteSymbol, PIXI, app
-
-// Where the camera stands.
-//
-// `.curve(...)` alone puts one camera dead ahead of every reel, so each is its
-// own little drum and they all look identical. `.curveFocus('set')` puts a
-// SINGLE camera in front of the middle of the board instead: cells that rotate
-// away also lean IN toward the centre, and the whole grid reads as one wide
-// cylinder rather than five separate ones.
-//
-// Watch the outer reels. Their top and bottom rows no longer just narrow in
-// place, they tilt toward the middle of the board - and the centre reel, which
-// the camera is pointed straight at, barely moves at all.
-//
-// `'set-lean'` is halfway between, and is usually the sweet spot on a 5-wide
-// board with real art: enough of the one-big-drum read to sell the cabinet,
-// not so much that the outer reels visibly tilt into their neighbours.
-//
-// Leaning cells cross their own column, so the builder auto-selects
-// `SharedRectMaskStrategy`; the default per-reel mask would slice the overhang
-// off at the boundary. Pass `.maskStrategy(...)` yourself to override.
-
-const COLORS = [0xe8563f, 0xf2a03d, 0x3fa9e8, 0x5ac26a, 0x9b6bd6, 0xe0c341];
-const SIZE = 128;
-
-function tile(color) {
-  const g = new PIXI.Graphics();
-  g.roundRect(3, 3, SIZE - 6, SIZE - 6, 14).fill({ color });
-  for (let i = 1; i < 4; i++) {
-    const at = (SIZE / 4) * i;
-    g.moveTo(at, 6).lineTo(at, SIZE - 6);
-    g.moveTo(6, at).lineTo(SIZE - 6, at);
-  }
-  g.stroke({ color: 0xffffff, width: 2, alpha: 0.55 });
-  g.roundRect(3, 3, SIZE - 6, SIZE - 6, 14).stroke({ color: 0xffffff, width: 4 });
-  const texture = app.renderer.generateTexture({ target: g, resolution: 2 });
-  g.destroy();
-  return texture;
-}
-
-// NOT `textures`: that name is already an injected recipe global, and
-// redeclaring it is a SyntaxError that shows up as a silently blank demo.
-const art = {};
-COLORS.forEach((color, i) => {
-  art[`tile_${i}`] = tile(color);
-});
-const IDS = Object.keys(art);
-
-const REELS = 5;
-const CELLS = 3;
-
-const reelSet = new ReelSetBuilder()
-  .reels(REELS)
-  .visibleCells(CELLS)
-  .symbolSize(96, 96)
-  .symbolGap(6, 6)
-  .curve(0.5)
-  .curveFocus('set') // <- one camera for the whole board
-  .curveMode('warp') // bend the container: motion rides the curve too
-  .renderer(app.renderer)
-  .symbols((r) => {
-    for (const id of IDS) r.register(id, SpriteSymbol, { textures: art });
-  })
-  .speed('normal', SpeedPresets.NORMAL)
-  .speed('turbo', SpeedPresets.TURBO)
-  .ticker(app.ticker)
-  .build();
-
-// --- bezel -------------------------------------------------------------
-// A drum whose middle cell is drawn 1:1 cannot also reach the window edges;
-// the buffer cells show in that band, compressed as they curve away. Real
-// cabinets put a frame over it. `curve.mapMain(0)` is exactly where the drum's
-// top edge lands, so the frame is measured, not guessed.
-//
-// Kept strictly INSIDE the window rect: a bezel drawn outside it grows the
-// set's bounds and the recipe runner centres on those.
-const bw = reelSet.viewport.maskWidth;
-const bh = reelSet.viewport.maskHeight;
-const lip = Math.ceil(Math.max(...reelSet.reels.map((r) => (r.curve ? r.curve.mapMain(0) : 0)))) + 2;
-const bezel = new PIXI.Graphics();
-bezel.rect(0, 0, bw, lip).rect(0, bh - lip, bw, lip).fill({ color: 0x0b0a12 });
-bezel
-  .moveTo(0, lip)
-  .lineTo(bw, lip)
-  .moveTo(0, bh - lip)
-  .lineTo(bw, bh - lip)
-  .stroke({ color: 0x2c2740, width: 2 });
-reelSet.addChild(bezel);
-
-return {
-  reelSet,
-  nextResult: () =>
-    Array.from({ length: REELS }, () =>
-      Array.from({ length: CELLS }, () => IDS[Math.floor(Math.random() * IDS.length)]),
-    ),
-};
-```
-
-### curved-reels-gems
-URL: https://pixi-reels.schmooky.dev/recipes/curved-reels-gems/
-```ts
-// @ts-nocheck
-// Injected: ReelSetBuilder, SpeedPresets, BlurSpriteSymbol,
-//           loadHoldAndWinSprites, PIXI, app
-
-// Real art on the drum.
-//
-// The grid tiles in the other recipes are a measuring instrument - they make
-// the projection obvious. This is what it looks like on shipped symbols:
-// Playson's Supercharged Diamonds 3 gem set, the same sheet the sprite Hold &
-// Win recipes use.
-//
-// Two things matter here that the grid tiles hide.
-//
-// 1. These gems do NOT fill their cells. They are trimmed atlas frames,
-//    letterboxed into a square cell, so the actual art is a shape floating in
-//    a much bigger transparent box. `BlurSpriteSymbol` reports where its art
-//    really sits via `cellInset`, so the drum projects THE GEM rather than the
-//    empty cell around it - otherwise every symbol would be inflated to the
-//    cell edges and handed the cell's keystone instead of its own.
-//
-// 2. `BlurSpriteSymbol` is a docs-site class, not a library one, and it opts
-//    into the real projection in about ten lines by handing the quad to the
-//    exported `PerspectiveCell`. That is the whole extension story: if your
-//    symbol's content is a single texture, you get true keystoning; if it is a
-//    Spine skeleton or a composite subtree, the base class falls back to a
-//    uniform scale and nothing is distorted.
-//
-// Blur-on-spin still works: the mesh is handed each new texture as the symbol
-// swaps to its motion-blur variant.
-
-const { symbols, blur } = await loadHoldAndWinSprites();
-
-const IDS = ['1', '2', '3', '4', '5', '6', '7', '8', 'wild'];
-
-class BlurCell extends BlurSpriteSymbol {
-  onReelSpinStart() { this.setBlurred(true); }
-  onReelSpinEnd() { this.setBlurred(false); }
-  onReelLanded() { this.setBlurred(false); }
-}
-
-const REELS = 5;
-const CELLS = 3;
-
-const reelSet = new ReelSetBuilder()
-  .reels(REELS)
-  .visibleCells(CELLS)
-  .symbolSize(96, 96)
-  .symbolGap(6, 6)
-  .curve({ amount: 0.42, depth: 0.26 })
-  .curveFocus('set-lean')
-  .curveMode('warp') // bend the container: motion rides the curve too
-  .renderer(app.renderer)
-  .symbols((r) => {
-    for (const id of IDS) {
-      r.register(id, BlurCell, { textures: symbols, blurTextures: blur });
-    }
-  })
-  .speed('normal', SpeedPresets.NORMAL)
-  .speed('turbo', SpeedPresets.TURBO)
-  .ticker(app.ticker)
-  .build();
-
-// --- bezel -------------------------------------------------------------
-// A drum whose middle cell is drawn 1:1 cannot also reach the window edges;
-// the buffer cells show in that band, compressed as they curve away. Real
-// cabinets put a frame over it. `curve.mapMain(0)` is exactly where the drum's
-// top edge lands, so the frame is measured, not guessed.
-//
-// Kept strictly INSIDE the window rect: a bezel drawn outside it grows the
-// set's bounds and the recipe runner centres on those.
-const bw = reelSet.viewport.maskWidth;
-const bh = reelSet.viewport.maskHeight;
-const lip = Math.ceil(Math.max(...reelSet.reels.map((r) => (r.curve ? r.curve.mapMain(0) : 0)))) + 2;
-const bezel = new PIXI.Graphics();
-bezel.rect(0, 0, bw, lip).rect(0, bh - lip, bw, lip).fill({ color: 0x0b0a12 });
-bezel
-  .moveTo(0, lip)
-  .lineTo(bw, lip)
-  .moveTo(0, bh - lip)
-  .lineTo(bw, bh - lip)
-  .stroke({ color: 0x2c2740, width: 2 });
-reelSet.addChild(bezel);
-
-return {
-  reelSet,
-  nextResult: () =>
-    Array.from({ length: REELS }, () =>
-      Array.from({ length: CELLS }, () => IDS[Math.floor(Math.random() * IDS.length)]),
-    ),
-};
-```
-
-### curved-reels-per-reel
-URL: https://pixi-reels.schmooky.dev/recipes/curved-reels-per-reel/
-```ts
-// @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, SpriteSymbol, PIXI, app
-
-// One wide drum instead of five identical ones.
-//
-// `.curvePerReel([...])` gives each reel its own camera. Bending the middle
-// reels hardest and easing off toward the outside makes the board read as a
-// single cylinder lying across the screen rather than five columns that each
-// happen to be curved the same way. It is the cheapest trick in the file for
-// making a 5x3 look like a cabinet.
-//
-// The array is one entry per reel and must match `reels()`. Each entry takes
-// the same shorthand or object form `.curve()` does, so the outer reels here
-// are nearly flat while the centre one runs deep - watch the grid lines
-// converge harder as you look toward the middle of the board.
-//
-// `depth` is spelled out rather than left to default because the centre reel
-// wants a stronger perspective than `amount * 0.5` would give it. It is capped
-// below `cos(arc)` - past that the projection would fold cells back over each
-// other - so a very deep curve quietly saturates instead of turning inside out.
-
-const COLORS = [0xe8563f, 0xf2a03d, 0x3fa9e8, 0x5ac26a, 0x9b6bd6, 0xe0c341];
-const SIZE = 128;
-
-// Same generated grid tile as the single-curve recipe: a grid is the quickest
-// way to SEE a projection, because parallel lines stop being parallel.
-function tile(color) {
-  const g = new PIXI.Graphics();
-  g.roundRect(3, 3, SIZE - 6, SIZE - 6, 14).fill({ color });
-  for (let i = 1; i < 4; i++) {
-    const at = (SIZE / 4) * i;
-    g.moveTo(at, 6).lineTo(at, SIZE - 6);
-    g.moveTo(6, at).lineTo(SIZE - 6, at);
-  }
-  g.stroke({ color: 0xffffff, width: 2, alpha: 0.55 });
-  g.roundRect(3, 3, SIZE - 6, SIZE - 6, 14).stroke({ color: 0xffffff, width: 4 });
-  const texture = app.renderer.generateTexture({ target: g, resolution: 2 });
-  g.destroy();
-  return texture;
-}
-
-// NOT `textures`: that name is already an injected recipe global, and
-// redeclaring it is a SyntaxError that shows up as a silently blank demo.
-const art = {};
-COLORS.forEach((color, i) => {
-  art[`tile_${i}`] = tile(color);
-});
-const IDS = Object.keys(art);
-
-const REELS = 5;
-const CELLS = 3;
-
-const reelSet = new ReelSetBuilder()
-  .reels(REELS)
-  .visibleCells(CELLS)
-  .symbolSize(96, 96)
-  .symbolGap(6, 6)
-  .curvePerReel([
-    { amount: 0.2, depth: 0.1 },
-    { amount: 0.45, depth: 0.22 },
-    { amount: 0.7, depth: 0.34 }, // centre reel faces you most
-    { amount: 0.45, depth: 0.22 },
-    { amount: 0.2, depth: 0.1 },
-  ])
-  .curveMode('warp') // bend the container: motion rides the curve too
-  .renderer(app.renderer)
-  .symbols((r) => {
-    for (const id of IDS) r.register(id, SpriteSymbol, { textures: art });
-  })
-  .speed('normal', SpeedPresets.NORMAL)
-  .speed('turbo', SpeedPresets.TURBO)
-  .ticker(app.ticker)
-  .build();
-
-// --- bezel -------------------------------------------------------------
-// A drum whose middle cell is drawn 1:1 cannot also reach the window edges;
-// the buffer cells show in that band, compressed as they curve away. Real
-// cabinets put a frame over it. `curve.mapMain(0)` is exactly where the drum's
-// top edge lands, so the frame is measured, not guessed.
-//
-// Kept strictly INSIDE the window rect: a bezel drawn outside it grows the
-// set's bounds and the recipe runner centres on those.
-const bw = reelSet.viewport.maskWidth;
-const bh = reelSet.viewport.maskHeight;
-const lip = Math.ceil(Math.max(...reelSet.reels.map((r) => (r.curve ? r.curve.mapMain(0) : 0)))) + 2;
-const bezel = new PIXI.Graphics();
-bezel.rect(0, 0, bw, lip).rect(0, bh - lip, bw, lip).fill({ color: 0x0b0a12 });
-bezel
-  .moveTo(0, lip)
-  .lineTo(bw, lip)
-  .moveTo(0, bh - lip)
-  .lineTo(bw, bh - lip)
-  .stroke({ color: 0x2c2740, width: 2 });
-reelSet.addChild(bezel);
-
-return {
-  reelSet,
-  nextResult: () =>
-    Array.from({ length: REELS }, () =>
-      Array.from({ length: CELLS }, () => IDS[Math.floor(Math.random() * IDS.length)]),
-    ),
-};
-```
-
-### curved-reels-warp
-URL: https://pixi-reels.schmooky.dev/recipes/curved-reels-warp/
-```ts
-// @ts-nocheck
-// Injected: ReelSetBuilder, SpeedPresets, SpineReelSymbol, loadSpineSet,
-//           PIXI, app
-
-// Bend the whole reel, not each symbol.
-//
-// `.curveMode('warp')` renders each reel to a texture and draws it through a
-// mesh whose VERTICES are displaced by the projection. Everything inside bends
-// - Spine skeletons, atlas sprites, text, effects - and no symbol has to
-// cooperate or even know the reel is curved.
-//
-// These are Thunderkick's Rex the Hunt skeletons, which the per-symbol path
-// cannot bend at all: a `Container` transform is affine, so it can only
-// displace and scale a live skeleton. Here they curve like everything else,
-// and they keep animating while they do.
-//
-// The other thing the warp buys you is MOTION. Because the bend is applied to
-// the rendered reel rather than baked into each cell, anything that moves the
-// strip travels along the curve for free - the spin, the stop bounce, cascade
-// falls. On the per-symbol path the bounce is a flat translation of the reel
-// container, so the whole board slides straight up and down instead of riding
-// the drum.
-//
-// A bezel covers the top and bottom of the window. A drum whose middle cell is
-// drawn 1:1 cannot also reach the window edges, so the buffer cells show there,
-// compressed as they curve away - exactly the sliver of the next symbol a real
-// cabinet shows, and exactly what a real cabinet's frame hides.
-
-const { spineMap, symbolIds } = await loadSpineSet('thunderkick');
-const IDS = [...symbolIds];
-
-const REELS = 5;
-const CELLS = 3;
-// Rex the Hunt plates measure exactly 175x203 in the setup pose, and the
-// skeleton draws at that size unless you tell it otherwise. Derive the cell
-// from one scale factor and hand the SAME factor to the symbol - pick the cell
-// without it and every skeleton overflows, cropping at the cell edge and
-// spilling into its neighbours.
-const SPINE_SCALE = 0.8;
-const CELL_W = 175 * SPINE_SCALE;
-const CELL_H = 203 * SPINE_SCALE;
-// Gap on the CROSS axis only. It separates the drums, which is the point;
-// a main-axis gap would punch black bands through each strip's background,
-// because every symbol here carries its own full-bleed backdrop.
-const GAP = 16;
-
-const reelSet = new ReelSetBuilder()
-  .reels(REELS)
-  .visibleCells(CELLS)
-  .symbolSize(CELL_W, CELL_H)
-  .symbolGap(GAP, 0) // separates the drums without slicing the strips
-  .bufferSymbols(2) // more to draw in the band the bezel covers
-  .curve(0.45)
-  .curveFocus('set-lean')
-  .curveMode('warp') // <- bend the container, not the cells
-  // Room across the strip for art wider than its cell. The mystery plate's
-  // leaves overflow their tile; without this the warp texture slices them off
-  // at the reel edge. `curveFocus` other than 'reel' has already selected
-  // SharedRectMaskStrategy, so the overhang is not clipped again by the mask.
-  .curveBleed(46)
-  .renderer(app.renderer)
-  // Per-symbol stacking INSIDE a reel. `zIndex` is folded in as
-  // `zIndex * 100 + cellIndex`, so any raised value beats every cell index and
-  // the symbol draws over its neighbours whatever row it lands on. The mystery
-  // and scatter plates deliberately overflow their tile, so this is what lets
-  // the leaves spill over the symbol below instead of being covered by it.
-  // Re-applied on every wrap, so it holds mid-spin too.
-  .symbolData({
-    // Both overflow their tile, so both need to win against their neighbours.
-    // Same tier rather than a pecking order: on a tie the cell index decides,
-    // which keeps the lower cell in front and reads correctly either way.
-    mystery: { zIndex: 2 },
-    scatter: { zIndex: 2 },
-  })
-  // Weighted up from a real paytable so the demo actually shows them.
-  .weights({
-    ...Object.fromEntries(IDS.map((id) => [id, 6])),
-    mystery: 14,
-    scatter: 10,
-  })
-  .symbols((r) => {
-    for (const id of IDS) {
-      r.register(id, SpineReelSymbol, {
-        spineMap,
-        scale: SPINE_SCALE,
-        autoPlayLanding: true,
-      });
-    }
-  })
-  .speed('normal', SpeedPresets.NORMAL)
-  .speed('turbo', SpeedPresets.TURBO)
-  .ticker(app.ticker)
-  .build();
-
-// --- bezel -------------------------------------------------------------
-// Drawn OVER the set, in the set's own coordinates, so it travels with it.
-const boardW = REELS * CELL_W + (REELS - 1) * GAP;
-const boardH = CELLS * CELL_H;
-// The drum's ends fall short of the window by `halfExtent * (1 - edgeMapped)`,
-// about 45px at this size and curve. The bezel has to cover at least that or
-// the curl shows under it.
-const LIP = 50;
-
-// Kept strictly INSIDE the board rect. A bezel drawn outside it grows the
-// set's bounds, and the recipe runner centres on those - the board slides off
-// centre and the frame stops lining up with the window.
-const bezel = new PIXI.Graphics();
-bezel
-  .rect(0, 0, boardW, LIP)
-  .rect(0, boardH - LIP, boardW, LIP)
-  .fill({ color: 0x0b0a12 });
-bezel
-  .moveTo(0, LIP)
-  .lineTo(boardW, LIP)
-  .moveTo(0, boardH - LIP)
-  .lineTo(boardW, boardH - LIP)
-  .stroke({ color: 0x2c2740, width: 2 });
-reelSet.addChild(bezel);
-
-return {
-  reelSet,
-  nextResult: () =>
-    Array.from({ length: REELS }, () =>
-      Array.from({ length: CELLS }, () => IDS[Math.floor(Math.random() * IDS.length)]),
-    ),
-};
-```
-
-### curved-reels
-URL: https://pixi-reels.schmooky.dev/recipes/curved-reels/
-```ts
-// @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, SpriteSymbol, PIXI, app
-
-// The whole board on one drum. `.curve(0.5)` is the entire feature.
-//
-// `SpriteSymbol` draws its texture through a `PerspectiveMesh` as soon as the
-// reel is curved, so every cell is a genuine projected TRAPEZOID: the edge that
-// has rotated further round the drum is narrower than the one facing you. A
-// scale can only ever hand you a smaller rectangle. This bends the art itself.
-//
-// The tiles are drawn with a grid on purpose - it is the quickest way to SEE a
-// projection. On the top and bottom rows the grid lines converge toward the
-// edge that has turned away; on the middle row, which faces the camera
-// square-on, they stay parallel.
-//
-// It costs no render pass: the symbol already owns a texture, so the mesh maps
-// that texture straight onto the projected quad. A set with no `.curve()` never
-// allocates a mesh at all and runs exactly the code it ran before.
-
-const COLORS = [0xe8563f, 0xf2a03d, 0x3fa9e8, 0x5ac26a, 0x9b6bd6, 0xe0c341];
-const SIZE = 128;
-
-// A flat tile with a border and an internal grid. Generated rather than loaded
-// so the demo has no art dependency and the texture is exactly cell-shaped.
-function tile(color) {
-  const g = new PIXI.Graphics();
-  g.roundRect(3, 3, SIZE - 6, SIZE - 6, 14).fill({ color });
-  for (let i = 1; i < 4; i++) {
-    const at = (SIZE / 4) * i;
-    g.moveTo(at, 6).lineTo(at, SIZE - 6);
-    g.moveTo(6, at).lineTo(SIZE - 6, at);
-  }
-  g.stroke({ color: 0xffffff, width: 2, alpha: 0.55 });
-  g.roundRect(3, 3, SIZE - 6, SIZE - 6, 14).stroke({ color: 0xffffff, width: 4 });
-  const texture = app.renderer.generateTexture({ target: g, resolution: 2 });
-  g.destroy();
-  return texture;
-}
-
-const art = {};
-COLORS.forEach((color, i) => {
-  art[`tile_${i}`] = tile(color);
-});
-const IDS = Object.keys(art);
-
-const REELS = 5;
-const CELLS = 3;
-
-const reelSet = new ReelSetBuilder()
-  .reels(REELS)
-  .visibleCells(CELLS)
-  .symbolSize(96, 96)
-  .symbolGap(6, 6)
-  .curve(0.5) // <- the whole thing
-  .curveMode('warp') // bend the container: motion rides the curve too
-  .renderer(app.renderer)
-  .symbols((r) => {
-    for (const id of IDS) r.register(id, SpriteSymbol, { textures: art });
-  })
-  .speed('normal', SpeedPresets.NORMAL)
-  .speed('turbo', SpeedPresets.TURBO)
-  .ticker(app.ticker)
-  .build();
-
-// --- bezel -------------------------------------------------------------
-// A drum whose middle cell is drawn 1:1 cannot also reach the window edges;
-// the buffer cells show in that band, compressed as they curve away. Real
-// cabinets put a frame over it. `curve.mapMain(0)` is exactly where the drum's
-// top edge lands, so the frame is measured, not guessed.
-//
-// Kept strictly INSIDE the window rect: a bezel drawn outside it grows the
-// set's bounds and the recipe runner centres on those.
-const bw = reelSet.viewport.maskWidth;
-const bh = reelSet.viewport.maskHeight;
-const lip = Math.ceil(Math.max(...reelSet.reels.map((r) => (r.curve ? r.curve.mapMain(0) : 0)))) + 2;
-const bezel = new PIXI.Graphics();
-bezel.rect(0, 0, bw, lip).rect(0, bh - lip, bw, lip).fill({ color: 0x0b0a12 });
-bezel
-  .moveTo(0, lip)
-  .lineTo(bw, lip)
-  .moveTo(0, bh - lip)
-  .lineTo(bw, bh - lip)
-  .stroke({ color: 0x2c2740, width: 2 });
-reelSet.addChild(bezel);
-
-return {
-  reelSet,
-  nextResult: () =>
-    Array.from({ length: REELS }, () =>
-      Array.from({ length: CELLS }, () => IDS[Math.floor(Math.random() * IDS.length)]),
-    ),
-};
-```
-
-### curved-value-reel
-URL: https://pixi-reels.schmooky.dev/recipes/curved-value-reel/
-```ts
-// @ts-nocheck
-// Injected: ReelSetBuilder, SpeedPresets, ReelSymbol, PIXI, app
-
-// A single value reel: 1 reel, 3 cells, money amounts spinning past.
-//
-// The pattern behind every prize picker, jackpot ladder and bonus-wheel
-// readout: the symbols are not art at all, they are NUMBERS, drawn at runtime.
-// Here each cell is nothing but a `PIXI.Text`, and the symbol id IS the amount -
-// `setResult([['100.00', ...]])` lands the value you name. No plate, no border,
-// no background: just numbers turning on a drum.
-//
-// It is also the case only `curveMode('warp')` can bend. A `Text` is not a
-// texture the engine can hand to a mesh, so the per-symbol projection can do
-// nothing but displace and scale it. The warp renders the whole reel to a
-// texture first, so the digits themselves curve.
-//
-// Text is authored big and scaled down to fit, which keeps `1000.00` and
-// `5.00` on the same optical size without reflowing the font.
-
-const VALUES = ['5.00', '10.00', '25.00', '50.00', '100.00', '250.00', '1000.00'];
-
-// Rarer as they get bigger, like a real prize ladder.
-const WEIGHTS = {
-  '5.00': 30, '10.00': 24, '25.00': 18, '50.00': 12,
-  '100.00': 8, '250.00': 5, '1000.00': 2,
-};
-
-const CELL_W = 260;
-const CELL_H = 88;
-
-class ValueSymbol extends ReelSymbol {
-  constructor() {
-    super();
-    this._text = new PIXI.Text({
-      text: '',
-      style: {
-        // Authored large, scaled down in `_fit`. Rasterising once at a big
-        // size and shrinking beats re-rasterising per value.
-        fontSize: 64,
-        fontWeight: '700',
-        fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
-        fill: 0xfff6d5,
-        letterSpacing: 1,
-      },
-    });
-    this._text.anchor.set(0.5);
-    this.view.addChild(this._text);
-    this._w = 0;
-    this._h = 0;
-    this._fitScale = 1;
-    this._winTween = null;
-  }
-
-  onActivate(symbolId) {
-    this._text.text = `$${symbolId}`;
-    // Bigger prizes read warmer, so the reel is a ladder at a glance.
-    const rank = VALUES.indexOf(symbolId) / (VALUES.length - 1);
-    this._text.style.fill = rank > 0.7 ? 0xffcf4d : rank > 0.35 ? 0xf0e2bd : 0xa79b83;
-    this._fit();
-  }
-
-  onDeactivate() {
-    this._killWin();
-    this._text.scale.set(this._fitScale);
-  }
-
-  async playWin() {
-    this._killWin();
-    const to = this._fitScale * 1.16;
-    return new Promise((resolve) => {
-      this._winTween = this.gsap.to(this._text.scale, {
-        x: to, y: to, duration: 0.16, yoyo: true, repeat: 1,
-        ease: 'power2.inOut', onComplete: resolve,
-      });
-    });
-  }
-
-  stopAnimation() {
-    this._killWin();
-    this._text.scale.set(this._fitScale);
-  }
-
-  resize(width, height) {
-    this._w = width;
-    this._h = height;
-    this._text.x = width / 2;
-    this._text.y = height / 2;
-    this._fit();
-  }
-
-  _fit() {
-    if (this._w <= 0 || !this._text.text) return;
-    // Reset before measuring, or each fit compounds on the last one's scale.
-    this._text.scale.set(1);
-    const room = Math.min((this._w - 24) / this._text.width, (this._h - 16) / this._text.height);
-    this._fitScale = Math.min(room, 1);
-    this._text.scale.set(this._fitScale);
-  }
-
-  _killWin() {
-    if (this._winTween) {
-      this._winTween.kill();
-      this._winTween = null;
-    }
-  }
-}
-
-const reelSet = new ReelSetBuilder()
-  .reels(1)
-  .visibleCells(3)
-  .symbolSize(CELL_W, CELL_H)
-  .symbolGap(0, 6)
-  .curve(0.5)
-  .curveMode('warp') // a Text cell has no texture of its own to bend
-  .renderer(app.renderer)
-  .symbols((r) => {
-    for (const v of VALUES) r.register(v, ValueSymbol, {});
-  })
-  .weights(WEIGHTS)
-  // Slow on purpose. A prize reel is read, not raced: the player is following
-  // the amounts as they pass, so the strip crawls and takes its time settling.
-  .speed('normal', {
-    ...SpeedPresets.NORMAL,
-    spinSpeed: SpeedPresets.NORMAL.spinSpeed * 0.28,
-    accelerationDuration: 700,
-    minimumSpinTime: 1200,
-    bounceDuration: 700,
-  })
-  .speed('turbo', {
-    ...SpeedPresets.NORMAL,
-    spinSpeed: SpeedPresets.NORMAL.spinSpeed * 0.6,
-    minimumSpinTime: 600,
-  })
-  .ticker(app.ticker)
-  .build();
-
-const pick = () => {
-  const total = Object.values(WEIGHTS).reduce((a, b) => a + b, 0);
-  let r = Math.random() * total;
-  for (const [v, w] of Object.entries(WEIGHTS)) {
-    r -= w;
-    if (r <= 0) return v;
-  }
-  return VALUES[0];
-};
-
-return {
-  reelSet,
-  // One reel, three cells: the middle one is the prize, the neighbours are
-  // just the ladder either side of it.
-  nextResult: () => [[pick(), pick(), pick()]],
 };
 ```
 
@@ -11016,6 +10516,119 @@ return {
 };
 ```
 
+### per-reel-symbol-pool
+URL: https://pixi-reels.schmooky.dev/recipes/per-reel-symbol-pool/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//                   WILD_CARD, PIXI, app
+//
+// Give one reel its own draw table.
+//
+// `builder.weights({...})` is one table for the whole set. A pool scoped to
+// `{ reel: n }` layers on top of it for that reel alone, so the strip
+// streaming past reel 2 can be nothing but wilds while its neighbours keep
+// the base mix -- no middleware, no second ReelSet.
+//
+// Watch the spin, not the landing: pools decide what SCROLLS past. What
+// stops on screen is whatever `setResult` says, exactly as before.
+
+const WILD = WILD_CARD.id;
+const LOW = ['7', '8'];
+const HIGH = ['J', 'Q', 'K', 'A'];
+
+const COLS = 5, ROWS = 3, SIZE = 84, GAP = 4;
+
+const reelSet = new ReelSetBuilder()
+  .reels(COLS)
+  .visibleCells(ROWS)
+  .symbolSize(SIZE, SIZE)
+  .symbolGap(GAP, GAP)
+  .symbols((r) => {
+    for (const sym of [...CARD_DECK, WILD_CARD]) {
+      r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
+    }
+  })
+  // The base table every reel starts from: low cards common, wild rare.
+  .weights({ '7': 20, '8': 20, '9': 14, '10': 14, J: 8, Q: 8, K: 6, A: 6, [WILD]: 2 })
+  // --- The three pools this recipe is about ---------------------------
+  // Build-time form. `reelSet.randomSymbols.set(pool, scope)` takes the same
+  // pool and scope at run time, which is where a feature-mode swap belongs.
+  //
+  // Reel 0: low cards only. Weight 0 bans a symbol as surely as `exclude`.
+  .randomSymbols({ weights: { '9': 0, '10': 0, J: 0, Q: 0, K: 0, A: 0, [WILD]: 0 } }, { reel: 0 })
+  // Reel 2: a wild reel while it spins.
+  .randomSymbols({ weights: { [WILD]: 400 } }, { reel: 2 })
+  // Reel 4: never teases a wild at all.
+  .randomSymbols({ exclude: [WILD] }, { reel: 4 })
+  .speed('normal', { ...SpeedPresets.NORMAL, minimumSpinTime: 1400, stopDelay: 220 })
+  .ticker(app.ticker)
+  .build();
+
+// --- Captions, so the rule under each reel is readable -----------------
+// One composition root with headroom for the title, returned as `stage`: the
+// runner scales and centres that instead of clipping what sits above y = 0.
+const CAPTIONS = ['low cards only', 'base table', 'WILD x400', 'base table', 'no WILD'];
+const PAD_TOP = 30;
+const gridBottom = PAD_TOP + ROWS * (SIZE + GAP) - GAP;
+
+const stage = new PIXI.Container();
+reelSet.y = PAD_TOP;
+stage.addChild(reelSet);
+
+const title = new PIXI.Text({
+  text: 'one weights() table, three per-reel pools on top',
+  style: { fontFamily: 'ui-monospace, monospace', fontSize: 13, fontWeight: '700', fill: 0x475569 },
+});
+title.y = 0;
+stage.addChild(title);
+
+for (let i = 0; i < COLS; i++) {
+  const scoped = CAPTIONS[i] !== 'base table';
+  // The index goes on the demo, not just in the source: reel indices are
+  // 0-based, so `{ reel: 2 }` is the THIRD reel, not the second.
+  const index = new PIXI.Text({
+    text: `reel ${i}`,
+    style: { fontFamily: 'ui-monospace, monospace', fontSize: 10, fontWeight: '700', fill: 0x94a3b8 },
+  });
+  index.anchor.set(0.5, 0);
+  index.x = i * (SIZE + GAP) + SIZE / 2;
+  index.y = gridBottom + 8;
+  stage.addChild(index);
+
+  const caption = new PIXI.Text({
+    text: CAPTIONS[i],
+    style: {
+      fontFamily: 'ui-monospace, monospace',
+      fontSize: 10,
+      fontWeight: scoped ? '700' : '500',
+      fill: scoped ? 0x16a34a : 0x94a3b8,
+    },
+  });
+  caption.anchor.set(0.5, 0);
+  caption.x = index.x;
+  caption.y = gridBottom + 22;
+  stage.addChild(caption);
+}
+
+// The engine only reports what it will draw; assert your own config with it.
+// eslint-disable-next-line no-console -- the point of the line is to be read
+console.log('reel 2 draw table:', reelSet.randomSymbols.weights({ reel: 2 }));
+
+return {
+  reelSet,
+  stage,
+  nextResult: () =>
+    // A perfectly ordinary server result. The pools never touch it.
+    Array.from({ length: COLS }, () =>
+      Array.from({ length: ROWS }, () => {
+        const pool = Math.random() < 0.5 ? LOW : HIGH;
+        return pool[Math.floor(Math.random() * pool.length)];
+      }),
+    ),
+};
+```
+
 ### positional-multiplier-pin
 URL: https://pixi-reels.schmooky.dev/recipes/positional-multiplier-pin/
 ```ts
@@ -14814,6 +14427,151 @@ return {
       stagger: 240,
       slowdown: { from: 0.5, to: 0.12 },
     });
+    await p;
+  },
+};
+```
+
+### unmask-stays-in-the-grid
+URL: https://pixi-reels.schmooky.dev/recipes/unmask-stays-in-the-grid/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//                   ReelSymbol, PIXI, app
+//
+// `unmask: true` lifts VISIBLE cells only.
+//
+// An unmasked symbol is parented to the viewport-wide unmasked container on
+// land, so art wider than its cell can overflow the grid instead of being
+// clipped. That is a presentation for a cell the player is looking at: the
+// same id sitting in a BUFFER cell stays under the mask, because a buffer
+// cell is parked outside the window precisely so nobody sees it.
+//
+// Both cases are on screen at once below. Same symbol, one cell apart.
+
+const PLATE = 'plate';
+const FILLER = ['7', '8', '9', '10'];
+
+const COLS = 4, ROWS = 3, SIZE = 88, GAP = 6;
+const GRID_W = COLS * (SIZE + GAP) - GAP;
+const GRID_H = ROWS * (SIZE + GAP) - GAP;
+
+// A deliberately oversized symbol: 1.7x its cell in both directions, so a
+// lifted one overflows the grid edge and its neighbours, and a masked one
+// would be impossible to miss if it ever leaked.
+class PlateSymbol extends ReelSymbol {
+  onActivate() {
+    this._draw();
+  }
+  onDeactivate() {}
+  async playWin() {}
+  stopAnimation() {}
+  resize(width, height) {
+    this._w = width;
+    this._h = height;
+    this._draw();
+  }
+  _draw() {
+    if (!this._w) return;
+    this.view.removeChildren();
+    const w = this._w * 1.7;
+    const h = this._h * 1.7;
+    const x = (this._w - w) / 2;
+    const y = (this._h - h) / 2;
+    this.view.addChild(
+      new PIXI.Graphics()
+        .roundRect(x, y, w, h, 14)
+        .fill({ color: 0x7c3aed })
+        .stroke({ color: 0xfef08a, width: 4 }),
+    );
+    const label = new PIXI.Text({
+      text: 'JACKPOT',
+      style: { fontFamily: 'ui-monospace, monospace', fontSize: 15, fontWeight: '900', fill: 0xfef08a },
+    });
+    label.anchor.set(0.5);
+    label.x = this._w / 2;
+    label.y = this._h / 2;
+    this.view.addChild(label);
+  }
+}
+
+const spare = () => FILLER[Math.floor(Math.random() * FILLER.length)];
+const result = () => [
+  { visible: [spare(), spare(), spare()] },
+  // Visible cell 0 -> lifted above the mask on land.
+  { visible: [PLATE, spare(), spare()] },
+  { visible: [spare(), spare(), spare()] },
+  // Buffer cell above the window -> masked, invisible, and it must stay that
+  // way through a skip as well: hit SPIN then SKIP and nothing pops out.
+  { visible: [spare(), spare(), spare()], bufferStart: [PLATE] },
+];
+
+const reelSet = new ReelSetBuilder()
+  .reels(COLS)
+  .visibleCells(ROWS)
+  .symbolSize(SIZE, SIZE)
+  .symbolGap(GAP, GAP)
+  .bufferSymbols(1)
+  .symbols((r) => {
+    for (const sym of CARD_DECK) {
+      r.register(sym.id, CardSymbol, { color: sym.color, label: sym.label, textColor: sym.textColor });
+    }
+    r.register(PLATE, PlateSymbol, {});
+  })
+  // The plate is never drawn at random: it only ever lands where the result
+  // puts it. A pool is the tidy way to say so.
+  .randomSymbols({ exclude: [PLATE] })
+  .symbolData({ [PLATE]: { unmask: true, zIndex: 10 } })
+  .speed('normal', { ...SpeedPresets.NORMAL, minimumSpinTime: 900 })
+  .initialFrame(result())
+  .ticker(app.ticker)
+  .build();
+
+// --- Captions ----------------------------------------------------------
+// The lifted plate overflows ABOVE the grid, and the buffer cell it is
+// compared against sits above it too, so the composition needs real headroom.
+// One root with the reels pushed down, returned as `stage`.
+const PAD_TOP = 118;
+const stage = new PIXI.Container();
+reelSet.y = PAD_TOP;
+stage.addChild(reelSet);
+
+const caption = (text, color, x, y, anchorX) => {
+  const t = new PIXI.Text({
+    text,
+    style: { fontFamily: 'ui-monospace, monospace', fontSize: 11, fontWeight: '700', fill: color },
+  });
+  t.anchor.set(anchorX, 0);
+  t.x = x;
+  t.y = y;
+  stage.addChild(t);
+  return t;
+};
+
+caption('same symbol, one cell apart', 0x475569, 0, 0, 0);
+caption('reel 1, top VISIBLE cell: lifted, overflows the grid', 0x7c3aed, 0, 16, 0);
+caption('reel 3, BUFFER cell above: clipped by the mask at the grid edge', 0x94a3b8, 0, 32, 0);
+
+// Mark where the buffered plate actually is, since the point of it is what
+// you canNOT see. The dashes sit one cell above the grid, over reel 3.
+const ghost = new PIXI.Graphics();
+const gx = 3 * (SIZE + GAP);
+const ghostY = PAD_TOP - SIZE - GAP + SIZE / 2;
+for (let i = 0; i < 6; i++) {
+  ghost.rect(gx + i * (SIZE / 6) + 3, ghostY, SIZE / 12, 2);
+}
+ghost.fill({ color: 0x94a3b8 });
+const ghostLabel = caption('plate is parked here', 0x94a3b8, gx + SIZE / 2, ghostY + 6, 0.5);
+ghostLabel.style.fontSize = 9;
+stage.addChild(ghost);
+
+return {
+  reelSet,
+  stage,
+  onSpin: async () => {
+    const p = reelSet.spin();
+    await new Promise((r) => setTimeout(r, 200));
+    reelSet.setResult(result());
     await p;
   },
 };

@@ -27,6 +27,7 @@ import { ReelViewport } from './ReelViewport.js';
 import { SymbolRegistry } from '../symbols/SymbolRegistry.js';
 import { SymbolFactory } from '../symbols/SymbolFactory.js';
 import { RandomSymbolProvider } from '../frame/RandomSymbolProvider.js';
+import type { SymbolPool, SymbolPoolScope } from '../frame/SymbolPool.js';
 import { FrameBuilder } from '../frame/FrameBuilder.js';
 import { PhaseFactory } from '../spin/phases/PhaseFactory.js';
 import type { SpinningMode } from '../spin/modes/SpinningMode.js';
@@ -87,6 +88,7 @@ export class ReelSetBuilder {
   private _bufferEnd = DEFAULTS.bufferSymbols;
   private _symbolRegistry = new SymbolRegistry();
   private _weights: Record<string, number> = {};
+  private _symbolPools: { pool: SymbolPool; scope: SymbolPoolScope }[] = [];
   private _speeds = new Map<string, SpeedProfile>();
   private _initialSpeed = DEFAULTS.initialSpeed;
   private _offset: OffsetConfig = { mode: 'none' };
@@ -580,6 +582,27 @@ export class ReelSetBuilder {
   }
 
   /**
+   * Narrow what the engine may draw when it fills a cell you did not name.
+   *
+   * `weights()` sets the base table for every reel; this layers pools on
+   * top of it, so a symbol can be common on the strip and impossible in
+   * the buffer cells, or heavy on one reel only. Call it once per scope.
+   *
+   * Buffer pools apply ON TOP of the spinning ones (see `SymbolPoolScope`),
+   * and the same pools are reachable at run time as
+   * `reelSet.randomSymbols`, which is where a game mode switch belongs.
+   *
+   * @example
+   * .randomSymbols({ exclude: ['EMPTY'] })                       // every reel
+   * .randomSymbols({ exclude: ['COIN'] }, { slots: 'buffer' })   // buffers only
+   * .randomSymbols({ weights: { WILD: 40 } }, { reel: 2 })       // reel 2 only
+   */
+  randomSymbols(pool: SymbolPool, scope: SymbolPoolScope = {}): this {
+    this._symbolPools.push({ pool, scope });
+    return this;
+  }
+
+  /**
    * Per-symbol metadata overrides (zIndex, unmask, or a custom weight that
    * replaces the one from `weights()`). Merged into the final symbolsData map;
    * any field you don't specify falls back to the default.
@@ -957,6 +980,9 @@ export class ReelSetBuilder {
       setAxis.mainProp,
     );
     const randomProvider = new RandomSymbolProvider(symbolsData, this._rng);
+    for (const { pool, scope } of this._symbolPools) {
+      randomProvider.set(pool, scope);
+    }
     const frameBuilder = new FrameBuilder(randomProvider);
 
     for (const mw of this._middlewares) {

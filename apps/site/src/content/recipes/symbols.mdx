@@ -5,6 +5,9 @@ oneLiner: Symbol classes, three-tier layering (zIndex, unmask, promote), multi-s
 order: 70
 tags:
   - symbols
+  - pools
+  - buffers
+  - weights
   - layering
   - static-spin
   - motion-blur
@@ -71,6 +74,24 @@ A symbol morphs into a different (usually higher) one mid-round via setSymbolAt.
 
 <RecipeDemo code="symbol-transform" />
 
+<a id="symbol-pools"></a>
+
+## Which symbols may spawn where
+
+`weights()` is one table for the whole set. A pool layers on top of it for a scope: one reel, the buffer cells, or one reel's buffer cells. It governs the RANDOM draw only - an explicit `setResult` target always wins.
+
+**Keep a symbol out of the hidden cells (globally, or on one reel):**
+
+Each spin steps the pool through off, `{ reel: 1, slots: 'buffer' }`, and `{ slots: 'buffer' }`. The labels above and below the grid read the hidden cells live, so you can see COIN stop parking there - on the middle reel first, then everywhere.
+
+<RecipeDemo code="buffer-pool-exclude" height={440} />
+
+**Give one reel its own draw table:**
+
+Watch the spin rather than the landing: reel 0 draws low cards only, reel 2 is a wild reel while it scrolls, reel 4 never teases a wild. Same `weights()` underneath all five.
+
+<RecipeDemo code="per-reel-symbol-pool" height={400} />
+
 <a id="symbol-layering"></a>
 
 ## Symbol layering - zIndex, unmask, promote
@@ -84,6 +105,10 @@ Three tiers of "draw my symbol on top": within one reel, above every reel and th
 **Cross-reel and out-of-mask (unmask, at rest):**
 
 <RecipeDemo code="layering-unmask" height={420} />
+
+**Gotcha:** unmask lifts VISIBLE cells only. The same id in a buffer cell stays under the mask, so oversized art cannot hang outside the grid from a slot the player was never meant to see. The demo below lands both at once - and holds through a skip, which is the moment that used to leak.
+
+<RecipeDemo code="unmask-stays-in-the-grid" height={400} />
 
 **Per-instance (promote the landed view into spotlightContainer):**
 
