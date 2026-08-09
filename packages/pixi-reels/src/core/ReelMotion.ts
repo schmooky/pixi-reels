@@ -1,6 +1,7 @@
 import type { ReelSymbol } from '../symbols/ReelSymbol.js';
 import type { ReelAxis } from './ReelAxis.js';
 import { VERTICAL_FORWARD } from './ReelAxis.js';
+import type { ReelCurve } from './ReelCurve.js';
 
 const EPS = 1e-9;
 
@@ -36,6 +37,7 @@ export class ReelMotion {
     _bufferEnd: number,
     private _onSymbolWrapped: (symbol: ReelSymbol) => void,
     axis: ReelAxis = VERTICAL_FORWARD,
+    private _curve?: ReelCurve,
   ) {
     this._pitch = symbolHeight + symbolGapY;
     this._bufferStart = bufferStart;
@@ -73,6 +75,21 @@ export class ReelMotion {
 
     this._off = this._travel - targetRot * this._pitch;
     if (Math.abs(this._off) < EPS) this._off = 0;
+    this._render();
+  }
+
+  /**
+   * Swap the curvature in or out at runtime. Symbols projected by the outgoing
+   * curve are flattened first, otherwise dropping to `amount: 0` would leave
+   * the last quad it handed out still on screen.
+   */
+  setCurve(curve: ReelCurve | undefined): void {
+    if (this._curve && !curve) {
+      // Tell every symbol the reel is flat again, otherwise dropping to
+      // `amount: 0` leaves the last projection it was given on screen.
+      for (let i = 0; i < this._symbols.length; i++) this._symbols[i].applyCellQuad(null);
+    }
+    this._curve = curve;
     this._render();
   }
 
@@ -124,8 +141,15 @@ export class ReelMotion {
 
   private _render(): void {
     const off = this._off;
+    const curve = this._curve;
     for (let i = 0; i < this._symbols.length; i++) {
-      this._axis.setMain(this._symbols[i].view, (i - this._bufferStart) * this._pitch + off);
+      const symbol = this._symbols[i];
+      const main = (i - this._bufferStart) * this._pitch + off;
+      this._axis.setMain(symbol.view, main);
+      // The projection is derived from this same flat coordinate and handed to
+      // the symbol as a view-LOCAL quad, so the value we just wrote survives
+      // untouched for the reads in `Reel` that recover a slot from a view.
+      if (curve) symbol.applyCellQuad(curve.quadFor(main, symbol.cellInset));
     }
   }
 }

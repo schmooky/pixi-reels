@@ -11,11 +11,12 @@ import { Graphics } from 'pixi.js';
 import { VERTICAL_FORWARD } from '../../src/core/ReelAxis.js';
 
 /** Build a MaskContext for the direct-strategy unit tests. */
-const ctx = (rects: ReelMaskRect[], width: number, height: number) => ({
+const ctx = (rects: ReelMaskRect[], width: number, height: number, bleed = 0) => ({
   rects,
   width,
   height,
   axis: VERTICAL_FORWARD,
+  bleed,
 });
 import { createTestReelSet } from '../../src/testing/index.js';
 import { FakeTicker } from '../../src/testing/FakeTicker.js';
@@ -94,6 +95,26 @@ describe('mask strategies', () => {
     expect(bounds.width).toBe(300);
     expect(bounds.height).toBe(300);
     strat.update(g, ctx(RECTS, 300, 300));
+  });
+
+  it('SharedRectMaskStrategy inflates across the strip by the bleed, not along it', () => {
+    // `curveBleed` lets art hang past its cell; a mask still clipping to the
+    // board would cut it off, worst at the outermost reels where the overhang
+    // leaves the board entirely. Cross axis only - the main axis is where the
+    // buffer cells live and they are meant to stay hidden.
+    const strat = new SharedRectMaskStrategy();
+    const g = strat.build(ctx(RECTS, 300, 300, 40));
+    const bounds = getBoundsArea(g);
+    expect(bounds.width).toBe(380);
+    expect(bounds.height).toBe(300);
+  });
+
+  it('SharedRectMaskStrategy survives a context built before `bleed` existed', () => {
+    const strat = new SharedRectMaskStrategy();
+    const legacy = { rects: RECTS, width: 300, height: 300, axis: VERTICAL_FORWARD };
+    const bounds = getBoundsArea(strat.build(legacy as never));
+    expect(bounds.width).toBe(300);
+    expect(bounds.height).toBe(300);
   });
 
   it('viewport.maskRects exposes per-reel rects for pyramid layouts', () => {

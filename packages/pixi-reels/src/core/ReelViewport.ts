@@ -43,6 +43,15 @@ export interface MaskContext {
    * right two corners instead of guessing.
    */
   readonly axis: ReelAxis;
+  /**
+   * Cross-axis room, per side, that `curveBleed` asked for. Art wider than its
+   * cell hangs over by this much, so a strategy that clips to the board would
+   * cut it straight back off - the outermost reels worst of all, where the
+   * overhang leaves the board entirely. Inflate by it on the CROSS axis only:
+   * the main axis is where the buffer cells live, and they are meant to stay
+   * hidden. `0` unless `ReelSetBuilder.curveBleed()` was called.
+   */
+  readonly bleed: number;
 }
 
 /**
@@ -154,7 +163,16 @@ export class SharedRectMaskStrategy implements MaskStrategy {
   }
 
   private _draw(g: Graphics, ctx: MaskContext): void {
-    g.rect(0, 0, ctx.width, ctx.height).fill({ color: 0xffffff });
+    // Cross axis only - `toScreen(bleed, 0)` puts it on x for a vertical set
+    // and on y for a horizontal one, so this needs no orientation branch.
+    // `?? 0` because `MaskContext` is public and `bleed` was added after v2
+    // shipped: a context built by third-party code predates the field, and
+    // `toScreen(undefined, 0)` would quietly produce a NaN rect - a mask that
+    // clips everything, with no error anywhere.
+    const out = ctx.axis.toScreen(ctx.bleed ?? 0, 0);
+    g.rect(-out.x, -out.y, ctx.width + out.x * 2, ctx.height + out.y * 2).fill({
+      color: 0xffffff,
+    });
   }
 }
 
@@ -190,6 +208,7 @@ export class ReelViewport extends Container implements Disposable {
   private _maskHeight: number;
   private _maskRects: ReelMaskRect[] = [];
   private readonly _axis: ReelAxis;
+  private readonly _bleed: number;
   private _isDestroyed = false;
   /**
    * Number of active dim requests. The single overlay is shared by the
@@ -205,6 +224,7 @@ export class ReelViewport extends Container implements Disposable {
     position: { x: number; y: number } = { x: 0, y: 0 },
     maskStrategy: MaskStrategy = new RectMaskStrategy(),
     axis: ReelAxis = VERTICAL_FORWARD,
+    bleed = 0,
   ) {
     super();
     this.x = position.x;
@@ -213,6 +233,7 @@ export class ReelViewport extends Container implements Disposable {
     this._maskWidth = width;
     this._maskHeight = height;
     this._axis = axis;
+    this._bleed = bleed;
 
     this._mask = this._maskStrategy.build(this._maskContext());
 
@@ -253,6 +274,7 @@ export class ReelViewport extends Container implements Disposable {
       width: this._maskWidth,
       height: this._maskHeight,
       axis: this._axis,
+      bleed: this._bleed,
     };
   }
 

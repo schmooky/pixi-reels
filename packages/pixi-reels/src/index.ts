@@ -6,6 +6,10 @@ export type { ReelConfig, NudgeOptions } from './core/Reel.js';
 export { ReelViewport } from './core/ReelViewport.js';
 export { reelAxis, VERTICAL_FORWARD } from './core/ReelAxis.js';
 export type { ReelAxis, Orientation, Direction } from './core/ReelAxis.js';
+export { ReelCurve, resolveCurveConfig } from './core/ReelCurve.js';
+export { ReelWarp } from './core/ReelWarp.js';
+export type { ReelCurveConfig, ReelCurveInput, CurveFocus, CurveMode } from './core/ReelCurve.js';
+export { CURVE_FOCUS_WEIGHT } from './core/ReelCurve.js';
 
 // Config
 export { SpeedPresets } from './config/SpeedPresets.js';
@@ -16,6 +20,8 @@ export type {
   SymbolData,
   ReelGridConfig,
   ReelExtraSymbols,
+  ReelCellQuad,
+  ReelCellInset,
   TrapezoidConfig,
   NoOffsetConfig,
   OffsetConfig,
@@ -48,6 +54,7 @@ export { AnimatedSpriteSymbol } from './symbols/AnimatedSpriteSymbol.js';
 export type { AnimatedSpriteSymbolOptions } from './symbols/AnimatedSpriteSymbol.js';
 export { SpineSymbol, whenSpineReady } from './symbols/SpineSymbol.js';
 export type { SpineSymbolOptions } from './symbols/SpineSymbol.js';
+export { PerspectiveCell, textureCellInset, canProjectTexture } from './symbols/PerspectiveCell.js';
 export { SymbolRegistry } from './symbols/SymbolRegistry.js';
 export { EmptySymbol } from './symbols/EmptySymbol.js';
 

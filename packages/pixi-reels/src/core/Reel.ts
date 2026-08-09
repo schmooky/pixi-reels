@@ -1,4 +1,4 @@
-import { Container } from 'pixi.js';
+import { Container, type Renderer, type Ticker } from 'pixi.js';
 import type { Disposable } from '../utils/Disposable.js';
 import { ReelSymbol } from '../symbols/ReelSymbol.js';
 import type { SymbolFactory } from '../symbols/SymbolFactory.js';
@@ -6,6 +6,8 @@ import type { SymbolData, Stacking } from '../config/types.js';
 import { ReelMotion } from './ReelMotion.js';
 import type { ReelAxis } from './ReelAxis.js';
 import { VERTICAL_FORWARD } from './ReelAxis.js';
+import { ReelCurve, resolveCurveConfig, type ReelCurveInput } from './ReelCurve.js';
+import { ReelWarp } from './ReelWarp.js';
 import { StopSequencer } from './StopSequencer.js';
 import { EventEmitter } from '../events/EventEmitter.js';
 import type { ReelEvents } from '../events/ReelEvents.js';
@@ -171,6 +173,30 @@ export interface ReelConfig {
    * reel draws in front.
    */
   reelStacking?: Stacking;
+  /**
+   * Cylinder curvature for this reel. Omitted or `0` leaves it dead flat and
+   * costs nothing. See {@link ReelCurveConfig}.
+   */
+  curve?: ReelCurveInput;
+  /**
+   * Reel-local cross coordinate the curve's perspective converges on. Set by
+   * the builder from `curveFocus(...)`; omitted means the reel's own centre.
+   */
+  curveFocus?: number;
+  /**
+   * Renderer to draw the reel's warp texture with. Present only when the set
+   * was built with `curveMode('warp')` and a `renderer(...)`; its presence is
+   * what switches this reel from the per-symbol projection to the whole-reel
+   * vertex warp.
+   */
+  curveRenderer?: Renderer;
+  /** Ticker driving the warp's per-frame texture refresh. Warp mode only. */
+  curveTicker?: Ticker;
+  /**
+   * Cross-axis room, in pixels per side, for art that is wider than its cell.
+   * Warp mode only; set by `ReelSetBuilder.curveBleed()`.
+   */
+  curveBleed?: number;
 }
 
 /**
@@ -229,6 +255,19 @@ export class Reel implements Disposable {
    */
   public readonly stopSequencer: StopSequencer;
   private readonly _axis: ReelAxis;
+  /** Cylinder curvature, or `undefined` when this reel is flat. */
+  private _curve?: ReelCurve;
+  /** Reel-local cross coordinate the curve converges on. `null` = own centre. */
+  private readonly _curveFocus: number | null;
+  /**
+   * Whole-reel vertex warp, when the set is in `curveMode('warp')`. Present
+   * means the reel container is rendered to a texture and drawn through a
+   * displaced mesh instead of being drawn directly, and symbols are left
+   * completely alone - the warp bends all of them at once.
+   */
+  private _warp?: ReelWarp;
+  /** True when this reel is drawn through a whole-reel warp. */
+  private readonly _warping: boolean;
   private readonly _mainCell: number;
   private readonly _mainGap: number;
   private readonly _crossGap: number;
@@ -386,6 +425,20 @@ export class Reel implements Disposable {
       return symbol;
     });
 
+    // Curvature is bound to the same geometry the motion layer marches on, so
+    // the bend follows a MultiWays reshape without a second source of truth.
+    this._curveFocus = config.curveFocus ?? null;
+    // In warp mode the whole reel is bent at once, so the motion layer must NOT
+    // also hand each symbol a quad - that would curve the strip twice - and the
+    // projection is left un-normalized so it magnifies both axes equally.
+    // Recorded BEFORE the initial placement. `_warp` itself cannot be built
+    // until the symbols exist, and keying off it meant `_setupSymbolPositions`
+    // still handed every symbol a per-symbol quad, which the warp then bent a
+    // second time - the strip came out shrunk into the middle of its texture.
+    this._warping = config.curveRenderer !== undefined && config.curve !== undefined;
+    this._curve = this._buildCurve(config.curve, this._mainCell, config.visibleCells);
+    const warping = this._warping;
+
     // Create motion handler. SPIN-time slot height is `spinCellSize`;
     // AdjustPhase reshapes motion to the per-reel cell height.
     this.motion = new ReelMotion(
@@ -397,9 +450,33 @@ export class Reel implements Disposable {
       config.bufferEnd,
       (symbol) => this._onSymbolWrapped(symbol),
       this._axis,
+      warping ? undefined : this._curve,
     );
 
     this._setupSymbolPositions(config);
+
+    if (warping && config.curveRenderer && config.curveTicker && this._curve) {
+      // Swap the reel out of the scene for its warp. The container keeps its
+      // position and offsets - everything from `getCellBounds` to the unmasked
+      // lift still reads them - it is simply drawn off-screen from now on.
+      const box = this._screenSize(this._extent, this._cellCross);
+      this._warp = new ReelWarp(
+        this.container,
+        config.curveRenderer,
+        this._curve,
+        this._axis,
+        box.width,
+        box.height,
+        config.curveTicker,
+        this.motion.slotPitch,
+        config.curveBleed ?? 0,
+      );
+      this._warp.zIndex = this.container.zIndex;
+      this._axis.setCross(this._warp, this._axis.getCross(this.container));
+      this._axis.setMain(this._warp, this._axis.getMain(this.container));
+      this._viewport.maskedContainer.removeChild(this.container);
+      this._viewport.maskedContainer.addChild(this._warp);
+    }
   }
 
   get isDestroyed(): boolean {
@@ -524,6 +601,36 @@ export class Reel implements Disposable {
   /** This reel's travel projection (orientation + direction). */
   get axis(): ReelAxis {
     return this._axis;
+  }
+
+  /**
+   * This reel's cylinder curvature, or `undefined` when it renders flat.
+   * Read it to map your own overlays onto the bent grid.
+   */
+  get curve(): ReelCurve | undefined {
+    return this._curve;
+  }
+
+  /**
+   * Re-curve this reel. Takes effect on the next frame of motion, and
+   * immediately for a reel already at rest. Pass `0` (or `undefined`) to go
+   * back to flat.
+   *
+   * @internal Drive this through `ReelSet.setCurve()` so a whole set stays
+   * consistent; it is public so a game tuning one reel does not have to
+   * rebuild the set.
+   */
+  setCurve(input: ReelCurveInput | undefined): void {
+    // Derive the cell extent from the motion layer rather than `_cellMain`:
+    // during SPIN a MultiWays reel marches on `spinCellSize`, and the curve
+    // has to measure the window the strip is actually laid out on.
+    const cellMain = this.motion.slotPitch - this._mainGap;
+    this._curve = this._buildCurve(input, cellMain, this._visibleCells);
+    this.motion.setCurve(this._curve);
+    // `setCurve` -> `motion.setCurve` re-renders from the motion layer's own
+    // positions, which is right for masked views but writes bare reel-local
+    // main over any view the at-rest unmask lift moved into viewport space.
+    this._syncUnmaskedViewOffsets();
   }
 
   /** Update reel for one frame. Called by SpinController via ticker. */
@@ -725,11 +832,12 @@ export class Reel implements Disposable {
     if (!this._atRest) return;
     this._atRest = false;
     for (let i = 0; i < this.symbols.length; i++) {
-      const view = this.symbols[i].view;
+      const symbol = this.symbols[i];
+      const view = symbol.view;
       if (view.parent === this._viewport.unmaskedContainer) {
         const reelLocalY = this._axis.getMain(view) - this._axis.getMain(this.container);
         this.container.addChild(view);
-        this._placeSymbolView(view, reelLocalY, false);
+        this._placeSymbolView(symbol, reelLocalY, false);
       }
     }
   }
@@ -787,7 +895,7 @@ export class Reel implements Disposable {
       if (this._isUnmasked(symbol.symbolId) && symbol.view.parent === this.container) {
         const reelLocalY = this._axis.getMain(symbol.view);
         this._viewport.unmaskedContainer.addChild(symbol.view);
-        this._placeSymbolView(symbol.view, reelLocalY, true);
+        this._placeSymbolView(symbol, reelLocalY, true);
       }
       if (only === null || only.has(i - this._bufferStart)) {
         symbol.onReelLanded();
@@ -822,12 +930,16 @@ export class Reel implements Disposable {
    */
   private _reMaskLiftedBufferSlots(): void {
     for (let i = 0; i < this.symbols.length; i++) {
-      const view = this.symbols[i].view;
+      const symbol = this.symbols[i];
+      const view = symbol.view;
       if (view.parent !== this._viewport.unmaskedContainer) continue;
       if (!this._isBufferSlot(i)) continue;
       const reelLocalMain = this._toReelLocalY(view);
       this.container.addChild(view);
-      this._placeSymbolView(view, reelLocalMain, false);
+      // Placing by SYMBOL, not view, so dropping back under the mask also
+      // re-applies the curve - a re-masked buffer cell that kept the pose it
+      // had while lifted would sit flat next to its bent neighbours.
+      this._placeSymbolView(symbol, reelLocalMain, false);
     }
   }
 
@@ -1362,7 +1474,7 @@ export class Reel implements Disposable {
       const sym = this._symbolFactory.acquire(id);
       const slot = this.symbols.length;
       sym.resize(newSize.width, newSize.height);
-      this._placeSymbolView(sym.view, this._axis.getMain(sym.view), this._effectiveUnmask(id, slot));
+      this._placeSymbolView(sym, this._axis.getMain(sym.view), this._effectiveUnmask(id, slot));
       this._parentForSymbolId(id, slot).addChild(sym.view);
       this.symbols.push(sym);
     }
@@ -1394,6 +1506,26 @@ export class Reel implements Disposable {
     for (const sym of this.symbols) {
       if (sym instanceof OccupiedStub) continue;
       sym.resize(newSize.width, newSize.height);
+    }
+
+    // Re-bind curvature to the reshaped window before the snap re-renders:
+    // both the cell extent and the number of cells the window holds changed,
+    // and a curve still measuring the old window would bend the new cells
+    // against the wrong centre.
+    this._curve?.setGeometry(
+      newCellSize,
+      this._cellCross,
+      newCellSize + this._mainGap,
+      newVisibleCells,
+    );
+
+    // ...and re-measure the warp against it. Its texture and displaced mesh
+    // are both sized from the reel box, so a MultiWays reshape that grew or
+    // shrank the window left the drum drawn at the old size, with the strip
+    // sliding inside a texture that no longer matches it.
+    if (this._warp) {
+      const box = this._screenSize(this._extent, this._cellCross);
+      this._warp.resize(box.width, box.height);
     }
 
     // Update motion: new slot pitch + bounds, on the main axis.
@@ -1473,6 +1605,7 @@ export class Reel implements Disposable {
     }
     this._occupiedStubs = [];
     this.symbols = [];
+    this._warp?.destroy();
     this.container.destroy({ children: true });
     this._isDestroyed = true;
     // Emit 'destroyed' while listeners are still attached, THEN remove them —
@@ -1548,7 +1681,12 @@ export class Reel implements Disposable {
    * the at-rest cell position aligned with the reel column. Masked views
    * live in `this.container`, so reel-local coords map directly.
    */
-  private _placeSymbolView(view: Container, reelLocalMain: number, isUnmasked: boolean): void {
+  private _placeSymbolView(
+    symbol: ReelSymbol,
+    reelLocalMain: number,
+    isUnmasked: boolean,
+  ): void {
+    const view = symbol.view;
     if (isUnmasked) {
       // Viewport space: bake in the reel container's own offset on both axes.
       this._axis.setCross(view, this._axis.getCross(this.container));
@@ -1557,6 +1695,31 @@ export class Reel implements Disposable {
       this._axis.setCross(view, 0);
       this._axis.setMain(view, reelLocalMain);
     }
+    // The projection is defined in reel-local main and handed over as a
+    // VIEW-LOCAL quad, so the same call is correct whichever of the two spaces
+    // above the view was just placed in. In warp mode the whole reel is bent
+    // downstream instead, and symbols are left completely alone.
+    if (this._curve && !this._warping) {
+      symbol.applyCellQuad(this._curve.quadFor(reelLocalMain, symbol.cellInset));
+    }
+  }
+
+  /**
+   * Build the curvature for this reel, or `undefined` when it would be flat.
+   * A flat set must not carry a curve object at all: that keeps the render
+   * loop and every placement byte-identical to an uncurved build.
+   */
+  private _buildCurve(
+    input: ReelCurveInput | undefined,
+    cellMain: number,
+    visibleCells: number,
+  ): ReelCurve | undefined {
+    if (input === undefined) return undefined;
+    const curve = new ReelCurve(resolveCurveConfig(input), this._axis);
+    if (curve.isFlat) return undefined;
+    curve.setGeometry(cellMain, this._cellCross, cellMain + this._mainGap, visibleCells);
+    curve.setFocus(this._curveFocus);
+    return curve;
   }
 
   /**
@@ -1651,7 +1814,7 @@ export class Reel implements Disposable {
       // Unmask applies to visible cells only. a buffer-cell symbol lifted
       // above the mask would sit visibly parked outside the grid.
       const unmasked = this._effectiveUnmask(symbol.symbolId, i);
-      this._placeSymbolView(symbol.view, main, unmasked);
+      this._placeSymbolView(symbol, main, unmasked);
       (unmasked ? this._viewport.unmaskedContainer : this.container).addChild(symbol.view);
     }
   }
@@ -1728,9 +1891,12 @@ export class Reel implements Disposable {
       const newSymbol = this._symbolFactory.acquire(newSymbolId);
       const newIsUnmasked = this._effectiveUnmask(newSymbolId, index);
       newSymbol.resize(this.symbolWidth, this.symbolHeight);
-      this._placeSymbolView(newSymbol.view, reelLocalY, newIsUnmasked);
       newSymbol.view.alpha = 1;
+      // Reset BEFORE placing: on a curved reel the placement is what writes
+      // the cell's scale, and a reset after it would flatten the symbol back
+      // out until the next frame of motion re-bent it.
       newSymbol.view.scale.set(1, 1);
+      this._placeSymbolView(newSymbol, reelLocalY, newIsUnmasked);
       newSymbol.view.zIndex = this._computeSymbolZIndex(newSymbolId, index);
       this._parentForSymbolId(newSymbolId, index).addChild(newSymbol.view);
       this.symbols[index] = newSymbol;
@@ -1755,7 +1921,7 @@ export class Reel implements Disposable {
       const target = this._parentForSymbolId(newSymbolId, index);
       if (oldSymbol.view.parent !== target) target.addChild(oldSymbol.view);
       // Reset Y in case spotlight or another mutator displaced it.
-      this._placeSymbolView(oldSymbol.view, reelLocalY, this._effectiveUnmask(newSymbolId, index));
+      this._placeSymbolView(oldSymbol, reelLocalY, this._effectiveUnmask(newSymbolId, index));
       // The instance was never deactivated, so it usually still carries its
       // spin state. re-notify anyway for uniformity (hooks are idempotent).
       if (this._spinPresentationActive) oldSymbol.onReelSpinStart(true);
@@ -1767,9 +1933,10 @@ export class Reel implements Disposable {
     const newSymbol = this._symbolFactory.acquire(newSymbolId);
     const newIsUnmasked = this._effectiveUnmask(newSymbolId, index);
     newSymbol.resize(this.symbolWidth, this.symbolHeight);
-    this._placeSymbolView(newSymbol.view, reelLocalY, newIsUnmasked);
     newSymbol.view.alpha = 1;
+    // Reset before placing. see the stub-replacement path above.
     newSymbol.view.scale.set(1, 1);
+    this._placeSymbolView(newSymbol, reelLocalY, newIsUnmasked);
     newSymbol.view.zIndex = this._computeSymbolZIndex(newSymbolId, index);
 
     this._parentForSymbolId(newSymbolId, index).addChild(newSymbol.view);

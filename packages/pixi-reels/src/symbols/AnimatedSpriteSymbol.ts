@@ -1,5 +1,7 @@
 import { AnimatedSprite, type Texture } from 'pixi.js';
+import type { ReelCellInset, ReelCellQuad } from '../config/types.js';
 import { ReelSymbol } from './ReelSymbol.js';
+import { PerspectiveCell, textureCellInset } from './PerspectiveCell.js';
 
 export interface AnimatedSpriteSymbolOptions {
   /** Map of symbolId → array of frame textures. */
@@ -19,6 +21,7 @@ export class AnimatedSpriteSymbol extends ReelSymbol {
   private _frames: Record<string, Texture[]>;
   private _animationSpeed: number;
   private _winResolve: (() => void) | null = null;
+  private _perspective: PerspectiveCell;
 
   constructor(options: AnimatedSpriteSymbolOptions) {
     super();
@@ -32,6 +35,29 @@ export class AnimatedSpriteSymbol extends ReelSymbol {
     this._animSprite.animationSpeed = this._animationSpeed;
     this._animSprite.loop = false;
     this.view.addChild(this._animSprite);
+    this._perspective = new PerspectiveCell(this.view, this._animSprite);
+    // On a curved reel the mesh, not the sprite, is what draws. It has to be
+    // handed each new frame or a playing win animation freezes on frame 0.
+    this._animSprite.onFrameChange = () => {
+      this._perspective.syncTexture(this._animSprite.texture);
+    };
+  }
+
+  override get cellInset(): ReelCellInset | null {
+    return textureCellInset(this._animSprite.texture);
+  }
+
+  override applyCellQuad(quad: ReelCellQuad | null): void {
+    if (this._perspective.apply(quad, this._animSprite.texture)) {
+      // The mesh's own corners carry the whole projection, so the view must
+      // stay at identity. Anything else would apply the curve twice.
+      this.view.scale.set(1, 1);
+      this.view.pivot.set(0, 0);
+      return;
+    }
+    // The mesh declined this texture (today: any atlas sub-frame). Take the
+    // base class's uniform-scale fit so the cell is still on the drum.
+    super.applyCellQuad(quad);
   }
 
   protected onActivate(symbolId: string): void {
@@ -83,5 +109,10 @@ export class AnimatedSpriteSymbol extends ReelSymbol {
     // quadrant visible inside the mask.
     this._animSprite.x = width * this._animSprite.anchor.x;
     this._animSprite.y = height * this._animSprite.anchor.y;
+  }
+
+  protected override onDestroy(): void {
+    this._animSprite.onFrameChange = undefined;
+    this._perspective.destroy();
   }
 }

@@ -1,6 +1,6 @@
 import { Sprite, type Texture } from 'pixi.js';
 import { gsap } from 'gsap';
-import { ReelSymbol } from 'pixi-reels';
+import { ReelSymbol, PerspectiveCell, type ReelCellInset, type ReelCellQuad } from 'pixi-reels';
 
 /**
  * Sprite symbol that swaps to a pre-rendered motion-blur texture during the
@@ -42,6 +42,7 @@ export class BlurSpriteSymbol extends ReelSymbol {
   private _cellH = 0;
   private _blurred = false;
   private _winTween: gsap.core.Tween | null = null;
+  private _perspective: PerspectiveCell;
 
   constructor(options: BlurSpriteSymbolOptions) {
     super();
@@ -52,6 +53,54 @@ export class BlurSpriteSymbol extends ReelSymbol {
     this._sprite = new Sprite();
     this._sprite.anchor.set(anchor.x, anchor.y);
     this.view.addChild(this._sprite);
+    this._perspective = new PerspectiveCell(this.view, this._sprite);
+  }
+
+  /**
+   * Where this symbol's art really sits inside its cell, as fractions of the
+   * cell box. Letterbox fitting leaves bars on one axis, and a trimmed atlas
+   * frame leaves transparent margin on both, so without this the reel would
+   * project (and inflate) the whole cell instead of the gem in the middle of
+   * it. See the `Reel curvature` recipe.
+   */
+  override get cellInset(): ReelCellInset | null {
+    if (this._cellW <= 0 || this._cellH <= 0) return null;
+    const tex = this._sprite.texture;
+    const scale = this._sprite.scale.x;
+    if (!(scale > 0)) return null;
+    const trim = tex.trim ?? { x: 0, y: 0, width: tex.orig.width, height: tex.orig.height };
+    // The fitted `orig` box is centred in the cell; the art sits at `trim`
+    // inside that box, both at the sprite's own scale.
+    const left = (this._cellW - tex.orig.width * scale) / 2 + trim.x * scale;
+    const top = (this._cellH - tex.orig.height * scale) / 2 + trim.y * scale;
+    return {
+      left: left / this._cellW,
+      top: top / this._cellH,
+      right: (left + trim.width * scale) / this._cellW,
+      bottom: (top + trim.height * scale) / this._cellH,
+    };
+  }
+
+  /**
+   * Draw through a real perspective quad when the reel is curved.
+   *
+   * `PerspectiveCell` is exported by the library precisely so a custom
+   * texture-backed symbol can do this in a few lines: hand it the quad and the
+   * current texture and it swaps the sprite for a `PerspectiveMesh`. Without
+   * this override the base class would fall back to a uniform scale, which
+   * looks fine but never keystones.
+   */
+  override applyCellQuad(quad: ReelCellQuad | null): void {
+    if (this._perspective.apply(quad, this._sprite.texture)) {
+      // The mesh's corners carry the whole projection, so the view stays at
+      // identity or the curve would be applied twice.
+      this.view.scale.set(1, 1);
+      this.view.pivot.set(0, 0);
+      return;
+    }
+    // Declined - these Hold & Win gems are atlas sub-frames. The base class's
+    // uniform-scale fit still puts the cell on the drum.
+    super.applyCellQuad(quad);
   }
 
   protected onActivate(_symbolId: string): void {
@@ -115,6 +164,9 @@ export class BlurSpriteSymbol extends ReelSymbol {
     if (tex) {
       this._sprite.texture = tex;
       this._rescale();
+      // A blur swap changes the texture under a live mesh; tell it, or the
+      // curved cell keeps drawing the crisp frame through the whole spin.
+      this._perspective.syncTexture(tex);
     }
   }
 

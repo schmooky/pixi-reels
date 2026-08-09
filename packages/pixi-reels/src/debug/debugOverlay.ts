@@ -409,11 +409,22 @@ class DebugOverlay implements DebugOverlayHandle {
     this._reelSet.reels.forEach((reel: Reel, reelIndex: number) => {
       for (let cell = 0; cell < reel.visibleCells; cell++) {
         const b = this._reelSet.getCellBounds(reelIndex, cell);
-        g.rect(b.x, b.y, b.width, b.height).stroke({ color: COLORS.cells, width: 1 });
+        // On a curved reel outline the TRAPEZOID the drum actually draws, not
+        // the bounding box `getCellBounds` has to widen to. The overlay is how
+        // you check the projection landed where you think it did, so it has to
+        // show the bend rather than a rectangle around it.
+        const quad = this._reelSet.getCellQuad(reelIndex, cell);
+        if (quad) {
+          g.poly(quad).stroke({ color: COLORS.cells, width: 1 });
+        } else {
+          g.rect(b.x, b.y, b.width, b.height).stroke({ color: COLORS.cells, width: 1 });
+        }
         const label = this._text(this._cellLabels, labelIndex++, COLORS.cells, 10);
         label.text = `${reelIndex},${cell}`;
-        label.x = b.x + 3;
-        label.y = b.y + 3;
+        // Anchor the label on the quad's own leading corner so it tracks the
+        // bend instead of floating off in the bounding box's dead space.
+        label.x = (quad ? quad[0].x : b.x) + 3;
+        label.y = (quad ? quad[0].y : b.y) + 3;
       }
     });
     this._hideTextsFrom(this._cellLabels, labelIndex);
@@ -424,7 +435,14 @@ class DebugOverlay implements DebugOverlayHandle {
     for (const reel of this._reelSet.reels) {
       const pitch = reel.motion.slotPitch;
       const draw = (main: number): void => {
-        const r = this._reelRect(reel, 0, main, reel.cellCross, reel.cellMain);
+        // Follow the drum. A buffer box left on the flat grid sits nowhere
+        // near the symbol it is labelling once the reel is curved, and the
+        // buffers are exactly the cells the curve moves furthest.
+        const curve = reel.curve;
+        const from = curve ? curve.mapMain(main) : main;
+        const to = curve ? curve.mapMain(main + reel.cellMain) : main + reel.cellMain;
+        const cross = curve ? reel.cellCross * curve.scaleAt(main + reel.cellMain / 2) : reel.cellCross;
+        const r = this._reelRect(reel, (reel.cellCross - cross) / 2, from, cross, to - from);
         g.rect(r.x, r.y, r.width, r.height).stroke({
           color: COLORS.buffers,
           width: 1,
