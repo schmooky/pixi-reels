@@ -4,12 +4,12 @@ import type { ReelCellInset, ReelCellQuad } from '../config/types.js';
 /**
  * The slice of its cell a texture's opaque art really occupies.
  *
- * TexturePacker trims the transparent margin off every frame and records where
- * it came from, so a 300x300 symbol whose art is a 152x152 blob at (74, 74)
- * ships as a 152x152 frame. A `Sprite` puts that back for you; a mesh will not,
- * so the reel has to be told or it projects (and inflates) the whole cell.
+ * TexturePacker trims the transparent margin off each frame, so a 300x300
+ * symbol whose art is a 152x152 blob at (74, 74) ships as a 152x152 frame. A
+ * `Sprite` puts that back; a mesh does not, so the reel has to be told or it
+ * projects - and inflates - the whole cell.
  *
- * Returns `null` for an untrimmed texture, which needs no correction.
+ * `null` for an untrimmed texture, which needs no correction.
  */
 export function textureCellInset(texture: Texture): ReelCellInset | null {
   const trim = texture.trim;
@@ -25,19 +25,19 @@ export function textureCellInset(texture: Texture): ReelCellInset | null {
 }
 
 /**
- * Whether a texture can be drawn through the perspective mesh at all.
+ * Whether a texture can go through the perspective mesh.
  *
- * Only textures that own their whole source qualify today. An atlas SUB-frame
- * does not: the mesh addresses its source with plain 0..1 UVs, and remapping
- * them onto the frame - via `texture.uvs`, via `textureMatrix`, or by leaving
- * PixiJS to it - has not yet produced a correct draw here. Left unmapped the
- * cell shows the entire sheet; mapped by hand it shows a magnified crop of the
- * right frame, which says the mapping is being applied somewhere else as well.
- * Rather than ship either, a sub-frame texture falls back to the affine fit in
- * `ReelSymbol.applyCellQuad()`, which is correct - just not keystoned.
+ * Only textures owning their whole source qualify. An atlas SUB-frame does
+ * not: the mesh addresses its source with plain 0..1 UVs, and remapping them
+ * onto the frame - via `texture.uvs`, via `textureMatrix`, or leaving it to
+ * PixiJS - has not produced a correct draw here. Unmapped, the cell shows the
+ * whole sheet; mapped by hand, a magnified crop of the right frame, which says
+ * the mapping is applied somewhere else too. Rather than ship either, a
+ * sub-frame falls back to the affine fit in `ReelSymbol.applyCellQuad()` -
+ * correct, just not keystoned.
  *
- * Generated textures, `Assets.load`ed single images and render textures all
- * pass. Atlas frames (the common production case) do not, yet.
+ * Generated textures, single loaded images and render textures pass. Atlas
+ * frames - the common production case - do not, yet.
  */
 export function canProjectTexture(texture: Texture): boolean {
   const source = texture.source;
@@ -59,22 +59,20 @@ export function canProjectTexture(texture: Texture): boolean {
 const VERTICES = 10;
 
 /**
- * Draws a texture through a real perspective quad, for symbols whose content
- * IS a texture.
+ * Draws a texture through a real perspective quad.
  *
- * This is what makes a curved reel a projection rather than a squash. A
- * `Container` transform is affine: it can scale a cell but it can never turn it
- * into a trapezoid, so a cell that has rotated away round the drum comes out as
- * a smaller rectangle instead of one with a narrower far edge. A
- * `PerspectiveMesh` maps the same texture onto four arbitrary corners with
- * perspective-correct interpolation, which is exactly the missing piece - and
- * because the symbol already owns a texture, it costs no render pass at all.
+ * What makes a curved reel a projection rather than a squash. A `Container`
+ * transform is affine - it can scale a cell, never turn it into a trapezoid -
+ * so a cell rotated away comes out a smaller rectangle instead of one with a
+ * narrower far edge. `PerspectiveMesh` maps the texture onto four arbitrary
+ * corners with perspective-correct interpolation, and costs no render pass
+ * because the symbol already owns a texture.
  *
- * The mesh is created lazily: a game that never calls `curve()` never
- * allocates one, and its symbols keep rendering through their plain sprite.
+ * Lazy: a game that never calls `curve()` allocates no mesh and keeps
+ * rendering through its plain sprite.
  *
- * @internal Shared by `SpriteSymbol` and `AnimatedSpriteSymbol`. Use it from a
- * custom symbol the same way if your content is a single texture.
+ * @internal Shared by `SpriteSymbol` and `AnimatedSpriteSymbol`. Use it the
+ * same way from a custom symbol whose content is a single texture.
  */
 export class PerspectiveCell {
   private _mesh: PerspectiveMesh | null = null;
@@ -98,9 +96,9 @@ export class PerspectiveCell {
   }
 
   /**
-   * The mesh, once one exists. Animate THIS rather than the symbol's view for
-   * a win pulse on a curved reel: it is pivoted on the quad's centre, so a
-   * scale tween pulses in place instead of swinging out from the cell corner.
+   * The mesh, once one exists. Animate THIS, not the symbol's view, for a win
+   * pulse on a curved reel - it is pivoted on the quad's centre, so a scale
+   * tween pulses in place instead of swinging out from the cell corner.
    */
   get mesh(): PerspectiveMesh | null {
     return this._mesh;
@@ -127,9 +125,8 @@ export class PerspectiveCell {
     if (mesh.texture !== texture) mesh.texture = texture;
     this._syncUvs(mesh, texture);
     mesh.setCorners(quad.x0, quad.y0, quad.x1, quad.y1, quad.x2, quad.y2, quad.x3, quad.y3);
-    // Pivot on the quad's centre and sit at the same point, so the mesh renders
-    // unchanged at scale 1 but any scale tween pulses about what the player
-    // sees as the middle of the cell.
+    // Pivot and position on the quad's centre: renders unchanged at scale 1,
+    // but a scale tween pulses about the middle of the cell.
     const cx = (quad.x0 + quad.x1 + quad.x2 + quad.x3) / 4;
     const cy = (quad.y0 + quad.y1 + quad.y2 + quad.y3) / 4;
     mesh.pivot.set(cx, cy);
@@ -188,16 +185,14 @@ export class PerspectiveCell {
   /**
    * Fold the texture's atlas frame into the mesh's UVs.
    *
-   * A `Sprite` gets this for free; a `Mesh` does not. Its 0..1 UVs address the
+   * A `Sprite` gets this free; a `Mesh` does not. Its 0..1 UVs address the
    * whole SHEET, so an unmapped mesh draws the entire atlas squeezed into one
-   * cell rather than the one frame it was handed - which is exactly what it
-   * looks like, and unmistakable once you have seen it.
+   * cell.
    *
-   * `texture.uvs` carries the frame's four corners in source space and PixiJS
-   * keeps it current, so bilinear interpolation between them is both exact and
-   * safe. Going through `textureMatrix` instead reads a matrix that has not
-   * necessarily been updated for this texture yet, which silently yields
-   * out-of-range UVs and samples whatever is next door on the sheet.
+   * `texture.uvs` carries the frame's corners in source space and PixiJS keeps
+   * it current, so interpolating between them is exact. `textureMatrix` is not
+   * necessarily updated for this texture yet, and yields out-of-range UVs that
+   * sample whatever is next door on the sheet.
    */
   private _syncUvs(mesh: PerspectiveMesh, texture: Texture): void {
     if (this._uvSource === texture) return;
@@ -205,11 +200,10 @@ export class PerspectiveCell {
     if (!out) return;
     this._uvSource = texture;
 
-    // Derive the plane's grid coordinates from the vertex index rather than
-    // reading them back off the geometry: the UV buffer is not necessarily
-    // populated at construction time, and a snapshot of zeros would point
-    // every vertex at the frame's first texel - a cell of flat colour.
-    // Row-major, matching `applyProjectiveTransformationToPlane`.
+    // Grid coordinates from the vertex index, not read back off the geometry:
+    // the UV buffer is not necessarily populated at construction, and a
+    // snapshot of zeros points every vertex at the frame's first texel - a
+    // cell of flat colour. Row-major, matching PixiJS's own plane transform.
     const { x0, y0, x1, y1, x2, y2, x3, y3 } = texture.uvs;
     const span = VERTICES - 1;
     for (let k = 0; k < out.length / 2; k++) {

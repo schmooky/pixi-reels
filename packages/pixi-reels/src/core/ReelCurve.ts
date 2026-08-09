@@ -4,12 +4,9 @@ import type { ReelAxis } from './ReelAxis.js';
 /**
  * Fake the curvature of a spinning reel cylinder.
  *
- * A physical slot reel is a drum, and the cells you see are wrapped around it.
- * The one in the middle of the window faces you square-on; the ones near the
- * top and bottom edges have rotated away, so they sit further from your eye and
- * their far edge is further still. Under a real camera that does not squash a
- * cell into a smaller rectangle - it turns it into a TRAPEZOID, narrower on the
- * edge that has rotated away.
+ * The middle cell faces you; the outer ones have rotated away, so their far
+ * edge sits further from your eye. A camera turns those into TRAPEZOIDS, not
+ * smaller rectangles.
  *
  * ```
  *   amount: 0            amount: 0.5
@@ -28,21 +25,17 @@ import type { ReelAxis } from './ReelAxis.js';
  */
 export interface ReelCurveConfig {
   /**
-   * How far round the drum the window sees, `0` (dead flat, the default) to
-   * `1` (a hard barrel). This is the only knob most games need: it drives both
-   * how much the cells bunch up toward the window edges and how hard they
-   * keystone.
+   * How far round the drum the window sees. `0` flat (default), `1` hard
+   * barrel. Drives both the bunching toward the edges and the keystone.
    */
   amount: number;
   /**
-   * How strong the perspective is - how much smaller a cell at the window edge
-   * is than the one facing you. `0.25` puts the edge of the window a fifth
-   * further from the camera, so it renders a fifth smaller. `0` gives a flat
-   * (orthographic) drum: cells still bunch up, but nothing recedes and nothing
-   * keystones. Defaults to `amount * 0.5`.
+   * Perspective strength: how much smaller an edge cell is than the middle one.
+   * `0.25` renders the window edge a fifth smaller. `0` is orthographic - cells
+   * bunch, nothing recedes, nothing keystones. Defaults to `amount * 0.5`.
    *
-   * Clamped below `cos(arc)`, past which the projection would fold cells back
-   * over each other, so it saturates as `amount` approaches `1`.
+   * Clamped below `cos(arc)`, past which the projection folds cells back over
+   * each other, so it saturates as `amount` approaches `1`.
    */
   depth?: number;
 }
@@ -51,33 +44,26 @@ export interface ReelCurveConfig {
 export type ReelCurveInput = number | ReelCurveConfig;
 
 /**
- * Where the camera looking at the drum sits, across the strip.
+ * Where the camera sits across the strip.
  *
- *   - `'reel'` (default). one camera per reel, dead ahead of it. Every reel is
- *     its own little drum and looks identical to its neighbours. This is the
- *     right answer when the reels are visually separate - framed columns, wide
- *     gaps, a cabinet with five physical drums in it.
- *   - `'set'`. a single camera in front of the middle of the board. Cells that
- *     rotate away also lean IN toward the centre of the set, so the whole grid
- *     reads as one wide cylinder rather than five identical ones. The outer
- *     reels do most of the leaning; the middle one barely moves.
- *   - `'set-lean'`. halfway between. Keeps a hint of the one-big-drum read
- *     without the outer reels visibly tilting into their neighbours, which is
- *     usually what you want on a 5-wide board with real art in it.
+ *   - `'reel'` (default). One per reel, dead ahead. Every reel its own drum.
+ *     Right when the reels read as separate - framed columns, wide gaps.
+ *   - `'set'`. One in front of the middle of the board. Receding cells also
+ *     lean IN, so the grid reads as one wide cylinder. Outer reels do the
+ *     leaning; the middle one barely moves.
+ *   - `'set-lean'`. Halfway. Usually the sweet spot on a 5-wide board.
  */
 export type CurveFocus = 'reel' | 'set-lean' | 'set';
 
 /**
  * How the curve is drawn.
  *
- *   - `'symbol'` (default). project each cell on its own. Crisp, free, and a
- *     real keystone - but only for symbols whose content IS a texture, because
- *     a `Container` transform is affine and can displace a Spine skeleton or a
- *     composite subtree without ever bending it.
- *   - `'warp'`. render each reel to a texture and draw it through a mesh whose
- *     VERTICES are displaced by the projection. Everything inside bends
- *     identically and no symbol has to cooperate, at the cost of one render
- *     pass per reel per frame and one resample.
+ *   - `'symbol'` (default). Project each cell alone. Crisp, free, a real
+ *     keystone - but only for content that IS a texture, because a `Container`
+ *     transform is affine and can displace a Spine skeleton without bending it.
+ *   - `'warp'`. Render each reel to a texture, draw it through a mesh whose
+ *     VERTICES are displaced. Everything inside bends, no symbol cooperates.
+ *     Costs one render pass per reel per frame and one resample.
  */
 export type CurveMode = 'symbol' | 'warp';
 
@@ -89,10 +75,9 @@ export const CURVE_FOCUS_WEIGHT: Record<CurveFocus, number> = {
 };
 
 /**
- * Widest arc `amount: 1` maps to, in radians (~57 degrees of drum). Kept well
- * under `PI / 2` both so `sin` stays monotonic across the window and so
- * `cos(arc)` leaves a usable `depth` range - the fold-over limit is
- * `depth < cos(arc)`, which at 90 degrees would be zero.
+ * Widest arc `amount: 1` maps to, in radians (~57 degrees). Well under `PI / 2`
+ * so `sin` stays monotonic AND `cos(arc)` leaves a usable `depth` range - the
+ * fold-over limit is `depth < cos(arc)`, zero at 90 degrees.
  */
 const MAX_ARC = 1.0;
 
@@ -122,20 +107,16 @@ function clamp01(v: number): number {
 /**
  * The curvature of one reel: a camera looking at a drum.
  *
- * The strip is wrapped on a cylinder whose radius is chosen so the visible
- * window covers `2 * arc` radians of it, and a camera sits far enough in front
- * that the window edge renders `depth` smaller than the middle. Every cell edge
- * is projected through that one model, so what comes out is a genuine
- * perspective quad rather than a rectangle that has been scaled.
+ * The strip wraps a cylinder whose radius makes the window cover `2 * arc`
+ * radians, with the camera far enough in front that the window edge renders
+ * `depth` smaller than the middle. Every cell edge goes through that one
+ * model, so the result is a real perspective quad, not a scaled rectangle.
  *
- * ## What this deliberately does NOT do
- *
- * It never writes a symbol's `position`. Every symbol view's main coordinate is
- * load-bearing: `Reel` reads it back out in `beginMotion`, `notifyLanded` and
- * `_replaceSymbol` to recover which slot a symbol is in, and a bent value taken
- * for a flat one would compound a little more on every round trip. The
- * projection is handed to the symbol as a view-LOCAL quad instead, so the
- * coordinate the engine wrote stays exactly where it put it.
+ * It never writes a symbol's `position`. That coordinate is load-bearing -
+ * `Reel` reads it back in `beginMotion`, `notifyLanded` and `_replaceSymbol`
+ * to recover which slot a symbol is in, and a bent value taken for a flat one
+ * compounds on every round trip. The projection is handed over as a view-LOCAL
+ * quad instead.
  */
 export class ReelCurve {
   private readonly _arc: number;
@@ -173,26 +154,19 @@ export class ReelCurve {
     const versine = 1 - cosArc;
     this._k = versine > 0 ? _config.depth / versine : 0;
     this._edgeScale = this._perspectiveAt(this._arc);
-    // Normalize so the MIDDLE of the window is drawn at 1:1.
+    // Normalize so the MIDDLE of the window is drawn at 1:1: `d/dm` at the
+    // centre is `arc / norm`, so `norm = arc` leaves the cell facing the
+    // camera at authored size, both axes, no keystone.
     //
-    // `d/dm` of the projection at the centre works out to `arc / norm`, so
-    // `norm = arc` makes the cell facing the camera come out at exactly its
-    // authored size, in both axes, with no keystone - it is the one cell that
-    // is not turned away from you, so it should look untouched.
-    //
-    // Normalizing to `sin(arc) * s(arc)` instead would pin the projection to
-    // the window edges, which sounds tidier but magnifies the main axis at the
-    // centre while leaving the cross axis alone: the middle row comes out
-    // visibly STRETCHED. The ends of the drum now fall short of the window
-    // instead, and the buffer cells - which the strip already carries - fill
-    // that space, exactly as a real drum shows a sliver of the next symbol.
-    //
-    // A positive constant either way, so monotonicity is unaffected.
+    // Normalizing to `sin(arc) * s(arc)` would pin the ends to the window
+    // instead, but magnifies the main axis at the centre and not the cross
+    // axis - a visibly STRETCHED middle row. So the ends fall short, and the
+    // buffer cells fill that band. Positive constant either way, so
+    // monotonicity is unaffected.
     this._norm = this._arc > 0 ? this._arc : 1;
-    // How far up the window the drum's edge actually reaches, as a fraction of
-    // the half-extent. `1` would mean it touches the window edge; normalized to
-    // 1:1 at the centre it comes up short, and the difference is the band the
-    // buffer cells (and your frame art) live in.
+    // Where the drum's edge reaches, as a fraction of the half-extent. `1`
+    // would touch the window edge; short of that is the band the buffer cells
+    // (and your frame art) live in.
     this._edgeMapped = (sinArc * this._edgeScale) / this._norm;
     // d/dphi of `sin(phi) * s(phi)` reduces to `(cos phi (1 + k) - k) * s^2`;
     // normalized, then converted from radians to flat-coordinate units.
@@ -217,9 +191,8 @@ export class ReelCurve {
   }
 
   /**
-   * (Re)bind the reel geometry the projection is defined against. Called on
-   * build and again from `Reel.reshape()`, because a MultiWays reshape changes
-   * both the cell size and how many cells the window holds.
+   * (Re)bind the geometry the projection is defined against. Called on build
+   * and from `Reel.reshape()`, which changes both cell size and cell count.
    *
    * @param cellMain   main-axis extent of one cell's art
    * @param cellCross  cross-axis extent of one cell's art
@@ -238,9 +211,8 @@ export class ReelCurve {
   }
 
   /**
-   * Point the camera at a reel-local cross coordinate other than this reel's
-   * own centreline. Cells then converge on THAT point as they recede, which is
-   * what turns five separate drums into one wide one.
+   * Point the camera somewhere other than this reel's own centreline. Cells
+   * converge on THAT point as they recede - what turns five drums into one.
    *
    * @param cross reel-local cross coordinate, or `null` for the reel's centre
    */
@@ -262,10 +234,9 @@ export class ReelCurve {
   quadFor(mainStart: number, inset?: ReelCellInset | null): ReelCellQuad | null {
     if (this.isFlat || this._halfExtent <= 0) return null;
 
-    // Project the rectangle the ART is really in, which for a trimmed atlas
-    // frame is a good deal smaller than the cell. Stretching a small symbol
-    // across the whole cell quad would both inflate it and hand it the cell's
-    // keystone rather than the milder one its own position earns.
+    // Project the rectangle the ART is really in - for a trimmed atlas frame,
+    // much smaller than the cell. Using the whole cell would inflate a small
+    // symbol and give it the cell's keystone instead of its own, milder one.
     let mainFrom = mainStart;
     let mainTo = mainStart + this._cellMain;
     let crossFrom = 0;
@@ -283,10 +254,9 @@ export class ReelCurve {
 
     const near = this._project(mainFrom);
     const far = this._project(mainTo);
-    // Everything converges on the camera's optical axis. By default that is
-    // the reel's own centreline (a reel is exactly one cell wide), so a cell
-    // narrows in place; aimed at the middle of the board instead, a receding
-    // cell also LEANS toward it, and the reels read as one drum.
+    // Converge on the camera's optical axis. Default is the reel's own
+    // centreline, so a cell narrows in place; aimed at the board's middle, a
+    // receding cell also LEANS toward it and the reels read as one drum.
     const centre = this.focusCross;
     const nearFrom = centre + (crossFrom - centre) * near.scale;
     const nearTo = centre + (crossTo - centre) * near.scale;
@@ -306,11 +276,10 @@ export class ReelCurve {
     const box = { x: origin.x, y: origin.y, width: size.x, height: size.y };
     const vertical = this._axis.orientation === 'vertical';
 
-    // Clockwise from screen top-left. On a vertical reel the smaller main
-    // coordinate is the TOP edge, so the near pair is (TL, TR). On a horizontal
-    // one it is the LEFT edge, so the near pair is (TL, BL) instead - the art
-    // stays upright either way, so the texture's top-left must keep landing on
-    // the screen's top-left.
+    // Clockwise from screen top-left. Vertical: smaller main is the TOP edge,
+    // so the near pair is (TL, TR). Horizontal: it is the LEFT edge, so the
+    // near pair is (TL, BL). Art stays upright either way, so the texture's
+    // top-left must keep landing on the screen's top-left.
     return vertical
       ? {
           ...box,
@@ -330,17 +299,17 @@ export class ReelCurve {
 
   /**
    * Where a flat reel-local main coordinate lands on the drum. Public so
-   * `ReelSet.getCellBounds()` and any overlay a game draws itself can follow
-   * the curve instead of the flat grid behind it.
+   * `getCellBounds()` and game-drawn overlays follow the curve, not the flat
+   * grid behind it.
    */
   mapMain(main: number): number {
     return this._project(main).main;
   }
 
   /**
-   * How much smaller the drum renders whatever sits at flat main coordinate
-   * `main`. `1` at the middle of the window, falling to `1 / (1 + depth)` at
-   * its edges. Public for the same reason as {@link ReelCurve.mapMain}.
+   * How much smaller the drum renders whatever sits at `main`. `1` at the
+   * window's middle, `1 / (1 + depth)` at its edges. Public for the same
+   * reason as {@link ReelCurve.mapMain}.
    */
   scaleAt(main: number): number {
     return this._project(main).scale;
@@ -350,17 +319,14 @@ export class ReelCurve {
    * Project one flat reel-local main coordinate: where it lands, and how much
    * the perspective divide shrinks whatever is there.
    *
-   * Inside the window this is the real thing: a point wrapped on the cylinder,
-   * pushed through the perspective divide.
+   * Inside the window: a point wrapped on the cylinder, pushed through the
+   * perspective divide.
    *
-   * POSITION continues as a straight line past the window, because carrying
-   * `sin` beyond its peak folds the buffer back over itself and marches
-   * wrapping symbols the wrong way. SCALE does not - it keeps following the
-   * real perspective, because `1 - cos(phi)` is still climbing there and
-   * nothing folds. Pinning it to the edge value (as this did) handed every
-   * buffer cell two equal-width edges, i.e. a flat rectangle with no keystone
-   * at all - glaringly obvious on the cell peeking in above the window, right
-   * next to a hard-curved neighbour.
+   * POSITION continues as a straight line past the window - carrying `sin`
+   * beyond its peak folds the buffer back on itself. SCALE does not need that:
+   * `1 - cos(phi)` is still climbing out there and nothing folds. Pinning it
+   * to the edge value gave every buffer cell two equal edges, i.e. a flat
+   * rectangle beside a hard-curved neighbour.
    */
   private _project(main: number): { main: number; scale: number } {
     if (this.isFlat || this._halfExtent <= 0) return { main, scale: 1 };
@@ -370,10 +336,9 @@ export class ReelCurve {
     // back on itself. Buffers never reach it at any sane arc; this is just so
     // a pathological strip length cannot un-shrink a cell.
     const scale = this._perspectiveAt(Math.min(Math.abs(phi), Math.PI));
-    // Continue from where the window edge ACTUALLY lands, which is no longer
-    // the window edge itself now that the centre is normalized to 1:1. Reusing
-    // the old `2h` / `0` anchors left a jump there, and the buffer cells came
-    // away from the strip with a visible gap between them.
+    // Continue from where the window edge ACTUALLY lands - not the window
+    // edge itself, now the centre is normalized to 1:1. Anchoring on `2h`/`0`
+    // left a jump there and detached the buffer cells from the strip.
     const edge = h * this._edgeMapped;
     if (phi > this._arc) {
       return { main: h + edge + (main - 2 * h) * this._edgeSlope, scale };
@@ -385,9 +350,8 @@ export class ReelCurve {
   }
 
   /**
-   * The perspective divide at arc angle `phi`. A point that has rotated `phi`
-   * round the drum has receded `R * (1 - cos phi)` from the front surface, and
-   * a camera makes it that much smaller.
+   * Perspective divide at arc angle `phi`. A point rotated `phi` round the
+   * drum has receded `R * (1 - cos phi)`; the camera shrinks it by that.
    */
   private _perspectiveAt(phi: number): number {
     return 1 / (1 + this._k * (1 - Math.cos(phi)));
