@@ -121,6 +121,30 @@ Watch the outer reels tilt toward the middle while the centre one barely moves. 
 
 <RecipeDemo code="curved-reels-per-reel" height={420} />
 
+<a id="curved-reels-payband"></a>
+
+## A pay band inside a taller drum
+
+Five cells drawn, three of them paying. The top and bottom rows exist to be curved: they are the part of the drum turning away from you, and they are what tells the eye it is a cylinder rather than a grid. They land real symbols - the strip has no idea they are decorative - the game simply evaluates rows 1-3.
+
+This is a better shape for a curve than a bare 3x5. With three rows the drum has to bend hard to read as round, which distorts the paying symbols. With five, the bend is spent on rows nobody is reading, and the pay band sits near the middle where the projection is close to 1:1 - so it takes a deeper `curve(0.62)` than a short board would tolerate.
+
+The scrim over the non-paying rows is built from `getCellQuad()`, not `getCellBounds()`. Bounds return the trapezoid's bounding box, which is looser than the cell, so a scrim built from it would spill over its neighbours.
+
+<RecipeDemo code="curved-reels-payband" height={460} />
+
+<a id="curved-reels-cascade"></a>
+
+## Cascades on a drum
+
+The case the warp exists for. The bend is on the rendered reel, not baked into each cell, so everything the tumble moves rides the curve: symbols exploding out, survivors sliding down, fresh ones dropping in from above the window. Nothing in the cascade code knows the reel is curved.
+
+Under `'symbol'` each cell carries its own projection, so a falling symbol is re-projected every frame as it passes - correct, but the fall itself is still a straight line down the flat grid.
+
+**Gotcha worth copying:** the flat `cascade-6x5-spine` recipe puts `unmask: true` on its high symbol so the head can overflow the mask. Under the warp that backfires - a lifted symbol is outside the reel's texture and draws flat over a curved board. `curveBleed` is the warp's answer: the overflow stays inside the texture and bends with everything else.
+
+<RecipeDemo code="curved-reels-cascade" height={460} />
+
 ## Tuning it live
 
 `reelSet.setCurve()` re-projects at runtime - same value or a per-reel array. Dial it against your art instead of rebuilding:
