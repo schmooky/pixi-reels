@@ -1519,6 +1519,15 @@ export class Reel implements Disposable {
       newVisibleCells,
     );
 
+    // ...and re-measure the warp against it. Its texture and displaced mesh
+    // are both sized from the reel box, so a MultiWays reshape that grew or
+    // shrank the window left the drum drawn at the old size, with the strip
+    // sliding inside a texture that no longer matches it.
+    if (this._warp) {
+      const box = this._screenSize(this._extent, this._cellCross);
+      this._warp.resize(box.width, box.height);
+    }
+
     // Update motion: new slot pitch + bounds, on the main axis.
     this.motion.reshape(newCellSize, this._mainGap, bufferStart, newVisibleCells, bufferEnd);
     this.motion.snapToGrid();

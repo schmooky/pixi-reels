@@ -71,6 +71,8 @@ It also bends **motion**. The curve is on the rendered reel, not baked into each
 
 Under `'warp'`, symbols stop being real display objects to the renderer, so use `getCellQuad()` rather than screen-space hit testing.
 
+**Gotcha:** anything the engine LIFTS out of a reel is not in that reel's texture, so `'warp'` cannot bend it - it draws flat over a curved board. That is `unmask: true` symbols, the win spotlight, and pin flights and overlays. The builder logs when it sees `unmask` under `'warp'`. `'symbol'` mode has no such split: symbols stay real display objects wherever they are parented, so a lifted one keeps its projection.
+
 ### Symbols that hang over their cell
 
 Two knobs, and they compose.

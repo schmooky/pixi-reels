@@ -1081,6 +1081,21 @@ export class ReelSetBuilder {
       );
     }
 
+    // Warp draws each reel through a texture, so anything the engine LIFTS out
+    // of a reel container is not in that texture and is not bent: it draws
+    // flat, over a curved board. Unmask is the one a game asks for by name, so
+    // say so rather than let it look like a curve bug.
+    if (this._curveMode === 'warp' && this._curve !== undefined && hasUnmaskedSymbols) {
+      // eslint-disable-next-line no-console
+      console.info(
+        "[pixi-reels] curveMode('warp') does not bend symbols with `unmask: true`. " +
+        'They are lifted into `viewport.unmaskedContainer`, outside the reel texture, ' +
+        'so they render FLAT above a curved board. The same applies to the win ' +
+        'spotlight and pin overlays. Use curveMode(\'symbol\') if those have to follow ' +
+        'the drum.',
+      );
+    }
+
     // Reel-local cross coordinate each reel's perspective converges on. At
     // weight 0 that is the reel's own centreline; at 1 it is the middle of the
     // whole board, expressed in that reel's coordinates.
