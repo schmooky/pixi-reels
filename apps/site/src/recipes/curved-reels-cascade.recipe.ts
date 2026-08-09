@@ -19,6 +19,19 @@
 // the warp that would backfire - a lifted symbol is outside the reel's texture
 // and draws FLAT over a curved board. `curveBleed` is the warp's answer:
 // the overflow stays inside the texture and bends with everything else.
+//
+// The bezel is not decoration here, it is REQUIRED. A drum whose middle cell
+// is drawn 1:1 falls short of the window at both ends, and on a tumble board
+// that band is a problem twice over:
+//
+//   - at the top it shows the BUFFER cell, which is the refill queue. It does
+//     not slide when survivors fall, so it sits frozen while the grid drops
+//     past it - the thing that reads most obviously as broken.
+//   - at the bottom there is nothing to show at all. A pure tumble sets
+//     `bufferSymbols({ end: 0 })`, so the strip simply ends and the band is a
+//     hole onto the background.
+//
+// Framing it is the fix, and it is what a real cabinet does anyway.
 
 const cascade = await loadSpineSet('cascade');
 
@@ -87,6 +100,22 @@ const reelSet = new ReelSetBuilder()
   })
   .ticker(app.ticker)
   .build();
+
+// --- bezel -------------------------------------------------------------
+// Measured, not guessed: `curve.mapMain(0)` is exactly where the drum's top
+// edge lands, so the frame covers precisely the band that falls short.
+const bw = reelSet.viewport.maskWidth;
+const bh = reelSet.viewport.maskHeight;
+const lip = Math.ceil(Math.max(...reelSet.reels.map((r) => (r.curve ? r.curve.mapMain(0) : 0)))) + 2;
+const bezel = new PIXI.Graphics();
+bezel.rect(0, 0, bw, lip).rect(0, bh - lip, bw, lip).fill({ color: 0x0a0910 });
+bezel
+  .moveTo(0, lip)
+  .lineTo(bw, lip)
+  .moveTo(0, bh - lip)
+  .lineTo(bw, bh - lip)
+  .stroke({ color: 0x2f2a44, width: 2 });
+reelSet.addChild(bezel);
 
 return {
   reelSet,

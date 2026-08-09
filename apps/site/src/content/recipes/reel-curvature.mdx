@@ -141,6 +141,8 @@ The case the warp exists for. The bend is on the rendered reel, not baked into e
 
 Under `'symbol'` each cell carries its own projection, so a falling symbol is re-projected every frame as it passes - correct, but the fall itself is still a straight line down the flat grid.
 
+**A tumble board MUST frame the band.** Elsewhere on this page the band the drum's ends leave short is a nicety; on a cascade it is a defect twice over. At the top it shows the BUFFER cell - the refill queue - which does not slide when survivors fall, so it sits frozen while the grid drops past it. At the bottom there is nothing to show at all, because a pure tumble sets `bufferSymbols({ end: 0 })` and the strip simply ends. A bezel covers both, and `curve.mapMain(0)` tells you exactly how deep it needs to be.
+
 **Gotcha worth copying:** the flat `cascade-6x5-spine` recipe puts `unmask: true` on its high symbol so the head can overflow the mask. Under the warp that backfires - a lifted symbol is outside the reel's texture and draws flat over a curved board. `curveBleed` is the warp's answer: the overflow stays inside the texture and bends with everything else.
 
 <RecipeDemo code="curved-reels-cascade" height={460} />
