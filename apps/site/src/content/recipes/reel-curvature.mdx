@@ -17,28 +17,22 @@ steps: []
 
 ## One number
 
-A slot reel is a drum. The middle cell faces you; the outer ones have rotated away, so their far edge sits further from your eye. A camera turns those into **trapezoids**, not smaller rectangles.
+A slot reel is a drum. The middle cell faces you; the outer ones have rotated away. A camera turns those into **trapezoids**, not smaller rectangles.
 
-`.curve(amount)`. `0` flat (default, free), `1` hard barrel. Most boards want `0.3`&ndash;`0.5`.
-
-The grid on the tiles is the tell: lines converge on the outer rows, stay parallel on the middle one.
+`.curve(amount)` - `0` flat (default, free), `1` hard barrel, most boards `0.3`&ndash;`0.5`. The grid on the tiles is the tell: lines converge on the outer rows, stay parallel on the middle one.
 
 <RecipeDemo code="curved-reels" height={420} />
 
-`depth` is perspective strength - how much smaller an edge cell is than the middle. `0` gives an orthographic drum: cells bunch, nothing recedes, nothing keystones. Defaults to `amount * 0.5`, capped just under `cos(arc)` where the projection would fold cells back over each other.
-
 ```ts
-builder.curve(0.45);                          // depth 0.225
-builder.curve({ amount: 0.45, depth: 0.35 }); // stronger
+builder.curve(0.45);                          // depth defaults to amount * 0.5
+builder.curve({ amount: 0.45, depth: 0.35 }); // stronger perspective
 ```
 
-## The middle cell is never deformed
+`depth` is how much smaller an edge cell is than the middle. `0` is orthographic - cells bunch, nothing recedes or keystones. Capped just under `cos(arc)`, past which cells fold back over each other.
 
-The cell facing the camera is drawn at authored size, both axes, no keystone. Everything bends around it.
+**The middle cell is never deformed.** Authored size, both axes, no keystone. So it cannot also fill a window sized for N flat cells: the ends fall short and the buffer cells show in that band. Frame it, like a cabinet bezel does - `curve.mapMain(0)` gives the depth.
 
-So it cannot also fill a window sized for N flat cells. The ends fall short, and the buffer cells show in that band, compressed as they curve away. Frame it - that band is the sliver of the next symbol a real cabinet shows, and a real cabinet's bezel covers it. `bufferSymbols(2)` gives it more to draw.
-
-Stretching to the window edges instead magnifies the main axis but not the cross axis: a visibly taller middle row.
+<a id="curved-reels-warp"></a>
 
 ## Two ways to draw it
 
@@ -48,66 +42,46 @@ Every demo here uses `.curveMode('warp')`.
 builder.curve(0.45).curveMode('warp').renderer(app.renderer);
 ```
 
-**`'warp'`** renders each reel to a texture and displaces the **vertices** of a mesh. Everything inside bends - Spine, atlas sprites, text, effects - and no symbol cooperates or knows. It also bends **motion**: the curve is on the rendered reel, so the spin, stop bounce and cascade falls ride it.
-
-**`'symbol'`** (default) projects each cell alone. Crisper, free, but a `Container` transform is affine, so it only bends content that IS a texture. Spine, `Graphics`, composites and *atlas sub-frames* get a uniform scale instead: displaced and shrunk, never keystoned. The stop bounce translates the reel flat, so the board slides rather than travelling round the drum.
-
-| | `'symbol'` | `'warp'` |
+| | `'symbol'` (default) | `'warp'` |
 |---|---|---|
 | Spine / composites bend | no | **yes** |
 | Atlas art keystones | no | **yes** |
 | Motion follows the curve | no | **yes** |
 | Cost | free | 1 render pass per reel per frame |
 | Sharpness | native | one resample |
-| Needs `renderer()` | no | **yes** - `build()` throws without it |
+| Needs `renderer()` | no | **yes** - `build()` throws |
 
-Under `'warp'`, symbols are not real display objects to the renderer: use `getCellQuad()`, not screen-space hit testing.
+`'warp'` renders each reel to a texture and displaces a mesh's **vertices**, so everything inside bends and no symbol cooperates. `'symbol'` projects each cell alone - crisper, but a `Container` transform is affine, so it only bends content that IS a texture.
 
-**Gotcha:** anything the engine LIFTS out of a reel is not in that reel's texture, so `'warp'` cannot bend it - `unmask: true` symbols, the win spotlight, pin flights and overlays all draw flat over a curved board. The builder logs when it sees `unmask` under `'warp'`. `'symbol'` has no such split.
-
-<a id="curved-reels-warp"></a>
-
-The demo is Spine skeletons - content `'symbol'` cannot bend at all.
+The demo is Spine skeletons, which `'symbol'` cannot bend at all.
 
 <RecipeDemo code="curved-reels-warp" height={420} />
 
-### Symbols that hang over their cell
-
-`SymbolData.zIndex` stacks within a reel, folded in as `zIndex * 100 + cellIndex`, so any raised value beats every cell index. Reapplied on every wrap, so it holds mid-spin.
-
-`.curveBleed(px)` gives the warp texture room across the strip. Art wider than its cell is otherwise sliced at the texture edge; bleed captures the overhang and warps it with everything else.
+Symbols that hang over their cell need two things: `SymbolData.zIndex` to stack within the reel, and `.curveBleed(px)` to stop the warp texture slicing the overhang at its edge.
 
 ```ts
-builder
-  .symbolData({ mystery: { zIndex: 2 } }) // draws over its neighbours
-  .curveBleed(46);                        // and may hang over them
+builder.symbolData({ mystery: { zIndex: 2 } }).curveBleed(46);
 ```
-
-Pair bleed with `SharedRectMaskStrategy` - any `curveFocus` other than `'reel'` selects it - or the per-reel mask clips the overhang back off.
 
 <a id="curved-reels-focus"></a>
 
 ## Where the camera stands
 
-Default: one camera per reel, each its own drum. `.curveFocus('set')`: one camera on the middle of the board, so receding cells lean IN and the grid reads as one wide cylinder.
+One camera per reel, or one for the whole board. Outer reels tilt toward the middle; the centre one barely moves.
 
 ```ts
 builder.curve(0.5).curveFocus('reel');     // default - five separate drums
-builder.curve(0.5).curveFocus('set-lean'); // halfway
-builder.curve(0.5).curveFocus('set');      // one camera, whole board
+builder.curve(0.5).curveFocus('set-lean'); // halfway, usually the sweet spot
+builder.curve(0.5).curveFocus('set');      // one camera, one wide cylinder
 ```
 
-Outer reels tilt toward the middle; the centre one barely moves. `'set-lean'` is usually the sweet spot on a 5-wide board.
-
 <RecipeDemo code="curved-reels-focus" height={420} />
-
-**Gotcha:** leaning cells cross their own column, and the per-reel `RectMaskStrategy` would slice the overhang. Anything but `'reel'` auto-selects `SharedRectMaskStrategy`; an explicit `.maskStrategy(...)` still wins.
 
 <a id="curved-reels-per-reel"></a>
 
 ## One drum, not five
 
-`.curvePerReel([...])` - a camera each. Bend the middle reels hardest, ease off outward. Length must equal `reels()`; entries take the same forms as `.curve()`.
+`.curvePerReel([...])` gives each reel its own camera - bend the middle hardest, ease off outward. Length must equal `reels()`.
 
 <RecipeDemo code="curved-reels-per-reel" height={420} />
 
@@ -115,11 +89,7 @@ Outer reels tilt toward the middle; the centre one barely moves. `'set-lean'` is
 
 ## A pay band inside a taller drum
 
-Five cells drawn, three paying. The outer rows exist to be curved: they are the part of the drum turning away, and they are what makes it read as a cylinder rather than a grid. They land real symbols - the strip does not know they are decorative - the game evaluates rows 1-3.
-
-Better for a curve than a bare 3x5, where the drum must bend hard enough to distort the symbols people are reading. Here the bend is spent on rows nobody reads and the band sits near 1:1, so it takes a deeper `curve(0.62)`.
-
-The scrim comes from `getCellQuad()`, not `getCellBounds()`, whose bounding box is looser than the cell and would spill onto neighbours.
+Five cells drawn, three paying. The outer rows exist to be curved - they are what makes it read as a cylinder rather than a grid. Better than a bare 3x5, where the drum must bend hard enough to distort the symbols people are reading; here the bend is spent on rows nobody reads, so it takes a deeper `curve(0.62)`.
 
 <RecipeDemo code="curved-reels-payband" height={460} />
 
@@ -127,31 +97,17 @@ The scrim comes from `getCellQuad()`, not `getCellBounds()`, whose bounding box 
 
 ## Cascades on a drum
 
-The case the warp exists for. The bend is on the rendered reel, so everything the tumble moves rides the curve: symbols exploding out, survivors sliding down, fresh ones dropping in. Nothing in the cascade code knows.
+The case the warp exists for: the bend is on the rendered reel, so explosions, survivors sliding down and drop-ins all ride the curve with the cascade code none the wiser.
 
-**A tumble board must frame the band.** Elsewhere it is a nicety; here it is a defect twice over. At the top it shows the buffer cell - the refill queue - which does not slide when survivors fall, so it sits frozen while the grid drops past. At the bottom there is nothing to show, because a pure tumble sets `bufferSymbols({ end: 0 })`. A bezel covers both; `curve.mapMain(0)` gives its depth.
-
-**Gotcha worth copying:** the flat `cascade-6x5-spine` recipe puts `unmask: true` on its high symbol to overflow the mask. Under the warp that lifts it out of the reel texture and it draws flat. Use `curveBleed` instead.
+A tumble board **must** frame the band. At the top it shows the buffer cell - the refill queue - which does not slide when survivors fall, so it sits frozen. At the bottom a pure tumble sets `bufferSymbols({ end: 0 })`, so there is nothing to show at all.
 
 <RecipeDemo code="curved-reels-cascade" height={460} />
-
-## Tuning it live
-
-`reelSet.setCurve()` re-projects at runtime - same value or a per-reel array:
-
-```ts
-reelSet.setCurve(0.4);
-reelSet.setCurve([0.2, 0.35, 0.5, 0.35, 0.2]);
-reelSet.setCurve(0); // flat
-```
 
 <a id="curved-reels-gems"></a>
 
 ## On real art
 
-Grid tiles are a measuring instrument. Same curve on shipped symbols - Playson's Supercharged Diamonds 3, the sheet the sprite Hold &amp; Win recipes use - at `curveFocus('set-lean')`.
-
-Trimmed atlas frames. Under `'symbol'` they could not keystone at all; under `'warp'` they bend like everything else. Blur-on-spin is unaffected.
+Playson's Supercharged Diamonds 3, the sheet the sprite Hold &amp; Win recipes use. Trimmed atlas frames: under `'symbol'` they could not keystone at all, under `'warp'` they bend like everything else. Blur-on-spin is unaffected.
 
 <RecipeDemo code="curved-reels-gems" height={420} />
 
@@ -159,29 +115,30 @@ Trimmed atlas frames. Under `'symbol'` they could not keystone at all; under `'w
 
 ## Numbers, not art
 
-One reel, three cells, money amounts - the pattern behind prize pickers and jackpot ladders. Symbols are drawn at runtime and the symbol id IS the amount, so `setResult([['100.00', ...]])` lands the value you name.
-
-Each cell is a `PIXI.Text`, a composite with no texture of its own, so `'symbol'` could only displace and scale it. Under the warp the digits themselves bend.
+The pattern behind prize pickers and jackpot ladders. Symbols are drawn at runtime and the symbol id IS the amount, so `setResult([['100.00', ...]])` lands the value you name. Each cell is a `PIXI.Text` - a composite with no texture, so only the warp bends the digits.
 
 <RecipeDemo code="curved-value-reel" height={360} />
 
+## Tuning it live
+
+```ts
+reelSet.setCurve(0.4);
+reelSet.setCurve([0.2, 0.35, 0.5, 0.35, 0.2]);
+reelSet.setCurve(0); // flat
+```
+
+## Gotchas
+
+- **Lifted symbols do not bend under `'warp'`.** `unmask: true`, the win spotlight, pin flights and overlays are outside the reel's texture, so they draw flat over a curved board. The builder logs when it sees `unmask`. `'symbol'` has no such split.
+- **Leaning or bleeding cells cross their own column.** Anything but `curveFocus('reel')` auto-selects `SharedRectMaskStrategy`; with `curveBleed` under `'reel'`, set it yourself or the per-reel mask clips the overhang.
+- **`getCellBounds()` returns the bounding box**, `getCellQuad()` the four corners drawn on. Outline with the quad, hit-test with the box.
+- **The affine fallback owns `view.scale`.** A win animation tweening `symbol.view.scale` overwrites the projection while it runs - animate a child of `view`. Not an issue under `'warp'`.
+- **Curvature is presentation only.** It never changes what lands where, `getVisibleGrid()`, or any event payload.
+
 ## Extending `'symbol'` mode
 
-Only relevant if you skip the warp. The engine hands each symbol a projected quad via `ReelSymbol.applyCellQuad()`:
+Only if you skip the warp. The engine hands each symbol a projected quad via `ReelSymbol.applyCellQuad()`.
 
-- **`SpriteSymbol` / `AnimatedSpriteSymbol`** map it onto a `PerspectiveMesh` - true keystone, no extra render pass - when the texture owns its whole source. `canProjectTexture()` refuses atlas sub-frames: the mesh addresses its source with 0..1 UVs and remapping them onto the frame has not produced a correct draw here.
-- **Everything else** gets a uniform scale about the quad's centre, sized to fit INSIDE it so no cell overlaps its neighbour. Uniform on purpose: squashing one axis turns a `7` into a squashed `7`, not a `7` at an angle.
+`SpriteSymbol` / `AnimatedSpriteSymbol` map it onto a `PerspectiveMesh` - true keystone, no extra render pass - when the texture owns its whole source. `canProjectTexture()` refuses atlas sub-frames: the mesh addresses its source with 0..1 UVs and remapping them onto the frame has not produced a correct draw here. Everything else gets a uniform scale sized to fit inside the quad, so no cell overlaps its neighbour and a `7` never becomes a squashed `7`.
 
-Own symbol, single texture? Write `applyCellQuad()`. `PerspectiveCell` is exported and does the mesh plumbing.
-
-**Art that does not fill its cell** - most does not - reports its real rect via `ReelSymbol.cellInset`. Sprite symbols derive it from the texture's trim. Without it the drum projects the empty cell instead of the gem inside it.
-
-**Gotcha:** the affine fallback owns `view.scale`. A win animation tweening `symbol.view.scale` to an absolute value overwrites the projection while it runs. Animate a child of `view` instead. Not an issue under `'warp'`.
-
-## The engine does not notice
-
-The strip still marches on flat coordinates. The projection never touches a view's `position`, so `setResult()`, wrapping, cascades, big symbols and MultiWays reshapes behave exactly as flat.
-
-`getCellBounds()` returns the projected cell's **bounding box**; `getCellQuad()` returns the four corners it is drawn on. Outline with the quad, hit-test with the box.
-
-**Gotcha:** curvature is presentation only. It never changes what lands where, what `getVisibleGrid()` returns, or any event payload.
+Writing your own with a single texture? `PerspectiveCell` is exported and does the mesh plumbing. Art that does not fill its cell reports its real rect via `ReelSymbol.cellInset`, which the sprite symbols derive from the texture's trim.
