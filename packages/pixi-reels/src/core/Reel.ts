@@ -1911,6 +1911,18 @@ export class Reel implements Disposable {
     // container in case the pool moved it elsewhere since the last
     // activation (e.g. spotlight promotion above the mask).
     if (oldSymbol.symbolId === newSymbolId) {
+      // The instance is reused WITHOUT deactivate/activate, so nothing else
+      // resets its animation pose. A symbol that just played a one-shot win
+      // is still parked on that animation's final frame, and the reset below
+      // only touches `view` — anything the symbol class drives internally
+      // (a Spine skeleton, a nested container's alpha) stays where the win
+      // left it, so the refilled cell renders blank.
+      //
+      // `stopAnimation()` is the documented "spotlight is over, return to
+      // idle" hook, and `deactivate()`/`destroy()` already call it on paths
+      // that do go through the pool. This makes the same-id path agree with
+      // them.
+      oldSymbol.stopAnimation();
       oldSymbol.view.alpha = 1;
       oldSymbol.view.scale.set(1, 1);
       oldSymbol.view.rotation = 0;
