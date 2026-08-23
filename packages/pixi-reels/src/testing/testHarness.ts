@@ -50,6 +50,11 @@ export interface TestReelSetOptions {
   tumble?: import('../cascade/TumbleConfig.js').TumbleConfig;
   /** Number of symbols above + below the visible area. Defaults to the builder default. */
   bufferSymbols?: number | { start: number; end: number };
+  /**
+   * Same hook as `ReelSetBuilder.phases(...)`. Register a custom or
+   * subclassed phase over a built-in for this set.
+   */
+  phases?: (factory: import('../spin/phases/PhaseFactory.js').PhaseFactory) => void;
   /** Initial symbol grid. Same `ColumnTarget[]` form as `ReelSetBuilder.initialFrame`. */
   initialFrame?: ColumnTarget[];
   /**
@@ -168,6 +173,9 @@ export function createTestReelSet(opts: TestReelSetOptions = {}): TestReelSetHan
   }
   if (opts.tumble) {
     builder.tumble(opts.tumble);
+  }
+  if (opts.phases) {
+    builder.phases(opts.phases);
   }
 
   const reelSet = builder.build();

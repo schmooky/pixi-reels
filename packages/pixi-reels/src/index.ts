@@ -38,6 +38,8 @@ export type {
   AnticipationStagger,
   AnticipationSlowdown,
   AnticipationOptions,
+  AnticipationProtect,
+  SlamOptions,
 } from './config/types.js';
 export type { ReelMaskRect, MaskStrategy, MaskContext } from './core/ReelViewport.js';
 export {
@@ -79,13 +81,26 @@ export type { StaticSpinSymbolOptions } from './snapshot/StaticSpinSymbol.js';
 // `ReelSet`. Consumers never construct one. Same shape as `ReelMotion` /
 // `StopSequencer`, which were hidden in 1.0.0.
 //
-// The built-in phase CLASSES (StartPhase, SpinPhase, StopPhase, etc.) are
-// also internal. Consumers register custom phases via
-// `builder.phases(f => f.register('name', class extends ReelPhase { ... }))`,
-// they do not subclass the built-ins. Phase Config TYPES stay exported as
-// stable shape descriptions for documentation.
+// The built-in phase CLASSES are exported so a custom phase can SUBCLASS one
+// rather than reimplement it. Overriding a single hook of `StopPhase` is a
+// very different job from writing a stop phase from scratch, and going
+// through `PhaseFactory` used to force the latter. Register a subclass the
+// usual way: `builder.phases(f => f.register('stop', class extends StopPhase { ... }))`.
+//
+// These are engine internals with an engine-internal contract. Their
+// protected surface (`onEnter` / `onSkip` / `update`, and each phase's private
+// staging) can change in a minor release, so a subclass may need to follow.
+// Phase Config TYPES stay exported as stable shape descriptions.
 export { ReelPhase } from './spin/phases/ReelPhase.js';
 export { PhaseFactory } from './spin/phases/PhaseFactory.js';
+export { StartPhase } from './spin/phases/StartPhase.js';
+export { SpinPhase } from './spin/phases/SpinPhase.js';
+export { StopPhase } from './spin/phases/StopPhase.js';
+export { AnticipationPhase } from './spin/phases/AnticipationPhase.js';
+export { AdjustPhase } from './spin/phases/AdjustPhase.js';
+export { CascadeFallPhase } from './spin/phases/CascadeFallPhase.js';
+export { CascadePlacePhase } from './spin/phases/CascadePlacePhase.js';
+export { CascadeDropInPhase } from './spin/phases/CascadeDropInPhase.js';
 // The two shapes `PhaseFactory.register` / `.registerFactory` accept. Needed
 // to type a helper that registers phases on your behalf.
 export type { PhaseConstructor, PhaseCreatorFn } from './spin/phases/PhaseFactory.js';

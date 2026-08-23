@@ -63,8 +63,8 @@ interface SpinResult {
 
 | Event | Payload | When |
 |---|---|---|
-| `skip:requested` |. | A slam fires. from `skipSpin()`, `requestSkip()` (after `setResult` arrives), or `slamStop()`. |
-| `skip:completed` |. | Every un-landed reel has been force-landed at the end of the slam. |
+| `skip:requested` | `({ reels: number[], partial: boolean })` | A slam fires. from `skipSpin()`, `requestSkip()` (after `setResult` arrives), or `slamStop()`. `reels` is what this slam lands; `partial` is `true` when reels are still spinning after it (a protected tease, or `slamStop({ reels })` / `slamStop({ except })`). |
+| `skip:completed` | `({ reels: number[], partial: boolean })` | The same slam, after every target reel has been placed and landed. |
 | `skip:boosted` | `({ previous: SpeedProfile, current: SpeedProfile })` | First `skipSpin()` press of a STANDARD-mode round; engine bumped to the fastest registered profile for the rest of the round. Cascade rounds set the auto-slam-refills flag instead and never emit this event. Restore on the next `spin()` does **not** re-emit. |
 
 ```ts

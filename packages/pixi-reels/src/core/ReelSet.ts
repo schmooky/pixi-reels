@@ -7,6 +7,7 @@ import type {
   SpinOptions,
   AnticipationStagger,
   AnticipationOptions,
+  SlamOptions,
 } from '../config/types.js';
 import { EventEmitter } from '../events/EventEmitter.js';
 import type { ReelSetEvents, SpinResult, RunCascadeResult as RunCascadeResultBase } from '../events/ReelEvents.js';
@@ -1026,6 +1027,10 @@ export class ReelSet extends Container implements Disposable {
    *   - `duration` (ms) overrides the profile's `anticipationDelay`, so the
    *     tease plays even in Turbo / SuperTurbo (whose profiles use
    *     `anticipationDelay: 0` and would otherwise skip anticipation).
+   *   - `protect` keeps a skip press from ending the tease before the player
+   *     has seen it. `'once'` lands every non-tease reel on the first press
+   *     and leaves the tease running (a second press ends it); `'always'`
+   *     never lets a press end a tease. See {@link AnticipationProtect}.
    *
    * Listen to `anticipation:reel` ({ reelIndex, order, total }) to drive
    * per-step tension SFX / a pitch ramp, and `anticipation:reelEnd` to stop it.
@@ -1048,6 +1053,11 @@ export class ReelSet extends Container implements Disposable {
    * // Drive which reels tease straight from the result grid:
    * const reels = anticipationForScatters(grid, { symbol: 'SCAT', trigger: 2 });
    * reelSet.setAnticipation(reels, { stagger: 'sequential', slowdown: { from: 0.4, to: 0.1 } });
+   *
+   * // Skip must not hide the tease: the first press lands reels 0-1 instantly
+   * // so the two scatters are on screen, and reels 2-4 keep teasing. The next
+   * // press ends the tease.
+   * reelSet.setAnticipation([2, 3, 4], { stagger: 400, protect: 'once' });
    */
   setAnticipation(
     reelIndices: number[],
@@ -1094,6 +1104,11 @@ export class ReelSet extends Container implements Disposable {
    *
    * Subsequent presses also slam each current drop.
    *
+   * When the spin set a protected tease (`setAnticipation(reels, { protect })`),
+   * a press that would otherwise end the tease instead lands only the reels
+   * around it, holds the round side effect back, and parks `skipStage` at `1`.
+   * The next press does the full slam.
+   *
    * Throws if called before `setResult()` arrives (nothing to land on:
    * slamming now would land on random spin-buffer content). The universal
    * "spin/skip" button pattern should call `requestSkip()` in that window
@@ -1130,23 +1145,55 @@ export class ReelSet extends Container implements Disposable {
   }
 
   /**
-   * Hard slam-stop. Always lands every un-landed reel immediately.
-   * Bypasses the two-stage `skipSpin()` machine and any speed boost.
+   * Hard slam-stop. Lands un-landed reels immediately, bypassing the
+   * two-stage `skipSpin()` machine, any speed boost, and tease protection.
    * For tests, anti-cheat flows, or any caller with unambiguous
    * "end now" intent.
    *
+   * With no argument it lands EVERY un-landed reel and ends the round.
+   * Pass `{ reels }` or `{ except }` (not both) for a PARTIAL slam: those
+   * reels land now, every other reel keeps running its phase chain to a
+   * natural landing, and `skipStage` is left alone. This is the raw lever
+   * under `setAnticipation(..., { protect })` — reach for it directly when
+   * you want your own skip granularity rather than the tease rule.
+   *
    * Pairs with `skipSpin()` (round-aware land + boost) and `skipNudge()`
    * (fast-forward an in-flight `nudge()`).
+   *
+   * @example
+   * // Land everything except the two reels still teasing.
+   * reelSet.slamStop({ except: [3, 4] });
    */
-  slamStop(): void {
-    this._spinController.slamStop();
+  slamStop(options?: SlamOptions): void {
+    this._spinController.slamStop(options);
+  }
+
+  /**
+   * Override the minimum spin time (ms) every reel must accumulate before it
+   * may start stopping. This replaces the active speed profile's
+   * `minimumSpinTime`, which is one value shared by every reel and therefore
+   * a floor no single reel can land below — the reason `setStopDelays()`
+   * alone can't make one reel land instantly while another keeps spinning.
+   *
+   * Pass a number for a uniform floor, one value per reel for a per-reel
+   * floor (entries past the end fall back to the profile), or `null` to
+   * clear. Like `setStopDelays()`, the override persists across `spin()` and
+   * `refill()` until it is cleared.
+   *
+   * @example
+   * reelSet.setMinimumSpinTime([0, 0, 0, 900, 900]); // last two hold longer
+   * reelSet.setMinimumSpinTime(null);                // back to the profile
+   */
+  setMinimumSpinTime(ms: number | number[] | null): void {
+    this._spinController.setMinimumSpinTime(ms);
   }
 
   /**
    * Current `skipSpin()` position within the active round. `0` until the
    * player presses the slam button, `2` after. Read this to drive button
-   * labels (e.g. "Skip" to "Skipped"). `1` is reserved for forward compat
-   * and is not currently reachable.
+   * labels (e.g. "Skip" to "Skipped"). `1` means a press landed the reels
+   * around a protected tease and left the tease running — the button should
+   * stay live, because the next press is the one that ends it.
    *
    * `requestSkip()` that gets queued pre-`setResult()` does NOT advance
    * the stage until the queued slam actually fires (i.e. once

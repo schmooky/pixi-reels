@@ -67,6 +67,20 @@ export interface SpinOptions {
 }
 
 /**
+ * Which reels a `slamStop()` call lands. Omit the argument entirely to land
+ * every un-landed reel (the default hard slam).
+ *
+ * Exactly one of `reels` / `except` may be given. Out-of-range indices are
+ * ignored; held and already-landed reels are never slammed.
+ */
+export interface SlamOptions {
+  /** Land ONLY these reels. Every other reel keeps spinning through its phase chain. */
+  reels?: number[];
+  /** Land every un-landed reel EXCEPT these. The complement of `reels`. */
+  except?: number[];
+}
+
+/**
  * How the START of each anticipation reel's slow-down is spaced (offsets are
  * by tease-order, i.e. position within the anticipation set, not raw reel
  * index):
@@ -96,10 +110,41 @@ export interface AnticipationSlowdown {
   holdTo?: number;
 }
 
+/**
+ * How a tease resists a skip press. Skip granularity is otherwise all-or-nothing:
+ * a slam force-completes every phase including `AnticipationPhase`, so a player
+ * who presses skip never sees that the spin was teasing at all.
+ *
+ *   - `false` (default) — no protection. A skip press lands every reel, tease
+ *     included. This is the pre-2.3 behaviour.
+ *   - `'once'` (or `true`) — the first skip press of the round lands every
+ *     NON-tease reel immediately and leaves the tease reels running, so the
+ *     trigger symbols are on screen and the tease is visibly under way. The
+ *     next press lands the tease too. Protection is spent after that first
+ *     press, hence "once".
+ *   - `'always'` — a skip press never ends a tease. Non-tease reels land
+ *     immediately on every press; tease reels always play out in full.
+ *
+ * Protection applies to the player-facing entry points `skip()` and
+ * `requestSkip()`. `slamStop()` stays an unconditional land-now (pass its
+ * `reels` / `except` options for a deliberate partial slam).
+ *
+ * Protection is inert when the tease would not play anyway — an effective hold
+ * of `0` ms, as in the Turbo / SuperTurbo profiles with no `duration` override.
+ * There is no tease to protect there, so every press lands everything, and a
+ * protected spin is indistinguishable from an ordinary one.
+ */
+export type AnticipationProtect = boolean | 'once' | 'always';
+
 /** Full anticipation configuration. The object form of `setAnticipation`'s second argument. */
 export interface AnticipationOptions {
   stagger?: AnticipationStagger;
   slowdown?: AnticipationSlowdown;
+  /**
+   * Guarantee the tease becomes visible before a skip press can end it. See
+   * {@link AnticipationProtect}. Default `false`.
+   */
+  protect?: AnticipationProtect;
   /**
    * Explicit tease hold in ms, overriding the active speed profile's
    * `anticipationDelay`. Pass a positive value to keep the tease playing in

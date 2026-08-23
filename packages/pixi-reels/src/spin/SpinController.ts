@@ -2,8 +2,10 @@ import type { Ticker } from 'pixi.js';
 import type { Reel } from '../core/Reel.js';
 import type {
   AnticipationOptions,
+  AnticipationProtect,
   AnticipationSlowdown,
   AnticipationStagger,
+  SlamOptions,
   SpeedProfile,
   SpinOptions,
   SymbolData,
@@ -14,7 +16,7 @@ import type { SpinResult } from '../events/ReelEvents.js';
 import { EventEmitter } from '../events/EventEmitter.js';
 import type { ReelSetEvents } from '../events/ReelEvents.js';
 import { PhaseFactory } from './phases/PhaseFactory.js';
-import type { SpinPhase } from './phases/SpinPhase.js';
+import type { SpinPhase, SpinPhaseConfig } from './phases/SpinPhase.js';
 import type { ReelPhase } from './phases/ReelPhase.js';
 import type { StartPhaseConfig } from './phases/StartPhase.js';
 import type { StopPhaseConfig } from './phases/StopPhase.js';
@@ -135,6 +137,19 @@ export class SpinController implements Disposable {
    */
   private _anticipationDuration: number | null = null;
   /**
+   * Tease-protect mode for this spin, or `null` for none. Set via
+   * `setAnticipation(reels, { protect })`; see {@link AnticipationProtect}.
+   * Decides whether a `skip()` / `requestSkip()` press is allowed to end a
+   * tease or only lands the reels around it. Cleared per spin.
+   */
+  private _anticipationProtect: AnticipationProtect = false;
+  /**
+   * `true` once a protected press has spent `'once'` protection, so the next
+   * press slams everything. Never set under `'always'` (which is unspendable).
+   * Cleared per spin.
+   */
+  private _protectSpent = false;
+  /**
    * Reels that actually entered a tease this spin. populated when
    * `anticipation:reel` fires, drained in `_markLanded` to fire
    * `anticipation:reelEnd` only for reels that teased. Cleared per spin.
@@ -151,6 +166,23 @@ export class SpinController implements Disposable {
   private _stopDelayOverride: number[] | null = null;
   private _activePhases: Map<number, ReelPhase<any>> = new Map();
   private _landedReels = new Set<number>();
+  /**
+   * Reels landed by a PARTIAL slam. A full slam aborts every in-flight phase
+   * chain by bumping `_spinGeneration`, but a partial one must leave the
+   * surviving reels' chains running, so it can't touch the generation.
+   * Instead the slammed indices land here and each per-reel chain checks them
+   * at its own await boundaries via `_isStale`. Cleared per spin / refill and
+   * whenever a full slam takes over.
+   */
+  private _slammedReels = new Set<number>();
+  /**
+   * Minimum spin time (ms) override, replacing the active speed profile's
+   * `minimumSpinTime` floor. A single number applies to every reel; an array
+   * is per-reel (index-aligned, short arrays fall back to the profile).
+   * `null` = no override. Like `_stopDelayOverride`, this PERSISTS across
+   * `spin()` / `refill()` until explicitly cleared.
+   */
+  private _minimumSpinTimeOverride: number | number[] | null = null;
   /**
    * Reels held for the current spin (per `SpinOptions.holdReels`). Held
    * reels skip START / SPIN / STOP and stay on their current symbols.
@@ -177,13 +209,13 @@ export class SpinController implements Disposable {
    * `spin()`.
    *
    * `0`. no press yet this round.
+   * `1`. a press landed the reels AROUND a protected tease and left the
+   *       tease running (see {@link AnticipationProtect}). The round's side
+   *       effect has NOT been applied yet. reached only on a spin that called
+   *       `setAnticipation(..., { protect })`.
    * `2`. a press has slammed (and applied the round's side effect: a
    *       speed boost in standard mode or auto-slam-refills in cascade).
    *       Subsequent presses also slam.
-   *
-   * `1` is reserved (kept for forward compat in the type) but currently
-   * unreachable. every press slams now, side effects are applied on the
-   * first press together with the slam.
    */
   private _skipStage: 0 | 1 | 2 = 0;
   /**
@@ -325,6 +357,8 @@ export class SpinController implements Disposable {
     this._anticipationStagger = 0;
     this._anticipationSlowdown = null;
     this._anticipationDuration = null;
+    this._anticipationProtect = false;
+    this._protectSpent = false;
     this._teasingReels.clear();
     this._reelLandedResolvers.clear();
     this._reelLandedPromises.clear();
@@ -335,6 +369,7 @@ export class SpinController implements Disposable {
     // user just set. The override persists until the next setDropOrder()
     // call overwrites it.
     this._landedReels.clear();
+    this._slammedReels.clear();
     this._activePhases.clear();
     this._heldReels = this._normalizeHoldReels(options?.holdReels);
     this._spinGeneration++;
@@ -425,10 +460,14 @@ export class SpinController implements Disposable {
     this._tryBeginStopSequence();
     if (this._skipPending) {
       // Deferred `requestSkip()` is an explicit slam intent. bypass the
-      // two-stage `skip()` machine and slam directly.
+      // two-stage `skip()` machine and slam directly. Tease protection still
+      // applies: a press queued before the result arrived is exactly the case
+      // the feature exists for, since the tease hasn't started yet. Requires
+      // `setAnticipation()` to have been called by now. call it BEFORE
+      // `setResult()` (every recipe does) or the queued press sees no tease
+      // to protect.
       this._skipPending = false;
-      this._slam();
-      this._skipStage = 2;
+      this._pressSkip(false);
     }
   }
 
@@ -535,6 +574,8 @@ export class SpinController implements Disposable {
     this._anticipationStagger = 0;
     this._anticipationSlowdown = null;
     this._anticipationDuration = null;
+    this._anticipationProtect = false;
+    this._protectSpent = false;
     this._teasingReels.clear();
     this._reelLandedResolvers.clear();
     this._reelLandedPromises.clear();
@@ -543,6 +584,7 @@ export class SpinController implements Disposable {
     // would otherwise see their setting clobbered, falling back to the
     // default `i * speed.stopDelay` left-to-right stagger.
     this._landedReels.clear();
+    this._slammedReels.clear();
     this._activePhases.clear();
     this._heldReels = new Set();
     this._spinGeneration++;
@@ -650,7 +692,7 @@ export class SpinController implements Disposable {
     generation: number,
     winnerCells: number[],
   ): Promise<void> {
-    if (generation !== this._spinGeneration) return;
+    if (this._isStale(reelIndex, generation)) return;
 
     const reel = this._reels[reelIndex];
     const targetFrame = this._frameFor(reelIndex);
@@ -665,7 +707,7 @@ export class SpinController implements Disposable {
       delay: stopDelay,
       events: this._events,
     } satisfies CascadePlacePhaseConfig);
-    if (generation !== this._spinGeneration) return;
+    if (this._isStale(reelIndex, generation)) return;
 
     const dropInPhase = this._phaseFactory.create<any>('cascade:dropIn', reel, speed);
     this._activePhases.set(reelIndex, dropInPhase);
@@ -674,7 +716,7 @@ export class SpinController implements Disposable {
       initial: false,
       events: this._events,
     } satisfies CascadeDropInPhaseConfig);
-    if (generation !== this._spinGeneration) return;
+    if (this._isStale(reelIndex, generation)) return;
 
     this._markLanded(reelIndex);
   }
@@ -697,7 +739,7 @@ export class SpinController implements Disposable {
     // reels swap identities in lockstep; the staggered "reveal" lives in
     // stage 2.
     const stage1 = this._reels.map(async (_, i) => {
-      if (generation !== this._spinGeneration) return;
+      if (this._isStale(i, generation)) return;
       const reel = this._reels[i];
       const targetFrame = this._frameFor(i);
       const winnerCells = winnersByReel.get(i) ?? [];
@@ -711,7 +753,7 @@ export class SpinController implements Disposable {
         delay: 0,
         events: this._events,
       } satisfies CascadePlacePhaseConfig);
-      if (generation !== this._spinGeneration) return;
+      if (this._isStale(i, generation)) return;
 
       const gravityPhase = this._phaseFactory.create<any>('cascade:dropIn', reel, speed);
       this._activePhases.set(i, gravityPhase);
@@ -783,7 +825,7 @@ export class SpinController implements Disposable {
     generation: number,
     winnerCells: number[],
   ): Promise<void> {
-    if (generation !== this._spinGeneration) return;
+    if (this._isStale(reelIndex, generation)) return;
 
     const reel = this._reels[reelIndex];
     const stopDelay = this._stopDelayFor(reelIndex, speed);
@@ -794,7 +836,7 @@ export class SpinController implements Disposable {
     // parameter (Phase delay is a CascadePlacePhase concern).
     if (stopDelay > 0) {
       await new Promise<void>((r) => setTimeout(r, stopDelay));
-      if (generation !== this._spinGeneration) return;
+      if (this._isStale(reelIndex, generation)) return;
     }
 
     const dropInPhase = this._phaseFactory.create<any>('cascade:dropIn', reel, speed);
@@ -805,7 +847,7 @@ export class SpinController implements Disposable {
       role: 'new',
       events: this._events,
     } satisfies CascadeDropInPhaseConfig);
-    if (generation !== this._spinGeneration) return;
+    if (this._isStale(reelIndex, generation)) return;
 
     this._markLanded(reelIndex);
   }
@@ -831,6 +873,12 @@ export class SpinController implements Disposable {
    * `duration` overrides the active speed profile's `anticipationDelay` (ms).
    * Pass a positive value to make the tease play even in Turbo / SuperTurbo,
    * whose profiles have `anticipationDelay: 0` and would otherwise skip it.
+   *
+   * `protect` decides what a skip press does to the tease. By default a press
+   * lands everything and the player never learns the spin was teasing;
+   * `'once'` lands the reels around the tease and leaves the tease itself
+   * running, so the trigger is on screen before a second press can end it.
+   * See {@link AnticipationProtect}.
    */
   setAnticipation(
     reelIndices: number[],
@@ -849,6 +897,8 @@ export class SpinController implements Disposable {
     this._anticipationStagger = stagger;
     this._anticipationSlowdown = opts.slowdown ?? null;
     this._anticipationDuration = opts.duration ?? null;
+    this._anticipationProtect = opts.protect ?? false;
+    this._protectSpent = false;
     this._teasingReels.clear();
 
     // Sequential chaining needs a landed-deferred per anticipation reel so a
@@ -878,6 +928,33 @@ export class SpinController implements Disposable {
   }
 
   /**
+   * Override the minimum spin time (ms) that every reel must accumulate in
+   * `SpinPhase` before it is allowed to move on to anticipation / stop.
+   * Replaces the active speed profile's `minimumSpinTime`, which is a single
+   * value shared by every reel and therefore the floor no individual reel can
+   * land below.
+   *
+   * Pass a number for a uniform floor, or one value per reel for a per-reel
+   * floor (entries past the end of the array fall back to the profile). Pass
+   * `null` to clear and restore the profile value.
+   *
+   * Like `setStopDelays()`, the override PERSISTS across `spin()` and
+   * `refill()` until it is explicitly cleared.
+   */
+  setMinimumSpinTime(ms: number | number[] | null): void {
+    this._minimumSpinTimeOverride = Array.isArray(ms) ? [...ms] : ms;
+  }
+
+  /** Resolve the effective `SpinPhase` floor for one reel. */
+  private _minimumSpinTimeFor(reelIndex: number): number | undefined {
+    const override = this._minimumSpinTimeOverride;
+    if (override === null) return undefined;
+    const value = Array.isArray(override) ? override[reelIndex] : override;
+    if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) return undefined;
+    return value;
+  }
+
+  /**
    * Slam-stop safe before `setResult()` arrives. Queues until a result is
    * set, then slams. Bypasses the two-stage `skip()` machine. this API is
    * for callers with explicit slam intent (e.g. UIs that wire the queued
@@ -886,8 +963,7 @@ export class SpinController implements Disposable {
   requestSkip(): void {
     if (!this._isSpinning) return;
     if (this._resultSymbols) {
-      this._slam();
-      this._skipStage = 2;
+      this._pressSkip(false);
       return;
     }
     this._skipPending = true;
@@ -941,7 +1017,41 @@ export class SpinController implements Disposable {
       );
     }
 
-    if (this._skipStage === 0) {
+    this._pressSkip(true);
+  }
+
+  /**
+   * Shared body of the two player-facing skip presses (`skip()` and the
+   * post-result / deferred half of `requestSkip()`).
+   *
+   * Consults tease protection first. When a protected tease is still in
+   * flight, this press lands only the reels AROUND it, holds the round's
+   * side effect back (there's another press coming), and parks at
+   * `skipStage: 1`. Otherwise it applies the side effect (first effective
+   * press of the round only) and slams everything.
+   *
+   * @param withSideEffects - `false` for `requestSkip()`, which is documented
+   *   as a bare slam intent and never boosts speed or arms cascade auto-slam.
+   */
+  private _pressSkip(withSideEffects: boolean): void {
+    const protectedReels = this._protectedTeaseReels();
+    if (protectedReels.size > 0) {
+      // Land everything the tease isn't using. The tease reels keep their
+      // phase chains, so the player sees the slow-down start (and, under
+      // `'once'`, can end it with the next press).
+      const targets: number[] = [];
+      for (let i = 0; i < this._reels.length; i++) {
+        if (!protectedReels.has(i)) targets.push(i);
+      }
+      this._slam(targets);
+      if (this._anticipationProtect !== 'always') this._protectSpent = true;
+      // Stage 1, not 2: the round's side effect is still owed to the press
+      // that actually ends the tease.
+      if (this._skipStage === 0) this._skipStage = 1;
+      return;
+    }
+
+    if (withSideEffects && this._skipStage !== 2) {
       if (this._currentSpinMode === 'cascade') {
         // Cascade: phase durations are static (don't read `speed.spinSpeed`),
         // so a boost would be invisible. Auto-slam future refills instead.
@@ -965,38 +1075,153 @@ export class SpinController implements Disposable {
   }
 
   /**
-   * Hard slam-stop. Always lands every un-landed reel immediately, regardless
-   * of stage. Sets `skipStage` to 2 so future `skip()` presses in this round
-   * also slam (the boost ship has sailed).
+   * The reels a skip press must NOT land right now, per the active
+   * {@link AnticipationProtect} mode. Empty (no protection in force) when:
+   *
+   *   - no `protect` was passed to `setAnticipation`,
+   *   - `'once'` protection was already spent by an earlier press,
+   *   - the effective tease hold is `0` ms, so no tease would play anyway
+   *     (Turbo / SuperTurbo without a `duration` override). Protecting a
+   *     tease that never happens would stall the reels for nothing AND
+   *     reintroduce the response-time tell it exists to remove,
+   *   - every anticipation reel has already landed.
    */
-  slamStop(): void {
+  private _protectedTeaseReels(): Set<number> {
+    const out = new Set<number>();
+    if (this._anticipationProtect === false) return out;
+    if (this._anticipationProtect !== 'always' && this._protectSpent) return out;
+
+    const speed = this._speedManager.active;
+    const hold = this._anticipationDuration ?? speed.anticipationDelay;
+    if (hold <= 0) return out;
+
+    for (const i of this._anticipationReels) {
+      if (this._landedReels.has(i)) continue;
+      if (this._heldReels.has(i)) continue;
+      out.add(i);
+    }
+    return out;
+  }
+
+  /**
+   * Hard slam-stop. Lands un-landed reels immediately regardless of stage,
+   * ignoring tease protection. Sets `skipStage` to 2 so future `skip()`
+   * presses in this round also slam (the boost ship has sailed).
+   *
+   * Pass `{ reels }` or `{ except }` for a PARTIAL slam: those reels land now
+   * and every other reel keeps running its phase chain to a natural landing.
+   * This is the low-level lever under tease protection, exposed so a game can
+   * build its own skip granularity (land the left reels, let the right ones
+   * play). A partial slam leaves `skipStage` alone. it isn't the round-ending
+   * press.
+   */
+  slamStop(options?: SlamOptions): void {
     if (!this._isSpinning) return;
+    if (options?.reels && options?.except) {
+      throw new Error("slamStop: pass either 'reels' or 'except', not both.");
+    }
+    if (options?.reels) {
+      this._slam(options.reels);
+      return;
+    }
+    if (options?.except) {
+      const exclude = new Set(options.except);
+      const targets: number[] = [];
+      for (let i = 0; i < this._reels.length; i++) {
+        if (!exclude.has(i)) targets.push(i);
+      }
+      this._slam(targets);
+      return;
+    }
     this._slam();
     this._skipStage = 2;
   }
 
   /**
+   * Should this reel's phase chain abort at its current await boundary?
+   *
+   * Two independent abort switches:
+   *   - the GLOBAL one. `_spinGeneration` moved, so a fresh `spin()` /
+   *     `refill()` / full slam / destroy replaced this whole round,
+   *   - the PER-REEL one. this reel was landed by a partial slam, which
+   *     must not disturb the reels still running.
+   */
+  private _isStale(reelIndex: number, generation: number): boolean {
+    return generation !== this._spinGeneration || this._slammedReels.has(reelIndex);
+  }
+
+  /**
    * The slam path itself: force-complete active phases, place results (or
-   * snap to current symbols when no result is set), mark every un-landed
-   * reel as landed. Shared by `skip()` (stage 1+), `requestSkip()`'s
-   * deferred path, `slamStop()`, and the per-reel error-recovery path
-   * inside `_runReelTask`.
+   * snap to current symbols when no result is set), mark the target reels as
+   * landed. Shared by `skip()` (stage 1+), `requestSkip()`'s deferred path,
+   * `slamStop()`, and the per-reel error-recovery path inside `_runReelTask`.
+   *
+   * With no argument it lands every un-landed, non-held reel and ends the
+   * round: active phases die, `_spinGeneration` moves, every chain aborts.
+   *
+   * With `reels` it lands only those and the round continues. The surviving
+   * chains must keep running, so the generation is left alone and the slammed
+   * indices are recorded in `_slammedReels` for `_isStale` to act on. This is
+   * what makes skip granularity expressible: tease protection is a partial
+   * slam over "everything except the anticipation reels".
    *
    * Idempotent: a second call once the spin has finished is a no-op. Lets
    * cascading rejection handlers each safely invoke `_slam` without
    * triple-emitting `skip:requested`.
    */
-  private _slam(): void {
+  private _slam(reels?: readonly number[]): void {
     if (!this._isSpinning) return;
-    this._wasSkipped = true;
-    this._events.emit('skip:requested');
 
-    for (const [, phase] of this._activePhases) {
-      phase.forceComplete();
+    // Resolve the target set first: everything downstream (which phases die,
+    // whether the generation moves, which reels get placed) keys off it.
+    const targets = new Set<number>();
+    if (reels) {
+      for (const i of reels) {
+        if (!Number.isInteger(i) || i < 0 || i >= this._reels.length) continue;
+        if (this._landedReels.has(i) || this._heldReels.has(i)) continue;
+        targets.add(i);
+      }
+      // A partial slam with nothing left to land is a no-op, not a skip: it
+      // must not flip `wasSkipped` or fire the skip events. (The full path
+      // keeps its historical behaviour of emitting even when every reel has
+      // already landed.)
+      if (targets.size === 0) return;
+    } else {
+      for (let i = 0; i < this._reels.length; i++) {
+        if (this._landedReels.has(i) || this._heldReels.has(i)) continue;
+        targets.add(i);
+      }
     }
-    this._activePhases.clear();
 
-    this._spinGeneration++;
+    let unlanded = 0;
+    for (let i = 0; i < this._reels.length; i++) {
+      if (!this._landedReels.has(i) && !this._heldReels.has(i)) unlanded++;
+    }
+    const partial = targets.size < unlanded;
+
+    this._wasSkipped = true;
+    this._events.emit('skip:requested', { reels: [...targets], partial });
+
+    if (partial) {
+      // Kill ONLY the target reels' phases and abort ONLY their chains. The
+      // generation is the global abort switch; bumping it here would strand
+      // every surviving reel mid-chain, so partial slams route their abort
+      // through `_slammedReels` instead (see `_isStale`).
+      for (const i of targets) {
+        const phase = this._activePhases.get(i);
+        if (phase) {
+          phase.forceComplete();
+          this._activePhases.delete(i);
+        }
+        this._slammedReels.add(i);
+      }
+    } else {
+      for (const [, phase] of this._activePhases) {
+        phase.forceComplete();
+      }
+      this._activePhases.clear();
+      this._spinGeneration++;
+    }
 
     if (this._resultSymbols) {
       // MultiWays skip: apply pending shape and big-symbol coordinator before
@@ -1006,9 +1231,7 @@ export class SpinController implements Disposable {
         pendingShape ? pendingShape[i] : this._reels[i].visibleCells;
       const decorated = this._coordinateBigSymbols(this._resultSymbols, visibleCellsForReel);
 
-      for (let i = 0; i < this._reels.length; i++) {
-        if (this._landedReels.has(i)) continue;
-        if (this._heldReels.has(i)) continue;
+      for (const i of targets) {
         const reel = this._reels[i];
         reel.speed = 0;
         reel.isStopping = false;
@@ -1033,9 +1256,7 @@ export class SpinController implements Disposable {
         this._markLanded(i);
       }
     } else {
-      for (let i = 0; i < this._reels.length; i++) {
-        if (this._landedReels.has(i)) continue;
-        if (this._heldReels.has(i)) continue;
+      for (const i of targets) {
         const reel = this._reels[i];
         reel.speed = 0;
         reel.isStopping = false;
@@ -1046,7 +1267,7 @@ export class SpinController implements Disposable {
       }
     }
 
-    this._events.emit('skip:completed');
+    this._events.emit('skip:completed', { reels: [...targets], partial });
   }
 
   /**
@@ -1160,7 +1381,7 @@ export class SpinController implements Disposable {
   // ── Internal ──────────────────────────────────────────
 
   private async _startReel(reelIndex: number, speed: SpeedProfile, generation: number): Promise<void> {
-    if (generation !== this._spinGeneration) return;
+    if (this._isStale(reelIndex, generation)) return;
 
     const reel = this._reels[reelIndex];
     const isTumble = this._currentSpinMode === 'cascade';
@@ -1180,7 +1401,7 @@ export class SpinController implements Disposable {
     const reshapeBeforeFall = isTumble && canAdjust && this._hooks.peekTargetShape() !== null;
     if (reshapeBeforeFall) {
       await this._runAdjustForReel(reel, reelIndex, speed, generation);
-      if (generation !== this._spinGeneration) return;
+      if (this._isStale(reelIndex, generation)) return;
     }
 
     // START or FALL: chain via phase.run() promises (no busy-polling).
@@ -1201,17 +1422,23 @@ export class SpinController implements Disposable {
       } satisfies StartPhaseConfig);
     }
 
-    if (generation !== this._spinGeneration) return;
+    if (this._isStale(reelIndex, generation)) return;
 
     const spinPhase = this._phaseFactory.create<SpinPhase>('spin', reel, speed);
     this._activePhases.set(reelIndex, spinPhase);
-    const spinDone = spinPhase.run({});
+    // A per-reel `minimumSpinTime` is what lets ONE reel land below the
+    // profile's shared floor. without it the only way under the floor is the
+    // all-reels slam, which is why skip granularity used to be all-or-nothing.
+    const spinDone = spinPhase.run({
+      minimumSpinTime: this._minimumSpinTimeFor(reelIndex),
+    } satisfies SpinPhaseConfig);
 
     let allSpinning = true;
     for (let i = 0; i < this._reels.length; i++) {
-      // Held reels never enter the phase chain; they don't gate
-      // `spin:allStarted` or the stop-sequence start.
-      if (this._heldReels.has(i)) continue;
+      // Held reels never enter the phase chain, and partially-slammed reels
+      // have already left it; neither gates `spin:allStarted` or the
+      // stop-sequence start.
+      if (this._heldReels.has(i) || this._landedReels.has(i)) continue;
       const phase = this._activePhases.get(i);
       if (!phase || phase.name !== 'spin') { allSpinning = false; break; }
     }
@@ -1221,7 +1448,7 @@ export class SpinController implements Disposable {
     }
 
     await spinDone;
-    if (generation !== this._spinGeneration) return;
+    if (this._isStale(reelIndex, generation)) return;
 
     // MultiWays: AdjustPhase commits the new shape and migrates pins between
     // SpinPhase and StopPhase. Inserted only when builder.multiways() was
@@ -1229,7 +1456,7 @@ export class SpinController implements Disposable {
     // spin already committed the reshape before the fall (see above).
     if (canAdjust && !reshapeBeforeFall) {
       await this._runAdjustForReel(reel, reelIndex, speed, generation);
-      if (generation !== this._spinGeneration) return;
+      if (this._isStale(reelIndex, generation)) return;
     }
 
     // SpinPhase resolved (result arrived). Run ANTICIPATION (if requested) then STOP.
@@ -1268,7 +1495,7 @@ export class SpinController implements Disposable {
       const anticipationPhase = this._phaseFactory.create<any>('anticipation', reel, speed);
       this._activePhases.set(reelIndex, anticipationPhase);
       await anticipationPhase.run(this._anticipationConfigFor(reelIndex, speed));
-      if (generation !== this._spinGeneration) return;
+      if (this._isStale(reelIndex, generation)) return;
       didAnticipate = true;
     } else {
       this._events.emit('spin:stopping', reelIndex);
@@ -1286,7 +1513,7 @@ export class SpinController implements Disposable {
         delay: stopDelay,
         events: this._events,
       } satisfies CascadePlacePhaseConfig);
-      if (generation !== this._spinGeneration) return;
+      if (this._isStale(reelIndex, generation)) return;
 
       const dropInPhase = this._phaseFactory.create<any>('cascade:dropIn', reel, speed);
       this._activePhases.set(reelIndex, dropInPhase);
@@ -1295,7 +1522,7 @@ export class SpinController implements Disposable {
         initial: true,
         events: this._events,
       } satisfies CascadeDropInPhaseConfig);
-      if (generation !== this._spinGeneration) return;
+      if (this._isStale(reelIndex, generation)) return;
     } else {
       const stopPhase = this._phaseFactory.create<any>('stop', reel, speed);
       this._activePhases.set(reelIndex, stopPhase);
@@ -1306,7 +1533,7 @@ export class SpinController implements Disposable {
         delay: stopDelay,
         preserveSpeed: didAnticipate,
       } satisfies StopPhaseConfig);
-      if (generation !== this._spinGeneration) return;
+      if (this._isStale(reelIndex, generation)) return;
     }
 
     this._markLanded(reelIndex);
@@ -1375,7 +1602,7 @@ export class SpinController implements Disposable {
       const prevLanded = this._reelLandedPromises.get(this._anticipationReels[order - 1]);
       if (prevLanded) {
         await prevLanded;
-        if (generation !== this._spinGeneration) return false;
+        if (this._isStale(reelIndex, generation)) return false;
       }
       return true;
     }
@@ -1383,7 +1610,7 @@ export class SpinController implements Disposable {
     const offsetMs = Array.isArray(stagger) ? (stagger[order] ?? 0) : order * stagger;
     if (offsetMs > 0) {
       await new Promise<void>((r) => setTimeout(r, offsetMs));
-      if (generation !== this._spinGeneration) return false;
+      if (this._isStale(reelIndex, generation)) return false;
     }
     return true;
   }
@@ -1450,9 +1677,9 @@ export class SpinController implements Disposable {
     if (!this._resultSymbols) return;
 
     for (let i = 0; i < this._reels.length; i++) {
-      // Held reels never enter a phase chain. don't gate the stop
-      // sequence on them.
-      if (this._heldReels.has(i)) continue;
+      // Held reels never enter a phase chain, and partially-slammed reels
+      // have already left theirs. neither gates the stop sequence.
+      if (this._heldReels.has(i) || this._landedReels.has(i)) continue;
       const phase = this._activePhases.get(i);
       if (!phase || phase.name !== 'spin') return;
     }
@@ -1499,7 +1726,7 @@ export class SpinController implements Disposable {
     // spinDone, then independently runs ANTICIPATION/STOP. Held reels have
     // no SpinPhase to resolve.
     for (let i = 0; i < this._reels.length; i++) {
-      if (this._heldReels.has(i)) continue;
+      if (this._heldReels.has(i) || this._landedReels.has(i)) continue;
       const spinPhase = this._activePhases.get(i) as SpinPhase;
       if (spinPhase?.resolve) spinPhase.resolve();
     }

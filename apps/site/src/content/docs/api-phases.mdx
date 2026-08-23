@@ -61,3 +61,48 @@ builder.phases((f) => f.register('flash', FlashPhase));
 
 Replacing built-ins works the same way. register with the same name (`'start'`,
 `'spin'`, `'anticipation'`, `'stop'`) to override.
+
+## Subclass a built-in
+
+Every built-in phase class is exported, so a small change is a subclass rather
+than a rewrite. Call `super` from the hook you override and the rest of the
+phase behaves exactly as before.
+
+```ts
+import { StopPhase } from 'pixi-reels';
+import type { StopPhaseConfig } from 'pixi-reels';
+
+class ThudStopPhase extends StopPhase {
+  protected onEnter(config: StopPhaseConfig): void {
+    super.onEnter(config);
+    playSfx('reel-thud');
+  }
+}
+
+builder.phases((f) => f.register('stop', ThudStopPhase));
+```
+
+These are engine internals. The protected surface (`onEnter` / `onSkip` /
+`update`, and each phase's private staging) can shift in a minor release, so a
+subclass may need to follow. Config TYPES are the stable part.
+
+## Skip granularity
+
+A slam force-completes every active phase, `AnticipationPhase` included, so by
+default a skip press ends the tease before the player sees it. Three levers
+open that up:
+
+| Lever | What it does |
+|---|---|
+| `setAnticipation(reels, { protect })` | Skip presses stop ending the tease. `'once'` lands the reels around it and leaves the tease running (the next press ends it); `'always'` never lets a press end one. |
+| `slamStop({ reels })` / `slamStop({ except })` | Per-reel slam. Those reels land now, everything else keeps running its phase chain to a natural landing. |
+| `setMinimumSpinTime(ms \| ms[])` | Per-reel `SpinPhase` floor, replacing the profile's single shared `minimumSpinTime`. Without this, no individual reel can land below the profile floor except through an all-reels slam. |
+
+`skip:requested` / `skip:completed` carry `{ reels, partial }` so a listener can
+tell a partial slam from a round-ending one.
+
+There is a fairness reason to reach for `protect` rather than raising the floor
+on teasing spins: if a scatterless skip lands instantly but a teasing skip
+settles slower, the response time itself tells the player a feature is coming
+before the reels have landed. `protect` keeps the non-tease reels landing at the
+exact same instant either way, and puts the tell where it belongs. on screen.

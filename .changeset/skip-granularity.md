@@ -1,0 +1,19 @@
+---
+'pixi-reels': minor
+---
+
+Add: skip granularity. Skip used to be all-or-nothing. `skipSpin()` / `requestSkip()` / `slamStop()` force-completed every reel's phase, `AnticipationPhase` included, so a press on a teasing spin ended the tease before the player ever saw it. Three levers now open that up, plus the phase classes needed to build your own.
+
+**`setAnticipation(reels, { protect })`** guarantees the tease becomes visible before a press can end it. `'once'` (or `true`) makes the first press of the round land every NON-tease reel immediately and leave the tease reels running, so the trigger symbols are on screen and the build-up is under way; the next press ends it. `'always'` never lets a press end a tease. `skipStage` reports `1` in that in-between state, which is what a UI should keep the button live on. Protection applies to `skipSpin()` and `requestSkip()` (including a press queued before `setResult()` arrived - call `setAnticipation` BEFORE `setResult` so the queued press can see the tease). Bare `slamStop()` stays an unconditional land-now. Protection is inert when the effective hold is `0` ms, as in Turbo / SuperTurbo without a `duration` override: there is no tease to protect, so every press lands everything.
+
+**`slamStop({ reels })` / `slamStop({ except })`** is a per-reel slam. Those reels land now and every other reel keeps running its phase chain to a natural landing. It is the raw lever under `protect`, exposed so a game can express its own rule. A partial slam does not touch `skipStage` and does not end the round; a partial slam with nothing left to land is a no-op rather than a skip.
+
+**`setMinimumSpinTime(ms | ms[])`** overrides the `SpinPhase` floor per reel. `minimumSpinTime` lives on the speed profile, so it is one value shared by every reel, and `setStopDelays()` - the only other per-reel lever - cannot go under it. The two missed each other: instant was only ever global, and per-reel could not go below the floor. Persists across `spin()` / `refill()` until cleared with `null`, matching `setStopDelays()`.
+
+There is a fairness reason to prefer `protect` over raising the floor on teasing spins. If a scatterless skip lands instantly but a teasing skip settles at the floor, the response time itself tells the player a feature is coming before the reels have landed. `protect` keeps the non-tease reels landing at the same instant either way and puts the tell on screen where it belongs.
+
+`skip:requested` and `skip:completed` now carry `{ reels, partial }` so a listener can tell a partial slam from a round-ending one. Listeners written against the old zero-argument signature keep working.
+
+**The built-in phase classes are exported**: `StartPhase`, `SpinPhase`, `StopPhase`, `AnticipationPhase`, `AdjustPhase`, `CascadeFallPhase`, `CascadePlacePhase`, `CascadeDropInPhase`. `SpinPhaseConfig.minimumSpinTime` documented an override that could not be reached, because registering a phase through `PhaseFactory` meant reimplementing it rather than subclassing it. Now `class MyStop extends StopPhase` and register it. These are engine internals: the protected surface (`onEnter` / `onSkip` / `update` and each phase's private staging) can shift in a minor release, so a subclass may need to follow. The config TYPES remain the stable part.
+
+Internally, a partial slam cannot use the spin generation as its abort switch - that is global, and bumping it would strand the surviving reels mid-chain - so slammed indices are tracked per reel and each chain checks them at its own await boundaries. A full slam behaves exactly as before.
