@@ -1,5 +1,11 @@
 # pixi-reels
 
+## 2.2.1
+
+### Patch Changes
+
+- [#209](https://github.com/schmooky/pixi-reels/pull/209) [`8b6517c`](https://github.com/schmooky/pixi-reels/commit/8b6517ca572d58d655c7f2debc4242b147a58ac6) Thanks [@caesar-v](https://github.com/caesar-v)! - Reset the symbol's animation pose on a same-id refill. Reusing the instance without `deactivate()`/`activate()` left it parked on the final frame of its last one-shot win, so a refilled cell could hold a symbol and draw nothing.
+
 ## 2.2.0
 
 ### Minor Changes
