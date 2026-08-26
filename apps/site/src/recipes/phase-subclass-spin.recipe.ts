@@ -66,11 +66,24 @@ for (let i = 0; i < REELS; i++) {
 // Seeded, not 0: a landing that somehow fires before `onSpin` set it would
 // otherwise print time-since-page-load as the reel's landing time.
 let t0 = performance.now();
+
+// A floor governs NATURAL landings only. A slam force-completes every phase
+// and places the result, so it ignores `minimumSpinTime` however that floor
+// was set - profile, `setMinimumSpinTime`, or this subclass. Tapping the
+// button again mid-spin therefore lands all five together and flattens the
+// staircase, which looks like the feature broke unless the readout says
+// otherwise. So it says otherwise.
+let slammed = false;
+reelSet.events.on('spin:start', () => { slammed = false; });
+reelSet.events.on('skip:requested', () => { slammed = true; });
+
 reelSet.events.on('spin:reelLanded', (i) => {
   // Two lines, not one: a single `250 -> 1324ms` line is wider than the reel
   // it sits under, so five of them ran into each other. Stacked, the label
   // cannot outgrow its column however big the numbers get.
-  labels[i].text = `${floorFor(i)}ms\n-> ${Math.round(performance.now() - t0)}ms`;
+  labels[i].text = slammed
+    ? `${floorFor(i)}ms\n-> slam`
+    : `${floorFor(i)}ms\n-> ${Math.round(performance.now() - t0)}ms`;
 });
 
 return {

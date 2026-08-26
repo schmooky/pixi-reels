@@ -52,6 +52,14 @@ for (let i = 0; i < REELS; i++) {
   labels.push(t);
 }
 
+// A floor governs NATURAL landings only: a slam ignores `minimumSpinTime`
+// by design, so a mid-spin tap lands every reel together and flattens the
+// staircase. Say so rather than printing five near-identical times that read
+// as the override having failed.
+let slammed = false;
+reelSet.events.on('spin:start', () => { slammed = false; });
+reelSet.events.on('skip:requested', () => { slammed = true; });
+
 // floor -> when the reel actually came to rest. The gap between columns is
 // the floor doing its work; the shared baseline is accel + stop-out + bounce,
 // which every reel pays either way.
@@ -59,7 +67,9 @@ for (let i = 0; i < REELS; i++) {
 // otherwise print time-since-page-load as the reel's landing time.
 let t0 = performance.now();
 reelSet.events.on('spin:reelLanded', (i) => {
-  labels[i].text = `${FLOORS[i]}ms\n-> ${Math.round(performance.now() - t0)}ms`;
+  labels[i].text = slammed
+    ? `${FLOORS[i]}ms\n-> slam`
+    : `${FLOORS[i]}ms\n-> ${Math.round(performance.now() - t0)}ms`;
 });
 
 return {

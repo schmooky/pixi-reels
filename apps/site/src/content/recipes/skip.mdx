@@ -132,6 +132,8 @@ No slam here at all. `minimumSpinTime` lives on the speed profile, so it is one 
 
 **Gotcha:** it persists across `spin()` and `refill()` until cleared with `null`, exactly like `setStopDelays()`. Set it once at boot, not per spin, unless you mean it to change.
 
+**Gotcha:** a floor governs NATURAL landings only. A slam force-completes every phase and places the result, so it ignores `minimumSpinTime` however that floor was set. Tap the button again mid-spin and all five reels land together; the labels read `-> slam` rather than five near-identical times, so the flattened staircase reads as the slam it is.
+
 <RecipeDemo code="skip-min-spin-time" />
 
 <a id="skip-min-spin-uniform"></a>
@@ -187,6 +189,8 @@ Every built-in phase class is exported, so a small change is a subclass rather t
 `SpinPhaseConfig.minimumSpinTime` documented an override of the profile's shared floor that could not be reached, because registering through `PhaseFactory` meant writing a spin phase from scratch. Subclass `SpinPhase` and it is one line. `setMinimumSpinTime([...])` is the ready-made version; reach for the subclass when the floor is derived rather than configured.
 
 **Gotcha:** merge the config, don't replace it - `super.onEnter({ ...config, minimumSpinTime })`. The controller may already be passing a floor, and clobbering the object drops anything added to it later.
+
+**Gotcha:** the staircase only exists on natural landings. A slam ignores the floor by design, so a mid-spin tap lands every reel at once and the labels switch to `-> slam` - that flat reading is correct, not a broken override.
 
 <RecipeDemo code="phase-subclass-spin" />
 

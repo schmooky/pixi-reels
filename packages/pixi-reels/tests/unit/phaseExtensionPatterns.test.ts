@@ -140,6 +140,38 @@ describe('phase extension patterns', () => {
     expect(at.get(4)! - t0).toBeGreaterThan(400);
   });
 
+  it('a slam collapses the subclass staircase, by design', async () => {
+    // The floor governs NATURAL landings. A slam force-completes every phase
+    // and places the result, so it ignores `minimumSpinTime` however that
+    // floor was set - profile, `setMinimumSpinTime`, or a `SpinPhase`
+    // subclass. Worth pinning because a demo that shows a per-reel staircase
+    // looks broken when a stray skip press flattens it, and the flat reading
+    // is the correct one.
+    const floorFor = (i: number) => i * 400;
+    class StaircaseSpinPhase extends SpinPhase {
+      protected onEnter(config: { minimumSpinTime?: number }): void {
+        super.onEnter({ ...config, minimumSpinTime: floorFor(this.reel.reelIndex) });
+      }
+    }
+
+    const h = (active = makeHarness((f) => f.register('spin', StaircaseSpinPhase)));
+    const at = new Map<number, number>();
+    h.reelSet.events.on('spin:reelLanded', (i) => { if (!at.has(i)) at.set(i, performance.now()); });
+
+    const p = h.reelSet.spin();
+    const t0 = performance.now();
+    h.reelSet.setResult(GRID);
+    await new Promise((r) => setTimeout(r, 150));
+    h.reelSet.slamStop();
+    await p;
+
+    // Reel 4's own floor is 1600ms; the slam lands it in a fraction of that,
+    // together with reel 0, which has no floor at all.
+    const spread = Math.max(...at.values()) - Math.min(...at.values());
+    expect(at.get(4)! - t0).toBeLessThan(600);
+    expect(spread).toBeLessThan(100);
+  });
+
   it('an AnticipationPhase subclass sees update() and onSkip()', async () => {
     let ticks = 0;
     let skipped = 0;
