@@ -1,14 +1,12 @@
 # pixi-reels
 
-pixi-reels 1.0.0 is a reel engine for PixiJS v8.
+pixi-reels 2.2.0 is a reel engine for PixiJS v8.
 It ships reel-only primitives. Win math, paytable math, RNG, and audio live in consumer code.
-This file inlines every guide and recipe for offline LLM context.
+This file inlines every guide, API page, recipe (with source) and answered FAQ entry for offline LLM context.
 
 Site: https://pixi-reels.schmooky.dev
 Repo: https://github.com/schmooky/pixi-reels
 Package: https://www.npmjs.com/package/pixi-reels
-
-Generated: 2026-08-26T12:27:04.781Z
 
 ## Quick start
 
@@ -24,7 +22,7 @@ const app = new Application();
 await app.init({ width: 800, height: 480 });
 
 const reelSet = new ReelSetBuilder()
-  .reels(5).visibleRows(3).symbolSize(120, 120)
+  .reels(5).visibleCells(3).symbolSize(120, 120)
   .symbols(r => r.register('cherry', SpriteSymbol, { textures: { cherry: cherryTex } }))
   .ticker(app.ticker)
   .build();
@@ -168,86 +166,1130 @@ URL: https://pixi-reels.schmooky.dev/architecture/testing/
 ### Anticipation & near-miss
 URL: https://pixi-reels.schmooky.dev/recipes/anticipation/
 Tags: anticipation, tension, scatter, near-miss, spine, horizontal, reverse
-APIs: 
-Steps:
-  - 
 
 ### Big symbols & non-uniform grids
 URL: https://pixi-reels.schmooky.dev/recipes/big-symbols/
 Tags: big-symbols, multiways, pyramid, spine, geometry, sticky-wild, horizontal, reverse, orientation
-APIs: 
-Steps:
-  - 
 
 ### Cascade & tumble
 URL: https://pixi-reels.schmooky.dev/recipes/cascade/
 Tags: cascade, tumble, refill, anticipation, spine, thunderkick, horizontal, reverse, orientation, gravity
-APIs: 
-Steps:
-  - 
 
 ### Cells, bounds, paylines & overlays
 URL: https://pixi-reels.schmooky.dev/recipes/cells-and-banners/
 Tags: paylines, hit-areas, overlays, wins, horizontal, orientation
-APIs: 
-Steps:
-  - 
 
 ### Hold & Win
 URL: https://pixi-reels.schmooky.dev/recipes/hold-and-win/
 Tags: hold-and-win, coins, collector, respin, spine, horizontal, reverse, orientation
-APIs: 
-Steps:
-  - 
 
 ### Nudge
 URL: https://pixi-reels.schmooky.dev/recipes/nudge/
 Tags: nudge, stagger, spotlight, big-symbols, abort, skip, horizontal, reverse, orientation
-APIs: 
-Steps:
-  - 
 
 ### Orientation & direction
 URL: https://pixi-reels.schmooky.dev/recipes/orientation-and-direction/
 Tags: horizontal, orientation, direction, reverse, roll-up, banner, ways, axis
-APIs: 
-Steps:
-  - 
 
 ### Reel curvature
 URL: https://pixi-reels.schmooky.dev/recipes/reel-curvature/
 Tags: curve, curvature, perspective, projection, cylinder, drum, 3d
-APIs: 
-Steps:
-  - 
 
 ### Skip & slam
 URL: https://pixi-reels.schmooky.dev/recipes/skip/
 Tags: skip, slam, anticipation, tease, phases, timing
-APIs: 
-Steps:
-  - 
 
 ### Starters
 URL: https://pixi-reels.schmooky.dev/recipes/starters/
 Tags: starter, 5x3, cascade, multiways, hold-and-win, horizontal, reverse, orientation
-APIs: 
-Steps:
-  - 
 
 ### Symbols, layering & motion blur
 URL: https://pixi-reels.schmooky.dev/recipes/symbols/
 Tags: symbols, pools, buffers, weights, layering, static-spin, motion-blur, spine, horizontal, orientation
-APIs: 
-Steps:
-  - 
 
 ### Wilds, multipliers & mystery (CellPin)
 URL: https://pixi-reels.schmooky.dev/recipes/wilds-and-pins/
 Tags: wild, sticky, multiplier, mystery, respin, cell-pin, horizontal, reverse, orientation
-APIs: 
-Steps:
-  - 
+
+## FAQ
+
+The knowledge base behind /faq/. Only answered questions appear here; open ones are to-dos on the site and would be worse than nothing as context.
+
+### Getting started
+Put a board on the screen and make it move.
+
+Q (basics-001): How do I create a reel set and show it on screen?
+A: Use the fluent `ReelSetBuilder`: chain `.reels()`, `.visibleCells()`, `.symbolSize()`, register your symbols, then `.build()` returns a `ReelSet` (a PixiJS `Container`) that you add to the stage.
+
+Q (basics-002): How do I set how many reels (columns) the game has?
+A: Set the column count with `.reels(n)` on the builder before `.build()`.
+
+Q (basics-003): How do I set how many cells are visible?
+A: Use `.visibleCells(n)` for a uniform count, or `.visibleCellsPerReel([...])` when each reel shows a different number of cells.
+
+Q (basics-004): How do I set the pixel size of a single symbol cell?
+A: `.symbolSize(width, height)` on the builder sets the pixel box of one cell; pair it with `.symbolGap(x, y)` for spacing.
+
+Q (basics-005): How do I add a gap between reels and between rows?
+A: `.symbolGap(x, y)` sets the pixel gap between reels (x) and between rows (y).
+
+Q (basics-006): How do I put specific symbols on the board at startup?
+A: Seed the opening grid with `.initialFrame(grid)` on the builder, passing one `ColumnTarget` per reel — e.g. `{ visible: ['A', 'B', 'C'] }`.
+
+Q (basics-007): How do I register the list of symbol ids my game uses?
+A: Inside `.symbols((r) => …)`, call `r.register(id, SymbolClass, options)` once per symbol id your game uses.
+
+Q (basics-008): How do I show a static board with no spinning at all?
+A: Build with `.initialFrame(grid)` and never call `spin()` — the board renders the seeded symbols statically.
+
+Q (basics-009): How do I attach the reel set to my existing PixiJS app?
+A: `build()` returns a `ReelSet`, which is a PixiJS `Container`: `app.stage.addChild(reelSet)`, and pass the app ticker via `.ticker(app.ticker)`.
+
+Q (basics-010): How do I center the reels inside the game canvas?
+A: A `ReelSet` is a Container with normal `width`/`height`, so set `reelSet.x`/`reelSet.y` to `(app.screen.width - reelSet.width) / 2`, etc.
+
+Q (basics-011): How do I scale the whole board to fit different screen sizes?
+A: Set `reelSet.scale` from the ratio of available space to `reelSet.width`/`height`, and recompute it on the renderer `resize` event.
+
+Q (basics-012): How do I change the symbols after the board is already built?
+A: Use `reelSet.setResult(grid)` (animated, through a spin) or `reelSet.setSymbolAt(col, row, id)` for an instant in-place swap while the reels are idle.
+
+Q (basics-013): How do I drive the reels from my own game loop / ticker?
+A: Pass your ticker with `.ticker(myTicker)` — the engine drives all motion from it — and call `driveGsapWithTicker(ticker)` so GSAP advances off the same clock.
+
+Q (basics-014): How do I clean up and destroy the reel set when leaving the screen?
+A: `reelSet.destroy()` tears down the reels, pools, masks and ticker refs (every subsystem implements `Disposable`).
+
+### Symbols
+Define what lives in a cell and how it looks.
+
+Q (symbols-001): How do I add a brand-new symbol type to the game?
+A: Subclass `ReelSymbol` and implement all five abstract members -- `onActivate`, `onDeactivate`, `resize`, `playWin`, `stopAnimation` -- then register it with `r.register(id, MySymbol, opts)`. `resize()` runs on every symbol swap, so anything positional belongs there rather than in the constructor.
+
+Q (symbols-002): How do I make a symbol from a single texture/sprite?
+A: Use the built-in `SpriteSymbol`: `r.register(id, SpriteSymbol, { textures })` maps each id to a `Texture`.
+
+Q (symbols-003): How do I make a symbol from a sprite-sheet animation?
+A: Use `AnimatedSpriteSymbol` with `{ frames: Record<id, Texture[]>, animationSpeed }`; the board calls `playWin()` to play the sequence.
+
+Q (symbols-004): How do I make a symbol from a Spine skeleton?
+A: Use `SpineSymbol` (or `SpineReelSymbol`) from `pixi-reels/spine` with a `skeletonDataMap` / `spineMap`.
+
+Q (symbols-005): How do I render nothing for an empty cell?
+A: Register the `EmptySymbol` class against an id like `empty` — it renders nothing but still occupies the slot.
+
+Q (symbols-006): How do I set how often each symbol appears (weights)?
+A: Pass relative weights to `.weights({ id: n })`: a higher number lands more often. A weight of `0` means the symbol never comes from random fill, so it can only be placed by the server / `setResult`.
+
+Q (symbols-007): How do I make one symbol much rarer than the rest?
+A: Give it a small number in `.weights({ rare: 1, common: 20 })`, or `0` so it never comes from random fill (server-placed only).
+
+Q (symbols-008): How do I anchor a symbol at the cell center vs the top-left?
+A: Pass `anchor` in the symbol options (e.g. `SpriteSymbol`'s `{ anchor: { x: 0.5, y: 0.5 } }`); SpriteSymbol defaults to top-left, Spine centers in `resize()`.
+
+Q (symbols-009): How do I resize a symbol whenever the cell size changes?
+A: Implement `resize(width, height)` on your `ReelSymbol` and put all positioning there — it is called on every symbol swap, so the constructor is the wrong place.
+
+Q (symbols-010): How do I swap a symbol to a blurred texture while spinning?
+A: Use the shared `BlurSpriteSymbol` (`{ textures, blurTextures }`); subclass it to swap on the engine's `onReelSpinStart` / `onReelLanded` hooks so blur needs no per-cell event wiring.
+
+Q (symbols-011): How do I attach custom data (a value, a tier) to a symbol instance?
+A: Pass per-instance data through the symbol's constructor options, or carry it in a pin payload via `reelSet.pin(col, row, id, { payload })`.
+
+Q (symbols-012): How do I read which symbol is currently shown in a given cell?
+A: `reelSet.getVisibleGrid()` returns the whole `string[][]`, or read the live instance with `reelSet.getReel(col).getSymbolAt(row)`.
+
+Q (symbols-013): How do I let a symbol's art overflow its cell without clipping?
+A: Mark the id `{ unmask: true }` via `.symbolData(...)` so the engine reparents its view to the viewport's unmasked container, above the reel mask (server-placed ids only).
+
+Q (symbols-014): How do I give two different ids the same artwork?
+A: Register both ids with the same class and point them at the same texture / skeleton in the options map.
+
+Q (symbols-015): How do I tint or recolor a symbol per spin (e.g. a charged state)?
+A: Tint the symbol's `view` (a PixiJS Container) in `onActivate` — e.g. set `this.view.tint` for a charged state.
+
+### Spinning, speed & stopping
+Start, stop, turbo, slam, and hold reels.
+
+Q (spin-001): How do I start a spin?
+A: Call `await reelSet.spin()`. It starts every reel with a staggered delay and resolves with a `SpinResult` once all reels have landed.
+
+Q (spin-002): How do I stop the reels on a result?
+A: Once the server responds, call `reelSet.setResult(grid)` while the spin promise is still pending. The stop sequence consumes it and each reel lands on its target.
+
+Q (spin-003): How do I know when a spin has completely finished?
+A: `await reelSet.spin()` resolves with a `SpinResult` once every reel lands, or listen for the `spin:complete` event.
+
+Q (spin-004): How do I stagger reel starts so they begin one after another?
+A: The active `SpeedProfile`'s `spinDelay` staggers reel starts; tune it per profile via `.speed(name, { …, spinDelay })`.
+
+Q (spin-005): How do I make the reels stop left to right?
+A: `reelSet.setDropOrder('ltr')` -- also `'rtl'`, `'all'`, a per-reel delay array, or `null` to clear -- sets the stop order. The gap defaults to `max(profile.stopDelay, 150)` ms, so on Turbo it is 150 rather than the profile's own value; pass a second argument, `setDropOrder('ltr', 90)`, to override. The setting is sticky across `spin()` and `refill()` until you change it.
+
+Q (spin-006): How do I add a turbo / fast-spin mode?
+A: Register a faster profile (`.speed('turbo', SpeedPresets.TURBO)`) and switch with `reelSet.setSpeed('turbo')`.
+
+Q (spin-007): How do I slam-stop the reels on a second button press?
+A: On the second tap call `reelSet.skipSpin()` to slam the reels to their landing — or `reelSet.requestSkip()` if the server result has not arrived yet, which queues the slam for the moment it does.
+
+Q (spin-008): How do I boost only the current spin without changing the speed profile?
+A: There is no boost-only call. `skipSpin()` slams the current drop, and as a round-scoped side effect switches the active profile to the fastest registered one and emits `skip:boosted`. That speed change only affects subsequent spins -- mid-spin speed switching is not supported -- and the next `spin()` restores your original profile. For a slam with no speed side effect, use `slamStop()`.
+
+Q (spin-009): How do I control the bounce/overshoot when a reel lands?
+A: Tune `bounceDistance` and `bounceDuration` on the `SpeedProfile`.
+
+Q (spin-010): How do I hold some reels still while the others spin?
+A: Pass `reelSet.spin({ holdReels: [0, 4] })`. Held reels skip START / SPIN / STOP entirely, do not move, and count as already-landed for the all-landed resolver.
+
+Q (spin-011): How do I respin just one reel?
+A: Hold the rest: `reelSet.spin({ holdReels: [everything but one] })`. For a fully self-contained single reel, the Hold & Win pattern uses one 1×1 ReelSet per cell.
+
+Q (spin-012): How do I abort a spin that is already in flight?
+A: Pass an `AbortSignal` via `spin({ signal })` and call `controller.abort()`; the spin promise rejects with an AbortError.
+
+Q (spin-013): How do I block a new spin until all animations finish?
+A: Gate the spin button on the `spin()` promise (and any post-land animation promises) before calling `spin()` again.
+
+Q (spin-014): How do I add a timeout/watchdog if the server never sends a result?
+A: Pass `spin({ timeoutMs })` (or a `signal`) — if `setResult` never arrives, the spin rejects so you can surface an error.
+
+Q (spin-015): How do I keep the reels animating correctly on a hidden/background tab?
+A: Drive the engine from `app.ticker` and call `driveGsapWithTicker(app.ticker)` so GSAP advances off the Pixi ticker instead of rAF, which freezes on hidden tabs.
+
+### Results & forcing outcomes
+Tell the reels exactly what to land on.
+
+Q (result-001): How do I tell the reels exactly what grid to land on?
+A: Give `reelSet.setResult(grid)` an array of one `ColumnTarget` per reel: `{ visible: ['A','B','C'], bufferStart?: [...], bufferEnd?: [...] }`. The visible array is the on-screen window; the buffers target cells just outside it.
+
+Q (result-002): How do I force a specific outcome for a demo or trailer?
+A: Call `reelSet.setResult(grid)` with the exact `ColumnTarget[]` you want; the example `CheatEngine` (in the private `@pixi-reels/cheats` package, copy it in) + `forceGrid(grid)` forces it every spin.
+
+Q (result-003): How do I read the final visible grid after a spin?
+A: `reelSet.getVisibleGrid()` returns the resolved visible `string[][]` (also on `SpinResult.symbols`).
+
+Q (result-004): How do I apply a result that came from my server?
+A: Map the server payload to `ColumnTarget[]` and pass it to `reelSet.setResult(grid)` while the spin promise is still pending.
+
+Q (result-005): How do I land a symbol just above the visible window (in the buffer)?
+A: Put the symbol in that reel's `bufferStart`, e.g. `{ visible: [...], bufferStart: ['COIN'] }`.
+
+Q (result-006): How do I land a tall symbol partially off-screen so only its edge shows?
+A: Anchor a tall block in `bufferStart` so only its tail shows at row 0; the viewport mask clips the off-screen part.
+
+Q (result-007): How do I use a seeded RNG so a spin is exactly reproducible?
+A: Inject a deterministic generator with `.rng(fn)` on the builder. The engine takes any `() => number` in `[0, 1)`, so bring your own PRNG -- the repo's `SeededRng` is example code (`@pixi-reels/cheats/seededRng`, a private workspace package), not part of the published package, so copy it in rather than importing it from `pixi-reels`.
+
+Q (result-008): How do I guarantee at least one specific symbol lands this spin?
+A: Place it explicitly in the `ColumnTarget` you pass to `setResult`, or use the example `CheatEngine`'s `forceScatters` / `forceCell` (copy it from the private `@pixi-reels/cheats` package).
+
+Q (result-009): How do I land a different row count on each reel in one result?
+A: Build with `.multiways({ minCells, maxCells, reelExtent })` and pass a per-reel `ColumnTarget[]` whose `visible` arrays differ in length.
+
+Q (result-010): How do I send a structured result that survives JSON / postMessage?
+A: Use the explicit `ColumnTarget` object form (`{ visible, bufferStart, bufferEnd }`) — it survives JSON / postMessage, unlike the negative-index array form.
+
+Q (result-011): How do I keep the visual result separate from the payout math?
+A: Keep payout math on the server; the engine only consumes the visual grid via `setResult` and never computes wins itself.
+
+Q (result-012): How do I replay the exact same spin again for a bug report?
+A: Re-inject the same seeded `.rng(fn)` and the same `setResult` grid. `startRecording(reelSet, 'bug-123')` then `getFrames('bug-123')` captures a grid snapshot at each key spin event for the report; call `stopRecording(reelSet)` when you are done.
+
+### Reel motion & board shape
+Drop-in, roll-up, fall delays, and growing boards.
+
+Q (motion-001): How do I make symbols drop in from above instead of scrolling?
+A: Make the spin a drop-in: build with `.tumble({ dropIn })` and spin `{ mode: 'cascade' }`, or register `ImmediateMode` for an instant land.
+
+Q (motion-002): How do I make a reel land with a bounce?
+A: The stop phase bounces by `bounceDistance` / `bounceDuration` on the active `SpeedProfile`.
+
+Q (motion-003): How do I stagger the fall of individual symbols into place?
+A: `.tumble({ dropIn: { cellStagger } })` delays each symbol's fall; the `cascade:dropIn:symbol` events expose per-symbol timing.
+
+Q (motion-004): How do I make symbols rise up from below (roll-up)?
+A: `.direction('reverse')` on the builder makes the strip travel toward the smaller coordinate -- a roll-up on a vertical set -- with new symbols feeding in from the opposite edge. Use `.directionPerReel([...])` to set it per reel.
+
+Q (motion-005): How do I spin one reel up and another down (mixed directions)?
+A: `.directionPerReel(['forward', 'reverse', 'forward', ...])` on the builder, one entry per reel (length must equal `.reels(n)`). Reels you omit fall back to `.direction()`. A big symbol spanning reels (`size.reels > 1`) throws at `build()` when the directions it straddles are mixed.
+
+Q (motion-006): How do I peek the next symbol from above before it lands?
+A: Pre-fill the `bufferStart` slot so a teaser symbol sits just out of frame and scrolls into view on the next spin.
+
+Q (motion-007): How do I nudge a reel by one position after it stopped?
+A: `reelSet.nudge(col, { … })` shifts a reel up or down after it landed, feeding caller-supplied incoming symbols.
+
+Q (motion-008): How do I add rows to a reel at runtime (the board grows)?
+A: MultiWays changes a reel's visible row count per spin (via `setShape` + the AdjustPhase); a permanent static row change otherwise needs a rebuild.
+
+Q (motion-009): How do I add a whole new reel mid-feature (Infinity-Reels style)?
+A: Adding whole columns mid-feature (Infinity Reels) is not built in — the reel count is fixed at build; it is a custom extension on top of the engine.
+
+Q (motion-010): How do I make reels horizontal instead of vertical?
+A: `.orientation('horizontal')` on the builder runs the strip along X, with reels marched along Y. Everything else is orientation-neutral -- pyramids, MultiWays, big symbols and cascades all work on either axis. `symbolSize(width, height)` stays screen-space, so a horizontal set takes its travel pitch from `width`.
+
+Q (motion-011): How do I fit two half-symbols in one cell (split symbols)?
+A: Two symbols per cell is not a built-in; render a composite `ReelSymbol` whose `view` holds both halves.
+
+Q (motion-012): How do I keep a tall block intact while everything else scrolls?
+A: Big-symbol blocks stay intact through spins and cascades automatically — you place the anchor and the engine paints OCCUPIED across the rest of the block.
+
+### Anticipation & near-miss
+Build tension before the last reels land.
+
+Q (antic-001): How do I slow the last reel down when a big win is possible?
+A: `reelSet.setAnticipation([reelIndex])` before it stops slows that reel using the profile's `anticipationDelay`.
+
+Q (antic-002): How do I trigger anticipation only when 2 scatters are already in?
+A: Track landed scatters from `spin:reelLanded`, then call `setAnticipation([next])` only once the count crosses your threshold.
+
+Q (antic-003): How do I fake a near-miss with a scatter just above the line?
+A: Land N-1 scatters plus `setAnticipation` on the reel that almost completes, and place the teased scatter in `bufferStart`.
+
+Q (antic-004): How do I play a teaser sound/glow on the anticipating reel?
+A: Listen for `anticipation:reel` -- it carries `{ reelIndex, order, total }` and fires only for reels that actually tease, at the moment they start slowing -- and stop the glow or sound on `anticipation:reelEnd`. `spin:stopping` fires for every reel, teasing or not, so it is the wrong hook for this.
+
+Q (antic-005): How do I extend the spin time on specific reels for tension?
+A: `setAnticipation([...])` extends those reels via `anticipationDelay`; for finer control raise their `minimumSpinTime`.
+
+Q (antic-006): How do I show an "almost" frame where the symbol overshoots then settles?
+A: Prefill the teased symbol into `bufferStart` so it scrolls into view on the slowed reel, then settles back.
+
+Q (antic-007): How do I anticipate the final cell when one more coin means the grand?
+A: In Hold & Win, flip the remaining cells to a tension profile with the builder's `anticipateWhen(({ locked, capacity }) => capacity - locked === 1)`.
+
+Q (antic-008): How do I chain anticipation across multiple reels (rolling tension)?
+A: Pass several reel indices plus a stagger: `setAnticipation([2, 3, 4], 450)`. With the default stagger of `0` every anticipation reel starts slowing at the same moment. A number staggers the tease starts by `k * value` ms, a `number[]` sets them explicitly, and `'sequential'` makes each reel wait until the previous one has fully landed.
+
+Q (antic-009): How do I cancel anticipation cleanly if the tease misses?
+A: Anticipation is just the slow stop — if the tease misses, the reel lands normally, so there is nothing to cancel; stop your own glow/sound on `spin:reelLanded`.
+
+Q (antic-010): How do I make the anticipation reel speed up briefly before slowing?
+A: Use a profile whose `accelerationEase` / `decelerationEase` ramps up before the anticipation slowdown; tune `accelerationDuration`.
+
+Q (antic-011): How do I run built-in anticipation on a single cell, the way the engine does it for a whole reel?
+A: Hold & Win cells are independent reels, so the builder's `anticipateWhen(...)` runs anticipation on the still-spinning cells out of the box; for one cell, swap that mini-reel to a tension profile.
+
+### Win presentation
+Lines, ways, clusters, highlights and big-win tiers.
+
+Q (wins-001): How do I highlight the winning symbols and dim the rest?
+A: `reelSet.spotlight.show(positions)` dims the board and promotes the winning cells, or use the higher-level `WinPresenter`.
+
+Q (wins-002): How do I draw a payline across the winning cells?
+A: Core never draws lines — subscribe to `win:group` and draw your own overlay using `reelSet.getCellBounds(col, row)`.
+
+Q (wins-003): How do I play each symbol's own win animation?
+A: `WinPresenter` calls each winning symbol's `playWin()`; or call it yourself on `reelSet.getReel(col).getSymbolAt(row)`.
+
+Q (wins-004): How do I show winning cells for a ways-to-win game (no lines)?
+A: Read the winning cells from `win:group` and spotlight them with `SymbolSpotlight.show(positions)` — no line geometry needed.
+
+Q (wins-005): How do I cycle through multiple winning lines one at a time?
+A: `reelSet.spotlight.cycle(lines)` (or `WinPresenter` with a `cycles` count) steps through each winning line in turn.
+
+Q (wins-006): How do I draw connection lines between a connected cluster?
+A: Draw the links yourself between cluster cells using `getCellBounds`; the engine supplies geometry, you supply the lines.
+
+Q (wins-007): How do I evaluate pays both ways (left-to-right and right-to-left)?
+A: Evaluate both directions in your win logic and feed all winning cells to the presenter — the engine is direction-agnostic.
+
+Q (wins-008): How do I show a small/medium/big/mega win celebration by tier?
+A: Pick the tier from the win amount in your code and play the matching celebration; the engine exposes the win cells, the banner is game-layer.
+
+Q (wins-009): How do I count the win amount up with a rolling number?
+A: Drive your own counter widget; a small `win:set` / `win:add` event bus of your own is enough to carry the running win total to it.
+
+Q (wins-010): How do I zoom and scale the board into a big-win banner?
+A: Scale `reelSet` (a Container) with a GSAP tween for the zoom, and build the banner in your UI layer.
+
+Q (wins-011): How do I skip the win presentation when the player taps?
+A: `WinPresenter.abort()` ends the in-flight presentation immediately; on a bare `SymbolSpotlight`, `hide()` is the stop-everything call (it aborts a running `cycle()` and clears the dim).
+
+Q (wins-012): How do I keep the win highlight in sync with the win sound?
+A: Both fire from the same `win:group` event — start the sound in the same listener that triggers the highlight.
+
+### Cascades & tumbling
+Remove winners, drop new symbols, repeat.
+
+Q (cascade-001): How do I remove the winning symbols and drop new ones in?
+A: Build with `.tumble(...)`, then after fading the winners call `reelSet.refill({ winners, grid: nextGrid })` with the cleared cells and the new symbols. Survivors fall into the gaps and fresh symbols drop in from above.
+
+Q (cascade-002): How do I run a tumble sequence until there are no more wins?
+A: `reelSet.runCascade({ … })` runs the full detect → destroy → refill loop until there are no new wins.
+
+Q (cascade-003): How do I play a destroy/pop animation on cleared symbols?
+A: Override `playDestroy(opts)` on the symbol; `reelSet.destroySymbols(cells)` plays it on the cleared cells.
+
+Q (cascade-004): How do I make survivors fall down into the gaps?
+A: `reelSet.refill({ winners, grid })` slides survivors into the gaps and drops new symbols in from above.
+
+Q (cascade-005): How do I control the fall delay between columns?
+A: `.tumble({ fall: { cellStagger } })` plus the refill order set the per-column timing.
+
+Q (cascade-006): How do I increment a multiplier on each cascade step?
+A: Listen for `cascade:chain:start` / `cascade:chain:end` and bump your multiplier each chain; the meter itself is game-layer.
+
+Q (cascade-007): How do I keep a cluster-pays board (8+ connected) tumbling?
+A: Detect 8+ connected in your win logic and feed the winners to `runCascade` / `refill`; the engine tumbles whatever cells you clear.
+
+Q (cascade-008): How do I drop multiplier orbs that sum up at the end of the tumble?
+A: Track orb values across the tumble via the cascade events and apply the sum on the final `cascade:chain:end`.
+
+Q (cascade-009): How do I spin once and then cascade (spin-then-tumble)?
+A: One ReelSet, override the mode per spin: classic strip-spin first, then `spin({ mode: 'cascade' })` for the refills.
+
+Q (cascade-010): How do I let a special symbol survive the cascade and stick?
+A: Pin it with `reelSet.pin(col, row, id)` so it sticks while the cascade clears around it.
+
+Q (cascade-011): How do I show the win presenter between cascade steps?
+A: Run `WinPresenter.show(wins)` inside your cascade loop, between `destroySymbols` and `refill`.
+
+Q (cascade-012): How do I slam through all remaining cascades on a tap?
+A: `reelSet.skipSpin()` during a cascade fast-forwards the remaining tumble steps.
+
+Q (cascade-013): How do I order the refills (which column fills first)?
+A: `setDropOrder('all' | 'ltr' | 'rtl' | [perReelDelaysMs])` chooses which reel refills first -- simultaneous, a left-to-right wave, right-to-left, or explicit per-reel delays. Which cell inside a reel lands first is a separate knob: `.tumble({ dropIn: { cellOrder: 'endFirst' | 'startFirst' } })`.
+
+### Wilds
+Sticky, expanding, walking, multiplier, generated.
+
+Q (wilds-001): How do I make a wild stay stuck across the next spins?
+A: Pin it: `reelSet.pin(col, row, 'wild', { turns })` keeps it across spins.
+
+Q (wilds-002): How do I make a wild expand to fill its whole reel?
+A: On land, pin every cell of the column to wild for N turns; it auto-expires on the turn counter.
+
+Q (wilds-003): How do I make a wild walk one reel left each respin?
+A: `await reelSet.movePin({ reel: fromReel, cell }, { reel: fromReel - 1, cell })` shifts the wild one reel left each respin, with a flight animation.
+
+Q (wilds-004): How do I put a multiplier number on a wild?
+A: Carry the multiplier in the pin payload and render a ×N badge on the cell.
+
+Q (wilds-005): How do I randomly drop wilds onto the board before the spin?
+A: Inject them with a `FrameMiddleware` (or place them in the `setResult` grid) before the reels stop.
+
+Q (wilds-006): How do I expand a single special symbol to a full reel in free spins (Book style)?
+A: Pick the symbol at feature start and pin its whole column to wild — the same expanding-wild pin pattern.
+
+Q (wilds-007): How do I keep a sticky wild for a fixed number of spins then drop it?
+A: Pin with `{ turns: N }`; it auto-unpins and fires `pin:expired` when the counter runs out.
+
+Q (wilds-008): How do I stack multiplier wilds so their values multiply together?
+A: Keep each wild's multiplier in its pin payload and multiply the payloads together in your win math.
+
+Q (wilds-009): How do I spawn a wild from a winning combo (chain-reaction wild)?
+A: On `win:group`, pin a new wild at the cleared cell before the next cascade step.
+
+Q (wilds-010): How do I make a walking wild leave a multiplier trail behind it?
+A: Use `movePin` to walk it and pin a multiplier payload at each cell it leaves behind.
+
+Q (wilds-011): How do I animate a wild crawling across reels along a path?
+A: `movePin` animates the wild between cells; chain the calls to follow a path.
+
+Q (wilds-012): How do I turn a whole reel wild for the duration of a feature?
+A: Pin every cell of that reel to wild for the feature's duration.
+
+### Sticky cells & pins
+Lock a cell to an id and keep it across spins.
+
+Q (pins-001): How do I lock a single cell to a symbol so it survives spins?
+A: `reelSet.pin(col, row, id)` locks the cell to that symbol so it survives spins.
+
+Q (pins-002): How do I unlock a pinned cell again?
+A: `reelSet.unpin(col, row)` removes it.
+
+Q (pins-003): How do I pin a cell for only N spins (a TTL)?
+A: `reelSet.pin(col, row, id, { turns: N })` auto-expires after N spins (also `'eval'` or `'permanent'`).
+
+Q (pins-004): How do I store a value/payload on a pinned cell?
+A: Pass `{ payload }` to `pin(...)` and read it back from `reelSet.getPin(col, row).payload`.
+
+Q (pins-005): How do I read all currently pinned cells?
+A: `reelSet.pins` is a ReadonlyMap of every active pin.
+
+Q (pins-006): How do I move a pin from one cell to another with animation?
+A: `await reelSet.movePin({ reel: fromReel, cell: fromCell }, { reel: toReel, cell: toCell }, { duration, easing })` flies the pin to a new cell. Only callable at rest -- it throws while spinning, and it throws if a pin already sits at the destination.
+
+Q (pins-007): How do I keep a pin in place when the board reshapes (MultiWays)?
+A: Pins clamp and restore automatically across MultiWays reshapes; `pin:migrated` fires when they move.
+
+Q (pins-008): How do I make a pin migrate back to its origin row when there is room?
+A: `reelSet.pin(reel, cell, id, { migration: 'origin', originCell })`. `'origin'` is already the default, so you only need `originCell` when the origin differs from the cell you are pinning. The pin clamps when the shape shrinks and climbs back toward `originCell` when it grows again. Use `migration: 'frozen'` for lock-and-never-restore.
+
+Q (pins-009): How do I override the spin result so pinned cells always win out?
+A: Pinned cells are overlaid onto the result before the stop sequencer, so they always land on the pin id regardless of the server grid.
+
+Q (pins-010): How do I animate a pin landing differently from a normal symbol?
+A: Give the pinned symbol class its own `playWin` / landing animation, or react to the `pin:placed` event.
+
+### Big / colossal symbols
+One symbol that occupies an N×M block.
+
+Q (big-001): How do I place a 2×2 symbol on the board?
+A: Give the id `size: { reels: 2, cells: 2 }` via `.symbolData(...)` and `weight: 0` via `.weights(...)`, place its anchor cell via `setResult`, and the engine paints OCCUPIED across the block.
+
+Q (big-002): How do I make a 3×3 colossal symbol overlay the grid?
+A: Same mechanic with `size: { reels: 3, cells: 3 }` (via `.symbolData(...)`); use `SharedRectMaskStrategy` so the block is not clipped per reel.
+
+Q (big-003): How do I make a 1×3 tall bar symbol?
+A: Give the id `size: { reels: 1, cells: 3 }` via `.symbolData(...)`.
+
+Q (big-004): How do I stop a big symbol from being placed by random fill?
+A: Give it `weight: 0` so it only ever comes from `setResult` / the server, never random fill.
+
+Q (big-005): How do I land a tall block with only its bottom cell visible?
+A: Anchor the tall block in `bufferStart` so only its bottom cell shows at row 0.
+
+Q (big-006): How do I scale the big symbol's art to fill its whole block?
+A: Render the symbol at the block size (e.g. a Spine `scale`) so it fills the whole N×M, not just the anchor cell.
+
+Q (big-007): How do I hold a big symbol while the rest of the board respins?
+A: Land the block, then `spin({ holdReels: [its reels] })` so it survives the respin.
+
+Q (big-008): How do I tumble a big symbol down through the cascade intact?
+A: The cascade carries the block as a unit — its tail falls through the strip into full view.
+
+Q (big-009): How do I split a big symbol into single symbols on a win?
+A: After the win, swap the block id for single ids via `setSymbolAt` or the next `setResult`.
+
+Q (big-010): How do I read the bounds of a big symbol block for an overlay?
+A: `reelSet.getBlockBounds(col, row)` returns the pixel rect of the whole block for an overlay.
+
+Q (big-011): How do I clip a big symbol that lands past the top or bottom edge?
+A: Buffer-anchored blocks that run past the top or bottom are clipped by the viewport mask automatically.
+
+### MultiWays & Megaways
+Variable row counts per reel, per spin.
+
+Q (mways-001): How do I let each reel land a different number of rows?
+A: Build with `.multiways({ minCells, maxCells, reelExtent })` and pass per-reel `visible` arrays of different lengths to `setResult`.
+
+Q (mways-002): How do I set a min and max row count per reel?
+A: `.multiways({ minCells, maxCells, reelExtent })`.
+
+Q (mways-003): How do I compute and show the current ways count?
+A: Ways = the product of the per-reel row counts; read the shape from `getVisibleGrid()` lengths or your result.
+
+Q (mways-004): How do I animate a reel growing from 2 to 7 rows mid-spin?
+A: Call `reelSet.setShape(cellsPerReel)` after `spin()` and before `setResult()`; it applies to that spin only, and throws if the result already arrived. The new geometry is committed under spin blur between the SPIN and STOP phases, so cell symbols resize instantly rather than tweening. `shape:changed` fires on `setShape`; `adjust:start` / `adjust:complete` fire per reel that actually has pin overlays to move.
+
+Q (mways-005): How do I keep symbol size consistent as the row count changes?
+A: `.multiways({ minCells, maxCells, reelExtent })` fixes the reel's pixel box, so symbols resize to fit whatever row count lands.
+
+Q (mways-006): How do I run a cascade on a MultiWays board?
+A: Combine `.multiways(...)` with `.tumble(...)`; the refills are shape-aware per reel.
+
+Q (mways-007): How do I add a top horizontal reel (extra strip above the board)?
+A: Build it as a second `ReelSet` with `.orientation('horizontal')` -- one reel (`.reels(1)`) whose `.visibleCells(n)` is the number of symbols in the strip -- and add it to the stage above your main set. It is a normal reel set, so it spins, lands and cascades with the same API. There is no single-call "banner" helper; the two sets stay independent and you position them yourself.
+
+Q (mways-008): How do I keep a pyramid (fixed jagged shape) instead of random cell counts?
+A: For a fixed jagged shape use `.visibleCellsPerReel([...])` instead of MultiWays.
+
+Q (mways-009): How do I anticipate on a tall reel that is about to grow?
+A: Call `setAnticipation([reelIndex], options)` for the reel about to grow. The reshape runs between SPIN and STOP -- before the tease and before the reel lands -- so the reel is already at its new size while it teases.
+
+Q (mways-010): How do I combine MultiWays with big symbols safely?
+A: They are mutually exclusive: registering a big symbol (a `size` larger than 1×1) on a `.multiways(...)` slot throws at build time. Keep big symbols and MultiWays on separate ReelSets.
+
+### Hold & Win
+Lock-and-respin: the coin mechanic everyone ships.
+
+Q (hw-001): How do I build a Hold & Win board where each cell spins on its own?
+A: A Hold & Win cell is its own 1×1 ReelSet — the engine's atomic spin unit is the reel, the mechanic's is the cell. `HoldAndWinBuilder` (in `pixi-reels`) builds the whole grid of independent cells plus the lock / respin choreography. Import it and drive it with `enter()` then `respin()` per round.
+
+Q (hw-002): How do I lock a coin in place when it lands?
+A: Stop spinning that cell and leave its symbol in place. With `HoldAndWinBuilder` a hit cell is not respun next round; the `coin:locked` event fires so you can play the lock animation and update the HUD.
+
+Q (hw-003): How do I respin only the empty cells?
+A: `board.respin(hits)` spins only the free cells; the locked ones sit out automatically.
+
+Q (hw-004): How do I reset the respin counter to 3 on every new coin?
+A: The builder's `.respins(3)` sets the count, and every locked coin resets it (the `respins:changed` reason is `'hit-reset'`).
+
+Q (hw-005): How do I decrement the respin counter on a dry spin?
+A: A respin with no hits decrements the counter automatically (`respins:changed` reason `'miss'`).
+
+Q (hw-006): How do I end the feature when the board is full (grand jackpot)?
+A: `board.respin(...)` returns `{ full, done }` and fires `board:full` when every cell is locked.
+
+Q (hw-007): How do I carry the triggering coins into the feature already locked?
+A: `board.enter(seedCoins)` seeds them already locked and fills the respin counter.
+
+Q (hw-008): How do I show the held count and respins left in a HUD?
+A: Read `board.lockedCoins.length` / `board.respinsLeft` (or the `coin:locked` / `respins:changed` events) into your HUD.
+
+Q (hw-009): How do I make most spins land blank so coins flash by rarely?
+A: Weight `empty` heavily over the coin on the strip, e.g. `.weights({ coin: 1, empty: 3 })`.
+
+Q (hw-010): How do I drive the whole feature from server-decided hits per round?
+A: Loop `await board.respin(round.hits)` per round with the server's hit list until `result.done`.
+
+Q (hw-011): How do I do a column-respin variant (hold whole columns)?
+A: For whole-column holds use one ReelSet and `spin({ holdReels })` instead of the per-cell board.
+
+Q (hw-012): How do I switch from base game into the Hold & Win board cleanly?
+A: Hide the base ReelSet and show the `HoldAndWinBoard.container` — same screen, two display objects; `enter(triggerCoins)` carries the trigger into the feature, and `feature:end` is when you swap back.
+
+Q (hw-013): How do I play a slick reset back to the opening state after the feature?
+A: On replay, `board.reset()` blanks the board, then re-`enter(seed)`; animate the sweep yourself.
+
+Q (hw-014): How do I gate the next respin until all land animations have settled?
+A: Collect each lock effect's promise and `await Promise.all(...)` before the next `board.respin(...)`.
+
+Q (hw-015): How do I award a mini jackpot when a whole row of coins fills?
+A: Check the locked cells for a full row in your `coin:locked` handler, flash the row and award the mini jackpot in the game layer.
+
+Q (hw-016): How do I grow the board by a row when a trigger condition is met mid-feature?
+A: Live row growth is not built into the board; rebuild it at the new size, or pre-size it and reveal a row on the trigger.
+
+Q (hw-017): How do I make a special coin upgrade all adjacent coins when it lands?
+A: On `coin:locked`, walk the other coins and bump their ids/data — the board hands you `symbolAt(cell)` and the coin payload.
+
+Q (hw-018): How do I persist the locked board if the player reloads mid-feature?
+A: Store the locked coins server-side and replay them into `board.enter(...)` on reload.
+
+Q (hw-019): How do I run several Hold & Win boards at different bet tiers from one builder?
+A: One `HoldAndWinBuilder` builds a board per tier — call `.build()` with different `.respins` / weights, or rebuild per bet.
+
+Q (hw-020): How do I drive each Hold & Win cell as its own reel — start it, stop it, and read the symbol inside it independently?
+A: Each cell is its own 1×1 ReelSet: `board.reelAt(cell)` hands you the reel to `spin()` / `skipSpin()` it on its own, and `board.symbolAt(cell)` reads the live symbol inside it.
+
+Q (hw-021): How do I make a single skip fast-forward every spin, flight and collect at once, then fire one "feature done" event?
+A: `board.skip()` slams every in-flight cell to its landed position and fires `feature:skip`; gate your own flights / collect on that signal to cut them short, and treat `feature:end` as the single "all done" event.
+
+### Coins, values, collectors & jackpots
+Money coins, mystery reveals, collectors, tiers.
+
+Q (coins-001): How do I print a money value on a coin?
+A: Use the shared `CoinSymbol` with `coinValue(amount)` (or your own text) to render the amount on the coin face.
+
+Q (coins-002): How do I format the value as 0.00 with a bitmap gold font?
+A: Render the amount with a PixiJS `BitmapText` in a gold digit font and format it with `value.toFixed(2)`.
+
+Q (coins-003): How do I scale the number to fit the coin face?
+A: Fit the text by font size to a fraction of the coin width, so short values read big and long ones shrink.
+
+Q (coins-004): How do I attach the value as data without baking it into the id?
+A: Carry the value in `coin.data` (the `HwCoin` payload) or a pin payload — the id stays art-only.
+
+Q (coins-005): My coin is a mystery — how do I spin values inside it to reveal the number it held?
+A: Land the coin showing a mystery face, then on lock spin a strip of candidate values inside the coin and ease it onto the real amount. Drive it from the `coin:locked` event via `symbolAt(cell)` so the board itself stays value-agnostic.
+
+Q (coins-006): How do I land a coin wearing a MINI/MAJOR word and reveal it into a money face?
+A: Land the coin showing the tier word, then on `coin:locked` play the reveal animation that spins it and settles on the money face.
+
+Q (coins-007): How do I show MINI/MINOR/MAJOR/GRAND jackpot plaques above the reels?
+A: The plaques are game-layer UI. Render them above the board and flash them on `coin:locked` by `coin.data?.kind` -- type the board as `HoldAndWinBuilder<{ kind: string }>` so the payload is typed, since `data` is optional.
+
+Q (coins-008): How do I flash the matching jackpot plaque when its coin locks?
+A: In the `coin:locked` handler read `coin.data?.kind` (`data` is optional) and play that plaque's win animation.
+
+Q (coins-009): How do I sum every coin value at the end and count it up?
+A: On `feature:end`, sum the `board.lockedCoins` data values and roll the total up in your counter.
+
+Q (coins-010): How do I make a collector coin pull every other coin's value into itself?
+A: The collector is just another server-placed id. When it locks, walk the locked coins and fly a clone of each value into the collector along a bezier arc (`bezierFly`), ticking the collector's total up on every arrival. Those helpers are demo code in `apps/site/src/runtime/holdAndWinFx.ts`, not exports of the `pixi-reels` package -- copy them into your project.
+
+Q (coins-011): How do I fly a value clone from each coin into the collector over an arc?
+A: Spawn a clone at `board.cellCenter(coin.cell)` and `bezierFly(clone, from, to, { lean: 'up' })` into the collector. Those helpers are demo code in `apps/site/src/runtime/holdAndWinFx.ts`, not exports of the `pixi-reels` package -- copy them into your project.
+
+Q (coins-012): How do I tick the collector total up as each value lands on it?
+A: Increment the collector total in the `bezierFly().then(...)` arrival callback. Those helpers are demo code in `apps/site/src/runtime/holdAndWinFx.ts`, not exports of the `pixi-reels` package -- copy them into your project.
+
+Q (coins-013): How do I make a payer coin add its value to every other coin?
+A: On its lock, iterate `board.lockedCoins` and bump each value in your game state, flying a token to each coin — the board stays value-agnostic.
+
+Q (coins-014): How do I make a coin double or boost every value already on the board?
+A: Same pattern: walk the locked coins and rewrite their values on lock (e.g. `value *= 2`), then refresh the labels from your data.
+
+Q (coins-015): How do I make a row/column of cells all act as collectors that sweep the board?
+A: Use the shared `coinWaves(coins, 'by-cell' | 'by-reel')` helper (copy it from `apps/site/src/runtime/holdAndWinFx.ts`) to order the sweep, and `bezierFly` each value into the collector cell, optionally trailed by particle streams.
+
+Q (coins-016): How do I upgrade a coin's value tier in place (5 → 10 → 25)?
+A: Swap the coin's id and data in place with `board.setSymbolAt(cell, id, data)`. It rewrites the ledger entry and returns the new live symbol, so `lockedCoins` stays correct; repaint the label from the new `data`. It throws on a free cell, and while a wave is in flight -- `await respin()` first. On a plain `ReelSet` the equivalent is `reelSet.setSymbolAt(reel, cell, symbolId)`, which carries no payload.
+
+Q (coins-017): How do I send collected coins flying to a feature meter above the reels?
+A: `board.cellCenter(cell)` gives the start; `bezierFly` to your meter's screen position with `arriveScale` to shrink it in. Those helpers are demo code in `apps/site/src/runtime/holdAndWinFx.ts`, not exports of the `pixi-reels` package -- copy them into your project.
+
+Q (coins-018): How do I send a golden trail to the meter instead of a flying coin?
+A: Send a trail sprite or particle along the same `bezierFly` path instead of a coin clone — the board only hands out geometry. Those helpers are demo code in `apps/site/src/runtime/holdAndWinFx.ts`, not exports of the `pixi-reels` package -- copy them into your project.
+
+Q (coins-019): How do I show a coin counting up its own value before locking?
+A: Tween a `{ v }` counter from 0 to the value in your `cell:landed` / `coin:locked` handler, rewriting the label every frame, then pop the fitted final amount in.
+
+Q (coins-020): How do I make a blank coin reveal a random value with a spinning reel inside it?
+A: Land it blank, then scroll a masked strip of candidate values inside the coin and ease it onto the revealed number, driven from `coin:locked`.
+
+Q (coins-021): How do I order the collect flights by row, by column, or all at once?
+A: The shared `coinWaves(board.lockedCoins, 'by-reel')` helper -- also `'by-cell'`, `'sequence'`, `'all'`, `{ chunk }`, or a custom `(item, index) => waveIndex` -- groups the flights into waves. It lives in `apps/site/src/runtime/holdAndWinFx.ts`, not the package.
+
+Q (coins-022): How do I curve the collect flight toward the screen edge or center?
+A: `bezierFly(..., { lean: 'up' | 'down' | 'in' | 'out', curvature })` bends the arc; `around` sets the in/out reference point. Those helpers are demo code in `apps/site/src/runtime/holdAndWinFx.ts`, not exports of the `pixi-reels` package -- copy them into your project.
+
+Q (coins-023): How do I aim collect flights at a specific feature meter with a custom path?
+A: Pass an explicit `control` point to `bezierFly` (computed per coin index) to aim the flight at a specific feature meter. Those helpers are demo code in `apps/site/src/runtime/holdAndWinFx.ts`, not exports of the `pixi-reels` package -- copy them into your project.
+
+Q (coins-024): How do I attach a value overlay (100x, a jackpot label) that survives an in-place symbol swap and rides along when the symbol flies?
+A: Keep the value in `coin.data` and attach the overlay as a child of the symbol's `view`; on an in-place swap re-attach it from `data` (the new instance has a fresh view), and on a flight rebuild it onto the flying clone from the same `data`.
+
+### Symbol animations
+Win, land, destroy, transform, idle, react.
+
+Q (anim-001): How do I play a win animation on a single symbol?
+A: Call `playWin()` on the symbol — `reelSet.getReel(col).getSymbolAt(row).playWin()`.
+
+Q (anim-002): How do I play an idle/breathing loop while a symbol sits?
+A: Start an idle/breathing loop in the symbol's `onActivate`; `SpineReelSymbol` loops its `idle` animation by default.
+
+Q (anim-003): How do I play a landing animation when a symbol settles?
+A: Play it from `onReelLanded`, or use `SpineReelSymbol`'s `autoPlayLanding` + `playLanding()`.
+
+Q (anim-004): A symbol gets destroyed by an object — how do I play its destroy animation?
+A: Override `playDestroy(opts)` on your `ReelSymbol`. The default is a ~200 ms scale-and-fade implode: a ~60 ms anticipation pop, then a ~140 ms collapse to `scale: 0` / `alpha: 0`, with no rotation. For Spine, play a `disintegration` or shatter track. Honour `opts.signal` so a slam can abort it mid-tween.
+
+Q (anim-005): How do I morph one symbol into a different (higher) one mid-round?
+A: Swap to the higher id in place with `setSymbolAt`, playing a transition tween in the old symbol's view first.
+
+Q (anim-006): How do I reveal a mystery symbol into a matching symbol across the board?
+A: Land mystery placeholders, then pin them all to one random id with `{ turns: 'eval' }` so they reveal together and clear next spin.
+
+Q (anim-007): How do I freeze a Spine animation on its final frame and hold it?
+A: Park the one-shot just before its end with `timeScale = 0` so it never completes and holds the last frame — the shared `freezeAtEnd` helper does exactly this.
+
+Q (anim-008): How do I play an arbitrary named Spine animation on a symbol?
+A: Reach the skeleton via `SpineReelSymbol`'s `.spine` getter and call `spine.state.setAnimation(0, name, loop)`.
+
+Q (anim-009): How do I await a one-shot animation and continue when it finishes?
+A: `await symbol.playWin()` resolves when the win one-shot finishes; on `SpineReelSymbol`, `playLanding()` / `playOut()` do the same for the landing / exit one-shots.
+
+Q (anim-010): How do I play a different destroy animation per symbol art (shatter vs disintegrate)?
+A: Override `playDestroy(opts)` per symbol class -- Spine plays a `disintegration` track, a sprite swaps to a shatter. The default is a scale-and-fade implode, no rotation.
+
+Q (anim-011): How do I abort a destroy animation mid-tween when the player slams?
+A: `playDestroy(opts)` honours `opts.signal`; on a slam, abort it and snap the view to the destroyed pose.
+
+Q (anim-012): How do I make a symbol react to a neighbour (e.g. shake when hit)?
+A: On the triggering event (e.g. `coin:locked` or a win), call a method on the neighbour symbol's `view` to shake it.
+
+Q (anim-013): How do I charge a symbol up over several wins before it activates?
+A: Track a per-symbol charge count in your state, advance its animation each win, and activate when it hits the threshold.
+
+Q (anim-014): How do I keep GSAP tweens in sync with the Pixi ticker?
+A: Call `driveGsapWithTicker(app.ticker)` once so GSAP advances off the Pixi ticker (and survives hidden tabs).
+
+### Characters & objects over the reels
+A creature above the reels that collects, throws, walks, reacts.
+
+Q (chars-001): How do I place a character above the reels that stays put?
+A: It is a normal PixiJS display object — add your character `Container` to the stage above the `ReelSet`; the engine does not own it.
+
+Q (chars-002): How do I throw a coin symbol at a character (a pig) above the reels?
+A: Read the source cell center with `board.cellCenter(cell)` and the character's position, then tween a coin clone along a bezier arc with `bezierFly(clone, from, to, { lean: 'up' })` — the flying object is the first argument. Play the character's reaction on arrival. The flight is game-layer choreography; the board only hands out pixel geometry and events. Those helpers are demo code in `apps/site/src/runtime/holdAndWinFx.ts`, not exports of the `pixi-reels` package -- copy them into your project.
+
+Q (chars-003): How do I make the character react (chomp, bounce) when a coin hits it?
+A: Resolve the `bezierFly` promise on arrival and play the character's reaction in the `.then(...)`. Those helpers are demo code in `apps/site/src/runtime/holdAndWinFx.ts`, not exports of the `pixi-reels` package -- copy them into your project.
+
+Q (chars-004): How do I make a fisherman collect every money-fish on the board?
+A: On collect, walk the money-symbol cells and `bezierFly` each value into the character; the board only gives you `cellCenter` + the payloads. Those helpers are demo code in `apps/site/src/runtime/holdAndWinFx.ts`, not exports of the `pixi-reels` package -- copy them into your project.
+
+Q (chars-005): How do I fly each collected symbol's value into the character's pouch and total it?
+A: `bezierFly` the value clone to the character's position and add it to your running total in the arrival callback. Those helpers are demo code in `apps/site/src/runtime/holdAndWinFx.ts`, not exports of the `pixi-reels` package -- copy them into your project.
+
+Q (chars-006): How do I walk a character across the reels stopping on each cell?
+A: Tween the character along the cell centers from `getCellBounds` / `cellCenter`, stopping on each.
+
+Q (chars-007): How do I make a hammer/object smash specific cells and clear them?
+A: Tween the object to the target cell's `getCellBounds`, then clear those cells with `destroySymbols` / `setSymbolAt`.
+
+Q (chars-008): How do I have a special symbol shoot/affect another cell (sniper style)?
+A: Read both cells' geometry from `getCellBounds`, fly an effect between them, and swap the target via `setSymbolAt` or a pin.
+
+Q (chars-009): How do I make persistent feature symbols interact across the board (Money-Train style)?
+A: On the Hold & Win board, coordinate persistent feature symbols from your lock handler — walk `board.lockedCoins`, read each via `symbolAt(cell)`, and act across cells (absorb, boost, move).
+
+Q (chars-010): How do I aim a flight at a moving target (the character animates while a coin flies)?
+A: The helper tweens to a fixed point, so recompute the target each frame in your own update (or re-issue `bezierFly`) as the character moves. Those helpers are demo code in `apps/site/src/runtime/holdAndWinFx.ts`, not exports of the `pixi-reels` package -- copy them into your project.
+
+Q (chars-011): How do I sequence many throws so they arrive one after another?
+A: `coinWaves(items, 'sequence')` plus a per-item `delay` on `bezierFly` stagger the throws to arrive one after another. Those helpers are demo code in `apps/site/src/runtime/holdAndWinFx.ts`, not exports of the `pixi-reels` package -- copy them into your project.
+
+Q (chars-012): How do I have the character grow/level up as it eats more coins?
+A: Scale the character's view up per collected coin in your collect callback — it is game-layer state.
+
+### Scatters & bonus triggers
+Detect the trigger and enter the feature.
+
+Q (triggers-001): How do I make a scatter pay regardless of its position?
+A: Detect the scatter count from the grid regardless of position in your win logic; the engine does not evaluate scatters.
+
+Q (triggers-002): How do I count how many scatters are anywhere on the board?
+A: Scan `reelSet.getVisibleGrid()` for the scatter id across all cells.
+
+Q (triggers-003): How do I require 6+ coins to trigger Hold & Win?
+A: Count the coin symbols in the result and call `board.enter(...)` when the count meets your threshold.
+
+Q (triggers-004): How do I make a symbol that is both a coin and a bonus trigger?
+A: Use one id and treat it as both — your trigger logic counts it, and it also lands as a coin in the board's seed.
+
+Q (triggers-005): How do I show a partial-trigger teaser (5 in, need 6)?
+A: With 5 in and a 6th possible, `setAnticipation` on the deciding reel for the tease.
+
+Q (triggers-006): How do I show the scatters collecting into a trigger counter?
+A: On each scatter land, `bezierFly` it to your trigger counter and bump the count. Those helpers are demo code in `apps/site/src/runtime/holdAndWinFx.ts`, not exports of the `pixi-reels` package -- copy them into your project.
+
+Q (triggers-007): How do I play a "bonus triggered" celebration before the mode swap?
+A: Detect the trigger, play your celebration, then swap to the feature (hide base, show the feature display).
+
+Q (triggers-008): How do I award scatter pays and trigger free spins from the same scatters?
+A: Award the scatter pay and enter free spins from the same detected scatters — both are your game logic over one result.
+
+Q (triggers-009): How do I trigger different bonuses from different scatter sets?
+A: Branch in your trigger logic on which scatter set landed and enter the matching feature.
+
+Q (triggers-010): How do I scale the number of free spins by the scatter count?
+A: Pick the spin count from the scatter total in your code before entering the feature.
+
+### Free spins & feature modes
+Trigger, count, retrigger, swap modes, persist state.
+
+Q (fs-001): How do I trigger free spins from 3 scatters?
+A: Count scatters in the result and enter free spins in your game logic; the engine reports the grid via `setResult` / events.
+
+Q (fs-002): How do I swap to a different reel set / background for the feature?
+A: Toggle a `FrameMiddleware` (or show a second ReelSet) to switch strips/art at runtime with no rebuild.
+
+Q (fs-003): How do I count down the remaining free spins?
+A: Track the counter in your game state and update the HUD; the engine just spins on demand.
+
+Q (fs-004): How do I retrigger and add more free spins mid-feature?
+A: Detect the retrigger in the feature result and add to your counter — game-layer bookkeeping.
+
+Q (fs-005): How do I keep sticky wilds/multipliers persistent across all free spins?
+A: Pin them with a long or `'permanent'` TTL so they survive every free spin.
+
+Q (fs-006): How do I pick a single expanding symbol at the start of the feature?
+A: Pick the id at feature start and pin its column to expand each spin (the expanding-wild pattern).
+
+Q (fs-007): How do I run a different weight table during the feature?
+A: Spin a feature ReelSet built with different `.weights(...)`, or swap weights by toggling a `FrameMiddleware`.
+
+Q (fs-008): How do I show a "feature complete, you won X" summary screen?
+A: Build the "you won X" screen in your UI layer; the running win total you accumulate from win events feeds it.
+
+Q (fs-009): How do I carry a running multiplier meter through the whole feature?
+A: Keep the meter in your state, apply it to wins, and persist it across the feature yourself.
+
+Q (fs-010): How do I return to base game and restore the pre-feature state?
+A: Hide the feature display, re-show the base ReelSet, and restore your saved pre-feature state.
+
+Q (fs-011): How do I offer a buy-feature entry straight into the bonus?
+A: Wire a button that skips the trigger and calls your enter-feature path directly — pure game logic.
+
+Q (fs-012): How do I gamble/upgrade the number of free spins before they start?
+A: Run the gamble in your UI and set the final spin count before entering — outside the engine.
+
+### Bonus mini-games
+Wheels, picks, ladders and gamble.
+
+Q (bonusgames-001): How do I run a pick-a-prize bonus on clickable cells?
+A: Attach pointer events to cells via `getCellBounds` hit areas and reveal prizes on click.
+
+Q (bonusgames-002): How do I reveal hidden prizes one tap at a time?
+A: Same cell hit-areas — reveal each prize in its click handler.
+
+Q (bonusgames-003): How do I spin a bonus wheel and land it on a segment?
+A: A wheel is a standalone PixiJS widget, not a reel feature — build it in your game layer.
+
+Q (bonusgames-004): How do I settle the wheel pointer with a believable bounce?
+A: Tween the wheel rotation with a GSAP `back.out` ease to settle the pointer — game-layer.
+
+Q (bonusgames-005): How do I offer a gamble / double-up on a win?
+A: A gamble / double-up is a standalone screen in your UI; the reel engine is not involved.
+
+Q (bonusgames-006): How do I climb a prize ladder with collect-or-gamble choices?
+A: A prize ladder is a game-layer mini-game — build the ladder UI and its collect/gamble logic yourself.
+
+Q (bonusgames-007): How do I run a "pick until you hit 3 of a kind" collection bonus?
+A: Cell hit-areas plus your own pick logic tallying matches until three of a kind.
+
+Q (bonusgames-008): How do I award a random multiplier from a chest or orb?
+A: Reveal it with your own widget/animation and feed the result into your win math.
+
+Q (bonusgames-009): How do I run a trail / board-game bonus that hops across cells?
+A: Tween a token between cells using `getCellBounds` positions; the board-game logic is yours.
+
+Q (bonusgames-010): How do I tally "you collected X" at the end of the pick?
+A: Sum the picks in your state and show the total in your UI.
+
+### Meters, multipliers & progression
+Accumulators, level-ups, progressive jackpots.
+
+Q (meters-001): How do I show a multiplier meter above the reels?
+A: Render the meter as your own PixiJS/HTML widget above the board; the engine does not own the HUD.
+
+Q (meters-002): How do I increment the meter on each win and reset on a miss?
+A: Drive it from win events (or your own round event bus) — increment on a win, reset on a dry spin in your handler.
+
+Q (meters-003): How do I level up a jar/symbol multiplier each time it wins?
+A: Track the level in the symbol's pin payload and advance it each win.
+
+Q (meters-004): How do I fill a progress bar that unlocks a feature at 100%?
+A: A progress bar is game-layer — fill it from your win events and trigger the feature at 100%.
+
+Q (meters-005): How do I animate a value flying into the meter and bumping it up?
+A: `bezierFly` the value to the meter's screen position with `arriveScale` and bump it in the arrival callback. Those helpers are demo code in `apps/site/src/runtime/holdAndWinFx.ts`, not exports of the `pixi-reels` package -- copy them into your project.
+
+Q (meters-006): How do I drive a progressive jackpot value that ticks up live?
+A: A progressive value comes from your server feed; animate the ticking number in your UI.
+
+Q (meters-007): How do I show a coin-collect counter that aggregates bonus coins?
+A: Aggregate collected coins in your state via `coin:locked` / collect callbacks and show the total.
+
+Q (meters-008): How do I apply the meter's multiplier to the final win?
+A: Multiply the win in your math layer; the engine presents whatever cells/values you give it.
+
+Q (meters-009): How do I keep the meter and its server value from drifting apart?
+A: Treat the server value as the source of truth and reconcile the displayed meter to it on each response.
+
+Q (meters-010): How do I sticky-stack position-locked multipliers that persist?
+A: Pin the multiplier to its cell with a payload so it persists and stacks by position.
+
+### Sound & juice
+Hook sound and haptics to game events.
+
+Q (audio-001): How do I play a sound when a reel stops?
+A: Listen for `spin:reelLanded` (or `spin:stopping`) and play the stop sound.
+
+Q (audio-002): How do I play a per-coin sound as each one lands in stagger order?
+A: Play it in the `cell:landed` / `coin:locked` handler — they fire in landing (stagger) order.
+
+Q (audio-003): How do I rise the anticipation music as tension builds?
+A: Start or raise it when you call `setAnticipation`; drive the layers from your audio engine.
+
+Q (audio-004): How do I duck the music during a big-win count-up?
+A: Duck the music in your audio layer when the win roll-up starts (e.g. on `win:start`).
+
+Q (audio-005): How do I pitch the count-up sound higher the longer it runs?
+A: Ramp the playbackRate of the count-up sound in your audio code as the total climbs.
+
+Q (audio-006): How do I layer base vs feature music and crossfade between them?
+A: Crossfade tracks in your audio engine on the feature swap; the engine just signals the mode change.
+
+Q (audio-007): How do I fire haptics/vibration on a jackpot hit?
+A: Fire `navigator.vibrate(...)` in your `coin:locked` / `board:full` handler.
+
+Q (audio-008): How do I sync a sound exactly to a Spine animation event?
+A: Add a Spine animation event and play the sound from the skeleton's event listener via the `.spine` getter.
+
+Q (audio-009): How do I cut all feature sounds cleanly when the player exits?
+A: Stop your audio in the same teardown that hides the feature / calls `board.destroy()`.
+
+Q (audio-010): How do I keep audio aligned when the player slams the reels?
+A: On `skipSpin()`, re-cue or shorten the landing sound — `skip:completed` marks the slammed stop.
+
+### HUD, buttons & overlays
+Spin button, bet, autoplay, counters, tooltips.
+
+Q (ui-001): How do I wire a single spin button that also slam-stops?
+A: On tap, `spin()` if idle, else `skipSpin()` (or `requestSkip()` if the result has not arrived yet).
+
+Q (ui-002): How do I disable the spin button while a spin is running?
+A: Disable the button on `spin:start` and re-enable when the `spin()` promise resolves (`spin:complete`).
+
+Q (ui-003): How do I show the current bet and balance?
+A: Bet and balance live in your game/UI state; the engine does not track money.
+
+Q (ui-004): How do I run autoplay for N spins with a stop condition?
+A: Loop `await reelSet.spin()` N times with your own stop conditions.
+
+Q (ui-005): How do I overlay a HUD that reads purely from board events?
+A: Subscribe your HUD to the typed `reelSet.events` / `board.events` — they are the single source of truth.
+
+Q (ui-006): How do I draw a value label centered on a specific cell?
+A: Position your text at the center of `reelSet.getCellBounds(col, row)` (or `board.cellCenter`).
+
+Q (ui-007): How do I position an overlay using a cell's exact pixel bounds?
+A: `reelSet.getCellBounds(col, row)` returns the pixel rect to align any overlay exactly.
+
+Q (ui-008): How do I add clickable hit-areas per cell (pick-a-cell bonus)?
+A: Set each cell's `hitArea` / pointer events from `getCellBounds`.
+
+Q (ui-009): How do I keep HUD text crisp at any board scale?
+A: Render HUD text at device resolution (high `resolution`) or keep it in a non-scaled HTML/overlay layer.
+
+Q (ui-010): How do I show a "respins left" badge that updates live?
+A: Bind it to the `respins:changed` event / `board.respinsLeft`.
+
+Q (ui-011): How do I render the board on a dark feature background vs a light base?
+A: Draw the background in your scene per mode; the board renders on top of whatever you provide.
+
+### Bet, lines & paytable
+Lines vs ways, bet levels, the paytable screen.
+
+Q (bet-001): How do I switch a game between paylines and ways-to-win?
+A: Both are your evaluation choice — the engine lands a grid; you evaluate lines or ways over it.
+
+Q (bet-002): How do I let the player change the bet level?
+A: Bet level lives in your game state; pass it to the server and scale values yourself.
+
+Q (bet-003): How do I scale coin values by the current bet?
+A: Multiply the coin `data.value` by the bet in your code before displaying it.
+
+Q (bet-004): How do I show a paytable screen for the registered symbols?
+A: Build a paytable screen from your registered symbol ids and pays — it is UI, not an engine feature.
+
+Q (bet-005): How do I draw and highlight which lines are active?
+A: Draw line overlays with `getCellBounds`; highlighting is your render layer.
+
+Q (bet-006): How do I recompute the ways count when the board shape changes?
+A: Recompute ways as the product of row counts on `shape:changed` / `adjust:complete`.
+
+Q (bet-007): How do I price the buy-feature off the current bet?
+A: Compute the buy-feature price from the current bet in your game logic.
+
+Q (bet-008): How do I lock the bet during a feature?
+A: Disable the bet control in your UI for the feature's duration.
+
+### Layout, orientation & transitions
+Responsive boards, portrait/landscape, intros and wipes.
+
+Q (layout-001): How do I lay the board out for portrait vs landscape?
+A: Lay out your scene per orientation and scale/position the `ReelSet` Container accordingly.
+
+Q (layout-002): How do I scale the board to fit a fixed safe-area?
+A: Scale `reelSet` to the safe-area box and recompute on resize.
+
+Q (layout-003): How do I reflow the HUD when the orientation changes?
+A: Reposition your HUD in your resize handler; the engine exposes the board's size, the layout is yours.
+
+Q (layout-004): How do I keep the board centered with jackpot panels flanking it?
+A: Position the side panels and the `reelSet` Container around the center in your layout code.
+
+Q (layout-005): How do I anchor a top feature meter relative to the reels?
+A: Position the meter relative to `reelSet.y` / its bounds.
+
+Q (layout-006): How do I play an intro that assembles the reels on load?
+A: Animate the `ReelSet` / reel containers in with GSAP on load — game-layer choreography.
+
+Q (layout-007): How do I transition between base and feature with a wipe?
+A: Play a wipe in your scene during the mode swap (hide base, show feature).
+
+Q (layout-008): How do I play an outro that breaks the board apart on exit?
+A: Tween the reel containers out on exit before calling `destroy()`.
+
+Q (layout-009): How do I support an ultrawide background behind a fixed board?
+A: Keep the background full-bleed and the `ReelSet` at a fixed size centered on top.
+
+Q (layout-010): How do I mirror the layout for RTL locales?
+A: Flip your scene layout for RTL in your code; the engine has no locale awareness.
+
+Q (layout-011): How do I build the horizontal reel above the reels that shows which symbols pay this round?
+A: It is a normal `ReelSetBuilder` with `.orientation('horizontal')`. There is no separate builder in v2 — `HorizontalReelBuilder` and `HorizontalReel` were removed, because a sideways banner is just a reel set whose strip travels along X. Use `.reels(1)` with `.visibleCells(n)` for the n symbols in the banner, register symbols and pass a ticker exactly as usual. The spin contract is unchanged: `spin()` returns a promise, `setResult([{ visible: ids }])` takes `ColumnTarget[]` (one entry, since the banner is a single reel) and triggers the stop, and the promise resolves with a `SpinResult`. Add the built set to the stage above your main one.
+Recipe: https://pixi-reels.schmooky.dev/recipes/horizontal-reel/
+
+Q (layout-012): Can the horizontal banner reel cascade like the main reels when a symbol was part of a win?
+A: Yes -- the banner is a plain `ReelSet`, so it uses the same cascade API as the main board. Build it with `.orientation('horizontal')` plus `.tumble({ fall, dropIn })`, then `await reelSet.refill({ winners, grid })` with the winning `Cell`s (`{ reel, cell }`) and the next `ColumnTarget[]`, or `await reelSet.runCascade({ detectWinners, nextGrid })` for the whole destroy-refill-check loop. Progress is observable through `cascade:fall:*`, `cascade:dropIn:*` and `cascade:chain:end`.
+Recipe: https://pixi-reels.schmooky.dev/recipes/horizontal-reel/
+
+### Performance & lifecycle
+Pooling, disposal, memory, big grids.
+
+Q (perf-001): How do I recycle symbols instead of recreating them every spin?
+A: The engine already pools symbols via `ObjectPool`, recycling instances instead of recreating them each spin.
+
+Q (perf-002): How do I cap how many instances of a symbol are pooled?
+A: `.poolCapacity(maxPerSymbol)` caps how many of each symbol the pool keeps.
+
+Q (perf-003): How do I dispose everything without leaking textures or tickers?
+A: `reelSet.destroy()` disposes the reels, pools, masks and ticker refs — every subsystem implements `Disposable`.
+
+Q (perf-004): How do I keep a 7×7 board with many masks from dropping frames?
+A: Use `SharedRectMaskStrategy` so one mask clips the whole board instead of one mask per cell.
+
+Q (perf-005): How do I share one mask across many cells?
+A: `maskStrategy(new SharedRectMaskStrategy())` clips many cells with a single mask.
+
+Q (perf-006): How do I avoid stutter on a long session of continuous spins?
+A: Drive everything off one `app.ticker` and `driveGsapWithTicker` so tweens do not accumulate; pooling keeps allocations flat.
+
+Q (perf-007): How do I tear down a feature's 20+ sub-reelsets safely?
+A: Call `destroy()` on each sub-ReelSet — for a Hold & Win board, `board.destroy()` tears down all its cells at once.
+
+Q (perf-008): How do I keep tweens from leaking when a symbol is recycled mid-animation?
+A: Kill the symbol's tweens in `onDeactivate` / `stopAnimation`; the one-shot `playWin` etc. settle their promises on recycle.
+
+Q (perf-009): How do I batch Spine instances so the GPU does not choke?
+A: Cache one Spine instance per id (as `SpineReelSymbol` does) and reuse it across swaps instead of recreating skeletons.
+
+Q (perf-010): How do I preload feature assets so the mode swap has no hitch?
+A: Preload the feature atlas/skeletons (e.g. `Assets.load`) before the mode swap so it has no hitch.
+
+### Debugging & testing
+See the opaque canvas, make spins deterministic.
+
+Q (debug-001): How do I dump the current board state as readable JSON?
+A: `enableDebug(reelSet)`, then `window.__PIXI_REELS_DEBUG.snapshot()` returns a serializable state object (no PixiJS types).
+
+Q (debug-002): How do I print an ASCII grid of the visible symbols?
+A: `__PIXI_REELS_DEBUG.grid()` RETURNS an ASCII table of the visible symbols as a string (`debugGrid(reelSet)` is the direct import). Use `__PIXI_REELS_DEBUG.log()` if you want it printed.
+
+Q (debug-003): How do I log every domain event as it fires?
+A: `__PIXI_REELS_DEBUG.trace()` logs the spin, skip, speed, spotlight, shape/adjust, pin and destroy events as they fire. It does not cover the cascade, win, nudge, phase or anticipation buses -- attach `reelSet.events.on(...)` directly for those.
+
+Q (debug-004): How do I diagnose a stuck spin that never lands?
+A: `__PIXI_REELS_DEBUG.log()` shows `isSpinning` and per-reel state so you can see which reel never landed.
+
+Q (debug-005): How do I force a guaranteed jackpot for a screenshot?
+A: The example `CheatEngine` (in the private `@pixi-reels/cheats` package) + `holdAndWinProgress(coin, 1)` guarantees a coin every spin for a screenshot.
+
+Q (debug-006): How do I make a deterministic spin in a unit test?
+A: Inject a fixed seeded `.rng(fn)` and `setResult` a known grid; pure-logic tests need no renderer.
+
+Q (debug-007): How do I run the engine headless with no canvas for tests?
+A: The engine's logic modules are pure and testable without a canvas; use the `pixi-reels/testing` entry.
+
+Q (debug-008): How do I add a cheat panel (force a symbol, force a hit)?
+A: Wire the example `CheatEngine` (`forceGrid` / `forceScatters` / `forceCell` / `holdAndWinProgress`, from the private `@pixi-reels/cheats` package) to UI toggles.
+
+Q (debug-009): How do I record and replay a spin frame by frame?
+A: `startRecording(reelSet, tag)` snapshots the board at `spin:start`, each `spin:reelLanded`, `spin:allLanded` and `spin:complete`; `getFrames(tag)` returns them in capture order and `stopRecording(reelSet)` detaches. It is an event-level trace, not a per-animation-frame capture -- replay the same seed and the same `setResult` grid to reproduce.
+
+Q (debug-010): How do I assert the visible grid matches the expected result?
+A: Assert against `reelSet.getVisibleGrid()` (or `SpinResult.symbols`).
+
+### Server, math & integration
+Wire the engine to an RGS and recover state.
+
+Q (integ-001): How do I drive every spin from a server (RGS) response?
+A: Map each server response to `ColumnTarget[]` and feed `setResult` while the spin is pending.
+
+Q (integ-002): How do I keep all payout math on the server and only present results?
+A: Keep all payout math server-side; the engine only renders the grid and fires presentation events.
+
+Q (integ-003): How do I show a spin while waiting for the server, then snap to its result?
+A: Call `spin()` immediately, then `setResult(grid)` when the server replies — the stop sequence lands on it.
+
+Q (integ-004): How do I recover an interrupted feature on reload (resume state)?
+A: Persist feature state server-side and replay it (e.g. `board.enter(...)` with the saved coins) on reload.
+
+Q (integ-005): How do I format currency values for different locales?
+A: Format values with `Intl.NumberFormat` in your UI; the engine treats values as opaque data.
+
+Q (integ-006): How do I map a server symbol-id scheme onto my registered ids?
+A: Translate the server's symbol scheme to your registered ids when building the `ColumnTarget[]`.
+
+Q (integ-007): How do I sequence multi-step server features (round → round → collect)?
+A: Drive each step with an `await` (e.g. `board.respin(round.hits)` per round) against the server's per-step response.
+
+Q (integ-008): How do I keep visuals honest when the server is the only source of truth?
+A: Only ever render what `setResult` / the server says; never compute outcomes client-side.
+
+Q (integ-009): How do I handle a desync between the animation and the server state?
+A: Reconcile to the server state on each response and re-`setResult` / `setSymbolAt` if the display drifted.
+
+Q (integ-010): How do I satisfy regulatory replay (exact reproduction of any past spin)?
+A: Re-inject the recorded seed + result for an exact reproduction; the debug recorder captures frames as evidence.
 
 ## Recipe source code
 

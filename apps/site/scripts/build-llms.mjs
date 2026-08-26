@@ -2,9 +2,11 @@
 /**
  * Generate `public/llms.txt` from the Astro page tree.
  *
- * Walks the route tree (`src/pages/{architecture,demos}`) plus the Keystatic
- * content collections (`src/content/{recipes,guides,docs}`) and extracts each
- * page's frontmatter (title, description, tags, apis, steps).
+ * Walks the route tree (`src/pages/architecture`) plus the Keystatic content
+ * collections (`src/content/{recipes,guides,docs}`) and extracts each page's
+ * frontmatter (title, description, tags). The FAQ is a separate collection of
+ * one-question YAML files rather than MDX pages, so it is read on its own -
+ * it used to be dropped entirely, because nothing here matched a `.yaml`.
  * Groups by section and emits a single text file an LLM can fetch to
  * understand the whole library surface in one request.
  *
@@ -14,9 +16,12 @@
  *
  * Wired into the docs build via `pnpm llms:gen` (run by predev/prebuild).
  *
- * Output is committed-time deterministic: stable order, ISO timestamp.
+ * Output is deterministic: stable order, and no build timestamp. The file is
+ * committed, so stamping every regeneration made a diff out of a rebuild that
+ * changed nothing. The version line below is the freshness signal instead.
  */
 import { readFile, readdir, stat, writeFile } from 'node:fs/promises';
+import { parse as parseYaml } from 'yaml';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -27,6 +32,9 @@ const PAGES = resolve(ROOT, 'src/pages');
 // architecture are still route MDX/astro under src/pages.
 const CONTENT = resolve(ROOT, 'src/content');
 const RECIPES_SRC = resolve(ROOT, 'src/recipes');
+const FAQ_DIR = resolve(CONTENT, 'faq');
+const FAQ_GROUPS_DIR = resolve(CONTENT, 'faq-groups');
+const PKG = resolve(ROOT, '../../packages/pixi-reels/package.json');
 const OUT = resolve(ROOT, 'public/llms.txt');
 
 const SITE_URL = 'https://pixi-reels.schmooky.dev';
@@ -40,7 +48,6 @@ const SECTIONS = [
   { id: 'docs', label: 'API reference', match: (p) => p.startsWith('docs/') },
   { id: 'architecture', label: 'Architecture deep-dives', match: (p) => p.startsWith('architecture/') },
   { id: 'recipes', label: 'Recipes', match: (p) => p.startsWith('recipes/') },
-  { id: 'demos', label: 'Mechanic demos', match: (p) => p.startsWith('demos/') },
 ];
 
 const SKIP_BASENAMES = new Set(['llms.txt', 'index']);
@@ -50,6 +57,8 @@ async function main() {
   // src/content/recipes/x.mdx → "recipes/x" exactly as the old page did.
   const pages = [...(await collectPages(PAGES)), ...(await collectPages(CONTENT))];
   const recipes = await collectRecipes();
+  const faq = await collectFaq();
+  const version = JSON.parse(await readFile(PKG, 'utf-8')).version;
 
   const grouped = SECTIONS.map((s) => ({
     id: s.id,
@@ -57,11 +66,15 @@ async function main() {
     items: pages.filter((p) => s.match(p.slug)).sort((a, b) => a.slug.localeCompare(b.slug)),
   })).filter((g) => g.items.length > 0);
 
-  const out = render(grouped, recipes);
+  const out = render(grouped, recipes, faq, version);
   await writeFile(OUT, out, 'utf-8');
 
   const total = grouped.reduce((n, g) => n + g.items.length, 0);
-  console.log(`[build-llms] Wrote ${total} pages + ${recipes.length} recipe sources to ${OUT}`);
+  const answered = faq.reduce((n, g) => n + g.questions.length, 0);
+  console.log(
+    `[build-llms] Wrote ${total} pages + ${recipes.length} recipe sources + ` +
+    `${answered} answered FAQ entries (v${version}) to ${OUT}`,
+  );
 }
 
 async function collectPages(baseDir) {
@@ -85,8 +98,6 @@ async function collectPages(baseDir) {
       title: fm.title ?? slug,
       description: fm.description ?? '',
       tags: fm.tags ?? [],
-      apis: fm.apis ?? [],
-      steps: fm.steps ?? [],
       realGameVideo: extractRealGameVideo(raw),
     });
   }
@@ -133,6 +144,48 @@ async function collectRecipes() {
     out.push({ slug, code: code.trim() });
   }
   return out;
+}
+
+/**
+ * The FAQ is 331 one-question YAML files plus a group index, not MDX pages, so
+ * the page walker never saw it and the whole knowledge base was missing from
+ * this file. Mirrors what `src/content/faq.ts` does for the site: groups sort
+ * by `order`, questions by their zero-padded id.
+ *
+ * Only ANSWERED questions are emitted. An open one is a to-do on the site, and
+ * a question with no answer is worse than nothing as LLM context.
+ */
+async function collectFaq() {
+  const readYamlDir = async (dir) => {
+    let entries;
+    try { entries = await readdir(dir); } catch { return []; }
+    const out = [];
+    for (const file of entries.sort()) {
+      if (!file.endsWith('.yaml')) continue;
+      out.push({ id: file.replace(/\.yaml$/, ''), data: parseYaml(await readFile(join(dir, file), 'utf-8')) });
+    }
+    return out;
+  };
+
+  const groups = (await readYamlDir(FAQ_GROUPS_DIR))
+    .sort((a, b) => (a.data.order ?? 0) - (b.data.order ?? 0) || a.id.localeCompare(b.id));
+  const questions = await readYamlDir(FAQ_DIR);
+
+  const byGroup = new Map();
+  for (const { id, data } of questions) {
+    if (!data.answer) continue;
+    if (!byGroup.has(data.group)) byGroup.set(data.group, []);
+    byGroup.get(data.group).push({ id, question: data.question, answer: data.answer, recipe: data.recipe });
+  }
+
+  return groups
+    .map((g) => ({
+      id: g.id,
+      title: g.data.title,
+      blurb: g.data.blurb,
+      questions: byGroup.get(g.id) ?? [],
+    }))
+    .filter((g) => g.questions.length > 0);
 }
 
 async function walk(dir) {
@@ -195,19 +248,20 @@ function parseFrontmatter(raw) {
   return out;
 }
 
-function render(sections, recipes) {
+function render(sections, recipes, faq, version) {
   const lines = [];
   lines.push('# pixi-reels');
   lines.push('');
-  lines.push('pixi-reels 1.0.0 is a reel engine for PixiJS v8.');
+  // Read from the package, never hand-written: this said 1.0.0 while the
+  // library was on 2.2.0, so the whole file opened by telling an LLM the
+  // wrong major.
+  lines.push(`pixi-reels ${version} is a reel engine for PixiJS v8.`);
   lines.push('It ships reel-only primitives. Win math, paytable math, RNG, and audio live in consumer code.');
-  lines.push('This file inlines every guide and recipe for offline LLM context.');
+  lines.push('This file inlines every guide, API page, recipe (with source) and answered FAQ entry for offline LLM context.');
   lines.push('');
   lines.push(`Site: ${SITE_URL}`);
   lines.push('Repo: https://github.com/schmooky/pixi-reels');
   lines.push('Package: https://www.npmjs.com/package/pixi-reels');
-  lines.push('');
-  lines.push(`Generated: ${new Date().toISOString()}`);
   lines.push('');
   lines.push('## Quick start');
   lines.push('');
@@ -223,7 +277,7 @@ function render(sections, recipes) {
   lines.push('await app.init({ width: 800, height: 480 });');
   lines.push('');
   lines.push('const reelSet = new ReelSetBuilder()');
-  lines.push('  .reels(5).visibleRows(3).symbolSize(120, 120)');
+  lines.push('  .reels(5).visibleCells(3).symbolSize(120, 120)');
   lines.push("  .symbols(r => r.register('cherry', SpriteSymbol, { textures: { cherry: cherryTex } }))");
   lines.push('  .ticker(app.ticker)');
   lines.push('  .build();');
@@ -243,17 +297,30 @@ function render(sections, recipes) {
       lines.push(`URL: ${item.href}`);
       if (item.description) lines.push(item.description);
       if (item.tags.length) lines.push(`Tags: ${item.tags.join(', ')}`);
-      if (item.apis.length) lines.push(`APIs: ${item.apis.join(', ')}`);
-      if (item.steps.length) {
-        lines.push('Steps:');
-        for (const s of item.steps) lines.push(`  - ${s}`);
-      }
       if (item.realGameVideo) {
         const v = item.realGameVideo;
         const url = v.webm ?? v.mp4;
         lines.push(`Real game example: ${v.caption}${url ? ` (${SITE_URL}${url})` : ''}`);
       }
       lines.push('');
+    }
+  }
+
+  if (faq.length) {
+    lines.push('## FAQ');
+    lines.push('');
+    lines.push('The knowledge base behind /faq/. Only answered questions appear here; open ones are to-dos on the site and would be worse than nothing as context.');
+    lines.push('');
+    for (const group of faq) {
+      lines.push(`### ${group.title}`);
+      if (group.blurb) lines.push(group.blurb);
+      lines.push('');
+      for (const q of group.questions) {
+        lines.push(`Q (${q.id}): ${q.question}`);
+        lines.push(`A: ${String(q.answer).trim()}`);
+        if (q.recipe) lines.push(`Recipe: ${SITE_URL}/recipes/${q.recipe}/`);
+        lines.push('');
+      }
     }
   }
 

@@ -1,7 +1,7 @@
 ---
 import Base from './Base.astro';
 import { ChevronLeft } from 'lucide-react';
-import { articleLd, howToLd, breadcrumbLd, SITE } from '../lib/seo.ts';
+import { articleLd, breadcrumbLd, SITE } from '../lib/seo.ts';
 import RealGameVideo from '../components/RealGameVideo.astro';
 
 interface RealGameVideoFrontmatter {
@@ -13,15 +13,11 @@ interface RealGameVideoFrontmatter {
 interface Props {
   title?: string;
   description?: string;
-  steps?: string[];
-  apis?: string[];
   tags?: string[];
   realGameVideo?: RealGameVideoFrontmatter;
   frontmatter?: {
     title?: string;
     description?: string;
-    steps?: string[];
-    apis?: string[];
     tags?: string[];
     realGameVideo?: RealGameVideoFrontmatter;
   };
@@ -30,20 +26,16 @@ const props = Astro.props as Props;
 const fm = props.frontmatter ?? {};
 const title = props.title ?? fm.title ?? 'Recipe';
 const description = props.description ?? fm.description ?? `${title}. step-by-step slot recipe built with pixi-reels.`;
-const steps = props.steps ?? fm.steps ?? [];
-const apis = props.apis ?? fm.apis ?? [];
 const tags = props.tags ?? fm.tags ?? [];
 const realGameVideo = props.realGameVideo ?? fm.realGameVideo;
 const pathname = Astro.url.pathname;
 
 const jsonLd = [
   articleLd({ title, description, path: pathname }),
-  howToLd({
-    name: title,
-    description,
-    path: pathname,
-    steps: steps.map((s, i) => ({ name: `Step ${i + 1}`, text: s })),
-  }),
+  // No HowTo here: a recipe page is an umbrella of independent demos, not an
+  // ordered procedure. It used to emit one anyway, built from a `steps` field
+  // that was `[]` on all twelve pages - i.e. a schema.org HowTo with zero
+  // steps on every recipe URL.
   breadcrumbLd([
     { name: SITE.name, url: '/' },
     { name: 'Recipes', url: '/recipes/' },

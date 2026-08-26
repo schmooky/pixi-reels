@@ -100,14 +100,6 @@ export default config({
           description: 'Lower sorts first on the /recipes/ index. Ties fall back to slug.',
           defaultValue: 0,
         }),
-        steps: fields.array(fields.text({ label: 'Step' }), {
-          label: 'Steps',
-          itemLabel: (p) => p.value,
-        }),
-        apis: fields.array(fields.text({ label: 'API' }), {
-          label: 'Related APIs',
-          itemLabel: (p) => p.value,
-        }),
         tags: fields.array(fields.text({ label: 'Tag' }), {
           label: 'Tags',
           itemLabel: (p) => p.value,

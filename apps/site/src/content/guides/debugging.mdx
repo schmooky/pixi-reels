@@ -159,6 +159,66 @@ info.reels[0];
 that distinguishes a reverse reel from a forward one, and a bounding box
 cannot see it.
 
+## Console notices
+
+Separate from the debug tooling above: the library itself talks to you through
+one channel, for things a DEVELOPER should act on - a call that will not do
+what you meant, a hook of yours that threw, a value that had to be clamped.
+Never per-frame state, and nothing in the hot path.
+
+Every notice carries a stable CODE, so it can be grepped, searched for in these
+docs, or quoted in a bug report:
+
+```
+pixi-reels  slam-before-result   slamStop() was called before setResult(), so the reels
+                                 will land on whatever the strip is currently showing...
+```
+
+### Levels
+
+One knob, four settings, each level including the ones before it:
+
+| Level | Prints | Use it when |
+|---|---|---|
+| `'info'` | everything | The default. Advisory notices (the mask-strategy auto-pick, warp/unmask caveats) plus every problem. |
+| `'warn'` | errors + warnings | You have read the advisories and want them out of the way, but still want to hear about problems. |
+| `'error'` | errors only | Something the library could not do, and recovered from. Nothing else. |
+| `'silent'` | nothing | Production - once you have read the warnings at least once. |
+
+```ts
+import { setLogLevel, getLogLevel } from 'pixi-reels';
+
+setLogLevel('silent');
+getLogLevel(); // 'silent'
+```
+
+The default is `'info'` rather than something quieter on purpose: several
+notices - the mask-strategy auto-pick in particular - used to print
+unconditionally, and a quieter default would have silently removed advice the
+engine had always given.
+
+### What it looks like where
+
+In a browser a notice renders as a styled badge: a `pixi-reels` pill, then the
+code, then the message. Everywhere else - Node, a test runner, CI - `%c` is not
+a thing and the console would print the style directives literally, so it
+degrades to a plain line instead:
+
+```
+[pixi-reels] warn(slam-before-result) slamStop() was called before setResult()...
+```
+
+Notices go out on `console.warn` / `console.error` / `console.info` rather than
+funnelling through one `console.log`, which is what keeps devtools level
+filtering, stack capture and the browser's own warn/error styling working. Any
+extra detail is passed straight through, so an `Error` argument keeps its
+stack rather than being stringified.
+
+A few notices fire only once per process (`buffer-clamped`, for instance) so a
+builder constructed in a loop cannot flood the console.
+
+The full list of codes lives in the [events reference](/docs/api-events/).
+
 ## Gotchas
 
 - `debugGrid` returns plain text. safe to log, assert against, or paste anywhere.

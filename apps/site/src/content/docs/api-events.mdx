@@ -286,7 +286,8 @@ setLogLevel('silent'); // production
 ```
 
 `'silent' | 'error' | 'warn' | 'info'`, each level including the ones before
-it. Default `'info'` (everything). In a browser a notice prints as a styled
+it. Default `'info'` (everything) - see the [debugging guide](/guides/debugging/#console-notices)
+for what each level covers and why the default is not quieter. In a browser a notice prints as a styled
 badge - `pixi-reels`, then the code, then the message; elsewhere it degrades to
 `[pixi-reels] warn(code) message`, since `%c` is a browser console feature.
 

@@ -15,8 +15,6 @@ const recipes = defineCollection({
     oneLiner: z.string().default(''),
     description: z.string().optional(),
     order: z.number().default(0),
-    steps: z.array(z.string()).default([]),
-    apis: z.array(z.string()).default([]),
     tags: z.array(z.string()).default([]),
     image: z.string().optional(),
   }),
