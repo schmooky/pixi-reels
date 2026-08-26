@@ -176,6 +176,13 @@ export class SpinController implements Disposable {
    */
   private _slammedReels = new Set<number>();
   /**
+   * The `SpeedProfile` instance the in-flight spin captured. `spin()` reads
+   * `speedManager.active` once and hands that instance to every phase, so any
+   * decision made DURING a round has to consult this rather than the live
+   * profile. `null` while idle.
+   */
+  private _activeSpinSpeed: SpeedProfile | null = null;
+  /**
    * Minimum spin time (ms) override, replacing the active speed profile's
    * `minimumSpinTime` floor. A single number applies to every reel; an array
    * is per-reel (index-aligned, short arrays fall back to the profile).
@@ -376,6 +383,7 @@ export class SpinController implements Disposable {
 
     const generation = this._spinGeneration;
     const speed = this._speedManager.active;
+    this._activeSpinSpeed = speed;
 
     this._events.emit('spin:start');
 
@@ -592,6 +600,7 @@ export class SpinController implements Disposable {
 
     const generation = this._spinGeneration;
     const speed = this._speedManager.active;
+    this._activeSpinSpeed = speed;
 
     // Normalize grid + build per-reel frames upfront. No waiting on
     // `setResult` here. the caller provided everything. Reuses the
@@ -897,7 +906,12 @@ export class SpinController implements Disposable {
     this._anticipationStagger = stagger;
     this._anticipationSlowdown = opts.slowdown ?? null;
     this._anticipationDuration = opts.duration ?? null;
-    this._anticipationProtect = opts.protect ?? false;
+    // Normalise at the boundary. `true` is documented as an alias for
+    // `'once'`, but every spend check compares against the STRING, so storing
+    // the raw boolean silently produced `'always'` behaviour: protection that
+    // could never be spent and a tease no press could ever end.
+    const protect = opts.protect ?? false;
+    this._anticipationProtect = protect === true ? 'once' : protect;
     this._protectSpent = false;
     this._teasingReels.clear();
 
@@ -1153,7 +1167,13 @@ export class SpinController implements Disposable {
     if (this._anticipationProtect === false) return out;
     if (this._anticipationProtect === 'once' && this._protectSpent) return out;
 
-    const speed = this._speedManager.active;
+    // The profile THIS spin captured, not whatever is active now. `spin()`
+    // hands one `SpeedProfile` instance to every phase for the whole round, so
+    // reading the live one let a mid-spin `setSpeed('turbo')` declare
+    // protection inert while the tease actually on screen was still running on
+    // the old `anticipationDelay` - and the next press would end a tease the
+    // player could see playing.
+    const speed = this._activeSpinSpeed ?? this._speedManager.active;
     const hold = this._anticipationDuration ?? speed.anticipationDelay;
     if (hold <= 0) return out;
 
@@ -1182,8 +1202,12 @@ export class SpinController implements Disposable {
     if (options?.reels && options?.except) {
       throw new Error("slamStop: pass either 'reels' or 'except', not both.");
     }
+    // A `reels` / `except` set that happens to cover every un-landed reel is
+    // not a partial slam: it ends the round like the bare call does, so it has
+    // to claim the stage too. Leaving it at 0 made a `skipStage`-driven button
+    // read "still skippable" on a dead round until the next `spin()`.
     if (options?.reels) {
-      this._slam(options.reels);
+      if (!this._slam(options.reels)) this._skipStage = 2;
       return;
     }
     if (options?.except) {
@@ -1192,7 +1216,7 @@ export class SpinController implements Disposable {
       for (let i = 0; i < this._reels.length; i++) {
         if (!exclude.has(i)) targets.push(i);
       }
-      this._slam(targets);
+      if (!this._slam(targets)) this._skipStage = 2;
       return;
     }
     this._slam();
@@ -1231,8 +1255,8 @@ export class SpinController implements Disposable {
    * cascading rejection handlers each safely invoke `_slam` without
    * triple-emitting `skip:requested`.
    */
-  private _slam(reels?: readonly number[]): void {
-    if (!this._isSpinning) return;
+  private _slam(reels?: readonly number[]): boolean {
+    if (!this._isSpinning) return false;
 
     // Resolve the target set first: everything downstream (which phases die,
     // whether the generation moves, which reels get placed) keys off it.
@@ -1247,7 +1271,7 @@ export class SpinController implements Disposable {
       // must not flip `wasSkipped` or fire the skip events. (The full path
       // keeps its historical behaviour of emitting even when every reel has
       // already landed.)
-      if (targets.size === 0) return;
+      if (targets.size === 0) return true;
     } else {
       for (let i = 0; i < this._reels.length; i++) {
         if (this._landedReels.has(i) || this._heldReels.has(i)) continue;
@@ -1330,6 +1354,19 @@ export class SpinController implements Disposable {
     }
 
     this._events.emit('skip:completed', { reels: [...targets], partial });
+
+    if (partial) {
+      // Re-open the stop-sequence gate. It requires EVERY non-held,
+      // non-landed reel to be holding a 'spin' phase, and it is only ever
+      // triggered by `setResult()` or by a reel entering SPIN. Landing the
+      // reels that had not reached SPIN yet therefore removes the last thing
+      // that would have opened it, and the survivors' `SpinPhase` is left
+      // with nobody to resolve it: they spin for ever and `spin()` never
+      // settles. Reachable through `slamStop({ reels })` and, when the tease
+      // sits on low-index reels, through `protect` itself.
+      this._tryBeginStopSequence();
+    }
+    return partial;
   }
 
   /**

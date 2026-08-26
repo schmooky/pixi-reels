@@ -1199,6 +1199,12 @@ export class ReelSet extends Container implements Disposable {
    * the stage until the queued slam actually fires (i.e. once
    * `setResult()` arrives). If you need a "queued" UI state, track that
    * yourself alongside `skipStage`.
+   *
+   * The stage is ROUND-scoped and only resets on the next `spin()`, which is
+   * what lets it survive the `refill()` calls of a cascade round. So gate a
+   * button on `isSpinning` before reading it: a `protect: 'always'` round
+   * never reaches `2` (no press can end the tease), and therefore ends parked
+   * at `1` for the whole idle window.
    */
   get skipStage(): 0 | 1 | 2 {
     return this._spinController.skipStage;
