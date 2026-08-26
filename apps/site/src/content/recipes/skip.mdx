@@ -1,7 +1,7 @@
 ---
 title: "Skip & slam"
 group: mechanics
-oneLiner: Skip control at reel granularity, partial slams, a tease a press cannot hide, per-reel spin floors, and phases you subclass instead of rewrite.
+oneLiner: Every skip lever end to end - partial slams both spellings, all three tease-protect modes, your own release plan, queued presses, skipStage, per-reel spin floors, and all four ways to own a phase.
 order: 57
 tags:
   - skip
@@ -25,6 +25,16 @@ A slam force-completes every active phase, `AnticipationPhase` included. That is
 **Gotcha:** a partial slam leaves `skipStage` alone and does not end the round, so the button stays live. Only a full slam moves the stage to `2` and applies the round's speed boost.
 
 <RecipeDemo code="skip-partial-slam" />
+
+<a id="skip-reels-complement"></a>
+
+## Name the reels that land
+
+`slamStop({ reels })` is the complement: pass the reels to land instead of the reels to spare. Same lever, two spellings - reach for `reels` when the landing set is the short one or comes from game state, `except` when the spared set is. Here a three-beat plan walks the board outside in, with no tease and no protection involved.
+
+**Gotcha:** neither form needs guarding. Out-of-range indices are ignored, and held or already-landed reels are never slammed.
+
+<RecipeDemo code="skip-reels-complement" />
 
 <a id="skip-tease-protect"></a>
 
@@ -60,6 +70,50 @@ function onSkipPressed() {
 
 **Gotcha:** two things that look like they would work here do not, and both are pinned by tests. Shrinking the set with `setAnticipation()` mid-spin does NOT release a reel that is already teasing - the anticipation set is read once, at the moment a reel leaves `SPIN`. And `setSpeed()` mid-spin does not re-time the round in flight: `spin()` captures the active profile and hands that instance to every phase, which is why the `skipSpin()` boost lands on the NEXT spin. `slamStop({ reels })` is the lever that works mid-tease.
 
+<a id="skip-always-protect"></a>
+
+## A tease no press can end
+
+`protect: 'always'`. The first press lands everything outside the tease, exactly like `'once'`; every press after that is a deliberate no-op. Use it when the tease IS the reward beat and cutting it costs more than the impatience does - a jackpot reveal, a final-reel bonus land.
+
+**Gotcha:** a refused press emits no skip events at all, rather than throwing. And `slamStop()` still lands everything: the engine reserves an unconditional exit for your own code (an abort, a timeout, a disconnect), it only refuses the player's press.
+
+<RecipeDemo code="skip-always-protect" />
+
+<a id="skip-custom-plan"></a>
+
+## Your own release plan
+
+`'always'` plus a queue of your own is the general form: the engine guarantees no press can end a tease behind your back, and game code decides which group each press lands. Here three teasing reels come down in two beats instead of three.
+
+<RecipeDemo code="skip-custom-plan" />
+
+<a id="skip-queued-request"></a>
+
+## Pressing before the server answers
+
+`skipSpin()` throws before `setResult()` arrives - there is nothing to land on, and slamming would put the reels on random buffer fill. `requestSkip()` queues the intent and fires it the instant the result lands, with tease protection still applied. The demo's result is deliberately slow so the window is easy to hit.
+
+**Gotcha:** this is why `setAnticipation` must come BEFORE `setResult`. A press queued in that window can only protect a tease the engine already knows about.
+
+<RecipeDemo code="skip-queued-request" />
+
+<a id="skip-stage-button"></a>
+
+## Driving the button from skipStage
+
+`0` no press yet, `1` a press landed the reels around a protected tease and left it running, `2` the round-ending press happened. Stage `1` is only reachable on a spin that asked for protection, so a game with no protected teases sees the old two-state button and nothing changes. The label here is read off `reelSet.skipStage` every frame rather than counted locally.
+
+<RecipeDemo code="skip-stage-button" />
+
+<a id="skip-turbo-inert"></a>
+
+## No hold, no tease, nothing to protect
+
+Turbo and SuperTurbo set `anticipationDelay: 0`. With an effective hold of `0` ms `protect` does nothing and every press lands everything - protecting a tease that never plays would stall the reels for nothing and put back the response-time tell. Spins here alternate on the same turbo profile with the same `protect`; only `duration` differs.
+
+<RecipeDemo code="skip-turbo-inert" />
+
 <a id="skip-no-tell"></a>
 
 ## Skip without a tell
@@ -80,6 +134,14 @@ No slam here at all. `minimumSpinTime` lives on the speed profile, so it is one 
 
 <RecipeDemo code="skip-min-spin-time" />
 
+<a id="skip-min-spin-uniform"></a>
+
+## Uniform floor, and clearing it
+
+A single number raises the floor on every reel; `null` clears the override and hands the floor back to the speed profile (which is not the same as a floor of `0`). Spins alternate between the two so the difference reads back to back.
+
+<RecipeDemo code="skip-min-spin-uniform" />
+
 <a id="phase-subclass-stop"></a>
 
 ## Subclass a built-in phase
@@ -90,4 +152,44 @@ Every built-in phase class is exported, so a small change is a subclass rather t
 
 <RecipeDemo code="phase-subclass-stop" />
 
-See [Phases](/docs/api-phases/) for the full extension contract, including the cascade and MultiWays phases, which take extra constructor arguments and are registered with `registerFactory`.
+<a id="phase-subclass-spin"></a>
+
+## A spin floor the phase decides for itself
+
+`SpinPhaseConfig.minimumSpinTime` documented an override of the profile's shared floor that could not be reached, because registering through `PhaseFactory` meant writing a spin phase from scratch. Subclass `SpinPhase` and it is one line. `setMinimumSpinTime([...])` is the ready-made version; reach for the subclass when the floor is derived rather than configured.
+
+**Gotcha:** merge the config, don't replace it - `super.onEnter({ ...config, minimumSpinTime })`. The controller may already be passing a floor, and clobbering the object drops anything added to it later.
+
+<RecipeDemo code="phase-subclass-spin" />
+
+<a id="phase-subclass-anticipation"></a>
+
+## Using update() from a subclass
+
+A per-reel countdown drawn from inside the tease, with each hook doing its job: `onEnter` shows the label then `super` starts the slow-down, `update(deltaMs)` runs every frame while active, `onSkip` takes the label off when a press force-completes the phase.
+
+**Gotcha:** `update` is ticker-driven accumulation, not wall clock, which is why it stays correct in a backgrounded tab where `performance.now()` would not. And a phase is handed the active `SpeedProfile` as `this._speed`, so a subclass never has to be told the timings the engine is already using.
+
+<RecipeDemo code="phase-subclass-anticipation" />
+
+<a id="phase-from-scratch-start"></a>
+
+## A phase written from scratch
+
+Extend `ReelPhase` when you want the whole behaviour rather than a tweak - here a flat linear ramp with no step-back pull, replacing `StartPhase` under its own key.
+
+**Gotcha:** a custom NAME buys nothing on its own. The controller only ever asks the factory for the lifecycle keys, so `register('myPhase', ...)` leaves it orphaned - nothing constructs it. Own a phase by taking its key. And call `this._complete()` exactly once, or the reel never advances and the spin promise never settles.
+
+<RecipeDemo code="phase-from-scratch-start" />
+
+<a id="phase-subclass-cascade"></a>
+
+## Phases that take constructor arguments
+
+The three cascade phases and MultiWays' `AdjustPhase` carry build-time config as extra constructor arguments, so a subclass needs `registerFactory` and has to forward them. `resolveTumbleConfig(config)` produces the shape they expect - the same call `.tumble()` makes internally.
+
+**Gotcha:** note where `.phases(...)` sits in this recipe - before `.tumble(...)`, and it still wins. Configurators are deferred to `build()` and applied after the built-in registrations. Before 2.3 they ran at call time while `.tumble()` registered its defaults inside `build()`, so a `'cascade:*'` override was silently discarded wherever you put it.
+
+<RecipeDemo code="phase-subclass-cascade" />
+
+See [Phases](/docs/api-phases/) for the full extension contract.

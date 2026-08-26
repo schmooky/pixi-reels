@@ -8,7 +8,7 @@ Site: https://pixi-reels.schmooky.dev
 Repo: https://github.com/schmooky/pixi-reels
 Package: https://www.npmjs.com/package/pixi-reels
 
-Generated: 2026-08-26T09:13:01.457Z
+Generated: 2026-08-26T10:47:57.575Z
 
 ## Quick start
 
@@ -11604,6 +11604,402 @@ return {
 };
 ```
 
+### phase-from-scratch-start
+URL: https://pixi-reels.schmooky.dev/recipes/phase-from-scratch-start/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, ReelPhase, CardSymbol, CARD_DECK, PIXI, app
+//
+// A PHASE WRITTEN FROM SCRATCH, on `ReelPhase`.
+//
+// Subclassing a built-in is the cheap path. Extend `ReelPhase` when you want
+// the whole behaviour, not a tweak to it - here a linear ramp with no
+// step-back pull, replacing `StartPhase` under its own key.
+//
+// A custom NAME buys nothing on its own: the controller only ever asks the
+// factory for the keys in the lifecycle (`'start'`, `'spin'`, `'anticipation'`,
+// `'stop'`, plus the cascade and MultiWays keys). Registering `'myPhase'`
+// leaves it orphaned - nothing constructs it. Own a phase by taking its key.
+//
+// The contract in four lines:
+//   name / skippable  - readonly fields, no default
+//   onEnter(config)   - set the reel up. nothing starts until you do
+//   update(deltaMs)   - every frame while active, ticker-driven
+//   onSkip()          - the slam pose: leave the reel where a natural finish
+//                       would have left it
+// and call `this._complete()` exactly once, or the reel never advances.
+
+const IDS = ['9', '10', 'J', 'Q', 'K'];
+const REELS = 5, ROWS = 3, SIZE = 80, GAP = 4;
+const RAMP_MS = 700;
+const CARDS = CARD_DECK.filter((c) => IDS.includes(c.id));
+function rv() { return IDS[Math.floor(Math.random() * IDS.length)]; }
+
+class LinearStartPhase extends ReelPhase {
+  name = 'start';
+  skippable = true;
+
+  onEnter(config) {
+    this._elapsed = 0;
+    this._waited = 0;
+    this._delay = config.delay ?? 0;
+    this._launched = false;
+    this.reel.spinningMode = config.spinningMode;
+    this.reel.speed = 0;
+  }
+
+  update(deltaMs) {
+    // The stagger, hand-rolled: no GSAP, no timers, just the frame delta.
+    if (this._waited < this._delay) {
+      this._waited += deltaMs;
+      return;
+    }
+    if (!this._launched) {
+      this._launched = true;
+      // Re-masks any lifted unmask symbol the instant the reel moves. Skipping
+      // it leaves such a symbol floating above the mask for the whole ramp.
+      this.reel.beginMotion();
+    }
+    this._elapsed += deltaMs;
+    const t = Math.min(1, this._elapsed / RAMP_MS);
+    this.reel.speed = this._speed.spinSpeed * t;
+    if (t >= 1) {
+      this.reel.notifySpinStart();
+      this._complete();
+    }
+  }
+
+  onSkip() {
+    // Land where the phase would have ended: at full speed, with symbols told
+    // they are in a spin (blur / static-spin presentations key off this).
+    this.reel.speed = this._speed.spinSpeed;
+    this.reel.notifySpinStart();
+  }
+}
+
+const reelSet = new ReelSetBuilder()
+  .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
+  .symbols((r) => {
+    for (const c of CARDS) {
+      r.register(c.id, CardSymbol, { color: c.color, label: c.label, textColor: c.textColor });
+    }
+  })
+  .speed('normal', { ...SpeedPresets.NORMAL, spinDelay: 120, minimumSpinTime: 900 })
+  .phases((f) => f.register('start', LinearStartPhase))
+  .ticker(app.ticker)
+  .build();
+
+const TOTAL_H = ROWS * SIZE + (ROWS - 1) * GAP;
+const hud = new PIXI.Text({
+  text: 'StartPhase replaced: a flat 700ms ramp, no step-back pull',
+  style: { fontFamily: 'system-ui, sans-serif', fontSize: 13, fontWeight: '600', fill: 0x9c8f78 },
+});
+hud.position.set(0, TOTAL_H + 10);
+reelSet.addChild(hud);
+
+return {
+  reelSet,
+  cleanup: () => { try { hud.destroy(); } catch {} },
+  onSkip: () => { try { reelSet.skipSpin(); } catch { reelSet.requestSkip(); } },
+  onSpin: async () => {
+    const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
+    const p = reelSet.spin();
+    await new Promise((r) => setTimeout(r, 250));
+    reelSet.setResult(grid);
+    await p;
+  },
+};
+```
+
+### phase-subclass-anticipation
+URL: https://pixi-reels.schmooky.dev/recipes/phase-subclass-anticipation/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, AnticipationPhase, CardSymbol, CARD_DECK, PIXI, app
+//
+// SUBCLASS `AnticipationPhase`, and use `update()`.
+//
+// The tease gets a per-reel countdown drawn from inside the phase. Three hooks,
+// each doing its job:
+//
+//   onEnter  - show the label, then `super` starts the real slow-down
+//   update   - called every frame WHILE ACTIVE, with the frame delta. It is
+//              ticker-driven accumulation, not wall clock, so it stays correct
+//              in a backgrounded tab where `performance.now()` would not
+//   onSkip   - the SLAM pose. Runs when a press force-completes the phase, so
+//              anything onEnter put on screen has to come off here too
+//
+// Note the countdown reads its total from `this._speed.anticipationDelay`: a
+// phase gets the active `SpeedProfile` handed to it, so a subclass never has
+// to be told the timings the rest of the engine is already using.
+
+const IDS = ['9', '10', 'J', 'Q', 'K'];
+const SCAT = 'SCAT';
+const REELS = 5, ROWS = 3, SIZE = 80, GAP = 4;
+const TEASE = [2, 3, 4];
+const HOLD = 1500;
+const CARDS = CARD_DECK.filter((c) => IDS.includes(c.id));
+function rv() { return IDS[Math.floor(Math.random() * IDS.length)]; }
+
+// The phase writes here; the recipe owns the display objects.
+const counters = new Map();
+
+class CountdownAnticipationPhase extends AnticipationPhase {
+  onEnter(config) {
+    this._left = config.duration ?? this._speed.anticipationDelay;
+    const c = counters.get(this.reel.reelIndex);
+    if (c) { c.visible = true; c.text = `${(this._left / 1000).toFixed(1)}s`; }
+    super.onEnter(config);
+  }
+
+  update(deltaMs) {
+    super.update(deltaMs);
+    this._left = Math.max(0, this._left - deltaMs);
+    const c = counters.get(this.reel.reelIndex);
+    if (c) c.text = `${(this._left / 1000).toFixed(1)}s`;
+  }
+
+  onSkip() {
+    const c = counters.get(this.reel.reelIndex);
+    if (c) c.visible = false;
+    super.onSkip();
+  }
+}
+
+const reelSet = new ReelSetBuilder()
+  .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
+  .symbols((r) => {
+    for (const c of CARDS) {
+      r.register(c.id, CardSymbol, { color: c.color, label: c.label, textColor: c.textColor });
+    }
+    r.register(SCAT, CardSymbol, { color: 0xffcc44, label: 'F', textColor: 0x3a2600 });
+  })
+  .speed('normal', { ...SpeedPresets.NORMAL, anticipationDelay: HOLD })
+  .phases((f) => f.register('anticipation', CountdownAnticipationPhase))
+  .ticker(app.ticker)
+  .build();
+
+const TOTAL_H = ROWS * SIZE + (ROWS - 1) * GAP;
+for (const i of TEASE) {
+  const t = new PIXI.Text({
+    text: '',
+    style: { fontFamily: 'monospace', fontSize: 15, fontWeight: '700', fill: 0xfef08a },
+  });
+  t.anchor.set(0.5, 1);
+  t.position.set(i * (SIZE + GAP) + SIZE / 2, -6);
+  t.visible = false;
+  reelSet.addChild(t);
+  counters.set(i, t);
+}
+// The phase only hides a counter on a SKIP; a natural finish ends the tease
+// through the normal path, so clear those here.
+reelSet.events.on('anticipation:reelEnd', ({ reelIndex }) => {
+  const c = counters.get(reelIndex);
+  if (c) c.visible = false;
+});
+
+const hud = new PIXI.Text({
+  text: 'each teasing reel counts its own hold down, from inside the phase',
+  style: { fontFamily: 'system-ui, sans-serif', fontSize: 13, fontWeight: '600', fill: 0x9c8f78 },
+});
+hud.position.set(0, TOTAL_H + 10);
+reelSet.addChild(hud);
+
+return {
+  reelSet,
+  cleanup: () => {
+    for (const c of counters.values()) { try { c.destroy(); } catch {} }
+    counters.clear();
+    try { hud.destroy(); } catch {}
+  },
+  // Tap mid-tease: the slam routes through the subclass's `onSkip`, so the
+  // counters come off with the tease rather than freezing on screen.
+  onSkip: () => { try { reelSet.skipSpin(); } catch { reelSet.requestSkip(); } },
+  onSpin: async () => {
+    for (const c of counters.values()) c.visible = false;
+    const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
+    grid[0].visible[1] = SCAT;
+    grid[1].visible[1] = SCAT;
+
+    const p = reelSet.spin();
+    reelSet.setAnticipation(TEASE, { stagger: 400 });
+    await new Promise((r) => setTimeout(r, 250));
+    reelSet.setResult(grid);
+    await p;
+  },
+};
+```
+
+### phase-subclass-cascade
+URL: https://pixi-reels.schmooky.dev/recipes/phase-subclass-cascade/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, CascadeDropInPhase, resolveTumbleConfig, CardSymbol, CARD_DECK, PIXI, app
+//
+// SUBCLASSING A PHASE THAT TAKES CONSTRUCTOR ARGUMENTS.
+//
+// The four standard phases are built with `(reel, speed)`, so
+// `register(key, Class)` is enough. The three cascade phases and MultiWays'
+// `AdjustPhase` carry build-time config as EXTRA constructor arguments, so a
+// subclass of one needs `registerFactory` and has to forward them.
+//
+// `resolveTumbleConfig(config)` fills a partial `.tumble(...)` config out to
+// the shape those constructors expect - the same call `.tumble()` makes
+// internally. Hand-writing the fields instead is how a subclass quietly drifts
+// from the set's real tumble settings.
+//
+// Note where `.phases(...)` sits: BEFORE `.tumble(...)`. Configurators are
+// deferred to `build()` and applied after the built-in registrations, so chain
+// position does not decide the winner. (It used to: `.phases()` ran at call
+// time and `.tumble()` registered its defaults later, inside `build()`, which
+// silently discarded any `'cascade:*'` override.)
+
+const IDS = ['9', '10', 'J', 'Q', 'K'];
+const REELS = 5, ROWS = 3, SIZE = 76, GAP = 4;
+const TUMBLE = {
+  fall: { duration: 300, ease: 'power3.in', cellStagger: 60 },
+  dropIn: { duration: 500, ease: 'power2.out', cellStagger: 60, distance: 'perHole' },
+};
+const RESOLVED = resolveTumbleConfig(TUMBLE);
+const CARDS = CARD_DECK.filter((c) => IDS.includes(c.id));
+function rv() { return IDS[Math.floor(Math.random() * IDS.length)]; }
+
+let drops = 0;
+const bumpDrops = () => { drops += 1; };
+
+class CountingDropInPhase extends CascadeDropInPhase {
+  onEnter(config) {
+    bumpDrops();
+    super.onEnter(config);
+  }
+}
+
+const reelSet = new ReelSetBuilder()
+  .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
+  .symbols((r) => {
+    for (const c of CARDS) {
+      r.register(c.id, CardSymbol, { color: c.color, label: c.label, textColor: c.textColor });
+    }
+  })
+  // Registered BEFORE .tumble() on purpose - it still wins.
+  .phases((f) =>
+    f.registerFactory(
+      'cascade:dropIn',
+      (reel, speed) => new CountingDropInPhase(reel, speed, RESOLVED.dropIn, RESOLVED.gravity),
+    ),
+  )
+  .tumble(TUMBLE)
+  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 120 })
+  .ticker(app.ticker)
+  .build();
+
+const TOTAL_H = ROWS * SIZE + (ROWS - 1) * GAP;
+const hud = new PIXI.Text({
+  text: 'press spin: the drop-in phase is the subclass, one per reel',
+  style: { fontFamily: 'monospace', fontSize: 13, fill: 0x9c8f78 },
+});
+hud.position.set(0, TOTAL_H + 10);
+reelSet.addChild(hud);
+
+return {
+  reelSet,
+  cleanup: () => { try { hud.destroy(); } catch {} },
+  onSpin: async () => {
+    drops = 0;
+    const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
+    const p = reelSet.spin();
+    await new Promise((r) => setTimeout(r, 250));
+    reelSet.setResult(grid);
+    await p;
+    hud.text = `CountingDropInPhase constructed ${drops}x - once per reel, ` +
+      'from a registration made before .tumble()';
+  },
+};
+```
+
+### phase-subclass-spin
+URL: https://pixi-reels.schmooky.dev/recipes/phase-subclass-spin/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, SpinPhase, CardSymbol, CARD_DECK, PIXI, app
+//
+// SUBCLASS `SpinPhase`. Per-reel spin floor, decided by the phase itself.
+//
+// `SpinPhaseConfig.minimumSpinTime` has always documented an override of the
+// profile's shared floor - and until the phase classes were exported there was
+// no way to reach it, because registering through `PhaseFactory` meant writing
+// a spin phase from scratch rather than subclassing one.
+//
+// `reelSet.setMinimumSpinTime([...])` is the ready-made version of this. Reach
+// for the subclass when the floor is DERIVED rather than configured: read it
+// off the reel, off game state at the moment the phase enters, off whatever
+// the feature currently is. Here it comes from the reel index.
+
+const IDS = ['9', '10', 'J', 'Q', 'K'];
+const REELS = 5, ROWS = 3, SIZE = 80, GAP = 4;
+const CARDS = CARD_DECK.filter((c) => IDS.includes(c.id));
+function rv() { return IDS[Math.floor(Math.random() * IDS.length)]; }
+
+// The rule the phase applies: each reel spins 250ms longer than the one left
+// of it. A staircase no single profile value can express.
+const floorFor = (reelIndex) => reelIndex * 250;
+
+class StaircaseSpinPhase extends SpinPhase {
+  onEnter(config) {
+    // Merge, don't replace: the controller may already be passing a floor
+    // (that is what `setMinimumSpinTime` does) and clobbering the whole
+    // config would drop anything added to it later.
+    super.onEnter({ ...config, minimumSpinTime: floorFor(this.reel.reelIndex) });
+  }
+}
+
+const reelSet = new ReelSetBuilder()
+  .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
+  .symbols((r) => {
+    for (const c of CARDS) {
+      r.register(c.id, CardSymbol, { color: c.color, label: c.label, textColor: c.textColor });
+    }
+  })
+  .speed('normal', { ...SpeedPresets.NORMAL, spinDelay: 0, stopDelay: 0, minimumSpinTime: 0 })
+  .phases((f) => f.register('spin', StaircaseSpinPhase))
+  .ticker(app.ticker)
+  .build();
+
+const TOTAL_H = ROWS * SIZE + (ROWS - 1) * GAP;
+const labels = [];
+for (let i = 0; i < REELS; i++) {
+  const t = new PIXI.Text({
+    text: `floor ${floorFor(i)}ms`,
+    style: { fontFamily: 'monospace', fontSize: 11, fill: i === 0 ? 0x6b7280 : 0xfef08a },
+  });
+  t.anchor.set(0.5, 0);
+  t.position.set(i * (SIZE + GAP) + SIZE / 2, TOTAL_H + 8);
+  reelSet.addChild(t);
+  labels.push(t);
+}
+
+let t0 = 0;
+reelSet.events.on('spin:reelLanded', (i) => {
+  labels[i].text = `${floorFor(i)} -> ${Math.round(performance.now() - t0)}ms`;
+});
+
+return {
+  reelSet,
+  cleanup: () => { for (const t of labels) { try { t.destroy(); } catch {} } },
+  onSpin: async () => {
+    for (let i = 0; i < REELS; i++) labels[i].text = `floor ${floorFor(i)}ms`;
+    const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
+    const p = reelSet.spin();
+    t0 = performance.now();
+    // Result arrives early: reel 0 can act on it at once, each reel to its
+    // right is held a further 250ms by the phase's own floor.
+    await new Promise((r) => setTimeout(r, 100));
+    reelSet.setResult(grid);
+    await p;
+  },
+};
+```
+
 ### phase-subclass-stop
 URL: https://pixi-reels.schmooky.dev/recipes/phase-subclass-stop/
 ```ts
@@ -12507,6 +12903,114 @@ return {
 };
 ```
 
+### skip-always-protect
+URL: https://pixi-reels.schmooky.dev/recipes/skip-always-protect/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, PIXI, app
+//
+// A TEASE NO PRESS CAN END. `protect: 'always'`.
+//
+// The first press lands every reel outside the tease, exactly like `'once'`.
+// Every press after that is a deliberate no-op: the tease reels play out in
+// full, however many times the player taps.
+//
+// Use it when the tease IS the reward beat and cutting it costs more than the
+// impatience does - a jackpot reveal, a final-reel bonus land, the last spin
+// of a free-spins round. Note that `slamStop()` still lands everything: the
+// engine reserves an unconditional exit for the game's own code (an abort, a
+// timeout, a disconnect), it only refuses the PLAYER's press.
+
+const IDS = ['9', '10', 'J', 'Q', 'K'];
+const SCAT = 'SCAT';
+const REELS = 5, ROWS = 3, SIZE = 80, GAP = 4;
+const TEASE = [3, 4];
+const CARDS = CARD_DECK.filter((c) => IDS.includes(c.id));
+function rv() { return IDS[Math.floor(Math.random() * IDS.length)]; }
+
+const reelSet = new ReelSetBuilder()
+  .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
+  .symbols((r) => {
+    for (const c of CARDS) {
+      r.register(c.id, CardSymbol, { color: c.color, label: c.label, textColor: c.textColor });
+    }
+    r.register(SCAT, CardSymbol, { color: 0xffcc44, label: 'F', textColor: 0x3a2600 });
+  })
+  .speed('normal', { ...SpeedPresets.NORMAL, anticipationDelay: 1400 })
+  .ticker(app.ticker)
+  .build();
+
+const TOTAL_H = ROWS * SIZE + (ROWS - 1) * GAP;
+
+const antSheet = await PIXI.Assets.load('/hw-sprites/anticipation.json');
+const antFrames = (pre) => Object.entries(antSheet.textures)
+  .filter(([k]) => k.startsWith(pre)).sort(([a], [b]) => a.localeCompare(b)).map(([, t]) => t);
+const ANT_IN = antFrames('in/'), ANT_LOOP = antFrames('loop/');
+const glowLayer = new PIXI.Container();
+reelSet.addChild(glowLayer);
+const glows = new Map();
+const stopGlow = (i) => { const g = glows.get(i); if (g) { try { g.destroy(); } catch {} glows.delete(i); } };
+const startGlow = (i) => {
+  stopGlow(i);
+  const g = new PIXI.AnimatedSprite(ANT_IN.length ? ANT_IN : ANT_LOOP);
+  g.anchor.set(0.5);
+  g.position.set(i * (SIZE + GAP) + SIZE / 2, TOTAL_H / 2);
+  g.width = g.height = SIZE * 2.0;
+  g.blendMode = 'add';
+  g.animationSpeed = 0.5; g.loop = false;
+  g.onComplete = () => { if (ANT_LOOP.length) { g.textures = ANT_LOOP; g.loop = true; g.play(); } };
+  glowLayer.addChild(g); g.play();
+  glows.set(i, g);
+};
+reelSet.events.on('anticipation:reel', ({ reelIndex }) => startGlow(reelIndex));
+reelSet.events.on('anticipation:reelEnd', ({ reelIndex }) => stopGlow(reelIndex));
+
+const hud = new PIXI.Text({
+  text: '',
+  style: { fontFamily: 'monospace', fontSize: 13, fill: 0xffcc44 },
+});
+hud.position.set(0, TOTAL_H + 10);
+reelSet.addChild(hud);
+
+let taps = 0;
+let landedByPress = false;
+const idle = 'spin, then tap as much as you like';
+hud.text = idle;
+
+reelSet.events.on('spin:start', () => { taps = 0; landedByPress = false; hud.text = idle; });
+reelSet.events.on('skip:requested', ({ reels }) => { landedByPress = reels.length > 0; });
+
+return {
+  reelSet,
+  cleanup: () => {
+    for (const i of [...glows.keys()]) stopGlow(i);
+    try { glowLayer.destroy(); } catch {}
+    try { hud.destroy(); } catch {}
+  },
+  onSkip: () => {
+    taps += 1;
+    landedByPress = false;
+    try { reelSet.skipSpin(); } catch { reelSet.requestSkip(); }
+    // A press that landed nothing emits no skip events at all. that is how
+    // `'always'` refuses one, rather than by throwing.
+    hud.text = landedByPress
+      ? `tap ${taps}: landed the reels around the tease`
+      : `tap ${taps}: ignored - reels ${TEASE.join(' and ')} finish on their own`;
+  },
+  onSpin: async () => {
+    const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
+    grid[0].visible[1] = SCAT;
+    grid[1].visible[1] = SCAT;
+
+    const p = reelSet.spin();
+    reelSet.setAnticipation(TEASE, { stagger: 'sequential', protect: 'always' });
+    await new Promise((r) => setTimeout(r, 250));
+    reelSet.setResult(grid);
+    await p;
+  },
+};
+```
+
 ### skip-anticipation
 URL: https://pixi-reels.schmooky.dev/recipes/skip-anticipation/
 ```ts
@@ -12595,6 +13099,123 @@ return {
 };
 ```
 
+### skip-custom-plan
+URL: https://pixi-reels.schmooky.dev/recipes/skip-custom-plan/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, PIXI, app
+//
+// YOUR OWN RELEASE PLAN. `protect: 'always'` + `slamStop({ reels })`.
+//
+// The built-in modes cover the two common shapes: `'once'` ends the tease on
+// the second press, `'stepwise'` walks it one reel per press. Anything else -
+// release in pairs, outside-in, the highest-paying reel last - is a plan that
+// belongs in game code, and the engine already has the lever for it.
+//
+// `'always'` is what makes it safe: it guarantees no player press can end a
+// tease behind your back, so the queue below is the ONLY thing that releases
+// tease reels. Without it, a press would race your plan.
+//
+// Here the three teasing reels come down in two beats instead of three.
+
+const IDS = ['9', '10', 'J', 'Q', 'K'];
+const SCAT = 'SCAT';
+const REELS = 5, ROWS = 3, SIZE = 80, GAP = 4;
+const TEASE = [2, 3, 4];
+const PLAN = [[4, 3], [2]]; // outside in, then the one nearest the scatters
+const CARDS = CARD_DECK.filter((c) => IDS.includes(c.id));
+function rv() { return IDS[Math.floor(Math.random() * IDS.length)]; }
+
+const reelSet = new ReelSetBuilder()
+  .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
+  .symbols((r) => {
+    for (const c of CARDS) {
+      r.register(c.id, CardSymbol, { color: c.color, label: c.label, textColor: c.textColor });
+    }
+    r.register(SCAT, CardSymbol, { color: 0xffcc44, label: 'F', textColor: 0x3a2600 });
+  })
+  .speed('normal', { ...SpeedPresets.NORMAL, anticipationDelay: 1600 })
+  .ticker(app.ticker)
+  .build();
+
+const TOTAL_H = ROWS * SIZE + (ROWS - 1) * GAP;
+
+const antSheet = await PIXI.Assets.load('/hw-sprites/anticipation.json');
+const antFrames = (pre) => Object.entries(antSheet.textures)
+  .filter(([k]) => k.startsWith(pre)).sort(([a], [b]) => a.localeCompare(b)).map(([, t]) => t);
+const ANT_IN = antFrames('in/'), ANT_LOOP = antFrames('loop/');
+const glowLayer = new PIXI.Container();
+reelSet.addChild(glowLayer);
+const glows = new Map();
+const stopGlow = (i) => { const g = glows.get(i); if (g) { try { g.destroy(); } catch {} glows.delete(i); } };
+const startGlow = (i) => {
+  stopGlow(i);
+  const g = new PIXI.AnimatedSprite(ANT_IN.length ? ANT_IN : ANT_LOOP);
+  g.anchor.set(0.5);
+  g.position.set(i * (SIZE + GAP) + SIZE / 2, TOTAL_H / 2);
+  g.width = g.height = SIZE * 2.0;
+  g.blendMode = 'add';
+  g.animationSpeed = 0.5; g.loop = false;
+  g.onComplete = () => { if (ANT_LOOP.length) { g.textures = ANT_LOOP; g.loop = true; g.play(); } };
+  glowLayer.addChild(g); g.play();
+  glows.set(i, g);
+};
+reelSet.events.on('anticipation:reel', ({ reelIndex }) => startGlow(reelIndex));
+reelSet.events.on('anticipation:reelEnd', ({ reelIndex }) => stopGlow(reelIndex));
+
+const hud = new PIXI.Text({
+  text: '',
+  style: { fontFamily: 'monospace', fontSize: 13, fill: 0xffcc44 },
+});
+hud.position.set(0, TOTAL_H + 10);
+reelSet.addChild(hud);
+
+let queue = [];
+let press = 0;
+const idle = 'spin, then tap: rest of board -> reels 4+3 -> reel 2';
+hud.text = idle;
+
+reelSet.events.on('spin:start', () => {
+  queue = PLAN.map((g) => [...g]);
+  press = 0;
+  hud.text = idle;
+});
+reelSet.events.on('skip:requested', ({ reels, partial }) => {
+  hud.text = `press ${press}: landed [${reels.join(', ')}]${partial ? '' : ' - round over'}`;
+});
+
+return {
+  reelSet,
+  cleanup: () => {
+    for (const i of [...glows.keys()]) stopGlow(i);
+    try { glowLayer.destroy(); } catch {}
+    try { hud.destroy(); } catch {}
+  },
+  onSkip: () => {
+    press += 1;
+    if (press === 1) {
+      // Press 1 is the engine's own group: everything outside the tease.
+      // `'always'` stops it reaching any further.
+      try { reelSet.skipSpin(); } catch { reelSet.requestSkip(); }
+      return;
+    }
+    const group = queue.shift();
+    if (group) reelSet.slamStop({ reels: group });
+  },
+  onSpin: async () => {
+    const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
+    grid[0].visible[1] = SCAT;
+    grid[1].visible[1] = SCAT;
+
+    const p = reelSet.spin();
+    reelSet.setAnticipation(TEASE, { stagger: 250, protect: 'always' });
+    await new Promise((r) => setTimeout(r, 250));
+    reelSet.setResult(grid);
+    await p;
+  },
+};
+```
+
 ### skip-min-spin-time
 URL: https://pixi-reels.schmooky.dev/recipes/skip-min-spin-time/
 ```ts
@@ -12675,6 +13296,78 @@ return {
     await new Promise((r) => setTimeout(r, 150));
     reelSet.setResult(grid);
     await p;
+  },
+};
+```
+
+### skip-min-spin-uniform
+URL: https://pixi-reels.schmooky.dev/recipes/skip-min-spin-uniform/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, PIXI, app
+//
+// THE OTHER TWO SHAPES OF `setMinimumSpinTime`.
+//
+// A single number raises the floor on EVERY reel, and `null` clears the
+// override and hands the floor back to the speed profile. Per-reel arrays get
+// their own demo above; this one is about the lifecycle.
+//
+// Like `setStopDelays()`, the override PERSISTS across `spin()` and
+// `refill()`. It is a setting, not a per-spin argument, so set it once at boot
+// or when the player changes a preference - not inside every spin - and clear
+// it deliberately with `null`. Spins here alternate between a 900ms uniform
+// floor and the cleared state so the difference is visible back to back.
+
+const IDS = ['9', '10', 'J', 'Q', 'K'];
+const REELS = 5, ROWS = 3, SIZE = 80, GAP = 4;
+const FLOOR = 900;
+const CARDS = CARD_DECK.filter((c) => IDS.includes(c.id));
+function rv() { return IDS[Math.floor(Math.random() * IDS.length)]; }
+
+const reelSet = new ReelSetBuilder()
+  .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
+  .symbols((r) => {
+    for (const c of CARDS) {
+      r.register(c.id, CardSymbol, { color: c.color, label: c.label, textColor: c.textColor });
+    }
+  })
+  // Profile floor of 200ms, so the override is unmistakable when it applies.
+  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 0, minimumSpinTime: 200 })
+  .ticker(app.ticker)
+  .build();
+
+const TOTAL_H = ROWS * SIZE + (ROWS - 1) * GAP;
+const hud = new PIXI.Text({
+  text: 'press spin. alternate spins clear the override',
+  style: { fontFamily: 'monospace', fontSize: 13, fill: 0x9c8f78 },
+});
+hud.position.set(0, TOTAL_H + 10);
+reelSet.addChild(hud);
+
+let spinNo = 0;
+let t0 = 0;
+let last = 0;
+reelSet.events.on('spin:reelLanded', () => { last = Math.round(performance.now() - t0); });
+
+return {
+  reelSet,
+  cleanup: () => { try { hud.destroy(); } catch {} },
+  onSpin: async () => {
+    const cleared = spinNo++ % 2 === 1;
+    // One call, both shapes. `null` is not "floor of 0", it is "use the
+    // profile's own minimumSpinTime again".
+    reelSet.setMinimumSpinTime(cleared ? null : FLOOR);
+
+    const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
+    const p = reelSet.spin();
+    t0 = performance.now();
+    await new Promise((r) => setTimeout(r, 120));
+    reelSet.setResult(grid);
+    await p;
+
+    hud.text = cleared
+      ? `setMinimumSpinTime(null) -> profile floor 200ms, last reel at rest ${last}ms`
+      : `setMinimumSpinTime(${FLOOR}) -> every reel held, last reel at rest ${last}ms`;
   },
 };
 ```
@@ -12873,6 +13566,247 @@ return {
 };
 ```
 
+### skip-queued-request
+URL: https://pixi-reels.schmooky.dev/recipes/skip-queued-request/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, PIXI, app
+//
+// PRESSING BEFORE THE SERVER ANSWERS. `requestSkip()`.
+//
+// `skipSpin()` THROWS before `setResult()` arrives, on purpose: there is
+// nothing to land on yet, and slamming would put the reels on random buffer
+// fill. `requestSkip()` queues the intent instead and fires it the instant the
+// result lands.
+//
+// The result here is deliberately slow (1.4s) so the pre-result window is easy
+// to hit. Tap during it and nothing appears to happen; the slam goes off the
+// moment the grid arrives - and tease protection still applies to it, because
+// `setAnticipation` was called BEFORE `setResult`. That ordering is the whole
+// requirement: a press queued in this window can only protect a tease the
+// engine already knows about.
+
+const IDS = ['9', '10', 'J', 'Q', 'K'];
+const SCAT = 'SCAT';
+const REELS = 5, ROWS = 3, SIZE = 80, GAP = 4;
+const TEASE = [3, 4];
+const CARDS = CARD_DECK.filter((c) => IDS.includes(c.id));
+function rv() { return IDS[Math.floor(Math.random() * IDS.length)]; }
+
+const reelSet = new ReelSetBuilder()
+  .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
+  .symbols((r) => {
+    for (const c of CARDS) {
+      r.register(c.id, CardSymbol, { color: c.color, label: c.label, textColor: c.textColor });
+    }
+    r.register(SCAT, CardSymbol, { color: 0xffcc44, label: 'F', textColor: 0x3a2600 });
+  })
+  .speed('normal', { ...SpeedPresets.NORMAL, anticipationDelay: 1200 })
+  .ticker(app.ticker)
+  .build();
+
+const TOTAL_H = ROWS * SIZE + (ROWS - 1) * GAP;
+const hud = new PIXI.Text({
+  text: '',
+  style: { fontFamily: 'monospace', fontSize: 13, fill: 0xffcc44 },
+});
+hud.position.set(0, TOTAL_H + 10);
+reelSet.addChild(hud);
+
+const idle = 'spin, then tap IMMEDIATELY - before the result lands';
+hud.text = idle;
+reelSet.events.on('spin:start', () => { hud.text = idle; });
+reelSet.events.on('skip:requested', ({ reels, partial }) => {
+  hud.text = `queued slam fired: landed [${reels.join(', ')}]${partial ? ' - tease protected' : ''}`;
+});
+
+return {
+  reelSet,
+  cleanup: () => { try { hud.destroy(); } catch {} },
+  // The canonical universal-button pattern: try the round-aware press, fall
+  // back to the queue when it throws. One handler covers both windows.
+  onSkip: () => {
+    try {
+      reelSet.skipSpin();
+    } catch {
+      reelSet.requestSkip();
+      hud.text = 'too early to land - slam QUEUED until the result arrives';
+    }
+  },
+  onSpin: async () => {
+    const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
+    grid[0].visible[1] = SCAT;
+    grid[1].visible[1] = SCAT;
+
+    const p = reelSet.spin();
+    // BEFORE setResult, so a press queued in the window below sees the tease.
+    reelSet.setAnticipation(TEASE, { stagger: 250, protect: 'once' });
+    await new Promise((r) => setTimeout(r, 1400)); // slow "server"
+    reelSet.setResult(grid);
+    await p;
+  },
+};
+```
+
+### skip-reels-complement
+URL: https://pixi-reels.schmooky.dev/recipes/skip-reels-complement/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, PIXI, app
+//
+// NAME THE REELS THAT LAND. `slamStop({ reels })` is the complement of
+// `{ except }`: pass the reels to land instead of the reels to spare.
+//
+// Same lever, two spellings. Reach for `reels` when the landing set is the
+// short one or comes from game state (a held-reel list, a win line, the reels
+// a feature has already resolved); reach for `except` when the SPARED set is
+// the short one. Out-of-range indices are ignored, and held or already-landed
+// reels are never slammed, so neither form needs guarding.
+
+const IDS = ['9', '10', 'J', 'Q', 'K'];
+const REELS = 5, ROWS = 3, SIZE = 80, GAP = 4;
+// Outside in: a press lands the two edges, the next lands the pair inside
+// them, the last lands the middle.
+const PLAN = [[0, 4], [1, 3], [2]];
+const CARDS = CARD_DECK.filter((c) => IDS.includes(c.id));
+function rv() { return IDS[Math.floor(Math.random() * IDS.length)]; }
+
+const reelSet = new ReelSetBuilder()
+  .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
+  .symbols((r) => {
+    for (const c of CARDS) {
+      r.register(c.id, CardSymbol, { color: c.color, label: c.label, textColor: c.textColor });
+    }
+  })
+  // Long stagger and a high floor so nothing lands on its own mid-plan.
+  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 900, minimumSpinTime: 4000 })
+  .ticker(app.ticker)
+  .build();
+
+const TOTAL_H = ROWS * SIZE + (ROWS - 1) * GAP;
+const hud = new PIXI.Text({
+  text: '',
+  style: { fontFamily: 'monospace', fontSize: 13, fill: 0x9c8f78 },
+});
+hud.position.set(0, TOTAL_H + 10);
+reelSet.addChild(hud);
+
+let queue = [];
+const idle = 'spin, then keep tapping: edges -> inner pair -> middle';
+hud.text = idle;
+
+reelSet.events.on('spin:start', () => { queue = PLAN.map((g) => [...g]); hud.text = idle; });
+reelSet.events.on('skip:requested', ({ reels, partial }) => {
+  hud.text = `landed [${reels.join(', ')}]${partial ? ' - tap for the next group' : ' - round over'}`;
+});
+
+return {
+  reelSet,
+  cleanup: () => { try { hud.destroy(); } catch {} },
+  // No protection involved and no tease: this is the raw per-reel lever
+  // driving a plan that lives entirely in game code.
+  onSkip: () => {
+    const group = queue.shift();
+    if (group) reelSet.slamStop({ reels: group });
+  },
+  onSpin: async () => {
+    const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
+    const p = reelSet.spin();
+    await new Promise((r) => setTimeout(r, 250));
+    reelSet.setResult(grid);
+    await p;
+  },
+};
+```
+
+### skip-stage-button
+URL: https://pixi-reels.schmooky.dev/recipes/skip-stage-button/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, PIXI, app
+//
+// DRIVING THE BUTTON FROM `skipStage`.
+//
+//   0 - no press yet this round
+//   1 - a press landed the reels around a protected tease and left it running.
+//       The button must STAY LIVE: the next press is the one that ends it
+//   2 - the round-ending press happened. Further presses just slam
+//
+// Stage `1` is only reachable on a spin that asked for protection, so a game
+// with no protected teases sees the old two-state button and nothing changes.
+// The label below is read straight off `reelSet.skipStage` every frame, which
+// is exactly what a real HUD should do rather than counting presses itself.
+
+const IDS = ['9', '10', 'J', 'Q', 'K'];
+const SCAT = 'SCAT';
+const REELS = 5, ROWS = 3, SIZE = 80, GAP = 4;
+const TEASE = [2, 3, 4];
+const LABELS = ['SKIP', 'SKIP TEASE', 'SKIPPED'];
+const CARDS = CARD_DECK.filter((c) => IDS.includes(c.id));
+function rv() { return IDS[Math.floor(Math.random() * IDS.length)]; }
+
+const reelSet = new ReelSetBuilder()
+  .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
+  .symbols((r) => {
+    for (const c of CARDS) {
+      r.register(c.id, CardSymbol, { color: c.color, label: c.label, textColor: c.textColor });
+    }
+    r.register(SCAT, CardSymbol, { color: 0xffcc44, label: 'F', textColor: 0x3a2600 });
+  })
+  .speed('normal', { ...SpeedPresets.NORMAL, anticipationDelay: 1500 })
+  .ticker(app.ticker)
+  .build();
+
+const TOTAL_H = ROWS * SIZE + (ROWS - 1) * GAP;
+
+// A fake button face, so the stage is visible as a LABEL rather than a number.
+const face = new PIXI.Container();
+face.position.set(0, TOTAL_H + 12);
+const plate = new PIXI.Graphics().roundRect(0, 0, 150, 30, 6).fill({ color: 0x2a2622 });
+const label = new PIXI.Text({
+  text: LABELS[0],
+  style: { fontFamily: 'monospace', fontSize: 13, fontWeight: '700', fill: 0xfef08a },
+});
+label.position.set(12, 8);
+face.addChild(plate, label);
+const stageText = new PIXI.Text({
+  text: '',
+  style: { fontFamily: 'monospace', fontSize: 12, fill: 0x9c8f78 },
+});
+stageText.position.set(162, 8);
+face.addChild(stageText);
+reelSet.addChild(face);
+
+// Read the stage every frame. no press counting, no local mirror of it.
+const tick = () => {
+  const stage = reelSet.skipStage;
+  label.text = LABELS[stage];
+  plate.tint = stage === 2 ? 0x555049 : 0xffffff;
+  stageText.text = `skipStage = ${stage}`;
+};
+app.ticker.add(tick);
+
+return {
+  reelSet,
+  cleanup: () => {
+    app.ticker.remove(tick);
+    try { face.destroy({ children: true }); } catch {}
+  },
+  onSkip: () => { try { reelSet.skipSpin(); } catch { reelSet.requestSkip(); } },
+  onSpin: async () => {
+    const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
+    grid[0].visible[1] = SCAT;
+    grid[1].visible[1] = SCAT;
+
+    const p = reelSet.spin();
+    reelSet.setAnticipation(TEASE, { stagger: 250, protect: 'stepwise' });
+    await new Promise((r) => setTimeout(r, 250));
+    reelSet.setResult(grid);
+    await p;
+  },
+};
+```
+
 ### skip-stepwise-tease
 URL: https://pixi-reels.schmooky.dev/recipes/skip-stepwise-tease/
 ```ts
@@ -12977,6 +13911,87 @@ return {
 
     const p = reelSet.spin();
     reelSet.setAnticipation(TEASE, { stagger: 'sequential', protect: 'stepwise' });
+    await new Promise((r) => setTimeout(r, 250));
+    reelSet.setResult(grid);
+    await p;
+  },
+};
+```
+
+### skip-turbo-inert
+URL: https://pixi-reels.schmooky.dev/recipes/skip-turbo-inert/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, PIXI, app
+//
+// PROTECTION IS INERT WHEN THERE IS NO TEASE.
+//
+// Turbo and SuperTurbo set `anticipationDelay: 0`, so anticipation does not
+// play on those profiles at all. Protecting a tease that never happens would
+// stall the reels for nothing AND put back the response-time tell the feature
+// exists to remove - so with an effective hold of `0` ms, `protect` does
+// nothing and every press lands everything.
+//
+// Spins here alternate on the SAME turbo profile, with the same `protect`:
+//   even - no `duration` override -> hold is 0 -> one press ends the spin
+//   odd  - `duration: 900`        -> the tease plays -> protection engages
+//
+// So the rule is not "turbo disables protection", it is "no hold, no tease,
+// nothing to protect". Pass `duration` when you want the tease in turbo too.
+
+const IDS = ['9', '10', 'J', 'Q', 'K'];
+const SCAT = 'SCAT';
+const REELS = 5, ROWS = 3, SIZE = 80, GAP = 4;
+const TEASE = [3, 4];
+const CARDS = CARD_DECK.filter((c) => IDS.includes(c.id));
+function rv() { return IDS[Math.floor(Math.random() * IDS.length)]; }
+
+const reelSet = new ReelSetBuilder()
+  .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
+  .symbols((r) => {
+    for (const c of CARDS) {
+      r.register(c.id, CardSymbol, { color: c.color, label: c.label, textColor: c.textColor });
+    }
+    r.register(SCAT, CardSymbol, { color: 0xffcc44, label: 'F', textColor: 0x3a2600 });
+  })
+  // SuperTurbo timings under the default profile name. only one profile is
+  // registered here, and the builder's `initialSpeed` is `'normal'`, so
+  // registering it as `'turbo'` alone would fail validation at `build()`.
+  .speed('normal', { ...SpeedPresets.SUPER_TURBO, name: 'normal', minimumSpinTime: 1200 })
+  .ticker(app.ticker)
+  .build();
+
+const TOTAL_H = ROWS * SIZE + (ROWS - 1) * GAP;
+const hud = new PIXI.Text({
+  text: 'spin, then tap. alternate spins add a duration override',
+  style: { fontFamily: 'monospace', fontSize: 13, fill: 0xffcc44 },
+});
+hud.position.set(0, TOTAL_H + 10);
+reelSet.addChild(hud);
+
+let spinNo = 0;
+let overridden = false;
+reelSet.events.on('skip:requested', ({ reels, partial }) => {
+  hud.text = overridden
+    ? `duration: 900 -> tease plays, press landed [${reels.join(', ')}]${partial ? ' only' : ''}`
+    : `hold 0ms -> no tease to protect, press landed [${reels.join(', ')}]`;
+});
+
+return {
+  reelSet,
+  cleanup: () => { try { hud.destroy(); } catch {} },
+  onSkip: () => { try { reelSet.skipSpin(); } catch { reelSet.requestSkip(); } },
+  onSpin: async () => {
+    overridden = spinNo++ % 2 === 1;
+    const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
+    grid[0].visible[1] = SCAT;
+    grid[1].visible[1] = SCAT;
+
+    const p = reelSet.spin();
+    // Same call, same protect. only `duration` differs.
+    reelSet.setAnticipation(TEASE, overridden
+      ? { stagger: 200, protect: 'once', duration: 900 }
+      : { stagger: 200, protect: 'once' });
     await new Promise((r) => setTimeout(r, 250));
     reelSet.setResult(grid);
     await p;

@@ -43,6 +43,7 @@ import {
   WinPresenter,
   anticipationForScatters,
   prewarmSpinTextures,
+  resolveTumbleConfig,
 } from 'pixi-reels';
 import { BlurSpriteSymbol } from '../runtime/BlurSpriteSymbol.ts';
 import { CardSymbol, CARD_DECK, WILD_CARD } from 'pixi-reels';
@@ -188,6 +189,9 @@ export function buildRecipeGlobals(
     CascadeFallPhase,
     CascadePlacePhase,
     CascadeDropInPhase,
+    // Fills a partial `.tumble(...)` config out to the shape the three cascade
+    // phase constructors take. required to SUBCLASS one of them.
+    resolveTumbleConfig,
 
     // Host environment
     app: env.app,

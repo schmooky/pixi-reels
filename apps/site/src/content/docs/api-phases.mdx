@@ -75,7 +75,13 @@ builder.phases((f) => f.register('flash', FlashPhase));
 ```
 
 Replacing built-ins works the same way. register with the same name (`'start'`,
-`'spin'`, `'anticipation'`, `'stop'`) to override.
+`'spin'`, `'anticipation'`, `'stop'`) to override - and that is the only way a
+from-scratch phase ever runs. The controller asks the factory for the
+lifecycle keys and nothing else, so a phase registered under a NAME OF ITS OWN
+like `'flash'` above is orphaned: nothing constructs it. Own a phase by taking
+its key.
+
+<RecipeDemo code="phase-from-scratch-start" />
 
 ## Subclass a built-in
 
@@ -98,8 +104,7 @@ class ThudStopPhase extends StopPhase {
 builder.phases((f) => f.register('stop', ThudStopPhase));
 ```
 
-Live version, with the slam path covered too:
-[subclass a built-in phase](/recipes/skip/#phase-subclass-stop).
+<RecipeDemo code="phase-subclass-stop" />
 
 ### The contract
 
@@ -126,6 +131,12 @@ addition also needs to fire on a skipped reel, and call `super` there too.
 **`update(deltaMs)` runs every frame while active, and only then.** It is
 ticker-driven accumulation, not wall clock, so it stays correct in a
 backgrounded tab. GSAP-driven phases leave it empty.
+
+A subclass using all four at once - `onEnter` to show a per-reel countdown,
+`update` to drive it, `onSkip` to take it off when a press cuts the tease
+short:
+
+<RecipeDemo code="phase-subclass-anticipation" />
 
 `this.reel` (including `reel.reelIndex`), `this._speed` (the active
 `SpeedProfile`) and `this.isActive` are what a subclass reads. `name` and
@@ -171,6 +182,8 @@ builder
 `CascadePlacePhase` takes `(reel, speed, resolved.gravity)`, and `AdjustPhase`
 takes `(reel, speed, { durationMs, ease })`.
 
+<RecipeDemo code="phase-subclass-cascade" />
+
 Chain position does not matter. `.phases(...)` configurators are deferred to
 `build()` and applied after the tumble / MultiWays defaults, so an override
 wins from anywhere in the chain, and the last override of a given key wins.
@@ -200,8 +213,14 @@ open that up:
 | `setMinimumSpinTime(ms \| ms[])` | Per-reel `SpinPhase` floor, replacing the profile's single shared `minimumSpinTime`. Without this, no individual reel can land below the profile floor except through an all-reels slam. |
 
 `skip:requested` / `skip:completed` carry `{ reels, partial }` so a listener can
-tell a partial slam from a round-ending one. Worked examples:
-[Skip & slam](/recipes/skip/).
+tell a partial slam from a round-ending one.
+
+The per-reel `SpinPhase` floor is also reachable from a subclass, which is
+where to put it when the floor is derived rather than configured:
+
+<RecipeDemo code="phase-subclass-spin" />
+
+Every lever above has a worked demo on [Skip & slam](/recipes/skip/).
 
 There is a fairness reason to reach for `protect` rather than raising the floor
 on teasing spins: if a scatterless skip lands instantly but a teasing skip
