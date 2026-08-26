@@ -141,6 +141,809 @@ Mechanical changes to move from 0.x to 1.0.0. Every breaking change
 URL: https://pixi-reels.schmooky.dev/docs/migrating-to-2-0/
 Every breaking change in 2.0.0, with a before and after. Rows became
 
+## Generated API (TypeDoc)
+
+### AdjustPhase
+URL: https://pixi-reels.schmooky.dev/api/classes/index.AdjustPhase/
+Tween-only phase between SPIN and STOP for MultiWays slots.
+
+### AnimatedSpriteSymbol
+URL: https://pixi-reels.schmooky.dev/api/classes/index.AnimatedSpriteSymbol/
+Symbol implementation using PixiJS AnimatedSprite. Swaps frame arrays on activate. Win animation plays the full sequence.
+
+### AnticipationPhase
+URL: https://pixi-reels.schmooky.dev/api/classes/index.AnticipationPhase/
+Anticipation phase: slow-down tease before a reel stops.
+
+### BoardGrid
+URL: https://pixi-reels.schmooky.dev/api/classes/index.BoardGrid/
+A grid of cells that each spin **independently** - the generic "board of reels" primitive. Every cell is its own 1×1 [ReelSet](/api/classes/index.ReelSet/), so it inherits the engine''s phases, speed m
+
+### CardSymbol
+URL: https://pixi-reels.schmooky.dev/api/classes/index.CardSymbol/
+One visible cell on a reel. the thing that actually draws.
+
+### CascadeDropInPhase
+URL: https://pixi-reels.schmooky.dev/api/classes/index.CascadeDropInPhase/
+Drop-in half of the tumble cascade. Animates each visible symbol from its computed origin (above the viewport for new symbols, its old grid cell for survivors) down to its current grid position.
+
+### CascadeFallPhase
+URL: https://pixi-reels.schmooky.dev/api/classes/index.CascadeFallPhase/
+Fall-out half of the tumble cascade. Replaces `StartPhase` when the builder was configured with `.tumble(...)`.
+
+### CascadeMode
+URL: https://pixi-reels.schmooky.dev/api/classes/index.CascadeMode/
+Cascade/tumble spinning mode. Symbols fall from above with gravity-like acceleration, used for tumble/avalanche mechanics.
+
+### CascadePlacePhase
+URL: https://pixi-reels.schmooky.dev/api/classes/index.CascadePlacePhase/
+Identity-swap half of the tumble cascade. Runs after `CascadeFallPhase` (Moment A) or right at the start of `refill()` (Moment B).
+
+### EmptySymbol
+URL: https://pixi-reels.schmooky.dev/api/classes/index.EmptySymbol/
+A [ReelSymbol](/api/classes/index.ReelSymbol/) that renders nothing and never animates.
+
+### EventEmitter\<TEvents\>
+URL: https://pixi-reels.schmooky.dev/api/classes/index.EventEmitter/
+Typed event emitter with zero dependencies.
+
+### FrameBuilder
+URL: https://pixi-reels.schmooky.dev/api/classes/index.FrameBuilder/
+Builds symbol frames using a middleware pipeline.
+
+### HoldAndWinBoard\<TData\>
+URL: https://pixi-reels.schmooky.dev/api/classes/index.HoldAndWinBoard/
+A Hold & Win board: a grid of independently spinning cells plus the round choreography every H&W game repeats - spin the free cells, lock the hits, reset-or-decrement the respin counter, detect the fu
+
+### HoldAndWinBuilder\<TData\>
+URL: https://pixi-reels.schmooky.dev/api/classes/index.HoldAndWinBuilder/
+Fluent builder for [HoldAndWinBoard](/api/classes/index.HoldAndWinBoard/).
+
+### HoldAndWinState\<TData\>
+URL: https://pixi-reels.schmooky.dev/api/classes/index.HoldAndWinState/
+The pure Hold & Win state machine - the single source of truth for board state, with **zero** PixiJS. It owns the locked-coin ledger, the respin counter, the round number and the feature [HwPhase](/ap
+
+### ImmediateMode
+URL: https://pixi-reels.schmooky.dev/api/classes/index.ImmediateMode/
+Immediate placement mode for super-turbo skip. Symbols snap to position instantly. no actual spinning animation.
+
+### ObjectPool\<T\>
+URL: https://pixi-reels.schmooky.dev/api/classes/index.ObjectPool/
+Generic object pool for reusing expensive-to-create objects.
+
+### PhaseFactory
+URL: https://pixi-reels.schmooky.dev/api/classes/index.PhaseFactory/
+Factory for creating reel phase instances.
+
+### RectMaskStrategy
+URL: https://pixi-reels.schmooky.dev/api/classes/index.RectMaskStrategy/
+v1 default: a per-reel rectangular mask. Each reel is clipped to its own `(mainOffset, extent)` box so pyramid shapes clip cleanly without buffer-cell peek above or below short reels.
+
+### Reel
+URL: https://pixi-reels.schmooky.dev/api/classes/index.Reel/
+One vertical column of a slot board.
+
+### ReelCurve
+URL: https://pixi-reels.schmooky.dev/api/classes/index.ReelCurve/
+The curvature of one reel: a camera looking at a drum.
+
+### Abstract Class: ReelPhase\<TConfig\>
+URL: https://pixi-reels.schmooky.dev/api/classes/index.ReelPhase/
+Abstract base for reel spin phases.
+
+### ReelSet
+URL: https://pixi-reels.schmooky.dev/api/classes/index.ReelSet/
+The whole slot board as one object.
+
+### ReelSetBuilder
+URL: https://pixi-reels.schmooky.dev/api/classes/index.ReelSetBuilder/
+The configurator you call before every reel set.
+
+### Abstract Class: ReelSymbol
+URL: https://pixi-reels.schmooky.dev/api/classes/index.ReelSymbol/
+One visible cell on a reel. the thing that actually draws.
+
+### ReelViewport
+URL: https://pixi-reels.schmooky.dev/api/classes/index.ReelViewport/
+The clipping window + layering tricks for a reel set.
+
+### ReelWarp
+URL: https://pixi-reels.schmooky.dev/api/classes/index.ReelWarp/
+Bend a whole reel, whatever is inside it.
+
+### SharedRectMaskStrategy
+URL: https://pixi-reels.schmooky.dev/api/classes/index.SharedRectMaskStrategy/
+Single bounding-box mask covering every reel. Use this when symbols need to overlap across reel boundaries. typical for slots with big symbols that span multiple reels (a 2x2 bonus, a 3x3 giant) AND a
+
+### SpeedManager
+URL: https://pixi-reels.schmooky.dev/api/classes/index.SpeedManager/
+The tempo of your reels, as named presets.
+
+### SpineSymbol
+URL: https://pixi-reels.schmooky.dev/api/classes/index.SpineSymbol/
+Symbol implementation using Spine 2D skeletal animation.
+
+### SpinPhase
+URL: https://pixi-reels.schmooky.dev/api/classes/index.SpinPhase/
+Continuous spinning at constant speed.
+
+### SpinTextureCache
+URL: https://pixi-reels.schmooky.dev/api/classes/index.SpinTextureCache/
+Per-symbolId cache of "spin textures". flat snapshots a reel shows instead of the live symbol (Spine skeleton, animated sprite, ...) while it spins.
+
+### SpriteSymbol
+URL: https://pixi-reels.schmooky.dev/api/classes/index.SpriteSymbol/
+Symbol implementation using a simple PixiJS Sprite. Swaps texture on activate. Win animation is a scale pulse via GSAP.
+
+### StandardMode
+URL: https://pixi-reels.schmooky.dev/api/classes/index.StandardMode/
+Standard top-to-bottom reel spinning. Symbols scroll downward at constant speed, wrapping around.
+
+### StartPhase
+URL: https://pixi-reels.schmooky.dev/api/classes/index.StartPhase/
+Accelerates the reel from rest to full spin speed.
+
+### StaticSpinSymbol
+URL: https://pixi-reels.schmooky.dev/api/classes/index.StaticSpinSymbol/
+Wraps any `ReelSymbol` and swaps it for a cached snapshot texture while the reel spins. "spin static, not Spine."
+
+### StopPhase
+URL: https://pixi-reels.schmooky.dev/api/classes/index.StopPhase/
+Stops the reel on the target frame.
+
+### SymbolRegistry
+URL: https://pixi-reels.schmooky.dev/api/classes/index.SymbolRegistry/
+Registry that maps symbolIds to their constructors and options.
+
+### SymbolSpotlight
+URL: https://pixi-reels.schmooky.dev/api/classes/index.SymbolSpotlight/
+The "we just won" visual primitive.
+
+### TickerRef
+URL: https://pixi-reels.schmooky.dev/api/classes/index.TickerRef/
+Safe wrapper around PixiJS Ticker subscriptions.
+
+### WinPresenter
+URL: https://pixi-reels.schmooky.dev/api/classes/index.WinPresenter/
+Highlights winning cells on a reel set. One job: animate the symbols.
+
+### SpineReelSymbol
+URL: https://pixi-reels.schmooky.dev/api/classes/spine.SpineReelSymbol/
+ReelSymbol implementation using Spine 2D skeletons.
+
+### FakeTicker
+URL: https://pixi-reels.schmooky.dev/api/classes/testing.FakeTicker/
+Minimal drop-in replacement for `PIXI.Ticker` for tests.
+
+### HeadlessSymbol
+URL: https://pixi-reels.schmooky.dev/api/classes/testing.HeadlessSymbol/
+A `ReelSymbol` implementation that does no rendering at all.
+
+### anticipationForScatters()
+URL: https://pixi-reels.schmooky.dev/api/functions/index.anticipationForScatters/
+```ts function anticipationForScatters(grid: ColumnTarget[], opts: ScatterAnticipationOptions): number[]; ```
+
+### canProjectTexture()
+URL: https://pixi-reels.schmooky.dev/api/functions/index.canProjectTexture/
+```ts function canProjectTexture(texture: Texture): boolean; ```
+
+### cellKey()
+URL: https://pixi-reels.schmooky.dev/api/functions/index.cellKey/
+```ts function cellKey(c: HwCell): string; ```
+
+### clearFrames()
+URL: https://pixi-reels.schmooky.dev/api/functions/index.clearFrames/
+```ts function clearFrames(): void; ```
+
+### cloneColumnTarget()
+URL: https://pixi-reels.schmooky.dev/api/functions/index.cloneColumnTarget/
+```ts function cloneColumnTarget(target: ColumnTarget): ColumnTarget; ```
+
+### columnTargetToStrip()
+URL: https://pixi-reels.schmooky.dev/api/functions/index.columnTargetToStrip/
+```ts function columnTargetToStrip(target: ColumnTarget, bufferStart: number): (string | undefined)[]; ```
+
+### computeDropOffsets()
+URL: https://pixi-reels.schmooky.dev/api/functions/index.computeDropOffsets/
+```ts function computeDropOffsets( visibleCells: number, winnerCells: readonly number[], options?: { gravity?: Direction; initial?: boolean; }): DropOffset[]; ```
+
+### debugGrid()
+URL: https://pixi-reels.schmooky.dev/api/functions/index.debugGrid/
+```ts function debugGrid(reelSet: ReelSet): string; ```
+
+### debugOverlay()
+URL: https://pixi-reels.schmooky.dev/api/functions/index.debugOverlay/
+```ts function debugOverlay(reelSet: ReelSet, options?: DebugOverlayOptions): DebugOverlayHandle; ```
+
+### debugSnapshot()
+URL: https://pixi-reels.schmooky.dev/api/functions/index.debugSnapshot/
+```ts function debugSnapshot(reelSet: ReelSet): DebugSnapshot; ```
+
+### driveGsapWithTicker()
+URL: https://pixi-reels.schmooky.dev/api/functions/index.driveGsapWithTicker/
+```ts function driveGsapWithTicker(ticker: Ticker, instance?: typeof gsap): () => void; ```
+
+### enableDebug()
+URL: https://pixi-reels.schmooky.dev/api/functions/index.enableDebug/
+```ts function enableDebug(reelSet: ReelSet, key?: string): void; ```
+
+### getFrames()
+URL: https://pixi-reels.schmooky.dev/api/functions/index.getFrames/
+```ts function getFrames(tag?: string): readonly RecordedFrame[]; ```
+
+### getLogLevel()
+URL: https://pixi-reels.schmooky.dev/api/functions/index.getLogLevel/
+```ts function getLogLevel(): LogLevel; ```
+
+### getTargetSlot()
+URL: https://pixi-reels.schmooky.dev/api/functions/index.getTargetSlot/
+```ts function getTargetSlot(target: ColumnTarget, cell: number): string | undefined; ```
+
+### pinKey()
+URL: https://pixi-reels.schmooky.dev/api/functions/index.pinKey/
+```ts function pinKey(reel: number, cell: number): string; ```
+
+### prewarmSpinTextures()
+URL: https://pixi-reels.schmooky.dev/api/functions/index.prewarmSpinTextures/
+```ts function prewarmSpinTextures(options: PrewarmSpinTexturesOptions): void; ```
+
+### reelAxis()
+URL: https://pixi-reels.schmooky.dev/api/functions/index.reelAxis/
+```ts function reelAxis(orientation: Orientation, direction: Direction): ReelAxis; ```
+
+### resolveCurveConfig()
+URL: https://pixi-reels.schmooky.dev/api/functions/index.resolveCurveConfig/
+```ts function resolveCurveConfig(input: ReelCurveInput): Required<ReelCurveConfig>; ```
+
+### resolveTumbleConfig()
+URL: https://pixi-reels.schmooky.dev/api/functions/index.resolveTumbleConfig/
+```ts function resolveTumbleConfig(config: TumbleConfig | undefined): ResolvedTumbleConfig; ```
+
+### setLogLevel()
+URL: https://pixi-reels.schmooky.dev/api/functions/index.setLogLevel/
+```ts function setLogLevel(level: LogLevel): void; ```
+
+### setTargetSlot()
+URL: https://pixi-reels.schmooky.dev/api/functions/index.setTargetSlot/
+```ts function setTargetSlot( target: ColumnTarget, cell: number, id: string): void; ```
+
+### sortByValueDesc()
+URL: https://pixi-reels.schmooky.dev/api/functions/index.sortByValueDesc/
+```ts function sortByValueDesc<T>(wins: readonly T[]): T[]; ```
+
+### startRecording()
+URL: https://pixi-reels.schmooky.dev/api/functions/index.startRecording/
+```ts function startRecording( reelSet: ReelSet, tag?: string, options?: StartRecordingOptions): void; ```
+
+### stopRecording()
+URL: https://pixi-reels.schmooky.dev/api/functions/index.stopRecording/
+```ts function stopRecording(reelSet: ReelSet): void; ```
+
+### textureCellInset()
+URL: https://pixi-reels.schmooky.dev/api/functions/index.textureCellInset/
+```ts function textureCellInset(texture: Texture): ReelCellInset | null; ```
+
+### whenSpineReady()
+URL: https://pixi-reels.schmooky.dev/api/functions/index.whenSpineReady/
+```ts function whenSpineReady(): Promise<void>; ```
+
+### captureEvents()
+URL: https://pixi-reels.schmooky.dev/api/functions/testing.captureEvents/
+```ts function captureEvents(reelSet: ReelSet, names: keyof ReelSetEvents[]): { args: unknown[]; event: string; }[]; ```
+
+### countSymbol()
+URL: https://pixi-reels.schmooky.dev/api/functions/testing.countSymbol/
+```ts function countSymbol(reelSet: ReelSet, symbolId: string): number; ```
+
+### createTestReelSet()
+URL: https://pixi-reels.schmooky.dev/api/functions/testing.createTestReelSet/
+```ts function createTestReelSet(opts?: TestReelSetOptions): TestReelSetHandle; ```
+
+### expectGrid()
+URL: https://pixi-reels.schmooky.dev/api/functions/testing.expectGrid/
+```ts function expectGrid(reelSet: ReelSet, expected: string[][]): void; ```
+
+### spinAndLand()
+URL: https://pixi-reels.schmooky.dev/api/functions/testing.spinAndLand/
+```ts function spinAndLand(reelSet: ReelSet, grid: ColumnTarget[]): Promise<SpinResult>; ```
+
+### AdjustPhaseConfig
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.AdjustPhaseConfig/
+
+### AnimatedSpriteSymbolOptions
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.AnimatedSpriteSymbolOptions/
+
+### AnticipationOptions
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.AnticipationOptions/
+Full anticipation configuration. The object form of `setAnticipation`''s second argument.
+
+### AnticipationPhaseConfig
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.AnticipationPhaseConfig/
+
+### AnticipationSlowdown
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.AnticipationSlowdown/
+Progressive slow-down across the tease sequence. Values interpolate linearly across tease-order (first anticipation reel → last), so each successive reel decelerates deeper and/or holds longer than th
+
+### BoardCell
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.BoardCell/
+A cell coordinate in the grid.
+
+### BoardGridOptions
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.BoardGridOptions/
+
+### BoardSpinTarget
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.BoardSpinTarget/
+A landing target: spin `cell` and stop it showing `id`.
+
+### CardSymbolOptions
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.CardSymbolOptions/
+
+### CascadeDropInPhaseConfig
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.CascadeDropInPhaseConfig/
+
+### CascadeFallPhaseConfig
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.CascadeFallPhaseConfig/
+
+### CascadePlacePhaseConfig
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.CascadePlacePhaseConfig/
+
+### Cell
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.Cell/
+A cell coordinate on the reel set. `reel` is column, `cell` is visible cell.
+
+### CellBounds
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.CellBounds/
+Axis-aligned bounding box of a single grid cell in ReelSet-local coordinates. Returned by `reelSet.getCellBounds(reel, cell)`.
+
+### CellCoord
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.CellCoord/
+A grid coordinate.
+
+### CellPin
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.CellPin/
+
+### CellPinOptions
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.CellPinOptions/
+Options accepted by `reelSet.pin()`.
+
+### ColumnTarget
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.ColumnTarget/
+Per-reel target shape for `ReelSet.setResult` and `ReelSetBuilder.initialFrame`. One object per reel.
+
+### CycleOptions
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.CycleOptions/
+
+### DebugOverlayHandle
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.DebugOverlayHandle/
+Handle returned by [debugOverlay](/api/functions/index.debugOverlay/). Owns its display objects.
+
+### DebugOverlayOptions
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.DebugOverlayOptions/
+
+### DebugOverlayReelInfo
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.DebugOverlayReelInfo/
+What the axis-family layers drew for one reel, as plain numbers.
+
+### DebugOverlaySnapshot
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.DebugOverlaySnapshot/
+Serializable summary of the overlay. the text half of a visual debugger.
+
+### DebugReelSnapshot
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.DebugReelSnapshot/
+
+### DebugSnapshot
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.DebugSnapshot/
+Debug snapshot. plain JSON representation of the entire reel state.
+
+### DestroySymbolsOptions
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.DestroySymbolsOptions/
+Options for [ReelSet.destroySymbols](/api/classes/index.ReelSet/#destroysymbols). Every field is optional; the defaults produce the canonical "winners poof" look (no stagger, no viewport dim, zIndex b
+
+### Disposable
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.Disposable/
+Contract for objects that allocate resources and need cleanup. Every class that subscribes to tickers, creates display objects, or holds references must implement this to prevent memory leaks.
+
+### DropOffset
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.DropOffset/
+
+### FrameAPI
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.FrameAPI/
+The runtime-mutable frame-builder pipeline exposed on `reelSet.frame`. Matches `FrameBuilder.use/remove`. the internal machinery that already exists; this is the ergonomic surface.
+
+### FrameContext
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.FrameContext/
+Context passed through the middleware pipeline.
+
+### FrameMiddleware
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.FrameMiddleware/
+Middleware that participates in frame building.
+
+### HoldAndWinBoardConfig\<TData\>
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.HoldAndWinBoardConfig/
+Internal config produced by [HoldAndWinBuilder.build](/api/classes/index.HoldAndWinBuilder/#build).
+
+### HwCell
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.HwCell/
+Grid coordinate of a board cell.
+
+### HwCellSizeOptions
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.HwCellSizeOptions/
+
+### HwCoin\<TData\>
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.HwCoin/
+A coin somewhere on the board. `id` selects the registered symbol art; `data` is an opaque game-layer payload the board never interprets.
+
+### HwRespinResult\<TData\>
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.HwRespinResult/
+Resolution of one [HoldAndWinBoard.respin](/api/classes/index.HoldAndWinBoard/#respin) wave.
+
+### MaskConfig
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.MaskConfig/
+Mask configuration for the reel viewport.
+
+### MaskContext
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.MaskContext/
+Everything a mask strategy is given. Passed as one object so the axis cannot be forgotten, and so later additions do not break the signature.
+
+### MaskStrategy
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.MaskStrategy/
+Strategy for building the viewport''s clip mask. Public. pass a custom implementation to `ReelSetBuilder.maskStrategy(...)` to clip the reels with any shape PixiJS Graphics can express (rounded frames,
+
+### MotionBlurOptions
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.MotionBlurOptions/
+Tuning for the baked motion-blur variant of a snapshot.
+
+### MovePinOptions
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.MovePinOptions/
+Options for `reelSet.movePin()`. flight animation tuning + lifecycle hooks.
+
+### MultiWaysConfig
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.MultiWaysConfig/
+MultiWays configuration knobs. Set via `builder.multiways({ ... })`. mutually exclusive with big-symbol registration.
+
+### NoOffsetConfig
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.NoOffsetConfig/
+No offset configuration.
+
+### NudgeOptions
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.NudgeOptions/
+Options for `Reel.nudge()` / `ReelSet.nudge()`. a post-stop reposition that shifts the reel by `distance` symbol positions and reveals new caller-supplied symbols.
+
+### PinOverlayTween
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.PinOverlayTween/
+Descriptor for one pin overlay''s animation across a MultiWays reshape.
+
+### Position
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.Position/
+2D position.
+
+### PrewarmSpinTexturesOptions
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.PrewarmSpinTexturesOptions/
+
+### RandomSymbolControl
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.RandomSymbolControl/
+Runtime control over the random symbol draw, reachable as `reelSet.randomSymbols`.
+
+### RecordedFrame
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.RecordedFrame/
+One captured frame from `startRecording()`. a `DebugSnapshot` plus the tag the recording was started with and the spin event that triggered the capture.
+
+### ReelAxis
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.ReelAxis/
+Immutable projection between screen space and a reel''s travel/cross axes.
+
+### ReelCellInset
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.ReelCellInset/
+The part of its cell a symbol''s art actually covers, as fractions of the flat cell box in SCREEN space (`0,0` top-left to `1,1` bottom-right).
+
+### ReelCellQuad
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.ReelCellQuad/
+One cell''s projected footprint on a curved reel: the four corners of the quad the symbol should render into, replacing its flat rectangle.
+
+### ReelConfig
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.ReelConfig/
+
+### ReelCurveConfig
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.ReelCurveConfig/
+Fake the curvature of a spinning reel cylinder.
+
+### ReelEvents
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.ReelEvents/
+Events emitted by an individual Reel.
+
+### ReelExtraSymbols
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.ReelExtraSymbols/
+Extra symbols above/below config per reel.
+
+### ReelGridConfig
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.ReelGridConfig/
+Configuration for the reel grid layout.
+
+### ReelMaskRect
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.ReelMaskRect/
+Bounding rectangle for one reel. what `MaskStrategy` builds the clip geometry from. SCREEN-space and viewport-local (origin = viewport top-left), in reel order.
+
+### ReelSetEvents
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.ReelSetEvents/
+Events emitted by a ReelSet.
+
+### RefillOptions
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.RefillOptions/
+Options for [ReelSet.refill](/api/classes/index.ReelSet/#refill). The two required fields encode what just happened (`winners`) and what the next visible state should be (`grid`). Everything else is t
+
+### RefillResult
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.RefillResult/
+Summary returned by [ReelSet.refill](/api/classes/index.ReelSet/#refill). Symmetric with [RunCascadeResult](/api/types/index.RunCascadeResult/). same vocabulary, narrower scope (one stage vs. the full
+
+### ResolvedTumbleConfig
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.ResolvedTumbleConfig/
+Resolved config with defaults applied. Internal type.
+
+### RunCascadeOptions
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.RunCascadeOptions/
+Options for [ReelSet.runCascade](/api/classes/index.ReelSet/#runcascade). The two required callbacks (`detectWinners`, `nextGrid`) encode game rules; everything else is timing / cancellation / forward
+
+### ScatterAnticipationOptions
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.ScatterAnticipationOptions/
+
+### SlamOptions
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.SlamOptions/
+Which reels a `slamStop()` call lands. Omit the argument entirely to land every un-landed reel (the default hard slam).
+
+### SnapshotRenderer
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.SnapshotRenderer/
+The slice of a PixiJS renderer the cache needs. `Renderer` (WebGL or WebGPU) satisfies it structurally; tests can pass a stub.
+
+### SpeedProfile
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.SpeedProfile/
+Timing and animation profile for a speed mode.
+
+### SpineSymbolOptions
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.SpineSymbolOptions/
+
+### SpinningMode
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.SpinningMode/
+Strategy interface for different reel spinning behaviors.
+
+### SpinOptions
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.SpinOptions/
+Options accepted by `reelSet.spin(options?)`. All fields are optional. passing nothing reproduces the legacy "every reel spins" behaviour.
+
+### SpinPhaseConfig
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.SpinPhaseConfig/
+
+### SpinResult
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.SpinResult/
+Result returned when a spin completes.
+
+### SpinTextureCacheOptions
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.SpinTextureCacheOptions/
+
+### SpotlightOptions
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.SpotlightOptions/
+
+### SpriteSymbolOptions
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.SpriteSymbolOptions/
+
+### StartPhaseConfig
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.StartPhaseConfig/
+
+### StartRecordingOptions
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.StartRecordingOptions/
+Options for [startRecording](/api/functions/index.startRecording/).
+
+### StaticSpinSymbolOptions
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.StaticSpinSymbolOptions/
+
+### StopPhaseConfig
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.StopPhaseConfig/
+
+### SymbolData
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.SymbolData/
+Per-symbol configuration data.
+
+### SymbolPool
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.SymbolPool/
+What the engine is allowed to draw when it needs a random symbol.
+
+### SymbolPoolScope
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.SymbolPoolScope/
+Which draws a pool applies to.
+
+### SymbolPosition
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.SymbolPosition/
+A cell on the visible grid. `reelIndex` is the column; `cellIndex` is the cell from the top.
+
+### TrapezoidConfig
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.TrapezoidConfig/
+Trapezoid perspective configuration.
+
+### TumbleConfig
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.TumbleConfig/
+
+### TumbleDropInConfig
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.TumbleDropInConfig/
+
+### TumbleFallConfig
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.TumbleFallConfig/
+
+### Win
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.Win/
+One "win" as the presenter sees it: an ordered set of cells to highlight.
+
+### WinLine
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.WinLine/
+
+### WinPresenterOptions
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.WinPresenterOptions/
+
+### SpineReelSymbolOptions
+URL: https://pixi-reels.schmooky.dev/api/interfaces/spine.SpineReelSymbolOptions/
+
+### SpineSymbolSource
+URL: https://pixi-reels.schmooky.dev/api/interfaces/spine.SpineSymbolSource/
+One spine source: a skeleton/atlas alias pair plus an optional skin.
+
+### TestReelSetHandle
+URL: https://pixi-reels.schmooky.dev/api/interfaces/testing.TestReelSetHandle/
+
+### TestReelSetOptions
+URL: https://pixi-reels.schmooky.dev/api/interfaces/testing.TestReelSetOptions/
+
+### spine
+URL: https://pixi-reels.schmooky.dev/api/modules/spine/
+
+### testing
+URL: https://pixi-reels.schmooky.dev/api/modules/testing/
+
+### AnticipationProtect
+URL: https://pixi-reels.schmooky.dev/api/types/index.AnticipationProtect/
+```ts type AnticipationProtect = boolean | "once" | "stepwise" | "always"; ```
+
+### AnticipationStagger
+URL: https://pixi-reels.schmooky.dev/api/types/index.AnticipationStagger/
+```ts type AnticipationStagger = number | number[] | "sequential"; ```
+
+### BoardProfile
+URL: https://pixi-reels.schmooky.dev/api/types/index.BoardProfile/
+```ts type BoardProfile =
+
+### CrossOffsetMode
+URL: https://pixi-reels.schmooky.dev/api/types/index.CrossOffsetMode/
+```ts type CrossOffsetMode = "none" | "trapezoid"; ```
+
+### CurveFocus
+URL: https://pixi-reels.schmooky.dev/api/types/index.CurveFocus/
+```ts type CurveFocus = "reel" | "set-lean" | "set"; ```
+
+### CurveMode
+URL: https://pixi-reels.schmooky.dev/api/types/index.CurveMode/
+```ts type CurveMode = "symbol" | "warp"; ```
+
+### DebugOverlayLayer
+URL: https://pixi-reels.schmooky.dev/api/types/index.DebugOverlayLayer/
+```ts type DebugOverlayLayer =
+
+### Direction
+URL: https://pixi-reels.schmooky.dev/api/types/index.Direction/
+```ts type Direction = "forward" | "reverse"; ```
+
+### Gsap
+URL: https://pixi-reels.schmooky.dev/api/types/index.Gsap/
+```ts type Gsap = typeof resolvedGsap; ```
+
+### HoldAndWinBoardEvents\<TData\>
+URL: https://pixi-reels.schmooky.dev/api/types/index.HoldAndWinBoardEvents/
+```ts type HoldAndWinBoardEvents<TData> = { board:full: [{ coins: HwCoin<TData>[]; }]; cell:landed: [{ cell: HwCell; coin: HwCoin<TData> | null; }]; coin:locked: [{ capacity: number; coin: HwCoin<TDat
+
+### HwEffect\<TData\>
+URL: https://pixi-reels.schmooky.dev/api/types/index.HwEffect/
+```ts type HwEffect<TData> = { [K in keyof HoldAndWinBoardEvents<TData>]: { payload: HoldAndWinBoardEvents<TData>[K][0]; type: K } }[keyof HoldAndWinBoardEvents<TData>]; ```
+
+### HwPhase
+URL: https://pixi-reels.schmooky.dev/api/types/index.HwPhase/
+```ts type HwPhase = "idle" | "active" | "spinning"; ```
+
+### HwRespinReason
+URL: https://pixi-reels.schmooky.dev/api/types/index.HwRespinReason/
+```ts type HwRespinReason = "seed" | "hit-reset" | "miss"; ```
+
+### LogLevel
+URL: https://pixi-reels.schmooky.dev/api/types/index.LogLevel/
+```ts type LogLevel = "silent" | "error" | "warn" | "info"; ```
+
+### Matrix\<T\>
+URL: https://pixi-reels.schmooky.dev/api/types/index.Matrix/
+```ts type Matrix<T> = T[][]; ```
+
+### OffsetConfig
+URL: https://pixi-reels.schmooky.dev/api/types/index.OffsetConfig/
+```ts type OffsetConfig =
+
+### Orientation
+URL: https://pixi-reels.schmooky.dev/api/types/index.Orientation/
+```ts type Orientation = "vertical" | "horizontal"; ```
+
+### PhaseConstructor\<T\>
+URL: https://pixi-reels.schmooky.dev/api/types/index.PhaseConstructor/
+```ts type PhaseConstructor<T> = (reel: Reel, speed: SpeedProfile) => T; ```
+
+### PhaseCreatorFn\<T\>
+URL: https://pixi-reels.schmooky.dev/api/types/index.PhaseCreatorFn/
+```ts type PhaseCreatorFn<T> = (reel: Reel, speed: SpeedProfile) => T; ```
+
+### PinExpireReason
+URL: https://pixi-reels.schmooky.dev/api/types/index.PinExpireReason/
+```ts type PinExpireReason = "turns" | "explicit" | "eval" | "collision"; ```
+
+### PinMigration
+URL: https://pixi-reels.schmooky.dev/api/types/index.PinMigration/
+```ts type PinMigration = "origin" | "frozen"; ```
+
+### ReelAnchor
+URL: https://pixi-reels.schmooky.dev/api/types/index.ReelAnchor/
+```ts type ReelAnchor = "start" | "center" | "end"; ```
+
+### ReelCurveInput
+URL: https://pixi-reels.schmooky.dev/api/types/index.ReelCurveInput/
+```ts type ReelCurveInput = number | ReelCurveConfig; ```
+
+### RunCascadeResult
+URL: https://pixi-reels.schmooky.dev/api/types/index.RunCascadeResult/
+```ts type RunCascadeResult = RunCascadeResultBase; ```
+
+### Stacking
+URL: https://pixi-reels.schmooky.dev/api/types/index.Stacking/
+```ts type Stacking = "ascending" | "descending"; ```
+
+### SymbolPoolSlots
+URL: https://pixi-reels.schmooky.dev/api/types/index.SymbolPoolSlots/
+```ts type SymbolPoolSlots = "spinning" | "buffer" | "bufferStart" | "bufferEnd"; ```
+
+### TickerCallback
+URL: https://pixi-reels.schmooky.dev/api/types/index.TickerCallback/
+```ts type TickerCallback = (ticker: Ticker) => void; ```
+
+### WinSymbolAnim
+URL: https://pixi-reels.schmooky.dev/api/types/index.WinSymbolAnim/
+```ts type WinSymbolAnim =
+
+### SymbolAnimOverrides
+URL: https://pixi-reels.schmooky.dev/api/types/spine.SymbolAnimOverrides/
+```ts type SymbolAnimOverrides = Record<string, Partial<Record<"idle" | "landing" | "win" | "out" | "blur", string>>>; ```
+
+### CARD\_DECK
+URL: https://pixi-reels.schmooky.dev/api/variables/index.CARD_DECK/
+```ts const CARD_DECK: ReadonlyArray<{ color: number; id: string; label: string; }>; ```
+
+### CURVE\_FOCUS\_WEIGHT
+URL: https://pixi-reels.schmooky.dev/api/variables/index.CURVE_FOCUS_WEIGHT/
+```ts const CURVE_FOCUS_WEIGHT: Record<CurveFocus, number>; ```
+
+### DEFAULTS
+URL: https://pixi-reels.schmooky.dev/api/variables/index.DEFAULTS/
+```ts const DEFAULTS: { bufferSymbols: number; initialSpeed: string; maxPoolPerKey: number; symbolGap: { x: number; y: number; }; zIndexStep: number; }; ```
+
+### MASK\_STRATEGY\_VERSION
+URL: https://pixi-reels.schmooky.dev/api/variables/index.MASK_STRATEGY_VERSION/
+```ts const MASK_STRATEGY_VERSION: 2 = 2; ```
+
+### OVERLAY\_LABEL
+URL: https://pixi-reels.schmooky.dev/api/variables/index.OVERLAY_LABEL/
+```ts const OVERLAY_LABEL: "pixi-reels:debugOverlay" = ''pixi-reels:debugOverlay''; ```
+
+### SpeedPresets
+URL: https://pixi-reels.schmooky.dev/api/variables/index.SpeedPresets/
+```ts const SpeedPresets: { NORMAL: { accelerationDuration: 300; accelerationEase: "power2.in"; anticipationDelay: 450; bounceDistance: 56; bounceDuration: 600; decelerationEase: "power2.out"; minimum
+
+### VERTICAL\_FORWARD
+URL: https://pixi-reels.schmooky.dev/api/variables/index.VERTICAL_FORWARD/
+```ts const VERTICAL_FORWARD: ReelAxis; ```
+
+### WILD\_CARD
+URL: https://pixi-reels.schmooky.dev/api/variables/index.WILD_CARD/
+```ts const WILD_CARD: { color: 16774048; id: "wild"; label: "WILD"; textColor: 7033856; }; ```
+
 ## Architecture deep-dives
 
 ### architecture/cascade

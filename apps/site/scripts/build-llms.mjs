@@ -2,7 +2,7 @@
 /**
  * Generate `public/llms.txt` from the Astro page tree.
  *
- * Walks the route tree (`src/pages/architecture`) plus the Keystatic content
+ * Walks the route tree (`src/pages/{architecture,api}`) plus the Keystatic content
  * collections (`src/content/{recipes,guides,docs}`) and extracts each page's
  * frontmatter (title, description, tags). The FAQ is a separate collection of
  * one-question YAML files rather than MDX pages, so it is read on its own -
@@ -46,6 +46,11 @@ const SITE_URL = 'https://pixi-reels.schmooky.dev';
 const SECTIONS = [
   { id: 'guides', label: 'Guides', match: (p) => p.startsWith('guides/') },
   { id: 'docs', label: 'API reference', match: (p) => p.startsWith('docs/') },
+  // TypeDoc output: one page per exported symbol. Listed by name, signature
+  // and URL rather than inlined, because the bodies are 831KB - larger than
+  // the rest of this file put together - and an LLM can fetch the one symbol
+  // it needs. The point here is that it knows the symbol EXISTS.
+  { id: 'api', label: 'Generated API (TypeDoc)', match: (p) => p.startsWith('api/') },
   { id: 'architecture', label: 'Architecture deep-dives', match: (p) => p.startsWith('architecture/') },
   { id: 'recipes', label: 'Recipes', match: (p) => p.startsWith('recipes/') },
 ];
@@ -55,6 +60,20 @@ const SKIP_BASENAMES = new Set(['llms.txt', 'index']);
 async function main() {
   // Walk both roots; slugs are computed relative to each base, so
   // src/content/recipes/x.mdx → "recipes/x" exactly as the old page did.
+  // `src/pages/api` is gitignored TypeDoc output, so on a clean checkout it
+  // only exists after `pnpm api:gen`. Running before that used to write a
+  // silently gutted file - 44 pages instead of 253, the whole generated API
+  // reference missing, with a success message either way. Fail instead.
+  try {
+    await stat(resolve(PAGES, 'api'));
+  } catch {
+    throw new Error(
+      'build-llms: src/pages/api is missing, so the generated API reference would ' +
+      'be silently left out of llms.txt. Run `pnpm api:gen` first (predev / ' +
+      'prebuild / prepreview already do, in that order).',
+    );
+  }
+
   const pages = [...(await collectPages(PAGES)), ...(await collectPages(CONTENT))];
   const recipes = await collectRecipes();
   const faq = await collectFaq();
@@ -81,7 +100,7 @@ async function collectPages(baseDir) {
   const entries = await walk(baseDir);
   const out = [];
   for (const file of entries) {
-    if (!/\.(mdx|astro)$/.test(file)) continue;
+    if (!/\.(mdx|md|astro)$/.test(file)) continue;
     const rel = relative(baseDir, file);
     const base = baseNoExt(rel.split('/').pop());
     if (SKIP_BASENAMES.has(base)) continue;
@@ -204,7 +223,7 @@ async function walk(dir) {
 function baseNoExt(p) { return (p ?? '').replace(/\.[^.]+$/, ''); }
 
 function relToSlug(rel) {
-  const noExt = rel.replace(/\.(mdx|astro)$/, '');
+  const noExt = rel.replace(/\.(mdx|md|astro)$/, '');
   return noExt.replace(/\/index$/, '');
 }
 
