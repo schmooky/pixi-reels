@@ -63,8 +63,18 @@ export interface ReelSetEvents extends Record<string, unknown[]> {
   'spin:reelLanded': [reelIndex: number, symbols: string[]];
   'spin:allLanded': [result: SpinResult];
   'spin:complete': [result: SpinResult];
-  'skip:requested': [];
-  'skip:completed': [];
+  /**
+   * A slam is about to place reels. `reels` lists the indices this slam
+   * lands (already-landed and held reels are excluded), and `partial` is
+   * `true` when reels are still spinning after it. a tease-protected skip
+   * press, or a `slamStop({ reels })` / `slamStop({ except })` call.
+   *
+   * Listeners written before partial slams existed take no arguments and
+   * keep working unchanged.
+   */
+  'skip:requested': [info: { reels: number[]; partial: boolean }];
+  /** The same slam, after every target reel has been placed and landed. */
+  'skip:completed': [info: { reels: number[]; partial: boolean }];
   /**
    * Round-aware `skip()` first-press boost: in standard (non-cascade)
    * mode, the engine switched the active speed profile to the fastest

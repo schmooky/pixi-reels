@@ -38,6 +38,8 @@ export type {
   AnticipationStagger,
   AnticipationSlowdown,
   AnticipationOptions,
+  AnticipationProtect,
+  SlamOptions,
 } from './config/types.js';
 export type { ReelMaskRect, MaskStrategy, MaskContext } from './core/ReelViewport.js';
 export {
@@ -79,13 +81,32 @@ export type { StaticSpinSymbolOptions } from './snapshot/StaticSpinSymbol.js';
 // `ReelSet`. Consumers never construct one. Same shape as `ReelMotion` /
 // `StopSequencer`, which were hidden in 1.0.0.
 //
-// The built-in phase CLASSES (StartPhase, SpinPhase, StopPhase, etc.) are
-// also internal. Consumers register custom phases via
-// `builder.phases(f => f.register('name', class extends ReelPhase { ... }))`,
-// they do not subclass the built-ins. Phase Config TYPES stay exported as
-// stable shape descriptions for documentation.
+// The built-in phase CLASSES are exported so a custom phase can SUBCLASS one
+// rather than reimplement it. Overriding a single hook of `StopPhase` is a
+// very different job from writing a stop phase from scratch, and going
+// through `PhaseFactory` used to force the latter. Register a subclass the
+// usual way: `builder.phases(f => f.register('stop', class extends StopPhase { ... }))`.
+//
+// These are engine internals with an engine-internal contract. Their
+// protected surface (`onEnter` / `onSkip` / `update`, and each phase's private
+// staging) can change in a minor release, so a subclass may need to follow.
+// Phase Config TYPES stay exported as stable shape descriptions.
+// Console channel. Every warning and error the library emits carries a stable
+// code and obeys one volume knob; `setLogLevel('silent')` is the production
+// switch. See `utils/notify.ts` for the contract.
+export { setLogLevel, getLogLevel } from './utils/notify.js';
+export type { LogLevel } from './utils/notify.js';
+
 export { ReelPhase } from './spin/phases/ReelPhase.js';
 export { PhaseFactory } from './spin/phases/PhaseFactory.js';
+export { StartPhase } from './spin/phases/StartPhase.js';
+export { SpinPhase } from './spin/phases/SpinPhase.js';
+export { StopPhase } from './spin/phases/StopPhase.js';
+export { AnticipationPhase } from './spin/phases/AnticipationPhase.js';
+export { AdjustPhase } from './spin/phases/AdjustPhase.js';
+export { CascadeFallPhase } from './spin/phases/CascadeFallPhase.js';
+export { CascadePlacePhase } from './spin/phases/CascadePlacePhase.js';
+export { CascadeDropInPhase } from './spin/phases/CascadeDropInPhase.js';
 // The two shapes `PhaseFactory.register` / `.registerFactory` accept. Needed
 // to type a helper that registers phases on your behalf.
 export type { PhaseConstructor, PhaseCreatorFn } from './spin/phases/PhaseFactory.js';
@@ -101,6 +122,13 @@ export type { ScatterAnticipationOptions } from './spin/anticipationRecipes.js';
 
 // Tumble cascade
 export type { TumbleConfig, TumbleFallConfig, TumbleDropInConfig } from './cascade/TumbleConfig.js';
+// Fill a partial `.tumble(...)` config out to the fully-specified shape the
+// three cascade phase constructors take. Needed to SUBCLASS one of them:
+// `registerFactory` has to forward the same resolved config the builder would
+// have passed, and hand-writing every field is how a subclass silently drifts
+// from the set's actual tumble settings.
+export { resolveTumbleConfig } from './cascade/TumbleConfig.js';
+export type { ResolvedTumbleConfig } from './cascade/TumbleConfig.js';
 export type { Cell, DropOffset } from './cascade/tumbleAlgorithm.js';
 export { computeDropOffsets } from './cascade/tumbleAlgorithm.js';
 export type { CascadeFallPhaseConfig } from './spin/phases/CascadeFallPhase.js';

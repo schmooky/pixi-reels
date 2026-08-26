@@ -50,23 +50,29 @@ const ogImage = image ?? ogUrlForPath(path ?? Astro.url.pathname);
       noIndex={noIndex}
     />
     {/*
-      Roboto Condensed is used by the debug CardSymbol inside recipe canvases.
-      Loaded asynchronously so it never blocks first paint on pages that
-      never render a card. Pattern: preload + onload-promote, with a
-      no-JS fallback. https://web.dev/articles/defer-non-critical-css
+      Roboto Condensed is used by the debug CardSymbol inside recipe canvases;
+      Fira Code is the readout face for recipe HUDs and per-reel labels, where
+      its ligatures turn an ASCII `->` into a single arrow glyph - which both
+      reads better and is narrower, and narrow matters when a label has to fit
+      inside one reel's width.
+
+      Both are in ONE request so this stays a single stylesheet, loaded
+      asynchronously so it never blocks first paint on pages that render
+      neither. Pattern: preload + onload-promote, with a no-JS fallback.
+      https://web.dev/articles/defer-non-critical-css
     */}
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       rel="preload"
       as="style"
-      href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@400;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Roboto+Condensed:wght@400;700&display=swap"
       onload="this.onload=null;this.rel='stylesheet'"
     />
     <noscript>
       <link
         rel="stylesheet"
-        href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@400;700&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Roboto+Condensed:wght@400;700&display=swap"
       />
     </noscript>
   </head>

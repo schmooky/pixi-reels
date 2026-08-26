@@ -137,27 +137,6 @@ export function articleLd(p: {
   };
 }
 
-export function howToLd(p: {
-  name: string;
-  description: string;
-  steps: Array<{ name: string; text: string }>;
-  path: string;
-}): Record<string, unknown> {
-  return {
-    '@context': 'https://schema.org',
-    '@type': 'HowTo',
-    name: p.name,
-    description: p.description,
-    mainEntityOfPage: { '@type': 'WebPage', '@id': canonical(p.path) },
-    step: p.steps.map((s, i) => ({
-      '@type': 'HowToStep',
-      position: i + 1,
-      name: s.name,
-      text: s.text,
-    })),
-  };
-}
-
 export function breadcrumbLd(
   crumbs: Array<{ name: string; url: string }>,
 ): Record<string, unknown> {

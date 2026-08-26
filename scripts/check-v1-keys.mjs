@@ -28,9 +28,14 @@ import { dirname, extname, join, resolve } from 'node:path';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const RENAMES = join(ROOT, 'packages/pixi-reels/src/config/v1Renames.ts');
-const SCAN = ['apps/site/src/recipes', 'apps/site/src/components', 'apps/site/src/pages', 'apps/site/src/content', 'examples'];
+// `apps/site/scripts` is in here because `build-llms.mjs` HAND-WRITES a quick
+// start into the generated llms.txt, and it used `visibleRows(3)` - removed in
+// v2, throws on call - for as long as the gate only looked at src/. The
+// generated file itself is not scanned: catching the source is what stops it
+// coming back.
+const SCAN = ['apps/site/src/recipes', 'apps/site/src/components', 'apps/site/src/pages', 'apps/site/src/content', 'apps/site/scripts', 'examples'];
 const SKIP = new Set(['node_modules', 'dist', '.astro']);
-const EXTS = ['.ts', '.tsx', '.mdx', '.md', '.yaml'];
+const EXTS = ['.ts', '.tsx', '.mdx', '.md', '.yaml', '.mjs'];
 
 /**
  * Files whose whole job is showing v1 names next to their v2 replacements.

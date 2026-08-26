@@ -10,6 +10,7 @@ import type { Direction, Orientation } from '../core/ReelAxis.js';
 import { HoldAndWinState } from './HoldAndWinState.js';
 import type { HwPhase } from './HoldAndWinState.js';
 import { cellKey } from './HwTypes.js';
+import { noticeWarn } from '../utils/notify.js';
 import type {
   HoldAndWinBoardEvents,
   HwCell,
@@ -287,7 +288,7 @@ export class HoldAndWinBoard<TData = unknown> implements Disposable {
         // it must not vanish silently either - log it like the rest of the engine.
         void this.symbolAt(fx.payload.coin.cell)
           .playWin()
-          .catch((err) => console.warn('HoldAndWinBoard: coin win animation failed.', err));
+          .catch((err) => noticeWarn('hw-coin-win-failed', 'HoldAndWinBoard: coin win animation failed.', err));
       }
     }
   }

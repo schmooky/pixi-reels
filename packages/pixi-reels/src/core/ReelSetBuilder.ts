@@ -49,6 +49,7 @@ import { CascadeFallPhase } from '../spin/phases/CascadeFallPhase.js';
 import { CascadePlacePhase } from '../spin/phases/CascadePlacePhase.js';
 import { CascadeDropInPhase } from '../spin/phases/CascadeDropInPhase.js';
 import { AdjustPhase } from '../spin/phases/AdjustPhase.js';
+import { noticeInfo, noticeWarnOnce } from '../utils/notify.js';
 
 /**
  * The configurator you call before every reel set.
@@ -95,6 +96,8 @@ export class ReelSetBuilder {
   private _ticker?: Ticker;
   private _spinningMode: SpinningMode = new StandardMode();
   private _phaseFactory = new PhaseFactory();
+  /** Deferred `.phases(...)` configurators. See that method for why. */
+  private _phaseConfigurators: Array<(factory: PhaseFactory) => void> = [];
   private _middlewares: FrameMiddleware[] = [];
   private _initialFrame?: ColumnTarget[];
   private _symbolDataOverrides: Record<string, Partial<SymbolData>> = {};
@@ -554,20 +557,16 @@ export class ReelSetBuilder {
 
   private _clampBufferMin1(count: number, label: string): number {
     if (!Number.isFinite(count) || count < 1) {
-      if (!ReelSetBuilder._bufferWarnedThisProcess) {
-        ReelSetBuilder._bufferWarnedThisProcess = true;
-        // eslint-disable-next-line no-console
-        console.warn(
-          `[pixi-reels] ${label} is below the minimum of 1; clamping to 1. ` +
-            `The motion layer needs at least one buffer cell above (and, outside tumble-only sets, below) the visible window for wrap detection.`,
-        );
-      }
+      // `noticeWarnOnce` owns the de-duplication now.
+      noticeWarnOnce(
+        'buffer-clamped',
+        `${label} is below the minimum of 1; clamping to 1. ` +
+          'The motion layer needs at least one buffer cell above (and, outside tumble-only sets, below) the visible window for wrap detection.',
+      );
       return 1;
     }
     return count;
   }
-  /** One-shot guard so we don't spam consoles when builders are constructed in a loop. */
-  private static _bufferWarnedThisProcess = false;
 
   /** Configure symbols via a registry callback. */
   symbols(configurator: (registry: SymbolRegistry) => void): this {
@@ -742,9 +741,21 @@ export class ReelSetBuilder {
     return this;
   }
 
-  /** Override default phases. */
+  /**
+   * Override default phases.
+   *
+   * Configurators are DEFERRED to `build()` and run after the built-in
+   * registrations, so a `.phases(...)` override of a cascade or MultiWays key
+   * wins regardless of where it sits in the chain. Running them at call time
+   * meant `.tumble()` / `.multiways()` registered their defaults later, inside
+   * `build()`, and silently clobbered any `'cascade:*'` / `'adjust'` override
+   * the caller had made. no error, just the built-in phase.
+   *
+   * Multiple calls are kept and applied in call order, so the last override of
+   * a given key wins.
+   */
   phases(configurator: (factory: PhaseFactory) => void): this {
-    configurator(this._phaseFactory);
+    this._phaseConfigurators.push(configurator);
     return this;
   }
 
@@ -772,6 +783,10 @@ export class ReelSetBuilder {
    * any other property in sync with the library's `view.y` motion.
    *
    * Override any individual phase via `.phases(f => f.register('cascade:fall', MyPhase))`.
+   * Chain position does not matter. `.phases(...)` is applied after these
+   * defaults regardless. Subclasses of the cascade phases need
+   * `registerFactory` and the extra constructor args, which
+   * `resolveTumbleConfig(config)` produces.
    *
    * @example
    * builder.tumble({
@@ -989,10 +1004,10 @@ export class ReelSetBuilder {
       frameBuilder.use(mw);
     }
 
-    // Wire the three tumble cascade phases under their named keys. The
-    // defaults registered here can be overridden via `.phases(...)` after
-    // `.tumble(...)` was called. The default spin mode flips to 'cascade'
-    // when `.tumble()` ran.
+    // Wire the three tumble cascade phases under their named keys. These are
+    // DEFAULTS: the deferred `.phases(...)` configurators run after this block
+    // and can replace any of them, from anywhere in the builder chain. The
+    // default spin mode flips to 'cascade' when `.tumble()` ran.
     if (this._tumbleConfig) {
       const fall = this._tumbleConfig.fall;
       const drop = this._tumbleConfig.dropIn;
@@ -1014,6 +1029,13 @@ export class ReelSetBuilder {
         const ms = typeof adjustDur === 'function' ? adjustDur(reel.reelIndex) : adjustDur;
         return new AdjustPhase(reel, speed, { durationMs: ms, ease: pinMigrationEase });
       });
+    }
+
+    // User phase overrides run LAST, after the tumble / MultiWays defaults
+    // above, so `.phases(f => f.registerFactory('cascade:dropIn', ...))` is
+    // honoured no matter where it sat in the builder chain.
+    for (const configurator of this._phaseConfigurators) {
+      configurator(this._phaseFactory);
     }
 
     // Create viewport. width covers all reels, height covers tallest box.
@@ -1057,9 +1079,9 @@ export class ReelSetBuilder {
       const reason = hasBigSymbols
         ? 'big symbols are registered'
         : 'one or more symbols use `unmask: true`';
-      // eslint-disable-next-line no-console
-      console.info(
-        `[pixi-reels] auto-selected SharedRectMaskStrategy because ${reason} ` +
+      noticeInfo(
+        'mask-auto-shared',
+        `auto-selected SharedRectMaskStrategy because ${reason} ` +
         `and the cross-axis gap (symbolGap.${vertical ? 'x' : 'y'}) is > 0. ` +
         'Pass .maskStrategy(...) explicitly to override.',
       );
@@ -1074,9 +1096,9 @@ export class ReelSetBuilder {
       this._curveFocus !== 'reel' && (this._curve !== undefined || this._curvePerReel !== undefined);
     if (!this._maskStrategyExplicit && curveLeans) {
       this._maskStrategy = new SharedRectMaskStrategy();
-      // eslint-disable-next-line no-console
-      console.info(
-        `[pixi-reels] auto-selected SharedRectMaskStrategy because curveFocus('${this._curveFocus}') ` +
+      noticeInfo(
+        'mask-auto-shared',
+        `auto-selected SharedRectMaskStrategy because curveFocus('${this._curveFocus}') ` +
         'leans cells across their own reel column. Pass .maskStrategy(...) explicitly to override.',
       );
     }
@@ -1086,9 +1108,9 @@ export class ReelSetBuilder {
     // flat, over a curved board. Unmask is the one a game asks for by name, so
     // say so rather than let it look like a curve bug.
     if (this._curveMode === 'warp' && this._curve !== undefined && hasUnmaskedSymbols) {
-      // eslint-disable-next-line no-console
-      console.info(
-        "[pixi-reels] curveMode('warp') does not bend symbols with `unmask: true`. " +
+      noticeInfo(
+        'warp-skips-unmask',
+        "curveMode('warp') does not bend symbols with `unmask: true`. " +
         'They are lifted into `viewport.unmaskedContainer`, outside the reel texture, ' +
         'so they render FLAT above a curved board. The same applies to the win ' +
         'spotlight and pin overlays. Use curveMode(\'symbol\') if those have to follow ' +

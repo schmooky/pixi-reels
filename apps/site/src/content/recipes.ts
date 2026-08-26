@@ -5,8 +5,6 @@ export interface RecipeMeta {
   group: RecipeGroup;
   title: string;
   oneLiner: string;
-  steps: string[];
-  apis: string[];
   tags: string[];
   /**
    * Card preview, OPTIONAL. By convention you don't set this: drop a file at
@@ -65,8 +63,6 @@ interface RecipeFrontmatter {
   group: RecipeGroup;
   oneLiner: string;
   order?: number;
-  steps?: string[];
-  apis?: string[];
   tags?: string[];
   image?: string;
 }
@@ -85,8 +81,6 @@ export const RECIPES: RecipeMeta[] = Object.entries(recipeFiles)
       group: fm.group,
       title: fm.title,
       oneLiner: fm.oneLiner,
-      steps: fm.steps ?? [],
-      apis: fm.apis ?? [],
       tags: fm.tags ?? [],
     };
     if (fm.image) meta.image = fm.image;

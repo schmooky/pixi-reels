@@ -78,8 +78,74 @@ All three land on whatever `setResult()` gave the engine, and set
 Every lifecycle event still fires on the slam path. Your win presenter needs
 no second code path.
 
-`skipStage` tells you where the round is: `0` before any press, `2` after.
-Drive the button's look from it.
+`skipStage` tells you where the round is: `0` before any press, `2` after,
+`1` while a protected tease is still running (see below). Drive the button's
+look from it.
+
+## Skip granularity
+
+By default a slam is all-or-nothing: it force-completes every active phase,
+including the skippable `AnticipationPhase`. So a press on a teasing spin ends
+the tease before the player ever sees it.
+
+To land some reels and let others keep playing:
+
+```ts
+// The tease rule, applied by the engine.
+reelSet.setAnticipation([2, 3, 4], { stagger: 'sequential', protect: 'once' });
+// press 1 -> reels 0-1 land now, 2-4 keep teasing, skipStage becomes 1
+// press 2 -> the tease ends too, skipStage becomes 2
+
+// 'stepwise' walks it forward instead of ending it in one go.
+reelSet.setAnticipation([2, 3, 4], { protect: 'stepwise' });
+// press 1 -> reels 0-1;  press 2 -> reel 2;  press 3 -> reel 3;
+// press 4 -> reel 4, and that press ends the round
+
+// Or do it by hand, for your own rule.
+reelSet.slamStop({ except: [3, 4] });
+```
+
+For a grouping the built-in modes don't cover, use `protect: 'always'` so no
+press can ever end a tease, and land your own groups with
+`slamStop({ reels })` per press.
+
+In a tumble cascade the initial spin protects exactly the same way; what
+changes is that the round's side effect is auto-slam-refills rather than a
+speed boost, and that refills carry no tease of their own (`refill()` clears
+the anticipation set on entry). A Hold & Win board is a different shape
+entirely - one single-reel `ReelSet` per cell - so per-reel slam has nothing to
+divide there and `BoardGrid.skipSpinning()` is the per-cell lever instead. See
+[Skip & slam](/recipes/skip/#skip-cascade-protect) for both.
+
+Two mid-spin calls that look like they would help here do not, and both are
+pinned by tests. Shrinking the set with `setAnticipation()` does NOT release a
+reel already teasing - the set is read once, when a reel leaves `SPIN`. And
+`setSpeed()` does not re-time the round in flight, because `spin()` captures
+the active profile and hands that instance to every phase (the same reason the
+`skipSpin()` boost lands on the next spin).
+
+`protect` applies to `skipSpin()` and `requestSkip()` (including a press queued
+before the result arrived, which is exactly the case it exists for. call
+`setAnticipation` BEFORE `setResult` so the queued press can see the tease).
+Bare `slamStop()` stays an unconditional land-now.
+
+`skip:requested` / `skip:completed` carry `{ reels, partial }`, so a listener
+can tell a partial slam from the round-ending one.
+
+The related floor is `minimumSpinTime`, which lives on the speed profile and is
+therefore one value shared by every reel. `setStopDelays()` is per-reel but
+cannot go under it, so the two levers used to miss each other: instant was only
+ever global, and per-reel could not go below the floor.
+`setMinimumSpinTime(ms | ms[])` overrides it per reel and closes that gap.
+
+```ts
+reelSet.setMinimumSpinTime([0, 0, 0, 900, 900]); // last two hold longer
+reelSet.setMinimumSpinTime(null);                // back to the profile
+```
+
+Reach for `protect` rather than a raised floor on teasing spins. If a
+scatterless skip lands instantly but a teasing one settles slower, the response
+time itself tells the player a feature is coming before the reels have landed.
 
 ## Holding some reels
 
@@ -158,8 +224,8 @@ Live recipes: [nudge](/recipes/nudge/), [skip](/recipes/nudge-skip/), [abort](/r
 | `spin:reelLanded`      | `(reelIndex, symbols)`                          | Individual reel landed (held reels never fire)                                                                                                                           |
 | `spin:allLanded`       | `(result)`                                      | Last non-held reel landed                                                                                                                                                |
 | `spin:complete`        | `(result)`                                      | Just after `spin:allLanded`                                                                                                                                              |
-| `skip:requested`       | .                                               | A slam fired. from `skipSpin()`, `requestSkip()` (after `setResult`), or `slamStop()`                                                                                        |
-| `skip:completed`       | .                                               | All non-held reels force-landed                                                                                                                                          |
+| `skip:requested`       | `({ reels, partial })`                          | A slam fired. from `skipSpin()`, `requestSkip()` (after `setResult`), or `slamStop()`. `partial` is `true` when reels are still spinning after it                            |
+| `skip:completed`       | `({ reels, partial })`                          | Those reels have been force-landed                                                                                                                                       |
 | `skip:boosted`         | `({ previous, current })`                       | First `skipSpin()` press of a standard-mode round; engine bumped speed to the fastest registered profile for the rest of the round. Cascade mode auto-slams refills instead. |
 | `speed:changed`        | `(profile, previous)`                           | `setSpeed()` called                                                                                                                                                      |
 | `spotlight:start`      | `(positions)`                                   | `spotlight.cycle(...)` began                                                                                                                                             |

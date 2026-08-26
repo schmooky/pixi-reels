@@ -20,20 +20,30 @@
 import * as PIXI from 'pixi.js';
 import { gsap } from 'gsap';
 import {
+  AdjustPhase,
   AnimatedSpriteSymbol,
+  AnticipationPhase,
   BoardGrid,
+  CascadeDropInPhase,
+  CascadeFallPhase,
+  CascadePlacePhase,
   EmptySymbol,
   HoldAndWinBuilder,
+  ReelPhase,
   ReelSymbol,
   RectMaskStrategy,
   SharedRectMaskStrategy,
   SpeedPresets,
+  SpinPhase,
   SpinTextureCache,
   SpriteSymbol,
+  StartPhase,
   StaticSpinSymbol,
+  StopPhase,
   WinPresenter,
   anticipationForScatters,
   prewarmSpinTextures,
+  resolveTumbleConfig,
 } from 'pixi-reels';
 import { BlurSpriteSymbol } from '../runtime/BlurSpriteSymbol.ts';
 import { CardSymbol, CARD_DECK, WILD_CARD } from 'pixi-reels';
@@ -166,6 +176,22 @@ export function buildRecipeGlobals(
     SpinTextureCache,
     StaticSpinSymbol,
     prewarmSpinTextures,
+
+    // Phase classes. `ReelPhase` for a phase written from scratch, the
+    // built-ins so a recipe can SUBCLASS one and register the subclass over
+    // it. Already in the pixi-reels bundle, so this costs no extra chunk.
+    ReelPhase,
+    StartPhase,
+    SpinPhase,
+    StopPhase,
+    AnticipationPhase,
+    AdjustPhase,
+    CascadeFallPhase,
+    CascadePlacePhase,
+    CascadeDropInPhase,
+    // Fills a partial `.tumble(...)` config out to the shape the three cascade
+    // phase constructors take. required to SUBCLASS one of them.
+    resolveTumbleConfig,
 
     // Host environment
     app: env.app,

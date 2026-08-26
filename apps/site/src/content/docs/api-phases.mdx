@@ -16,20 +16,35 @@ ReelPhase<TConfig>
 └─ onSkip()          // clean up when forced
 ```
 
+Every phase runs on ONE reel. Five reels in `StopPhase` are five instances, and
+`SpinController` builds them per reel per spin through the `PhaseFactory` -
+there are no long-lived phase objects to hold state across spins.
+
 ## Built-ins
 
-| Phase | Role | Skippable |
-|---|---|---|
-| `StartPhase` | Accelerate from rest, with a step-back pull | yes |
-| `SpinPhase` | Full speed until the result arrives | **no** |
-| `AnticipationPhase` | Slow hold, for tension | yes |
-| `StopPhase` | Decelerate onto the target frame, bounce | yes |
+Every one of these is exported, so you can subclass it as well as replace it.
+The KEY is the name to register under; registering a different class under an
+existing key is what swaps the built-in out.
+
+| Class | Key | Config | Role | Skippable |
+|---|---|---|---|---|
+| `StartPhase` | `'start'` | `StartPhaseConfig` | Accelerate from rest, with a step-back pull | yes |
+| `SpinPhase` | `'spin'` | `SpinPhaseConfig` | Full speed until the result arrives | **no** |
+| `AnticipationPhase` | `'anticipation'` | `AnticipationPhaseConfig` | Slow hold, for tension | yes |
+| `StopPhase` | `'stop'` | `StopPhaseConfig` | Decelerate onto the target frame, bounce | yes |
+| `CascadeFallPhase` | `'cascade:fall'` | `CascadeFallPhaseConfig` | Tumble fall-out. replaces `StartPhase` | yes |
+| `CascadePlacePhase` | `'cascade:place'` | `CascadePlacePhaseConfig` | Tumble identity swap | yes |
+| `CascadeDropInPhase` | `'cascade:dropIn'` | `CascadeDropInPhaseConfig` | Tumble drop-in and gravity slide | yes |
+| `AdjustPhase` | `'adjust'` | `AdjustPhaseConfig` | MultiWays reshape. tweens pin overlays | yes |
 
 `SpinPhase` is the one that cannot be skipped: it is not animating toward
-anything, it is waiting for `setResult()`. A slam resolves it instead.
+anything, it is waiting for `setResult()`. A slam resolves it instead. Which is
+also why a per-reel `minimumSpinTime` matters. `SpinPhase` is where the floor
+that decides how early a reel may stop actually lives.
 
-Cascade slots add three more, all skippable: `cascade:fall`, `cascade:place`,
-`cascade:dropIn`. MultiWays adds `AdjustPhase`, also skippable.
+The bottom four are wired only when you asked for them. the cascade three by
+`builder.tumble(...)`, `AdjustPhase` by `builder.multiways(...)`. A plain slot
+never sees them.
 
 ## Register a custom phase
 
@@ -60,4 +75,155 @@ builder.phases((f) => f.register('flash', FlashPhase));
 ```
 
 Replacing built-ins works the same way. register with the same name (`'start'`,
-`'spin'`, `'anticipation'`, `'stop'`) to override.
+`'spin'`, `'anticipation'`, `'stop'`) to override - and that is the only way a
+from-scratch phase ever runs. The controller asks the factory for the
+lifecycle keys and nothing else, so a phase registered under a NAME OF ITS OWN
+like `'flash'` above is orphaned: nothing constructs it. Own a phase by taking
+its key.
+
+<RecipeDemo code="phase-from-scratch-start" />
+
+## Subclass a built-in
+
+Most changes to a built-in are small: a sound on landing, a flash when the stop
+begins, a different tease curve. Writing those against `ReelPhase` means
+rebuilding the stop sequencer or the anticipation timeline to get at one line.
+Subclass instead, override the hook you care about, and call `super`.
+
+```ts
+import { StopPhase } from 'pixi-reels';
+import type { StopPhaseConfig } from 'pixi-reels';
+
+class ThudStopPhase extends StopPhase {
+  protected onEnter(config: StopPhaseConfig): void {
+    super.onEnter(config);
+    playSfx('reel-thud');
+  }
+}
+
+builder.phases((f) => f.register('stop', ThudStopPhase));
+```
+
+<RecipeDemo code="phase-subclass-stop" />
+
+### The contract
+
+Four rules cover every subclass.
+
+**Call `super` from every hook you override.** The base `onEnter` is what
+actually starts the phase. a `StopPhase` whose override never reaches it spins
+forever and takes the spin promise with it. Order is yours: before `super` for
+"as the phase begins", after it for "once the phase is set up".
+
+**Resolve exactly once.** A phase ends by calling `this._complete()`, and the
+base classes already do that at the right moment. Only call it yourself in a
+phase you wrote from scratch, or in an override that deliberately replaces the
+base's ending. Calling it twice is harmless (the second is a no-op), never
+calling it hangs the reel.
+
+**`onSkip` is the slam pose, not a teardown.** It runs when a slam calls
+`forceComplete()`, and it must leave the reel in the state the phase would
+have ended in. kill tweens, and put speed and position where a natural finish
+would have. `StopPhase.onSkip` places the full target frame and rests the
+container; `StartPhase.onSkip` jumps to full spin speed. Override it when your
+addition also needs to fire on a skipped reel, and call `super` there too.
+
+**`update(deltaMs)` runs every frame while active, and only then.** It is
+ticker-driven accumulation, not wall clock, so it stays correct in a
+backgrounded tab. GSAP-driven phases leave it empty.
+
+A subclass using all four at once - `onEnter` to show a per-reel countdown,
+`update` to drive it, `onSkip` to take it off when a press cuts the tease
+short:
+
+<RecipeDemo code="phase-subclass-anticipation" />
+
+`this.reel` (including `reel.reelIndex`), `this._speed` (the active
+`SpeedProfile`) and `this.isActive` are what a subclass reads. `name` and
+`skippable` are readonly fields on the class; a subclass inherits both, and
+overriding `skippable` on a built-in is not a supported way to protect a phase
+from a slam - `forceComplete()` ignores the flag by design. Use
+[tease protection](/docs/api-reelset/) for that.
+
+### Phases that take constructor arguments
+
+The four standard phases are constructed with `(reel, speed)`, so
+`register(key, Class)` is enough. The cascade and MultiWays phases carry
+build-time config as extra constructor arguments, so a subclass of one has to
+be registered through `registerFactory` and forward them.
+
+```ts
+import { CascadeDropInPhase, resolveTumbleConfig } from 'pixi-reels';
+import type { CascadeDropInPhaseConfig } from 'pixi-reels';
+
+const TUMBLE = { dropIn: { duration: 500, cellStagger: 40 } };
+// Fills the partial config out to the fully-specified shape the constructor
+// takes, the same way `.tumble()` does internally. Hand-writing those fields
+// is how a subclass silently drifts from the set's real tumble settings.
+const resolved = resolveTumbleConfig(TUMBLE);
+
+class LoudDropInPhase extends CascadeDropInPhase {
+  protected onEnter(config: CascadeDropInPhaseConfig): void {
+    super.onEnter(config);
+    playSfx('tumble-land');
+  }
+}
+
+builder
+  .tumble(TUMBLE)
+  // AFTER .tumble(), which registers the defaults this replaces.
+  .phases((f) =>
+    f.registerFactory('cascade:dropIn', (reel, speed) =>
+      new LoudDropInPhase(reel, speed, resolved.dropIn, resolved.gravity)),
+  );
+```
+
+`CascadeFallPhase` takes `(reel, speed, resolved.fall, resolved.gravity)`,
+`CascadePlacePhase` takes `(reel, speed, resolved.gravity)`, and `AdjustPhase`
+takes `(reel, speed, { durationMs, ease })`.
+
+<RecipeDemo code="phase-subclass-cascade" />
+
+Chain position does not matter. `.phases(...)` configurators are deferred to
+`build()` and applied after the tumble / MultiWays defaults, so an override
+wins from anywhere in the chain, and the last override of a given key wins.
+
+(Before 2.3 they ran at call time while `.tumble()` registered its defaults
+inside `build()`, so a `'cascade:*'` or `'adjust'` override was silently
+discarded no matter where it sat.)
+
+### Stability
+
+These are engine internals with an engine-internal contract. The protected
+surface (`onEnter` / `onSkip` / `update`, and each phase's private staging) can
+change in a minor release, so a subclass may need to follow. The config TYPES
+are the stable part, and so is the hook shape itself. If you want a guarantee
+rather than a hook, extend `ReelPhase` and own the whole phase.
+
+## Skip granularity
+
+A slam force-completes every active phase, `AnticipationPhase` included, so by
+default a skip press ends the tease before the player sees it. Three levers
+open that up:
+
+| Lever | What it does |
+|---|---|
+| `setAnticipation(reels, { protect })` | Skip presses stop ending the tease. `'once'` lands the reels around it and leaves the tease running (the next press ends it); `'stepwise'` then releases one tease reel per press, in tease order; `'always'` never lets a press end one. |
+| `slamStop({ reels })` / `slamStop({ except })` | Per-reel slam. Those reels land now, everything else keeps running its phase chain to a natural landing. |
+| `setMinimumSpinTime(ms \| ms[])` | Per-reel `SpinPhase` floor, replacing the profile's single shared `minimumSpinTime`. Without this, no individual reel can land below the profile floor except through an all-reels slam. |
+
+`skip:requested` / `skip:completed` carry `{ reels, partial }` so a listener can
+tell a partial slam from a round-ending one.
+
+The per-reel `SpinPhase` floor is also reachable from a subclass, which is
+where to put it when the floor is derived rather than configured:
+
+<RecipeDemo code="phase-subclass-spin" />
+
+Every lever above has a worked demo on [Skip & slam](/recipes/skip/).
+
+There is a fairness reason to reach for `protect` rather than raising the floor
+on teasing spins: if a scatterless skip lands instantly but a teasing skip
+settles slower, the response time itself tells the player a feature is coming
+before the reels have landed. `protect` keeps the non-tease reels landing at the
+exact same instant either way, and puts the tell where it belongs. on screen.

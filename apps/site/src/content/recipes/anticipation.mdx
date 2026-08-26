@@ -11,8 +11,6 @@ tags:
   - spine
   - horizontal
   - reverse
-apis: []
-steps: []
 ---
 
 Every way to hold the player at the reel stop, from a single slowed reel to a full Spine near-win act.
@@ -86,6 +84,18 @@ Keep the tease playing in Turbo / SuperTurbo with a duration override (the Super
 Let the player slam through a long anticipation at any point.
 
 <RecipeDemo code="skip-anticipation" />
+
+<a id="protected-anticipation"></a>
+
+## Skip that cannot hide the tease
+
+The same long tease, but the first press only lands the reels AROUND it. `protect: 'once'` guarantees the two scatters are on screen and the build-up is visibly under way before a second press can end it.
+
+**Gotcha:** call `setAnticipation` BEFORE `setResult`. A press in the pre-result window is queued by `requestSkip()` and fires the instant the result arrives, so the tease has to be registered by then or there is nothing to protect.
+
+<RecipeDemo code="protected-anticipation" />
+
+`protect: 'stepwise'` walks it forward one reel per press instead of ending it in one go. That, partial slams, per-reel spin floors, and why a protected tease beats a slower skip are all on [Skip & slam](/recipes/skip/).
 
 <a id="spine-scatter-jaw-anticipation"></a>
 
