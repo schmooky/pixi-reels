@@ -1,0 +1,69 @@
+---
+title: "Skip & slam"
+group: mechanics
+oneLiner: Skip control at reel granularity, partial slams, a tease a press cannot hide, per-reel spin floors, and phases you subclass instead of rewrite.
+order: 57
+tags:
+  - skip
+  - slam
+  - anticipation
+  - tease
+  - phases
+  - timing
+apis: []
+steps: []
+---
+
+A slam force-completes every active phase, `AnticipationPhase` included. That is the right default and the wrong one: it makes the button honest on an ordinary spin and makes it hide the build-up on the spin that had one. These recipes take skip apart into the three levers that decide WHICH reels a press lands, and WHEN a reel is allowed to stop at all.
+
+<a id="skip-partial-slam"></a>
+
+## Land some reels, not all
+
+`slamStop({ except: [3, 4] })` places reels 0-2 on the result this instant and leaves 3 and 4 running their own phase chains to a natural stop. `{ reels: [...] }` is the complement, for when it is easier to name the reels that should land.
+
+**Gotcha:** a partial slam leaves `skipStage` alone and does not end the round, so the button stays live. Only a full slam moves the stage to `2` and applies the round's speed boost.
+
+<RecipeDemo code="skip-partial-slam" />
+
+<a id="skip-tease-protect"></a>
+
+## A tease a press cannot hide
+
+The same partial slam, expressed as a rule the engine applies for you. `protect: 'once'` makes the first press land every non-tease reel and leave the tease running, so the trigger symbols are on screen and the build-up is visibly under way; the next press ends it. `'always'` never lets a press end a tease.
+
+**Gotcha:** call `setAnticipation` BEFORE `setResult`. A press in the pre-result window is queued by `requestSkip()` and fires the instant the result arrives, so the tease has to be registered by then or there is nothing to protect.
+
+<RecipeDemo code="protected-anticipation" />
+
+<a id="skip-no-tell"></a>
+
+## Skip without a tell
+
+The reason to protect the tease rather than slow the skip down. Spins alternate scatterless and teasing, both auto-press at the same moment, and the panel times how long the last non-tease reel takes to rest. The numbers stay equal: the press answers identically, and what differs happens after it, on screen.
+
+Keeping the tease skippable and raising `minimumSpinTime` so a teasing spin cannot land instantly gets the pacing right and leaks the outcome through the response time itself. The player learns a feature is coming before a single reel has landed, from how the button felt.
+
+<RecipeDemo code="skip-no-tell" height={340} />
+
+<a id="skip-min-spin-time"></a>
+
+## Per-reel spin floor
+
+No slam here at all. `minimumSpinTime` lives on the speed profile, so it is one value shared by every reel, and `setStopDelays()` only re-orders stops on top of it. The two levers missed each other: instant was only ever global, and per-reel could not go below the floor. `setMinimumSpinTime([0, 0, 0, 1000, 1000])` overrides it per reel, so reels 0-2 take the result the moment it arrives while 3 and 4 are held a full second.
+
+**Gotcha:** it persists across `spin()` and `refill()` until cleared with `null`, exactly like `setStopDelays()`. Set it once at boot, not per spin, unless you mean it to change.
+
+<RecipeDemo code="skip-min-spin-time" />
+
+<a id="phase-subclass-stop"></a>
+
+## Subclass a built-in phase
+
+Every built-in phase class is exported, so a small change is a subclass rather than a rewrite. `StopPhase` here gains a landing backlight; the stop sequencer, the bounce and the skip pose are inherited untouched. Register under the same key (`'start'`, `'spin'`, `'anticipation'`, `'stop'`) to replace the built-in.
+
+**Gotcha:** call `super` from every hook you override. `onEnter` starts the real spin-out, and a reel whose `onEnter` never reaches it will spin forever. Override `onSkip` too when the beat should also fire on a slammed reel.
+
+<RecipeDemo code="phase-subclass-stop" />
+
+See [Phases](/docs/api-phases/) for the full extension contract, including the cascade and MultiWays phases, which take extra constructor arguments and are registered with `registerFactory`.

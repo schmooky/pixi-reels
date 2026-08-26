@@ -20,17 +20,26 @@
 import * as PIXI from 'pixi.js';
 import { gsap } from 'gsap';
 import {
+  AdjustPhase,
   AnimatedSpriteSymbol,
+  AnticipationPhase,
   BoardGrid,
+  CascadeDropInPhase,
+  CascadeFallPhase,
+  CascadePlacePhase,
   EmptySymbol,
   HoldAndWinBuilder,
+  ReelPhase,
   ReelSymbol,
   RectMaskStrategy,
   SharedRectMaskStrategy,
   SpeedPresets,
+  SpinPhase,
   SpinTextureCache,
   SpriteSymbol,
+  StartPhase,
   StaticSpinSymbol,
+  StopPhase,
   WinPresenter,
   anticipationForScatters,
   prewarmSpinTextures,
@@ -166,6 +175,19 @@ export function buildRecipeGlobals(
     SpinTextureCache,
     StaticSpinSymbol,
     prewarmSpinTextures,
+
+    // Phase classes. `ReelPhase` for a phase written from scratch, the
+    // built-ins so a recipe can SUBCLASS one and register the subclass over
+    // it. Already in the pixi-reels bundle, so this costs no extra chunk.
+    ReelPhase,
+    StartPhase,
+    SpinPhase,
+    StopPhase,
+    AnticipationPhase,
+    AdjustPhase,
+    CascadeFallPhase,
+    CascadePlacePhase,
+    CascadeDropInPhase,
 
     // Host environment
     app: env.app,

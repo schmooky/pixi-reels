@@ -95,6 +95,8 @@ export class ReelSetBuilder {
   private _ticker?: Ticker;
   private _spinningMode: SpinningMode = new StandardMode();
   private _phaseFactory = new PhaseFactory();
+  /** Deferred `.phases(...)` configurators. See that method for why. */
+  private _phaseConfigurators: Array<(factory: PhaseFactory) => void> = [];
   private _middlewares: FrameMiddleware[] = [];
   private _initialFrame?: ColumnTarget[];
   private _symbolDataOverrides: Record<string, Partial<SymbolData>> = {};
@@ -742,9 +744,21 @@ export class ReelSetBuilder {
     return this;
   }
 
-  /** Override default phases. */
+  /**
+   * Override default phases.
+   *
+   * Configurators are DEFERRED to `build()` and run after the built-in
+   * registrations, so a `.phases(...)` override of a cascade or MultiWays key
+   * wins regardless of where it sits in the chain. Running them at call time
+   * meant `.tumble()` / `.multiways()` registered their defaults later, inside
+   * `build()`, and silently clobbered any `'cascade:*'` / `'adjust'` override
+   * the caller had made. no error, just the built-in phase.
+   *
+   * Multiple calls are kept and applied in call order, so the last override of
+   * a given key wins.
+   */
   phases(configurator: (factory: PhaseFactory) => void): this {
-    configurator(this._phaseFactory);
+    this._phaseConfigurators.push(configurator);
     return this;
   }
 
@@ -772,6 +786,10 @@ export class ReelSetBuilder {
    * any other property in sync with the library's `view.y` motion.
    *
    * Override any individual phase via `.phases(f => f.register('cascade:fall', MyPhase))`.
+   * Chain position does not matter. `.phases(...)` is applied after these
+   * defaults regardless. Subclasses of the cascade phases need
+   * `registerFactory` and the extra constructor args, which
+   * `resolveTumbleConfig(config)` produces.
    *
    * @example
    * builder.tumble({
@@ -989,10 +1007,10 @@ export class ReelSetBuilder {
       frameBuilder.use(mw);
     }
 
-    // Wire the three tumble cascade phases under their named keys. The
-    // defaults registered here can be overridden via `.phases(...)` after
-    // `.tumble(...)` was called. The default spin mode flips to 'cascade'
-    // when `.tumble()` ran.
+    // Wire the three tumble cascade phases under their named keys. These are
+    // DEFAULTS: the deferred `.phases(...)` configurators run after this block
+    // and can replace any of them, from anywhere in the builder chain. The
+    // default spin mode flips to 'cascade' when `.tumble()` ran.
     if (this._tumbleConfig) {
       const fall = this._tumbleConfig.fall;
       const drop = this._tumbleConfig.dropIn;
@@ -1014,6 +1032,13 @@ export class ReelSetBuilder {
         const ms = typeof adjustDur === 'function' ? adjustDur(reel.reelIndex) : adjustDur;
         return new AdjustPhase(reel, speed, { durationMs: ms, ease: pinMigrationEase });
       });
+    }
+
+    // User phase overrides run LAST, after the tumble / MultiWays defaults
+    // above, so `.phases(f => f.registerFactory('cascade:dropIn', ...))` is
+    // honoured no matter where it sat in the builder chain.
+    for (const configurator of this._phaseConfigurators) {
+      configurator(this._phaseFactory);
     }
 
     // Create viewport. width covers all reels, height covers tallest box.

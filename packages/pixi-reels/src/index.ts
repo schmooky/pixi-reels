@@ -116,6 +116,13 @@ export type { ScatterAnticipationOptions } from './spin/anticipationRecipes.js';
 
 // Tumble cascade
 export type { TumbleConfig, TumbleFallConfig, TumbleDropInConfig } from './cascade/TumbleConfig.js';
+// Fill a partial `.tumble(...)` config out to the fully-specified shape the
+// three cascade phase constructors take. Needed to SUBCLASS one of them:
+// `registerFactory` has to forward the same resolved config the builder would
+// have passed, and hand-writing every field is how a subclass silently drifts
+// from the set's actual tumble settings.
+export { resolveTumbleConfig } from './cascade/TumbleConfig.js';
+export type { ResolvedTumbleConfig } from './cascade/TumbleConfig.js';
 export type { Cell, DropOffset } from './cascade/tumbleAlgorithm.js';
 export { computeDropOffsets } from './cascade/tumbleAlgorithm.js';
 export type { CascadeFallPhaseConfig } from './spin/phases/CascadeFallPhase.js';
