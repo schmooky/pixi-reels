@@ -182,6 +182,8 @@ export class SpinController implements Disposable {
    * profile. `null` while idle.
    */
   private _activeSpinSpeed: SpeedProfile | null = null;
+  /** `spin:allStarted` is a once-per-round announcement; this is the latch. */
+  private _allStartedEmitted = false;
   /**
    * Minimum spin time (ms) override, replacing the active speed profile's
    * `minimumSpinTime` floor. A single number applies to every reel; an array
@@ -377,6 +379,7 @@ export class SpinController implements Disposable {
     // call overwrites it.
     this._landedReels.clear();
     this._slammedReels.clear();
+    this._allStartedEmitted = false;
     this._activePhases.clear();
     this._heldReels = this._normalizeHoldReels(options?.holdReels);
     this._spinGeneration++;
@@ -593,6 +596,7 @@ export class SpinController implements Disposable {
     // default `i * speed.stopDelay` left-to-right stagger.
     this._landedReels.clear();
     this._slammedReels.clear();
+    this._allStartedEmitted = false;
     this._activePhases.clear();
     this._heldReels = new Set();
     this._spinGeneration++;
@@ -1364,6 +1368,10 @@ export class SpinController implements Disposable {
       // with nobody to resolve it: they spin for ever and `spin()` never
       // settles. Reachable through `slamStop({ reels })` and, when the tease
       // sits on low-index reels, through `protect` itself.
+      //
+      // Same for the announcement: landing every reel that had yet to start
+      // leaves nobody to emit `spin:allStarted`.
+      this._announceAllStartedIfReady();
       this._tryBeginStopSequence();
     }
     return partial;
@@ -1532,17 +1540,7 @@ export class SpinController implements Disposable {
       minimumSpinTime: this._minimumSpinTimeFor(reelIndex),
     } satisfies SpinPhaseConfig);
 
-    let allSpinning = true;
-    for (let i = 0; i < this._reels.length; i++) {
-      // Held reels never enter the phase chain, and partially-slammed reels
-      // have already left it; neither gates `spin:allStarted` or the
-      // stop-sequence start.
-      if (this._heldReels.has(i) || this._landedReels.has(i)) continue;
-      const phase = this._activePhases.get(i);
-      if (!phase || phase.name !== 'spin') { allSpinning = false; break; }
-    }
-    if (allSpinning) {
-      this._events.emit('spin:allStarted');
+    if (this._announceAllStartedIfReady()) {
       this._tryBeginStopSequence();
     }
 
@@ -1787,6 +1785,32 @@ export class SpinController implements Disposable {
   private _frameFor(reelIndex: number): string[] {
     if (!this._cachedFrames) return [];
     return this._cachedFrames[reelIndex];
+  }
+
+  /**
+   * Emit `spin:allStarted` if every reel that is still going has reached SPIN,
+   * at most once per round.
+   *
+   * This used to be inline in the per-reel chain, which meant only a reel
+   * ENTERING spin could ever announce it. A partial slam that landed every
+   * reel still waiting to start therefore left nobody to emit, and a listener
+   * awaiting the event waited for ever - the event-contract twin of the
+   * stop-sequence hang. Both callers now go through here.
+   *
+   * @returns whether this call was the one that emitted.
+   */
+  private _announceAllStartedIfReady(): boolean {
+    if (this._allStartedEmitted) return false;
+    for (let i = 0; i < this._reels.length; i++) {
+      // Held reels never enter the phase chain, and partially-slammed reels
+      // have already left it; neither gates the announcement.
+      if (this._heldReels.has(i) || this._landedReels.has(i)) continue;
+      const phase = this._activePhases.get(i);
+      if (!phase || phase.name !== 'spin') return false;
+    }
+    this._allStartedEmitted = true;
+    this._events.emit('spin:allStarted');
+    return true;
   }
 
   private _tryBeginStopSequence(): void {

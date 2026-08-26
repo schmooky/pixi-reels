@@ -18,4 +18,6 @@ There is a fairness reason to prefer `protect` over raising the floor on teasing
 
 Fix: a `.phases(...)` override of a cascade or MultiWays phase was silently discarded. `phases()` applied its configurator at call time, while `.tumble()` and `.multiways()` register their defaults later, inside `build()`, so any `'cascade:fall'` / `'cascade:place'` / `'cascade:dropIn'` / `'adjust'` registration was overwritten with no error - and the builder's own doc comment advised calling `.phases(...)` after `.tumble(...)`, which could not help, because chain position was never what decided the winner. Configurators are now deferred to the end of `build()`'s phase wiring, so an override wins from anywhere in the chain and the last override of a key wins.
 
+`spin:allStarted` is now announced from a single place rather than only by a reel entering SPIN, so a partial slam that lands every reel still waiting to start no longer swallows it. It still fires at most once per round.
+
 Internally, a partial slam cannot use the spin generation as its abort switch - that is global, and bumping it would strand the surviving reels mid-chain - so slammed indices are tracked per reel and each chain checks them at its own await boundaries. A full slam behaves exactly as before.
