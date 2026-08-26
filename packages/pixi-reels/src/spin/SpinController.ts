@@ -1556,7 +1556,12 @@ export class SpinController implements Disposable {
       this._events.emit('spin:stopping', reelIndex);
       const anticipationPhase = this._phaseFactory.create<any>('anticipation', reel, speed);
       this._activePhases.set(reelIndex, anticipationPhase);
-      await anticipationPhase.run(this._anticipationConfigFor(reelIndex, speed));
+      // A tumble reel has already dropped its visible symbols and is sitting
+      // at speed zero; scrolling it during the tease would drag buffer
+      // symbols back through the empty window. The tease there is a pure
+      // hold, so pin the multiplier to 0 whatever the slowdown curve says.
+      const antConfig = this._anticipationConfigFor(reelIndex, speed);
+      await anticipationPhase.run(isTumble ? { ...antConfig, speedMultiplier: 0 } : antConfig);
       if (this._isStale(reelIndex, generation)) return;
       didAnticipate = true;
     } else {
@@ -1564,6 +1569,18 @@ export class SpinController implements Disposable {
     }
 
     if (isTumble) {
+      // A tumble reel must enter the place phase AT REST. Nothing on this
+      // path brings it to rest on its own: `cascade:place` swaps identities
+      // and `cascade:dropIn` tweens views, and neither touches `reel.speed`
+      // the way `StopPhase._landAndBounce` does. So a tease that spun the
+      // reel up left it scrolling forever, drifting further off-grid every
+      // frame for the rest of the session. The default phase no longer
+      // moves it (above), but a custom `'anticipation'` phase may, and this
+      // is the invariant either way.
+      if (didAnticipate) {
+        reel.speed = 0;
+        reel.snapToGrid();
+      }
       // Tumble stop = place + dropIn. Both phases are user-overridable via
       // the factory; the orchestration here is internal.
       const placePhase = this._phaseFactory.create<any>('cascade:place', reel, speed);

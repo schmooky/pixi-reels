@@ -142,6 +142,34 @@ A single number raises the floor on every reel; `null` clears the override and h
 
 <RecipeDemo code="skip-min-spin-uniform" />
 
+<a id="skip-cascade-protect"></a>
+
+## Cascades
+
+Anticipation runs before the tumble/standard split in the phase chain, so a cascade spin teases and protects exactly like a strip spin. Three things differ, all about what a press carries rather than what it lands:
+
+| | Behaviour |
+|---|---|
+| Initial spin | `protect` applies unchanged. Press 1 lands the reels outside the tease, press 2 ends it. |
+| Round side effect | In cascade mode this is auto-slam-refills, not a speed boost. A protected press does NOT spend it; the press that ends the tease does, and every refill after that lands instantly. |
+| Refills | Carry no tease. `refill()` clears the anticipation set on entry, so a press inside one is an ordinary full slam - though `slamStop({ reels })` still works per reel there. |
+
+**Gotcha:** `refill()` and `runCascade()` listen to `skip:requested` only to set `wasSkipped` on their result. A partial slam does not abort the chain, but it does mark the whole result `wasSkipped: true`.
+
+<RecipeDemo code="skip-cascade-protect" />
+
+<a id="skip-hold-and-win"></a>
+
+## Hold & Win
+
+Nothing to demo here, and that is the point: a Hold & Win board is one single-reel `ReelSet` **per cell**, not one set with many reels. Per-reel slam has no granularity to add, because `slamStop({ reels })` and `{ except }` can only ever name reel `0`. The granularity you want is per CELL, and it already exists as `BoardGrid.skipSpinning()` / `HoldAndWinBoard.skip()`, which press each cell's set individually.
+
+Tease protection on a cell's set behaves consistently but rarely usefully, since "every reel outside the tease" is the empty set:
+
+- `'once'` - press 1 lands nothing and spends the protection, press 2 lands the cell. That is protection working, not a bug: the impatient first press is spent making the tease visible.
+- `'stepwise'` - the release group IS the tease reel, so one press lands it.
+- `'always'` - **do not use it on a Hold & Win cell.** No press can ever land that cell, and `BoardGrid.skipSpinning()`'s error-recovery path needs it to land or the next `respin()` throws "already spinning" on it. `slamStop()` still lands it, which is the escape hatch that path would need.
+
 <a id="phase-subclass-stop"></a>
 
 ## Subclass a built-in phase
