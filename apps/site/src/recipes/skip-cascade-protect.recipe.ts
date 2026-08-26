@@ -94,6 +94,9 @@ let stage = 'spin';
 const idle = 'spin, then tap through: tease first, then the cascade';
 hud.text = idle;
 reelSet.events.on('spin:start', () => { hud.text = idle; });
+// The chain drives the HUD label now that `runCascade` owns the loop, so a
+// slam still reports which beat of the round it landed in.
+reelSet.events.on('cascade:chain:start', ({ chain }) => { stage = `cascade ${chain}`; });
 reelSet.events.on('skip:requested', ({ reels, partial }) => {
   hud.text = `${stage}: landed [${reels.join(', ')}]` +
     (partial ? `  (skipStage ${reelSet.skipStage}, tease held)` : `  (skipStage ${reelSet.skipStage})`);
@@ -122,49 +125,49 @@ return {
     reelSet.setResult(grid);
     await p;
 
-    // Cascade until the board stops matching. Once the round-ending press has
-    // landed, the engine auto-slams each refill with no animation at all -
-    // that is the cascade form of the round side effect a protected press
-    // deferred.
+    // Hand the whole cascade to the engine. `runCascade` owns the beats a
+    // cascade actually has - detect, DESTROY, pause, refill, re-detect - so
+    // the winning symbols play their `playDestroy()` removal and the refill
+    // then drops in over the hole. Driving `refill()` directly, as this demo
+    // used to, skips the destroy beat entirely: symbols blink out and are
+    // replaced in place, with no removal and no fall.
     //
-    // The grid and the winners have to agree: the engine animates the grid it
-    // is given and never reorders it, so a column whose contents changed
-    // without a matching `winners` entry has no hole to fill and lands
-    // mispositioned. Only the winning cells change.
-    for (let chain = 1; chain <= 2; chain += 1) {
-      const current = reelSet.getVisibleGrid();
-      const win = topRowRun(current);
-      if (!win) break;
-
-      stage = `refill ${chain}`;
-      await new Promise((r) => setTimeout(r, 220));
-
-      // Chain 1 refills every winning reel with the SAME symbol on purpose, so
-      // the second cascade happens for the reason a real one would - the refill
-      // landed another match - rather than because a loop counter said so.
-      //
-      // The last chain must do the opposite and refill per reel, or the board
-      // ends showing a run it never cleared. Re-roll until the first two
-      // differ, which is what `topRowRun` reads.
-      const fresh = new Map();
-      if (chain === 1) {
-        for (const reel of win.reels) fresh.set(reel, WIN_ID);
-      } else {
-        for (const reel of win.reels) fresh.set(reel, rv());
-        while (fresh.get(win.reels[0]) === fresh.get(win.reels[1])) {
-          fresh.set(win.reels[0], rv());
+    // `setDropOrder('all')` is the canonical refill order: every column drops
+    // together rather than sweeping left to right.
+    reelSet.setDropOrder('all');
+    let chain = 0;
+    await reelSet.runCascade({
+      detectWinners: () => {
+        const win = topRowRun(reelSet.getVisibleGrid());
+        return win ? win.reels.map((reel) => ({ reel, cell: 0 })) : [];
+      },
+      nextGrid: (prev, winners) => {
+        chain += 1;
+        // Chain 1 refills every winning reel with the SAME symbol on purpose,
+        // so the next detect finds another match and the chain continues for
+        // the reason a real cascade would. Any later chain refills per reel
+        // and keeps the first two different - what `topRowRun` reads - so the
+        // round cannot end showing a run it never cleared.
+        const fresh = new Map();
+        if (chain === 1) {
+          for (const w of winners) fresh.set(w.reel, WIN_ID);
+        } else {
+          for (const w of winners) fresh.set(w.reel, rv());
+          while (fresh.get(winners[0].reel) === fresh.get(winners[1].reel)) {
+            fresh.set(winners[0].reel, rv());
+          }
         }
-      }
-      // Downward gravity: survivors pack toward the bottom, the fresh symbol
-      // enters at the top. So `[fresh, ...survivors]` per cleared column.
-      const next = current.map((col, reel) => ({
-        visible: fresh.has(reel) ? [fresh.get(reel), col[1], col[2]] : [...col],
-      }));
-      await reelSet.refill({
-        grid: next,
-        winners: win.reels.map((reel) => ({ reel, cell: 0 })),
-      });
-    }
+        // Survivors slide down into the hole; the fresh symbol enters at the
+        // top, which is where downward gravity feeds from.
+        const next = prev.map((col) => [...col]);
+        for (const w of winners) {
+          for (let r = w.cell; r > 0; r -= 1) next[w.reel][r] = next[w.reel][r - 1];
+          next[w.reel][0] = fresh.get(w.reel);
+        }
+        return next.map((visible) => ({ visible }));
+      },
+      pauseAfterDestroyMs: 250,
+    });
     hud.text = 'round over - refills after the round-ending press are instant';
   },
 };
