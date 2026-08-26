@@ -32,7 +32,11 @@ const reelSet = new ReelSetBuilder()
     }
     r.register(SCAT, CardSymbol, { color: 0xffcc44, label: 'F', textColor: 0x3a2600 });
   })
-  .speed('normal', { ...SpeedPresets.NORMAL, anticipationDelay: 900 })
+  // `minimumSpinTime` is raised so NO reel can reach its own stop before the
+  // auto-press below. On the stock profile (500ms) reel 0 has already begun
+  // its spin-out by the time the press lands, which would make the two runs
+  // measure different things. The slam ignores the floor. that is the point.
+  .speed('normal', { ...SpeedPresets.NORMAL, anticipationDelay: 700, minimumSpinTime: 1100 })
   .ticker(app.ticker)
   .build();
 
@@ -44,7 +48,7 @@ let scattersThisSpin = false;
 const times = { plain: null, tease: null };
 
 const hud = new PIXI.Text({
-  text: 'press spin. every spin auto-skips at the same moment',
+  text: 'press spin. every spin auto-skips once the board is at speed',
   style: { fontFamily: 'monospace', fontSize: 13, fill: 0x9c8f78 },
 });
 hud.position.set(0, TOTAL_H + 10);
@@ -53,7 +57,7 @@ reelSet.addChild(hud);
 const render = () => {
   const f = (v) => (v === null ? '  -' : `${String(Math.round(v)).padStart(3)}ms`);
   hud.text =
-    `press -> reel ${LAST_FREE} at rest\n` +
+    `press (board at speed) -> reel ${LAST_FREE} at rest\n` +
     `  no scatters : ${f(times.plain)}\n` +
     `  2 scatters  : ${f(times.tease)}   (tease still running on ${TEASE.join(',')})`;
 };
@@ -89,11 +93,20 @@ return {
     if (scattersThisSpin) {
       reelSet.setAnticipation(TEASE, { stagger: 300, protect: 'once' });
     }
-    await new Promise((r) => setTimeout(r, 300));
+
+    // Wait for the board to actually BE spinning before the auto-press.
+    // Reels start staggered by `spinDelay` and each takes
+    // `accelerationDuration` to reach full speed, so on the NORMAL profile
+    // (100ms apart, 300ms ramp) the last reel is not up to speed until ~700ms.
+    // Pressing before that lands the left reels while the right ones are still
+    // winding up from rest, which reads as "the skip stopped the board and then
+    // started it again". `spin:allStarted` is the signal that every reel is at
+    // speed. A real player's press lands here too.
+    await new Promise((r) => reelSet.events.once('spin:allStarted', () => r()));
     reelSet.setResult(grid);
 
-    // Same press, same moment, both kinds of spin.
-    await new Promise((r) => setTimeout(r, 200));
+    // Same press, same moment after the board is at speed, both kinds of spin.
+    await new Promise((r) => setTimeout(r, 250));
     pressAt = performance.now();
     reelSet.skipSpin();
 
