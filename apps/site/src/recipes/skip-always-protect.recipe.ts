@@ -1,5 +1,5 @@
 // @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, PIXI, app
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, PIXI, gsap, app
 //
 // A TEASE NO PRESS CAN END. `protect: 'always'`.
 //
@@ -34,26 +34,31 @@ const reelSet = new ReelSetBuilder()
 
 const TOTAL_H = ROWS * SIZE + (ROWS - 1) * GAP;
 
-const antSheet = await PIXI.Assets.load('/hw-sprites/anticipation.json');
-const antFrames = (pre) => Object.entries(antSheet.textures)
-  .filter(([k]) => k.startsWith(pre)).sort(([a], [b]) => a.localeCompare(b)).map(([, t]) => t);
-const ANT_IN = antFrames('in/'), ANT_LOOP = antFrames('loop/');
+// Tease highlight, drawn with Graphics. No atlas fetch: the glow is pure
+// decoration here and the demo is about skip semantics, so a missing sprite
+// sheet must not be able to take the whole recipe down with it.
 const glowLayer = new PIXI.Container();
-reelSet.addChild(glowLayer);
+reelSet.addChildAt(glowLayer, 0);
 const glows = new Map();
-const stopGlow = (i) => { const g = glows.get(i); if (g) { try { g.destroy(); } catch {} glows.delete(i); } };
+const stopGlow = (i) => {
+  const g = glows.get(i);
+  if (!g) return;
+  gsap.killTweensOf(g);
+  try { g.destroy(); } catch {}
+  glows.delete(i);
+};
 const startGlow = (i) => {
   stopGlow(i);
-  const g = new PIXI.AnimatedSprite(ANT_IN.length ? ANT_IN : ANT_LOOP);
-  g.anchor.set(0.5);
-  g.position.set(i * (SIZE + GAP) + SIZE / 2, TOTAL_H / 2);
-  g.width = g.height = SIZE * 2.0;
-  g.blendMode = 'add';
-  g.animationSpeed = 0.5; g.loop = false;
-  g.onComplete = () => { if (ANT_LOOP.length) { g.textures = ANT_LOOP; g.loop = true; g.play(); } };
-  glowLayer.addChild(g); g.play();
+  const g = new PIXI.Graphics()
+    .roundRect(i * (SIZE + GAP) - 6, -6, SIZE + 12, TOTAL_H + 12, 8)
+    .fill({ color: 0xfef08a });
+  g.alpha = 0.14;
+  glowLayer.addChild(g);
+  // Slow breathing pulse for as long as the reel is teasing.
+  gsap.to(g, { alpha: 0.42, duration: 0.5, yoyo: true, repeat: -1, ease: 'sine.inOut' });
   glows.set(i, g);
 };
+
 reelSet.events.on('anticipation:reel', ({ reelIndex }) => startGlow(reelIndex));
 reelSet.events.on('anticipation:reelEnd', ({ reelIndex }) => stopGlow(reelIndex));
 
@@ -76,7 +81,7 @@ return {
   reelSet,
   cleanup: () => {
     for (const i of [...glows.keys()]) stopGlow(i);
-    try { glowLayer.destroy(); } catch {}
+    try { glowLayer.destroy({ children: true }); } catch {}
     try { hud.destroy(); } catch {}
   },
   onSkip: () => {
