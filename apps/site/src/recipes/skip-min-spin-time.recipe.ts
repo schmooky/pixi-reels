@@ -33,14 +33,20 @@ const reelSet = new ReelSetBuilder()
 
 const TOTAL_H = ROWS * SIZE + (ROWS - 1) * GAP;
 
+// The face loads async from Google Fonts, and PIXI.Text bakes its metrics
+// at construction. Without this the first paint measures the fallback and
+// only corrects itself on the next label update.
+await document.fonts.load('9px "Fira Code"');
+
 // Per-reel floor labels, so it is clear which number holds which column.
 const labels = [];
 for (let i = 0; i < REELS; i++) {
   const t = new PIXI.Text({
-    text: `floor ${FLOORS[i]}ms`,
-    style: { fontFamily: 'monospace', fontSize: 11, fill: FLOORS[i] > 0 ? 0xfef08a : 0x6b7280 },
+    text: `${FLOORS[i]}ms\nfloor`,
+    style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 9, fill: FLOORS[i] > 0 ? 0xfef08a : 0x6b7280 },
   });
   t.anchor.set(0.5, 0);
+  t.style.align = 'center';
   t.position.set(i * (SIZE + GAP) + SIZE / 2, TOTAL_H + 8);
   reelSet.addChild(t);
   labels.push(t);
@@ -49,9 +55,11 @@ for (let i = 0; i < REELS; i++) {
 // floor -> when the reel actually came to rest. The gap between columns is
 // the floor doing its work; the shared baseline is accel + stop-out + bounce,
 // which every reel pays either way.
-let t0 = 0;
+// Seeded, not 0: a landing that somehow fires before `onSpin` set it would
+// otherwise print time-since-page-load as the reel's landing time.
+let t0 = performance.now();
 reelSet.events.on('spin:reelLanded', (i) => {
-  labels[i].text = `${FLOORS[i]} -> ${Math.round(performance.now() - t0)}ms`;
+  labels[i].text = `${FLOORS[i]}ms\n-> ${Math.round(performance.now() - t0)}ms`;
 });
 
 return {
@@ -63,7 +71,7 @@ return {
     reelSet.setMinimumSpinTime(FLOORS);
 
     for (let i = 0; i < REELS; i++) {
-      labels[i].text = `floor ${FLOORS[i]}ms`;
+      labels[i].text = `${FLOORS[i]}ms\nfloor`;
       labels[i].style.fill = FLOORS[i] > 0 ? 0xfef08a : 0x6b7280;
     }
 

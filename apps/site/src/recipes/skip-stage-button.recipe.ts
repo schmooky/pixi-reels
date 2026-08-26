@@ -41,13 +41,13 @@ face.position.set(0, TOTAL_H + 12);
 const plate = new PIXI.Graphics().roundRect(0, 0, 150, 30, 6).fill({ color: 0x2a2622 });
 const label = new PIXI.Text({
   text: LABELS[0],
-  style: { fontFamily: 'monospace', fontSize: 13, fontWeight: '700', fill: 0xfef08a },
+  style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 11, fontWeight: '700', fill: 0xfef08a },
 });
 label.position.set(12, 8);
 face.addChild(plate, label);
 const stageText = new PIXI.Text({
   text: '',
-  style: { fontFamily: 'monospace', fontSize: 12, fill: 0x9c8f78 },
+  style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 11, fill: 0x9c8f78 },
 });
 stageText.position.set(162, 8);
 face.addChild(stageText);

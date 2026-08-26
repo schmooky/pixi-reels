@@ -49,7 +49,7 @@ const times = { plain: null, tease: null };
 
 const hud = new PIXI.Text({
   text: 'press spin. every spin auto-skips once the board is at speed',
-  style: { fontFamily: 'monospace', fontSize: 13, fill: 0x9c8f78 },
+  style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 11, fill: 0x9c8f78 },
 });
 hud.position.set(0, TOTAL_H + 10);
 reelSet.addChild(hud);

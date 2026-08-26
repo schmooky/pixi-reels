@@ -33,7 +33,7 @@ const reelSet = new ReelSetBuilder()
 const TOTAL_H = ROWS * SIZE + (ROWS - 1) * GAP;
 const hud = new PIXI.Text({
   text: '',
-  style: { fontFamily: 'monospace', fontSize: 13, fill: 0x9c8f78 },
+  style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 11, fill: 0x9c8f78 },
 });
 hud.position.set(0, TOTAL_H + 10);
 reelSet.addChild(hud);

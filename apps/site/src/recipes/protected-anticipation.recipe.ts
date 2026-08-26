@@ -66,7 +66,7 @@ reelSet.events.on('anticipation:reelEnd', ({ reelIndex }) => stopGlow(reelIndex)
 // reels the slam lands and whether reels are still running after it.
 const label = new PIXI.Text({
   text: '',
-  style: { fontFamily: 'monospace', fontSize: 13, fill: 0xffcc44 },
+  style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 11, fill: 0xffcc44 },
 });
 label.position.set(0, TOTAL_H + 10);
 reelSet.addChild(label);

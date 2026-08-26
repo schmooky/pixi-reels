@@ -44,28 +44,40 @@ const reelSet = new ReelSetBuilder()
   .build();
 
 const TOTAL_H = ROWS * SIZE + (ROWS - 1) * GAP;
+
+// The face loads async from Google Fonts, and PIXI.Text bakes its metrics
+// at construction. Without this the first paint measures the fallback and
+// only corrects itself on the next label update.
+await document.fonts.load('9px "Fira Code"');
+
 const labels = [];
 for (let i = 0; i < REELS; i++) {
   const t = new PIXI.Text({
-    text: `floor ${floorFor(i)}ms`,
-    style: { fontFamily: 'monospace', fontSize: 11, fill: i === 0 ? 0x6b7280 : 0xfef08a },
+    text: `${floorFor(i)}ms\nfloor`,
+    style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 9, fill: i === 0 ? 0x6b7280 : 0xfef08a },
   });
   t.anchor.set(0.5, 0);
+  t.style.align = 'center';
   t.position.set(i * (SIZE + GAP) + SIZE / 2, TOTAL_H + 8);
   reelSet.addChild(t);
   labels.push(t);
 }
 
-let t0 = 0;
+// Seeded, not 0: a landing that somehow fires before `onSpin` set it would
+// otherwise print time-since-page-load as the reel's landing time.
+let t0 = performance.now();
 reelSet.events.on('spin:reelLanded', (i) => {
-  labels[i].text = `${floorFor(i)} -> ${Math.round(performance.now() - t0)}ms`;
+  // Two lines, not one: a single `250 -> 1324ms` line is wider than the reel
+  // it sits under, so five of them ran into each other. Stacked, the label
+  // cannot outgrow its column however big the numbers get.
+  labels[i].text = `${floorFor(i)}ms\n-> ${Math.round(performance.now() - t0)}ms`;
 });
 
 return {
   reelSet,
   cleanup: () => { for (const t of labels) { try { t.destroy(); } catch {} } },
   onSpin: async () => {
-    for (let i = 0; i < REELS; i++) labels[i].text = `floor ${floorFor(i)}ms`;
+    for (let i = 0; i < REELS; i++) labels[i].text = `${floorFor(i)}ms\nfloor`;
     const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
     const p = reelSet.spin();
     t0 = performance.now();
