@@ -1,5 +1,5 @@
 // @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, PIXI, app
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, PIXI, gsap, app
 //
 // WALK THE TEASE FORWARD, ONE REEL PER PRESS. `protect: 'stepwise'`.
 //
@@ -37,28 +37,48 @@ const reelSet = new ReelSetBuilder()
 
 const TOTAL_H = ROWS * SIZE + (ROWS - 1) * GAP;
 
-// Hold & Win anticipation glow on each teasing reel.
-const antSheet = await PIXI.Assets.load('/hw-sprites/anticipation.json');
-const antFrames = (pre) => Object.entries(antSheet.textures)
-  .filter(([k]) => k.startsWith(pre)).sort(([a], [b]) => a.localeCompare(b)).map(([, t]) => t);
-const ANT_IN = antFrames('in/'), ANT_LOOP = antFrames('loop/');
-
+// Tease outline: a thin dashed border on the reel's OWN bounds, blinking.
+// Not a filled plate and not a glow bigger than the reel - both of those sat
+// outside the column and read as decoration on top of the board rather than as
+// "this reel is the one still going".
+//
+// PixiJS has no dashed stroke, so the dashes are drawn as segments along each
+// edge, inset by half the line width to keep the stroke inside the bounds.
 const glowLayer = new PIXI.Container();
+// ON TOP, not at index 0. A backlight can sit behind the reels because it is
+// bigger than them and bleeds out at the edges; an outline drawn on the exact
+// bounds would be covered by the opaque symbols themselves.
 reelSet.addChild(glowLayer);
 const glows = new Map();
-const stopGlow = (i) => { const g = glows.get(i); if (g) { try { g.destroy(); } catch {} glows.delete(i); } };
+const stopGlow = (i) => {
+  const g = glows.get(i);
+  if (!g) return;
+  gsap.killTweensOf(g);
+  try { g.destroy(); } catch {}
+  glows.delete(i);
+};
 const startGlow = (i) => {
   stopGlow(i);
-  const g = new PIXI.AnimatedSprite(ANT_IN.length ? ANT_IN : ANT_LOOP);
-  g.anchor.set(0.5);
-  g.position.set(i * (SIZE + GAP) + SIZE / 2, TOTAL_H / 2);
-  g.width = g.height = SIZE * 2.0;
-  g.blendMode = 'add';
-  g.animationSpeed = 0.5; g.loop = false;
-  g.onComplete = () => { if (ANT_LOOP.length) { g.textures = ANT_LOOP; g.loop = true; g.play(); } };
-  glowLayer.addChild(g); g.play();
+  const DASH = 7, GAP_ = 5, W = 1.5, inset = W / 2;
+  const l = i * (SIZE + GAP) + inset, t = inset;
+  const r = i * (SIZE + GAP) + SIZE - inset, b = TOTAL_H - inset;
+  const g = new PIXI.Graphics();
+  for (const [x1, y1, x2, y2] of [[l, t, r, t], [r, t, r, b], [r, b, l, b], [l, b, l, t]]) {
+    const len = Math.hypot(x2 - x1, y2 - y1);
+    const ux = (x2 - x1) / len, uy = (y2 - y1) / len;
+    for (let d = 0; d < len; d += DASH + GAP_) {
+      const e = Math.min(d + DASH, len);
+      g.moveTo(x1 + ux * d, y1 + uy * d).lineTo(x1 + ux * e, y1 + uy * e);
+    }
+  }
+  g.stroke({ width: W, color: 0xfef08a });
+  glowLayer.addChild(g);
+  // Hard on/off rather than a soft pulse - `steps(1)` is what makes it read as
+  // a blink instead of a breathe.
+  gsap.to(g, { alpha: 0.15, duration: 0.22, yoyo: true, repeat: -1, ease: 'steps(1)' });
   glows.set(i, g);
 };
+
 reelSet.events.on('anticipation:reel', ({ reelIndex }) => startGlow(reelIndex));
 reelSet.events.on('anticipation:reelEnd', ({ reelIndex }) => stopGlow(reelIndex));
 
@@ -86,7 +106,7 @@ return {
   reelSet,
   cleanup: () => {
     for (const i of [...glows.keys()]) stopGlow(i);
-    try { glowLayer.destroy(); } catch {}
+    try { glowLayer.destroy({ children: true }); } catch {}
     try { hud.destroy(); } catch {}
   },
   // Every press goes through the same call. The engine decides which group

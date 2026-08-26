@@ -34,11 +34,18 @@ const reelSet = new ReelSetBuilder()
 
 const TOTAL_H = ROWS * SIZE + (ROWS - 1) * GAP;
 
-// Tease highlight, drawn with Graphics. No atlas fetch: the glow is pure
-// decoration here and the demo is about skip semantics, so a missing sprite
-// sheet must not be able to take the whole recipe down with it.
+// Tease outline: a thin dashed border on the reel's OWN bounds, blinking.
+// Not a filled plate and not a glow bigger than the reel - both of those sat
+// outside the column and read as decoration on top of the board rather than as
+// "this reel is the one still going".
+//
+// PixiJS has no dashed stroke, so the dashes are drawn as segments along each
+// edge, inset by half the line width to keep the stroke inside the bounds.
 const glowLayer = new PIXI.Container();
-reelSet.addChildAt(glowLayer, 0);
+// ON TOP, not at index 0. A backlight can sit behind the reels because it is
+// bigger than them and bleeds out at the edges; an outline drawn on the exact
+// bounds would be covered by the opaque symbols themselves.
+reelSet.addChild(glowLayer);
 const glows = new Map();
 const stopGlow = (i) => {
   const g = glows.get(i);
@@ -49,13 +56,23 @@ const stopGlow = (i) => {
 };
 const startGlow = (i) => {
   stopGlow(i);
-  const g = new PIXI.Graphics()
-    .roundRect(i * (SIZE + GAP) - 6, -6, SIZE + 12, TOTAL_H + 12, 8)
-    .fill({ color: 0xfef08a });
-  g.alpha = 0.14;
+  const DASH = 7, GAP_ = 5, W = 1.5, inset = W / 2;
+  const l = i * (SIZE + GAP) + inset, t = inset;
+  const r = i * (SIZE + GAP) + SIZE - inset, b = TOTAL_H - inset;
+  const g = new PIXI.Graphics();
+  for (const [x1, y1, x2, y2] of [[l, t, r, t], [r, t, r, b], [r, b, l, b], [l, b, l, t]]) {
+    const len = Math.hypot(x2 - x1, y2 - y1);
+    const ux = (x2 - x1) / len, uy = (y2 - y1) / len;
+    for (let d = 0; d < len; d += DASH + GAP_) {
+      const e = Math.min(d + DASH, len);
+      g.moveTo(x1 + ux * d, y1 + uy * d).lineTo(x1 + ux * e, y1 + uy * e);
+    }
+  }
+  g.stroke({ width: W, color: 0xfef08a });
   glowLayer.addChild(g);
-  // Slow breathing pulse for as long as the reel is teasing.
-  gsap.to(g, { alpha: 0.42, duration: 0.5, yoyo: true, repeat: -1, ease: 'sine.inOut' });
+  // Hard on/off rather than a soft pulse - `steps(1)` is what makes it read as
+  // a blink instead of a breathe.
+  gsap.to(g, { alpha: 0.15, duration: 0.22, yoyo: true, repeat: -1, ease: 'steps(1)' });
   glows.set(i, g);
 };
 
