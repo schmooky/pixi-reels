@@ -49,6 +49,7 @@ import { CascadeFallPhase } from '../spin/phases/CascadeFallPhase.js';
 import { CascadePlacePhase } from '../spin/phases/CascadePlacePhase.js';
 import { CascadeDropInPhase } from '../spin/phases/CascadeDropInPhase.js';
 import { AdjustPhase } from '../spin/phases/AdjustPhase.js';
+import { noticeInfo, noticeWarnOnce } from '../utils/notify.js';
 
 /**
  * The configurator you call before every reel set.
@@ -556,20 +557,16 @@ export class ReelSetBuilder {
 
   private _clampBufferMin1(count: number, label: string): number {
     if (!Number.isFinite(count) || count < 1) {
-      if (!ReelSetBuilder._bufferWarnedThisProcess) {
-        ReelSetBuilder._bufferWarnedThisProcess = true;
-        // eslint-disable-next-line no-console
-        console.warn(
-          `[pixi-reels] ${label} is below the minimum of 1; clamping to 1. ` +
-            `The motion layer needs at least one buffer cell above (and, outside tumble-only sets, below) the visible window for wrap detection.`,
-        );
-      }
+      // `noticeWarnOnce` owns the de-duplication now.
+      noticeWarnOnce(
+        'buffer-clamped',
+        `${label} is below the minimum of 1; clamping to 1. ` +
+          'The motion layer needs at least one buffer cell above (and, outside tumble-only sets, below) the visible window for wrap detection.',
+      );
       return 1;
     }
     return count;
   }
-  /** One-shot guard so we don't spam consoles when builders are constructed in a loop. */
-  private static _bufferWarnedThisProcess = false;
 
   /** Configure symbols via a registry callback. */
   symbols(configurator: (registry: SymbolRegistry) => void): this {
@@ -1082,9 +1079,9 @@ export class ReelSetBuilder {
       const reason = hasBigSymbols
         ? 'big symbols are registered'
         : 'one or more symbols use `unmask: true`';
-      // eslint-disable-next-line no-console
-      console.info(
-        `[pixi-reels] auto-selected SharedRectMaskStrategy because ${reason} ` +
+      noticeInfo(
+        'mask-auto-shared',
+        `auto-selected SharedRectMaskStrategy because ${reason} ` +
         `and the cross-axis gap (symbolGap.${vertical ? 'x' : 'y'}) is > 0. ` +
         'Pass .maskStrategy(...) explicitly to override.',
       );
@@ -1099,9 +1096,9 @@ export class ReelSetBuilder {
       this._curveFocus !== 'reel' && (this._curve !== undefined || this._curvePerReel !== undefined);
     if (!this._maskStrategyExplicit && curveLeans) {
       this._maskStrategy = new SharedRectMaskStrategy();
-      // eslint-disable-next-line no-console
-      console.info(
-        `[pixi-reels] auto-selected SharedRectMaskStrategy because curveFocus('${this._curveFocus}') ` +
+      noticeInfo(
+        'mask-auto-shared',
+        `auto-selected SharedRectMaskStrategy because curveFocus('${this._curveFocus}') ` +
         'leans cells across their own reel column. Pass .maskStrategy(...) explicitly to override.',
       );
     }
@@ -1111,9 +1108,9 @@ export class ReelSetBuilder {
     // flat, over a curved board. Unmask is the one a game asks for by name, so
     // say so rather than let it look like a curve bug.
     if (this._curveMode === 'warp' && this._curve !== undefined && hasUnmaskedSymbols) {
-      // eslint-disable-next-line no-console
-      console.info(
-        "[pixi-reels] curveMode('warp') does not bend symbols with `unmask: true`. " +
+      noticeInfo(
+        'warp-skips-unmask',
+        "curveMode('warp') does not bend symbols with `unmask: true`. " +
         'They are lifted into `viewport.unmaskedContainer`, outside the reel texture, ' +
         'so they render FLAT above a curved board. The same applies to the win ' +
         'spotlight and pin overlays. Use curveMode(\'symbol\') if those have to follow ' +

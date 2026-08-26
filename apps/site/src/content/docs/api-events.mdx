@@ -271,3 +271,37 @@ reelSet.getReel(4).events.on('phase:enter', (name) => {
 - Async listeners run "fire and forget." If you must `await` per-event work, queue it yourself. the engine doesn't.
 - The library emits `cascade:*:symbol` events BEFORE its own tween starts. Your listener can read the same `view` and queue a parallel tween. they'll run in lockstep.
 - The `Cell` type used in cascade payloads is `{ reel: number; cell: number }` (column = `reel`, visible cell = `cell`). Same shape as `destroySymbols` input.
+
+## Console notices
+
+Everything the library prints goes through one channel, so notices all look the
+same and all carry a stable CODE you can grep for, search the docs for, or
+quote in a bug report.
+
+```ts
+import { setLogLevel } from 'pixi-reels';
+
+setLogLevel('warn');   // drop the advisory notices, keep problems
+setLogLevel('silent'); // production
+```
+
+`'silent' | 'error' | 'warn' | 'info'`, each level including the ones before
+it. Default `'info'` (everything). In a browser a notice prints as a styled
+badge - `pixi-reels`, then the code, then the message; elsewhere it degrades to
+`[pixi-reels] warn(code) message`, since `%c` is a browser console feature.
+
+Notices keep using `console.warn` / `console.error` / `console.info` rather
+than one `console.log`, so devtools level filtering and stack capture still
+work, and detail arguments pass through untouched (an `Error` keeps its stack).
+
+| Code | Level | Meaning |
+|---|---|---|
+| `slam-before-result` | warn | `slamStop()` ran before `setResult()`, so the reels landed on whatever the strip was showing - random fill, or an invisible board in cascade mode. Use `requestSkip()` in that window. |
+| `phase-chain-threw` | error | A reel's phase chain rejected. The engine slammed to recover so the spin still settles. |
+| `refill-threw` | error | A two-stage refill rejected, usually from a caller's `gravityHold` / `onGravityComplete`. Slammed to recover. |
+| `pin-hook-threw` | error | A `movePin` flight hook threw. The flight continues so the flight symbol is not leaked. |
+| `destroy-rejected` | warn | A cell's `playDestroy()` rejected during `destroySymbols()`. Reported per cell on `cascade:destroy:end` as well. |
+| `buffer-clamped` | warn | `bufferSymbols()` was given less than 1 and was clamped. Once per process. |
+| `hw-coin-win-failed` | warn | A Hold & Win coin win animation rejected. |
+| `mask-auto-shared` | info | The builder auto-selected `SharedRectMaskStrategy`. Pass `.maskStrategy(...)` to override. |
+| `warp-skips-unmask` | info | `curveMode('warp')` does not bend `unmask: true` symbols, the win spotlight or pin overlays. |

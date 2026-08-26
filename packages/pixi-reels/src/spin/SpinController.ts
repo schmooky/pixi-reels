@@ -30,6 +30,7 @@ import { StandardMode } from './modes/StandardMode.js';
 import type { Disposable } from '../utils/Disposable.js';
 import { TickerRef } from '../utils/TickerRef.js';
 import { OCCUPIED_SENTINEL } from '../core/Reel.js';
+import { noticeError, noticeWarn } from '../utils/notify.js';
 import type { CellPin } from '../pins/CellPin.js';
 import {
   cloneColumnTarget,
@@ -433,9 +434,9 @@ export class SpinController implements Disposable {
   ): void {
     p.catch((err: unknown) => {
       if (generation !== this._spinGeneration) return;
-      // eslint-disable-next-line no-console
-      console.error(
-        `[pixi-reels] reel ${reelIndex} (${kind}) phase chain threw. slamming to recover:`,
+      noticeError(
+        'phase-chain-threw',
+        `reel ${reelIndex} (${kind}) phase chain threw. slamming to recover:`,
         err,
       );
       this._slam();
@@ -681,9 +682,9 @@ export class SpinController implements Disposable {
         // We still slam so the engine returns to a coherent idle state
         //. without this the refill promise would hang forever.
         this._events.emit('cascade:gravity:error', { error: err });
-        // eslint-disable-next-line no-console
-        console.error(
-          '[pixi-reels] two-stage refill threw (likely from a user-supplied ' +
+        noticeError(
+          'refill-threw',
+          'two-stage refill threw (likely from a user-supplied ' +
           'gravityHold/onGravityComplete). slamming to recover:',
           err,
         );
@@ -1205,6 +1206,26 @@ export class SpinController implements Disposable {
     if (!this._isSpinning) return;
     if (options?.reels && options?.except) {
       throw new Error("slamStop: pass either 'reels' or 'except', not both.");
+    }
+    if (!this._resultSymbols) {
+      // There is nothing to land ON yet, so the reels stop wherever the strip
+      // happens to be: random buffer fill in standard mode, and the alpha-0
+      // residue of the fall-out in cascade mode, i.e. an invisible board. No
+      // developer wants that outcome, and nothing else in the engine will
+      // report it - the reels just sit there showing the wrong thing.
+      //
+      // It stays a warning rather than a throw because `slamStop()` is the
+      // unconditional exit the engine's own abort, timeout and error-recovery
+      // paths depend on, and those legitimately fire before a result. `skip()`
+      // is the guarded entry point and throws here instead.
+      noticeWarn(
+        'slam-before-result',
+        'slamStop() was called before setResult(), so the reels will land on ' +
+          'whatever the strip is currently showing (random fill in standard mode, ' +
+          'the invisible fall-out residue in cascade mode) rather than on a result. ' +
+          'Use requestSkip() to queue the slam until setResult() arrives, or ' +
+          'skipSpin(), which throws in this window instead of landing on nothing.',
+      );
     }
     // A `reels` / `except` set that happens to cover every un-landed reel is
     // not a partial slam: it ends the round like the bare call does, so it has

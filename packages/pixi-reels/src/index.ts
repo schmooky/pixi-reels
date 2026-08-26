@@ -91,6 +91,12 @@ export type { StaticSpinSymbolOptions } from './snapshot/StaticSpinSymbol.js';
 // protected surface (`onEnter` / `onSkip` / `update`, and each phase's private
 // staging) can change in a minor release, so a subclass may need to follow.
 // Phase Config TYPES stay exported as stable shape descriptions.
+// Console channel. Every warning and error the library emits carries a stable
+// code and obeys one volume knob; `setLogLevel('silent')` is the production
+// switch. See `utils/notify.ts` for the contract.
+export { setLogLevel, getLogLevel } from './utils/notify.js';
+export type { LogLevel } from './utils/notify.js';
+
 export { ReelPhase } from './spin/phases/ReelPhase.js';
 export { PhaseFactory } from './spin/phases/PhaseFactory.js';
 export { StartPhase } from './spin/phases/StartPhase.js';

@@ -32,6 +32,7 @@ import type { RandomSymbolControl } from '../frame/SymbolPool.js';
 import { assertBufferCountsInRange, assertColumnTargets, cloneColumnTarget } from '../frame/ColumnTarget.js';
 import { V1_OPTION_KEYS, assertNoV1Keys } from '../config/v1Renames.js';
 import type { Cell } from '../cascade/tumbleAlgorithm.js';
+import { noticeError, noticeWarn } from '../utils/notify.js';
 
 export interface ReelSetParams {
   config: ReelSetInternalConfig;
@@ -814,10 +815,9 @@ export class ReelSet extends Container implements Disposable {
       for (let i = 0; i < results.length; i++) {
         if (results[i].status === 'rejected') {
           failed.push(cells[i]);
-          // eslint-disable-next-line no-console
-          console.warn(
-            `[pixi-reels] destroySymbols: cell (${cells[i].reel}, ${cells[i].cell}) ` +
-            'playDestroy rejected:',
+          noticeWarn(
+            'destroy-rejected',
+            `destroySymbols: cell (${cells[i].reel}, ${cells[i].cell}) playDestroy rejected:`,
             (results[i] as PromiseRejectedResult).reason,
           );
         }
@@ -2154,7 +2154,7 @@ export class ReelSet extends Container implements Disposable {
       opts?.onFlightCreated?.(flight);
     } catch (err) {
       // eslint-disable-next-line no-console
-      console.error('[pixi-reels] movePin onFlightCreated hook threw. continuing the flight to avoid leaking the flight symbol:', err);
+      noticeError('pin-hook-threw', 'movePin onFlightCreated hook threw. continuing the flight to avoid leaking the flight symbol:', err);
     }
 
     const duration = (opts?.duration ?? 400) / 1000;
@@ -2180,7 +2180,7 @@ export class ReelSet extends Container implements Disposable {
       opts?.onFlightCompleted?.(flight);
     } catch (err) {
       // eslint-disable-next-line no-console
-      console.error('[pixi-reels] movePin onFlightCompleted hook threw. continuing cleanup:', err);
+      noticeError('pin-hook-threw', 'movePin onFlightCompleted hook threw. continuing cleanup:', err);
     }
 
     // Apply the pin visually at the destination cell.
