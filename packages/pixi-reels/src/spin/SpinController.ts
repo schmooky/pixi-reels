@@ -1034,23 +1034,87 @@ export class SpinController implements Disposable {
    *   as a bare slam intent and never boosts speed or arms cascade auto-slam.
    */
   private _pressSkip(withSideEffects: boolean): void {
-    const protectedReels = this._protectedTeaseReels();
-    if (protectedReels.size > 0) {
-      // Land everything the tease isn't using. The tease reels keep their
-      // phase chains, so the player sees the slow-down start (and, under
-      // `'once'`, can end it with the next press).
-      const targets: number[] = [];
-      for (let i = 0; i < this._reels.length; i++) {
-        if (!protectedReels.has(i)) targets.push(i);
+    const group = this._nextSlamGroup();
+    if (group !== null) {
+      this._slam(group);
+      // Read this BEFORE spending `'once'`, and off the raw anticipation set
+      // rather than `_protectedTeaseReels()`. that helper reports what is
+      // still PROTECTED, which spending would zero out, and "the tease is
+      // over" is not the same question as "the tease is still protected".
+      const teaseLeft = this._teaseStillRunning();
+      // `'once'` is the only spendable mode. `'stepwise'` and `'always'` keep
+      // protecting whatever tease is left.
+      if (this._anticipationProtect === 'once') this._protectSpent = true;
+
+      if (teaseLeft) {
+        // Tease still running. Stage 1, not 2: the round's side effect is
+        // still owed to the press that actually ends it.
+        if (this._skipStage === 0) this._skipStage = 1;
+        return;
       }
-      this._slam(targets);
-      if (this._anticipationProtect !== 'always') this._protectSpent = true;
-      // Stage 1, not 2: the round's side effect is still owed to the press
-      // that actually ends the tease.
-      if (this._skipStage === 0) this._skipStage = 1;
+      // That release emptied the tease, so this WAS the round-ending press.
+      // Fall through for the side effect and stage 2, but skip the second
+      // `_slam()`. everything is already down and a bare `_slam()` would
+      // emit a second, empty pair of skip events for one press.
+      this._applyRoundSideEffects(withSideEffects);
+      this._skipStage = 2;
       return;
     }
 
+    this._applyRoundSideEffects(withSideEffects);
+    this._slam();
+    this._skipStage = 2;
+  }
+
+  /**
+   * The reels the NEXT press should land, or `null` when no tease protection
+   * is in force and the press is a plain full slam.
+   *
+   * Groups come out in the order a player walks through them:
+   *
+   *   1. everything outside the tease. the trigger symbols and any filler
+   *      reel, landed together so the board reads at a glance,
+   *   2. under `'stepwise'`, one tease reel per press after that, in tease
+   *      order, so the tension steps forward instead of ending at once.
+   *
+   * `'once'` and `'always'` stop after group 1: `'once'` spends its
+   * protection there and the next press is a plain full slam, `'always'`
+   * returns an empty group forever (a no-op press, by design).
+   */
+  private _nextSlamGroup(): number[] | null {
+    const teasing = this._protectedTeaseReels();
+    if (teasing.size === 0) return null;
+
+    const rest: number[] = [];
+    for (let i = 0; i < this._reels.length; i++) {
+      if (teasing.has(i) || this._landedReels.has(i) || this._heldReels.has(i)) continue;
+      rest.push(i);
+    }
+    if (rest.length > 0) return rest;
+
+    // Nothing left outside the tease. Only `'stepwise'` reaches into it.
+    if (this._anticipationProtect !== 'stepwise') return rest;
+
+    // Tease ORDER, not reel index: `setAnticipation([4, 2, 3])` releases 4
+    // first, matching the order the teases were staged in.
+    const next = this._anticipationReels.find((i) => teasing.has(i));
+    return next === undefined ? rest : [next];
+  }
+
+  /** Is any anticipation reel still un-landed, protected or not? */
+  private _teaseStillRunning(): boolean {
+    for (const i of this._anticipationReels) {
+      if (!this._landedReels.has(i) && !this._heldReels.has(i)) return true;
+    }
+    return false;
+  }
+
+  /**
+   * The once-per-round side effect a skip press carries, applied by whichever
+   * press ends the round. Split out of `_pressSkip` because a `'stepwise'`
+   * release can end the round without going through the full-slam path.
+   */
+  private _applyRoundSideEffects(withSideEffects: boolean): void {
     if (withSideEffects && this._skipStage !== 2) {
       if (this._currentSpinMode === 'cascade') {
         // Cascade: phase durations are static (don't read `speed.spinSpeed`),
@@ -1069,9 +1133,6 @@ export class SpinController implements Disposable {
         }
       }
     }
-
-    this._slam();
-    this._skipStage = 2;
   }
 
   /**
@@ -1079,7 +1140,8 @@ export class SpinController implements Disposable {
    * {@link AnticipationProtect} mode. Empty (no protection in force) when:
    *
    *   - no `protect` was passed to `setAnticipation`,
-   *   - `'once'` protection was already spent by an earlier press,
+   *   - `'once'` protection was already spent by an earlier press
+   *     (`'stepwise'` and `'always'` are not spendable),
    *   - the effective tease hold is `0` ms, so no tease would play anyway
    *     (Turbo / SuperTurbo without a `duration` override). Protecting a
    *     tease that never happens would stall the reels for nothing AND
@@ -1089,7 +1151,7 @@ export class SpinController implements Disposable {
   private _protectedTeaseReels(): Set<number> {
     const out = new Set<number>();
     if (this._anticipationProtect === false) return out;
-    if (this._anticipationProtect !== 'always' && this._protectSpent) return out;
+    if (this._anticipationProtect === 'once' && this._protectSpent) return out;
 
     const speed = this._speedManager.active;
     const hold = this._anticipationDuration ?? speed.anticipationDelay;

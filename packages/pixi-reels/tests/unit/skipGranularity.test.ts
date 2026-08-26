@@ -137,6 +137,82 @@ describe('skip granularity', () => {
       await p;
     });
 
+    it("'stepwise' releases one tease reel per press, in tease order", async () => {
+      const h = (harness = makeHarness());
+      const slams: Array<{ reels: number[]; partial: boolean }> = [];
+      h.reelSet.events.on('skip:requested', (info) => slams.push(info));
+
+      const p = h.reelSet.spin();
+      h.reelSet.setAnticipation([2, 3, 4], { protect: 'stepwise' });
+      h.reelSet.setResult(GRID);
+
+      // Press 1: everything outside the tease.
+      h.reelSet.skipSpin();
+      expect([...h.landed].sort()).toEqual([0, 1]);
+      expect(h.reelSet.skipStage).toBe(1);
+
+      // Then one reel at a time. Protection is not spendable, so each press
+      // reaches exactly one more.
+      h.reelSet.skipSpin();
+      expect([...h.landed].sort()).toEqual([0, 1, 2]);
+      expect(h.reelSet.skipStage).toBe(1);
+
+      h.reelSet.skipSpin();
+      expect([...h.landed].sort()).toEqual([0, 1, 2, 3]);
+      expect(h.reelSet.skipStage).toBe(1);
+
+      // The press that releases the last tease reel ends the round.
+      h.reelSet.skipSpin();
+      expect([...h.landed].sort()).toEqual([0, 1, 2, 3, 4]);
+      expect(h.reelSet.skipStage).toBe(2);
+
+      expect(slams).toEqual([
+        { reels: [0, 1], partial: true },
+        { reels: [2], partial: true },
+        { reels: [3], partial: true },
+        { reels: [4], partial: false },
+      ]);
+      await p;
+    });
+
+    it("'stepwise' follows tease order, not reel index", async () => {
+      const h = (harness = makeHarness());
+      const p = h.reelSet.spin();
+      // Staged 4 first, so 4 is released first.
+      h.reelSet.setAnticipation([4, 2, 3], { protect: 'stepwise' });
+      h.reelSet.setResult(GRID);
+
+      h.reelSet.skipSpin();
+      expect([...h.landed].sort()).toEqual([0, 1]);
+      h.reelSet.skipSpin();
+      expect(h.landed).toContain(4);
+      expect(h.landed).not.toContain(2);
+      h.reelSet.skipSpin();
+      expect(h.landed).toContain(2);
+      h.reelSet.skipSpin();
+      expect([...h.landed].sort()).toEqual([0, 1, 2, 3, 4]);
+      await p;
+    });
+
+    it("'stepwise' skips a tease reel that already landed on its own", async () => {
+      const h = (harness = makeHarness());
+      const p = h.reelSet.spin();
+      h.reelSet.setAnticipation([2, 3, 4], { protect: 'stepwise' });
+      h.reelSet.setResult(GRID);
+
+      h.reelSet.skipSpin();
+      expect([...h.landed].sort()).toEqual([0, 1]);
+
+      // Reel 2 finishes its tease naturally while the player waits.
+      h.reelSet.slamStop({ reels: [2] });
+      expect([...h.landed].sort()).toEqual([0, 1, 2]);
+
+      // Next press moves on to 3 rather than stalling on the landed reel.
+      h.reelSet.skipSpin();
+      expect([...h.landed].sort()).toEqual([0, 1, 2, 3]);
+      await p;
+    });
+
     it("'always' never lets a press end the tease", async () => {
       const h = (harness = makeHarness());
       const teased: number[] = [];

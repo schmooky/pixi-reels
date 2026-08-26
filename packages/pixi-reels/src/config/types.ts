@@ -122,8 +122,17 @@ export interface AnticipationSlowdown {
  *     trigger symbols are on screen and the tease is visibly under way. The
  *     next press lands the tease too. Protection is spent after that first
  *     press, hence "once".
+ *   - `'stepwise'` — the first press lands every non-tease reel, and each press
+ *     after that releases the NEXT tease reel on its own, in tease order. The
+ *     player keeps pressing to walk the tension forward one reel at a time
+ *     instead of ending it in one go. The press that releases the last tease
+ *     reel is the round-ending press and carries the round's side effect.
  *   - `'always'` — a skip press never ends a tease. Non-tease reels land
  *     immediately on every press; tease reels always play out in full.
+ *
+ * For any grouping other than these, drive it from game code with
+ * `slamStop({ reels })`: `'always'` keeps a press from ending a tease, and
+ * your own handler lands whichever group it wants per press.
  *
  * Protection applies to the player-facing entry points `skip()` and
  * `requestSkip()`. `slamStop()` stays an unconditional land-now (pass its
@@ -134,7 +143,7 @@ export interface AnticipationSlowdown {
  * There is no tease to protect there, so every press lands everything, and a
  * protected spin is indistinguishable from an ordinary one.
  */
-export type AnticipationProtect = boolean | 'once' | 'always';
+export type AnticipationProtect = boolean | 'once' | 'stepwise' | 'always';
 
 /** Full anticipation configuration. The object form of `setAnticipation`'s second argument. */
 export interface AnticipationOptions {

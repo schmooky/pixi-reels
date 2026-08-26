@@ -96,9 +96,25 @@ reelSet.setAnticipation([2, 3, 4], { stagger: 'sequential', protect: 'once' });
 // press 1 -> reels 0-1 land now, 2-4 keep teasing, skipStage becomes 1
 // press 2 -> the tease ends too, skipStage becomes 2
 
+// 'stepwise' walks it forward instead of ending it in one go.
+reelSet.setAnticipation([2, 3, 4], { protect: 'stepwise' });
+// press 1 -> reels 0-1;  press 2 -> reel 2;  press 3 -> reel 3;
+// press 4 -> reel 4, and that press ends the round
+
 // Or do it by hand, for your own rule.
 reelSet.slamStop({ except: [3, 4] });
 ```
+
+For a grouping the built-in modes don't cover, use `protect: 'always'` so no
+press can ever end a tease, and land your own groups with
+`slamStop({ reels })` per press.
+
+Two mid-spin calls that look like they would help here do not, and both are
+pinned by tests. Shrinking the set with `setAnticipation()` does NOT release a
+reel already teasing - the set is read once, when a reel leaves `SPIN`. And
+`setSpeed()` does not re-time the round in flight, because `spin()` captures
+the active profile and hands that instance to every phase (the same reason the
+`skipSpin()` boost lands on the next spin).
 
 `protect` applies to `skipSpin()` and `requestSkip()` (including a press queued
 before the result arrived, which is exactly the case it exists for. call

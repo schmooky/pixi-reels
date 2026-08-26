@@ -36,6 +36,30 @@ The same partial slam, expressed as a rule the engine applies for you. `protect:
 
 <RecipeDemo code="protected-anticipation" />
 
+<a id="skip-stepwise-tease"></a>
+
+## Walk the tease forward, one reel per press
+
+`protect: 'stepwise'` is the same rule applied per reel. Press 1 lands everything outside the tease, and each press after that releases the next tease reel in tease order. The player sets the pace: mash through it, or stop pressing and let it play. The press that releases the last tease reel is the one that ends the round.
+
+**Gotcha:** release order is TEASE order, not reel index. `setAnticipation([4, 2, 3], ...)` releases 4 first, matching the order you staged the teases in.
+
+<RecipeDemo code="skip-stepwise-tease" />
+
+For any other grouping - release the tease in pairs, or from the outside in - use `protect: 'always'` so a press can never end a tease, and drive the releases yourself with `slamStop({ reels })`:
+
+```ts
+reelSet.setAnticipation(tease, { protect: 'always' });
+
+const queue = [[3, 4], [2]];   // your plan, in press order
+function onSkipPressed() {
+  const group = queue.shift();
+  if (group) reelSet.slamStop({ reels: group });
+}
+```
+
+**Gotcha:** two things that look like they would work here do not, and both are pinned by tests. Shrinking the set with `setAnticipation()` mid-spin does NOT release a reel that is already teasing - the anticipation set is read once, at the moment a reel leaves `SPIN`. And `setSpeed()` mid-spin does not re-time the round in flight: `spin()` captures the active profile and hands that instance to every phase, which is why the `skipSpin()` boost lands on the NEXT spin. `slamStop({ reels })` is the lever that works mid-tease.
+
 <a id="skip-no-tell"></a>
 
 ## Skip without a tell

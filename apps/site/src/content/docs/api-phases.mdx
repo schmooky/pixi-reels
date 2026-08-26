@@ -195,7 +195,7 @@ open that up:
 
 | Lever | What it does |
 |---|---|
-| `setAnticipation(reels, { protect })` | Skip presses stop ending the tease. `'once'` lands the reels around it and leaves the tease running (the next press ends it); `'always'` never lets a press end one. |
+| `setAnticipation(reels, { protect })` | Skip presses stop ending the tease. `'once'` lands the reels around it and leaves the tease running (the next press ends it); `'stepwise'` then releases one tease reel per press, in tease order; `'always'` never lets a press end one. |
 | `slamStop({ reels })` / `slamStop({ except })` | Per-reel slam. Those reels land now, everything else keeps running its phase chain to a natural landing. |
 | `setMinimumSpinTime(ms \| ms[])` | Per-reel `SpinPhase` floor, replacing the profile's single shared `minimumSpinTime`. Without this, no individual reel can land below the profile floor except through an all-reels slam. |
 
