@@ -52,31 +52,61 @@ reelSet.addChild(hud);
 
 // A speed trace for the last tease reel. `speedNormalized` is live speed over
 // the profile's spinSpeed - the value you would drive a pitch ramp from.
+//
+// The panel below is drawn ONCE, at setup. That matters: the recipe runner
+// scales and centres the reel set to fit the frame, and it measures bounds at
+// setup time. A Graphics that is still empty then contributes nothing to those
+// bounds, so the fit gets solved for the reels alone and everything the chart
+// draws later spills outside the frame. Reserving the box up front makes the
+// runner scale the reels AND the chart together.
+const W = REELS * SIZE + (REELS - 1) * GAP;
+const TRACE_H = 62;
+const TRACE_TOP = H + 30;
+const SPAN = 240;
+// Top of the plot = 2.2x spin speed, so a 2x surge has headroom.
+const V_MAX = 2.2;
+
+const panel = new PIXI.Graphics();
+panel.roundRect(0, TRACE_TOP, W, TRACE_H, 6).fill({ color: 0x171310 });
+// The 1x line: "normal spin speed". Everything above it is a surge.
+const oneY = TRACE_TOP + TRACE_H - (1 / V_MAX) * TRACE_H;
+panel.moveTo(0, oneY).lineTo(W, oneY).stroke({ width: 1, color: 0x5c5147 });
+panel.roundRect(0, TRACE_TOP, W, TRACE_H, 6).stroke({ width: 1, color: 0x332c26 });
+reelSet.addChild(panel);
+
+const oneLabel = new PIXI.Text({
+  text: '1x',
+  style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 9, fill: 0x6f6459 },
+});
+// INSIDE the panel. Outside it the label widens the composition past the reels,
+// and the runner's fit centres on total bounds - so the board would sit visibly
+// off-centre in the frame.
+oneLabel.position.set(W - 20, oneY - 12);
+reelSet.addChild(oneLabel);
+
 const trace = new PIXI.Graphics();
-trace.position.set(0, H + 34);
 reelSet.addChild(trace);
-const TRACE_W = REELS * SIZE + (REELS - 1) * GAP;
-const TRACE_H = 44;
+
 let samples = [];
 let sampling = false;
+
+const yFor = (v) => {
+  // Clamped so a stray value can never grow the bounds the fit was solved for.
+  const t = Math.max(0, Math.min(1, v / V_MAX));
+  return TRACE_TOP + TRACE_H - t * TRACE_H;
+};
 
 const tick = () => {
   if (!sampling) return;
   samples.push(reelSet.reels[4].speedNormalized);
-  if (samples.length > 240) samples.shift();
+  if (samples.length > SPAN) samples.shift();
   trace.clear();
-  // The 1.0 line, so "above normal speed" is readable at a glance.
-  trace.moveTo(0, TRACE_H * 0.5).lineTo(TRACE_W, TRACE_H * 0.5)
-    .stroke({ width: 1, color: 0x554b43 });
-  if (samples.length > 1) {
-    // Scale so 2x spin speed is the top of the box and 0 is the bottom.
-    const y = (v) => TRACE_H - (v / 2) * TRACE_H;
-    trace.moveTo(0, y(samples[0]));
-    for (let i = 1; i < samples.length; i++) {
-      trace.lineTo((i / 240) * TRACE_W, y(samples[i]));
-    }
-    trace.stroke({ width: 2, color: 0x6ad0ff });
+  if (samples.length < 2) return;
+  trace.moveTo(0, yFor(samples[0]));
+  for (let i = 1; i < samples.length; i++) {
+    trace.lineTo((i / SPAN) * W, yFor(samples[i]));
   }
+  trace.stroke({ width: 2, color: 0x6ad0ff });
 };
 app.ticker.add(tick);
 
@@ -85,6 +115,8 @@ return {
   cleanup: () => {
     app.ticker.remove(tick);
     try { trace.destroy(); } catch {}
+    try { panel.destroy(); } catch {}
+    try { oneLabel.destroy(); } catch {}
     try { hud.destroy(); } catch {}
   },
   onSpin: async () => {

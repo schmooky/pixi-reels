@@ -70,36 +70,81 @@ reelSet.addChild(hud);
 
 // Speed AND acceleration, so the bounded second derivative is visible rather
 // than merely asserted.
+//
+// Both panels are drawn ONCE, at setup. The recipe runner scales and centres
+// the reel set to fit the frame and it measures bounds at setup time, so a
+// Graphics that is still empty then contributes nothing: the fit gets solved
+// for the reels alone and the chart spills out of the frame when it finally
+// draws. Reserving the boxes up front is what makes the runner scale the reels
+// and the charts together.
+const LANE_H = 46;
+const LANE_GAP = 8;
+const SPEED_TOP = H + 28;
+const ACCEL_TOP = SPEED_TOP + LANE_H + LANE_GAP;
+const SPAN = 260;
+const V_MAX = 2;
+// Acceleration is a per-frame delta of a 0..1 value, so it is tiny. This is the
+// magnification that puts the drive's plateau on screen at a readable height.
+const A_MAX = 0.06;
+
+const panels = new PIXI.Graphics();
+panels.roundRect(0, SPEED_TOP, W, LANE_H, 6).fill({ color: 0x171310 });
+panels.roundRect(0, ACCEL_TOP, W, LANE_H, 6).fill({ color: 0x171310 });
+// 1x spin speed on the speed lane, and zero acceleration on the accel lane.
+const oneY = SPEED_TOP + LANE_H - (1 / V_MAX) * LANE_H;
+const zeroY = ACCEL_TOP + LANE_H / 2;
+panels.moveTo(0, oneY).lineTo(W, oneY).stroke({ width: 1, color: 0x5c5147 });
+panels.moveTo(0, zeroY).lineTo(W, zeroY).stroke({ width: 1, color: 0x5c5147 });
+panels.roundRect(0, SPEED_TOP, W, LANE_H, 6).stroke({ width: 1, color: 0x332c26 });
+panels.roundRect(0, ACCEL_TOP, W, LANE_H, 6).stroke({ width: 1, color: 0x332c26 });
+reelSet.addChild(panels);
+
+const labels = [];
+for (const [text, y, fill] of [
+  ['speed 1x', oneY - 6, 0x6ad0ff],
+  ['accel 0', zeroY - 6, 0xf0a06a],
+]) {
+  const t = new PIXI.Text({
+    text,
+    style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 9, fill },
+  });
+  // INSIDE the panel: a label hanging off the right edge widens the composition
+  // past the reels, and the runner's fit centres on total bounds, which would
+  // push the board visibly off-centre.
+  t.position.set(W - 56, y - 6);
+  reelSet.addChild(t);
+  labels.push(t);
+}
+
 const trace = new PIXI.Graphics();
-trace.position.set(0, H + 32);
 reelSet.addChild(trace);
-const TRACE_H = 52, SPAN = 260;
+
 let speeds = [];
-let lastSpeed = 0;
 let accels = [];
+let lastSpeed = 0;
+
+// Clamped, so a stray sample can never grow the bounds the fit was solved for.
+const speedY = (v) => SPEED_TOP + LANE_H - Math.max(0, Math.min(1, v / V_MAX)) * LANE_H;
+const accelY = (a) => zeroY - Math.max(-1, Math.min(1, a / A_MAX)) * (LANE_H / 2);
 
 const tick = () => {
-  const reel = reelSet.reels[4];
-  const v = reel.speedNormalized;
+  const v = reelSet.reels[4].speedNormalized;
   speeds.push(v);
   accels.push(v - lastSpeed);
   lastSpeed = v;
   if (speeds.length > SPAN) { speeds.shift(); accels.shift(); }
+  if (speeds.length < 2) return;
 
   trace.clear();
-  trace.moveTo(0, TRACE_H).lineTo(W, TRACE_H).stroke({ width: 1, color: 0x554b43 });
-  const plot = (series, scale, color, mid) => {
-    if (series.length < 2) return;
-    const y = (val) => mid - val * scale;
+  const plot = (series, y, color) => {
     trace.moveTo(0, y(series[0]));
     for (let i = 1; i < series.length; i++) trace.lineTo((i / SPAN) * W, y(series[i]));
     trace.stroke({ width: 2, color });
   };
-  plot(speeds, TRACE_H * 0.9, 0x6ad0ff, TRACE_H);
-  // Acceleration, magnified and centred on the baseline. A tween model would
-  // show a spike here at the start of every transition; a drive shows a plateau,
-  // and with `jerk` set, a trapezoid.
-  plot(accels, TRACE_H * 9, 0xf0a06a, TRACE_H * 0.5);
+  plot(speeds, speedY, 0x6ad0ff);
+  // A tween model spikes here at the start of every transition. A drive shows a
+  // plateau, and with `jerk` set, a trapezoid: the acceleration ramps too.
+  plot(accels, accelY, 0xf0a06a);
 };
 app.ticker.add(tick);
 
@@ -108,6 +153,8 @@ return {
   cleanup: () => {
     app.ticker.remove(tick);
     try { trace.destroy(); } catch {}
+    try { panels.destroy(); } catch {}
+    for (const t of labels) { try { t.destroy(); } catch {} }
     try { hud.destroy(); } catch {}
   },
   onSpin: async () => {
