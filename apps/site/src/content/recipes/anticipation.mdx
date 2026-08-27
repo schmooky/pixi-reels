@@ -11,6 +11,8 @@ tags:
   - spine
   - horizontal
   - reverse
+  - curve
+  - acceleration
 ---
 
 Every way to hold the player at the reel stop, from a single slowed reel to a full Spine near-win act.
@@ -76,6 +78,136 @@ Each teasing reel crawls slower than the last, then stops exactly there.
 Keep the tease playing in Turbo / SuperTurbo with a duration override (the SuperTurbo profile sets anticipationDelay to 0, so a plain call skips the tease).
 
 <RecipeDemo code="turbo-anticipation" />
+
+<a id="anticipation-surge-curve"></a>
+
+## Shape the tease: surge, then crawl
+
+The stock tease can only slow down, and the way it slows down is the problem.
+It eases `reel.speed` to a fraction of spin speed over the first 35% of the
+hold, then sits flat for the other 65%.
+
+Two things follow. **An ease applied to a speed is a step in acceleration:**
+`power2.out` puts peak deceleration on the very first frame and decays from
+there, so the reel does not so much slow down as get set to a lower speed. And
+**there is no way to ask a reel to speed up first** - the phase is called
+anticipation but the implementation is deceleration.
+
+`curve` replaces the fixed shape with explicit legs. Speeds are multiples of the
+profile's `spinSpeed`, so `2` is a genuine surge and `0.08` is a crawl. Segment
+eases default to `power2.inOut`, which ramps the acceleration in *and* out.
+
+```ts
+reelSet.setAnticipation([2, 3, 4], {
+  stagger: 260,
+  curve: [
+    { speed: 2,    duration: 240, ease: 'power2.in' },
+    { speed: 0.08, duration: 620, ease: 'power3.inOut', hold: 300 },
+  ],
+});
+```
+
+**Gotcha:** `curve` and `slowdown` together throws. `slowdown` is shorthand for
+a two-leg curve, so accepting both would mean silently picking one - express the
+whole tease in `curve` instead.
+
+The profile's `anticipationDelay` still gates whether the tease runs at all (so
+Turbo still needs a `duration` override to tease), but the curve's own segment
+durations set the length.
+
+<RecipeDemo code="anticipation-surge-curve" />
+
+<a id="anticipation-curve-per-reel"></a>
+
+## A different curve per reel
+
+`slowdown` escalates by interpolating two numbers across the tease sequence. Two
+curves of different lengths have no meaningful midpoint, so `curve` takes a
+function instead:
+
+```ts
+curve: (order, total) => AnticipationSegment[]
+```
+
+`order` is the reel's place in the anticipation set, **not** its reel index - so
+`setAnticipation([4, 2, 3], ...)` hands `order: 0` to reel 4. That is the same
+ordering `slowdown` interpolates over and `protect: 'stepwise'` releases in.
+
+<RecipeDemo code="anticipation-curve-per-reel" />
+
+<a id="anticipation-cells"></a>
+
+## Tease for N symbols, not N milliseconds
+
+`duration` is a time budget, so how far a reel actually moves during a tease
+depends on its speed. If the tease is choreographed around symbols going past
+the window - "three more and then it lands" - time is the wrong anchor.
+
+`cells: n` ends the tease once the reel has travelled n symbol pitches, read off
+a monotonic odometer (`reel.travelledCells`) that survives the snap at the end
+of every spin.
+
+Time is right when the tease is cut to an audio bed; travel is right when it is
+cut to symbols passing the window. Neither is the default for the other.
+
+**Gotcha:** `duration` stays as the backstop. A reel that comes to rest can
+never reach a travel target, and a tease that never ends is a hung spin - so
+with `cells` set, `duration` stops being the tease length and becomes its
+ceiling.
+
+<RecipeDemo code="anticipation-cells" />
+
+<a id="anticipation-drive"></a>
+
+## The gas pedal: bounded acceleration
+
+Everything above still shapes the tease with an ease, and an ease only shapes
+the one transition it was written for.
+
+`motionModel('drive', { accel, decel, jerk })` bounds acceleration instead.
+Phases stop tweening `reel.speed` and start assigning `reel.targetSpeed`;
+`Reel.update` walks the speed toward it, never faster than the bounds allow. The
+reel can only change speed so fast, whatever it is asked for, and every
+transition inherits that - including ones nobody authored. Add `jerk` and the
+acceleration itself ramps: the pedal goes down over time rather than being
+stamped.
+
+It also makes interruption free. A skip press, a mid-tease retarget or a
+`setSpeed` mid-spin is one target assignment, and the motion stays continuous by
+construction - there is no timeline to kill and no leftover speed to reconcile.
+
+```ts
+builder.motionModel('drive', {
+  accel: spinSpeed / 20,   // ~20 frames from rest to full speed
+  decel: spinSpeed / 34,   // leans into its stops
+  jerk:  spinSpeed / 260,  // the S-curve; omit for a snappier response
+})
+```
+
+Units are px/frame^2 at 60fps, matching `spinSpeed`'s px/frame.
+
+**Opt-in, at build time only.** The default `'tween'` model is byte-for-byte
+unchanged, and there is no runtime toggle: handing `reel.speed` to a second
+owner while a phase is mid-tween is the failure this design avoids.
+
+Two moments stay instant under a drive, and both are deliberate. **Landing**
+halts the reel dead so it can snap to grid and bounce - the bounce tween is what
+covers it. **A skip press** means now. Both are identical in the tween model, so
+neither is the drive's to smooth.
+
+<RecipeDemo code="anticipation-drive" />
+
+<a id="anticipation-audio"></a>
+
+## Driving tease audio
+
+`anticipation:reel` (`{ reelIndex, order, total }`) and `anticipation:reelEnd`
+are the discrete bookends - use them to start and stop a tension loop.
+
+For a pitch ramp that tracks the actual slow-down rather than just its start and
+end, sample `reelSet.reels[i].speedNormalized` from your own ticker. It is live
+speed over the profile's spin speed: `1` at full blur, `0` at rest, negative
+during the start-up pull, and above `1` during a surge segment.
 
 <a id="skip-anticipation"></a>
 

@@ -467,11 +467,13 @@ export type MaskPathFn = (g: Graphics, ctx: MaskContext) => void;
  * }))
  *
  * @example
- * // A frame: everything except a hole in the middle.
+ * // A frame: everything except a hole in the middle. `cut()` subtracts from
+ * // the last shape that was already FILLED, so the fill comes first - draw the
+ * // hole before filling and it finds nothing to cut from, leaving an empty
+ * // mask and an invisible board.
  * builder.maskStrategy(new PathMaskStrategy((g, ctx) => {
- *   g.rect(0, 0, ctx.width, ctx.height);
+ *   g.rect(0, 0, ctx.width, ctx.height).fill({ color: 0xffffff });
  *   g.rect(60, 60, ctx.width - 120, ctx.height - 120).cut();
- *   g.fill({ color: 0xffffff });
  * }))
  */
 export class PathMaskStrategy implements DrawableMaskStrategy {

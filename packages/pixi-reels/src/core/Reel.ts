@@ -17,12 +17,7 @@ import type { ReelViewport } from './ReelViewport.js';
 import type { SpinningMode } from '../spin/modes/SpinningMode.js';
 import { StandardMode } from '../spin/modes/StandardMode.js';
 import { DEFAULT_GSAP, type Gsap } from '../utils/gsap.js';
-import {
-  resolveDriveConfig,
-  stepDrive,
-  type ReelDriveConfig,
-  type ReelDriveState,
-} from './ReelDrive.js';
+import { resolveDriveConfig, stepDrive, type ReelDriveConfig } from './ReelDrive.js';
 
 /**
  * Upper bound (ms) on a single `update()` delta. Matches Pixi's default
