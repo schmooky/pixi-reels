@@ -20,6 +20,7 @@ import { DEFAULTS } from '../config/defaults.js';
 import { SpeedPresets } from '../config/SpeedPresets.js';
 import { ReelSet, type ReelSetParams } from './ReelSet.js';
 import { Reel, type ReelConfig } from './Reel.js';
+import { resolveDriveConfig, type ReelDriveConfig } from './ReelDrive.js';
 import { reelAxis, type Orientation, type Direction } from './ReelAxis.js';
 import type { ReelCurveConfig, ReelCurveInput, CurveFocus, CurveMode } from './ReelCurve.js';
 import { CURVE_FOCUS_WEIGHT } from './ReelCurve.js';
@@ -131,6 +132,8 @@ export class ReelSetBuilder {
   private _maskStrategy: MaskStrategy = new RectMaskStrategy();
   /** True if the user explicitly set a mask strategy (no auto-pick override). */
   private _maskStrategyExplicit = false;
+  /** Acceleration bounds for the `'drive'` motion model, or `undefined` for `'tween'`. */
+  private _drive?: ReelDriveConfig;
 
   private _gsap: Gsap = DEFAULT_GSAP;
 
@@ -457,6 +460,60 @@ export class ReelSetBuilder {
     }
     this._maskStrategy = strategy;
     this._maskStrategyExplicit = true;
+    return this;
+  }
+
+  /**
+   * Choose how `reel.speed` gets from one value to the next.
+   *
+   * - `'tween'` (default) - phases tween the speed with a GSAP ease. Every
+   *   existing game uses this and nothing about it changes.
+   * - `'drive'` - the reel integrates toward a target speed under an
+   *   acceleration bound, and phases set that target instead of tweening.
+   *
+   * Why the second one exists: an ease applied to a SPEED is a step in
+   * acceleration. `power2.out` puts peak deceleration on the very first frame
+   * and decays from there, which is why the stock tease reads as the speed
+   * setting changing rather than as the reel slowing down. Bounding
+   * acceleration is the physical model instead - the reel can only change speed
+   * so fast, whatever it is asked for. Add `jerk` and the acceleration itself
+   * ramps, which is the pedal feel: down over time rather than stamped.
+   *
+   * The drive also makes interruption free. A skip press, a mid-tease retarget
+   * or a `setSpeed` mid-spin is a new target assignment, and the motion stays
+   * continuous by construction - there is no timeline to kill and no leftover
+   * speed to reconcile.
+   *
+   * Set at build time only. There is no runtime toggle, because handing the
+   * speed field to a second owner while a phase is mid-tween is exactly the
+   * failure this design avoids.
+   *
+   * Units are px/frame^2 at 60fps, matching `spinSpeed`'s px/frame:
+   * `accel: spinSpeed / 20` reaches full speed in roughly 20 frames.
+   *
+   * @example
+   * builder.motionModel('drive', { accel: 1.2, decel: 0.8, jerk: 0.15 })
+   */
+  motionModel(model: 'tween'): this;
+  motionModel(model: 'drive', config: ReelDriveConfig): this;
+  motionModel(model: 'tween' | 'drive', config?: ReelDriveConfig): this {
+    if (model === 'tween') {
+      this._drive = undefined;
+      return this;
+    }
+    if (model !== 'drive') {
+      throw new Error(`motionModel(): expected 'tween' or 'drive', got ${String(model)}.`);
+    }
+    if (!config) {
+      throw new Error(
+        "motionModel('drive'): an acceleration config is required, e.g. " +
+          '{ accel: spinSpeed / 20 }. Pass `motionModel(\'tween\')` for the default model.',
+      );
+    }
+    // Validate now rather than at first tick, so a bad number names the builder
+    // call that produced it instead of surfacing as a motionless reel.
+    resolveDriveConfig(config);
+    this._drive = config;
     return this;
   }
 
@@ -1198,6 +1255,7 @@ export class ReelSetBuilder {
       };
 
       const reel = new Reel(reelConfig, symbolFactory, randomProvider, viewport);
+      if (this._drive) reel.installDrive(this._drive);
       reels.push(reel);
       // Per-reel mask rect: cross position marches the reels, main position is
       // the reel's own offset, cross size is one cell, main size is the strip.

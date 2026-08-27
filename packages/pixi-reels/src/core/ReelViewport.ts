@@ -52,6 +52,18 @@ export interface MaskContext {
    * hidden. `0` unless `ReelSetBuilder.curveBleed()` was called.
    */
   readonly bleed: number;
+  /**
+   * Screen-space offset every drawn shape should be shifted by. `undefined`
+   * (treated as `{ x: 0, y: 0 }`) for a context the viewport built itself;
+   * set only by the `inset(...)` decorator, which shrinks `rects` and the
+   * viewport box and then uses this to move strategies that draw from
+   * `(0, 0)` rather than from a rect.
+   *
+   * A strategy that draws only from `ctx.rects` may ignore it - the rects are
+   * already shifted. A strategy that draws from `ctx.width`/`ctx.height` must
+   * add it, or `inset` will resize its mask without moving it.
+   */
+  readonly origin?: { x: number; y: number };
 }
 
 /**
@@ -115,22 +127,38 @@ export class RectMaskStrategy implements MaskStrategy {
 
   build(ctx: MaskContext): Graphics {
     const g = new Graphics();
-    this._draw(g, ctx);
+    this.draw(g, ctx);
     return g;
   }
 
   update(g: Graphics, ctx: MaskContext): void {
     g.clear();
-    this._draw(g, ctx);
+    this.draw(g, ctx);
   }
 
-  private _draw(g: Graphics, ctx: MaskContext): void {
+  /**
+   * Draw into a Graphics somebody else owns, so this strategy can be combined
+   * by `composeMasks(...)` / `inset(...)`. Does not clear.
+   */
+  draw(g: Graphics, ctx: MaskContext): void {
+    // Cross axis only - `toScreen(bleed, 0)` puts it on x for a vertical set
+    // and on y for a horizontal one. Each reel's art overhangs its OWN cell,
+    // so every rect inflates, not just the outermost pair.
+    const out = ctx.axis.toScreen(ctx.bleed ?? 0, 0);
+    const o = ctx.origin ?? { x: 0, y: 0 };
     if (ctx.rects.length === 0) {
-      g.rect(0, 0, ctx.width, ctx.height).fill({ color: 0xffffff });
+      g.rect(o.x - out.x, o.y - out.y, ctx.width + out.x * 2, ctx.height + out.y * 2).fill({
+        color: 0xffffff,
+      });
       return;
     }
     for (const r of ctx.rects) {
-      g.rect(r.x, r.y, r.width, r.height).fill({ color: 0xffffff });
+      g.rect(
+        o.x + r.x - out.x,
+        o.y + r.y - out.y,
+        r.width + out.x * 2,
+        r.height + out.y * 2,
+      ).fill({ color: 0xffffff });
     }
   }
 }
@@ -153,16 +181,20 @@ export class SharedRectMaskStrategy implements MaskStrategy {
 
   build(ctx: MaskContext): Graphics {
     const g = new Graphics();
-    this._draw(g, ctx);
+    this.draw(g, ctx);
     return g;
   }
 
   update(g: Graphics, ctx: MaskContext): void {
     g.clear();
-    this._draw(g, ctx);
+    this.draw(g, ctx);
   }
 
-  private _draw(g: Graphics, ctx: MaskContext): void {
+  /**
+   * Draw into a Graphics somebody else owns, so this strategy can be combined
+   * by `composeMasks(...)` / `inset(...)`. Does not clear.
+   */
+  draw(g: Graphics, ctx: MaskContext): void {
     // Cross axis only - `toScreen(bleed, 0)` puts it on x for a vertical set
     // and on y for a horizontal one, so this needs no orientation branch.
     // `?? 0` because `MaskContext` is public and `bleed` was added after v2
@@ -170,9 +202,13 @@ export class SharedRectMaskStrategy implements MaskStrategy {
     // `toScreen(undefined, 0)` would quietly produce a NaN rect - a mask that
     // clips everything, with no error anywhere.
     const out = ctx.axis.toScreen(ctx.bleed ?? 0, 0);
-    g.rect(-out.x, -out.y, ctx.width + out.x * 2, ctx.height + out.y * 2).fill({
-      color: 0xffffff,
-    });
+    const o = ctx.origin ?? { x: 0, y: 0 };
+    g.rect(
+      o.x - out.x,
+      o.y - out.y,
+      ctx.width + out.x * 2,
+      ctx.height + out.y * 2,
+    ).fill({ color: 0xffffff });
   }
 }
 

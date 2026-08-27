@@ -1,6 +1,6 @@
 # ADR 019: Built-in mask primitives beyond the rectangle
 
-## Status: Proposed
+## Status: Accepted, implemented on `feat/masks-and-anticipation-feel`
 
 ## Context
 
@@ -71,25 +71,31 @@ strategies are untouched, so no existing game changes behaviour.
 ```ts
 new RoundedRectMaskStrategy({
   radius: 16,
-  scope?: 'ends' | 'reel' | 'set',   // default 'ends'
-  bleed?: boolean,                    // default true
+  scope?: 'set' | 'reel',   // default 'set'
 })
 ```
 
-- `'ends'` (default) rounds only the two corners at each end of the **main**
-  axis per reel, leaving the cross-axis sides square. Adjacent reels butt
-  together with no notch, which is what makes this the safe default and the one
-  that survives a zero cross gap. Resolved through `ctx.axis`, so a horizontal
-  set rounds its left/right ends without the caller knowing.
-- `'reel'` rounds all four corners of each reel box. Correct only when reels are
-  visually separated (non-zero cross gap); pinches otherwise. The strategy warns
-  once when it detects touching rects.
-- `'set'` rounds the outer bounding box only. Equivalent to
-  `SharedRectMaskStrategy` with corners, and carries the same pyramid-peek
-  caveat.
+- `'set'` (default) rounds the four corners of the union bounding box. Safe at
+  any cross gap. On a pyramid it also discards the staircase and shows buffer
+  cells past the short reels, which is what `SilhouetteMaskStrategy` is for.
+- `'reel'` rounds all four corners of each reel box, so each reel reads as its
+  own rounded card. Correct only when reels are visually separated by a non-zero
+  cross gap; at gap `0` neighbours share an edge, and rounding both sides of it
+  bites a lens-shaped notch out of every seam. The strategy warns once when it
+  sees touching rects.
 
-Radius is clamped per rect to half the shorter side, so a large radius on a thin
-reel degrades to a stadium instead of inverting.
+**The `'ends'` scope from the first draft does not exist**, and the reasoning
+that produced it was wrong. It was going to round "only the corners at the
+main-axis ends of each reel, leaving the sides square" — but a rectangle's four
+corners *are* its main-axis ends, so that is `'reel'` with extra words, and it
+pinches at gap `0` in exactly the same way. The seam problem cannot be solved by
+choosing corners on a per-reel box; it is solved only by rounding the
+silhouette, which is item 2. Two scopes, not three.
+
+Radius is clamped per corner to half the shorter adjacent edge — by PixiJS
+itself, inside `roundRect` / `roundShape` — so a large radius on a thin reel
+degrades to a stadium rather than inverting, and the engine needs no clamp of
+its own.
 
 ### 2. `SilhouetteMaskStrategy`
 
@@ -112,13 +118,18 @@ Preconditions and degradation:
 - Requires cross gap `0`. With a gap the reels are genuinely disjoint and the
   union is not one ring; the strategy detects this and falls back to
   `RoundedRectMaskStrategy({ scope: 'reel' })` with a one-time warning.
-- Concave corners need a separate (usually smaller) radius, because the
-  clamp there is against the *step height*, not the rect side. Defaults to
-  `radius`, clamped.
-- Whether PixiJS `roundShape` arcs concave vertices the correct way must be
-  verified against the shipping build before this lands — if it does not, the
-  fallback is an explicit `arcTo` ring, which is the same walk with a different
-  emitter.
+- Concave corners take a separate, usually smaller radius, because the step they
+  sit on is often much shorter than the outer edges. Defaults to `radius`; `0`
+  leaves them sharp.
+- **Concave rounding confirmed against PixiJS 8.18.1.** `roundedShapeArc`
+  derives `radDirection` / `drawDirection` from the sign of the cross product of
+  the incoming and outgoing edges, and arcs concave vertices the opposite way
+  from convex ones. The `arcTo` fallback is not needed. Convexity is still
+  computed engine-side, because the *radius* assignment differs per vertex and
+  Pixi has no notion of a concave radius.
+- Convexity is judged against the ring's own winding (signed area) rather than
+  against a fixed sign, so it does not matter which way round the walk emits the
+  outline — which it does differently per axis.
 
 This is the strategy that answers "rounded masks that actually work on reels of
 different shapes".
@@ -139,16 +150,42 @@ it is what recipe authors should reach for before writing a class.
 
 Two decorators.
 
-`inset` grows or shrinks any strategy's output uniformly. Negative shrinks.
-Implemented by scaling the rects in a derived `MaskContext` rather than by
-touching the produced geometry, so it composes with any strategy including a
-custom one. This is the fix for "art bleeds a pixel past the frame" without
-rewriting the strategy.
+`inset` shrinks any strategy's output uniformly; negative grows. Implemented by
+deriving a `MaskContext` rather than by touching the produced geometry, so it
+composes with any strategy including a custom one. This is the fix for "art
+bleeds a pixel past the frame" without rewriting the strategy.
+
+The two axes go through different mechanisms, and the first implementation,
+which treated them alike, was wrong twice over:
+
+- **Cross** rides on a negated `ctx.bleed`. Every strategy already knows what
+  its own cross edges are, and they disagree for good reasons — a per-reel mask
+  insets each reel's sides, a shared box the outer pair, the silhouette only the
+  two outermost reels. Shrinking each rect's cross size directly instead opens a
+  gap between neighbours, which then fails the silhouette's contiguity test and
+  silently drops it to the per-reel fallback.
+- **Main** rides on the rect *sizes* plus a new optional `MaskContext.origin`.
+  Moving the rects *and* setting the origin applies the offset twice.
+
+`MaskContext.origin` is the one interface addition: an optional screen-space
+shift that strategies drawing from `(0, 0)` rather than from a rect must add.
+Optional and defaulted, exactly as `bleed` was, so no version bump. A custom
+strategy that ignores it insets in size but not in position — documented on the
+field.
 
 `composeMasks` draws several strategies into one `Graphics`. Union semantics
 only, per the PixiJS limitation above — documented on the function, not left to
 be discovered. The motivating case is a reel set plus a detached banner cell
 that must share one mask.
+
+Combining strategies needs a seam `MaskStrategy` does not have: `build` and
+`update` both assume the strategy owns its `Graphics`, so two of them yield two
+objects and a viewport that accepts one. Hence `DrawableMaskStrategy`, which
+adds `draw(g, ctx)`. Every built-in implements it, including the two that
+already shipped. A strategy that does not is still accepted everywhere —
+`composeMasks` nests its `Graphics` as a child, which unions correctly because a
+PixiJS stencil mask renders the mask container's whole subtree, at the cost of
+one scene node.
 
 ### 5. Fix: `RectMaskStrategy` ignores `ctx.bleed`
 

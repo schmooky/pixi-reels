@@ -86,7 +86,7 @@ export class CascadeFallPhase extends ReelPhase<CascadeFallPhaseConfig> {
   protected onEnter(config: CascadeFallPhaseConfig): void {
     const reel = this._reel;
     reel.spinningMode = config.spinningMode;
-    reel.speed = 0;
+    reel.haltDrive();
     reel.notifySpinStart();
 
     // Apply speed-profile tumble override. Falls back to the build-time

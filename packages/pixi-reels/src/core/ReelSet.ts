@@ -1031,9 +1031,18 @@ export class ReelSet extends Container implements Disposable {
    *     has seen it. `'once'` lands every non-tease reel on the first press
    *     and leaves the tease running (a second press ends it); `'always'`
    *     never lets a press end a tease. See {@link AnticipationProtect}.
+   *   - `curve` replaces the built-in decelerate-then-hold with an explicit
+   *     list of speed legs, so a tease can surge before it crawls and its
+   *     transitions ramp instead of stepping. See {@link AnticipationCurve}.
+   *     Mutually exclusive with `slowdown`, which is sugar for a two-leg curve.
+   *   - `cells` ends the tease after that many symbol pitches of travel rather
+   *     than after a fixed time — cut the tease to symbols going past the
+   *     window instead of to a clock.
    *
    * Listen to `anticipation:reel` ({ reelIndex, order, total }) to drive
    * per-step tension SFX / a pitch ramp, and `anticipation:reelEnd` to stop it.
+   * For a pitch ramp that tracks the actual slow-down rather than just its
+   * start and end, sample `reelSet.reels[i].speedNormalized` from your ticker.
    *
    * @example
    * // Classic "2 scatters showing" sweep across the last three reels:
@@ -1058,6 +1067,19 @@ export class ReelSet extends Container implements Disposable {
    * // so the two scatters are on screen, and reels 2-4 keep teasing. The next
    * // press ends the tease.
    * reelSet.setAnticipation([2, 3, 4], { stagger: 400, protect: 'once' });
+   *
+   * // Surge, then crawl. The reel speeds UP before it slows, and both
+   * // transitions ramp rather than stepping.
+   * reelSet.setAnticipation([2, 3, 4], {
+   *   stagger: 'sequential',
+   *   curve: [
+   *     { speed: 1.8,  duration: 220, ease: 'power2.in' },
+   *     { speed: 0.12, duration: 700, ease: 'power3.inOut', hold: 400 },
+   *   ],
+   * });
+   *
+   * // Tease for exactly four symbols of travel, however long that takes.
+   * reelSet.setAnticipation([4], { curve: [{ speed: 0.25, duration: 300 }], cells: 4 });
    */
   setAnticipation(
     reelIndices: number[],

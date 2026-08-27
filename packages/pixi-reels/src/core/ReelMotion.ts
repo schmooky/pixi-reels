@@ -27,6 +27,15 @@ export class ReelMotion {
   private _travel = 0; // total signed travel since the last snap
   private _rot = 0; // whole-slot rotations already applied
   private _off = 0; // sub-slot remainder
+  /**
+   * Total UNSIGNED distance travelled, in pixels, for the life of the reel.
+   *
+   * Separate from `_travel`, which is signed and resets on every
+   * `snapToGrid()` - and the engine snaps often (each stop, each cascade
+   * refill), so `_travel` cannot answer "how far has this reel moved since the
+   * tease began". This one only ever grows.
+   */
+  private _odometer = 0;
 
   constructor(
     private _symbols: ReelSymbol[],
@@ -55,6 +64,7 @@ export class ReelMotion {
   advance(delta: number): void {
     if (delta === 0) return;
     this._travel += this._axis.polarity * delta;
+    this._odometer += Math.abs(delta);
 
     // Derive the rotation count from total travel rather than mutating it.
     // Snapping q to a whole number inside EPS lands an exact N-slot travel on
@@ -108,6 +118,15 @@ export class ReelMotion {
 
   get slotPitch(): number {
     return this._pitch;
+  }
+
+  /**
+   * Total distance travelled in pixels, unsigned, never reset. Divide by
+   * {@link slotPitch} for a count in symbols. Read by `AnticipationPhase` to
+   * end a tease after N cells rather than after N milliseconds.
+   */
+  get odometer(): number {
+    return this._odometer;
   }
 
   /**

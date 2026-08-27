@@ -111,6 +111,59 @@ export interface AnticipationSlowdown {
 }
 
 /**
+ * One leg of an {@link AnticipationCurve}: reach a speed, optionally sit there.
+ *
+ * Speeds are multiples of the active profile's `spinSpeed`, so `0.15` is a
+ * crawl, `1` is normal, and `1.8` is a surge - the tease is not obliged to
+ * slow down.
+ */
+export interface AnticipationSegment {
+  /** Target speed as a multiple of `spinSpeed`. Must be >= 0. */
+  speed: number;
+  /** Milliseconds to get there from whatever the reel is doing now. */
+  duration: number;
+  /**
+   * GSAP ease for the transition. Default `'power2.inOut'`.
+   *
+   * The default deliberately differs from the legacy `power2.out`. An ease-out
+   * applied to a SPEED value means the deceleration is at its maximum on the
+   * first frame and decays from there - acceleration steps from nothing to its
+   * peak instantly, which is why the old tease reads as a setting change rather
+   * than as the reel slowing down. An `inOut` ease ramps the acceleration in and
+   * out, which is the S-shape a pedal produces.
+   */
+  ease?: string;
+  /** Milliseconds to hold this speed once reached. Default `0`. */
+  hold?: number;
+}
+
+/**
+ * The shape of a tease, as a list of speed legs played in order.
+ *
+ * Pass a function to vary the curve per reel: `order` is the reel's place in
+ * the anticipation set (`0` for the first tease reel) and `total` is how many
+ * are teasing, so the last reel can crawl deeper or hold longer than the first
+ * without hand-writing every reel's curve.
+ *
+ * @example
+ * // Surge, then crawl. The classic modern tease.
+ * curve: [
+ *   { speed: 1.8,  duration: 220, ease: 'power2.in' },
+ *   { speed: 0.12, duration: 700, ease: 'power3.inOut', hold: 400 },
+ * ]
+ *
+ * @example
+ * // Each successive reel crawls slower and holds longer.
+ * curve: (order, total) => {
+ *   const f = total > 1 ? order / (total - 1) : 0;
+ *   return [{ speed: 0.4 - 0.3 * f, duration: 300, hold: 200 + 400 * f }];
+ * }
+ */
+export type AnticipationCurve =
+  | AnticipationSegment[]
+  | ((order: number, total: number) => AnticipationSegment[]);
+
+/**
  * How a tease resists a skip press. Skip granularity is otherwise all-or-nothing:
  * a slam force-completes every phase including `AnticipationPhase`, so a player
  * who presses skip never sees that the spin was teasing at all.
@@ -160,8 +213,38 @@ export interface AnticipationOptions {
    * Turbo / SuperTurbo (whose profiles set `anticipationDelay: 0`, which would
    * otherwise skip anticipation entirely). When `slowdown.holdFrom/holdTo` are
    * also set, this is the base they scale.
+   *
+   * With a `curve`, this is only the gate that decides whether the tease runs
+   * at all (it must be > 0 in Turbo); the curve's own segment durations set the
+   * length.
    */
   duration?: number;
+  /**
+   * Shape the tease as an explicit sequence of speed legs instead of the fixed
+   * decelerate-then-hold. See {@link AnticipationCurve}. This is what makes a
+   * surge-then-crawl tease expressible, and what replaces the ease-on-a-speed
+   * feel with a ramped one.
+   *
+   * Mutually exclusive with `slowdown`, which is sugar for a two-leg curve;
+   * passing both throws rather than silently picking one.
+   */
+  curve?: AnticipationCurve;
+  /**
+   * End the tease after the reel has travelled this many symbol pitches,
+   * instead of after a fixed time.
+   *
+   * `duration` is a time budget, so how far the reel actually moves during a
+   * tease depends on the speed curve: two reels teasing at different speeds
+   * pass a different number of symbols. Anchor to travel when the tease is cut
+   * to symbols going past the window; anchor to time when it is cut to an audio
+   * bed. Mutually exclusive with a `curve`'s own hold - the last segment holds
+   * until the travel target is met.
+   *
+   * The reel must actually be moving: a `cells` tease with a curve that reaches
+   * speed `0` would never finish, so the phase falls back to its time budget if
+   * the reel comes to rest.
+   */
+  cells?: number;
 }
 
 /** Timing and animation profile for a speed mode. */

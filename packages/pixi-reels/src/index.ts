@@ -39,9 +39,28 @@ export type {
   AnticipationSlowdown,
   AnticipationOptions,
   AnticipationProtect,
+  AnticipationSegment,
+  AnticipationCurve,
   SlamOptions,
 } from './config/types.js';
 export type { ReelMaskRect, MaskStrategy, MaskContext } from './core/ReelViewport.js';
+export type {
+  DrawableMaskStrategy,
+  MaskPathFn,
+  RoundedMaskScope,
+  RoundedRectMaskOptions,
+  SilhouetteMaskOptions,
+} from './core/maskStrategies.js';
+export {
+  RoundedRectMaskStrategy,
+  SilhouetteMaskStrategy,
+  PathMaskStrategy,
+  composeMasks,
+  inset,
+  isDrawableMaskStrategy,
+} from './core/maskStrategies.js';
+export type { ReelDriveConfig, ReelDriveState } from './core/ReelDrive.js';
+export { stepDrive, DRIVE_FRAME_MS } from './core/ReelDrive.js';
 export {
   MASK_STRATEGY_VERSION,
   RectMaskStrategy,

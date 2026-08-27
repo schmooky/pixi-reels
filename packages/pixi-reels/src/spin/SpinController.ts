@@ -1,8 +1,10 @@
 import type { Ticker } from 'pixi.js';
 import type { Reel } from '../core/Reel.js';
 import type {
+  AnticipationCurve,
   AnticipationOptions,
   AnticipationProtect,
+  AnticipationSegment,
   AnticipationSlowdown,
   AnticipationStagger,
   SlamOptions,
@@ -130,6 +132,18 @@ export class SpinController implements Disposable {
    * of 30% spin speed). See {@link setAnticipation}. Cleared per spin.
    */
   private _anticipationSlowdown: AnticipationSlowdown | null = null;
+  /**
+   * Explicit tease shape from `setAnticipation(reels, { curve })`, replacing
+   * the built-in decelerate-then-hold. `null` for the legacy shape. Cleared
+   * per spin.
+   */
+  private _anticipationCurve: AnticipationCurve | null = null;
+  /**
+   * Travel anchor from `setAnticipation(reels, { cells })`: end the tease after
+   * this many symbol pitches rather than after the scripted hold. `null` for a
+   * time-anchored tease. Cleared per spin.
+   */
+  private _anticipationCells: number | null = null;
   /**
    * Explicit anticipation hold (ms) that OVERRIDES the active speed profile's
    * `anticipationDelay`. Set via `setAnticipation(reels, { duration })`. `null`
@@ -366,6 +380,8 @@ export class SpinController implements Disposable {
     this._anticipationReels = [];
     this._anticipationStagger = 0;
     this._anticipationSlowdown = null;
+    this._anticipationCurve = null;
+    this._anticipationCells = null;
     this._anticipationDuration = null;
     this._anticipationProtect = false;
     this._protectSpent = false;
@@ -585,6 +601,8 @@ export class SpinController implements Disposable {
     this._anticipationReels = [];
     this._anticipationStagger = 0;
     this._anticipationSlowdown = null;
+    this._anticipationCurve = null;
+    this._anticipationCells = null;
     this._anticipationDuration = null;
     this._anticipationProtect = false;
     this._protectSpent = false;
@@ -907,9 +925,28 @@ export class SpinController implements Disposable {
     // Held reels never reach AnticipationPhase, but filter here too so the
     // public API is forgiving. callers can pass a flat list without
     // tracking which indices are held this spin.
+    // `slowdown` is sugar for a two-leg curve, so accepting both would mean
+    // silently picking one. Say which one is redundant instead.
+    if (opts.curve && opts.slowdown) {
+      throw new Error(
+        'setAnticipation(): pass either `slowdown` or `curve`, not both. `slowdown` is ' +
+          'shorthand for a two-segment curve; express the whole tease in `curve`.',
+      );
+    }
+    if (opts.cells != null && !(opts.cells > 0)) {
+      throw new Error(
+        `setAnticipation(): \`cells\` must be a positive number of symbol pitches, got ${String(opts.cells)}.`,
+      );
+    }
+    if (Array.isArray(opts.curve) && opts.curve.length === 0) {
+      throw new Error('setAnticipation(): `curve` must have at least one segment.');
+    }
+
     this._anticipationReels = reelIndices.filter((i) => !this._heldReels.has(i));
     this._anticipationStagger = stagger;
     this._anticipationSlowdown = opts.slowdown ?? null;
+    this._anticipationCurve = opts.curve ?? null;
+    this._anticipationCells = opts.cells ?? null;
     this._anticipationDuration = opts.duration ?? null;
     // Normalise at the boundary. `true` is documented as an alias for
     // `'once'`, but every spend check compares against the STRING, so storing
@@ -1344,7 +1381,7 @@ export class SpinController implements Disposable {
 
       for (const i of targets) {
         const reel = this._reels[i];
-        reel.speed = 0;
+        reel.haltDrive();
         reel.isStopping = false;
 
         if (this._hooks.isMultiWaysSlot && pendingShape) {
@@ -1369,7 +1406,7 @@ export class SpinController implements Disposable {
     } else {
       for (const i of targets) {
         const reel = this._reels[i];
-        reel.speed = 0;
+        reel.haltDrive();
         reel.isStopping = false;
         reel.snapToGrid();
         reel.notifySpinEnd();
@@ -1512,6 +1549,10 @@ export class SpinController implements Disposable {
     if (this._isStale(reelIndex, generation)) return;
 
     const reel = this._reels[reelIndex];
+    // What `reel.speedNormalized` divides by. Set per spin because the active
+    // profile can change between spins (and mid-spin, via `setSpeed`), and a
+    // stale reference would report the wrong fraction to a tease SFX ramp.
+    reel.referenceSpeed = speed.spinSpeed;
     const isTumble = this._currentSpinMode === 'cascade';
     const canAdjust = this._hooks.isMultiWaysSlot && this._phaseFactory.has('adjust');
 
@@ -1634,7 +1675,7 @@ export class SpinController implements Disposable {
       // moves it (above), but a custom `'anticipation'` phase may, and this
       // is the invariant either way.
       if (didAnticipate) {
-        reel.speed = 0;
+        reel.haltDrive();
         reel.snapToGrid();
       }
       // Tumble stop = place + dropIn. Both phases are user-overridable via
@@ -1765,12 +1806,27 @@ export class SpinController implements Disposable {
   ): AnticipationPhaseConfig {
     const slowdown = this._anticipationSlowdown;
     const baseDuration = this._anticipationDuration;
+    const cells = this._anticipationCells;
+    const travel: { cells?: number } = cells != null ? { cells } : {};
+
+    // An explicit curve replaces the whole slowdown/hold computation. `duration`
+    // still rides along: the phase uses it only as the gate that decides whether
+    // the tease runs at all (it must be > 0 in Turbo) and as the backstop for a
+    // travel-anchored tease.
+    if (this._anticipationCurve) {
+      const config: AnticipationPhaseConfig = {
+        curve: this._resolveCurve(reelIndex),
+        ...travel,
+      };
+      if (baseDuration != null) config.duration = baseDuration;
+      return config;
+    }
 
     // No slowdown curve: only the (optional) duration override matters. Passing
     // it explicitly is what lets the tease run when the profile's
     // anticipationDelay is 0 (Turbo / SuperTurbo).
     if (!slowdown) {
-      return baseDuration != null ? { duration: baseDuration } : {};
+      return baseDuration != null ? { duration: baseDuration, ...travel } : { ...travel };
     }
 
     const count = this._anticipationReels.length;
@@ -1786,12 +1842,37 @@ export class SpinController implements Disposable {
 
     const config: AnticipationPhaseConfig = {
       speedMultiplier: from + (to - from) * f,
+      ...travel,
     };
     const holdMult = holdFrom + (holdTo - holdFrom) * f;
     // Set duration whenever an override is active OR the hold is scaled; leave
     // it off only when the plain profile hold (holdMult 1, no override) applies.
     if (baseDuration != null || holdMult !== 1) config.duration = base * holdMult;
     return config;
+  }
+
+  /**
+   * Resolve the configured {@link AnticipationCurve} for one reel.
+   *
+   * The function form is called with the reel's TEASE-ORDER, not its index, so
+   * `setAnticipation([4, 2, 3], { curve })` hands `order: 0` to reel 4 - the
+   * same ordering `slowdown` interpolates over and `'stepwise'` protection
+   * releases in.
+   */
+  private _resolveCurve(reelIndex: number): AnticipationSegment[] {
+    const curve = this._anticipationCurve;
+    if (!curve) return [];
+    if (Array.isArray(curve)) return curve;
+    const total = this._anticipationReels.length;
+    const order = this._anticipationReels.indexOf(reelIndex);
+    const segments = curve(order < 0 ? 0 : order, total);
+    if (!Array.isArray(segments) || segments.length === 0) {
+      throw new Error(
+        `setAnticipation(): the curve function returned no segments for reel ${reelIndex} ` +
+          `(tease order ${order}). Return at least one segment.`,
+      );
+    }
+    return segments;
   }
 
   private _stopDelayFor(reelIndex: number, speed: SpeedProfile): number {
