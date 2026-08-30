@@ -18,8 +18,9 @@
 // rather than being stamped. The drive starts easing off early enough to arrive
 // without overshooting.
 //
-// Units are px/frame^2 at 60fps, matching `spinSpeed`'s px/frame. `accel:
-// spinSpeed / 20` reaches full speed in roughly 20 frames.
+// The bounds are PROFILE-RELATIVE: `accelFrames: 20` means "reach whatever the
+// active profile calls full speed in 20 frames", so a Turbo accelerates harder
+// than a Normal instead of taking proportionally longer.
 //
 // Opt-in per set, at build time only. The default `'tween'` model is unchanged,
 // and there is no runtime toggle - handing `reel.speed` to a second owner while
@@ -33,7 +34,6 @@ const IDS = ['9', '10', 'J', 'Q', 'K'];
 const SCAT = 'SCAT';
 const REELS = 5, ROWS = 3, SIZE = 78, GAP = 4;
 const TEASE = [2, 3, 4];
-const SPIN_SPEED = SpeedPresets.NORMAL.spinSpeed;
 const CARDS = CARD_DECK.filter((c) => IDS.includes(c.id));
 function rv() { return IDS[Math.floor(Math.random() * IDS.length)]; }
 
@@ -47,12 +47,12 @@ const reelSet = new ReelSetBuilder()
   })
   .motionModel('drive', {
     // Roughly 20 frames from rest to full speed.
-    accel: SPIN_SPEED / 20,
+    accelFrames: 20,
     // Slower coming down than going up: the reel leans into its stops.
-    decel: SPIN_SPEED / 34,
+    decelFrames: 34,
     // The S-curve. Comment this line out to feel the difference - without it
     // the acceleration still steps to its bound, it just cannot exceed it.
-    jerk: SPIN_SPEED / 260,
+    jerkFrames: 260,
   })
   .speed('normal', { ...SpeedPresets.NORMAL, anticipationDelay: 900, stopDelay: 120 })
   .ticker(app.ticker)

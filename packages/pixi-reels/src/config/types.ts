@@ -164,6 +164,20 @@ export type AnticipationCurve =
   | ((order: number, total: number) => AnticipationSegment[]);
 
 /**
+ * How far a tease runs, in symbol pitches.
+ *
+ * Takes the same function form as {@link AnticipationCurve}, and for the same
+ * reason: the last reel of a sweep usually wants to run further than the first,
+ * and one number cannot say that. `order` is the reel's place in the
+ * anticipation set, `total` is how many are teasing.
+ *
+ * @example
+ * // One more symbol of travel per reel across the sweep.
+ * cells: (order) => 2 + order
+ */
+export type AnticipationCells = number | ((order: number, total: number) => number);
+
+/**
  * How a tease resists a skip press. Skip granularity is otherwise all-or-nothing:
  * a slam force-completes every phase including `AnticipationPhase`, so a player
  * who presses skip never sees that the spin was teasing at all.
@@ -214,9 +228,11 @@ export interface AnticipationOptions {
    * otherwise skip anticipation entirely). When `slowdown.holdFrom/holdTo` are
    * also set, this is the base they scale.
    *
-   * With a `curve`, this is only the gate that decides whether the tease runs
-   * at all (it must be > 0 in Turbo); the curve's own segment durations set the
-   * length.
+   * With a `curve`, this is the gate that decides whether the tease runs at all
+   * (it must be > 0 in Turbo); the curve's own segment durations set the
+   * length. With `cells` it is additionally the backstop on the FINAL leg - the
+   * longest the tease will wait for the travel target once the curve has
+   * played - so the tease can run for as long as the curve plus this value.
    */
   duration?: number;
   /**
@@ -231,20 +247,24 @@ export interface AnticipationOptions {
   curve?: AnticipationCurve;
   /**
    * End the tease after the reel has travelled this many symbol pitches,
-   * instead of after a fixed time.
+   * instead of after a fixed time. See {@link AnticipationCells}.
    *
    * `duration` is a time budget, so how far the reel actually moves during a
    * tease depends on the speed curve: two reels teasing at different speeds
    * pass a different number of symbols. Anchor to travel when the tease is cut
    * to symbols going past the window; anchor to time when it is cut to an audio
-   * bed. Mutually exclusive with a `curve`'s own hold - the last segment holds
-   * until the travel target is met.
+   * bed.
    *
-   * The reel must actually be moving: a `cells` tease with a curve that reaches
-   * speed `0` would never finish, so the phase falls back to its time budget if
-   * the reel comes to rest.
+   * The anchor applies to the **final leg** of a curve: earlier legs play in
+   * full, and the last one holds until the target is met instead of for its
+   * scripted `hold`. (Measuring from the start of the tease instead would let a
+   * fast opening segment burn the whole budget and silently delete the legs
+   * after it.)
+   *
+   * The reel must actually be moving: a final leg at speed `0` can never reach
+   * the target, so `duration` runs as the backstop and a notice is emitted.
    */
-  cells?: number;
+  cells?: AnticipationCells;
 }
 
 /** Timing and animation profile for a speed mode. */

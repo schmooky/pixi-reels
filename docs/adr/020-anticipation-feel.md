@@ -119,11 +119,14 @@ as `Reel.travelledCells`.
 that comes to rest can never reach a travel target and a tease that never ends
 is a hung spin. The scripted time becomes the backstop.
 
-Time is right when the tease is cut to an audio bed; travel is right when it is
-cut to symbols passing the window. Both are real production needs, so both ship;
-neither is the default for the other. The first draft called them mutually
-exclusive, which the backstop above makes false: with `cells` set, `duration`
-stops being the tease length and becomes its ceiling.
+**The anchor measures the FINAL leg, not the whole tease.** Arming the odometer
+at the start of the tease looked simpler and is wrong: a surge leg covers cells
+fast, so `cells: 2` on a surge-then-crawl curve ends the tease inside the surge
+and the crawl the author wrote never plays - silently, because there is nothing
+to warn about. Earlier legs therefore always play in full, and the travel mark
+is taken when the last leg's ramp completes. Which means `duration` bounds that
+final leg, so the tease runs for at most the curve plus `duration` - it is not a
+ceiling on the tease as a whole, and the docs say so.
 
 ### Layer 3 — `ReelDrive`: bounded acceleration in the update loop
 
@@ -222,3 +225,20 @@ already on a ticker and can sample it. `anticipation:reel` /
   split disappears, so anything that visually depended on it — a game timing an
   SFX to the end of the ramp — changes shape. It is opt-in, so this is a
   documentation obligation, not a break.
+
+
+### Bounds are profile-relative
+
+The first cut took `accel` in absolute px/frame^2. That is only correct for a
+game with one speed profile. The shipped presets run `spinSpeed` 30 / 50 / 80,
+so one absolute bound tuned against Normal makes SuperTurbo take 53 frames to
+reach full speed where Normal takes 20 - and `StartPhase` completes on
+`accelerationDuration` (50ms, 3 frames) regardless, so the reel enters the spin
+at a fraction of its speed and keeps ramping. A turbo that starts slower than
+normal is the exact opposite of what the setting means.
+
+`accelFrames` therefore expresses the bound as "frames from rest to the ACTIVE
+profile's full spin speed", re-resolved whenever `Reel.referenceSpeed` changes -
+which the controller sets per spin. The absolute form stays for single-profile
+games; mixing the two throws, because a half-relative drive has no coherent
+meaning.

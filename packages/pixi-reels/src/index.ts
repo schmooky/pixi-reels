@@ -41,6 +41,7 @@ export type {
   AnticipationProtect,
   AnticipationSegment,
   AnticipationCurve,
+  AnticipationCells,
   SlamOptions,
 } from './config/types.js';
 export type { ReelMaskRect, MaskStrategy, MaskContext } from './core/ReelViewport.js';
@@ -59,7 +60,7 @@ export {
   inset,
   isDrawableMaskStrategy,
 } from './core/maskStrategies.js';
-export type { ReelDriveConfig, ReelDriveState } from './core/ReelDrive.js';
+export type { ReelDriveConfig, ReelDriveState, ResolvedDriveConfig } from './core/ReelDrive.js';
 export { stepDrive, resolveDriveConfig, DRIVE_FRAME_MS } from './core/ReelDrive.js';
 export {
   MASK_STRATEGY_VERSION,

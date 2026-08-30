@@ -150,10 +150,27 @@ of every spin.
 Time is right when the tease is cut to an audio bed; travel is right when it is
 cut to symbols passing the window. Neither is the default for the other.
 
-**Gotcha:** `duration` stays as the backstop. A reel that comes to rest can
-never reach a travel target, and a tease that never ends is a hung spin - so
-with `cells` set, `duration` stops being the tease length and becomes its
-ceiling.
+**The anchor applies to the final leg of a curve.** Earlier legs play in full,
+and the last one holds until the target is met instead of for its scripted
+`hold`. Measuring from the start of the tease instead would let a fast opening
+segment burn the whole travel budget and silently delete every leg after it -
+add `cells: 2` to a surge-then-crawl curve and you would never see the crawl.
+
+`cells` takes the same function-of-tease-order form as `curve`, so a sweep can
+run each successive reel further than the last:
+
+```ts
+reelSet.setAnticipation([2, 3, 4], {
+  curve: [{ speed: 0.25, duration: 300 }],
+  cells: (order) => 2 + order,   // 2, 3, then 4 symbols
+});
+```
+
+**Gotcha:** `duration` stays as the backstop on that final leg. A reel that
+comes to rest can never reach a travel target, and a tease that never ends is a
+hung spin - so the tease runs for at most the curve plus `duration`. A final leg
+that sits at speed `0` can never reach the target at all, and says so on the
+notice channel.
 
 <RecipeDemo code="anticipation-cells" />
 
@@ -178,13 +195,32 @@ construction - there is no timeline to kill and no leftover speed to reconcile.
 
 ```ts
 builder.motionModel('drive', {
-  accel: spinSpeed / 20,   // ~20 frames from rest to full speed
-  decel: spinSpeed / 34,   // leans into its stops
-  jerk:  spinSpeed / 260,  // the S-curve; omit for a snappier response
+  accelFrames: 20,   // frames from rest to the ACTIVE profile's full speed
+  decelFrames: 34,   // leans into its stops
+  jerkFrames: 260,   // the S-curve; omit for a snappier response
 })
 ```
 
-Units are px/frame^2 at 60fps, matching `spinSpeed`'s px/frame.
+The bounds are **profile-relative**, and that matters as soon as a game has more
+than one speed. The shipped presets run `spinSpeed` 30 / 50 / 80, so a single
+absolute `px/frame^2` bound tuned for Normal makes SuperTurbo take 53 frames to
+reach speed where Normal takes 20 - a turbo that starts *slower* than normal.
+`accelFrames` re-resolves against whichever profile is running, so the feel
+holds across all three.
+
+The absolute form is still accepted for a single-profile game:
+
+```ts
+builder.motionModel('drive', { accel: 1.5, decel: 0.9, jerk: 0.12 })
+```
+
+Units there are px/frame^2 at 60fps, matching `spinSpeed`'s px/frame. Mixing the
+two forms throws.
+
+If a segment asks for a speed the drive cannot reach inside that segment's
+duration, the leg simply ends where it got to and the next retarget hides it -
+so the engine says so once on the notice channel, with the acceleration that
+would have been needed.
 
 **Opt-in, at build time only.** The default `'tween'` model is byte-for-byte
 unchanged, and there is no runtime toggle: handing `reel.speed` to a second
@@ -203,6 +239,18 @@ neither is the drive's to smooth.
 
 `anticipation:reel` (`{ reelIndex, order, total }`) and `anticipation:reelEnd`
 are the discrete bookends - use them to start and stop a tension loop.
+
+Between them, `anticipation:segment` (`{ reelIndex, index, total, speed,
+targetSpeed }`) fires once per leg of a `curve`, in order. That is what lets a
+surge get a different sound from the crawl that follows it without polling the
+speed and inferring where one ended:
+
+```ts
+reelSet.events.on('anticipation:segment', ({ index, speed }) => {
+  if (speed > 1) sfx.play('tease-surge');
+  else if (index > 0) sfx.play('tease-crawl');
+});
+```
 
 For a pitch ramp that tracks the actual slow-down rather than just its start and
 end, sample `reelSet.reels[i].speedNormalized` from your own ticker. It is live

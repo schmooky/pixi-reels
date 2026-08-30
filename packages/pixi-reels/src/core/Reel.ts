@@ -17,7 +17,14 @@ import type { ReelViewport } from './ReelViewport.js';
 import type { SpinningMode } from '../spin/modes/SpinningMode.js';
 import { StandardMode } from '../spin/modes/StandardMode.js';
 import { DEFAULT_GSAP, type Gsap } from '../utils/gsap.js';
-import { resolveDriveConfig, stepDrive, type ReelDriveConfig } from './ReelDrive.js';
+import {
+  isRelativeDriveConfig,
+  resolveDriveConfig,
+  stepDrive,
+  type ReelDriveConfig,
+  type ReelDriveState,
+  type ResolvedDriveConfig,
+} from './ReelDrive.js';
 
 /**
  * Upper bound (ms) on a single `update()` delta. Matches Pixi's default
@@ -241,10 +248,16 @@ export class Reel implements Disposable {
    * default `'tween'` model phases write `speed` directly and this is ignored.
    */
   private _targetSpeed = 0;
-  /** Resolved acceleration bounds, or `null` under the `'tween'` model. */
-  private _drive: { accel: number; decel: number; jerk: number } | null = null;
-  /** Live drive acceleration, px/frame^2. Only non-zero while jerk-limited. */
-  private _driveAccel = 0;
+  /** Build-time drive config, or `null` under the `'tween'` model. */
+  private _driveConfig: ReelDriveConfig | null = null;
+  /** Resolved acceleration bounds for the ACTIVE profile, or `null` under `'tween'`. */
+  private _drive: ResolvedDriveConfig | null = null;
+  /**
+   * Live drive state, reused across ticks. `stepDrive` writes into it rather
+   * than returning a fresh object, because this runs once per reel per frame
+   * for the life of the session.
+   */
+  private readonly _driveState: ReelDriveState = { speed: 0, accel: 0 };
   /** Full spin speed of the active profile, px/frame. Set by the controller. */
   private _referenceSpeed = 0;
 
@@ -655,17 +668,16 @@ export class Reel implements Disposable {
     // mode caps at a full slot, so an unbounded deltaMs there could still skip.
     const dt = Math.min(deltaMs, MAX_TICK_MS);
 
-    if (this._drive) {
-      // A stationary reel with a target still has work to do, so the drive is
-      // stepped before the early-out rather than after it.
-      const next = stepDrive(
-        { speed: this.speed, accel: this._driveAccel },
-        this._targetSpeed,
-        this._drive,
-        dt,
-      );
-      this.speed = next.speed;
-      this._driveAccel = next.accel;
+    // A stationary reel with a target still has work to do, so the drive is
+    // stepped before the early-out rather than after it - but a drive that is
+    // parked (at rest, no target, no residual acceleration) has nothing to
+    // integrate, and stepping it anyway is pure per-frame work for every reel
+    // in every idle set.
+    if (this._drive && !(this.speed === 0 && this._targetSpeed === 0 && this._driveState.accel === 0)) {
+      const state = this._driveState;
+      state.speed = this.speed;
+      stepDrive(state, this._targetSpeed, this._drive, dt);
+      this.speed = state.speed;
     }
 
     if (this.speed === 0) return;
@@ -689,12 +701,33 @@ export class Reel implements Disposable {
    * @internal
    */
   installDrive(config: ReelDriveConfig): void {
-    this._drive = resolveDriveConfig(config);
+    this._driveConfig = config;
+    this._resolveDrive();
+  }
+
+  /**
+   * Re-derive the acceleration bounds for the current {@link referenceSpeed}.
+   *
+   * The profile-relative form (`accelFrames`) is deliberately re-resolved
+   * whenever the reference speed changes: one absolute bound cannot serve
+   * profiles whose `spinSpeed` differs by 2.7x, and pinning it to the profile
+   * that happened to be active at build time is how a Turbo ends up starting
+   * slower than Normal.
+   */
+  private _resolveDrive(): void {
+    const config = this._driveConfig;
+    if (!config) return;
+    if (isRelativeDriveConfig(config) && this._referenceSpeed <= 0) {
+      // No profile yet. `hasDrive` still reports true, so phases keep taking
+      // the drive path; the bounds land the moment a spin sets a reference.
+      return;
+    }
+    this._drive = resolveDriveConfig(config, this._referenceSpeed);
   }
 
   /** True when this reel integrates toward a target instead of being tweened. */
   get hasDrive(): boolean {
-    return this._drive !== null;
+    return this._driveConfig !== null;
   }
 
   /**
@@ -721,7 +754,8 @@ export class Reel implements Disposable {
   haltDrive(): void {
     this.speed = 0;
     this._targetSpeed = 0;
-    this._driveAccel = 0;
+    this._driveState.speed = 0;
+    this._driveState.accel = 0;
   }
 
   /**
@@ -733,7 +767,8 @@ export class Reel implements Disposable {
   forceSpeed(v: number): void {
     this.speed = v;
     this._targetSpeed = v;
-    this._driveAccel = 0;
+    this._driveState.speed = v;
+    this._driveState.accel = 0;
   }
 
   /**
@@ -743,7 +778,15 @@ export class Reel implements Disposable {
    * @internal
    */
   set referenceSpeed(v: number) {
+    if (v === this._referenceSpeed) return;
     this._referenceSpeed = v;
+    // Profile-relative drive bounds rescale with it.
+    this._resolveDrive();
+  }
+
+  /** The reference speed {@link speedNormalized} divides by. `0` before any profile lands. */
+  get referenceSpeed(): number {
+    return this._referenceSpeed;
   }
 
   /**

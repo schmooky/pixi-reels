@@ -1,5 +1,8 @@
 import type { gsap } from 'gsap';
 import type { AnticipationSegment } from '../../config/types.js';
+import type { EventEmitter } from '../../events/EventEmitter.js';
+import type { ReelSetEvents } from '../../events/ReelEvents.js';
+import { noticeWarnOnce } from '../../utils/notify.js';
 import { ReelPhase } from './ReelPhase.js';
 
 export interface AnticipationPhaseConfig {
@@ -19,10 +22,17 @@ export interface AnticipationPhaseConfig {
    * instead of after the scripted hold. See `AnticipationOptions.cells`.
    */
   cells?: number;
+  /** Set-level emitter, for `anticipation:segment`. Passed by the controller. */
+  events?: EventEmitter<ReelSetEvents>;
+  /** This reel's index, for the events above. */
+  reelIndex?: number;
 }
 
 /** Ease for a curve segment that does not name one. See {@link AnticipationSegment.ease}. */
 const DEFAULT_CURVE_EASE = 'power2.inOut';
+
+/** Speed gap (px/frame) under which a drive counts as having reached its target. */
+const DRIVE_ARRIVAL_EPS = 0.5;
 
 /**
  * Anticipation phase: the tease before a reel stops.
@@ -42,11 +52,13 @@ const DEFAULT_CURVE_EASE = 'power2.inOut';
  * what makes the legacy tease read as a setting change rather than as the reel
  * slowing down.
  *
- * **Travel anchor.** With `config.cells`, the phase ignores the final hold and
- * ends when the reel has covered that many symbol pitches instead, so the tease
- * is cut to symbols going past the window rather than to a clock. A reel that
- * comes to rest can never reach a travel target, so the scripted time still
- * runs as a backstop.
+ * **Travel anchor.** With `config.cells`, the FINAL leg holds until the reel
+ * has covered that many symbol pitches instead of for its scripted `hold`, so
+ * the end of the tease is cut to symbols going past the window rather than to
+ * a clock. Earlier legs always play in full: a travel target that could cut
+ * the curve short mid-surge would silently delete legs the caller wrote. A
+ * reel that comes to rest can never reach a travel target, so `duration` still
+ * runs as the backstop on that final leg.
  *
  * Either way the controller runs StopPhase with `preserveSpeed: true`
  * afterwards, so the speed the tease ends on carries into the spin-out and the
@@ -63,19 +75,26 @@ export class AnticipationPhase extends ReelPhase<AnticipationPhaseConfig> {
   private _tween: gsap.core.Timeline | null = null;
   private _delayed: gsap.core.Tween | null = null;
 
-  /** Odometer reading (in cells) when the tease began. Only used with `cells`. */
+  /** Odometer reading (in cells) the travel target is measured from. */
   private _travelMark = 0;
   /** Travel target in cells, or `null` when this tease is time-anchored. */
   private _cells: number | null = null;
+  /**
+   * True once the odometer is being watched. A curve arms it only on its FINAL
+   * leg, so a fast early segment cannot eat the travel budget and end the tease
+   * before the legs the caller wrote have played.
+   */
+  private _travelArmed = false;
   /** Curve legs still to play, when driving segments by hand. */
   private _segments: AnticipationSegment[] = [];
   private _segmentIndex = 0;
   /**
-   * Effective tease hold in ms. Doubles as the backstop for a travel-anchored
-   * tease: a reel that comes to rest can never reach a cell target, and a tease
-   * that never ends is a hung spin.
+   * Backstop in ms for a travel-anchored final leg: a reel that comes to rest
+   * can never reach a cell target, and a tease that never ends is a hung spin.
    */
   private _backstopMs = 0;
+  private _events: EventEmitter<ReelSetEvents> | null = null;
+  private _reelIndex = -1;
 
   protected onEnter(config: AnticipationPhaseConfig): void {
     const reel = this._reel;
@@ -88,8 +107,11 @@ export class AnticipationPhase extends ReelPhase<AnticipationPhaseConfig> {
     }
 
     this._cells = config.cells != null && config.cells > 0 ? config.cells : null;
+    this._travelArmed = false;
     this._travelMark = reel.travelledCells;
     this._backstopMs = duration * 1000;
+    this._events = config.events ?? null;
+    this._reelIndex = config.reelIndex ?? -1;
 
     if (config.curve && config.curve.length > 0) {
       this._segments = config.curve;
@@ -100,6 +122,9 @@ export class AnticipationPhase extends ReelPhase<AnticipationPhaseConfig> {
 
     const targetSpeed = speed.spinSpeed * (config.speedMultiplier ?? 0.3);
     this._segments = [];
+    // The legacy tease is one leg, so its only leg is also its last: arm the
+    // travel watch immediately.
+    this._travelArmed = this._cells != null;
 
     if (reel.hasDrive) {
       // The drive shapes the ramp; the phase only says where to go and how long
@@ -130,10 +155,24 @@ export class AnticipationPhase extends ReelPhase<AnticipationPhaseConfig> {
     const isLast = this._segmentIndex === this._segments.length - 1;
     const hold = seg.hold ?? 0;
 
+    this._events?.emit('anticipation:segment', {
+      reelIndex: this._reelIndex,
+      index: this._segmentIndex,
+      total: this._segments.length,
+      speed: seg.speed,
+      targetSpeed: target,
+    });
+
     const afterRamp = (): void => {
-      // A travel-anchored tease holds until the odometer says so; the scripted
-      // hold on the last leg is the backstop for a reel that stops moving.
+      if (reel.hasDrive) this._warnIfDriveMissedBudget(seg, target);
+      // A travel-anchored tease holds its FINAL leg until the odometer says so;
+      // the scripted time is the backstop for a reel that stops moving. The
+      // mark is taken here, not at `onEnter`, so the count is "cells during the
+      // final leg" rather than "cells since the tease began" - the latter lets
+      // a surge leg burn the whole budget before the crawl ever starts.
       if (isLast && this._cells != null) {
+        this._travelMark = reel.travelledCells;
+        this._travelArmed = true;
         this._awaitTravel(Math.max(hold, this._backstopMs));
         return;
       }
@@ -161,6 +200,25 @@ export class AnticipationPhase extends ReelPhase<AnticipationPhaseConfig> {
     });
   }
 
+  /**
+   * A drive that could not reach a segment's speed inside the segment's time
+   * budget plays a DIFFERENT tease from the one that was written, and the next
+   * leg's retarget hides the evidence. Say so once rather than letting the
+   * tween and drive models silently disagree on identical config.
+   */
+  private _warnIfDriveMissedBudget(seg: AnticipationSegment, target: number): void {
+    const gap = Math.abs(this._reel.speed - target);
+    if (gap <= DRIVE_ARRIVAL_EPS) return;
+    const needed = (gap / Math.max(seg.duration, 1)) * 1000;
+    noticeWarnOnce(
+      'anticipation-drive-budget',
+      `an anticipation segment asked for speed ${seg.speed}x (${target.toFixed(1)} px/frame) ` +
+        `within ${seg.duration}ms, but the drive only reached ${this._reel.speed.toFixed(1)}. ` +
+        `Raise the segment duration, or loosen the drive (about ${needed.toFixed(2)} px/frame^2 ` +
+        'of acceleration would be needed here).',
+    );
+  }
+
   private _advance(): void {
     this._segmentIndex++;
     this._runSegment();
@@ -179,16 +237,16 @@ export class AnticipationPhase extends ReelPhase<AnticipationPhaseConfig> {
   }
 
   /**
-   * Hold until the reel has covered `_cells` pitches since the tease began.
-   * `update` does the watching; `backstopMs` is the ceiling that keeps a reel
-   * which stopped moving from hanging the spin forever.
+   * Hold until the reel has covered `_cells` pitches since the final leg
+   * began. `update` does the watching; `backstopMs` is the ceiling that keeps a
+   * reel which stopped moving from hanging the spin forever.
    */
   private _awaitTravel(backstopMs: number): void {
     this._holdFor(Math.max(backstopMs, 1), () => this._complete());
   }
 
   update(_deltaMs: number): void {
-    if (this._cells == null || !this._isActive) return;
+    if (!this._travelArmed || this._cells == null || !this._isActive) return;
     if (this._reel.travelledCells - this._travelMark >= this._cells) {
       this._kill();
       this._complete();

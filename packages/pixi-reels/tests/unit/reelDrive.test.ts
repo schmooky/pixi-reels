@@ -1,15 +1,17 @@
 /**
  * The acceleration-bounded motion model.
  *
- * `stepDrive` is a pure function of (speed, target, bounds, dt), which is what
- * lets the laws below be stated directly rather than inferred from a rendered
- * reel. The point of the whole model is the second derivative: an ease applied
+ * `stepDrive` is a function of (speed, target, bounds, dt) alone - it writes
+ * the answer into the state it is handed rather than allocating, but the answer
+ * depends on nothing else - which is what lets the laws below be stated
+ * directly rather than inferred from a rendered reel. The point of the whole model is the second derivative: an ease applied
  * to a SPEED steps the acceleration, a drive bounds it.
  */
 import { describe, it, expect } from 'vitest';
 import {
   stepDrive,
   resolveDriveConfig,
+  assertDriveConfig,
   DRIVE_FRAME_MS,
   type ReelDriveState,
 } from '../../src/core/ReelDrive.js';
@@ -24,11 +26,13 @@ function run(
   dtMs = DRIVE_FRAME_MS,
   maxTicks = 2000,
 ): ReelDriveState[] {
-  let state: ReelDriveState = { speed: from, accel: 0 };
-  const trace: ReelDriveState[] = [state];
+  const state: ReelDriveState = { speed: from, accel: 0 };
+  // `stepDrive` writes into the state it is given (it runs per reel per frame,
+  // so it does not allocate). A trace therefore has to snapshot each tick.
+  const trace: ReelDriveState[] = [{ ...state }];
   for (let i = 0; i < maxTicks; i++) {
-    state = stepDrive(state, target, bounds, dtMs);
-    trace.push(state);
+    stepDrive(state, target, bounds, dtMs);
+    trace.push({ ...state });
     if (state.speed === target) break;
   }
   return trace;
@@ -151,5 +155,53 @@ describe('stepDrive with a jerk bound', () => {
   it('never overshoots on the way down either', () => {
     const trace = run(30, 2, JERKY);
     expect(Math.min(...trace.map((s) => s.speed))).toBeGreaterThanOrEqual(2 - 1e-9);
+  });
+});
+
+describe('profile-relative drive bounds', () => {
+  it('resolves accelFrames against the profile it is given', () => {
+    // The whole point: the same config produces a harder bound for a faster
+    // profile, so a Turbo does not start SLOWER than Normal.
+    expect(resolveDriveConfig({ accelFrames: 20 }, 30)).toEqual({
+      accel: 1.5,
+      decel: 1.5,
+      jerk: 0,
+    });
+    expect(resolveDriveConfig({ accelFrames: 20 }, 80)).toEqual({
+      accel: 4,
+      decel: 4,
+      jerk: 0,
+    });
+  });
+
+  it('defaults decelFrames to accelFrames and leaves jerk off', () => {
+    expect(resolveDriveConfig({ accelFrames: 10, jerkFrames: 100 }, 50)).toEqual({
+      accel: 5,
+      decel: 5,
+      jerk: 0.5,
+    });
+  });
+
+  it('refuses to resolve a relative config without a profile speed', () => {
+    expect(() => resolveDriveConfig({ accelFrames: 20 })).toThrow(/spinSpeed to resolve against/);
+  });
+
+  it('refuses to mix the relative and absolute forms', () => {
+    expect(() => assertDriveConfig({ accelFrames: 20, decel: 1 })).toThrow(/not both/);
+  });
+
+  it('refuses an empty config', () => {
+    expect(() => assertDriveConfig({})).toThrow(/acceleration bound is required/);
+  });
+
+  it.each(['accelFrames', 'decelFrames', 'jerkFrames'])('refuses a non-positive %s', (field) => {
+    expect(() => assertDriveConfig({ accelFrames: 20, [field]: 0 })).toThrow(
+      /positive number of frames/,
+    );
+  });
+
+  it('still accepts and validates the absolute form', () => {
+    expect(resolveDriveConfig({ accel: 2 })).toEqual({ accel: 2, decel: 2, jerk: 0 });
+    expect(() => assertDriveConfig({ accel: -1 })).toThrow(/positive number of px/);
   });
 });

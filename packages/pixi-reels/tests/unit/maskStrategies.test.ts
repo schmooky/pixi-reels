@@ -13,6 +13,8 @@ import {
   RectMaskStrategy,
   SharedRectMaskStrategy,
   type MaskContext,
+  MASK_STRATEGY_VERSION,
+  type MaskStrategy,
   type ReelMaskRect,
 } from '../../src/core/ReelViewport.js';
 import {
@@ -425,5 +427,45 @@ describe('RectMaskStrategy curve bleed', () => {
       { kind: 'rect', x: 100, y: 0, width: 100, height: 300 },
       { kind: 'rect', x: 200, y: 0, width: 100, height: 300 },
     ]);
+  });
+});
+
+describe('composed masks do not accumulate scene nodes', () => {
+  /** A strategy that only implements build/update, i.e. owns its Graphics. */
+  class OwnGraphicsStrategy implements MaskStrategy {
+    readonly version = MASK_STRATEGY_VERSION;
+    build(): Graphics {
+      const g = new Graphics();
+      g.rect(0, 0, 10, 10).fill({ color: 0xffffff });
+      return g;
+    }
+    update(g: Graphics): void {
+      g.clear();
+      g.rect(0, 0, 10, 10).fill({ color: 0xffffff });
+    }
+  }
+
+  const ctx = (): MaskContext => uniformCtx();
+
+  it('reuses the nested child across updates when wrapped in inset()', () => {
+    // `Graphics.clear()` empties the path but keeps children, so a redraw that
+    // called build() again would add one node per viewport resize and per
+    // MultiWays reshape, for the life of the session.
+    const strategy = composeMasks(inset(new OwnGraphicsStrategy(), 2));
+    const g = strategy.build(ctx());
+    const afterBuild = g.children.length;
+    strategy.update(g, ctx());
+    strategy.update(g, ctx());
+    strategy.update(g, ctx());
+    expect(g.children.length).toBe(afterBuild);
+  });
+
+  it('reuses the nested child for a bare non-drawable member too', () => {
+    const strategy = composeMasks(new OwnGraphicsStrategy());
+    const g = strategy.build(ctx());
+    const afterBuild = g.children.length;
+    strategy.update(g, ctx());
+    strategy.update(g, ctx());
+    expect(g.children.length).toBe(afterBuild);
   });
 });

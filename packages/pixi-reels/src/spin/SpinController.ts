@@ -5,6 +5,7 @@ import type {
   AnticipationOptions,
   AnticipationProtect,
   AnticipationSegment,
+  AnticipationCells,
   AnticipationSlowdown,
   AnticipationStagger,
   SlamOptions,
@@ -32,7 +33,7 @@ import { StandardMode } from './modes/StandardMode.js';
 import type { Disposable } from '../utils/Disposable.js';
 import { TickerRef } from '../utils/TickerRef.js';
 import { OCCUPIED_SENTINEL } from '../core/Reel.js';
-import { noticeError, noticeWarn } from '../utils/notify.js';
+import { noticeError, noticeWarn, noticeWarnOnce } from '../utils/notify.js';
 import type { CellPin } from '../pins/CellPin.js';
 import {
   cloneColumnTarget,
@@ -41,6 +42,64 @@ import {
   type ColumnTarget,
 } from '../frame/ColumnTarget.js';
 import type { Cell } from '../cascade/tumbleAlgorithm.js';
+
+
+/**
+ * Reject nonsense inside a curve at the CALL, not three phases later.
+ *
+ * A curve is authored by trial and error, and every one of these failures is
+ * silent otherwise: a negative speed runs the reel backwards through the tease,
+ * a zero duration is a leg that does nothing (under a drive it assigns a target
+ * and overwrites it the same tick), and a NaN puts NaN into `reel.speed` and
+ * freezes the board with a clean console.
+ */
+function assertSegments(segments: AnticipationSegment[], where: string): void {
+  segments.forEach((seg, i) => {
+    const at = `${where} segment ${i}`;
+    if (!seg || typeof seg !== 'object') {
+      throw new Error(`setAnticipation(): ${at} is not a segment object.`);
+    }
+    if (!Number.isFinite(seg.speed) || seg.speed < 0) {
+      throw new Error(
+        `setAnticipation(): ${at} - \`speed\` must be a non-negative multiple of spinSpeed, ` +
+          `got ${String(seg.speed)}.`,
+      );
+    }
+    if (!Number.isFinite(seg.duration) || seg.duration <= 0) {
+      throw new Error(
+        `setAnticipation(): ${at} - \`duration\` must be a positive number of ms, ` +
+          `got ${String(seg.duration)}.`,
+      );
+    }
+    if (seg.hold != null && (!Number.isFinite(seg.hold) || seg.hold < 0)) {
+      throw new Error(
+        `setAnticipation(): ${at} - \`hold\` must be a non-negative number of ms, ` +
+          `got ${String(seg.hold)}.`,
+      );
+    }
+  });
+}
+
+/**
+ * A travel anchor measures the FINAL leg, so a final leg that asks for speed
+ * `0` can never reach it and the tease always falls through to its time
+ * backstop. Legal, and the backstop is there precisely so it cannot hang - but
+ * it means `cells` is doing nothing, which is worth saying out loud.
+ */
+function warnIfTravelUnreachable(
+  segments: AnticipationSegment[],
+  cells: AnticipationCells | null | undefined,
+): void {
+  if (cells == null) return;
+  const last = segments[segments.length - 1];
+  if (!last || last.speed > 0) return;
+  noticeWarn(
+    'anticipation-cells-unreachable',
+    'setAnticipation(): the last curve segment holds at speed 0, so the `cells` travel ' +
+      'target can never be reached and the tease will always end on its time backstop. ' +
+      'Give the final leg a non-zero speed, or drop `cells`.',
+  );
+}
 
 /**
  * MultiWays/big-symbol coordination hook injected by `ReelSet` into
@@ -143,7 +202,11 @@ export class SpinController implements Disposable {
    * this many symbol pitches rather than after the scripted hold. `null` for a
    * time-anchored tease. Cleared per spin.
    */
-  private _anticipationCells: number | null = null;
+  private _anticipationCells: AnticipationCells | null = null;
+  /** Per-reel curve after the function form is resolved. Keyed by reel index. */
+  private readonly _resolvedCurves = new Map<number, AnticipationSegment[]>();
+  /** Per-reel travel target after the function form is resolved. */
+  private readonly _resolvedCells = new Map<number, number>();
   /**
    * Explicit anticipation hold (ms) that OVERRIDES the active speed profile's
    * `anticipationDelay`. Set via `setAnticipation(reels, { duration })`. `null`
@@ -382,6 +445,8 @@ export class SpinController implements Disposable {
     this._anticipationSlowdown = null;
     this._anticipationCurve = null;
     this._anticipationCells = null;
+    this._resolvedCurves.clear();
+    this._resolvedCells.clear();
     this._anticipationDuration = null;
     this._anticipationProtect = false;
     this._protectSpent = false;
@@ -603,6 +668,8 @@ export class SpinController implements Disposable {
     this._anticipationSlowdown = null;
     this._anticipationCurve = null;
     this._anticipationCells = null;
+    this._resolvedCurves.clear();
+    this._resolvedCells.clear();
     this._anticipationDuration = null;
     this._anticipationProtect = false;
     this._protectSpent = false;
@@ -933,13 +1000,16 @@ export class SpinController implements Disposable {
           'shorthand for a two-segment curve; express the whole tease in `curve`.',
       );
     }
-    if (opts.cells != null && !(opts.cells > 0)) {
+    if (opts.cells != null && typeof opts.cells !== 'function' && !(opts.cells > 0)) {
       throw new Error(
         `setAnticipation(): \`cells\` must be a positive number of symbol pitches, got ${String(opts.cells)}.`,
       );
     }
-    if (Array.isArray(opts.curve) && opts.curve.length === 0) {
-      throw new Error('setAnticipation(): `curve` must have at least one segment.');
+    if (Array.isArray(opts.curve)) {
+      if (opts.curve.length === 0) {
+        throw new Error('setAnticipation(): `curve` must have at least one segment.');
+      }
+      assertSegments(opts.curve, '`curve`');
     }
 
     this._anticipationReels = reelIndices.filter((i) => !this._heldReels.has(i));
@@ -947,6 +1017,7 @@ export class SpinController implements Disposable {
     this._anticipationSlowdown = opts.slowdown ?? null;
     this._anticipationCurve = opts.curve ?? null;
     this._anticipationCells = opts.cells ?? null;
+    this._resolveAnticipationShapes();
     this._anticipationDuration = opts.duration ?? null;
     // Normalise at the boundary. `true` is documented as an alias for
     // `'once'`, but every spend check compares against the STRING, so storing
@@ -1549,9 +1620,10 @@ export class SpinController implements Disposable {
     if (this._isStale(reelIndex, generation)) return;
 
     const reel = this._reels[reelIndex];
-    // What `reel.speedNormalized` divides by. Set per spin because the active
-    // profile can change between spins (and mid-spin, via `setSpeed`), and a
-    // stale reference would report the wrong fraction to a tease SFX ramp.
+    // What `reel.speedNormalized` divides by. `spin()` captures one profile for
+    // the whole round and hands it to every reel, so this is the right divisor
+    // for the entire spin - including after a mid-round `setSpeed`, which does
+    // not retune reels already running on the captured profile.
     reel.referenceSpeed = speed.spinSpeed;
     const isTumble = this._currentSpinMode === 'cascade';
     const canAdjust = this._hooks.isMultiWaysSlot && this._phaseFactory.has('adjust');
@@ -1658,7 +1730,25 @@ export class SpinController implements Disposable {
       // symbols back through the empty window. The tease there is a pure
       // hold, so pin the multiplier to 0 whatever the slowdown curve says.
       const antConfig = this._anticipationConfigFor(reelIndex, speed);
-      await anticipationPhase.run(isTumble ? { ...antConfig, speedMultiplier: 0 } : antConfig);
+      if (isTumble && (antConfig.curve || antConfig.cells != null)) {
+        // A tumble reel has already dropped its visible symbols and sits at
+        // rest. `speedMultiplier: 0` pins the legacy tease there, but a curve
+        // path never reads `speedMultiplier` - so an unfiltered curve scrolls
+        // buffer symbols back through the empty window. Drop the shape rather
+        // than play it wrong, and say which reel lost it.
+        noticeWarnOnce(
+          'anticipation-curve-cascade',
+          `setAnticipation({ curve / cells }) is ignored in cascade mode (reel ${reelIndex}). ` +
+            'A tumble reel has already dropped its symbols and must tease AT REST; scrolling ' +
+            'it would drag buffer symbols through the empty window. Use a standard-mode spin, ' +
+            'or hold the tension with a `duration` override instead.',
+        );
+      }
+      await anticipationPhase.run(
+        isTumble
+          ? { ...antConfig, speedMultiplier: 0, curve: undefined, cells: undefined }
+          : antConfig,
+      );
       if (this._isStale(reelIndex, generation)) return;
       didAnticipate = true;
     } else {
@@ -1806,8 +1896,9 @@ export class SpinController implements Disposable {
   ): AnticipationPhaseConfig {
     const slowdown = this._anticipationSlowdown;
     const baseDuration = this._anticipationDuration;
-    const cells = this._anticipationCells;
+    const cells = this._resolvedCells.get(reelIndex);
     const travel: { cells?: number } = cells != null ? { cells } : {};
+    const wiring = { events: this._events, reelIndex };
 
     // An explicit curve replaces the whole slowdown/hold computation. `duration`
     // still rides along: the phase uses it only as the gate that decides whether
@@ -1815,8 +1906,9 @@ export class SpinController implements Disposable {
     // travel-anchored tease.
     if (this._anticipationCurve) {
       const config: AnticipationPhaseConfig = {
-        curve: this._resolveCurve(reelIndex),
+        curve: this._resolvedCurves.get(reelIndex),
         ...travel,
+        ...wiring,
       };
       if (baseDuration != null) config.duration = baseDuration;
       return config;
@@ -1826,7 +1918,9 @@ export class SpinController implements Disposable {
     // it explicitly is what lets the tease run when the profile's
     // anticipationDelay is 0 (Turbo / SuperTurbo).
     if (!slowdown) {
-      return baseDuration != null ? { duration: baseDuration, ...travel } : { ...travel };
+      return baseDuration != null
+        ? { duration: baseDuration, ...travel, ...wiring }
+        : { ...travel, ...wiring };
     }
 
     const count = this._anticipationReels.length;
@@ -1843,6 +1937,7 @@ export class SpinController implements Disposable {
     const config: AnticipationPhaseConfig = {
       speedMultiplier: from + (to - from) * f,
       ...travel,
+      ...wiring,
     };
     const holdMult = holdFrom + (holdTo - holdFrom) * f;
     // Set duration whenever an override is active OR the hold is scaled; leave
@@ -1852,27 +1947,59 @@ export class SpinController implements Disposable {
   }
 
   /**
-   * Resolve the configured {@link AnticipationCurve} for one reel.
+   * Resolve the function forms of `curve` / `cells` for every teasing reel, at
+   * the CALL rather than when each reel reaches its tease.
    *
-   * The function form is called with the reel's TEASE-ORDER, not its index, so
-   * `setAnticipation([4, 2, 3], { curve })` hands `order: 0` to reel 4 - the
-   * same ordering `slowdown` interpolates over and `'stepwise'` protection
-   * releases in.
+   * Two reasons. A curve function that returns nonsense should throw where the
+   * caller can see it, next to their own stack - deferred, it surfaces inside a
+   * reel task where the spin swallows it and lands anyway. And the function is
+   * then called exactly once per reel, so a caller may put a counter or an RNG
+   * in it without the count depending on how the engine happens to schedule.
+   *
+   * `order` is the reel's place in the anticipation set, NOT its reel index:
+   * `setAnticipation([4, 2, 3])` hands `order: 0` to reel 4 - the same ordering
+   * `slowdown` interpolates over and `'stepwise'` protection releases in.
    */
-  private _resolveCurve(reelIndex: number): AnticipationSegment[] {
+  private _resolveAnticipationShapes(): void {
+    this._resolvedCurves.clear();
+    this._resolvedCells.clear();
     const curve = this._anticipationCurve;
-    if (!curve) return [];
-    if (Array.isArray(curve)) return curve;
-    const total = this._anticipationReels.length;
-    const order = this._anticipationReels.indexOf(reelIndex);
-    const segments = curve(order < 0 ? 0 : order, total);
-    if (!Array.isArray(segments) || segments.length === 0) {
-      throw new Error(
-        `setAnticipation(): the curve function returned no segments for reel ${reelIndex} ` +
-          `(tease order ${order}). Return at least one segment.`,
-      );
-    }
-    return segments;
+    const cells = this._anticipationCells;
+    if (curve == null && cells == null) return;
+
+    const reels = this._anticipationReels;
+    const total = reels.length;
+    reels.forEach((reelIndex, order) => {
+      if (typeof curve === 'function') {
+        const segments = curve(order, total);
+        if (!Array.isArray(segments) || segments.length === 0) {
+          throw new Error(
+            `setAnticipation(): the curve function returned no segments for reel ${reelIndex} ` +
+              `(tease order ${order}). Return at least one segment.`,
+          );
+        }
+        assertSegments(segments, `the curve function's return for reel ${reelIndex} (tease order ${order})`);
+        this._resolvedCurves.set(reelIndex, segments);
+      } else if (Array.isArray(curve)) {
+        this._resolvedCurves.set(reelIndex, curve);
+      }
+
+      if (typeof cells === 'function') {
+        const value = cells(order, total);
+        if (!Number.isFinite(value) || value <= 0) {
+          throw new Error(
+            `setAnticipation(): the cells function returned ${String(value)} for reel ` +
+              `${reelIndex} (tease order ${order}). Return a positive number of symbol pitches.`,
+          );
+        }
+        this._resolvedCells.set(reelIndex, value);
+      } else if (cells != null) {
+        this._resolvedCells.set(reelIndex, cells);
+      }
+
+      const segments = this._resolvedCurves.get(reelIndex);
+      if (segments) warnIfTravelUnreachable(segments, this._resolvedCells.get(reelIndex));
+    });
   }
 
   private _stopDelayFor(reelIndex: number, speed: SpeedProfile): number {

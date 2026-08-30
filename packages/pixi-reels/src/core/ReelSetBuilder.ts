@@ -20,7 +20,7 @@ import { DEFAULTS } from '../config/defaults.js';
 import { SpeedPresets } from '../config/SpeedPresets.js';
 import { ReelSet, type ReelSetParams } from './ReelSet.js';
 import { Reel, type ReelConfig } from './Reel.js';
-import { resolveDriveConfig, type ReelDriveConfig } from './ReelDrive.js';
+import { assertDriveConfig, type ReelDriveConfig } from './ReelDrive.js';
 import { reelAxis, type Orientation, type Direction } from './ReelAxis.js';
 import type { ReelCurveConfig, ReelCurveInput, CurveFocus, CurveMode } from './ReelCurve.js';
 import { CURVE_FOCUS_WEIGHT } from './ReelCurve.js';
@@ -488,11 +488,20 @@ export class ReelSetBuilder {
    * speed field to a second owner while a phase is mid-tween is exactly the
    * failure this design avoids.
    *
-   * Units are px/frame^2 at 60fps, matching `spinSpeed`'s px/frame:
-   * `accel: spinSpeed / 20` reaches full speed in roughly 20 frames.
+   * Bounds are **profile-relative** by default: `accelFrames: 20` means "reach
+   * whatever the active profile calls full speed in 20 frames", so Turbo
+   * accelerates harder than Normal in proportion to how much faster it spins.
+   * The absolute form (`accel`, px/frame^2) is still accepted, but one fixed
+   * number cannot serve the shipped presets - their `spinSpeed` runs 30 / 50 /
+   * 80, so an absolute bound tuned for Normal makes SuperTurbo take 53 frames
+   * to reach speed instead of 20, i.e. a turbo that starts SLOWER than normal.
    *
    * @example
-   * builder.motionModel('drive', { accel: 1.2, decel: 0.8, jerk: 0.15 })
+   * builder.motionModel('drive', { accelFrames: 20, decelFrames: 34, jerkFrames: 260 })
+   *
+   * @example
+   * // Single-profile game, tuned in raw px/frame^2.
+   * builder.motionModel('drive', { accel: 1.5, decel: 0.9, jerk: 0.12 })
    */
   motionModel(model: 'tween'): this;
   motionModel(model: 'drive', config: ReelDriveConfig): this;
@@ -507,12 +516,14 @@ export class ReelSetBuilder {
     if (!config) {
       throw new Error(
         "motionModel('drive'): an acceleration config is required, e.g. " +
-          '{ accel: spinSpeed / 20 }. Pass `motionModel(\'tween\')` for the default model.',
+          "{ accelFrames: 20 }. Pass motionModel('tween') for the default model.",
       );
     }
-    // Validate now rather than at first tick, so a bad number names the builder
-    // call that produced it instead of surfacing as a motionless reel.
-    resolveDriveConfig(config);
+    // Validate the SHAPE now rather than at first tick, so a bad number names
+    // the builder call that produced it instead of surfacing as a motionless
+    // reel. The relative form's actual bounds are resolved per spin, against
+    // whichever profile is active.
+    assertDriveConfig(config);
     this._drive = config;
     return this;
   }
@@ -1001,6 +1012,8 @@ export class ReelSetBuilder {
     if (this._speeds.size === 0) {
       this._speeds.set('normal', SpeedPresets.NORMAL);
     }
+    // The profile a reel runs on until the first spin picks one.
+    const defaultSpinSpeed = this._speeds.values().next().value?.spinSpeed ?? 0;
 
     const symbolsData: Record<string, SymbolData> = {};
     const symbolIds = this._symbolRegistry.symbolIds;
@@ -1255,6 +1268,11 @@ export class ReelSetBuilder {
       };
 
       const reel = new Reel(reelConfig, symbolFactory, randomProvider, viewport);
+      // Seed the reference BEFORE the drive: profile-relative bounds resolve
+      // against it, and `speedNormalized` divides by it. The controller
+      // refreshes both per spin; this is what makes them correct before the
+      // first one.
+      reel.referenceSpeed = defaultSpinSpeed;
       if (this._drive) reel.installDrive(this._drive);
       reels.push(reel);
       // Per-reel mask rect: cross position marches the reels, main position is

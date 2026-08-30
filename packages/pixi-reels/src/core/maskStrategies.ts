@@ -1,4 +1,5 @@
 import { Graphics } from 'pixi.js';
+import { noticeWarnOnce } from '../utils/notify.js';
 import type { MaskContext, MaskStrategy, ReelMaskRect } from './ReelViewport.js';
 import { MASK_STRATEGY_VERSION } from './ReelViewport.js';
 
@@ -116,7 +117,6 @@ export class RoundedRectMaskStrategy implements DrawableMaskStrategy {
 
   private readonly _radius: number;
   private readonly _scope: RoundedMaskScope;
-  private _warnedTouching = false;
 
   constructor(options: RoundedRectMaskOptions) {
     if (!Number.isFinite(options?.radius) || options.radius < 0) {
@@ -169,12 +169,12 @@ export class RoundedRectMaskStrategy implements DrawableMaskStrategy {
 
   /**
    * `scope: 'reel'` at cross gap 0 notches every seam. That reads as a
-   * rendering bug rather than a configuration mistake, so say so once - not
-   * per frame, and not as a throw, because a MultiWays reshape can legally
-   * pass through a touching arrangement.
+   * rendering bug rather than a configuration mistake, so say so once (the
+   * notice channel dedupes on the code) and not as a throw, because a MultiWays
+   * reshape can legally pass through a touching arrangement.
    */
   private _warnIfTouching(ctx: MaskContext): void {
-    if (this._warnedTouching || ctx.rects.length < 2) return;
+    if (ctx.rects.length < 2) return;
     const crossProp = ctx.axis.crossProp;
     const sizeProp = crossProp === 'x' ? 'width' : 'height';
     for (let i = 1; i < ctx.rects.length; i++) {
@@ -182,8 +182,8 @@ export class RoundedRectMaskStrategy implements DrawableMaskStrategy {
       const cur = ctx.rects[i];
       const gap = cur[crossProp] - (prev[crossProp] + prev[sizeProp]);
       if (Math.abs(gap) < 0.5) {
-        this._warnedTouching = true;
-        console.warn(
+        noticeWarnOnce(
+          'mask-rounded-touching',
           "RoundedRectMaskStrategy: scope 'reel' with a zero cross gap rounds both sides " +
             'of every shared reel edge, which notches the seams. Add a cross gap ' +
             "(symbolGap.x on a vertical set), use scope 'set', or use SilhouetteMaskStrategy.",
@@ -254,7 +254,6 @@ export class SilhouetteMaskStrategy implements DrawableMaskStrategy {
   private readonly _radius: number;
   private readonly _concaveRadius: number;
   private readonly _fallback: RoundedRectMaskStrategy;
-  private _warnedDisjoint = false;
 
   constructor(options: SilhouetteMaskOptions) {
     if (!Number.isFinite(options?.radius) || options.radius < 0) {
@@ -301,14 +300,12 @@ export class SilhouetteMaskStrategy implements DrawableMaskStrategy {
     }
 
     if (!this._isContiguous(spans)) {
-      if (!this._warnedDisjoint) {
-        this._warnedDisjoint = true;
-        console.warn(
-          'SilhouetteMaskStrategy: reels have a non-zero cross gap, so their union is not ' +
-            'one outline. Falling back to per-reel rounded rects. Drop the cross gap to use ' +
-            'the silhouette.',
-        );
-      }
+      noticeWarnOnce(
+        'mask-silhouette-disjoint',
+        'SilhouetteMaskStrategy: reels have a non-zero cross gap, so their union is not ' +
+          'one outline. Falling back to per-reel rounded rects. Drop the cross gap to use ' +
+          'the silhouette.',
+      );
       this._fallback.draw(g, ctx);
       return;
     }
@@ -590,29 +587,11 @@ export function composeMasks(...strategies: MaskStrategy[]): DrawableMaskStrateg
   // Non-drawable strategies own their Graphics, so they are nested as children
   // instead. A Pixi stencil mask renders the mask container's whole subtree, so
   // a nested Graphics unions with the parent's own shapes - at the cost of one
-  // scene node, and of a `update` that has to find its child again.
-  const nested = new WeakMap<Graphics, Map<MaskStrategy, Graphics>>();
-
+  // scene node, and of an `update` that has to find its child again. `drawInto`
+  // owns that bookkeeping, so a member wrapped in `inset(...)` gets the same
+  // caching as a bare one.
   const drawAll = (g: Graphics, ctx: MaskContext): void => {
-    let children = nested.get(g);
-    for (const s of strategies) {
-      if (isDrawableMaskStrategy(s)) {
-        s.draw(g, ctx);
-        continue;
-      }
-      const existing = children?.get(s);
-      if (existing) {
-        s.update(existing, ctx);
-      } else {
-        const child = s.build(ctx);
-        if (!children) {
-          children = new Map();
-          nested.set(g, children);
-        }
-        children.set(s, child);
-        g.addChild(child);
-      }
-    }
+    for (const s of strategies) drawInto(s, g, ctx);
   };
 
   return {
@@ -631,14 +610,38 @@ export function composeMasks(...strategies: MaskStrategy[]): DrawableMaskStrateg
 }
 
 /**
+ * Per-host cache of the Graphics a non-drawable strategy owns.
+ *
+ * `Graphics.clear()` empties the path but does NOT remove children, so a
+ * `drawInto` that called `build()` every time would add one node per redraw -
+ * and a redraw happens on every viewport resize and every MultiWays reshape.
+ * Keyed weakly on the host Graphics so a destroyed mask takes its entry with
+ * it.
+ */
+const nestedChildren = new WeakMap<Graphics, Map<MaskStrategy, Graphics>>();
+
+/**
  * Draw `strategy` into `g`, whether or not it implements
  * {@link DrawableMaskStrategy}. Non-drawable strategies get their own Graphics
- * nested as a child, which unions the same way.
+ * nested as a child, which unions the same way - built once per host and
+ * updated in place thereafter.
  */
 function drawInto(strategy: MaskStrategy, g: Graphics, ctx: MaskContext): void {
   if (isDrawableMaskStrategy(strategy)) {
     strategy.draw(g, ctx);
     return;
   }
-  g.addChild(strategy.build(ctx));
+  let children = nestedChildren.get(g);
+  const existing = children?.get(strategy);
+  if (existing && existing.parent === g) {
+    strategy.update(existing, ctx);
+    return;
+  }
+  const child = strategy.build(ctx);
+  if (!children) {
+    children = new Map();
+    nestedChildren.set(g, children);
+  }
+  children.set(strategy, child);
+  g.addChild(child);
 }

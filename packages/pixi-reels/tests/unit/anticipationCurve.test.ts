@@ -215,19 +215,15 @@ describe('anticipation curve validation', () => {
     expect(() => h.reelSet.setAnticipation([4], { cells })).toThrow(/positive number of symbol/);
   });
 
-  it('names the reel when a curve function returns nothing', async () => {
-    // The controller catches a phase-chain throw and slams to recover, so the
-    // spin promise still resolves; the message goes to the notice channel.
+  it('names the reel when a curve function returns nothing', () => {
+    // Thrown at the CALL, not deferred into the reel task: a curve function is
+    // resolved for every teasing reel the moment `setAnticipation` is made, so
+    // the caller sees the failure next to their own stack instead of watching
+    // the spin land anyway.
     const h = (harness = makeHarness());
-    const errs = vi.spyOn(console, 'error').mockImplementation(() => {});
-    const p = h.reelSet.spin();
-    h.reelSet.setResult(GRID);
-    h.reelSet.setAnticipation([4], { curve: () => [] });
-    await p;
-    const said = errs.mock.calls.map((c) => c.map(String).join(' ')).join('\n');
-    expect(said).toMatch(/returned no segments for reel 4/);
-    expect(said).toMatch(/tease order 0/);
-    errs.mockRestore();
+    expect(() => h.reelSet.setAnticipation([4], { curve: () => [] })).toThrow(
+      /returned no segments for reel 4[\s\S]*tease order 0/,
+    );
   });
 });
 
