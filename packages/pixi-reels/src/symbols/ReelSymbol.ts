@@ -261,6 +261,144 @@ export abstract class ReelSymbol implements Disposable {
   }
 
   /**
+   * Animate this symbol AWAY, without destroying it.
+   *
+   * The counterpart to {@link playIn}, and the seam a mystery reveal needs:
+   * the cells on screen dissolve, their identities are swapped underneath, and
+   * the new ones arrive. `playDestroy` is the cascade's version of the same
+   * beat and is deliberately separate - it is tuned as a "this cell was a
+   * winner and is being consumed" poof, and a reveal is not that.
+   *
+   * Leaves the view hidden (`alpha: 0`) with its transform restored, so the
+   * caller may swap the identity and call `playIn` next.
+   *
+   * Override for art-appropriate exits - a Spine symbol plays its own `out`
+   * track here. Honour `opts.signal`: abort means "snap to the end", not
+   * "fail", so the promise still resolves.
+   *
+   * Default: a ~180 ms shrink-and-fade with no overshoot, centred on the
+   * symbol's bounds rather than the view origin.
+   */
+  async playOut(opts?: { delay?: number; signal?: AbortSignal }): Promise<void> {
+    await this._tweenPresence('out', opts);
+  }
+
+  /**
+   * Animate this symbol IN, from nothing to its resting pose.
+   *
+   * Owns its own start pose. A symbol that has just been re-activated is fully
+   * visible (`activate()` resets alpha and scale), so an entrance that assumed
+   * it started hidden would pop before it animated. This sets the hidden pose
+   * first, then plays.
+   *
+   * Override for art-appropriate entrances - a Spine symbol plays its own `in`
+   * track here. Honour `opts.signal`: abort snaps to the RESTING pose (alpha 1,
+   * scale 1), because arriving is what the caller asked for.
+   *
+   * Default: a ~200 ms fade and scale-up with a small overshoot.
+   */
+  async playIn(opts?: { delay?: number; signal?: AbortSignal }): Promise<void> {
+    await this._tweenPresence('in', opts);
+  }
+
+  /**
+   * Shared body of {@link playIn} / {@link playOut}.
+   *
+   * One function because the two are the same tween read in opposite
+   * directions, and because the fiddly part - pivoting to the visual centre so
+   * the scale does not collapse toward the view's (0, 0) corner, and
+   * compensating the position for the pivot move - is identical and easy to get
+   * subtly wrong twice. Same correction as `playDestroy`: a container renders a
+   * local point at `position + (point - pivot) * scale`, so a curved reel (which
+   * scales every cell) would make the symbol jump without the `* scale` term.
+   */
+  private async _tweenPresence(
+    direction: 'in' | 'out',
+    opts?: { delay?: number; signal?: AbortSignal },
+  ): Promise<void> {
+    const view = this.view;
+    const originalPivotX = view.pivot.x;
+    const originalPivotY = view.pivot.y;
+    const originalX = view.x;
+    const originalY = view.y;
+
+    const bounds = view.getLocalBounds();
+    const cx = bounds.x + bounds.width / 2;
+    const cy = bounds.y + bounds.height / 2;
+    view.pivot.set(cx, cy);
+    view.x = originalX + (cx - originalPivotX) * view.scale.x;
+    view.y = originalY + (cy - originalPivotY) * view.scale.y;
+
+    const restorePivot = (): void => {
+      view.pivot.set(originalPivotX, originalPivotY);
+      view.x = originalX;
+      view.y = originalY;
+    };
+    const snapEnd = (): void => {
+      if (direction === 'out') {
+        view.alpha = 0;
+        view.scale.set(1, 1);
+      } else {
+        view.visible = true;
+        view.alpha = 1;
+        view.scale.set(1, 1);
+      }
+    };
+
+    const delay = opts?.delay ?? 0;
+    const signal = opts?.signal;
+
+    if (direction === 'in') {
+      // Own the start pose: `activate()` leaves a freshly swapped symbol fully
+      // visible, so without this the new art is on screen for a frame before
+      // the entrance begins.
+      view.visible = true;
+      view.alpha = 0;
+      view.scale.set(0.72, 0.72);
+    }
+
+    if (signal?.aborted) {
+      snapEnd();
+      restorePivot();
+      return;
+    }
+
+    await new Promise<void>((resolve) => {
+      const onAbort = (): void => {
+        tl.kill();
+        snapEnd();
+        resolve();
+      };
+      const tl = this.gsap.timeline({
+        delay,
+        onComplete: () => {
+          if (signal) signal.removeEventListener('abort', onAbort);
+          resolve();
+        },
+      });
+      if (direction === 'out') {
+        tl.to(view.scale, { x: 0.72, y: 0.72, duration: 0.18, ease: 'power2.in' }).to(
+          view,
+          { alpha: 0, duration: 0.18, ease: 'power2.in' },
+          '<',
+        );
+      } else {
+        tl.to(view.scale, { x: 1, y: 1, duration: 0.2, ease: 'back.out(1.7)' }).to(
+          view,
+          { alpha: 1, duration: 0.16, ease: 'power2.out' },
+          '<',
+        );
+      }
+      if (signal) signal.addEventListener('abort', onAbort, { once: true });
+    });
+
+    // Scale back to 1 either way: a hidden symbol still has to be a legal
+    // resting pose, or pool reuse inherits the shrunken scale.
+    view.scale.set(1, 1);
+    restorePivot();
+  }
+
+  /**
    * The owning reel is curved: render into this projected quad instead of the
    * flat cell rectangle. `null` means the reel is flat again.
    *

@@ -249,6 +249,8 @@ export type { FrameAPI } from './core/ReelSet.js';
 // option objects around or extend them for engine-on-engine adapters.
 export type {
   DestroySymbolsOptions,
+  SymbolSwap,
+  SwapSymbolsOptions,
   RefillOptions,
   RefillResult,
   RunCascadeOptions,

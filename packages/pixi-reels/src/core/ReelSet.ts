@@ -96,6 +96,70 @@ export interface DestroySymbolsOptions {
   signal?: AbortSignal;
 }
 
+/** One cell to re-skin. See {@link ReelSet.swapSymbols}. */
+export interface SymbolSwap {
+  /** Reel index. */
+  reel: number;
+  /** Visible cell index within that reel. */
+  cell: number;
+  /** Registered symbol id to swap in. */
+  id: string;
+}
+
+/**
+ * Options for {@link ReelSet.swapSymbols}. Every field is optional; the
+ * defaults play every cell out together, swap, and play every cell in
+ * together.
+ */
+export interface SwapSymbolsOptions {
+  /**
+   * Per-cell start delay for the OUT beat, in seconds. Default `0`.
+   * Pass `(swap, i) => i * 0.04` to peel the cells away one at a time.
+   */
+  outDelay?: number | ((swap: SymbolSwap, index: number) => number);
+  /** Same for the IN beat. Default `0`. */
+  inDelay?: number | ((swap: SymbolSwap, index: number) => number);
+  /**
+   * Pause between the swap and the IN beat, in ms. Default `0`. This is the
+   * beat a reveal usually wants: the board is empty, the sound lands, then the
+   * new symbol arrives.
+   */
+  holdMs?: number;
+  /**
+   * Called after the identities are swapped and before anything animates in,
+   * with the board sitting empty. Its returned promise is awaited, so it can
+   * hold the beat on a real animation rather than a guessed number of ms. Runs
+   * after `holdMs`, so the two compose.
+   */
+  onSwapped?: () => void | Promise<void>;
+  /**
+   * zIndex applied to each swapping view while it animates, so an entrance that
+   * overshoots its cell is not clipped behind a neighbour. Default `1000`.
+   * Applied and restored per beat, and the restored value is whatever the cell
+   * had before that beat - so the new symbol keeps the zIndex its own
+   * registration gave it. (`destroySymbols` does not restore, because its cells
+   * are consumed.) Pass `null` to skip the bump.
+   */
+  zIndex?: number | null;
+  /**
+   * Skip the OUT beat. For cells already hidden by something else - a Spine
+   * track the game drove itself, a previous `swapSymbols` that left them out.
+   */
+  skipOut?: boolean;
+  /**
+   * Skip the IN beat. The swapped cells are left HIDDEN (`alpha: 0`) - the
+   * midpoint of a swap is a dark board - so the caller owns the reveal. For art
+   * that plays its own Spine `in` track.
+   */
+  skipIn?: boolean;
+  /**
+   * Abort signal. Aborting fast-forwards every in-flight beat to its end pose
+   * and still performs the swap, so the board is never left half-changed. The
+   * promise resolves normally: abort means "skip the animation", not "fail".
+   */
+  signal?: AbortSignal;
+}
+
 /**
  * Summary returned by {@link ReelSet.runCascade}. Re-exported from the
  * canonical definition in `events/ReelEvents.ts` so the events module
@@ -743,6 +807,144 @@ export class ReelSet extends Container implements Disposable {
    *   delay: (cell, i) => i * 0.03,
    * });
    */
+  /**
+   * Re-skin cells in place: animate the current symbols out, swap their
+   * identities, animate the new ones in.
+   *
+   * The mystery-reveal beat, and the upgrade beat, as one call. `setSymbolAt`
+   * already swaps an identity, but it swaps it INSTANTLY - so a game that wants
+   * "the reel dissolves, the symbol underneath changes, the reveal arrives" has
+   * to hand-roll the ordering, the stagger, the zIndex bump so the entrance is
+   * not clipped, and the abort handling, every time.
+   *
+   * The three beats are separately skippable, because the middle one is the
+   * only one the engine has to own. A game whose art plays its own Spine `out`
+   * track passes `skipOut: true` and keeps the rest.
+   *
+   * Cells are validated up front, so a bad coordinate fails before anything has
+   * animated rather than half way through. Single-cell symbols only: a big
+   * symbol spans cells the frame layer has to reserve, so revealing one is a
+   * `setResult` / `setShape` job and `setSymbolAt` says so.
+   *
+   * Only valid at rest - `setSymbolAt` throws mid-motion.
+   *
+   * @example
+   * // Mystery reveal: the reel peels away, then one symbol arrives late.
+   * await reelSet.swapSymbols(
+   *   [0, 1, 2].map((cell) => ({ reel: 2, cell, id: 'WILD' })),
+   *   { outDelay: (_, i) => i * 0.05, holdMs: 220, inDelay: (_, i) => i * 0.08 },
+   * );
+   *
+   * @example
+   * // Upgrade in place, art driving its own exit.
+   * await reelSet.swapSymbols([{ reel: 1, cell: 1, id: 'GOLD_K' }], { skipOut: true });
+   */
+  async swapSymbols(swaps: ReadonlyArray<SymbolSwap>, opts?: SwapSymbolsOptions): Promise<void> {
+    if (swaps.length === 0) return;
+
+    for (const swap of swaps) {
+      if (swap.reel < 0 || swap.reel >= this._reels.length) {
+        throw new RangeError(
+          `swapSymbols: reel ${swap.reel} out of range [0, ${this._reels.length})`,
+        );
+      }
+      const reel = this._reels[swap.reel];
+      if (swap.cell < 0 || swap.cell >= reel.visibleCells) {
+        throw new RangeError(
+          `swapSymbols: cell ${swap.cell} out of range [0, ${reel.visibleCells}) ` +
+            `for reel ${swap.reel}`,
+        );
+      }
+    }
+
+    const signal = opts?.signal;
+    const z = opts?.zIndex === undefined ? 1000 : opts.zIndex;
+    const resolveDelay = (
+      spec: number | ((swap: SymbolSwap, index: number) => number) | undefined,
+      swap: SymbolSwap,
+      i: number,
+    ): number => (typeof spec === 'function' ? spec(swap, i) : (spec ?? 0));
+
+    const symbolFor = (swap: SymbolSwap): ReelSymbol => {
+      const reel = this._reels[swap.reel];
+      const sym = reel.getSymbolAt(swap.cell);
+      if (!sym) {
+        throw new Error(
+          `swapSymbols: reel ${swap.reel} has no symbol at visible cell ${swap.cell} ` +
+            `(strip length ${reel.symbols.length}, visibleCells ${reel.visibleCells}). ` +
+            'The reel was torn down or reshaped while a swap was in flight.',
+        );
+      }
+      return sym;
+    };
+
+    // Bumped and restored PER BEAT, not once around the whole call. The swap
+    // recycles the view: `setSymbolAt` may hand the cell a different pooled
+    // instance, and re-activation assigns the new symbol's own zIndex from the
+    // registry. A single restore at the end would push the OLD instance's value
+    // onto the new symbol and quietly override what the registry said.
+    //
+    // Captured rather than assumed to be 0, because a game may have promoted a
+    // symbol itself and a reveal should not silently demote it.
+    const promote = (): Array<[ReelSymbol, number]> => {
+      if (z === null) return [];
+      return swaps.map((swap) => {
+        const sym = symbolFor(swap);
+        const prev = sym.view.zIndex;
+        sym.view.zIndex = z;
+        return [sym, prev] as [ReelSymbol, number];
+      });
+    };
+    const demote = (saved: Array<[ReelSymbol, number]>): void => {
+      for (const [sym, prev] of saved) {
+        if (!sym.isDestroyed) sym.view.zIndex = prev;
+      }
+    };
+
+    let saved: Array<[ReelSymbol, number]> = [];
+    try {
+      if (!opts?.skipOut) {
+        saved = promote();
+        await Promise.all(
+          swaps.map((swap, i) =>
+            symbolFor(swap).playOut({ delay: resolveDelay(opts?.outDelay, swap, i), signal }),
+          ),
+        );
+        demote(saved);
+        saved = [];
+      }
+
+      // The swap itself is NOT skippable and NOT abortable. An aborted reveal
+      // still has to land on the new symbols, or the board disagrees with the
+      // result the server sent.
+      for (const swap of swaps) {
+        this.setSymbolAt(swap.reel, swap.cell, swap.id);
+      }
+      // `setSymbolAt` re-activates the view, which resets it to fully visible.
+      // Hide it again, always: the midpoint of a swap is a dark board, and the
+      // IN beat is what brings it back. Without this the new art pops for a
+      // frame before its entrance begins. Under `skipIn` the board stays dark
+      // and revealing it is the caller's job, which is the point of the flag.
+      for (const swap of swaps) symbolFor(swap).view.alpha = 0;
+
+      if (opts?.holdMs && opts.holdMs > 0 && !signal?.aborted) {
+        await new Promise<void>((r) => setTimeout(r, opts.holdMs));
+      }
+      if (opts?.onSwapped) await opts.onSwapped();
+
+      if (!opts?.skipIn) {
+        saved = promote();
+        await Promise.all(
+          swaps.map((swap, i) =>
+            symbolFor(swap).playIn({ delay: resolveDelay(opts?.inDelay, swap, i), signal }),
+          ),
+        );
+      }
+    } finally {
+      demote(saved);
+    }
+  }
+
   async destroySymbols(
     cells: ReadonlyArray<Cell>,
     opts?: DestroySymbolsOptions,
