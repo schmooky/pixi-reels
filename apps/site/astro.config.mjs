@@ -3,6 +3,8 @@ import mdx from '@astrojs/mdx';
 import react from '@astrojs/react';
 import keystatic from '@keystatic/astro';
 import tailwindcss from '@tailwindcss/vite';
+import { rehypeHeadingIds } from '@astrojs/markdown-remark';
+import { rehypeHeadingAnchors } from './src/lib/rehypeHeadingAnchors.mjs';
 import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
 
@@ -83,6 +85,16 @@ export default defineConfig({
   prefetch: {
     defaultStrategy: 'hover',
     prefetchAll: false,
+  },
+  // Astro already slugs headings into `id`s; this makes those anchors visible
+  // and clickable. `mdx()` extends this config by default, so .md and .mdx get
+  // the same treatment.
+  markdown: {
+    // `rehypeHeadingIds` runs explicitly first: Astro applies it AFTER user
+    // rehype plugins by default, so the anchor plugin would otherwise read an
+    // id that does not exist yet. Astro's own later pass skips headings that
+    // already have one.
+    rehypePlugins: [rehypeHeadingIds, rehypeHeadingAnchors],
   },
   integrations: [
     mdx(),
