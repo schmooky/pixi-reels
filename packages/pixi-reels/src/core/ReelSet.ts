@@ -1344,8 +1344,16 @@ export class ReelSet extends Container implements Disposable {
    * an implicit trailing group would make the barrier depend on something the
    * caller never wrote down. Pass `null` to clear.
    *
-   * **Sticky**, like {@link setStopDelays}: a group layout describes the board,
-   * not one round, so it survives `spin()` and `refill()` until changed.
+   * **Sticky**, like {@link setStopDelays}: a layout survives `spin()` and
+   * `refill()` until changed, so a fixed board is configured once.
+   *
+   * **Per round, from the server response.** The barrier is read as each reel's
+   * SpinPhase resolves - which is exactly when `setResult()` lands - so a layout
+   * set any time up to that point is honoured in full, including between
+   * `spin()` and `setResult()`. Group each round however that round's response
+   * says to. Changing the layout after reels have begun landing throws: a reel
+   * that already passed the barrier cannot un-pass it, so the new layout would
+   * apply to some reels and not others, silently.
    *
    * @example
    * // Reels 1-2 land together; 3-4 tease, one press each; 5 outlasts them all.
@@ -1353,6 +1361,14 @@ export class ReelSet extends Container implements Disposable {
    * reelSet.setAnticipation([2, 3], { stagger: 400, protect: 'stepwise' });
    *
    * // Presses walk the board: [0,1] -> 2 -> 3 -> [4].
+   *
+   * @example
+   * // A different shape every round, decided by the server response.
+   * const res = await api.spin();
+   * const p = reelSet.spin();
+   * reelSet.setReelGroups(res.teasing.length ? [[0, 1], res.teasing, [4]] : [[0, 1, 2, 3, 4]]);
+   * reelSet.setResult(res.grid);
+   * await p;
    */
   setReelGroups(groups: number[][] | null): void {
     this._spinController.setReelGroups(groups);

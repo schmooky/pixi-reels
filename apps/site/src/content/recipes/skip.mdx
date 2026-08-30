@@ -10,6 +10,7 @@ tags:
   - tease
   - phases
   - timing
+  - groups
 ---
 
 A slam force-completes every active phase, `AnticipationPhase` included. That is the right default and the wrong one: it makes the button honest on an ordinary spin and makes it hide the build-up on the spin that had one. These recipes take skip apart into the three levers that decide WHICH reels a press lands, and WHEN a reel is allowed to stop at all.
@@ -53,6 +54,63 @@ The same partial slam, expressed as a rule the engine applies for you. `protect:
 **Gotcha:** release order is TEASE order, not reel index. `setAnticipation([4, 2, 3], ...)` releases 4 first, matching the order you staged the teases in.
 
 <RecipeDemo code="skip-stepwise-tease" />
+
+<a id="reel-groups"></a>
+
+## Groups: reels that stop and skip together
+
+Reel index is the only ordering the engine has on its own. Stop delays are one
+flat `reelIndex * stopDelay` stagger across the board, and a press lands
+"everything outside the tease" in one go. That holds while every reel's job is
+the same, and breaks the moment one is different:
+
+- reels 1-2 spin normally and land **together**
+- reels 3-4 tease, one press each
+- reel 5 keeps spinning at full speed until **both** teases are over
+
+Delays cannot say that. Reel 5 is index 4, so its stop delay comes due while
+reels 3-4 are still teasing, and it lands in the middle of the tease it was
+supposed to outlast.
+
+```ts
+reelSet.setReelGroups([[0, 1], [2, 3], [4]]);
+reelSet.setAnticipation([2, 3], { stagger: 'sequential', protect: 'stepwise' });
+// Presses walk the board: [1,2] -> 3 -> 4 -> [5].
+```
+
+A group is a barrier in both directions. **Stopping:** no reel in a group starts
+its stop sequence, anticipation included, until every reel in the earlier groups
+has *landed* - and it keeps spinning at full speed while it waits, so the wait
+reads as "still going" rather than as a pause. **Skipping:** a press releases the
+next un-landed group, with tease protection still applying inside it.
+
+Stop delays become group-relative, so the profile's `stopDelay` staggers reels
+*within* a group instead of re-adding a whole-board offset on top of the barrier.
+An explicit `setStopDelays()` is still taken as given.
+
+**Per round, from the server response.** The barrier is read as each reel's
+SpinPhase resolves - which is exactly when `setResult()` lands - so a layout set
+any time up to that point is honoured in full, including between `spin()` and
+`setResult()`:
+
+```ts
+const res = await api.spin();
+const p = reelSet.spin();
+reelSet.setReelGroups(res.teasing.length ? [[0, 1], res.teasing, [4]] : [[0, 1, 2, 3, 4]]);
+reelSet.setResult(res.grid);
+await p;
+```
+
+**Gotchas.** Every reel must appear exactly once - letting the unlisted ones fall
+into an implicit trailing group would make the barrier depend on something you
+never wrote down, so that throws. Changing the layout once reels have begun
+landing also throws: a reel that already passed the barrier cannot un-pass it, so
+the new layout would apply to some reels and not others, silently. `null` clears.
+
+The demo alternates: every other spin runs with no groups, so you can watch reel
+5 land mid-tease and then not.
+
+<RecipeDemo code="reel-groups" height={380} />
 
 For any other grouping - release the tease in pairs, or from the outside in - use `protect: 'always'` so a press can never end a tease, and drive the releases yourself with `slamStop({ reels })`:
 

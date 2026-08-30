@@ -5,6 +5,8 @@ oneLiner: Symbol classes, three-tier layering (zIndex, unmask, promote), multi-s
 order: 70
 tags:
   - symbols
+  - reveal
+  - mystery
   - pools
   - buffers
   - weights
@@ -71,6 +73,53 @@ A symbol morphs into a different (usually higher) one mid-round via setSymbolAt.
 **Gotcha:** transform only after landing (spin:complete / spin:reelLanded); setSymbolAt throws mid-spin and on big-symbol anchors.
 
 <RecipeDemo code="symbol-transform" />
+
+<a id="symbol-swap-reveal"></a>
+
+## Reveal a mystery symbol: out, swap, in
+
+`setSymbolAt` swaps a symbol's identity, but it swaps it *instantly*. So a
+reveal - the mystery tiles dissolve, what is underneath changes, the prize
+arrives - meant hand-rolling the same five things every time: the ordering, a
+per-cell stagger on each side of it, a zIndex bump so an entrance that overshoots
+its cell is not clipped by the neighbour drawn after it, a re-hide after the swap
+(re-activation resets `alpha` to 1, so the new art pops for a frame before its
+entrance begins), and abort handling so a player skipping the presentation still
+ends up looking at what the server sent.
+
+```ts
+await reelSet.swapSymbols(
+  [0, 1, 2].map((cell) => ({ reel: 1, cell, id: 'WILD' })),
+  {
+    outDelay: (_, i) => i * 0.06,   // peel the tiles away, top to bottom
+    holdMs: 200,                    // the beat where the reveal sound goes
+    inDelay: (_, i) => i * 0.09,    // the prize arrives, same order
+  },
+);
+```
+
+The three beats are separately skippable, because the middle one is the only one
+the engine has to own. Art that plays its own Spine `out` track passes
+`skipOut: true` and keeps the rest; `skipIn: true` leaves the swapped cells
+hidden for you to reveal yourself. `onSwapped` is the hook for a midpoint beat
+that has to wait on a real animation rather than a guessed number of
+milliseconds - its promise is awaited.
+
+`playIn()` / `playOut()` are the per-symbol hooks underneath, on the same
+contract as `playDestroy`: `delay`, `signal`, resolve when done, and abort
+meaning "snap to the end" rather than "fail". Override them on your own
+`ReelSymbol` for art-appropriate entrances and exits. They stay separate from
+`playDestroy`, which is tuned as the cascade's "this cell was a winner and is
+being consumed" poof - a reveal is a different beat, and borrowing that one reads
+wrong.
+
+**Gotchas.** Cells are validated up front, so a bad coordinate fails before
+anything has animated. An abort still performs the swap - the board must never be
+left disagreeing with the result. Only valid at rest; `setSymbolAt` throws
+mid-motion. Single-cell symbols only: a big symbol spans cells the frame layer
+has to reserve, so revealing one is a `setResult` / `setShape` job.
+
+<RecipeDemo code="symbol-swap-reveal" />
 
 <a id="symbol-pools"></a>
 

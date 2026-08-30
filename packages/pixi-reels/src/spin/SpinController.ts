@@ -1068,12 +1068,32 @@ export class SpinController implements Disposable {
    * Every reel must appear exactly once. Pass `null` to clear. Persists across
    * spins, like `setStopDelays()`.
    *
+   * **When to call it.** Any time up to `setResult()`, including between
+   * `spin()` and `setResult()` - the barrier is read as each reel's SpinPhase
+   * resolves, which is exactly when the result lands. That is what lets a round
+   * be grouped from the server's own response. Changing the layout after reels
+   * have begun landing throws.
+   *
    * @example
    * // Reels 1-2 land together, 3-4 tease one press at a time, 5 outlasts both.
    * reelSet.setReelGroups([[0, 1], [2, 3], [4]]);
    * reelSet.setAnticipation([2, 3], { stagger: 400, protect: 'stepwise' });
    */
   setReelGroups(groups: number[][] | null): void {
+    // A reel that has already passed the barrier cannot un-pass it, so a layout
+    // changed part-way through a round would only partly apply - and silently,
+    // since the reels still waiting would honour it perfectly. Setting groups
+    // BEFORE `setResult()` is the supported window (see the doc above) and is
+    // where the per-round case lives; this is only the incoherent one.
+    if (this._isSpinning && this._landedReels.size > 0) {
+      throw new Error(
+        'setReelGroups(): the group layout cannot change once reels have started landing ' +
+          `(reel${this._landedReels.size > 1 ? 's' : ''} ${[...this._landedReels]
+            .sort((a, b) => a - b)
+            .join(', ')} already down this round). Set groups before setResult(), which is ` +
+          'where the barrier is read.',
+      );
+    }
     if (groups === null) {
       this._reelGroups = null;
       this._groupOfReel = [];

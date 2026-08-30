@@ -149,6 +149,71 @@ describe('a group holds its reels until the group before it lands', () => {
   });
 });
 
+describe('a layout can be chosen per round, from the server response', () => {
+  let harness: ReturnType<typeof makeHarness> | null = null;
+  afterEach(() => {
+    harness?.stopPump();
+    harness?.destroy();
+    harness = null;
+  });
+
+  it('honours a layout set between spin() and setResult()', async () => {
+    const h = (harness = makeHarness());
+    const rounds: number[][] = [];
+
+    for (const layout of [
+      [[0, 1], [2, 3], [4]],
+      [[4], [0, 1, 2], [3]],
+    ]) {
+      const order: number[] = [];
+      const record = (i: number): number => order.push(i);
+      h.reelSet.events.on('spin:reelLanded', record);
+
+      const p = h.reelSet.spin();
+      // Where a game learns what this round looks like.
+      h.reelSet.setReelGroups(layout);
+      h.reelSet.setResult(GRID);
+      await p;
+
+      h.reelSet.events.off('spin:reelLanded', record);
+      rounds.push(order);
+    }
+
+    // The barrier is read as each reel's SpinPhase resolves, which is exactly
+    // when the result lands - so a layout set up to that point applies in full.
+    expect(rounds[0]).toEqual([0, 1, 2, 3, 4]);
+    expect(rounds[1]).toEqual([4, 0, 1, 2, 3]);
+  });
+
+  it('refuses a layout change once reels have started landing', async () => {
+    const h = (harness = makeHarness());
+    h.reelSet.setReelGroups([[0, 1], [2, 3], [4]]);
+
+    const p = h.reelSet.spin();
+    h.reelSet.setResult(GRID);
+    const landed = new Promise<void>((resolve) => {
+      h.reelSet.events.on('spin:reelLanded', () => resolve());
+    });
+    await landed;
+
+    // Half-applying a layout is worse than refusing it: the reels still waiting
+    // would honour the new one perfectly while the landed ones never could.
+    expect(() => h.reelSet.setReelGroups([[4], [0, 1, 2, 3]])).toThrow(
+      /cannot change once reels have started landing/,
+    );
+    await p;
+  });
+
+  it('allows a change between rounds', async () => {
+    const h = (harness = makeHarness());
+    h.reelSet.setReelGroups([[0, 1], [2, 3], [4]]);
+    const first = h.reelSet.spin();
+    h.reelSet.setResult(GRID);
+    await first;
+    expect(() => h.reelSet.setReelGroups([[4], [0, 1, 2, 3]])).not.toThrow();
+  });
+});
+
 describe('a skip press releases one group at a time', () => {
   let harness: ReturnType<typeof makeHarness> | null = null;
   afterEach(() => {
