@@ -12,31 +12,21 @@ tags:
   - frame
 ---
 
-The viewport clips the reels through a `MaskStrategy`, so buffer cells never
-leak past the visible grid. Two strategies have always shipped and both draw
-hard rectangles: `RectMaskStrategy` (one rect per reel, the default) and
-`SharedRectMaskStrategy` (a single bounding box).
-
-Everything on this page is additive. Existing sets are unaffected.
-
-## Which one do I want?
+The viewport clips the reels through a `MaskStrategy` so buffer cells never leak past the grid. Everything here is additive; the default `RectMaskStrategy` is unchanged.
 
 | Board | Strategy |
 |---|---|
-| Square frame art | `RectMaskStrategy` (default) - nothing to do |
-| Rounded frame art, reels flush | `RoundedRectMaskStrategy` (`scope: 'set'`) |
-| Reels drawn as separate cards, with a cross gap | `RoundedRectMaskStrategy` (`scope: 'reel'`) |
+| Square frame art | `RectMaskStrategy` (default) |
+| Rounded frame, reels flush | `RoundedRectMaskStrategy` (`scope: 'set'`) |
+| Reels as separate cards, with a cross gap | `RoundedRectMaskStrategy` (`scope: 'reel'`) |
 | Pyramid / MultiWays, rounded, reels flush | `SilhouetteMaskStrategy` |
-| Anything else - hexes, holes, cut-outs | `PathMaskStrategy` |
+| Hexes, holes, cut-outs | `PathMaskStrategy` |
 
-Two decorators wrap any of them, yours included: `inset(strategy, px)` shrinks
-what it draws, and `composeMasks(a, b, ...)` unions several into the viewport's
-one mask.
+`inset(strategy, px)` and `composeMasks(a, b, ...)` wrap any of them, yours included.
 
 ## A rounded window
 
-`scope: 'set'` rounds the four corners of the union bounding box. Safe at any
-cross gap, which is why it is the default.
+`scope: 'set'` rounds the union bounding box. Safe at any cross gap, so it is the default.
 
 <RecipeDemo code="mask-rounded-set" />
 
@@ -46,10 +36,7 @@ cross gap, which is why it is the default.
 
 `scope: 'reel'` rounds every reel box instead.
 
-**Gotcha:** this needs a non-zero CROSS gap (`symbolGap.x` on a vertical set,
-`symbolGap.y` on a horizontal one). At gap `0` neighbouring reels share an edge,
-and rounding both sides of a shared edge bites a lens-shaped notch out of every
-seam. The strategy warns once to the console when it sees touching rects.
+**Gotcha:** needs a non-zero CROSS gap. At gap `0` neighbours share an edge and rounding both sides of it notches every seam. The strategy warns once.
 
 <RecipeDemo code="mask-rounded-reels" />
 
@@ -57,19 +44,9 @@ seam. The strategy warns once to the console when it sees touching rects.
 
 ## Rounding a jagged board
 
-A pyramid has no single rectangle to round. Per-reel rounding notches every
-seam; bounding-box rounding throws the staircase away and shows buffer cells
-past the short reels.
+A pyramid has no single rectangle to round: per-reel rounding notches the seams, bounding-box rounding hides the staircase. `SilhouetteMaskStrategy` walks the union outline and rounds every vertex, concave steps included via `concaveRadius`. A uniform set degrades to a rounded rect.
 
-`SilhouetteMaskStrategy` walks the rectilinear union outline of the reel rects
-and rounds every vertex of it - outer corners bulging out, and the inward
-corners of each step curving the other way with their own `concaveRadius`. On a
-uniform set the outline *is* the bounding box, so it degrades to a rounded
-rectangle with no special case.
-
-Reels must butt together (cross gap `0`); with a gap they are genuinely
-disjoint, and the strategy says so once and falls back to per-reel rounded
-rects.
+**Gotcha:** reels must butt together (cross gap `0`). With a gap they are genuinely disjoint; the strategy says so and falls back to per-reel rounded rects.
 
 <RecipeDemo code="mask-silhouette-pyramid" />
 
@@ -77,17 +54,9 @@ rects.
 
 ## Any shape, without a class
 
-`PathMaskStrategy` takes a `(graphics, context) => void`. The context carries
-`rects`, `width`, `height`, `axis` and `bleed`, so an orientation-aware mask
-stays a one-liner. Do not call `g.clear()` - the strategy already did.
+`PathMaskStrategy` takes a `(graphics, context) => void`. The context carries `rects`, `width`, `height`, `axis` and `bleed`. Do not call `g.clear()` - the strategy already did.
 
-`Graphics.cut()` subtracts a path from the last shape that was already
-**filled**, which is how you punch a hole; `regularPoly` gives you hex and
-diamond boards.
-
-**Gotcha:** the fill comes first. `rect(...).fill(...)` then `rect(...).cut()`.
-Draw the hole before filling and `cut()` finds nothing to cut from - you get an
-empty mask and a completely invisible board, with no error.
+**Gotcha:** `cut()` subtracts from the last shape already **filled**, so fill first. Draw the hole before filling and you get an empty mask and an invisible board, with no error.
 
 <RecipeDemo code="mask-path-custom" />
 
@@ -95,36 +64,14 @@ empty mask and a completely invisible board, with no error.
 
 ## Insetting and composing
 
-`inset(strategy, px)` shrinks any strategy's output uniformly - the fix for "the
-art bleeds a pixel past the frame" without rewriting the strategy. Negative
-grows instead.
+`inset(strategy, px)` shrinks any strategy's output (negative grows) - the fix for art bleeding a pixel past the frame. `composeMasks(...)` unions several into the viewport's one mask, for a board plus a banner.
 
-`composeMasks(...)` unions several strategies into one mask, for a board plus a
-banner or side cell that has to share the viewport's single mask.
-
-**Union only.** A PixiJS Graphics mask is the union of every filled shape in it,
-and there is no way to intersect or subtract the output of two independent
-strategies. To subtract *within* one strategy, use `.cut()` inside a
-`PathMaskStrategy`.
+**Gotcha:** union only. A Graphics mask is the union of its filled shapes; there is no way to intersect or subtract two strategies. Use `.cut()` inside a `PathMaskStrategy` instead.
 
 <RecipeDemo code="mask-inset-compose" />
 
 ## Writing your own
 
-`MaskStrategy` is public. Implement `build(ctx)` and `update(g, ctx)`, set
-`version = MASK_STRATEGY_VERSION`, and pass it to `.maskStrategy(...)`. Reach
-for `PathMaskStrategy` first - a class only earns its keep when the strategy
-holds state across draws.
+Implement `build(ctx)` and `update(g, ctx)`, set `version = MASK_STRATEGY_VERSION`, pass it to `.maskStrategy(...)`. Reach for `PathMaskStrategy` first; a class only earns its keep when it holds state across draws.
 
-Two things a hand-written strategy must respect:
-
-- **`ctx.axis`.** `rects` are screen-space in every orientation, so which of
-  their four numbers runs along the strip depends on the axis.
-  `axis.toLocal(width, height)` gives you the pair as `{ cross, main }`.
-- **`ctx.bleed`.** Cross-axis room per side that `curveBleed(...)` asked for.
-  Inflate by it on the CROSS axis only; the main axis is where the buffer cells
-  live and they are meant to stay hidden.
-
-Implement the optional `draw(g, ctx)` as well and your strategy composes with
-`composeMasks` and `inset` like the built-ins do. Without it both still work -
-`composeMasks` nests your Graphics as a child - at the cost of one scene node.
+Respect two things: `ctx.axis`, because `rects` are screen-space in every orientation (`axis.toLocal(w, h)` gives `{ cross, main }`), and `ctx.bleed`, which inflates the CROSS axis only. Add the optional `draw(g, ctx)` and your strategy composes like the built-ins.
