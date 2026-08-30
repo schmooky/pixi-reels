@@ -242,6 +242,14 @@ export class SpinController implements Disposable {
   private _reelLandedResolvers: Map<number, () => void> = new Map();
   private _reelLandedPromises: Map<number, Promise<void>> = new Map();
   private _stopDelayOverride: number[] | null = null;
+  /**
+   * Reel groups, or `null` when every reel is on its own. See
+   * {@link setReelGroups}. Like `_stopDelayOverride` this PERSISTS across
+   * spins: a group layout describes the board, not one round.
+   */
+  private _reelGroups: number[][] | null = null;
+  /** Reel index -> its group's position. Derived from `_reelGroups`. */
+  private _groupOfReel: number[] = [];
   private _activePhases: Map<number, ReelPhase<any>> = new Map();
   private _landedReels = new Set<number>();
   /**
@@ -453,6 +461,7 @@ export class SpinController implements Disposable {
     this._teasingReels.clear();
     this._reelLandedResolvers.clear();
     this._reelLandedPromises.clear();
+    this._armReelLandedDeferreds();
     // NOTE: _stopDelayOverride is NOT cleared here. The contract is that
     // `setDropOrder()` (or `setStopDelays()`) is called right before
     // `spin()` / `refill()` and represents user intent for the upcoming
@@ -676,6 +685,7 @@ export class SpinController implements Disposable {
     this._teasingReels.clear();
     this._reelLandedResolvers.clear();
     this._reelLandedPromises.clear();
+    this._armReelLandedDeferreds();
     // _stopDelayOverride preserved across entry. see spin() for rationale.
     // Cascade recipes set `setDropOrder('all')` right before refill() and
     // would otherwise see their setting clobbered, falling back to the
@@ -1028,20 +1038,169 @@ export class SpinController implements Disposable {
     this._protectSpent = false;
     this._teasingReels.clear();
 
-    // Sequential chaining needs a landed-deferred per anticipation reel so a
-    // reel can await the previous one's landing. Build them here (setResult
-    // resolves the spin phases synchronously, so the deferreds must exist
-    // before the anticipation branch runs on the next microtask).
-    this._reelLandedResolvers.clear();
-    this._reelLandedPromises.clear();
-    if (stagger === 'sequential') {
-      for (const i of this._anticipationReels) {
-        this._reelLandedPromises.set(
-          i,
-          new Promise<void>((resolve) => this._reelLandedResolvers.set(i, resolve)),
-        );
-      }
+  }
+
+  /**
+   * Group the reels, so they stop and skip as blocks instead of individually.
+   *
+   * Without this, every reel is on its own: stop delays are one flat
+   * `reelIndex * stopDelay` stagger across the whole set, and a skip press
+   * lands "everything outside the tease" in one go. That falls apart as soon as
+   * the board has a reel whose job is NOT tied to its neighbours - a filler
+   * reel that should keep spinning past the tease, or a pair that must land
+   * together - because index order is the only ordering the engine has.
+   *
+   * A group is a barrier in both directions:
+   *
+   * - **Stopping.** No reel in a group begins its stop sequence (anticipation
+   *   included) until every reel in the groups before it has LANDED. A reel
+   *   waiting its turn keeps spinning at full speed, so the wait reads as
+   *   "still going" rather than as a pause.
+   * - **Skipping.** A press releases the next un-landed group rather than the
+   *   whole board. Tease protection still applies inside a group: with
+   *   `protect: 'stepwise'` a group of teasing reels comes down one press at a
+   *   time, in tease order.
+   *
+   * Stop delays become group-relative, so `stopDelay` staggers reels WITHIN a
+   * group rather than re-adding a whole-board offset on top of the barrier.
+   * An explicit `setStopDelays()` is still taken as given.
+   *
+   * Every reel must appear exactly once. Pass `null` to clear. Persists across
+   * spins, like `setStopDelays()`.
+   *
+   * @example
+   * // Reels 1-2 land together, 3-4 tease one press at a time, 5 outlasts both.
+   * reelSet.setReelGroups([[0, 1], [2, 3], [4]]);
+   * reelSet.setAnticipation([2, 3], { stagger: 400, protect: 'stepwise' });
+   */
+  setReelGroups(groups: number[][] | null): void {
+    if (groups === null) {
+      this._reelGroups = null;
+      this._groupOfReel = [];
+      return;
     }
+    if (!Array.isArray(groups) || groups.length === 0) {
+      throw new Error('setReelGroups(): expected a non-empty array of groups, or null to clear.');
+    }
+    const owner = new Array<number>(this._reels.length).fill(-1);
+    groups.forEach((group, g) => {
+      if (!Array.isArray(group) || group.length === 0) {
+        throw new Error(`setReelGroups(): group ${g} is empty. Every group needs at least one reel.`);
+      }
+      for (const i of group) {
+        if (!Number.isInteger(i) || i < 0 || i >= this._reels.length) {
+          throw new Error(
+            `setReelGroups(): group ${g} names reel ${String(i)}, which is not a reel index ` +
+              `(0..${this._reels.length - 1}).`,
+          );
+        }
+        if (owner[i] !== -1) {
+          throw new Error(
+            `setReelGroups(): reel ${i} appears in group ${owner[i]} and group ${g}. ` +
+              'A reel belongs to exactly one group.',
+          );
+        }
+        owner[i] = g;
+      }
+    });
+    const missing = owner.map((g, i) => (g === -1 ? i : -1)).filter((i) => i !== -1);
+    if (missing.length > 0) {
+      // Silently dropping the unlisted reels into a trailing group would make
+      // the barrier depend on something the caller never wrote down.
+      throw new Error(
+        `setReelGroups(): reel${missing.length > 1 ? 's' : ''} ${missing.join(', ')} ` +
+          'not in any group. List every reel, or pass null to clear.',
+      );
+    }
+    this._reelGroups = groups.map((g) => [...g]);
+    this._groupOfReel = owner;
+  }
+
+  /** The reel groups in force, or `null`. Copy; mutating it changes nothing. */
+  get reelGroups(): number[][] | null {
+    return this._reelGroups ? this._reelGroups.map((g) => [...g]) : null;
+  }
+
+  /**
+   * One landed-deferred per reel, armed at the start of every round.
+   *
+   * Both the `'sequential'` anticipation stagger and the group barrier are
+   * "wait for that reel to land", so they share one set. Armed here rather
+   * than in `setAnticipation` because a group barrier exists whether or not
+   * anything teases - and because arming them mid-round could hand a waiter a
+   * deferred for a reel that has already landed, which never resolves.
+   */
+  private _armReelLandedDeferreds(): void {
+    for (let i = 0; i < this._reels.length; i++) {
+      this._reelLandedPromises.set(
+        i,
+        new Promise<void>((resolve) => this._reelLandedResolvers.set(i, resolve)),
+      );
+    }
+  }
+
+  /** This reel's group position, or `-1` when no groups are configured. */
+  private _groupIndexOf(reelIndex: number): number {
+    return this._reelGroups ? (this._groupOfReel[reelIndex] ?? -1) : -1;
+  }
+
+  /**
+   * Hold a reel at full speed until every earlier group has landed.
+   *
+   * Returns `false` if the round moved on during the wait (a slam, or a new
+   * spin), exactly like `_awaitAnticipationOffset`.
+   */
+  private async _awaitGroupTurn(reelIndex: number, generation: number): Promise<boolean> {
+    const group = this._groupIndexOf(reelIndex);
+    if (group <= 0) return true;
+
+    const waits: Array<Promise<void>> = [];
+    for (let i = 0; i < this._reels.length; i++) {
+      if (this._groupIndexOf(i) >= group) continue;
+      // A reel that already landed, or that is held out of this spin entirely,
+      // is not something to wait for - and its deferred may already be spent.
+      if (this._landedReels.has(i) || this._heldReels.has(i)) continue;
+      const landed = this._reelLandedPromises.get(i);
+      if (landed) waits.push(landed);
+    }
+    if (waits.length === 0) return true;
+
+    await Promise.all(waits);
+    return !this._isStale(reelIndex, generation);
+  }
+
+  /** Is there a group still waiting for a press after the one just released? */
+  private _hasUnreleasedGroup(): boolean {
+    if (!this._reelGroups) return false;
+    for (let i = 0; i < this._reels.length; i++) {
+      if (!this._landedReels.has(i) && !this._heldReels.has(i)) return true;
+    }
+    return false;
+  }
+
+  /**
+   * The next group a press should land, walking the configured groups in
+   * order. `null` once every reel is down, which makes the press a plain slam.
+   *
+   * Within a group the unprotected reels come down first, so the board reads
+   * before the tease is touched; then `'stepwise'` releases the teasing ones
+   * one press at a time in TEASE order, and `'once'` / `'always'` hold them
+   * (an empty group is a no-op press, by design).
+   */
+  private _nextReelGroupRelease(teasing: Set<number>): number[] | null {
+    for (const group of this._reelGroups ?? []) {
+      const pending = group.filter(
+        (i) => !this._landedReels.has(i) && !this._heldReels.has(i),
+      );
+      if (pending.length === 0) continue;
+
+      const free = pending.filter((i) => !teasing.has(i));
+      if (free.length > 0) return free;
+      if (this._anticipationProtect !== 'stepwise') return [];
+      const next = this._anticipationReels.find((i) => pending.includes(i));
+      return next === undefined ? [] : [next];
+    }
+    return null;
   }
 
   /**
@@ -1168,12 +1327,14 @@ export class SpinController implements Disposable {
       // rather than `_protectedTeaseReels()`. that helper reports what is
       // still PROTECTED, which spending would zero out, and "the tease is
       // over" is not the same question as "the tease is still protected".
-      const teaseLeft = this._teaseStillRunning();
+      // With reel groups the round is not over until every group is down,
+      // tease or no tease: a filler group behind the tease still owes a press.
+      const roundLeft = this._teaseStillRunning() || this._hasUnreleasedGroup();
       // `'once'` is the only spendable mode. `'stepwise'` and `'always'` keep
       // protecting whatever tease is left.
       if (this._anticipationProtect === 'once') this._protectSpent = true;
 
-      if (teaseLeft) {
+      if (roundLeft) {
         // Tease still running. Stage 1, not 2: the round's side effect is
         // still owed to the press that actually ends it.
         if (this._skipStage === 0) this._skipStage = 1;
@@ -1210,6 +1371,9 @@ export class SpinController implements Disposable {
    */
   private _nextSlamGroup(): number[] | null {
     const teasing = this._protectedTeaseReels();
+    // Configured groups replace the implicit "tease vs everything else" split:
+    // the caller has said what belongs together, so a press walks THAT order.
+    if (this._reelGroups) return this._nextReelGroupRelease(teasing);
     if (teasing.size === 0) return null;
 
     const rest: number[] = [];
@@ -1690,6 +1854,12 @@ export class SpinController implements Disposable {
       if (this._isStale(reelIndex, generation)) return;
     }
 
+    // Group barrier: hold this reel at full speed until every earlier group has
+    // landed. Without it the only ordering the engine has is reel index, so a
+    // filler reel late in the board lands in the middle of a tease on the reels
+    // before it.
+    if (!(await this._awaitGroupTurn(reelIndex, generation))) return;
+
     // SpinPhase resolved (result arrived). Run ANTICIPATION (if requested) then STOP.
     const stopDelay = this._stopDelayFor(reelIndex, speed);
     const targetFrame = this._frameFor(reelIndex);
@@ -2005,6 +2175,14 @@ export class SpinController implements Disposable {
   private _stopDelayFor(reelIndex: number, speed: SpeedProfile): number {
     if (this._stopDelayOverride) {
       return this._stopDelayOverride[reelIndex] ?? 0;
+    }
+    // With groups the barrier already orders the board, so the stagger is
+    // relative to the reel's place in ITS group. Keeping the whole-board offset
+    // would re-add the ordering the barrier just enforced, on top of it.
+    const group = this._groupIndexOf(reelIndex);
+    if (group >= 0) {
+      const within = (this._reelGroups as number[][])[group].indexOf(reelIndex);
+      return Math.max(within, 0) * speed.stopDelay;
     }
     return reelIndex * speed.stopDelay;
   }

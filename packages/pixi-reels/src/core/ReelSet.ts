@@ -1114,6 +1114,54 @@ export class ReelSet extends Container implements Disposable {
   }
 
   /**
+   * Group the reels, so they stop and skip as blocks instead of individually.
+   *
+   * Without groups the engine's only ordering is reel index: stop delays are
+   * one flat `reelIndex * stopDelay` stagger across the whole board, and a skip
+   * press lands "everything outside the tease" at once. That breaks down the
+   * moment a reel's job is not tied to its neighbours - a filler reel meant to
+   * outlast a tease on the reels before it will still land in the middle of it,
+   * because index 4 comes after index 3 and nothing else is being said.
+   *
+   * A group is a barrier in both directions:
+   *
+   * - **Stopping.** No reel in a group starts its stop sequence (anticipation
+   *   included) until every reel in the earlier groups has LANDED. A reel
+   *   waiting its turn keeps spinning at full speed, so the wait reads as
+   *   "still going", not as a pause.
+   * - **Skipping.** A press releases the next un-landed group, not the whole
+   *   board. Tease protection still applies inside a group: with
+   *   `protect: 'stepwise'` a group of teasing reels comes down one press at a
+   *   time, in tease order.
+   *
+   * Stop delays become group-relative, so the profile's `stopDelay` staggers
+   * reels WITHIN a group instead of re-adding a whole-board offset on top of
+   * the barrier. An explicit {@link setStopDelays} is still taken as given.
+   *
+   * Every reel must appear exactly once - listing some and leaving the rest to
+   * an implicit trailing group would make the barrier depend on something the
+   * caller never wrote down. Pass `null` to clear.
+   *
+   * **Sticky**, like {@link setStopDelays}: a group layout describes the board,
+   * not one round, so it survives `spin()` and `refill()` until changed.
+   *
+   * @example
+   * // Reels 1-2 land together; 3-4 tease, one press each; 5 outlasts them all.
+   * reelSet.setReelGroups([[0, 1], [2, 3], [4]]);
+   * reelSet.setAnticipation([2, 3], { stagger: 400, protect: 'stepwise' });
+   *
+   * // Presses walk the board: [0,1] -> 2 -> 3 -> [4].
+   */
+  setReelGroups(groups: number[][] | null): void {
+    this._spinController.setReelGroups(groups);
+  }
+
+  /** The reel groups in force, or `null`. A copy; mutating it changes nothing. */
+  get reelGroups(): number[][] | null {
+    return this._spinController.reelGroups;
+  }
+
+  /**
    * Round-aware spin skip. The button-press entry point. The first press
    * in a round slams the current drop AND applies a round-scoped side
    * effect:
