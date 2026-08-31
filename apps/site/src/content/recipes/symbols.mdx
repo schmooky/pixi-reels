@@ -5,6 +5,8 @@ oneLiner: Symbol classes, three-tier layering (zIndex, unmask, promote), multi-s
 order: 70
 tags:
   - symbols
+  - reveal
+  - mystery
   - pools
   - buffers
   - weights
@@ -71,6 +73,25 @@ A symbol morphs into a different (usually higher) one mid-round via setSymbolAt.
 **Gotcha:** transform only after landing (spin:complete / spin:reelLanded); setSymbolAt throws mid-spin and on big-symbol anchors.
 
 <RecipeDemo code="symbol-transform" />
+
+<a id="symbol-swap-reveal"></a>
+
+## Reveal a mystery symbol: out, swap, in
+
+`setSymbolAt` swaps an identity instantly, so a reveal meant hand-rolling the ordering, the per-cell stagger, a zIndex bump so an overshooting entrance is not clipped, a re-hide after the swap (re-activation resets `alpha` to 1, so the new art pops for a frame), and abort handling.
+
+```ts
+await reelSet.swapSymbols(
+  [0, 1, 2].map((cell) => ({ reel: 1, cell, id: 'WILD' })),
+  { outDelay: (_, i) => i * 0.06, holdMs: 200, inDelay: (_, i) => i * 0.09 },
+);
+```
+
+The three beats are separately skippable: `skipOut` for art that plays its own Spine `out` track, `skipIn` to leave the cells hidden and reveal them yourself, `onSwapped` for a midpoint beat that has to await a real animation. `playIn()` / `playOut()` are the per-symbol hooks underneath, on the same contract as `playDestroy` - override them for art-appropriate entrances and exits.
+
+**Gotcha:** cells are validated up front, and an abort still performs the swap so the board never disagrees with the result. Only valid at rest, and single-cell symbols only - a big symbol spans cells the frame layer reserves, so revealing one is a `setResult` / `setShape` job.
+
+<RecipeDemo code="symbol-swap-reveal" />
 
 <a id="symbol-pools"></a>
 

@@ -11,6 +11,8 @@ tags:
   - spine
   - horizontal
   - reverse
+  - curve
+  - acceleration
 ---
 
 Every way to hold the player at the reel stop, from a single slowed reel to a full Spine near-win act.
@@ -76,6 +78,70 @@ Each teasing reel crawls slower than the last, then stops exactly there.
 Keep the tease playing in Turbo / SuperTurbo with a duration override (the SuperTurbo profile sets anticipationDelay to 0, so a plain call skips the tease).
 
 <RecipeDemo code="turbo-anticipation" />
+
+<a id="anticipation-surge-curve"></a>
+
+## Shape the tease: surge, then crawl
+
+The stock tease only decelerates, and an ease applied to a SPEED is a step in acceleration - `power2.out` puts peak deceleration on the first frame, so the reel reads as being *set* to a lower speed rather than slowing down.
+
+`curve` replaces the fixed shape with explicit legs. Speeds are multiples of `spinSpeed`, so `2` is a genuine surge and `0.08` a crawl; segment eases default to `power2.inOut`, which ramps the acceleration in *and* out.
+
+```ts
+reelSet.setAnticipation([2, 3, 4], {
+  stagger: 260,
+  curve: [
+    { speed: 2,    duration: 240, ease: 'power2.in' },
+    { speed: 0.08, duration: 620, ease: 'power3.inOut', hold: 300 },
+  ],
+});
+```
+
+**Gotcha:** `curve` and `slowdown` together throws - `slowdown` is shorthand for a two-leg curve. The profile's `anticipationDelay` still gates whether the tease runs at all, so Turbo needs a `duration` override; the curve's own durations set the length.
+
+<RecipeDemo code="anticipation-surge-curve" height={400} />
+
+<a id="anticipation-curve-per-reel"></a>
+
+## A different curve per reel
+
+Two curves of different lengths have no meaningful midpoint, so `curve` takes a function - `(order, total) => AnticipationSegment[]` - instead of interpolating.
+
+**Gotcha:** `order` is the reel's place in the anticipation set, not its index. `setAnticipation([4, 2, 3], ...)` hands `order: 0` to reel 4, matching `slowdown` and `protect: 'stepwise'`.
+
+<RecipeDemo code="anticipation-curve-per-reel" />
+
+<a id="anticipation-cells"></a>
+
+## Tease for N symbols, not N milliseconds
+
+`duration` is a time budget, so how far a reel moves depends on its speed. When the tease is choreographed around symbols passing the window - "three more and it lands" - anchor to travel instead: `cells: n` ends it after n symbol pitches, read off a monotonic odometer (`reel.travelledCells`) that survives the snap at the end of every spin. `cells` takes the same function-of-order form as `curve`.
+
+**Gotcha:** the anchor applies to the FINAL leg; earlier legs always play in full, or a fast opening segment would silently delete the ones after it. `duration` is the backstop on that leg, since a reel at rest can never reach a travel target.
+
+<RecipeDemo code="anticipation-cells" />
+
+<a id="anticipation-drive"></a>
+
+## The gas pedal: bounded acceleration
+
+An ease shapes only the transition it was written for. `motionModel('drive', ...)` bounds acceleration instead: phases assign `reel.targetSpeed` and `Reel.update` walks the speed toward it, so every transition inherits the same feel, interruption is a single reassignment, and `jerkFrames` ramps the acceleration itself.
+
+```ts
+builder.motionModel('drive', { accelFrames: 20, decelFrames: 34, jerkFrames: 260 })
+```
+
+Bounds are profile-relative - frames to the ACTIVE profile's full speed - because the presets run `spinSpeed` 30 / 50 / 80 and one absolute px/frame^2 bound would make SuperTurbo start slower than Normal. The absolute `{ accel, decel, jerk }` form still works for a single-profile game; mixing the two throws.
+
+**Gotcha:** build-time only, and opt-in - the default `'tween'` model is byte-for-byte unchanged. Landing and a skip press stay instantaneous by design, exactly as they are under `'tween'`. A segment the drive cannot reach in time says so on the notice channel.
+
+<RecipeDemo code="anticipation-drive" height={440} />
+
+<a id="anticipation-audio"></a>
+
+## Driving tease audio
+
+`anticipation:reel` and `anticipation:reelEnd` bracket a tension loop. `anticipation:segment` (`{ reelIndex, index, total, speed, targetSpeed }`) fires once per curve leg, so a surge can sound different from the crawl after it without polling for the boundary. For a pitch ramp that tracks the actual slow-down, sample `reelSet.reels[i].speedNormalized` from your own ticker: `1` at full blur, `0` at rest, above `1` during a surge.
 
 <a id="skip-anticipation"></a>
 

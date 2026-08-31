@@ -48,6 +48,7 @@
     "@pixi-reels/cheats": "workspace:*"
   },
   "devDependencies": {
+    "@astrojs/markdown-remark": "^7.1.0",
     "@resvg/resvg-js": "^2.6.2",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",

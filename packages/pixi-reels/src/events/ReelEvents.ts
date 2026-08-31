@@ -60,6 +60,27 @@ export interface ReelSetEvents extends Record<string, unknown[]> {
    * `anticipation:reel` to bracket a per-reel tension effect.
    */
   'anticipation:reelEnd': [info: { reelIndex: number }];
+  /**
+   * One leg of an anticipation `curve` has begun on a reel. Fires once per
+   * segment, in order, only for teases configured with a curve.
+   *
+   * The bookend events say a tease started and ended; this says which leg is
+   * playing, so a surge can get a different sound from the crawl that follows
+   * it without polling `reel.speedNormalized` and inferring the boundary.
+   *   - `reelIndex`: the teasing reel.
+   *   - `index` / `total`: this leg's place in the curve.
+   *   - `speed`: the leg's target as a multiple of `spinSpeed` (as authored).
+   *   - `targetSpeed`: the same target in px/frame.
+   */
+  'anticipation:segment': [
+    info: {
+      reelIndex: number;
+      index: number;
+      total: number;
+      speed: number;
+      targetSpeed: number;
+    },
+  ];
   'spin:reelLanded': [reelIndex: number, symbols: string[]];
   'spin:allLanded': [result: SpinResult];
   'spin:complete': [result: SpinResult];

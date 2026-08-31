@@ -61,16 +61,32 @@ export class StopPhase extends ReelPhase<StopPhaseConfig> {
 
     reel.setStopFrame(this._config.targetFrame);
     reel.isStopping = true;
+    // Under the drive model the reel RAMPS to the spin-out speed inside its
+    // acceleration bounds; forcing it would put back exactly the discontinuity
+    // the drive exists to remove. Under the tween model there is no ramp to
+    // respect and the assignment is immediate, as it always was.
+    const setSpeed = reel.hasDrive
+      ? (v: number) => {
+          reel.targetSpeed = v;
+        }
+      : (v: number) => reel.forceSpeed(v);
+
     if (this._config.preserveSpeed) {
       // Following an anticipation tease: keep the current (slow) speed so the
       // reel crawls its target frame into place and stops exactly there,
       // rather than re-accelerating to full speed. Floor it so a near-zero
-      // anticipation speed can't stall the spin-out forever.
-      reel.speed = Math.max(reel.speed, speed.spinSpeed * 0.08);
+      // anticipation speed can't stall the spin-out forever, and cap it at full
+      // spin speed so a curve that ended on a SURGE segment cannot leak an
+      // above-normal speed into the landing.
+      setSpeed(Math.min(Math.max(reel.speed, speed.spinSpeed * 0.08), speed.spinSpeed));
+      // A surge has to come DOWN before the frame lands, and a drive would take
+      // its own sweet time about it. The cap is a correctness rule, not a feel
+      // choice, so it applies to the live speed immediately either way.
+      if (reel.hasDrive && reel.speed > speed.spinSpeed) reel.speed = speed.spinSpeed;
     } else {
       // Restore full spin speed. anticipation or other phases may have lowered
       // it. The full momentum carries through the final frame placement.
-      reel.speed = speed.spinSpeed;
+      setSpeed(speed.spinSpeed);
     }
 
     this._stage = 'spinning';
@@ -89,7 +105,9 @@ export class StopPhase extends ReelPhase<StopPhaseConfig> {
     const reel = this._reel;
     const speed = this._speed;
 
-    reel.speed = 0;
+    // haltDrive, not `speed = 0`: under the drive model a bare zero would be
+    // ramped straight back toward the old target on the very next tick.
+    reel.haltDrive();
     reel.isStopping = false;
     reel.snapToGrid();
     reel.notifySpinEnd();
@@ -146,7 +164,7 @@ export class StopPhase extends ReelPhase<StopPhaseConfig> {
   protected onSkip(): void {
     this._killTweens();
     const reel = this._reel;
-    reel.speed = 0;
+    reel.haltDrive();
     reel.isStopping = false;
 
     if (this._stage !== 'done' && this._config) {

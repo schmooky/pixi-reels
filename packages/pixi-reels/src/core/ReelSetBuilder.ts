@@ -20,6 +20,7 @@ import { DEFAULTS } from '../config/defaults.js';
 import { SpeedPresets } from '../config/SpeedPresets.js';
 import { ReelSet, type ReelSetParams } from './ReelSet.js';
 import { Reel, type ReelConfig } from './Reel.js';
+import { assertDriveConfig, type ReelDriveConfig } from './ReelDrive.js';
 import { reelAxis, type Orientation, type Direction } from './ReelAxis.js';
 import type { ReelCurveConfig, ReelCurveInput, CurveFocus, CurveMode } from './ReelCurve.js';
 import { CURVE_FOCUS_WEIGHT } from './ReelCurve.js';
@@ -131,6 +132,8 @@ export class ReelSetBuilder {
   private _maskStrategy: MaskStrategy = new RectMaskStrategy();
   /** True if the user explicitly set a mask strategy (no auto-pick override). */
   private _maskStrategyExplicit = false;
+  /** Acceleration bounds for the `'drive'` motion model, or `undefined` for `'tween'`. */
+  private _drive?: ReelDriveConfig;
 
   private _gsap: Gsap = DEFAULT_GSAP;
 
@@ -457,6 +460,71 @@ export class ReelSetBuilder {
     }
     this._maskStrategy = strategy;
     this._maskStrategyExplicit = true;
+    return this;
+  }
+
+  /**
+   * Choose how `reel.speed` gets from one value to the next.
+   *
+   * - `'tween'` (default) - phases tween the speed with a GSAP ease. Every
+   *   existing game uses this and nothing about it changes.
+   * - `'drive'` - the reel integrates toward a target speed under an
+   *   acceleration bound, and phases set that target instead of tweening.
+   *
+   * Why the second one exists: an ease applied to a SPEED is a step in
+   * acceleration. `power2.out` puts peak deceleration on the very first frame
+   * and decays from there, which is why the stock tease reads as the speed
+   * setting changing rather than as the reel slowing down. Bounding
+   * acceleration is the physical model instead - the reel can only change speed
+   * so fast, whatever it is asked for. Add `jerk` and the acceleration itself
+   * ramps, which is the pedal feel: down over time rather than stamped.
+   *
+   * The drive also makes interruption free. A skip press, a mid-tease retarget
+   * or a `setSpeed` mid-spin is a new target assignment, and the motion stays
+   * continuous by construction - there is no timeline to kill and no leftover
+   * speed to reconcile.
+   *
+   * Set at build time only. There is no runtime toggle, because handing the
+   * speed field to a second owner while a phase is mid-tween is exactly the
+   * failure this design avoids.
+   *
+   * Bounds are **profile-relative** by default: `accelFrames: 20` means "reach
+   * whatever the active profile calls full speed in 20 frames", so Turbo
+   * accelerates harder than Normal in proportion to how much faster it spins.
+   * The absolute form (`accel`, px/frame^2) is still accepted, but one fixed
+   * number cannot serve the shipped presets - their `spinSpeed` runs 30 / 50 /
+   * 80, so an absolute bound tuned for Normal makes SuperTurbo take 53 frames
+   * to reach speed instead of 20, i.e. a turbo that starts SLOWER than normal.
+   *
+   * @example
+   * builder.motionModel('drive', { accelFrames: 20, decelFrames: 34, jerkFrames: 260 })
+   *
+   * @example
+   * // Single-profile game, tuned in raw px/frame^2.
+   * builder.motionModel('drive', { accel: 1.5, decel: 0.9, jerk: 0.12 })
+   */
+  motionModel(model: 'tween'): this;
+  motionModel(model: 'drive', config: ReelDriveConfig): this;
+  motionModel(model: 'tween' | 'drive', config?: ReelDriveConfig): this {
+    if (model === 'tween') {
+      this._drive = undefined;
+      return this;
+    }
+    if (model !== 'drive') {
+      throw new Error(`motionModel(): expected 'tween' or 'drive', got ${String(model)}.`);
+    }
+    if (!config) {
+      throw new Error(
+        "motionModel('drive'): an acceleration config is required, e.g. " +
+          "{ accelFrames: 20 }. Pass motionModel('tween') for the default model.",
+      );
+    }
+    // Validate the SHAPE now rather than at first tick, so a bad number names
+    // the builder call that produced it instead of surfacing as a motionless
+    // reel. The relative form's actual bounds are resolved per spin, against
+    // whichever profile is active.
+    assertDriveConfig(config);
+    this._drive = config;
     return this;
   }
 
@@ -944,6 +1012,8 @@ export class ReelSetBuilder {
     if (this._speeds.size === 0) {
       this._speeds.set('normal', SpeedPresets.NORMAL);
     }
+    // The profile a reel runs on until the first spin picks one.
+    const defaultSpinSpeed = this._speeds.values().next().value?.spinSpeed ?? 0;
 
     const symbolsData: Record<string, SymbolData> = {};
     const symbolIds = this._symbolRegistry.symbolIds;
@@ -1198,6 +1268,12 @@ export class ReelSetBuilder {
       };
 
       const reel = new Reel(reelConfig, symbolFactory, randomProvider, viewport);
+      // Seed the reference BEFORE the drive: profile-relative bounds resolve
+      // against it, and `speedNormalized` divides by it. The controller
+      // refreshes both per spin; this is what makes them correct before the
+      // first one.
+      reel.referenceSpeed = defaultSpinSpeed;
+      if (this._drive) reel.installDrive(this._drive);
       reels.push(reel);
       // Per-reel mask rect: cross position marches the reels, main position is
       // the reel's own offset, cross size is one cell, main size is the strip.

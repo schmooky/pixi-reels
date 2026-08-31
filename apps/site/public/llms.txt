@@ -1,6 +1,6 @@
 # pixi-reels
 
-pixi-reels 2.2.0 is a reel engine for PixiJS v8.
+pixi-reels 2.3.0 is a reel engine for PixiJS v8.
 It ships reel-only primitives. Win math, paytable math, RNG, and audio live in consumer code.
 This file inlines every guide, API page, recipe (with source) and answered FAQ entry for offline LLM context.
 
@@ -153,7 +153,7 @@ Symbol implementation using PixiJS AnimatedSprite. Swaps frame arrays on activat
 
 ### AnticipationPhase
 URL: https://pixi-reels.schmooky.dev/api/classes/index.AnticipationPhase/
-Anticipation phase: slow-down tease before a reel stops.
+Anticipation phase: the tease before a reel stops.
 
 ### BoardGrid
 URL: https://pixi-reels.schmooky.dev/api/classes/index.BoardGrid/
@@ -211,6 +211,10 @@ Immediate placement mode for super-turbo skip. Symbols snap to position instantl
 URL: https://pixi-reels.schmooky.dev/api/classes/index.ObjectPool/
 Generic object pool for reusing expensive-to-create objects.
 
+### PathMaskStrategy
+URL: https://pixi-reels.schmooky.dev/api/classes/index.PathMaskStrategy/
+Any mask you can draw, without the class.
+
 ### PhaseFactory
 URL: https://pixi-reels.schmooky.dev/api/classes/index.PhaseFactory/
 Factory for creating reel phase instances.
@@ -251,9 +255,17 @@ The clipping window + layering tricks for a reel set.
 URL: https://pixi-reels.schmooky.dev/api/classes/index.ReelWarp/
 Bend a whole reel, whatever is inside it.
 
+### RoundedRectMaskStrategy
+URL: https://pixi-reels.schmooky.dev/api/classes/index.RoundedRectMaskStrategy/
+Rounded-corner rectangles, per reel or per set.
+
 ### SharedRectMaskStrategy
 URL: https://pixi-reels.schmooky.dev/api/classes/index.SharedRectMaskStrategy/
 Single bounding-box mask covering every reel. Use this when symbols need to overlap across reel boundaries. typical for slots with big symbols that span multiple reels (a 2x2 bonus, a 3x3 giant) AND a
+
+### SilhouetteMaskStrategy
+URL: https://pixi-reels.schmooky.dev/api/classes/index.SilhouetteMaskStrategy/
+Rounds the OUTLINE of the whole reel set, staircase and all.
 
 ### SpeedManager
 URL: https://pixi-reels.schmooky.dev/api/classes/index.SpeedManager/
@@ -343,6 +355,10 @@ URL: https://pixi-reels.schmooky.dev/api/functions/index.cloneColumnTarget/
 URL: https://pixi-reels.schmooky.dev/api/functions/index.columnTargetToStrip/
 ```ts function columnTargetToStrip(target: ColumnTarget, bufferStart: number): (string | undefined)[]; ```
 
+### composeMasks()
+URL: https://pixi-reels.schmooky.dev/api/functions/index.composeMasks/
+```ts function composeMasks(...strategies: MaskStrategy[]): DrawableMaskStrategy; ```
+
 ### computeDropOffsets()
 URL: https://pixi-reels.schmooky.dev/api/functions/index.computeDropOffsets/
 ```ts function computeDropOffsets( visibleCells: number, winnerCells: readonly number[], options?: { gravity?: Direction; initial?: boolean; }): DropOffset[]; ```
@@ -379,6 +395,14 @@ URL: https://pixi-reels.schmooky.dev/api/functions/index.getLogLevel/
 URL: https://pixi-reels.schmooky.dev/api/functions/index.getTargetSlot/
 ```ts function getTargetSlot(target: ColumnTarget, cell: number): string | undefined; ```
 
+### inset()
+URL: https://pixi-reels.schmooky.dev/api/functions/index.inset/
+```ts function inset(strategy: MaskStrategy, pixels: number): DrawableMaskStrategy; ```
+
+### isDrawableMaskStrategy()
+URL: https://pixi-reels.schmooky.dev/api/functions/index.isDrawableMaskStrategy/
+```ts function isDrawableMaskStrategy(s: MaskStrategy): s is DrawableMaskStrategy; ```
+
 ### pinKey()
 URL: https://pixi-reels.schmooky.dev/api/functions/index.pinKey/
 ```ts function pinKey(reel: number, cell: number): string; ```
@@ -394,6 +418,10 @@ URL: https://pixi-reels.schmooky.dev/api/functions/index.reelAxis/
 ### resolveCurveConfig()
 URL: https://pixi-reels.schmooky.dev/api/functions/index.resolveCurveConfig/
 ```ts function resolveCurveConfig(input: ReelCurveInput): Required<ReelCurveConfig>; ```
+
+### resolveDriveConfig()
+URL: https://pixi-reels.schmooky.dev/api/functions/index.resolveDriveConfig/
+```ts function resolveDriveConfig(config: ReelDriveConfig): Required<Omit<ReelDriveConfig, "jerk">> & { jerk: number; }; ```
 
 ### resolveTumbleConfig()
 URL: https://pixi-reels.schmooky.dev/api/functions/index.resolveTumbleConfig/
@@ -414,6 +442,10 @@ URL: https://pixi-reels.schmooky.dev/api/functions/index.sortByValueDesc/
 ### startRecording()
 URL: https://pixi-reels.schmooky.dev/api/functions/index.startRecording/
 ```ts function startRecording( reelSet: ReelSet, tag?: string, options?: StartRecordingOptions): void; ```
+
+### stepDrive()
+URL: https://pixi-reels.schmooky.dev/api/functions/index.stepDrive/
+```ts function stepDrive( state: ReelDriveState, target: number, config: { accel: number; decel: number; jerk: number; }, deltaMs: number): ReelDriveState; ```
 
 ### stopRecording()
 URL: https://pixi-reels.schmooky.dev/api/functions/index.stopRecording/
@@ -459,6 +491,10 @@ Full anticipation configuration. The object form of `setAnticipation`''s second 
 
 ### AnticipationPhaseConfig
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.AnticipationPhaseConfig/
+
+### AnticipationSegment
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.AnticipationSegment/
+One leg of an [AnticipationCurve](/api/types/index.AnticipationCurve/): reach a speed, optionally sit there.
 
 ### AnticipationSlowdown
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.AnticipationSlowdown/
@@ -542,6 +578,10 @@ Options for [ReelSet.destroySymbols](/api/classes/index.ReelSet/#destroysymbols)
 ### Disposable
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.Disposable/
 Contract for objects that allocate resources and need cleanup. Every class that subscribes to tickers, creates display objects, or holds references must implement this to prevent memory leaks.
+
+### DrawableMaskStrategy
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.DrawableMaskStrategy/
+A [MaskStrategy](/api/interfaces/index.MaskStrategy/) that can draw into a Graphics somebody else owns.
 
 ### DropOffset
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.DropOffset/
@@ -647,6 +687,14 @@ URL: https://pixi-reels.schmooky.dev/api/interfaces/index.ReelConfig/
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.ReelCurveConfig/
 Fake the curvature of a spinning reel cylinder.
 
+### ReelDriveConfig
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.ReelDriveConfig/
+Acceleration bounds for a reel under the `''drive''` motion model.
+
+### ReelDriveState
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.ReelDriveState/
+A drive''s live state. Owned by `Reel`; stepped once per tick.
+
 ### ReelEvents
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.ReelEvents/
 Events emitted by an individual Reel.
@@ -679,12 +727,18 @@ Summary returned by [ReelSet.refill](/api/classes/index.ReelSet/#refill). Symmet
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.ResolvedTumbleConfig/
 Resolved config with defaults applied. Internal type.
 
+### RoundedRectMaskOptions
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.RoundedRectMaskOptions/
+
 ### RunCascadeOptions
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.RunCascadeOptions/
 Options for [ReelSet.runCascade](/api/classes/index.ReelSet/#runcascade). The two required callbacks (`detectWinners`, `nextGrid`) encode game rules; everything else is timing / cancellation / forward
 
 ### ScatterAnticipationOptions
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.ScatterAnticipationOptions/
+
+### SilhouetteMaskOptions
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.SilhouetteMaskOptions/
 
 ### SlamOptions
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.SlamOptions/
@@ -796,6 +850,10 @@ URL: https://pixi-reels.schmooky.dev/api/modules/spine/
 ### testing
 URL: https://pixi-reels.schmooky.dev/api/modules/testing/
 
+### AnticipationCurve
+URL: https://pixi-reels.schmooky.dev/api/types/index.AnticipationCurve/
+```ts type AnticipationCurve =
+
 ### AnticipationProtect
 URL: https://pixi-reels.schmooky.dev/api/types/index.AnticipationProtect/
 ```ts type AnticipationProtect = boolean | "once" | "stepwise" | "always"; ```
@@ -852,6 +910,10 @@ URL: https://pixi-reels.schmooky.dev/api/types/index.HwRespinReason/
 URL: https://pixi-reels.schmooky.dev/api/types/index.LogLevel/
 ```ts type LogLevel = "silent" | "error" | "warn" | "info"; ```
 
+### MaskPathFn
+URL: https://pixi-reels.schmooky.dev/api/types/index.MaskPathFn/
+```ts type MaskPathFn = (g: Graphics, ctx: MaskContext) => void; ```
+
 ### Matrix\<T\>
 URL: https://pixi-reels.schmooky.dev/api/types/index.Matrix/
 ```ts type Matrix<T> = T[][]; ```
@@ -888,6 +950,10 @@ URL: https://pixi-reels.schmooky.dev/api/types/index.ReelAnchor/
 URL: https://pixi-reels.schmooky.dev/api/types/index.ReelCurveInput/
 ```ts type ReelCurveInput = number | ReelCurveConfig; ```
 
+### RoundedMaskScope
+URL: https://pixi-reels.schmooky.dev/api/types/index.RoundedMaskScope/
+```ts type RoundedMaskScope = "set" | "reel"; ```
+
 ### RunCascadeResult
 URL: https://pixi-reels.schmooky.dev/api/types/index.RunCascadeResult/
 ```ts type RunCascadeResult = RunCascadeResultBase; ```
@@ -923,6 +989,10 @@ URL: https://pixi-reels.schmooky.dev/api/variables/index.CURVE_FOCUS_WEIGHT/
 ### DEFAULTS
 URL: https://pixi-reels.schmooky.dev/api/variables/index.DEFAULTS/
 ```ts const DEFAULTS: { bufferSymbols: number; initialSpeed: string; maxPoolPerKey: number; symbolGap: { x: number; y: number; }; zIndexStep: number; }; ```
+
+### DRIVE\_FRAME\_MS
+URL: https://pixi-reels.schmooky.dev/api/variables/index.DRIVE_FRAME_MS/
+```ts const DRIVE_FRAME_MS: number; ```
 
 ### MASK\_STRATEGY\_VERSION
 URL: https://pixi-reels.schmooky.dev/api/variables/index.MASK_STRATEGY_VERSION/
@@ -968,7 +1038,7 @@ URL: https://pixi-reels.schmooky.dev/architecture/testing/
 
 ### Anticipation & near-miss
 URL: https://pixi-reels.schmooky.dev/recipes/anticipation/
-Tags: anticipation, tension, scatter, near-miss, spine, horizontal, reverse
+Tags: anticipation, tension, scatter, near-miss, spine, horizontal, reverse, curve, acceleration
 
 ### Big symbols & non-uniform grids
 URL: https://pixi-reels.schmooky.dev/recipes/big-symbols/
@@ -986,6 +1056,10 @@ Tags: paylines, hit-areas, overlays, wins, horizontal, orientation
 URL: https://pixi-reels.schmooky.dev/recipes/hold-and-win/
 Tags: hold-and-win, coins, collector, respin, spine, horizontal, reverse, orientation
 
+### Masks & board shapes
+URL: https://pixi-reels.schmooky.dev/recipes/masks/
+Tags: mask, rounded, silhouette, pyramid, jagged, frame
+
 ### Nudge
 URL: https://pixi-reels.schmooky.dev/recipes/nudge/
 Tags: nudge, stagger, spotlight, big-symbols, abort, skip, horizontal, reverse, orientation
@@ -1000,7 +1074,7 @@ Tags: curve, curvature, perspective, projection, cylinder, drum, 3d
 
 ### Skip & slam
 URL: https://pixi-reels.schmooky.dev/recipes/skip/
-Tags: skip, slam, anticipation, tease, phases, timing
+Tags: skip, slam, anticipation, tease, phases, timing, groups
 
 ### Starters
 URL: https://pixi-reels.schmooky.dev/recipes/starters/
@@ -1008,7 +1082,7 @@ Tags: starter, 5x3, cascade, multiways, hold-and-win, horizontal, reverse, orien
 
 ### Symbols, layering & motion blur
 URL: https://pixi-reels.schmooky.dev/recipes/symbols/
-Tags: symbols, pools, buffers, weights, layering, static-spin, motion-blur, spine, horizontal, orientation
+Tags: symbols, reveal, mystery, pools, buffers, weights, layering, static-spin, motion-blur, spine, horizontal, orientation
 
 ### Wilds, multipliers & mystery (CellPin)
 URL: https://pixi-reels.schmooky.dev/recipes/wilds-and-pins/
@@ -2151,6 +2225,388 @@ return {
 };
 ```
 
+### anticipation-cells
+URL: https://pixi-reels.schmooky.dev/recipes/anticipation-cells/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, PIXI, app
+//
+// TEASE FOR N SYMBOLS, NOT FOR N MILLISECONDS.
+//
+// `duration` is a time budget, so how far a reel actually MOVES during a tease
+// depends on the speed curve. Two reels teasing at different speeds pass a
+// different number of symbols, and the crawl-in length going into the stop
+// varies with them. If the tease is choreographed around symbols going past the
+// window - "three more symbols and then it lands" - time is the wrong anchor.
+//
+// `cells: n` ends the tease once the reel has travelled n symbol pitches,
+// whatever that takes. It reads a monotonic odometer (`reel.travelledCells`)
+// that is never reset by the snap at the end of a spin, so it measures real
+// travel rather than an estimate.
+//
+// `duration` stays as the BACKSTOP. A reel that comes to rest can never reach a
+// travel target, and a tease that never ends is a hung spin - so the scripted
+// time is the ceiling, not the length.
+//
+// The readout prints the cells actually covered per tease. It lands on the
+// requested count regardless of which speed the curve picked.
+
+const IDS = ['9', '10', 'J', 'Q', 'K'];
+const SCAT = 'SCAT';
+const REELS = 5, ROWS = 3, SIZE = 78, GAP = 4;
+const TEASE = [2, 3, 4];
+const CELLS = 4;
+const CARDS = CARD_DECK.filter((c) => IDS.includes(c.id));
+function rv() { return IDS[Math.floor(Math.random() * IDS.length)]; }
+
+const reelSet = new ReelSetBuilder()
+  .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
+  .symbols((r) => {
+    for (const c of CARDS) {
+      r.register(c.id, CardSymbol, { color: c.color, label: c.label, textColor: c.textColor });
+    }
+    r.register(SCAT, CardSymbol, { color: 0xffcc44, label: 'F', textColor: 0x3a2600 });
+  })
+  .speed('normal', { ...SpeedPresets.NORMAL, anticipationDelay: 600, stopDelay: 110 })
+  .ticker(app.ticker)
+  .build();
+
+const H = ROWS * SIZE + (ROWS - 1) * GAP;
+const hud = new PIXI.Text({
+  text: `press spin - each tease runs exactly ${CELLS} symbols`,
+  style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 11, fill: 0x9c8f78 },
+});
+hud.position.set(0, H + 10);
+reelSet.addChild(hud);
+
+// Measure on the REEL's own phase boundaries. The set-level
+// `anticipation:reelEnd` fires at LANDING, which would fold the whole spin-out
+// into the reading.
+const marks = new Map();
+const covered = new Map();
+for (const i of TEASE) {
+  reelSet.reels[i].events.on('phase:enter', (name) => {
+    const cells = reelSet.reels[i].travelledCells;
+    if (name === 'anticipation') marks.set(i, cells);
+    if (name === 'stop' && marks.has(i)) covered.set(i, cells - marks.get(i));
+  });
+}
+
+// Different speeds per reel on purpose: the covered count should NOT vary with
+// them, which is the whole point of a travel anchor.
+const SPEEDS = { 2: 0.55, 3: 0.3, 4: 0.14 };
+
+return {
+  reelSet,
+  cleanup: () => { try { hud.destroy(); } catch {} },
+  onSpin: async () => {
+    const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
+    grid[0].visible[1] = SCAT;
+    grid[1].visible[1] = SCAT;
+    marks.clear();
+    covered.clear();
+
+    const p = reelSet.spin();
+    await new Promise((r) => setTimeout(r, 400));
+    reelSet.setResult(grid);
+    reelSet.setAnticipation(TEASE, {
+      stagger: 200,
+      // Generous ceiling so the CELLS target is what actually ends each tease.
+      duration: 4000,
+      curve: (order) => [{ speed: SPEEDS[TEASE[order]], duration: 220, ease: 'power2.inOut' }],
+      cells: CELLS,
+    });
+    await p;
+
+    hud.text = TEASE
+      .map((i) => `reel ${i} @${SPEEDS[i]}x -> ${(covered.get(i) ?? 0).toFixed(2)} cells`)
+      .join('   ');
+  },
+};
+```
+
+### anticipation-curve-per-reel
+URL: https://pixi-reels.schmooky.dev/recipes/anticipation-curve-per-reel/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, anticipationForScatters,
+//                   CardSymbol, CARD_DECK, PIXI, app
+//
+// A DIFFERENT CURVE PER REEL, BY TEASE ORDER.
+//
+// `slowdown` escalates by interpolating two numbers across the tease sequence.
+// A curve cannot be interpolated that way - two curves of different lengths
+// have no meaningful midpoint - so `curve` takes a FUNCTION instead:
+//
+//     curve: (order, total) => AnticipationSegment[]
+//
+// `order` is the reel's place in the anticipation set, NOT its reel index. So
+// `setAnticipation([4, 2, 3], ...)` hands `order: 0` to reel 4. That is the
+// same ordering `slowdown` interpolates over and `protect: 'stepwise'`
+// releases in, so all three agree.
+//
+// Here each successive reel surges a little harder, crawls a little slower and
+// holds a little longer - the escalating build-up, but with the whole shape
+// under control rather than two endpoints.
+
+const IDS = ['9', '10', 'J', 'Q', 'K'];
+const SCAT = 'SCAT';
+const REELS = 5, ROWS = 3, SIZE = 78, GAP = 4;
+const CARDS = CARD_DECK.filter((c) => IDS.includes(c.id));
+function rv() { return IDS[Math.floor(Math.random() * IDS.length)]; }
+
+const reelSet = new ReelSetBuilder()
+  .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
+  .symbols((r) => {
+    for (const c of CARDS) {
+      r.register(c.id, CardSymbol, { color: c.color, label: c.label, textColor: c.textColor });
+    }
+    r.register(SCAT, CardSymbol, { color: 0xffcc44, label: 'F', textColor: 0x3a2600 });
+  })
+  .speed('normal', { ...SpeedPresets.NORMAL, anticipationDelay: 900, stopDelay: 110 })
+  .ticker(app.ticker)
+  .build();
+
+const H = ROWS * SIZE + (ROWS - 1) * GAP;
+const hud = new PIXI.Text({
+  text: 'press spin',
+  style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 11, fill: 0x9c8f78 },
+});
+hud.position.set(0, H + 10);
+reelSet.addChild(hud);
+
+const lines = [];
+reelSet.events.on('anticipation:reel', ({ reelIndex, order, total }) => {
+  lines.push(`reel ${reelIndex} = tease order ${order}/${total - 1}`);
+  hud.text = lines.join('   ');
+});
+
+return {
+  reelSet,
+  cleanup: () => { try { hud.destroy(); } catch {} },
+  onSpin: async () => {
+    const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
+    grid[0].visible[1] = SCAT;
+    grid[1].visible[0] = SCAT;
+
+    lines.length = 0;
+    hud.text = 'teasing...';
+
+    const p = reelSet.spin();
+    await new Promise((r) => setTimeout(r, 400));
+    reelSet.setResult(grid);
+
+    // Which reels tease comes straight off the result grid.
+    const reels = anticipationForScatters(grid, { symbol: SCAT, trigger: 2 });
+    reelSet.setAnticipation(reels, {
+      stagger: 'sequential',
+      curve: (order, total) => {
+        // 0 for the first tease reel, 1 for the last.
+        const f = total > 1 ? order / (total - 1) : 0;
+        return [
+          { speed: 1.4 + 0.8 * f, duration: 200, ease: 'power2.in' },
+          {
+            speed: 0.3 - 0.24 * f,
+            duration: 420 + 260 * f,
+            ease: 'power3.inOut',
+            hold: 160 + 420 * f,
+          },
+        ];
+      },
+    });
+    await p;
+    hud.text = `${lines.join('   ')}  -  landed`;
+  },
+};
+```
+
+### anticipation-drive
+URL: https://pixi-reels.schmooky.dev/recipes/anticipation-drive/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, PIXI, app
+//
+// THE GAS PEDAL: `motionModel('drive')`.
+//
+// Every recipe above still shapes the tease with an EASE. An ease can only
+// shape the one transition it was written for, and an ease on a speed value
+// still steps the acceleration at the moment it starts.
+//
+// The drive model bounds acceleration instead. Phases stop tweening
+// `reel.speed` and start assigning `reel.targetSpeed`; `Reel.update` walks the
+// speed toward that target, never faster than `accel` (speeding up) or `decel`
+// (slowing down) allow. That is the physical model - the reel can only change
+// speed so fast, whatever it is asked for - and EVERY transition inherits it,
+// including ones nobody authored.
+//
+// Add `jerk` and the acceleration itself ramps: the pedal goes down over time
+// rather than being stamped. The drive starts easing off early enough to arrive
+// without overshooting.
+//
+// The bounds are PROFILE-RELATIVE: `accelFrames: 20` means "reach whatever the
+// active profile calls full speed in 20 frames", so a Turbo accelerates harder
+// than a Normal instead of taking proportionally longer.
+//
+// Opt-in per set, at build time only. The default `'tween'` model is unchanged,
+// and there is no runtime toggle - handing `reel.speed` to a second owner while
+// a phase is mid-tween is exactly the failure this avoids.
+//
+// Two moments stay instant on purpose: LANDING halts the drive dead so the reel
+// can snap to grid and bounce, and a SKIP press means now. Both are identical
+// in the tween model, so neither is the drive's to smooth.
+
+const IDS = ['9', '10', 'J', 'Q', 'K'];
+const SCAT = 'SCAT';
+const REELS = 5, ROWS = 3, SIZE = 78, GAP = 4;
+const TEASE = [2, 3, 4];
+const CARDS = CARD_DECK.filter((c) => IDS.includes(c.id));
+function rv() { return IDS[Math.floor(Math.random() * IDS.length)]; }
+
+const reelSet = new ReelSetBuilder()
+  .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
+  .symbols((r) => {
+    for (const c of CARDS) {
+      r.register(c.id, CardSymbol, { color: c.color, label: c.label, textColor: c.textColor });
+    }
+    r.register(SCAT, CardSymbol, { color: 0xffcc44, label: 'F', textColor: 0x3a2600 });
+  })
+  .motionModel('drive', {
+    // Roughly 20 frames from rest to full speed.
+    accelFrames: 20,
+    // Slower coming down than going up: the reel leans into its stops.
+    decelFrames: 34,
+    // The S-curve. Comment this line out to feel the difference - without it
+    // the acceleration still steps to its bound, it just cannot exceed it.
+    jerkFrames: 260,
+  })
+  .speed('normal', { ...SpeedPresets.NORMAL, anticipationDelay: 900, stopDelay: 120 })
+  .ticker(app.ticker)
+  .build();
+
+const H = ROWS * SIZE + (ROWS - 1) * GAP;
+const W = REELS * SIZE + (REELS - 1) * GAP;
+
+const hud = new PIXI.Text({
+  text: 'press spin - trace is reel 4 speed, no ease anywhere',
+  style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 11, fill: 0x9c8f78 },
+});
+hud.position.set(0, H + 10);
+reelSet.addChild(hud);
+
+// Speed AND acceleration, so the bounded second derivative is visible rather
+// than merely asserted.
+//
+// Both panels are drawn ONCE, at setup. The recipe runner scales and centres
+// the reel set to fit the frame and it measures bounds at setup time, so a
+// Graphics that is still empty then contributes nothing: the fit gets solved
+// for the reels alone and the chart spills out of the frame when it finally
+// draws. Reserving the boxes up front is what makes the runner scale the reels
+// and the charts together.
+const LANE_H = 46;
+const LANE_GAP = 8;
+const SPEED_TOP = H + 28;
+const ACCEL_TOP = SPEED_TOP + LANE_H + LANE_GAP;
+const SPAN = 260;
+const V_MAX = 2;
+// Acceleration is a per-frame delta of a 0..1 value, so it is tiny. This is the
+// magnification that puts the drive's plateau on screen at a readable height.
+const A_MAX = 0.06;
+
+const panels = new PIXI.Graphics();
+panels.roundRect(0, SPEED_TOP, W, LANE_H, 6).fill({ color: 0x171310 });
+panels.roundRect(0, ACCEL_TOP, W, LANE_H, 6).fill({ color: 0x171310 });
+// 1x spin speed on the speed lane, and zero acceleration on the accel lane.
+const oneY = SPEED_TOP + LANE_H - (1 / V_MAX) * LANE_H;
+const zeroY = ACCEL_TOP + LANE_H / 2;
+panels.moveTo(0, oneY).lineTo(W, oneY).stroke({ width: 1, color: 0x5c5147 });
+panels.moveTo(0, zeroY).lineTo(W, zeroY).stroke({ width: 1, color: 0x5c5147 });
+panels.roundRect(0, SPEED_TOP, W, LANE_H, 6).stroke({ width: 1, color: 0x332c26 });
+panels.roundRect(0, ACCEL_TOP, W, LANE_H, 6).stroke({ width: 1, color: 0x332c26 });
+reelSet.addChild(panels);
+
+const labels = [];
+for (const [text, y, fill] of [
+  ['speed 1x', oneY - 6, 0x6ad0ff],
+  ['accel 0', zeroY - 6, 0xf0a06a],
+]) {
+  const t = new PIXI.Text({
+    text,
+    style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 9, fill },
+  });
+  // INSIDE the panel: a label hanging off the right edge widens the composition
+  // past the reels, and the runner's fit centres on total bounds, which would
+  // push the board visibly off-centre.
+  t.position.set(W - 56, y - 6);
+  reelSet.addChild(t);
+  labels.push(t);
+}
+
+const trace = new PIXI.Graphics();
+reelSet.addChild(trace);
+
+let speeds = [];
+let accels = [];
+let lastSpeed = 0;
+
+// Clamped, so a stray sample can never grow the bounds the fit was solved for.
+const speedY = (v) => SPEED_TOP + LANE_H - Math.max(0, Math.min(1, v / V_MAX)) * LANE_H;
+const accelY = (a) => zeroY - Math.max(-1, Math.min(1, a / A_MAX)) * (LANE_H / 2);
+
+const tick = () => {
+  const v = reelSet.reels[4].speedNormalized;
+  speeds.push(v);
+  accels.push(v - lastSpeed);
+  lastSpeed = v;
+  if (speeds.length > SPAN) { speeds.shift(); accels.shift(); }
+  if (speeds.length < 2) return;
+
+  trace.clear();
+  const plot = (series, y, color) => {
+    trace.moveTo(0, y(series[0]));
+    for (let i = 1; i < series.length; i++) trace.lineTo((i / SPAN) * W, y(series[i]));
+    trace.stroke({ width: 2, color });
+  };
+  plot(speeds, speedY, 0x6ad0ff);
+  // A tween model spikes here at the start of every transition. A drive shows a
+  // plateau, and with `jerk` set, a trapezoid: the acceleration ramps too.
+  plot(accels, accelY, 0xf0a06a);
+};
+app.ticker.add(tick);
+
+return {
+  reelSet,
+  cleanup: () => {
+    app.ticker.remove(tick);
+    try { trace.destroy(); } catch {}
+    try { panels.destroy(); } catch {}
+    for (const t of labels) { try { t.destroy(); } catch {} }
+    try { hud.destroy(); } catch {}
+  },
+  onSpin: async () => {
+    const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
+    grid[0].visible[1] = SCAT;
+    grid[1].visible[1] = SCAT;
+    speeds = []; accels = []; lastSpeed = 0;
+    hud.text = 'blue = speed, orange = acceleration (bounded, ramped by jerk)';
+
+    const p = reelSet.spin();
+    await new Promise((r) => setTimeout(r, 420));
+    reelSet.setResult(grid);
+    // Under a drive the segment `duration` is the leg's time BUDGET, not a
+    // tween length: the bounds decide how fast the reel can actually get there.
+    reelSet.setAnticipation(TEASE, {
+      stagger: 240,
+      curve: [
+        { speed: 1.7, duration: 260 },
+        { speed: 0.1, duration: 520, hold: 260 },
+      ],
+    });
+    await p;
+    hud.text = 'landed. blue = speed, orange = acceleration';
+  },
+};
+```
+
 ### anticipation-horizontal-scatter
 URL: https://pixi-reels.schmooky.dev/recipes/anticipation-horizontal-scatter/
 ```ts
@@ -2288,6 +2744,159 @@ return {
     // buffer entry and the teaser silently disappears.
     reelSet.setResult(result);
     await p;
+  },
+};
+```
+
+### anticipation-surge-curve
+URL: https://pixi-reels.schmooky.dev/recipes/anticipation-surge-curve/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, PIXI, gsap, app
+//
+// SURGE, THEN CRAWL.
+//
+// The stock tease can only decelerate: it eases `reel.speed` down to a
+// fraction of spin speed over the first 35% of the hold and then sits flat for
+// the other 65%. Two things are wrong with how that FEELS.
+//
+//   1. An ease applied to a SPEED is a step in ACCELERATION. `power2.out` puts
+//      peak deceleration on the very first frame and decays from there, so the
+//      reel does not slow down so much as get set to a lower speed.
+//   2. There is no way to ask a reel to speed UP first.
+//
+// `curve` replaces the fixed shape with explicit legs. Speeds are multiples of
+// the profile's `spinSpeed`, so `2` is twice normal - a genuine surge - and
+// `0.08` is a crawl. Segment eases default to `power2.inOut` rather than
+// `power2.out`, which ramps the acceleration in AND out instead of stamping it.
+//
+// Watch the readout: the top row is live speed as a fraction of spin speed.
+// It goes ABOVE 1 before it goes below it.
+
+const IDS = ['9', '10', 'J', 'Q', 'K'];
+const SCAT = 'SCAT';
+const REELS = 5, ROWS = 3, SIZE = 78, GAP = 4;
+const TEASE = [2, 3, 4];
+const CARDS = CARD_DECK.filter((c) => IDS.includes(c.id));
+function rv() { return IDS[Math.floor(Math.random() * IDS.length)]; }
+
+const reelSet = new ReelSetBuilder()
+  .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
+  .symbols((r) => {
+    for (const c of CARDS) {
+      r.register(c.id, CardSymbol, { color: c.color, label: c.label, textColor: c.textColor });
+    }
+    r.register(SCAT, CardSymbol, { color: 0xffcc44, label: 'F', textColor: 0x3a2600 });
+  })
+  // The profile hold still gates whether the tease runs at all; the CURVE sets
+  // how long it actually lasts.
+  .speed('normal', { ...SpeedPresets.NORMAL, anticipationDelay: 900, stopDelay: 120 })
+  .ticker(app.ticker)
+  .build();
+
+const H = ROWS * SIZE + (ROWS - 1) * GAP;
+
+const hud = new PIXI.Text({
+  text: 'press spin',
+  style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 12, fill: 0x9c8f78 },
+});
+hud.position.set(0, H + 10);
+reelSet.addChild(hud);
+
+// A speed trace for the last tease reel. `speedNormalized` is live speed over
+// the profile's spinSpeed - the value you would drive a pitch ramp from.
+//
+// The panel below is drawn ONCE, at setup. That matters: the recipe runner
+// scales and centres the reel set to fit the frame, and it measures bounds at
+// setup time. A Graphics that is still empty then contributes nothing to those
+// bounds, so the fit gets solved for the reels alone and everything the chart
+// draws later spills outside the frame. Reserving the box up front makes the
+// runner scale the reels AND the chart together.
+const W = REELS * SIZE + (REELS - 1) * GAP;
+const TRACE_H = 62;
+const TRACE_TOP = H + 30;
+const SPAN = 240;
+// Top of the plot = 2.2x spin speed, so a 2x surge has headroom.
+const V_MAX = 2.2;
+
+const panel = new PIXI.Graphics();
+panel.roundRect(0, TRACE_TOP, W, TRACE_H, 6).fill({ color: 0x171310 });
+// The 1x line: "normal spin speed". Everything above it is a surge.
+const oneY = TRACE_TOP + TRACE_H - (1 / V_MAX) * TRACE_H;
+panel.moveTo(0, oneY).lineTo(W, oneY).stroke({ width: 1, color: 0x5c5147 });
+panel.roundRect(0, TRACE_TOP, W, TRACE_H, 6).stroke({ width: 1, color: 0x332c26 });
+reelSet.addChild(panel);
+
+const oneLabel = new PIXI.Text({
+  text: '1x',
+  style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 9, fill: 0x6f6459 },
+});
+// INSIDE the panel. Outside it the label widens the composition past the reels,
+// and the runner's fit centres on total bounds - so the board would sit visibly
+// off-centre in the frame.
+oneLabel.position.set(W - 20, oneY - 12);
+reelSet.addChild(oneLabel);
+
+const trace = new PIXI.Graphics();
+reelSet.addChild(trace);
+
+let samples = [];
+let sampling = false;
+
+const yFor = (v) => {
+  // Clamped so a stray value can never grow the bounds the fit was solved for.
+  const t = Math.max(0, Math.min(1, v / V_MAX));
+  return TRACE_TOP + TRACE_H - t * TRACE_H;
+};
+
+const tick = () => {
+  if (!sampling) return;
+  samples.push(reelSet.reels[4].speedNormalized);
+  if (samples.length > SPAN) samples.shift();
+  trace.clear();
+  if (samples.length < 2) return;
+  trace.moveTo(0, yFor(samples[0]));
+  for (let i = 1; i < samples.length; i++) {
+    trace.lineTo((i / SPAN) * W, yFor(samples[i]));
+  }
+  trace.stroke({ width: 2, color: 0x6ad0ff });
+};
+app.ticker.add(tick);
+
+return {
+  reelSet,
+  cleanup: () => {
+    app.ticker.remove(tick);
+    try { trace.destroy(); } catch {}
+    try { panel.destroy(); } catch {}
+    try { oneLabel.destroy(); } catch {}
+    try { hud.destroy(); } catch {}
+  },
+  onSpin: async () => {
+    const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
+    grid[0].visible[1] = SCAT;
+    grid[1].visible[1] = SCAT;
+
+    samples = [];
+    sampling = true;
+    hud.text = 'surge (2x) then crawl (0.08x) - trace: blue line, grey = 1x';
+
+    const p = reelSet.spin();
+    await new Promise((r) => setTimeout(r, 420));
+    reelSet.setResult(grid);
+    reelSet.setAnticipation(TEASE, {
+      stagger: 260,
+      curve: [
+        // Leg 1: kick UP. `power2.in` so the surge builds rather than snapping.
+        { speed: 2, duration: 240, ease: 'power2.in' },
+        // Leg 2: fall away to a crawl and sit there. `power3.inOut` ramps the
+        // deceleration in and back out - this is the leg that carries the feel.
+        { speed: 0.08, duration: 620, ease: 'power3.inOut', hold: 300 },
+      ],
+    });
+    await p;
+    sampling = false;
+    hud.text = 'landed. press spin again';
   },
 };
 ```
@@ -11436,6 +12045,396 @@ return {
 };
 ```
 
+### mask-inset-compose
+URL: https://pixi-reels.schmooky.dev/recipes/mask-inset-compose/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, RoundedRectMaskStrategy,
+//                   PathMaskStrategy, composeMasks, inset,
+//                   CardSymbol, CARD_DECK, PIXI, app
+//
+// TWO DECORATORS: `inset(...)` AND `composeMasks(...)`.
+//
+// `inset(strategy, px)` shrinks whatever a strategy draws by a uniform number
+// of pixels on all four sides; negative grows it. It is the fix for "the art
+// bleeds a pixel past the frame" that does not involve rewriting the strategy,
+// and it works on any strategy including your own.
+//
+// `composeMasks(a, b, ...)` unions several strategies into the viewport's one
+// mask. UNION ONLY - a PixiJS Graphics mask is the union of every filled shape
+// in it, and there is no way to intersect or subtract the output of two
+// independent strategies. (To subtract WITHIN one strategy, use `.cut()` inside
+// a PathMaskStrategy.)
+//
+// Here the reel window is a rounded box pulled in by 4px, unioned with a banner
+// strip above the reels that is outside the reel bounds entirely - so a symbol
+// promoted into that strip stays visible instead of being clipped away.
+
+const IDS = ['9', '10', 'J', 'Q', 'K'];
+const REELS = 5, ROWS = 3, SIZE = 80, GAP = 0;
+const BANNER_H = 46, BANNER_GAP = 8;
+const CARDS = CARD_DECK.filter((c) => IDS.includes(c.id));
+function rv() { return IDS[Math.floor(Math.random() * IDS.length)]; }
+
+const reelSet = new ReelSetBuilder()
+  .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
+  .symbols((r) => {
+    for (const c of CARDS) {
+      r.register(c.id, CardSymbol, { color: c.color, label: c.label, textColor: c.textColor });
+    }
+  })
+  .maskStrategy(composeMasks(
+    // The reels, rounded and pulled in 4px so no symbol edge touches the frame.
+    inset(new RoundedRectMaskStrategy({ radius: 20 }), 4),
+    // Plus a strip ABOVE the board, at negative main coordinates. Nothing in
+    // `ctx.rects` covers this, which is the whole point of composing.
+    new PathMaskStrategy((g, ctx) => {
+      g.roundRect(0, -(BANNER_H + BANNER_GAP), ctx.width, BANNER_H, 10)
+        .fill({ color: 0xffffff });
+    }),
+  ))
+  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 140 })
+  .ticker(app.ticker)
+  .build();
+
+const W = REELS * SIZE, H = ROWS * SIZE;
+
+// Something to actually live in the banner region, so the extra mask shape is
+// visibly doing work rather than being an invisible claim.
+const banner = new PIXI.Container();
+banner.position.set(0, -(BANNER_H + BANNER_GAP));
+const plate = new PIXI.Graphics();
+plate.roundRect(0, 0, W, BANNER_H, 10).fill({ color: 0x2b2136 });
+banner.addChild(plate);
+const bannerText = new PIXI.Text({
+  text: 'BANNER INSIDE THE SAME MASK',
+  style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 13, fill: 0xf0d98a },
+});
+bannerText.anchor.set(0.5);
+bannerText.position.set(W / 2, BANNER_H / 2);
+banner.addChild(bannerText);
+reelSet.viewport.maskedContainer.addChild(banner);
+
+const hud = new PIXI.Text({
+  text: 'composeMasks(inset(rounded, 4), bannerStrip)  -  union only',
+  style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 11, fill: 0x9c8f78 },
+});
+hud.position.set(0, H + 10);
+reelSet.addChild(hud);
+
+// Slide the banner text past the strip edges so the clip is observable.
+const drift = gsap.to(bannerText, {
+  x: W / 2 + 90, duration: 2.2, yoyo: true, repeat: -1, ease: 'sine.inOut',
+});
+
+return {
+  reelSet,
+  cleanup: () => {
+    drift.kill();
+    try { banner.destroy({ children: true }); } catch {}
+    try { hud.destroy(); } catch {}
+  },
+  onSpin: async () => {
+    const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
+    const p = reelSet.spin();
+    await new Promise((r) => setTimeout(r, 380));
+    reelSet.setResult(grid);
+    await p;
+  },
+};
+```
+
+### mask-path-custom
+URL: https://pixi-reels.schmooky.dev/recipes/mask-path-custom/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, PathMaskStrategy,
+//                   CardSymbol, CARD_DECK, PIXI, app
+//
+// ANY SHAPE, WITHOUT WRITING A CLASS.
+//
+// `MaskStrategy` has always been a public extension point, but the smallest
+// possible custom strategy was still a class with a version marker, a
+// `build`/`update` split and a `clear()` on update - about 25 lines of ceremony
+// around one drawing call. `PathMaskStrategy` is that ceremony, written once.
+//
+// The callback gets the Graphics and the full `MaskContext`: `ctx.rects` (one
+// per reel), `ctx.width` / `ctx.height`, `ctx.axis` (so an orientation-aware
+// mask stays a one-liner) and `ctx.bleed`. Do NOT call `g.clear()` - the
+// strategy already did.
+//
+// This one cuts a hole: `rect(...)` then `rect(...).cut()` makes a frame mask,
+// so the middle of the board is punched out and only the border ring of symbols
+// is visible. Anything PixiJS Graphics can express works here, `regularPoly`
+// for hex boards included.
+
+const IDS = ['9', '10', 'J', 'Q', 'K'];
+const REELS = 5, ROWS = 4, SIZE = 74, GAP = 0;
+const CARDS = CARD_DECK.filter((c) => IDS.includes(c.id));
+function rv() { return IDS[Math.floor(Math.random() * IDS.length)]; }
+
+const reelSet = new ReelSetBuilder()
+  .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
+  .symbols((r) => {
+    for (const c of CARDS) {
+      r.register(c.id, CardSymbol, { color: c.color, label: c.label, textColor: c.textColor });
+    }
+  })
+  .maskStrategy(new PathMaskStrategy((g, ctx) => {
+    // Outer rounded window, FILLED...
+    g.roundRect(0, 0, ctx.width, ctx.height, 22).fill({ color: 0xffffff });
+    // ...then a hole cut out of it. `cut()` subtracts the current path from the
+    // last shape that was already filled, so the fill has to come FIRST. Draw
+    // the hole before filling and `cut()` finds nothing to cut from - you get
+    // an empty mask and a completely invisible board.
+    g.roundRect(SIZE, SIZE, ctx.width - SIZE * 2, ctx.height - SIZE * 2, 14).cut();
+  }))
+  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 130 })
+  .ticker(app.ticker)
+  .build();
+
+const W = REELS * SIZE, H = ROWS * SIZE;
+
+const hud = new PIXI.Text({
+  text: 'PathMaskStrategy: roundRect().fill() then roundRect().cut() = a frame mask',
+  style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 11, fill: 0x9c8f78 },
+});
+hud.position.set(0, H + 10);
+reelSet.addChild(hud);
+
+return {
+  reelSet,
+  cleanup: () => { try { hud.destroy(); } catch {} },
+  onSpin: async () => {
+    const grid = Array.from({ length: REELS }, () => ({
+      visible: Array.from({ length: ROWS }, rv),
+    }));
+    const p = reelSet.spin();
+    await new Promise((r) => setTimeout(r, 380));
+    reelSet.setResult(grid);
+    await p;
+  },
+};
+```
+
+### mask-rounded-reels
+URL: https://pixi-reels.schmooky.dev/recipes/mask-rounded-reels/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, RoundedRectMaskStrategy,
+//                   CardSymbol, CARD_DECK, PIXI, app
+//
+// EACH REEL AS ITS OWN ROUNDED CARD.
+//
+// `scope: 'reel'` rounds all four corners of every reel box instead of the
+// union. The look is a row of separate rounded columns rather than one window.
+//
+// **It needs a cross gap.** On a vertical set that is `symbolGap.x`. At gap 0
+// neighbouring reels share an edge, and rounding both sides of a shared edge
+// bites a lens-shaped notch out of every seam - which reads as a rendering bug,
+// not as a style. The strategy warns once to the console if it sees touching
+// rects; open devtools and set GAP to 0 below to hear it.
+//
+// The gap is also why this scope is not the default: most slots butt their
+// reels together, and there `scope: 'set'` or SilhouetteMaskStrategy is right.
+
+const IDS = ['9', '10', 'J', 'Q', 'K'];
+const REELS = 5, ROWS = 3, SIZE = 80;
+// Non-zero CROSS gap. This is the precondition for scope 'reel'.
+const GAP = 14;
+const RADIUS = 18;
+const CARDS = CARD_DECK.filter((c) => IDS.includes(c.id));
+function rv() { return IDS[Math.floor(Math.random() * IDS.length)]; }
+
+const reelSet = new ReelSetBuilder()
+  .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE)
+  // x is the CROSS axis on a vertical set. y stays 0 so cells stack flush.
+  .symbolGap(GAP, 0)
+  .symbols((r) => {
+    for (const c of CARDS) {
+      r.register(c.id, CardSymbol, { color: c.color, label: c.label, textColor: c.textColor });
+    }
+  })
+  .maskStrategy(new RoundedRectMaskStrategy({ radius: RADIUS, scope: 'reel' }))
+  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150 })
+  .ticker(app.ticker)
+  .build();
+
+const H = ROWS * SIZE;
+
+const outline = new PIXI.Graphics();
+for (let i = 0; i < REELS; i++) {
+  outline.roundRect(i * (SIZE + GAP), 0, SIZE, H, RADIUS);
+}
+outline.stroke({ width: 2, color: 0x6ad0ff, alpha: 0.85 });
+reelSet.addChild(outline);
+
+const hud = new PIXI.Text({
+  text: `scope: 'reel', radius ${RADIUS}  -  needs symbolGap.x > 0 (here ${GAP})`,
+  style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 11, fill: 0x9c8f78 },
+});
+hud.position.set(0, H + 10);
+reelSet.addChild(hud);
+
+return {
+  reelSet,
+  cleanup: () => {
+    try { outline.destroy(); } catch {}
+    try { hud.destroy(); } catch {}
+  },
+  onSpin: async () => {
+    const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
+    const p = reelSet.spin();
+    await new Promise((r) => setTimeout(r, 380));
+    reelSet.setResult(grid);
+    await p;
+  },
+};
+```
+
+### mask-rounded-set
+URL: https://pixi-reels.schmooky.dev/recipes/mask-rounded-set/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, RoundedRectMaskStrategy,
+//                   RectMaskStrategy, CardSymbol, CARD_DECK, PIXI, app
+//
+// ROUNDED WINDOW AROUND THE WHOLE GRID.
+//
+// The default `RectMaskStrategy` clips each reel to a hard rectangle. That is
+// invisible under frame art with square corners and painfully visible under
+// frame art with round ones: the mask corner pokes out past the artwork.
+//
+// `scope: 'set'` (the default) rounds the four corners of the union bounding
+// box. Every reel inside stays one flush block, so this is safe at any cross
+// gap - which is exactly why it is the default.
+//
+// Press spin to watch symbols get clipped by the rounded corners on the way
+// past. The dashed outline is drawn on the SAME geometry the mask uses, so you
+// can see where the clip actually is.
+
+const IDS = ['9', '10', 'J', 'Q', 'K'];
+const REELS = 5, ROWS = 3, SIZE = 80, GAP = 0;
+const RADIUS = 28;
+const CARDS = CARD_DECK.filter((c) => IDS.includes(c.id));
+function rv() { return IDS[Math.floor(Math.random() * IDS.length)]; }
+
+const reelSet = new ReelSetBuilder()
+  .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
+  .symbols((r) => {
+    for (const c of CARDS) {
+      r.register(c.id, CardSymbol, { color: c.color, label: c.label, textColor: c.textColor });
+    }
+  })
+  .maskStrategy(new RoundedRectMaskStrategy({ radius: RADIUS }))
+  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 140 })
+  .ticker(app.ticker)
+  .build();
+
+const W = REELS * SIZE + (REELS - 1) * GAP;
+const H = ROWS * SIZE + (ROWS - 1) * GAP;
+
+// Trace the mask boundary so the clip is legible without a screenshot diff.
+const outline = new PIXI.Graphics();
+outline.roundRect(0, 0, W, H, RADIUS).stroke({ width: 2, color: 0x6ad0ff, alpha: 0.9 });
+reelSet.addChild(outline);
+
+const hud = new PIXI.Text({
+  text: `RoundedRectMaskStrategy({ radius: ${RADIUS} })  -  scope 'set' (default)`,
+  style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 11, fill: 0x9c8f78 },
+});
+hud.position.set(0, H + 10);
+reelSet.addChild(hud);
+
+return {
+  reelSet,
+  cleanup: () => {
+    try { outline.destroy(); } catch {}
+    try { hud.destroy(); } catch {}
+  },
+  onSpin: async () => {
+    const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
+    const p = reelSet.spin();
+    await new Promise((r) => setTimeout(r, 380));
+    reelSet.setResult(grid);
+    await p;
+  },
+};
+```
+
+### mask-silhouette-pyramid
+URL: https://pixi-reels.schmooky.dev/recipes/mask-silhouette-pyramid/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, SilhouetteMaskStrategy,
+//                   CardSymbol, CARD_DECK, PIXI, app
+//
+// ROUNDING A JAGGED BOARD.
+//
+// A pyramid (3-4-5-4-3) has no single rectangle to round. The two obvious
+// approaches both fail:
+//
+//   - Round each reel box -> every shared seam gets notched, because both
+//     sides of the same edge curve away from each other.
+//   - Round the bounding box -> the staircase disappears and buffer cells show
+//     past the ends of the short reels.
+//
+// `SilhouetteMaskStrategy` walks the rectilinear UNION OUTLINE of the reel
+// rects and rounds every vertex of it. The outer corners bulge out; the inward
+// corners where a short reel meets a tall one curve the other way, and take
+// their own (usually smaller) `concaveRadius` - the step they sit on is much
+// shorter than the outer edges, so one radius for both reads badly.
+//
+// Reels must butt together (cross gap 0). With a gap the reels are genuinely
+// disjoint, their union is several rings rather than one, and the strategy says
+// so once and falls back to per-reel rounded rects.
+
+const IDS = ['9', '10', 'J', 'Q', 'K'];
+const SHAPE = [3, 4, 5, 4, 3];
+const REELS = SHAPE.length, SIZE = 76, GAP = 0;
+const RADIUS = 26, CONCAVE = 9;
+const CARDS = CARD_DECK.filter((c) => IDS.includes(c.id));
+function rv() { return IDS[Math.floor(Math.random() * IDS.length)]; }
+
+const reelSet = new ReelSetBuilder()
+  .reels(REELS)
+  .visibleCellsPerReel(SHAPE)
+  .symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
+  .symbols((r) => {
+    for (const c of CARDS) {
+      r.register(c.id, CardSymbol, { color: c.color, label: c.label, textColor: c.textColor });
+    }
+  })
+  .maskStrategy(new SilhouetteMaskStrategy({ radius: RADIUS, concaveRadius: CONCAVE }))
+  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 130 })
+  .ticker(app.ticker)
+  .build();
+
+const TALLEST = Math.max(...SHAPE);
+const H = TALLEST * SIZE;
+
+const hud = new PIXI.Text({
+  text: `SilhouetteMaskStrategy({ radius: ${RADIUS}, concaveRadius: ${CONCAVE} }) on ${SHAPE.join('-')}`,
+  style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 11, fill: 0x9c8f78 },
+});
+hud.position.set(0, H + 10);
+reelSet.addChild(hud);
+
+return {
+  reelSet,
+  cleanup: () => { try { hud.destroy(); } catch {} },
+  onSpin: async () => {
+    const grid = SHAPE.map((cells) => ({
+      visible: Array.from({ length: cells }, rv),
+    }));
+    const p = reelSet.spin();
+    await new Promise((r) => setTimeout(r, 380));
+    reelSet.setResult(grid);
+    await p;
+  },
+};
+```
+
 ### multiplier-wild-pin
 URL: https://pixi-reels.schmooky.dev/recipes/multiplier-wild-pin/
 ```ts
@@ -14278,6 +15277,150 @@ return {
     VISIBLE.map((cells) =>
       Array.from({ length: cells }, () => CARD_DECK[Math.floor(Math.random() * CARD_DECK.length)].id),
     ),
+};
+```
+
+### reel-groups
+URL: https://pixi-reels.schmooky.dev/recipes/reel-groups/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, PIXI, gsap, app
+//
+// GROUPS: REELS THAT STOP AND SKIP TOGETHER.
+//
+//   reels 1-2  land together
+//   reels 3-4  tease, one press each
+//   reel  5    keeps spinning until both teases are over
+//
+// Index order cannot say that: reel 5 is index 4, so its stop delay comes due
+// while 3-4 are still teasing. The coloured bars are the groups.
+
+const IDS = ['9', '10', 'J', 'Q', 'K'];
+const SCAT = 'SCAT';
+const REELS = 5, ROWS = 3, SIZE = 78, GAP = 4;
+const GROUPS = [[0, 1], [2, 3], [4]];
+const TEASE = [2, 3];
+const COLORS = [0x6ad0ff, 0xffcc44, 0xb388ff];
+const CARDS = CARD_DECK.filter((c) => IDS.includes(c.id));
+function rv() { return IDS[Math.floor(Math.random() * IDS.length)]; }
+
+const reelSet = new ReelSetBuilder()
+  .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
+  .symbols((r) => {
+    for (const c of CARDS) {
+      r.register(c.id, CardSymbol, { color: c.color, label: c.label, textColor: c.textColor });
+    }
+    r.register(SCAT, CardSymbol, { color: 0xffcc44, label: 'F', textColor: 0x3a2600 });
+  })
+  .speed('normal', { ...SpeedPresets.NORMAL, anticipationDelay: 1500, stopDelay: 150 })
+  .ticker(app.ticker)
+  .build();
+
+// Sticky: set once, every later spin honours it. Also legal any time up to
+// `setResult()`, which is what lets a round be grouped from its own response.
+reelSet.setReelGroups(GROUPS);
+
+const H = ROWS * SIZE + (ROWS - 1) * GAP;
+
+// Drawn once at setup: the runner measures bounds then to fit the board, so
+// anything added later would spill outside the frame.
+const bars = new PIXI.Graphics();
+GROUPS.forEach((group, g) => {
+  for (const i of group) {
+    bars.roundRect(i * (SIZE + GAP), H + 6, SIZE, 5, 2).fill({ color: COLORS[g] });
+  }
+});
+reelSet.addChild(bars);
+
+// Tease outline: the same dashed, blinking border the stepwise-tease recipe
+// uses, so the two demos read the same. It marks WHICH reel is still going,
+// which is the thing a group barrier is about - the filler reel keeps spinning
+// with no outline, so "still spinning" and "still teasing" stay distinguishable.
+//
+// PixiJS has no dashed stroke, so each edge is drawn as segments, inset by half
+// the line width to keep the stroke inside the reel's own bounds.
+const glowLayer = new PIXI.Container();
+// ON TOP: an outline drawn on the exact bounds would be hidden behind the
+// opaque symbols if it sat underneath them.
+reelSet.addChild(glowLayer);
+const glows = new Map();
+const stopGlow = (i) => {
+  const g = glows.get(i);
+  if (!g) return;
+  gsap.killTweensOf(g);
+  try { g.destroy(); } catch {}
+  glows.delete(i);
+};
+const startGlow = (i) => {
+  stopGlow(i);
+  const DASH = 7, GAP_ = 5, W = 1.5, inset = W / 2;
+  const l = i * (SIZE + GAP) + inset, t = inset;
+  const r = i * (SIZE + GAP) + SIZE - inset, b = H - inset;
+  const g = new PIXI.Graphics();
+  for (const [x1, y1, x2, y2] of [[l, t, r, t], [r, t, r, b], [r, b, l, b], [l, b, l, t]]) {
+    const len = Math.hypot(x2 - x1, y2 - y1);
+    const ux = (x2 - x1) / len, uy = (y2 - y1) / len;
+    for (let d = 0; d < len; d += DASH + GAP_) {
+      const e = Math.min(d + DASH, len);
+      g.moveTo(x1 + ux * d, y1 + uy * d).lineTo(x1 + ux * e, y1 + uy * e);
+    }
+  }
+  g.stroke({ width: W, color: 0xfef08a });
+  glowLayer.addChild(g);
+  // `steps(1)` makes it blink rather than breathe.
+  gsap.to(g, { alpha: 0.15, duration: 0.22, yoyo: true, repeat: -1, ease: 'steps(1)' });
+  glows.set(i, g);
+};
+
+reelSet.events.on('anticipation:reel', ({ reelIndex }) => startGlow(reelIndex));
+reelSet.events.on('anticipation:reelEnd', ({ reelIndex }) => stopGlow(reelIndex));
+
+const hud = new PIXI.Text({
+  text: 'press spin, then keep pressing',
+  style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 11, fill: 0x9c8f78 },
+});
+hud.position.set(0, H + 19);
+reelSet.addChild(hud);
+
+let order = [];
+let press = 0;
+reelSet.events.on('spin:reelLanded', (i) => order.push(i + 1));
+reelSet.events.on('skip:requested', ({ reels, partial }) => {
+  press += 1;
+  const named = reels.map((i) => i + 1).join(', ');
+  hud.text = partial
+    ? `press ${press}: [${named}] - press again`
+    : `press ${press}: [${named}] - round over`;
+});
+
+return {
+  reelSet,
+  cleanup: () => {
+    for (const i of [...glows.keys()]) stopGlow(i);
+    try { glowLayer.destroy({ children: true }); } catch {}
+    try { bars.destroy(); } catch {}
+    try { hud.destroy(); } catch {}
+  },
+  onSkip: () => { try { reelSet.skipSpin(); } catch { reelSet.requestSkip(); } },
+  onSpin: async () => {
+    order = [];
+    press = 0;
+    for (const i of [...glows.keys()]) stopGlow(i);
+    const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
+    grid[0].visible[1] = SCAT;
+    grid[1].visible[1] = SCAT;
+
+    const p = reelSet.spin();
+    // BEFORE setResult. A press during the server-wait window queues via
+    // `requestSkip`, and `setResult` fires it - so a tease declared afterwards
+    // is not there to protect, and an early press walks every group at once.
+    reelSet.setAnticipation(TEASE, { stagger: 'sequential', protect: 'stepwise' });
+    await new Promise((r) => setTimeout(r, 250));
+    reelSet.setResult(grid);
+    await p;
+
+    hud.text = `landed ${order.join(' -> ')}`;
+  },
 };
 ```
 
@@ -17963,6 +19106,115 @@ return {
     return grid;
   },
   cleanup: () => { try { lockLayer.destroy(); } catch {} },
+};
+```
+
+### symbol-swap-reveal
+URL: https://pixi-reels.schmooky.dev/recipes/symbol-swap-reveal/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, PIXI, gsap, app
+//
+// MYSTERY REVEAL: OUT, SWAP, IN.
+//
+// `setSymbolAt` already swaps a symbol's identity, but it swaps it INSTANTLY.
+// So a reveal - the mystery tiles dissolve, what is underneath changes, the
+// prize arrives - meant hand-rolling the same five things every time:
+//
+//   1. the out / swap / in ordering,
+//   2. a per-cell stagger on each side of it,
+//   3. a zIndex bump, or an entrance that overshoots its cell gets clipped by
+//      the neighbour drawn after it,
+//   4. re-hiding after the swap. `setSymbolAt` re-activates the view, and
+//      activation resets alpha to 1 - so the new art POPS for a frame before
+//      its entrance has started,
+//   5. abort handling, so a player skipping the presentation still ends up
+//      looking at the symbols the server actually sent.
+//
+// `swapSymbols` is those five things. The three beats are separately skippable,
+// because the middle one is the only one the engine has to own: art that plays
+// its own Spine `out` track passes `skipOut: true` and keeps the rest.
+//
+// `playIn` / `playOut` are the per-symbol hooks underneath, on the same
+// contract as `playDestroy` - delay, signal, resolve when done, and abort
+// meaning "snap to the end" rather than "fail". Override them on your own
+// ReelSymbol for art-appropriate entrances and exits. They stay separate from
+// `playDestroy`, which is tuned as the cascade's "this cell was a winner and is
+// being consumed" poof; a reveal is a different beat and borrowing that one
+// reads wrong.
+
+const IDS = ['9', '10', 'J', 'Q', 'K'];
+const MYST = 'MYST';
+const PRIZES = ['WILD', 'GOLD'];
+const REELS = 5, ROWS = 3, SIZE = 78, GAP = 4;
+const CARDS = CARD_DECK.filter((c) => IDS.includes(c.id));
+function rv() { return IDS[Math.floor(Math.random() * IDS.length)]; }
+
+const reelSet = new ReelSetBuilder()
+  .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
+  .symbols((r) => {
+    for (const c of CARDS) {
+      r.register(c.id, CardSymbol, { color: c.color, label: c.label, textColor: c.textColor });
+    }
+    r.register(MYST, CardSymbol, { color: 0x2b2440, label: '?', textColor: 0xb388ff });
+    r.register('WILD', CardSymbol, { color: 0xb388ff, label: 'W', textColor: 0x241a33 });
+    r.register('GOLD', CardSymbol, { color: 0xffcc44, label: 'G', textColor: 0x3a2600 });
+  })
+  .ticker(app.ticker)
+  .build();
+
+const H = ROWS * SIZE + (ROWS - 1) * GAP;
+
+const hud = new PIXI.Text({
+  text: 'press spin - the ? tiles land, then reveal',
+  style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 11, fill: 0x9c8f78 },
+});
+hud.position.set(0, H + 10);
+reelSet.addChild(hud);
+
+// Which reel carries the mystery tiles this round. Rotated so the demo does not
+// always play out in the same column.
+let mysteryReel = 1;
+
+return {
+  reelSet,
+  cleanup: () => { try { hud.destroy(); } catch {} },
+  onSpin: async () => {
+    const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
+    for (let cell = 0; cell < ROWS; cell++) grid[mysteryReel].visible[cell] = MYST;
+
+    hud.text = `reel ${mysteryReel + 1} is mystery`;
+    const p = reelSet.spin();
+    await new Promise((r) => setTimeout(r, 300));
+    reelSet.setResult(grid);
+    await p;
+
+    // Let the board settle before the reveal starts, so the two beats read as
+    // separate events rather than as one long stop.
+    await new Promise((r) => setTimeout(r, 260));
+
+    const prize = PRIZES[Math.floor(Math.random() * PRIZES.length)];
+    const cells = Array.from({ length: ROWS }, (_, cell) => ({
+      reel: mysteryReel,
+      cell,
+      id: prize,
+    }));
+
+    hud.text = `revealing ${prize}...`;
+    await reelSet.swapSymbols(cells, {
+      // Peel the tiles away top to bottom...
+      outDelay: (_, i) => i * 0.06,
+      // ...hold the empty column for a beat. This is where the reveal sound
+      // goes, and `onSwapped` is the hook for anything that has to wait on a
+      // real animation rather than a guessed number of milliseconds.
+      holdMs: 200,
+      // ...then bring the prize in, same order.
+      inDelay: (_, i) => i * 0.09,
+    });
+
+    hud.text = `reel ${mysteryReel + 1}: ? -> ${prize}`;
+    mysteryReel = (mysteryReel + 1) % REELS;
+  },
 };
 ```
 

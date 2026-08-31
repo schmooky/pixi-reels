@@ -39,9 +39,29 @@ export type {
   AnticipationSlowdown,
   AnticipationOptions,
   AnticipationProtect,
+  AnticipationSegment,
+  AnticipationCurve,
+  AnticipationCells,
   SlamOptions,
 } from './config/types.js';
 export type { ReelMaskRect, MaskStrategy, MaskContext } from './core/ReelViewport.js';
+export type {
+  DrawableMaskStrategy,
+  MaskPathFn,
+  RoundedMaskScope,
+  RoundedRectMaskOptions,
+  SilhouetteMaskOptions,
+} from './core/maskStrategies.js';
+export {
+  RoundedRectMaskStrategy,
+  SilhouetteMaskStrategy,
+  PathMaskStrategy,
+  composeMasks,
+  inset,
+  isDrawableMaskStrategy,
+} from './core/maskStrategies.js';
+export type { ReelDriveConfig, ReelDriveState, ResolvedDriveConfig } from './core/ReelDrive.js';
+export { stepDrive, resolveDriveConfig, DRIVE_FRAME_MS } from './core/ReelDrive.js';
 export {
   MASK_STRATEGY_VERSION,
   RectMaskStrategy,
@@ -229,6 +249,8 @@ export type { FrameAPI } from './core/ReelSet.js';
 // option objects around or extend them for engine-on-engine adapters.
 export type {
   DestroySymbolsOptions,
+  SymbolSwap,
+  SwapSymbolsOptions,
   RefillOptions,
   RefillResult,
   RunCascadeOptions,

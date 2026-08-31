@@ -27,7 +27,7 @@ export class StartPhase extends ReelPhase<StartPhaseConfig> {
     const delay = config.delay ?? 0;
 
     reel.spinningMode = config.spinningMode;
-    reel.speed = 0;
+    reel.haltDrive();
 
     if (delay > 0) {
       this._delayedCall = this._reel.gsap.delayedCall(delay / 1000, () => this._launch());
@@ -46,6 +46,14 @@ export class StartPhase extends ReelPhase<StartPhaseConfig> {
     reel.beginMotion();
     const accelDuration = (speed.accelerationDuration ?? 300) / 1000;
     const accelEase = speed.accelerationEase ?? 'power2.in';
+
+    if (reel.hasDrive) {
+      // Under the drive model the ramp shape belongs to the acceleration
+      // bounds, not to this ease. The phase only names the destination and
+      // gives the drive the same time budget the tween would have had.
+      this._driveLaunch(accelDuration);
+      return;
+    }
 
     this._tween = this._reel.gsap.timeline();
 
@@ -74,13 +82,40 @@ export class StartPhase extends ReelPhase<StartPhaseConfig> {
     });
   }
 
+  /**
+   * Drive-model launch: pull back, then ask for full speed and let the
+   * acceleration bounds do the ramp. Timed rather than watched for arrival,
+   * because a drive tuned slower than `accelerationDuration` would otherwise
+   * stretch every spin's start.
+   */
+  private _driveLaunch(accelDuration: number): void {
+    const reel = this._reel;
+    const speed = this._speed;
+    const finish = (): void => {
+      this._delayedCall = null;
+      reel.targetSpeed = speed.spinSpeed;
+      this._delayedCall = reel.gsap.delayedCall(accelDuration, () => {
+        this._delayedCall = null;
+        reel.notifySpinStart();
+        this._complete();
+      });
+    };
+
+    if (speed.bounceDistance > 0) {
+      reel.targetSpeed = -2;
+      this._delayedCall = reel.gsap.delayedCall(0.05, finish);
+    } else {
+      finish();
+    }
+  }
+
   update(_deltaMs: number): void {
     // Motion is driven by reel.speed, updated by Reel.update()
   }
 
   protected onSkip(): void {
     this._kill();
-    this._reel.speed = this._speed.spinSpeed;
+    this._reel.forceSpeed(this._speed.spinSpeed);
     // The accel tween died with _kill() before its onComplete could fire
     // notifySpinStart, but the reel keeps spinning through StopPhase.
     // symbols must still learn they're in a spin (blur / static-spin

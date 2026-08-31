@@ -111,6 +111,27 @@
 
   /* Prose for MDX docs */
   .prose-docs h1 { @apply text-3xl font-semibold tracking-tight mb-3 text-foreground; }
+  /* Anchored headings must clear the sticky h-14 nav, or a jump from the URL
+     hash lands with the heading tucked underneath it. The hand-placed
+     `<a id>` targets need it too: they are the element the browser actually
+     scrolls to on those pages. */
+  .prose-docs :where(h2, h3, h4), .prose-docs > a[id]:empty { scroll-margin-top: 5rem; }
+
+  /* The permalink itself. Hidden until the heading is hovered or the link is
+     focused, so it never competes with the heading text - but it is a real link
+     in the DOM at all times, so keyboard and screen-reader users reach it. */
+  .prose-docs .heading-anchor {
+    @apply ml-2 align-middle text-muted-foreground no-underline opacity-0 transition-opacity;
+    font-weight: 400;
+  }
+  .prose-docs :where(h2, h3, h4):hover .heading-anchor,
+  .prose-docs .heading-anchor:focus-visible { @apply opacity-100; }
+  .prose-docs .heading-anchor:hover { @apply text-foreground; }
+  /* Touch has no hover, so there is nothing to reveal - show them outright. */
+  @media (hover: none) {
+    .prose-docs .heading-anchor { @apply opacity-60; }
+  }
+
   .prose-docs h2 { @apply text-xl font-semibold tracking-tight mt-10 mb-3 text-foreground; }
   .prose-docs h3 { @apply text-lg font-semibold tracking-tight mt-8 mb-2 text-foreground; }
   .prose-docs h4 { @apply text-sm font-semibold uppercase tracking-wider mt-6 mb-2 text-muted-foreground; }

@@ -166,6 +166,9 @@ importers:
         specifier: ^2.9.0
         version: 2.9.0
     devDependencies:
+      '@astrojs/markdown-remark':
+        specifier: ^7.1.0
+        version: 7.1.0
       '@resvg/resvg-js':
         specifier: ^2.6.2
         version: 2.6.2

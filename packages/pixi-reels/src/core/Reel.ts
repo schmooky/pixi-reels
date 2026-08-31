@@ -17,6 +17,14 @@ import type { ReelViewport } from './ReelViewport.js';
 import type { SpinningMode } from '../spin/modes/SpinningMode.js';
 import { StandardMode } from '../spin/modes/StandardMode.js';
 import { DEFAULT_GSAP, type Gsap } from '../utils/gsap.js';
+import {
+  isRelativeDriveConfig,
+  resolveDriveConfig,
+  stepDrive,
+  type ReelDriveConfig,
+  type ReelDriveState,
+  type ResolvedDriveConfig,
+} from './ReelDrive.js';
 
 /**
  * Upper bound (ms) on a single `update()` delta. Matches Pixi's default
@@ -233,6 +241,25 @@ export class Reel implements Disposable {
 
   /** Current spin speed (pixels per frame). Set by phases. */
   public speed: number = 0;
+
+  /**
+   * Speed the reel is being asked for, px/frame. Only meaningful under the
+   * `'drive'` motion model - see {@link ReelSetBuilder.motionModel}. Under the
+   * default `'tween'` model phases write `speed` directly and this is ignored.
+   */
+  private _targetSpeed = 0;
+  /** Build-time drive config, or `null` under the `'tween'` model. */
+  private _driveConfig: ReelDriveConfig | null = null;
+  /** Resolved acceleration bounds for the ACTIVE profile, or `null` under `'tween'`. */
+  private _drive: ResolvedDriveConfig | null = null;
+  /**
+   * Live drive state, reused across ticks. `stepDrive` writes into it rather
+   * than returning a fresh object, because this runs once per reel per frame
+   * for the life of the session.
+   */
+  private readonly _driveState: ReelDriveState = { speed: 0, accel: 0 };
+  /** Full spin speed of the active profile, px/frame. Set by the controller. */
+  private _referenceSpeed = 0;
 
   /** Current spinning mode. */
   public spinningMode: SpinningMode = new StandardMode();
@@ -635,13 +662,25 @@ export class Reel implements Disposable {
 
   /** Update reel for one frame. Called by SpinController via ticker. */
   update(deltaMs: number): void {
-    if (this.speed === 0) return;
-
     // Clamp pathological frame spikes (a backgrounded tab refocusing, a custom
     // or fake ticker without Pixi's minFPS floor) to a sane per-tick budget.
-    // Defence in depth on top of each mode's own displacement cap — the tumble
+    // Defence in depth on top of each mode's own displacement cap - the tumble
     // mode caps at a full slot, so an unbounded deltaMs there could still skip.
     const dt = Math.min(deltaMs, MAX_TICK_MS);
+
+    // A stationary reel with a target still has work to do, so the drive is
+    // stepped before the early-out rather than after it - but a drive that is
+    // parked (at rest, no target, no residual acceleration) has nothing to
+    // integrate, and stepping it anyway is pure per-frame work for every reel
+    // in every idle set.
+    if (this._drive && !(this.speed === 0 && this._targetSpeed === 0 && this._driveState.accel === 0)) {
+      const state = this._driveState;
+      state.speed = this.speed;
+      stepDrive(state, this._targetSpeed, this._drive, dt);
+      this.speed = state.speed;
+    }
+
+    if (this.speed === 0) return;
 
     const deltaY = this.spinningMode.computeDelta(
       this.motion.slotPitch,
@@ -652,6 +691,126 @@ export class Reel implements Disposable {
     if (deltaY !== 0) {
       this.motion.advance(deltaY);
     }
+  }
+
+  /**
+   * Install acceleration bounds, switching this reel to the `'drive'` motion
+   * model. Called by the builder; there is no runtime toggle, because a phase
+   * mid-tween would be handing the speed field to a second owner.
+   *
+   * @internal
+   */
+  installDrive(config: ReelDriveConfig): void {
+    this._driveConfig = config;
+    this._resolveDrive();
+  }
+
+  /**
+   * Re-derive the acceleration bounds for the current {@link referenceSpeed}.
+   *
+   * The profile-relative form (`accelFrames`) is deliberately re-resolved
+   * whenever the reference speed changes: one absolute bound cannot serve
+   * profiles whose `spinSpeed` differs by 2.7x, and pinning it to the profile
+   * that happened to be active at build time is how a Turbo ends up starting
+   * slower than Normal.
+   */
+  private _resolveDrive(): void {
+    const config = this._driveConfig;
+    if (!config) return;
+    if (isRelativeDriveConfig(config) && this._referenceSpeed <= 0) {
+      // No profile yet. `hasDrive` still reports true, so phases keep taking
+      // the drive path; the bounds land the moment a spin sets a reference.
+      return;
+    }
+    this._drive = resolveDriveConfig(config, this._referenceSpeed);
+  }
+
+  /** True when this reel integrates toward a target instead of being tweened. */
+  get hasDrive(): boolean {
+    return this._driveConfig !== null;
+  }
+
+  /**
+   * The speed the drive is ramping toward, px/frame. Assigning is how a phase
+   * asks for a speed under the `'drive'` model: the reel gets there as fast as
+   * its bounds allow and no faster, and re-assigning mid-move is continuous by
+   * construction - there is no tween to kill.
+   *
+   * Inert under the `'tween'` model.
+   */
+  get targetSpeed(): number {
+    return this._targetSpeed;
+  }
+  set targetSpeed(v: number) {
+    this._targetSpeed = v;
+  }
+
+  /**
+   * Stop dead, drive included. `speed = 0` alone would leave a drive ramping
+   * straight back toward its old target on the next tick.
+   *
+   * @internal
+   */
+  haltDrive(): void {
+    this.speed = 0;
+    this._targetSpeed = 0;
+    this._driveState.speed = 0;
+    this._driveState.accel = 0;
+  }
+
+  /**
+   * Jump to a speed immediately, drive included. What a skip press wants: the
+   * whole point is that there is no ramp.
+   *
+   * @internal
+   */
+  forceSpeed(v: number): void {
+    this.speed = v;
+    this._targetSpeed = v;
+    this._driveState.speed = v;
+    this._driveState.accel = 0;
+  }
+
+  /**
+   * Full spin speed of the active profile, px/frame. Set by the controller each
+   * spin so {@link speedNormalized} has something to divide by.
+   *
+   * @internal
+   */
+  set referenceSpeed(v: number) {
+    if (v === this._referenceSpeed) return;
+    this._referenceSpeed = v;
+    // Profile-relative drive bounds rescale with it.
+    this._resolveDrive();
+  }
+
+  /** The reference speed {@link speedNormalized} divides by. `0` before any profile lands. */
+  get referenceSpeed(): number {
+    return this._referenceSpeed;
+  }
+
+  /**
+   * Current speed as a fraction of the active profile's full spin speed.
+   * `1` at full blur, `0` at rest, negative during StartPhase's step-back pull,
+   * and above `1` during a surge segment of an anticipation curve.
+   *
+   * Provided because every game hand-rolls a pitch-ramping tease loop and has
+   * nothing to drive it from: `anticipation:reel` says a tease started but not
+   * how fast the reel is going right now. Sample it from your own ticker.
+   *
+   * `0` before the first spin, when no profile has been applied yet.
+   */
+  get speedNormalized(): number {
+    return this._referenceSpeed === 0 ? 0 : this.speed / this._referenceSpeed;
+  }
+
+  /**
+   * Total distance this reel has travelled, in symbol pitches. Unsigned and
+   * never reset, so the difference between two readings is the travel between
+   * them. Used to end an anticipation tease after N cells rather than N ms.
+   */
+  get travelledCells(): number {
+    return this.motion.odometer / this.motion.slotPitch;
   }
 
   /**

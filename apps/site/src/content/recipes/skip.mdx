@@ -10,17 +10,18 @@ tags:
   - tease
   - phases
   - timing
+  - groups
 ---
 
-A slam force-completes every active phase, `AnticipationPhase` included. That is the right default and the wrong one: it makes the button honest on an ordinary spin and makes it hide the build-up on the spin that had one. These recipes take skip apart into the three levers that decide WHICH reels a press lands, and WHEN a reel is allowed to stop at all.
+A slam force-completes every phase, `AnticipationPhase` included - honest on an ordinary spin, and it hides the build-up on the spin that had one. These recipes are the levers that decide WHICH reels a press lands, and WHEN a reel may stop at all.
 
 <a id="skip-partial-slam"></a>
 
 ## Land some reels, not all
 
-`slamStop({ except: [3, 4] })` places reels 0-2 on the result this instant and leaves 3 and 4 running their own phase chains to a natural stop. `{ reels: [...] }` is the complement, for when it is easier to name the reels that should land.
+`slamStop({ except: [3, 4] })` lands reels 0-2 now and leaves 3 and 4 to stop naturally.
 
-**Gotcha:** a partial slam leaves `skipStage` alone and does not end the round, so the button stays live. Only a full slam moves the stage to `2` and applies the round's speed boost.
+**Gotcha:** a partial slam does not end the round - the button stays live, and only a full slam moves `skipStage` to `2` and applies the speed boost.
 
 <RecipeDemo code="skip-partial-slam" />
 
@@ -28,9 +29,9 @@ A slam force-completes every active phase, `AnticipationPhase` included. That is
 
 ## Name the reels that land
 
-`slamStop({ reels })` is the complement: pass the reels to land instead of the reels to spare. Same lever, two spellings - reach for `reels` when the landing set is the short one or comes from game state, `except` when the spared set is. Here a three-beat plan walks the board outside in, with no tease and no protection involved.
+The complement: name the reels to land instead of the ones to spare. Here a three-beat plan walks the board outside in.
 
-**Gotcha:** neither form needs guarding. Out-of-range indices are ignored, and held or already-landed reels are never slammed.
+**Gotcha:** neither form needs guarding - out-of-range indices are ignored, and held or landed reels are never slammed.
 
 <RecipeDemo code="skip-reels-complement" />
 
@@ -38,9 +39,9 @@ A slam force-completes every active phase, `AnticipationPhase` included. That is
 
 ## A tease a press cannot hide
 
-The same partial slam, expressed as a rule the engine applies for you. `protect: 'once'` makes the first press land every non-tease reel and leave the tease running, so the trigger symbols are on screen and the build-up is visibly under way; the next press ends it. `'always'` never lets a press end a tease.
+The same partial slam as a rule the engine applies for you. `protect: 'once'`: press 1 lands every non-tease reel and leaves the tease running, so the trigger symbols are on screen; press 2 ends it.
 
-**Gotcha:** call `setAnticipation` BEFORE `setResult`. A press in the pre-result window is queued by `requestSkip()` and fires the instant the result arrives, so the tease has to be registered by then or there is nothing to protect.
+**Gotcha:** call `setAnticipation` BEFORE `setResult`. A press in the pre-result window is queued by `requestSkip()` and fires the moment the result arrives, so the tease must already be registered.
 
 <RecipeDemo code="protected-anticipation" />
 
@@ -48,33 +49,41 @@ The same partial slam, expressed as a rule the engine applies for you. `protect:
 
 ## Walk the tease forward, one reel per press
 
-`protect: 'stepwise'` is the same rule applied per reel. Press 1 lands everything outside the tease, and each press after that releases the next tease reel in tease order. The player sets the pace: mash through it, or stop pressing and let it play. The press that releases the last tease reel is the one that ends the round.
+The same rule per reel. Press 1 lands everything outside the tease; each press after releases the next tease reel. The player sets the pace.
 
-**Gotcha:** release order is TEASE order, not reel index. `setAnticipation([4, 2, 3], ...)` releases 4 first, matching the order you staged the teases in.
+**Gotcha:** release order is TEASE order, not reel index - `setAnticipation([4, 2, 3], ...)` releases 4 first.
 
 <RecipeDemo code="skip-stepwise-tease" />
 
-For any other grouping - release the tease in pairs, or from the outside in - use `protect: 'always'` so a press can never end a tease, and drive the releases yourself with `slamStop({ reels })`:
+<a id="reel-groups"></a>
+
+## Groups: reels that stop and skip together
+
+Reel index is the engine's only ordering, and it cannot say "reels 1-2 land together, 3-4 tease one press each, reel 5 outlasts both". Reel 5 is index 4, so its stop delay comes due mid-tease.
 
 ```ts
-reelSet.setAnticipation(tease, { protect: 'always' });
-
-const queue = [[3, 4], [2]];   // your plan, in press order
-function onSkipPressed() {
-  const group = queue.shift();
-  if (group) reelSet.slamStop({ reels: group });
-}
+reelSet.setReelGroups([[0, 1], [2, 3], [4]]);
+reelSet.setAnticipation([2, 3], { stagger: 'sequential', protect: 'stepwise' });
+// Presses walk the board: [1,2] -> 3 -> 4 -> [5].
 ```
 
-**Gotcha:** two things that look like they would work here do not, and both are pinned by tests. Shrinking the set with `setAnticipation()` mid-spin does NOT release a reel that is already teasing - the anticipation set is read once, at the moment a reel leaves `SPIN`. And `setSpeed()` mid-spin does not re-time the round in flight: `spin()` captures the active profile and hands that instance to every phase, which is why the `skipSpin()` boost lands on the NEXT spin. `slamStop({ reels })` is the lever that works mid-tease.
+A group is a barrier both ways. **Stopping:** no reel starts its stop sequence, anticipation included, until every reel in the earlier groups has landed - and it keeps spinning at full speed while it waits. **Skipping:** a press releases the next un-landed group, protection still applying inside it. Stop delays become group-relative; an explicit `setStopDelays()` still wins.
+
+**Gotcha:** set it any time up to `setResult()` - the barrier is read as each reel's SpinPhase resolves - so a round can be grouped from its own server response. Every reel must appear exactly once, and changing the layout once reels have begun landing throws. `null` clears.
+
+<RecipeDemo code="reel-groups" height={380} />
+
+For any other release order, use `protect: 'always'` and drive it yourself with `slamStop({ reels })` from a queue of your own.
+
+**Gotcha:** two near-misses, both pinned by tests. Shrinking the set with `setAnticipation()` mid-spin does NOT release a teasing reel - the set is read once, as a reel leaves `SPIN`. And `setSpeed()` mid-spin does not re-time the round, which is why the `skipSpin()` boost lands on the NEXT spin.
 
 <a id="skip-always-protect"></a>
 
 ## A tease no press can end
 
-`protect: 'always'`. The first press lands everything outside the tease, exactly like `'once'`; every press after that is a deliberate no-op. Use it when the tease IS the reward beat and cutting it costs more than the impatience does - a jackpot reveal, a final-reel bonus land.
+Press 1 lands everything outside the tease, like `'once'`; every press after is a deliberate no-op. For when the tease IS the reward beat - a jackpot reveal, a final-reel bonus land.
 
-**Gotcha:** a refused press emits no skip events at all, rather than throwing. And `slamStop()` still lands everything: the engine reserves an unconditional exit for your own code (an abort, a timeout, a disconnect), it only refuses the player's press.
+**Gotcha:** a refused press emits no events rather than throwing, and `slamStop()` still lands everything. The engine refuses the player's press, never your own code's.
 
 <RecipeDemo code="skip-always-protect" />
 
@@ -82,7 +91,7 @@ function onSkipPressed() {
 
 ## Your own release plan
 
-`'always'` plus a queue of your own is the general form: the engine guarantees no press can end a tease behind your back, and game code decides which group each press lands. Here three teasing reels come down in two beats instead of three.
+`'always'` plus your own queue is the general form: the engine guarantees no press ends a tease behind your back, your code decides the groups. Three teasing reels, two beats.
 
 <RecipeDemo code="skip-custom-plan" />
 
@@ -90,9 +99,9 @@ function onSkipPressed() {
 
 ## Pressing before the server answers
 
-`skipSpin()` throws before `setResult()` arrives - there is nothing to land on, and slamming would put the reels on random buffer fill. `requestSkip()` queues the intent and fires it the instant the result lands, with tease protection still applied. The demo's result is deliberately slow so the window is easy to hit.
+`skipSpin()` throws before `setResult()` - there is nothing to land on. `requestSkip()` queues the intent and fires it when the result lands, protection intact. The demo's result is deliberately slow.
 
-**Gotcha:** this is why `setAnticipation` must come BEFORE `setResult`. A press queued in that window can only protect a tease the engine already knows about.
+**Gotcha:** this is why `setAnticipation` comes BEFORE `setResult` - a queued press can only protect a tease the engine already knows about.
 
 <RecipeDemo code="skip-queued-request" />
 
@@ -100,7 +109,7 @@ function onSkipPressed() {
 
 ## Driving the button from skipStage
 
-`0` no press yet, `1` a press landed the reels around a protected tease and left it running, `2` the round-ending press happened. Stage `1` is only reachable on a spin that asked for protection, so a game with no protected teases sees the old two-state button and nothing changes. The label here is read off `reelSet.skipStage` every frame rather than counted locally.
+`0` no press yet, `1` a press landed around a protected tease and left it running, `2` the round-ending press. Stage `1` needs protection, so an unprotected game still sees a two-state button. Read off `reelSet.skipStage` every frame, not counted locally.
 
 <RecipeDemo code="skip-stage-button" />
 
@@ -108,7 +117,7 @@ function onSkipPressed() {
 
 ## No hold, no tease, nothing to protect
 
-Turbo and SuperTurbo set `anticipationDelay: 0`. With an effective hold of `0` ms `protect` does nothing and every press lands everything - protecting a tease that never plays would stall the reels for nothing and put back the response-time tell. Spins here alternate on the same turbo profile with the same `protect`; only `duration` differs.
+Turbo profiles set `anticipationDelay: 0`, and at a `0` ms hold `protect` does nothing - protecting a tease that never plays would stall the reels and put the response-time tell back. Spins alternate on one turbo profile; only `duration` differs.
 
 <RecipeDemo code="skip-turbo-inert" />
 
@@ -116,9 +125,9 @@ Turbo and SuperTurbo set `anticipationDelay: 0`. With an effective hold of `0` m
 
 ## Skip without a tell
 
-The reason to protect the tease rather than slow the skip down. Spins alternate scatterless and teasing, both auto-press at the same moment, and the panel times how long the last non-tease reel takes to rest. The numbers stay equal: the press answers identically, and what differs happens after it, on screen.
+Why you protect the tease rather than slow the skip down. Spins alternate scatterless and teasing, both auto-press at the same moment; the panel times the last non-tease reel. The numbers stay equal - what differs happens after the press, on screen.
 
-Keeping the tease skippable and raising `minimumSpinTime` so a teasing spin cannot land instantly gets the pacing right and leaks the outcome through the response time itself. The player learns a feature is coming before a single reel has landed, from how the button felt.
+Raising `minimumSpinTime` instead gets the pacing right and leaks the outcome through response time: the player learns a feature is coming from how the button felt.
 
 <RecipeDemo code="skip-no-tell" height={340} />
 
@@ -126,11 +135,11 @@ Keeping the tease skippable and raising `minimumSpinTime` so a teasing spin cann
 
 ## Per-reel spin floor
 
-No slam here at all. `minimumSpinTime` lives on the speed profile, so it is one value shared by every reel, and `setStopDelays()` only re-orders stops on top of it. The two levers missed each other: instant was only ever global, and per-reel could not go below the floor. `setMinimumSpinTime([0, 0, 0, 1000, 1000])` overrides it per reel, so reels 0-2 take the result the moment it arrives while 3 and 4 are held a full second.
+No slam here. `minimumSpinTime` is one value on the speed profile, shared by every reel; `setMinimumSpinTime([0, 0, 0, 1000, 1000])` overrides it per reel, so reels 0-2 take the result on arrival while 3 and 4 hold a full second.
 
-**Gotcha:** it persists across `spin()` and `refill()` until cleared with `null`, exactly like `setStopDelays()`. Set it once at boot, not per spin, unless you mean it to change.
+**Gotcha:** sticky across `spin()` and `refill()` until cleared with `null`, like `setStopDelays()`. Set it at boot, not per spin.
 
-**Gotcha:** a floor governs NATURAL landings only. A slam force-completes every phase and places the result, so it ignores `minimumSpinTime` however that floor was set. Tap the button again mid-spin and all five reels land together; the labels read `-> slam` rather than five near-identical times, so the flattened staircase reads as the slam it is.
+**Gotcha:** a floor governs NATURAL landings only. A slam ignores it, so a mid-spin tap lands all five together and the labels read `-> slam`.
 
 <RecipeDemo code="skip-min-spin-time" />
 
@@ -138,7 +147,7 @@ No slam here at all. `minimumSpinTime` lives on the speed profile, so it is one 
 
 ## Uniform floor, and clearing it
 
-A single number raises the floor on every reel; `null` clears the override and hands the floor back to the speed profile (which is not the same as a floor of `0`). Spins alternate between the two so the difference reads back to back.
+A single number raises the floor on every reel; `null` hands it back to the speed profile, which is not the same as a floor of `0`. Spins alternate so the difference reads back to back.
 
 <RecipeDemo code="skip-min-spin-uniform" />
 
@@ -146,7 +155,7 @@ A single number raises the floor on every reel; `null` clears the override and h
 
 ## Cascades
 
-Anticipation runs before the tumble/standard split in the phase chain, so a cascade spin teases and protects exactly like a strip spin. Three things differ, all about what a press carries rather than what it lands:
+Anticipation runs before the tumble/standard split, so a cascade spin teases and protects like a strip spin. Three things differ, all about what a press carries:
 
 | | Behaviour |
 |---|---|
@@ -154,7 +163,7 @@ Anticipation runs before the tumble/standard split in the phase chain, so a casc
 | Round side effect | In cascade mode this is auto-slam-refills, not a speed boost. A protected press does NOT spend it; the press that ends the tease does, and every refill after that lands instantly. |
 | Refills | Carry no tease. `refill()` clears the anticipation set on entry, so a press inside one is an ordinary full slam - though `slamStop({ reels })` still works per reel there. |
 
-**Gotcha:** `refill()` and `runCascade()` listen to `skip:requested` only to set `wasSkipped` on their result. A partial slam does not abort the chain, but it does mark the whole result `wasSkipped: true`.
+**Gotcha:** a partial slam does not abort the chain, but it does mark the whole result `wasSkipped: true`.
 
 <RecipeDemo code="skip-cascade-protect" />
 
@@ -162,21 +171,21 @@ Anticipation runs before the tumble/standard split in the phase chain, so a casc
 
 ## Hold & Win
 
-Nothing to demo here, and that is the point: a Hold & Win board is one single-reel `ReelSet` **per cell**, not one set with many reels. Per-reel slam has no granularity to add, because `slamStop({ reels })` and `{ except }` can only ever name reel `0`. The granularity you want is per CELL, and it already exists as `BoardGrid.skipSpinning()` / `HoldAndWinBoard.skip()`, which press each cell's set individually.
+Nothing to demo, and that is the point: a Hold & Win board is one single-reel `ReelSet` **per cell**, so `slamStop({ reels })` can only ever name reel `0`. The granularity you want is per cell - `BoardGrid.skipSpinning()` / `HoldAndWinBoard.skip()`.
 
-Tease protection on a cell's set behaves consistently but rarely usefully, since "every reel outside the tease" is the empty set:
+Protection on a cell's set is consistent but rarely useful, since "every reel outside the tease" is empty:
 
-- `'once'` - press 1 lands nothing and spends the protection, press 2 lands the cell. That is protection working, not a bug: the impatient first press is spent making the tease visible.
+- `'once'` - press 1 spends the protection and lands nothing, press 2 lands the cell. Working as intended.
 - `'stepwise'` - the release group IS the tease reel, so one press lands it.
-- `'always'` - **do not use it on a Hold & Win cell.** No press can ever land that cell, and `BoardGrid.skipSpinning()`'s error-recovery path needs it to land or the next `respin()` throws "already spinning" on it. `slamStop()` still lands it, which is the escape hatch that path would need.
+- `'always'` - **do not use it here.** No press can ever land the cell, and `BoardGrid.skipSpinning()`'s recovery path needs it to land or the next `respin()` throws.
 
 <a id="phase-subclass-stop"></a>
 
 ## Subclass a built-in phase
 
-Every built-in phase class is exported, so a small change is a subclass rather than a rewrite. `StopPhase` here gains a landing backlight; the stop sequencer, the bounce and the skip pose are inherited untouched. Register under the same key (`'start'`, `'spin'`, `'anticipation'`, `'stop'`) to replace the built-in.
+Every built-in phase is exported, so a small change is a subclass. `StopPhase` gains a landing backlight; sequencer, bounce and skip pose are inherited. Register under the same key to replace the built-in.
 
-**Gotcha:** call `super` from every hook you override. `onEnter` starts the real spin-out, and a reel whose `onEnter` never reaches it will spin forever. Override `onSkip` too when the beat should also fire on a slammed reel.
+**Gotcha:** call `super` from every hook you override - a reel whose `onEnter` never reaches it spins forever. Override `onSkip` too if the beat should fire on a slammed reel.
 
 <RecipeDemo code="phase-subclass-stop" />
 
@@ -184,11 +193,11 @@ Every built-in phase class is exported, so a small change is a subclass rather t
 
 ## A spin floor the phase decides for itself
 
-`SpinPhaseConfig.minimumSpinTime` documented an override of the profile's shared floor that could not be reached, because registering through `PhaseFactory` meant writing a spin phase from scratch. Subclass `SpinPhase` and it is one line. `setMinimumSpinTime([...])` is the ready-made version; reach for the subclass when the floor is derived rather than configured.
+Subclass `SpinPhase` and a per-reel floor is one line. `setMinimumSpinTime([...])` is the ready-made version; subclass when the floor is derived rather than configured.
 
-**Gotcha:** merge the config, don't replace it - `super.onEnter({ ...config, minimumSpinTime })`. The controller may already be passing a floor, and clobbering the object drops anything added to it later.
+**Gotcha:** merge the config, don't replace it - `super.onEnter({ ...config, minimumSpinTime })`.
 
-**Gotcha:** the staircase only exists on natural landings. A slam ignores the floor by design, so a mid-spin tap lands every reel at once and the labels switch to `-> slam` - that flat reading is correct, not a broken override.
+**Gotcha:** the staircase is natural landings only. A slam ignores the floor, so a mid-spin tap flattens it and the labels read `-> slam`.
 
 <RecipeDemo code="phase-subclass-spin" />
 
@@ -196,9 +205,9 @@ Every built-in phase class is exported, so a small change is a subclass rather t
 
 ## Using update() from a subclass
 
-A per-reel countdown drawn from inside the tease, with each hook doing its job: `onEnter` shows the label then `super` starts the slow-down, `update(deltaMs)` runs every frame while active, `onSkip` takes the label off when a press force-completes the phase.
+A per-reel countdown drawn from inside the tease: `onEnter` shows the label then calls `super`, `update(deltaMs)` runs every frame, `onSkip` clears it when a press force-completes the phase.
 
-**Gotcha:** `update` is ticker-driven accumulation, not wall clock, which is why it stays correct in a backgrounded tab where `performance.now()` would not. And a phase is handed the active `SpeedProfile` as `this._speed`, so a subclass never has to be told the timings the engine is already using.
+**Gotcha:** `update` accumulates ticker time, not wall clock, so it stays correct in a backgrounded tab. The active `SpeedProfile` is already on `this._speed`.
 
 <RecipeDemo code="phase-subclass-anticipation" />
 
@@ -206,9 +215,9 @@ A per-reel countdown drawn from inside the tease, with each hook doing its job: 
 
 ## A phase written from scratch
 
-Extend `ReelPhase` when you want the whole behaviour rather than a tweak - here a flat linear ramp with no step-back pull, replacing `StartPhase` under its own key.
+Extend `ReelPhase` for the whole behaviour rather than a tweak - here a flat linear ramp with no step-back pull, replacing `StartPhase`.
 
-**Gotcha:** a custom NAME buys nothing on its own. The controller only ever asks the factory for the lifecycle keys, so `register('myPhase', ...)` leaves it orphaned - nothing constructs it. Own a phase by taking its key. And call `this._complete()` exactly once, or the reel never advances and the spin promise never settles.
+**Gotcha:** a custom name buys nothing. The controller only asks for lifecycle keys, so `register('myPhase', ...)` is orphaned - take the key instead. And call `this._complete()` exactly once, or the spin promise never settles.
 
 <RecipeDemo code="phase-from-scratch-start" />
 
@@ -216,9 +225,9 @@ Extend `ReelPhase` when you want the whole behaviour rather than a tweak - here 
 
 ## Phases that take constructor arguments
 
-The three cascade phases and MultiWays' `AdjustPhase` carry build-time config as extra constructor arguments, so a subclass needs `registerFactory` and has to forward them. `resolveTumbleConfig(config)` produces the shape they expect - the same call `.tumble()` makes internally.
+The cascade phases and `AdjustPhase` take build-time config as extra constructor arguments, so a subclass needs `registerFactory` and must forward them. `resolveTumbleConfig(config)` builds the shape they expect.
 
-**Gotcha:** note where `.phases(...)` sits in this recipe - before `.tumble(...)`, and it still wins. Configurators are deferred to `build()` and applied after the built-in registrations. Before 2.3 they ran at call time while `.tumble()` registered its defaults inside `build()`, so a `'cascade:*'` override was silently discarded wherever you put it.
+**Gotcha:** `.phases(...)` sits before `.tumble(...)` here and still wins - configurators are deferred to `build()` and applied after the built-in registrations.
 
 <RecipeDemo code="phase-subclass-cascade" />
 

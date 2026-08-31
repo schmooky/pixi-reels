@@ -1,8 +1,11 @@
 import type { Ticker } from 'pixi.js';
 import type { Reel } from '../core/Reel.js';
 import type {
+  AnticipationCurve,
   AnticipationOptions,
   AnticipationProtect,
+  AnticipationSegment,
+  AnticipationCells,
   AnticipationSlowdown,
   AnticipationStagger,
   SlamOptions,
@@ -30,7 +33,7 @@ import { StandardMode } from './modes/StandardMode.js';
 import type { Disposable } from '../utils/Disposable.js';
 import { TickerRef } from '../utils/TickerRef.js';
 import { OCCUPIED_SENTINEL } from '../core/Reel.js';
-import { noticeError, noticeWarn } from '../utils/notify.js';
+import { noticeError, noticeWarn, noticeWarnOnce } from '../utils/notify.js';
 import type { CellPin } from '../pins/CellPin.js';
 import {
   cloneColumnTarget,
@@ -39,6 +42,64 @@ import {
   type ColumnTarget,
 } from '../frame/ColumnTarget.js';
 import type { Cell } from '../cascade/tumbleAlgorithm.js';
+
+
+/**
+ * Reject nonsense inside a curve at the CALL, not three phases later.
+ *
+ * A curve is authored by trial and error, and every one of these failures is
+ * silent otherwise: a negative speed runs the reel backwards through the tease,
+ * a zero duration is a leg that does nothing (under a drive it assigns a target
+ * and overwrites it the same tick), and a NaN puts NaN into `reel.speed` and
+ * freezes the board with a clean console.
+ */
+function assertSegments(segments: AnticipationSegment[], where: string): void {
+  segments.forEach((seg, i) => {
+    const at = `${where} segment ${i}`;
+    if (!seg || typeof seg !== 'object') {
+      throw new Error(`setAnticipation(): ${at} is not a segment object.`);
+    }
+    if (!Number.isFinite(seg.speed) || seg.speed < 0) {
+      throw new Error(
+        `setAnticipation(): ${at} - \`speed\` must be a non-negative multiple of spinSpeed, ` +
+          `got ${String(seg.speed)}.`,
+      );
+    }
+    if (!Number.isFinite(seg.duration) || seg.duration <= 0) {
+      throw new Error(
+        `setAnticipation(): ${at} - \`duration\` must be a positive number of ms, ` +
+          `got ${String(seg.duration)}.`,
+      );
+    }
+    if (seg.hold != null && (!Number.isFinite(seg.hold) || seg.hold < 0)) {
+      throw new Error(
+        `setAnticipation(): ${at} - \`hold\` must be a non-negative number of ms, ` +
+          `got ${String(seg.hold)}.`,
+      );
+    }
+  });
+}
+
+/**
+ * A travel anchor measures the FINAL leg, so a final leg that asks for speed
+ * `0` can never reach it and the tease always falls through to its time
+ * backstop. Legal, and the backstop is there precisely so it cannot hang - but
+ * it means `cells` is doing nothing, which is worth saying out loud.
+ */
+function warnIfTravelUnreachable(
+  segments: AnticipationSegment[],
+  cells: AnticipationCells | null | undefined,
+): void {
+  if (cells == null) return;
+  const last = segments[segments.length - 1];
+  if (!last || last.speed > 0) return;
+  noticeWarn(
+    'anticipation-cells-unreachable',
+    'setAnticipation(): the last curve segment holds at speed 0, so the `cells` travel ' +
+      'target can never be reached and the tease will always end on its time backstop. ' +
+      'Give the final leg a non-zero speed, or drop `cells`.',
+  );
+}
 
 /**
  * MultiWays/big-symbol coordination hook injected by `ReelSet` into
@@ -131,6 +192,22 @@ export class SpinController implements Disposable {
    */
   private _anticipationSlowdown: AnticipationSlowdown | null = null;
   /**
+   * Explicit tease shape from `setAnticipation(reels, { curve })`, replacing
+   * the built-in decelerate-then-hold. `null` for the legacy shape. Cleared
+   * per spin.
+   */
+  private _anticipationCurve: AnticipationCurve | null = null;
+  /**
+   * Travel anchor from `setAnticipation(reels, { cells })`: end the tease after
+   * this many symbol pitches rather than after the scripted hold. `null` for a
+   * time-anchored tease. Cleared per spin.
+   */
+  private _anticipationCells: AnticipationCells | null = null;
+  /** Per-reel curve after the function form is resolved. Keyed by reel index. */
+  private readonly _resolvedCurves = new Map<number, AnticipationSegment[]>();
+  /** Per-reel travel target after the function form is resolved. */
+  private readonly _resolvedCells = new Map<number, number>();
+  /**
    * Explicit anticipation hold (ms) that OVERRIDES the active speed profile's
    * `anticipationDelay`. Set via `setAnticipation(reels, { duration })`. `null`
    * means "use the profile". A positive value also lets the tease play when the
@@ -165,6 +242,14 @@ export class SpinController implements Disposable {
   private _reelLandedResolvers: Map<number, () => void> = new Map();
   private _reelLandedPromises: Map<number, Promise<void>> = new Map();
   private _stopDelayOverride: number[] | null = null;
+  /**
+   * Reel groups, or `null` when every reel is on its own. See
+   * {@link setReelGroups}. Like `_stopDelayOverride` this PERSISTS across
+   * spins: a group layout describes the board, not one round.
+   */
+  private _reelGroups: number[][] | null = null;
+  /** Reel index -> its group's position. Derived from `_reelGroups`. */
+  private _groupOfReel: number[] = [];
   private _activePhases: Map<number, ReelPhase<any>> = new Map();
   private _landedReels = new Set<number>();
   /**
@@ -366,12 +451,17 @@ export class SpinController implements Disposable {
     this._anticipationReels = [];
     this._anticipationStagger = 0;
     this._anticipationSlowdown = null;
+    this._anticipationCurve = null;
+    this._anticipationCells = null;
+    this._resolvedCurves.clear();
+    this._resolvedCells.clear();
     this._anticipationDuration = null;
     this._anticipationProtect = false;
     this._protectSpent = false;
     this._teasingReels.clear();
     this._reelLandedResolvers.clear();
     this._reelLandedPromises.clear();
+    this._armReelLandedDeferreds();
     // NOTE: _stopDelayOverride is NOT cleared here. The contract is that
     // `setDropOrder()` (or `setStopDelays()`) is called right before
     // `spin()` / `refill()` and represents user intent for the upcoming
@@ -585,12 +675,17 @@ export class SpinController implements Disposable {
     this._anticipationReels = [];
     this._anticipationStagger = 0;
     this._anticipationSlowdown = null;
+    this._anticipationCurve = null;
+    this._anticipationCells = null;
+    this._resolvedCurves.clear();
+    this._resolvedCells.clear();
     this._anticipationDuration = null;
     this._anticipationProtect = false;
     this._protectSpent = false;
     this._teasingReels.clear();
     this._reelLandedResolvers.clear();
     this._reelLandedPromises.clear();
+    this._armReelLandedDeferreds();
     // _stopDelayOverride preserved across entry. see spin() for rationale.
     // Cascade recipes set `setDropOrder('all')` right before refill() and
     // would otherwise see their setting clobbered, falling back to the
@@ -907,9 +1002,32 @@ export class SpinController implements Disposable {
     // Held reels never reach AnticipationPhase, but filter here too so the
     // public API is forgiving. callers can pass a flat list without
     // tracking which indices are held this spin.
+    // `slowdown` is sugar for a two-leg curve, so accepting both would mean
+    // silently picking one. Say which one is redundant instead.
+    if (opts.curve && opts.slowdown) {
+      throw new Error(
+        'setAnticipation(): pass either `slowdown` or `curve`, not both. `slowdown` is ' +
+          'shorthand for a two-segment curve; express the whole tease in `curve`.',
+      );
+    }
+    if (opts.cells != null && typeof opts.cells !== 'function' && !(opts.cells > 0)) {
+      throw new Error(
+        `setAnticipation(): \`cells\` must be a positive number of symbol pitches, got ${String(opts.cells)}.`,
+      );
+    }
+    if (Array.isArray(opts.curve)) {
+      if (opts.curve.length === 0) {
+        throw new Error('setAnticipation(): `curve` must have at least one segment.');
+      }
+      assertSegments(opts.curve, '`curve`');
+    }
+
     this._anticipationReels = reelIndices.filter((i) => !this._heldReels.has(i));
     this._anticipationStagger = stagger;
     this._anticipationSlowdown = opts.slowdown ?? null;
+    this._anticipationCurve = opts.curve ?? null;
+    this._anticipationCells = opts.cells ?? null;
+    this._resolveAnticipationShapes();
     this._anticipationDuration = opts.duration ?? null;
     // Normalise at the boundary. `true` is documented as an alias for
     // `'once'`, but every spend check compares against the STRING, so storing
@@ -920,20 +1038,189 @@ export class SpinController implements Disposable {
     this._protectSpent = false;
     this._teasingReels.clear();
 
-    // Sequential chaining needs a landed-deferred per anticipation reel so a
-    // reel can await the previous one's landing. Build them here (setResult
-    // resolves the spin phases synchronously, so the deferreds must exist
-    // before the anticipation branch runs on the next microtask).
-    this._reelLandedResolvers.clear();
-    this._reelLandedPromises.clear();
-    if (stagger === 'sequential') {
-      for (const i of this._anticipationReels) {
-        this._reelLandedPromises.set(
-          i,
-          new Promise<void>((resolve) => this._reelLandedResolvers.set(i, resolve)),
-        );
-      }
+  }
+
+  /**
+   * Group the reels, so they stop and skip as blocks instead of individually.
+   *
+   * Without this, every reel is on its own: stop delays are one flat
+   * `reelIndex * stopDelay` stagger across the whole set, and a skip press
+   * lands "everything outside the tease" in one go. That falls apart as soon as
+   * the board has a reel whose job is NOT tied to its neighbours - a filler
+   * reel that should keep spinning past the tease, or a pair that must land
+   * together - because index order is the only ordering the engine has.
+   *
+   * A group is a barrier in both directions:
+   *
+   * - **Stopping.** No reel in a group begins its stop sequence (anticipation
+   *   included) until every reel in the groups before it has LANDED. A reel
+   *   waiting its turn keeps spinning at full speed, so the wait reads as
+   *   "still going" rather than as a pause.
+   * - **Skipping.** A press releases the next un-landed group rather than the
+   *   whole board. Tease protection still applies inside a group: with
+   *   `protect: 'stepwise'` a group of teasing reels comes down one press at a
+   *   time, in tease order.
+   *
+   * Stop delays become group-relative, so `stopDelay` staggers reels WITHIN a
+   * group rather than re-adding a whole-board offset on top of the barrier.
+   * An explicit `setStopDelays()` is still taken as given.
+   *
+   * Every reel must appear exactly once. Pass `null` to clear. Persists across
+   * spins, like `setStopDelays()`.
+   *
+   * **When to call it.** Any time up to `setResult()`, including between
+   * `spin()` and `setResult()` - the barrier is read as each reel's SpinPhase
+   * resolves, which is exactly when the result lands. That is what lets a round
+   * be grouped from the server's own response. Changing the layout after reels
+   * have begun landing throws.
+   *
+   * @example
+   * // Reels 1-2 land together, 3-4 tease one press at a time, 5 outlasts both.
+   * reelSet.setReelGroups([[0, 1], [2, 3], [4]]);
+   * reelSet.setAnticipation([2, 3], { stagger: 400, protect: 'stepwise' });
+   */
+  setReelGroups(groups: number[][] | null): void {
+    // A reel that has already passed the barrier cannot un-pass it, so a layout
+    // changed part-way through a round would only partly apply - and silently,
+    // since the reels still waiting would honour it perfectly. Setting groups
+    // BEFORE `setResult()` is the supported window (see the doc above) and is
+    // where the per-round case lives; this is only the incoherent one.
+    if (this._isSpinning && this._landedReels.size > 0) {
+      throw new Error(
+        'setReelGroups(): the group layout cannot change once reels have started landing ' +
+          `(reel${this._landedReels.size > 1 ? 's' : ''} ${[...this._landedReels]
+            .sort((a, b) => a - b)
+            .join(', ')} already down this round). Set groups before setResult(), which is ` +
+          'where the barrier is read.',
+      );
     }
+    if (groups === null) {
+      this._reelGroups = null;
+      this._groupOfReel = [];
+      return;
+    }
+    if (!Array.isArray(groups) || groups.length === 0) {
+      throw new Error('setReelGroups(): expected a non-empty array of groups, or null to clear.');
+    }
+    const owner = new Array<number>(this._reels.length).fill(-1);
+    groups.forEach((group, g) => {
+      if (!Array.isArray(group) || group.length === 0) {
+        throw new Error(`setReelGroups(): group ${g} is empty. Every group needs at least one reel.`);
+      }
+      for (const i of group) {
+        if (!Number.isInteger(i) || i < 0 || i >= this._reels.length) {
+          throw new Error(
+            `setReelGroups(): group ${g} names reel ${String(i)}, which is not a reel index ` +
+              `(0..${this._reels.length - 1}).`,
+          );
+        }
+        if (owner[i] !== -1) {
+          throw new Error(
+            `setReelGroups(): reel ${i} appears in group ${owner[i]} and group ${g}. ` +
+              'A reel belongs to exactly one group.',
+          );
+        }
+        owner[i] = g;
+      }
+    });
+    const missing = owner.map((g, i) => (g === -1 ? i : -1)).filter((i) => i !== -1);
+    if (missing.length > 0) {
+      // Silently dropping the unlisted reels into a trailing group would make
+      // the barrier depend on something the caller never wrote down.
+      throw new Error(
+        `setReelGroups(): reel${missing.length > 1 ? 's' : ''} ${missing.join(', ')} ` +
+          'not in any group. List every reel, or pass null to clear.',
+      );
+    }
+    this._reelGroups = groups.map((g) => [...g]);
+    this._groupOfReel = owner;
+  }
+
+  /** The reel groups in force, or `null`. Copy; mutating it changes nothing. */
+  get reelGroups(): number[][] | null {
+    return this._reelGroups ? this._reelGroups.map((g) => [...g]) : null;
+  }
+
+  /**
+   * One landed-deferred per reel, armed at the start of every round.
+   *
+   * Both the `'sequential'` anticipation stagger and the group barrier are
+   * "wait for that reel to land", so they share one set. Armed here rather
+   * than in `setAnticipation` because a group barrier exists whether or not
+   * anything teases - and because arming them mid-round could hand a waiter a
+   * deferred for a reel that has already landed, which never resolves.
+   */
+  private _armReelLandedDeferreds(): void {
+    for (let i = 0; i < this._reels.length; i++) {
+      this._reelLandedPromises.set(
+        i,
+        new Promise<void>((resolve) => this._reelLandedResolvers.set(i, resolve)),
+      );
+    }
+  }
+
+  /** This reel's group position, or `-1` when no groups are configured. */
+  private _groupIndexOf(reelIndex: number): number {
+    return this._reelGroups ? (this._groupOfReel[reelIndex] ?? -1) : -1;
+  }
+
+  /**
+   * Hold a reel at full speed until every earlier group has landed.
+   *
+   * Returns `false` if the round moved on during the wait (a slam, or a new
+   * spin), exactly like `_awaitAnticipationOffset`.
+   */
+  private async _awaitGroupTurn(reelIndex: number, generation: number): Promise<boolean> {
+    const group = this._groupIndexOf(reelIndex);
+    if (group <= 0) return true;
+
+    const waits: Array<Promise<void>> = [];
+    for (let i = 0; i < this._reels.length; i++) {
+      if (this._groupIndexOf(i) >= group) continue;
+      // A reel that already landed, or that is held out of this spin entirely,
+      // is not something to wait for - and its deferred may already be spent.
+      if (this._landedReels.has(i) || this._heldReels.has(i)) continue;
+      const landed = this._reelLandedPromises.get(i);
+      if (landed) waits.push(landed);
+    }
+    if (waits.length === 0) return true;
+
+    await Promise.all(waits);
+    return !this._isStale(reelIndex, generation);
+  }
+
+  /** Is there a group still waiting for a press after the one just released? */
+  private _hasUnreleasedGroup(): boolean {
+    if (!this._reelGroups) return false;
+    for (let i = 0; i < this._reels.length; i++) {
+      if (!this._landedReels.has(i) && !this._heldReels.has(i)) return true;
+    }
+    return false;
+  }
+
+  /**
+   * The next group a press should land, walking the configured groups in
+   * order. `null` once every reel is down, which makes the press a plain slam.
+   *
+   * Within a group the unprotected reels come down first, so the board reads
+   * before the tease is touched; then `'stepwise'` releases the teasing ones
+   * one press at a time in TEASE order, and `'once'` / `'always'` hold them
+   * (an empty group is a no-op press, by design).
+   */
+  private _nextReelGroupRelease(teasing: Set<number>): number[] | null {
+    for (const group of this._reelGroups ?? []) {
+      const pending = group.filter(
+        (i) => !this._landedReels.has(i) && !this._heldReels.has(i),
+      );
+      if (pending.length === 0) continue;
+
+      const free = pending.filter((i) => !teasing.has(i));
+      if (free.length > 0) return free;
+      if (this._anticipationProtect !== 'stepwise') return [];
+      const next = this._anticipationReels.find((i) => pending.includes(i));
+      return next === undefined ? [] : [next];
+    }
+    return null;
   }
 
   /**
@@ -1060,12 +1347,14 @@ export class SpinController implements Disposable {
       // rather than `_protectedTeaseReels()`. that helper reports what is
       // still PROTECTED, which spending would zero out, and "the tease is
       // over" is not the same question as "the tease is still protected".
-      const teaseLeft = this._teaseStillRunning();
+      // With reel groups the round is not over until every group is down,
+      // tease or no tease: a filler group behind the tease still owes a press.
+      const roundLeft = this._teaseStillRunning() || this._hasUnreleasedGroup();
       // `'once'` is the only spendable mode. `'stepwise'` and `'always'` keep
       // protecting whatever tease is left.
       if (this._anticipationProtect === 'once') this._protectSpent = true;
 
-      if (teaseLeft) {
+      if (roundLeft) {
         // Tease still running. Stage 1, not 2: the round's side effect is
         // still owed to the press that actually ends it.
         if (this._skipStage === 0) this._skipStage = 1;
@@ -1102,6 +1391,9 @@ export class SpinController implements Disposable {
    */
   private _nextSlamGroup(): number[] | null {
     const teasing = this._protectedTeaseReels();
+    // Configured groups replace the implicit "tease vs everything else" split:
+    // the caller has said what belongs together, so a press walks THAT order.
+    if (this._reelGroups) return this._nextReelGroupRelease(teasing);
     if (teasing.size === 0) return null;
 
     const rest: number[] = [];
@@ -1344,7 +1636,7 @@ export class SpinController implements Disposable {
 
       for (const i of targets) {
         const reel = this._reels[i];
-        reel.speed = 0;
+        reel.haltDrive();
         reel.isStopping = false;
 
         if (this._hooks.isMultiWaysSlot && pendingShape) {
@@ -1369,7 +1661,7 @@ export class SpinController implements Disposable {
     } else {
       for (const i of targets) {
         const reel = this._reels[i];
-        reel.speed = 0;
+        reel.haltDrive();
         reel.isStopping = false;
         reel.snapToGrid();
         reel.notifySpinEnd();
@@ -1512,6 +1804,11 @@ export class SpinController implements Disposable {
     if (this._isStale(reelIndex, generation)) return;
 
     const reel = this._reels[reelIndex];
+    // What `reel.speedNormalized` divides by. `spin()` captures one profile for
+    // the whole round and hands it to every reel, so this is the right divisor
+    // for the entire spin - including after a mid-round `setSpeed`, which does
+    // not retune reels already running on the captured profile.
+    reel.referenceSpeed = speed.spinSpeed;
     const isTumble = this._currentSpinMode === 'cascade';
     const canAdjust = this._hooks.isMultiWaysSlot && this._phaseFactory.has('adjust');
 
@@ -1577,6 +1874,12 @@ export class SpinController implements Disposable {
       if (this._isStale(reelIndex, generation)) return;
     }
 
+    // Group barrier: hold this reel at full speed until every earlier group has
+    // landed. Without it the only ordering the engine has is reel index, so a
+    // filler reel late in the board lands in the middle of a tease on the reels
+    // before it.
+    if (!(await this._awaitGroupTurn(reelIndex, generation))) return;
+
     // SpinPhase resolved (result arrived). Run ANTICIPATION (if requested) then STOP.
     const stopDelay = this._stopDelayFor(reelIndex, speed);
     const targetFrame = this._frameFor(reelIndex);
@@ -1617,7 +1920,25 @@ export class SpinController implements Disposable {
       // symbols back through the empty window. The tease there is a pure
       // hold, so pin the multiplier to 0 whatever the slowdown curve says.
       const antConfig = this._anticipationConfigFor(reelIndex, speed);
-      await anticipationPhase.run(isTumble ? { ...antConfig, speedMultiplier: 0 } : antConfig);
+      if (isTumble && (antConfig.curve || antConfig.cells != null)) {
+        // A tumble reel has already dropped its visible symbols and sits at
+        // rest. `speedMultiplier: 0` pins the legacy tease there, but a curve
+        // path never reads `speedMultiplier` - so an unfiltered curve scrolls
+        // buffer symbols back through the empty window. Drop the shape rather
+        // than play it wrong, and say which reel lost it.
+        noticeWarnOnce(
+          'anticipation-curve-cascade',
+          `setAnticipation({ curve / cells }) is ignored in cascade mode (reel ${reelIndex}). ` +
+            'A tumble reel has already dropped its symbols and must tease AT REST; scrolling ' +
+            'it would drag buffer symbols through the empty window. Use a standard-mode spin, ' +
+            'or hold the tension with a `duration` override instead.',
+        );
+      }
+      await anticipationPhase.run(
+        isTumble
+          ? { ...antConfig, speedMultiplier: 0, curve: undefined, cells: undefined }
+          : antConfig,
+      );
       if (this._isStale(reelIndex, generation)) return;
       didAnticipate = true;
     } else {
@@ -1634,7 +1955,7 @@ export class SpinController implements Disposable {
       // moves it (above), but a custom `'anticipation'` phase may, and this
       // is the invariant either way.
       if (didAnticipate) {
-        reel.speed = 0;
+        reel.haltDrive();
         reel.snapToGrid();
       }
       // Tumble stop = place + dropIn. Both phases are user-overridable via
@@ -1765,12 +2086,31 @@ export class SpinController implements Disposable {
   ): AnticipationPhaseConfig {
     const slowdown = this._anticipationSlowdown;
     const baseDuration = this._anticipationDuration;
+    const cells = this._resolvedCells.get(reelIndex);
+    const travel: { cells?: number } = cells != null ? { cells } : {};
+    const wiring = { events: this._events, reelIndex };
+
+    // An explicit curve replaces the whole slowdown/hold computation. `duration`
+    // still rides along: the phase uses it only as the gate that decides whether
+    // the tease runs at all (it must be > 0 in Turbo) and as the backstop for a
+    // travel-anchored tease.
+    if (this._anticipationCurve) {
+      const config: AnticipationPhaseConfig = {
+        curve: this._resolvedCurves.get(reelIndex),
+        ...travel,
+        ...wiring,
+      };
+      if (baseDuration != null) config.duration = baseDuration;
+      return config;
+    }
 
     // No slowdown curve: only the (optional) duration override matters. Passing
     // it explicitly is what lets the tease run when the profile's
     // anticipationDelay is 0 (Turbo / SuperTurbo).
     if (!slowdown) {
-      return baseDuration != null ? { duration: baseDuration } : {};
+      return baseDuration != null
+        ? { duration: baseDuration, ...travel, ...wiring }
+        : { ...travel, ...wiring };
     }
 
     const count = this._anticipationReels.length;
@@ -1786,6 +2126,8 @@ export class SpinController implements Disposable {
 
     const config: AnticipationPhaseConfig = {
       speedMultiplier: from + (to - from) * f,
+      ...travel,
+      ...wiring,
     };
     const holdMult = holdFrom + (holdTo - holdFrom) * f;
     // Set duration whenever an override is active OR the hold is scaled; leave
@@ -1794,9 +2136,73 @@ export class SpinController implements Disposable {
     return config;
   }
 
+  /**
+   * Resolve the function forms of `curve` / `cells` for every teasing reel, at
+   * the CALL rather than when each reel reaches its tease.
+   *
+   * Two reasons. A curve function that returns nonsense should throw where the
+   * caller can see it, next to their own stack - deferred, it surfaces inside a
+   * reel task where the spin swallows it and lands anyway. And the function is
+   * then called exactly once per reel, so a caller may put a counter or an RNG
+   * in it without the count depending on how the engine happens to schedule.
+   *
+   * `order` is the reel's place in the anticipation set, NOT its reel index:
+   * `setAnticipation([4, 2, 3])` hands `order: 0` to reel 4 - the same ordering
+   * `slowdown` interpolates over and `'stepwise'` protection releases in.
+   */
+  private _resolveAnticipationShapes(): void {
+    this._resolvedCurves.clear();
+    this._resolvedCells.clear();
+    const curve = this._anticipationCurve;
+    const cells = this._anticipationCells;
+    if (curve == null && cells == null) return;
+
+    const reels = this._anticipationReels;
+    const total = reels.length;
+    reels.forEach((reelIndex, order) => {
+      if (typeof curve === 'function') {
+        const segments = curve(order, total);
+        if (!Array.isArray(segments) || segments.length === 0) {
+          throw new Error(
+            `setAnticipation(): the curve function returned no segments for reel ${reelIndex} ` +
+              `(tease order ${order}). Return at least one segment.`,
+          );
+        }
+        assertSegments(segments, `the curve function's return for reel ${reelIndex} (tease order ${order})`);
+        this._resolvedCurves.set(reelIndex, segments);
+      } else if (Array.isArray(curve)) {
+        this._resolvedCurves.set(reelIndex, curve);
+      }
+
+      if (typeof cells === 'function') {
+        const value = cells(order, total);
+        if (!Number.isFinite(value) || value <= 0) {
+          throw new Error(
+            `setAnticipation(): the cells function returned ${String(value)} for reel ` +
+              `${reelIndex} (tease order ${order}). Return a positive number of symbol pitches.`,
+          );
+        }
+        this._resolvedCells.set(reelIndex, value);
+      } else if (cells != null) {
+        this._resolvedCells.set(reelIndex, cells);
+      }
+
+      const segments = this._resolvedCurves.get(reelIndex);
+      if (segments) warnIfTravelUnreachable(segments, this._resolvedCells.get(reelIndex));
+    });
+  }
+
   private _stopDelayFor(reelIndex: number, speed: SpeedProfile): number {
     if (this._stopDelayOverride) {
       return this._stopDelayOverride[reelIndex] ?? 0;
+    }
+    // With groups the barrier already orders the board, so the stagger is
+    // relative to the reel's place in ITS group. Keeping the whole-board offset
+    // would re-add the ordering the barrier just enforced, on top of it.
+    const group = this._groupIndexOf(reelIndex);
+    if (group >= 0) {
+      const within = (this._reelGroups as number[][])[group].indexOf(reelIndex);
+      return Math.max(within, 0) * speed.stopDelay;
     }
     return reelIndex * speed.stopDelay;
   }
