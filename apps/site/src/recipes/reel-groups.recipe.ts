@@ -47,6 +47,49 @@ GROUPS.forEach((group, g) => {
 });
 reelSet.addChild(bars);
 
+// Tease outline: the same dashed, blinking border the stepwise-tease recipe
+// uses, so the two demos read the same. It marks WHICH reel is still going,
+// which is the thing a group barrier is about - the filler reel keeps spinning
+// with no outline, so "still spinning" and "still teasing" stay distinguishable.
+//
+// PixiJS has no dashed stroke, so each edge is drawn as segments, inset by half
+// the line width to keep the stroke inside the reel's own bounds.
+const glowLayer = new PIXI.Container();
+// ON TOP: an outline drawn on the exact bounds would be hidden behind the
+// opaque symbols if it sat underneath them.
+reelSet.addChild(glowLayer);
+const glows = new Map();
+const stopGlow = (i) => {
+  const g = glows.get(i);
+  if (!g) return;
+  gsap.killTweensOf(g);
+  try { g.destroy(); } catch {}
+  glows.delete(i);
+};
+const startGlow = (i) => {
+  stopGlow(i);
+  const DASH = 7, GAP_ = 5, W = 1.5, inset = W / 2;
+  const l = i * (SIZE + GAP) + inset, t = inset;
+  const r = i * (SIZE + GAP) + SIZE - inset, b = H - inset;
+  const g = new PIXI.Graphics();
+  for (const [x1, y1, x2, y2] of [[l, t, r, t], [r, t, r, b], [r, b, l, b], [l, b, l, t]]) {
+    const len = Math.hypot(x2 - x1, y2 - y1);
+    const ux = (x2 - x1) / len, uy = (y2 - y1) / len;
+    for (let d = 0; d < len; d += DASH + GAP_) {
+      const e = Math.min(d + DASH, len);
+      g.moveTo(x1 + ux * d, y1 + uy * d).lineTo(x1 + ux * e, y1 + uy * e);
+    }
+  }
+  g.stroke({ width: W, color: 0xfef08a });
+  glowLayer.addChild(g);
+  // `steps(1)` makes it blink rather than breathe.
+  gsap.to(g, { alpha: 0.15, duration: 0.22, yoyo: true, repeat: -1, ease: 'steps(1)' });
+  glows.set(i, g);
+};
+
+reelSet.events.on('anticipation:reel', ({ reelIndex }) => startGlow(reelIndex));
+reelSet.events.on('anticipation:reelEnd', ({ reelIndex }) => stopGlow(reelIndex));
+
 const hud = new PIXI.Text({
   text: 'press spin, then keep pressing',
   style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 11, fill: 0x9c8f78 },
@@ -68,6 +111,8 @@ reelSet.events.on('skip:requested', ({ reels, partial }) => {
 return {
   reelSet,
   cleanup: () => {
+    for (const i of [...glows.keys()]) stopGlow(i);
+    try { glowLayer.destroy({ children: true }); } catch {}
     try { bars.destroy(); } catch {}
     try { hud.destroy(); } catch {}
   },
@@ -75,6 +120,7 @@ return {
   onSpin: async () => {
     order = [];
     press = 0;
+    for (const i of [...glows.keys()]) stopGlow(i);
     const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
     grid[0].visible[1] = SCAT;
     grid[1].visible[1] = SCAT;
