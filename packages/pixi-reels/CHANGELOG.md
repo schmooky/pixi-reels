@@ -1,5 +1,143 @@
 # pixi-reels
 
+## 2.4.0
+
+### Minor Changes
+
+- [#215](https://github.com/schmooky/pixi-reels/pull/215) [`002ded2`](https://github.com/schmooky/pixi-reels/commit/002ded279aaf106d6f21050a81108ec30cfb683b) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Fix and sharpen shaped anticipation, following review of the feature above.
+
+  **Fix: a `curve` no longer scrolls a cascade reel.** A tumble reel has already
+  dropped its visible symbols and must tease at rest; the guard that pinned this
+  only covered the legacy tease, so a `curve` dragged buffer symbols back through
+  the empty window. `curve` / `cells` are now dropped in cascade mode with a
+  notice naming the reel.
+
+  **Fix: a travel anchor no longer deletes the legs before the last one.**
+  `cells` measured from the start of the tease, so a fast opening segment could
+  reach the target before the segments after it ever played — silently. The anchor
+  now applies to the final leg, which is what the docs always described.
+
+  **Fix: curve segments are validated at the call.** A negative `speed`, a
+  non-positive `duration`, a negative `hold` or a `NaN` were all accepted and
+  played. The function form is now resolved (and validated) for every teasing reel
+  when `setAnticipation` is called, so a bad curve throws next to the caller's own
+  stack instead of being swallowed by the reel task.
+
+  **Fix: drive bounds are profile-relative.** `motionModel('drive', { accelFrames:
+20 })` means "reach the ACTIVE profile's full spin speed in 20 frames" and
+  re-resolves per spin. The absolute `accel` form only suited a single-profile
+  game: with `spinSpeed` 30 / 50 / 80 across the presets, one fixed bound made
+  SuperTurbo take 53 frames to reach speed where Normal took 20. Mixing the two
+  forms throws. A drive that cannot meet a segment's time budget now says so.
+
+  **Fix: `composeMasks` no longer accumulates scene nodes.** A member that owns
+  its own Graphics — including any strategy wrapped in `inset(...)` — added a
+  fresh child on every redraw, so each viewport resize and MultiWays reshape
+  leaked a node.
+
+  **Fix: the new mask warnings go through the notice channel**, so they carry a
+  code and obey `setLogLevel('silent')` like every other notice.
+
+  Add: `anticipation:segment` fires once per curve leg (`{ reelIndex, index,
+total, speed, targetSpeed }`), so tease audio can hit the surge and the crawl
+  separately instead of polling the speed to find the boundary. `cells` takes the
+  same function-of-tease-order form as `curve`. `stepDrive` writes into the state
+  it is given rather than allocating one per reel per frame, and a parked drive is
+  no longer stepped at all.
+
+- [#215](https://github.com/schmooky/pixi-reels/pull/215) [`002ded2`](https://github.com/schmooky/pixi-reels/commit/002ded279aaf106d6f21050a81108ec30cfb683b) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Add: `reelSet.setReelGroups([[0, 1], [2, 3], [4]])` — reels stop and skip as
+  blocks instead of individually.
+
+  Reel index was the engine's only ordering, which breaks as soon as a reel's job
+  is not tied to its neighbours. A filler reel meant to outlast a tease on the
+  reels before it landed in the middle of that tease instead, because its flat
+  `reelIndex * stopDelay` offset came due while they were still teasing, and a
+  skip press landed "everything outside the tease" — including that filler reel —
+  in one go.
+
+  A group is a barrier in both directions. **Stopping:** no reel in a group starts
+  its stop sequence (anticipation included) until every reel in the earlier groups
+  has landed, and a reel waiting its turn keeps spinning at full speed, so the
+  wait reads as "still going" rather than as a pause. **Skipping:** a press
+  releases the next un-landed group, with tease protection still applying inside
+  it — `protect: 'stepwise'` brings a group of teasing reels down one press at a
+  time, in tease order.
+
+  Stop delays become group-relative, so the profile's `stopDelay` staggers reels
+  within a group rather than re-adding a whole-board offset on top of the barrier.
+  An explicit `setStopDelays()` is still taken as given. Every reel must be listed
+  exactly once; `null` clears. Sticky across spins, like `setStopDelays()`.
+
+  Sets that never call it are unaffected.
+
+- [#215](https://github.com/schmooky/pixi-reels/pull/215) [`002ded2`](https://github.com/schmooky/pixi-reels/commit/002ded279aaf106d6f21050a81108ec30cfb683b) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Add: mask primitives beyond the rectangle, and anticipation you can shape.
+
+  **Masks.** `RoundedRectMaskStrategy` rounds the whole grid (`scope: 'set'`) or
+  each reel as its own card (`scope: 'reel'`). `SilhouetteMaskStrategy` rounds the
+  outline of a jagged pyramid / MultiWays set — every step of the staircase,
+  concave corners included, with their own radius — instead of forcing you to pick
+  between notched seams and a bounding box that hides the shape.
+  `PathMaskStrategy` takes a `(graphics, context) => void` so a one-off custom
+  mask no longer needs a class. `inset(strategy, px)` shrinks any strategy's
+  output; `composeMasks(...)` unions several into one mask.
+
+  **Fix:** `RectMaskStrategy` ignored `ctx.bleed`, so a warped set combining
+  `curveBleed(...)` with an explicit `.maskStrategy(new RectMaskStrategy())` clipped
+  the very overhang the bleed asked for.
+
+  **Anticipation.** `setAnticipation(reels, { curve })` replaces the fixed
+  decelerate-then-hold with explicit speed legs, so a tease can surge above spin
+  speed before it crawls, and its transitions ramp instead of stepping (segment
+  eases default to `power2.inOut`). Pass a function of tease order to vary the
+  curve per reel. `{ cells: n }` ends a tease after N symbols of travel instead of
+  after a fixed time. `reel.speedNormalized` exposes live speed as a fraction of
+  spin speed, for tease audio that tracks the slow-down rather than just its
+  start and end.
+
+  **`motionModel('drive', { accel, decel, jerk })`** opts a set into
+  acceleration-bounded motion: phases set a target speed and the reel integrates
+  toward it, so every transition is shaped by the bounds instead of by a
+  per-transition ease, and a mid-move retarget stays continuous. Opt-in; the
+  default `'tween'` model is unchanged.
+
+  Existing spins are byte-for-byte unaffected: the new eases and the drive apply
+  only where you ask for them.
+
+- [#215](https://github.com/schmooky/pixi-reels/pull/215) [`002ded2`](https://github.com/schmooky/pixi-reels/commit/002ded279aaf106d6f21050a81108ec30cfb683b) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Add: `ReelSymbol.playIn()` / `playOut()`, and `reelSet.swapSymbols(...)` — the
+  mystery-reveal and upgrade beat as one call.
+
+  `setSymbolAt` already swapped an identity, but instantly. A game that wants "the
+  cells dissolve, the symbol underneath changes, the reveal arrives" had to
+  hand-roll the ordering, the stagger, the zIndex bump so an overshooting entrance
+  is not clipped, the re-hide after the swap (re-activation resets the view to
+  fully visible, so the new art popped for a frame before its entrance began), and
+  the abort handling — every time.
+
+  `playIn` / `playOut` are the symbol-level hooks, with the same contract as
+  `playDestroy`: `delay`, `signal`, resolve when done, abort means "snap to the
+  end" rather than "fail". Defaults are a short scale-and-fade; override them for
+  a Spine `in` / `out` track. They are separate from `playDestroy`, which stays
+  tuned as the cascade's "this cell was a winner and is being consumed" poof.
+
+  `swapSymbols(cells, opts)` orchestrates the three beats — out, swap, in — with
+  per-cell `outDelay` / `inDelay` staggers, a `holdMs` and an `onSwapped` hook for
+  the beat while the board is dark, and `skipOut` / `skipIn` for art that drives
+  one side itself. Cells are validated up front, and an abort still performs the
+  swap, so the board never disagrees with the result the server sent.
+
+  Single-cell symbols only: a big symbol spans cells the frame layer has to
+  reserve, so revealing one remains a `setResult` / `setShape` job.
+
+### Patch Changes
+
+- [#215](https://github.com/schmooky/pixi-reels/pull/215) [`002ded2`](https://github.com/schmooky/pixi-reels/commit/002ded279aaf106d6f21050a81108ec30cfb683b) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - `setReelGroups()` now documents and enforces its window. A layout may be set any
+  time up to `setResult()` — including between `spin()` and `setResult()`, so a
+  round can be grouped from its own server response; the barrier is read as each
+  reel's SpinPhase resolves, which is exactly when the result lands. Changing the
+  layout once reels have begun landing throws instead of half-applying: a reel that
+  already passed the barrier cannot un-pass it, so the new layout would apply to
+  some reels and not others, silently.
+
 ## 2.3.0
 
 ### Minor Changes
