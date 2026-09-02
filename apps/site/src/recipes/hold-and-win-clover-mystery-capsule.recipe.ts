@@ -1,0 +1,128 @@
+// @ts-nocheck
+// Injected: HoldAndWinBuilder, CloverSymbol, loadHwClover, PIXI, gsap, app
+//
+// The capsule: a sealed jackpot. It spins past like any other symbol and
+// locks like a coin, then between waves the seal breaks - the four jackpot
+// titles flick across its face and settle on the tier the server sent,
+// the tier's plaque above the board lights, and the amount paints on. The
+// symbol's own setBadge / setLabel do the whole reveal; nothing is added to
+// the stage per cell.
+
+const COLS = 5, ROWS = 3;
+const CELL = { width: 101, height: 85 }, COLUMN_GAP = 6, ROW_GAP = 0;
+const BET = 1;
+const JACKPOTS = { mini: 20, minor: 50, major: 200, grand: 1000 };
+const TIERS = ['mini', 'minor', 'major', 'grand'];
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const fmt = (v) => v.toFixed(2);
+const pick = (a) => a[Math.floor(Math.random() * a.length)];
+
+const art = await loadHwClover();
+class Clover extends CloverSymbol {
+  onActivate(id) { super.onActivate(id); if (id === 'gold') this.setLabel(fmt(pick([1, 2, 3, 5]) * BET)); }
+}
+
+const board = new HoldAndWinBuilder()
+  .grid(COLS, ROWS)
+  .cellSize(CELL, { columnGap: COLUMN_GAP, rowGap: ROW_GAP })
+  .symbols((r) => {
+    for (const id of ['gold', 'empty']) r.register(id, Clover, { art });
+    r.register('capsule', Clover, { art, font: 'CloverJackpot', labelOffset: 0.26, badgeOffset: -0.14 });
+  })
+  .weights({ gold: 2, empty: 6, capsule: 0 })
+  .respins(3)
+  .lockAnimation('landing')
+  .cellChrome((g, w, h) => g.rect(0, 0, w, h).fill({ color: 0x0b1a4a }).stroke({ color: 0x3f6bd8, width: 1, alpha: 0.8 }))
+  .ticker(app.ticker)
+  .build();
+const boardW = COLS * CELL.width + (COLS - 1) * COLUMN_GAP;
+const boardH = ROWS * CELL.height + (ROWS - 1) * ROW_GAP;
+board.container.position.set((app.screen.width - boardW) / 2, (app.screen.height - boardH) / 2 + 12);
+app.stage.addChild(board.container);
+
+// -- jackpot plaques above the board, one per tier --
+const plaques = {};
+const rail = new PIXI.Container();
+TIERS.forEach((tier, i) => {
+  // the plaque is the coloured frame; the tier word is its own small title
+  const p = new PIXI.Container();
+  const frame = new PIXI.Sprite(art.plaques[tier]);
+  const word = new PIXI.Sprite(art.titles[`${tier}_small`]);
+  frame.anchor.set(0.5);
+  word.anchor.set(0.5);
+  p.addChild(frame, word);
+  p.x = (i - 1.5) * 150;
+  p.alpha = 0.45;
+  rail.addChild(p);
+  plaques[tier] = p;
+});
+rail.position.set(app.screen.width / 2, board.container.y - 30);
+app.stage.addChild(rail);
+const lightPlaque = (tier) => {
+  for (const [t, p] of Object.entries(plaques)) gsap.to(p, { alpha: t === tier ? 1 : 0.35, duration: 0.2 });
+  gsap.fromTo(plaques[tier].scale, { x: 1.35, y: 1.35 }, { x: 1, y: 1, duration: 0.45, ease: 'back.out(2)' });
+};
+
+const hud = new PIXI.Text({ text: 'press spin', style: { fontFamily: 'system-ui, sans-serif', fontSize: 13, fontWeight: '600', fill: 0x9c8f78 } });
+hud.anchor.set(0.5, 0);
+hud.position.set(app.screen.width / 2, board.container.y + boardH + 10);
+app.stage.addChild(hud);
+
+board.events.on('cell:landed', ({ cell, coin }) => {
+  if (coin && coin.id === 'gold') board.symbolAt(cell).setLabel(fmt(coin.data.value));
+});
+
+// The reveal: cycle the titles fast, slow down, stop on the served tier.
+async function reveal(coin) {
+  const sym = board.symbolAt(coin.cell);
+  const tier = coin.data.tier;
+  hud.text = 'a capsule locked - breaking the seal';
+  await sleep(300);
+  let step = 70;
+  for (let i = 0; i < 14; i++) {
+    sym.setBadge(art.titles[TIERS[i % TIERS.length]]);
+    await sleep(step);
+    step += 12;
+  }
+  sym.setBadge(art.titles[tier]);
+  lightPlaque(tier);
+  await sym.playWin();
+  sym.setLabel(fmt(coin.data.value));
+  hud.text = `${tier.toUpperCase()} jackpot: ${fmt(coin.data.value)}`;
+  await sleep(600);
+}
+
+const gold = (cell) => ({ cell, id: 'gold', data: { value: pick([1, 2, 3, 5]) * BET } });
+const capsule = (cell, tier) => ({ cell, id: 'capsule', data: { tier, value: JACKPOTS[tier] * BET } });
+const SEED = [{ reel: 1, cell: 2 }, { reel: 3, cell: 0 }].map(gold);
+const ROUNDS = [
+  [gold({ reel: 0, cell: 0 }), capsule({ reel: 2, cell: 1 }, 'major')],
+  [gold({ reel: 4, cell: 2 })],
+  [capsule({ reel: 4, cell: 0 }, 'mini')],
+  [], [], [],
+];
+
+let busy = false;
+return {
+  cleanup: () => { for (const p of Object.values(plaques)) gsap.killTweensOf(p); try { hud.destroy(); rail.destroy(); } catch {} board.destroy(); },
+  onSpin: async () => {
+    if (busy) return;
+    busy = true;
+    board.reset();
+    for (const p of Object.values(plaques)) p.alpha = 0.45;
+    board.enter(SEED);
+    for (const c of SEED) board.symbolAt(c.cell).setLabel(fmt(c.data.value));
+    hud.text = 'capsules are server-placed (weight 0) and lock like coins';
+    await sleep(400);
+    for (const hits of ROUNDS) {
+      const res = await board.respin(hits);
+      for (const coin of res.hits) if (coin.id === 'capsule') await reveal(coin);
+      await sleep(350);
+      if (res.done) break;
+    }
+    await board.playWin();
+    const total = board.lockedCoins.reduce((a, c) => a + c.data.value, 0);
+    hud.text = `feature over · TOTAL ${fmt(total)} · press spin to replay`;
+    busy = false;
+  },
+};
