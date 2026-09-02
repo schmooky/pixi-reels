@@ -76,7 +76,7 @@ Events come in a fixed order. Cells land in stagger order, so `cell:landed` /
 respin(hits)
   respin:start
   ├─ cell:landed        per cell, in landing order (coin = null on a miss)
-  └─ coin:locked        only on a hit  →  the board calls symbolAt(cell).playWin()
+  └─ coin:locked        only on a hit  →  the board plays the lock animation ('win' by default)
   respins:changed       reason: 'hit-reset' (full) or 'miss' (-1)
   respin:end
   [board:full]          if the last free cell just locked
@@ -138,6 +138,7 @@ Every event carries `TData` on its coins.
 | `respin:start` | `{ round, respinsLeft, spinning }` | a wave begins |
 | `cell:landed` | `{ cell, coin }` (`coin: null` on a miss) | each cell settles, in stagger order |
 | `coin:locked` | `{ coin, locked, capacity }` | a hit cell locks |
+| `cells:activated` | `{ cells, capacity }` | `activate()` woke dormant cells; `capacity` is the new full-board count |
 | `respins:changed` | `{ value, reason }` | counter changes (`seed` / `hit-reset` / `miss`) |
 | `respin:end` | `{ round, hits, respinsLeft }` | the wave finishes |
 | `board:full` | `{ coins }` | the last free cell locks |
@@ -155,6 +156,31 @@ Two deliberate distinctions:
 - **`setSymbolAt(cell, id, data)` rewrites a *locked* coin in place** (coin →
   MINI → MAJOR), keeping the ledger correct. It throws on a free cell; placing a
   brand-new tracked coin is `enter`/`respin`'s job.
+
+## Rectangular cells, the lock animation, dormant cells
+
+Three builder knobs cover what a production board usually needs beyond the square default:
+
+```ts
+const board = new HoldAndWinBuilder()
+  .grid(5, 3)
+  // art is 202x170: a seam between columns, rows touching
+  .cellSize({ width: 101, height: 85 }, { columnGap: 6, rowGap: 0 })
+  // 'win' (default) plays playWin() on every lock; 'landing' plays the
+  // symbol's playLanding() settle instead; 'none' plays nothing
+  .lockAnimation('landing')
+  // built, drawn as `sealed`, but outside the feature until activate()
+  .inactive(row(0).concat(row(4)), 'sealed')
+  ...
+```
+
+With `'landing'` or `'none'` the celebration is yours: `await board.playWin()` pulses
+every locked coin (or `board.playWin(cells)` a subset) whenever the game decides,
+typically on `board:full` or after `feature:end`. `board.activate(cells)` wakes dormant
+cells between waves - they show the empty symbol, join the next respin and count toward
+`isFull` from then on; `reset()` seals them again. The `Rectangular cells`, `Landing only`
+and `Clover board that grows` recipes on the [Hold & Win recipes page](/recipes/hold-and-win/)
+show each one running.
 
 ## Own the board
 
