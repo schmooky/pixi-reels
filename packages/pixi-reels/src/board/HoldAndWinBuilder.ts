@@ -4,7 +4,7 @@ import type { SpeedProfile, SymbolData } from '../config/types.js';
 import type { SymbolRegistry } from '../symbols/SymbolRegistry.js';
 import { HoldAndWinBoard } from './HoldAndWinBoard.js';
 import type { Direction, Orientation } from '../core/ReelAxis.js';
-import type { HwCellSizeOptions } from './HwTypes.js';
+import type { HwCell, HwCellSizeOptions, HwLockAnimation } from './HwTypes.js';
 
 /**
  * Fluent builder for {@link HoldAndWinBoard}.
@@ -20,10 +20,15 @@ import type { HwCellSizeOptions } from './HwTypes.js';
 export class HoldAndWinBuilder<TData = unknown> {
   private _cols = 5;
   private _rows = 3;
-  private _cell = 72;
-  private _gap = 4;
+  private _cellWidth = 72;
+  private _cellHeight = 72;
+  private _columnGap = 4;
+  private _rowGap = 4;
   private _emptyId = 'empty';
+  private _inactive: HwCell[] = [];
+  private _inactiveId: string | null = null;
   private _respins = 3;
+  private _lockAnimation: HwLockAnimation = 'win';
   private _configurator: ((registry: SymbolRegistry) => void) | null = null;
   private _weights: Record<string, number> | null = null;
   private _symbolData: Record<string, Partial<SymbolData>> | null = null;
@@ -32,7 +37,7 @@ export class HoldAndWinBuilder<TData = unknown> {
   private _anticipateWhen:
     | ((state: { locked: number; capacity: number; respinsLeft: number }) => boolean)
     | null = null;
-  private _chrome: ((g: Graphics, size: number) => void) | null = null;
+  private _chrome: ((g: Graphics, width: number, height: number) => void) | null = null;
   private _orientation: Orientation = 'vertical';
   private _direction: Direction = 'forward';
   private _ticker: Ticker | null = null;
@@ -44,9 +49,26 @@ export class HoldAndWinBuilder<TData = unknown> {
     return this;
   }
 
-  cellSize(size: number, opts: HwCellSizeOptions = {}): this {
-    this._cell = size;
-    this._gap = opts.gap ?? this._gap;
+  /**
+   * Cell size in pixels - one number for square cells, `{ width, height }` for
+   * rectangular ones - plus the gaps between cells. `gap` sets both axes;
+   * `columnGap` / `rowGap` override one each, so `{ columnGap: 6, rowGap: 0 }`
+   * gives touching rows with a seam between columns.
+   */
+  cellSize(size: number | { width: number; height: number }, opts: HwCellSizeOptions = {}): this {
+    if (typeof size === 'number') {
+      this._cellWidth = size;
+      this._cellHeight = size;
+    } else {
+      this._cellWidth = size.width;
+      this._cellHeight = size.height;
+    }
+    if (opts.gap !== undefined) {
+      this._columnGap = opts.gap;
+      this._rowGap = opts.gap;
+    }
+    if (opts.columnGap !== undefined) this._columnGap = opts.columnGap;
+    if (opts.rowGap !== undefined) this._rowGap = opts.rowGap;
     return this;
   }
 
@@ -73,6 +95,19 @@ export class HoldAndWinBuilder<TData = unknown> {
   }
 
   /**
+   * Cells that are built but dormant: they never spin, never take a coin and
+   * do not count toward the full board until {@link HoldAndWinBoard.activate}
+   * wakes them. `id` is the symbol shown on a dormant cell (default: the empty
+   * id) - register a distinct one to draw them as sealed. A board that grows
+   * from 5x3 to 5x5 mid-feature is a 5x5 board with two inactive rows.
+   */
+  inactive(cells: HwCell[], id?: string): this {
+    this._inactive = cells.map((c) => ({ reel: c.reel, cell: c.cell }));
+    this._inactiveId = id ?? null;
+    return this;
+  }
+
+  /**
    * Per-symbol engine overrides, exactly like `ReelSetBuilder.symbolData`. The
    * headline use is `{ unmask: true }` for coins whose lock/reveal animations
    * expand past the cell. Safe only for server-placed ids (weight 0): unmasked
@@ -86,6 +121,17 @@ export class HoldAndWinBuilder<TData = unknown> {
   /** Respins granted on enter and restored on every hit. Default 3. */
   respins(count: number): this {
     this._respins = count;
+    return this;
+  }
+
+  /**
+   * What a coin's symbol plays the moment it locks. Default `'win'` - the
+   * symbol's `playWin()`. Pick `'landing'` for a land beat only and call
+   * {@link HoldAndWinBoard.playWin} when the game wants the celebration, or
+   * `'none'` to drive presentation entirely from the events.
+   */
+  lockAnimation(mode: HwLockAnimation): this {
+    this._lockAnimation = mode;
     return this;
   }
 
@@ -117,8 +163,12 @@ export class HoldAndWinBuilder<TData = unknown> {
     return this;
   }
 
-  /** Per-cell background, drawn behind each mini reel. */
-  cellChrome(draw: (g: Graphics, size: number) => void): this {
+  /**
+   * Per-cell background, drawn behind each mini reel, handed the cell's width
+   * and height. A callback written for a square board that only reads the
+   * first argument keeps working.
+   */
+  cellChrome(draw: (g: Graphics, width: number, height: number) => void): this {
     this._chrome = draw;
     return this;
   }
@@ -155,10 +205,15 @@ export class HoldAndWinBuilder<TData = unknown> {
     return new HoldAndWinBoard<TData>({
       cols: this._cols,
       rows: this._rows,
-      cell: this._cell,
-      gap: this._gap,
+      cellWidth: this._cellWidth,
+      cellHeight: this._cellHeight,
+      columnGap: this._columnGap,
+      rowGap: this._rowGap,
       emptyId: this._emptyId,
+      inactive: this._inactive,
+      inactiveId: this._inactiveId ?? this._emptyId,
       respins: this._respins,
+      lockAnimation: this._lockAnimation,
       configurator: this._configurator,
       weights: this._weights,
       symbolData: this._symbolData,

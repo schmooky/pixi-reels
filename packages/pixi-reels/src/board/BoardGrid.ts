@@ -30,10 +30,14 @@ export interface BoardGridOptions {
   /** Grid dimensions. */
   cols: number;
   rows: number;
-  /** Cell edge length in pixels. */
-  cellSize: number;
-  /** Gap between cells. Default 4. */
+  /** Cell size in pixels: one number for square cells, or `{ width, height }`. */
+  cellSize: number | { width: number; height: number };
+  /** Gap between cells on both axes. Default 4. */
   gap?: number;
+  /** Horizontal gap between columns. Falls back to `gap`. */
+  columnGap?: number;
+  /** Vertical gap between rows. Falls back to `gap`. */
+  rowGap?: number;
   /** Id a cell shows when blank - also placed in the off-window buffers. Default `'empty'`. */
   emptyId?: string;
   /** Register symbol classes, exactly like `ReelSetBuilder.symbols`. Applied to every cell. */
@@ -46,8 +50,12 @@ export interface BoardGridOptions {
   rng?: () => number;
   /** Drives every cell's reel - required. */
   ticker: Ticker;
-  /** Per-cell background, drawn behind each reel. */
-  chrome?: (g: Graphics, size: number) => void;
+  /**
+   * Per-cell background, drawn behind each reel, handed the cell's width and
+   * height. A square-board callback that only reads the first size argument
+   * keeps working unchanged.
+   */
+  chrome?: (g: Graphics, width: number, height: number) => void;
   /**
    * Which way each cell's own strip travels while it spins. Every cell is a
    * 1x1 reel set, so this changes the direction a symbol scrolls in from, not
@@ -84,7 +92,7 @@ const DEFAULT_PROFILE = 'default';
  *
  * ```ts
  * const grid = new BoardGrid({
- *   cols: 3, rows: 3, cellSize: 80,
+ *   cols: 3, rows: 3, cellSize: { width: 100, height: 84 }, columnGap: 6, rowGap: 0,
  *   symbols: (r) => r.register('prize', PrizeSymbol, {}),
  *   weights: { prize: 1, empty: 4 },
  *   ticker: app.ticker,
@@ -101,8 +109,10 @@ export class BoardGrid implements Disposable {
   readonly container: Container;
   readonly cols: number;
   readonly rows: number;
-  readonly cellSize: number;
-  readonly gap: number;
+  readonly cellWidth: number;
+  readonly cellHeight: number;
+  readonly columnGap: number;
+  readonly rowGap: number;
   readonly emptyId: string;
 
   private readonly _reels = new Map<string, ReelSet>();
@@ -113,8 +123,14 @@ export class BoardGrid implements Disposable {
     if (!opts.ticker) throw new Error('BoardGrid: a ticker is required.');
     this.cols = opts.cols;
     this.rows = opts.rows;
-    this.cellSize = opts.cellSize;
-    this.gap = opts.gap ?? 4;
+    const size = typeof opts.cellSize === 'number'
+      ? { width: opts.cellSize, height: opts.cellSize }
+      : opts.cellSize;
+    this.cellWidth = size.width;
+    this.cellHeight = size.height;
+    const gap = opts.gap ?? 4;
+    this.columnGap = opts.columnGap ?? gap;
+    this.rowGap = opts.rowGap ?? gap;
     this.emptyId = opts.emptyId ?? 'empty';
     this.container = new Container();
 
@@ -132,7 +148,7 @@ export class BoardGrid implements Disposable {
         const origin = this._origin(cell);
         if (opts.chrome) {
           const bg = new Graphics();
-          opts.chrome(bg, this.cellSize);
+          opts.chrome(bg, this.cellWidth, this.cellHeight);
           bg.position.set(origin.x, origin.y);
           this.container.addChild(bg);
         }
@@ -140,7 +156,7 @@ export class BoardGrid implements Disposable {
         const builder = new ReelSetBuilder()
           .reels(1)
           .visibleCells(1)
-          .symbolSize(this.cellSize, this.cellSize)
+          .symbolSize(this.cellWidth, this.cellHeight)
           .symbolGap(0, 0)
           // Spine symbols overrun the default per-reel rect mask; a shared rect
           // keeps buffer-cell art from painting over neighbouring cells.
@@ -174,6 +190,24 @@ export class BoardGrid implements Disposable {
     }
   }
 
+  /**
+   * Cell edge length. Only meaningful on a square board; a rectangular board
+   * reports its width here.
+   * @deprecated Read {@link cellWidth} / {@link cellHeight}.
+   */
+  get cellSize(): number {
+    return this.cellWidth;
+  }
+
+  /**
+   * Gap between cells. Only meaningful when both gaps agree; otherwise this is
+   * the column gap.
+   * @deprecated Read {@link columnGap} / {@link rowGap}.
+   */
+  get gap(): number {
+    return this.columnGap;
+  }
+
   /** Every cell coordinate, reel-major: (0,0), (0,1), ... then (1,0). */
   cells(): BoardCell[] {
     return this._cells.map((c) => ({ reel: c.reel, cell: c.cell }));
@@ -182,13 +216,13 @@ export class BoardGrid implements Disposable {
   /** Board-local bounds of a cell. `container.toGlobal` for stage space. */
   cellBounds(cell: BoardCell): { x: number; y: number; width: number; height: number } {
     const origin = this._origin(cell);
-    return { x: origin.x, y: origin.y, width: this.cellSize, height: this.cellSize };
+    return { x: origin.x, y: origin.y, width: this.cellWidth, height: this.cellHeight };
   }
 
   /** Board-local center of a cell - flight / trail start and end points. */
   cellCenter(cell: BoardCell): { x: number; y: number } {
     const origin = this._origin(cell);
-    return { x: origin.x + this.cellSize / 2, y: origin.y + this.cellSize / 2 };
+    return { x: origin.x + this.cellWidth / 2, y: origin.y + this.cellHeight / 2 };
   }
 
   /** Live symbol instance currently shown in a cell. */
@@ -277,8 +311,8 @@ export class BoardGrid implements Disposable {
 
   private _origin(cell: BoardCell): { x: number; y: number } {
     return {
-      x: cell.reel * (this.cellSize + this.gap),
-      y: cell.cell * (this.cellSize + this.gap),
+      x: cell.reel * (this.cellWidth + this.columnGap),
+      y: cell.cell * (this.cellHeight + this.rowGap),
     };
   }
 

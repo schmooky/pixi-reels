@@ -192,7 +192,7 @@ export class SpineReelSymbol extends ReelSymbol {
    * Play the landing animation (one-shot). Call this when the reel settles.
    * typically inside a `spin:reelLanded` listener.
    */
-  async playLanding(): Promise<void> {
+  override async playLanding(): Promise<void> {
     return this._playOneShot(this._animNameFor('landing'), 0, true);
   }
 

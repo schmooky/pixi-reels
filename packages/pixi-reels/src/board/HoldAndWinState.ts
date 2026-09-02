@@ -6,9 +6,10 @@ export type HwPhase = 'idle' | 'active' | 'spinning';
 /**
  * The pure Hold & Win state machine - the single source of truth for board
  * state, with **zero** PixiJS. It owns the locked-coin ledger, the respin
- * counter, the round number and the feature {@link HwPhase}; every derived
- * value (`freeCells`, `isFull`) is computed from the one ledger, never stored
- * in parallel, so nothing can drift out of sync.
+ * counter, the round number, the set of dormant cells and the feature
+ * {@link HwPhase}; every derived value (`freeCells`, `isFull`, `capacity`) is
+ * computed from that state, never stored in parallel, so nothing can drift
+ * out of sync.
  *
  * It is a *reducer, not a cache*: {@link HoldAndWinBoard} drives the reels and
  * reports each landing here; the methods mutate the ledger and **return the
@@ -25,16 +26,30 @@ export class HoldAndWinState<TData = unknown> {
   private readonly _locked = new Map<string, HwCoin<TData>>();
   private readonly _cellSet: Set<string>;
   private readonly _allCells: HwCell[];
+  private readonly _initialInactive: Set<string>;
+  private readonly _inactive: Set<string>;
   private readonly _defaultRespins: number;
   private _respinsLeft = 0;
   private _round = 0;
   private _phase: HwPhase = 'idle';
   private _waveLanded: HwCoin<TData>[] = [];
 
-  constructor(allCells: HwCell[], defaultRespins: number) {
+  /**
+   * `inactive` cells exist in the grid but take no part in the feature until
+   * {@link activate}d: they never spin, never take a coin, and do not count
+   * toward `capacity`. `reset()` puts them back to dormant.
+   */
+  constructor(allCells: HwCell[], defaultRespins: number, inactive: HwCell[] = []) {
     this._allCells = allCells;
     this._cellSet = new Set(allCells.map(cellKey));
     this._defaultRespins = defaultRespins;
+    for (const cell of inactive) {
+      if (!this._cellSet.has(cellKey(cell))) {
+        throw new Error(`HoldAndWinBoard: inactive cell ${cellKey(cell)} is outside the grid.`);
+      }
+    }
+    this._initialInactive = new Set(inactive.map(cellKey));
+    this._inactive = new Set(this._initialInactive);
   }
 
   // ── Queries ──────────────────────────────────────────────────────────
@@ -48,8 +63,9 @@ export class HoldAndWinState<TData = unknown> {
   get round(): number {
     return this._round;
   }
+  /** Number of active cells - what `isFull` is measured against. */
   get capacity(): number {
-    return this._allCells.length;
+    return this._allCells.length - this._inactive.size;
   }
   get isFull(): boolean {
     return this._locked.size === this.capacity;
@@ -59,8 +75,21 @@ export class HoldAndWinState<TData = unknown> {
     return [...this._locked.values()];
   }
 
+  /** Active cells with no coin. */
   freeCells(): HwCell[] {
-    return this._allCells.filter((c) => !this._locked.has(cellKey(c)));
+    return this._allCells.filter((c) => {
+      const k = cellKey(c);
+      return !this._locked.has(k) && !this._inactive.has(k);
+    });
+  }
+
+  /** Cells that are dormant right now. */
+  inactiveCells(): HwCell[] {
+    return this._allCells.filter((c) => this._inactive.has(cellKey(c)));
+  }
+
+  isActive(cell: HwCell): boolean {
+    return !this._inactive.has(cellKey(cell));
   }
 
   isLocked(cell: HwCell): boolean {
@@ -82,7 +111,7 @@ export class HoldAndWinState<TData = unknown> {
     const seen = new Set<string>();
     for (const coin of seed) {
       const k = cellKey(coin.cell);
-      this._assertInGrid(coin.cell, 'enter');
+      this._assertActive(coin.cell, 'enter');
       if (seen.has(k)) throw new Error(`HoldAndWinBoard: enter() seeds cell ${k} twice.`);
       seen.add(k);
       const stored = this._freeze(coin.cell, coin.id, coin.data);
@@ -116,7 +145,7 @@ export class HoldAndWinState<TData = unknown> {
     const hitByKey = new Map<string, HwCoin<TData>>();
     for (const hit of hits) {
       const k = cellKey(hit.cell);
-      this._assertInGrid(hit.cell, 'respin');
+      this._assertActive(hit.cell, 'respin');
       if (this._locked.has(k)) throw new Error(`HoldAndWinBoard: hit targets locked cell ${k}.`);
       // A free cell can only land once per wave, so a duplicate hit is always a
       // malformed result. Fail loud rather than silently dropping the first coin.
@@ -215,6 +244,27 @@ export class HoldAndWinState<TData = unknown> {
   }
 
   /**
+   * Wake dormant cells: from now on they spin with the free cells and count
+   * toward `capacity`. Already-active cells are ignored. Not allowed mid-wave -
+   * the spinning set was fixed when the wave began.
+   */
+  activate(cells: HwCell[]): HwEffect<TData>[] {
+    if (this._phase === 'spinning') {
+      throw new Error('HoldAndWinBoard: activate() while a wave is in flight — await respin() first.');
+    }
+    const woken: HwCell[] = [];
+    for (const cell of cells) {
+      const k = cellKey(cell);
+      this._assertInGrid(cell, 'activate');
+      if (!this._inactive.has(k)) continue;
+      this._inactive.delete(k);
+      woken.push({ reel: cell.reel, cell: cell.cell });
+    }
+    if (woken.length === 0) return [];
+    return [{ type: 'cells:activated', payload: { cells: woken, capacity: this.capacity } }];
+  }
+
+  /**
    * Rewrite a **locked** cell's coin identity in place (coin → jackpot, mini →
    * major). Throws on a free cell - placing a brand-new tracked coin out of a
    * spin is `enter`/`respin`'s job; for purely decorative art on a free cell use
@@ -234,10 +284,15 @@ export class HoldAndWinState<TData = unknown> {
     this._locked.set(k, this._freeze(cell, id, data ?? prev.data));
   }
 
-  /** Hard clear back to idle. Fires `feature:reset`, never `coin:released`. */
+  /**
+   * Hard clear back to idle. Fires `feature:reset`, never `coin:released`.
+   * Cells activated during the feature go dormant again.
+   */
   reset(): HwEffect<TData>[] {
     const clearedCoins = this._locked.size;
     this._locked.clear();
+    this._inactive.clear();
+    for (const k of this._initialInactive) this._inactive.add(k);
     this._waveLanded = [];
     this._round = 0;
     this._respinsLeft = 0;
@@ -264,6 +319,15 @@ export class HoldAndWinState<TData = unknown> {
   private _assertInGrid(cell: HwCell, op: string): void {
     if (!this._cellSet.has(cellKey(cell))) {
       throw new Error(`HoldAndWinBoard: ${op}() targets cell ${cellKey(cell)} outside the grid.`);
+    }
+  }
+
+  private _assertActive(cell: HwCell, op: string): void {
+    this._assertInGrid(cell, op);
+    if (this._inactive.has(cellKey(cell))) {
+      throw new Error(
+        `HoldAndWinBoard: ${op}() targets inactive cell ${cellKey(cell)} — activate() it first.`,
+      );
     }
   }
 }

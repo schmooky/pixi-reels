@@ -91,3 +91,53 @@ describe('BoardGrid', () => {
     ).toThrow(/ticker is required/);
   });
 });
+
+describe('BoardGrid rectangular cells and per-axis gaps', () => {
+  it('lays out width x height cells with separate column and row gaps', () => {
+    const grid = make({ cellSize: { width: 100, height: 60 }, columnGap: 6, rowGap: 2 });
+    expect(grid.cellWidth).toBe(100);
+    expect(grid.cellHeight).toBe(60);
+    expect(grid.columnGap).toBe(6);
+    expect(grid.rowGap).toBe(2);
+    expect(grid.cellBounds({ reel: 1, cell: 1 })).toEqual({ x: 106, y: 62, width: 100, height: 60 });
+    expect(grid.cellCenter({ reel: 2, cell: 0 })).toEqual({ x: 2 * 106 + 50, y: 30 });
+    grid.destroy();
+  });
+
+  it('sizes each cell reel to the rectangle, not a square', () => {
+    const grid = make({ cellSize: { width: 100, height: 60 } });
+    grid.place({ reel: 0, cell: 0 }, 'a');
+    const symbol = grid.symbolAt({ reel: 0, cell: 0 }) as HeadlessSymbol;
+    expect(symbol.width).toBe(100);
+    expect(symbol.height).toBe(60);
+    grid.destroy();
+  });
+
+  it('falls back from the uniform gap when only one axis is given', () => {
+    const grid = make({ gap: 5, rowGap: 0 });
+    expect(grid.columnGap).toBe(5);
+    expect(grid.rowGap).toBe(0);
+    expect(grid.cellBounds({ reel: 1, cell: 1 })).toEqual({ x: 85, y: 80, width: 80, height: 80 });
+    grid.destroy();
+  });
+
+  it('keeps cellSize and gap as aliases for square boards', () => {
+    const grid = make({ cellSize: 64, gap: 3 });
+    expect(grid.cellSize).toBe(64);
+    expect(grid.gap).toBe(3);
+    grid.destroy();
+  });
+
+  it('hands chrome the cell width and height', () => {
+    const seen: Array<[number, number]> = [];
+    const grid = make({
+      cellSize: { width: 100, height: 60 },
+      chrome: (_g: unknown, width: number, height: number) => {
+        seen.push([width, height]);
+      },
+    });
+    expect(seen).toHaveLength(6);
+    expect(seen[0]).toEqual([100, 60]);
+    grid.destroy();
+  });
+});

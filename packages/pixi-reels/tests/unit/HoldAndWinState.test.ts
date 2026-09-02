@@ -322,3 +322,73 @@ describe('HoldAndWinState', () => {
     });
   });
 });
+
+describe('HoldAndWinState inactive cells', () => {
+  const TOP: HwCell = { reel: 0, cell: 0 };
+  const BOTTOM: HwCell = { reel: 0, cell: 1 };
+  const dormant = () =>
+    new HoldAndWinState<{ value: number }>(CELLS, 3, [{ reel: 0, cell: 1 }, { reel: 1, cell: 1 }]);
+
+  it('keeps dormant cells out of capacity and the free set', () => {
+    const s = dormant();
+    expect(s.capacity).toBe(2);
+    expect(s.freeCells()).toEqual([{ reel: 0, cell: 0 }, { reel: 1, cell: 0 }]);
+    expect(s.inactiveCells()).toEqual([{ reel: 0, cell: 1 }, { reel: 1, cell: 1 }]);
+    expect(s.isActive(TOP)).toBe(true);
+    expect(s.isActive(BOTTOM)).toBe(false);
+  });
+
+  it('throws when a dormant cell is given outside the grid', () => {
+    expect(() => new HoldAndWinState(CELLS, 3, [{ reel: 9, cell: 9 }])).toThrow(/outside the grid/);
+  });
+
+  it('refuses a seed or a hit on a dormant cell', () => {
+    const s = dormant();
+    expect(() => s.enter([{ cell: BOTTOM, id: 'coin' }])).toThrow(/inactive cell 0,1/);
+    s.enter([]);
+    expect(() => s.beginWave([{ cell: BOTTOM, id: 'coin' }])).toThrow(/inactive cell 0,1/);
+  });
+
+  it('spins only the active free cells and fills on the active count', () => {
+    const s = dormant();
+    s.enter([{ cell: TOP, id: 'coin', data: { value: 1 } }]);
+    const wave = s.beginWave([{ cell: { reel: 1, cell: 0 }, id: 'coin', data: { value: 2 } }]);
+    expect(wave.spinning).toEqual([{ reel: 1, cell: 0 }]);
+    s.land({ reel: 1, cell: 0 }, wave.hitByKey.get('1,0') ?? null);
+    const { effects } = s.endWave();
+    expect(s.isFull).toBe(true);
+    expect(types(effects)).toContain('board:full');
+  });
+
+  it('activate wakes cells, grows capacity and reports once', () => {
+    const s = dormant();
+    s.enter([]);
+    const fx = s.activate([BOTTOM, { reel: 1, cell: 1 }]);
+    expect(types(fx)).toEqual(['cells:activated']);
+    expect(fx[0].payload).toEqual({
+      cells: [{ reel: 0, cell: 1 }, { reel: 1, cell: 1 }],
+      capacity: 4,
+    });
+    expect(s.capacity).toBe(4);
+    expect(s.freeCells()).toHaveLength(4);
+    // already active: nothing to report
+    expect(s.activate([BOTTOM])).toEqual([]);
+  });
+
+  it('refuses to activate while a wave is in flight', () => {
+    const s = dormant();
+    s.enter([]);
+    s.beginWave([]);
+    expect(() => s.activate([BOTTOM])).toThrow(/wave is in flight/);
+  });
+
+  it('reset puts activated cells back to dormant', () => {
+    const s = dormant();
+    s.enter([]);
+    s.activate([BOTTOM]);
+    expect(s.capacity).toBe(3);
+    s.reset();
+    expect(s.capacity).toBe(2);
+    expect(s.isActive(BOTTOM)).toBe(false);
+  });
+});
