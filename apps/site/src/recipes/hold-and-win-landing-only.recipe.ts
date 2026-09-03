@@ -13,6 +13,9 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const fmt = (v) => v.toFixed(2);
 
 const art = await loadHwClover();
+// The clover glow is drawn past the 202x170 cell: lift these above the cell mask
+// at rest (unmask), or every edge of every clover is clipped.
+const UNMASK = Object.fromEntries(['gold'].map((id) => [id, { unmask: true }]));
 
 const board = new HoldAndWinBuilder()
   .grid(COLS, ROWS)
@@ -21,6 +24,7 @@ const board = new HoldAndWinBuilder()
     for (const id of ['gold', 'cherry', 'orange', 'grapes', 'empty']) r.register(id, CloverSymbol, { art });
   })
   .weights({ gold: 2, cherry: 2, orange: 2, grapes: 2, empty: 5 })
+  .symbolData(UNMASK)
   .respins(3)
   // 'win' (default) | 'landing' | 'none'
   .lockAnimation('landing')

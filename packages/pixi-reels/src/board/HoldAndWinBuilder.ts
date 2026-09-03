@@ -109,9 +109,10 @@ export class HoldAndWinBuilder<TData = unknown> {
 
   /**
    * Per-symbol engine overrides, exactly like `ReelSetBuilder.symbolData`. The
-   * headline use is `{ unmask: true }` for coins whose lock/reveal animations
-   * expand past the cell. Safe only for server-placed ids (weight 0): unmasked
-   * strip symbols mis-track vertically while the reel spins.
+   * headline use is `{ unmask: true }` for coins whose art or lock/reveal
+   * animation is drawn past the cell. The lift applies at rest only - the
+   * engine re-masks a cell the moment it moves - so weighted strip ids are
+   * fine too: they scroll clipped and sit unclipped once landed.
    */
   symbolData(overrides: Record<string, Partial<SymbolData>>): this {
     this._symbolData = { ...(this._symbolData ?? {}), ...overrides };

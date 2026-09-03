@@ -17,6 +17,9 @@ const pick = (a) => a[Math.floor(Math.random() * a.length)];
 const VALUES = [1, 1.5, 2, 2.5, 3, 5];
 
 const art = await loadHwClover();
+// The clover glow is drawn past the 202x170 cell: lift these above the cell mask
+// at rest (unmask), or every edge of every clover is clipped.
+const UNMASK = Object.fromEntries(['gold', 'collect', 'multi', 'mystery'].map((id) => [id, { unmask: true }]));
 class Clover extends CloverSymbol {
   onActivate(id) { super.onActivate(id); if (id === 'gold') this.setLabel(fmt(pick(VALUES))); }
 }
@@ -30,6 +33,7 @@ const board = new HoldAndWinBuilder()
     r.register('collect', Clover, { art, font: 'CloverJackpot', labelOffset: 0.02 });
   })
   .weights({ gold: 2, empty: 6, multi: 0, mystery: 0, collect: 0 })
+  .symbolData(UNMASK)
   .respins(3)
   .lockAnimation('landing')
   .cellChrome((g, w, h) => g.rect(0, 0, w, h).fill({ color: 0x0b1a4a }).stroke({ color: 0x3f6bd8, width: 1, alpha: 0.8 }))

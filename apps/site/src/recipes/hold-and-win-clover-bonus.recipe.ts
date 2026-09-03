@@ -14,6 +14,9 @@ const fmt = (v) => v.toFixed(2);
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
 
 const art = await loadHwClover();
+// The clover glow is drawn past the 202x170 cell: lift these above the cell mask
+// at rest (unmask), or every edge of every clover is clipped.
+const UNMASK = Object.fromEntries(['gold'].map((id) => [id, { unmask: true }]));
 const STRIP_VALUES = [1, 1, 1.5, 2, 2.5, 3, 5, 7, 10];
 
 class Clover extends CloverSymbol {
@@ -28,6 +31,7 @@ const board = new HoldAndWinBuilder()
   .cellSize(CELL, { columnGap: COLUMN_GAP, rowGap: ROW_GAP })
   .symbols((r) => { for (const id of ['gold', 'empty']) r.register(id, Clover, { art }); })
   .weights({ gold: 2, empty: 6 })
+  .symbolData(UNMASK)
   .respins(3)
   .lockAnimation('landing')
   .cellChrome((g, w, h) => g.rect(0, 0, w, h).fill({ color: 0x0b1a4a }).stroke({ color: 0x3f6bd8, width: 1, alpha: 0.8 }))
