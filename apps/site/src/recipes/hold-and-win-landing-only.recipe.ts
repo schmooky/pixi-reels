@@ -1,5 +1,5 @@
 // @ts-nocheck
-// Injected: HoldAndWinBuilder, CloverSymbol, cloverGridBackground, loadHwClover, CLOVER_SPEED, CLOVER_CELL, PIXI, gsap, app
+// Injected: HoldAndWinBuilder, CloverSymbol, cloverGridBackground, loadHwClover, CLOVER_SPEED, cloverCellMask, CLOVER_CELL, PIXI, gsap, app
 //
 // Landing only. By default the board plays a coin's win animation the moment
 // it locks; most productions want just a land beat there and one celebration
@@ -39,6 +39,8 @@ const board = new HoldAndWinBuilder()
   .symbolData(UNMASK)
   // a few px of bounce, not the tall-reel default: a clover cell should settle, not jump
   .speedProfile(CLOVER_SPEED)
+  // rounded cells, cut on the frame's own radius
+  .cellMask(cloverCellMask)
   .respins(3)
   // 'win' (default) | 'landing' | 'none'
   .lockAnimation('landing')

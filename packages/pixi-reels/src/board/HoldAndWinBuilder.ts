@@ -4,6 +4,7 @@ import type { SpeedProfile, SymbolData } from '../config/types.js';
 import type { SymbolRegistry } from '../symbols/SymbolRegistry.js';
 import { HoldAndWinBoard } from './HoldAndWinBoard.js';
 import type { Direction, Orientation } from '../core/ReelAxis.js';
+import type { MaskStrategy } from '../core/ReelViewport.js';
 import type { HwCell, HwCellSizeOptions, HwLockAnimation } from './HwTypes.js';
 
 /**
@@ -38,6 +39,7 @@ export class HoldAndWinBuilder<TData = unknown> {
     | ((state: { locked: number; capacity: number; respinsLeft: number }) => boolean)
     | null = null;
   private _chrome: ((g: Graphics, width: number, height: number) => void) | null = null;
+  private _mask: (() => MaskStrategy) | null = null;
   private _orientation: Orientation = 'vertical';
   private _direction: Direction = 'forward';
   private _ticker: Ticker | null = null;
@@ -175,6 +177,16 @@ export class HoldAndWinBuilder<TData = unknown> {
   }
 
   /**
+   * Mask for each cell, built once per cell. Default: a shared rect over the
+   * cell. `() => new RoundedRectMaskStrategy({ radius: 8 })` rounds every
+   * cell's corners to match a rounded frame drawn behind the board.
+   */
+  cellMask(factory: () => MaskStrategy): this {
+    this._mask = factory;
+    return this;
+  }
+
+  /**
    * Which way each cell's strip travels while it spins. Cells are 1x1 reel
    * sets, so this picks the edge a coin scrolls in from; the board's own
    * `cols` x `rows` layout is unaffected. Defaults to vertical / forward.
@@ -222,6 +234,7 @@ export class HoldAndWinBuilder<TData = unknown> {
       stagger: this._stagger,
       anticipateWhen: this._anticipateWhen,
       chrome: this._chrome,
+      mask: this._mask,
       orientation: this._orientation,
       direction: this._direction,
       ticker: this._ticker,

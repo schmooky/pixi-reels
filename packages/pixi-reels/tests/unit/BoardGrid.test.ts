@@ -3,6 +3,7 @@ import type { Ticker } from 'pixi.js';
 import { Graphics } from 'pixi.js';
 import type { RenderLayer } from 'pixi.js';
 import { BoardGrid } from '../../src/board/BoardGrid.js';
+import { SharedRectMaskStrategy } from '../../src/core/ReelViewport.js';
 import { ReelSet } from '../../src/core/ReelSet.js';
 import { FakeTicker } from '../../src/testing/FakeTicker.js';
 import { HeadlessSymbol } from '../../src/testing/HeadlessSymbol.js';
@@ -158,6 +159,20 @@ describe('BoardGrid render order', () => {
     for (const cell of grid.cells()) {
       expect(layer.renderLayerChildren).toContain(grid.reelAt(cell).viewport.unmaskedContainer);
     }
+    grid.destroy();
+  });
+});
+
+describe('BoardGrid cell mask', () => {
+  it('builds one mask strategy per cell from the factory', () => {
+    let built = 0;
+    const grid = make({
+      mask: () => {
+        built += 1;
+        return new SharedRectMaskStrategy();
+      },
+    });
+    expect(built).toBe(6);
     grid.destroy();
   });
 });

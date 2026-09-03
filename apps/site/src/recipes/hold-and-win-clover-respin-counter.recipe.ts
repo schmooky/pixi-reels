@@ -1,5 +1,5 @@
 // @ts-nocheck
-// Injected: HoldAndWinBuilder, CloverSymbol, cloverGridBackground, loadHwClover, CLOVER_SPEED, PIXI, gsap, app
+// Injected: HoldAndWinBuilder, CloverSymbol, cloverGridBackground, loadHwClover, CLOVER_SPEED, cloverCellMask, PIXI, gsap, app
 //
 // The respin counter. Three lamps under the board: all lit when the feature
 // arms, one goes dark per miss, every hit relights them all. It is driven by
@@ -29,6 +29,8 @@ const board = new HoldAndWinBuilder()
   .symbolData(UNMASK)
   // a few px of bounce, not the tall-reel default: a clover cell should settle, not jump
   .speedProfile(CLOVER_SPEED)
+  // rounded cells, cut on the frame's own radius
+  .cellMask(cloverCellMask)
   .respins(3)
   .lockAnimation('landing')
   .ticker(app.ticker)

@@ -1,5 +1,5 @@
 // @ts-nocheck
-// Injected: HoldAndWinBuilder, CloverSymbol, cloverGridBackground, loadHwClover, CLOVER_SPEED, PIXI, gsap, app
+// Injected: HoldAndWinBuilder, CloverSymbol, cloverGridBackground, loadHwClover, CLOVER_SPEED, cloverCellMask, PIXI, gsap, app
 //
 // The bonus on its own: a 5x5 board of rectangular cells, nothing but the
 // Hold & Win. Gold clovers spin past with bet-scaled amounts and lock where
@@ -34,6 +34,8 @@ const board = new HoldAndWinBuilder()
   .symbolData(UNMASK)
   // a few px of bounce, not the tall-reel default: a clover cell should settle, not jump
   .speedProfile(CLOVER_SPEED)
+  // rounded cells, cut on the frame's own radius
+  .cellMask(cloverCellMask)
   .respins(3)
   .lockAnimation('landing')
   .ticker(app.ticker)

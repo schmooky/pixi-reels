@@ -4,6 +4,7 @@ import { ReelSetBuilder } from '../core/ReelSetBuilder.js';
 import type { Direction, Orientation } from '../core/ReelAxis.js';
 import type { ReelSet } from '../core/ReelSet.js';
 import { SharedRectMaskStrategy } from '../core/ReelViewport.js';
+import type { MaskStrategy } from '../core/ReelViewport.js';
 import type { ReelSymbol } from '../symbols/ReelSymbol.js';
 import type { SymbolRegistry } from '../symbols/SymbolRegistry.js';
 import { EmptySymbol } from '../symbols/EmptySymbol.js';
@@ -56,6 +57,13 @@ export interface BoardGridOptions {
    * keeps working unchanged.
    */
   chrome?: (g: Graphics, width: number, height: number) => void;
+  /**
+   * Mask for each cell, built once per cell (every cell is its own reel set
+   * and owns its mask). Default: a shared rect over the cell. Hand it
+   * `() => new RoundedRectMaskStrategy({ radius })` for cells whose art and
+   * frame have rounded corners.
+   */
+  mask?: () => MaskStrategy;
   /**
    * Which way each cell's own strip travels while it spins. Every cell is a
    * 1x1 reel set, so this changes the direction a symbol scrolls in from, not
@@ -178,7 +186,7 @@ export class BoardGrid implements Disposable {
           .symbolGap(0, 0)
           // Spine symbols overrun the default per-reel rect mask; a shared rect
           // keeps buffer-cell art from painting over neighbouring cells.
-          .maskStrategy(new SharedRectMaskStrategy())
+          .maskStrategy(opts.mask ? opts.mask() : new SharedRectMaskStrategy())
           .symbols((registry) => {
             opts.symbols(registry);
             if (!registry.has(this.emptyId)) registry.register(this.emptyId, EmptySymbol, {});

@@ -7,6 +7,7 @@ import type { SpeedProfile, SymbolData } from '../config/types.js';
 import type { Disposable } from '../utils/Disposable.js';
 import { BoardGrid } from './BoardGrid.js';
 import type { Direction, Orientation } from '../core/ReelAxis.js';
+import type { MaskStrategy } from '../core/ReelViewport.js';
 import { HoldAndWinState } from './HoldAndWinState.js';
 import type { HwPhase } from './HoldAndWinState.js';
 import { cellKey } from './HwTypes.js';
@@ -44,6 +45,8 @@ export interface HoldAndWinBoardConfig<TData> {
     | ((state: { locked: number; capacity: number; respinsLeft: number }) => boolean)
     | null;
   chrome: ((g: Graphics, width: number, height: number) => void) | null;
+  /** Per-cell mask factory. See `HoldAndWinBuilder.cellMask`. */
+  mask: (() => MaskStrategy) | null;
   /** Travel axis for each cell's own strip. See `HoldAndWinBuilder.axis`. */
   orientation?: Orientation;
   direction?: Direction;
@@ -131,6 +134,7 @@ export class HoldAndWinBoard<TData = unknown> implements Disposable {
       weights: cfg.weights ?? undefined,
       symbolData: cfg.symbolData ?? undefined,
       chrome: cfg.chrome ?? undefined,
+      mask: cfg.mask ?? undefined,
       orientation: cfg.orientation,
       direction: cfg.direction,
       ticker: cfg.ticker,

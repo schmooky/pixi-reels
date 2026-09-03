@@ -1,6 +1,6 @@
 import { Assets, BitmapText, Container, FillGradient, Graphics, Sprite, type Spritesheet, type Texture } from 'pixi.js';
 import { gsap } from 'gsap';
-import { ReelSymbol, SpeedPresets, type SpeedProfile } from 'pixi-reels';
+import { ReelSymbol, RoundedRectMaskStrategy, SpeedPresets, type MaskStrategy, type SpeedProfile } from 'pixi-reels';
 
 /**
  * The Playson "Four Charged Clovers" art set behind the rectangular Hold & Win
@@ -381,6 +381,16 @@ export class CloverSymbol extends ReelSymbol {
 
 }
 
+/** Corner radius of a clover cell: its frame outline and its mask share it. */
+export const CLOVER_CELL_RADIUS = 8;
+
+/**
+ * Mask factory for `HoldAndWinBuilder.cellMask`: every cell clipped to a
+ * rounded rect, so the tile's corners are cut exactly where the frame drawn
+ * by {@link cloverGridBackground} rounds off.
+ */
+export const cloverCellMask = (): MaskStrategy => new RoundedRectMaskStrategy({ radius: CLOVER_CELL_RADIUS });
+
 export interface CloverGridOptions {
   /** Board origin on the stage (the board container's position). */
   x: number;
@@ -395,11 +405,13 @@ export interface CloverGridOptions {
 }
 
 /**
- * The game's framing, as two plain `Graphics`: a navy-to-blue gradient panel
- * under the whole board and a grid line down the middle of every gap. Add it
- * to the stage BEFORE the board and build the board with no chrome: the cells
- * are the empty tile, so this only ever shows in the gaps and the margin.
- * Destroy it with `{ children: true }` in the recipe's cleanup.
+ * The game's framing, as plain `Graphics`: a navy-to-blue gradient panel
+ * under the board, and for EVERY cell a rounded frame that traces the cell's
+ * own rectangle exactly - the outline sits just outside the cell bounds, so
+ * the gaps between cells carry two outlines with the panel showing between
+ * them. Pair it with {@link cloverCellMask} so the tiles' corners are cut on
+ * the same radius. Add it to the stage BEFORE the board, build the board
+ * with no chrome, and destroy it with `{ children: true }` in cleanup.
  */
 export function cloverGridBackground(opts: CloverGridOptions): Container {
   const { x, y, cols, rows, cell, columnGap, rowGap } = opts;
@@ -420,25 +432,23 @@ export function cloverGridBackground(opts: CloverGridOptions): Container {
     ],
   });
   panel
-    .roundRect(x - margin, y - margin, w + margin * 2, h + margin * 2, 12)
+    .roundRect(x - margin, y - margin, w + margin * 2, h + margin * 2, CLOVER_CELL_RADIUS + margin)
     .fill(gradient)
     .stroke({ color: 0x4f8cff, width: 2, alpha: 0.9 });
   bg.addChild(panel);
 
-  const lines = new Graphics();
-  const xs: number[] = [];
-  const ys: number[] = [];
-  for (let c = 1; c < cols; c++) xs.push(x + c * cell.width + (c - 1) * columnGap + columnGap / 2);
-  for (let r = 1; r < rows; r++) ys.push(y + r * cell.height + (r - 1) * rowGap + rowGap / 2);
-  // a soft wide line under a crisp one, the way the game's grid glows
-  for (const [width, alpha] of [
-    [Math.max(columnGap, rowGap), 0.35],
-    [2, 0.95],
-  ] as const) {
-    for (const gx of xs) lines.moveTo(gx, y - margin + 2).lineTo(gx, y + h + margin - 2);
-    for (const gy of ys) lines.moveTo(x - margin + 2, gy).lineTo(x + w + margin - 2, gy);
-    lines.stroke({ color: 0x5fa0ff, width, alpha });
+  // One frame per cell, on the cell's exact bounds: a dark fill the tile sits
+  // on, a soft glow just outside the edge, a crisp line right on it.
+  const frames = new Graphics();
+  const r = CLOVER_CELL_RADIUS;
+  for (let c = 0; c < cols; c++) {
+    for (let rw = 0; rw < rows; rw++) {
+      const cx = x + c * (cell.width + columnGap);
+      const cy = y + rw * (cell.height + rowGap);
+      frames.roundRect(cx - 3, cy - 3, cell.width + 6, cell.height + 6, r + 3).stroke({ color: 0x5fa0ff, width: 4, alpha: 0.28 });
+      frames.roundRect(cx, cy, cell.width, cell.height, r).fill({ color: 0x0b1a4a }).stroke({ color: 0x5fa0ff, width: 1.5, alpha: 0.95 });
+    }
   }
-  bg.addChild(lines);
+  bg.addChild(frames);
   return bg;
 }

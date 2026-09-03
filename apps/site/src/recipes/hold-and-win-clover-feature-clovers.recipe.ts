@@ -1,5 +1,5 @@
 // @ts-nocheck
-// Injected: HoldAndWinBuilder, CloverSymbol, cloverGridBackground, loadHwClover, CLOVER_SPEED, PIXI, gsap, app
+// Injected: HoldAndWinBuilder, CloverSymbol, cloverGridBackground, loadHwClover, CLOVER_SPEED, cloverCellMask, PIXI, gsap, app
 //
 // Feature clovers carry no money of their own; each one acts on the gold
 // clovers around it when it locks. The board only knows "a coin locked" -
@@ -37,6 +37,8 @@ const board = new HoldAndWinBuilder()
   .symbolData(UNMASK)
   // a few px of bounce, not the tall-reel default: a clover cell should settle, not jump
   .speedProfile(CLOVER_SPEED)
+  // rounded cells, cut on the frame's own radius
+  .cellMask(cloverCellMask)
   .respins(3)
   .lockAnimation('landing')
   .ticker(app.ticker)

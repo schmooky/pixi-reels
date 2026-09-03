@@ -1,16 +1,17 @@
 // @ts-nocheck
-// Injected: HoldAndWinBuilder, CloverSymbol, loadHwClover, PIXI, gsap, app
+// Injected: HoldAndWinBuilder, RoundedRectMaskStrategy, CloverSymbol, loadHwClover, CLOVER_SPEED, PIXI, gsap, app
 //
 // The game's own framing: cells in a visible grid with real gaps between
 // them, and the gaps are not empty - the background under the board shows
 // through them. Nothing here is a board feature. The gaps come from
 // cellSize({ columnGap, rowGap }), the board draws no chrome, and a couple
-// of plain PIXI.Graphics sit behind it: a gradient panel and grid lines
-// drawn down the middle of every gap. The cells themselves are the empty
-// tile, so the background is only ever seen in the gaps and the margin.
+// of plain PIXI.Graphics sit behind it: a gradient panel and, per cell, a
+// rounded frame traced on the cell's exact bounds. A rounded cell mask cuts
+// each tile's corners on the same radius, so frame and tile agree to the
+// pixel. The background is only ever seen in the gaps and the margin.
 
 const COLS = 5, ROWS = 3;
-const CELL = { width: 101, height: 85 }, GAP = 10;
+const CELL = { width: 101, height: 85 }, GAP = 8;
 const BET = 1;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const fmt = (v) => v.toFixed(2);
@@ -30,32 +31,35 @@ const boardW = COLS * CELL.width + (COLS - 1) * GAP;
 const boardH = ROWS * CELL.height + (ROWS - 1) * GAP;
 const ox = Math.round((app.screen.width - boardW) / 2);
 const oy = Math.round((app.screen.height - boardH) / 2 - 10);
-const MARGIN = 16;
+const MARGIN = 8;
 
 // -- the background: everything the gaps reveal, added BEFORE the board --
 const bg = new PIXI.Container();
 app.stage.addChild(bg);
+const R = 8; // cell corner radius: the frame and the cell mask share it
 
 // the panel: a navy-to-blue gradient under the whole grid
 const panel = new PIXI.Graphics();
 const gradient = new PIXI.FillGradient({ type: 'linear', start: { x: 0, y: 0 }, end: { x: 0, y: 1 },
   colorStops: [{ offset: 0, color: 0x061236 }, { offset: 0.5, color: 0x102f7a }, { offset: 1, color: 0x061236 }] });
-panel.roundRect(ox - MARGIN, oy - MARGIN, boardW + MARGIN * 2, boardH + MARGIN * 2, 14)
+panel.roundRect(ox - MARGIN, oy - MARGIN, boardW + MARGIN * 2, boardH + MARGIN * 2, R + MARGIN)
   .fill(gradient)
   .stroke({ color: 0x4f8cff, width: 2, alpha: 0.9 });
 bg.addChild(panel);
 
-// the grid lines: one down the middle of every gap, a soft wide line under a crisp one
-const lines = new PIXI.Graphics();
-const gapXs = Array.from({ length: COLS - 1 }, (_, i) => ox + (i + 1) * CELL.width + i * GAP + GAP / 2);
-const gapYs = Array.from({ length: ROWS - 1 }, (_, i) => oy + (i + 1) * CELL.height + i * GAP + GAP / 2);
-for (const [width, alpha] of [[GAP, 0.35], [2, 0.95]]) {
-  for (const x of gapXs) lines.moveTo(x, oy - MARGIN + 2).lineTo(x, oy + boardH + MARGIN - 2);
-  for (const y of gapYs) lines.moveTo(ox - MARGIN + 2, y).lineTo(ox + boardW + MARGIN - 2, y);
-  lines.stroke({ color: 0x5fa0ff, width, alpha });
+// one frame per cell, traced on the cell's exact bounds: a fill the tile sits
+// on, a soft glow just outside the edge, a crisp line on it. The gap between
+// two cells therefore holds two outlines with the panel between them.
+const frames = new PIXI.Graphics();
+for (let c = 0; c < COLS; c++) {
+  for (let r = 0; r < ROWS; r++) {
+    const cx = ox + c * (CELL.width + GAP), cy = oy + r * (CELL.height + GAP);
+    frames.roundRect(cx - 3, cy - 3, CELL.width + 6, CELL.height + 6, R + 3).stroke({ color: 0x5fa0ff, width: 4, alpha: 0.28 });
+    frames.roundRect(cx, cy, CELL.width, CELL.height, R).fill({ color: 0x0b1a4a }).stroke({ color: 0x5fa0ff, width: 1.5, alpha: 0.95 });
+  }
 }
-bg.addChild(lines);
-const linePulse = gsap.to(lines, { alpha: 0.55, duration: 1.4, yoyo: true, repeat: -1, ease: 'sine.inOut' });
+bg.addChild(frames);
+const framePulse = gsap.to(frames, { alpha: 0.7, duration: 1.4, yoyo: true, repeat: -1, ease: 'sine.inOut' });
 
 // -- the board: no chrome, so the cells are the empty tiles and the gaps are the background --
 const board = new HoldAndWinBuilder()
@@ -66,6 +70,9 @@ const board = new HoldAndWinBuilder()
   .symbolData(UNMASK)
   // a few px of bounce, not the tall-reel default: a clover cell should settle, not jump
   .speedProfile(CLOVER_SPEED)
+  // rounded cells, cut on the frame's own radius
+  // the mask cuts the tile's corners on the frame's radius
+  .cellMask(() => new RoundedRectMaskStrategy({ radius: R }))
   .respins(3)
   .lockAnimation('landing')
   .ticker(app.ticker)
@@ -92,7 +99,7 @@ const ROUNDS = [[{ reel: 0, cell: 0 }, { reel: 2, cell: 2 }], [{ reel: 4, cell: 
 let busy = false;
 return {
   cleanup: () => {
-    linePulse.kill();
+    framePulse.kill();
     try { hud.destroy(); bg.destroy({ children: true }); } catch {}
     board.destroy();
   },

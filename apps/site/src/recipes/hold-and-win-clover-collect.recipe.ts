@@ -1,12 +1,14 @@
 // @ts-nocheck
-// Injected: HoldAndWinBuilder, CloverSymbol, cloverGridBackground, loadHwClover, CLOVER_SPEED, PIXI, gsap, app
+// Injected: HoldAndWinBuilder, CloverSymbol, cloverGridBackground, loadHwClover, CLOVER_SPEED, cloverCellMask, PIXI, gsap, app
 //
 // The COLLECT clover the way the game plays it. Every held clover idles
 // (breathes) from the moment it lands. When the blue COLLECT clover locks,
-// lightning strikes from it to each gold clover's number in turn: the number
-// is taken - the collect face counts it up - and the struck clover dims to
-// grey, still held but spent. The bolts are plain Graphics redrawn every
-// frame; the strike IS the collect clover's win moment.
+// lightning strikes from it to each gold clover's number in turn and the
+// collect face counts the values up: that sum becomes the collector's own
+// value. The gold clovers keep theirs and keep idling - the next collector
+// takes them again. Once done the collector dims to grey: spent, still
+// held, its sum still on the board. The bolts are plain Graphics redrawn
+// every frame; the strike IS the collect clover's win moment.
 
 const COLS = 5, ROWS = 3;
 const CELL = { width: 101, height: 85 }, COLUMN_GAP = 8, ROW_GAP = 8;
@@ -32,6 +34,8 @@ const board = new HoldAndWinBuilder()
   .symbolData(UNMASK)
   // a few px of bounce, not the tall-reel default: a clover cell should settle, not jump
   .speedProfile(CLOVER_SPEED)
+  // rounded cells, cut on the frame's own radius
+  .cellMask(cloverCellMask)
   .respins(3)
   .lockAnimation('landing')
   .ticker(app.ticker)
@@ -54,7 +58,7 @@ app.stage.addChild(hud);
 const abs = (cell) => { const c = board.cellCenter(cell); return { x: board.container.x + c.x, y: board.container.y + c.y }; };
 const paint = (coin) => { if (coin.id === 'gold') board.symbolAt(coin.cell).setLabel(fmt(coin.data.value)); };
 board.events.on('cell:landed', ({ coin }) => { if (coin) paint(coin); });
-const golds = () => board.lockedCoins.filter((c) => c.id === 'gold' && !board.symbolAt(c.cell).isDimmed);
+const golds = () => board.lockedCoins.filter((c) => c.id === 'gold');
 
 // A bolt from a to b: a jagged line re-jittered every frame for `ms`, three
 // strokes wide-to-thin for the glow, then a quick fade.
@@ -88,7 +92,7 @@ function strike(a, b, ms = 260) {
 const pop = (t) => { if (!t) return; const sx = t.scale.x, sy = t.scale.y; gsap.fromTo(t.scale, { x: sx * 1.5, y: sy * 1.5 }, { x: sx, y: sy, duration: 0.28, ease: 'power2.out' }); };
 
 // The collect: strike each value in reading order, count it onto the
-// collect face, dim the clover it came from.
+// collect face, keep the sum on the collector, then dim the collector.
 async function collect(coin) {
   const collector = board.symbolAt(coin.cell);
   const from = abs(coin.cell);
@@ -102,16 +106,17 @@ async function collect(coin) {
     const at = abs(g.cell);
     const bolt = strike(from, { x: at.x, y: at.y + CELL.height * 0.06 }, 240);
     await sleep(110);
-    pop(sym.label);
+    pop(sym.label); // the value is read, not taken: the gold keeps it
     sum += g.data.value;
     collector.setLabel(fmt(sum));
     pop(collector.label);
     await bolt;
-    sym.setDimmed(true); // spent: still held, no longer idling
     await sleep(70);
   }
+  coin.data.value = sum; // the collector now carries what it gathered
   await collector.playWin();
-  hud.text = `collected ${fmt(sum)} · spent clovers stay held, dimmed`;
+  collector.setDimmed(true); // spent: still held, no longer idling, sum kept
+  hud.text = `collected ${fmt(sum)} · collector spent and dimmed, golds untouched`;
   await sleep(500);
 }
 
@@ -142,8 +147,8 @@ return {
       await sleep(350);
       if (res.done) break;
     }
-    const total = board.lockedCoins.filter((c) => c.id === 'gold').reduce((a, g) => a + g.data.value, 0);
-    hud.text = `feature over · gold on board ${fmt(total)} · press spin to replay`;
+    const total = board.lockedCoins.reduce((a, c) => a + c.data.value, 0);
+    hud.text = `feature over · board total ${fmt(total)} · press spin to replay`;
     busy = false;
   },
 };

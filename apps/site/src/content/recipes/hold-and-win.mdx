@@ -268,9 +268,9 @@ Non-monetary clovers act on the held gold between waves: MULTI doubles every amo
 
 <a id="hold-and-win-clover-collect"></a>
 
-## Collect: lightning strikes the values, the clover dims
+## Collect: lightning takes the values, the collector dims
 
-Held clovers idle until the feature ends. When COLLECT locks, lightning strikes from it to each gold clover's number, the collect face counts the value in, and the struck clover dims to grey: still held, spent.
+Held clovers idle until the feature ends. When COLLECT locks, lightning strikes from it to each gold clover's number and the collect face counts the values up into its own value; the golds keep theirs, and the spent collector dims to grey, still held.
 
 <RecipeDemo code="hold-and-win-clover-collect" height={400} />
 
@@ -282,19 +282,11 @@ The sealed capsule locks like a coin; between waves the jackpot titles flick acr
 
 <RecipeDemo code="hold-and-win-clover-mystery-capsule" height={420} />
 
-<a id="hold-and-win-clover-super"></a>
-
-## SUPER clover and the jackpot rails
-
-Plaques turned on end frame the board; the crystal SUPER clover flares on lock, wears the GRAND title, and turns into a gold clover worth the GRAND amount in place.
-
-<RecipeDemo code="hold-and-win-clover-super" height={400} />
-
 <a id="hold-and-win-clover-grid-bg"></a>
 
 ## The game's grid: gaps filled by the background
 
-Real gaps between the cells (columnGap and rowGap) and no chrome, so the board is a grid the background shows through: a gradient panel and glowing grid lines, plain PIXI.Graphics drawn behind the board and seen only in the gaps.
+Real gaps between the cells (columnGap and rowGap) and no chrome, so the board is a grid the background shows through: a gradient panel and one rounded frame per cell traced on its exact bounds, plain PIXI.Graphics behind the board, with a rounded cell mask cutting the tiles' corners to match.
 
 <RecipeDemo code="hold-and-win-clover-grid-bg" height={420} />
 

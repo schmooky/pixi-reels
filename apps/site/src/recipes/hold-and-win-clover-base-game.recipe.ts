@@ -1,5 +1,5 @@
 // @ts-nocheck
-// Injected: ReelSetBuilder, HoldAndWinBuilder, CloverSymbol,
+// Injected: ReelSetBuilder, RoundedRectMaskStrategy, HoldAndWinBuilder, CloverSymbol,
 //           loadHwClover, CLOVER_FRUITS, CLOVER_FEATURES, PIXI, gsap, app
 //
 // The base game of a clover Hold & Win slot, on rectangular cells. Fruits and
@@ -51,6 +51,7 @@ const base = new ReelSetBuilder()
     gold: 1.2, collect: 0.3, multi: 0.3, mystery: 0.3, super: 0.2, capsule: 0.2,
   })
   .symbolData(UNMASK)
+  .maskStrategy(new RoundedRectMaskStrategy({ radius: CLOVER_CELL_RADIUS }))
   .speed('normal', CLOVER_SPEED)
   .ticker(app.ticker)
   .build();
@@ -69,6 +70,8 @@ const board = new HoldAndWinBuilder()
   .symbolData(UNMASK)
   // a few px of bounce, not the tall-reel default: a clover cell should settle, not jump
   .speedProfile(CLOVER_SPEED)
+  // rounded cells, cut on the frame's own radius
+  .cellMask(cloverCellMask)
   .respins(3)
   .lockAnimation('landing')
   .ticker(app.ticker)
