@@ -123,6 +123,16 @@ async function loadHoldAndWinGlobals(): Promise<Record<string, unknown>> {
   };
 }
 
+async function loadHwCloverSpineGlobals(): Promise<Record<string, unknown>> {
+  const spines = await import('../runtime/hwCloverSpine.ts');
+  return {
+    CloverSpineSymbol: spines.CloverSpineSymbol,
+    loadHwCloverSpines: spines.loadHwCloverSpines,
+    CLOVER_SPINE_MAP: spines.CLOVER_SPINE_MAP,
+    CLOVER_SPINE_IDS: spines.CLOVER_SPINE_IDS,
+  };
+}
+
 async function loadHwCloverGlobals(): Promise<Record<string, unknown>> {
   const clover = await import('../runtime/hwClover.ts');
   return {
@@ -153,6 +163,8 @@ const LAZY_GROUPS: Array<{ test: RegExp; load: () => Promise<Record<string, unkn
   },
   // The clover (rectangular-cell) Hold & Win kit: one sheet, no Spine.
   { test: /loadHwClover|CloverSymbol|cloverGridBackground|cloverCellMask|CLOVER_/, load: loadHwCloverGlobals },
+  // The clover skeletons: pulls the Spine runtime in behind it, so it stays lazy too.
+  { test: /CloverSpineSymbol|loadHwCloverSpines|CLOVER_SPINE_/, load: loadHwCloverSpineGlobals },
 ];
 
 /** Per-runtime values. Everything else is the same in all three. */

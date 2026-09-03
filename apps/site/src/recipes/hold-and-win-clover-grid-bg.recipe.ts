@@ -1,5 +1,5 @@
 // @ts-nocheck
-// Injected: HoldAndWinBuilder, RoundedRectMaskStrategy, CloverSymbol, loadHwClover, CLOVER_SPEED, PIXI, gsap, app
+// Injected: HoldAndWinBuilder, RoundedRectMaskStrategy, CloverSpineSymbol, CloverSymbol, loadHwCloverSpines, CLOVER_SPEED, CLOVER_CELL, PIXI, gsap, app
 //
 // The game's own framing: cells in a visible grid with real gaps between
 // them, and the gaps are not empty - the background under the board shows
@@ -12,15 +12,16 @@
 
 const COLS = 5, ROWS = 3;
 const CELL = { width: 101, height: 85 }, GAP = 8;
+const SCALE = CELL.width / CLOVER_CELL.width; // the skeletons are authored at the 202x170 cell
 const BET = 1;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const fmt = (v) => v.toFixed(2);
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
 
-const art = await loadHwClover();
+const art = await loadHwCloverSpines(); // atlas + skeletons, plus the sheets for titles and plaques
 const UNMASK = Object.fromEntries(['gold', 'collect', 'multi', 'mystery', 'super', 'capsule'].map((id) => [id, { unmask: true }]));
 const STRIP_VALUES = [1, 1, 1.5, 2, 2.5, 3, 5, 7, 10];
-class Clover extends CloverSymbol {
+class Clover extends CloverSpineSymbol {
   onActivate(id) {
     super.onActivate(id);
     if (id === 'gold') this.setLabel(fmt(pick(STRIP_VALUES) * BET));
@@ -65,7 +66,7 @@ const framePulse = gsap.to(frames, { alpha: 0.7, duration: 1.4, yoyo: true, repe
 const board = new HoldAndWinBuilder()
   .grid(COLS, ROWS)
   .cellSize(CELL, { columnGap: GAP, rowGap: GAP })
-  .symbols((r) => { for (const id of ['gold', 'collect', 'multi', 'mystery', 'super', 'capsule', 'empty']) r.register(id, Clover, { art }); })
+  .symbols((r) => { for (const id of ['gold', 'collect', 'multi', 'mystery', 'super', 'capsule', 'empty']) r.register(id, Clover, { scale: SCALE }); })
   .weights({ gold: 2, collect: 0.6, multi: 0.6, mystery: 0.6, super: 0.4, capsule: 0.5, empty: 5 })
   .symbolData(UNMASK)
   // a few px of bounce, not the tall-reel default: a clover cell should settle, not jump

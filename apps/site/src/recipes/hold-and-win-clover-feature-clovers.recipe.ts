@@ -1,5 +1,5 @@
 // @ts-nocheck
-// Injected: HoldAndWinBuilder, CloverSymbol, cloverGridBackground, loadHwClover, CLOVER_SPEED, cloverCellMask, PIXI, gsap, app
+// Injected: HoldAndWinBuilder, CloverSpineSymbol, CloverSymbol, cloverGridBackground, loadHwCloverSpines, CLOVER_SPEED, cloverCellMask, CLOVER_CELL, PIXI, gsap, app
 //
 // Feature clovers carry no money of their own; each one acts on the gold
 // clovers around it when it locks. The board only knows "a coin locked" -
@@ -11,16 +11,17 @@
 
 const COLS = 5, ROWS = 3;
 const CELL = { width: 101, height: 85 }, COLUMN_GAP = 8, ROW_GAP = 8;
+const SCALE = CELL.width / CLOVER_CELL.width; // the skeletons are authored at the 202x170 cell
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const fmt = (v) => v.toFixed(2);
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
 const VALUES = [1, 1.5, 2, 2.5, 3, 5];
 
-const art = await loadHwClover();
+const art = await loadHwCloverSpines(); // atlas + skeletons, plus the sheets for titles and plaques
 // The clover glow is drawn past the 202x170 cell: lift these above the cell mask
 // at rest (unmask), or every edge of every clover is clipped.
 const UNMASK = Object.fromEntries(['gold', 'collect', 'multi', 'mystery', 'super', 'capsule'].map((id) => [id, { unmask: true }]));
-class Clover extends CloverSymbol {
+class Clover extends CloverSpineSymbol {
   onActivate(id) { super.onActivate(id); if (id === 'gold') this.setLabel(fmt(pick(VALUES))); }
 }
 
@@ -28,9 +29,9 @@ const board = new HoldAndWinBuilder()
   .grid(COLS, ROWS)
   .cellSize(CELL, { columnGap: COLUMN_GAP, rowGap: ROW_GAP })
   .symbols((r) => {
-    for (const id of ['gold', 'mystery', 'super', 'capsule', 'empty']) r.register(id, Clover, { art });
-    r.register('multi', Clover, { art, font: 'CloverMult', labelOffset: 0.02 });
-    r.register('collect', Clover, { art, font: 'CloverJackpot', labelOffset: 0.02 });
+    for (const id of ['gold', 'mystery', 'super', 'capsule', 'empty']) r.register(id, Clover, { scale: SCALE });
+    r.register('multi', Clover, { scale: SCALE, font: 'CloverMult', labelOffset: 0.02 });
+    r.register('collect', Clover, { scale: SCALE, font: 'CloverJackpot', labelOffset: 0.02 });
   })
   // every clover flashes past on the strip; which ones LAND is the server's call
   .weights({ gold: 2, collect: 0.6, multi: 0.6, mystery: 0.6, super: 0.4, capsule: 0.5, empty: 5 })

@@ -1,6 +1,6 @@
 // @ts-nocheck
 // Injected: ReelSetBuilder, RoundedRectMaskStrategy, HoldAndWinBuilder, CloverSymbol,
-//           loadHwClover, CLOVER_FRUITS, CLOVER_FEATURES, PIXI, gsap, app
+//           loadHwCloverSpines, CLOVER_FRUITS, CLOVER_FEATURES, CLOVER_CELL, PIXI, gsap, app
 //
 // The base game of a clover Hold & Win slot, on rectangular cells. Fruits and
 // clovers share the strips: a GOLD clover is money and spins past with a
@@ -10,12 +10,13 @@
 
 const COLS = 5, ROWS = 3;
 const CELL = { width: 101, height: 85 }, COLUMN_GAP = 8, ROW_GAP = 8;
+const SCALE = CELL.width / CLOVER_CELL.width; // the skeletons are authored at the 202x170 cell
 const BET = 1;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const fmt = (v) => v.toFixed(2);
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
 
-const art = await loadHwClover();
+const art = await loadHwCloverSpines(); // atlas + skeletons, plus the sheets for titles and plaques
 // The clover glow is drawn past the 202x170 cell: lift these above the cell mask
 // at rest (unmask), or every edge of every clover is clipped.
 const UNMASK = Object.fromEntries(['gold', 'collect', 'multi', 'mystery', 'super', 'capsule'].map((id) => [id, { unmask: true }]));
@@ -25,7 +26,7 @@ const CLOVERS = ['gold', ...CLOVER_FEATURES, 'capsule'];
 // A gold clover on the strip already shows an amount - a random one, scaled
 // by the bet - so money reads as money while the reel is still moving. The
 // landed value overwrites it the instant the reel settles (see spin:reelLanded).
-class Clover extends CloverSymbol {
+class Clover extends CloverSpineSymbol {
   onActivate(id) {
     super.onActivate(id);
     if (id === 'gold') this.setLabel(fmt(pick(STRIP_VALUES) * BET));
@@ -43,8 +44,8 @@ const base = new ReelSetBuilder()
   .symbolSize(CELL.width, CELL.height).symbolGap(COLUMN_GAP, ROW_GAP)
   .symbols((r) => {
     // fruit sits still after a spin; a landed clover keeps its idle going
-    for (const id of CLOVER_FRUITS) r.register(id, Clover, { art, idleAfterLand: false });
-    for (const id of CLOVERS) r.register(id, Clover, { art });
+    for (const id of CLOVER_FRUITS) r.register(id, CloverSymbol, { art, idleAfterLand: false }); // fruit has no skeleton: sprite kit
+    for (const id of CLOVERS) r.register(id, Clover, { scale: SCALE });
   })
   .weights({
     ...Object.fromEntries(CLOVER_FRUITS.map((id) => [id, 3])),
@@ -64,7 +65,7 @@ app.stage.addChild(grid, base);
 const board = new HoldAndWinBuilder()
   .grid(COLS, ROWS)
   .cellSize(CELL, { columnGap: COLUMN_GAP, rowGap: ROW_GAP })
-  .symbols((r) => { for (const id of [...CLOVERS, 'empty']) r.register(id, Clover, { art }); })
+  .symbols((r) => { for (const id of [...CLOVERS, 'empty']) r.register(id, Clover, { scale: SCALE }); })
   // in the feature only clovers spin past - the base game's fruit stays behind
   .weights({ gold: 2, collect: 0.6, multi: 0.6, mystery: 0.6, super: 0.4, capsule: 0.5, empty: 5 })
   .symbolData(UNMASK)

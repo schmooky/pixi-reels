@@ -1,5 +1,5 @@
 // @ts-nocheck
-// Injected: HoldAndWinBuilder, CloverSymbol, cloverGridBackground, loadHwClover, CLOVER_SPEED, cloverCellMask, PIXI, gsap, app
+// Injected: HoldAndWinBuilder, CloverSpineSymbol, CloverSymbol, cloverGridBackground, loadHwCloverSpines, CLOVER_SPEED, cloverCellMask, CLOVER_CELL, PIXI, gsap, app
 //
 // The bonus on its own: a 5x5 board of rectangular cells, nothing but the
 // Hold & Win. Gold clovers spin past with bet-scaled amounts and lock where
@@ -8,18 +8,19 @@
 
 const COLS = 5, ROWS = 5;
 const CELL = { width: 101, height: 85 }, COLUMN_GAP = 8, ROW_GAP = 8;
+const SCALE = CELL.width / CLOVER_CELL.width; // the skeletons are authored at the 202x170 cell
 const BET = 1;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const fmt = (v) => v.toFixed(2);
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
 
-const art = await loadHwClover();
+const art = await loadHwCloverSpines(); // atlas + skeletons, plus the sheets for titles and plaques
 // The clover glow is drawn past the 202x170 cell: lift these above the cell mask
 // at rest (unmask), or every edge of every clover is clipped.
 const UNMASK = Object.fromEntries(['gold', 'collect', 'multi', 'mystery', 'super', 'capsule'].map((id) => [id, { unmask: true }]));
 const STRIP_VALUES = [1, 1, 1.5, 2, 2.5, 3, 5, 7, 10];
 
-class Clover extends CloverSymbol {
+class Clover extends CloverSpineSymbol {
   onActivate(id) {
     super.onActivate(id);
     if (id === 'gold') this.setLabel(fmt(pick(STRIP_VALUES) * BET));
@@ -29,7 +30,7 @@ class Clover extends CloverSymbol {
 const board = new HoldAndWinBuilder()
   .grid(COLS, ROWS)
   .cellSize(CELL, { columnGap: COLUMN_GAP, rowGap: ROW_GAP })
-  .symbols((r) => { for (const id of ['gold', 'collect', 'multi', 'mystery', 'super', 'capsule', 'empty']) r.register(id, Clover, { art }); })
+  .symbols((r) => { for (const id of ['gold', 'collect', 'multi', 'mystery', 'super', 'capsule', 'empty']) r.register(id, Clover, { scale: SCALE }); })
   .weights({ gold: 2, collect: 0.6, multi: 0.6, mystery: 0.6, super: 0.4, capsule: 0.5, empty: 5 })
   .symbolData(UNMASK)
   // a few px of bounce, not the tall-reel default: a clover cell should settle, not jump

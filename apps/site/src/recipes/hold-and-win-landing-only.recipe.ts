@@ -1,5 +1,5 @@
 // @ts-nocheck
-// Injected: HoldAndWinBuilder, CloverSymbol, cloverGridBackground, loadHwClover, CLOVER_SPEED, cloverCellMask, CLOVER_CELL, PIXI, gsap, app
+// Injected: HoldAndWinBuilder, CloverSpineSymbol, CloverSymbol, cloverGridBackground, loadHwCloverSpines, CLOVER_SPEED, cloverCellMask, CLOVER_CELL, PIXI, gsap, app
 //
 // Landing only. By default the board plays a coin's win animation the moment
 // it locks; most productions want just a land beat there and one celebration
@@ -9,17 +9,18 @@
 
 const COLS = 5, ROWS = 3;
 const CELL = { width: 101, height: 85 }, COLUMN_GAP = 8, ROW_GAP = 8;
+const SCALE = CELL.width / CLOVER_CELL.width; // the skeletons are authored at the 202x170 cell
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const fmt = (v) => v.toFixed(2);
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
 
-const art = await loadHwClover();
+const art = await loadHwCloverSpines(); // atlas + skeletons, plus the sheets for titles and plaques
 
 // Gold is the money clover: on the strip it already wears a bet-scaled amount,
 // a different one each time it flashes past, so money reads as money in
 // motion. The served amount replaces it the frame the cell lands.
 const STRIP_VALUES = [1, 1, 1.5, 2, 2.5, 3, 5, 7, 10];
-class Clover extends CloverSymbol {
+class Clover extends CloverSpineSymbol {
   onActivate(id) {
     super.onActivate(id);
     if (id === 'gold') this.setLabel(fmt(pick(STRIP_VALUES)));
@@ -33,7 +34,7 @@ const board = new HoldAndWinBuilder()
   .grid(COLS, ROWS)
   .cellSize(CELL, { columnGap: COLUMN_GAP, rowGap: ROW_GAP })
   .symbols((r) => {
-    for (const id of ['gold', 'collect', 'multi', 'mystery', 'super', 'capsule', 'empty']) r.register(id, Clover, { art });
+    for (const id of ['gold', 'collect', 'multi', 'mystery', 'super', 'capsule', 'empty']) r.register(id, Clover, { scale: SCALE });
   })
   .weights({ gold: 2, collect: 0.6, multi: 0.6, mystery: 0.6, super: 0.4, capsule: 0.5, empty: 5 })
   .symbolData(UNMASK)

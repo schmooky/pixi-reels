@@ -206,7 +206,7 @@ The same round on `.axis('vertical', 'reverse')`, plus the hold that pairs with 
 
 ## Rectangular cells: width, height and a gap per axis
 
-Hold & Win art is usually wider than tall. cellSize takes a width and a height plus a columnGap and a rowGap, so the board lays out to the art's own rectangle, with the game's grid showing through the gaps.
+Hold & Win art is usually wider than tall. cellSize takes a width and a height plus a columnGap and a rowGap, so the board lays out to the art's own rectangle, with the game's grid showing through the gaps. Every clover here is a Spine 4.2 skeleton on the game's art, with idle, landing, win and blur tracks the engine drives through SpineReelSymbol.
 
 <RecipeDemo code="hold-and-win-rect-cells" height={360} />
 
@@ -254,7 +254,7 @@ Built 5x5 with the top and bottom rows dormant behind the purple sealed tile (in
 
 ## Blur strips on rectangular cells
 
-Every symbol ships a crisp and a motion-blur frame; CloverSymbol swaps to the blur while the reel spins. Two identical rows, one with the swap and one without.
+Every skeleton has a blur animation that swaps its body to the motion-blur frame, and SpineReelSymbol plays it while the reel moves. Two identical rows, one with the blur track and one that opts out.
 
 <RecipeDemo code="hold-and-win-clover-blur-strips" height={300} />
 
