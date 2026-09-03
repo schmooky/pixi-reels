@@ -1,4 +1,4 @@
-import { Container, Graphics } from 'pixi.js';
+import { Container, Graphics, RenderLayer } from 'pixi.js';
 import type { Ticker } from 'pixi.js';
 import { ReelSetBuilder } from '../core/ReelSetBuilder.js';
 import type { Direction, Orientation } from '../core/ReelAxis.js';
@@ -117,6 +117,15 @@ export class BoardGrid implements Disposable {
 
   private readonly _reels = new Map<string, ReelSet>();
   private readonly _cells: BoardCell[] = [];
+  /**
+   * Every cell's `viewport.unmaskedContainer`, rendered here - above ALL
+   * cells - instead of inside its own reel set. Each cell is its own display
+   * subtree, so a symbol the engine lifts above its cell's mask (`unmask:
+   * true`, at rest) would otherwise still sit below every later cell's
+   * chrome and blank symbol, and art that overflows the cell is cut along
+   * the neighbour's edge.
+   */
+  private readonly _lifted: RenderLayer;
   private _destroyed = false;
 
   constructor(opts: BoardGridOptions) {
@@ -142,6 +151,8 @@ export class BoardGrid implements Disposable {
     const profileFor = (p: BoardProfile, cell: BoardCell): SpeedProfile =>
       typeof p === 'function' ? p(cell) : p;
 
+    // Chrome for every cell goes in first, then every reel, then the lifted
+    // layer: nothing a cell draws may cover a neighbour's overflow.
     for (let reel = 0; reel < opts.cols; reel++) {
       for (let rowIdx = 0; rowIdx < opts.rows; rowIdx++) {
         const cell: BoardCell = { reel, cell: rowIdx };
@@ -152,6 +163,13 @@ export class BoardGrid implements Disposable {
           bg.position.set(origin.x, origin.y);
           this.container.addChild(bg);
         }
+      }
+    }
+
+    for (let reel = 0; reel < opts.cols; reel++) {
+      for (let rowIdx = 0; rowIdx < opts.rows; rowIdx++) {
+        const cell: BoardCell = { reel, cell: rowIdx };
+        const origin = this._origin(cell);
 
         const builder = new ReelSetBuilder()
           .reels(1)
@@ -187,6 +205,12 @@ export class BoardGrid implements Disposable {
         this._reels.set(key(cell), reelSet);
         this._cells.push(cell);
       }
+    }
+
+    this._lifted = new RenderLayer();
+    this.container.addChild(this._lifted);
+    for (const reelSet of this._reels.values()) {
+      this._lifted.attach(reelSet.viewport.unmaskedContainer);
     }
   }
 

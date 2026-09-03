@@ -1,6 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import type { Ticker } from 'pixi.js';
+import { Graphics } from 'pixi.js';
+import type { RenderLayer } from 'pixi.js';
 import { BoardGrid } from '../../src/board/BoardGrid.js';
+import { ReelSet } from '../../src/core/ReelSet.js';
 import { FakeTicker } from '../../src/testing/FakeTicker.js';
 import { HeadlessSymbol } from '../../src/testing/HeadlessSymbol.js';
 
@@ -138,6 +141,23 @@ describe('BoardGrid rectangular cells and per-axis gaps', () => {
     });
     expect(seen).toHaveLength(6);
     expect(seen[0]).toEqual([100, 60]);
+    grid.destroy();
+  });
+});
+
+describe('BoardGrid render order', () => {
+  it('draws every chrome under every reel and lifts unmasked views above all cells', () => {
+    const grid = make({ chrome: (g: Graphics) => { g.rect(0, 0, 1, 1); } });
+    const kids = grid.container.children;
+    // 6 cells: chrome x6, reel set x6, then the one lifted layer
+    expect(kids).toHaveLength(13);
+    expect(kids.slice(0, 6).every((c) => c instanceof Graphics)).toBe(true);
+    expect(kids.slice(6, 12).every((c) => c instanceof ReelSet)).toBe(true);
+    const layer = kids[12] as unknown as RenderLayer;
+    expect(layer.renderLayerChildren).toHaveLength(6);
+    for (const cell of grid.cells()) {
+      expect(layer.renderLayerChildren).toContain(grid.reelAt(cell).viewport.unmaskedContainer);
+    }
     grid.destroy();
   });
 });
