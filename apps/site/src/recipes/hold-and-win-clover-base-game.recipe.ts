@@ -9,7 +9,7 @@
 // their cells to the Hold & Win board, which respins around them.
 
 const COLS = 5, ROWS = 3;
-const CELL = { width: 101, height: 85 }, COLUMN_GAP = 6, ROW_GAP = 0;
+const CELL = { width: 101, height: 85 }, COLUMN_GAP = 8, ROW_GAP = 8;
 const BET = 1;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const fmt = (v) => v.toFixed(2);
@@ -51,7 +51,9 @@ const base = new ReelSetBuilder()
   .ticker(app.ticker)
   .build();
 base.position.set(ox, oy);
-app.stage.addChild(base);
+// one framing for both: the base reels and the board share the geometry
+const grid = cloverGridBackground({ x: ox, y: oy, cols: COLS, rows: ROWS, cell: CELL, columnGap: COLUMN_GAP, rowGap: ROW_GAP });
+app.stage.addChild(grid, base);
 
 // -- the Hold & Win board on the same geometry, hidden until it triggers --
 const board = new HoldAndWinBuilder()
@@ -63,7 +65,6 @@ const board = new HoldAndWinBuilder()
   .symbolData(UNMASK)
   .respins(3)
   .lockAnimation('landing')
-  .cellChrome((g, w, h) => g.rect(0, 0, w, h).fill({ color: 0x0b1a4a }).stroke({ color: 0x3f6bd8, width: 1, alpha: 0.8 }))
   .ticker(app.ticker)
   .build();
 board.container.position.set(ox, oy);
@@ -72,7 +73,7 @@ app.stage.addChild(board.container);
 
 const hud = new PIXI.Text({ text: 'press spin · 3+ clovers trigger the feature', style: { fontFamily: 'system-ui, sans-serif', fontSize: 13, fontWeight: '600', fill: 0x9c8f78 } });
 hud.anchor.set(0.5, 0);
-hud.position.set(app.screen.width / 2, oy + boardH + 10);
+hud.position.set(app.screen.width / 2, oy + boardH + 24);
 app.stage.addChild(hud);
 
 // The served amount replaces the strip's random one on the very frame the
@@ -131,7 +132,7 @@ async function runFeature(clovers) {
 
 let busy = false;
 return {
-  cleanup: () => { try { hud.destroy(); } catch {} board.destroy(); base.destroy(); },
+  cleanup: () => { try { hud.destroy(); grid.destroy({ children: true }); } catch {} board.destroy(); base.destroy(); },
   onSpin: async () => {
     if (busy) return;
     busy = true;

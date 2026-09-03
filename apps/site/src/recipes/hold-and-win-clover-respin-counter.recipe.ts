@@ -1,5 +1,5 @@
 // @ts-nocheck
-// Injected: HoldAndWinBuilder, CloverSymbol, loadHwClover, PIXI, gsap, app
+// Injected: HoldAndWinBuilder, CloverSymbol, cloverGridBackground, loadHwClover, PIXI, gsap, app
 //
 // The respin counter. Three lamps under the board: all lit when the feature
 // arms, one goes dark per miss, every hit relights them all. It is driven by
@@ -8,7 +8,7 @@
 // without the game re-deriving any of it.
 
 const COLS = 5, ROWS = 3;
-const CELL = { width: 101, height: 85 }, COLUMN_GAP = 6, ROW_GAP = 0;
+const CELL = { width: 101, height: 85 }, COLUMN_GAP = 8, ROW_GAP = 8;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const fmt = (v) => v.toFixed(2);
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
@@ -29,12 +29,14 @@ const board = new HoldAndWinBuilder()
   .symbolData(UNMASK)
   .respins(3)
   .lockAnimation('landing')
-  .cellChrome((g, w, h) => g.rect(0, 0, w, h).fill({ color: 0x0b1a4a }).stroke({ color: 0x3f6bd8, width: 1, alpha: 0.8 }))
   .ticker(app.ticker)
   .build();
 const boardW = COLS * CELL.width + (COLS - 1) * COLUMN_GAP;
 const boardH = ROWS * CELL.height + (ROWS - 1) * ROW_GAP;
 board.container.position.set((app.screen.width - boardW) / 2, (app.screen.height - boardH) / 2 - 24);
+// the game's framing: gradient panel + grid lines in the gaps, behind a chrome-less board
+const grid = cloverGridBackground({ x: board.container.x, y: board.container.y, cols: COLS, rows: ROWS, cell: CELL, columnGap: COLUMN_GAP, rowGap: ROW_GAP });
+app.stage.addChild(grid);
 app.stage.addChild(board.container);
 
 // -- the counter --
@@ -57,7 +59,7 @@ const paint = (left) => {
     digit.alpha = lit ? 1 : 0.4;
   });
 };
-counter.position.set(app.screen.width / 2 - 60, board.container.y + boardH + 26);
+counter.position.set(app.screen.width / 2 - 60, board.container.y + boardH + 40);
 app.stage.addChild(counter);
 paint(0);
 
@@ -87,7 +89,7 @@ const ROUNDS = [[], [], [{ reel: 0, cell: 2 }], [], [], []];
 
 let busy = false;
 return {
-  cleanup: () => { for (const { lamp } of lamps) gsap.killTweensOf(lamp); try { hud.destroy(); counter.destroy(); } catch {} board.destroy(); },
+  cleanup: () => { for (const { lamp } of lamps) gsap.killTweensOf(lamp); try { hud.destroy(); counter.destroy(); } catch {} grid.destroy({ children: true }); board.destroy(); },
   onSpin: async () => {
     if (busy) return;
     busy = true;

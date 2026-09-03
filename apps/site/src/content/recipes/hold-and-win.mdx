@@ -206,7 +206,7 @@ The same round on `.axis('vertical', 'reverse')`, plus the hold that pairs with 
 
 ## Rectangular cells: width, height and a gap per axis
 
-Hold & Win art is usually wider than tall. cellSize takes a width and a height plus a columnGap and a rowGap, so the board lays out to the art's own rectangle and the chrome gets both sides.
+Hold & Win art is usually wider than tall. cellSize takes a width and a height plus a columnGap and a rowGap, so the board lays out to the art's own rectangle, with the game's grid showing through the gaps.
 
 <RecipeDemo code="hold-and-win-rect-cells" height={360} />
 
@@ -281,6 +281,14 @@ The sealed capsule locks like a coin; between waves the jackpot titles flick acr
 Plaques turned on end frame the board; the crystal SUPER clover flares on lock, wears the GRAND title, and turns into a gold clover worth the GRAND amount in place.
 
 <RecipeDemo code="hold-and-win-clover-super" height={400} />
+
+<a id="hold-and-win-clover-grid-bg"></a>
+
+## The game's grid: gaps filled by the background
+
+Real gaps between the cells (columnGap and rowGap) and no chrome, so the board is a grid the background shows through: a gradient panel and glowing grid lines, plain PIXI.Graphics drawn behind the board and seen only in the gaps.
+
+<RecipeDemo code="hold-and-win-clover-grid-bg" height={420} />
 
 <a id="hold-and-win-clover-respin-counter"></a>
 

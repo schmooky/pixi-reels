@@ -1,4 +1,4 @@
-import { Assets, BitmapText, Container, Sprite, type Spritesheet, type Texture } from 'pixi.js';
+import { Assets, BitmapText, Container, FillGradient, Graphics, Sprite, type Spritesheet, type Texture } from 'pixi.js';
 import { gsap } from 'gsap';
 import { ReelSymbol } from 'pixi-reels';
 
@@ -90,12 +90,11 @@ export interface CloverSymbolOptions {
  * it, instead of each texture being inflated to the cell on its own.
  *
  * The clovers are drawn BIGGER than the cell. At rest the engine lifts them
- * above the cell mask (`unmask: true`), but while the reel moves everything
- * is clipped to the cell, so an oversized clover scrolling into place would
- * show as a rectangle until the lift. So while its reel is in motion the art
- * is held at a contained scale that fits the cell, and on landing it grows
- * back to authored size in a short tween - the same beat the game's landing
- * animation plays, and no mask edge is ever seen.
+ * above the cell mask (`unmask: true`); while the reel moves everything is
+ * clipped to the cell, which is fine for a blur frame streaking past but
+ * would show a crisp clover as a rectangle during the stop approach. So the
+ * blur frame stays on until the cell has actually landed: the crisp,
+ * overflowing clover only ever appears once it is lifted above the mask.
  *
  * `playLanding()` is a short settle (the Hold & Win board calls it on lock
  * when built with `lockAnimation('landing')`); `playWin()` is the pulse the
@@ -106,7 +105,7 @@ export class CloverSymbol extends ReelSymbol {
   private readonly _font: string;
   private readonly _labelOffset: number;
   private readonly _badgeOffset: number;
-  /** Sprite, label and badge, centred on the cell; scaled as one while the reel moves. */
+  /** Sprite, label and badge, centred on the cell. */
   private readonly _art: Container;
   private readonly _sprite: Sprite;
   private readonly _badge: Sprite;
@@ -114,9 +113,7 @@ export class CloverSymbol extends ReelSymbol {
   private _cellW = 0;
   private _cellH = 0;
   private _blurred = false;
-  private _inMotion = false;
   private _tween: gsap.core.Timeline | gsap.core.Tween | null = null;
-  private _grow: gsap.core.Tween | null = null;
 
   constructor(options: CloverSymbolOptions) {
     super();
@@ -144,47 +141,25 @@ export class CloverSymbol extends ReelSymbol {
     this._applyTexture();
     this.setLabel(null);
     this.setBadge(null);
-    // A symbol installed into a moving reel gets onReelSpinStart right after
-    // this, which contains it; one placed at rest stays at authored size.
-    this._killGrow();
-    this._art.scale.set(this._inMotion ? this._containedScale() : 1);
   }
 
   protected onDeactivate(): void {
     this._kill();
-    this._killGrow();
     this._blurred = false;
-    this._inMotion = false;
     this.setLabel(null);
     this.setBadge(null);
     this._sprite.scale.set(1);
     this._sprite.alpha = 1;
-    this._art.scale.set(1);
   }
 
   override onReelSpinStart(): void {
-    this._inMotion = true;
-    this._killGrow();
-    this._art.scale.set(this._containedScale());
     this._setBlurred(true);
   }
-  override onReelSpinEnd(): void {
-    this._setBlurred(false);
-  }
+  // Deliberately NOT crisp on onReelSpinEnd: the reel is still moving through
+  // the stop approach then, clipped to the cell. The swap waits for the land,
+  // which is also when the engine lifts an unmask symbol above the mask.
   override onReelLanded(): void {
     this._setBlurred(false);
-    if (!this._inMotion) return;
-    this._inMotion = false;
-    // The lift above the mask happened just before this hook; grow out of
-    // the cell now, so the overflow arrives as a land beat.
-    this._killGrow();
-    this._grow = gsap.to(this._art.scale, {
-      x: 1,
-      y: 1,
-      duration: 0.16,
-      ease: 'power2.out',
-      onComplete: () => { this._grow = null; },
-    });
   }
 
   /** Paint (or clear, with `null`) the value text over the symbol face. */
@@ -270,33 +245,11 @@ export class CloverSymbol extends ReelSymbol {
     this._cellH = height;
     this._art.position.set(width / 2, height / 2);
     this._sprite.scale.set(this.artScale);
-    if (this._inMotion && !this._grow) this._art.scale.set(this._containedScale());
     this._layout();
   }
 
   protected override onDestroy(): void {
     this._kill();
-    this._killGrow();
-  }
-
-  /**
-   * The factor that shrinks this symbol's authored art to fit inside the
-   * cell, 1 when it already fits. Measured on the crisp frame and the blur
-   * frame both, so the swap mid-spin never pokes past the mask either.
-   */
-  private _containedScale(): number {
-    if (this._cellW <= 0 || this._cellH <= 0) return 1;
-    const id = this.symbolId;
-    let w = 0;
-    let h = 0;
-    for (const tex of [this._artSet.symbols[id], this._artSet.blur[id]]) {
-      if (!tex) continue;
-      w = Math.max(w, tex.orig.width);
-      h = Math.max(h, tex.orig.height);
-    }
-    if (w <= 0 || h <= 0) return 1;
-    const s = this.artScale;
-    return Math.min(1, this._cellW / (w * s), this._cellH / (h * s));
   }
 
   private _setBlurred(blurred: boolean): void {
@@ -336,10 +289,67 @@ export class CloverSymbol extends ReelSymbol {
     }
   }
 
-  private _killGrow(): void {
-    if (this._grow) {
-      this._grow.kill();
-      this._grow = null;
-    }
+
+}
+
+export interface CloverGridOptions {
+  /** Board origin on the stage (the board container's position). */
+  x: number;
+  y: number;
+  cols: number;
+  rows: number;
+  cell: { width: number; height: number };
+  columnGap: number;
+  rowGap: number;
+  /** Panel margin around the grid. Default: the larger gap, so the frame hugs the cells. */
+  margin?: number;
+}
+
+/**
+ * The game's framing, as two plain `Graphics`: a navy-to-blue gradient panel
+ * under the whole board and a grid line down the middle of every gap. Add it
+ * to the stage BEFORE the board and build the board with no chrome: the cells
+ * are the empty tile, so this only ever shows in the gaps and the margin.
+ * Destroy it with `{ children: true }` in the recipe's cleanup.
+ */
+export function cloverGridBackground(opts: CloverGridOptions): Container {
+  const { x, y, cols, rows, cell, columnGap, rowGap } = opts;
+  const margin = opts.margin ?? Math.max(columnGap, rowGap);
+  const w = cols * cell.width + (cols - 1) * columnGap;
+  const h = rows * cell.height + (rows - 1) * rowGap;
+  const bg = new Container();
+
+  const panel = new Graphics();
+  const gradient = new FillGradient({
+    type: 'linear',
+    start: { x: 0, y: 0 },
+    end: { x: 0, y: 1 },
+    colorStops: [
+      { offset: 0, color: 0x061236 },
+      { offset: 0.5, color: 0x102f7a },
+      { offset: 1, color: 0x061236 },
+    ],
+  });
+  panel
+    .roundRect(x - margin, y - margin, w + margin * 2, h + margin * 2, 12)
+    .fill(gradient)
+    .stroke({ color: 0x4f8cff, width: 2, alpha: 0.9 });
+  bg.addChild(panel);
+
+  const lines = new Graphics();
+  const xs: number[] = [];
+  const ys: number[] = [];
+  for (let c = 1; c < cols; c++) xs.push(x + c * cell.width + (c - 1) * columnGap + columnGap / 2);
+  for (let r = 1; r < rows; r++) ys.push(y + r * cell.height + (r - 1) * rowGap + rowGap / 2);
+  // a soft wide line under a crisp one, the way the game's grid glows
+  for (const [width, alpha] of [
+    [Math.max(columnGap, rowGap), 0.35],
+    [2, 0.95],
+  ] as const) {
+    for (const gx of xs) lines.moveTo(gx, y - margin + 2).lineTo(gx, y + h + margin - 2);
+    for (const gy of ys) lines.moveTo(x - margin + 2, gy).lineTo(x + w + margin - 2, gy);
+    lines.stroke({ color: 0x5fa0ff, width, alpha });
   }
+  bg.addChild(lines);
+  return bg;
 }

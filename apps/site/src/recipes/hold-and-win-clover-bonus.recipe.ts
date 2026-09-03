@@ -1,5 +1,5 @@
 // @ts-nocheck
-// Injected: HoldAndWinBuilder, CloverSymbol, loadHwClover, PIXI, gsap, app
+// Injected: HoldAndWinBuilder, CloverSymbol, cloverGridBackground, loadHwClover, PIXI, gsap, app
 //
 // The bonus on its own: a 5x3 board of rectangular cells, nothing but the
 // Hold & Win. Gold clovers spin past with bet-scaled amounts and lock where
@@ -7,7 +7,7 @@
 // lamps under the board are the respin counter, relit on every hit.
 
 const COLS = 5, ROWS = 3;
-const CELL = { width: 101, height: 85 }, COLUMN_GAP = 6, ROW_GAP = 0;
+const CELL = { width: 101, height: 85 }, COLUMN_GAP = 8, ROW_GAP = 8;
 const BET = 1;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const fmt = (v) => v.toFixed(2);
@@ -34,13 +34,15 @@ const board = new HoldAndWinBuilder()
   .symbolData(UNMASK)
   .respins(3)
   .lockAnimation('landing')
-  .cellChrome((g, w, h) => g.rect(0, 0, w, h).fill({ color: 0x0b1a4a }).stroke({ color: 0x3f6bd8, width: 1, alpha: 0.8 }))
   .ticker(app.ticker)
   .build();
 
 const boardW = COLS * CELL.width + (COLS - 1) * COLUMN_GAP;
 const boardH = ROWS * CELL.height + (ROWS - 1) * ROW_GAP;
 board.container.position.set((app.screen.width - boardW) / 2, (app.screen.height - boardH) / 2 - 14);
+// the game's framing: gradient panel + grid lines in the gaps, behind a chrome-less board
+const grid = cloverGridBackground({ x: board.container.x, y: board.container.y, cols: COLS, rows: ROWS, cell: CELL, columnGap: COLUMN_GAP, rowGap: ROW_GAP });
+app.stage.addChild(grid);
 app.stage.addChild(board.container);
 
 // -- respin counter: three lamps, lit = respins left --
@@ -63,7 +65,7 @@ const lightLamps = (left) => {
     digit.alpha = lit ? 1 : 0.45;
   });
 };
-counter.position.set(app.screen.width / 2 - 52, board.container.y + boardH + 20);
+counter.position.set(app.screen.width / 2 - 52, board.container.y + boardH + 34);
 app.stage.addChild(counter);
 lightLamps(0);
 board.events.on('respins:changed', ({ value }) => lightLamps(value));
@@ -88,7 +90,7 @@ const ROUNDS = [[{ reel: 0, cell: 0 }, { reel: 2, cell: 2 }], [{ reel: 4, cell: 
 
 let busy = false;
 return {
-  cleanup: () => { try { hud.destroy(); counter.destroy(); } catch {} board.destroy(); },
+  cleanup: () => { try { hud.destroy(); counter.destroy(); } catch {} grid.destroy({ children: true }); board.destroy(); },
   onSpin: async () => {
     if (busy) return;
     busy = true;

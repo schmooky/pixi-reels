@@ -1,5 +1,5 @@
 // @ts-nocheck
-// Injected: HoldAndWinBuilder, CloverSymbol, loadHwClover, PIXI, gsap, app
+// Injected: HoldAndWinBuilder, CloverSymbol, cloverGridBackground, loadHwClover, PIXI, gsap, app
 //
 // The capsule: a sealed jackpot. It spins past like any other symbol and
 // locks like a coin, then between waves the seal breaks - the four jackpot
@@ -9,7 +9,7 @@
 // the stage per cell.
 
 const COLS = 5, ROWS = 3;
-const CELL = { width: 101, height: 85 }, COLUMN_GAP = 6, ROW_GAP = 0;
+const CELL = { width: 101, height: 85 }, COLUMN_GAP = 8, ROW_GAP = 8;
 const BET = 1;
 const JACKPOTS = { mini: 20, minor: 50, major: 200, grand: 1000 };
 const TIERS = ['mini', 'minor', 'major', 'grand'];
@@ -36,12 +36,14 @@ const board = new HoldAndWinBuilder()
   .symbolData(UNMASK)
   .respins(3)
   .lockAnimation('landing')
-  .cellChrome((g, w, h) => g.rect(0, 0, w, h).fill({ color: 0x0b1a4a }).stroke({ color: 0x3f6bd8, width: 1, alpha: 0.8 }))
   .ticker(app.ticker)
   .build();
 const boardW = COLS * CELL.width + (COLS - 1) * COLUMN_GAP;
 const boardH = ROWS * CELL.height + (ROWS - 1) * ROW_GAP;
 board.container.position.set((app.screen.width - boardW) / 2, (app.screen.height - boardH) / 2 + 12);
+// the game's framing: gradient panel + grid lines in the gaps, behind a chrome-less board
+const grid = cloverGridBackground({ x: board.container.x, y: board.container.y, cols: COLS, rows: ROWS, cell: CELL, columnGap: COLUMN_GAP, rowGap: ROW_GAP });
+app.stage.addChild(grid);
 app.stage.addChild(board.container);
 
 // -- jackpot plaques above the board, one per tier --
@@ -60,7 +62,7 @@ TIERS.forEach((tier, i) => {
   rail.addChild(p);
   plaques[tier] = p;
 });
-rail.position.set(app.screen.width / 2, board.container.y - 30);
+rail.position.set(app.screen.width / 2, board.container.y - 40);
 app.stage.addChild(rail);
 const lightPlaque = (tier) => {
   for (const [t, p] of Object.entries(plaques)) gsap.to(p, { alpha: t === tier ? 1 : 0.35, duration: 0.2 });
@@ -69,7 +71,7 @@ const lightPlaque = (tier) => {
 
 const hud = new PIXI.Text({ text: 'press spin', style: { fontFamily: 'system-ui, sans-serif', fontSize: 13, fontWeight: '600', fill: 0x9c8f78 } });
 hud.anchor.set(0.5, 0);
-hud.position.set(app.screen.width / 2, board.container.y + boardH + 10);
+hud.position.set(app.screen.width / 2, board.container.y + boardH + 24);
 app.stage.addChild(hud);
 
 board.events.on('cell:landed', ({ cell, coin }) => {
@@ -108,7 +110,7 @@ const ROUNDS = [
 
 let busy = false;
 return {
-  cleanup: () => { for (const p of Object.values(plaques)) gsap.killTweensOf(p); try { hud.destroy(); rail.destroy(); } catch {} board.destroy(); },
+  cleanup: () => { for (const p of Object.values(plaques)) gsap.killTweensOf(p); try { hud.destroy(); rail.destroy(); } catch {} grid.destroy({ children: true }); board.destroy(); },
   onSpin: async () => {
     if (busy) return;
     busy = true;

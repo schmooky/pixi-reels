@@ -1,5 +1,5 @@
 // @ts-nocheck
-// Injected: HoldAndWinBuilder, CloverSymbol, loadHwClover, CLOVER_CELL, PIXI, gsap, app
+// Injected: HoldAndWinBuilder, CloverSymbol, cloverGridBackground, loadHwClover, CLOVER_CELL, PIXI, gsap, app
 //
 // Landing only. By default the board plays a coin's win animation the moment
 // it locks; most productions want just a land beat there and one celebration
@@ -8,7 +8,7 @@
 // `board.playWin()` itself when the feature ends.
 
 const COLS = 5, ROWS = 3;
-const CELL = { width: 101, height: 85 };
+const CELL = { width: 101, height: 85 }, COLUMN_GAP = 8, ROW_GAP = 8;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const fmt = (v) => v.toFixed(2);
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
@@ -31,7 +31,7 @@ const UNMASK = Object.fromEntries(['gold', 'collect', 'multi', 'mystery', 'super
 
 const board = new HoldAndWinBuilder()
   .grid(COLS, ROWS)
-  .cellSize(CELL, { columnGap: 6, rowGap: 0 })
+  .cellSize(CELL, { columnGap: COLUMN_GAP, rowGap: ROW_GAP })
   .symbols((r) => {
     for (const id of ['gold', 'collect', 'multi', 'mystery', 'super', 'capsule', 'empty']) r.register(id, Clover, { art });
   })
@@ -40,15 +40,15 @@ const board = new HoldAndWinBuilder()
   .respins(3)
   // 'win' (default) | 'landing' | 'none'
   .lockAnimation('landing')
-  .cellChrome((g, w, h) => {
-    g.rect(0, 0, w, h).fill({ color: 0x0b1a4a, alpha: 0.9 }).stroke({ color: 0x3f6bd8, width: 1, alpha: 0.8 });
-  })
   .ticker(app.ticker)
   .build();
 
-const boardW = COLS * CELL.width + 4 * 6;
-const boardH = ROWS * CELL.height;
+const boardW = COLS * CELL.width + (COLS - 1) * COLUMN_GAP;
+const boardH = ROWS * CELL.height + (ROWS - 1) * ROW_GAP;
 board.container.position.set((app.screen.width - boardW) / 2, (app.screen.height - boardH) / 2 - 8);
+// the game's framing: gradient panel + grid lines in the gaps, behind a chrome-less board
+const grid = cloverGridBackground({ x: board.container.x, y: board.container.y, cols: COLS, rows: ROWS, cell: CELL, columnGap: COLUMN_GAP, rowGap: ROW_GAP });
+app.stage.addChild(grid);
 app.stage.addChild(board.container);
 
 const hud = new PIXI.Text({
@@ -56,7 +56,7 @@ const hud = new PIXI.Text({
   style: { fontFamily: 'system-ui, sans-serif', fontSize: 13, fontWeight: '600', fill: 0x9c8f78 },
 });
 hud.anchor.set(0.5, 0);
-hud.position.set(app.screen.width / 2, board.container.y + boardH + 10);
+hud.position.set(app.screen.width / 2, board.container.y + boardH + 24);
 app.stage.addChild(hud);
 
 let landed = 0;
@@ -75,7 +75,7 @@ const ROUNDS = [[{ reel: 0, cell: 0 }, { reel: 4, cell: 0 }], [{ reel: 2, cell: 
 
 let busy = false;
 return {
-  cleanup: () => { try { hud.destroy(); } catch {} board.destroy(); },
+  cleanup: () => { try { hud.destroy(); } catch {} grid.destroy({ children: true }); board.destroy(); },
   onSpin: async () => {
     if (busy) return;
     busy = true;

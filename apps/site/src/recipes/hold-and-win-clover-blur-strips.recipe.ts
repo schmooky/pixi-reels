@@ -1,5 +1,5 @@
 // @ts-nocheck
-// Injected: HoldAndWinBuilder, SpeedPresets, CloverSymbol, loadHwClover, PIXI, gsap, app
+// Injected: HoldAndWinBuilder, SpeedPresets, CloverSymbol, cloverGridBackground, loadHwClover, PIXI, gsap, app
 //
 // Blur strips on rectangular cells. Every symbol in the set ships a crisp
 // frame and a motion-blur frame; CloverSymbol swaps to the blur while its
@@ -8,7 +8,7 @@
 // the difference is why studios pre-render the blur.
 
 const COLS = 5;
-const CELL = { width: 101, height: 85 }, COLUMN_GAP = 6;
+const CELL = { width: 101, height: 85 }, COLUMN_GAP = 8, ROW_GAP = 8;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const fmt = (v) => v.toFixed(2);
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
@@ -27,10 +27,11 @@ class Crisp extends Blurred {
   onReelSpinStart() {}
 }
 
+const grids = [];
 const makeRow = (Symbol, y) => {
   const board = new HoldAndWinBuilder()
     .grid(COLS, 1)
-    .cellSize(CELL, { columnGap: COLUMN_GAP, rowGap: 0 })
+    .cellSize(CELL, { columnGap: COLUMN_GAP, rowGap: ROW_GAP })
     .symbols((r) => { for (const id of IDS) r.register(id, Symbol, { art }); })
     .weights({ gold: 2, collect: 1, multi: 1, mystery: 1, super: 0.7, capsule: 0.8, empty: 3 })
     // a long spin so the strip is on screen long enough to compare
@@ -38,16 +39,17 @@ const makeRow = (Symbol, y) => {
     .stagger((reel) => reel * 120)
     .symbolData(UNMASK)
     .lockAnimation('none')
-    .cellChrome((g, w, h) => g.rect(0, 0, w, h).fill({ color: 0x0b1a4a }).stroke({ color: 0x3f6bd8, width: 1, alpha: 0.8 }))
-    .ticker(app.ticker)
+      .ticker(app.ticker)
     .build();
   board.container.position.set((app.screen.width - (COLS * CELL.width + (COLS - 1) * COLUMN_GAP)) / 2, y);
-  app.stage.addChild(board.container);
+  const grid = cloverGridBackground({ x: board.container.x, y: board.container.y, cols: COLS, rows: 1, cell: CELL, columnGap: COLUMN_GAP, rowGap: ROW_GAP, margin: 10 });
+  app.stage.addChild(grid, board.container);
+  grids.push(grid);
   board.events.on('cell:landed', ({ cell, coin }) => { if (coin) board.symbolAt(cell).setLabel(fmt(coin.data.value)); });
   return board;
 };
-const top = makeRow(Blurred, 24);
-const bottom = makeRow(Crisp, 24 + CELL.height + 34);
+const top = makeRow(Blurred, 40);
+const bottom = makeRow(Crisp, 40 + CELL.height + 56);
 
 const caption = (text, y) => {
   const t = new PIXI.Text({ text, style: { fontFamily: 'system-ui, sans-serif', fontSize: 12, fontWeight: '600', fill: 0x9c8f78 } });
@@ -56,13 +58,13 @@ const caption = (text, y) => {
   app.stage.addChild(t);
   return t;
 };
-const c1 = caption('with blur frames (CloverSymbol swaps on spin)', 6);
-const c2 = caption('without: the crisp frame at reel speed', top.container.y + CELL.height + 16);
+const c1 = caption('with blur frames (CloverSymbol swaps on spin)', 8);
+const c2 = caption('without: the crisp frame at reel speed', top.container.y + CELL.height + 22);
 
 const gold = (cell) => ({ cell, id: 'gold', data: { value: pick([1, 2, 5, 10]) } });
 let busy = false;
 return {
-  cleanup: () => { try { c1.destroy(); c2.destroy(); } catch {} top.destroy(); bottom.destroy(); },
+  cleanup: () => { try { c1.destroy(); c2.destroy(); for (const g of grids) g.destroy({ children: true }); } catch {} top.destroy(); bottom.destroy(); },
   onSpin: async () => {
     if (busy) return;
     busy = true;

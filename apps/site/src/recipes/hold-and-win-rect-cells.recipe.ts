@@ -1,5 +1,5 @@
 // @ts-nocheck
-// Injected: HoldAndWinBuilder, CloverSymbol, loadHwClover, CLOVER_CELL, PIXI, gsap, app
+// Injected: HoldAndWinBuilder, CloverSymbol, cloverGridBackground, loadHwClover, CLOVER_CELL, PIXI, gsap, app
 //
 // Rectangular cells. Most Hold & Win art is wider than it is tall - this set
 // is authored for 202x170 - so the board takes `{ width, height }` and a gap
@@ -7,7 +7,7 @@
 
 const COLS = 5, ROWS = 3;
 const CELL = { width: CLOVER_CELL.width / 2, height: CLOVER_CELL.height / 2 }; // 101 x 85
-const COLUMN_GAP = 6, ROW_GAP = 0;
+const COLUMN_GAP = 8, ROW_GAP = 8;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const fmt = (v) => v.toFixed(2);
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
@@ -38,16 +38,15 @@ const board = new HoldAndWinBuilder()
   .weights({ gold: 2, collect: 0.6, multi: 0.6, mystery: 0.6, super: 0.4, capsule: 0.5, empty: 5 })
   .symbolData(UNMASK)
   .respins(3)
-  // The chrome gets the real cell rectangle, not one "size".
-  .cellChrome((g, width, height) => {
-    g.rect(0, 0, width, height).fill({ color: 0x0b1a4a, alpha: 0.9 }).stroke({ color: 0x3f6bd8, width: 1, alpha: 0.8 });
-  })
   .ticker(app.ticker)
   .build();
 
 const boardW = COLS * CELL.width + (COLS - 1) * COLUMN_GAP;
 const boardH = ROWS * CELL.height + (ROWS - 1) * ROW_GAP;
 board.container.position.set((app.screen.width - boardW) / 2, (app.screen.height - boardH) / 2 - 8);
+// the game's framing: gradient panel + grid lines in the gaps, behind a chrome-less board
+const grid = cloverGridBackground({ x: board.container.x, y: board.container.y, cols: COLS, rows: ROWS, cell: CELL, columnGap: COLUMN_GAP, rowGap: ROW_GAP });
+app.stage.addChild(grid);
 app.stage.addChild(board.container);
 
 const hud = new PIXI.Text({
@@ -55,7 +54,7 @@ const hud = new PIXI.Text({
   style: { fontFamily: 'system-ui, sans-serif', fontSize: 13, fontWeight: '600', fill: 0x9c8f78 },
 });
 hud.anchor.set(0.5, 0);
-hud.position.set(app.screen.width / 2, board.container.y + boardH + 10);
+hud.position.set(app.screen.width / 2, board.container.y + boardH + 24);
 app.stage.addChild(hud);
 
 // The value lives in coin.data; the symbol paints it the moment the cell lands.
@@ -73,7 +72,7 @@ const ROUNDS = [[{ reel: 2, cell: 2 }, { reel: 4, cell: 1 }], [{ reel: 1, cell: 
 
 let busy = false;
 return {
-  cleanup: () => { try { hud.destroy(); } catch {} board.destroy(); },
+  cleanup: () => { try { hud.destroy(); } catch {} grid.destroy({ children: true }); board.destroy(); },
   onSpin: async () => {
     if (busy) return;
     busy = true;

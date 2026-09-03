@@ -128,6 +128,7 @@ async function loadHwCloverGlobals(): Promise<Record<string, unknown>> {
   return {
     loadHwClover: clover.loadHwClover,
     CloverSymbol: clover.CloverSymbol,
+    cloverGridBackground: clover.cloverGridBackground,
     CLOVER_CELL: clover.CLOVER_CELL,
     CLOVER_FRUITS: clover.CLOVER_FRUITS,
     CLOVER_FEATURES: clover.CLOVER_FEATURES,
@@ -147,7 +148,7 @@ const LAZY_GROUPS: Array<{ test: RegExp; load: () => Promise<Record<string, unkn
     load: loadHoldAndWinGlobals,
   },
   // The clover (rectangular-cell) Hold & Win kit: one sheet, no Spine.
-  { test: /loadHwClover|CloverSymbol|CLOVER_/, load: loadHwCloverGlobals },
+  { test: /loadHwClover|CloverSymbol|cloverGridBackground|CLOVER_/, load: loadHwCloverGlobals },
 ];
 
 /** Per-runtime values. Everything else is the same in all three. */

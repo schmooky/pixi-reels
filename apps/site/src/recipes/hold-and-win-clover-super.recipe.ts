@@ -1,5 +1,5 @@
 // @ts-nocheck
-// Injected: HoldAndWinBuilder, CloverSymbol, loadHwClover, PIXI, gsap, app
+// Injected: HoldAndWinBuilder, CloverSymbol, cloverGridBackground, loadHwClover, PIXI, gsap, app
 //
 // The crystal SUPER clover and the jackpot rails. Four plaques sit beside the
 // board the way the game frames its reels - MINI and MINOR on the left,
@@ -8,7 +8,7 @@
 // GRAND amount in place: the ledger is rewritten, no other cell moves.
 
 const COLS = 5, ROWS = 3;
-const CELL = { width: 101, height: 85 }, COLUMN_GAP = 6, ROW_GAP = 0;
+const CELL = { width: 101, height: 85 }, COLUMN_GAP = 8, ROW_GAP = 8;
 const BET = 1;
 const GRAND = 1000 * BET;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -33,12 +33,14 @@ const board = new HoldAndWinBuilder()
   .symbolData(UNMASK)
   .respins(3)
   .lockAnimation('landing')
-  .cellChrome((g, w, h) => g.rect(0, 0, w, h).fill({ color: 0x0b1a4a }).stroke({ color: 0x3f6bd8, width: 1, alpha: 0.8 }))
   .ticker(app.ticker)
   .build();
 const boardW = COLS * CELL.width + (COLS - 1) * COLUMN_GAP;
 const boardH = ROWS * CELL.height + (ROWS - 1) * ROW_GAP;
 board.container.position.set((app.screen.width - boardW) / 2, (app.screen.height - boardH) / 2 - 10);
+// the game's framing: gradient panel + grid lines in the gaps, behind a chrome-less board
+const grid = cloverGridBackground({ x: board.container.x, y: board.container.y, cols: COLS, rows: ROWS, cell: CELL, columnGap: COLUMN_GAP, rowGap: ROW_GAP });
+app.stage.addChild(grid);
 app.stage.addChild(board.container);
 
 // -- side rails: plaques turned on end, hugging the board like the source frame --
@@ -53,7 +55,7 @@ const rail = (tier, side, slot) => {
   p.addChild(frame, word);
   p.rotation = side < 0 ? -Math.PI / 2 : Math.PI / 2;
   p.scale.set(0.9);
-  p.x = board.container.x + (side < 0 ? -24 : boardW + 24);
+  p.x = board.container.x + (side < 0 ? -36 : boardW + 36);
   p.y = board.container.y + boardH * (slot === 0 ? 0.28 : 0.72);
   p.alpha = 0.55;
   rails.addChild(p);
@@ -64,7 +66,7 @@ app.stage.addChild(rails);
 
 const hud = new PIXI.Text({ text: 'press spin', style: { fontFamily: 'system-ui, sans-serif', fontSize: 13, fontWeight: '600', fill: 0x9c8f78 } });
 hud.anchor.set(0.5, 0);
-hud.position.set(app.screen.width / 2, board.container.y + boardH + 10);
+hud.position.set(app.screen.width / 2, board.container.y + boardH + 24);
 app.stage.addChild(hud);
 
 board.events.on('cell:landed', ({ cell, coin }) => {
@@ -99,7 +101,7 @@ const ROUNDS = [
 
 let busy = false;
 return {
-  cleanup: () => { for (const p of Object.values(plaques)) gsap.killTweensOf(p); try { hud.destroy(); rails.destroy(); } catch {} board.destroy(); },
+  cleanup: () => { for (const p of Object.values(plaques)) gsap.killTweensOf(p); try { hud.destroy(); rails.destroy(); } catch {} grid.destroy({ children: true }); board.destroy(); },
   onSpin: async () => {
     if (busy) return;
     busy = true;

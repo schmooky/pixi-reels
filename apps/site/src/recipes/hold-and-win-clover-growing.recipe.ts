@@ -1,5 +1,5 @@
 // @ts-nocheck
-// Injected: HoldAndWinBuilder, CloverSymbol, loadHwClover, PIXI, gsap, app
+// Injected: HoldAndWinBuilder, CloverSymbol, cloverGridBackground, loadHwClover, PIXI, gsap, app
 //
 // A board that grows. It is built 5x5, but the top and bottom rows start
 // dormant - `inactive(cells, 'sealed')` draws them as the purple sealed tile
@@ -8,7 +8,7 @@
 // and the next respin spins it with the rest.
 
 const COLS = 5, ROWS = 5;
-const CELL = { width: 101, height: 85 }, COLUMN_GAP = 6, ROW_GAP = 0;
+const CELL = { width: 101, height: 85 }, COLUMN_GAP = 8, ROW_GAP = 8;
 const BET = 1;
 const OPEN_TOP_AT = 5, OPEN_BOTTOM_AT = 8;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -40,18 +40,20 @@ const board = new HoldAndWinBuilder()
   .symbolData(UNMASK)
   .respins(3)
   .lockAnimation('landing')
-  .cellChrome((g, w, h) => g.rect(0, 0, w, h).fill({ color: 0x0b1a4a }).stroke({ color: 0x3f6bd8, width: 1, alpha: 0.8 }))
   .ticker(app.ticker)
   .build();
 
 const boardW = COLS * CELL.width + (COLS - 1) * COLUMN_GAP;
 const boardH = ROWS * CELL.height + (ROWS - 1) * ROW_GAP;
 board.container.position.set((app.screen.width - boardW) / 2, (app.screen.height - boardH) / 2 - 10);
+// the game's framing: gradient panel + grid lines in the gaps, behind a chrome-less board
+const grid = cloverGridBackground({ x: board.container.x, y: board.container.y, cols: COLS, rows: ROWS, cell: CELL, columnGap: COLUMN_GAP, rowGap: ROW_GAP });
+app.stage.addChild(grid);
 app.stage.addChild(board.container);
 
 const hud = new PIXI.Text({ text: `press spin · rows open at ${OPEN_TOP_AT} and ${OPEN_BOTTOM_AT} clovers`, style: { fontFamily: 'system-ui, sans-serif', fontSize: 13, fontWeight: '600', fill: 0x9c8f78 } });
 hud.anchor.set(0.5, 0);
-hud.position.set(app.screen.width / 2, board.container.y + boardH + 10);
+hud.position.set(app.screen.width / 2, board.container.y + boardH + 24);
 app.stage.addChild(hud);
 
 board.events.on('cell:landed', ({ cell, coin }) => {
@@ -88,7 +90,7 @@ const ROUNDS = [
 
 let busy = false;
 return {
-  cleanup: () => { try { hud.destroy(); } catch {} board.destroy(); },
+  cleanup: () => { try { hud.destroy(); } catch {} grid.destroy({ children: true }); board.destroy(); },
   onSpin: async () => {
     if (busy) return;
     busy = true;
