@@ -153,6 +153,20 @@ export abstract class ReelSymbol implements Disposable {
   /** Play the win/highlight animation for this symbol. Resolves when complete. */
   abstract playWin(): Promise<void>;
 
+  /**
+   * Play the landing beat for this symbol - the settle a symbol does as its
+   * reel stops, before (or instead of) any celebration. Resolves when done.
+   *
+   * The reel engine never calls this itself: `onReelLanded()` is the
+   * engine-driven hook, fired on every landed symbol. This is the explicit
+   * counterpart for a caller that lands cells one at a time - `HoldAndWinBoard`
+   * calls it on each lock when built with `lockAnimation('landing')`.
+   *
+   * Default: resolves at once. `SpineReelSymbol` overrides it with the
+   * skeleton's `landing` track; a sprite symbol can override it with a tween.
+   */
+  async playLanding(): Promise<void> {}
+
   /** Immediately stop any running animation and return to idle. */
   abstract stopAnimation(): void;
 

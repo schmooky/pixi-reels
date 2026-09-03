@@ -1,6 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import type { Ticker } from 'pixi.js';
+import { Graphics } from 'pixi.js';
+import type { RenderLayer } from 'pixi.js';
 import { BoardGrid } from '../../src/board/BoardGrid.js';
+import { SharedRectMaskStrategy } from '../../src/core/ReelViewport.js';
+import { ReelSet } from '../../src/core/ReelSet.js';
 import { FakeTicker } from '../../src/testing/FakeTicker.js';
 import { HeadlessSymbol } from '../../src/testing/HeadlessSymbol.js';
 
@@ -89,5 +93,86 @@ describe('BoardGrid', () => {
           ticker: undefined as unknown as Ticker,
         }),
     ).toThrow(/ticker is required/);
+  });
+});
+
+describe('BoardGrid rectangular cells and per-axis gaps', () => {
+  it('lays out width x height cells with separate column and row gaps', () => {
+    const grid = make({ cellSize: { width: 100, height: 60 }, columnGap: 6, rowGap: 2 });
+    expect(grid.cellWidth).toBe(100);
+    expect(grid.cellHeight).toBe(60);
+    expect(grid.columnGap).toBe(6);
+    expect(grid.rowGap).toBe(2);
+    expect(grid.cellBounds({ reel: 1, cell: 1 })).toEqual({ x: 106, y: 62, width: 100, height: 60 });
+    expect(grid.cellCenter({ reel: 2, cell: 0 })).toEqual({ x: 2 * 106 + 50, y: 30 });
+    grid.destroy();
+  });
+
+  it('sizes each cell reel to the rectangle, not a square', () => {
+    const grid = make({ cellSize: { width: 100, height: 60 } });
+    grid.place({ reel: 0, cell: 0 }, 'a');
+    const symbol = grid.symbolAt({ reel: 0, cell: 0 }) as HeadlessSymbol;
+    expect(symbol.width).toBe(100);
+    expect(symbol.height).toBe(60);
+    grid.destroy();
+  });
+
+  it('falls back from the uniform gap when only one axis is given', () => {
+    const grid = make({ gap: 5, rowGap: 0 });
+    expect(grid.columnGap).toBe(5);
+    expect(grid.rowGap).toBe(0);
+    expect(grid.cellBounds({ reel: 1, cell: 1 })).toEqual({ x: 85, y: 80, width: 80, height: 80 });
+    grid.destroy();
+  });
+
+  it('keeps cellSize and gap as aliases for square boards', () => {
+    const grid = make({ cellSize: 64, gap: 3 });
+    expect(grid.cellSize).toBe(64);
+    expect(grid.gap).toBe(3);
+    grid.destroy();
+  });
+
+  it('hands chrome the cell width and height', () => {
+    const seen: Array<[number, number]> = [];
+    const grid = make({
+      cellSize: { width: 100, height: 60 },
+      chrome: (_g: unknown, width: number, height: number) => {
+        seen.push([width, height]);
+      },
+    });
+    expect(seen).toHaveLength(6);
+    expect(seen[0]).toEqual([100, 60]);
+    grid.destroy();
+  });
+});
+
+describe('BoardGrid render order', () => {
+  it('draws every chrome under every reel and lifts unmasked views above all cells', () => {
+    const grid = make({ chrome: (g: Graphics) => { g.rect(0, 0, 1, 1); } });
+    const kids = grid.container.children;
+    // 6 cells: chrome x6, reel set x6, then the one lifted layer
+    expect(kids).toHaveLength(13);
+    expect(kids.slice(0, 6).every((c) => c instanceof Graphics)).toBe(true);
+    expect(kids.slice(6, 12).every((c) => c instanceof ReelSet)).toBe(true);
+    const layer = kids[12] as unknown as RenderLayer;
+    expect(layer.renderLayerChildren).toHaveLength(6);
+    for (const cell of grid.cells()) {
+      expect(layer.renderLayerChildren).toContain(grid.reelAt(cell).viewport.unmaskedContainer);
+    }
+    grid.destroy();
+  });
+});
+
+describe('BoardGrid cell mask', () => {
+  it('builds one mask strategy per cell from the factory', () => {
+    let built = 0;
+    const grid = make({
+      mask: () => {
+        built += 1;
+        return new SharedRectMaskStrategy();
+      },
+    });
+    expect(built).toBe(6);
+    grid.destroy();
   });
 });

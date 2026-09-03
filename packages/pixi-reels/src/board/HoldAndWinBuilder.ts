@@ -4,7 +4,8 @@ import type { SpeedProfile, SymbolData } from '../config/types.js';
 import type { SymbolRegistry } from '../symbols/SymbolRegistry.js';
 import { HoldAndWinBoard } from './HoldAndWinBoard.js';
 import type { Direction, Orientation } from '../core/ReelAxis.js';
-import type { HwCellSizeOptions } from './HwTypes.js';
+import type { MaskStrategy } from '../core/ReelViewport.js';
+import type { HwCell, HwCellSizeOptions, HwLockAnimation } from './HwTypes.js';
 
 /**
  * Fluent builder for {@link HoldAndWinBoard}.
@@ -20,19 +21,26 @@ import type { HwCellSizeOptions } from './HwTypes.js';
 export class HoldAndWinBuilder<TData = unknown> {
   private _cols = 5;
   private _rows = 3;
-  private _cell = 72;
-  private _gap = 4;
+  private _cellWidth = 72;
+  private _cellHeight = 72;
+  private _columnGap = 4;
+  private _rowGap = 4;
   private _emptyId = 'empty';
+  private _inactive: HwCell[] = [];
+  private _inactiveId: string | null = null;
   private _respins = 3;
+  private _lockAnimation: HwLockAnimation = 'win';
   private _configurator: ((registry: SymbolRegistry) => void) | null = null;
   private _weights: Record<string, number> | null = null;
   private _symbolData: Record<string, Partial<SymbolData>> | null = null;
-  private _baseProfile: SpeedProfile = { ...SpeedPresets.NORMAL, minimumSpinTime: 320 };
-  private _stagger: (reel: number, cell: number) => number = (reel, cell) => (reel + cell) * 70;
+  private _speeds: Record<string, SpeedProfile> = { normal: { ...SpeedPresets.NORMAL, minimumSpinTime: 320 } };
+  private _initialSpeed = 'normal';
+  private _stagger: (reel: number, cell: number, speed: string) => number = (reel, cell) => (reel + cell) * 70;
   private _anticipateWhen:
     | ((state: { locked: number; capacity: number; respinsLeft: number }) => boolean)
     | null = null;
-  private _chrome: ((g: Graphics, size: number) => void) | null = null;
+  private _chrome: ((g: Graphics, width: number, height: number) => void) | null = null;
+  private _mask: (() => MaskStrategy) | null = null;
   private _orientation: Orientation = 'vertical';
   private _direction: Direction = 'forward';
   private _ticker: Ticker | null = null;
@@ -44,9 +52,26 @@ export class HoldAndWinBuilder<TData = unknown> {
     return this;
   }
 
-  cellSize(size: number, opts: HwCellSizeOptions = {}): this {
-    this._cell = size;
-    this._gap = opts.gap ?? this._gap;
+  /**
+   * Cell size in pixels - one number for square cells, `{ width, height }` for
+   * rectangular ones - plus the gaps between cells. `gap` sets both axes;
+   * `columnGap` / `rowGap` override one each, so `{ columnGap: 6, rowGap: 0 }`
+   * gives touching rows with a seam between columns.
+   */
+  cellSize(size: number | { width: number; height: number }, opts: HwCellSizeOptions = {}): this {
+    if (typeof size === 'number') {
+      this._cellWidth = size;
+      this._cellHeight = size;
+    } else {
+      this._cellWidth = size.width;
+      this._cellHeight = size.height;
+    }
+    if (opts.gap !== undefined) {
+      this._columnGap = opts.gap;
+      this._rowGap = opts.gap;
+    }
+    if (opts.columnGap !== undefined) this._columnGap = opts.columnGap;
+    if (opts.rowGap !== undefined) this._rowGap = opts.rowGap;
     return this;
   }
 
@@ -73,10 +98,24 @@ export class HoldAndWinBuilder<TData = unknown> {
   }
 
   /**
+   * Cells that are built but dormant: they never spin, never take a coin and
+   * do not count toward the full board until {@link HoldAndWinBoard.activate}
+   * wakes them. `id` is the symbol shown on a dormant cell (default: the empty
+   * id) - register a distinct one to draw them as sealed. A board that grows
+   * from 5x3 to 5x5 mid-feature is a 5x5 board with two inactive rows.
+   */
+  inactive(cells: HwCell[], id?: string): this {
+    this._inactive = cells.map((c) => ({ reel: c.reel, cell: c.cell }));
+    this._inactiveId = id ?? null;
+    return this;
+  }
+
+  /**
    * Per-symbol engine overrides, exactly like `ReelSetBuilder.symbolData`. The
-   * headline use is `{ unmask: true }` for coins whose lock/reveal animations
-   * expand past the cell. Safe only for server-placed ids (weight 0): unmasked
-   * strip symbols mis-track vertically while the reel spins.
+   * headline use is `{ unmask: true }` for coins whose art or lock/reveal
+   * animation is drawn past the cell. The lift applies at rest only - the
+   * engine re-masks a cell the moment it moves - so weighted strip ids are
+   * fine too: they scroll clipped and sit unclipped once landed.
    */
   symbolData(overrides: Record<string, Partial<SymbolData>>): this {
     this._symbolData = { ...(this._symbolData ?? {}), ...overrides };
@@ -89,18 +128,54 @@ export class HoldAndWinBuilder<TData = unknown> {
     return this;
   }
 
-  /** Base spin feel for every cell. Default: NORMAL with a 320ms floor. */
-  speedProfile(profile: SpeedProfile): this {
-    this._baseProfile = profile;
+  /**
+   * What a coin's symbol plays the moment it locks. Default `'win'` - the
+   * symbol's `playWin()`. Pick `'landing'` for a land beat only and call
+   * {@link HoldAndWinBoard.playWin} when the game wants the celebration, or
+   * `'none'` to drive presentation entirely from the events.
+   */
+  lockAnimation(mode: HwLockAnimation): this {
+    this._lockAnimation = mode;
     return this;
   }
 
   /**
-   * Extra milliseconds of spin per cell on top of the base minimum spin time.
-   * Default `(reel + cell) * 70` - the diagonal landing wave. Return 0 for
-   * simultaneous landings.
+   * The `'normal'` spin feel for every cell. Default: NORMAL with a 320ms
+   * floor. Shorthand for `speeds({ normal: profile })`.
    */
-  stagger(fn: (reel: number, cell: number) => number): this {
+  speedProfile(profile: SpeedProfile): this {
+    this._speeds = { ...this._speeds, normal: profile };
+    return this;
+  }
+
+  /**
+   * Named speed profiles, registered into EVERY cell's SpeedManager - the
+   * board's `speed.addProfile()`. `board.setSpeed(name)` then switches all
+   * cells at once, exactly like `reelSet.setSpeed()` on one reel set. Merges
+   * with what is already registered (`'normal'` by default).
+   *
+   * ```ts
+   * .speeds({ normal: NORMAL, turbo: TURBO, superTurbo: SUPER_TURBO })
+   * ```
+   */
+  speeds(profiles: Record<string, SpeedProfile>): this {
+    this._speeds = { ...this._speeds, ...profiles };
+    return this;
+  }
+
+  /** Profile active when the board is built. Default `'normal'`. */
+  initialSpeed(name: string): this {
+    this._initialSpeed = name;
+    return this;
+  }
+
+  /**
+   * Extra milliseconds of spin per cell on top of the active profile's
+   * minimum spin time. Default `(reel + cell) * 70` - the diagonal landing
+   * wave. The active speed's name is the third argument, so a turbo profile
+   * can flatten the wave: `(reel, cell, speed) => speed === 'turbo' ? 0 : ...`.
+   */
+  stagger(fn: (reel: number, cell: number, speed: string) => number): this {
     this._stagger = fn;
     return this;
   }
@@ -117,9 +192,23 @@ export class HoldAndWinBuilder<TData = unknown> {
     return this;
   }
 
-  /** Per-cell background, drawn behind each mini reel. */
-  cellChrome(draw: (g: Graphics, size: number) => void): this {
+  /**
+   * Per-cell background, drawn behind each mini reel, handed the cell's width
+   * and height. A callback written for a square board that only reads the
+   * first argument keeps working.
+   */
+  cellChrome(draw: (g: Graphics, width: number, height: number) => void): this {
     this._chrome = draw;
+    return this;
+  }
+
+  /**
+   * Mask for each cell, built once per cell. Default: a shared rect over the
+   * cell. `() => new RoundedRectMaskStrategy({ radius: 8 })` rounds every
+   * cell's corners to match a rounded frame drawn behind the board.
+   */
+  cellMask(factory: () => MaskStrategy): this {
+    this._mask = factory;
     return this;
   }
 
@@ -152,20 +241,32 @@ export class HoldAndWinBuilder<TData = unknown> {
     if (!this._ticker) {
       throw new Error('HoldAndWinBuilder: .ticker(...) is required.');
     }
+    if (!(this._initialSpeed in this._speeds)) {
+      throw new Error(
+        `HoldAndWinBuilder: initialSpeed('${this._initialSpeed}') names no registered profile - register it with .speeds({ ... }).`,
+      );
+    }
     return new HoldAndWinBoard<TData>({
       cols: this._cols,
       rows: this._rows,
-      cell: this._cell,
-      gap: this._gap,
+      cellWidth: this._cellWidth,
+      cellHeight: this._cellHeight,
+      columnGap: this._columnGap,
+      rowGap: this._rowGap,
       emptyId: this._emptyId,
+      inactive: this._inactive,
+      inactiveId: this._inactiveId ?? this._emptyId,
       respins: this._respins,
+      lockAnimation: this._lockAnimation,
       configurator: this._configurator,
       weights: this._weights,
       symbolData: this._symbolData,
-      baseProfile: this._baseProfile,
+      speeds: this._speeds,
+      initialSpeed: this._initialSpeed,
       stagger: this._stagger,
       anticipateWhen: this._anticipateWhen,
       chrome: this._chrome,
+      mask: this._mask,
       orientation: this._orientation,
       direction: this._direction,
       ticker: this._ticker,

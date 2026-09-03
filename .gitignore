@@ -43,3 +43,4 @@ apps/site/src/pages/api/
 # Local to each contributor's dev session; never belongs in git.
 .claude/scheduled_tasks.lock
 .claude/scheduled_tasks/
+__pycache__/

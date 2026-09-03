@@ -224,6 +224,7 @@ export type {
   HoldAndWinBoardEvents,
   HwEffect,
   HwCellSizeOptions,
+  HwLockAnimation,
 } from './board/HwTypes.js';
 
 // Wins (symbol-highlight presenter. no line drawing, events-driven)

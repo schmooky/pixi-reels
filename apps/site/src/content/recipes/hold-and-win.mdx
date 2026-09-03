@@ -1,7 +1,7 @@
 ---
 title: "Hold & Win"
 group: mechanics
-oneLiner: Every Hold and Win building block on one page, from carrying a value on a coin to production Spine and sprite boards with collectors, multipliers, jackpots, meters, anticipation and skips.
+oneLiner: Every Hold and Win building block on one page, from carrying a value on a coin to production Spine and sprite boards with collectors, multipliers, jackpots, meters, anticipation and skips, plus a rectangular-cell clover game from base spin to growing bonus board.
 order: 10
 tags:
   - hold-and-win
@@ -12,6 +12,8 @@ tags:
   - horizontal
   - reverse
   - orientation
+  - rectangular
+  - clovers
 ---
 
 Every Hold & Win building block on one page: the respin mechanic, value coins, collectors, jackpots, meters, and the beginner lessons that lead up to them, each a live demo.
@@ -199,6 +201,110 @@ The same round on `.axis('vertical', 'reverse')`, plus the hold that pairs with 
 **Gotcha:** the ReelSet-level equivalent, `spin({ holdReels })`, holds a whole reel. a board has no `holdReels` because Hold & Win holds single cells.
 
 <RecipeDemo code="hold-and-win-reverse-respin" height={340} />
+
+<a id="hold-and-win-rect-cells"></a>
+
+## Rectangular cells: width, height and a gap per axis
+
+Hold & Win art is usually wider than tall. cellSize takes a width and a height plus a columnGap and a rowGap, so the board lays out to the art's own rectangle, with the game's grid showing through the gaps.
+
+<RecipeDemo code="hold-and-win-rect-cells" height={360} />
+
+<a id="hold-and-win-landing-only"></a>
+
+## Landing only, celebrate once
+
+lockAnimation('landing') plays a settle on every lock and nothing else; board.playWin() is the one explicit celebration, fired when the game decides.
+
+<RecipeDemo code="hold-and-win-landing-only" height={360} />
+
+<a id="hold-and-win-clover-base-game"></a>
+
+## Clover base game into the feature
+
+A fruit base game where gold clovers spin past showing bet-scaled money and the collect / multi / mystery / super clovers carry none; three or more clovers on the stop hand their cells to the Hold & Win board.
+
+<RecipeDemo code="hold-and-win-clover-base-game" height={360} />
+
+<a id="hold-and-win-clover-bonus"></a>
+
+## Clover bonus board, 5x3
+
+The feature on its own: gold clovers lock with their amounts, blanks are the game's dark clover tile, and the 1 2 3 lamps below are the respin counter.
+
+<RecipeDemo code="hold-and-win-clover-bonus" height={400} />
+
+<a id="hold-and-win-clover-bonus-5x5"></a>
+
+## Clover bonus board, 5x5
+
+The same board with five rows, every cell live from the start.
+
+<RecipeDemo code="hold-and-win-clover-bonus-5x5" height={560} />
+
+<a id="hold-and-win-clover-growing"></a>
+
+## Clover board that grows from 5x3 to 5x5
+
+Built 5x5 with the top and bottom rows dormant behind the purple sealed tile (inactive); holding enough clovers opens a row with board.activate(), and the next respin spins it too.
+
+<RecipeDemo code="hold-and-win-clover-growing" height={560} />
+
+<a id="hold-and-win-clover-blur-strips"></a>
+
+## Blur strips on rectangular cells
+
+Every symbol ships a crisp and a motion-blur frame; CloverSymbol swaps to the blur while the reel spins. Two identical rows, one with the swap and one without.
+
+<RecipeDemo code="hold-and-win-clover-blur-strips" height={300} />
+
+<a id="hold-and-win-clover-feature-clovers"></a>
+
+## Feature clovers: collect, multi, mystery
+
+Non-monetary clovers act on the held gold between waves: MULTI doubles every amount, MYSTERY becomes a gold clover with a revealed amount via setSymbolAt, COLLECT sums the board onto its face.
+
+<RecipeDemo code="hold-and-win-clover-feature-clovers" height={400} />
+
+<a id="hold-and-win-clover-collect"></a>
+
+## Collect: lightning takes the values, the collector dims
+
+Held clovers idle until the feature ends. When COLLECT locks, lightning strikes from it to each gold clover's number and the collect face counts the values up into its own value; the golds keep theirs, and the spent collector dims to grey, still held.
+
+<RecipeDemo code="hold-and-win-clover-collect" height={400} />
+
+<a id="hold-and-win-clover-mystery-capsule"></a>
+
+## Mystery capsule: one of the jackpots
+
+The sealed capsule locks like a coin; between waves the jackpot titles flick across its face (setBadge) and settle on the served tier, the plaque lights, and the amount paints on.
+
+<RecipeDemo code="hold-and-win-clover-mystery-capsule" height={420} />
+
+<a id="hold-and-win-clover-grid-bg"></a>
+
+## The game's grid: gaps filled by the background
+
+Real gaps between the cells (columnGap and rowGap) and no chrome, so the board is a grid the background shows through: a gradient panel and one rounded frame per cell traced on its exact bounds, plain PIXI.Graphics behind the board, with a rounded cell mask cutting the tiles' corners to match.
+
+<RecipeDemo code="hold-and-win-clover-grid-bg" height={420} />
+
+<a id="hold-and-win-clover-speeds"></a>
+
+## One speed switch for every cell
+
+speeds(normal, turbo, superTurbo) registers each profile into every cell's SpeedManager and board.setSpeed(name) switches them all at once, the board's reelSet.setSpeed(); a wave in flight finishes on its own profile, so a turbo press mid-wave is setSpeed plus skip().
+
+<RecipeDemo code="hold-and-win-clover-speeds" height={420} />
+
+<a id="hold-and-win-clover-respin-counter"></a>
+
+## Respin counter lamps
+
+Three lamps driven by respins:changed alone: its reason says whether the number moved on seed, hit-reset or miss, so the lamps pop or dim without the game re-deriving anything.
+
+<RecipeDemo code="hold-and-win-clover-respin-counter" height={420} />
 
 <a id="coin-value-symbol"></a>
 

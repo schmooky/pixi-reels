@@ -58,6 +58,17 @@ export type HoldAndWinBoardEvents<TData = unknown> = {
    */
   'feature:reset': [{ clearedCoins: number }];
   'feature:end': [{ coins: HwCoin<TData>[]; rounds: number; full: boolean }];
+  /**
+   * Fired by `activate()` - dormant cells joined the board. `capacity` is the
+   * new total of active cells, the number `isFull` is measured against.
+   */
+  'cells:activated': [{ cells: HwCell[]; capacity: number }];
+  /**
+   * Fired by `setSpeed()` - every cell's active speed profile changed. Cells
+   * already in flight finish on the profile they started with; the next wave
+   * (or a `skip()`) is where the new one shows.
+   */
+  'speed:changed': [{ name: string; previous: string }];
 };
 
 /**
@@ -76,8 +87,24 @@ export type HwEffect<TData = unknown> = {
 }[keyof HoldAndWinBoardEvents<TData>];
 
 export interface HwCellSizeOptions {
+  /** Gap between cells on both axes, in pixels. Default 4. */
   gap?: number;
+  /** Horizontal gap between columns. Falls back to `gap`. */
+  columnGap?: number;
+  /** Vertical gap between rows. Falls back to `gap`. */
+  rowGap?: number;
 }
+
+/**
+ * What the board plays on a coin's symbol the moment it locks.
+ *
+ * - `'win'` - `playWin()`, the celebration one-shot. The default.
+ * - `'landing'` - `playLanding()`, a land beat only. The game decides when the
+ *   celebration happens and calls {@link HoldAndWinBoard.playWin} itself,
+ *   typically once the board is full or the feature ends.
+ * - `'none'` - nothing. Presentation is entirely the game layer's.
+ */
+export type HwLockAnimation = 'win' | 'landing' | 'none';
 
 /** `reel,cell` string key for the board's cell-indexed maps. */
 export const cellKey = (c: HwCell): string => `${c.reel},${c.cell}`;

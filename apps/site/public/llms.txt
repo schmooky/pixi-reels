@@ -1,6 +1,6 @@
 # pixi-reels
 
-pixi-reels 2.3.0 is a reel engine for PixiJS v8.
+pixi-reels 2.4.0 is a reel engine for PixiJS v8.
 It ships reel-only primitives. Win math, paytable math, RNG, and audio live in consumer code.
 This file inlines every guide, API page, recipe (with source) and answered FAQ entry for offline LLM context.
 
@@ -201,7 +201,7 @@ Fluent builder for [HoldAndWinBoard](/api/classes/index.HoldAndWinBoard/).
 
 ### HoldAndWinState\<TData\>
 URL: https://pixi-reels.schmooky.dev/api/classes/index.HoldAndWinState/
-The pure Hold & Win state machine - the single source of truth for board state, with **zero** PixiJS. It owns the locked-coin ledger, the respin counter, the round number and the feature [HwPhase](/ap
+The pure Hold & Win state machine - the single source of truth for board state, with **zero** PixiJS. It owns the locked-coin ledger, the respin counter, the round number, the set of dormant cells and
 
 ### ImmediateMode
 URL: https://pixi-reels.schmooky.dev/api/classes/index.ImmediateMode/
@@ -421,7 +421,7 @@ URL: https://pixi-reels.schmooky.dev/api/functions/index.resolveCurveConfig/
 
 ### resolveDriveConfig()
 URL: https://pixi-reels.schmooky.dev/api/functions/index.resolveDriveConfig/
-```ts function resolveDriveConfig(config: ReelDriveConfig): Required<Omit<ReelDriveConfig, "jerk">> & { jerk: number; }; ```
+```ts function resolveDriveConfig(config: ReelDriveConfig, spinSpeed?: number): ResolvedDriveConfig; ```
 
 ### resolveTumbleConfig()
 URL: https://pixi-reels.schmooky.dev/api/functions/index.resolveTumbleConfig/
@@ -445,7 +445,7 @@ URL: https://pixi-reels.schmooky.dev/api/functions/index.startRecording/
 
 ### stepDrive()
 URL: https://pixi-reels.schmooky.dev/api/functions/index.stepDrive/
-```ts function stepDrive( state: ReelDriveState, target: number, config: { accel: number; decel: number; jerk: number; }, deltaMs: number): ReelDriveState; ```
+```ts function stepDrive( state: ReelDriveState, target: number, config: ResolvedDriveConfig, deltaMs: number): ReelDriveState; ```
 
 ### stopRecording()
 URL: https://pixi-reels.schmooky.dev/api/functions/index.stopRecording/
@@ -723,6 +723,10 @@ Options for [ReelSet.refill](/api/classes/index.ReelSet/#refill). The two requir
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.RefillResult/
 Summary returned by [ReelSet.refill](/api/classes/index.ReelSet/#refill). Symmetric with [RunCascadeResult](/api/types/index.RunCascadeResult/). same vocabulary, narrower scope (one stage vs. the full
 
+### ResolvedDriveConfig
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.ResolvedDriveConfig/
+Acceleration bounds with every default filled in. px/frame^2, px/frame^3.
+
 ### ResolvedTumbleConfig
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.ResolvedTumbleConfig/
 Resolved config with defaults applied. Internal type.
@@ -792,6 +796,10 @@ URL: https://pixi-reels.schmooky.dev/api/interfaces/index.StaticSpinSymbolOption
 ### StopPhaseConfig
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.StopPhaseConfig/
 
+### SwapSymbolsOptions
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.SwapSymbolsOptions/
+Options for [ReelSet.swapSymbols](/api/classes/index.ReelSet/#swapsymbols). Every field is optional; the defaults play every cell out together, swap, and play every cell in together.
+
 ### SymbolData
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.SymbolData/
 Per-symbol configuration data.
@@ -807,6 +815,10 @@ Which draws a pool applies to.
 ### SymbolPosition
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.SymbolPosition/
 A cell on the visible grid. `reelIndex` is the column; `cellIndex` is the cell from the top.
+
+### SymbolSwap
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.SymbolSwap/
+One cell to re-skin. See [ReelSet.swapSymbols](/api/classes/index.ReelSet/#swapsymbols).
 
 ### TrapezoidConfig
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.TrapezoidConfig/
@@ -850,6 +862,10 @@ URL: https://pixi-reels.schmooky.dev/api/modules/spine/
 ### testing
 URL: https://pixi-reels.schmooky.dev/api/modules/testing/
 
+### AnticipationCells
+URL: https://pixi-reels.schmooky.dev/api/types/index.AnticipationCells/
+```ts type AnticipationCells = number | ((order: number, total: number) => number); ```
+
 ### AnticipationCurve
 URL: https://pixi-reels.schmooky.dev/api/types/index.AnticipationCurve/
 ```ts type AnticipationCurve =
@@ -892,11 +908,15 @@ URL: https://pixi-reels.schmooky.dev/api/types/index.Gsap/
 
 ### HoldAndWinBoardEvents\<TData\>
 URL: https://pixi-reels.schmooky.dev/api/types/index.HoldAndWinBoardEvents/
-```ts type HoldAndWinBoardEvents<TData> = { board:full: [{ coins: HwCoin<TData>[]; }]; cell:landed: [{ cell: HwCell; coin: HwCoin<TData> | null; }]; coin:locked: [{ capacity: number; coin: HwCoin<TDat
+```ts type HoldAndWinBoardEvents<TData> = { board:full: [{ coins: HwCoin<TData>[]; }]; cell:landed: [{ cell: HwCell; coin: HwCoin<TData> | null; }]; cells:activated: [{ capacity: number; cells: HwCell
 
 ### HwEffect\<TData\>
 URL: https://pixi-reels.schmooky.dev/api/types/index.HwEffect/
 ```ts type HwEffect<TData> = { [K in keyof HoldAndWinBoardEvents<TData>]: { payload: HoldAndWinBoardEvents<TData>[K][0]; type: K } }[keyof HoldAndWinBoardEvents<TData>]; ```
+
+### HwLockAnimation
+URL: https://pixi-reels.schmooky.dev/api/types/index.HwLockAnimation/
+```ts type HwLockAnimation = "win" | "landing" | "none"; ```
 
 ### HwPhase
 URL: https://pixi-reels.schmooky.dev/api/types/index.HwPhase/
@@ -1054,7 +1074,7 @@ Tags: paylines, hit-areas, overlays, wins, horizontal, orientation
 
 ### Hold & Win
 URL: https://pixi-reels.schmooky.dev/recipes/hold-and-win/
-Tags: hold-and-win, coins, collector, respin, spine, horizontal, reverse, orientation
+Tags: hold-and-win, coins, collector, respin, spine, horizontal, reverse, orientation, rectangular, clovers
 
 ### Masks & board shapes
 URL: https://pixi-reels.schmooky.dev/recipes/masks/
@@ -8574,6 +8594,1413 @@ return {
 };
 ```
 
+### hold-and-win-clover-base-game
+URL: https://pixi-reels.schmooky.dev/recipes/hold-and-win-clover-base-game/
+```ts
+// @ts-nocheck
+// Injected: ReelSetBuilder, RoundedRectMaskStrategy, HoldAndWinBuilder, CloverSymbol,
+//           loadHwClover, CLOVER_FRUITS, CLOVER_FEATURES, PIXI, gsap, app
+//
+// The base game of a clover Hold & Win slot, on rectangular cells. Fruits and
+// clovers share the strips: a GOLD clover is money and spins past with a
+// bet-scaled amount on its face; the feature clovers (collect, multi,
+// mystery, super) carry no amount. Three or more clovers on the stop hand
+// their cells to the Hold & Win board, which respins around them.
+
+const COLS = 5, ROWS = 3;
+const CELL = { width: 101, height: 85 }, COLUMN_GAP = 8, ROW_GAP = 8;
+const BET = 1;
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const fmt = (v) => v.toFixed(2);
+const pick = (a) => a[Math.floor(Math.random() * a.length)];
+
+const art = await loadHwClover();
+// The clover glow is drawn past the 202x170 cell: lift these above the cell mask
+// at rest (unmask), or every edge of every clover is clipped.
+const UNMASK = Object.fromEntries(['gold', 'collect', 'multi', 'mystery', 'super', 'capsule'].map((id) => [id, { unmask: true }]));
+const STRIP_VALUES = [1, 1, 1.5, 2, 2.5, 3, 5, 7, 10];
+const CLOVERS = ['gold', ...CLOVER_FEATURES, 'capsule'];
+
+// A gold clover on the strip already shows an amount - a random one, scaled
+// by the bet - so money reads as money while the reel is still moving. The
+// landed value overwrites it the instant the reel settles (see spin:reelLanded).
+class Clover extends CloverSymbol {
+  onActivate(id) {
+    super.onActivate(id);
+    if (id === 'gold') this.setLabel(fmt(pick(STRIP_VALUES) * BET));
+  }
+}
+
+const boardW = COLS * CELL.width + (COLS - 1) * COLUMN_GAP;
+const boardH = ROWS * CELL.height + (ROWS - 1) * ROW_GAP;
+const ox = (app.screen.width - boardW) / 2;
+const oy = (app.screen.height - boardH) / 2 - 8;
+
+// -- base game: a normal reel set on the same rectangle as the board --
+const base = new ReelSetBuilder()
+  .reels(COLS).visibleCells(ROWS)
+  .symbolSize(CELL.width, CELL.height).symbolGap(COLUMN_GAP, ROW_GAP)
+  .symbols((r) => {
+    // fruit sits still after a spin; a landed clover keeps its idle going
+    for (const id of CLOVER_FRUITS) r.register(id, Clover, { art, idleAfterLand: false });
+    for (const id of CLOVERS) r.register(id, Clover, { art });
+  })
+  .weights({
+    ...Object.fromEntries(CLOVER_FRUITS.map((id) => [id, 3])),
+    gold: 1.2, collect: 0.3, multi: 0.3, mystery: 0.3, super: 0.2, capsule: 0.2,
+  })
+  .symbolData(UNMASK)
+  .maskStrategy(new RoundedRectMaskStrategy({ radius: CLOVER_CELL_RADIUS }))
+  .speed('normal', CLOVER_SPEED)
+  .ticker(app.ticker)
+  .build();
+base.position.set(ox, oy);
+// one framing for both: the base reels and the board share the geometry
+const grid = cloverGridBackground({ x: ox, y: oy, cols: COLS, rows: ROWS, cell: CELL, columnGap: COLUMN_GAP, rowGap: ROW_GAP });
+app.stage.addChild(grid, base);
+
+// -- the Hold & Win board on the same geometry, hidden until it triggers --
+const board = new HoldAndWinBuilder()
+  .grid(COLS, ROWS)
+  .cellSize(CELL, { columnGap: COLUMN_GAP, rowGap: ROW_GAP })
+  .symbols((r) => { for (const id of [...CLOVERS, 'empty']) r.register(id, Clover, { art }); })
+  // in the feature only clovers spin past - the base game's fruit stays behind
+  .weights({ gold: 2, collect: 0.6, multi: 0.6, mystery: 0.6, super: 0.4, capsule: 0.5, empty: 5 })
+  .symbolData(UNMASK)
+  // a few px of bounce, not the tall-reel default: a clover cell should settle, not jump
+  .speedProfile(CLOVER_SPEED)
+  // rounded cells, cut on the frame's own radius
+  .cellMask(cloverCellMask)
+  .respins(3)
+  .lockAnimation('landing')
+  .ticker(app.ticker)
+  .build();
+board.container.position.set(ox, oy);
+board.container.visible = false;
+app.stage.addChild(board.container);
+
+const hud = new PIXI.Text({ text: 'press spin · 3+ clovers trigger the feature', style: { fontFamily: 'system-ui, sans-serif', fontSize: 13, fontWeight: '600', fill: 0x9c8f78 } });
+hud.anchor.set(0.5, 0);
+hud.position.set(app.screen.width / 2, oy + boardH + 24);
+app.stage.addChild(hud);
+
+// The served amount replaces the strip's random one on the very frame the
+// reel lands - the label is on the symbol, so nothing has to be re-drawn.
+let served = null; // per-spin: reel -> row -> value for gold cells
+base.events.on('spin:reelLanded', (reelIndex) => {
+  if (!served) return;
+  for (let row = 0; row < ROWS; row++) {
+    const s = base.reels[reelIndex].getSymbolAt(row);
+    if (s.symbolId === 'gold') s.setLabel(fmt(served[reelIndex][row]));
+  }
+});
+board.events.on('cell:landed', ({ cell, coin }) => {
+  if (coin && coin.id === 'gold') board.symbolAt(cell).setLabel(fmt(coin.data.value));
+});
+
+// scripted base results: a near miss (2 clovers), then a trigger (3 gold + a mystery)
+const SPINS = [
+  [{ reel: 1, cell: 1, id: 'gold' }, { reel: 3, cell: 0, id: 'multi' }],
+  [{ reel: 0, cell: 2, id: 'gold' }, { reel: 2, cell: 0, id: 'gold' }, { reel: 3, cell: 1, id: 'mystery' }, { reel: 4, cell: 2, id: 'gold' }],
+];
+let spinNo = 0;
+
+function baseResult(clovers) {
+  const grid = Array.from({ length: COLS }, () => Array.from({ length: ROWS }, () => pick(CLOVER_FRUITS)));
+  served = Array.from({ length: COLS }, () => Array(ROWS).fill(0));
+  for (const c of clovers) {
+    grid[c.reel][c.cell] = c.id;
+    if (c.id === 'gold') served[c.reel][c.cell] = pick(STRIP_VALUES) * BET;
+  }
+  return grid;
+}
+
+async function runFeature(clovers) {
+  base.visible = false;
+  board.container.visible = true;
+  board.reset();
+  // the trigger clovers carry over as the first locked cells; only gold has a value
+  const seed = clovers.map((c) => ({ cell: { reel: c.reel, cell: c.cell }, id: c.id, data: { value: c.id === 'gold' ? served[c.reel][c.cell] : 0 } }));
+  board.enter(seed);
+  for (const c of seed) { const sym = board.symbolAt(c.cell); if (c.id === 'gold') sym.setLabel(fmt(c.data.value)); sym.playIdle(); }
+  hud.text = 'HOLD & WIN · gold carries money, feature clovers carry none';
+  await sleep(500);
+  for (const cells of [[{ reel: 1, cell: 0 }], [{ reel: 3, cell: 2 }, { reel: 0, cell: 0 }], [], [], []]) {
+    const res = await board.respin(cells.map((cell) => ({ cell, id: 'gold', data: { value: pick(STRIP_VALUES) * BET } })));
+    await sleep(400);
+    if (res.done) break;
+  }
+  await board.playWin();
+  const total = board.lockedCoins.reduce((a, c) => a + c.data.value, 0);
+  hud.text = `feature over · won ${fmt(total)} · back to the base game`;
+  await sleep(700);
+  board.container.visible = false;
+  base.visible = true;
+}
+
+let busy = false;
+return {
+  cleanup: () => { try { hud.destroy(); grid.destroy({ children: true }); } catch {} board.destroy(); base.destroy(); },
+  onSpin: async () => {
+    if (busy) return;
+    busy = true;
+    const clovers = SPINS[spinNo % SPINS.length];
+    spinNo += 1;
+    hud.text = 'spinning...';
+    const p = base.spin();
+    await sleep(150);
+    base.setResult(baseResult(clovers).map((visible) => ({ visible })));
+    await p;
+    if (clovers.length >= 3) {
+      hud.text = `${clovers.length} clovers - entering Hold & Win`;
+      await sleep(600);
+      await runFeature(clovers);
+    } else {
+      hud.text = `${clovers.length} clovers · need 3 · press spin`;
+    }
+    busy = false;
+  },
+};
+```
+
+### hold-and-win-clover-blur-strips
+URL: https://pixi-reels.schmooky.dev/recipes/hold-and-win-clover-blur-strips/
+```ts
+// @ts-nocheck
+// Injected: HoldAndWinBuilder, CloverSymbol, cloverGridBackground, loadHwClover, CLOVER_SPEED, cloverCellMask, PIXI, gsap, app
+//
+// Blur strips on rectangular cells. Every symbol in the set ships a crisp
+// frame and a motion-blur frame; CloverSymbol swaps to the blur while its
+// reel spins and back on the stop. Two one-row boards, same spin: the top
+// one uses the blur frames, the bottom one is a subclass that never swaps -
+// the difference is why studios pre-render the blur.
+
+const COLS = 5;
+const CELL = { width: 101, height: 85 }, COLUMN_GAP = 8, ROW_GAP = 8;
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const fmt = (v) => v.toFixed(2);
+const pick = (a) => a[Math.floor(Math.random() * a.length)];
+
+const art = await loadHwClover();
+// The clover glow is drawn past the 202x170 cell: lift these above the cell mask
+// at rest (unmask), or every edge of every clover is clipped.
+const UNMASK = Object.fromEntries(['gold', 'collect', 'multi', 'mystery', 'super', 'capsule'].map((id) => [id, { unmask: true }]));
+const IDS = ['gold', 'collect', 'multi', 'mystery', 'super', 'capsule', 'empty'];
+
+class Blurred extends CloverSymbol {
+  onActivate(id) { super.onActivate(id); if (id === 'gold') this.setLabel(fmt(pick([1, 2, 5, 10]))); }
+}
+// Opt out of the swap: the crisp frame smears into stripes at reel speed.
+class Crisp extends Blurred {
+  onReelSpinStart() {}
+}
+
+const grids = [];
+const makeRow = (Symbol, y) => {
+  const board = new HoldAndWinBuilder()
+    .grid(COLS, 1)
+    .cellSize(CELL, { columnGap: COLUMN_GAP, rowGap: ROW_GAP })
+    .symbols((r) => { for (const id of IDS) r.register(id, Symbol, { art }); })
+    .weights({ gold: 2, collect: 1, multi: 1, mystery: 1, super: 0.7, capsule: 0.8, empty: 3 })
+    // a long spin so the strip is on screen long enough to compare
+    .speedProfile({ ...CLOVER_SPEED, minimumSpinTime: 1600 })
+    .cellMask(cloverCellMask)
+    .stagger((reel) => reel * 120)
+    .symbolData(UNMASK)
+    .lockAnimation('none')
+      .ticker(app.ticker)
+    .build();
+  board.container.position.set((app.screen.width - (COLS * CELL.width + (COLS - 1) * COLUMN_GAP)) / 2, y);
+  const grid = cloverGridBackground({ x: board.container.x, y: board.container.y, cols: COLS, rows: 1, cell: CELL, columnGap: COLUMN_GAP, rowGap: ROW_GAP, margin: 10 });
+  app.stage.addChild(grid, board.container);
+  grids.push(grid);
+  board.events.on('cell:landed', ({ cell, coin }) => { if (coin) board.symbolAt(cell).setLabel(fmt(coin.data.value)); });
+  return board;
+};
+const top = makeRow(Blurred, 40);
+const bottom = makeRow(Crisp, 40 + CELL.height + 56);
+
+const caption = (text, y) => {
+  const t = new PIXI.Text({ text, style: { fontFamily: 'system-ui, sans-serif', fontSize: 12, fontWeight: '600', fill: 0x9c8f78 } });
+  t.anchor.set(0.5, 0);
+  t.position.set(app.screen.width / 2, y);
+  app.stage.addChild(t);
+  return t;
+};
+const c1 = caption('with blur frames (CloverSymbol swaps on spin)', 8);
+const c2 = caption('without: the crisp frame at reel speed', top.container.y + CELL.height + 22);
+
+const gold = (cell) => ({ cell, id: 'gold', data: { value: pick([1, 2, 5, 10]) } });
+let busy = false;
+return {
+  cleanup: () => { try { c1.destroy(); c2.destroy(); for (const g of grids) g.destroy({ children: true }); } catch {} top.destroy(); bottom.destroy(); },
+  onSpin: async () => {
+    if (busy) return;
+    busy = true;
+    for (const b of [top, bottom]) { b.reset(); b.enter([]); }
+    const hits = [{ reel: 1, cell: 0 }, { reel: 3, cell: 0 }];
+    await Promise.all([top.respin(hits.map(gold)), bottom.respin(hits.map(gold))]);
+    await sleep(300);
+    busy = false;
+  },
+};
+```
+
+### hold-and-win-clover-bonus-5x5
+URL: https://pixi-reels.schmooky.dev/recipes/hold-and-win-clover-bonus-5x5/
+```ts
+// @ts-nocheck
+// Injected: HoldAndWinBuilder, CloverSymbol, cloverGridBackground, loadHwClover, CLOVER_SPEED, cloverCellMask, PIXI, gsap, app
+//
+// The bonus on its own: a 5x5 board of rectangular cells, nothing but the
+// Hold & Win. Gold clovers spin past with bet-scaled amounts and lock where
+// they land; a blank cell is the game's own dark clover tile; the 1 2 3
+// lamps under the board are the respin counter, relit on every hit.
+
+const COLS = 5, ROWS = 5;
+const CELL = { width: 101, height: 85 }, COLUMN_GAP = 8, ROW_GAP = 8;
+const BET = 1;
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const fmt = (v) => v.toFixed(2);
+const pick = (a) => a[Math.floor(Math.random() * a.length)];
+
+const art = await loadHwClover();
+// The clover glow is drawn past the 202x170 cell: lift these above the cell mask
+// at rest (unmask), or every edge of every clover is clipped.
+const UNMASK = Object.fromEntries(['gold', 'collect', 'multi', 'mystery', 'super', 'capsule'].map((id) => [id, { unmask: true }]));
+const STRIP_VALUES = [1, 1, 1.5, 2, 2.5, 3, 5, 7, 10];
+
+class Clover extends CloverSymbol {
+  onActivate(id) {
+    super.onActivate(id);
+    if (id === 'gold') this.setLabel(fmt(pick(STRIP_VALUES) * BET));
+  }
+}
+
+const board = new HoldAndWinBuilder()
+  .grid(COLS, ROWS)
+  .cellSize(CELL, { columnGap: COLUMN_GAP, rowGap: ROW_GAP })
+  .symbols((r) => { for (const id of ['gold', 'collect', 'multi', 'mystery', 'super', 'capsule', 'empty']) r.register(id, Clover, { art }); })
+  .weights({ gold: 2, collect: 0.6, multi: 0.6, mystery: 0.6, super: 0.4, capsule: 0.5, empty: 5 })
+  .symbolData(UNMASK)
+  // a few px of bounce, not the tall-reel default: a clover cell should settle, not jump
+  .speedProfile(CLOVER_SPEED)
+  // rounded cells, cut on the frame's own radius
+  .cellMask(cloverCellMask)
+  .respins(3)
+  .lockAnimation('landing')
+  .ticker(app.ticker)
+  .build();
+
+const boardW = COLS * CELL.width + (COLS - 1) * COLUMN_GAP;
+const boardH = ROWS * CELL.height + (ROWS - 1) * ROW_GAP;
+board.container.position.set((app.screen.width - boardW) / 2, (app.screen.height - boardH) / 2 - 14);
+// the game's framing: gradient panel + grid lines in the gaps, behind a chrome-less board
+const grid = cloverGridBackground({ x: board.container.x, y: board.container.y, cols: COLS, rows: ROWS, cell: CELL, columnGap: COLUMN_GAP, rowGap: ROW_GAP });
+app.stage.addChild(grid);
+app.stage.addChild(board.container);
+
+// -- respin counter: three lamps, lit = respins left --
+const counter = new PIXI.Container();
+const lamps = [];
+for (let i = 0; i < 3; i++) {
+  const lamp = new PIXI.Container();
+  const bg = new PIXI.Graphics();
+  const digit = new PIXI.BitmapText({ text: String(i + 1), style: { fontFamily: 'CloverValue', fontSize: 22 } });
+  digit.anchor.set(0.5);
+  lamp.addChild(bg, digit);
+  lamp.x = i * 52;
+  counter.addChild(lamp);
+  lamps.push({ bg, digit });
+}
+const lightLamps = (left) => {
+  lamps.forEach(({ bg, digit }, i) => {
+    const lit = i < left;
+    bg.clear().roundRect(-24, -13, 48, 26, 4).fill({ color: lit ? 0xf5b400 : 0x0b1a4a }).stroke({ color: lit ? 0xffe27a : 0x3f6bd8, width: 1 });
+    digit.alpha = lit ? 1 : 0.45;
+  });
+};
+counter.position.set(app.screen.width / 2 - 52, board.container.y + boardH + 34);
+app.stage.addChild(counter);
+lightLamps(0);
+board.events.on('respins:changed', ({ value }) => lightLamps(value));
+
+const hud = new PIXI.Text({ text: 'press spin', style: { fontFamily: 'system-ui, sans-serif', fontSize: 13, fontWeight: '600', fill: 0x9c8f78 } });
+hud.anchor.set(0.5, 0);
+hud.position.set(app.screen.width / 2, counter.y + 22);
+app.stage.addChild(hud);
+
+let total = 0;
+board.events.on('cell:landed', ({ cell, coin }) => {
+  if (coin) board.symbolAt(cell).setLabel(fmt(coin.data.value));
+});
+board.events.on('coin:locked', ({ coin, locked, capacity }) => {
+  total += coin.data.value;
+  hud.text = `${locked}/${capacity} held · total ${fmt(total)}`;
+});
+
+const gold = (cell) => ({ cell, id: 'gold', data: { value: pick(STRIP_VALUES) * BET } });
+const SEED = [{ reel: 1, cell: 1 }, { reel: 3, cell: 4 }, { reel: 4, cell: 0 }, { reel: 0, cell: 3 }].map(gold);
+const ROUNDS = [[{ reel: 0, cell: 0 }, { reel: 2, cell: 2 }], [{ reel: 4, cell: 1 }, { reel: 1, cell: 4 }], [], [{ reel: 2, cell: 0 }, { reel: 3, cell: 2 }], [], [], []];
+
+let busy = false;
+return {
+  cleanup: () => { try { hud.destroy(); counter.destroy(); } catch {} grid.destroy({ children: true }); board.destroy(); },
+  onSpin: async () => {
+    if (busy) return;
+    busy = true;
+    total = 0;
+    board.reset();
+    board.enter(SEED);
+    for (const c of SEED) { const sym = board.symbolAt(c.cell); sym.setLabel(fmt(c.data.value)); sym.playIdle(); total += c.data.value; }
+    hud.text = `${SEED.length}/${board.capacity} held · total ${fmt(total)}`;
+    await sleep(400);
+    for (const cells of ROUNDS) {
+      const res = await board.respin(cells.map(gold));
+      await sleep(400);
+      if (res.done) break;
+    }
+    await board.playWin();
+    hud.text = `feature over · TOTAL ${fmt(total)} · press spin to replay`;
+    busy = false;
+  },
+};
+```
+
+### hold-and-win-clover-bonus
+URL: https://pixi-reels.schmooky.dev/recipes/hold-and-win-clover-bonus/
+```ts
+// @ts-nocheck
+// Injected: HoldAndWinBuilder, CloverSymbol, cloverGridBackground, loadHwClover, CLOVER_SPEED, cloverCellMask, PIXI, gsap, app
+//
+// The bonus on its own: a 5x3 board of rectangular cells, nothing but the
+// Hold & Win. Gold clovers spin past with bet-scaled amounts and lock where
+// they land; a blank cell is the game's own dark clover tile; the 1 2 3
+// lamps under the board are the respin counter, relit on every hit.
+
+const COLS = 5, ROWS = 3;
+const CELL = { width: 101, height: 85 }, COLUMN_GAP = 8, ROW_GAP = 8;
+const BET = 1;
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const fmt = (v) => v.toFixed(2);
+const pick = (a) => a[Math.floor(Math.random() * a.length)];
+
+const art = await loadHwClover();
+// The clover glow is drawn past the 202x170 cell: lift these above the cell mask
+// at rest (unmask), or every edge of every clover is clipped.
+const UNMASK = Object.fromEntries(['gold', 'collect', 'multi', 'mystery', 'super', 'capsule'].map((id) => [id, { unmask: true }]));
+const STRIP_VALUES = [1, 1, 1.5, 2, 2.5, 3, 5, 7, 10];
+
+class Clover extends CloverSymbol {
+  onActivate(id) {
+    super.onActivate(id);
+    if (id === 'gold') this.setLabel(fmt(pick(STRIP_VALUES) * BET));
+  }
+}
+
+const board = new HoldAndWinBuilder()
+  .grid(COLS, ROWS)
+  .cellSize(CELL, { columnGap: COLUMN_GAP, rowGap: ROW_GAP })
+  .symbols((r) => { for (const id of ['gold', 'collect', 'multi', 'mystery', 'super', 'capsule', 'empty']) r.register(id, Clover, { art }); })
+  .weights({ gold: 2, collect: 0.6, multi: 0.6, mystery: 0.6, super: 0.4, capsule: 0.5, empty: 5 })
+  .symbolData(UNMASK)
+  // a few px of bounce, not the tall-reel default: a clover cell should settle, not jump
+  .speedProfile(CLOVER_SPEED)
+  // rounded cells, cut on the frame's own radius
+  .cellMask(cloverCellMask)
+  .respins(3)
+  .lockAnimation('landing')
+  .ticker(app.ticker)
+  .build();
+
+const boardW = COLS * CELL.width + (COLS - 1) * COLUMN_GAP;
+const boardH = ROWS * CELL.height + (ROWS - 1) * ROW_GAP;
+board.container.position.set((app.screen.width - boardW) / 2, (app.screen.height - boardH) / 2 - 14);
+// the game's framing: gradient panel + grid lines in the gaps, behind a chrome-less board
+const grid = cloverGridBackground({ x: board.container.x, y: board.container.y, cols: COLS, rows: ROWS, cell: CELL, columnGap: COLUMN_GAP, rowGap: ROW_GAP });
+app.stage.addChild(grid);
+app.stage.addChild(board.container);
+
+// -- respin counter: three lamps, lit = respins left --
+const counter = new PIXI.Container();
+const lamps = [];
+for (let i = 0; i < 3; i++) {
+  const lamp = new PIXI.Container();
+  const bg = new PIXI.Graphics();
+  const digit = new PIXI.BitmapText({ text: String(i + 1), style: { fontFamily: 'CloverValue', fontSize: 22 } });
+  digit.anchor.set(0.5);
+  lamp.addChild(bg, digit);
+  lamp.x = i * 52;
+  counter.addChild(lamp);
+  lamps.push({ bg, digit });
+}
+const lightLamps = (left) => {
+  lamps.forEach(({ bg, digit }, i) => {
+    const lit = i < left;
+    bg.clear().roundRect(-24, -13, 48, 26, 4).fill({ color: lit ? 0xf5b400 : 0x0b1a4a }).stroke({ color: lit ? 0xffe27a : 0x3f6bd8, width: 1 });
+    digit.alpha = lit ? 1 : 0.45;
+  });
+};
+counter.position.set(app.screen.width / 2 - 52, board.container.y + boardH + 34);
+app.stage.addChild(counter);
+lightLamps(0);
+board.events.on('respins:changed', ({ value }) => lightLamps(value));
+
+const hud = new PIXI.Text({ text: 'press spin', style: { fontFamily: 'system-ui, sans-serif', fontSize: 13, fontWeight: '600', fill: 0x9c8f78 } });
+hud.anchor.set(0.5, 0);
+hud.position.set(app.screen.width / 2, counter.y + 22);
+app.stage.addChild(hud);
+
+let total = 0;
+board.events.on('cell:landed', ({ cell, coin }) => {
+  if (coin) board.symbolAt(cell).setLabel(fmt(coin.data.value));
+});
+board.events.on('coin:locked', ({ coin, locked, capacity }) => {
+  total += coin.data.value;
+  hud.text = `${locked}/${capacity} held · total ${fmt(total)}`;
+});
+
+const gold = (cell) => ({ cell, id: 'gold', data: { value: pick(STRIP_VALUES) * BET } });
+const SEED = [{ reel: 1, cell: 1 }, { reel: 3, cell: 2 }, { reel: 4, cell: 0 }].map(gold);
+const ROUNDS = [[{ reel: 0, cell: 0 }, { reel: 2, cell: 2 }], [{ reel: 4, cell: 1 }], [], [{ reel: 2, cell: 0 }], [], [], []];
+
+let busy = false;
+return {
+  cleanup: () => { try { hud.destroy(); counter.destroy(); } catch {} grid.destroy({ children: true }); board.destroy(); },
+  onSpin: async () => {
+    if (busy) return;
+    busy = true;
+    total = 0;
+    board.reset();
+    board.enter(SEED);
+    for (const c of SEED) { const sym = board.symbolAt(c.cell); sym.setLabel(fmt(c.data.value)); sym.playIdle(); total += c.data.value; }
+    hud.text = `${SEED.length}/${board.capacity} held · total ${fmt(total)}`;
+    await sleep(400);
+    for (const cells of ROUNDS) {
+      const res = await board.respin(cells.map(gold));
+      await sleep(400);
+      if (res.done) break;
+    }
+    await board.playWin();
+    hud.text = `feature over · TOTAL ${fmt(total)} · press spin to replay`;
+    busy = false;
+  },
+};
+```
+
+### hold-and-win-clover-collect
+URL: https://pixi-reels.schmooky.dev/recipes/hold-and-win-clover-collect/
+```ts
+// @ts-nocheck
+// Injected: HoldAndWinBuilder, CloverSymbol, cloverGridBackground, loadHwClover, CLOVER_SPEED, cloverCellMask, PIXI, gsap, app
+//
+// The COLLECT clover the way the game plays it. Every held clover idles
+// (breathes) from the moment it lands. When the blue COLLECT clover locks,
+// lightning strikes from it to each gold clover's number in turn and the
+// collect face counts the values up: that sum becomes the collector's own
+// value. The gold clovers keep theirs and keep idling - the next collector
+// takes them again. Once done the collector dims to grey: spent, still
+// held, its sum still on the board. The bolts are plain Graphics redrawn
+// every frame; the strike IS the collect clover's win moment.
+
+const COLS = 5, ROWS = 3;
+const CELL = { width: 101, height: 85 }, COLUMN_GAP = 8, ROW_GAP = 8;
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const fmt = (v) => v.toFixed(2);
+const pick = (a) => a[Math.floor(Math.random() * a.length)];
+const VALUES = [1, 1.5, 2, 2.5, 3, 5];
+
+const art = await loadHwClover();
+const UNMASK = Object.fromEntries(['gold', 'collect', 'multi', 'mystery', 'super', 'capsule'].map((id) => [id, { unmask: true }]));
+class Clover extends CloverSymbol {
+  onActivate(id) { super.onActivate(id); if (id === 'gold') this.setLabel(fmt(pick(VALUES))); }
+}
+
+const board = new HoldAndWinBuilder()
+  .grid(COLS, ROWS)
+  .cellSize(CELL, { columnGap: COLUMN_GAP, rowGap: ROW_GAP })
+  .symbols((r) => {
+    for (const id of ['gold', 'multi', 'mystery', 'super', 'capsule', 'empty']) r.register(id, Clover, { art });
+    r.register('collect', Clover, { art, font: 'CloverJackpot', labelOffset: 0.02 });
+  })
+  .weights({ gold: 2, collect: 0.6, multi: 0.6, mystery: 0.6, super: 0.4, capsule: 0.5, empty: 5 })
+  .symbolData(UNMASK)
+  // a few px of bounce, not the tall-reel default: a clover cell should settle, not jump
+  .speedProfile(CLOVER_SPEED)
+  // rounded cells, cut on the frame's own radius
+  .cellMask(cloverCellMask)
+  .respins(3)
+  .lockAnimation('landing')
+  .ticker(app.ticker)
+  .build();
+const boardW = COLS * CELL.width + (COLS - 1) * COLUMN_GAP;
+const boardH = ROWS * CELL.height + (ROWS - 1) * ROW_GAP;
+board.container.position.set((app.screen.width - boardW) / 2, (app.screen.height - boardH) / 2 - 10);
+const grid = cloverGridBackground({ x: board.container.x, y: board.container.y, cols: COLS, rows: ROWS, cell: CELL, columnGap: COLUMN_GAP, rowGap: ROW_GAP });
+app.stage.addChild(grid);
+app.stage.addChild(board.container);
+// bolts draw above the board - the held clovers are lifted inside it, this sits after it
+const boltLayer = new PIXI.Container();
+app.stage.addChild(boltLayer);
+
+const hud = new PIXI.Text({ text: 'press spin', style: { fontFamily: 'system-ui, sans-serif', fontSize: 13, fontWeight: '600', fill: 0x9c8f78 } });
+hud.anchor.set(0.5, 0);
+hud.position.set(app.screen.width / 2, board.container.y + boardH + 24);
+app.stage.addChild(hud);
+
+const abs = (cell) => { const c = board.cellCenter(cell); return { x: board.container.x + c.x, y: board.container.y + c.y }; };
+const paint = (coin) => { if (coin.id === 'gold') board.symbolAt(coin.cell).setLabel(fmt(coin.data.value)); };
+board.events.on('cell:landed', ({ coin }) => { if (coin) paint(coin); });
+const golds = () => board.lockedCoins.filter((c) => c.id === 'gold');
+
+// A bolt from a to b: a jagged line re-jittered every frame for `ms`, three
+// strokes wide-to-thin for the glow, then a quick fade.
+function strike(a, b, ms = 260) {
+  const g = new PIXI.Graphics();
+  boltLayer.addChild(g);
+  const draw = () => {
+    g.clear();
+    const dx = b.x - a.x, dy = b.y - a.y, len = Math.hypot(dx, dy) || 1, nx = -dy / len, ny = dx / len;
+    const n = Math.max(6, Math.round(len / 16));
+    const pts = [a];
+    for (let i = 1; i < n; i++) {
+      const t = i / n, j = (Math.random() - 0.5) * 26 * Math.sin(Math.PI * t);
+      pts.push({ x: a.x + dx * t + nx * j, y: a.y + dy * t + ny * j });
+    }
+    pts.push(b);
+    for (const [width, color, alpha] of [[11, 0x3f8cff, 0.22], [4, 0xa8d4ff, 0.7], [1.5, 0xffffff, 1]]) {
+      g.moveTo(pts[0].x, pts[0].y);
+      for (const p of pts.slice(1)) g.lineTo(p.x, p.y);
+      g.stroke({ width, color, alpha, cap: 'round', join: 'round' });
+    }
+  };
+  draw();
+  app.ticker.add(draw);
+  return new Promise((res) => setTimeout(() => {
+    app.ticker.remove(draw);
+    gsap.to(g, { alpha: 0, duration: 0.12, onComplete: () => { g.destroy(); res(); } });
+  }, ms));
+}
+
+const pop = (t) => { if (!t) return; const sx = t.scale.x, sy = t.scale.y; gsap.fromTo(t.scale, { x: sx * 1.5, y: sy * 1.5 }, { x: sx, y: sy, duration: 0.28, ease: 'power2.out' }); };
+
+// The collect: strike each value in reading order, count it onto the
+// collect face, keep the sum on the collector, then dim the collector.
+async function collect(coin) {
+  const collector = board.symbolAt(coin.cell);
+  const from = abs(coin.cell);
+  let sum = 0;
+  collector.setLabel(fmt(0));
+  hud.text = 'COLLECT locked - lightning takes every value';
+  await collector.playWin();
+  const targets = golds().sort((p, q) => (p.cell.cell - q.cell.cell) || (p.cell.reel - q.cell.reel));
+  for (const g of targets) {
+    const sym = board.symbolAt(g.cell);
+    const at = abs(g.cell);
+    const bolt = strike(from, { x: at.x, y: at.y + CELL.height * 0.06 }, 240);
+    await sleep(110);
+    pop(sym.label); // the value is read, not taken: the gold keeps it
+    sum += g.data.value;
+    collector.setLabel(fmt(sum));
+    pop(collector.label);
+    await bolt;
+    await sleep(70);
+  }
+  coin.data.value = sum; // the collector now carries what it gathered
+  await collector.playWin();
+  collector.setDimmed(true); // spent: still held, no longer idling, sum kept
+  hud.text = `collected ${fmt(sum)} · collector spent and dimmed, golds untouched`;
+  await sleep(500);
+}
+
+const gold = (cell) => ({ cell, id: 'gold', data: { value: pick(VALUES) } });
+const SEED = [{ reel: 0, cell: 0 }, { reel: 3, cell: 1 }, { reel: 1, cell: 2 }].map(gold);
+const ROUNDS = [
+  [gold({ reel: 4, cell: 0 }), gold({ reel: 2, cell: 2 })],
+  [gold({ reel: 0, cell: 1 })],
+  [{ cell: { reel: 2, cell: 1 }, id: 'collect', data: { value: 0 } }],
+  [gold({ reel: 4, cell: 2 })],
+  [], [], [],
+];
+
+let busy = false;
+return {
+  cleanup: () => { try { hud.destroy(); grid.destroy({ children: true }); boltLayer.destroy({ children: true }); } catch {} board.destroy(); },
+  onSpin: async () => {
+    if (busy) return;
+    busy = true;
+    board.reset();
+    board.enter(SEED);
+    for (const c of SEED) { paint(c); board.symbolAt(c.cell).playIdle(); }
+    hud.text = 'held clovers idle until the feature ends';
+    await sleep(400);
+    for (const hits of ROUNDS) {
+      const res = await board.respin(hits);
+      for (const coin of res.hits) if (coin.id === 'collect') await collect(coin);
+      await sleep(350);
+      if (res.done) break;
+    }
+    const total = board.lockedCoins.reduce((a, c) => a + c.data.value, 0);
+    hud.text = `feature over · board total ${fmt(total)} · press spin to replay`;
+    busy = false;
+  },
+};
+```
+
+### hold-and-win-clover-feature-clovers
+URL: https://pixi-reels.schmooky.dev/recipes/hold-and-win-clover-feature-clovers/
+```ts
+// @ts-nocheck
+// Injected: HoldAndWinBuilder, CloverSymbol, cloverGridBackground, loadHwClover, CLOVER_SPEED, cloverCellMask, PIXI, gsap, app
+//
+// Feature clovers carry no money of their own; each one acts on the gold
+// clovers around it when it locks. The board only knows "a coin locked" -
+// the game layer reads coin.id and does the mechanic between waves:
+//   MULTI    doubles every held amount (a pink x2 on its face)
+//   MYSTERY  turns into a gold clover with a revealed amount (setSymbolAt)
+//   COLLECT  sums every held amount and shows the total on its face
+// Strip weights are flavour only: a cell lands on what respin() was handed.
+
+const COLS = 5, ROWS = 3;
+const CELL = { width: 101, height: 85 }, COLUMN_GAP = 8, ROW_GAP = 8;
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const fmt = (v) => v.toFixed(2);
+const pick = (a) => a[Math.floor(Math.random() * a.length)];
+const VALUES = [1, 1.5, 2, 2.5, 3, 5];
+
+const art = await loadHwClover();
+// The clover glow is drawn past the 202x170 cell: lift these above the cell mask
+// at rest (unmask), or every edge of every clover is clipped.
+const UNMASK = Object.fromEntries(['gold', 'collect', 'multi', 'mystery', 'super', 'capsule'].map((id) => [id, { unmask: true }]));
+class Clover extends CloverSymbol {
+  onActivate(id) { super.onActivate(id); if (id === 'gold') this.setLabel(fmt(pick(VALUES))); }
+}
+
+const board = new HoldAndWinBuilder()
+  .grid(COLS, ROWS)
+  .cellSize(CELL, { columnGap: COLUMN_GAP, rowGap: ROW_GAP })
+  .symbols((r) => {
+    for (const id of ['gold', 'mystery', 'super', 'capsule', 'empty']) r.register(id, Clover, { art });
+    r.register('multi', Clover, { art, font: 'CloverMult', labelOffset: 0.02 });
+    r.register('collect', Clover, { art, font: 'CloverJackpot', labelOffset: 0.02 });
+  })
+  // every clover flashes past on the strip; which ones LAND is the server's call
+  .weights({ gold: 2, collect: 0.6, multi: 0.6, mystery: 0.6, super: 0.4, capsule: 0.5, empty: 5 })
+  .symbolData(UNMASK)
+  // a few px of bounce, not the tall-reel default: a clover cell should settle, not jump
+  .speedProfile(CLOVER_SPEED)
+  // rounded cells, cut on the frame's own radius
+  .cellMask(cloverCellMask)
+  .respins(3)
+  .lockAnimation('landing')
+  .ticker(app.ticker)
+  .build();
+const boardW = COLS * CELL.width + (COLS - 1) * COLUMN_GAP;
+const boardH = ROWS * CELL.height + (ROWS - 1) * ROW_GAP;
+board.container.position.set((app.screen.width - boardW) / 2, (app.screen.height - boardH) / 2 - 10);
+// the game's framing: gradient panel + grid lines in the gaps, behind a chrome-less board
+const grid = cloverGridBackground({ x: board.container.x, y: board.container.y, cols: COLS, rows: ROWS, cell: CELL, columnGap: COLUMN_GAP, rowGap: ROW_GAP });
+app.stage.addChild(grid);
+app.stage.addChild(board.container);
+
+const hud = new PIXI.Text({ text: 'press spin', style: { fontFamily: 'system-ui, sans-serif', fontSize: 13, fontWeight: '600', fill: 0x9c8f78 } });
+hud.anchor.set(0.5, 0);
+hud.position.set(app.screen.width / 2, board.container.y + boardH + 24);
+app.stage.addChild(hud);
+
+const paint = (coin) => { if (coin.id === 'gold') board.symbolAt(coin.cell).setLabel(fmt(coin.data.value)); };
+board.events.on('cell:landed', ({ coin }) => { if (coin) paint(coin); });
+
+const golds = () => board.lockedCoins.filter((c) => c.id === 'gold');
+const pulse = (cell) => board.symbolAt(cell).playWin();
+
+// Each feature clover resolves BETWEEN waves, once the awaited respin() is
+// back - setSymbolAt and value rewrites are refused while cells are in flight.
+async function resolve(coin) {
+  const sym = board.symbolAt(coin.cell);
+  if (coin.id === 'multi') {
+    sym.setLabel('x2');
+    await sym.playWin();
+    for (const g of golds()) { g.data.value *= 2; paint(g); void pulse(g.cell); }
+    hud.text = 'MULTI: every held amount doubled';
+  } else if (coin.id === 'mystery') {
+    await sym.playWin();
+    const value = pick([5, 7, 10]);
+    const revealed = board.setSymbolAt(coin.cell, 'gold', { value });
+    revealed.setLabel(fmt(value));
+    revealed.playIdle();
+    hud.text = `MYSTERY revealed ${fmt(value)}`;
+  } else if (coin.id === 'collect') {
+    const sum = golds().reduce((a, g) => a + g.data.value, 0);
+    for (const g of golds()) void pulse(g.cell);
+    await sleep(250);
+    sym.setLabel(fmt(sum));
+    await sym.playWin();
+    hud.text = `COLLECT gathered ${fmt(sum)}`;
+  }
+  await sleep(500);
+}
+
+const gold = (cell) => ({ cell, id: 'gold', data: { value: pick(VALUES) } });
+const SEED = [{ reel: 0, cell: 1 }, { reel: 4, cell: 0 }].map(gold);
+const ROUNDS = [
+  [gold({ reel: 2, cell: 2 }), { cell: { reel: 1, cell: 0 }, id: 'multi', data: { value: 0 } }],
+  [{ cell: { reel: 3, cell: 1 }, id: 'mystery', data: { value: 0 } }],
+  [gold({ reel: 2, cell: 0 })],
+  [{ cell: { reel: 4, cell: 2 }, id: 'collect', data: { value: 0 } }],
+  [], [], [],
+];
+
+let busy = false;
+return {
+  cleanup: () => { try { hud.destroy(); } catch {} grid.destroy({ children: true }); board.destroy(); },
+  onSpin: async () => {
+    if (busy) return;
+    busy = true;
+    board.reset();
+    board.enter(SEED);
+    for (const c of SEED) { paint(c); board.symbolAt(c.cell).playIdle(); }
+    hud.text = 'gold locks with money; feature clovers act on it';
+    await sleep(400);
+    for (const hits of ROUNDS) {
+      const res = await board.respin(hits);
+      for (const coin of res.hits) if (coin.id !== 'gold') await resolve(coin);
+      await sleep(350);
+      if (res.done) break;
+    }
+    await board.playWin(golds().map((g) => g.cell));
+    const total = golds().reduce((a, g) => a + g.data.value, 0);
+    hud.text = `feature over · gold total ${fmt(total)} · press spin to replay`;
+    busy = false;
+  },
+};
+```
+
+### hold-and-win-clover-grid-bg
+URL: https://pixi-reels.schmooky.dev/recipes/hold-and-win-clover-grid-bg/
+```ts
+// @ts-nocheck
+// Injected: HoldAndWinBuilder, RoundedRectMaskStrategy, CloverSymbol, loadHwClover, CLOVER_SPEED, PIXI, gsap, app
+//
+// The game's own framing: cells in a visible grid with real gaps between
+// them, and the gaps are not empty - the background under the board shows
+// through them. Nothing here is a board feature. The gaps come from
+// cellSize({ columnGap, rowGap }), the board draws no chrome, and a couple
+// of plain PIXI.Graphics sit behind it: a gradient panel and, per cell, a
+// rounded frame traced on the cell's exact bounds. A rounded cell mask cuts
+// each tile's corners on the same radius, so frame and tile agree to the
+// pixel. The background is only ever seen in the gaps and the margin.
+
+const COLS = 5, ROWS = 3;
+const CELL = { width: 101, height: 85 }, GAP = 8;
+const BET = 1;
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const fmt = (v) => v.toFixed(2);
+const pick = (a) => a[Math.floor(Math.random() * a.length)];
+
+const art = await loadHwClover();
+const UNMASK = Object.fromEntries(['gold', 'collect', 'multi', 'mystery', 'super', 'capsule'].map((id) => [id, { unmask: true }]));
+const STRIP_VALUES = [1, 1, 1.5, 2, 2.5, 3, 5, 7, 10];
+class Clover extends CloverSymbol {
+  onActivate(id) {
+    super.onActivate(id);
+    if (id === 'gold') this.setLabel(fmt(pick(STRIP_VALUES) * BET));
+  }
+}
+
+const boardW = COLS * CELL.width + (COLS - 1) * GAP;
+const boardH = ROWS * CELL.height + (ROWS - 1) * GAP;
+const ox = Math.round((app.screen.width - boardW) / 2);
+const oy = Math.round((app.screen.height - boardH) / 2 - 10);
+const MARGIN = 8;
+
+// -- the background: everything the gaps reveal, added BEFORE the board --
+const bg = new PIXI.Container();
+app.stage.addChild(bg);
+const R = 8; // cell corner radius: the frame and the cell mask share it
+
+// the panel: a navy-to-blue gradient under the whole grid
+const panel = new PIXI.Graphics();
+const gradient = new PIXI.FillGradient({ type: 'linear', start: { x: 0, y: 0 }, end: { x: 0, y: 1 },
+  colorStops: [{ offset: 0, color: 0x061236 }, { offset: 0.5, color: 0x102f7a }, { offset: 1, color: 0x061236 }] });
+panel.roundRect(ox - MARGIN, oy - MARGIN, boardW + MARGIN * 2, boardH + MARGIN * 2, R + MARGIN)
+  .fill(gradient)
+  .stroke({ color: 0x4f8cff, width: 2, alpha: 0.9 });
+bg.addChild(panel);
+
+// one frame per cell, traced on the cell's exact bounds: a fill the tile sits
+// on, a soft glow just outside the edge, a crisp line on it. The gap between
+// two cells therefore holds two outlines with the panel between them.
+const frames = new PIXI.Graphics();
+for (let c = 0; c < COLS; c++) {
+  for (let r = 0; r < ROWS; r++) {
+    const cx = ox + c * (CELL.width + GAP), cy = oy + r * (CELL.height + GAP);
+    frames.roundRect(cx - 3, cy - 3, CELL.width + 6, CELL.height + 6, R + 3).stroke({ color: 0x5fa0ff, width: 4, alpha: 0.28 });
+    frames.roundRect(cx, cy, CELL.width, CELL.height, R).fill({ color: 0x0b1a4a }).stroke({ color: 0x5fa0ff, width: 1.5, alpha: 0.95 });
+  }
+}
+bg.addChild(frames);
+const framePulse = gsap.to(frames, { alpha: 0.7, duration: 1.4, yoyo: true, repeat: -1, ease: 'sine.inOut' });
+
+// -- the board: no chrome, so the cells are the empty tiles and the gaps are the background --
+const board = new HoldAndWinBuilder()
+  .grid(COLS, ROWS)
+  .cellSize(CELL, { columnGap: GAP, rowGap: GAP })
+  .symbols((r) => { for (const id of ['gold', 'collect', 'multi', 'mystery', 'super', 'capsule', 'empty']) r.register(id, Clover, { art }); })
+  .weights({ gold: 2, collect: 0.6, multi: 0.6, mystery: 0.6, super: 0.4, capsule: 0.5, empty: 5 })
+  .symbolData(UNMASK)
+  // a few px of bounce, not the tall-reel default: a clover cell should settle, not jump
+  .speedProfile(CLOVER_SPEED)
+  // rounded cells, cut on the frame's own radius
+  // the mask cuts the tile's corners on the frame's radius
+  .cellMask(() => new RoundedRectMaskStrategy({ radius: R }))
+  .respins(3)
+  .lockAnimation('landing')
+  .ticker(app.ticker)
+  .build();
+board.container.position.set(ox, oy);
+app.stage.addChild(board.container);
+
+const hud = new PIXI.Text({ text: 'press spin', style: { fontFamily: 'system-ui, sans-serif', fontSize: 13, fontWeight: '600', fill: 0x9c8f78 } });
+hud.anchor.set(0.5, 0);
+hud.position.set(app.screen.width / 2, oy + boardH + MARGIN + 8);
+app.stage.addChild(hud);
+
+let total = 0;
+board.events.on('cell:landed', ({ cell, coin }) => { if (coin) board.symbolAt(cell).setLabel(fmt(coin.data.value)); });
+board.events.on('coin:locked', ({ coin, locked, capacity }) => {
+  total += coin.data.value;
+  hud.text = `${locked}/${capacity} held · total ${fmt(total)}`;
+});
+
+const gold = (cell) => ({ cell, id: 'gold', data: { value: pick(STRIP_VALUES) * BET } });
+const SEED = [{ reel: 1, cell: 1 }, { reel: 3, cell: 2 }, { reel: 4, cell: 0 }].map(gold);
+const ROUNDS = [[{ reel: 0, cell: 0 }, { reel: 2, cell: 2 }], [{ reel: 4, cell: 1 }], [], [{ reel: 2, cell: 0 }], [], [], []];
+
+let busy = false;
+return {
+  cleanup: () => {
+    framePulse.kill();
+    try { hud.destroy(); bg.destroy({ children: true }); } catch {}
+    board.destroy();
+  },
+  onSpin: async () => {
+    if (busy) return;
+    busy = true;
+    total = 0;
+    board.reset();
+    board.enter(SEED);
+    for (const c of SEED) { const sym = board.symbolAt(c.cell); sym.setLabel(fmt(c.data.value)); sym.playIdle(); total += c.data.value; }
+    hud.text = `${SEED.length}/${board.capacity} held · total ${fmt(total)}`;
+    await sleep(400);
+    for (const cells of ROUNDS) {
+      const res = await board.respin(cells.map(gold));
+      await sleep(400);
+      if (res.done) break;
+    }
+    await board.playWin();
+    hud.text = `feature over · TOTAL ${fmt(total)} · press spin to replay`;
+    busy = false;
+  },
+};
+```
+
+### hold-and-win-clover-growing
+URL: https://pixi-reels.schmooky.dev/recipes/hold-and-win-clover-growing/
+```ts
+// @ts-nocheck
+// Injected: HoldAndWinBuilder, CloverSymbol, cloverGridBackground, loadHwClover, CLOVER_SPEED, cloverCellMask, PIXI, gsap, app
+//
+// A board that grows. It is built 5x5, but the top and bottom rows start
+// dormant - `inactive(cells, 'sealed')` draws them as the purple sealed tile
+// and keeps them out of the feature: they never spin and do not count toward
+// the full board. Locking enough clovers opens a row with `board.activate()`,
+// and the next respin spins it with the rest.
+
+const COLS = 5, ROWS = 5;
+const CELL = { width: 101, height: 85 }, COLUMN_GAP = 8, ROW_GAP = 8;
+const BET = 1;
+const OPEN_TOP_AT = 5, OPEN_BOTTOM_AT = 8;
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const fmt = (v) => v.toFixed(2);
+const pick = (a) => a[Math.floor(Math.random() * a.length)];
+
+const art = await loadHwClover();
+// The clover glow is drawn past the 202x170 cell: lift these above the cell mask
+// at rest (unmask), or every edge of every clover is clipped.
+const UNMASK = Object.fromEntries(['gold', 'collect', 'multi', 'mystery', 'super', 'capsule'].map((id) => [id, { unmask: true }]));
+const STRIP_VALUES = [1, 1, 1.5, 2, 2.5, 3, 5, 7, 10];
+class Clover extends CloverSymbol {
+  onActivate(id) {
+    super.onActivate(id);
+    if (id === 'gold') this.setLabel(fmt(pick(STRIP_VALUES) * BET));
+  }
+}
+
+const row = (r) => Array.from({ length: COLS }, (_, reel) => ({ reel, cell: r }));
+const TOP = row(0), BOTTOM = row(ROWS - 1);
+
+const board = new HoldAndWinBuilder()
+  .grid(COLS, ROWS)
+  .cellSize(CELL, { columnGap: COLUMN_GAP, rowGap: ROW_GAP })
+  .symbols((r) => { for (const id of ['gold', 'collect', 'multi', 'mystery', 'super', 'capsule', 'empty', 'sealed']) r.register(id, Clover, { art }); })
+  .weights({ gold: 2, collect: 0.6, multi: 0.6, mystery: 0.6, super: 0.4, capsule: 0.5, empty: 5, sealed: 0 })
+  // dormant rows wear the sealed tile until activate() wakes them
+  .inactive([...TOP, ...BOTTOM], 'sealed')
+  .symbolData(UNMASK)
+  // a few px of bounce, not the tall-reel default: a clover cell should settle, not jump
+  .speedProfile(CLOVER_SPEED)
+  // rounded cells, cut on the frame's own radius
+  .cellMask(cloverCellMask)
+  .respins(3)
+  .lockAnimation('landing')
+  .ticker(app.ticker)
+  .build();
+
+const boardW = COLS * CELL.width + (COLS - 1) * COLUMN_GAP;
+const boardH = ROWS * CELL.height + (ROWS - 1) * ROW_GAP;
+board.container.position.set((app.screen.width - boardW) / 2, (app.screen.height - boardH) / 2 - 10);
+// the game's framing: gradient panel + grid lines in the gaps, behind a chrome-less board
+const grid = cloverGridBackground({ x: board.container.x, y: board.container.y, cols: COLS, rows: ROWS, cell: CELL, columnGap: COLUMN_GAP, rowGap: ROW_GAP });
+app.stage.addChild(grid);
+app.stage.addChild(board.container);
+
+const hud = new PIXI.Text({ text: `press spin · rows open at ${OPEN_TOP_AT} and ${OPEN_BOTTOM_AT} clovers`, style: { fontFamily: 'system-ui, sans-serif', fontSize: 13, fontWeight: '600', fill: 0x9c8f78 } });
+hud.anchor.set(0.5, 0);
+hud.position.set(app.screen.width / 2, board.container.y + boardH + 24);
+app.stage.addChild(hud);
+
+board.events.on('cell:landed', ({ cell, coin }) => {
+  if (coin) board.symbolAt(cell).setLabel(fmt(coin.data.value));
+});
+board.events.on('cells:activated', ({ cells, capacity }) => {
+  hud.text = `row opened · board is now ${capacity} cells`;
+  // the woken cells show the empty tile now; fade them in from the sealed look
+  for (const cell of cells) {
+    const s = board.symbolAt(cell).sprite;
+    gsap.fromTo(s, { alpha: 0.2 }, { alpha: 1, duration: 0.5, ease: 'power2.out' });
+  }
+});
+
+// Between waves: open a row once enough clovers are held. Never inside an
+// event listener - activate() is refused while a wave is in flight.
+let topOpen = false, bottomOpen = false;
+function maybeGrow() {
+  const held = board.lockedCoins.length;
+  if (!topOpen && held >= OPEN_TOP_AT) { topOpen = true; board.activate(TOP); return true; }
+  if (!bottomOpen && held >= OPEN_BOTTOM_AT) { bottomOpen = true; board.activate(BOTTOM); return true; }
+  return false;
+}
+
+const gold = (cell) => ({ cell, id: 'gold', data: { value: pick(STRIP_VALUES) * BET } });
+const SEED = [{ reel: 0, cell: 2 }, { reel: 2, cell: 1 }, { reel: 4, cell: 3 }].map(gold);
+const ROUNDS = [
+  [{ reel: 1, cell: 3 }, { reel: 3, cell: 2 }],        // 5 held -> top row opens
+  [{ reel: 2, cell: 0 }, { reel: 4, cell: 0 }],        // the new row takes coins
+  [{ reel: 0, cell: 1 }],                              // 8 held -> bottom row opens
+  [{ reel: 3, cell: 4 }, { reel: 1, cell: 4 }],
+  [], [], [],
+];
+
+let busy = false;
+return {
+  cleanup: () => { try { hud.destroy(); } catch {} grid.destroy({ children: true }); board.destroy(); },
+  onSpin: async () => {
+    if (busy) return;
+    busy = true;
+    topOpen = false; bottomOpen = false;
+    board.reset(); // sealed rows come back
+    board.enter(SEED);
+    for (const c of SEED) { const sym = board.symbolAt(c.cell); sym.setLabel(fmt(c.data.value)); sym.playIdle(); }
+    hud.text = `${SEED.length}/${board.capacity} held on the ${board.capacity}-cell board`;
+    await sleep(400);
+    for (const cells of ROUNDS) {
+      const res = await board.respin(cells.map(gold));
+      await sleep(350);
+      if (res.done) break;
+      if (maybeGrow()) await sleep(600);
+    }
+    await board.playWin();
+    const total = board.lockedCoins.reduce((a, c) => a + c.data.value, 0);
+    hud.text = `feature over · ${board.lockedCoins.length}/${board.capacity} · TOTAL ${fmt(total)}`;
+    busy = false;
+  },
+};
+```
+
+### hold-and-win-clover-mystery-capsule
+URL: https://pixi-reels.schmooky.dev/recipes/hold-and-win-clover-mystery-capsule/
+```ts
+// @ts-nocheck
+// Injected: HoldAndWinBuilder, CloverSymbol, cloverGridBackground, loadHwClover, CLOVER_SPEED, cloverCellMask, PIXI, gsap, app
+//
+// The capsule: a sealed jackpot. It spins past like any other symbol and
+// locks like a coin, then between waves the seal breaks - the four jackpot
+// titles flick across its face and settle on the tier the server sent,
+// the tier's plaque above the board lights, and the amount paints on. The
+// symbol's own setBadge / setLabel do the whole reveal; nothing is added to
+// the stage per cell.
+
+const COLS = 5, ROWS = 3;
+const CELL = { width: 101, height: 85 }, COLUMN_GAP = 8, ROW_GAP = 8;
+const BET = 1;
+const JACKPOTS = { mini: 20, minor: 50, major: 200, grand: 1000 };
+const TIERS = ['mini', 'minor', 'major', 'grand'];
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const fmt = (v) => v.toFixed(2);
+const pick = (a) => a[Math.floor(Math.random() * a.length)];
+
+const art = await loadHwClover();
+// The clover glow is drawn past the 202x170 cell: lift these above the cell mask
+// at rest (unmask), or every edge of every clover is clipped.
+const UNMASK = Object.fromEntries(['gold', 'collect', 'multi', 'mystery', 'super', 'capsule'].map((id) => [id, { unmask: true }]));
+class Clover extends CloverSymbol {
+  onActivate(id) { super.onActivate(id); if (id === 'gold') this.setLabel(fmt(pick([1, 2, 3, 5]) * BET)); }
+}
+
+const board = new HoldAndWinBuilder()
+  .grid(COLS, ROWS)
+  .cellSize(CELL, { columnGap: COLUMN_GAP, rowGap: ROW_GAP })
+  .symbols((r) => {
+    for (const id of ['gold', 'collect', 'multi', 'mystery', 'super', 'empty']) r.register(id, Clover, { art });
+    r.register('capsule', Clover, { art, font: 'CloverJackpot', labelOffset: 0.26, badgeOffset: -0.14 });
+  })
+  .weights({ gold: 2, collect: 0.6, multi: 0.6, mystery: 0.6, super: 0.4, capsule: 0.5, empty: 5 })
+  .symbolData(UNMASK)
+  // a few px of bounce, not the tall-reel default: a clover cell should settle, not jump
+  .speedProfile(CLOVER_SPEED)
+  // rounded cells, cut on the frame's own radius
+  .cellMask(cloverCellMask)
+  .respins(3)
+  .lockAnimation('landing')
+  .ticker(app.ticker)
+  .build();
+const boardW = COLS * CELL.width + (COLS - 1) * COLUMN_GAP;
+const boardH = ROWS * CELL.height + (ROWS - 1) * ROW_GAP;
+board.container.position.set((app.screen.width - boardW) / 2, (app.screen.height - boardH) / 2 + 12);
+// the game's framing: gradient panel + grid lines in the gaps, behind a chrome-less board
+const grid = cloverGridBackground({ x: board.container.x, y: board.container.y, cols: COLS, rows: ROWS, cell: CELL, columnGap: COLUMN_GAP, rowGap: ROW_GAP });
+app.stage.addChild(grid);
+app.stage.addChild(board.container);
+
+// -- jackpot plaques above the board, one per tier --
+const plaques = {};
+const rail = new PIXI.Container();
+TIERS.forEach((tier, i) => {
+  // the plaque is the coloured frame; the tier word is its own small title
+  const p = new PIXI.Container();
+  const frame = new PIXI.Sprite(art.plaques[tier]);
+  const word = new PIXI.Sprite(art.titles[`${tier}_small`]);
+  frame.anchor.set(0.5);
+  word.anchor.set(0.5);
+  p.addChild(frame, word);
+  p.x = (i - 1.5) * 150;
+  p.alpha = 0.45;
+  rail.addChild(p);
+  plaques[tier] = p;
+});
+rail.position.set(app.screen.width / 2, board.container.y - 40);
+app.stage.addChild(rail);
+const lightPlaque = (tier) => {
+  for (const [t, p] of Object.entries(plaques)) gsap.to(p, { alpha: t === tier ? 1 : 0.35, duration: 0.2 });
+  gsap.fromTo(plaques[tier].scale, { x: 1.35, y: 1.35 }, { x: 1, y: 1, duration: 0.45, ease: 'back.out(2)' });
+};
+
+const hud = new PIXI.Text({ text: 'press spin', style: { fontFamily: 'system-ui, sans-serif', fontSize: 13, fontWeight: '600', fill: 0x9c8f78 } });
+hud.anchor.set(0.5, 0);
+hud.position.set(app.screen.width / 2, board.container.y + boardH + 24);
+app.stage.addChild(hud);
+
+board.events.on('cell:landed', ({ cell, coin }) => {
+  if (coin && coin.id === 'gold') board.symbolAt(cell).setLabel(fmt(coin.data.value));
+});
+
+// The reveal: cycle the titles fast, slow down, stop on the served tier.
+async function reveal(coin) {
+  const sym = board.symbolAt(coin.cell);
+  const tier = coin.data.tier;
+  hud.text = 'a capsule locked - breaking the seal';
+  await sleep(300);
+  let step = 70;
+  for (let i = 0; i < 14; i++) {
+    sym.setBadge(art.titles[TIERS[i % TIERS.length]]);
+    await sleep(step);
+    step += 12;
+  }
+  sym.setBadge(art.titles[tier]);
+  lightPlaque(tier);
+  await sym.playWin();
+  sym.setLabel(fmt(coin.data.value));
+  hud.text = `${tier.toUpperCase()} jackpot: ${fmt(coin.data.value)}`;
+  await sleep(600);
+}
+
+const gold = (cell) => ({ cell, id: 'gold', data: { value: pick([1, 2, 3, 5]) * BET } });
+const capsule = (cell, tier) => ({ cell, id: 'capsule', data: { tier, value: JACKPOTS[tier] * BET } });
+const SEED = [{ reel: 1, cell: 2 }, { reel: 3, cell: 0 }].map(gold);
+const ROUNDS = [
+  [gold({ reel: 0, cell: 0 }), capsule({ reel: 2, cell: 1 }, 'major')],
+  [gold({ reel: 4, cell: 2 })],
+  [capsule({ reel: 4, cell: 0 }, 'mini')],
+  [], [], [],
+];
+
+let busy = false;
+return {
+  cleanup: () => { for (const p of Object.values(plaques)) gsap.killTweensOf(p); try { hud.destroy(); rail.destroy(); } catch {} grid.destroy({ children: true }); board.destroy(); },
+  onSpin: async () => {
+    if (busy) return;
+    busy = true;
+    board.reset();
+    for (const p of Object.values(plaques)) p.alpha = 0.45;
+    board.enter(SEED);
+    for (const c of SEED) { const sym = board.symbolAt(c.cell); sym.setLabel(fmt(c.data.value)); sym.playIdle(); }
+    hud.text = 'a capsule locks like a coin; the seal breaks between waves';
+    await sleep(400);
+    for (const hits of ROUNDS) {
+      const res = await board.respin(hits);
+      for (const coin of res.hits) if (coin.id === 'capsule') await reveal(coin);
+      await sleep(350);
+      if (res.done) break;
+    }
+    await board.playWin();
+    const total = board.lockedCoins.reduce((a, c) => a + c.data.value, 0);
+    hud.text = `feature over · TOTAL ${fmt(total)} · press spin to replay`;
+    busy = false;
+  },
+};
+```
+
+### hold-and-win-clover-respin-counter
+URL: https://pixi-reels.schmooky.dev/recipes/hold-and-win-clover-respin-counter/
+```ts
+// @ts-nocheck
+// Injected: HoldAndWinBuilder, CloverSymbol, cloverGridBackground, loadHwClover, CLOVER_SPEED, cloverCellMask, PIXI, gsap, app
+//
+// The respin counter. Three lamps under the board: all lit when the feature
+// arms, one goes dark per miss, every hit relights them all. It is driven by
+// one event, `respins:changed`, whose `reason` says why the number moved -
+// seed, hit-reset or miss - so the lamps can pop on a reset and dim on a miss
+// without the game re-deriving any of it.
+
+const COLS = 5, ROWS = 3;
+const CELL = { width: 101, height: 85 }, COLUMN_GAP = 8, ROW_GAP = 8;
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const fmt = (v) => v.toFixed(2);
+const pick = (a) => a[Math.floor(Math.random() * a.length)];
+
+const art = await loadHwClover();
+// The clover glow is drawn past the 202x170 cell: lift these above the cell mask
+// at rest (unmask), or every edge of every clover is clipped.
+const UNMASK = Object.fromEntries(['gold', 'collect', 'multi', 'mystery', 'super', 'capsule'].map((id) => [id, { unmask: true }]));
+class Clover extends CloverSymbol {
+  onActivate(id) { super.onActivate(id); if (id === 'gold') this.setLabel(fmt(pick([1, 2, 3, 5]))); }
+}
+
+const board = new HoldAndWinBuilder()
+  .grid(COLS, ROWS)
+  .cellSize(CELL, { columnGap: COLUMN_GAP, rowGap: ROW_GAP })
+  .symbols((r) => { for (const id of ['gold', 'collect', 'multi', 'mystery', 'super', 'capsule', 'empty']) r.register(id, Clover, { art }); })
+  .weights({ gold: 2, collect: 0.6, multi: 0.6, mystery: 0.6, super: 0.4, capsule: 0.5, empty: 5 })
+  .symbolData(UNMASK)
+  // a few px of bounce, not the tall-reel default: a clover cell should settle, not jump
+  .speedProfile(CLOVER_SPEED)
+  // rounded cells, cut on the frame's own radius
+  .cellMask(cloverCellMask)
+  .respins(3)
+  .lockAnimation('landing')
+  .ticker(app.ticker)
+  .build();
+const boardW = COLS * CELL.width + (COLS - 1) * COLUMN_GAP;
+const boardH = ROWS * CELL.height + (ROWS - 1) * ROW_GAP;
+board.container.position.set((app.screen.width - boardW) / 2, (app.screen.height - boardH) / 2 - 24);
+// the game's framing: gradient panel + grid lines in the gaps, behind a chrome-less board
+const grid = cloverGridBackground({ x: board.container.x, y: board.container.y, cols: COLS, rows: ROWS, cell: CELL, columnGap: COLUMN_GAP, rowGap: ROW_GAP });
+app.stage.addChild(grid);
+app.stage.addChild(board.container);
+
+// -- the counter --
+const counter = new PIXI.Container();
+const lamps = [];
+for (let i = 0; i < 3; i++) {
+  const lamp = new PIXI.Container();
+  const bg = new PIXI.Graphics();
+  const digit = new PIXI.BitmapText({ text: String(i + 1), style: { fontFamily: 'CloverValue', fontSize: 24 } });
+  digit.anchor.set(0.5);
+  lamp.addChild(bg, digit);
+  lamp.x = i * 60;
+  counter.addChild(lamp);
+  lamps.push({ lamp, bg, digit });
+}
+const paint = (left) => {
+  lamps.forEach(({ bg, digit }, i) => {
+    const lit = i < left;
+    bg.clear().roundRect(-27, -15, 54, 30, 5).fill({ color: lit ? 0xf5b400 : 0x0b1a4a }).stroke({ color: lit ? 0xffe27a : 0x3f6bd8, width: 1 });
+    digit.alpha = lit ? 1 : 0.4;
+  });
+};
+counter.position.set(app.screen.width / 2 - 60, board.container.y + boardH + 40);
+app.stage.addChild(counter);
+paint(0);
+
+const hud = new PIXI.Text({ text: 'press spin', style: { fontFamily: 'system-ui, sans-serif', fontSize: 13, fontWeight: '600', fill: 0x9c8f78 } });
+hud.anchor.set(0.5, 0);
+hud.position.set(app.screen.width / 2, counter.y + 24);
+app.stage.addChild(hud);
+
+board.events.on('respins:changed', ({ value, reason }) => {
+  paint(value);
+  if (reason === 'seed') hud.text = `armed: ${value} respins`;
+  else if (reason === 'hit-reset') {
+    hud.text = `hit - counter back to ${value}`;
+    for (const { lamp } of lamps) gsap.fromTo(lamp.scale, { x: 1.25, y: 1.25 }, { x: 1, y: 1, duration: 0.35, ease: 'back.out(2)' });
+  } else {
+    hud.text = `miss - ${value} left`;
+    const { lamp } = lamps[value];
+    gsap.fromTo(lamp, { alpha: 0.2 }, { alpha: 1, duration: 0.4 });
+  }
+});
+board.events.on('cell:landed', ({ cell, coin }) => { if (coin) board.symbolAt(cell).setLabel(fmt(coin.data.value)); });
+
+const gold = (cell) => ({ cell, id: 'gold', data: { value: pick([1, 2, 3, 5]) } });
+const SEED = [{ reel: 1, cell: 1 }, { reel: 3, cell: 1 }].map(gold);
+// two misses, a hit (relight), then three misses to the end
+const ROUNDS = [[], [], [{ reel: 0, cell: 2 }], [], [], []];
+
+let busy = false;
+return {
+  cleanup: () => { for (const { lamp } of lamps) gsap.killTweensOf(lamp); try { hud.destroy(); counter.destroy(); } catch {} grid.destroy({ children: true }); board.destroy(); },
+  onSpin: async () => {
+    if (busy) return;
+    busy = true;
+    board.reset();
+    board.enter(SEED);
+    for (const c of SEED) { const sym = board.symbolAt(c.cell); sym.setLabel(fmt(c.data.value)); sym.playIdle(); }
+    await sleep(500);
+    for (const cells of ROUNDS) {
+      const res = await board.respin(cells.map(gold));
+      await sleep(600);
+      if (res.done) break;
+    }
+    hud.text = `counter ran out · ${board.lockedCoins.length} held · press spin to replay`;
+    busy = false;
+  },
+};
+```
+
+### hold-and-win-clover-speeds
+URL: https://pixi-reels.schmooky.dev/recipes/hold-and-win-clover-speeds/
+```ts
+// @ts-nocheck
+// Injected: HoldAndWinBuilder, CloverSymbol, cloverGridBackground, loadHwClover,
+//           CLOVER_SPEEDS, cloverCellMask, PIXI, gsap, app
+//
+// One speed switch for the whole board. Every cell is its own 1x1 reel set
+// with its own SpeedManager, so speeds are registered board-wide with
+// speeds({ normal, turbo, superTurbo }) and switched board-wide with
+// board.setSpeed(name) - the board's reelSet.setSpeed(). Same rule as a reel
+// set: a cell already in flight finishes on the profile it started with, the
+// next wave runs on the new one, and skip() is how a turbo press cuts the
+// wave in progress. Three waves here: normal, turbo (switched mid-wave and
+// slammed home), superTurbo.
+
+const COLS = 5, ROWS = 3;
+const CELL = { width: 101, height: 85 }, COLUMN_GAP = 8, ROW_GAP = 8;
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const fmt = (v) => v.toFixed(2);
+const pick = (a) => a[Math.floor(Math.random() * a.length)];
+const VALUES = [1, 1.5, 2, 2.5, 3, 5];
+
+const art = await loadHwClover();
+const UNMASK = Object.fromEntries(['gold', 'collect', 'multi', 'mystery', 'super', 'capsule'].map((id) => [id, { unmask: true }]));
+class Clover extends CloverSymbol {
+  onActivate(id) { super.onActivate(id); if (id === 'gold') this.setLabel(fmt(pick(VALUES))); }
+}
+
+const board = new HoldAndWinBuilder()
+  .grid(COLS, ROWS)
+  .cellSize(CELL, { columnGap: COLUMN_GAP, rowGap: ROW_GAP })
+  .symbols((r) => { for (const id of ['gold', 'collect', 'multi', 'mystery', 'super', 'capsule', 'empty']) r.register(id, Clover, { art }); })
+  .weights({ gold: 2, collect: 0.6, multi: 0.6, mystery: 0.6, super: 0.4, capsule: 0.5, empty: 5 })
+  .symbolData(UNMASK)
+  // every name lands in every cell's SpeedManager; 'normal' is active at build
+  .speeds(CLOVER_SPEEDS)
+  // the landing wave flattens as the speed goes up
+  .stagger((reel, cell, speed) => (speed === 'superTurbo' ? 0 : speed === 'turbo' ? (reel + cell) * 25 : (reel + cell) * 70))
+  .cellMask(cloverCellMask)
+  .respins(3)
+  .lockAnimation('landing')
+  .ticker(app.ticker)
+  .build();
+const boardW = COLS * CELL.width + (COLS - 1) * COLUMN_GAP;
+const boardH = ROWS * CELL.height + (ROWS - 1) * ROW_GAP;
+board.container.position.set((app.screen.width - boardW) / 2, (app.screen.height - boardH) / 2 - 10);
+const grid = cloverGridBackground({ x: board.container.x, y: board.container.y, cols: COLS, rows: ROWS, cell: CELL, columnGap: COLUMN_GAP, rowGap: ROW_GAP });
+app.stage.addChild(grid, board.container);
+
+const hud = new PIXI.Text({ text: 'press spin', style: { fontFamily: 'system-ui, sans-serif', fontSize: 13, fontWeight: '600', fill: 0x9c8f78 } });
+hud.anchor.set(0.5, 0);
+hud.position.set(app.screen.width / 2, board.container.y + boardH + 24);
+app.stage.addChild(hud);
+const badge = new PIXI.Text({ text: 'normal', style: { fontFamily: 'system-ui, sans-serif', fontSize: 12, fontWeight: '700', fill: 0xf5b400 } });
+badge.anchor.set(1, 0);
+badge.position.set(board.container.x + boardW, board.container.y - 26);
+app.stage.addChild(badge);
+board.events.on('speed:changed', ({ name, previous }) => {
+  badge.text = name;
+  gsap.fromTo(badge.scale, { x: 1.4, y: 1.4 }, { x: 1, y: 1, duration: 0.3, ease: 'back.out(2)' });
+  hud.text = `setSpeed('${name}') from ${previous}: every cell's SpeedManager at once`;
+});
+board.events.on('cell:landed', ({ cell, coin }) => { if (coin) board.symbolAt(cell).setLabel(fmt(coin.data.value)); });
+
+const gold = (cell) => ({ cell, id: 'gold', data: { value: pick(VALUES) } });
+const SEED = [{ reel: 1, cell: 1 }, { reel: 3, cell: 2 }].map(gold);
+
+let busy = false;
+return {
+  cleanup: () => { try { hud.destroy(); badge.destroy(); grid.destroy({ children: true }); } catch {} board.destroy(); },
+  onSpin: async () => {
+    if (busy) return;
+    busy = true;
+    board.reset();
+    board.setSpeed('normal');
+    board.enter(SEED);
+    for (const c of SEED) { const s = board.symbolAt(c.cell); s.setLabel(fmt(c.data.value)); s.playIdle(); }
+    hud.text = 'wave 1 on normal';
+    await sleep(400);
+
+    // wave 1: normal
+    await board.respin([gold({ reel: 0, cell: 0 })]);
+    await sleep(400);
+
+    // wave 2: switched to turbo WHILE the cells spin. They finish on normal
+    // (the engine never retunes a reel in flight), so slam them - that is
+    // what a turbo press does - and the wave after runs turbo end to end.
+    const wave = board.respin([gold({ reel: 4, cell: 1 })]);
+    await sleep(350);
+    board.setSpeed('turbo');
+    hud.text = "turbo mid-wave: cells finish on normal, skip() cuts them, next wave is turbo";
+    await sleep(250);
+    board.skip();
+    await wave;
+    await sleep(400);
+    await board.respin([gold({ reel: 2, cell: 0 })]);
+    await sleep(400);
+
+    // wave 3: superTurbo, stagger 0 - the whole board lands as one
+    board.setSpeed('superTurbo');
+    await sleep(300);
+    const res = await board.respin([gold({ reel: 2, cell: 2 })]);
+    await sleep(300);
+    if (!res.done) for (let i = 0; i < 3; i++) { const r = await board.respin([]); if (r.done) break; }
+    await board.playWin();
+    const total = board.lockedCoins.reduce((a, c) => a + c.data.value, 0);
+    hud.text = `feature over on ${board.speed} · TOTAL ${fmt(total)} · press spin to replay`;
+    busy = false;
+  },
+};
+```
+
 ### hold-and-win-collector-particles
 URL: https://pixi-reels.schmooky.dev/recipes/hold-and-win-collector-particles/
 ```ts
@@ -9279,6 +10706,114 @@ return {
     } finally {
       busy = false;
     }
+  },
+};
+```
+
+### hold-and-win-landing-only
+URL: https://pixi-reels.schmooky.dev/recipes/hold-and-win-landing-only/
+```ts
+// @ts-nocheck
+// Injected: HoldAndWinBuilder, CloverSymbol, cloverGridBackground, loadHwClover, CLOVER_SPEED, cloverCellMask, CLOVER_CELL, PIXI, gsap, app
+//
+// Landing only. By default the board plays a coin's win animation the moment
+// it locks; most productions want just a land beat there and one celebration
+// once the board is decided. `lockAnimation('landing')` makes every lock play
+// `playLanding()` (a settle) and nothing else; the game calls
+// `board.playWin()` itself when the feature ends.
+
+const COLS = 5, ROWS = 3;
+const CELL = { width: 101, height: 85 }, COLUMN_GAP = 8, ROW_GAP = 8;
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const fmt = (v) => v.toFixed(2);
+const pick = (a) => a[Math.floor(Math.random() * a.length)];
+
+const art = await loadHwClover();
+
+// Gold is the money clover: on the strip it already wears a bet-scaled amount,
+// a different one each time it flashes past, so money reads as money in
+// motion. The served amount replaces it the frame the cell lands.
+const STRIP_VALUES = [1, 1, 1.5, 2, 2.5, 3, 5, 7, 10];
+class Clover extends CloverSymbol {
+  onActivate(id) {
+    super.onActivate(id);
+    if (id === 'gold') this.setLabel(fmt(pick(STRIP_VALUES)));
+  }
+}
+// The clover glow is drawn past the 202x170 cell: lift these above the cell mask
+// at rest (unmask), or every edge of every clover is clipped.
+const UNMASK = Object.fromEntries(['gold', 'collect', 'multi', 'mystery', 'super', 'capsule'].map((id) => [id, { unmask: true }]));
+
+const board = new HoldAndWinBuilder()
+  .grid(COLS, ROWS)
+  .cellSize(CELL, { columnGap: COLUMN_GAP, rowGap: ROW_GAP })
+  .symbols((r) => {
+    for (const id of ['gold', 'collect', 'multi', 'mystery', 'super', 'capsule', 'empty']) r.register(id, Clover, { art });
+  })
+  .weights({ gold: 2, collect: 0.6, multi: 0.6, mystery: 0.6, super: 0.4, capsule: 0.5, empty: 5 })
+  .symbolData(UNMASK)
+  // a few px of bounce, not the tall-reel default: a clover cell should settle, not jump
+  .speedProfile(CLOVER_SPEED)
+  // rounded cells, cut on the frame's own radius
+  .cellMask(cloverCellMask)
+  .respins(3)
+  // 'win' (default) | 'landing' | 'none'
+  .lockAnimation('landing')
+  .ticker(app.ticker)
+  .build();
+
+const boardW = COLS * CELL.width + (COLS - 1) * COLUMN_GAP;
+const boardH = ROWS * CELL.height + (ROWS - 1) * ROW_GAP;
+board.container.position.set((app.screen.width - boardW) / 2, (app.screen.height - boardH) / 2 - 8);
+// the game's framing: gradient panel + grid lines in the gaps, behind a chrome-less board
+const grid = cloverGridBackground({ x: board.container.x, y: board.container.y, cols: COLS, rows: ROWS, cell: CELL, columnGap: COLUMN_GAP, rowGap: ROW_GAP });
+app.stage.addChild(grid);
+app.stage.addChild(board.container);
+
+const hud = new PIXI.Text({
+  text: 'press spin',
+  style: { fontFamily: 'system-ui, sans-serif', fontSize: 13, fontWeight: '600', fill: 0x9c8f78 },
+});
+hud.anchor.set(0.5, 0);
+hud.position.set(app.screen.width / 2, board.container.y + boardH + 24);
+app.stage.addChild(hud);
+
+let landed = 0;
+board.events.on('cell:landed', ({ cell, coin }) => {
+  if (!coin) return;
+  landed += 1;
+  board.symbolAt(cell).setLabel(fmt(coin.data.value));
+  hud.text = `coin ${landed} landed · settle only, no win`;
+});
+
+const SEED = [
+  { cell: { reel: 1, cell: 1 }, id: 'gold', data: { value: 3 } },
+  { cell: { reel: 3, cell: 2 }, id: 'gold', data: { value: 1 } },
+];
+const ROUNDS = [[{ reel: 0, cell: 0 }, { reel: 4, cell: 0 }], [{ reel: 2, cell: 1 }], [{ reel: 4, cell: 2 }], [], [], []];
+
+let busy = false;
+return {
+  cleanup: () => { try { hud.destroy(); } catch {} grid.destroy({ children: true }); board.destroy(); },
+  onSpin: async () => {
+    if (busy) return;
+    busy = true;
+    landed = 0;
+    board.reset();
+    board.enter(SEED);
+    for (const c of SEED) { const sym = board.symbolAt(c.cell); sym.setLabel(fmt(c.data.value)); sym.playIdle(); }
+    await sleep(350);
+    for (const cells of ROUNDS) {
+      const result = await board.respin(cells.map((cell) => ({ cell, id: 'gold', data: { value: pick(STRIP_VALUES) } })));
+      await sleep(350);
+      if (result.done) break;
+    }
+    // The one explicit celebration: every locked coin pulses together.
+    hud.text = 'feature over · board.playWin() on every locked coin';
+    await board.playWin();
+    const total = board.lockedCoins.reduce((a, c) => a + c.data.value, 0);
+    hud.text = `TOTAL ${fmt(total)} · press spin to replay`;
+    busy = false;
   },
 };
 ```
@@ -10058,6 +11593,107 @@ return {
     await payout(PAYER_CELL, PAY_VALUE);
     phase = 'done';
     hud.text = `paid · total ${fmt(totalOf())} · press spin to reset`;
+  },
+};
+```
+
+### hold-and-win-rect-cells
+URL: https://pixi-reels.schmooky.dev/recipes/hold-and-win-rect-cells/
+```ts
+// @ts-nocheck
+// Injected: HoldAndWinBuilder, CloverSymbol, cloverGridBackground, loadHwClover, CLOVER_SPEED, cloverCellMask, CLOVER_CELL, PIXI, gsap, app
+//
+// Rectangular cells. Most Hold & Win art is wider than it is tall - this set
+// is authored for 202x170 - so the board takes `{ width, height }` and a gap
+// per axis: a seam between the columns, rows touching, like the source game.
+
+const COLS = 5, ROWS = 3;
+const CELL = { width: CLOVER_CELL.width / 2, height: CLOVER_CELL.height / 2 }; // 101 x 85
+const COLUMN_GAP = 8, ROW_GAP = 8;
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const fmt = (v) => v.toFixed(2);
+const pick = (a) => a[Math.floor(Math.random() * a.length)];
+
+const art = await loadHwClover();
+
+// Gold is the money clover: on the strip it already wears a bet-scaled amount,
+// a different one each time it flashes past, so money reads as money in
+// motion. The served amount replaces it the frame the cell lands.
+const STRIP_VALUES = [1, 1, 1.5, 2, 2.5, 3, 5, 7, 10];
+class Clover extends CloverSymbol {
+  onActivate(id) {
+    super.onActivate(id);
+    if (id === 'gold') this.setLabel(fmt(pick(STRIP_VALUES)));
+  }
+}
+// The clover glow is drawn past the 202x170 cell: lift these above the cell mask
+// at rest (unmask), or every edge of every clover is clipped.
+const UNMASK = Object.fromEntries(['gold', 'collect', 'multi', 'mystery', 'super', 'capsule'].map((id) => [id, { unmask: true }]));
+
+const board = new HoldAndWinBuilder()
+  .grid(COLS, ROWS)
+  .cellSize(CELL, { columnGap: COLUMN_GAP, rowGap: ROW_GAP })
+  .symbols((r) => {
+    for (const id of ['gold', 'collect', 'multi', 'mystery', 'super', 'capsule', 'empty']) r.register(id, Clover, { art });
+  })
+  // the bonus strip: only clovers and the capsule flash past, never base-game fruit
+  .weights({ gold: 2, collect: 0.6, multi: 0.6, mystery: 0.6, super: 0.4, capsule: 0.5, empty: 5 })
+  .symbolData(UNMASK)
+  // a few px of bounce, not the tall-reel default: a clover cell should settle, not jump
+  .speedProfile(CLOVER_SPEED)
+  // rounded cells, cut on the frame's own radius
+  .cellMask(cloverCellMask)
+  .respins(3)
+  .ticker(app.ticker)
+  .build();
+
+const boardW = COLS * CELL.width + (COLS - 1) * COLUMN_GAP;
+const boardH = ROWS * CELL.height + (ROWS - 1) * ROW_GAP;
+board.container.position.set((app.screen.width - boardW) / 2, (app.screen.height - boardH) / 2 - 8);
+// the game's framing: gradient panel + grid lines in the gaps, behind a chrome-less board
+const grid = cloverGridBackground({ x: board.container.x, y: board.container.y, cols: COLS, rows: ROWS, cell: CELL, columnGap: COLUMN_GAP, rowGap: ROW_GAP });
+app.stage.addChild(grid);
+app.stage.addChild(board.container);
+
+const hud = new PIXI.Text({
+  text: `cell ${CELL.width}x${CELL.height} · column gap ${COLUMN_GAP} · row gap ${ROW_GAP} · press spin`,
+  style: { fontFamily: 'system-ui, sans-serif', fontSize: 13, fontWeight: '600', fill: 0x9c8f78 },
+});
+hud.anchor.set(0.5, 0);
+hud.position.set(app.screen.width / 2, board.container.y + boardH + 24);
+app.stage.addChild(hud);
+
+// The value lives in coin.data; the symbol paints it the moment the cell lands.
+board.events.on('cell:landed', ({ cell, coin }) => {
+  if (coin) board.symbolAt(cell).setLabel(fmt(coin.data.value));
+});
+const b = board.cellBounds({ reel: 4, cell: 2 });
+hud.text += `\nlast cell at (${b.x}, ${b.y}) ${b.width}x${b.height}`;
+
+const SEED = [
+  { cell: { reel: 0, cell: 1 }, id: 'gold', data: { value: 2 } },
+  { cell: { reel: 3, cell: 0 }, id: 'gold', data: { value: 5 } },
+];
+const ROUNDS = [[{ reel: 2, cell: 2 }, { reel: 4, cell: 1 }], [{ reel: 1, cell: 0 }], [], [], []];
+
+let busy = false;
+return {
+  cleanup: () => { try { hud.destroy(); } catch {} grid.destroy({ children: true }); board.destroy(); },
+  onSpin: async () => {
+    if (busy) return;
+    busy = true;
+    board.reset();
+    board.enter(SEED);
+    for (const c of SEED) { const sym = board.symbolAt(c.cell); sym.setLabel(fmt(c.data.value)); sym.playIdle(); }
+    await sleep(350);
+    for (const cells of ROUNDS) {
+      const result = await board.respin(cells.map((cell) => ({ cell, id: 'gold', data: { value: pick(STRIP_VALUES) } })));
+      await sleep(400);
+      if (result.done) break;
+    }
+    const total = board.lockedCoins.reduce((a, c) => a + c.data.value, 0);
+    hud.text = `feature over · TOTAL ${fmt(total)} · press spin to replay`;
+    busy = false;
   },
 };
 ```
