@@ -1,5 +1,12 @@
 # @pixi-reels/cheats
 
+## 0.0.7
+
+### Patch Changes
+
+- Updated dependencies [[`e341a10`](https://github.com/schmooky/pixi-reels/commit/e341a10221197bd7db04cbf047c46fd8e2af41f0), [`e341a10`](https://github.com/schmooky/pixi-reels/commit/e341a10221197bd7db04cbf047c46fd8e2af41f0), [`e341a10`](https://github.com/schmooky/pixi-reels/commit/e341a10221197bd7db04cbf047c46fd8e2af41f0), [`e341a10`](https://github.com/schmooky/pixi-reels/commit/e341a10221197bd7db04cbf047c46fd8e2af41f0), [`e341a10`](https://github.com/schmooky/pixi-reels/commit/e341a10221197bd7db04cbf047c46fd8e2af41f0)]:
+  - pixi-reels@2.5.0
+
 ## 0.0.6
 
 ### Patch Changes
