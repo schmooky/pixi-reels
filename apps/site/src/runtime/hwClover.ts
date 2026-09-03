@@ -52,6 +52,17 @@ export const CLOVER_SPEED: SpeedProfile = {
   bounceDuration: 240,
 };
 
+/**
+ * The three speeds a clover board offers, for `HoldAndWinBuilder.speeds()`:
+ * the engine's NORMAL / TURBO / SUPER_TURBO, each with the cell-sized bounce
+ * of {@link CLOVER_SPEED}. `board.setSpeed('turbo')` moves every cell at once.
+ */
+export const CLOVER_SPEEDS: Record<'normal' | 'turbo' | 'superTurbo', SpeedProfile> = {
+  normal: CLOVER_SPEED,
+  turbo: { ...SpeedPresets.TURBO, minimumSpinTime: 180, bounceDistance: 4, bounceDuration: 160 },
+  superTurbo: { ...SpeedPresets.SUPER_TURBO, minimumSpinTime: 80, bounceDistance: 2, bounceDuration: 100 },
+};
+
 export async function loadHwClover(base = '/hw-clover/'): Promise<HwCloverArt> {
   await Assets.load([base + 'value.fnt', base + 'jackpot.fnt', base + 'mult.fnt']);
   const [symbolsSheet, plaquesSheet] = (await Promise.all([

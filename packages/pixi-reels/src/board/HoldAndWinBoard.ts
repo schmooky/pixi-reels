@@ -6,6 +6,7 @@ import type { SymbolRegistry } from '../symbols/SymbolRegistry.js';
 import type { SpeedProfile, SymbolData } from '../config/types.js';
 import type { Disposable } from '../utils/Disposable.js';
 import { BoardGrid } from './BoardGrid.js';
+import type { BoardProfile } from './BoardGrid.js';
 import type { Direction, Orientation } from '../core/ReelAxis.js';
 import type { MaskStrategy } from '../core/ReelViewport.js';
 import { HoldAndWinState } from './HoldAndWinState.js';
@@ -39,8 +40,10 @@ export interface HoldAndWinBoardConfig<TData> {
   configurator: (registry: SymbolRegistry) => void;
   weights: Record<string, number> | null;
   symbolData: Record<string, Partial<SymbolData>> | null;
-  baseProfile: SpeedProfile;
-  stagger: (reel: number, cell: number) => number;
+  /** Named base profiles, registered into every cell. See `HoldAndWinBuilder.speeds`. */
+  speeds: Record<string, SpeedProfile>;
+  initialSpeed: string;
+  stagger: (reel: number, cell: number, speed: string) => number;
   anticipateWhen:
     | ((state: { locked: number; capacity: number; respinsLeft: number }) => boolean)
     | null;
@@ -102,6 +105,11 @@ export class HoldAndWinBoard<TData = unknown> implements Disposable {
   private readonly _inactiveId: string;
   private readonly _lockAnimation: HwLockAnimation;
   private readonly _anticipateWhen: HoldAndWinBoardConfig<TData>['anticipateWhen'];
+  private readonly _stagger: HoldAndWinBoardConfig<TData>['stagger'];
+  private readonly _speeds = new Set<string>();
+  private _speed: string;
+  /** Whether the wave in flight (if any) runs on the tension variants. */
+  private _tenseWave = false;
 
   constructor(cfg: HoldAndWinBoardConfig<TData>) {
     this.cols = cfg.cols;
@@ -110,9 +118,20 @@ export class HoldAndWinBoard<TData = unknown> implements Disposable {
     this._inactiveId = cfg.inactiveId;
     this._lockAnimation = cfg.lockAnimation;
     this._anticipateWhen = cfg.anticipateWhen;
+    this._stagger = cfg.stagger;
+    this._speed = cfg.initialSpeed;
 
-    const base = (cell: HwCell): number =>
-      (cfg.baseProfile.minimumSpinTime ?? 320) + cfg.stagger(cell.reel, cell.cell);
+    // Every named speed becomes two per-cell profiles: `name` and
+    // `name:tension`, the latter the drawn-out variant of an anticipating
+    // wave. The initial speed goes first: BoardGrid activates the first name.
+    const names = [cfg.initialSpeed, ...Object.keys(cfg.speeds).filter((n) => n !== cfg.initialSpeed)];
+    const profiles: Record<string, BoardProfile> = {};
+    for (const name of names) {
+      const profile = cfg.speeds[name];
+      this._speeds.add(name);
+      profiles[name] = (cell) => this._profileFor(name, profile, cell, false);
+      profiles[`${name}:tension`] = (cell) => this._profileFor(name, profile, cell, true);
+    }
     this._grid = new BoardGrid({
       cols: cfg.cols,
       rows: cfg.rows,
@@ -139,10 +158,7 @@ export class HoldAndWinBoard<TData = unknown> implements Disposable {
       direction: cfg.direction,
       ticker: cfg.ticker,
       rng: cfg.rng ?? undefined,
-      profiles: {
-        normal: (cell) => ({ ...cfg.baseProfile, minimumSpinTime: base(cell) }),
-        tension: (cell) => ({ ...cfg.baseProfile, minimumSpinTime: base(cell) + TENSION_EXTRA_MS }),
-      },
+      profiles,
     });
     this._state = new HoldAndWinState<TData>(this._grid.cells(), cfg.respins, cfg.inactive);
     this._dressInactive();
@@ -177,6 +193,14 @@ export class HoldAndWinBoard<TData = unknown> implements Disposable {
   /** Where the feature is right now: idle (no feature), active, or spinning. */
   get phase(): HwPhase {
     return this._state.phase;
+  }
+  /** Name of the speed profile every cell is set to. */
+  get speed(): string {
+    return this._speed;
+  }
+  /** Every registered speed name, initial first. */
+  get speedNames(): string[] {
+    return [...this._speeds];
   }
 
   // ── Geometry & instances (the game layer's openings) ────────────────
@@ -230,7 +254,9 @@ export class HoldAndWinBoard<TData = unknown> implements Disposable {
     const { round, spinning, hitByKey } = this._state.beginWave(hits);
     try {
       const tense = this._anticipating() && spinning.length > 0;
-      for (const cell of spinning) this._grid.setProfile(cell, tense ? 'tension' : 'normal');
+      this._tenseWave = tense;
+      const variant = tense ? `${this._speed}:tension` : this._speed;
+      for (const cell of spinning) this._grid.setProfile(cell, variant);
       this.events.emit('respin:start', { round, respinsLeft: this._state.respinsLeft, spinning });
 
       const targets = spinning.map((cell) => ({
@@ -264,6 +290,42 @@ export class HoldAndWinBoard<TData = unknown> implements Disposable {
       this._grid.skipSpinning();
       throw err;
     }
+  }
+
+  /**
+   * Switch every cell to a registered speed profile at once - the board's
+   * `reelSet.setSpeed()`. Takes hold immediately on every cell's SpeedManager;
+   * as on a reel set, a cell already in flight finishes on the profile it
+   * started with, so a wave in progress shows the change from its next wave -
+   * or right away after `skip()`, the turbo-button semantic. Fires
+   * `speed:changed`.
+   */
+  setSpeed(name: string): void {
+    if (!this._speeds.has(name)) {
+      throw new Error(
+        `HoldAndWinBoard: setSpeed('${name}') names no registered profile (have: ${[...this._speeds].join(', ')}).`,
+      );
+    }
+    const previous = this._speed;
+    this._speed = name;
+    const variant = this._state.phase === 'spinning' && this._tenseWave ? `${name}:tension` : name;
+    for (const cell of this._grid.cells()) this._grid.setProfile(cell, variant);
+    this.events.emit('speed:changed', { name, previous });
+  }
+
+  /**
+   * Register one more named profile into every cell's SpeedManager after
+   * build - `reelSet.speed.addProfile()` for the whole board. Its tension
+   * variant is derived the same way as for the built-in ones. Select it with
+   * {@link setSpeed}.
+   */
+  addSpeed(name: string, profile: SpeedProfile): void {
+    for (const cell of this._grid.cells()) {
+      const manager = this._grid.reelAt(cell).speed;
+      manager.addProfile(name, this._profileFor(name, profile, cell, false));
+      manager.addProfile(`${name}:tension`, this._profileFor(name, profile, cell, true));
+    }
+    this._speeds.add(name);
   }
 
   /**
@@ -361,6 +423,12 @@ export class HoldAndWinBoard<TData = unknown> implements Disposable {
     return run.catch((err) =>
       noticeWarn(`hw-coin-${anim}-failed`, `HoldAndWinBoard: coin ${anim} animation failed.`, err),
     );
+  }
+
+  /** A cell's concrete profile for a named speed: the base plus this cell's stagger. */
+  private _profileFor(name: string, profile: SpeedProfile, cell: HwCell, tense: boolean): SpeedProfile {
+    const floor = (profile.minimumSpinTime ?? 320) + this._stagger(cell.reel, cell.cell, name);
+    return { ...profile, minimumSpinTime: floor + (tense ? TENSION_EXTRA_MS : 0) };
   }
 
   /** Show the dormant symbol on every currently inactive cell. */

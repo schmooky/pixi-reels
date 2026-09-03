@@ -63,6 +63,12 @@ export type HoldAndWinBoardEvents<TData = unknown> = {
    * new total of active cells, the number `isFull` is measured against.
    */
   'cells:activated': [{ cells: HwCell[]; capacity: number }];
+  /**
+   * Fired by `setSpeed()` - every cell's active speed profile changed. Cells
+   * already in flight finish on the profile they started with; the next wave
+   * (or a `skip()`) is where the new one shows.
+   */
+  'speed:changed': [{ name: string; previous: string }];
 };
 
 /**

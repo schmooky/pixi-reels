@@ -133,6 +133,7 @@ async function loadHwCloverGlobals(): Promise<Record<string, unknown>> {
     CLOVER_FRUITS: clover.CLOVER_FRUITS,
     CLOVER_FEATURES: clover.CLOVER_FEATURES,
     CLOVER_SPEED: clover.CLOVER_SPEED,
+    CLOVER_SPEEDS: clover.CLOVER_SPEEDS,
     CLOVER_CELL_RADIUS: clover.CLOVER_CELL_RADIUS,
     cloverCellMask: clover.cloverCellMask,
   };

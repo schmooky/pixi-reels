@@ -290,6 +290,14 @@ Real gaps between the cells (columnGap and rowGap) and no chrome, so the board i
 
 <RecipeDemo code="hold-and-win-clover-grid-bg" height={420} />
 
+<a id="hold-and-win-clover-speeds"></a>
+
+## One speed switch for every cell
+
+speeds(normal, turbo, superTurbo) registers each profile into every cell's SpeedManager and board.setSpeed(name) switches them all at once, the board's reelSet.setSpeed(); a wave in flight finishes on its own profile, so a turbo press mid-wave is setSpeed plus skip().
+
+<RecipeDemo code="hold-and-win-clover-speeds" height={420} />
+
 <a id="hold-and-win-clover-respin-counter"></a>
 
 ## Respin counter lamps

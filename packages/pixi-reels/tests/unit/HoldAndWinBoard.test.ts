@@ -4,6 +4,7 @@ import { HoldAndWinBuilder } from '../../src/board/HoldAndWinBuilder.js';
 import type { HoldAndWinBoard } from '../../src/board/HoldAndWinBoard.js';
 import type { HwCell, HwLockAnimation } from '../../src/board/HwTypes.js';
 import { FakeTicker } from '../../src/testing/FakeTicker.js';
+import { SpeedPresets } from '../../src/config/SpeedPresets.js';
 import { HeadlessSymbol } from '../../src/testing/HeadlessSymbol.js';
 
 /** Counts the one-shots the board fires on it. */
@@ -181,6 +182,89 @@ describe('HoldAndWinBoard inactive cells', () => {
         .ticker(ticker as unknown as Ticker)
         .build(),
     ).toThrow(/'nope'/);
+    ticker.destroy();
+  });
+});
+
+describe('HoldAndWinBoard named speeds', () => {
+  const FAST = { ...SpeedPresets.TURBO, minimumSpinTime: 100 };
+  function buildSpeeds() {
+    const ticker = new FakeTicker();
+    const seen: string[] = [];
+    const board = new HoldAndWinBuilder<{ value: number }>()
+      .grid(2, 2)
+      .cellSize(40)
+      .symbols((r) => r.register('coin', TrackedSymbol, {}))
+      .weights({ coin: 1, empty: 1 })
+      .speeds({ turbo: FAST })
+      .stagger((_reel, _cell, speed) => { seen.push(speed); return 0; })
+      .anticipateWhen(({ locked }) => locked >= 1)
+      .ticker(ticker as unknown as Ticker)
+      .build();
+    return { board, ticker, seen };
+  }
+
+  it('registers every named profile into every cell and starts on the initial one', () => {
+    const { board, ticker } = buildSpeeds();
+    expect(board.speed).toBe('normal');
+    expect(board.speedNames).toEqual(['normal', 'turbo']);
+    for (const cell of board.freeCells) {
+      const names = board.reelAt(cell).speed.profileNames;
+      expect(names).toEqual(expect.arrayContaining(['normal', 'normal:tension', 'turbo', 'turbo:tension']));
+      expect(board.reelAt(cell).speed.activeName).toBe('normal');
+    }
+    board.destroy();
+    ticker.destroy();
+  });
+
+  it('setSpeed switches every cell at once and reports it', () => {
+    const { board, ticker } = buildSpeeds();
+    const changes: unknown[] = [];
+    board.events.on('speed:changed', (e) => changes.push(e));
+    board.setSpeed('turbo');
+    expect(board.speed).toBe('turbo');
+    for (const cell of board.freeCells) expect(board.reelAt(cell).speed.activeName).toBe('turbo');
+    expect(changes).toEqual([{ name: 'turbo', previous: 'normal' }]);
+    expect(() => board.setSpeed('warp')).toThrow(/no registered profile/);
+    board.destroy();
+    ticker.destroy();
+  });
+
+  it('runs an anticipating wave on the active speed tension variant and hands the stagger the speed name', async () => {
+    const { board, ticker, seen } = buildSpeeds();
+    board.setSpeed('turbo');
+    board.enter([coin(A)]);
+    const p = board.respin([coin(B)]);
+    for (const cell of [B, C, D]) expect(board.reelAt(cell).speed.activeName).toBe('turbo:tension');
+    await settle(board, ticker, p);
+    expect(seen).toContain('turbo');
+    board.destroy();
+    ticker.destroy();
+  });
+
+  it('addSpeed registers a profile into every cell after build', () => {
+    const { board, ticker } = buildSpeeds();
+    board.addSpeed('cinematic', { ...SpeedPresets.NORMAL, minimumSpinTime: 900 });
+    expect(board.speedNames).toContain('cinematic');
+    board.setSpeed('cinematic');
+    for (const cell of board.freeCells) {
+      expect(board.reelAt(cell).speed.activeName).toBe('cinematic');
+      expect(board.reelAt(cell).speed.active.minimumSpinTime).toBe(900);
+    }
+    board.destroy();
+    ticker.destroy();
+  });
+
+  it('refuses an initial speed that was never registered', () => {
+    const ticker = new FakeTicker();
+    expect(() =>
+      new HoldAndWinBuilder()
+        .grid(1, 1)
+        .symbols((r) => r.register('coin', TrackedSymbol, {}))
+        .initialSpeed('turbo')
+        .ticker(ticker as unknown as Ticker)
+        .build(),
+    ).toThrow(/initialSpeed\('turbo'\)/);
     ticker.destroy();
   });
 });
