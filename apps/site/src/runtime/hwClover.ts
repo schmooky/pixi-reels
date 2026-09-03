@@ -1,4 +1,4 @@
-import { Assets, BitmapText, Sprite, type Spritesheet, type Texture } from 'pixi.js';
+import { Assets, BitmapText, Container, Sprite, type Spritesheet, type Texture } from 'pixi.js';
 import { gsap } from 'gsap';
 import { ReelSymbol } from 'pixi-reels';
 
@@ -89,35 +89,49 @@ export interface CloverSymbolOptions {
  * 202x170 - so a cherry stays smaller than a clover the way the artist drew
  * it, instead of each texture being inflated to the cell on its own.
  *
+ * The clovers are drawn BIGGER than the cell. At rest the engine lifts them
+ * above the cell mask (`unmask: true`), but while the reel moves everything
+ * is clipped to the cell, so an oversized clover scrolling into place would
+ * show as a rectangle until the lift. So while its reel is in motion the art
+ * is held at a contained scale that fits the cell, and on landing it grows
+ * back to authored size in a short tween - the same beat the game's landing
+ * animation plays, and no mask edge is ever seen.
+ *
  * `playLanding()` is a short settle (the Hold & Win board calls it on lock
  * when built with `lockAnimation('landing')`); `playWin()` is the pulse the
  * board plays on lock by default, or on `board.playWin()`.
  */
 export class CloverSymbol extends ReelSymbol {
-  private readonly _art: HwCloverArt;
+  private readonly _artSet: HwCloverArt;
   private readonly _font: string;
   private readonly _labelOffset: number;
   private readonly _badgeOffset: number;
+  /** Sprite, label and badge, centred on the cell; scaled as one while the reel moves. */
+  private readonly _art: Container;
   private readonly _sprite: Sprite;
   private readonly _badge: Sprite;
   private _label: BitmapText | null = null;
   private _cellW = 0;
   private _cellH = 0;
   private _blurred = false;
+  private _inMotion = false;
   private _tween: gsap.core.Timeline | gsap.core.Tween | null = null;
+  private _grow: gsap.core.Tween | null = null;
 
   constructor(options: CloverSymbolOptions) {
     super();
-    this._art = options.art;
+    this._artSet = options.art;
     this._font = options.font ?? 'CloverValue';
     this._labelOffset = options.labelOffset ?? 0.06;
     this._badgeOffset = options.badgeOffset ?? -0.12;
+    this._art = new Container();
     this._sprite = new Sprite();
     this._sprite.anchor.set(0.5);
     this._badge = new Sprite();
     this._badge.anchor.set(0.5);
     this._badge.visible = false;
-    this.view.addChild(this._sprite, this._badge);
+    this._art.addChild(this._sprite, this._badge);
+    this.view.addChild(this._art);
   }
 
   /** Uniform authored-space scale for the current cell. */
@@ -130,18 +144,28 @@ export class CloverSymbol extends ReelSymbol {
     this._applyTexture();
     this.setLabel(null);
     this.setBadge(null);
+    // A symbol installed into a moving reel gets onReelSpinStart right after
+    // this, which contains it; one placed at rest stays at authored size.
+    this._killGrow();
+    this._art.scale.set(this._inMotion ? this._containedScale() : 1);
   }
 
   protected onDeactivate(): void {
     this._kill();
+    this._killGrow();
     this._blurred = false;
+    this._inMotion = false;
     this.setLabel(null);
     this.setBadge(null);
     this._sprite.scale.set(1);
     this._sprite.alpha = 1;
+    this._art.scale.set(1);
   }
 
   override onReelSpinStart(): void {
+    this._inMotion = true;
+    this._killGrow();
+    this._art.scale.set(this._containedScale());
     this._setBlurred(true);
   }
   override onReelSpinEnd(): void {
@@ -149,6 +173,18 @@ export class CloverSymbol extends ReelSymbol {
   }
   override onReelLanded(): void {
     this._setBlurred(false);
+    if (!this._inMotion) return;
+    this._inMotion = false;
+    // The lift above the mask happened just before this hook; grow out of
+    // the cell now, so the overflow arrives as a land beat.
+    this._killGrow();
+    this._grow = gsap.to(this._art.scale, {
+      x: 1,
+      y: 1,
+      duration: 0.16,
+      ease: 'power2.out',
+      onComplete: () => { this._grow = null; },
+    });
   }
 
   /** Paint (or clear, with `null`) the value text over the symbol face. */
@@ -163,7 +199,7 @@ export class CloverSymbol extends ReelSymbol {
     if (!this._label) {
       this._label = new BitmapText({ text, style: { fontFamily: this._font, fontSize: 60, letterSpacing: -2 } });
       this._label.anchor.set(0.5);
-      this.view.addChild(this._label);
+      this._art.addChild(this._label);
     } else {
       this._label.text = text;
     }
@@ -232,13 +268,35 @@ export class CloverSymbol extends ReelSymbol {
   resize(width: number, height: number): void {
     this._cellW = width;
     this._cellH = height;
-    this._sprite.position.set(width / 2, height / 2);
+    this._art.position.set(width / 2, height / 2);
     this._sprite.scale.set(this.artScale);
+    if (this._inMotion && !this._grow) this._art.scale.set(this._containedScale());
     this._layout();
   }
 
   protected override onDestroy(): void {
     this._kill();
+    this._killGrow();
+  }
+
+  /**
+   * The factor that shrinks this symbol's authored art to fit inside the
+   * cell, 1 when it already fits. Measured on the crisp frame and the blur
+   * frame both, so the swap mid-spin never pokes past the mask either.
+   */
+  private _containedScale(): number {
+    if (this._cellW <= 0 || this._cellH <= 0) return 1;
+    const id = this.symbolId;
+    let w = 0;
+    let h = 0;
+    for (const tex of [this._artSet.symbols[id], this._artSet.blur[id]]) {
+      if (!tex) continue;
+      w = Math.max(w, tex.orig.width);
+      h = Math.max(h, tex.orig.height);
+    }
+    if (w <= 0 || h <= 0) return 1;
+    const s = this.artScale;
+    return Math.min(1, this._cellW / (w * s), this._cellH / (h * s));
   }
 
   private _setBlurred(blurred: boolean): void {
@@ -250,7 +308,7 @@ export class CloverSymbol extends ReelSymbol {
   private _applyTexture(): void {
     const id = this.symbolId;
     if (!id) return;
-    const tex = (this._blurred ? this._art.blur[id] : undefined) ?? this._art.symbols[id];
+    const tex = (this._blurred ? this._artSet.blur[id] : undefined) ?? this._artSet.symbols[id];
     if (tex) this._sprite.texture = tex;
   }
 
@@ -259,13 +317,13 @@ export class CloverSymbol extends ReelSymbol {
     const s = this.artScale;
     if (this._label) {
       this._label.scale.set(s);
-      this._label.position.set(this._cellW / 2, this._cellH / 2 + this._cellH * this._labelOffset);
+      this._label.position.set(0, this._cellH * this._labelOffset);
       const maxW = this._cellW * 0.8;
       if (this._label.width > maxW) this._label.scale.set((s * maxW) / this._label.width);
     }
     if (this._badge.visible) {
       this._badge.scale.set(s);
-      this._badge.position.set(this._cellW / 2, this._cellH / 2 + this._cellH * this._badgeOffset);
+      this._badge.position.set(0, this._cellH * this._badgeOffset);
       const maxW = this._cellW * 0.9;
       if (this._badge.width > maxW) this._badge.scale.set((s * maxW) / this._badge.width);
     }
@@ -275,6 +333,13 @@ export class CloverSymbol extends ReelSymbol {
     if (this._tween) {
       this._tween.kill();
       this._tween = null;
+    }
+  }
+
+  private _killGrow(): void {
+    if (this._grow) {
+      this._grow.kill();
+      this._grow = null;
     }
   }
 }
