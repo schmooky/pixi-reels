@@ -1,6 +1,6 @@
 import { Assets, BitmapText, Container, Sprite, type Texture } from 'pixi.js';
 import { SpineReelSymbol, type SpineReelSymbolOptions, type SpineSymbolSource } from 'pixi-reels/spine';
-import { CLOVER_CELL, loadHwClover, type HwCloverArt } from './hwClover.ts';
+import { CLOVER_CELL, loadHwClover, type HwCloverArt } from './hwClover.js';
 
 /**
  * The clover Hold & Win symbols as Spine 4.2 skeletons, authored by

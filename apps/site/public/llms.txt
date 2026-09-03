@@ -1082,7 +1082,11 @@ Tags: paylines, hit-areas, overlays, wins, horizontal, orientation
 
 ### Hold & Win
 URL: https://pixi-reels.schmooky.dev/recipes/hold-and-win/
-Tags: hold-and-win, coins, collector, respin, spine, horizontal, reverse, orientation, rectangular, clovers
+Tags: hold-and-win, coins, collector, respin, spine, horizontal, reverse, orientation, rectangular
+
+### Hold & Win: Four Charged Clovers
+URL: https://pixi-reels.schmooky.dev/recipes/hold-and-win-clovers/
+Tags: hold-and-win, clovers, spine, rectangular, coins, collector, respin
 
 ### Masks & board shapes
 URL: https://pixi-reels.schmooky.dev/recipes/masks/

@@ -114,11 +114,11 @@ def skeleton(sid, sym_frames, fx_frames):
     if not tile:
         slots = [
             {"name": "glow", "bone": "glow", "attachment": glow, "color": rgba(0.3), "blend": "additive"},
-            {"name": "burst", "bone": "burst", "attachment": burst, "color": rgba(0.0), "blend": "additive"},
+            {"name": "burst", "bone": "burst", "color": rgba(0.0), "blend": "additive"},
             {"name": "body", "bone": "body", "attachment": body},
-            {"name": "flare", "bone": "flare", "attachment": "fx/flare", "color": rgba(0.0), "blend": "additive"},
-            {"name": "rays", "bone": "rays", "attachment": "fx/light_back", "color": rgba(0.0), "blend": "additive"},
-            {"name": "star", "bone": "star", "attachment": "fx/star", "color": rgba(0.0), "blend": "additive"},
+            {"name": "flare", "bone": "flare", "color": rgba(0.0), "blend": "additive"},
+            {"name": "rays", "bone": "rays", "color": rgba(0.0), "blend": "additive"},
+            {"name": "star", "bone": "star", "color": rgba(0.0), "blend": "additive"},
         ]
         attachments["glow"] = {glow: {"width": uw, "height": uh, "scaleX": glow_scale, "scaleY": glow_scale}}
         attachments["burst"] = {burst: {"width": xw, "height": xh, "scaleX": burst_scale, "scaleY": burst_scale}}
@@ -126,10 +126,16 @@ def skeleton(sid, sym_frames, fx_frames):
         attachments["rays"] = {"fx/light_back": {"width": lw, "height": lh, "scaleX": 1.6, "scaleY": 1.6}}
         attachments["star"] = {"fx/star": {"width": sw, "height": sh, "x": bw * 0.28, "y": bh * 0.22}}
 
-    # every animation re-keys the crisp frame at 0 so leaving `blur` restores it
+    # every animation re-keys the crisp frame at 0 so leaving `blur` restores it;
+    # the effect slots only carry an attachment for the frames that show them,
+    # so a resting or spinning clover draws two meshes, not six
+    def on(name, t0, t1):
+        return [{"time": t0, "name": name}, {"time": t1, "name": None}]
     crisp = {"body": {"attachment": [{"time": 0, "name": body}]}}
+    if not tile:
+        crisp["glow"] = {"attachment": [{"time": 0, "name": glow}]}
     animations = {
-        "blur": {"slots": {"body": {"attachment": [{"time": 0, "name": blur}]}, **({"glow": {"rgba": [{"time": 0, "color": rgba(0)}]}} if not tile else {})}},
+        "blur": {"slots": {"body": {"attachment": [{"time": 0, "name": blur}]}, **({"glow": {"attachment": [{"time": 0, "name": None}]}} if not tile else {})}},
         "idle": {"slots": dict(crisp)},
     }
     if not tile:
@@ -141,7 +147,7 @@ def skeleton(sid, sym_frames, fx_frames):
         }
         animations["idle"]["slots"]["glow"] = {"rgba": alpha_keys([(0, 0.3), (1.2, 0.5), (2.4, 0.3)])}
         animations["landing"] = {
-            "slots": {**crisp, "flare": {"rgba": alpha_keys([(0, 0), (0.08, 0.9), (0.3, 0)], "out")}},
+            "slots": {**crisp, "flare": {"attachment": on("fx/flare", 0, 0.3), "rgba": alpha_keys([(0, 0), (0.08, 0.9), (0.3, 0)], "out")}},
             "bones": {
                 "body": {"scale": scale_keys([(0, 1, 1), (0.09, 1.04, 0.94), (0.18, 0.99, 1.02), (0.3, 1, 1)], "out")},
                 "flare": {"scale": scale_keys([(0, 0.5, 0.5), (0.3, 1.6, 1.6)], "out")},
@@ -151,9 +157,9 @@ def skeleton(sid, sym_frames, fx_frames):
             "slots": {
                 **crisp,
                 "glow": {"rgba": alpha_keys([(0, 0.3), (0.15, 0.9), (0.3, 0.45), (0.45, 0.9), (0.6, 0.3)])},
-                "burst": {"rgba": alpha_keys([(0, 0), (0.1, 0.55), (0.3, 0), (0.36, 0.45), (0.6, 0)], "out")},
-                "rays": {"rgba": alpha_keys([(0, 0), (0.12, 0.8), (0.6, 0)], "out")},
-                "star": {"rgba": alpha_keys([(0, 0), (0.2, 1.0), (0.5, 0)], "out")},
+                "burst": {"attachment": on(burst, 0, 0.6), "rgba": alpha_keys([(0, 0), (0.1, 0.55), (0.3, 0), (0.36, 0.45), (0.6, 0)], "out")},
+                "rays": {"attachment": on("fx/light_back", 0, 0.6), "rgba": alpha_keys([(0, 0), (0.12, 0.8), (0.6, 0)], "out")},
+                "star": {"attachment": on("fx/star", 0, 0.5), "rgba": alpha_keys([(0, 0), (0.2, 1.0), (0.5, 0)], "out")},
             },
             "bones": {
                 "body": {"scale": scale_keys([(0, 1, 1), (0.13, 1.14, 1.14), (0.26, 1, 1), (0.39, 1.14, 1.14), (0.6, 1, 1)])},
