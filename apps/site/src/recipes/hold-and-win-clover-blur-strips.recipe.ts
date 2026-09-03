@@ -16,8 +16,8 @@ const pick = (a) => a[Math.floor(Math.random() * a.length)];
 const art = await loadHwClover();
 // The clover glow is drawn past the 202x170 cell: lift these above the cell mask
 // at rest (unmask), or every edge of every clover is clipped.
-const UNMASK = Object.fromEntries(['gold'].map((id) => [id, { unmask: true }]));
-const IDS = ['gold', 'cherry', 'lemon', 'plum', 'grapes', 'watermelon', 'seven', 'empty'];
+const UNMASK = Object.fromEntries(['gold', 'collect', 'multi', 'mystery', 'super', 'capsule'].map((id) => [id, { unmask: true }]));
+const IDS = ['gold', 'collect', 'multi', 'mystery', 'super', 'capsule', 'empty'];
 
 class Blurred extends CloverSymbol {
   onActivate(id) { super.onActivate(id); if (id === 'gold') this.setLabel(fmt(pick([1, 2, 5, 10]))); }
@@ -32,7 +32,7 @@ const makeRow = (Symbol, y) => {
     .grid(COLS, 1)
     .cellSize(CELL, { columnGap: COLUMN_GAP, rowGap: 0 })
     .symbols((r) => { for (const id of IDS) r.register(id, Symbol, { art }); })
-    .weights({ gold: 2, cherry: 2, lemon: 2, plum: 2, grapes: 2, watermelon: 2, seven: 1, empty: 3 })
+    .weights({ gold: 2, collect: 1, multi: 1, mystery: 1, super: 0.7, capsule: 0.8, empty: 3 })
     // a long spin so the strip is on screen long enough to compare
     .speedProfile({ ...SpeedPresets.NORMAL, minimumSpinTime: 1600 })
     .stagger((reel) => reel * 120)

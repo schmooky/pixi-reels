@@ -10,19 +10,32 @@ const CELL = { width: CLOVER_CELL.width / 2, height: CLOVER_CELL.height / 2 }; /
 const COLUMN_GAP = 6, ROW_GAP = 0;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const fmt = (v) => v.toFixed(2);
+const pick = (a) => a[Math.floor(Math.random() * a.length)];
 
 const art = await loadHwClover();
+
+// Gold is the money clover: on the strip it already wears a bet-scaled amount,
+// a different one each time it flashes past, so money reads as money in
+// motion. The served amount replaces it the frame the cell lands.
+const STRIP_VALUES = [1, 1, 1.5, 2, 2.5, 3, 5, 7, 10];
+class Clover extends CloverSymbol {
+  onActivate(id) {
+    super.onActivate(id);
+    if (id === 'gold') this.setLabel(fmt(pick(STRIP_VALUES)));
+  }
+}
 // The clover glow is drawn past the 202x170 cell: lift these above the cell mask
 // at rest (unmask), or every edge of every clover is clipped.
-const UNMASK = Object.fromEntries(['gold'].map((id) => [id, { unmask: true }]));
+const UNMASK = Object.fromEntries(['gold', 'collect', 'multi', 'mystery', 'super', 'capsule'].map((id) => [id, { unmask: true }]));
 
 const board = new HoldAndWinBuilder()
   .grid(COLS, ROWS)
   .cellSize(CELL, { columnGap: COLUMN_GAP, rowGap: ROW_GAP })
   .symbols((r) => {
-    for (const id of ['gold', 'cherry', 'lemon', 'plum', 'empty']) r.register(id, CloverSymbol, { art });
+    for (const id of ['gold', 'collect', 'multi', 'mystery', 'super', 'capsule', 'empty']) r.register(id, Clover, { art });
   })
-  .weights({ gold: 2, cherry: 2, lemon: 2, plum: 2, empty: 5 })
+  // the bonus strip: only clovers and the capsule flash past, never base-game fruit
+  .weights({ gold: 2, collect: 0.6, multi: 0.6, mystery: 0.6, super: 0.4, capsule: 0.5, empty: 5 })
   .symbolData(UNMASK)
   .respins(3)
   // The chrome gets the real cell rectangle, not one "size".
@@ -52,8 +65,6 @@ board.events.on('cell:landed', ({ cell, coin }) => {
 const b = board.cellBounds({ reel: 4, cell: 2 });
 hud.text += `\nlast cell at (${b.x}, ${b.y}) ${b.width}x${b.height}`;
 
-const VALUES = [1, 1, 2, 2.5, 3, 5, 7, 10];
-const pick = () => VALUES[Math.floor(Math.random() * VALUES.length)];
 const SEED = [
   { cell: { reel: 0, cell: 1 }, id: 'gold', data: { value: 2 } },
   { cell: { reel: 3, cell: 0 }, id: 'gold', data: { value: 5 } },
@@ -71,7 +82,7 @@ return {
     for (const c of SEED) board.symbolAt(c.cell).setLabel(fmt(c.data.value));
     await sleep(350);
     for (const cells of ROUNDS) {
-      const result = await board.respin(cells.map((cell) => ({ cell, id: 'gold', data: { value: pick() } })));
+      const result = await board.respin(cells.map((cell) => ({ cell, id: 'gold', data: { value: pick(STRIP_VALUES) } })));
       await sleep(400);
       if (result.done) break;
     }

@@ -7,7 +7,7 @@
 //   MULTI    doubles every held amount (a pink x2 on its face)
 //   MYSTERY  turns into a gold clover with a revealed amount (setSymbolAt)
 //   COLLECT  sums every held amount and shows the total on its face
-// The feature ids have weight 0: they only ever land where the server says.
+// Strip weights are flavour only: a cell lands on what respin() was handed.
 
 const COLS = 5, ROWS = 3;
 const CELL = { width: 101, height: 85 }, COLUMN_GAP = 6, ROW_GAP = 0;
@@ -19,7 +19,7 @@ const VALUES = [1, 1.5, 2, 2.5, 3, 5];
 const art = await loadHwClover();
 // The clover glow is drawn past the 202x170 cell: lift these above the cell mask
 // at rest (unmask), or every edge of every clover is clipped.
-const UNMASK = Object.fromEntries(['gold', 'collect', 'multi', 'mystery'].map((id) => [id, { unmask: true }]));
+const UNMASK = Object.fromEntries(['gold', 'collect', 'multi', 'mystery', 'super', 'capsule'].map((id) => [id, { unmask: true }]));
 class Clover extends CloverSymbol {
   onActivate(id) { super.onActivate(id); if (id === 'gold') this.setLabel(fmt(pick(VALUES))); }
 }
@@ -28,11 +28,12 @@ const board = new HoldAndWinBuilder()
   .grid(COLS, ROWS)
   .cellSize(CELL, { columnGap: COLUMN_GAP, rowGap: ROW_GAP })
   .symbols((r) => {
-    for (const id of ['gold', 'mystery', 'empty']) r.register(id, Clover, { art });
+    for (const id of ['gold', 'mystery', 'super', 'capsule', 'empty']) r.register(id, Clover, { art });
     r.register('multi', Clover, { art, font: 'CloverMult', labelOffset: 0.02 });
     r.register('collect', Clover, { art, font: 'CloverJackpot', labelOffset: 0.02 });
   })
-  .weights({ gold: 2, empty: 6, multi: 0, mystery: 0, collect: 0 })
+  // every clover flashes past on the strip; which ones LAND is the server's call
+  .weights({ gold: 2, collect: 0.6, multi: 0.6, mystery: 0.6, super: 0.4, capsule: 0.5, empty: 5 })
   .symbolData(UNMASK)
   .respins(3)
   .lockAnimation('landing')

@@ -18,9 +18,9 @@ const pick = (a) => a[Math.floor(Math.random() * a.length)];
 const art = await loadHwClover();
 // The clover glow is drawn past the 202x170 cell: lift these above the cell mask
 // at rest (unmask), or every edge of every clover is clipped.
-const UNMASK = Object.fromEntries(['gold', 'collect', 'multi', 'mystery', 'super'].map((id) => [id, { unmask: true }]));
+const UNMASK = Object.fromEntries(['gold', 'collect', 'multi', 'mystery', 'super', 'capsule'].map((id) => [id, { unmask: true }]));
 const STRIP_VALUES = [1, 1, 1.5, 2, 2.5, 3, 5, 7, 10];
-const CLOVERS = ['gold', ...CLOVER_FEATURES];
+const CLOVERS = ['gold', ...CLOVER_FEATURES, 'capsule'];
 
 // A gold clover on the strip already shows an amount - a random one, scaled
 // by the bet - so money reads as money while the reel is still moving. The
@@ -44,7 +44,7 @@ const base = new ReelSetBuilder()
   .symbols((r) => { for (const id of [...CLOVER_FRUITS, ...CLOVERS]) r.register(id, Clover, { art }); })
   .weights({
     ...Object.fromEntries(CLOVER_FRUITS.map((id) => [id, 3])),
-    gold: 1.2, collect: 0.3, multi: 0.3, mystery: 0.3, super: 0.2,
+    gold: 1.2, collect: 0.3, multi: 0.3, mystery: 0.3, super: 0.2, capsule: 0.2,
   })
   .symbolData(UNMASK)
   .speed('normal', SpeedPresets.NORMAL)
@@ -58,7 +58,8 @@ const board = new HoldAndWinBuilder()
   .grid(COLS, ROWS)
   .cellSize(CELL, { columnGap: COLUMN_GAP, rowGap: ROW_GAP })
   .symbols((r) => { for (const id of [...CLOVERS, 'empty']) r.register(id, Clover, { art }); })
-  .weights({ gold: 2, empty: 6, collect: 0, multi: 0, mystery: 0, super: 0 })
+  // in the feature only clovers spin past - the base game's fruit stays behind
+  .weights({ gold: 2, collect: 0.6, multi: 0.6, mystery: 0.6, super: 0.4, capsule: 0.5, empty: 5 })
   .symbolData(UNMASK)
   .respins(3)
   .lockAnimation('landing')

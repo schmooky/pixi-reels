@@ -20,7 +20,7 @@ const pick = (a) => a[Math.floor(Math.random() * a.length)];
 const art = await loadHwClover();
 // The clover glow is drawn past the 202x170 cell: lift these above the cell mask
 // at rest (unmask), or every edge of every clover is clipped.
-const UNMASK = Object.fromEntries(['gold', 'capsule'].map((id) => [id, { unmask: true }]));
+const UNMASK = Object.fromEntries(['gold', 'collect', 'multi', 'mystery', 'super', 'capsule'].map((id) => [id, { unmask: true }]));
 class Clover extends CloverSymbol {
   onActivate(id) { super.onActivate(id); if (id === 'gold') this.setLabel(fmt(pick([1, 2, 3, 5]) * BET)); }
 }
@@ -29,10 +29,10 @@ const board = new HoldAndWinBuilder()
   .grid(COLS, ROWS)
   .cellSize(CELL, { columnGap: COLUMN_GAP, rowGap: ROW_GAP })
   .symbols((r) => {
-    for (const id of ['gold', 'empty']) r.register(id, Clover, { art });
+    for (const id of ['gold', 'collect', 'multi', 'mystery', 'super', 'empty']) r.register(id, Clover, { art });
     r.register('capsule', Clover, { art, font: 'CloverJackpot', labelOffset: 0.26, badgeOffset: -0.14 });
   })
-  .weights({ gold: 2, empty: 6, capsule: 0 })
+  .weights({ gold: 2, collect: 0.6, multi: 0.6, mystery: 0.6, super: 0.4, capsule: 0.5, empty: 5 })
   .symbolData(UNMASK)
   .respins(3)
   .lockAnimation('landing')
@@ -116,7 +116,7 @@ return {
     for (const p of Object.values(plaques)) p.alpha = 0.45;
     board.enter(SEED);
     for (const c of SEED) board.symbolAt(c.cell).setLabel(fmt(c.data.value));
-    hud.text = 'capsules are server-placed (weight 0) and lock like coins';
+    hud.text = 'a capsule locks like a coin; the seal breaks between waves';
     await sleep(400);
     for (const hits of ROUNDS) {
       const res = await board.respin(hits);

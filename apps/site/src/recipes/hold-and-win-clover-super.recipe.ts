@@ -18,7 +18,7 @@ const pick = (a) => a[Math.floor(Math.random() * a.length)];
 const art = await loadHwClover();
 // The clover glow is drawn past the 202x170 cell: lift these above the cell mask
 // at rest (unmask), or every edge of every clover is clipped.
-const UNMASK = Object.fromEntries(['gold', 'super'].map((id) => [id, { unmask: true }]));
+const UNMASK = Object.fromEntries(['gold', 'collect', 'multi', 'mystery', 'super', 'capsule'].map((id) => [id, { unmask: true }]));
 class Clover extends CloverSymbol {
   onActivate(id) { super.onActivate(id); if (id === 'gold') this.setLabel(fmt(pick([1, 2, 3, 5]) * BET)); }
 }
@@ -27,9 +27,9 @@ const board = new HoldAndWinBuilder()
   .grid(COLS, ROWS)
   .cellSize(CELL, { columnGap: COLUMN_GAP, rowGap: ROW_GAP })
   .symbols((r) => {
-    for (const id of ['gold', 'empty', 'super']) r.register(id, Clover, { art });
+    for (const id of ['gold', 'collect', 'multi', 'mystery', 'super', 'capsule', 'empty']) r.register(id, Clover, { art });
   })
-  .weights({ gold: 2, empty: 6, super: 0 })
+  .weights({ gold: 2, collect: 0.6, multi: 0.6, mystery: 0.6, super: 0.4, capsule: 0.5, empty: 5 })
   .symbolData(UNMASK)
   .respins(3)
   .lockAnimation('landing')
@@ -107,7 +107,7 @@ return {
     for (const p of Object.values(plaques)) { p.alpha = 0.55; p.scale.set(0.9); }
     board.enter(SEED);
     for (const c of SEED) board.symbolAt(c.cell).setLabel(fmt(c.data.value));
-    hud.text = 'the SUPER clover is server-placed (weight 0)';
+    hud.text = 'the SUPER clover lands where the server puts it';
     await sleep(400);
     for (const hits of ROUNDS) {
       const res = await board.respin(hits);
