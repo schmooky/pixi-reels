@@ -1,5 +1,5 @@
 // @ts-nocheck
-// Injected: HoldAndWinBuilder, CloverSymbol, cloverGridBackground, loadHwClover, PIXI, gsap, app
+// Injected: HoldAndWinBuilder, CloverSymbol, cloverGridBackground, loadHwClover, CLOVER_SPEED, PIXI, gsap, app
 //
 // The bonus on its own: a 5x3 board of rectangular cells, nothing but the
 // Hold & Win. Gold clovers spin past with bet-scaled amounts and lock where
@@ -32,6 +32,8 @@ const board = new HoldAndWinBuilder()
   .symbols((r) => { for (const id of ['gold', 'collect', 'multi', 'mystery', 'super', 'capsule', 'empty']) r.register(id, Clover, { art }); })
   .weights({ gold: 2, collect: 0.6, multi: 0.6, mystery: 0.6, super: 0.4, capsule: 0.5, empty: 5 })
   .symbolData(UNMASK)
+  // a few px of bounce, not the tall-reel default: a clover cell should settle, not jump
+  .speedProfile(CLOVER_SPEED)
   .respins(3)
   .lockAnimation('landing')
   .ticker(app.ticker)
@@ -97,7 +99,7 @@ return {
     total = 0;
     board.reset();
     board.enter(SEED);
-    for (const c of SEED) { board.symbolAt(c.cell).setLabel(fmt(c.data.value)); total += c.data.value; }
+    for (const c of SEED) { const sym = board.symbolAt(c.cell); sym.setLabel(fmt(c.data.value)); sym.playIdle(); total += c.data.value; }
     hud.text = `${SEED.length}/${board.capacity} held · total ${fmt(total)}`;
     await sleep(400);
     for (const cells of ROUNDS) {

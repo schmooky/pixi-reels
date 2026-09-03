@@ -1,5 +1,5 @@
 // @ts-nocheck
-// Injected: HoldAndWinBuilder, CloverSymbol, cloverGridBackground, loadHwClover, PIXI, gsap, app
+// Injected: HoldAndWinBuilder, CloverSymbol, cloverGridBackground, loadHwClover, CLOVER_SPEED, PIXI, gsap, app
 //
 // A board that grows. It is built 5x5, but the top and bottom rows start
 // dormant - `inactive(cells, 'sealed')` draws them as the purple sealed tile
@@ -38,6 +38,8 @@ const board = new HoldAndWinBuilder()
   // dormant rows wear the sealed tile until activate() wakes them
   .inactive([...TOP, ...BOTTOM], 'sealed')
   .symbolData(UNMASK)
+  // a few px of bounce, not the tall-reel default: a clover cell should settle, not jump
+  .speedProfile(CLOVER_SPEED)
   .respins(3)
   .lockAnimation('landing')
   .ticker(app.ticker)
@@ -97,7 +99,7 @@ return {
     topOpen = false; bottomOpen = false;
     board.reset(); // sealed rows come back
     board.enter(SEED);
-    for (const c of SEED) board.symbolAt(c.cell).setLabel(fmt(c.data.value));
+    for (const c of SEED) { const sym = board.symbolAt(c.cell); sym.setLabel(fmt(c.data.value)); sym.playIdle(); }
     hud.text = `${SEED.length}/${board.capacity} held on the ${board.capacity}-cell board`;
     await sleep(400);
     for (const cells of ROUNDS) {

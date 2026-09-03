@@ -1,5 +1,5 @@
 // @ts-nocheck
-// Injected: ReelSetBuilder, SpeedPresets, HoldAndWinBuilder, CloverSymbol,
+// Injected: ReelSetBuilder, HoldAndWinBuilder, CloverSymbol,
 //           loadHwClover, CLOVER_FRUITS, CLOVER_FEATURES, PIXI, gsap, app
 //
 // The base game of a clover Hold & Win slot, on rectangular cells. Fruits and
@@ -41,13 +41,17 @@ const oy = (app.screen.height - boardH) / 2 - 8;
 const base = new ReelSetBuilder()
   .reels(COLS).visibleCells(ROWS)
   .symbolSize(CELL.width, CELL.height).symbolGap(COLUMN_GAP, ROW_GAP)
-  .symbols((r) => { for (const id of [...CLOVER_FRUITS, ...CLOVERS]) r.register(id, Clover, { art }); })
+  .symbols((r) => {
+    // fruit sits still after a spin; a landed clover keeps its idle going
+    for (const id of CLOVER_FRUITS) r.register(id, Clover, { art, idleAfterLand: false });
+    for (const id of CLOVERS) r.register(id, Clover, { art });
+  })
   .weights({
     ...Object.fromEntries(CLOVER_FRUITS.map((id) => [id, 3])),
     gold: 1.2, collect: 0.3, multi: 0.3, mystery: 0.3, super: 0.2, capsule: 0.2,
   })
   .symbolData(UNMASK)
-  .speed('normal', SpeedPresets.NORMAL)
+  .speed('normal', CLOVER_SPEED)
   .ticker(app.ticker)
   .build();
 base.position.set(ox, oy);
@@ -63,6 +67,8 @@ const board = new HoldAndWinBuilder()
   // in the feature only clovers spin past - the base game's fruit stays behind
   .weights({ gold: 2, collect: 0.6, multi: 0.6, mystery: 0.6, super: 0.4, capsule: 0.5, empty: 5 })
   .symbolData(UNMASK)
+  // a few px of bounce, not the tall-reel default: a clover cell should settle, not jump
+  .speedProfile(CLOVER_SPEED)
   .respins(3)
   .lockAnimation('landing')
   .ticker(app.ticker)
@@ -114,7 +120,7 @@ async function runFeature(clovers) {
   // the trigger clovers carry over as the first locked cells; only gold has a value
   const seed = clovers.map((c) => ({ cell: { reel: c.reel, cell: c.cell }, id: c.id, data: { value: c.id === 'gold' ? served[c.reel][c.cell] : 0 } }));
   board.enter(seed);
-  for (const c of seed) if (c.id === 'gold') board.symbolAt(c.cell).setLabel(fmt(c.data.value));
+  for (const c of seed) { const sym = board.symbolAt(c.cell); if (c.id === 'gold') sym.setLabel(fmt(c.data.value)); sym.playIdle(); }
   hud.text = 'HOLD & WIN · gold carries money, feature clovers carry none';
   await sleep(500);
   for (const cells of [[{ reel: 1, cell: 0 }], [{ reel: 3, cell: 2 }, { reel: 0, cell: 0 }], [], [], []]) {

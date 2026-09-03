@@ -1,6 +1,6 @@
 import { Assets, BitmapText, Container, FillGradient, Graphics, Sprite, type Spritesheet, type Texture } from 'pixi.js';
 import { gsap } from 'gsap';
-import { ReelSymbol } from 'pixi-reels';
+import { ReelSymbol, SpeedPresets, type SpeedProfile } from 'pixi-reels';
 
 /**
  * The Playson "Four Charged Clovers" art set behind the rectangular Hold & Win
@@ -38,6 +38,19 @@ export const CLOVER_FRUITS = [
   'cherry', 'orange', 'lemon', 'plum', 'grapes', 'watermelon', 'bar', 'bell', 'seven',
 ] as const;
 export const CLOVER_FEATURES = ['collect', 'multi', 'mystery', 'super'] as const;
+
+/**
+ * The spin feel for a clover cell. The engine's NORMAL preset lands with a
+ * 56px, 600ms bounce - a fifth of a reel window, right for a tall reel and
+ * far too much for an 85px cell, where the whole clover visibly overshoots.
+ * A few pixels over a short beat reads as a settle instead.
+ */
+export const CLOVER_SPEED: SpeedProfile = {
+  ...SpeedPresets.NORMAL,
+  minimumSpinTime: 320,
+  bounceDistance: 6,
+  bounceDuration: 240,
+};
 
 export async function loadHwClover(base = '/hw-clover/'): Promise<HwCloverArt> {
   await Assets.load([base + 'value.fnt', base + 'jackpot.fnt', base + 'mult.fnt']);
@@ -78,6 +91,12 @@ export interface CloverSymbolOptions {
   labelOffset?: number;
   /** Where the badge sits, same units. Default -0.12, clear of a label below it. */
   badgeOffset?: number;
+  /**
+   * Loop the idle once the cell has landed, the way a held clover keeps
+   * breathing until the feature clears it. Default true; pass false for
+   * base-game ids that should sit still after a spin.
+   */
+  idleAfterLand?: boolean;
 }
 
 /**
@@ -98,13 +117,18 @@ export interface CloverSymbolOptions {
  *
  * `playLanding()` is a short settle (the Hold & Win board calls it on lock
  * when built with `lockAnimation('landing')`); `playWin()` is the pulse the
- * board plays on lock by default, or on `board.playWin()`.
+ * board plays on lock by default, or on `board.playWin()`. Between and after
+ * those, a landed clover loops `playIdle()` - the breathing a held coin does
+ * until the feature clears it. A one-shot pauses the idle and resumes it;
+ * `stopAnimation()`, `setDimmed(true)` and pooling stop it for good. This is
+ * the same contract a Spine coin gets from its `idle` track for free.
  */
 export class CloverSymbol extends ReelSymbol {
   private readonly _artSet: HwCloverArt;
   private readonly _font: string;
   private readonly _labelOffset: number;
   private readonly _badgeOffset: number;
+  private readonly _idleAfterLand: boolean;
   /** Sprite, label and badge, centred on the cell. */
   private readonly _art: Container;
   private readonly _sprite: Sprite;
@@ -113,7 +137,9 @@ export class CloverSymbol extends ReelSymbol {
   private _cellW = 0;
   private _cellH = 0;
   private _blurred = false;
+  private _dimmed = false;
   private _tween: gsap.core.Timeline | gsap.core.Tween | null = null;
+  private _idle: gsap.core.Timeline | null = null;
 
   constructor(options: CloverSymbolOptions) {
     super();
@@ -121,6 +147,7 @@ export class CloverSymbol extends ReelSymbol {
     this._font = options.font ?? 'CloverValue';
     this._labelOffset = options.labelOffset ?? 0.06;
     this._badgeOffset = options.badgeOffset ?? -0.12;
+    this._idleAfterLand = options.idleAfterLand ?? true;
     this._art = new Container();
     this._sprite = new Sprite();
     this._sprite.anchor.set(0.5);
@@ -141,18 +168,22 @@ export class CloverSymbol extends ReelSymbol {
     this._applyTexture();
     this.setLabel(null);
     this.setBadge(null);
+    this.setDimmed(false);
   }
 
   protected onDeactivate(): void {
     this._kill();
+    this.stopIdle();
     this._blurred = false;
     this.setLabel(null);
     this.setBadge(null);
+    this.setDimmed(false);
     this._sprite.scale.set(1);
     this._sprite.alpha = 1;
   }
 
   override onReelSpinStart(): void {
+    this.stopIdle();
     this._setBlurred(true);
   }
   // Deliberately NOT crisp on onReelSpinEnd: the reel is still moving through
@@ -160,6 +191,51 @@ export class CloverSymbol extends ReelSymbol {
   // which is also when the engine lifts an unmask symbol above the mask.
   override onReelLanded(): void {
     this._setBlurred(false);
+    if (this._idleAfterLand && !this._isTile()) this.playIdle();
+  }
+
+  /**
+   * Loop the held-coin idle: a slow breathe and sway on the art. Idempotent.
+   * Started on land automatically (see `idleAfterLand`); call it yourself on
+   * a coin the board placed without a spin (a seed from `enter()`).
+   */
+  playIdle(): void {
+    if (this._idle || this._dimmed || this._cellW <= 0 || this._isTile()) return;
+    const s = this.artScale;
+    this._idle = gsap
+      .timeline({ repeat: -1, yoyo: true, defaults: { ease: 'sine.inOut', duration: 1.1 } })
+      .to(this._sprite.scale, { x: s * 1.035, y: s * 1.035 }, 0)
+      .to(this._sprite, { rotation: 0.035 }, 0);
+  }
+
+  /** Stop the idle loop and settle the art. */
+  stopIdle(): void {
+    if (!this._idle) return;
+    this._idle.kill();
+    this._idle = null;
+    this._sprite.scale.set(this.artScale);
+    this._sprite.rotation = 0;
+  }
+
+  get isIdling(): boolean {
+    return this._idle !== null;
+  }
+
+  /**
+   * Grey the coin out - a value that has been collected. Stops the idle; the
+   * label stays, dimmed with it. Cleared on the next activation.
+   */
+  setDimmed(dimmed: boolean): void {
+    this._dimmed = dimmed;
+    if (dimmed) this.stopIdle();
+    const tint = dimmed ? 0x6c7080 : 0xffffff;
+    this._sprite.tint = tint;
+    this._sprite.alpha = dimmed ? 0.8 : 1;
+    if (this._label) this._label.tint = tint;
+  }
+
+  get isDimmed(): boolean {
+    return this._dimmed;
   }
 
   /** Paint (or clear, with `null`) the value text over the symbol face. */
@@ -174,6 +250,7 @@ export class CloverSymbol extends ReelSymbol {
     if (!this._label) {
       this._label = new BitmapText({ text, style: { fontFamily: this._font, fontSize: 60, letterSpacing: -2 } });
       this._label.anchor.set(0.5);
+      if (this._dimmed) this._label.tint = 0x6c7080;
       this._art.addChild(this._label);
     } else {
       this._label.text = text;
@@ -202,23 +279,28 @@ export class CloverSymbol extends ReelSymbol {
     return this._sprite;
   }
 
-  /** A settle: a quick squash and recover, about 260 ms. */
+  /** A settle: a slight squash and recover, about 260 ms. Subtle on purpose - a framed cell reads any real overshoot as a jump. */
   override async playLanding(): Promise<void> {
     this._kill();
+    const resume = this.isIdling;
+    this.stopIdle();
     const s = this.artScale;
     await new Promise<void>((resolve) => {
       this._tween = gsap
         .timeline({ onComplete: resolve })
-        .to(this._sprite.scale, { x: s * 1.06, y: s * 0.9, duration: 0.09, ease: 'power2.out' })
-        .to(this._sprite.scale, { x: s * 0.98, y: s * 1.04, duration: 0.09, ease: 'power1.inOut' })
+        .to(this._sprite.scale, { x: s * 1.03, y: s * 0.95, duration: 0.09, ease: 'power2.out' })
+        .to(this._sprite.scale, { x: s * 0.99, y: s * 1.02, duration: 0.09, ease: 'power1.inOut' })
         .to(this._sprite.scale, { x: s, y: s, duration: 0.08, ease: 'power1.out' });
     });
     this._tween = null;
+    if (resume || this._idleAfterLand) this.playIdle();
   }
 
   /** A two-beat pulse, about 500 ms. */
   override async playWin(): Promise<void> {
     this._kill();
+    const resume = this.isIdling;
+    this.stopIdle();
     const s = this.artScale;
     await new Promise<void>((resolve) => {
       this._tween = gsap.to(this._sprite.scale, {
@@ -233,10 +315,12 @@ export class CloverSymbol extends ReelSymbol {
     });
     this._tween = null;
     this._sprite.scale.set(s);
+    if (resume) this.playIdle();
   }
 
   stopAnimation(): void {
     this._kill();
+    this.stopIdle();
     this._sprite.scale.set(this.artScale);
   }
 
@@ -280,6 +364,11 @@ export class CloverSymbol extends ReelSymbol {
       const maxW = this._cellW * 0.9;
       if (this._badge.width > maxW) this._badge.scale.set((s * maxW) / this._badge.width);
     }
+  }
+
+  /** The blank cell and the sealed cell are tiles, not coins: they never idle. */
+  private _isTile(): boolean {
+    return this.symbolId === 'empty' || this.symbolId === 'sealed';
   }
 
   private _kill(): void {

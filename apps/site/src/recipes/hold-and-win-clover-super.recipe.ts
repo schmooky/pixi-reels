@@ -1,5 +1,5 @@
 // @ts-nocheck
-// Injected: HoldAndWinBuilder, CloverSymbol, cloverGridBackground, loadHwClover, PIXI, gsap, app
+// Injected: HoldAndWinBuilder, CloverSymbol, cloverGridBackground, loadHwClover, CLOVER_SPEED, PIXI, gsap, app
 //
 // The crystal SUPER clover and the jackpot rails. Four plaques sit beside the
 // board the way the game frames its reels - MINI and MINOR on the left,
@@ -31,6 +31,8 @@ const board = new HoldAndWinBuilder()
   })
   .weights({ gold: 2, collect: 0.6, multi: 0.6, mystery: 0.6, super: 0.4, capsule: 0.5, empty: 5 })
   .symbolData(UNMASK)
+  // a few px of bounce, not the tall-reel default: a clover cell should settle, not jump
+  .speedProfile(CLOVER_SPEED)
   .respins(3)
   .lockAnimation('landing')
   .ticker(app.ticker)
@@ -85,7 +87,9 @@ async function resolveSuper(coin) {
   await sym.playWin();
   await sleep(350);
   // in place: same cell, new identity, ledger rewritten
-  board.setSymbolAt(coin.cell, 'gold', { value: GRAND }).setLabel(fmt(GRAND));
+  const upgraded = board.setSymbolAt(coin.cell, 'gold', { value: GRAND });
+  upgraded.setLabel(fmt(GRAND));
+  upgraded.playIdle();
   hud.text = `GRAND ${fmt(GRAND)} sits on the board as a gold clover`;
   await sleep(500);
 }
@@ -108,7 +112,7 @@ return {
     board.reset();
     for (const p of Object.values(plaques)) { p.alpha = 0.55; p.scale.set(0.9); }
     board.enter(SEED);
-    for (const c of SEED) board.symbolAt(c.cell).setLabel(fmt(c.data.value));
+    for (const c of SEED) { const sym = board.symbolAt(c.cell); sym.setLabel(fmt(c.data.value)); sym.playIdle(); }
     hud.text = 'the SUPER clover lands where the server puts it';
     await sleep(400);
     for (const hits of ROUNDS) {

@@ -1,5 +1,5 @@
 // @ts-nocheck
-// Injected: HoldAndWinBuilder, CloverSymbol, cloverGridBackground, loadHwClover, PIXI, gsap, app
+// Injected: HoldAndWinBuilder, CloverSymbol, cloverGridBackground, loadHwClover, CLOVER_SPEED, PIXI, gsap, app
 //
 // Feature clovers carry no money of their own; each one acts on the gold
 // clovers around it when it locks. The board only knows "a coin locked" -
@@ -35,6 +35,8 @@ const board = new HoldAndWinBuilder()
   // every clover flashes past on the strip; which ones LAND is the server's call
   .weights({ gold: 2, collect: 0.6, multi: 0.6, mystery: 0.6, super: 0.4, capsule: 0.5, empty: 5 })
   .symbolData(UNMASK)
+  // a few px of bounce, not the tall-reel default: a clover cell should settle, not jump
+  .speedProfile(CLOVER_SPEED)
   .respins(3)
   .lockAnimation('landing')
   .ticker(app.ticker)
@@ -70,7 +72,9 @@ async function resolve(coin) {
   } else if (coin.id === 'mystery') {
     await sym.playWin();
     const value = pick([5, 7, 10]);
-    board.setSymbolAt(coin.cell, 'gold', { value }).setLabel(fmt(value));
+    const revealed = board.setSymbolAt(coin.cell, 'gold', { value });
+    revealed.setLabel(fmt(value));
+    revealed.playIdle();
     hud.text = `MYSTERY revealed ${fmt(value)}`;
   } else if (coin.id === 'collect') {
     const sum = golds().reduce((a, g) => a + g.data.value, 0);
@@ -101,7 +105,7 @@ return {
     busy = true;
     board.reset();
     board.enter(SEED);
-    for (const c of SEED) paint(c);
+    for (const c of SEED) { paint(c); board.symbolAt(c.cell).playIdle(); }
     hud.text = 'gold locks with money; feature clovers act on it';
     await sleep(400);
     for (const hits of ROUNDS) {

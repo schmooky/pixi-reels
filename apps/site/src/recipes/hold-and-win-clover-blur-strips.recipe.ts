@@ -1,5 +1,5 @@
 // @ts-nocheck
-// Injected: HoldAndWinBuilder, SpeedPresets, CloverSymbol, cloverGridBackground, loadHwClover, PIXI, gsap, app
+// Injected: HoldAndWinBuilder, CloverSymbol, cloverGridBackground, loadHwClover, CLOVER_SPEED, PIXI, gsap, app
 //
 // Blur strips on rectangular cells. Every symbol in the set ships a crisp
 // frame and a motion-blur frame; CloverSymbol swaps to the blur while its
@@ -35,7 +35,7 @@ const makeRow = (Symbol, y) => {
     .symbols((r) => { for (const id of IDS) r.register(id, Symbol, { art }); })
     .weights({ gold: 2, collect: 1, multi: 1, mystery: 1, super: 0.7, capsule: 0.8, empty: 3 })
     // a long spin so the strip is on screen long enough to compare
-    .speedProfile({ ...SpeedPresets.NORMAL, minimumSpinTime: 1600 })
+    .speedProfile({ ...CLOVER_SPEED, minimumSpinTime: 1600 })
     .stagger((reel) => reel * 120)
     .symbolData(UNMASK)
     .lockAnimation('none')
