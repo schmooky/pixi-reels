@@ -1,5 +1,21 @@
 # pixi-reels
 
+## 2.5.0
+
+### Minor Changes
+
+- [#218](https://github.com/schmooky/pixi-reels/pull/218) [`e341a10`](https://github.com/schmooky/pixi-reels/commit/e341a10221197bd7db04cbf047c46fd8e2af41f0) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Add: named speed profiles for the whole Hold & Win board. `HoldAndWinBuilder.speeds({ normal, turbo, superTurbo })` registers each profile into every cell's SpeedManager (`speedProfile(p)` is now `speeds({ normal: p })`), `initialSpeed(name)` picks the one active at build, `board.setSpeed(name)` switches every cell at once and fires `speed:changed`, `board.addSpeed(name, profile)` registers another after build, and `board.speed` / `board.speedNames` read them back. As on a single reel set, a cell already in flight finishes on the profile it started with; the next wave (or `skip()`) shows the new one. The `stagger` callback now receives the active speed name as its third argument.
+
+- [#218](https://github.com/schmooky/pixi-reels/pull/218) [`e341a10`](https://github.com/schmooky/pixi-reels/commit/e341a10221197bd7db04cbf047c46fd8e2af41f0) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Add: dormant Hold & Win cells for boards that grow mid-feature. `HoldAndWinBuilder.inactive(cells, id?)` builds the cells but keeps them out of the feature - they never spin, take no coin, show `id` (default: the empty id) and do not count toward `capacity` / `isFull` - until `HoldAndWinBoard.activate(cells)` wakes them, which fires the new `cells:activated` event. `reset()` puts them back to dormant. `HoldAndWinState` takes the inactive set as a third constructor argument and gains `activate`, `inactiveCells` and `isActive`; the board mirrors them as `activate`, `inactiveCells`.
+
+- [#218](https://github.com/schmooky/pixi-reels/pull/218) [`e341a10`](https://github.com/schmooky/pixi-reels/commit/e341a10221197bd7db04cbf047c46fd8e2af41f0) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Add: `HoldAndWinBuilder.lockAnimation('win' | 'landing' | 'none')` picks what a coin's symbol plays the moment it locks. The default stays `'win'` (the board's existing `playWin()` on `coin:locked`); `'landing'` plays the new `ReelSymbol.playLanding()` land beat only and `'none'` plays nothing, so a board can land every cell quietly and celebrate once. `HoldAndWinBoard.playWin(cells?)` is the explicit celebration: it plays the win on every locked coin (or just `cells`) and resolves when they finish. `ReelSymbol.playLanding()` is a new base-class one-shot that resolves at once by default; `SpineReelSymbol` already implements it with the skeleton's `landing` track.
+
+- [#218](https://github.com/schmooky/pixi-reels/pull/218) [`e341a10`](https://github.com/schmooky/pixi-reels/commit/e341a10221197bd7db04cbf047c46fd8e2af41f0) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Add: rectangular Hold & Win cells and per-axis gaps. `HoldAndWinBuilder.cellSize` takes `{ width, height }` as well as a number, and its options accept `columnGap` / `rowGap` beside the uniform `gap`. `BoardGrid` gains the same (`cellSize: number | { width, height }`, `columnGap`, `rowGap`) and exposes `cellWidth`, `cellHeight`, `columnGap`, `rowGap`; `cellSize` and `gap` remain as deprecated aliases. `cellChrome` / `chrome` callbacks now receive `(graphics, width, height)` - a square-board callback that reads one size argument keeps working. `HoldAndWinBuilder.cellMask(factory)` / `BoardGrid` option `mask` supply each cell's mask strategy, for example a `RoundedRectMaskStrategy` so rounded cell corners match a rounded frame.
+
+### Patch Changes
+
+- [#218](https://github.com/schmooky/pixi-reels/pull/218) [`e341a10`](https://github.com/schmooky/pixi-reels/commit/e341a10221197bd7db04cbf047c46fd8e2af41f0) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Fix: `BoardGrid` (and so `HoldAndWinBoard`) now draws every cell's chrome beneath every reel and renders the unmasked, at-rest symbols of all cells on one `RenderLayer` above the whole board. A coin with `unmask: true` whose art overflows its cell used to be covered by the next cell's chrome and blank symbol, cutting it along the neighbour's edge.
+
 ## 2.4.0
 
 ### Minor Changes
