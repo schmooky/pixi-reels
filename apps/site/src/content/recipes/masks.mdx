@@ -20,6 +20,7 @@ The viewport clips the reels through a `MaskStrategy` so buffer cells never leak
 | Rounded frame, reels flush | `RoundedRectMaskStrategy` (`scope: 'set'`) |
 | Reels as separate cards, with a cross gap | `RoundedRectMaskStrategy` (`scope: 'reel'`) |
 | Rounded frame, one rect per reel, any gap | `RoundedRectMaskStrategy` (`scope: 'outer'`) |
+| Hold & Win board, a mask per cell | `cellMask((cell, { corners }) => ...)` |
 | Pyramid / MultiWays, rounded, reels flush | `SilhouetteMaskStrategy` |
 | Hexes, holes, cut-outs | `PathMaskStrategy` |
 
@@ -50,6 +51,14 @@ The viewport clips the reels through a `MaskStrategy` so buffer cells never leak
 **Gotcha:** on a jagged set the box corners may touch no reel, and then nothing rounds. Use `SilhouetteMaskStrategy` there.
 
 <RecipeDemo code="mask-outer-corners" />
+
+<a id="mask-hold-and-win-cells"></a>
+
+## A mask per Hold & Win cell, from its row and column
+
+Every Hold & Win cell is its own 1x1 reel set with its own mask, and `cellMask` takes a function called once per cell with `{ reel, cell }` (column, row) and `{ cols, rows, corners }`. Return any strategy per cell: here a plain rect everywhere and one rounded corner on each of the four corner cells, so a gapless board clips as one rounded window built from fifteen masks. `corners` is that per-cell corner set precomputed, for the short form `(_, { corners }) => new RoundedRectMaskStrategy({ radius, corners })`.
+
+<RecipeDemo code="hold-and-win-outer-corners" height={360} />
 
 <a id="mask-silhouette"></a>
 
