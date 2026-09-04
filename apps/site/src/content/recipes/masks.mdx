@@ -19,6 +19,7 @@ The viewport clips the reels through a `MaskStrategy` so buffer cells never leak
 | Square frame art | `RectMaskStrategy` (default) |
 | Rounded frame, reels flush | `RoundedRectMaskStrategy` (`scope: 'set'`) |
 | Reels as separate cards, with a cross gap | `RoundedRectMaskStrategy` (`scope: 'reel'`) |
+| Rounded frame, one rect per reel, any gap | `RoundedRectMaskStrategy` (`scope: 'outer'`) |
 | Pyramid / MultiWays, rounded, reels flush | `SilhouetteMaskStrategy` |
 | Hexes, holes, cut-outs | `PathMaskStrategy` |
 
@@ -39,6 +40,16 @@ The viewport clips the reels through a `MaskStrategy` so buffer cells never leak
 **Gotcha:** needs a non-zero CROSS gap. At gap `0` neighbours share an edge and rounding both sides of it notches every seam. The strategy warns once.
 
 <RecipeDemo code="mask-rounded-reels" />
+
+<a id="mask-outer-corners"></a>
+
+## One rect per reel, the window's corners only
+
+`scope: 'outer'` keeps one rect per reel, so buffer cells past a short reel stay hidden as with the default, and rounds a corner only where it sits on a corner of the union box: the first reel's outer pair, the last reel's outer pair, nothing in between. Inner edges stay square, so it is fine at cross gap `0`, where `scope: 'reel'` notches. `corners: { topLeft: true, ... }` narrows any scope to named screen corners.
+
+**Gotcha:** on a jagged set the box corners may touch no reel, and then nothing rounds. Use `SilhouetteMaskStrategy` there.
+
+<RecipeDemo code="mask-outer-corners" />
 
 <a id="mask-silhouette"></a>
 

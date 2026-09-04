@@ -6,7 +6,7 @@ import type { SymbolRegistry } from '../symbols/SymbolRegistry.js';
 import type { SpeedProfile, SymbolData } from '../config/types.js';
 import type { Disposable } from '../utils/Disposable.js';
 import { BoardGrid } from './BoardGrid.js';
-import type { BoardProfile } from './BoardGrid.js';
+import type { BoardCellMaskInfo, BoardProfile } from './BoardGrid.js';
 import type { Direction, Orientation } from '../core/ReelAxis.js';
 import type { MaskStrategy } from '../core/ReelViewport.js';
 import { HoldAndWinState } from './HoldAndWinState.js';
@@ -49,7 +49,7 @@ export interface HoldAndWinBoardConfig<TData> {
     | null;
   chrome: ((g: Graphics, width: number, height: number) => void) | null;
   /** Per-cell mask factory. See `HoldAndWinBuilder.cellMask`. */
-  mask: (() => MaskStrategy) | null;
+  mask: ((cell: HwCell, info: BoardCellMaskInfo) => MaskStrategy) | null;
   /** Travel axis for each cell's own strip. See `HoldAndWinBuilder.axis`. */
   orientation?: Orientation;
   direction?: Direction;

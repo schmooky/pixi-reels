@@ -24,6 +24,7 @@ import {
   composeMasks,
   inset,
   isDrawableMaskStrategy,
+  type MaskCorners,
 } from '../../src/core/maskStrategies.js';
 import { reelAxis, VERTICAL_FORWARD } from '../../src/core/ReelAxis.js';
 
@@ -175,6 +176,196 @@ describe('RoundedRectMaskStrategy', () => {
 
   it('rejects a negative radius at construction rather than at draw time', () => {
     expect(() => new RoundedRectMaskStrategy({ radius: -4 })).toThrow(/non-negative/);
+  });
+});
+
+describe("RoundedRectMaskStrategy scope 'outer' and corners", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  /** One 100x100 cell - the shape of a Hold & Win board cell. */
+  const cellCtx = (): MaskContext => ({
+    rects: [{ x: 0, y: 0, width: 100, height: 100 }],
+    width: 100,
+    height: 100,
+    axis: VERTICAL_FORWARD,
+    bleed: 0,
+  });
+
+  it("scope 'outer' keeps one rect per reel and rounds only the corners on the union box", () => {
+    const drawn = shapes(
+      new RoundedRectMaskStrategy({ radius: 16, scope: 'outer' }).build(uniformCtx()),
+    );
+    expect(drawn).toEqual([
+      {
+        kind: 'roundShape',
+        points: [
+          { x: 0, y: 0, radius: 16 },
+          { x: 100, y: 0, radius: 0 },
+          { x: 100, y: 300, radius: 0 },
+          { x: 0, y: 300, radius: 16 },
+        ],
+      },
+      { kind: 'rect', x: 100, y: 0, width: 100, height: 300 },
+      {
+        kind: 'roundShape',
+        points: [
+          { x: 200, y: 0, radius: 0 },
+          { x: 300, y: 0, radius: 16 },
+          { x: 300, y: 300, radius: 16 },
+          { x: 200, y: 300, radius: 0 },
+        ],
+      },
+    ]);
+  });
+
+  it("scope 'outer' stays quiet on touching reels - square inner edges never notch", () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    new RoundedRectMaskStrategy({ radius: 16, scope: 'outer' }).build(uniformCtx());
+    expect(warn).not.toHaveBeenCalled();
+  });
+
+  it("scope 'outer' rounds nothing on a pyramid whose box corners touch no reel", () => {
+    const drawn = shapes(
+      new RoundedRectMaskStrategy({ radius: 16, scope: 'outer' }).build(pyramidCtx()),
+    );
+    expect(drawn).toHaveLength(3);
+    expect(drawn.every((d) => d.kind === 'rect')).toBe(true);
+  });
+
+  it("scope 'outer' inflates on the CROSS axis only, like the other scopes", () => {
+    const drawn = shapes(
+      new RoundedRectMaskStrategy({ radius: 16, scope: 'outer' }).build(uniformCtx({ bleed: 20 })),
+    );
+    expect(drawn[0]).toEqual({
+      kind: 'roundShape',
+      points: [
+        { x: -20, y: 0, radius: 16 },
+        { x: 120, y: 0, radius: 0 },
+        { x: 120, y: 300, radius: 0 },
+        { x: -20, y: 300, radius: 16 },
+      ],
+    });
+  });
+
+  it('corners rounds only the named screen corner of a single cell', () => {
+    const drawn = shapes(
+      new RoundedRectMaskStrategy({ radius: 12, corners: { topLeft: true } }).build(cellCtx()),
+    );
+    expect(drawn).toEqual([
+      {
+        kind: 'roundShape',
+        points: [
+          { x: 0, y: 0, radius: 12 },
+          { x: 100, y: 0, radius: 0 },
+          { x: 100, y: 100, radius: 0 },
+          { x: 0, y: 100, radius: 0 },
+        ],
+      },
+    ]);
+  });
+
+  it('an empty corners object rounds nothing: a plain rect, no roundShape', () => {
+    const drawn = shapes(new RoundedRectMaskStrategy({ radius: 12, corners: {} }).build(cellCtx()));
+    expect(drawn).toEqual([{ kind: 'rect', x: 0, y: 0, width: 100, height: 100 }]);
+  });
+
+  it('all four corners listed is the plain roundRect, so existing output is unchanged', () => {
+    const drawn = shapes(
+      new RoundedRectMaskStrategy({
+        radius: 12,
+        corners: { topLeft: true, topRight: true, bottomLeft: true, bottomRight: true },
+      }).build(cellCtx()),
+    );
+    expect(drawn).toEqual([{ kind: 'roundRect', x: 0, y: 0, width: 100, height: 100, radius: 12 }]);
+  });
+
+  it("corners applies to every reel under scope 'reel'", () => {
+    const ctx = uniformCtx({
+      rects: [
+        { x: 0, y: 0, width: 90, height: 300 },
+        { x: 100, y: 0, width: 90, height: 300 },
+      ],
+    });
+    const drawn = shapes(
+      new RoundedRectMaskStrategy({ radius: 10, scope: 'reel', corners: { bottomRight: true } }).build(ctx),
+    );
+    expect(drawn).toHaveLength(2);
+    for (const d of drawn) {
+      expect(d.kind).toBe('roundShape');
+      if (d.kind === 'roundShape') {
+        expect(d.points.map((pt) => pt.radius)).toEqual([0, 0, 10, 0]);
+      }
+    }
+  });
+
+  it("corners intersects with the box corners under scope 'outer'", () => {
+    const drawn = shapes(
+      new RoundedRectMaskStrategy({
+        radius: 16,
+        scope: 'outer',
+        corners: { topLeft: true, bottomRight: true },
+      }).build(uniformCtx()),
+    );
+    expect(drawn[0]).toEqual({
+      kind: 'roundShape',
+      points: [
+        { x: 0, y: 0, radius: 16 },
+        { x: 100, y: 0, radius: 0 },
+        { x: 100, y: 300, radius: 0 },
+        { x: 0, y: 300, radius: 0 },
+      ],
+    });
+    expect(drawn[1]).toEqual({ kind: 'rect', x: 100, y: 0, width: 100, height: 300 });
+    expect(drawn[2]).toEqual({
+      kind: 'roundShape',
+      points: [
+        { x: 200, y: 0, radius: 0 },
+        { x: 300, y: 0, radius: 0 },
+        { x: 300, y: 300, radius: 16 },
+        { x: 200, y: 300, radius: 0 },
+      ],
+    });
+  });
+
+  it('corners are screen corners on a horizontal set too', () => {
+    const ctx: MaskContext = {
+      rects: [
+        { x: 0, y: 0, width: 300, height: 100 },
+        { x: 0, y: 100, width: 300, height: 100 },
+        { x: 0, y: 200, width: 300, height: 100 },
+      ],
+      width: 300,
+      height: 300,
+      axis: reelAxis('horizontal', 'forward'),
+      bleed: 0,
+    };
+    const drawn = shapes(new RoundedRectMaskStrategy({ radius: 16, scope: 'outer' }).build(ctx));
+    // The first reel is the TOP row: its top-left and top-right round.
+    expect(drawn[0]).toEqual({
+      kind: 'roundShape',
+      points: [
+        { x: 0, y: 0, radius: 16 },
+        { x: 300, y: 0, radius: 16 },
+        { x: 300, y: 100, radius: 0 },
+        { x: 0, y: 100, radius: 0 },
+      ],
+    });
+    expect(drawn[1]).toEqual({ kind: 'rect', x: 0, y: 100, width: 300, height: 100 });
+    expect(drawn[2]).toEqual({
+      kind: 'roundShape',
+      points: [
+        { x: 0, y: 200, radius: 0 },
+        { x: 300, y: 200, radius: 0 },
+        { x: 300, y: 300, radius: 16 },
+        { x: 0, y: 300, radius: 16 },
+      ],
+    });
+  });
+
+  it('rejects a corners value that is not an object', () => {
+    expect(
+      () => new RoundedRectMaskStrategy({ radius: 4, corners: 'all' as unknown as MaskCorners }),
+    ).toThrow(/corners/);
   });
 });
 

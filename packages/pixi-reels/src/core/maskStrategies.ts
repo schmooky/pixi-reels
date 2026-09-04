@@ -84,13 +84,126 @@ export type RoundedMaskScope =
    * bites a lens-shaped notch out of the seam. The strategy warns once when
    * it sees touching rects.
    */
-  | 'reel';
+  | 'reel'
+  /**
+   * One rect per reel, like `'reel'`, but a reel corner is rounded only when
+   * it sits on a corner of the union bounding box: the first reel's outer
+   * pair, the last reel's outer pair, nothing in between. Inner edges stay
+   * square, so the seams never notch and a zero cross gap is fine - the set
+   * reads as one rounded window while every reel keeps its own rect.
+   *
+   * On a jagged set the box corners may touch no reel at all, in which case
+   * nothing rounds; use {@link SilhouetteMaskStrategy} there.
+   */
+  | 'outer';
+
+/**
+ * Which corners of a box a {@link RoundedRectMaskStrategy} may round.
+ * SCREEN corners in every orientation: `topLeft` is the top-left of the drawn
+ * rect on a horizontal set too. Only the keys set to `true` round; `{}`
+ * rounds nothing. Absent (`undefined`) means all four.
+ */
+export interface MaskCorners {
+  topLeft?: boolean;
+  topRight?: boolean;
+  bottomLeft?: boolean;
+  bottomRight?: boolean;
+}
 
 export interface RoundedRectMaskOptions {
   /** Corner radius in pixels. Pixi clamps it per corner to half the shorter adjacent edge. */
   radius: number;
   /** Which boxes get rounded. Default `'set'`. */
   scope?: RoundedMaskScope;
+  /**
+   * Which corners may round at all. Default: all four. With `scope: 'set'`
+   * these are the corners of the union box; with `'reel'` the same corners of
+   * every reel; with `'outer'` the box corners that are also listed here. The
+   * way a 1x1 Hold & Win cell rounds only the board corner it sits on - see
+   * `HoldAndWinBuilder.cellMask`.
+   */
+  corners?: MaskCorners;
+}
+
+const ALL_CORNERS: Required<MaskCorners> = {
+  topLeft: true,
+  topRight: true,
+  bottomLeft: true,
+  bottomRight: true,
+};
+
+/** `undefined` means all four; an object means exactly its `true` keys. */
+function resolveCorners(corners: MaskCorners | undefined): Required<MaskCorners> {
+  if (corners === undefined) return ALL_CORNERS;
+  if (typeof corners !== 'object' || corners === null) {
+    throw new Error(
+      `RoundedRectMaskStrategy: corners must be an object like { topLeft: true }, got ${String(corners)}.`,
+    );
+  }
+  return {
+    topLeft: corners.topLeft === true,
+    topRight: corners.topRight === true,
+    bottomLeft: corners.bottomLeft === true,
+    bottomRight: corners.bottomRight === true,
+  };
+}
+
+/** Edge-coincidence tolerance for `scope: 'outer'`, in pixels. */
+const CORNER_EPS = 0.5;
+
+/**
+ * Of `allowed`, the corners of `r` (already shifted by the origin) that lie
+ * on a corner of the union box `b`.
+ */
+function cornersOnBox(
+  r: ReelMaskRect,
+  b: ReelMaskRect,
+  allowed: Required<MaskCorners>,
+): Required<MaskCorners> {
+  const left = Math.abs(r.x - b.x) < CORNER_EPS;
+  const top = Math.abs(r.y - b.y) < CORNER_EPS;
+  const right = Math.abs(r.x + r.width - (b.x + b.width)) < CORNER_EPS;
+  const bottom = Math.abs(r.y + r.height - (b.y + b.height)) < CORNER_EPS;
+  return {
+    topLeft: allowed.topLeft && left && top,
+    topRight: allowed.topRight && right && top,
+    bottomLeft: allowed.bottomLeft && left && bottom,
+    bottomRight: allowed.bottomRight && right && bottom,
+  };
+}
+
+/**
+ * Fill a box with only `corners` rounded: a `roundRect` when all four round,
+ * a plain `rect` when none, else a `roundShape` with a radius per vertex (a
+ * `0` vertex radius is a sharp corner in Pixi).
+ */
+function fillBox(
+  g: Graphics,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  radius: number,
+  corners: Required<MaskCorners>,
+): void {
+  const { topLeft, topRight, bottomLeft, bottomRight } = corners;
+  if (topLeft && topRight && bottomLeft && bottomRight) {
+    g.roundRect(x, y, width, height, radius).fill(MASK_FILL);
+    return;
+  }
+  if (!topLeft && !topRight && !bottomLeft && !bottomRight) {
+    g.rect(x, y, width, height).fill(MASK_FILL);
+    return;
+  }
+  g.roundShape(
+    [
+      { x, y, radius: topLeft ? radius : 0 },
+      { x: x + width, y, radius: topRight ? radius : 0 },
+      { x: x + width, y: y + height, radius: bottomRight ? radius : 0 },
+      { x, y: y + height, radius: bottomLeft ? radius : 0 },
+    ],
+    radius,
+  ).fill(MASK_FILL);
 }
 
 /**
@@ -111,12 +224,21 @@ export interface RoundedRectMaskOptions {
  * // Each reel its own rounded card. Needs a cross gap.
  * builder.symbolGap({ x: 12, y: 0 })
  *        .maskStrategy(new RoundedRectMaskStrategy({ radius: 14, scope: 'reel' }))
+ *
+ * @example
+ * // One rect per reel, only the window's four corners rounded. Any gap.
+ * builder.maskStrategy(new RoundedRectMaskStrategy({ radius: 18, scope: 'outer' }))
+ *
+ * @example
+ * // A 1x1 Hold & Win cell that rounds only the board corner it sits on.
+ * hw.cellMask((_cell, { corners }) => new RoundedRectMaskStrategy({ radius: 18, corners }))
  */
 export class RoundedRectMaskStrategy implements DrawableMaskStrategy {
   readonly version = MASK_STRATEGY_VERSION;
 
   private readonly _radius: number;
   private readonly _scope: RoundedMaskScope;
+  private readonly _corners: Required<MaskCorners>;
 
   constructor(options: RoundedRectMaskOptions) {
     if (!Number.isFinite(options?.radius) || options.radius < 0) {
@@ -126,6 +248,7 @@ export class RoundedRectMaskStrategy implements DrawableMaskStrategy {
     }
     this._radius = options.radius;
     this._scope = options.scope ?? 'set';
+    this._corners = resolveCorners(options.corners);
   }
 
   build(ctx: MaskContext): Graphics {
@@ -145,25 +268,34 @@ export class RoundedRectMaskStrategy implements DrawableMaskStrategy {
 
     if (this._scope === 'set' || ctx.rects.length === 0) {
       const b = boundsOf(ctx);
-      g.roundRect(
+      fillBox(
+        g,
         b.x - out.x,
         b.y - out.y,
         b.width + out.x * 2,
         b.height + out.y * 2,
         this._radius,
-      ).fill(MASK_FILL);
+        this._corners,
+      );
       return;
     }
 
-    this._warnIfTouching(ctx);
+    // 'outer' leaves every inner edge square, so touching reels are its
+    // normal case rather than a notched seam.
+    if (this._scope === 'reel') this._warnIfTouching(ctx);
+    const box = this._scope === 'outer' ? boundsOf(ctx) : null;
     for (const r of ctx.rects) {
-      g.roundRect(
-        o.x + r.x - out.x,
-        o.y + r.y - out.y,
+      const shifted = { x: o.x + r.x, y: o.y + r.y, width: r.width, height: r.height };
+      const corners = box ? cornersOnBox(shifted, box, this._corners) : this._corners;
+      fillBox(
+        g,
+        shifted.x - out.x,
+        shifted.y - out.y,
         r.width + out.x * 2,
         r.height + out.y * 2,
         this._radius,
-      ).fill(MASK_FILL);
+        corners,
+      );
     }
   }
 

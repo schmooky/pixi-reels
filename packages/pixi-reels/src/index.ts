@@ -47,6 +47,7 @@ export type {
 export type { ReelMaskRect, MaskStrategy, MaskContext } from './core/ReelViewport.js';
 export type {
   DrawableMaskStrategy,
+  MaskCorners,
   MaskPathFn,
   RoundedMaskScope,
   RoundedRectMaskOptions,
@@ -200,7 +201,13 @@ export type { SpotlightOptions, WinLine, CycleOptions } from './spotlight/Symbol
 //   opinionated lock / respin / collect layer, built entirely on BoardGrid's
 //   public surface, so you can copy it and change the rules.
 export { BoardGrid } from './board/BoardGrid.js';
-export type { BoardCell, BoardSpinTarget, BoardProfile, BoardGridOptions } from './board/BoardGrid.js';
+export type {
+  BoardCell,
+  BoardCellMaskInfo,
+  BoardSpinTarget,
+  BoardProfile,
+  BoardGridOptions,
+} from './board/BoardGrid.js';
 export { HoldAndWinBuilder } from './board/HoldAndWinBuilder.js';
 export { HoldAndWinBoard } from './board/HoldAndWinBoard.js';
 // The board's own constructor parameter. `HoldAndWinBuilder.build()` returns a
