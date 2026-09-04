@@ -5,6 +5,7 @@ import type { Direction, Orientation } from '../core/ReelAxis.js';
 import type { ReelSet } from '../core/ReelSet.js';
 import { SharedRectMaskStrategy } from '../core/ReelViewport.js';
 import type { MaskStrategy } from '../core/ReelViewport.js';
+import type { MaskCorners } from '../core/maskStrategies.js';
 import type { ReelSymbol } from '../symbols/ReelSymbol.js';
 import type { SymbolRegistry } from '../symbols/SymbolRegistry.js';
 import { EmptySymbol } from '../symbols/EmptySymbol.js';
@@ -22,6 +23,19 @@ export interface BoardCell {
 export interface BoardSpinTarget {
   cell: BoardCell;
   id: string;
+}
+
+/** What a cell-mask factory is told about the cell it builds for. */
+export interface BoardCellMaskInfo {
+  cols: number;
+  rows: number;
+  /**
+   * The BOARD corners this cell sits on: `{ topLeft: true }` and the rest
+   * `false` for cell `(0, 0)`, all `false` for an inner cell. Hand it to
+   * `RoundedRectMaskStrategy` as `corners` and the board reads as one rounded
+   * window built from one rect per cell.
+   */
+  corners: MaskCorners;
 }
 
 /** A speed profile, or a per-cell function of one (e.g. a stagger wave). */
@@ -61,9 +75,12 @@ export interface BoardGridOptions {
    * Mask for each cell, built once per cell (every cell is its own reel set
    * and owns its mask). Default: a shared rect over the cell. Hand it
    * `() => new RoundedRectMaskStrategy({ radius })` for cells whose art and
-   * frame have rounded corners.
+   * frame have rounded corners. The factory is told which cell it builds for
+   * and which board corners that cell sits on, so
+   * `(_, { corners }) => new RoundedRectMaskStrategy({ radius, corners })`
+   * rounds only the board's outer corners and keeps every other cell square.
    */
-  mask?: () => MaskStrategy;
+  mask?: (cell: BoardCell, info: BoardCellMaskInfo) => MaskStrategy;
   /**
    * Which way each cell's own strip travels while it spins. Every cell is a
    * 1x1 reel set, so this changes the direction a symbol scrolls in from, not
@@ -80,6 +97,20 @@ export interface BoardGridOptions {
    * profile, which is the active one until you `setProfile` otherwise.
    */
   profiles?: Record<string, BoardProfile>;
+}
+
+/** Which of the board's four screen corners `cell` sits on. */
+function boardCorners(cell: BoardCell, cols: number, rows: number): MaskCorners {
+  const left = cell.reel === 0;
+  const right = cell.reel === cols - 1;
+  const top = cell.cell === 0;
+  const bottom = cell.cell === rows - 1;
+  return {
+    topLeft: left && top,
+    topRight: right && top,
+    bottomLeft: left && bottom,
+    bottomRight: right && bottom,
+  };
 }
 
 const key = (c: BoardCell): string => `${c.reel},${c.cell}`;
@@ -186,7 +217,11 @@ export class BoardGrid implements Disposable {
           .symbolGap(0, 0)
           // Spine symbols overrun the default per-reel rect mask; a shared rect
           // keeps buffer-cell art from painting over neighbouring cells.
-          .maskStrategy(opts.mask ? opts.mask() : new SharedRectMaskStrategy())
+          .maskStrategy(
+            opts.mask
+              ? opts.mask(cell, { cols: opts.cols, rows: opts.rows, corners: boardCorners(cell, opts.cols, opts.rows) })
+              : new SharedRectMaskStrategy(),
+          )
           .symbols((registry) => {
             opts.symbols(registry);
             if (!registry.has(this.emptyId)) registry.register(this.emptyId, EmptySymbol, {});

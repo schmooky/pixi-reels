@@ -290,6 +290,14 @@ Real gaps between the cells (columnGap and rowGap) and no chrome, so the board i
 
 <RecipeDemo code="hold-and-win-clover-grid-bg" height={420} />
 
+<a id="hold-and-win-outer-corners"></a>
+
+## One rounded window, one mask per cell
+
+Every cell is its own reel set with its own mask, and cellMask takes a function called once per cell with its column and row plus the board size, returning that cell's strategy. Here every cell clips to a plain rect except the four corner cells, each rounded on its single outer corner through `RoundedRectMaskStrategy({ radius, corners })`; with no gap the fifteen masks read as one rounded frame, cut on the panel's own radius. The info argument also carries corners, that same per-cell object precomputed.
+
+<RecipeDemo code="hold-and-win-outer-corners" height={360} />
+
 <a id="hold-and-win-clover-speeds"></a>
 
 ## One speed switch for every cell

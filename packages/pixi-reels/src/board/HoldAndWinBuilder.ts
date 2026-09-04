@@ -5,6 +5,7 @@ import type { SymbolRegistry } from '../symbols/SymbolRegistry.js';
 import { HoldAndWinBoard } from './HoldAndWinBoard.js';
 import type { Direction, Orientation } from '../core/ReelAxis.js';
 import type { MaskStrategy } from '../core/ReelViewport.js';
+import type { BoardCellMaskInfo } from './BoardGrid.js';
 import type { HwCell, HwCellSizeOptions, HwLockAnimation } from './HwTypes.js';
 
 /**
@@ -40,7 +41,7 @@ export class HoldAndWinBuilder<TData = unknown> {
     | ((state: { locked: number; capacity: number; respinsLeft: number }) => boolean)
     | null = null;
   private _chrome: ((g: Graphics, width: number, height: number) => void) | null = null;
-  private _mask: (() => MaskStrategy) | null = null;
+  private _mask: ((cell: HwCell, info: BoardCellMaskInfo) => MaskStrategy) | null = null;
   private _orientation: Orientation = 'vertical';
   private _direction: Direction = 'forward';
   private _ticker: Ticker | null = null;
@@ -206,8 +207,16 @@ export class HoldAndWinBuilder<TData = unknown> {
    * Mask for each cell, built once per cell. Default: a shared rect over the
    * cell. `() => new RoundedRectMaskStrategy({ radius: 8 })` rounds every
    * cell's corners to match a rounded frame drawn behind the board.
+   *
+   * The factory receives the cell and the board corners it sits on, so a
+   * board framed as ONE rounded window keeps every cell a plain rect except
+   * the four corner cells, each rounded on its outer corner only:
+   *
+   * ```ts
+   * .cellMask((_, { corners }) => new RoundedRectMaskStrategy({ radius: 18, corners }))
+   * ```
    */
-  cellMask(factory: () => MaskStrategy): this {
+  cellMask(factory: (cell: HwCell, info: BoardCellMaskInfo) => MaskStrategy): this {
     this._mask = factory;
     return this;
   }

@@ -1,6 +1,6 @@
 # pixi-reels
 
-pixi-reels 2.4.0 is a reel engine for PixiJS v8.
+pixi-reels 2.5.0 is a reel engine for PixiJS v8.
 It ships reel-only primitives. Win math, paytable math, RNG, and audio live in consumer code.
 This file inlines every guide, API page, recipe (with source) and answered FAQ entry for offline LLM context.
 
@@ -504,6 +504,10 @@ Progressive slow-down across the tease sequence. Values interpolate linearly acr
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.BoardCell/
 A cell coordinate in the grid.
 
+### BoardCellMaskInfo
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.BoardCellMaskInfo/
+What a cell-mask factory is told about the cell it builds for.
+
 ### BoardGridOptions
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.BoardGridOptions/
 
@@ -624,6 +628,10 @@ Mask configuration for the reel viewport.
 ### MaskContext
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.MaskContext/
 Everything a mask strategy is given. Passed as one object so the axis cannot be forgotten, and so later additions do not break the signature.
+
+### MaskCorners
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.MaskCorners/
+Which corners of a box a [RoundedRectMaskStrategy](/api/classes/index.RoundedRectMaskStrategy/) may round. SCREEN corners in every orientation: `topLeft` is the top-left of the drawn rect on a horizon
 
 ### MaskStrategy
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.MaskStrategy/
@@ -972,7 +980,7 @@ URL: https://pixi-reels.schmooky.dev/api/types/index.ReelCurveInput/
 
 ### RoundedMaskScope
 URL: https://pixi-reels.schmooky.dev/api/types/index.RoundedMaskScope/
-```ts type RoundedMaskScope = "set" | "reel"; ```
+```ts type RoundedMaskScope = "set" | "reel" | "outer"; ```
 
 ### RunCascadeResult
 URL: https://pixi-reels.schmooky.dev/api/types/index.RunCascadeResult/
@@ -11388,6 +11396,145 @@ return {
 };
 ```
 
+### hold-and-win-outer-corners
+URL: https://pixi-reels.schmooky.dev/recipes/hold-and-win-outer-corners/
+```ts
+// @ts-nocheck
+// Injected: HoldAndWinBuilder, RoundedRectMaskStrategy, CloverSymbol, loadHwClover, CLOVER_SPEED, CLOVER_CELL, PIXI, gsap, app
+//
+// One rounded window, one mask per cell. Every Hold & Win cell is its own
+// 1x1 reel set with its own mask, and `cellMask` takes a FUNCTION: it is
+// called once per cell with the cell's column and row plus the board size,
+// and returns that cell's strategy. Here each cell clips to a plain rect -
+// except the four corner cells, each rounded on its single outer corner:
+// top-left for (0, 0), top-right for (4, 0), and so on. With no gap between
+// the cells the fifteen masks read as one rounded frame, cut on the same
+// radius as the panel drawn behind the board.
+
+const COLS = 5, ROWS = 3;
+const CELL = { width: CLOVER_CELL.width / 2, height: CLOVER_CELL.height / 2 }; // 101 x 85
+const RADIUS = 20;
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const fmt = (v) => v.toFixed(2);
+const pick = (a) => a[Math.floor(Math.random() * a.length)];
+
+const art = await loadHwClover();
+
+const STRIP_VALUES = [1, 1, 1.5, 2, 2.5, 3, 5, 7, 10];
+class Clover extends CloverSymbol {
+  onActivate(id) {
+    super.onActivate(id);
+    if (id === 'gold') this.setLabel(fmt(pick(STRIP_VALUES)));
+  }
+}
+// The clover glow is drawn past the cell: lift landed coins above their cell's
+// mask (unmask), so only the strip in motion and the empty tiles are clipped.
+const UNMASK = Object.fromEntries(['gold', 'collect', 'multi', 'mystery', 'super', 'capsule'].map((id) => [id, { unmask: true }]));
+
+const board = new HoldAndWinBuilder()
+  .grid(COLS, ROWS)
+  // No gap: the cells butt together and the corner masks meet the panel edge.
+  .cellSize(CELL, { gap: 0 })
+  .symbols((r) => {
+    for (const id of ['gold', 'collect', 'multi', 'mystery', 'super', 'capsule', 'empty']) r.register(id, Clover, { art });
+  })
+  .weights({ gold: 2, collect: 0.6, multi: 0.6, mystery: 0.6, super: 0.4, capsule: 0.5, empty: 5 })
+  .symbolData(UNMASK)
+  .speedProfile(CLOVER_SPEED)
+  // One strategy per cell, decided from the cell's own column (`reel`) and
+  // row (`cell`) and the board size: a plain rect everywhere, one rounded
+  // corner on each of the four corner cells. `info.corners` carries this
+  // exact object precomputed, so `(_, { corners }) => new
+  // RoundedRectMaskStrategy({ radius, corners })` is the short form.
+  .cellMask(({ reel, cell }, { cols, rows }) => new RoundedRectMaskStrategy({
+    radius: RADIUS,
+    corners: {
+      topLeft: reel === 0 && cell === 0,
+      topRight: reel === cols - 1 && cell === 0,
+      bottomLeft: reel === 0 && cell === rows - 1,
+      bottomRight: reel === cols - 1 && cell === rows - 1,
+    },
+  }))
+  .respins(3)
+  .ticker(app.ticker)
+  .build();
+
+const boardW = COLS * CELL.width;
+const boardH = ROWS * CELL.height;
+board.container.position.set(Math.round((app.screen.width - boardW) / 2), Math.round((app.screen.height - boardH) / 2 - 8));
+
+// The frame: one rounded panel on the board's exact bounds, same radius as
+// the corner masks, plus a soft glow just outside it.
+const frame = new PIXI.Graphics();
+const { x: bx, y: by } = board.container;
+frame.roundRect(bx - 6, by - 6, boardW + 12, boardH + 12, RADIUS + 6).stroke({ color: 0x5fa0ff, width: 6, alpha: 0.25 });
+frame.roundRect(bx, by, boardW, boardH, RADIUS).fill({ color: 0x0b1a4a }).stroke({ color: 0x5fa0ff, width: 2, alpha: 0.95 });
+app.stage.addChild(frame);
+app.stage.addChild(board.container);
+
+// Trace every cell's own mask on top, faintly: fifteen rects, four of them
+// with one rounded corner. This is the shape the engine clips each cell to.
+const seams = new PIXI.Graphics();
+for (let reel = 0; reel < COLS; reel++) {
+  for (let cell = 0; cell < ROWS; cell++) {
+    const b = board.cellBounds({ reel, cell });
+    const r = (on) => (on ? RADIUS : 0);
+    seams.roundShape([
+      { x: b.x, y: b.y, radius: r(reel === 0 && cell === 0) },
+      { x: b.x + b.width, y: b.y, radius: r(reel === COLS - 1 && cell === 0) },
+      { x: b.x + b.width, y: b.y + b.height, radius: r(reel === COLS - 1 && cell === ROWS - 1) },
+      { x: b.x, y: b.y + b.height, radius: r(reel === 0 && cell === ROWS - 1) },
+    ], RADIUS).stroke({ color: 0x9cc8ff, width: 1, alpha: 0.35 });
+  }
+}
+seams.position.copyFrom(board.container.position);
+app.stage.addChild(seams);
+
+const hud = new PIXI.Text({
+  text: `gap 0 · radius ${RADIUS} · cellMask(({ reel, cell }, { cols, rows }) => strategy for that cell) · press spin`,
+  style: { fontFamily: 'system-ui, sans-serif', fontSize: 13, fontWeight: '600', fill: 0x9c8f78 },
+});
+hud.anchor.set(0.5, 0);
+hud.position.set(app.screen.width / 2, board.container.y + boardH + 24);
+app.stage.addChild(hud);
+
+board.events.on('cell:landed', ({ cell, coin }) => {
+  if (coin) board.symbolAt(cell).setLabel(fmt(coin.data.value));
+});
+
+const SEED = [
+  { cell: { reel: 0, cell: 0 }, id: 'gold', data: { value: 2 } },
+  { cell: { reel: 4, cell: 2 }, id: 'gold', data: { value: 5 } },
+];
+const ROUNDS = [[{ reel: 2, cell: 1 }, { reel: 4, cell: 0 }], [{ reel: 0, cell: 2 }], [], [], []];
+
+let busy = false;
+return {
+  cleanup: () => {
+    try { hud.destroy(); } catch {}
+    try { seams.destroy(); } catch {}
+    try { frame.destroy(); } catch {}
+    board.destroy();
+  },
+  onSpin: async () => {
+    if (busy) return;
+    busy = true;
+    board.reset();
+    board.enter(SEED);
+    for (const c of SEED) { const sym = board.symbolAt(c.cell); sym.setLabel(fmt(c.data.value)); sym.playIdle(); }
+    await sleep(350);
+    for (const cells of ROUNDS) {
+      const result = await board.respin(cells.map((cell) => ({ cell, id: 'gold', data: { value: pick(STRIP_VALUES) } })));
+      await sleep(400);
+      if (result.done) break;
+    }
+    const total = board.lockedCoins.reduce((a, c) => a + c.data.value, 0);
+    hud.text = `feature over · TOTAL ${fmt(total)} · press spin to replay`;
+    busy = false;
+  },
+};
+```
+
 ### hold-and-win-payer-coin
 URL: https://pixi-reels.schmooky.dev/recipes/hold-and-win-payer-coin/
 ```ts
@@ -13768,6 +13915,89 @@ return {
   cleanup: () => {
     drift.kill();
     try { banner.destroy({ children: true }); } catch {}
+    try { hud.destroy(); } catch {}
+  },
+  onSpin: async () => {
+    const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
+    const p = reelSet.spin();
+    await new Promise((r) => setTimeout(r, 380));
+    reelSet.setResult(grid);
+    await p;
+  },
+};
+```
+
+### mask-outer-corners
+URL: https://pixi-reels.schmooky.dev/recipes/mask-outer-corners/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, RoundedRectMaskStrategy,
+//                   CardSymbol, CARD_DECK, PIXI, app
+//
+// ONE RECT PER REEL, ONLY THE WINDOW'S CORNERS ROUNDED.
+//
+// `scope: 'outer'` keeps the default's one-rect-per-reel clipping (a short
+// reel never shows its buffer cells) and rounds a reel corner only where it
+// sits on a corner of the union box: the first reel's left pair, the last
+// reel's right pair, and nothing on the reels in between. Every inner edge
+// stays square, so unlike `scope: 'reel'` this is fine at cross gap 0 - the
+// reels butt together and the set reads as one rounded window.
+//
+// `corners` narrows it further to named SCREEN corners, in any scope. Set
+// CORNERS below to `{ topLeft: true }` and only that one corner rounds.
+
+const IDS = ['9', '10', 'J', 'Q', 'K'];
+const REELS = 5, ROWS = 3, SIZE = 80;
+const RADIUS = 22;
+// Which of the window's corners may round. `undefined` means all four.
+const CORNERS = undefined;
+const CARDS = CARD_DECK.filter((c) => IDS.includes(c.id));
+function rv() { return IDS[Math.floor(Math.random() * IDS.length)]; }
+
+const reelSet = new ReelSetBuilder()
+  .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE)
+  // Zero gap on both axes: the reels touch, and 'outer' is built for that.
+  .symbolGap(0, 0)
+  .symbols((r) => {
+    for (const c of CARDS) {
+      r.register(c.id, CardSymbol, { color: c.color, label: c.label, textColor: c.textColor });
+    }
+  })
+  .maskStrategy(new RoundedRectMaskStrategy({ radius: RADIUS, scope: 'outer', corners: CORNERS }))
+  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 150 })
+  .ticker(app.ticker)
+  .build();
+
+const W = REELS * SIZE, H = ROWS * SIZE;
+
+// The frame the mask is cut to match: one rounded window around the grid...
+const outline = new PIXI.Graphics();
+const rr = (on) => (on ? RADIUS : 0);
+const c = CORNERS ?? { topLeft: true, topRight: true, bottomLeft: true, bottomRight: true };
+outline.roundShape([
+  { x: 0, y: 0, radius: rr(c.topLeft) },
+  { x: W, y: 0, radius: rr(c.topRight) },
+  { x: W, y: H, radius: rr(c.bottomRight) },
+  { x: 0, y: H, radius: rr(c.bottomLeft) },
+], RADIUS).stroke({ width: 2, color: 0x6ad0ff, alpha: 0.85 });
+// ...and the seams between the reels' own rects, which stay straight.
+for (let i = 1; i < REELS; i++) {
+  outline.moveTo(i * SIZE, 0).lineTo(i * SIZE, H);
+}
+outline.stroke({ width: 1, color: 0x6ad0ff, alpha: 0.3 });
+reelSet.addChild(outline);
+
+const hud = new PIXI.Text({
+  text: `scope: 'outer', radius ${RADIUS}, gap 0  -  one rect per reel, seams square, window corners round`,
+  style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 11, fill: 0x9c8f78 },
+});
+hud.position.set(0, H + 10);
+reelSet.addChild(hud);
+
+return {
+  reelSet,
+  cleanup: () => {
+    try { outline.destroy(); } catch {}
     try { hud.destroy(); } catch {}
   },
   onSpin: async () => {

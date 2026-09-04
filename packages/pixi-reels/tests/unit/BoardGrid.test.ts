@@ -3,6 +3,7 @@ import type { Ticker } from 'pixi.js';
 import { Graphics } from 'pixi.js';
 import type { RenderLayer } from 'pixi.js';
 import { BoardGrid } from '../../src/board/BoardGrid.js';
+import type { BoardCell, BoardCellMaskInfo } from '../../src/board/BoardGrid.js';
 import { SharedRectMaskStrategy } from '../../src/core/ReelViewport.js';
 import { ReelSet } from '../../src/core/ReelSet.js';
 import { FakeTicker } from '../../src/testing/FakeTicker.js';
@@ -173,6 +174,25 @@ describe('BoardGrid cell mask', () => {
       },
     });
     expect(built).toBe(6);
+    grid.destroy();
+  });
+
+  it('tells the factory which cell it builds for and which board corners that cell sits on', () => {
+    const seen = new Map<string, BoardCellMaskInfo>();
+    const grid = make({
+      mask: (cell: BoardCell, info: BoardCellMaskInfo) => {
+        seen.set(`${cell.reel},${cell.cell}`, info);
+        return new SharedRectMaskStrategy();
+      },
+    });
+    const none = { topLeft: false, topRight: false, bottomLeft: false, bottomRight: false };
+    expect(seen.size).toBe(6);
+    expect(seen.get('0,0')).toEqual({ cols: 3, rows: 2, corners: { ...none, topLeft: true } });
+    expect(seen.get('2,0')?.corners).toEqual({ ...none, topRight: true });
+    expect(seen.get('0,1')?.corners).toEqual({ ...none, bottomLeft: true });
+    expect(seen.get('2,1')?.corners).toEqual({ ...none, bottomRight: true });
+    expect(seen.get('1,0')?.corners).toEqual(none);
+    expect(seen.get('1,1')?.corners).toEqual(none);
     grid.destroy();
   });
 });
