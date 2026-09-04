@@ -125,7 +125,7 @@ export class SpineReelSymbol extends ReelSymbol {
   }
 
   protected onActivate(symbolId: string): void {
-    if (this._currentSpine) this._currentSpine.visible = false;
+    if (this._currentSpine) this._park(this._currentSpine);
 
     let spine = this._spines.get(symbolId);
     if (!spine) {
@@ -137,6 +137,10 @@ export class SpineReelSymbol extends ReelSymbol {
 
     this._positionSpine(spine);
     spine.visible = true;
+    // Only the spine on screen ticks. Every other cached instance would
+    // otherwise keep running its state and world transform on the shared
+    // ticker while hidden - hundreds of them on a Hold & Win board.
+    spine.autoUpdate = true;
     this._currentSpine = spine;
 
     // Settle any lingering one-shot resolve from a prior pool use so the
@@ -157,7 +161,7 @@ export class SpineReelSymbol extends ReelSymbol {
 
   /** Instantiate a spine from a source config: scale, optional skin, attach. */
   private _createSpine(cfg: SpineSymbolSource): Spine {
-    const spine = Spine.from({ skeleton: cfg.skeleton, atlas: cfg.atlas });
+    const spine = Spine.from({ skeleton: cfg.skeleton, atlas: cfg.atlas, autoUpdate: false });
     spine.scale.set(this._scale);
     if (cfg.skin) {
       spine.skeleton.setSkinByName(cfg.skin);
@@ -175,10 +179,16 @@ export class SpineReelSymbol extends ReelSymbol {
       // an invisible "out" frame (e.g. after `playOut()` / disintegrate) is
       // still invisible when the pool reassigns it on the next spin.
       this._currentSpine.skeleton.setToSetupPose();
-      this._currentSpine.visible = false;
+      this._park(this._currentSpine);
       this._currentSpine = null;
     }
     this._resolveOneShot();
+  }
+
+  /** Hide a cached instance and take it off the ticker until it is shown again. */
+  private _park(spine: Spine): void {
+    spine.visible = false;
+    spine.autoUpdate = false;
   }
 
   // -- Canonical one-shot animations ---------------------------------------

@@ -1,0 +1,136 @@
+
+symbols.webp
+size: 2003, 953
+filter: Linear, Linear
+pma: false
+blur/multi
+  bounds: 0, 0, 310, 275
+  offsets: 0, 0, 316, 282
+blur/mystery
+  bounds: 312, 0, 310, 266
+  offsets: 1, 0, 318, 278
+blur/gold
+  bounds: 624, 0, 290, 260
+  offsets: 0, 0, 290, 264
+normal/mystery
+  bounds: 916, 0, 311, 253
+  offsets: 0, 0, 318, 258
+normal/multi
+  bounds: 1229, 0, 310, 252
+  offsets: 0, 0, 316, 258
+blur/collect
+  bounds: 1541, 0, 284, 249
+  offsets: 0, 0, 286, 260
+blur/super
+  bounds: 0, 277, 284, 249
+  offsets: 0, 0, 286, 260
+blur/capsule
+  bounds: 286, 277, 284, 241
+  offsets: 6, 0, 296, 244
+normal/gold
+  bounds: 572, 277, 290, 237
+  offsets: 0, 0, 290, 240
+normal/capsule
+  bounds: 864, 277, 290, 222
+  offsets: 6, 0, 296, 226
+normal/collect
+  bounds: 1156, 277, 284, 220
+  offsets: 0, 0, 286, 232
+normal/super
+  bounds: 1442, 277, 284, 220
+  offsets: 0, 0, 286, 232
+blur/bell
+  bounds: 1728, 277, 159, 200
+  offsets: 3, 0, 166, 200
+blur/empty
+  bounds: 0, 528, 202, 200
+blur/sealed
+  bounds: 204, 528, 202, 200
+blur/grapes
+  bounds: 408, 528, 170, 198
+  offsets: 4, 0, 176, 198
+blur/seven
+  bounds: 580, 528, 174, 198
+blur/watermelon
+  bounds: 756, 528, 172, 196
+  offsets: 6, 0, 180, 196
+normal/bell
+  bounds: 930, 528, 166, 183
+  offsets: 0, 0, 166, 188
+blur/cherry
+  bounds: 1098, 528, 133, 180
+normal/grapes
+  bounds: 1233, 528, 176, 176
+normal/watermelon
+  bounds: 1411, 528, 178, 176
+  offsets: 0, 0, 180, 178
+blur/plum
+  bounds: 1591, 528, 124, 171
+  offsets: 0, 1, 124, 172
+normal/empty
+  bounds: 1717, 528, 202, 170
+normal/sealed
+  bounds: 0, 730, 202, 170
+normal/seven
+  bounds: 204, 730, 174, 168
+blur/orange
+  bounds: 380, 730, 136, 167
+  offsets: 0, 0, 136, 170
+blur/lemon
+  bounds: 518, 730, 148, 162
+  offsets: 4, 0, 164, 166
+normal/cherry
+  bounds: 668, 730, 141, 151
+  offsets: 7, 1, 148, 152
+normal/lemon
+  bounds: 811, 730, 152, 145
+  offsets: 0, 0, 164, 160
+normal/plum
+  bounds: 965, 730, 124, 143
+  offsets: 0, 3, 124, 146
+normal/orange
+  bounds: 1091, 730, 136, 140
+blur/bar
+  bounds: 1229, 730, 181, 126
+  offsets: 1, 0, 182, 126
+normal/bar
+  bounds: 1412, 730, 181, 96
+  offsets: 1, 0, 182, 96
+title/major
+  bounds: 1595, 730, 205, 52
+title/minor
+  bounds: 1802, 730, 201, 52
+title/mini
+  bounds: 0, 902, 134, 51
+
+spinefx.webp
+size: 1351, 132
+filter: Linear, Linear
+pma: false
+fx/light_back
+  bounds: 0, 0, 136, 132
+  offsets: 1, 3, 138, 138
+fx/star
+  bounds: 138, 0, 128, 128
+fx/glow_white
+  bounds: 268, 0, 158, 124
+fx/back_light
+  bounds: 428, 0, 131, 114
+fx/glow_square
+  bounds: 561, 0, 126, 111
+  offsets: 4, 0, 133, 111
+fx/glint
+  bounds: 689, 0, 93, 93
+  offsets: 12, 12, 117, 117
+fx/flare
+  bounds: 784, 0, 85, 84
+fx/flare_b
+  bounds: 871, 0, 85, 84
+fx/under_collect
+  bounds: 958, 0, 104, 82
+fx/under_multi
+  bounds: 1064, 0, 104, 82
+fx/under_mystery
+  bounds: 1170, 0, 104, 82
+fx/under_super
+  bounds: 1276, 0, 75, 60

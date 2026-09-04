@@ -272,6 +272,33 @@ describe('SpineReelSymbol multi-skin skeletons', () => {
     expect(first.visible).toBe(true);
   });
 
+  it('takes a parked instance off the ticker and resumes it when shown again', () => {
+    const sym = new SpineReelSymbol({
+      spineMap: {
+        low1: { skeleton: 'lowSymbols', atlas: 'symbols' },
+        low2: { skeleton: 'lowSymbols', atlas: 'symbols' },
+      },
+    });
+    sym.activate('low1');
+    const first = getLastSpine() as MockSpine & { autoUpdate?: boolean };
+    expect(first.autoUpdate).toBe(true);
+
+    sym.deactivate();
+    expect(first.autoUpdate).toBe(false);
+    expect(first.visible).toBe(false);
+
+    sym.activate('low2');
+    const second = getLastSpine() as MockSpine & { autoUpdate?: boolean };
+    expect(second.autoUpdate).toBe(true);
+    expect(first.autoUpdate).toBe(false);
+
+    // swapping ids in place parks the old one and wakes the cached one
+    sym.activate('low1');
+    expect(first.autoUpdate).toBe(true);
+    expect(second.autoUpdate).toBe(false);
+    expect(second.visible).toBe(false);
+  });
+
   it('does not touch skins when the entry has none', () => {
     const sym = new SpineReelSymbol({
       spineMap: { high: { skeleton: 'high', atlas: 'symbols' } },
