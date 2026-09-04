@@ -165,6 +165,11 @@ for (const path of SCROLL_PAGES) {
     // survivors then threw from inside their own render loop, one frame
     // later -- "Cannot read properties of null (reading 'geometry')".
     const height = await page.evaluate(() => document.body.scrollHeight);
+    // Each step waits 700ms and then pays for whatever the demos that just
+    // scrolled in cost to mount. On CI's software GL a Spine-heavy page (Hold
+    // & Win stacks ~40 demos) spent the whole fixed 60s inside this loop, so
+    // budget by page height instead: a longer page is not a red build.
+    test.setTimeout(Math.ceil(height / 700) * 2500 + 30_000);
     for (let y = 0; y < height; y += 700) {
       await page.evaluate((to) => window.scrollTo(0, to), y);
       await page.waitForTimeout(700);
