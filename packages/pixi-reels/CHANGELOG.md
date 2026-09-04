@@ -1,5 +1,15 @@
 # pixi-reels
 
+## 2.6.0
+
+### Minor Changes
+
+- [#221](https://github.com/schmooky/pixi-reels/pull/221) [`c96cfdd`](https://github.com/schmooky/pixi-reels/commit/c96cfdd5a29ccbb783425bd4f35765b43fd49941) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Add: `RoundedRectMaskStrategy` gains `scope: 'outer'` (one rect per reel, only the corners that sit on the set's bounding box rounded, safe at a zero cross gap) and a `corners` option (`{ topLeft, topRight, bottomLeft, bottomRight }`, screen-space) that limits which corners round in any scope. `HoldAndWinBuilder.cellMask` and the `BoardGrid` `mask` option now hand the factory `(cell, { cols, rows, corners })`, where `corners` are the board corners that cell sits on, so `(_, { corners }) => new RoundedRectMaskStrategy({ radius, corners })` clips a gapless board as one rounded window with a separate rect mask per cell. Zero-argument factories keep working.
+
+### Patch Changes
+
+- [#220](https://github.com/schmooky/pixi-reels/pull/220) [`767453a`](https://github.com/schmooky/pixi-reels/commit/767453a4f32c1c84ae4a8f0589d9f6a93ba6d0b9) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Perf: `SpineReelSymbol` takes its cached, hidden Spine instances off the ticker. It keeps one instance per symbol id for instant swaps, and each of those was created with spine-pixi's default `autoUpdate`, so every parked skeleton kept updating its animation state and world transform every frame while invisible - hundreds of them on a Hold & Win board of 1x1 reels. Now only the instance on screen updates; a parked one is resumed the moment it is shown again.
+
 ## 2.5.0
 
 ### Minor Changes
