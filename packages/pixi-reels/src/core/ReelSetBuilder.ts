@@ -9,6 +9,7 @@ import type {
   MultiWaysConfig,
   ReelAnchor,
   Stacking,
+  SymbolZIndexResolver,
 } from '../config/types.js';
 import type { ReelMaskRect, MaskStrategy } from './ReelViewport.js';
 import {
@@ -112,6 +113,7 @@ export class ReelSetBuilder {
   private _reelAnchor: ReelAnchor = 'center';
   /** Render order of cells inside a reel, and of reels inside the set. */
   private _cellStacking: Stacking = 'ascending';
+  private _symbolZIndex: SymbolZIndexResolver | null = null;
   private _reelStacking: Stacking = 'ascending';
   private _orientation: Orientation = 'vertical';
   private _direction: Direction = 'forward';
@@ -696,6 +698,41 @@ export class ReelSetBuilder {
     return this;
   }
 
+  /**
+   * Decide every symbol view's `zIndex` yourself instead of taking the
+   * engine's `symbolData.zIndex * 100 + cellStackingIndex`.
+   *
+   * The resolver is the single source of symbol draw order once set: the
+   * engine asks it again whenever a symbol's id, cell, reel shape or rest
+   * state changes (every wrap, snap, swap, reshape, landing and departure).
+   * It must be pure and cheap. Return `ctx.defaultZIndex` for the ids you do
+   * not care about.
+   *
+   * Cross-reel order only exists for symbols that share a container: an
+   * `unmask: true` symbol at rest is lifted into the viewport-wide
+   * `unmaskedContainer`, where the value orders it against every other
+   * lifted symbol. A masked symbol stays inside its reel's own container,
+   * which has its own `zIndex` (`reelStacking`), so a resolver's reel term
+   * does nothing for it. `ctx.atRest` tells the two situations apart: the
+   * usual shape keeps the engine's order in motion and grades at rest.
+   *
+   * @example
+   * .symbolZIndex((ctx) => {
+   *   if (!ctx.atRest || ctx.visibleCell === null) return ctx.defaultZIndex;
+   *   const grade = GRADES[ctx.symbolId];
+   *   return grade === undefined
+   *     ? ctx.defaultZIndex
+   *     : grade * 1000 + ctx.visibleCell * 10 + ctx.reelIndex;
+   * })
+   */
+  symbolZIndex(resolver: SymbolZIndexResolver): this {
+    if (typeof resolver !== 'function') {
+      throw new Error(`symbolZIndex(): expected a function, got ${String(resolver)}.`);
+    }
+    this._symbolZIndex = resolver;
+    return this;
+  }
+
   /** Add a named speed profile. */
   speed(name: string, profile: SpeedProfile): this {
     this._speeds.set(name, profile);
@@ -1239,6 +1276,7 @@ export class ReelSetBuilder {
 
       const reelConfig: ReelConfig = {
         reelIndex,
+        reelCount,
         visibleCells: cells,
         bufferStart,
         bufferEnd,
@@ -1247,6 +1285,7 @@ export class ReelSetBuilder {
         symbolGapX: this._symbolGap.x,
         symbolGapY: this._symbolGap.y,
         symbolsData,
+        symbolZIndex: this._symbolZIndex ?? undefined,
         initialSymbols: initialFrame,
         mainOffset: mainOffsets[reelIndex],
         extent: reelExtents[reelIndex],

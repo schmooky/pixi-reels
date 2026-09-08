@@ -31,9 +31,38 @@ engine just sits on it until this passes.
 `spin:stopping` -- one per reel, carrying its index, as it starts braking.
 Held reels never fire it.
 
-`spin:reelLanded` -- that reel settled. Carries its index and its symbols.
-Use it for per-reel beats: a scatter ping, a column glow. You do not have to
+`spin:reelLanding` -- that reel is ON its result frame: strip snapped, every
+visible symbol told it landed, the bounce about to start. Carries its index
+and its symbols. The frame to start anything coupled to the landing on -- an
+overlay growing over the reel, a per-reel SFX, a symbol takeover.
+
+`spin:reelLanded` -- that reel settled: the bounce is over, a whole
+`bounceDuration` after `spin:reelLanding` (the same tick on a slam, which has
+no bounce). Carries its index and its symbols. Use it for per-reel beats that
+should wait for the rest: a scatter ping, a column glow. You do not have to
 wait for the whole grid.
+
+Each symbol hears the landing too: `onReelLanded(ctx)` runs on every visible
+symbol just before `spin:reelLanding`, and `ctx` says which reel and cell it
+landed in (`reelIndex`, `reelCount`, `cell`, `visibleCells`, `symbolId`). A
+Spine symbol's `autoPlayLanding` may be a function of it, returning `true`,
+`false` or an animation name -- so the symbols on the reel a takeover is about
+to run on skip their landing, and the rest land as usual:
+
+```ts
+new SpineReelSymbol({
+  spineMap,
+  autoPlayLanding: ({ reelIndex }) => !copyReels.has(reelIndex),
+});
+
+reelSet.events.on('spin:reelLanding', (reelIndex) => {
+  if (copyReels.has(reelIndex)) overlay.growOver(reelIndex);
+});
+```
+
+A symbol that starts a landing beat this way reports it as `symbol.landing`
+(a promise, kept until the reel moves again), so anything that wants to play
+after the landing can `await` it instead of hijacking the track.
 
 `spin:allLanded` -- last non-held reel is down. Full result attached.
 
@@ -221,6 +250,7 @@ Live recipes: [nudge](/recipes/nudge/), [skip](/recipes/nudge-skip/), [abort](/r
 | `spin:start`           | .                                               | Any `spin()` call                                                                                                                                                        |
 | `spin:allStarted`      | .                                               | Every (non-held) reel is in SPIN phase                                                                                                                                   |
 | `spin:stopping`        | `(reelIndex)`                                   | A reel begins STOP (held reels never fire)                                                                                                                               |
+| `spin:reelLanding`     | `(reelIndex, symbols)`                          | Individual reel is on its result frame, bounce not started; after every `onReelLanded()`. Every landing path, including cascade refill stages                              |
 | `spin:reelLanded`      | `(reelIndex, symbols)`                          | Individual reel landed (held reels never fire)                                                                                                                           |
 | `spin:allLanded`       | `(result)`                                      | Last non-held reel landed                                                                                                                                                |
 | `spin:complete`        | `(result)`                                      | Just after `spin:allLanded`                                                                                                                                              |

@@ -177,11 +177,33 @@ const board = new HoldAndWinBuilder()
 
 With `'landing'` or `'none'` the celebration is yours: `await board.playWin()` pulses
 every locked coin (or `board.playWin(cells)` a subset) whenever the game decides,
-typically on `board:full` or after `feature:end`. `board.activate(cells)` wakes dormant
+typically on `board:full` or after `feature:end`. A coin that starts its own landing
+beat on land (a Spine coin with `autoPlayLanding`, a sprite that reports its settle
+through `trackLanding`) keeps it: `'win'` waits for that beat before the celebration
+and `'landing'` does not replay it. The mode can also be a function of the coin that
+locked -- `.lockAnimation((coin) => coin.id === 'collector' ? 'win' : 'landing')` -- so a
+collector celebrates while plain coins only settle. `board.activate(cells)` wakes dormant
 cells between waves - they show the empty symbol, join the next respin and count toward
 `isFull` from then on; `reset()` seals them again. The `Rectangular cells`, `Landing only`
 and `Clover board that grows` recipes on the [Hold & Win recipes page](/recipes/hold-and-win/)
 show each one running.
+
+## Draw order between cells
+
+Every cell is its own reel set, so a coin's `zIndex` only ever sorts it against
+its own buffers. The art the engine lifts above a cell's mask at rest (`unmask:
+true`) renders in one layer above all cells, in attach order -- column-major --
+so a lower coin's overflow is covered by the next column's. `cellZIndex` makes
+that layer sortable and asks for each cell's order on every place and landing:
+
+```ts
+.cellZIndex(({ cell, symbolId, cols }) =>
+  (symbolId === 'grand' ? 1000 : 0) + cell.cell * cols + cell.reel)
+```
+
+`board.liftedLayer` is the layer itself, for an effect that has to sit between the
+cells and their lifted art. `symbolZIndex(resolver)` is the per-symbol form from
+`ReelSetBuilder`, applied inside every cell -- see [big symbols](/guides/big-symbols/#zindex-layering).
 
 ## Speeds, board-wide
 

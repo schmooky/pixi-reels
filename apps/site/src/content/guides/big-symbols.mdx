@@ -132,12 +132,37 @@ peek". Production slots cover it with frame art.
 
 ## zIndex layering
 
+When the formula below is not the order you want -- a row-dominant grading
+where the symbol in the bottom row always fronts the one above it, whatever
+its type -- hand the engine a resolver and it stops computing:
+
+```ts
+.symbolZIndex((ctx) => {
+  if (!ctx.atRest || ctx.visibleCell === null) return ctx.defaultZIndex;
+  const grade = GRADES[ctx.symbolId];
+  return grade === undefined
+    ? ctx.defaultZIndex
+    : grade * 1000 + ctx.visibleCell * 10 + ctx.reelIndex;
+})
+```
+
+The resolver is asked with `symbolId`, `symbolData`, `reelIndex`, `reelCount`,
+`arrayIndex`, `visibleCell` (`null` for a buffer slot), `visibleCells`,
+`atRest` and `defaultZIndex` -- what the engine would have used -- and re-asked
+whenever a symbol's id, cell, reel shape or rest state changes, so its answer
+is never overwritten. Cross-reel order only exists for symbols that share a
+container: an `unmask: true` symbol at rest sits in the viewport-wide
+`unmaskedContainer` with every other lifted symbol; a masked one is bounded by
+its reel container's own `zIndex` (`reelStacking`). That is why the example
+grades at rest only and keeps the engine's order in motion. Keep every value
+below `Z_INDEX_BUDGET.pinOverlay`.
+
 Anchors render at `symbolData.zIndex * 100 + arrayIndex` -- about 500 with
 `zIndex: 5`. The 100x multiplier leaves room for per-cell stacking inside one
 layer, so cells at the larger coordinate still draw in front of their
 neighbours.
 
-Pin overlays render at zIndex `10000` (an internal `ReelSet` constant. not part of the public API). So a big symbol that's also pinned (`reelSet.pin(anchorReel, anchorCell, id, ...)`) gets its overlay rendered above the cell. The overlay is sized to a **single cell**, so while the reel spins it does not cover the rest of the block; the block only spans again once the frame commits at land.
+Pin overlays render at zIndex `10000` (`Z_INDEX_BUDGET.pinOverlay`; `Z_INDEX_BUDGET.symbolLayer` is the 100x). So a big symbol that's also pinned (`reelSet.pin(anchorReel, anchorCell, id, ...)`) gets its overlay rendered above the cell. The overlay is sized to a **single cell**, so while the reel spins it does not cover the rest of the block; the block only spans again once the frame commits at land.
 
 | Layer | zIndex | Source |
 |---|---|---|

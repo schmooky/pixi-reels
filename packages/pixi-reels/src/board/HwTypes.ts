@@ -106,5 +106,14 @@ export interface HwCellSizeOptions {
  */
 export type HwLockAnimation = 'win' | 'landing' | 'none';
 
+/**
+ * A lock animation for every coin, or a function of the coin that just
+ * locked - so a collector can celebrate while a plain coin only settles, or
+ * a seed from `enter()` stays quiet. See `HoldAndWinBuilder.lockAnimation`.
+ */
+export type HwLockAnimationRule<TData = unknown> =
+  | HwLockAnimation
+  | ((coin: HwCoin<TData>) => HwLockAnimation);
+
 /** `reel,cell` string key for the board's cell-indexed maps. */
 export const cellKey = (c: HwCell): string => `${c.reel},${c.cell}`;

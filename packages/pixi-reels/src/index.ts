@@ -14,10 +14,14 @@ export { CURVE_FOCUS_WEIGHT } from './core/ReelCurve.js';
 // Config
 export { SpeedPresets } from './config/SpeedPresets.js';
 export { DEFAULTS } from './config/defaults.js';
+export { Z_INDEX_BUDGET } from './config/types.js';
 export type {
   SpeedProfile,
   SpinOptions,
   SymbolData,
+  ReelLandingContext,
+  SymbolZIndexContext,
+  SymbolZIndexResolver,
   ReelGridConfig,
   ReelExtraSymbols,
   ReelCellQuad,
@@ -52,6 +56,7 @@ export type {
   RoundedMaskScope,
   RoundedRectMaskOptions,
   SilhouetteMaskOptions,
+  InsetSides,
 } from './core/maskStrategies.js';
 export {
   RoundedRectMaskStrategy,
@@ -204,6 +209,8 @@ export { BoardGrid } from './board/BoardGrid.js';
 export type {
   BoardCell,
   BoardCellMaskInfo,
+  BoardCellZIndexContext,
+  BoardCellZIndexResolver,
   BoardSpinTarget,
   BoardProfile,
   BoardGridOptions,
@@ -232,6 +239,7 @@ export type {
   HwEffect,
   HwCellSizeOptions,
   HwLockAnimation,
+  HwLockAnimationRule,
 } from './board/HwTypes.js';
 
 // Wins (symbol-highlight presenter. no line drawing, events-driven)

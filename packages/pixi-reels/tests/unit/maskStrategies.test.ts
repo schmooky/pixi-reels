@@ -533,6 +533,51 @@ describe('inset', () => {
 
   it('rejects a non-finite inset', () => {
     expect(() => inset(new RectMaskStrategy(), Number.NaN)).toThrow(/finite/);
+    expect(() => inset(new RectMaskStrategy(), { top: Number.NaN })).toThrow(/'top'/);
+    expect(() => inset(new RectMaskStrategy(), null as unknown as number)).toThrow(/top, right, bottom, left/);
+  });
+
+  describe('per side', () => {
+    it('trims the main-axis ends by different amounts', () => {
+      const g = inset(new SharedRectMaskStrategy(), { top: 4, bottom: 12 }).build(uniformCtx());
+      expect(shapes(g)).toEqual([{ kind: 'rect', x: 0, y: 4, width: 300, height: 284 }]);
+    });
+
+    it('trims the cross-axis sides by different amounts', () => {
+      // Symmetric half through bleed (-6), the remainder a +4 shift: [10, 298].
+      const g = inset(new SharedRectMaskStrategy(), { left: 10, right: 2 }).build(uniformCtx());
+      expect(shapes(g)).toEqual([{ kind: 'rect', x: 10, y: 0, width: 288, height: 300 }]);
+    });
+
+    it('applies the same cross trim to every reel of a per-reel strategy', () => {
+      const g = inset(new RectMaskStrategy(), { left: 10, right: 2 }).build(uniformCtx());
+      expect(shapes(g)[1]).toEqual({ kind: 'rect', x: 110, y: 0, width: 88, height: 300 });
+    });
+
+    it('reads the sides as screen sides on a horizontal set', () => {
+      const ctx = uniformCtx({ axis: reelAxis('horizontal', 'forward') });
+      const g = inset(new SharedRectMaskStrategy(), { top: 3, left: 7 }).build(ctx);
+      expect(shapes(g)).toEqual([{ kind: 'rect', x: 7, y: 3, width: 293, height: 297 }]);
+    });
+
+    it('leaves an omitted side alone', () => {
+      const g = inset(new SharedRectMaskStrategy(), { top: 5 }).build(uniformCtx());
+      expect(shapes(g)).toEqual([{ kind: 'rect', x: 0, y: 5, width: 300, height: 295 }]);
+    });
+
+    it('matches the uniform form when every side is equal', () => {
+      const uniform = shapes(inset(new RoundedRectMaskStrategy({ radius: 8 }), 6).build(uniformCtx()));
+      const sides = shapes(
+        inset(new RoundedRectMaskStrategy({ radius: 8 }), { top: 6, right: 6, bottom: 6, left: 6 }).build(uniformCtx()),
+      );
+      expect(sides).toEqual(uniform);
+    });
+
+    it('composes with curve bleed on the cross axis', () => {
+      const g = inset(new SharedRectMaskStrategy(), { left: 4, right: 8 }).build(uniformCtx({ bleed: 20 }));
+      // Left edge: -20 + 4 = -16; right edge: 320 - 8 = 312.
+      expect(shapes(g)).toEqual([{ kind: 'rect', x: -16, y: 0, width: 328, height: 300 }]);
+    });
   });
 });
 

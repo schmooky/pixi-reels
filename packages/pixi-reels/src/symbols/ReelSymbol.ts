@@ -1,6 +1,6 @@
 import { Container } from 'pixi.js';
 import type { Disposable } from '../utils/Disposable.js';
-import type { ReelCellInset, ReelCellQuad } from '../config/types.js';
+import type { ReelCellInset, ReelCellQuad, ReelLandingContext } from '../config/types.js';
 import { DEFAULT_GSAP, type Gsap } from '../utils/gsap.js';
 
 /**
@@ -90,6 +90,38 @@ export abstract class ReelSymbol implements Disposable {
     return this._symbolId;
   }
 
+  private _landing: Promise<void> | null = null;
+
+  /**
+   * The landing beat this symbol started on its latest `onReelLanded()`, or
+   * `null` if it started none. Stays set (resolved) until the reel moves
+   * again or the symbol is pooled, so a presenter that lands cells one at a
+   * time - `HoldAndWinBoard` on a lock, a win spotlight - can sequence after
+   * the landing (`await symbol.landing`) instead of stomping it, and can
+   * tell a symbol that already landed from one that still needs
+   * `playLanding()`.
+   *
+   * Subclasses report a landing through {@link trackLanding}.
+   */
+  get landing(): Promise<void> | null {
+    return this._landing;
+  }
+
+  /**
+   * Subclass helper: record `run` as this symbol's landing beat (see
+   * {@link landing}) and return it. `SpineReelSymbol` wraps its landing
+   * one-shot in it; a sprite symbol wraps its settle tween.
+   */
+  protected trackLanding(run: Promise<void>): Promise<void> {
+    this._landing = run;
+    return run;
+  }
+
+  /** @internal Called by the reel when it leaves rest; the landing is over. */
+  resetLanding(): void {
+    this._landing = null;
+  }
+
   get isDestroyed(): boolean {
     return this._isDestroyed;
   }
@@ -119,6 +151,7 @@ export abstract class ReelSymbol implements Disposable {
     this.stopAnimation();
     this.onDeactivate();
     this._symbolId = '';
+    this._landing = null;
     this.view.visible = false;
     this.view.alpha = 1;
     this.view.scale.set(1, 1);
@@ -530,6 +563,12 @@ export abstract class ReelSymbol implements Disposable {
    * Lifecycle hook: the owning reel has landed on its final symbols.
    * Default: no-op. Override (e.g. SpineReelSymbol.autoPlayLanding) to fire
    * a landing animation concurrently with the bounce.
+   *
+   * `ctx` says which reel and cell this symbol landed in, so an override can
+   * play a different beat - or none - on a particular reel. The engine always
+   * supplies it; it is optional only so an override written as
+   * `onReelLanded()` keeps compiling. Fired before the reel's `landing` event
+   * and the set's `spin:reelLanding`, by contract.
    */
-  onReelLanded(): void {}
+  onReelLanded(ctx?: ReelLandingContext): void {}
 }

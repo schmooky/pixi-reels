@@ -9,6 +9,7 @@ import type {
   AnticipationOptions,
   SlamOptions,
 } from '../config/types.js';
+import { Z_INDEX_BUDGET } from '../config/types.js';
 import { EventEmitter } from '../events/EventEmitter.js';
 import type { ReelSetEvents, SpinResult, RunCascadeResult as RunCascadeResultBase } from '../events/ReelEvents.js';
 import { Reel, } from './Reel.js';
@@ -481,7 +482,7 @@ export class ReelSet extends Container implements Disposable {
    * | 1×1 symbol, default | `0 * 100 + arrayIndex` (~0–10) | `symbolData.zIndex ?? 0` |
    * | 1×1 symbol, elevated (`zIndex: 1` on `symbolData`) | `1 * 100 + arrayIndex` (~100) | `symbolData.zIndex` |
    * | Big-symbol anchor, default registration | `5 * 100 + arrayIndex` (~500) | recipe convention |
-   * | Pin overlay (sticky/expanding wild during spin) | `10000` | `PIN_OVERLAY_Z_INDEX` |
+   * | Pin overlay (sticky/expanding wild during spin) | `10000` | `Z_INDEX_BUDGET.pinOverlay` |
    *
    * The 100× multiplier on `symbolData.zIndex` leaves room for per-cell
    * stacking inside a layer (bottom cells render in front of top cells on
@@ -492,7 +493,7 @@ export class ReelSet extends Container implements Disposable {
    * `viewport.spotlightContainer`, which is its own DisplayObject layer
    * above pin overlays.
    */
-  private static readonly PIN_OVERLAY_Z_INDEX = 10000;
+  private static readonly PIN_OVERLAY_Z_INDEX = Z_INDEX_BUDGET.pinOverlay;
 
   private _events = new EventEmitter<ReelSetEvents>();
   private _reels: Reel[];

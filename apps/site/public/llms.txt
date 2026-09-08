@@ -1,6 +1,6 @@
 # pixi-reels
 
-pixi-reels 2.5.0 is a reel engine for PixiJS v8.
+pixi-reels 2.6.0 is a reel engine for PixiJS v8.
 It ships reel-only primitives. Win math, paytable math, RNG, and audio live in consumer code.
 This file inlines every guide, API page, recipe (with source) and answered FAQ entry for offline LLM context.
 
@@ -397,7 +397,7 @@ URL: https://pixi-reels.schmooky.dev/api/functions/index.getTargetSlot/
 
 ### inset()
 URL: https://pixi-reels.schmooky.dev/api/functions/index.inset/
-```ts function inset(strategy: MaskStrategy, pixels: number): DrawableMaskStrategy; ```
+```ts function inset(strategy: MaskStrategy, pixels: number | InsetSides): DrawableMaskStrategy; ```
 
 ### isDrawableMaskStrategy()
 URL: https://pixi-reels.schmooky.dev/api/functions/index.isDrawableMaskStrategy/
@@ -507,6 +507,10 @@ A cell coordinate in the grid.
 ### BoardCellMaskInfo
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.BoardCellMaskInfo/
 What a cell-mask factory is told about the cell it builds for.
+
+### BoardCellZIndexContext
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.BoardCellZIndexContext/
+What a [BoardCellZIndexResolver](/api/types/index.BoardCellZIndexResolver/) is asked about.
 
 ### BoardGridOptions
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.BoardGridOptions/
@@ -621,6 +625,10 @@ A coin somewhere on the board. `id` selects the registered symbol art; `data` is
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.HwRespinResult/
 Resolution of one [HoldAndWinBoard.respin](/api/classes/index.HoldAndWinBoard/#respin) wave.
 
+### InsetSides
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.InsetSides/
+Per-side inset for [inset](/api/functions/index.inset/). SCREEN sides in every orientation, so `top` trims the top edge of the drawn mask on a horizontal set too. A side left out is `0`; negative grow
+
 ### MaskConfig
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.MaskConfig/
 Mask configuration for the reel viewport.
@@ -714,6 +722,10 @@ Extra symbols above/below config per reel.
 ### ReelGridConfig
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.ReelGridConfig/
 Configuration for the reel grid layout.
+
+### ReelLandingContext
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.ReelLandingContext/
+What a symbol is told about where it landed. Handed to `ReelSymbol.onReelLanded(ctx)` by the engine on every landing path, so a symbol can decide what its landing beat is on THIS reel and cell - or th
 
 ### ReelMaskRect
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.ReelMaskRect/
@@ -828,6 +840,10 @@ A cell on the visible grid. `reelIndex` is the column; `cellIndex` is the cell f
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.SymbolSwap/
 One cell to re-skin. See [ReelSet.swapSymbols](/api/classes/index.ReelSet/#swapsymbols).
 
+### SymbolZIndexContext
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.SymbolZIndexContext/
+Everything a [SymbolZIndexResolver](/api/types/index.SymbolZIndexResolver/) is asked about. Built by the reel once per symbol per z-index refresh.
+
 ### TrapezoidConfig
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.TrapezoidConfig/
 Trapezoid perspective configuration.
@@ -886,6 +902,10 @@ URL: https://pixi-reels.schmooky.dev/api/types/index.AnticipationProtect/
 URL: https://pixi-reels.schmooky.dev/api/types/index.AnticipationStagger/
 ```ts type AnticipationStagger = number | number[] | "sequential"; ```
 
+### BoardCellZIndexResolver
+URL: https://pixi-reels.schmooky.dev/api/types/index.BoardCellZIndexResolver/
+```ts type BoardCellZIndexResolver = (ctx: BoardCellZIndexContext) => number; ```
+
 ### BoardProfile
 URL: https://pixi-reels.schmooky.dev/api/types/index.BoardProfile/
 ```ts type BoardProfile =
@@ -925,6 +945,10 @@ URL: https://pixi-reels.schmooky.dev/api/types/index.HwEffect/
 ### HwLockAnimation
 URL: https://pixi-reels.schmooky.dev/api/types/index.HwLockAnimation/
 ```ts type HwLockAnimation = "win" | "landing" | "none"; ```
+
+### HwLockAnimationRule\<TData\>
+URL: https://pixi-reels.schmooky.dev/api/types/index.HwLockAnimationRule/
+```ts type HwLockAnimationRule<TData> =
 
 ### HwPhase
 URL: https://pixi-reels.schmooky.dev/api/types/index.HwPhase/
@@ -994,6 +1018,10 @@ URL: https://pixi-reels.schmooky.dev/api/types/index.Stacking/
 URL: https://pixi-reels.schmooky.dev/api/types/index.SymbolPoolSlots/
 ```ts type SymbolPoolSlots = "spinning" | "buffer" | "bufferStart" | "bufferEnd"; ```
 
+### SymbolZIndexResolver
+URL: https://pixi-reels.schmooky.dev/api/types/index.SymbolZIndexResolver/
+```ts type SymbolZIndexResolver = (ctx: SymbolZIndexContext) => number; ```
+
 ### TickerCallback
 URL: https://pixi-reels.schmooky.dev/api/types/index.TickerCallback/
 ```ts type TickerCallback = (ticker: Ticker) => void; ```
@@ -1001,6 +1029,10 @@ URL: https://pixi-reels.schmooky.dev/api/types/index.TickerCallback/
 ### WinSymbolAnim
 URL: https://pixi-reels.schmooky.dev/api/types/index.WinSymbolAnim/
 ```ts type WinSymbolAnim =
+
+### LandingDecision
+URL: https://pixi-reels.schmooky.dev/api/types/spine.LandingDecision/
+```ts type LandingDecision = boolean | string; ```
 
 ### SymbolAnimOverrides
 URL: https://pixi-reels.schmooky.dev/api/types/spine.SymbolAnimOverrides/
@@ -1041,6 +1073,10 @@ URL: https://pixi-reels.schmooky.dev/api/variables/index.VERTICAL_FORWARD/
 ### WILD\_CARD
 URL: https://pixi-reels.schmooky.dev/api/variables/index.WILD_CARD/
 ```ts const WILD_CARD: { color: 16774048; id: "wild"; label: "WILD"; textColor: 7033856; }; ```
+
+### Z\_INDEX\_BUDGET
+URL: https://pixi-reels.schmooky.dev/api/variables/index.Z_INDEX_BUDGET/
+```ts const Z_INDEX_BUDGET: { pinOverlay: 10000; symbolLayer: 100; }; ```
 
 ## Architecture deep-dives
 

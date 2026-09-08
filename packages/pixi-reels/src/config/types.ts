@@ -624,3 +624,84 @@ export interface ReelSetInternalConfig {
   offset: OffsetConfig;
   ticker: Ticker;
 }
+
+/**
+ * What a symbol is told about where it landed. Handed to
+ * `ReelSymbol.onReelLanded(ctx)` by the engine on every landing path, so a
+ * symbol can decide what its landing beat is on THIS reel and cell - or that
+ * it has none here - without the game reaching into the reel to find out.
+ */
+export interface ReelLandingContext {
+  /** Index of the reel that landed. */
+  reelIndex: number;
+  /** Reels in the set. `1` for a Hold & Win cell (each cell is its own set). */
+  reelCount: number;
+  /** 0-based visible cell the symbol landed in (0 = the reel's first visible cell). */
+  cell: number;
+  /** Visible cells on this reel. Varies per reel on a pyramid / MultiWays set. */
+  visibleCells: number;
+  /** The id the symbol shows. */
+  symbolId: string;
+}
+
+/**
+ * Everything a {@link SymbolZIndexResolver} is asked about. Built by the reel
+ * once per symbol per z-index refresh.
+ */
+export interface SymbolZIndexContext {
+  symbolId: string;
+  /** Resolved static metadata for this id (weight / zIndex / unmask / size). */
+  symbolData: SymbolData;
+  reelIndex: number;
+  reelCount: number;
+  /** Index in the reel's strip array - what the default formula uses. */
+  arrayIndex: number;
+  /**
+   * 0-based visible cell, or `null` for a buffer slot. A big symbol reports
+   * the cell its anchor sits in.
+   */
+  visibleCell: number | null;
+  /** Visible cells on THIS reel (varies per reel on a pyramid / MultiWays set). */
+  visibleCells: number;
+  /**
+   * `true` while the reel is fully at rest, i.e. `unmask` symbols are lifted
+   * into the viewport's shared `unmaskedContainer`, where a z-index orders
+   * them against every other lifted symbol in the set. `false` from the
+   * first frame of motion to the landing.
+   */
+  atRest: boolean;
+  /**
+   * What the engine would have used without a resolver:
+   * `symbolData.zIndex * 100 + cellStackingIndex`. Return it for ids the
+   * resolver does not care about.
+   */
+  defaultZIndex: number;
+}
+
+/**
+ * Replaces the engine's z-index formula for symbol views. See
+ * `ReelSetBuilder.symbolZIndex`. Must be pure and cheap: it is called once
+ * per symbol per refresh, and a refresh follows every wrap, snap, swap and
+ * rest transition.
+ */
+export type SymbolZIndexResolver = (ctx: SymbolZIndexContext) => number;
+
+/**
+ * The z-index values the engine reserves, so a {@link SymbolZIndexResolver}
+ * can be bounds-checked against the library instead of a copied literal.
+ *
+ * | Layer | zIndex |
+ * |---|---|
+ * | 1x1 symbol, default (`symbolData.zIndex` 1) | `1 * symbolLayer + arrayIndex` |
+ * | Big-symbol anchor, recipe convention (`zIndex: 5`) | `5 * symbolLayer + arrayIndex` |
+ * | Pin overlay (sticky / expanding wild during spin) | `pinOverlay` |
+ *
+ * A symbol that must draw above pin overlays is re-parented to
+ * `viewport.spotlightContainer` instead - that is its own layer above them.
+ */
+export const Z_INDEX_BUDGET = {
+  /** Multiplier on `symbolData.zIndex`; leaves room for per-cell stacking inside one layer. */
+  symbolLayer: 100,
+  /** Pin overlays. Keep every symbol z-index below this. */
+  pinOverlay: 10000,
+} as const;
