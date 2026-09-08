@@ -66,16 +66,19 @@ for (const path of CASCADE_PAGES) {
     const spins = page.getByRole('button', { name: 'Spin' });
     const count = await spins.count();
     expect(count, `${path} mounted no runnable demo`).toBeGreaterThan(0);
-    // Budget by demo count, as the scroll test does by page height: every
-    // demo costs a click, its settle and a share of the CI runner's software
-    // GL, and the cascade page is at 26 demos. A flat 60s ran out on the
-    // runner at about 45s of clicking with the 12s tail still to wait.
-    test.setTimeout(20_000 + count * 2_500 + 12_000);
+    // Budget by demo count, as the scroll test does by page height, with the
+    // old flat 60s as the floor: every demo costs a click, its settle and a
+    // share of the runner's software GL, and the cascade page is at 26.
+    test.setTimeout(Math.max(60_000, 20_000 + count * 3_000 + 12_000));
 
-    for (let i = 0; i < count; i++) {
-      const btn = spins.nth(i);
+    // Pin the buttons NOW. Once a demo is mid-round its button reads Skip, so
+    // the "Spin" locator shrinks under an index loop: `nth(i)` past the end
+    // waits the whole click timeout for an element that never comes, and a
+    // few of those on a slow runner ate the budget with the 12s tail unspent.
+    const buttons = await spins.elementHandles();
+    for (const btn of buttons) {
       if (!(await btn.isEnabled().catch(() => false))) continue;
-      await btn.click({ timeout: 10_000 }).catch(() => { /* mid-round relabel */ });
+      await btn.click({ timeout: 5_000 }).catch(() => { /* mid-round relabel */ });
       await page.waitForTimeout(400);
     }
 
