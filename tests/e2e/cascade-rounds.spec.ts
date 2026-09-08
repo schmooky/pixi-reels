@@ -66,19 +66,24 @@ for (const path of CASCADE_PAGES) {
     const spins = page.getByRole('button', { name: 'Spin' });
     const count = await spins.count();
     expect(count, `${path} mounted no runnable demo`).toBeGreaterThan(0);
-    // Budget by demo count, as the scroll test does by page height, with the
-    // old flat 60s as the floor: every demo costs a click, its settle and a
-    // share of the runner's software GL, and the cascade page is at 26.
-    test.setTimeout(Math.max(60_000, 20_000 + count * 3_000 + 12_000));
+    // Budget by the page's demo count, as the scroll test does by height,
+    // with the old flat 60s as the floor. Frames, not mounted buttons: on a
+    // slow runner only a third of the demos have mounted at count time, and
+    // a budget from that number came out BELOW the floor. The cascade page
+    // is at 26 frames.
+    const frames = await page.locator('.recipe-frame').count();
+    test.setTimeout(Math.max(60_000, 20_000 + frames * 3_000 + 12_000));
 
     // Pin the buttons NOW. Once a demo is mid-round its button reads Skip, so
     // the "Spin" locator shrinks under an index loop: `nth(i)` past the end
-    // waits the whole click timeout for an element that never comes, and a
-    // few of those on a slow runner ate the budget with the 12s tail unspent.
+    // waits the whole click timeout for an element that never comes. And
+    // click without actionability checks: under software GL a frame can take
+    // long enough that "stable" never holds for two of them in a row, and
+    // one waited-out click per demo is the whole budget.
     const buttons = await spins.elementHandles();
     for (const btn of buttons) {
       if (!(await btn.isEnabled().catch(() => false))) continue;
-      await btn.click({ timeout: 5_000 }).catch(() => { /* mid-round relabel */ });
+      await btn.click({ timeout: 5_000, force: true }).catch(() => { /* mid-round relabel */ });
       await page.waitForTimeout(400);
     }
 
