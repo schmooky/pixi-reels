@@ -234,6 +234,14 @@ The feature on its own: gold clovers lock with their amounts, blanks are the gam
 
 <RecipeDemo code="hold-and-win-clover-bonus" height={400} />
 
+<a id="hold-and-win-clover-cell-order"></a>
+
+## Draw order between cells
+
+Every cell is its own reel set, so the clovers the engine lifts above the cells at rest share one layer, drawn in attach order: column by column, which lets the next column's clover cover a lower clover's glow. `cellZIndex` sorts that layer by whatever the board says - here lower rows in front and the capsule on top of everything, re-asked on every place and landing.
+
+<RecipeDemo code="hold-and-win-clover-cell-order" height={400} />
+
 <a id="hold-and-win-clover-bonus-5x5"></a>
 
 ## Clover bonus board, 5x5
@@ -273,6 +281,14 @@ Non-monetary clovers act on the held gold between waves: MULTI doubles every amo
 Held clovers idle until the feature ends. When COLLECT locks, lightning strikes from it to each gold clover's number and the collect face counts the values up into its own value; the golds keep theirs, and the spent collector dims to grey, still held.
 
 <RecipeDemo code="hold-and-win-clover-collect" height={400} />
+
+<a id="hold-and-win-clover-lock-rule"></a>
+
+## The lock animation, per coin and after the landing
+
+`lockAnimation` may be a function of the coin that just locked: gold settles with its landing only, COLLECT celebrates. The celebration waits for the skeleton's own landing beat (`symbol.landing`) instead of taking its track from it, so the landing shows first and the win follows - the HUD prints when each finished.
+
+<RecipeDemo code="hold-and-win-clover-lock-rule" height={400} />
 
 <a id="hold-and-win-clover-mystery-capsule"></a>
 

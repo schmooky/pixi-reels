@@ -125,6 +125,12 @@ Three tiers of "draw my symbol on top": within one reel, above every reel and th
 
 <RecipeDemo code="layering-unmask" height={420} />
 
+**Your own order (symbolZIndex):** the engine's formula is type-dominant; a grading spec is row-dominant. Hand the engine a resolver and it keeps applying it after every wrap, swap and landing - here every mid and high is unmasked, so at rest the lower row fronts the one above whatever the symbol, and only a higher grade wins over that.
+
+<a id="layering-graded-zindex"></a>
+
+<RecipeDemo code="layering-graded-zindex" height={420} />
+
 **Gotcha:** unmask lifts VISIBLE cells only. The same id in a buffer cell stays under the mask, so oversized art cannot hang outside the grid from a slot the player was never meant to see. The demo below lands both at once - and holds through a skip, which is the moment that used to leak.
 
 <RecipeDemo code="unmask-stays-in-the-grid" height={400} />
@@ -132,6 +138,22 @@ Three tiers of "draw my symbol on top": within one reel, above every reel and th
 **Per-instance (promote the landed view into spotlightContainer):**
 
 <RecipeDemo code="layering-promote-jagged" height={420} />
+
+<AssetCredit studio="Thunderkick" />
+
+<a id="landing-signal"></a>
+
+## Landing: the frame, and the beat
+
+`spin:reelLanding` fires the frame a reel is on its result - strip snapped, every symbol told it landed, the bounce about to start. `spin:reelLanded` fires once the bounce has settled, a whole `bounceDuration` later. Anything coupled to the landing itself belongs on the first one; the demo grows a takeover plate over the copy reels on it and prints the gap.
+
+<RecipeDemo code="landing-signal" />
+
+Each symbol hears the same moment through `onReelLanded(ctx)`, with the reel and cell it landed in. A Spine symbol's `autoPlayLanding` can be a rule of that context: `true` for its landing, `false` for nothing, or an animation name for a different beat - so the copy reels land without a pose to fight the takeover, and the last two reels use a reveal as their landing.
+
+<a id="spine-landing-rule"></a>
+
+<RecipeDemo code="spine-landing-rule" height={460} />
 
 <AssetCredit studio="Thunderkick" />
 

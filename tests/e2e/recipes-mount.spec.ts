@@ -35,7 +35,7 @@ const BASE = `http://localhost:${PORT}`;
  */
 const PAGES = [
   ...['anticipation', 'big-symbols', 'cascade', 'cells-and-banners', 'hold-and-win',
-      'nudge', 'orientation-and-direction', 'starters', 'symbols', 'wilds-and-pins',
+      'masks', 'nudge', 'orientation-and-direction', 'starters', 'symbols', 'wilds-and-pins',
      ].map((s) => `/recipes/${s}/`),
   // The only guide that embeds recipes. Kept explicit rather than globbed so
   // adding <RecipeDemo> to another guide is a deliberate act, not a silent

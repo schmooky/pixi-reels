@@ -90,6 +90,14 @@ A pyramid has no single rectangle to round: per-reel rounding notches the seams,
 
 <RecipeDemo code="mask-inset-compose" />
 
+<a id="mask-inset-sides"></a>
+
+## A different trim per side
+
+Frame art rarely has four equal lips. `inset(strategy, { top, right, bottom, left })` names the sides the way the artist measured them - screen sides in every orientation, an omitted side untouched - so a rounded window with a thick bottom lip is one wrapped strategy, not a hand-drawn path.
+
+<RecipeDemo code="mask-inset-sides" />
+
 ## Writing your own
 
 Implement `build(ctx)` and `update(g, ctx)`, set `version = MASK_STRATEGY_VERSION`, pass it to `.maskStrategy(...)`. Reach for `PathMaskStrategy` first; a class only earns its keep when it holds state across draws.

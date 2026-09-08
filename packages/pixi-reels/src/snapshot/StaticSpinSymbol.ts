@@ -1,4 +1,5 @@
 import { Sprite } from 'pixi.js';
+import type { ReelLandingContext } from '../config/types.js';
 import type { gsap } from 'gsap';
 
 import { ReelSymbol } from '../symbols/ReelSymbol.js';
@@ -194,8 +195,9 @@ export class StaticSpinSymbol extends ReelSymbol {
     }
   }
 
-  override onReelLanded(): void {
-    if (!this._spinning) this._inner.onReelLanded();
+  override onReelLanded(ctx?: ReelLandingContext): void {
+    // Forward the context: the inner symbol's landing rule is keyed on it.
+    if (!this._spinning) this._inner.onReelLanded(ctx);
   }
 
   async playWin(): Promise<void> {
