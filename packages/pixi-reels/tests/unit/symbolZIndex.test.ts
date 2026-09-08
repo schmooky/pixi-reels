@@ -24,6 +24,9 @@ function build(resolver?: SymbolZIndexResolver, unmask = false): { reelSet: Reel
       r.register('a', HeadlessSymbol, {});
       r.register('w', HeadlessSymbol, {});
     })
+    // `w` only where the frames put it: a random buffer fill of `w` would
+    // make "the wild's context" ambiguous.
+    .weights({ a: 1, w: 0 })
     .symbolData({ w: { zIndex: 5, unmask } })
     .initialFrame([
       { visible: ['a', 'w', 'a'] },
@@ -48,7 +51,9 @@ describe('ReelSetBuilder.symbolZIndex', () => {
     });
     const reel = reelSet.reels[0];
     const bufferStart = reel.bufferStart;
-    const forWild = seen.filter((c) => c.symbolId === 'w' && c.reelIndex === 0).at(-1)!;
+    const forWild = seen.find(
+      (c) => c.symbolId === 'w' && c.reelIndex === 0 && c.arrayIndex === bufferStart + 1,
+    )!;
     expect(forWild).toMatchObject({
       reelIndex: 0,
       reelCount: 3,
