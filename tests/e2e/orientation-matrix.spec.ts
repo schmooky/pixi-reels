@@ -24,10 +24,23 @@ const PORT = 5180;
 const URL = `http://localhost:${PORT}/`;
 
 test.beforeAll(async () => {
+  // `--strictPort` makes vite exit rather than pick another port, so a stale
+  // server left on 5180 by an earlier run would answer the readiness fetch
+  // below and the whole suite would silently assert against a stale bundle.
+  // Refuse to attach to a server this spec did not start, the way the other
+  // two specs in this directory do.
+  let occupied = false;
+  try { occupied = (await fetch(URL)).ok; } catch { /* free, as wanted */ }
+  if (occupied) {
+    throw new Error(
+      `${URL} is already served by a process this spec did not start. ` +
+      `Kill it: pkill -f "vite --port ${PORT}"`,
+    );
+  }
   server = spawn(
     'pnpm',
     ['--filter', 'orientation-matrix', 'exec', 'vite', '--port', String(PORT), '--strictPort'],
-    { stdio: 'pipe', cwd: process.cwd() },
+    { stdio: 'pipe', cwd: process.cwd(), detached: true },
   );
   for (let i = 0; i < 60; i++) {
     try {
@@ -42,7 +55,12 @@ test.beforeAll(async () => {
 });
 
 test.afterAll(() => {
-  server?.kill('SIGTERM');
+  // Negative pid = the process group. SIGTERM to the pnpm wrapper alone leaves
+  // the vite child alive holding 5180, which is exactly the orphan the guard
+  // in beforeAll now has to reject.
+  if (server?.pid) {
+    try { process.kill(-server.pid, 'SIGTERM'); } catch { /* already gone */ }
+  }
   server = null;
 });
 
