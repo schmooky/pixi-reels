@@ -151,11 +151,14 @@ describe('BoardGrid render order', () => {
   it('draws every chrome under every reel and lifts unmasked views above all cells', () => {
     const grid = make({ chrome: (g: Graphics) => { g.rect(0, 0, 1, 1); } });
     const kids = grid.container.children;
-    // 6 cells: chrome x6, reel set x6, then the one lifted layer
-    expect(kids).toHaveLength(13);
+    // 6 cells: chrome x6, reel set x6, the lifted layer, then the empty
+    // layer `lift()` promotes into.
+    expect(kids).toHaveLength(14);
     expect(kids.slice(0, 6).every((c) => c instanceof Graphics)).toBe(true);
     expect(kids.slice(6, 12).every((c) => c instanceof ReelSet)).toBe(true);
     const layer = kids[12] as unknown as RenderLayer;
+    expect(layer).toBe(grid.liftedLayer);
+    expect((kids[13] as unknown as RenderLayer).renderLayerChildren).toHaveLength(0);
     expect(layer.renderLayerChildren).toHaveLength(6);
     for (const cell of grid.cells()) {
       expect(layer.renderLayerChildren).toContain(grid.reelAt(cell).viewport.unmaskedContainer);

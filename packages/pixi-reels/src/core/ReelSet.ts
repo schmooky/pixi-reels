@@ -8,6 +8,7 @@ import type {
   AnticipationStagger,
   AnticipationOptions,
   SlamOptions,
+  SymbolPosition,
 } from '../config/types.js';
 import { Z_INDEX_BUDGET } from '../config/types.js';
 import { EventEmitter } from '../events/EventEmitter.js';
@@ -2033,6 +2034,93 @@ export class ReelSet extends Container implements Disposable {
 
   get spotlight(): SymbolSpotlight {
     return this._spotlight;
+  }
+
+  /**
+   * Draw the symbols at these positions above every other symbol in the set,
+   * and above the mask, until the returned function is called. The bare
+   * promotion the spotlight does as one step of a bigger presentation: no
+   * dim, no `playWin()`, nothing to await.
+   *
+   * Unlike `spotlight.show()` this does not reparent. the views are attached
+   * to `viewport.promotedLayer`, which changes render order only, so their
+   * transforms are untouched and there is no stale-parent hazard when the
+   * symbol pool recycles an instance.
+   *
+   * The promotion covers the symbol INSTANCES currently at those positions.
+   * A swap under a promoted symbol - a spin, a cascade, a `setResult` - hands
+   * the cell a different instance, and that symbol's promotion ends with it:
+   * the raised view goes back to the pool, so leaving it attached would raise
+   * whatever cell the pool hands it to next. Promote at rest, or re-promote
+   * after the swap. The release stays safe to call either way, and calling it
+   * twice is a no-op.
+   *
+   * For the board-level equivalent - promote a whole cell, surviving swaps -
+   * see `BoardGrid.lift`.
+   *
+   * @example
+   * ```ts
+   * const drop = reelSet.promote([{ reelIndex: 2, cellIndex: 1 }]);
+   * await reelSet.getReel(2).getSymbolAt(1).playWin();
+   * drop();
+   * ```
+   */
+  promote(positions: SymbolPosition[]): () => void {
+    const layer = this._viewport.promotedLayer;
+    const raised: { reel: Reel; cell: number; symbol: ReelSymbol }[] = [];
+    const seen = new Set<string>();
+    for (const pos of positions) {
+      const reel = this._reels[pos.reelIndex];
+      if (!reel) {
+        throw new RangeError(
+          `promote(): reel ${pos.reelIndex} out of range [0, ${this._reels.length}).`,
+        );
+      }
+      if (pos.cellIndex < 0 || pos.cellIndex >= reel.visibleCells) {
+        throw new RangeError(
+          `promote(): cell ${pos.cellIndex} out of range [0, ${reel.visibleCells}) on reel ${pos.reelIndex}.`,
+        );
+      }
+      // A big symbol spans several positions; promote its one view once.
+      const anchor = reel.getAnchorCell(pos.cellIndex);
+      const key = `${pos.reelIndex}:${anchor}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const symbol = reel.getSymbolAt(pos.cellIndex);
+      layer.attach(symbol.view);
+      raised.push({ reel, cell: pos.cellIndex, symbol });
+    }
+
+    // Drop any entry whose cell no longer holds the instance we raised. The
+    // pool keeps a released view alive and `deactivate()` only hides it, so an
+    // attachment left behind would raise whatever cell the pool reuses it for.
+    const prune = (): void => {
+      for (let i = raised.length - 1; i >= 0; i--) {
+        const entry = raised[i];
+        if (entry.reel.getSymbolAt(entry.cell) === entry.symbol) continue;
+        if (entry.symbol.view.parentRenderLayer === layer) layer.detach(entry.symbol.view);
+        raised.splice(i, 1);
+      }
+    };
+    const watched = [...new Set(raised.map((e) => e.reel))];
+    for (const reel of watched) reel.events.on('symbol:created', prune);
+
+    let released = false;
+    return () => {
+      if (released) return;
+      released = true;
+      for (const reel of watched) reel.events.off('symbol:created', prune);
+      for (const { symbol } of raised) {
+        // Only ours: a later promote may have handed the view to another layer.
+        if (symbol.view.parentRenderLayer === layer) layer.detach(symbol.view);
+      }
+      raised.length = 0;
+    };
+  }
+
+  /** Symbol views currently raised by {@link promote}. Debug / assertion surface. */
+  get promotedViews(): readonly Container[] {
+    return this._viewport.promotedLayer.renderLayerChildren as readonly Container[];
   }
 
   // ─── Curve API ────────────────────────────────────────────

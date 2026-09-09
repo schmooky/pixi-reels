@@ -1,4 +1,4 @@
-import { Container, Graphics } from 'pixi.js';
+import { Container, Graphics, RenderLayer } from 'pixi.js';
 import type { Disposable } from '../utils/Disposable.js';
 import type { ReelAxis } from './ReelAxis.js';
 import { VERTICAL_FORWARD } from './ReelAxis.js';
@@ -227,6 +227,9 @@ export class SharedRectMaskStrategy implements MaskStrategy {
  *     wild, a splash frame).
  *   - `spotlightContainer`. above everything else. Win spotlight lifts
  *     winning symbols here temporarily so dim overlay + bounce don't clip.
+ *   - `promotedLayer`. a `RenderLayer` above all three, where
+ *     `ReelSet.promote()` draws a symbol without moving it. Empty unless
+ *     someone calls `promote()`.
  *
  * `dimOverlay` is a semi-transparent rectangle the spotlight fades in
  * behind the promoted winners to visually push the losers into the
@@ -237,6 +240,13 @@ export class ReelViewport extends Container implements Disposable {
   public readonly unmaskedContainer: Container;
   public readonly spotlightContainer: Container;
   public readonly dimOverlay: Graphics;
+  /**
+   * Draw order for symbols `ReelSet.promote()` has raised: a `RenderLayer`,
+   * so a promoted view renders here while keeping its real parent - no
+   * reparenting, no transform re-bake, and the mask it escapes is the one
+   * that clips its parent rather than one it was moved out of.
+   */
+  public readonly promotedLayer: RenderLayer;
 
   private _mask: Graphics;
   private _maskStrategy: MaskStrategy;
@@ -291,6 +301,13 @@ export class ReelViewport extends Container implements Disposable {
     this.spotlightContainer = new Container();
     this.spotlightContainer.sortableChildren = true;
     this.addChild(this.spotlightContainer);
+
+    // Last child, so a promoted view draws above every container above -
+    // including a spotlight running at the same time. Sortable by the same
+    // `zIndex` a symbol already carries, so several promoted symbols keep
+    // the order the set gave them.
+    this.promotedLayer = new RenderLayer({ sortableChildren: true });
+    this.addChild(this.promotedLayer);
   }
 
   /** The viewport mask bounding box width (independent of children bounds). */
@@ -347,6 +364,9 @@ export class ReelViewport extends Container implements Disposable {
   destroy(): void {
     if (this._isDestroyed) return;
     this._isDestroyed = true;
+    // Clear the back-reference every attached view holds before the layer
+    // goes; a view the symbol pool outlives must not point at a dead layer.
+    this.promotedLayer.detachAll();
     super.destroy({ children: true });
   }
 }
