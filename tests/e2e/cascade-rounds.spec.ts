@@ -21,6 +21,14 @@ let server: ChildProcess | null = null;
 const PORT = 4332;
 const BASE = `http://localhost:${PORT}`;
 
+/**
+ * `ASTRO_PREVIEW_BACKGROUND` set to anything only turns OFF astro 7's agent
+ * auto-detect (`!process.env.ASTRO_PREVIEW_BACKGROUND && isRunByAgent()`), which
+ * is what would otherwise daemonize the server out from under `afterAll`. It does
+ * not request a background server; `--background` does that, and we never pass it.
+ */
+const PREVIEW_ENV = { ...process.env, ASTRO_PREVIEW_BACKGROUND: '1' };
+
 /** Umbrella pages that host at least one `runCascade` recipe. */
 const CASCADE_PAGES = ['/recipes/cascade/', '/recipes/big-symbols/'];
 
@@ -31,9 +39,20 @@ test.beforeAll(async () => {
     throw new Error(`${BASE} is already served by a process this spec did not start. ` +
       `Kill it: pkill -f "astro preview --port ${PORT}"`);
   }
-  server = spawn('pnpm', ['--filter', 'site', 'exec', 'astro', 'preview', '--port', String(PORT)], {
-    stdio: 'pipe', cwd: process.cwd(), detached: true,
-  });
+  server = spawn(
+    'pnpm',
+    // astro 7 turned `preview` into a managed server: it writes a project-wide
+    // lock and refuses to start a second one even on a different port, and it
+    // daemonizes itself when it detects an agent environment. Two specs each run
+    // their own preview on their own port, and both do their own port guard above
+    // plus a process-group kill in afterAll, so neither behavior helps here.
+    //   --ignore-lock          -> coexist with the other spec's server
+    //   ASTRO_PREVIEW_BACKGROUND -> only suppresses the agent auto-detect, so the
+    //                            server stays in the foreground and dies with us
+    // The two must go together: astro rejects --ignore-lock for a background server.
+    ['--filter', 'site', 'exec', 'astro', 'preview', '--ignore-lock', '--port', String(PORT)],
+    { stdio: 'pipe', cwd: process.cwd(), detached: true, env: PREVIEW_ENV },
+  );
   for (let i = 0; i < 90; i++) {
     try { if ((await fetch(`${BASE}/`)).ok) return; } catch { /* not up yet */ }
     await wait(500);

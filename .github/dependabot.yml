@@ -38,11 +38,6 @@ updates:
       - dependency-name: '@esotericsoftware/spine-pixi-v8'
       - dependency-name: 'pixi.js'
       - dependency-name: 'gsap'
-      # Vite 8.0.10+ rolldown bindings break @tailwindcss/vite and astro 6.x.
-      # Pinned to 8.0.9 via package.json ranges. Revisit when astro and
-      # tailwind catch up.
-      - dependency-name: 'vite'
-        versions: ['>= 8.0.10']
 
   # GitHub Actions workflows under .github/workflows
   - package-ecosystem: github-actions
