@@ -242,6 +242,22 @@ Every cell is its own reel set, so the clovers the engine lifts above the cells 
 
 <RecipeDemo code="hold-and-win-clover-cell-order" height={400} />
 
+<a id="hold-and-win-clover-lift"></a>
+
+## One cell in front, for a beat
+
+`cellZIndex` is the at-rest order and the board re-asks it on every place and every landing, so a clover that must not be overlapped while it upgrades cannot express that by returning a bigger number: the next landing overwrites it mid-animation. `board.lift(cell)` promotes the cell on a separate channel and hands back a release - the refresh keeps running underneath and cannot touch it, and the release restores the cell's place without recomputing anything.
+
+<RecipeDemo code="hold-and-win-clover-lift" height={400} />
+
+<a id="hold-and-win-clover-lift-dim"></a>
+
+## Lift one cell, dim the rest
+
+`board.dim({ except })` is the partner of `lift()`: it draws above every cell's clover and below anything lifted, so a lifted cell stays in front of the dim whether or not it is excepted. A dim covers cells, not symbol ids - this collect resolves the gold clovers it is about to sweep to cells and spares them, so the money stays bright while the blanks go dark.
+
+<RecipeDemo code="hold-and-win-clover-lift-dim" height={400} />
+
 <a id="hold-and-win-clover-bonus-5x5"></a>
 
 ## Clover bonus board, 5x5
