@@ -201,6 +201,14 @@ export class BoardGrid implements Disposable {
    * the neighbour's edge.
    */
   private readonly _lifted: RenderLayer;
+  /**
+   * The lifted art of cells a consumer has {@link lift}ed, rendered above
+   * `_lifted` - the transient exception to `cellZIndex`. Empty until someone
+   * calls `lift()`, so a board that never does renders exactly as before.
+   */
+  private readonly _promoted: RenderLayer;
+  /** Outstanding {@link lift} count per cell key, in lift order. */
+  private readonly _liftCounts = new Map<string, number>();
   private readonly _cellZIndex: BoardCellZIndexResolver | null;
   private _destroyed = false;
 
@@ -298,6 +306,11 @@ export class BoardGrid implements Disposable {
     for (const reelSet of this._reels.values()) {
       this._lifted.attach(reelSet.viewport.unmaskedContainer);
     }
+    // Added after `_lifted`, so anything attached here draws above every
+    // cell's at-rest art. Sorted on the same terms: two cells lifted at once
+    // keep the order `cellZIndex` gave them.
+    this._promoted = new RenderLayer({ sortableChildren: this._cellZIndex !== null });
+    this.container.addChild(this._promoted);
     this.refreshCellZIndex();
   }
 
@@ -309,6 +322,91 @@ export class BoardGrid implements Disposable {
    */
   get liftedLayer(): RenderLayer {
     return this._lifted;
+  }
+
+  /**
+   * Draw one cell's lifted art in front of every other cell's until the
+   * returned function is called - the transient exception to the board's
+   * at-rest order (`cellZIndex`). For a symbol whose one-shot must not be
+   * overlapped by a neighbour's art: a coin upgrading in place, a collect
+   * sweeping the board, a symbol firing at another cell.
+   *
+   * Promotion is a SEPARATE channel from `zIndex`, so a lift survives
+   * {@link refreshCellZIndex} - which keeps writing the lifted cell's
+   * `zIndex` throughout, ordering it for the moment it comes back - and
+   * releasing restores the cell's place exactly, recomputing nothing.
+   *
+   * Lifts are reference-counted per cell and the returned release is
+   * idempotent, so overlapping lifts of one cell cannot strand each other.
+   * Several lifted cells keep their relative at-rest order.
+   *
+   * Scope: this promotes the cell's LIFTED art - the views the engine hoists
+   * out of the cell for a symbol registered `unmask: true`, which is what the
+   * board renders above all cells in the first place. A cell showing a masked
+   * symbol has nothing in that layer, so lifting it is a no-op; masked art is
+   * clipped to its own cell and cannot overlap a neighbour anyway.
+   *
+   * Lifting is presentation only: no ledger, no phase, no event. A lift held
+   * across a respin is legal - the caller owns its own choreography - and is
+   * released only by its own release, {@link destroy}, or (on a
+   * `HoldAndWinBoard`) `reset()`.
+   *
+   * @example
+   * ```ts
+   * const release = board.lift(cell);
+   * await board.symbolAt(cell).playWin();
+   * release();
+   * ```
+   */
+  lift(cell: BoardCell): () => void {
+    // A feature can end while a reveal is still awaiting; a lift on a dead
+    // board is a no-op rather than a crash. The coordinate check comes after,
+    // so a destroyed board never reports a valid cell as out of range.
+    if (this._destroyed) return () => {};
+    const reelSet = this._reel(cell);
+    const k = key(cell);
+    const count = this._liftCounts.get(k) ?? 0;
+    // Re-setting an existing key keeps its insertion order, so `liftedCells`
+    // reports first-lift order rather than last-increment order.
+    this._liftCounts.set(k, count + 1);
+    if (count === 0) this._promoted.attach(reelSet.viewport.unmaskedContainer);
+
+    let released = false;
+    return () => {
+      if (released) return;
+      released = true;
+      if (this._destroyed) return;
+      const held = this._liftCounts.get(k) ?? 0;
+      if (held <= 1) {
+        this._liftCounts.delete(k);
+        this._lifted.attach(reelSet.viewport.unmaskedContainer);
+      } else {
+        this._liftCounts.set(k, held - 1);
+      }
+    };
+  }
+
+  /** Currently lifted cells, in lift order. Debug / assertion surface. */
+  get liftedCells(): BoardCell[] {
+    return [...this._liftCounts.keys()].map((k) => {
+      const [reel, cell] = k.split(',');
+      return { reel: Number(reel), cell: Number(cell) };
+    });
+  }
+
+  /**
+   * Drop every outstanding lift at once, whatever its reference count.
+   * Called by `reset()` and `destroy()` on a `HoldAndWinBoard`, so a feature
+   * that ends mid-animation cannot leave a cell stuck in front. Releases
+   * handed out before this stay safe to call - they become no-ops.
+   */
+  releaseAllLifts(): void {
+    if (this._liftCounts.size === 0) return;
+    for (const k of this._liftCounts.keys()) {
+      const reelSet = this._reels.get(k);
+      if (reelSet) this._lifted.attach(reelSet.viewport.unmaskedContainer);
+    }
+    this._liftCounts.clear();
   }
 
   /**
@@ -448,6 +546,7 @@ export class BoardGrid implements Disposable {
 
   destroy(): void {
     if (this._destroyed) return;
+    this.releaseAllLifts();
     this._destroyed = true;
     for (const reelSet of this._reels.values()) reelSet.destroy();
     this._reels.clear();
