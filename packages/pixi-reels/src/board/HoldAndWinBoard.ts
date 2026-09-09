@@ -181,6 +181,29 @@ export class HoldAndWinBoard<TData = unknown> implements Disposable {
   get liftedLayer(): RenderLayer {
     return this._grid.liftedLayer;
   }
+  /**
+   * Draw one cell's lifted art in front of every other cell's until the
+   * returned release is called - a coin upgrading in place, a collect
+   * sweeping the board. See `BoardGrid.lift`. Released by {@link reset} and
+   * {@link destroy}; NOT by {@link respin}, so a presentation may legitimately
+   * span a respin.
+   */
+  lift(cell: HwCell): () => void {
+    return this._grid.lift(cell);
+  }
+  /** Currently lifted cells, in lift order. See `BoardGrid.liftedCells`. */
+  get liftedCells(): HwCell[] {
+    return this._grid.liftedCells;
+  }
+  /**
+   * Re-ask the `cellZIndex` resolver for every cell. See
+   * `BoardGrid.refreshCellZIndex`. The board already calls it on every place
+   * and every landing; call it yourself when the resolver depends on state
+   * the board does not watch - a HUD multiplier, a collected total.
+   */
+  refreshCellZIndex(): void {
+    this._grid.refreshCellZIndex();
+  }
   /** Number of active cells - what `isFull` is measured against. */
   get capacity(): number {
     return this._state.capacity;
@@ -394,6 +417,8 @@ export class HoldAndWinBoard<TData = unknown> implements Disposable {
    */
   reset(): void {
     const effects = this._state.reset();
+    // A feature that ends mid-animation must not leave a cell stuck in front.
+    this._grid.releaseAllLifts();
     for (const cell of this._grid.cells()) this._grid.place(cell, this._emptyId);
     this._dressInactive();
     this._apply(effects);
