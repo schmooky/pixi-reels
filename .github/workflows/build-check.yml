@@ -38,8 +38,10 @@ jobs:
       - name: Build docs site
         run: pnpm site:build
 
-      - name: Bundle size report
-        # Informational on PRs - prints the gzipped size of the library dist.
-        # Once the baseline is populated (`pnpm size:update` on main), switch
-        # to `pnpm size:check` to enforce the drift tolerance.
-        run: pnpm size
+      - name: Bundle size check
+        # Fails the PR when the library's gzipped dist grows more than
+        # DRIFT_TOLERANCE_PCT (10%) over ci/size-baseline.json. One-sided:
+        # shrinking never fails. Growth that is intentional is accepted by
+        # rewriting the baseline, which the failure message spells out:
+        #   node scripts/size-check.mjs --update && git add ci/size-baseline.json
+        run: pnpm size:check
