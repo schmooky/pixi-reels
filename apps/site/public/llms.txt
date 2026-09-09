@@ -1046,6 +1046,10 @@ URL: https://pixi-reels.schmooky.dev/api/variables/index.CARD_DECK/
 URL: https://pixi-reels.schmooky.dev/api/variables/index.CURVE_FOCUS_WEIGHT/
 ```ts const CURVE_FOCUS_WEIGHT: Record<CurveFocus, number>; ```
 
+### DEFAULT\_DIM\_FADE\_MS
+URL: https://pixi-reels.schmooky.dev/api/variables/index.DEFAULT_DIM_FADE_MS/
+```ts const DEFAULT_DIM_FADE_MS: 180 = 180; ```
+
 ### DEFAULTS
 URL: https://pixi-reels.schmooky.dev/api/variables/index.DEFAULTS/
 ```ts const DEFAULTS: { bufferSymbols: number; initialSpeed: string; maxPoolPerKey: number; symbolGap: { x: number; y: number; }; zIndexStep: number; }; ```
@@ -9887,6 +9891,10 @@ URL: https://pixi-reels.schmooky.dev/recipes/hold-and-win-clover-lift-dim/
 // A dim covers CELLS, not symbol ids. This collect spares every gold clover
 // it is about to sweep, so the money stays bright while the blanks go dark:
 // the ids are resolved to cells at the call site, where the game knows them.
+//
+// It fades rather than pops - `fade` milliseconds in and the same back out,
+// off the board's own ticker. Fast enough to belong to the collect's first
+// beat instead of reading as a transition of its own; `fade: 0` cuts.
 
 const COLS = 5, ROWS = 3;
 const CELL = { width: 101, height: 85 }, COLUMN_GAP = 8, ROW_GAP = 8;
@@ -9945,7 +9953,7 @@ const SEED = [...GOLDS.map((c) => gold(c)), { cell: COLLECTOR, id: 'collect', da
 async function collect() {
   // Both releases live in this function - `finally` puts the board back
   // however the sweep ends.
-  const undim = board.dim({ except: [COLLECTOR, ...GOLDS], amount: 0.65 });
+  const undim = board.dim({ except: [COLLECTOR, ...GOLDS], amount: 0.65, fade: 220 });
   const drop = board.lift(COLLECTOR);
   const collector = board.symbolAt(COLLECTOR);
   let total = 0;
