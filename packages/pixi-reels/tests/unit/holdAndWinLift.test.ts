@@ -113,6 +113,21 @@ describe('HoldAndWinBoard lift passthrough', () => {
     destroy();
   });
 
+  it('dims every cell but the excepted ones, and drops it on reset', () => {
+    const { board, destroy } = make();
+    const spared = { reel: 1, cell: 1 };
+    board.enter([{ cell: spared, id: 'coin' }]);
+    board.dim({ except: [spared], amount: 0.7 });
+    expect(board.dimmedCells).toHaveLength(5);
+    expect(board.dimmedCells).not.toContainEqual(spared);
+
+    board.reset();
+    expect(board.dimmedCells).toEqual([]);
+    // The reset cleared it, so a fresh dim must be allowed.
+    expect(() => board.dim()).not.toThrow();
+    destroy();
+  });
+
   it('drops every lift on destroy', () => {
     const { board, destroy } = make();
     const release = board.lift({ reel: 0, cell: 0 });

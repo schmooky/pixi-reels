@@ -196,6 +196,18 @@ export class HoldAndWinBoard<TData = unknown> implements Disposable {
     return this._grid.liftedCells;
   }
   /**
+   * Push every cell except these into the background until the returned
+   * release is called - the partner of {@link lift}. See `BoardGrid.dim`.
+   * Released by {@link reset} and {@link destroy}.
+   */
+  dim(opts: { except?: HwCell[]; amount?: number } = {}): () => void {
+    return this._grid.dim(opts);
+  }
+  /** Cells a {@link dim} currently covers. See `BoardGrid.dimmedCells`. */
+  get dimmedCells(): HwCell[] {
+    return this._grid.dimmedCells;
+  }
+  /**
    * Re-ask the `cellZIndex` resolver for every cell. See
    * `BoardGrid.refreshCellZIndex`. The board already calls it on every place
    * and every landing; call it yourself when the resolver depends on state
@@ -417,8 +429,10 @@ export class HoldAndWinBoard<TData = unknown> implements Disposable {
    */
   reset(): void {
     const effects = this._state.reset();
-    // A feature that ends mid-animation must not leave a cell stuck in front.
+    // A feature that ends mid-animation must not leave a cell stuck in front
+    // or the board stuck under a dim.
     this._grid.releaseAllLifts();
+    this._grid.clearDim();
     for (const cell of this._grid.cells()) this._grid.place(cell, this._emptyId);
     this._dressInactive();
     this._apply(effects);

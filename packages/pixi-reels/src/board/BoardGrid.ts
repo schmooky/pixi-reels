@@ -209,6 +209,19 @@ export class BoardGrid implements Disposable {
   private readonly _promoted: RenderLayer;
   /** Outstanding {@link lift} count per cell key, in lift order. */
   private readonly _liftCounts = new Map<string, number>();
+  /**
+   * Holds the {@link dim} rectangles, one per dimmed cell. A child of
+   * `container` for its transform, drawn through `_dimLayer` for its order.
+   */
+  private readonly _dimHost: Container;
+  /**
+   * Where the dim rectangles draw: above `_lifted`, so a dimmed cell's
+   * lifted art goes down with it, and below `_promoted`, so a lifted cell
+   * stays out in front of the dim.
+   */
+  private readonly _dimLayer: RenderLayer;
+  /** Set while a {@link dim} is up - only one at a time is meaningful. */
+  private _dimmed: BoardCell[] | null = null;
   private readonly _cellZIndex: BoardCellZIndexResolver | null;
   private _destroyed = false;
 
@@ -306,9 +319,15 @@ export class BoardGrid implements Disposable {
     for (const reelSet of this._reels.values()) {
       this._lifted.attach(reelSet.viewport.unmaskedContainer);
     }
-    // Added after `_lifted`, so anything attached here draws above every
-    // cell's at-rest art. Sorted on the same terms: two cells lifted at once
-    // keep the order `cellZIndex` gave them.
+    this._dimHost = new Container();
+    this.container.addChild(this._dimHost);
+    this._dimLayer = new RenderLayer();
+    this.container.addChild(this._dimLayer);
+    this._dimLayer.attach(this._dimHost);
+    // Added after `_lifted` and the dim, so anything attached here draws
+    // above every cell's at-rest art and stays out of the dim. Sorted on the
+    // same terms as `_lifted`: two cells lifted at once keep the order
+    // `cellZIndex` gave them.
     this._promoted = new RenderLayer({ sortableChildren: this._cellZIndex !== null });
     this.container.addChild(this._promoted);
     this.refreshCellZIndex();
@@ -407,6 +426,83 @@ export class BoardGrid implements Disposable {
       if (reelSet) this._lifted.attach(reelSet.viewport.unmaskedContainer);
     }
     this._liftCounts.clear();
+  }
+
+  /**
+   * Push every cell except these into the background until the returned
+   * function is called - the board-level counterpart to a `ReelSet`'s
+   * spotlight dim, and the natural partner of {@link lift}: one cell forward,
+   * the rest back, for the length of one beat.
+   *
+   * One black rectangle per dimmed cell, drawn above the cells' lifted art
+   * and below anything {@link lift}ed - so a lifted cell stays out in front
+   * of the dim whether or not it is excepted, while its cell background goes
+   * down with the rest unless you name it in `except`.
+   *
+   * A dim covers CELLS, not symbol ids. To keep every coin of one kind bright,
+   * resolve the ids to cells first and pass those.
+   *
+   * Only one dim at a time is meaningful, so a second call throws rather than
+   * silently replacing the first. Release is idempotent.
+   *
+   * @example
+   * ```ts
+   * const undim = board.dim({ except: [cell], amount: 0.6 });
+   * const drop = board.lift(cell);
+   * await board.symbolAt(cell).playWin();
+   * drop();
+   * undim();
+   * ```
+   */
+  dim(opts: { except?: BoardCell[]; amount?: number } = {}): () => void {
+    if (this._destroyed) return () => {};
+    if (this._dimmed) {
+      throw new Error(
+        'BoardGrid.dim(): a dim is already up. Release it before dimming again - ' +
+        'two dims with different exceptions have no meaning.',
+      );
+    }
+    const amount = opts.amount ?? 0.5;
+    if (!(amount >= 0 && amount <= 1)) {
+      throw new RangeError(`BoardGrid.dim(): amount must be within [0, 1], got ${amount}.`);
+    }
+    const spared = new Set((opts.except ?? []).map((c) => key(this._assertCell(c))));
+    const dimmed: BoardCell[] = [];
+    for (const cell of this._cells) {
+      if (spared.has(key(cell))) continue;
+      const bounds = this.cellBounds(cell);
+      const rect = new Graphics()
+        .rect(bounds.x, bounds.y, bounds.width, bounds.height)
+        .fill({ color: 0x000000, alpha: 1 });
+      rect.alpha = amount;
+      this._dimHost.addChild(rect);
+      dimmed.push({ reel: cell.reel, cell: cell.cell });
+    }
+    this._dimmed = dimmed;
+
+    let released = false;
+    return () => {
+      if (released) return;
+      released = true;
+      if (this._destroyed) return;
+      this._dimHost.removeChildren().forEach((c) => c.destroy());
+      this._dimmed = null;
+    };
+  }
+
+  /**
+   * Drop the dim, whatever holds it. Called by `reset()` and `destroy()` on a
+   * `HoldAndWinBoard`; a release handed out before this stays a safe no-op.
+   */
+  clearDim(): void {
+    if (!this._dimmed) return;
+    this._dimHost.removeChildren().forEach((c) => c.destroy());
+    this._dimmed = null;
+  }
+
+  /** Cells a {@link dim} currently covers; empty when nothing is dimmed. */
+  get dimmedCells(): BoardCell[] {
+    return this._dimmed ? this._dimmed.map((c) => ({ reel: c.reel, cell: c.cell })) : [];
   }
 
   /**
@@ -547,6 +643,7 @@ export class BoardGrid implements Disposable {
   destroy(): void {
     if (this._destroyed) return;
     this.releaseAllLifts();
+    this.clearDim();
     this._destroyed = true;
     for (const reelSet of this._reels.values()) reelSet.destroy();
     this._reels.clear();
@@ -559,6 +656,12 @@ export class BoardGrid implements Disposable {
       x: cell.reel * (this.cellWidth + this.columnGap),
       y: cell.cell * (this.cellHeight + this.rowGap),
     };
+  }
+
+  /** Throw for a coordinate outside the grid; returns it for chaining. */
+  private _assertCell(cell: BoardCell): BoardCell {
+    this._reel(cell);
+    return cell;
   }
 
   private _reel(cell: BoardCell): ReelSet {
