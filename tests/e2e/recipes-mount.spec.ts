@@ -159,6 +159,8 @@ const DRIVEN: { path: string; anchor: string; ms: number }[] = [
   { path: '/recipes/hold-and-win/', anchor: 'hold-and-win-clover-lift-dim', ms: 9_000 },
   // `dim()` and `dimSymbols()` back to back, both under a `lift()`.
   { path: '/recipes/hold-and-win/', anchor: 'hold-and-win-clover-dim-symbols', ms: 12_000 },
+  // One cell, chrome background vs symbol art, four dims in a row.
+  { path: '/recipes/hold-and-win/', anchor: 'hold-and-win-clover-dim-one-cell', ms: 12_000 },
   // `reelSet.promote()` around a GSAP tween, run twice.
   { path: '/recipes/symbols/', anchor: 'clover-promote-win-line', ms: 12_000 },
 ];
