@@ -19,12 +19,6 @@
   "files": [],
   "references": [
     { "path": "./packages/pixi-reels" },
-    { "path": "./examples/classic-spin" },
-    { "path": "./examples/cascade-tumble" },
-    { "path": "./examples/big-symbols" },
-    { "path": "./examples/multiways" },
-    { "path": "./examples/pyramid-cascade" },
-    { "path": "./examples/sandbox" },
     { "path": "./apps/site" }
   ]
 }

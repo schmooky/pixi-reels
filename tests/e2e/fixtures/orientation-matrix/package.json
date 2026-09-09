@@ -11,10 +11,10 @@
     "@esotericsoftware/spine-pixi-v8": "~4.2.110",
     "gsap": "^3.15.0",
     "pixi-reels": "workspace:*",
-    "pixi.js": "^8.18.1"
+    "pixi.js": "^8.20.1"
   },
   "devDependencies": {
     "typescript": "^6.0.3",
-    "vite": "^8.0.9"
+    "vite": "^8.2.2"
   }
 }
