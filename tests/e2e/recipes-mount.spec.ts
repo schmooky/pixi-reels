@@ -18,6 +18,12 @@ import { setTimeout as wait } from 'node:timers/promises';
  * Asserts on the CANVAS plus a clean console rather than pixels -- a WebGL
  * screenshot baseline is GPU- and platform-dependent (same reasoning as
  * orientation-matrix.spec.ts).
+ *
+ * A third section drives named demos through their spin button, because
+ * mounting proves nothing about a recipe whose point is inside `onSpin`. It
+ * lives here rather than in its own spec so it shares this file's preview
+ * server: the guard above refuses to attach to a server it did not start, and
+ * a second spec booting its own would race this one for the port.
  */
 
 let server: ChildProcess | null = null;
@@ -127,6 +133,81 @@ for (const path of PAGES) {
     expect(failures, `${path} has recipe(s) that threw on mount`).toEqual([]);
 
     expect(errors, `${path} logged console errors while mounting`).toEqual([]);
+  });
+}
+
+/**
+ * Demos whose whole point is in `onSpin`: the layering APIs they exercise are
+ * only called once the choreography starts, so a recipe can mount perfectly
+ * and throw on the first `lift()`. Neither section above would notice --
+ * `recipes mount` only reaches demos near the top of a page, and `recipes
+ * survive scrolling` mounts every demo but presses nothing.
+ *
+ * This asserts that the choreography RUNS to the end without throwing. It
+ * does not assert what it drew: draw order is a scene-graph fact, pinned by
+ * the unit tests (boardGridLift, boardGridDim, reelSetPromote), and a WebGL
+ * pixel baseline is GPU-dependent for the reason given at the top.
+ *
+ * `ms` is how long that recipe's own choreography takes, plus slack: too
+ * short and the assertion fires mid-run, which passes for the wrong reason.
+ */
+const DRIVEN: { path: string; anchor: string; ms: number }[] = [
+  // A lift held across three respin landings, each one a whole-board
+  // `refreshCellZIndex()` over the lifted cell.
+  { path: '/recipes/hold-and-win/', anchor: 'hold-and-win-clover-lift', ms: 12_000 },
+  // `dim({ except })` under a `lift()`, both released in a `finally`.
+  { path: '/recipes/hold-and-win/', anchor: 'hold-and-win-clover-lift-dim', ms: 9_000 },
+  // `dim()` and `dimSymbols()` back to back, both under a `lift()`.
+  { path: '/recipes/hold-and-win/', anchor: 'hold-and-win-clover-dim-symbols', ms: 12_000 },
+  // One cell, chrome background vs symbol art, four dims in a row.
+  { path: '/recipes/hold-and-win/', anchor: 'hold-and-win-clover-dim-one-cell', ms: 12_000 },
+  // `reelSet.promote()` around a GSAP tween, run twice.
+  { path: '/recipes/symbols/', anchor: 'clover-promote-win-line', ms: 12_000 },
+];
+
+for (const { path, anchor, ms } of DRIVEN) {
+  test(`recipe runs its choreography: ${anchor}`, async ({ page }) => {
+    // Mounting a Spine-heavy demo on CI's software GL is the slow part, not
+    // the run itself; the default 60s is not enough once `ms` is on top.
+    test.setTimeout(ms + 90_000);
+
+    const errors: string[] = [];
+    page.on('console', (msg) => {
+      if (msg.type() === 'error') errors.push(msg.text());
+    });
+    page.on('pageerror', (err) => errors.push(String(err)));
+
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto(`${BASE}${path}`, { waitUntil: 'networkidle' });
+
+    // The MDX emits `<a id> <h2> <p> <div class="recipe-frame">` as siblings,
+    // so the first frame after the anchor is that heading's demo.
+    const frame = page.locator(`#${anchor} ~ .recipe-frame`).first();
+    await expect(frame, `${anchor} has no demo frame on ${path}`).toHaveCount(1);
+    await frame.scrollIntoViewIfNeeded();
+
+    // LazyRecipeRunner mounts on intersection, then the recipe loads its
+    // atlases and skeletons before a canvas exists at all.
+    await expect(frame.locator('canvas')).toBeVisible({ timeout: 60_000 });
+    const mountFailures = (await frame.locator('.text-destructive').allInnerTexts())
+      .map((t) => t.trim()).filter(Boolean);
+    expect(mountFailures, `${anchor} threw on mount`).toEqual([]);
+
+    await frame.getByRole('button', { name: 'Spin' }).click();
+    await page.waitForTimeout(ms);
+
+    // Both assertions below are load-bearing, and they catch different
+    // shapes. A throw on the awaited path is caught by the runner and
+    // rendered over the slot without ever reaching the console; a throw in a
+    // branch the recipe started but has not awaited yet (the lift demo runs
+    // its upgrade alongside the respins) surfaces as an unhandled rejection
+    // instead. Verified by breaking the lift recipe on purpose: the slot
+    // stayed clean and `errors` went red.
+    const shown = (await frame.locator('.text-destructive').allInnerTexts())
+      .map((t) => t.trim()).filter(Boolean);
+    expect(shown, `${anchor} threw while running its choreography`).toEqual([]);
+
+    expect(errors, `${anchor} logged console errors while running`).toEqual([]);
   });
 }
 

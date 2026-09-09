@@ -141,6 +141,12 @@ Three tiers of "draw my symbol on top": within one reel, above every reel and th
 
 <AssetCredit studio="Thunderkick" />
 
+<a id="clover-promote-win-line"></a>
+
+**The same job in one call (`reelSet.promote`):** the demo above hand-rolls it - capture each view's parent and position, reparent into `spotlightContainer`, put every one back before the strip moves. `promote(positions)` is that, as a value: it attaches the views to a render layer instead of reparenting, so nothing moves, nothing has to be put back, and the returned release drops them. Unlike `spotlight.show()` there is no dim, no `playWin()` and nothing to await, so the game's own timeline stays in charge. Below, the same tween runs twice - once clipped, once promoted.
+
+<RecipeDemo code="clover-promote-win-line" height={400} />
+
 <a id="landing-signal"></a>
 
 ## Landing: the frame, and the beat

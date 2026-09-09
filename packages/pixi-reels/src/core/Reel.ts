@@ -2152,6 +2152,9 @@ export class Reel implements Disposable {
       oldSymbol.view.scale.set(1, 1);
       oldSymbol.view.rotation = 0;
       oldSymbol.view.filters = null;
+      // Same list as `activate()`/`deactivate()`: this path never touches the
+      // pool, so nothing else would clear a tint the cell was wearing.
+      oldSymbol.view.tint = 0xffffff;
       oldSymbol.view.zIndex = this._computeSymbolZIndex(newSymbolId, index);
       // Same id → same unmask status; pick the right destination by id
       // so an unmasked symbol stays in `unmaskedContainer` post-spotlight.

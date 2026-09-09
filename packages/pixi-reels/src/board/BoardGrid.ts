@@ -12,6 +12,8 @@ import { EmptySymbol } from '../symbols/EmptySymbol.js';
 import { SpeedPresets } from '../config/SpeedPresets.js';
 import type { SpeedProfile, SymbolData, SymbolZIndexResolver } from '../config/types.js';
 import type { Disposable } from '../utils/Disposable.js';
+import { TickerRef } from '../utils/TickerRef.js';
+import type { TickerCallback } from '../utils/TickerRef.js';
 
 /** A cell coordinate in the grid. */
 export interface BoardCell {
@@ -150,6 +152,29 @@ function boardCorners(cell: BoardCell, cols: number, rows: number): MaskCorners 
 }
 
 const key = (c: BoardCell): string => `${c.reel},${c.cell}`;
+
+/** Pixi's "no tint": white multiplies the art by one. */
+const NO_TINT = 0xffffff;
+
+/** Grey that multiplies art down by `amount`: 0 leaves it, 1 takes it to black. */
+const tintFor = (amount: number): number => {
+  const channel = Math.round(255 * (1 - amount));
+  return (channel << 16) | (channel << 8) | channel;
+};
+
+/**
+ * Default strength for {@link BoardGrid.dim} and {@link BoardGrid.dimSymbols}.
+ * Half way: dark enough to read as background, light enough that the art is
+ * still legible behind whatever is in front of it.
+ */
+export const DEFAULT_DIM_AMOUNT = 0.5;
+
+/**
+ * How long {@link BoardGrid.dim} takes to fade in, and to fade back out.
+ * Short enough to read as part of the beat it belongs to rather than as a
+ * transition of its own; `fade: 0` cuts instantly.
+ */
+export const DEFAULT_DIM_FADE_MS = 180;
 const DEFAULT_PROFILE = 'default';
 
 /**
@@ -201,6 +226,41 @@ export class BoardGrid implements Disposable {
    * the neighbour's edge.
    */
   private readonly _lifted: RenderLayer;
+  /**
+   * The lifted art of cells a consumer has {@link lift}ed, rendered above
+   * `_lifted` - the transient exception to `cellZIndex`. Empty until someone
+   * calls `lift()`, so a board that never does renders exactly as before.
+   */
+  private readonly _promoted: RenderLayer;
+  /** Outstanding {@link lift} count per cell key, in lift order. */
+  private readonly _liftCounts = new Map<string, number>();
+  /**
+   * Holds the {@link dim} rectangles, one per dimmed cell. A child of
+   * `container` for its transform, drawn through `_dimLayer` for its order.
+   */
+  private readonly _dimHost: Container;
+  /**
+   * Where the dim rectangles draw: above `_lifted`, so a dimmed cell's
+   * lifted art goes down with it, and below `_promoted`, so a lifted cell
+   * stays out in front of the dim.
+   */
+  private readonly _dimLayer: RenderLayer;
+  /** Set while a {@link dim} is up - only one at a time is meaningful. */
+  private _dimmed: BoardCell[] | null = null;
+  /**
+   * The running fades, keyed by what they drive: `cell` moves `_dimHost.alpha`
+   * for {@link dim}, `symbol` moves the tint strength for {@link dimSymbols}.
+   * Separate slots so the two can run at once without cancelling each other.
+   */
+  private readonly _fades = new Map<'cell' | 'symbol', TickerCallback>();
+  /** Cells {@link dimSymbols} currently tints, and the instance tinted in each. */
+  private _dimmedSymbols: Map<string, ReelSymbol> | null = null;
+  /** Strength the symbol dim is currently at, 0..1. Read by the fade. */
+  private _symbolDimAmount = 0;
+  /** Per-cell `symbol:created` listeners keeping the symbol dim on swaps. */
+  private readonly _symbolDimWatch = new Map<string, () => void>();
+  /** Owns the dim fade's ticker subscription, so `destroy()` cannot leak it. */
+  private readonly _ticker: TickerRef;
   private readonly _cellZIndex: BoardCellZIndexResolver | null;
   private _destroyed = false;
 
@@ -298,6 +358,19 @@ export class BoardGrid implements Disposable {
     for (const reelSet of this._reels.values()) {
       this._lifted.attach(reelSet.viewport.unmaskedContainer);
     }
+    this._ticker = new TickerRef(opts.ticker);
+    this._dimHost = new Container();
+    this._dimHost.alpha = 0;
+    this.container.addChild(this._dimHost);
+    this._dimLayer = new RenderLayer();
+    this.container.addChild(this._dimLayer);
+    this._dimLayer.attach(this._dimHost);
+    // Added after `_lifted` and the dim, so anything attached here draws
+    // above every cell's at-rest art and stays out of the dim. Sorted on the
+    // same terms as `_lifted`: two cells lifted at once keep the order
+    // `cellZIndex` gave them.
+    this._promoted = new RenderLayer({ sortableChildren: this._cellZIndex !== null });
+    this.container.addChild(this._promoted);
     this.refreshCellZIndex();
   }
 
@@ -309,6 +382,388 @@ export class BoardGrid implements Disposable {
    */
   get liftedLayer(): RenderLayer {
     return this._lifted;
+  }
+
+  /**
+   * Draw one cell's lifted art in front of every other cell's until the
+   * returned function is called - the transient exception to the board's
+   * at-rest order (`cellZIndex`). For a symbol whose one-shot must not be
+   * overlapped by a neighbour's art: a coin upgrading in place, a collect
+   * sweeping the board, a symbol firing at another cell.
+   *
+   * Promotion is a SEPARATE channel from `zIndex`, so a lift survives
+   * {@link refreshCellZIndex} - which keeps writing the lifted cell's
+   * `zIndex` throughout, ordering it for the moment it comes back - and
+   * releasing restores the cell's place exactly, recomputing nothing.
+   *
+   * Lifts are reference-counted per cell and the returned release is
+   * idempotent, so overlapping lifts of one cell cannot strand each other.
+   * Several lifted cells keep their relative at-rest order.
+   *
+   * Scope: this promotes the cell's LIFTED art - the views the engine hoists
+   * out of the cell for a symbol registered `unmask: true`, which is what the
+   * board renders above all cells in the first place. A cell showing a masked
+   * symbol has nothing in that layer, so lifting it is a no-op; masked art is
+   * clipped to its own cell and cannot overlap a neighbour anyway.
+   *
+   * Lifting is presentation only: no ledger, no phase, no event. A lift held
+   * across a respin is legal - the caller owns its own choreography - and is
+   * released only by its own release, {@link destroy}, or (on a
+   * `HoldAndWinBoard`) `reset()`.
+   *
+   * @example
+   * ```ts
+   * const release = board.lift(cell);
+   * await board.symbolAt(cell).playWin();
+   * release();
+   * ```
+   */
+  lift(cell: BoardCell): () => void {
+    // A feature can end while a reveal is still awaiting; a lift on a dead
+    // board is a no-op rather than a crash. The coordinate check comes after,
+    // so a destroyed board never reports a valid cell as out of range.
+    if (this._destroyed) return () => {};
+    const reelSet = this._reel(cell);
+    const k = key(cell);
+    const count = this._liftCounts.get(k) ?? 0;
+    // Re-setting an existing key keeps its insertion order, so `liftedCells`
+    // reports first-lift order rather than last-increment order.
+    this._liftCounts.set(k, count + 1);
+    if (count === 0) this._promoted.attach(reelSet.viewport.unmaskedContainer);
+
+    let released = false;
+    return () => {
+      if (released) return;
+      released = true;
+      if (this._destroyed) return;
+      const held = this._liftCounts.get(k) ?? 0;
+      if (held <= 1) {
+        this._liftCounts.delete(k);
+        this._lifted.attach(reelSet.viewport.unmaskedContainer);
+      } else {
+        this._liftCounts.set(k, held - 1);
+      }
+    };
+  }
+
+  /** Currently lifted cells, in lift order. Debug / assertion surface. */
+  get liftedCells(): BoardCell[] {
+    return [...this._liftCounts.keys()].map((k) => {
+      const [reel, cell] = k.split(',');
+      return { reel: Number(reel), cell: Number(cell) };
+    });
+  }
+
+  /**
+   * Drop every outstanding lift at once, whatever its reference count.
+   * Called by `reset()` and `destroy()` on a `HoldAndWinBoard`, so a feature
+   * that ends mid-animation cannot leave a cell stuck in front. Releases
+   * handed out before this stay safe to call - they become no-ops.
+   */
+  releaseAllLifts(): void {
+    if (this._liftCounts.size === 0) return;
+    for (const k of this._liftCounts.keys()) {
+      const reelSet = this._reels.get(k);
+      if (reelSet) this._lifted.attach(reelSet.viewport.unmaskedContainer);
+    }
+    this._liftCounts.clear();
+  }
+
+  /**
+   * Push every cell except these into the background until the returned
+   * function is called - the board-level counterpart to a `ReelSet`'s
+   * spotlight dim, and the natural partner of {@link lift}: one cell forward,
+   * the rest back, for the length of one beat.
+   *
+   * One black rectangle per dimmed cell, drawn above the cells' lifted art
+   * and below anything {@link lift}ed - so a lifted cell stays out in front
+   * of the dim whether or not it is excepted, while its cell background goes
+   * down with the rest unless you name it in `except`.
+   *
+   * A dim covers CELLS, not symbol ids. To keep every coin of one kind bright,
+   * resolve the ids to cells first and pass those.
+   *
+   * It fades rather than pops: `fade` milliseconds in, the same back out, off
+   * the board's own ticker. Pass `fade: 0` for an instant cut. A fade
+   * interrupted part-way (release during the fade in, or a fresh `dim()`
+   * during the fade out) starts from where it is and takes the proportional
+   * share of `fade`, so nothing jumps.
+   *
+   * Only one dim at a time is meaningful, so a second call throws rather than
+   * silently replacing the first. Release is idempotent, and it ends the dim
+   * immediately as far as {@link dimmedCells} is concerned - the fade out is
+   * presentation the next `dim()` is free to interrupt.
+   *
+   * @example
+   * ```ts
+   * const undim = board.dim({ except: [cell], amount: 0.6 });
+   * const drop = board.lift(cell);
+   * await board.symbolAt(cell).playWin();
+   * drop();
+   * undim();
+   * ```
+   */
+  dim(opts: { except?: BoardCell[]; amount?: number; fade?: number } = {}): () => void {
+    if (this._destroyed) return () => {};
+    if (this._dimmed) {
+      throw new Error(
+        'BoardGrid.dim(): a dim is already up. Release it before dimming again - ' +
+        'two dims with different exceptions have no meaning.',
+      );
+    }
+    const amount = opts.amount ?? DEFAULT_DIM_AMOUNT;
+    if (!(amount >= 0 && amount <= 1)) {
+      throw new RangeError(`BoardGrid.dim(): amount must be within [0, 1], got ${amount}.`);
+    }
+    const fade = opts.fade ?? DEFAULT_DIM_FADE_MS;
+    if (!(fade >= 0 && Number.isFinite(fade))) {
+      throw new RangeError(`BoardGrid.dim(): fade must be a finite count of milliseconds, got ${fade}.`);
+    }
+    const spared = new Set((opts.except ?? []).map((c) => key(this._assertCell(c))));
+    // A previous dim may still be fading out; take its rectangles, not its
+    // alpha, so the new dim continues from what is on screen.
+    this._cancelFade('cell');
+    this._dimHost.removeChildren().forEach((c) => c.destroy());
+    const dimmed: BoardCell[] = [];
+    for (const cell of this._cells) {
+      if (spared.has(key(cell))) continue;
+      const bounds = this.cellBounds(cell);
+      const rect = new Graphics()
+        .rect(bounds.x, bounds.y, bounds.width, bounds.height)
+        .fill({ color: 0x000000, alpha: 1 });
+      rect.alpha = amount;
+      this._dimHost.addChild(rect);
+      dimmed.push({ reel: cell.reel, cell: cell.cell });
+    }
+    this._dimmed = dimmed;
+    this._fade('cell', this._dimHost.alpha, 1, fade, (v) => { this._dimHost.alpha = v; });
+
+    let released = false;
+    return () => {
+      if (released) return;
+      released = true;
+      if (this._destroyed) return;
+      // A later dim owns the host now; releasing this one must not touch it.
+      if (this._dimmed !== dimmed) return;
+      this._dimmed = null;
+      this._fade('cell', this._dimHost.alpha, 0, fade, (v) => { this._dimHost.alpha = v; }, () => {
+        this._dimHost.removeChildren().forEach((c) => c.destroy());
+      });
+    };
+  }
+
+  /**
+   * Drive one 0..1 value from `from` to `target` over the share of `ms` the
+   * remaining distance is worth, handing each step to `apply`, then run
+   * `onDone`. `slot` names which fade this is, so the cell dim and the symbol
+   * dim can run at once while each still replaces only its own.
+   */
+  private _fade(
+    slot: 'cell' | 'symbol',
+    from: number,
+    target: number,
+    ms: number,
+    apply: (value: number) => void,
+    onDone?: () => void,
+  ): void {
+    this._cancelFade(slot);
+    const duration = ms * Math.abs(target - from);
+    if (duration <= 0) {
+      apply(target);
+      onDone?.();
+      return;
+    }
+    let elapsed = 0;
+    const step: TickerCallback = (ticker) => {
+      elapsed += ticker.deltaMS;
+      const t = Math.min(1, elapsed / duration);
+      apply(from + (target - from) * t);
+      if (t < 1) return;
+      this._cancelFade(slot);
+      onDone?.();
+    };
+    this._fades.set(slot, step);
+    this._ticker.add(step);
+  }
+
+  private _cancelFade(slot: 'cell' | 'symbol'): void {
+    const step = this._fades.get(slot);
+    if (!step) return;
+    this._ticker.remove(step);
+    this._fades.delete(slot);
+  }
+
+  /**
+   * Push every cell's SYMBOL except these into the background until the
+   * returned function is called. Same shape as {@link dim}, different channel:
+   * this darkens the art itself and leaves the cell alone, so the board's
+   * chrome, backgrounds and gaps stay exactly as bright as they were and only
+   * the symbols sink.
+   *
+   * It works by multiplying each symbol view's `tint` towards black, which
+   * carries down the whole view - a Spine skeleton, its nested containers,
+   * anything the symbol class draws - without touching what the symbol class
+   * tints internally. `amount` is the strength: `0` leaves the art alone, `1`
+   * takes it to black, and `0.5` is the classic `tint: 0x808080`.
+   *
+   * A dimmed cell that SWAPS its symbol keeps its dim: the new occupant is
+   * tinted as it arrives and the one that left is cleaned before the pool can
+   * hand it on. That is the difference from doing this by hand - `deactivate()`
+   * resets alpha, scale, rotation and filters but NOT tint, so a symbol
+   * released while dark stays dark in whatever cell reuses it next.
+   *
+   * This owns `symbol.view.tint` for its duration; a game tinting the same
+   * property itself will be overwritten. Tint your own art on a child of the
+   * view and the two multiply cleanly.
+   *
+   * Fades like {@link dim}, on its own slot, so the two can run together: one
+   * to sink the cells and one to sink the art.
+   *
+   * @example
+   * ```ts
+   * const undim = board.dimSymbols({ except: [collector], amount: 0.65 });
+   * await sweep();
+   * undim();
+   * ```
+   */
+  dimSymbols(opts: { except?: BoardCell[]; amount?: number; fade?: number } = {}): () => void {
+    if (this._destroyed) return () => {};
+    if (this._dimmedSymbols) {
+      throw new Error(
+        'BoardGrid.dimSymbols(): a symbol dim is already up. Release it before ' +
+        'dimming again - two dims with different exceptions have no meaning.',
+      );
+    }
+    const amount = opts.amount ?? DEFAULT_DIM_AMOUNT;
+    if (!(amount >= 0 && amount <= 1)) {
+      throw new RangeError(`BoardGrid.dimSymbols(): amount must be within [0, 1], got ${amount}.`);
+    }
+    const fade = opts.fade ?? DEFAULT_DIM_FADE_MS;
+    if (!(fade >= 0 && Number.isFinite(fade))) {
+      throw new RangeError(
+        `BoardGrid.dimSymbols(): fade must be a finite count of milliseconds, got ${fade}.`,
+      );
+    }
+    const spared = new Set((opts.except ?? []).map((c) => key(this._assertCell(c))));
+    // A previous symbol dim may still be fading out; drop its tints and its
+    // watchers but KEEP the strength it reached, so the new dim continues from
+    // what is on screen instead of flashing back to white.
+    this._cancelFade('symbol');
+    this._releaseSymbolDim();
+
+    const tinted = new Map<string, ReelSymbol>();
+    for (const cell of this._cells) {
+      const k = key(cell);
+      if (spared.has(k)) continue;
+      tinted.set(k, this.symbolAt(cell));
+      // A swap under the dim must arrive dark, and the symbol that leaves must
+      // not carry the tint back into the pool.
+      const reel = this._reel(cell).getReel(0);
+      const onCreated = (): void => {
+        const held = this._dimmedSymbols?.get(k);
+        const now = this.symbolAt(cell);
+        if (held === now) return;
+        if (held) held.view.tint = NO_TINT;
+        this._dimmedSymbols?.set(k, now);
+        now.view.tint = tintFor(this._symbolDimAmount);
+      };
+      reel.events.on('symbol:created', onCreated);
+      this._symbolDimWatch.set(k, () => reel.events.off('symbol:created', onCreated));
+    }
+    this._dimmedSymbols = tinted;
+    // Paint the carried-over strength on before the first frame, or a dim that
+    // interrupts a fade out shows one white frame.
+    this._applySymbolDim(this._symbolDimAmount);
+    this._fade('symbol', this._symbolDimAmount, amount, fade, (v) => this._applySymbolDim(v));
+
+    let released = false;
+    return () => {
+      if (released) return;
+      released = true;
+      if (this._destroyed) return;
+      // A later symbol dim owns the tints now; releasing this one must not
+      // clear them out from under it.
+      if (this._dimmedSymbols !== tinted) return;
+      this._dimmedSymbols = null;
+      this._fade('symbol', this._symbolDimAmount, 0, fade, (v) => {
+        // Fading out a dim nobody holds any more: the cells to repaint are
+        // still the ones this dim tinted.
+        this._applySymbolDim(v, tinted);
+      }, () => {
+        for (const symbol of tinted.values()) symbol.view.tint = NO_TINT;
+        for (const off of this._symbolDimWatch.values()) off();
+        this._symbolDimWatch.clear();
+        this._symbolDimAmount = 0;
+      });
+    };
+  }
+
+  /** Cells whose symbol {@link dimSymbols} currently tints. */
+  get dimmedSymbolCells(): BoardCell[] {
+    if (!this._dimmedSymbols) return [];
+    return [...this._dimmedSymbols.keys()].map((k) => {
+      const [reel, cell] = k.split(',');
+      return { reel: Number(reel), cell: Number(cell) };
+    });
+  }
+
+  /**
+   * Drop the symbol dim at once, whatever it is mid-fade, and clear every
+   * tint it wrote. Called by `reset()` and `destroy()` on a `HoldAndWinBoard`.
+   */
+  clearSymbolDim(): void {
+    this._cancelFade('symbol');
+    this._releaseSymbolDim();
+    // Every cell, not just the tracked ones: a fade out still running may have
+    // left a tint on a symbol whose entry has already gone.
+    for (const cell of this._cells) this.symbolAt(cell).view.tint = NO_TINT;
+    this._symbolDimAmount = 0;
+  }
+
+  /** Write the current strength onto every dimmed cell's live symbol. */
+  private _applySymbolDim(amount: number, over = this._dimmedSymbols): void {
+    this._symbolDimAmount = amount;
+    if (!over) return;
+    const tint = tintFor(amount);
+    for (const symbol of over.values()) symbol.view.tint = tint;
+  }
+
+  /**
+   * Undo the tints of the dim currently tracked and stop watching its cells
+   * for swaps. Leaves {@link _symbolDimAmount} alone: a replacement dim wants
+   * to continue from the strength on screen, while `clearSymbolDim()` zeroes
+   * it itself.
+   */
+  private _releaseSymbolDim(): void {
+    for (const off of this._symbolDimWatch.values()) off();
+    this._symbolDimWatch.clear();
+    if (!this._dimmedSymbols) return;
+    for (const symbol of this._dimmedSymbols.values()) symbol.view.tint = NO_TINT;
+    this._dimmedSymbols = null;
+  }
+
+  /**
+   * Drop the dim at once, whatever holds it and whatever it is mid-fade. A
+   * reset must not leave an overlay fading over a board that has already
+   * gone. Called by `reset()` and `destroy()` on a `HoldAndWinBoard`; a
+   * release handed out before this stays a safe no-op.
+   */
+  clearDim(): void {
+    this._cancelFade('cell');
+    if (this._dimHost.children.length > 0) {
+      this._dimHost.removeChildren().forEach((c) => c.destroy());
+    }
+    this._dimHost.alpha = 0;
+    this._dimmed = null;
+  }
+
+  /**
+   * Cells a {@link dim} currently covers; empty when nothing is dimmed. A
+   * released dim reports empty from the moment it is released, while its
+   * fade out is still on screen.
+   */
+  get dimmedCells(): BoardCell[] {
+    return this._dimmed ? this._dimmed.map((c) => ({ reel: c.reel, cell: c.cell })) : [];
   }
 
   /**
@@ -448,6 +903,10 @@ export class BoardGrid implements Disposable {
 
   destroy(): void {
     if (this._destroyed) return;
+    this.releaseAllLifts();
+    this.clearDim();
+    this.clearSymbolDim();
+    this._ticker.destroy();
     this._destroyed = true;
     for (const reelSet of this._reels.values()) reelSet.destroy();
     this._reels.clear();
@@ -460,6 +919,12 @@ export class BoardGrid implements Disposable {
       x: cell.reel * (this.cellWidth + this.columnGap),
       y: cell.cell * (this.cellHeight + this.rowGap),
     };
+  }
+
+  /** Throw for a coordinate outside the grid; returns it for chaining. */
+  private _assertCell(cell: BoardCell): BoardCell {
+    this._reel(cell);
+    return cell;
   }
 
   private _reel(cell: BoardCell): ReelSet {

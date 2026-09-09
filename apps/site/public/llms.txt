@@ -1,6 +1,6 @@
 # pixi-reels
 
-pixi-reels 2.6.0 is a reel engine for PixiJS v8.
+pixi-reels 2.7.0 is a reel engine for PixiJS v8.
 It ships reel-only primitives. Win math, paytable math, RNG, and audio live in consumer code.
 This file inlines every guide, API page, recipe (with source) and answered FAQ entry for offline LLM context.
 
@@ -1045,6 +1045,14 @@ URL: https://pixi-reels.schmooky.dev/api/variables/index.CARD_DECK/
 ### CURVE\_FOCUS\_WEIGHT
 URL: https://pixi-reels.schmooky.dev/api/variables/index.CURVE_FOCUS_WEIGHT/
 ```ts const CURVE_FOCUS_WEIGHT: Record<CurveFocus, number>; ```
+
+### DEFAULT\_DIM\_AMOUNT
+URL: https://pixi-reels.schmooky.dev/api/variables/index.DEFAULT_DIM_AMOUNT/
+```ts const DEFAULT_DIM_AMOUNT: 0.5 = 0.5; ```
+
+### DEFAULT\_DIM\_FADE\_MS
+URL: https://pixi-reels.schmooky.dev/api/variables/index.DEFAULT_DIM_FADE_MS/
+```ts const DEFAULT_DIM_FADE_MS: 180 = 180; ```
 
 ### DEFAULTS
 URL: https://pixi-reels.schmooky.dev/api/variables/index.DEFAULTS/
@@ -5523,6 +5531,100 @@ return {
 };
 ```
 
+### clover-promote-win-line
+URL: https://pixi-reels.schmooky.dev/recipes/clover-promote-win-line/
+```ts
+// @ts-nocheck
+// Injected: ReelSetBuilder, RoundedRectMaskStrategy, CloverSymbol, loadHwClover,
+//           CLOVER_FRUITS, CLOVER_CELL, CLOVER_CELL_RADIUS, CLOVER_SPEED, PIXI, gsap, app
+//
+// PROMOTE, WITHOUT THE SPOTLIGHT. `spotlight.show()` is a whole presentation:
+// it dims, reparents the winners, plays their win animation and only resolves
+// when that finishes. A game that wants ONLY the layering - these symbols
+// above the mask and above their neighbours, while its own timeline runs -
+// had to ask for the presentation and switch every part of it off.
+//
+// `reelSet.promote(positions)` is that layering on its own. It attaches the
+// views to a render layer instead of reparenting them, so nothing moves and
+// nothing has to be put back; the returned release drops them.
+//
+// Watch the TOP row: it swells past the top of the grid. Unpromoted, the
+// viewport mask cuts every symbol at the grid edge and the next reel draws
+// over the one before it. Promoted, the same tween is neither cut nor
+// covered - and nothing moved to get there.
+
+const COLS = 5, ROWS = 3;
+const CELL = { width: 101, height: 85 }, COLUMN_GAP = 8, ROW_GAP = 8;
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const art = await loadHwClover();
+
+// Nothing here is `unmask`: at rest every fruit is clipped to its own cell,
+// which is what makes the promotion visible.
+const reels = new ReelSetBuilder()
+  .reels(COLS).visibleCells(ROWS)
+  .symbolSize(CELL.width, CELL.height).symbolGap(COLUMN_GAP, ROW_GAP)
+  .symbols((r) => { for (const id of CLOVER_FRUITS) r.register(id, CloverSymbol, { art, idleAfterLand: false }); })
+  .maskStrategy(new RoundedRectMaskStrategy({ radius: CLOVER_CELL_RADIUS }))
+  .speed('normal', CLOVER_SPEED)
+  .ticker(app.ticker)
+  .build();
+
+const boardW = COLS * CELL.width + (COLS - 1) * COLUMN_GAP;
+const boardH = ROWS * CELL.height + (ROWS - 1) * ROW_GAP;
+reels.position.set((app.screen.width - boardW) / 2, (app.screen.height - boardH) / 2 - 10);
+app.stage.addChild(reels);
+
+const hud = new PIXI.Text({ text: 'press spin', style: { fontFamily: 'system-ui, sans-serif', fontSize: 13, fontWeight: '600', fill: 0x9c8f78 } });
+hud.anchor.set(0.5, 0);
+hud.position.set(app.screen.width / 2, reels.y + boardH + 24);
+app.stage.addChild(hud);
+
+const LINE = [0, 1, 2, 3, 4].map((reelIndex) => ({ reelIndex, cellIndex: 0 }));
+const WIN = ['seven', 'seven', 'seven', 'seven', 'seven'];
+const filler = () => CLOVER_FRUITS[Math.floor(Math.random() * CLOVER_FRUITS.length)];
+
+/** Swell the top row past the grid edge, promoted for the length of the swell. */
+async function showLine(promote) {
+  // Promoting covers the INSTANCES at those cells. Held only for the beat, so
+  // the next spin never inherits it.
+  const drop = promote ? reels.promote(LINE) : null;
+  const views = LINE.map((p) => reels.getReel(p.reelIndex).getSymbolAt(p.cellIndex).view);
+  hud.text = promote
+    ? 'promoted: the swell clears the grid edge and the reel beside it'
+    : 'not promoted: the same tween, cut at the grid edge and covered by the next reel';
+  try {
+    await gsap.to(views.map((v) => v.scale), {
+      x: 1.9, y: 1.9, duration: 0.55, ease: 'back.out(2)', stagger: 0.1,
+      yoyo: true, repeat: 1, repeatDelay: 0.45,
+    });
+  } finally {
+    for (const v of views) v.scale.set(1, 1);
+    drop?.();
+  }
+}
+
+let busy = false;
+return {
+  cleanup: () => { try { hud.destroy(); } catch {} reels.destroy(); },
+  onSpin: async () => {
+    if (busy) return;
+    busy = true;
+    const settle = reels.spin();
+    reels.setResult(WIN.map((id) => ({ visible: [id, filler(), filler()] })));
+    await settle;
+    await sleep(250);
+
+    // Same tween twice, so the only difference on screen is the promotion.
+    await showLine(false);
+    await sleep(700);
+    await showLine(true);
+
+    hud.text = 'released - press spin to compare again';
+    busy = false;
+  },
+};
+```
+
 ### coin-value-data
 URL: https://pixi-reels.schmooky.dev/recipes/coin-value-data/
 ```ts
@@ -9393,6 +9495,236 @@ return {
 };
 ```
 
+### hold-and-win-clover-dim-one-cell
+URL: https://pixi-reels.schmooky.dev/recipes/hold-and-win-clover-dim-one-cell/
+```ts
+// @ts-nocheck
+// Injected: HoldAndWinBuilder, CloverSymbol, loadHwClover, CLOVER_CELL_RADIUS,
+//           CLOVER_SPEED, cloverCellMask, PIXI, gsap, app
+//
+// DIMMING THE ART IS NOT DIMMING THE CELL. One clover slot, blown up, holding
+// a cherry - non-clover, and drawn small - so the cell's own background shows
+// all the way around the symbol.
+//
+// That background is `cellChrome()`: the board draws it, it is not a symbol.
+// `dimSymbols()` only ever touches symbol views, so the plate stays exactly as
+// bright as it started however hard the cherry sinks. `dim()` lays a rectangle
+// over the whole cell, so the plate goes down with it.
+//
+// The last beat is the corollary. Swap the cell to the EMPTY id and there is
+// no art left to dim, so `dimSymbols()` changes nothing at all: not the cherry
+// that has gone, and not the plate, which was never its business. Which is
+// also the thing to watch out for - if your blank tile is a registered SYMBOL
+// (as it is in the other clover recipes, where the dark tile is the `empty`
+// id) then it IS art and `dimSymbols()` dims it with everything else. Draw
+// whatever must stay lit in `cellChrome()`.
+
+const CELL = { width: 320, height: 269 };
+const C = { reel: 0, cell: 0 };
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+const art = await loadHwClover();
+
+const board = new HoldAndWinBuilder()
+  .grid(1, 1)
+  .cellSize(CELL)
+  // The cell's own background: board chrome, not a symbol. A fat lit frame
+  // and an inner plate, so there is plenty of it to watch.
+  .cellChrome((g, w, h) => {
+    const r = CLOVER_CELL_RADIUS * 3;
+    g.roundRect(0, 0, w, h, r).fill({ color: 0x4d7fd6 });
+    g.roundRect(6, 6, w - 12, h - 12, r - 4).fill({ color: 0x2b4f96 });
+    g.roundRect(26, 26, w - 52, h - 52, r - 10).fill({ color: 0x16264a });
+  })
+  .symbols((r) => {
+    // Non-clover on purpose, and a cherry rather than a melon: the clover set
+    // scales every frame by the same factor, so a small-authored symbol stays
+    // small in the cell and leaves the plate visible around it.
+    r.register('cherry', CloverSymbol, { art, idleAfterLand: false });
+  })
+  // No art registered under this id, so the board auto-registers the library's
+  // EmptySymbol: a symbol with nothing in it.
+  .emptyId('blank')
+  .speedProfile(CLOVER_SPEED)
+  .cellMask(cloverCellMask)
+  .respins(3)
+  .ticker(app.ticker)
+  .build();
+
+board.container.position.set(
+  (app.screen.width - CELL.width) / 2,
+  (app.screen.height - CELL.height) / 2 - 16,
+);
+app.stage.addChild(board.container);
+
+const hud = new PIXI.Text({ text: 'press spin', style: { fontFamily: 'system-ui, sans-serif', fontSize: 13, fontWeight: '600', fill: 0x9c8f78 } });
+hud.anchor.set(0.5, 0);
+hud.position.set(app.screen.width / 2, board.container.y + CELL.height + 22);
+app.stage.addChild(hud);
+
+/** Hold a dim of `which` channel at `amount` for a beat, then let it go. */
+async function hold(which, amount, note) {
+  const undim = which === 'symbols'
+    ? board.dimSymbols({ amount, fade: 200 })
+    : board.dim({ amount, fade: 200 });
+  try {
+    hud.text = note;
+    await sleep(1100);
+  } finally {
+    undim();
+  }
+  await sleep(420); // let the fade out land before the next beat starts
+}
+
+let busy = false;
+return {
+  cleanup: () => { try { hud.destroy(); } catch {} board.destroy(); },
+  onSpin: async () => {
+    if (busy) return;
+    busy = true;
+    board.reset();
+    board.enter([{ cell: C, id: 'cherry' }]);
+    hud.text = 'at rest - blue plate is cellChrome(), cherry is the symbol';
+    await sleep(900);
+
+    // Strength is `amount`, and it only ever reaches the cherry. Watch the
+    // plate: it does not move through any of these three.
+    for (const amount of [0.3, 0.6, 0.9]) {
+      await hold('symbols', amount, `dimSymbols({ amount: ${amount} }) - cherry sinks, plate untouched`);
+    }
+
+    // Same strength, other channel: now the plate goes down too.
+    await hold('cells', 0.6, 'dim({ amount: 0.6 }) - the rectangle covers the cell, plate and all');
+
+    // And the corollary: no art in the cell, nothing for dimSymbols to do.
+    board.setSymbolAt(C, 'blank');
+    hud.text = 'cell swapped to the empty id - no art left in it';
+    await sleep(700);
+    await hold('symbols', 0.9, 'dimSymbols({ amount: 0.9 }) on an empty cell - nothing changes, not even the plate');
+
+    board.setSymbolAt(C, 'cherry');
+    hud.text = 'released - press spin to compare again';
+    busy = false;
+  },
+};
+```
+
+### hold-and-win-clover-dim-symbols
+URL: https://pixi-reels.schmooky.dev/recipes/hold-and-win-clover-dim-symbols/
+```ts
+// @ts-nocheck
+// Injected: HoldAndWinBuilder, CloverSpineSymbol, cloverGridBackground, loadHwCloverSpines,
+//           CLOVER_SPEED, cloverCellMask, CLOVER_CELL, PIXI, gsap, app
+//
+// TWO CHANNELS TO PUSH A BOARD BACK. `board.dim()` lays a rectangle over each
+// cell: the clover goes dark AND so does the cell it sits in, gaps and tile
+// and all. `board.dimSymbols()` multiplies each symbol's own tint towards
+// black instead: the art sinks, the board keeps its lights on.
+//
+// Same sweep runs twice here, so the only difference on screen is which
+// channel did the dimming. `amount` is the strength on both, and both fade in
+// and out over `fade` off the board's own ticker.
+//
+// The reason this is a library method rather than three lines of `gsap.to`:
+// a dimmed cell that swaps its symbol has to keep its dim, and the symbol
+// that LEFT has to lose the tint before the pool hands it to another cell.
+
+const COLS = 5, ROWS = 3;
+const CELL = { width: 101, height: 85 }, COLUMN_GAP = 8, ROW_GAP = 8;
+const SCALE = CELL.width / CLOVER_CELL.width;
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const fmt = (v) => v.toFixed(2);
+const pick = (a) => a[Math.floor(Math.random() * a.length)];
+const VALUES = [1, 1.5, 2, 2.5, 3, 5];
+
+const art = await loadHwCloverSpines();
+const UNMASK = Object.fromEntries(['gold', 'collect', 'multi', 'super', 'capsule'].map((id) => [id, { unmask: true }]));
+
+const board = new HoldAndWinBuilder()
+  .grid(COLS, ROWS)
+  .cellSize(CELL, { columnGap: COLUMN_GAP, rowGap: ROW_GAP })
+  .symbols((r) => { for (const id of ['gold', 'collect', 'multi', 'super', 'empty']) r.register(id, CloverSpineSymbol, { scale: SCALE }); })
+  .weights({ gold: 3, collect: 0.5, multi: 0.4, super: 0.4, empty: 5 })
+  .symbolData(UNMASK)
+  .speedProfile(CLOVER_SPEED)
+  .cellMask(cloverCellMask)
+  .cellZIndex(({ cell, cols }) => cell.cell * cols + cell.reel)
+  .respins(3)
+  .lockAnimation('landing')
+  .ticker(app.ticker)
+  .build();
+
+const boardW = COLS * CELL.width + (COLS - 1) * COLUMN_GAP;
+const boardH = ROWS * CELL.height + (ROWS - 1) * ROW_GAP;
+board.container.position.set((app.screen.width - boardW) / 2, (app.screen.height - boardH) / 2 - 10);
+const grid = cloverGridBackground({ x: board.container.x, y: board.container.y, cols: COLS, rows: ROWS, cell: CELL, columnGap: COLUMN_GAP, rowGap: ROW_GAP });
+app.stage.addChild(grid);
+app.stage.addChild(board.container);
+
+const hud = new PIXI.Text({ text: 'press spin', style: { fontFamily: 'system-ui, sans-serif', fontSize: 13, fontWeight: '600', fill: 0x9c8f78 } });
+hud.anchor.set(0.5, 0);
+hud.position.set(app.screen.width / 2, board.container.y + boardH + 24);
+app.stage.addChild(hud);
+
+board.events.on('cell:landed', ({ cell, coin }) => {
+  if (coin?.id === 'gold') board.symbolAt(cell).setLabel(fmt(coin.data.value));
+});
+
+const gold = (cell, value = pick(VALUES)) => ({ cell, id: 'gold', data: { value } });
+const HERO = { reel: 2, cell: 1 };
+const OTHERS = [
+  { reel: 0, cell: 0 }, { reel: 1, cell: 2 }, { reel: 3, cell: 0 },
+  { reel: 4, cell: 1 }, { reel: 1, cell: 0 },
+];
+const SEED = [gold(HERO, 25), ...OTHERS.map((c) => gold(c))];
+
+/**
+ * Hold the hero out on its own for a beat, pushing the rest back through
+ * `which` channel. Both releases live here, so the board comes back however
+ * the beat ends.
+ */
+async function spotlight(which) {
+  const undim = which === 'cells'
+    ? board.dim({ except: [HERO], amount: 0.7, fade: 240 })
+    : board.dimSymbols({ except: [HERO], amount: 0.7, fade: 240 });
+  const drop = board.lift(HERO);
+  try {
+    hud.text = which === 'cells'
+      ? 'dim(): the cells go back too - tiles, gaps, the lot'
+      : 'dimSymbols(): only the art goes back - the board keeps its lights on';
+    for (let i = 0; i < 3; i++) {
+      board.symbolAt(HERO).playWin();
+      await sleep(560);
+    }
+  } finally {
+    drop();
+    undim();
+  }
+  board.symbolAt(HERO).playIdle();
+}
+
+let busy = false;
+return {
+  cleanup: () => { try { hud.destroy(); } catch {} grid.destroy({ children: true }); board.destroy(); },
+  onSpin: async () => {
+    if (busy) return;
+    busy = true;
+    board.reset();
+    board.enter(SEED);
+    for (const c of SEED) { const s = board.symbolAt(c.cell); s.setLabel(fmt(c.data.value)); s.playIdle(); }
+    hud.text = 'at rest - the same sweep runs twice, on two different channels';
+    await sleep(900);
+
+    await spotlight('cells');
+    await sleep(700);
+    await spotlight('symbols');
+
+    hud.text = 'both released - press spin to compare again';
+    busy = false;
+  },
+};
+```
+
 ### hold-and-win-clover-feature-clovers
 URL: https://pixi-reels.schmooky.dev/recipes/hold-and-win-clover-feature-clovers/
 ```ts
@@ -9772,6 +10104,262 @@ return {
     await board.playWin();
     const total = board.lockedCoins.reduce((a, c) => a + c.data.value, 0);
     hud.text = `feature over · ${board.lockedCoins.length}/${board.capacity} · TOTAL ${fmt(total)}`;
+    busy = false;
+  },
+};
+```
+
+### hold-and-win-clover-lift-dim
+URL: https://pixi-reels.schmooky.dev/recipes/hold-and-win-clover-lift-dim/
+```ts
+// @ts-nocheck
+// Injected: HoldAndWinBuilder, CloverSpineSymbol, cloverGridBackground, loadHwCloverSpines,
+//           CLOVER_SPEED, cloverCellMask, CLOVER_CELL, PIXI, gsap, app
+//
+// ONE CELL FORWARD, THE REST BACK. `board.dim({ except })` is the partner of
+// `board.lift()`: the dim draws above every cell's clover and below anything
+// lifted, so a lifted cell stays out in front of it whether or not it is
+// excepted. Pair them and a collect reads as one beat - the collector out on
+// its own, the board it is collecting from sunk behind.
+//
+// A dim covers CELLS, not symbol ids. This collect spares every gold clover
+// it is about to sweep, so the money stays bright while the blanks go dark:
+// the ids are resolved to cells at the call site, where the game knows them.
+//
+// It fades rather than pops - `fade` milliseconds in and the same back out,
+// off the board's own ticker. Fast enough to belong to the collect's first
+// beat instead of reading as a transition of its own; `fade: 0` cuts.
+
+const COLS = 5, ROWS = 3;
+const CELL = { width: 101, height: 85 }, COLUMN_GAP = 8, ROW_GAP = 8;
+const SCALE = CELL.width / CLOVER_CELL.width;
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const fmt = (v) => v.toFixed(2);
+const pick = (a) => a[Math.floor(Math.random() * a.length)];
+const VALUES = [1, 1.5, 2, 2.5, 3, 5];
+
+const art = await loadHwCloverSpines();
+const UNMASK = Object.fromEntries(['gold', 'collect', 'multi', 'super', 'capsule'].map((id) => [id, { unmask: true }]));
+
+const board = new HoldAndWinBuilder()
+  .grid(COLS, ROWS)
+  .cellSize(CELL, { columnGap: COLUMN_GAP, rowGap: ROW_GAP })
+  .symbols((r) => { for (const id of ['gold', 'collect', 'multi', 'super', 'empty']) r.register(id, CloverSpineSymbol, { scale: SCALE }); })
+  .weights({ gold: 3, collect: 0.5, multi: 0.4, super: 0.4, empty: 5 })
+  .symbolData(UNMASK)
+  .speedProfile(CLOVER_SPEED)
+  .cellMask(cloverCellMask)
+  .cellZIndex(({ cell, cols }) => cell.cell * cols + cell.reel)
+  .respins(3)
+  .lockAnimation('landing')
+  .ticker(app.ticker)
+  .build();
+
+const boardW = COLS * CELL.width + (COLS - 1) * COLUMN_GAP;
+const boardH = ROWS * CELL.height + (ROWS - 1) * ROW_GAP;
+board.container.position.set((app.screen.width - boardW) / 2, (app.screen.height - boardH) / 2 - 10);
+const grid = cloverGridBackground({ x: board.container.x, y: board.container.y, cols: COLS, rows: ROWS, cell: CELL, columnGap: COLUMN_GAP, rowGap: ROW_GAP });
+app.stage.addChild(grid);
+app.stage.addChild(board.container);
+
+const hud = new PIXI.Text({ text: 'press spin', style: { fontFamily: 'system-ui, sans-serif', fontSize: 13, fontWeight: '600', fill: 0x9c8f78 } });
+hud.anchor.set(0.5, 0);
+hud.position.set(app.screen.width / 2, board.container.y + boardH + 24);
+app.stage.addChild(hud);
+
+board.events.on('cell:landed', ({ cell, coin }) => {
+  if (coin?.id === 'gold') board.symbolAt(cell).setLabel(fmt(coin.data.value));
+});
+
+const gold = (cell, value = pick(VALUES)) => ({ cell, id: 'gold', data: { value } });
+const COLLECTOR = { reel: 4, cell: 1 };
+const GOLDS = [
+  { reel: 0, cell: 1 }, { reel: 1, cell: 0 }, { reel: 1, cell: 2 },
+  { reel: 2, cell: 1 }, { reel: 3, cell: 0 }, { reel: 3, cell: 2 },
+];
+const SEED = [...GOLDS.map((c) => gold(c)), { cell: COLLECTOR, id: 'collect', data: { value: 0 } }];
+
+/**
+ * Sweep every gold clover into the collector. The dim spares the collector
+ * and the money it is about to take, so the pair reads as one beat; the lift
+ * keeps the collector's own animation clear of its neighbours' art.
+ */
+async function collect() {
+  // Both releases live in this function - `finally` puts the board back
+  // however the sweep ends.
+  const undim = board.dim({ except: [COLLECTOR, ...GOLDS], amount: 0.65, fade: 220 });
+  const drop = board.lift(COLLECTOR);
+  const collector = board.symbolAt(COLLECTOR);
+  let total = 0;
+  try {
+    collector.playWin();
+    await sleep(320);
+    for (const cell of GOLDS) {
+      const coin = board.lockedCoins.find((c) => c.cell.reel === cell.reel && c.cell.cell === cell.cell);
+      total += coin?.data.value ?? 0;
+      board.symbolAt(cell).playWin();
+      collector.setLabel(fmt(total));
+      hud.text = `collecting ${fmt(total)} - collector lifted, board dimmed except the money`;
+      await sleep(240);
+    }
+    await sleep(300);
+  } finally {
+    drop();
+    undim();
+  }
+  return total;
+}
+
+let busy = false;
+return {
+  cleanup: () => { try { hud.destroy(); } catch {} grid.destroy({ children: true }); board.destroy(); },
+  onSpin: async () => {
+    if (busy) return;
+    busy = true;
+    board.reset();
+    board.enter(SEED);
+    for (const c of SEED) {
+      const s = board.symbolAt(c.cell);
+      if (c.id === 'gold') s.setLabel(fmt(c.data.value));
+      s.playIdle();
+    }
+    hud.text = 'seven cells held - the collector is about to sweep';
+    await sleep(700);
+
+    const total = await collect();
+    hud.text = `collected ${fmt(total)} - board back to its at-rest order`;
+    busy = false;
+  },
+};
+```
+
+### hold-and-win-clover-lift
+URL: https://pixi-reels.schmooky.dev/recipes/hold-and-win-clover-lift/
+```ts
+// @ts-nocheck
+// Injected: HoldAndWinBuilder, CloverSpineSymbol, cloverGridBackground, loadHwCloverSpines,
+//           CLOVER_SPEED, cloverCellMask, CLOVER_CELL, PIXI, gsap, app
+//
+// A CELL IN FRONT, FOR A BEAT. `cellZIndex` says which clover draws over
+// which at rest, and the board re-asks it on every place and every landing.
+// That is right at rest and wrong for the ~1s a clover spends upgrading:
+// whatever the resolver says, THIS clover must not be overlapped while it
+// plays. `board.lift(cell)` promotes it on a separate channel and hands back
+// a release; the order refresh keeps running underneath and cannot touch it.
+//
+// The demo upgrades the middle clover while its neighbours keep landing. The
+// counter shows the refresh firing during the lift - and the clover stays in
+// front through every one.
+
+const COLS = 5, ROWS = 3;
+const CELL = { width: 101, height: 85 }, COLUMN_GAP = 8, ROW_GAP = 8;
+const SCALE = CELL.width / CLOVER_CELL.width;
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const fmt = (v) => v.toFixed(2);
+const pick = (a) => a[Math.floor(Math.random() * a.length)];
+const VALUES = [1, 1.5, 2, 2.5, 3, 5];
+
+const art = await loadHwCloverSpines();
+const UNMASK = Object.fromEntries(['gold', 'collect', 'multi', 'super', 'capsule'].map((id) => [id, { unmask: true }]));
+
+// The at-rest order every recipe on this page uses: lower rows in front, so a
+// clover's glow hangs down over the cell below. It is exactly the rule the
+// lift has to suspend - the clover we upgrade sits in row 0, the row the
+// resolver puts LAST.
+let refreshes = 0;
+const cellZIndex = ({ cell, cols, attachOrder }) => {
+  // One sweep asks about every cell, so count the first answer of each.
+  if (attachOrder === 0) refreshes++;
+  return cell.cell * cols + cell.reel;
+};
+
+const board = new HoldAndWinBuilder()
+  .grid(COLS, ROWS)
+  .cellSize(CELL, { columnGap: COLUMN_GAP, rowGap: ROW_GAP })
+  .symbols((r) => { for (const id of ['gold', 'collect', 'super', 'capsule', 'empty']) r.register(id, CloverSpineSymbol, { scale: SCALE }); })
+  .weights({ gold: 3, collect: 0.5, super: 0.4, capsule: 0.4, empty: 5 })
+  .symbolData(UNMASK)
+  .speedProfile(CLOVER_SPEED)
+  .cellMask(cloverCellMask)
+  .cellZIndex(cellZIndex)
+  .respins(3)
+  .lockAnimation('landing')
+  .ticker(app.ticker)
+  .build();
+
+const boardW = COLS * CELL.width + (COLS - 1) * COLUMN_GAP;
+const boardH = ROWS * CELL.height + (ROWS - 1) * ROW_GAP;
+board.container.position.set((app.screen.width - boardW) / 2, (app.screen.height - boardH) / 2 - 10);
+const grid = cloverGridBackground({ x: board.container.x, y: board.container.y, cols: COLS, rows: ROWS, cell: CELL, columnGap: COLUMN_GAP, rowGap: ROW_GAP });
+app.stage.addChild(grid);
+app.stage.addChild(board.container);
+
+const hud = new PIXI.Text({ text: 'press spin', style: { fontFamily: 'system-ui, sans-serif', fontSize: 13, fontWeight: '600', fill: 0x9c8f78 } });
+hud.anchor.set(0.5, 0);
+hud.position.set(app.screen.width / 2, board.container.y + boardH + 24);
+app.stage.addChild(hud);
+
+board.events.on('cell:landed', ({ cell, coin }) => {
+  if (coin?.id === 'gold') board.symbolAt(cell).setLabel(fmt(coin.data.value));
+});
+
+const gold = (cell, value = pick(VALUES)) => ({ cell, id: 'gold', data: { value } });
+
+// The cell that upgrades: row 0, so the at-rest order draws it BEHIND both
+// rows under it. Without the lift its upgrade plays under two neighbours.
+const HERO = { reel: 2, cell: 0 };
+const SEED = [HERO, { reel: 2, cell: 1 }, { reel: 2, cell: 2 }, { reel: 1, cell: 1 }].map((c) => gold(c));
+// Landings that keep arriving DURING the hero's upgrade - each one is a
+// `refreshCellZIndex()` over all 15 cells.
+const DURING = [
+  [gold({ reel: 1, cell: 0 }), gold({ reel: 3, cell: 1 })],
+  [gold({ reel: 3, cell: 0 })],
+  [gold({ reel: 1, cell: 2 }), gold({ reel: 3, cell: 2 })],
+];
+
+/** Raise a clover's value on its face, held in front of the board while it plays. */
+async function upgrade(cell, to) {
+  const release = board.lift(cell);
+  const symbol = board.symbolAt(cell);
+  const before = refreshes;
+  try {
+    for (const step of [to / 8, to / 4, to / 2, to]) {
+      symbol.setLabel(fmt(step));
+      symbol.playWin();
+      hud.text = `lifted ${cell.reel},${cell.cell} - ${refreshes - before} whole-board order refreshes since, still in front`;
+      await sleep(460);
+    }
+  } finally {
+    // A release the caller cannot forget: the lift's lifetime is this function's.
+    release();
+  }
+  symbol.playIdle();
+}
+
+let busy = false;
+return {
+  cleanup: () => { try { hud.destroy(); } catch {} grid.destroy({ children: true }); board.destroy(); },
+  onSpin: async () => {
+    if (busy) return;
+    busy = true;
+    board.reset();
+    board.enter(SEED);
+    for (const c of SEED) { const s = board.symbolAt(c.cell); s.setLabel(fmt(c.data.value)); s.playIdle(); }
+    // A beat at rest first: the hero is in row 0, so the row-dominant order
+    // draws it UNDER the clover below it. That is the order the lift suspends.
+    hud.text = `at rest: ${HERO.reel},${HERO.cell} is in row 0, so the row below draws over it`;
+    await sleep(1100);
+
+    // The upgrade and the respins run TOGETHER: every landing below refreshes
+    // the whole board's order while the hero is still mid-animation.
+    const lifted = upgrade(HERO, 25);
+    for (const hits of DURING) {
+      await board.respin(hits);
+      await sleep(120);
+    }
+    await lifted;
+
+    hud.text = `back in the pack after ${refreshes} whole-board refreshes - press spin to replay`;
     busy = false;
   },
 };

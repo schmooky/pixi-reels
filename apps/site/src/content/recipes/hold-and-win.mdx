@@ -242,6 +242,44 @@ Every cell is its own reel set, so the clovers the engine lifts above the cells 
 
 <RecipeDemo code="hold-and-win-clover-cell-order" height={400} />
 
+<a id="hold-and-win-clover-lift"></a>
+
+## One cell in front, for a beat
+
+`cellZIndex` is the at-rest order and the board re-asks it on every place and every landing, so a clover that must not be overlapped while it upgrades cannot express that by returning a bigger number: the next landing overwrites it mid-animation. `board.lift(cell)` promotes the cell on a separate channel and hands back a release - the refresh keeps running underneath and cannot touch it, and the release restores the cell's place without recomputing anything.
+
+<RecipeDemo code="hold-and-win-clover-lift" height={400} />
+
+<a id="hold-and-win-clover-lift-dim"></a>
+
+## Lift one cell, dim the rest
+
+`board.dim({ except })` is the partner of `lift()`: it draws above every cell's clover and below anything lifted, so a lifted cell stays in front of the dim whether or not it is excepted. A dim covers cells, not symbol ids - this collect resolves the gold clovers it is about to sweep to cells and spares them, so the money stays bright while the blanks go dark. It fades in and back out over `fade` ms off the board's own ticker, fast enough to belong to the beat rather than read as a transition; `fade: 0` cuts.
+
+<RecipeDemo code="hold-and-win-clover-lift-dim" height={400} />
+
+<a id="hold-and-win-clover-dim-symbols"></a>
+
+## Dim the cells, or dim only the art
+
+Two channels for pushing a board back. `dim()` lays a rectangle over each cell, so the clover goes dark and so does the tile it sits in. `dimSymbols()` multiplies each symbol's own tint towards black instead: the art sinks and the board keeps its lights on. Same sweep runs twice below, so the only difference on screen is which one did it - `amount` is the strength on both, and both fade over `fade`.
+
+The reason it is a board method rather than three lines of `gsap.to`: a dimmed cell that swaps its symbol has to keep its dim, and the symbol that left has to lose the tint before the pool hands it to another cell.
+
+<RecipeDemo code="hold-and-win-clover-dim-symbols" height={400} />
+
+<a id="hold-and-win-clover-dim-one-cell"></a>
+
+## Dimming the art is not dimming the cell
+
+One slot blown up, with a fruit in it rather than a clover so the cell's own background shows all the way around the symbol. The blue plate is `cellChrome()` - the board draws it, it is not a symbol - so `dimSymbols()` never touches it however hard it dims the fruit. `amount` steps 0.3, 0.6, 0.9 and the plate does not move; then the same 0.6 through `dim()` takes the whole cell down.
+
+The last beat is the corollary: swap the cell to the empty id and there is no art left to dim, so `dimSymbols()` changes nothing at all - not the symbol that has gone, and not the plate, which was never its business.
+
+Which is the thing to watch for on a real board. If your blank tile is a registered symbol (as it is in the recipes above, where the dark tile is the `empty` id) then it IS art, and `dimSymbols()` dims it with everything else. Draw whatever must stay lit in `cellChrome()`, or name its cell in `except`.
+
+<RecipeDemo code="hold-and-win-clover-dim-one-cell" height={400} />
+
 <a id="hold-and-win-clover-bonus-5x5"></a>
 
 ## Clover bonus board, 5x5
