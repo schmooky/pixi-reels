@@ -2,7 +2,13 @@ import { Container, type Renderer, type Ticker } from 'pixi.js';
 import type { Disposable } from '../utils/Disposable.js';
 import { ReelSymbol } from '../symbols/ReelSymbol.js';
 import type { SymbolFactory } from '../symbols/SymbolFactory.js';
-import type { SymbolData, Stacking } from '../config/types.js';
+import type {
+  SymbolData,
+  Stacking,
+  ReelLandingContext,
+  SymbolZIndexResolver,
+} from '../config/types.js';
+import { Z_INDEX_BUDGET } from '../config/types.js';
 import { ReelMotion } from './ReelMotion.js';
 import type { ReelAxis } from './ReelAxis.js';
 import { VERTICAL_FORWARD } from './ReelAxis.js';
@@ -136,6 +142,8 @@ class OccupiedStub extends ReelSymbol {
 
 export interface ReelConfig {
   reelIndex: number;
+  /** Reels in the set. Reported to symbols and z-index resolvers. Default 1. */
+  reelCount?: number;
   visibleCells: number;
   bufferStart: number;
   bufferEnd: number;
@@ -144,6 +152,12 @@ export interface ReelConfig {
   symbolGapX: number;
   symbolGapY: number;
   symbolsData: Record<string, SymbolData>;
+  /**
+   * Replaces the engine's symbol z-index formula. See
+   * `ReelSetBuilder.symbolZIndex`. Omitted: `symbolData.zIndex * 100 +
+   * cellStackingIndex`.
+   */
+  symbolZIndex?: SymbolZIndexResolver;
   initialSymbols: string[];
   /**
    * Y offset of this reel relative to the viewport's top edge. Set by the
@@ -235,6 +249,9 @@ export class Reel implements Disposable {
   public readonly container: Container;
   public readonly events: EventEmitter<ReelEvents>;
   public readonly reelIndex: number;
+  /** Reels in the owning set. */
+  public readonly reelCount: number;
+  private readonly _symbolZIndex: SymbolZIndexResolver | null;
 
   /** Current symbols in order (top buffer → visible → bottom buffer). */
   public symbols: ReelSymbol[];
@@ -390,6 +407,8 @@ export class Reel implements Disposable {
     viewport: ReelViewport,
   ) {
     this.reelIndex = config.reelIndex;
+    this.reelCount = config.reelCount ?? 1;
+    this._symbolZIndex = config.symbolZIndex ?? null;
     this._symbolFactory = symbolFactory;
     this._randomProvider = randomProvider;
     this._viewport = viewport;
@@ -504,6 +523,11 @@ export class Reel implements Disposable {
       this._viewport.maskedContainer.removeChild(this.container);
       this._viewport.maskedContainer.addChild(this._warp);
     }
+
+    // The initial frame is ordered like every later one. Before this the
+    // views sat at zIndex 0 until the first wrap or snap, which a consumer
+    // resolver would have read as "never asked at build".
+    this.refreshZIndex();
   }
 
   get isDestroyed(): boolean {
@@ -992,6 +1016,9 @@ export class Reel implements Disposable {
     this._atRest = false;
     for (let i = 0; i < this.symbols.length; i++) {
       const symbol = this.symbols[i];
+      // Leaving rest ends the landing: whatever beat the symbol reported on
+      // land is over as far as anyone sequencing after it is concerned.
+      symbol.resetLanding();
       const view = symbol.view;
       if (view.parent === this._viewport.unmaskedContainer) {
         const reelLocalY = this._axis.getMain(view) - this._axis.getMain(this.container);
@@ -999,6 +1026,9 @@ export class Reel implements Disposable {
         this._placeSymbolView(symbol, reelLocalY, false);
       }
     }
+    // A resolver may key on `atRest`; the formula does not, so skip the
+    // rescan when there is none.
+    if (this._symbolZIndex) this.refreshZIndex();
   }
 
   /**
@@ -1057,9 +1087,31 @@ export class Reel implements Disposable {
         this._placeSymbolView(symbol, reelLocalY, true);
       }
       if (only === null || only.has(i - this._bufferStart)) {
-        symbol.onReelLanded();
+        symbol.onReelLanded(this.landingContext(i - this._bufferStart, symbol.symbolId));
       }
     }
+    // The lift moved views between containers and flipped `atRest`; a
+    // resolver keyed on either needs a pass now. The formula sees no change.
+    if (this._symbolZIndex) this.refreshZIndex();
+    // After the `onReelLanded()` loop by contract: a listener that takes a
+    // landed symbol's track over finds the engine's own landing already set.
+    this.events.emit('landing', this.getVisibleSymbols());
+  }
+
+  /**
+   * The {@link ReelLandingContext} for a visible cell of this reel.
+   *
+   * @internal Built for `onReelLanded()`; the cascade drop-in phase uses it
+   * for the gravity movers it lands itself.
+   */
+  landingContext(cell: number, symbolId: string): ReelLandingContext {
+    return {
+      reelIndex: this.reelIndex,
+      reelCount: this.reelCount,
+      cell,
+      visibleCells: this._visibleCells,
+      symbolId,
+    };
   }
 
   /**
@@ -1702,10 +1754,24 @@ export class Reel implements Disposable {
    * to remember to call `refreshZIndex` afterwards).
    */
   private _computeSymbolZIndex(symbolId: string, index: number): number {
-    const base = this._symbolsData[symbolId]?.zIndex ?? 0;
+    const symbolData = this._symbolsData[symbolId];
+    const base = symbolData?.zIndex ?? 0;
     const within =
       this._cellStacking === 'ascending' ? index : this.symbols.length - 1 - index;
-    return base * 100 + within;
+    const defaultZIndex = base * Z_INDEX_BUDGET.symbolLayer + within;
+    if (!this._symbolZIndex) return defaultZIndex;
+    const cell = index - this._bufferStart;
+    return this._symbolZIndex({
+      symbolId,
+      symbolData: symbolData ?? { weight: 0 },
+      reelIndex: this.reelIndex,
+      reelCount: this.reelCount,
+      arrayIndex: index,
+      visibleCell: cell >= 0 && cell < this._visibleCells ? cell : null,
+      visibleCells: this._visibleCells,
+      atRest: this._atRest,
+      defaultZIndex,
+    });
   }
 
   /**

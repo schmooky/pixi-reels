@@ -1,6 +1,6 @@
 # pixi-reels
 
-pixi-reels 2.5.0 is a reel engine for PixiJS v8.
+pixi-reels 2.6.0 is a reel engine for PixiJS v8.
 It ships reel-only primitives. Win math, paytable math, RNG, and audio live in consumer code.
 This file inlines every guide, API page, recipe (with source) and answered FAQ entry for offline LLM context.
 
@@ -397,7 +397,7 @@ URL: https://pixi-reels.schmooky.dev/api/functions/index.getTargetSlot/
 
 ### inset()
 URL: https://pixi-reels.schmooky.dev/api/functions/index.inset/
-```ts function inset(strategy: MaskStrategy, pixels: number): DrawableMaskStrategy; ```
+```ts function inset(strategy: MaskStrategy, pixels: number | InsetSides): DrawableMaskStrategy; ```
 
 ### isDrawableMaskStrategy()
 URL: https://pixi-reels.schmooky.dev/api/functions/index.isDrawableMaskStrategy/
@@ -507,6 +507,10 @@ A cell coordinate in the grid.
 ### BoardCellMaskInfo
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.BoardCellMaskInfo/
 What a cell-mask factory is told about the cell it builds for.
+
+### BoardCellZIndexContext
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.BoardCellZIndexContext/
+What a [BoardCellZIndexResolver](/api/types/index.BoardCellZIndexResolver/) is asked about.
 
 ### BoardGridOptions
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.BoardGridOptions/
@@ -621,6 +625,10 @@ A coin somewhere on the board. `id` selects the registered symbol art; `data` is
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.HwRespinResult/
 Resolution of one [HoldAndWinBoard.respin](/api/classes/index.HoldAndWinBoard/#respin) wave.
 
+### InsetSides
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.InsetSides/
+Per-side inset for [inset](/api/functions/index.inset/). SCREEN sides in every orientation, so `top` trims the top edge of the drawn mask on a horizontal set too. A side left out is `0`; negative grow
+
 ### MaskConfig
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.MaskConfig/
 Mask configuration for the reel viewport.
@@ -714,6 +722,10 @@ Extra symbols above/below config per reel.
 ### ReelGridConfig
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.ReelGridConfig/
 Configuration for the reel grid layout.
+
+### ReelLandingContext
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.ReelLandingContext/
+What a symbol is told about where it landed. Handed to `ReelSymbol.onReelLanded(ctx)` by the engine on every landing path, so a symbol can decide what its landing beat is on THIS reel and cell - or th
 
 ### ReelMaskRect
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.ReelMaskRect/
@@ -828,6 +840,10 @@ A cell on the visible grid. `reelIndex` is the column; `cellIndex` is the cell f
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.SymbolSwap/
 One cell to re-skin. See [ReelSet.swapSymbols](/api/classes/index.ReelSet/#swapsymbols).
 
+### SymbolZIndexContext
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.SymbolZIndexContext/
+Everything a [SymbolZIndexResolver](/api/types/index.SymbolZIndexResolver/) is asked about. Built by the reel once per symbol per z-index refresh.
+
 ### TrapezoidConfig
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.TrapezoidConfig/
 Trapezoid perspective configuration.
@@ -886,6 +902,10 @@ URL: https://pixi-reels.schmooky.dev/api/types/index.AnticipationProtect/
 URL: https://pixi-reels.schmooky.dev/api/types/index.AnticipationStagger/
 ```ts type AnticipationStagger = number | number[] | "sequential"; ```
 
+### BoardCellZIndexResolver
+URL: https://pixi-reels.schmooky.dev/api/types/index.BoardCellZIndexResolver/
+```ts type BoardCellZIndexResolver = (ctx: BoardCellZIndexContext) => number; ```
+
 ### BoardProfile
 URL: https://pixi-reels.schmooky.dev/api/types/index.BoardProfile/
 ```ts type BoardProfile =
@@ -925,6 +945,10 @@ URL: https://pixi-reels.schmooky.dev/api/types/index.HwEffect/
 ### HwLockAnimation
 URL: https://pixi-reels.schmooky.dev/api/types/index.HwLockAnimation/
 ```ts type HwLockAnimation = "win" | "landing" | "none"; ```
+
+### HwLockAnimationRule\<TData\>
+URL: https://pixi-reels.schmooky.dev/api/types/index.HwLockAnimationRule/
+```ts type HwLockAnimationRule<TData> =
 
 ### HwPhase
 URL: https://pixi-reels.schmooky.dev/api/types/index.HwPhase/
@@ -994,6 +1018,10 @@ URL: https://pixi-reels.schmooky.dev/api/types/index.Stacking/
 URL: https://pixi-reels.schmooky.dev/api/types/index.SymbolPoolSlots/
 ```ts type SymbolPoolSlots = "spinning" | "buffer" | "bufferStart" | "bufferEnd"; ```
 
+### SymbolZIndexResolver
+URL: https://pixi-reels.schmooky.dev/api/types/index.SymbolZIndexResolver/
+```ts type SymbolZIndexResolver = (ctx: SymbolZIndexContext) => number; ```
+
 ### TickerCallback
 URL: https://pixi-reels.schmooky.dev/api/types/index.TickerCallback/
 ```ts type TickerCallback = (ticker: Ticker) => void; ```
@@ -1001,6 +1029,10 @@ URL: https://pixi-reels.schmooky.dev/api/types/index.TickerCallback/
 ### WinSymbolAnim
 URL: https://pixi-reels.schmooky.dev/api/types/index.WinSymbolAnim/
 ```ts type WinSymbolAnim =
+
+### LandingDecision
+URL: https://pixi-reels.schmooky.dev/api/types/spine.LandingDecision/
+```ts type LandingDecision = boolean | string; ```
 
 ### SymbolAnimOverrides
 URL: https://pixi-reels.schmooky.dev/api/types/spine.SymbolAnimOverrides/
@@ -1041,6 +1073,10 @@ URL: https://pixi-reels.schmooky.dev/api/variables/index.VERTICAL_FORWARD/
 ### WILD\_CARD
 URL: https://pixi-reels.schmooky.dev/api/variables/index.WILD_CARD/
 ```ts const WILD_CARD: { color: 16774048; id: "wild"; label: "WILD"; textColor: 7033856; }; ```
+
+### Z\_INDEX\_BUDGET
+URL: https://pixi-reels.schmooky.dev/api/variables/index.Z_INDEX_BUDGET/
+```ts const Z_INDEX_BUDGET: { pinOverlay: 10000; symbolLayer: 100; }; ```
 
 ## Architecture deep-dives
 
@@ -9099,6 +9135,104 @@ return {
 };
 ```
 
+### hold-and-win-clover-cell-order
+URL: https://pixi-reels.schmooky.dev/recipes/hold-and-win-clover-cell-order/
+```ts
+// @ts-nocheck
+// Injected: HoldAndWinBuilder, CloverSpineSymbol, CloverSymbol, cloverGridBackground, loadHwCloverSpines, CLOVER_SPEED, cloverCellMask, CLOVER_CELL, PIXI, gsap, app
+//
+// DRAW ORDER BETWEEN CELLS. Every cell is its own 1x1 reel set, so a
+// clover's zIndex only ever sorts it against its own buffers; the clovers
+// the engine lifts above the cells at rest (unmask) all render in ONE layer
+// the board owns, in attach order - column by column - which lets the next
+// column's clover cover a lower clover's glow. `cellZIndex` sorts that layer
+// by whatever the board says: here lower rows in front (a clover's glow
+// hangs down over the cell below), and the capsule above everything. It is
+// asked again on every place and every landing, so the answer can depend
+// on the clover shown.
+
+const COLS = 5, ROWS = 3;
+const CELL = { width: 101, height: 85 }, COLUMN_GAP = 8, ROW_GAP = 8;
+const SCALE = CELL.width / CLOVER_CELL.width;
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const fmt = (v) => v.toFixed(2);
+const pick = (a) => a[Math.floor(Math.random() * a.length)];
+const VALUES = [1, 1.5, 2, 2.5, 3, 5];
+
+const art = await loadHwCloverSpines();
+const UNMASK = Object.fromEntries(['gold', 'collect', 'multi', 'mystery', 'super', 'capsule'].map((id) => [id, { unmask: true }]));
+class Clover extends CloverSpineSymbol {
+  onActivate(id) { super.onActivate(id); if (id === 'gold') this.setLabel(fmt(pick(VALUES))); }
+}
+
+const board = new HoldAndWinBuilder()
+  .grid(COLS, ROWS)
+  .cellSize(CELL, { columnGap: COLUMN_GAP, rowGap: ROW_GAP })
+  .symbols((r) => { for (const id of ['gold', 'collect', 'multi', 'mystery', 'super', 'capsule', 'empty']) r.register(id, Clover, { scale: SCALE }); })
+  .weights({ gold: 2, collect: 0.6, multi: 0.6, mystery: 0.6, super: 0.4, capsule: 0.5, empty: 5 })
+  .symbolData(UNMASK)
+  .speedProfile(CLOVER_SPEED)
+  .cellMask(cloverCellMask)
+  // Rows beat columns; the capsule beats rows. `attachOrder` would be the default.
+  .cellZIndex(({ cell, symbolId, cols }) =>
+    (symbolId === 'capsule' ? 1000 : 0) + cell.cell * cols + cell.reel)
+  .respins(3)
+  .lockAnimation('landing')
+  .ticker(app.ticker)
+  .build();
+
+const boardW = COLS * CELL.width + (COLS - 1) * COLUMN_GAP;
+const boardH = ROWS * CELL.height + (ROWS - 1) * ROW_GAP;
+board.container.position.set((app.screen.width - boardW) / 2, (app.screen.height - boardH) / 2 - 10);
+const grid = cloverGridBackground({ x: board.container.x, y: board.container.y, cols: COLS, rows: ROWS, cell: CELL, columnGap: COLUMN_GAP, rowGap: ROW_GAP });
+app.stage.addChild(grid);
+app.stage.addChild(board.container);
+
+const hud = new PIXI.Text({ text: 'press spin', style: { fontFamily: 'system-ui, sans-serif', fontSize: 13, fontWeight: '600', fill: 0x9c8f78 } });
+hud.anchor.set(0.5, 0);
+hud.position.set(app.screen.width / 2, board.container.y + boardH + 24);
+app.stage.addChild(hud);
+
+board.events.on('cell:landed', ({ cell, coin }) => {
+  if (coin?.id === 'gold') board.symbolAt(cell).setLabel(fmt(coin.data.value));
+});
+board.events.on('coin:locked', ({ locked, capacity }) => {
+  hud.text = `${locked}/${capacity} held · lower rows in front, capsule on top`;
+});
+
+const gold = (cell) => ({ cell, id: 'gold', data: { value: pick(VALUES) } });
+const capsule = (cell) => ({ cell, id: 'capsule', data: { value: 0 } });
+// Full columns, so every clover has a neighbour above and below to overlap.
+const SEED = [{ reel: 1, cell: 0 }, { reel: 1, cell: 1 }, { reel: 1, cell: 2 }, { reel: 3, cell: 1 }].map(gold);
+const ROUNDS = [
+  [gold({ reel: 2, cell: 0 }), gold({ reel: 2, cell: 1 }), gold({ reel: 3, cell: 0 })],
+  [capsule({ reel: 2, cell: 2 }), gold({ reel: 3, cell: 2 })],
+  [gold({ reel: 0, cell: 1 })],
+  [], [], [],
+];
+
+let busy = false;
+return {
+  cleanup: () => { try { hud.destroy(); } catch {} grid.destroy({ children: true }); board.destroy(); },
+  onSpin: async () => {
+    if (busy) return;
+    busy = true;
+    board.reset();
+    board.enter(SEED);
+    for (const c of SEED) { const sym = board.symbolAt(c.cell); sym.setLabel(fmt(c.data.value)); sym.playIdle(); }
+    hud.text = `${SEED.length}/${board.capacity} held · lower rows in front, capsule on top`;
+    await sleep(400);
+    for (const hits of ROUNDS) {
+      const res = await board.respin(hits);
+      await sleep(400);
+      if (res.done) break;
+    }
+    hud.text = 'feature over · press spin to replay';
+    busy = false;
+  },
+};
+```
+
 ### hold-and-win-clover-collect
 URL: https://pixi-reels.schmooky.dev/recipes/hold-and-win-clover-collect/
 ```ts
@@ -9638,6 +9772,113 @@ return {
     await board.playWin();
     const total = board.lockedCoins.reduce((a, c) => a + c.data.value, 0);
     hud.text = `feature over · ${board.lockedCoins.length}/${board.capacity} · TOTAL ${fmt(total)}`;
+    busy = false;
+  },
+};
+```
+
+### hold-and-win-clover-lock-rule
+URL: https://pixi-reels.schmooky.dev/recipes/hold-and-win-clover-lock-rule/
+```ts
+// @ts-nocheck
+// Injected: HoldAndWinBuilder, CloverSpineSymbol, CloverSymbol, cloverGridBackground, loadHwCloverSpines, CLOVER_SPEED, cloverCellMask, CLOVER_CELL, PIXI, gsap, app
+//
+// THE LOCK ANIMATION, PER COIN AND AFTER THE LANDING.
+//
+// `lockAnimation` may be a function of the coin that just locked: gold
+// settles with its landing only, COLLECT celebrates. And the celebration
+// waits for the skeleton's own landing beat - the one `autoPlayLanding`
+// started on the landing frame - instead of taking its track from it, which
+// is what used to happen: `coin:locked` fires a bounce after the reel is on
+// its frame, and `playWin()` on the same track cut the landing short every
+// time. `symbol.landing` is that beat as a promise; the HUD prints when it
+// finished and when the win followed.
+
+const COLS = 5, ROWS = 3;
+const CELL = { width: 101, height: 85 }, COLUMN_GAP = 8, ROW_GAP = 8;
+const SCALE = CELL.width / CLOVER_CELL.width;
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const fmt = (v) => v.toFixed(2);
+const pick = (a) => a[Math.floor(Math.random() * a.length)];
+const VALUES = [1, 1.5, 2, 2.5, 3, 5];
+
+const art = await loadHwCloverSpines();
+const UNMASK = Object.fromEntries(['gold', 'collect', 'multi', 'mystery', 'super', 'capsule'].map((id) => [id, { unmask: true }]));
+class Clover extends CloverSpineSymbol {
+  onActivate(id) { super.onActivate(id); if (id === 'gold') this.setLabel(fmt(pick(VALUES))); }
+}
+
+const board = new HoldAndWinBuilder()
+  .grid(COLS, ROWS)
+  .cellSize(CELL, { columnGap: COLUMN_GAP, rowGap: ROW_GAP })
+  .symbols((r) => {
+    for (const id of ['gold', 'multi', 'mystery', 'super', 'capsule', 'empty']) r.register(id, Clover, { scale: SCALE });
+    r.register('collect', Clover, { scale: SCALE, font: 'CloverJackpot', labelOffset: 0.02 });
+  })
+  .weights({ gold: 2, collect: 0.6, multi: 0.6, mystery: 0.6, super: 0.4, capsule: 0.5, empty: 5 })
+  .symbolData(UNMASK)
+  .speedProfile(CLOVER_SPEED)
+  .cellMask(cloverCellMask)
+  .respins(3)
+  // Per coin: the collector gets the win, everything else its landing only.
+  .lockAnimation((coin) => (coin.id === 'collect' ? 'win' : 'landing'))
+  .ticker(app.ticker)
+  .build();
+
+const boardW = COLS * CELL.width + (COLS - 1) * COLUMN_GAP;
+const boardH = ROWS * CELL.height + (ROWS - 1) * ROW_GAP;
+board.container.position.set((app.screen.width - boardW) / 2, (app.screen.height - boardH) / 2 - 10);
+const grid = cloverGridBackground({ x: board.container.x, y: board.container.y, cols: COLS, rows: ROWS, cell: CELL, columnGap: COLUMN_GAP, rowGap: ROW_GAP });
+app.stage.addChild(grid);
+app.stage.addChild(board.container);
+
+const hud = new PIXI.Text({ text: 'press spin', style: { fontFamily: 'system-ui, sans-serif', fontSize: 13, fontWeight: '600', fill: 0x9c8f78 } });
+hud.anchor.set(0.5, 0);
+hud.position.set(app.screen.width / 2, board.container.y + boardH + 24);
+app.stage.addChild(hud);
+
+board.events.on('cell:landed', ({ cell, coin }) => {
+  if (coin?.id === 'gold') board.symbolAt(cell).setLabel(fmt(coin.data.value));
+});
+// The sequencing, observed: the collector's landing beat is still running
+// when it locks; the board's win queues behind it.
+board.events.on('coin:locked', async ({ coin }) => {
+  if (coin.id !== 'collect') return;
+  const symbol = board.symbolAt(coin.cell);
+  const t0 = performance.now();
+  hud.text = 'COLLECT locked while its landing still plays - win waits';
+  await symbol.landing;
+  const landed = Math.round(performance.now() - t0);
+  hud.text = `landing done +${landed}ms after the lock · win playing`;
+  await symbol.playWin(); // resolves with the board's own win: same track, same entry
+  hud.text = `landing done +${landed}ms · win done +${Math.round(performance.now() - t0)}ms`;
+});
+
+const gold = (cell) => ({ cell, id: 'gold', data: { value: pick(VALUES) } });
+const SEED = [{ reel: 0, cell: 0 }, { reel: 3, cell: 1 }, { reel: 1, cell: 2 }].map(gold);
+const ROUNDS = [
+  [gold({ reel: 4, cell: 0 })],
+  [{ cell: { reel: 2, cell: 1 }, id: 'collect', data: { value: 0 } }],
+  [gold({ reel: 4, cell: 2 })],
+  [], [], [],
+];
+
+let busy = false;
+return {
+  cleanup: () => { try { hud.destroy(); } catch {} grid.destroy({ children: true }); board.destroy(); },
+  onSpin: async () => {
+    if (busy) return;
+    busy = true;
+    board.reset();
+    board.enter(SEED);
+    for (const c of SEED) { const sym = board.symbolAt(c.cell); sym.setLabel(fmt(c.data.value)); sym.playIdle(); }
+    hud.text = 'gold: landing only · COLLECT: landing, then win';
+    await sleep(400);
+    for (const hits of ROUNDS) {
+      const res = await board.respin(hits);
+      await sleep(900);
+      if (res.done) break;
+    }
     busy = false;
   },
 };
@@ -13533,6 +13774,204 @@ return {
 };
 ```
 
+### landing-signal
+URL: https://pixi-reels.schmooky.dev/recipes/landing-signal/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK,
+//                   PIXI, gsap, app
+//
+// TWO LANDING EVENTS, ONE BOUNCE APART.
+//
+// `spin:reelLanding` fires the frame a reel is ON its result: strip snapped,
+// every symbol told it landed, the bounce about to start. `spin:reelLanded`
+// fires once the bounce has settled - a whole `bounceDuration` later on an
+// animated stop (600ms on NORMAL), the same tick on a slam. Anything coupled
+// to the landing itself belongs on the first one; the HUD prints the gap.
+//
+// The "copy reels" (2 and 3) show the use: a takeover plate grows over the
+// reel the instant it lands, not after it has finished bouncing, and their
+// symbols dim from `onReelLanded(ctx)` - the symbol knows which reel it is
+// on now, so "no landing beat here" needs no reel lookup from outside.
+
+const IDS = ['9', '10', 'J', 'Q', 'K'];
+const REELS = 5, ROWS = 3, SIZE = 80;
+const CARDS = CARD_DECK.filter((c) => IDS.includes(c.id));
+const COPY = new Set([2, 3]);
+function rv() { return IDS[Math.floor(Math.random() * IDS.length)]; }
+
+// The symbol side: land quietly on a copy reel, the takeover is about to
+// replace it. `ctx` is the engine's, no reel reference needed.
+class Card extends CardSymbol {
+  onReelSpinStart(joined) { super.onReelSpinStart?.(joined); this.view.alpha = 1; }
+  onReelLanded(ctx) { if (ctx && COPY.has(ctx.reelIndex)) this.view.alpha = 0.35; }
+}
+
+const reelSet = new ReelSetBuilder()
+  .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(0, 0)
+  .symbols((r) => {
+    for (const c of CARDS) {
+      r.register(c.id, Card, { color: c.color, label: c.label, textColor: c.textColor });
+    }
+  })
+  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 160 })
+  .ticker(app.ticker)
+  .build();
+
+const W = REELS * SIZE, H = ROWS * SIZE;
+
+// Takeover plates, one per copy reel, above the mask.
+const plates = new Map();
+for (const reel of COPY) {
+  const g = new PIXI.Graphics();
+  g.roundRect(4, 4, SIZE - 8, H - 8, 10).fill({ color: 0xf0d98a, alpha: 0.28 })
+    .stroke({ color: 0xf0d98a, width: 2 });
+  g.position.set(reel * SIZE, 0);
+  g.scale.y = 0;
+  g.zIndex = 9000;
+  reelSet.viewport.unmaskedContainer.addChild(g);
+  plates.set(reel, g);
+}
+
+const lines = Array.from({ length: REELS }, (_, i) => `reel ${i}: -`);
+const hud = new PIXI.Text({
+  text: '',
+  style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 11, fill: 0x9c8f78, lineHeight: 15 },
+});
+hud.position.set(0, H + 12);
+reelSet.addChild(hud);
+const redraw = () => { hud.text = lines.join('\n'); };
+redraw();
+
+const landingAt = new Map();
+const onLanding = (reel) => {
+  landingAt.set(reel, performance.now());
+  lines[reel] = `reel ${reel}: landing frame${COPY.has(reel) ? ' - takeover starts' : ''}`;
+  redraw();
+  const plate = plates.get(reel);
+  if (plate) gsap.fromTo(plate.scale, { y: 0 }, { y: 1, duration: 0.3, ease: 'power2.out' });
+};
+const onLanded = (reel) => {
+  const dt = Math.round(performance.now() - (landingAt.get(reel) ?? performance.now()));
+  lines[reel] = `reel ${reel}: landed +${dt}ms after the landing frame`;
+  redraw();
+};
+reelSet.events.on('spin:reelLanding', onLanding);
+reelSet.events.on('spin:reelLanded', onLanded);
+
+return {
+  reelSet,
+  cleanup: () => {
+    reelSet.events.off('spin:reelLanding', onLanding);
+    reelSet.events.off('spin:reelLanded', onLanded);
+    for (const g of plates.values()) { gsap.killTweensOf(g.scale); try { g.destroy(); } catch {} }
+    try { hud.destroy(); } catch {}
+  },
+  onSpin: async () => {
+    for (const g of plates.values()) gsap.to(g.scale, { y: 0, duration: 0.15 });
+    for (let i = 0; i < REELS; i++) lines[i] = `reel ${i}: spinning`;
+    redraw();
+    const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
+    const p = reelSet.spin();
+    await new Promise((r) => setTimeout(r, 380));
+    reelSet.setResult(grid);
+    await p;
+  },
+};
+```
+
+### layering-graded-zindex
+URL: https://pixi-reels.schmooky.dev/recipes/layering-graded-zindex/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, SpineReelSymbol,
+//                   StaticSpinSymbol, SpinTextureCache, prewarmSpinTextures,
+//                   loadSpineSet, PIXI, app, pickWeighted
+//
+// SYMBOL GRADING: the consumer owns the draw order.
+//
+// The engine's formula is type-dominant (`symbolData.zIndex * 100 + cell`),
+// so an elevated symbol fronts everything below it. Grading specs are the
+// other way round: within a grade the LOWER ROW is in front, then the reel to
+// the right, and only then does a higher grade win. `symbolZIndex` hands the
+// engine that rule and the engine keeps applying it - after every wrap, snap
+// and swap, and after the unmask lift on land, which is the moment this
+// order becomes visible: every mid and high here is unmasked, so at rest they
+// all share one container and the resolver sorts them against each other.
+//
+// In motion the resolver returns `defaultZIndex`, so the spin looks exactly
+// as it did - the grading is an at-rest presentation.
+
+const thunderkick = await loadSpineSet("thunderkick");
+
+const SPINE_SCALE = 0.6;
+const CELL_W = 175 * SPINE_SCALE;
+const CELL_H = 203 * SPINE_SCALE;
+const ROWS_PER_REEL = [3, 4, 4, 4, 4, 3];
+
+const spineMap = thunderkick.spineMap;
+const weights = {
+  low1: 6, low2: 6, low3: 6, low4: 6, low5: 6,
+  mid1: 12, mid2: 12, mid3: 12, mid4: 12, high: 10,
+};
+// The spec: lows ungraded (engine order), mids one grade, high above them.
+const GRADE = { mid1: 1, mid2: 1, mid3: 1, mid4: 1, high: 2 };
+const UNMASK = Object.fromEntries(Object.keys(GRADE).map((id) => [id, { unmask: true }]));
+
+const cache = new SpinTextureCache({ renderer: app.renderer });
+const createInner = () =>
+  new SpineReelSymbol({ spineMap, scale: SPINE_SCALE, landingAnimation: 'land', autoPlayLanding: true });
+
+prewarmSpinTextures({
+  cache,
+  ids: Object.keys(weights),
+  createSymbol: createInner,
+  width: CELL_W,
+  height: CELL_H,
+});
+
+const reelSet = new ReelSetBuilder()
+  .reels(6)
+  .visibleCellsPerReel(ROWS_PER_REEL)
+  .reelAnchor('center')
+  .symbolSize(CELL_W, CELL_H)
+  .symbolGap(0, 0)
+  .symbols((r) => {
+    for (const id of Object.keys(weights)) {
+      r.register(id, StaticSpinSymbol, { createInner, cache, blurRampMs: 160 });
+    }
+  })
+  .weights(weights)
+  .symbolData(UNMASK)
+  // Row-dominant within a grade: cell * 10 beats reel, grade * 1000 beats both.
+  .symbolZIndex((ctx) => {
+    if (!ctx.atRest || ctx.visibleCell === null) return ctx.defaultZIndex;
+    const grade = GRADE[ctx.symbolId];
+    return grade === undefined
+      ? ctx.defaultZIndex
+      : grade * 1000 + ctx.visibleCell * 10 + ctx.reelIndex;
+  })
+  .speed('normal', { ...SpeedPresets.NORMAL, spinDelay: 0, stopDelay: 0, bounceDistance: 0 })
+  .speed('turbo', { ...SpeedPresets.TURBO, spinDelay: 0, stopDelay: 0, bounceDistance: 0 })
+  .ticker(app.ticker)
+  .build();
+
+const hud = new PIXI.Text({
+  text: 'at rest: lower row in front, then the reel to the right, high above every mid',
+  style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 11, fill: 0x9c8f78 },
+});
+hud.anchor.set(0.5, 0);
+hud.position.set(3 * CELL_W, 4 * CELL_H + 6);
+reelSet.addChild(hud);
+
+return {
+  reelSet,
+  cleanup: () => { try { hud.destroy(); } catch {} },
+  nextResult: () =>
+    ROWS_PER_REEL.map((cells) => Array.from({ length: cells }, () => pickWeighted(weights))),
+};
+```
+
 ### layering-promote-jagged
 URL: https://pixi-reels.schmooky.dev/recipes/layering-promote-jagged/
 ```ts
@@ -13928,6 +14367,87 @@ return {
     drift.kill();
     try { banner.destroy({ children: true }); } catch {}
     try { hud.destroy(); } catch {}
+  },
+  onSpin: async () => {
+    const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
+    const p = reelSet.spin();
+    await new Promise((r) => setTimeout(r, 380));
+    reelSet.setResult(grid);
+    await p;
+  },
+};
+```
+
+### mask-inset-sides
+URL: https://pixi-reels.schmooky.dev/recipes/mask-inset-sides/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, RoundedRectMaskStrategy,
+//                   inset, CardSymbol, CARD_DECK, PIXI, app
+//
+// `inset(strategy, { top, right, bottom, left })`: a different trim per
+// SCREEN side. Frame art rarely has four equal lips - here the bottom lip
+// carries the bet strip and is four times thicker than the top one - and
+// before this the only way to match it was to draw the whole window by hand
+// in a PathMaskStrategy. Now the rounded strategy is wrapped once, and the
+// sides are named the way the artist names them, whichever way the reels
+// travel.
+//
+// The frame behind the reels is drawn from the same LIP numbers, so the
+// gold outline IS the mask window: nothing peeks past it on any side.
+
+const IDS = ['9', '10', 'J', 'Q', 'K'];
+const REELS = 5, ROWS = 3, SIZE = 80;
+const CARDS = CARD_DECK.filter((c) => IDS.includes(c.id));
+function rv() { return IDS[Math.floor(Math.random() * IDS.length)]; }
+
+// The frame's lips, in px, as the artist measured them.
+const LIP = { top: 6, right: 6, bottom: 26, left: 6 };
+const RADIUS = 20;
+
+const reelSet = new ReelSetBuilder()
+  .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(0, 0)
+  .symbols((r) => {
+    for (const c of CARDS) {
+      r.register(c.id, CardSymbol, { color: c.color, label: c.label, textColor: c.textColor });
+    }
+  })
+  // One rounded window, pulled in by each lip. An omitted side would be 0.
+  .maskStrategy(inset(new RoundedRectMaskStrategy({ radius: RADIUS }), LIP))
+  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 140 })
+  .ticker(app.ticker)
+  .build();
+
+const W = REELS * SIZE, H = ROWS * SIZE;
+
+// The frame: a plate under the reels, and the window the lips leave open,
+// outlined in gold. The bottom lip is thick enough to hold a label.
+const frame = new PIXI.Graphics();
+frame.roundRect(-10, -10, W + 20, H + 20, RADIUS + 10).fill({ color: 0x2b2136 });
+frame
+  .roundRect(LIP.left, LIP.top, W - LIP.left - LIP.right, H - LIP.top - LIP.bottom, RADIUS)
+  .stroke({ color: 0xf0d98a, width: 2, alpha: 0.9 });
+reelSet.addChildAt(frame, 0);
+
+const lipText = new PIXI.Text({
+  text: `bottom lip ${LIP.bottom}px  ·  top ${LIP.top}px`,
+  style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 11, fill: 0xf0d98a },
+});
+lipText.anchor.set(0.5);
+lipText.position.set(W / 2, H - LIP.bottom / 2);
+reelSet.addChild(lipText);
+
+const hud = new PIXI.Text({
+  text: `inset(rounded, { top: ${LIP.top}, right: ${LIP.right}, bottom: ${LIP.bottom}, left: ${LIP.left} })`,
+  style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 11, fill: 0x9c8f78 },
+});
+hud.position.set(0, H + 16);
+reelSet.addChild(hud);
+
+return {
+  reelSet,
+  cleanup: () => {
+    try { frame.destroy(); lipText.destroy(); hud.destroy(); } catch {}
   },
   onSpin: async () => {
     const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
@@ -19731,6 +20251,111 @@ return {
       grid[reel][cell] = 'bigWild';
     }
     return grid;
+  },
+};
+```
+
+### spine-landing-rule
+URL: https://pixi-reels.schmooky.dev/recipes/spine-landing-rule/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, SpineReelSymbol,
+//                   StaticSpinSymbol, SpinTextureCache, prewarmSpinTextures,
+//                   loadSpineSet, PIXI, app, pickWeighted
+//
+// WHAT PLAYS ON LANDING, AND WHERE - decided by the symbol.
+//
+// `autoPlayLanding` takes a rule of the landing context. Reels 0-1 land as
+// usual (`land`); reels 2-3 are the copy reels, where a takeover is about to
+// replace the symbols, so the skeleton plays NOTHING - no landing pose to
+// fight with; reels 4-5 play `revealWin` as their landing beat instead. One
+// symbol class, one option, no per-reel subclasses and no listener that
+// re-sets the track after the engine set it. The log under the grid prints
+// what the rule chose, the frame each reel lands (`spin:reelLanding`).
+
+const thunderkick = await loadSpineSet("thunderkick");
+
+const SPINE_SCALE = 0.6;
+const CELL_W = 175 * SPINE_SCALE;
+const CELL_H = 203 * SPINE_SCALE;
+const ROWS_PER_REEL = [3, 4, 4, 4, 4, 3];
+const COPY = new Set([2, 3]);
+
+const spineMap = thunderkick.spineMap;
+const weights = {
+  low1: 16, low2: 16, low3: 14, low4: 14, low5: 12,
+  mid1: 9, mid2: 8, mid3: 7, mid4: 6, high: 4,
+};
+
+// The rule. `true` = the configured landing, `false` = nothing, a string =
+// that animation as this landing's one-shot.
+const landingRule = ({ reelIndex }) =>
+  COPY.has(reelIndex) ? false : reelIndex >= 4 ? 'revealWin' : true;
+
+const cache = new SpinTextureCache({ renderer: app.renderer });
+const createInner = () =>
+  new SpineReelSymbol({
+    spineMap,
+    scale: SPINE_SCALE,
+    landingAnimation: 'land',
+    autoPlayLanding: landingRule,
+  });
+
+prewarmSpinTextures({
+  cache,
+  ids: Object.keys(weights),
+  createSymbol: createInner,
+  width: CELL_W,
+  height: CELL_H,
+});
+
+const reelSet = new ReelSetBuilder()
+  .reels(6)
+  .visibleCellsPerReel(ROWS_PER_REEL)
+  .reelAnchor('center')
+  .symbolSize(CELL_W, CELL_H)
+  .symbolGap(0, 0)
+  .symbols((r) => {
+    for (const id of Object.keys(weights)) {
+      r.register(id, StaticSpinSymbol, { createInner, cache, blurRampMs: 160 });
+    }
+  })
+  .weights(weights)
+  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 180 })
+  .speed('turbo', { ...SpeedPresets.TURBO, stopDelay: 60 })
+  .ticker(app.ticker)
+  .build();
+
+// What the rule chose, per reel, printed the frame the reel lands.
+const lines = Array.from({ length: 6 }, (_, i) => `reel ${i}: -`);
+const hud = new PIXI.Text({
+  text: '',
+  style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 11, fill: 0x9c8f78, lineHeight: 15 },
+});
+hud.position.set(0, 4 * CELL_H + 6);
+reelSet.addChild(hud);
+const redraw = () => { hud.text = lines.join('\n'); };
+redraw();
+const choice = (reel) => {
+  const d = landingRule({ reelIndex: reel, reelCount: 6, cell: 0, visibleCells: ROWS_PER_REEL[reel], symbolId: '' });
+  return d === true ? 'land' : d === false ? 'nothing (takeover)' : `'${d}'`;
+};
+const onLanding = (reel) => {
+  lines[reel] = `reel ${reel}: landing frame - rule says ${choice(reel)}`;
+  redraw();
+};
+reelSet.events.on('spin:reelLanding', onLanding);
+
+return {
+  reelSet,
+  cleanup: () => {
+    reelSet.events.off('spin:reelLanding', onLanding);
+    try { hud.destroy(); } catch {}
+  },
+  nextResult: () => {
+    for (let i = 0; i < 6; i++) lines[i] = `reel ${i}: spinning`;
+    redraw();
+    return ROWS_PER_REEL.map((cells) => Array.from({ length: cells }, () => pickWeighted(weights)));
   },
 };
 ```

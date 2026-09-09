@@ -3,10 +3,11 @@ import { EventEmitter } from '../events/EventEmitter.js';
 import type { ReelSet } from '../core/ReelSet.js';
 import type { ReelSymbol } from '../symbols/ReelSymbol.js';
 import type { SymbolRegistry } from '../symbols/SymbolRegistry.js';
-import type { SpeedProfile, SymbolData } from '../config/types.js';
+import type { SpeedProfile, SymbolData, SymbolZIndexResolver } from '../config/types.js';
 import type { Disposable } from '../utils/Disposable.js';
 import { BoardGrid } from './BoardGrid.js';
-import type { BoardCellMaskInfo, BoardProfile } from './BoardGrid.js';
+import type { BoardCellMaskInfo, BoardCellZIndexResolver, BoardProfile } from './BoardGrid.js';
+import type { RenderLayer } from 'pixi.js';
 import type { Direction, Orientation } from '../core/ReelAxis.js';
 import type { MaskStrategy } from '../core/ReelViewport.js';
 import { HoldAndWinState } from './HoldAndWinState.js';
@@ -18,8 +19,8 @@ import type {
   HwCell,
   HwCoin,
   HwEffect,
-  HwLockAnimation,
   HwRespinResult,
+  HwLockAnimationRule,
 } from './HwTypes.js';
 
 /** Internal config produced by {@link HoldAndWinBuilder.build}. */
@@ -36,7 +37,11 @@ export interface HoldAndWinBoardConfig<TData> {
   /** Symbol shown on a dormant cell. */
   inactiveId: string;
   respins: number;
-  lockAnimation: HwLockAnimation;
+  lockAnimation: HwLockAnimationRule<TData>;
+  /** Per-symbol z-index resolver for every cell. See `HoldAndWinBuilder.symbolZIndex`. */
+  symbolZIndex: SymbolZIndexResolver | null;
+  /** Order of the cells' lifted art. See `HoldAndWinBuilder.cellZIndex`. */
+  cellZIndex: BoardCellZIndexResolver | null;
   configurator: (registry: SymbolRegistry) => void;
   weights: Record<string, number> | null;
   symbolData: Record<string, Partial<SymbolData>> | null;
@@ -103,7 +108,7 @@ export class HoldAndWinBoard<TData = unknown> implements Disposable {
   private readonly _state: HoldAndWinState<TData>;
   private readonly _emptyId: string;
   private readonly _inactiveId: string;
-  private readonly _lockAnimation: HwLockAnimation;
+  private readonly _lockAnimation: HwLockAnimationRule<TData>;
   private readonly _anticipateWhen: HoldAndWinBoardConfig<TData>['anticipateWhen'];
   private readonly _stagger: HoldAndWinBoardConfig<TData>['stagger'];
   private readonly _speeds = new Set<string>();
@@ -152,6 +157,8 @@ export class HoldAndWinBoard<TData = unknown> implements Disposable {
       },
       weights: cfg.weights ?? undefined,
       symbolData: cfg.symbolData ?? undefined,
+      symbolZIndex: cfg.symbolZIndex ?? undefined,
+      cellZIndex: cfg.cellZIndex ?? undefined,
       chrome: cfg.chrome ?? undefined,
       mask: cfg.mask ?? undefined,
       orientation: cfg.orientation,
@@ -168,6 +175,11 @@ export class HoldAndWinBoard<TData = unknown> implements Disposable {
 
   get container(): Container {
     return this._grid.container;
+  }
+
+  /** The layer the cells' lifted art renders in. See `BoardGrid.liftedLayer`. */
+  get liftedLayer(): RenderLayer {
+    return this._grid.liftedLayer;
   }
   /** Number of active cells - what `isFull` is measured against. */
   get capacity(): number {
@@ -406,8 +418,12 @@ export class HoldAndWinBoard<TData = unknown> implements Disposable {
       // in the reducer, but TS can't carry that correlation through `emit`'s
       // generic. One local cast keeps every other call site fully typed.
       (this.events.emit as (type: string, payload: unknown) => void)(fx.type, fx.payload);
-      if (fx.type === 'coin:locked' && this._lockAnimation !== 'none') {
-        void this._playOn(fx.payload.coin.cell, this._lockAnimation);
+      if (fx.type === 'coin:locked') {
+        const mode =
+          typeof this._lockAnimation === 'function'
+            ? this._lockAnimation(fx.payload.coin)
+            : this._lockAnimation;
+        if (mode !== 'none') void this._playOn(fx.payload.coin.cell, mode);
       }
     }
   }
@@ -419,7 +435,16 @@ export class HoldAndWinBoard<TData = unknown> implements Disposable {
    */
   private _playOn(cell: HwCell, anim: 'win' | 'landing'): Promise<void> {
     const symbol = this.symbolAt(cell);
-    const run = anim === 'win' ? symbol.playWin() : symbol.playLanding();
+    // A symbol that started its own landing beat on land (`ReelSymbol.landing`)
+    // keeps it: the lock's win queues behind it instead of hijacking its
+    // track, and a lock that only wants the landing does not replay it.
+    const landing = symbol.landing;
+    const run =
+      anim === 'win'
+        ? landing
+          ? landing.then(() => symbol.playWin())
+          : symbol.playWin()
+        : (landing ?? symbol.playLanding());
     return run.catch((err) =>
       noticeWarn(`hw-coin-${anim}-failed`, `HoldAndWinBoard: coin ${anim} animation failed.`, err),
     );

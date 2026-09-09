@@ -631,11 +631,48 @@ export class PathMaskStrategy implements DrawableMaskStrategy {
 }
 
 /**
- * Shrink (or grow) any strategy's mask by a uniform number of pixels.
+ * Per-side inset for {@link inset}. SCREEN sides in every orientation, so
+ * `top` trims the top edge of the drawn mask on a horizontal set too. A side
+ * left out is `0`; negative grows that side.
+ */
+export interface InsetSides {
+  top?: number;
+  right?: number;
+  bottom?: number;
+  left?: number;
+}
+
+/** `pixels` normalised to the four screen sides, each validated finite. */
+function resolveInsetSides(pixels: number | InsetSides): Required<InsetSides> {
+  if (typeof pixels === 'number') {
+    if (!Number.isFinite(pixels)) {
+      throw new Error(`inset(): expected a finite number of pixels, got ${String(pixels)}.`);
+    }
+    return { top: pixels, right: pixels, bottom: pixels, left: pixels };
+  }
+  if (typeof pixels !== 'object' || pixels === null) {
+    throw new Error(
+      `inset(): expected a number of pixels or { top, right, bottom, left }, got ${String(pixels)}.`,
+    );
+  }
+  const side = (name: keyof InsetSides): number => {
+    const v = pixels[name] ?? 0;
+    if (!Number.isFinite(v)) {
+      throw new Error(`inset(): expected a finite number for '${name}', got ${String(v)}.`);
+    }
+    return v;
+  };
+  return { top: side('top'), right: side('right'), bottom: side('bottom'), left: side('left') };
+}
+
+/**
+ * Shrink (or grow) any strategy's mask by a number of pixels - one number for
+ * all four sides, or `{ top, right, bottom, left }` for a different trim per
+ * screen side.
  *
  * The fix for "the art bleeds a pixel past the frame" that does not involve
- * rewriting the strategy. Positive `pixels` shrinks on all four sides;
- * negative grows.
+ * rewriting the strategy. Positive shrinks; negative grows. A side left out of
+ * the object form is untouched.
  *
  * Implemented by handing the wrapped strategy a derived {@link MaskContext} -
  * shrunken rects, a shrunken viewport box, and an `origin` shift for the
@@ -647,14 +684,24 @@ export class PathMaskStrategy implements DrawableMaskStrategy {
  *
  * @example
  * builder.maskStrategy(inset(new SilhouetteMaskStrategy({ radius: 20 }), 3))
+ *
+ * @example
+ * // Trim more off the bottom than the top - a frame whose lower lip is thicker.
+ * builder.maskStrategy(inset(new RoundedRectMaskStrategy({ radius: 43 }), { top: 4, bottom: 12 }))
  */
-export function inset(strategy: MaskStrategy, pixels: number): DrawableMaskStrategy {
-  if (!Number.isFinite(pixels)) {
-    throw new Error(`inset(): expected a finite number of pixels, got ${String(pixels)}.`);
-  }
+export function inset(strategy: MaskStrategy, pixels: number | InsetSides): DrawableMaskStrategy {
+  const sides = resolveInsetSides(pixels);
   const shrink = (ctx: MaskContext): MaskContext => {
     const o = originOf(ctx);
     const vertical = ctx.axis.mainProp === 'y';
+    // Screen sides -> axis ends. `mainStart` is the smaller main coordinate
+    // (top on a vertical set, left on a horizontal one) whichever way the
+    // strip travels: the rects and the origin are screen geometry, so the
+    // direction never enters into it.
+    const mainStart = vertical ? sides.top : sides.left;
+    const mainEnd = vertical ? sides.bottom : sides.right;
+    const crossStart = vertical ? sides.left : sides.top;
+    const crossEnd = vertical ? sides.right : sides.bottom;
     // The two axes are inset by different mechanisms, and mixing them
     // double-counts.
     //
@@ -663,12 +710,16 @@ export function inset(strategy: MaskStrategy, pixels: number): DrawableMaskStrat
     // insets each reel's own sides, a shared box insets the outer pair, and the
     // silhouette insets only the two outermost reels - shrinking each rect's
     // cross size directly would instead open a gap between neighbouring reels
-    // and break the silhouette's contiguity test.
+    // and break the silhouette's contiguity test. `bleed` is symmetric, so an
+    // uneven pair is split into its symmetric half (through `bleed`) and the
+    // remainder, which is a plain shift of the whole mask along the cross axis
+    // (through `origin`). [L + start, R - end] is exactly what that sums to.
     //
     // MAIN goes through the rect SIZES plus `origin`. Moving the rects as well
     // as setting the origin would apply the offset twice.
-    const bleed = (ctx.bleed ?? 0) - pixels;
-    const shrinkMain = (main: number): number => main - pixels * 2;
+    const bleed = (ctx.bleed ?? 0) - (crossStart + crossEnd) / 2;
+    const crossShift = (crossStart - crossEnd) / 2;
+    const shrinkMain = (main: number): number => main - mainStart - mainEnd;
     return {
       rects: ctx.rects.map((r) => ({
         x: r.x,
@@ -680,7 +731,9 @@ export function inset(strategy: MaskStrategy, pixels: number): DrawableMaskStrat
       height: vertical ? shrinkMain(ctx.height) : ctx.height,
       axis: ctx.axis,
       bleed,
-      origin: vertical ? { x: o.x, y: o.y + pixels } : { x: o.x + pixels, y: o.y },
+      origin: vertical
+        ? { x: o.x + crossShift, y: o.y + mainStart }
+        : { x: o.x + mainStart, y: o.y + crossShift },
     };
   };
 

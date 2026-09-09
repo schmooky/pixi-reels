@@ -1,12 +1,12 @@
 import type { Graphics, Ticker } from 'pixi.js';
 import { SpeedPresets } from '../config/SpeedPresets.js';
-import type { SpeedProfile, SymbolData } from '../config/types.js';
+import type { SpeedProfile, SymbolData, SymbolZIndexResolver } from '../config/types.js';
 import type { SymbolRegistry } from '../symbols/SymbolRegistry.js';
 import { HoldAndWinBoard } from './HoldAndWinBoard.js';
 import type { Direction, Orientation } from '../core/ReelAxis.js';
 import type { MaskStrategy } from '../core/ReelViewport.js';
-import type { BoardCellMaskInfo } from './BoardGrid.js';
-import type { HwCell, HwCellSizeOptions, HwLockAnimation } from './HwTypes.js';
+import type { BoardCellMaskInfo, BoardCellZIndexResolver } from './BoardGrid.js';
+import type { HwCell, HwCellSizeOptions, HwLockAnimationRule } from './HwTypes.js';
 
 /**
  * Fluent builder for {@link HoldAndWinBoard}.
@@ -30,7 +30,9 @@ export class HoldAndWinBuilder<TData = unknown> {
   private _inactive: HwCell[] = [];
   private _inactiveId: string | null = null;
   private _respins = 3;
-  private _lockAnimation: HwLockAnimation = 'win';
+  private _lockAnimation: HwLockAnimationRule<TData> = 'win';
+  private _symbolZIndex: SymbolZIndexResolver | null = null;
+  private _cellZIndex: BoardCellZIndexResolver | null = null;
   private _configurator: ((registry: SymbolRegistry) => void) | null = null;
   private _weights: Record<string, number> | null = null;
   private _symbolData: Record<string, Partial<SymbolData>> | null = null;
@@ -134,9 +136,52 @@ export class HoldAndWinBuilder<TData = unknown> {
    * symbol's `playWin()`. Pick `'landing'` for a land beat only and call
    * {@link HoldAndWinBoard.playWin} when the game wants the celebration, or
    * `'none'` to drive presentation entirely from the events.
+   *
+   * A symbol that starts its own landing beat on land (`autoPlayLanding` on a
+   * Spine symbol, or a sprite reporting one through `trackLanding`) is never
+   * stomped: `'win'` waits for that landing to finish before the celebration,
+   * and `'landing'` does not replay it.
+   *
+   * Pass a function to decide per coin: `(coin) => coin.id === 'collector'
+   * ? 'win' : 'landing'`.
    */
-  lockAnimation(mode: HwLockAnimation): this {
+  lockAnimation(mode: HwLockAnimationRule<TData>): this {
     this._lockAnimation = mode;
+    return this;
+  }
+
+  /**
+   * Per-symbol z-index resolver for every cell's reel set, exactly like
+   * `ReelSetBuilder.symbolZIndex`. Orders symbols inside one cell (a cell
+   * holds one symbol plus its buffers, so most boards want {@link cellZIndex}
+   * instead).
+   */
+  symbolZIndex(resolver: SymbolZIndexResolver): this {
+    if (typeof resolver !== 'function') {
+      throw new Error(`symbolZIndex(): expected a function, got ${String(resolver)}.`);
+    }
+    this._symbolZIndex = resolver;
+    return this;
+  }
+
+  /**
+   * Draw order of the cells' lifted art - the `unmask: true` coins the engine
+   * lifts above each cell's mask at rest, rendered in one layer above every
+   * cell. Default: attach order (column-major), which lets the next column's
+   * coin cover a lower coin's overflow. Asked again on every place and every
+   * landing, so the answer may depend on the coin shown:
+   *
+   * ```ts
+   * // Rows in front of columns, big coins on top.
+   * .cellZIndex(({ cell, symbolId, cols }) =>
+   *   (symbolId === 'grand' ? 1000 : 0) + cell.cell * cols + cell.reel)
+   * ```
+   */
+  cellZIndex(resolver: BoardCellZIndexResolver): this {
+    if (typeof resolver !== 'function') {
+      throw new Error(`cellZIndex(): expected a function, got ${String(resolver)}.`);
+    }
+    this._cellZIndex = resolver;
     return this;
   }
 
@@ -267,6 +312,8 @@ export class HoldAndWinBuilder<TData = unknown> {
       inactiveId: this._inactiveId ?? this._emptyId,
       respins: this._respins,
       lockAnimation: this._lockAnimation,
+      symbolZIndex: this._symbolZIndex,
+      cellZIndex: this._cellZIndex,
       configurator: this._configurator,
       weights: this._weights,
       symbolData: this._symbolData,

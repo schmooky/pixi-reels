@@ -84,11 +84,19 @@ A pyramid has no single rectangle to round: per-reel rounding notches the seams,
 
 ## Insetting and composing
 
-`inset(strategy, px)` shrinks any strategy's output (negative grows) - the fix for art bleeding a pixel past the frame. `composeMasks(...)` unions several into the viewport's one mask, for a board plus a banner.
+`inset(strategy, px)` shrinks any strategy's output (negative grows) - the fix for art bleeding a pixel past the frame. Pass `{ top, right, bottom, left }` instead of one number when the frame's lips differ: `inset(new RoundedRectMaskStrategy({ radius: 43 }), { top: 4, bottom: 12 })`. Sides are screen sides in every orientation and an omitted side is untouched. `composeMasks(...)` unions several into the viewport's one mask, for a board plus a banner.
 
 **Gotcha:** union only. A Graphics mask is the union of its filled shapes; there is no way to intersect or subtract two strategies. Use `.cut()` inside a `PathMaskStrategy` instead.
 
 <RecipeDemo code="mask-inset-compose" />
+
+<a id="mask-inset-sides"></a>
+
+## A different trim per side
+
+Frame art rarely has four equal lips. `inset(strategy, { top, right, bottom, left })` names the sides the way the artist measured them - screen sides in every orientation, an omitted side untouched - so a rounded window with a thick bottom lip is one wrapped strategy, not a hand-drawn path.
+
+<RecipeDemo code="mask-inset-sides" />
 
 ## Writing your own
 

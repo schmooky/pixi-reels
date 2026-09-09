@@ -359,6 +359,14 @@ export class SpinController implements Disposable {
     hooks?: SpinControllerHooks,
   ) {
     this._reels = reels;
+    // The landing-frame signal is raised by `Reel.notifyLanded()`, where every
+    // landing path converges (animated stop, slam, cascade refill); this is
+    // the one place it gets a reel index. Listeners die with the reel.
+    for (const reel of reels) {
+      reel.events.on('landing', (symbols) => {
+        this._events.emit('spin:reelLanding', reel.reelIndex, symbols);
+      });
+    }
     this._speedManager = speedManager;
     this._frameBuilder = frameBuilder;
     this._phaseFactory = phaseFactory;

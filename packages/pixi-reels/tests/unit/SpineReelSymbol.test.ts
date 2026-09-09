@@ -101,6 +101,7 @@ vi.mock('@esotericsoftware/spine-pixi-v8', () => {
 
 // Import after the mock is registered.
 import { SpineReelSymbol } from '../../src/spine/SpineReelSymbol.js';
+import type { SpineReelSymbolOptions } from '../../src/spine/SpineReelSymbol.js';
 import { Spine as MockSpineModule } from '@esotericsoftware/spine-pixi-v8';
 
 function getLastSpine(): MockSpine {
@@ -306,5 +307,66 @@ describe('SpineReelSymbol multi-skin skeletons', () => {
     sym.activate('high');
     const spine = getLastSpine();
     expect(spine.skeleton.setSkinByName).not.toHaveBeenCalled();
+  });
+});
+
+describe('SpineReelSymbol autoPlayLanding', () => {
+  const ctx = (reelIndex: number) => ({ reelIndex, reelCount: 5, cell: 1, visibleCells: 3, symbolId: 'test' });
+
+  function make(autoPlayLanding: SpineReelSymbolOptions['autoPlayLanding']): SpineReelSymbol {
+    const sym = new SpineReelSymbol({
+      spineMap: { test: { skeleton: 'foo', atlas: 'bar' } },
+      autoPlayLanding,
+    });
+    sym.activate('test');
+    return sym;
+  }
+
+  it('plays the landing on the reels the rule says yes to, and nothing elsewhere', () => {
+    const sym = make((c) => c.reelIndex !== 2);
+    const spine = getLastSpine();
+    sym.onReelLanded(ctx(2));
+    expect(spine.state.current?.animation.name).not.toBe('landing');
+    expect(sym.landing).toBeNull();
+    sym.onReelLanded(ctx(0));
+    expect(spine.state.current?.animation.name).toBe('landing');
+    expect(sym.landing).toBeInstanceOf(Promise);
+  });
+
+  it('plays a named animation as the landing beat when the rule returns a string', async () => {
+    const sym = make((c) => (c.reelIndex === 4 ? 'spin' : true));
+    const spine = getLastSpine();
+    sym.onReelLanded(ctx(4));
+    expect(spine.state.current?.animation.name).toBe('spin');
+    const beat = sym.landing!;
+    spine.state.fireComplete(spine.state.current!);
+    await expect(beat).resolves.toBeUndefined();
+    // One-shot semantics: back to idle once the named beat completes.
+    expect(spine.state.current?.animation.name).toBe('idle');
+  });
+
+  it('treats a rule as unconditional when called without a context', () => {
+    const sym = make(() => false);
+    const spine = getLastSpine();
+    sym.onReelLanded();
+    expect(spine.state.current?.animation.name).toBe('landing');
+  });
+
+  it('keeps the boolean forms', () => {
+    const off = make(false);
+    const offSpine = getLastSpine();
+    off.onReelLanded(ctx(0));
+    expect(offSpine.state.current?.animation.name).not.toBe('landing');
+    const on = make(true);
+    const onSpine = getLastSpine();
+    on.onReelLanded(ctx(0));
+    expect(onSpine.state.current?.animation.name).toBe('landing');
+    expect(on.landing).toBeInstanceOf(Promise);
+  });
+
+  it('reports an explicit playLanding() through `landing` too', () => {
+    const sym = make(false);
+    void sym.playLanding();
+    expect(sym.landing).toBeInstanceOf(Promise);
   });
 });

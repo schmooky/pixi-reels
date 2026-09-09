@@ -1,5 +1,6 @@
 import { Spine, type TrackEntry } from '@esotericsoftware/spine-pixi-v8';
 import { ReelSymbol } from '../symbols/ReelSymbol.js';
+import type { ReelLandingContext } from '../config/types.js';
 
 /**
  * Per-symbol overrides so a skeleton with unusual animation names still works.
@@ -52,12 +53,29 @@ export interface SpineReelSymbolOptions {
    */
   autoPlayBlur?: boolean;
   /**
-   * If true, automatically plays the `landing` animation concurrently with
-   * the stop-phase bounce. Requires the skeleton to have a `landing`
-   * animation (or the overridden name). Default: false.
+   * What plays when the owning reel lands, concurrently with the stop-phase
+   * bounce. Default: false (nothing).
+   *
+   * - `true`: the `landing` animation (or the overridden name), then idle.
+   * - `false`: nothing.
+   * - a function: asked per landing with the {@link ReelLandingContext} -
+   *   which reel and cell this symbol landed in - and returns one of the
+   *   above, or an animation NAME to play as the landing beat on this reel
+   *   and cell instead. So a symbol can land on reels 1-3, skip its landing
+   *   on the reel a takeover is about to run on, and play a different beat
+   *   on the last one.
+   *
+   * Requires the skeleton to have the animation; a missing one is skipped.
    */
-  autoPlayLanding?: boolean;
+  autoPlayLanding?: boolean | ((ctx: ReelLandingContext) => LandingDecision);
 }
+
+/**
+ * What a Spine symbol does on a landing: `true` for its configured landing
+ * one-shot, `false` for nothing, or the name of another animation to play as
+ * this landing's one-shot (then idle). See `autoPlayLanding`.
+ */
+export type LandingDecision = boolean | string;
 
 /**
  * ReelSymbol implementation using Spine 2D skeletons.
@@ -83,7 +101,7 @@ export class SpineReelSymbol extends ReelSymbol {
   private _overrides: SymbolAnimOverrides;
   private _scale: number;
   private _autoPlayBlur: boolean;
-  private _autoPlayLanding: boolean;
+  private _autoPlayLanding: boolean | ((ctx: ReelLandingContext) => LandingDecision);
   private _oneShotResolve: (() => void) | null = null;
   private _cellWidth = 0;
   private _cellHeight = 0;
@@ -112,10 +130,18 @@ export class SpineReelSymbol extends ReelSymbol {
     if (this._autoPlayBlur) this.stopAnimation();
   }
 
-  override onReelLanded(): void {
-    if (this._autoPlayLanding) {
+  override onReelLanded(ctx?: ReelLandingContext): void {
+    const rule = this._autoPlayLanding;
+    // A manual call without a context cannot be asked per reel; treat the
+    // rule as its unconditional form.
+    const decision: LandingDecision =
+      typeof rule === 'function' ? (ctx ? rule(ctx) : true) : rule;
+    if (decision === false) return;
+    if (decision === true) {
       void this.playLanding();
+      return;
     }
+    void this.trackLanding(this._playOneShot(decision, 0, true));
   }
 
   /** Resolve an animation name for the current symbol, respecting overrides. */
@@ -203,7 +229,7 @@ export class SpineReelSymbol extends ReelSymbol {
    * typically inside a `spin:reelLanded` listener.
    */
   override async playLanding(): Promise<void> {
-    return this._playOneShot(this._animNameFor('landing'), 0, true);
+    return this.trackLanding(this._playOneShot(this._animNameFor('landing'), 0, true));
   }
 
   /**

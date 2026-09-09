@@ -279,7 +279,9 @@ export class CascadeDropInPhase extends ReelPhase<CascadeDropInPhaseConfig> {
       // Gravity movers get their reaction the moment they settle. the
       // reel itself still lands at the final stage.
       if (role === 'gravity') {
-        for (const job of jobs) job.symbol.onReelLanded();
+        for (const job of jobs) {
+          job.symbol.onReelLanded(reel.landingContext(job.cell, job.symbol.symbolId));
+        }
       } else {
         reel.notifyLanded(jobs.map((j) => j.cell));
       }

@@ -10,7 +10,7 @@ import type { ReelSymbol } from '../symbols/ReelSymbol.js';
 import type { SymbolRegistry } from '../symbols/SymbolRegistry.js';
 import { EmptySymbol } from '../symbols/EmptySymbol.js';
 import { SpeedPresets } from '../config/SpeedPresets.js';
-import type { SpeedProfile, SymbolData } from '../config/types.js';
+import type { SpeedProfile, SymbolData, SymbolZIndexResolver } from '../config/types.js';
 import type { Disposable } from '../utils/Disposable.js';
 
 /** A cell coordinate in the grid. */
@@ -40,6 +40,26 @@ export interface BoardCellMaskInfo {
 
 /** A speed profile, or a per-cell function of one (e.g. a stagger wave). */
 export type BoardProfile = SpeedProfile | ((cell: BoardCell) => SpeedProfile);
+
+/** What a {@link BoardCellZIndexResolver} is asked about. */
+export interface BoardCellZIndexContext {
+  /** Id currently shown in the cell. */
+  symbolId: string;
+  /** The board coordinate - what a per-symbol resolver cannot supply, since every cell is reel 0 of its own set. */
+  cell: BoardCell;
+  cols: number;
+  rows: number;
+  /** `false` while the cell's own strip is in flight. */
+  atRest: boolean;
+  /** The cell's attach index (column-major); returning it reproduces the default order. */
+  attachOrder: number;
+}
+
+/**
+ * Orders the cells' lifted art. See the `cellZIndex` option of
+ * {@link BoardGridOptions}.
+ */
+export type BoardCellZIndexResolver = (ctx: BoardCellZIndexContext) => number;
 
 export interface BoardGridOptions {
   /** Grid dimensions. */
@@ -97,6 +117,22 @@ export interface BoardGridOptions {
    * profile, which is the active one until you `setProfile` otherwise.
    */
   profiles?: Record<string, BoardProfile>;
+  /**
+   * Per-symbol z-index resolver, exactly like `ReelSetBuilder.symbolZIndex`,
+   * applied to every cell's reel set. Orders symbols INSIDE a cell; for the
+   * order between cells see `cellZIndex`.
+   */
+  symbolZIndex?: SymbolZIndexResolver;
+  /**
+   * Draw order of the cells' lifted art - the `unmask: true` symbols the
+   * engine lifts above each cell's mask at rest, which the grid renders in one
+   * shared layer above every cell. Without this the layer draws in attach
+   * order (column-major), so a lower cell's overflowing art is covered by the
+   * next column's. Provided, the layer sorts by the value returned for each
+   * cell, re-asked whenever any cell's symbol changes (place, landing).
+   * `ctx.attachOrder` reproduces the default.
+   */
+  cellZIndex?: BoardCellZIndexResolver;
 }
 
 /** Which of the board's four screen corners `cell` sits on. */
@@ -165,6 +201,7 @@ export class BoardGrid implements Disposable {
    * the neighbour's edge.
    */
   private readonly _lifted: RenderLayer;
+  private readonly _cellZIndex: BoardCellZIndexResolver | null;
   private _destroyed = false;
 
   constructor(opts: BoardGridOptions) {
@@ -240,6 +277,7 @@ export class BoardGrid implements Disposable {
         }
         if (opts.weights) builder.weights(opts.weights);
         if (opts.symbolData) builder.symbolData(opts.symbolData);
+        if (opts.symbolZIndex) builder.symbolZIndex(opts.symbolZIndex);
         if (opts.rng) builder.rng(opts.rng);
 
         const reelSet = builder.build();
@@ -250,11 +288,48 @@ export class BoardGrid implements Disposable {
       }
     }
 
-    this._lifted = new RenderLayer();
+    this._cellZIndex = opts.cellZIndex ?? null;
+    // Sortable only when asked: the default `RenderLayer` sort is by
+    // `zIndex`, and every cell container starts at 0, so sorting a board with
+    // no resolver would still be attach order - at the cost of a sort per
+    // frame the layer is marked dirty.
+    this._lifted = new RenderLayer({ sortableChildren: this._cellZIndex !== null });
     this.container.addChild(this._lifted);
     for (const reelSet of this._reels.values()) {
       this._lifted.attach(reelSet.viewport.unmaskedContainer);
     }
+    this.refreshCellZIndex();
+  }
+
+  /**
+   * The layer every cell's lifted (`unmask: true`, at rest) art renders in,
+   * above all cells. Escape hatch for an effect that must sit between the
+   * cells and their lifted art, or above both; the `cellZIndex` option is the
+   * supported way to order the cells themselves.
+   */
+  get liftedLayer(): RenderLayer {
+    return this._lifted;
+  }
+
+  /**
+   * Re-ask the `cellZIndex` resolver for every cell and write the answers
+   * onto the cells' lifted containers. Called on every `place` and every
+   * cell landing; a no-op without a resolver. Fifteen property writes on a
+   * 5x3 board, so the contract is unconditional rather than incremental.
+   */
+  refreshCellZIndex(): void {
+    if (!this._cellZIndex || this._destroyed) return;
+    this._cells.forEach((cell, attachOrder) => {
+      const reelSet = this._reel(cell);
+      reelSet.viewport.unmaskedContainer.zIndex = this._cellZIndex!({
+        symbolId: reelSet.getReel(0).getVisibleSymbols()[0] ?? this.emptyId,
+        cell,
+        cols: this.cols,
+        rows: this.rows,
+        atRest: !reelSet.isSpinning,
+        attachOrder,
+      });
+    });
   }
 
   /**
@@ -316,6 +391,7 @@ export class BoardGrid implements Disposable {
       bufferStart: [this.emptyId],
       bufferEnd: [this.emptyId],
     });
+    this.refreshCellZIndex();
   }
 
   /**
@@ -342,6 +418,9 @@ export class BoardGrid implements Disposable {
           { visible: [id], bufferStart: [this.emptyId], bufferEnd: [this.emptyId] },
         ]);
         await settle;
+        // Before `onLanded`, so the cell is already ordered when the game's
+        // after-land presentation starts.
+        this.refreshCellZIndex();
         await onLanded(cell, id);
       }),
     );

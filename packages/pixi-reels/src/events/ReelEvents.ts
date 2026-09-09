@@ -81,6 +81,24 @@ export interface ReelSetEvents extends Record<string, unknown[]> {
       targetSpeed: number;
     },
   ];
+  /**
+   * A reel is ON its result frame: the strip is snapped, every visible symbol
+   * has had `onReelLanded()`, and the landing bounce (if any) is about to
+   * tween. The frame to start a landing-coupled presentation on - an overlay,
+   * a per-reel SFX, a symbol takeover.
+   *
+   * Fires after the `onReelLanded()` loop by contract, so a listener that
+   * takes a landed symbol's track over finds the engine's own landing already
+   * set and can replace it in the same tick. Fires on every landing path -
+   * animated stop, slam, and each cascade refill stage that lands new
+   * symbols on the reel - and, unlike `spin:reelLanded`, is not deduplicated
+   * per spin.
+   *
+   * `spin:reelLanded` is the LATER bookend: it fires when the reel is fully
+   * at rest, a whole `bounceDuration` after this one on an animated stop, and
+   * in the same tick as this one on a slam, which has no bounce.
+   */
+  'spin:reelLanding': [reelIndex: number, symbols: string[]];
   'spin:reelLanded': [reelIndex: number, symbols: string[]];
   'spin:allLanded': [result: SpinResult];
   'spin:complete': [result: SpinResult];
@@ -438,6 +456,12 @@ export interface ReelEvents extends Record<string, unknown[]> {
   'phase:enter': [phaseName: string];
   'phase:exit': [phaseName: string];
   'symbol:created': [symbolId: string, stripIndex: number];
+  /**
+   * The reel is on its result frame and its symbols have been told they
+   * landed; the bounce has not started. Per-reel source of the set-level
+   * `spin:reelLanding`.
+   */
+  'landing': [symbols: string[]];
   'landed': [symbols: string[]];
   'destroyed': [];
 }
