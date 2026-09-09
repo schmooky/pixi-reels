@@ -1,5 +1,25 @@
 # pixi-reels
 
+## 2.7.0
+
+### Minor Changes
+
+- [#239](https://github.com/schmooky/pixi-reels/pull/239) [`64b3a0b`](https://github.com/schmooky/pixi-reels/commit/64b3a0bfc0536c67deb2a25181ee6bb5b465a428) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Add: the landing frame as a signal, and a say for the symbol in what it plays there.
+
+  - `spin:reelLanding` (`reelIndex, symbols`) fires the frame a reel is on its result: strip snapped, every visible symbol told it landed, the bounce not yet started. `spin:reelLanded` still fires when the reel is fully at rest, a whole `bounceDuration` later on an animated stop and in the same tick on a slam. The new event fires on every landing path (animated stop, slam, each cascade refill stage), always after the `onReelLanded()` loop, so a listener that takes a landed symbol's track over finds the engine's own landing already set. Each `Reel` raises the per-reel `landing` event it is bridged from.
+  - `ReelSymbol.onReelLanded(ctx)` now receives a `ReelLandingContext` - `reelIndex`, `reelCount`, `cell`, `visibleCells`, `symbolId` - so an override can play a different beat, or none, on a particular reel. Overrides written as `onReelLanded()` keep compiling.
+  - `SpineReelSymbol`'s `autoPlayLanding` accepts a function of that context returning `true` (the landing one-shot), `false` (nothing) or an animation name to play as the landing beat on this reel and cell instead. `StaticSpinSymbol` forwards the context to its inner symbol, so the rule works behind a baked spin blur too.
+  - `ReelSymbol.landing` exposes the landing beat a symbol started on land (reported by subclasses through the new `trackLanding(promise)`), kept until the reel moves again or the symbol is pooled, so a presenter can sequence after it instead of stomping it.
+  - `HoldAndWinBuilder.lockAnimation` uses it: `'win'` now waits for the coin's own landing beat before the celebration (before, a Spine coin's landing never showed under the default lock), `'landing'` no longer replays one the symbol already started, and the mode may be a function of the coin - `(coin) => coin.id === 'collector' ? 'win' : 'landing'` (`HwLockAnimationRule`).
+
+- [#239](https://github.com/schmooky/pixi-reels/pull/239) [`64b3a0b`](https://github.com/schmooky/pixi-reels/commit/64b3a0bfc0536c67deb2a25181ee6bb5b465a428) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Add: `inset(strategy, pixels)` takes a per-side trim as well as one number: `inset(new RoundedRectMaskStrategy({ radius: 43 }), { top: 4, bottom: 12 })`. The sides are screen sides in every orientation, an omitted side is untouched, and a negative one grows. Uneven cross-axis sides are split into their symmetric half (through `bleed`, as before) and a shift of the whole mask, so every built-in strategy honours them and curve bleed still composes. Replaces the hand-written `PathMaskStrategy` a game needed for a frame whose top and bottom lips differ.
+
+- [#239](https://github.com/schmooky/pixi-reels/pull/239) [`64b3a0b`](https://github.com/schmooky/pixi-reels/commit/64b3a0bfc0536c67deb2a25181ee6bb5b465a428) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Add: consumer-owned symbol draw order. `ReelSetBuilder.symbolZIndex(resolver)` replaces the engine's `symbolData.zIndex * 100 + cellStackingIndex` with the resolver's answer, asked with a `SymbolZIndexContext` (`symbolId`, `symbolData`, `reelIndex`, `reelCount`, `arrayIndex`, `visibleCell`, `visibleCells`, `atRest`, `defaultZIndex`) and re-asked whenever a symbol's id, cell, reel shape or rest state changes - including after the at-rest unmask lift and the re-mask on departure, which the old refresh did not cover. Omitted, nothing changes. `HoldAndWinBuilder.symbolZIndex` and the `BoardGrid` option pass it to every cell. For the order BETWEEN cells of a board, whose lifted art shares one layer, `HoldAndWinBuilder.cellZIndex(resolver)` / the `BoardGrid` `cellZIndex` option make that layer sortable and ask for each cell's value on every place and landing (`BoardCellZIndexContext`: `symbolId`, `cell`, `cols`, `rows`, `atRest`, `attachOrder`); `liftedLayer` exposes the layer itself. `Z_INDEX_BUDGET` publishes the reserved values (`symbolLayer: 100`, `pinOverlay: 10000`) so a resolver can be bounds-checked against the library.
+
+### Patch Changes
+
+- [#239](https://github.com/schmooky/pixi-reels/pull/239) [`64b3a0b`](https://github.com/schmooky/pixi-reels/commit/64b3a0bfc0536c67deb2a25181ee6bb5b465a428) Thanks [@igaming-bulochka](https://github.com/igaming-bulochka)! - Fix: `pixi-reels/spine` and `pixi-reels/testing` resolve their types under `moduleResolution: node` (node10) too. That resolver ignores `exports`, so those subpaths had no declarations at all and a game on it had to declare the module by hand; `typesVersions` now maps them. The `types` condition is also listed first in every `exports` entry, as TypeScript asks.
+
 ## 2.6.0
 
 ### Minor Changes

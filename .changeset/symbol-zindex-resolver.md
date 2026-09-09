@@ -1,5 +1,0 @@
----
-"pixi-reels": minor
----
-
-Add: consumer-owned symbol draw order. `ReelSetBuilder.symbolZIndex(resolver)` replaces the engine's `symbolData.zIndex * 100 + cellStackingIndex` with the resolver's answer, asked with a `SymbolZIndexContext` (`symbolId`, `symbolData`, `reelIndex`, `reelCount`, `arrayIndex`, `visibleCell`, `visibleCells`, `atRest`, `defaultZIndex`) and re-asked whenever a symbol's id, cell, reel shape or rest state changes - including after the at-rest unmask lift and the re-mask on departure, which the old refresh did not cover. Omitted, nothing changes. `HoldAndWinBuilder.symbolZIndex` and the `BoardGrid` option pass it to every cell. For the order BETWEEN cells of a board, whose lifted art shares one layer, `HoldAndWinBuilder.cellZIndex(resolver)` / the `BoardGrid` `cellZIndex` option make that layer sortable and ask for each cell's value on every place and landing (`BoardCellZIndexContext`: `symbolId`, `cell`, `cols`, `rows`, `atRest`, `attachOrder`); `liftedLayer` exposes the layer itself. `Z_INDEX_BUDGET` publishes the reserved values (`symbolLayer: 100`, `pinOverlay: 10000`) so a resolver can be bounds-checked against the library.
