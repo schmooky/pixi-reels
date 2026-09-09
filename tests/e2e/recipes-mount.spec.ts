@@ -157,6 +157,8 @@ const DRIVEN: { path: string; anchor: string; ms: number }[] = [
   { path: '/recipes/hold-and-win/', anchor: 'hold-and-win-clover-lift', ms: 12_000 },
   // `dim({ except })` under a `lift()`, both released in a `finally`.
   { path: '/recipes/hold-and-win/', anchor: 'hold-and-win-clover-lift-dim', ms: 9_000 },
+  // `dim()` and `dimSymbols()` back to back, both under a `lift()`.
+  { path: '/recipes/hold-and-win/', anchor: 'hold-and-win-clover-dim-symbols', ms: 12_000 },
   // `reelSet.promote()` around a GSAP tween, run twice.
   { path: '/recipes/symbols/', anchor: 'clover-promote-win-line', ms: 12_000 },
 ];

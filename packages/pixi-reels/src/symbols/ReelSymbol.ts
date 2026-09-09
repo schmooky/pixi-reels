@@ -138,6 +138,10 @@ export abstract class ReelSymbol implements Disposable {
     this.view.scale.set(1, 1);
     this.view.rotation = 0;
     this.view.filters = null;
+    // Tint is a mutable visual like the rest: a symbol arriving from the pool
+    // must not wear a colour some previous cell put on it. Cleared on both
+    // sides of the recycle so neither half has to trust the other.
+    this.view.tint = 0xffffff;
     this.view.zIndex = 0;
     this.onActivate(symbolId);
   }
@@ -157,6 +161,10 @@ export abstract class ReelSymbol implements Disposable {
     this.view.scale.set(1, 1);
     this.view.rotation = 0;
     this.view.filters = null;
+    // See activate(). A symbol dimmed by the board (or tinted by a game) is
+    // released to the pool the moment its cell swaps, and the pool hands the
+    // same instance to a different cell - which would inherit the colour.
+    this.view.tint = 0xffffff;
     this.view.zIndex = 0;
   }
 

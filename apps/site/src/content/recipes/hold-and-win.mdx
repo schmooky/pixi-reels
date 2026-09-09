@@ -258,6 +258,16 @@ Every cell is its own reel set, so the clovers the engine lifts above the cells 
 
 <RecipeDemo code="hold-and-win-clover-lift-dim" height={400} />
 
+<a id="hold-and-win-clover-dim-symbols"></a>
+
+## Dim the cells, or dim only the art
+
+Two channels for pushing a board back. `dim()` lays a rectangle over each cell, so the clover goes dark and so does the tile it sits in. `dimSymbols()` multiplies each symbol's own tint towards black instead: the art sinks and the board keeps its lights on. Same sweep runs twice below, so the only difference on screen is which one did it - `amount` is the strength on both, and both fade over `fade`.
+
+The reason it is a board method rather than three lines of `gsap.to`: a dimmed cell that swaps its symbol has to keep its dim, and the symbol that left has to lose the tint before the pool hands it to another cell.
+
+<RecipeDemo code="hold-and-win-clover-dim-symbols" height={400} />
+
 <a id="hold-and-win-clover-bonus-5x5"></a>
 
 ## Clover bonus board, 5x5

@@ -209,6 +209,19 @@ export class HoldAndWinBoard<TData = unknown> implements Disposable {
     return this._grid.dimmedCells;
   }
   /**
+   * Push every cell's SYMBOL except these into the background - the same
+   * shape as {@link dim} on a different channel, darkening the art and
+   * leaving the cell's own background alone. See `BoardGrid.dimSymbols`.
+   * Released by {@link reset} and {@link destroy}.
+   */
+  dimSymbols(opts: { except?: HwCell[]; amount?: number; fade?: number } = {}): () => void {
+    return this._grid.dimSymbols(opts);
+  }
+  /** Cells whose symbol a {@link dimSymbols} currently tints. */
+  get dimmedSymbolCells(): HwCell[] {
+    return this._grid.dimmedSymbolCells;
+  }
+  /**
    * Re-ask the `cellZIndex` resolver for every cell. See
    * `BoardGrid.refreshCellZIndex`. The board already calls it on every place
    * and every landing; call it yourself when the resolver depends on state
@@ -434,6 +447,7 @@ export class HoldAndWinBoard<TData = unknown> implements Disposable {
     // or the board stuck under a dim.
     this._grid.releaseAllLifts();
     this._grid.clearDim();
+    this._grid.clearSymbolDim();
     for (const cell of this._grid.cells()) this._grid.place(cell, this._emptyId);
     this._dressInactive();
     this._apply(effects);
