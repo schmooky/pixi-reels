@@ -205,7 +205,7 @@ export type { SpotlightOptions, WinLine, CycleOptions } from './spotlight/Symbol
 //   set of cells) - build your own feature on it. HoldAndWinBoard is the
 //   opinionated lock / respin / collect layer, built entirely on BoardGrid's
 //   public surface, so you can copy it and change the rules.
-export { BoardGrid } from './board/BoardGrid.js';
+export { BoardGrid, DEFAULT_DIM_FADE_MS } from './board/BoardGrid.js';
 export type {
   BoardCell,
   BoardCellMaskInfo,

@@ -197,10 +197,11 @@ export class HoldAndWinBoard<TData = unknown> implements Disposable {
   }
   /**
    * Push every cell except these into the background until the returned
-   * release is called - the partner of {@link lift}. See `BoardGrid.dim`.
-   * Released by {@link reset} and {@link destroy}.
+   * release is called - the partner of {@link lift}. Fades in and out over
+   * `fade` ms; see `BoardGrid.dim`. Released by {@link reset} and
+   * {@link destroy}.
    */
-  dim(opts: { except?: HwCell[]; amount?: number } = {}): () => void {
+  dim(opts: { except?: HwCell[]; amount?: number; fade?: number } = {}): () => void {
     return this._grid.dim(opts);
   }
   /** Cells a {@link dim} currently covers. See `BoardGrid.dimmedCells`. */

@@ -254,7 +254,7 @@ Every cell is its own reel set, so the clovers the engine lifts above the cells 
 
 ## Lift one cell, dim the rest
 
-`board.dim({ except })` is the partner of `lift()`: it draws above every cell's clover and below anything lifted, so a lifted cell stays in front of the dim whether or not it is excepted. A dim covers cells, not symbol ids - this collect resolves the gold clovers it is about to sweep to cells and spares them, so the money stays bright while the blanks go dark.
+`board.dim({ except })` is the partner of `lift()`: it draws above every cell's clover and below anything lifted, so a lifted cell stays in front of the dim whether or not it is excepted. A dim covers cells, not symbol ids - this collect resolves the gold clovers it is about to sweep to cells and spares them, so the money stays bright while the blanks go dark. It fades in and back out over `fade` ms off the board's own ticker, fast enough to belong to the beat rather than read as a transition; `fade: 0` cuts.
 
 <RecipeDemo code="hold-and-win-clover-lift-dim" height={400} />
 

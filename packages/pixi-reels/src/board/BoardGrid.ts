@@ -12,6 +12,8 @@ import { EmptySymbol } from '../symbols/EmptySymbol.js';
 import { SpeedPresets } from '../config/SpeedPresets.js';
 import type { SpeedProfile, SymbolData, SymbolZIndexResolver } from '../config/types.js';
 import type { Disposable } from '../utils/Disposable.js';
+import { TickerRef } from '../utils/TickerRef.js';
+import type { TickerCallback } from '../utils/TickerRef.js';
 
 /** A cell coordinate in the grid. */
 export interface BoardCell {
@@ -150,6 +152,13 @@ function boardCorners(cell: BoardCell, cols: number, rows: number): MaskCorners 
 }
 
 const key = (c: BoardCell): string => `${c.reel},${c.cell}`;
+
+/**
+ * How long {@link BoardGrid.dim} takes to fade in, and to fade back out.
+ * Short enough to read as part of the beat it belongs to rather than as a
+ * transition of its own; `fade: 0` cuts instantly.
+ */
+export const DEFAULT_DIM_FADE_MS = 180;
 const DEFAULT_PROFILE = 'default';
 
 /**
@@ -222,6 +231,10 @@ export class BoardGrid implements Disposable {
   private readonly _dimLayer: RenderLayer;
   /** Set while a {@link dim} is up - only one at a time is meaningful. */
   private _dimmed: BoardCell[] | null = null;
+  /** The running dim fade, if any. Drives `_dimHost.alpha` off the board's ticker. */
+  private _dimFade: TickerCallback | null = null;
+  /** Owns the dim fade's ticker subscription, so `destroy()` cannot leak it. */
+  private readonly _ticker: TickerRef;
   private readonly _cellZIndex: BoardCellZIndexResolver | null;
   private _destroyed = false;
 
@@ -319,7 +332,9 @@ export class BoardGrid implements Disposable {
     for (const reelSet of this._reels.values()) {
       this._lifted.attach(reelSet.viewport.unmaskedContainer);
     }
+    this._ticker = new TickerRef(opts.ticker);
     this._dimHost = new Container();
+    this._dimHost.alpha = 0;
     this.container.addChild(this._dimHost);
     this._dimLayer = new RenderLayer();
     this.container.addChild(this._dimLayer);
@@ -442,8 +457,16 @@ export class BoardGrid implements Disposable {
    * A dim covers CELLS, not symbol ids. To keep every coin of one kind bright,
    * resolve the ids to cells first and pass those.
    *
+   * It fades rather than pops: `fade` milliseconds in, the same back out, off
+   * the board's own ticker. Pass `fade: 0` for an instant cut. A fade
+   * interrupted part-way (release during the fade in, or a fresh `dim()`
+   * during the fade out) starts from where it is and takes the proportional
+   * share of `fade`, so nothing jumps.
+   *
    * Only one dim at a time is meaningful, so a second call throws rather than
-   * silently replacing the first. Release is idempotent.
+   * silently replacing the first. Release is idempotent, and it ends the dim
+   * immediately as far as {@link dimmedCells} is concerned - the fade out is
+   * presentation the next `dim()` is free to interrupt.
    *
    * @example
    * ```ts
@@ -454,7 +477,7 @@ export class BoardGrid implements Disposable {
    * undim();
    * ```
    */
-  dim(opts: { except?: BoardCell[]; amount?: number } = {}): () => void {
+  dim(opts: { except?: BoardCell[]; amount?: number; fade?: number } = {}): () => void {
     if (this._destroyed) return () => {};
     if (this._dimmed) {
       throw new Error(
@@ -466,7 +489,15 @@ export class BoardGrid implements Disposable {
     if (!(amount >= 0 && amount <= 1)) {
       throw new RangeError(`BoardGrid.dim(): amount must be within [0, 1], got ${amount}.`);
     }
+    const fade = opts.fade ?? DEFAULT_DIM_FADE_MS;
+    if (!(fade >= 0 && Number.isFinite(fade))) {
+      throw new RangeError(`BoardGrid.dim(): fade must be a finite count of milliseconds, got ${fade}.`);
+    }
     const spared = new Set((opts.except ?? []).map((c) => key(this._assertCell(c))));
+    // A previous dim may still be fading out; take its rectangles, not its
+    // alpha, so the new dim continues from what is on screen.
+    this._cancelDimFade();
+    this._dimHost.removeChildren().forEach((c) => c.destroy());
     const dimmed: BoardCell[] = [];
     for (const cell of this._cells) {
       if (spared.has(key(cell))) continue;
@@ -479,28 +510,74 @@ export class BoardGrid implements Disposable {
       dimmed.push({ reel: cell.reel, cell: cell.cell });
     }
     this._dimmed = dimmed;
+    this._fadeDimTo(1, fade);
 
     let released = false;
     return () => {
       if (released) return;
       released = true;
       if (this._destroyed) return;
-      this._dimHost.removeChildren().forEach((c) => c.destroy());
+      // A later dim owns the host now; releasing this one must not touch it.
+      if (this._dimmed !== dimmed) return;
       this._dimmed = null;
+      this._fadeDimTo(0, fade, () => {
+        this._dimHost.removeChildren().forEach((c) => c.destroy());
+      });
     };
   }
 
   /**
-   * Drop the dim, whatever holds it. Called by `reset()` and `destroy()` on a
-   * `HoldAndWinBoard`; a release handed out before this stays a safe no-op.
+   * Drive `_dimHost.alpha` to `target` over the share of `ms` the remaining
+   * distance is worth, then run `onDone`. Replaces any running fade.
+   */
+  private _fadeDimTo(target: number, ms: number, onDone?: () => void): void {
+    this._cancelDimFade();
+    const from = this._dimHost.alpha;
+    const duration = ms * Math.abs(target - from);
+    if (duration <= 0) {
+      this._dimHost.alpha = target;
+      onDone?.();
+      return;
+    }
+    let elapsed = 0;
+    const step: TickerCallback = (ticker) => {
+      elapsed += ticker.deltaMS;
+      const t = Math.min(1, elapsed / duration);
+      this._dimHost.alpha = from + (target - from) * t;
+      if (t < 1) return;
+      this._cancelDimFade();
+      onDone?.();
+    };
+    this._dimFade = step;
+    this._ticker.add(step);
+  }
+
+  private _cancelDimFade(): void {
+    if (!this._dimFade) return;
+    this._ticker.remove(this._dimFade);
+    this._dimFade = null;
+  }
+
+  /**
+   * Drop the dim at once, whatever holds it and whatever it is mid-fade. A
+   * reset must not leave an overlay fading over a board that has already
+   * gone. Called by `reset()` and `destroy()` on a `HoldAndWinBoard`; a
+   * release handed out before this stays a safe no-op.
    */
   clearDim(): void {
-    if (!this._dimmed) return;
-    this._dimHost.removeChildren().forEach((c) => c.destroy());
+    this._cancelDimFade();
+    if (this._dimHost.children.length > 0) {
+      this._dimHost.removeChildren().forEach((c) => c.destroy());
+    }
+    this._dimHost.alpha = 0;
     this._dimmed = null;
   }
 
-  /** Cells a {@link dim} currently covers; empty when nothing is dimmed. */
+  /**
+   * Cells a {@link dim} currently covers; empty when nothing is dimmed. A
+   * released dim reports empty from the moment it is released, while its
+   * fade out is still on screen.
+   */
   get dimmedCells(): BoardCell[] {
     return this._dimmed ? this._dimmed.map((c) => ({ reel: c.reel, cell: c.cell })) : [];
   }
@@ -644,6 +721,7 @@ export class BoardGrid implements Disposable {
     if (this._destroyed) return;
     this.releaseAllLifts();
     this.clearDim();
+    this._ticker.destroy();
     this._destroyed = true;
     for (const reelSet of this._reels.values()) reelSet.destroy();
     this._reels.clear();
