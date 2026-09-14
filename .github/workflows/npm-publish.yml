@@ -122,7 +122,7 @@ jobs:
         run: pnpm --filter pixi-reels test
 
       - name: Create Release Pull Request or Publish
-        uses: changesets/action@8488615a623b1b9c987934bb89eae8af6a946ac1 # v2.1.1
+        uses: changesets/action@ae32849d5ba541f9ae29e40e22a623bc13562f51 # v2.1.2
         with:
           # Opens or updates the "Version Packages" PR with pending bumps.
           version: pnpm version-packages
