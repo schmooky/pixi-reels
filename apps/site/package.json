@@ -35,7 +35,7 @@
     "clsx": "^2.1.1",
     "gsap": "^3.15.0",
     "lucide-react": "^1.43.0",
-    "mermaid": "^11.17.2",
+    "mermaid": "^12.0.0",
     "pixi-reels": "workspace:*",
     "pixi.js": "^8.20.1",
     "react": "^19.3.0",
