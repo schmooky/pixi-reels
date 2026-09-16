@@ -115,6 +115,14 @@ export interface ReelSetEvents extends Record<string, unknown[]> {
   /** The same slam, after every target reel has been placed and landed. */
   'skip:completed': [info: { reels: number[]; partial: boolean }];
   /**
+   * A `requestHurry()` press freed these reels: each is advancing to its
+   * natural landing as fast as its animation allows instead of being placed.
+   * The counterpart of `skip:requested`, which still means "about to be
+   * placed" and never lists a hurried reel. The landing itself arrives as the
+   * usual `spin:reelLanding` / `spin:reelLanded`.
+   */
+  'hurry:requested': [info: { reels: number[] }];
+  /**
    * Round-aware `skip()` first-press boost: in standard (non-cascade)
    * mode, the engine switched the active speed profile to the fastest
    * registered one for the rest of this round. Fires once per round on

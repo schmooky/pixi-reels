@@ -115,6 +115,27 @@ export abstract class ReelPhase<TConfig = void, TProfile extends SpeedProfile = 
     this._complete();
   }
 
+  /**
+   * Advance to this phase's natural end as fast as its animation allows,
+   * WITHOUT changing the outcome. The counterpart of `skip()`, which
+   * force-completes and may place the frame outright: a hurried stop still
+   * spins its frame in and bounces, it just stops waiting first. What a
+   * `requestHurry()` press asks of the reel it frees.
+   *
+   * With `speed`, the phase carries on with that profile from here: the
+   * spin-out speed and bounce a hurried stop lands on.
+   *
+   * Returns `false` when the phase cannot be hurried. The reel then runs the
+   * phase to its natural end, and the controller applies the rest of the
+   * hurry (no stop delay, no tease, the named profile) at the chain's next
+   * decision point.
+   */
+  hurry(speed?: TProfile): boolean {
+    if (!this._isActive) return false;
+    if (speed) this._speed = speed;
+    return this.onHurry();
+  }
+
   /** Called each frame while the phase is active. */
   abstract update(deltaMs: number): void;
 
@@ -123,6 +144,16 @@ export abstract class ReelPhase<TConfig = void, TProfile extends SpeedProfile = 
 
   /** Subclass: clean up when skipped or force-completed. */
   protected abstract onSkip(): void;
+
+  /**
+   * Subclass: reach the natural end sooner without changing what it looks
+   * like. Cut a wait (a delay, a hold, a tease), leave the landing itself
+   * alone, and return `true`. The default returns `false`: this phase cannot
+   * be hurried and runs its course.
+   */
+  protected onHurry(): boolean {
+    return false;
+  }
 
   /** Call when the phase naturally completes. */
   protected _complete(): void {

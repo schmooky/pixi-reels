@@ -80,6 +80,17 @@ export interface SlamOptions {
   except?: number[];
 }
 
+/** Options for `requestHurry()`. */
+export interface HurryOptions {
+  /**
+   * Registered speed profile the freed reels run their STOP on: its
+   * `spinSpeed` is the spin-out, its `bounceDistance` / `bounceDuration` the
+   * landing. Omit to keep the profile the spin started on. The common tuning
+   * is a pressed reel that lands on the turbo bounce.
+   */
+  speed?: string;
+}
+
 /**
  * How the START of each anticipation reel's slow-down is spaced (offsets are
  * by tease-order, i.e. position within the anticipation set, not raw reel

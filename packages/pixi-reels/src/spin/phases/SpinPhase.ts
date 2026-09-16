@@ -44,4 +44,11 @@ export class SpinPhase extends ReelPhase<SpinPhaseConfig> {
   protected onSkip(): void {
     // SpinPhase is not skippable.
   }
+
+  /** Drop the floor: a hurried reel may stop the moment the result is in. */
+  protected onHurry(): boolean {
+    this._minTime = 0;
+    if (this._readyToStop) this._complete();
+    return true;
+  }
 }

@@ -46,6 +46,7 @@ export type {
   AnticipationSegment,
   AnticipationCurve,
   AnticipationCells,
+  HurryOptions,
   SlamOptions,
 } from './config/types.js';
 export type { ReelMaskRect, MaskStrategy, MaskContext } from './core/ReelViewport.js';

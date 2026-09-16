@@ -8,6 +8,7 @@ import type {
   AnticipationCells,
   AnticipationSlowdown,
   AnticipationStagger,
+  HurryOptions,
   SlamOptions,
   SpeedProfile,
   SpinOptions,
@@ -286,6 +287,20 @@ export class SpinController implements Disposable {
   private _heldReels = new Set<number>();
   private _wasSkipped = false;
   private _skipPending = false;
+  /**
+   * Reels a `requestHurry()` press has freed: each is advancing to its natural
+   * landing as fast as its animation allows instead of being placed. Read at
+   * the chain's decision points (tease, stop delay, stop profile) and by the
+   * release walk, which treats a hurried reel as already down so the next
+   * hurry press moves on to the next group while it lands. A slam still
+   * places a hurried reel: it is un-landed until its stop settles. Cleared per
+   * spin / refill.
+   */
+  private _hurriedReels = new Set<number>();
+  /** Per hurried reel, the profile its stop runs on when the press named one. */
+  private _hurrySpeed = new Map<number, SpeedProfile>();
+  /** A `requestHurry()` that arrived before the result; fired by `setResult()`. */
+  private _hurryPending: { speed: SpeedProfile | null } | null = null;
   private _isDestroyed = false;
   private _currentSpinResolve: ((result: SpinResult) => void) | null = null;
   private _currentSpinReject: ((error: Error) => void) | null = null;
@@ -453,6 +468,9 @@ export class SpinController implements Disposable {
     this._isSpinning = true;
     this._wasSkipped = false;
     this._skipPending = false;
+    this._hurriedReels.clear();
+    this._hurrySpeed.clear();
+    this._hurryPending = null;
     this._pendingAbortError = null;
     this._spinStartTime = performance.now();
     this._resultSymbols = null;
@@ -579,6 +597,11 @@ export class SpinController implements Disposable {
       this._skipPending = false;
       this._pressSkip(false);
     }
+    if (this._hurryPending) {
+      const { speed } = this._hurryPending;
+      this._hurryPending = null;
+      this._pressHurry(speed);
+    }
   }
 
   /**
@@ -677,6 +700,9 @@ export class SpinController implements Disposable {
     this._isSpinning = true;
     this._wasSkipped = false;
     this._skipPending = false;
+    this._hurriedReels.clear();
+    this._hurrySpeed.clear();
+    this._hurryPending = null;
     this._pendingAbortError = null;
     this._spinStartTime = performance.now();
     this._resultSymbols = null;
@@ -1215,11 +1241,12 @@ export class SpinController implements Disposable {
    * one press at a time in TEASE order, and `'once'` / `'always'` hold them
    * (an empty group is a no-op press, by design).
    */
-  private _nextReelGroupRelease(teasing: Set<number>): number[] | null {
+  private _nextReelGroupRelease(
+    teasing: Set<number>,
+    released: (reelIndex: number) => boolean,
+  ): number[] | null {
     for (const group of this._reelGroups ?? []) {
-      const pending = group.filter(
-        (i) => !this._landedReels.has(i) && !this._heldReels.has(i),
-      );
+      const pending = group.filter((i) => !released(i));
       if (pending.length === 0) continue;
 
       const free = pending.filter((i) => !teasing.has(i));
@@ -1281,6 +1308,69 @@ export class SpinController implements Disposable {
       return;
     }
     this._skipPending = true;
+  }
+
+  /**
+   * Land the reels a press frees through their normal stop instead of placing
+   * them. Same release plan as `requestSkip()` (tease protection,
+   * `'stepwise'`, reel groups decide WHICH reels a press frees) and the same
+   * pre-result queueing; only what freeing means differs. See
+   * {@link ReelSet.requestHurry} for the contract.
+   */
+  requestHurry(options: HurryOptions = {}): void {
+    if (!this._isSpinning) return;
+    const speed = this._resolveHurrySpeed(options);
+    if (this._currentSpinMode === 'cascade') {
+      // A tumble reel has already dropped its symbols and lands by placing
+      // them: there is no spin-out to run sooner. Slam, as every other press
+      // does in this mode, and say so once.
+      noticeWarnOnce(
+        'hurry-cascade',
+        'requestHurry() has nothing to hurry in cascade mode: a tumble reel lands by ' +
+          'placing its symbols, not by spinning them in. The press slams as requestSkip() ' +
+          'would.',
+      );
+      this.requestSkip();
+      return;
+    }
+    if (this._resultSymbols) {
+      this._pressHurry(speed);
+      return;
+    }
+    this._hurryPending = { speed };
+  }
+
+  /** The profile a hurry press named, or `null` for the round's own. Unknown names throw. */
+  private _resolveHurrySpeed(options: HurryOptions): SpeedProfile | null {
+    if (options.speed === undefined) return null;
+    const profile = this._speedManager.getProfile(options.speed);
+    if (!profile) {
+      throw new Error(
+        `requestHurry(): no speed profile named '${options.speed}'. Register it with ` +
+          `builder.speed() or reelSet.speed.addProfile(). Available: ` +
+          `${this._speedManager.profileNames.join(', ')}.`,
+      );
+    }
+    return profile;
+  }
+
+  /**
+   * The hurry counterpart of `_pressSkip`: walk the same release plan, but
+   * hurry the group instead of slamming it. A hurried reel counts as released
+   * for the walk, so the next press moves on while it lands. `'once'` is spent
+   * exactly as a slam press spends it. No round side effect and no
+   * `skipStage`: a hurry is not a skip, and a `requestSkip()` after it still
+   * slams whatever is still moving.
+   */
+  private _pressHurry(speed: SpeedProfile | null): void {
+    const released = (i: number): boolean => this._isReleased(i) || this._hurriedReels.has(i);
+    const group = this._nextSlamGroup(released);
+    if (group !== null) {
+      this._hurry(group, speed);
+      if (this._anticipationProtect === 'once') this._protectSpent = true;
+      return;
+    }
+    this._hurry(undefined, speed);
   }
 
   /**
@@ -1397,16 +1487,16 @@ export class SpinController implements Disposable {
    * protection there and the next press is a plain full slam, `'always'`
    * returns an empty group forever (a no-op press, by design).
    */
-  private _nextSlamGroup(): number[] | null {
-    const teasing = this._protectedTeaseReels();
+  private _nextSlamGroup(released: (reelIndex: number) => boolean = this._isReleased): number[] | null {
+    const teasing = this._protectedTeaseReels(released);
     // Configured groups replace the implicit "tease vs everything else" split:
     // the caller has said what belongs together, so a press walks THAT order.
-    if (this._reelGroups) return this._nextReelGroupRelease(teasing);
+    if (this._reelGroups) return this._nextReelGroupRelease(teasing, released);
     if (teasing.size === 0) return null;
 
     const rest: number[] = [];
     for (let i = 0; i < this._reels.length; i++) {
-      if (teasing.has(i) || this._landedReels.has(i) || this._heldReels.has(i)) continue;
+      if (teasing.has(i) || released(i)) continue;
       rest.push(i);
     }
     if (rest.length > 0) return rest;
@@ -1467,7 +1557,7 @@ export class SpinController implements Disposable {
    *     reintroduce the response-time tell it exists to remove,
    *   - every anticipation reel has already landed.
    */
-  private _protectedTeaseReels(): Set<number> {
+  private _protectedTeaseReels(released: (reelIndex: number) => boolean): Set<number> {
     const out = new Set<number>();
     if (this._anticipationProtect === false) return out;
     if (this._anticipationProtect === 'once' && this._protectSpent) return out;
@@ -1483,11 +1573,56 @@ export class SpinController implements Disposable {
     if (hold <= 0) return out;
 
     for (const i of this._anticipationReels) {
-      if (this._landedReels.has(i)) continue;
-      if (this._heldReels.has(i)) continue;
+      if (released(i)) continue;
       out.add(i);
     }
     return out;
+  }
+
+  /**
+   * Is this reel out of the release walk's way: landed, or held out of the
+   * spin entirely? What a slam press treats as "already down"; a hurry press
+   * adds the reels it has already hurried. Bound, so it can be the default.
+   */
+  private readonly _isReleased = (reelIndex: number): boolean =>
+    this._landedReels.has(reelIndex) || this._heldReels.has(reelIndex);
+
+  /**
+   * The hurry path itself: mark the target reels, hand each active phase the
+   * hurry, and let the chains carry the rest. Nothing is placed and nothing is
+   * marked landed here; every hurried reel still lands through
+   * `spin:reelLanding` / `spin:reelLanded` when its stop settles.
+   *
+   * With no argument it hurries every reel that is neither released nor
+   * already hurried. A call with nothing left to hurry emits nothing.
+   */
+  private _hurry(reels: readonly number[] | undefined, speed: SpeedProfile | null): void {
+    const targets: number[] = [];
+    const candidates = reels ?? this._reels.map((_, i) => i);
+    for (const i of candidates) {
+      if (!Number.isInteger(i) || i < 0 || i >= this._reels.length) continue;
+      if (this._isReleased(i) || this._hurriedReels.has(i)) continue;
+      targets.push(i);
+    }
+    if (targets.length === 0) return;
+
+    for (const i of targets) {
+      this._hurriedReels.add(i);
+      if (speed) {
+        this._hurrySpeed.set(i, speed);
+        // `speedNormalized` and profile-relative drive bounds follow the
+        // profile the reel now lands on, as they would after `setSpeed()`.
+        this._reels[i].referenceSpeed = speed.spinSpeed;
+      }
+    }
+    this._events.emit('hurry:requested', { reels: [...targets] });
+
+    for (const i of targets) {
+      // The active phase advances itself where it can (a tease ends, a stop
+      // delay is cut). A phase that cannot be hurried keeps running, and the
+      // chain applies the rest at its next decision point.
+      this._activePhases.get(i)?.hurry(speed ?? undefined);
+    }
   }
 
   /**
@@ -1863,7 +1998,8 @@ export class SpinController implements Disposable {
     // profile's shared floor. without it the only way under the floor is the
     // all-reels slam, which is why skip granularity used to be all-or-nothing.
     const spinDone = spinPhase.run({
-      minimumSpinTime: this._minimumSpinTimeFor(reelIndex),
+      // A reel hurried before it reached SPIN owes no floor either.
+      minimumSpinTime: this._hurriedReels.has(reelIndex) ? 0 : this._minimumSpinTimeFor(reelIndex),
     } satisfies SpinPhaseConfig);
 
     if (this._announceAllStartedIfReady()) {
@@ -1898,7 +2034,11 @@ export class SpinController implements Disposable {
     const antBaseDuration = this._anticipationDuration ?? speed.anticipationDelay;
 
     let didAnticipate = false;
-    if (this._anticipationReels.includes(reelIndex) && antBaseDuration > 0) {
+    const teases = this._anticipationReels.includes(reelIndex) && antBaseDuration > 0;
+    // A hurried reel skips its tease: the press asked for the landing, and the
+    // tease is the one thing on the way there that is not part of it. Checked
+    // again after the stagger wait, which is where a press can land too.
+    if (teases && !this._hurriedReels.has(reelIndex)) {
       // Stagger the START of the slow-down so anticipation reels tease one
       // after another instead of all at once. The reel keeps spinning at full
       // speed during this wait (its SpinPhase resolved but `reel.speed` is
@@ -1906,7 +2046,8 @@ export class SpinController implements Disposable {
       // visibly hold while later ones stay at full blur.
       const proceed = await this._awaitAnticipationOffset(reelIndex, generation);
       if (!proceed) return; // slam / new spin superseded us during the wait
-
+    }
+    if (teases && !this._hurriedReels.has(reelIndex)) {
       // A dedicated tease-start signal carrying the reel's place in the
       // sequence, so games can layer per-step SFX / pitch ramps without
       // re-deriving which reels are teasing from `spin:stopping`.
@@ -1988,14 +2129,19 @@ export class SpinController implements Disposable {
       } satisfies CascadeDropInPhaseConfig);
       if (this._isStale(reelIndex, generation)) return;
     } else {
-      const stopPhase = this._phaseFactory.create<any>('stop', reel, speed);
+      // A hurried reel has been asked for its landing: no stagger, full spin-out
+      // speed rather than the tease crawl it may have been on, and the profile
+      // the press named, if any.
+      const hurried = this._hurriedReels.has(reelIndex);
+      const stopSpeed = this._hurrySpeed.get(reelIndex) ?? speed;
+      const stopPhase = this._phaseFactory.create<any>('stop', reel, stopSpeed);
       this._activePhases.set(reelIndex, stopPhase);
       // After a tease, carry the slow anticipation speed into the stop so the
       // reel crawls to its landing position instead of re-accelerating.
       await stopPhase.run({
         targetFrame,
-        delay: stopDelay,
-        preserveSpeed: didAnticipate,
+        delay: hurried ? 0 : stopDelay,
+        preserveSpeed: didAnticipate && !hurried,
       } satisfies StopPhaseConfig);
       if (this._isStale(reelIndex, generation)) return;
     }

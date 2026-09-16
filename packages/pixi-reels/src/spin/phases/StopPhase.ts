@@ -138,6 +138,21 @@ export class StopPhase extends ReelPhase<StopPhaseConfig> {
     this._stage = 'done';
   }
 
+  /**
+   * Cut the stagger and spin out now. A stop already spinning out or bouncing
+   * is already on its way to the landing and is left alone; the profile a
+   * hurry names has been swapped in by then and shapes whatever is still to
+   * come (the spin-out speed from `'delay'`, the bounce from `'spinning'`).
+   */
+  protected onHurry(): boolean {
+    if (this._stage === 'delay') {
+      this._delayTween?.kill();
+      this._delayTween = null;
+      this._beginSpinOut();
+    }
+    return true;
+  }
+
   private _killTweens(): void {
     if (this._delayTween) {
       this._delayTween.kill();
