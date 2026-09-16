@@ -1,6 +1,6 @@
 # pixi-reels
 
-pixi-reels 2.7.0 is a reel engine for PixiJS v8.
+pixi-reels 2.8.0 is a reel engine for PixiJS v8.
 It ships reel-only primitives. Win math, paytable math, RNG, and audio live in consumer code.
 This file inlines every guide, API page, recipe (with source) and answered FAQ entry for offline LLM context.
 
@@ -183,7 +183,7 @@ Identity-swap half of the tumble cascade. Runs after `CascadeFallPhase` (Moment 
 URL: https://pixi-reels.schmooky.dev/api/classes/index.EmptySymbol/
 A [ReelSymbol](/api/classes/index.ReelSymbol/) that renders nothing and never animates.
 
-### EventEmitter\<TEvents\>
+### EventEmitter\<TEvents *extends* `Record`\<`string`, `unknown`[]\>\>
 URL: https://pixi-reels.schmooky.dev/api/classes/index.EventEmitter/
 Typed event emitter with zero dependencies.
 
@@ -191,15 +191,15 @@ Typed event emitter with zero dependencies.
 URL: https://pixi-reels.schmooky.dev/api/classes/index.FrameBuilder/
 Builds symbol frames using a middleware pipeline.
 
-### HoldAndWinBoard\<TData\>
+### HoldAndWinBoard\<TData = `unknown`\>
 URL: https://pixi-reels.schmooky.dev/api/classes/index.HoldAndWinBoard/
 A Hold & Win board: a grid of independently spinning cells plus the round choreography every H&W game repeats - spin the free cells, lock the hits, reset-or-decrement the respin counter, detect the fu
 
-### HoldAndWinBuilder\<TData\>
+### HoldAndWinBuilder\<TData = `unknown`\>
 URL: https://pixi-reels.schmooky.dev/api/classes/index.HoldAndWinBuilder/
 Fluent builder for [HoldAndWinBoard](/api/classes/index.HoldAndWinBoard/).
 
-### HoldAndWinState\<TData\>
+### HoldAndWinState\<TData = `unknown`\>
 URL: https://pixi-reels.schmooky.dev/api/classes/index.HoldAndWinState/
 The pure Hold & Win state machine - the single source of truth for board state, with **zero** PixiJS. It owns the locked-coin ledger, the respin counter, the round number, the set of dormant cells and
 
@@ -231,7 +231,7 @@ One vertical column of a slot board.
 URL: https://pixi-reels.schmooky.dev/api/classes/index.ReelCurve/
 The curvature of one reel: a camera looking at a drum.
 
-### Abstract Class: ReelPhase\<TConfig\>
+### Abstract Class: ReelPhase\<TConfig = `void`, TProfile *extends* [`SpeedProfile`](/api/interfaces/index.SpeedProfile/) = [`SpeedProfile`](/api/interfaces/index.SpeedProfile/)\>
 URL: https://pixi-reels.schmooky.dev/api/classes/index.ReelPhase/
 Abstract base for reel spin phases.
 
@@ -361,7 +361,7 @@ URL: https://pixi-reels.schmooky.dev/api/functions/index.composeMasks/
 
 ### computeDropOffsets()
 URL: https://pixi-reels.schmooky.dev/api/functions/index.computeDropOffsets/
-```ts function computeDropOffsets( visibleCells: number, winnerCells: readonly number[], options?: { gravity?: Direction; initial?: boolean; }): DropOffset[]; ```
+```ts function computeDropOffsets( visibleCells: number, winnerCells: readonly number[], options?: { gravity?: Direction; initial?: boolean; } ): DropOffset[]; ```
 
 ### debugGrid()
 URL: https://pixi-reels.schmooky.dev/api/functions/index.debugGrid/
@@ -433,19 +433,19 @@ URL: https://pixi-reels.schmooky.dev/api/functions/index.setLogLevel/
 
 ### setTargetSlot()
 URL: https://pixi-reels.schmooky.dev/api/functions/index.setTargetSlot/
-```ts function setTargetSlot( target: ColumnTarget, cell: number, id: string): void; ```
+```ts function setTargetSlot( target: ColumnTarget, cell: number, id: string ): void; ```
 
 ### sortByValueDesc()
 URL: https://pixi-reels.schmooky.dev/api/functions/index.sortByValueDesc/
-```ts function sortByValueDesc<T>(wins: readonly T[]): T[]; ```
+```ts function sortByValueDesc<T extends { value?: number; }>(wins: readonly T[]): T[]; ```
 
 ### startRecording()
 URL: https://pixi-reels.schmooky.dev/api/functions/index.startRecording/
-```ts function startRecording( reelSet: ReelSet, tag?: string, options?: StartRecordingOptions): void; ```
+```ts function startRecording( reelSet: ReelSet, tag?: string, options?: StartRecordingOptions ): void; ```
 
 ### stepDrive()
 URL: https://pixi-reels.schmooky.dev/api/functions/index.stepDrive/
-```ts function stepDrive( state: ReelDriveState, target: number, config: ResolvedDriveConfig, deltaMs: number): ReelDriveState; ```
+```ts function stepDrive( state: ReelDriveState, target: number, config: ResolvedDriveConfig, deltaMs: number ): ReelDriveState; ```
 
 ### stopRecording()
 URL: https://pixi-reels.schmooky.dev/api/functions/index.stopRecording/
@@ -518,6 +518,10 @@ URL: https://pixi-reels.schmooky.dev/api/interfaces/index.BoardGridOptions/
 ### BoardSpinTarget
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.BoardSpinTarget/
 A landing target: spin `cell` and stop it showing `id`.
+
+### BounceOptions
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.BounceOptions/
+Shape of one landing bounce, for [ReelPhase.bounce](/api/classes/index.ReelPhase/#bounce). Every field falls back to the phase''s speed profile, so a phase that wants the profile''s own bounce passes no
 
 ### CardSymbolOptions
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.CardSymbolOptions/
@@ -610,6 +614,10 @@ Middleware that participates in frame building.
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.HoldAndWinBoardConfig/
 Internal config produced by [HoldAndWinBuilder.build](/api/classes/index.HoldAndWinBuilder/#build).
 
+### HurryOptions
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.HurryOptions/
+Options for `requestHurry()`.
+
 ### HwCell
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.HwCell/
 Grid coordinate of a board cell.
@@ -617,11 +625,11 @@ Grid coordinate of a board cell.
 ### HwCellSizeOptions
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.HwCellSizeOptions/
 
-### HwCoin\<TData\>
+### HwCoin\<TData = `unknown`\>
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.HwCoin/
 A coin somewhere on the board. `id` selects the registered symbol art; `data` is an opaque game-layer payload the board never interprets.
 
-### HwRespinResult\<TData\>
+### HwRespinResult\<TData = `unknown`\>
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.HwRespinResult/
 Resolution of one [HoldAndWinBoard.respin](/api/classes/index.HoldAndWinBoard/#respin) wave.
 
@@ -687,6 +695,10 @@ One captured frame from `startRecording()`. a `DebugSnapshot` plus the tag the r
 ### ReelAxis
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.ReelAxis/
 Immutable projection between screen space and a reel''s travel/cross axes.
+
+### ReelBounce
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.ReelBounce/
+A landing bounce in flight, returned by [ReelPhase.bounce](/api/classes/index.ReelPhase/#bounce).
 
 ### ReelCellInset
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.ReelCellInset/
@@ -934,21 +946,21 @@ URL: https://pixi-reels.schmooky.dev/api/types/index.Direction/
 URL: https://pixi-reels.schmooky.dev/api/types/index.Gsap/
 ```ts type Gsap = typeof resolvedGsap; ```
 
-### HoldAndWinBoardEvents\<TData\>
+### HoldAndWinBoardEvents\<TData = `unknown`\>
 URL: https://pixi-reels.schmooky.dev/api/types/index.HoldAndWinBoardEvents/
-```ts type HoldAndWinBoardEvents<TData> = { board:full: [{ coins: HwCoin<TData>[]; }]; cell:landed: [{ cell: HwCell; coin: HwCoin<TData> | null; }]; cells:activated: [{ capacity: number; cells: HwCell
+```ts type HoldAndWinBoardEvents<TData = unknown> = { board:full: [{ coins: HwCoin<TData>[]; }]; cell:landed: [{ cell: HwCell; coin: HwCoin<TData> | null; }]; cells:activated: [{ capacity: number; cel
 
-### HwEffect\<TData\>
+### HwEffect\<TData = `unknown`\>
 URL: https://pixi-reels.schmooky.dev/api/types/index.HwEffect/
-```ts type HwEffect<TData> = { [K in keyof HoldAndWinBoardEvents<TData>]: { payload: HoldAndWinBoardEvents<TData>[K][0]; type: K } }[keyof HoldAndWinBoardEvents<TData>]; ```
+```ts type HwEffect<TData = unknown> = { [K in keyof HoldAndWinBoardEvents<TData>]: { payload: HoldAndWinBoardEvents<TData>[K][0]; type: K } }[keyof HoldAndWinBoardEvents<TData>]; ```
 
 ### HwLockAnimation
 URL: https://pixi-reels.schmooky.dev/api/types/index.HwLockAnimation/
 ```ts type HwLockAnimation = "win" | "landing" | "none"; ```
 
-### HwLockAnimationRule\<TData\>
+### HwLockAnimationRule\<TData = `unknown`\>
 URL: https://pixi-reels.schmooky.dev/api/types/index.HwLockAnimationRule/
-```ts type HwLockAnimationRule<TData> =
+```ts type HwLockAnimationRule<TData = unknown> =
 
 ### HwPhase
 URL: https://pixi-reels.schmooky.dev/api/types/index.HwPhase/
@@ -978,13 +990,13 @@ URL: https://pixi-reels.schmooky.dev/api/types/index.OffsetConfig/
 URL: https://pixi-reels.schmooky.dev/api/types/index.Orientation/
 ```ts type Orientation = "vertical" | "horizontal"; ```
 
-### PhaseConstructor\<T\>
+### PhaseConstructor\<T *extends* [`ReelPhase`](/api/classes/index.ReelPhase/)\<`any`, `any`\> = [`ReelPhase`](/api/classes/index.ReelPhase/)\<`any`\>, P *extends* [`SpeedProfile`](/api/interfaces/index.SpeedProfile/) = [`SpeedProfile`](/api/interfaces/index.SpeedProfile/)\>
 URL: https://pixi-reels.schmooky.dev/api/types/index.PhaseConstructor/
-```ts type PhaseConstructor<T> = (reel: Reel, speed: SpeedProfile) => T; ```
+```ts type PhaseConstructor<T extends ReelPhase<any, any> = ReelPhase<any>, P extends SpeedProfile = SpeedProfile> = (reel: Reel, speed: P) => T; ```
 
-### PhaseCreatorFn\<T\>
+### PhaseCreatorFn\<T *extends* [`ReelPhase`](/api/classes/index.ReelPhase/)\<`any`, `any`\> = [`ReelPhase`](/api/classes/index.ReelPhase/)\<`any`\>, P *extends* [`SpeedProfile`](/api/interfaces/index.SpeedProfile/) = [`SpeedProfile`](/api/interfaces/index.SpeedProfile/)\>
 URL: https://pixi-reels.schmooky.dev/api/types/index.PhaseCreatorFn/
-```ts type PhaseCreatorFn<T> = (reel: Reel, speed: SpeedProfile) => T; ```
+```ts type PhaseCreatorFn<T extends ReelPhase<any, any> = ReelPhase<any>, P extends SpeedProfile = SpeedProfile> = (reel: Reel, speed: P) => T; ```
 
 ### PinExpireReason
 URL: https://pixi-reels.schmooky.dev/api/types/index.PinExpireReason/
@@ -17541,6 +17553,124 @@ return {
 };
 ```
 
+### phase-from-scratch-stop
+URL: https://pixi-reels.schmooky.dev/recipes/phase-from-scratch-stop/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, ReelPhase, CardSymbol, CARD_DECK, PIXI, gsap, app
+//
+// A STOP PHASE WRITTEN FROM SCRATCH, on `ReelPhase`. The instant stop.
+//
+// The reel never scrolls its frame in. It stops dead, the result is placed,
+// slides the last tenth of a cell into place, lands and bounces - two beats
+// with no spin-out between them. The legacy "instant spin" stop, and until the
+// phase contract shipped it could not be written against the published
+// typings: landing a reel meant four `@internal` calls behind a cast.
+//
+// The contract a stop phase needs, all of it public:
+//   reel.forceSpeed(0)       - stop dead, drive included, without landing
+//   reel.placeStrip(frame)   - the full strip, buffers included. `placeSymbols`
+//                              is the visible-window form and drops a big
+//                              symbol's tail parked in a buffer row
+//   this.land()              - halt, snap, tell the symbols, lift unmask art,
+//                              raise `spin:reelLanding`. The only way to land
+//   this.bounce(opts?)       - the overshoot, carrying lifted views along.
+//                              `{ done, cancel() }`; profile defaults
+//   onSkip()                 - the slam pose: cancel, rest, land if not yet
+//   onHurry()                - optional. A `requestHurry()` press asks for
+//                              the landing sooner; here there is no wait to
+//                              cut, so the default (`false`) is right
+//
+// Timing that belongs to the phase rides on the profile: `slideMs` below is
+// not a `SpeedProfile` field, and `ReelPhase<Config, Profile>` is what lets
+// `this._speed` read it in TypeScript. The manager hands every phase the
+// profile instance the game registered, so the field is there at run time;
+// the generic is what types it.
+
+const IDS = ['9', '10', 'J', 'Q', 'K'];
+const REELS = 5, ROWS = 3, SIZE = 80, GAP = 4;
+const CARDS = CARD_DECK.filter((c) => IDS.includes(c.id));
+function rv() { return IDS[Math.floor(Math.random() * IDS.length)]; }
+
+class InstantStopPhase extends ReelPhase {
+  name = 'stop';
+  skippable = true;
+
+  onEnter(config) {
+    const reel = this.reel;
+    const axis = reel.axis;
+    this._landed = false;
+    // Stop dead first: while the reel moves, the ticker would scroll the
+    // placed frame straight back out of the window.
+    reel.forceSpeed(0);
+    reel.placeStrip(config.targetFrame);
+    // Slide in from a tenth of a cell back, along the reel's own axis, then
+    // land and bounce. Lifted unmask art would need carrying here the way
+    // `bounce()` carries it; none is registered in this demo, so a bare tween
+    // of the container is honest.
+    this._rest = axis.getMain(reel.container);
+    axis.setMain(reel.container, this._rest - axis.polarity * reel.symbolHeight * 0.1);
+    this._slide = gsap.to(reel.container, {
+      [axis.mainProp]: this._rest,
+      duration: this._speed.slideMs / 1000,
+      ease: 'power2.out',
+      onComplete: () => {
+        this._slide = null;
+        this._landed = true;
+        this.land();
+        this._bounce = this.bounce();
+        this._bounce.done.then(() => this._complete());
+      },
+    });
+  }
+
+  update() {}
+
+  // The slam pose: wherever the phase was, leave the reel where a natural
+  // finish would have - resting on its frame, landed.
+  onSkip() {
+    if (this._slide) { this._slide.kill(); this._slide = null; }
+    if (this._bounce) { this._bounce.cancel(); this._bounce = null; }
+    this.reel.axis.setMain(this.reel.container, this._rest);
+    if (!this._landed) { this._landed = true; this.land(); }
+  }
+}
+
+const reelSet = new ReelSetBuilder()
+  .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
+  .symbols((r) => {
+    for (const c of CARDS) {
+      r.register(c.id, CardSymbol, { color: c.color, label: c.label, textColor: c.textColor });
+    }
+  })
+  // `slideMs` is the phase's own field on the profile.
+  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 160, minimumSpinTime: 700, slideMs: 140 })
+  .phases((f) => f.register('stop', InstantStopPhase))
+  .ticker(app.ticker)
+  .build();
+
+const TOTAL_H = ROWS * SIZE + (ROWS - 1) * GAP;
+const hud = new PIXI.Text({
+  text: 'StopPhase replaced: stop dead, place, slide a tenth of a cell in, land, bounce.',
+  style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 11, fontWeight: '600', fill: 0x9c8f78 },
+});
+hud.position.set(0, TOTAL_H + 10);
+reelSet.addChild(hud);
+
+return {
+  reelSet,
+  cleanup: () => { try { hud.destroy(); } catch {} },
+  onSkip: () => { try { reelSet.skipSpin(); } catch { reelSet.requestSkip(); } },
+  onSpin: async () => {
+    const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
+    const p = reelSet.spin();
+    await new Promise((r) => setTimeout(r, 250));
+    reelSet.setResult(grid);
+    await p;
+  },
+};
+```
+
 ### phase-subclass-anticipation
 URL: https://pixi-reels.schmooky.dev/recipes/phase-subclass-anticipation/
 ```ts
@@ -19479,6 +19609,151 @@ return {
 
     const p = reelSet.spin();
     reelSet.setAnticipation(TEASE, { stagger: 250, protect: 'always' });
+    await new Promise((r) => setTimeout(r, 250));
+    reelSet.setResult(grid);
+    await p;
+  },
+};
+```
+
+### skip-hurry
+URL: https://pixi-reels.schmooky.dev/recipes/skip-hurry/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, PIXI, gsap, app
+//
+// A PRESS THAT LANDS, NOT CUTS. `requestHurry()`.
+//
+// Every slam places the frame and lands in the same tick. The landing beat
+// still plays, but on symbols already parked, so a press reads as a cut - and
+// on a teasing spin it hides the build-up. `requestHurry()` frees the same
+// reels a `requestSkip()` press would (tease protection, stepwise, groups all
+// apply) and asks each one for its landing instead: the tease ends, the stop
+// delay is cut, the reel spins its frame in at full speed and bounces.
+//
+//   press 1 - reels 0-1 land through their stop, together. reels 2-4 tease
+//   press 2 - reel 2's tease ends and it spins out. 3-4 keep teasing
+//   press 3 - reel 3
+//   press 4 - reel 4
+//
+// `speed: 'turbo'` lands every hurried reel on the turbo profile: its faster
+// spin-out and its shorter bounce. The round's own profile otherwise.
+//
+// A `requestSkip()` still cuts: it slams whatever is still moving, hurried or
+// not. The second button below is that press, so the two can be compared on
+// the same spin.
+
+const IDS = ['9', '10', 'J', 'Q', 'K'];
+const SCAT = 'SCAT';
+const REELS = 5, ROWS = 3, SIZE = 80, GAP = 4;
+const TEASE = [2, 3, 4];
+const CARDS = CARD_DECK.filter((c) => IDS.includes(c.id));
+function rv() { return IDS[Math.floor(Math.random() * IDS.length)]; }
+
+const reelSet = new ReelSetBuilder()
+  .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
+  .symbols((r) => {
+    for (const c of CARDS) {
+      r.register(c.id, CardSymbol, { color: c.color, label: c.label, textColor: c.textColor });
+    }
+    r.register(SCAT, CardSymbol, { color: 0xffcc44, label: 'F', textColor: 0x3a2600 });
+  })
+  // A long hold per reel, so there is room to press through it, and a slow
+  // bounce, so a hurried landing is visibly a landing.
+  .speed('normal', { ...SpeedPresets.NORMAL, anticipationDelay: 1600, bounceDuration: 520 })
+  // What a hurried reel lands on: the turbo spin-out and its short bounce.
+  .speed('turbo', SpeedPresets.TURBO)
+  .ticker(app.ticker)
+  .build();
+
+const TOTAL_H = ROWS * SIZE + (ROWS - 1) * GAP;
+
+// Tease outline: a thin dashed border on the reel's own bounds, blinking.
+const glowLayer = new PIXI.Container();
+reelSet.addChild(glowLayer);
+const glows = new Map();
+const stopGlow = (i) => {
+  const g = glows.get(i);
+  if (!g) return;
+  gsap.killTweensOf(g);
+  try { g.destroy(); } catch {}
+  glows.delete(i);
+};
+const startGlow = (i) => {
+  stopGlow(i);
+  const DASH = 7, GAP_ = 5, W = 1.5, inset = W / 2;
+  const l = i * (SIZE + GAP) + inset, t = inset;
+  const r = i * (SIZE + GAP) + SIZE - inset, b = TOTAL_H - inset;
+  const g = new PIXI.Graphics();
+  for (const [x1, y1, x2, y2] of [[l, t, r, t], [r, t, r, b], [r, b, l, b], [l, b, l, t]]) {
+    const len = Math.hypot(x2 - x1, y2 - y1);
+    const ux = (x2 - x1) / len, uy = (y2 - y1) / len;
+    for (let d = 0; d < len; d += DASH + GAP_) {
+      const e = Math.min(d + DASH, len);
+      g.moveTo(x1 + ux * d, y1 + uy * d).lineTo(x1 + ux * e, y1 + uy * e);
+    }
+  }
+  g.stroke({ width: W, color: 0xfef08a });
+  glowLayer.addChild(g);
+  gsap.to(g, { alpha: 0.15, duration: 0.22, yoyo: true, repeat: -1, ease: 'steps(1)' });
+  glows.set(i, g);
+};
+reelSet.events.on('anticipation:reel', ({ reelIndex }) => startGlow(reelIndex));
+reelSet.events.on('anticipation:reelEnd', ({ reelIndex }) => stopGlow(reelIndex));
+
+const hud = new PIXI.Text({
+  text: '',
+  style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 11, fill: 0xffcc44 },
+});
+hud.position.set(0, TOTAL_H + 10);
+reelSet.addChild(hud);
+
+// The numeric definition of "landed, not placed": the landing frame and the
+// settle are a whole bounce apart on a hurried reel, and the same tick on a
+// slammed one.
+const landingAt = new Map();
+reelSet.events.on('spin:reelLanding', (i) => landingAt.set(i, performance.now()));
+
+let press = 0;
+const idle = 'spin, then press to walk the board: hurried reels spin out and bounce';
+hud.text = idle;
+reelSet.events.on('spin:start', () => { press = 0; landingAt.clear(); hud.text = idle; });
+reelSet.events.on('hurry:requested', ({ reels }) => {
+  press += 1;
+  hud.text = `press ${press}: hurried [${reels.join(', ')}] - landing through their stop`;
+});
+reelSet.events.on('skip:requested', ({ reels }) => {
+  press += 1;
+  hud.text = `press ${press}: SLAMMED [${reels.join(', ')}] - placed, no spin-out`;
+});
+reelSet.events.on('spin:reelLanded', (i) => {
+  const bounce = Math.round(performance.now() - (landingAt.get(i) ?? performance.now()));
+  hud.text = `${hud.text.split('\n')[0]}\nreel ${i} settled ${bounce} ms after its landing frame`;
+});
+
+// The cut, for comparison: a slam on the same spin. Wired to the HUD click
+// rather than the skip button, which is the hurry.
+hud.eventMode = 'static';
+hud.cursor = 'pointer';
+hud.on('pointertap', () => reelSet.requestSkip());
+
+return {
+  reelSet,
+  cleanup: () => {
+    for (const i of [...glows.keys()]) stopGlow(i);
+    try { glowLayer.destroy({ children: true }); } catch {}
+    try { hud.destroy(); } catch {}
+  },
+  // Every press goes through the same call. The engine decides which reels
+  // this one frees, from `protect`; the profile decides how they land.
+  onSkip: () => reelSet.requestHurry({ speed: 'turbo' }),
+  onSpin: async () => {
+    const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
+    grid[0].visible[1] = SCAT;
+    grid[1].visible[1] = SCAT;
+
+    const p = reelSet.spin();
+    reelSet.setAnticipation(TEASE, { stagger: 'sequential', protect: 'stepwise' });
     await new Promise((r) => setTimeout(r, 250));
     reelSet.setResult(grid);
     await p;
