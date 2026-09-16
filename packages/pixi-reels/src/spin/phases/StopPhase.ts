@@ -1,5 +1,6 @@
 import type { gsap } from 'gsap';
 import { ReelPhase } from './ReelPhase.js';
+import type { ReelBounce } from './ReelPhase.js';
 
 export interface StopPhaseConfig {
   /** Target symbols for this reel (full frame including buffers, top-to-bottom). */
@@ -37,7 +38,7 @@ export class StopPhase extends ReelPhase<StopPhaseConfig> {
 
   private _config: StopPhaseConfig | null = null;
   private _delayTween: gsap.core.Tween | null = null;
-  private _bounceTween: gsap.core.Timeline | null = null;
+  private _bounce: ReelBounce | null = null;
   private _stage: 'delay' | 'spinning' | 'bouncing' | 'done' = 'delay';
   private _baseY = 0;
 
@@ -102,62 +103,15 @@ export class StopPhase extends ReelPhase<StopPhaseConfig> {
   }
 
   private _landAndBounce(): void {
-    const reel = this._reel;
-    const speed = this._speed;
-
-    // haltDrive, not `speed = 0`: under the drive model a bare zero would be
-    // ramped straight back toward the old target on the very next tick.
-    reel.haltDrive();
-    reel.isStopping = false;
-    reel.snapToGrid();
-    reel.notifySpinEnd();
-    reel.notifyLanded();
-
-    const bounceDistance = speed.bounceDistance;
-    if (bounceDistance <= 0) {
+    this.land();
+    this._stage = 'bouncing';
+    this._bounce = this.bounce();
+    void this._bounce.done.then(() => {
+      // A cancelled bounce settles `done` too, but by then `onSkip` has
+      // already put the phase to bed.
+      if (this._stage !== 'bouncing') return;
       this._stage = 'done';
       this._complete();
-      return;
-    }
-
-    const legDuration = (speed.bounceDuration ?? 600) / 2000; // half of total, in seconds
-    // Overshoot in the direction of travel: forward reels overshoot toward the
-    // larger main coordinate, reverse reels toward the smaller. axis.polarity
-    // makes this automatic and keeps vertical/forward at `base + bounceDistance`.
-    const axis = reel.axis;
-    this._stage = 'bouncing';
-
-    // `notifyLanded()` just lifted every at-rest unmask symbol into
-    // `viewport.unmaskedContainer`, where the reel offset is baked into the
-    // view's own coordinate instead of inherited from `reel.container`. The
-    // bounce moves the container, so without this the lifted views hang
-    // motionless for the whole overshoot while the reel travels under them.
-    let followedMain = this._baseY;
-    const followLifted = (): void => {
-      const main = axis.getMain(reel.container);
-      reel.offsetLiftedViews(main - followedMain);
-      followedMain = main;
-    };
-
-    this._bounceTween = this._reel.gsap.timeline();
-    this._bounceTween.to(reel.container, {
-      [axis.mainProp]: this._baseY + axis.polarity * bounceDistance,
-      duration: legDuration,
-      ease: 'power1.out',
-      onUpdate: followLifted,
-    });
-    this._bounceTween.to(reel.container, {
-      [axis.mainProp]: this._baseY,
-      duration: legDuration,
-      ease: 'power1.out',
-      onUpdate: followLifted,
-      onComplete: () => {
-        // The last onUpdate can land a hair short of the end value; settle the
-        // lifted views on the exact resting position rather than that epsilon.
-        followLifted();
-        this._stage = 'done';
-        this._complete();
-      },
     });
   }
 
@@ -184,14 +138,29 @@ export class StopPhase extends ReelPhase<StopPhaseConfig> {
     this._stage = 'done';
   }
 
+  /**
+   * Cut the stagger and spin out now. A stop already spinning out or bouncing
+   * is already on its way to the landing and is left alone; the profile a
+   * hurry names has been swapped in by then and shapes whatever is still to
+   * come (the spin-out speed from `'delay'`, the bounce from `'spinning'`).
+   */
+  protected onHurry(): boolean {
+    if (this._stage === 'delay') {
+      this._delayTween?.kill();
+      this._delayTween = null;
+      this._beginSpinOut();
+    }
+    return true;
+  }
+
   private _killTweens(): void {
     if (this._delayTween) {
       this._delayTween.kill();
       this._delayTween = null;
     }
-    if (this._bounceTween) {
-      this._bounceTween.kill();
-      this._bounceTween = null;
+    if (this._bounce) {
+      this._bounce.cancel();
+      this._bounce = null;
     }
   }
 }

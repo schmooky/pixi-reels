@@ -19,7 +19,7 @@ Both emitters' `on(name, cb)` returns the emitter, for chaining. Unsubscribe wit
 |---|---|---|
 | Spin lifecycle | `spin:start` · `spin:allStarted` · `spin:stopping` · `spin:reelLanded` · `spin:allLanded` · `spin:complete` | Every `spin()` |
 | Nudge | `nudge:start` · `nudge:complete` · `nudge:cancelled` | `nudge()` |
-| Skip / slam | `skip:requested` · `skip:completed` · `skip:boosted` | `skipSpin()` · `requestSkip()` · `slamStop()` |
+| Skip / slam | `skip:requested` · `skip:completed` · `skip:boosted` · `hurry:requested` | `skipSpin()` · `requestSkip()` · `slamStop()` · `requestHurry()` |
 | Speed | `speed:changed` | `setSpeed()` |
 | Cascade | `cascade:chain:start` · `cascade:chain:end` · `cascade:fall:start` · `cascade:fall:symbol` · `cascade:fall:end` · `cascade:place:end` · `cascade:dropIn:start` · `cascade:dropIn:symbol` · `cascade:dropIn:end` · `cascade:destroy:start` · `cascade:destroy:end` · `cascade:gravity:start` · `cascade:gravity:symbol` · `cascade:gravity:end` · `cascade:gravity:error` | `.tumble()` + `spin({mode:'cascade'})` / `refill()` / `runCascade()` / `destroySymbols()` |
 | Spotlight | `spotlight:start` · `spotlight:end` | `spotlight.cycle(...)` |
@@ -66,6 +66,7 @@ interface SpinResult {
 | `skip:requested` | `({ reels: number[], partial: boolean })` | A slam fires. from `skipSpin()`, `requestSkip()` (after `setResult` arrives), or `slamStop()`. `reels` is what this slam lands; `partial` is `true` when reels are still spinning after it (a protected tease, or `slamStop({ reels })` / `slamStop({ except })`). |
 | `skip:completed` | `({ reels: number[], partial: boolean })` | The same slam, after every target reel has been placed and landed. |
 | `skip:boosted` | `({ previous: SpeedProfile, current: SpeedProfile })` | First `skipSpin()` press of a STANDARD-mode round; engine bumped to the fastest registered profile for the rest of the round. Cascade rounds set the auto-slam-refills flag instead and never emit this event. Restore on the next `spin()` does **not** re-emit. |
+| `hurry:requested` | `({ reels: number[] })` | A `requestHurry()` press freed these reels. Each lands through its stop rather than being placed, so its landing arrives as the usual `spin:reelLanding` then `spin:reelLanded`, a bounce apart. `skip:requested` still means "about to be placed" and never lists a hurried reel. |
 
 ```ts
 reelSet.events.on('skip:boosted', ({ previous, current }) => {
@@ -298,6 +299,7 @@ work, and detail arguments pass through untouched (an `Error` keeps its stack).
 | Code | Level | Meaning |
 |---|---|---|
 | `slam-before-result` | warn | `slamStop()` ran before `setResult()`, so the reels landed on whatever the strip was showing - random fill, or an invisible board in cascade mode. Use `requestSkip()` in that window. |
+| `hurry-cascade` | warn | `requestHurry()` in cascade mode. A tumble reel lands by placing its symbols, so there is nothing to spin out; the press slammed as `requestSkip()` would. |
 | `phase-chain-threw` | error | A reel's phase chain rejected. The engine slammed to recover so the spin still settles. |
 | `refill-threw` | error | A two-stage refill rejected, usually from a caller's `gravityHold` / `onGravityComplete`. Slammed to recover. |
 | `pin-hook-threw` | error | A `movePin` flight hook threw. The flight continues so the flight symbol is not leaked. |

@@ -123,6 +123,15 @@ export class StartPhase extends ReelPhase<StartPhaseConfig> {
     this._reel.notifySpinStart();
   }
 
+  /**
+   * The natural end of a start is full spin speed with the spin announced,
+   * which is exactly the slam pose, so hurrying is force-completing.
+   */
+  protected onHurry(): boolean {
+    this.forceComplete();
+    return true;
+  }
+
   private _kill(): void {
     if (this._delayedCall) {
       this._delayedCall.kill();

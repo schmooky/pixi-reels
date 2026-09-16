@@ -258,6 +258,16 @@ export class AnticipationPhase extends ReelPhase<AnticipationPhaseConfig> {
     this._reel.forceSpeed(this._speed.spinSpeed);
   }
 
+  /**
+   * A tease has no landing of its own to protect: ending it early and
+   * returning the reel to full speed IS its natural end, so hurrying is
+   * force-completing. The stop that follows crawls the frame in from there.
+   */
+  protected onHurry(): boolean {
+    this.forceComplete();
+    return true;
+  }
+
   private _kill(): void {
     if (this._tween) {
       this._tween.kill();

@@ -7,6 +7,7 @@ import type {
   SpinOptions,
   AnticipationStagger,
   AnticipationOptions,
+  HurryOptions,
   SlamOptions,
   SymbolPosition,
 } from '../config/types.js';
@@ -1432,6 +1433,35 @@ export class ReelSet extends Container implements Disposable {
    */
   requestSkip(): void {
     this._spinController.requestSkip();
+  }
+
+  /**
+   * Land the reels a press frees through their normal stop instead of placing
+   * them. The tease ends, the reel returns to full speed, and its stop runs
+   * with no delay: the frame crawls in and bounces, so the press reads as a
+   * fast landing rather than a cut.
+   *
+   * Which reels a press frees is decided exactly as for `requestSkip()`:
+   * tease protection, `'stepwise'`, reel groups. Only what freeing means
+   * differs, and a hurried reel counts as released, so the next press moves
+   * on to the next group while it lands. Queues before `setResult()` like
+   * `requestSkip()`. No speed boost, no `wasSkipped`, `skipStage` untouched:
+   * a `requestSkip()` after it still slams whatever is still moving, so one
+   * button can hurry on the first press and cut on the second.
+   *
+   * `speed` names a registered profile for the hurried stop (its spin-out
+   * speed and bounce); the round's profile otherwise. Throws on an unknown
+   * name. In cascade mode there is nothing to spin out, so the press slams as
+   * `requestSkip()` would and warns once with code `hurry-cascade`.
+   *
+   * Fires `hurry:requested` with the reels freed; each then lands through the
+   * usual `spin:reelLanding` / `spin:reelLanded`.
+   *
+   * @example
+   * reelSet.requestHurry({ speed: 'turbo' });
+   */
+  requestHurry(options?: HurryOptions): void {
+    this._spinController.requestHurry(options);
   }
 
   /**

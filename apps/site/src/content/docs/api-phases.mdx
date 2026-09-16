@@ -7,13 +7,14 @@ description: START, SPIN, ANTICIPATION, STOP. the four lifecycle phases and how
 ---
 
 A phase is one slice of a reel's lifecycle. Extend `ReelPhase<TConfig>`,
-implement three hooks.
+implement three hooks; a fourth is optional.
 
 ```
-ReelPhase<TConfig>
+ReelPhase<TConfig, TProfile = SpeedProfile>
 ├─ onEnter(config)   // set up tweens, set reel.speed
 ├─ update(deltaMs)   // called every frame while active
-└─ onSkip()          // clean up when forced
+├─ onSkip()          // the slam pose: leave the reel where it would have ended
+└─ onHurry()         // optional: reach that end sooner, without changing it
 ```
 
 Every phase runs on ONE reel. Five reels in `StopPhase` are five instances, and
@@ -83,6 +84,63 @@ its key.
 
 <RecipeDemo code="phase-from-scratch-start" />
 
+## What a phase may call
+
+A phase drives its reel through `this.reel`. Everything the built-in phases
+call on it is the contract a custom phase may rely on too, and it is in the
+published typings:
+
+| Call | Does | Used by |
+|---|---|---|
+| `reel.beginMotion()` | Re-masks lifted unmask symbols the instant the reel begins to move. Idempotent. | `StartPhase` on launch |
+| `reel.notifySpinStart()` | Tells every symbol it is in a spin (blur, static-spin presentations). Idempotent. | `StartPhase` at full speed, and from `onSkip` |
+| `reel.forceSpeed(v)` | Jump to a speed, drive included. Assigning `reel.speed` from a phase is ramped back under the drive model; this is not. | `StartPhase.onSkip`, `AnticipationPhase.onSkip` |
+| `reel.placeStrip(frame)` | Place a full strip, buffers included. `placeSymbols` is the visible-window form for game code and drops a big symbol's tail parked in a buffer row. | `StopPhase.onSkip` |
+| `this.land(cells?)` | Halt the drive, snap to the grid, tell the symbols the spin ended and that they landed, lift unmask art, raise `spin:reelLanding`. The only way a phase lands a reel. | `StopPhase` between its spin-out and its bounce |
+| `this.bounce(options?)` | The landing overshoot, carrying lifted views along. Returns `{ done, cancel() }`; `done` settles on the rest position or right after `cancel()`. Defaults from the profile, `BounceOptions` (`distance`, `duration`, `ease`) per call. | `StopPhase` after `land()` |
+
+`land()` and `bounce()` are protected on the base, so they are reachable
+exactly where landing a reel is the sanctioned thing to do. The reel's own
+`haltDrive`, `snapToGrid`, `notifySpinEnd`, `notifyLanded` and
+`offsetLiftedViews` stay internal: the two helpers are their whole use.
+
+Two guarantees a phase that never moves its reel relies on: `SpinPhase` never
+writes `reel.speed`, and `Reel.update` does nothing at `speed === 0`. A stop
+that places its frame and slides it in, with no spin-out at all, is supported.
+
+Timing that belongs to the phase can ride on the speed profile. Declare the
+profile the phase reads as the second type parameter and `this._speed` sees
+the extra fields; `register()` infers it from the class, so the registration
+needs no cast either. The manager hands every phase the profile instance the
+game registered, which is why the fields are there at run time.
+
+```ts
+interface InstantProfile extends SpeedProfile { slideMs: number }
+
+class InstantStopPhase extends ReelPhase<StopPhaseConfig, InstantProfile> {
+  readonly name = 'stop';
+  readonly skippable = true;
+  private _bounce: ReelBounce | null = null;
+
+  protected onEnter(config: StopPhaseConfig): void {
+    this.reel.forceSpeed(0);
+    this.reel.placeStrip(config.targetFrame);
+    // ...slide the container in over this._speed.slideMs, then:
+    this.land();
+    this._bounce = this.bounce();
+    void this._bounce.done.then(() => this._complete());
+  }
+  update(): void {}
+  protected onSkip(): void { this._bounce?.cancel(); }
+}
+
+builder
+  .speed('normal', { ...SpeedPresets.NORMAL, slideMs: 140 })
+  .phases((f) => f.register('stop', InstantStopPhase));
+```
+
+<RecipeDemo code="phase-from-scratch-stop" />
+
 ## Subclass a built-in
 
 Most changes to a built-in are small: a sound on landing, a flash when the stop
@@ -108,7 +166,7 @@ builder.phases((f) => f.register('stop', ThudStopPhase));
 
 ### The contract
 
-Four rules cover every subclass.
+Five rules cover every subclass.
 
 **Call `super` from every hook you override.** The base `onEnter` is what
 actually starts the phase. a `StopPhase` whose override never reaches it spins
@@ -132,9 +190,24 @@ addition also needs to fire on a skipped reel, and call `super` there too.
 ticker-driven accumulation, not wall clock, so it stays correct in a
 backgrounded tab. GSAP-driven phases leave it empty.
 
-A subclass using all four at once - `onEnter` to show a per-reel countdown,
-`update` to drive it, `onSkip` to take it off when a press cuts the tease
-short:
+**`onHurry` is optional, and it is not a skip.** A `requestHurry()` press asks
+a reel for its landing sooner without changing what the landing looks like:
+`StopPhase` cuts its scheduled delay and spins out at once, `AnticipationPhase`
+ends the tease and returns to full speed, `SpinPhase` drops its floor. Override
+it to cut a wait of your own and return `true`; the default returns `false`,
+the phase runs its course, and the reel still lands. A hurry that names a
+profile swaps `this._speed` before the hook runs, so the spin-out and bounce
+that follow read the new one. Where the natural end IS the slam pose
+(`StartPhase`, `AnticipationPhase`), the built-in `onHurry` force-completes,
+so a subclass's `onSkip` override runs on a hurry press too.
+
+A subclass using the first four at once - `onEnter` to show a per-reel
+countdown, `update` to drive it, `onSkip` to take it off when a press cuts the
+tease short. The demo's button SLAMS (`skipSpin()`, queued through
+`requestSkip()` before the result). A `requestHurry()` press would take the
+countdown off through the same `onSkip`, because `AnticipationPhase.onHurry`
+force-completes the tease; the difference is what the reel does next - placed
+on its frame here, spun out and bounced on a hurry:
 
 <RecipeDemo code="phase-subclass-anticipation" />
 
@@ -211,6 +284,7 @@ open that up:
 | `setAnticipation(reels, { protect })` | Skip presses stop ending the tease. `'once'` lands the reels around it and leaves the tease running (the next press ends it); `'stepwise'` then releases one tease reel per press, in tease order; `'always'` never lets a press end one. |
 | `slamStop({ reels })` / `slamStop({ except })` | Per-reel slam. Those reels land now, everything else keeps running its phase chain to a natural landing. |
 | `setMinimumSpinTime(ms \| ms[])` | Per-reel `SpinPhase` floor, replacing the profile's single shared `minimumSpinTime`. Without this, no individual reel can land below the profile floor except through an all-reels slam. |
+| `requestHurry({ speed? })` | The press that lands instead of cutting. Frees the same reels a `requestSkip()` press would and hurries them: tease over, delay cut, spin-out and bounce still played, optionally on a named profile. `requestSkip()` afterwards still slams what is moving. |
 
 `skip:requested` / `skip:completed` carry `{ reels, partial }` so a listener can
 tell a partial slam from a round-ending one.

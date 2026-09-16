@@ -1,7 +1,7 @@
 ---
 title: "Skip & slam"
 group: mechanics
-oneLiner: Every skip lever end to end - partial slams both spellings, all three tease-protect modes, your own release plan, queued presses, skipStage, per-reel spin floors, and all four ways to own a phase.
+oneLiner: Every skip lever end to end - partial slams both spellings, all three tease-protect modes, your own release plan, a press that lands instead of cutting, queued presses, skipStage, per-reel spin floors, and all four ways to own a phase.
 order: 57
 tags:
   - skip
@@ -94,6 +94,16 @@ Press 1 lands everything outside the tease, like `'once'`; every press after is 
 `'always'` plus your own queue is the general form: the engine guarantees no press ends a tease behind your back, your code decides the groups. Three teasing reels, two beats.
 
 <RecipeDemo code="skip-custom-plan" />
+
+<a id="skip-hurry"></a>
+
+## A press that lands, not cuts
+
+Every slam places the frame and lands in the same tick, so a press reads as a cut. `requestHurry()` frees the same reels a `requestSkip()` press would - protection, `'stepwise'` and groups all apply - and asks each for its landing instead: the tease ends, the stop delay is cut, the reel spins its frame in and bounces. `speed: 'turbo'` lands the hurried reels on the turbo spin-out and bounce.
+
+**Gotcha:** a hurry is not a skip. `skipStage` and `wasSkipped` stay put, and a `requestSkip()` after it slams whatever is still moving - one button can hurry on the first press and cut on the second. Tap the readout to see the cut on the same spin.
+
+<RecipeDemo code="skip-hurry" />
 
 <a id="skip-queued-request"></a>
 
