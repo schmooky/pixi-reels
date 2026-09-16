@@ -124,6 +124,7 @@ export { setLogLevel, getLogLevel } from './utils/notify.js';
 export type { LogLevel } from './utils/notify.js';
 
 export { ReelPhase } from './spin/phases/ReelPhase.js';
+export type { BounceOptions, ReelBounce } from './spin/phases/ReelPhase.js';
 export { PhaseFactory } from './spin/phases/PhaseFactory.js';
 export { StartPhase } from './spin/phases/StartPhase.js';
 export { SpinPhase } from './spin/phases/SpinPhase.js';

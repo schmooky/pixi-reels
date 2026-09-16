@@ -786,7 +786,9 @@ export class Reel implements Disposable {
    * Jump to a speed immediately, drive included. What a skip press wants: the
    * whole point is that there is no ramp.
    *
-   * @internal
+   * Phase contract. `StartPhase.onSkip` and `AnticipationPhase.onSkip` use it
+   * to put the reel at full spin speed the instant a slam cuts them short;
+   * prefer it to assigning `speed` from a phase, which a drive ramps back.
    */
   forceSpeed(v: number): void {
     this.speed = v;
@@ -985,7 +987,9 @@ export class Reel implements Disposable {
    * `onReelSpinStart(true)` so pool-recycled symbols joining a moving reel
    * can apply their spin presentation (blur, static snapshot).
    *
-   * @internal Called by SpinController on phase transition.
+   * Phase contract. `StartPhase` calls it once the reel reaches full speed,
+   * and again from `onSkip` so a slammed start still announces the spin. A
+   * custom start phase must do the same. Idempotent.
    */
   notifySpinStart(): void {
     this._spinPresentationActive = true;
@@ -1009,7 +1013,8 @@ export class Reel implements Disposable {
    * lifted view back into the masked reel container up front, and clear
    * `_atRest` so `_replaceSymbol` doesn't re-lift a result symbol mid-spin.
    *
-   * @internal Called by StartPhase on launch. Idempotent.
+   * Phase contract. `StartPhase` calls it on launch; a custom start phase
+   * must call it the instant its reel begins to move. Idempotent.
    */
   beginMotion(): void {
     if (!this._atRest) return;
@@ -1629,13 +1634,16 @@ export class Reel implements Disposable {
   }
 
   /**
-   * @internal. Engine and custom phases only.
-   *
    * Place a full strip frame: one entry per strip slot, top to bottom,
    * index `0` being the furthest buffer-above cell. This is exactly what
    * `FrameBuilder.build` returns, so a phase holding a built frame can
    * land it without re-deriving buffer offsets. Missing or `undefined`
    * entries are filled with random symbols.
+   *
+   * Phase contract: what a stop phase that does not spin its frame in places
+   * before it lands (`ReelPhase.land()`). `placeSymbols` is the
+   * visible-window form for game code; this one carries the buffers, which is
+   * where a big symbol's tail sits.
    */
   placeStrip(frame: ReadonlyArray<string | undefined>): void {
     const totalSlots = this.symbols.length;
