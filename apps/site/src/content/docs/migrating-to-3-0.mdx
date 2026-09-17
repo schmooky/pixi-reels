@@ -1,0 +1,182 @@
+---
+title: Migrating to 3.0.0
+order: 6
+description: Every breaking change in 3.0.0, with a before and after. Skip presses
+  take a mode, phases take a skip context, the built-in beats are moves, and the
+  unpublished hurry API is gone.
+---
+
+3.0.0 is a small migration for a game and a real one for a custom phase. There
+is no codemod; every change below is a few lines, and the engine names the
+replacement in the typings.
+
+## Why any of this
+
+2.8 had one thing a skip press could do to a reel: slam it. A press placed the
+frame and landed it in the same tick, so it always read as a cut, and a tease
+was hidden rather than shortened. 3.0 gives the press a **mode**: `'slam'` is
+the cut, `'quicken'` asks each freed reel for its landing sooner without
+changing what the landing looks like. To carry that through a phase, the
+phase's skip hook grew a context, and while the hooks were open the animated
+beats hard-wired into the built-in phases became replaceable and their private
+internals became protected.
+
+## Skip presses
+
+`requestSkip()` and `skipSpin()` take an options object. With no argument they
+do what they did.
+
+```ts
+// before
+reelSet.requestSkip();
+
+// after: the same slam
+reelSet.requestSkip();
+// or the new mode, per press...
+reelSet.requestSkip({ mode: 'quicken', speed: 'turbo' });
+// ...or as the set's default
+builder.skipMode('quicken');
+```
+
+A quicken is a skip: `skipStage` advances, `SpinResult.wasSkipped` is `true`,
+and the new `SpinResult.skipMode` says which mode ended the round.
+
+`slamStop()` before `setResult()` now throws, as `skipSpin()` always did. It
+used to warn with `slam-before-result` and land the reels on random fill. A
+spin whose result will never come is aborted through its signal:
+
+```ts
+// before: lands on whatever the strip shows, warns slam-before-result
+reelSet.slamStop();
+
+// after
+const abort = new AbortController();
+const spin = reelSet.spin({ signal: abort.signal });
+// ...the server failed:
+abort.abort();
+```
+
+`skipStage` is decided before a slam lands anything, so a `spin:complete`
+listener on the press that ended the round sees `2`. It saw `0` in 2.8, and
+read the stage one tick too early.
+
+## Skip events
+
+`skip:requested` and `skip:completed` carry `mode`. A listener that only ever
+meant a slam keeps working; one that meant "these reels are about to be
+placed" checks the mode now.
+
+```ts
+// before
+reelSet.events.on('skip:requested', ({ reels, partial }) => flashPlaced(reels));
+
+// after
+reelSet.events.on('skip:requested', ({ reels, partial, mode }) => {
+  if (mode === 'slam') flashPlaced(reels);
+});
+```
+
+`skip:completed` fires in the same tick for a slam and as the last freed reel
+lands for a quicken. On a Hold & Win board, `feature:skip` is
+`{ inFlight, mode }` and `board.skip(options?)` takes the same options as
+`requestSkip()`; `HoldAndWinBuilder.skipMode()` sets the board's default.
+
+## Custom phases: `onSkip(ctx)`
+
+Every phase hears a press through `onSkip(ctx)`, where `ctx` is a
+`SkipContext`: `{ mode, speed?, payload? }`. `ReelPhase.skip(ctx?)` and
+`forceComplete(ctx?)` take the same object.
+
+```ts
+// before
+protected onSkip(): void {
+  this._tween?.kill();
+  this.reel.placeStrip(this._frame);
+}
+
+// after
+protected onSkip(ctx: SkipContext): void {
+  if (ctx.mode === 'quicken') {
+    // cut a wait, keep the landing; complete yourself when you reach it
+    this._delay?.kill();
+    this._beginSpinOut();
+    return;
+  }
+  this._tween?.kill();
+  this.reel.placeStrip(this._frame);
+}
+```
+
+Under `'slam'` the hook is the slam pose it always was, and the base completes
+the phase after it. Under `'quicken'` only the hook runs: the phase cuts a
+wait and completes itself when its natural end is reached, right away if the
+slam pose already is that end (`StartPhase` and `AnticipationPhase` do this).
+A phase that ignores the mode runs its course, so the reel still lands.
+
+A subclass of a built-in that calls `super.onSkip()` with no argument keeps
+its 2.8 meaning, because the built-in hooks default `ctx` to a slam. Pass
+`ctx` through to take part in quickens:
+
+```ts
+protected onSkip(ctx: SkipContext): void {
+  flash(this.reel.reelIndex);
+  super.onSkip(ctx);
+}
+```
+
+`SpinPhase` handles `'quicken'` too (it drops its floor), so a subclass of it
+that overrides `onSkip` should call `super.onSkip(ctx)` where it used to do
+nothing.
+
+## Moves
+
+The gsap beats that were hard-wired into the built-in phases are replaceable
+without replacing the phase. If you subclassed `StartPhase` or `StopPhase`
+only to change a tween, a move is the shorter road:
+
+```ts
+builder.moves({
+  start: { pull: null },                    // no step-back
+  stop: {
+    bounce: (ctx) => ctx.gsap.to(ctx.reel.container, {
+      [ctx.reel.axis.mainProp]: ctx.base,
+      duration: ctx.duration / 1000,
+      ease: 'elastic.out(1, 0.4)',
+      onUpdate: ctx.followLifted,
+    }),
+  },
+});
+```
+
+`defaultMoves` is exported so a replacement can wrap one, and `runMove()` runs
+a move with the cancel semantics the built-ins use. `ReelPhase.bounce()` plays
+the set's `stop.bounce`, so a custom stop phase gets a replaced bounce too.
+
+## Built-in phase internals
+
+Every `private` on `StartPhase`, `SpinPhase`, `AnticipationPhase`,
+`StopPhase`, `AdjustPhase`, `CascadeFallPhase`, `CascadePlacePhase` and
+`CascadeDropInPhase` is `protected`. A subclass that copied a whole method to
+reach one field can call it instead. `ReelPhase.speed` is a public getter
+beside `reel`; `this._speed` still works.
+
+The rule from the phases page stands: the protected surface can change in a
+minor release, so a subclass may need to follow. What changed here is that
+the surface exists.
+
+## Removed: the unpublished hurry API
+
+2.9 was cut on `main` but never published, so nothing below ever reached npm.
+If you built against a snapshot:
+
+| 2.9 snapshot | 3.0 |
+|---|---|
+| `reelSet.requestHurry(options)` | `reelSet.requestSkip({ mode: 'quicken', ...options })` |
+| `HurryOptions` | `SkipOptions` (`mode`, `speed`, `payload`) |
+| `hurry:requested` | `skip:requested` with `mode === 'quicken'` |
+| `board.hurry(options)` / `BoardGrid.hurrySpinning()` | `board.skip({ mode: 'quicken', ...options })` / `BoardGrid.skipSpinning(options)` |
+| `feature:hurry` | `feature:skip` with `mode === 'quicken'` |
+| `ReelPhase.hurry(speed?)` | `ReelPhase.skip({ mode: 'quicken', speed })` |
+| `protected onHurry(): boolean` | `protected onSkip(ctx)` branching on `ctx.mode` |
+| notice `hurry-cascade` | notice `quicken-cascade` |
+| notice `slam-before-result` | `slamStop()` throws instead |

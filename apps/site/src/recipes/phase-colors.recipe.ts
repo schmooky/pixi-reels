@@ -17,7 +17,7 @@
 // `symbol:created` events, so a custom phase registered under its own key
 // gets a colour too (`other`, or one you add through `colors`). Skip presses
 // show why the symbol exists: a slam goes amber-or-blue straight to green,
-// a hurry (see Skip & slam) shows the violet stop in between.
+// a quicken (see Skip & slam) shows the violet stop in between.
 
 const IDS = ['9', '10', 'J', 'Q', 'K'];
 const REELS = 5, ROWS = 3, SIZE = 80, GAP = 4;

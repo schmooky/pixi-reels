@@ -166,13 +166,13 @@ board.skip() slams every in-flight cell to its landed position and fires feature
 
 <RecipeDemo code="hold-and-win-skip" height={420} />
 
-<a id="hold-and-win-hurry"></a>
+<a id="hold-and-win-quicken"></a>
 
-## Hold & Win: hurry the wave
+## Hold & Win: quicken the wave
 
-board.hurry() lands every in-flight cell through its stop instead of placing it: the board's stagger lives in each cell's spin floor, so the whole wave lands together, and each cell still spins its symbol in and bounces. `{ speed: 'turbo' }` lands the wave on the turbo profile. `feature:hurry` reports the count; the landing flow is unchanged.
+`board.skip({ mode: 'quicken' })` lands every in-flight cell through its stop instead of placing it: the board's stagger lives in each cell's spin floor, so the whole wave lands together, and each cell still spins its symbol in and bounces. `speed: 'turbo'` lands the wave on the turbo profile; `HoldAndWinBuilder.skipMode('quicken')` makes it the default. `feature:skip` reports the count and the mode; the landing flow is unchanged.
 
-<RecipeDemo code="hold-and-win-hurry" height={320} />
+<RecipeDemo code="hold-and-win-quicken" height={320} />
 
 <a id="hold-and-win-sticky-overlay"></a>
 

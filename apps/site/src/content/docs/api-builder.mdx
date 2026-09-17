@@ -37,6 +37,8 @@ Missing any of these throws at `.build()` with a human-readable list of problems
 | `.spinningMode(mode)` | `new StandardMode()` |
 | `.frameMiddleware(mw)` | *(none)*. add as many as you want; sorted by priority. |
 | `.phases((f) => { f.register(...) })` | Built-in `START`/`SPIN`/`STOP`/`ANTICIPATION` (+ cascade phases when `.tumble()` is used). |
+| `.moves({ start, stop, anticipation })` | *(defaults)*. Replace the animated beats of the built-in phases without replacing the phases: `start.pull`, `start.accelerate`, `stop.bounce`, `anticipation.slowdown`. A move gets the reel, the profile, the numbers the default uses and an `AbortSignal`; returns a gsap animation, a promise or nothing. `null` removes a beat. See [Phases](/docs/api-phases/#moves). |
+| `.skipMode('slam' \| 'quicken')` | `'slam'`. What a skip press does to the reels it frees when `requestSkip()` / `skipSpin()` do not say. See [ReelSet](/docs/api-reelset/). |
 | `.tumble({ fall, dropIn })` | *(unset; required for `spin({ mode: 'cascade' })` and `reelSet.refill(...)`)*. see [the Tumble section](#tumble) below. |
 | `.multiways({ minCells, maxCells, reelExtent })` | *(unset; required for `setShape(...)`)*. `reelExtent` is a MAIN-axis extent. |
 | `.orientation('vertical' \| 'horizontal')` | `'vertical'`. which screen axis the strip travels along. See [Orientation & direction](/guides/orientation-and-direction/). |

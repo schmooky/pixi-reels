@@ -170,8 +170,8 @@ Every notice carries a stable CODE, so it can be grepped, searched for in these
 docs, or quoted in a bug report:
 
 ```
-pixi-reels  slam-before-result   slamStop() was called before setResult(), so the reels
-                                 will land on whatever the strip is currently showing...
+pixi-reels  quicken-cascade      requestSkip({ mode: 'quicken' }) has nothing to quicken in
+                                 cascade mode: a tumble reel lands by placing its symbols...
 ```
 
 ### Levels
@@ -205,7 +205,7 @@ a thing and the console would print the style directives literally, so it
 degrades to a plain line instead:
 
 ```
-[pixi-reels] warn(slam-before-result) slamStop() was called before setResult()...
+[pixi-reels] warn(quicken-cascade) requestSkip({ mode: 'quicken' }) has nothing to quicken...
 ```
 
 Notices go out on `console.warn` / `console.error` / `console.info` rather than
