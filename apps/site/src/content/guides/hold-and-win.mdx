@@ -126,7 +126,10 @@ board.release(board.lockedCoins.map((c) => c.cell));
 `respin()` resolves only after the whole wave has landed *and* the counter has
 resolved, so the loop reads top-to-bottom. Want a [single skip button](/recipes/hold-and-win-skip/)?
 Call `board.skip()` to slam every in-flight cell; the landing → `coin:locked` →
-`feature:end` flow still resolves, you stop waiting.
+`feature:end` flow still resolves, you stop waiting. `board.hurry()` is the
+press that lands instead of cutting: every in-flight cell drops its spin floor
+(the stagger lives there, so the wave lands together) and still spins its
+symbol in and bounces; `board.hurry({ speed: 'turbo' })` lands it on turbo.
 
 ## Events reference
 
@@ -147,6 +150,7 @@ Every event carries `TData` on its coins.
 | `coin:released` | `{ coin, remaining }` | `release()` removes a coin (the collect moment) |
 | `feature:reset` | `{ clearedCoins }` | `reset()` hard-clears the board |
 | `feature:skip` | `{ inFlight }` | `skip()` slams the in-flight cells |
+| `feature:hurry` | `{ inFlight }` | `hurry()` lands the in-flight cells through their stop |
 
 Two deliberate distinctions:
 
@@ -221,8 +225,9 @@ board.addSpeed('cinematic', slow);  // one more, after build
 
 Same rule as `reelSet.setSpeed()`: a cell already in flight finishes on the profile it
 started with, the next wave runs on the new one, and `board.skip()` is how a turbo press
-cuts the wave in progress. Each name also gets a `name:tension` variant the board uses
-for an anticipating wave.
+cuts the wave in progress - or `board.hurry({ speed: 'turbo' })`, which lands it on turbo
+instead of cutting it. Each name also gets a `name:tension` variant the board uses for an
+anticipating wave.
 
 ## Own the board
 
