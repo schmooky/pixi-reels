@@ -175,8 +175,15 @@ export abstract class ReelSymbol implements Disposable {
 
   destroy(): void {
     if (this._isDestroyed) return;
-    this.stopAnimation();
-    this.onDeactivate();
+    // A pooled symbol's view stays a child of the reel container it was
+    // released from, so `Reel.destroy()` has already destroyed it (children
+    // included) by the time the pool disposes the symbol. There is nothing
+    // left to stop or clean visually, and a `stopAnimation()` that reaches
+    // into a destroyed child (`CardSymbol` resets its label's scale) throws.
+    if (!this.view.destroyed) {
+      this.stopAnimation();
+      this.onDeactivate();
+    }
     this.onDestroy();
     if (!this.view.destroyed) this.view.destroy({ children: true });
     this._isDestroyed = true;
