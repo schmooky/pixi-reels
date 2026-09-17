@@ -154,12 +154,26 @@ export abstract class ReelPhase<TConfig = void, TProfile extends SpeedProfile = 
     return this._stepRun?.quickened ?? this._quickened;
   }
   private _quickened = false;
+  private _primedQuicken = false;
+
+  /**
+   * The controller's word that a press already quickened this reel before
+   * the phase existed: the run starts quickened, so `cut` steps are skipped
+   * from the first one on instead of starting and being cut a moment later.
+   * `skip(ctx)` still follows `run()`, so `onSkip` keeps its usual order.
+   * @internal
+   */
+  primeQuicken(ctx: SkipContext<TProfile>): void {
+    if (ctx.speed) this._speed = ctx.speed;
+    this._primedQuicken = true;
+  }
 
   /** Enter the phase. Returns a promise that resolves when the phase is complete. */
   async run(config: TConfig): Promise<void> {
     this._isActive = true;
     this._config = config;
-    this._quickened = false;
+    this._quickened = this._primedQuicken;
+    this._primedQuicken = false;
     this._reel.events.emit('phase:enter', this.name);
 
     return new Promise<void>((resolve) => {

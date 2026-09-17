@@ -194,6 +194,42 @@ describe('a custom phase on runSteps()', () => {
     ticker.destroy();
   });
 
+  it('never starts a cut step when the stop is created for a reel already quickened', async () => {
+    // Before the press reaches a stop that exists, the runner is primed: a
+    // `cut` wait is skipped outright, not started and cut a moment later.
+    let holdStarted = 0;
+    class CountingStop extends ScriptedStop {
+      protected override onEnter(config: StopPhaseConfig): void {
+        const reel = this.reel;
+        ScriptedStop.log.push(`enter:${reel.reelIndex}`);
+        this.runSteps([
+          step('hold', (ctx) => { holdStarted++; return ctx.wait(400); }, { cut: true }),
+          step('place', () => { reel.forceSpeed(0); reel.placeStrip(config.targetFrame); }),
+          // A beat that is not a wait, so the phase is still running when
+          // the controller asks it after `run()`.
+          step('settle', (ctx) => ctx.wait(30)),
+          step('land', () => this.land()),
+        ]);
+      }
+    }
+    ScriptedStop.log = [];
+    const { reelSet, ticker } = build((f) => f.register('stop', CountingStop));
+    const spin = reelSet.spin();
+    reelSet.setResult(RESULT);
+    reelSet.requestSkip({ mode: 'quicken' });
+    await pump(ticker, spin);
+    expect(holdStarted).toBe(0);
+    // `onSkip` still ran on both reels, and after `onEnter`.
+    for (const i of [0, 1]) {
+      const enter = ScriptedStop.log.indexOf(`enter:${i}`);
+      const skip = ScriptedStop.log.indexOf(`skip:${i}`);
+      expect(enter).toBeGreaterThanOrEqual(0);
+      expect(skip).toBeGreaterThan(enter);
+    }
+    reelSet.destroy();
+    ticker.destroy();
+  });
+
   it('cancels the step in flight on a slam, then runs the pose', async () => {
     ScriptedStop.log = [];
     let aborted = 0;

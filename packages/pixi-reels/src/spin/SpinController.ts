@@ -2197,6 +2197,10 @@ export class SpinController implements Disposable {
       const stopSpeed = quickened?.speed ?? speed;
       const stopPhase = this._phaseFactory.create<any>('stop', reel, stopSpeed);
       this._activePhases.set(reelIndex, stopPhase);
+      // The press came before this phase existed, so it never heard it. Prime
+      // it, so a run on steps skips its `cut` waits from the first one on
+      // rather than starting one and cutting it a moment later.
+      if (quickened) stopPhase.primeQuicken(quickened);
       // After a tease, carry the slow anticipation speed into the stop so the
       // reel crawls to its landing position instead of re-accelerating.
       const stopDone = stopPhase.run({
@@ -2204,9 +2208,8 @@ export class SpinController implements Disposable {
         delay: quickened ? 0 : stopDelay,
         preserveSpeed: didAnticipate && !quickened,
       } satisfies StopPhaseConfig);
-      // The press came before this phase existed, so it never heard it. Ask
-      // now: a built-in stop with no delay has nothing left to cut, but a
-      // custom stop with a wait of its own is cut the same either way.
+      // And ask, now that it has entered: `onSkip(ctx)` for a quickenable
+      // custom stop, in the usual order after `onEnter`.
       if (quickened) stopPhase.skip(quickened);
       await stopDone;
       if (this._isStale(reelIndex, generation)) return;
