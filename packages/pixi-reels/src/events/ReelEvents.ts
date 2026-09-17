@@ -3,6 +3,7 @@ import type {
   SpeedProfile,
   Win,
   SymbolPosition,
+  SkipMode,
 } from '../config/types.js';
 import type { CellPin, PinExpireReason } from '../pins/CellPin.js';
 import type { ReelSymbol } from '../symbols/ReelSymbol.js';
@@ -15,8 +16,10 @@ export type { SymbolPosition };
 export interface SpinResult {
   /** Final symbol grid [reelIndex][cellIndex]. */
   symbols: string[][];
-  /** Whether the spin was skipped/slam-stopped. */
+  /** Whether a skip press freed reels this spin, in either mode, or the engine slammed it. */
   wasSkipped: boolean;
+  /** The mode of the last press that freed reels, `null` when none did. */
+  skipMode: SkipMode | null;
   /** Total spin duration in milliseconds. */
   duration: number;
 }
@@ -103,25 +106,21 @@ export interface ReelSetEvents extends Record<string, unknown[]> {
   'spin:allLanded': [result: SpinResult];
   'spin:complete': [result: SpinResult];
   /**
-   * A slam is about to place reels. `reels` lists the indices this slam
-   * lands (already-landed and held reels are excluded), and `partial` is
-   * `true` when reels are still spinning after it. a tease-protected skip
-   * press, or a `slamStop({ reels })` / `slamStop({ except })` call.
-   *
-   * Listeners written before partial slams existed take no arguments and
-   * keep working unchanged.
+   * A skip press freed reels. `reels` lists the indices this press frees
+   * (already-landed and held reels are excluded), `partial` is `true` when
+   * reels are still spinning after it (a tease-protected press, a reel group,
+   * or a `slamStop({ reels })` / `slamStop({ except })` call), and `mode`
+   * says what freeing means: `'slam'` places them now, `'quicken'` asks each
+   * for its landing sooner and the landing arrives as the usual
+   * `spin:reelLanding` / `spin:reelLanded`.
    */
-  'skip:requested': [info: { reels: number[]; partial: boolean }];
-  /** The same slam, after every target reel has been placed and landed. */
-  'skip:completed': [info: { reels: number[]; partial: boolean }];
+  'skip:requested': [info: { reels: number[]; partial: boolean; mode: SkipMode }];
   /**
-   * A `requestHurry()` press freed these reels: each is advancing to its
-   * natural landing as fast as its animation allows instead of being placed.
-   * The counterpart of `skip:requested`, which still means "about to be
-   * placed" and never lists a hurried reel. The landing itself arrives as the
-   * usual `spin:reelLanding` / `spin:reelLanded`.
+   * The same press, once its reels are down: in the same tick for a slam,
+   * as the last freed reel lands for a quicken (however it got down, its own
+   * stop or a later slam).
    */
-  'hurry:requested': [info: { reels: number[] }];
+  'skip:completed': [info: { reels: number[]; partial: boolean; mode: SkipMode }];
   /**
    * Round-aware `skip()` first-press boost: in standard (non-cascade)
    * mode, the engine switched the active speed profile to the fastest

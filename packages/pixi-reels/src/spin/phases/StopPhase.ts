@@ -1,4 +1,5 @@
 import type { gsap } from 'gsap';
+import type { SkipContext } from '../../config/types.js';
 import { ReelPhase } from './ReelPhase.js';
 import type { ReelBounce } from './ReelPhase.js';
 
@@ -36,11 +37,11 @@ export class StopPhase extends ReelPhase<StopPhaseConfig> {
   readonly name = 'stop';
   readonly skippable = true;
 
-  private _config: StopPhaseConfig | null = null;
-  private _delayTween: gsap.core.Tween | null = null;
-  private _bounce: ReelBounce | null = null;
-  private _stage: 'delay' | 'spinning' | 'bouncing' | 'done' = 'delay';
-  private _baseY = 0;
+  protected _config: StopPhaseConfig | null = null;
+  protected _delayTween: gsap.core.Tween | null = null;
+  protected _bounce: ReelBounce | null = null;
+  protected _stage: 'delay' | 'spinning' | 'bouncing' | 'done' = 'delay';
+  protected _baseY = 0;
 
   protected onEnter(config: StopPhaseConfig): void {
     this._config = config;
@@ -55,7 +56,7 @@ export class StopPhase extends ReelPhase<StopPhaseConfig> {
     }
   }
 
-  private _beginSpinOut(): void {
+  protected _beginSpinOut(): void {
     if (!this._config) return;
     const reel = this._reel;
     const speed = this._speed;
@@ -102,7 +103,7 @@ export class StopPhase extends ReelPhase<StopPhaseConfig> {
     }
   }
 
-  private _landAndBounce(): void {
+  protected _landAndBounce(): void {
     this.land();
     this._stage = 'bouncing';
     this._bounce = this.bounce();
@@ -115,7 +116,20 @@ export class StopPhase extends ReelPhase<StopPhaseConfig> {
     });
   }
 
-  protected onSkip(): void {
+  protected onSkip(ctx: SkipContext = { mode: 'slam' }): void {
+    if (ctx.mode === 'quicken') {
+      // Cut the stagger and spin out now. A stop already spinning out or
+      // bouncing is on its way to the landing and is left alone; a profile the
+      // press named has been swapped in by the base and shapes whatever is
+      // still to come (the spin-out speed from `'delay'`, the bounce from
+      // `'spinning'`).
+      if (this._stage === 'delay') {
+        this._delayTween?.kill();
+        this._delayTween = null;
+        this._beginSpinOut();
+      }
+      return;
+    }
     this._killTweens();
     const reel = this._reel;
     reel.haltDrive();
@@ -138,22 +152,7 @@ export class StopPhase extends ReelPhase<StopPhaseConfig> {
     this._stage = 'done';
   }
 
-  /**
-   * Cut the stagger and spin out now. A stop already spinning out or bouncing
-   * is already on its way to the landing and is left alone; the profile a
-   * hurry names has been swapped in by then and shapes whatever is still to
-   * come (the spin-out speed from `'delay'`, the bounce from `'spinning'`).
-   */
-  protected onHurry(): boolean {
-    if (this._stage === 'delay') {
-      this._delayTween?.kill();
-      this._delayTween = null;
-      this._beginSpinOut();
-    }
-    return true;
-  }
-
-  private _killTweens(): void {
+  protected _killTweens(): void {
     if (this._delayTween) {
       this._delayTween.kill();
       this._delayTween = null;

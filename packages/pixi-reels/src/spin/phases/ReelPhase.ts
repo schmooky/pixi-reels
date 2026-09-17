@@ -1,6 +1,7 @@
-import type { gsap } from 'gsap';
 import type { Reel } from '../../core/Reel.js';
-import type { SpeedProfile } from '../../config/types.js';
+import type { SkipContext, SpeedProfile } from '../../config/types.js';
+import { defaultMoves, runMove } from './moves.js';
+import type { BounceMoveContext, ResolvedPhaseMoves } from './moves.js';
 
 /**
  * Shape of one landing bounce, for {@link ReelPhase.bounce}. Every field
@@ -40,6 +41,8 @@ export interface ReelBounce {
 /** Ease for a bounce leg that does not name one. */
 const DEFAULT_BOUNCE_EASE = 'power1.out';
 
+const SLAM: SkipContext = { mode: 'slam' };
+
 /**
  * Abstract base for reel spin phases.
  *
@@ -50,19 +53,21 @@ const DEFAULT_BOUNCE_EASE = 'power1.out';
  * if marked as skippable and the user triggers skip/slam-stop.
  *
  * A phase drives its reel through `this.reel` and reads its timing from
- * `this._speed`. What the built-in phases call on the reel is the contract a
+ * `this.speed`. What the built-in phases call on the reel is the contract a
  * custom phase may rely on too: `placeStrip()`, `beginMotion()`,
  * `notifySpinStart()`, `forceSpeed()` and the public accessors. The two
  * moments every stop phase has to express, landing and bouncing, are the
  * protected helpers {@link land} and {@link bounce}, so a phase written from
- * scratch never has to reach for the reel's internals.
+ * scratch never has to reach for the reel's internals. The animated beats
+ * of the built-in phases are {@link moves}, replaceable per set through
+ * `builder.moves()`.
  *
  * @typeParam TConfig - Phase-specific configuration type.
  * @typeParam TProfile - The speed profile this phase reads. Widen it when a
  *   phase carries its own timing on the profile (`interface InstantProfile
  *   extends SpeedProfile { slideMs: number }`): the manager hands every phase
  *   the profile instance the game registered, so the extra fields are there
- *   at run time, and the parameter is what lets `this._speed` see them.
+ *   at run time, and the parameter is what lets `this.speed` see them.
  */
 export abstract class ReelPhase<TConfig = void, TProfile extends SpeedProfile = SpeedProfile> {
   abstract readonly name: string;
@@ -72,6 +77,7 @@ export abstract class ReelPhase<TConfig = void, TProfile extends SpeedProfile = 
   protected _speed: TProfile;
   protected _resolve: (() => void) | null = null;
   protected _isActive = false;
+  protected _moves: ResolvedPhaseMoves = defaultMoves;
 
   constructor(reel: Reel, speed: TProfile) {
     this._reel = reel;
@@ -82,8 +88,23 @@ export abstract class ReelPhase<TConfig = void, TProfile extends SpeedProfile = 
     return this._reel;
   }
 
+  /** The profile this phase runs on. A `'quicken'` press that names one swaps it. */
+  get speed(): TProfile {
+    return this._speed;
+  }
+
+  /** The animated beats this set replaced, defaults where it did not. See `builder.moves()`. */
+  protected get moves(): ResolvedPhaseMoves {
+    return this._moves;
+  }
+
   get isActive(): boolean {
     return this._isActive;
+  }
+
+  /** @internal Set by `PhaseFactory.create()` from the builder's `moves()`. */
+  bindMoves(moves: ResolvedPhaseMoves): void {
+    this._moves = moves;
   }
 
   /** Enter the phase. Returns a promise that resolves when the phase is complete. */
@@ -101,41 +122,42 @@ export abstract class ReelPhase<TConfig = void, TProfile extends SpeedProfile = 
     });
   }
 
-  /** Skip the phase immediately (if skippable). */
-  skip(): void {
-    if (!this.skippable || !this._isActive) return;
-    this.onSkip();
-    this._complete();
-  }
-
-  /** Force-complete the phase regardless of skippable flag. */
-  forceComplete(): void {
+  /**
+   * A skip press reached this phase.
+   *
+   * `'slam'` (the default): if the phase is skippable, `onSkip(ctx)` runs and
+   * the phase completes at once; the controller then places the reel.
+   *
+   * `'quicken'`: `onSkip(ctx)` runs and nothing else. The phase is asked to
+   * reach its natural end sooner without changing what it looks like, and it
+   * completes itself when it gets there: a stop cuts its delay and spins out,
+   * a tease ends and returns to full speed, a spin drops its floor. A phase
+   * whose slam pose IS its natural end completes inside `onSkip`. A phase
+   * that does not handle `'quicken'` runs its course and the reel still
+   * lands. `skippable` is not consulted, since nothing is forced. A profile
+   * named on the press replaces `speed` first, so whatever the phase plays
+   * from here reads the new one.
+   */
+  skip(ctx: SkipContext<TProfile> = SLAM as SkipContext<TProfile>): void {
     if (!this._isActive) return;
-    this.onSkip();
+    if (ctx.mode === 'quicken') {
+      if (ctx.speed) this._speed = ctx.speed;
+      this.onSkip(ctx);
+      return;
+    }
+    if (!this.skippable) return;
+    this.onSkip(ctx);
     this._complete();
   }
 
   /**
-   * Advance to this phase's natural end as fast as its animation allows,
-   * WITHOUT changing the outcome. The counterpart of `skip()`, which
-   * force-completes and may place the frame outright: a hurried stop still
-   * spins its frame in and bounces, it just stops waiting first. What a
-   * `requestHurry()` press asks of the reel it frees.
-   *
-   * With `speed`, the phase carries on with that profile from here: the
-   * spin-out speed and bounce a hurried stop lands on.
-   *
-   * Returns `false` when the phase cannot be hurried. The reel then runs the
-   * phase to its natural end, and the controller applies the rest of the
-   * hurry (no stop delay, no tease, the named profile) at the chain's next
-   * decision point. A reel hurried before it reached its stop has its stop
-   * phase asked as soon as it is created, so a wait inside a custom stop is
-   * cut whether the press came before it or during it.
+   * Slam this phase regardless of `skippable`: `onSkip(ctx)` then complete.
+   * What the controller's slam path calls; `ctx.mode` is `'slam'` there.
    */
-  hurry(speed?: TProfile): boolean {
-    if (!this._isActive) return false;
-    if (speed) this._speed = speed;
-    return this.onHurry();
+  forceComplete(ctx: SkipContext<TProfile> = SLAM as SkipContext<TProfile>): void {
+    if (!this._isActive) return;
+    this.onSkip(ctx);
+    this._complete();
   }
 
   /** Called each frame while the phase is active. */
@@ -144,18 +166,18 @@ export abstract class ReelPhase<TConfig = void, TProfile extends SpeedProfile = 
   /** Subclass: set up the phase (start tweens, set speed, etc). */
   protected abstract onEnter(config: TConfig): void;
 
-  /** Subclass: clean up when skipped or force-completed. */
-  protected abstract onSkip(): void;
-
   /**
-   * Subclass: reach the natural end sooner without changing what it looks
-   * like. Cut a wait (a delay, a hold, a tease), leave the landing itself
-   * alone, and return `true`. The default returns `false`: this phase cannot
-   * be hurried and runs its course.
+   * Subclass: a skip press reached the phase. Branch on `ctx.mode`.
+   *
+   * Under `'slam'` this is the slam pose: kill tweens and leave the reel
+   * where a natural finish would have; the base completes the phase after.
+   *
+   * Under `'quicken'` cut a wait, never the landing, and call `_complete()`
+   * yourself once the natural end is reached (right away, if the slam pose
+   * already is that end). Ignore the mode and the phase simply runs its
+   * course. `ctx.payload` is whatever the game attached to the press.
    */
-  protected onHurry(): boolean {
-    return false;
-  }
+  protected abstract onSkip(ctx: SkipContext<TProfile>): void;
 
   /** Call when the phase naturally completes. */
   protected _complete(): void {
@@ -205,22 +227,21 @@ export abstract class ReelPhase<TConfig = void, TProfile extends SpeedProfile = 
    * position rather than the tween's last epsilon. That bookkeeping is why
    * the bounce is a helper and not two lines of GSAP.
    *
-   * Defaults come from the phase's profile; pass {@link BounceOptions} to
-   * bounce differently from the profile (a pressed reel that lands on a
-   * shorter bounce, say). A non-positive distance returns an already-settled
+   * The tween itself is the set's `stop.bounce` move (see `builder.moves()`),
+   * so a replaced bounce plays here too. Defaults come from the phase's
+   * profile; pass {@link BounceOptions} to bounce differently from the
+   * profile (a pressed reel that lands on a shorter bounce, say). A
+   * non-positive distance, or a removed move, returns an already-settled
    * bounce, so the caller's `done` handling is the same either way.
    */
   protected bounce(options: BounceOptions = {}): ReelBounce {
     const reel = this._reel;
     const distance = options.distance ?? this._speed.bounceDistance;
-    if (distance <= 0) {
+    const move = this._moves.stop.bounce;
+    if (distance <= 0 || !move) {
       return { done: Promise.resolve(), cancel: () => {} };
     }
 
-    // Half of the total per leg, in seconds. Both legs share a duration so
-    // the down + up motion is symmetric.
-    const legDuration = (options.duration ?? this._speed.bounceDuration) / 2000;
-    const ease = options.ease ?? DEFAULT_BOUNCE_EASE;
     // Overshoot in the direction of travel: forward reels overshoot toward the
     // larger main coordinate, reverse reels toward the smaller. axis.polarity
     // makes this automatic and keeps vertical/forward at `base + distance`.
@@ -234,40 +255,34 @@ export abstract class ReelPhase<TConfig = void, TProfile extends SpeedProfile = 
       followedMain = main;
     };
 
-    let settle: (() => void) | null = null;
-    const done = new Promise<void>((resolve) => {
-      settle = resolve;
+    const running = runMove<BounceMoveContext>(move, {
+      reel,
+      profile: this._speed,
+      gsap: reel.gsap,
+      distance: axis.polarity * distance,
+      duration: options.duration ?? this._speed.bounceDuration,
+      ease: options.ease ?? DEFAULT_BOUNCE_EASE,
+      base,
+      followLifted,
     });
-    let timeline: gsap.core.Timeline | null = reel.gsap.timeline();
-    timeline.to(reel.container, {
-      [axis.mainProp]: base + axis.polarity * distance,
-      duration: legDuration,
-      ease,
-      onUpdate: followLifted,
-    });
-    timeline.to(reel.container, {
-      [axis.mainProp]: base,
-      duration: legDuration,
-      ease,
-      onUpdate: followLifted,
-      onComplete: () => {
-        // The last onUpdate can land a hair short of the end value; settle the
-        // lifted views on the exact resting position rather than that epsilon.
-        followLifted();
-        timeline = null;
-        settle?.();
-      },
+
+    let finished = false;
+    const done = running.done.then(() => {
+      if (finished) return;
+      finished = true;
+      // The last onUpdate can land a hair short of the end value; settle the
+      // lifted views on the exact resting position rather than that epsilon.
+      followLifted();
     });
 
     return {
       done,
       cancel: () => {
-        if (!timeline) return;
-        timeline.kill();
-        timeline = null;
+        if (finished) return;
+        finished = true;
+        running.cancel();
         axis.setMain(reel.container, base);
         followLifted();
-        settle?.();
       },
     };
   }

@@ -10,7 +10,7 @@ import type { ReelSymbol } from '../symbols/ReelSymbol.js';
 import type { SymbolRegistry } from '../symbols/SymbolRegistry.js';
 import { EmptySymbol } from '../symbols/EmptySymbol.js';
 import { SpeedPresets } from '../config/SpeedPresets.js';
-import type { HurryOptions, SpeedProfile, SymbolData, SymbolZIndexResolver } from '../config/types.js';
+import type { SkipOptions, SpeedProfile, SymbolData, SymbolZIndexResolver } from '../config/types.js';
 import type { Disposable } from '../utils/Disposable.js';
 import { TickerRef } from '../utils/TickerRef.js';
 import type { TickerCallback } from '../utils/TickerRef.js';
@@ -882,30 +882,18 @@ export class BoardGrid implements Disposable {
   }
 
   /**
-   * Hurry every in-flight cell: each lands through its stop, its spin floor
-   * (and so its stagger) dropped, instead of being placed. `reelSet.requestHurry()`
-   * per cell; `options.speed` names the profile the cells land on. Returns
-   * the count.
+   * Press skip on every in-flight cell. `'slam'` lands each on its result
+   * now; `'quicken'` drops each cell's spin floor (the stagger lives there,
+   * so the wave lands together) and lets it spin its symbol in and bounce,
+   * on `options.speed` if named. Returns the count.
    */
-  hurrySpinning(options?: HurryOptions): number {
-    let inFlight = 0;
-    for (const reelSet of this._reels.values()) {
-      if (reelSet.isSpinning) {
-        inFlight += 1;
-        reelSet.requestHurry(options);
-      }
-    }
-    return inFlight;
-  }
-
-  /** Slam every in-flight cell to its landed position. Returns the count. */
-  skipSpinning(): number {
+  skipSpinning(options?: SkipOptions): number {
     let inFlight = 0;
     for (const reelSet of this._reels.values()) {
       if (reelSet.isSpinning) {
         inFlight += 1;
         try {
-          reelSet.skipSpin();
+          reelSet.skipSpin(options);
         } catch {
           /* result not provided yet - nothing to skip to; ignore */
         }

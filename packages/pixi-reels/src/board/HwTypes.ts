@@ -3,6 +3,7 @@
  * reducer ({@link HoldAndWinState}), the driver ({@link HoldAndWinBoard}) and
  * the builder can share them without import cycles.
  */
+import type { SkipMode } from '../config/types.js';
 
 /** Grid coordinate of a board cell. */
 export interface HwCell {
@@ -49,13 +50,12 @@ export type HoldAndWinBoardEvents<TData = unknown> = {
   'respins:changed': [{ value: number; reason: HwRespinReason }];
   'respin:end': [{ round: number; hits: HwCoin<TData>[]; respinsLeft: number }];
   'board:full': [{ coins: HwCoin<TData>[] }];
-  /** Fired by `skip()` so the game layer can cut its own flights / collect short. */
-  'feature:skip': [{ inFlight: number }];
   /**
-   * Fired by `hurry()`: the in-flight cells are landing through their stop
-   * rather than being placed. Nothing to cut short; the landing flow follows.
+   * Fired by `skip()`. After a `'slam'` the game layer cuts its own flights /
+   * collect short; after a `'quicken'` the cells are landing through their
+   * stop and there is nothing to cut.
    */
-  'feature:hurry': [{ inFlight: number }];
+  'feature:skip': [{ inFlight: number; mode: SkipMode }];
   /**
    * Fired by `reset()` - a hard clear back to idle. Distinct from `coin:released`
    * (which means "collect this coin"); listeners that maintain derived state
@@ -80,9 +80,9 @@ export type HoldAndWinBoardEvents<TData = unknown> = {
  * One state-change the reducer ({@link HoldAndWinState}) decided, ready for the
  * driver to emit. A tagged pair of `{ type, payload }` for every board event the
  * reducer owns - the driver replays them onto its emitter and keys visual side
- * effects (e.g. `playWin()` on `coin:locked`) off the type. `respin:start`,
- * `feature:skip` and `feature:hurry` are driver-owned (they describe in-flight
- * reels, not ledger state) and are not produced here.
+ * effects (e.g. `playWin()` on `coin:locked`) off the type. `respin:start` and
+ * `feature:skip` are driver-owned (they describe in-flight reels, not ledger
+ * state) and are not produced here.
  */
 export type HwEffect<TData = unknown> = {
   [K in keyof HoldAndWinBoardEvents<TData>]: {

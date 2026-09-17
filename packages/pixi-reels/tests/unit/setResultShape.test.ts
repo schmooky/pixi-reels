@@ -21,7 +21,8 @@ describe('setResult argument shape', () => {
         .setResult([['a', 'b', 'a', 'b', 'a']]))
         .toThrow(/column 0 is a plain string\[\].*grid\.map/s);
     } finally {
-      reelSet.slamStop();
+      // No result ever landed, so there is nothing to slam onto; tearing the
+      // set down is the exit for a spin whose result was rejected.
       destroy();
     }
   });
@@ -34,7 +35,8 @@ describe('setResult argument shape', () => {
         .setResult([{ cells: ['a'] }]))
         .toThrow(/column 0 has no 'visible' array/);
     } finally {
-      reelSet.slamStop();
+      // No result ever landed, so there is nothing to slam onto; tearing the
+      // set down is the exit for a spin whose result was rejected.
       destroy();
     }
   });

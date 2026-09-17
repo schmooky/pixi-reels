@@ -7,7 +7,8 @@ import type {
   SpinOptions,
   AnticipationStagger,
   AnticipationOptions,
-  HurryOptions,
+  SkipMode,
+  SkipOptions,
   SlamOptions,
   SymbolPosition,
 } from '../config/types.js';
@@ -46,6 +47,8 @@ export interface ReelSetParams {
   phaseFactory: PhaseFactory;
   spinningMode: SpinningMode;
   defaultSpinMode: 'standard' | 'cascade';
+  /** What a skip press does when the call does not say. See `ReelSetBuilder.skipMode`. */
+  skipMode: SkipMode;
 }
 
 /**
@@ -618,6 +621,7 @@ export class ReelSet extends Container implements Disposable {
           this._buildPinOverlayTweens(reelIndex, targetCellMain),
       },
     );
+    this._spinController.defaultSkipMode = params.skipMode;
 
     this._spotlight = new SymbolSpotlight(params.reels, params.viewport, this._events);
 
@@ -760,7 +764,7 @@ export class ReelSet extends Container implements Disposable {
     const onAbort = (): void => {
       wasSkipped = true;
       if (this._spinController.isSpinning) {
-        this._spinController.slamStop();
+        this._spinController.abortSlam();
       }
     };
     if (opts.signal) {
@@ -1090,7 +1094,7 @@ export class ReelSet extends Container implements Disposable {
       // when the engine is idle (between refills), so we only need this
       // guard for in-flight cancellation.
       if (this._spinController.isSpinning) {
-        this._spinController.slamStop();
+        this._spinController.abortSlam();
       }
     };
     if (opts.signal) {
@@ -1416,52 +1420,43 @@ export class ReelSet extends Container implements Disposable {
    *     position. Spin state is unrelated.
    *   - `slamStop()` lands every un-landed reel unconditionally. No boost.
    */
-  skipSpin(): void {
-    this._spinController.skip();
+  skipSpin(options?: SkipOptions): void {
+    this._spinController.skip(options);
   }
 
   /**
-   * Slam-stop safe before `setResult()` arrives: queues until then.
-   * Bypasses the two-stage `skipSpin()` machine. An explicit slam intent.
+   * A skip press safe before `setResult()` arrives: queues until then, and
+   * fires the moment the result lands. Bypasses the two-stage `skipSpin()`
+   * machine: no speed boost, no cascade auto-slam.
    *
-   * Note on `skipStage`: when this call queues a slam (pre-`setResult`)
+   * `options.mode` is what the press does to the reels it frees. `'slam'`
+   * places them on the result now; `'quicken'` asks each for its landing
+   * sooner without changing what the landing looks like: a tease ends, a stop
+   * delay is cut, the spin-out and bounce still play, and `speed` names a
+   * registered profile to finish on (the turbo bounce for a pressed reel, say).
+   * Which reels a press frees (tease protection, `'stepwise'`, reel groups) is
+   * the same either way; a quicken press treats the reels it already
+   * quickened as down and walks on to the next group, a slam press cuts them.
+   * Omit `mode` for the builder's `skipMode()`, `'slam'` unless set. In
+   * cascade mode a quicken slams and warns once with code `quicken-cascade`:
+   * a tumble reel lands by placing, there is nothing to spin out.
+   *
+   * Either mode is a skip: `skipStage` advances, `wasSkipped` is `true`,
+   * `SpinResult.skipMode` says which. `payload` reaches every phase the press
+   * touches as `ctx.payload`.
+   *
+   * Note on `skipStage`: when this call queues a press (pre-`setResult`)
    * rather than firing one, `skipStage` stays at `0` until `setResult()`
-   * arrives and the queued slam actually runs. If your UI labels the
+   * arrives and the queued press actually runs. If your UI labels the
    * button off `skipStage`, expect a beat of "Skip" still shown while
    * the queued intent is in flight; the queued state is not exposed as
    * its own stage on purpose (kept the `0 | 1 | 2` shape stable).
-   */
-  requestSkip(): void {
-    this._spinController.requestSkip();
-  }
-
-  /**
-   * Land the reels a press frees through their normal stop instead of placing
-   * them. The tease ends, the reel returns to full speed, and its stop runs
-   * with no delay: the frame crawls in and bounces, so the press reads as a
-   * fast landing rather than a cut.
-   *
-   * Which reels a press frees is decided exactly as for `requestSkip()`:
-   * tease protection, `'stepwise'`, reel groups. Only what freeing means
-   * differs, and a hurried reel counts as released, so the next press moves
-   * on to the next group while it lands. Queues before `setResult()` like
-   * `requestSkip()`. No speed boost, no `wasSkipped`, `skipStage` untouched:
-   * a `requestSkip()` after it still slams whatever is still moving, so one
-   * button can hurry on the first press and cut on the second.
-   *
-   * `speed` names a registered profile for the hurried stop (its spin-out
-   * speed and bounce); the round's profile otherwise. Throws on an unknown
-   * name. In cascade mode there is nothing to spin out, so the press slams as
-   * `requestSkip()` would and warns once with code `hurry-cascade`.
-   *
-   * Fires `hurry:requested` with the reels freed; each then lands through the
-   * usual `spin:reelLanding` / `spin:reelLanded`.
    *
    * @example
-   * reelSet.requestHurry({ speed: 'turbo' });
+   * reelSet.requestSkip({ mode: 'quicken', speed: 'turbo' });
    */
-  requestHurry(options?: HurryOptions): void {
-    this._spinController.requestHurry(options);
+  requestSkip(options?: SkipOptions): void {
+    this._spinController.requestSkip(options);
   }
 
   /**
@@ -1476,6 +1471,9 @@ export class ReelSet extends Container implements Disposable {
    * natural landing, and `skipStage` is left alone. This is the raw lever
    * under `setAnticipation(..., { protect })` — reach for it directly when
    * you want your own skip granularity rather than the tease rule.
+   *
+   * Throws before `setResult()`, like `skipSpin()`: there is nothing to land
+   * on yet. Use `requestSkip()` in that window.
    *
    * Pairs with `skipSpin()` (round-aware land + boost) and `skipNudge()`
    * (fast-forward an in-flight `nudge()`).

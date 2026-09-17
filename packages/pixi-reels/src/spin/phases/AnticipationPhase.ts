@@ -1,9 +1,11 @@
 import type { gsap } from 'gsap';
-import type { AnticipationSegment } from '../../config/types.js';
+import type { AnticipationSegment, SkipContext } from '../../config/types.js';
 import type { EventEmitter } from '../../events/EventEmitter.js';
 import type { ReelSetEvents } from '../../events/ReelEvents.js';
 import { noticeWarnOnce } from '../../utils/notify.js';
 import { ReelPhase } from './ReelPhase.js';
+import { runMove } from './moves.js';
+import type { RunningMove, SlowdownMoveContext } from './moves.js';
 
 export interface AnticipationPhaseConfig {
   /** Duration override in ms. Uses speed profile anticipationDelay if not set. */
@@ -72,29 +74,31 @@ export class AnticipationPhase extends ReelPhase<AnticipationPhaseConfig> {
   readonly name = 'anticipation';
   readonly skippable = true;
 
-  private _tween: gsap.core.Timeline | null = null;
-  private _delayed: gsap.core.Tween | null = null;
+  protected _tween: gsap.core.Timeline | null = null;
+  protected _delayed: gsap.core.Tween | null = null;
+  /** The legacy slow-down beat in flight, the set's `anticipation.slowdown` move. */
+  protected _slowdown: RunningMove | null = null;
 
   /** Odometer reading (in cells) the travel target is measured from. */
-  private _travelMark = 0;
+  protected _travelMark = 0;
   /** Travel target in cells, or `null` when this tease is time-anchored. */
-  private _cells: number | null = null;
+  protected _cells: number | null = null;
   /**
    * True once the odometer is being watched. A curve arms it only on its FINAL
    * leg, so a fast early segment cannot eat the travel budget and end the tease
    * before the legs the caller wrote have played.
    */
-  private _travelArmed = false;
+  protected _travelArmed = false;
   /** Curve legs still to play, when driving segments by hand. */
-  private _segments: AnticipationSegment[] = [];
-  private _segmentIndex = 0;
+  protected _segments: AnticipationSegment[] = [];
+  protected _segmentIndex = 0;
   /**
    * Backstop in ms for a travel-anchored final leg: a reel that comes to rest
    * can never reach a cell target, and a tease that never ends is a hung spin.
    */
-  private _backstopMs = 0;
-  private _events: EventEmitter<ReelSetEvents> | null = null;
-  private _reelIndex = -1;
+  protected _backstopMs = 0;
+  protected _events: EventEmitter<ReelSetEvents> | null = null;
+  protected _reelIndex = -1;
 
   protected onEnter(config: AnticipationPhaseConfig): void {
     const reel = this._reel;
@@ -134,17 +138,24 @@ export class AnticipationPhase extends ReelPhase<AnticipationPhaseConfig> {
       return;
     }
 
-    this._tween = reel.gsap.timeline();
-    this._tween.to(reel, {
-      speed: targetSpeed,
-      duration: duration * 0.35,
-      ease: 'power2.out',
+    const running = runMove<SlowdownMoveContext>(this._moves.anticipation.slowdown, {
+      reel,
+      profile: speed,
+      gsap: reel.gsap,
+      targetSpeed,
+      duration: duration * 1000,
     });
-    this._tween.to({}, { duration: duration * 0.65, onComplete: () => this._complete() });
+    this._slowdown = running;
+    void running.done.then(() => {
+      // Cancelled by a skip or a travel anchor: whoever cancelled owns the end.
+      if (this._slowdown !== running) return;
+      this._slowdown = null;
+      this._complete();
+    });
   }
 
   /** Play `_segments[_segmentIndex]`, then chain to the next or finish. */
-  private _runSegment(): void {
+  protected _runSegment(): void {
     const seg = this._segments[this._segmentIndex];
     if (!seg) {
       this._complete();
@@ -206,7 +217,7 @@ export class AnticipationPhase extends ReelPhase<AnticipationPhaseConfig> {
    * leg's retarget hides the evidence. Say so once rather than letting the
    * tween and drive models silently disagree on identical config.
    */
-  private _warnIfDriveMissedBudget(seg: AnticipationSegment, target: number): void {
+  protected _warnIfDriveMissedBudget(seg: AnticipationSegment, target: number): void {
     const gap = Math.abs(this._reel.speed - target);
     if (gap <= DRIVE_ARRIVAL_EPS) return;
     const needed = (gap / Math.max(seg.duration, 1)) * 1000;
@@ -219,13 +230,13 @@ export class AnticipationPhase extends ReelPhase<AnticipationPhaseConfig> {
     );
   }
 
-  private _advance(): void {
+  protected _advance(): void {
     this._segmentIndex++;
     this._runSegment();
   }
 
   /** GSAP-driven wait, so a hidden tab pauses the tease with everything else. */
-  private _holdFor(ms: number, done: () => void): void {
+  protected _holdFor(ms: number, done: () => void): void {
     if (ms <= 0) {
       done();
       return;
@@ -241,7 +252,7 @@ export class AnticipationPhase extends ReelPhase<AnticipationPhaseConfig> {
    * began. `update` does the watching; `backstopMs` is the ceiling that keeps a
    * reel which stopped moving from hanging the spin forever.
    */
-  private _awaitTravel(backstopMs: number): void {
+  protected _awaitTravel(backstopMs: number): void {
     this._holdFor(Math.max(backstopMs, 1), () => this._complete());
   }
 
@@ -253,22 +264,23 @@ export class AnticipationPhase extends ReelPhase<AnticipationPhaseConfig> {
     }
   }
 
-  protected onSkip(): void {
-    this._kill();
-    this._reel.forceSpeed(this._speed.spinSpeed);
-  }
-
   /**
    * A tease has no landing of its own to protect: ending it early and
-   * returning the reel to full speed IS its natural end, so hurrying is
-   * force-completing. The stop that follows crawls the frame in from there.
+   * returning the reel to full speed IS its natural end, so a `'quicken'`
+   * completes here too. The stop that follows crawls the frame in from there.
    */
-  protected onHurry(): boolean {
-    this.forceComplete();
-    return true;
+  protected onSkip(ctx: SkipContext = { mode: 'slam' }): void {
+    this._kill();
+    this._reel.forceSpeed(this._speed.spinSpeed);
+    if (ctx.mode === 'quicken') this._complete();
   }
 
-  private _kill(): void {
+  protected _kill(): void {
+    if (this._slowdown) {
+      const running = this._slowdown;
+      this._slowdown = null;
+      running.cancel();
+    }
     if (this._tween) {
       this._tween.kill();
       this._tween = null;

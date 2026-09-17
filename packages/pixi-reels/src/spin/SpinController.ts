@@ -8,7 +8,9 @@ import type {
   AnticipationCells,
   AnticipationSlowdown,
   AnticipationStagger,
-  HurryOptions,
+  SkipContext,
+  SkipMode,
+  SkipOptions,
   SlamOptions,
   SpeedProfile,
   SpinOptions,
@@ -164,6 +166,16 @@ export interface SpinControllerHooks {
  *   `spin:start`, `spin:allStarted`, `spin:stopping`, `spin:reelLanded`,
  *   `spin:allLanded`, `spin:complete`, `skip:requested`, `skip:completed`.
  */
+/** A skip press with its options resolved: the mode decided, the profile looked up. */
+interface ResolvedSkip {
+  mode: SkipMode;
+  speed: SpeedProfile | null;
+  payload: unknown;
+}
+
+/** The context the engine's own slams hand to phases: abort, timeout, error recovery, `slamStop()`. */
+const SLAM_CTX: SkipContext = { mode: 'slam' };
+
 export class SpinController implements Disposable {
   private _reels: Reel[];
   private _speedManager: SpeedManager;
@@ -286,21 +298,37 @@ export class SpinController implements Disposable {
    */
   private _heldReels = new Set<number>();
   private _wasSkipped = false;
-  private _skipPending = false;
+  /** The mode of the last press that freed reels this round, for `SpinResult.skipMode`. */
+  private _skipMode: SkipMode | null = null;
+  /** A `requestSkip()` that arrived before the result; fired by `setResult()`. */
+  private _skipPending: ResolvedSkip | null = null;
   /**
-   * Reels a `requestHurry()` press has freed: each is advancing to its natural
+   * What a skip press does to the reels it frees when the call does not say.
+   * Set from the builder's `skipMode()`; `'slam'` unless set.
+   */
+  defaultSkipMode: SkipMode = 'slam';
+  /**
+   * Reels a `'quicken'` press has freed: each is advancing to its natural
    * landing as fast as its animation allows instead of being placed. Read at
    * the chain's decision points (tease, stop delay, stop profile) and by the
-   * release walk, which treats a hurried reel as already down so the next
-   * hurry press moves on to the next group while it lands. A slam still
-   * places a hurried reel: it is un-landed until its stop settles. Cleared per
-   * spin / refill.
+   * release walk of a quicken press, which treats a quickened reel as already
+   * down so the next press moves on to the next group while it lands. A slam
+   * press still places a quickened reel: it is un-landed until its stop
+   * settles. Cleared per spin / refill.
    */
-  private _hurriedReels = new Set<number>();
-  /** Per hurried reel, the profile its stop runs on when the press named one. */
-  private _hurrySpeed = new Map<number, SpeedProfile>();
-  /** A `requestHurry()` that arrived before the result; fired by `setResult()`. */
-  private _hurryPending: { speed: SpeedProfile | null } | null = null;
+  private _quickenedReels = new Set<number>();
+  /**
+   * Per quickened reel, the context of the press that freed it: the profile
+   * it finishes on and the game's payload, handed to the stop phase the chain
+   * creates later.
+   */
+  private _quickenCtx = new Map<number, SkipContext>();
+  /**
+   * Quicken presses whose freed reels have not all landed. `skip:completed`
+   * fires per press as its last reel lands, the way a slam's fires once its
+   * reels are placed.
+   */
+  private _quickenBatches: Array<{ pending: Set<number>; reels: number[]; partial: boolean }> = [];
   private _isDestroyed = false;
   private _currentSpinResolve: ((result: SpinResult) => void) | null = null;
   private _currentSpinReject: ((error: Error) => void) | null = null;
@@ -467,10 +495,11 @@ export class SpinController implements Disposable {
 
     this._isSpinning = true;
     this._wasSkipped = false;
-    this._skipPending = false;
-    this._hurriedReels.clear();
-    this._hurrySpeed.clear();
-    this._hurryPending = null;
+    this._skipMode = null;
+    this._skipPending = null;
+    this._quickenedReels.clear();
+    this._quickenCtx.clear();
+    this._quickenBatches.length = 0;
     this._pendingAbortError = null;
     this._spinStartTime = performance.now();
     this._resultSymbols = null;
@@ -587,20 +616,16 @@ export class SpinController implements Disposable {
     this._resultSymbols = symbols;
     this._tryBeginStopSequence();
     if (this._skipPending) {
-      // Deferred `requestSkip()` is an explicit slam intent. bypass the
-      // two-stage `skip()` machine and slam directly. Tease protection still
-      // applies: a press queued before the result arrived is exactly the case
-      // the feature exists for, since the tease hasn't started yet. Requires
+      // Deferred `requestSkip()` is an explicit press. bypass the two-stage
+      // `skip()` machine and press directly. Tease protection still applies:
+      // a press queued before the result arrived is exactly the case the
+      // feature exists for, since the tease hasn't started yet. Requires
       // `setAnticipation()` to have been called by now. call it BEFORE
       // `setResult()` (every recipe does) or the queued press sees no tease
       // to protect.
-      this._skipPending = false;
-      this._pressSkip(false);
-    }
-    if (this._hurryPending) {
-      const { speed } = this._hurryPending;
-      this._hurryPending = null;
-      this._pressHurry(speed);
+      const req = this._skipPending;
+      this._skipPending = null;
+      this._pressSkip(false, req);
     }
   }
 
@@ -699,10 +724,11 @@ export class SpinController implements Disposable {
 
     this._isSpinning = true;
     this._wasSkipped = false;
-    this._skipPending = false;
-    this._hurriedReels.clear();
-    this._hurrySpeed.clear();
-    this._hurryPending = null;
+    this._skipMode = null;
+    this._skipPending = null;
+    this._quickenedReels.clear();
+    this._quickenCtx.clear();
+    this._quickenBatches.length = 0;
     this._pendingAbortError = null;
     this._spinStartTime = performance.now();
     this._resultSymbols = null;
@@ -1296,81 +1322,39 @@ export class SpinController implements Disposable {
   }
 
   /**
-   * Slam-stop safe before `setResult()` arrives. Queues until a result is
-   * set, then slams. Bypasses the two-stage `skip()` machine. this API is
-   * for callers with explicit slam intent (e.g. UIs that wire the queued
-   * slam separately from a stage-aware button).
+   * A skip press safe before `setResult()` arrives. Queues until a result is
+   * set, then presses. Bypasses the two-stage `skip()` machine: this API is
+   * for callers with explicit intent (e.g. UIs that wire the queued press
+   * separately from a stage-aware button). `options.mode` decides what the
+   * press does to the reels it frees (see {@link SkipMode}); the default is
+   * {@link defaultSkipMode}.
    */
-  requestSkip(): void {
+  requestSkip(options?: SkipOptions): void {
     if (!this._isSpinning) return;
+    const req = this._resolveSkip(options);
     if (this._resultSymbols) {
-      this._pressSkip(false);
+      this._pressSkip(false, req);
       return;
     }
-    this._skipPending = true;
+    this._skipPending = req;
   }
 
-  /**
-   * Land the reels a press frees through their normal stop instead of placing
-   * them. Same release plan as `requestSkip()` (tease protection,
-   * `'stepwise'`, reel groups decide WHICH reels a press frees) and the same
-   * pre-result queueing; only what freeing means differs. See
-   * {@link ReelSet.requestHurry} for the contract.
-   */
-  requestHurry(options: HurryOptions = {}): void {
-    if (!this._isSpinning) return;
-    const speed = this._resolveHurrySpeed(options);
-    if (this._currentSpinMode === 'cascade') {
-      // A tumble reel has already dropped its symbols and lands by placing
-      // them: there is no spin-out to run sooner. Slam, as every other press
-      // does in this mode, and say so once.
-      noticeWarnOnce(
-        'hurry-cascade',
-        'requestHurry() has nothing to hurry in cascade mode: a tumble reel lands by ' +
-          'placing its symbols, not by spinning them in. The press slams as requestSkip() ' +
-          'would.',
-      );
-      this.requestSkip();
-      return;
+  /** Decide the mode and look the profile up; an unknown profile name throws at the call site. */
+  private _resolveSkip(options?: SkipOptions): ResolvedSkip {
+    const mode = options?.mode ?? this.defaultSkipMode;
+    let speed: SpeedProfile | null = null;
+    if (options?.speed !== undefined) {
+      const profile = this._speedManager.getProfile(options.speed);
+      if (!profile) {
+        throw new Error(
+          `requestSkip(): no speed profile named '${options.speed}'. Register it with ` +
+            `builder.speed() or reelSet.speed.addProfile(). Available: ` +
+            `${this._speedManager.profileNames.join(', ')}.`,
+        );
+      }
+      speed = profile;
     }
-    if (this._resultSymbols) {
-      this._pressHurry(speed);
-      return;
-    }
-    this._hurryPending = { speed };
-  }
-
-  /** The profile a hurry press named, or `null` for the round's own. Unknown names throw. */
-  private _resolveHurrySpeed(options: HurryOptions): SpeedProfile | null {
-    if (options.speed === undefined) return null;
-    const profile = this._speedManager.getProfile(options.speed);
-    if (!profile) {
-      throw new Error(
-        `requestHurry(): no speed profile named '${options.speed}'. Register it with ` +
-          `builder.speed() or reelSet.speed.addProfile(). Available: ` +
-          `${this._speedManager.profileNames.join(', ')}.`,
-      );
-    }
-    return profile;
-  }
-
-  /**
-   * The hurry counterpart of `_pressSkip`: walk the same release plan, but
-   * hurry the group instead of slamming it. A hurried reel counts as released
-   * for the walk, so the next press moves on while it lands. `'once'` is spent
-   * exactly as a slam press spends it. No round side effect and no
-   * `skipStage`: a hurry is not a skip, and a `requestSkip()` after it still
-   * slams whatever is still moving.
-   */
-  private _pressHurry(speed: SpeedProfile | null): void {
-    const released = (i: number): boolean => this._isReleased(i) || this._hurriedReels.has(i);
-    const group = this._nextSlamGroup(released);
-    if (group !== null) {
-      this._hurry(group, speed);
-      if (this._anticipationProtect === 'once') this._protectSpent = true;
-      return;
-    }
-    this._hurry(undefined, speed);
+    return { mode, speed, payload: options?.payload };
   }
 
   /**
@@ -1401,7 +1385,7 @@ export class SpinController implements Disposable {
    * effects (tests, anti-cheat, programmatic automation) should use
    * `slamStop()` instead.
    */
-  skip(): void {
+  skip(options?: SkipOptions): void {
     if (!this._isSpinning) return;
 
     // Pre-result guard. Slamming before setResult() lands on the random
@@ -1421,7 +1405,7 @@ export class SpinController implements Disposable {
       );
     }
 
-    this._pressSkip(true);
+    this._pressSkip(true, this._resolveSkip(options));
   }
 
   /**
@@ -1429,25 +1413,59 @@ export class SpinController implements Disposable {
    * post-result / deferred half of `requestSkip()`).
    *
    * Consults tease protection first. When a protected tease is still in
-   * flight, this press lands only the reels AROUND it, holds the round's
+   * flight, this press frees only the reels AROUND it, holds the round's
    * side effect back (there's another press coming), and parks at
    * `skipStage: 1`. Otherwise it applies the side effect (first effective
-   * press of the round only) and slams everything.
+   * press of the round only) and frees everything.
+   *
+   * What freeing means is `req.mode`: a slam places, a quicken asks each reel
+   * for its landing sooner. The walk is the same, with one difference: a
+   * quicken press treats reels it already quickened as down, so it moves on
+   * to the next group while they land; a slam press does not, so it cuts
+   * them. The stage is decided BEFORE anything is freed, because a slam lands
+   * synchronously and can end the round inside the call, and a listener on
+   * `spin:complete` must already see the stage the round ended on.
    *
    * @param withSideEffects - `false` for `requestSkip()`, which is documented
-   *   as a bare slam intent and never boosts speed or arms cascade auto-slam.
+   *   as a bare press and never boosts speed or arms cascade auto-slam.
    */
-  private _pressSkip(withSideEffects: boolean): void {
-    const group = this._nextSlamGroup();
+  private _pressSkip(withSideEffects: boolean, req: ResolvedSkip): void {
+    let mode = req.mode;
+    if (mode === 'quicken' && this._currentSpinMode === 'cascade') {
+      // A tumble reel has already dropped its symbols and lands by placing
+      // them: there is no spin-out to run sooner. Slam, as every other press
+      // does in this mode, and say so once.
+      noticeWarnOnce(
+        'quicken-cascade',
+        "requestSkip({ mode: 'quicken' }) has nothing to quicken in cascade mode: a tumble " +
+          'reel lands by placing its symbols, not by spinning them in. The press slams.',
+      );
+      mode = 'slam';
+    }
+    const quicken = mode === 'quicken';
+    const ctx: SkipContext = { mode, speed: req.speed ?? undefined, payload: req.payload };
+    const released = quicken
+      ? (i: number): boolean => this._isReleased(i) || this._quickenedReels.has(i)
+      : this._isReleased;
+    const free = (targets?: readonly number[]): void => {
+      if (quicken) this._quicken(targets, ctx);
+      else this._slam(targets, ctx);
+    };
+
+    const group = this._nextSlamGroup(released);
     if (group !== null) {
-      this._slam(group);
-      // Read this BEFORE spending `'once'`, and off the raw anticipation set
-      // rather than `_protectedTeaseReels()`. that helper reports what is
-      // still PROTECTED, which spending would zero out, and "the tease is
-      // over" is not the same question as "the tease is still protected".
-      // With reel groups the round is not over until every group is down,
-      // tease or no tease: a filler group behind the tease still owes a press.
-      const roundLeft = this._teaseStillRunning() || this._hasUnreleasedGroup();
+      // Is the round over once this group is down? Read off the raw
+      // anticipation set rather than `_protectedTeaseReels()`: that helper
+      // reports what is still PROTECTED, which spending `'once'` would zero
+      // out, and "the tease is over" is not the same question as "the tease
+      // is still protected". With reel groups the round is not over until
+      // every group is down, tease or no tease: a filler group behind the
+      // tease still owes a press.
+      const freed = new Set(group);
+      const down = (i: number): boolean => released(i) || freed.has(i);
+      const roundLeft =
+        this._anticipationReels.some((i) => !down(i)) ||
+        (this._reelGroups !== null && this._reels.some((_, i) => !down(i)));
       // `'once'` is the only spendable mode. `'stepwise'` and `'always'` keep
       // protecting whatever tease is left.
       if (this._anticipationProtect === 'once') this._protectSpent = true;
@@ -1456,20 +1474,21 @@ export class SpinController implements Disposable {
         // Tease still running. Stage 1, not 2: the round's side effect is
         // still owed to the press that actually ends it.
         if (this._skipStage === 0) this._skipStage = 1;
+        free(group);
         return;
       }
-      // That release emptied the tease, so this WAS the round-ending press.
-      // Fall through for the side effect and stage 2, but skip the second
-      // `_slam()`. everything is already down and a bare `_slam()` would
-      // emit a second, empty pair of skip events for one press.
+      // This group empties the round, so this IS the round-ending press: the
+      // side effect and stage 2 are its, and the group is all there is to
+      // free (a second full pass would emit an empty pair of skip events).
       this._applyRoundSideEffects(withSideEffects);
       this._skipStage = 2;
+      free(group);
       return;
     }
 
     this._applyRoundSideEffects(withSideEffects);
-    this._slam();
     this._skipStage = 2;
+    free();
   }
 
   /**
@@ -1581,54 +1600,64 @@ export class SpinController implements Disposable {
 
   /**
    * Is this reel out of the release walk's way: landed, or held out of the
-   * spin entirely? What a slam press treats as "already down"; a hurry press
-   * adds the reels it has already hurried. Bound, so it can be the default.
+   * spin entirely? What a slam press treats as "already down"; a quicken press
+   * adds the reels it has already quickened. Bound, so it can be the default.
    */
   private readonly _isReleased = (reelIndex: number): boolean =>
     this._landedReels.has(reelIndex) || this._heldReels.has(reelIndex);
 
   /**
-   * The hurry path itself: mark the target reels, hand each active phase the
-   * hurry, and let the chains carry the rest. Nothing is placed and nothing is
-   * marked landed here; every hurried reel still lands through
-   * `spin:reelLanding` / `spin:reelLanded` when its stop settles.
+   * The quicken path: mark the target reels, hand each active phase the
+   * press, and let the chains carry the rest. Nothing is placed and nothing
+   * is marked landed here; every quickened reel still lands through
+   * `spin:reelLanding` / `spin:reelLanded` when its stop settles, and the
+   * press's `skip:completed` fires as the last of them does.
    *
-   * With no argument it hurries every reel that is neither released nor
-   * already hurried. A call with nothing left to hurry emits nothing.
+   * With no argument it quickens every reel that is neither released nor
+   * already quickened. A press with nothing left to quicken emits nothing.
    */
-  private _hurry(reels: readonly number[] | undefined, speed: SpeedProfile | null): void {
+  private _quicken(reels: readonly number[] | undefined, ctx: SkipContext): void {
     const targets: number[] = [];
     const candidates = reels ?? this._reels.map((_, i) => i);
     for (const i of candidates) {
       if (!Number.isInteger(i) || i < 0 || i >= this._reels.length) continue;
-      if (this._isReleased(i) || this._hurriedReels.has(i)) continue;
+      if (this._isReleased(i) || this._quickenedReels.has(i)) continue;
       targets.push(i);
     }
     if (targets.length === 0) return;
 
-    for (const i of targets) {
-      this._hurriedReels.add(i);
-      if (speed) {
-        this._hurrySpeed.set(i, speed);
-        // `speedNormalized` and profile-relative drive bounds follow the
-        // profile the reel now lands on, as they would after `setSpeed()`.
-        this._reels[i].referenceSpeed = speed.spinSpeed;
-      }
+    // Reels this press left alone: not released, not already on their way.
+    let unfreed = 0;
+    for (let i = 0; i < this._reels.length; i++) {
+      if (!this._isReleased(i) && !this._quickenedReels.has(i)) unfreed++;
     }
-    this._events.emit('hurry:requested', { reels: [...targets] });
+    const partial = targets.length < unfreed;
+
+    this._wasSkipped = true;
+    this._skipMode = 'quicken';
+    for (const i of targets) {
+      this._quickenedReels.add(i);
+      this._quickenCtx.set(i, ctx);
+      // `speedNormalized` and profile-relative drive bounds follow the
+      // profile the reel now lands on, as they would after `setSpeed()`.
+      if (ctx.speed) this._reels[i].referenceSpeed = ctx.speed.spinSpeed;
+    }
+    this._quickenBatches.push({ pending: new Set(targets), reels: [...targets], partial });
+    this._events.emit('skip:requested', { reels: [...targets], partial, mode: 'quicken' });
 
     for (const i of targets) {
       // The active phase advances itself where it can (a tease ends, a stop
-      // delay is cut). A phase that cannot be hurried keeps running, and the
+      // delay is cut). A phase that cannot be quickened keeps running, and the
       // chain applies the rest at its next decision point.
-      this._activePhases.get(i)?.hurry(speed ?? undefined);
+      this._activePhases.get(i)?.skip(ctx);
     }
   }
 
   /**
    * Hard slam-stop. Lands un-landed reels immediately regardless of stage,
-   * ignoring tease protection. Sets `skipStage` to 2 so future `skip()`
-   * presses in this round also slam (the boost ship has sailed).
+   * ignoring tease protection and the default skip mode. Sets `skipStage` to
+   * 2 so future `skip()` presses in this round also slam (the boost ship has
+   * sailed).
    *
    * Pass `{ reels }` or `{ except }` for a PARTIAL slam: those reels land now
    * and every other reel keeps running its phase chain to a natural landing.
@@ -1636,6 +1665,13 @@ export class SpinController implements Disposable {
    * build its own skip granularity (land the left reels, let the right ones
    * play). A partial slam leaves `skipStage` alone. it isn't the round-ending
    * press.
+   *
+   * Throws before `setResult()`, like `skip()`: there is nothing to land on
+   * yet, and a slam now would leave the reels on whatever the strip is
+   * showing (random fill in standard mode, the invisible fall-out residue in
+   * cascade mode). The engine's own abort, timeout and error-recovery paths
+   * use {@link abortSlam}, which lands on that regardless because those
+   * exits have no better option.
    */
   slamStop(options?: SlamOptions): void {
     if (!this._isSpinning) return;
@@ -1643,31 +1679,15 @@ export class SpinController implements Disposable {
       throw new Error("slamStop: pass either 'reels' or 'except', not both.");
     }
     if (!this._resultSymbols) {
-      // There is nothing to land ON yet, so the reels stop wherever the strip
-      // happens to be: random buffer fill in standard mode, and the alpha-0
-      // residue of the fall-out in cascade mode, i.e. an invisible board. No
-      // developer wants that outcome, and nothing else in the engine will
-      // report it - the reels just sit there showing the wrong thing.
-      //
-      // It stays a warning rather than a throw because `slamStop()` is the
-      // unconditional exit the engine's own abort, timeout and error-recovery
-      // paths depend on, and those legitimately fire before a result. `skip()`
-      // is the guarded entry point and throws here instead.
-      noticeWarn(
-        'slam-before-result',
-        'slamStop() was called before setResult(), so the reels will land on ' +
-          'whatever the strip is currently showing (random fill in standard mode, ' +
-          'the invisible fall-out residue in cascade mode) rather than on a result. ' +
-          'Use requestSkip() to queue the slam until setResult() arrives, or ' +
-          'skipSpin(), which throws in this window instead of landing on nothing.',
+      throw new Error(
+        'slamStop() called before setResult(). there is nothing to land on yet ' +
+          '(standard mode would land on random buffer fill; cascade mode would land ' +
+          'invisible). Use reelSet.requestSkip() to queue the press until setResult() ' +
+          'arrives, or wait for setResult() before calling slamStop().',
       );
     }
-    // A `reels` / `except` set that happens to cover every un-landed reel is
-    // not a partial slam: it ends the round like the bare call does, so it has
-    // to claim the stage too. Leaving it at 0 made a `skipStage`-driven button
-    // read "still skippable" on a dead round until the next `spin()`.
     if (options?.reels) {
-      if (!this._slam(options.reels)) this._skipStage = 2;
+      this._slamWithStage(options.reels);
       return;
     }
     if (options?.except) {
@@ -1676,11 +1696,39 @@ export class SpinController implements Disposable {
       for (let i = 0; i < this._reels.length; i++) {
         if (!exclude.has(i)) targets.push(i);
       }
-      if (!this._slam(targets)) this._skipStage = 2;
+      this._slamWithStage(targets);
       return;
     }
-    this._slam();
+    // Stage first: the slam can end the round synchronously, and a listener
+    // on `spin:complete` must already see the stage it ended on.
     this._skipStage = 2;
+    this._slam();
+  }
+
+  /**
+   * A `reels` / `except` set that happens to cover every un-landed reel is
+   * not a partial slam: it ends the round like the bare call does, so it has
+   * to claim the stage too, and before it lands anything (see `slamStop`).
+   * Leaving it at 0 made a `skipStage`-driven button read "still skippable"
+   * on a dead round until the next `spin()`.
+   */
+  private _slamWithStage(reels: readonly number[]): void {
+    const resolved = this._resolveSlamTargets(reels);
+    if (!resolved) return;
+    if (!resolved.partial) this._skipStage = 2;
+    this._slamTargets(resolved.targets, resolved.partial, SLAM_CTX);
+  }
+
+  /**
+   * @internal The unconditional exit the engine's abort, timeout and
+   * error-recovery paths take, and the one `ReelSet`'s abort handlers use:
+   * lands every un-landed reel on whatever the strip shows, result or not,
+   * and ends the round. Never the answer to a player's press.
+   */
+  abortSlam(): void {
+    if (!this._isSpinning) return;
+    this._skipStage = 2;
+    this._slam();
   }
 
   /**
@@ -1700,7 +1748,8 @@ export class SpinController implements Disposable {
    * The slam path itself: force-complete active phases, place results (or
    * snap to current symbols when no result is set), mark the target reels as
    * landed. Shared by `skip()` (stage 1+), `requestSkip()`'s deferred path,
-   * `slamStop()`, and the per-reel error-recovery path inside `_runReelTask`.
+   * `slamStop()`, `abortSlam()` and the per-reel error-recovery path inside
+   * `_runReelTask`.
    *
    * With no argument it lands every un-landed, non-held reel and ends the
    * round: active phases die, `_spinGeneration` moves, every chain aborts.
@@ -1713,13 +1762,27 @@ export class SpinController implements Disposable {
    *
    * Idempotent: a second call once the spin has finished is a no-op. Lets
    * cascading rejection handlers each safely invoke `_slam` without
-   * triple-emitting `skip:requested`.
+   * triple-emitting `skip:requested`. Returns whether the slam was partial.
    */
-  private _slam(reels?: readonly number[]): boolean {
+  private _slam(reels?: readonly number[], ctx: SkipContext = SLAM_CTX): boolean {
     if (!this._isSpinning) return false;
+    const resolved = this._resolveSlamTargets(reels);
+    // A partial slam with nothing left to land is a no-op, not a skip: it
+    // must not flip `wasSkipped` or fire the skip events. (The full path
+    // keeps its historical behaviour of emitting even when every reel has
+    // already landed.)
+    if (!resolved) return true;
+    this._slamTargets(resolved.targets, resolved.partial, ctx);
+    return resolved.partial;
+  }
 
-    // Resolve the target set first: everything downstream (which phases die,
-    // whether the generation moves, which reels get placed) keys off it.
+  /**
+   * The reels a slam will land and whether reels stay in flight after it.
+   * `null` for a partial request that names nothing left to land.
+   */
+  private _resolveSlamTargets(
+    reels?: readonly number[],
+  ): { targets: Set<number>; partial: boolean } | null {
     const targets = new Set<number>();
     if (reels) {
       for (const i of reels) {
@@ -1727,11 +1790,7 @@ export class SpinController implements Disposable {
         if (this._landedReels.has(i) || this._heldReels.has(i)) continue;
         targets.add(i);
       }
-      // A partial slam with nothing left to land is a no-op, not a skip: it
-      // must not flip `wasSkipped` or fire the skip events. (The full path
-      // keeps its historical behaviour of emitting even when every reel has
-      // already landed.)
-      if (targets.size === 0) return true;
+      if (targets.size === 0) return null;
     } else {
       for (let i = 0; i < this._reels.length; i++) {
         if (this._landedReels.has(i) || this._heldReels.has(i)) continue;
@@ -1743,10 +1802,13 @@ export class SpinController implements Disposable {
     for (let i = 0; i < this._reels.length; i++) {
       if (!this._landedReels.has(i) && !this._heldReels.has(i)) unlanded++;
     }
-    const partial = targets.size < unlanded;
+    return { targets, partial: targets.size < unlanded };
+  }
 
+  private _slamTargets(targets: Set<number>, partial: boolean, ctx: SkipContext): void {
     this._wasSkipped = true;
-    this._events.emit('skip:requested', { reels: [...targets], partial });
+    this._skipMode = 'slam';
+    this._events.emit('skip:requested', { reels: [...targets], partial, mode: 'slam' });
 
     if (partial) {
       // Kill ONLY the target reels' phases and abort ONLY their chains. The
@@ -1756,14 +1818,14 @@ export class SpinController implements Disposable {
       for (const i of targets) {
         const phase = this._activePhases.get(i);
         if (phase) {
-          phase.forceComplete();
+          phase.forceComplete(ctx);
           this._activePhases.delete(i);
         }
         this._slammedReels.add(i);
       }
     } else {
       for (const [, phase] of this._activePhases) {
-        phase.forceComplete();
+        phase.forceComplete(ctx);
       }
       this._activePhases.clear();
       this._spinGeneration++;
@@ -1813,7 +1875,7 @@ export class SpinController implements Disposable {
       }
     }
 
-    this._events.emit('skip:completed', { reels: [...targets], partial });
+    this._events.emit('skip:completed', { reels: [...targets], partial, mode: 'slam' });
 
     if (partial) {
       // Re-open the stop-sequence gate. It requires EVERY non-held,
@@ -1830,7 +1892,6 @@ export class SpinController implements Disposable {
       this._announceAllStartedIfReady();
       this._tryBeginStopSequence();
     }
-    return partial;
   }
 
   /**
@@ -1998,8 +2059,8 @@ export class SpinController implements Disposable {
     // profile's shared floor. without it the only way under the floor is the
     // all-reels slam, which is why skip granularity used to be all-or-nothing.
     const spinDone = spinPhase.run({
-      // A reel hurried before it reached SPIN owes no floor either.
-      minimumSpinTime: this._hurriedReels.has(reelIndex) ? 0 : this._minimumSpinTimeFor(reelIndex),
+      // A reel quickened before it reached SPIN owes no floor either.
+      minimumSpinTime: this._quickenedReels.has(reelIndex) ? 0 : this._minimumSpinTimeFor(reelIndex),
     } satisfies SpinPhaseConfig);
 
     if (this._announceAllStartedIfReady()) {
@@ -2035,10 +2096,10 @@ export class SpinController implements Disposable {
 
     let didAnticipate = false;
     const teases = this._anticipationReels.includes(reelIndex) && antBaseDuration > 0;
-    // A hurried reel skips its tease: the press asked for the landing, and the
-    // tease is the one thing on the way there that is not part of it. Checked
-    // again after the stagger wait, which is where a press can land too.
-    if (teases && !this._hurriedReels.has(reelIndex)) {
+    // A quickened reel skips its tease: the press asked for the landing, and
+    // the tease is the one thing on the way there that is not part of it.
+    // Checked again after the stagger wait, which is where a press can land too.
+    if (teases && !this._quickenedReels.has(reelIndex)) {
       // Stagger the START of the slow-down so anticipation reels tease one
       // after another instead of all at once. The reel keeps spinning at full
       // speed during this wait (its SpinPhase resolved but `reel.speed` is
@@ -2047,7 +2108,7 @@ export class SpinController implements Disposable {
       const proceed = await this._awaitAnticipationOffset(reelIndex, generation);
       if (!proceed) return; // slam / new spin superseded us during the wait
     }
-    if (teases && !this._hurriedReels.has(reelIndex)) {
+    if (teases && !this._quickenedReels.has(reelIndex)) {
       // A dedicated tease-start signal carrying the reel's place in the
       // sequence, so games can layer per-step SFX / pitch ramps without
       // re-deriving which reels are teasing from `spin:stopping`.
@@ -2129,24 +2190,24 @@ export class SpinController implements Disposable {
       } satisfies CascadeDropInPhaseConfig);
       if (this._isStale(reelIndex, generation)) return;
     } else {
-      // A hurried reel has been asked for its landing: no stagger, full spin-out
-      // speed rather than the tease crawl it may have been on, and the profile
-      // the press named, if any.
-      const hurried = this._hurriedReels.has(reelIndex);
-      const stopSpeed = this._hurrySpeed.get(reelIndex) ?? speed;
+      // A quickened reel has been asked for its landing: no stagger, full
+      // spin-out speed rather than the tease crawl it may have been on, and
+      // the profile the press named, if any.
+      const quickened = this._quickenCtx.get(reelIndex) ?? null;
+      const stopSpeed = quickened?.speed ?? speed;
       const stopPhase = this._phaseFactory.create<any>('stop', reel, stopSpeed);
       this._activePhases.set(reelIndex, stopPhase);
       // After a tease, carry the slow anticipation speed into the stop so the
       // reel crawls to its landing position instead of re-accelerating.
       const stopDone = stopPhase.run({
         targetFrame,
-        delay: hurried ? 0 : stopDelay,
-        preserveSpeed: didAnticipate && !hurried,
+        delay: quickened ? 0 : stopDelay,
+        preserveSpeed: didAnticipate && !quickened,
       } satisfies StopPhaseConfig);
       // The press came before this phase existed, so it never heard it. Ask
       // now: a built-in stop with no delay has nothing left to cut, but a
       // custom stop with a wait of its own is cut the same either way.
-      if (hurried) stopPhase.hurry(this._hurrySpeed.get(reelIndex));
+      if (quickened) stopPhase.skip(quickened);
       await stopDone;
       if (this._isStale(reelIndex, generation)) return;
     }
@@ -2579,6 +2640,15 @@ export class SpinController implements Disposable {
     reel.events.emit('landed', symbols);
     this._events.emit('spin:reelLanded', reelIndex, symbols);
 
+    // A quicken press completes as the last reel it freed lands, however it
+    // got down (its own stop, or a slam that cut it).
+    for (let b = this._quickenBatches.length - 1; b >= 0; b--) {
+      const batch = this._quickenBatches[b];
+      if (!batch.pending.delete(reelIndex) || batch.pending.size > 0) continue;
+      this._quickenBatches.splice(b, 1);
+      this._events.emit('skip:completed', { reels: batch.reels, partial: batch.partial, mode: 'quicken' });
+    }
+
     // All NON-HELD reels accounted for → finish. Held reels never
     // _markLanded, but their slots count toward `reels.length`, so we
     // compare against the count that was supposed to actually animate.
@@ -2678,6 +2748,7 @@ export class SpinController implements Disposable {
     const result: SpinResult = {
       symbols: this._reels.map((r) => r.getVisibleSymbols()),
       wasSkipped: this._wasSkipped,
+      skipMode: this._skipMode,
       duration: performance.now() - this._spinStartTime,
     };
 

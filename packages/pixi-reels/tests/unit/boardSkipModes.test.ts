@@ -1,10 +1,10 @@
 /**
- * `HoldAndWinBoard.hurry()`: the board's `requestHurry()`.
+ * `HoldAndWinBoard.skip({ mode: 'quicken' })`: the board's quicken.
  *
  * Every cell is its own 1x1 reel set and the board folds its stagger into
- * each cell's spin floor, so a hurried cell drops the floor and the whole
+ * each cell's spin floor, so a quickened cell drops the floor and the whole
  * wave lands together - through each cell's stop, with its bounce, rather
- * than placed the way `skip()` lands it.
+ * than placed the way a slam lands it.
  *
  * GSAP runs on the real clock in node, so bounds are generous.
  */
@@ -15,7 +15,7 @@ import type { HoldAndWinBoard } from '../../src/board/HoldAndWinBoard.js';
 import type { HwCell } from '../../src/board/HwTypes.js';
 import { FakeTicker } from '../../src/testing/FakeTicker.js';
 import { HeadlessSymbol } from '../../src/testing/HeadlessSymbol.js';
-import type { SpeedProfile } from '../../src/config/types.js';
+import type { SkipMode, SpeedProfile } from '../../src/config/types.js';
 
 const STAGGER_MS = 300;
 const BOUNCE_MS = 200;
@@ -40,9 +40,9 @@ const D: HwCell = { reel: 1, cell: 1 };
 const FREE = [B, C, D];
 const coin = (cell: HwCell) => ({ cell, id: 'coin', data: { value: 1 } });
 
-function build() {
+function build(skipMode?: SkipMode) {
   const ticker = new FakeTicker();
-  const board = new HoldAndWinBuilder<{ value: number }>()
+  const builder = new HoldAndWinBuilder<{ value: number }>()
     .grid(2, 2)
     .cellSize(40)
     .symbols((r) => r.register('coin', HeadlessSymbol, {}))
@@ -51,8 +51,9 @@ function build() {
     .initialSpeed('normal')
     // A wave that lands one cell every 300 ms when left alone.
     .stagger((reel, cell) => (reel * 2 + cell) * STAGGER_MS)
-    .ticker(ticker as unknown as Ticker)
-    .build();
+    .ticker(ticker as unknown as Ticker);
+  if (skipMode) builder.skipMode(skipMode);
+  const board = builder.build();
   const pump = setInterval(() => ticker.tick(16), 16);
   const landingAt = new Map<string, number>();
   const landedAt = new Map<string, number>();
@@ -62,11 +63,14 @@ function build() {
     reel.events.on('landing', () => landingAt.set(key(cell), performance.now()));
     reel.events.on('landed', () => landedAt.set(key(cell), performance.now()));
   }
+  const skips: Array<{ inFlight: number; mode: SkipMode }> = [];
+  board.events.on('feature:skip', (info) => skips.push(info));
   return {
     board,
     ticker,
     landingAt,
     landedAt,
+    skips,
     key,
     bounceMs(cell: HwCell): number {
       return landedAt.get(key(cell))! - landingAt.get(key(cell))!;
@@ -87,26 +91,20 @@ function startWave(board: HoldAndWinBoard<{ value: number }>) {
   return board.respin([coin(B)]);
 }
 
-describe('HoldAndWinBoard.hurry()', () => {
+describe("HoldAndWinBoard.skip({ mode: 'quicken' })", () => {
   let h: ReturnType<typeof build> | null = null;
   afterEach(() => {
     h?.destroy();
     h = null;
   });
 
-  it('lands every in-flight cell through its stop, together, and reports the count', async () => {
+  it('lands every in-flight cell through its stop, together, and reports the count and mode', async () => {
     h = build();
-    const hurries: number[] = [];
-    const skips: number[] = [];
-    h.board.events.on('feature:hurry', ({ inFlight }) => hurries.push(inFlight));
-    h.board.events.on('feature:skip', ({ inFlight }) => skips.push(inFlight));
-
     const wave = startWave(h.board);
     await sleep(40);
     const pressed = performance.now();
-    expect(h.board.hurry()).toBe(FREE.length);
-    expect(hurries).toEqual([FREE.length]);
-    expect(skips).toEqual([]);
+    expect(h.board.skip({ mode: 'quicken' })).toBe(FREE.length);
+    expect(h.skips).toEqual([{ inFlight: FREE.length, mode: 'quicken' }]);
     // Nothing placed: the cells are still in flight after the press.
     expect(h.landedAt.size).toBe(0);
 
@@ -123,13 +121,33 @@ describe('HoldAndWinBoard.hurry()', () => {
     expect(Math.max(...settled) - pressed).toBeLessThan(STAGGER_MS * 3);
   });
 
+  it('slams by default, and quickens by default once the builder says so', async () => {
+    h = build();
+    const wave = startWave(h.board);
+    await sleep(40);
+    h.board.skip();
+    // A slam lands synchronously.
+    expect(h.skips).toEqual([{ inFlight: FREE.length, mode: 'slam' }]);
+    expect(h.landedAt.size).toBe(FREE.length);
+    await wave;
+    h.destroy();
+
+    h = build('quicken');
+    const wave2 = startWave(h.board);
+    await sleep(40);
+    h.board.skip();
+    expect(h.skips).toEqual([{ inFlight: FREE.length, mode: 'quicken' }]);
+    expect(h.landedAt.size).toBe(0);
+    await wave2;
+  });
+
   it('lands the wave on the named profile, and refuses one the board never registered', async () => {
     h = build();
-    expect(() => h!.board.hurry({ speed: 'nope' })).toThrow(/names no registered profile/);
+    expect(() => h!.board.skip({ mode: 'quicken', speed: 'nope' })).toThrow(/names no registered profile/);
 
     const wave = startWave(h.board);
     await sleep(40);
-    h.board.hurry({ speed: 'turbo' });
+    h.board.skip({ mode: 'quicken', speed: 'turbo' });
     await wave;
     for (const cell of FREE) {
       // Turbo's 60 ms bounce, not normal's 200 ms.
@@ -139,9 +157,7 @@ describe('HoldAndWinBoard.hurry()', () => {
 
   it('is a no-op with nothing in flight', () => {
     h = build();
-    const hurries: number[] = [];
-    h.board.events.on('feature:hurry', ({ inFlight }) => hurries.push(inFlight));
-    expect(h.board.hurry()).toBe(0);
-    expect(hurries).toEqual([0]);
+    expect(h.board.skip({ mode: 'quicken' })).toBe(0);
+    expect(h.skips).toEqual([{ inFlight: 0, mode: 'quicken' }]);
   });
 });

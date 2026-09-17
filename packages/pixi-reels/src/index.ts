@@ -46,7 +46,9 @@ export type {
   AnticipationSegment,
   AnticipationCurve,
   AnticipationCells,
-  HurryOptions,
+  SkipContext,
+  SkipMode,
+  SkipOptions,
   SlamOptions,
 } from './config/types.js';
 export type { ReelMaskRect, MaskStrategy, MaskContext } from './core/ReelViewport.js';
@@ -129,6 +131,21 @@ export type { LogLevel } from './utils/notify.js';
 
 export { ReelPhase } from './spin/phases/ReelPhase.js';
 export type { BounceOptions, ReelBounce } from './spin/phases/ReelPhase.js';
+// The animated beats of the built-in phases, replaceable through
+// `builder.moves()`; `runMove` gives a custom phase the same cancel semantics.
+export { defaultMoves, resolveMoves, runMove } from './spin/phases/moves.js';
+export type {
+  AccelerateMoveContext,
+  BounceMoveContext,
+  Move,
+  MoveContext,
+  MoveResult,
+  PhaseMoves,
+  PullMoveContext,
+  ResolvedPhaseMoves,
+  RunningMove,
+  SlowdownMoveContext,
+} from './spin/phases/moves.js';
 export { PhaseFactory } from './spin/phases/PhaseFactory.js';
 export { StartPhase } from './spin/phases/StartPhase.js';
 export { SpinPhase } from './spin/phases/SpinPhase.js';

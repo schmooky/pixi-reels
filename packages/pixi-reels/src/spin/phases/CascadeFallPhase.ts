@@ -2,7 +2,7 @@ import type { gsap } from 'gsap';
 import type { Container } from 'pixi.js';
 import { ReelPhase } from './ReelPhase.js';
 import type { Reel } from '../../core/Reel.js';
-import type { SpeedProfile } from '../../config/types.js';
+import type {SpeedProfile, SkipContext } from '../../config/types.js';
 import type { SpinningMode } from '../modes/SpinningMode.js';
 import type { ReelSymbol } from '../../symbols/ReelSymbol.js';
 import type { EventEmitter } from '../../events/EventEmitter.js';
@@ -43,33 +43,33 @@ export class CascadeFallPhase extends ReelPhase<CascadeFallPhaseConfig> {
   readonly name = 'cascade:fall';
   readonly skippable = true;
 
-  private readonly _baseFall: Required<TumbleFallConfig>;
+  protected readonly _baseFall: Required<TumbleFallConfig>;
   /** Resolved at `onEnter` time by merging the active speed profile's
    *  `tumble.fall` override (if any) over `_baseFall`. Lives only for the
    *  duration of a single run so a `setSpeed` between phases is honoured
    *  on the next entry. */
-  private _fall: Required<TumbleFallConfig>;
-  private _timeline: gsap.core.Timeline | null = null;
-  private _delayedCall: gsap.core.Tween | null = null;
+  protected _fall: Required<TumbleFallConfig>;
+  protected _timeline: gsap.core.Timeline | null = null;
+  protected _delayedCall: gsap.core.Tween | null = null;
   /** Views actively being faded out. Tracked so `onSkip` can hide them
    *  rather than leaving them at mid-fall position. */
-  private _fallingViews: Container[] = [];
+  protected _fallingViews: Container[] = [];
   /** Captured on enter so `onSkip` can emit the paired `cascade:fall:end`
    *  without needing the config closure (which lives only inside `_beginFall`). */
-  private _events: EventEmitter<ReelSetEvents> | null = null;
+  protected _events: EventEmitter<ReelSetEvents> | null = null;
   /** Whether `cascade:fall:start` was emitted yet. `onSkip` emits the
    *  matching `:end` ONLY when `:start` already fired. a skip during the
    *  pre-fall delay window must not produce an unpaired `:end`. */
-  private _startEmitted = false;
+  protected _startEmitted = false;
   /** Per-run abort controller exposed to listeners on `cascade:fall:symbol`
    *  as `signal`. Aborts on `onSkip` so listener-scheduled tweens (squish,
    *  badge fade, etc.) can clean themselves up alongside the library's
    *  own timeline. Stays un-aborted on natural completion. only explicit
    *  skips trigger it. */
-  private _skipAbort: AbortController | null = null;
+  protected _skipAbort: AbortController | null = null;
 
   /** Build-time gravity setting; `'auto'` resolves per reel at `onEnter`. */
-  private readonly _gravity: 'auto' | Direction;
+  protected readonly _gravity: 'auto' | Direction;
 
   constructor(
     reel: Reel,
@@ -105,7 +105,7 @@ export class CascadeFallPhase extends ReelPhase<CascadeFallPhaseConfig> {
     }
   }
 
-  private _beginFall(events: EventEmitter<ReelSetEvents>): void {
+  protected _beginFall(events: EventEmitter<ReelSetEvents>): void {
     this._delayedCall = null;
 
     const reel = this._reel;
@@ -228,7 +228,7 @@ export class CascadeFallPhase extends ReelPhase<CascadeFallPhaseConfig> {
 
   update(_deltaMs: number): void {}
 
-  protected onSkip(): void {
+  protected onSkip(ctx: SkipContext = { mode: 'slam' }): void {
     this._kill();
     for (const v of this._fallingViews) v.alpha = 0;
     this._fallingViews = [];
@@ -249,9 +249,11 @@ export class CascadeFallPhase extends ReelPhase<CascadeFallPhaseConfig> {
     }
     this._startEmitted = false;
     this._events = null;
+    // The pose is the landed state, the natural end, so a `'quicken'` completes here.
+    if (ctx.mode === 'quicken') this._complete();
   }
 
-  private _kill(): void {
+  protected _kill(): void {
     if (this._delayedCall) {
       this._delayedCall.kill();
       this._delayedCall = null;

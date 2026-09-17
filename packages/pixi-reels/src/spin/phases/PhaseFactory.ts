@@ -1,6 +1,8 @@
 import type { Reel } from '../../core/Reel.js';
 import type { SpeedProfile } from '../../config/types.js';
 import { ReelPhase } from './ReelPhase.js';
+import { defaultMoves, resolveMoves } from './moves.js';
+import type { PhaseMoves, ResolvedPhaseMoves } from './moves.js';
 import { StartPhase } from './StartPhase.js';
 import { SpinPhase } from './SpinPhase.js';
 import { StopPhase } from './StopPhase.js';
@@ -29,6 +31,7 @@ export type PhaseCreatorFn<
  */
 export class PhaseFactory {
   private _registry = new Map<string, PhaseCreatorFn>();
+  private _moves: ResolvedPhaseMoves = defaultMoves;
 
   constructor() {
     this._registry.set('start', (r, s) => new StartPhase(r, s));
@@ -66,6 +69,20 @@ export class PhaseFactory {
     this._registry.set(name, (r, s) => factory(r, s as P));
   }
 
+  /**
+   * Replace the animated beats of the built-in phases. Resolved against
+   * `defaultMoves` once, here; every phase this factory creates is handed
+   * the result, custom subclasses included. See `builder.moves()`.
+   */
+  moves(overrides: PhaseMoves): void {
+    this._moves = resolveMoves(overrides);
+  }
+
+  /** The beats phases created by this factory play. */
+  get resolvedMoves(): ResolvedPhaseMoves {
+    return this._moves;
+  }
+
   /** Create a phase instance for a reel. */
   create<T extends ReelPhase<any> = ReelPhase<any>>(
     name: string,
@@ -78,7 +95,9 @@ export class PhaseFactory {
         `Phase '${name}' not registered. Available: ${[...this._registry.keys()].join(', ')}`,
       );
     }
-    return creator(reel, speed) as T;
+    const phase = creator(reel, speed);
+    phase.bindMoves(this._moves);
+    return phase as T;
   }
 
   has(name: string): boolean {
