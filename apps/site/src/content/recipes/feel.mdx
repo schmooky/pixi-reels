@@ -1,0 +1,76 @@
+---
+title: "Feel: timings & landing FX"
+group: tension
+oneLiner: Six edits to the built-in phases' step lists that change how a spin feels - stagger curves, a wind-up launch, a landing kick with dust, beats and FX that follow the speed profile, a spotlight around the tease, and one extra beat on the last reel - each a few lines against StartPhase, StopPhase or AnticipationPhase, with slam and quicken still working.
+order: 62
+tags:
+  - phases
+  - steps
+  - timing
+  - fx
+  - anticipation
+  - speed
+  - skip
+---
+
+The built-in phases run named step lists. `StartPhase` runs `delay, launch, pull, accelerate, announce`, `StopPhase` runs `delay, spinOut, land, bounce`, `AnticipationPhase` runs `tease`, and `f.register('stop', StopPhase, { steps })` hands you the list before it runs. These recipes are the feel work that used to mean a subclass: each is one `insertBefore` / `insertAfter` / `replaceStep`, or a list built by hand, and every one keeps slam and quicken working because the waits stay marked `cut`. The step API itself is on the [Phases page](/docs/api-phases/#steps).
+
+<a id="steps-stagger-curve"></a>
+
+## Stagger curves
+
+The flat stagger arrives as `ctx.config.delay` and the `delay` step is the only place it is spent, so a curve is one `replaceStep` per phase: the start ripples out from the middle reel, the stop's gaps grow so reels 1-3 fall fast and reel 5 hangs. The profile still owns the unit, and the second readout line is measured landings, not the schedule.
+
+**Gotcha:** keep `{ cut: true }` on the replacement. It is a wait, and a quicken press must cut it the way it cuts the flat one.
+
+<RecipeDemo code="steps-stagger-curve" />
+
+<a id="steps-windup-start"></a>
+
+## A wind-up launch
+
+The built-in `pull` is a two-pixel twitch. Replace it with a real drag back, insert a `hold` after it, and the untouched `accelerate` ramps from wherever the reel is. Tap the readout to switch the wind-up off and compare.
+
+**Gotcha:** cover both motion models the way the built-in does. Under the drive, name a `targetSpeed` and wait; under the tween, tween `reel.speed`. `reel.hasDrive` tells you which.
+
+<RecipeDemo code="steps-windup-start" />
+
+<a id="steps-land-impact"></a>
+
+## A landing kick, with dust
+
+One step after `land`, before `bounce`: the set kicks and a puff spreads under the reel, harder on the last one. The step returns nothing, so the bounce starts on the same frame. Return the tween and the phase waits for it: that is the difference between an effect and a beat.
+
+**Gotcha:** a slam lands through `onSkip`, not through the list, so a step after `land` does not fire on a slam. FX that must play on a slam too hangs off `spin:reelLanded`. A quicken keeps the list.
+
+<RecipeDemo code="steps-land-impact" />
+
+<a id="steps-fx-per-profile"></a>
+
+## Beats and FX that follow the speed mode
+
+`ctx.profile` is the profile the game registered under the active speed name, custom fields included. A `breath` beat before the spin-out and a `glow` after land both read the profile, so normal gets both and turbo gets neither, and the glow's fade rides `bounceDuration`. Tap the readout to switch speeds; the skip button here is `requestSkip({ mode: 'quicken', speed: 'turbo' })`, which swaps the profile the same way.
+
+**Gotcha:** a step never asks "is this turbo". Put the decision on the profile and every speed mode you add later comes with its own answer.
+
+<RecipeDemo code="steps-fx-per-profile" />
+
+<a id="steps-anticipation-spotlight"></a>
+
+## A spotlight around the tease
+
+`AnticipationPhase` runs one step and is created on the teased reel only, so "shade the other reels while the tease runs" is a list built by hand around the built-in: `[dim, ...steps, lift]`. Both wraps are awaited, 150 ms each, so the spotlight is on before the reel starts to crawl and off before the stop takes over.
+
+**Gotcha:** a slam cancels the list in flight and `lift` never runs. Clear the shades on `spin:complete` as the backstop. A quicken cuts the `tease` step and `lift` still runs.
+
+<RecipeDemo code="steps-anticipation-spotlight" />
+
+<a id="steps-last-reel-suspense"></a>
+
+## One extra beat on the last reel
+
+Every reel runs the same list, so a per-reel beat is a step that returns nothing on the reels it does not concern. `suspense` waits 700 ms before reel 5's spin-out and is instant on the others, pulsing the backlight while it waits.
+
+**Gotcha:** a step that starts something must own it both ways out. `ctx.wait` resolves early when the step is cut, `ctx.signal` fires when it is cancelled; one `stop` handles the natural end, a quicken and a slam.
+
+<RecipeDemo code="steps-last-reel-suspense" />
