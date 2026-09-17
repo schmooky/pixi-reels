@@ -124,16 +124,20 @@ jobs:
       - name: Create Release Pull Request or Publish
         uses: changesets/action@8488615a623b1b9c987934bb89eae8af6a946ac1 # v2.1.1
         with:
+          # v2 renamed every input (version -> version-script, publish ->
+          # publish-script, title -> pr-title, commit -> commit-message,
+          # createGithubReleases -> create-github-releases) and fails on the
+          # old names. The first push to main after the v1 -> v2 bump did.
           # Opens or updates the "Version Packages" PR with pending bumps.
-          version: pnpm version-packages
+          version-script: pnpm version-packages
           # Runs when the Version Packages PR has already been merged. builds
           # all dist/ folders topologically and publishes the bumped packages
           # to npm.
-          publish: pnpm release
+          publish-script: pnpm release
           # Create a GitHub Release for every package version that ships.
-          createGithubReleases: true
-          title: 'chore: version packages'
-          commit: 'chore: version packages'
+          create-github-releases: true
+          pr-title: 'chore: version packages'
+          commit-message: 'chore: version packages'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Auth is handled by npm OIDC trusted publishing. The npm CLI
