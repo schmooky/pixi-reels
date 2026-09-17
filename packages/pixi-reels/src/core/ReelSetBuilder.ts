@@ -33,7 +33,6 @@ import { RandomSymbolProvider } from '../frame/RandomSymbolProvider.js';
 import type { SymbolPool, SymbolPoolScope } from '../frame/SymbolPool.js';
 import { FrameBuilder } from '../frame/FrameBuilder.js';
 import { PhaseFactory } from '../spin/phases/PhaseFactory.js';
-import type { PhaseMoves } from '../spin/phases/moves.js';
 import type { SpinningMode } from '../spin/modes/SpinningMode.js';
 import { StandardMode } from '../spin/modes/StandardMode.js';
 import type { FrameMiddleware } from '../frame/FrameBuilder.js';
@@ -102,7 +101,6 @@ export class ReelSetBuilder {
   private _phaseFactory = new PhaseFactory();
   /** Deferred `.phases(...)` configurators. See that method for why. */
   private _phaseConfigurators: Array<(factory: PhaseFactory) => void> = [];
-  private _moves: PhaseMoves | null = null;
   private _skipMode: SkipMode = 'slam';
   private _middlewares: FrameMiddleware[] = [];
   private _initialFrame?: ColumnTarget[];
@@ -869,40 +867,6 @@ export class ReelSetBuilder {
   }
 
   /**
-   * Replace the animated beats of the built-in phases without replacing the
-   * phases: the step-back pull and the acceleration of `StartPhase`, the
-   * bounce of `StopPhase` (and of `ReelPhase.bounce()` in a custom phase),
-   * the slow-down of the legacy `AnticipationPhase` tease. A move receives
-   * the reel, the profile, the numbers the default uses and an `AbortSignal`,
-   * and returns a gsap tween or timeline, a promise, or nothing. `null`
-   * removes a beat. Every beat left out keeps its default from
-   * `defaultMoves`, exported so a replacement can wrap one.
-   *
-   * Under the `'drive'` motion model the pull and the acceleration belong to
-   * the drive's bounds and are not moves; the bounce is.
-   *
-   * @example
-   * builder.moves({
-   *   start: { pull: null },
-   *   stop: {
-   *     bounce: (ctx) => ctx.gsap.to(ctx.reel.container, {
-   *       [ctx.reel.axis.mainProp]: ctx.base, duration: ctx.duration / 1000,
-   *       ease: 'elastic.out(1, 0.4)', onUpdate: ctx.followLifted,
-   *     }),
-   *   },
-   * });
-   */
-  moves(overrides: PhaseMoves): this {
-    // Merge per phase, so two calls that each name one beat keep both.
-    this._moves = {
-      start: { ...this._moves?.start, ...overrides.start },
-      stop: { ...this._moves?.stop, ...overrides.stop },
-      anticipation: { ...this._moves?.anticipation, ...overrides.anticipation },
-    };
-    return this;
-  }
-
-  /**
    * What a skip press does to the reels it frees when the call does not say:
    * `'slam'` places them (the default), `'quicken'` asks each for its landing
    * sooner. See `SkipMode`. `requestSkip({ mode })` and `skipSpin({ mode })`
@@ -1193,7 +1157,6 @@ export class ReelSetBuilder {
     for (const configurator of this._phaseConfigurators) {
       configurator(this._phaseFactory);
     }
-    if (this._moves) this._phaseFactory.moves(this._moves);
 
     // Create viewport. width covers all reels, height covers tallest box.
     // Viewport spans the cross axis across all reels and the main axis over the

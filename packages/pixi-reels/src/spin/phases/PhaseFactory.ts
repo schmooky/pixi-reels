@@ -1,8 +1,6 @@
 import type { Reel } from '../../core/Reel.js';
 import type { SpeedProfile } from '../../config/types.js';
 import { ReelPhase } from './ReelPhase.js';
-import { defaultMoves, resolveMoves } from './moves.js';
-import type { PhaseMoves, ResolvedPhaseMoves } from './moves.js';
 import { StartPhase } from './StartPhase.js';
 import { SpinPhase } from './SpinPhase.js';
 import { StopPhase } from './StopPhase.js';
@@ -14,7 +12,8 @@ import { AnticipationPhase } from './AnticipationPhase.js';
 export type PhaseConstructor<
   T extends ReelPhase<any, any> = ReelPhase<any>,
   P extends SpeedProfile = SpeedProfile,
-> = new (reel: Reel, speed: P) => T;
+  O = undefined,
+> = new (reel: Reel, speed: P, options?: O) => T;
 
 export type PhaseCreatorFn<
   T extends ReelPhase<any, any> = ReelPhase<any>,
@@ -31,7 +30,6 @@ export type PhaseCreatorFn<
  */
 export class PhaseFactory {
   private _registry = new Map<string, PhaseCreatorFn>();
-  private _moves: ResolvedPhaseMoves = defaultMoves;
 
   constructor() {
     this._registry.set('start', (r, s) => new StartPhase(r, s));
@@ -41,18 +39,26 @@ export class PhaseFactory {
   }
 
   /**
-   * Register or override a phase type by constructor.
+   * Register or override a phase type by constructor, with the `options` its
+   * constructor takes as a third argument. Registering a built-in under its
+   * own key with options is how a game reconfigures it without subclassing:
+   *
+   * @example
+   * factory.register('stop', StopPhase, {
+   *   steps: (steps) => insertAfter(steps, 'land', step('flash', (ctx) => flash(ctx.reel))),
+   * });
    *
    * A phase declared against a wider profile (`ReelPhase<Config, MyProfile>`)
    * registers the same way: the manager hands every phase the profile
    * instance the game registered, so the extra fields are there at run time,
    * and narrowing to `P` here is what lets that declaration typecheck.
    */
-  register<P extends SpeedProfile, T extends ReelPhase<any, any>>(
+  register<P extends SpeedProfile, T extends ReelPhase<any, any>, O = undefined>(
     name: string,
-    PhaseClass: PhaseConstructor<T, P>,
+    PhaseClass: PhaseConstructor<T, P, O>,
+    options?: O,
   ): void {
-    this._registry.set(name, (r, s) => new PhaseClass(r, s as P));
+    this._registry.set(name, (r, s) => new PhaseClass(r, s as P, options));
   }
 
   /**
@@ -69,20 +75,6 @@ export class PhaseFactory {
     this._registry.set(name, (r, s) => factory(r, s as P));
   }
 
-  /**
-   * Replace the animated beats of the built-in phases. Resolved against
-   * `defaultMoves` once, here; every phase this factory creates is handed
-   * the result, custom subclasses included. See `builder.moves()`.
-   */
-  moves(overrides: PhaseMoves): void {
-    this._moves = resolveMoves(overrides);
-  }
-
-  /** The beats phases created by this factory play. */
-  get resolvedMoves(): ResolvedPhaseMoves {
-    return this._moves;
-  }
-
   /** Create a phase instance for a reel. */
   create<T extends ReelPhase<any> = ReelPhase<any>>(
     name: string,
@@ -95,9 +87,7 @@ export class PhaseFactory {
         `Phase '${name}' not registered. Available: ${[...this._registry.keys()].join(', ')}`,
       );
     }
-    const phase = creator(reel, speed);
-    phase.bindMoves(this._moves);
-    return phase as T;
+    return creator(reel, speed) as T;
   }
 
   has(name: string): boolean {

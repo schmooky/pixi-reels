@@ -363,7 +363,10 @@ describe("requestSkip({ mode: 'quicken' })", () => {
     expect(seen).toEqual(Array.from({ length: 5 }, () => ({ button: 'turbo' })));
   });
 
-  it('lets a phase that ignores the mode run its course, and lands anyway', async () => {
+  it('leaves a phase that never declared quickenable alone, and it lands anyway', async () => {
+    // A 2.8-style stop: slam pose only, no `quickenable`. A quicken must not
+    // reach its `onSkip`, which would kill its tween with nobody left to
+    // complete the phase.
     let asked = 0;
     class StubbornStopPhase extends ReelPhase<StopPhaseConfig> {
       readonly name = 'stop';
@@ -382,11 +385,8 @@ describe("requestSkip({ mode: 'quicken' })", () => {
         this._config = null;
         this._complete();
       }
-      protected onSkip(ctx: SkipContext): void {
+      protected onSkip(): void {
         asked++;
-        // Written for a slam only: under a quicken this does nothing and the
-        // phase carries on to its own landing.
-        if (ctx.mode !== 'slam') return;
         if (this._config) this.reel.placeStrip(this._config.targetFrame);
         this._config = null;
       }
@@ -398,9 +398,10 @@ describe("requestSkip({ mode: 'quicken' })", () => {
     h.reelSet.requestSkip(QUICKEN);
     expect(h.freed('quicken')).toEqual([[0, 1, 2, 3, 4]]);
     const result = await p;
-    // Every stop phase was asked, none obliged, and the round still settled.
-    expect(asked).toBe(5);
+    // No stop phase heard the press, and the round still settled on its own.
+    expect(asked).toBe(0);
     expect(result.wasSkipped).toBe(true);
+    expect(result.skipMode).toBe('quicken');
   });
 
   it('asks the stop phase a reel creates after the press to quicken too', async () => {

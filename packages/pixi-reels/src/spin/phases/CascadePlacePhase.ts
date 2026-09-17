@@ -36,6 +36,7 @@ export interface CascadePlacePhaseConfig {
 export class CascadePlacePhase extends ReelPhase<CascadePlacePhaseConfig> {
   readonly name = 'cascade:place';
   readonly skippable = true;
+  override readonly quickenable = true;
 
   protected _config: CascadePlacePhaseConfig | null = null;
   protected _delayedCall: gsap.core.Tween | null = null;

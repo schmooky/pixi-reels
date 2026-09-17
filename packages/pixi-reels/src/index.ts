@@ -130,22 +130,11 @@ export { setLogLevel, getLogLevel } from './utils/notify.js';
 export type { LogLevel } from './utils/notify.js';
 
 export { ReelPhase } from './spin/phases/ReelPhase.js';
-export type { BounceOptions, ReelBounce } from './spin/phases/ReelPhase.js';
-// The animated beats of the built-in phases, replaceable through
-// `builder.moves()`; `runMove` gives a custom phase the same cancel semantics.
-export { defaultMoves, resolveMoves, runMove } from './spin/phases/moves.js';
-export type {
-  AccelerateMoveContext,
-  BounceMoveContext,
-  Move,
-  MoveContext,
-  MoveResult,
-  PhaseMoves,
-  PullMoveContext,
-  ResolvedPhaseMoves,
-  RunningMove,
-  SlowdownMoveContext,
-} from './spin/phases/moves.js';
+export type { BounceContext, BounceOptions, ReelBounce } from './spin/phases/ReelPhase.js';
+// The steps the built-in phases run, and the editors a game reconfigures
+// them with through `f.register('stop', StopPhase, { steps })`.
+export { step, insertBefore, insertAfter, replaceStep, removeStep, runStep } from './spin/phases/steps.js';
+export type { Cancellable, PhaseStep, RunningStep, StepContext, StepResult, StepsEditor } from './spin/phases/steps.js';
 export { PhaseFactory } from './spin/phases/PhaseFactory.js';
 export { StartPhase } from './spin/phases/StartPhase.js';
 export { SpinPhase } from './spin/phases/SpinPhase.js';
@@ -158,10 +147,10 @@ export { CascadeDropInPhase } from './spin/phases/CascadeDropInPhase.js';
 // The two shapes `PhaseFactory.register` / `.registerFactory` accept. Needed
 // to type a helper that registers phases on your behalf.
 export type { PhaseConstructor, PhaseCreatorFn } from './spin/phases/PhaseFactory.js';
-export type { StartPhaseConfig } from './spin/phases/StartPhase.js';
+export type { StartPhaseConfig, StartPhaseOptions, StartStepContext } from './spin/phases/StartPhase.js';
 export type { SpinPhaseConfig } from './spin/phases/SpinPhase.js';
-export type { StopPhaseConfig } from './spin/phases/StopPhase.js';
-export type { AnticipationPhaseConfig } from './spin/phases/AnticipationPhase.js';
+export type { StopPhaseConfig, StopPhaseOptions, StopStepContext } from './spin/phases/StopPhase.js';
+export type { AnticipationPhaseConfig, AnticipationPhaseOptions, AnticipationStepContext } from './spin/phases/AnticipationPhase.js';
 export type { AdjustPhaseConfig, PinOverlayTween } from './spin/phases/AdjustPhase.js';
 
 // Anticipation recipes

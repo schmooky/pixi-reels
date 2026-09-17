@@ -61,6 +61,7 @@ export interface PinOverlayTween {
 export class AdjustPhase extends ReelPhase<AdjustPhaseConfig> {
   readonly name = 'adjust';
   readonly skippable = true;
+  override readonly quickenable = true;
 
   protected _durationMs: number;
   protected _ease: string;

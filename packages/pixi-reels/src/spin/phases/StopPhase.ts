@@ -1,7 +1,7 @@
-import type { gsap } from 'gsap';
 import type { SkipContext } from '../../config/types.js';
 import { ReelPhase } from './ReelPhase.js';
-import type { ReelBounce } from './ReelPhase.js';
+import { step } from './steps.js';
+import type { PhaseStep, StepContext, StepsEditor } from './steps.js';
 
 export interface StopPhaseConfig {
   /** Target symbols for this reel (full frame including buffers, top-to-bottom). */
@@ -19,49 +19,78 @@ export interface StopPhaseConfig {
   preserveSpeed?: boolean;
 }
 
+/** What a game hands `StopPhase` through `f.register('stop', StopPhase, options)`. */
+export interface StopPhaseOptions {
+  /**
+   * Edit the built-in steps (`delay`, `spinOut`, `land`, `bounce`) before
+   * they run: insert one, replace one, drop one. Gets the default list,
+   * returns the list to run. See `insertAfter` and friends.
+   */
+  steps?: StepsEditor<StopStepContext>;
+}
+
+export type StopStepContext = StepContext<StopPhaseConfig>;
+
 /**
  * Stops the reel on the target frame.
  *
- * Sequence:
- * 1. Wait for the staggered delay.
- * 2. Keep spinning at full speed with `isStopping` flagged. The target frame
- *    is loaded into the StopSequencer; each wrap event at the top of the
- *    reel pulls the next frame symbol. so targets arrive in the visible
- *    area naturally, carrying the full momentum of the spin.
- * 3. When the sequencer is exhausted, snap to grid and bounce:
- *    - overshoot downward by `bounceDistance` with `power1.out`
- *    - settle back upward with `power1.out`
- *    Both legs share a duration so the down + up motion is symmetric.
+ * Steps, in order:
+ * 1. `delay`: wait the staggered delay. Cut by a quicken.
+ * 2. `spinOut`: keep spinning at full speed with `isStopping` flagged. The
+ *    target frame is loaded into the StopSequencer; each wrap event at the
+ *    top of the reel pulls the next frame symbol. so targets arrive in the
+ *    visible area naturally, carrying the full momentum of the spin. Ends
+ *    when the sequencer is exhausted.
+ * 3. `land`: snap to grid, tell the symbols, raise the landing.
+ * 4. `bounce`: overshoot by `bounceDistance` and settle back over
+ *    `bounceDuration`.
  */
 export class StopPhase extends ReelPhase<StopPhaseConfig> {
   readonly name = 'stop';
   readonly skippable = true;
+  override readonly quickenable = true;
 
-  protected _config: StopPhaseConfig | null = null;
-  protected _delayTween: gsap.core.Tween | null = null;
-  protected _bounce: ReelBounce | null = null;
-  protected _stage: 'delay' | 'spinning' | 'bouncing' | 'done' = 'delay';
+  protected readonly _options: StopPhaseOptions;
+  protected _stage: 'delay' | 'spinning' | 'landed' | 'done' = 'delay';
   protected _baseY = 0;
 
+  constructor(reel: ReelPhase<StopPhaseConfig>['reel'], speed: StopPhase['speed'], options: StopPhaseOptions = {}) {
+    super(reel, speed);
+    this._options = options;
+  }
+
+  /** The built-in list. A subclass overrides this to change the flow; a game edits it through `options.steps`. */
+  defaultSteps(): PhaseStep<StopStepContext>[] {
+    return [
+      step('delay', (ctx) => ((ctx.config.delay ?? 0) > 0 ? ctx.wait(ctx.config.delay ?? 0) : undefined), { cut: true }),
+      step('spinOut', (ctx) => {
+        this._beginSpinOut();
+        // Sequencer consumes one symbol per wrap via Reel._onSymbolWrapped.
+        // When it's empty, the target frame is fully placed. time to land.
+        return ctx.until(() => !this._reel.stopSequencer.hasRemaining);
+      }),
+      step('land', () => {
+        this.land();
+        this._stage = 'landed';
+      }),
+      step('bounce', () => this.bounce()),
+    ];
+  }
+
   protected onEnter(config: StopPhaseConfig): void {
-    this._config = config;
     this._stage = 'delay';
     this._baseY = this._reel.axis.getMain(this._reel.container);
-
-    const delay = (config.delay ?? 0) / 1000;
-    if (delay > 0) {
-      this._delayTween = this._reel.gsap.delayedCall(delay, () => this._beginSpinOut());
-    } else {
-      this._beginSpinOut();
-    }
+    const steps = this.defaultSteps();
+    this.runSteps(this._options.steps ? this._options.steps(steps) : steps);
   }
 
   protected _beginSpinOut(): void {
-    if (!this._config) return;
+    const config = this._config;
+    if (!config) return;
     const reel = this._reel;
     const speed = this._speed;
 
-    reel.setStopFrame(this._config.targetFrame);
+    reel.setStopFrame(config.targetFrame);
     reel.isStopping = true;
     // Under the drive model the reel RAMPS to the spin-out speed inside its
     // acceleration bounds; forcing it would put back exactly the discontinuity
@@ -73,7 +102,7 @@ export class StopPhase extends ReelPhase<StopPhaseConfig> {
         }
       : (v: number) => reel.forceSpeed(v);
 
-    if (this._config.preserveSpeed) {
+    if (config.preserveSpeed) {
       // Following an anticipation tease: keep the current (slow) speed so the
       // reel crawls its target frame into place and stops exactly there,
       // rather than re-accelerating to full speed. Floor it so a near-zero
@@ -95,42 +124,17 @@ export class StopPhase extends ReelPhase<StopPhaseConfig> {
   }
 
   update(_deltaMs: number): void {
-    if (this._stage !== 'spinning') return;
-    // Sequencer consumes one symbol per wrap via Reel._onSymbolWrapped.
-    // When it's empty, the target frame is fully placed. time to land.
-    if (!this._reel.stopSequencer.hasRemaining) {
-      this._landAndBounce();
-    }
+    this.tickSteps();
   }
 
-  protected _landAndBounce(): void {
-    this.land();
-    this._stage = 'bouncing';
-    this._bounce = this.bounce();
-    void this._bounce.done.then(() => {
-      // A cancelled bounce settles `done` too, but by then `onSkip` has
-      // already put the phase to bed.
-      if (this._stage !== 'bouncing') return;
-      this._stage = 'done';
-      this._complete();
-    });
-  }
-
+  /**
+   * Slam: rest on the frame, landed. Quicken: nothing to do here, the runner
+   * skips the `delay` step and the spin-out starts at once; a profile the
+   * press named has been swapped in and shapes the spin-out and the bounce
+   * still to come.
+   */
   protected onSkip(ctx: SkipContext = { mode: 'slam' }): void {
-    if (ctx.mode === 'quicken') {
-      // Cut the stagger and spin out now. A stop already spinning out or
-      // bouncing is on its way to the landing and is left alone; a profile the
-      // press named has been swapped in by the base and shapes whatever is
-      // still to come (the spin-out speed from `'delay'`, the bounce from
-      // `'spinning'`).
-      if (this._stage === 'delay') {
-        this._delayTween?.kill();
-        this._delayTween = null;
-        this._beginSpinOut();
-      }
-      return;
-    }
-    this._killTweens();
+    if (ctx.mode === 'quicken') return;
     const reel = this._reel;
     reel.haltDrive();
     reel.isStopping = false;
@@ -150,16 +154,5 @@ export class StopPhase extends ReelPhase<StopPhaseConfig> {
     reel.axis.setMain(reel.container, this._baseY);
     reel.snapToGrid();
     this._stage = 'done';
-  }
-
-  protected _killTweens(): void {
-    if (this._delayTween) {
-      this._delayTween.kill();
-      this._delayTween = null;
-    }
-    if (this._bounce) {
-      this._bounce.cancel();
-      this._bounce = null;
-    }
   }
 }

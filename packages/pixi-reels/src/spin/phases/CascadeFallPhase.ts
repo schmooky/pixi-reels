@@ -42,6 +42,7 @@ export interface CascadeFallPhaseConfig {
 export class CascadeFallPhase extends ReelPhase<CascadeFallPhaseConfig> {
   readonly name = 'cascade:fall';
   readonly skippable = true;
+  override readonly quickenable = true;
 
   protected readonly _baseFall: Required<TumbleFallConfig>;
   /** Resolved at `onEnter` time by merging the active speed profile's

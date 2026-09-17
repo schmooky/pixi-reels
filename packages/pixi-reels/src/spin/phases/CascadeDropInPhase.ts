@@ -68,6 +68,7 @@ interface DropJob {
 export class CascadeDropInPhase extends ReelPhase<CascadeDropInPhaseConfig> {
   readonly name = 'cascade:dropIn';
   readonly skippable = true;
+  override readonly quickenable = true;
 
   protected readonly _baseDrop: Required<TumbleDropInConfig>;
   /** Resolved at `onEnter` time by merging the active speed profile's

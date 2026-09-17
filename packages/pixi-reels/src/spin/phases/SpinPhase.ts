@@ -16,6 +16,7 @@ export interface SpinPhaseConfig {
 export class SpinPhase extends ReelPhase<SpinPhaseConfig> {
   readonly name = 'spin';
   readonly skippable = false;
+  override readonly quickenable = true;
 
   protected _elapsed = 0;
   protected _minTime = 0;
