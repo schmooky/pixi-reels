@@ -128,7 +128,9 @@ export abstract class ReelPhase<TConfig = void, TProfile extends SpeedProfile = 
    * Returns `false` when the phase cannot be hurried. The reel then runs the
    * phase to its natural end, and the controller applies the rest of the
    * hurry (no stop delay, no tease, the named profile) at the chain's next
-   * decision point.
+   * decision point. A reel hurried before it reached its stop has its stop
+   * phase asked as soon as it is created, so a wait inside a custom stop is
+   * cut whether the press came before it or during it.
    */
   hurry(speed?: TProfile): boolean {
     if (!this._isActive) return false;

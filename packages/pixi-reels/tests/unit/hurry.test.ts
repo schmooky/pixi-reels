@@ -20,6 +20,7 @@
 import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest';
 import { createTestReelSet } from '../../src/testing/index.js';
 import { ReelPhase } from '../../src/spin/phases/ReelPhase.js';
+import { StopPhase } from '../../src/spin/phases/StopPhase.js';
 import { resetNoticesForTest, setLogLevel } from '../../src/utils/notify.js';
 import type { StopPhaseConfig } from '../../src/spin/phases/StopPhase.js';
 import type { PhaseFactory } from '../../src/spin/phases/PhaseFactory.js';
@@ -353,6 +354,48 @@ describe('requestHurry()', () => {
     // Every stop phase was asked, none obliged, and the round still settled.
     expect(asked).toBe(5);
     expect(result.wasSkipped).toBe(false);
+  });
+
+  it('asks the stop phase a reel creates after the press to hurry too', async () => {
+    // A stop with a wait of its own: 400 ms of hold before the built-in
+    // spin-out. `onHurry` cuts the hold; a hurry that arrived before this
+    // phase existed must reach it all the same.
+    const asked: number[] = [];
+    class HeldStopPhase extends StopPhase {
+      private _held: StopPhaseConfig | null = null;
+      private _timer: ReturnType<typeof setTimeout> | null = null;
+      protected override onEnter(config: StopPhaseConfig): void {
+        this._held = config;
+        this._timer = setTimeout(() => this._release(), 400);
+      }
+      private _release(): void {
+        if (this._timer) clearTimeout(this._timer);
+        this._timer = null;
+        const config = this._held;
+        this._held = null;
+        if (config) super.onEnter(config);
+      }
+      protected override onHurry(): boolean {
+        asked.push(this.reel.reelIndex);
+        if (this._held) this._release();
+        return super.onHurry();
+      }
+      protected override onSkip(): void {
+        if (this._held) this._release();
+        super.onSkip();
+      }
+    }
+    const h = (harness = makeHarness((f) => f.register('stop', HeldStopPhase)));
+    const p = h.reelSet.spin();
+    h.reelSet.setResult(GRID);
+    // Pressed while every reel is still in SPIN: no stop phase exists yet.
+    const pressed = performance.now();
+    h.reelSet.requestHurry();
+    await p;
+    expect([...asked].sort()).toEqual([0, 1, 2, 3, 4]);
+    // The hold was cut on every reel, so the round is down well inside 400 ms
+    // plus a spin-out, rather than 400 ms after the last stagger.
+    expect(Math.max(...h.landedAt.values()) - pressed).toBeLessThan(400 + STOP_DELAY);
   });
 
   it('slams in cascade mode and says so once', async () => {
