@@ -101,6 +101,9 @@ export { StaticSpinSymbol } from './snapshot/StaticSpinSymbol.js';
 // win pulse. Ships with the package so a prototype needs no art at all.
 export { CardSymbol, CARD_DECK, WILD_CARD } from './symbols/CardSymbol.js';
 export type { CardSymbolOptions } from './symbols/CardSymbol.js';
+// Same status as CardSymbol: debug scaffolding that reads the phase off the board.
+export { PhaseCardSymbol, PHASE_CARD_COLORS } from './symbols/PhaseCardSymbol.js';
+export type { PhaseCardSymbolOptions, PhaseWatchedReel } from './symbols/PhaseCardSymbol.js';
 export type { StaticSpinSymbolOptions } from './snapshot/StaticSpinSymbol.js';
 
 // Spin
