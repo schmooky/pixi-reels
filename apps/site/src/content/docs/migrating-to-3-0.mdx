@@ -128,29 +128,41 @@ protected onSkip(ctx: SkipContext): void {
 that overrides `onSkip` should call `super.onSkip(ctx)` where it used to do
 nothing.
 
-## Moves
+## Steps
 
-The gsap beats that were hard-wired into the built-in phases are replaceable
-without replacing the phase. If you subclassed `StartPhase` or `StopPhase`
-only to change a tween, a move is the shorter road:
+The built-in phases run a named list of steps, and a game edits that list by
+re-registering the same class with options. If you subclassed `StartPhase` or
+`StopPhase` only to change or insert one thing, this is the shorter road:
 
 ```ts
-builder.moves({
-  start: { pull: null },                    // no step-back
-  stop: {
-    bounce: (ctx) => ctx.gsap.to(ctx.reel.container, {
-      [ctx.reel.axis.mainProp]: ctx.base,
-      duration: ctx.duration / 1000,
-      ease: 'elastic.out(1, 0.4)',
-      onUpdate: ctx.followLifted,
-    }),
-  },
+import { StopPhase, StartPhase, step, insertAfter, replaceStep, removeStep } from 'pixi-reels';
+
+builder.phases((f) => {
+  f.register('stop', StopPhase, {
+    steps: (steps) => insertAfter(steps, 'land', step('flash', (ctx) => flash(ctx.reel.reelIndex))),
+  });
+  f.register('start', StartPhase, { steps: (steps) => removeStep(steps, 'pull') });
 });
 ```
 
-`defaultMoves` is exported so a replacement can wrap one, and `runMove()` runs
-a move with the cancel semantics the built-ins use. `ReelPhase.bounce()` plays
-the set's `stop.bounce`, so a custom stop phase gets a replaced bounce too.
+`StopPhase` runs `delay, spinOut, land, bounce`; `StartPhase` runs `delay,
+launch, pull, accelerate, announce`; `AnticipationPhase` runs one `tease`
+step. A different bounce shape goes through `ctx.phase.bounce({ animation })`.
+
+## `quickenable`
+
+A quicken only reaches `onSkip(ctx)` on a phase that declares it:
+
+```ts
+class MyStop extends ReelPhase<StopPhaseConfig> {
+  readonly quickenable = true;   // "my onSkip branches on ctx.mode"
+  ...
+}
+```
+
+A phase without the flag is left alone by a quicken and runs its course, so
+a 2.8 phase whose `onSkip` kills its tweens and places the frame keeps
+working: the reel still lands. The built-ins declare it.
 
 ## Built-in phase internals
 
@@ -158,7 +170,8 @@ Every `private` on `StartPhase`, `SpinPhase`, `AnticipationPhase`,
 `StopPhase`, `AdjustPhase`, `CascadeFallPhase`, `CascadePlacePhase` and
 `CascadeDropInPhase` is `protected`. A subclass that copied a whole method to
 reach one field can call it instead. `ReelPhase.speed` is a public getter
-beside `reel`; `this._speed` still works.
+beside `reel`; `this._speed` still works. `land()` and `bounce()` are public,
+so a step written outside the class can reach them.
 
 The rule from the phases page stands: the protected surface can change in a
 minor release, so a subclass may need to follow. What changed here is that

@@ -12,7 +12,8 @@
 // press wants: under `'slam'` the hook is the slam pose (rest on the frame,
 // landed; the base completes the phase after). Under `'quicken'` the hook
 // cuts a wait and leaves the landing alone - here it kills the hold and
-// slides in at once. Ignore the mode and the phase simply runs its course:
+// slides in at once. A quicken only reaches a phase that declares
+// `quickenable = true`; leave that out and the phase simply runs its course:
 // the reel still lands, the press just shortens nothing. `ctx.payload` is
 // whatever the game put on the press.
 //
@@ -29,6 +30,8 @@ let note = () => {};
 class HeldInstantStopPhase extends ReelPhase {
   name = 'stop';
   skippable = true;
+  // "My onSkip branches on ctx.mode." Without this a quicken leaves the phase alone.
+  quickenable = true;
 
   onEnter(config) {
     const reel = this.reel;

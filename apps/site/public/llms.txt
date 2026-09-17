@@ -402,6 +402,14 @@ URL: https://pixi-reels.schmooky.dev/api/functions/index.getLogLevel/
 URL: https://pixi-reels.schmooky.dev/api/functions/index.getTargetSlot/
 ```ts function getTargetSlot(target: ColumnTarget, cell: number): string | undefined; ```
 
+### insertAfter()
+URL: https://pixi-reels.schmooky.dev/api/functions/index.insertAfter/
+```ts function insertAfter<TCtx extends StepContext<any, any>>( steps: readonly PhaseStep<TCtx>[], name: string, ...added: PhaseStep<TCtx>[] ): PhaseStep<TCtx>[]; ```
+
+### insertBefore()
+URL: https://pixi-reels.schmooky.dev/api/functions/index.insertBefore/
+```ts function insertBefore<TCtx extends StepContext<any, any>>( steps: readonly PhaseStep<TCtx>[], name: string, ...added: PhaseStep<TCtx>[] ): PhaseStep<TCtx>[]; ```
+
 ### inset()
 URL: https://pixi-reels.schmooky.dev/api/functions/index.inset/
 ```ts function inset(strategy: MaskStrategy, pixels: number | InsetSides): DrawableMaskStrategy; ```
@@ -422,6 +430,14 @@ URL: https://pixi-reels.schmooky.dev/api/functions/index.prewarmSpinTextures/
 URL: https://pixi-reels.schmooky.dev/api/functions/index.reelAxis/
 ```ts function reelAxis(orientation: Orientation, direction: Direction): ReelAxis; ```
 
+### removeStep()
+URL: https://pixi-reels.schmooky.dev/api/functions/index.removeStep/
+```ts function removeStep<TCtx extends StepContext<any, any>>(steps: readonly PhaseStep<TCtx>[], name: string): PhaseStep<TCtx>[]; ```
+
+### replaceStep()
+URL: https://pixi-reels.schmooky.dev/api/functions/index.replaceStep/
+```ts function replaceStep<TCtx extends StepContext<any, any>>( steps: readonly PhaseStep<TCtx>[], name: string, replacement: PhaseStep<TCtx> ): PhaseStep<TCtx>[]; ```
+
 ### resolveCurveConfig()
 URL: https://pixi-reels.schmooky.dev/api/functions/index.resolveCurveConfig/
 ```ts function resolveCurveConfig(input: ReelCurveInput): Required<ReelCurveConfig>; ```
@@ -430,17 +446,13 @@ URL: https://pixi-reels.schmooky.dev/api/functions/index.resolveCurveConfig/
 URL: https://pixi-reels.schmooky.dev/api/functions/index.resolveDriveConfig/
 ```ts function resolveDriveConfig(config: ReelDriveConfig, spinSpeed?: number): ResolvedDriveConfig; ```
 
-### resolveMoves()
-URL: https://pixi-reels.schmooky.dev/api/functions/index.resolveMoves/
-```ts function resolveMoves(overrides?: PhaseMoves): ResolvedPhaseMoves; ```
-
 ### resolveTumbleConfig()
 URL: https://pixi-reels.schmooky.dev/api/functions/index.resolveTumbleConfig/
 ```ts function resolveTumbleConfig(config: TumbleConfig | undefined): ResolvedTumbleConfig; ```
 
-### runMove()
-URL: https://pixi-reels.schmooky.dev/api/functions/index.runMove/
-```ts function runMove<TCtx extends MoveContext>(move: Move<TCtx> | null, ctx: Omit<TCtx, "signal">): RunningMove; ```
+### runStep()
+URL: https://pixi-reels.schmooky.dev/api/functions/index.runStep/
+```ts function runStep<TCtx extends StepContext<any, any>>( run: (ctx: TCtx) => StepResult, ctx: Omit<TCtx, "signal">, controller?: AbortController ): RunningStep; ```
 
 ### setLogLevel()
 URL: https://pixi-reels.schmooky.dev/api/functions/index.setLogLevel/
@@ -457,6 +469,10 @@ URL: https://pixi-reels.schmooky.dev/api/functions/index.sortByValueDesc/
 ### startRecording()
 URL: https://pixi-reels.schmooky.dev/api/functions/index.startRecording/
 ```ts function startRecording( reelSet: ReelSet, tag?: string, options?: StartRecordingOptions ): void; ```
+
+### step()
+URL: https://pixi-reels.schmooky.dev/api/functions/index.step/
+```ts function step<TCtx extends StepContext<any, any> = StepContext<any, any>>( name: string, run: (ctx: TCtx) => StepResult, options?: { cut?: boolean; } ): PhaseStep<TCtx>; ```
 
 ### stepDrive()
 URL: https://pixi-reels.schmooky.dev/api/functions/index.stepDrive/
@@ -494,10 +510,6 @@ URL: https://pixi-reels.schmooky.dev/api/functions/testing.expectGrid/
 URL: https://pixi-reels.schmooky.dev/api/functions/testing.spinAndLand/
 ```ts function spinAndLand(reelSet: ReelSet, grid: ColumnTarget[]): Promise<SpinResult>; ```
 
-### AccelerateMoveContext
-URL: https://pixi-reels.schmooky.dev/api/interfaces/index.AccelerateMoveContext/
-`StartPhase`: rest (or the pull) to full spin speed.
-
 ### AdjustPhaseConfig
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.AdjustPhaseConfig/
 
@@ -510,6 +522,10 @@ Full anticipation configuration. The object form of `setAnticipation`''s second 
 
 ### AnticipationPhaseConfig
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.AnticipationPhaseConfig/
+
+### AnticipationPhaseOptions
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.AnticipationPhaseOptions/
+What a game hands `AnticipationPhase` through `f.register(''anticipation'', AnticipationPhase, options)`.
 
 ### AnticipationSegment
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.AnticipationSegment/
@@ -538,13 +554,17 @@ URL: https://pixi-reels.schmooky.dev/api/interfaces/index.BoardGridOptions/
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.BoardSpinTarget/
 A landing target: spin `cell` and stop it showing `id`.
 
-### BounceMoveContext
-URL: https://pixi-reels.schmooky.dev/api/interfaces/index.BounceMoveContext/
-`StopPhase` (and `ReelPhase.bounce()`): the landing overshoot.
+### BounceContext
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.BounceContext/
+What a custom bounce animation receives. See [BounceOptions.animation](/api/interfaces/index.BounceOptions/#animation).
 
 ### BounceOptions
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.BounceOptions/
 Shape of one landing bounce, for [ReelPhase.bounce](/api/classes/index.ReelPhase/#bounce). Every field falls back to the phase''s speed profile, so a phase that wants the profile''s own bounce passes no
+
+### Cancellable
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.Cancellable/
+Something a step may hand back to be waited on and cancelled.
 
 ### CardSymbolOptions
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.CardSymbolOptions/
@@ -676,10 +696,6 @@ Strategy for building the viewport''s clip mask. Public. pass a custom implement
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.MotionBlurOptions/
 Tuning for the baked motion-blur variant of a snapshot.
 
-### MoveContext
-URL: https://pixi-reels.schmooky.dev/api/interfaces/index.MoveContext/
-What every move receives. A move is one animated beat of a built-in phase, handed out so a game can replace the beat without replacing the phase: the step-back pull and the acceleration of `StartPhase
-
 ### MovePinOptions
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.MovePinOptions/
 Options for `reelSet.movePin()`. flight animation tuning + lifecycle hooks.
@@ -699,9 +715,9 @@ Options for `Reel.nudge()` / `ReelSet.nudge()`. a post-stop reposition that shif
 ### PhaseCardSymbolOptions
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.PhaseCardSymbolOptions/
 
-### PhaseMoves
-URL: https://pixi-reels.schmooky.dev/api/interfaces/index.PhaseMoves/
-The moves a game may replace, by phase and beat. `null` removes the beat: no pull, no bounce, an instant jump to spin speed, a tease with no slow-down. Every beat left out keeps its default from [defa
+### PhaseStep\<TCtx *extends* [`StepContext`](/api/interfaces/index.StepContext/)\<`any`, `any`\> = [`StepContext`](/api/interfaces/index.StepContext/)\<`any`, `any`\>\>
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.PhaseStep/
+One step of a phase: a name to address it by, and what it does.
 
 ### PhaseWatchedReel
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.PhaseWatchedReel/
@@ -717,10 +733,6 @@ URL: https://pixi-reels.schmooky.dev/api/interfaces/index.Position/
 
 ### PrewarmSpinTexturesOptions
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.PrewarmSpinTexturesOptions/
-
-### PullMoveContext
-URL: https://pixi-reels.schmooky.dev/api/interfaces/index.PullMoveContext/
-`StartPhase`: the brief reverse before launch.
 
 ### RandomSymbolControl
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.RandomSymbolControl/
@@ -797,10 +809,6 @@ Summary returned by [ReelSet.refill](/api/classes/index.ReelSet/#refill). Symmet
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.ResolvedDriveConfig/
 Acceleration bounds with every default filled in. px/frame^2, px/frame^3.
 
-### ResolvedPhaseMoves
-URL: https://pixi-reels.schmooky.dev/api/interfaces/index.ResolvedPhaseMoves/
-[PhaseMoves](/api/interfaces/index.PhaseMoves/) with every beat present, `null` where it was removed.
-
 ### ResolvedTumbleConfig
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.ResolvedTumbleConfig/
 Resolved config with defaults applied. Internal type.
@@ -811,10 +819,6 @@ URL: https://pixi-reels.schmooky.dev/api/interfaces/index.RoundedRectMaskOptions
 ### RunCascadeOptions
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.RunCascadeOptions/
 Options for [ReelSet.runCascade](/api/classes/index.ReelSet/#runcascade). The two required callbacks (`detectWinners`, `nextGrid`) encode game rules; everything else is timing / cancellation / forward
-
-### RunningMove
-URL: https://pixi-reels.schmooky.dev/api/interfaces/index.RunningMove/
-A move in flight, from [runMove](/api/functions/index.runMove/).
 
 ### ScatterAnticipationOptions
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.ScatterAnticipationOptions/
@@ -833,10 +837,6 @@ Options for `requestSkip()` / `skipSpin()`, and for `board.skip()`.
 ### SlamOptions
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.SlamOptions/
 Which reels a `slamStop()` call lands. Omit the argument entirely to land every un-landed reel (the default hard slam).
-
-### SlowdownMoveContext
-URL: https://pixi-reels.schmooky.dev/api/interfaces/index.SlowdownMoveContext/
-Legacy `AnticipationPhase` tease: decelerate, then hold.
 
 ### SnapshotRenderer
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.SnapshotRenderer/
@@ -876,6 +876,10 @@ URL: https://pixi-reels.schmooky.dev/api/interfaces/index.SpriteSymbolOptions/
 ### StartPhaseConfig
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.StartPhaseConfig/
 
+### StartPhaseOptions
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.StartPhaseOptions/
+What a game hands `StartPhase` through `f.register(''start'', StartPhase, options)`.
+
 ### StartRecordingOptions
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.StartRecordingOptions/
 Options for [startRecording](/api/functions/index.startRecording/).
@@ -883,8 +887,16 @@ Options for [startRecording](/api/functions/index.startRecording/).
 ### StaticSpinSymbolOptions
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.StaticSpinSymbolOptions/
 
+### StepContext\<TConfig = `unknown`, TProfile *extends* [`SpeedProfile`](/api/interfaces/index.SpeedProfile/) = [`SpeedProfile`](/api/interfaces/index.SpeedProfile/)\>
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.StepContext/
+What every step of a phase receives. The reel and the numbers a step needs, plus two ways to wait that a slam can cut: `wait` for time, `until` for a condition the reel reaches on some frame.
+
 ### StopPhaseConfig
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.StopPhaseConfig/
+
+### StopPhaseOptions
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.StopPhaseOptions/
+What a game hands `StopPhase` through `f.register(''stop'', StopPhase, options)`.
 
 ### SwapSymbolsOptions
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.SwapSymbolsOptions/
@@ -972,6 +984,10 @@ URL: https://pixi-reels.schmooky.dev/api/types/index.AnticipationProtect/
 URL: https://pixi-reels.schmooky.dev/api/types/index.AnticipationStagger/
 ```ts type AnticipationStagger = number | number[] | "sequential"; ```
 
+### AnticipationStepContext
+URL: https://pixi-reels.schmooky.dev/api/types/index.AnticipationStepContext/
+```ts type AnticipationStepContext = StepContext<AnticipationPhaseConfig>; ```
+
 ### BoardCellZIndexResolver
 URL: https://pixi-reels.schmooky.dev/api/types/index.BoardCellZIndexResolver/
 ```ts type BoardCellZIndexResolver = (ctx: BoardCellZIndexContext) => number; ```
@@ -1040,14 +1056,6 @@ URL: https://pixi-reels.schmooky.dev/api/types/index.MaskPathFn/
 URL: https://pixi-reels.schmooky.dev/api/types/index.Matrix/
 ```ts type Matrix<T> = T[][]; ```
 
-### Move\<TCtx *extends* [`MoveContext`](/api/interfaces/index.MoveContext/) = [`MoveContext`](/api/interfaces/index.MoveContext/)\>
-URL: https://pixi-reels.schmooky.dev/api/types/index.Move/
-```ts type Move<TCtx extends MoveContext = MoveContext> = (ctx: TCtx) => MoveResult; ```
-
-### MoveResult
-URL: https://pixi-reels.schmooky.dev/api/types/index.MoveResult/
-```ts type MoveResult = gsap.core.Animation | Promise<void> | void; ```
-
 ### OffsetConfig
 URL: https://pixi-reels.schmooky.dev/api/types/index.OffsetConfig/
 ```ts type OffsetConfig =
@@ -1056,9 +1064,9 @@ URL: https://pixi-reels.schmooky.dev/api/types/index.OffsetConfig/
 URL: https://pixi-reels.schmooky.dev/api/types/index.Orientation/
 ```ts type Orientation = "vertical" | "horizontal"; ```
 
-### PhaseConstructor\<T *extends* [`ReelPhase`](/api/classes/index.ReelPhase/)\<`any`, `any`\> = [`ReelPhase`](/api/classes/index.ReelPhase/)\<`any`\>, P *extends* [`SpeedProfile`](/api/interfaces/index.SpeedProfile/) = [`SpeedProfile`](/api/interfaces/index.SpeedProfile/)\>
+### PhaseConstructor\<T *extends* [`ReelPhase`](/api/classes/index.ReelPhase/)\<`any`, `any`\> = [`ReelPhase`](/api/classes/index.ReelPhase/)\<`any`\>, P *extends* [`SpeedProfile`](/api/interfaces/index.SpeedProfile/) = [`SpeedProfile`](/api/interfaces/index.SpeedProfile/), O = `undefined`\>
 URL: https://pixi-reels.schmooky.dev/api/types/index.PhaseConstructor/
-```ts type PhaseConstructor<T extends ReelPhase<any, any> = ReelPhase<any>, P extends SpeedProfile = SpeedProfile> = (reel: Reel, speed: P) => T; ```
+```ts type PhaseConstructor<T extends ReelPhase<any, any> = ReelPhase<any>, P extends SpeedProfile = SpeedProfile, O = undefined> = (reel: Reel, speed: P, options?: O) => T; ```
 
 ### PhaseCreatorFn\<T *extends* [`ReelPhase`](/api/classes/index.ReelPhase/)\<`any`, `any`\> = [`ReelPhase`](/api/classes/index.ReelPhase/)\<`any`\>, P *extends* [`SpeedProfile`](/api/interfaces/index.SpeedProfile/) = [`SpeedProfile`](/api/interfaces/index.SpeedProfile/)\>
 URL: https://pixi-reels.schmooky.dev/api/types/index.PhaseCreatorFn/
@@ -1095,6 +1103,22 @@ URL: https://pixi-reels.schmooky.dev/api/types/index.SkipMode/
 ### Stacking
 URL: https://pixi-reels.schmooky.dev/api/types/index.Stacking/
 ```ts type Stacking = "ascending" | "descending"; ```
+
+### StartStepContext
+URL: https://pixi-reels.schmooky.dev/api/types/index.StartStepContext/
+```ts type StartStepContext = StepContext<StartPhaseConfig>; ```
+
+### StepResult
+URL: https://pixi-reels.schmooky.dev/api/types/index.StepResult/
+```ts type StepResult =
+
+### StepsEditor\<TCtx *extends* [`StepContext`](/api/interfaces/index.StepContext/)\<`any`, `any`\> = [`StepContext`](/api/interfaces/index.StepContext/)\<`any`, `any`\>\>
+URL: https://pixi-reels.schmooky.dev/api/types/index.StepsEditor/
+```ts type StepsEditor<TCtx extends StepContext<any, any> = StepContext<any, any>> = (steps: PhaseStep<TCtx>[]) => PhaseStep<TCtx>[]; ```
+
+### StopStepContext
+URL: https://pixi-reels.schmooky.dev/api/types/index.StopStepContext/
+```ts type StopStepContext = StepContext<StopPhaseConfig>; ```
 
 ### SymbolPoolSlots
 URL: https://pixi-reels.schmooky.dev/api/types/index.SymbolPoolSlots/
@@ -1135,10 +1159,6 @@ URL: https://pixi-reels.schmooky.dev/api/variables/index.DEFAULT_DIM_AMOUNT/
 ### DEFAULT\_DIM\_FADE\_MS
 URL: https://pixi-reels.schmooky.dev/api/variables/index.DEFAULT_DIM_FADE_MS/
 ```ts const DEFAULT_DIM_FADE_MS: 180 = 180; ```
-
-### defaultMoves
-URL: https://pixi-reels.schmooky.dev/api/variables/index.defaultMoves/
-```ts const defaultMoves: ResolvedPhaseMoves; ```
 
 ### DEFAULTS
 URL: https://pixi-reels.schmooky.dev/api/variables/index.DEFAULTS/
@@ -17934,35 +17954,46 @@ return {
 };
 ```
 
-### phase-moves
-URL: https://pixi-reels.schmooky.dev/recipes/phase-moves/
+### phase-steps
+URL: https://pixi-reels.schmooky.dev/recipes/phase-steps/
 ```ts
 // @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, PhaseCardSymbol, defaultMoves, PIXI, gsap, app
+// Injected globals: ReelSetBuilder, SpeedPresets, StopPhase, StartPhase, PhaseCardSymbol,
+//                   step, insertAfter, replaceStep, removeStep, PIXI, gsap, app
 //
-// MOVES: REPLACE A BEAT, KEEP THE PHASE. `builder.moves()`.
+// EDIT A BUILT-IN PHASE'S STEPS. `f.register('stop', StopPhase, { steps })`.
 //
-// The gsap beats the built-in phases play are hard-wired no longer. A move is
-// one beat - the step-back pull and the acceleration of `StartPhase`, the
-// bounce of `StopPhase`, the slow-down of the legacy tease - handed the reel,
-// the profile, the numbers the default would use and an AbortSignal. It
-// returns a gsap tween or timeline (killed on a slam), a promise (told to
-// stop through the signal), or nothing.
+// A built-in phase runs a named list of steps in order. `StopPhase` runs
+// `delay, spinOut, land, bounce`; `StartPhase` runs `delay, launch, pull,
+// accelerate, announce`. Re-register the same class under the same key with
+// `options.steps` and the phase hands you that list before it runs: insert a
+// step, replace one, drop one. No subclass, no knowledge of the phase's
+// insides beyond the names.
 //
-// Three shapes here:
-//   start.pull: null       the beat removed. No backwards twitch before launch
-//   start.accelerate       wrapped: the default ramp, then a flash on the HUD
-//   stop.bounce            replaced: one elastic settle instead of two legs.
-//                          `ctx.followLifted` keeps lifted unmask art riding
-//                          along, the same bookkeeping the default does
+// A step is `step(name, (ctx) => result)`. `ctx` has the reel, the profile,
+// the config, gsap, `container`, `main` (the travel-axis property), the phase,
+// a `signal`, and `wait(ms)` / `until(pred)`. The result is a tween or
+// timeline (killed on a slam), a promise, a cancellable such as what
+// `ctx.phase.bounce()` returns, or nothing.
 //
-// A custom stop phase calling `this.bounce()` plays the replaced bounce too.
+// Three edits here:
+//   stop:  a flash step after `land`, an elastic bounce in place of the
+//          built-in one (through `phase.bounce`, which keeps lifted art riding
+//          along)
+//   start: no `pull`, so the reel never twitches backwards on launch
 
 const IDS = ['9', '10', 'J', 'Q', 'K'];
 const REELS = 5, ROWS = 3, SIZE = 80, GAP = 4;
 function rv() { return IDS[Math.floor(Math.random() * IDS.length)]; }
 
-let flash = () => {};
+const plates = [];
+const flash = (reelIndex) => {
+  const g = plates[reelIndex];
+  if (!g) return;
+  gsap.killTweensOf(g);
+  g.alpha = 0.55;
+  return gsap.to(g, { alpha: 0, duration: 0.35, ease: 'power2.out' });
+};
 
 const reelSet = new ReelSetBuilder()
   .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
@@ -17970,26 +18001,23 @@ const reelSet = new ReelSetBuilder()
     for (const id of IDS) r.register(id, PhaseCardSymbol, { label: id });
   })
   .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 260, bounceDistance: 26, bounceDuration: 900 })
-  .moves({
-    start: {
-      pull: null,
-      accelerate: (ctx) => {
-        flash(`reel ${ctx.reel.reelIndex + 1}: accelerating to ${ctx.targetSpeed} px/frame over ${ctx.duration} ms`);
-        return defaultMoves.start.accelerate(ctx);
-      },
-    },
-    stop: {
-      bounce: (ctx) => gsap.fromTo(
-        ctx.reel.container,
-        { [ctx.reel.axis.mainProp]: ctx.base + ctx.distance },
-        {
-          [ctx.reel.axis.mainProp]: ctx.base,
-          duration: ctx.duration / 1000,
-          ease: 'elastic.out(1, 0.35)',
-          onUpdate: ctx.followLifted,
-        },
+  .phases((f) => {
+    f.register('stop', StopPhase, {
+      steps: (steps) => replaceStep(
+        insertAfter(steps, 'land', step('flash', (ctx) => flash(ctx.reel.reelIndex))),
+        'bounce',
+        step('bounce', (ctx) => ctx.phase.bounce({
+          animation: (b) => b.gsap.fromTo(
+            b.container,
+            { [b.main]: b.base + b.distance },
+            { [b.main]: b.base, duration: b.seconds, ease: 'elastic.out(1, 0.35)' },
+          ),
+        })),
       ),
-    },
+    });
+    f.register('start', StartPhase, {
+      steps: (steps) => removeStep(steps, 'pull'),
+    });
   })
   .ticker(app.ticker)
   .build();
@@ -17997,26 +18025,29 @@ const reelSet = new ReelSetBuilder()
 const unwatch = PhaseCardSymbol.watch(reelSet.reels);
 const TOTAL_H = ROWS * SIZE + (ROWS - 1) * GAP;
 
+// One backlight plate per reel, drawn under the symbols, lit by the `flash` step.
+const plateLayer = new PIXI.Container();
+reelSet.addChildAt(plateLayer, 0);
+for (let i = 0; i < REELS; i++) {
+  const g = new PIXI.Graphics().rect(i * (SIZE + GAP) - 6, -6, SIZE + 12, TOTAL_H + 12).fill({ color: 0xfef08a });
+  g.alpha = 0;
+  plateLayer.addChild(g);
+  plates.push(g);
+}
+
 const hud = new PIXI.Text({
-  text: 'spin: no pull on launch, an elastic settle on landing',
+  text: 'spin: no pull on launch, a flash after land, an elastic settle',
   style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 11, fill: 0x9c8f78 },
 });
 hud.position.set(0, TOTAL_H + 10);
 reelSet.addChild(hud);
-const lines = [];
-flash = (line) => {
-  lines.push(line);
-  hud.text = lines.slice(-2).join('\n');
-};
-reelSet.events.on('spin:start', () => { lines.length = 0; });
-reelSet.events.on('spin:complete', () => {
-  hud.text = 'landed on the elastic bounce - spin again, or press mid-spin to slam';
-});
 
 return {
   reelSet,
   cleanup: () => {
     unwatch();
+    for (const g of plates) gsap.killTweensOf(g);
+    try { plateLayer.destroy({ children: true }); } catch {}
     try { hud.destroy(); } catch {}
   },
   onSkip: () => { try { reelSet.skipSpin(); } catch { reelSet.requestSkip(); } },
@@ -18772,7 +18803,8 @@ URL: https://pixi-reels.schmooky.dev/recipes/quicken-custom-phase/
 // press wants: under `'slam'` the hook is the slam pose (rest on the frame,
 // landed; the base completes the phase after). Under `'quicken'` the hook
 // cuts a wait and leaves the landing alone - here it kills the hold and
-// slides in at once. Ignore the mode and the phase simply runs its course:
+// slides in at once. A quicken only reaches a phase that declares
+// `quickenable = true`; leave that out and the phase simply runs its course:
 // the reel still lands, the press just shortens nothing. `ctx.payload` is
 // whatever the game put on the press.
 //
@@ -18789,6 +18821,8 @@ let note = () => {};
 class HeldInstantStopPhase extends ReelPhase {
   name = 'stop';
   skippable = true;
+  // "My onSkip branches on ctx.mode." Without this a quicken leaves the phase alone.
+  quickenable = true;
 
   onEnter(config) {
     const reel = this.reel;

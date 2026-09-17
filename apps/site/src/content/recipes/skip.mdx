@@ -129,7 +129,7 @@ One button, two presses: `requestSkip({ mode: 'quicken', speed: 'turbo' })` on t
 
 ## A phase that can be quickened
 
-`onSkip(ctx)` is where a custom phase hears a press, and `ctx.mode` is where it decides what to cut. This instant stop holds its frame a tenth of a cell short for 900 ms before sliding in; under `'quicken'` the hook kills the hold and slides at once, under `'slam'` it rests on the frame. Ignore the mode and the reel still lands, the press just shortens nothing.
+`onSkip(ctx)` is where a custom phase hears a press, and `ctx.mode` is where it decides what to cut. This instant stop holds its frame a tenth of a cell short for 900 ms before sliding in; under `'quicken'` the hook kills the hold and slides at once, under `'slam'` it rests on the frame. The class declares `quickenable = true` to say its hook branches on the mode; without the flag a quicken leaves the phase alone and the reel still lands, the press just shortens nothing.
 
 **Gotcha:** the quicken branch cuts a wait, never the landing itself - keep `land()` and `bounce()` exactly where the natural path has them, or a quickened reel lands differently from a patient one.
 
