@@ -1,7 +1,7 @@
 ---
 title: "Symbols, layering & motion blur"
 group: rendering
-oneLiner: Symbol classes, three-tier layering (zIndex, unmask, promote), multi-skin Spine tiers, and static-spin motion blur.
+oneLiner: Symbol classes, a card that shows its reel's phase, three-tier layering (zIndex, unmask, promote), multi-skin Spine tiers, and static-spin motion blur.
 order: 70
 tags:
   - symbols
@@ -31,6 +31,16 @@ Exported from the package, so a prototype needs no art at all:
 **Gotcha:** debug scaffolding, not production art - ship SpriteSymbol / AnimatedSpriteSymbol / SpineSymbol instead.
 
 <RecipeDemo code="card-symbol-debug" />
+
+<a id="phase-colors"></a>
+
+## PhaseCardSymbol: read the phase off the board
+
+A `CardSymbol` that is grey at rest and takes the colour of the phase its reel is running - sky for `start`, blue for `spin`, amber for `anticipation`, violet for `stop`, a green beat on landing. Register it like any symbol, then point one watcher at the reels: `PhaseCardSymbol.watch(reelSet.reels)` paints every card from the reels' own `phase:enter`, `landed` and `symbol:created` events, custom phases included, and returns the release.
+
+**Gotcha:** the card does not know its reel, so without the watcher it stays grey. `setPhase()` is public for anything else that knows the phase. `colors` overrides or extends `PHASE_CARD_COLORS`; a phase with no entry draws `other`.
+
+<RecipeDemo code="phase-colors" />
 
 <a id="empty-symbol"></a>
 

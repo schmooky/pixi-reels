@@ -43,7 +43,7 @@ export interface CardSymbolOptions {
 }
 
 export class CardSymbol extends ReelSymbol {
-  private _color: number;
+  protected _color: number;
   private _label: string;
   private _textColor: number;
   private _gfx: Graphics;

@@ -3,7 +3,7 @@ import { EventEmitter } from '../events/EventEmitter.js';
 import type { ReelSet } from '../core/ReelSet.js';
 import type { ReelSymbol } from '../symbols/ReelSymbol.js';
 import type { SymbolRegistry } from '../symbols/SymbolRegistry.js';
-import type { SpeedProfile, SymbolData, SymbolZIndexResolver } from '../config/types.js';
+import type { HurryOptions, SpeedProfile, SymbolData, SymbolZIndexResolver } from '../config/types.js';
 import type { Disposable } from '../utils/Disposable.js';
 import { BoardGrid } from './BoardGrid.js';
 import type { BoardCellMaskInfo, BoardCellZIndexResolver, BoardProfile } from './BoardGrid.js';
@@ -434,6 +434,26 @@ export class HoldAndWinBoard<TData = unknown> implements Disposable {
   skip(): number {
     const inFlight = this._grid.skipSpinning();
     this.events.emit('feature:skip', { inFlight });
+    return inFlight;
+  }
+
+  /**
+   * Land whatever is spinning through its stop instead of cutting it: every
+   * in-flight cell drops its spin floor (the stagger lives there, so the
+   * whole wave lands together), spins its symbol in and bounces. The
+   * counterpart of {@link skip}, which places the cells. `speed` names a
+   * registered profile the cells land on. Then `feature:hurry` fires with the
+   * count; the landing flow (`cell:landed`, `coin:locked`, `respin:end`) is
+   * unchanged, and there is nothing for the game layer to cut short.
+   */
+  hurry(options: HurryOptions = {}): number {
+    if (options.speed !== undefined && !this._speeds.has(options.speed)) {
+      throw new Error(
+        `HoldAndWinBoard: hurry({ speed: '${options.speed}' }) names no registered profile (have: ${[...this._speeds].join(', ')}).`,
+      );
+    }
+    const inFlight = this._grid.hurrySpinning(options);
+    this.events.emit('feature:hurry', { inFlight });
     return inFlight;
   }
 

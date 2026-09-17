@@ -52,6 +52,11 @@ export type HoldAndWinBoardEvents<TData = unknown> = {
   /** Fired by `skip()` so the game layer can cut its own flights / collect short. */
   'feature:skip': [{ inFlight: number }];
   /**
+   * Fired by `hurry()`: the in-flight cells are landing through their stop
+   * rather than being placed. Nothing to cut short; the landing flow follows.
+   */
+  'feature:hurry': [{ inFlight: number }];
+  /**
    * Fired by `reset()` - a hard clear back to idle. Distinct from `coin:released`
    * (which means "collect this coin"); listeners that maintain derived state
    * from events (HUD totals, meters) clear it here without triggering collect.
@@ -75,9 +80,9 @@ export type HoldAndWinBoardEvents<TData = unknown> = {
  * One state-change the reducer ({@link HoldAndWinState}) decided, ready for the
  * driver to emit. A tagged pair of `{ type, payload }` for every board event the
  * reducer owns - the driver replays them onto its emitter and keys visual side
- * effects (e.g. `playWin()` on `coin:locked`) off the type. `respin:start` and
- * `feature:skip` are driver-owned (they describe in-flight reels, not ledger
- * state) and are not produced here.
+ * effects (e.g. `playWin()` on `coin:locked`) off the type. `respin:start`,
+ * `feature:skip` and `feature:hurry` are driver-owned (they describe in-flight
+ * reels, not ledger state) and are not produced here.
  */
 export type HwEffect<TData = unknown> = {
   [K in keyof HoldAndWinBoardEvents<TData>]: {

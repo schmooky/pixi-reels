@@ -51,7 +51,7 @@ import {
   resolveTumbleConfig,
 } from 'pixi-reels';
 import { BlurSpriteSymbol } from '../runtime/BlurSpriteSymbol.ts';
-import { CardSymbol, CARD_DECK, WILD_CARD } from 'pixi-reels';
+import { CardSymbol, CARD_DECK, WILD_CARD, PhaseCardSymbol, PHASE_CARD_COLORS } from 'pixi-reels';
 import {
   CoinSymbol,
   COIN_TIER,
@@ -247,6 +247,8 @@ export function buildRecipeGlobals(
     CardSymbol,
     CARD_DECK,
     WILD_CARD,
+    PhaseCardSymbol,
+    PHASE_CARD_COLORS,
     CoinSymbol,
     COIN_TIER,
     COIN_FEATURE,

@@ -197,7 +197,9 @@ ends the tease and returns to full speed, `SpinPhase` drops its floor. Override
 it to cut a wait of your own and return `true`; the default returns `false`,
 the phase runs its course, and the reel still lands. A hurry that names a
 profile swaps `this._speed` before the hook runs, so the spin-out and bounce
-that follow read the new one. Where the natural end IS the slam pose
+that follow read the new one. A reel hurried before it reached its stop has
+the stop phase asked as soon as it is created, so a wait inside a custom stop
+is cut whether the press came before it or during it. Where the natural end IS the slam pose
 (`StartPhase`, `AnticipationPhase`), the built-in `onHurry` force-completes,
 so a subclass's `onSkip` override runs on a hurry press too.
 

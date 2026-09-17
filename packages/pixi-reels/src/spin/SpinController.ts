@@ -2138,11 +2138,16 @@ export class SpinController implements Disposable {
       this._activePhases.set(reelIndex, stopPhase);
       // After a tease, carry the slow anticipation speed into the stop so the
       // reel crawls to its landing position instead of re-accelerating.
-      await stopPhase.run({
+      const stopDone = stopPhase.run({
         targetFrame,
         delay: hurried ? 0 : stopDelay,
         preserveSpeed: didAnticipate && !hurried,
       } satisfies StopPhaseConfig);
+      // The press came before this phase existed, so it never heard it. Ask
+      // now: a built-in stop with no delay has nothing left to cut, but a
+      // custom stop with a wait of its own is cut the same either way.
+      if (hurried) stopPhase.hurry(this._hurrySpeed.get(reelIndex));
+      await stopDone;
       if (this._isStale(reelIndex, generation)) return;
     }
 

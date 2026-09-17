@@ -1,7 +1,7 @@
 ---
 title: "Skip & slam"
 group: mechanics
-oneLiner: Every skip lever end to end - partial slams both spellings, all three tease-protect modes, your own release plan, a press that lands instead of cutting, queued presses, skipStage, per-reel spin floors, and all four ways to own a phase.
+oneLiner: Every skip lever end to end - partial slams both spellings, all three tease-protect modes, your own release plan, a press that lands instead of cutting (with groups, as a two-press button, and in a custom phase), queued presses, skipStage, per-reel spin floors, and all four ways to own a phase.
 order: 57
 tags:
   - skip
@@ -104,6 +104,36 @@ Every slam places the frame and lands in the same tick, so a press reads as a cu
 **Gotcha:** a hurry is not a skip. `skipStage` and `wasSkipped` stay put, and a `requestSkip()` after it slams whatever is still moving - one button can hurry on the first press and cut on the second. Tap the readout to see the cut on the same spin.
 
 <RecipeDemo code="skip-hurry" />
+
+<a id="hurry-groups"></a>
+
+## Hurry with groups
+
+The same barrier, a different verb. `requestHurry()` walks exactly the groups a `requestSkip()` press would and hurries each one instead of placing it: a freed group goes violet (the stop, spinning in), not straight to grey. The cards are `PhaseCardSymbol`, so the phases are the colours.
+
+**Gotcha:** a hurried reel counts as released for the WALK, so a fast next press is taken early; the reel behind the barrier still waits for the group before it to land. Reel 5 stays blue until reel 4 is down, however fast you press.
+
+<RecipeDemo code="hurry-groups" />
+
+<a id="hurry-then-cut"></a>
+
+## Hurry first, cut second
+
+One button, two presses: `requestHurry({ speed: 'turbo' })` on the first, `requestSkip()` on the second. A hurry is not a skip - `skipStage` stays `0` and `wasSkipped` stays `false` - so the slam is still there for the player who really means it, and it slams whatever is still moving.
+
+**Gotcha:** read "has this round been hurried" off `hurry:requested`, not off a local counter - a press that hurried nothing must not arm the cut.
+
+<RecipeDemo code="hurry-then-cut" />
+
+<a id="hurry-custom-phase"></a>
+
+## A phase that can be hurried
+
+`onHurry()` is where a custom phase says which of its waits a hurry press may cut. This instant stop holds its frame a tenth of a cell short for 900 ms before sliding in; the hook kills the hold and slides at once, then returns `true`. Leave it out and the default `false` applies: the reel still lands, the press just shortens nothing.
+
+**Gotcha:** the hook cuts a wait, never the landing itself - keep `land()` and `bounce()` exactly where the natural path has them, or a hurried reel lands differently from a patient one.
+
+<RecipeDemo code="hurry-custom-phase" />
 
 <a id="skip-queued-request"></a>
 
