@@ -189,6 +189,14 @@ scratch may run its own list through `this.runSteps(steps)` and
 
 <RecipeDemo code="phase-steps" />
 
+A custom phase takes the same door. Write the class as before, let
+`runSteps()` sequence it, mark the waits `cut`, and expose `defaultSteps()`
+through a constructor option: a quicken skips the hold with no `onSkip`
+branch, a slam cancels the step in flight, and the game edits the list with
+`f.register('stop', MyPhase, { steps })` exactly as it edits `StopPhase`'s.
+
+<RecipeDemo code="phase-steps-custom" />
+
 ## Subclass a built-in
 
 Most changes to a built-in are small: a sound on landing, a flash when the stop
