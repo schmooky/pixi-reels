@@ -1,6 +1,6 @@
 # pixi-reels
 
-pixi-reels 3.0.0 is a reel engine for PixiJS v8.
+pixi-reels 2.8.0 is a reel engine for PixiJS v8.
 It ships reel-only primitives. Win math, paytable math, RNG, and audio live in consumer code.
 This file inlines every guide, API page, recipe (with source) and answered FAQ entry for offline LLM context.
 
