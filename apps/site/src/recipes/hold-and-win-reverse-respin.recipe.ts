@@ -113,6 +113,7 @@ const rollHits = () => {
 
 let busy = false;
 return {
+  board,
   cleanup: () => {
     try { hud.destroy(); } catch {}
     try { locks.destroy(); } catch {}

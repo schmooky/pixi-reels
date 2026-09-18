@@ -117,6 +117,7 @@ function countUp(cell, value) {
 const randVal = () => [2, 5, 10, 15, 25, 50, 100][Math.floor(Math.random() * 7)];
 let busy = false;
 return {
+  board,
   cleanup: () => {
     for (const t of labelAt.values()) { try { gsap.killTweensOf(t.scale); t.destroy(); } catch {} }
     labelAt.clear();

@@ -78,6 +78,7 @@ async function hold(which, amount, note) {
 
 let busy = false;
 return {
+  board,
   cleanup: () => { try { hud.destroy(); } catch {} board.destroy(); },
   onSpin: async () => {
     if (busy) return;

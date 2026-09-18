@@ -67,6 +67,7 @@ interface SpinResult {
 |---|---|---|
 | `skip:requested` | `(info: SkipInfo)` = `({ reels: number[], partial: boolean, mode: SkipMode, speed?: SpeedProfile, payload?: unknown })` | A press freed reels. from `skipSpin()`, `requestSkip()` (after `setResult` arrives), or `slamStop()`. `reels` is what this press frees; `partial` is `true` when reels are still spinning after it (a protected tease, a reel group, or `slamStop({ reels })` / `slamStop({ except })`); `mode` says what freeing means: `'slam'` places them now, `'quicken'` asks each for its landing sooner and the landing arrives as the usual `spin:reelLanding` / `spin:reelLanded`. `speed` and `payload` are the press's own, the same `SkipContext` every phase's `onSkip(ctx)` saw; keys the press did not set are absent. An engine slam (abort, timeout, `slamStop()`) is a bare `mode: 'slam'`. |
 | `skip:completed` | `(info: SkipInfo)` | The same press, once its reels are down: in the same tick for a slam, as the last freed reel lands for a quicken (however it got down, its own stop or a later slam). The same `info` its `skip:requested` carried. |
+| `skip:queued` | `(info: SkipContext)` = `({ mode, speed?, payload? })` | `requestSkip()` came before `setResult()`: the press is kept and fires the moment the result arrives. The same context its `skip:requested` will carry, minus the reels, which are not known yet. |
 | `skip:boosted` | `({ previous: SpeedProfile, current: SpeedProfile })` | First `skipSpin()` press of a STANDARD-mode round; engine bumped to the fastest registered profile for the rest of the round. Cascade rounds set the auto-slam-refills flag instead and never emit this event. Restore on the next `spin()` does **not** re-emit. |
 
 ```ts
@@ -249,6 +250,8 @@ Emitted by `WinPresenter` only. listeners are dead weight if you don't use it.
 
 `reel.events` is a smaller surface scoped to one column.
 
+Every bus (`reelSet.events`, `reel.events`, a board's `events`) also takes `onAny((event, ...args) => ...)` / `offAny(fn)`: every event, name first, after the event's own listeners. For a trace, an events panel, a recorder; game logic names the events it wants. Engine notices are not events; `onNotice(fn)` hears them the same way, whatever the log level.
+
 ```ts
 type ReelEvents = {
   'phase:enter':     [phaseName: string];
@@ -256,6 +259,10 @@ type ReelEvents = {
     // (+ 'cascade:fall' | 'cascade:place' | 'cascade:dropIn' on a tumble set)
     // | 'cascade:fall' | 'cascade:place' | 'cascade:dropIn'
   'phase:exit':      [phaseName: string];
+  'phase:step':      [{ phase: string, step: string, status: PhaseStepStatus }];
+    // a step of a phase on runSteps(): 'start' | 'end' | 'skipped' (a cut
+    // step a quicken never started) | 'cut' (the cut step a quicken stopped
+    // in flight) | 'cancelled' (the step a slam or a destroy stopped)
   'symbol:created':  [symbolId: string, stripIndex: number];
   'landed':          [symbols: string[]];
   'destroyed':       [];

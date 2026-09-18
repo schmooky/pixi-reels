@@ -116,6 +116,7 @@ const reset = () => { clearMarkers(); for (const t of labelAt.values()) { try { 
 placeMarkers();
 
 return {
+  board,
   cleanup: () => { clearMarkers(); for (const t of labelAt.values()) { try { gsap.killTweensOf(t.scale); t.destroy(); } catch {} } labelAt.clear(); try { hud.destroy(); labels.destroy(); } catch {} board.destroy(); },
   onSpin: async () => {
     if (busy) return;

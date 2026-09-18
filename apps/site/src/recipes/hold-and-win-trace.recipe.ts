@@ -96,6 +96,7 @@ function pickHits() {
 
 let running = false;
 return {
+  board,
   cleanup: () => { for (const l of lines) { try { gsap.killTweensOf(l); l.destroy(); } catch {} } lines.length = 0; try { panel.destroy({ children: true }); hud.destroy(); } catch {} board.destroy(); },
   onSpin: async () => {
     if (running) return;

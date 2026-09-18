@@ -1,5 +1,6 @@
 /** @jsxImportSource react */
 import { useEffect, useRef, useState } from 'react';
+import type { CSSProperties } from 'react';
 import { RefreshCw, ExternalLink, SkipForward, Bug } from 'lucide-react';
 import { Application } from 'pixi.js';
 import type { Texture, Ticker } from 'pixi.js';
@@ -73,6 +74,9 @@ import { runRecipeSource } from '@/lib/recipeGlobals';
 import { cn } from '@/lib/utils';
 import { CanvasSkeleton } from './CanvasSkeleton';
 import { useMinDisplay } from './useMinDisplay';
+import { EventsPanel, ROW_LIMIT } from './EventsPanel';
+import type { EventEntry } from './EventsPanel';
+import { onNotice } from 'pixi-reels';
 
 // Renderer teardown options for `app.destroy(...)`.
 //
@@ -159,8 +163,8 @@ function pickWeighted(weights: Record<string, number>): string {
  * finds them whatever the recipe did with them, and needs no per-recipe
  * bookkeeping.
  */
-function collectReelSets(stage: PIXI.Container, primary: ReelSet): ReelSet[] {
-  const found: ReelSet[] = [primary];
+function collectReelSets(stage: PIXI.Container, primary: ReelSet | null): ReelSet[] {
+  const found: ReelSet[] = primary ? [primary] : [];
   const walk = (node: PIXI.Container): void => {
     if (node instanceof ReelSet) {
       if (!found.includes(node)) found.push(node);
@@ -198,7 +202,19 @@ interface RunResult {
    * try `skip()` and fall through to `requestSkip()`.
    */
   onSkip?: () => void;
+  /**
+   * A board (HoldAndWinBoard) whose bus the events panel should hear beside
+   * the reel sets it finds on the stage. Cells are reel sets and are found on
+   * their own; this is for the board-level events (`feature:*`, `coin:*`).
+   */
+  board?: { events: AnyBus };
   cleanup?: () => void;
+}
+
+/** The two methods the events panel needs from any bus, typed loosely on purpose. */
+interface AnyBus {
+  onAny(fn: (event: string, ...args: unknown[]) => void): unknown;
+  offAny(fn: (event: string, ...args: unknown[]) => void): unknown;
 }
 
 interface Env {
@@ -232,6 +248,17 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
   // The overlay draws into a container on the ReelSet, so a recipe that
   // returns only `onSpin` (HoldAndWinBoard, BoardGrid) has nothing to draw on.
   const [canDebug, setCanDebug] = useState(false);
+  // The events recorder. Always on (a push per event, capped), rendered only
+  // while the panel is open: `eventsTick` bumps once per animation frame with
+  // new rows, so a burst of `symbol:created` is one re-render, not a hundred.
+  const eventsRef = useRef<EventEntry[]>([]);
+  const eventsDirtyRef = useRef(false);
+  const eventsFrameRef = useRef<number | null>(null);
+  const spinOriginRef = useRef<number | null>(null);
+  const eventIdRef = useRef(0);
+  const unsubscribeRef = useRef<Array<() => void>>([]);
+  const debugOnRef = useRef(false);
+  const [eventsTick, setEventsTick] = useState(0);
   // Hold the skeleton for at least 250ms so it doesn't flash for one
   // frame on fast loads.
   const showSkeleton = useMinDisplay(!ready, 250);
@@ -300,6 +327,44 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
       onSkipRef.current = result.onSkip ?? null;
       cleanupRef.current = result.cleanup ?? null;
 
+      // Record every bus in the demo for the events panel: each reel set on
+      // the stage (a board's cells included), each of their reels, the board
+      // itself when the recipe hands it over, and engine notices.
+      const record = (source: string) => (event: string, ...args: unknown[]): void => {
+        const now = performance.now();
+        if (event === 'spin:start') {
+          // A board starts its cells within the same burst: keep one origin.
+          const prev = spinOriginRef.current;
+          if (prev === null || now - prev > 100) spinOriginRef.current = now;
+        }
+        const origin = spinOriginRef.current;
+        const list = eventsRef.current;
+        list.push({ id: ++eventIdRef.current, t: now, rel: origin === null ? null : now - origin, source, name: event, args });
+        if (list.length > ROW_LIMIT) list.splice(0, list.length - ROW_LIMIT);
+        eventsDirtyRef.current = true;
+        if (debugOnRef.current && eventsFrameRef.current === null) {
+          eventsFrameRef.current = requestAnimationFrame(() => {
+            eventsFrameRef.current = null;
+            if (!eventsDirtyRef.current) return;
+            eventsDirtyRef.current = false;
+            setEventsTick((n) => n + 1);
+          });
+        }
+      };
+      const listen = (bus: AnyBus, source: string): void => {
+        const fn = record(source);
+        bus.onAny(fn);
+        unsubscribeRef.current.push(() => bus.offAny(fn));
+      };
+      const sets = collectReelSets(app.stage, result.reelSet ?? null);
+      sets.forEach((rs, k) => {
+        const setLabel = sets.length === 1 ? 'set' : `set${k}`;
+        listen(rs.events as unknown as AnyBus, setLabel);
+        rs.reels.forEach((reel, i) => listen(reel.events as unknown as AnyBus, sets.length === 1 ? `reel ${i}` : `${setLabel}/r${i}`));
+      });
+      if (result.board?.events) listen(result.board.events, 'board');
+      unsubscribeRef.current.push(onNotice((n) => record('notice')(n.code, { kind: n.kind, message: n.message, detail: n.detail })));
+
       if (result.reelSet) {
         const rs = result.reelSet;
         // Fit the composition root when there is one, so a banner set moves,
@@ -319,6 +384,11 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
         app.renderer.on('resize', fit);
         enableDebug(rs);
         setCanDebug(true);
+        // The events panel docks beside the canvas and takes width from it;
+        // PixiJS only watches the window, so the host's own resize is ours.
+        const ro = new ResizeObserver(() => app.resize());
+        ro.observe(host);
+        unsubscribeRef.current.push(() => ro.disconnect());
       } else {
         // Board / custom-stage recipes (HoldAndWinBoard, BoardGrid) add their
         // own content (the grid, HUD, side panels, flight layer) straight to
@@ -350,6 +420,9 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
         };
         fitStage();
         app.renderer.on('resize', fitStage);
+        const ro = new ResizeObserver(() => app.resize());
+        ro.observe(host);
+        unsubscribeRef.current.push(() => ro.disconnect());
       }
 
       setReady(true);
@@ -357,6 +430,11 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
 
     return () => {
       cancelled = true;
+      for (const off of unsubscribeRef.current) {
+        try { off(); } catch { /* ignore */ }
+      }
+      unsubscribeRef.current = [];
+      if (eventsFrameRef.current !== null) cancelAnimationFrame(eventsFrameRef.current);
       try { cleanupRef.current?.(); } catch { /* ignore */ }
       // Before the set and the app: the overlay is a child of the ReelSet and
       // holds a TickerRef on app.ticker.
@@ -427,15 +505,19 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
   }
 
   function toggleDebug() {
-    const reelSet = reelSetRef.current;
-    const app = envRef.current?.app;
-    if (!reelSet || !app) return;
-    if (overlayRef.current.length > 0) {
+    if (debugOn) {
       for (const o of overlayRef.current) o.destroy();
       overlayRef.current = [];
+      debugOnRef.current = false;
       setDebugOn(false);
       return;
     }
+    debugOnRef.current = true;
+    setDebugOn(true);
+    setEventsTick((n) => n + 1);
+    const reelSet = reelSetRef.current;
+    const app = envRef.current?.app;
+    if (!reelSet || !app) return;
     // Built on first press, not at mount: a umbrella page mounts several
     // recipes at once and none of them should pay for an overlay nobody asked
     // to see. `live` drives the bounds / blocks / pins / hud layers off the
@@ -444,7 +526,11 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
     overlayRef.current = collectReelSets(app.stage, reelSet).map((rs) =>
       debugOverlay(rs, { layers: 'all', live: true, ticker: app.ticker }),
     );
-    setDebugOn(true);
+  }
+
+  function clearEvents() {
+    eventsRef.current = [];
+    setEventsTick((n) => n + 1);
   }
 
   function openInStudio() {
@@ -454,9 +540,12 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
   return (
     // Outer card frame + my-5 margin are supplied by the surrounding
     // <RecipeFrame> Astro wrapper so the layout is stable before JS
-    // hydrates. Don't add a duplicate card here.
+    // hydrates. Don't add a duplicate card here. With the events panel open
+    // the canvas keeps its height and gives up width to the panel on the
+    // right; below the `sm` breakpoint the panel goes under the canvas.
+    <div className={cn('flex w-full bg-background', debugOn && 'flex-col sm:flex-row')} style={{ '--recipe-h': `${height}px` } as CSSProperties}>
     <div
-      className="relative flex w-full items-center justify-center bg-background"
+      className="relative flex min-w-0 flex-1 items-center justify-center"
       style={{ height }}
     >
         <div
@@ -490,13 +579,13 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
             ? <SkipForward size={22} strokeWidth={2.25} />
             : <RefreshCw size={22} strokeWidth={2.25} />}
         </button>
-        {canDebug && (
+        {(
           <button
             type="button"
             onClick={toggleDebug}
             disabled={!!error || !ready}
-            title={debugOn ? 'Hide debug overlay' : 'Show debug overlay'}
-            aria-label={debugOn ? 'Hide debug overlay' : 'Show debug overlay'}
+            title={debugOn ? 'Hide the events panel and overlay' : canDebug ? 'Show the events panel and overlay' : 'Show the events panel'}
+            aria-label={debugOn ? 'Hide debug' : 'Show debug'}
             aria-pressed={debugOn}
             className={cn(
               'absolute left-2 top-2 inline-flex items-center gap-1 rounded-md border px-2 py-1',
@@ -521,6 +610,15 @@ export function RecipeRunner({ code, height = 300 }: RecipeRunnerProps) {
           <ExternalLink size={10} />
           Studio
         </button>
+    </div>
+    {debugOn && (
+      <EventsPanel
+        entries={eventsRef.current}
+        tick={eventsTick}
+        onClear={clearEvents}
+        className="h-[220px] w-full shrink-0 border-t sm:h-[var(--recipe-h)] sm:w-[360px] sm:max-w-[46%] sm:border-l sm:border-t-0"
+      />
+    )}
     </div>
   );
 }

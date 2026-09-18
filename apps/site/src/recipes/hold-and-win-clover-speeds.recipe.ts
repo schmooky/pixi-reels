@@ -66,6 +66,7 @@ const SEED = [{ reel: 1, cell: 1 }, { reel: 3, cell: 2 }].map(gold);
 
 let busy = false;
 return {
+  board,
   cleanup: () => { try { hud.destroy(); badge.destroy(); grid.destroy({ children: true }); } catch {} board.destroy(); },
   onSpin: async () => {
     if (busy) return;

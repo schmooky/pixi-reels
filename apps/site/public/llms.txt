@@ -418,6 +418,10 @@ URL: https://pixi-reels.schmooky.dev/api/functions/index.inset/
 URL: https://pixi-reels.schmooky.dev/api/functions/index.isDrawableMaskStrategy/
 ```ts function isDrawableMaskStrategy(s: MaskStrategy): s is DrawableMaskStrategy; ```
 
+### onNotice()
+URL: https://pixi-reels.schmooky.dev/api/functions/index.onNotice/
+```ts function onNotice(listener: (notice: Notice) => void): () => void; ```
+
 ### pinKey()
 URL: https://pixi-reels.schmooky.dev/api/functions/index.pinKey/
 ```ts function pinKey(reel: number, cell: number): string; ```
@@ -707,6 +711,10 @@ MultiWays configuration knobs. Set via `builder.multiways({ ... })`. mutually ex
 ### NoOffsetConfig
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.NoOffsetConfig/
 No offset configuration.
+
+### Notice
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.Notice/
+One notice as [onNotice](/api/functions/index.onNotice/) hands it over.
 
 ### NudgeOptions
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.NudgeOptions/
@@ -1079,6 +1087,10 @@ URL: https://pixi-reels.schmooky.dev/api/types/index.PhaseConstructor/
 ### PhaseCreatorFn\<T *extends* [`ReelPhase`](/api/classes/index.ReelPhase/)\<`any`, `any`\> = [`ReelPhase`](/api/classes/index.ReelPhase/)\<`any`\>, P *extends* [`SpeedProfile`](/api/interfaces/index.SpeedProfile/) = [`SpeedProfile`](/api/interfaces/index.SpeedProfile/)\>
 URL: https://pixi-reels.schmooky.dev/api/types/index.PhaseCreatorFn/
 ```ts type PhaseCreatorFn<T extends ReelPhase<any, any> = ReelPhase<any>, P extends SpeedProfile = SpeedProfile> = (reel: Reel, speed: P) => T; ```
+
+### PhaseStepStatus
+URL: https://pixi-reels.schmooky.dev/api/types/index.PhaseStepStatus/
+```ts type PhaseStepStatus = "start" | "end" | "skipped" | "cut" | "cancelled"; ```
 
 ### PinExpireReason
 URL: https://pixi-reels.schmooky.dev/api/types/index.PinExpireReason/
@@ -5842,6 +5854,7 @@ const ROUNDS = [
 ];
 
 return {
+  board,
   cleanup: () => { for (const t of labelAt.values()) { try { t.destroy(); } catch {} } labelAt.clear(); try { labels.destroy({ children: false }); } catch {} board.destroy(); },
   onSpin: async () => {
     for (const t of labelAt.values()) t.destroy();
@@ -6143,6 +6156,7 @@ async function absorb(collectorCell) {
 
 let phase = 'ready';
 return {
+  board,
   cleanup: () => { for (const f of flyers) { try { gsap.killTweensOf(f); f.destroy(); } catch {} } for (const t of labelAt.values()) { try { t.destroy(); } catch {} } labelAt.clear(); try { hud.destroy(); labels.destroy(); } catch {} board.destroy(); },
   onSpin: async () => {
     if (phase === 'running') return;
@@ -8464,6 +8478,7 @@ const val = () => [5, 10, 15, 25][Math.floor(Math.random() * 4)];
 
 let busy = false;
 return {
+  board,
   cleanup: () => { stopPulse(); for (const t of labelAt.values()) { try { t.destroy(); } catch {} } labelAt.clear(); try { hud.destroy(); labels.destroy(); } catch {} board.destroy(); },
   onSpin: async () => {
     if (busy) return;
@@ -8613,6 +8628,7 @@ async function runFeature(triggerCells) {
 
 let busy = false;
 return {
+  board,
   cleanup: () => { try { gsap.killTweensOf(board.container); } catch {} for (const t of labelAt.values()) { try { t.destroy(); } catch {} } labelAt.clear(); try { hud.destroy(); labels.destroy(); } catch {} board.destroy(); base.destroy(); },
   onSpin: async () => {
     if (busy) return;
@@ -8756,6 +8772,7 @@ const reset = () => { clearMarkers(); for (const t of labelAt.values()) { try { 
 placeMarkers();
 
 return {
+  board,
   cleanup: () => { clearMarkers(); for (const t of labelAt.values()) { try { gsap.killTweensOf(t.scale); t.destroy(); } catch {} } labelAt.clear(); try { hud.destroy(); labels.destroy(); } catch {} board.destroy(); },
   onSpin: async () => {
     if (busy) return;
@@ -8829,6 +8846,7 @@ function spinCell(cell, id) {
 
 let busy = false;
 return {
+  board,
   cleanup: () => { try { hud.destroy(); } catch {} board.destroy(); },
   onSpin: async () => {
     if (busy) return;
@@ -9009,6 +9027,7 @@ async function runFeature(clovers) {
 
 let busy = false;
 return {
+  board,
   cleanup: () => { try { hud.destroy(); grid.destroy({ children: true }); } catch {} board.destroy(); base.destroy(); },
   onSpin: async () => {
     if (busy) return;
@@ -9215,6 +9234,7 @@ const ROUNDS = [[{ reel: 0, cell: 0 }, { reel: 2, cell: 2 }], [{ reel: 4, cell: 
 
 let busy = false;
 return {
+  board,
   cleanup: () => { try { hud.destroy(); counter.destroy(); } catch {} grid.destroy({ children: true }); board.destroy(); },
   onSpin: async () => {
     if (busy) return;
@@ -9337,6 +9357,7 @@ const ROUNDS = [[{ reel: 0, cell: 0 }, { reel: 2, cell: 2 }], [{ reel: 4, cell: 
 
 let busy = false;
 return {
+  board,
   cleanup: () => { try { hud.destroy(); counter.destroy(); } catch {} grid.destroy({ children: true }); board.destroy(); },
   onSpin: async () => {
     if (busy) return;
@@ -9437,6 +9458,7 @@ const ROUNDS = [
 
 let busy = false;
 return {
+  board,
   cleanup: () => { try { hud.destroy(); } catch {} grid.destroy({ children: true }); board.destroy(); },
   onSpin: async () => {
     if (busy) return;
@@ -9595,6 +9617,7 @@ const ROUNDS = [
 
 let busy = false;
 return {
+  board,
   cleanup: () => { try { hud.destroy(); grid.destroy({ children: true }); boltLayer.destroy({ children: true }); } catch {} board.destroy(); },
   onSpin: async () => {
     if (busy) return;
@@ -9700,6 +9723,7 @@ async function hold(which, amount, note) {
 
 let busy = false;
 return {
+  board,
   cleanup: () => { try { hud.destroy(); } catch {} board.destroy(); },
   onSpin: async () => {
     if (busy) return;
@@ -9827,6 +9851,7 @@ async function spotlight(which) {
 
 let busy = false;
 return {
+  board,
   cleanup: () => { try { hud.destroy(); } catch {} grid.destroy({ children: true }); board.destroy(); },
   onSpin: async () => {
     if (busy) return;
@@ -9954,6 +9979,7 @@ const ROUNDS = [
 
 let busy = false;
 return {
+  board,
   cleanup: () => { try { hud.destroy(); } catch {} grid.destroy({ children: true }); board.destroy(); },
   onSpin: async () => {
     if (busy) return;
@@ -10081,6 +10107,7 @@ const ROUNDS = [[{ reel: 0, cell: 0 }, { reel: 2, cell: 2 }], [{ reel: 4, cell: 
 
 let busy = false;
 return {
+  board,
   cleanup: () => {
     framePulse.kill();
     try { hud.destroy(); bg.destroy({ children: true }); } catch {}
@@ -10207,6 +10234,7 @@ const ROUNDS = [
 
 let busy = false;
 return {
+  board,
   cleanup: () => { try { hud.destroy(); } catch {} grid.destroy({ children: true }); board.destroy(); },
   onSpin: async () => {
     if (busy) return;
@@ -10334,6 +10362,7 @@ async function collect() {
 
 let busy = false;
 return {
+  board,
   cleanup: () => { try { hud.destroy(); } catch {} grid.destroy({ children: true }); board.destroy(); },
   onSpin: async () => {
     if (busy) return;
@@ -10460,6 +10489,7 @@ async function upgrade(cell, to) {
 
 let busy = false;
 return {
+  board,
   cleanup: () => { try { hud.destroy(); } catch {} grid.destroy({ children: true }); board.destroy(); },
   onSpin: async () => {
     if (busy) return;
@@ -10575,6 +10605,7 @@ const ROUNDS = [
 
 let busy = false;
 return {
+  board,
   cleanup: () => { try { hud.destroy(); } catch {} grid.destroy({ children: true }); board.destroy(); },
   onSpin: async () => {
     if (busy) return;
@@ -10714,6 +10745,7 @@ const ROUNDS = [
 
 let busy = false;
 return {
+  board,
   cleanup: () => { for (const p of Object.values(plaques)) gsap.killTweensOf(p); try { hud.destroy(); rail.destroy(); } catch {} grid.destroy({ children: true }); board.destroy(); },
   onSpin: async () => {
     if (busy) return;
@@ -10837,6 +10869,7 @@ const ROUNDS = [[], [], [{ reel: 0, cell: 2 }], [], [], []];
 
 let busy = false;
 return {
+  board,
   cleanup: () => { for (const { lamp } of lamps) gsap.killTweensOf(lamp); try { hud.destroy(); counter.destroy(); } catch {} grid.destroy({ children: true }); board.destroy(); },
   onSpin: async () => {
     if (busy) return;
@@ -10927,6 +10960,7 @@ const SEED = [{ reel: 1, cell: 1 }, { reel: 3, cell: 2 }].map(gold);
 
 let busy = false;
 return {
+  board,
   cleanup: () => { try { hud.destroy(); badge.destroy(); grid.destroy({ children: true }); } catch {} board.destroy(); },
   onSpin: async () => {
     if (busy) return;
@@ -11106,6 +11140,7 @@ async function collect() {
 
 let phase = 'ready';
 return {
+  board,
   cleanup: () => { for (const f of flyers) { try { gsap.killTweensOf(f); f.destroy(); } catch {} } flyers.clear(); for (const t of labelAt.values()) { try { t.destroy(); } catch {} } labelAt.clear(); if (sumText) { try { gsap.killTweensOf(sumText.scale); gsap.killTweensOf(sumText); sumText.destroy(); } catch {} sumText = null; } try { hud.destroy(); labels.destroy(); } catch {} board.destroy(); },
   onSpin: async () => {
     if (phase === 'running') return;
@@ -11364,6 +11399,7 @@ async function slickReset() {
 let phase = 'ready'; // ready -> done -> (reset) -> ready
 
 return {
+  board,
   cleanup: () => {
     for (const f of flyers) { try { gsap.killTweensOf(f); f.destroy(); } catch {} }
     flyers.clear();
@@ -11523,6 +11559,7 @@ function countUp(cell, value) {
 const randVal = () => [2, 5, 10, 15, 25, 50, 100][Math.floor(Math.random() * 7)];
 let busy = false;
 return {
+  board,
   cleanup: () => {
     for (const t of labelAt.values()) { try { gsap.killTweensOf(t.scale); t.destroy(); } catch {} }
     labelAt.clear();
@@ -11653,6 +11690,7 @@ const rollHits = () => {
 
 let busy = false;
 return {
+  board,
   cleanup: () => {
     try { hud.destroy(); } catch {}
     board.destroy();
@@ -11764,6 +11802,7 @@ const ROUNDS = [[{ reel: 0, cell: 0 }, { reel: 4, cell: 0 }], [{ reel: 2, cell: 
 
 let busy = false;
 return {
+  board,
   cleanup: () => { try { hud.destroy(); } catch {} grid.destroy({ children: true }); board.destroy(); },
   onSpin: async () => {
     if (busy) return;
@@ -11971,6 +12010,7 @@ async function collectToMeter() {
 
 let phase = 'ready';
 return {
+  board,
   cleanup: () => {
     for (const f of flyers) { try { gsap.killTweensOf(f); f.destroy(); } catch {} }
     flyers.clear();
@@ -12121,6 +12161,7 @@ seedBoard();
 
 let phase = 'ready';
 return {
+  board,
   cleanup: () => { for (const f of flyers) { try { gsap.killTweensOf(f); f.destroy?.(); } catch {} } flyers.clear(); for (const t of labelAt.values()) { try { gsap.killTweensOf(t.scale); t.destroy(); } catch {} } labelAt.clear(); try { hud.destroy(); labels.destroy(); } catch {} board.destroy(); },
   onSpin: async () => {
     if (phase === 'running') return;
@@ -12333,6 +12374,7 @@ const ROUNDS = [
 
 let total = 0;
 return {
+  board,
   cleanup: () => { for (const t of labelAt.values()) { try { gsap.killTweensOf(t.scale); t.destroy(); } catch {} } labelAt.clear(); try { hud.destroy(); labels.destroy(); } catch {} board.destroy(); },
   onSpin: async () => {
     for (const t of labelAt.values()) { try { gsap.killTweensOf(t.scale); t.destroy(); } catch {} }
@@ -12472,6 +12514,7 @@ const ROUNDS = [[{ reel: 2, cell: 1 }, { reel: 4, cell: 0 }], [{ reel: 0, cell: 
 
 let busy = false;
 return {
+  board,
   cleanup: () => {
     try { hud.destroy(); } catch {}
     try { seams.destroy(); } catch {}
@@ -12674,6 +12717,7 @@ board.events.on('coin:locked', ({ coin }) => {
 
 let phase = 'ready';
 return {
+  board,
   cleanup: () => {
     for (const f of flyers) { try { gsap.killTweensOf(f); f.destroy(); } catch {} }
     flyers.clear();
@@ -12783,6 +12827,7 @@ const ROUNDS = [[{ reel: 0, cell: 0 }, { reel: 4, cell: 1 }], [{ reel: 2, cell: 
 
 let running = false;
 return {
+  board,
   cleanup: () => {
     unwatch();
     try { hud.destroy(); } catch {}
@@ -12892,6 +12937,7 @@ const ROUNDS = [[{ reel: 2, cell: 2 }, { reel: 4, cell: 1 }], [{ reel: 1, cell: 
 
 let busy = false;
 return {
+  board,
   cleanup: () => { try { hud.destroy(); } catch {} grid.destroy({ children: true }); board.destroy(); },
   onSpin: async () => {
     if (busy) return;
@@ -13030,6 +13076,7 @@ const rollHits = () => {
 
 let busy = false;
 return {
+  board,
   cleanup: () => {
     try { hud.destroy(); } catch {}
     try { locks.destroy(); } catch {}
@@ -13240,6 +13287,7 @@ seedBoard();
 
 let phase = 'ready';
 return {
+  board,
   cleanup: () => {
     for (const f of flyers) { try { gsap.killTweensOf(f); f.destroy(); } catch {} }
     flyers.clear();
@@ -13357,6 +13405,7 @@ async function collect() {
 
 let running = false;
 return {
+  board,
   cleanup: () => { for (const f of flyers) { try { gsap.killTweensOf(f); f.destroy(); } catch {} } flyers.clear(); for (const t of labelAt.values()) { try { t.destroy(); } catch {} } labelAt.clear(); try { meterText.destroy(); hud.destroy(); labels.destroy({ children: false }); } catch {} board.destroy(); },
   // RecipeRunner calls onSkip when the button is tapped mid-feature
   onSkip: () => {
@@ -13724,6 +13773,7 @@ const ROUNDS = [
 ];
 
 return {
+  board,
   cleanup: () => {
     for (const fly of flyers) { try { gsap.killTweensOf(fly); gsap.killTweensOf(fly.scale); fly.destroy(); } catch {} }
     flyers.clear();
@@ -13877,6 +13927,7 @@ const ROUNDS = [
 
 let busy = false;
 return {
+  board,
   cleanup: () => { for (const t of labelAt.values()) { try { t.destroy(); } catch {} } labelAt.clear(); try { hud.destroy(); labels.destroy(); } catch {} board.destroy(); },
   onSpin: async () => {
     if (busy) return;
@@ -13981,6 +14032,7 @@ seedBoard();
 const flyers = new Set();
 let phase = 'ready', total = 0;
 return {
+  board,
   cleanup: () => { try { gsap.killTweensOf(meterText.scale); } catch {} for (const f of flyers) { try { gsap.killTweensOf(f); f.destroy(); } catch {} } flyers.clear(); board.destroy(); },
   onSpin: async () => {
     if (phase === 'swapping' || phase === 'flying') return;
@@ -14123,6 +14175,7 @@ seedBoard();
 
 let tier = 0, busy = false;
 return {
+  board,
   cleanup: () => { for (const t of labelAt.values()) { try { t.destroy(); } catch {} } labelAt.clear(); try { hud.destroy(); labels.destroy({ children: false }); } catch {} board.destroy(); },
   onSpin: async () => {
     if (busy) return;
@@ -14241,6 +14294,7 @@ function pickHits() {
 
 let running = false;
 return {
+  board,
   cleanup: () => { for (const l of lines) { try { gsap.killTweensOf(l); l.destroy(); } catch {} } lines.length = 0; try { panel.destroy({ children: true }); hud.destroy(); } catch {} board.destroy(); },
   onSpin: async () => {
     if (running) return;
@@ -14399,6 +14453,7 @@ async function upgradeCoin(coin) {
 
 let busy = false;
 return {
+  board,
   cleanup: () => { for (const t of labelAt.values()) { try { gsap.killTweensOf(t.scale); t.destroy(); } catch {} } labelAt.clear(); try { hud.destroy(); labels.destroy(); } catch {} board.destroy(); },
   onSpin: async () => {
     if (busy) return;
@@ -14527,6 +14582,7 @@ const rounds = [
 ];
 
 return {
+  board,
   cleanup: () => { for (const t of labelAt.values()) { try { t.destroy(); } catch {} } labelAt.clear(); try { hud.destroy(); labels.destroy(); } catch {} board.destroy(); },
   onSpin: async () => {
     for (const t of labelAt.values()) t.destroy();
@@ -25556,6 +25612,7 @@ const ROUNDS = [
 
 let busy = false;
 return {
+  board,
   cleanup: () => { for (const t of labelAt.values()) { try { t.destroy(); } catch {} } labelAt.clear(); try { total.destroy(); labels.destroy(); } catch {} board.destroy(); },
   onSpin: async () => {
     if (busy) return;

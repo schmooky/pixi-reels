@@ -94,6 +94,7 @@ const ROUNDS = [[], [], [{ reel: 0, cell: 2 }], [], [], []];
 
 let busy = false;
 return {
+  board,
   cleanup: () => { for (const { lamp } of lamps) gsap.killTweensOf(lamp); try { hud.destroy(); counter.destroy(); } catch {} grid.destroy({ children: true }); board.destroy(); },
   onSpin: async () => {
     if (busy) return;

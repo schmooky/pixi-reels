@@ -75,6 +75,7 @@ seedBoard();
 const flyers = new Set();
 let phase = 'ready', total = 0;
 return {
+  board,
   cleanup: () => { try { gsap.killTweensOf(meterText.scale); } catch {} for (const f of flyers) { try { gsap.killTweensOf(f); f.destroy(); } catch {} } flyers.clear(); board.destroy(); },
   onSpin: async () => {
     if (phase === 'swapping' || phase === 'flying') return;

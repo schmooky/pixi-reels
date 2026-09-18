@@ -178,6 +178,7 @@ async function collectToMeter() {
 
 let phase = 'ready';
 return {
+  board,
   cleanup: () => {
     for (const f of flyers) { try { gsap.killTweensOf(f); f.destroy(); } catch {} }
     flyers.clear();

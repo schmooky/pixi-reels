@@ -70,6 +70,7 @@ const ROUNDS = [
 
 let busy = false;
 return {
+  board,
   cleanup: () => { for (const t of labelAt.values()) { try { t.destroy(); } catch {} } labelAt.clear(); try { total.destroy(); labels.destroy(); } catch {} board.destroy(); },
   onSpin: async () => {
     if (busy) return;

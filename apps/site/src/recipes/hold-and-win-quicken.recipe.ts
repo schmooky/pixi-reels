@@ -72,6 +72,7 @@ const ROUNDS = [[{ reel: 0, cell: 0 }, { reel: 4, cell: 1 }], [{ reel: 2, cell: 
 
 let running = false;
 return {
+  board,
   cleanup: () => {
     unwatch();
     try { hud.destroy(); } catch {}
