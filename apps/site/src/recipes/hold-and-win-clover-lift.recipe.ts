@@ -100,6 +100,7 @@ async function upgrade(cell, to) {
 
 let busy = false;
 return {
+  board,
   cleanup: () => { try { hud.destroy(); } catch {} grid.destroy({ children: true }); board.destroy(); },
   onSpin: async () => {
     if (busy) return;

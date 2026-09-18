@@ -1,7 +1,7 @@
 import type { gsap } from 'gsap';
 import { ReelPhase } from './ReelPhase.js';
 import type { Reel } from '../../core/Reel.js';
-import type { SpeedProfile } from '../../config/types.js';
+import type { SpeedProfile, SkipContext } from '../../config/types.js';
 import type { ReelSymbol } from '../../symbols/ReelSymbol.js';
 
 export interface AdjustPhaseConfig {
@@ -61,11 +61,12 @@ export interface PinOverlayTween {
 export class AdjustPhase extends ReelPhase<AdjustPhaseConfig> {
   readonly name = 'adjust';
   readonly skippable = true;
+  override readonly quickenable = true;
 
-  private _durationMs: number;
-  private _ease: string;
-  private _tween: gsap.core.Timeline | null = null;
-  private _settle: (() => void) | null = null;
+  protected _durationMs: number;
+  protected _ease: string;
+  protected _tween: gsap.core.Timeline | null = null;
+  protected _settle: (() => void) | null = null;
 
   constructor(
     reel: Reel,
@@ -138,7 +139,8 @@ export class AdjustPhase extends ReelPhase<AdjustPhaseConfig> {
     // GSAP-driven; no per-frame work needed.
   }
 
-  protected onSkip(): void {
+  /** The pose is the natural end (overlays on their new cells), so a `'quicken'` completes here. */
+  protected onSkip(ctx: SkipContext = { mode: 'slam' }): void {
     if (this._tween) {
       this._tween.progress(1);
       this._tween.kill();
@@ -148,9 +150,10 @@ export class AdjustPhase extends ReelPhase<AdjustPhaseConfig> {
       this._settle();
       this._settle = null;
     }
+    if (ctx.mode === 'quicken') this._complete();
   }
 
-  private _snapPinOverlays(overlays: PinOverlayTween[]): void {
+  protected _snapPinOverlays(overlays: PinOverlayTween[]): void {
     const axis = this._reel.axis;
     for (const o of overlays) {
       const size = axis.toScreen(o.cellCross, o.newCellMain);

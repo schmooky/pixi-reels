@@ -59,22 +59,25 @@ describe('nudge in-flight guard (M4)', () => {
       await h.spinAndLand([ { visible: ['a', 'b', 'c'] }, { visible: ['a', 'b', 'c'] }, { visible: ['a', 'b', 'c'] } ]);
 
       // Two parallel nudges across reels 1 and 2; both tweens are deferred.
+      // Counted from the shim's current length: the spin's own beats are
+      // `gsap.to` tweens as well and sit in the same list.
+      const before = deferred.count();
       const nA = h.reelSet.nudge(1, { distance: 1, direction: 'forward', incoming: ['wild'] });
       const nB = h.reelSet.nudge(2, { distance: 1, direction: 'forward', incoming: ['wild'] });
-      expect(deferred.count()).toBe(2);
+      expect(deferred.count() - before).toBe(2);
 
       // Both in flight -> spin() blocked.
       await expect(h.reelSet.spin()).rejects.toThrow(/nudge/);
 
       // Settle the FIRST nudge only.
-      deferred.fire(0);
+      deferred.fire(before);
       await nA;
 
       // The old single-boolean cleared the guard here; the counter must not.
       await expect(h.reelSet.spin()).rejects.toThrow(/nudge/);
 
       // Settle the second nudge.
-      deferred.fire(1);
+      deferred.fire(before + 1);
       await nB;
 
       // Guard released - a spin runs again.

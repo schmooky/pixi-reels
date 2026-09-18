@@ -35,7 +35,13 @@ import { dirname, join, resolve } from 'node:path';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const CHANGESETS = join(ROOT, '.changeset');
-const GUIDE = join(ROOT, 'apps/site/src/content/docs/migrating-to-2-0.mdx');
+const DOCS = join(ROOT, 'apps/site/src/content/docs');
+/** Every migration guide counts; a 3.0 removal lands in the 3.0 guide, not the 2.0 one. */
+const GUIDES = (await readdir(DOCS))
+  .filter((f) => /^migrating-to-.*\.mdx$/.test(f))
+  .sort()
+  .map((f) => join(DOCS, f));
+const GUIDE = GUIDES.map((g) => g.replace(`${ROOT}/`, '')).join(', ');
 const SRC = join(ROOT, 'packages/pixi-reels/src');
 const RENAMES = join(SRC, 'config/v1Renames.ts');
 
@@ -52,13 +58,16 @@ const NOISE = new Set([
  * against it would let a one-line description stand in for the sections that
  * actually tell a user what to type.
  */
-const guideFile = await readFile(GUIDE, 'utf8');
-const firstSection = guideFile.indexOf('\n## ');
-if (firstSection === -1) {
-  console.error(`check-migration-coverage: ${GUIDE} has no '## ' sections to land in.`);
-  process.exit(1);
+let guide = '';
+for (const path of GUIDES) {
+  const guideFile = await readFile(path, 'utf8');
+  const firstSection = guideFile.indexOf('\n## ');
+  if (firstSection === -1) {
+    console.error(`check-migration-coverage: ${path} has no '## ' sections to land in.`);
+    process.exit(1);
+  }
+  guide += guideFile.slice(firstSection);
 }
-const guide = guideFile.slice(firstSection);
 
 /** Whole word, case-sensitive: `top` must not be satisfied by `topToBottom`. */
 const named = (name, text) => new RegExp(`\\b${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`).test(text);
@@ -189,7 +198,7 @@ for (const file of files) {
 if (undocumented.length > 0) {
   console.error(`check-migration-coverage: ${undocumented.length} rename(s) missing from the guide:\n`);
   for (const u of undocumented) console.error(`  ${u}`);
-  console.error(`\nThe engine throws on these names. ${GUIDE.replace(`${ROOT}/`, '')} is where the message sends the user.`);
+  console.error(`\nThe engine throws on these names. ${GUIDE} is where the message sends the user.`);
 }
 if (gaps.length > 0) {
   console.error(`check-migration-coverage: ${gaps.length} breaking change(s) with no migration path:\n`);

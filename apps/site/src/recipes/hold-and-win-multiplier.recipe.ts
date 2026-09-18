@@ -116,6 +116,7 @@ seedBoard();
 
 let phase = 'ready';
 return {
+  board,
   cleanup: () => { for (const f of flyers) { try { gsap.killTweensOf(f); f.destroy?.(); } catch {} } flyers.clear(); for (const t of labelAt.values()) { try { gsap.killTweensOf(t.scale); t.destroy(); } catch {} } labelAt.clear(); try { hud.destroy(); labels.destroy(); } catch {} board.destroy(); },
   onSpin: async () => {
     if (phase === 'running') return;

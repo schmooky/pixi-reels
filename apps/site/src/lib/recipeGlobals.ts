@@ -52,6 +52,7 @@ import {
 } from 'pixi-reels';
 import { BlurSpriteSymbol } from '../runtime/BlurSpriteSymbol.ts';
 import { CardSymbol, CARD_DECK, WILD_CARD, PhaseCardSymbol, PHASE_CARD_COLORS } from 'pixi-reels';
+import { step, insertBefore, insertAfter, replaceStep, removeStep, runStep } from 'pixi-reels';
 import {
   CoinSymbol,
   COIN_TIER,
@@ -249,6 +250,12 @@ export function buildRecipeGlobals(
     WILD_CARD,
     PhaseCardSymbol,
     PHASE_CARD_COLORS,
+    step,
+    insertBefore,
+    insertAfter,
+    replaceStep,
+    removeStep,
+    runStep,
     CoinSymbol,
     COIN_TIER,
     COIN_FEATURE,

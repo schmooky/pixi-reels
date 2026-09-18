@@ -142,6 +142,7 @@ async function runFeature(clovers) {
 
 let busy = false;
 return {
+  board,
   cleanup: () => { try { hud.destroy(); grid.destroy({ children: true }); } catch {} board.destroy(); base.destroy(); },
   onSpin: async () => {
     if (busy) return;

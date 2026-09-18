@@ -22,6 +22,7 @@ interface ListenerEntry {
  */
 export class EventEmitter<TEvents extends Record<string, unknown[]>> {
   private _listeners = new Map<keyof TEvents, ListenerEntry[]>();
+  private _any: Array<(event: Extract<keyof TEvents, string>, ...args: unknown[]) => void> = [];
 
   on<K extends keyof TEvents>(
     event: K,
@@ -63,20 +64,43 @@ export class EventEmitter<TEvents extends Record<string, unknown[]>> {
     return this;
   }
 
+  /**
+   * Hear every event this emitter raises, name first: for a trace, an events
+   * panel, a recorder. Not for game logic, which names the events it wants.
+   * Runs after the event's own listeners.
+   */
+  onAny(fn: (event: Extract<keyof TEvents, string>, ...args: unknown[]) => void): this {
+    this._any.push(fn);
+    return this;
+  }
+
+  offAny(fn: (event: Extract<keyof TEvents, string>, ...args: unknown[]) => void): this {
+    this._any = this._any.filter((f) => f !== fn);
+    return this;
+  }
+
   emit<K extends keyof TEvents>(event: K, ...args: TEvents[K]): boolean {
     const entries = this._listeners.get(event);
-    if (!entries || entries.length === 0) return false;
+    const any = this._any.length > 0 ? this._any.slice() : null;
+    if ((!entries || entries.length === 0) && !any) return false;
 
-    // Snapshot to allow mutations during iteration
-    const snapshot = entries.slice();
-    for (const entry of snapshot) {
-      if (entry.once) {
-        // Remove this specific entry by identity. Calling off(fn, context)
-        // would drop *every* listener with the same fn reference — including a
-        // separate persistent on() registration of the same handler.
-        this._removeEntry(event, entry);
+    if (entries && entries.length > 0) {
+      // Snapshot to allow mutations during iteration
+      const snapshot = entries.slice();
+      for (const entry of snapshot) {
+        if (entry.once) {
+          // Remove this specific entry by identity. Calling off(fn, context)
+          // would drop *every* listener with the same fn reference — including a
+          // separate persistent on() registration of the same handler.
+          this._removeEntry(event, entry);
+        }
+        entry.fn.apply(entry.context, args);
       }
-      entry.fn.apply(entry.context, args);
+    }
+    if (any) {
+      // A `Record<string, ...>` key is a string at run time; the `number` half
+      // of `keyof` is the index signature's artefact, hence the two-step cast.
+      for (const fn of any) fn(event as unknown as Extract<keyof TEvents, string>, ...args);
     }
     return true;
   }
@@ -95,6 +119,7 @@ export class EventEmitter<TEvents extends Record<string, unknown[]>> {
       this._listeners.delete(event);
     } else {
       this._listeners.clear();
+      this._any = [];
     }
     return this;
   }

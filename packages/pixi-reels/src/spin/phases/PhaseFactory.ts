@@ -12,7 +12,8 @@ import { AnticipationPhase } from './AnticipationPhase.js';
 export type PhaseConstructor<
   T extends ReelPhase<any, any> = ReelPhase<any>,
   P extends SpeedProfile = SpeedProfile,
-> = new (reel: Reel, speed: P) => T;
+  O = undefined,
+> = new (reel: Reel, speed: P, options?: O) => T;
 
 export type PhaseCreatorFn<
   T extends ReelPhase<any, any> = ReelPhase<any>,
@@ -38,18 +39,26 @@ export class PhaseFactory {
   }
 
   /**
-   * Register or override a phase type by constructor.
+   * Register or override a phase type by constructor, with the `options` its
+   * constructor takes as a third argument. Registering a built-in under its
+   * own key with options is how a game reconfigures it without subclassing:
+   *
+   * @example
+   * factory.register('stop', StopPhase, {
+   *   steps: (steps) => insertAfter(steps, 'land', step('flash', (ctx) => flash(ctx.reel))),
+   * });
    *
    * A phase declared against a wider profile (`ReelPhase<Config, MyProfile>`)
    * registers the same way: the manager hands every phase the profile
    * instance the game registered, so the extra fields are there at run time,
    * and narrowing to `P` here is what lets that declaration typecheck.
    */
-  register<P extends SpeedProfile, T extends ReelPhase<any, any>>(
+  register<P extends SpeedProfile, T extends ReelPhase<any, any>, O = undefined>(
     name: string,
-    PhaseClass: PhaseConstructor<T, P>,
+    PhaseClass: PhaseConstructor<T, P, O>,
+    options?: O,
   ): void {
-    this._registry.set(name, (r, s) => new PhaseClass(r, s as P));
+    this._registry.set(name, (r, s) => new PhaseClass(r, s as P, options));
   }
 
   /**

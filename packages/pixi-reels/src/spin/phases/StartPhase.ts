@@ -1,5 +1,7 @@
-import type { gsap } from 'gsap';
+import type { SkipContext } from '../../config/types.js';
 import { ReelPhase } from './ReelPhase.js';
+import { step } from './steps.js';
+import type { PhaseStep, StepContext, StepsEditor } from './steps.js';
 import type { SpinningMode } from '../modes/SpinningMode.js';
 
 export interface StartPhaseConfig {
@@ -9,137 +11,117 @@ export interface StartPhaseConfig {
   delay?: number;
 }
 
+/** What a game hands `StartPhase` through `f.register('start', StartPhase, options)`. */
+export interface StartPhaseOptions {
+  /**
+   * Edit the built-in steps (`delay`, `launch`, `pull`, `accelerate`,
+   * `announce`) before they run: insert one, replace one, drop one. Gets the
+   * default list, returns the list to run. See `insertAfter` and friends.
+   */
+  steps?: StepsEditor<StartStepContext>;
+}
+
+export type StartStepContext = StepContext<StartPhaseConfig>;
+
+/** The step-back pull, px/frame backwards and for how long. */
+const PULL_SPEED = -2;
+const PULL_MS = 50;
+
 /**
  * Accelerates the reel from rest to full spin speed.
  *
  * Optionally performs a brief step-back (reel reverses a tiny amount) before
  * accelerating upward, giving the classic slot machine "pull" feel.
+ *
+ * Steps, in order: `delay` (the stagger, cut by a quicken), `launch`
+ * (re-mask lifted symbols), `pull` (only on a profile that bounces),
+ * `accelerate`, `announce` (`notifySpinStart`). Under the tween model the
+ * pull and the acceleration are tweens of `reel.speed`; under the drive
+ * model they name a `targetSpeed` and wait, letting the drive's bounds shape
+ * the ramp.
  */
 export class StartPhase extends ReelPhase<StartPhaseConfig> {
   readonly name = 'start';
   readonly skippable = true;
+  override readonly quickenable = true;
 
-  private _tween: gsap.core.Timeline | null = null;
-  private _delayedCall: gsap.core.Tween | null = null;
+  protected readonly _options: StartPhaseOptions;
 
-  protected onEnter(config: StartPhaseConfig): void {
-    const reel = this._reel;
-    const delay = config.delay ?? 0;
-
-    reel.spinningMode = config.spinningMode;
-    reel.haltDrive();
-
-    if (delay > 0) {
-      this._delayedCall = this._reel.gsap.delayedCall(delay / 1000, () => this._launch());
-    } else {
-      this._launch();
-    }
+  constructor(reel: ReelPhase<StartPhaseConfig>['reel'], speed: StartPhase['speed'], options: StartPhaseOptions = {}) {
+    super(reel, speed);
+    this._options = options;
   }
 
-  private _launch(): void {
-    this._delayedCall = null;
+  /** The built-in list. A subclass overrides this to change the flow; a game edits it through `options.steps`. */
+  defaultSteps(): PhaseStep<StartStepContext>[] {
     const reel = this._reel;
     const speed = this._speed;
-    // Re-mask any lifted unmask symbols the instant this reel starts to
-    // move. notifySpinStart only fires at accel-end, which would leave an
-    // unmasked symbol floating above the mask for the whole ramp.
-    reel.beginMotion();
-    const accelDuration = (speed.accelerationDuration ?? 300) / 1000;
-    const accelEase = speed.accelerationEase ?? 'power2.in';
-
-    if (reel.hasDrive) {
-      // Under the drive model the ramp shape belongs to the acceleration
-      // bounds, not to this ease. The phase only names the destination and
-      // gives the drive the same time budget the tween would have had.
-      this._driveLaunch(accelDuration);
-      return;
-    }
-
-    this._tween = this._reel.gsap.timeline();
-
+    const steps: PhaseStep<StartStepContext>[] = [
+      step('delay', (ctx) => ((ctx.config.delay ?? 0) > 0 ? ctx.wait(ctx.config.delay ?? 0) : undefined), { cut: true }),
+      // Re-mask any lifted unmask symbols the instant this reel starts to
+      // move. notifySpinStart only fires at accel-end, which would leave an
+      // unmasked symbol floating above the mask for the whole ramp.
+      step('launch', () => reel.beginMotion()),
+    ];
     // Step-back: brief reverse to give a "pull" before launch. This tweens
     // reel.speed, not a position, so it needs no axis routing: the negative
     // speed is direction-relative and ReelMotion.advance multiplies travel by
     // axis.polarity, making it read as "backwards for this reel" in any
-    // orientation/direction. Multiplying speed by polarity here would instead
-    // invert the pull on reverse reels.
+    // orientation/direction.
     if (speed.bounceDistance > 0) {
-      this._tween.to(reel, {
-        speed: -2,
-        duration: 0.05,
-        ease: 'power1.out',
-      });
+      steps.push(
+        step('pull', (ctx) => {
+          if (reel.hasDrive) {
+            reel.targetSpeed = PULL_SPEED;
+            return ctx.wait(PULL_MS);
+          }
+          return ctx.gsap.to(reel, { speed: PULL_SPEED, duration: PULL_MS / 1000, ease: 'power1.out' });
+        }),
+      );
     }
-
-    this._tween.to(reel, {
-      speed: speed.spinSpeed,
-      duration: accelDuration,
-      ease: accelEase,
-      onComplete: () => {
-        reel.notifySpinStart();
-        this._complete();
-      },
-    });
+    steps.push(
+      step('accelerate', (ctx) => {
+        const duration = speed.accelerationDuration ?? 300;
+        if (reel.hasDrive) {
+          // Under the drive model the ramp shape belongs to the acceleration
+          // bounds, not to an ease. The phase only names the destination and
+          // gives the drive the same time budget the tween would have had.
+          reel.targetSpeed = speed.spinSpeed;
+          return ctx.wait(duration);
+        }
+        return ctx.gsap.to(reel, {
+          speed: speed.spinSpeed,
+          duration: duration / 1000,
+          ease: speed.accelerationEase ?? 'power2.in',
+        });
+      }),
+      step('announce', () => reel.notifySpinStart()),
+    );
+    return steps;
   }
 
-  /**
-   * Drive-model launch: pull back, then ask for full speed and let the
-   * acceleration bounds do the ramp. Timed rather than watched for arrival,
-   * because a drive tuned slower than `accelerationDuration` would otherwise
-   * stretch every spin's start.
-   */
-  private _driveLaunch(accelDuration: number): void {
-    const reel = this._reel;
-    const speed = this._speed;
-    const finish = (): void => {
-      this._delayedCall = null;
-      reel.targetSpeed = speed.spinSpeed;
-      this._delayedCall = reel.gsap.delayedCall(accelDuration, () => {
-        this._delayedCall = null;
-        reel.notifySpinStart();
-        this._complete();
-      });
-    };
-
-    if (speed.bounceDistance > 0) {
-      reel.targetSpeed = -2;
-      this._delayedCall = reel.gsap.delayedCall(0.05, finish);
-    } else {
-      finish();
-    }
+  protected onEnter(config: StartPhaseConfig): void {
+    this._reel.spinningMode = config.spinningMode;
+    this._reel.haltDrive();
+    const steps = this.defaultSteps();
+    this.runSteps(this._options.steps ? this._options.steps(steps) : steps);
   }
 
   update(_deltaMs: number): void {
-    // Motion is driven by reel.speed, updated by Reel.update()
-  }
-
-  protected onSkip(): void {
-    this._kill();
-    this._reel.forceSpeed(this._speed.spinSpeed);
-    // The accel tween died with _kill() before its onComplete could fire
-    // notifySpinStart, but the reel keeps spinning through StopPhase.
-    // symbols must still learn they're in a spin (blur / static-spin
-    // presentations). Safe if it already fired: the hook is idempotent.
-    this._reel.notifySpinStart();
+    this.tickSteps();
   }
 
   /**
-   * The natural end of a start is full spin speed with the spin announced,
-   * which is exactly the slam pose, so hurrying is force-completing.
+   * Both modes end the same way: at full spin speed, with the spin announced.
+   * The pose IS the natural end, so a `'quicken'` completes here as well.
    */
-  protected onHurry(): boolean {
-    this.forceComplete();
-    return true;
-  }
-
-  private _kill(): void {
-    if (this._delayedCall) {
-      this._delayedCall.kill();
-      this._delayedCall = null;
-    }
-    if (this._tween) {
-      this._tween.kill();
-      this._tween = null;
-    }
+  protected onSkip(ctx: SkipContext = { mode: 'slam' }): void {
+    this._reel.forceSpeed(this._speed.spinSpeed);
+    // The accel step died before `announce` could run, but the reel keeps
+    // spinning through StopPhase. symbols must still learn they're in a spin
+    // (blur / static-spin presentations). Safe if it already fired: the hook
+    // is idempotent.
+    this._reel.notifySpinStart();
+    if (ctx.mode === 'quicken') this._complete();
   }
 }

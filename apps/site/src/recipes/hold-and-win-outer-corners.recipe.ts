@@ -109,6 +109,7 @@ const ROUNDS = [[{ reel: 2, cell: 1 }, { reel: 4, cell: 0 }], [{ reel: 0, cell: 
 
 let busy = false;
 return {
+  board,
   cleanup: () => {
     try { hud.destroy(); } catch {}
     try { seams.destroy(); } catch {}

@@ -3,6 +3,8 @@ import type {
   SpeedProfile,
   Win,
   SymbolPosition,
+  SkipContext,
+  SkipMode,
 } from '../config/types.js';
 import type { CellPin, PinExpireReason } from '../pins/CellPin.js';
 import type { ReelSymbol } from '../symbols/ReelSymbol.js';
@@ -15,10 +17,48 @@ export type { SymbolPosition };
 export interface SpinResult {
   /** Final symbol grid [reelIndex][cellIndex]. */
   symbols: string[][];
-  /** Whether the spin was skipped/slam-stopped. */
+  /** Whether a skip press freed reels this spin, in either mode, or the engine slammed it. */
   wasSkipped: boolean;
+  /** The mode of the last press that freed reels, `null` when none did. */
+  skipMode: SkipMode | null;
+  /**
+   * The last press that freed reels, as its `skip:requested` carried it:
+   * `mode`, the profile a quicken named, the game's `payload`. `null` when
+   * none did; `{ mode: 'slam' }` when the engine slammed with no press behind
+   * it (an abort, a timeout, `slamStop()`).
+   */
+  skipContext: SkipContext | null;
   /** Total spin duration in milliseconds. */
   duration: number;
+}
+
+/**
+ * What `skip:requested` and `skip:completed` carry: the press as every phase
+ * saw it in `onSkip(ctx)` (`mode`, the `speed` profile a quicken named, the
+ * game's `payload`), plus the reels it freed and whether reels are still
+ * spinning after it. An engine slam (an abort, a timeout, error recovery,
+ * `slamStop()`) has no press behind it: `mode: 'slam'`, no `speed`, no
+ * `payload`. Keys the press did not set are absent, not `undefined`.
+ */
+export interface SkipInfo extends SkipContext {
+  /** The reels this press frees; landed and held reels are excluded. */
+  reels: number[];
+  /** `true` when reels are still spinning after this press. */
+  partial: boolean;
+}
+
+/** Where a step of a phase on `runSteps()` is, as `reel.events` reports it in `phase:step`. */
+export type PhaseStepStatus = 'start' | 'end' | 'skipped' | 'cut' | 'cancelled';
+
+/**
+ * The press behind a `SkipContext` or `SkipInfo` as events and results carry
+ * it: a fresh object, `mode` and only the keys the press set.
+ */
+export function skipContextOf(ctx: SkipContext): SkipContext {
+  const copy: SkipContext = { mode: ctx.mode };
+  if (ctx.speed) copy.speed = ctx.speed;
+  if (ctx.payload !== undefined) copy.payload = ctx.payload;
+  return copy;
 }
 
 /**
@@ -35,6 +75,12 @@ export interface RunCascadeResult {
   finalGrid: string[][];
   /** True when the chain ended early because the player slammed mid-cascade. */
   wasSkipped: boolean;
+  /**
+   * The press that ended the chain, as its `skip:requested` carried it
+   * (`mode`, `speed`, `payload`); `null` when no press did. An abort through
+   * `signal` is an engine slam: `{ mode: 'slam' }`.
+   */
+  skipContext: SkipContext | null;
 }
 
 /** Events emitted by a ReelSet. */
@@ -103,25 +149,28 @@ export interface ReelSetEvents extends Record<string, unknown[]> {
   'spin:allLanded': [result: SpinResult];
   'spin:complete': [result: SpinResult];
   /**
-   * A slam is about to place reels. `reels` lists the indices this slam
-   * lands (already-landed and held reels are excluded), and `partial` is
-   * `true` when reels are still spinning after it. a tease-protected skip
-   * press, or a `slamStop({ reels })` / `slamStop({ except })` call.
-   *
-   * Listeners written before partial slams existed take no arguments and
-   * keep working unchanged.
+   * A skip press freed reels. `reels` lists the indices this press frees
+   * (already-landed and held reels are excluded), `partial` is `true` when
+   * reels are still spinning after it (a tease-protected press, a reel group,
+   * or a `slamStop({ reels })` / `slamStop({ except })` call), and `mode`
+   * says what freeing means: `'slam'` places them now, `'quicken'` asks each
+   * for its landing sooner and the landing arrives as the usual
+   * `spin:reelLanding` / `spin:reelLanded`. `speed` and `payload` are the
+   * press's own, the same `SkipContext` every phase's `onSkip(ctx)` saw.
    */
-  'skip:requested': [info: { reels: number[]; partial: boolean }];
-  /** The same slam, after every target reel has been placed and landed. */
-  'skip:completed': [info: { reels: number[]; partial: boolean }];
+  'skip:requested': [info: SkipInfo];
   /**
-   * A `requestHurry()` press freed these reels: each is advancing to its
-   * natural landing as fast as its animation allows instead of being placed.
-   * The counterpart of `skip:requested`, which still means "about to be
-   * placed" and never lists a hurried reel. The landing itself arrives as the
-   * usual `spin:reelLanding` / `spin:reelLanded`.
+   * The same press, once its reels are down: in the same tick for a slam,
+   * as the last freed reel lands for a quicken (however it got down, its own
+   * stop or a later slam). The same `info` its `skip:requested` carried.
    */
-  'hurry:requested': [info: { reels: number[] }];
+  'skip:completed': [info: SkipInfo];
+  /**
+   * `requestSkip()` came before the result: the press is kept and fires the
+   * moment the result arrives. The same context its `skip:requested` will
+   * carry, minus the reels, which are not known yet.
+   */
+  'skip:queued': [info: SkipContext];
   /**
    * Round-aware `skip()` first-press boost: in standard (non-cascade)
    * mode, the engine switched the active speed profile to the fastest
@@ -463,6 +512,13 @@ export interface ReelSetEvents extends Record<string, unknown[]> {
 export interface ReelEvents extends Record<string, unknown[]> {
   'phase:enter': [phaseName: string];
   'phase:exit': [phaseName: string];
+  /**
+   * A step of a phase running on `ReelPhase.runSteps()`: `start` as it
+   * begins, `end` as it finishes on its own, `skipped` for a `cut` step a
+   * quicken never started, `cut` for the `cut` step a quicken stopped in
+   * flight, `cancelled` for the step a slam or a destroy stopped in flight.
+   */
+  'phase:step': [info: { phase: string; step: string; status: PhaseStepStatus }];
   'symbol:created': [symbolId: string, stripIndex: number];
   /**
    * The reel is on its result frame and its symbols have been told they

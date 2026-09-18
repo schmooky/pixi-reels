@@ -90,6 +90,7 @@ const ROUNDS = [
 ];
 
 return {
+  board,
   cleanup: () => { for (const t of labelAt.values()) { try { t.destroy(); } catch {} } labelAt.clear(); try { labels.destroy({ children: false }); } catch {} board.destroy(); },
   onSpin: async () => {
     for (const t of labelAt.values()) t.destroy();

@@ -332,6 +332,7 @@ const ROUNDS = [
 ];
 
 return {
+  board,
   cleanup: () => {
     for (const fly of flyers) { try { gsap.killTweensOf(fly); gsap.killTweensOf(fly.scale); fly.destroy(); } catch {} }
     flyers.clear();

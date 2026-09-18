@@ -1,22 +1,22 @@
 // @ts-nocheck
 // Injected globals: ReelSetBuilder, SpeedPresets, PhaseCardSymbol, CardSymbol, PIXI, gsap, app
 //
-// HURRY WITH GROUPS. The same barrier, a different verb.
+// QUICKEN WITH GROUPS. The same barrier, a different mode.
 //
 //   reels 1-2  land together
 //   reels 3-4  tease, one press each
 //   reel  5    keeps spinning until both teases are over
 //
-// `requestHurry()` walks exactly the groups `requestSkip()` would and hurries
-// each one instead of placing it: press 1 frees reels 1-2, press 2 ends reel
-// 3's tease, press 3 reel 4's, press 4 frees reel 5. The cards are
+// `requestSkip({ mode: 'quicken' })` walks exactly the groups a slam would and
+// quickens each one instead of placing it: press 1 frees reels 1-2, press 2
+// ends reel 3's tease, press 3 reel 4's, press 4 frees reel 5. The cards are
 // PhaseCardSymbol, so the difference is on screen: blue is spin, amber is
 // the tease, violet is the stop spinning the frame in.
 //
 //   - a freed group goes violet, not straight to grey. It lands; it is not placed
 //   - the barrier holds. Reel 5 stays blue until reel 4 is down, however fast
-//     you press. A hurried reel counts as released for the WALK, so press 4 is
-//     taken early; the reel itself still waits its turn
+//     you press. A quickened reel counts as released for the WALK, so press 4
+//     is taken early; the reel itself still waits its turn
 
 const IDS = ['9', '10', 'J', 'Q', 'K'];
 const SCAT = 'SCAT';
@@ -50,7 +50,7 @@ GROUPS.forEach((group, g) => {
 reelSet.addChild(bars);
 
 const hud = new PIXI.Text({
-  text: 'press spin, then keep pressing: each press hurries the next group',
+  text: 'press spin, then keep pressing: each press quickens the next group',
   style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 11, fill: 0x9c8f78 },
 });
 hud.position.set(0, H + 19);
@@ -61,11 +61,11 @@ let order = [];
 reelSet.events.on('spin:start', () => {
   press = 0;
   order = [];
-  hud.text = 'press spin, then keep pressing: each press hurries the next group';
+  hud.text = 'press spin, then keep pressing: each press quickens the next group';
 });
-reelSet.events.on('hurry:requested', ({ reels }) => {
+reelSet.events.on('skip:requested', ({ reels, mode }) => {
   press += 1;
-  hud.text = `press ${press}: hurried [${reels.map((i) => i + 1).join(', ')}]`;
+  hud.text = `press ${press}: ${mode === 'quicken' ? 'quickened' : 'slammed'} [${reels.map((i) => i + 1).join(', ')}]`;
 });
 reelSet.events.on('spin:reelLanded', (i) => {
   order.push(i + 1);
@@ -81,7 +81,7 @@ return {
   },
   // Every press goes through the same call. The engine decides which group
   // this one frees; the group lands through its stop.
-  onSkip: () => reelSet.requestHurry(),
+  onSkip: () => reelSet.requestSkip({ mode: 'quicken' }),
   onSpin: async () => {
     const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
     grid[0].visible[1] = SCAT;

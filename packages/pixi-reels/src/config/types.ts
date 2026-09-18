@@ -80,15 +80,53 @@ export interface SlamOptions {
   except?: number[];
 }
 
-/** Options for `requestHurry()`. */
-export interface HurryOptions {
+/**
+ * What a skip press does to the reels it frees.
+ *
+ *   - `'slam'` (the default): place each freed reel on its result frame and
+ *     land it in the same tick. The cut.
+ *   - `'quicken'`: ask each freed reel for its landing sooner without changing
+ *     what the landing looks like. A tease ends, a stop delay is cut, the
+ *     spin-out and bounce still play. A phase that does not know how to be
+ *     quickened runs its course, so the reel still lands.
+ *
+ * Which reels a press frees (tease protection, `'stepwise'`, reel groups) is
+ * the same in both modes; only what freeing means differs.
+ */
+export type SkipMode = 'slam' | 'quicken';
+
+/**
+ * Options for `requestSkip()` / `skipSpin()`, and for `board.skip()`.
+ */
+export interface SkipOptions {
+  /** See {@link SkipMode}. Defaults to the builder's `skipMode()`, `'slam'` unless set. */
+  mode?: SkipMode;
   /**
-   * Registered speed profile the freed reels run their STOP on: its
+   * Registered speed profile the freed reels finish on under `'quicken'`: its
    * `spinSpeed` is the spin-out, its `bounceDistance` / `bounceDuration` the
    * landing. Omit to keep the profile the spin started on. The common tuning
-   * is a pressed reel that lands on the turbo bounce.
+   * is a pressed reel that lands on the turbo bounce. Ignored by a slam.
    */
   speed?: string;
+  /**
+   * Anything the game wants a phase to see in `onSkip(ctx)`, and any listener
+   * to see on `skip:requested` / `skip:completed` and `SpinResult.skipContext`:
+   * which button, which player, a reason. Passed through untouched.
+   */
+  payload?: unknown;
+}
+
+/**
+ * What a phase receives in `onSkip(ctx)`: the mode of the press that reached
+ * it, the profile it should finish on (a `'quicken'` that named one), and
+ * whatever the game attached. See {@link SkipOptions}. The same press rides
+ * on `skip:requested` / `skip:completed` (as `SkipInfo`, with the reels) and
+ * ends up in `SpinResult.skipContext`.
+ */
+export interface SkipContext<TProfile extends SpeedProfile = SpeedProfile> {
+  mode: SkipMode;
+  speed?: TProfile;
+  payload?: unknown;
 }
 
 /**

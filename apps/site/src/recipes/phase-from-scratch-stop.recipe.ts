@@ -18,10 +18,11 @@
 //                              raise `spin:reelLanding`. The only way to land
 //   this.bounce(opts?)       - the overshoot, carrying lifted views along.
 //                              `{ done, cancel() }`; profile defaults
-//   onSkip()                 - the slam pose: cancel, rest, land if not yet
-//   onHurry()                - optional. A `requestHurry()` press asks for
-//                              the landing sooner; here there is no wait to
-//                              cut, so the default (`false`) is right
+//   onSkip(ctx)              - the slam pose: cancel the bounce, rest, land if
+//                              not yet. Under `ctx.mode === 'quicken'` a press
+//                              asks for the landing sooner; there is no wait
+//                              to cut here, so that branch does nothing and
+//                              the phase runs its course
 //
 // Timing that belongs to the phase rides on the profile: `slideMs` below is
 // not a `SpeedProfile` field, and `ReelPhase<Config, Profile>` is what lets
@@ -69,8 +70,10 @@ class InstantStopPhase extends ReelPhase {
   update() {}
 
   // The slam pose: wherever the phase was, leave the reel where a natural
-  // finish would have - resting on its frame, landed.
-  onSkip() {
+  // finish would have - resting on its frame, landed. A quicken has nothing
+  // to cut in this phase, so it is left to finish on its own.
+  onSkip(ctx) {
+    if (ctx.mode === 'quicken') return;
     if (this._slide) { this._slide.kill(); this._slide = null; }
     if (this._bounce) { this._bounce.cancel(); this._bounce = null; }
     this.reel.axis.setMain(this.reel.container, this._rest);

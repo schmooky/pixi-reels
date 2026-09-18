@@ -1,7 +1,7 @@
 ---
 title: "Skip & slam"
 group: mechanics
-oneLiner: Every skip lever end to end - partial slams both spellings, all three tease-protect modes, your own release plan, a press that lands instead of cutting (with groups, as a two-press button, and in a custom phase), queued presses, skipStage, per-reel spin floors, and all four ways to own a phase.
+oneLiner: Every skip lever end to end - partial slams both spellings, all three tease-protect modes, your own release plan, the quicken mode that lands instead of cutting (with groups, as a two-press button, and in a custom phase), queued presses, skipStage, per-reel spin floors, and all four ways to own a phase.
 order: 57
 tags:
   - skip
@@ -95,45 +95,47 @@ Press 1 lands everything outside the tease, like `'once'`; every press after is 
 
 <RecipeDemo code="skip-custom-plan" />
 
-<a id="skip-hurry"></a>
+<a id="skip-quicken"></a>
 
 ## A press that lands, not cuts
 
-Every slam places the frame and lands in the same tick, so a press reads as a cut. `requestHurry()` frees the same reels a `requestSkip()` press would - protection, `'stepwise'` and groups all apply - and asks each for its landing instead: the tease ends, the stop delay is cut, the reel spins its frame in and bounces. `speed: 'turbo'` lands the hurried reels on the turbo spin-out and bounce.
+Every slam places the frame and lands in the same tick, so a press reads as a cut. `requestSkip({ mode: 'quicken' })` frees the same reels a slam would - protection, `'stepwise'` and groups all apply - and asks each for its landing instead: the tease ends, the stop delay is cut, the reel spins its frame in and bounces. `speed: 'turbo'` lands the quickened reels on the turbo spin-out and bounce; `builder.skipMode('quicken')` makes the mode the default.
 
-**Gotcha:** a hurry is not a skip. `skipStage` and `wasSkipped` stay put, and a `requestSkip()` after it slams whatever is still moving - one button can hurry on the first press and cut on the second. Tap the readout to see the cut on the same spin.
+**Gotcha:** a quicken is a skip. `skipStage` advances and `wasSkipped` is true, and `SpinResult.skipMode` says which mode ended the round. A `mode: 'slam'` press after it still cuts whatever is moving. Tap the readout to see the cut on the same spin.
 
-<RecipeDemo code="skip-hurry" />
+<RecipeDemo code="skip-quicken" />
 
-<a id="hurry-groups"></a>
+<a id="quicken-groups"></a>
 
-## Hurry with groups
+## Quicken with groups
 
-The same barrier, a different verb. `requestHurry()` walks exactly the groups a `requestSkip()` press would and hurries each one instead of placing it: a freed group goes violet (the stop, spinning in), not straight to grey. The cards are `PhaseCardSymbol`, so the phases are the colours.
+The same barrier, a different mode. A quicken walks exactly the groups a slam would and quickens each one instead of placing it: a freed group goes violet (the stop, spinning in), not straight to grey. The cards are `PhaseCardSymbol`, so the phases are the colours.
 
-**Gotcha:** a hurried reel counts as released for the WALK, so a fast next press is taken early; the reel behind the barrier still waits for the group before it to land. Reel 5 stays blue until reel 4 is down, however fast you press.
+**Gotcha:** a quickened reel counts as released for the WALK, so a fast next press is taken early; the reel behind the barrier still waits for the group before it to land. Reel 5 stays blue until reel 4 is down, however fast you press.
 
-<RecipeDemo code="hurry-groups" />
+<RecipeDemo code="quicken-groups" />
 
-<a id="hurry-then-cut"></a>
+<a id="quicken-then-slam"></a>
 
-## Hurry first, cut second
+## Quicken first, slam second
 
-One button, two presses: `requestHurry({ speed: 'turbo' })` on the first, `requestSkip()` on the second. A hurry is not a skip - `skipStage` stays `0` and `wasSkipped` stays `false` - so the slam is still there for the player who really means it, and it slams whatever is still moving.
+One button, two presses: `requestSkip({ mode: 'quicken', speed: 'turbo' })` on the first, `requestSkip({ mode: 'slam' })` on the second. A quicken press walks past the reels it already quickened; a slam press cuts them. Both are skips, and `SpinResult.skipMode` names the one that ended the round.
 
-**Gotcha:** read "has this round been hurried" off `hurry:requested`, not off a local counter - a press that hurried nothing must not arm the cut.
+Each press carries a `payload` (`{ press: 1 }`, `{ press: 2 }`) and the HUD reads it back off `skip:requested`, with the profile a quicken named as `speed.name`: the event carries the whole press, the same context every phase's `onSkip(ctx)` gets, and `SpinResult.skipContext` keeps the last one.
 
-<RecipeDemo code="hurry-then-cut" />
+**Gotcha:** read "has this round been quickened" off `skip:requested` and its `mode`, not off a local counter - a press that freed nothing must not arm the slam.
 
-<a id="hurry-custom-phase"></a>
+<RecipeDemo code="quicken-then-slam" />
 
-## A phase that can be hurried
+<a id="quicken-custom-phase"></a>
 
-`onHurry()` is where a custom phase says which of its waits a hurry press may cut. This instant stop holds its frame a tenth of a cell short for 900 ms before sliding in; the hook kills the hold and slides at once, then returns `true`. Leave it out and the default `false` applies: the reel still lands, the press just shortens nothing.
+## A phase that can be quickened
 
-**Gotcha:** the hook cuts a wait, never the landing itself - keep `land()` and `bounce()` exactly where the natural path has them, or a hurried reel lands differently from a patient one.
+`onSkip(ctx)` is where a custom phase hears a press, and `ctx.mode` is where it decides what to cut. This instant stop holds its frame a tenth of a cell short for 900 ms before sliding in; under `'quicken'` the hook kills the hold and slides at once, under `'slam'` it rests on the frame. The class declares `quickenable = true` to say its hook branches on the mode; without the flag a quicken leaves the phase alone and the reel still lands, the press just shortens nothing.
 
-<RecipeDemo code="hurry-custom-phase" />
+**Gotcha:** the quicken branch cuts a wait, never the landing itself - keep `land()` and `bounce()` exactly where the natural path has them, or a quickened reel lands differently from a patient one.
+
+<RecipeDemo code="quicken-custom-phase" />
 
 <a id="skip-queued-request"></a>
 

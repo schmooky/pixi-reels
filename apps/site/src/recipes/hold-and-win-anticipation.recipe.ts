@@ -149,6 +149,7 @@ const val = () => [5, 10, 15, 25][Math.floor(Math.random() * 4)];
 
 let busy = false;
 return {
+  board,
   cleanup: () => { stopPulse(); for (const t of labelAt.values()) { try { t.destroy(); } catch {} } labelAt.clear(); try { hud.destroy(); labels.destroy(); } catch {} board.destroy(); },
   onSpin: async () => {
     if (busy) return;

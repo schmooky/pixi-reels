@@ -93,6 +93,7 @@ const rollHits = () => {
 
 let busy = false;
 return {
+  board,
   cleanup: () => {
     try { hud.destroy(); } catch {}
     board.destroy();

@@ -1,0 +1,214 @@
+---
+title: Migrating to 3.0.0
+order: 6
+description: Every breaking change in 3.0.0, with a before and after. Skip presses
+  take a mode, phases take a skip context, the built-in beats are moves, and the
+  unpublished hurry API is gone.
+---
+
+3.0.0 is a small migration for a game and a real one for a custom phase. There
+is no codemod; every change below is a few lines, and the engine names the
+replacement in the typings.
+
+## Why any of this
+
+2.8 had one thing a skip press could do to a reel: slam it. A press placed the
+frame and landed it in the same tick, so it always read as a cut, and a tease
+was hidden rather than shortened. 3.0 gives the press a **mode**: `'slam'` is
+the cut, `'quicken'` asks each freed reel for its landing sooner without
+changing what the landing looks like. To carry that through a phase, the
+phase's skip hook grew a context, and while the hooks were open the animated
+beats hard-wired into the built-in phases became replaceable and their private
+internals became protected.
+
+## Skip presses
+
+`requestSkip()` and `skipSpin()` take an options object. With no argument they
+do what they did.
+
+```ts
+// before
+reelSet.requestSkip();
+
+// after: the same slam
+reelSet.requestSkip();
+// or the new mode, per press...
+reelSet.requestSkip({ mode: 'quicken', speed: 'turbo' });
+// ...or as the set's default
+builder.skipMode('quicken');
+```
+
+A quicken is a skip: `skipStage` advances, `SpinResult.wasSkipped` is `true`,
+the new `SpinResult.skipMode` says which mode ended the round, and
+`SpinResult.skipContext` is that press in full (`mode`, `speed`, `payload`).
+
+`slamStop()` before `setResult()` now throws, as `skipSpin()` always did. It
+used to warn with `slam-before-result` and land the reels on random fill. A
+spin whose result will never come is aborted through its signal:
+
+```ts
+// before: lands on whatever the strip shows, warns slam-before-result
+reelSet.slamStop();
+
+// after
+const abort = new AbortController();
+const spin = reelSet.spin({ signal: abort.signal });
+// ...the server failed:
+abort.abort();
+```
+
+`skipStage` is decided before a slam lands anything, so a `spin:complete`
+listener on the press that ended the round sees `2`. It saw `0` in 2.8, and
+read the stage one tick too early.
+
+## Skip events
+
+`skip:requested` and `skip:completed` carry `mode`. A listener that only ever
+meant a slam keeps working; one that meant "these reels are about to be
+placed" checks the mode now.
+
+```ts
+// before
+reelSet.events.on('skip:requested', ({ reels, partial }) => flashPlaced(reels));
+
+// after
+reelSet.events.on('skip:requested', ({ reels, partial, mode }) => {
+  if (mode === 'slam') flashPlaced(reels);
+});
+```
+
+Both events carry the whole press, not only its mode: the `info` is a
+`SkipInfo`, `{ reels, partial, mode, speed?, payload? }`, the same
+`SkipContext` every phase's `onSkip(ctx)` saw plus the reels. So code that
+hangs off the event gets what the game attached to the press, without a side
+channel:
+
+```ts
+reelSet.requestSkip({ mode: 'quicken', speed: 'turbo', payload: { button: 'skip' } });
+
+reelSet.events.on('skip:requested', ({ reels, mode, speed, payload }) => {
+  sfx.play(mode === 'quicken' ? 'whoosh' : 'thud', { source: payload?.button });
+  if (speed) hud.flash(`landing on ${speed.name}`);
+});
+```
+
+Keys the press did not set are absent, and an engine slam (an abort, a
+timeout, `slamStop()`) is a bare `mode: 'slam'`. `skip:completed` fires in the
+same tick for a slam and as the last freed reel lands for a quicken, with the
+same `info`. On a Hold & Win board, `feature:skip` is
+`{ inFlight, mode, speed?, payload? }` with the press's options as given, and
+`board.skip(options?)` takes the same options as `requestSkip()`;
+`HoldAndWinBuilder.skipMode()` sets the board's default.
+
+## Custom phases: `onSkip(ctx)`
+
+Every phase hears a press through `onSkip(ctx)`, where `ctx` is a
+`SkipContext`: `{ mode, speed?, payload? }`. `ReelPhase.skip(ctx?)` and
+`forceComplete(ctx?)` take the same object.
+
+```ts
+// before
+protected onSkip(): void {
+  this._tween?.kill();
+  this.reel.placeStrip(this._frame);
+}
+
+// after
+protected onSkip(ctx: SkipContext): void {
+  if (ctx.mode === 'quicken') {
+    // cut a wait, keep the landing; complete yourself when you reach it
+    this._delay?.kill();
+    this._beginSpinOut();
+    return;
+  }
+  this._tween?.kill();
+  this.reel.placeStrip(this._frame);
+}
+```
+
+Under `'slam'` the hook is the slam pose it always was, and the base completes
+the phase after it. Under `'quicken'` only the hook runs: the phase cuts a
+wait and completes itself when its natural end is reached, right away if the
+slam pose already is that end (`StartPhase` and `AnticipationPhase` do this).
+A phase that ignores the mode runs its course, so the reel still lands.
+
+A subclass of a built-in that calls `super.onSkip()` with no argument keeps
+its 2.8 meaning, because the built-in hooks default `ctx` to a slam. Pass
+`ctx` through to take part in quickens:
+
+```ts
+protected onSkip(ctx: SkipContext): void {
+  flash(this.reel.reelIndex);
+  super.onSkip(ctx);
+}
+```
+
+`SpinPhase` handles `'quicken'` too (it drops its floor), so a subclass of it
+that overrides `onSkip` should call `super.onSkip(ctx)` where it used to do
+nothing.
+
+## Steps
+
+The built-in phases run a named list of steps, and a game edits that list by
+re-registering the same class with options. If you subclassed `StartPhase` or
+`StopPhase` only to change or insert one thing, this is the shorter road:
+
+```ts
+import { StopPhase, StartPhase, step, insertAfter, replaceStep, removeStep } from 'pixi-reels';
+
+builder.phases((f) => {
+  f.register('stop', StopPhase, {
+    steps: (steps) => insertAfter(steps, 'land', step('flash', (ctx) => flash(ctx.reel.reelIndex))),
+  });
+  f.register('start', StartPhase, { steps: (steps) => removeStep(steps, 'pull') });
+});
+```
+
+`StopPhase` runs `delay, spinOut, land, bounce`; `StartPhase` runs `delay,
+launch, pull, accelerate, announce`; `AnticipationPhase` runs one `tease`
+step. A different bounce shape goes through `ctx.phase.bounce({ animation })`.
+
+## `quickenable`
+
+A quicken only reaches `onSkip(ctx)` on a phase that declares it:
+
+```ts
+class MyStop extends ReelPhase<StopPhaseConfig> {
+  readonly quickenable = true;   // "my onSkip branches on ctx.mode"
+  ...
+}
+```
+
+A phase without the flag is left alone by a quicken and runs its course, so
+a 2.8 phase whose `onSkip` kills its tweens and places the frame keeps
+working: the reel still lands. The built-ins declare it.
+
+## Built-in phase internals
+
+Every `private` on `StartPhase`, `SpinPhase`, `AnticipationPhase`,
+`StopPhase`, `AdjustPhase`, `CascadeFallPhase`, `CascadePlacePhase` and
+`CascadeDropInPhase` is `protected`. A subclass that copied a whole method to
+reach one field can call it instead. `ReelPhase.speed` is a public getter
+beside `reel`; `this._speed` still works. `land()` and `bounce()` are public,
+so a step written outside the class can reach them.
+
+The rule from the phases page stands: the protected surface can change in a
+minor release, so a subclass may need to follow. What changed here is that
+the surface exists.
+
+## Removed: the unpublished hurry API
+
+2.9 was cut on `main` but never published, so nothing below ever reached npm.
+If you built against a snapshot:
+
+| 2.9 snapshot | 3.0 |
+|---|---|
+| `reelSet.requestHurry(options)` | `reelSet.requestSkip({ mode: 'quicken', ...options })` |
+| `HurryOptions` | `SkipOptions` (`mode`, `speed`, `payload`) |
+| `hurry:requested` | `skip:requested` with `mode === 'quicken'` |
+| `board.hurry(options)` / `BoardGrid.hurrySpinning()` | `board.skip({ mode: 'quicken', ...options })` / `BoardGrid.skipSpinning(options)` |
+| `feature:hurry` | `feature:skip` with `mode === 'quicken'` |
+| `ReelPhase.hurry(speed?)` | `ReelPhase.skip({ mode: 'quicken', speed })` |
+| `protected onHurry(): boolean` | `protected onSkip(ctx)` branching on `ctx.mode` |
+| notice `hurry-cascade` | notice `quicken-cascade` |
+| notice `slam-before-result` | `slamStop()` throws instead |

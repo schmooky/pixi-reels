@@ -36,7 +36,8 @@ Missing any of these throws at `.build()` with a human-readable list of problems
 | `.offsetConfig(config)` | `{ mode: 'none' }` |
 | `.spinningMode(mode)` | `new StandardMode()` |
 | `.frameMiddleware(mw)` | *(none)*. add as many as you want; sorted by priority. |
-| `.phases((f) => { f.register(...) })` | Built-in `START`/`SPIN`/`STOP`/`ANTICIPATION` (+ cascade phases when `.tumble()` is used). |
+| `.phases((f) => { f.register(...) })` | Built-in `START`/`SPIN`/`STOP`/`ANTICIPATION` (+ cascade phases when `.tumble()` is used). `f.register(key, Class, options)` re-registers a built-in with options; `{ steps }` edits its step list, see [Phases](/docs/api-phases/#steps). |
+| `.skipMode('slam' \| 'quicken')` | `'slam'`. What a skip press does to the reels it frees when `requestSkip()` / `skipSpin()` do not say. See [ReelSet](/docs/api-reelset/). |
 | `.tumble({ fall, dropIn })` | *(unset; required for `spin({ mode: 'cascade' })` and `reelSet.refill(...)`)*. see [the Tumble section](#tumble) below. |
 | `.multiways({ minCells, maxCells, reelExtent })` | *(unset; required for `setShape(...)`)*. `reelExtent` is a MAIN-axis extent. |
 | `.orientation('vertical' \| 'horizontal')` | `'vertical'`. which screen axis the strip travels along. See [Orientation & direction](/guides/orientation-and-direction/). |

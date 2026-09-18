@@ -94,6 +94,7 @@ async function absorb(collectorCell) {
 
 let phase = 'ready';
 return {
+  board,
   cleanup: () => { for (const f of flyers) { try { gsap.killTweensOf(f); f.destroy(); } catch {} } for (const t of labelAt.values()) { try { t.destroy(); } catch {} } labelAt.clear(); try { hud.destroy(); labels.destroy(); } catch {} board.destroy(); },
   onSpin: async () => {
     if (phase === 'running') return;

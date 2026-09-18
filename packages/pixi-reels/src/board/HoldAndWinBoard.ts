@@ -3,7 +3,7 @@ import { EventEmitter } from '../events/EventEmitter.js';
 import type { ReelSet } from '../core/ReelSet.js';
 import type { ReelSymbol } from '../symbols/ReelSymbol.js';
 import type { SymbolRegistry } from '../symbols/SymbolRegistry.js';
-import type { HurryOptions, SpeedProfile, SymbolData, SymbolZIndexResolver } from '../config/types.js';
+import type { SkipMode, SkipOptions, SpeedProfile, SymbolData, SymbolZIndexResolver } from '../config/types.js';
 import type { Disposable } from '../utils/Disposable.js';
 import { BoardGrid } from './BoardGrid.js';
 import type { BoardCellMaskInfo, BoardCellZIndexResolver, BoardProfile } from './BoardGrid.js';
@@ -49,6 +49,8 @@ export interface HoldAndWinBoardConfig<TData> {
   speeds: Record<string, SpeedProfile>;
   initialSpeed: string;
   stagger: (reel: number, cell: number, speed: string) => number;
+  /** What `skip()` does when the call does not say. See `HoldAndWinBuilder.skipMode`. */
+  skipMode: SkipMode;
   anticipateWhen:
     | ((state: { locked: number; capacity: number; respinsLeft: number }) => boolean)
     | null;
@@ -113,6 +115,7 @@ export class HoldAndWinBoard<TData = unknown> implements Disposable {
   private readonly _stagger: HoldAndWinBoardConfig<TData>['stagger'];
   private readonly _speeds = new Set<string>();
   private _speed: string;
+  private readonly _skipMode: SkipMode;
   /** Whether the wave in flight (if any) runs on the tension variants. */
   private _tenseWave = false;
 
@@ -125,6 +128,7 @@ export class HoldAndWinBoard<TData = unknown> implements Disposable {
     this._anticipateWhen = cfg.anticipateWhen;
     this._stagger = cfg.stagger;
     this._speed = cfg.initialSpeed;
+    this._skipMode = cfg.skipMode;
 
     // Every named speed becomes two per-cell profiles: `name` and
     // `name:tension`, the latter the drawn-out variant of an anticipating
@@ -425,35 +429,29 @@ export class HoldAndWinBoard<TData = unknown> implements Disposable {
   }
 
   /**
-   * Fast-forward whatever is spinning: every in-flight cell is slammed to its
-   * landed position, then `feature:skip` fires so the game layer can cut its own
-   * flights short. The normal landing → `coin:locked` → `feature:end` flow still
-   * resolves; this only removes the waiting. Returns the number of cells that
-   * were in flight.
+   * Press skip on whatever is spinning. Under `'slam'` (the default unless the
+   * builder's `skipMode()` says otherwise) every in-flight cell is placed on
+   * its landed position; under `'quicken'` every in-flight cell drops its
+   * spin floor (the board's stagger lives there, so the whole wave lands
+   * together), spins its symbol in and bounces, on `options.speed` if named.
+   * Then `feature:skip` fires with the count, the mode and the press's own
+   * `speed` / `payload`, so the game layer can cut its own flights short
+   * after a slam and know which press it was. The normal landing ->
+   * `coin:locked` -> `feature:end` flow still resolves either way; this only
+   * removes the waiting. Returns the number of cells that were in flight.
    */
-  skip(): number {
-    const inFlight = this._grid.skipSpinning();
-    this.events.emit('feature:skip', { inFlight });
-    return inFlight;
-  }
-
-  /**
-   * Land whatever is spinning through its stop instead of cutting it: every
-   * in-flight cell drops its spin floor (the stagger lives there, so the
-   * whole wave lands together), spins its symbol in and bounces. The
-   * counterpart of {@link skip}, which places the cells. `speed` names a
-   * registered profile the cells land on. Then `feature:hurry` fires with the
-   * count; the landing flow (`cell:landed`, `coin:locked`, `respin:end`) is
-   * unchanged, and there is nothing for the game layer to cut short.
-   */
-  hurry(options: HurryOptions = {}): number {
+  skip(options: SkipOptions = {}): number {
     if (options.speed !== undefined && !this._speeds.has(options.speed)) {
       throw new Error(
-        `HoldAndWinBoard: hurry({ speed: '${options.speed}' }) names no registered profile (have: ${[...this._speeds].join(', ')}).`,
+        `HoldAndWinBoard: skip({ speed: '${options.speed}' }) names no registered profile (have: ${[...this._speeds].join(', ')}).`,
       );
     }
-    const inFlight = this._grid.hurrySpinning(options);
-    this.events.emit('feature:hurry', { inFlight });
+    const mode = options.mode ?? this._skipMode;
+    const inFlight = this._grid.skipSpinning({ ...options, mode });
+    const info: { inFlight: number; mode: SkipMode; speed?: string; payload?: unknown } = { inFlight, mode };
+    if (options.speed !== undefined) info.speed = options.speed;
+    if (options.payload !== undefined) info.payload = options.payload;
+    this.events.emit('feature:skip', info);
     return inFlight;
   }
 

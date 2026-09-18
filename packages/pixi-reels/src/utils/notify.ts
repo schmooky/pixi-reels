@@ -48,6 +48,31 @@ const seen = new Set<string>();
 /** Test seam: forget which `once` notices have fired. */
 export function resetNoticesForTest(): void {
   seen.clear();
+  noticeListeners.clear();
+}
+
+/** One notice as {@link onNotice} hands it over. */
+export interface Notice {
+  kind: 'error' | 'warn' | 'info';
+  /** The stable code, the same one the console line carries. */
+  code: string;
+  message: string;
+  /** Whatever the engine attached: an Error, a value, a hint. */
+  detail: unknown[];
+}
+
+const noticeListeners = new Set<(notice: Notice) => void>();
+
+/**
+ * Hear every notice the engine raises, whatever the log level: for an
+ * events panel, a test, a telemetry hook. The console keeps its own volume
+ * knob (`setLogLevel`). Returns the function that unsubscribes.
+ */
+export function onNotice(listener: (notice: Notice) => void): () => void {
+  noticeListeners.add(listener);
+  return () => {
+    noticeListeners.delete(listener);
+  };
 }
 
 interface NoticeOptions {
@@ -77,11 +102,15 @@ function emit(
   detail: unknown[],
   options?: NoticeOptions,
 ): void {
-  if (RANK[currentLevel] < RANK[kind]) return;
   if (options?.once) {
     if (seen.has(code)) return;
     seen.add(code);
   }
+  if (noticeListeners.size > 0) {
+    const notice: Notice = { kind, code, message, detail };
+    for (const listener of [...noticeListeners]) listener(notice);
+  }
+  if (RANK[currentLevel] < RANK[kind]) return;
 
   // `console[kind]` keeps devtools filtering, stack capture and the browser's
   // own warn/error styling working. a single `console.log` would lose all three.

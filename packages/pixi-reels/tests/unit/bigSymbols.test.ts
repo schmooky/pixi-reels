@@ -68,7 +68,8 @@ describe('big symbols', () => {
       symbolData: { giant: { weight: 0, size: { reels: 1, cells: 6 } } },
     });
     try {
-      const promise = reelSet.spin();
+      const abort = new AbortController();
+      const promise = reelSet.spin({ signal: abort.signal });
       expect(() => {
         reelSet.setResult([
           { visible: ['giant', 'a', 'a'] },
@@ -76,7 +77,9 @@ describe('big symbols', () => {
           { visible: ['a', 'a', 'a'] },
         ]);
       }).toThrow(/extends past the bottom of the strip/);
-      reelSet.slamStop();
+      // No result is coming for this spin: aborting it is the exit for a
+      // rejected result. slamStop() throws with nothing to land on.
+      abort.abort();
       await promise.catch(() => {});
     } finally {
       destroy();
@@ -91,7 +94,8 @@ describe('big symbols', () => {
       symbolData: { wide: { weight: 0, size: { reels: 4, cells: 1 } } },
     });
     try {
-      const promise = reelSet.spin();
+      const abort = new AbortController();
+      const promise = reelSet.spin({ signal: abort.signal });
       expect(() => {
         reelSet.setResult([
           { visible: ['a', 'a', 'a'] },
@@ -99,7 +103,9 @@ describe('big symbols', () => {
           { visible: ['wide', 'a', 'a'] },
         ]);
       }).toThrow(/exceeds reel count/);
-      reelSet.slamStop();
+      // No result is coming for this spin: aborting it is the exit for a
+      // rejected result. slamStop() throws with nothing to land on.
+      abort.abort();
       await promise.catch(() => {});
     } finally {
       destroy();
@@ -563,13 +569,16 @@ describe('big symbols', () => {
       symbolData: { tall: { weight: 0, size: { reels: 1, cells: 4 } } },
     });
     try {
-      const promise = reelSet.spin();
+      const abort = new AbortController();
+      const promise = reelSet.spin({ signal: abort.signal });
       expect(() => {
         reelSet.setResult([
           { visible: ['a', 'a', 'tall'] }, // anchor at cell 2, h=4 -> past strip
         ]);
       }).toThrow(/extends past the bottom of the strip/);
-      reelSet.slamStop();
+      // No result is coming for this spin: aborting it is the exit for a
+      // rejected result. slamStop() throws with nothing to land on.
+      abort.abort();
       await promise.catch(() => {});
     } finally {
       destroy();

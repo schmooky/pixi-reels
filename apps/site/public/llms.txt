@@ -141,6 +141,10 @@ Mechanical changes to move from 0.x to 1.0.0. Every breaking change
 URL: https://pixi-reels.schmooky.dev/docs/migrating-to-2-0/
 Every breaking change in 2.0.0, with a before and after. Rows became
 
+### Migrating to 3.0.0
+URL: https://pixi-reels.schmooky.dev/docs/migrating-to-3-0/
+Every breaking change in 3.0.0, with a before and after. Skip presses
+
 ## Generated API (TypeDoc)
 
 ### AdjustPhase
@@ -214,6 +218,9 @@ Generic object pool for reusing expensive-to-create objects.
 ### PathMaskStrategy
 URL: https://pixi-reels.schmooky.dev/api/classes/index.PathMaskStrategy/
 Any mask you can draw, without the class.
+
+### PhaseCardSymbol
+URL: https://pixi-reels.schmooky.dev/api/classes/index.PhaseCardSymbol/
 
 ### PhaseFactory
 URL: https://pixi-reels.schmooky.dev/api/classes/index.PhaseFactory/
@@ -395,6 +402,14 @@ URL: https://pixi-reels.schmooky.dev/api/functions/index.getLogLevel/
 URL: https://pixi-reels.schmooky.dev/api/functions/index.getTargetSlot/
 ```ts function getTargetSlot(target: ColumnTarget, cell: number): string | undefined; ```
 
+### insertAfter()
+URL: https://pixi-reels.schmooky.dev/api/functions/index.insertAfter/
+```ts function insertAfter<TCtx extends StepContext<any, any>>( steps: readonly PhaseStep<TCtx>[], name: string, ...added: PhaseStep<TCtx>[] ): PhaseStep<TCtx>[]; ```
+
+### insertBefore()
+URL: https://pixi-reels.schmooky.dev/api/functions/index.insertBefore/
+```ts function insertBefore<TCtx extends StepContext<any, any>>( steps: readonly PhaseStep<TCtx>[], name: string, ...added: PhaseStep<TCtx>[] ): PhaseStep<TCtx>[]; ```
+
 ### inset()
 URL: https://pixi-reels.schmooky.dev/api/functions/index.inset/
 ```ts function inset(strategy: MaskStrategy, pixels: number | InsetSides): DrawableMaskStrategy; ```
@@ -402,6 +417,10 @@ URL: https://pixi-reels.schmooky.dev/api/functions/index.inset/
 ### isDrawableMaskStrategy()
 URL: https://pixi-reels.schmooky.dev/api/functions/index.isDrawableMaskStrategy/
 ```ts function isDrawableMaskStrategy(s: MaskStrategy): s is DrawableMaskStrategy; ```
+
+### onNotice()
+URL: https://pixi-reels.schmooky.dev/api/functions/index.onNotice/
+```ts function onNotice(listener: (notice: Notice) => void): () => void; ```
 
 ### pinKey()
 URL: https://pixi-reels.schmooky.dev/api/functions/index.pinKey/
@@ -415,6 +434,14 @@ URL: https://pixi-reels.schmooky.dev/api/functions/index.prewarmSpinTextures/
 URL: https://pixi-reels.schmooky.dev/api/functions/index.reelAxis/
 ```ts function reelAxis(orientation: Orientation, direction: Direction): ReelAxis; ```
 
+### removeStep()
+URL: https://pixi-reels.schmooky.dev/api/functions/index.removeStep/
+```ts function removeStep<TCtx extends StepContext<any, any>>(steps: readonly PhaseStep<TCtx>[], name: string): PhaseStep<TCtx>[]; ```
+
+### replaceStep()
+URL: https://pixi-reels.schmooky.dev/api/functions/index.replaceStep/
+```ts function replaceStep<TCtx extends StepContext<any, any>>( steps: readonly PhaseStep<TCtx>[], name: string, replacement: PhaseStep<TCtx> ): PhaseStep<TCtx>[]; ```
+
 ### resolveCurveConfig()
 URL: https://pixi-reels.schmooky.dev/api/functions/index.resolveCurveConfig/
 ```ts function resolveCurveConfig(input: ReelCurveInput): Required<ReelCurveConfig>; ```
@@ -426,6 +453,10 @@ URL: https://pixi-reels.schmooky.dev/api/functions/index.resolveDriveConfig/
 ### resolveTumbleConfig()
 URL: https://pixi-reels.schmooky.dev/api/functions/index.resolveTumbleConfig/
 ```ts function resolveTumbleConfig(config: TumbleConfig | undefined): ResolvedTumbleConfig; ```
+
+### runStep()
+URL: https://pixi-reels.schmooky.dev/api/functions/index.runStep/
+```ts function runStep<TCtx extends StepContext<any, any>>( run: (ctx: TCtx) => StepResult, ctx: Omit<TCtx, "signal">, controller?: AbortController ): RunningStep; ```
 
 ### setLogLevel()
 URL: https://pixi-reels.schmooky.dev/api/functions/index.setLogLevel/
@@ -442,6 +473,10 @@ URL: https://pixi-reels.schmooky.dev/api/functions/index.sortByValueDesc/
 ### startRecording()
 URL: https://pixi-reels.schmooky.dev/api/functions/index.startRecording/
 ```ts function startRecording( reelSet: ReelSet, tag?: string, options?: StartRecordingOptions ): void; ```
+
+### step()
+URL: https://pixi-reels.schmooky.dev/api/functions/index.step/
+```ts function step<TCtx extends StepContext<any, any> = StepContext<any, any>>( name: string, run: (ctx: TCtx) => StepResult, options?: { cut?: boolean; } ): PhaseStep<TCtx>; ```
 
 ### stepDrive()
 URL: https://pixi-reels.schmooky.dev/api/functions/index.stepDrive/
@@ -492,6 +527,10 @@ Full anticipation configuration. The object form of `setAnticipation`''s second 
 ### AnticipationPhaseConfig
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.AnticipationPhaseConfig/
 
+### AnticipationPhaseOptions
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.AnticipationPhaseOptions/
+What a game hands `AnticipationPhase` through `f.register(''anticipation'', AnticipationPhase, options)`.
+
 ### AnticipationSegment
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.AnticipationSegment/
 One leg of an [AnticipationCurve](/api/types/index.AnticipationCurve/): reach a speed, optionally sit there.
@@ -519,9 +558,17 @@ URL: https://pixi-reels.schmooky.dev/api/interfaces/index.BoardGridOptions/
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.BoardSpinTarget/
 A landing target: spin `cell` and stop it showing `id`.
 
+### BounceContext
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.BounceContext/
+What a custom bounce animation receives. See [BounceOptions.animation](/api/interfaces/index.BounceOptions/#animation).
+
 ### BounceOptions
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.BounceOptions/
 Shape of one landing bounce, for [ReelPhase.bounce](/api/classes/index.ReelPhase/#bounce). Every field falls back to the phase''s speed profile, so a phase that wants the profile''s own bounce passes no
+
+### Cancellable
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.Cancellable/
+Something a step may hand back to be waited on and cancelled.
 
 ### CardSymbolOptions
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.CardSymbolOptions/
@@ -614,10 +661,6 @@ Middleware that participates in frame building.
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.HoldAndWinBoardConfig/
 Internal config produced by [HoldAndWinBuilder.build](/api/classes/index.HoldAndWinBuilder/#build).
 
-### HurryOptions
-URL: https://pixi-reels.schmooky.dev/api/interfaces/index.HurryOptions/
-Options for `requestHurry()`.
-
 ### HwCell
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.HwCell/
 Grid coordinate of a board cell.
@@ -669,9 +712,24 @@ MultiWays configuration knobs. Set via `builder.multiways({ ... })`. mutually ex
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.NoOffsetConfig/
 No offset configuration.
 
+### Notice
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.Notice/
+One notice as [onNotice](/api/functions/index.onNotice/) hands it over.
+
 ### NudgeOptions
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.NudgeOptions/
 Options for `Reel.nudge()` / `ReelSet.nudge()`. a post-stop reposition that shifts the reel by `distance` symbol positions and reveals new caller-supplied symbols.
+
+### PhaseCardSymbolOptions
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.PhaseCardSymbolOptions/
+
+### PhaseStep\<TCtx *extends* [`StepContext`](/api/interfaces/index.StepContext/)\<`any`, `any`\> = [`StepContext`](/api/interfaces/index.StepContext/)\<`any`, `any`\>\>
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.PhaseStep/
+One step of a phase: a name to address it by, and what it does.
+
+### PhaseWatchedReel
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.PhaseWatchedReel/
+The slice of a `Reel` that [PhaseCardSymbol.watch](/api/classes/index.PhaseCardSymbol/#watch) reads. Every entry of `ReelSet.reels` satisfies it.
 
 ### PinOverlayTween
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.PinOverlayTween/
@@ -770,11 +828,27 @@ URL: https://pixi-reels.schmooky.dev/api/interfaces/index.RoundedRectMaskOptions
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.RunCascadeOptions/
 Options for [ReelSet.runCascade](/api/classes/index.ReelSet/#runcascade). The two required callbacks (`detectWinners`, `nextGrid`) encode game rules; everything else is timing / cancellation / forward
 
+### RunningStep
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.RunningStep/
+A step in flight, from [runStep](/api/functions/index.runStep/).
+
 ### ScatterAnticipationOptions
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.ScatterAnticipationOptions/
 
 ### SilhouetteMaskOptions
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.SilhouetteMaskOptions/
+
+### SkipContext\<TProfile *extends* [`SpeedProfile`](/api/interfaces/index.SpeedProfile/) = [`SpeedProfile`](/api/interfaces/index.SpeedProfile/)\>
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.SkipContext/
+What a phase receives in `onSkip(ctx)`: the mode of the press that reached it, the profile it should finish on (a `''quicken''` that named one), and whatever the game attached. See [SkipOptions](/api/in
+
+### SkipInfo
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.SkipInfo/
+What `skip:requested` and `skip:completed` carry: the press as every phase saw it in `onSkip(ctx)` (`mode`, the `speed` profile a quicken named, the game''s `payload`), plus the reels it freed and whet
+
+### SkipOptions
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.SkipOptions/
+Options for `requestSkip()` / `skipSpin()`, and for `board.skip()`.
 
 ### SlamOptions
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.SlamOptions/
@@ -818,6 +892,10 @@ URL: https://pixi-reels.schmooky.dev/api/interfaces/index.SpriteSymbolOptions/
 ### StartPhaseConfig
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.StartPhaseConfig/
 
+### StartPhaseOptions
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.StartPhaseOptions/
+What a game hands `StartPhase` through `f.register(''start'', StartPhase, options)`.
+
 ### StartRecordingOptions
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.StartRecordingOptions/
 Options for [startRecording](/api/functions/index.startRecording/).
@@ -825,8 +903,16 @@ Options for [startRecording](/api/functions/index.startRecording/).
 ### StaticSpinSymbolOptions
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.StaticSpinSymbolOptions/
 
+### StepContext\<TConfig = `unknown`, TProfile *extends* [`SpeedProfile`](/api/interfaces/index.SpeedProfile/) = [`SpeedProfile`](/api/interfaces/index.SpeedProfile/)\>
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.StepContext/
+What every step of a phase receives. The reel and the numbers a step needs, plus two ways to wait that a slam can cut: `wait` for time, `until` for a condition the reel reaches on some frame.
+
 ### StopPhaseConfig
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.StopPhaseConfig/
+
+### StopPhaseOptions
+URL: https://pixi-reels.schmooky.dev/api/interfaces/index.StopPhaseOptions/
+What a game hands `StopPhase` through `f.register(''stop'', StopPhase, options)`.
 
 ### SwapSymbolsOptions
 URL: https://pixi-reels.schmooky.dev/api/interfaces/index.SwapSymbolsOptions/
@@ -914,6 +1000,10 @@ URL: https://pixi-reels.schmooky.dev/api/types/index.AnticipationProtect/
 URL: https://pixi-reels.schmooky.dev/api/types/index.AnticipationStagger/
 ```ts type AnticipationStagger = number | number[] | "sequential"; ```
 
+### AnticipationStepContext
+URL: https://pixi-reels.schmooky.dev/api/types/index.AnticipationStepContext/
+```ts type AnticipationStepContext = StepContext<AnticipationPhaseConfig>; ```
+
 ### BoardCellZIndexResolver
 URL: https://pixi-reels.schmooky.dev/api/types/index.BoardCellZIndexResolver/
 ```ts type BoardCellZIndexResolver = (ctx: BoardCellZIndexContext) => number; ```
@@ -990,13 +1080,17 @@ URL: https://pixi-reels.schmooky.dev/api/types/index.OffsetConfig/
 URL: https://pixi-reels.schmooky.dev/api/types/index.Orientation/
 ```ts type Orientation = "vertical" | "horizontal"; ```
 
-### PhaseConstructor\<T *extends* [`ReelPhase`](/api/classes/index.ReelPhase/)\<`any`, `any`\> = [`ReelPhase`](/api/classes/index.ReelPhase/)\<`any`\>, P *extends* [`SpeedProfile`](/api/interfaces/index.SpeedProfile/) = [`SpeedProfile`](/api/interfaces/index.SpeedProfile/)\>
+### PhaseConstructor\<T *extends* [`ReelPhase`](/api/classes/index.ReelPhase/)\<`any`, `any`\> = [`ReelPhase`](/api/classes/index.ReelPhase/)\<`any`\>, P *extends* [`SpeedProfile`](/api/interfaces/index.SpeedProfile/) = [`SpeedProfile`](/api/interfaces/index.SpeedProfile/), O = `undefined`\>
 URL: https://pixi-reels.schmooky.dev/api/types/index.PhaseConstructor/
-```ts type PhaseConstructor<T extends ReelPhase<any, any> = ReelPhase<any>, P extends SpeedProfile = SpeedProfile> = (reel: Reel, speed: P) => T; ```
+```ts type PhaseConstructor<T extends ReelPhase<any, any> = ReelPhase<any>, P extends SpeedProfile = SpeedProfile, O = undefined> = (reel: Reel, speed: P, options?: O) => T; ```
 
 ### PhaseCreatorFn\<T *extends* [`ReelPhase`](/api/classes/index.ReelPhase/)\<`any`, `any`\> = [`ReelPhase`](/api/classes/index.ReelPhase/)\<`any`\>, P *extends* [`SpeedProfile`](/api/interfaces/index.SpeedProfile/) = [`SpeedProfile`](/api/interfaces/index.SpeedProfile/)\>
 URL: https://pixi-reels.schmooky.dev/api/types/index.PhaseCreatorFn/
 ```ts type PhaseCreatorFn<T extends ReelPhase<any, any> = ReelPhase<any>, P extends SpeedProfile = SpeedProfile> = (reel: Reel, speed: P) => T; ```
+
+### PhaseStepStatus
+URL: https://pixi-reels.schmooky.dev/api/types/index.PhaseStepStatus/
+```ts type PhaseStepStatus = "start" | "end" | "skipped" | "cut" | "cancelled"; ```
 
 ### PinExpireReason
 URL: https://pixi-reels.schmooky.dev/api/types/index.PinExpireReason/
@@ -1022,9 +1116,29 @@ URL: https://pixi-reels.schmooky.dev/api/types/index.RoundedMaskScope/
 URL: https://pixi-reels.schmooky.dev/api/types/index.RunCascadeResult/
 ```ts type RunCascadeResult = RunCascadeResultBase; ```
 
+### SkipMode
+URL: https://pixi-reels.schmooky.dev/api/types/index.SkipMode/
+```ts type SkipMode = "slam" | "quicken"; ```
+
 ### Stacking
 URL: https://pixi-reels.schmooky.dev/api/types/index.Stacking/
 ```ts type Stacking = "ascending" | "descending"; ```
+
+### StartStepContext
+URL: https://pixi-reels.schmooky.dev/api/types/index.StartStepContext/
+```ts type StartStepContext = StepContext<StartPhaseConfig>; ```
+
+### StepResult
+URL: https://pixi-reels.schmooky.dev/api/types/index.StepResult/
+```ts type StepResult =
+
+### StepsEditor\<TCtx *extends* [`StepContext`](/api/interfaces/index.StepContext/)\<`any`, `any`\> = [`StepContext`](/api/interfaces/index.StepContext/)\<`any`, `any`\>\>
+URL: https://pixi-reels.schmooky.dev/api/types/index.StepsEditor/
+```ts type StepsEditor<TCtx extends StepContext<any, any> = StepContext<any, any>> = (steps: PhaseStep<TCtx>[]) => PhaseStep<TCtx>[]; ```
+
+### StopStepContext
+URL: https://pixi-reels.schmooky.dev/api/types/index.StopStepContext/
+```ts type StopStepContext = StepContext<StopPhaseConfig>; ```
 
 ### SymbolPoolSlots
 URL: https://pixi-reels.schmooky.dev/api/types/index.SymbolPoolSlots/
@@ -1082,6 +1196,10 @@ URL: https://pixi-reels.schmooky.dev/api/variables/index.MASK_STRATEGY_VERSION/
 URL: https://pixi-reels.schmooky.dev/api/variables/index.OVERLAY_LABEL/
 ```ts const OVERLAY_LABEL: "pixi-reels:debugOverlay" = ''pixi-reels:debugOverlay''; ```
 
+### PHASE\_CARD\_COLORS
+URL: https://pixi-reels.schmooky.dev/api/variables/index.PHASE_CARD_COLORS/
+```ts const PHASE_CARD_COLORS: Readonly<Record<string, number>>; ```
+
 ### SpeedPresets
 URL: https://pixi-reels.schmooky.dev/api/variables/index.SpeedPresets/
 ```ts const SpeedPresets: { NORMAL: { accelerationDuration: 300; accelerationEase: "power2.in"; anticipationDelay: 450; bounceDistance: 56; bounceDuration: 600; decelerationEase: "power2.out"; minimum
@@ -1135,6 +1253,10 @@ Tags: cascade, tumble, refill, anticipation, spine, thunderkick, horizontal, rev
 ### Cells, bounds, paylines & overlays
 URL: https://pixi-reels.schmooky.dev/recipes/cells-and-banners/
 Tags: paylines, hit-areas, overlays, wins, horizontal, orientation
+
+### Feel: timings & landing FX
+URL: https://pixi-reels.schmooky.dev/recipes/feel/
+Tags: phases, steps, timing, fx, anticipation, speed, skip
 
 ### Hold & Win
 URL: https://pixi-reels.schmooky.dev/recipes/hold-and-win/
@@ -5732,6 +5854,7 @@ const ROUNDS = [
 ];
 
 return {
+  board,
   cleanup: () => { for (const t of labelAt.values()) { try { t.destroy(); } catch {} } labelAt.clear(); try { labels.destroy({ children: false }); } catch {} board.destroy(); },
   onSpin: async () => {
     for (const t of labelAt.values()) t.destroy();
@@ -6033,6 +6156,7 @@ async function absorb(collectorCell) {
 
 let phase = 'ready';
 return {
+  board,
   cleanup: () => { for (const f of flyers) { try { gsap.killTweensOf(f); f.destroy(); } catch {} } for (const t of labelAt.values()) { try { t.destroy(); } catch {} } labelAt.clear(); try { hud.destroy(); labels.destroy(); } catch {} board.destroy(); },
   onSpin: async () => {
     if (phase === 'running') return;
@@ -8354,6 +8478,7 @@ const val = () => [5, 10, 15, 25][Math.floor(Math.random() * 4)];
 
 let busy = false;
 return {
+  board,
   cleanup: () => { stopPulse(); for (const t of labelAt.values()) { try { t.destroy(); } catch {} } labelAt.clear(); try { hud.destroy(); labels.destroy(); } catch {} board.destroy(); },
   onSpin: async () => {
     if (busy) return;
@@ -8503,6 +8628,7 @@ async function runFeature(triggerCells) {
 
 let busy = false;
 return {
+  board,
   cleanup: () => { try { gsap.killTweensOf(board.container); } catch {} for (const t of labelAt.values()) { try { t.destroy(); } catch {} } labelAt.clear(); try { hud.destroy(); labels.destroy(); } catch {} board.destroy(); base.destroy(); },
   onSpin: async () => {
     if (busy) return;
@@ -8646,6 +8772,7 @@ const reset = () => { clearMarkers(); for (const t of labelAt.values()) { try { 
 placeMarkers();
 
 return {
+  board,
   cleanup: () => { clearMarkers(); for (const t of labelAt.values()) { try { gsap.killTweensOf(t.scale); t.destroy(); } catch {} } labelAt.clear(); try { hud.destroy(); labels.destroy(); } catch {} board.destroy(); },
   onSpin: async () => {
     if (busy) return;
@@ -8719,6 +8846,7 @@ function spinCell(cell, id) {
 
 let busy = false;
 return {
+  board,
   cleanup: () => { try { hud.destroy(); } catch {} board.destroy(); },
   onSpin: async () => {
     if (busy) return;
@@ -8899,6 +9027,7 @@ async function runFeature(clovers) {
 
 let busy = false;
 return {
+  board,
   cleanup: () => { try { hud.destroy(); grid.destroy({ children: true }); } catch {} board.destroy(); base.destroy(); },
   onSpin: async () => {
     if (busy) return;
@@ -9105,6 +9234,7 @@ const ROUNDS = [[{ reel: 0, cell: 0 }, { reel: 2, cell: 2 }], [{ reel: 4, cell: 
 
 let busy = false;
 return {
+  board,
   cleanup: () => { try { hud.destroy(); counter.destroy(); } catch {} grid.destroy({ children: true }); board.destroy(); },
   onSpin: async () => {
     if (busy) return;
@@ -9227,6 +9357,7 @@ const ROUNDS = [[{ reel: 0, cell: 0 }, { reel: 2, cell: 2 }], [{ reel: 4, cell: 
 
 let busy = false;
 return {
+  board,
   cleanup: () => { try { hud.destroy(); counter.destroy(); } catch {} grid.destroy({ children: true }); board.destroy(); },
   onSpin: async () => {
     if (busy) return;
@@ -9327,6 +9458,7 @@ const ROUNDS = [
 
 let busy = false;
 return {
+  board,
   cleanup: () => { try { hud.destroy(); } catch {} grid.destroy({ children: true }); board.destroy(); },
   onSpin: async () => {
     if (busy) return;
@@ -9485,6 +9617,7 @@ const ROUNDS = [
 
 let busy = false;
 return {
+  board,
   cleanup: () => { try { hud.destroy(); grid.destroy({ children: true }); boltLayer.destroy({ children: true }); } catch {} board.destroy(); },
   onSpin: async () => {
     if (busy) return;
@@ -9590,6 +9723,7 @@ async function hold(which, amount, note) {
 
 let busy = false;
 return {
+  board,
   cleanup: () => { try { hud.destroy(); } catch {} board.destroy(); },
   onSpin: async () => {
     if (busy) return;
@@ -9717,6 +9851,7 @@ async function spotlight(which) {
 
 let busy = false;
 return {
+  board,
   cleanup: () => { try { hud.destroy(); } catch {} grid.destroy({ children: true }); board.destroy(); },
   onSpin: async () => {
     if (busy) return;
@@ -9844,6 +9979,7 @@ const ROUNDS = [
 
 let busy = false;
 return {
+  board,
   cleanup: () => { try { hud.destroy(); } catch {} grid.destroy({ children: true }); board.destroy(); },
   onSpin: async () => {
     if (busy) return;
@@ -9971,6 +10107,7 @@ const ROUNDS = [[{ reel: 0, cell: 0 }, { reel: 2, cell: 2 }], [{ reel: 4, cell: 
 
 let busy = false;
 return {
+  board,
   cleanup: () => {
     framePulse.kill();
     try { hud.destroy(); bg.destroy({ children: true }); } catch {}
@@ -10097,6 +10234,7 @@ const ROUNDS = [
 
 let busy = false;
 return {
+  board,
   cleanup: () => { try { hud.destroy(); } catch {} grid.destroy({ children: true }); board.destroy(); },
   onSpin: async () => {
     if (busy) return;
@@ -10224,6 +10362,7 @@ async function collect() {
 
 let busy = false;
 return {
+  board,
   cleanup: () => { try { hud.destroy(); } catch {} grid.destroy({ children: true }); board.destroy(); },
   onSpin: async () => {
     if (busy) return;
@@ -10350,6 +10489,7 @@ async function upgrade(cell, to) {
 
 let busy = false;
 return {
+  board,
   cleanup: () => { try { hud.destroy(); } catch {} grid.destroy({ children: true }); board.destroy(); },
   onSpin: async () => {
     if (busy) return;
@@ -10465,6 +10605,7 @@ const ROUNDS = [
 
 let busy = false;
 return {
+  board,
   cleanup: () => { try { hud.destroy(); } catch {} grid.destroy({ children: true }); board.destroy(); },
   onSpin: async () => {
     if (busy) return;
@@ -10604,6 +10745,7 @@ const ROUNDS = [
 
 let busy = false;
 return {
+  board,
   cleanup: () => { for (const p of Object.values(plaques)) gsap.killTweensOf(p); try { hud.destroy(); rail.destroy(); } catch {} grid.destroy({ children: true }); board.destroy(); },
   onSpin: async () => {
     if (busy) return;
@@ -10727,6 +10869,7 @@ const ROUNDS = [[], [], [{ reel: 0, cell: 2 }], [], [], []];
 
 let busy = false;
 return {
+  board,
   cleanup: () => { for (const { lamp } of lamps) gsap.killTweensOf(lamp); try { hud.destroy(); counter.destroy(); } catch {} grid.destroy({ children: true }); board.destroy(); },
   onSpin: async () => {
     if (busy) return;
@@ -10817,6 +10960,7 @@ const SEED = [{ reel: 1, cell: 1 }, { reel: 3, cell: 2 }].map(gold);
 
 let busy = false;
 return {
+  board,
   cleanup: () => { try { hud.destroy(); badge.destroy(); grid.destroy({ children: true }); } catch {} board.destroy(); },
   onSpin: async () => {
     if (busy) return;
@@ -10996,6 +11140,7 @@ async function collect() {
 
 let phase = 'ready';
 return {
+  board,
   cleanup: () => { for (const f of flyers) { try { gsap.killTweensOf(f); f.destroy(); } catch {} } flyers.clear(); for (const t of labelAt.values()) { try { t.destroy(); } catch {} } labelAt.clear(); if (sumText) { try { gsap.killTweensOf(sumText.scale); gsap.killTweensOf(sumText); sumText.destroy(); } catch {} sumText = null; } try { hud.destroy(); labels.destroy(); } catch {} board.destroy(); },
   onSpin: async () => {
     if (phase === 'running') return;
@@ -11254,6 +11399,7 @@ async function slickReset() {
 let phase = 'ready'; // ready -> done -> (reset) -> ready
 
 return {
+  board,
   cleanup: () => {
     for (const f of flyers) { try { gsap.killTweensOf(f); f.destroy(); } catch {} }
     flyers.clear();
@@ -11413,6 +11559,7 @@ function countUp(cell, value) {
 const randVal = () => [2, 5, 10, 15, 25, 50, 100][Math.floor(Math.random() * 7)];
 let busy = false;
 return {
+  board,
   cleanup: () => {
     for (const t of labelAt.values()) { try { gsap.killTweensOf(t.scale); t.destroy(); } catch {} }
     labelAt.clear();
@@ -11543,6 +11690,7 @@ const rollHits = () => {
 
 let busy = false;
 return {
+  board,
   cleanup: () => {
     try { hud.destroy(); } catch {}
     board.destroy();
@@ -11654,6 +11802,7 @@ const ROUNDS = [[{ reel: 0, cell: 0 }, { reel: 4, cell: 0 }], [{ reel: 2, cell: 
 
 let busy = false;
 return {
+  board,
   cleanup: () => { try { hud.destroy(); } catch {} grid.destroy({ children: true }); board.destroy(); },
   onSpin: async () => {
     if (busy) return;
@@ -11861,6 +12010,7 @@ async function collectToMeter() {
 
 let phase = 'ready';
 return {
+  board,
   cleanup: () => {
     for (const f of flyers) { try { gsap.killTweensOf(f); f.destroy(); } catch {} }
     flyers.clear();
@@ -12011,6 +12161,7 @@ seedBoard();
 
 let phase = 'ready';
 return {
+  board,
   cleanup: () => { for (const f of flyers) { try { gsap.killTweensOf(f); f.destroy?.(); } catch {} } flyers.clear(); for (const t of labelAt.values()) { try { gsap.killTweensOf(t.scale); t.destroy(); } catch {} } labelAt.clear(); try { hud.destroy(); labels.destroy(); } catch {} board.destroy(); },
   onSpin: async () => {
     if (phase === 'running') return;
@@ -12223,6 +12374,7 @@ const ROUNDS = [
 
 let total = 0;
 return {
+  board,
   cleanup: () => { for (const t of labelAt.values()) { try { gsap.killTweensOf(t.scale); t.destroy(); } catch {} } labelAt.clear(); try { hud.destroy(); labels.destroy(); } catch {} board.destroy(); },
   onSpin: async () => {
     for (const t of labelAt.values()) { try { gsap.killTweensOf(t.scale); t.destroy(); } catch {} }
@@ -12362,6 +12514,7 @@ const ROUNDS = [[{ reel: 2, cell: 1 }, { reel: 4, cell: 0 }], [{ reel: 0, cell: 
 
 let busy = false;
 return {
+  board,
   cleanup: () => {
     try { hud.destroy(); } catch {}
     try { seams.destroy(); } catch {}
@@ -12564,6 +12717,7 @@ board.events.on('coin:locked', ({ coin }) => {
 
 let phase = 'ready';
 return {
+  board,
   cleanup: () => {
     for (const f of flyers) { try { gsap.killTweensOf(f); f.destroy(); } catch {} }
     flyers.clear();
@@ -12592,6 +12746,111 @@ return {
     await payout(PAYER_CELL, PAY_VALUE);
     phase = 'done';
     hud.text = `paid · total ${fmt(totalOf())} · press spin to reset`;
+  },
+};
+```
+
+### hold-and-win-quicken
+URL: https://pixi-reels.schmooky.dev/recipes/hold-and-win-quicken/
+```ts
+// @ts-nocheck
+// Injected: HoldAndWinBuilder, PhaseCardSymbol, SpeedPresets, PIXI, gsap, app
+//
+// QUICKEN ON THE BOARD. `board.skip({ mode: 'quicken' })`.
+//
+// Every cell is its own 1x1 reel set, and the board folds its stagger into
+// each cell's spin floor. A quicken asks every in-flight cell for its
+// landing: the floor drops, so the whole wave lands together, and each cell
+// still spins its symbol in and bounces. `board.skip()` with the default
+// `'slam'` places them instead. `{ speed: 'turbo' }` lands the wave on the
+// turbo profile; `HoldAndWinBuilder.skipMode('quicken')` would make it the
+// board's default.
+//
+// `feature:skip` reports how many cells were in flight and the mode; after a
+// quicken there is nothing for the game layer to cut short, and the landing
+// flow (`cell:landed`, `coin:locked`, `respin:end`) is unchanged. The coins
+// are PhaseCardSymbol, so a spinning cell is blue and a landing one violet;
+// a placed one goes straight to grey.
+
+const COIN = 'coin', CELL = 60, GAP = 6, COLS = 5, ROWS = 3;
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+const board = new HoldAndWinBuilder()
+  .grid(COLS, ROWS)
+  .cellSize(CELL, { gap: GAP })
+  .symbols((r) => r.register(COIN, PhaseCardSymbol, { label: 'C' }))
+  .weights({ [COIN]: 1, empty: 3 })
+  .respins(3)
+  .speeds({ normal: { ...SpeedPresets.NORMAL, minimumSpinTime: 700 }, turbo: SpeedPresets.TURBO })
+  .initialSpeed('normal')
+  // A slow diagonal wave, so a quicken has something to collapse.
+  .stagger((reel, cell) => (reel + cell) * 160)
+  .cellChrome((g, size) => g.roundRect(0, 0, size, size, 8).fill({ color: 0x140f2e, alpha: 0.55 }).stroke({ color: 0x6a5acd, width: 1, alpha: 0.6 }))
+  .ticker(app.ticker)
+  .build();
+
+// One watcher for every cell's reel.
+const cells = [];
+for (let reel = 0; reel < COLS; reel++) for (let cell = 0; cell < ROWS; cell++) cells.push({ reel, cell });
+const unwatch = PhaseCardSymbol.watch(cells.flatMap((c) => board.reelAt(c).reels));
+
+const boardW = COLS * CELL + (COLS - 1) * GAP, boardH = ROWS * CELL + (ROWS - 1) * GAP;
+board.container.x = (app.screen.width - boardW) / 2;
+board.container.y = 40;
+app.stage.addChild(board.container);
+
+const hud = new PIXI.Text({
+  text: 'press spin, then tap again mid-wave to QUICKEN it',
+  style: { fontFamily: 'system-ui, sans-serif', fontSize: 13, fontWeight: '600', fill: 0x9c8f78 },
+});
+hud.anchor.set(0.5, 0);
+hud.position.set(app.screen.width / 2, board.container.y + boardH + 12);
+app.stage.addChild(hud);
+
+// When the wave landed relative to the press: one number per quickened wave.
+let pressedAt = 0;
+let landedInWave = 0;
+board.events.on('feature:skip', ({ inFlight, mode }) => {
+  pressedAt = performance.now();
+  landedInWave = 0;
+  hud.text = `${mode}: ${inFlight} cells landing through their stop on turbo`;
+});
+board.events.on('cell:landed', () => {
+  if (!pressedAt) return;
+  landedInWave += 1;
+  hud.text = `quicken: ${landedInWave} landed, last one ${Math.round(performance.now() - pressedAt)} ms after the press`;
+});
+board.events.on('respin:start', () => { pressedAt = 0; });
+
+const SEED = [{ cell: { reel: 1, cell: 1 }, id: COIN, data: { value: 10 } }, { cell: { reel: 3, cell: 2 }, id: COIN, data: { value: 25 } }];
+const ROUNDS = [[{ reel: 0, cell: 0 }, { reel: 4, cell: 1 }], [{ reel: 2, cell: 0 }], [{ reel: 1, cell: 2 }], []];
+
+let running = false;
+return {
+  board,
+  cleanup: () => {
+    unwatch();
+    try { hud.destroy(); } catch {}
+    board.destroy();
+  },
+  onSkip: () => {
+    if (!running) return;
+    board.skip({ mode: 'quicken', speed: 'turbo' });
+  },
+  onSpin: async () => {
+    if (running) return;
+    running = true;
+    board.reset();
+    board.enter(SEED);
+    hud.text = 'feature running: tap to quicken the wave';
+    await sleep(300);
+    for (const hits of ROUNDS) {
+      const res = await board.respin(hits.map((cell) => ({ cell, id: COIN, data: { value: 10 } })));
+      await sleep(500);
+      if (res.done) break;
+    }
+    hud.text = 'feature over: press spin';
+    running = false;
   },
 };
 ```
@@ -12678,6 +12937,7 @@ const ROUNDS = [[{ reel: 2, cell: 2 }, { reel: 4, cell: 1 }], [{ reel: 1, cell: 
 
 let busy = false;
 return {
+  board,
   cleanup: () => { try { hud.destroy(); } catch {} grid.destroy({ children: true }); board.destroy(); },
   onSpin: async () => {
     if (busy) return;
@@ -12816,6 +13076,7 @@ const rollHits = () => {
 
 let busy = false;
 return {
+  board,
   cleanup: () => {
     try { hud.destroy(); } catch {}
     try { locks.destroy(); } catch {}
@@ -13026,6 +13287,7 @@ seedBoard();
 
 let phase = 'ready';
 return {
+  board,
   cleanup: () => {
     for (const f of flyers) { try { gsap.killTweensOf(f); f.destroy(); } catch {} }
     flyers.clear();
@@ -13143,6 +13405,7 @@ async function collect() {
 
 let running = false;
 return {
+  board,
   cleanup: () => { for (const f of flyers) { try { gsap.killTweensOf(f); f.destroy(); } catch {} } flyers.clear(); for (const t of labelAt.values()) { try { t.destroy(); } catch {} } labelAt.clear(); try { meterText.destroy(); hud.destroy(); labels.destroy({ children: false }); } catch {} board.destroy(); },
   // RecipeRunner calls onSkip when the button is tapped mid-feature
   onSkip: () => {
@@ -13510,6 +13773,7 @@ const ROUNDS = [
 ];
 
 return {
+  board,
   cleanup: () => {
     for (const fly of flyers) { try { gsap.killTweensOf(fly); gsap.killTweensOf(fly.scale); fly.destroy(); } catch {} }
     flyers.clear();
@@ -13663,6 +13927,7 @@ const ROUNDS = [
 
 let busy = false;
 return {
+  board,
   cleanup: () => { for (const t of labelAt.values()) { try { t.destroy(); } catch {} } labelAt.clear(); try { hud.destroy(); labels.destroy(); } catch {} board.destroy(); },
   onSpin: async () => {
     if (busy) return;
@@ -13767,6 +14032,7 @@ seedBoard();
 const flyers = new Set();
 let phase = 'ready', total = 0;
 return {
+  board,
   cleanup: () => { try { gsap.killTweensOf(meterText.scale); } catch {} for (const f of flyers) { try { gsap.killTweensOf(f); f.destroy(); } catch {} } flyers.clear(); board.destroy(); },
   onSpin: async () => {
     if (phase === 'swapping' || phase === 'flying') return;
@@ -13909,6 +14175,7 @@ seedBoard();
 
 let tier = 0, busy = false;
 return {
+  board,
   cleanup: () => { for (const t of labelAt.values()) { try { t.destroy(); } catch {} } labelAt.clear(); try { hud.destroy(); labels.destroy({ children: false }); } catch {} board.destroy(); },
   onSpin: async () => {
     if (busy) return;
@@ -14027,6 +14294,7 @@ function pickHits() {
 
 let running = false;
 return {
+  board,
   cleanup: () => { for (const l of lines) { try { gsap.killTweensOf(l); l.destroy(); } catch {} } lines.length = 0; try { panel.destroy({ children: true }); hud.destroy(); } catch {} board.destroy(); },
   onSpin: async () => {
     if (running) return;
@@ -14185,6 +14453,7 @@ async function upgradeCoin(coin) {
 
 let busy = false;
 return {
+  board,
   cleanup: () => { for (const t of labelAt.values()) { try { gsap.killTweensOf(t.scale); t.destroy(); } catch {} } labelAt.clear(); try { hud.destroy(); labels.destroy(); } catch {} board.destroy(); },
   onSpin: async () => {
     if (busy) return;
@@ -14313,6 +14582,7 @@ const rounds = [
 ];
 
 return {
+  board,
   cleanup: () => { for (const t of labelAt.values()) { try { t.destroy(); } catch {} } labelAt.clear(); try { hud.destroy(); labels.destroy(); } catch {} board.destroy(); },
   onSpin: async () => {
     for (const t of labelAt.values()) t.destroy();
@@ -17446,6 +17716,84 @@ return {
 };
 ```
 
+### phase-colors
+URL: https://pixi-reels.schmooky.dev/recipes/phase-colors/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, PhaseCardSymbol, PHASE_CARD_COLORS, PIXI, app
+//
+// SEE THE PHASE. `PhaseCardSymbol`.
+//
+// A CardSymbol that is grey at rest and takes the colour of the phase its
+// reel is running, so a spin can be read straight off the board:
+//
+//   sky     start         accelerating from rest
+//   blue    spin          full speed, waiting for the result
+//   amber   anticipation  the tease (reels 4-5 here)
+//   violet  stop          spinning the frame in, then the bounce
+//   green   landed        one beat on the result, then grey
+//
+// The card does not know its reel. `PhaseCardSymbol.watch(reelSet.reels)`
+// paints every card from each reel's own `phase:enter`, `landed` and
+// `symbol:created` events, so a custom phase registered under its own key
+// gets a colour too (`other`, or one you add through `colors`). Skip presses
+// show why the symbol exists: a slam goes amber-or-blue straight to green,
+// a quicken (see Skip & slam) shows the violet stop in between.
+
+const IDS = ['9', '10', 'J', 'Q', 'K'];
+const REELS = 5, ROWS = 3, SIZE = 80, GAP = 4;
+const TEASE = [3, 4];
+function rv() { return IDS[Math.floor(Math.random() * IDS.length)]; }
+
+const reelSet = new ReelSetBuilder()
+  .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
+  .symbols((r) => {
+    for (const id of IDS) r.register(id, PhaseCardSymbol, { label: id });
+  })
+  // Slow enough that every colour is on screen long enough to read.
+  .speed('normal', { ...SpeedPresets.NORMAL, accelerationDuration: 600, stopDelay: 350, anticipationDelay: 1400, bounceDuration: 500 })
+  .ticker(app.ticker)
+  .build();
+
+// One call, every reel. Returns the release.
+const unwatch = PhaseCardSymbol.watch(reelSet.reels);
+
+const TOTAL_H = ROWS * SIZE + (ROWS - 1) * GAP;
+
+// Legend: a swatch per phase, in lifecycle order, two rows so the long
+// names do not run into each other.
+const legend = new PIXI.Container();
+const ORDER = ['rest', 'start', 'spin', 'anticipation', 'stop', 'landed'];
+ORDER.forEach((phase, i) => {
+  const x = (i % 3) * 130, y = TOTAL_H + 10 + Math.floor(i / 3) * 16;
+  const swatch = new PIXI.Graphics().roundRect(x, y, 10, 10, 2).fill({ color: PHASE_CARD_COLORS[phase] });
+  const label = new PIXI.Text({
+    text: phase,
+    style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 10, fill: 0x9c8f78 },
+  });
+  label.position.set(x + 14, y - 2);
+  legend.addChild(swatch, label);
+});
+reelSet.addChild(legend);
+
+return {
+  reelSet,
+  cleanup: () => {
+    unwatch();
+    try { legend.destroy({ children: true }); } catch {}
+  },
+  onSkip: () => { try { reelSet.skipSpin(); } catch { reelSet.requestSkip(); } },
+  onSpin: async () => {
+    const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
+    const p = reelSet.spin();
+    reelSet.setAnticipation(TEASE, { stagger: 'sequential' });
+    await new Promise((r) => setTimeout(r, 400));
+    reelSet.setResult(grid);
+    await p;
+  },
+};
+```
+
 ### phase-from-scratch-start
 URL: https://pixi-reels.schmooky.dev/recipes/phase-from-scratch-start/
 ```ts
@@ -17576,10 +17924,11 @@ URL: https://pixi-reels.schmooky.dev/recipes/phase-from-scratch-stop/
 //                              raise `spin:reelLanding`. The only way to land
 //   this.bounce(opts?)       - the overshoot, carrying lifted views along.
 //                              `{ done, cancel() }`; profile defaults
-//   onSkip()                 - the slam pose: cancel, rest, land if not yet
-//   onHurry()                - optional. A `requestHurry()` press asks for
-//                              the landing sooner; here there is no wait to
-//                              cut, so the default (`false`) is right
+//   onSkip(ctx)              - the slam pose: cancel the bounce, rest, land if
+//                              not yet. Under `ctx.mode === 'quicken'` a press
+//                              asks for the landing sooner; there is no wait
+//                              to cut here, so that branch does nothing and
+//                              the phase runs its course
 //
 // Timing that belongs to the phase rides on the profile: `slideMs` below is
 // not a `SpeedProfile` field, and `ReelPhase<Config, Profile>` is what lets
@@ -17627,8 +17976,10 @@ class InstantStopPhase extends ReelPhase {
   update() {}
 
   // The slam pose: wherever the phase was, leave the reel where a natural
-  // finish would have - resting on its frame, landed.
-  onSkip() {
+  // finish would have - resting on its frame, landed. A quicken has nothing
+  // to cut in this phase, so it is left to finish on its own.
+  onSkip(ctx) {
+    if (ctx.mode === 'quicken') return;
     if (this._slide) { this._slide.kill(); this._slide = null; }
     if (this._bounce) { this._bounce.cancel(); this._bounce = null; }
     this.reel.axis.setMain(this.reel.container, this._rest);
@@ -17660,6 +18011,259 @@ reelSet.addChild(hud);
 return {
   reelSet,
   cleanup: () => { try { hud.destroy(); } catch {} },
+  onSkip: () => { try { reelSet.skipSpin(); } catch { reelSet.requestSkip(); } },
+  onSpin: async () => {
+    const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
+    const p = reelSet.spin();
+    await new Promise((r) => setTimeout(r, 250));
+    reelSet.setResult(grid);
+    await p;
+  },
+};
+```
+
+### phase-steps-custom
+URL: https://pixi-reels.schmooky.dev/recipes/phase-steps-custom/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, ReelPhase, PhaseCardSymbol,
+//                   step, insertBefore, PIXI, gsap, app
+//
+// A CUSTOM PHASE ON THE STEP RUNNER. Same door the built-ins use.
+//
+// A phase is still a class with `onEnter` / `update` / `onSkip`. This one
+// lets `runSteps()` do the sequencing: five named steps, one of them a wait
+// marked `cut`. That buys three things without a line of extra code:
+//
+//   - a quicken skips the `hold` step and plays the rest. No `onSkip` branch
+//   - a slam cancels whatever step is in flight before `onSkip` runs
+//   - the game can edit the list, exactly as it edits `StopPhase`'s:
+//     `f.register('stop', HoldStopPhase, { steps })`. Here it inserts a
+//     `tick` step before the slide
+//
+// The flow: stop dead, place the frame a tenth of a cell short, hold there
+// (the dramatic beat), slide in, land, bounce. Violet on the cards is the
+// whole phase; press while violet and the hold is cut.
+
+const IDS = ['9', '10', 'J', 'Q', 'K'];
+const REELS = 5, ROWS = 3, SIZE = 80, GAP = 4;
+const HOLD_MS = 800;
+function rv() { return IDS[Math.floor(Math.random() * IDS.length)]; }
+
+let note = () => {};
+
+class HoldStopPhase extends ReelPhase {
+  name = 'stop';
+  skippable = true;
+  // "A quicken may reach my onSkip." It has nothing to do there, the runner
+  // cuts `hold` for it, but the flag is what opts the phase in.
+  quickenable = true;
+
+  constructor(reel, speed, options = {}) {
+    super(reel, speed);
+    this._options = options;
+  }
+
+  // The list the game edits. Names are the public part.
+  defaultSteps() {
+    return [
+      step('place', (ctx) => {
+        const reel = ctx.reel;
+        reel.forceSpeed(0);
+        reel.placeStrip(ctx.config.targetFrame);
+        this._rest = reel.axis.getMain(ctx.container);
+        this._landed = false;
+        reel.axis.setMain(ctx.container, this._rest - reel.axis.polarity * reel.symbolHeight * 0.1);
+      }),
+      // The wait a press may cut. `ctx.wait` resolves early when it is.
+      step('hold', (ctx) => ctx.wait(HOLD_MS), { cut: true }),
+      step('slide', (ctx) => {
+        note(`reel ${ctx.reel.reelIndex + 1}: ${ctx.quickened ? 'hold CUT' : 'hold played'}, sliding in`);
+        return ctx.gsap.to(ctx.container, {
+          [ctx.main]: this._rest,
+          duration: ctx.profile.slideMs / 1000,
+          ease: 'power2.out',
+        });
+      }),
+      step('land', (ctx) => {
+        ctx.phase.land();
+        this._landed = true;
+      }),
+      step('bounce', (ctx) => ctx.phase.bounce()),
+    ];
+  }
+
+  onEnter() {
+    const steps = this.defaultSteps();
+    this.runSteps(this._options.steps ? this._options.steps(steps) : steps);
+  }
+
+  // Feeds `ctx.until()` and the runner; nothing else per frame.
+  update() {
+    this.tickSteps();
+  }
+
+  // Slam pose only. The base has already cancelled the step in flight and
+  // aborted its signal, and a quicken never gets here for this phase's sake.
+  onSkip(ctx) {
+    if (ctx.mode === 'quicken') return;
+    this.reel.axis.setMain(this.reel.container, this._rest ?? 0);
+    if (!this._landed) { this._landed = true; this.land(); }
+  }
+}
+
+const reelSet = new ReelSetBuilder()
+  .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
+  .symbols((r) => {
+    for (const id of IDS) r.register(id, PhaseCardSymbol, { label: id });
+  })
+  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 200, minimumSpinTime: 600, slideMs: 160 })
+  // The game's edit of a phase it did not write: a tick before the slide.
+  .phases((f) => f.register('stop', HoldStopPhase, {
+    steps: (steps) => insertBefore(steps, 'slide', step('tick', (ctx) => {
+      note(`reel ${ctx.reel.reelIndex + 1}: tick (inserted by the game)`);
+    })),
+  }))
+  .ticker(app.ticker)
+  .build();
+
+const unwatch = PhaseCardSymbol.watch(reelSet.reels);
+const TOTAL_H = ROWS * SIZE + (ROWS - 1) * GAP;
+
+const hud = new PIXI.Text({
+  text: 'spin, then press while the cards are violet: the hold step is cut',
+  style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 11, fill: 0x9c8f78 },
+});
+hud.position.set(0, TOTAL_H + 10);
+reelSet.addChild(hud);
+const lines = [];
+note = (line) => {
+  lines.push(line);
+  hud.text = lines.slice(-2).join('\n');
+};
+reelSet.events.on('spin:start', () => {
+  lines.length = 0;
+  hud.text = 'spin, then press while the cards are violet: the hold step is cut';
+});
+
+// The other press, for comparison: tap the readout to slam.
+hud.eventMode = 'static';
+hud.cursor = 'pointer';
+hud.on('pointertap', () => reelSet.requestSkip({ mode: 'slam' }));
+
+return {
+  reelSet,
+  cleanup: () => {
+    unwatch();
+    try { hud.destroy(); } catch {}
+  },
+  onSkip: () => reelSet.requestSkip({ mode: 'quicken' }),
+  onSpin: async () => {
+    const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
+    const p = reelSet.spin();
+    await new Promise((r) => setTimeout(r, 250));
+    reelSet.setResult(grid);
+    await p;
+  },
+};
+```
+
+### phase-steps
+URL: https://pixi-reels.schmooky.dev/recipes/phase-steps/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, StopPhase, StartPhase, PhaseCardSymbol,
+//                   step, insertAfter, replaceStep, removeStep, PIXI, gsap, app
+//
+// EDIT A BUILT-IN PHASE'S STEPS. `f.register('stop', StopPhase, { steps })`.
+//
+// A built-in phase runs a named list of steps in order. `StopPhase` runs
+// `delay, spinOut, land, bounce`; `StartPhase` runs `delay, launch, pull,
+// accelerate, announce`. Re-register the same class under the same key with
+// `options.steps` and the phase hands you that list before it runs: insert a
+// step, replace one, drop one. No subclass, no knowledge of the phase's
+// insides beyond the names.
+//
+// A step is `step(name, (ctx) => result)`. `ctx` has the reel, the profile,
+// the config, gsap, `container`, `main` (the travel-axis property), the phase,
+// a `signal`, and `wait(ms)` / `until(pred)`. The result is a tween or
+// timeline (killed on a slam), a promise, a cancellable such as what
+// `ctx.phase.bounce()` returns, or nothing.
+//
+// Three edits here:
+//   stop:  a flash step after `land`, an elastic bounce in place of the
+//          built-in one (through `phase.bounce`, which keeps lifted art riding
+//          along)
+//   start: no `pull`, so the reel never twitches backwards on launch
+
+const IDS = ['9', '10', 'J', 'Q', 'K'];
+const REELS = 5, ROWS = 3, SIZE = 80, GAP = 4;
+function rv() { return IDS[Math.floor(Math.random() * IDS.length)]; }
+
+const plates = [];
+const flash = (reelIndex) => {
+  const g = plates[reelIndex];
+  if (!g) return;
+  gsap.killTweensOf(g);
+  g.alpha = 0.55;
+  return gsap.to(g, { alpha: 0, duration: 0.35, ease: 'power2.out' });
+};
+
+const reelSet = new ReelSetBuilder()
+  .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
+  .symbols((r) => {
+    for (const id of IDS) r.register(id, PhaseCardSymbol, { label: id });
+  })
+  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 260, bounceDistance: 26, bounceDuration: 900 })
+  .phases((f) => {
+    f.register('stop', StopPhase, {
+      steps: (steps) => replaceStep(
+        insertAfter(steps, 'land', step('flash', (ctx) => flash(ctx.reel.reelIndex))),
+        'bounce',
+        step('bounce', (ctx) => ctx.phase.bounce({
+          animation: (b) => b.gsap.fromTo(
+            b.container,
+            { [b.main]: b.base + b.distance },
+            { [b.main]: b.base, duration: b.seconds, ease: 'elastic.out(1, 0.35)' },
+          ),
+        })),
+      ),
+    });
+    f.register('start', StartPhase, {
+      steps: (steps) => removeStep(steps, 'pull'),
+    });
+  })
+  .ticker(app.ticker)
+  .build();
+
+const unwatch = PhaseCardSymbol.watch(reelSet.reels);
+const TOTAL_H = ROWS * SIZE + (ROWS - 1) * GAP;
+
+// One backlight plate per reel, drawn under the symbols, lit by the `flash` step.
+const plateLayer = new PIXI.Container();
+reelSet.addChildAt(plateLayer, 0);
+for (let i = 0; i < REELS; i++) {
+  const g = new PIXI.Graphics().rect(i * (SIZE + GAP) - 6, -6, SIZE + 12, TOTAL_H + 12).fill({ color: 0xfef08a });
+  g.alpha = 0;
+  plateLayer.addChild(g);
+  plates.push(g);
+}
+
+const hud = new PIXI.Text({
+  text: 'spin: no pull on launch, a flash after land, an elastic settle',
+  style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 11, fill: 0x9c8f78 },
+});
+hud.position.set(0, TOTAL_H + 10);
+reelSet.addChild(hud);
+
+return {
+  reelSet,
+  cleanup: () => {
+    unwatch();
+    for (const g of plates) gsap.killTweensOf(g);
+    try { plateLayer.destroy({ children: true }); } catch {}
+    try { hud.destroy(); } catch {}
+  },
   onSkip: () => { try { reelSet.skipSpin(); } catch { reelSet.requestSkip(); } },
   onSpin: async () => {
     const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
@@ -18393,6 +18997,339 @@ return {
     VISIBLE.map((cells) =>
       Array.from({ length: cells }, () => CARD_DECK[Math.floor(Math.random() * CARD_DECK.length)].id),
     ),
+};
+```
+
+### quicken-custom-phase
+URL: https://pixi-reels.schmooky.dev/recipes/quicken-custom-phase/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, ReelPhase, PhaseCardSymbol, PIXI, gsap, app
+//
+// A CUSTOM PHASE THAT CAN BE QUICKENED. `onSkip(ctx)` and `ctx.mode`.
+//
+// The instant stop from "A stop phase written from scratch", plus a
+// deliberate pause: the reel stops dead on its frame a tenth of a cell short
+// and HOLDS there for 900 ms before sliding the rest of the way in, landing
+// and bouncing. A dramatic beat, and a wait a press should be able to cut.
+//
+// Every phase hears a press through `onSkip(ctx)`. `ctx.mode` says what the
+// press wants: under `'slam'` the hook is the slam pose (rest on the frame,
+// landed; the base completes the phase after). Under `'quicken'` the hook
+// cuts a wait and leaves the landing alone - here it kills the hold and
+// slides in at once. A quicken only reaches a phase that declares
+// `quickenable = true`; leave that out and the phase simply runs its course:
+// the reel still lands, the press just shortens nothing. `ctx.payload` is
+// whatever the game put on the press.
+//
+// The hold is violet on the PhaseCardSymbol cards (it is part of the stop);
+// press while it is violet and the slide starts at once.
+
+const IDS = ['9', '10', 'J', 'Q', 'K'];
+const REELS = 5, ROWS = 3, SIZE = 80, GAP = 4;
+const HOLD_MS = 900;
+function rv() { return IDS[Math.floor(Math.random() * IDS.length)]; }
+
+let note = () => {};
+
+class HeldInstantStopPhase extends ReelPhase {
+  name = 'stop';
+  skippable = true;
+  // "My onSkip branches on ctx.mode." Without this a quicken leaves the phase alone.
+  quickenable = true;
+
+  onEnter(config) {
+    const reel = this.reel;
+    const axis = reel.axis;
+    this._landed = false;
+    reel.forceSpeed(0);
+    reel.placeStrip(config.targetFrame);
+    this._rest = axis.getMain(reel.container);
+    axis.setMain(reel.container, this._rest - axis.polarity * reel.symbolHeight * 0.1);
+    this._holdStarted = performance.now();
+    this._hold = gsap.delayedCall(HOLD_MS / 1000, () => {
+      this._hold = null;
+      this._slideIn();
+    });
+  }
+
+  _slideIn() {
+    const reel = this.reel;
+    this._slide = gsap.to(reel.container, {
+      [reel.axis.mainProp]: this._rest,
+      duration: this.speed.slideMs / 1000,
+      ease: 'power2.out',
+      onComplete: () => {
+        this._slide = null;
+        this._landed = true;
+        this.land();
+        this._bounce = this.bounce();
+        this._bounce.done.then(() => this._complete());
+      },
+    });
+  }
+
+  update() {}
+
+  // The one hook, two branches.
+  onSkip(ctx) {
+    if (ctx.mode === 'quicken') {
+      // Cut the hold, keep the landing exactly as it would have been. A
+      // press during the slide or the bounce has nothing left to cut.
+      if (this._hold) {
+        this._hold.kill();
+        this._hold = null;
+        note(`reel ${this.reel.reelIndex + 1}: hold cut after ${Math.round(performance.now() - this._holdStarted)} of ${HOLD_MS} ms`);
+        this._slideIn();
+      }
+      return;
+    }
+    // The slam pose: wherever the phase was, rest the reel on its frame,
+    // landed. The base completes the phase after this.
+    if (this._hold) { this._hold.kill(); this._hold = null; }
+    if (this._slide) { this._slide.kill(); this._slide = null; }
+    if (this._bounce) { this._bounce.cancel(); this._bounce = null; }
+    this.reel.axis.setMain(this.reel.container, this._rest);
+    if (!this._landed) { this._landed = true; this.land(); }
+  }
+}
+
+const reelSet = new ReelSetBuilder()
+  .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
+  .symbols((r) => {
+    for (const id of IDS) r.register(id, PhaseCardSymbol, { label: id });
+  })
+  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 200, minimumSpinTime: 600, slideMs: 160 })
+  .phases((f) => f.register('stop', HeldInstantStopPhase))
+  .ticker(app.ticker)
+  .build();
+
+const unwatch = PhaseCardSymbol.watch(reelSet.reels);
+const TOTAL_H = ROWS * SIZE + (ROWS - 1) * GAP;
+
+const hud = new PIXI.Text({
+  text: 'spin, then press while the cards are violet: the 900 ms hold is cut',
+  style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 11, fill: 0x9c8f78 },
+});
+hud.position.set(0, TOTAL_H + 10);
+reelSet.addChild(hud);
+const lines = [];
+note = (line) => {
+  lines.push(line);
+  hud.text = lines.slice(-3).join('\n');
+};
+reelSet.events.on('spin:start', () => {
+  lines.length = 0;
+  hud.text = 'spin, then press while the cards are violet: the 900 ms hold is cut';
+});
+
+return {
+  reelSet,
+  cleanup: () => {
+    unwatch();
+    try { hud.destroy(); } catch {}
+  },
+  onSkip: () => reelSet.requestSkip({ mode: 'quicken' }),
+  onSpin: async () => {
+    const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
+    const p = reelSet.spin();
+    await new Promise((r) => setTimeout(r, 250));
+    reelSet.setResult(grid);
+    await p;
+  },
+};
+```
+
+### quicken-groups
+URL: https://pixi-reels.schmooky.dev/recipes/quicken-groups/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, PhaseCardSymbol, CardSymbol, PIXI, gsap, app
+//
+// QUICKEN WITH GROUPS. The same barrier, a different mode.
+//
+//   reels 1-2  land together
+//   reels 3-4  tease, one press each
+//   reel  5    keeps spinning until both teases are over
+//
+// `requestSkip({ mode: 'quicken' })` walks exactly the groups a slam would and
+// quickens each one instead of placing it: press 1 frees reels 1-2, press 2
+// ends reel 3's tease, press 3 reel 4's, press 4 frees reel 5. The cards are
+// PhaseCardSymbol, so the difference is on screen: blue is spin, amber is
+// the tease, violet is the stop spinning the frame in.
+//
+//   - a freed group goes violet, not straight to grey. It lands; it is not placed
+//   - the barrier holds. Reel 5 stays blue until reel 4 is down, however fast
+//     you press. A quickened reel counts as released for the WALK, so press 4
+//     is taken early; the reel itself still waits its turn
+
+const IDS = ['9', '10', 'J', 'Q', 'K'];
+const SCAT = 'SCAT';
+const REELS = 5, ROWS = 3, SIZE = 78, GAP = 4;
+const GROUPS = [[0, 1], [2, 3], [4]];
+const TEASE = [2, 3];
+const COLORS = [0x6ad0ff, 0xffcc44, 0xb388ff];
+function rv() { return IDS[Math.floor(Math.random() * IDS.length)]; }
+
+const reelSet = new ReelSetBuilder()
+  .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
+  .symbols((r) => {
+    for (const id of IDS) r.register(id, PhaseCardSymbol, { label: id });
+    // The scatter keeps its own colour, so the trigger reads through the phases.
+    r.register(SCAT, CardSymbol, { color: 0xffcc44, label: 'F', textColor: 0x3a2600 });
+  })
+  .speed('normal', { ...SpeedPresets.NORMAL, anticipationDelay: 1500, stopDelay: 150, bounceDuration: 450 })
+  .ticker(app.ticker)
+  .build();
+
+const unwatch = PhaseCardSymbol.watch(reelSet.reels);
+reelSet.setReelGroups(GROUPS);
+
+const H = ROWS * SIZE + (ROWS - 1) * GAP;
+
+// Group bars under the reels, drawn once at setup.
+const bars = new PIXI.Graphics();
+GROUPS.forEach((group, g) => {
+  for (const i of group) bars.roundRect(i * (SIZE + GAP), H + 6, SIZE, 5, 2).fill({ color: COLORS[g] });
+});
+reelSet.addChild(bars);
+
+const hud = new PIXI.Text({
+  text: 'press spin, then keep pressing: each press quickens the next group',
+  style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 11, fill: 0x9c8f78 },
+});
+hud.position.set(0, H + 19);
+reelSet.addChild(hud);
+
+let press = 0;
+let order = [];
+reelSet.events.on('spin:start', () => {
+  press = 0;
+  order = [];
+  hud.text = 'press spin, then keep pressing: each press quickens the next group';
+});
+reelSet.events.on('skip:requested', ({ reels, mode }) => {
+  press += 1;
+  hud.text = `press ${press}: ${mode === 'quicken' ? 'quickened' : 'slammed'} [${reels.map((i) => i + 1).join(', ')}]`;
+});
+reelSet.events.on('spin:reelLanded', (i) => {
+  order.push(i + 1);
+  hud.text = `${hud.text.split('\n')[0]}\nlanded so far: ${order.join(' ')}`;
+});
+
+return {
+  reelSet,
+  cleanup: () => {
+    unwatch();
+    try { bars.destroy(); } catch {}
+    try { hud.destroy(); } catch {}
+  },
+  // Every press goes through the same call. The engine decides which group
+  // this one frees; the group lands through its stop.
+  onSkip: () => reelSet.requestSkip({ mode: 'quicken' }),
+  onSpin: async () => {
+    const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
+    grid[0].visible[1] = SCAT;
+    grid[1].visible[1] = SCAT;
+    const p = reelSet.spin();
+    reelSet.setAnticipation(TEASE, { stagger: 'sequential', protect: 'stepwise' });
+    await new Promise((r) => setTimeout(r, 250));
+    reelSet.setResult(grid);
+    await p;
+  },
+};
+```
+
+### quicken-then-slam
+URL: https://pixi-reels.schmooky.dev/recipes/quicken-then-slam/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, PhaseCardSymbol, PIXI, gsap, app
+//
+// ONE BUTTON, TWO PRESSES. Quicken first, slam second.
+//
+//   press 1  requestSkip({ mode: 'quicken', speed: 'turbo', payload })  every
+//            reel spins its frame in and bounces on the turbo profile - felt,
+//            and still a landing
+//   press 2  requestSkip({ mode: 'slam', payload })   whatever is still moving
+//            is placed. The cut, for the player who really means it
+//
+// The engine keeps the two apart on purpose. A quicken press treats the reels
+// it already quickened as down and walks on; a slam press cuts them. Both are
+// skips: `skipStage` advances, `wasSkipped` is true, `SpinResult.skipMode`
+// says which press ended it. On the PhaseCardSymbol cards press 1 turns every
+// reel violet (the stop, spinning in); press 2 turns whatever is still violet
+// grey at once. Wait the bounce out instead and press 2 has nothing to cut.
+//
+// The press rides on the events whole: `skip:requested` is `{ reels, partial,
+// mode, speed?, payload? }`, the same context every phase's `onSkip(ctx)`
+// got. The HUD reads the press number off `payload` and the profile off
+// `speed.name`, from the event, with no counter of its own.
+
+const IDS = ['9', '10', 'J', 'Q', 'K'];
+const REELS = 5, ROWS = 3, SIZE = 80, GAP = 4;
+function rv() { return IDS[Math.floor(Math.random() * IDS.length)]; }
+
+const reelSet = new ReelSetBuilder()
+  .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
+  .symbols((r) => {
+    for (const id of IDS) r.register(id, PhaseCardSymbol, { label: id });
+  })
+  // A slow round, so there is time to press twice.
+  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 350, minimumSpinTime: 900 })
+  // What press 1 lands on: turbo's spin-out and its 200 ms bounce.
+  .speed('turbo', SpeedPresets.TURBO)
+  .ticker(app.ticker)
+  .build();
+
+const unwatch = PhaseCardSymbol.watch(reelSet.reels);
+const TOTAL_H = ROWS * SIZE + (ROWS - 1) * GAP;
+
+const hud = new PIXI.Text({
+  text: 'spin, press once to quicken, press again to slam',
+  style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 11, fill: 0xffcc44 },
+});
+hud.position.set(0, TOTAL_H + 10);
+reelSet.addChild(hud);
+
+// The one piece of state the button needs: has this round been quickened
+// yet? Read off the engine's own event rather than counted locally, so a
+// press that freed nothing (round already down) does not arm the slam.
+let quickened = false;
+reelSet.events.on('spin:start', () => {
+  quickened = false;
+  hud.text = 'spin, press once to quicken, press again to slam';
+});
+reelSet.events.on('skip:requested', ({ reels, mode, speed, payload }) => {
+  if (mode === 'quicken') {
+    quickened = true;
+    hud.text = `press ${payload.press}: quickened [${reels.join(', ')}] on ${speed.name} - press again to slam`;
+  } else {
+    hud.text = `press ${payload.press}: slammed [${reels.join(', ')}] - placed, no spin-out`;
+  }
+});
+reelSet.events.on('spin:complete', ({ wasSkipped, skipMode, skipContext }) => {
+  hud.text = `${hud.text.split(' - ')[0]} - over: skipMode ${skipMode}, payload.press ${skipContext?.payload?.press}, wasSkipped ${wasSkipped}`;
+});
+
+return {
+  reelSet,
+  cleanup: () => {
+    unwatch();
+    try { hud.destroy(); } catch {}
+  },
+  onSkip: () => {
+    reelSet.requestSkip(quickened
+      ? { mode: 'slam', payload: { press: 2 } }
+      : { mode: 'quicken', speed: 'turbo', payload: { press: 1 } });
+  },
+  onSpin: async () => {
+    const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
+    const p = reelSet.spin();
+    await new Promise((r) => setTimeout(r, 250));
+    reelSet.setResult(grid);
+    await p;
+  },
 };
 ```
 
@@ -19616,151 +20553,6 @@ return {
 };
 ```
 
-### skip-hurry
-URL: https://pixi-reels.schmooky.dev/recipes/skip-hurry/
-```ts
-// @ts-nocheck
-// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, PIXI, gsap, app
-//
-// A PRESS THAT LANDS, NOT CUTS. `requestHurry()`.
-//
-// Every slam places the frame and lands in the same tick. The landing beat
-// still plays, but on symbols already parked, so a press reads as a cut - and
-// on a teasing spin it hides the build-up. `requestHurry()` frees the same
-// reels a `requestSkip()` press would (tease protection, stepwise, groups all
-// apply) and asks each one for its landing instead: the tease ends, the stop
-// delay is cut, the reel spins its frame in at full speed and bounces.
-//
-//   press 1 - reels 0-1 land through their stop, together. reels 2-4 tease
-//   press 2 - reel 2's tease ends and it spins out. 3-4 keep teasing
-//   press 3 - reel 3
-//   press 4 - reel 4
-//
-// `speed: 'turbo'` lands every hurried reel on the turbo profile: its faster
-// spin-out and its shorter bounce. The round's own profile otherwise.
-//
-// A `requestSkip()` still cuts: it slams whatever is still moving, hurried or
-// not. The second button below is that press, so the two can be compared on
-// the same spin.
-
-const IDS = ['9', '10', 'J', 'Q', 'K'];
-const SCAT = 'SCAT';
-const REELS = 5, ROWS = 3, SIZE = 80, GAP = 4;
-const TEASE = [2, 3, 4];
-const CARDS = CARD_DECK.filter((c) => IDS.includes(c.id));
-function rv() { return IDS[Math.floor(Math.random() * IDS.length)]; }
-
-const reelSet = new ReelSetBuilder()
-  .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
-  .symbols((r) => {
-    for (const c of CARDS) {
-      r.register(c.id, CardSymbol, { color: c.color, label: c.label, textColor: c.textColor });
-    }
-    r.register(SCAT, CardSymbol, { color: 0xffcc44, label: 'F', textColor: 0x3a2600 });
-  })
-  // A long hold per reel, so there is room to press through it, and a slow
-  // bounce, so a hurried landing is visibly a landing.
-  .speed('normal', { ...SpeedPresets.NORMAL, anticipationDelay: 1600, bounceDuration: 520 })
-  // What a hurried reel lands on: the turbo spin-out and its short bounce.
-  .speed('turbo', SpeedPresets.TURBO)
-  .ticker(app.ticker)
-  .build();
-
-const TOTAL_H = ROWS * SIZE + (ROWS - 1) * GAP;
-
-// Tease outline: a thin dashed border on the reel's own bounds, blinking.
-const glowLayer = new PIXI.Container();
-reelSet.addChild(glowLayer);
-const glows = new Map();
-const stopGlow = (i) => {
-  const g = glows.get(i);
-  if (!g) return;
-  gsap.killTweensOf(g);
-  try { g.destroy(); } catch {}
-  glows.delete(i);
-};
-const startGlow = (i) => {
-  stopGlow(i);
-  const DASH = 7, GAP_ = 5, W = 1.5, inset = W / 2;
-  const l = i * (SIZE + GAP) + inset, t = inset;
-  const r = i * (SIZE + GAP) + SIZE - inset, b = TOTAL_H - inset;
-  const g = new PIXI.Graphics();
-  for (const [x1, y1, x2, y2] of [[l, t, r, t], [r, t, r, b], [r, b, l, b], [l, b, l, t]]) {
-    const len = Math.hypot(x2 - x1, y2 - y1);
-    const ux = (x2 - x1) / len, uy = (y2 - y1) / len;
-    for (let d = 0; d < len; d += DASH + GAP_) {
-      const e = Math.min(d + DASH, len);
-      g.moveTo(x1 + ux * d, y1 + uy * d).lineTo(x1 + ux * e, y1 + uy * e);
-    }
-  }
-  g.stroke({ width: W, color: 0xfef08a });
-  glowLayer.addChild(g);
-  gsap.to(g, { alpha: 0.15, duration: 0.22, yoyo: true, repeat: -1, ease: 'steps(1)' });
-  glows.set(i, g);
-};
-reelSet.events.on('anticipation:reel', ({ reelIndex }) => startGlow(reelIndex));
-reelSet.events.on('anticipation:reelEnd', ({ reelIndex }) => stopGlow(reelIndex));
-
-const hud = new PIXI.Text({
-  text: '',
-  style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 11, fill: 0xffcc44 },
-});
-hud.position.set(0, TOTAL_H + 10);
-reelSet.addChild(hud);
-
-// The numeric definition of "landed, not placed": the landing frame and the
-// settle are a whole bounce apart on a hurried reel, and the same tick on a
-// slammed one.
-const landingAt = new Map();
-reelSet.events.on('spin:reelLanding', (i) => landingAt.set(i, performance.now()));
-
-let press = 0;
-const idle = 'spin, then press to walk the board: hurried reels spin out and bounce';
-hud.text = idle;
-reelSet.events.on('spin:start', () => { press = 0; landingAt.clear(); hud.text = idle; });
-reelSet.events.on('hurry:requested', ({ reels }) => {
-  press += 1;
-  hud.text = `press ${press}: hurried [${reels.join(', ')}] - landing through their stop`;
-});
-reelSet.events.on('skip:requested', ({ reels }) => {
-  press += 1;
-  hud.text = `press ${press}: SLAMMED [${reels.join(', ')}] - placed, no spin-out`;
-});
-reelSet.events.on('spin:reelLanded', (i) => {
-  const bounce = Math.round(performance.now() - (landingAt.get(i) ?? performance.now()));
-  hud.text = `${hud.text.split('\n')[0]}\nreel ${i} settled ${bounce} ms after its landing frame`;
-});
-
-// The cut, for comparison: a slam on the same spin. Wired to the HUD click
-// rather than the skip button, which is the hurry.
-hud.eventMode = 'static';
-hud.cursor = 'pointer';
-hud.on('pointertap', () => reelSet.requestSkip());
-
-return {
-  reelSet,
-  cleanup: () => {
-    for (const i of [...glows.keys()]) stopGlow(i);
-    try { glowLayer.destroy({ children: true }); } catch {}
-    try { hud.destroy(); } catch {}
-  },
-  // Every press goes through the same call. The engine decides which reels
-  // this one frees, from `protect`; the profile decides how they land.
-  onSkip: () => reelSet.requestHurry({ speed: 'turbo' }),
-  onSpin: async () => {
-    const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
-    grid[0].visible[1] = SCAT;
-    grid[1].visible[1] = SCAT;
-
-    const p = reelSet.spin();
-    reelSet.setAnticipation(TEASE, { stagger: 'sequential', protect: 'stepwise' });
-    await new Promise((r) => setTimeout(r, 250));
-    reelSet.setResult(grid);
-    await p;
-  },
-};
-```
-
 ### skip-min-spin-time
 URL: https://pixi-reels.schmooky.dev/recipes/skip-min-spin-time/
 ```ts
@@ -20205,6 +20997,150 @@ return {
     // BEFORE setResult, so a press queued in the window below sees the tease.
     reelSet.setAnticipation(TEASE, { stagger: 250, protect: 'once' });
     await new Promise((r) => setTimeout(r, 1400)); // slow "server"
+    reelSet.setResult(grid);
+    await p;
+  },
+};
+```
+
+### skip-quicken
+URL: https://pixi-reels.schmooky.dev/recipes/skip-quicken/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, CardSymbol, CARD_DECK, PIXI, gsap, app
+//
+// A PRESS THAT LANDS, NOT CUTS. `requestSkip({ mode: 'quicken' })`.
+//
+// Every slam places the frame and lands in the same tick. The landing beat
+// still plays, but on symbols already parked, so a press reads as a cut - and
+// on a teasing spin it hides the build-up. `mode: 'quicken'` frees the same
+// reels a slam would (tease protection, stepwise, groups all apply) and asks
+// each one for its landing instead: the tease ends, the stop delay is cut,
+// the reel spins its frame in at full speed and bounces.
+//
+//   press 1 - reels 0-1 land through their stop, together. reels 2-4 tease
+//   press 2 - reel 2's tease ends and it spins out. 3-4 keep teasing
+//   press 3 - reel 3
+//   press 4 - reel 4
+//
+// `speed: 'turbo'` lands every quickened reel on the turbo profile: its
+// faster spin-out and its shorter bounce. The round's own profile otherwise.
+//
+// A slam still cuts: `requestSkip({ mode: 'slam' })` places whatever is still
+// moving, quickened or not. Tapping the readout is that press, so the two
+// can be compared on the same spin.
+
+const IDS = ['9', '10', 'J', 'Q', 'K'];
+const SCAT = 'SCAT';
+const REELS = 5, ROWS = 3, SIZE = 80, GAP = 4;
+const TEASE = [2, 3, 4];
+const CARDS = CARD_DECK.filter((c) => IDS.includes(c.id));
+function rv() { return IDS[Math.floor(Math.random() * IDS.length)]; }
+
+const reelSet = new ReelSetBuilder()
+  .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
+  .symbols((r) => {
+    for (const c of CARDS) {
+      r.register(c.id, CardSymbol, { color: c.color, label: c.label, textColor: c.textColor });
+    }
+    r.register(SCAT, CardSymbol, { color: 0xffcc44, label: 'F', textColor: 0x3a2600 });
+  })
+  // A long hold per reel, so there is room to press through it, and a slow
+  // bounce, so a quickened landing is visibly a landing.
+  .speed('normal', { ...SpeedPresets.NORMAL, anticipationDelay: 1600, bounceDuration: 520 })
+  // What a quickened reel lands on: the turbo spin-out and its short bounce.
+  .speed('turbo', SpeedPresets.TURBO)
+  .ticker(app.ticker)
+  .build();
+
+const TOTAL_H = ROWS * SIZE + (ROWS - 1) * GAP;
+
+// Tease outline: a thin dashed border on the reel's own bounds, blinking.
+const glowLayer = new PIXI.Container();
+reelSet.addChild(glowLayer);
+const glows = new Map();
+const stopGlow = (i) => {
+  const g = glows.get(i);
+  if (!g) return;
+  gsap.killTweensOf(g);
+  try { g.destroy(); } catch {}
+  glows.delete(i);
+};
+const startGlow = (i) => {
+  stopGlow(i);
+  const DASH = 7, GAP_ = 5, W = 1.5, inset = W / 2;
+  const l = i * (SIZE + GAP) + inset, t = inset;
+  const r = i * (SIZE + GAP) + SIZE - inset, b = TOTAL_H - inset;
+  const g = new PIXI.Graphics();
+  for (const [x1, y1, x2, y2] of [[l, t, r, t], [r, t, r, b], [r, b, l, b], [l, b, l, t]]) {
+    const len = Math.hypot(x2 - x1, y2 - y1);
+    const ux = (x2 - x1) / len, uy = (y2 - y1) / len;
+    for (let d = 0; d < len; d += DASH + GAP_) {
+      const e = Math.min(d + DASH, len);
+      g.moveTo(x1 + ux * d, y1 + uy * d).lineTo(x1 + ux * e, y1 + uy * e);
+    }
+  }
+  g.stroke({ width: W, color: 0xfef08a });
+  glowLayer.addChild(g);
+  gsap.to(g, { alpha: 0.15, duration: 0.22, yoyo: true, repeat: -1, ease: 'steps(1)' });
+  glows.set(i, g);
+};
+reelSet.events.on('anticipation:reel', ({ reelIndex }) => startGlow(reelIndex));
+reelSet.events.on('anticipation:reelEnd', ({ reelIndex }) => stopGlow(reelIndex));
+
+const hud = new PIXI.Text({
+  text: '',
+  style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 11, fill: 0xffcc44 },
+});
+hud.position.set(0, TOTAL_H + 10);
+reelSet.addChild(hud);
+
+// The numeric definition of "landed, not placed": the landing frame and the
+// settle are a whole bounce apart on a quickened reel, and the same tick on a
+// slammed one.
+const landingAt = new Map();
+reelSet.events.on('spin:reelLanding', (i) => landingAt.set(i, performance.now()));
+
+let press = 0;
+const idle = 'spin, then press to walk the board: quickened reels spin out and bounce';
+hud.text = idle;
+reelSet.events.on('spin:start', () => { press = 0; landingAt.clear(); hud.text = idle; });
+// One event for both modes; `mode` says which press it was.
+reelSet.events.on('skip:requested', ({ reels, mode }) => {
+  press += 1;
+  hud.text = mode === 'quicken'
+    ? `press ${press}: quickened [${reels.join(', ')}] - landing through their stop`
+    : `press ${press}: SLAMMED [${reels.join(', ')}] - placed, no spin-out`;
+});
+reelSet.events.on('spin:reelLanded', (i) => {
+  const bounce = Math.round(performance.now() - (landingAt.get(i) ?? performance.now()));
+  hud.text = `${hud.text.split('\n')[0]}\nreel ${i} settled ${bounce} ms after its landing frame`;
+});
+
+// The cut, for comparison: a slam on the same spin. Wired to the HUD click
+// rather than the skip button, which is the quicken.
+hud.eventMode = 'static';
+hud.cursor = 'pointer';
+hud.on('pointertap', () => reelSet.requestSkip({ mode: 'slam' }));
+
+return {
+  reelSet,
+  cleanup: () => {
+    for (const i of [...glows.keys()]) stopGlow(i);
+    try { glowLayer.destroy({ children: true }); } catch {}
+    try { hud.destroy(); } catch {}
+  },
+  // Every press goes through the same call. The engine decides which reels
+  // this one frees, from `protect`; the mode decides how they land.
+  onSkip: () => reelSet.requestSkip({ mode: 'quicken', speed: 'turbo' }),
+  onSpin: async () => {
+    const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
+    grid[0].visible[1] = SCAT;
+    grid[1].visible[1] = SCAT;
+
+    const p = reelSet.spin();
+    reelSet.setAnticipation(TEASE, { stagger: 'sequential', protect: 'stepwise' });
+    await new Promise((r) => setTimeout(r, 250));
     reelSet.setResult(grid);
     await p;
   },
@@ -22167,6 +23103,632 @@ return {
 };
 ```
 
+### steps-anticipation-spotlight
+URL: https://pixi-reels.schmooky.dev/recipes/steps-anticipation-spotlight/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, AnticipationPhase, CardSymbol, PhaseCardSymbol,
+//                   step, PIXI, gsap, app
+//
+// A SPOTLIGHT AROUND THE TEASE. Wrap AnticipationPhase's one step.
+//
+// `AnticipationPhase` runs a single step, `tease`, and the phase is created
+// on the teased reel only. So "shade everything else while the tease runs"
+// is a list built by hand around the built-in, `[dim, ...steps, lift]`. No
+// helper needed when the shape is "wrap":
+//
+//   dim    fade a shade over every OTHER reel, awaited (150 ms), so the
+//          spotlight is on before the reel starts to crawl
+//   tease  the built-in, untouched, `cut` for a quicken
+//   lift   fade the shades out, awaited, then the stop takes over
+//
+// Two scatters on reels 1 and 3, the tease on reel 5. Press for a quicken:
+// the tease is cut and `lift` still runs. A slam cancels the list in flight,
+// so `lift` never runs and `spin:complete` clears the shades as a backstop.
+
+const IDS = ['9', '10', 'J', 'Q', 'K'];
+const SCAT = 'SCAT';
+const REELS = 5, ROWS = 3, SIZE = 80, GAP = 4;
+const TOTAL_H = ROWS * SIZE + (ROWS - 1) * GAP;
+const TEASE = REELS - 1;
+function rv() { return IDS[Math.floor(Math.random() * IDS.length)]; }
+
+const shades = [];
+const dim = (ctx) => {
+  const others = shades.filter((_, i) => i !== ctx.reel.reelIndex);
+  gsap.killTweensOf(shades);
+  return gsap.to(others, { alpha: 0.62, duration: 0.15, ease: 'power1.out' });
+};
+const lift = () => {
+  gsap.killTweensOf(shades);
+  return gsap.to(shades, { alpha: 0, duration: 0.15, ease: 'power1.out' });
+};
+
+const reelSet = new ReelSetBuilder()
+  .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
+  .symbols((r) => {
+    for (const id of IDS) r.register(id, PhaseCardSymbol, { label: id });
+    r.register(SCAT, CardSymbol, { color: 0xffcc44, label: 'F', textColor: 0x3a2600 });
+  })
+  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 180, anticipationDelay: 1500 })
+  .phases((f) => f.register('anticipation', AnticipationPhase, {
+    steps: (steps) => [step('dim', dim), ...steps, step('lift', lift)],
+  }))
+  .ticker(app.ticker)
+  .build();
+
+const unwatch = PhaseCardSymbol.watch(reelSet.reels);
+
+// One shade per reel, above the symbols, at rest invisible.
+const shadeLayer = new PIXI.Container();
+reelSet.addChild(shadeLayer);
+for (let i = 0; i < REELS; i++) {
+  const g = new PIXI.Graphics().rect(i * (SIZE + GAP), 0, SIZE, TOTAL_H).fill({ color: 0x0b0b0f });
+  g.alpha = 0;
+  shadeLayer.addChild(g);
+  shades.push(g);
+}
+// The backstop: a slam cancels `lift`, so the shades are cleared here too.
+reelSet.events.on('spin:complete', () => {
+  gsap.killTweensOf(shades);
+  for (const g of shades) g.alpha = 0;
+});
+
+const hud = new PIXI.Text({
+  text: 'two scatters land, reel 5 teases under a spotlight. press to quicken: the tease is cut, the shades still lift',
+  style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 11, fill: 0x9c8f78, wordWrap: true, wordWrapWidth: REELS * (SIZE + GAP) },
+});
+hud.position.set(0, TOTAL_H + 10);
+reelSet.addChild(hud);
+
+return {
+  reelSet,
+  cleanup: () => {
+    unwatch();
+    gsap.killTweensOf(shades);
+    try { shadeLayer.destroy({ children: true }); } catch {}
+    try { hud.destroy(); } catch {}
+  },
+  onSkip: () => reelSet.requestSkip({ mode: 'quicken' }),
+  onSpin: async () => {
+    const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
+    grid[0].visible[1] = SCAT;
+    grid[2].visible[1] = SCAT;
+    const p = reelSet.spin();
+    reelSet.setAnticipation([TEASE]);
+    await new Promise((r) => setTimeout(r, 250));
+    reelSet.setResult(grid);
+    await p;
+  },
+};
+```
+
+### steps-fx-per-profile
+URL: https://pixi-reels.schmooky.dev/recipes/steps-fx-per-profile/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, StopPhase, PhaseCardSymbol,
+//                   step, insertBefore, insertAfter, PIXI, gsap, app
+//
+// FX AND BEATS THAT FOLLOW THE SPEED MODE, through the profile.
+//
+// `ctx.profile` is the profile instance the game registered under the active
+// speed name, custom fields included. So a step never asks "is this turbo";
+// it reads what the profile says, and the profile says it per mode:
+//
+//   breathMs   an extra beat before the spin-out   normal 140   turbo 0
+//   landGlow   the backlight after land            normal on    turbo off
+//   the glow's fade rides `bounceDuration`, so it shortens with the bounce
+//
+// Two steps on StopPhase: `breath` before `spinOut` (a wait, so `cut`), and
+// `glow` after `land` (an effect, not awaited). Tap the readout to switch
+// `setSpeed('normal' | 'turbo')`. A quicken press that names a speed swaps
+// the profile the same way, so `requestSkip({ mode: 'quicken', speed:
+// 'turbo' })` lands with turbo's beats and turbo's FX.
+
+const IDS = ['9', '10', 'J', 'Q', 'K'];
+const REELS = 5, ROWS = 3, SIZE = 80, GAP = 4;
+const TOTAL_H = ROWS * SIZE + (ROWS - 1) * GAP;
+function rv() { return IDS[Math.floor(Math.random() * IDS.length)]; }
+
+const PROFILES = {
+  normal: { ...SpeedPresets.NORMAL, stopDelay: 200, breathMs: 140, landGlow: true },
+  turbo: { ...SpeedPresets.TURBO, stopDelay: 60, breathMs: 0, landGlow: false },
+};
+
+const plates = [];
+const breath = (ctx) => (ctx.profile.breathMs > 0 ? ctx.wait(ctx.profile.breathMs) : undefined);
+const glow = (ctx) => {
+  if (!ctx.profile.landGlow) return;
+  const g = plates[ctx.reel.reelIndex];
+  gsap.killTweensOf(g);
+  g.alpha = 0.9;
+  gsap.to(g, { alpha: 0, duration: ctx.profile.bounceDuration / 1000, ease: 'power2.out' });
+};
+
+const reelSet = new ReelSetBuilder()
+  .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
+  .symbols((r) => {
+    for (const id of IDS) r.register(id, PhaseCardSymbol, { label: id });
+  })
+  .speed('normal', PROFILES.normal)
+  .speed('turbo', PROFILES.turbo)
+  .phases((f) => f.register('stop', StopPhase, {
+    steps: (steps) => insertAfter(
+      insertBefore(steps, 'spinOut', step('breath', breath, { cut: true })),
+      'land',
+      step('glow', glow),
+    ),
+  }))
+  .ticker(app.ticker)
+  .build();
+
+const unwatch = PhaseCardSymbol.watch(reelSet.reels);
+
+// One backlight plate per reel, under the symbols, lit by `glow`.
+const plateLayer = new PIXI.Container();
+reelSet.addChildAt(plateLayer, 0);
+for (let i = 0; i < REELS; i++) {
+  const g = new PIXI.Graphics().rect(i * (SIZE + GAP) - 10, -10, SIZE + 20, TOTAL_H + 20).fill({ color: 0x60a5fa });
+  g.alpha = 0;
+  plateLayer.addChild(g);
+  plates.push(g);
+}
+
+let current = 'normal';
+const label = () => {
+  const p = PROFILES[current];
+  return `speed ${current}: breath ${p.breathMs} ms, glow ${p.landGlow ? `on, fades over ${p.bounceDuration} ms` : 'off'}. tap to switch`;
+};
+const hud = new PIXI.Text({
+  text: label(),
+  style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 11, fill: 0x9c8f78 },
+});
+hud.position.set(0, TOTAL_H + 10);
+hud.eventMode = 'static';
+hud.cursor = 'pointer';
+hud.on('pointertap', () => reelSet.setSpeed(current === 'normal' ? 'turbo' : 'normal'));
+reelSet.events.on('speed:changed', (profile) => {
+  current = profile.name;
+  hud.text = label();
+});
+reelSet.addChild(hud);
+
+return {
+  reelSet,
+  cleanup: () => {
+    unwatch();
+    for (const g of plates) gsap.killTweensOf(g);
+    try { plateLayer.destroy({ children: true }); } catch {}
+    try { hud.destroy(); } catch {}
+  },
+  onSkip: () => reelSet.requestSkip({ mode: 'quicken', speed: 'turbo' }),
+  onSpin: async () => {
+    const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
+    const p = reelSet.spin();
+    await new Promise((r) => setTimeout(r, 250));
+    reelSet.setResult(grid);
+    await p;
+  },
+};
+```
+
+### steps-land-impact
+URL: https://pixi-reels.schmooky.dev/recipes/steps-land-impact/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, StopPhase, PhaseCardSymbol,
+//                   step, insertAfter, PIXI, gsap, app
+//
+// LANDING IMPACT. One step after `land`: a camera kick and a dust puff.
+//
+// `insertAfter(steps, 'land', step('impact', fx))` gives the FX the exact
+// frame the reel comes to rest: after `land()` (symbols told, the reel's
+// landing raised) and before `bounce`. The step returns nothing, so it is
+// instant: the bounce starts on the same frame and the FX plays alongside
+// it. Return the tween instead and the phase WAITS for it before bouncing.
+// That is the whole difference between an effect and a beat, one `return`.
+//
+// The kick is on `reelSet.pivot`, so it never fights the runner's placement
+// of the set, and it ends at 0. Harder on the last reel, the one the player
+// is waiting on.
+//
+// Gotcha: a slam lands through `onSkip`, not through the list, so `impact`
+// does not fire on a slam. FX that must play on a slam too hangs off
+// `spin:reelLanded`. A quicken keeps the list, so it keeps the FX.
+
+const IDS = ['9', '10', 'J', 'Q', 'K'];
+const REELS = 5, ROWS = 3, SIZE = 80, GAP = 4;
+const TOTAL_H = ROWS * SIZE + (ROWS - 1) * GAP;
+function rv() { return IDS[Math.floor(Math.random() * IDS.length)]; }
+
+let reelSet;
+const fxLayer = new PIXI.Container();
+
+const impact = (ctx) => {
+  const i = ctx.reel.reelIndex;
+  const last = i === REELS - 1;
+
+  // The kick: the set drops and settles. A new landing overrides the settle.
+  gsap.killTweensOf(reelSet.pivot);
+  gsap.fromTo(reelSet.pivot, { y: last ? -14 : -6 }, {
+    y: 0, duration: last ? 0.6 : 0.35, ease: 'elastic.out(1, 0.3)',
+  });
+
+  // The dust: an ellipse under the reel that spreads, fades and dies.
+  const puff = new PIXI.Graphics().ellipse(0, 0, SIZE * 0.5, 11).fill({ color: 0xf59e0b });
+  puff.position.set(i * (SIZE + GAP) + SIZE / 2, TOTAL_H + 4);
+  puff.alpha = 0.9;
+  puff.scale.set(0.4, 0.5);
+  fxLayer.addChild(puff);
+  gsap.to(puff, { alpha: 0, duration: 0.5, ease: 'power2.out' });
+  gsap.to(puff.scale, {
+    x: last ? 2.2 : 1.6, y: 1.3, duration: 0.5, ease: 'power2.out',
+    onComplete: () => puff.destroy(),
+  });
+  // No return: instant. `return gsap.to(...)` would make the bounce wait.
+};
+
+reelSet = new ReelSetBuilder()
+  .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
+  .symbols((r) => {
+    for (const id of IDS) r.register(id, PhaseCardSymbol, { label: id });
+  })
+  .speed('normal', { ...SpeedPresets.NORMAL, stopDelay: 240, bounceDistance: 30, bounceDuration: 420 })
+  .phases((f) => f.register('stop', StopPhase, {
+    steps: (steps) => insertAfter(steps, 'land', step('impact', impact)),
+  }))
+  .ticker(app.ticker)
+  .build();
+
+const unwatch = PhaseCardSymbol.watch(reelSet.reels);
+reelSet.addChild(fxLayer);
+
+const hud = new PIXI.Text({
+  text: 'spin: each landing kicks the set and puffs dust, the last reel harder',
+  style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 11, fill: 0x9c8f78 },
+});
+hud.position.set(0, TOTAL_H + 14);
+reelSet.addChild(hud);
+
+return {
+  reelSet,
+  cleanup: () => {
+    unwatch();
+    gsap.killTweensOf(reelSet.pivot);
+    reelSet.pivot.set(0, 0);
+    for (const puff of [...fxLayer.children]) gsap.killTweensOf(puff.scale);
+    try { fxLayer.destroy({ children: true }); } catch {}
+    try { hud.destroy(); } catch {}
+  },
+  onSkip: () => reelSet.requestSkip({ mode: 'quicken' }),
+  onSpin: async () => {
+    const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
+    const p = reelSet.spin();
+    await new Promise((r) => setTimeout(r, 250));
+    reelSet.setResult(grid);
+    await p;
+  },
+};
+```
+
+### steps-last-reel-suspense
+URL: https://pixi-reels.schmooky.dev/recipes/steps-last-reel-suspense/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, StopPhase, PhaseCardSymbol,
+//                   step, insertBefore, PIXI, gsap, app
+//
+// ONE REEL, ONE EXTRA BEAT. A step that only acts on the last reel.
+//
+// Every reel runs the same list, so a per-reel beat is a step that returns
+// nothing on the reels it does not concern. `insertBefore(steps, 'spinOut',
+// step('suspense', ...))` waits 700 ms on reel 5 and is instant on 1-4.
+//
+// While it waits, the reel's backlight pulses, and the step owns the pulse
+// both ways out: `ctx.wait` resolves early when the step is cut, and
+// `ctx.signal` fires when it is cancelled. One `stop` handles the natural
+// end, a quicken (the step is `cut`) and a slam. A press that comes before
+// reel 5 reaches the hang skips the step outright: its stop is created
+// already quickened, and a `cut` step never starts.
+
+const IDS = ['9', '10', 'J', 'Q', 'K'];
+const REELS = 5, ROWS = 3, SIZE = 80, GAP = 4;
+const TOTAL_H = ROWS * SIZE + (ROWS - 1) * GAP;
+const LAST = REELS - 1;
+const SUSPENSE_MS = 700;
+function rv() { return IDS[Math.floor(Math.random() * IDS.length)]; }
+
+let plate;
+let outcome = null;
+
+const suspense = (ctx) => {
+  if (ctx.reel.reelIndex !== LAST) return;
+  const started = performance.now();
+  const pulse = gsap.fromTo(plate, { alpha: 0.1 }, {
+    alpha: 0.5, duration: 0.22, yoyo: true, repeat: -1, ease: 'sine.inOut',
+  });
+  const stop = () => {
+    pulse.kill();
+    plate.alpha = 0;
+    outcome = ctx.signal.aborted
+      ? `hang cut after ${Math.round(performance.now() - started)} of ${SUSPENSE_MS} ms`
+      : `hang played, ${SUSPENSE_MS} ms`;
+  };
+  ctx.signal.addEventListener('abort', stop, { once: true });
+  return ctx.wait(SUSPENSE_MS).then(() => { if (!ctx.signal.aborted) stop(); });
+};
+
+const reelSet = new ReelSetBuilder()
+  .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
+  .symbols((r) => {
+    for (const id of IDS) r.register(id, PhaseCardSymbol, { label: id });
+  })
+  .speed('normal', { ...SpeedPresets.NORMAL, spinDelay: 40, minimumSpinTime: 300, stopDelay: 160 })
+  .phases((f) => f.register('stop', StopPhase, {
+    steps: (steps) => insertBefore(steps, 'spinOut', step('suspense', suspense, { cut: true })),
+  }))
+  .ticker(app.ticker)
+  .build();
+
+const unwatch = PhaseCardSymbol.watch(reelSet.reels);
+
+// The last reel's backlight, under the symbols.
+plate = new PIXI.Graphics().rect(LAST * (SIZE + GAP) - 6, -6, SIZE + 12, TOTAL_H + 12).fill({ color: 0xfef08a });
+plate.alpha = 0;
+reelSet.addChildAt(plate, 0);
+
+const IDLE = 'spin: reels 1-4 stop on the stagger, reel 5 hangs 700 ms first. press to cut the hang';
+const hud = new PIXI.Text({
+  text: IDLE,
+  style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 11, fill: 0x9c8f78, wordWrap: true, wordWrapWidth: REELS * (SIZE + GAP) },
+});
+hud.position.set(0, TOTAL_H + 10);
+reelSet.addChild(hud);
+reelSet.events.on('spin:start', () => {
+  outcome = null;
+  hud.text = IDLE;
+});
+reelSet.events.on('spin:reelLanded', (reelIndex) => {
+  if (reelIndex !== LAST) return;
+  hud.text = `reel ${LAST + 1}: ${outcome ?? 'hang skipped, the press came before it'}`;
+});
+
+return {
+  reelSet,
+  cleanup: () => {
+    unwatch();
+    gsap.killTweensOf(plate);
+    try { plate.destroy(); } catch {}
+    try { hud.destroy(); } catch {}
+  },
+  onSkip: () => reelSet.requestSkip({ mode: 'quicken' }),
+  onSpin: async () => {
+    const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
+    const p = reelSet.spin();
+    await new Promise((r) => setTimeout(r, 250));
+    reelSet.setResult(grid);
+    await p;
+  },
+};
+```
+
+### steps-stagger-curve
+URL: https://pixi-reels.schmooky.dev/recipes/steps-stagger-curve/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, StartPhase, StopPhase, PhaseCardSymbol,
+//                   step, replaceStep, PIXI, gsap, app
+//
+// STAGGER CURVES. Replace the `delay` step on both built-in phases.
+//
+// The controller hands every reel a flat stagger, `spinDelay * index` to
+// start and `stopDelay * index` to stop, and the `delay` step is the one
+// place that number is spent. So a curve is one `replaceStep` per phase, and
+// the profile keeps owning the unit:
+//
+//   start: a ripple out from the middle reel, one `spinDelay` per ring
+//   stop:  gaps that grow (t to the 1.5). Reels 1-2 fall fast, reel 5 hangs.
+//          Same budget as the flat stagger, `stopDelay * (reels - 1)`
+//
+// Both replacements keep `{ cut: true }`: they are waits, and a quicken press
+// cuts them exactly as it cuts the flat ones. The second HUD line is
+// measured, not scheduled: each landing relative to the first reel down.
+//
+// One interaction to know: a reel's stop cannot begin before its own
+// `minimumSpinTime`, counted from ITS start. With a ripple start the outer
+// reels start last, so a result that arrives early would floor them and
+// reel 2 would land before reel 1. The demo hands the result over at 900 ms,
+// after every floor, so the landings follow the stop curve alone. Expect the
+// measured line to wander by up to one cell of spin-out per reel: the
+// spin-out lands on a wrap, and each reel is at its own point in the cell.
+
+const IDS = ['9', '10', 'J', 'Q', 'K'];
+const REELS = 5, ROWS = 3, SIZE = 80, GAP = 4;
+const MID = (REELS - 1) / 2;
+const PROFILE = { ...SpeedPresets.NORMAL, spinDelay: 90, stopDelay: 240, minimumSpinTime: 500 };
+function rv() { return IDS[Math.floor(Math.random() * IDS.length)]; }
+
+const startDelay = (ctx) => Math.abs(ctx.reel.reelIndex - MID) * ctx.profile.spinDelay;
+const stopDelay = (ctx) => {
+  const t = ctx.reel.reelIndex / (REELS - 1);
+  return ctx.profile.stopDelay * (REELS - 1) * Math.pow(t, 1.5);
+};
+// A 0 ms wait returns nothing, so the next step chains on the same frame.
+// The built-in `delay` does the same.
+const waitFor = (ctx, ms) => (ms > 0 ? ctx.wait(ms) : undefined);
+
+const reelSet = new ReelSetBuilder()
+  .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
+  .symbols((r) => {
+    for (const id of IDS) r.register(id, PhaseCardSymbol, { label: id });
+  })
+  .speed('normal', PROFILE)
+  .phases((f) => {
+    f.register('start', StartPhase, {
+      steps: (steps) => replaceStep(steps, 'delay',
+        step('delay', (ctx) => waitFor(ctx, startDelay(ctx)), { cut: true })),
+    });
+    f.register('stop', StopPhase, {
+      steps: (steps) => replaceStep(steps, 'delay',
+        step('delay', (ctx) => waitFor(ctx, stopDelay(ctx)), { cut: true })),
+    });
+  })
+  .ticker(app.ticker)
+  .build();
+
+const unwatch = PhaseCardSymbol.watch(reelSet.reels);
+const TOTAL_H = ROWS * SIZE + (ROWS - 1) * GAP;
+
+// The schedule, from the same functions the steps run.
+const schedule = (fn) => Array.from({ length: REELS }, (_, i) =>
+  Math.round(fn({ reel: { reelIndex: i }, profile: PROFILE }))).join(' ');
+const SCHEDULE = `start ${schedule(startDelay)} ms, stop ${schedule(stopDelay)} ms`;
+
+const hud = new PIXI.Text({
+  text: SCHEDULE,
+  style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 11, fill: 0x9c8f78 },
+});
+hud.position.set(0, TOTAL_H + 10);
+reelSet.addChild(hud);
+
+let first = 0;
+const landed = [];
+reelSet.events.on('spin:start', () => {
+  first = 0;
+  landed.length = 0;
+  hud.text = SCHEDULE;
+});
+reelSet.events.on('spin:reelLanded', (reelIndex) => {
+  const now = performance.now();
+  if (!first) first = now;
+  landed[reelIndex] = Math.round(now - first);
+  hud.text = `${SCHEDULE}\nlanded at +${landed.map((ms) => ms ?? '?').join(' +')} ms`;
+});
+
+return {
+  reelSet,
+  cleanup: () => {
+    unwatch();
+    try { hud.destroy(); } catch {}
+  },
+  onSkip: () => reelSet.requestSkip({ mode: 'quicken' }),
+  onSpin: async () => {
+    const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
+    const p = reelSet.spin();
+    // After the last reel's minimumSpinTime floor, so only the curve shows.
+    await new Promise((r) => setTimeout(r, 900));
+    reelSet.setResult(grid);
+    await p;
+  },
+};
+```
+
+### steps-windup-start
+URL: https://pixi-reels.schmooky.dev/recipes/steps-windup-start/
+```ts
+// @ts-nocheck
+// Injected globals: ReelSetBuilder, SpeedPresets, StartPhase, PhaseCardSymbol,
+//                   step, insertAfter, replaceStep, PIXI, gsap, app
+//
+// A WIND-UP LAUNCH. Replace `pull` on StartPhase, insert `hold` after it.
+//
+// The built-in `pull` is a twitch: speed -2 for 50 ms, two pixels of
+// backwards travel before the reel accelerates. A machine with weight drags
+// back most of a cell, hangs for a beat, then goes. Two edits:
+//
+//   replaceStep(steps, 'pull', ...)           a longer, harder pull
+//   insertAfter(steps, 'pull', step('hold'))  the beat at the top of it
+//
+// Both steps cover both motion models the way the built-in does: under the
+// drive, name a target speed and wait; under the tween, tween `reel.speed`.
+// The `accelerate` step that follows is untouched. It ramps from wherever
+// the reel is, so the launch reads as one motion. Tap the readout to switch
+// the wind-up off and compare against the stock twitch.
+
+const IDS = ['9', '10', 'J', 'Q', 'K'];
+const REELS = 5, ROWS = 3, SIZE = 80, GAP = 4;
+const WINDUP = { speed: -7, ms: 140 };
+const STOCK = { speed: -2, ms: 50 };
+const HOLD_MS = 90;
+function rv() { return IDS[Math.floor(Math.random() * IDS.length)]; }
+
+let windup = true;
+
+const pull = (ctx) => {
+  const reel = ctx.reel;
+  const { speed, ms } = windup ? WINDUP : STOCK;
+  if (reel.hasDrive) {
+    reel.targetSpeed = speed;
+    return ctx.wait(ms);
+  }
+  return ctx.gsap.to(reel, { speed, duration: ms / 1000, ease: 'power2.out' });
+};
+
+// The beat at the top of the pull: come to rest, hang, then `accelerate`
+// takes it from 0. Instant when the wind-up is off.
+const hold = (ctx) => {
+  if (!windup) return;
+  const reel = ctx.reel;
+  if (reel.hasDrive) {
+    reel.targetSpeed = 0;
+    return ctx.wait(HOLD_MS);
+  }
+  return ctx.gsap.to(reel, { speed: 0, duration: HOLD_MS / 1000, ease: 'power1.out' });
+};
+
+const reelSet = new ReelSetBuilder()
+  .reels(REELS).visibleCells(ROWS).symbolSize(SIZE, SIZE).symbolGap(GAP, GAP)
+  .symbols((r) => {
+    for (const id of IDS) r.register(id, PhaseCardSymbol, { label: id });
+  })
+  .speed('normal', { ...SpeedPresets.NORMAL, spinDelay: 70, accelerationDuration: 360 })
+  .phases((f) => f.register('start', StartPhase, {
+    steps: (steps) => insertAfter(
+      replaceStep(steps, 'pull', step('pull', pull)),
+      'pull',
+      step('hold', hold, { cut: true }),
+    ),
+  }))
+  .ticker(app.ticker)
+  .build();
+
+const unwatch = PhaseCardSymbol.watch(reelSet.reels);
+const TOTAL_H = ROWS * SIZE + (ROWS - 1) * GAP;
+
+const label = () => (windup
+  ? `wind-up ON: pull ${WINDUP.speed} px/frame for ${WINDUP.ms} ms, hold ${HOLD_MS} ms, launch. tap to switch`
+  : `wind-up OFF: stock pull ${STOCK.speed} px/frame for ${STOCK.ms} ms, no hold. tap to switch`);
+const hud = new PIXI.Text({
+  text: label(),
+  style: { fontFamily: "'Fira Code', ui-monospace, monospace", fontSize: 11, fill: 0x9c8f78 },
+});
+hud.position.set(0, TOTAL_H + 10);
+hud.eventMode = 'static';
+hud.cursor = 'pointer';
+hud.on('pointertap', () => {
+  windup = !windup;
+  hud.text = label();
+});
+reelSet.addChild(hud);
+
+return {
+  reelSet,
+  cleanup: () => {
+    unwatch();
+    try { hud.destroy(); } catch {}
+  },
+  onSkip: () => { try { reelSet.skipSpin(); } catch { reelSet.requestSkip(); } },
+  onSpin: async () => {
+    const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
+    const p = reelSet.spin();
+    await new Promise((r) => setTimeout(r, 250));
+    reelSet.setResult(grid);
+    await p;
+  },
+};
+```
+
 ### sticky-wild-multiways
 URL: https://pixi-reels.schmooky.dev/recipes/sticky-wild-multiways/
 ```ts
@@ -24050,6 +25612,7 @@ const ROUNDS = [
 
 let busy = false;
 return {
+  board,
   cleanup: () => { for (const t of labelAt.values()) { try { t.destroy(); } catch {} } labelAt.clear(); try { total.destroy(); labels.destroy(); } catch {} board.destroy(); },
   onSpin: async () => {
     if (busy) return;

@@ -28,8 +28,34 @@ __PIXI_REELS_DEBUG.log();
 // │ orange │ bell   │ cherry │ plum   │ bell   │
 // └────────┴────────┴────────┴────────┴────────┘
 
-__PIXI_REELS_DEBUG.trace();  // logs every domain event from now on
+const stop = __PIXI_REELS_DEBUG.trace();  // logs every event on the set bus from now on
+stop();                                    // and stops
 ```
+
+`trace()` is `reelSet.events.onAny(...)` with a `console.log` in it. The same
+hook is yours on every bus, and `onNotice` is its twin for engine notices:
+
+```ts
+import { onNotice } from 'pixi-reels';
+
+reelSet.events.onAny((event, ...args) => log.push({ event, args }));
+reelSet.reels[4].events.onAny((event, info) => {
+  if (event === 'phase:step') console.log(info); // { phase: 'stop', step: 'delay', status: 'cut' }
+});
+const off = onNotice(({ kind, code, message }) => telemetry.note(kind, code, message));
+```
+
+## The events panel on the recipes site
+
+Every live recipe on this site has a **Debug** button (top-left of the
+canvas). It opens the events panel beside the canvas, under it on a narrow
+screen: every event every reel set, reel and board in the demo raised, as it
+happens, with a timestamp relative to the round's `spin:start` and the
+payload unwrapped under the event, one member per line. The filter
+takes words and `!words` (`skip !symbol:created`), pause freezes the view
+while the recorder keeps going, copy puts the visible rows on the clipboard
+as JSON. Engine notices show up as `notice` rows. On a recipe that returns a
+reel set the same button also draws the geometry overlay described below.
 
 ## Programmatic snapshot
 
@@ -170,8 +196,8 @@ Every notice carries a stable CODE, so it can be grepped, searched for in these
 docs, or quoted in a bug report:
 
 ```
-pixi-reels  slam-before-result   slamStop() was called before setResult(), so the reels
-                                 will land on whatever the strip is currently showing...
+pixi-reels  quicken-cascade      requestSkip({ mode: 'quicken' }) has nothing to quicken in
+                                 cascade mode: a tumble reel lands by placing its symbols...
 ```
 
 ### Levels
@@ -205,7 +231,7 @@ a thing and the console would print the style directives literally, so it
 degrades to a plain line instead:
 
 ```
-[pixi-reels] warn(slam-before-result) slamStop() was called before setResult()...
+[pixi-reels] warn(quicken-cascade) requestSkip({ mode: 'quicken' }) has nothing to quicken...
 ```
 
 Notices go out on `console.warn` / `console.error` / `console.info` rather than

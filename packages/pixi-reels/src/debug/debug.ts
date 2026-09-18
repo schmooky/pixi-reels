@@ -302,23 +302,16 @@ export function enableDebug(reelSet: ReelSet, key?: string): void {
       console.log(debugGrid(reelSet));
       return snap;
     },
-    /** Log every event as it happens */
+    /** Log every event on the set bus as it happens; returns the function that stops. */
     trace: () => {
-      const events = [
-        'spin:start', 'spin:allStarted', 'spin:stopping',
-        'spin:reelLanded', 'spin:allLanded', 'spin:complete',
-        'skip:requested', 'skip:completed', 'speed:changed',
-        'spotlight:start', 'spotlight:end',
-        'shape:changed', 'adjust:start', 'adjust:complete',
-        'pin:placed', 'pin:moved', 'pin:expired', 'pin:migrated',
-        'destroyed',
-      ] as const;
-      for (const event of events) {
-        reelSet.events.on(event as any, (...args: any[]) => {
-          console.log(`[pixi-reels] ${event}`, ...args);
-        });
-      }
-      console.log('[pixi-reels debug] tracing enabled for all events');
+      const listener = (event: string, ...args: unknown[]): void => {
+        console.log(`[pixi-reels] ${event}`, ...args);
+      };
+      reelSet.events.onAny(listener);
+      console.log('[pixi-reels debug] tracing every event on the set bus');
+      return () => {
+        reelSet.events.offAny(listener);
+      };
     },
     /** Start a frame-state recording session on this reel set. */
     startRecording: (tag = 'default', options?: StartRecordingOptions) =>

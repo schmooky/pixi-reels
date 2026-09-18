@@ -55,7 +55,7 @@ const DEFAULT_LANDED_MS = 350;
  * phase its reel is running, so a spin can be read off the board: sky while
  * the reel accelerates, blue at full speed, amber through a tease, violet
  * while the stop spins the frame in, a green beat on landing, then grey
- * again. A slam shows as amber or blue going straight to green; a hurry
+ * again. A slam shows as amber or blue going straight to green; a quicken
  * shows the violet in between.
  *
  * The card does not know its reel. Point a watcher at the reels once and it

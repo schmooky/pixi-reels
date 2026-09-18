@@ -1,6 +1,6 @@
 import type { Graphics, Ticker } from 'pixi.js';
 import { SpeedPresets } from '../config/SpeedPresets.js';
-import type { SpeedProfile, SymbolData, SymbolZIndexResolver } from '../config/types.js';
+import type {SpeedProfile, SymbolData, SymbolZIndexResolver, SkipMode } from '../config/types.js';
 import type { SymbolRegistry } from '../symbols/SymbolRegistry.js';
 import { HoldAndWinBoard } from './HoldAndWinBoard.js';
 import type { Direction, Orientation } from '../core/ReelAxis.js';
@@ -39,6 +39,7 @@ export class HoldAndWinBuilder<TData = unknown> {
   private _speeds: Record<string, SpeedProfile> = { normal: { ...SpeedPresets.NORMAL, minimumSpinTime: 320 } };
   private _initialSpeed = 'normal';
   private _stagger: (reel: number, cell: number, speed: string) => number = (reel, cell) => (reel + cell) * 70;
+  private _skipMode: SkipMode = 'slam';
   private _anticipateWhen:
     | ((state: { locked: number; capacity: number; respinsLeft: number }) => boolean)
     | null = null;
@@ -221,6 +222,17 @@ export class HoldAndWinBuilder<TData = unknown> {
    * wave. The active speed's name is the third argument, so a turbo profile
    * can flatten the wave: `(reel, cell, speed) => speed === 'turbo' ? 0 : ...`.
    */
+  /**
+   * What `board.skip()` does when the call does not say: `'slam'` places the
+   * in-flight cells (the default), `'quicken'` lets each spin its symbol in
+   * and bounce with its stagger dropped. `board.skip({ mode })` overrides it
+   * per press. See `SkipMode`.
+   */
+  skipMode(mode: SkipMode): this {
+    this._skipMode = mode;
+    return this;
+  }
+
   stagger(fn: (reel: number, cell: number, speed: string) => number): this {
     this._stagger = fn;
     return this;
@@ -320,6 +332,7 @@ export class HoldAndWinBuilder<TData = unknown> {
       speeds: this._speeds,
       initialSpeed: this._initialSpeed,
       stagger: this._stagger,
+      skipMode: this._skipMode,
       anticipateWhen: this._anticipateWhen,
       chrome: this._chrome,
       mask: this._mask,

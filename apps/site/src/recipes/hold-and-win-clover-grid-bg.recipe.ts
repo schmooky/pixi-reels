@@ -99,6 +99,7 @@ const ROUNDS = [[{ reel: 0, cell: 0 }, { reel: 2, cell: 2 }], [{ reel: 4, cell: 
 
 let busy = false;
 return {
+  board,
   cleanup: () => {
     framePulse.kill();
     try { hud.destroy(); bg.destroy({ children: true }); } catch {}

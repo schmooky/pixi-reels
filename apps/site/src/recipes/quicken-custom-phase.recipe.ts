@@ -1,18 +1,21 @@
 // @ts-nocheck
 // Injected globals: ReelSetBuilder, SpeedPresets, ReelPhase, PhaseCardSymbol, PIXI, gsap, app
 //
-// A CUSTOM PHASE THAT CAN BE HURRIED. `onHurry()`.
+// A CUSTOM PHASE THAT CAN BE QUICKENED. `onSkip(ctx)` and `ctx.mode`.
 //
 // The instant stop from "A stop phase written from scratch", plus a
 // deliberate pause: the reel stops dead on its frame a tenth of a cell short
 // and HOLDS there for 900 ms before sliding the rest of the way in, landing
 // and bouncing. A dramatic beat, and a wait a press should be able to cut.
 //
-// `onHurry()` is where a phase says which of its waits a `requestHurry()`
-// press may cut. Here it kills the hold and slides in at once, then returns
-// `true`. Leave the hook out and the default `false` applies: the reel still
-// lands, the press just does not shorten anything - which is the right answer
-// for a phase with no wait in it, and the wrong one here.
+// Every phase hears a press through `onSkip(ctx)`. `ctx.mode` says what the
+// press wants: under `'slam'` the hook is the slam pose (rest on the frame,
+// landed; the base completes the phase after). Under `'quicken'` the hook
+// cuts a wait and leaves the landing alone - here it kills the hold and
+// slides in at once. A quicken only reaches a phase that declares
+// `quickenable = true`; leave that out and the phase simply runs its course:
+// the reel still lands, the press just shortens nothing. `ctx.payload` is
+// whatever the game put on the press.
 //
 // The hold is violet on the PhaseCardSymbol cards (it is part of the stop);
 // press while it is violet and the slide starts at once.
@@ -27,6 +30,8 @@ let note = () => {};
 class HeldInstantStopPhase extends ReelPhase {
   name = 'stop';
   skippable = true;
+  // "My onSkip branches on ctx.mode." Without this a quicken leaves the phase alone.
+  quickenable = true;
 
   onEnter(config) {
     const reel = this.reel;
@@ -43,22 +48,11 @@ class HeldInstantStopPhase extends ReelPhase {
     });
   }
 
-  // The hook. Cut the hold, keep the landing exactly as it would have been.
-  onHurry() {
-    if (this._hold) {
-      this._hold.kill();
-      this._hold = null;
-      note(`reel ${this.reel.reelIndex + 1}: hold cut after ${Math.round(performance.now() - this._holdStarted)} of ${HOLD_MS} ms`);
-      this._slideIn();
-    }
-    return true;
-  }
-
   _slideIn() {
     const reel = this.reel;
     this._slide = gsap.to(reel.container, {
       [reel.axis.mainProp]: this._rest,
-      duration: this._speed.slideMs / 1000,
+      duration: this.speed.slideMs / 1000,
       ease: 'power2.out',
       onComplete: () => {
         this._slide = null;
@@ -72,8 +66,21 @@ class HeldInstantStopPhase extends ReelPhase {
 
   update() {}
 
-  // The slam pose: rest on the frame, landed.
-  onSkip() {
+  // The one hook, two branches.
+  onSkip(ctx) {
+    if (ctx.mode === 'quicken') {
+      // Cut the hold, keep the landing exactly as it would have been. A
+      // press during the slide or the bounce has nothing left to cut.
+      if (this._hold) {
+        this._hold.kill();
+        this._hold = null;
+        note(`reel ${this.reel.reelIndex + 1}: hold cut after ${Math.round(performance.now() - this._holdStarted)} of ${HOLD_MS} ms`);
+        this._slideIn();
+      }
+      return;
+    }
+    // The slam pose: wherever the phase was, rest the reel on its frame,
+    // landed. The base completes the phase after this.
     if (this._hold) { this._hold.kill(); this._hold = null; }
     if (this._slide) { this._slide.kill(); this._slide = null; }
     if (this._bounce) { this._bounce.cancel(); this._bounce = null; }
@@ -117,7 +124,7 @@ return {
     unwatch();
     try { hud.destroy(); } catch {}
   },
-  onSkip: () => reelSet.requestHurry(),
+  onSkip: () => reelSet.requestSkip({ mode: 'quicken' }),
   onSpin: async () => {
     const grid = Array.from({ length: REELS }, () => ({ visible: [rv(), rv(), rv()] }));
     const p = reelSet.spin();

@@ -10,6 +10,7 @@ import type {
   ReelAnchor,
   Stacking,
   SymbolZIndexResolver,
+  SkipMode,
 } from '../config/types.js';
 import type { ReelMaskRect, MaskStrategy } from './ReelViewport.js';
 import {
@@ -100,6 +101,7 @@ export class ReelSetBuilder {
   private _phaseFactory = new PhaseFactory();
   /** Deferred `.phases(...)` configurators. See that method for why. */
   private _phaseConfigurators: Array<(factory: PhaseFactory) => void> = [];
+  private _skipMode: SkipMode = 'slam';
   private _middlewares: FrameMiddleware[] = [];
   private _initialFrame?: ColumnTarget[];
   private _symbolDataOverrides: Record<string, Partial<SymbolData>> = {};
@@ -865,6 +867,17 @@ export class ReelSetBuilder {
   }
 
   /**
+   * What a skip press does to the reels it frees when the call does not say:
+   * `'slam'` places them (the default), `'quicken'` asks each for its landing
+   * sooner. See `SkipMode`. `requestSkip({ mode })` and `skipSpin({ mode })`
+   * override it per press; `slamStop()` is always a slam.
+   */
+  skipMode(mode: SkipMode): this {
+    this._skipMode = mode;
+    return this;
+  }
+
+  /**
    * Enable tumble cascade mechanics. Replaces strip-spin + bounce-stop with
    * a three-phase pipeline:
    *
@@ -1336,6 +1349,7 @@ export class ReelSetBuilder {
       phaseFactory: this._phaseFactory,
       spinningMode: this._spinningMode,
       defaultSpinMode: this._defaultSpinMode,
+      skipMode: this._skipMode,
     };
 
     return new ReelSet(params);

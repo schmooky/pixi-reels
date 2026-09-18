@@ -115,6 +115,7 @@ const ROUNDS = [
 
 let busy = false;
 return {
+  board,
   cleanup: () => { for (const p of Object.values(plaques)) gsap.killTweensOf(p); try { hud.destroy(); rail.destroy(); } catch {} grid.destroy({ children: true }); board.destroy(); },
   onSpin: async () => {
     if (busy) return;

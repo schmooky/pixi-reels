@@ -55,6 +55,8 @@ export interface TestReelSetOptions {
    * subclassed phase over a built-in for this set.
    */
   phases?: (factory: import('../spin/phases/PhaseFactory.js').PhaseFactory) => void;
+  /** What a skip press does when the call does not say. See `ReelSetBuilder.skipMode`. */
+  skipMode?: import('../config/types.js').SkipMode;
   /** Initial symbol grid. Same `ColumnTarget[]` form as `ReelSetBuilder.initialFrame`. */
   initialFrame?: ColumnTarget[];
   /**
@@ -171,6 +173,7 @@ export function createTestReelSet(opts: TestReelSetOptions = {}): TestReelSetHan
   if (opts.curveFocus) {
     builder.curveFocus(opts.curveFocus);
   }
+  if (opts.skipMode) builder.skipMode(opts.skipMode);
   if (opts.tumble) {
     builder.tumble(opts.tumble);
   }

@@ -1,7 +1,7 @@
 import type { gsap } from 'gsap';
 import { ReelPhase } from './ReelPhase.js';
 import type { Reel } from '../../core/Reel.js';
-import type { SpeedProfile } from '../../config/types.js';
+import type {SpeedProfile, SkipContext } from '../../config/types.js';
 import type { ReelSymbol } from '../../symbols/ReelSymbol.js';
 import type { EventEmitter } from '../../events/EventEmitter.js';
 import type { ReelSetEvents } from '../../events/ReelEvents.js';
@@ -36,11 +36,12 @@ export interface CascadePlacePhaseConfig {
 export class CascadePlacePhase extends ReelPhase<CascadePlacePhaseConfig> {
   readonly name = 'cascade:place';
   readonly skippable = true;
+  override readonly quickenable = true;
 
-  private _config: CascadePlacePhaseConfig | null = null;
-  private _delayedCall: gsap.core.Tween | null = null;
+  protected _config: CascadePlacePhaseConfig | null = null;
+  protected _delayedCall: gsap.core.Tween | null = null;
   /** Build-time gravity setting; `'auto'` resolves per reel at place time. */
-  private readonly _gravity: 'auto' | Direction;
+  protected readonly _gravity: 'auto' | Direction;
 
   constructor(reel: Reel, speed: SpeedProfile, gravity: 'auto' | Direction = 'auto') {
     super(reel, speed);
@@ -67,11 +68,11 @@ export class CascadePlacePhase extends ReelPhase<CascadePlacePhaseConfig> {
    * `placeStrip` to random-fill: they're masked and never carry a visible
    * anchor.
    */
-  private _placement(targetFrame: string[]): string[] {
+  protected _placement(targetFrame: string[]): string[] {
     return targetFrame.slice(0, this._reel.bufferStart + this._reel.visibleCells);
   }
 
-  private _doPlace(): void {
+  protected _doPlace(): void {
     this._delayedCall = null;
     if (!this._config) return;
 
@@ -143,7 +144,7 @@ export class CascadePlacePhase extends ReelPhase<CascadePlacePhaseConfig> {
 
   update(_deltaMs: number): void {}
 
-  protected onSkip(): void {
+  protected onSkip(ctx: SkipContext = { mode: 'slam' }): void {
     if (this._delayedCall) {
       this._delayedCall.kill();
       this._delayedCall = null;
@@ -160,5 +161,7 @@ export class CascadePlacePhase extends ReelPhase<CascadePlacePhaseConfig> {
         view.visible = true;
       }
     }
+    // The pose is the landed state, the natural end, so a `'quicken'` completes here.
+    if (ctx.mode === 'quicken') this._complete();
   }
 }

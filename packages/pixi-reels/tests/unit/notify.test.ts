@@ -11,6 +11,7 @@ import {
   noticeWarn,
   noticeWarnOnce,
   noticeInfo,
+  onNotice,
   resetNoticesForTest,
 } from '../../src/utils/notify.js';
 import { createTestReelSet } from '../../src/testing/index.js';
@@ -81,19 +82,19 @@ describe('notice channel', () => {
     expect(error.mock.calls[0]).toContain(err);
   });
 
-  it('warns when slamStop() lands before a result exists', async () => {
+  it('throws, rather than warns, when slamStop() is pressed before a result exists', async () => {
     const h = createTestReelSet({ reels: 3, visibleCells: 3, symbolIds: ['a', 'b', 'c'] });
     const pump = setInterval(() => h.ticker.tick(16), 16);
     const p = h.reelSet.spin();
 
-    // No setResult: the reels have nothing to land on, so this is the case the
-    // notice exists for.
+    // No setResult: the reels have nothing to land on. This used to warn with
+    // `slam-before-result` and land on random fill; it is a call-site error now.
+    expect(() => h.reelSet.slamStop()).toThrow(/before setResult\(\)/);
+    expect(warn).not.toHaveBeenCalled();
+
+    h.reelSet.setResult([{ visible: ['a', 'b', 'c'] }, { visible: ['a', 'b', 'c'] }, { visible: ['a', 'b', 'c'] }]);
     h.reelSet.slamStop();
     await p;
-
-    expect(warn).toHaveBeenCalledTimes(1);
-    expect(String(warn.mock.calls[0][0])).toContain('slam-before-result');
-    expect(String(warn.mock.calls[0][0])).toContain('requestSkip()');
 
     clearInterval(pump);
     h.destroy();
@@ -112,5 +113,29 @@ describe('notice channel', () => {
     expect(warn).not.toHaveBeenCalled();
     clearInterval(pump);
     h.destroy();
+  });
+});
+
+describe('onNotice', () => {
+  it('hands every notice to the listener, whatever the console level, until unsubscribed', () => {
+    resetNoticesForTest();
+    const got: Array<{ kind: string; code: string; message: string; detail: unknown[] }> = [];
+    const off = onNotice((n) => got.push(n));
+    setLogLevel('silent');
+    const err = new Error('boom');
+    noticeWarn('some-code', 'a warning', err, 42);
+    noticeInfo('other-code', 'an info');
+    expect(got).toEqual([
+      { kind: 'warn', code: 'some-code', message: 'a warning', detail: [err, 42] },
+      { kind: 'info', code: 'other-code', message: 'an info', detail: [] },
+    ]);
+    // once-per-code holds for listeners too
+    noticeWarnOnce('once-code', 'first');
+    noticeWarnOnce('once-code', 'second');
+    expect(got.filter((n) => n.code === 'once-code')).toHaveLength(1);
+    off();
+    noticeError('after', 'not heard');
+    expect(got.some((n) => n.code === 'after')).toBe(false);
+    setLogLevel('info');
   });
 });

@@ -1,9 +1,23 @@
 import type { gsap } from 'gsap';
-import type { AnticipationSegment } from '../../config/types.js';
+import type { AnticipationSegment, SkipContext } from '../../config/types.js';
 import type { EventEmitter } from '../../events/EventEmitter.js';
 import type { ReelSetEvents } from '../../events/ReelEvents.js';
 import { noticeWarnOnce } from '../../utils/notify.js';
 import { ReelPhase } from './ReelPhase.js';
+import { step } from './steps.js';
+import type { PhaseStep, StepContext, StepsEditor } from './steps.js';
+
+/** What a game hands `AnticipationPhase` through `f.register('anticipation', AnticipationPhase, options)`. */
+export interface AnticipationPhaseOptions {
+  /**
+   * Edit the built-in steps before they run. The tease is one step,
+   * `tease`, cut by a quicken; insert around it. Gets the default list,
+   * returns the list to run.
+   */
+  steps?: StepsEditor<AnticipationStepContext>;
+}
+
+export type AnticipationStepContext = StepContext<AnticipationPhaseConfig>;
 
 export interface AnticipationPhaseConfig {
   /** Duration override in ms. Uses speed profile anticipationDelay if not set. */
@@ -71,38 +85,80 @@ const DRIVE_ARRIVAL_EPS = 0.5;
 export class AnticipationPhase extends ReelPhase<AnticipationPhaseConfig> {
   readonly name = 'anticipation';
   readonly skippable = true;
+  override readonly quickenable = true;
 
-  private _tween: gsap.core.Timeline | null = null;
-  private _delayed: gsap.core.Tween | null = null;
+  protected readonly _options: AnticipationPhaseOptions;
+  protected _tween: gsap.core.Timeline | null = null;
+  protected _delayed: gsap.core.Tween | null = null;
+  /** Resolves the `tease` step. `null` outside a tease. */
+  protected _finishTease: (() => void) | null = null;
 
   /** Odometer reading (in cells) the travel target is measured from. */
-  private _travelMark = 0;
+  protected _travelMark = 0;
   /** Travel target in cells, or `null` when this tease is time-anchored. */
-  private _cells: number | null = null;
+  protected _cells: number | null = null;
   /**
    * True once the odometer is being watched. A curve arms it only on its FINAL
    * leg, so a fast early segment cannot eat the travel budget and end the tease
    * before the legs the caller wrote have played.
    */
-  private _travelArmed = false;
+  protected _travelArmed = false;
   /** Curve legs still to play, when driving segments by hand. */
-  private _segments: AnticipationSegment[] = [];
-  private _segmentIndex = 0;
+  protected _segments: AnticipationSegment[] = [];
+  protected _segmentIndex = 0;
   /**
    * Backstop in ms for a travel-anchored final leg: a reel that comes to rest
    * can never reach a cell target, and a tease that never ends is a hung spin.
    */
-  private _backstopMs = 0;
-  private _events: EventEmitter<ReelSetEvents> | null = null;
-  private _reelIndex = -1;
+  protected _backstopMs = 0;
+  protected _events: EventEmitter<ReelSetEvents> | null = null;
+  protected _reelIndex = -1;
+
+  constructor(
+    reel: ReelPhase<AnticipationPhaseConfig>['reel'],
+    speed: AnticipationPhase['speed'],
+    options: AnticipationPhaseOptions = {},
+  ) {
+    super(reel, speed);
+    this._options = options;
+  }
+
+  /** The built-in list: the whole tease is one cuttable step. */
+  defaultSteps(): PhaseStep<AnticipationStepContext>[] {
+    return [
+      step(
+        'tease',
+        (ctx) => ({
+          done: new Promise<void>((resolve) => {
+            this._finishTease = () => {
+              this._finishTease = null;
+              resolve();
+            };
+            this._startTease(ctx.config);
+          }),
+          cancel: () => {
+            this._kill();
+            this._finishTease?.();
+          },
+        }),
+        { cut: true },
+      ),
+    ];
+  }
 
   protected onEnter(config: AnticipationPhaseConfig): void {
+    const steps = this.defaultSteps();
+    this.runSteps(this._options.steps ? this._options.steps(steps) : steps);
+  }
+
+  /** Play the tease `config` describes; `_endTease()` when it is over. */
+  protected _startTease(config: AnticipationPhaseConfig): void {
     const reel = this._reel;
     const speed = this._speed;
     const duration = (config.duration ?? speed.anticipationDelay) / 1000;
 
     if (duration <= 0) {
-      this._complete();
+      this._endTease();
       return;
     }
 
@@ -130,24 +186,30 @@ export class AnticipationPhase extends ReelPhase<AnticipationPhaseConfig> {
       // The drive shapes the ramp; the phase only says where to go and how long
       // the whole tease lasts.
       reel.targetSpeed = targetSpeed;
-      this._holdFor(duration * 1000, () => this._complete());
+      this._holdFor(duration * 1000, () => this._endTease());
       return;
     }
 
+    // Decelerate over the first 35% of the hold, sit there for the rest.
     this._tween = reel.gsap.timeline();
     this._tween.to(reel, {
       speed: targetSpeed,
       duration: duration * 0.35,
       ease: 'power2.out',
     });
-    this._tween.to({}, { duration: duration * 0.65, onComplete: () => this._complete() });
+    this._tween.to({}, { duration: duration * 0.65, onComplete: () => this._endTease() });
+  }
+
+  /** The tease reached its end: resolve the `tease` step, which completes the phase. */
+  protected _endTease(): void {
+    this._finishTease?.();
   }
 
   /** Play `_segments[_segmentIndex]`, then chain to the next or finish. */
-  private _runSegment(): void {
+  protected _runSegment(): void {
     const seg = this._segments[this._segmentIndex];
     if (!seg) {
-      this._complete();
+      this._endTease();
       return;
     }
     const reel = this._reel;
@@ -206,7 +268,7 @@ export class AnticipationPhase extends ReelPhase<AnticipationPhaseConfig> {
    * leg's retarget hides the evidence. Say so once rather than letting the
    * tween and drive models silently disagree on identical config.
    */
-  private _warnIfDriveMissedBudget(seg: AnticipationSegment, target: number): void {
+  protected _warnIfDriveMissedBudget(seg: AnticipationSegment, target: number): void {
     const gap = Math.abs(this._reel.speed - target);
     if (gap <= DRIVE_ARRIVAL_EPS) return;
     const needed = (gap / Math.max(seg.duration, 1)) * 1000;
@@ -219,13 +281,13 @@ export class AnticipationPhase extends ReelPhase<AnticipationPhaseConfig> {
     );
   }
 
-  private _advance(): void {
+  protected _advance(): void {
     this._segmentIndex++;
     this._runSegment();
   }
 
   /** GSAP-driven wait, so a hidden tab pauses the tease with everything else. */
-  private _holdFor(ms: number, done: () => void): void {
+  protected _holdFor(ms: number, done: () => void): void {
     if (ms <= 0) {
       done();
       return;
@@ -241,34 +303,33 @@ export class AnticipationPhase extends ReelPhase<AnticipationPhaseConfig> {
    * began. `update` does the watching; `backstopMs` is the ceiling that keeps a
    * reel which stopped moving from hanging the spin forever.
    */
-  private _awaitTravel(backstopMs: number): void {
-    this._holdFor(Math.max(backstopMs, 1), () => this._complete());
+  protected _awaitTravel(backstopMs: number): void {
+    this._holdFor(Math.max(backstopMs, 1), () => this._endTease());
   }
 
   update(_deltaMs: number): void {
+    this.tickSteps();
     if (!this._travelArmed || this._cells == null || !this._isActive) return;
     if (this._reel.travelledCells - this._travelMark >= this._cells) {
       this._kill();
-      this._complete();
+      this._endTease();
     }
-  }
-
-  protected onSkip(): void {
-    this._kill();
-    this._reel.forceSpeed(this._speed.spinSpeed);
   }
 
   /**
    * A tease has no landing of its own to protect: ending it early and
-   * returning the reel to full speed IS its natural end, so hurrying is
-   * force-completing. The stop that follows crawls the frame in from there.
+   * returning the reel to full speed IS its natural end, so a `'quicken'`
+   * completes here too. The stop that follows crawls the frame in from there.
    */
-  protected onHurry(): boolean {
-    this.forceComplete();
-    return true;
+  protected onSkip(_ctx: SkipContext = { mode: 'slam' }): void {
+    // Slam and quicken end the same way: the tease over, the reel back at
+    // full speed. Under a quicken the runner then skips the `tease` step,
+    // which is what completes the phase.
+    this._kill();
+    this._reel.forceSpeed(this._speed.spinSpeed);
   }
 
-  private _kill(): void {
+  protected _kill(): void {
     if (this._tween) {
       this._tween.kill();
       this._tween = null;

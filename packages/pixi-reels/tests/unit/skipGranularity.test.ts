@@ -110,7 +110,7 @@ describe('skip granularity', () => {
       // Synchronously after the press: the non-tease reels are down, the two
       // tease reels are still spinning.
       expect([...h.landed].sort()).toEqual([0, 1, 2]);
-      expect(slams).toEqual([{ reels: [0, 1, 2], partial: true }]);
+      expect(slams).toEqual([{ reels: [0, 1, 2], partial: true, mode: 'slam' }]);
       // Stage 1, not 2: the round's side effect is owed to the press that
       // actually ends the tease.
       expect(h.reelSet.skipStage).toBe(1);
@@ -167,10 +167,10 @@ describe('skip granularity', () => {
       expect(h.reelSet.skipStage).toBe(2);
 
       expect(slams).toEqual([
-        { reels: [0, 1], partial: true },
-        { reels: [2], partial: true },
-        { reels: [3], partial: true },
-        { reels: [4], partial: false },
+        { reels: [0, 1], partial: true, mode: 'slam' },
+        { reels: [2], partial: true, mode: 'slam' },
+        { reels: [3], partial: true, mode: 'slam' },
+        { reels: [4], partial: false, mode: 'slam' },
       ]);
       await p;
     });
@@ -334,7 +334,7 @@ describe('skip granularity', () => {
       h.reelSet.slamStop({ except: [3, 4] });
 
       expect([...h.landed].sort()).toEqual([0, 1, 2]);
-      expect(completed).toEqual([{ reels: [0, 1, 2], partial: true }]);
+      expect(completed).toEqual([{ reels: [0, 1, 2], partial: true, mode: 'slam' }]);
       // A partial slam is not the round-ending press.
       expect(h.reelSet.skipStage).toBe(0);
 
@@ -381,7 +381,7 @@ describe('skip granularity', () => {
       h.reelSet.slamStop();
       await p;
 
-      expect(requested).toEqual([{ reels: [0, 1, 2, 3, 4], partial: false }]);
+      expect(requested).toEqual([{ reels: [0, 1, 2, 3, 4], partial: false, mode: 'slam' }]);
     });
 
     it('rejects reels + except together', async () => {

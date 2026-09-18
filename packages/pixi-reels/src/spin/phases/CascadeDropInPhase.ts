@@ -2,7 +2,7 @@ import type { gsap } from 'gsap';
 import type { Container } from 'pixi.js';
 import { ReelPhase } from './ReelPhase.js';
 import type { Reel } from '../../core/Reel.js';
-import type { SpeedProfile } from '../../config/types.js';
+import type {SpeedProfile, SkipContext } from '../../config/types.js';
 import type { ReelSymbol } from '../../symbols/ReelSymbol.js';
 import type { EventEmitter } from '../../events/EventEmitter.js';
 import type { ReelSetEvents } from '../../events/ReelEvents.js';
@@ -68,28 +68,29 @@ interface DropJob {
 export class CascadeDropInPhase extends ReelPhase<CascadeDropInPhaseConfig> {
   readonly name = 'cascade:dropIn';
   readonly skippable = true;
+  override readonly quickenable = true;
 
-  private readonly _baseDrop: Required<TumbleDropInConfig>;
+  protected readonly _baseDrop: Required<TumbleDropInConfig>;
   /** Resolved at `onEnter` time by merging the active speed profile's
    *  `tumble.dropIn` override (if any) over `_baseDrop`. Lives only for
    *  the duration of a single run so a `setSpeed` between phases is
    *  honoured on the next entry. */
-  private _drop: Required<TumbleDropInConfig>;
-  private _timeline: gsap.core.Timeline | null = null;
-  private _jobs: DropJob[] = [];
+  protected _drop: Required<TumbleDropInConfig>;
+  protected _timeline: gsap.core.Timeline | null = null;
+  protected _jobs: DropJob[] = [];
   /** Captured on enter so `onSkip` can emit the paired `:end` event
    *  without needing the config closure. */
-  private _events: EventEmitter<ReelSetEvents> | null = null;
-  private _endEvent: 'cascade:dropIn:end' | 'cascade:gravity:end' = 'cascade:dropIn:end';
+  protected _events: EventEmitter<ReelSetEvents> | null = null;
+  protected _endEvent: 'cascade:dropIn:end' | 'cascade:gravity:end' = 'cascade:dropIn:end';
   /** Per-run abort controller exposed on `cascade:dropIn:symbol` (or
    *  `cascade:gravity:symbol`) as `signal`. Aborts on `onSkip` so
    *  listener-scheduled tweens (landing squish, badge fade) can clean up
    *  alongside the library's own timeline. Stays un-aborted on natural
    *  completion. */
-  private _skipAbort: AbortController | null = null;
+  protected _skipAbort: AbortController | null = null;
 
   /** Build-time gravity setting; `'auto'` resolves per reel at `onEnter`. */
-  private readonly _gravity: 'auto' | Direction;
+  protected readonly _gravity: 'auto' | Direction;
 
   constructor(
     reel: Reel,
@@ -344,7 +345,7 @@ export class CascadeDropInPhase extends ReelPhase<CascadeDropInPhaseConfig> {
 
   update(_deltaMs: number): void {}
 
-  protected onSkip(): void {
+  protected onSkip(ctx: SkipContext = { mode: 'slam' }): void {
     const axis = this._reel.axis;
     if (this._timeline) {
       this._timeline.kill();
@@ -390,5 +391,7 @@ export class CascadeDropInPhase extends ReelPhase<CascadeDropInPhaseConfig> {
       this._events.emit(this._endEvent, { reelIndex: this._reel.reelIndex });
       this._events = null;
     }
+    // The pose is the landed state, the natural end, so a `'quicken'` completes here.
+    if (ctx.mode === 'quicken') this._complete();
   }
 }
