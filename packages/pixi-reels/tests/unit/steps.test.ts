@@ -271,6 +271,81 @@ describe('a custom phase on runSteps()', () => {
   });
 });
 
+describe('phase:step on the reel', () => {
+  const stepsOf = (log: string[], phase: string): string[] => log.filter((e) => e.startsWith(`${phase}/`));
+
+  it('reports start and end of every step of a built-in, in order', async () => {
+    const { reelSet, ticker } = build(() => {});
+    const log: string[] = [];
+    reelSet.reels[0]!.events.on('phase:step', ({ phase, step, status }) => log.push(`${phase}/${step}:${status}`));
+    const spin = reelSet.spin();
+    reelSet.setResult(RESULT);
+    await pump(ticker, spin);
+    expect(stepsOf(log, 'stop')).toEqual([
+      'stop/delay:start', 'stop/delay:end',
+      'stop/spinOut:start', 'stop/spinOut:end',
+      'stop/land:start', 'stop/land:end',
+      'stop/bounce:start', 'stop/bounce:end',
+    ]);
+    expect(stepsOf(log, 'start').slice(0, 4)).toEqual([
+      'start/delay:start', 'start/delay:end', 'start/launch:start', 'start/launch:end',
+    ]);
+    reelSet.destroy();
+    ticker.destroy();
+  });
+
+  it('reports a cut step as skipped, cut, or cancelled, by how it went', async () => {
+    class HoldStop extends ReelPhase<StopPhaseConfig> {
+      readonly name = 'stop';
+      readonly skippable = true;
+      override readonly quickenable = true;
+      protected onEnter(config: StopPhaseConfig): void {
+        const reel = this.reel;
+        this.runSteps([
+          step('hold', (ctx) => ctx.wait(400), { cut: true }),
+          step('place', () => { reel.forceSpeed(0); reel.placeStrip(config.targetFrame); }),
+          step('settle', (ctx) => ctx.wait(300)),
+          step('land', () => this.land()),
+        ]);
+      }
+      update(): void { this.tickSteps(); }
+      protected onSkip(): void {}
+    }
+    const { reelSet, ticker } = build((f) => f.register('stop', HoldStop));
+    const log: string[] = [];
+    reelSet.reels[0]!.events.on('phase:step', ({ phase, step, status }) => { if (phase === 'stop') log.push(`${step}:${status}`); });
+
+    // A quicken before the stop exists: the hold is skipped outright.
+    let spin = reelSet.spin();
+    reelSet.setResult(RESULT);
+    reelSet.requestSkip({ mode: 'quicken' });
+    await pump(ticker, spin);
+    expect(log).toContain('hold:skipped');
+    expect(log).not.toContain('hold:start');
+
+    // A quicken during the hold: cut in flight.
+    log.length = 0;
+    spin = reelSet.spin();
+    reelSet.setResult(RESULT);
+    await pump(ticker, new Promise<void>((r) => { const t = setInterval(() => { if (log.includes('hold:start')) { clearInterval(t); r(); } }, 5); }));
+    reelSet.requestSkip({ mode: 'quicken' });
+    await pump(ticker, spin);
+    expect(log.slice(0, 3)).toEqual(['hold:start', 'hold:cut', 'place:start']);
+
+    // A slam during the settle: cancelled in flight.
+    log.length = 0;
+    spin = reelSet.spin();
+    reelSet.setResult(RESULT);
+    await pump(ticker, new Promise<void>((r) => { const t = setInterval(() => { if (log.includes('settle:start')) { clearInterval(t); r(); } }, 5); }));
+    reelSet.skipSpin();
+    await pump(ticker, spin);
+    expect(log).toContain('settle:cancelled');
+    expect(log).not.toContain('settle:end');
+    reelSet.destroy();
+    ticker.destroy();
+  });
+});
+
 describe('runStep()', () => {
   const ctx = {} as Omit<StepContext, 'signal'>;
 

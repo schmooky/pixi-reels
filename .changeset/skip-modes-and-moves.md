@@ -14,6 +14,8 @@ Skip presses get a mode, phases get a skip context and pluggable beats, and the 
 
 **`quickenable`.** A quicken reaches `onSkip(ctx)` only on a phase that declares `readonly quickenable = true`. A phase without it is left alone by a quicken and runs its course, so a 2.8 phase whose slam pose kills its tweens keeps working. The built-ins declare it.
 
+**More to listen to.** `skip:queued` on the set bus when `requestSkip()` comes before the result, with the press on it. `phase:step` on `reel.events` for every step of a phase on `runSteps()`: `start`, `end`, `skipped` (a `cut` step a quicken never started), `cut` (the `cut` step a quicken stopped in flight), `cancelled` (the step a slam stopped). `EventEmitter.onAny(fn)` / `offAny(fn)` on every bus, name first, after the event's own listeners; `enableDebug().trace()` now runs on it, covers every event, and returns the function that stops it. `onNotice(fn)` hears every engine notice whatever the console level, as `{ kind, code, message, detail }`.
+
 **Open internals.** Every `private` field and method on `StartPhase`, `SpinPhase`, `AnticipationPhase`, `StopPhase`, `AdjustPhase` and the three cascade phases is `protected`, so a subclass can reach `_beginSpinOut`, `_landAndBounce`, `_stage`, `_launch`, `_runSegment` and the rest instead of rewriting the phase. `ReelPhase.speed` is a public getter beside `reel`.
 
 **Also.** `skipStage` is decided before a slam lands anything, so a `spin:complete` listener sees `2` on the press that ended the round (it saw `0` before). `slamStop()` before `setResult()` throws like `skipSpin()` instead of warning `slam-before-result` and landing on random fill; a spin whose result will never come is aborted through its `spin({ signal })`.

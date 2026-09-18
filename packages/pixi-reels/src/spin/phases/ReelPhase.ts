@@ -1,4 +1,5 @@
 import type { gsap } from 'gsap';
+import type { PhaseStepStatus } from '../../events/ReelEvents.js';
 import type { Container } from 'pixi.js';
 import type { Reel } from '../../core/Reel.js';
 import type { SkipContext, SpeedProfile } from '../../config/types.js';
@@ -307,16 +308,19 @@ export abstract class ReelPhase<TConfig = void, TProfile extends SpeedProfile = 
       return;
     }
     if (current.cut && run.quickened) {
+      this._stepEvent(current.name, 'skipped');
       this._nextStep(run);
       return;
     }
     const controller = new AbortController();
+    this._stepEvent(current.name, 'start');
     const running = runStep(current.run, this._stepContext(run, controller.signal), controller);
     // An instant step (no result, or a 0 ms wait) chains synchronously, so a
     // reel with no start delay begins to move inside `run()` as it always
     // did, not a microtask later.
     if (running.settled) {
       if (run.cancelled) return;
+      this._stepEvent(current.name, 'end');
       this._nextStep(run);
       return;
     }
@@ -325,8 +329,14 @@ export abstract class ReelPhase<TConfig = void, TProfile extends SpeedProfile = 
       // Cancelled, or skipped by a quicken that already moved on.
       if (run.current !== running) return;
       run.current = null;
+      this._stepEvent(current.name, 'end');
       this._nextStep(run);
     });
+  }
+
+  /** `phase:step` on the reel: where a step is, for a trace or an events panel. */
+  private _stepEvent(step: string, status: PhaseStepStatus): void {
+    this._reel.events.emit('phase:step', { phase: this.name, step, status });
   }
 
   private _stepContext(run: StepRun, signal: AbortSignal): Omit<StepContext<TConfig, TProfile>, 'signal'> {
@@ -378,7 +388,10 @@ export abstract class ReelPhase<TConfig = void, TProfile extends SpeedProfile = 
     this._stepRun = null;
     const current = run.current;
     run.current = null;
-    current?.cancel();
+    if (current) {
+      current.cancel();
+      this._stepEvent(run.steps[run.index]!.name, 'cancelled');
+    }
     for (const waiter of run.pending.splice(0)) waiter.resolve();
   }
 
@@ -391,6 +404,7 @@ export abstract class ReelPhase<TConfig = void, TProfile extends SpeedProfile = 
     const running = run.current;
     run.current = null;
     running.cancel();
+    this._stepEvent(current.name, 'cut');
     this._nextStep(run);
   }
 

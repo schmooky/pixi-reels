@@ -1346,6 +1346,7 @@ export class SpinController implements Disposable {
       return;
     }
     this._skipPending = req;
+    this._events.emit('skip:queued', skipContextOf({ mode: req.mode, speed: req.speed ?? undefined, payload: req.payload }));
   }
 
   /** Decide the mode and look the profile up; an unknown profile name throws at the call site. */

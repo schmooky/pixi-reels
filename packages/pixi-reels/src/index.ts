@@ -126,8 +126,8 @@ export type { StaticSpinSymbolOptions } from './snapshot/StaticSpinSymbol.js';
 // Console channel. Every warning and error the library emits carries a stable
 // code and obeys one volume knob; `setLogLevel('silent')` is the production
 // switch. See `utils/notify.ts` for the contract.
-export { setLogLevel, getLogLevel } from './utils/notify.js';
-export type { LogLevel } from './utils/notify.js';
+export { setLogLevel, getLogLevel, onNotice } from './utils/notify.js';
+export type { LogLevel, Notice } from './utils/notify.js';
 
 export { ReelPhase } from './spin/phases/ReelPhase.js';
 export type { BounceContext, BounceOptions, ReelBounce } from './spin/phases/ReelPhase.js';
@@ -291,6 +291,7 @@ export type {
   ReelEvents,
   SpinResult,
   SkipInfo,
+  PhaseStepStatus,
 } from './events/ReelEvents.js';
 
 // Utils

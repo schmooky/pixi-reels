@@ -47,6 +47,9 @@ export interface SkipInfo extends SkipContext {
   partial: boolean;
 }
 
+/** Where a step of a phase on `runSteps()` is, as `reel.events` reports it in `phase:step`. */
+export type PhaseStepStatus = 'start' | 'end' | 'skipped' | 'cut' | 'cancelled';
+
 /**
  * The press behind a `SkipContext` or `SkipInfo` as events and results carry
  * it: a fresh object, `mode` and only the keys the press set.
@@ -162,6 +165,12 @@ export interface ReelSetEvents extends Record<string, unknown[]> {
    * stop or a later slam). The same `info` its `skip:requested` carried.
    */
   'skip:completed': [info: SkipInfo];
+  /**
+   * `requestSkip()` came before the result: the press is kept and fires the
+   * moment the result arrives. The same context its `skip:requested` will
+   * carry, minus the reels, which are not known yet.
+   */
+  'skip:queued': [info: SkipContext];
   /**
    * Round-aware `skip()` first-press boost: in standard (non-cascade)
    * mode, the engine switched the active speed profile to the fastest
@@ -503,6 +512,13 @@ export interface ReelSetEvents extends Record<string, unknown[]> {
 export interface ReelEvents extends Record<string, unknown[]> {
   'phase:enter': [phaseName: string];
   'phase:exit': [phaseName: string];
+  /**
+   * A step of a phase running on `ReelPhase.runSteps()`: `start` as it
+   * begins, `end` as it finishes on its own, `skipped` for a `cut` step a
+   * quicken never started, `cut` for the `cut` step a quicken stopped in
+   * flight, `cancelled` for the step a slam or a destroy stopped in flight.
+   */
+  'phase:step': [info: { phase: string; step: string; status: PhaseStepStatus }];
   'symbol:created': [symbolId: string, stripIndex: number];
   /**
    * The reel is on its result frame and its symbols have been told they

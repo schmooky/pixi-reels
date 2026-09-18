@@ -548,6 +548,19 @@ describe('the press rides on the events and the result', () => {
     expect(result.skipContext).toEqual({ mode: 'quicken', payload: { queued: true } });
   });
 
+  it('says a pre-result press was queued, with the press on it', async () => {
+    const h = (harness = makeHarness());
+    const queued: unknown[] = [];
+    h.reelSet.events.on('skip:queued', (info) => queued.push(info));
+    const p = h.reelSet.spin();
+    h.reelSet.requestSkip({ mode: 'quicken', speed: 'turbo', payload: 'early' });
+    expect(queued).toEqual([{ mode: 'quicken', speed: TURBO, payload: 'early' }]);
+    expect(h.requested).toEqual([]);
+    h.reelSet.setResult(GRID);
+    expect(h.requested).toHaveLength(1);
+    await p;
+  });
+
   it('reports an engine slam as a bare { mode: "slam" }', async () => {
     const h = (harness = makeHarness());
     const p = h.reelSet.spin();

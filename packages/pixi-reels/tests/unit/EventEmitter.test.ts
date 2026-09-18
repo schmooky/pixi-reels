@@ -138,3 +138,37 @@ describe('EventEmitter', () => {
     expect(emitter.listenerCount('foo')).toBe(2);
   });
 });
+
+describe('EventEmitter.onAny', () => {
+  it('hears every event, name first, after the event\'s own listeners', () => {
+    const emitter = new EventEmitter<TestEvents>();
+    const order: string[] = [];
+    emitter.on('foo', () => order.push('own'));
+    emitter.onAny((event, ...args) => order.push(`any:${String(event)}:${args.join(',')}`));
+    emitter.emit('foo', 1, 'a');
+    emitter.emit('bar');
+    expect(order).toEqual(['own', 'any:foo:1,a', 'any:bar:']);
+  });
+
+  it('is enough on its own: emit reports handled with no named listener', () => {
+    const emitter = new EventEmitter<TestEvents>();
+    const fn = vi.fn();
+    emitter.onAny(fn);
+    expect(emitter.emit('bar')).toBe(true);
+    expect(fn).toHaveBeenCalledWith('bar');
+  });
+
+  it('offAny stops it, and removeAllListeners() clears it', () => {
+    const emitter = new EventEmitter<TestEvents>();
+    const a = vi.fn();
+    const b = vi.fn();
+    emitter.onAny(a).onAny(b);
+    emitter.offAny(a);
+    emitter.emit('bar');
+    expect(a).not.toHaveBeenCalled();
+    expect(b).toHaveBeenCalledTimes(1);
+    emitter.removeAllListeners();
+    expect(emitter.emit('bar')).toBe(false);
+    expect(b).toHaveBeenCalledTimes(1);
+  });
+});
