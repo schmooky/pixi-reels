@@ -2,7 +2,7 @@
 'pixi-reels': major
 ---
 
-Skip presses get a mode, phases get a skip context and pluggable beats, and the built-in phases open their internals. Breaking for anyone with a custom phase or a listener on the skip events; additive for everyone else.
+Add: skip modes (`requestSkip({ mode: 'slam' | 'quicken' })`), `onSkip(ctx)` on every phase, the built-in phases as editable step lists, the press on the skip events and the results, and every built-in phase internal as `protected`. Remove: the unpublished hurry API. Breaking for anyone with a custom phase or a listener on the skip events; additive for everyone else.
 
 **Skip modes.** `requestSkip(options?)` and `skipSpin(options?)` take `{ mode, speed, payload }`. `mode: 'slam'` (the default) places each freed reel on its result now, as every press always has. `mode: 'quicken'` asks each freed reel for its landing sooner without changing what the landing looks like: a tease ends, a stop delay is cut, the spin-out and bounce still play, and `speed` names a registered profile to finish on (the turbo bounce for a pressed reel, say). Which reels a press frees (tease protection, `'stepwise'`, reel groups) is the same in both modes; a quicken press treats the reels it already quickened as down and walks on to the next group, a slam press cuts them. `builder.skipMode('quicken')` sets the default for a set, `HoldAndWinBuilder.skipMode()` for a board, and `board.skip(options?)` takes the same object. Either mode is a skip: `skipStage` advances, `wasSkipped` is `true`, and `SpinResult.skipMode` says which. `slamStop()` stays a slam by name. In cascade mode a quicken slams and warns once with code `quicken-cascade`.
 
