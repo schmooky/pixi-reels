@@ -150,7 +150,7 @@ Every event carries `TData` on its coins.
 | `feature:end` | `{ coins, rounds, full }` | the feature is over → `idle` |
 | `coin:released` | `{ coin, remaining }` | `release()` removes a coin (the collect moment) |
 | `feature:reset` | `{ clearedCoins }` | `reset()` hard-clears the board |
-| `feature:skip` | `{ inFlight, mode }` | `skip()` freed the in-flight cells: placed (`'slam'`) or landing through their stop (`'quicken'`) |
+| `feature:skip` | `{ inFlight, mode, speed?, payload? }` | `skip()` freed the in-flight cells: placed (`'slam'`) or landing through their stop (`'quicken'`). `speed` and `payload` are the press's options as given |
 
 Two deliberate distinctions:
 

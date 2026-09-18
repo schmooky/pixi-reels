@@ -57,6 +57,7 @@ describe('ReelSet.runCascade', () => {
       totalWinners: 0,
       finalGrid: reelSet.getVisibleGrid(),
       wasSkipped: false,
+      skipContext: null,
     });
     destroy();
   });
@@ -326,7 +327,7 @@ describe('ReelSet.runCascade', () => {
         // in the FakeTicker harness; the contract being verified is
         // "runCascade observes skip:requested and exits at the next
         // chain boundary."
-        if (calls === 1) reelSet.events.emit('skip:requested');
+        if (calls === 1) reelSet.events.emit('skip:requested', { reels: [0, 1, 2], partial: false, mode: 'slam', payload: 'mid-chain' });
       },
       pauseAfterDestroyMs: 0,
       // Avoid actual gsap destroy (320ms x N rounds -> timeout in headless
@@ -336,6 +337,7 @@ describe('ReelSet.runCascade', () => {
     });
 
     expect(summary.wasSkipped).toBe(true);
+    expect(summary.skipContext).toEqual({ mode: 'slam', payload: 'mid-chain' });
     expect(summary.chainLength).toBeLessThanOrEqual(1);
     destroy();
   });

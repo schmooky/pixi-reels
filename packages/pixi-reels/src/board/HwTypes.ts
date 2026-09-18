@@ -53,9 +53,11 @@ export type HoldAndWinBoardEvents<TData = unknown> = {
   /**
    * Fired by `skip()`. After a `'slam'` the game layer cuts its own flights /
    * collect short; after a `'quicken'` the cells are landing through their
-   * stop and there is nothing to cut.
+   * stop and there is nothing to cut. `speed` and `payload` are the press's
+   * own options, passed through as given; keys the press did not set are
+   * absent.
    */
-  'feature:skip': [{ inFlight: number; mode: SkipMode }];
+  'feature:skip': [{ inFlight: number; mode: SkipMode; speed?: string; payload?: unknown }];
   /**
    * Fired by `reset()` - a hard clear back to idle. Distinct from `coin:released`
    * (which means "collect this coin"); listeners that maintain derived state

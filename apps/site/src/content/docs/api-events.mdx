@@ -53,9 +53,11 @@ hold above 0.
 
 ```ts
 interface SpinResult {
-  symbols: string[][];   // final visible grid [reelIndex][cellIndex]
-  wasSkipped: boolean;   // true if skipSpin() / requestSkip() / slamStop() ended the spin
-  duration: number;      // ms from spin:start to spin:complete
+  symbols: string[][];              // final visible grid [reelIndex][cellIndex]
+  wasSkipped: boolean;              // true if skipSpin() / requestSkip() / slamStop() ended the spin
+  skipMode: SkipMode | null;        // the mode of the last press that freed reels
+  skipContext: SkipContext | null;  // that press: { mode, speed?, payload? }; { mode: 'slam' } for an engine slam
+  duration: number;                 // ms from spin:start to spin:complete
 }
 ```
 
@@ -63,8 +65,8 @@ interface SpinResult {
 
 | Event | Payload | When |
 |---|---|---|
-| `skip:requested` | `({ reels: number[], partial: boolean, mode: SkipMode })` | A press freed reels. from `skipSpin()`, `requestSkip()` (after `setResult` arrives), or `slamStop()`. `reels` is what this press frees; `partial` is `true` when reels are still spinning after it (a protected tease, a reel group, or `slamStop({ reels })` / `slamStop({ except })`); `mode` says what freeing means: `'slam'` places them now, `'quicken'` asks each for its landing sooner and the landing arrives as the usual `spin:reelLanding` / `spin:reelLanded`. |
-| `skip:completed` | `({ reels: number[], partial: boolean, mode: SkipMode })` | The same press, once its reels are down: in the same tick for a slam, as the last freed reel lands for a quicken (however it got down, its own stop or a later slam). |
+| `skip:requested` | `(info: SkipInfo)` = `({ reels: number[], partial: boolean, mode: SkipMode, speed?: SpeedProfile, payload?: unknown })` | A press freed reels. from `skipSpin()`, `requestSkip()` (after `setResult` arrives), or `slamStop()`. `reels` is what this press frees; `partial` is `true` when reels are still spinning after it (a protected tease, a reel group, or `slamStop({ reels })` / `slamStop({ except })`); `mode` says what freeing means: `'slam'` places them now, `'quicken'` asks each for its landing sooner and the landing arrives as the usual `spin:reelLanding` / `spin:reelLanded`. `speed` and `payload` are the press's own, the same `SkipContext` every phase's `onSkip(ctx)` saw; keys the press did not set are absent. An engine slam (abort, timeout, `slamStop()`) is a bare `mode: 'slam'`. |
+| `skip:completed` | `(info: SkipInfo)` | The same press, once its reels are down: in the same tick for a slam, as the last freed reel lands for a quicken (however it got down, its own stop or a later slam). The same `info` its `skip:requested` carried. |
 | `skip:boosted` | `({ previous: SpeedProfile, current: SpeedProfile })` | First `skipSpin()` press of a STANDARD-mode round; engine bumped to the fastest registered profile for the rest of the round. Cascade rounds set the auto-slam-refills flag instead and never emit this event. Restore on the next `spin()` does **not** re-emit. |
 
 ```ts
@@ -93,6 +95,7 @@ interface RunCascadeResult {
   totalWinners: number;    // sum of winners.length across every refill
   finalGrid: string[][];   // grid after the last refill
   wasSkipped: boolean;     // true if the player slammed mid-chain
+  skipContext: SkipContext | null;  // the press that ended it, or null; an abort is { mode: 'slam' }
 }
 ```
 

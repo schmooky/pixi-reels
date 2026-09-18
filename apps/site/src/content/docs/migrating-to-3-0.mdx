@@ -39,7 +39,8 @@ builder.skipMode('quicken');
 ```
 
 A quicken is a skip: `skipStage` advances, `SpinResult.wasSkipped` is `true`,
-and the new `SpinResult.skipMode` says which mode ended the round.
+the new `SpinResult.skipMode` says which mode ended the round, and
+`SpinResult.skipContext` is that press in full (`mode`, `speed`, `payload`).
 
 `slamStop()` before `setResult()` now throws, as `skipSpin()` always did. It
 used to warn with `slam-before-result` and land the reels on random fill. A
@@ -76,10 +77,28 @@ reelSet.events.on('skip:requested', ({ reels, partial, mode }) => {
 });
 ```
 
-`skip:completed` fires in the same tick for a slam and as the last freed reel
-lands for a quicken. On a Hold & Win board, `feature:skip` is
-`{ inFlight, mode }` and `board.skip(options?)` takes the same options as
-`requestSkip()`; `HoldAndWinBuilder.skipMode()` sets the board's default.
+Both events carry the whole press, not only its mode: the `info` is a
+`SkipInfo`, `{ reels, partial, mode, speed?, payload? }`, the same
+`SkipContext` every phase's `onSkip(ctx)` saw plus the reels. So code that
+hangs off the event gets what the game attached to the press, without a side
+channel:
+
+```ts
+reelSet.requestSkip({ mode: 'quicken', speed: 'turbo', payload: { button: 'skip' } });
+
+reelSet.events.on('skip:requested', ({ reels, mode, speed, payload }) => {
+  sfx.play(mode === 'quicken' ? 'whoosh' : 'thud', { source: payload?.button });
+  if (speed) hud.flash(`landing on ${speed.name}`);
+});
+```
+
+Keys the press did not set are absent, and an engine slam (an abort, a
+timeout, `slamStop()`) is a bare `mode: 'slam'`. `skip:completed` fires in the
+same tick for a slam and as the last freed reel lands for a quicken, with the
+same `info`. On a Hold & Win board, `feature:skip` is
+`{ inFlight, mode, speed?, payload? }` with the press's options as given, and
+`board.skip(options?)` takes the same options as `requestSkip()`;
+`HoldAndWinBuilder.skipMode()` sets the board's default.
 
 ## Custom phases: `onSkip(ctx)`
 

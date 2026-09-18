@@ -495,3 +495,78 @@ describe('the stage a listener sees', () => {
     await p;
   });
 });
+
+describe('the press rides on the events and the result', () => {
+  let harness: ReturnType<typeof makeHarness> | null = null;
+
+  afterEach(() => {
+    if (harness) {
+      harness.stopPump();
+      harness.destroy();
+      harness = null;
+    }
+  });
+
+  it('carries a quicken press, profile and payload included, on both events and into SpinResult.skipContext', async () => {
+    const h = (harness = makeHarness());
+    const p = h.reelSet.spin();
+    h.reelSet.setResult(GRID);
+    const payload = { button: 'skip', player: 7 };
+    h.reelSet.requestSkip({ mode: 'quicken', speed: 'turbo', payload });
+    expect(h.requested).toEqual([{ reels: [0, 1, 2, 3, 4], partial: false, mode: 'quicken', speed: TURBO, payload }]);
+    const result = await p;
+    expect(h.completed).toEqual([{ reels: [0, 1, 2, 3, 4], partial: false, mode: 'quicken', speed: TURBO, payload }]);
+    expect(result.skipMode).toBe('quicken');
+    expect(result.skipContext).toEqual({ mode: 'quicken', speed: TURBO, payload });
+    // The event's object is the press as `onSkip(ctx)` saw it, not the
+    // engine's own: mutating it changes nothing downstream.
+    expect(h.requested[0]).not.toBe(h.completed[0]);
+  });
+
+  it('carries a slam press and its payload, and leaves the keys it did not set absent', async () => {
+    const h = (harness = makeHarness());
+    const p = h.reelSet.spin();
+    h.reelSet.setResult(GRID);
+    h.reelSet.requestSkip({ mode: 'slam', payload: 'second press' });
+    expect(h.requested).toEqual([{ reels: [0, 1, 2, 3, 4], partial: false, mode: 'slam', payload: 'second press' }]);
+    expect(h.completed).toEqual([{ reels: [0, 1, 2, 3, 4], partial: false, mode: 'slam', payload: 'second press' }]);
+    expect('speed' in h.requested[0]!).toBe(false);
+    const result = await p;
+    expect(result.skipContext).toEqual({ mode: 'slam', payload: 'second press' });
+    expect('speed' in result.skipContext!).toBe(false);
+  });
+
+  it('keeps the payload of a press queued before the result', async () => {
+    const h = (harness = makeHarness());
+    const p = h.reelSet.spin();
+    // Pre-result: queued, and fired the moment the result arrives.
+    h.reelSet.requestSkip({ mode: 'quicken', payload: { queued: true } });
+    expect(h.requested).toEqual([]);
+    h.reelSet.setResult(GRID);
+    expect(h.requested).toEqual([{ reels: [0, 1, 2, 3, 4], partial: false, mode: 'quicken', payload: { queued: true } }]);
+    const result = await p;
+    expect(result.skipContext).toEqual({ mode: 'quicken', payload: { queued: true } });
+  });
+
+  it('reports an engine slam as a bare { mode: "slam" }', async () => {
+    const h = (harness = makeHarness());
+    const p = h.reelSet.spin();
+    h.reelSet.setResult(GRID);
+    h.reelSet.slamStop();
+    expect(h.requested).toEqual([{ reels: [0, 1, 2, 3, 4], partial: false, mode: 'slam' }]);
+    const result = await p;
+    expect(result.skipMode).toBe('slam');
+    expect(result.skipContext).toEqual({ mode: 'slam' });
+  });
+
+  it('reports the last press that freed reels: a quicken then a slam ends as the slam', async () => {
+    const h = (harness = makeHarness());
+    const p = h.reelSet.spin();
+    h.reelSet.setResult(GRID);
+    h.reelSet.requestSkip({ mode: 'quicken', payload: 1 });
+    h.reelSet.requestSkip({ mode: 'slam', payload: 2 });
+    const result = await p;
+    expect(h.requested.map((r) => r.payload)).toEqual([1, 2]);
+    expect(result.skipContext).toEqual({ mode: 'slam', payload: 2 });
+  });
+});

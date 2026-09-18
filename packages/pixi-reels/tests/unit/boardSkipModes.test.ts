@@ -161,3 +161,27 @@ describe("HoldAndWinBoard.skip({ mode: 'quicken' })", () => {
     expect(h.skips).toEqual([{ inFlight: 0, mode: 'quicken' }]);
   });
 });
+
+describe('feature:skip carries the press', () => {
+  let h: ReturnType<typeof build> | null = null;
+  afterEach(() => {
+    h?.destroy();
+    h = null;
+  });
+
+  it('passes speed and payload through as given, and leaves unset keys absent', async () => {
+    h = build();
+    startWave(h.board);
+    await sleep(40);
+    const payload = { button: 'skip' };
+    h.board.skip({ mode: 'quicken', speed: 'turbo', payload });
+    expect(h.skips).toEqual([{ inFlight: FREE.length, mode: 'quicken', speed: 'turbo', payload }]);
+    h.destroy();
+    h = build('slam');
+    startWave(h.board);
+    await sleep(40);
+    h.board.skip();
+    expect(h.skips).toEqual([{ inFlight: FREE.length, mode: 'slam' }]);
+    expect('payload' in h.skips[0]!).toBe(false);
+  });
+});

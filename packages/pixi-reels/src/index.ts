@@ -290,6 +290,7 @@ export type {
   ReelSetEvents,
   ReelEvents,
   SpinResult,
+  SkipInfo,
 } from './events/ReelEvents.js';
 
 // Utils

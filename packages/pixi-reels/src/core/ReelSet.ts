@@ -11,10 +11,12 @@ import type {
   SkipOptions,
   SlamOptions,
   SymbolPosition,
+  SkipContext,
 } from '../config/types.js';
 import { Z_INDEX_BUDGET } from '../config/types.js';
 import { EventEmitter } from '../events/EventEmitter.js';
-import type { ReelSetEvents, SpinResult, RunCascadeResult as RunCascadeResultBase } from '../events/ReelEvents.js';
+import type { ReelSetEvents, SpinResult, SkipInfo, RunCascadeResult as RunCascadeResultBase } from '../events/ReelEvents.js';
+import { skipContextOf } from '../events/ReelEvents.js';
 import { Reel, } from './Reel.js';
 import type { NudgeOptions } from './Reel.js';
 import type { ReelCurveInput } from './ReelCurve.js';
@@ -259,6 +261,12 @@ export interface RefillResult {
   finalGrid: string[][];
   /** True if the refill was aborted via `signal` (slammed to land). */
   wasSkipped: boolean;
+  /**
+   * The press that ended it, as its `skip:requested` carried it (`mode`,
+   * `speed`, `payload`); `null` when none did. An abort through `signal` is
+   * an engine slam: `{ mode: 'slam' }`.
+   */
+  skipContext: SkipContext | null;
   /** Total refill duration in milliseconds. */
   duration: number;
 }
@@ -757,8 +765,12 @@ export class ReelSet extends Container implements Disposable {
     this._assertGrid(opts.grid, 'refill(): grid');
     const startTime = performance.now();
     let wasSkipped = false;
+    let skipContext: SkipContext | null = null;
 
-    const onSkip = (): void => { wasSkipped = true; };
+    const onSkip = (info: SkipInfo): void => {
+      wasSkipped = true;
+      skipContext = skipContextOf(info);
+    };
     this._events.on('skip:requested', onSkip);
 
     const onAbort = (): void => {
@@ -778,6 +790,7 @@ export class ReelSet extends Container implements Disposable {
         winnersRefilled: opts.winners.length,
         finalGrid: spinResult.symbols,
         wasSkipped: wasSkipped || spinResult.wasSkipped,
+        skipContext: skipContext ?? spinResult.skipContext,
         duration: performance.now() - startTime,
       };
     } finally {
@@ -1084,7 +1097,11 @@ export class ReelSet extends Container implements Disposable {
     const pauseMs = opts.pauseAfterDestroyMs ?? 250;
     const maxChain = opts.maxChain ?? 32;
     let wasSkipped = false;
-    const onSkip = (): void => { wasSkipped = true; };
+    let skipContext: SkipContext | null = null;
+    const onSkip = (info: SkipInfo): void => {
+      wasSkipped = true;
+      skipContext = skipContextOf(info);
+    };
     this._events.on('skip:requested', onSkip);
 
     const onAbort = (): void => {
@@ -1209,6 +1226,7 @@ export class ReelSet extends Container implements Disposable {
       totalWinners,
       finalGrid: current,
       wasSkipped,
+      skipContext,
     };
     return summary;
   }

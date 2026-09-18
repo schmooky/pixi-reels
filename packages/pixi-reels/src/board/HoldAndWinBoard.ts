@@ -434,8 +434,9 @@ export class HoldAndWinBoard<TData = unknown> implements Disposable {
    * its landed position; under `'quicken'` every in-flight cell drops its
    * spin floor (the board's stagger lives there, so the whole wave lands
    * together), spins its symbol in and bounces, on `options.speed` if named.
-   * Then `feature:skip` fires with the count and the mode, so the game layer
-   * can cut its own flights short after a slam. The normal landing ->
+   * Then `feature:skip` fires with the count, the mode and the press's own
+   * `speed` / `payload`, so the game layer can cut its own flights short
+   * after a slam and know which press it was. The normal landing ->
    * `coin:locked` -> `feature:end` flow still resolves either way; this only
    * removes the waiting. Returns the number of cells that were in flight.
    */
@@ -447,7 +448,10 @@ export class HoldAndWinBoard<TData = unknown> implements Disposable {
     }
     const mode = options.mode ?? this._skipMode;
     const inFlight = this._grid.skipSpinning({ ...options, mode });
-    this.events.emit('feature:skip', { inFlight, mode });
+    const info: { inFlight: number; mode: SkipMode; speed?: string; payload?: unknown } = { inFlight, mode };
+    if (options.speed !== undefined) info.speed = options.speed;
+    if (options.payload !== undefined) info.payload = options.payload;
+    this.events.emit('feature:skip', info);
     return inFlight;
   }
 

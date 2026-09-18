@@ -3,6 +3,7 @@ import type {
   SpeedProfile,
   Win,
   SymbolPosition,
+  SkipContext,
   SkipMode,
 } from '../config/types.js';
 import type { CellPin, PinExpireReason } from '../pins/CellPin.js';
@@ -20,8 +21,41 @@ export interface SpinResult {
   wasSkipped: boolean;
   /** The mode of the last press that freed reels, `null` when none did. */
   skipMode: SkipMode | null;
+  /**
+   * The last press that freed reels, as its `skip:requested` carried it:
+   * `mode`, the profile a quicken named, the game's `payload`. `null` when
+   * none did; `{ mode: 'slam' }` when the engine slammed with no press behind
+   * it (an abort, a timeout, `slamStop()`).
+   */
+  skipContext: SkipContext | null;
   /** Total spin duration in milliseconds. */
   duration: number;
+}
+
+/**
+ * What `skip:requested` and `skip:completed` carry: the press as every phase
+ * saw it in `onSkip(ctx)` (`mode`, the `speed` profile a quicken named, the
+ * game's `payload`), plus the reels it freed and whether reels are still
+ * spinning after it. An engine slam (an abort, a timeout, error recovery,
+ * `slamStop()`) has no press behind it: `mode: 'slam'`, no `speed`, no
+ * `payload`. Keys the press did not set are absent, not `undefined`.
+ */
+export interface SkipInfo extends SkipContext {
+  /** The reels this press frees; landed and held reels are excluded. */
+  reels: number[];
+  /** `true` when reels are still spinning after this press. */
+  partial: boolean;
+}
+
+/**
+ * The press behind a `SkipContext` or `SkipInfo` as events and results carry
+ * it: a fresh object, `mode` and only the keys the press set.
+ */
+export function skipContextOf(ctx: SkipContext): SkipContext {
+  const copy: SkipContext = { mode: ctx.mode };
+  if (ctx.speed) copy.speed = ctx.speed;
+  if (ctx.payload !== undefined) copy.payload = ctx.payload;
+  return copy;
 }
 
 /**
@@ -38,6 +72,12 @@ export interface RunCascadeResult {
   finalGrid: string[][];
   /** True when the chain ended early because the player slammed mid-cascade. */
   wasSkipped: boolean;
+  /**
+   * The press that ended the chain, as its `skip:requested` carried it
+   * (`mode`, `speed`, `payload`); `null` when no press did. An abort through
+   * `signal` is an engine slam: `{ mode: 'slam' }`.
+   */
+  skipContext: SkipContext | null;
 }
 
 /** Events emitted by a ReelSet. */
@@ -112,15 +152,16 @@ export interface ReelSetEvents extends Record<string, unknown[]> {
    * or a `slamStop({ reels })` / `slamStop({ except })` call), and `mode`
    * says what freeing means: `'slam'` places them now, `'quicken'` asks each
    * for its landing sooner and the landing arrives as the usual
-   * `spin:reelLanding` / `spin:reelLanded`.
+   * `spin:reelLanding` / `spin:reelLanded`. `speed` and `payload` are the
+   * press's own, the same `SkipContext` every phase's `onSkip(ctx)` saw.
    */
-  'skip:requested': [info: { reels: number[]; partial: boolean; mode: SkipMode }];
+  'skip:requested': [info: SkipInfo];
   /**
    * The same press, once its reels are down: in the same tick for a slam,
    * as the last freed reel lands for a quicken (however it got down, its own
-   * stop or a later slam).
+   * stop or a later slam). The same `info` its `skip:requested` carried.
    */
-  'skip:completed': [info: { reels: number[]; partial: boolean; mode: SkipMode }];
+  'skip:completed': [info: SkipInfo];
   /**
    * Round-aware `skip()` first-press boost: in standard (non-cascade)
    * mode, the engine switched the active speed profile to the fastest

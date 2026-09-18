@@ -109,8 +109,9 @@ export interface SkipOptions {
    */
   speed?: string;
   /**
-   * Anything the game wants a phase to see in `onSkip(ctx)`: which button,
-   * which player, a reason. Passed through untouched.
+   * Anything the game wants a phase to see in `onSkip(ctx)`, and any listener
+   * to see on `skip:requested` / `skip:completed` and `SpinResult.skipContext`:
+   * which button, which player, a reason. Passed through untouched.
    */
   payload?: unknown;
 }
@@ -118,7 +119,9 @@ export interface SkipOptions {
 /**
  * What a phase receives in `onSkip(ctx)`: the mode of the press that reached
  * it, the profile it should finish on (a `'quicken'` that named one), and
- * whatever the game attached. See {@link SkipOptions}.
+ * whatever the game attached. See {@link SkipOptions}. The same press rides
+ * on `skip:requested` / `skip:completed` (as `SkipInfo`, with the reels) and
+ * ends up in `SpinResult.skipContext`.
  */
 export interface SkipContext<TProfile extends SpeedProfile = SpeedProfile> {
   mode: SkipMode;

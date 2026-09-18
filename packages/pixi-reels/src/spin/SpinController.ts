@@ -18,7 +18,8 @@ import type {
 } from '../config/types.js';
 import type { SpeedManager } from '../speed/SpeedManager.js';
 import type { FrameBuilder } from '../frame/FrameBuilder.js';
-import type { SpinResult } from '../events/ReelEvents.js';
+import type { SpinResult, SkipInfo } from '../events/ReelEvents.js';
+import { skipContextOf } from '../events/ReelEvents.js';
 import { EventEmitter } from '../events/EventEmitter.js';
 import type { ReelSetEvents } from '../events/ReelEvents.js';
 import { PhaseFactory } from './phases/PhaseFactory.js';
@@ -176,6 +177,10 @@ interface ResolvedSkip {
 /** The context the engine's own slams hand to phases: abort, timeout, error recovery, `slamStop()`. */
 const SLAM_CTX: SkipContext = { mode: 'slam' };
 
+function skipInfo(reels: number[], partial: boolean, ctx: SkipContext): SkipInfo {
+  return { reels, partial, ...skipContextOf(ctx) };
+}
+
 export class SpinController implements Disposable {
   private _reels: Reel[];
   private _speedManager: SpeedManager;
@@ -300,6 +305,8 @@ export class SpinController implements Disposable {
   private _wasSkipped = false;
   /** The mode of the last press that freed reels this round, for `SpinResult.skipMode`. */
   private _skipMode: SkipMode | null = null;
+  /** The press behind `_skipMode`, for `SpinResult.skipContext`. */
+  private _skipCtx: SkipContext | null = null;
   /** A `requestSkip()` that arrived before the result; fired by `setResult()`. */
   private _skipPending: ResolvedSkip | null = null;
   /**
@@ -328,7 +335,7 @@ export class SpinController implements Disposable {
    * fires per press as its last reel lands, the way a slam's fires once its
    * reels are placed.
    */
-  private _quickenBatches: Array<{ pending: Set<number>; reels: number[]; partial: boolean }> = [];
+  private _quickenBatches: Array<{ pending: Set<number>; reels: number[]; partial: boolean; ctx: SkipContext }> = [];
   private _isDestroyed = false;
   private _currentSpinResolve: ((result: SpinResult) => void) | null = null;
   private _currentSpinReject: ((error: Error) => void) | null = null;
@@ -496,6 +503,7 @@ export class SpinController implements Disposable {
     this._isSpinning = true;
     this._wasSkipped = false;
     this._skipMode = null;
+    this._skipCtx = null;
     this._skipPending = null;
     this._quickenedReels.clear();
     this._quickenCtx.clear();
@@ -725,6 +733,7 @@ export class SpinController implements Disposable {
     this._isSpinning = true;
     this._wasSkipped = false;
     this._skipMode = null;
+    this._skipCtx = null;
     this._skipPending = null;
     this._quickenedReels.clear();
     this._quickenCtx.clear();
@@ -1635,6 +1644,7 @@ export class SpinController implements Disposable {
 
     this._wasSkipped = true;
     this._skipMode = 'quicken';
+    this._skipCtx = skipContextOf(ctx);
     for (const i of targets) {
       this._quickenedReels.add(i);
       this._quickenCtx.set(i, ctx);
@@ -1642,8 +1652,8 @@ export class SpinController implements Disposable {
       // profile the reel now lands on, as they would after `setSpeed()`.
       if (ctx.speed) this._reels[i].referenceSpeed = ctx.speed.spinSpeed;
     }
-    this._quickenBatches.push({ pending: new Set(targets), reels: [...targets], partial });
-    this._events.emit('skip:requested', { reels: [...targets], partial, mode: 'quicken' });
+    this._quickenBatches.push({ pending: new Set(targets), reels: [...targets], partial, ctx });
+    this._events.emit('skip:requested', skipInfo([...targets], partial, ctx));
 
     for (const i of targets) {
       // The active phase advances itself where it can (a tease ends, a stop
@@ -1808,7 +1818,8 @@ export class SpinController implements Disposable {
   private _slamTargets(targets: Set<number>, partial: boolean, ctx: SkipContext): void {
     this._wasSkipped = true;
     this._skipMode = 'slam';
-    this._events.emit('skip:requested', { reels: [...targets], partial, mode: 'slam' });
+    this._skipCtx = skipContextOf(ctx);
+    this._events.emit('skip:requested', skipInfo([...targets], partial, ctx));
 
     if (partial) {
       // Kill ONLY the target reels' phases and abort ONLY their chains. The
@@ -1875,7 +1886,7 @@ export class SpinController implements Disposable {
       }
     }
 
-    this._events.emit('skip:completed', { reels: [...targets], partial, mode: 'slam' });
+    this._events.emit('skip:completed', skipInfo([...targets], partial, ctx));
 
     if (partial) {
       // Re-open the stop-sequence gate. It requires EVERY non-held,
@@ -2649,7 +2660,7 @@ export class SpinController implements Disposable {
       const batch = this._quickenBatches[b];
       if (!batch.pending.delete(reelIndex) || batch.pending.size > 0) continue;
       this._quickenBatches.splice(b, 1);
-      this._events.emit('skip:completed', { reels: batch.reels, partial: batch.partial, mode: 'quicken' });
+      this._events.emit('skip:completed', skipInfo(batch.reels, batch.partial, batch.ctx));
     }
 
     // All NON-HELD reels accounted for → finish. Held reels never
@@ -2752,6 +2763,7 @@ export class SpinController implements Disposable {
       symbols: this._reels.map((r) => r.getVisibleSymbols()),
       wasSkipped: this._wasSkipped,
       skipMode: this._skipMode,
+      skipContext: this._skipCtx,
       duration: performance.now() - this._spinStartTime,
     };
 

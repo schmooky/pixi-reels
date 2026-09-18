@@ -121,6 +121,8 @@ The same barrier, a different mode. A quicken walks exactly the groups a slam wo
 
 One button, two presses: `requestSkip({ mode: 'quicken', speed: 'turbo' })` on the first, `requestSkip({ mode: 'slam' })` on the second. A quicken press walks past the reels it already quickened; a slam press cuts them. Both are skips, and `SpinResult.skipMode` names the one that ended the round.
 
+Each press carries a `payload` (`{ press: 1 }`, `{ press: 2 }`) and the HUD reads it back off `skip:requested`, with the profile a quicken named as `speed.name`: the event carries the whole press, the same context every phase's `onSkip(ctx)` gets, and `SpinResult.skipContext` keeps the last one.
+
 **Gotcha:** read "has this round been quickened" off `skip:requested` and its `mode`, not off a local counter - a press that freed nothing must not arm the slam.
 
 <RecipeDemo code="quicken-then-slam" />
