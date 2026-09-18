@@ -1,5 +1,5 @@
 /** @jsxImportSource react */
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { Pause, Play, Trash2, Copy, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -100,11 +100,42 @@ export function describeValue(value: unknown, opts: FmtOptions = COMPACT, depth 
   }
 }
 
-/** The compact one-line payload for a row. */
-function describeArgs(args: unknown[], opts: FmtOptions): string {
-  if (args.length === 0) return '';
-  if (args.length === 1) return describeValue(args[0], opts);
-  return args.map((a) => describeValue(a, opts)).join('  ');
+/** A rendering fits on the header line when it is this short. */
+const INLINE_MAX = 60;
+
+/**
+ * The same description, unwrapped: objects and arrays one member per line,
+ * two spaces per level, so the payload reads as the object it is. Anything
+ * whose one-line form is short stays on one line.
+ */
+export function prettyValue(value: unknown, opts: FmtOptions = FULL, depth = 0, seen = new Set<unknown>()): string {
+  const flat = describeValue(value, opts, depth, seen);
+  // A payload object is always unwrapped; inside it, short members stay on
+  // one line so `reels: [0, 1, 2, 3, 4]` does not become five lines.
+  if ((depth > 0 && flat.length <= INLINE_MAX) || !isRecord(value) || seen.has(value)) return flat;
+  if (value instanceof Error) return flat;
+  // Tagged objects (display objects, symbols, profiles) are a tag already.
+  if (!flat.startsWith('{') && !flat.startsWith('[') && !/^[A-Za-z_$][\w$]* \{/.test(flat)) return flat;
+  if (depth >= opts.depth) return flat;
+
+  const pad = '  '.repeat(depth + 1);
+  const close = '  '.repeat(depth);
+  seen.add(value);
+  try {
+    if (Array.isArray(value)) {
+      const items = value.slice(0, opts.items).map((v) => `${pad}${prettyValue(v, opts, depth + 1, seen)}`);
+      if (value.length > opts.items) items.push(`${pad}...+${value.length - opts.items}`);
+      return `[\n${items.join(',\n')}\n${close}]`;
+    }
+    const entries = Object.entries(value).filter(([, v]) => typeof v !== 'function');
+    const lines = entries.slice(0, opts.keys).map(([k, v]) => `${pad}${k}: ${prettyValue(v, opts, depth + 1, seen)}`);
+    if (entries.length > opts.keys) lines.push(`${pad}...+${entries.length - opts.keys}`);
+    const ctor = (value as { constructor?: { name?: string } }).constructor?.name ?? 'Object';
+    const head = ctor === 'Object' ? '{' : `${ctor} {`;
+    return `${head}\n${lines.join(',\n')}\n${close}}`;
+  } finally {
+    seen.delete(value);
+  }
 }
 
 /** Namespace colour: what family an event belongs to, at a glance. */
@@ -157,7 +188,6 @@ function formatRel(e: EventEntry): string {
 export function EventsPanel({ entries, tick, onClear, className, style }: EventsPanelProps) {
   const [filter, setFilter] = useState('');
   const [paused, setPaused] = useState(false);
-  const [expanded, setExpanded] = useState<number | null>(null);
   const [copied, setCopied] = useState(false);
   const frozenRef = useRef<readonly EventEntry[] | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -193,7 +223,7 @@ export function EventsPanel({ entries, tick, onClear, className, style }: Events
       rel: e.rel === null ? null : Math.round(e.rel),
       source: e.source,
       name: e.name,
-      args: e.args.map((a) => describeValue(a, FULL)),
+      args: e.args.map((a) => prettyValue(a, FULL)),
     }));
     try {
       await navigator.clipboard.writeText(JSON.stringify(rows, null, 2));
@@ -243,7 +273,7 @@ export function EventsPanel({ entries, tick, onClear, className, style }: Events
         </button>
         <button
           type="button"
-          onClick={() => { onClear(); frozenRef.current = paused ? [] : null; setExpanded(null); }}
+          onClick={() => { onClear(); frozenRef.current = paused ? [] : null; }}
           title="Clear"
           aria-label="Clear events"
           className="rounded border border-border/60 p-1 text-muted-foreground hover:text-foreground"
@@ -257,32 +287,37 @@ export function EventsPanel({ entries, tick, onClear, className, style }: Events
             {shown.length === 0 ? 'No events yet. Spin.' : 'Nothing matches the filter.'}
           </div>
         )}
-        {visible.map((e) => {
-          const open = expanded === e.id;
-          return (
-            <div
-              key={e.id}
-              onClick={() => setExpanded(open ? null : e.id)}
-              className={cn('cursor-pointer border-b border-border/30 px-1.5 py-0.5 hover:bg-background/60', open && 'bg-background/60')}
-              title={`${new Date(performance.timeOrigin + e.t).toISOString()}`}
-            >
-              <div className="flex gap-1.5 whitespace-nowrap">
-                <span className="w-12 shrink-0 text-right tabular-nums text-muted-foreground">{formatRel(e)}</span>
-                <span className="w-12 shrink-0 truncate text-muted-foreground">{e.source}</span>
-                <span className={cn('shrink-0', nameClass(e.name))}>{e.name}</span>
-                {!open && <span className="truncate text-muted-foreground/80">{describeArgs(e.args, COMPACT)}</span>}
-              </div>
-              {open && (
-                <pre className="mt-0.5 whitespace-pre-wrap break-all pl-[6.5rem] text-muted-foreground">
-                  {e.args.length === 0 ? '(no payload)' : e.args.map((a) => describeValue(a, FULL)).join('\n')}
-                </pre>
-              )}
-            </div>
-          );
-        })}
+        {visible.map((e) => <Row key={e.id} entry={e} />)}
       </div>
     </div>
   );
 }
+
+/**
+ * One event. Memoised on the entry, which never changes once recorded, so a
+ * frame of new events renders its new rows and leaves the rest alone.
+ */
+const Row = memo(function Row({ entry: e }: { entry: EventEntry }) {
+  const rendered = useMemo(() => e.args.map((a) => prettyValue(a, FULL)), [e]);
+  const inline = rendered.filter((r) => !r.includes('\n'));
+  const blocks = rendered.filter((r) => r.includes('\n'));
+  return (
+    <div
+      className="border-b border-border/30 px-1.5 py-0.5 hover:bg-background/60"
+      title={new Date(performance.timeOrigin + e.t).toISOString()}
+    >
+      <div className="flex gap-1.5">
+        <span className="w-12 shrink-0 text-right tabular-nums text-muted-foreground">{formatRel(e)}</span>
+        <span className="w-12 shrink-0 truncate text-muted-foreground">{e.source}</span>
+        <span className={cn('shrink-0', nameClass(e.name))}>{e.name}</span>
+        {inline.length > 0 && <span className="whitespace-pre-wrap break-all text-muted-foreground/90">{inline.join('  ')}</span>}
+      </div>
+      {blocks.map((b, i) => (
+        // A div, not a pre: the page's prose styles give `pre` a dark box.
+        <div key={i} className="whitespace-pre-wrap break-all pl-[3.25rem] text-muted-foreground/90">{b}</div>
+      ))}
+    </div>
+  );
+});
 
 export { ROW_LIMIT };
